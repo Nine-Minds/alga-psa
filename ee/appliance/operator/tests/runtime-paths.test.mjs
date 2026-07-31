@@ -12,13 +12,13 @@ const __dirname = path.dirname(__filename);
 
 test('T006: resolves repo runtime paths from repository layout', () => {
   const fixtureRoot = path.resolve(__dirname, 'fixtures/runtime-repo');
-  const nestedCwd = path.join(fixtureRoot, 'ee/appliance/releases');
+  const nestedCwd = path.join(fixtureRoot, 'ee/appliance/scripts');
   const runtime = resolveRuntimePaths({ cwd: nestedCwd });
 
   assert.equal(runtime.runtimeMode, 'repo');
   assert.equal(runtime.repoRoot, fixtureRoot);
-  assert.equal(runtime.bootstrapScript, path.join(fixtureRoot, 'ee/appliance/scripts/bootstrap-appliance.sh'));
-  assert.equal(runtime.releasesDir, path.join(fixtureRoot, 'ee/appliance/releases'));
+  assert.equal(runtime.supportBundleScript, path.join(fixtureRoot, 'ee/appliance/scripts/collect-support-bundle.sh'));
+  assert.equal(runtime.resetScript, path.join(fixtureRoot, 'ee/appliance/scripts/reset-appliance-data.sh'));
 });
 
 test('T006: resolves standalone asset-root runtime paths', () => {
@@ -27,8 +27,8 @@ test('T006: resolves standalone asset-root runtime paths', () => {
 
   assert.equal(runtime.runtimeMode, 'asset-root');
   assert.equal(runtime.assetRoot, fixtureRoot);
-  assert.equal(runtime.bootstrapScript, path.join(fixtureRoot, 'scripts/bootstrap-appliance.sh'));
-  assert.equal(runtime.releasesDir, path.join(fixtureRoot, 'releases'));
+  assert.equal(runtime.supportBundleScript, path.join(fixtureRoot, 'scripts/collect-support-bundle.sh'));
+  assert.equal(runtime.resetScript, path.join(fixtureRoot, 'scripts/reset-appliance-data.sh'));
 });
 
 test('resolveConfigBase defaults to a product-owned appliance config home', () => {

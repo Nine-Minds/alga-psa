@@ -67,7 +67,7 @@ describe('recurring service-period regeneration', () => {
 
     expect(regenerationPlan.regeneratedRecords).toHaveLength(1);
     expect(regenerationPlan.regeneratedRecords[0]).toMatchObject({
-      periodKey: 'slot-1',
+      periodKey: 'candidate-slot-1',
       revision: 2,
       servicePeriod: {
         start: '2026-01-05',
@@ -267,7 +267,7 @@ describe('recurring service-period regeneration', () => {
     expect(regenerationPlan.preservedRecords).toEqual([editedOverride, billedOverride]);
     expect(regenerationPlan.regeneratedRecords).toHaveLength(1);
     expect(regenerationPlan.regeneratedRecords[0]).toMatchObject({
-      periodKey: 'slot-3',
+      periodKey: 'candidate-slot-3',
       revision: 2,
       servicePeriod: {
         start: '2026-03-05',
@@ -288,7 +288,7 @@ describe('recurring service-period regeneration', () => {
       editedOverride,
       billedOverride,
       expect.objectContaining({
-        periodKey: 'slot-3',
+        periodKey: 'candidate-slot-3',
         revision: 2,
       }),
     ]);

@@ -66,6 +66,8 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
   });
 
   return {
+    detectClientLocale: () => 'de',
+    useOptionalI18n: () => null,
     I18nProvider: ({
       children,
       initialLocale = 'de',
@@ -124,6 +126,17 @@ vi.mock('@/components/layout/DefaultLayout', () => ({
   ),
 }));
 
+vi.mock('server/src/components/layout/DefaultLayout', () => ({
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="default-layout">{children}</div>
+  ),
+}));
+
+vi.mock('server/src/components/layout/Header', () => ({
+  QUICK_CREATE_OPEN_EVENT: 'alga:quick-create:open',
+  default: () => null,
+}));
+
 vi.mock('@alga-psa/tags/context', () => ({
   TagProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -147,10 +160,111 @@ vi.mock('@/context/TierContext', () => ({
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: (...args: unknown[]) => getCurrentUserMock(...args),
+  getCurrentUserPermissions: async () => null,
+}));
+
+vi.mock('@/lib/productAccess', () => ({
+  getCurrentTenantProduct: async () => 'psa',
+}));
+
+vi.mock('@/context/ProductContext', () => ({
+  ProductProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useProduct: () => ({
+    productCode: 'psa',
+    isMisconfigured: false,
+    isPsa: true,
+    isAlgaDesk: false,
+    isLoading: false,
+  }),
+}));
+
+vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({
+  KeyboardShortcutsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@/hooks/useKeyboardShortcutPreferenceStorage', () => ({
+  useKeyboardShortcutPreferenceStorage: () => ({
+    value: {},
+    setValue: () => {},
+    storage: {
+      load: () => ({}),
+      save: () => {},
+    },
+  }),
 }));
 
 vi.mock('@alga-psa/tickets/actions/optimizedTicketActions', () => ({
   getConsolidatedTicketData: (...args: unknown[]) => getConsolidatedTicketDataMock(...args),
+  getAdjacentTicketIds: async () => null,
+}));
+
+vi.mock('@alga-psa/tickets/actions/ticketActions', () => ({
+  getTicketById: async () => null,
+}));
+
+vi.mock('@alga-psa/tickets/actions/ticketActivityActions', () => ({
+  getTicketTimelineEntries: async () => [],
+}));
+
+vi.mock('@alga-psa/tickets/actions/comment-actions/commentReactionActions', () => ({
+  getCommentsReactionsBatch: async () => ({ reactions: {}, userNames: {} }),
+}));
+
+vi.mock('@alga-psa/tickets/actions/ticketBentoActions', () => ({
+  getTicketBillingRollup: async () => null,
+  getTicketInteractions: async () => [],
+  getTicketScheduleEntries: async () => [],
+  getTicketSlaPolicyName: async () => null,
+}));
+
+vi.mock('@alga-psa/tickets/actions/ticketLayoutPreference', () => ({
+  getTicketLayoutPreference: async () => null,
+}));
+
+vi.mock('@alga-psa/tickets/actions/checklists/ticketChecklistActions', () => ({
+  getTicketChecklistItems: async () => [],
+}));
+
+vi.mock('@alga-psa/tickets/actions/close-rules/closeRuleActions', () => ({
+  getTicketAutoCloseState: async () => null,
+}));
+
+vi.mock('@alga-psa/tickets/actions/ticketDisplaySettings', () => ({
+  getTicketingDisplaySettings: async () => null,
+}));
+
+vi.mock('@alga-psa/tickets/actions/materialCatalogActions', () => ({
+  listTicketMaterials: async () => [],
+}));
+
+vi.mock('@alga-psa/tickets/components/ticket/commentMetadataDebug', () => ({
+  hasAdminSettingsViewAccess: () => false,
+}));
+
+vi.mock('@alga-psa/assets/actions/assetActions', () => ({
+  listEntityAssets: async () => [],
+}));
+
+vi.mock('@alga-psa/assets/actions/assetActionErrors', () => ({
+  unwrapAssetActionResult: (value: unknown) => value,
+}));
+
+vi.mock('@alga-psa/projects/actions/projectTaskActions', () => ({
+  getLinkedTasksForTicketAction: async () => [],
+}));
+
+vi.mock('@alga-psa/tags/actions', () => ({
+  findTagsByEntityId: async () => [],
+  isTagActionError: () => false,
+}));
+
+vi.mock('@alga-psa/teams/actions', () => ({
+  getTeams: async () => [],
+  isTeamActionError: () => false,
+}));
+
+vi.mock('@alga-psa/scheduling/actions/timeEntryTicketActions', () => ({
+  fetchTimeEntriesForTicket: async () => null,
 }));
 
 vi.mock('@alga-psa/surveys/actions/survey-actions/surveyDashboardActions', () => ({
@@ -161,12 +275,12 @@ vi.mock('@alga-psa/assets/components/AssociatedAssets', () => ({
   default: () => null,
 }));
 
-vi.mock('@alga-psa/msp-composition/tickets', async () => {
+vi.mock('@alga-psa/msp-composition/tickets/MspTicketDetailsContainerClient', async () => {
   const ReactModule = await import('react');
   const { useTranslation } = await import('@alga-psa/ui/lib/i18n/client');
 
   return {
-    MspTicketDetailsContainerClient: () => {
+    default: function MockTicketDetailsContainer() {
       const { t } = useTranslation('features/tickets');
 
       return (
@@ -213,10 +327,10 @@ async function renderTicketDetail(locale: keyof typeof translations = 'de') {
   render(
     <MspLayoutClient
       session={null}
+      productCode="psa"
       needsOnboarding={false}
       initialSidebarCollapsed={false}
       initialLocale={locale}
-      i18nEnabled={true}
     >
       {page}
     </MspLayoutClient>

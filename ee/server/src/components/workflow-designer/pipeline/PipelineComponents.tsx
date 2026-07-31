@@ -399,6 +399,7 @@ export const CollapsibleBlock: React.FC<{
   defaultExpanded?: boolean;
   children: React.ReactNode;
 }> = ({ title, variant, stepCount, defaultExpanded = true, children }) => {
+  const { t } = useTranslation('msp/workflows');
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   return (
@@ -416,7 +417,7 @@ export const CollapsibleBlock: React.FC<{
         <BranchLabel label={title} variant={variant} />
         {!isExpanded && stepCount > 0 && (
           <span className="text-xs text-gray-400">
-            ({stepCount} step{stepCount !== 1 ? 's' : ''})
+            {t('pipeline.stepCount', { defaultValue: '({{count}} steps)', count: stepCount })}
           </span>
         )}
       </button>

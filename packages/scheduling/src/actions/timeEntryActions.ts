@@ -8,7 +8,8 @@ import {
   submitTimeSheet,
   fetchAllTimeSheets,
   fetchTimePeriods,
-  fetchOrCreateTimeSheet
+  fetchOrCreateTimeSheet,
+  deleteTimeSheets
 } from './timeSheetOperations';
 import {
   fetchTimeEntriesForTimeSheet,
@@ -38,6 +39,7 @@ export {
   fetchAllTimeSheets,
   fetchTimePeriods,
   fetchOrCreateTimeSheet,
+  deleteTimeSheets,
   fetchTimeEntriesForTimeSheet,
   saveTimeEntry,
   updateTimeEntryApprovalStatus,

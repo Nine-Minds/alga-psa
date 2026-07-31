@@ -3,27 +3,29 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/notifications/src",
   "projectType": "library",
-  "tags": ["scope:notifications", "type:horizontal"],
+  "tags": [
+    "scope:notifications",
+    "type:horizontal"
+  ],
   "targets": {
     "build": {
       "executor": "nx:run-script",
       "options": {
         "script": "build"
       },
-      "dependsOn": ["^build"]
-    },
-    "test": {
-      "executor": "@nx/vite:test",
-      "outputs": ["{workspaceRoot}/coverage/packages/notifications"],
-      "options": {
-        "passWithNoTests": true
-      }
+      "dependsOn": [
+        "^build"
+      ]
     },
     "lint": {
       "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"],
+      "outputs": [
+        "{options.outputFile}"
+      ],
       "options": {
-        "lintFilePatterns": ["packages/notifications/**/*.{ts,tsx}"]
+        "lintFilePatterns": [
+          "packages/notifications/**/*.{ts,tsx}"
+        ]
       }
     }
   }

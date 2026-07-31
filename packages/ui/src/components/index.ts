@@ -1,4 +1,5 @@
 export * from './Alert';
+export * from './StaleActionBanner';
 export * from './LanguageHierarchyTable';
 export type { SelectOption as AsyncSearchableSelectOption } from './AsyncSearchableSelect';
 export { default as AsyncSearchableSelect } from './AsyncSearchableSelect';
@@ -20,8 +21,8 @@ export { default as ClientAvatar } from './ClientAvatar';
 export * from './ClientPicker';
 export * from './ColorPicker';
 export { default as ColorPicker } from './ColorPicker';
-export * from './CommentThreadDrawer';
-export { default as CommentThreadDrawer } from './CommentThreadDrawer';
+// CommentThreadDrawer pulls the BlockNote editor (via InlineReplyComposer). Not re-exported
+// from the barrel — import directly from '@alga-psa/ui/components/CommentThreadDrawer'.
 export * from './CommentThreadList';
 export { default as CommentThreadList } from './CommentThreadList';
 export * from './CollapseToggleButton';
@@ -31,7 +32,8 @@ export { default as ContactAvatar } from './ContactAvatar';
 export * from './ContactPicker';
 export * from './ContactPickerDialog';
 export { default as ContactPickerDialog } from './ContactPickerDialog';
-export { ContentCard } from './ContentCard';
+export { ContentCard, ContentCardVariantProvider, useContentCardVariant } from './ContentCard';
+export type { ContentCardVariant } from './ContentCard';
 export { default as ContentCardDefault } from './ContentCard';
 export * from './CountryPicker';
 export { default as CountryPicker } from './CountryPicker';
@@ -72,8 +74,8 @@ export * from './IconPicker';
 export * from './Input';
 export * from './InteractionIcon';
 export { default as InteractionIcon } from './InteractionIcon';
-export * from './InlineReplyComposer';
-export { default as InlineReplyComposer } from './InlineReplyComposer';
+// InlineReplyComposer pulls the BlockNote editor. Not re-exported from the barrel —
+// import directly from '@alga-psa/ui/components/InlineReplyComposer'.
 export * from './Label';
 export * from './LanguagePreference';
 export * from './LoadingIndicator';
@@ -90,6 +92,7 @@ export * from './PrintButton';
 export * from './PrintOptionsDialog';
 export * from './PrintableDetailHeader';
 export * from './PrintableRegion';
+export * from './PrintableSummary';
 export * from './PrintableTable';
 export * from './ShareActionsMenu';
 export * from './Progress';
@@ -161,8 +164,8 @@ export * from './widgets/ButtonLinkWidget';
 export { default as ButtonLinkWidget } from './widgets/ButtonLinkWidget';
 export * from './widgets/HighlightWidget';
 export { default as HighlightWidget } from './widgets/HighlightWidget';
-export * from './widgets/RichTextViewerWidget';
-export { default as RichTextViewerWidget } from './widgets/RichTextViewerWidget';
+// RichTextViewerWidget pulls the BlockNote editor. Not re-exported from the barrel —
+// import directly from '@alga-psa/ui/components/widgets/RichTextViewerWidget'.
 export * from './tags';
 export * from './dashboard';
 export * from './common';

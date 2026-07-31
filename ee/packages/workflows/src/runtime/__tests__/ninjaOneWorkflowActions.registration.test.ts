@@ -9,6 +9,8 @@ const NINJAONE_ACTION_IDS = [
   'ninjaone.devices.find',
   'ninjaone.devices.sync',
   'ninjaone.devices.reboot',
+  'ninjaone.devices.scripting_options',
+  'ninjaone.devices.run_script',
   'ninjaone.alerts.list_active',
   'ninjaone.alerts.get',
   'ninjaone.alerts.reset'
@@ -23,13 +25,13 @@ const loadNinjaOneActions = async (entry: 'bootstrap' | 'worker') => {
 };
 
 describe('NinjaOne workflow action runtime registration', () => {
-  it('T006: bootstrap runtime includes the six NinjaOne workflow action IDs', async () => {
+  it('T006: bootstrap runtime includes the eight NinjaOne workflow action IDs', async () => {
     const actions = await loadNinjaOneActions('bootstrap');
     const ids = actions.map((action) => action.id).sort();
     expect(ids).toEqual([...NINJAONE_ACTION_IDS].sort());
   });
 
-  it('T006: worker runtime includes the same six NinjaOne workflow action IDs', async () => {
+  it('T006: worker runtime includes the same eight NinjaOne workflow action IDs', async () => {
     const actions = await loadNinjaOneActions('worker');
     const ids = actions.map((action) => action.id).sort();
     expect(ids).toEqual([...NINJAONE_ACTION_IDS].sort());
@@ -42,7 +44,7 @@ describe('NinjaOne workflow action runtime registration', () => {
     expect(byId.get('ninjaone.devices.find')?.sideEffectful).toBe(false);
     expect(byId.get('ninjaone.alerts.list_active')?.sideEffectful).toBe(false);
 
-    for (const id of ['ninjaone.devices.sync', 'ninjaone.devices.reboot', 'ninjaone.alerts.reset'] as const) {
+    for (const id of ['ninjaone.devices.sync', 'ninjaone.devices.reboot', 'ninjaone.devices.run_script', 'ninjaone.alerts.reset'] as const) {
       expect(byId.get(id)?.sideEffectful).toBe(true);
       expect(byId.get(id)?.idempotency.mode).toBe('engineProvided');
     }

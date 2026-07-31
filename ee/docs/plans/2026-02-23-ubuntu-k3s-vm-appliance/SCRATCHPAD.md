@@ -23,7 +23,7 @@
 3. `ee/appliance/k3s/`
 4. `ee/appliance/gitops/`
 5. `ee/appliance/scripts/`
-6. `ee/appliance/releases/`
+6. `historical local release metadata (removed)`
 
 ## Open Decisions To Finalize
 1. Concrete endpoint names and ownership for vendor-hosted artifact storage.

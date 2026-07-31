@@ -9,7 +9,6 @@
  * - Financial reporting and analytics
  * - Payment method management
  * - Transaction history and auditing
- * - Financial reconciliation
  * - Bulk financial operations
  */
 
@@ -95,7 +94,6 @@ export const discountTypeSchema = z.enum(['percentage', 'fixed']);
 
 export const paymentMethodTypeSchema = z.enum(['credit_card', 'bank_account']);
 
-export const reconciliationStatusSchema = z.enum(['open', 'in_review', 'resolved']);
 
 export const taxTypeSchema = z.enum(['VAT', 'GST', 'Sales Tax']);
 
@@ -637,41 +635,6 @@ export const updateClientContractLineCycleSchema = clientContractLineCycleBaseSc
 
 export const clientContractLineCycleResponseSchema = clientContractLineCycleBaseSchema.merge(baseEntitySchema);
 
-// ============================================================================
-// FINANCIAL RECONCILIATION SCHEMAS
-// ============================================================================
-
-export const creditReconciliationReportBaseSchema = z.object({
-  report_id: uuidSchema.optional(),
-  client_id: uuidSchema,
-  expected_balance: z.number(),
-  actual_balance: z.number(),
-  difference: z.number(),
-  detection_date: dateSchema,
-  status: reconciliationStatusSchema,
-  resolution_date: dateSchema.optional(),
-  resolution_user: uuidSchema.optional(),
-  resolution_notes: z.string().optional(),
-  resolution_transaction_id: uuidSchema.optional(),
-  metadata: z.record(z.any()).optional()
-});
-
-export const createCreditReconciliationReportSchema = creditReconciliationReportBaseSchema.extend({
-  tenant: uuidSchema
-});
-
-export const updateCreditReconciliationReportSchema = creditReconciliationReportBaseSchema.partial();
-
-export const creditReconciliationReportResponseSchema = creditReconciliationReportBaseSchema.merge(baseEntitySchema);
-
-export const reconciliationListQuerySchema = paginationQuerySchema.merge(baseFilterSchema).extend({
-  client_id: uuidSchema.optional(),
-  status: reconciliationStatusSchema.optional(),
-  detection_date_from: dateSchema.optional(),
-  detection_date_to: dateSchema.optional(),
-  difference_min: numberTransform.optional(),
-  difference_max: numberTransform.optional()
-});
 
 // ============================================================================
 // BILLING SETTINGS SCHEMAS
@@ -933,14 +896,6 @@ export const taxRateListResponseSchema = paginatedResponseSchema.extend({
   data: z.array(taxRateResponseSchema)
 });
 
-export const reconciliationSuccessResponseSchema = successResponseSchema.extend({
-  data: creditReconciliationReportResponseSchema
-});
-
-export const reconciliationListResponseSchema = paginatedResponseSchema.extend({
-  data: z.array(creditReconciliationReportResponseSchema)
-});
-
 export const accountBalanceSuccessResponseSchema = successResponseSchema.extend({
   data: accountBalanceReportSchema
 });
@@ -956,11 +911,6 @@ export const bulkOperationSuccessResponseSchema = successResponseSchema.extend({
 // ============================================================================
 // UTILITY SCHEMAS FOR COMPLEX OPERATIONS
 // ============================================================================
-
-export const validateCreditBalanceSchema = z.object({
-  client_id: uuidSchema,
-  expected_balance: z.number().optional()
-});
 
 export const creditValidationResultSchema = z.object({
   is_valid: z.boolean(),
@@ -999,7 +949,6 @@ export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>;
 export type TransactionStatus = z.infer<typeof transactionStatusSchema>;
 export type DiscountType = z.infer<typeof discountTypeSchema>;
 export type PaymentMethodType = z.infer<typeof paymentMethodTypeSchema>;
-export type ReconciliationStatus = z.infer<typeof reconciliationStatusSchema>;
 export type TaxType = z.infer<typeof taxTypeSchema>;
 export type PlanType = z.infer<typeof planTypeSchema>;
 export type BillingMethod = z.infer<typeof billingMethodSchema>;
@@ -1026,6 +975,7 @@ export type InvoiceListQuery = z.infer<typeof invoiceListQuerySchema>;
 export type CreatePaymentMethodRequest = z.infer<typeof createPaymentMethodSchema>;
 export type UpdatePaymentMethodRequest = z.infer<typeof updatePaymentMethodSchema>;
 export type PaymentMethodResponse = z.infer<typeof paymentMethodResponseSchema>;
+export type PaymentMethodListQuery = z.infer<typeof paymentMethodListQuerySchema>;
 
 export type CreateContractLineRequest = z.infer<typeof createContractLineSchema>;
 export type UpdateContractLineRequest = z.infer<typeof updateContractLineSchema>;
@@ -1034,9 +984,6 @@ export type ContractLineResponse = z.infer<typeof contractLineResponseSchema>;
 export type CreateTaxRateRequest = z.infer<typeof createTaxRateSchema>;
 export type UpdateTaxRateRequest = z.infer<typeof updateTaxRateSchema>;
 export type TaxRateResponse = z.infer<typeof taxRateResponseSchema>;
-
-export type CreateCreditReconciliationReportRequest = z.infer<typeof createCreditReconciliationReportSchema>;
-export type CreditReconciliationReportResponse = z.infer<typeof creditReconciliationReportResponseSchema>;
 
 export type AccountBalanceReport = z.infer<typeof accountBalanceReportSchema>;
 export type AgingReport = z.infer<typeof agingReportSchema>;

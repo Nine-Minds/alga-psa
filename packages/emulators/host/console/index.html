@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>algasim console</title>
+<style>
+  :root {
+    --bg: #101418; --panel: #181e24; --panel-2: #1f262e; --line: #2a333d;
+    --text: #dbe4ec; --dim: #8a99a8; --accent: #4fa3ff; --ok: #45c48a;
+    --warn: #e6a23c; --bad: #e0605e; --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  header { display: flex; align-items: center; gap: 16px; padding: 10px 16px;
+    background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 2; }
+  header h1 { font-size: 15px; margin: 0; letter-spacing: .4px; }
+  header h1 span { color: var(--accent); }
+  .clock { margin-left: auto; display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; color: var(--dim); }
+  .clock input { width: 70px; }
+  main { display: grid; grid-template-columns: 230px 1fr; min-height: calc(100vh - 45px); }
+  nav { background: var(--panel); border-right: 1px solid var(--line); padding: 12px 0; }
+  nav h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--dim); margin: 14px 16px 6px; }
+  nav button { display: block; width: 100%; text-align: left; background: none; border: none;
+    color: var(--text); padding: 7px 16px; cursor: pointer; font-size: 14px; }
+  nav button:hover { background: var(--panel-2); }
+  nav button.active { background: var(--panel-2); border-left: 3px solid var(--accent); padding-left: 13px; }
+  nav .sub { color: var(--dim); font-size: 11px; font-family: var(--mono); }
+  #content { padding: 18px 22px; overflow-x: auto; }
+  section.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 14px 16px; margin-bottom: 16px; }
+  section.card > h3 { margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: .8px; color: var(--dim); }
+  .control { border-top: 1px solid var(--line); padding: 10px 0; }
+  .control:first-of-type { border-top: none; }
+  .control .head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .control .name { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+  .control .desc { color: var(--dim); font-size: 12px; }
+  form.params { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-top: 8px; }
+  form.params label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--dim); }
+  input, select, textarea { background: var(--bg); color: var(--text); border: 1px solid var(--line);
+    border-radius: 5px; padding: 5px 8px; font-size: 13px; font-family: var(--mono); }
+  textarea { width: 340px; min-height: 54px; }
+  button.go { background: var(--accent); color: #06121f; font-weight: 600; border: none;
+    border-radius: 5px; padding: 6px 14px; cursor: pointer; font-size: 13px; }
+  button.go.subtle { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }
+  button.go.danger { background: var(--bad); color: #1c0808; }
+  .badge { font-size: 10px; font-weight: 700; letter-spacing: .5px; border-radius: 4px; padding: 2px 6px; }
+  .badge.armed { background: rgba(224,96,94,.18); color: var(--bad); }
+  .badge.port { background: rgba(79,163,255,.15); color: var(--accent); font-family: var(--mono); }
+  pre.out { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
+    font-size: 12px; overflow-x: auto; max-height: 340px; margin: 8px 0 0; white-space: pre-wrap; word-break: break-word; }
+  pre.out.error { border-color: var(--bad); color: var(--bad); }
+  .tabs { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+  .tabs button { background: var(--panel-2); border: 1px solid var(--line); color: var(--dim);
+    border-radius: 5px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: var(--mono); }
+  .tabs button.active { color: var(--text); border-color: var(--accent); }
+  .muted { color: var(--dim); font-size: 12px; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<header>
+  <h1><span>algasim</span> console</h1>
+  <span id="hostinfo" class="muted"></span>
+  <div class="clock">
+    <span id="clock-now">…</span>
+    <input id="clock-adv" placeholder="32d" title='Duration: "500ms", "30s", "4h30m", "32d"'>
+    <button class="go subtle" onclick="advanceClock()">advance</button>
+  </div>
+</header>
+<main>
+  <nav>
+    <h2>Emulators</h2>
+    <div id="nav-emulators"></div>
+    <h2>Host</h2>
+    <div id="nav-host"></div>
+  </nav>
+  <div id="content"></div>
+</main>
+<script>
+'use strict';
+let catalog = null;
+let selected = null;          // emulator id or '#scenarios'
+let activeView = {};          // emulator id -> state view name
+let refreshTimer = null;
+
+async function api(method, path, body) {
+  const response = await fetch(path, {
+    method,
+    headers: { 'content-type': 'application/json' },
+    body: method === 'POST' ? JSON.stringify(body === undefined ? {} : body) : undefined,
+  });
+  const payload = await response.json();
+  if (!response.ok || payload.ok === false) throw new Error(payload.error || ('HTTP ' + response.status));
+  return payload.result;
+}
+
+function el(tag, attrs, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs || {})) {
+    if (key === 'class') node.className = value;
+    else if (key.startsWith('on')) node.addEventListener(key.slice(2), value);
+    else node.setAttribute(key, value);
+  }
+  for (const child of children) {
+    if (child == null) continue;
+    node.append(child.nodeType ? child : document.createTextNode(String(child)));
+  }
+  return node;
+}
+
+// ---- schema-driven forms -------------------------------------------------
+
+function isSimpleProp(prop) {
+  return prop && ['string', 'number', 'integer', 'boolean'].includes(prop.type);
+}
+
+function buildForm(schema, submitLabel, onSubmit, danger, rerenderOnSuccess) {
+  const form = el('form', { class: 'params' });
+  const props = schema && schema.type === 'object' ? (schema.properties || {}) : null;
+  const required = new Set((schema && schema.required) || []);
+  const jsonFallback = !schema ? false : schema.type !== 'object';
+
+  if (props) {
+    for (const [name, prop] of Object.entries(props)) {
+      let input;
+      if (prop.type === 'boolean') {
+        input = el('select', { name });
+        input.append(el('option', { value: '' }, required.has(name) ? 'choose…' : '(unset)'));
+        input.append(el('option', { value: 'true' }, 'true'));
+        input.append(el('option', { value: 'false' }, 'false'));
+      } else if (isSimpleProp(prop)) {
+        input = el('input', {
+          name,
+          placeholder: prop.default !== undefined ? String(prop.default) : (prop.type || ''),
+        });
+      } else {
+        input = el('textarea', { name, placeholder: 'JSON' });
+        input.dataset.json = '1';
+      }
+      input.dataset.type = prop.type || 'json';
+      form.append(el('label', {}, name + (required.has(name) ? ' *' : ''), input));
+    }
+  } else if (jsonFallback || !schema) {
+    if (schema) {
+      const input = el('textarea', { name: '__raw', placeholder: 'params JSON' });
+      form.append(el('label', {}, 'params', input));
+    }
+  }
+
+  const out = el('pre', { class: 'out', style: 'display:none' });
+  const button = el('button', { class: 'go' + (danger ? ' danger' : ''), type: 'submit' }, submitLabel);
+  form.append(button);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    let params = {};
+    try {
+      for (const input of form.querySelectorAll('input,select,textarea')) {
+        const value = input.value.trim();
+        if (!value) continue;
+        if (input.name === '__raw') { params = JSON.parse(value); break; }
+        if (input.dataset.json) params[input.name] = JSON.parse(value);
+        else if (input.dataset.type === 'number' || input.dataset.type === 'integer') params[input.name] = Number(value);
+        else if (input.dataset.type === 'boolean') params[input.name] = value === 'true';
+        else params[input.name] = value;
+      }
+    } catch (err) {
+      out.style.display = ''; out.className = 'out error'; out.textContent = 'Bad JSON: ' + err.message;
+      return;
+    }
+    try {
+      const result = await onSubmit(params);
+      if (rerenderOnSuccess) { await loadCatalog(true); return; }
+      out.className = 'out'; out.style.display = '';
+      out.textContent = result === null ? 'ok' : JSON.stringify(result, null, 2);
+      await loadCatalog(false);
+    } catch (err) {
+      out.className = 'out error'; out.style.display = ''; out.textContent = err.message;
+    }
+  });
+  const wrap = el('div', {});
+  wrap.append(form, out);
+  return wrap;
+}
+
+// ---- rendering -------------------------------------------------------------
+
+function renderNav() {
+  const emulators = document.getElementById('nav-emulators');
+  emulators.replaceChildren(...catalog.emulators.map((emu) =>
+    el('button', { class: selected === emu.id ? 'active' : '', onclick: () => select(emu.id) },
+      emu.displayName, ' ', el('span', { class: 'sub' }, ':' + emu.port))));
+  const hostNav = document.getElementById('nav-host');
+  hostNav.replaceChildren(
+    el('button', { class: selected === '#scenarios' ? 'active' : '', onclick: () => select('#scenarios') }, 'Scenarios'));
+}
+
+function controlBlock(emu, kind, def, run, extra) {
+  const head = el('div', { class: 'head' }, el('span', { class: 'name' }, def.name),
+    extra || null, el('span', { class: 'desc' }, def.description || ''));
+  const block = el('div', { class: 'control' }, head);
+  block.append(run);
+  return block;
+}
+
+function renderEmulator(emu) {
+  const content = document.getElementById('content');
+  const sections = [];
+
+  if (emu.stateViews.length) {
+    const active = activeView[emu.id] || emu.stateViews[0].name;
+    activeView[emu.id] = active;
+    const tabs = el('div', { class: 'tabs' }, ...emu.stateViews.map((view) =>
+      el('button', { class: view.name === active ? 'active' : '',
+        onclick: () => { activeView[emu.id] = view.name; renderEmulator(emu); } }, view.name)));
+    const pre = el('pre', { class: 'out', id: 'stateview' }, 'loading…');
+    sections.push(el('section', { class: 'card' }, el('h3', {}, 'State'), tabs, pre));
+    refreshState(emu.id, active);
+  }
+
+  if (emu.seeders.length) {
+    sections.push(el('section', { class: 'card' }, el('h3', {}, 'Seed'),
+      ...emu.seeders.map((def) => controlBlock(emu, 'seed', def,
+        buildForm(def.paramsSchema, 'seed', (params) => api('POST', '/control/' + emu.id + '/seed/' + def.name, params))))));
+  }
+
+  if (emu.actions.length) {
+    sections.push(el('section', { class: 'card' }, el('h3', {}, 'Actions'),
+      ...emu.actions.map((def) => controlBlock(emu, 'action', def,
+        buildForm(def.paramsSchema, 'run', (params) => api('POST', '/control/' + emu.id + '/actions/' + def.name, params))))));
+  }
+
+  if (emu.faults.length) {
+    sections.push(el('section', { class: 'card' }, el('h3', {}, 'Faults'),
+      ...emu.faults.map((def) => {
+        const armed = def.armed;
+        const controls = el('div', {});
+        controls.append(buildForm(def.paramsSchema, armed ? 're-arm' : 'arm',
+          (params) => api('POST', '/control/' + emu.id + '/faults/' + def.name + '/arm', params), true, true));
+        if (armed) {
+          controls.append(el('button', { class: 'go subtle', style: 'margin-top:6px',
+            onclick: async () => { await api('POST', '/control/' + emu.id + '/faults/' + def.name + '/disarm'); await loadCatalog(true); } }, 'disarm'));
+        }
+        return controlBlock(emu, 'fault', def, controls,
+          armed ? el('span', { class: 'badge armed' }, 'ARMED') : null);
+      })));
+  }
+
+  const reset = el('section', { class: 'card' }, el('h3', {}, 'Reset'),
+    el('div', { class: 'row' },
+      el('button', { class: 'go danger', onclick: async () => { await api('POST', '/control/' + emu.id + '/reset'); await loadCatalog(true); } },
+        'reset ' + emu.id),
+      el('span', { class: 'muted' }, 'Clears state, disarms all faults.')));
+
+  content.replaceChildren(
+    el('div', { class: 'row', style: 'margin-bottom:12px' },
+      el('h2', { style: 'margin:0;font-size:18px' }, emu.displayName),
+      el('span', { class: 'badge port' }, 'vendor :' + emu.port)),
+    ...sections, reset);
+}
+
+async function renderScenarios() {
+  const content = document.getElementById('content');
+  const scenarios = await api('GET', '/control/scenarios');
+  const out = el('pre', { class: 'out', style: 'display:none' });
+  const rows = scenarios.length
+    ? scenarios.map((scenario) => el('div', { class: 'control' },
+        el('div', { class: 'head' },
+          el('span', { class: 'name' }, scenario.name),
+          el('span', { class: 'desc' }, (scenario.description || '') + ' · ' + scenario.stepCount + ' steps'),
+          el('button', { class: 'go', onclick: async () => {
+            try {
+              out.className = 'out'; out.style.display = '';
+              out.textContent = JSON.stringify(await api('POST', '/control/scenarios/' + scenario.name + '/run'), null, 2);
+            } catch (err) { out.className = 'out error'; out.style.display = ''; out.textContent = err.message; }
+          } }, 'run'))))
+    : [el('p', { class: 'muted' }, 'No scenarios loaded. Start the host with --scenarios <dir>, or run files from the CLI: algasim scenario run <file>.')];
+  content.replaceChildren(
+    el('h2', { style: 'margin:0 0 12px;font-size:18px' }, 'Scenarios'),
+    el('section', { class: 'card' }, ...rows, out));
+}
+
+async function refreshState(emuId, view) {
+  const pre = document.getElementById('stateview');
+  if (!pre || selected !== emuId) return;
+  try {
+    const result = await api('GET', '/control/' + emuId + '/state/' + view);
+    pre.textContent = JSON.stringify(result, null, 2);
+  } catch (err) {
+    pre.textContent = err.message;
+  }
+}
+
+function select(id) {
+  selected = id;
+  renderNav();
+  if (id === '#scenarios') renderScenarios();
+  else renderEmulator(catalog.emulators.find((emu) => emu.id === id));
+}
+
+async function advanceClock() {
+  const input = document.getElementById('clock-adv');
+  if (!input.value.trim()) return;
+  await api('POST', '/control/clock/advance', { duration: input.value.trim() });
+  input.value = '';
+  await loadCatalog(false);
+}
+
+async function loadCatalog(rerender) {
+  catalog = await api('GET', '/control/catalog');
+  document.getElementById('clock-now').textContent =
+    catalog.clock.now.replace('T', ' ').slice(0, 19) + (catalog.clock.offsetMs ? ' (+' + Math.round(catalog.clock.offsetMs / 1000) + 's)' : '');
+  document.getElementById('hostinfo').textContent =
+    catalog.emulators.length + ' emulator' + (catalog.emulators.length === 1 ? '' : 's');
+  if (!selected || (selected !== '#scenarios' && !catalog.emulators.some((emu) => emu.id === selected))) {
+    selected = catalog.emulators[0] ? catalog.emulators[0].id : '#scenarios';
+    rerender = true;
+  }
+  renderNav();
+  if (rerender && selected) select(selected);
+}
+
+loadCatalog(true).catch((err) => {
+  document.getElementById('content').replaceChildren(
+    el('pre', { class: 'out error' }, 'Cannot reach control API: ' + err.message));
+});
+setInterval(() => {
+  if (selected && selected !== '#scenarios') refreshState(selected, activeView[selected]);
+  if (catalog) api('GET', '/control/clock').then((clock) => {
+    document.getElementById('clock-now').textContent =
+      clock.now.replace('T', ' ').slice(0, 19) + (clock.offsetMs ? ' (+' + Math.round(clock.offsetMs / 1000) + 's)' : '');
+  }).catch(() => undefined);
+}, 2500);
+</script>
+</body>
+</html>

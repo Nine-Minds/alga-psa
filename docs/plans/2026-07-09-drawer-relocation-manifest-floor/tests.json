@@ -1,0 +1,135 @@
+[
+  {
+    "id": "T001",
+    "description": "Canary baseline: projects route 9.8MB/137 modules; non-work routes /msp/inventory, /msp/settings, /msp/billing floor recorded (current cross-feature module counts captured)",
+    "implemented": true,
+    "commitGroup": "p1-intercept-scaffold",
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "QuickCreateDialog.tsx no longer statically imports QuickAddClient/Contact/Asset/ProjectQuickAdd/QuickAddService/QuickAddProduct (grep + typecheck green)",
+    "implemented": true,
+    "commitGroup": "p1-intercept-scaffold",
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T010",
+    "description": "Each intercepted create-<x> route resolves and its @modal slot renders the dialog; the existing create-ticket path still works unchanged",
+    "implemented": true,
+    "commitGroup": "p1-intercept-dialogs",
+    "featureIds": ["F010", "F011", "F012", "F013", "F014"]
+  },
+  {
+    "id": "T011",
+    "description": "Canary after intercept: assets/clients/projects/billing quick-add component graphs absent from the shell/header chunk (present only under their create-<x> route)",
+    "implemented": true,
+    "commitGroup": "p1-intercept-dialogs",
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T020",
+    "description": "Phase 1 gates: typecheck exit 0; ESLint guard 0; no new import('@alga-psa/ in shell; all 6 dialogs open+submit; project/user-activities pages still load",
+    "implemented": true,
+    "commitGroup": "p1-verify",
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T030",
+    "description": "Work-set grep is exhaustive: every file calling useDrawer/openDrawer/replaceDrawer and every cross-feature use* hook is traced to a /msp route and classified; no route with drawer usage lands in the non-work list",
+    "implemented": true,
+    "commitGroup": "p2-define-work-set",
+    "featureIds": ["F030", "F031"]
+  },
+  {
+    "id": "T031",
+    "description": "Work vs non-work lists recorded with measured non-work floor; the user's OOM-trigger routes (inventory/billing/settings) are correctly classified",
+    "implemented": true,
+    "commitGroup": "p2-define-work-set",
+    "featureIds": ["F031"]
+  },
+  {
+    "id": "T040",
+    "description": "WorkspaceProviders renders the exact same provider nesting + DrawerOutlet as DefaultLayout 461-472/575 did (structural equivalence — a work route wrapped in it resolves every cross-feature context)",
+    "implemented": true,
+    "commitGroup": "p2-workspace-extract",
+    "featureIds": ["F040"]
+  },
+  {
+    "id": "T041",
+    "description": "DrawerProvider state placement decided (OQ1): a surviving chrome trigger (if any) can still open a drawer; if none, state moving into WorkspaceProviders is confirmed safe",
+    "implemented": true,
+    "commitGroup": "p2-workspace-extract",
+    "featureIds": ["F041"]
+  },
+  {
+    "id": "T050",
+    "description": "SPIKE: the chosen mount mechanism coexists with the @modal parallel slot + create-<x> intercepting routes (create-ticket modal still intercepts from a work route; no route-group/parallel-route breakage)",
+    "implemented": true,
+    "commitGroup": "p2-workspace-mount",
+    "featureIds": ["F050"]
+  },
+  {
+    "id": "T051",
+    "description": "Every work route is wrapped by WorkspaceProviders (a cross-feature hook consumer on each work route resolves context; SSR of each work route succeeds)",
+    "implemented": true,
+    "commitGroup": "p2-workspace-mount",
+    "featureIds": ["F051"]
+  },
+  {
+    "id": "T052",
+    "description": "CROSS-FEATURE DRAWER NAV intact: on a work route, open ticket drawer → replaceDrawer to client → openDrawer interaction → goBack/forward through the stack + drawer.historyBack shortcut, all with intact context",
+    "implemented": true,
+    "commitGroup": "p2-workspace-mount",
+    "featureIds": ["F052"]
+  },
+  {
+    "id": "T060",
+    "description": "DefaultLayout no longer imports/renders the cross-feature provider stack or DrawerOutlet (grep + typecheck); only justified globals remain",
+    "implemented": true,
+    "commitGroup": "p2-remove-from-shell",
+    "featureIds": ["F060"]
+  },
+  {
+    "id": "T061",
+    "description": "Canary: /msp/inventory and /msp/settings pull ZERO tickets/projects/scheduling/clients/user-activities cross-feature modules; their partial size drops materially vs T001 baseline",
+    "implemented": true,
+    "commitGroup": "p2-remove-from-shell",
+    "featureIds": ["F061"]
+  },
+  {
+    "id": "T062",
+    "description": "No non-work route has a broken drawer trigger (runtime smoke a sample of non-work routes: no openDrawer-with-no-outlet dead-ends)",
+    "implemented": true,
+    "commitGroup": "p2-remove-from-shell",
+    "featureIds": ["F061"]
+  },
+  {
+    "id": "T063",
+    "description": "Settings user management and service-request definition editor drawer triggers work with local lightweight drawer handling after the shell DrawerOutlet is removed; neither route imports WorkspaceProviders",
+    "implemented": true,
+    "commitGroup": "p2-remove-from-shell",
+    "featureIds": ["F062"]
+  },
+  {
+    "id": "T070",
+    "description": "Final canary: non-work routes floor-free; work routes unchanged; >=15 mixed routes compile with NO Zone-Allocation OOM; Results table filled",
+    "implemented": true,
+    "commitGroup": "p2-verify",
+    "featureIds": ["F070"]
+  },
+  {
+    "id": "T071",
+    "description": "Final gates: full typecheck exit 0; ESLint barrel guard 0; rg finds zero dynamic import('@alga-psa/ in shell/layouts/msp-composition; packageDependencies.test.ts passes; touched-package unit tests pass",
+    "implemented": true,
+    "commitGroup": "p2-verify",
+    "featureIds": ["F071"]
+  },
+  {
+    "id": "T072",
+    "description": "Final runtime smoke matrix: full cross-feature drawer navigation works on work routes (ticket↔client↔interaction↔project chains with back/forward); non-work routes render chrome only, no drawer regressions",
+    "implemented": true,
+    "commitGroup": "p2-verify",
+    "featureIds": ["F072"]
+  }
+]

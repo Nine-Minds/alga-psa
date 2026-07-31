@@ -1,4 +1,8 @@
 {
+  "escalationManager": {
+    "unsavedChanges_one": "{{count}} unsaved change",
+    "unsavedChanges_other": "{{count}} unsaved changes"
+  },
   "page": {
     "title": "Admin Settings"
   },
@@ -34,7 +38,7 @@
   },
   "general": {
     "title": "General Settings",
-    "description": "Manage your organization name and default client. The default client is used for configuration purposes and represents your MSP.",
+    "description": "Manage your organization name and choose which client record represents your own company. That client's details appear on invoices, quotes, and client-facing communications.",
     "fields": {
       "organizationName": {
         "label": "Organization Name"
@@ -49,14 +53,24 @@
       "saveDefaultTimezone": "Save Default Time Zone"
     },
     "clients": {
-      "title": "Clients",
+      "title": "Your Company",
+      "help": "The client marked as your company is your own organization. Its name, address, and logo appear on invoices, quotes, and client-facing communications.",
+      "currentDefault": "Your company is currently {{name}}.",
+      "yourCompanyBadge": "Your company",
       "table": {
         "name": "Name",
-        "default": "Default",
+        "default": "Your Company (Default)",
         "actions": "Actions"
       },
       "placeholder": "Select a client to add",
-      "addClient": "Add Client"
+      "addClient": "Add Client",
+      "confirmDialog": {
+        "title": "Change your company?",
+        "message": "This will change your company from {{current}} to {{next}}. {{next}} will represent your own organization on invoices, quotes, and client-facing emails and invitations.",
+        "messageInitial": "This will set {{next}} as your company. {{next}} will represent your own organization on invoices, quotes, and client-facing emails and invitations.",
+        "confirm": "Change Company",
+        "cancel": "Cancel"
+      }
     },
     "messages": {
       "success": {
@@ -72,6 +86,7 @@
         "updateTimezone": "Failed to update timezone",
         "selectClient": "Please select a client",
         "clientNotFound": "Client not found",
+        "clientAlreadyAdded": "That client is already listed here",
         "addClient": "Failed to add client",
         "removeClient": "Failed to remove client",
         "setDefaultClient": "Failed to set default client",
@@ -146,6 +161,7 @@
       "copying": "Copying...",
       "createUser": "Create User",
       "sendInvitation": "Send Portal Invitation",
+      "sendTeamInvitation": "Send Invitation",
       "cancel": "Cancel"
     },
     "form": {
@@ -179,7 +195,8 @@
       },
       "passwordAlert": {
         "withPassword": "Setting a password will create the user immediately. They can log in right away.",
-        "withoutPassword": "No password required — we will send a portal invitation for the user to set it."
+        "withoutPassword": "No password required — we will send a portal invitation for the user to set it.",
+        "withoutPasswordMsp": "No password required — we will send them an email invitation to set it themselves."
       },
       "requirePasswordChange": "Require password change on first login"
     },
@@ -204,9 +221,11 @@
     "messages": {
       "success": {
         "portalInvitationSent": "Portal invitation sent successfully!",
+        "teamInvitationSent": "Invitation sent successfully!",
         "clientPortalUserCreated": "Client portal user created successfully!",
         "copiedVanityLink": "Copied vanity portal login link to clipboard",
-        "copiedCanonicalLink": "Copied canonical portal login link to clipboard"
+        "copiedCanonicalLink": "Copied canonical portal login link to clipboard",
+        "invitationRevoked": "Invitation revoked"
       },
       "error": {
         "fetchUsers": "Failed to fetch users",
@@ -233,6 +252,7 @@
         "contactNotFound": "Contact not found.",
         "contactMissingEmailGeneric": "Contact does not have an email address. Please add an email address to the contact before sending an invitation.",
         "contactInvalidEmail": "Contact has an invalid email address. Please update the contact with a valid email address before sending an invitation.",
+        "invalidEmail": "Please enter a valid email address",
         "noDefaultClient": "No default client configured for this tenant. Please set a default client in General Settings.",
         "noDefaultLocation": "Default client must have a default location configured to send portal invitations.",
         "noLocationEmail": "Default client's location must have a contact email configured.",
@@ -241,8 +261,17 @@
         "roleRequired": "Role is required",
         "invalidRole": "Selected role is invalid",
         "licenseLimitReached": "You've reached your MSP user license limit.",
-        "soloPlanLimit": "Solo plan is limited to 1 user. Upgrade to Pro to add more users."
+        "soloPlanLimit": "Solo plan is limited to 1 user. Upgrade to Pro to add more users.",
+        "revokeInvitation": "Failed to revoke invitation",
+        "invitationNotFound": "Invitation not found or already used"
       }
+    },
+    "invitations": {
+      "title": "Pending Invitations",
+      "description": "Invited team members who haven't set up their account yet.",
+      "expiresPrefix": "Expires:",
+      "revoke": "Revoke",
+      "revoking": "Revoking..."
     }
   },
   "userDetails": {
@@ -263,6 +292,27 @@
       "reportsTo": {
         "label": "Reports To",
         "placeholder": "Select manager"
+      },
+      "workSchedule": {
+        "label": "Working hours",
+        "help": "When this person is on the clock. Used by utilization reports. This is not client booking availability.",
+        "setHours": "Set working hours",
+        "clear": "Clear",
+        "weeklyTotal": "{{hours}}h per week",
+        "days": {
+          "0": "Sunday",
+          "1": "Monday",
+          "2": "Tuesday",
+          "3": "Wednesday",
+          "4": "Thursday",
+          "5": "Friday",
+          "6": "Saturday"
+        }
+      },
+      "weeklyCapacity": {
+        "label": "Weekly capacity (hours)",
+        "placeholder": "e.g. 40",
+        "help": "Fallback used only when no working hours are set above."
       },
       "lastLogin": "Last Login",
       "roles": "Roles",
@@ -308,7 +358,9 @@
         "passwordTooShort": "Password must be at least 8 characters long",
         "passwordChangeFailed": "Failed to change password",
         "passwordChangeError": "An error occurred while changing password",
-        "permissionDenied": "You do not have permission to change user roles."
+        "permissionDenied": "You do not have permission to change user roles.",
+        "invalidCapacity": "Weekly capacity must be a positive number.",
+        "invalidWorkSchedule": "Working hours must be valid time ranges that end after they start."
       }
     },
     "loading": "Loading user details..."
@@ -359,9 +411,9 @@
         "new": "New",
         "lead": "Lead"
       },
-      "memberCount": "{{count}} member",
-      "memberCount_plural": "{{count}} members",
-      "leadName": "Lead: {{name}}"
+      "leadName": "Lead: {{name}}",
+      "memberCount_one": "{{count}} member",
+      "memberCount_other": "{{count}} members"
     },
     "messages": {
       "error": {
@@ -380,7 +432,6 @@
       "display": "Display",
       "ticketNumbering": "Ticket Numbering",
       "boards": "Boards",
-      "statuses": "Statuses",
       "priorities": "Priorities",
       "categories": "Categories",
       "checklistTemplates": "Checklist Templates"
@@ -485,7 +536,9 @@
         "boardManager": "Board Manager",
         "order": "Order",
         "itilBoard": "ITIL Board",
-        "actions": "Actions"
+        "actions": "Actions",
+        "ticketLoad": "Ticket load",
+        "statuses": "Statuses"
       },
       "statusLabels": {
         "active": "Active",
@@ -504,7 +557,8 @@
         "up": "Up",
         "down": "Down",
         "remove": "Remove",
-        "addStatus": "Add Status"
+        "addStatus": "Add Status",
+        "back": "Back to Boards"
       },
       "fields": {
         "boardName": {
@@ -584,6 +638,10 @@
         "liveTimer": {
           "label": "Enable live ticket timer",
           "help": "Shows the live timer and tracked intervals on tickets in this board. Manual time entry remains available."
+        },
+        "defaultBoard": {
+          "label": "Default board for client portal tickets",
+          "help": "New tickets submitted from the client portal land on this board. Only one board can be the default."
         }
       },
       "dialog": {
@@ -701,15 +759,46 @@
         "inactivityDaysLabel": "Days of inactivity",
         "warningDaysLabel": "Warn days before close",
         "warningDaysPlaceholder": "No warning",
+        "suppressContactNotificationsLabel": "Don't notify the customer",
+        "suppressContactNotificationsHelp": "Skips the warning email, close email, survey invitation, and client-portal notification.",
+        "suppressInternalNotificationsLabel": "Also don't notify agents and watchers",
         "ruleEnabledLabel": "Enabled",
         "removeRule": "Remove",
         "messages": {
           "fetchFailed": "Failed to load close rules for this board",
           "autoCloseStatusRequired": "Each auto-close rule needs a trigger status and a closed target status",
           "autoCloseDaysInvalid": "Auto-close inactivity days must be a positive whole number",
-          "autoCloseWarningInvalid": "The warning lead time must be smaller than the inactivity days"
+          "autoCloseWarningInvalid": "The warning lead time must be smaller than the inactivity days",
+          "autoCloseSuppressionInvalid": "Agent and watcher notifications can only be skipped when customer notifications are skipped."
         }
-      }
+      },
+      "editor": {
+        "sections": {
+          "general": "General",
+          "generalHelp": "Name, description, visibility and default",
+          "assignment": "Assignment & SLA",
+          "assignmentHelp": "Default routing, SLA and board manager",
+          "inbound": "Email & inbound replies",
+          "inboundHelp": "Reopen tickets when clients reply by email",
+          "close": "Close rules",
+          "closeHelp": "Requirements before a ticket can be closed",
+          "automation": "Automation",
+          "automationHelp": "Auto-close stale tickets after inactivity",
+          "statuses": "Priorities & statuses",
+          "statusesHelp": "Default priority and the ticket statuses for this board",
+          "display": "Display & behaviour",
+          "displayHelp": "Live timer and board type"
+        },
+        "saveChanges": "Save Changes",
+        "unsaved": "Unsaved",
+        "unsavedShort": "Unsaved changes",
+        "unsavedBanner": "You have unsaved changes. Click \"Save Changes\" to apply them.",
+        "allSaved": "All changes saved",
+        "reopenBadge": "reopen",
+        "required": "Required"
+      },
+      "empty": "No boards found.",
+      "searchPlaceholder": "Search boards…"
     },
     "priorities": {
       "title": {
@@ -916,8 +1005,8 @@
       "messages": {
         "success": {
           "deleted": "Interaction type deleted",
-          "imported": "Imported {{count}} interaction type",
-          "imported_plural": "Imported {{count}} interaction types"
+          "imported_one": "Imported {{count}} interaction type",
+          "imported_other": "Imported {{count}} interaction types"
         },
         "error": {
           "fetchFailed": "Failed to fetch interaction types",
@@ -1001,6 +1090,15 @@
     "openMenu": "Open menu"
   },
   "clientPortal": {
+    "features": {
+      "title": "Portal Features",
+      "description": "Choose which self-service features clients can access.",
+      "appointmentsLabel": "Appointments",
+      "appointmentsHelp": "Allow clients to view and request appointments from the client portal.",
+      "appointmentsEnabled": "Appointments are now available in the client portal",
+      "appointmentsDisabled": "Appointments are now hidden from the client portal",
+      "updateFailed": "Failed to update client portal features"
+    },
     "branding": {
       "title": "Branding & Appearance",
       "description": "Customize the look and feel of your client portal with your company branding.",
@@ -1011,7 +1109,8 @@
         "primaryColor": "Primary Color",
         "secondaryColor": "Secondary Color",
         "supportEmail": "Support Email",
-        "supportPhone": "Support Phone"
+        "supportPhone": "Support Phone",
+        "heroGradient": "Dashboard hero gradient"
       },
       "help": {
         "companyName": "This will be displayed in the client portal header",
@@ -1019,7 +1118,12 @@
         "primaryColor": "Used for buttons, links, and highlights",
         "secondaryColor": "Used for accents and secondary actions",
         "supportEmail": "Shown to clients in appointment confirmations and other outbound emails as the address to contact for help.",
-        "supportPhone": "Optional. Shown alongside the support email in client-facing emails."
+        "supportPhone": "Optional. Shown alongside the support email in client-facing emails.",
+        "heroGradient": "Controls the welcome banner gradient on the client dashboard."
+      },
+      "heroGradient": {
+        "primaryShades": "Primary color to primary shade",
+        "primarySecondary": "Primary color to secondary color"
       },
       "preview": "Preview",
       "previewDarkMode": "Preview dark mode",
@@ -1049,7 +1153,22 @@
       "milestoneCompleted": "Project milestone completed",
       "dayAgo": "1 day ago",
       "createTicket": "Create Ticket",
-      "viewProjects": "View Projects"
+      "viewProjects": "View Projects",
+      "activeDevices": "Active devices",
+      "basicSupport": "Basic Support",
+      "dashboardTitle": "Dashboard",
+      "greeting": "Good morning, Alex 👋",
+      "navAppointments": "Appointments",
+      "navDashboard": "Dashboard",
+      "navDevices": "My devices",
+      "navProjects": "Projects",
+      "navServiceRequests": "Service Requests",
+      "navTickets": "Tickets",
+      "serviceRequests": "Service requests",
+      "upcomingShort": "Upcoming",
+      "upcomingVisits": "Upcoming visits",
+      "welcomeBack": "Welcome back",
+      "workspaceSection": "Workspace"
     },
     "signInPreview": {
       "portalTitle": "Client Portal",
@@ -1118,6 +1237,17 @@
         "step2": "Click \"Save Domain\" to trigger DNS verification and certificate provisioning.",
         "step3": "Use the Refresh button to poll provisioning progress. We will email your administrators if provisioning fails.",
         "canonicalHostFallback": "canonical host"
+      },
+      "appliance": {
+        "helpText": "Point this hostname at your appliance and have your reverse proxy forward the original Host header before saving.",
+        "checklistTitle": "Reverse proxy setup",
+        "step1Prefix": "Point ",
+        "step1Suffix": " at this appliance (an A record to its address, or a CNAME to your appliance host).",
+        "step2": "On your reverse proxy, terminate TLS for the domain and forward to this appliance on port 3000, preserving the original Host header (e.g. proxy_set_header Host $host) and sending X-Forwarded-Proto: https.",
+        "step3": "Obtain and maintain the TLS certificate for the domain on your proxy.",
+        "step4": "Save the domain here — it activates immediately. Wire DNS and your proxy first, since portal links switch to this domain right away.",
+        "docLinkText": "Reverse proxy setup & troubleshooting guide",
+        "neverSeenWarning": "No requests have reached {{domain}} yet. Check that your reverse proxy forwards the original Host header."
       },
       "badges": {
         "pending_dns": "Pending DNS",
@@ -1213,6 +1343,176 @@
       "telemetry": {
         "title": "Telemetry & Analytics",
         "description": "Manage your telemetry and analytics preferences"
+      }
+    },
+    "settingsForm": {
+      "enable": {
+        "label": "Enable Notifications",
+        "description": "Toggle all notifications on or off for this tenant"
+      },
+      "loading": "Loading notification settings...",
+      "loadError": "Failed to load settings",
+      "save": "Save Changes",
+      "saving": "Saving..."
+    },
+    "emailTemplatesUi": {
+      "preview": {
+        "subjectLabel": "Subject Preview",
+        "iframeTitle": "Email template preview",
+        "sampleDataNote": "Preview uses sample data. Actual emails will contain real values."
+      },
+      "errors": {
+        "loadFailed": "Failed to load templates"
+      },
+      "list": {
+        "loading": "Loading email templates...",
+        "templateCount": "({{templateCount}} templates)",
+        "usingCustom": "Using custom template",
+        "usingStandard": "Using standard template"
+      },
+      "columns": {
+        "name": "Name",
+        "actions": "Actions"
+      },
+      "fields": {
+        "language": "Language",
+        "subject": "Subject",
+        "htmlContent": "HTML Content",
+        "textContent": "Text Content"
+      },
+      "actions": {
+        "collapse": "Collapse",
+        "expand": "Expand",
+        "edit": "Edit",
+        "useStandard": "Use Standard",
+        "view": "View",
+        "customize": "Customize",
+        "sending": "Sending...",
+        "sendTest": "Send Test Email",
+        "close": "Close",
+        "cancel": "Cancel",
+        "saving": "Saving...",
+        "save": "Save"
+      },
+      "description": "Each event type has a standard template that can be customized. You can either use the standard template or create a custom version.",
+      "filter": {
+        "languages": "Languages",
+        "reset": "Reset"
+      },
+      "test": {
+        "sentTo": "Test email sent to {{recipient}}",
+        "failed": "Failed to send test email."
+      },
+      "view": {
+        "title": "Standard Template: {{name}}"
+      },
+      "tabs": {
+        "source": "Source",
+        "preview": "Preview"
+      },
+      "common": {
+        "notAvailable": "N/A"
+      },
+      "edit": {
+        "title": "Edit Custom Template: {{name}}"
+      },
+      "languages": {
+        "en": "English",
+        "fr": "French",
+        "es": "Spanish",
+        "de": "German",
+        "nl": "Dutch",
+        "it": "Italian",
+        "pl": "Polish",
+        "pt": "Portuguese"
+      }
+    },
+    "categoriesUi": {
+      "errors": {
+        "loadCategories": "Failed to load categories",
+        "loadSubtypes": "Failed to load notification subtypes",
+        "save": "Failed to save notification settings"
+      },
+      "loading": "Loading notification categories...",
+      "toasts": {
+        "saved": "Notification settings saved successfully",
+        "discarded": "Changes discarded"
+      },
+      "columns": {
+        "name": "Name",
+        "description": "Description",
+        "enabled": "Enabled",
+        "defaultForUsers": "Default for Users",
+        "actions": "Actions"
+      },
+      "tooltips": {
+        "cannotDisable": "This category cannot be disabled",
+        "cannotModify": "This category cannot be modified"
+      },
+      "actions": {
+        "enableAllSubtypes": "Enable all subtypes",
+        "disableAllSubtypes": "Disable all subtypes",
+        "disable": "Disable",
+        "enable": "Enable",
+        "disableDefault": "Disable default",
+        "enableDefault": "Enable default",
+        "discardChanges": "Discard Changes",
+        "saving": "Saving...",
+        "saveChanges": "Save Changes",
+        "cancel": "Cancel"
+      },
+      "help": {
+        "intro": "Control which email notification types are available and set defaults for new users.",
+        "enabledLabel": "Enabled:",
+        "enabledDescription": "Controls whether this notification type is active",
+        "defaultLabel": "Default for Users:",
+        "defaultDescription": "Sets whether new users have this notification enabled by default"
+      },
+      "unsavedChangesAlert": "You have unsaved changes. Click \"Save Changes\" to apply them.",
+      "discardDialog": {
+        "title": "Discard Changes?",
+        "message": "Are you sure you want to discard all unsaved changes? This action cannot be undone."
+      }
+    },
+    "internalCategoriesUi": {
+      "errors": {
+        "loadCategories": "Failed to load categories",
+        "loadSubtypes": "Failed to load notification subtypes",
+        "saveSettings": "Failed to save notification settings"
+      },
+      "loading": "Loading internal notification categories...",
+      "toasts": {
+        "saveSuccess": "Notification settings saved successfully",
+        "changesDiscarded": "Changes discarded"
+      },
+      "columns": {
+        "name": "Name",
+        "description": "Description",
+        "enabled": "Enabled",
+        "defaultForUsers": "Default for Users",
+        "actions": "Actions"
+      },
+      "actions": {
+        "enableAllSubtypes": "Enable all subtypes",
+        "disableAllSubtypes": "Disable all subtypes",
+        "disable": "Disable",
+        "enable": "Enable",
+        "disableDefault": "Disable default",
+        "enableDefault": "Enable default",
+        "discardChanges": "Discard Changes",
+        "saving": "Saving...",
+        "saveChanges": "Save Changes",
+        "cancel": "Cancel"
+      },
+      "intro": "Control which internal notification types are available and set defaults for new users.",
+      "enabledLabel": "Enabled:",
+      "enabledDescription": "Controls whether this notification type is active in the system",
+      "defaultForUsersLabel": "Default for Users:",
+      "defaultForUsersDescription": "Sets whether new users have this notification enabled by default",
+      "unsavedChangesAlert": "You have unsaved changes. Click \"Save Changes\" to apply them.",
+      "discardDialog": {
+        "title": "Discard Changes?",
+        "message": "Are you sure you want to discard all unsaved changes? This action cannot be undone."
       }
     }
   },
@@ -1507,8 +1807,6 @@
     },
     "sessions": {
       "title": "All User Sessions",
-      "subtitle": "{{sessionCount}} active session across {{userCount}} user",
-      "subtitle_plural": "{{sessionCount}} active sessions across {{userCount}} users",
       "filters": {
         "search": "Search",
         "searchPlaceholder": "Search by name, email, device, or IP...",
@@ -1551,13 +1849,21 @@
         "loading": "Loading sessions...",
         "noMatch": "No sessions match your search",
         "noSessions": "No active sessions found"
-      }
+      },
+      "subtitle_one": "{{sessionCount}} active session across {{userCount}} user",
+      "subtitle_other": "{{sessionCount}} active sessions across {{userCount}} users"
     }
   },
   "ssoBulk": {
     "loading": {
       "title": "Single Sign-On",
       "description": "Loading SSO bulk assignment tools..."
+    },
+    "status": {
+      "title": "Sign-in providers",
+      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
+      "available": "Available",
+      "notConfigured": "Not configured"
     },
     "autoLink": {
       "title": "Automatically set up SSO for new internal users",
@@ -1749,6 +2055,10 @@
         "label": "RMM",
         "description": "Connect remote monitoring and management tools"
       },
+      "itDocumentation": {
+        "label": "IT Documentation",
+        "description": "Connect IT documentation platforms to surface client documentation, assets, and credentials in context."
+      },
       "communication": {
         "label": "Communication",
         "description": "Connect inbox and collaboration surfaces for ticket processing, operator workflows, and Microsoft Teams access."
@@ -1760,8 +2070,8 @@
       "providers": {
         "label": "Providers",
         "description": {
-          "ee": "Configure shared provider credentials used by email, calendar, MSP SSO, and other integrations.",
-          "oss": "Configure shared provider credentials used by email, MSP SSO, and other integrations."
+          "ee": "Set up Google or Microsoft for staff sign-in, email, calendar, and other integrations.",
+          "oss": "Set up Google or Microsoft for staff sign-in, email, and other integrations."
         }
       },
       "identity": {
@@ -1782,6 +2092,10 @@
         "name": "RMM Integrations",
         "description": "Select and configure your RMM provider"
       },
+      "hudu": {
+        "name": "Hudu",
+        "description": "Connect a Hudu instance to view client documentation and credentials inside AlgaPSA."
+      },
       "email": {
         "name": "Inbound Email",
         "description": "Process incoming emails into tickets",
@@ -1800,13 +2114,13 @@
       "google": {
         "name": "Google",
         "description": {
-          "ee": "Tenant-owned Google Cloud credentials for Gmail and Calendar",
-          "oss": "Tenant-owned Google Cloud credentials for Gmail and MSP SSO support flows"
+          "ee": "Google OAuth credentials for staff sign-in, Gmail, and Calendar",
+          "oss": "Google OAuth credentials for staff sign-in and Gmail"
         },
-        "cardTitle": "Provider Credentials",
+        "cardTitle": "Google or Microsoft setup",
         "cardDescription": {
-          "ee": "Configure Google and Microsoft first, then connect provider accounts from the Inbound Email and Calendar integration screens. MSP SSO domain discovery uses these provider credentials with tenant login-domain mappings.",
-          "oss": "Configure Google and Microsoft first, then connect provider accounts from the Inbound Email integration screen. MSP SSO domain discovery uses these provider credentials with tenant login-domain mappings."
+          "ee": "Set up Google or Microsoft first. Then connect mailbox and calendar accounts from their integration screens. Staff sign-in uses the OAuth credentials saved here.",
+          "oss": "Set up Google or Microsoft first. Then connect mailbox accounts from Inbound Email. Staff sign-in uses the OAuth credentials saved here."
         }
       },
       "entra": {
@@ -1867,5 +2181,97 @@
   "language": {
     "selectLanguage": "Select a language",
     "languagesUpdated": "Available languages updated"
+  },
+  "settings": {
+    "assetTypes": {
+      "tab": "Assets",
+      "title": "Asset Types",
+      "description": "Manage the asset types available in your asset module. Custom types carry a field schema that drives their create/edit forms.",
+      "loading": "Loading asset types...",
+      "table": {
+        "name": "Name",
+        "builtin": "Built-in",
+        "slug": "Identifier",
+        "fieldCount": "Fields",
+        "order": "Order",
+        "actions": "Actions",
+        "openMenu": "Open menu"
+      },
+      "actions": {
+        "addType": "Add Asset Type",
+        "edit": "Edit",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "save": "Save",
+        "create": "Create",
+        "confirmDelete": "Delete"
+      },
+      "dialog": {
+        "createTitle": "Add Asset Type",
+        "editTitle": "Edit Asset Type",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. Firewall",
+        "displayOrderLabel": "Display Order",
+        "iconLabel": "Icon",
+        "builtinSchemaHint": "Built-in types use fixed forms managed by AlgaPSA, so their field schema cannot be edited. You can still rename the type or change its icon."
+      },
+      "deleteDialog": {
+        "title": "Delete Asset Type",
+        "message": "This permanently removes \"{{name}}\" from your asset type registry."
+      },
+      "messages": {
+        "created": "Asset type created",
+        "updated": "Asset type updated",
+        "deleted": "Asset type deleted"
+      },
+      "errors": {
+        "fetchFailed": "Failed to load asset types.",
+        "saveFailed": "Failed to save asset type.",
+        "deleteFailed": "Failed to delete asset type.",
+        "invalidName": "Enter a name for this asset type.",
+        "invalidSchema": "The field schema is invalid. Fix the highlighted fields and try again.",
+        "reservedSlug": "The identifier \"{{slug}}\" is reserved for a built-in type. Choose another name.",
+        "slugConflict": "An asset type with the identifier \"{{slug}}\" already exists.",
+        "notFound": "This asset type no longer exists.",
+        "builtinImmutable": "Built-in types only allow name and icon changes.",
+        "builtinUndeletable": "Built-in types cannot be deleted.",
+        "inUse": "This type is still used by {{assetCount}} asset(s). Reassign those assets before deleting it.",
+        "unknown": "Something went wrong."
+      },
+      "editor": {
+        "title": "Fields",
+        "empty": "No fields yet. Add fields to build the create/edit form for this type.",
+        "addField": "Add field",
+        "fieldLabel": "Label",
+        "fieldLabelPlaceholder": "e.g. Serial Number",
+        "fieldKey": "Key",
+        "fieldKeyPlaceholder": "e.g. serial_number",
+        "fieldKind": "Kind",
+        "fieldRequired": "Required",
+        "fieldOptions": "Options (comma-separated)",
+        "fieldOptionsPlaceholder": "e.g. Gold, Silver, Bronze",
+        "moveUp": "Move field up",
+        "moveDown": "Move field down",
+        "removeField": "Remove field",
+        "kinds": {
+          "text": "Text",
+          "number": "Number",
+          "date": "Date",
+          "select": "Select",
+          "url": "URL",
+          "boolean": "Yes / No"
+        },
+        "errors": {
+          "invalidKey": "Key must start with a lowercase letter and use only lowercase letters, numbers, and underscores.",
+          "duplicateKey": "Each field key must be unique.",
+          "missingLabel": "Label is required.",
+          "invalidKind": "Choose a valid field kind.",
+          "invalidRequired": "Required must be on or off.",
+          "missingOptions": "Select fields need at least one option.",
+          "invalidOptions": "Options must be non-empty values.",
+          "invalidField": "This field is invalid."
+        }
+      }
+    }
   }
 }

@@ -367,10 +367,13 @@ export class MailHogPollingService {
     
     try {
       // Get the actual tenant from the database using proper transaction wrapper
-      const { withAdminTransaction } = await import('@alga-psa/db');
+      const { withAdminTransaction, tenantDb } = await import('@alga-psa/db');
       
       const tenantId = await withAdminTransaction(async (trx) => {
-        const tenant = await trx('tenants').select('tenant').first();
+        const tenant = await tenantDb(trx, '__mailhog_default_tenant_discovery__')
+          .unscoped('tenants', 'MailHog test polling discovers a default tenant when none is configured')
+          .select('tenant')
+          .first();
         if (tenant) {
           console.log(`[TENANT-DEBUG] MailHogPollingService found tenant in database: tenant=${tenant.tenant}`);
           return tenant.tenant;

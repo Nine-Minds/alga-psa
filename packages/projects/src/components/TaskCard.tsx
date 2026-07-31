@@ -295,7 +295,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         console.log('Using cached project tree data when selecting task for editing');
         onTaskSelected(task);
       }}
-      className={`${styles.taskCard} relative bg-white ${zoomScales.cardPadding} rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-all duration-200 border flex flex-col ${zoomScales.cardGap} ${
+      className={`${styles.taskCard} relative bg-white ${zoomScales.cardPadding} rounded-lg shadow-sm cursor-pointer hover:shadow-md border flex flex-col ${zoomScales.cardGap} ${
         selected ? 'border-primary-500 ring-2 ring-primary-500' : 'border-gray-200'
       } ${
         isDragging ? styles.dragging : ''

@@ -1,4 +1,4 @@
-import { createTenantKnex, getUserWithRoles } from '@alga-psa/db';
+import { createTenantKnex, getUserWithRoles, tenantDb } from '@alga-psa/db';
 import { getTeamsIntegrationExecutionStateImpl as getTeamsIntegrationExecutionState } from '../../actions/integrations/teamsActions';
 import { NextResponse } from 'next/server';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -16,6 +16,11 @@ import {
 import { resolveTeamsLinkedUser } from '../resolveTeamsLinkedUser';
 import { resolveTeamsTenantContext } from '../resolveTeamsTenantContext';
 import { buildTeamsAvailabilityJsonResponse } from '../teamsAvailabilityResponses';
+import {
+  authenticateTeamsInboundRequest,
+  isTeamsInboundRejected,
+  type TeamsVerifiedInboundIdentity,
+} from '../bot/teamsInboundAuth';
 import {
   listPendingApprovalsForTeams,
   searchTeamsContacts,
@@ -142,6 +147,7 @@ export type TeamsMessageExtensionResponse = TeamsMessageExtensionComposeResponse
 
 interface HandleTeamsMessageExtensionActivityOptions {
   tenantIdHint?: string | null;
+  verifiedIdentity?: TeamsVerifiedInboundIdentity | null;
 }
 
 interface TeamsMessageSearchHit {
@@ -438,10 +444,13 @@ async function buildMessageExtensionMyWorkLink(tenantId: string): Promise<string
 
 async function loadCreateTicketFormOptions(tenantId: string): Promise<TeamsCreateTicketFormOptions> {
   const { knex } = await createTenantKnex(tenantId);
+  const db = tenantDb(knex, tenantId);
+  const contactsQuery = db.table('contacts as c');
+  db.tenantJoin(contactsQuery, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
 
   const [boards, statuses, clients, contacts] = await Promise.all([
-    (await knex('boards')
-      .where({ tenant: tenantId, is_inactive: false })
+    (await db.table('boards')
+      .where({ is_inactive: false })
       .select('board_id', 'board_name', 'default_priority_id', 'is_default')
       .orderBy('is_default', 'desc')
       .orderBy('display_order', 'asc')
@@ -452,22 +461,18 @@ async function loadCreateTicketFormOptions(tenantId: string): Promise<TeamsCreat
       default_priority_id?: string | null;
       is_default?: boolean | null;
     }>,
-    (await knex('statuses')
-      .where({ tenant: tenantId, status_type: 'ticket', is_closed: false })
+    (await db.table('statuses')
+      .where({ status_type: 'ticket', is_closed: false })
       .select('status_id', 'name', 'is_default')
       .orderBy('is_default', 'desc')
       .orderBy('name', 'asc')
       .limit(25)) as Array<{ status_id?: string | null; name?: string | null; is_default?: boolean | null }>,
-    (await knex('clients')
-      .where({ tenant: tenantId, is_inactive: false })
+    (await db.table('clients')
+      .where({ is_inactive: false })
       .select('client_id', 'client_name')
       .orderBy('client_name', 'asc')
       .limit(25)) as Array<{ client_id?: string | null; client_name?: string | null }>,
-    (await knex('contacts as c')
-      .leftJoin('clients as comp', function joinClients() {
-        this.on('c.client_id', '=', 'comp.client_id').andOn('c.tenant', '=', 'comp.tenant');
-      })
-      .where('c.tenant', tenantId)
+    (await contactsQuery
       .where('c.is_inactive', false)
       .select('c.contact_name_id', 'c.full_name', 'c.client_id', 'comp.client_name')
       .orderBy('c.full_name', 'asc')
@@ -927,11 +932,11 @@ async function searchTaskHits(params: {
   }
 
   const { knex } = await createTenantKnex(params.tenantId);
-  const rows = (await knex('project_tasks as pt')
-    .join('projects as p', function joinProjects() {
-      this.on('pt.project_id', '=', 'p.project_id').andOn('pt.tenant', '=', 'p.tenant');
-    })
-    .where('pt.tenant', params.tenantId)
+  const db = tenantDb(knex, params.tenantId);
+  const taskQuery = db.table('project_tasks as pt');
+  db.tenantJoin(taskQuery, 'projects as p', 'pt.project_id', 'p.project_id');
+
+  const rows = (await taskQuery
     .where((builder) => {
       builder
         .whereILike('pt.task_name', `%${params.query}%`)
@@ -1016,13 +1021,14 @@ async function searchApprovalHits(params: {
 async function resolveInvokingUser(params: {
   activity: TeamsMessageExtensionActivity;
   tenantId: string;
+  microsoftAccountId?: string | null;
 }): Promise<
   | { success: true; user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>; message?: undefined }
   | { success: false; message: string }
 > {
   const linkedUser = await resolveTeamsLinkedUser({
     tenantId: params.tenantId,
-    microsoftAccountId: getMicrosoftAccountId(params.activity),
+    microsoftAccountId: params.microsoftAccountId || getMicrosoftAccountId(params.activity),
   });
 
   if (linkedUser.status !== 'linked') {
@@ -1048,7 +1054,8 @@ async function resolveInvokingUser(params: {
 
 async function handleQueryRequest(
   activity: TeamsMessageExtensionActivity,
-  tenantId: string
+  tenantId: string,
+  verifiedIdentity?: TeamsVerifiedInboundIdentity | null
 ): Promise<TeamsMessageExtensionResponse> {
   const commandId = getCommandId(activity);
   if (commandId !== 'searchRecords') {
@@ -1073,6 +1080,7 @@ async function handleQueryRequest(
   const invokingUser = await resolveInvokingUser({
     activity,
     tenantId,
+    microsoftAccountId: verifiedIdentity?.microsoftUserId,
   });
   if (invokingUser.success === false) {
     return buildMessageResponse(invokingUser.message);
@@ -1234,7 +1242,8 @@ async function handleUpdateFromMessageSubmit(params: {
 
 async function handleActionRequest(
   activity: TeamsMessageExtensionActivity,
-  tenantId: string
+  tenantId: string,
+  verifiedIdentity?: TeamsVerifiedInboundIdentity | null
 ): Promise<TeamsMessageExtensionResponse> {
   const commandId = getCommandId(activity);
   if (commandId !== 'createTicketFromMessage' && commandId !== 'updateFromMessage') {
@@ -1251,9 +1260,11 @@ async function handleActionRequest(
     return buildTaskMessageResponse('Select a Teams message with usable content before starting this PSA workflow.');
   }
 
+  const microsoftUserId = verifiedIdentity?.microsoftUserId || getMicrosoftAccountId(activity);
   const invokingUser = await resolveInvokingUser({
     activity,
     tenantId,
+    microsoftAccountId: verifiedIdentity?.microsoftUserId,
   });
   if (invokingUser.success === false) {
     return buildTaskMessageResponse(invokingUser.message);
@@ -1269,7 +1280,7 @@ async function handleActionRequest(
         activity,
         tenantId,
         user: invokingUser.user,
-        microsoftUserId: getMicrosoftAccountId(activity),
+        microsoftUserId,
         preview,
       });
     }
@@ -1278,7 +1289,7 @@ async function handleActionRequest(
       activity,
       tenantId,
       user: invokingUser.user,
-      microsoftUserId: getMicrosoftAccountId(activity),
+      microsoftUserId,
       preview,
     });
   }
@@ -1340,7 +1351,8 @@ export async function handleTeamsMessageExtensionActivity(
 ): Promise<TeamsMessageExtensionResponse> {
   const tenantContext = await resolveTeamsTenantContext({
     explicitTenantId: options.tenantIdHint || undefined,
-    microsoftTenantId: getTeamsTenantId(activity) || undefined,
+    microsoftTenantId:
+      options.verifiedIdentity?.microsoftTenantId || getTeamsTenantId(activity) || undefined,
     requiredCapability: 'message_extension',
   });
 
@@ -1351,42 +1363,41 @@ export async function handleTeamsMessageExtensionActivity(
   }
 
   if (isQueryRequest(activity)) {
-    return handleQueryRequest(activity, tenantContext.tenantId);
+    return handleQueryRequest(activity, tenantContext.tenantId, options.verifiedIdentity);
   }
 
   if (isActionRequest(activity)) {
-    return handleActionRequest(activity, tenantContext.tenantId);
+    return handleActionRequest(activity, tenantContext.tenantId, options.verifiedIdentity);
   }
 
   return buildMessageResponse('The Teams message extension supports search queries and message actions in v1.');
 }
 
 export async function handleTeamsMessageExtensionRequest(request: Request): Promise<NextResponse> {
-  let activity: TeamsMessageExtensionActivity;
-  try {
-    activity = (await request.json()) as TeamsMessageExtensionActivity;
-  } catch {
-    return NextResponse.json(
-      {
-        error: 'invalid_json',
-        message: 'The Teams message extension request body must be valid JSON.',
-      },
-      { status: 400 }
-    );
+  const auth = await authenticateTeamsInboundRequest<TeamsMessageExtensionActivity>(
+    request,
+    'message_extension'
+  );
+  if (isTeamsInboundRejected(auth)) {
+    return auth.response;
   }
+  const { activity, identity } = auth;
 
   const url = new URL(request.url);
   const tenantIdHint = url.searchParams.get('tenantId') || url.searchParams.get('tenant');
   const availability = await getTeamsRuntimeAvailability({
     explicitTenantId: tenantIdHint,
-    microsoftTenantId: getTeamsTenantId(activity),
+    microsoftTenantId: identity.microsoftTenantId || getTeamsTenantId(activity),
     requiredCapability: 'message_extension',
   });
   if (availability && availability.enabled === false) {
     return buildTeamsAvailabilityJsonResponse(availability);
   }
 
-  const response = await handleTeamsMessageExtensionActivity(activity, { tenantIdHint });
+  const response = await handleTeamsMessageExtensionActivity(activity, {
+    tenantIdHint,
+    verifiedIdentity: identity,
+  });
 
   return NextResponse.json(response, {
     status: 200,

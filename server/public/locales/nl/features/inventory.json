@@ -1,0 +1,1662 @@
+{
+  "common": {
+    "actions": "Acties",
+    "active": "Actief",
+    "allTime": "Volledige periode",
+    "cancel": "Annuleren",
+    "clear": "Wissen",
+    "close": "Sluiten",
+    "confirm": "Bevestigen",
+    "deactivate": "Deactiveren",
+    "description": "Omschrijving",
+    "edit": "Bewerken",
+    "emptyValue": "—",
+    "from": "Van",
+    "inactive": "Inactief",
+    "loading": "Laden…",
+    "name": "Naam",
+    "period": "Periode",
+    "quantity": "Aantal",
+    "refresh": "Vernieuwen",
+    "refreshing": "Vernieuwen…",
+    "remove": "Verwijderen",
+    "retry": "Opnieuw proberen",
+    "run": "Uitvoeren",
+    "runReport": "Rapport uitvoeren",
+    "running": "Uitvoeren…",
+    "save": "Opslaan",
+    "saveFailed": "Opslaan mislukt",
+    "saving": "Opslaan…",
+    "search": "Zoeken",
+    "status": "Status",
+    "to": "Naar",
+    "today": "Vandaag",
+    "total": "Totaal",
+    "unknown": "Onbekend"
+  },
+  "counts": {
+    "adjustments": "{{count}} aanpassing(en)",
+    "approveApply": "Goedkeuren en toepassen",
+    "approveFailed": "Kon de sessie niet goedkeuren.",
+    "approved": "Telling goedgekeurd — {{summary}}.",
+    "approving": "Goedkeuren…",
+    "blindCountHint": "Verwachte aantallen worden nu vastgelegd en verborgen tijdens het tellen (blinde telling).",
+    "cancelCount": "Telling annuleren",
+    "cancelFailed": "Kon de sessie niet annuleren.",
+    "cancelledDone": "Telling geannuleerd — er is geen voorraad gewijzigd.",
+    "columns": {
+      "progress": "Voortgang",
+      "started": "Gestart"
+    },
+    "count": "Tellen",
+    "counted": "Geteld {{qty}}",
+    "detailTitle": "Telling — {{location}}",
+    "dispositionAdd": "Toevoegen aan voorraad (gevonden eenheid)",
+    "dispositionExclude": "Uitsluiten van deze telling",
+    "dispositionPlaceholder": "Afhandeling…",
+    "expected": "Verwacht {{qty}}",
+    "fields": {
+      "countedQty": "Getelde aantal",
+      "location": "Locatie",
+      "locationPlaceholder": "Selecteer een locatie…",
+      "serialsLabel": "Aanwezige serienummers (één per regel)"
+    },
+    "loadSessionFailed": "Kon de sessie niet laden.",
+    "loadSessionsFailed": "Kon telsessies niet laden.",
+    "noProducts": "Geen gevolgde producten op deze locatie.",
+    "open": "Openen",
+    "pickLocation": "Kies een locatie om te tellen.",
+    "progressValue": "{{counted}} van {{total}} geteld",
+    "qtyInvalid": "Telling moet een niet-negatief geheel getal zijn.",
+    "recordFailed": "Kon de telling niet vastleggen.",
+    "recorded": "Telling vastgelegd.",
+    "saveCount": "Telling opslaan",
+    "staleBadge": "Verouderd — voorraad verplaatst, opnieuw tellen",
+    "staleLines": "{{count}} regel(s) waren verouderd (voorraad tijdens het tellen verplaatst) en zijn overgeslagen — tel ze opnieuw.",
+    "startCount": "Telling starten",
+    "startDialogTitle": "Een voorraadtelling starten",
+    "startFailed": "Kon de telling niet starten.",
+    "started": "Telling gestart — verwachte aantallen zijn vastgelegd.",
+    "starting": "Starten…",
+    "status": {
+      "approved": "Goedgekeurd",
+      "cancelled": "Geannuleerd",
+      "counting": "Bezig met tellen",
+      "draft": "Concept",
+      "inReview": "In beoordeling"
+    },
+    "submitFailed": "Kon de sessie niet indienen.",
+    "submitForReview": "Indienen ter beoordeling",
+    "submitted": "Ingediend ter beoordeling.",
+    "submitting": "Indienen…",
+    "subtitle": "Blinde voorraadtellingen per locatie — afwijkingen worden bij goedkeuring toegepast via het bewegingsgrootboek.",
+    "title": "Voorraadtellingen",
+    "uncountedLines": "{{count}} regel(s) zijn nooit geteld en zijn ongewijzigd gelaten.",
+    "unexpectedPrompt": "Onverwachte serienummer(s) — kies wat te doen vóór goedkeuring:",
+    "unitsAdded": "{{count}} eenhe(i)d(en) toegevoegd",
+    "unitsRetired": "{{count}} eenhe(i)d(en) afgevoerd",
+    "varianceLabel": "· afwijking"
+  },
+  "dashboard": {
+    "actions": {
+      "newPurchaseOrder": "Nieuwe inkooporder",
+      "receiveStock": "Voorraad ontvangen",
+      "stockLedger": "Voorraadgrootboek openen"
+    },
+    "loadError": {
+      "title": "Live voorraadgegevens konden niet worden geladen",
+      "body": "Het dashboard toont lege waarden totdat de gegevensfeed slaagt."
+    },
+    "attention": {
+      "allClear": "Alles in orde — er is momenteel niets dat aandacht vereist.",
+      "title": "Vereist aandacht",
+      "urgent": "{{count}} urgent",
+      "footer": "Gerangschikt op geldbedrag + klantimpact · zojuist vernieuwd",
+      "itemFallback": "eenheid",
+      "refFallback": "RMA",
+      "noneFallback": "geen",
+      "personFallback": "iemand",
+      "vendorFallback": "leverancier",
+      "filters": {
+        "all": "Alle",
+        "money": "Geld",
+        "fulfillment": "Uitvoering",
+        "field": "Buitendienst",
+        "ops": "Ops"
+      },
+      "bands": {
+        "red": "Kost vandaag geld of een klant",
+        "amber": "Deze week het opvolgen waard",
+        "info": "In de gaten houden"
+      },
+      "actions": {
+        "invoice": "Factureren",
+        "viewSo": "SO bekijken",
+        "trackTransfer": "Overboeking volgen",
+        "recall": "Terughalen",
+        "review": "Beoordelen",
+        "chase": "Opvolgen",
+        "openStaging": "Staging openen",
+        "requote": "Opnieuw offreren",
+        "reviewBill": "Factuur beoordelen",
+        "approve": "Goedkeuren",
+        "reorder": "Bijbestellen",
+        "createPo": "PO aanmaken",
+        "receive": "Ontvangen",
+        "shipReplacement": "Vervanging verzenden",
+        "view": "Bekijken"
+      },
+      "kind": {
+        "unbilled": "niet gefactureerd",
+        "dropship": "dropship",
+        "cutoverRisk": "risicovolle overgang",
+        "cutover": "overgang",
+        "vanShortage": "bustekort",
+        "loaner": "achterstallige leeneenheid",
+        "ghost": "ghost-verbruik",
+        "rmaAging": "rma-veroudering",
+        "rmaClient": "vervanging",
+        "priceCreep": "prijsstijging",
+        "billCreep": "factuurstijging",
+        "billsOverdue": "achterstallige facturen",
+        "countApproval": "telgoedkeuring",
+        "stockLow": "lage voorraad",
+        "stockOut": "geen voorraad",
+        "poPartial": "gedeeltelijke PO",
+        "warranty": "garantie",
+        "deadStock": "dode voorraad"
+      },
+      "fact": {
+        "unbilledSo": "verzonden, nog niet gefactureerd",
+        "unbilledDropship": "dropships niet gefactureerd over {{count}} SO's",
+        "cutoverRisk": "overgang {{date}} — {{backordered}} van {{ordered}} in backorder",
+        "cutoverStaging": "overgang {{date}} — {{staged}} van {{ordered}} klaargezet",
+        "vanShortage": "{{service}}-tekort met {{jobs}} installaties vandaag",
+        "overdueLoaner": "{{service}}-leeneenheid {{days}}d achterstallig",
+        "ghostTech": "{{count}} hardwaretickets gesloten, geen onderdelen gefactureerd",
+        "rmaVendor": "verschuldigde creditering — geen reactie {{days}} dagen",
+        "rmaClient": "vervangende eenheid nog verschuldigd",
+        "priceCreepSo": "nog geprijsd tegen oude kostprijs",
+        "priceCreepQuotes": "{{count}} open offerte(s) nu onder huidige kostprijs",
+        "priceCreepBill": "factuur overschrijdt bijbehorende PO",
+        "billsOverdue": "{{count}} leveranciersfactu(u)r(en) achterstallig",
+        "countApproval": "telafwijking vereist goedkeurder",
+        "stockOut": "{{service}} is niet op voorraad",
+        "stockLow": "{{service}} onder bestelpunt",
+        "poPartial": "gedeeltelijk ontvangen PO nog open",
+        "warranty": "{{count}} eenheden met garantie die <30d verloopt",
+        "deadStock": "geen beweging in 90 dagen"
+      },
+      "meta": {
+        "unbilledSo": "{{so}} · {{lines}} regels · verzonden {{days}}d geleden",
+        "unbilledDropship": "bevestigde dropship-regels klaar voor facturatie",
+        "cutoverFeeder": "ETA {{po}} {{eta}} · {{slack}}d speling · gereedheid {{pct}}%",
+        "cutover": "{{so}} · {{pct}}% gereedheid · nog {{days}}d",
+        "vanShortageTransit": "beschikbaar {{available}} · overboeking {{from}} verzonden",
+        "vanShortage": "beschikbaar {{available}} · bestelpunt {{reorder}}",
+        "overdueLoaner": "vervalt {{date}}{{serial}}",
+        "ghostTech": "gesch. materiaalblootstelling uit gesloten hardwaretickets",
+        "rmaVendor": "{{ref}} · oudste openstaande vordering",
+        "rmaClient": "{{ref}} · {{service}} · vervalt over {{days}}d",
+        "priceCreepSo": "{{so}} · margeblootstelling bij uitvoering zoals nu",
+        "priceCreepQuotes": "offerte(s): {{numbers}}",
+        "priceCreepBill": "{{bill}} · gemarkeerd t.o.v. bijbehorende PO",
+        "billsOverdue": "oudste achterstallig {{days}}d",
+        "countApproval": "geteld door {{name}} · vierogenprincipe",
+        "stockLevel": "beschikbaar {{available}} · bestelpunt {{reorder}}",
+        "poPartial": "{{po}} · {{received}} van {{ordered}} ontvangen · {{vendor}}",
+        "warranty": "{{count}} klanten",
+        "deadStock": "{{locations}} locatie(s) leggen werkkapitaal vast"
+      },
+      "metric": {
+        "ageDays": "{{days}}d",
+        "percent": "{{pct}}%",
+        "daysOut": "nog {{days}}d",
+        "jobs": "{{count}} klussen",
+        "today": "vandaag",
+        "units": "{{count}} eenheden",
+        "ltThirty": "<30d",
+        "available": "beschikbaar"
+      }
+    },
+    "bills": {
+      "acrossBill": "{{total}} verdeeld over {{count}} factuur",
+      "acrossBills": "{{total}} verdeeld over {{count}} facturen",
+      "nothingOverdue": "niets achterstallig",
+      "overdue": "{{count}} achterstallig · {{total}}",
+      "title": "Openstaande leveranciersfacturen",
+      "viewBills": "Facturen bekijken"
+    },
+    "kpi": {
+      "arrivingToday": " · {{count}} komt vandaag aan",
+      "marginFoot": "{{margin}} op {{revenue}}",
+      "marginMtd": "Marge · lopende maand",
+      "onHandUnits": "Eenheden op voorraad",
+      "onOrder": "Besteld (open inkooporders)",
+      "poCount": "{{count}} inkooporder",
+      "poCountPlural": "{{count}} inkooporders",
+      "serialized": "{{count}} met serienummer",
+      "stockedLocation": "{{count}} bevoorrade locatie",
+      "stockedLocations": "{{count}} bevoorrade locaties",
+      "totalValue": "Totale voorraadwaarde"
+    },
+    "movements": {
+      "bySuffix": " · door {{name}}",
+      "consumed": "Verbruikt",
+      "empty": "Geen recente beweging.",
+      "fullLedger": "Volledig grootboek",
+      "generic": "{{type}} {{qty}} × {{name}}",
+      "itemFallback": "item",
+      "received": "Ontvangen",
+      "rma": "RMA",
+      "serialSuffix": " (SN {{sn}})",
+      "title": "Recente voorraadbewegingen",
+      "transferred": "Overgeboekt"
+    },
+    "receiving": {
+      "allPos": "Alle inkooporders",
+      "arriving": "Onderweg",
+      "empty": "Geen open inkooporders.",
+      "open": "Open",
+      "partial": "Gedeeltelijk",
+      "receivedOf": "{{received}} van {{ordered}} ontvangen",
+      "title": "Ontvangstwachtrij",
+      "unit": "{{count}} eenheid",
+      "units": "{{count}} eenheden",
+      "vendorFallback": "Leverancier"
+    },
+    "relTime": {
+      "dayAgo": "{{count}}d geleden",
+      "hrAgo": "{{count}} uur geleden",
+      "justNow": "zojuist",
+      "minAgo": "{{count}} min geleden"
+    },
+    "stockHealthAcross": "Voorraadstatus over {{subtitle}}",
+    "subtitle": {
+      "location": "{{count}} locatie",
+      "locations": "{{count}} locaties",
+      "van": " & {{count}} servicebus",
+      "vans": " & {{count}} servicebussen"
+    },
+    "thisWeek": {
+      "rmasOpened": "Geopende RMA's",
+      "title": "Deze week",
+      "transfers": "Overboekingen tussen locaties",
+      "unitsDeployed": "Ingezette eenheden",
+      "unitsReceived": "Ontvangen eenheden"
+    },
+    "title": "Inventaris",
+    "valueByLocation": {
+      "empty": "Geen voorraad aanwezig.",
+      "grandTotal": "Eindtotaal {{total}}",
+      "title": "Voorraadwaarde per locatie"
+    },
+    "sourceDocType": {
+      "purchaseOrder": "Inkooporder",
+      "salesOrder": "Verkooporder",
+      "ticketMaterial": "Ticketmateriaal",
+      "projectMaterial": "Projectmateriaal",
+      "contract": "Contract",
+      "rma": "RMA",
+      "transfer": "Overdracht",
+      "loan": "Uitlening",
+      "manual": "Handmatig"
+    },
+    "movementType": {
+      "adjust": "Aangepast",
+      "returnRestock": "Aangevuld",
+      "loanOut": "Uitgeleend",
+      "loanIn": "Lening geretourneerd",
+      "retire": "Afgevoerd"
+    },
+    "header": {
+      "branch": "vestiging",
+      "branches": "vestigingen",
+      "van": "bus",
+      "vans": "bussen",
+      "tech": "monteur",
+      "techs": "monteurs",
+      "subtitle": "{{branches}} · {{vans}} · {{techs}} — {{attention}} vereisen aandacht, {{inPlay}} vandaag in behandeling."
+    },
+    "money": {
+      "estUnavailable": "alleen aantal",
+      "unbilled": {
+        "title": "Niet gefactureerd maar verzonden",
+        "noShippedSos": "Geen verzonden SO's in wachtrij",
+        "otherSos": "nog {{count}} verzonden SO's",
+        "dropship": "Dropships niet gefactureerd",
+        "soCount": "{{count}} SO's",
+        "ghost": "Ghost-verbruik",
+        "ticketCount": "{{count}} tickets",
+        "ledgerLink": "Omzetgrootboek bekijken"
+      },
+      "margin": {
+        "title": "Marge lopende maand",
+        "vsLastMonth": "t.o.v. vorige mnd",
+        "meta": "{{margin}} marge · {{revenue}} omzet · {{cogs}} COGS",
+        "priceCreep": "{{count}} offerte(s) en {{sos}} nog tegen oude kostprijs — {{amount}} marge in gevaar.",
+        "noSos": "geen open SO's"
+      },
+      "rma": {
+        "title": "Verschuldigd door leverancier (RMA-creditering)",
+        "oldest": "{{days}}d oudste",
+        "empty": "Geen leveranciers-RMA's verouderen.",
+        "vendorFallback": "Leverancier",
+        "creditRef": "creditering · {{ref}}",
+        "credit": "creditering",
+        "link": "Alle RMA's opvolgen"
+      }
+    },
+    "deployments": {
+      "title": "Uitrol van deze week",
+      "subtitle": "{{count}} geplande overgang(en)",
+      "eyebrow": "Deze week",
+      "scope": "{{qty}}× {{name}} — {{staged}} klaargezet · {{backordered}} in backorder",
+      "itemFallback": "item",
+      "scopeFallback": "{{staged}} klaargezet · {{backordered}} in backorder",
+      "feeder": "Aangevoerd door {{po}} {{vendor}}, ETA {{eta}} — {{slack}}d speling.",
+      "vendorFallback": "leverancier",
+      "noEta": "geen ETA",
+      "allServiceOrders": "Alle serviceorders",
+      "countdownBefore": "T-{{days}}",
+      "countdownAfter": "T+{{days}}",
+      "status": {
+        "atRisk": "Risicovol",
+        "ready": "Gereed",
+        "staging": "Klaarzetten"
+      }
+    },
+    "pipeline": {
+      "title": "Verkooporderpijplijn",
+      "openSos": "{{count}} open SO's",
+      "quotes": "Offerte",
+      "quotesValue": "{{count}} open",
+      "booked": "SO geboekt",
+      "bookedValue": "{{count}} · {{draft}} concept",
+      "fulfilling": "In uitvoering",
+      "fulfillingValue": "{{count}} backorder",
+      "invoiced": "Gefactureerd",
+      "invoicedValue": "deze wk",
+      "blocked": "{{count}} SO's geblokkeerd door backorder",
+      "allSos": "Alle SO's"
+    },
+    "receivingToday": {
+      "title": "Vandaag ontvangen",
+      "meta": "PO's · {{amount}} · {{more}} meer deze wk",
+      "empty": "Vandaag komen er geen inkooporders binnen.",
+      "vendorFallback": "Leverancier",
+      "flag": "Let op: {{po}} komt binnen met {{slack}}d speling vóór overgang {{client}}.",
+      "clientFallback": "klant",
+      "receiveStock": "Voorraad ontvangen"
+    },
+    "ghostWeek": {
+      "title": "Ghost-verbruik deze week",
+      "countOnly": "tickets gesloten, 0 onderdelen",
+      "est": "tickets gesloten, 0 onderdelen · gesch. {{amount}}",
+      "explainer": "Hardwaretickets gesloten zonder geboekt materiaal — niet-gefactureerde afsluitingen met alleen arbeid per monteur.",
+      "empty": "Deze week geen kandidaten voor ghost-verbruik.",
+      "techChip": "{{name}} · {{count}}{{amount}}",
+      "review": "Ghost-verbruik beoordelen"
+    },
+    "footer": {
+      "title": "Voorraadstatus",
+      "weekAbbrev": "wk",
+      "onHand": "Eenheden op voorraad",
+      "serialized": "{{count}} met serienummer",
+      "deadStock": "Dode voorraad",
+      "deadStockDetail": "{{location}} · 90d",
+      "locationFallback": "Locatie",
+      "thisWeek": "Deze week",
+      "weekActivity": "{{received}} ontvangen · {{deployed}} uitgerold · {{transfers}} overboekingen · {{rmas}} RMA's",
+      "valuationReport": "Waarderingsrapport"
+    }
+  },
+  "ghostUsage": {
+    "actions": {
+      "dismiss": "Negeren",
+      "openTicket": "Ticket openen",
+      "openTicketAddMaterial": "Ticket openen · materiaal toevoegen",
+      "reopen": "Heropenen"
+    },
+    "ai": {
+      "batchHint": "Verwerkt maximaal {{count}} kandidaten per keer.",
+      "checking": "Beschikbaarheid van AI controleren…",
+      "classifiedSummary": "{{classified}} geclassificeerd (onduidelijk {{unclear}}, mislukt {{failed}}, resterend {{remaining}})",
+      "classifyCandidates": "Kandidaten classificeren",
+      "classifying": "Classificeren…",
+      "didNotRun": "AI-triage is niet uitgevoerd{{reason}}.",
+      "requiresEnterprise": "AI-triage vereist Enterprise en de AI Assistant-add-on.",
+      "runFailed": "AI-triage mislukt.",
+      "toggleFailed": "Kon de AI-triage-instelling niet wijzigen.",
+      "toggleLabel": "AI-triage — classificeer kandidaat-tickets met de AI-add-on",
+      "toggledOff": "AI-triage uit.",
+      "toggledOn": "AI-triage aan."
+    },
+    "candidateCapNote": " (eerste {{cap}} weergegeven)",
+    "candidateCount": "{{count}} ghost-kandidaat",
+    "candidateCountPlural": "{{count}} ghost-kandidaten",
+    "candidatesTitle": "Ghost-kandidaten",
+    "columns": {
+      "aiVerdict": "AI-oordeel",
+      "assignedTo": "Toegewezen aan",
+      "board": "Board",
+      "category": "Categorie",
+      "client": "Klant",
+      "closed": "Gesloten",
+      "closedBy": "Gesloten door",
+      "ticketNumber": "Ticket #",
+      "title": "Titel"
+    },
+    "disposition": {
+      "confirmed": "Bevestigd — verplaatst naar de werklijst.",
+      "dismissed": "Genegeerd.",
+      "reopened": "Heropend."
+    },
+    "filters": {
+      "allBoards": "Alle boards",
+      "allCategories": "Alle categorieën",
+      "board": "Board",
+      "category": "Categorie"
+    },
+    "funnel": {
+      "closedInWindow": "Gesloten in periode",
+      "ghostCandidates": "Ghost-kandidaten",
+      "hasMaterials": "Heeft materialen",
+      "inHardwareScope": "Binnen hardware-scope"
+    },
+    "loadError": "Kon het ghost-usage-rapport niet laden. Probeer Vernieuwen.",
+    "loading": "Ghost-kandidaten laden…",
+    "noCandidates": "Geen ghost-kandidaten — niets lijkt te zijn opgeslokt.",
+    "runFailed": "Kon het ghost-usage-rapport niet uitvoeren.",
+    "subtitle": "Gesloten hardware-tickets zonder geregistreerde onderdelen — werk dat de werkplaats mogelijk heeft opgeslokt.",
+    "title": "Ghost Usage",
+    "updateFailed": "Kon dit ticket niet bijwerken.",
+    "verdict": {
+      "hardwareMissing": "Hardware ontbreekt",
+      "noHardware": "Geen hardware",
+      "unclear": "Onduidelijk"
+    },
+    "worklistTitle": "Bevestigd — registreer het materiaal"
+  },
+  "import_": {
+    "actions": {
+      "import": "Importeren",
+      "importRows": "{{count}} rijen importeren",
+      "importing": "Importeren…",
+      "validate": "Valideren",
+      "validating": "Valideren…"
+    },
+    "andMore": "…en nog {{count}} meer",
+    "andMoreValidRows": "…en nog {{count}} geldige rijen",
+    "apply": {
+      "receipt": "{{count}} ontvangst",
+      "receipts": "{{count}} ontvangsten",
+      "success": "{{receipts}} geïmporteerd ({{units}}, {{value}}) als \"{{label}}\".",
+      "unit": "{{count}} eenheid",
+      "units": "{{count}} eenheden"
+    },
+    "chooseFileFirst": "Kies eerst een CSV-bestand.",
+    "dialogTitle": "Beginvoorraad importeren",
+    "errors": {
+      "headingPlural": "{{count}} fouten — er wordt niets geïmporteerd totdat elke rij foutloos is:",
+      "headingSingular": "{{count}} fout — er wordt niets geïmporteerd totdat elke rij foutloos is:"
+    },
+    "fields": {
+      "batchLabel": "Batchlabel",
+      "csvFile": "CSV-bestand",
+      "enableTracking": "Voorraadregistratie inschakelen voor producten die nog niet worden gevolgd"
+    },
+    "importFailed": "Import mislukt — er is niets weggeschreven.",
+    "intro": {
+      "downloadTemplate": "Download de sjabloon",
+      "forColumns": "voor de verwachte kolommen.",
+      "text": "Zet day-one voorraad op vanuit een CSV. Elke rij komt binnen als een echte grootboekontvangst met het batchlabel — rijen met een serienummer worden afzonderlijke eenheden, rijen zonder worden bulkaantallen."
+    },
+    "openButton": "Beginvoorraad importeren",
+    "readFileFailed": "Kon het bestand niet lezen.",
+    "rowPrefix": "Rij {{row}}: ",
+    "summary": {
+      "bulkQuantity": "Bulkaantal:",
+      "locations": "Locaties:",
+      "products": "Producten:",
+      "rows": "Rijen:",
+      "serializedUnits": "Eenheden met serienummer:",
+      "settingWillEnable": "{{count}} product wordt ingeschakeld voor registratie",
+      "settingsWillEnable": "{{count}} producten worden ingeschakeld voor registratie",
+      "value": "Waarde:"
+    },
+    "table": {
+      "location": "Locatie",
+      "product": "Product",
+      "qty": "Aantal",
+      "serial": "Serienummer",
+      "unitCost": "Kostprijs per eenheid"
+    },
+    "validationFailed": "Validatie mislukt."
+  },
+  "kits": {
+    "addComponent": "Component toevoegen",
+    "addFailed": "Toevoegen mislukt",
+    "columns": {
+      "component": "Component",
+      "sku": "SKU"
+    },
+    "componentAdded": "Component toegevoegd",
+    "componentRemoved": "Component verwijderd",
+    "componentRequired": "Component is verplicht",
+    "componentsHeading": "Componenten — {{name}}",
+    "fields": {
+      "component": "Component",
+      "componentPlaceholder": "Selecteer een product…",
+      "sku": "SKU",
+      "unit": "Unit"
+    },
+    "loadComponentsFailed": "Componenten laden mislukt",
+    "loadKitsFailed": "Kits laden mislukt",
+    "manage": "Beheren",
+    "quantityInvalid": "Aantal moet groter zijn dan 0",
+    "removeConfirm": "{{name}} uit deze kit verwijderen?",
+    "removeFailed": "Verwijderen mislukt",
+    "removeTitle": "Component verwijderen",
+    "title": "Kits",
+    "actions": {
+      "addComponent": "Add component",
+      "createKit": "Create kit",
+      "createSalesOrder": "Create sales order",
+      "productSettings": "Open product settings",
+      "updateQuantity": "Update quantity",
+      "viewSalesOrders": "View sales orders"
+    },
+    "bom": {
+      "componentCount": "{{count}} components",
+      "componentCountShort": "Components",
+      "emptyBody": "Componentless kits cannot be used on sales orders because there is nothing to allocate or fulfill.",
+      "emptyTitle": "Add at least one BOM component",
+      "qtyPerKit": "Qty per kit",
+      "title": "Bill of materials"
+    },
+    "create": {
+      "created": "Kit created.",
+      "fields": {
+        "name": "Kit name",
+        "productType": "Product type"
+      },
+      "noServiceTypes": "Create a product type in Billing before creating a kit.",
+      "title": "Create kit",
+      "validation": {
+        "costInvalid": "Kit cost must be a valid amount.",
+        "nameRequired": "Kit name is required.",
+        "priceRequired": "Kit price must be greater than 0.",
+        "typeRequired": "Product type is required."
+      }
+    },
+    "detail": {
+      "loadFailedTitle": "Could not load this kit",
+      "notFound": "This kit could not be found.",
+      "pickKit": "Select a kit to manage its bill of materials."
+    },
+    "empty": {
+      "body": "Create a sellable kit, then add its bill of materials.",
+      "noResults": "No kits match those filters.",
+      "title": "No inventory kits yet"
+    },
+    "filters": {
+      "all": "All"
+    },
+    "list": {
+      "label": "Kit list"
+    },
+    "pricing": {
+      "addComponentsToCalculate": "Add components to calculate a price.",
+      "calculatedBasis": "Component selling prices × quantity",
+      "calculatedPrice": "Calculated kit price",
+      "componentCost": "Component cost",
+      "createSumHint": "Price will be calculated after components are added.",
+      "currency": "Currency",
+      "each": "each",
+      "extCost": "Ext. cost",
+      "extended": "extended",
+      "fixed": "Fixed price",
+      "fixedAmount": "Fixed kit price",
+      "grossMargin": "Gross margin",
+      "grossProfit": "Gross profit",
+      "kitCostOptional": "Kit cost (optional)",
+      "kitPrice": "Kit price",
+      "kitPriceWithCurrency": "Kit price ({{currency}})",
+      "margin": "Margin",
+      "marginUnavailable": "Add component costs in the kit currency to calculate margin.",
+      "mode": "Pricing mode",
+      "salesOrderPrice": "Sales-order kit price",
+      "save": "Save pricing",
+      "saved": "Pricing saved.",
+      "sellingPrice": "Selling price",
+      "sum": "Sum of component prices",
+      "title": "Pricing and margin",
+      "unitCost": "Unit cost",
+      "unsaved": "Save pricing before creating a sales order.",
+      "validation": {
+        "fixedRequired": "Fixed kit price must be greater than 0.",
+        "priceRequired": "Kit price must be greater than 0."
+      }
+    },
+    "salesOrder": {
+      "componentLines": "Component lines",
+      "componentLinesValue": "Explode as child lines",
+      "parentLine": "Parent kit line",
+      "parentLineValue": "Priced at {{price}}",
+      "preview": "Sales-order preview",
+      "previewQuantity": "Kit quantity",
+      "previewQuantityInvalid": "Enter a positive whole number.",
+      "stockEffect": "Stock effect",
+      "stockEffectValue": "Components allocate and fulfill stock",
+      "title": "Sales-order behavior"
+    },
+    "searchPlaceholder": "Search kits or SKUs",
+    "status": {
+      "incomplete": "Incomplete",
+      "lowStock": "Low stock",
+      "noBom": "No BOM",
+      "ready": "Ready"
+    },
+    "stock": {
+      "available": "Available",
+      "canBuildLabel": "Can build",
+      "noStockLimit": "No stock limit",
+      "noStockLimitShort": "n/a",
+      "nonStocked": "Non-stocked",
+      "serialized": "Serialized",
+      "shortComponents": "Short components",
+      "shortWarning": "At least one stocked component cannot cover one complete kit from available stock.",
+      "stocked": "Stocked",
+      "stockedComponents": "Stocked components",
+      "title": "Stock readiness"
+    },
+    "summary": {
+      "attention": "{{count}} need attention",
+      "ready": "{{count}} ready",
+      "total": "{{count}} kits"
+    },
+    "usage": {
+      "usedOnSalesOrders": "Used on sales orders"
+    },
+    "componentUpdated": "Component quantity updated."
+  },
+  "loaners": {
+    "title": "Leeneenheden",
+    "loanOut": "Uitlenen",
+    "return": "Retourneren",
+    "extend": "Extend",
+    "history": "History",
+    "loadFailed": "Leeneenheden laden mislukt",
+    "loadLocationsFailed": "Kon voorraadlocaties niet laden",
+    "loanDialogTitle": "Eenheid uitlenen",
+    "loaningOut": "Loaning out…",
+    "loanedOut": "{{serial}} loaned out.",
+    "loanFailed": "Uitlenen mislukt",
+    "theUnit": "The unit",
+    "chooseUnit": "Choose a unit.",
+    "chooseClient": "Choose a client.",
+    "returnDialogTitle": "Leeneenheid retourneren",
+    "returning": "Returning…",
+    "returningTo": "Returning {{serial}} to stock.",
+    "returned": "{{serial}} returned to stock.",
+    "returnFailed": "Retourneren mislukt",
+    "returnLocationRequired": "Retourlocatie is verplicht",
+    "extendDialogTitle": "Extend loan",
+    "currentlyDue": "Currently due: {{due}}",
+    "updateDueDate": "Update due date",
+    "updatingDueDate": "Updating…",
+    "dueDateUpdated": "Due date updated for {{serial}}.",
+    "extendFailed": "Couldn't update the due date.",
+    "historyNotFound": "No history recorded for this unit yet.",
+    "historyLoadFailed": "Couldn't load this unit's history. Try again.",
+    "noDueDate": "No due date",
+    "daysOut": "{{n}}d out",
+    "daysOverdue": "{{n}}d overdue",
+    "dueToday": "Due today",
+    "dueInDays": "Due in {{n}}d",
+    "searchPlaceholder": "Search serial, MAC, client, or product",
+    "columns": {
+      "serial": "Serial",
+      "product": "Product",
+      "client": "Klant",
+      "loaned": "Loaned",
+      "due": "Vervaldatum"
+    },
+    "summary": {
+      "out": "{{n}} out",
+      "overdueSuffix": " · {{n}} overdue"
+    },
+    "filter": {
+      "label": "Show",
+      "all": "All loaners",
+      "overdue": "Overdue only"
+    },
+    "empty": {
+      "noMatchTitle": "No loaners match",
+      "noMatchDescription": "Clear the search and filter to see everything on loan.",
+      "clearFilters": "Clear filters",
+      "noLoansTitle": "Nothing out on loan",
+      "noLoansDescription": "Units you loan to clients appear here until they come back."
+    },
+    "fields": {
+      "unit": "Unit",
+      "unitPlaceholder": "Search by serial or MAC…",
+      "unitSearchPlaceholder": "e.g. SSD990-0007",
+      "noInStockUnits": "Geen eenheden op voorraad gevonden",
+      "client": "Client",
+      "dueDate": "Vervaldatum",
+      "returnLocation": "Retourneren naar locatie",
+      "locationPlaceholder": "Selecteer een locatie…"
+    }
+  },
+  "locations": {
+    "addLocation": "Locatie toevoegen",
+    "addressLabel": "Adres (optioneel)",
+    "assignedPlaceholder": "Van wie is deze locatie?",
+    "cityPlaceholder": "Plaats",
+    "clearSearch": "Zoekopdracht wissen",
+    "columns": {
+      "assignedTo": "Toegewezen aan",
+      "available": "Beschikbaar",
+      "onHand": "Op voorraad",
+      "product": "Product",
+      "sku": "SKU",
+      "stock": "Voorraad",
+      "type": "Type"
+    },
+    "count": "{{n}} locatie",
+    "countPlural": "{{n}} locaties",
+    "create": "Aanmaken",
+    "created": "Locatie aangemaakt.",
+    "deactivateConfirm": "\"{{name}}\" deactiveren? Deze verschijnt dan niet meer als voorraadbestemming.",
+    "deactivateFailed": "Kon de locatie niet deactiveren.",
+    "deactivateTitle": "Locatie deactiveren",
+    "deactivated": "Locatie gedeactiveerd.",
+    "default": "Standaard",
+    "editLocation": "Locatie bewerken",
+    "emptyDescription": "Voeg een magazijn, bus of kantoor toe om bij te houden waar voorraad ligt.",
+    "emptyTitle": "Nog geen voorraadlocaties",
+    "filteredCount": "{{shown}} van {{total}}",
+    "holdsStockTooltip": "Bevat voorraad — verplaats deze eerst voordat u deactiveert",
+    "keepActive": "Actief houden",
+    "loadErrorDescription": "Er is iets misgegaan bij het laden van deze pagina. Probeer het opnieuw.",
+    "loadErrorTitle": "Kon locaties niet laden",
+    "loadFailed": "Kon locaties niet laden.",
+    "makeDefault": "Maak dit de standaardlocatie",
+    "nameRequired": "Locatienaam is verplicht",
+    "noActiveDescription": "Elke locatie is gedeactiveerd.",
+    "noActiveTitle": "Geen actieve locaties",
+    "noMatchTitle": "Geen locaties komen overeen",
+    "notAssigned": "Niet toegewezen",
+    "nothingOnHand": "Niets op voorraad op deze locatie.",
+    "reactivate": "Heractiveren",
+    "reactivateFailed": "Kon de locatie niet heractiveren.",
+    "reactivated": "Locatie geheractiveerd.",
+    "saveFailed": "Kon de locatie niet opslaan.",
+    "searchPlaceholder": "Locaties zoeken",
+    "selectType": "Selecteer een type…",
+    "setDefault": "Als standaard instellen",
+    "setDefaultFailed": "Kon de standaardlocatie niet instellen.",
+    "setDefaultSuccess": "\"{{name}}\" is nu de standaardlocatie.",
+    "showInactive": "Inactieve tonen",
+    "showInactiveCount": "Inactieve tonen ({{n}})",
+    "statePlaceholder": "Staat",
+    "stock": {
+      "loadFailed": "Kon de voorraad van de locatie niet laden."
+    },
+    "stockAt": "Voorraad op {{name}}",
+    "stockEmpty": "Leeg",
+    "stockSearchPlaceholder": "Product of SKU zoeken",
+    "stockTitle": "Voorraad",
+    "streetPlaceholder": "Straatnaam en huisnummer",
+    "suitePlaceholder": "Suite, unit, verdieping (optioneel)",
+    "title": "Voorraadlocaties",
+    "type": {
+      "office": "Kantoor",
+      "other": "Overig",
+      "van": "Voertuig",
+      "warehouse": "Magazijn"
+    },
+    "updated": "Locatie bijgewerkt.",
+    "zipPlaceholder": "ZIP"
+  },
+  "margin": {
+    "columns": {
+      "cogs": "COGS",
+      "margin": "Marge",
+      "marginPct": "Marge %",
+      "product": "Product",
+      "qtySold": "Verkocht aantal",
+      "revenue": "Omzet"
+    },
+    "empty": "Geen op verkoop gebaseerde marge in deze periode.",
+    "loading": "Marge laden…",
+    "metrics": {
+      "cogs": "COGS",
+      "margin": "Marge",
+      "marginPct": "Marge %",
+      "revenue": "Omzet"
+    },
+    "runFailed": "Kon het margerapport niet uitvoeren.",
+    "subtitle": "Omzet, kostprijs van verkochte goederen en marge per product uit uitgevoerde verkooporders.",
+    "title": "Margerapport"
+  },
+  "poLandedCost": {
+    "actions": {
+      "addEntry": "Post toevoegen",
+      "adding": "Toevoegen…",
+      "applyPending": "Openstaande posten toepassen",
+      "applying": "Toepassen…"
+    },
+    "addFailed": "Kon de post niet toevoegen.",
+    "allocation": {
+      "value": "Regelwaarde"
+    },
+    "amountRequired": "Bedrag moet groter zijn dan 0.",
+    "applied": "{{amount}} toegepast over {{count}} regel(s) — gemiddelden en kostprijzen bijgewerkt.",
+    "appliedLabel": "Toegepast:",
+    "applyFailed": "Kon de aankomstkosten niet toepassen.",
+    "columns": {
+      "allocateBy": "Verdeelbasis",
+      "allocated": "Toegerekend",
+      "amount": "Bedrag",
+      "effectiveUnitCost": "Effectieve kostprijs per eenheid",
+      "product": "Product",
+      "received": "Ontvangen",
+      "type": "Type"
+    },
+    "costType": {
+      "duty": "Invoerrechten",
+      "freight": "Vracht",
+      "other": "Overig"
+    },
+    "entryAdded": "Aankomstkostenpost toegevoegd.",
+    "fields": {
+      "amount": "Bedrag ($ {{currency}})"
+    },
+    "loadError": "Kon de aankomstkosten niet laden.",
+    "nothingReceived": "Nog niets ontvangen — ontvang eerst de inkooporder en pas daarna toe.",
+    "nothingToApply": "Niets om toe te passen.",
+    "pendingLabel": "In afwachting:",
+    "previewTitle": "Voorbeeld van verdeling (openstaande posten)",
+    "removeFailed": "Kon de post niet verwijderen.",
+    "status": {
+      "applied": "Toegepast",
+      "pending": "In afwachting"
+    },
+    "title": "Aankomstkosten",
+    "titleWithPo": "Aankomstkosten — {{poNumber}}"
+  },
+  "purchaseOrders": {
+    "actions": {
+      "addItem": "Item toevoegen",
+      "create": "Aanmaken",
+      "landedCost": "Aankomstkosten",
+      "receive": "Ontvangen",
+      "receiving": "Ontvangen…",
+      "submit": "Indienen"
+    },
+    "addPurchaseOrder": "Inkooporder toevoegen",
+    "allVendors": "Alle leveranciers",
+    "amountOnOrder": "{{amount}} besteld",
+    "mixedCurrencyOnOrder": "{{count}} inkooporders in bestelling in meerdere valuta",
+    "cancelConfirm": "Weet u zeker dat u inkooporder {{poNumber}} wilt annuleren? Dit kan niet ongedaan worden gemaakt.",
+    "cancelFailed": "Kon de inkooporder niet annuleren.",
+    "cancelTitle": "Inkooporder annuleren",
+    "cancelled": "Inkooporder geannuleerd.",
+    "clearFilters": "Filters wissen",
+    "columns": {
+      "amount": "Bedrag",
+      "expected": "Verwacht",
+      "poNumber": "PO-nummer",
+      "product": "Product",
+      "qty": "Aantal",
+      "received": "Ontvangen",
+      "unitCost": "Kostprijs per eenheid",
+      "vendor": "Leverancier"
+    },
+    "count": "{{count}} inkooporder",
+    "countPlural": "{{count}} inkooporders",
+    "createFailed": "Kon de inkooporder niet aanmaken.",
+    "created": "Inkooporder aangemaakt.",
+    "currency": {
+      "cad": "CAD — Canadese dollar",
+      "eur": "EUR — Euro",
+      "gbp": "GBP — Britse pond",
+      "usd": "USD — Amerikaanse dollar"
+    },
+    "currencyRequired": "Valuta is verplicht",
+    "emptyDescription": "Maak een inkooporder om bij te houden wat er bij uw leveranciers besteld is.",
+    "emptyTitle": "Nog geen inkooporders",
+    "fields": {
+      "currency": "Valuta",
+      "expectedDate": "Verwachte datum",
+      "items": "Items",
+      "location": "Locatie",
+      "selectLocation": "Selecteer een locatie…",
+      "selectProduct": "Selecteer een product…",
+      "selectVendor": "Selecteer een leverancier…",
+      "serialNumbers": "Serienummers (één per regel)",
+      "vendor": "Leverancier"
+    },
+    "filteredCount": "{{filtered}} van {{total}}",
+    "keepPo": "Inkooporder behouden",
+    "lineFullyReceived": "Deze regel is volledig ontvangen.",
+    "lineQtyRequired": "Elk regelaantal moet groter zijn dan 0",
+    "loadError": "Kon inkooporders niet laden.",
+    "loadErrorDescription": "Er is iets misgegaan bij het laden van deze pagina. Probeer het opnieuw.",
+    "loadErrorTitle": "Kon inkooporders niet laden",
+    "loadOneFailed": "Kon de inkooporder niet laden.",
+    "loadingPo": "Inkooporder laden…",
+    "locationRequired": "Locatie is verplicht",
+    "noLines": "Deze inkooporder heeft geen regels.",
+    "noMatchTitle": "Geen inkooporders komen overeen",
+    "notFound": "Inkooporder niet gevonden",
+    "overReceived": "{{quantity}} ontvangen. U heeft nu meer ontvangen dan besteld was.",
+    "productsLoadError": "Kon producten niet laden.",
+    "qtyRequired": "Aantal moet groter zijn dan 0",
+    "receiveFailed": "Kon deze regel niet ontvangen.",
+    "receiveTitle": "{{poNumber}} ontvangen",
+    "receiveTitleDefault": "Inkooporder ontvangen",
+    "receivedOf": "{{received}} van {{ordered}} ontvangen",
+    "receivedStatus": "{{quantity}} ontvangen. Inkooporder is nu {{status}}.",
+    "searchPlaceholder": "PO-nummer of leverancier zoeken",
+    "status": {
+      "allStatuses": "Alle statussen",
+      "cancelled": "Geannuleerd",
+      "draft": "Concept",
+      "open": "Open",
+      "partiallyReceived": "Gedeeltelijk ontvangen",
+      "received": "Ontvangen"
+    },
+    "submitFailed": "Kon de inkooporder niet indienen.",
+    "submitted": "Inkooporder ingediend.",
+    "title": "Inkooporders",
+    "unnamedProduct": "Naamloos product",
+    "vendorRequired": "Leverancier is verplicht",
+    "vendorsLoadError": "Kon leveranciers niet laden."
+  },
+  "rma": {
+    "caseOpened": "RMA-zaak geopend.",
+    "columns": {
+      "client": "Klant",
+      "daysRemaining": "Resterende dagen",
+      "dueDate": "Vervaldatum",
+      "reason": "Reden",
+      "returnedUnit": "Geretourneerde eenheid",
+      "type": "Type",
+      "vendor": "Leverancier",
+      "creditAtStake": "Credit at stake",
+      "rmaNumber": "RMA #"
+    },
+    "deadUnitsOwed": "Openstaande defecte eenheden",
+    "fields": {
+      "location": "Locatie",
+      "locationPlaceholder": "Selecteer een locatie…",
+      "reason": "Reden",
+      "returnedUnitId": "ID geretourneerde eenheid",
+      "rmaType": "RMA-type",
+      "vendor": "Leverancier",
+      "vendorPlaceholder": "Selecteer een leverancier…",
+      "vendorRef": "RMA-referentie leverancier"
+    },
+    "loadCasesFailed": "Kon RMA-zaken niet laden.",
+    "loadLocationsVendorsFailed": "Kon locaties en leveranciers niet laden.",
+    "openFailed": "Kon RMA niet openen.",
+    "openRma": "RMA openen",
+    "pickLocation": "Kies een locatie.",
+    "pickVendor": "Kies een leverancier.",
+    "receiveFailed": "Kon de retour niet ontvangen.",
+    "receiveReturn": "Retour ontvangen",
+    "receiving": "Ontvangen…",
+    "returnReceived": "Retour ontvangen.",
+    "returnedUnitRequired": "ID van geretourneerde eenheid is verplicht.",
+    "sendToVendor": "Naar leverancier sturen",
+    "sendVendorFailed": "Kon niet naar leverancier sturen.",
+    "sending": "Verzenden…",
+    "sentToVendor": "Naar leverancier verzonden.",
+    "title": "RMA",
+    "types": {
+      "advanceReplacement": "Vervanging vooraf",
+      "standard": "Standaard"
+    },
+    "status": {
+      "open": "Open",
+      "awaitingReturn": "Wacht op retour",
+      "returned": "Geretourneerd",
+      "sentToVendor": "Naar leverancier verzonden",
+      "replacementReceived": "Vervanging ontvangen",
+      "replacementDeployed": "Vervanging uitgerold",
+      "deadUnitOwed": "Defecte eenheid verschuldigd",
+      "deadUnitReturned": "Defecte eenheid geretourneerd",
+      "replaced": "Vervangen",
+      "credited": "Gecrediteerd",
+      "charged": "In rekening gebracht",
+      "closed": "Gesloten"
+    },
+    "ageAtVendor": "{{days}}d at vendor",
+    "filters": {
+      "statusActive": "Showing {{status}} RMA cases."
+    }
+  },
+  "salesOrders": {
+    "actions": {
+      "addLine": "Regel toevoegen",
+      "confirmShipment": "Verzending bevestigen",
+      "confirming": "Bevestigen…",
+      "createBackorderPo": "Concept-inkooporder aanmaken voor backorder",
+      "createDropShipPo": "Dropship-inkooporder aanmaken",
+      "createPo": "Inkooporder aanmaken",
+      "creating": "Aanmaken…",
+      "document": "Document",
+      "emailConfirmation": "Bevestiging e-mailen naar klant…",
+      "fulfill": "Uitvoeren",
+      "fulfilling": "Uitvoeren…",
+      "generateInvoice": "Factuur genereren",
+      "invoicing": "Factureren…",
+      "manageLayouts": "Lay-outs beheren",
+      "reopenToDraft": "Heropenen als concept",
+      "reopening": "Heropenen…",
+      "cancelSalesOrder": "Cancel sales order",
+      "moreActions": "More actions",
+      "orderPdfs": "Order PDFs"
+    },
+    "addSalesOrder": "Verkooporder toevoegen",
+    "allocationMode": {
+      "hard": "Hard",
+      "soft": "Zacht"
+    },
+    "allocationModeHelp": "Soft reserves stock but leaves it visible to other orders; Hard holds it exclusively.",
+    "availabilityOk": "OK",
+    "backorderBadge": "Backorder {{shortfall}}",
+    "billingAllocation": "Billing & allocation",
+    "billsOnFulfillment": "Factureert bij uitvoering",
+    "cancelDialog": {
+      "confirm": "Verkooporder annuleren",
+      "keep": "Order behouden",
+      "message": "Verkooporder {{number}} annuleren? Dit kan niet ongedaan worden gemaakt.",
+      "title": "Verkooporder annuleren"
+    },
+    "cancelFailed": "Annuleren mislukt",
+    "cancelled": "Verkooporder geannuleerd",
+    "clientRequired": "Klant is verplicht",
+    "columns": {
+      "client": "Klant",
+      "currency": "Valuta",
+      "invoiceMode": "Factuurmodus",
+      "soNumber": "SO-nummer",
+      "amount": "Amount",
+      "fulfillment": "Fulfillment",
+      "invoiceable": "Invoiceable"
+    },
+    "confirmFailed": "Bevestigen mislukt",
+    "confirmShipmentError": "Kon de verzending niet bevestigen.",
+    "confirmed": "Verkooporder bevestigd",
+    "createDraftPoError": "Kon de concept-inkooporder niet aanmaken.",
+    "createDropShipPoError": "Kon de dropship-inkooporder niet aanmaken.",
+    "createPoDialog": {
+      "note": "Bestelt de volledige hoeveelheid van de regel ({{quantity}}) bij de leverancier, rechtstreeks verzonden naar de klant. Zodra de leverancier verzendt, gebruikt u \"Verzending bevestigen\" om de regel als uitgevoerd te markeren.",
+      "title": "Dropship-inkooporder aanmaken — {{name}}",
+      "vendor": "Leverancier",
+      "vendorPlaceholder": "Selecteer een leverancier…"
+    },
+    "created": "Verkooporder aangemaakt",
+    "currencyFromClient": "Set from client",
+    "currencyRequired": "Valutacode is verplicht",
+    "detailTitle": "Verkooporder {{number}}",
+    "detailTitleFallback": "Verkooporder",
+    "documentFailed": "Kon het document niet genereren.",
+    "documents": {
+      "packingSlip": "Pakbon",
+      "pickList": "Piklijst",
+      "salesOrder": "Orderbevestiging"
+    },
+    "draftPoCreated": "Concept-inkooporder aangemaakt: {{numbers}}",
+    "draftPosCreated": "Concept-inkooporders aangemaakt: {{numbers}}",
+    "dropShipBadge": "Dropship",
+    "dropShipDialog": {
+      "addSerial": "Serienummer toevoegen",
+      "confirmNote": "Bevestig dat de leverancier de openstaande {{count}} eenhe(i)d(en) naar de klant heeft verzonden. De regel wordt gemarkeerd als uitgevoerd; de voorraad wordt nooit aangepast.",
+      "macPlaceholder": "MAC (optioneel)",
+      "serialPlaceholder": "Serienummer",
+      "serialsNote": "Voer de serienummers in die de leverancier heeft verzonden (met MAC waar van toepassing). Eenheden worden geregistreerd als geleverd aan de klant — de voorraad wordt nooit aangepast.",
+      "title": "Verzending leverancier bevestigen — {{name}}"
+    },
+    "dropShipPoCreated": "Dropship-inkooporder {{number}} aangemaakt — bevestig de verzending zodra de leverancier verzendt.",
+    "emailDialog": {
+      "confirm": "E-mail verzenden",
+      "message": "De orderbevestiging voor {{number}} naar het factuurcontact van de klant e-mailen?",
+      "title": "Orderbevestiging e-mailen"
+    },
+    "emailFailed": "Kon de bevestiging niet e-mailen.",
+    "emailSuccess": "Bevestiging per e-mail verzonden naar {{recipients}}",
+    "enterSerial": "Voer minstens één serienummer in.",
+    "errors": {
+      "documentGenerationFailed": "Kon het document niet genereren",
+      "downloadPermissionDenied": "Toegang geweigerd: verkooporderdocumenten kunnen niet worden gedownload",
+      "emailConfirmationFailed": "Kon de bevestiging niet e-mailen",
+      "emailPermissionDenied": "Toegang geweigerd: verkooporderdocumenten kunnen niet per e-mail worden verzonden",
+      "emailSendFailed": "E-mail verzenden mislukt.",
+      "noRecipientEmail": "Er is geen e-mailadres van een ontvanger voor deze klant geregistreerd.",
+      "notFound": "Verkooporder niet gevonden"
+    },
+    "fields": {
+      "allocationMode": "Toewijzingsmodus",
+      "clientPoNumber": "Client PO number",
+      "currencyCode": "Valutacode",
+      "expectedShipDate": "Expected ship date",
+      "fulfillment": "Fulfillment",
+      "invoiceMode": "Factuurmodus",
+      "items": "Items",
+      "lines": "Regels",
+      "noService": "No service found.",
+      "notes": "Notes",
+      "qty": "Aantal",
+      "searchService": "Search services…",
+      "selectService": "Select a service…",
+      "service": "Service",
+      "serviceId": "Service-ID",
+      "unitPrice": "Stukprijs",
+      "unitPriceIn": "Unit price ({{currency}})"
+    },
+    "filters": {
+      "kitUsageActive": "Showing sales orders using {{kit}}.",
+      "invoiceableActive": "Showing sales orders with fulfilled, uninvoiced items."
+    },
+    "fromQuote": "Uit offerte",
+    "fulfillDialog": {
+      "allocatedToThis": "Toegewezen aan deze order",
+      "hardHeldMany": "{{count}} eenheden zijn hard gereserveerd door andere orders en worden niet getoond.",
+      "hardHeldOne": "{{count}} eenheid is hard gereserveerd door andere orders en wordt niet getoond.",
+      "loadingUnits": "Eenheden laden…",
+      "noUnits": "Geen beschikbare eenheden.",
+      "remaining": "{{remaining}} van {{ordered}} resterend.",
+      "searchPlaceholder": "Serienummer of MAC zoeken",
+      "selectedMany": "{{count}} eenheden geselecteerd",
+      "selectedOne": "{{count}} eenheid geselecteerd",
+      "shortStockNote": "Voorraadtekort geeft een waarschuwing maar blokkeert nooit — consistent met automatische materiaalfacturatie.",
+      "softAllocatedOther": "Zacht toegewezen aan een andere order",
+      "sourceLocation": "Bronlocatie",
+      "title": "Uitvoeren — {{name}}"
+    },
+    "fulfilledUnits": "{{count}} eenhe(i)d(en) uitgevoerd.",
+    "fulfillment": {
+      "dropShip": "Drop-ship",
+      "fromStock": "From stock"
+    },
+    "fulfillmentFailed": "Uitvoering mislukt.",
+    "invoiceColumns": {
+      "amount": "Bedrag",
+      "created": "Aangemaakt",
+      "invoice": "Factuur"
+    },
+    "invoiceGenFailed": "Factuurgeneratie mislukt.",
+    "invoiceMode": {
+      "manual": "Handmatig",
+      "onFulfillment": "Bij uitvoering"
+    },
+    "kitPrice": {
+      "calculated": "Calculated from components",
+      "configured": "Configured kit price",
+      "currencyMismatch": "Kit price is configured in {{kitCurrency}}. Enter a {{orderCurrency}} price for this sales order.",
+      "currencyOverride": "Order-specific {{currency}} price",
+      "overridden": "Overridden from {{price}} for this sales order",
+      "reset": "Reset to kit price"
+    },
+    "invoiceModeHelp": "On fulfillment bills as items ship; Manual leaves invoicing to you.",
+    "invoicedItems": "{{count}} item(s) gefactureerd.",
+    "invoices": "Facturen",
+    "invoicingFailed": "Facturatie mislukt: {{error}}. Gebruik \"Factuur genereren\" om het opnieuw te proberen.",
+    "lineColumns": {
+      "availability": "Beschikbaarheid",
+      "fulfilled": "Uitgevoerd",
+      "invoiced": "Gefactureerd",
+      "ordered": "Besteld",
+      "product": "Product",
+      "unitPrice": "Stukprijs"
+    },
+    "lineQtyPositive": "Elk regelaantal moet groter zijn dan 0",
+    "loadDetailError": "Kon de verkooporder niet laden.",
+    "loadError": "Verkooporders laden mislukt",
+    "loadUnitsError": "Kon beschikbare eenheden niet laden.",
+    "loadVendorsError": "Kon leveranciers niet laden.",
+    "manualInvoicing": "Handmatige facturatie",
+    "nothingBackordered": "Er staat niets in backorder.",
+    "nothingToInvoice": "Er is niets meer te factureren.",
+    "onlyRemaining": "Nog maar {{remaining}} resterend op deze regel.",
+    "pickServiceForLine": "Pick a service for this line.",
+    "pickVendor": "Kies de leverancier die deze regel gaat verzenden.",
+    "productDefaultLocation": "Standaardlocatie product",
+    "qtyPositive": "Must be > 0.",
+    "qtyPositiveInteger": "Aantal moet een positief geheel getal zijn.",
+    "reopenError": "Kon de verkooporder niet heropenen.",
+    "reopened": "Verkooporder heropend — het is weer een concept.",
+    "selectUnit": "Selecteer minstens één eenheid.",
+    "shipmentConfirmed": "Verzending bevestigd — {{count}} eenhe(i)d(en) geleverd.",
+    "status": {
+      "cancelled": "Geannuleerd",
+      "closed": "Gesloten",
+      "confirmed": "Bevestigd",
+      "draft": "Concept",
+      "fulfilled": "Uitgevoerd",
+      "invoiced": "Gefactureerd",
+      "partiallyFulfilled": "Gedeeltelijk uitgevoerd"
+    },
+    "title": "Verkooporders",
+    "total": "Total",
+    "unassignedBackorder": "{{count}} backorderregel(s) hebben geen voorkeursleverancier — maak die inkooporders handmatig aan.",
+    "unnamedService": "Unnamed",
+    "notFound": "Sales order not found.",
+    "badges": {
+      "dropShip": "Drop-ship",
+      "readyToInvoice": "Ready"
+    }
+  },
+  "stock": {
+    "actions": {
+      "receive": "Ontvangen"
+    },
+    "badge": {
+      "serial": "Serienummer"
+    },
+    "clearFilters": "Filters wissen",
+    "columns": {
+      "available": "Beschikbaar",
+      "location": "Locatie",
+      "onHand": "Op voorraad",
+      "product": "Product",
+      "sku": "SKU"
+    },
+    "empty": {
+      "noMatchTitle": "Geen producten komen overeen",
+      "noProductsDescription": "Schakel voorraadregistratie in voor een product in Facturatie → Producten en ontvang daarna voorraad.",
+      "noProductsTitle": "Nog geen producten met voorraadregistratie"
+    },
+    "fields": {
+      "location": "Locatie",
+      "product": "Product",
+      "unitCost": "Kostprijs per eenheid"
+    },
+    "filteredCount": "{{shown}} van {{total}} producten",
+    "levels": {
+      "empty": "Geen voorraad geregistreerd voor dit product.",
+      "loadFailed": "Kon voorraadniveaus niet laden.",
+      "loading": "Voorraad laden…",
+      "title": "Voorraadniveaus — {{name}}"
+    },
+    "loadLocationsFailed": "Kon locaties niet laden.",
+    "loadProductsFailed": "Kon producten niet laden.",
+    "needsAttention": "Vereist aandacht",
+    "rebuild": {
+      "button": "Voorraadcaches opnieuw opbouwen",
+      "consistent": "{{products}} producten gecontroleerd — caches waren al consistent.",
+      "correctedMany": "{{products}} producten gecontroleerd en {{n}} waarden gecorrigeerd.",
+      "correctedOne": "{{products}} producten gecontroleerd en {{n}} waarde gecorrigeerd.",
+      "failed": "Kon voorraadcaches niet opnieuw opbouwen.",
+      "inProgress": "Opnieuw opbouwen…"
+    },
+    "receive": {
+      "costNonNegative": "Kostprijs per eenheid kan niet negatief zijn.",
+      "failed": "Kon voorraad niet ontvangen.",
+      "inProgress": "Ontvangen…",
+      "pickLocation": "Kies een locatie.",
+      "pickProduct": "Kies een product.",
+      "qtyPositive": "Aantal moet een positief geheel getal zijn.",
+      "selectLocation": "Selecteer een locatie…",
+      "selectProduct": "Selecteer een product…",
+      "serialCount": "{{n}} eenheden worden ontvangen.",
+      "serialCountOne": "1 eenheid wordt ontvangen.",
+      "serialNumbers": "Serienummers (één per regel)",
+      "serialsRequired": "Voer ten minste één serienummer in.",
+      "success": "Voorraad ontvangen."
+    },
+    "receiveStock": "Voorraad ontvangen",
+    "searchPlaceholder": "Producten of SKU zoeken",
+    "status": {
+      "low": "Laag",
+      "out": "Op",
+      "wordSite": "{{word}} · {{n}} locatie",
+      "wordSites": "{{word}} · {{n}} locaties"
+    },
+    "summary": {
+      "lowSuffix": " · {{n}} laag",
+      "outSuffix": " · {{n}} op",
+      "productMany": "{{n}} producten",
+      "productOne": "{{n}} product"
+    },
+    "title": "Voorraad",
+    "unnamedProduct": "Naamloos product"
+  },
+  "stockUnits": {
+    "columns": {
+      "client": "Klant",
+      "location": "Locatie",
+      "macAddress": "MAC-adres",
+      "serialNumber": "Serienummer",
+      "warrantyExpires": "Garantie verloopt",
+      "product": "Product",
+      "unitCost": "Kostprijs per eenheid"
+    },
+    "detail": {
+      "delivered": "Geleverd",
+      "location": "Locatie",
+      "mac": "MAC",
+      "received": "Ontvangen",
+      "serial": "Serienummer",
+      "unitCost": "Kostprijs per eenheid",
+      "asset": "Asset"
+    },
+    "exportCsv": "CSV exporteren",
+    "history": "Geschiedenis",
+    "historyLoadFailed": "Kon eenheidsgeschiedenis niet laden",
+    "historyNotFound": "Eenheidsgeschiedenis niet gevonden",
+    "loadFailed": "Kon eenheden niet laden",
+    "noMovements": "Geen bewegingen geregistreerd.",
+    "qty": "Aantal",
+    "searchBy": "Zoeken op",
+    "searchFailed": "Zoeken mislukt",
+    "searchMode": {
+      "mac": "MAC-adres",
+      "serial": "Serienummer"
+    },
+    "searchPlaceholder": {
+      "mac": "MAC-adres…",
+      "serial": "Serienummer…"
+    },
+    "searchTerm": "Zoekterm",
+    "title": "Voorraadeenheden",
+    "unitHistoryTitle": "Eenheidsgeschiedenis",
+    "unitTitle": "Eenheid {{id}}",
+    "status": {
+      "inStock": "Op voorraad",
+      "allocated": "Toegewezen",
+      "inTransit": "Onderweg",
+      "onLoan": "Uitgeleend",
+      "delivered": "Geleverd",
+      "returned": "Geretourneerd",
+      "inRma": "In RMA",
+      "retired": "Afgevoerd"
+    },
+    "empty": {
+      "clearFilters": "Filters wissen",
+      "clearSearch": "Zoekopdracht wissen",
+      "noFilterMatchTitle": "Geen eenheden komen overeen met dit filter",
+      "noMatchDescription": "Wis de zoekopdracht en filters om alle eenheden te zien.",
+      "noMatchTitle": "Geen eenheden komen overeen met \"{{term}}\"",
+      "noUnitsDescription": "Geserialiseerde eenheden verschijnen hier zodra voorraad wordt ontvangen voor een geserialiseerd product.",
+      "noUnitsTitle": "Nog geen voorraadeenheden"
+    },
+    "filter": {
+      "allClients": "Alle bedrijven",
+      "allStatuses": "Alle statussen",
+      "client": "Bedrijf",
+      "status": "Status"
+    },
+    "summary": {
+      "many": "{{n}} eenheden",
+      "one": "{{n}} eenheid",
+      "valueSuffix": " · {{value}} waarde"
+    },
+    "viewAsset": "Asset bekijken",
+    "restock": {
+      "action": "Restock",
+      "headerAction": "Restock a return",
+      "dialogTitle": "Restock a returned unit",
+      "mode": "What are you restocking?",
+      "modeUnit": "A specific returned unit",
+      "modeQuantity": "A quantity of a product",
+      "unit": "Unit",
+      "unitPlaceholder": "Search a delivered or returned unit…",
+      "noUnits": "No delivered or returned units match",
+      "location": "Restock to location",
+      "locationPlaceholder": "Select a location…",
+      "useCurrentLocation": "Use unit's current location",
+      "product": "Product",
+      "productPlaceholder": "Select a product…",
+      "quantity": "Quantity",
+      "fee": "Restocking fee",
+      "feeClient": "Bill restocking fee to",
+      "feeInvalid": "Restocking fee must be a non-negative amount.",
+      "chooseUnit": "Choose a unit to restock.",
+      "chooseProduct": "Choose a product to restock.",
+      "chooseLocation": "Choose a location to restock into.",
+      "quantityInvalid": "Enter a quantity greater than zero.",
+      "chooseClient": "Choose the client to bill the restocking fee to.",
+      "theProduct": "the product",
+      "doneWithInvoice": "Unit restocked. Draft invoice {{number}} created for the {{amount}} restocking fee.",
+      "doneFeeFailed": "Unit restocked, but the restocking fee wasn't billed: {{reason}} Create it manually.",
+      "doneQuantity": "{{qty}} × {{product}} restocked.",
+      "done": "Unit restocked.",
+      "failed": "Couldn't restock the return.",
+      "restocking": "Restocking…",
+      "submit": "Restock"
+    }
+  },
+  "transfers": {
+    "addLine": "Regel toevoegen",
+    "cancelConfirm": "Weet u zeker dat u deze overboeking wilt annuleren? Dit kan niet ongedaan worden gemaakt.",
+    "cancelFailed": "Annuleren mislukt",
+    "cancelTitle": "Overboeking annuleren",
+    "cancelled": "Overboeking geannuleerd",
+    "columns": {
+      "atSource": "Op bron",
+      "dispatched": "Verzonden",
+      "from": "Van",
+      "loadQty": "Laadaantal",
+      "needed": "Benodigd",
+      "product": "Product",
+      "received": "Ontvangen",
+      "serials": "Serienummers",
+      "to": "Naar"
+    },
+    "compute": "Berekenen",
+    "computeFailed": "Kon laadlijst niet berekenen",
+    "computing": "Berekenen...",
+    "dash": "-",
+    "dispatch": "Verzenden",
+    "dispatchFailed": "Verzenden mislukt",
+    "dispatchLoad": "Lading verzenden",
+    "dispatchTransfer": "Overboeking verzenden",
+    "dispatched": "Overboeking verzonden",
+    "dispatching": "Verzenden…",
+    "dispatchingLoad": "Verzenden...",
+    "fifoPicked": "FIFO gekozen",
+    "fromLocation": "Bronlocatie",
+    "fromSource": "Van (bronschap)",
+    "keepTransfer": "Overboeking behouden",
+    "lineRequired": "Er is minstens één regel met een service vereist",
+    "linesLabel": "Regels *",
+    "loadDestination": "Laden (bestemming)",
+    "loadDispatchedMany": "Lading verzonden ({{n}} regels)",
+    "loadDispatchedOne": "Lading verzonden ({{n}} regel)",
+    "loadFailed": "Kon overboekingen niet laden",
+    "loadList": "Laadlijst",
+    "loadLocationsFailed": "Kon locaties niet laden",
+    "loadQtyRequired": "Er is minstens één laadaantal vereist",
+    "locationsMustDiffer": "Bron en bestemming moeten verschillen",
+    "locationsRequired": "Bron- en bestemmingslocaties zijn verplicht",
+    "noLowStock": "Geen regels met lage voorraad gevonden voor deze bestemming.",
+    "noSerials": "Geen serienummers",
+    "receive": "Ontvangen",
+    "receiveFailed": "Ontvangen mislukt",
+    "received": "Overboeking ontvangen",
+    "selectDestination": "Selecteer bestemming...",
+    "selectLocation": "Selecteer een locatie…",
+    "selectSource": "Selecteer bron...",
+    "serviceId": "Service-ID",
+    "shortAtSource": "{{n}} tekort op bron",
+    "title": "Overboekingen",
+    "toLocation": "Bestemmingslocatie",
+    "vanLoadList": "Buslaadlijst",
+    "vanLoadListReplenishment": "Aanvulling voor buslaadlijst",
+    "status": {
+      "dispatched": "Verzonden",
+      "received": "Ontvangen",
+      "cancelled": "Geannuleerd"
+    }
+  },
+  "vendorBills": {
+    "actions": {
+      "markPaid": "Als betaald markeren",
+      "open": "Openen",
+      "void": "Storneren"
+    },
+    "addBill": "Factuur toevoegen",
+    "allStatuses": "Alle statussen",
+    "billCreated": "Factuur aangemaakt (concept).",
+    "billLoadError": "Kon de factuur niet laden.",
+    "billNumberRequired": "Voer het factuurnummer van de leverancier in.",
+    "billOpened": "Factuur geopend.",
+    "billPaid": "Factuur als betaald gemarkeerd.",
+    "billVoided": "Factuur gestorneerd.",
+    "billedAbove": "{{amount}} boven de ontvangen waarde gefactureerd.",
+    "billedBelow": "{{amount}} onder de ontvangen waarde gefactureerd.",
+    "columns": {
+      "amount": "Bedrag",
+      "billNumber": "Factuur #",
+      "due": "Vervaldatum",
+      "line": "Regel",
+      "po": "PO",
+      "qty": "Aantal",
+      "unitCost": "Kostprijs per eenheid",
+      "vendor": "Leverancier",
+      "vsPo": "t.o.v. PO"
+    },
+    "createBill": "Factuur aanmaken",
+    "createError": "Kon de factuur niet aanmaken.",
+    "createHint": "De vervaldatum wordt standaard bepaald door de betalingsvoorwaarden van de leverancier. Facturen die vooraf zijn ingevuld vanuit een PO nemen de ontvangen aantallen en kosten over.",
+    "creating": "Aanmaken…",
+    "detailDue": "Vervalt op {{date}}",
+    "detailPo": "PO {{number}}",
+    "dialog": {
+      "billTitle": "Factuur",
+      "createTitle": "Leveranciersfactuur toevoegen",
+      "detailTitle": "Factuur {{number}} — {{vendor}}"
+    },
+    "export": {
+      "error": "Export mislukt",
+      "exported": "Geëxporteerd",
+      "notExported": "Niet geëxporteerd",
+      "pending": "Export in afwachting",
+      "retry": "Opnieuw proberen",
+      "retrying": "Opnieuw proberen…"
+    },
+    "exportError": "Kon de factuur niet exporteren.",
+    "exportFailed": "Export mislukt.",
+    "exportQueued": "Export in wachtrij geplaatst.",
+    "exportedToAccounting": "Geëxporteerd naar boekhouding.",
+    "fields": {
+      "billNumber": "Factuurnummer van de leverancier",
+      "noPoPlaceholder": "Geen PO — lege factuur",
+      "prefillPo": "Vooraf invullen vanuit inkooporder (optioneel)",
+      "vendor": "Leverancier",
+      "vendorPlaceholder": "Selecteer een leverancier…"
+    },
+    "loadError": "Kon leveranciersfacturen niet laden.",
+    "matchesPo": "komt overeen met PO",
+    "matchesPoValue": "Komt overeen met de ontvangen waarde van de PO.",
+    "pickVendor": "Kies een leverancier (of een PO om vanuit vooraf in te vullen).",
+    "status": {
+      "draft": "Concept",
+      "open": "Open",
+      "paid": "Betaald",
+      "void": "Gestorneerd"
+    },
+    "subtitle": "Lichte crediteurenadministratie: houd bij wat leveranciers hebben gefactureerd tegenover wat u heeft ontvangen. Geen grootboek — markeer handmatig als betaald.",
+    "title": "Leveranciersfacturen",
+    "updateError": "Kon de factuur niet bijwerken."
+  },
+  "vendorPriceList": {
+    "columns": {
+      "cost": "Kostprijs",
+      "leadTime": "Levertijd",
+      "product": "Product",
+      "vendorSku": "Leveranciers-SKU"
+    },
+    "costNegative": "Kostprijs kan niet negatief zijn.",
+    "dialogTitle": "Prijslijst — {{name}}",
+    "emptyState": "Nog geen aanbiedingen — voeg hieronder de artikelnummers en contractkosten van de leverancier toe.",
+    "fields": {
+      "cost": "Kostprijs",
+      "currency": "Valuta",
+      "leadTime": "Levertijd (dagen)",
+      "preferred": "Voorkeursleverancier voor dit product (bepaalt bestelsuggesties)",
+      "product": "Product",
+      "productPlaceholder": "Selecteer een product…",
+      "vendorSku": "Leveranciers-SKU"
+    },
+    "leadTimeDays": "{{days}}d",
+    "loadError": "Kon de prijslijst niet laden.",
+    "offerRemoved": "Aanbieding verwijderd.",
+    "offerSaved": "Aanbieding opgeslagen.",
+    "pickProduct": "Kies een product.",
+    "preferred": "Voorkeur",
+    "removeError": "Kon de aanbieding niet verwijderen.",
+    "saveError": "Kon de aanbieding niet opslaan.",
+    "saveOffer": "Aanbieding opslaan",
+    "title": "Prijslijst",
+    "unnamedProduct": "Naamloos product"
+  },
+  "vendors": {
+    "addVendor": "Leverancier toevoegen",
+    "columns": {
+      "contact": "Contactpersoon",
+      "email": "E-mail",
+      "paymentTerms": "Betalingsvoorwaarden",
+      "vendor": "Leverancier"
+    },
+    "created": "Leverancier aangemaakt",
+    "deactivateConfirm": "Weet u zeker dat u {{name}} wilt deactiveren? Deze leverancier is dan niet meer beschikbaar voor nieuwe inkooporders.",
+    "deactivateFailed": "Deactiveren mislukt",
+    "deactivateTitle": "Leverancier deactiveren",
+    "deactivated": "Leverancier gedeactiveerd",
+    "editVendor": "Leverancier bewerken",
+    "fields": {
+      "accountNumber": "Accountnummer",
+      "contactName": "Naam contactpersoon",
+      "email": "E-mail",
+      "name": "Naam leverancier",
+      "paymentTerms": "Betalingsvoorwaarden",
+      "phone": "Telefoon"
+    },
+    "loadError": "Leveranciers laden mislukt",
+    "nameRequired": "Naam leverancier is verplicht",
+    "priceList": "Prijslijst",
+    "title": "Leveranciers",
+    "updated": "Leverancier bijgewerkt"
+  },
+  "writeOffs": {
+    "badges": {
+      "adjustment": "Aanpassing",
+      "countCorrection": "Telcorrectie",
+      "retired": "Afgevoerd"
+    },
+    "byUser": "Per gebruiker",
+    "columns": {
+      "by": "Door",
+      "events": "Gebeurtenissen",
+      "foundAdded": "Gevonden / toegevoegd",
+      "location": "Locatie",
+      "net": "Netto",
+      "product": "Product",
+      "qty": "Aantal",
+      "reason": "Reden",
+      "type": "Type",
+      "user": "Gebruiker",
+      "value": "Waarde",
+      "when": "Wanneer",
+      "writtenOff": "Afgeschreven"
+    },
+    "eventsTitle": "Gebeurtenissen",
+    "runFailed": "Kon het afschrijvingsrapport niet uitvoeren.",
+    "subtitle": "Elke voorraadafwaardering, afvoering en telcorrectie — met de naam van degene die het heeft ondertekend. Grootboekgedekt; niets hier kan achteraf worden bewerkt.",
+    "title": "Afschrijvingen en aanpassingen",
+    "totals": {
+      "foundAdded": "Gevonden / toegevoegd: ",
+      "net": "Netto: ",
+      "writtenOff": "Afgeschreven: "
+    },
+    "truncatedNotice": "De meest recente {{count}} gebeurtenissen worden getoond — de totalen hierboven dekken nog steeds de hele periode. Verklein het datumbereik om alles gespecificeerd te zien."
+  }
+}

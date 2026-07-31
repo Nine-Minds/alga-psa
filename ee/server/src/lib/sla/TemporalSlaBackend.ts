@@ -1,5 +1,5 @@
 import logger from '@alga-psa/core/logger';
-import { getConnection } from '@alga-psa/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import type { ISlaBackend } from '@alga-psa/sla/services';
 import type {
   IBusinessHoursScheduleWithEntries,
@@ -12,6 +12,7 @@ const DEFAULT_TEMPORAL_ADDRESS =
   'temporal-frontend.temporal.svc.cluster.local:7233';
 const DEFAULT_TEMPORAL_NAMESPACE = 'default';
 const DEFAULT_SLA_TASK_QUEUE = 'sla-workflows';
+const TEMPORAL_SLA_TICKET_DISCOVERY_CONTEXT = '__temporal_sla_ticket_discovery__';
 
 export class TemporalSlaBackend implements ISlaBackend {
   private clientPromise: Promise<any> | null = null;
@@ -112,7 +113,11 @@ export class TemporalSlaBackend implements ISlaBackend {
 
   private async resolveTenantId(ticketId: string): Promise<string> {
     const knex = await getConnection(null);
-    const ticket = await knex<{ tenant: string; ticket_id: string }>('tickets')
+    const ticket = await tenantDb(knex, TEMPORAL_SLA_TICKET_DISCOVERY_CONTEXT)
+      .unscoped<{ tenant: string; ticket_id: string }>(
+        'tickets',
+        'resolve tenant id for SLA workflow ticket handle'
+      )
       .where({ ticket_id: ticketId })
       .select('tenant')
       .first();

@@ -101,7 +101,8 @@
     "selection": {
       "selectAllVisibleAssets": "Selecteer alle zichtbare assets",
       "selectAsset": "Selecteer item {{name}}",
-      "selectedAssets": "{{count}} item{{suffix}} geselecteerd",
+      "selectedAssets_one": "{{count}} item geselecteerd",
+      "selectedAssets_other": "{{count}} items geselecteerd",
       "clearSelection": "Duidelijke selectie",
       "bulkActionsComingSoon": "Bulkacties binnenkort beschikbaar"
     },
@@ -118,10 +119,12 @@
       "type": "Type",
       "details": "Details",
       "status": "Status",
-      "agent": "Tussenpersoon",
+      "agent": "Agent",
       "client": "Cliënt",
       "location": "Locatie",
-      "actions": "Acties"
+      "actions": "Acties",
+      "patching": "Patches",
+      "coverage": "Dekking"
     },
     "metrics": {
       "totalAssets": {
@@ -216,6 +219,49 @@
         "title": "Afdrukopties",
         "description": "Kies welke kolommen worden opgenomen bij het afdrukken van assets."
       }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "Wissen",
+        "delete": "Verwijderen",
+        "selectedCount": "{{count}} geselecteerd",
+        "setLocation": "Locatie instellen",
+        "setStatus": "Status instellen"
+      },
+      "actions": {
+        "apply": "Toepassen",
+        "applying": "Toepassen...",
+        "deleteAssets": "Verwijderen",
+        "deleting": "Verwijderen...",
+        "updateLocation": "Locatie-update",
+        "updateStatus": "Statusupdate"
+      },
+      "deleteDialog": {
+        "description": "Verwijder {{count}} geselecteerde asset(s). Assets met afhankelijkheden worden mogelijk overgeslagen.",
+        "title": "Geselecteerde assets verwijderen"
+      },
+      "errors": {
+        "deleteFailed": "Kan geselecteerde assets niet verwijderen.",
+        "updateLocationFailed": "Kan locaties van geselecteerde assets niet bijwerken.",
+        "updateStatusFailed": "Kan geselecteerde assets niet bijwerken."
+      },
+      "locationDialog": {
+        "clearLocation": "Locatie wissen",
+        "customLocation": "Aangepaste locatie",
+        "customPlaceholder": "Voer een aangepaste locatie of ruimte in",
+        "description": "Werk {{count}} geselecteerde asset(s) bij.",
+        "loadingLocations": "Locaties laden...",
+        "savedDisabled": "Opgeslagen klantlocaties zijn alleen beschikbaar wanneer alle geselecteerde assets zichtbaar zijn en bij één klant horen.",
+        "savedLocation": "Opgeslagen klantlocatie",
+        "selectLocation": "Selecteer locatie",
+        "title": "Assetlocatie instellen"
+      },
+      "partialFailure": "{{action}} voltooid voor {{succeeded}} asset(s); {{failed}} mislukt.",
+      "statusDialog": {
+        "description": "Werk {{count}} geselecteerde asset(s) bij.",
+        "title": "Assetstatus instellen"
+      },
+      "success": "{{action}} voltooid voor {{count}} asset(s)."
     }
   },
   "assetDashboardGrid": {
@@ -233,7 +279,7 @@
     "tabs": {
       "overview": "Overzicht",
       "maintenance": "Onderhoud",
-      "tickets": "Kaartjes",
+      "tickets": "Tickets",
       "configuration": "Configuratie",
       "documents": "Documenten"
     },
@@ -341,9 +387,12 @@
     },
     "relative": {
       "momentsAgo": "momenten geleden",
-      "minutesAgo": "{{count}} minuut{{suffix}} geleden",
-      "hoursAgo": "{{count}} uur{{suffix}} geleden",
-      "daysAgo": "{{count}} dag{{suffix}} geleden"
+      "minutesAgo_one": "{{count}} minuut geleden",
+      "minutesAgo_other": "{{count}} minuten geleden",
+      "hoursAgo_one": "{{count}} uur geleden",
+      "hoursAgo_other": "{{count}} uur geleden",
+      "daysAgo_one": "{{count}} dag geleden",
+      "daysAgo_other": "{{count}} dagen geleden"
     }
   },
   "assetDetailHeader": {
@@ -373,7 +422,7 @@
       "maintenance": "Onderhoud",
       "relatedAssets": "Gerelateerde activa",
       "documentsPasswords": "Documenten en wachtwoorden",
-      "auditLog": "Auditlogboek"
+      "timeline": "Tijdlijn"
     }
   },
   "assetDetailView": {
@@ -501,7 +550,8 @@
       "loadFailed": "Kan itemdetails niet laden",
       "clientsLoadFailed": "Kan klanten niet laden",
       "locationsLoadFailed": "Kan locaties voor deze klant niet laden",
-      "updateFailed": "Kan item niet updaten"
+      "updateFailed": "Kan item niet updaten",
+      "validation": "Corrigeer de gemarkeerde velden voordat u opslaat."
     },
     "actions": {
       "viewClient": "Klant bekijken",
@@ -553,7 +603,8 @@
       "serialNumber": "Serienummer",
       "status": "Status",
       "purchaseDate": "Aankoopdatum",
-      "warrantyEndDate": "Einddatum garantie"
+      "warrantyEndDate": "Einddatum garantie",
+      "assetType": "Type"
     },
     "placeholders": {
       "loadingClients": "Klanten laden…",
@@ -596,7 +647,8 @@
       "networkDevice": "Netwerkapparaatdetails",
       "server": "Serverdetails",
       "mobileDevice": "Gegevens van mobiele apparaten",
-      "printer": "Printerdetails"
+      "printer": "Printerdetails",
+      "custom": "{{typeName}}-details"
     }
   },
   "assetFormClient": {
@@ -609,7 +661,7 @@
     "description": "Metrische kaarten en rollups voor tickets, onderhoud, uptime en indicatoren voor de status van bedrijfsmiddelen",
     "labels": {
       "healthStatus": "Gezondheidsstatus",
-      "openTickets": "Kaartjes openen",
+      "openTickets": "Openstaande tickets",
       "securityStatus": "Beveiligingsstatus",
       "warranty": "Garantie"
     },
@@ -707,7 +759,8 @@
     "actions": {
       "addAsset": "Voeg item toe",
       "showLess": "Laat minder zien",
-      "moreAssets": "{{count}} meer activa{{suffix}}"
+      "moreAssets_one": "Nog {{count}} item",
+      "moreAssets_other": "Nog {{count}} items"
     },
     "errors": {
       "loadAvailableAssets": "Kan beschikbare middelen niet laden",
@@ -719,8 +772,10 @@
       "removeFailed": "Kan itemkoppeling niet verwijderen"
     },
     "success": {
-      "associated": "{{count}} item{{suffix}} is succesvol gekoppeld",
-      "associatedPartial": "{{count}} asset{{suffix}} succesvol gekoppeld, {{failed}} mislukt (mogelijk al gekoppeld)",
+      "associated_one": "{{count}} item is succesvol gekoppeld",
+      "associated_other": "{{count}} items zijn succesvol gekoppeld",
+      "associatedPartial_one": "{{count}} item succesvol gekoppeld, {{failed}} mislukt (mogelijk al gekoppeld)",
+      "associatedPartial_other": "{{count}} items succesvol gekoppeld, {{failed}} mislukt (mogelijk al gekoppeld)",
       "removed": "Itemkoppeling verwijderd"
     },
     "empty": {
@@ -743,7 +798,8 @@
         "placeholder": "Type…"
       },
       "actions": {
-        "addAssets": "Item toevoegen{{suffix}}"
+        "addAssets_one": "Item toevoegen",
+        "addAssets_other": "Items toevoegen"
       }
     },
     "table": {
@@ -853,7 +909,9 @@
       "assetTagRequired": "Itemtag *",
       "typeRequired": "Type *",
       "status": "Status",
-      "serialNumber": "Serienummer"
+      "serialNumber": "Serienummer",
+      "customLocationOption": "Aangepaste locatie",
+      "location": "Locatie"
     },
     "placeholders": {
       "workstationOsType": "bijvoorbeeld Windows, macOS, Linux",
@@ -869,7 +927,11 @@
       "assetTag": "Voer de itemtag in",
       "selectType": "Selecteer type",
       "selectStatus": "Selecteer status",
-      "serialNumber": "Voer het serienummer in"
+      "serialNumber": "Voer het serienummer in",
+      "customLocation": "Voer een aangepaste locatie of gebied in",
+      "loadingLocations": "Locaties laden...",
+      "selectClientFirst": "Selecteer eerst een klant",
+      "selectLocation": "Selecteer locatie"
     },
     "sections": {
       "typeSpecificDetails": "Typespecifieke details"
@@ -884,7 +946,8 @@
       "network_device": "Netwerkapparaat",
       "server": "Server",
       "mobile_device": "Mobiel apparaat",
-      "printer": "Printer"
+      "printer": "Printer",
+      "unknown": "Onbekend"
     },
     "networkDeviceTypes": {
       "switch": "Schakelaar",
@@ -939,11 +1002,12 @@
     }
   },
   "assetNotesPanel": {
-    "title": "Opmerkingen en snelle informatie",
+    "title": "Notities",
     "description": "Rich-text notitiepaneel voor asset-specifieke notities en snelle operationele context",
     "errors": {
       "loadTitle": "Notities kunnen niet worden geladen",
-      "unknown": "Onbekende fout"
+      "unknown": "Onbekende fout",
+      "loadDescription": "Could not load notes. Please try again."
     },
     "lastUpdated": "Laatst bijgewerkt: {{value}}"
   },
@@ -966,6 +1030,10 @@
     "empty": "Geen hardwaregegevens beschikbaar",
     "emptyStorage": "Geen opslagstations gedetecteerd"
   },
+  "huduDocumentationCard": {
+    "title": "Hudu-documentatie",
+    "syncedAt": "Laatst gesynchroniseerd vanuit Hudu: {{value}}"
+  },
   "rmmVitalsPanel": {
     "title": "RMM Vitals & Connectiviteit",
     "description": "RMM vitals-paneel voor details over hartslag, monitoring en eindpuntstatus",
@@ -979,7 +1047,8 @@
       "uptime": "Uptime",
       "lastSync": "Laatste RMM-synchronisatie",
       "network": "Netwerk",
-      "networkValue": "LAN-IP: {{lan}} | WAN IP: {{wan}}"
+      "networkValue": "LAN-IP: {{lan}} | WAN IP: {{wan}}",
+      "taniumCriticality": "Tanium-kritikaliteit"
     },
     "values": {
       "never": "Nooit"
@@ -1046,17 +1115,6 @@
   "utilizationBar": {
     "title": "Gebruiksbalk",
     "description": "Gedeelde voortgangsbalkcomponent voor gebruik en op percentages gebaseerde activastatistieken"
-  },
-  "auditLogTab": {
-    "title": "Auditlogboek",
-    "description": "Tabblad Activa-auditgeschiedenis voor tijdlijngebeurtenissen en recordwijzigingen",
-    "changedBy": "Gewijzigd door {{name}}",
-    "userFallback": "gebruiker {{id}}",
-    "empty": "Geen auditgeschiedenis beschikbaar.",
-    "changeTypes": {
-      "created": "Gemaakt",
-      "updated": "Bijgewerkt"
-    }
   },
   "createMaintenanceScheduleDialog": {
     "title": "Onderhoudsschema maken",
@@ -1136,13 +1194,19 @@
       "actions": "Acties"
     },
     "frequency": {
-      "every": "Elke {{count}} {{frequency}}{{suffix}}",
+      "every_one": "Elke {{frequency}}",
+      "every_other": "Elke {{count}} {{frequency}}",
       "units": {
-        "daily": "dag",
-        "weekly": "week",
-        "monthly": "maand",
-        "quarterly": "kwartaal",
-        "yearly": "jaar"
+        "daily_one": "dag",
+        "daily_other": "dagen",
+        "weekly_one": "week",
+        "weekly_other": "weken",
+        "monthly_one": "maand",
+        "monthly_other": "maanden",
+        "quarterly_one": "kwartaal",
+        "quarterly_other": "kwartalen",
+        "yearly_one": "jaar",
+        "yearly_other": "jaren"
       }
     },
     "status": {
@@ -1278,5 +1342,153 @@
     "activeAlerts": "Actieve waarschuwingen",
     "acknowledge": "Bevestigen",
     "createTicket": "Ticket aanmaken"
+  },
+  "actions": {
+    "print": "Afdrukken",
+    "printOptions": "Afdrukopties",
+    "printSelected": "Geselecteerde afdrukken ({{count}})"
+  },
+  "crossFeature": {
+    "loadTicketFailed": "Kan ticket niet laden",
+    "openTicketFailed": "Kan ticket niet openen"
+  },
+  "assetTypeBreakdown": {
+    "title": "Assets per type"
+  },
+  "customTypeDetailsPanel": {
+    "title": "{{name}}-details",
+    "values": {
+      "yes": "Ja",
+      "no": "Nee"
+    }
+  },
+  "assetBento": {
+    "health": "Toestand",
+    "security": "Beveiliging",
+    "openTickets": "Open tickets",
+    "warranty": "Garantie",
+    "identity": "Identiteit",
+    "tag": "Label",
+    "serial": "Serienummer",
+    "status": "Status",
+    "location": "Locatie",
+    "purchased": "Gekocht",
+    "warrantyEnds": "Garantie eindigt",
+    "hardware": "Hardware",
+    "os": "Besturingssysteem",
+    "cpu": "CPU",
+    "cores": "Kernen",
+    "ram": "RAM",
+    "ip": "IP",
+    "noHardware": "Geen hardwaregegevens vastgelegd.",
+    "notes": "Notities",
+    "liveVitals": "Live-waarden",
+    "checkedIn": "Laatst gemeld",
+    "neverCheckedIn": "Nooit gemeld",
+    "memory": "Geheugen",
+    "disk": "Schijf",
+    "uptime": "Bedrijfstijd",
+    "signedIn": "Aangemeld",
+    "securityTitle": "Beveiliging",
+    "antivirus": "Antivirus",
+    "pendingPatches": "Openstaande patches",
+    "failedPatches": "Mislukte patches",
+    "lastScan": "Laatste scan",
+    "agentVersion": "Agent",
+    "noRelated": "Niet gekoppeld aan een ander asset.",
+    "manage": "Beheren",
+    "reportedFacts": "Gerapporteerde gegevens",
+    "more": "Al het overige",
+    "views": "Assetweergaven",
+    "editAsset": "Asset bewerken",
+    "viewAll": "Alles bekijken",
+    "open": "Openen",
+    "close": "Sluiten",
+    "packagesReported": "{{count}} pakketten gemeld",
+    "noSoftware": "Geen software-inventaris gemeld.",
+    "noService": "Geen tickets verwijzen naar dit asset.",
+    "activeSchedules": "Actieve planningen",
+    "compliance": "Naleving",
+    "lastDone": "Laatst uitgevoerd",
+    "noMaintenance": "Niets gepland.",
+    "docsHint": "Bijlagen en inloggegevens voor dit asset."
+  },
+  "assetTimeline": {
+    "title": "Tijdlijn",
+    "empty": "Er is nog niets vastgelegd voor dit asset.",
+    "emptyLane": "Geen {{lane}}-gebeurtenissen vastgelegd.",
+    "moreEvents": "{{shown}} van {{total}} gebeurtenissen weergegeven.",
+    "lanes": {
+      "all": "Alles",
+      "service": "Service",
+      "changes": "Wijzigingen",
+      "maintenance": "Onderhoud",
+      "system": "Systeem"
+    },
+    "events": {
+      "maintenancePerformed": "Onderhoud uitgevoerd",
+      "lastReboot": "Laatste herstart",
+      "patchScan": "Patchscan",
+      "patchScanDetail": "{{pending}} openstaand, {{failed}} mislukt",
+      "purchased": "Gekocht"
+    },
+    "changeTypes": {
+      "created": "Aangemaakt",
+      "updated": "Bijgewerkt",
+      "status_change": "Status gewijzigd",
+      "location_change": "Locatie gewijzigd",
+      "rmm_linked": "RMM gekoppeld",
+      "hardware_upgrade": "Hardware geüpgraded",
+      "warranty_updated": "Garantie bijgewerkt"
+    }
+  },
+  "assetSignals": {
+    "warranty": {
+      "daysLeft": "nog {{count}} d",
+      "expiresToday": "verloopt vandaag",
+      "expiredAgo": "{{count}} d geleden verlopen"
+    },
+    "duration": {
+      "dayHour": "{{days}} d {{hours}} u",
+      "hourMinute": "{{hours}} u {{minutes}} min",
+      "minute": "{{minutes}} min"
+    },
+    "age": {
+      "justNow": "zojuist",
+      "minutesAgo": "{{count}} min geleden",
+      "hoursAgo": "{{count}} u geleden",
+      "daysAgo": "{{count}} d geleden"
+    },
+    "patching": {
+      "failed": "{{count}} mislukt",
+      "pending": "{{count}} openstaand",
+      "upToDate": "up-to-date"
+    }
+  },
+  "assetCells": {
+    "agent": {
+      "unmanaged": "onbeheerd",
+      "noAgent": "geen RMM-agent",
+      "seen": "gezien {{age}}",
+      "neverSeen": "nooit gezien"
+    },
+    "agentStatus": {
+      "online": "online",
+      "offline": "offline",
+      "overdue": "te laat",
+      "unknown": "onbekend"
+    },
+    "patching": {
+      "scanned": "gescand {{age}}",
+      "neverScanned": "nooit gescand"
+    },
+    "coverage": {
+      "noWarrantyDate": "geen garantiedatum"
+    },
+    "status": {
+      "active": "actief",
+      "inactive": "inactief",
+      "maintenance": "onderhoud"
+    }
   }
 }

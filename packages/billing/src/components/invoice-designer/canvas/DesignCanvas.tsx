@@ -491,28 +491,34 @@ const resolveTotalsRowBindingFallback = (type: 'subtotal' | 'tax' | 'discount' |
   }
 };
 
-const resolveTotalsRowAmountFallback = (type: 'subtotal' | 'tax' | 'discount' | 'custom-total'): string => {
+const resolveTotalsRowAmountFallbackMinorUnits = (type: 'subtotal' | 'tax' | 'discount' | 'custom-total'): number => {
   switch (type) {
     case 'subtotal':
-      return '$1,200.00';
+      return 120000;
     case 'tax':
-      return '$96.00';
+      return 9600;
     case 'discount':
-      return '-$50.00';
+      return -5000;
     case 'custom-total':
-      return '$1,296.00';
+      return 129600;
   }
 };
+
+const resolveTotalsRowAmountFallback = (
+  type: 'subtotal' | 'tax' | 'discount' | 'custom-total',
+  currencyCode: string
+): string => formatBoundValue(resolveTotalsRowAmountFallbackMinorUnits(type), 'currency', currencyCode) ?? '';
 
 const resolveTotalsRowPreviewModel = (
   node: DesignerNode,
   previewData: WasmInvoiceViewModel | null = null
 ): TotalsRowPreviewModel => {
+  const currencyCode = previewData?.currencyCode ?? 'USD';
   if (!isTotalsRowType(node.type)) {
     return {
       label: 'Value',
       bindingKey: 'binding',
-      previewValue: '$0.00',
+      previewValue: formatBoundValue(0, 'currency', currencyCode) ?? '',
       isGrandTotal: false,
     };
   }
@@ -525,13 +531,13 @@ const resolveTotalsRowPreviewModel = (
   const boundValue = formatBoundValue(
     resolveInvoiceBindingRawValue(previewData, bindingKey),
     format,
-    previewData?.currencyCode ?? 'USD'
+    currencyCode
   );
   const previewValue =
     boundValue ||
     asTrimmedString(metadata.previewValue) ||
     asTrimmedString(metadata.sampleValue) ||
-    resolveTotalsRowAmountFallback(node.type);
+    resolveTotalsRowAmountFallback(node.type, currencyCode);
   const isGrandTotal = /\b(grand total|amount due|balance due|total due)\b/i.test(label);
 
   return {
@@ -646,9 +652,10 @@ const renderTablePreview = (
 
 const renderTotalsSummaryPreview = (previewData: WasmInvoiceViewModel | null, t?: DesignerTranslator): React.ReactNode => {
   const currencyCode = previewData?.currencyCode ?? 'USD';
-  const subtotal = formatBoundValue(previewData?.subtotal ?? null, 'currency', currencyCode) ?? '$0.00';
-  const tax = formatBoundValue(previewData?.tax ?? null, 'currency', currencyCode) ?? '$0.00';
-  const total = formatBoundValue(previewData?.total ?? null, 'currency', currencyCode) ?? '$0.00';
+  const zeroAmount = formatBoundValue(0, 'currency', currencyCode) ?? '';
+  const subtotal = formatBoundValue(previewData?.subtotal ?? null, 'currency', currencyCode) ?? zeroAmount;
+  const tax = formatBoundValue(previewData?.tax ?? null, 'currency', currencyCode) ?? zeroAmount;
+  const total = formatBoundValue(previewData?.total ?? null, 'currency', currencyCode) ?? zeroAmount;
   return (
     <div className="space-y-1 text-[11px]">
       <div className="flex items-center justify-between text-slate-600">
@@ -697,7 +704,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
           singleLine: !boundValue.multiline,
         };
       }
-      const preview = resolveFieldPreviewScaffold(node);
+      const preview = resolveFieldPreviewScaffold(node, previewData?.currencyCode ?? 'USD');
       if (preview.isPlaceholder) {
         return {
           content: renderPlaceholderPreview(preview.text),

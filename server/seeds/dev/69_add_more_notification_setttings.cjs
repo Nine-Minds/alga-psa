@@ -1,3 +1,5 @@
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
+
 /**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
@@ -7,10 +9,12 @@
  */
 exports.seed = async function(knex) {
   // Get the first tenant from the tenants table
-  const tenant = await knex('tenants').first('tenant');
-  if (!tenant) {
+  const context = await getFirstTenantSeedContext(knex);
+  if (!context) {
     throw new Error('No tenant found in tenants table');
   }
+
+  const { tenantId, db } = context;
 
   console.log('Seeding notification categories and subtypes (non-destructive)...');
 
@@ -140,19 +144,17 @@ exports.seed = async function(knex) {
 
   // Ensure notification settings exist for tenant.
   // NOTE: Some schemas do not enforce uniqueness on (tenant), so ON CONFLICT (tenant) may fail.
-  const existingSettings = await knex('notification_settings')
-    .where({ tenant: tenant.tenant })
+  const existingSettings = await db.table('notification_settings')
     .first('id');
 
   if (!existingSettings) {
-    await knex('notification_settings').insert({
-      tenant: tenant.tenant,
+    await db.table('notification_settings').insert({
+      tenant: tenantId,
       is_enabled: true,
       rate_limit_per_minute: 60
     });
   } else {
-    await knex('notification_settings')
-      .where({ tenant: tenant.tenant })
+    await db.table('notification_settings')
       .update({ updated_at: knex.fn.now() });
   }
   console.log(`  ✓ Ensured notification settings exist for tenant`);

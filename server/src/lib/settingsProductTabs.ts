@@ -9,6 +9,9 @@ const ALGA_DESK_ALLOWED_SETTINGS_TABS = [
   'client-portal',
   'profile',
   'security',
+  // AlgaDesk users can set a per-user language on their profile, so the tenant-level
+  // language tab is available too.
+  'language',
 ] as const;
 
 export function getAllowedSettingsTabIds(productCode: ProductCode): Set<string> {

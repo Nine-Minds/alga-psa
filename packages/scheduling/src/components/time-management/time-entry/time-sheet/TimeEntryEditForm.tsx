@@ -34,6 +34,15 @@ interface EligiblePlanUI {
   has_bucket_overlay: boolean;
 }
 
+// Parse a 'YYYY-MM-DD' (or ISO) date string into a local midnight Date, avoiding the UTC shift
+// that `new Date(str)`/`parseISO` introduce for date-only values.
+// LEVERAGE: pattern date-only-local-parse — 4th site (also TimeSheet.tsx, IntervalSection.tsx,
+// timeSheetOperations.ts). Candidate for a shared scheduling date util.
+const parseDateOnlyLocal = (value: string): Date => {
+  const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 const TimeEntryEditForm = memo(function TimeEntryEditForm({
   id,
   entry,
@@ -48,6 +57,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   onUpdateEntry,
   onUpdateTimeInputs,
   lastNoteInputRef,
+  timePeriod,
   date,
   isNewEntry = false,
   isSaving = false,
@@ -112,6 +122,18 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     }
     return date || new Date();
   });
+
+  // Keep the entry inside its time sheet's period. The period is a half-open interval
+  // [start_date, end_date), so the last selectable day is end_date - 1. This mirrors the
+  // backend guard in saveTimeEntry (work_date >= start && work_date < end), so any date the
+  // picker allows will also pass server-side validation.
+  const periodBounds = useMemo(() => {
+    if (!timePeriod?.start_date || !timePeriod?.end_date) return undefined;
+    const minDate = parseDateOnlyLocal(timePeriod.start_date);
+    const maxDate = parseDateOnlyLocal(timePeriod.end_date);
+    maxDate.setDate(maxDate.getDate() - 1);
+    return { minDate, maxDate };
+  }, [timePeriod?.start_date, timePeriod?.end_date]);
 
   const validateTimes = useCallback(() => {
     if (!entry?.start_time || !entry?.end_time) return false;
@@ -516,62 +538,67 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
         />
       )}
 
-      {isNewEntry && (
-        <div className="space-y-1.5">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            {t('timeEntryForm.labels.date', { defaultValue: 'Date' })} <span className="text-red-500">*</span>
-          </label>
-          <DatePicker
-            value={selectedDate}
-            onChange={(newDate) => {
-              if (!newDate || !entry) return;
+      {/*
+        Date field — shown for both new and existing entries so a saved entry can be moved to a
+        different day. Bounded to the current time period (when known) so the entry stays in the
+        same time sheet; see periodBounds above.
+      */}
+      <div className="space-y-1.5">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          {t('timeEntryForm.labels.date', { defaultValue: 'Date' })} <span className="text-red-500">*</span>
+        </label>
+        <DatePicker
+          value={selectedDate}
+          minDate={periodBounds?.minDate}
+          maxDate={periodBounds?.maxDate}
+          onChange={(newDate) => {
+            if (!newDate || !entry) return;
 
-              setSelectedDate(newDate);
+            setSelectedDate(newDate);
 
-              // Update the entry's start time to the new date and preserve duration when it still fits the same day.
-              const startTime = parseISO(entry.start_time);
-              const endTime = parseISO(entry.end_time);
+            // Update the entry's start time to the new date and preserve duration when it still fits the same day.
+            const startTime = parseISO(entry.start_time);
+            const endTime = parseISO(entry.end_time);
 
-              const newStartTime = setSeconds(
-                setMinutes(
-                  setHours(newDate, startTime.getHours()),
-                  startTime.getMinutes()
-                ),
-                startTime.getSeconds()
-              );
+            const newStartTime = setSeconds(
+              setMinutes(
+                setHours(newDate, startTime.getHours()),
+                startTime.getMinutes()
+              ),
+              startTime.getSeconds()
+            );
 
-              const originalDuration = calculateDuration(startTime, endTime);
-              const {
-                durationMinutes,
-                endTime: newEndTime,
-                wasClampedToSameDay,
-              } = clampDurationToSameDay(newStartTime, originalDuration);
+            const originalDuration = calculateDuration(startTime, endTime);
+            const {
+              durationMinutes,
+              endTime: newEndTime,
+              wasClampedToSameDay,
+            } = clampDurationToSameDay(newStartTime, originalDuration);
 
-              onUpdateEntry(index, markEntryAsDirty({
-                ...entry,
-                start_time: formatISO(newStartTime),
-                end_time: formatISO(newEndTime),
-                billable_duration: entry.billable_duration === 0 ? 0 : durationMinutes,
-              }));
-              onUpdateTimeInputs({
-                [`start-${index}`]: formatTimeForInput(newStartTime),
-                [`end-${index}`]: formatTimeForInput(newEndTime),
-              });
-              setValidationErrors(prev => ({
-                ...prev,
-                duration: wasClampedToSameDay
-                  ? t('timeEntryForm.validation.durationSameDay', {
-                    defaultValue: 'Duration must end on the same day'
-                  })
-                  : undefined,
-              }));
-            }}
-            placeholder={t('timeEntryForm.placeholders.selectDate', { defaultValue: 'Select date' })}
-            disabled={!isEditable}
-            clearable={false}
-          />
-        </div>
-      )}
+            onUpdateEntry(index, markEntryAsDirty({
+              ...entry,
+              start_time: formatISO(newStartTime),
+              end_time: formatISO(newEndTime),
+              billable_duration: entry.billable_duration === 0 ? 0 : durationMinutes,
+            }));
+            onUpdateTimeInputs({
+              [`start-${index}`]: formatTimeForInput(newStartTime),
+              [`end-${index}`]: formatTimeForInput(newEndTime),
+            });
+            setValidationErrors(prev => ({
+              ...prev,
+              duration: wasClampedToSameDay
+                ? t('timeEntryForm.validation.durationSameDay', {
+                  defaultValue: 'Duration must end on the same day'
+                })
+                : undefined,
+            }));
+          }}
+          placeholder={t('timeEntryForm.placeholders.selectDate', { defaultValue: 'Select date' })}
+          disabled={!isEditable}
+          clearable={false}
+        />
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1.5">

@@ -1,4 +1,4 @@
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import {
   TicketModel,
   type CreateCommentInput,
@@ -6,7 +6,11 @@ import {
   type UpdateTicketInput,
 } from '@alga-psa/shared/models/ticketModel';
 
-import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
+import {
+  registerAction,
+  type InboundActionDefinition,
+  type InboundActionResult,
+} from '@alga-psa/shared/inboundWebhooks/actions/registry';
 import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
 
 interface CreateTicketMappedValues extends Record<string, unknown> {
@@ -58,6 +62,20 @@ interface ChangeTicketStatusByExternalIdMappedValues extends Record<string, unkn
   external_id: string;
   status_id: string;
   board_id?: string;
+}
+
+function validationFailure(
+  message: string,
+  externalId?: string,
+  metadata: Record<string, unknown> = {},
+): InboundActionResult {
+  return {
+    success: false,
+    entityType: 'ticket',
+    externalId,
+    message,
+    metadata: { code: 'VALIDATION_ERROR', ...metadata },
+  };
 }
 
 const createTicketAction: InboundActionDefinition<CreateTicketMappedValues> = {
@@ -112,7 +130,7 @@ const createTicketAction: InboundActionDefinition<CreateTicketMappedValues> = {
       const created = await TicketModel.createTicketWithRetry(input, ctx.tenant, trx, {}, undefined, undefined, undefined, 3);
 
       if (mappedValues.asset_id) {
-        await trx('asset_associations').insert({
+        await tenantDb(trx, ctx.tenant).table('asset_associations').insert({
           tenant: ctx.tenant,
           asset_id: mappedValues.asset_id,
           entity_id: created.ticket_id,
@@ -210,6 +228,7 @@ const updateTicketByExternalIdAction: InboundActionDefinition<UpdateTicketByExte
         entityType: 'ticket',
         externalId: mappedValues.external_id,
         message: `lookup_miss: ticket external_id "${mappedValues.external_id}" is not mapped for webhook "${ctx.webhookSlug}"`,
+        metadata: { code: 'LOOKUP_MISS' },
       };
     }
 
@@ -240,8 +259,10 @@ const addTicketCommentByExternalIdAction: InboundActionDefinition<AddTicketComme
   ],
   async handle(ctx, mappedValues) {
     if (mappedValues.author_id && mappedValues.contact_id) {
-      throw new Error(
+      return validationFailure(
         'VALIDATION_ERROR: author_id and contact_id cannot both be set on a single comment',
+        mappedValues.external_id,
+        { fields: ['author_id', 'contact_id'] },
       );
     }
 
@@ -283,6 +304,7 @@ const addTicketCommentByExternalIdAction: InboundActionDefinition<AddTicketComme
         entityType: 'ticket',
         externalId: mappedValues.external_id,
         message: `lookup_miss: ticket external_id "${mappedValues.external_id}" is not mapped for webhook "${ctx.webhookSlug}"`,
+        metadata: { code: 'LOOKUP_MISS' },
       };
     }
 
@@ -337,6 +359,7 @@ const changeTicketStatusByExternalIdAction: InboundActionDefinition<ChangeTicket
         entityType: 'ticket',
         externalId: mappedValues.external_id,
         message: `lookup_miss: ticket external_id "${mappedValues.external_id}" is not mapped for webhook "${ctx.webhookSlug}"`,
+        metadata: { code: 'LOOKUP_MISS' },
       };
     }
 

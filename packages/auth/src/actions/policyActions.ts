@@ -4,20 +4,182 @@ import { IPermission, IRole, IPolicy, IUserRole, IUserWithRoles, ICondition, Del
 import { ITicket } from '@alga-psa/types';
 import { PolicyEngine } from '../lib/policy/PolicyEngine';
 import { USER_ATTRIBUTES, TICKET_ATTRIBUTES } from '../lib/attributes/EntityAttributes';
-import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '../lib/withAuth';
 import { hasPermission } from '../lib/rbac';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 
 const policyEngine = new PolicyEngine();
 
+export interface AuthActionPermissionError {
+  readonly permissionError: string;
+}
+
+export interface AuthActionMessageError {
+  readonly actionError: string;
+}
+
+export type AuthActionError = AuthActionPermissionError | AuthActionMessageError;
+
+function permissionError(message: string): AuthActionPermissionError {
+  return { permissionError: message };
+}
+
+function actionError(message: string): AuthActionMessageError {
+  return { actionError: message };
+}
+
+function isAuthActionError(value: unknown): value is AuthActionError {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (
+      (typeof (value as { permissionError?: unknown }).permissionError === 'string') ||
+      (typeof (value as { actionError?: unknown }).actionError === 'string')
+    )
+  );
+}
+
+function authActionErrorFrom(error: unknown): AuthActionError | null {
+  if (isAuthActionError(error)) {
+    return error;
+  }
+
+  if (error instanceof Error) {
+    const message = error.message;
+    if (message.startsWith('Permission denied') || message === 'user is not logged in') {
+      return permissionError(message);
+    }
+    if (message === 'Role not found') {
+      return actionError('Role not found. Refresh the role list and try again.');
+    }
+    if (message === 'User not found') {
+      return actionError('User not found. Refresh the user list and try again.');
+    }
+    if (message === 'Ticket not found') {
+      return actionError('Ticket not found. Refresh the ticket and try again.');
+    }
+    if (message === 'Role or permission not found for this tenant') {
+      return actionError('Role or permission not found. Refresh the permissions list and try again.');
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string; constraint?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected role, permission, or policy values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required security field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected security records no longer exists. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    if (dbError.constraint?.includes('role_permissions')) {
+      return actionError('That permission is already assigned to this role.');
+    }
+    return actionError('A security record with these details already exists.');
+  }
+
+  return null;
+}
+
+/**
+ * Roles, permissions and policies are governed by the `security_settings`
+ * resource (see preCheckDeletion.ts, which maps the `role` entity to
+ * `security_settings`). Every RBAC/ABAC mutation must be gated on the
+ * corresponding security_settings permission; without this an authenticated
+ * but unprivileged user could create/rename/delete roles or attach arbitrary
+ * permissions to a role they already hold and self-escalate to admin.
+ */
+async function assertSecuritySettingsPermission(
+  user: IUserWithRoles,
+  action: 'create' | 'read' | 'update' | 'delete',
+  knexConnection?: Knex | Knex.Transaction,
+): Promise<void> {
+  const allowed = await hasPermission(user, 'security_settings', action, knexConnection);
+  if (!allowed) {
+    throw new Error('Permission denied: You do not have permission to manage roles and permissions.');
+  }
+}
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
+/**
+ * Client-portal callers may only assign/remove client-flagged roles on client
+ * users of their own company. The role.msp/user_type compatibility checks
+ * alone are not sufficient: the client portal 'Admin' role holds
+ * client-flagged 'user:update'/'client:update' permissions, and without a
+ * caller-type + same-company check a portal admin could re-role MSP staff or
+ * users of other companies. Internal callers are unaffected (RBAC-gated by
+ * the callers). Returns an error to propagate, or null when in scope.
+ */
+async function checkClientPortalRoleScope(
+  currentUser: IUserWithRoles,
+  tenant: string,
+  trx: Knex.Transaction,
+  targetUser: { user_type?: string; contact_id?: string | null } | undefined,
+  role: IRole | undefined
+): Promise<AuthActionError | null> {
+  if (currentUser.user_type !== 'client') {
+    return null;
+  }
+
+  if (!targetUser || !role) {
+    return null; // existence errors are reported by the caller
+  }
+
+  if (!role.client) {
+    return permissionError('Permission denied: Client portal admins may only manage client portal roles.');
+  }
+
+  if (targetUser.user_type !== 'client') {
+    return permissionError('Permission denied: Client portal admins may only manage client portal users.');
+  }
+
+  if (!currentUser.contact_id) {
+    return permissionError('Permission denied: Client portal admin access is required.');
+  }
+
+  const scopedDb = tenantDb(trx, tenant);
+  const [actorContact, targetContact] = await Promise.all([
+    scopedDb.table('contacts')
+      .where({ contact_name_id: currentUser.contact_id })
+      .select('client_id', 'is_client_admin')
+      .first(),
+    targetUser.contact_id
+      ? scopedDb.table('contacts')
+          .where({ contact_name_id: targetUser.contact_id })
+          .select('client_id')
+          .first()
+      : Promise.resolve(undefined),
+  ]);
+
+  if (!actorContact?.is_client_admin || !actorContact.client_id) {
+    return permissionError('Permission denied: Client portal admin access is required.');
+  }
+
+  if (!targetContact?.client_id || targetContact.client_id !== actorContact.client_id) {
+    return permissionError('Permission denied: Cannot manage users for another client.');
+  }
+
+  return null;
+}
+
 // Role actions
-export const createRole = withAuth(async (_user, { tenant }, roleName: string, description: string, msp: boolean = true, client: boolean = false): Promise<IRole> => {
+export const createRole = withAuth(async (user, { tenant }, roleName: string, description: string, msp: boolean = true, client: boolean = false): Promise<IRole | AuthActionError> => {
+  try {
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-        const [role] = await trx('roles').insert({
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+        await assertSecuritySettingsPermission(user, 'create', trx);
+        const [role] = await tenantScopedTable(trx, 'roles', tenant).insert({
             role_name: roleName,
             description,
             tenant,
@@ -26,29 +188,46 @@ export const createRole = withAuth(async (_user, { tenant }, roleName: string, d
         }).returning('*');
         return role;
     });
+  } catch (error) {
+    const expected = authActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
-export const updateRole = withAuth(async (_user, { tenant }, roleId: string, roleName: string): Promise<IRole> => {
+export const updateRole = withAuth(async (user, { tenant }, roleId: string, roleName: string): Promise<IRole | AuthActionError> => {
+  try {
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-        const [updatedRole] = await trx('roles')
-            .where({ role_id: roleId, tenant })
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+        await assertSecuritySettingsPermission(user, 'update', trx);
+        const [updatedRole] = await tenantScopedTable(trx, 'roles', tenant)
+            .where({ role_id: roleId })
             .update({ role_name: roleName })
             .returning('*');
+        if (!updatedRole) {
+            return actionError('Role not found. Refresh the role list and try again.');
+        }
         return updatedRole;
     });
+  } catch (error) {
+    const expected = authActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 export const deleteRole = withAuth(async (
-  _user,
+  user,
   { tenant },
   roleId: string
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
   try {
     const { knex: db } = await createTenantKnex();
 
-    const role = await db('roles')
-      .where({ role_id: roleId, tenant })
+    await assertSecuritySettingsPermission(user, 'delete', db);
+
+    const role = await tenantScopedTable(db, 'roles', tenant)
+      .where({ role_id: roleId })
       .first();
 
     if (!role) {
@@ -75,9 +254,9 @@ export const deleteRole = withAuth(async (
 
     const result = await deleteEntityWithValidation('role', roleId, db, tenant, async (trx, tenantId) => {
       // Clean up child records owned by the role
-      await trx('role_permissions').where({ role_id: roleId, tenant: tenantId }).del();
+      await tenantScopedTable(trx, 'role_permissions', tenantId).where({ role_id: roleId }).del();
 
-      await trx('roles').where({ role_id: roleId, tenant: tenantId }).del();
+      await tenantScopedTable(trx, 'roles', tenantId).where({ role_id: roleId }).del();
     });
 
     return {
@@ -86,11 +265,15 @@ export const deleteRole = withAuth(async (
       deleted: result.deleted
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to delete role';
+    const expected = authActionErrorFrom(error);
+    const isPermission = !!expected && 'permissionError' in expected;
+    const message = expected
+      ? ('permissionError' in expected ? expected.permissionError : expected.actionError)
+      : error instanceof Error ? error.message : 'Failed to delete role';
     return {
       success: false,
       canDelete: false,
-      code: 'VALIDATION_FAILED',
+      code: isPermission ? 'PERMISSION_DENIED' : 'VALIDATION_FAILED',
       message,
       dependencies: [],
       alternatives: []
@@ -101,30 +284,31 @@ export const deleteRole = withAuth(async (
 export const getRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('roles')
-            .where({ tenant })
+        return await tenantScopedTable(trx, 'roles', tenant)
             .select('role_id', 'role_name', 'description', 'tenant', 'msp', 'client');
     });
 });
 
 // Role-Permission actions
-export const assignPermissionToRole = withAuth(async (_user, { tenant }, roleId: string, permissionId: string): Promise<void> => {
+export const assignPermissionToRole = withAuth(async (user, { tenant }, roleId: string, permissionId: string): Promise<void | AuthActionError> => {
     try {
         const { knex: db } = await createTenantKnex();
-        return withTransaction(db, async (trx: Knex.Transaction) => {
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+
+        await assertSecuritySettingsPermission(user, 'update', trx);
 
         // First, verify both the role and permission exist for this tenant
         const [role, permission] = await Promise.all([
-            trx('roles').where({ role_id: roleId, tenant }).first(),
-            trx('permissions').where({ permission_id: permissionId, tenant }).first()
+            tenantScopedTable(trx, 'roles', tenant).where({ role_id: roleId }).first(),
+            tenantScopedTable(trx, 'permissions', tenant).where({ permission_id: permissionId }).first()
         ]);
 
         if (!role || !permission) {
-            throw new Error('Role or permission not found for this tenant');
+            return actionError('Role or permission not found. Refresh the permissions list and try again.');
         }
 
         // Then insert the role permission
-        await trx('role_permissions')
+        await tenantScopedTable(trx, 'role_permissions', tenant)
             .insert({
                 role_id: roleId,
                 permission_id: permissionId,
@@ -135,36 +319,50 @@ export const assignPermissionToRole = withAuth(async (_user, { tenant }, roleId:
         });
     } catch (error) {
         console.error('Error assigning permission to role:', error);
+        const expected = authActionErrorFrom(error);
+        if (expected) return expected;
         throw error;
     }
 });
 
-export const removePermissionFromRole = withAuth(async (_user, { tenant }, roleId: string, permissionId: string): Promise<void> => {
+export const removePermissionFromRole = withAuth(async (user, { tenant }, roleId: string, permissionId: string): Promise<void | AuthActionError> => {
     try {
         const { knex: db } = await createTenantKnex();
-        return withTransaction(db, async (trx: Knex.Transaction) => {
-        await trx('role_permissions')
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+        await assertSecuritySettingsPermission(user, 'update', trx);
+        const [role, permission] = await Promise.all([
+            tenantScopedTable(trx, 'roles', tenant).where({ role_id: roleId }).first(),
+            tenantScopedTable(trx, 'permissions', tenant).where({ permission_id: permissionId }).first()
+        ]);
+
+        if (!role || !permission) {
+            return actionError('Role or permission not found. Refresh the permissions list and try again.');
+        }
+
+        await tenantScopedTable(trx, 'role_permissions', tenant)
             .where({
                 role_id: roleId,
-                permission_id: permissionId,
-                tenant
+                permission_id: permissionId
             })
               .del();
         });
     } catch (error) {
         console.error('Error removing permission from role:', error);
+        const expected = authActionErrorFrom(error);
+        if (expected) return expected;
         throw error;
     }
 });
 
 // User-Role actions
-export const assignRoleToUser = withAuth(async (currentUser, { tenant }, userId: string, roleId: string): Promise<IUserRole> => {
+export const assignRoleToUser = withAuth(async (currentUser, { tenant }, userId: string, roleId: string): Promise<IUserRole | AuthActionError> => {
+    try {
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
         // Validate that the role and user exist and are compatible
         const [user, role] = await Promise.all([
-            trx('users').where({ user_id: userId, tenant }).first(),
-            trx('roles').where({ role_id: roleId, tenant }).first()
+            tenantScopedTable(trx, 'users', tenant).where({ user_id: userId }).first(),
+            tenantScopedTable(trx, 'roles', tenant).where({ role_id: roleId }).first()
         ]);
 
         // Authorization: assigning an MSP role requires 'user:update'.
@@ -175,37 +373,50 @@ export const assignRoleToUser = withAuth(async (currentUser, { tenant }, userId:
             ? await hasPermission(currentUser, 'client', 'update', trx)
             : false;
         if (!canUpdateUsers && !canManageClientRole) {
-            throw new Error('Permission denied: You do not have permission to change user roles.');
+            return permissionError('Permission denied: You do not have permission to change user roles.');
         }
 
         if (!user) {
-            throw new Error('User not found');
+            return actionError('User not found. Refresh the user list and try again.');
         }
 
         if (!role) {
-            throw new Error('Role not found');
+            return actionError('Role not found. Refresh the role list and try again.');
+        }
+
+        // Client-portal callers: only client-flagged roles on client users of
+        // their own company. Internal callers are unaffected.
+        const clientScopeError = await checkClientPortalRoleScope(currentUser, tenant, trx, user, role);
+        if (clientScopeError) {
+            return clientScopeError;
         }
 
         // Validate role compatibility based on user type
         if (user.user_type === 'internal' && !role.msp) {
-            throw new Error('Cannot assign client portal role to MSP user');
+            return actionError('Cannot assign a client portal role to an MSP user.');
         }
 
         if (user.user_type === 'client' && !role.client) {
-            throw new Error('Cannot assign MSP role to client portal user');
+            return actionError('Cannot assign an MSP role to a client portal user.');
         }
 
-        const [userRole] = await trx('user_roles')
+        const [userRole] = await tenantScopedTable(trx, 'user_roles', tenant)
             .insert({ user_id: userId, role_id: roleId, tenant })
             .returning('*');
         return userRole;
     });
+    } catch (error) {
+        const expected = authActionErrorFrom(error);
+        if (expected) return expected;
+        throw error;
+    }
 });
 
-export const removeRoleFromUser = withAuth(async (currentUser, { tenant }, userId: string, roleId: string): Promise<void> => {
+export const removeRoleFromUser = withAuth(async (currentUser, { tenant }, userId: string, roleId: string): Promise<void | AuthActionError> => {
+    try {
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-        const role = await trx('roles').where({ role_id: roleId, tenant }).first();
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+        const role = await tenantScopedTable(trx, 'roles', tenant).where({ role_id: roleId }).first();
 
         // Authorization mirrors assignRoleToUser: removing an MSP role requires
         // 'user:update'; pure client-portal roles may also use 'client:update'.
@@ -214,24 +425,42 @@ export const removeRoleFromUser = withAuth(async (currentUser, { tenant }, userI
             ? await hasPermission(currentUser, 'client', 'update', trx)
             : false;
         if (!canUpdateUsers && !canManageClientRole) {
-            throw new Error('Permission denied: You do not have permission to change user roles.');
+            return permissionError('Permission denied: You do not have permission to change user roles.');
         }
 
-        await trx('user_roles').where({ user_id: userId, role_id: roleId, tenant }).del();
+        if (!role) {
+            return actionError('Role not found. Refresh the role list and try again.');
+        }
+
+        // Client-portal callers: only client-flagged roles on client users of
+        // their own company. Internal callers are unaffected.
+        const targetUser = currentUser.user_type === 'client'
+            ? await tenantScopedTable(trx, 'users', tenant).where({ user_id: userId }).first()
+            : undefined;
+        const clientScopeError = await checkClientPortalRoleScope(currentUser, tenant, trx, targetUser, role);
+        if (clientScopeError) {
+            return clientScopeError;
+        }
+
+        await tenantScopedTable(trx, 'user_roles', tenant).where({ user_id: userId, role_id: roleId }).del();
     });
+    } catch (error) {
+        const expected = authActionErrorFrom(error);
+        if (expected) return expected;
+        throw error;
+    }
 });
 
 export const getUserRoles = withAuth(async (_user, { tenant }, userId: string): Promise<IRole[]> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('user_roles')
-            .join('roles', function() {
-                this.on('user_roles.role_id', '=', 'roles.role_id')
-                    .andOn('user_roles.tenant', '=', 'roles.tenant');
-            })
+        const scopedDb = tenantDb(trx, tenant);
+        const query = scopedDb.table('user_roles');
+        scopedDb.tenantJoin(query, 'roles', 'user_roles.role_id', 'roles.role_id');
+
+        return await query
             .where({
-                'user_roles.user_id': userId,
-                'user_roles.tenant': tenant
+                'user_roles.user_id': userId
             })
             .select('roles.*');
     });
@@ -247,12 +476,11 @@ export const getUserRolesBatch = withAuth(
         const { knex: db } = await createTenantKnex();
 
         return withTransaction(db, async (trx: Knex.Transaction) => {
-            const rows = await trx('user_roles')
-                .join('roles', function() {
-                    this.on('user_roles.role_id', '=', 'roles.role_id')
-                        .andOn('user_roles.tenant', '=', 'roles.tenant');
-                })
-                .where({ 'user_roles.tenant': tenant })
+            const scopedDb = tenantDb(trx, tenant);
+            const query = scopedDb.table('user_roles');
+            scopedDb.tenantJoin(query, 'roles', 'user_roles.role_id', 'roles.role_id');
+
+            const rows = await query
                 .whereIn('user_roles.user_id', uniqueUserIds)
                 .select<Array<IRole & { user_id: string }>>('roles.*', 'user_roles.user_id');
 
@@ -273,7 +501,7 @@ export const getUserRolesBatch = withAuth(
 export const getUserAttributes = withAuth(async (_user, { tenant }, userId: string): Promise<Partial<IUserWithRoles>> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const user = await trx('users').where({ user_id: userId, tenant }).first();
+        const user = await tenantScopedTable(trx, 'users', tenant).where({ user_id: userId }).first();
 
     if (!user) {
         throw new Error('User not found');
@@ -296,7 +524,7 @@ export const getUserAttributes = withAuth(async (_user, { tenant }, userId: stri
 export const getTicketAttributes = withAuth(async (_user, { tenant }, ticketId: string): Promise<Partial<ITicket>> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const ticket = await trx('tickets').where({ ticket_id: ticketId, tenant }).first();
+        const ticket = await tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id: ticketId }).first();
 
     if (!ticket) {
         throw new Error('Ticket not found');
@@ -309,10 +537,12 @@ export const getTicketAttributes = withAuth(async (_user, { tenant }, ticketId: 
 });
 
 // Policy actions
-export const createPolicy = withAuth(async (_user, { tenant }, policyName: string, resource: string, action: string, conditions: ICondition[]): Promise<IPolicy> => {
+export const createPolicy = withAuth(async (user, { tenant }, policyName: string, resource: string, action: string, conditions: ICondition[]): Promise<IPolicy | AuthActionError> => {
+    try {
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-        const [policy] = await trx('policies').insert({
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+        await assertSecuritySettingsPermission(user, 'create', trx);
+        const [policy] = await tenantScopedTable(trx, 'policies', tenant).insert({
             tenant,
             policy_name: policyName,
             resource,
@@ -322,13 +552,20 @@ export const createPolicy = withAuth(async (_user, { tenant }, policyName: strin
         policyEngine.addPolicy(policy);
         return policy;
     });
+    } catch (error) {
+        const expected = authActionErrorFrom(error);
+        if (expected) return expected;
+        throw error;
+    }
 });
 
-export const updatePolicy = withAuth(async (_user, { tenant }, policyId: string, policyName: string, resource: string, action: string, conditions: ICondition[]): Promise<IPolicy> => {
+export const updatePolicy = withAuth(async (user, { tenant }, policyId: string, policyName: string, resource: string, action: string, conditions: ICondition[]): Promise<IPolicy | AuthActionError> => {
+    try {
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-        const [updatedPolicy] = await trx('policies')
-            .where({ policy_id: policyId, tenant })
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+        await assertSecuritySettingsPermission(user, 'update', trx);
+        const [updatedPolicy] = await tenantScopedTable(trx, 'policies', tenant)
+            .where({ policy_id: policyId })
             .update({
                 policy_name: policyName,
                 resource,
@@ -336,25 +573,43 @@ export const updatePolicy = withAuth(async (_user, { tenant }, policyId: string,
                 conditions
             })
             .returning('*');
+        if (!updatedPolicy) {
+            return actionError('Policy not found. Refresh the policy list and try again.');
+        }
         policyEngine.removePolicy(updatedPolicy);
         policyEngine.addPolicy(updatedPolicy);
         return updatedPolicy;
     });
+    } catch (error) {
+        const expected = authActionErrorFrom(error);
+        if (expected) return expected;
+        throw error;
+    }
 });
 
-export const deletePolicy = withAuth(async (_user, { tenant }, policyId: string): Promise<void> => {
+export const deletePolicy = withAuth(async (user, { tenant }, policyId: string): Promise<void | AuthActionError> => {
+    try {
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-        const [deletedPolicy] = await trx('policies').where({ policy_id: policyId, tenant }).returning('*');
-        await trx('policies').where({ policy_id: policyId, tenant }).del();
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+        await assertSecuritySettingsPermission(user, 'delete', trx);
+        const deletedPolicy = await tenantScopedTable(trx, 'policies', tenant).where({ policy_id: policyId }).first();
+        if (!deletedPolicy) {
+            return actionError('Policy not found. Refresh the policy list and try again.');
+        }
+        await tenantScopedTable(trx, 'policies', tenant).where({ policy_id: policyId }).del();
         policyEngine.removePolicy(deletedPolicy);
     });
+    } catch (error) {
+        const expected = authActionErrorFrom(error);
+        if (expected) return expected;
+        throw error;
+    }
 });
 
 export const getPolicies = withAuth(async (_user, { tenant }): Promise<IPolicy[]> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const policies = await trx('policies').where({ tenant });
+        const policies = await tenantScopedTable(trx, 'policies', tenant);
         return policies.map((policy: any): IPolicy => ({
             ...policy,
             conditions: policy.conditions
@@ -371,14 +626,13 @@ export const getRolePermissions = withAuth(async (_user, { tenant }, roleId: str
     try {
         const { knex: db } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
-            return await trx('role_permissions')
-                .join('permissions', function() {
-                    this.on('role_permissions.permission_id', '=', 'permissions.permission_id')
-                        .andOn('role_permissions.tenant', '=', 'permissions.tenant');
-                })
+            const scopedDb = tenantDb(trx, tenant);
+            const query = scopedDb.table('role_permissions');
+            scopedDb.tenantJoin(query, 'permissions', 'role_permissions.permission_id', 'permissions.permission_id');
+
+            return await query
                 .where({
-                    'role_permissions.role_id': roleId,
-                    'role_permissions.tenant': tenant
+                    'role_permissions.role_id': roleId
                 })
                 .select('permissions.permission_id', 'permissions.resource', 'permissions.action', 'permissions.tenant', 'permissions.msp', 'permissions.client', 'permissions.description');
         });
@@ -392,8 +646,7 @@ export const getPermissions = withAuth(async (_user, { tenant }): Promise<IPermi
     try {
         const { knex: db } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
-            const permissions = await trx('permissions')
-                .where({ tenant })
+            const permissions = await tenantScopedTable(trx, 'permissions', tenant)
                 .select('permission_id', 'resource', 'action', 'tenant', 'msp', 'client', 'description');
             return permissions;
         });

@@ -21,13 +21,16 @@ describe('command palette application wiring', () => {
     expect(source).toContain('<CommandPalette open={isCommandPaletteOpen}');
   });
 
-  it('merges navigation and registered action providers without duplicating record search', () => {
+  it('merges navigation and registered action providers and gates record search behind fulltext mode', () => {
     const source = read('server/src/components/search/CommandPalette.tsx');
 
     expect(source).toContain('navigationSections');
     expect(source).toContain('bottomMenuItems');
     expect(source).toContain('SHORTCUT_ACTION_CATALOG');
-    expect(source).not.toContain('searchAppTypeaheadAction');
+    // Record search now lives in the palette's dedicated fulltext mode rather
+    // than being duplicated into the default command list.
+    expect(source).toContain('searchAppTypeaheadAction');
+    expect(source).toContain("mode !== 'fulltext'");
     expect(source).toContain('localStorage');
   });
 

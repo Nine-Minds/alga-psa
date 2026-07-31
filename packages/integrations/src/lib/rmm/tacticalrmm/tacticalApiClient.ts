@@ -135,7 +135,7 @@ export class TacticalRmmClient {
   }
 
   async checkCreds(input: { username: string; password: string }): Promise<{ totp: boolean }> {
-    const res = await axios.post(new URL('/api/v2/checkcreds/', this.ax.defaults.baseURL!).toString(), input, {
+    const res = await axios.post(new URL('/v2/checkcreds/', this.ax.defaults.baseURL!).toString(), input, {
       timeout: 30_000,
     });
     return { totp: Boolean((res.data as any)?.totp) };
@@ -144,7 +144,7 @@ export class TacticalRmmClient {
   async login(input: { username: string; password: string; totpCode?: string }): Promise<{ token: string }> {
     const payload: Record<string, any> = { username: input.username, password: input.password };
     if (input.totpCode) payload.twofactor = input.totpCode;
-    const res = await axios.post(new URL('/api/v2/login/', this.ax.defaults.baseURL!).toString(), payload, {
+    const res = await axios.post(new URL('/v2/login/', this.ax.defaults.baseURL!).toString(), payload, {
       timeout: 30_000,
     });
     const token: string | undefined =

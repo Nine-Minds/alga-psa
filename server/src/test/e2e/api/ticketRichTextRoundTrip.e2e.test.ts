@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { AddressInfo } from 'node:net';
 import type { Knex } from 'knex';
-import { resetTenantConnectionPool } from '@alga-psa/db';
+import { resetTenantConnectionPool, tenantDb } from '@alga-psa/db';
 import baseKnexConfig from '@/lib/db/knexfile';
 import { setupE2ETestEnvironment, type E2ETestEnvironment } from '../utils/e2eTestSetup';
 import { createTestTicket } from '../utils/ticketTestData';
@@ -69,7 +69,8 @@ function configureTicketTestDatabase(): void {
 }
 
 async function resolveTicketDefaults(db: Knex, tenant: string): Promise<void> {
-  const board = await db('boards').where({ tenant, is_default: true }).first();
+  const tenantTable = (table: string) => tenantDb(db, tenant).table(table);
+  const board = await tenantTable('boards').where({ tenant, is_default: true }).first();
   if (!board) {
     throw new Error('Ticket E2E defaults were not created by setupE2ETestEnvironment');
   }
@@ -77,12 +78,12 @@ async function resolveTicketDefaults(db: Knex, tenant: string): Promise<void> {
   boardId = board.board_id;
 
   const [openStatus, inProgressStatus, closedStatus, lowPriority, mediumPriority, highPriority] = await Promise.all([
-    db('statuses').where({ tenant, board_id: boardId, name: 'New', status_type: 'ticket' }).first(),
-    db('statuses').where({ tenant, board_id: boardId, name: 'In Progress', status_type: 'ticket' }).first(),
-    db('statuses').where({ tenant, board_id: boardId, name: 'Closed', status_type: 'ticket' }).first(),
-    db('priorities').where({ tenant, priority_name: 'Low' }).first(),
-    db('priorities').where({ tenant, priority_name: 'Medium' }).first(),
-    db('priorities').where({ tenant, priority_name: 'High' }).first(),
+    tenantTable('statuses').where({ tenant, board_id: boardId, name: 'New', status_type: 'ticket' }).first(),
+    tenantTable('statuses').where({ tenant, board_id: boardId, name: 'In Progress', status_type: 'ticket' }).first(),
+    tenantTable('statuses').where({ tenant, board_id: boardId, name: 'Closed', status_type: 'ticket' }).first(),
+    tenantTable('priorities').where({ tenant, priority_name: 'Low' }).first(),
+    tenantTable('priorities').where({ tenant, priority_name: 'Medium' }).first(),
+    tenantTable('priorities').where({ tenant, priority_name: 'High' }).first(),
   ]);
 
   if (!openStatus || !inProgressStatus || !closedStatus || !lowPriority || !mediumPriority || !highPriority) {

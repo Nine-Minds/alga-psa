@@ -13,8 +13,10 @@ import {
   dateSchema
 } from './common';
 
-// Asset type schema
-export const assetTypeSchema = z.enum(['workstation', 'network_device', 'server', 'mobile_device', 'printer', 'unknown']);
+// Asset type schema — any registry slug (built-in or custom tenant type), not a
+// fixed enum. Validation against the tenant's asset_type_registry happens in the
+// action layer (resolveWritableAssetType).
+export const assetTypeSchema = z.string().min(1, 'Asset type is required').max(255);
 
 // Base asset schema
 export const createAssetSchema = z.object({
@@ -294,10 +296,15 @@ export const maintenanceScheduleResponseSchema = z.object({
 });
 
 export const recordMaintenanceSchema = z.object({
-  schedule_id: uuidSchema.optional(),
+  // schedule_id is required: asset_maintenance_history rows are always tied to a
+  // schedule (the tech records a scheduled task as done).
+  schedule_id: uuidSchema,
   maintenance_type: z.enum(['preventive', 'corrective', 'inspection', 'calibration', 'replacement']),
-  performed_by: uuidSchema,
-  performed_at: z.string().datetime(),
+  description: z.string().trim().min(1).optional(),
+  // Defaults to the calling user / now when omitted (the common field case).
+  performed_by: uuidSchema.optional(),
+  performed_at: z.string().datetime().optional(),
+  // These have no dedicated columns; they are folded into maintenance_data.
   duration_hours: z.number().min(0).optional(),
   cost: z.number().min(0).optional(),
   notes: z.string().optional(),

@@ -6,7 +6,7 @@ import { IBoard, IUser } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -16,12 +16,19 @@ import { useDrawer } from "@alga-psa/ui";
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import { useRouter } from 'next/navigation';
+import { buildCreateTicketHref } from '@alga-psa/tickets/lib/createTicketRoute';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
 import { getTicketingDisplaySettings, type TicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { ITag } from '@alga-psa/types';
-import { findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { findTagsByEntityIds } from '@alga-psa/tags/actions/tagActions';
+import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { TagFilter } from '@alga-psa/ui/components';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
@@ -29,6 +36,7 @@ import {
   isTicketStatusOpenFilter,
   TICKET_STATUS_FILTER_OPEN,
 } from '@alga-psa/tickets/lib';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientTicketsProps {
   clientId: string;
@@ -39,6 +47,10 @@ interface ClientTicketsProps {
   initialCategories?: ITicketCategory[];
   initialTags?: ITag[];
   initialUsers?: IUser[];
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -64,13 +76,14 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
   initialTags = [],
   initialUsers = []
 }) => {
+  const { t } = useTranslation('msp/clients');
+  const router = useRouter();
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<IUser | null>(null);
   const [displaySettings, setDisplaySettings] = useState<TicketingDisplaySettings | null>(null);
   const ticketTagsRef = useRef<Record<string, ITag[]>>({});
-  const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
 
   const { openDrawer } = useDrawer();
 
@@ -146,6 +159,14 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
       };
 
       const result = await getTicketsForListWithCursor(filters, cursor);
+      if (isReturnedActionError(result)) {
+        handleError(getErrorMessage(result));
+        if (resetTickets) {
+          setTickets([]);
+        }
+        setNextCursor(null);
+        return;
+      }
 
       if (resetTickets) {
         setTickets(result.tickets);
@@ -168,7 +189,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
 
   const handleTicketClick = useCallback(async (ticketId: string) => {
     if (!currentUser) {
-      toast.error('User not authenticated');
+      toast.error(t('clientTabs.tickets.toasts.userNotAuthenticated', { defaultValue: 'User not authenticated' }));
       return;
     }
 
@@ -176,7 +197,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
       const ticketData = await getConsolidatedTicketData(ticketId);
 
       if (!ticketData) {
-        toast.error('Failed to load ticket');
+        toast.error(t('clientTabs.tickets.toasts.loadTicketFailed', { defaultValue: 'Failed to load ticket' }));
         return;
       }
 
@@ -204,7 +225,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
         />
       );
     } catch (error) {
-      handleError(error, 'Failed to open ticket');
+      handleError(error, t('clientTabs.tickets.toasts.openTicketFailed', { defaultValue: 'Failed to open ticket' }));
     }
   }, [currentUser, openDrawer]);
 
@@ -229,6 +250,10 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
       try {
         const ticketIds = tickets.map(t => t.ticket_id).filter(Boolean) as string[];
         const tags = await findTagsByEntityIds(ticketIds, 'ticket');
+        if (isTagActionError(tags)) {
+          console.error('Error fetching tags:', tags);
+          return;
+        }
 
         const newTicketTags: Record<string, ITag[]> = {};
         tags.forEach(tag => {
@@ -247,16 +272,60 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
   }, [tickets]);
 
 
+  // Dispatcher preset for the client context: the drawer is narrower than the
+  // full tickets screen, and the auto-fit hides trailing columns — so this
+  // list keeps the triage set (number/title/status/priority/SLA/assignee/due)
+  // and drops board/category/created/created-by, which stay available on the
+  // main tickets screen. Explicit widths keep the whole set admitted at
+  // drawer width (computeColumnFit prioritizes width-bearing columns) and
+  // stop Title's 320px natural width from crowding out assignee and due date.
+  const clientDisplaySettings = useMemo(() => displaySettings ? ({
+    ...displaySettings,
+    list: {
+      ...displaySettings.list,
+      columnVisibility: {
+        ...displaySettings.list?.columnVisibility,
+        sla: true,
+        board: false,
+        category: false,
+        created: false,
+        created_by: false,
+      },
+    },
+  }) : undefined, [displaySettings]);
+
+  // SLA deliberately carries no width: width-bearing columns are admitted
+  // first, so when space runs out SLA yields before assignee and due date —
+  // the two facts a dispatcher can't triage without.
+  const CLIENT_LIST_COLUMN_WIDTHS: Record<string, string> = {
+    ticket_number: '100px',
+    title: '220px',
+    status_name: '110px',
+    priority_name: '110px',
+    assigned_to_name: '140px',
+    due_date: '120px',
+  };
+
   const columns = useMemo(() =>
     createTicketColumns({
       categories: initialCategories,
       boards: initialBoards,
-      displaySettings: displaySettings || undefined,
+      displaySettings: clientDisplaySettings,
       onTicketClick: handleTicketClick,
       ticketTagsRef,
       onTagsChange: handleTagsChange,
       showClient: false, // Don't show client column since we're already on client page
-    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleTagsChange]);
+    }).map((column) => {
+      const columnId = Array.isArray(column.dataIndex) ? column.dataIndex.join('_') : column.dataIndex;
+      // Every shared ticket column declares a percent width, which makes them
+      // all equal priority — so SLA's width is stripped (not just left alone)
+      // to actually demote it below assignee/due date.
+      if (columnId === 'sla_policy_id') {
+        return { ...column, width: undefined };
+      }
+      const width = CLIENT_LIST_COLUMN_WIDTHS[columnId];
+      return width ? { ...column, width } : column;
+    }), [initialCategories, initialBoards, clientDisplaySettings, handleTicketClick, handleTagsChange]);
 
   // Filter tickets by selected tags
   const filteredTickets = useMemo(() => {
@@ -308,10 +377,18 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
     setExcludedCategories(newExcludedCategories);
   }, []);
 
-  const handleTicketAdded = useCallback(() => {
-    // Refresh the tickets list
-    loadTickets(undefined, true);
-    setIsQuickAddTicketOpen(false);
+  // Tickets are created via the create-ticket modal route now. This list fetches
+  // client-side, so it won't react to router.refresh(); reload it on the cross-feature
+  // "created" event (mirrored in CreateTicketRouteClient).
+  useEffect(() => {
+    const onCreated = (event: Event) => {
+      const detail = (event as CustomEvent<{ entity?: string }>).detail;
+      if (detail?.entity === 'ticket') {
+        loadTickets(undefined, true);
+      }
+    };
+    window.addEventListener('alga:quick-create:created', onCreated);
+    return () => window.removeEventListener('alga:quick-create:created', onCreated);
   }, [loadTickets]);
 
   const handleLoadMore = () => {
@@ -323,7 +400,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
   if (isLoading && tickets.length === 0) {
     return (
       <div className="flex justify-center items-center h-32">
-        <span>Loading tickets...</span>
+        <span>{t('clientTabs.tickets.loading', { defaultValue: 'Loading tickets...' })}</span>
       </div>
     );
   }
@@ -333,18 +410,20 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
       {/* Sticky Header and Filters */}
       <div className="sticky top-0 z-40 bg-white rounded-t-lg p-6 border-b border-gray-100">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Client Tickets</h3>
+          <h3 className="text-lg font-semibold text-gray-900">{t('clientTabs.tickets.title', { defaultValue: 'Tickets' })}</h3>
           <Button
             id="add-client-ticket-btn"
-            onClick={() => setIsQuickAddTicketOpen(true)}
+            onClick={() => router.push(buildCreateTicketHref({ client: { id: clientId, name: clientName } }))}
             className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
           >
-            Add Ticket
+            {t('clientTabs.tickets.addTicket', { defaultValue: 'Add Ticket' })}
           </Button>
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-4">
+        {/* Wraps instead of overflowing — this toolbar renders inside the
+            focus drawer, not just the full-page tickets screen. */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
           {initialBoards.length > 0 && (
             <BoardPicker
               id="client-tickets-board-picker"
@@ -353,6 +432,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
               selectedBoardId={selectedBoard}
               filterState={boardFilterState}
               onFilterStateChange={setBoardFilterState}
+              placeholder="Select board"
             />
           )}
 
@@ -362,7 +442,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
               options={initialStatuses}
               value={selectedStatus}
               onValueChange={(value) => setSelectedStatus(value)}
-              placeholder="Select Status"
+              placeholder={t('clientTabs.tickets.filters.statusPlaceholder', { defaultValue: 'Select status' })}
             />
           )}
 
@@ -372,7 +452,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
               options={initialPriorities}
               value={selectedPriority}
               onValueChange={(value) => setSelectedPriority(value)}
-              placeholder="All Priorities"
+              placeholder={t('clientTabs.tickets.filters.allPriorities', { defaultValue: 'All priorities' })}
             />
           )}
 
@@ -385,7 +465,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
               filterMode={true}
               includeUnassigned={includeUnassigned}
               onUnassignedChange={setIncludeUnassigned}
-              placeholder="All Assignees"
+              placeholder={t('clientTabs.tickets.filters.allAssignees', { defaultValue: 'All assignees' })}
               showSearch={true}
               compactDisplay={true}
             />
@@ -400,7 +480,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
               selectedCategories={selectedCategories}
               excludedCategories={excludedCategories}
               onSelect={handleCategorySelect}
-              placeholder="Filter by category"
+              placeholder={t('clientTabs.tickets.filters.categoryPlaceholder', { defaultValue: 'All categories' })}
               multiSelect={true}
               showExclude={true}
               showReset={true}
@@ -413,11 +493,11 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
 
           <Input
             id="client-tickets-search-input"
-            placeholder="Search tickets..."
+            placeholder={t('clientTabs.tickets.filters.searchPlaceholder', { defaultValue: 'Search tickets...' })}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-[38px] min-w-[350px] text-sm"
-            containerClassName=""
+            className="h-[38px] min-w-[220px] text-sm"
+            containerClassName="flex-1 min-w-[220px] max-w-[350px]"
           />
 
           {allUniqueTags.length > 0 && (
@@ -444,7 +524,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
               id="client-tickets-reset-filters-btn"
             >
               <XCircle className="h-4 w-4" />
-              Reset
+              {t('clientTabs.tickets.filters.reset', { defaultValue: 'Reset' })}
             </Button>
         </div>
       </div>
@@ -471,22 +551,11 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
               disabled={isLoading}
               variant="outline"
             >
-              {isLoading ? 'Loading...' : 'Load More Tickets'}
+              {isLoading ? t('clientTabs.tickets.loadMore.loading', { defaultValue: 'Loading...' }) : t('clientTabs.tickets.loadMore.label', { defaultValue: 'Load More Tickets' })}
             </Button>
           </div>
         )}
       </div>
-
-      {/* Quick Add Ticket Dialog */}
-      <QuickAddTicket
-        open={isQuickAddTicketOpen}
-        onOpenChange={setIsQuickAddTicketOpen}
-        onTicketAdded={handleTicketAdded}
-        prefilledClient={{
-          id: clientId,
-          name: clientName
-        }}
-      />
     </div>
   );
 };

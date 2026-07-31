@@ -45,17 +45,34 @@ export const billingOverviewReport: ReportDefinition = {
         joins: [
           {
             type: 'inner',
-            table: 'client_contract_lines',
+            table: 'client_contracts',
             on: [
-              { left: 'clients.client_id', right: 'client_contract_lines.client_id' },
-              { left: 'clients.tenant', right: 'client_contract_lines.tenant' }
+              { left: 'clients.client_id', right: 'client_contracts.client_id' },
+              { left: 'clients.tenant', right: 'client_contracts.tenant' }
+            ]
+          },
+          {
+            type: 'inner',
+            table: 'contracts',
+            on: [
+              { left: 'client_contracts.contract_id', right: 'contracts.contract_id' },
+              { left: 'client_contracts.tenant', right: 'contracts.tenant' }
+            ]
+          },
+          {
+            type: 'inner',
+            table: 'contract_lines',
+            on: [
+              { left: 'contracts.contract_id', right: 'contract_lines.contract_id' },
+              { left: 'contracts.tenant', right: 'contract_lines.tenant' }
             ]
           }
         ],
         aggregation: 'count_distinct',
         fields: ['clients.client_id'],
         filters: [
-          { field: 'client_contract_lines.is_active', operator: 'eq', value: true },
+          { field: 'client_contracts.is_active', operator: 'eq', value: true },
+          { field: 'contract_lines.is_active', operator: 'eq', value: true },
           { field: 'clients.tenant', operator: 'eq', value: '{{tenant}}' }
         ]
       },
@@ -82,8 +99,9 @@ export const billingOverviewReport: ReportDefinition = {
         ]
       },
       formatting: {
+        // Currency intentionally omitted; resolved to the tenant default at run
+        // time by the ReportEngine (formatting.currency path, owned by WS1).
         type: 'currency',
-        currency: 'USD',
         divisor: 100 // Convert from cents
       }
     },
@@ -121,33 +139,36 @@ export const billingOverviewReport: ReportDefinition = {
         ]
       },
       formatting: {
+        // Currency intentionally omitted; resolved to the tenant default at run
+        // time by the ReportEngine (formatting.currency path, owned by WS1).
         type: 'currency',
-        currency: 'USD',
         divisor: 100
       }
     },
-    
+
     {
       id: 'total_credit_balance',
       name: 'Total Credit Balance',
-      description: 'Sum of all client credit balances',
+      description: 'Sum of remaining, non-expired client credits',
       type: 'sum',
       query: {
-        table: 'clients',
-        fields: ['credit_balance'],
+        table: 'credit_tracking',
+        fields: ['remaining_amount'],
         aggregation: 'sum',
         filters: [
           { field: 'tenant', operator: 'eq', value: '{{tenant}}' },
-          { field: 'credit_balance', operator: 'gt', value: 0 }
+          { field: 'is_expired', operator: 'eq', value: false },
+          { field: 'remaining_amount', operator: 'gt', value: 0 }
         ]
       },
       formatting: {
+        // Currency intentionally omitted; resolved to the tenant default at run
+        // time by the ReportEngine (formatting.currency path, owned by WS1).
         type: 'currency',
-        currency: 'USD',
         divisor: 100
       }
     },
-    
+
     {
       id: 'pending_time_entries',
       name: 'Pending Time Entries',

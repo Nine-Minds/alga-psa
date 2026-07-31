@@ -24,7 +24,7 @@ function isDirectory(filePath) {
 function walkUpForRepo(startDir) {
   let cursor = path.resolve(startDir);
   while (true) {
-    const candidate = path.join(cursor, 'ee', 'appliance', 'scripts', 'bootstrap-appliance.sh');
+    const candidate = path.join(cursor, 'ee', 'appliance', 'scripts', 'collect-support-bundle.sh');
     if (exists(candidate)) {
       return cursor;
     }
@@ -47,11 +47,8 @@ export function resolveRuntimePaths(options = {}) {
       runtimeMode: 'asset-root',
       assetRoot: path.resolve(assetRoot),
       scriptsDir: path.resolve(assetRoot, 'scripts'),
-      releasesDir: path.resolve(assetRoot, 'releases'),
       fluxDir: path.resolve(assetRoot, 'flux'),
       supportBundleScript: path.resolve(assetRoot, 'scripts', 'collect-support-bundle.sh'),
-      bootstrapScript: path.resolve(assetRoot, 'scripts', 'bootstrap-appliance.sh'),
-      upgradeScript: path.resolve(assetRoot, 'scripts', 'upgrade-appliance.sh'),
       repairScript: path.resolve(assetRoot, 'scripts', 'repair-release.sh'),
       resetScript: path.resolve(assetRoot, 'scripts', 'reset-appliance-data.sh'),
     };
@@ -70,11 +67,8 @@ export function resolveRuntimePaths(options = {}) {
     repoRoot: base,
     assetRoot: path.join(base, 'ee', 'appliance'),
     scriptsDir: path.join(base, 'ee', 'appliance', 'scripts'),
-    releasesDir: path.join(base, 'ee', 'appliance', 'releases'),
     fluxDir: path.join(base, 'ee', 'appliance', 'flux'),
     supportBundleScript: path.join(base, 'ee', 'appliance', 'scripts', 'collect-support-bundle.sh'),
-    bootstrapScript: path.join(base, 'ee', 'appliance', 'scripts', 'bootstrap-appliance.sh'),
-    upgradeScript: path.join(base, 'ee', 'appliance', 'scripts', 'upgrade-appliance.sh'),
     repairScript: path.join(base, 'ee', 'appliance', 'scripts', 'repair-release.sh'),
     resetScript: path.join(base, 'ee', 'appliance', 'scripts', 'reset-appliance-data.sh'),
   };

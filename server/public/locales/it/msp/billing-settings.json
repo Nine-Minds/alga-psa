@@ -1,9 +1,11 @@
 {
   "tabs": {
     "general": "Generale",
+    "numbering": "Numerazione",
     "quoting": "Citando",
     "tax": "Tassare",
-    "payments": "Pagamenti"
+    "payments": "Pagamenti",
+    "costRates": "Tariffe di costo"
   },
   "general": {
     "currency": {
@@ -26,6 +28,10 @@
     "invoiceNumbering": {
       "title": "Numerazione delle fatture",
       "description": "Personalizza il modo in cui i numeri delle fatture vengono generati e visualizzati."
+    },
+    "creditNoteNumbering": {
+      "title": "Numerazione delle note di credito",
+      "description": "Personalizza il modo in cui i numeri delle note di credito vengono generati e visualizzati."
     },
     "zeroDollar": {
       "title": "Fatture a zero dollari",
@@ -88,10 +94,10 @@
       "fields": {
         "dueDateAction": {
           "label": "Azione della data di scadenza",
-          "help": "Scegli se le date di scadenza del rinnovo devono creare biglietti o rimanere solo in coda per impostazione predefinita."
+          "help": "Scegli se le date di scadenza del rinnovo devono creare ticket o rimanere solo in coda per impostazione predefinita."
         },
         "ticketBoard": {
-          "label": "Rinnovo biglietteria",
+          "label": "Bacheca ticket di rinnovo",
           "placeholderLoading": "Caricamento schede...",
           "placeholderSelect": "Seleziona scheda"
         },
@@ -104,7 +110,7 @@
         }
       },
       "options": {
-        "createTicket": "Crea biglietto",
+        "createTicket": "Crea ticket",
         "queueOnly": "Solo coda"
       },
       "states": {
@@ -112,14 +118,14 @@
       },
       "actions": {
         "save": "Salva",
-        "saving": "Risparmio..."
+        "saving": "Salvataggio..."
       },
       "toast": {
         "updated": "Le impostazioni di automazione del rinnovo sono state aggiornate."
       },
       "errors": {
         "load": "Impossibile caricare le impostazioni di automazione del rinnovo",
-        "loadStatuses": "Impossibile caricare gli stati dei biglietti di rinnovo",
+        "loadStatuses": "Impossibile caricare gli stati dei ticket di rinnovo",
         "save": "Impossibile salvare le impostazioni di automazione del rinnovo"
       }
     }
@@ -128,6 +134,10 @@
     "quoteNumbering": {
       "title": "Numerazione delle quote",
       "description": "Personalizza il modo in cui i numeri dei preventivi vengono generati e visualizzati."
+    },
+    "salesOrderNumbering": {
+      "title": "Numerazione degli ordini di vendita",
+      "description": "Personalizza il modo in cui i numeri degli ordini di vendita vengono generati e visualizzati."
     }
   },
   "tax": {
@@ -168,7 +178,7 @@
       "actions": {
         "cancel": "Cancellare",
         "save": "Salva impostazioni",
-        "saving": "Risparmio..."
+        "saving": "Salvataggio..."
       },
       "toast": {
         "saved": "Impostazioni dell'origine fiscale salvate correttamente."
@@ -205,7 +215,7 @@
         "deactivate": "Disattivare",
         "cancel": "Cancellare",
         "save": "Salva modifiche",
-        "saving": "Risparmio..."
+        "saving": "Salvataggio..."
       },
       "toast": {
         "created": "Regione fiscale creata con successo.",
@@ -270,7 +280,7 @@
         "delete": "Eliminare",
         "cancel": "Cancellare",
         "save": "Salva",
-        "saving": "Risparmio...",
+        "saving": "Salvataggio...",
         "deleting": "Eliminazione..."
       },
       "delete": {
@@ -340,7 +350,7 @@
         "delete": "Eliminare",
         "cancel": "Cancellare",
         "save": "Salva",
-        "saving": "Risparmio...",
+        "saving": "Salvataggio...",
         "deleting": "Eliminazione..."
       },
       "delete": {
@@ -392,7 +402,7 @@
         "delete": "Eliminare",
         "cancel": "Cancellare",
         "save": "Salva",
-        "saving": "Risparmio...",
+        "saving": "Salvataggio...",
         "deleting": "Eliminazione..."
       },
       "delete": {
@@ -535,9 +545,9 @@
       "reorder": "Importa con ordine diverso:"
     },
     "toast": {
-      "importedCount": "Tipo di servizio {{count}} importato",
       "importedCount_other": "Tipi di servizio {{count}} importati",
-      "skippedItem": "{{name}}: {{reason}}"
+      "skippedItem": "{{name}}: {{reason}}",
+      "importedCount_one": "Tipo di servizio {{count}} importato"
     },
     "errors": {
       "fetch": "Impossibile recuperare i tipi di servizio",
@@ -862,6 +872,22 @@
       },
       "description": {
         "label": "Descrizione"
+      },
+      "inventory": {
+        "label": "Inventario",
+        "track": "Traccia inventario",
+        "serialized": "Serializzato",
+        "kit": "Kit",
+        "createsAsset": "Crea un asset alla consegna",
+        "defaultAssetType": "Tipo di asset predefinito",
+        "reorderPoint": "Punto di riordino",
+        "reorderQuantity": "Quantità di riordino",
+        "kitPricingMode": "Modalità prezzo kit",
+        "kitPricingSum": "Somma dei componenti",
+        "kitPricingFixed": "Prezzo fisso"
+      },
+      "barcode": {
+        "label": "Codice a barre (UPC/EAN)"
       }
     },
     "options": {
@@ -932,7 +958,7 @@
       "actions": {
         "cancel": "Cancellare",
         "save": "Salva lo stato di esenzione fiscale",
-        "saving": "Risparmio..."
+        "saving": "Salvataggio..."
       }
     },
     "advanced": {
@@ -1191,6 +1217,91 @@
         "title": "Impostazioni di pagamento",
         "description": "Configura come funzionano i link di pagamento con le tue fatture"
       }
+    }
+  },
+  "costRates": {
+    "title": "Tariffe di costo",
+    "description": "Gestisci le tariffe del costo del lavoro interno, comprensive di tutti gli oneri, utilizzate dai report di redditività.",
+    "loading": "Caricamento delle tariffe di costo...",
+    "default": {
+      "title": "Tariffa di costo predefinita del tenant",
+      "current": "Predefinita attuale: {{rate}} dal {{date}}",
+      "missing": "Nessuna tariffa predefinita del tenant configurata. Gli utenti senza una tariffa specifica risulteranno senza costo.",
+      "history": "Cronologia della tariffa predefinita",
+      "empty": "Ancora nessuna tariffa predefinita."
+    },
+    "empty": {
+      "title": "Le tariffe di costo non sono configurate",
+      "description": "Imposta prima la tariffa predefinita del tenant in modo che i report possano calcolare il costo del lavoro per gli utenti senza una tariffa specifica."
+    },
+    "table": {
+      "currentRate": "Tariffa attuale",
+      "actions": "Azioni",
+      "usesDefault": "Usa la predefinita",
+      "uncosted": "Senza costo",
+      "status": "Stato",
+      "user": "Utente"
+    },
+    "history": {
+      "empty": "Nessuna tariffa specifica per utente."
+    },
+    "dialog": {
+      "title": "Tariffa di costo",
+      "description": "Inserisci il costo orario del lavoro, comprensivo di tutti gli oneri, nella valuta predefinita del tenant."
+    },
+    "fields": {
+      "user": {
+        "label": "Utente",
+        "default": "Predefinita del tenant"
+      },
+      "rate": {
+        "label": "Costo orario"
+      },
+      "effectiveFrom": {
+        "label": "Data di decorrenza"
+      },
+      "effectiveTo": {
+        "label": "Data di fine validità"
+      }
+    },
+    "actions": {
+      "setDefault": "Imposta predefinita",
+      "addRate": "Aggiungi tariffa",
+      "addUserRate": "Aggiungi tariffa utente",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "saving": "Salvataggio...",
+      "continue": "Continua"
+    },
+    "warning": {
+      "title": "In questo intervallo sono presenti ore lavorate",
+      "description": "La modifica di questa tariffa cambierà la redditività storica delle voci di tempo nel suo periodo di validità.",
+      "body": "Continua solo se si tratta di una correzione intenzionale."
+    },
+    "toast": {
+      "saved": "Tariffa di costo salvata.",
+      "deleted": "Tariffa di costo eliminata."
+    },
+    "errors": {
+      "load": "Impossibile caricare le tariffe di costo",
+      "save": "Impossibile salvare la tariffa di costo",
+      "delete": "Impossibile eliminare la tariffa di costo"
+    },
+    "formats": {
+      "noRate": "—",
+      "hourlyRate": "{{amount}}/h",
+      "dateRange": "{{start}} - {{end}}",
+      "openDateRange": "{{start}} - in corso"
+    },
+    "status": {
+      "current": "Attuale",
+      "scheduled": "Pianificata",
+      "ended": "Terminata"
+    },
+    "sections": {
+      "userRates": "Tariffe per utente"
     }
   }
 }

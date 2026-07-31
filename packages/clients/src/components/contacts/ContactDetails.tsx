@@ -34,19 +34,32 @@ import { IBoard } from '@alga-psa/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { TagManager } from '@alga-psa/tags/components';
-import { findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { findTagsByEntityIds, isTagActionError } from '@alga-psa/tags/actions';
 import ContactAvatarUpload from './ContactAvatarUpload';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import { getClientById } from '@alga-psa/clients/actions';
 import { getAllCountries, ICountry } from '@alga-psa/clients/actions';
-import ClientDetails from '../clients/ClientDetails';
+import ClientQuickView from '../clients/ClientQuickView';
 import { ContactPortalTab } from './ContactPortalTab';
+import { EntraContactBadge } from './EntraContactBadge';
+import { readEntraContactLinkage, findOverwritingEntraRule } from './entraContactLinkage';
+import { useEntraContactFieldRules } from './useEntraContactFieldRules';
 import { ContactNotesPanel } from './panels/ContactNotesPanel';
 import ContactPhoneNumbersEditor, { compactContactPhoneNumbers, validateContactPhoneNumbers } from './ContactPhoneNumbersEditor';
 import ContactEmailAddressesEditor, {
   compactContactEmailAddresses,
   validateContactEmailAddresses,
 } from './ContactEmailAddressesEditor';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 type EditableContact = Omit<IContact, 'phone_numbers' | 'additional_email_addresses'> & {
   phone_numbers: ContactPhoneNumberInput[];
@@ -241,6 +254,10 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       if (!currentUser) return;
       try {
         const options = await getTicketFormOptions();
+        if (isReturnedActionError(options)) {
+          console.warn('Error fetching ticket form options:', getErrorMessage(options));
+          return;
+        }
         setTicketFormOptions({
           statusOptions: options.statusOptions,
           priorityOptions: options.priorityOptions,
@@ -283,6 +300,11 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       try {
         const rows = await listInboundTicketDestinationOptions();
         if (cancelled) return;
+        if (isReturnedActionError(rows)) {
+          console.error('Error loading inbound ticket destination options:', getErrorMessage(rows));
+          setInboundDestinationOptions([]);
+          return;
+        }
         setInboundDestinationOptions(
           (rows ?? []).map((row: any) => ({
             value: row.id,
@@ -318,7 +340,12 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           ]);
           
           setAvatarUrl(contactAvatarUrl);
-          setTags(fetchedTags);
+          if (isTagActionError(fetchedTags)) {
+            console.error('Error fetching contact tags:', fetchedTags);
+            setTags([]);
+          } else {
+            setTags(fetchedTags);
+          }
         } catch (error) {
           console.error('Error fetching avatar and tags:', error);
         }
@@ -327,12 +354,34 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     fetchAvatarAndTags();
   }, [contact.contact_name_id, contact.tenant, userId]);
 
+  // Only Entra-linked contacts pay for this; everyone else skips the fetch.
+  const entraLinkage = readEntraContactLinkage(contact as unknown as Record<string, unknown>);
+  const entraFieldRules = useEntraContactFieldRules(entraLinkage.isLinked);
+  const [entraOverwriteWarnings, setEntraOverwriteWarnings] = useState<Record<string, string>>({});
+
   const handleFieldChange = (field: string, value: string | boolean | ContactPhoneNumberInput[]) => {
     setEditedContact(prevContact => ({
       ...prevContact,
       [field]: value
     }));
     setHasUnsavedChanges(true);
+
+    // Warn while the edit is being made, not after it silently reverts on the
+    // next sync.
+    const rule = findOverwritingEntraRule({
+      contact: contact as unknown as Record<string, unknown>,
+      field,
+      fieldSyncConfig: entraFieldRules,
+    });
+    setEntraOverwriteWarnings((current) => {
+      if (!rule) {
+        if (!current[field]) return current;
+        const next = { ...current };
+        delete next[field];
+        return next;
+      }
+      return { ...current, [field]: rule };
+    });
   };
 
   const handleEmailAddressesChange = (value: Pick<
@@ -401,12 +450,11 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       } else {
         router.push('/msp/contacts');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to delete contact:', error);
-      const errorMessage = error.message || t('contactDetails.delete.failed', { defaultValue: 'Failed to delete contact. Please try again.' });
       toast({
         title: t('contactDetails.error.title', { defaultValue: 'Error' }),
-        description: errorMessage,
+        description: t('contactDetails.delete.failed', { defaultValue: 'Failed to delete contact. Please try again.' }),
         variant: "destructive"
       });
     } finally {
@@ -433,6 +481,14 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         ...editedContact,
         is_inactive: true
       });
+      if (isReturnedActionError(updatedContact)) {
+        toast({
+          title: t('contactDetails.error.title', { defaultValue: 'Error' }),
+          description: getErrorMessage(updatedContact),
+          variant: "destructive"
+        });
+        return;
+      }
 
       setIsDeleteDialogOpen(false);
 
@@ -495,6 +551,15 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       };
 
       const updatedContact = await updateContact(dataToUpdate);
+      if (isReturnedActionError(updatedContact)) {
+        toast({
+          title: t('contactDetails.saveFailed.title', { defaultValue: 'Save Failed' }),
+          description: getErrorMessage(updatedContact),
+          variant: 'destructive',
+        });
+        return;
+      }
+
       setEditedContact({
         ...updatedContact,
         additional_email_addresses: updatedContact.additional_email_addresses ?? [],
@@ -548,10 +613,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           const delay = quickView ? 0 : 10;
           setTimeout(() => {
             drawer.openDrawer(
-              <ClientDetails
+              <ClientQuickView
                 client={client}
-                documents={[]}
-                contacts={[]}
                 isInDrawer={true}
                 quickView={true}
               />
@@ -701,6 +764,15 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
                 onValidationChange={setPhoneValidationErrors}
               />
             </div>
+            {Object.keys(entraOverwriteWarnings).length > 0 ? (
+              <p
+                className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-2 text-sm text-[rgb(var(--color-text-700))]"
+                id="entra-overwrite-warning"
+              >
+                Microsoft Entra syncs this field. Your change will be overwritten on the next
+                sync unless that rule is turned off in Integrations → Identity → Field rules.
+              </p>
+            ) : null}
             <SwitchDetailItem
               value={!editedContact.is_inactive || false}
               label={t('contactDetails.status.label', { defaultValue: 'Status' })}
@@ -709,6 +781,9 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               inactiveLabel={t('contactDetails.status.inactive', { defaultValue: 'Inactive' })}
               onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
             />
+            {/* Provenance for a contact a directory maintains: renders nothing
+                for the contacts that are not linked, which is most of them. */}
+            <EntraContactBadge contact={contact as unknown as Record<string, unknown>} variant="detail" />
           </div>
 
           {/* Tags Section */}

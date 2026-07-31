@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
 import {
   QUOTE_TEMPLATE_VALUE_BINDINGS,
@@ -11,6 +11,8 @@ import {
   STANDARD_QUOTE_TEMPLATE_ASTS,
   getStandardQuoteTemplateAstByCode,
 } from '../../src/lib/quote-template-ast/standardTemplates';
+import { evaluateTemplateAst } from '../../src/lib/invoice-template-ast/evaluator';
+import { renderTemplateAstHtmlDocument } from '../../src/lib/invoice-template-ast/server-render';
 
 // ── bindings ─────────────────────────────────────────────────────────
 describe('quote-template-ast – bindings', () => {
@@ -45,7 +47,9 @@ describe('quote-template-ast – bindings', () => {
     expect(bindings.values).toBeDefined();
     expect(bindings.collections).toBeDefined();
     expect(Object.keys(bindings.values!).length).toBeGreaterThan(0);
-    expect(Object.keys(bindings.collections!).length).toBe(2);
+    expect(Object.keys(bindings.collections!)).toEqual(
+      Object.keys(QUOTE_TEMPLATE_COLLECTION_BINDINGS),
+    );
   });
 
   it('T233: value bindings provide fallbacks for display fields', () => {
@@ -72,7 +76,7 @@ describe('quote-template-ast – standardTemplates', () => {
   it('T236: each standard template has the correct AST structure', () => {
     for (const [code, ast] of Object.entries(STANDARD_QUOTE_TEMPLATE_ASTS)) {
       expect(ast.kind).toBe('invoice-template-ast');
-      expect(ast.version).toBe(INVOICE_TEMPLATE_AST_VERSION);
+      expect(ast.version).toBe(TEMPLATE_AST_VERSION);
       expect(ast.metadata?.templateName).toBeTruthy();
       expect(ast.bindings).toBeDefined();
       expect(ast.layout).toBeDefined();
@@ -117,6 +121,38 @@ describe('quote-template-ast – standardTemplates', () => {
       expect(bindings.values?.subtotal).toBeDefined();
       expect(bindings.collections?.lineItems).toBeDefined();
     }
+  });
+
+  it('renders native quote party and date bindings without invoice aliases', async () => {
+    const ast = getStandardQuoteTemplateAstByCode('standard-quote-default');
+    expect(ast).not.toBeNull();
+    if (!ast) {
+      throw new Error('Expected the standard quote template to exist.');
+    }
+
+    const evaluation = evaluateTemplateAst(ast, {
+      quote_number: 'Q-0003',
+      quote_date: '2026-07-13',
+      valid_until: '2026-08-12',
+      title: 'Managed Services Proposal',
+      currency_code: 'USD',
+      subtotal: 0,
+      discount_total: 0,
+      tax: 0,
+      total_amount: 0,
+      line_items: [],
+      client: { name: 'Acme Corp', address: '123 Main St' },
+      tenant: { name: 'Northwind MSP', address: '400 SW Main' },
+    });
+    const html = await renderTemplateAstHtmlDocument(ast, evaluation, { title: 'Quote Q-0003' });
+
+    expect(html).toContain('Acme Corp');
+    expect(html).toContain('123 Main St');
+    expect(html).toContain('Northwind MSP');
+    expect(html).toContain('400 SW Main');
+    expect(html).toContain('7/13/2026');
+    expect(html).toContain('8/12/2026');
+    expect(html).not.toContain('Your Company');
   });
 });
 

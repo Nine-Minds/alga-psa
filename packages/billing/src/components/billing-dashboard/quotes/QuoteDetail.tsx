@@ -10,16 +10,18 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { IClient, IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
-import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
+import { isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
 import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '../../../actions/billingClientLocationActions';
 import LocationAddress from '../locations/LocationAddress';
 import { buildLocationGroups, shouldShowLocationGroups } from '../locations/locationGrouping';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import type { IQuoteDocumentTemplate } from '@alga-psa/types';
-import { approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, createQuoteRevision, deleteQuote, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, renderQuotePreview, requestQuoteApprovalChanges, resendQuote, saveQuoteAsTemplate, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
+import { approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuoteRevision, deleteQuote, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, renderQuotePreview, requestQuoteApprovalChanges, resendQuote, saveQuoteAsTemplate, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
-import { getContactsForPicker } from '@alga-psa/user-composition/actions';
+import { getSalesOrderForQuote, type SalesOrderQuoteLink } from '@alga-psa/inventory/actions/salesOrderLinkActions';
+import { getProductAvailability, type ProductAvailability } from '@alga-psa/inventory/actions/availabilityActions';
+import { getContactsForPicker } from '@alga-psa/user-composition/actions/contactQueryActions';
 import QuoteStatusBadge from './QuoteStatusBadge';
 import { ArrowLeft } from 'lucide-react';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
@@ -52,13 +54,52 @@ function hasConvertibleOneTimeItems(quote: IQuote | null): boolean {
   return oneTimeItems.some((item) => item.is_discount && (!item.applies_to_item_id || oneTimeItemIds.has(item.applies_to_item_id) || (item.applies_to_service_id ? oneTimeServiceIds.has(item.applies_to_service_id) : true)));
 }
 
-type ConversionMode = 'contract' | 'invoice' | 'both';
+type ConversionMode = 'contract' | 'invoice' | 'both' | 'sales_order';
+
+// Product one-time lines are what convert to a sales order (F002/D2): a product-kind
+// service, not recurring, not a discount, and either non-optional or an accepted option.
+function hasConvertibleProductOneTimeItems(quote: IQuote | null): boolean {
+  return Boolean(
+    (quote?.quote_items || []).some(
+      (item) =>
+        item.service_item_kind === 'product' &&
+        !item.is_recurring &&
+        !item.is_discount &&
+        (!item.is_optional || item.is_selected !== false),
+    ),
+  );
+}
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
+
+// Advisory on-hand chip for tracked product lines (F006): red at zero, amber at/below the
+// reorder point, plain otherwise. Nothing for untracked products or missing availability.
+function renderAvailabilityChip(
+  availability: ProductAvailability | null | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
+) {
+  if (!availability || !availability.track_stock) return null;
+  const onHand = availability.on_hand_total;
+  const tone =
+    onHand <= 0
+      ? 'bg-red-100 text-red-800'
+      : availability.reorder_point != null && onHand <= availability.reorder_point
+        ? 'bg-amber-100 text-amber-800'
+        : 'bg-gray-100 text-gray-700';
+  return (
+    <div className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-medium ${tone}`}>
+      {t('quoteDetail.availability.onHand', { defaultValue: 'On hand: {{count}}', count: onHand })}
+    </div>
+  );
+}
 
 function renderQuoteDetailRow(
   quote: IQuote,
   item: NonNullable<IQuote['quote_items']>[number],
   formatCurrencyFn: (amount: number, currencyCode: string) => string,
   t: (key: string, options?: Record<string, unknown>) => string,
+  availability?: ProductAvailability | null,
 ) {
   const showClientSelection = quote.status === 'accepted' && item.is_optional;
   const clientSelected = item.is_selected !== false;
@@ -77,6 +118,7 @@ function renderQuoteDetailRow(
           {item.is_optional ? ` • ${t('quoteDetail.labels.optional', { defaultValue: 'Optional' })}` : ''}
           {item.is_recurring ? ` • ${t('quoteDetail.labels.recurring', { defaultValue: 'Recurring' })}${item.billing_frequency ? ` (${item.billing_frequency})` : ''}` : ''}
         </div>
+        {item.service_item_kind === 'product' ? renderAvailabilityChip(availability, t) : null}
         {showClientSelection ? (
           <div className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-medium ${clientSelected ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
             {clientSelected
@@ -126,6 +168,10 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const [isPreviewLoading2, setIsPreviewLoading2] = useState(false);
   const [documentTemplates, setDocumentTemplates] = useState<IQuoteDocumentTemplate[]>([]);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  // Sales order converted from this quote (F010) — also set right after an SO conversion (F002).
+  const [convertedSo, setConvertedSo] = useState<SalesOrderQuoteLink | null>(null);
+  // On-hand advisory for product lines, keyed by service_id (F006).
+  const [productAvailability, setProductAvailability] = useState<Map<string, ProductAvailability>>(new Map());
 
   useEffect(() => {
     void loadQuote();
@@ -148,6 +194,12 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             ? t('quoteDetail.errors.notFound', { defaultValue: 'Quote not found' })
             : getErrorMessage(loadedQuote),
         );
+      }
+      if (isActionPermissionError(loadedContacts) || isActionMessageError(loadedContacts)) {
+        throw new Error(getErrorMessage(loadedContacts));
+      }
+      if (isActionPermissionError(loadedClients) || isActionMessageError(loadedClients)) {
+        throw new Error(getErrorMessage(loadedClients));
       }
 
       setQuote(loadedQuote);
@@ -195,6 +247,10 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       }
       try {
         const locations = await getActiveClientLocationsForBilling(quote.client_id);
+        if (isActionPermissionError(locations) || isActionMessageError(locations)) {
+          if (!cancelled) setClientLocations([]);
+          return;
+        }
         if (!cancelled) setClientLocations(locations);
       } catch (locationError) {
         console.error('Failed to load client locations:', locationError);
@@ -207,6 +263,51 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const canConvertToContract = useMemo(() => hasConvertibleRecurringItems(quote), [quote]);
   const canConvertToInvoice = useMemo(() => hasConvertibleOneTimeItems(quote), [quote]);
   const canConvertToBoth = canConvertToContract && canConvertToInvoice;
+  const canConvertToSalesOrder = useMemo(() => hasConvertibleProductOneTimeItems(quote), [quote]);
+
+  // Backlink to the sales order this quote produced, if any (F010). Advisory — a failure
+  // (e.g. the link action unavailable) simply hides the link.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      if (!quote?.quote_id) {
+        setConvertedSo(null);
+        return;
+      }
+      try {
+        const so = await getSalesOrderForQuote(quote.quote_id);
+        if (!cancelled) setConvertedSo(so);
+      } catch {
+        if (!cancelled) setConvertedSo(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [quote?.quote_id]);
+
+  // On-hand advisory for the quote's product lines (F006). Batched; failures render nothing.
+  useEffect(() => {
+    let cancelled = false;
+    const productServiceIds = Array.from(
+      new Set(
+        (quote?.quote_items || [])
+          .filter((item) => item.service_item_kind === 'product' && item.service_id)
+          .map((item) => item.service_id as string),
+      ),
+    );
+    void (async () => {
+      if (productServiceIds.length === 0) {
+        setProductAvailability(new Map());
+        return;
+      }
+      try {
+        const rows = await getProductAvailability(productServiceIds);
+        if (!cancelled) setProductAvailability(new Map(rows.map((r) => [r.service_id, r])));
+      } catch {
+        if (!cancelled) setProductAvailability(new Map());
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [quote?.quote_items]);
 
   const handleDelete = async () => {
     if (!quote) {
@@ -219,8 +320,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setNotice(null);
       const result = await deleteQuote(quote.quote_id);
 
-      if ('permissionError' in result) {
-        throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
 
       if (!result.deleted) {
@@ -255,8 +356,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setNotice(null);
       const result = await updateQuote(quote.quote_id, { status: 'cancelled' });
 
-      if ('permissionError' in result) {
-        throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
 
       setQuote(result);
@@ -282,8 +383,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setNotice(null);
       const result = await submitQuoteForApproval(quote.quote_id);
 
-      if ('permissionError' in result) {
-        throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
 
       setQuote(result);
@@ -316,8 +417,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setNotice(null);
       const result = await approveQuote(quote.quote_id, approvalComment);
 
-      if ('permissionError' in result) {
-        throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
 
       setQuote(result);
@@ -352,8 +453,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setNotice(null);
       const result = await requestQuoteApprovalChanges(quote.quote_id, approvalComment);
 
-      if ('permissionError' in result) {
-        throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
 
       setQuote(result);
@@ -388,8 +489,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setNotice(null);
       const result = await resendQuote(quote.quote_id);
 
-      if ('permissionError' in result) {
-        throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
 
       setQuote(result);
@@ -420,8 +521,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setNotice(null);
       const result = await sendQuoteReminder(quote.quote_id);
 
-      if ('permissionError' in result) {
-        throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
 
       setQuote(result);
@@ -454,8 +555,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setNotice(null);
       const result = await duplicateQuote(quote.quote_id);
 
-      if ('permissionError' in result) {
-        throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
 
       router.push(`/msp/billing?tab=quotes&quoteId=${result.quote_id}&mode=edit`);
@@ -481,8 +582,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setNotice(null);
       const result = await saveQuoteAsTemplate(quote.quote_id);
 
-      if ('permissionError' in result) {
-        throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
 
       router.push(`/msp/billing?tab=quotes&quoteId=${result.quote_id}&mode=edit`);
@@ -523,8 +624,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         email_addresses: combined.length > 0 ? combined : undefined,
       });
 
-      if ('permissionError' in result) {
-        throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
 
       setQuote(result);
@@ -557,8 +658,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setNotice(null);
       const result = await createQuoteRevision(quote.quote_id);
 
-      if ('permissionError' in result) {
-        throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
 
       router.push(`/msp/billing?tab=quotes&quoteId=${result.quote_id}&mode=edit`);
@@ -585,8 +686,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setError(null);
 
       const result = await downloadQuotePdf(quote.quote_id);
-      if (result && typeof result === 'object' && 'permissionError' in result) {
-        throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
 
       const { pdfData, quoteNumber } = result as { pdfData: number[]; quoteNumber: string };
@@ -623,8 +724,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setNotice(null);
       const result = await updateQuote(quote.quote_id, { template_id: templateId } as any);
 
-      if ('permissionError' in result) {
-        throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
 
       setQuote(result);
@@ -660,8 +761,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setError(null);
       const result = await renderQuotePreview(quote.quote_id);
 
-      if (result && typeof result === 'object' && 'permissionError' in result) {
-        throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
 
       setPreviewHtml(result as { html: string; css: string });
@@ -691,8 +792,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setConversionMode(mode);
       const preview = await getQuoteConversionPreview(quote.quote_id);
 
-      if ('permissionError' in preview) {
-        throw new Error(preview.permissionError);
+      if (isActionMessageError(preview) || isActionPermissionError(preview)) {
+        throw new Error(getErrorMessage(preview));
       }
 
       setConversionPreview(preview);
@@ -722,8 +823,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
 
       if (conversionMode === 'contract') {
         const result = await convertQuoteToContract(quote.quote_id);
-        if ('permissionError' in result) {
-          throw new Error(result.permissionError);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          throw new Error(getErrorMessage(result));
         }
         setQuote(result.quote);
         setNotice(
@@ -734,8 +835,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         );
       } else if (conversionMode === 'invoice') {
         const result = await convertQuoteToInvoice(quote.quote_id);
-        if ('permissionError' in result) {
-          throw new Error(result.permissionError);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          throw new Error(getErrorMessage(result));
         }
         setQuote(result.quote);
         setNotice(
@@ -744,10 +845,23 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             name: result.invoice.invoice_number,
           }),
         );
+      } else if (conversionMode === 'sales_order') {
+        const result = await convertQuoteToSalesOrder(quote.quote_id);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          throw new Error(getErrorMessage(result));
+        }
+        setQuote(result.quote);
+        setConvertedSo({ so_id: result.so_id, so_number: result.so_number, status: 'draft' });
+        setNotice(
+          t('quoteDetail.notices.createdSalesOrder', {
+            defaultValue: 'Created draft sales order {{number}}. Product lines will bill on fulfillment.',
+            number: result.so_number,
+          }),
+        );
       } else {
         const result = await convertQuoteToBoth(quote.quote_id);
-        if ('permissionError' in result) {
-          throw new Error(result.permissionError);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          throw new Error(getErrorMessage(result));
         }
         setQuote(result.quote);
         setNotice(
@@ -816,6 +930,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             <Button id="quote-detail-convert-contract" onClick={() => void handleOpenConversionDialog('contract')} disabled={isWorking || isPreviewLoading || !canConvertToContract}>{t('quoteForm.actions.convertToContract', { defaultValue: 'Convert to Contract' })}</Button>
             <Button id="quote-detail-convert-invoice" onClick={() => void handleOpenConversionDialog('invoice')} disabled={isWorking || isPreviewLoading || !canConvertToInvoice}>{t('quoteForm.actions.convertToInvoice', { defaultValue: 'Convert to Invoice' })}</Button>
             <Button id="quote-detail-convert-both" onClick={() => void handleOpenConversionDialog('both')} disabled={isWorking || isPreviewLoading || !canConvertToBoth}>{t('quoteForm.actions.convertToBoth', { defaultValue: 'Convert to Both' })}</Button>
+            {canConvertToSalesOrder ? (
+              <Button id="quote-detail-convert-sales-order" onClick={() => void handleOpenConversionDialog('sales_order')} disabled={isWorking || isPreviewLoading}>{t('quoteForm.actions.convertToSalesOrder', { defaultValue: 'Convert to Sales Order' })}</Button>
+            ) : null}
           </>
         );
       case 'approved':
@@ -902,7 +1019,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           </Alert>
         ) : null}
 
-        {quote.converted_contract_id || quote.converted_invoice_id ? (
+        {quote.converted_contract_id || quote.converted_invoice_id || convertedSo ? (
           <section className="flex flex-wrap gap-2 rounded-lg border border-border p-4">
             {quote.converted_contract_id ? (
               <Button
@@ -920,6 +1037,18 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                 onClick={() => router.push(`/msp/billing?tab=invoicing&subtab=drafts&invoiceId=${quote.converted_invoice_id}`)}
               >
                 {t('quoteDetail.actions.openConvertedInvoice', { defaultValue: 'Open Converted Invoice' })}
+              </Button>
+            ) : null}
+            {convertedSo ? (
+              <Button
+                id="quote-detail-open-converted-sales-order"
+                variant="outline"
+                onClick={() => router.push('/msp/inventory/sales-orders')}
+              >
+                {t('quoteDetail.actions.openConvertedSalesOrder', {
+                  defaultValue: 'Converted to {{number}}',
+                  number: convertedSo.so_number,
+                })}
               </Button>
             ) : null}
           </section>
@@ -1098,7 +1227,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border bg-background">
-                            {group.items.map((item) => renderQuoteDetailRow(quote, item, formatCurrency, t))}
+                            {group.items.map((item) => renderQuoteDetailRow(quote, item, formatCurrency, t, item.service_id ? productAvailability.get(item.service_id) : null))}
                           </tbody>
                         </table>
                       </div>
@@ -1119,7 +1248,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border bg-background">
-                    {quoteItems.map((item) => renderQuoteDetailRow(quote, item, formatCurrency, t))}
+                    {quoteItems.map((item) => renderQuoteDetailRow(quote, item, formatCurrency, t, item.service_id ? productAvailability.get(item.service_id) : null))}
                   </tbody>
                 </table>
               </div>
@@ -1178,7 +1307,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                 ? t('quoteConversion.actions.contract', { defaultValue: 'Create Draft Contract' })
                 : conversionMode === 'invoice'
                   ? t('quoteConversion.actions.invoice', { defaultValue: 'Create Draft Invoice' })
-                  : t('quoteConversion.actions.both', { defaultValue: 'Create Both Records' })}
+                  : conversionMode === 'sales_order'
+                    ? t('quoteConversion.actions.salesOrder', { defaultValue: 'Create Sales Order' })
+                    : t('quoteConversion.actions.both', { defaultValue: 'Create Both Records' })}
             </Button>
           </div>
         )}
@@ -1195,6 +1326,14 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
 
           {conversionPreview ? (
             <div className="space-y-4">
+              {conversionMode === 'sales_order' ? (
+                <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+                  {t('quoteConversion.salesOrder.note', {
+                    defaultValue:
+                      'Product one-time lines move to a draft sales order (billed on fulfillment) and are excluded from any draft-invoice conversion, so nothing double-bills.',
+                  })}
+                </div>
+              ) : null}
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="rounded-lg border border-border p-3">
                   <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('quoteConversion.sections.contractItems', { defaultValue: 'Contract Items' })}</div>

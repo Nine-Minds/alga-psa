@@ -1,6 +1,5 @@
 import type { FieldDefinition } from '../../types/imports.types';
 import {
-  createEnumValidator,
   createMacAddressParser,
   createMacAddressValidator,
   createIpAddressValidator,
@@ -27,11 +26,14 @@ export const assetFieldDefinitions: FieldDefinition[] = [
     validators: [createMaxLengthValidator('name', 'Asset Name', 255)],
   },
   {
+    // Any asset_type_registry slug (built-in or custom) is allowed; the registry
+    // is the authority, enforced downstream in createAsset. The importer only
+    // bounds length (the handler lowercases the value before insert).
     field: 'asset_type',
     label: 'Asset Type',
     required: true,
     example: 'workstation',
-    validators: [createEnumValidator('asset_type', 'Asset Type', ASSET_TYPE_VALUES)],
+    validators: [createMaxLengthValidator('asset_type', 'Asset Type', 255)],
     parser: createToUpperCaseParser(),
   },
   {

@@ -49,7 +49,7 @@ export const ClientNotesPanel: React.FC<ClientNotesPanelProps> = ({
     <Card className="bg-white">
       <CardHeader className="pb-2">
         <div className="flex flex-row items-center justify-between">
-          <CardTitle>{t('clientNotesPanel.title', { defaultValue: 'Notes & Quick Info' })}</CardTitle>
+          <CardTitle>{t('clientNotesPanel.title', { defaultValue: 'Notes' })}</CardTitle>
           <Button
             id="save-client-note-btn"
             variant="ghost"
@@ -83,7 +83,7 @@ export const ClientNotesPanel: React.FC<ClientNotesPanelProps> = ({
               <AlertDescription>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm">
-                    {error instanceof Error ? error.message : t('clientNotesPanel.unknownError', { defaultValue: 'Unknown error' })}
+                    {t('clientNotesPanel.loadErrorDescription', { defaultValue: 'Could not load notes. Please try again.' })}
                   </span>
                   <Button
                     id="retry-client-notes-btn"
@@ -98,7 +98,8 @@ export const ClientNotesPanel: React.FC<ClientNotesPanelProps> = ({
             </Alert>
           </div>
         )}
-        <div className="min-h-[200px]">
+        {/* Fill the focus drawer instead of a small box in its corner. */}
+        <div className="min-h-[50vh]">
           <TextEditor
             id={`client-${clientId}-notes-editor`}
             // Remount when the backing document changes (or first loads) so saved notes show up on open.

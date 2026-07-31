@@ -4,9 +4,9 @@
       "title": "Ready to Invoice",
       "description": "Review recurring due work and generate draft invoices for the selected periods.",
       "selectAllExplanation": "Select parent groups or individual rows to control invoice generation.",
-      "filterPlaceholder": "Filter ready-to-invoice rows",
+      "filterPlaceholder": "Filter by client",
       "dateRange": "Invoice window",
-      "search": "Search",
+      "search": "Apply",
       "groupedPreviewUnavailable": "Preview supports grouped selections; direct \"Generate from preview\" remains single-selection only.",
       "selectionHintCombined": "1 invoice if parent selected",
       "selectionHintSeparate": "Select items individually",
@@ -25,31 +25,32 @@
         }
       },
       "columns": {
-        "group": "Group",
+        "group": "Client / Group",
         "servicePeriod": "Service Period",
         "invoiceWindow": "Invoice Window",
-        "included": "Included"
-      }
+        "included": "Included",
+        "charge": "Charge",
+        "status": "Status",
+        "amount": "Amount"
+      },
+      "pageScopeNote": "{{count}} group(s) on this page"
     },
     "groups": {
-      "item": "{{count}} item",
-      "item_one": "{{count}} item",
-      "item_other": "{{count}} items",
+      "item": "{{count}} line item",
+      "item_one": "{{count}} line item",
+      "item_other": "{{count}} line items",
       "contract": "{{count}} contract",
       "contract_one": "{{count}} contract",
       "contract_other": "{{count}} contracts",
       "line": "{{count}} line",
       "line_one": "{{count}} line",
       "line_other": "{{count}} lines",
-      "obligationCount": "{{count}} obligation",
-      "obligationCount_one": "{{count}} obligation",
-      "obligationCount_other": "{{count}} obligations",
-      "includedCount": "{{count}} item included",
-      "includedCount_one": "{{count}} item included",
-      "includedCount_other": "{{count}} items included",
-      "attributionMetadataMissing": "Assignment attribution metadata missing ({{count}} obligation)",
-      "attributionMetadataMissing_one": "Assignment attribution metadata missing ({{count}} obligation)",
-      "attributionMetadataMissing_other": "Assignment attribution metadata missing ({{count}} obligations)",
+      "includedCount": "{{count}} line item included",
+      "includedCount_one": "{{count}} line item included",
+      "includedCount_other": "{{count}} line items included",
+      "attributionMetadataMissing": "Assignment attribution metadata missing ({{count}} line item)",
+      "attributionMetadataMissing_one": "Assignment attribution metadata missing ({{count}} line item)",
+      "attributionMetadataMissing_other": "Assignment attribution metadata missing ({{count}} line items)",
       "actions": {
         "expand": "Expand",
         "collapse": "Collapse"
@@ -58,7 +59,10 @@
       "canCombine": "Can combine into 1 invoice",
       "separate": "Must invoice separately",
       "blocked": "Contains blocked items",
-      "notReady": "Not ready to invoice"
+      "notReady": "Not ready to invoice",
+      "upcoming": "Not yet due",
+      "upcomingDetail": "Bills in arrears. Available once the service period ends.",
+      "upcomingDetailWithDate": "This period bills in arrears, so it becomes available to invoice on {{date}}, after the service period ends."
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "Invoice window differs",
@@ -75,6 +79,7 @@
         "servicePeriod": "Service period"
       },
       "pendingAmount": "Pending amount",
+      "billableOn": "Billable on {{date}}",
       "attributionWarning": "Assignment attribution metadata missing",
       "blockedUntilApproval": "Blocked until approval: {{count}} unapproved entry.",
       "blockedUntilApproval_one": "Blocked until approval: {{count}} unapproved entry.",
@@ -89,9 +94,9 @@
     },
     "actions": {
       "previewSelected": "Preview Selected",
-      "generateSelected": "Generate Invoices for Selected Periods ({{count}})",
-      "generateSelected_one": "Generate Invoices for Selected Periods ({{count}})",
-      "generateSelected_other": "Generate Invoices for Selected Periods ({{count}})",
+      "generateSelected": "Generate Invoices ({{count}})",
+      "generateSelected_one": "Generate Invoices ({{count}})",
+      "generateSelected_other": "Generate Invoices ({{count}})",
       "reverseInvoice": "Reverse Invoice",
       "deleteInvoice": "Delete Invoice",
       "closePreview": "Close Preview",
@@ -196,15 +201,21 @@
       }
     },
     "materializationGap": {
-      "title": "Recurring service period repair required",
-      "description": "These client-cadence windows are missing persisted recurring service periods, so they are blocked from ready-to-invoice work until the canonical schedule is repaired.",
+      "title": "These billing schedules need to be rebuilt",
+      "description": "A billing schedule changed for these clients, so their upcoming charges are out of date and cannot be invoiced yet. Rebuilding updates the charges to match the current schedule. Charges that were already invoiced are not affected.",
       "labels": {
         "servicePeriod": "Service period",
         "invoiceWindow": "Invoice window",
         "scheduleKey": "Schedule key"
       },
       "reviewLink": "Review Service Periods",
-      "helpText": "Repair the canonical service-period records instead of generating a compatibility invoice row."
+      "helpText": "Repair the canonical service-period records instead of generating a compatibility invoice row.",
+      "fixAll": "Fix all",
+      "fixAllBusy": "Rebuilding…",
+      "fixAllResult": "Rebuilt {{schedules}} schedule(s) across {{clients}} client(s).",
+      "fixAllNoop": "All billing schedules are already up to date. Anything still listed below needs individual review.",
+      "fixAllError": "Could not rebuild service periods. Please try again.",
+      "fixAllDenied": "You do not have permission to rebuild service periods."
     },
     "errors": {
       "title": "Errors occurred while finalizing invoices:",
@@ -213,6 +224,61 @@
     },
     "loading": {
       "billingData": "Loading billing data"
+    },
+    "views": {
+      "all": "All",
+      "ready": "Ready",
+      "combinable": "Combinable",
+      "attention": "Needs attention",
+      "notYetDue": "Not yet due"
+    },
+    "status": {
+      "ready": "Ready",
+      "combine": "Combine",
+      "separate": "Separate",
+      "notYetDue": "Not yet due",
+      "approval": "Approval",
+      "blocked": "Blocked"
+    },
+    "chargeTags": {
+      "fixed": "FIX",
+      "hourly": "T&M",
+      "usage": "USE",
+      "bucket": "BKT"
+    },
+    "summary": {
+      "selected": "{{count}} selected",
+      "breakdown": "{{invoices}} invoice(s) · {{combine}} combined · {{separate}} separate",
+      "knownNow": "known now",
+      "knownPlusAtGeneration": "known now · {{count}} calculated at generation",
+      "atGenerationLines": "{{count}} line item(s)",
+      "empty": "Select groups or line items to preview or generate invoices.",
+      "pageScope": "{{groups}} group(s) · {{obligations}} line item(s)"
+    },
+    "amount": {
+      "atGeneration": "Calculated at generation",
+      "plusAtGeneration": "+ {{count}} at generation"
+    },
+    "window": {
+      "open": "Open",
+      "opensOn": "Opens {{date}}",
+      "notOpen": "Not open yet"
+    },
+    "legend": {
+      "confirmed": "Amount known now",
+      "atGeneration": "Calculated at generation",
+      "combine": "Combine into one invoice",
+      "separate": "Must invoice separately",
+      "notYetDue": "Not yet due"
+    },
+    "filters": {
+      "title": "Filters",
+      "windowOpen": "Window open",
+      "charge": "Charge",
+      "currency": "Currency",
+      "any": "any",
+      "clear": "Clear",
+      "countSummary": "{{groups}} group(s) · {{obligations}} line item(s)"
     }
   },
   "manualInvoices": {
@@ -223,11 +289,15 @@
     "fields": {
       "client": "Client",
       "invoiceNumber": "Invoice Number",
-      "invoiceNumberOptional": "Invoice Number (Optional)"
+      "invoiceNumberOptional": "Invoice Number (Optional)",
+      "sourceSalesOrder": "Source sales order (optional)"
     },
     "placeholders": {
       "selectClient": "Select a client",
-      "invoiceNumberOptional": "Leave blank to auto-generate"
+      "invoiceNumberOptional": "Leave blank to auto-generate",
+      "sourceSalesOrder": "Select a fulfilled or manually billable sales order",
+      "searchSalesOrders": "Search sales orders...",
+      "noInvoiceableSalesOrders": "No invoiceable sales orders found."
     },
     "automatedItems": {
       "title": "Automated Line Items",
@@ -244,7 +314,9 @@
       "addDiscount": "Add Discount",
       "generate": "Generate Invoice",
       "saveChanges": "Save Changes",
-      "processing": "Processing..."
+      "processing": "Processing...",
+      "generateSalesOrderInvoice": "Generate Sales Order Invoice",
+      "clearSalesOrderSource": "Clear sales order source"
     },
     "labels": {
       "total": "Total"
@@ -266,11 +338,29 @@
       "loadItems": "Error loading invoice items",
       "refresh": "An error occurred while refreshing invoice data.",
       "updateFailed": "Error updating invoice",
-      "generateFailed": "Error generating invoice"
+      "generateFailed": "Error generating invoice",
+      "NO_BILLING_EMAIL": "{{clientName}} has no billing email. Set an email address on the client's billing location, then try again.",
+      "CLIENT_NOT_FOUND": "The selected client could not be found. Refresh and try again.",
+      "SERVICE_NOT_FOUND": "Service {{serviceId}} could not be found. Refresh and try again.",
+      "INVALID_QUANTITY": "Quantity must be greater than zero.",
+      "NO_TAX_RATE": "No active tax rate was found for {{region}} on {{date}}.",
+      "DISCOUNT_TARGET_NOT_FOUND": "Service {{serviceId}} could not be found for this discount.",
+      "INVOICE_NUMBER_CONFLICT": "This invoice number is already in use.",
+      "PERMISSION_DENIED": "You do not have permission to create or update this invoice.",
+      "UNEXPECTED": "Something went wrong generating the invoice. Quote reference {{ref}} when contacting support.",
+      "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
+      "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
+      "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+    },
+    "warnings": {
+      "noBillingEmail": "This client has no billing email. Set an email address on the client's billing location before generating the invoice."
     },
     "errorFallback": {
       "title": "Something went wrong",
       "retry": "Try again"
+    },
+    "salesOrderContext": {
+      "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
     }
   },
   "draftsTab": {
@@ -285,7 +375,8 @@
       "invoiceDate": "Invoice Date",
       "dueDate": "Due Date",
       "status": "Status",
-      "actions": "Actions"
+      "actions": "Actions",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "finalize": "Finalize",
@@ -315,12 +406,12 @@
       "bulkFinalizeSkipped_other": "{{count}} invoices could not be finalized and were skipped."
     },
     "reverseDialog": {
-      "title": "Reverse Draft Invoice",
       "title_other": "Reverse Draft Invoices",
       "message_one": "Reversing this draft invoice will delete it and release any linked time entries or usage records. This action cannot be undone.",
       "message_other": "Reversing {{count}} draft invoices will delete them and release any linked time entries or usage records. This action cannot be undone.",
       "confirm": "Reverse Draft",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "title_one": "Reverse Draft Invoice"
     },
     "pendingTaxDialog": {
       "title": "Invoice awaiting external tax",
@@ -340,7 +431,8 @@
       "amount": "Amount",
       "finalizedDate": "Finalized Date",
       "status": "Status",
-      "actions": "Actions"
+      "actions": "Actions",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "downloadPdfs": "Download PDFs",
@@ -364,7 +456,8 @@
       "pdfFailed": "Failed to generate PDF. Please try again.",
       "bulkPdfFailed": "Failed to generate PDFs. Please try again.",
       "unfinalizeFailed": "Failed to unfinalize invoice. Please try again.",
-      "bulkUnfinalizeFailed": "Failed to unfinalize invoices. Please try again."
+      "bulkUnfinalizeFailed": "Failed to unfinalize invoices. Please try again.",
+      "bulkUnfinalizeInvoiceFailed": "Could not unfinalize {{invoiceNumber}}: {{reason}}"
     }
   },
   "recurringServicePeriods": {
@@ -578,13 +671,21 @@
       "reverseDraft": "Reverse Draft",
       "sendEmail": "Send Email",
       "unfinalize": "Unfinalize",
-      "viewSourceQuote": "View Source Quote"
+      "viewSourceQuote": "View Source Quote",
+      "applyCredit": "Apply Credit",
+      "driftAccept": "Accept QuickBooks Version",
+      "driftReexport": "Re-export to QuickBooks",
+      "syncNow": "Sync to QuickBooks",
+      "viewInQbo": "View in QuickBooks",
+      "voidInvoice": "Void Invoice"
     },
     "loading": "Loading Preview...",
     "empty": "Select an invoice to preview",
     "error": "Could not display preview",
     "errorDescription": "Could not display preview. Data might be missing.",
     "errors": {
+      "notFound": "Invoice not found.",
+      "noTemplates": "No invoice templates are available.",
       "loadFailed": "Failed to load preview: {{message}}",
       "actionFailed": "Failed to {{action}}. Please try again.",
       "actionLabels": {
@@ -594,6 +695,17 @@
         "sendEmail": "send email",
         "unfinalize": "unfinalize invoice"
       }
+    },
+    "applyCreditDialog": {
+      "title": "Apply Credit"
+    },
+    "voidDialog": {
+      "title": "Void Invoice",
+      "description": "Voiding this invoice is permanent. Please provide a reason.",
+      "reasonPlaceholder": "Reason for voiding...",
+      "cancel": "Cancel",
+      "confirm": "Void Invoice",
+      "voiding": "Voiding..."
     }
   },
   "templateEditor": {
@@ -847,7 +959,7 @@
       "prepayment": "Prepayment"
     },
     "descriptions": {
-      "automatic": "Use invoice windows to review due recurring service periods before generating a recurring batch.",
+      "automatic": "Generate invoices for the recurring service periods that are due.",
       "manual": "Use manual invoices for one-off or adjustment lines. They do not redefine recurring service periods.",
       "prepayment": "Use prepayment and credit flows for financial value that should stay separate from recurring service-period coverage."
     },
@@ -897,7 +1009,9 @@
       "description": "Description",
       "quantity": "Quantity",
       "rate": "Rate",
-      "amount": "Amount"
+      "amount": "Amount",
+      "salesOrder": "Sales Order",
+      "cogsMargin": "COGS / Margin"
     },
     "labels": {
       "contractSubtotal": "Contract Subtotal:",
@@ -911,7 +1025,23 @@
     "tabs": {
       "generate": "Generate",
       "drafts": "Drafts",
-      "finalized": "Finalized"
+      "finalized": "Finalized",
+      "projectBilling": "Project Billing"
+    }
+  },
+  "invoiceSyncBadge": {
+    "states": {
+      "notSynced": "Not synced",
+      "queued": "Queued",
+      "synced": "Synced",
+      "drift": "Drift",
+      "error": "Sync error",
+      "voided": "Voided"
+    },
+    "tooltip": {
+      "qboNumberPrefix": "QBO #",
+      "lastSynced": "Last synced:",
+      "viewInQuickBooks": "View in QuickBooks"
     }
   },
   "templateManager": {
@@ -1525,6 +1655,72 @@
         "label": "Tenant Address",
         "description": "Your company address."
       }
+    },
+    "canvas": {
+      "templateBoundary": "Template Boundary"
+    },
+    "dragOverlay": {
+      "component": "Component"
+    }
+  },
+  "projectBilling": {
+    "subtitle": "Ready milestones and deposits awaiting approval across all projects.",
+    "bulkActions": "Actions ({{count}})",
+    "loading": "Loading project billing queue...",
+    "empty": "Nothing is waiting for review. Ready milestones and deposits will appear here.",
+    "columns": {
+      "project": "Project",
+      "client": "Client",
+      "description": "Description",
+      "amount": "Amount",
+      "trigger": "Trigger",
+      "daysWaiting": "Days waiting",
+      "actions": "Actions"
+    },
+    "trigger": {
+      "phase": "Phase {{phase}} completed {{date}}",
+      "date": "Date reached",
+      "manual": "Manual"
+    },
+    "actions": {
+      "approve": "Approve",
+      "approveInvoiceNow": "Approve & invoice now",
+      "hold": "Hold",
+      "cancel": "Cancel",
+      "approveSelected": "Approve selected",
+      "holdSelected": "Hold selected"
+    },
+    "toasts": {
+      "approved": "Entry approved.",
+      "approvedWithWarning": "Entry approved. {{warning}}",
+      "invoiced": "Entry approved and invoiced.",
+      "bulkApproved": "{{count}} entries approved.",
+      "bulkApproveFailed": "{{count}} entries could not be approved (e.g. {{reason}}).",
+      "held": "Entry placed on hold.",
+      "bulkHeld": "{{count}} entries placed on hold.",
+      "bulkHoldFailed": "{{count}} entries could not be held (e.g. {{reason}}).",
+      "canceled": "Entry canceled."
+    },
+    "errors": {
+      "loadFailed": "Failed to load the project billing review queue. Please try again.",
+      "approveFailed": "Failed to approve the entry.",
+      "invoiceFailed": "Failed to approve and invoice the entry.",
+      "holdFailed": "Failed to place the entry on hold.",
+      "cancelFailed": "Failed to cancel the entry."
+    },
+    "holdDialog": {
+      "title": "Hold entry",
+      "titlePlural": "Hold {{count}} entries",
+      "description": "Holding returns the entry to pending until it is made ready again. A reason is required.",
+      "reasonPlaceholder": "Reason for holding...",
+      "cancel": "Cancel",
+      "confirm": "Hold"
+    },
+    "cancelDialog": {
+      "title": "Cancel entry",
+      "message": "Canceling this schedule entry removes it from billing. This cannot be undone.",
+      "confirm": "Cancel entry",
+      "dismiss": "Keep entry"
     }
   }
 }

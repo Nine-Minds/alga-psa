@@ -5,6 +5,12 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import {
   getCustomerMatchCandidates,
   linkClientToQboCustomer,
@@ -12,10 +18,12 @@ import {
   createQboCustomerForClient,
 } from '../../actions/qboOnboardingActions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- billing-owned onboarding panel reads the QBO customer catalog directly (same bridge as the accounting export adapter)
-import { getQboCustomers } from '@alga-psa/integrations/actions';
+import { getQboCustomers } from '@alga-psa/integrations/actions/qboActions';
 
 type QboCustomer = { id: string; name: string; active: boolean };
 type Candidate = Awaited<ReturnType<typeof getCustomerMatchCandidates>>['rows'][number];
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface RowActionProps {
   row: Candidate;
@@ -249,6 +257,7 @@ function PickerInline({
 }
 
 export function QboCustomerMappingPanel() {
+  const { t: tCommon } = useTranslation('common');
   const [rows, setRows] = React.useState<Candidate[]>([]);
   const [qboCustomers, setQboCustomers] = React.useState<QboCustomer[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -264,10 +273,19 @@ export function QboCustomerMappingPanel() {
         getCustomerMatchCandidates(),
         getQboCustomers(),
       ]);
+      if (candidates.error) {
+        setError(candidates.error);
+      }
+      if (isReturnedActionError(customers)) {
+        setError(getErrorMessage(customers));
+        setQboCustomers([]);
+      } else {
+        setQboCustomers(customers);
+      }
       setRows(candidates.rows);
-      setQboCustomers(customers);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load customer mappings.');
+      console.error('Failed to load customer mappings:', err);
+      setError('Failed to load customer mappings.');
     } finally {
       setLoading(false);
     }
@@ -325,7 +343,7 @@ export function QboCustomerMappingPanel() {
       )}
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading customer mappings…</p>
+        <p className="text-sm text-muted-foreground">{tCommon('status.loading', { defaultValue: 'Loading...' })}</p>
       ) : rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">No clients found.</p>
       ) : (

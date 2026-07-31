@@ -4,6 +4,11 @@ const createTenantKnex = vi.fn();
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnex(...args),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -11,6 +16,10 @@ vi.mock('@alga-psa/auth', () => ({
     (fn: any) =>
     (...args: any[]) =>
       fn({ id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
+}));
+
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
 }));
 
 function buildThenableQuery(result: any[]) {
@@ -200,7 +209,9 @@ describe('contractReportActions recurring service-period basis', () => {
     expect(canonicalOutput).toEqual([
       {
         contract_name: 'Managed Services',
+        client_id: 'client-1',
         client_name: 'Acme Industries',
+        logoUrl: null,
         monthly_recurring: 20000,
         total_billed_ytd: 12000,
         status: 'active',

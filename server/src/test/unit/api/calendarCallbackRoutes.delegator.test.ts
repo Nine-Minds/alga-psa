@@ -29,6 +29,7 @@ describe('Calendar callback route delegators', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.doUnmock('@alga-psa/ee-calendar/routes');
 
     if (originalEdition === undefined) {
       delete process.env.EDITION;
@@ -69,11 +70,9 @@ describe('Calendar callback route delegators', () => {
     const eeGoogleGet = vi.fn(async () => new Response(JSON.stringify({ ok: 'google' }), { status: 200 }));
     const eeMicrosoftGet = vi.fn(async () => new Response(JSON.stringify({ ok: 'microsoft' }), { status: 200 }));
 
-    vi.doMock('@enterprise/app/api/auth/google/calendar/callback/route', () => ({
-      GET: eeGoogleGet,
-    }));
-    vi.doMock('@enterprise/app/api/auth/microsoft/calendar/callback/route', () => ({
-      GET: eeMicrosoftGet,
+    vi.doMock('@alga-psa/ee-calendar/routes', () => ({
+      handleGoogleCalendarOAuthCallbackGet: eeGoogleGet,
+      handleMicrosoftCalendarOAuthCallbackGet: eeMicrosoftGet,
     }));
 
     const googleRequest = new Request('http://localhost/api/auth/google/calendar/callback?code=abc&state=nonce', { method: 'GET' });

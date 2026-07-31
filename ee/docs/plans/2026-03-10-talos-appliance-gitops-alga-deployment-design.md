@@ -58,7 +58,7 @@ Repository additions:
 - `ee/appliance/flux/base/`
 - `ee/appliance/flux/profiles/talos-single-node/`
 - `ee/appliance/flux/profiles/talos-single-node/values/*.yaml`
-- `ee/appliance/scripts/bootstrap-site.sh`
+- `historical removed bootstrap wrapper`
 - `ee/appliance/scripts/deploy-app.sh`
 - `ee/helm/pgbouncer/`
 

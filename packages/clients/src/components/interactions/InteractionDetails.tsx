@@ -11,7 +11,7 @@ import { ButtonComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/
 import { useDrawer, useClientDrawer } from "@alga-psa/ui";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
-import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
+import ClientQuickView from '@alga-psa/clients/components/clients/ClientQuickView';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { QuickAddInteraction } from '@alga-psa/clients/components/interactions/QuickAddInteraction';
@@ -21,7 +21,11 @@ import { deleteInteraction } from '@alga-psa/clients/actions';
 import { Text, Flex, Heading } from '@radix-ui/themes';
 import { RichTextViewer } from '@alga-psa/ui/editor';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { findUserByIdAsync, getCurrentUserAsync } from '../../lib/usersHelpers';
 import { buildInteractionTimeEntryContext } from '../../lib/timeEntryContext';
 import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
@@ -33,6 +37,8 @@ interface InteractionDetailsProps {
   onInteractionUpdated?: (updatedInteraction: IInteraction) => void; // Callback when interaction is updated
   isInDrawer?: boolean; // Whether this component is displayed in a drawer
 }
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 // Helper to format duration from total minutes to "Xh Ym" format
 const formatDuration = (totalMinutes: number): string => {
@@ -206,10 +212,8 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         const client = await getClientById(interaction.client_id);
         if (client) {
           openDrawer(
-            <ClientDetails
+            <ClientQuickView
               client={client}
-              documents={[]}
-              contacts={[]}
               isInDrawer={true}
               quickView={true}
             />
@@ -262,7 +266,11 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
 
   const handleDeleteInteraction = async () => {
     try {
-      await deleteInteraction(interaction.interaction_id);
+      const result = await deleteInteraction(interaction.interaction_id);
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
+      }
       setIsDeleteDialogOpen(false);
       
       // Call the callback to notify parent that interaction was deleted
@@ -298,6 +306,10 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
     setIsRefreshingRecordings(true);
     try {
       const onlineMeeting = await refreshMeetingRecordings(interaction.online_meeting.meeting_id);
+      if (isReturnedActionError(onlineMeeting)) {
+        handleError(onlineMeeting);
+        return;
+      }
       const updatedInteraction = {
         ...interaction,
         online_meeting: onlineMeeting,
@@ -402,17 +414,19 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button
-                  id="online-meeting-join-button"
-                  asChild
-                  variant="outline"
-                  size="sm"
-                >
-                  <a href={onlineMeeting.join_url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    {t('interactions.onlineMeeting.join', { defaultValue: 'Join' })}
-                  </a>
-                </Button>
+                {onlineMeeting.join_url && (
+                  <Button
+                    id="online-meeting-join-button"
+                    asChild
+                    variant="outline"
+                    size="sm"
+                  >
+                    <a href={onlineMeeting.join_url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      {t('interactions.onlineMeeting.join', { defaultValue: 'Join' })}
+                    </a>
+                  </Button>
+                )}
                 {showOnlineMeetingRecordingControls && (
                   <Button
                     id="online-meeting-refresh-recordings-button"

@@ -1,0 +1,18 @@
+/*
+ * App-wide Inter: point the component-library font tokens at the self-hosted
+ * Inter variable font (--font-inter, defined by next/font in layout.tsx).
+ * Selectors use extra specificity so they win regardless of CSS import order
+ * relative to @mantine/core and @radix-ui/themes.
+ */
+:root:root {
+  --mantine-font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --mantine-font-family-headings: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+:root .radix-themes,
+.radix-themes.radix-themes {
+  --default-font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --heading-font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --em-font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --quote-font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}

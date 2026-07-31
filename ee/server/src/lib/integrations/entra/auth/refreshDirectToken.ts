@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { resolveMicrosoftCredentialsForTenant } from './microsoftCredentialResolver';
 import {
   getEntraDirectRefreshToken,
@@ -39,13 +40,38 @@ async function refreshEntraDirectTokenForAuthority(
     scope: ENTRA_DIRECT_SCOPE_STRING,
   });
 
-  const response = await axios.post(
-    `https://login.microsoftonline.com/${encodeURIComponent(authorityTenant)}/oauth2/v2.0/token`,
-    tokenParams.toString(),
-    {
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+  let response;
+  try {
+    response = await axios.post(
+      getMicrosoftTokenUrl(authorityTenant),
+      tokenParams.toString(),
+      {
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      }
+    );
+  } catch (error: unknown) {
+    // A revoked or expired grant is the most common way a working connection
+    // stops working, and it is the one an operator can fix. Left as the raw
+    // axios error it reaches the run history as "Request failed with status
+    // code 400", which names neither the cause nor the remedy.
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const oauthError = (error.response?.data as { error?: string } | undefined)?.error;
+      if (status === 400 || status === 401) {
+        throw new Error(
+          'Microsoft rejected the stored credentials for this connection'
+          + (oauthError ? ` (${oauthError})` : '')
+          + '. Reconnect Microsoft Entra to resume syncing.'
+        );
+      }
+      throw new Error(
+        `Microsoft could not refresh the connection's access token${
+          status ? ` (HTTP ${status})` : ''
+        }. The sync will retry on its next run.`
+      );
     }
-  );
+    throw error;
+  }
 
   const accessToken = response.data?.access_token as string | undefined;
   const newRefreshToken =

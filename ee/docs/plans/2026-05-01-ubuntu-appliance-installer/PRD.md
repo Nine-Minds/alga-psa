@@ -159,14 +159,14 @@ Because GitHub/GHCR access is a hard v1 setup dependency, the setup engine must 
 Channels remain:
 
 ```text
-ee/appliance/releases/channels/stable.json
-ee/appliance/releases/channels/nightly.json
+historical local stable channel metadata (removed)
+historical local nightly channel metadata (removed)
 ```
 
 Immutable release manifests remain:
 
 ```text
-ee/appliance/releases/<release-version>/release.json
+historical local release metadata (removed)
 ```
 
 The installer should default to the public HTTPS GitHub URL rather than SSH-style origins.

@@ -29,7 +29,9 @@
       "viewDetails": "Ver detalles",
       "manageTimePeriods": "Administrar períodos de tiempo",
       "selectWorkItem": "Seleccionar elemento de trabajo",
-      "clearFilter": "Borrar filtro"
+      "clearFilter": "Borrar filtro",
+      "remove": "Eliminar",
+      "clear": "Limpiar"
     },
     "states": {
       "inProgress": "En progreso",
@@ -95,6 +97,24 @@
     },
     "lastEntry": {
       "none": "No hay entradas"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} seleccionado(s)"
+    },
+    "delete": {
+      "success": "{{count}} hoja(s) de horas eliminada(s)",
+      "partialFailure": "No se pudieron eliminar {{count}} hoja(s) de horas",
+      "error": "No se pudieron eliminar las hojas de horas"
+    },
+    "removePeriod": {
+      "success": "{{count}} período(s) eliminado(s)",
+      "partialFailure": "No se pudieron eliminar {{count}} período(s)",
+      "error": "No se pudieron eliminar los períodos"
+    },
+    "remove": {
+      "title": "Eliminar elementos no utilizados",
+      "message": "¿Eliminar {{count}} período(s) seleccionado(s)? Los períodos de pago no utilizados se eliminan para toda la organización, junto con cualquier borrador vacío registrado en ellos. Esto no se puede deshacer.",
+      "timesheetMessage": "¿Eliminar {{count}} hoja(s) de horas no utilizada(s)? Solo se eliminan los borradores de hojas de horas vacíos y esto no se puede deshacer."
     }
   },
   "timeEntryForm": {
@@ -121,7 +141,10 @@
       "minimumDuration": "La duración mínima es de 1 minuto.",
       "serviceRequired": "Se requiere servicio para entradas de tiempo",
       "timePeriodRange": "La fecha debe estar dentro del período actual ({{periodRange}})",
-      "endAfterStartPicker": "La hora de finalización debe ser posterior a la hora de inicio."
+      "endAfterStartPicker": "La hora de finalización debe ser posterior a la hora de inicio.",
+      "durationSameDay": "La duración debe terminar el mismo día",
+      "endSameDay": "La hora de finalización debe ser el mismo día que la hora de inicio",
+      "invalidTimeRange": "Introduzca un rango de tiempo válido"
     }
   },
   "workItemPicker": {
@@ -145,7 +168,9 @@
     "empty": {
       "searching": "Búsqueda...",
       "noWorkItems": "No se encontraron elementos de trabajo"
-    }
+    },
+    "paymentWarningTitle": "Advertencia de requisito de pago",
+    "paymentWarning": "Se requiere el pago de un hito de facturación del proyecto marcado y aún no se ha confirmado. Confirme el pago antes de continuar el trabajo."
   },
   "workItemList": {
     "meta": {
@@ -286,7 +311,7 @@
       "failedInteraction": "No se pudieron cargar los detalles de la interacción",
       "interactionNotFound": "Interacción no encontrada",
       "noUserSession": "No se encontró una sesión de usuario",
-      "failedTicket": "No se pudo cargar el boleto",
+      "failedTicket": "No se pudo cargar el ticket",
       "failedTask": "No se pudo cargar la tarea",
       "failedTaskPhase": "No se pudo cargar la fase de tarea",
       "failedTaskProjectMetadata": "No se pudieron cargar los metadatos del proyecto de tarea",
@@ -365,7 +390,11 @@
     "active": "Activo"
   },
   "intervals": {
-    "title": "Intervalos de tiempo del boleto",
+    "createdFromNote_one": "Creado a partir de {{count}} intervalo",
+    "createdFromNote_other": "Creado a partir de {{count}} intervalos",
+    "selectedCount_one": "{{count}} intervalo seleccionado",
+    "selectedCount_other": "{{count}} intervalos seleccionados",
+    "title": "Intervalos de tiempo del ticket",
     "hideShortIntervals": "Ocultar intervalos inferiores a 1 minuto",
     "totalTime": "Tiempo total: {{value}}",
     "selectedOne": "{{count}} intervalo seleccionado",
@@ -386,7 +415,7 @@
       "noIntervalsThisTicket": "No se encontraron intervalos para este ticket",
       "noIntervalsLongerThanMinute": "No se encontraron intervalos superiores a 1 minuto"
     },
-    "entryName": "Entrada de hora del billete",
+    "entryName": "Entrada de tiempo del ticket",
     "messages": {
       "cannotFindTimeSheet": "No se puede crear una entrada de horas: no se pudo encontrar ni crear una hoja de horas",
       "mergeFirst": "Primero combine los intervalos antes de crear una entrada de tiempo.",
@@ -421,7 +450,8 @@
     "taskUpdated": "Tarea actualizada correctamente",
     "saveChangesFailed": "Error al guardar los cambios",
     "changesSaved": "Cambios guardados correctamente",
-    "workItemDeleted": "Elemento de trabajo eliminado correctamente"
+    "workItemDeleted": "Elemento de trabajo eliminado correctamente",
+    "submitFailed": "Failed to submit time sheet"
   },
   "bundleNotice": {
     "withNumber": "Este ticket está agrupado bajo {{number}}. El tiempo del grupo se suele registrar en el ticket maestro.",

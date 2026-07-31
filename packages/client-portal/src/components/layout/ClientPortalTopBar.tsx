@@ -3,6 +3,7 @@
 import { ReactNode } from 'react';
 import { NotificationBell } from '@alga-psa/notifications/components';
 import { ThemeToggle } from '@alga-psa/ui/components/ThemeToggle';
+import { StaleActionBanner } from '@alga-psa/ui/components/StaleActionBanner';
 
 interface TopBarProps {
   breadcrumb?: ReactNode;
@@ -40,6 +41,7 @@ export function ClientPortalTopBar({
           {userMenu && <div className="ml-2">{userMenu}</div>}
         </div>
       </div>
+      <StaleActionBanner />
     </header>
   );
 }

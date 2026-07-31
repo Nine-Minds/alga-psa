@@ -18,10 +18,13 @@ vi.mock('@alga-psa/auth', async (importOriginal) => {
   const mod = await importOriginal<typeof import('@alga-psa/auth')>();
   return {
     ...mod,
+    // ApiKeyService is a class: spreading it copies no statics, so every
+    // method the service calls must be listed here explicitly.
     ApiKeyService: {
       ...mod.ApiKeyService,
       createApiKey: vi.fn(),
       deactivateApiKey: vi.fn(),
+      cleanupStaleKeys: vi.fn(async () => undefined),
     },
   };
 });
@@ -136,6 +139,11 @@ class FakeQueryBuilder<T extends Record<string, any>> {
     return this;
   }
 
+  forUpdate(): this {
+    // Row locking is a no-op for the in-memory fake.
+    return this;
+  }
+
   first(): T | undefined {
     return this.rows()[0];
   }
@@ -182,6 +190,9 @@ function createFakeKnex(state: FakeDbState) {
   const fn = { now: () => new Date(Date.now()) };
   const knex: any = (table: keyof FakeDbState) => new FakeQueryBuilder<any>(table, state, fn.now);
   knex.fn = fn;
+  // refreshMobileSession wraps the rotation in knex.transaction; the fake just
+  // runs the callback against the same in-memory connection.
+  knex.transaction = async (cb: (trx: any) => Promise<any>) => cb(knex);
   return knex;
 }
 
@@ -192,6 +203,8 @@ describe('mobile auth (OTT + refresh rotation)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-02-03T12:00:00.000Z'));
+    // Mobile sign-in is gated to the enterprise edition before tier checks run.
+    vi.stubEnv('EDITION', 'ee');
     state.mobile_auth_otts.length = 0;
     state.mobile_refresh_tokens.length = 0;
     state.sessions.length = 0;
@@ -241,6 +254,7 @@ describe('mobile auth (OTT + refresh rotation)', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllEnvs();
     __resetMobileAuthTestState();
     vi.restoreAllMocks();
   });

@@ -1,11 +1,12 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { IProject } from '@alga-psa/types';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
 
 /**
  * Get clientId from user's contact - avoids nested withAuth calls
@@ -17,10 +18,9 @@ async function getClientIdFromUser(
 ): Promise<string | null> {
   if (!user.contact_id) return null;
 
-  const contact = await knex('contacts')
+  const contact = await tenantDb(knex, tenant).table('contacts')
     .where({
       contact_name_id: user.contact_id,
-      tenant
     })
     .select('client_id')
     .first();
@@ -36,42 +36,48 @@ export const getClientProjectDetails = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
   projectId: string
-): Promise<IProject | null> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProject | null | ClientPortalActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+    const scopedDb = tenantDb(knex, tenant);
 
-  const clientId = await getClientIdFromUser(knex, user, tenant);
-  if (!clientId) {
-    throw new Error('Client not found');
+    const clientId = await getClientIdFromUser(knex, user, tenant);
+    if (!clientId) {
+      throw new Error('Client not found');
+    }
+
+    // Fetch project with client access verification
+    const projectQuery = scopedDb.table('projects')
+      .select([
+        'projects.project_id',
+        'projects.project_name',
+        'projects.project_number',
+        'projects.wbs_code',
+        'projects.description',
+        'projects.start_date',
+        'projects.end_date',
+        'projects.status',
+        'statuses.name as status_name',
+        'statuses.is_closed',
+        'projects.created_at',
+        'projects.updated_at',
+        'projects.client_portal_config'
+      ])
+      .where('projects.project_id', projectId)
+      .where('projects.client_id', clientId)
+      .where('projects.is_inactive', false)
+      .first();
+    scopedDb.tenantJoin(projectQuery, 'statuses', 'projects.status', 'statuses.status_id', { type: 'left' });
+    const project = await projectQuery as IProject | undefined;
+
+    return project || null;
+  } catch (error) {
+    const expected = clientPortalActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-
-  // Fetch project with client access verification
-  const project = await knex('projects')
-    .select([
-      'projects.project_id',
-      'projects.project_name',
-      'projects.project_number',
-      'projects.wbs_code',
-      'projects.description',
-      'projects.start_date',
-      'projects.end_date',
-      'projects.status',
-      'statuses.name as status_name',
-      'statuses.is_closed',
-      'projects.created_at',
-      'projects.updated_at',
-      'projects.client_portal_config'
-    ])
-    .leftJoin('statuses', function() {
-      this.on('projects.status', '=', 'statuses.status_id')
-         .andOn('projects.tenant', '=', 'statuses.tenant');
-    })
-    .where('projects.project_id', projectId)
-    .where('projects.client_id', clientId)
-    .where('projects.tenant', tenant)
-    .where('projects.is_inactive', false)
-    .first();
-
-  return project || null;
 });
 
 /**
@@ -93,16 +99,18 @@ export const getClientProjects = withAuth(async (
   total: number;
   page: number;
   pageSize: number;
-}> => {
-  const { knex } = await createTenantKnex();
+} | ClientPortalActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+    const scopedDb = tenantDb(knex, tenant);
 
-  const clientId = await getClientIdFromUser(knex, user, tenant);
-  if (!clientId) {
-    throw new Error('Client not found');
-  }
+    const clientId = await getClientIdFromUser(knex, user, tenant);
+    if (!clientId) {
+      throw new Error('Client not found');
+    }
 
   // Set up query with pagination, sorting, filtering
-  const query = knex('projects')
+  const query = scopedDb.table('projects')
     .select([
       'projects.project_id',
       'projects.project_name',
@@ -117,13 +125,9 @@ export const getClientProjects = withAuth(async (
       'projects.updated_at',
       'projects.client_portal_config'
     ])
-    .leftJoin('statuses', function() {
-      this.on('projects.status', '=', 'statuses.status_id')
-         .andOn('projects.tenant', '=', 'statuses.tenant')
-    })
     .where('projects.client_id', clientId)
-    .where('projects.tenant', tenant)
     .where('projects.is_inactive', false);
+  scopedDb.tenantJoin(query, 'statuses', 'projects.status', 'statuses.status_id', { type: 'left' });
   
   // Apply filters if provided
   if (options.status) {
@@ -145,15 +149,11 @@ export const getClientProjects = withAuth(async (
   }
   
   // Create a separate count query without the selected columns
-  const countQuery = knex('projects')
+  const countQuery = scopedDb.table('projects')
     .count('* as count')
-    .leftJoin('statuses', function() {
-      this.on('projects.status', '=', 'statuses.status_id')
-         .andOn('projects.tenant', '=', 'statuses.tenant')
-    })
     .where('projects.client_id', clientId)
-    .where('projects.tenant', tenant)
     .where('projects.is_inactive', false);
+  scopedDb.tenantJoin(countQuery, 'statuses', 'projects.status', 'statuses.status_id', { type: 'left' });
   
   // Apply the same filters to the count query
   if (options.status) {
@@ -192,11 +192,17 @@ export const getClientProjects = withAuth(async (
     ]);
   });
   
-  return {
-    projects,
-    total: parseInt(countResult?.count as string) || 0,
-    page,
-    pageSize
-  };
+    return {
+      projects: projects as IProject[],
+      total: parseInt(countResult?.count as string) || 0,
+      page,
+      pageSize
+    };
+  } catch (error) {
+    const expected = clientPortalActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
-

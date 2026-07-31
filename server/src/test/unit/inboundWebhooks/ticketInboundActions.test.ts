@@ -238,6 +238,7 @@ describe('ticket inbound webhook actions', () => {
       entityType: 'ticket',
       externalId: 'missing-alert',
       message: 'lookup_miss: ticket external_id "missing-alert" is not mapped for webhook "rmm-alerts"',
+      metadata: { code: 'LOOKUP_MISS' },
     });
 
     expect(mocks.updateTicket).not.toHaveBeenCalled();

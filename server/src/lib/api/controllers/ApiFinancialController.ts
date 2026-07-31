@@ -9,7 +9,6 @@
  * - Financial reporting and analytics
  * - Payment method management
  * - Transaction history and auditing
- * - Financial reconciliation processes
  * - Bulk financial operations
  */
 
@@ -73,10 +72,6 @@ import {
   UpdateContractLineRequest,
   calculateBillingSchema,
   
-  // Reconciliation schemas
-  createCreditReconciliationReportSchema,
-  reconciliationListQuerySchema,
-  CreateCreditReconciliationReportRequest,
   
   // Reporting schemas
   financialAnalyticsQuerySchema,
@@ -91,7 +86,6 @@ import {
   BulkCreditOperation,
   
   // Utility schemas
-  validateCreditBalanceSchema,
   updateBillingSettingsSchema
 } from '../schemas/financialSchemas';
 
@@ -338,29 +332,6 @@ export class ApiFinancialController extends ApiBaseController {
     };
   }
 
-  /**
-   * POST /api/v1/financial/credits/balance/validate - Validate credit balance
-   */
-  validateCreditBalance() {
-    return async (req: NextRequest): Promise<NextResponse> => {
-      try {
-        const apiRequest = await this.authenticate(req);
-        
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
-
-          const body = await apiRequest.json();
-          const validatedData = validateCreditBalanceSchema.parse(body);
-
-          const result = await this.financialService.validateCreditBalance(validatedData.client_id, apiRequest.context!);
-          return createSuccessResponse(result);
-        });
-      } catch (error) {
-        return handleApiError(error);
-      }
-    };
-  }
-
   // ============================================================================
   // PAYMENT METHOD ENDPOINTS
   // ============================================================================
@@ -427,6 +398,43 @@ export class ApiFinancialController extends ApiBaseController {
             apiRequest.context!
           );
           return createSuccessResponse(result);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * GET /api/v1/financial/payment-methods - List payment methods
+   */
+  listPaymentMethods() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, 'read');
+
+          const url = new URL(apiRequest.url);
+          const query: Record<string, any> = {};
+          url.searchParams.forEach((value, key) => {
+            query[key] = value;
+          });
+
+          const validatedQuery = paymentMethodListQuerySchema.parse(query);
+          const result = await this.financialService.listPaymentMethods(validatedQuery, apiRequest.context!);
+
+          return createPaginatedResponse(
+            result.data,
+            result.total,
+            validatedQuery.page || 1,
+            validatedQuery.limit || 25,
+            {
+              filters: validatedQuery,
+              resource: 'financial/payment-methods'
+            }
+          );
         });
       } catch (error) {
         return handleApiError(error);
@@ -574,64 +582,6 @@ export class ApiFinancialController extends ApiBaseController {
   }
 
   // ============================================================================
-  // RECONCILIATION ENDPOINTS
-  // ============================================================================
-
-  /**
-   * POST /api/v1/financial/reconciliation/run - Run reconciliation
-   */
-  runReconciliation() {
-    return async (req: NextRequest): Promise<NextResponse> => {
-      try {
-        const apiRequest = await this.authenticate(req);
-        
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'update');
-
-          const url = new URL(apiRequest.url);
-          const clientId = url.searchParams.get('client_id') || undefined;
-
-          const result = await this.financialService.runCreditReconciliation(clientId, apiRequest.context!);
-          return createSuccessResponse(result);
-        });
-      } catch (error) {
-        return handleApiError(error);
-      }
-    };
-  }
-
-  /**
-   * POST /api/v1/financial/reconciliation/{id}/resolve - Resolve reconciliation report
-   */
-  resolveReconciliationReport() {
-    return async (req: NextRequest): Promise<NextResponse> => {
-      try {
-        const apiRequest = await this.authenticate(req);
-        
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'update');
-
-          const body = await apiRequest.json();
-          const notesSchema = z.object({
-            notes: z.string().optional()
-          });
-          const validatedData = notesSchema.parse(body);
-
-          const reportId = await this.extractIdFromPath(apiRequest);
-          const result = await this.financialService.resolveReconciliationReport(
-            reportId,
-            validatedData.notes,
-            apiRequest.context!
-          );
-          return createSuccessResponse(result);
-        });
-      } catch (error) {
-        return handleApiError(error);
-      }
-    };
-  }
-
-  // ============================================================================
   // BULK OPERATION ENDPOINTS
   // ============================================================================
 
@@ -754,6 +704,43 @@ export class ApiFinancialController extends ApiBaseController {
                 credits: '/api/v1/financial/credits',
                 invoices: '/api/v1/financial/invoices'
               }
+            }
+          );
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * GET /api/v1/financial/invoices - List invoices for financial operations
+   */
+  listInvoices() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, 'read');
+
+          const url = new URL(apiRequest.url);
+          const query: Record<string, any> = {};
+          url.searchParams.forEach((value, key) => {
+            query[key] = value;
+          });
+
+          const validatedQuery = invoiceListQuerySchema.parse(query);
+          const result = await this.financialService.listInvoices(validatedQuery, apiRequest.context!);
+
+          return createPaginatedResponse(
+            result.data,
+            result.total,
+            validatedQuery.page || 1,
+            validatedQuery.limit || 25,
+            {
+              filters: validatedQuery,
+              resource: 'financial/invoices'
             }
           );
         });

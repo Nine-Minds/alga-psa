@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Ticket } from 'lucide-react';
 import { getAssetLinkedTickets } from '../../actions/assetActions';
+import { unwrapAssetActionResult } from '../../actions/assetActionErrors';
 import { formatDateTime } from '@alga-psa/core';
 import type { Asset } from '@alga-psa/types';
 import { useAssetCrossFeature } from '../../context/AssetCrossFeatureContext';
@@ -23,7 +24,7 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
   
   const { data: tickets, isLoading } = useSWR(
     asset.asset_id ? ['asset', asset.asset_id, 'tickets'] : null,
-    ([, id]) => getAssetLinkedTickets(id)
+    ([, id]) => getAssetLinkedTickets(id).then(unwrapAssetActionResult)
   );
 
   const handleTicketAdded = () => {

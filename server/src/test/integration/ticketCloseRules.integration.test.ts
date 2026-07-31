@@ -79,7 +79,7 @@ import { updateTicketInTransaction } from '../../../../packages/tickets/src/acti
 // the after-commit hooks that defer TICKET_CLOSED/live-update publishing, so the
 // close path must run through it — exactly as the production callers do — for the
 // event mocks to observe the publishes.
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { bulkUpdateTicketStatus, updateTicket } from '../../../../packages/tickets/src/actions/ticketActions';
 import { auditCloseRulesBypassIfGated } from '@alga-psa/shared/lib/ticketCloseRules';
 import { updateTicketStatus as portalUpdateTicketStatus } from '../../../../packages/client-portal/src/actions/client-portal-actions/client-tickets';
@@ -93,11 +93,33 @@ import {
   insertResolutionComment,
   type CloseRulesFixture,
 } from './helpers/closeRulesFixture';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const HOOK_TIMEOUT = 240_000;
 
 let db: Knex;
 let fixture: CloseRulesFixture;
+
+function isReturnedActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
+
+function expectActionSuccess<T>(result: T | ActionMessageError | ActionPermissionError): T {
+  if (isReturnedActionError(result)) {
+    throw new Error(getErrorMessage(result));
+  }
+  return result;
+}
+
+function scopedDb() {
+  return tenantDb(db, fixture.tenantId);
+}
 
 function ticketShape(ticketId: string) {
   return {
@@ -117,7 +139,10 @@ describe('ticket close rules', () => {
     db = await createTestDbConnection();
     dbRef.knex = db;
 
-    const seededUser = await db('users').where({ user_type: 'internal' }).first();
+    const seededUser = await tenantDb(db, '__test_discovery__')
+      .unscoped('users', 'test discovery of seeded internal user for close rules integration')
+      .where({ user_type: 'internal' })
+      .first();
     expect(seededUser).toBeTruthy();
     dbRef.tenant = seededUser.tenant;
     userRef.user = {
@@ -167,37 +192,41 @@ describe('ticket close rules', () => {
       )`);
     expect(constraints.rows.length).toBe(5);
 
-    const item = await db('ticket_checklist_items').columnInfo();
+    const item = await tenantDb(db, '__test_discovery__')
+      .unscoped('ticket_checklist_items', 'columnInfo reads schema metadata, not tenant rows')
+      .columnInfo();
     expect(item.is_required.defaultValue).toContain('true');
     expect(item.completed.defaultValue).toContain('false');
     expect(item.source.defaultValue).toContain('manual');
   });
 
   it('T002: close_override permission exists and is granted to Admin', async () => {
-    const permission = await db('permissions')
-      .where({ tenant: fixture.tenantId, resource: 'ticket', action: 'close_override' })
+    const db = scopedDb();
+    const permission = await db.table('permissions')
+      .where({ resource: 'ticket', action: 'close_override' })
       .first();
     expect(permission).toBeTruthy();
     expect(permission.msp).toBe(true);
     expect(permission.client).toBe(false);
 
-    const adminGrant = await db('role_permissions as rp')
-      .join('roles as r', function joinRoles() {
-        this.on('r.role_id', 'rp.role_id').andOn('r.tenant', 'rp.tenant');
-      })
-      .where({ 'rp.tenant': fixture.tenantId, 'rp.permission_id': permission.permission_id })
+    const adminGrantQuery = db.table('role_permissions as rp');
+    db.tenantJoin(adminGrantQuery, 'roles as r', 'rp.role_id', 'r.role_id');
+    const adminGrant = await adminGrantQuery
+      .where({ 'rp.permission_id': permission.permission_id })
       .whereRaw("lower(r.role_name) = 'admin'")
       .first();
     expect(adminGrant).toBeTruthy();
   });
 
   it('T003: auto-close warning subtype and template are seeded and aligned', async () => {
-    const subtype = await db('notification_subtypes')
+    const subtype = await tenantDb(db, '__test_discovery__')
+      .unscoped('notification_subtypes', 'global notification subtype catalog seed assertion')
       .where({ name: 'Ticket Auto-Close Warning' })
       .first();
     expect(subtype).toBeTruthy();
 
-    const templates = await db('system_email_templates')
+    const templates = await tenantDb(db, '__test_discovery__')
+      .unscoped('system_email_templates', 'global system email template catalog seed assertion')
       .where({ name: 'ticket-auto-close-warning' })
       .select('notification_subtype_id');
     expect(templates.length).toBeGreaterThan(0);
@@ -209,64 +238,64 @@ describe('ticket close rules', () => {
     expect(defaults.require_time_entry).toBe(false);
     expect(defaults.required_fields).toEqual([]);
 
-    const saved = await upsertBoardCloseRules(fixture.boardId, {
+    const saved = expectActionSuccess(await upsertBoardCloseRules(fixture.boardId, {
       require_time_entry: true,
       required_fields: ['category_id', 'assigned_to'],
-    });
+    }));
     expect(saved.require_time_entry).toBe(true);
     expect(saved.required_fields.sort()).toEqual(['assigned_to', 'category_id']);
 
     const reloaded = await getBoardCloseRules(fixture.boardId);
     expect(reloaded.require_time_entry).toBe(true);
 
-    await expect(
-      upsertBoardCloseRules(fixture.boardId, { required_fields: ['nonsense_field'] })
-    ).rejects.toThrow(/Invalid required fields/);
+    expect(
+      await upsertBoardCloseRules(fixture.boardId, { required_fields: ['nonsense_field'] })
+    ).toMatchObject({ actionError: expect.stringMatching(/Invalid required fields/) });
   });
 
   it('T005: auto-close rule validation rejects bad configurations', async () => {
-    await expect(
-      createBoardAutoCloseRule(fixture.boardId, {
+    expect(
+      await createBoardAutoCloseRule(fixture.boardId, {
         trigger_status_id: fixture.waitingStatusId,
         inactivity_days: 7,
         close_to_status_id: fixture.openStatusId, // not a closed status
       })
-    ).rejects.toThrow(/closed status/);
+    ).toMatchObject({ actionError: expect.stringMatching(/closed status/) });
 
-    await expect(
-      createBoardAutoCloseRule(fixture.boardId, {
+    expect(
+      await createBoardAutoCloseRule(fixture.boardId, {
         trigger_status_id: fixture.closedStatusId, // closed trigger
         inactivity_days: 7,
         close_to_status_id: fixture.closedStatusId,
       })
-    ).rejects.toThrow(/open status/);
+    ).toMatchObject({ actionError: expect.stringMatching(/open status/) });
 
-    await expect(
-      createBoardAutoCloseRule(fixture.boardId, {
+    expect(
+      await createBoardAutoCloseRule(fixture.boardId, {
         trigger_status_id: fixture.waitingStatusId,
         inactivity_days: 5,
         warning_days_before: 5, // must be < inactivity
         close_to_status_id: fixture.closedStatusId,
       })
-    ).rejects.toThrow(/Warning lead time/);
+    ).toMatchObject({ actionError: expect.stringMatching(/Warning lead time/) });
 
-    const created = await createBoardAutoCloseRule(fixture.boardId, {
+    const created = expectActionSuccess(await createBoardAutoCloseRule(fixture.boardId, {
       trigger_status_id: fixture.waitingStatusId,
       inactivity_days: 5,
       warning_days_before: 2,
       close_to_status_id: fixture.closedStatusId,
-    });
+    }));
     expect(created.rule_id).toBeTruthy();
 
-    await expect(
-      createBoardAutoCloseRule(fixture.boardId, {
+    expect(
+      await createBoardAutoCloseRule(fixture.boardId, {
         trigger_status_id: fixture.waitingStatusId, // duplicate
         inactivity_days: 9,
         close_to_status_id: fixture.closedStatusId,
       })
-    ).rejects.toThrow(/already exists/);
+    ).toMatchObject({ actionError: expect.stringMatching(/already exists/) });
 
-    await db('board_auto_close_rules').where({ tenant: fixture.tenantId, rule_id: created.rule_id }).del();
+    await scopedDb().table('board_auto_close_rules').where({ rule_id: created.rule_id }).del();
   });
 
   it('T006: no rules row or disabled rules allow closure', async () => {
@@ -296,7 +325,7 @@ describe('ticket close rules', () => {
     expect(await evaluateTicketCloseRules(db, fixture.tenantId, ticketShape(ticketId))).toEqual([]);
 
     // metadata closes_ticket marker also passes
-    await db('comments').where({ tenant: fixture.tenantId, comment_id: commentId }).update({ is_resolution: false, metadata: JSON.stringify({ closes_ticket: true }) });
+    await scopedDb().table('comments').where({ comment_id: commentId }).update({ is_resolution: false, metadata: JSON.stringify({ closes_ticket: true }) });
     expect(await evaluateTicketCloseRules(db, fixture.tenantId, ticketShape(ticketId))).toEqual([]);
   });
 
@@ -308,7 +337,7 @@ describe('ticket close rules', () => {
     expect(failures.map((f) => f.rule)).toEqual(['time_entry']);
 
     // A non-ticket work item doesn't count
-    await db('time_entries').insert({
+    await scopedDb().table('time_entries').insert({
       tenant: fixture.tenantId,
       entry_id: uuidv4(),
       work_item_id: ticketId,
@@ -344,8 +373,8 @@ describe('ticket close rules', () => {
     expect(failures[0].meta?.incomplete_count).toBe(1);
 
     // Completing the required item passes even though the optional one is open
-    await db('ticket_checklist_items')
-      .where({ tenant: fixture.tenantId, checklist_item_id: requiredItem })
+    await scopedDb().table('ticket_checklist_items')
+      .where({ checklist_item_id: requiredItem })
       .update({ completed: true, completed_by: fixture.userId, completed_at: db.fn.now() });
     expect(await evaluateTicketCloseRules(db, fixture.tenantId, ticketShape(ticketId))).toEqual([]);
   });
@@ -361,8 +390,8 @@ describe('ticket close rules', () => {
     // Non-master tickets pass
     expect(await evaluateTicketCloseRules(db, fixture.tenantId, ticketShape(childId))).toEqual([]);
 
-    await db('tickets')
-      .where({ tenant: fixture.tenantId, ticket_id: childId })
+    await scopedDb().table('tickets')
+      .where({ ticket_id: childId })
       .update({ closed_at: db.fn.now(), is_closed: true });
     expect(await evaluateTicketCloseRules(db, fixture.tenantId, ticketShape(masterId))).toEqual([]);
   });
@@ -431,8 +460,8 @@ describe('ticket close rules', () => {
     );
     expect(result.overridden).toBe(true);
 
-    const audit = await db('ticket_audit_logs')
-      .where({ tenant: fixture.tenantId, ticket_id: ticketId, event_type: 'TICKET_CLOSE_RULES_OVERRIDDEN' })
+    const audit = await scopedDb().table('ticket_audit_logs')
+      .where({ ticket_id: ticketId, event_type: 'TICKET_CLOSE_RULES_OVERRIDDEN' })
       .first();
     expect(audit).toBeTruthy();
     expect(audit.details.reason).toBe('spam ticket');
@@ -454,8 +483,8 @@ describe('ticket close rules', () => {
     );
     expect(result).toBe(true);
 
-    const audits = await db('ticket_audit_logs')
-      .where({ tenant: fixture.tenantId, ticket_id: ticketId, event_type: 'TICKET_CLOSE_RULES_BYPASSED' })
+    const audits = await scopedDb().table('ticket_audit_logs')
+      .where({ ticket_id: ticketId, event_type: 'TICKET_CLOSE_RULES_BYPASSED' })
       .select('details');
     expect(audits.length).toBe(1);
     expect(audits[0].details.bypass_source).toBe('workflow');
@@ -465,11 +494,12 @@ describe('ticket close rules', () => {
     const ticketId = await insertTicket(db, fixture);
     await setBoardCloseRules(db, fixture, { require_time_entry: true });
 
-    await expect(
-      updateTicket(ticketId, { status_id: fixture.closedStatusId })
-    ).rejects.toThrow(/cannot be closed/i);
+    const closeResult = await updateTicket(ticketId, { status_id: fixture.closedStatusId });
+    expect(closeResult).toMatchObject({
+      actionError: expect.stringContaining('Ticket cannot be closed'),
+    });
 
-    let ticket = await db('tickets').where({ tenant: fixture.tenantId, ticket_id: ticketId }).first();
+    let ticket = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
     expect(ticket.status_id).toBe(fixture.openStatusId);
     expect(ticket.is_closed).toBe(false);
 
@@ -478,11 +508,11 @@ describe('ticket close rules', () => {
       overrideCloseRules: true,
       overrideCloseRulesReason: 'duplicate ticket',
     });
-    ticket = await db('tickets').where({ tenant: fixture.tenantId, ticket_id: ticketId }).first();
+    ticket = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
     expect(ticket.is_closed).toBe(true);
 
-    const overrideAudit = await db('ticket_audit_logs')
-      .where({ tenant: fixture.tenantId, ticket_id: ticketId, event_type: 'TICKET_CLOSE_RULES_OVERRIDDEN' })
+    const overrideAudit = await scopedDb().table('ticket_audit_logs')
+      .where({ ticket_id: ticketId, event_type: 'TICKET_CLOSE_RULES_OVERRIDDEN' })
       .first();
     expect(overrideAudit.details.reason).toBe('duplicate ticket');
   });
@@ -499,7 +529,7 @@ describe('ticket close rules', () => {
       )
     ).rejects.toThrow(TicketCloseValidationError);
 
-    const ticket = await db('tickets').where({ tenant: fixture.tenantId, ticket_id: ticketId }).first();
+    const ticket = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
     expect(ticket.status_id).toBe(fixture.openStatusId);
     expect(ticket.is_closed).toBe(false);
     expect(ticket.closed_at).toBeNull();
@@ -522,7 +552,7 @@ describe('ticket close rules', () => {
       })
     );
 
-    const ticket = await db('tickets').where({ tenant: fixture.tenantId, ticket_id: ticketId }).first();
+    const ticket = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
     expect(ticket.is_closed).toBe(true);
     expect(ticket.closed_at).not.toBeNull();
     expect(ticket.closed_by).toBe(fixture.userId);
@@ -532,8 +562,8 @@ describe('ticket close rules', () => {
     );
     expect(closedEvents.length).toBe(1);
 
-    const audit = await db('ticket_audit_logs')
-      .where({ tenant: fixture.tenantId, ticket_id: ticketId, event_type: 'TICKET_CLOSED' })
+    const audit = await scopedDb().table('ticket_audit_logs')
+      .where({ ticket_id: ticketId, event_type: 'TICKET_CLOSED' })
       .first();
     expect(audit).toBeTruthy();
   });
@@ -551,7 +581,7 @@ describe('ticket close rules', () => {
     expect(result.failed[0].ticketId).toBe(failingId);
     expect(result.failed[0].closeRuleFailures?.map((f) => f.rule)).toEqual(['time_entry']);
 
-    const failing = await db('tickets').where({ tenant: fixture.tenantId, ticket_id: failingId }).first();
+    const failing = await scopedDb().table('tickets').where({ ticket_id: failingId }).first();
     expect(failing.is_closed).toBe(false);
   });
 
@@ -590,8 +620,8 @@ describe('ticket close rules', () => {
     );
     expect(result.bypassed).toBe(true);
 
-    const audit = await db('ticket_audit_logs')
-      .where({ tenant: fixture.tenantId, ticket_id: ticketId, event_type: 'TICKET_CLOSE_RULES_BYPASSED' })
+    const audit = await scopedDb().table('ticket_audit_logs')
+      .where({ ticket_id: ticketId, event_type: 'TICKET_CLOSE_RULES_BYPASSED' })
       .first();
     expect(audit.details.bypass_source).toBe('import');
   });
@@ -602,7 +632,7 @@ describe('ticket close rules', () => {
     await setBoardCloseRules(db, fixture, { require_time_entry: true });
 
     const portalUserId = uuidv4();
-    await db('users').insert({
+    await scopedDb().table('users').insert({
       tenant: fixture.tenantId,
       user_id: portalUserId,
       username: `portal-${portalUserId.slice(0, 8)}`,
@@ -624,7 +654,7 @@ describe('ticket close rules', () => {
     try {
       await portalUpdateTicketStatus(ticketId, fixture.closedStatusId);
 
-      const closed = await db('tickets').where({ tenant: fixture.tenantId, ticket_id: ticketId }).first();
+      const closed = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
       expect(closed.is_closed).toBe(true);
       expect(closed.closed_at).not.toBeNull();
       expect(closed.closed_by).toBe(portalUserId);
@@ -634,19 +664,19 @@ describe('ticket close rules', () => {
       );
       expect(closedEvents.length).toBe(1);
 
-      const bypassAudit = await db('ticket_audit_logs')
-        .where({ tenant: fixture.tenantId, ticket_id: ticketId, event_type: 'TICKET_CLOSE_RULES_BYPASSED' })
+      const bypassAudit = await scopedDb().table('ticket_audit_logs')
+        .where({ ticket_id: ticketId, event_type: 'TICKET_CLOSE_RULES_BYPASSED' })
         .first();
       expect(bypassAudit.details.bypass_source).toBe('client_portal');
 
-      const closedActivity = await db('ticket_audit_logs')
-        .where({ tenant: fixture.tenantId, ticket_id: ticketId, event_type: 'TICKET_CLOSED' })
+      const closedActivity = await scopedDb().table('ticket_audit_logs')
+        .where({ ticket_id: ticketId, event_type: 'TICKET_CLOSED' })
         .first();
       expect(closedActivity.source).toBe('client_portal');
 
       // Reopening from the portal clears the closure fields and publishes TICKET_REOPENED
       await portalUpdateTicketStatus(ticketId, fixture.openStatusId);
-      const reopened = await db('tickets').where({ tenant: fixture.tenantId, ticket_id: ticketId }).first();
+      const reopened = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
       expect(reopened.is_closed).toBe(false);
       expect(reopened.closed_at).toBeNull();
       expect(reopened.closed_by).toBeNull();
@@ -669,12 +699,12 @@ describe('ticket close rules', () => {
       })
     );
 
-    const ticket = await db('tickets').where({ tenant: fixture.tenantId, ticket_id: ticketId }).first();
+    const ticket = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
     expect(ticket.is_closed).toBe(true);
     expect(ticket.closed_by).toBe(fixture.userId);
 
-    const ruleAudits = await db('ticket_audit_logs')
-      .where({ tenant: fixture.tenantId, ticket_id: ticketId })
+    const ruleAudits = await scopedDb().table('ticket_audit_logs')
+      .where({ ticket_id: ticketId })
       .whereIn('event_type', ['TICKET_CLOSE_RULES_BYPASSED', 'TICKET_CLOSE_RULES_OVERRIDDEN'])
       .select('audit_id');
     expect(ruleAudits.length).toBe(0);
@@ -701,7 +731,7 @@ describe('ticket close rules', () => {
       })
     );
 
-    const ticket = await db('tickets').where({ tenant: fixture.tenantId, ticket_id: ticketId }).first();
+    const ticket = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
     expect(ticket.is_closed).toBe(false);
     expect(ticket.closed_at).toBeNull();
     expect(ticket.closed_by).toBeNull();

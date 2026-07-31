@@ -207,7 +207,7 @@ const MultiContactPicker = ({
               return (
                 <div
                   key={contact.contact_name_id}
-                  className={`relative flex items-center rounded px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${isSelected ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-50))]' : ''} ${noEmail ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                  className={`relative flex items-center rounded px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${isSelected ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-50))]' : ''} ${noEmail ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                   onClick={() => { if (!noEmail) handleToggle(contact.contact_name_id); }}
                 >
                   <div onClick={(e) => e.stopPropagation()}>
@@ -216,7 +216,7 @@ const MultiContactPicker = ({
                       checked={isSelected}
                       disabled={noEmail}
                       onChange={() => handleToggle(contact.contact_name_id)}
-                      className="mr-3"
+                      className="mr-2"
                     />
                   </div>
                   <ContactAvatar

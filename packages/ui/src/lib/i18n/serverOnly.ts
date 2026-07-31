@@ -15,6 +15,7 @@ import {
   getBestMatchingLocale,
   isSupportedLocale,
 } from './config';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@alga-psa/db/tenant';
 
 /**
@@ -157,11 +158,10 @@ export const getServerLocale = cache(
       // 2. Check user preferences from database
       if (options?.userId && options?.tenantId) {
         const knex = await getConnection(options.tenantId);
-        const userPref = await knex('user_preferences')
+        const userPref = await tenantDb(knex, options.tenantId).table('user_preferences')
           .where({
             user_id: options.userId,
             setting_name: 'locale',
-            tenant: options.tenantId
           })
           .first();
 
@@ -180,10 +180,9 @@ export const getServerLocale = cache(
       // 3. Check client default locale
       if (options?.clientId && options?.tenantId) {
         const knex = await getConnection(options.tenantId);
-        const client = await knex('clients')
+        const client = await tenantDb(knex, options.tenantId).table('clients')
           .where({
-            client_id: options.clientId,
-            tenant: options.tenantId
+            client_id: options.clientId
           })
           .first();
 
@@ -196,8 +195,7 @@ export const getServerLocale = cache(
       // 4. Check tenant default locale (for client portal)
       if (options?.tenantId) {
         const knex = await getConnection(options.tenantId);
-        const tenantSettings = await knex('tenant_settings')
-          .where({ tenant: options.tenantId })
+        const tenantSettings = await tenantDb(knex, options.tenantId).table('tenant_settings')
           .first();
 
         const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
@@ -285,21 +283,19 @@ export async function updateUserLocalePreference(
   const knex = await getConnection(tenantId);
 
   // Check if preference exists
-  const existing = await knex('user_preferences')
+  const existing = await tenantDb(knex, tenantId).table('user_preferences')
     .where({
       user_id: userId,
-      setting_name: 'locale',
-      tenant: tenantId
+      setting_name: 'locale'
     })
     .first();
 
   if (existing) {
     // Update existing preference
-    await knex('user_preferences')
+    await tenantDb(knex, tenantId).table('user_preferences')
       .where({
         user_id: userId,
-        setting_name: 'locale',
-        tenant: tenantId
+        setting_name: 'locale'
       })
       .update({
         setting_value: JSON.stringify(locale),
@@ -307,7 +303,7 @@ export async function updateUserLocalePreference(
       });
   } else {
     // Insert new preference
-    await knex('user_preferences').insert({
+    await tenantDb(knex, tenantId).table('user_preferences').insert({
       user_id: userId,
       tenant: tenantId,
       setting_name: 'locale',
@@ -332,8 +328,7 @@ export async function updateTenantDefaultLocale(
   const knex = await getConnection(tenantId);
 
   // Get existing settings
-  const existingRecord = await knex('tenant_settings')
-    .where({ tenant: tenantId })
+  const existingRecord = await tenantDb(knex, tenantId).table('tenant_settings')
     .first();
 
   const existingSettings = existingRecord?.settings || {};
@@ -349,14 +344,13 @@ export async function updateTenantDefaultLocale(
   };
 
   if (existingRecord) {
-    await knex('tenant_settings')
-      .where({ tenant: tenantId })
+    await tenantDb(knex, tenantId).table('tenant_settings')
       .update({
         settings: updatedSettings,
         updated_at: knex.fn.now()
       });
   } else {
-    await knex('tenant_settings').insert({
+    await tenantDb(knex, tenantId).table('tenant_settings').insert({
       tenant: tenantId,
       settings: updatedSettings,
       created_at: knex.fn.now(),

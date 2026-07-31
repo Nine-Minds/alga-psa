@@ -3,23 +3,23 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/licensing/src",
   "projectType": "library",
-  "tags": ["scope:licensing", "type:horizontal"],
+  "tags": [
+    "scope:licensing",
+    "type:horizontal"
+  ],
   "targets": {
     "build": {
       "executor": "nx:noop"
     },
-    "test": {
-      "executor": "@nx/vite:test",
-      "outputs": ["{workspaceRoot}/coverage/packages/licensing"],
-      "options": {
-        "passWithNoTests": true
-      }
-    },
     "lint": {
       "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"],
+      "outputs": [
+        "{options.outputFile}"
+      ],
       "options": {
-        "lintFilePatterns": ["packages/licensing/**/*.{ts,tsx}"]
+        "lintFilePatterns": [
+          "packages/licensing/**/*.{ts,tsx}"
+        ]
       }
     }
   }

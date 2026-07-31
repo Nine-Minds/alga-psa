@@ -13,6 +13,7 @@ export const CURRENCY_OPTIONS: CurrencyOption[] = [
   { value: 'AUD', label: 'AUD (A$)', symbol: 'A$' },
   { value: 'NZD', label: 'NZD (NZ$)', symbol: 'NZ$' },
   { value: 'ARS', label: 'ARS ($)', symbol: '$' },
+  { value: 'BRL', label: 'BRL (R$)', symbol: 'R$' },
   { value: 'JPY', label: 'JPY (¥)', symbol: '¥' },
   { value: 'CHF', label: 'CHF (Fr.)', symbol: 'Fr.' },
 ];

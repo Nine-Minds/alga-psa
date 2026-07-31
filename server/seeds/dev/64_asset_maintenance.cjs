@@ -1,15 +1,21 @@
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
+
 exports.seed = async function(knex) {
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
+
+    const { tenantId, db } = context;
+
     // Clean up existing data
-    await knex('asset_maintenance_history').del();
-    await knex('asset_maintenance_notifications').del();
-    await knex('asset_maintenance_schedules').del();
+    await db.table('asset_maintenance_history').del();
+    await db.table('asset_maintenance_notifications').del();
+    await db.table('asset_maintenance_schedules').del();
 
-    const tenant = await knex('tenants').select('tenant').first();
-    const scarecrow = await knex('users').where({ username: 'scarecrow' }).first();
-    const madhatter = await knex('users').where({ username: 'madhatter' }).first();
-    const assets = await knex('assets').select('asset_id', 'name');
+    const scarecrow = await db.table('users').where({ username: 'scarecrow' }).first();
+    const madhatter = await db.table('users').where({ username: 'madhatter' }).first();
+    const assets = await db.table('assets').select('asset_id', 'name');
 
-    if (tenant && scarecrow && madhatter) {
+    if (scarecrow && madhatter) {
         // Get specific assets
         const rubyServer = assets.find(a => a.name === 'Ruby Slippers Server');
         const teaServer = assets.find(a => a.name === 'Mad Hatter Tea Time Server');
@@ -25,9 +31,9 @@ exports.seed = async function(knex) {
         const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
         // Insert maintenance schedules
-        const [schedule1, schedule2, schedule3, schedule4] = await knex('asset_maintenance_schedules').insert([
+        const [schedule1, schedule2, schedule3, schedule4] = await db.table('asset_maintenance_schedules').insert([
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 asset_id: rubyServer.asset_id,
                 schedule_name: 'Magical Power Calibration',
                 description: 'Regular calibration of ruby energy crystals',
@@ -45,7 +51,7 @@ exports.seed = async function(knex) {
                 updated_at: now.toISOString()
             },
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 asset_id: teaServer.asset_id,
                 schedule_name: 'Tea Time Optimization',
                 description: 'Ensure server performance peaks at tea time',
@@ -64,7 +70,7 @@ exports.seed = async function(knex) {
                 updated_at: now.toISOString()
             },
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 asset_id: crystalWorkstation.asset_id,
                 schedule_name: 'Crystal Ball Clarity Check',
                 description: 'Maintain optimal clarity for future predictions',
@@ -82,7 +88,7 @@ exports.seed = async function(knex) {
                 updated_at: now.toISOString()
             },
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 asset_id: lookingGlassWS.asset_id,
                 schedule_name: 'Mirror Polish and Alignment',
                 description: 'Keep the looking glass perfectly aligned',
@@ -102,9 +108,9 @@ exports.seed = async function(knex) {
         ]).returning(['schedule_id', 'asset_id']);
 
         // Insert maintenance history
-        await knex('asset_maintenance_history').insert([
+        await db.table('asset_maintenance_history').insert([
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 schedule_id: schedule1.schedule_id,
                 asset_id: schedule1.asset_id,
                 maintenance_type: 'calibration',
@@ -119,7 +125,7 @@ exports.seed = async function(knex) {
                 created_at: oneMonthAgo.toISOString()
             },
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 schedule_id: schedule2.schedule_id,
                 asset_id: schedule2.asset_id,
                 maintenance_type: 'preventive',
@@ -136,9 +142,9 @@ exports.seed = async function(knex) {
         ]);
 
         // Insert notifications
-        await knex('asset_maintenance_notifications').insert([
+        await db.table('asset_maintenance_notifications').insert([
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 schedule_id: schedule1.schedule_id,
                 asset_id: schedule1.asset_id,
                 notification_type: 'upcoming',
@@ -151,7 +157,7 @@ exports.seed = async function(knex) {
                 created_at: now.toISOString()
             },
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 schedule_id: schedule2.schedule_id,
                 asset_id: schedule2.asset_id,
                 notification_type: 'upcoming',

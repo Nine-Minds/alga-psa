@@ -1,16 +1,14 @@
 const { randomUUID } = require('node:crypto');
 
-async function pickOne(ctx, { label, sql, params }) {
-  const rows = await ctx.db.query(sql, params);
-  if (!rows.length) throw new Error(`Fixture requires ${label} in DB (tenant=${ctx.config.tenantId}).`);
-  return rows[0];
-}
+const { deleteTenantRows, pickTenantOne, selectTenantRows } = require('./tenant-sql.cjs');
 
 async function pickUser(ctx, { tenantId, label } = {}) {
-  return pickOne(ctx, {
+  return pickTenantOne(ctx, {
     label: label ?? 'a user',
-    sql: `select user_id from users where tenant = $1 order by created_at asc limit 1`,
-    params: [tenantId ?? ctx.config.tenantId]
+    table: 'users',
+    columns: 'user_id',
+    tenantId,
+    orderBy: 'created_at asc'
   });
 }
 
@@ -248,25 +246,26 @@ async function assertRunSucceeded(ctx, runRow) {
 }
 
 async function listNotifications(ctx, { tenantId, userId, limit = 50 }) {
-  return ctx.db.query(
-    `
-      select internal_notification_id, title, message, template_name, is_read, created_at
-      from internal_notifications
-      where tenant = $1 and user_id = $2
-      order by created_at desc
-      limit ${Number(limit) || 50}
-    `,
-    [tenantId, userId]
-  );
+  return selectTenantRows(ctx, {
+    table: 'internal_notifications',
+    columns: 'internal_notification_id, title, message, template_name, is_read, created_at',
+    tenantId,
+    where: 'user_id = $2',
+    params: [userId],
+    orderBy: 'created_at desc',
+    limit: Number(limit) || 50
+  });
 }
 
 async function cleanupNotifications(ctx, { tenantId, userId, marker, dedupeKey }) {
   const titleLike = `%${marker}%`;
   const msgLike = `%${dedupeKey}%`;
-  await ctx.dbWrite.query(
-    `delete from internal_notifications where tenant = $1 and user_id = $2 and title like $3 and message like $4`,
-    [tenantId, userId, titleLike, msgLike]
-  );
+  await deleteTenantRows(ctx, {
+    table: 'internal_notifications',
+    tenantId,
+    where: ['user_id = $2', 'title like $3', 'message like $4'],
+    params: [userId, titleLike, msgLike]
+  });
 }
 
 async function triggerEvent(ctx, { eventName, schemaRef, correlationKey, payload }) {
@@ -485,10 +484,8 @@ async function runNotificationFixture(ctx, opts) {
 }
 
 module.exports = {
-  pickOne,
   pickUser,
   buildMarker,
   buildBasePayloadForEvent,
   runNotificationFixture,
 };
-

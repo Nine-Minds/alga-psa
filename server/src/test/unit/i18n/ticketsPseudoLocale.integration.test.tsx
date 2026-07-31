@@ -54,6 +54,8 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
   });
 
   return {
+    detectClientLocale: () => 'xx',
+    useOptionalI18n: () => null,
     I18nProvider: ({
       children,
       initialLocale = 'xx',
@@ -112,6 +114,17 @@ vi.mock('@/components/layout/DefaultLayout', () => ({
   ),
 }));
 
+vi.mock('server/src/components/layout/DefaultLayout', () => ({
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="default-layout">{children}</div>
+  ),
+}));
+
+vi.mock('server/src/components/layout/Header', () => ({
+  QUICK_CREATE_OPEN_EVENT: 'alga:quick-create:open',
+  default: () => null,
+}));
+
 vi.mock('@alga-psa/tags/context', () => ({
   TagProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -128,8 +141,21 @@ vi.mock('@product/chat/context', () => ({
   AIChatContextProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+vi.mock('@alga-psa/tickets/actions/ticketActions', () => ({}));
+
 vi.mock('@/context/TierContext', () => ({
   TierProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@/context/ProductContext', () => ({
+  ProductProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useProduct: () => ({
+    productCode: 'psa',
+    isMisconfigured: false,
+    isPsa: true,
+    isAlgaDesk: false,
+    isLoading: false,
+  }),
 }));
 
 const { useTranslation } = await import('@alga-psa/ui/lib/i18n/client');
@@ -173,10 +199,10 @@ function renderWithRoute(path: string, child: React.ReactNode) {
   render(
     <MspLayoutClient
       session={null}
+      productCode="psa"
       needsOnboarding={false}
       initialSidebarCollapsed={false}
       initialLocale="xx"
-      i18nEnabled={true}
     >
       {child}
     </MspLayoutClient>

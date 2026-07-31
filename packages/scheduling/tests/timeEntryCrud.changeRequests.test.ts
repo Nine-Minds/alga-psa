@@ -20,6 +20,16 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
   resolveUserTimeZone: (...args: any[]) => resolveUserTimeZoneMock(...args),
   computeWorkDateFields: (...args: any[]) => computeWorkDateFieldsMock(...args),
+  truncateToMinute: (value: string | Date) =>
+    new Date(Math.floor(new Date(value).getTime() / 60000) * 60000),
+  recalculateProjectTaskActualHoursForEntryChange: vi.fn(async () => undefined),
+  tenantDb: (conn: any, tenant: string) => ({
+    tenant,
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+    tenantJoin: (query: any, table: string, _left?: string, _right?: string, opts?: any) =>
+      opts?.type === 'left' ? query.leftJoin?.(table) ?? query : query.join?.(table) ?? query,
+  }),
 }));
 
 vi.mock('../src/actions/timeEntryDelegationAuth', () => ({
@@ -30,7 +40,7 @@ vi.mock('../src/lib/contractLineDisambiguation', () => ({
   determineDefaultContractLine: (...args: any[]) => determineDefaultContractLineMock(...args),
 }));
 
-vi.mock('../src/services/bucketUsageService', () => ({
+vi.mock('@alga-psa/shared/billingClients/bucketUsageService', () => ({
   findOrCreateCurrentBucketUsageRecord: vi.fn(),
   updateBucketUsageMinutes: vi.fn(),
 }));
@@ -143,6 +153,9 @@ function createFetchEntriesDbStub() {
 
     if (table === 'time_entries') {
       const builder: any = {
+        leftJoin() {
+          return builder;
+        },
         where() {
           return builder;
         },
@@ -288,7 +301,9 @@ describe('time entry change-request action integration', () => {
           changeRequestComment: 'Please fix this.',
         },
       ),
-    ).rejects.toThrow('Permission denied: Cannot update time entry approval status');
+    ).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot update time entry approval status',
+    });
 
     expect(createTimeEntryChangeRequestRecordMock).not.toHaveBeenCalled();
   });

@@ -28,12 +28,25 @@
       "inactive": "Inactief",
       "loading": "Laden...",
       "na": "N.v.t.",
-      "none": "Geen"
+      "none": "Geen",
+      "archived": "Gearchiveerd",
+      "draft": "Concept",
+      "expired": "Verlopen",
+      "published": "Gepubliceerd",
+      "terminated": "Beëindigd"
     },
     "no": "Nee",
     "yes": "Ja"
   },
+  "clientLifecycle": {
+    "prospect": "Prospect",
+    "active": "Actieve klant",
+    "former": "Voormalige klant",
+    "all": "Alle levenscyclusfasen"
+  },
   "clientsPage": {
+    "filterByLifecycle": "Filteren op levenscyclus",
+    "lifecycleFilterLabel": "Levenscyclusfilter",
     "title": "Klantenpagina",
     "description": "Hoofdbeheerpagina voor klanten met zoeken, filters en klantenraster/lijstweergave",
     "searchPlaceholder": "Zoek klanten, notities, documenten en interacties",
@@ -83,38 +96,47 @@
     "selectedSingle": "{{count}} Geselecteerd",
     "selectedPlural": "{{count}} Geselecteerd",
     "createSuccess": "{{name}} is succesvol aangemaakt.",
-    "exportSuccess": "Geëxporteerd {{count}} {{clientsLabel}} naar CSV",
-    "bulkDeleteSuccess": "{{count}} {{clientsLabel}} {{verb}} is succesvol verwijderd.",
-    "bulkInactiveFailed": "{{count}} {{clientsLabel}} kan niet als inactief worden gemarkeerd.",
+    "exportSuccess_one": "{{count}} klant geëxporteerd naar CSV",
+    "exportSuccess_other": "{{count}} klanten geëxporteerd naar CSV",
+    "bulkDeleteSuccess_one": "{{count}} klant is succesvol verwijderd.",
+    "bulkDeleteSuccess_other": "{{count}} klanten zijn succesvol verwijderd.",
+    "bulkInactiveFailed_one": "{{count}} klant kon niet als inactief worden gemarkeerd.",
+    "bulkInactiveFailed_other": "{{count}} klanten konden niet als inactief worden gemarkeerd.",
     "bulkInactiveWithContactsSuccess": "{{clientCount}} {{clientsLabel}} en {{contactCount}} {{contactsLabel}} zijn succesvol als inactief gemarkeerd.",
     "singleInactiveSuccess": "{{name}} is succesvol als inactief gemarkeerd.",
-    "bulkInactiveSuccess": "{{count}} {{clientsLabel}} {{verb}} is succesvol gemarkeerd als inactief.",
-    "bulkInactiveShortSuccess": "{{count}} {{clientsLabel}} {{verb}} is gemarkeerd als inactief.",
+    "bulkInactiveSuccess_one": "{{count}} klant is succesvol gemarkeerd als inactief.",
+    "bulkInactiveSuccess_other": "{{count}} klanten zijn succesvol gemarkeerd als inactief.",
+    "bulkInactiveShortSuccess_one": "{{count}} klant is gemarkeerd als inactief.",
+    "bulkInactiveShortSuccess_other": "{{count}} klanten zijn gemarkeerd als inactief.",
     "bulkInactiveWithContactsShortSuccess": "{{clientCount}} {{clientsLabel}} en {{contactCount}} {{contactsLabel}} zijn gemarkeerd als inactief.",
     "bulkInactiveShortError": "Er is een fout opgetreden bij het markeren van clients als inactief.",
-    "bulkReactivateFailed": "{{count}} {{clientsLabel}} kon niet opnieuw worden geactiveerd.",
+    "bulkReactivateFailed_one": "{{count}} klant kon niet opnieuw worden geactiveerd.",
+    "bulkReactivateFailed_other": "{{count}} klanten konden niet opnieuw worden geactiveerd.",
     "bulkReactivateWithContactsSuccess": "{{clientCount}} {{clientsLabel}} en {{contactCount}} {{contactsLabel}} zijn succesvol opnieuw geactiveerd.",
-    "bulkReactivateSuccess": "{{count}} {{clientsLabel}} {{verb}} is succesvol gereactiveerd.",
+    "bulkReactivateSuccess_one": "{{count}} klant is succesvol opnieuw geactiveerd.",
+    "bulkReactivateSuccess_other": "{{count}} klanten zijn succesvol opnieuw geactiveerd.",
     "deleteClientUnable": "Kan deze klant niet verwijderen.",
     "deleteSinglePrompt": "Weet u zeker dat u {{name}} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
     "markFailedAsInactive": "Markeer {{count}} als Inactief",
-    "multiDeleteSuccessSummary": "{{count}} {{clientsLabel}} {{verb}} succesvol verwijderd.",
-    "multiDeleteFailedSummary": "{{count}} {{clientsLabel}} kon niet worden verwijderd",
+    "multiDeleteSuccessSummary_one": "{{count}} klant succesvol verwijderd.",
+    "multiDeleteSuccessSummary_other": "{{count}} klanten succesvol verwijderd.",
+    "multiDeleteFailedSummary_one": "{{count}} klant kon niet worden verwijderd",
+    "multiDeleteFailedSummary_other": "{{count}} klanten konden niet worden verwijderd",
     "inactiveAlternative": "U kunt deze klant in plaats daarvan als inactief markeren. Inactieve klanten zijn voor de meeste weergaven verborgen, maar behouden al hun gegevens en kunnen later als actief worden gemarkeerd.",
     "table": {
       "client": "Cliënt"
     },
     "entities": {
-      "client": "cliënt",
-      "clients": "klanten",
-      "contact": "contact",
-      "contacts": "contacten"
+      "client_one": "klant",
+      "client_other": "klanten",
+      "contact_one": "contact",
+      "contact_other": "contacten"
     },
     "dependency": {
       "contact": "contact",
       "contacts": "contacten",
       "ticket": "ticket",
-      "tickets": "kaartjes",
+      "tickets": "tickets",
       "project": "project",
       "projects": "projecten",
       "invoice": "factuur",
@@ -130,7 +152,8 @@
       "bucketUsageRecord": "record voor emmergebruik",
       "bucketUsageRecords": "registraties van emmergebruik"
     },
-    "deleteSelectedPrompt": "Weet u zeker dat u {{count}} geselecteerde {{clientsLabel}} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "deleteSelectedPrompt_one": "Weet u zeker dat u {{count}} geselecteerde klant wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "deleteSelectedPrompt_other": "Weet u zeker dat u {{count}} geselecteerde klanten wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
     "singleInactiveWithContactsSuccess_one": "{{name}} en {{count}} contact zijn succesvol gedeactiveerd.",
     "singleInactiveWithContactsSuccess_other": "{{name}} en {{count}} contacten zijn succesvol gedeactiveerd.",
     "clientTypes": {
@@ -155,13 +178,15 @@
         "description": "Kies welke kolommen worden opgenomen bij het afdrukken van klanten."
       }
     },
-    "shareTooltip": "Afdrukken, importeren en exporteren"
-    ,
+    "shareTooltip": "Afdrukken, importeren en exporteren",
     "defaultClientDeleteError": "De standaardklant kan niet worden verwijderd. Stel eerst een andere klant als standaard in bij Algemene instellingen.",
     "clientNotFound": "Klant niet gevonden.",
     "deletePermissionDenied": "Toestemming geweigerd: klanten kunnen niet worden verwijderd."
   },
   "clientDetails": {
+    "opportunities": "Verkoopkansen",
+    "lifecycleStatus": "Levenscyclus",
+    "lifecycleStatusHelper": "Prospects zijn beschikbaar in verkoopworkflows, maar worden standaard verborgen in operationele klantenlijsten.",
     "title": "Klantgegevens",
     "backToClients": "Terug naar Klanten",
     "openInNewTab": "Openen in nieuw tabblad",
@@ -173,6 +198,8 @@
     "billing": "Facturering",
     "interactions": "Interacties",
     "notes": "Opmerkingen",
+    "huduTab": "Hudu",
+    "huduPasswordsTab": "Wachtwoorden",
     "clientLocations": "Klantlocaties",
     "billingDashboard": "Factureringsdashboard",
     "clientAndContacts": "Klant & Contacten",
@@ -190,9 +217,9 @@
     "providerDefault": "Standaard van de provider",
     "inboundEmailDomains": "Inkomende e-maildomeinen",
     "inboundEmailDomainsHelp": "Alleen deze domeinen worden gebruikt voor het matchen van binnenkomende e-maildomeinen (bijvoorbeeld acme.com). Domeinen moeten uniek zijn voor alle clients.",
-    "noInboundDomains": "Geen inkomende e-maildomeinen geconfigureerd. Er wordt geen gebruik gemaakt van domeinmatching.",
+    "noInboundDomains": "Voeg een domein toe om inkomende e-mail aan deze klant te koppelen.",
     "inboundTicketDestination": "Inkomende ticketbestemming",
-    "inboundDestinationPrecedence": "Voorrang: Contact overschrijven -> Klantbestemming -> Standaard provider.",
+    "inboundDestinationPrecedence": "Gebruikt eerst de overschrijving van de contactpersoon, daarna die van de klant en daarna de standaard van de provider.",
     "manageLocations": "Beheer locaties",
     "loadingUsers": "Gebruikers laden...",
     "loadingPolicies": "Beleid laden...",
@@ -211,8 +238,10 @@
     "reactivateError": "Er is een fout opgetreden bij het opnieuw activeren van de client. Probeer het opnieuw.",
     "entraSyncError": "Kan Entra-synchronisatie niet starten.",
     "deleteError": "Kan klant niet verwijderen. Probeer het opnieuw.",
-    "deactivateWithContactsSuccess": "Klant en {{count}} contact(s) zijn succesvol gedeactiveerd.",
-    "reactivateWithContactsSuccess": "Klant en {{count}} contactpersoon(en) zijn succesvol gereactiveerd.",
+    "deactivateWithContactsSuccess_one": "Klant en {{count}} contact zijn succesvol gedeactiveerd.",
+    "deactivateWithContactsSuccess_other": "Klant en {{count}} contacten zijn succesvol gedeactiveerd.",
+    "reactivateWithContactsSuccess_one": "Klant en {{count}} contact zijn succesvol gereactiveerd.",
+    "reactivateWithContactsSuccess_other": "Klant en {{count}} contacten zijn succesvol gereactiveerd.",
     "singleInactiveSuccess": "{{name}} is succesvol als inactief gemarkeerd.",
     "slaPolicy": "SLA-beleid",
     "defaultPolicy": "{{name}} (standaard)",
@@ -223,7 +252,7 @@
     "timezoneHelper": "Selecteer de tijdzone voor deze client",
     "taxSettings": "Belastinginstellingen",
     "additionalInfo": "Aanvullende informatie",
-    "tickets": "Kaartjes",
+    "tickets": "Tickets",
     "saveChanges": "Wijzigingen opslaan",
     "requiredFields": "Vul alle verplichte velden in",
     "syncEntraNow": "Synchroniseer Entra nu",
@@ -240,6 +269,10 @@
       "helper": "Stel de clientstatus in op actief of inactief"
     },
     "entraSyncStarted": "Entra-synchronisatie gestart. Uitvoerings-ID: {{runId}}",
+    "entraSyncStatusUnknown": "Synchronisatiestatus niet beschikbaar",
+    "clientNameRequired": "Klantnaam is vereist",
+    "deactivateClientAndContacts": "Klant en contacten deactiveren",
+    "reactivateClientAndContacts": "Klant en contacten opnieuw activeren",
     "inboundDomainAdded": "Inkomend e-maildomein toegevoegd",
     "inboundDomainAddFailed": "Kan domein niet toevoegen",
     "inboundDomainRemoved": "Inkomend e-maildomein verwijderd",
@@ -248,12 +281,172 @@
       "accountManager": "Accountmanager",
       "url": "URL",
       "status": "Status"
-    }
-    ,
+    },
     "deactivateClientDescription": "Deactiveert de record zonder de gegevens te verwijderen.",
-    "deactivateClientOnlyDescription": "Deactiveer de klant maar laat de contacten actief."
+    "deactivateClientOnlyDescription": "Deactiveer de klant maar laat de contacten actief.",
+    "nameAliasAddFailed": "Kan alias niet toevoegen",
+    "nameAliasAdded": "Alias toegevoegd",
+    "nameAliasRemoveFailed": "Kan alias niet verwijderen",
+    "nameAliasRemoved": "Alias verwijderd",
+    "nameAliases": "Overeenkomende aliassen",
+    "noNameAliases": "Geen aliassen geconfigureerd. De klantnaam zelf komt altijd overeen.",
+    "equipment": "Apparatuur",
+    "parentClientSelf": "Een klant kan niet zijn eigen bovenliggende klant zijn",
+    "parentClientPlaceholder": "Geen bovenliggende klant",
+    "parentClientClear": "Wissen",
+    "parentClientLegacy": "Eerder als tekst ingevoerd: {{name}}"
+  },
+  "clientCommandCenter": {
+    "cards": {
+      "concerns": "Aandachtspunten",
+      "documents": "Documenten",
+      "installBase": "Geïnstalleerde basis",
+      "locations": "Locaties",
+      "money": "Financiën",
+      "notes": "Notities",
+      "people": "Personen",
+      "record": "Klantrecord",
+      "service": "Service",
+      "timeline": "Alles, op volgorde"
+    },
+    "csatEmpty": "Nog geen enquêtereacties.",
+    "discardCancel": "Verder bewerken",
+    "discardConfirm": "Wijzigingen verwerpen",
+    "discardMessage": "Je hebt niet-opgeslagen wijzigingen in het klantrecord. Sluiten en verwerpen?",
+    "discardTitle": "Niet-opgeslagen wijzigingen",
+    "documents": {
+      "more": "+{{count}} meer",
+      "none": "Nog geen documenten."
+    },
+    "flags": {
+      "clientWaiting": "Klant wacht {{days}} d — {{ref}}",
+      "draftInvoices_one": "1 conceptfactuur — {{amount}} niet gefactureerd · {{ref}}",
+      "draftInvoices_other": "{{count}} conceptfacturen — {{amount}} niet gefactureerd · {{ref}}",
+      "rmaOpen_one": "1 open RMA — {{days}} d",
+      "rmaOpen_other": "{{count}} open RMA’s — oudste {{days}} d",
+      "slaAtRisk_one": "SLA loopt risico — {{ref}}",
+      "slaAtRisk_other": "{{count}} tickets met SLA-risico — volgende {{ref}}",
+      "slaBreached_one": "SLA overschreden — {{ref}}",
+      "slaBreached_other": "{{count}} SLA-overschrijdingen — ernstigste {{ref}}",
+      "soPartial": "{{ref}}: {{fulfilled}} van {{total}} regels geleverd",
+      "ticketOverdue_one": "1 achterstallig ticket — {{ref}} {{days}} d te laat",
+      "ticketOverdue_other": "{{count}} achterstallige tickets — {{ref}} {{days}} d te laat",
+      "ticketUnassigned_one": "1 niet-toegewezen ticket — {{ref}}",
+      "ticketUnassigned_other": "{{count}} niet-toegewezen tickets — oudste {{ref}}",
+      "wipAging_one": "1 niet-gefactureerd item — {{days}} d oud{{materials}}",
+      "wipAging_other": "{{count}} niet-gefactureerde items — oudste {{days}} d{{materials}}"
+    },
+    "installBase": {
+      "assets": "beheerde assets",
+      "assetsLink": "Beheerde assets",
+      "none": "Nog geen geleverde apparatuur.",
+      "rmas": "open RMA’s",
+      "sold": "verkochte eenheden",
+      "viewAsset": "asset",
+      "warrantyExpired_one": "1 buiten garantie",
+      "warrantyExpired_other": "{{count}} buiten garantie",
+      "warrantyExpiring_one": "1 verloopt binnen ≤90 d",
+      "warrantyExpiring_other": "{{count}} verlopen binnen ≤90 d",
+      "warrantyTracked": " (van {{count}} bijgehouden)"
+    },
+    "locations": {
+      "billing": "Facturatie",
+      "manage": "Beheren",
+      "more": "+{{count}} meer",
+      "none": "Nog geen locaties.",
+      "shipping": "Verzending"
+    },
+    "money": {
+      "activeContracts": "Actieve contracten",
+      "agingNote": "{{total}} openstaand · geregistreerde betalingen afgetrokken",
+      "billingSetup": "Facturatie-instellingen",
+      "current": "actueel",
+      "draft": "concept",
+      "moreDrafts_one": "+1 concept meer",
+      "moreDrafts_other": "+{{count}} concepten meer",
+      "nothingOutstanding": "Niets openstaand op definitieve facturen.",
+      "taxSettings": "Belastinginstellingen",
+      "unbilledHours": "{{hours}} u",
+      "unbilledMaterials": "{{amount}} aan materialen",
+      "unbilledWork": "Niet-gefactureerd werk"
+    },
+    "notes": {
+      "add": "Notitie toevoegen",
+      "lastEdited": "Gedeelde klantnotitie · {{days}} d geleden bewerkt",
+      "none": "Nog geen notities."
+    },
+    "openView": "Openen",
+    "people": {
+      "addContact": "Contact toevoegen",
+      "more": "+{{count}} meer",
+      "noContactInfo": "geen contactgegevens vastgelegd",
+      "none": "Nog geen contacten.",
+      "primary": "Primair"
+    },
+    "pulseError": "Het klantoverzicht kon niet worden geladen.",
+    "rail": {
+      "close": "Sluiten",
+      "installBase": "Geïnstalleerde basis",
+      "label": "Klantweergaven",
+      "money": "Financiën",
+      "more": "Meer",
+      "records": "Records",
+      "service": "Service"
+    },
+    "record": {
+      "accountManager": "Accountmanager",
+      "additionalInfo": "Aanvullende informatie",
+      "clientSince": "Klant sinds",
+      "defaultContact": "Standaardcontact",
+      "edit": "Bewerken",
+      "unset": "niet ingesteld"
+    },
+    "service": {
+      "newTicket": "Nieuw ticket",
+      "none": "Geen open tickets.",
+      "oldest": "oudste open",
+      "open": "open tickets",
+      "overdue": "achterstallig",
+      "overdueTag": "achterstallig",
+      "unassigned": "Niet toegewezen"
+    },
+    "sla": {
+      "atRisk": "SLA loopt risico",
+      "atRiskLeft": "SLA: nog {{left}}",
+      "breached": "SLA overschreden",
+      "breachedAgo": "SLA {{over}} geleden overschreden",
+      "onTrack": "SLA op schema",
+      "onTrackLeft": "SLA: nog {{left}}",
+      "paused": "SLA gepauzeerd"
+    },
+    "timeline": {
+      "daysAgo": "{{count}} d geleden",
+      "empty": "Er is nog niets vastgelegd voor deze klant.",
+      "error": "De tijdlijn kon niet worden geladen.",
+      "filterAll": "Alles",
+      "filterInteractions": "Interacties",
+      "filterInventory": "Voorraad",
+      "filterMoney": "Financiën",
+      "filterService": "Service",
+      "hoursAgo": "{{count}} u geleden",
+      "interaction": "Interactie",
+      "invoiceCreated": "Factuur als concept",
+      "invoiceFinalized": "Factuur definitief",
+      "justNow": "zojuist",
+      "loadMore": "Meer laden",
+      "loading": "Laden…",
+      "materialAdded": "Materiaal gebruikt",
+      "quoteActivity": "Offerteactiviteit",
+      "rmaClosed": "RMA gesloten",
+      "rmaOpened": "RMA geopend",
+      "soCreated": "Verkooporder aangemaakt",
+      "ticketClosed": "Ticket gesloten",
+      "ticketOpened": "Ticket geopend",
+      "unitDelivered": "Apparatuur geleverd"
+    }
   },
   "quickAddClient": {
+    "lifecycleStatus": "Levenscyclus",
     "title": "Nieuwe klant toevoegen",
     "clientDetails": "Klantgegevens",
     "clientLocation": "Klant Locatie",
@@ -301,7 +494,8 @@
     "created": "\"{{name}}\" aangemaakt. Voeg hieronder een andere klant toe.",
     "createAndAddAnother": "Aanmaken + Nog een toevoegen",
     "createAndView": "Aanmaken + Klant bekijken",
-    "additionalDetails": "Aanvullende gegevens"
+    "additionalDetails": "Aanvullende gegevens",
+    "createFailed": "Failed to create client. Please try again."
   },
   "clientCreatedDialog": {
     "title": "Klant gemaakt",
@@ -418,7 +612,9 @@
     "invalidDate": "Ongeldige datum",
     "formattingError": "Formatteringsfout",
     "removeAssignmentTitle": "Contractregeltoewijzing verwijderen",
-    "removeAssignmentMessage": "Weet u zeker dat u deze contractregeltoewijzing van de klant wilt verwijderen? De contractregel zelf wordt niet verwijderd."
+    "removeAssignmentMessage": "Weet u zeker dat u deze contractregeltoewijzing van de klant wilt verwijderen? De contractregel zelf wordt niet verwijderd.",
+    "contracts": "Contracten",
+    "taxRatesLoadError": "Failed to load tax rate configuration."
   },
   "clientBillingSchedule": {
     "title": "Factureringsschema",
@@ -494,6 +690,17 @@
       "5": "Vrijdag",
       "6": "Zaterdag",
       "7": "Zondag"
+    },
+    "reviewError": "Kan de impact van deze wijziging niet controleren",
+    "reviewing": "Impact controleren…",
+    "confirmSave": "Bevestigen en opslaan",
+    "reviewChanges": "Wijzigingen bekijken",
+    "impact": {
+      "title": "Controleer voordat je toepast",
+      "periods": "{{count}} aankomende factureringsperiode(n) over {{lines}} contractregel(s) worden opnieuw opgebouwd volgens het nieuwe schema.",
+      "from": "Opnieuw opgebouwd vanaf {{date}}.",
+      "billedPreserved": "Reeds gefactureerde kosten blijven behouden en veranderen niet.",
+      "confirmHint": "Kies ‘Bevestigen en opslaan’ om toe te passen."
     }
   },
   "clientContractAssignment": {
@@ -522,7 +729,9 @@
     "manualDue": "Handmatig (vervaldatum {{date}})",
     "addError": "Kan contract niet toevoegen aan klant",
     "deactivateError": "Kan het contract niet deactiveren",
-    "updateError": "Kan contract niet updaten"
+    "updateError": "Kan contract niet updaten",
+    "createContract": "Contract aanmaken",
+    "quickAdd": "Snel toevoegen"
   },
   "clientContractDialog": {
     "assignTitle": "Wijs contract toe aan klant",
@@ -553,7 +762,8 @@
     "startDate": "Startdatum",
     "startDateRequired": "Startdatum is vereist",
     "updateAssignment": "Opdracht bijwerken",
-    "useTenantRenewalDefaults": "Gebruik de standaardwaarden voor huurderverlenging"
+    "useTenantRenewalDefaults": "Gebruik de standaardwaarden voor huurderverlenging",
+    "saveError": "Failed to save contract. Please try again."
   },
   "clientContractLineDashboard": {
     "title": "Gebruiksstatistieken (afgelopen 30 dagen)",
@@ -575,7 +785,10 @@
     "noActiveBucketPlans": "Geen actieve bucketplannen gevonden.",
     "noHours": "Er zijn geen uren geregistreerd in de geselecteerde periode.",
     "noInvoices": "Geen recente facturen gevonden.",
-    "noUsage": "Geen gebruiksgegevens gevonden in de geselecteerde periode."
+    "noUsage": "Geen gebruiksgegevens gevonden in de geselecteerde periode.",
+    "retry": "Opnieuw",
+    "loadError": "Deze sectie kon niet worden geladen.",
+    "balanceDue": "Openstaand saldo"
   },
   "clientContractLineGuide": {
     "title": "Handleiding voor het ondubbelzinnig maken van contractregels",
@@ -854,8 +1067,15 @@
     "email": "E-mail",
     "clientName": "Klantnaam",
     "importCompleteMessage": "{{count}}-clients zijn geïmporteerd",
+    "importCompleteWithErrors": "Import voltooid met fouten",
+    "importResultSummary": "{{created}} aangemaakt, {{updated}} bijgewerkt, {{skipped}} overgeslagen, {{failed}} mislukt",
+    "skippedExistingMessage": "{{count}} klanten zijn overgeslagen omdat ze al bestaan. Schakel \"Update bestaande klanten\" in om ze te overschrijven.",
+    "error": "Fout",
     "updateExistingTitle": "Update bestaande klanten",
-    "updateExistingMessage": "{{count}}-clients bestaan ​​al. Wilt u ze updaten met de nieuwe gegevens?"
+    "updateExistingMessage": "{{count}}-clients bestaan ​​al. Wilt u ze updaten met de nieuwe gegevens?",
+    "invalidRowsBlocked": "Fix {{count}} invalid rows or enable \"Skip invalid records\" before importing.",
+    "noValidRows": "There are no valid client rows to import.",
+    "serverFailures": "{{failed}} of {{total}} clients failed to import. Review the row issues below."
   },
   "clientsList": {
     "name": "Naam",
@@ -967,7 +1187,6 @@
     "title": "Instellingen voor belastingberekening",
     "description": "Configureer hoe belastingen worden berekend voor deze klant.",
     "createDefault": "Maak standaardbelastinginstellingen",
-    "goToBillingTaxSettings": "Ga naar Factureringsbelastinginstellingen",
     "taxExemptStatus": "Belastingvrijstelling",
     "taxExempt": "Belasting vrijgesteld",
     "taxExemptHelp": "Indien ingeschakeld, worden er geen belastingen toegepast op facturen voor deze klant.",
@@ -1002,22 +1221,26 @@
     "taxExemptUpdatedSuccess": "Status van belastingvrijstelling is succesvol bijgewerkt",
     "taxExemptUpdateError": "Kan de status van belastingvrijstelling niet bijwerken",
     "taxSourceExternal": "Extern",
-    "taxSourceHelp": "Beheer standaard belastingtarieven voor klanten in Klantinstellingen → Belastingtarieven, en beheer globale tarieven in Facturering → Belastinginstellingen.",
+    "taxSourceHelp": "Stel de tarieven van deze klant in via Facturering → Belastingtarieven. Stel globale tarieven in via Factureringsinstellingen → Belasting.",
     "taxSourceInternal": "Intern"
   },
   "clientNotesPanel": {
-    "title": "Opmerkingen en snelle informatie",
+    "title": "Notities",
     "initialNote": "Eerste opmerking",
-    "lastUpdated": "Laatst bijgewerkt:",
+    "lastUpdated": "Laatst bijgewerkt: {{value}}",
     "save": "Opslaan",
     "retry": "Opnieuw proberen",
     "loadError": "Notities kunnen niet worden geladen",
     "unknownError": "Onbekende fout",
-    "loadErrorTitle": "Notities kunnen niet worden geladen"
+    "loadErrorTitle": "Notities kunnen niet worden geladen",
+    "loadErrorDescription": "Could not load notes. Please try again."
   },
   "actions": {
     "cancel": "Annuleren",
-    "delete": "Verwijderen"
+    "delete": "Verwijderen",
+    "print": "Afdrukken",
+    "printOptions": "Afdrukopties",
+    "printSelected": "Geselecteerde afdrukken ({{count}})"
   },
   "clients": {
     "locations": {
@@ -1129,6 +1352,208 @@
     "messages": {
       "saveSuccess": "Notities opgeslagen",
       "saveFailed": "Notities opslaan is mislukt"
+    }
+  },
+  "interactions": {
+    "onlineMeeting": {
+      "downloadRecording": "Opname downloaden",
+      "join": "Deelnemen",
+      "noArtifacts": "Er zijn nog geen opnamen of transcripties beschikbaar.",
+      "recordingArtifact": "Opname",
+      "refreshFailed": "Kan opnamen niet vernieuwen. Probeer het opnieuw.",
+      "refreshRecordings": "Opnamen vernieuwen",
+      "sectionTitle": "Onlinevergadering",
+      "transcriptArtifact": "Transcriptie",
+      "viewTranscript": "Transcriptie bekijken"
+    },
+    "quickAdd": {
+      "teams": {
+        "attendees": {
+          "add": "Toevoegen",
+          "addContact": "Selecteer contactpersonen...",
+          "addUser": "Selecteer interne gebruikers...",
+          "badge": {
+            "clientLocation": "Klantlocatie",
+            "contact": "Contact",
+            "email": "E-mail",
+            "internal": "Intern"
+          },
+          "duplicateEmail": "Dat e-mailadres staat al op de deelnemerslijst.",
+          "emailPlaceholder": "naam@voorbeeld.com",
+          "empty": "Nog geen deelnemers toegevoegd.",
+          "helper": "Deelnemers ontvangen een Teams-agenda-uitnodiging van de organisator van de vergadering.",
+          "invalidEmail": "Voer een geldig e-mailadres in.",
+          "label": "Deelnemers",
+          "remove": "{{name}} verwijderen",
+          "tabs": {
+            "contacts": "Contactpersonen",
+            "email": "E-mail",
+            "users": "Gebruikers"
+          }
+        },
+        "checkingCapability": "Beschikbaarheid van Teams-vergaderingen controleren...",
+        "createFailed": "Kan Teams-vergadering niet aanmaken",
+        "createToggle": "Teams-vergadering aanmaken",
+        "endRequired": "Eindtijd is vereist om een Teams-vergadering aan te maken",
+        "startRequired": "Starttijd is vereist om een Teams-vergadering aan te maken",
+        "unavailable": "Het aanmaken van Teams-vergaderingen is niet beschikbaar voor deze tenant."
+      },
+      "loadFailed": "Interaction options could not be loaded. Please try again.",
+      "saveFailed": "The interaction could not be saved. Please try again."
+    },
+    "feed": {
+      "addInteraction": "Interactie toevoegen",
+      "allTypes": "Alle typen",
+      "applyFilters": "Filters toepassen",
+      "endDate": "Einddatum",
+      "filter": "Filteren",
+      "filterDialogTitle": "Interacties filteren",
+      "reset": "Resetten",
+      "searchPlaceholder": "Interacties zoeken",
+      "startDate": "Startdatum",
+      "title": "Interacties",
+      "typePlaceholder": "Interactietype",
+      "loadFailed": "Interactions could not be loaded. Please try again.",
+      "typesLoadFailed": "Interaction types could not be loaded. Please try again."
+    },
+    "overall": {
+      "allContacts": "Alle contacten",
+      "allStatuses": "Alle statussen",
+      "allUsers": "Alle gebruikers",
+      "byUser": "Door {{name}}",
+      "collapse": "Recente interacties samenvouwen",
+      "contactsFromClient": "Contacten van de geselecteerde klant",
+      "endTime": "Eindtijd",
+      "endTimeLabel": "Eindtijd interactie",
+      "endTimePlaceholder": "Filteren tot deze eindtijd",
+      "expand": "Recente interacties uitvouwen",
+      "startTime": "Starttijd",
+      "startTimeLabel": "Starttijd interactie",
+      "startTimePlaceholder": "Filteren vanaf deze starttijd",
+      "statusPlaceholder": "Status",
+      "title": "Recente interacties",
+      "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
+    }
+  },
+  "clientDrawer": {
+    "loadFailed": "Kan klantgegevens niet laden.",
+    "loading": "Laden...",
+    "notFound": "Klant niet gevonden."
+  },
+  "clientTabs": {
+    "assets": {
+      "columns": {
+        "assetTag": "Asset-tag",
+        "details": "Details",
+        "location": "Locatie",
+        "name": "Naam",
+        "purchaseDate": "Aankoopdatum",
+        "serialNumber": "Serienummer",
+        "status": "Status",
+        "type": "Type",
+        "warrantyEnd": "Einde garantie",
+        "agent": "Agent",
+        "patching": "Patches",
+        "coverage": "Dekking"
+      },
+      "details": {
+        "local": "Lokaal",
+        "network": "Netwerk",
+        "noIp": "Geen IP",
+        "none": "Geen details beschikbaar"
+      },
+      "drawerLoadError": "Kan assetdetails momenteel niet laden. Probeer het opnieuw.",
+      "expiredSuffix": "(Verlopen)",
+      "filterByType": "Filteren op type",
+      "inventory": {
+        "subtitle": "Beheer en volg alle assets van de klant",
+        "title": "Assetinventaris"
+      },
+      "loading": "Assets laden...",
+      "loadingHint": "Even geduld terwijl we uw gegevens ophalen",
+      "maintenanceTypes": {
+        "subtitle": "Uitsplitsing per categorie",
+        "title": "Onderhoudstypen"
+      },
+      "overview": {
+        "assetsWithMaintenance": "Assets met onderhoud",
+        "coverageRate": "Dekkingsgraad",
+        "subtitle": "Onderhoudsstatistieken",
+        "title": "Assetoverzicht",
+        "totalSchedules": "Totaal aantal schema's"
+      },
+      "summary": {
+        "activeBadge": "Actief",
+        "maintenanceRate": "Onderhoudspercentage",
+        "needsAttention": "Heeft aandacht nodig",
+        "overdueMaintenance": "Achterstallig onderhoud",
+        "scheduledBadge": "Gepland",
+        "totalAssets": "Totaal aantal assets",
+        "upcomingMaintenance": "Aankomend onderhoud"
+      },
+      "typePlaceholder": "Alle assettypen...",
+      "types": {
+        "all": "Alle assettypen",
+        "mobileDevice": "Mobiel apparaat",
+        "networkDevice": "Netwerkapparaat",
+        "printer": "Printer",
+        "server": "Server",
+        "workstation": "Werkstation"
+      },
+      "loadError": "Kan assets momenteel niet laden.",
+      "retry": "Opnieuw"
+    },
+    "tickets": {
+      "addTicket": "Ticket toevoegen",
+      "filters": {
+        "allAssignees": "Alle toegewezen personen",
+        "allPriorities": "Alle prioriteiten",
+        "categoryPlaceholder": "Filteren op categorie",
+        "reset": "Resetten",
+        "searchPlaceholder": "Tickets zoeken...",
+        "statusPlaceholder": "Status selecteren"
+      },
+      "loadMore": {
+        "label": "Meer tickets laden",
+        "loading": "Laden..."
+      },
+      "loading": "Tickets laden...",
+      "title": "Klanttickets",
+      "toasts": {
+        "loadTicketFailed": "Kan ticket niet laden",
+        "openTicketFailed": "Kan ticket niet openen",
+        "userNotAuthenticated": "Gebruiker niet geauthenticeerd"
+      }
+    }
+  },
+  "clientEquipmentTab": {
+    "retry": "Opnieuw",
+    "loadError": "Deze sectie kon niet worden geladen.",
+    "emptyValue": "—",
+    "orderNumber": "Bestelnummer",
+    "status": "Status",
+    "ordered": "Besteld",
+    "amount": "Bedrag",
+    "product": "Product",
+    "sku": "SKU",
+    "serialNumber": "Serienummer",
+    "delivered": "Geleverd",
+    "asset": "Asset",
+    "viewAsset": "Asset bekijken",
+    "rmaNumber": "RMA-nummer",
+    "opened": "Geopend",
+    "salesOrders": "Verkooporders",
+    "noSalesOrders": "Geen verkooporders voor deze klant.",
+    "deliveredUnits": "Geleverde eenheden",
+    "noDeliveredEquipment": "Geen geleverde apparatuur geregistreerd.",
+    "rmas": "RMA's",
+    "noRmas": "Geen RMA's voor deze klant."
+  },
+  "contacts": {
+    "quickView": {
+      "loading": "Contactpersoon laden...",
+      "notFound": "Contactpersoon niet gevonden.",
+      "loadFailed": "Kan contactpersoon niet laden."
     }
   }
 }

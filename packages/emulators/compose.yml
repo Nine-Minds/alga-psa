@@ -1,0 +1,17 @@
+# Run the full emulator suite as test infrastructure.
+# Build the image first: ./build-image.sh
+services:
+  algasim:
+    image: algasim:dev
+    container_name: algasim
+    ports:
+      - "4010:4010" # msgraph (Microsoft login + Graph v1.0)
+      - "4020:4020" # qbo (Intuit OAuth + v3 company API)
+      - "4030:4030" # webhook-sink
+      - "4040:4040" # smtp-sink (SMTP protocol)
+      - "9500:9500" # control API + console
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9500/control/catalog"]
+      interval: 5s
+      timeout: 3s
+      retries: 10

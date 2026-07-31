@@ -100,11 +100,11 @@ Core architecture:
 
 ## Public Interfaces / Contracts
 1. New script entrypoints under `ee/appliance/scripts/`:
-- `build-images.sh`
+- `historical removed image-build script`
 - `publish-release.sh`
-- `bootstrap-site.sh`
+- `historical removed bootstrap wrapper`
 - `upgrade-site.sh`
-2. Release manifest contract under `ee/appliance/releases/<version>/release.json`:
+2. Release manifest contract under `historical local release metadata (removed)`:
 - `releaseVersion`
 - `os.base`
 - `os.artifacts[]`

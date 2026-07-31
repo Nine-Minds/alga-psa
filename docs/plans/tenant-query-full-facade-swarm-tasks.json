@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "id": "T400A",
+      "title": "Facade raw report SQL tenant tables",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "worker-reporting",
+      "notes": "Update reporting QueryBuilder copies and revenue report raw SQL so Alga tenant scoping is not hand-coded in report SQL."
+    },
+    {
+      "id": "T400B",
+      "title": "Facade global webhook cleanup SQL",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "worker-jobs",
+      "notes": "Replace direct raw webhook_deliveries cleanup with explicit facade/unscoped boundary and focused coverage."
+    },
+    {
+      "id": "T400C",
+      "title": "Facade test utility tenant roots",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "worker-test-utils",
+      "notes": "Move EE/test billing utility direct tenant filters and roots behind tenantDb helpers where practical."
+    },
+    {
+      "id": "T400E",
+      "title": "Facade TestContext tenant roots",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "worker-test-context",
+      "notes": "Move server TestContext direct tenant reads and generic entity helpers behind tenantDb without touching billing helper work."
+    },
+    {
+      "id": "T400F",
+      "title": "Facade small production tenant roots",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "main",
+      "notes": "Moved portal-domain delete and tenant export registered tenant-table paths through tenantDb with source contracts."
+    },
+    {
+      "id": "T400D",
+      "title": "Integrate validation and ledger",
+      "status": "done",
+      "dependsOn": ["T400A", "T400B", "T400C", "T400E", "T400F"],
+      "owner": "main",
+      "notes": "Run focused tests, Alga Dev ticket sanity, update /tmp/act-migration.md, and commit."
+    }
+  ]
+}

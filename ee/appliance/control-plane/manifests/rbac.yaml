@@ -23,6 +23,13 @@ metadata:
       to Kubernetes cluster-admin. Narrow further once setup-engine moves from
       shell commands to typed in-cluster API operations.
 rules:
+  # Interactive support tools use the Kubernetes streaming subresources. The
+  # WebSocket streaming protocol opens these with GET (SPDY used POST/create),
+  # so both verbs are required — create alone authorizes the access review but
+  # the actual exec then 403s. Neither grant permits pod creation or mutation.
+  - apiGroups: [""]
+    resources: ["pods/exec", "pods/portforward"]
+    verbs: ["get", "create"]
   - apiGroups: [""]
     resources: ["namespaces", "configmaps", "secrets", "services", "serviceaccounts", "persistentvolumeclaims", "persistentvolumes", "pods", "pods/log", "events", "resourcequotas", "limitranges"]
     verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
@@ -50,7 +57,9 @@ rules:
     resources: ["helmreleases"]
     verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
   - apiGroups: ["source.toolkit.fluxcd.io"]
-    resources: ["gitrepositories", "helmrepositories", "ocirepositories"]
+    # helmcharts + buckets are needed so `flux reconcile helmrelease --with-source`
+    # (the app-channel update path) can reconcile the HelmChart it generates.
+    resources: ["gitrepositories", "helmrepositories", "ocirepositories", "helmcharts", "buckets"]
     verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
   - apiGroups: ["kustomize.toolkit.fluxcd.io"]
     resources: ["kustomizations"]

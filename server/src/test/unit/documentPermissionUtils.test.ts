@@ -14,21 +14,24 @@ vi.mock('../../lib/auth/rbac', () => ({
   hasPermission: vi.fn()
 }));
 
-vi.mock('@alga-psa/documents/models/documentAssociation', () => ({
-  default: {
-    getByDocumentId: vi.fn()
-  }
-}));
-
 vi.mock('../../lib/db', () => ({
   createTenantKnex: vi.fn()
 }));
 
 import { hasPermission } from '@/lib/auth/rbac';
-import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import { createTenantKnex } from '@/lib/db';
 
-const mockKnexInstance = {} as any;
+// canAccessDocument queries associations through tenantDb:
+//   db('document_associations').where('document_associations.tenant', tenant).select('*').where({ document_id })
+let mockAssociationRows: IDocumentAssociation[] = [];
+const associationBuilder = {
+  where: vi.fn().mockReturnThis(),
+  whereIn: vi.fn().mockReturnThis(),
+  select: vi.fn().mockReturnThis(),
+  then: (resolve: (value: IDocumentAssociation[]) => unknown, reject?: (reason: unknown) => unknown) =>
+    Promise.resolve(mockAssociationRows).then(resolve, reject),
+};
+const mockKnexInstance: any = vi.fn(() => associationBuilder);
 
 describe('documentPermissionUtils', () => {
   const mockUser: IUser = {
@@ -55,6 +58,7 @@ describe('documentPermissionUtils', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAssociationRows = [];
     vi.mocked(createTenantKnex).mockResolvedValue({ knex: mockKnexInstance, tenant: 'tenant-123' });
   });
 
@@ -70,12 +74,14 @@ describe('documentPermissionUtils', () => {
 
     it('should allow access to document with no associations (tenant-level)', async () => {
       vi.mocked(hasPermission).mockResolvedValue(true);
-      vi.mocked(DocumentAssociation.getByDocumentId).mockResolvedValue([]);
+      mockAssociationRows = [];
 
       const result = await canAccessDocument(mockUser, mockDocument);
 
       expect(result).toBe(true);
-      expect(DocumentAssociation.getByDocumentId).toHaveBeenCalledWith(mockKnexInstance, 'doc-123');
+      expect(mockKnexInstance).toHaveBeenCalledWith('document_associations');
+      expect(associationBuilder.where).toHaveBeenCalledWith('document_associations.tenant', 'tenant-123');
+      expect(associationBuilder.where).toHaveBeenCalledWith({ document_id: 'doc-123' });
     });
 
     it('should allow access if user has permission for associated entity (contract)', async () => {
@@ -93,7 +99,7 @@ describe('documentPermissionUtils', () => {
         return false;
       });
 
-      vi.mocked(DocumentAssociation.getByDocumentId).mockResolvedValue([mockAssociation]);
+      mockAssociationRows = [mockAssociation];
 
       const result = await canAccessDocument(mockUser, mockDocument);
 
@@ -116,7 +122,7 @@ describe('documentPermissionUtils', () => {
         return false;
       });
 
-      vi.mocked(DocumentAssociation.getByDocumentId).mockResolvedValue([mockAssociation]);
+      mockAssociationRows = [mockAssociation];
 
       const result = await canAccessDocument(mockUser, mockDocument);
 
@@ -139,7 +145,7 @@ describe('documentPermissionUtils', () => {
         return false;
       });
 
-      vi.mocked(DocumentAssociation.getByDocumentId).mockResolvedValue([mockAssociation]);
+      mockAssociationRows = [mockAssociation];
 
       const result = await canAccessDocument(mockUser, mockDocument);
 
@@ -160,7 +166,7 @@ describe('documentPermissionUtils', () => {
         return false;
       });
 
-      vi.mocked(DocumentAssociation.getByDocumentId).mockResolvedValue([mockAssociation]);
+      mockAssociationRows = [mockAssociation];
 
       const result = await canAccessDocument(mockUser, mockDocument);
 
@@ -192,7 +198,7 @@ describe('documentPermissionUtils', () => {
         return false;
       });
 
-      vi.mocked(DocumentAssociation.getByDocumentId).mockResolvedValue(mockAssociations);
+      mockAssociationRows = mockAssociations;
 
       const result = await canAccessDocument(mockUser, mockDocument);
 
@@ -224,7 +230,7 @@ describe('documentPermissionUtils', () => {
         return false;
       });
 
-      vi.mocked(DocumentAssociation.getByDocumentId).mockResolvedValue(mockAssociations);
+      mockAssociationRows = mockAssociations;
 
       const result = await canAccessDocument(mockUser, mockDocument);
 
@@ -255,8 +261,8 @@ describe('documentPermissionUtils', () => {
       ];
 
       const mockKnex: any = vi.fn();
+      mockKnex.where = vi.fn().mockReturnValue(mockKnex);
       mockKnex.whereIn = vi.fn().mockReturnValue(mockKnex);
-      mockKnex.andWhere = vi.fn().mockReturnValue(mockKnex);
       mockKnex.select = vi.fn().mockResolvedValue([
         { document_id: 'doc-1', entity_type: 'ticket' },
         { document_id: 'doc-2', entity_type: 'contract' },
@@ -294,8 +300,8 @@ describe('documentPermissionUtils', () => {
       }));
 
       const mockKnex: any = vi.fn();
+      mockKnex.where = vi.fn().mockReturnValue(mockKnex);
       mockKnex.whereIn = vi.fn().mockReturnValue(mockKnex);
-      mockKnex.andWhere = vi.fn().mockReturnValue(mockKnex);
       mockKnex.select = vi.fn().mockResolvedValue([]);
       mockKnex.mockImplementation(() => mockKnex);
 

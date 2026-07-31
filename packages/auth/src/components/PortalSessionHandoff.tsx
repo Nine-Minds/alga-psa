@@ -19,6 +19,55 @@ interface ExchangeResponse {
   canonicalHost?: string;
 }
 
+interface ExchangeOutcome {
+  ok: boolean;
+  redirectTo?: string;
+  canonicalHost?: string;
+  networkError?: boolean;
+}
+
+// Dedupe the OTT exchange by token at module scope. The OTT is single-use, so it
+// must be POSTed at most once even if the handoff component mounts more than once
+// (e.g. a Suspense-driven remount). A second POST races the first and fails with
+// `already_consumed`, surfacing an error even though the login actually succeeded.
+const exchangesByOtt = new Map<string, Promise<ExchangeOutcome>>();
+
+async function performExchange(ott: string, returnPath?: string): Promise<ExchangeOutcome> {
+  try {
+    const response = await fetch('/api/client-portal/domain-session', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ott, returnPath }),
+    });
+
+    const payload: ExchangeResponse = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      return { ok: false, canonicalHost: payload?.canonicalHost };
+    }
+
+    return {
+      ok: true,
+      redirectTo: payload?.redirectTo || '/client-portal/dashboard',
+      canonicalHost: payload?.canonicalHost,
+    };
+  } catch {
+    return { ok: false, networkError: true };
+  }
+}
+
+function exchangeOnce(ott: string, returnPath?: string): Promise<ExchangeOutcome> {
+  let existing = exchangesByOtt.get(ott);
+  if (!existing) {
+    existing = performExchange(ott, returnPath);
+    exchangesByOtt.set(ott, existing);
+  }
+  return existing;
+}
+
 export default function PortalSessionHandoff({
   ott,
   returnPath,
@@ -46,61 +95,39 @@ export default function PortalSessionHandoff({
       return;
     }
 
-    let cancelled = false;
-    const controller = new AbortController();
+    let active = true;
+    setState('loading');
+    setError(null);
 
-    async function exchangeSession(): Promise<void> {
-      setState('loading');
-      setError(null);
+    // Reuse the in-flight/settled exchange for this OTT rather than firing (and
+    // aborting) a request per mount. The exchange irreversibly consumes the OTT
+    // and mints the session, so aborting it would throw away a successful login.
+    exchangeOnce(ott, returnPath).then((outcome) => {
+      if (!active) {
+        return;
+      }
 
-      try {
-        const response = await fetch('/api/client-portal/domain-session', {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ ott, returnPath }),
-          signal: controller.signal,
-        });
+      if (outcome.canonicalHost) {
+        setCanonicalHost(outcome.canonicalHost);
+      }
 
-        const payload: ExchangeResponse = await response.json().catch(() => ({}));
+      if (outcome.ok) {
+        router.replace(outcome.redirectTo || '/client-portal/dashboard');
+        return;
+      }
 
-        if (cancelled) {
-          return;
-        }
-
-        if (!response.ok) {
-          setState('error');
-          setError('We could not create a session on this domain. Please try signing in again.');
-          if (payload?.canonicalHost) {
-            setCanonicalHost(payload.canonicalHost);
-          }
-          toast.error(t('auth.messages.handoffFinalizeFailed'));
-          return;
-        }
-
-        if (payload?.canonicalHost) {
-          setCanonicalHost(payload.canonicalHost);
-        }
-
-        const destination = payload?.redirectTo || '/client-portal/dashboard';
-        router.replace(destination);
-      } catch (fetchError) {
-        if (cancelled) {
-          return;
-        }
-        setState('error');
+      setState('error');
+      if (outcome.networkError) {
         setError('We encountered a network issue while finalizing your login.');
         toast.error(t('auth.messages.handoffNetworkIssue'));
+      } else {
+        setError('We could not create a session on this domain. Please try signing in again.');
+        toast.error(t('auth.messages.handoffFinalizeFailed'));
       }
-    }
-
-    void exchangeSession();
+    });
 
     return () => {
-      cancelled = true;
-      controller.abort();
+      active = false;
     };
   }, [ott, returnPath, router]);
 

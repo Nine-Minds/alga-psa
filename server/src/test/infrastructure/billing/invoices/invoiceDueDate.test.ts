@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
-import { getDueDate } from '@alga-psa/billing/actions/billingAndTax';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { Temporal } from '@js-temporal/polyfill';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import { getDueDate } from '@alga-psa/billing/actions/billingAndTax';
 import {
   setupClientTaxConfiguration,
   assignServiceTaxRate,
@@ -12,20 +12,14 @@ import {
 } from '../../../../../test-utils/billingTestHelpers';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
-process.env.DB_PORT = '5432';
+process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
-let mockedTenantId = '11111111-1111-1111-1111-111111111111';
-let mockedUserId = 'mock-user-id';
 
-vi.mock('@alga-psa/auth', () => ({
-  getSession: vi.fn(async () => ({
-    user: {
-      id: mockedUserId,
-      tenant: mockedTenantId
-    }
-  }))
-}));
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
+  return createAuthModuleMock();
+});
 
 vi.mock('server/src/lib/analytics/posthog', () => ({
   analytics: {
@@ -36,7 +30,10 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  // Real module (tenantDb, tenantJoin, ...) — testContext/billingTestHelpers
+  // build real queries against the bootstrapped test database.
+  ...(await importOriginal<typeof import('@alga-psa/db')>()),
   withTransaction: vi.fn(async (knex, callback) => callback(knex)),
   withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
 }));
@@ -50,7 +47,8 @@ vi.mock('@alga-psa/core/logger', () => ({
   }
 }));
 
-vi.mock('@alga-psa/core/secrets', () => ({
+vi.mock('@alga-psa/core/secrets', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
@@ -60,7 +58,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
   })
 }));
 
-vi.mock('@alga-psa/core', () => ({
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
@@ -76,11 +75,12 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   }
 }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/workflow-streams')>()),
   getRedisStreamClient: () => ({
-    publishEvent: vi.fn()
+    publishEvent: vi.fn(),
   }),
-  toStreamEvent: (event: unknown) => event
+  toStreamEvent: (event: unknown) => event,
 }));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
@@ -127,14 +127,12 @@ describe('Invoice Due Date Calculation', () => {
       userType: 'internal'
     });
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
 
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     await configureDefaultTax();
     await ensureDefaultBillingSettings(context);
@@ -143,13 +141,11 @@ describe('Invoice Due Date Calculation', () => {
   beforeEach(async () => {
     context = await resetContext();
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     await configureDefaultTax();
     await ensureDefaultBillingSettings(context);

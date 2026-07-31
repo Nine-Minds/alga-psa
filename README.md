@@ -64,18 +64,50 @@ Feature availability varies by edition, deployment configuration, and enabled fe
 
 ## Product screenshots
 
-These images link directly to screenshots from the [Alga PSA feature tour](https://www.nineminds.com/AlgaPSA-features), [Workflow Automation docs](https://www.nineminds.com/documentation/152-choosing-workflow-triggers), and [Invoice Designer docs](https://www.nineminds.com/documentation/1410-bind-invoice-data-to-your-layout).
+These images link directly to screenshots from the [Alga PSA feature tour](https://www.nineminds.com/AlgaPSA-features), [Workflow Automation docs](https://www.nineminds.com/documentation/152-choosing-workflow-triggers), and [Invoice Designer docs](https://www.nineminds.com/documentation/1419-building-an-invoice-layout).
 
-| Core workflow | Business operations |
-| --- | --- |
-| <img src="https://www.nineminds.com/imported-media/Ticketing-1.gif" alt="Alga PSA ticketing screen" width="420"> | <img src="https://www.nineminds.com/imported-media/Billing%20dashboard.png" alt="Alga PSA billing dashboard" width="420"> |
-| Ticketing views for client requests, assignment, attachments, and follow-up. | Contracts, billing, and invoice-related workflows in one billing area. |
-| <img src="https://www.nineminds.com/imported-media/Screenshot%202026-04-30%20at%2011.33.51%E2%80%AFAM.png" alt="Alga PSA multilingual client portal" width="420"> | <img src="https://www.nineminds.com/imported-media/Screenshot%202026-05-01%20at%201.35.35%20PM.png" alt="Alga PSA time approval screen" width="420"> |
-| Multilingual client portal views for client-facing requests and updates. | Time entry views for recording and reviewing work before billing. |
-| <img src="https://www.nineminds.com/imported-media/Schedule%20view.png" alt="Alga PSA schedule view" width="420"> | <img src="https://www.nineminds.com/docs-images/invoice-designer-workspace.png" alt="Alga PSA invoice and quote designer workspace" width="420"> |
-| Schedule views for dispatch and calendar-based work planning. | Drag-and-drop invoice and quote layout designer for branded PDFs. |
-| <img src="https://www.nineminds.com/docs-images/workflow-designer-ticket-triage.png" alt="Alga PSA visual workflow designer" width="420"> | <img src="https://www.nineminds.com/imported-media/Assets%20Asset%20workspace%20overview.png" alt="Alga PSA asset workspace overview" width="420"> |
-| Visual workflow designer for ticket triage, notifications, approvals, and other repeatable processes. | Asset views for client equipment and service context. |
+<table>
+  <thead>
+    <tr>
+      <th width="50%" align="center">Core workflow</th>
+      <th width="50%" align="center">Business operations</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/Ticketing-1.gif" alt="Alga PSA ticketing screen" width="420"></td>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/Billing%20Cycles.png" alt="Alga PSA billing dashboard" width="420"></td>
+    </tr>
+    <tr>
+      <td width="50%">Ticketing views for client requests, assignment, attachments, and follow-up.</td>
+      <td width="50%">Contracts, billing, and invoice-related workflows in one billing area.</td>
+    </tr>
+    <tr>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/Screenshot%202026-04-30%20at%2011.33.51%E2%80%AFAM.png" alt="Alga PSA multilingual client portal" width="420"></td>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/Screenshot%202026-05-01%20at%201.35.35%20PM.png" alt="Alga PSA time approval screen" width="420"></td>
+    </tr>
+    <tr>
+      <td width="50%">Multilingual client portal views for client-facing requests and updates.</td>
+      <td width="50%">Time entry views for recording and reviewing work before billing.</td>
+    </tr>
+    <tr>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/Schedule%20view.png" alt="Alga PSA schedule view" width="420"></td>
+      <td width="50%"><img src="https://www.nineminds.com/docs-images/invoice-designer-workspace.png" alt="Alga PSA invoice and quote designer workspace" width="420"></td>
+    </tr>
+    <tr>
+      <td width="50%">Schedule views for dispatch and calendar-based work planning.</td>
+      <td width="50%">Drag-and-drop invoice and quote layout designer for branded PDFs.</td>
+    </tr>
+    <tr>
+      <td width="50%"><img src="https://www.nineminds.com/docs-images/workflow-designer-ticket-triage.png" alt="Alga PSA visual workflow designer" width="420"></td>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/Assets%20Asset%20workspace%20overview.png" alt="Alga PSA asset workspace overview" width="420"></td>
+    </tr>
+    <tr>
+      <td width="50%">Visual workflow designer for ticket triage, notifications, approvals, and other repeatable processes.</td>
+      <td width="50%">Asset views for client equipment and service context.</td>
+    </tr>
+  </tbody>
+</table>
 
 ## Quick start
 
@@ -113,6 +145,33 @@ docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.c
 
 For Windows-specific setup, see the [Windows Setup Guide](docs/getting-started/setup_guide_windows.md).
 
+## On-premise appliance (ISO)
+
+The Quick start above runs the Community Edition stack with Docker Compose, which suits teams that want to build on the source or manage the containers themselves. If you want a turnkey on-premise install instead, the appliance ISO installs and configures the full platform for you.
+
+The appliance ships as a single bootable image. It installs Ubuntu Server 24.04, brings up a self-contained Kubernetes runtime, and deploys AlgaPSA with its database, cache, and background workers. You boot the image, answer a short setup wizard, and sign in. There are no containers to assemble and no manifests to write.
+
+The free **Essentials** edition runs the open-source feature set and is community-supported. Each appliance includes a 15-day trial of the Enterprise feature set that you can start from inside the app, and paid editions add the integration layer, a support contract, and an SLA.
+
+### How it installs
+
+1. Register for the appliance at [nineminds.com/self-hosted](https://www.nineminds.com/self-hosted). You receive an install code and an ISO download link by email.
+2. Boot the ISO on your hardware or VM. Ubuntu installs unattended, then the machine reboots and prints a setup URL and one-time token on the console.
+3. Open the setup console on port `8080`, enter your install code, and create the first tenant and administrator. The appliance pulls its images and deploys itself.
+4. Sign in to AlgaPSA on port `3000` and complete the guided onboarding.
+
+A first install takes about 30 to 45 minutes, most of it unattended.
+
+### Appliance requirements
+
+- 64-bit x86 machine or VM running the appliance image (Ubuntu Server 24.04)
+- 4 vCPUs and 16 GB RAM recommended
+- At least 60 GB disk; the installer uses the whole disk you select
+- A reachable IPv4 address; reserve the DHCP lease or set a static address so the setup URL stays stable
+- Outbound HTTPS (port 443) to `license.nineminds.com` and `ghcr.io` to redeem the install code and pull images
+
+For the full walkthrough, see the [Appliance Install Guide](docs/getting-started/appliance_install.md).
+
 ## Technical architecture
 
 The following details are for teams evaluating the technical stack. For deployment requirements, see [Quick start](#quick-start).
@@ -149,6 +208,7 @@ Useful technical docs:
 ### Setup and configuration
 
 - [Complete Setup Guide](docs/getting-started/setup_guide.md)
+- [Appliance Install Guide](docs/getting-started/appliance_install.md)
 - [Windows Setup Guide](docs/getting-started/setup_guide_windows.md)
 - [Configuration Guide](docs/getting-started/configuration_guide.md)
 - [Development Guide](docs/getting-started/development_guide.md)

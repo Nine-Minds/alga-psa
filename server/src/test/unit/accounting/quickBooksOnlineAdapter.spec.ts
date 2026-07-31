@@ -32,8 +32,8 @@ const CLIENT_ID = 'client-qbo-spec';
 type MinimalLine = {
   line_id: string;
   batch_id: string;
-  invoice_id: string;
-  invoice_charge_id: string;
+  document_id: string;
+  document_line_id: string;
   client_id: string;
   amount_cents: number;
   currency_code: string;
@@ -74,8 +74,8 @@ describe('QuickBooksOnlineAdapter service-period export policy', () => {
   const baseLine: MinimalLine = {
     line_id: 'line-qbo-1',
     batch_id: 'batch-qbo-spec',
-    invoice_id: INVOICE_ID,
-    invoice_charge_id: 'charge-qbo-1',
+    document_id: INVOICE_ID,
+    document_line_id: 'charge-qbo-1',
     client_id: CLIENT_ID,
     amount_cents: 12_345,
     currency_code: 'USD',
@@ -272,7 +272,7 @@ describe('QuickBooksOnlineAdapter service-period export policy', () => {
       {
         ...baseLine,
         line_id: 'line-qbo-client',
-        invoice_charge_id: 'charge-qbo-client',
+        document_line_id: 'charge-qbo-client',
         service_period_start: '2025-02-01T00:00:00.000Z',
         service_period_end: '2025-03-01T00:00:00.000Z',
         payload: {
@@ -283,7 +283,7 @@ describe('QuickBooksOnlineAdapter service-period export policy', () => {
       {
         ...baseLine,
         line_id: 'line-qbo-contract',
-        invoice_charge_id: 'charge-qbo-contract',
+        document_line_id: 'charge-qbo-contract',
         amount_cents: 8_765,
         service_period_start: '2025-02-08T00:00:00.000Z',
         service_period_end: '2025-03-08T00:00:00.000Z',
@@ -630,8 +630,8 @@ describe('QuickBooksOnlineAdapter credit-note (CreditMemo) transform', () => {
   const creditNoteLine: MinimalLine = {
     line_id: 'line-cn-1',
     batch_id: 'batch-qbo-spec',
-    invoice_id: 'inv-cn-1',
-    invoice_charge_id: 'charge-cn-1',
+    document_id: 'inv-cn-1',
+    document_line_id: 'charge-cn-1',
     client_id: CLIENT_ID,
     amount_cents: -5000,
     currency_code: 'USD',
@@ -902,8 +902,8 @@ describe('QuickBooksOnlineAdapter class/department transform', () => {
   const baseLine: MinimalLine = {
     line_id: 'line-cls-1',
     batch_id: 'batch-cls',
-    invoice_id: INVOICE_ID,
-    invoice_charge_id: 'charge-cls-1',
+    document_id: INVOICE_ID,
+    document_line_id: 'charge-cls-1',
     client_id: CLIENT_ID,
     amount_cents: 10_000,
     currency_code: 'USD',
@@ -1063,5 +1063,149 @@ describe('QuickBooksOnlineAdapter class/department transform', () => {
     const invoiceHeader = (result.documents[0].payload as any).invoice;
 
     expect(invoiceHeader.DepartmentRef).toEqual({ value: 'dept-east' });
+  });
+});
+
+describe('QuickBooksOnlineAdapter customer auto-provisioning gate', () => {
+  const mockResolver = {
+    resolveServiceMapping: vi.fn(),
+    resolveTaxCodeMapping: vi.fn(),
+    ensureCompanyMapping: vi.fn()
+  };
+
+  const gateLine: MinimalLine = {
+    line_id: 'line-gate-1',
+    batch_id: 'batch-qbo-spec',
+    document_id: INVOICE_ID,
+    document_line_id: 'charge-gate-1',
+    client_id: CLIENT_ID,
+    amount_cents: 10_000,
+    currency_code: 'USD',
+    status: 'ready',
+    payload: null,
+    mapping_resolution: null,
+    service_period_start: null,
+    service_period_end: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  function spyLoadersWithUnmappedClient(adapter: QuickBooksOnlineAdapter) {
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(
+      new Map([
+        [
+          INVOICE_ID,
+          {
+            invoice_id: INVOICE_ID,
+            invoice_number: 'INV-GATE-1',
+            invoice_date: '2026-06-05',
+            due_date: '2026-06-20',
+            total_amount: 10_000,
+            client_id: CLIENT_ID,
+            currency_code: 'USD'
+          }
+        ]
+      ])
+    );
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(
+      new Map([
+        [
+          'charge-gate-1',
+          {
+            item_id: 'charge-gate-1',
+            invoice_id: INVOICE_ID,
+            service_id: 'svc-gate-1',
+            description: 'Managed services',
+            quantity: 1,
+            unit_price: 10_000,
+            net_amount: 10_000,
+            total_price: 10_000,
+            tax_amount: 0,
+            tax_region: null
+          }
+        ]
+      ])
+    );
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue({
+      clients: new Map([
+        [
+          CLIENT_ID,
+          {
+            client_id: CLIENT_ID,
+            client_name: 'Unmapped Newco LLC',
+            billing_email: 'billing@example.com',
+            payment_terms: null
+          }
+        ]
+      ]),
+      // No mapping: this client has never been through the wizard.
+      mappings: new Map()
+    });
+  }
+
+  beforeEach(() => {
+    mockResolver.resolveServiceMapping.mockReset();
+    mockResolver.resolveTaxCodeMapping.mockReset();
+    mockResolver.ensureCompanyMapping.mockReset();
+    getAccountingSyncSettingsMock.mockReset();
+    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: {} as any, tenant: TENANT_ID });
+    vi.spyOn(AccountingMappingResolver, 'create').mockResolvedValue(
+      mockResolver as unknown as AccountingMappingResolver
+    );
+    mockResolver.resolveServiceMapping.mockResolvedValue({
+      external_entity_id: 'ITEM-QBO-1',
+      metadata: {}
+    });
+    mockResolver.resolveTaxCodeMapping.mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('unmapped client with auto-provisioning off (default) → transform refuses to touch the QBO customer list', async () => {
+    getAccountingSyncSettingsMock.mockResolvedValue({
+      autoSyncEnabled: true,
+      autoSyncStartDate: null,
+      autoProvisionCustomers: false,
+      depositAccountRef: null,
+      defaultClassRef: null,
+      defaultDepartmentRef: null,
+      defaultRealm: null
+    });
+
+    const adapter = new QuickBooksOnlineAdapter();
+    spyLoadersWithUnmappedClient(adapter);
+
+    await expect(adapter.transform(buildContext([gateLine]))).rejects.toThrow(
+      /automatic customer creation is disabled/i
+    );
+    expect(mockResolver.ensureCompanyMapping).not.toHaveBeenCalled();
+  });
+
+  it('unmapped client with auto-provisioning explicitly enabled → transform provisions through the resolver', async () => {
+    getAccountingSyncSettingsMock.mockResolvedValue({
+      autoSyncEnabled: true,
+      autoSyncStartDate: null,
+      autoProvisionCustomers: true,
+      depositAccountRef: null,
+      defaultClassRef: null,
+      defaultDepartmentRef: null,
+      defaultRealm: null
+    });
+    mockResolver.ensureCompanyMapping.mockResolvedValue({
+      external_entity_id: 'qb-customer-new',
+      metadata: {}
+    });
+
+    const adapter = new QuickBooksOnlineAdapter();
+    spyLoadersWithUnmappedClient(adapter);
+
+    const result = await adapter.transform(buildContext([gateLine]));
+
+    expect(mockResolver.ensureCompanyMapping).toHaveBeenCalledWith(
+      expect.objectContaining({ companyId: CLIENT_ID })
+    );
+    expect((result.documents[0].payload as any).invoice.CustomerRef).toEqual({ value: 'qb-customer-new' });
   });
 });

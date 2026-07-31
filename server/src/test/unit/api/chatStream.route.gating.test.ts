@@ -12,9 +12,16 @@ const handleTitleStreamMock = vi.hoisted(() => vi.fn<
 const handleChatStreamMock = vi.hoisted(() => vi.fn<
   (req: Request) => Promise<Response>
 >());
+const assertPsaChatProductAccessMock = vi.hoisted(() => vi.fn<
+  () => Promise<Response | null>
+>());
 
 vi.mock('@alga-psa/tenancy/actions', () => ({
   isExperimentalFeatureEnabled: isExperimentalFeatureEnabledMock,
+}));
+
+vi.mock('@/app/api/chat/productAccess', () => ({
+  assertPsaChatProductAccess: assertPsaChatProductAccessMock,
 }));
 
 vi.mock('@product/chat/entry', () => ({
@@ -32,6 +39,8 @@ describe('POST /api/chat/stream/*', () => {
     isExperimentalFeatureEnabledMock.mockReset();
     handleTitleStreamMock.mockReset();
     handleChatStreamMock.mockReset();
+    assertPsaChatProductAccessMock.mockReset();
+    assertPsaChatProductAccessMock.mockResolvedValue(null);
     process.env.EDITION = 'enterprise';
     delete process.env.NEXT_PUBLIC_EDITION;
   });

@@ -56,7 +56,8 @@
       "noOpenTicketsInRange": "Nessun ticket aperto in questo intervallo.",
       "noDate": "Nessuna data",
       "notAvailable": "n/d",
-      "noEmailChannels": "Nessun canale email configurato."
+      "noEmailChannels": "Nessun canale email configurato.",
+      "noCapacity": "n/d — nessuna capacità impostata"
     },
     "fallbackTitle": "Report",
     "dateRange": {
@@ -95,7 +96,12 @@
       "bucketOverageHours": "Extra pacchetto",
       "openAssigned": "Aperti assegnati",
       "activeAssignees": "Assegnatari attivi",
-      "avgResolutionTime": "Tempo medio risoluzione"
+      "avgResolutionTime": "Tempo medio risoluzione",
+      "workedHours": "Ore lavorate",
+      "capacityHours": "Ore di capacità",
+      "utilization": "Utilizzo",
+      "usersWithoutCapacity": "Capacità mancante",
+      "activeUsers": "Utenti attivi"
     },
     "sections": {
       "openByStatus": "Aperti per stato",
@@ -113,7 +119,8 @@
       "upcomingRenewals": "Rinnovi imminenti",
       "bucketUsage": "Uso pacchetto",
       "performanceByAssignee": "Prestazioni per assegnatario",
-      "closedByAssignee": "Chiusi per assegnatario"
+      "closedByAssignee": "Chiusi per assegnatario",
+      "utilizationByUser": "Utilizzo per utente"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -136,9 +143,13 @@
         "title": "Prestazioni del team",
         "description": "Volume del team, responsabilità della risposta, spazi di lavoro multiutente."
       },
+      "employeeUtilization": {
+        "title": "Utilizzo dei dipendenti",
+        "description": "Ore lavorate rispetto alla capacità settimanale di ciascun membro del team."
+      },
       "contractReports": {
         "title": "Report contratti",
-        "description": "Ricavi dei contratti, rinnovi, utilizzo dei pacchetti, redditività semplice."
+        "description": "Ricavi dei contratti, rinnovi, utilizzo dei pacchetti e redditività."
       }
     },
     "table": {
@@ -158,7 +169,11 @@
       "entries": "Voci",
       "ticket": "Ticket",
       "entered": "Inserito",
-      "age": "Eta"
+      "age": "Eta",
+      "workedHours": "Ore lavorate",
+      "capacityHours": "Ore di capacità",
+      "utilization": "Utilizzo",
+      "capacityEstimated": "Stimato dalla capacità settimanale; nessun orario di lavoro impostato."
     },
     "statusValues": {
       "connected": "Connesso",
@@ -220,8 +235,8 @@
         "empty": "Nessun contratto basato su pacchetti trovato"
       },
       "profitability": {
-        "title": "Report di redditività semplice",
-        "description": "Analisi di base dei margini di profitto, con confronto ricavi/costi per contratto",
+        "title": "Report di redditività",
+        "description": "Margine per cliente, contratto e ticket in base alle tariffe di costo interne configurate.",
         "empty": "Nessun dato di redditività disponibile"
       }
     },
@@ -250,6 +265,108 @@
       "upcoming": "In arrivo",
       "yes": "Sì",
       "no": "No"
+    },
+    "profitability": {
+      "formats": {
+        "percent": "{{value}}%",
+        "hours": "{{value}} h",
+        "hourlyRate": "{{value}}/h",
+        "ticketWithNumber": "#{{number}} {{title}}",
+        "billableHours": "{{value}} h fatturabili",
+        "listSeparator": ", ",
+        "attributionUncosted": "{{attribution}} (senza costo)",
+        "unassignedLine": "{{line}} (non assegnato)"
+      },
+      "errors": {
+        "load": "Impossibile caricare i dati di redditività",
+        "title": "Errore durante il caricamento della redditività"
+      },
+      "table": {
+        "revenue": "Ricavi",
+        "laborCost": "Costo del lavoro",
+        "materialCost": "Costo materiali",
+        "margin": "Margine",
+        "marginPct": "Margine %",
+        "hours": "Ore",
+        "ehr": "Tariffa eff.",
+        "client": "Cliente",
+        "agreement": "Contratto",
+        "ticket": "Ticket",
+        "attribution": "Attribuzione",
+        "contractLine": "Riga",
+        "cost": "Costo"
+      },
+      "actions": {
+        "toggleLines": "Mostra/nascondi righe",
+        "apply": "Applica",
+        "configureCostRates": "Configura tariffe di costo",
+        "clearClient": "Tutti i clienti",
+        "clearAgreement": "Tutti i contratti"
+      },
+      "rowTypes": {
+        "adHoc": "Ad hoc",
+        "unattributed": "Non attribuito",
+        "unassigned": "Non assegnato"
+      },
+      "attribution": {
+        "exact": "Esatta",
+        "allocated": "Ripartita",
+        "none": "Nessuna"
+      },
+      "status": {
+        "uncosted": "Senza costo"
+      },
+      "filters": {
+        "startDate": "Data di inizio",
+        "endDate": "Data di fine"
+      },
+      "timingTooltip": "I ricavi sono filtrati per data fattura. Il costo del lavoro è filtrato per data di lavoro. Il costo dei materiali fatturati segue la data fattura; il costo dei materiali non fatturati segue la data di creazione.",
+      "empty": {
+        "costRates": "Le tariffe di costo non sono configurate. Le ore di lavoro risultano senza costo finché non esiste una tariffa predefinita del tenant o una tariffa utente.",
+        "clients": "Nessun dato di redditività per cliente disponibile in questo intervallo.",
+        "lines": "Nessun dettaglio a livello di riga per questa voce.",
+        "tickets": "Nessun dato di redditività dei ticket disponibile per questa selezione.",
+        "agreements": "Nessun dato di redditività per contratto disponibile per questa selezione."
+      },
+      "warnings": {
+        "title": "Avvisi del report",
+        "uncostedMinutes": "{{hours}} ore senza costo",
+        "unattributedMinutes": "{{hours}} ore non attribuite",
+        "unapprovedMinutes": "{{hours}} ore non approvate incluse",
+        "zeroDuration": "{{count}} voci a durata zero",
+        "uncostedMaterials": "{{count}} materiali senza costo",
+        "unconvertedRevenue": "{{count}} righe di ricavi non convertite",
+        "materialCurrencyMismatch": "{{count}} discrepanze di valuta nei materiali"
+      },
+      "summary": {
+        "revenue": "Ricavi",
+        "laborCost": "Costo del lavoro",
+        "materialCost": "Costo materiali",
+        "margin": "Margine",
+        "marginPct": "Margine %",
+        "ehr": "Tariffa oraria effettiva"
+      },
+      "sections": {
+        "clients": "Clienti",
+        "clientsDescription": "Seleziona un cliente per esplorare contratti e ticket.",
+        "agreements": "Contratti di {{client}}",
+        "agreementsDescription": "Le righe ad hoc e non attribuite sono incluse affinché i totali quadrino.",
+        "linesForAgreement": "Righe contratto di {{agreement}}",
+        "tickets": "Ticket",
+        "ticketsForAgreement": "Costi e ricavi dei ticket per {{agreement}}.",
+        "ticketsDescription": "Costo del lavoro e dei materiali, ricavi attribuiti e margine a livello di ticket."
+      },
+      "fallbacks": {
+        "untitledTicket": "Ticket senza titolo"
+      },
+      "print": {
+        "dateRange": "Dal {{start}} al {{end}}",
+        "client": "Cliente",
+        "allClients": "Tutti i clienti",
+        "agreement": "Contratto",
+        "allAgreements": "Tutti i contratti",
+        "currency": "Valuta"
+      }
     }
   },
   "contractPerformance": {

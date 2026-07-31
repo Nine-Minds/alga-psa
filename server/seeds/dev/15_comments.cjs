@@ -1,17 +1,18 @@
-exports.seed = async function (knex) {
-  const tenant = await knex('tenants').select('tenant').first();
-  if (!tenant) return;
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
 
-  const ticket = await knex('tickets')
+exports.seed = async function (knex) {
+  const context = await getFirstTenantSeedContext(knex);
+  if (!context) return;
+
+  const { tenantId, db } = context;
+  const ticket = await db.table('tickets')
     .where({
-      tenant: tenant.tenant,
       title: 'Missing White Rabbit',
     })
     .select('ticket_id')
     .first();
-  const user = await knex('users')
+  const user = await db.table('users')
     .where({
-      tenant: tenant.tenant,
       username: 'glinda',
     })
     .select('user_id')
@@ -42,8 +43,8 @@ exports.seed = async function (knex) {
     const generated = ids.rows?.[0];
     const now = new Date().toISOString();
 
-    await knex('comment_threads').insert({
-      tenant: tenant.tenant,
+    await db.table('comment_threads').insert({
+      tenant: tenantId,
       thread_id: generated.thread_id,
       ticket_id: ticket.ticket_id,
       root_comment_id: generated.comment_id,
@@ -54,8 +55,8 @@ exports.seed = async function (knex) {
       created_by: user.user_id,
     });
 
-    await knex('comments').insert({
-      tenant: tenant.tenant,
+    await db.table('comments').insert({
+      tenant: tenantId,
       comment_id: generated.comment_id,
       thread_id: generated.thread_id,
       ticket_id: ticket.ticket_id,

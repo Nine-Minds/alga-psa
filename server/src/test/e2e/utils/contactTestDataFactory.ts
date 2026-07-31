@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { faker } from '@faker-js/faker';
+import { tenantDb } from '@alga-psa/db';
 import { ContactModel, type CreateContactInput, type UpdateContactInput } from '@alga-psa/shared/models/contactModel';
 import type { ContactEmailAddressInput, ContactEmailCanonicalType } from '@alga-psa/shared/interfaces/contact.interfaces';
 import type { IContact } from '@alga-psa/types';
@@ -227,9 +228,7 @@ export async function createContactsForPagination(
  * @param tenant Tenant ID
  */
 export async function cleanupTestContacts(db: Knex, tenant: string): Promise<void> {
-  await db('contacts')
-    .where('tenant', tenant)
-    .delete();
+  await tenantDb(db, tenant).table('contacts').delete();
 }
 
 /**
@@ -245,8 +244,7 @@ export async function cleanupTestContactsByIds(
 ): Promise<void> {
   if (contactIds.length === 0) return;
   
-  await db('contacts')
-    .where('tenant', tenant)
+  await tenantDb(db, tenant).table('contacts')
     .whereIn('contact_name_id', contactIds)
     .delete();
 }

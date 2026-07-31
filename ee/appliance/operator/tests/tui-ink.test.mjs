@@ -42,7 +42,8 @@ function makeStatus() {
     },
     release: {
       selectedReleaseVersion: '1.0.0',
-      metadata: null,
+      appVersion: '1.0.0',
+      manifestDigest: 'sha256:release',
       appUrl: 'https://psa.example.com',
     },
     configPaths: {
@@ -57,11 +58,8 @@ function makeEnv(overrides = {}) {
   return {
     runtime: {
       assetRoot: '/tmp',
-      bootstrapScript: '/tmp/bootstrap-appliance.sh',
-      upgradeScript: '/tmp/upgrade-appliance.sh',
       resetScript: '/tmp/reset-appliance-data.sh',
       supportBundleScript: '/tmp/collect-support-bundle.sh',
-      releasesDir: '/tmp/releases',
     },
     configBaseDir: '/tmp/config-base',
     siteIds: ['appliance-single-node'],
@@ -78,8 +76,6 @@ function makeEnv(overrides = {}) {
       kubeconfig: '/tmp/kubeconfig',
       talosconfig: '/tmp/talosconfig',
     },
-    releases: ['0.9.0', '1.0.0'],
-    defaultReleaseVersion: '1.0.0',
     nodeIp: '10.0.0.2',
     appUrl: 'https://psa.example.com',
     ...overrides,
@@ -89,8 +85,6 @@ function makeEnv(overrides = {}) {
 function makeActions(overrides = {}) {
   return {
     collectStatus: async () => makeStatus(),
-    runBootstrap: async () => ({ ok: true }),
-    runUpgrade: async () => ({ ok: true }),
     runRepairRelease: async () => ({ ok: true }),
     runReset: async () => ({ ok: true }),
     runSupportBundle: async () => ({ ok: true }),
@@ -152,49 +146,12 @@ test('T007: Ink shell renders persistent layout regions instead of sequential pr
   assert.match(frame, /Actions/);
   assert.match(frame, /Status Dashboard/);
   assert.doesNotMatch(frame, /Live Progress/);
-  assert.match(frame, /Bootstrap/);
+  assert.match(frame, /Status/);
   assert.doesNotMatch(frame, /Select \[1\]/);
   ui.unmount();
 });
 
-test('T008: Ink lifecycle forms are keyboard-navigable, including reset confirmation and missing release states', async () => {
-  const bootstrapUi = render(
-    React.createElement(TuiApp, {
-      initialEnv: makeEnv(),
-      actions: makeActions(),
-      onExit: () => {},
-    }),
-  );
-
-  await sleep(20);
-
-  // Open Bootstrap form from default selection.
-  pressEnter(bootstrapUi);
-  await sleep(20);
-  let frame = bootstrapUi.lastFrame() || '';
-  assert.match(frame, /Bootstrap Form/);
-  assert.match(frame, /Release Version/);
-  assert.match(frame, /Network Mode/);
-  bootstrapUi.unmount();
-
-  // Open a fresh shell for reset flow.
-  const upgradeUi = render(
-    React.createElement(TuiApp, {
-      initialEnv: makeEnv(),
-      actions: makeActions(),
-      onExit: () => {},
-    }),
-  );
-  await sleep(20);
-  pressJ(upgradeUi, 1);
-  await sleep(20);
-  pressEnter(upgradeUi);
-  await sleep(20);
-  frame = upgradeUi.lastFrame() || '';
-  assert.match(frame, /Upgrade Form/);
-  assert.match(frame, /Reconcile After Apply/);
-  upgradeUi.unmount();
-
+test('T008: Ink lifecycle forms are keyboard-navigable, including repair and reset confirmation', async () => {
   const repairUi = render(
     React.createElement(TuiApp, {
       initialEnv: makeEnv(),
@@ -203,16 +160,15 @@ test('T008: Ink lifecycle forms are keyboard-navigable, including reset confirma
     }),
   );
   await sleep(20);
-  pressJ(repairUi, 4);
+  pressJ(repairUi, 2);
   await sleep(20);
   pressEnter(repairUi);
   await sleep(20);
-  frame = repairUi.lastFrame() || '';
+  let frame = repairUi.lastFrame() || '';
   assert.match(frame, /Repair Release Form/);
   assert.match(frame, /Cleanup Failed Workloads/);
   repairUi.unmount();
 
-  // Open a fresh shell for reset flow.
   const resetUi = render(
     React.createElement(TuiApp, {
       initialEnv: makeEnv(),
@@ -223,7 +179,7 @@ test('T008: Ink lifecycle forms are keyboard-navigable, including reset confirma
   await sleep(20);
 
   // Navigate to Reset and verify challenge behavior.
-  pressJ(resetUi, 6);
+  pressJ(resetUi, 4);
   await sleep(20);
   pressEnter(resetUi);
   await sleep(20);
@@ -246,7 +202,7 @@ test('T008: Ink lifecycle forms are keyboard-navigable, including reset confirma
     }),
   );
   await sleep(20);
-  pressJ(resetConfirmUi, 6);
+  pressJ(resetConfirmUi, 4);
   await sleep(20);
   pressEnter(resetConfirmUi);
   await sleep(20);
@@ -257,26 +213,9 @@ test('T008: Ink lifecycle forms are keyboard-navigable, including reset confirma
   assert.match(frame, /Type WIPE appliance-single-node: WIPE/);
   assert.match(frame, /Reset confirmation mismatch|Enter confirm/i);
   resetConfirmUi.unmount();
-
-  // Missing-release state (bootstrap flow).
-  const noReleaseUi = render(
-    React.createElement(TuiApp, {
-      initialEnv: makeEnv({ releases: [], defaultReleaseVersion: null }),
-      actions: makeActions(),
-      onExit: () => {},
-    }),
-  );
-  await sleep(20);
-  pressEnter(noReleaseUi);
-  await sleep(20);
-  const noReleaseFrame = noReleaseUi.lastFrame() || '';
-  assert.match(noReleaseFrame, /Bootstrap Unavailable/);
-  assert.match(noReleaseFrame, /No published appliance releases were/);
-  assert.match(noReleaseFrame, /found\./);
-  noReleaseUi.unmount();
 });
 
-test('Bootstrap is available before site selection, while site-bound actions defer to site picker', async () => {
+test('site-bound actions defer to site picker when no site is selected', async () => {
   const env = makeEnv({
     siteIds: ['site-a', 'site-b'],
     siteSelectionRequired: true,
@@ -301,18 +240,8 @@ test('Bootstrap is available before site selection, while site-bound actions def
   await sleep(20);
   let frame = ui.lastFrame() || '';
   assert.match(frame, /Selected appliance: unselected/);
-  assert.match(frame, /Bootstrap/);
+  assert.match(frame, /Status/);
 
-  pressEnter(ui);
-  await sleep(20);
-  frame = ui.lastFrame() || '';
-  assert.match(frame, /Bootstrap Form/);
-  assert.match(frame, /Site ID/);
-
-  ui.stdin.write('\u001B');
-  await sleep(20);
-  pressJ(ui, 2); // Status
-  await sleep(20);
   pressEnter(ui);
   await sleep(20);
   frame = ui.lastFrame() || '';
@@ -326,10 +255,10 @@ test('T009: Ink progress stream stays in dedicated region while status dashboard
     React.createElement(TuiApp, {
       initialEnv: makeEnv(),
       actions: makeActions({
-        runUpgrade: async (_env, options) => {
+        runRepairRelease: async (_env, options) => {
           options.onProgress?.({ type: 'phase', phase: 'Helm', line: 'Helm phase' });
           options.onProgress?.({ type: 'line', line: 'helmrelease/alga-core reconciling' });
-          options.onProgress?.({ type: 'done', line: 'upgrade complete' });
+          options.onProgress?.({ type: 'done', line: 'repair complete' });
           await sleep(10);
           return { ok: true };
         },
@@ -339,12 +268,12 @@ test('T009: Ink progress stream stays in dedicated region while status dashboard
   );
 
   await sleep(20);
-  pressJ(ui); // Upgrade
+  pressJ(ui, 2); // Repair Release
   await sleep(20);
   pressEnter(ui); // Form
   await sleep(20);
   let frame = ui.lastFrame() || '';
-  assert.match(frame, /Upgrade Form/);
+  assert.match(frame, /Repair Release Form/);
 
   pressEnter(ui); // Confirm
   await sleep(20);
@@ -352,7 +281,7 @@ test('T009: Ink progress stream stays in dedicated region while status dashboard
   await sleep(40);
 
   frame = ui.lastFrame() || '';
-  assert.match(frame, /Upgrade completed successfully/);
+  assert.match(frame, /Repair Release completed successfully/);
   assert.match(frame, /Live Progress/);
   assert.match(frame, /Helm phase/);
   assert.match(frame, /helmrelease\/alga-core reconciling/);
@@ -393,7 +322,7 @@ test('T010: Workload console lists appliance-scoped pods with status columns and
   );
 
   await sleep(20);
-  pressJ(ui, 3); // Workloads
+  pressJ(ui, 1); // Workloads
   await sleep(20);
   pressEnter(ui);
   await sleep(60);
@@ -424,7 +353,7 @@ test('T011: Log viewer opens from workload list and Escape returns to workloads 
     }),
   );
   await sleep(20);
-  pressJ(ui, 3);
+  pressJ(ui, 1);
   await sleep(20);
   pressEnter(ui);
   await sleep(50);
@@ -469,7 +398,7 @@ test('T012: Log viewer prepends older chunks, toggles follow mode, and bounds li
   );
 
   await sleep(20);
-  pressJ(ui, 3);
+  pressJ(ui, 1);
   await sleep(20);
   pressEnter(ui);
   await sleep(40);

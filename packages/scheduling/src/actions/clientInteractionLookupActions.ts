@@ -1,21 +1,34 @@
 'use server';
 
-import { withAuth } from '@alga-psa/auth';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { withAuth, hasPermission } from '@alga-psa/auth';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import type { IClient, IInteraction } from '@alga-psa/types';
+import type { IClient, IInteraction, IUserWithRoles } from '@alga-psa/types';
+
+// MSP-only lookups: these actions back internal scheduling/time-entry UIs
+// and expose tenant-wide client and interaction data, so client-portal
+// callers (user_type 'client') are rejected and the caller must hold the
+// matching read permission.
+async function assertInternalReadAccess(user: IUserWithRoles, resource: 'client' | 'interaction'): Promise<void> {
+  if (user.user_type !== 'internal') {
+    throw new Error('Permission denied: scheduling lookup actions are internal-only');
+  }
+  if (!await hasPermission(user, resource, 'read')) {
+    throw new Error(`Permission denied: cannot read ${resource}`);
+  }
+}
 
 export const getSchedulingClients = withAuth(async (
-  _user,
+  user,
   { tenant },
   includeInactive: boolean = true
 ): Promise<IClient[]> => {
+  await assertInternalReadAccess(user, 'client');
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const query = trx('clients')
+    const query = (tenantDb(trx, tenant) as any).table('clients')
       .select('*')
-      .where('tenant', tenant)
       .orderBy('client_name', 'asc');
 
     if (!includeInactive) {
@@ -27,16 +40,17 @@ export const getSchedulingClients = withAuth(async (
 });
 
 export const getSchedulingClientById = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string
 ): Promise<IClient | null> => {
+  await assertInternalReadAccess(user, 'client');
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const result = await trx('clients')
+    const result = await (tenantDb(trx, tenant) as any).table('clients')
       .select('*')
-      .where({ client_id: clientId, tenant })
+      .where({ client_id: clientId })
       .first();
 
     return (result ?? null) as IClient | null;
@@ -44,15 +58,16 @@ export const getSchedulingClientById = withAuth(async (
 });
 
 export const getSchedulingInteractionById = withAuth(async (
-  _user,
+  user,
   { tenant },
   interactionId: string
 ): Promise<IInteraction> => {
+  await assertInternalReadAccess(user, 'interaction');
   const { knex } = await createTenantKnex();
 
   const interaction = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return trx('interactions')
-      .where('interactions.tenant', tenant)
+    const scopedDb = tenantDb(trx, tenant) as any;
+    const query = scopedDb.table('interactions')
       .select(
         'interactions.*',
         trx.raw('COALESCE(it.type_name, sit.type_name) as type_name'),
@@ -62,30 +77,17 @@ export const getSchedulingInteractionById = withAuth(async (
         'users.username as user_name',
         'statuses.name as status_name',
         'statuses.is_closed as is_status_closed'
-      )
-      .leftJoin('interaction_types as it', function () {
-        this.on('interactions.type_id', '=', 'it.type_id')
-          .andOn('interactions.tenant', '=', 'it.tenant');
-      })
-      .leftJoin('system_interaction_types as sit', function () {
+      );
+    scopedDb.tenantJoin(query, 'interaction_types as it', 'interactions.type_id', 'it.type_id', { type: 'left' });
+    query
+      .leftJoin('system_interaction_types as sit', function (this: any) {
         this.on('interactions.type_id', '=', 'sit.type_id');
-      })
-      .leftJoin('contacts', function () {
-        this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
-          .andOn('interactions.tenant', '=', 'contacts.tenant');
-      })
-      .leftJoin('clients', function () {
-        this.on('interactions.client_id', '=', 'clients.client_id')
-          .andOn('interactions.tenant', '=', 'clients.tenant');
-      })
-      .leftJoin('users', function () {
-        this.on('interactions.user_id', '=', 'users.user_id')
-          .andOn('interactions.tenant', '=', 'users.tenant');
-      })
-      .leftJoin('statuses', function () {
-        this.on('interactions.status_id', '=', 'statuses.status_id')
-          .andOn('interactions.tenant', '=', 'statuses.tenant');
-      })
+      });
+    scopedDb.tenantJoin(query, 'contacts', 'interactions.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
+    scopedDb.tenantJoin(query, 'clients', 'interactions.client_id', 'clients.client_id', { type: 'left' });
+    scopedDb.tenantJoin(query, 'users', 'interactions.user_id', 'users.user_id', { type: 'left' });
+    scopedDb.tenantJoin(query, 'statuses', 'interactions.status_id', 'statuses.status_id', { type: 'left' });
+    return query
       .where('interactions.interaction_id', interactionId)
       .first();
   });

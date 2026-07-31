@@ -11,6 +11,7 @@ import { HiddenCardsExtrasProvider, type ExtraHiddenItem } from '@alga-psa/onboa
 import { isEnterprise } from '@/lib/features';
 import MobileAppCard from '@/components/dashboard/MobileAppCard';
 import WelcomeBanner from '@/components/dashboard/WelcomeBanner';
+import OpportunitySnapshotCard from '@/components/dashboard/OpportunitySnapshotCard';
 import {
   dismissDashboardMobileAppCardAction,
   restoreDashboardMobileAppCardAction,
@@ -240,6 +241,8 @@ const WelcomeDashboard = ({ onboardingSection, initialMobileAppCardDismissed = f
                   {onboardingSection}
                 </HiddenCardsExtrasProvider>
               ) : null}
+
+              <OpportunitySnapshotCard />
 
               <div>
                 <h2 className="text-xl font-semibold mb-4" style={{ color: 'rgb(var(--color-text-900))' }}>

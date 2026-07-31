@@ -32,7 +32,7 @@
   "calendar": {
     "legend": {
       "types": {
-        "ticket": "Biglietto",
+        "ticket": "Ticket",
         "projectTask": "Compito del progetto",
         "nonBillableCategory": "Categoria non fatturabile",
         "adHoc": "Inserimento ad hoc",
@@ -91,7 +91,8 @@
         "single": "Solo questo evento",
         "future": "Questo e gli eventi futuri",
         "all": "Tutti gli eventi"
-      }
+      },
+      "messageWithTeamsWarning": "Sei sicuro di voler eliminare questa voce di pianificazione? Questa azione non può essere annullata. Verrà eliminata anche la riunione Microsoft Teams."
     },
     "print": {
       "title": "Agenda pianificata",
@@ -123,16 +124,21 @@
   "requests": {
     "errors": {
       "load": "Impossibile caricare le richieste di appuntamento",
-      "ticketNotFound": "Biglietto non trovato",
-      "loadTicket": "Impossibile caricare il biglietto",
+      "ticketNotFound": "Ticket non trovato",
+      "loadTicket": "Impossibile caricare il ticket",
       "assignTechnicianRequired": "Si prega di assegnare un tecnico",
       "approve": "Impossibile approvare la richiesta",
       "declineReasonRequired": "Si prega di fornire un motivo per rifiutare",
-      "decline": "Impossibile rifiutare la richiesta"
+      "decline": "Impossibile rifiutare la richiesta",
+      "reschedule": "Impossibile riprogrammare l'appuntamento",
+      "rescheduleDateRequired": "Scegli una nuova data e ora",
+      "generateTeamsMeeting": "Impossibile creare la riunione di Microsoft Teams"
     },
     "feedback": {
       "approved": "Richiesta di appuntamento approvata",
-      "declined": "Richiesta di appuntamento rifiutata"
+      "declined": "Richiesta di appuntamento rifiutata",
+      "rescheduled": "Appuntamento riprogrammato",
+      "teamsMeetingGenerated": "Riunione di Microsoft Teams creata"
     },
     "filters": {
       "statusLabel": "Filtra per stato",
@@ -153,7 +159,7 @@
       "loading": "Caricamento richieste...",
       "empty": "Nessuna richiesta {{status}} trovata",
       "duration": "{{count}} minuti",
-      "ticketFallback": "Biglietto n.{{ticket}}",
+      "ticketFallback": "Ticket n.{{ticket}}",
       "fallbacks": {
         "publicRequest": "Richiesta pubblica"
       }
@@ -175,13 +181,15 @@
         "requestedTime": "Orario richiesto",
         "duration": "Durata",
         "status": "Stato",
-        "linkedTicket": "Biglietto collegato",
+        "linkedTicket": "Ticket collegato",
         "description": "Descrizione",
         "teamsMeeting": "Riunione Teams"
       },
       "actions": {
-        "joinTeamsMeeting": "Partecipa alla riunione Teams"
-      }
+        "joinTeamsMeeting": "Partecipa alla riunione Teams",
+        "generateTeamsMeeting": "Crea riunione Teams"
+      },
+      "teamsMeetingMissing": "Questo appuntamento approvato non ha ancora un link alla riunione Teams."
     },
     "approval": {
       "title": "Dettagli di approvazione",
@@ -189,7 +197,7 @@
         "assignedTechnician": "Assegna Tecnico *",
         "finalDateTime": "Data e ora finali",
         "internalNotes": "Note interne (facoltativo)",
-        "linkedTicket": "Link al biglietto (facoltativo)",
+        "linkedTicket": "Link al ticket (facoltativo)",
         "generateTeamsMeeting": "Genera link riunione Microsoft Teams"
       },
       "placeholders": {
@@ -200,6 +208,12 @@
       "actions": {
         "approve": "Approva",
         "decline": "Rifiuta"
+      },
+      "teamsMeetingFailure": {
+        "title": "Impossibile creare la riunione di Microsoft Teams",
+        "description": "L'appuntamento non è stato approvato. Riprova la creazione della riunione oppure approva senza riunione e creane una più tardi.",
+        "retry": "Riprova",
+        "approveWithout": "Approva senza riunione"
       }
     },
     "decline": {
@@ -212,6 +226,18 @@
       },
       "actions": {
         "confirm": "Conferma rifiuto",
+        "cancel": "Annulla"
+      }
+    },
+    "reschedule": {
+      "title": "Riprogramma",
+      "teamsNote": "I partecipanti riceveranno un invito aggiornato alla riunione di Microsoft Teams.",
+      "fields": {
+        "newDateTime": "Nuova data e ora"
+      },
+      "actions": {
+        "open": "Riprogramma appuntamento",
+        "confirm": "Conferma riprogrammazione",
         "cancel": "Annulla"
       }
     }
@@ -546,7 +572,9 @@
         "title": "Appuntamento approvato",
         "descriptionWithDate": "Questo appuntamento ha avuto origine da una richiesta del cliente ed è stato approvato il {{date}}.",
         "description": "Questo appuntamento è nato da una richiesta del cliente.",
-        "joinTeamsMeeting": "Partecipa alla riunione Teams"
+        "joinTeamsMeeting": "Partecipa alla riunione Teams",
+        "downloadRecording": "Scarica registrazione",
+        "viewTranscript": "Visualizza trascrizione"
       },
       "pending": {
         "title": "Richiesta di appuntamento in sospeso",
@@ -629,6 +657,32 @@
       "single": "Solo questo evento",
       "future": "Questo e gli eventi futuri",
       "all": "Tutti gli eventi"
+    },
+    "errors": {
+      "loadWorkItem": "Failed to load work item."
     }
+  },
+  "actions": {
+    "print": "Stampa",
+    "printOptions": "Opzioni di stampa"
+  },
+  "interactionDetails": {
+    "fields": {
+      "client": "Cliente",
+      "contact": "Contatto",
+      "duration": "Durata",
+      "endTime": "Ora di fine",
+      "notes": "Note",
+      "startTime": "Ora di inizio",
+      "status": "Stato",
+      "title": "Titolo",
+      "user": "Utente"
+    },
+    "noClient": "Nessun cliente associato",
+    "noContact": "Nessun contatto associato",
+    "noTitle": "Nessun titolo",
+    "notAvailable": "N/D",
+    "title": "Dettagli dell'interazione",
+    "unknownUser": "Sconosciuto"
   }
 }

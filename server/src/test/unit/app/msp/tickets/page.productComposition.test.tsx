@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const getCurrentUserMock = vi.fn();
 const getCurrentUserPermissionsMock = vi.fn();
+const getUserPreferenceMock = vi.fn();
 const getCurrentTenantProductMock = vi.fn();
 const getConsolidatedTicketListDataMock = vi.fn();
 const getTicketingDisplaySettingsMock = vi.fn();
@@ -17,6 +18,7 @@ function MspTicketsPageClientMock() {
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: getCurrentUserMock,
   getCurrentUserPermissions: getCurrentUserPermissionsMock,
+  getUserPreference: getUserPreferenceMock,
 }));
 
 vi.mock('@/lib/productAccess', () => ({
@@ -33,10 +35,11 @@ vi.mock('@alga-psa/tickets/actions/ticketDisplaySettings', () => ({
 
 vi.mock('@alga-psa/teams/actions', () => ({
   getTeams: getTeamsMock,
+  isTeamActionError: (value: unknown) => Boolean(value && typeof value === 'object' && 'error' in value),
 }));
 
-vi.mock('@alga-psa/msp-composition/tickets', () => ({
-  MspTicketsPageClient: MspTicketsPageClientMock,
+vi.mock('@alga-psa/msp-composition/tickets/MspTicketsPageClient', () => ({
+  default: MspTicketsPageClientMock,
 }));
 
 const { default: TicketsPage } = await import('server/src/app/msp/tickets/page');
@@ -54,6 +57,7 @@ describe('MSP tickets page product composition', () => {
 
     getCurrentUserMock.mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-1' });
     getCurrentUserPermissionsMock.mockResolvedValue(['ticket:update']);
+    getUserPreferenceMock.mockResolvedValue(null);
     getConsolidatedTicketListDataMock.mockResolvedValue({
       tickets: [],
       totalCount: 0,

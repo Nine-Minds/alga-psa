@@ -42,6 +42,7 @@ interface SidebarProps {
   productCode?: ProductCode;
   permissions: SidebarPermissions;
   permissionsLoaded: boolean;
+  appointmentsEnabled?: boolean;
   initialCollapsed?: boolean;
 }
 
@@ -62,6 +63,7 @@ export function ClientPortalSidebar({
   productCode = 'psa',
   permissions,
   permissionsLoaded,
+  appointmentsEnabled = true,
   initialCollapsed = false,
 }: SidebarProps) {
   const pathname = usePathname();
@@ -108,7 +110,9 @@ export function ClientPortalSidebar({
         { key: 'tickets', href: '/client-portal/tickets', label: t('nav.tickets', 'Tickets'), icon: Ticket },
         { key: 'request-services', href: '/client-portal/request-services', label: t('nav.requestServices', 'Request Services'), icon: LayoutTemplate },
         { key: 'projects', href: '/client-portal/projects', label: t('nav.projects', 'Projects'), icon: ListTodo },
-        { key: 'appointments', href: '/client-portal/appointments', label: t('nav.appointments', 'Appointments'), icon: Calendar },
+        ...(appointmentsEnabled
+          ? [{ key: 'appointments', href: '/client-portal/appointments', label: t('nav.appointments', 'Appointments'), icon: Calendar }]
+          : []),
         { key: 'devices', href: '/client-portal/devices', label: t('nav.myDevices', 'My devices'), icon: Monitor },
       ];
 

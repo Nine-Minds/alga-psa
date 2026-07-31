@@ -1,7 +1,7 @@
 'use server';
 
 import { Knex } from 'knex';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUser } from '@alga-psa/types';
@@ -11,6 +11,50 @@ import type {
   TemplateTask,
   TemplateWizardData,
 } from '@alga-psa/projects/types/templateWizard';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+type ProjectTemplateWizardActionError = ActionMessageError | ActionPermissionError;
+
+function projectTemplateWizardActionErrorFrom(error: unknown): ProjectTemplateWizardActionError | null {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  if (error.message.includes('Permission denied')) {
+    return permissionError(error.message);
+  }
+
+  if (
+    error.message === 'Template name is required' ||
+    error.message === 'New template name is required' ||
+    error.message === 'Template not found' ||
+    error.message === 'Source template not found'
+  ) {
+    return actionError(error.message);
+  }
+
+  return null;
+}
+
+type SourceTemplateStatusMappingRow = {
+  status_id?: string | null;
+  custom_status_name?: string | null;
+  display_order: number;
+};
+
+type SourceTemplatePhaseRow = {
+  template_phase_id: string;
+  phase_name: string;
+  description?: string | null;
+  duration_days?: number | null;
+  start_offset_days?: number | null;
+  order_key: string;
+};
 
 function getTaskMarkdownDescription(task: TemplateTask): string | null {
   if (task.description_rich_text) {
@@ -32,10 +76,19 @@ async function checkPermission(
   }
 }
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 /**
  * Create a template from wizard data
  */
-export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: TemplateWizardData): Promise<string> => {
+export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: TemplateWizardData): Promise<string | ProjectTemplateWizardActionError> => {
+  try {
   // Validate required fields
   if (!data.template_name?.trim()) {
     throw new Error('Template name is required');
@@ -47,7 +100,7 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
     await checkPermission(user, 'project', 'create', trx);
 
     // 1. Create the template
-    const [template] = await trx('project_templates')
+    const [template] = await tenantScopedTable(trx, 'project_templates', tenant)
       .insert({
         tenant,
         template_name: data.template_name.trim(),
@@ -67,7 +120,7 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
 
       for (let i = 0; i < sortedPhases.length; i++) {
         const phase = sortedPhases[i];
-        const [newPhase] = await trx('project_template_phases')
+        const [newPhase] = await tenantScopedTable(trx, 'project_template_phases', tenant)
           .insert({
             tenant,
             template_id: template.template_id,
@@ -87,7 +140,7 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
     const statusMappingMap = new Map<string, string>(); // temp_id → template_status_mapping_id
     if (data.status_mappings && data.status_mappings.length > 0) {
       for (const mapping of data.status_mappings) {
-        const [newMapping] = await trx('project_template_status_mappings')
+        const [newMapping] = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
           .insert({
             tenant,
             template_id: template.template_id,
@@ -132,7 +185,7 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
             ? statusMappingMap.get(task.template_status_mapping_id)
             : null;
 
-          const [newTask] = await trx('project_template_tasks')
+          const [newTask] = await tenantScopedTable(trx, 'project_template_tasks', tenant)
             .insert({
               tenant,
               template_phase_id: templatePhaseId,
@@ -168,7 +221,7 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
               template_task_id: templateTaskId,
               user_id: userId,
             }));
-            await trx('project_template_task_resources').insert(agentInserts);
+            await tenantScopedTable(trx, 'project_template_task_resources', tenant).insert(agentInserts);
           }
         }
       }
@@ -191,18 +244,26 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
         }));
 
       if (checklistInserts.length > 0) {
-        await trx('project_template_checklist_items').insert(checklistInserts);
+        await tenantScopedTable(trx, 'project_template_checklist_items', tenant).insert(checklistInserts);
       }
     }
 
     return template.template_id;
   });
+  } catch (error) {
+    const expected = projectTemplateWizardActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
  * Update an existing template with full wizard data (for editor save)
  */
-export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templateId: string, data: TemplateWizardData): Promise<void> => {
+export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templateId: string, data: TemplateWizardData): Promise<void | ProjectTemplateWizardActionError> => {
+  try {
   // Validate required fields
   if (!data.template_name?.trim()) {
     throw new Error('Template name is required');
@@ -214,8 +275,8 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify template exists
-    const template = await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    const template = await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .first();
 
     if (!template) {
@@ -223,8 +284,8 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
     }
 
     // 1. Update template metadata
-    await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .update({
         template_name: data.template_name.trim(),
         description: data.description?.trim() || null,
@@ -234,13 +295,15 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
       });
 
     // 2. Delete existing status mappings, phases, tasks, dependencies, and checklists
-    await trx('project_template_status_mappings')
-      .where({ template_id: templateId, tenant })
+    await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
+      .where({ template_id: templateId })
       .delete();
 
     // 3. Delete existing phases, tasks, dependencies, and checklists
     // (CASCADE should handle related records)
-    await trx('project_template_phases').where({ template_id: templateId, tenant }).delete();
+    await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_id: templateId })
+      .delete();
 
     // 4. Recreate phases with proper ordering
     const phaseMap = new Map<string, string>();
@@ -250,7 +313,7 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
 
       for (let i = 0; i < sortedPhases.length; i++) {
         const phase = sortedPhases[i];
-        const [newPhase] = await trx('project_template_phases')
+        const [newPhase] = await tenantScopedTable(trx, 'project_template_phases', tenant)
           .insert({
             tenant,
             template_id: templateId,
@@ -269,7 +332,7 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
     const statusMappingMap = new Map<string, string>();
     if (data.status_mappings && data.status_mappings.length > 0) {
       for (const mapping of data.status_mappings) {
-        const [newMapping] = await trx('project_template_status_mappings')
+        const [newMapping] = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
           .insert({
             tenant,
             template_id: templateId,
@@ -312,7 +375,7 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
             ? statusMappingMap.get(task.template_status_mapping_id)
             : null;
 
-          const [newTask] = await trx('project_template_tasks')
+          const [newTask] = await tenantScopedTable(trx, 'project_template_tasks', tenant)
             .insert({
               tenant,
               template_phase_id: templatePhaseId,
@@ -348,7 +411,7 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
               template_task_id: templateTaskId,
               user_id: userId,
             }));
-            await trx('project_template_task_resources').insert(agentInserts);
+            await tenantScopedTable(trx, 'project_template_task_resources', tenant).insert(agentInserts);
           }
         }
       }
@@ -371,17 +434,25 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
         }));
 
       if (checklistInserts.length > 0) {
-        await trx('project_template_checklist_items').insert(checklistInserts);
+        await tenantScopedTable(trx, 'project_template_checklist_items', tenant).insert(checklistInserts);
       }
     }
 
   });
+  } catch (error) {
+    const expected = projectTemplateWizardActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
  * Save a copy of a template as a new template (Save As functionality)
  */
-export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplateId: string, newTemplateName: string): Promise<string> => {
+export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplateId: string, newTemplateName: string): Promise<string | ProjectTemplateWizardActionError> => {
+  try {
   if (!newTemplateName?.trim()) {
     throw new Error('New template name is required');
   }
@@ -392,8 +463,8 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
     await checkPermission(user, 'project', 'create', trx);
 
     // Get source template with all details
-    const sourceTemplate = await trx('project_templates')
-      .where({ template_id: sourceTemplateId, tenant })
+    const sourceTemplate = await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: sourceTemplateId })
       .first();
 
     if (!sourceTemplate) {
@@ -401,7 +472,7 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
     }
 
     // Create new template
-    const [newTemplate] = await trx('project_templates')
+    const [newTemplate] = await tenantScopedTable(trx, 'project_templates', tenant)
       .insert({
         tenant,
         template_name: newTemplateName.trim(),
@@ -414,10 +485,8 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
       .returning('*');
 
     // Copy status mappings
-    const statusMappings = await trx('project_template_status_mappings').where({
-      template_id: sourceTemplateId,
-      tenant,
-    });
+    const statusMappings = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
+      .where({ template_id: sourceTemplateId }) as SourceTemplateStatusMappingRow[];
 
     if (statusMappings.length > 0) {
       const statusInserts = statusMappings.map((mapping) => ({
@@ -427,18 +496,18 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
         custom_status_name: mapping.custom_status_name,
         display_order: mapping.display_order,
       }));
-      await trx('project_template_status_mappings').insert(statusInserts);
+      await tenantScopedTable(trx, 'project_template_status_mappings', tenant).insert(statusInserts);
     }
 
     // Copy phases
-    const sourcePhases = await trx('project_template_phases')
-      .where({ template_id: sourceTemplateId, tenant })
-      .orderBy('order_key');
+    const sourcePhases = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_id: sourceTemplateId })
+      .orderBy('order_key') as SourceTemplatePhaseRow[];
 
     const phaseMap = new Map<string, string>();
 
     for (const phase of sourcePhases) {
-      const [newPhase] = await trx('project_template_phases')
+      const [newPhase] = await tenantScopedTable(trx, 'project_template_phases', tenant)
         .insert({
           tenant,
           template_id: newTemplate.template_id,
@@ -454,8 +523,7 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
     }
 
     // Copy tasks
-    const sourceTasks = await trx('project_template_tasks')
-      .where('tenant', tenant)
+    const sourceTasks = await tenantScopedTable(trx, 'project_template_tasks', tenant)
       .whereIn(
         'template_phase_id',
         sourcePhases.map((p) => p.template_phase_id)
@@ -468,7 +536,7 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
       const newPhaseId = phaseMap.get(task.template_phase_id);
       if (!newPhaseId) continue;
 
-      const [newTask] = await trx('project_template_tasks')
+      const [newTask] = await tenantScopedTable(trx, 'project_template_tasks', tenant)
         .insert({
           tenant,
           template_phase_id: newPhaseId,
@@ -491,17 +559,15 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
     }
 
     // Copy dependencies
-    const sourceDeps = await trx('project_template_dependencies').where({
-      template_id: sourceTemplateId,
-      tenant,
-    });
+    const sourceDeps = await tenantScopedTable(trx, 'project_template_dependencies', tenant)
+      .where({ template_id: sourceTemplateId });
 
     for (const dep of sourceDeps) {
       const newPred = taskMap.get(dep.predecessor_task_id);
       const newSucc = taskMap.get(dep.successor_task_id);
 
       if (newPred && newSucc) {
-        await trx('project_template_dependencies').insert({
+        await tenantScopedTable(trx, 'project_template_dependencies', tenant).insert({
           tenant,
           template_id: newTemplate.template_id,
           predecessor_task_id: newPred,
@@ -515,14 +581,13 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
 
     // Copy checklists
     if (taskMap.size > 0) {
-      const sourceChecklists = await trx('project_template_checklist_items')
-        .where('tenant', tenant)
+      const sourceChecklists = await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
         .whereIn('template_task_id', Array.from(taskMap.keys()));
 
       for (const item of sourceChecklists) {
         const newTaskId = taskMap.get(item.template_task_id);
         if (newTaskId) {
-          await trx('project_template_checklist_items').insert({
+          await tenantScopedTable(trx, 'project_template_checklist_items', tenant).insert({
             tenant,
             template_task_id: newTaskId,
             item_name: item.item_name,
@@ -537,4 +602,11 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
     // Publish event
     return newTemplate.template_id;
   });
+  } catch (error) {
+    const expected = projectTemplateWizardActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });

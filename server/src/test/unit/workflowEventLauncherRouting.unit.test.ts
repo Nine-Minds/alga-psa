@@ -169,7 +169,8 @@ describe('Workflow event launcher routing', () => {
       'event-1',
       expect.objectContaining({
         matched_run_id: 'run-1'
-      })
+      }),
+      'tenant-1'
     );
     expect(launchPublishedWorkflowRun).toHaveBeenCalledWith(
       knexMock,
@@ -186,7 +187,8 @@ describe('Workflow event launcher routing', () => {
         eventType: 'PING',
         sourcePayloadSchemaRef: TEST_SCHEMA_REF,
         triggerMappingApplied: false,
-        execute: true
+        payload: { foo: 'bar' },
+        executionKey: expect.stringMatching(/^event-\d+$/)
       })
     );
   });
@@ -205,18 +207,20 @@ describe('Workflow event launcher routing', () => {
       payloadSchemaRef: TEST_SCHEMA_REF
     })).rejects.toMatchObject({
       status: 500,
-      details: expect.objectContaining({ error: expect.stringContaining('signal failed') })
+      details: expect.objectContaining({ error: 'Workflow event was recorded but delivery failed.' })
     });
 
     expect(workflowEvents.update).not.toHaveBeenCalledWith(
       knexMock,
       'event-1',
-      expect.objectContaining({ matched_run_id: 'run-wait-1' })
+      expect.objectContaining({ matched_run_id: 'run-wait-1' }),
+      'tenant-1'
     );
     expect(workflowEvents.update).toHaveBeenCalledWith(
       knexMock,
       'event-1',
-      expect.objectContaining({ error_message: expect.stringContaining('signal failed') })
+      expect.objectContaining({ error_message: 'Workflow event was recorded but delivery failed.' }),
+      'tenant-1'
     );
   });
 
@@ -230,15 +234,16 @@ describe('Workflow event launcher routing', () => {
       payloadSchemaRef: TEST_SCHEMA_REF
     })).rejects.toMatchObject({
       status: 500,
-      details: expect.objectContaining({ error: expect.stringContaining('temporal unavailable') })
+      details: expect.objectContaining({ error: 'Workflow event was recorded but delivery failed.' })
     });
 
     expect(workflowEvents.update).toHaveBeenCalledWith(
       knexMock,
       'event-1',
       expect.objectContaining({
-        error_message: expect.stringContaining('temporal unavailable')
-      })
+        error_message: 'Workflow event was recorded but delivery failed.'
+      }),
+      'tenant-1'
     );
   });
 });

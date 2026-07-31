@@ -103,7 +103,7 @@
       "providerDisplay": "{{displayName}} ({{executionMode}})",
       "ticketRouting": {
         "title": "Configurazione dell'instradamento dei ticket",
-        "board": "Board",
+        "board": "Bacheca",
         "boardPlaceholder": "Seleziona Board",
         "status": "Stato",
         "statusPlaceholder": "Seleziona stato",
@@ -264,7 +264,8 @@
       "formBehaviorNotObject": "La configurazione del comportamento del modulo deve essere un oggetto JSON",
       "formBehaviorInvalid": "JSON del comportamento del modulo non valido",
       "visibilityNotObject": "La configurazione della visibilità deve essere un oggetto JSON",
-      "visibilityInvalid": "JSON della visibilità non valido"
+      "visibilityInvalid": "JSON della visibilità non valido",
+      "saveAllPartial": "Impossibile salvare alcune sezioni: {{sections}}"
     }
   }
 }

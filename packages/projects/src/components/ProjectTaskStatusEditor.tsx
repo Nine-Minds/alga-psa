@@ -13,7 +13,12 @@ import {
   reorderProjectStatuses
 } from '../actions/projectTaskStatusActions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from 'react-i18next';
 
 interface ProjectTaskStatusEditorProps {
@@ -21,6 +26,10 @@ interface ProjectTaskStatusEditorProps {
   phaseId?: string | null;
   error?: string;
   onChange?: () => void;
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 export function ProjectTaskStatusEditor({
@@ -45,6 +54,18 @@ export function ProjectTaskStatusEditor({
           getProjectStatusMappings(projectId, phaseId),
           getTenantProjectStatuses()
         ]);
+        if (isReturnedActionError(mappings)) {
+          handleError(mappings, t('settings.statuses.load_task_statuses_failed', 'Failed to load task statuses'));
+          setProjectStatusMappings([]);
+          setAvailableStatuses([]);
+          return;
+        }
+        if (isReturnedActionError(tenantStatuses)) {
+          handleError(tenantStatuses, t('settings.statuses.load_task_statuses_failed', 'Failed to load task statuses'));
+          setProjectStatusMappings([]);
+          setAvailableStatuses([]);
+          return;
+        }
         setProjectStatusMappings(mappings);
         setAvailableStatuses(tenantStatuses);
       } catch (error) {
@@ -73,6 +94,10 @@ export function ProjectTaskStatusEditor({
         status_id: statusId,
         is_visible: true
       }, phaseId);
+      if (isReturnedActionError(newMapping)) {
+        toast.error(getErrorMessage(newMapping));
+        return;
+      }
 
       setProjectStatusMappings([...projectStatusMappings, newMapping]);
 
@@ -94,7 +119,11 @@ export function ProjectTaskStatusEditor({
   // Remove a status from the project
   const removeStatus = async (mappingId: string) => {
     try {
-      await deleteProjectStatusMapping(mappingId);
+      const result = await deleteProjectStatusMapping(mappingId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       setProjectStatusMappings(projectStatusMappings.filter(m => m.project_status_mapping_id !== mappingId));
       onChange?.();
       toast.success(t('settings.statuses.removed_success', 'Status removed successfully'));
@@ -117,7 +146,11 @@ export function ProjectTaskStatusEditor({
     }));
 
     try {
-      await reorderProjectStatuses(projectId, statusOrder, phaseId);
+      const result = await reorderProjectStatuses(projectId, statusOrder, phaseId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       
 
       // Update local state with new order
@@ -146,7 +179,11 @@ export function ProjectTaskStatusEditor({
     }));
 
     try {
-      await reorderProjectStatuses(projectId, statusOrder, phaseId);
+      const result = await reorderProjectStatuses(projectId, statusOrder, phaseId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       
 
       // Update local state with new order

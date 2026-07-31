@@ -12,11 +12,18 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
+import { dateTimeFromString, dateTimeToString } from '@alga-psa/ui/lib/dateInput';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { createApiKey, deactivateApiKey, listApiKeys } from '@/lib/actions/apiKeyActions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { Search, RotateCcw } from 'lucide-react';
 
 export interface ApiKey {
@@ -61,10 +68,12 @@ export default function ApiKeysSetup() {
   const [newKeyValue, setNewKeyValue] = useState('');
   const router = useRouter();
 
+  // LEVERAGE: friction datatable-client-paging — re-derives page/size state + reset handler DataTable already owns internally
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // LEVERAGE: pattern datatable-filter-paging — filter state + debounced search + reset-page-to-1 + client filtering re-implemented per table; no list-controller layer
   // Filter state
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -139,7 +148,7 @@ export default function ApiKeysSetup() {
 
   useEffect(() => {
     loadApiKeys();
-  }, [loadApiKeys]);
+  }, [loadApiKeys, t]);
 
   const handleCreateKey = async () => {
     try {
@@ -147,6 +156,10 @@ export default function ApiKeysSetup() {
         description,
         expirationDate ? new Date(expirationDate).toISOString() : undefined
       );
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        handleError(result, t('security.apiKeys.generate.createFailed', 'Failed to create API key'));
+        return;
+      }
       setNewKeyValue(result.api_key);
       setShowNewKeyDialog(true);
       setDescription('');
@@ -154,15 +167,21 @@ export default function ApiKeysSetup() {
       await loadApiKeys();
     } catch (error) {
       console.error('Failed to create API key:', error);
+      toast.error(getErrorMessage(error));
     }
   };
 
   const handleDeactivateKey = useCallback(async (keyId: string) => {
     try {
-      await deactivateApiKey(keyId);
+      const result = await deactivateApiKey(keyId);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        handleError(result, t('security.apiKeys.list.deactivateFailed', 'Failed to deactivate API key'));
+        return;
+      }
       await loadApiKeys();
     } catch (error) {
       console.error('Failed to deactivate API key:', error);
+      toast.error(getErrorMessage(error));
     }
   }, [loadApiKeys]);
 
@@ -252,12 +271,14 @@ export default function ApiKeysSetup() {
           </div>
           <div>
             <Label htmlFor="api-key-expiration">{t('security.apiKeys.generate.expiration', 'Expiration Date (Optional)')}</Label>
-            <Input
+            <DateTimePicker
               id="api-key-expiration"
-              type="datetime-local"
-              value={expirationDate}
-              onChange={(e) => setExpirationDate(e.target.value)}
+              label={t('security.apiKeys.generate.expiration', 'Expiration Date (Optional)')}
+              placeholder={t('security.apiKeys.generate.expiration', 'Expiration Date (Optional)')}
+              clearable
               className="mt-1"
+              value={dateTimeFromString(expirationDate)}
+              onChange={(date) => setExpirationDate(dateTimeToString(date))}
             />
           </div>
           <Button

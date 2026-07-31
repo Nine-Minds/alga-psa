@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 type KnexLike = Awaited<ReturnType<typeof getAdminConnection>>;
@@ -7,6 +8,7 @@ type KnexLike = Awaited<ReturnType<typeof getAdminConnection>>;
 export interface CreateTenantReactivationTokenInput {
   tenantId: string;
   deletionId: string;
+  licenseCount: number;
   expiresAt?: Date;
   knex?: KnexLike;
 }
@@ -22,12 +24,14 @@ export interface TenantReactivationTokenPayload {
   deletion_id: string;
   exp: number;
   nonce: string;
+  license_count: number;
 }
 
 export interface ReservedTenantReactivationToken {
   tenantId: string;
   deletionId: string;
   tokenHash: string;
+  licenseCount: number;
 }
 
 function base64UrlEncode(value: Buffer | string): string {
@@ -59,6 +63,17 @@ function defaultTokenExpiry(): Date {
 
 async function getKnex(knex?: KnexLike): Promise<KnexLike> {
   return knex ?? getAdminConnection();
+}
+
+function tenantReactivationTokens(knex: KnexLike, tenantId: string) {
+  return tenantDb(knex, tenantId).table('tenant_reactivation_tokens');
+}
+
+export function isValidReactivationLicenseCount(value: unknown): value is number {
+  return typeof value === 'number'
+    && Number.isInteger(value)
+    && value >= 1
+    && value <= 1000;
 }
 
 export function hashTenantReactivationToken(token: string): string {
@@ -100,7 +115,8 @@ export function verifyTenantReactivationToken(token: string): TenantReactivation
       typeof payload?.tenant_id !== 'string' ||
       typeof payload?.deletion_id !== 'string' ||
       typeof payload?.exp !== 'number' ||
-      typeof payload?.nonce !== 'string'
+      typeof payload?.nonce !== 'string' ||
+      !isValidReactivationLicenseCount(payload?.license_count)
     ) {
       return null;
     }
@@ -118,18 +134,23 @@ export function verifyTenantReactivationToken(token: string): TenantReactivation
 export async function createTenantReactivationToken(
   input: CreateTenantReactivationTokenInput,
 ): Promise<CreatedTenantReactivationToken> {
+  if (!isValidReactivationLicenseCount(input.licenseCount)) {
+    throw new Error('License count must be an integer from 1 through 1000');
+  }
+
   const expiresAt = input.expiresAt ?? defaultTokenExpiry();
   const nonce = base64UrlEncode(crypto.randomBytes(24));
   const token = signTenantReactivationTokenPayload({
     tenant_id: input.tenantId,
     deletion_id: input.deletionId,
+    license_count: input.licenseCount,
     exp: Math.floor(expiresAt.getTime() / 1000),
     nonce,
   });
   const tokenHash = hashTenantReactivationToken(token);
   const knex = await getKnex(input.knex);
 
-  await knex('tenant_reactivation_tokens').insert({
+  await tenantReactivationTokens(knex, input.tenantId).insert({
     tenant: input.tenantId,
     deletion_id: input.deletionId,
     token_hash: tokenHash,
@@ -156,10 +177,9 @@ export async function reserveTenantReactivationToken(
 
   const knex = await getKnex(knexOverride);
   const tokenHash = hashTenantReactivationToken(token);
-  const rows = await knex('tenant_reactivation_tokens')
+  const rows = await tenantReactivationTokens(knex, payload.tenant_id)
     .where({
       token_hash: tokenHash,
-      tenant: payload.tenant_id,
       deletion_id: payload.deletion_id,
     })
     .whereNull('reserved_at')
@@ -180,6 +200,7 @@ export async function reserveTenantReactivationToken(
     tenantId: row.tenant,
     deletionId: row.deletion_id,
     tokenHash,
+    licenseCount: payload.license_count,
   };
 }
 
@@ -194,10 +215,9 @@ export async function attachCheckoutSessionToReactivationToken(
   }
 
   const knex = await getKnex(knexOverride);
-  const updated = await knex('tenant_reactivation_tokens')
+  const updated = await tenantReactivationTokens(knex, payload.tenant_id)
     .where({
       token_hash: hashTenantReactivationToken(token),
-      tenant: payload.tenant_id,
       deletion_id: payload.deletion_id,
     })
     .whereNotNull('reserved_at')
@@ -220,7 +240,11 @@ export async function consumeTenantReactivationTokenByCheckoutSession(
   }
 
   const knex = await getKnex(knexOverride);
-  const updated = await knex('tenant_reactivation_tokens')
+  const updated = await tenantDb(knex, '__tenant_reactivation_checkout_session_consume__')
+    .unscoped(
+      'tenant_reactivation_tokens',
+      'tenant reactivation checkout completion resolves token by checkout session before tenant context exists',
+    )
     .where({ checkout_session_id: checkoutSessionId })
     .whereNotNull('reserved_at')
     .whereNull('consumed_at')

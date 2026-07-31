@@ -11,13 +11,15 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { createClient, createTenant, createUser } from '../../../../test-utils/testDataFactory';
 
 // Mock dependencies
 vi.mock('server/src/lib/utils/getSecret', () => ({
-  getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+  getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -25,7 +27,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
     getAppSecret: async () => '',
   })),
   secretProvider: {
-    getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+    getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
   },
 }));
 
@@ -79,6 +82,9 @@ describe('Ticket Response State Integration Tests', () => {
   let priorityId: string;
 
   const HOOK_TIMEOUT = 180_000;
+  const scopedTable = (tenant: string, tableName: string) => tenantDb(db, tenant).table(tableName);
+  const schemaTable = (tableName: string, reason: string) =>
+    tenantDb(db, '__ticket_response_state_schema__').unscoped(tableName, reason);
 
   beforeAll(async () => {
     process.env.DB_HOST = process.env.DB_HOST || 'localhost';
@@ -91,12 +97,13 @@ describe('Ticket Response State Integration Tests', () => {
     db = await createTestDbConnection();
 
     // Verify the ticket_response_state enum exists
-    const enumCheck = await db.raw(`
-      SELECT EXISTS (
-        SELECT 1 FROM pg_type WHERE typname = 'ticket_response_state'
-      ) as exists
-    `);
-    if (!enumCheck.rows[0].exists) {
+    const enumCheck = await schemaTable(
+      'pg_type',
+      'schema check verifies ticket_response_state enum exists'
+    )
+      .where({ typname: 'ticket_response_state' })
+      .first('typname');
+    if (!enumCheck) {
       throw new Error('ticket_response_state enum does not exist. Run migrations first.');
     }
 
@@ -111,16 +118,14 @@ describe('Ticket Response State Integration Tests', () => {
 
     // Create required reference data for tenant 1
     boardId = uuidv4();
-    await db('boards').insert({
+    await scopedTable(tenantId, 'boards').insert({
       tenant: tenantId,
       board_id: boardId,
-      name: 'Test Board',
-      created_at: new Date(),
-      updated_at: new Date(),
+      board_name: 'Test Board',
     });
 
     statusId = uuidv4();
-    await db('statuses').insert({
+    await scopedTable(tenantId, 'statuses').insert({
       tenant: tenantId,
       status_id: statusId,
       name: 'Open',
@@ -130,7 +135,7 @@ describe('Ticket Response State Integration Tests', () => {
     });
 
     statusClosedId = uuidv4();
-    await db('statuses').insert({
+    await scopedTable(tenantId, 'statuses').insert({
       tenant: tenantId,
       status_id: statusClosedId,
       name: 'Closed',
@@ -140,7 +145,7 @@ describe('Ticket Response State Integration Tests', () => {
     });
 
     priorityId = uuidv4();
-    await db('priorities').insert({
+    await scopedTable(tenantId, 'priorities').insert({
       tenant: tenantId,
       priority_id: priorityId,
       priority_name: 'Normal',
@@ -163,9 +168,10 @@ describe('Ticket Response State Integration Tests', () => {
   } = {}): Promise<string> {
     const ticketId = uuidv4();
     const ticketNumber = `TEST-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    const ticketTenantId = options.tenantIdOverride ?? tenantId;
 
-    await db('tickets').insert({
-      tenant: options.tenantIdOverride ?? tenantId,
+    await scopedTable(ticketTenantId, 'tickets').insert({
+      tenant: ticketTenantId,
       ticket_id: ticketId,
       ticket_number: ticketNumber,
       title: 'Test Ticket',
@@ -183,40 +189,52 @@ describe('Ticket Response State Integration Tests', () => {
 
   describe('Database Schema Tests', () => {
     it('should have ticket_response_state enum type with correct values', async () => {
-      const result = await db.raw(`
-        SELECT enumlabel
-        FROM pg_enum
-        WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'ticket_response_state')
-        ORDER BY enumsortorder
-      `);
+      const result = await schemaTable(
+        'pg_enum',
+        'schema check reads values for ticket_response_state enum'
+      )
+        .select('enumlabel')
+        .where(
+          'enumtypid',
+          schemaTable(
+            'pg_type',
+            'schema check resolves ticket_response_state enum oid'
+          )
+            .select('oid')
+            .where({ typname: 'ticket_response_state' })
+            .first()
+        )
+        .orderBy('enumsortorder');
 
-      const enumValues = result.rows.map((r: { enumlabel: string }) => r.enumlabel);
+      const enumValues = result.map((r: { enumlabel: string }) => r.enumlabel);
       expect(enumValues).toContain('awaiting_client');
       expect(enumValues).toContain('awaiting_internal');
       expect(enumValues).toHaveLength(2);
     });
 
     it('should have response_state column on tickets table that is nullable', async () => {
-      const result = await db.raw(`
-        SELECT column_name, is_nullable, udt_name
-        FROM information_schema.columns
-        WHERE table_name = 'tickets' AND column_name = 'response_state'
-      `);
+      const result = await schemaTable(
+        'information_schema.columns',
+        'schema check reads tickets.response_state column metadata'
+      )
+        .select('column_name', 'is_nullable', 'udt_name')
+        .where({ table_name: 'tickets', column_name: 'response_state' });
 
-      expect(result.rows.length).toBe(1);
-      expect(result.rows[0].is_nullable).toBe('YES');
-      expect(result.rows[0].udt_name).toBe('ticket_response_state');
+      expect(result.length).toBe(1);
+      expect(result[0].is_nullable).toBe('YES');
+      expect(result[0].udt_name).toBe('ticket_response_state');
     });
 
     it('should have index on (tenant, response_state)', async () => {
-      const result = await db.raw(`
-        SELECT indexname
-        FROM pg_indexes
-        WHERE tablename = 'tickets'
-        AND indexdef LIKE '%response_state%'
-      `);
+      const result = await schemaTable(
+        'pg_indexes',
+        'schema check reads indexes for tickets.response_state'
+      )
+        .select('indexname')
+        .where({ tablename: 'tickets' })
+        .where('indexdef', 'like', '%response_state%');
 
-      expect(result.rows.length).toBeGreaterThan(0);
+      expect(result.length).toBeGreaterThan(0);
     });
   });
 
@@ -224,7 +242,7 @@ describe('Ticket Response State Integration Tests', () => {
     it('should create ticket with response_state=awaiting_client and save correctly', async () => {
       const ticketId = await createTestTicket({ responseState: 'awaiting_client' });
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -235,7 +253,7 @@ describe('Ticket Response State Integration Tests', () => {
     it('should create ticket with response_state=awaiting_internal and save correctly', async () => {
       const ticketId = await createTestTicket({ responseState: 'awaiting_internal' });
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -246,7 +264,7 @@ describe('Ticket Response State Integration Tests', () => {
     it('should create ticket with response_state=null (default)', async () => {
       const ticketId = await createTestTicket({ responseState: null });
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -257,7 +275,7 @@ describe('Ticket Response State Integration Tests', () => {
     it('should create ticket without specifying response_state (defaults to null)', async () => {
       const ticketId = await createTestTicket();
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -270,11 +288,11 @@ describe('Ticket Response State Integration Tests', () => {
     it('should update response_state from null to awaiting_client', async () => {
       const ticketId = await createTestTicket({ responseState: null });
 
-      await db('tickets')
+      await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .update({ response_state: 'awaiting_client', updated_at: new Date() });
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -284,11 +302,11 @@ describe('Ticket Response State Integration Tests', () => {
     it('should update response_state from null to awaiting_internal', async () => {
       const ticketId = await createTestTicket({ responseState: null });
 
-      await db('tickets')
+      await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .update({ response_state: 'awaiting_internal', updated_at: new Date() });
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -298,11 +316,11 @@ describe('Ticket Response State Integration Tests', () => {
     it('should update response_state from awaiting_client to awaiting_internal', async () => {
       const ticketId = await createTestTicket({ responseState: 'awaiting_client' });
 
-      await db('tickets')
+      await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .update({ response_state: 'awaiting_internal', updated_at: new Date() });
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -312,11 +330,11 @@ describe('Ticket Response State Integration Tests', () => {
     it('should update response_state from awaiting_internal to awaiting_client', async () => {
       const ticketId = await createTestTicket({ responseState: 'awaiting_internal' });
 
-      await db('tickets')
+      await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .update({ response_state: 'awaiting_client', updated_at: new Date() });
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -326,11 +344,11 @@ describe('Ticket Response State Integration Tests', () => {
     it('should clear response_state (set to null) from awaiting_client', async () => {
       const ticketId = await createTestTicket({ responseState: 'awaiting_client' });
 
-      await db('tickets')
+      await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .update({ response_state: null, updated_at: new Date() });
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -340,11 +358,11 @@ describe('Ticket Response State Integration Tests', () => {
     it('should clear response_state (set to null) from awaiting_internal', async () => {
       const ticketId = await createTestTicket({ responseState: 'awaiting_internal' });
 
-      await db('tickets')
+      await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .update({ response_state: null, updated_at: new Date() });
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -364,7 +382,7 @@ describe('Ticket Response State Integration Tests', () => {
     });
 
     it('should filter tickets by response_state=awaiting_client', async () => {
-      const tickets = await db('tickets')
+      const tickets = await scopedTable(tenantId, 'tickets')
         .where({ tenant: tenantId, response_state: 'awaiting_client' })
         .select('ticket_id');
 
@@ -375,7 +393,7 @@ describe('Ticket Response State Integration Tests', () => {
     });
 
     it('should filter tickets by response_state=awaiting_internal', async () => {
-      const tickets = await db('tickets')
+      const tickets = await scopedTable(tenantId, 'tickets')
         .where({ tenant: tenantId, response_state: 'awaiting_internal' })
         .select('ticket_id');
 
@@ -386,7 +404,7 @@ describe('Ticket Response State Integration Tests', () => {
     });
 
     it('should filter tickets with null response_state', async () => {
-      const tickets = await db('tickets')
+      const tickets = await scopedTable(tenantId, 'tickets')
         .where({ tenant: tenantId })
         .whereNull('response_state')
         .select('ticket_id');
@@ -398,7 +416,7 @@ describe('Ticket Response State Integration Tests', () => {
     });
 
     it('should filter tickets with any non-null response_state', async () => {
-      const tickets = await db('tickets')
+      const tickets = await scopedTable(tenantId, 'tickets')
         .where({ tenant: tenantId })
         .whereNotNull('response_state')
         .whereIn('ticket_id', [awaitingClientTicketId, awaitingInternalTicketId, nullResponseStateTicketId])
@@ -411,7 +429,7 @@ describe('Ticket Response State Integration Tests', () => {
     });
 
     it('should count tickets by response_state', async () => {
-      const counts = await db('tickets')
+      const counts = await scopedTable(tenantId, 'tickets')
         .where({ tenant: tenantId })
         .whereIn('ticket_id', [awaitingClientTicketId, awaitingInternalTicketId, nullResponseStateTicketId])
         .select('response_state')
@@ -430,16 +448,14 @@ describe('Ticket Response State Integration Tests', () => {
     it('should not allow access to response_state of tickets from other tenants', async () => {
       // Create required data for tenant 2
       const board2Id = uuidv4();
-      await db('boards').insert({
+      await scopedTable(tenant2Id, 'boards').insert({
         tenant: tenant2Id,
         board_id: board2Id,
-        name: 'Test Board 2',
-        created_at: new Date(),
-        updated_at: new Date(),
+        board_name: 'Test Board 2',
       });
 
       const status2Id = uuidv4();
-      await db('statuses').insert({
+      await scopedTable(tenant2Id, 'statuses').insert({
         tenant: tenant2Id,
         status_id: status2Id,
         name: 'Open',
@@ -450,7 +466,7 @@ describe('Ticket Response State Integration Tests', () => {
 
       const user2Id = await createUser(db, tenant2Id, { first_name: 'Tenant2', last_name: 'User' });
       const priority2Id = uuidv4();
-      await db('priorities').insert({
+      await scopedTable(tenant2Id, 'priorities').insert({
         tenant: tenant2Id,
         priority_id: priority2Id,
         priority_name: 'Normal',
@@ -461,7 +477,7 @@ describe('Ticket Response State Integration Tests', () => {
 
       // Create ticket in tenant 2 with response_state
       const ticketId = uuidv4();
-      await db('tickets').insert({
+      await scopedTable(tenant2Id, 'tickets').insert({
         tenant: tenant2Id,
         ticket_id: ticketId,
         ticket_number: `TEST-TENANT2-${Date.now()}`,
@@ -476,14 +492,14 @@ describe('Ticket Response State Integration Tests', () => {
       });
 
       // Try to query from tenant 1's perspective
-      const ticketFromTenant1 = await db('tickets')
+      const ticketFromTenant1 = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
       expect(ticketFromTenant1).toBeUndefined();
 
       // Query from tenant 2's perspective should work
-      const ticketFromTenant2 = await db('tickets')
+      const ticketFromTenant2 = await scopedTable(tenant2Id, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenant2Id })
         .first();
 
@@ -496,14 +512,14 @@ describe('Ticket Response State Integration Tests', () => {
       const tenant1TicketId = await createTestTicket({ responseState: 'awaiting_internal' });
 
       // Query for awaiting_internal in tenant 1 should include the ticket
-      const tenant1Tickets = await db('tickets')
+      const tenant1Tickets = await scopedTable(tenantId, 'tickets')
         .where({ tenant: tenantId, response_state: 'awaiting_internal' })
         .select('ticket_id');
 
       expect(tenant1Tickets.map(t => t.ticket_id)).toContain(tenant1TicketId);
 
       // Query for awaiting_internal in tenant 2 should not include tenant 1 ticket
-      const tenant2Tickets = await db('tickets')
+      const tenant2Tickets = await scopedTable(tenant2Id, 'tickets')
         .where({ tenant: tenant2Id, response_state: 'awaiting_internal' })
         .select('ticket_id');
 
@@ -518,7 +534,7 @@ describe('Ticket Response State Integration Tests', () => {
         statusIdOverride: statusId, // Open status
       });
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -532,7 +548,7 @@ describe('Ticket Response State Integration Tests', () => {
       });
 
       // Close the ticket and clear response_state
-      await db('tickets')
+      await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .update({
           status_id: statusClosedId,
@@ -540,7 +556,7 @@ describe('Ticket Response State Integration Tests', () => {
           updated_at: new Date(),
         });
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -555,7 +571,7 @@ describe('Ticket Response State Integration Tests', () => {
         statusIdOverride: statusId,
       });
 
-      await db('tickets')
+      await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .update({
           status_id: statusClosedId,
@@ -564,14 +580,14 @@ describe('Ticket Response State Integration Tests', () => {
         });
 
       // Reopen the ticket (just change status, don't set response_state)
-      await db('tickets')
+      await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .update({
           status_id: statusId,
           updated_at: new Date(),
         });
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -586,7 +602,7 @@ describe('Ticket Response State Integration Tests', () => {
       const ticketNumber = `TEST-INVALID-${Date.now()}`;
 
       await expect(
-        db('tickets').insert({
+        scopedTable(tenantId, 'tickets').insert({
           tenant: tenantId,
           ticket_id: ticketId,
           ticket_number: ticketNumber,

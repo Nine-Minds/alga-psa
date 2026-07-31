@@ -7,6 +7,7 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
+import { tenantDb } from '@alga-psa/db';
 import {
   CONTACT_PHONE_CANONICAL_TYPES,
   type ContactPhoneCanonicalType,
@@ -48,13 +49,26 @@ const emailRowInputSchema = z.object({
 
 export const contactFormSchema = z.object({
   full_name: z.string().trim().min(1, 'Full name is required'),
-  email: z.union([z.string().trim().email('Invalid email address'), z.literal(''), z.null()]).optional(),
+  // Validate with the same pattern the action/model/client all use, and surface a
+  // single clear message. A z.union([...email(), '', null]) here reported a confusing
+  // wrapped "Validation failed: email: Invalid email address" and could diverge from
+  // the regex used elsewhere, leaving users with an unhelpful error on a bad email.
+  email: z
+    .string()
+    .trim()
+    .nullable()
+    .optional()
+    .refine(
+      (value) => value == null || value === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+      { message: 'Please enter a valid email address' }
+    ),
   primary_email_canonical_type: canonicalEmailTypeSchema.nullish(),
   primary_email_custom_type: z.string().trim().min(1).nullish(),
   primary_email_custom_type_id: z.string().uuid().nullable().optional(),
   additional_email_addresses: z.array(emailRowInputSchema).optional(),
   phone_numbers: z.array(phoneRowInputSchema).optional(),
   client_id: z.string().uuid('Client ID must be a valid UUID').optional().nullable(),
+  inbound_ticket_defaults_id: z.string().uuid('Inbound ticket destination must be a valid UUID').nullable().optional(),
   role: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   is_inactive: z.boolean().optional(),
@@ -162,6 +176,20 @@ type ContactEmailRow = {
   updated_at?: string;
 };
 
+type ContactPhoneTypeDefinitionRow = {
+  contact_phone_type_id: string;
+  label: string;
+  normalized_label: string;
+};
+
+type ContactEmailTypeDefinitionRow = {
+  contact_email_type_id: string;
+  label: string;
+  normalized_label: string;
+};
+
+type ContactEmailTypeLabelRow = Pick<ContactEmailTypeDefinitionRow, 'contact_email_type_id' | 'label'>;
+
 type PreparedPhoneNumberInput = {
   contact_phone_number_id?: string;
   phone_number: string;
@@ -194,6 +222,22 @@ type ContactWithPhones = ContactRecord & Pick<IContact, 'phone_numbers' | 'defau
 
 const phonePattern = /^[0-9A-Za-z+().\-#\s/]+$/;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function tenantScopedTable(trx: Knex.Transaction, table: string, tenant: string): Knex.QueryBuilder {
+  return tenantDb(trx, tenant).table(table);
+}
+
+function tenantJoin(
+  trx: Knex.Transaction,
+  tenant: string,
+  query: Knex.QueryBuilder,
+  table: string,
+  left: string,
+  right: string,
+  options?: Parameters<ReturnType<typeof tenantDb>['tenantJoin']>[4]
+): Knex.QueryBuilder {
+  return tenantDb(trx, tenant).tenantJoin(query, table, left, right, options);
+}
 
 // =============================================================================
 // VALIDATION HELPER FUNCTIONS
@@ -253,6 +297,44 @@ function normalizePhoneForSearch(phoneNumber: string): string {
 
 function normalizeEmailAddress(emailAddress: string): string {
   return emailAddress.trim().toLowerCase();
+}
+
+function contactEmailConflictMessage(error: unknown): string | null {
+  const dbError = error as { code?: string; constraint?: string };
+  if (
+    dbError?.code === '23505' &&
+    (
+      dbError.constraint === 'ux_contact_additional_email_addresses_tenant_normalized_email' ||
+      dbError.constraint === 'contacts_email_tenant_unique' ||
+      dbError.constraint === 'contacts_tenant_email_unique'
+    )
+  ) {
+    return 'EMAIL_EXISTS: A contact with this email address already exists in the system';
+  }
+
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  const message = error.message;
+  if (
+    message.includes('duplicate key') &&
+    (
+      message.includes('ux_contact_additional_email_addresses_tenant_normalized_email') ||
+      message.includes('contacts_email_tenant_unique') ||
+      message.includes('contacts_tenant_email_unique')
+    )
+  ) {
+    return 'EMAIL_EXISTS: A contact with this email address already exists in the system';
+  }
+  if (message.includes('A contact email already exists as an additional email address in this tenant')) {
+    return 'EMAIL_EXISTS: A contact with this email address already exists in the system';
+  }
+  if (message.includes('An additional email address already exists as a contact primary email in this tenant')) {
+    return 'EMAIL_EXISTS: A contact email address already exists in this tenant';
+  }
+
+  return null;
 }
 
 function toPreparedEmailAddressInput(row: ContactEmailRow): PreparedEmailAddressInput {
@@ -599,8 +681,8 @@ export class ContactModel {
     trx: Knex.Transaction,
     excludeContactId?: string
   ): Promise<boolean> {
-    let query = trx('contacts')
-      .where({ email, tenant });
+    let query = tenantScopedTable(trx, 'contacts', tenant)
+      .where('email', email);
 
     if (excludeContactId) {
       query = query.whereNot('contact_name_id', excludeContactId);
@@ -641,8 +723,8 @@ export class ContactModel {
       throw new Error('VALIDATION_ERROR: Please enter a valid email address');
     }
 
-    const existingContact = await trx('contacts')
-      .where({ email: normalizedEmail, tenant })
+    const existingContact = await tenantScopedTable(trx, 'contacts', tenant)
+      .where('email', normalizedEmail)
       .first();
 
     if (existingContact) {
@@ -650,8 +732,8 @@ export class ContactModel {
     }
 
     if (input.client_id) {
-      const client = await trx('clients')
-        .where({ client_id: input.client_id, tenant })
+      const client = await tenantScopedTable(trx, 'clients', tenant)
+        .where('client_id', input.client_id)
         .first();
 
       if (!client) {
@@ -673,6 +755,7 @@ export class ContactModel {
         : (validatedInput.primary_email_canonical_type ?? 'work'),
       primary_email_custom_type_id: primaryEmailCustomTypeId,
       client_id: input.client_id || null,
+      inbound_ticket_defaults_id: validatedInput.inbound_ticket_defaults_id ?? null,
       role: input.role?.trim() || null,
       notes: input.notes?.trim() || null,
       is_inactive: input.is_inactive || false,
@@ -681,7 +764,7 @@ export class ContactModel {
     };
 
     try {
-      await trx('contacts').insert(insertData);
+      await tenantScopedTable(trx, 'contacts', tenant).insert(insertData);
       await this.replacePhoneNumbers(contactId, tenant, validatedInput.phone_numbers, trx, now);
       await this.replaceAdditionalEmailAddresses(contactId, tenant, validatedInput.additional_email_addresses, trx, now);
 
@@ -693,6 +776,11 @@ export class ContactModel {
       return hydratedContact;
     } catch (err) {
       console.error('Error creating contact:', err);
+
+      const emailConflict = contactEmailConflictMessage(err);
+      if (emailConflict) {
+        throw new Error(emailConflict);
+      }
 
       if (err instanceof Error) {
         const message = err.message;
@@ -748,8 +836,8 @@ export class ContactModel {
       additional_email_addresses?: PreparedEmailAddressInput[];
       primary_email_custom_type?: string | null;
     };
-    const existingContact = await trx('contacts')
-      .where({ contact_name_id: contactId, tenant })
+    const existingContact = await tenantScopedTable(trx, 'contacts', tenant)
+      .where('contact_name_id', contactId)
       .first<ContactRecord>();
 
     if (!existingContact) {
@@ -845,8 +933,8 @@ export class ContactModel {
     }
 
     if (updateData.client_id) {
-      const client = await trx('clients')
-        .where({ client_id: updateData.client_id, tenant })
+      const client = await tenantScopedTable(trx, 'clients', tenant)
+        .where('client_id', updateData.client_id)
         .first();
 
       if (!client) {
@@ -892,20 +980,28 @@ export class ContactModel {
       // During a primary-email promotion, clear the existing additional rows before
       // updating contacts.email so immediate uniqueness triggers never see both
       // the old and new primary addresses in conflicting locations at once.
-      await trx('contact_additional_email_addresses')
-        .where({ tenant, contact_name_id: contactId })
+      await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant)
+        .where('contact_name_id', contactId)
         .delete();
     }
 
-    await trx('contacts')
-      .where({ contact_name_id: contactId, tenant })
-      .update(dbData);
+    try {
+      await tenantScopedTable(trx, 'contacts', tenant)
+        .where('contact_name_id', contactId)
+        .update(dbData);
 
-    if (updateData.phone_numbers !== undefined) {
-      await this.replacePhoneNumbers(contactId, tenant, updateData.phone_numbers, trx, now);
-    }
-    if (updateData.additional_email_addresses !== undefined) {
-      await this.replaceAdditionalEmailAddresses(contactId, tenant, updateData.additional_email_addresses, trx, now);
+      if (updateData.phone_numbers !== undefined) {
+        await this.replacePhoneNumbers(contactId, tenant, updateData.phone_numbers, trx, now);
+      }
+      if (updateData.additional_email_addresses !== undefined) {
+        await this.replaceAdditionalEmailAddresses(contactId, tenant, updateData.additional_email_addresses, trx, now);
+      }
+    } catch (err) {
+      const emailConflict = contactEmailConflictMessage(err);
+      if (emailConflict) {
+        throw new Error(emailConflict);
+      }
+      throw err;
     }
 
     const hydratedContact = await this.getContactById(contactId, tenant, trx);
@@ -930,8 +1026,8 @@ export class ContactModel {
 
     const preparedRows = (validation.data ?? []) as PreparedPhoneNumberInput[];
 
-    await trx('contact_phone_numbers')
-      .where({ tenant, contact_name_id: contactId })
+    await tenantScopedTable(trx, 'contact_phone_numbers', tenant)
+      .where('contact_name_id', contactId)
       .delete();
 
     if (preparedRows.length === 0) {
@@ -940,7 +1036,7 @@ export class ContactModel {
 
     const customTypeMap = await this.ensureCustomPhoneTypeDefinitions(preparedRows, tenant, trx, now);
 
-    await trx('contact_phone_numbers').insert(
+    await tenantScopedTable(trx, 'contact_phone_numbers', tenant).insert(
       preparedRows.map((row) => ({
         tenant,
         contact_phone_number_id: row.contact_phone_number_id || uuidv4(),
@@ -981,8 +1077,8 @@ export class ContactModel {
         return (validation.data ?? []) as PreparedEmailAddressInput[];
       })();
 
-    await trx('contact_additional_email_addresses')
-      .where({ tenant, contact_name_id: contactId })
+    await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant)
+      .where('contact_name_id', contactId)
       .delete();
 
     if (preparedRows.length === 0) {
@@ -991,7 +1087,7 @@ export class ContactModel {
 
     const customTypeMap = await this.ensureCustomEmailTypeDefinitions(preparedRows, tenant, trx, now);
 
-    await trx('contact_additional_email_addresses').insert(
+    await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant).insert(
       preparedRows.map((row) => ({
         tenant,
         contact_additional_email_address_id: row.contact_additional_email_address_id || uuidv4(),
@@ -1027,11 +1123,18 @@ export class ContactModel {
       return emailMap;
     }
 
-    const rows = await trx('contact_additional_email_addresses as cea')
-      .leftJoin('contact_email_type_definitions as cecd', function joinCustomType() {
-        this.on('cea.custom_email_type_id', '=', 'cecd.contact_email_type_id')
-          .andOn('cea.tenant', '=', 'cecd.tenant');
-      })
+    const query = tenantScopedTable(trx, 'contact_additional_email_addresses as cea', tenant);
+    tenantJoin(
+      trx,
+      tenant,
+      query,
+      'contact_email_type_definitions as cecd',
+      'cea.custom_email_type_id',
+      'cecd.contact_email_type_id',
+      { type: 'left' }
+    );
+
+    const rows = await query
       .select(
         'cea.contact_additional_email_address_id',
         'cea.contact_name_id',
@@ -1044,7 +1147,6 @@ export class ContactModel {
         'cea.updated_at',
         'cecd.label as custom_type'
       )
-      .where('cea.tenant', tenant)
       .whereIn('cea.contact_name_id', contactIds)
       .orderBy([{ column: 'cea.contact_name_id', order: 'asc' }, { column: 'cea.display_order', order: 'asc' }]);
 
@@ -1088,11 +1190,18 @@ export class ContactModel {
       return phoneMap;
     }
 
-    const rows = await trx('contact_phone_numbers as cpn')
-      .leftJoin('contact_phone_type_definitions as cptd', function joinCustomType() {
-        this.on('cpn.custom_phone_type_id', '=', 'cptd.contact_phone_type_id')
-          .andOn('cpn.tenant', '=', 'cptd.tenant');
-      })
+    const query = tenantScopedTable(trx, 'contact_phone_numbers as cpn', tenant);
+    tenantJoin(
+      trx,
+      tenant,
+      query,
+      'contact_phone_type_definitions as cptd',
+      'cpn.custom_phone_type_id',
+      'cptd.contact_phone_type_id',
+      { type: 'left' }
+    );
+
+    const rows = await query
       .select(
         'cpn.contact_phone_number_id',
         'cpn.contact_name_id',
@@ -1106,7 +1215,6 @@ export class ContactModel {
         'cpn.updated_at',
         'cptd.label as custom_type'
       )
-      .where('cpn.tenant', tenant)
       .whereIn('cpn.contact_name_id', contactIds)
       .orderBy([{ column: 'cpn.contact_name_id', order: 'asc' }, { column: 'cpn.display_order', order: 'asc' }]);
 
@@ -1186,8 +1294,7 @@ export class ContactModel {
       return new Map();
     }
 
-    const rows = await trx('contact_email_type_definitions')
-      .where({ tenant })
+    const rows: ContactEmailTypeLabelRow[] = await tenantScopedTable(trx, 'contact_email_type_definitions', tenant)
       .whereIn('contact_email_type_id', customTypeIds)
       .select('contact_email_type_id', 'label');
 
@@ -1199,8 +1306,8 @@ export class ContactModel {
     tenant: string,
     trx: Knex.Transaction
   ): Promise<IContact | null> {
-    const contact = await trx('contacts')
-      .where({ contact_name_id: contactId, tenant })
+    const contact = await tenantScopedTable(trx, 'contacts', tenant)
+      .where('contact_name_id', contactId)
       .first<ContactRecord>();
 
     if (!contact) {
@@ -1217,8 +1324,8 @@ export class ContactModel {
     trx: Knex.Transaction,
     options: { includeInactive?: boolean } = {}
   ): Promise<IContact[]> {
-    let query = trx('contacts')
-      .where({ client_id: clientId, tenant });
+    let query = tenantScopedTable(trx, 'contacts', tenant)
+      .where('client_id', clientId);
 
     if (!options.includeInactive) {
       query = query.where(function activeOnly() {
@@ -1237,8 +1344,8 @@ export class ContactModel {
   ): Promise<IContact | null> {
     const normalizedEmail = normalizeEmailAddress(email);
 
-    const contact = await trx('contacts')
-      .where({ email: normalizedEmail, tenant })
+    const contact = await tenantScopedTable(trx, 'contacts', tenant)
+      .where('email', normalizedEmail)
       .first<ContactRecord>();
 
     if (contact) {
@@ -1246,10 +1353,9 @@ export class ContactModel {
       return hydrated as IContact;
     }
 
-    const additionalEmailMatch = await trx('contact_additional_email_addresses')
+    const additionalEmailMatch = await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant)
       .select('contact_name_id')
       .where({
-        tenant,
         normalized_email_address: normalizedEmail,
       })
       .first<{ contact_name_id: string }>();
@@ -1266,8 +1372,8 @@ export class ContactModel {
     tenant: string,
     trx: Knex.Transaction
   ): Promise<boolean> {
-    const result = await trx('contacts')
-      .where({ contact_name_id: contactId, tenant })
+    const result = await tenantScopedTable(trx, 'contacts', tenant)
+      .where('contact_name_id', contactId)
       .count('* as count')
       .first();
 
@@ -1295,25 +1401,23 @@ export class ContactModel {
     trx: Knex.Transaction,
     options: { limit?: number; includeInactive?: boolean } = {}
   ): Promise<IContact[]> {
-    let query = trx('contacts as c')
-      .where('c.tenant', tenant)
+    const normalizedSearchDigits = normalizePhoneForSearch(searchTerm);
+    const phoneSearchQuery = tenantScopedTable(trx, 'contact_phone_numbers as cpn', tenant)
+      .select(trx.raw('1'))
+      .whereRaw('cpn.contact_name_id = c.contact_name_id')
+      .andWhere(function matchPhone() {
+        this.where('cpn.phone_number', 'ilike', `%${searchTerm}%`);
+
+        if (normalizedSearchDigits) {
+          this.orWhere('cpn.normalized_phone_number', 'like', `%${normalizedSearchDigits}%`);
+        }
+      });
+
+    let query = tenantScopedTable(trx, 'contacts as c', tenant)
       .where(function searchByTerm() {
         this.where('c.full_name', 'ilike', `%${searchTerm}%`)
           .orWhere('c.email', 'ilike', `%${searchTerm}%`)
-          .orWhereExists(function searchPhones() {
-            this.select(trx.raw('1'))
-              .from('contact_phone_numbers as cpn')
-              .whereRaw('cpn.tenant = c.tenant')
-              .andWhereRaw('cpn.contact_name_id = c.contact_name_id')
-              .andWhere(function matchPhone() {
-                this.where('cpn.phone_number', 'ilike', `%${searchTerm}%`);
-
-                const normalizedDigits = normalizePhoneForSearch(searchTerm);
-                if (normalizedDigits) {
-                  this.orWhere('cpn.normalized_phone_number', 'like', `%${normalizedDigits}%`);
-                }
-              });
-          });
+          .orWhereExists(phoneSearchQuery);
       });
 
     if (!options.includeInactive) {
@@ -1340,24 +1444,23 @@ export class ContactModel {
   ): Promise<{ label: string; usageCount: number }> {
     const normalized = customTypeLabel.trim().replace(/\s+/g, ' ').toLowerCase();
 
-    const definition = await trx('contact_email_type_definitions')
-      .where({ tenant, normalized_label: normalized })
+    const definition = await tenantScopedTable(trx, 'contact_email_type_definitions', tenant)
+      .where('normalized_label', normalized)
       .first<{ contact_email_type_id: string }>();
 
     if (!definition) {
       return { label: customTypeLabel, usageCount: 0 };
     }
 
-    const additionalRows = await trx('contact_additional_email_addresses')
+    const additionalRows = await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant)
       .where({
-        tenant,
         custom_email_type_id: definition.contact_email_type_id,
       })
       .count<{ count: string }>('* as count')
       .first();
 
-    const primaryRows = await trx('contacts')
-      .where({ tenant, primary_email_custom_type_id: definition.contact_email_type_id })
+    const primaryRows = await tenantScopedTable(trx, 'contacts', tenant)
+      .where('primary_email_custom_type_id', definition.contact_email_type_id)
       .count<{ count: string }>('* as count')
       .first();
 
@@ -1375,8 +1478,8 @@ export class ContactModel {
     tenant: string,
     trx: Knex.Transaction
   ): Promise<Array<{ contact_email_type_id: string; label: string }>> {
-    const contact = await trx('contacts')
-      .where({ contact_name_id: contactId, tenant })
+    const contact = await tenantScopedTable(trx, 'contacts', tenant)
+      .where('contact_name_id', contactId)
       .first<ContactRecord>();
 
     if (!contact) {
@@ -1388,8 +1491,8 @@ export class ContactModel {
       contactTypeIds.add(contact.primary_email_custom_type_id);
     }
 
-    const additionalTypeIds = await trx('contact_additional_email_addresses')
-      .where({ tenant, contact_name_id: contactId })
+    const additionalTypeIds = await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant)
+      .where('contact_name_id', contactId)
       .whereNotNull('custom_email_type_id')
       .distinct('custom_email_type_id')
       .pluck('custom_email_type_id');
@@ -1401,8 +1504,7 @@ export class ContactModel {
 
     const typeIds = Array.from(contactTypeIds);
 
-    const additionalCounts = await trx('contact_additional_email_addresses')
-      .where({ tenant })
+    const additionalCounts = await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant)
       .whereIn('custom_email_type_id', typeIds)
       .groupBy('custom_email_type_id')
       .select('custom_email_type_id')
@@ -1412,8 +1514,7 @@ export class ContactModel {
       additionalCounts.map((row) => [row.custom_email_type_id, Number(row.count)]),
     );
 
-    const primaryCounts = await trx('contacts')
-      .where({ tenant })
+    const primaryCounts = await tenantScopedTable(trx, 'contacts', tenant)
       .whereNotNull('primary_email_custom_type_id')
       .whereIn('primary_email_custom_type_id', typeIds)
       .groupBy('primary_email_custom_type_id')
@@ -1430,8 +1531,7 @@ export class ContactModel {
 
     if (singleUseTypeIds.length === 0) return [];
 
-    return trx('contact_email_type_definitions')
-      .where({ tenant })
+    return tenantScopedTable(trx, 'contact_email_type_definitions', tenant)
       .whereIn('contact_email_type_id', singleUseTypeIds)
       .select('contact_email_type_id', 'label');
   }
@@ -1443,22 +1543,19 @@ export class ContactModel {
     tenant: string,
     trx: Knex.Transaction
   ): Promise<Array<{ contact_email_type_id: string; label: string }>> {
-    const usedInContacts = await trx('contacts')
-      .where({ tenant })
+    const usedInContacts = await tenantScopedTable(trx, 'contacts', tenant)
       .whereNotNull('primary_email_custom_type_id')
       .distinct('primary_email_custom_type_id')
       .pluck('primary_email_custom_type_id');
 
-    const usedInAdditional = await trx('contact_additional_email_addresses')
-      .where({ tenant })
+    const usedInAdditional = await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant)
       .whereNotNull('custom_email_type_id')
       .distinct('custom_email_type_id')
       .pluck('custom_email_type_id');
 
     const usedTypeIds = Array.from(new Set([...usedInContacts, ...usedInAdditional]));
 
-    const query = trx('contact_email_type_definitions')
-      .where({ tenant })
+    const query = tenantScopedTable(trx, 'contact_email_type_definitions', tenant)
       .select('contact_email_type_id', 'label');
 
     if (usedTypeIds.length > 0) {
@@ -1477,8 +1574,7 @@ export class ContactModel {
     trx: Knex.Transaction
   ): Promise<number> {
     if (typeIds.length === 0) return 0;
-    return trx('contact_email_type_definitions')
-      .where({ tenant })
+    return tenantScopedTable(trx, 'contact_email_type_definitions', tenant)
       .whereIn('contact_email_type_id', typeIds)
       .delete();
   }
@@ -1493,12 +1589,17 @@ export class ContactModel {
   ): Promise<{ label: string; usageCount: number }> {
     const normalized = customTypeLabel.trim().replace(/\s+/g, ' ').toLowerCase();
 
-    const result = await trx('contact_phone_numbers as cpn')
-      .join('contact_phone_type_definitions as cptd', function joinType() {
-        this.on('cpn.custom_phone_type_id', '=', 'cptd.contact_phone_type_id')
-          .andOn('cpn.tenant', '=', 'cptd.tenant');
-      })
-      .where('cpn.tenant', tenant)
+    const query = tenantScopedTable(trx, 'contact_phone_numbers as cpn', tenant);
+    tenantJoin(
+      trx,
+      tenant,
+      query,
+      'contact_phone_type_definitions as cptd',
+      'cpn.custom_phone_type_id',
+      'cptd.contact_phone_type_id'
+    );
+
+    const result = await query
       .where('cptd.normalized_label', normalized)
       .count<{ count: string }>('* as count')
       .first();
@@ -1516,8 +1617,8 @@ export class ContactModel {
     trx: Knex.Transaction
   ): Promise<Array<{ contact_phone_type_id: string; label: string }>> {
     // Get custom type IDs used by this contact
-    const contactTypeIds = await trx('contact_phone_numbers')
-      .where({ tenant, contact_name_id: contactId })
+    const contactTypeIds = await tenantScopedTable(trx, 'contact_phone_numbers', tenant)
+      .where('contact_name_id', contactId)
       .whereNotNull('custom_phone_type_id')
       .distinct('custom_phone_type_id')
       .pluck('custom_phone_type_id');
@@ -1525,8 +1626,7 @@ export class ContactModel {
     if (contactTypeIds.length === 0) return [];
 
     // Find which of those are used ONLY by this contact
-    const usageCounts = await trx('contact_phone_numbers')
-      .where('tenant', tenant)
+    const usageCounts = await tenantScopedTable(trx, 'contact_phone_numbers', tenant)
       .whereIn('custom_phone_type_id', contactTypeIds)
       .groupBy('custom_phone_type_id')
       .select('custom_phone_type_id')
@@ -1538,8 +1638,7 @@ export class ContactModel {
 
     if (singleUseIds.length === 0) return [];
 
-    return trx('contact_phone_type_definitions')
-      .where({ tenant })
+    return tenantScopedTable(trx, 'contact_phone_type_definitions', tenant)
       .whereIn('contact_phone_type_id', singleUseIds)
       .select('contact_phone_type_id', 'label');
   }
@@ -1552,13 +1651,19 @@ export class ContactModel {
     tenant: string,
     trx: Knex.Transaction
   ): Promise<Array<{ contact_phone_type_id: string; label: string }>> {
-    return trx('contact_phone_type_definitions as cptd')
-      .leftJoin('contact_phone_numbers as cpn', function joinPhones() {
-        this.on('cptd.contact_phone_type_id', '=', 'cpn.custom_phone_type_id')
-          .andOn('cptd.tenant', '=', 'cpn.tenant');
-      })
+    const query = tenantScopedTable(trx, 'contact_phone_type_definitions as cptd', tenant);
+    tenantJoin(
+      trx,
+      tenant,
+      query,
+      'contact_phone_numbers as cpn',
+      'cptd.contact_phone_type_id',
+      'cpn.custom_phone_type_id',
+      { type: 'left' }
+    );
+
+    return query
       .whereNull('cpn.contact_phone_number_id')
-      .where('cptd.tenant', tenant)
       .select('cptd.contact_phone_type_id', 'cptd.label');
   }
 
@@ -1571,8 +1676,7 @@ export class ContactModel {
     trx: Knex.Transaction
   ): Promise<number> {
     if (typeIds.length === 0) return 0;
-    return trx('contact_phone_type_definitions')
-      .where({ tenant })
+    return tenantScopedTable(trx, 'contact_phone_type_definitions', tenant)
       .whereIn('contact_phone_type_id', typeIds)
       .delete();
   }
@@ -1641,9 +1745,8 @@ export class ContactModel {
     }
 
     const normalizedLabels = Array.from(uniqueByNormalized.keys());
-    const existingRows = await trx('contact_phone_type_definitions')
+    const existingRows: ContactPhoneTypeDefinitionRow[] = await tenantScopedTable(trx, 'contact_phone_type_definitions', tenant)
       .select('contact_phone_type_id', 'label', 'normalized_label')
-      .where({ tenant })
       .whereIn('normalized_label', normalizedLabels);
 
     const existingByNormalized = new Map(existingRows.map((row) => [row.normalized_label, row]));
@@ -1660,15 +1763,14 @@ export class ContactModel {
       }));
 
     if (missingRows.length > 0) {
-      await trx('contact_phone_type_definitions')
+      await tenantScopedTable(trx, 'contact_phone_type_definitions', tenant)
         .insert(missingRows)
         .onConflict(['tenant', 'normalized_label'])
         .ignore();
     }
 
-    const resolvedRows = await trx('contact_phone_type_definitions')
+    const resolvedRows: ContactPhoneTypeDefinitionRow[] = await tenantScopedTable(trx, 'contact_phone_type_definitions', tenant)
       .select('contact_phone_type_id', 'label', 'normalized_label')
-      .where({ tenant })
       .whereIn('normalized_label', normalizedLabels);
 
     return new Map(
@@ -1707,9 +1809,8 @@ export class ContactModel {
     }
 
     const normalizedLabels = Array.from(uniqueByNormalized.keys());
-    const existingRows = await trx('contact_email_type_definitions')
+    const existingRows: ContactEmailTypeDefinitionRow[] = await tenantScopedTable(trx, 'contact_email_type_definitions', tenant)
       .select('contact_email_type_id', 'label', 'normalized_label')
-      .where({ tenant })
       .whereIn('normalized_label', normalizedLabels);
 
     const existingByNormalized = new Map(existingRows.map((row) => [row.normalized_label, row]));
@@ -1726,15 +1827,14 @@ export class ContactModel {
       }));
 
     if (missingRows.length > 0) {
-      await trx('contact_email_type_definitions')
+      await tenantScopedTable(trx, 'contact_email_type_definitions', tenant)
         .insert(missingRows)
         .onConflict(['tenant', 'normalized_label'])
         .ignore();
     }
 
-    const resolvedRows = await trx('contact_email_type_definitions')
+    const resolvedRows: ContactEmailTypeDefinitionRow[] = await tenantScopedTable(trx, 'contact_email_type_definitions', tenant)
       .select('contact_email_type_id', 'label', 'normalized_label')
-      .where({ tenant })
       .whereIn('normalized_label', normalizedLabels);
 
     return new Map(

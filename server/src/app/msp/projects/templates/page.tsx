@@ -5,6 +5,16 @@ import type { IProjectTemplate } from '@alga-psa/types';
 import { getTemplates, getTemplateCategories } from '@alga-psa/projects/actions/projectTemplateActions';
 import ProjectTemplatesList from '@alga-psa/projects/components/project-templates/ProjectTemplatesList';
 import Spinner from '@alga-psa/ui/components/Spinner';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 function TemplatesListSkeleton() {
   return (
@@ -76,6 +86,10 @@ export default function ProjectTemplatesPage() {
         ]);
 
         setTemplates(templatesData);
+        if (isReturnedActionError(categoriesData)) {
+          handleError(getErrorMessage(categoriesData));
+          return;
+        }
         setCategories(categoriesData);
       } catch (error) {
         console.error('Error loading templates page:', error);

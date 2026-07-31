@@ -59,7 +59,7 @@ function readJsonFile(file) {
 
 export function persistMaintenanceMetadata(options = {}) {
   const metadataFile = options.metadataFile || DEFAULT_METADATA_FILE;
-  const releaseSelectionFile = options.releaseSelectionFile || '/etc/alga-appliance/release-selection.json';
+  const releaseSelectionFile = options.releaseSelectionFile || '/var/lib/alga-appliance/release-selection.json';
   const installStateFile = options.installStateFile || '/var/lib/alga-appliance/install-state.json';
   const osReleaseFile = options.osReleaseFile || '/etc/os-release';
   const k3sVersionCommand = options.k3sVersionCommand || 'k3s --version | head -n1';
@@ -84,8 +84,9 @@ export function persistMaintenanceMetadata(options = {}) {
     app: {
       selectedChannel: releaseSelection.selectedChannel || releaseSelection.channel || null,
       selectedReleaseVersion: releaseSelection.selectedReleaseVersion || null,
-      repoUrl: releaseSelection.repoUrl || null,
-      repoBranch: releaseSelection.repoBranch || null,
+      registryHost: releaseSelection.registryHost || null,
+      repository: releaseSelection.repository || null,
+      manifestDigest: releaseSelection.manifestDigest || null,
       lastKnownInstallStatus: installState.status || null,
       lastKnownPhase: installState.phase || null,
       lastAppUpdateAt: existing.app?.lastAppUpdateAt || null

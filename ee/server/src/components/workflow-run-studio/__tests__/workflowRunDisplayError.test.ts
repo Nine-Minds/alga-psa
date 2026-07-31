@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildRunDisplayError, buildStepDisplayError } from '../workflowRunDisplayError';
+import { buildRunDisplayError, buildStepDisplayError, getWorkflowErrorCode } from '../workflowRunDisplayError';
 
 const failedStep = {
   step_id: 'step-runtime-1',
@@ -89,5 +89,27 @@ describe('workflow run display errors', () => {
       technicalMessage: 'Activity task failed',
       stepPath: 'root.steps[3]',
     });
+  });
+
+  it('surfaces the structured error code from invocation error_json', () => {
+    const displayError = buildStepDisplayError(failedStep, [
+      {
+        ...failedInvocation,
+        error_json: { category: 'ActionError', code: 'CONFLICT', message: 'Duplicate record' },
+      },
+    ]);
+
+    expect(displayError?.code).toBe('CONFLICT');
+  });
+
+  it('falls back to the error_json category when no code is present', () => {
+    expect(getWorkflowErrorCode({ category: 'TimeoutError', message: 'timed out' })).toBe('TimeoutError');
+    expect(getWorkflowErrorCode({ message: 'plain' })).toBeNull();
+    expect(getWorkflowErrorCode(null)).toBeNull();
+  });
+
+  it('leaves code null when the invocation has no error_json', () => {
+    const displayError = buildStepDisplayError(failedStep, [failedInvocation]);
+    expect(displayError?.code ?? null).toBeNull();
   });
 });

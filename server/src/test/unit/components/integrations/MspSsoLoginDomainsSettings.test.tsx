@@ -2,22 +2,66 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
+
+// The component freezes `isEnterprise` from process.env.NEXT_PUBLIC_EDITION at
+// module-load time. The unit suite runs single-fork, so process.env is shared
+// across files; a prior test leaving NEXT_PUBLIC_EDITION=enterprise would flip
+// this CE-only component to its EE branch and fail every assertion here. Pin
+// Community Edition before the component import (hoisted above it) — a
+// beforeEach would be too late, since the import is already evaluated by then.
+const originalEdition = vi.hoisted(() => {
+  const previous = process.env.NEXT_PUBLIC_EDITION;
+  process.env.NEXT_PUBLIC_EDITION = 'community';
+  return previous;
+});
 
 const listMspSsoLoginDomainsMock = vi.hoisted(() => vi.fn());
 const saveMspSsoLoginDomainsMock = vi.hoisted(() => vi.fn());
 const toastMock = vi.hoisted(() => vi.fn());
+const i18nMock = vi.hoisted(() => {
+  const t = (_key: string, options?: Record<string, unknown>) => {
+    const template = typeof options?.defaultValue === 'string' ? options.defaultValue : _key;
+    return template.replace(/\{\{(\w+)\}\}/g, (match, name) =>
+      options && options[name] != null ? String(options[name]) : match,
+    );
+  };
 
-vi.mock('@alga-psa/integrations/actions', () => ({
+  return {
+    t,
+    translation: { t },
+  };
+});
+
+vi.mock('@alga-psa/integrations/actions/integrations/mspSsoDomainActions', () => ({
   listMspSsoLoginDomains: (...args: unknown[]) => listMspSsoLoginDomainsMock(...args),
   saveMspSsoLoginDomains: (...args: unknown[]) => saveMspSsoLoginDomainsMock(...args),
+  listMspSsoDomainClaims: vi.fn(),
+  refreshMspSsoDomainClaimChallenge: vi.fn(),
+  requestMspSsoDomainClaim: vi.fn(),
+  revokeMspSsoDomainClaim: vi.fn(),
+  verifyMspSsoDomainClaimOwnership: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/hooks/use-toast', () => ({
   useToast: () => ({ toast: toastMock }),
+}));
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => i18nMock.translation,
+  useFormatters: () => ({
+    formatDate: (d: Date | string) => String(d),
+    formatNumber: (n: number) => String(n),
+    formatCurrency: (n: number) => String(n),
+    formatRelativeTime: (d: Date | string) => String(d),
+  }),
+  useI18n: () => ({ locale: 'en' }),
+  useOptionalI18n: () => ({ locale: 'en' }),
+  detectClientLocale: () => 'en',
+  I18nProvider: ({ children }: any) => children,
 }));
 
 import { MspSsoLoginDomainsSettings } from '@alga-psa/integrations/components/settings/integrations/MspSsoLoginDomainsSettings';
@@ -27,6 +71,18 @@ describe('MspSsoLoginDomainsSettings', () => {
     vi.clearAllMocks();
     listMspSsoLoginDomainsMock.mockResolvedValue({ success: true, domains: ['acme.com'] });
     saveMspSsoLoginDomainsMock.mockResolvedValue({ success: true, domains: ['acme.com'] });
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  afterAll(() => {
+    if (originalEdition === undefined) {
+      delete process.env.NEXT_PUBLIC_EDITION;
+    } else {
+      process.env.NEXT_PUBLIC_EDITION = originalEdition;
+    }
   });
 
   it('T012: renders MSP SSO login-domain management section', async () => {
@@ -51,7 +107,7 @@ describe('MspSsoLoginDomainsSettings', () => {
       expect(screen.getByDisplayValue('acme.com')).toBeInTheDocument();
     });
 
-    await user.type(screen.getAllByRole('textbox')[0], 'beta.com');
+    await user.type(screen.getByDisplayValue(''), 'beta.com');
     await user.click(screen.getByRole('button', { name: 'Add' }));
     await user.click(screen.getByRole('button', { name: 'Save Domains' }));
 
@@ -125,7 +181,7 @@ describe('MspSsoLoginDomainsSettings', () => {
 
     await user.click(screen.getByRole('button', { name: 'Save Domains' }));
 
-    expect(await screen.findByText(/already in use\./i)).toBeInTheDocument();
+    expect(await screen.findByText(/one or more domains are already in use\./i)).toBeInTheDocument();
     expect(await screen.findByText(/conflicts: acme\.com\./i)).toBeInTheDocument();
   });
 
@@ -158,7 +214,7 @@ describe('MspSsoLoginDomainsSettings', () => {
     });
 
     await user.click(screen.getByLabelText('Remove domain 2'));
-    await user.type(screen.getAllByRole('textbox')[0], 'beta.com');
+    await user.type(screen.getByDisplayValue(''), 'beta.com');
     await user.click(screen.getByRole('button', { name: 'Add' }));
     await user.click(screen.getByRole('button', { name: 'Save Domains' }));
 

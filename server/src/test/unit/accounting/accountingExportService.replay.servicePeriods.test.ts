@@ -20,6 +20,7 @@ class StubAdapter implements AccountingExportAdapter {
   capabilities(): AccountingExportAdapterCapabilities {
     return {
       deliveryMode: 'api',
+      supportedExportTypes: ['invoice'],
       supportsPartialRetry: true,
       supportsInvoiceUpdates: true,
     };
@@ -35,7 +36,7 @@ class StubAdapter implements AccountingExportAdapter {
     return {
       deliveredLines: context.lines.map((line) => ({
         lineId: line.line_id,
-        externalDocumentRef: `QB-${line.invoice_id}`,
+        externalDocumentRef: `QB-${line.document_id}`,
       })),
     };
   }
@@ -58,8 +59,8 @@ describe('AccountingExportService replay service-period behavior', () => {
       line_id: '33333333-3333-4333-8333-333333333333',
       batch_id: batch.batch_id,
       tenant: batch.tenant,
-      invoice_id: '44444444-4444-4444-8444-444444444444',
-      invoice_charge_id: '55555555-5555-4555-8555-555555555555',
+      document_id: '44444444-4444-4444-8444-444444444444',
+      document_line_id: '55555555-5555-4555-8555-555555555555',
       client_id: '66666666-6666-4666-8666-666666666666',
       amount_cents: 15000,
       currency_code: 'USD',
@@ -94,7 +95,7 @@ describe('AccountingExportService replay service-period behavior', () => {
         Object.assign(line, updates);
         return { ...line };
       }),
-      getInvoicesTaxSource: vi.fn(async () => [{ invoice_id: line.invoice_id, tax_source: 'internal' }]),
+      getInvoicesTaxSource: vi.fn(async () => [{ invoice_id: line.document_id, tax_source: 'internal' }]),
       attachTransactionsToBatch: vi.fn(async () => 0),
       addError: vi.fn(),
     } as any;

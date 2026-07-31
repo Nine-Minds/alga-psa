@@ -1,4 +1,5 @@
 import logger from '@alga-psa/core/logger';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 export type OAuthLinkProvider = 'google' | 'microsoft';
@@ -34,6 +35,7 @@ export class OAuthAccountLinkConflictError extends Error {
 }
 
 const TABLE_NAME = 'user_auth_accounts';
+const OAUTH_ACCOUNT_LINK_DISCOVERY_TENANT = 'oauth-account-link-discovery';
 
 type KnexLike = Awaited<ReturnType<typeof getAdminConnection>>;
 
@@ -48,9 +50,9 @@ async function assertProviderAccountAvailableForUser(
   knex: KnexLike,
   input: OAuthAccountLinkInput,
 ): Promise<void> {
-  const conflictingLink = await knex<OAuthAccountLinkRecord>(TABLE_NAME)
+  const conflictingLink = await tenantDb(knex, input.tenant)
+    .table<OAuthAccountLinkRecord>(TABLE_NAME)
     .where({
-      tenant: input.tenant,
       provider: input.provider,
       provider_account_id: input.providerAccountId,
     })
@@ -101,7 +103,8 @@ export async function upsertOAuthAccountLink(
     const writeLink = async (trx: KnexLike) => {
       await assertProviderAccountAvailableForUser(trx, input);
 
-      await trx(TABLE_NAME)
+      await tenantDb(trx, input.tenant)
+        .table(TABLE_NAME)
         .insert({
           tenant: input.tenant,
           user_id: input.userId,
@@ -116,8 +119,8 @@ export async function upsertOAuthAccountLink(
           provider_account_id: input.providerAccountId,
           provider_email: providerEmail,
           metadata: metadataPayload,
-          last_used_at: input.lastUsedAt ?? trx.fn.now(),
-          updated_at: trx.fn.now(),
+          last_used_at: input.lastUsedAt ?? new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         });
     };
 
@@ -152,17 +155,21 @@ export async function findOAuthAccountLink(
   tenant?: string,
 ): Promise<OAuthAccountLinkRecord | undefined> {
   const knex = await getAdminConnection();
-  const query = knex<OAuthAccountLinkRecord>(TABLE_NAME)
+  // When the caller already knows the tenant we stay tenant-scoped; otherwise the
+  // provider account id is the only handle we have and we must discover the owner.
+  const query = tenant
+    ? tenantDb(knex, tenant).table<OAuthAccountLinkRecord>(TABLE_NAME)
+    : tenantDb(knex, OAUTH_ACCOUNT_LINK_DISCOVERY_TENANT)
+        .unscoped<OAuthAccountLinkRecord>(
+          TABLE_NAME,
+          'OAuth account sign-in discovers the owning tenant from provider account id before tenant context exists',
+        );
+
+  const record = await query
     .where({
       provider,
       provider_account_id: providerAccountId,
-    });
-
-  if (tenant) {
-    query.andWhere({ tenant });
-  }
-
-  const record = await query
+    })
     .orderBy('updated_at', 'desc')
     .first();
 
@@ -174,7 +181,7 @@ export async function listOAuthAccountLinksForUser(
   userId: string,
 ): Promise<OAuthAccountLinkRecord[]> {
   const knex = await getAdminConnection();
-  return knex<OAuthAccountLinkRecord>(TABLE_NAME)
-    .where({ tenant, user_id: userId })
+  return tenantDb(knex, tenant).table<OAuthAccountLinkRecord>(TABLE_NAME)
+    .where({ user_id: userId })
     .orderBy('linked_at', 'desc');
 }

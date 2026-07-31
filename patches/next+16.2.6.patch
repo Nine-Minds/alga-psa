@@ -1,0 +1,325 @@
+diff --git a/node_modules/next/dist/esm/server/load-manifest.external.js b/node_modules/next/dist/esm/server/load-manifest.external.js
+index e51b340..fcd3b2b 100644
+--- a/node_modules/next/dist/esm/server/load-manifest.external.js
++++ b/node_modules/next/dist/esm/server/load-manifest.external.js
+@@ -3,6 +3,32 @@ import { readFileSync } from 'fs';
+ import { runInNewContext } from 'vm';
+ import { deepFreeze } from '../shared/lib/deep-freeze';
+ const sharedCache = new Map();
++// PATCH(alga-psa): expand action manifests whose duplicated worker moduleIds were interned
++// at write time behind __moduleIdTable (see shared/lib/turbopack/manifest-loader.js patch —
++// the naive serialization crashes past V8's ~512MB max string length, vercel/next.js#95239).
++// No-op for every other manifest (single property check).
++function expandInternedModuleIds(manifest) {
++    if (!manifest || typeof manifest !== 'object' || !Array.isArray(manifest.__moduleIdTable)) {
++        return manifest;
++    }
++    const table = manifest.__moduleIdTable;
++    for (const layerName of ['node', 'edge']){
++        const layer = manifest[layerName];
++        if (!layer) continue;
++        for(const actionId in layer){
++            const workers = layer[actionId] && layer[actionId].workers;
++            if (!workers) continue;
++            for(const key in workers){
++                const worker = workers[key];
++                if (worker && typeof worker.moduleId === 'string' && worker.moduleId.startsWith('@@MID:')) {
++                    worker.moduleId = table[Number(worker.moduleId.slice(6))];
++                }
++            }
++        }
++    }
++    delete manifest.__moduleIdTable;
++    return manifest;
++}
+ export function loadManifest(path, shouldCache = true, cache = sharedCache, skipParse = false, handleMissing) {
+     const cached = shouldCache && cache.get(path);
+     if (cached) {
+@@ -21,7 +47,7 @@ export function loadManifest(path, shouldCache = true, cache = sharedCache, skip
+         manifest = readFileSync(/* turbopackIgnore: true */ path, 'utf8');
+     }
+     if (!skipParse) {
+-        manifest = JSON.parse(manifest);
++        manifest = expandInternedModuleIds(JSON.parse(manifest));
+         // Freeze the manifest so it cannot be modified if we're caching it.
+         if (shouldCache) {
+             manifest = deepFreeze(manifest);
+diff --git a/node_modules/next/dist/esm/server/route-modules/route-module.js b/node_modules/next/dist/esm/server/route-modules/route-module.js
+index 453d7d3..9ae2221 100644
+--- a/node_modules/next/dist/esm/server/route-modules/route-module.js
++++ b/node_modules/next/dist/esm/server/route-modules/route-module.js
+@@ -77,6 +77,30 @@ const dynamicImportEsmDefault = (id)=>import(/* webpackIgnore: true */ /* turbop
+             var _self___RSC_MANIFEST;
+             const { getEdgePreviewProps } = require('../web/get-edge-preview-props');
+             const maybeJSONParse = (str)=>str ? JSON.parse(str) : undefined;
++            // PATCH(alga-psa): expand interned action-manifest moduleIds (see
++            // shared/lib/turbopack/manifest-loader.js patch, vercel/next.js#95239).
++            const expandInternedModuleIds = (manifest)=>{
++                if (!manifest || typeof manifest !== 'object' || !Array.isArray(manifest.__moduleIdTable)) {
++                    return manifest;
++                }
++                const table = manifest.__moduleIdTable;
++                for (const layerName of ['node', 'edge']){
++                    const layer = manifest[layerName];
++                    if (!layer) continue;
++                    for(const actionId in layer){
++                        const workers = layer[actionId] && layer[actionId].workers;
++                        if (!workers) continue;
++                        for(const key in workers){
++                            const worker = workers[key];
++                            if (worker && typeof worker.moduleId === 'string' && worker.moduleId.startsWith('@@MID:')) {
++                                worker.moduleId = table[Number(worker.moduleId.slice(6))];
++                            }
++                        }
++                    }
++                }
++                delete manifest.__moduleIdTable;
++                return manifest;
++            };
+             result = {
+                 buildId: process.env.__NEXT_BUILD_ID || '',
+                 buildManifest: self.__BUILD_MANIFEST,
+@@ -107,7 +131,7 @@ const dynamicImportEsmDefault = (id)=>import(/* webpackIgnore: true */ /* turbop
+                 },
+                 serverFilesManifest: self.__SERVER_FILES_MANIFEST,
+                 clientReferenceManifest: (_self___RSC_MANIFEST = self.__RSC_MANIFEST) == null ? void 0 : _self___RSC_MANIFEST[srcPage],
+-                serverActionsManifest: maybeJSONParse(self.__RSC_SERVER_MANIFEST),
++                serverActionsManifest: expandInternedModuleIds(maybeJSONParse(self.__RSC_SERVER_MANIFEST)),
+                 subresourceIntegrityManifest: maybeJSONParse(self.__SUBRESOURCE_INTEGRITY_MANIFEST),
+                 dynamicCssManifest: maybeJSONParse(self.__DYNAMIC_CSS_MANIFEST),
+                 interceptionRoutePatterns: (maybeJSONParse(self.__INTERCEPTION_ROUTE_REWRITE_MANIFEST) ?? []).map((rewrite)=>new RegExp(rewrite.regex))
+diff --git a/node_modules/next/dist/esm/shared/lib/turbopack/manifest-loader.js b/node_modules/next/dist/esm/shared/lib/turbopack/manifest-loader.js
+index 5c7a9a0..5f859e7 100644
+--- a/node_modules/next/dist/esm/shared/lib/turbopack/manifest-loader.js
++++ b/node_modules/next/dist/esm/shared/lib/turbopack/manifest-loader.js
+@@ -40,6 +40,53 @@ function readPartialManifestContent(distDir, name, pageName, type = 'pages') {
+     const manifestPath = getManifestPath(page, distDir, name, type, true);
+     return readFileSync(posix.join(manifestPath), 'utf-8');
+ }
++// PATCH(alga-psa): replace duplicated worker moduleId strings with "@@MID:<n>" refs plus a
++// top-level __moduleIdTable. Worker leaf objects are shared with the per-route partial
++// manifests held in ManifestsMap, so this clones instead of mutating.
++function internActionManifestModuleIds(manifest) {
++    const table = [];
++    const indexByValue = new Map();
++    const internLayer = (layer)=>{
++        const out = {};
++        for(const actionId in layer){
++            const entry = layer[actionId];
++            const workers = {};
++            for(const workerKey in entry.workers){
++                const worker = entry.workers[workerKey];
++                if (worker && typeof worker.moduleId === 'string') {
++                    let idx = indexByValue.get(worker.moduleId);
++                    if (idx === undefined) {
++                        idx = table.length;
++                        table.push(worker.moduleId);
++                        indexByValue.set(worker.moduleId, idx);
++                    }
++                    workers[workerKey] = {
++                        ...worker,
++                        moduleId: `@@MID:${idx}`
++                    };
++                } else {
++                    workers[workerKey] = worker;
++                }
++            }
++            out[actionId] = {
++                ...entry,
++                workers
++            };
++        }
++        return out;
++    };
++    const node = internLayer(manifest.node);
++    const edge = internLayer(manifest.edge);
++    if (table.length === 0) {
++        return manifest;
++    }
++    return {
++        ...manifest,
++        node,
++        edge,
++        __moduleIdTable: table
++    };
++}
+ /// Helper class that stores a map of manifests and tracks if they have changed
+ /// since the last time they were written to disk. This is used to avoid
+ /// unnecessary writes to disk.
+@@ -151,7 +198,11 @@ export class TurbopackManifestLoader {
+         const actionManifest = this.mergeActionManifests(this.actionManifests.values());
+         const actionManifestJsonPath = join(this.distDir, 'server', `${SERVER_REFERENCE_MANIFEST}.json`);
+         const actionManifestJsPath = join(this.distDir, 'server', `${SERVER_REFERENCE_MANIFEST}.js`);
+-        const json = JSON.stringify(actionManifest, null, 2);
++        // PATCH(alga-psa): intern duplicated worker moduleIds in dev — the naive stringify
++        // grows O(actions x routes) and crashes past V8's ~512MB max string length
++        // (vercel/next.js#95239). Readers expand via __moduleIdTable.
++        const manifestToWrite = this.dev ? internActionManifestModuleIds(actionManifest) : actionManifest;
++        const json = JSON.stringify(manifestToWrite, null, 2);
+         this.pendingCacheDeletes.push(actionManifestJsonPath);
+         this.pendingCacheDeletes.push(actionManifestJsPath);
+         writeFileAtomic(actionManifestJsonPath, json);
+diff --git a/node_modules/next/dist/server/load-manifest.external.js b/node_modules/next/dist/server/load-manifest.external.js
+index 40811b6..9d74381 100644
+--- a/node_modules/next/dist/server/load-manifest.external.js
++++ b/node_modules/next/dist/server/load-manifest.external.js
+@@ -33,6 +33,32 @@ const _fs = require("fs");
+ const _vm = require("vm");
+ const _deepfreeze = require("../shared/lib/deep-freeze");
+ const sharedCache = new Map();
++// PATCH(alga-psa): expand action manifests whose duplicated worker moduleIds were interned
++// at write time behind __moduleIdTable (see shared/lib/turbopack/manifest-loader.js patch —
++// the naive serialization crashes past V8's ~512MB max string length, vercel/next.js#95239).
++// No-op for every other manifest (single property check).
++function expandInternedModuleIds(manifest) {
++    if (!manifest || typeof manifest !== 'object' || !Array.isArray(manifest.__moduleIdTable)) {
++        return manifest;
++    }
++    const table = manifest.__moduleIdTable;
++    for (const layerName of ['node', 'edge']){
++        const layer = manifest[layerName];
++        if (!layer) continue;
++        for(const actionId in layer){
++            const workers = layer[actionId] && layer[actionId].workers;
++            if (!workers) continue;
++            for(const key in workers){
++                const worker = workers[key];
++                if (worker && typeof worker.moduleId === 'string' && worker.moduleId.startsWith('@@MID:')) {
++                    worker.moduleId = table[Number(worker.moduleId.slice(6))];
++                }
++            }
++        }
++    }
++    delete manifest.__moduleIdTable;
++    return manifest;
++}
+ function loadManifest(path, shouldCache = true, cache = sharedCache, skipParse = false, handleMissing) {
+     const cached = shouldCache && cache.get(path);
+     if (cached) {
+@@ -51,7 +77,7 @@ function loadManifest(path, shouldCache = true, cache = sharedCache, skipParse =
+         manifest = (0, _fs.readFileSync)(/* turbopackIgnore: true */ path, 'utf8');
+     }
+     if (!skipParse) {
+-        manifest = JSON.parse(manifest);
++        manifest = expandInternedModuleIds(JSON.parse(manifest));
+         // Freeze the manifest so it cannot be modified if we're caching it.
+         if (shouldCache) {
+             manifest = (0, _deepfreeze.deepFreeze)(manifest);
+diff --git a/node_modules/next/dist/server/route-modules/route-module.js b/node_modules/next/dist/server/route-modules/route-module.js
+index a6a70b6..10de1f3 100644
+--- a/node_modules/next/dist/server/route-modules/route-module.js
++++ b/node_modules/next/dist/server/route-modules/route-module.js
+@@ -89,6 +89,30 @@ class RouteModule {
+             var _self___RSC_MANIFEST;
+             const { getEdgePreviewProps } = require('../web/get-edge-preview-props');
+             const maybeJSONParse = (str)=>str ? JSON.parse(str) : undefined;
++            // PATCH(alga-psa): expand interned action-manifest moduleIds (see
++            // shared/lib/turbopack/manifest-loader.js patch, vercel/next.js#95239).
++            const expandInternedModuleIds = (manifest)=>{
++                if (!manifest || typeof manifest !== 'object' || !Array.isArray(manifest.__moduleIdTable)) {
++                    return manifest;
++                }
++                const table = manifest.__moduleIdTable;
++                for (const layerName of ['node', 'edge']){
++                    const layer = manifest[layerName];
++                    if (!layer) continue;
++                    for(const actionId in layer){
++                        const workers = layer[actionId] && layer[actionId].workers;
++                        if (!workers) continue;
++                        for(const key in workers){
++                            const worker = workers[key];
++                            if (worker && typeof worker.moduleId === 'string' && worker.moduleId.startsWith('@@MID:')) {
++                                worker.moduleId = table[Number(worker.moduleId.slice(6))];
++                            }
++                        }
++                    }
++                }
++                delete manifest.__moduleIdTable;
++                return manifest;
++            };
+             result = {
+                 buildId: process.env.__NEXT_BUILD_ID || '',
+                 buildManifest: self.__BUILD_MANIFEST,
+@@ -119,7 +143,7 @@ class RouteModule {
+                 },
+                 serverFilesManifest: self.__SERVER_FILES_MANIFEST,
+                 clientReferenceManifest: (_self___RSC_MANIFEST = self.__RSC_MANIFEST) == null ? void 0 : _self___RSC_MANIFEST[srcPage],
+-                serverActionsManifest: maybeJSONParse(self.__RSC_SERVER_MANIFEST),
++                serverActionsManifest: expandInternedModuleIds(maybeJSONParse(self.__RSC_SERVER_MANIFEST)),
+                 subresourceIntegrityManifest: maybeJSONParse(self.__SUBRESOURCE_INTEGRITY_MANIFEST),
+                 dynamicCssManifest: maybeJSONParse(self.__DYNAMIC_CSS_MANIFEST),
+                 interceptionRoutePatterns: (maybeJSONParse(self.__INTERCEPTION_ROUTE_REWRITE_MANIFEST) ?? []).map((rewrite)=>new RegExp(rewrite.regex))
+diff --git a/node_modules/next/dist/shared/lib/turbopack/manifest-loader.js b/node_modules/next/dist/shared/lib/turbopack/manifest-loader.js
+index ae17ac0..6167b6a 100644
+--- a/node_modules/next/dist/shared/lib/turbopack/manifest-loader.js
++++ b/node_modules/next/dist/shared/lib/turbopack/manifest-loader.js
+@@ -50,6 +50,53 @@ function readPartialManifestContent(distDir, name, pageName, type = 'pages') {
+     const manifestPath = getManifestPath(page, distDir, name, type, true);
+     return (0, _fs.readFileSync)(_path.posix.join(manifestPath), 'utf-8');
+ }
++// PATCH(alga-psa): replace duplicated worker moduleId strings with "@@MID:<n>" refs plus a
++// top-level __moduleIdTable. Worker leaf objects are shared with the per-route partial
++// manifests held in ManifestsMap, so this clones instead of mutating.
++function internActionManifestModuleIds(manifest) {
++    const table = [];
++    const indexByValue = new Map();
++    const internLayer = (layer)=>{
++        const out = {};
++        for(const actionId in layer){
++            const entry = layer[actionId];
++            const workers = {};
++            for(const workerKey in entry.workers){
++                const worker = entry.workers[workerKey];
++                if (worker && typeof worker.moduleId === 'string') {
++                    let idx = indexByValue.get(worker.moduleId);
++                    if (idx === undefined) {
++                        idx = table.length;
++                        table.push(worker.moduleId);
++                        indexByValue.set(worker.moduleId, idx);
++                    }
++                    workers[workerKey] = {
++                        ...worker,
++                        moduleId: `@@MID:${idx}`
++                    };
++                } else {
++                    workers[workerKey] = worker;
++                }
++            }
++            out[actionId] = {
++                ...entry,
++                workers
++            };
++        }
++        return out;
++    };
++    const node = internLayer(manifest.node);
++    const edge = internLayer(manifest.edge);
++    if (table.length === 0) {
++        return manifest;
++    }
++    return {
++        ...manifest,
++        node,
++        edge,
++        __moduleIdTable: table
++    };
++}
+ /// Helper class that stores a map of manifests and tracks if they have changed
+ /// since the last time they were written to disk. This is used to avoid
+ /// unnecessary writes to disk.
+@@ -161,7 +208,14 @@ class TurbopackManifestLoader {
+         const actionManifest = this.mergeActionManifests(this.actionManifests.values());
+         const actionManifestJsonPath = (0, _path.join)(this.distDir, 'server', `${_constants.SERVER_REFERENCE_MANIFEST}.json`);
+         const actionManifestJsPath = (0, _path.join)(this.distDir, 'server', `${_constants.SERVER_REFERENCE_MANIFEST}.js`);
+-        const json = JSON.stringify(actionManifest, null, 2);
++        // PATCH(alga-psa): in dev the worker moduleId is Turbopack's full named ident of the
++        // per-route actions.js, which inlines every reachable 'use server' module path. The
++        // same ~25KB string is duplicated once per (action id x route), so the serialized
++        // manifest grows O(actions x routes) and JSON.stringify crashes past V8's ~512MB max
++        // string length (vercel/next.js#95239). Intern the duplicates behind __moduleIdTable;
++        // readers expand (see load-manifest.external.js and route-modules/route-module.js).
++        const manifestToWrite = this.dev ? internActionManifestModuleIds(actionManifest) : actionManifest;
++        const json = JSON.stringify(manifestToWrite, null, 2);
+         this.pendingCacheDeletes.push(actionManifestJsonPath);
+         this.pendingCacheDeletes.push(actionManifestJsPath);
+         (0, _writeatomic.writeFileAtomic)(actionManifestJsonPath, json);

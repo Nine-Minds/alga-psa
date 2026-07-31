@@ -11,7 +11,63 @@ const useFeatureFlagMock = vi.hoisted(() => vi.fn());
 
 vi.mock('next/navigation', () => ({
   useSearchParams: useSearchParamsMock,
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
 }));
+
+// Resolve integration category labels/descriptions against the real msp/settings
+// translation bundle (the page calls t(key) without defaultValues).
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const path = await import('node:path');
+  const { createRequire } = await import('node:module');
+  const require = createRequire(import.meta.url);
+  const settings = require(
+    path.resolve(process.cwd(), 'public/locales/en/msp/settings.json'),
+  );
+  const get = (obj: any, key: string) =>
+    key.split('.').reduce((acc, part) => (acc == null ? undefined : acc[part]), obj);
+  const t = (key: string, options?: any) => {
+    const template = get(settings, key) ?? options?.defaultValue ?? key;
+    if (typeof template !== 'string') {
+      return key;
+    }
+    return template.replace(/\{\{(\w+)\}\}/g, (match: string, name: string) =>
+      options && options[name] != null ? String(options[name]) : match,
+    );
+  };
+  return {
+    useTranslation: () => ({ t, i18n: { language: 'en' } }),
+    useFormatters: () => ({
+      formatDate: (d: Date | string) => String(d),
+      formatNumber: (n: number) => String(n),
+      formatCurrency: (n: number) => String(n),
+      formatRelativeTime: (d: Date | string) => String(d),
+    }),
+    useI18n: () => ({ locale: 'en' }),
+    useOptionalI18n: () => ({ locale: 'en' }),
+    detectClientLocale: () => 'en',
+    I18nProvider: ({ children }: any) => children,
+  };
+});
+
+// Drive edition exclusively via NEXT_PUBLIC_EDITION (the process-wide EDITION is
+// 'enterprise' in the test env and would otherwise freeze isEnterprise true).
+vi.mock('../../../../../../packages/integrations/src/lib/calendarAvailability', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../../../packages/integrations/src/lib/calendarAvailability')>();
+  const isCalendarEnterpriseEdition = (env: NodeJS.ProcessEnv = process.env) =>
+    (env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise';
+  return {
+    ...actual,
+    isCalendarEnterpriseEdition,
+    getVisibleIntegrationCategoryIds: (isEE = isCalendarEnterpriseEdition()) =>
+      actual.getVisibleIntegrationCategoryIds(isEE),
+    resolveIntegrationSettingsCategory: (requested: string | null | undefined, isEE = isCalendarEnterpriseEdition()) =>
+      actual.resolveIntegrationSettingsCategory(requested, isEE),
+    getVisibleUserProfileTabs: (isEE = isCalendarEnterpriseEdition()) =>
+      actual.getVisibleUserProfileTabs(isEE),
+    resolveUserProfileTab: (requested: string | null | undefined, isEE = isCalendarEnterpriseEdition()) =>
+      actual.resolveUserProfileTab(requested, isEE),
+  };
+});
 
 vi.mock('@alga-psa/ui/hooks', async () => {
   const actual = await vi.importActual<object>('@alga-psa/ui/hooks');
@@ -23,14 +79,15 @@ vi.mock('@alga-psa/ui/hooks', async () => {
 
 vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
   __esModule: true,
-  default: ({ tabs, defaultTab }: { tabs: Array<{ label: string; content: React.ReactNode }>; defaultTab: string }) => {
-    const selected = tabs.find((tab) => tab.label === defaultTab) ?? tabs[0];
+  default: ({ tabs, defaultTab }: { tabs: Array<{ id: string; label: string; content: React.ReactNode }>; defaultTab: string }) => {
+    // The page selects tabs by id (matches the real CustomTabs contract), not label.
+    const selected = tabs.find((tab) => tab.id === defaultTab) ?? tabs[0];
 
     return (
       <div data-testid="custom-tabs-mock">
         <div>
           {tabs.map((tab) => (
-            <span key={tab.label}>{tab.label}</span>
+            <span key={tab.id}>{tab.label}</span>
           ))}
         </div>
         <div>{selected?.content}</div>
@@ -74,12 +131,22 @@ vi.mock('@alga-psa/integrations/components', () => ({
 
 vi.mock('@alga-psa/integrations/entra/components/entry', () => ({
   __esModule: true,
-  EntraIntegrationSettings: () => <div data-testid="entra-integration-settings-shell">Entra Settings Shell</div>,
+  EntraIntegrationSummaryCard: () => <div data-testid="entra-integration-settings-shell">Entra Settings Shell</div>,
 }));
 
 vi.mock('@alga-psa/ee-microsoft-teams/components', () => ({
   __esModule: true,
   TeamsIntegrationSettings: () => <div data-testid="teams-integration-settings-shell">Teams Integration Settings</div>,
+}));
+
+// The page renders Teams through the integrations-package enterprise wrapper, not
+// the ee-microsoft-teams barrel.
+vi.mock('../../../../../../packages/integrations/src/components/settings/integrations/TeamsEnterpriseIntegrationSettings', () => ({
+  __esModule: true,
+  TeamsEnterpriseIntegrationSettings: () =>
+    process.env.NEXT_PUBLIC_EDITION === 'enterprise' ? (
+      <div data-testid="teams-integration-settings-shell">Teams Integration Settings</div>
+    ) : null,
 }));
 
 vi.mock('@product/billing/entry', () => ({
@@ -139,10 +206,12 @@ describe('IntegrationsSettingsPage Teams placement', () => {
 
     render(<IntegrationsSettingsPage />);
 
-    expect(screen.getByText('Providers Integrations')).toBeInTheDocument();
+    // The simplified Providers tab renders no category heading banner.
+    expect(screen.queryByText('Providers Integrations')).not.toBeInTheDocument();
     expect(screen.getByText('Google Integration Settings')).toBeInTheDocument();
     expect(screen.getByText('Microsoft Integration Settings')).toBeInTheDocument();
-    expect(screen.getByText('MSP SSO Login Domains')).toBeInTheDocument();
+    // MSP SSO login-domain management moved to Settings -> Security (MspSsoAdvancedSection).
+    expect(screen.queryByText('MSP SSO Login Domains')).not.toBeInTheDocument();
     expect(screen.queryByTestId('teams-integration-settings-shell')).not.toBeInTheDocument();
   });
 
@@ -164,9 +233,12 @@ describe('IntegrationsSettingsPage Teams placement', () => {
     expect(screen.queryByText('Microsoft Integration Settings')).not.toBeInTheDocument();
   });
 
-  it('T038/T043/T044/T075/T076/T387/T388/T401/T402/T409/T410/T421: hides Teams entirely when EE mode is on but the tenant flag is disabled', async () => {
+  it('T038/T043/T044/T075/T076/T387/T388/T401/T402/T409/T410/T421: keeps the concrete Teams settings shell out of view when the Teams add-on is not entitled in EE', async () => {
+    // Teams visibility moved from a tenant feature flag to add-on entitlement
+    // (canUseTeams). Without the add-on, the page renders the add-on notice
+    // instead of the Teams settings shell.
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
-    useFeatureFlagMock.mockImplementation((flagKey: string) => ({
+    useFeatureFlagMock.mockImplementation(() => ({
       enabled: false,
       isLoading: false,
       error: null,
@@ -177,7 +249,7 @@ describe('IntegrationsSettingsPage Teams placement', () => {
       '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
     );
 
-    render(<IntegrationsSettingsPage />);
+    render(<IntegrationsSettingsPage canUseTeams={false} />);
 
     expect(screen.getByText('Communication Integrations')).toBeInTheDocument();
     expect(screen.getByText('Inbound Email Integration')).toBeInTheDocument();

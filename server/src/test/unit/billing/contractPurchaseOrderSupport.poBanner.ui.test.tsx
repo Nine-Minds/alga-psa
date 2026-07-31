@@ -2,10 +2,21 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (_key: string, fallback?: string | { defaultValue?: string }) =>
+      typeof fallback === 'string' ? fallback : fallback?.defaultValue ?? _key,
+  }),
+  useFormatters: () => ({
+    formatCurrency: (amount: number, currencyCode: string = 'USD') =>
+      new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode }).format(amount),
+  }),
+}));
 
 import { PurchaseOrderSummaryBanner } from '../../../../../packages/billing/src/components/billing-dashboard/invoicing/PurchaseOrderSummaryBanner';
 

@@ -8,14 +8,17 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { ArrowUpDown } from 'lucide-react';
 import { IComment, ITicket } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
+import { filterHiddenNoiseComments } from '../../lib/commentNoise';
 import { PartialBlock } from '@blocknote/core';
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { CommentThreadDrawer, CommentThreadList, HybridThreadNode, InlineReplyComposer, buildCommentThreadGroups } from '@alga-psa/ui/components';
+import CommentThreadDrawer from '@alga-psa/ui/components/CommentThreadDrawer';
+import InlineReplyComposer from '@alga-psa/ui/components/InlineReplyComposer';
+import { CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@alga-psa/ui/components';
 
 // Dynamic import for TextEditor
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
-  loading: () => <RichTextEditorSkeleton height="200px" title="Comment Editor" />,
+  loading: () => <RichTextEditorSkeleton height="200px" />,
   ssr: false
 });
 
@@ -53,6 +56,9 @@ import {
 import { buildTicketThreadTabState } from './ticketConversationThreadTabs';
 import { toggleCommentReaction, getCommentsReactionsBatch } from '../../actions/comment-actions/commentReactionActions';
 import type { IAggregatedReaction } from '@alga-psa/types';
+import TicketNotificationSuppressionControl, {
+  type TicketNotificationSuppressionValue,
+} from './TicketNotificationSuppressionControl';
 
 interface TicketConversationProps {
   id?: string;
@@ -67,7 +73,12 @@ interface TicketConversationProps {
   currentComment: IComment | null;
   editorKey: number;
   onNewCommentContentChange: (content: PartialBlock[]) => void;
-  onAddNewComment: (isInternal: boolean, isResolution: boolean, closeStatusId?: string | null) => Promise<boolean>;
+  onAddNewComment: (
+    isInternal: boolean,
+    isResolution: boolean,
+    closeStatusId?: string | null,
+    options?: TicketNotificationSuppressionValue
+  ) => Promise<boolean>;
   onAddReplyComment?: (content: PartialBlock[], parentCommentId: string, isInternal: boolean) => Promise<boolean>;
   onTabChange: (tab: string) => void;
   onEdit: (conversation: IComment) => void;
@@ -99,46 +110,12 @@ const ALL_COMMENTS_TAB_ID = 'all-comments';
 const CLIENT_TAB_ID = 'client';
 const INTERNAL_TAB_ID = 'internal';
 const RESOLUTION_TAB_ID = 'resolution';
+const NO_STATUS_CHANGE = '__no_status_change__';
 
-// Hides inbound-email comments whose body is empty or contains only a reply
-// token marker. The token data still lives in the saved comment row so email
-// threading (token + In-Reply-To/References fallback) stays intact; this just
-// suppresses the noise in the conversation view.
-const REPLY_TOKEN_ONLY_REGEX = /^\s*\[ALGA-REPLY-TOKEN [^\]]+\]\s*$/;
-
-function collectBlockNoteText(node: unknown): string {
-  if (typeof node === 'string') return node;
-  if (Array.isArray(node)) {
-    let out = '';
-    for (const item of node) out += collectBlockNoteText(item);
-    return out;
-  }
-  if (node && typeof node === 'object') {
-    const obj = node as Record<string, unknown>;
-    if (obj.type === 'text' && typeof obj.text === 'string') {
-      return obj.text;
-    }
-    if (Array.isArray(obj.content)) {
-      return collectBlockNoteText(obj.content);
-    }
-  }
-  return '';
-}
-
-function extractCommentText(note: string | undefined | null): string {
-  if (!note) return '';
-  try {
-    return collectBlockNoteText(JSON.parse(note)).trim();
-  } catch {
-    return note.trim();
-  }
-}
-
-function isHiddenNoiseComment(comment: IComment): boolean {
-  const text = extractCommentText(comment.note);
-  if (text === '') return true;
-  return REPLY_TOKEN_ONLY_REGEX.test(text);
-}
+const defaultNotificationSuppression = (): TicketNotificationSuppressionValue => ({
+  suppressContactNotifications: false,
+  suppressInternalNotifications: false,
+});
 
 const TicketConversation: React.FC<TicketConversationProps> = ({
   id,
@@ -183,8 +160,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [reverseOrder, setReverseOrder] = useState(defaultNewestFirst);
   const [isInternalToggle, setIsInternalToggle] = useState(false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
-  const NO_STATUS_CHANGE = '__no_status_change__';
   const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string>(NO_STATUS_CHANGE);
+  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(
+    defaultNotificationSuppression
+  );
   const [contactAvatarUrls, setContactAvatarUrls] = useState<Record<string, string | null>>({});
   const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
@@ -288,11 +267,21 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           isResolutionToggle && resolutionCloseStatusId !== NO_STATUS_CHANGE
             ? resolutionCloseStatusId
             : null;
-        success = await onAddNewComment(isInternalToggle, isResolutionToggle, closeStatusId);
+        const suppressionOptions =
+          closeStatusId && notificationSuppression.suppressContactNotifications
+            ? notificationSuppression
+            : undefined;
+        success = await onAddNewComment(
+          isInternalToggle,
+          isResolutionToggle,
+          closeStatusId,
+          suppressionOptions
+        );
         if (success) {
           setIsInternalToggle(false);
           setIsResolutionToggle(false);
           setResolutionCloseStatusId(NO_STATUS_CHANGE);
+          setNotificationSuppression(defaultNotificationSuppression());
         }
       }
       
@@ -330,7 +319,18 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     if (hideInternalTab) {
       await onAddNewComment(false, isResolutionToggle);
     } else {
-      await onAddNewComment(isInternalToggle, isResolutionToggle);
+      const closeStatusId =
+        isResolutionToggle && resolutionCloseStatusId !== NO_STATUS_CHANGE
+          ? resolutionCloseStatusId
+          : null;
+      await onAddNewComment(
+        isInternalToggle,
+        isResolutionToggle,
+        closeStatusId,
+        closeStatusId && notificationSuppression.suppressContactNotifications
+          ? notificationSuppression
+          : undefined
+      );
     }
   };
 
@@ -348,6 +348,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   useEffect(() => {
     if (!showEditor || !isResolutionToggle) {
       setResolutionCloseStatusId(NO_STATUS_CHANGE);
+      setNotificationSuppression(defaultNotificationSuppression());
     }
   }, [showEditor, isResolutionToggle]);
 
@@ -540,19 +541,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     );
   };
 
-  const visibleConversations = useMemo(() => {
-    const parentIds = new Set<string>();
-    for (const comment of conversations) {
-      if (comment.parent_comment_id) {
-        parentIds.add(comment.parent_comment_id);
-      }
-    }
-    return conversations.filter((comment) => {
-      if (!isHiddenNoiseComment(comment)) return true;
-      // Keep noise comments that have descendants so children don't orphan.
-      return comment.comment_id ? parentIds.has(comment.comment_id) : true;
-    });
-  }, [conversations]);
+  const visibleConversations = useMemo(
+    () => filterHiddenNoiseComments(conversations),
+    [conversations]
+  );
 
   const threadGroups = useMemo(
     () => buildCommentThreadGroups<IComment>({
@@ -629,7 +621,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       id: ALL_COMMENTS_TAB_ID,
       label: `${t('conversation.allComments', 'All Comments')} (${threadTabState.counts.all})`,
       content: (
-        <ReflectionContainer id={`${id}-all-comments`} label="All Comments">
+        <ReflectionContainer id={`${id}-all-comments`} label={t('conversation.allComments', 'All Comments')}>
           {renderComments(hideInternalTab
             // For client portal, "All Comments" should exclude internal comments (same as "Client Visible")
             ? threadTabState.allTabComments
@@ -642,7 +634,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       id: CLIENT_TAB_ID,
       label: `${t('conversation.client', 'Client')} (${threadTabState.counts.client})`,
       content: (
-        <ReflectionContainer id={`${id}-client-visible-comments`} label="Client Comments">
+        <ReflectionContainer id={`${id}-client-visible-comments`} label={t('conversation.clientComments', 'Client Comments')}>
           {renderComments(threadTabState.clientTabComments)}
           {renderExternalComments()}
         </ReflectionContainer>
@@ -652,7 +644,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       id: INTERNAL_TAB_ID,
       label: `${t('conversation.internal', 'Internal')} (${threadTabState.counts.internal})`,
       content: (
-        <ReflectionContainer id={`${id}-internal-comments`} label="Internal Comments">
+        <ReflectionContainer id={`${id}-internal-comments`} label={t('conversation.internalComments', 'Internal Comments')}>
           <h3 className="text-lg font-medium mb-4">{t('conversation.internalComments', 'Internal Comments')}</h3>
           {renderComments(threadTabState.internalTabComments)}
         </ReflectionContainer>
@@ -662,7 +654,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       id: RESOLUTION_TAB_ID,
       label: `${t('conversation.resolution', 'Resolution')} (${threadTabState.counts.resolution})`,
       content: (
-        <ReflectionContainer id={`${id}-resolution-comments`} label="Resolution Comments">
+        <ReflectionContainer id={`${id}-resolution-comments`} label={t('conversation.resolutionComments', 'Resolution Comments')}>
           <h3 className="text-lg font-medium mb-4">{t('conversation.resolutionComments', 'Resolution Comments')}</h3>
           {renderComments(threadTabState.resolutionTabComments)}
         </ReflectionContainer>
@@ -744,28 +736,36 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                   </div>
 
                   {!hideInternalTab && isResolutionToggle && (
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`${compId}-resolution-close-status-select`}>
-                        {t('tickets.conversation.closeStatus', 'Close status')}
-                      </Label>
-                      <CustomSelect
-                        id={`${compId}-resolution-close-status-select`}
-                        value={resolutionCloseStatusId}
-                        options={[
-                          {
-                            value: NO_STATUS_CHANGE,
-                            label: t('tickets.conversation.noStatusChange', 'Do not change status'),
-                          },
-                          ...closedStatusOptions,
-                        ]}
-                        onValueChange={setResolutionCloseStatusId}
-                        className="!w-64"
-                        disabled={closedStatusOptions.length === 0}
+                    <div className="flex flex-wrap items-start gap-3">
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor={`${compId}-resolution-close-status-select`}>
+                          {t('tickets.conversation.closeStatus', 'Close status')}
+                        </Label>
+                        <CustomSelect
+                          id={`${compId}-resolution-close-status-select`}
+                          value={resolutionCloseStatusId}
+                          options={[
+                            {
+                              value: NO_STATUS_CHANGE,
+                              label: t('tickets.conversation.noStatusChange', 'Do not change status'),
+                            },
+                            ...closedStatusOptions,
+                          ]}
+                          onValueChange={setResolutionCloseStatusId}
+                          className="!w-64"
+                          disabled={closedStatusOptions.length === 0}
+                        />
+                      </div>
+                      <TicketNotificationSuppressionControl
+                        idPrefix={`${compId}-resolution-notification-suppression`}
+                        value={notificationSuppression}
+                        onChange={setNotificationSuppression}
+                        disabled={resolutionCloseStatusId === NO_STATUS_CHANGE}
                       />
                     </div>
                   )}
                 </div>
-                <Suspense fallback={<RichTextEditorSkeleton height="200px" title="Comment Editor" />}>
+                <Suspense fallback={<RichTextEditorSkeleton height="200px" title={t('conversation.commentEditor', 'Comment Editor')} />}>
                   <TextEditor
                     {...withDataAutomationId({ id: `${compId}-editor` })}
                     key={editorKey}

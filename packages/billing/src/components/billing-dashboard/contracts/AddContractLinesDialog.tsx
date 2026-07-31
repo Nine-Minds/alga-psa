@@ -15,15 +15,24 @@ import {
   getContractLinePresetServices,
   getContractLinePresetFixedConfig
 } from '@alga-psa/billing/actions/contractLinePresetActions';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import {
   useContractLineTypeOptions,
   useFormatBillingFrequency,
   useFormatContractLineType,
 } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface ContractLinePresetServiceWithName extends IContractLinePresetService {
   service_name?: string;
@@ -49,6 +58,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
   onAdd,
 }) => {
   const { t } = useTranslation('msp/contracts');
+  const { money, symbol } = useCurrencyFormat();
   const contractLineTypeOptions = useContractLineTypeOptions();
   const formatContractLineType = useFormatContractLineType();
   const formatBillingFrequency = useFormatBillingFrequency();
@@ -108,6 +118,10 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
     setError(null);
     try {
       const presets = await getContractLinePresets();
+      if (isReturnedActionError(presets)) {
+        setError(getErrorMessage(presets));
+        return;
+      }
       setAvailablePresets(presets);
 
       // Load service counts for each preset
@@ -117,6 +131,10 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
           if (preset.preset_id) {
             try {
               const services = await getContractLinePresetServices(preset.preset_id);
+              if (isReturnedActionError(services)) {
+                counts[preset.preset_id] = 0;
+                return;
+              }
               counts[preset.preset_id] = services.length;
             } catch (error) {
               console.error(`Error loading service count for preset ${preset.preset_id}:`, error);
@@ -203,6 +221,10 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
       try {
         // Load services
         const services = await getContractLinePresetServices(presetId);
+        if (isReturnedActionError(services)) {
+          setError(getErrorMessage(services));
+          return;
+        }
 
         // Load all service details to get names and rates
         const allServices = await getServices(1, 999, { item_kind: 'any' });
@@ -252,6 +274,10 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
 
         if (preset?.contract_line_type === 'Fixed') {
           const fixedConfig = await getContractLinePresetFixedConfig(presetId);
+          if (isReturnedActionError(fixedConfig)) {
+            setError(getErrorMessage(fixedConfig));
+            return;
+          }
           setPresetFixedConfigs(prev => ({
             ...prev,
             [presetId]: fixedConfig
@@ -306,7 +332,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
     setError(null);
     try {
       // Add each selected preset to the contract
-      await Promise.all(
+      const results = await Promise.all(
         Array.from(selectedPresetIds).map(presetId => {
           const overrides: {
             base_rate?: number | null;
@@ -346,6 +372,11 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
           return copyPresetToContractLine(contractId, presetId, Object.keys(overrides).length > 0 ? overrides : undefined);
         })
       );
+      const expectedError = results.find(isReturnedActionError);
+      if (expectedError) {
+        setError(getErrorMessage(expectedError));
+        return;
+      }
 
       await onAdd();
       onClose();
@@ -553,7 +584,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                                 </span>
                                 <span className="ml-2 text-[rgb(var(--color-text-900))] font-semibold">
                                   {fixedConfig?.base_rate !== null && fixedConfig?.base_rate !== undefined
-                                    ? `$${(fixedConfig.base_rate / 100).toFixed(2)}`
+                                    ? money(Number(fixedConfig.base_rate))
                                     : t('addLines.fixedConfig.notSet', { defaultValue: 'Not set' })}
                                 </span>
                               </div>
@@ -562,7 +593,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                                   {t('addLines.fixedConfig.overrideBaseRate', { defaultValue: 'Override Base Rate' })}
                                 </Label>
                                 <div className="relative mt-1.5">
-                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
                                   <Input
                                     id={`rate-override-${preset.preset_id}`}
                                     type="text"
@@ -773,7 +804,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                                             {t('addLines.hourlyConfig.hourlyRate', { defaultValue: 'Hourly Rate' })}
                                           </Label>
                                           <div className="relative mt-1">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
                                             <Input
                                               id={`hourly-rate-${preset.preset_id}-${service.service_id}`}
                                               type="text"
@@ -905,7 +936,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                                           {t('addLines.usageConfig.ratePerUnit', { defaultValue: 'Rate (per unit)' })}
                                         </Label>
                                         <div className="relative mt-1">
-                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
                                           <Input
                                             id={`rate-${preset.preset_id}-${service.service_id}`}
                                             type="text"

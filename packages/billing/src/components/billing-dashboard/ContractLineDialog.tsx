@@ -21,13 +21,22 @@ import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { Package, Clock, Activity, Plus, X, Coins } from 'lucide-react';
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { getCurrencySymbol } from '@alga-psa/core';
-import { getServiceById } from '@alga-psa/billing/actions';
+import { getServiceById } from '@alga-psa/billing/actions/serviceActions';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './contracts/BucketOverlayFields';
 import { BucketOverlayInput } from './contracts/ContractWizard';
 import { ServiceCatalogPicker } from './contracts/ServiceCatalogPicker';
 import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
 
@@ -54,6 +63,7 @@ interface ContractLineDialogProps {
 
 export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerButton }: ContractLineDialogProps) {
   const { t } = useTranslation('msp/contract-lines');
+  const { symbol } = useCurrencyFormat();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const [open, setOpen] = useState(false);
   const [planName, setPlanName] = useState('');
@@ -110,6 +120,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       if (editingPlan.preset_id && editingPlan.contract_line_type === 'Fixed') {
         getContractLinePresetFixedConfig(editingPlan.preset_id)
           .then((cfg) => {
+            if (isReturnedActionError(cfg)) {
+              setValidationErrors([getErrorMessage(cfg)]);
+              return;
+            }
             if (cfg) {
               setBaseRate(cfg.base_rate ?? undefined);
               setEnableProration(!!cfg.enable_proration);
@@ -127,9 +141,16 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       if (editingPlan.preset_id) {
         getContractLinePresetServices(editingPlan.preset_id)
           .then(async (presetServices) => {
+            if (isReturnedActionError(presetServices)) {
+              setValidationErrors([getErrorMessage(presetServices)]);
+              return;
+            }
             const resolved = await Promise.all(
               presetServices.map(async (s) => {
                 const svc = await getServiceById(s.service_id);
+                if (isActionMessageError(svc) || isActionPermissionError(svc)) {
+                  return { preset: s, serviceName: '' };
+                }
                 return { preset: s, serviceName: svc?.service_name ?? '' };
               })
             );
@@ -364,10 +385,18 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       if (editingPlan?.preset_id) {
         const { preset_id, ...updateData } = presetData;
         const updatedPreset = await updateContractLinePreset(editingPlan.preset_id, updateData);
+        if (isReturnedActionError(updatedPreset)) {
+          setValidationErrors([getErrorMessage(updatedPreset)]);
+          return;
+        }
         savedPresetId = updatedPreset.preset_id;
       } else {
         const { preset_id, ...createData } = presetData;
         const newPreset = await createContractLinePreset(createData as any);
+        if (isReturnedActionError(newPreset)) {
+          setValidationErrors([getErrorMessage(newPreset)]);
+          return;
+        }
         savedPresetId = newPreset.preset_id;
       }
 
@@ -377,7 +406,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
 
         if (planType === 'Fixed') {
           // Save Fixed config
-          await updateContractLinePresetFixedConfig(savedPresetId, {
+          const fixedConfigResult = await updateContractLinePresetFixedConfig(savedPresetId, {
             base_rate: baseRate ?? null,
             enable_proration: enableProration,
             billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
@@ -385,6 +414,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
               enableProration: enableProration,
             }),
           });
+          if (isReturnedActionError(fixedConfigResult)) {
+            setValidationErrors([getErrorMessage(fixedConfigResult)]);
+            return;
+          }
 
           // Save Fixed services
           fixedServices.forEach(service => {
@@ -435,7 +468,11 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
         }
 
         // Update services for the preset
-        await updateContractLinePresetServices(savedPresetId, servicesToSave);
+        const servicesResult = await updateContractLinePresetServices(savedPresetId, servicesToSave);
+        if (isReturnedActionError(servicesResult)) {
+          setValidationErrors([getErrorMessage(servicesResult)]);
+          return;
+        }
       }
 
       resetForm();
@@ -760,7 +797,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                     {t('dialog.hourly.hourlyRateLabel', { defaultValue: 'Hourly Rate' })}
                   </Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                     <Input
                       id={`hourly-rate-${index}`}
                       type="text"
@@ -995,7 +1032,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       {t('dialog.usage.ratePerUnitLabel', { defaultValue: 'Rate per Unit' })}
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                       <Input
                         id={`unit-rate-${index}`}
                         type="text"
@@ -1400,7 +1437,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                         })}
                       </Label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                         <Input
                           id="base-rate"
                           type="text"

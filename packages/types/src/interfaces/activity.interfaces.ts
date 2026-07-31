@@ -46,7 +46,7 @@ export enum ActivityPriority {
  */
 export interface RelatedEntity {
   id: string;
-  type: 'project' | 'ticket' | 'client' | 'contact' | 'workflow';
+  type: 'project' | 'ticket' | 'client' | 'contact' | 'workflow' | 'opportunity';
   name: string;
   url?: string;
 }
@@ -82,6 +82,8 @@ export interface ActivityBase extends TenantEntity {
   assignedTo?: string[];
   assignedToNames?: string[];
   relatedEntities?: RelatedEntity[];
+  /** Optional direct navigation target for sources without a dedicated detail drawer. */
+  link?: string;
   sourceId: string;
   sourceType: ActivityType;
   actions: ActivityAction[];
@@ -203,6 +205,13 @@ export interface ActivityFilters {
   assignedTo?: string[];
   dueDateStart?: ISO8601String;
   dueDateEnd?: ISO8601String;
+  /**
+   * Filter by activity creation date (a.k.a. "date entered"), lower bound (ISO 8601, inclusive).
+   * Independent of `dueDate*` and `dateRange*`. Applies to every activity type via its `createdAt`.
+   */
+  createdAtStart?: ISO8601String;
+  /** Filter by activity creation date ("date entered"), upper bound (ISO 8601, inclusive). */
+  createdAtEnd?: ISO8601String;
   dateRangeStart?: ISO8601String;
   dateRangeEnd?: ISO8601String;
   search?: string;

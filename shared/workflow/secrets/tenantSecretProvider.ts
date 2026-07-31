@@ -9,6 +9,7 @@
  */
 
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
 import {
   TenantSecretMetadata,
@@ -20,6 +21,14 @@ import {
   createSecretInputSchema,
   updateSecretInputSchema
 } from './types';
+
+function tenantTable<Row extends object>(
+  conn: Knex | Knex.Transaction,
+  tenantId: string,
+  table: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenantId).table<Row>(table);
+}
 
 /**
  * Convert database model to metadata (no secret value).
@@ -93,15 +102,15 @@ export class TenantSecretProvider {
       context: context ?? null
     };
 
-    await trx('tenant_secrets_audit_log').insert(auditEntry);
+    await tenantTable<TenantSecretAuditLogModel>(trx, this.tenantId, 'tenant_secrets_audit_log')
+      .insert(auditEntry);
   }
 
   /**
    * List all secrets for the tenant (metadata only, no values).
    */
   async list(): Promise<TenantSecretMetadata[]> {
-    const rows = await this.knex('tenant_secrets')
-      .where({ tenant: this.tenantId })
+    const rows = await tenantTable<TenantSecretModel>(this.knex, this.tenantId, 'tenant_secrets')
       .orderBy('name', 'asc')
       .select<TenantSecretModel[]>('*');
 
@@ -112,8 +121,8 @@ export class TenantSecretProvider {
    * Get metadata for a specific secret by name.
    */
   async getMetadata(name: string): Promise<TenantSecretMetadata | null> {
-    const row = await this.knex('tenant_secrets')
-      .where({ tenant: this.tenantId, name })
+    const row = await tenantTable<TenantSecretModel>(this.knex, this.tenantId, 'tenant_secrets')
+      .where({ name })
       .first<TenantSecretModel>();
 
     return row ? modelToMetadata(row) : null;
@@ -123,8 +132,8 @@ export class TenantSecretProvider {
    * Check if a secret exists.
    */
   async exists(name: string): Promise<boolean> {
-    const row = await this.knex('tenant_secrets')
-      .where({ tenant: this.tenantId, name })
+    const row = await tenantTable<TenantSecretModel>(this.knex, this.tenantId, 'tenant_secrets')
+      .where({ name })
       .first<{ id: string }>('id');
 
     return !!row;
@@ -156,7 +165,7 @@ export class TenantSecretProvider {
       await provider.setTenantSecret(this.tenantId, validated.name, validated.value);
 
       // Store metadata in database
-      const [row] = await trx('tenant_secrets')
+      const [row] = await tenantTable<TenantSecretModel>(trx, this.tenantId, 'tenant_secrets')
         .insert({
           tenant: this.tenantId,
           name: validated.name,
@@ -188,8 +197,8 @@ export class TenantSecretProvider {
     const validated = updateSecretInputSchema.parse(input);
 
     // Find existing secret
-    const existing = await this.knex('tenant_secrets')
-      .where({ tenant: this.tenantId, name })
+    const existing = await tenantTable<TenantSecretModel>(this.knex, this.tenantId, 'tenant_secrets')
+      .where({ name })
       .first<TenantSecretModel>();
 
     if (!existing) {
@@ -213,8 +222,8 @@ export class TenantSecretProvider {
         updates.description = validated.description;
       }
 
-      const [row] = await trx('tenant_secrets')
-        .where({ tenant: this.tenantId, name })
+      const [row] = await tenantTable<TenantSecretModel>(trx, this.tenantId, 'tenant_secrets')
+        .where({ name })
         .update(updates)
         .returning<TenantSecretModel[]>('*');
 
@@ -237,8 +246,8 @@ export class TenantSecretProvider {
    */
   async delete(name: string, userId: string): Promise<void> {
     // Find existing secret
-    const existing = await this.knex('tenant_secrets')
-      .where({ tenant: this.tenantId, name })
+    const existing = await tenantTable<TenantSecretModel>(this.knex, this.tenantId, 'tenant_secrets')
+      .where({ name })
       .first<TenantSecretModel>();
 
     if (!existing) {
@@ -254,8 +263,8 @@ export class TenantSecretProvider {
       await this.logAuditEvent(trx, existing.id, name, 'deleted', userId);
 
       // Delete metadata from database
-      await trx('tenant_secrets')
-        .where({ tenant: this.tenantId, name })
+      await tenantTable<TenantSecretModel>(trx, this.tenantId, 'tenant_secrets')
+        .where({ name })
         .delete();
     });
   }
@@ -271,8 +280,8 @@ export class TenantSecretProvider {
    */
   async getValue(name: string, workflowRunId?: string): Promise<string> {
     // Find existing secret
-    const existing = await this.knex('tenant_secrets')
-      .where({ tenant: this.tenantId, name })
+    const existing = await tenantTable<TenantSecretModel>(this.knex, this.tenantId, 'tenant_secrets')
+      .where({ name })
       .first<TenantSecretModel>();
 
     if (!existing) {
@@ -289,8 +298,8 @@ export class TenantSecretProvider {
 
     // Update last_accessed_at and log access
     await this.knex.transaction(async (trx) => {
-      await trx('tenant_secrets')
-        .where({ tenant: this.tenantId, name })
+      await tenantTable<TenantSecretModel>(trx, this.tenantId, 'tenant_secrets')
+        .where({ name })
         .update({ last_accessed_at: new Date().toISOString() });
 
       await this.logAuditEvent(trx, existing.id, name, 'accessed', null, workflowRunId);
@@ -304,8 +313,7 @@ export class TenantSecretProvider {
    * Returns a map of secret names to the workflow IDs that reference them.
    */
   async getSecretUsage(): Promise<Map<string, string[]>> {
-    const definitions = await this.knex('workflow_definitions')
-      .where({ tenant: this.tenantId })
+    const definitions = await tenantTable<{ workflow_id: string }>(this.knex, this.tenantId, 'workflow_definitions')
       .select<{ workflow_id: string }[]>('workflow_id');
 
     const workflowIds = definitions.map((row) => row.workflow_id);
@@ -314,12 +322,11 @@ export class TenantSecretProvider {
     }
 
     const [versions, drafts] = await Promise.all([
-      this.knex('workflow_definition_versions')
+      tenantTable<{ workflow_id: string; definition_json: unknown }>(this.knex, this.tenantId, 'workflow_definition_versions')
         .whereIn('workflow_id', workflowIds)
         .whereRaw("definition_json::text LIKE '%$secret%'")
         .select<{ workflow_id: string; definition_json: unknown }[]>('workflow_id', 'definition_json'),
-      this.knex('workflow_definitions')
-        .where({ tenant: this.tenantId })
+      tenantTable<{ workflow_id: string; draft_definition: unknown }>(this.knex, this.tenantId, 'workflow_definitions')
         .whereIn('workflow_id', workflowIds)
         .whereRaw("draft_definition::text LIKE '%$secret%'")
         .select<{ workflow_id: string; draft_definition: unknown }[]>('workflow_id', 'draft_definition'),

@@ -1,4 +1,6 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
+import { ServiceRequestDefinitionBusinessError } from './definitionErrors';
 
 export interface ServiceRequestDefinitionListItem {
   tenant: string;
@@ -20,11 +22,18 @@ export async function archiveServiceRequestDefinition(
   definitionId: string,
   archivedBy?: string | null
 ): Promise<void> {
-  await knex('service_request_definitions').where({ tenant, definition_id: definitionId }).update({
+  const updated = await tenantDb(knex, tenant).table('service_request_definitions').where({ definition_id: definitionId }).update({
     lifecycle_state: 'archived',
     updated_by: archivedBy ?? null,
     updated_at: knex.fn.now(),
   });
+
+  if (updated === 0) {
+    throw new ServiceRequestDefinitionBusinessError(
+      'DEFINITION_NOT_FOUND',
+      'Service request definition was not found or is no longer available.'
+    );
+  }
 }
 
 export async function unarchiveServiceRequestDefinition(
@@ -33,29 +42,36 @@ export async function unarchiveServiceRequestDefinition(
   definitionId: string,
   updatedBy?: string | null
 ): Promise<void> {
-  await knex('service_request_definitions').where({ tenant, definition_id: definitionId }).update({
+  const updated = await tenantDb(knex, tenant).table('service_request_definitions').where({ definition_id: definitionId }).update({
     lifecycle_state: 'draft',
     published_by: null,
     published_at: null,
     updated_by: updatedBy ?? null,
     updated_at: knex.fn.now(),
   });
+
+  if (updated === 0) {
+    throw new ServiceRequestDefinitionBusinessError(
+      'DEFINITION_NOT_FOUND',
+      'Service request definition was not found or is no longer available.'
+    );
+  }
 }
 
 export async function listPublishedServiceRequestDefinitions(
   knex: Knex,
   tenant: string
 ): Promise<ServiceRequestDefinitionListItem[]> {
-  return (await knex('service_request_definitions as definition')
-    .where('definition.tenant', tenant)
+  const db = tenantDb(knex, tenant);
+
+  return (await db.table('service_request_definitions as definition')
     .whereNot('definition.lifecycle_state', 'archived')
     .whereNotNull('definition.published_at')
-    .whereExists(function publishedVersionExists() {
-      this.select(knex.raw('1'))
-        .from('service_request_definition_versions as version')
-        .whereRaw('version.tenant = definition.tenant')
-        .andWhereRaw('version.definition_id = definition.definition_id');
-    })
+    .whereExists(
+      db.subquery('service_request_definition_versions as version')
+        .select(knex.raw('1'))
+        .whereRaw('version.definition_id = definition.definition_id')
+    )
     .orderBy([{ column: 'definition.sort_order', order: 'asc' }, { column: 'definition.name', order: 'asc' }])
     .select(
       'definition.tenant',
@@ -78,8 +94,10 @@ export async function createDraftFromLatestPublishedVersion(
   definitionId: string,
   updatedBy?: string | null
 ): Promise<void> {
-  const latestVersion = await knex('service_request_definition_versions')
-    .where({ tenant, definition_id: definitionId })
+  const db = tenantDb(knex, tenant);
+
+  const latestVersion = await db.table('service_request_definition_versions')
+    .where({ definition_id: definitionId })
     .orderBy('version_number', 'desc')
     .first();
 
@@ -87,7 +105,7 @@ export async function createDraftFromLatestPublishedVersion(
     throw new Error('No published version found for definition');
   }
 
-  await knex('service_request_definitions').where({ tenant, definition_id: definitionId }).update({
+  await db.table('service_request_definitions').where({ definition_id: definitionId }).update({
     name: latestVersion.name,
     description: latestVersion.description,
     icon: latestVersion.icon,

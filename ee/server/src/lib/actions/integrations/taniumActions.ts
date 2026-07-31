@@ -4,6 +4,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { TIER_FEATURES } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex } from '@/lib/db';
 import {
   ingestNormalizedRmmDeviceSnapshot,
@@ -27,8 +28,31 @@ const TANIUM_API_TOKEN_SECRET = 'tanium_api_token';
 const TANIUM_ASSET_API_URL_SECRET = 'tanium_asset_api_url';
 const TANIUM_CRITICALITY_SENSOR_NAME = 'Endpoint Criticality with Level';
 
-function sanitizeError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+function sanitizeError(error: unknown, fallback = 'Unable to complete the Tanium request.'): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (!message) {
+    return fallback;
+  }
+
+  if (message === 'Forbidden' || message.startsWith('Forbidden:')) {
+    return 'You do not have permission to manage Tanium settings.';
+  }
+
+  if (
+    message.startsWith('Tanium Gateway') ||
+    message.startsWith('Tanium API token') ||
+    message.startsWith('Tanium Asset API') ||
+    message === 'Tanium Gateway URL is required.'
+  ) {
+    return message;
+  }
+
+  if (message.includes('fetch failed') || message.includes('ECONNREFUSED') || message.includes('ENOTFOUND')) {
+    return 'Unable to reach Tanium. Verify the Gateway URL and network connectivity.';
+  }
+
+  return fallback;
 }
 
 function withAdvancedAssetsAccess<TArgs extends unknown[], TResult>(
@@ -158,6 +182,7 @@ async function upsertTaniumIntegrationRow(args: {
   useAssetApiFallback?: boolean;
 }) {
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, args.tenant);
 
   const settings = {
     provider_settings: {
@@ -169,7 +194,7 @@ async function upsertTaniumIntegrationRow(args: {
     },
   };
 
-  const response = await knex('rmm_integrations')
+  const response = await db.table('rmm_integrations')
     .insert({
       tenant: args.tenant,
       provider: PROVIDER,
@@ -189,7 +214,7 @@ async function upsertTaniumIntegrationRow(args: {
       sync_status: args.syncStatus ?? knex.raw('rmm_integrations.sync_status'),
       sync_error: args.syncError ?? null,
       settings,
-      updated_at: knex.fn.now(),
+      updated_at: new Date().toISOString(),
     })
     .returning(['integration_id', 'is_active', 'instance_url', 'settings', 'connected_at', 'sync_status', 'sync_error']);
 
@@ -222,8 +247,8 @@ export const getTaniumSettings = withAdvancedAssetsAccess(async (user, { tenant 
 
   try {
     const { knex } = await createTenantKnex();
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    const integration = await tenantDb(knex, tenant).table('rmm_integrations')
+      .where({ provider: PROVIDER })
       .first(['integration_id', 'instance_url', 'is_active', 'connected_at', 'last_sync_at', 'sync_status', 'sync_error', 'settings']);
 
     const secretProvider = await getSecretProviderInstance();
@@ -253,7 +278,7 @@ export const getTaniumSettings = withAdvancedAssetsAccess(async (user, { tenant 
       },
     };
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to load Tanium settings.') };
   }
 });
 
@@ -305,7 +330,7 @@ export const saveTaniumConfiguration = withAdvancedAssetsAccess(async (
       integrationId: row.integration_id as string,
     };
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to save Tanium configuration.') };
   }
 });
 
@@ -335,18 +360,18 @@ export const testTaniumConnection = withAdvancedAssetsAccess(async (user, { tena
   } catch (error) {
     try {
       const { knex } = await createTenantKnex();
-      await knex('rmm_integrations')
-        .where({ tenant, provider: PROVIDER })
+      await tenantDb(knex, tenant).table('rmm_integrations')
+        .where({ provider: PROVIDER })
         .update({
           is_active: false,
-          sync_error: sanitizeError(error),
+          sync_error: sanitizeError(error, 'Unable to test the Tanium connection.'),
           updated_at: knex.fn.now(),
         });
     } catch {
       // Best effort.
     }
 
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to test the Tanium connection.') };
   }
 });
 
@@ -363,8 +388,8 @@ export const disconnectTaniumIntegration = withAdvancedAssetsAccess(async (user,
     ]);
 
     const { knex } = await createTenantKnex();
-    await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    await tenantDb(knex, tenant).table('rmm_integrations')
+      .where({ provider: PROVIDER })
       .update({
         is_active: false,
         connected_at: null,
@@ -375,7 +400,7 @@ export const disconnectTaniumIntegration = withAdvancedAssetsAccess(async (user,
 
     return { success: true };
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to disconnect Tanium.') };
   }
 });
 
@@ -384,17 +409,18 @@ export const syncTaniumScopes = withAdvancedAssetsAccess(async (user, { tenant }
   if (!permitted) return { success: false, error: 'Forbidden' };
 
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
 
   try {
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    const integration = await db.table('rmm_integrations')
+      .where({ provider: PROVIDER })
       .first(['integration_id', 'instance_url', 'settings']);
     if (!integration?.integration_id) {
       return { success: false, error: 'Tanium integration not configured.' };
     }
 
-    await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    await db.table('rmm_integrations')
+      .where({ provider: PROVIDER })
       .update({
         sync_status: 'syncing',
         sync_error: null,
@@ -408,9 +434,9 @@ export const syncTaniumScopes = withAdvancedAssetsAccess(async (user, { tenant }
     });
 
     const scopes = await client.listComputerGroups();
-    const existing = await knex('rmm_organization_mappings')
-      .where({ tenant, integration_id: integration.integration_id })
-      .select(['mapping_id', 'external_organization_id', 'client_id', 'auto_sync_assets', 'auto_create_tickets']);
+    const existing = await db.table('rmm_organization_mappings')
+      .where({ integration_id: integration.integration_id })
+      .select(['mapping_id', 'external_organization_id', 'client_id', 'auto_sync_assets', 'auto_create_tickets', 'default_contact_id']);
 
     const byExternalId = new Map(existing.map((row: any) => [String(row.external_organization_id), row]));
 
@@ -419,8 +445,8 @@ export const syncTaniumScopes = withAdvancedAssetsAccess(async (user, { tenant }
     for (const scope of scopes) {
       const prior = byExternalId.get(scope.id);
       if (prior) {
-        await knex('rmm_organization_mappings')
-          .where({ tenant, mapping_id: prior.mapping_id })
+        await db.table('rmm_organization_mappings')
+          .where({ mapping_id: prior.mapping_id })
           .update({
             external_organization_name: scope.name,
             metadata: { kind: 'computer_group' },
@@ -429,7 +455,7 @@ export const syncTaniumScopes = withAdvancedAssetsAccess(async (user, { tenant }
           });
         updated += 1;
       } else {
-        await knex('rmm_organization_mappings').insert({
+        await db.table('rmm_organization_mappings').insert({
           tenant,
           integration_id: integration.integration_id,
           external_organization_id: scope.id,
@@ -445,8 +471,8 @@ export const syncTaniumScopes = withAdvancedAssetsAccess(async (user, { tenant }
       }
     }
 
-    await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    await db.table('rmm_integrations')
+      .where({ provider: PROVIDER })
       .update({
         sync_status: 'completed',
         last_sync_at: knex.fn.now(),
@@ -463,15 +489,15 @@ export const syncTaniumScopes = withAdvancedAssetsAccess(async (user, { tenant }
       errors: [],
     };
   } catch (error) {
-    await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    await db.table('rmm_integrations')
+      .where({ provider: PROVIDER })
       .update({
         sync_status: 'error',
-        sync_error: sanitizeError(error),
+        sync_error: sanitizeError(error, 'Unable to sync Tanium scopes.'),
         updated_at: knex.fn.now(),
       });
 
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to sync Tanium scopes.') };
   }
 });
 
@@ -481,20 +507,19 @@ export const getTaniumOrganizationMappings = withAdvancedAssetsAccess(async (use
 
   try {
     const { knex } = await createTenantKnex();
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    const db = tenantDb(knex, tenant);
+    const integration = await db.table('rmm_integrations')
+      .where({ provider: PROVIDER })
       .first(['integration_id']);
 
     if (!integration?.integration_id) {
       return { success: true, mappings: [] };
     }
 
-    const rows = await knex('rmm_organization_mappings as rom')
-      .leftJoin('clients as c', function joinClient() {
-        this.on('rom.tenant', '=', 'c.tenant').andOn('rom.client_id', '=', 'c.client_id');
-      })
+    const rowsQuery = db.table('rmm_organization_mappings as rom');
+    db.tenantJoin(rowsQuery, 'clients as c', 'c.client_id', 'rom.client_id', { type: 'left' });
+    const rows = await rowsQuery
       .where({
-        'rom.tenant': tenant,
         'rom.integration_id': integration.integration_id,
       })
       .select([
@@ -504,19 +529,19 @@ export const getTaniumOrganizationMappings = withAdvancedAssetsAccess(async (use
         'rom.client_id',
         'rom.auto_sync_assets',
         'rom.auto_create_tickets',
+        'rom.default_contact_id',
         'rom.last_synced_at',
         'c.client_name as client_name',
       ])
       .orderBy('rom.external_organization_name', 'asc');
 
-    const clients = await knex('clients')
-      .where({ tenant })
+    const clients = await db.table('clients')
       .select(['client_id', 'client_name'])
       .orderBy('client_name', 'asc');
 
     return { success: true, mappings: rows, clients };
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to load Tanium organization mappings.') };
   }
 });
 
@@ -528,6 +553,7 @@ export const updateTaniumOrganizationMapping = withAdvancedAssetsAccess(async (
     clientId?: string | null;
     autoSyncAssets?: boolean;
     autoCreateTickets?: boolean;
+    defaultContactId?: string | null;
   }
 ) => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
@@ -535,20 +561,22 @@ export const updateTaniumOrganizationMapping = withAdvancedAssetsAccess(async (
 
   try {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
     const patch: Record<string, unknown> = {
       updated_at: knex.fn.now(),
     };
     if (typeof input.clientId !== 'undefined') patch.client_id = input.clientId || null;
     if (typeof input.autoSyncAssets !== 'undefined') patch.auto_sync_assets = input.autoSyncAssets;
     if (typeof input.autoCreateTickets !== 'undefined') patch.auto_create_tickets = input.autoCreateTickets;
+    if (typeof input.defaultContactId !== 'undefined') patch.default_contact_id = input.defaultContactId || null;
 
-    await knex('rmm_organization_mappings')
-      .where({ tenant, mapping_id: input.mappingId })
+    await db.table('rmm_organization_mappings')
+      .where({ mapping_id: input.mappingId })
       .update(patch);
 
     return { success: true };
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to update the Tanium organization mapping.') };
   }
 });
 
@@ -557,6 +585,7 @@ export const triggerTaniumFullSync = withAdvancedAssetsAccess(async (user, { ten
   if (!permitted) return { success: false, error: 'Forbidden' };
 
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
 
   try {
     return await runRmmSyncWithTransport({
@@ -566,24 +595,24 @@ export const triggerTaniumFullSync = withAdvancedAssetsAccess(async (user, { ten
         input: { tenant },
       },
       directExecutor: async () => {
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    const integration = await db.table('rmm_integrations')
+      .where({ provider: PROVIDER })
       .first(['integration_id', 'instance_url', 'settings']);
 
     if (!integration?.integration_id) {
       return { success: false, error: 'Tanium integration not configured.' };
     }
 
-    await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    await db.table('rmm_integrations')
+      .where({ provider: PROVIDER })
       .update({
         sync_status: 'syncing',
         sync_error: null,
         updated_at: knex.fn.now(),
       });
 
-    const mappedScopes = await knex('rmm_organization_mappings')
-      .where({ tenant, integration_id: integration.integration_id })
+    const mappedScopes = await db.table('rmm_organization_mappings')
+      .where({ integration_id: integration.integration_id })
       .whereNotNull('client_id')
       .andWhere('auto_sync_assets', true)
       .select(['external_organization_id', 'client_id']);
@@ -621,7 +650,7 @@ export const triggerTaniumFullSync = withAdvancedAssetsAccess(async (user, { ten
         console.warn('Tanium criticality enrichment failed; continuing inventory sync', {
           tenant,
           scopeId: externalScopeId,
-          error: sanitizeError(criticalityError),
+          error: sanitizeError(criticalityError, 'Unable to load Tanium criticality data.'),
         });
       }
 
@@ -691,13 +720,13 @@ export const triggerTaniumFullSync = withAdvancedAssetsAccess(async (user, { ten
           }
         } catch (error) {
           processed += 1;
-          errors.push(`${endpoint.id}: ${sanitizeError(error)}`);
+          errors.push(`${endpoint.id}: ${sanitizeError(error, 'Unable to sync this Tanium endpoint.')}`);
         }
       }
     }
 
-    await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    await db.table('rmm_integrations')
+      .where({ provider: PROVIDER })
       .update({
         sync_status: errors.length ? 'error' : 'completed',
         last_sync_at: knex.fn.now(),
@@ -718,14 +747,14 @@ export const triggerTaniumFullSync = withAdvancedAssetsAccess(async (user, { ten
       },
     });
   } catch (error) {
-    await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    await db.table('rmm_integrations')
+      .where({ provider: PROVIDER })
       .update({
         sync_status: 'error',
-        sync_error: sanitizeError(error),
+        sync_error: sanitizeError(error, 'Unable to sync Tanium inventory.'),
         updated_at: knex.fn.now(),
       });
 
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to sync Tanium inventory.') };
   }
 });

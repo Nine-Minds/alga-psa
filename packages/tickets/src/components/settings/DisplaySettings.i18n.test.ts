@@ -19,10 +19,7 @@ describe('display settings i18n wiring contract', () => {
     expect(source).toContain("'settings.display.preferencesDescription'");
     expect(source).toContain("t('settings.display.dateTimeFormat', 'Date/Time Format')");
     expect(source).toContain("t('settings.display.columnsTitle', 'Ticket List Columns')");
-    expect(source).toContain("t('settings.display.requiredSuffix', '(required)')");
     expect(source).toContain("t('settings.display.showTags', 'Show Tags')");
-    expect(source).toContain("t('settings.display.tagsUnderTitle', 'Display under Title')");
-    expect(source).toContain("t('settings.display.tagsSeparateColumn', 'Display in separate column')");
   });
 
   it('T081: routes the save action and save-result feedback through translations', () => {

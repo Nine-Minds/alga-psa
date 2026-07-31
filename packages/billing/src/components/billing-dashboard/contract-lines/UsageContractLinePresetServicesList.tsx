@@ -18,7 +18,7 @@ import {
   updateContractLinePresetServices,
   getContractLinePresetById
 } from '@alga-psa/billing/actions/contractLinePresetActions';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
@@ -26,8 +26,17 @@ import { BucketOverlayFields } from '../contracts/BucketOverlayFields';
 import { BucketOverlayInput } from '../contracts/ContractWizard';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; labelKey: string; defaultLabel: string }> = [
   { value: 'fixed', labelKey: 'services.usagePreset.billingMethod.fixed', defaultLabel: 'Fixed Price' },
@@ -50,6 +59,7 @@ interface PresetServiceWithBucket extends IContractLinePresetService {
 
 const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServicesListProps> = ({ presetId, onServiceAdded }) => {
   const { t } = useTranslation('msp/contract-lines');
+  const { money, symbol } = useCurrencyFormat();
   const [presetServices, setPresetServices] = useState<PresetServiceWithBucket[]>([]);
   const [originalServices, setOriginalServices] = useState<PresetServiceWithBucket[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
@@ -70,11 +80,19 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
     try {
       // Fetch preset to get billing frequency
       const preset = await getContractLinePresetById(presetId);
+      if (isReturnedActionError(preset)) {
+        setError(getErrorMessage(preset));
+        return;
+      }
       if (preset) {
         setBillingFrequency(preset.billing_frequency || 'monthly');
       }
 
       const presetServicesData = await getContractLinePresetServices(presetId);
+      if (isReturnedActionError(presetServicesData)) {
+        setError(getErrorMessage(presetServicesData));
+        return;
+      }
       const servicesResponse = await getServices(1, 999, { item_kind: 'any' });
       const allAvailableServices = Array.isArray(servicesResponse)
         ? servicesResponse
@@ -303,7 +321,11 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
         bucket_allow_rollover: s.bucket_overlay?.allow_rollover
       }));
 
-      await updateContractLinePresetServices(presetId, servicesToSave);
+      const result = await updateContractLinePresetServices(presetId, servicesToSave);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       await fetchData();
 
       toast.success(t('services.usagePreset.toast.savedSuccessfully', {
@@ -424,7 +446,7 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
                         <label className="text-sm font-medium">
                           {t('services.usagePreset.ratePerUnitLabel', { defaultValue: 'Rate per Unit:' })}
                         </label>
-                        <span className="text-muted-foreground">$</span>
+                        <span className="text-muted-foreground">{symbol()}</span>
                       <Input
                         type="text"
                         inputMode="decimal"
@@ -508,7 +530,7 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
                           key={service.service_id}
                           className="flex items-center space-x-2 p-1 hover:bg-muted/50 rounded"
                         >
-                          <div className="[&>div]:mb-0">
+                          <div>
                             <Checkbox
                               id={`add-service-${service.service_id}`}
                               checked={selectedServicesToAdd.includes(service.service_id!)}
@@ -529,7 +551,7 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
                                 defaultValue: 'Service Type: {{type}} | Method: {{method}} | Default Rate: {{rate}} | Unit: {{unit}}',
                                 type: serviceTypeName,
                                 method: billingMethod,
-                                rate: `$${(Number(service.default_rate) / 100).toFixed(2)}`,
+                                rate: money(Number(service.default_rate)),
                                 unit: service.unit_of_measure || t('services.usagePreset.defaultUnit', { defaultValue: 'unit' }),
                               })}
                             </span>

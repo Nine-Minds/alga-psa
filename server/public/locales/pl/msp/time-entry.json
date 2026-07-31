@@ -29,7 +29,9 @@
       "viewDetails": "Zobacz szczegóły",
       "manageTimePeriods": "Zarządzaj okresami czasu",
       "selectWorkItem": "Wybierz element pracy",
-      "clearFilter": "Wyczyść filtr"
+      "clearFilter": "Wyczyść filtr",
+      "remove": "Usuń",
+      "clear": "Wyczyść"
     },
     "states": {
       "inProgress": "W toku",
@@ -95,6 +97,24 @@
     },
     "lastEntry": {
       "none": "Brak wpisów"
+    },
+    "bulk": {
+      "selectedCount": "Wybrano: {{count}}"
+    },
+    "delete": {
+      "success": "Usunięto karty czasu pracy: {{count}}",
+      "partialFailure": "Nie można usunąć kart czasu pracy: {{count}}",
+      "error": "Nie udało się usunąć kart czasu pracy"
+    },
+    "removePeriod": {
+      "success": "Usunięto okresy: {{count}}",
+      "partialFailure": "Nie można usunąć okresów: {{count}}",
+      "error": "Nie udało się usunąć okresów"
+    },
+    "remove": {
+      "title": "Usuń nieużywane elementy",
+      "message": "Usunąć {{count}} wybrany(ch) okres(ów)? Nieużywane okresy rozliczeniowe zostaną usunięte dla całej organizacji wraz z wszelkimi pustymi wersjami roboczymi w nich zapisanymi. Tej operacji nie można cofnąć.",
+      "timesheetMessage": "Usunąć {{count}} nieużywaną(ych) kartę(kart) czasu pracy? Usuwane są tylko puste robocze karty czasu pracy, a tej operacji nie można cofnąć."
     }
   },
   "timeEntryForm": {
@@ -121,7 +141,10 @@
       "minimumDuration": "Minimalny czas trwania to 1 minuta",
       "serviceRequired": "Do wpisów czasu wymagana jest obsługa",
       "timePeriodRange": "Data musi mieścić się w bieżącym okresie ({{periodRange}})",
-      "endAfterStartPicker": "Godzina zakończenia musi być późniejsza niż godzina rozpoczęcia"
+      "endAfterStartPicker": "Godzina zakończenia musi być późniejsza niż godzina rozpoczęcia",
+      "durationSameDay": "Czas trwania musi kończyć się tego samego dnia",
+      "endSameDay": "Godzina zakończenia musi przypadać tego samego dnia co godzina rozpoczęcia",
+      "invalidTimeRange": "Wprowadź prawidłowy zakres czasu"
     }
   },
   "workItemPicker": {
@@ -145,7 +168,9 @@
     "empty": {
       "searching": "Badawczy...",
       "noWorkItems": "Nie znaleziono żadnych elementów pracy"
-    }
+    },
+    "paymentWarningTitle": "Ostrzeżenie o wymaganej płatności",
+    "paymentWarning": "Płatność jest wymagana dla oznaczonego etapu rozliczenia projektu i nie została jeszcze potwierdzona. Potwierdź płatność przed kontynuowaniem pracy."
   },
   "workItemList": {
     "meta": {
@@ -286,7 +311,7 @@
       "failedInteraction": "Nie udało się wczytać szczegółów interakcji",
       "interactionNotFound": "Nie znaleziono interakcji",
       "noUserSession": "Nie znaleziono sesji użytkownika",
-      "failedTicket": "Nie udało się załadować biletu",
+      "failedTicket": "Nie udało się załadować zgłoszenia",
       "failedTask": "Nie udało się załadować zadania",
       "failedTaskPhase": "Nie udało się załadować fazy zadania",
       "failedTaskProjectMetadata": "Nie udało się załadować metadanych projektu zadania",
@@ -365,7 +390,15 @@
     "active": "Aktywny"
   },
   "intervals": {
-    "title": "Przedziały czasowe biletów",
+    "createdFromNote_one": "Utworzono z {{count}} interwału",
+    "createdFromNote_few": "Utworzono z {{count}} interwałów",
+    "createdFromNote_many": "Utworzono z {{count}} interwałów",
+    "createdFromNote_other": "Utworzono z {{count}} interwałów",
+    "selectedCount_one": "Wybrano {{count}} interwał",
+    "selectedCount_few": "Wybrano {{count}} interwały",
+    "selectedCount_many": "Wybrano {{count}} interwałów",
+    "selectedCount_other": "Wybrano {{count}} interwałów",
+    "title": "Przedziały czasowe zgłoszeń",
     "hideShortIntervals": "Ukryj interwały poniżej 1 minuty",
     "totalTime": "Całkowity czas: {{value}}",
     "selectedOne": "Wybrano {{count}} interwał",
@@ -383,15 +416,15 @@
     "states": {
       "loading": "Interwały ładowania...",
       "noIntervalsThisPeriod": "Nie znaleziono interwałów dla tego okresu",
-      "noIntervalsThisTicket": "Nie znaleziono interwałów dla tego biletu",
+      "noIntervalsThisTicket": "Nie znaleziono interwałów dla tego zgłoszenia",
       "noIntervalsLongerThanMinute": "Nie znaleziono interwałów dłuższych niż 1 minuta"
     },
-    "entryName": "Wejście w godzinach biletu",
+    "entryName": "Wpis czasu zgłoszenia",
     "messages": {
       "cannotFindTimeSheet": "Nie można utworzyć wpisu czasu — nie można znaleźć ani utworzyć arkusza czasu pracy",
       "mergeFirst": "Przed utworzeniem wpisu czasu należy najpierw połączyć przedziały",
-      "sameTicketOnly": "Można tworzyć wpisy czasowe tylko z przedziałów tego samego biletu",
-      "mergeSameTicketOnly": "Można łączyć tylko interwały z tego samego biletu",
+      "sameTicketOnly": "Można tworzyć wpisy czasowe tylko z przedziałów tego samego zgłoszenia",
+      "mergeSameTicketOnly": "Można łączyć tylko interwały z tego samego zgłoszenia",
       "mergeSuccess": "Przedziały zostały pomyślnie połączone",
       "failedMerge": "Nie udało się scalić interwałów",
       "noActivePeriod": "Nie znaleziono aktywnego okresu",
@@ -421,10 +454,11 @@
     "taskUpdated": "Zadanie zaktualizowane pomyślnie",
     "saveChangesFailed": "Nie udało się zapisać zmian",
     "changesSaved": "Zmiany zapisane pomyślnie",
-    "workItemDeleted": "Element pracy usunięty pomyślnie"
+    "workItemDeleted": "Element pracy usunięty pomyślnie",
+    "submitFailed": "Failed to submit time sheet"
   },
   "bundleNotice": {
-    "withNumber": "Ten bilet jest częścią pakietu {{number}}. Czas pakietu jest zwykle rejestrowany na bilecie głównym.",
-    "withoutNumber": "Ten bilet jest częścią pakietu. Czas pakietu jest zwykle rejestrowany na bilecie głównym."
+    "withNumber": "To zgłoszenie jest częścią pakietu {{number}}. Czas pakietu jest zwykle rejestrowany na zgłoszeniu głównym.",
+    "withoutNumber": "To zgłoszenie jest częścią pakietu. Czas pakietu jest zwykle rejestrowany na zgłoszeniu głównym."
   }
 }

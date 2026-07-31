@@ -16,18 +16,20 @@ describe('default-contract observability wiring', () => {
 
   it('F052/F054: resolver paths emit explicit/default/ambiguous routing decisions with unresolved markers', () => {
     const schedulingSource = readRepo('packages/scheduling/src/lib/contractLineDisambiguation.ts');
+    const schedulingSharedSource = readRepo('packages/scheduling/src/lib/contractLineDisambiguation.shared.ts');
     const billingSource = readRepo('packages/billing/src/lib/contractLineDisambiguation.ts');
+    const billingSharedSource = readRepo('packages/billing/src/lib/contractLineDisambiguation.shared.ts');
 
     expect(schedulingSource).toContain("console.info('[contract_line_resolver.routing]'");
-    expect(schedulingSource).toContain("decision: 'explicit'");
-    expect(schedulingSource).toContain("decision: 'default'");
-    expect(schedulingSource).toContain("decision: 'ambiguous_or_unresolved'");
+    expect(schedulingSharedSource).toContain("decision: 'explicit'");
+    expect(schedulingSharedSource).toContain("decision: 'default'");
+    expect(schedulingSharedSource).toContain("decision: 'ambiguous_or_unresolved'");
     expect(schedulingSource).toContain("'unresolved_ambiguous_count'");
 
     expect(billingSource).toContain("console.info('[contract_line_resolver.routing]'");
-    expect(billingSource).toContain("decision: 'explicit'");
-    expect(billingSource).toContain("decision: 'default'");
-    expect(billingSource).toContain("decision: 'ambiguous_or_unresolved'");
+    expect(billingSharedSource).toContain("decision: 'explicit'");
+    expect(billingSharedSource).toContain("decision: 'default'");
+    expect(billingSharedSource).toContain("decision: 'ambiguous_or_unresolved'");
     expect(billingSource).toContain("'unresolved_ambiguous_count'");
   });
 

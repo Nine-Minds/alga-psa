@@ -10,6 +10,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { changeOwnPassword, checkPasswordResetStatus } from '../../actions';
 import { PasswordResetWarning } from '@alga-psa/ui/components/PasswordResetWarning';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { validatePassword as validatePasswordPolicy, getPasswordRequirements } from '@alga-psa/validation';
 
 interface PasswordChangeFormProps {
   onSuccess?: () => void;
@@ -55,12 +56,13 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
   }, [newPassword, confirmPassword]);
 
   const validatePassword = () => {
+    const reqs = getPasswordRequirements(newPassword);
     setPasswordRequirements({
-      minLength: newPassword.length >= 8,
-      hasUppercase: /[A-Z]/.test(newPassword),
-      hasLowercase: /[a-z]/.test(newPassword),
-      hasNumber: /\d/.test(newPassword),
-      hasSpecialChar: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword),
+      minLength: reqs.minLength,
+      hasUppercase: reqs.hasUpper,
+      hasLowercase: reqs.hasLower,
+      hasNumber: reqs.hasNumber,
+      hasSpecialChar: reqs.hasSpecial,
       passwordsMatch: newPassword === confirmPassword && newPassword.length > 0
     });
   };
@@ -93,6 +95,14 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
       setPasswordError(t('profile.changePassword.requirements', {
         defaultValue: 'Password must be at least 8 characters',
       }));
+      return;
+    }
+
+    // Shared policy gate: catches rules not shown in the checklist (common-word
+    // blocklist, long-sequence rejection) and surfaces the specific reason.
+    const policyError = validatePasswordPolicy(newPassword);
+    if (policyError) {
+      setPasswordError(policyError);
       return;
     }
 

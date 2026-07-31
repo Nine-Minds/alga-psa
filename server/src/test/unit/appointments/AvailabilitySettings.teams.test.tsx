@@ -1,17 +1,27 @@
 /**
  * @vitest-environment jsdom
+ *
+ * The default meeting-organizer controls (formerly a "Teams Meetings" tab inside
+ * AvailabilitySettings) were relocated to the dedicated Teams integration
+ * settings surface in commit 5ad47bed3d
+ * ("feat(teams-settings): move meeting organizer controls [F049-F050,T072-T073]").
+ *
+ * These tests assert the relocation contract:
+ *   1. AvailabilitySettings no longer renders any Teams meeting-organizer UI and
+ *      no longer depends on the meeting-organizer server actions.
+ *   2. The meeting-organizer controls + actions now live in
+ *      TeamsIntegrationSettings / the integrations teamsActions module.
  */
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import fs from 'node:fs';
+import path from 'node:path';
+import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AvailabilitySettings from '../../../../../packages/scheduling/src/components/schedule/AvailabilitySettings';
 
 const {
   getAvailabilitySettings,
-  getTeamsMeetingsTabState,
-  setDefaultMeetingOrganizer,
-  verifyMeetingOrganizer,
   createOrUpdateAvailabilitySetting,
   deleteAvailabilitySetting,
   getAvailabilityExceptions,
@@ -21,12 +31,8 @@ const {
   getAllUsersBasic,
   getTeams,
   useSession,
-  useFeatureFlag,
 } = vi.hoisted(() => ({
   getAvailabilitySettings: vi.fn(),
-  getTeamsMeetingsTabState: vi.fn(),
-  setDefaultMeetingOrganizer: vi.fn(),
-  verifyMeetingOrganizer: vi.fn(),
   createOrUpdateAvailabilitySetting: vi.fn(),
   deleteAvailabilitySetting: vi.fn(),
   getAvailabilityExceptions: vi.fn(),
@@ -36,14 +42,10 @@ const {
   getAllUsersBasic: vi.fn(),
   getTeams: vi.fn(),
   useSession: vi.fn(),
-  useFeatureFlag: vi.fn(),
 }));
 
 vi.mock('@alga-psa/scheduling/actions', () => ({
   getAvailabilitySettings,
-  getTeamsMeetingsTabState,
-  setDefaultMeetingOrganizer,
-  verifyMeetingOrganizer,
   createOrUpdateAvailabilitySetting,
   deleteAvailabilitySetting,
   getAvailabilityExceptions,
@@ -62,17 +64,6 @@ vi.mock('@alga-psa/teams/actions', () => ({
 
 vi.mock('next-auth/react', () => ({
   useSession: () => useSession(),
-}));
-
-vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: () => useFeatureFlag(),
-}));
-
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({
-    t: (_key: string, fallback?: string | { defaultValue?: string }) =>
-      typeof fallback === 'string' ? fallback : fallback?.defaultValue ?? _key,
-  }),
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -156,6 +147,10 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   ),
 }));
 
+vi.mock('@alga-psa/ui/components/MultiUserAndTeamPicker', () => ({
+  default: () => <div>Picker</div>,
+}));
+
 vi.mock('@alga-psa/ui/components/TimePicker', () => ({
   TimePicker: (props: any) => <input type="time" {...props} />,
 }));
@@ -181,29 +176,18 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
   DataTable: () => <div>Data table</div>,
 }));
 
-describe('AvailabilitySettings Teams meetings UI', () => {
+const repoRoot = path.resolve(__dirname, '../../../../..');
+
+describe('AvailabilitySettings Teams meetings relocation', () => {
   beforeEach(() => {
     useSession.mockReturnValue({
       data: { user: { id: 'user-1' } },
     });
-    useFeatureFlag.mockReturnValue({ enabled: false });
     getTeams.mockResolvedValue([]);
     getAllUsersBasic.mockResolvedValue([]);
     getServices.mockResolvedValue({ services: [] });
     getAvailabilitySettings.mockResolvedValue({ success: true, data: [] });
     getAvailabilityExceptions.mockResolvedValue({ success: true, data: [] });
-    getTeamsMeetingsTabState.mockResolvedValue({
-      success: true,
-      data: { visible: true, organizerUpn: 'scheduler@acme.com' },
-    });
-    setDefaultMeetingOrganizer.mockResolvedValue({
-      success: true,
-      data: { organizerUpn: 'video@acme.com' },
-    });
-    verifyMeetingOrganizer.mockResolvedValue({
-      success: true,
-      data: { valid: true, displayName: 'Scheduler User' },
-    });
     createOrUpdateAvailabilitySetting.mockResolvedValue({ success: true });
     deleteAvailabilitySetting.mockResolvedValue({ success: true });
     addAvailabilityException.mockResolvedValue({ success: true });
@@ -215,38 +199,40 @@ describe('AvailabilitySettings Teams meetings UI', () => {
     vi.clearAllMocks();
   });
 
-  it('shows the Teams Meetings tab only when the tab state reports it visible', async () => {
-    const visibleRender = render(<AvailabilitySettings isOpen={true} onClose={vi.fn()} />);
-
-    expect(await screen.findByText('Teams Meetings')).toBeInTheDocument();
-    visibleRender.unmount();
-
-    getTeamsMeetingsTabState.mockResolvedValue({
-      success: true,
-      data: { visible: false, organizerUpn: null },
-    });
-
+  it('no longer renders the Teams meeting-organizer UI in AvailabilitySettings', async () => {
     render(<AvailabilitySettings isOpen={true} onClose={vi.fn()} />);
 
-    await waitFor(() => {
-      expect(screen.queryByText('Teams Meetings')).not.toBeInTheDocument();
-    });
+    // Wait for the component to finish its initial async loads.
+    await screen.findByText('Existing Exceptions');
+
+    expect(screen.queryByText('Teams Meetings')).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Default meeting organizer (UPN or Microsoft user ID)')
+    ).not.toBeInTheDocument();
   });
 
-  it('saves the organizer UPN from the Teams Meetings tab', async () => {
-    render(<AvailabilitySettings isOpen={true} onClose={vi.fn()} />);
+  it('AvailabilitySettings source no longer wires the meeting-organizer actions', () => {
+    const source = fs.readFileSync(
+      path.join(repoRoot, 'packages/scheduling/src/components/schedule/AvailabilitySettings.tsx'),
+      'utf8'
+    );
 
-    const organizerInput = await screen.findByLabelText('Default meeting organizer (UPN or Microsoft user ID)');
+    expect(source).not.toContain('getTeamsMeetingsTabState');
+    expect(source).not.toContain('setDefaultMeetingOrganizer');
+    expect(source).not.toContain('verifyMeetingOrganizer');
+  });
 
-    fireEvent.change(organizerInput, { target: { value: 'video@acme.com' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  it('the meeting-organizer controls now live in TeamsIntegrationSettings', () => {
+    const teamsSettingsSource = fs.readFileSync(
+      path.join(
+        repoRoot,
+        'packages/integrations/src/components/settings/integrations/TeamsIntegrationSettings.tsx'
+      ),
+      'utf8'
+    );
 
-    await waitFor(() => {
-      expect(setDefaultMeetingOrganizer).toHaveBeenCalledWith({ upn: 'video@acme.com' });
-    });
-
-    expect(
-      (screen.getByLabelText('Default meeting organizer (UPN or Microsoft user ID)') as HTMLInputElement).value
-    ).toBe('video@acme.com');
+    expect(teamsSettingsSource).toContain('teams-default-meeting-organizer-upn');
+    expect(teamsSettingsSource).toContain('defaultMeetingOrganizerUpn');
+    expect(teamsSettingsSource).toContain('saveTeamsIntegrationSettings');
   });
 });

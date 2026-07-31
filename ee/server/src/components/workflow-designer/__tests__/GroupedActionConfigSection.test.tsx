@@ -167,4 +167,48 @@ describe('GroupedActionConfigSection', () => {
       document.getElementById('workflow-step-action-select-step-readonly')
     ).toBeDisabled();
   });
+
+  it('T019: shows a disconnected banner for unavailable integration records and keeps the action select usable', () => {
+    render(
+      <GroupedActionConfigSection
+        stepId="step-disc"
+        record={{ ...slackRecord, available: false }}
+        selectedActionId="slack.send_message"
+        onActionChange={vi.fn()}
+      />
+    );
+
+    expect(document.getElementById('workflow-step-group-disconnected-step-disc')).toHaveTextContent(
+      'Slack is not connected'
+    );
+    expect(
+      screen.getByText(
+        'Steps using its actions will fail at run time until the integration is reconnected under Settings > Integrations.'
+      )
+    ).toBeInTheDocument();
+    expect(document.getElementById('workflow-step-action-select-step-disc')).not.toBeDisabled();
+  });
+
+  it('T019: shows no disconnected banner when the record is available or availability is unspecified', () => {
+    render(
+      <GroupedActionConfigSection
+        stepId="step-avail"
+        record={{ ...slackRecord, available: true }}
+        selectedActionId="slack.send_message"
+        onActionChange={vi.fn()}
+      />
+    );
+    expect(document.getElementById('workflow-step-group-disconnected-step-avail')).toBeNull();
+    cleanup();
+
+    render(
+      <GroupedActionConfigSection
+        stepId="step-core"
+        record={ticketRecord}
+        selectedActionId="tickets.create"
+        onActionChange={vi.fn()}
+      />
+    );
+    expect(document.getElementById('workflow-step-group-disconnected-step-core')).toBeNull();
+  });
 });

@@ -69,10 +69,10 @@ describe('QboClientService error mapping', () => {
     vi.clearAllMocks();
   });
 
-  it('maps QBO stale-object fault (code 6240) to QBO_STALE_OBJECT', async () => {
+  it('maps QBO stale-object fault (code 5010) to QBO_STALE_OBJECT', async () => {
     const service = await createService();
     axiosRequestMock.mockRejectedValueOnce(
-      qboFaultRejection(400, { Message: 'Stale Object Error', code: '6240', Detail: 'SyncToken mismatch' })
+      qboFaultRejection(400, { Message: 'Stale Object Error', code: '5010', Detail: 'SyncToken mismatch' })
     );
 
     const error: any = await service

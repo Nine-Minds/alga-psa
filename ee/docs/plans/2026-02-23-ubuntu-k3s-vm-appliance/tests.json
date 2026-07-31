@@ -31,7 +31,7 @@
   },
   {
     "id": "T006",
-    "description": "Verify build-images.sh fails fast when required inputs are missing.",
+    "description": "Verify historical removed image-build script fails fast when required inputs are missing.",
     "implemented": false,
     "featureIds": ["F007"]
   },
@@ -91,7 +91,7 @@
   },
   {
     "id": "T016",
-    "description": "Verify bootstrap-site.sh performs non-interactive setup and exits successfully for a new site.",
+    "description": "Verify historical removed bootstrap wrapper performs non-interactive setup and exits successfully for a new site.",
     "implemented": false,
     "featureIds": ["F014"]
   },

@@ -24,12 +24,20 @@ import type { IClient } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
 import { getIntegrationClients } from '../../../actions/clientLookupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 export interface InboundTicketDefaultsFormProps {
   defaults?: InboundTicketDefaults | null;
   onSuccess: (defaults: InboundTicketDefaults) => void;
   onCancel: () => void;
 }
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export function InboundTicketDefaultsForm({ 
   defaults, 
@@ -87,7 +95,14 @@ export function InboundTicketDefaultsForm({
         return;
       }
       try {
-        const { categories } = await getCategoriesByBoard(formData.board_id);
+        const result = await getCategoriesByBoard(formData.board_id);
+        if (isReturnedActionError(result)) {
+          setError(getErrorMessage(result));
+          setFieldOptions(prev => ({ ...prev, categories: [] }));
+          return;
+        }
+
+        const { categories } = result;
         setFieldOptions(prev => ({ ...prev, categories }));
       } catch (err) {
         // On error, keep categories empty for safety
@@ -108,11 +123,19 @@ export function InboundTicketDefaultsForm({
 
       try {
         setLoadingStatuses(true);
-        const { statuses } = await getAvailableStatuses(formData.board_id);
+        const result = await getAvailableStatuses(formData.board_id);
         if (!active) {
           return;
         }
 
+        if (isReturnedActionError(result)) {
+          setError(getErrorMessage(result));
+          setFieldOptions(prev => ({ ...prev, statuses: [] }));
+          setFormData(prev => (prev.status_id ? { ...prev, status_id: '' } : prev));
+          return;
+        }
+
+        const { statuses } = result;
         setFieldOptions(prev => ({ ...prev, statuses }));
         setFormData(prev => {
           if (!prev.status_id) {
@@ -167,6 +190,11 @@ export function InboundTicketDefaultsForm({
     try {
       setLoadingOptions(true);
       const data = await getTicketFieldOptions();
+      if (isReturnedActionError(data)) {
+        setError(getErrorMessage(data));
+        return;
+      }
+
       setFieldOptions({
         ...data.options,
         statuses: [],
@@ -256,9 +284,14 @@ export function InboundTicketDefaultsForm({
         result = await createInboundTicketDefaults(payload);
       }
 
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+
       onSuccess(result.defaults);
     } catch (err: any) {
-      setError(err.message);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

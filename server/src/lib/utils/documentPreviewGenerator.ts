@@ -28,7 +28,7 @@ async function loadSharp() {
 }
 import { PDFDocument } from 'pdf-lib';
 import { fromPath } from 'pdf2pic';
-import { StorageService } from '../storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { createTenantKnex } from '../db';
 import { IDocument } from '../../interfaces/document.interface';
 import { v4 as uuidv4 } from 'uuid';
@@ -36,6 +36,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { tenantDb } from '@alga-psa/db';
 import { isValidUUID } from '@alga-psa/validation';
 import {
   buildMediaProcessingFailedPayload,
@@ -265,6 +266,7 @@ async function generateImagePreviews(
         {
           mime_type: 'image/jpeg',
           uploaded_by_id: document.created_by,
+          isDerivedArtifact: true,
           metadata: {
             context: 'document_thumbnail',
             source_document_id: document.document_id,
@@ -303,6 +305,7 @@ async function generateImagePreviews(
           {
             mime_type: 'image/jpeg',
             uploaded_by_id: document.created_by,
+            isDerivedArtifact: true,
             metadata: {
               context: 'document_preview',
               source_document_id: document.document_id,
@@ -404,6 +407,7 @@ async function generatePdfPreviews(
         {
           mime_type: 'image/jpeg',
           uploaded_by_id: document.created_by,
+          isDerivedArtifact: true,
           metadata: {
             context: 'document_thumbnail',
             source_document_id: document.document_id,
@@ -435,6 +439,7 @@ async function generatePdfPreviews(
         {
           mime_type: 'image/jpeg',
           uploaded_by_id: document.created_by,
+          isDerivedArtifact: true,
           metadata: {
             context: 'document_preview',
             source_document_id: document.document_id,
@@ -590,6 +595,7 @@ async function generateVideoPreviews(
         {
           mime_type: 'image/jpeg',
           uploaded_by_id: document.created_by,
+          isDerivedArtifact: true,
           metadata: {
             context: 'document_thumbnail',
             source_document_id: document.document_id,
@@ -622,6 +628,7 @@ async function generateVideoPreviews(
         {
           mime_type: 'image/jpeg',
           uploaded_by_id: document.created_by,
+          isDerivedArtifact: true,
           metadata: {
             context: 'document_preview',
             source_document_id: document.document_id,
@@ -686,9 +693,10 @@ export async function batchGeneratePreviews(limit: number = 50): Promise<number>
 
     console.log(`[batchGeneratePreviews] Starting batch preview generation (limit: ${limit})`);
 
+    const db = tenantDb(knex, tenant);
+
     // Find documents without previews that have files
-    const documents = await knex('documents')
-      .where({ tenant })
+    const documents = await db.table('documents')
       .whereNotNull('file_id')
       .whereNull('preview_file_id')
       .limit(limit)
@@ -715,8 +723,8 @@ export async function batchGeneratePreviews(limit: number = 50): Promise<number>
         const previewResult = await generateDocumentPreviews(doc, downloadResult.buffer);
 
         // Update document with preview file IDs
-        await knex('documents')
-          .where({ document_id: doc.document_id, tenant })
+        await db.table('documents')
+          .where({ document_id: doc.document_id })
           .update({
             thumbnail_file_id: previewResult.thumbnail_file_id,
             preview_file_id: previewResult.preview_file_id,
@@ -757,9 +765,11 @@ export async function regenerateDocumentPreview(documentId: string): Promise<boo
 
     console.log(`[regenerateDocumentPreview] Regenerating preview for document ${documentId}`);
 
+    const db = tenantDb(knex, tenant);
+
     // Get document
-    const document = await knex('documents')
-      .where({ document_id: documentId, tenant })
+    const document = await db.table('documents')
+      .where({ document_id: documentId })
       .first();
 
     if (!document) {
@@ -783,8 +793,8 @@ export async function regenerateDocumentPreview(documentId: string): Promise<boo
     const previewResult = await generateDocumentPreviews(document, downloadResult.buffer);
 
     // Update document with preview file IDs
-    await knex('documents')
-      .where({ document_id: documentId, tenant })
+    await db.table('documents')
+      .where({ document_id: documentId })
       .update({
         thumbnail_file_id: previewResult.thumbnail_file_id,
         preview_file_id: previewResult.preview_file_id,

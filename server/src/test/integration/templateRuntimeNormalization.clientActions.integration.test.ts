@@ -31,11 +31,31 @@ vi.mock('@alga-psa/auth', () => ({
         {
           user_id: userId,
           tenant: tenantId,
+          user_type: 'internal',
           roles: [{ role_name: 'Admin' }],
         },
         { tenant: tenantId },
         ...args,
       ),
+  withAuthCheck:
+    (fn: (...args: any[]) => any) =>
+    (...args: any[]) =>
+      fn(
+        {
+          user_id: userId,
+          tenant: tenantId,
+          user_type: 'internal',
+          roles: [{ role_name: 'Admin' }],
+        },
+        ...args,
+      ),
+  hasPermission: vi.fn(async () => true),
+  getCurrentUser: vi.fn(async () => ({
+    user_id: userId,
+    tenant: tenantId,
+    user_type: 'internal',
+    roles: [{ role_name: 'Admin' }],
+  })),
 }));
 
 async function insertClient(clientId: string) {
@@ -82,7 +102,9 @@ async function insertClientContract(
     start_date: '2026-01-01',
     end_date: null,
     is_active: true,
-    status: 'active',
+    // client_contracts.status is the renewal workflow status with a CHECK
+    // constraint (pending/renewing/non_renewing/snoozed/completed).
+    status: 'pending',
     po_required: false,
     po_number: null,
     po_amount: null,
@@ -376,9 +398,9 @@ describe('Template runtime normalization client action integration', () => {
         end_date: null,
         is_active: true,
       } as any),
-    ).rejects.toThrow(
-      `Client contract ${clientContractId} is missing template provenance (template_contract_id) required to clone template contract lines`,
-    );
+    ).resolves.toEqual({
+      actionError: `Client contract ${clientContractId} is missing template provenance (template_contract_id) required to clone template contract lines`,
+    });
 
     const targetLines = await db('contract_lines')
       .where({

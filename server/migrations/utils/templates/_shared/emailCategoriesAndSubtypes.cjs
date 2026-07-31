@@ -8,6 +8,7 @@
 const CATEGORIES = [
   { name: 'Tickets', description: 'Notifications related to support tickets', is_enabled: true, is_default_enabled: true },
   { name: 'Invoices', description: 'Notifications related to billing and invoices', is_enabled: true, is_default_enabled: true },
+  { name: 'Quotes', description: 'Notifications related to quotes sent to clients', is_enabled: true, is_default_enabled: true },
   { name: 'Projects', description: 'Notifications related to project updates', is_enabled: true, is_default_enabled: true },
   { name: 'Time Entries', description: 'Notifications related to time tracking and approvals', is_enabled: true, is_default_enabled: true },
   { name: 'Surveys', description: 'Customer satisfaction surveys and feedback loops', is_enabled: true, is_default_enabled: true },
@@ -37,6 +38,9 @@ const SUBTYPES = [
   { category: 'Invoices', name: 'Payment Received', description: 'When a payment is received' },
   { category: 'Invoices', name: 'Payment Overdue', description: 'When an invoice payment is overdue' },
   { category: 'Invoices', name: 'Credit Expiring', description: 'When credits are about to expire' },
+  // Quotes
+  { category: 'Quotes', name: 'Quote Email', description: 'Email sent to client with the quote attached' },
+  { category: 'Quotes', name: 'Quote Reminder', description: 'Reminder email sent before a quote expires' },
   // Projects
   { category: 'Projects', name: 'Project Created', description: 'When a new project is created' },
   { category: 'Projects', name: 'Project Updated', description: 'When a project is modified' },
@@ -46,6 +50,9 @@ const SUBTYPES = [
   { category: 'Projects', name: 'Task Updated', description: 'When a project task is updated' },
   { category: 'Projects', name: 'Task Comment Added', description: 'When a comment is added to a project task' },
   { category: 'Projects', name: 'Milestone Completed', description: 'When a project milestone is completed' },
+  { category: 'Projects', name: 'Project Milestone Ready', description: 'When a project billing schedule entry becomes ready for review' },
+  { category: 'Projects', name: 'Project Budget Threshold Reached', description: 'When project billing crosses a configured budget threshold' },
+  { category: 'Projects', name: 'Project Budget Exceeded', description: 'When billable project work first exceeds a hard budget cap' },
   // Time Entries
   { category: 'Time Entries', name: 'Time Entry Submitted', description: 'When time entries are submitted for approval' },
   { category: 'Time Entries', name: 'Time Entry Approved', description: 'When time entries are approved' },
@@ -54,6 +61,7 @@ const SUBTYPES = [
   { category: 'Authentication', name: 'email-verification', description: 'Email verification instructions for new users' },
   { category: 'Authentication', name: 'password-reset', description: 'Password reset instructions for users' },
   { category: 'Authentication', name: 'portal-invitation', description: 'Invitation email for customer portal access' },
+  { category: 'Authentication', name: 'team-invitation', description: 'Invitation email for internal MSP team member access' },
   { category: 'Authentication', name: 'tenant-recovery', description: 'Tenant/organization account recovery and login links' },
   { category: 'Authentication', name: 'no-account-found', description: 'Notification when no account is found for email address' },
   // Appointments

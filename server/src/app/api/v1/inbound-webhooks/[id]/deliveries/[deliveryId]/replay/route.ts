@@ -6,7 +6,12 @@
 import { NextResponse } from 'next/server';
 
 import { getInboundDelivery, replayInboundDelivery } from '@/lib/actions/inboundWebhookActions';
-import { handleApiError, NotFoundError } from 'server/src/lib/api/middleware/apiMiddleware';
+import {
+  createServerActionErrorResponse,
+  handleApiError,
+  isServerActionErrorResult,
+  NotFoundError,
+} from 'server/src/lib/api/middleware/apiMiddleware';
 
 type RouteContext = {
   params: Promise<{ id: string; deliveryId: string }>;
@@ -16,12 +21,18 @@ export async function POST(_request: Request, context: RouteContext) {
   try {
     const { id, deliveryId } = await context.params;
     const original = await getInboundDelivery(deliveryId);
+    if (isServerActionErrorResult(original)) {
+      return createServerActionErrorResponse(original);
+    }
 
     if (!original || original.inboundWebhookId !== id) {
       throw new NotFoundError('Inbound delivery not found');
     }
 
     const replayedDelivery = await replayInboundDelivery(deliveryId);
+    if (isServerActionErrorResult(replayedDelivery)) {
+      return createServerActionErrorResponse(replayedDelivery);
+    }
     return NextResponse.json({ data: replayedDelivery }, { status: 202 });
   } catch (error) {
     return handleApiError(error);

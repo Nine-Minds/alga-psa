@@ -7,7 +7,8 @@ import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import DefaultLayout from '../../../components/layout/DefaultLayout';
-import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
+import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
+import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
 
 const routerPush = vi.fn();
 const mockCancelHandler = vi.fn();
@@ -34,6 +35,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  detectClientLocale: () => 'en',
   useTranslation: () => ({
     t: (key: string, options?: string | { defaultValue?: string }) => {
       if (translations[key]) {
@@ -177,9 +179,26 @@ vi.mock('@alga-psa/ui/lib', () => ({
   savePreference: vi.fn(),
 }));
 
-vi.mock('@alga-psa/tenancy/actions', () => ({
+vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions', () => ({
   isExperimentalFeatureEnabled: vi.fn().mockResolvedValue(true),
 }));
+
+// AI Assistant availability is gated on both the experimental flag and the tier
+// add-on; stub the tier hook so only the flag drives the tests.
+vi.mock('server/src/context/TierContext', () => ({
+  useTier: () => ({ hasAddOn: () => true }),
+}));
+
+// The Cmd/Ctrl+L close shortcut is registered through the keyboard-shortcuts
+// catalog, which needs a KeyboardShortcutsProvider in the tree. Force the 'other'
+// platform so `mod` resolves to Ctrl; the catalog keydown listener lives on
+// `document` and matches on `code`.
+const renderLayout = (children: React.ReactNode) =>
+  render(
+    <KeyboardShortcutsProvider platform="other">
+      <DefaultLayout>{children}</DefaultLayout>
+    </KeyboardShortcutsProvider>,
+  );
 
 describe('DefaultLayout AI interrupt guard', () => {
   beforeEach(() => {
@@ -203,11 +222,7 @@ describe('DefaultLayout AI interrupt guard', () => {
   it('warns before closing the sidebar with Cmd+L while AI work is interruptible', async () => {
     sidebarIsInterruptible = true;
 
-    render(
-      <DefaultLayout>
-        <div>content</div>
-      </DefaultLayout>
-    );
+    renderLayout(<div>content</div>);
 
     await waitFor(() => {
       expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
@@ -219,11 +234,26 @@ describe('DefaultLayout AI interrupt guard', () => {
       expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'true');
     });
 
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', metaKey: true }));
+    // Flush the interruptible-state cascade (sidebar effect -> setIsChatInterruptible
+    // -> re-armed click/navigation guard) so the interaction below intercepts
+    // deterministically instead of racing the guard under full-suite load.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    expect(await screen.findByTestId('interrupt-confirmation')).toBeInTheDocument();
+    act(() => {
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'l',
+          code: 'KeyL',
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+
+    expect(await screen.findByTestId('interrupt-confirmation', {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getByText('Fermer le chat et annuler la reponse IA ?')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Garder le chat ouvert' })).toBeInTheDocument();
     expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'true');
@@ -239,11 +269,7 @@ describe('DefaultLayout AI interrupt guard', () => {
   it('warns before in-app navigation while AI work is interruptible', async () => {
     sidebarIsInterruptible = true;
 
-    render(
-      <DefaultLayout>
-        <a href="/msp/tickets">Go to tickets</a>
-      </DefaultLayout>
-    );
+    renderLayout(<a href="/msp/tickets">Go to tickets</a>);
 
     await waitFor(() => {
       expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
@@ -255,9 +281,16 @@ describe('DefaultLayout AI interrupt guard', () => {
       expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'true');
     });
 
+    // Flush the interruptible-state cascade (sidebar effect -> setIsChatInterruptible
+    // -> re-armed click/navigation guard) so the interaction below intercepts
+    // deterministically instead of racing the guard under full-suite load.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
     fireEvent.click(screen.getByText('Go to tickets'));
 
-    expect(await screen.findByTestId('interrupt-confirmation')).toBeInTheDocument();
+    expect(await screen.findByTestId('interrupt-confirmation', {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getByText('Quitter la page et annuler la reponse IA ?')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Rester sur la page' })).toBeInTheDocument();
     expect(routerPush).not.toHaveBeenCalled();
@@ -273,11 +306,7 @@ describe('DefaultLayout AI interrupt guard', () => {
   it('blocks browser unload while AI work is interruptible', async () => {
     sidebarIsInterruptible = true;
 
-    render(
-      <DefaultLayout>
-        <div>content</div>
-      </DefaultLayout>
-    );
+    renderLayout(<div>content</div>);
 
     await waitFor(() => {
       expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
@@ -287,6 +316,13 @@ describe('DefaultLayout AI interrupt guard', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'true');
+    });
+
+    // Flush the interruptible-state cascade (sidebar effect -> setIsChatInterruptible
+    // -> re-armed click/navigation guard) so the interaction below intercepts
+    // deterministically instead of racing the guard under full-suite load.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     const beforeUnloadEvent = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;

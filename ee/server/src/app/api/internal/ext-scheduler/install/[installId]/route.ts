@@ -12,6 +12,7 @@ import {
 } from '@ee/lib/extensions/schedulerHostApi';
 import { getInstallConfigByInstallId } from '@ee/lib/extensions/installConfig';
 import { resolveInstallIdFromParamsOrUrl } from '@ee/lib/next/routeParams';
+import { isValidRunnerToken } from '@ee/lib/extensions/runnerAuth';
 
 export const dynamic = 'force-dynamic';
 
@@ -141,12 +142,11 @@ function mapError(error: unknown): NextResponse {
 }
 
 function ensureRunnerAuth(req: NextRequest): void {
-  const expected = process.env.RUNNER_STORAGE_API_TOKEN || process.env.RUNNER_SERVICE_TOKEN;
-  if (!expected) {
-    throw new SchedulerApiError('UNAUTHORIZED', 'Runner token not configured');
-  }
-  const provided = req.headers.get('x-runner-auth');
-  if (!provided || provided !== expected) {
+  if (!isValidRunnerToken(
+    req.headers.get('x-runner-auth'),
+    process.env.RUNNER_STORAGE_API_TOKEN,
+    process.env.RUNNER_SERVICE_TOKEN,
+  )) {
     throw new SchedulerApiError('UNAUTHORIZED', 'Invalid runner token');
   }
 }

@@ -65,7 +65,8 @@
     },
     "lastPhoneTypeUsage": {
       "title": "Last Phone Type Usage",
-      "message": "The following custom phone type{{suffix}} no longer used by any contact: {{labels}}. Delete the type definition{{definitionSuffix}}, or keep for future use?",
+      "message_one": "The following custom phone type is no longer used by any contact: {{labels}}. Delete the type definition, or keep it for future use?",
+      "message_other": "The following custom phone types are no longer used by any contact: {{labels}}. Delete the type definitions, or keep them for future use?",
       "deleteType": "Delete Type",
       "keepType": "Keep Type"
     },
@@ -115,7 +116,8 @@
       "inboundTicketDestinationHelp": "If set, this overrides the client destination for this exact sender contact. Precedence: Contact override -> Client destination -> Provider default.",
       "tags": "Tags",
       "notes": "Notes",
-      "status": "Status"
+      "status": "Status",
+      "phone": "Phone"
     },
     "status": {
       "label": "Status",
@@ -264,6 +266,47 @@
       "message": "{{count}} contacts already exist. Do you want to update them with the new data?"
     }
   },
+  "contactEmailAddressesEditor": {
+    "title": "Email Addresses",
+    "description": "Add one or more email addresses and choose exactly one default.",
+    "actions": {
+      "addEmail": "Add Email"
+    },
+    "emailTypes": {
+      "work": "Work",
+      "personal": "Personal",
+      "billing": "Billing",
+      "other": "Other",
+      "custom": "Custom"
+    },
+    "primary": {
+      "title": "Primary email",
+      "description": "This remains the default address stored on the contact record"
+    },
+    "row": {
+      "title": "Additional email {{number}}",
+      "secondaryDescription": "Stored as a non-default email address",
+      "defaultLabel": "Default",
+      "noEmailYet": "No email entered yet",
+      "editLabel": "Edit",
+      "edit": "Edit additional email {{number}}",
+      "doneLabel": "Done",
+      "done": "Done editing additional email {{number}}",
+      "moveUp": "Move additional email {{number}} up",
+      "moveDown": "Move additional email {{number}} down",
+      "remove": "Remove additional email {{number}}"
+    },
+    "fields": {
+      "emailAddress": "Email Address",
+      "emailPlaceholder": "name@example.com",
+      "emailLabel": "Email Label",
+      "customEmailLabel": "Custom Email Label",
+      "customTypePlaceholder": "Select or enter a custom email label",
+      "customTypeSearchPlaceholder": "Search or enter a custom email label...",
+      "customTypeEmpty": "No matching custom email labels.",
+      "customTypeUseValue": "Use \"{{value}}\""
+    }
+  },
   "contactPhoneNumbersEditor": {
     "title": "Phone Numbers",
     "description": "Phone number editor with type management, validation, defaults, and extension support",
@@ -312,6 +355,8 @@
     }
   },
   "contactPortalTab": {
+    "boardCount_one": "{{count}} board",
+    "boardCount_other": "{{count}} boards",
     "title": "Portal Access",
     "description": "Client portal access management for a contact, including invitations and role updates",
     "loadingDescription": "Loading portal information...",
@@ -320,6 +365,9 @@
     "noAccess": {
       "title": "No Portal Access",
       "description": "This contact does not have client portal access yet"
+    },
+    "noClient": {
+      "description": "Assign this contact to a client to manage portal access."
     },
     "portalAdmin": {
       "label": "Portal Administrator",
@@ -402,7 +450,8 @@
         "noLocationEmail": "Default client's location must have a contact email configured.",
         "noBaseUrl": "Base URL is not configured for portal invitations.",
         "invitationNotFound": "Invitation not found or already used."
-      }
+      },
+      "userNotFound": "Client user not found"
     }
   },
   "quickAddContact": {
@@ -567,18 +616,20 @@
       "name": "Name",
       "email": "Email",
       "phoneNumber": "Phone Number",
-      "actions": "Actions"
+      "actions": "Actions",
+      "role": "Role"
     },
     "filter": {
       "show": "Show:",
       "active": "Active Contacts",
       "inactive": "Inactive Contacts",
-      "all": "All Contacts"
+      "all": "All Contacts",
+      "searchPlaceholder": "Search contacts..."
     },
     "actions": {
       "openMenu": "Open menu",
       "quickView": "Quick View",
-      "addNewContact": "Add New Contact"
+      "addNewContact": "Add contact"
     },
     "errors": {
       "loadFailed": "Failed to load contacts.",
@@ -599,7 +650,7 @@
     "description": "Avatar upload affordance for contact profile images"
   },
   "contactNotesPanel": {
-    "title": "Notes & Quick Info",
+    "title": "Notes",
     "description": "Rich text notes panel with legacy note display and save/retry actions",
     "legacy": {
       "initialNote": "Initial Note"
@@ -614,6 +665,44 @@
     "messages": {
       "saveSuccess": "Notes saved",
       "saveFailed": "Failed to save notes"
+    }
+  },
+  "actions": {
+    "print": "Print",
+    "printOptions": "Print options"
+  },
+  "contactTabs": {
+    "tickets": {
+      "addTicket": "Add Ticket",
+      "empty": "No tickets found for this contact",
+      "filters": {
+        "allAssignees": "All Assignees",
+        "allPriorities": "All Priorities",
+        "categoryPlaceholder": "Filter by category",
+        "reset": "Reset",
+        "searchPlaceholder": "Search tickets...",
+        "statusPlaceholder": "Select Status"
+      },
+      "loadMore": {
+        "label": "Load More Tickets",
+        "loading": "Loading..."
+      },
+      "loading": "Loading...",
+      "title": "Contact Tickets",
+      "toasts": {
+        "clientNotFound": "Client not found",
+        "loadClientFailed": "Failed to load client details",
+        "loadTicketFailed": "Failed to load ticket",
+        "openTicketFailed": "Failed to open ticket",
+        "userNotAuthenticated": "User not authenticated"
+      }
+    }
+  },
+  "contactBento": {
+    "toast": {
+      "saved": "Contact updated",
+      "saveFailed": "Could not update contact",
+      "saveFailedDescription": "The contact could not be updated. Please try again."
     }
   }
 }

@@ -144,7 +144,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         error.message.includes('Authentication')
       ) {
         return NextResponse.json(
-          { success: false, error: error.message },
+          { success: false, error: 'Access denied to platform reports.' },
           { status: 403 }
         );
       }
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         error.message.includes('Authentication')
       ) {
         return NextResponse.json(
-          { success: false, error: error.message },
+          { success: false, error: 'Access denied to platform reports.' },
           { status: 403 }
         );
       }
@@ -218,7 +218,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // Report permission errors (blocklist violations)
       if (error.name === 'ReportPermissionError') {
         return NextResponse.json(
-          { success: false, error: error.message },
+          { success: false, error: 'Report creation was blocked by the report security policy.' },
           { status: 400 }
         );
       }

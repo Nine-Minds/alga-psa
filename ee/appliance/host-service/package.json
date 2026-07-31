@@ -1,0 +1,10 @@
+{
+  "name": "@alga-psa/appliance-host-service",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "dependencies": {
+    "@kubernetes/client-node": "1.4.0",
+    "ws": "8.21.0"
+  }
+}

@@ -7,6 +7,7 @@ import { WorkItemType } from '../../interfaces/workItem.interfaces';
 import { ExternalCalendarEvent } from '../../interfaces/calendar.interfaces';
 import { convertRecurrencePatternToRRULE } from './recurrenceConverter';
 import { createTenantKnex } from '../../lib/db';
+import { tenantDb } from '@alga-psa/db';
 
 /**
  * Map IScheduleEntry to ExternalCalendarEvent format
@@ -264,9 +265,8 @@ async function buildScheduleEntryDescription(entry: IScheduleEntry): Promise<str
 
   try {
     const { knex } = await createTenantKnex();
-    const meeting = await knex('online_meetings')
+    const meeting = await tenantDb(knex, entry.tenant).table('online_meetings')
       .where({
-        tenant: entry.tenant,
         schedule_entry_id: entry.entry_id,
       })
       .first('join_url');
@@ -296,8 +296,7 @@ async function fetchUserEmails(userIds: string[], tenant: string): Promise<Map<s
 
   try {
     const { knex } = await createTenantKnex();
-    const users = await knex('users')
-      .where('tenant', tenant)
+    const users = await tenantDb(knex, tenant).table('users')
       .whereIn('user_id', userIds)
       .select('user_id', 'email');
 
@@ -333,8 +332,7 @@ async function fetchUserIdsByEmail(emails: string[], tenant: string): Promise<Ma
       return idMap;
     }
 
-    const users = await knex('users')
-      .where('tenant', tenant)
+    const users = await tenantDb(knex, tenant).table('users')
       .whereRaw('LOWER(email) IN (?)', [normalizedEmails])
       .select('user_id', 'email');
 
@@ -353,8 +351,7 @@ async function fetchUserIdsByEmail(emails: string[], tenant: string): Promise<Ma
 async function fetchFallbackUserId(tenant: string): Promise<string | null> {
   try {
     const { knex } = await createTenantKnex();
-    const fallbackUser = await knex('users')
-      .where('tenant', tenant)
+    const fallbackUser = await tenantDb(knex, tenant).table('users')
       .orderBy('created_at', 'asc')
       .first('user_id');
     return fallbackUser?.user_id ?? null;

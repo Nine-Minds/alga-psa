@@ -4,6 +4,7 @@ import { AppSessionProvider } from "@alga-psa/auth/client";
 import { ClientPortalLayout } from "@alga-psa/client-portal/components";
 import { I18nWrapper } from "@alga-psa/tenancy/components";
 import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHogUserIdentifier";
+import { CurrencyFormatProvider } from "@alga-psa/ui/lib";
 import { BrandingProvider } from "@alga-psa/tenancy/components";
 import type { Session } from "next-auth";
 import type { TenantBranding } from "@alga-psa/tenancy/actions";
@@ -19,6 +20,9 @@ interface Props {
   session: Session | null;
   branding: TenantBranding | null;
   productCode: ProductCode;
+  appointmentsEnabled?: boolean;
+  /** Tenant default currency (default_billing_settings) for CurrencyFormatProvider. */
+  currencyCode?: string;
   initialLocale?: SupportedLocale | null;
   initialSidebarCollapsed?: boolean;
 }
@@ -28,6 +32,8 @@ export function ClientPortalLayoutClient({
   session,
   branding,
   productCode,
+  appointmentsEnabled = true,
+  currencyCode,
   initialLocale,
   initialSidebarCollapsed = false,
 }: Props) {
@@ -38,10 +44,12 @@ export function ClientPortalLayoutClient({
     <AppSessionProvider session={session}>
       <PostHogUserIdentifier />
       <I18nWrapper portal="client" initialLocale={initialLocale || undefined}>
+        <CurrencyFormatProvider currencyCode={currencyCode || 'USD'}>
         <BrandingProvider initialBranding={branding}>
           <ClientPortalDocumentsProvider>
             <ClientPortalLayout
               productCode={productCode}
+              appointmentsEnabled={appointmentsEnabled}
               initialSidebarCollapsed={initialSidebarCollapsed}
             >
               {productCode === 'algadesk' && routeBehavior !== 'allowed'
@@ -50,6 +58,7 @@ export function ClientPortalLayoutClient({
             </ClientPortalLayout>
           </ClientPortalDocumentsProvider>
         </BrandingProvider>
+        </CurrencyFormatProvider>
       </I18nWrapper>
     </AppSessionProvider>
   );

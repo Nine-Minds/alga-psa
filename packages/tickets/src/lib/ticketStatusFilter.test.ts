@@ -64,6 +64,20 @@ describe('ticketStatusFilter', () => {
     ]);
   });
 
+  it('maps bare open/closed/all aliases to sentinel kinds instead of uuid-typed SQL', () => {
+    expect(parseTicketStatusFilterValue('open')).toEqual({ kind: 'open' });
+    expect(parseTicketStatusFilterValue('CLOSED')).toEqual({ kind: 'closed' });
+    expect(parseTicketStatusFilterValue('all')).toEqual({ kind: 'all' });
+  });
+
+  it('routes non-uuid strings to a name match rather than a status id', () => {
+    expect(parseTicketStatusFilterValue('In Progress')).toEqual({ kind: 'name', statusName: 'In Progress' });
+    expect(parseTicketStatusFilterValue('123e4567-e89b-12d3-a456-426614174000')).toEqual({
+      kind: 'id',
+      statusId: '123e4567-e89b-12d3-a456-426614174000',
+    });
+  });
+
   it('scopes grouped options to the selected board before deduping', () => {
     const options = buildTicketStatusFilterOptions(
       STATUS_OPTIONS,

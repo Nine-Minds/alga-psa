@@ -3,7 +3,7 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- sync actions consult QBO connection state */
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getStoredQboCredentialsMap, QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import {
@@ -71,6 +71,7 @@ export const updateAccountingSyncSettingsAction = withAuth(async (
   return updateAccountingSyncSettings(knex, tenant, {
     ...(patch.autoSyncEnabled !== undefined ? { autoSyncEnabled: Boolean(patch.autoSyncEnabled) } : {}),
     ...(patch.autoSyncStartDate !== undefined ? { autoSyncStartDate: patch.autoSyncStartDate } : {}),
+    ...(patch.autoProvisionCustomers !== undefined ? { autoProvisionCustomers: Boolean(patch.autoProvisionCustomers) } : {}),
     ...(patch.depositAccountRef !== undefined ? { depositAccountRef: patch.depositAccountRef } : {}),
     ...(patch.defaultClassRef !== undefined ? { defaultClassRef: patch.defaultClassRef } : {}),
     ...(patch.defaultDepartmentRef !== undefined ? { defaultDepartmentRef: patch.defaultDepartmentRef } : {}),
@@ -225,7 +226,11 @@ export const getInvoiceSyncStatuses = withAuth(async (
   { tenant },
   invoiceIds: string[]
 ): Promise<Record<string, InvoiceSyncStatus>> => {
-  assertEnterpriseEdition();
+  // Invoice lists and details are shared by CE and EE. A capability probe on
+  // those core screens must not turn normal CE browsing into a 500 response.
+  if (!isEnterpriseEdition()) {
+    return {};
+  }
   await checkBillingReadAccess(user);
   const { knex } = await createTenantKnex();
 
@@ -234,13 +239,18 @@ export const getInvoiceSyncStatuses = withAuth(async (
     return {};
   }
 
+  const realm = await resolveDefaultRealm(knex, tenant).catch(() => null);
+  if (!realm) {
+    return {};
+  }
+
   const [mappings, ops] = await Promise.all([
-    knex('tenant_external_entity_mappings')
-      .where({ tenant: tenant, integration_type: SYNC_ADAPTER_TYPE, alga_entity_type: 'invoice' })
+    tenantDb(knex, tenant).table('tenant_external_entity_mappings')
+      .where({ integration_type: SYNC_ADAPTER_TYPE, alga_entity_type: 'invoice' })
       .whereIn('alga_entity_id', ids)
       .select('alga_entity_id', 'external_entity_id', 'sync_status', 'last_synced_at', 'metadata'),
-    knex('accounting_sync_operations')
-      .where({ tenant, adapter_type: SYNC_ADAPTER_TYPE, operation: 'export_invoice', alga_entity_type: 'invoice' })
+    tenantDb(knex, tenant).table('accounting_sync_operations')
+      .where({ adapter_type: SYNC_ADAPTER_TYPE, operation: 'export_invoice', alga_entity_type: 'invoice' })
       .whereIn('alga_entity_id', ids)
       .whereIn('status', ['pending', 'in_progress', 'skipped'])
       .select('alga_entity_id', 'status', 'last_error')
@@ -421,7 +431,13 @@ export const setDefaultQboRealm = withAuth(async (
     await updateAccountingSyncSettings(knex, tenant, { defaultRealm: realmId });
     return { success: true };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'An unexpected error occurred.';
-    return { success: false, error: message };
+    if (error instanceof Error && error.message === 'Accounting sync is only available in Enterprise Edition.') {
+      return { success: false, error: 'Accounting sync is only available in Enterprise Edition.' };
+    }
+    if (error instanceof Error && error.message === 'Forbidden') {
+      return { success: false, error: 'You do not have permission to update accounting sync settings.' };
+    }
+    console.error('Failed to set default QuickBooks realm:', error);
+    return { success: false, error: 'Failed to update the default QuickBooks company. Please try again.' };
   }
 });

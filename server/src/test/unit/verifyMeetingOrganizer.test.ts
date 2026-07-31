@@ -6,6 +6,35 @@ const fetchMicrosoftGraphAppTokenMock = vi.hoisted(() => vi.fn());
 const loggerWarnMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (tableExpr: string) => {
+      const raw = conn(tableExpr);
+      if (!raw || typeof raw.where !== 'function') {
+        return raw;
+      }
+      const aliasMatch = /\bas\s+([A-Za-z0-9_]+)\s*$/i.exec(tableExpr.trim());
+      const tenantColumn = aliasMatch ? `${aliasMatch[1]}.tenant` : 'tenant';
+      // Mirror tenantDb.table(): the returned query is already tenant-scoped, so
+      // a terminal `.first()` works without an explicit `.where()` from the SUT.
+      const scoped = raw.where({ [tenantColumn]: tenant });
+      return {
+        ...scoped,
+        where: (criteria: any, ...rest: any[]) =>
+          criteria && typeof criteria === 'object' && !Array.isArray(criteria)
+            ? raw.where({ [tenantColumn]: tenant, ...criteria })
+            : raw.where(criteria, ...rest),
+      };
+    },
+    scoped: (t: string) => conn(t),
+    subquery: (t: string) => conn(t),
+    parentScopedTable: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+    tenantJoinSubquery: (q: any, sub: any, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(sub) ?? q) : (q.join?.(sub) ?? q),
+    tenantWhereColumn: (q: any) => q,
+  }),
   createTenantKnex: createTenantKnexMock,
 }));
 
@@ -25,10 +54,23 @@ vi.mock('@alga-psa/ee-microsoft-teams/lib/graphAuth', () => ({
 
 import { verifyMeetingOrganizer } from '@alga-psa/ee-microsoft-teams/lib/meetings/verifyMeetingOrganizer';
 
+// resolveTeamsMeetingGraphConfig now issues two queries before resolving provider
+// config: tenant_addons (Teams add-on entitlement check, using
+// .where().andWhere().first()) and teams_integrations (.where().first()).
 function buildTeamsIntegrationKnex(row: Record<string, unknown> | undefined | null) {
-  const first = vi.fn().mockResolvedValue(row ?? undefined);
-  const where = vi.fn(() => ({ first }));
-  const knex = vi.fn(() => ({ where }));
+  const knex: any = vi.fn((table: string) => {
+    if (table === 'tenant_addons') {
+      const first = vi.fn().mockResolvedValue({ addon_key: 'teams' });
+      const andWhere = vi.fn(() => ({ first }));
+      const where = vi.fn(() => ({ andWhere, first }));
+      return { where };
+    }
+
+    const first = vi.fn().mockResolvedValue(row ?? undefined);
+    const where = vi.fn(() => ({ first }));
+    return { where };
+  });
+  knex.fn = { now: vi.fn(() => 'now()') };
   return { knex };
 }
 

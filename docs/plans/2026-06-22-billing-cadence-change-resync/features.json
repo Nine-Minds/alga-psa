@@ -1,0 +1,345 @@
+[
+  {
+    "id": "F001",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Goals"
+    ],
+    "description": "Add shared applyClientCadenceChange(trx, {tenant, clientId, newCycle, newAnchor}) helper that updates the clients.billing_cycle scalar"
+  },
+  {
+    "id": "F002",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "description": "applyClientCadenceChange updates client_billing_settings anchor (day-of-week/day-of-month/etc) in the same transaction"
+  },
+  {
+    "id": "F003",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "description": "applyClientCadenceChange refreshes client_billing_cycles active windows to match the new cadence in the same transaction"
+  },
+  {
+    "id": "F004",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ],
+    "description": "applyClientCadenceChange re-materializes recurring_service_periods for every client-cadence obligation of the client in the same transaction"
+  },
+  {
+    "id": "F005",
+    "implemented": true,
+    "prdRefs": [
+      "Problem",
+      "Goals"
+    ],
+    "description": "Route updateBillingCycle through applyClientCadenceChange (closes the specific gap that broke for IT initiative)"
+  },
+  {
+    "id": "F006",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ],
+    "description": "Route updateClientBillingSchedule through applyClientCadenceChange"
+  },
+  {
+    "id": "F007",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ],
+    "description": "Route the billing-cycle anchor change actions through applyClientCadenceChange"
+  },
+  {
+    "id": "F008",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ],
+    "description": "Audit contract/line sync paths (syncRecurringServicePeriodsForContract*) and converge them on the shared helper, or document why they remain separate"
+  },
+  {
+    "id": "F009",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "description": "Re-materialization computes regenerationStart as max(obligation start, last billed boundary)"
+  },
+  {
+    "id": "F010",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Acceptance Criteria (Definition of Done)"
+    ],
+    "description": "Cadence change is atomic: scalar, cycle windows, and RSP rows all commit or all roll back together"
+  },
+  {
+    "id": "F011",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Security / Permissions"
+    ],
+    "description": "Re-materialization never supersedes rows in lifecycle_state 'billed'"
+  },
+  {
+    "id": "F012",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ],
+    "description": "Re-materialization never modifies invoice-linked rows (invoice_id or invoice_charge_detail_id not null)"
+  },
+  {
+    "id": "F013",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ],
+    "description": "Unbilled future rows are superseded and replaced with new-cadence rows"
+  },
+  {
+    "id": "F014",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ],
+    "description": "Detect when the affected range overlaps billed periods (compute billed boundary for the client)"
+  },
+  {
+    "id": "F015",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "Expose a 'billed periods preserved' warning flag in the change/preview result when billed periods are in range"
+  },
+  {
+    "id": "F016",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "description": "Add previewClientCadenceChange action that returns impact without writing any data"
+  },
+  {
+    "id": "F017",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "Preview reports the count of unbilled periods that will be regenerated"
+  },
+  {
+    "id": "F018",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "Preview reports the count of contract lines affected"
+  },
+  {
+    "id": "F019",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "Preview reports the regeneration start date and the new cadence"
+  },
+  {
+    "id": "F020",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "Preview reports whether billed periods fall in the affected range (warning)"
+  },
+  {
+    "id": "F021",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "Preview lists the affected schedule keys for a details expander"
+  },
+  {
+    "id": "F022",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Users and Primary Flows"
+    ],
+    "description": "The billing-cycle control opens a confirmation dialog before applying a change"
+  },
+  {
+    "id": "F023",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "Dialog shows old to new cadence"
+  },
+  {
+    "id": "F024",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "Dialog shows unbilled-periods and lines-affected counts from the preview"
+  },
+  {
+    "id": "F025",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "Dialog shows the regeneration start date"
+  },
+  {
+    "id": "F026",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "Dialog shows the billed-preserved warning when applicable"
+  },
+  {
+    "id": "F027",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ],
+    "description": "Apply button commits the change via applyClientCadenceChange"
+  },
+  {
+    "id": "F028",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ],
+    "description": "Cancel button closes the dialog and makes no changes"
+  },
+  {
+    "id": "F029",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Data / API / Integrations"
+    ],
+    "description": "Add repairAllRecurringServicePeriodsForTenant action that enumerates stale/gapped client-cadence schedules"
+  },
+  {
+    "id": "F030",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ],
+    "description": "Repair-all re-materializes each stale schedule, reusing repairScheduleMaterialization"
+  },
+  {
+    "id": "F031",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ],
+    "description": "Repair-all preserves billed periods using the same billed-protection rule"
+  },
+  {
+    "id": "F032",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "Repair-all returns a summary (schedules repaired, rows backfilled/realigned/superseded)"
+  },
+  {
+    "id": "F033",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ],
+    "description": "Repair-all is idempotent: a second run on a clean tenant makes no changes"
+  },
+  {
+    "id": "F034",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ],
+    "description": "Repair-all requires the recurring-service-period 'regenerate' permission"
+  },
+  {
+    "id": "F035",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "Replace gap-panel detail text with a plain-language explanation of the cause"
+  },
+  {
+    "id": "F036",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Users and Primary Flows"
+    ],
+    "description": "Add a 'Fix all' button to the Automatic Invoices gap panel that calls repair-all"
+  },
+  {
+    "id": "F037",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "'Fix all' shows progress and a result summary"
+  },
+  {
+    "id": "F038",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "Service Periods tab shows a tenant Repair-all entry point"
+  },
+  {
+    "id": "F039",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ],
+    "description": "State labels are accurate after repair (no stale 'repair required' rows remain)"
+  },
+  {
+    "id": "F040",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "Show a clean empty-state message when no gaps remain"
+  },
+  {
+    "id": "F041",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ],
+    "description": "Cadence change remains gated by billing:update permission"
+  },
+  {
+    "id": "F042",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ],
+    "description": "Preview and repair remain gated by the existing recurring-service-period permissions"
+  }
+]

@@ -16,7 +16,7 @@ import {
   MessageSquare, Edit, UserPlus, CheckCircle, Paperclip, Building, Users, Bot,
   Bell, Calendar, SquareCheck, StickyNote, ClipboardList, Ticket,
   FolderKanban, Handshake, Contact, Wand2, AppWindow, Hourglass, ShieldAlert,
-  CalendarPlus, Timer, BellRing
+  CalendarPlus, Timer, BellRing, Gauge, ShieldCheck, MessagesSquare
 } from 'lucide-react';
 import {
   getStepTypeColor,
@@ -58,7 +58,7 @@ import EventsCatalogV2 from '@alga-psa/workflows/components/automation-hub/Event
 import type { WorkflowPickerActions } from '@alga-psa/workflows/components/automation-hub/WorkflowActionInputFixedPicker';
 import { getAllContacts, getContactsByClient } from '@alga-psa/clients/actions';
 import { getAvailableStatuses, getTicketFieldOptions } from '@alga-psa/integrations/actions';
-import { getTicketById, getTicketsForList } from '@alga-psa/tickets/actions';
+import { getTicketById, getTicketsForList } from '@alga-psa/tickets/actions/ticketActions';
 import { getProjectsWithPhases } from '@alga-psa/projects/actions/projectActions';
 import { getProjectTaskData } from '@alga-psa/projects/actions/projectTaskActions';
 import WorkflowSchedules from './WorkflowSchedules';
@@ -346,7 +346,7 @@ const workflowPickerActions: WorkflowPickerActions = {
   getTicketsForList: async ({ boardFilterState, searchQuery }) => {
     const result = await getTicketsForList({ boardFilterState, searchQuery });
     return {
-      tickets: (result?.tickets ?? [])
+      tickets: (result ?? [])
         .filter((ticket): ticket is typeof ticket & { ticket_id: string } => Boolean(ticket.ticket_id))
         .map((ticket) => ({
           ticket_id: ticket.ticket_id,
@@ -3343,6 +3343,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       });
 
     const groupedActionItems = designerActionCatalog
+      // Disconnected integrations stay out of the palette; their records are
+      // kept in the catalog so existing steps render with group context.
+      .filter((record) => record.available !== false)
       .filter((record) => record.actions.length > 0 || record.tileKind === 'transform')
       .map((record, index) => {
         const defaultAction = record.defaultActionId
@@ -3484,10 +3487,15 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         case 'project': return <FolderKanban className={iconClass} />;
         case 'time': return <Clock className={iconClass} />;
         case 'crm': return <Handshake className={iconClass} />;
+        case 'activities': return <ClipboardList className={iconClass} />;
         case 'data-store': return <Database className={iconClass} />;
         case 'transform': return <Wand2 className={iconClass} />;
         case 'ai': return <Bot className={iconClass} />;
         case 'ninjaone': return <ShieldAlert className={iconClass} />;
+        case 'tacticalrmm': return <Terminal className={iconClass} />;
+        case 'levelio': return <Gauge className={iconClass} />;
+        case 'huntress': return <ShieldCheck className={iconClass} />;
+        case 'teams': return <MessagesSquare className={iconClass} />;
         case 'app': return <AppWindow className={iconClass} />;
         default: return <Box className={iconClass} />;
       }
@@ -3523,6 +3531,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       
       // Business Operations - Scheduling
       if (actionId === 'scheduling.assign_user') return <CalendarPlus className={iconClass} />;
+      if (actionId === 'scheduling.create_entry') return <CalendarPlus className={iconClass} />;
       
       // Business Operations - Projects
       if (actionId === 'projects.create_task') return <SquareCheck className={iconClass} />;
@@ -5604,6 +5613,10 @@ const StepCard: React.FC<{
   const isBlock = step.type.startsWith('control.');
   const colors = getStepTypeColor(step.type);
   const icon = getStepTypeIcon(step.type);
+  const groupedRecord = step.type === 'action.call' && designerActionCatalog
+    ? getGroupedActionCatalogRecordForStep(step, designerActionCatalog)
+    : undefined;
+  const integrationDisconnected = groupedRecord?.available === false;
 
   return (
     <Card
@@ -5670,6 +5683,19 @@ const StepCard: React.FC<{
                   <Link className="h-3.5 w-3.5" />
                 </span>
               )
+            )}
+            {/* Disconnected integration badge */}
+            {integrationDisconnected && (
+              <Badge
+                id={`workflow-step-disconnected-${step.id}`}
+                className="text-xs border border-amber-300 bg-amber-100 text-amber-900"
+                title={t('designer.stepCard.disconnectedTitle', {
+                  defaultValue: '{{group}} is not connected; this step will fail at run time until it is reconnected.',
+                  group: groupedRecord?.label ?? '',
+                })}
+              >
+                {t('designer.stepCard.badges.disconnected', { defaultValue: 'Disconnected' })}
+              </Badge>
             )}
             {/* Error badge */}
             {errorCount > 0 && (

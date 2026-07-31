@@ -5,8 +5,8 @@ import { Label } from "@alga-psa/ui/components/Label";
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getDefaultBillingSettings, updateDefaultBillingSettings } from "@alga-psa/billing/actions";
-import type { BillingSettings } from "@alga-psa/billing/actions";
+import { getDefaultBillingSettings, updateDefaultBillingSettings } from "../../../actions/billingSettingsActions";
+import type { BillingSettings } from "../../../actions/billingSettingsActions";
 
 const ZeroDollarInvoiceSettings = (): React.JSX.Element => {
   const { t } = useTranslation('msp/billing-settings');
@@ -34,7 +34,9 @@ const ZeroDollarInvoiceSettings = (): React.JSX.Element => {
         ...settings,
         zeroDollarInvoiceHandling: value as 'normal' | 'finalized',
       };
-      const result = await updateDefaultBillingSettings(newSettings);
+      const result = await updateDefaultBillingSettings({
+        zeroDollarInvoiceHandling: newSettings.zeroDollarInvoiceHandling,
+      });
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
         return;
@@ -56,7 +58,7 @@ const ZeroDollarInvoiceSettings = (): React.JSX.Element => {
         ...settings,
         suppressZeroDollarInvoices: checked,
       };
-      const result = await updateDefaultBillingSettings(newSettings);
+      const result = await updateDefaultBillingSettings({ suppressZeroDollarInvoices: checked });
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
         return;

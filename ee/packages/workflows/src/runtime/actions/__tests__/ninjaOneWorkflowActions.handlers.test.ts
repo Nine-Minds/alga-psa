@@ -180,7 +180,8 @@ describe('NinjaOne workflow action handlers', () => {
     });
 
     const result = await action.handler({ limit: 10, live: false }, { ...baseCtx, tenantId: 'tenant-1', knex } as any);
-    expect(alertsBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-1', integration_id: 'int-1', status: 'active' });
+    expect(alertsBuilder.where).toHaveBeenNthCalledWith(1, 'rmm_alerts.tenant', 'tenant-1');
+    expect(alertsBuilder.where).toHaveBeenNthCalledWith(2, { integration_id: 'int-1', status: 'active' });
     expect(result.count).toBe(1);
     expect(result.alerts[0]).toMatchObject({
       alert_id: 'a1',
@@ -204,7 +205,8 @@ describe('NinjaOne workflow action handlers', () => {
       throw new Error(`Unexpected table ${table}`);
     });
     const found = await action.handler({ external_alert_id: 'ext-a1' }, { ...baseCtx, tenantId: 'tenant-1', knex: foundKnex } as any);
-    expect(foundBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-1', integration_id: 'int-1', external_alert_id: 'ext-a1' });
+    expect(foundBuilder.where).toHaveBeenNthCalledWith(1, 'rmm_alerts.tenant', 'tenant-1');
+    expect(foundBuilder.where).toHaveBeenNthCalledWith(2, { integration_id: 'int-1', external_alert_id: 'ext-a1' });
     expect(found.alert.external_alert_id).toBe('ext-a1');
 
     const missingBuilder: any = { where: vi.fn().mockReturnThis(), first: vi.fn().mockResolvedValue(undefined) };
@@ -233,8 +235,90 @@ describe('NinjaOne workflow action handlers', () => {
 
     const result = await action.handler({ external_alert_id: 'ext-a1' }, { ...baseCtx, tenantId: 'tenant-1', knex } as any);
     expect(resetAlert).toHaveBeenCalledWith('ext-a1');
-    expect(alertsBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-1', integration_id: 'int-1', external_alert_id: 'ext-a1' });
+    expect(alertsBuilder.where).toHaveBeenNthCalledWith(1, 'rmm_alerts.tenant', 'tenant-1');
+    expect(alertsBuilder.where).toHaveBeenNthCalledWith(2, { integration_id: 'int-1', external_alert_id: 'ext-a1' });
     expect(update).toHaveBeenCalled();
     expect(result).toEqual({ acknowledged: true, alert_id: 'ext-a1' });
+  });
+});
+
+describe('NinjaOne script execution actions (T006)', () => {
+  const integrationOnlyKnex = (): any =>
+    vi.fn((table: string) => {
+      if (table === 'rmm_integrations') return createActiveIntegrationBuilder();
+      throw new Error(`Unexpected table ${table}`);
+    });
+
+  it('run_script passes type/id/parameters/runAs through to the client and reports the vendor response', async () => {
+    const action = await loadActionById('ninjaone.devices.run_script');
+    const supportModule = await import('../ninjaOneWorkflowRuntimeSupport');
+    const runScript = vi.fn().mockResolvedValue({ jobUid: 'job-9' });
+    vi.mocked(supportModule.createNinjaOneWorkflowClient).mockResolvedValue({ runScript } as any);
+
+    const result = await action.handler(
+      { device_id: 123, type: 'SCRIPT', script_id: 42, parameters: '-Force', run_as: 'system' },
+      { ...baseCtx, tenantId: 'tenant-1', knex: integrationOnlyKnex() } as any
+    );
+
+    expect(runScript).toHaveBeenCalledWith(123, {
+      type: 'SCRIPT',
+      id: 42,
+      parameters: '-Force',
+      runAs: 'system'
+    });
+    expect(result).toEqual({
+      run_requested: true,
+      external_device_id: '123',
+      vendor_response: { jobUid: 'job-9' }
+    });
+  });
+
+  it('run_script input schema demands script_id for SCRIPT and action_uid for ACTION', async () => {
+    const action = await loadActionById('ninjaone.devices.run_script');
+
+    expect(action.inputSchema.safeParse({ device_id: 1, type: 'SCRIPT' }).success).toBe(false);
+    expect(action.inputSchema.safeParse({ device_id: 1, type: 'ACTION' }).success).toBe(false);
+    expect(action.inputSchema.safeParse({ device_id: 1, type: 'SCRIPT', script_id: 5 }).success).toBe(true);
+    expect(
+      action.inputSchema.safeParse({ device_id: 1, type: 'ACTION', action_uid: '07cc67f4-45d6-494b-adac-09b5cbc7e2b5' }).success
+    ).toBe(true);
+  });
+
+  it('run_script surfaces vendor failures with status and message but no credentials', async () => {
+    const action = await loadActionById('ninjaone.devices.run_script');
+    const supportModule = await import('../ninjaOneWorkflowRuntimeSupport');
+    const runScript = vi.fn().mockRejectedValue(
+      new Error('NinjaOne API request failed (403) for /device/123/script/run: insufficient scope')
+    );
+    vi.mocked(supportModule.createNinjaOneWorkflowClient).mockResolvedValue({ runScript } as any);
+
+    await expect(
+      action.handler(
+        { device_id: 123, type: 'SCRIPT', script_id: 42 },
+        { ...baseCtx, tenantId: 'tenant-1', knex: integrationOnlyKnex() } as any
+      )
+    ).rejects.toThrow(/403.*insufficient scope/);
+  });
+
+  it('scripting_options normalizes scripts and built-in actions into one discoverable list', async () => {
+    const action = await loadActionById('ninjaone.devices.scripting_options');
+    const supportModule = await import('../ninjaOneWorkflowRuntimeSupport');
+    const getScriptingOptions = vi.fn().mockResolvedValue({
+      scripts: [{ id: 42, name: 'Clean temp files' }],
+      actions: [{ uid: '07cc67f4-45d6-494b-adac-09b5cbc7e2b5', name: 'Restart service' }]
+    });
+    vi.mocked(supportModule.createNinjaOneWorkflowClient).mockResolvedValue({ getScriptingOptions } as any);
+
+    const result = await action.handler(
+      { device_id: 123 },
+      { ...baseCtx, tenantId: 'tenant-1', knex: integrationOnlyKnex() } as any
+    );
+
+    expect(getScriptingOptions).toHaveBeenCalledWith(123);
+    expect(result.count).toBe(2);
+    expect(result.scripts).toEqual([
+      { id: 42, uid: null, name: 'Clean temp files', type: 'SCRIPT' },
+      { id: null, uid: '07cc67f4-45d6-494b-adac-09b5cbc7e2b5', name: 'Restart service', type: 'ACTION' }
+    ]);
   });
 });

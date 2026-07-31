@@ -123,7 +123,41 @@
       "goToPage": "Ir a la página",
       "dismissError": "No se pudo descartar la tarea: {{message}}"
     },
-    "retryLater": "Por favor, inténtelo de nuevo más tarde."
+    "retryLater": "Por favor, inténtelo de nuevo más tarde.",
+    "adHoc": {
+      "endBeforeStart": "La hora de finalización debe ser posterior a la hora de inicio.",
+      "fields": {
+        "end": "Fin (opcional)",
+        "noTime": "Sin hora",
+        "notes": "Notas",
+        "notesPlaceholder": "Agregar notas…",
+        "start": "Inicio (opcional)",
+        "title": "Título",
+        "titlePlaceholder": "Título"
+      },
+      "loadError": "No se pudo cargar este elemento. Inténtelo de nuevo más tarde.",
+      "saveError": "No se pudo guardar el elemento.",
+      "saveSuccess": "Elemento guardado",
+      "statusDone": "Hecho",
+      "statusOpen": "Abierto",
+      "title": "Elemento ad hoc",
+      "toggleDoneError": "No se pudo actualizar el elemento."
+    },
+    "enterpriseOnly": "Las tareas de flujo de trabajo son una función de Enterprise.",
+    "nextAction": "Próxima acción",
+    "overdueSince": "Vencido desde {{date}}",
+    "dueOn": "Vence el {{date}}",
+    "stage": "Etapa",
+    "confidence": "Confianza",
+    "owner": "Propietario",
+    "expectedClose": "Cierre previsto",
+    "mrr": "MRR",
+    "nrr": "NRR",
+    "hardware": "Hardware",
+    "contact": "Contacto",
+    "linkedQuotes": "Presupuestos vinculados",
+    "openOpportunity": "Abrir oportunidad",
+    "opportunityNotFound": "Oportunidad no encontrada."
   },
   "groupedView": {
     "addGroup": "Añadir grupo",
@@ -189,12 +223,14 @@
           "priorityPlaceholder": "Seleccionar prioridad...",
           "allPriorities": "Todas las prioridades",
           "dueDateRange": "Rango de fecha de vencimiento",
+          "createdDateRange": "Rango de fecha de creación",
           "showClosedTasks": "Mostrar tareas cerradas"
         },
         "actions": {
           "reset": "Restablecer",
           "cancel": "Cancelar",
-          "apply": "Aplicar filtros"
+          "apply": "Aplicar filtros",
+          "clearDates": "Borrar"
         }
       }
     },
@@ -232,12 +268,14 @@
           "priorityPlaceholder": "Seleccionar prioridad...",
           "allPriorities": "Todas las prioridades",
           "dueDateRange": "Rango de fecha de vencimiento",
+          "createdDateRange": "Rango de fecha de creación",
           "showClosedTickets": "Mostrar tickets cerrados"
         },
         "actions": {
           "reset": "Restablecer",
           "cancel": "Cancelar",
-          "apply": "Aplicar filtros"
+          "apply": "Aplicar filtros",
+          "clearDates": "Borrar"
         }
       }
     },
@@ -277,13 +315,15 @@
           "priorityMedium": "Media",
           "priorityLow": "Baja",
           "dueDateRange": "Rango de fecha de vencimiento",
+          "createdDateRange": "Rango de fecha de creación",
           "showClosedTasks": "Mostrar tareas cerradas",
           "includeHiddenTasks": "Incluir tareas ocultas"
         },
         "actions": {
           "reset": "Restablecer",
           "cancel": "Cancelar",
-          "apply": "Aplicar filtros"
+          "apply": "Aplicar filtros",
+          "clearDates": "Borrar"
         }
       },
       "listDrawer": {
@@ -322,7 +362,8 @@
       },
       "errors": {
         "loadFailed": "No se pudieron cargar las actividades del calendario. Inténtelo de nuevo más tarde.",
-        "refreshFailed": "No se pudieron actualizar las actividades del calendario. Inténtelo de nuevo más tarde."
+        "refreshFailed": "No se pudieron actualizar las actividades del calendario. Inténtelo de nuevo más tarde.",
+        "addAdHocFailed": "No se pudo agregar la actividad. Inténtelo de nuevo."
       },
       "filterDialog": {
         "title": "Filtrar entradas del calendario",
@@ -417,7 +458,14 @@
       "priority": "Prioridad",
       "dueDate": "Fecha de vencimiento",
       "showClosed": "Mostrar cerradas",
-      "search": "Buscar"
+      "search": "Buscar",
+      "client": "Cliente",
+      "dueDateShort": "Vence",
+      "createdShort": "Creado",
+      "tags": "Etiquetas",
+      "tagsSelected": "{{count}} etiquetas",
+      "tasksCompact": "Tareas",
+      "ticketsCompact": "Tickets"
     },
     "activityTypeOptions": {
       "schedule": "Calendario",
@@ -434,10 +482,18 @@
       "search": "Buscar actividades...",
       "searchBoards": "Buscar tableros...",
       "searchStatuses": "Buscar estados...",
-      "searchProjects": "Buscar proyectos..."
+      "searchProjects": "Buscar proyectos...",
+      "allClients": "Todos los clientes",
+      "fromDateShort": "Desde",
+      "projectTaskTags": "Filtrar etiquetas de tareas...",
+      "ticketTags": "Filtrar etiquetas de tickets...",
+      "toDateShort": "Hasta"
     },
     "actions": {
-      "reset": "Restablecer"
+      "reset": "Restablecer",
+      "clearClient": "Borrar filtro de cliente",
+      "clearDueDate": "Borrar filtro de fecha de vencimiento",
+      "clearCreatedDate": "Borrar filtro de fecha de creación"
     },
     "statusClosedSuffix": " (cerrado)",
     "summary": {
@@ -451,7 +507,16 @@
       "phases_other": "{{count}} fases",
       "excludingName": "excl. {{name}}",
       "excludingCount_one": "excl. {{count}}",
-      "excludingCount_other": "excl. {{count}}"
+      "excludingCount_other": "excl. {{count}}",
+      "boards": "{{count}} tableros",
+      "excludingCount": "excl. {{count}}",
+      "phases": "{{count}} fases",
+      "projects": "{{count}} proyectos",
+      "statuses": "{{count}} estados"
     }
+  },
+  "actions": {
+    "print": "Imprimir",
+    "printOptions": "Opciones de impresión"
   }
 }

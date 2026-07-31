@@ -12,7 +12,7 @@
       "save": "Redden",
       "saveChanges": "Wijzigingen opslaan",
       "saveChangesDirty": "Wijzigingen opslaan *",
-      "saving": "Besparing..."
+      "saving": "Opslaan..."
     },
     "errors": {
       "errorWithMessage": "Fout: {{message}}"
@@ -212,7 +212,7 @@
     "actions": {
       "cancel": "Annuleren",
       "createPreset": "Contractregelvoorinstelling maken",
-      "saving": "Besparing...",
+      "saving": "Opslaan...",
       "updatePreset": "Contractregelvoorinstelling bijwerken"
     },
     "basics": {

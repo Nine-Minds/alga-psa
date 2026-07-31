@@ -1,13 +1,8 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
-import { hasPermission } from '@alga-psa/auth/rbac';
-import { isFeatureFlagEnabled } from '@alga-psa/core';
-import { createTenantKnex } from '@alga-psa/db';
-
-function isClientPortalUser(user: unknown): boolean {
-  return (user as { user_type?: string } | undefined)?.user_type === 'client';
-}
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { hasMspPermission, isClientPortalUser } from '../lib/authHelpers';
 
 /**
  * Start an Entra sync for a single client.
@@ -21,21 +16,9 @@ export const startClientEntraSync = withAuth(async (
   { tenant },
   input: { clientId: string }
 ) => {
-  if (isClientPortalUser(user)) {
-    return { success: false, error: 'Forbidden' } as const;
-  }
-
-  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  const canUpdate = await hasMspPermission(user, 'system_settings', 'update');
   if (!canUpdate) {
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
-  }
-
-  const enabled = await isFeatureFlagEnabled('entra-integration-ui', {
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return { success: false, error: 'Microsoft Entra integration is disabled for this tenant.' } as const;
   }
 
   const clientId = String(input.clientId || '').trim();
@@ -44,12 +27,12 @@ export const startClientEntraSync = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const mapping = await knex('entra_client_tenant_mappings as m')
-    .join('entra_managed_tenants as t', function joinManagedTenants() {
-      this.on('m.tenant', '=', 't.tenant').andOn('m.managed_tenant_id', '=', 't.managed_tenant_id');
-    })
+  const db = tenantDb(knex, tenant);
+  const query = db.table('entra_client_tenant_mappings as m');
+  db.tenantJoin(query, 'entra_managed_tenants as t', 'm.managed_tenant_id', 't.managed_tenant_id');
+
+  const mapping = await query
     .where({
-      'm.tenant': tenant,
       'm.client_id': clientId,
       'm.is_active': true,
       'm.mapping_state': 'mapped',
@@ -86,4 +69,51 @@ export const startClientEntraSync = withAuth(async (
       error: workflowStart.error || null,
     },
   } as const;
+});
+
+
+/**
+ * Whether this user may manage the Entra integration.
+ *
+ * A local mirror of canManageEntraIntegration rather than an import of it, for
+ * the same reason startClientEntraSync exists here: @alga-psa/clients importing
+ * @alga-psa/integrations closes a package cycle. The predicate is one
+ * permission check, so a copy costs less than the edge.
+ */
+export const canManageEntraSync = withAuth(async (user, _ctx) => {
+  if (isClientPortalUser(user)) {
+    return false;
+  }
+
+  return hasMspPermission(user, 'system_settings', 'update');
+});
+
+/**
+ * The tenant's Entra field-sync rules, for surfaces that only need to know
+ * which contact fields the sync may overwrite. Read directly rather than
+ * through the integration's status action, which pulls in the whole connection
+ * record and the package edge with it.
+ */
+export const getEntraFieldSyncRules = withAuth(async (user, { tenant }) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canRead = await hasMspPermission(user, 'system_settings', 'read');
+  if (!canRead) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const { knex } = await createTenantKnex();
+  const row = await tenantDb(knex, tenant)
+    .table('entra_sync_settings')
+    .first(['field_sync_config']);
+
+  const raw = row?.field_sync_config;
+  const fieldSyncConfig =
+    raw && typeof raw === 'object' && !Array.isArray(raw)
+      ? (raw as Record<string, unknown>)
+      : null;
+
+  return { success: true, data: { fieldSyncConfig } } as const;
 });

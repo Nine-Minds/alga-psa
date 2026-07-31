@@ -1,4 +1,8 @@
 %% Ticket Timer Flow: Opening a ticket to stopping on leave
+%% Scope: Web browser (Next.js app) only.
+%% The mobile app (iOS/Android) uses server-backed sessions via the start-tracking /
+%% active-session / stop-tracking REST APIs so timers survive app kills and device
+%% switches. See docs/features/time_entry.md § "Mobile App Time Tracking" for that architecture.
 %% This sequence shows current behavior with IntervalTrackingService + State Machine + UI setInterval
 
 sequenceDiagram

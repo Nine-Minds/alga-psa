@@ -13,6 +13,7 @@ import {
   type WorkflowScheduleJobResult as ScheduleJobResult
 } from './jobRunnerProvider';
 import { computeNextFireAtForSchedule } from './computeNextFireAt';
+import { workflowTenantTable } from './workflowTenantDb';
 
 export const WORKFLOW_ONE_TIME_TRIGGER_JOB = 'workflow-time-trigger-once';
 export const WORKFLOW_RECURRING_TRIGGER_JOB = 'workflow-time-trigger-recurring';
@@ -45,6 +46,12 @@ type WorkflowScheduleJobData = {
   tenantId: string;
   workflowId: string;
   scheduleId: string;
+};
+
+type WorkflowScheduleJobRunnerRow = {
+  job_id: string;
+  runner_type: string | null;
+  interval: string | null;
 };
 
 export const buildWorkflowScheduleSingletonKey = (workflowId: string, scheduleId: string): string =>
@@ -232,6 +239,39 @@ async function restorePreviousScheduleRegistration(
     status: desired.status,
     next_fire_at: computeNextFireAtForDesired(desired)
   });
+}
+
+// Ensure an enabled recurring schedule is registered on the currently active
+// job runner. Idempotent: converges when the schedule's job row is already
+// backed by the active runner with a matching interval, so it is safe to run
+// on every boot. Used by the startup reconciler to migrate pre-cutover
+// pg-boss schedules onto Temporal (and vice versa) without operator action.
+export async function reconcileWorkflowScheduleRegistration(
+  knex: Knex,
+  existing: WorkflowScheduleStateRecord,
+  runnerType: 'pgboss' | 'temporal'
+): Promise<'ensured' | 'converged' | 'skipped'> {
+  const isRecurring =
+    existing.enabled === true &&
+    existing.status === 'scheduled' &&
+    existing.trigger_type === 'recurring' &&
+    typeof existing.cron === 'string' &&
+    existing.cron.trim().length > 0;
+  if (!isRecurring) return 'skipped';
+
+  if (existing.job_id) {
+    const job = await workflowTenantTable<WorkflowScheduleJobRunnerRow>(knex, existing.tenant, 'jobs')
+      .where('job_id', existing.job_id)
+      .select('runner_type')
+      .select(knex.raw(`metadata->>'interval' as interval`))
+      .first() as unknown as WorkflowScheduleJobRunnerRow | undefined;
+    if (job?.runner_type === runnerType && job.interval === existing.cron) {
+      return 'converged';
+    }
+  }
+
+  await restorePreviousScheduleRegistration(knex, existing);
+  return 'ensured';
 }
 
 async function persistScheduleCreate(

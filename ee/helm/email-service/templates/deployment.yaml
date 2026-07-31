@@ -63,6 +63,40 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if .Values.waitForBootstrap.enabled }}
+      initContainers:
+        - name: wait-for-bootstrap
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.waitForBootstrap.image.name }}:{{ .Values.waitForBootstrap.image.tag }}"
+          imagePullPolicy: {{ .Values.waitForBootstrap.pullPolicy }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              echo "Waiting for the email_providers table to exist..."
+              until PGPASSWORD="${WAIT_DB_PASSWORD}" psql -h "${DB_HOST}" -p "${DB_PORT}" -U "${WAIT_DB_USER}" -d "${DB_NAME_SERVER}" -Atqc "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'email_providers');" 2>/dev/null | grep -q '^t$'; do
+                sleep 2
+              done
+          env:
+            - name: DB_HOST
+              value: "{{ .Values.db.host }}"
+            - name: DB_PORT
+              value: "{{ .Values.db.port }}"
+            - name: DB_NAME_SERVER
+              value: "{{ .Values.db.serverDatabase }}"
+            # Use the server (pgbouncer) credentials for the readiness poll: the
+            # superuser may not be authenticated through pgbouncer, and reading
+            # information_schema only needs the app role.
+            - name: WAIT_DB_USER
+              value: "{{ .Values.db.user }}"
+            - name: WAIT_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.serverPasswordSecret.name }}
+                  key: {{ .Values.db.serverPasswordSecret.key }}
+      {{- end }}
       containers:
         - name: email-service
           {{- with .Values.securityContext }}
@@ -137,6 +171,10 @@ spec:
               value: "{{ .Values.secretsProvider.readChain }}"
             - name: SECRET_WRITE_PROVIDER
               value: "{{ .Values.secretsProvider.writeProvider }}"
+            {{- if .Values.sharedTenantSecrets.enabled }}
+            - name: SECRET_FS_BASE_PATH
+              value: "{{ .Values.sharedTenantSecrets.mountPath }}"
+            {{- end }}
             {{- if .Values.secretsProvider.vault.addr }}
             - name: VAULT_ADDR
               value: "{{ .Values.secretsProvider.vault.addr }}"
@@ -195,21 +233,22 @@ spec:
                   key: {{ default "IMAP_WEBHOOK_SECRET" .Values.webhook.secretKeyRef.key | quote }}
 
             {{- if not .Values.vaultAgent.enabled }}
+            {{- $appSecretName := .Values.appSecrets.existingSecret | default (printf "%s-secrets" (include "email-service.fullname" .)) }}
             - name: NEXTAUTH_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "email-service.fullname" . }}-secrets
-                  key: NEXTAUTH_SECRET
+                  name: {{ $appSecretName | quote }}
+                  key: {{ if .Values.appSecrets.existingSecret }}{{ .Values.appSecrets.keys.nextauthSecret | quote }}{{ else }}NEXTAUTH_SECRET{{ end }}
             - name: TOKEN_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "email-service.fullname" . }}-secrets
-                  key: TOKEN_SECRET_KEY
+                  name: {{ $appSecretName | quote }}
+                  key: {{ if .Values.appSecrets.existingSecret }}{{ .Values.appSecrets.keys.tokenSecretKey | quote }}{{ else }}TOKEN_SECRET_KEY{{ end }}
             - name: CRYPTO_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "email-service.fullname" . }}-secrets
-                  key: CRYPTO_KEY
+                  name: {{ $appSecretName | quote }}
+                  key: {{ if .Values.appSecrets.existingSecret }}{{ .Values.appSecrets.keys.cryptoKey | quote }}{{ else }}CRYPTO_KEY{{ end }}
             {{- end }}
 
             {{- range .Values.extraEnv }}
@@ -251,11 +290,21 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
 
           volumeMounts:
+            {{- if .Values.sharedTenantSecrets.enabled }}
+            - name: shared-tenant-secrets
+              mountPath: {{ .Values.sharedTenantSecrets.mountPath }}
+            {{- end }}
             {{- with .Values.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
 
       volumes:
+        {{- if .Values.sharedTenantSecrets.enabled }}
+        - name: shared-tenant-secrets
+          hostPath:
+            path: {{ .Values.sharedTenantSecrets.hostPath }}
+            type: DirectoryOrCreate
+        {{- end }}
         {{- with .Values.extraVolumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

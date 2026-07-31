@@ -17,7 +17,7 @@ All secrets are stored in the `secrets/` directory at the project root. Each sec
 
 ### Database Secrets
 - `postgres_password` - PostgreSQL admin password (used by 'postgres' user for administration)
-- `db_password_server` - Application user password (used by 'app_user' for RLS-controlled access)
+- `db_password_server` - Application user password (used by 'app_user' for application database access)
 - `db_password_hocuspocus` - Hocuspocus service password
 
 ### Redis Secrets
@@ -91,11 +91,10 @@ The system uses a two-user database authentication model for security:
    - Password: Stored in db_password_server secret
    - Used for:
      * Application database access
-     * Limited access via RLS policies
      * Regular database operations
    - Security:
-     * Access controlled by Row Level Security (RLS)
-     * Cannot modify schema or bypass RLS
+     * Cannot modify schema
+     * Tenant isolation is application-enforced (see [tenant-isolation.md](../architecture/tenant-isolation.md)); there are no RLS policies
 
 ## Security Considerations
 
@@ -168,4 +167,4 @@ The `.env.example` file indicates which values are managed via Docker secrets. W
 8. Follow the principle of least privilege:
    - Use app_user for normal operations
    - Limit postgres user access to administration
-   - Implement proper RLS policies
+   - Keep application queries tenant-scoped through the `tenantDb` facade

@@ -83,6 +83,9 @@ vi.mock('google-auth-library', () => ({
 
 const MANAGED_ENV_KEYS = [
   'AI_CHAT_PROVIDER',
+  'AI_GATEWAY_BYPASS',
+  'AI_GATEWAY_SERVICE_SECRET',
+  'AI_GATEWAY_URL',
   'OPENROUTER_API_KEY',
   'OPENROUTER_CHAT_MODEL',
   'VERTEX_PROJECT_ID',
@@ -660,9 +663,19 @@ describe('ChatCompletionsService (unit)', () => {
         },
       });
 
-      expect(promptContext).toContain(
-        'Current date/time: March 9, 2026 at 1:50 PM EDT | timezone: America/New_York',
-      );
+      // The service renders in the host timezone, so compute the expected
+      // string the same way instead of hardcoding one machine's zone.
+      const timezone = new Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+      const formatted = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: timezone,
+        timeZoneName: 'short',
+      }).format(new Date('2026-03-09T17:50:00Z'));
+      expect(promptContext).toContain(`Current date/time: ${formatted} | timezone: ${timezone}`);
       expect(promptContext).toContain('Pat Lee');
       expect(promptContext).toContain('pat@example.com');
       expect(promptContext).toContain('Ticket Details');
@@ -884,6 +897,16 @@ describe('ChatCompletionsService (unit)', () => {
 
     expect(executeFunctionCallSpy).toHaveBeenCalledTimes(1);
     expect(streamedEvents).toEqual([
+      expect.objectContaining({
+        type: 'tool_executed',
+        assistantPreview: 'Automatically ran List tickets.',
+        functionCall: expect.objectContaining({
+          name: 'call_api_endpoint',
+          toolCallId: 'tool-call-stream-auto-get',
+          entryId: 'tickets.list',
+          arguments: { entryId: 'tickets.list' },
+        }),
+      }),
       { type: 'content_delta', delta: 'Streamed ticket result.' },
       { type: 'done' },
     ]);
@@ -912,7 +935,9 @@ describe('ChatCompletionsService (unit)', () => {
                       type: 'function',
                       function: {
                         name: 'call_api_endpoint',
-                        arguments: '{"entryId":"tickets.list","query":{"status":"open"',
+                        // Truncated mid-string so the streaming JSON repair cannot
+                        // recover it and the retry path is exercised.
+                        arguments: '{"entryId":"tickets.list","query":{"status":"op',
                       },
                     },
                   ],
@@ -977,7 +1002,9 @@ describe('ChatCompletionsService (unit)', () => {
                       type: 'function',
                       function: {
                         name: 'call_api_endpoint',
-                        arguments: '{"entryId":"tickets.list","query":{"status":"open"',
+                        // Truncated mid-string so the streaming JSON repair cannot
+                        // recover it and the parse-failure logging is exercised.
+                        arguments: '{"entryId":"tickets.list","query":{"status":"op',
                       },
                     },
                   ],
@@ -1006,7 +1033,7 @@ describe('ChatCompletionsService (unit)', () => {
         source: 'stream',
         functionName: 'call_api_endpoint',
         toolCallId: 'tool-call-log-context',
-        rawArguments: '{"entryId":"tickets.list","query":{"status":"open"',
+        rawArguments: '{"entryId":"tickets.list","query":{"status":"op',
         rawArgumentsLength: expect.any(Number),
       }),
       expect.any(SyntaxError),
@@ -1757,6 +1784,33 @@ describe('ChatCompletionsService (unit)', () => {
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({
       error: 'Missing function call information',
+    });
+  });
+
+  it('handleRequest returns a structured 402 for gateway credit rejection', async () => {
+    process.env.EDITION = 'ee';
+    process.env.AI_CHAT_PROVIDER = 'openrouter';
+    setSecrets({ OPENROUTER_API_KEY: 'openrouter-key' });
+    openAiCreateSpy.mockRejectedValue({
+      status: 402,
+      error: { code: 'no_subscription' },
+    });
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+    const request = new NextRequest(
+      new Request('https://example.invalid/api/chat/v1/completions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ messages: [{ role: 'user', content: 'Hello' }] }),
+      }),
+    );
+
+    const response = await ChatCompletionsService.handleRequest(request);
+
+    expect(response.status).toBe(402);
+    await expect(response.json()).resolves.toEqual({
+      type: 'ai_credits',
+      reason: 'no_subscription',
     });
   });
 

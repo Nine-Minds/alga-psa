@@ -23,7 +23,15 @@ function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
 }
 
 function getTranslationKeys(source: string): string[] {
-  return Array.from(new Set(Array.from(source.matchAll(/(?:^|[^\w])t\('([^']+)'/g), (match) => match[1])));
+  return Array.from(new Set(Array.from(source.matchAll(/(?:^|[^\w])t\(\s*(['"])([^'"]+)\1/g), (match) => match[2])));
+}
+
+// Source files mix quote styles (the prettier rewrite moved some components to
+// double quotes), so assert t() calls quote-agnostically.
+function expectTCall(source: string, key: string): void {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`t\\(\\s*['"]${escaped}['"]`);
+  expect(pattern.test(source), `expected a t() call for ${key}`).toBe(true);
 }
 
 describe('Contracts integration i18n coverage', () => {
@@ -36,11 +44,11 @@ describe('Contracts integration i18n coverage', () => {
       '../../../../server/public/locales/en/msp/contracts.json'
     );
 
-    expect(configSource).toContain("'/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts']");
+    expect(configSource).toContain("'/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts', 'msp/invoicing']");
 
-    expect(contractsSource).toContain("const { t } = useTranslation('msp/contracts');");
-    expect(clientContractsSource).toContain("const { t } = useTranslation('msp/contracts');");
-    expect(templatesSource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(contractsSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
+    expect(clientContractsSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
+    expect(templatesSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
 
     expect(contractsSource).toContain("t('common.tabs.templates'");
     expect(contractsSource).toContain("t('common.tabs.clientContracts'");
@@ -113,7 +121,7 @@ describe('Contracts integration i18n coverage', () => {
     ];
 
     for (const key of requiredSourceKeys) {
-      expect(contractsSource).toContain(`t('${key}'`);
+      expectTCall(contractsSource, key);
     }
   });
 
@@ -128,9 +136,9 @@ describe('Contracts integration i18n coverage', () => {
       '../../../../server/public/locales/de/msp/contracts.json'
     );
 
-    expect(contractDetailSource).toContain("const { t } = useTranslation('msp/contracts');");
-    expect(contractLinesSource).toContain("const { t } = useTranslation('msp/contracts');");
-    expect(pricingSchedulesSource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(contractDetailSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
+    expect(contractLinesSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
+    expect(pricingSchedulesSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
 
     const keySet = new Set<string>([
       ...getTranslationKeys(contractDetailSource),
@@ -185,13 +193,13 @@ describe('Contracts integration i18n coverage', () => {
       '../../../../server/public/locales/de/msp/contracts.json'
     );
 
-    expect(wizardSource).toContain("const { t } = useTranslation('msp/contracts');");
-    expect(basicsSource).toContain("const { t } = useTranslation('msp/contracts');");
-    expect(fixedSource).toContain("const { t } = useTranslation('msp/contracts');");
-    expect(productsSource).toContain("const { t } = useTranslation('msp/contracts');");
-    expect(hourlySource).toContain("const { t } = useTranslation('msp/contracts');");
-    expect(usageSource).toContain("const { t } = useTranslation('msp/contracts');");
-    expect(reviewSource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(wizardSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
+    expect(basicsSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
+    expect(fixedSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
+    expect(productsSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
+    expect(hourlySource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
+    expect(usageSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
+    expect(reviewSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
 
     const keySet = new Set<string>([
       ...getTranslationKeys(wizardSource),
@@ -254,14 +262,14 @@ describe('Contracts integration i18n coverage', () => {
       '../../../../server/public/locales/de/msp/contracts.json'
     );
 
-    expect(templateWizardSource).toContain("const { t } = useTranslation('msp/contracts');");
-    expect(templateBasicsSource).toContain("const { t } = useTranslation('msp/contracts');");
-    expect(templateFixedSource).toContain("const { t } = useTranslation('msp/contracts');");
-    expect(templateProductsSource).toContain("const { t } = useTranslation('msp/contracts');");
-    expect(templateHourlySource).toContain("const { t } = useTranslation('msp/contracts');");
-    expect(templateUsageSource).toContain("const { t } = useTranslation('msp/contracts');");
-    expect(templateReviewSource).toContain("const { t } = useTranslation('msp/contracts');");
-    expect(templatePreviewSource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(templateWizardSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
+    expect(templateBasicsSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
+    expect(templateFixedSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
+    expect(templateProductsSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
+    expect(templateHourlySource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
+    expect(templateUsageSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
+    expect(templateReviewSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
+    expect(templatePreviewSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
 
     const keySet = new Set<string>([
       ...getTranslationKeys(templateWizardSource),
@@ -291,7 +299,7 @@ describe('Contracts integration i18n coverage', () => {
       '../../../../server/public/locales/xx/msp/contracts.json'
     );
 
-    expect(quickStartSource).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(quickStartSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
 
     const keySet = new Set<string>(getTranslationKeys(quickStartSource));
     expect(keySet.size).toBeGreaterThan(25);
@@ -328,6 +336,6 @@ describe('Contracts integration i18n coverage', () => {
     expect(reviewSource).toContain('useFormatters');
     expect(reviewSource).toContain('const { formatCurrency } = useFormatters();');
     expect(reviewSource).toContain('const formatMinorCurrency = (minorUnits: number | null | undefined) => {');
-    expect(reviewSource).toContain('return formatCurrency(amount / 100, {');
+    expect(reviewSource).toContain('return formatCurrency(amount / 100, currencyCode, {');
   });
 });

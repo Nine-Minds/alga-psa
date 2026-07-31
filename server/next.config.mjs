@@ -180,6 +180,17 @@ const buildCpus = parsePositiveInt(process.env.NEXT_BUILD_CPUS) ?? Math.min(4, h
 const memoryBasedWorkersCount = truthyEnv(process.env.NEXT_BUILD_MEMORY_BASED_WORKERS_COUNT);
 
 const nextConfig = {
+  // Permit isolated dev/test servers to coexist with the normal worktree server.
+  // Production and ordinary development retain Next's default `.next` directory.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
+  // Dev-only (ignored in production builds): Next blocks /_next/* asset, HMR,
+  // and RSC requests from origins it does not recognize, which stalls
+  // hydration when a phone/tablet loads the dev server by LAN IP.
+  // Comma-separated hostnames, e.g. DEV_ALLOWED_ORIGINS=192.168.1.20,my-mac.local
+  allowedDevOrigins: (process.env.DEV_ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || appVersion,
     // Propagate edition to client-side code
@@ -224,6 +235,28 @@ const nextConfig = {
       '@alga-psa/notifications/hooks': '../packages/notifications/src/hooks/index.ts',
       '@alga-psa/scheduling': '../packages/scheduling/src',
       '@alga-psa/scheduling/': '../packages/scheduling/src/',
+      // @alga-psa/jobs: export names don't mirror src (./fanout -> src/lib/fanout).
+      // Turbopack matches the bare key exactly, so every lib/* and mirror
+      // (actions/components) subpath is listed explicitly. The wildcard exports
+      // (./handlers/*, ./handler-utils/*, ./runners/*) additionally need a
+      // trailing-slash key so subpath imports like
+      // '@alga-psa/jobs/handlers/autoCloseTicketsHandler' resolve to src/lib/...
+      // instead of falling through to the tsconfig '@alga-psa/jobs/*' -> src/*
+      // mapping (which drops the lib/ segment).
+      '@alga-psa/jobs': '../packages/jobs/src',
+      '@alga-psa/jobs/actions': '../packages/jobs/src/actions',
+      '@alga-psa/jobs/components': '../packages/jobs/src/components',
+      '@alga-psa/jobs/fanout': '../packages/jobs/src/lib/fanout',
+      '@alga-psa/jobs/runner': '../packages/jobs/src/lib/jobRunnerAccessor.ts',
+      '@alga-psa/jobs/scheduler': '../packages/jobs/src/lib/jobSchedulerAccessor.ts',
+      '@alga-psa/jobs/handlers': '../packages/jobs/src/lib/handlers',
+      '@alga-psa/jobs/handlers/': '../packages/jobs/src/lib/handlers/',
+      '@alga-psa/jobs/handler-utils': '../packages/jobs/src/lib/handler-utils',
+      '@alga-psa/jobs/handler-utils/': '../packages/jobs/src/lib/handler-utils/',
+      '@alga-psa/jobs/runners': '../packages/jobs/src/lib/jobs/runners',
+      '@alga-psa/jobs/runners/': '../packages/jobs/src/lib/jobs/runners/',
+      '@alga-psa/search': '../packages/search/src',
+      '@alga-psa/search/': '../packages/search/src/',
       '@alga-psa/ee-calendar': '../ee/packages/calendar/src/index.ts',
       '@alga-psa/ee-calendar/': '../ee/packages/calendar/src/',
       '@alga-psa/ee-microsoft-teams': isEE ? '../ee/packages/microsoft-teams/src/index.ts' : './src/empty/index.ts',
@@ -280,6 +313,12 @@ const nextConfig = {
       '@alga-psa/billing/components': '../packages/billing/src/components/index.ts',
       '@alga-psa/billing/models': '../packages/billing/src/models/index.ts',
       '@alga-psa/billing/services': '../packages/billing/src/services/index.ts',
+      // Inventory package
+      '@alga-psa/inventory': '../packages/inventory/src',
+      '@alga-psa/inventory/': '../packages/inventory/src/',
+      '@alga-psa/inventory/actions': '../packages/inventory/src/actions/index.ts',
+      '@alga-psa/inventory/components': '../packages/inventory/src/components/index.ts',
+      '@alga-psa/inventory/lib': '../packages/inventory/src/lib/index.ts',
       // Projects package
       '@alga-psa/projects': '../packages/projects/src',
       '@alga-psa/projects/': '../packages/projects/src/',
@@ -402,6 +441,9 @@ const nextConfig = {
       '@alga-psa/user-activities/server/workflow-tasks': isEE
         ? '../ee/server/src/user-activities/workflowTasks.server'
         : '../packages/user-activities/src/server/workflow-tasks',
+      '@alga-psa/user-activities/server/workflow-task-actions': isEE
+        ? '../ee/server/src/user-activities/workflowTaskActions.server'
+        : '../packages/user-activities/src/server/workflow-task-actions',
       '@alga-psa/user-activities/client/workflow-tasks': isEE
         ? '../ee/server/src/user-activities/workflowTasks.client'
         : '../packages/user-activities/src/client/workflow-tasks',
@@ -454,6 +496,7 @@ const nextConfig = {
     '@alga-psa/documents',
     '@alga-psa/reference-data',
     '@alga-psa/billing',
+    '@alga-psa/inventory',
     '@alga-psa/msp-composition',
     '@alga-psa/user-composition',
     '@alga-psa/user-activities',
@@ -565,6 +608,25 @@ const nextConfig = {
       '@alga-psa/tags/': `${prebuiltDirAbs('tags')}/`,
       // Source-transpiled packages
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
+      // @alga-psa/jobs + /search: source-transpiled. jobs' export names do NOT
+      // mirror its src layout (./fanout -> src/lib/fanout, ./handlers/* ->
+      // src/lib/handlers/*), so the lib/ subpaths need explicit overrides
+      // webpack resolve.alias is FIRST-match, so the bare '@alga-psa/jobs' MUST be
+      // exact ('$') — otherwise it swallows every subpath (e.g. '@alga-psa/jobs/fanout'
+      // -> src/fanout, which doesn't exist, instead of src/lib/fanout) and never falls
+      // through to the specific alias. Mirror subpaths (actions/components) and the
+      // non-mirror lib/* subpaths are listed explicitly. search mirrors src (flat),
+      // so its bare prefix resolves fine.
+      '@alga-psa/jobs$': path.join(__dirname, '../packages/jobs/src'),
+      '@alga-psa/jobs/actions': path.join(__dirname, '../packages/jobs/src/actions'),
+      '@alga-psa/jobs/components': path.join(__dirname, '../packages/jobs/src/components'),
+      '@alga-psa/jobs/fanout': path.join(__dirname, '../packages/jobs/src/lib/fanout'),
+      '@alga-psa/jobs/runner': path.join(__dirname, '../packages/jobs/src/lib/jobRunnerAccessor.ts'),
+      '@alga-psa/jobs/scheduler': path.join(__dirname, '../packages/jobs/src/lib/jobSchedulerAccessor.ts'),
+      '@alga-psa/jobs/handlers': path.join(__dirname, '../packages/jobs/src/lib/handlers'),
+      '@alga-psa/jobs/handler-utils': path.join(__dirname, '../packages/jobs/src/lib/handler-utils'),
+      '@alga-psa/jobs/runners': path.join(__dirname, '../packages/jobs/src/lib/jobs/runners'),
+      '@alga-psa/search': path.join(__dirname, '../packages/search/src'),
       '@alga-psa/agent-tooling': path.join(__dirname, '../packages/agent-tooling/src'),
       '@alga-psa/agent-tooling/': `${path.join(__dirname, '../packages/agent-tooling/src')}/`,
       '@alga-psa/ee-calendar': path.join(__dirname, '../ee/packages/calendar/src'),
@@ -649,6 +711,9 @@ const nextConfig = {
       '@alga-psa/user-activities/server/workflow-tasks': isEE
         ? path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.server.ts')
         : path.join(__dirname, '../packages/user-activities/src/server/workflow-tasks.ts'),
+      '@alga-psa/user-activities/server/workflow-task-actions': isEE
+        ? path.join(__dirname, '../ee/server/src/user-activities/workflowTaskActions.server.ts')
+        : path.join(__dirname, '../packages/user-activities/src/server/workflow-task-actions.ts'),
       '@alga-psa/user-activities/client/workflow-tasks': isEE
         ? path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.client.tsx')
         : path.join(__dirname, '../packages/user-activities/src/client/workflow-tasks.tsx'),
@@ -991,6 +1056,7 @@ const nextConfig = {
         const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
         const workflowsEeEntry = path.join(__dirname, '../ee/server/src/workflows/entry.tsx');
         const userActivitiesWorkflowTasksServerEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.server.ts');
+        const userActivitiesWorkflowTaskActionsServerEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTaskActions.server.ts');
         const userActivitiesWorkflowTasksClientEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.client.tsx');
         const authSsoButtonsEeEntry = path.join(
           __dirname,
@@ -1023,6 +1089,10 @@ const nextConfig = {
             // exports map before the webpack alias wins. Force the EE implementations.
             if (req === '@alga-psa/user-activities/server/workflow-tasks') {
               resource.request = userActivitiesWorkflowTasksServerEe;
+              return;
+            }
+            if (req === '@alga-psa/user-activities/server/workflow-task-actions') {
+              resource.request = userActivitiesWorkflowTaskActionsServerEe;
               return;
             }
             if (req === '@alga-psa/user-activities/client/workflow-tasks') {

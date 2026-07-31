@@ -1,37 +1,20 @@
 import { vi } from 'vitest';
 import { IUserWithRoles } from '../src/interfaces/auth.interfaces';
+// This static import means vi.mock('@alga-psa/auth') factories must NEVER
+// dynamically import this file — the factory would await this module while
+// this module's auth import awaits the factory, deadlocking vitest silently
+// at collection. Factories import createAuthModuleMock from ./authModuleMock
+// (which imports no product code) instead; testMocks re-exports it for
+// non-factory callers.
 import { getCurrentUser, hasPermission } from '@alga-psa/auth';
+import {
+  currentUserRef,
+  sessionUserRef,
+  permissionRef,
+  permissionCheckRef
+} from './authModuleMock';
 
-const currentUserRef = vi.hoisted(() => ({
-  user: {
-    user_id: 'mock-user-id',
-    tenant: '11111111-1111-1111-1111-111111111111',
-    username: 'mock-user',
-    first_name: 'Mock',
-    last_name: 'User',
-    email: 'mock.user@example.com',
-    hashed_password: 'hashed_password_here',
-    is_inactive: false,
-    user_type: 'internal',
-    roles: []
-  } as IUserWithRoles
-}));
-
-const sessionUserRef = vi.hoisted(() => ({
-  user: {
-    id: 'mock-user-id',
-    tenant: '11111111-1111-1111-1111-111111111111'
-  }
-}));
-
-const permissionRef = vi.hoisted(() => ({
-  value: ['user_schedule:update', 'user_schedule:read'] as string[]
-}));
-
-const permissionCheckRef = vi.hoisted(() => ({
-  fn: (user: IUserWithRoles, resource?: string, action?: string) =>
-    user.roles?.some(role => role.role_name.toLowerCase() === 'admin') ?? true
-}));
+export { createAuthModuleMock } from './authModuleMock';
 
 // Hoisted so the vi.mock('next/headers') factory below can safely reference it.
 // (vi.mock factories are hoisted to the top of the module; referencing a
@@ -262,3 +245,4 @@ export function setupCommonMocks(options: {
 
   return { tenantId, userId, user };
 }
+

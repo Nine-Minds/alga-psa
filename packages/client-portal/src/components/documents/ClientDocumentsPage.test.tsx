@@ -12,60 +12,64 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   }),
 }));
 
-const mockFolders: IFolderNode[] = [
-  {
-    name: 'Contracts',
-    path: '/Contracts',
-    docCount: 2,
-    children: [],
-  },
-  {
-    name: 'Invoices',
-    path: '/Invoices',
-    docCount: 1,
-    children: [
-      {
-        name: '2026',
-        path: '/Invoices/2026',
-        docCount: 1,
-        children: [],
-      },
-    ],
-  },
-];
+const { mockFolders, mockDocuments } = vi.hoisted(() => {
+  const mockFolders = [
+    {
+      name: 'Contracts',
+      path: '/Contracts',
+      docCount: 2,
+      children: [],
+    },
+    {
+      name: 'Invoices',
+      path: '/Invoices',
+      docCount: 1,
+      children: [
+        {
+          name: '2026',
+          path: '/Invoices/2026',
+          docCount: 1,
+          children: [],
+        },
+      ],
+    },
+  ] as IFolderNode[];
 
-const mockDocuments: IDocument[] = [
-  {
-    tenant: 'tenant-1',
-    document_id: 'doc-1',
-    document_name: 'Service Agreement.pdf',
-    type_id: null,
-    user_id: 'user-1',
-    order_number: 1,
-    created_by: 'user-1',
-    folder_path: '/Contracts',
-    mime_type: 'application/pdf',
-    is_client_visible: true,
-    created_at: '2026-02-28T00:00:00Z',
-    updated_at: '2026-02-28T00:00:00Z',
-    file_size: 1024000,
-  },
-  {
-    tenant: 'tenant-1',
-    document_id: 'doc-2',
-    document_name: 'Network Diagram.png',
-    type_id: null,
-    user_id: 'user-1',
-    order_number: 2,
-    created_by: 'user-1',
-    folder_path: '/Contracts',
-    mime_type: 'image/png',
-    is_client_visible: true,
-    created_at: '2026-02-28T00:00:00Z',
-    updated_at: '2026-02-28T00:00:00Z',
-    file_size: 512000,
-  },
-];
+  const mockDocuments = [
+    {
+      tenant: 'tenant-1',
+      document_id: 'doc-1',
+      document_name: 'Service Agreement.pdf',
+      type_id: null,
+      user_id: 'user-1',
+      order_number: 1,
+      created_by: 'user-1',
+      folder_path: '/Contracts',
+      mime_type: 'application/pdf',
+      is_client_visible: true,
+      created_at: '2026-02-28T00:00:00Z',
+      updated_at: '2026-02-28T00:00:00Z',
+      file_size: 1024000,
+    },
+    {
+      tenant: 'tenant-1',
+      document_id: 'doc-2',
+      document_name: 'Network Diagram.png',
+      type_id: null,
+      user_id: 'user-1',
+      order_number: 2,
+      created_by: 'user-1',
+      folder_path: '/Contracts',
+      mime_type: 'image/png',
+      is_client_visible: true,
+      created_at: '2026-02-28T00:00:00Z',
+      updated_at: '2026-02-28T00:00:00Z',
+      file_size: 512000,
+    },
+  ] as IDocument[];
+
+  return { mockFolders, mockDocuments };
+});
 
 vi.mock('@alga-psa/client-portal/actions/client-portal-actions/client-documents', () => ({
   getClientDocuments: vi.fn().mockResolvedValue({
@@ -86,6 +90,13 @@ vi.mock('@alga-psa/client-portal/actions/client-portal-actions/client-documents'
 
 vi.mock('@alga-psa/documents/lib/documentUtils', () => ({
   downloadDocument: vi.fn(),
+}));
+
+vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
+  useDocumentsCrossFeature: () => ({
+    downloadDocument: vi.fn(),
+    getDocumentDownloadUrl: vi.fn(),
+  }),
 }));
 
 vi.mock('@alga-psa/ui/components/Button', () => ({

@@ -3,6 +3,8 @@ services:
     environment:
       NODE_ENV: production
       APP_ENV: production
+      APPLICATION_URL: ${NEXT_PUBLIC_BASE_URL:?Set NEXT_PUBLIC_BASE_URL to the public application URL}
+      NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:?Set NEXT_PUBLIC_BASE_URL to the public application URL}
       # Production secret provider configuration
       # Override defaults for production vault integration
       SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem,vault}

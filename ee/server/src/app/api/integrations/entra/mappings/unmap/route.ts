@@ -1,13 +1,14 @@
 import { badRequest, dynamic, ok, parseJsonBody, runtime } from '../../_responses';
-import { requireEntraUiFlagEnabled } from '../../_guards';
+import { requireEntraAccess } from '../../_guards';
 import { createTenantKnex, runWithTenant } from '@enterprise/lib/db';
+import { tenantDb } from '@alga-psa/db';
 
 export { dynamic, runtime };
 
 export async function POST(request: Request): Promise<Response> {
-  const flagGate = await requireEntraUiFlagEnabled('update');
-  if (flagGate instanceof Response) {
-    return flagGate;
+  const accessGate = await requireEntraAccess('update');
+  if (accessGate instanceof Response) {
+    return accessGate;
   }
 
   const body = await parseJsonBody(request);
@@ -17,13 +18,13 @@ export async function POST(request: Request): Promise<Response> {
     return badRequest('managedTenantId is required.');
   }
 
-  await runWithTenant(flagGate.tenantId, async () => {
+  await runWithTenant(accessGate.tenantId, async () => {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, accessGate.tenantId);
     const now = knex.fn.now();
 
-    const activeMapping = await knex('entra_client_tenant_mappings')
+    const activeMapping = await db.table('entra_client_tenant_mappings')
       .where({
-        tenant: flagGate.tenantId,
         managed_tenant_id: managedTenantId,
         is_active: true,
       })
@@ -33,9 +34,8 @@ export async function POST(request: Request): Promise<Response> {
       return;
     }
 
-    await knex('entra_client_tenant_mappings')
+    await db.table('entra_client_tenant_mappings')
       .where({
-        tenant: flagGate.tenantId,
         managed_tenant_id: managedTenantId,
         is_active: true,
       })
@@ -44,23 +44,22 @@ export async function POST(request: Request): Promise<Response> {
         updated_at: now,
       });
 
-    await knex('entra_client_tenant_mappings').insert({
-      tenant: flagGate.tenantId,
+    await db.table('entra_client_tenant_mappings').insert({
+      tenant: accessGate.tenantId,
       managed_tenant_id: managedTenantId,
       client_id: null,
       mapping_state: 'unmapped',
       confidence_score: null,
       is_active: true,
-      decided_by: flagGate.userId,
+      decided_by: accessGate.userId,
       decided_at: now,
       created_at: now,
       updated_at: now,
     });
 
     if (activeMapping.client_id) {
-      await knex('clients')
+      await db.table('clients')
         .where({
-          tenant: flagGate.tenantId,
           client_id: activeMapping.client_id,
         })
         .update({

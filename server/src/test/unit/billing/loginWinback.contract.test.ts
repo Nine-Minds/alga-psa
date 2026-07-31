@@ -37,7 +37,8 @@ describe('login win-back contract', () => {
   it('T037/T038/T039/T047/T076: EE hook uses one conditional update returning row for the 14-day throttle', () => {
     const source = read('ee/server/src/lib/auth/loginWinback.ts');
 
-    expect(source).toContain("knex('pending_tenant_deletions')");
+    expect(source).toContain('const db = tenantDb(knex, input.tenantId);');
+    expect(source).toContain("db.table('pending_tenant_deletions')");
     expect(source).toContain(".whereIn('status', ['pending', 'awaiting_confirmation', 'confirmed'])");
     expect(source).toContain("whereNull('last_winback_email_at')");
     expect(source).toContain("NOW() - INTERVAL '14 days'");

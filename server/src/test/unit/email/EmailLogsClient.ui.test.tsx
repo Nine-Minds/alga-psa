@@ -3,12 +3,13 @@
  */
 import React from 'react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import EmailLogsClient from 'server/src/app/msp/email-logs/EmailLogsClient';
 
 vi.mock('@alga-psa/email/actions', () => ({
   getEmailLogs: vi.fn(),
+  getEmailLogMetrics: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/components/Card', () => ({
@@ -27,6 +28,26 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
   ),
 }));
 
+vi.mock('@alga-psa/ui/components/DatePicker', () => ({
+  // The real DatePicker is a Radix popover + calendar, which fireEvent.change
+  // cannot drive. Render it as a native date input while preserving the
+  // Date-based onChange contract: (date: Date | undefined) => void.
+  DatePicker: ({ value, onChange, id, placeholder, label, clearable, displayFormat, minDate, maxDate, collapsible, ...props }: any) => {
+    const toDateString = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return (
+      <input
+        id={id}
+        type="date"
+        placeholder={placeholder}
+        value={value instanceof Date ? toDateString(value) : ''}
+        onChange={(e) => onChange?.(e.target.value ? new Date(`${e.target.value}T00:00:00`) : undefined)}
+        {...props}
+      />
+    );
+  },
+}));
+
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
   Dialog: ({ isOpen, children }: any) => (isOpen ? <div data-testid="dialog">{children}</div> : null),
   DialogHeader: ({ children }: any) => <div>{children}</div>,
@@ -35,20 +56,25 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
-  DataTable: ({ data, columns, onRowClick }: any) => (
-    <table>
-      <tbody>
-        {data.map((row: any, idx: number) => (
-          <tr key={row.id ?? idx} onClick={() => onRowClick?.(row)}>
-            {columns.map((col: any, colIdx: number) => {
-              const value = row[col.dataIndex];
-              const cell = col.render ? col.render(value, row, idx) : String(value ?? '');
-              return <td key={colIdx}>{cell}</td>;
-            })}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+  DataTable: ({ data, columns, currentPage, onPageChange, onRowClick }: any) => (
+    <div>
+      <div data-testid="current-page">{currentPage}</div>
+      <button onClick={() => onPageChange?.(2)}>Page 2</button>
+      <button onClick={() => onPageChange?.(3)}>Page 3</button>
+      <table>
+        <tbody>
+          {data.map((row: any, idx: number) => (
+            <tr key={row.id ?? idx} onClick={() => onRowClick?.(row)}>
+              {columns.map((col: any, colIdx: number) => {
+                const value = row[col.dataIndex];
+                const cell = col.render ? col.render(value, row, idx) : String(value ?? '');
+                return <td key={colIdx}>{cell}</td>;
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   ),
 }));
 
@@ -78,11 +104,13 @@ describe('EmailLogsClient', () => {
       />
     );
 
-    expect(screen.getByText('Total sent')).toBeTruthy();
+    // The component renders i18n keys via useTranslation; the shared test setup
+    // mocks `t` to return the key when no defaultValue is supplied.
+    expect(screen.getByText('emailLogs.metrics.totalSent')).toBeTruthy();
     expect(screen.getByText('10')).toBeTruthy();
-    expect(screen.getByText('Failed rate')).toBeTruthy();
+    expect(screen.getByText('emailLogs.metrics.failedRate')).toBeTruthy();
     expect(screen.getByText('20%')).toBeTruthy();
-    expect(screen.getByText('Today')).toBeTruthy();
+    expect(screen.getByText('emailLogs.metrics.today')).toBeTruthy();
     expect(screen.getByText('3')).toBeTruthy();
   });
 
@@ -104,30 +132,100 @@ describe('EmailLogsClient', () => {
     });
   });
 
-  it('updates results when date range filter changes', async () => {
-    getEmailLogsMock
-      .mockResolvedValueOnce({ data: [], total: 0, page: 1, pageSize: 50, totalPages: 0 } as any)
-      .mockResolvedValueOnce({
-        data: [
-          {
-            id: 1,
-            sent_at: '2026-01-01T00:00:00Z',
-            ticket_number: '123',
-            to_addresses: ['to@example.com'],
-            subject: 'Filtered',
-            status: 'sent',
-            provider_type: 'test',
-            provider_id: 'p',
-            message_id: 'm1',
-            from_address: 'from@example.com',
-            metadata: {},
-          },
-        ],
-        total: 1,
-        page: 1,
+  it('keeps the requested page active without refetching page 1', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <EmailLogsClient
+        initialMetrics={{ total: 0, failed: 0, today: 0, failedRate: 0 }}
+        initialLogs={{ data: [], total: 150, page: 1, pageSize: 50, totalPages: 3 }}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Page 2' }));
+
+    await waitFor(() => {
+      expect(getEmailLogsMock).toHaveBeenCalledTimes(1);
+      expect(getEmailLogsMock).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 350));
+
+    expect(screen.getByTestId('current-page').textContent).toBe('2');
+    expect(getEmailLogsMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores a stale page response that resolves after the latest request', async () => {
+    let resolvePage2: (value: any) => void = () => undefined;
+    let resolvePage3: (value: any) => void = () => undefined;
+    const page2Result = new Promise((resolve) => { resolvePage2 = resolve; });
+    const page3Result = new Promise((resolve) => { resolvePage3 = resolve; });
+
+    getEmailLogsMock.mockImplementation(({ page }: any) => {
+      if (page === 2) return page2Result as any;
+      if (page === 3) return page3Result as any;
+      throw new Error(`Unexpected page ${page}`);
+    });
+
+    render(
+      <EmailLogsClient
+        initialMetrics={{ total: 0, failed: 0, today: 0, failedRate: 0 }}
+        initialLogs={{ data: [], total: 150, page: 1, pageSize: 50, totalPages: 3 }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }));
+    await waitFor(() => expect(getEmailLogsMock).toHaveBeenCalledWith(expect.objectContaining({ page: 2 })));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Page 3' }));
+    await waitFor(() => expect(getEmailLogsMock).toHaveBeenCalledWith(expect.objectContaining({ page: 3 })));
+
+    resolvePage3({
+      data: [{ id: 3, subject: 'Newest page', sent_at: '2026-01-03T00:00:00Z', status: 'sent' }],
+      total: 150,
+      page: 3,
+      pageSize: 50,
+      totalPages: 3,
+    });
+    await waitFor(() => expect(screen.getByText('Newest page')).toBeTruthy());
+
+    await act(async () => {
+      resolvePage2({
+        data: [{ id: 2, subject: 'Stale page', sent_at: '2026-01-02T00:00:00Z', status: 'sent' }],
+        total: 150,
+        page: 2,
         pageSize: 50,
-        totalPages: 1,
-      } as any);
+        totalPages: 3,
+      });
+      await page2Result;
+    });
+
+    expect(screen.queryByText('Stale page')).toBeNull();
+    expect(screen.getByText('Newest page')).toBeTruthy();
+  });
+
+  it('updates results when date range filter changes', async () => {
+    getEmailLogsMock.mockResolvedValueOnce({
+      data: [
+        {
+          id: 1,
+          sent_at: '2026-01-01T00:00:00Z',
+          ticket_number: '123',
+          to_addresses: ['to@example.com'],
+          subject: 'Filtered',
+          status: 'sent',
+          provider_type: 'test',
+          provider_id: 'p',
+          message_id: 'm1',
+          from_address: 'from@example.com',
+          metadata: {},
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 50,
+      totalPages: 1,
+    } as any);
 
     render(
       <EmailLogsClient
@@ -148,29 +246,27 @@ describe('EmailLogsClient', () => {
   });
 
   it('updates results when recipient search changes', async () => {
-    getEmailLogsMock
-      .mockResolvedValueOnce({ data: [], total: 0, page: 1, pageSize: 50, totalPages: 0 } as any)
-      .mockResolvedValueOnce({
-        data: [
-          {
-            id: 1,
-            sent_at: '2026-01-01T00:00:00Z',
-            ticket_number: '123',
-            to_addresses: ['alice@example.com'],
-            subject: 'Recipient filtered',
-            status: 'sent',
-            provider_type: 'test',
-            provider_id: 'p',
-            message_id: 'm1',
-            from_address: 'from@example.com',
-            metadata: {},
-          },
-        ],
-        total: 1,
-        page: 1,
-        pageSize: 50,
-        totalPages: 1,
-      } as any);
+    getEmailLogsMock.mockResolvedValueOnce({
+      data: [
+        {
+          id: 1,
+          sent_at: '2026-01-01T00:00:00Z',
+          ticket_number: '123',
+          to_addresses: ['alice@example.com'],
+          subject: 'Recipient filtered',
+          status: 'sent',
+          provider_type: 'test',
+          provider_id: 'p',
+          message_id: 'm1',
+          from_address: 'from@example.com',
+          metadata: {},
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 50,
+      totalPages: 1,
+    } as any);
 
     render(
       <EmailLogsClient
@@ -179,7 +275,7 @@ describe('EmailLogsClient', () => {
       />
     );
 
-    fireEvent.change(screen.getByPlaceholderText('Search email…'), { target: { value: 'alice' } });
+    fireEvent.change(screen.getByPlaceholderText('emailLogs.filters.recipientPlaceholder'), { target: { value: 'alice' } });
 
     await waitFor(() => {
       const lastCall = getEmailLogsMock.mock.calls.at(-1)?.[0] as any;
@@ -192,29 +288,27 @@ describe('EmailLogsClient', () => {
   });
 
   it('updates results when ticket filter changes', async () => {
-    getEmailLogsMock
-      .mockResolvedValueOnce({ data: [], total: 0, page: 1, pageSize: 50, totalPages: 0 } as any)
-      .mockResolvedValueOnce({
-        data: [
-          {
-            id: 1,
-            sent_at: '2026-01-01T00:00:00Z',
-            ticket_number: '123',
-            to_addresses: ['to@example.com'],
-            subject: 'Ticket filtered',
-            status: 'sent',
-            provider_type: 'test',
-            provider_id: 'p',
-            message_id: 'm1',
-            from_address: 'from@example.com',
-            metadata: {},
-          },
-        ],
-        total: 1,
-        page: 1,
-        pageSize: 50,
-        totalPages: 1,
-      } as any);
+    getEmailLogsMock.mockResolvedValueOnce({
+      data: [
+        {
+          id: 1,
+          sent_at: '2026-01-01T00:00:00Z',
+          ticket_number: '123',
+          to_addresses: ['to@example.com'],
+          subject: 'Ticket filtered',
+          status: 'sent',
+          provider_type: 'test',
+          provider_id: 'p',
+          message_id: 'm1',
+          from_address: 'from@example.com',
+          metadata: {},
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 50,
+      totalPages: 1,
+    } as any);
 
     render(
       <EmailLogsClient
@@ -223,7 +317,7 @@ describe('EmailLogsClient', () => {
       />
     );
 
-    fireEvent.change(screen.getByPlaceholderText('Ticket #…'), { target: { value: '123' } });
+    fireEvent.change(screen.getByPlaceholderText('emailLogs.filters.ticketPlaceholder'), { target: { value: '123' } });
 
     await waitFor(() => {
       const lastCall = getEmailLogsMock.mock.calls.at(-1)?.[0] as any;
@@ -297,14 +391,14 @@ describe('EmailLogsClient', () => {
     });
 
     const dialog = screen.getByTestId('dialog');
-    expect(within(dialog).getByText('Sent at')).toBeTruthy();
-    expect(within(dialog).getByText('Status')).toBeTruthy();
-    expect(within(dialog).getByText('Provider')).toBeTruthy();
-    expect(within(dialog).getByText('Message ID')).toBeTruthy();
-    expect(within(dialog).getByText('To')).toBeTruthy();
-    expect(within(dialog).getByText('From')).toBeTruthy();
-    expect(within(dialog).getByText('Error')).toBeTruthy();
-    expect(within(dialog).getByText('Metadata')).toBeTruthy();
+    expect(within(dialog).getByText('emailLogs.detail.sentAt')).toBeTruthy();
+    expect(within(dialog).getByText('emailLogs.detail.status')).toBeTruthy();
+    expect(within(dialog).getByText('emailLogs.detail.provider')).toBeTruthy();
+    expect(within(dialog).getByText('emailLogs.detail.messageId')).toBeTruthy();
+    expect(within(dialog).getByText('emailLogs.detail.to')).toBeTruthy();
+    expect(within(dialog).getByText('emailLogs.detail.from')).toBeTruthy();
+    expect(within(dialog).getByText('emailLogs.detail.error')).toBeTruthy();
+    expect(within(dialog).getByText('emailLogs.detail.metadata')).toBeTruthy();
 
     expect(within(dialog).getByText(/test \(p\)/i)).toBeTruthy();
     expect(within(dialog).getByText('m1')).toBeTruthy();

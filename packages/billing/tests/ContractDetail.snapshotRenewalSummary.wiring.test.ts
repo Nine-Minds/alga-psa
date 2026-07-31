@@ -8,10 +8,11 @@ const source = readFileSync(
 
 describe('ContractDetail snapshot renewal summary wiring', () => {
   it('renders a renewal summary block in the contract snapshot card', () => {
-    expect(source).toContain('const primaryAssignment = assignments[0] ?? null;');
-    expect(source).toContain('text-xs uppercase tracking-wide text-muted-foreground">Renewal');
-    expect(source).toContain('Source');
-    expect(source).toContain('Decision Due');
+    expect(source).toContain('assignments.find((assignment) => assignment.client_contract_id === clientContractId) ??');
+    expect(source).toContain('assignments[0] ??');
+    expect(source).toContain("{t('contractDetail.headerCard.renewalHeading', { defaultValue: 'Renewal' })}");
+    expect(source).toContain("{t('renewal.labels.source', { defaultValue: 'Renewal Source' })}");
+    expect(source).toContain("{t('renewal.labels.decisionDue', { defaultValue: 'Decision Due' })}");
   });
 
   it('handles ongoing contracts in the top renewal summary', () => {

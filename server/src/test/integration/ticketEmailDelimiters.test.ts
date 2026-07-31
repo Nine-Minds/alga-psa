@@ -134,6 +134,10 @@ let currentProject: ProjectRecord | null = null;
 let currentPortalDomain: PortalDomainRecord | null = null;
 
 const sendEmailMock = vi.hoisted(() => vi.fn(async () => ({ success: true })));
+const getTenantEmailSettingsMock = vi.hoisted(() => vi.fn(async () => null as any));
+const getDefaultFromAddressMock = vi.hoisted(() =>
+  vi.fn(() => ({ email: 'notifications@example.com', name: 'Alga PSA Notifications' })),
+);
 const eventHandlers = vi.hoisted(() => new Map<string, (event: any) => Promise<void> | void>());
 const publishMock = vi.hoisted(() =>
   vi.fn(async (event: any) => {
@@ -403,6 +407,8 @@ function systemTemplateBuilder() {
 
 function tokenTableBuilder() {
   const builder: any = {
+    // tenantDb().table() scopes the root builder with .where(tenant) before insert
+    where: () => builder,
     insert: (data: any) => {
       const rows = Array.isArray(data) ? data : [data];
       for (const row of rows) {
@@ -889,6 +895,7 @@ function createMockKnex() {
         return systemTemplateBuilder();
       case 'email_reply_tokens':
         return tokenTableBuilder();
+      case 'comments':
       case 'comments as cm':
         return createQuery(() => null);
       case 'tickets as t':
@@ -940,7 +947,8 @@ vi.mock('@alga-psa/email', () => ({
   __esModule: true,
   TenantEmailService: {
     getInstance: () => ({ sendEmail: sendEmailMock }),
-    getTenantEmailSettings: async () => null,
+    getTenantEmailSettings: getTenantEmailSettingsMock,
+    getDefaultFromAddress: getDefaultFromAddressMock,
   },
   StaticTemplateProcessor: class {
     constructor(
@@ -1011,6 +1019,13 @@ beforeEach(() => {
   currentPortalDomain = null;
   resetNotificationState();
   sendEmailMock.mockReset();
+  getTenantEmailSettingsMock.mockReset();
+  getTenantEmailSettingsMock.mockImplementation(async () => null as any);
+  getDefaultFromAddressMock.mockReset();
+  getDefaultFromAddressMock.mockImplementation(() => ({
+    email: 'notifications@example.com',
+    name: 'Alga PSA Notifications',
+  }));
   subscribeMock.mockClear();
   unsubscribeMock.mockClear();
   publishMock.mockClear();
@@ -1185,6 +1200,8 @@ describe('ticket email subscriber reply markers', () => {
 
   it('processes ticket created events with delimiters', async () => {
     seedTemplate('ticket-created', 'Ticket Created: {{ticket.title}}', '<p>{{ticket.title}}</p>');
+    // External recipients (the primary contact) get the client-facing template.
+    seedTemplate('ticket-created-client', 'Ticket Created: {{ticket.title}}', '<p>{{ticket.title}}</p>');
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
@@ -1216,6 +1233,7 @@ describe('ticket email subscriber reply markers', () => {
 
   it('processes ticket updated events with delimiters', async () => {
     seedTemplate('ticket-updated', 'Ticket Updated: {{ticket.title}}', '<p>{{ticket.title}}</p>');
+    seedTemplate('ticket-updated-client', 'Ticket Updated: {{ticket.title}}', '<p>{{ticket.title}}</p>');
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
@@ -1283,7 +1301,9 @@ describe('ticket email subscriber reply markers', () => {
         comment: {
           id: commentId,
           content: 'Follow up',
-          author: 'contact@example.com',
+          // The comment author is excluded from the fanout, so the author must
+          // differ from the contact recipient for the email to be sent.
+          author: 'agent@example.com',
           isInternal: false,
         },
       },
@@ -1296,6 +1316,119 @@ describe('ticket email subscriber reply markers', () => {
   });
 });
 
+describe('ticket email subscriber from-address (display-name decoupling)', () => {
+  beforeEach(async () => {
+    eventHandlers.clear();
+    await registerTicketEmailSubscriber();
+  });
+
+  it('applies the configured ticketing display name onto the default sender address even without a custom From address', async () => {
+    seedTemplate('ticket-comment-added', 'New Comment {{ticket.title}}', '<p>{{comment.content}}</p>');
+
+    const tenantId = randomUUID();
+    const ticketId = randomUUID();
+    const commentId = randomUUID();
+    const authorId = randomUUID();
+
+    // Case: a display name is configured but NO custom ticketing From address.
+    // The name must still be applied, layered onto the tenant's default sender
+    // address (regression for "from-NAME ignored when no From address is set").
+    getTenantEmailSettingsMock.mockResolvedValue({
+      tenantId,
+      defaultFromDomain: 'acme.com',
+      ticketingFromEmail: null,
+      ticketingFromName: 'Acme Helpdesk',
+      customDomains: [],
+      emailProvider: 'smtp',
+      providerConfigs: [],
+      trackingEnabled: false,
+    } as any);
+    getDefaultFromAddressMock.mockReturnValue({
+      email: 'notifications@acme.com',
+      name: 'Alga PSA Notifications',
+    });
+
+    setTicket({
+      ticket_id: ticketId,
+      ticket_number: 'T-0500',
+      title: 'Name Only Ticket',
+      board_name: 'Urgent Matters',
+      contact_email: 'contact@example.com',
+      email_metadata: { threadId: 'thread-name-only' },
+    } as any);
+    setUser({
+      user_id: authorId,
+      first_name: 'Agent',
+      last_name: 'User',
+      email: 'agent@example.com',
+      user_type: 'internal',
+    } as any);
+
+    await handlerFor('TICKET_COMMENT_ADDED')({
+      id: randomUUID(),
+      eventType: 'TICKET_COMMENT_ADDED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: authorId,
+        comment: { id: commentId, content: 'Follow up', author: 'agent@example.com', isInternal: false },
+      },
+    });
+
+    expect(sendEmailMock).toHaveBeenCalled();
+    expect(getDefaultFromAddressMock).toHaveBeenCalled();
+    const fromValues = sendEmailMock.mock.calls.map((call) => call[0].from);
+    // The display name wins over the board-name fallback and rides on the default address.
+    expect(fromValues).toContainEqual({ email: 'notifications@acme.com', name: 'Acme Helpdesk' });
+  });
+
+  it('defers entirely to default resolution when neither a ticketing From address nor a display name is configured', async () => {
+    seedTemplate('ticket-comment-added', 'New Comment {{ticket.title}}', '<p>{{comment.content}}</p>');
+
+    const tenantId = randomUUID();
+    const ticketId = randomUUID();
+    const commentId = randomUUID();
+    const authorId = randomUUID();
+
+    getTenantEmailSettingsMock.mockResolvedValue(null);
+
+    setTicket({
+      ticket_id: ticketId,
+      ticket_number: 'T-0501',
+      title: 'No Override Ticket',
+      board_name: 'Urgent Matters',
+      contact_email: 'contact@example.com',
+      email_metadata: { threadId: 'thread-no-override' },
+    } as any);
+    setUser({
+      user_id: authorId,
+      first_name: 'Agent',
+      last_name: 'User',
+      email: 'agent@example.com',
+      user_type: 'internal',
+    } as any);
+
+    await handlerFor('TICKET_COMMENT_ADDED')({
+      id: randomUUID(),
+      eventType: 'TICKET_COMMENT_ADDED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: authorId,
+        comment: { id: commentId, content: 'Follow up', author: 'agent@example.com', isInternal: false },
+      },
+    });
+
+    expect(sendEmailMock).toHaveBeenCalled();
+    // No override configured: the resolver returns undefined (no explicit From),
+    // leaving from-address resolution to the default sender path downstream.
+    const fromValues = sendEmailMock.mock.calls.map((call) => call[0].from);
+    expect(fromValues.every((value) => value === undefined)).toBe(true);
+  });
+});
+
 describe('ticket email subscriber event publishing', () => {
   beforeEach(async () => {
     eventHandlers.clear();
@@ -1304,6 +1437,7 @@ describe('ticket email subscriber event publishing', () => {
 
   it('publishes ticket created events and emails the primary contact', async () => {
     seedTemplate('ticket-created', 'Ticket Created: {{ticket.title}}', '<p>{{ticket.title}}</p>');
+    seedTemplate('ticket-created-client', 'Ticket Created: {{ticket.title}}', '<p>{{ticket.title}}</p>');
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
@@ -1352,6 +1486,7 @@ describe('ticket email subscriber deduplication', () => {
 
   it('sends only one ticket created email when primary and assigned recipients share address', async () => {
     seedTemplate('ticket-created', 'Ticket Created: {{ticket.title}}', '<p>{{ticket.title}}</p>');
+    seedTemplate('ticket-created-client', 'Ticket Created: {{ticket.title}}', '<p>{{ticket.title}}</p>');
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
@@ -1420,6 +1555,8 @@ describe('ticket email subscriber deduplication', () => {
 
   it('sends one ticket assigned email when contact and location share address', async () => {
     seedTemplate('ticket-assigned', 'Ticket Assigned: {{ticket.title}}', '<p>{{ticket.title}}</p>');
+    // First individual assignments notify the client with the client-facing template.
+    seedTemplate('ticket-agent-assigned-client', 'Working On: {{ticket.title}}', '<p>{{ticket.title}}</p>');
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
@@ -1431,6 +1568,7 @@ describe('ticket email subscriber deduplication', () => {
       title: 'Location Shared Ticket',
       contact_email: sharedEmail,
       client_email: sharedEmail,
+      assigned_to: randomUUID(),
       email_metadata: { threadId: 'thread-location-dedup' },
     });
 
@@ -1451,6 +1589,7 @@ describe('ticket email subscriber deduplication', () => {
 
   it('sends one ticket assigned email when additional resource shares email with assignee', async () => {
     seedTemplate('ticket-assigned', 'Ticket Assigned: {{ticket.title}}', '<p>{{ticket.title}}</p>');
+    seedTemplate('ticket-agent-assigned-client', 'Working On: {{ticket.title}}', '<p>{{ticket.title}}</p>');
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
@@ -1607,9 +1746,15 @@ describe('ticket email subscriber notification gating (known gap)', () => {
     seedTemplate('ticket-created', 'Ticket Created: {{ticket.title}}', '<p>{{ticket.title}}</p>', {
       subtypeName: 'Ticket Created',
     });
+    // The primary contact is external and routes through the client-facing
+    // template/subtype, so that is the subtype the gate consults here.
+    seedTemplate('ticket-created-client', 'Ticket Created: {{ticket.title}}', '<p>{{ticket.title}}</p>', {
+      subtypeName: 'Ticket Created Client',
+    });
 
     setNotificationSettings(tenantId, { is_enabled: true });
     setTenantSubtypeEnabled(tenantId, 'Ticket Created', false);
+    setTenantSubtypeEnabled(tenantId, 'Ticket Created Client', false);
 
     setTicket({
       ticket_id: ticketId,
@@ -1702,6 +1847,11 @@ describe('ticket email subscriber link routing', () => {
       'Ticket Created: {{ticket.title}}',
       '<a href="{{ticket.url}}">{{ticket.url}}</a>',
     );
+    seedTemplate(
+      'ticket-created-client',
+      'Ticket Created: {{ticket.title}}',
+      '<a href="{{ticket.url}}">{{ticket.url}}</a>',
+    );
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
@@ -1748,6 +1898,11 @@ describe('ticket email subscriber link routing', () => {
   it('falls back to the client portal path when no custom domain exists', async () => {
     seedTemplate(
       'ticket-created',
+      'Ticket Created: {{ticket.title}}',
+      '<a href="{{ticket.url}}">{{ticket.url}}</a>',
+    );
+    seedTemplate(
+      'ticket-created-client',
       'Ticket Created: {{ticket.title}}',
       '<a href="{{ticket.url}}">{{ticket.url}}</a>',
     );
@@ -1880,6 +2035,11 @@ describe('ticket email subscriber rich text formatting', () => {
   it('renders ticket description rich text without leaking JSON', async () => {
     seedTemplate(
       'ticket-created',
+      'Ticket Created: {{ticket.title}}',
+      '<p><strong>Description:</strong> {{ticket.description}}</p>',
+    );
+    seedTemplate(
+      'ticket-created-client',
       'Ticket Created: {{ticket.title}}',
       '<p><strong>Description:</strong> {{ticket.description}}</p>',
     );

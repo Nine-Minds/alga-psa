@@ -1,6 +1,10 @@
 import type { Knex } from 'knex';
-import { parseExpression } from 'cron-parser';
+// cron-parser@4 is CJS with no statically-detectable named exports; default-import
+// for CJS-interop safety when consumed as a built ESM bundle (the Temporal worker).
+import cronParser from 'cron-parser';
 import type { WorkflowScheduleDayTypeFilter } from '@alga-psa/workflows/persistence';
+import { workflowTenantTable } from './workflowTenantDb';
+const { parseExpression } = cronParser;
 
 type BusinessHoursScheduleRow = {
   tenant: string;
@@ -180,8 +184,8 @@ export const resolveWorkflowBusinessDaySettings = async (
       return { ok: true, value: null };
     }
 
-    const overrideSchedule = await knex<BusinessHoursScheduleRow>('business_hours_schedules')
-      .where({ tenant: params.tenantId, schedule_id: overrideId })
+    const overrideSchedule = await workflowTenantTable<BusinessHoursScheduleRow>(knex, params.tenantId, 'business_hours_schedules')
+      .where({ schedule_id: overrideId })
       .first();
     if (!overrideSchedule) {
       return {
@@ -193,10 +197,9 @@ export const resolveWorkflowBusinessDaySettings = async (
       };
     }
 
-    const entries = await knex<BusinessHoursEntryRow>('business_hours_entries')
-      .where({ tenant: params.tenantId, schedule_id: overrideSchedule.schedule_id });
-    const holidays = await knex<HolidayRow>('holidays')
-      .where({ tenant: params.tenantId })
+    const entries = await workflowTenantTable<BusinessHoursEntryRow>(knex, params.tenantId, 'business_hours_entries')
+      .where({ schedule_id: overrideSchedule.schedule_id });
+    const holidays = await workflowTenantTable<HolidayRow>(knex, params.tenantId, 'holidays')
       .where(function whereGlobalOrScheduleSpecific() {
         this.whereNull('schedule_id').orWhere('schedule_id', overrideSchedule.schedule_id);
       });
@@ -219,8 +222,8 @@ export const resolveWorkflowBusinessDaySettings = async (
   let source: 'override' | 'tenant_default' = 'tenant_default';
 
   if (overrideId) {
-    selectedSchedule = await knex<BusinessHoursScheduleRow>('business_hours_schedules')
-      .where({ tenant: params.tenantId, schedule_id: overrideId })
+    selectedSchedule = await workflowTenantTable<BusinessHoursScheduleRow>(knex, params.tenantId, 'business_hours_schedules')
+      .where({ schedule_id: overrideId })
       .first();
     source = 'override';
     if (!selectedSchedule) {
@@ -233,8 +236,8 @@ export const resolveWorkflowBusinessDaySettings = async (
       };
     }
   } else {
-    selectedSchedule = await knex<BusinessHoursScheduleRow>('business_hours_schedules')
-      .where({ tenant: params.tenantId, is_default: true })
+    selectedSchedule = await workflowTenantTable<BusinessHoursScheduleRow>(knex, params.tenantId, 'business_hours_schedules')
+      .where({ is_default: true })
       .first();
     if (!selectedSchedule) {
       return {
@@ -247,10 +250,9 @@ export const resolveWorkflowBusinessDaySettings = async (
     }
   }
 
-  const entries = await knex<BusinessHoursEntryRow>('business_hours_entries')
-    .where({ tenant: params.tenantId, schedule_id: selectedSchedule.schedule_id });
-  const holidays = await knex<HolidayRow>('holidays')
-    .where({ tenant: params.tenantId })
+  const entries = await workflowTenantTable<BusinessHoursEntryRow>(knex, params.tenantId, 'business_hours_entries')
+    .where({ schedule_id: selectedSchedule.schedule_id });
+  const holidays = await workflowTenantTable<HolidayRow>(knex, params.tenantId, 'holidays')
     .where(function whereGlobalOrScheduleSpecific() {
       this.whereNull('schedule_id').orWhere('schedule_id', selectedSchedule.schedule_id);
     });

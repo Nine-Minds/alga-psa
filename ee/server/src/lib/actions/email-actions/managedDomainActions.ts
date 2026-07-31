@@ -6,17 +6,19 @@
 
 import { createTenantKnex } from '@/lib/db';
 import type { Knex } from 'knex';
-import { TIER_FEATURES, type DnsRecord, type DnsLookupResult } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
+import type { DnsRecord, DnsLookupResult } from '@alga-psa/types';
+import { assertHostedInstall, isSelfHostLicensing } from '@alga-psa/licensing';
 import { enqueueManagedEmailDomainWorkflow } from '@ee/lib/email-domains/workflowClient';
 import { isValidDomain } from '@ee/lib/email-domains/domainValidation';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { observabilityLogger } from '@/lib/observability/logging';
+import { observabilityLogger } from 'server/src/lib/observability/logging';
 import type { IUser } from 'server/src/interfaces/auth.interfaces';
-import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 
 const DEFAULT_REGION = process.env.RESEND_DEFAULT_REGION || 'us-east-1';
 const EMAIL_SETTINGS_RESOURCE = 'ticket_settings';
 type EmailDomainPermissionAction = 'read' | 'create' | 'update' | 'delete';
+type ManagedDomainOperation = 'read' | 'request' | 'refresh' | 'delete';
 
 let loggedManagedDomainConflictFallback = false;
 
@@ -58,18 +60,19 @@ async function upsertManagedEmailDomainWithoutConflict(params: {
   const { knex, tenantId, domainName, record, mergeFields } = params;
 
   await knex.transaction(async (trx) => {
-    const existing = await trx('email_domains')
-      .where({ tenant: tenantId, domain_name: domainName })
+    const db = tenantDb(trx, tenantId);
+    const existing = await db.table('email_domains')
+      .where({ domain_name: domainName })
       .first();
 
     if (existing) {
-      await trx('email_domains')
-        .where({ tenant: tenantId, domain_name: domainName })
+      await db.table('email_domains')
+        .where({ domain_name: domainName })
         .update(mergeFields);
       return;
     }
 
-    await trx('email_domains').insert(record);
+    await db.table('email_domains').insert(record);
   });
 }
 
@@ -103,6 +106,103 @@ export interface ManagedDomainStatus {
   updatedAt?: string | null;
 }
 
+export type ManagedDomainActionErrorCode =
+  | 'feature_unavailable'
+  | 'permission_denied'
+  | 'invalid_domain'
+  | 'domain_not_found'
+  | 'workflow_enqueue_failed';
+
+export interface ManagedDomainActionFailure {
+  success: false;
+  error: string;
+  code: ManagedDomainActionErrorCode;
+  fieldErrors?: Record<string, string>;
+}
+
+export type ManagedDomainActionResult =
+  | { success: true; alreadyRunning?: boolean }
+  | ManagedDomainActionFailure;
+
+function managedDomainActionFailureFrom(error: unknown, operation: ManagedDomainOperation): ManagedDomainActionFailure | null {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  const code = (error as { code?: unknown }).code;
+  if (code === 'TIER_ACCESS_DENIED' || code === 'HOSTING_REQUIRED') {
+    return {
+      success: false,
+      code: 'feature_unavailable',
+      error: code === 'HOSTING_REQUIRED'
+        ? error.message
+        : 'Managed email domains are not available for this workspace.',
+    };
+  }
+  if (error.message === 'You do not have permission to manage managed email domains.') {
+    return {
+      success: false,
+      code: 'permission_denied',
+      error: 'You do not have permission to manage managed email domains.',
+    };
+  }
+  if (error.message === 'Invalid domain format') {
+    return {
+      success: false,
+      code: 'invalid_domain',
+      error: 'Enter a valid domain name, such as example.com.',
+      fieldErrors: { domain: 'Enter a valid domain name.' },
+    };
+  }
+  if (error.message === 'Domain not found') {
+    return {
+      success: false,
+      code: 'domain_not_found',
+      error: 'Managed domain not found. Refresh the page and try again.',
+    };
+  }
+  if (
+    error.message.startsWith('Failed to start managed domain workflow') ||
+    error.message.startsWith('Failed to refresh domain status') ||
+    error.message.startsWith('Failed to delete managed domain')
+  ) {
+    if (operation !== 'read') {
+      return managedDomainWorkflowFailure(operation);
+    }
+  }
+
+  return null;
+}
+
+function managedDomainWorkflowFailure(operation: 'request' | 'refresh' | 'delete'): ManagedDomainActionFailure {
+  const messageByOperation = {
+    request: 'Managed domain setup could not be started. Please try again.',
+    refresh: 'Managed domain verification could not be refreshed. Please try again.',
+    delete: 'Managed domain removal could not be started. Please try again.',
+  };
+
+  return {
+    success: false,
+    code: 'workflow_enqueue_failed',
+    error: messageByOperation[operation],
+  };
+}
+
+async function managedDomainAction<T extends { success: true }>(
+  operation: 'request' | 'refresh' | 'delete',
+  action: () => Promise<T | ManagedDomainActionFailure>,
+): Promise<T | ManagedDomainActionFailure> {
+  try {
+    return await action();
+  } catch (error) {
+    const expectedFailure = managedDomainActionFailureFrom(error, operation);
+    if (expectedFailure) {
+      return expectedFailure;
+    }
+    throw error;
+  }
+}
+
 async function checkEmailDomainPermission(
   user: IUser,
   action: EmailDomainPermissionAction,
@@ -115,45 +215,54 @@ async function checkEmailDomainPermission(
   // MSP/internal roles are temporarily allowed even if the granular permission has not been seeded yet.
 }
 
-export const getManagedEmailDomains = withAuth(async (user, { tenant }): Promise<ManagedDomainStatus[]> => {
-  await assertTierAccess(TIER_FEATURES.MANAGED_EMAIL);
+export const getManagedEmailDomains = withAuth(async (user, { tenant }): Promise<ManagedDomainStatus[] | ManagedDomainActionFailure> => {
+  try {
+    if (await isSelfHostLicensing()) {
+      return [];
+    }
 
-  const { knex } = await createTenantKnex();
-  await checkEmailDomainPermission(user, 'read', knex);
+    const { knex } = await createTenantKnex();
+    await checkEmailDomainPermission(user, 'read', knex);
 
-  const rows = await knex('email_domains')
-    .where({ tenant })
-    .orderBy('created_at', 'desc');
+    const rows = await tenantDb(knex, tenant).table('email_domains')
+      .orderBy('created_at', 'desc');
 
-  return rows.map((row: any) => {
-    const parsedRecords: DnsRecord[] = row.dns_records
-      ? Array.isArray(row.dns_records)
-        ? row.dns_records
-        : JSON.parse(row.dns_records)
-      : [];
-    const parsedDnsLookup: DnsLookupResult[] = row.dns_lookup_results
-      ? Array.isArray(row.dns_lookup_results)
-        ? row.dns_lookup_results
-        : JSON.parse(row.dns_lookup_results)
-      : [];
+    return rows.map((row: any) => {
+      const parsedRecords: DnsRecord[] = row.dns_records
+        ? Array.isArray(row.dns_records)
+          ? row.dns_records
+          : JSON.parse(row.dns_records)
+        : [];
+      const parsedDnsLookup: DnsLookupResult[] = row.dns_lookup_results
+        ? Array.isArray(row.dns_lookup_results)
+          ? row.dns_lookup_results
+          : JSON.parse(row.dns_lookup_results)
+        : [];
 
-    return {
-      domain: row.domain_name,
-      status: row.status,
-      providerId: row.provider_id,
-      providerDomainId: row.provider_domain_id,
-      dnsRecords: parsedRecords,
-      dnsLookupResults: parsedDnsLookup,
-      dnsLastCheckedAt: row.dns_last_checked_at ? new Date(row.dns_last_checked_at).toISOString() : null,
-      verifiedAt: row.verified_at ? new Date(row.verified_at).toISOString() : null,
-      failureReason: row.failure_reason,
-      updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
-    } as ManagedDomainStatus;
-  });
+      return {
+        domain: row.domain_name,
+        status: row.status,
+        providerId: row.provider_id,
+        providerDomainId: row.provider_domain_id,
+        dnsRecords: parsedRecords,
+        dnsLookupResults: parsedDnsLookup,
+        dnsLastCheckedAt: row.dns_last_checked_at ? new Date(row.dns_last_checked_at).toISOString() : null,
+        verifiedAt: row.verified_at ? new Date(row.verified_at).toISOString() : null,
+        failureReason: row.failure_reason,
+        updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+      } as ManagedDomainStatus;
+    });
+  } catch (error) {
+    const expectedFailure = managedDomainActionFailureFrom(error, 'read');
+    if (expectedFailure) {
+      return expectedFailure;
+    }
+    throw error;
+  }
 });
 
-export const requestManagedEmailDomain = withAuth(async (user, { tenant }, domainName: string) => {
-  await assertTierAccess(TIER_FEATURES.MANAGED_EMAIL);
+export const requestManagedEmailDomain = withAuth(async (user, { tenant }, domainName: string): Promise<ManagedDomainActionResult> => managedDomainAction('request', async () => {
+  await assertHostedInstall('Managed email');
 
   const { knex } = await createTenantKnex();
   await checkEmailDomainPermission(user, 'create', knex);
@@ -178,7 +287,7 @@ export const requestManagedEmailDomain = withAuth(async (user, { tenant }, domai
   };
 
   try {
-    await knex('email_domains')
+    await tenantDb(knex, tenant).table('email_domains')
       .insert(record)
       .onConflict(['tenant', 'domain_name'])
       .merge(mergeFields);
@@ -214,7 +323,7 @@ export const requestManagedEmailDomain = withAuth(async (user, { tenant }, domai
       tenant_id: tenant,
       domain: normalizedDomain,
     });
-    throw new Error('Failed to start managed domain workflow');
+    return managedDomainWorkflowFailure('request');
   }
 
   if (!result.enqueued) {
@@ -224,21 +333,21 @@ export const requestManagedEmailDomain = withAuth(async (user, { tenant }, domai
       domain: normalizedDomain,
       workflowError: result.error,
     });
-    throw new Error(`Failed to start managed domain workflow${result.error ? `: ${result.error}` : ''}`);
+    return managedDomainWorkflowFailure('request');
   }
 
   return { success: true, alreadyRunning: result.alreadyRunning ?? false };
-});
+}));
 
-export const refreshManagedEmailDomain = withAuth(async (user, { tenant }, domainName: string) => {
-  await assertTierAccess(TIER_FEATURES.MANAGED_EMAIL);
+export const refreshManagedEmailDomain = withAuth(async (user, { tenant }, domainName: string): Promise<ManagedDomainActionResult> => managedDomainAction('refresh', async () => {
+  await assertHostedInstall('Managed email');
 
   const { knex } = await createTenantKnex();
   await checkEmailDomainPermission(user, 'update', knex);
   const normalizedDomain = domainName.trim().toLowerCase();
 
-  const existing = await knex('email_domains')
-    .where({ tenant, domain_name: normalizedDomain })
+  const existing = await tenantDb(knex, tenant).table('email_domains')
+    .where({ domain_name: normalizedDomain })
     .first();
 
   if (!existing) {
@@ -260,7 +369,7 @@ export const refreshManagedEmailDomain = withAuth(async (user, { tenant }, domai
       domain: normalizedDomain,
       provider_domain_id: existing.provider_domain_id || undefined,
     });
-    throw new Error('Failed to refresh domain status');
+    return managedDomainWorkflowFailure('refresh');
   }
 
   if (!result.enqueued) {
@@ -271,21 +380,22 @@ export const refreshManagedEmailDomain = withAuth(async (user, { tenant }, domai
       providerDomainId: existing.provider_domain_id || undefined,
       workflowError: result.error,
     });
-    throw new Error(`Failed to refresh domain status${result.error ? `: ${result.error}` : ''}`);
+    return managedDomainWorkflowFailure('refresh');
   }
 
   return { success: true, alreadyRunning: result.alreadyRunning ?? false };
-});
+}));
 
-export const deleteManagedEmailDomain = withAuth(async (user, { tenant }, domainName: string) => {
-  await assertTierAccess(TIER_FEATURES.MANAGED_EMAIL);
+export const deleteManagedEmailDomain = withAuth(async (user, { tenant }, domainName: string): Promise<ManagedDomainActionResult> => managedDomainAction('delete', async () => {
+  await assertHostedInstall('Managed email');
 
   const { knex } = await createTenantKnex();
   await checkEmailDomainPermission(user, 'delete', knex);
   const normalizedDomain = domainName.trim().toLowerCase();
 
-  const existing = await knex('email_domains')
-    .where({ tenant, domain_name: normalizedDomain })
+  const db = tenantDb(knex, tenant);
+  const existing = await db.table('email_domains')
+    .where({ domain_name: normalizedDomain })
     .first();
 
   if (!existing) {
@@ -293,8 +403,8 @@ export const deleteManagedEmailDomain = withAuth(async (user, { tenant }, domain
   }
 
   const now = new Date();
-  await knex('email_domains')
-    .where({ tenant, domain_name: normalizedDomain })
+  await db.table('email_domains')
+    .where({ domain_name: normalizedDomain })
     .update({
       status: 'deleting',
       updated_at: now,
@@ -315,7 +425,7 @@ export const deleteManagedEmailDomain = withAuth(async (user, { tenant }, domain
       domain: normalizedDomain,
       provider_domain_id: existing.provider_domain_id || undefined,
     });
-    throw new Error('Failed to delete managed domain');
+    return managedDomainWorkflowFailure('delete');
   }
 
   if (!result.enqueued) {
@@ -326,8 +436,8 @@ export const deleteManagedEmailDomain = withAuth(async (user, { tenant }, domain
       providerDomainId: existing.provider_domain_id || undefined,
       workflowError: result.error,
     });
-    throw new Error(`Failed to delete managed domain${result.error ? `: ${result.error}` : ''}`);
+    return managedDomainWorkflowFailure('delete');
   }
 
   return { success: true };
-});
+}));

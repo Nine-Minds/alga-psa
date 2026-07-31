@@ -39,8 +39,16 @@ import {
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { toBrowserDate } from '../appointments/dateUtils';
 import type { AppointmentSummary } from '../appointments/types';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useBranding } from '@alga-psa/tenancy/components';
+import type { PortalHeroGradient } from '@alga-psa/tenancy/actions';
 
 type TranslateFn = ReturnType<typeof useTranslation>['t'];
+
+const isReturnedActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 function activityVisuals(type: RecentActivity['type']): {
   Icon: React.ComponentType<{ className?: string }>;
@@ -136,10 +144,9 @@ function deviceIcon(type: Asset['asset_type']): React.ComponentType<{ className?
   }
 }
 
-// Pick black or white text based on the average luminance of the hero
-// gradient (read from --color-primary-500 / --color-primary-700, which can be
-// rebranded per tenant or flipped by theme).
-function useHeroTextColor(): 'black' | 'white' {
+// Pick black or white text based on the average luminance of the selected hero
+// gradient. The endpoint is either primary-700 (legacy) or secondary-500.
+function useHeroTextColor(gradientMode: PortalHeroGradient): 'black' | 'white' {
   const [color, setColor] = useState<'black' | 'white'>('white');
 
   useEffect(() => {
@@ -155,7 +162,11 @@ function useHeroTextColor(): 'black' | 'white' {
         return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
       };
       const start = parse('--color-primary-500');
-      const end = parse('--color-primary-700');
+      const end = parse(
+        gradientMode === 'primary-secondary'
+          ? '--color-secondary-500'
+          : '--color-primary-700',
+      );
       if (start.length !== 3 || end.length !== 3 || [...start, ...end].some(Number.isNaN)) return;
       const avg = (relLum(start) + relLum(end)) / 2;
       setColor(avg > 0.5 ? 'black' : 'white');
@@ -164,7 +175,7 @@ function useHeroTextColor(): 'black' | 'white' {
     const observer = new MutationObserver(compute);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     return () => observer.disconnect();
-  }, []);
+  }, [gradientMode]);
 
   return color;
 }
@@ -194,11 +205,22 @@ function timeAgo(value: string | Date | null | undefined, t: TranslateFn, locale
 const DASHBOARD_PREVIEW_DEVICES = 4;
 const DASHBOARD_PREVIEW_APPOINTMENTS = 3;
 
-export function ClientDashboard({ productCode = 'psa' }: { productCode?: ProductCode } = {}) {
+export function ClientDashboard({
+  productCode = 'psa',
+  appointmentsEnabled = true,
+}: {
+  productCode?: ProductCode;
+  appointmentsEnabled?: boolean;
+} = {}) {
   const { t, i18n } = useTranslation('client-portal');
+  const { branding } = useBranding();
+  const portalHeroGradient = branding?.portalHeroGradient ?? 'primary-shades';
+  const heroGradientEnd = portalHeroGradient === 'primary-secondary'
+    ? '--color-secondary-500'
+    : '--color-primary-700';
   const isAlgaDeskPortal = productCode === 'algadesk';
   const locale = i18n.language || undefined;
-  const heroTextColor = useHeroTextColor();
+  const heroTextColor = useHeroTextColor(portalHeroGradient);
   const heroTextClass = heroTextColor === 'black' ? 'text-black' : 'text-white';
   const heroTextMutedClass = heroTextColor === 'black' ? 'text-black/70' : 'text-white/80';
   const heroTextSubtleClass = heroTextColor === 'black' ? 'text-black/75' : 'text-white/85';
@@ -210,9 +232,11 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
   const [devices, setDevices] = useState<Asset[]>([]);
   const [firstName, setFirstName] = useState<string>('');
   const [error, setError] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const fetchDashboardData = useCallback(async () => {
     setError(false);
+    setErrorMessage(null);
     try {
       if (isAlgaDeskPortal) {
         const [user, metricsData, activityData] = await Promise.all([
@@ -220,10 +244,15 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
           getDashboardMetrics(),
           getRecentActivity().catch(() => [] as RecentActivity[]),
         ]);
+        if (isReturnedActionError(metricsData)) {
+          setErrorMessage(getErrorMessage(metricsData));
+          setError(true);
+          return;
+        }
         setFirstName(user?.first_name || '');
         setMetrics(metricsData);
         setUpcomingAppointments([]);
-        setActivities((activityData || []).filter((activity) => activity.type === 'ticket'));
+        setActivities(isReturnedActionError(activityData) ? [] : (activityData || []).filter((activity) => activity.type === 'ticket'));
         setDevices([]);
         return;
       }
@@ -231,10 +260,17 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
       const [user, metricsData, appointmentsResult, activityData, devicesData] = await Promise.all([
         getCurrentUser(),
         getDashboardMetrics(),
-        getMyAppointmentRequests({ status: 'approved' }),
+        appointmentsEnabled
+          ? getMyAppointmentRequests({ status: 'approved' })
+          : Promise.resolve({ success: true, data: [] }),
         getRecentActivity().catch(() => [] as RecentActivity[]),
         getClientAssets().catch(() => [] as Asset[]),
       ]);
+      if (isReturnedActionError(metricsData)) {
+        setErrorMessage(getErrorMessage(metricsData));
+        setError(true);
+        return;
+      }
       setFirstName(user?.first_name || '');
       setMetrics(metricsData);
 
@@ -246,13 +282,14 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
         setUpcomingAppointments([]);
       }
 
-      setActivities(activityData || []);
-      setDevices(devicesData || []);
+      setActivities(isReturnedActionError(activityData) ? [] : activityData || []);
+      setDevices(isReturnedActionError(devicesData) ? [] : devicesData || []);
     } catch (err) {
       console.error('Error loading dashboard:', err);
+      setErrorMessage(null);
       setError(true);
     }
-  }, [isAlgaDeskPortal]);
+  }, [appointmentsEnabled, isAlgaDeskPortal]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -279,7 +316,7 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
         <Card>
           <CardContent className="p-8 pt-8">
             <div className="text-center text-[rgb(var(--color-text-700))]">
-              <p>{t('dashboard.error')}</p>
+              <p>{errorMessage || t('dashboard.error')}</p>
             </div>
           </CardContent>
         </Card>
@@ -362,25 +399,27 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
               'Structured requests you have submitted from the catalog.',
             ),
           },
-          {
-            id: 'upcoming-visits',
-            label: t('dashboard.metrics.upcomingVisits', 'Upcoming visits'),
-            value: upcomingAppointments.length,
-            icon: Calendar,
-            href: '/client-portal/appointments',
-            hint: nextAppointmentLabel
-              ? t('dashboard.metrics.nextLabel', { defaultValue: 'Next: {{when}}', when: nextAppointmentLabel })
-              : t('dashboard.metrics.noneScheduled', 'None scheduled'),
-            description: t(
-              'dashboard.metrics.upcomingVisitsDescription',
-              'Scheduled appointments with our technicians.',
-            ),
-            action: {
-              id: 'kpi-upcoming-visits-request',
-              label: t('dashboard.quickActions.requestAppointment', 'Request appointment'),
-              onClick: () => setIsAppointmentModalOpen(true),
-            },
-          },
+          ...(appointmentsEnabled
+            ? [{
+                id: 'upcoming-visits',
+                label: t('dashboard.metrics.upcomingVisits', 'Upcoming visits'),
+                value: upcomingAppointments.length,
+                icon: Calendar,
+                href: '/client-portal/appointments',
+                hint: nextAppointmentLabel
+                  ? t('dashboard.metrics.nextLabel', { defaultValue: 'Next: {{when}}', when: nextAppointmentLabel })
+                  : t('dashboard.metrics.noneScheduled', 'None scheduled'),
+                description: t(
+                  'dashboard.metrics.upcomingVisitsDescription',
+                  'Scheduled appointments with our technicians.',
+                ),
+                action: {
+                  id: 'kpi-upcoming-visits-request',
+                  label: t('dashboard.quickActions.requestAppointment', 'Request appointment'),
+                  onClick: () => setIsAppointmentModalOpen(true),
+                },
+              }]
+            : []),
           {
             id: 'active-devices',
             label: t('dashboard.metrics.activeDevices', 'Active devices'),
@@ -402,7 +441,12 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
       {/* Welcome Hero */}
       {/* Text color is computed from the gradient's luminance (see
           useHeroTextColor) so it tracks the actual background, not the theme. */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[rgb(var(--color-primary-500))] to-[rgb(var(--color-primary-700))] px-8 py-7 shadow-sm">
+      <div
+        className="relative overflow-hidden rounded-2xl px-8 py-7 shadow-sm"
+        style={{
+          background: `linear-gradient(90deg, rgb(var(--color-primary-500)), rgb(var(${heroGradientEnd})))`,
+        }}
+      >
         <div className="max-w-2xl">
           <div className={`text-xs font-medium uppercase tracking-wider ${heroTextMutedClass}`}>
             {t('dashboard.welcomeBack', 'Welcome back')}
@@ -417,7 +461,13 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
       </div>
 
       {/* KPI Cards */}
-      <div className={isAlgaDeskPortal ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3' : 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'}>
+      <div className={
+        isAlgaDeskPortal
+          ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'
+          : appointmentsEnabled
+            ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
+            : 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4'
+      }>
         {kpiCards.map((card) => {
           const Icon = card.icon;
           return (
@@ -539,6 +589,7 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
         {/* Side rail: Schedule + Devices stacked */}
         {!isAlgaDeskPortal && (
         <div className="lg:col-span-1 space-y-4">
+        {appointmentsEnabled && (
         <Card className="bg-[rgb(var(--color-card))]">
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -610,6 +661,7 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* Devices preview */}
         <Card className="bg-[rgb(var(--color-card))]">
@@ -681,7 +733,7 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
         )}
       </div>
 
-      {!isAlgaDeskPortal && (
+      {!isAlgaDeskPortal && appointmentsEnabled && (
       <RequestAppointmentModal
         open={isAppointmentModalOpen}
         onOpenChange={setIsAppointmentModalOpen}

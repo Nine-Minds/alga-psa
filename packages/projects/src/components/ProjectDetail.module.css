@@ -385,6 +385,17 @@
   min-width: 350px; /* Ensure minimum width */
   max-width: 350px; /* Prevent columns from growing */
   flex-shrink: 0; /* Prevent columns from shrinking */
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.revealedHiddenColumn {
+  border-style: dashed !important;
+  opacity: 0.78;
+}
+
+.revealedHiddenHeader {
+  filter: saturate(0.45);
+  opacity: 0.82;
 }
 
 .kanbanTasks {
@@ -470,14 +481,19 @@ body.dragging-task .mainContent::after {
 
 /* Task card transitions */
 .taskCard {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    box-shadow 0.16s ease,
+    border-color 0.16s ease,
+    background-color 0.16s ease,
+    opacity 0.12s ease,
+    transform 0.12s ease;
   position: relative;
 }
 
 .taskCard.dragging {
-  opacity: 0.4;
-  transform: scale(0.95);
-  transition: all 0.2s ease-out;
+  opacity: 0.35;
+  cursor: grabbing;
+  transition: opacity 0.1s ease;
 }
 
 /* Drop placeholder that appears between tasks */
@@ -498,6 +514,32 @@ body.dragging-task .mainContent::after {
   opacity: 1;
   border-color: rgb(147, 51, 234);
   background-color: rgba(147, 51, 234, 0.05);
+}
+
+/*
+ * Slim drop indicator for the kanban board.
+ *
+ * Unlike .dropPlaceholder (which reserves a full card-sized gap), this is
+ * absolutely positioned and consumes NO layout space. Inserting/removing it
+ * never reflows the surrounding cards, which is what previously created a
+ * hover -> reflow -> re-measure feedback loop and made the drop target flicker
+ * back and forth while dragging between columns.
+ *
+ * It is positioned (via an inline top/bottom offset) in the centre of the gap
+ * between two cards, so the "after card A" and "before card B" indicators land
+ * on the exact same pixel and there is no visible jump if the closest-card
+ * calculation switches between two adjacent cards.
+ */
+.dropIndicator {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  height: 3px;
+  border-radius: 9999px;
+  background-color: rgb(147, 51, 234);
+  box-shadow: 0 0 0 1px rgba(147, 51, 234, 0.25), 0 0 8px rgba(147, 51, 234, 0.45);
+  z-index: 5;
+  pointer-events: none;
 }
 
 /* Phase drop placeholder - styled like task drop placeholder */
@@ -533,20 +575,15 @@ body.dragging-task .mainContent::after {
 /* Entry animation for newly dropped tasks */
 @keyframes taskEntry {
   0% {
-    opacity: 0;
-    transform: scale(0.8) translateY(-10px);
-  }
-  50% {
-    transform: scale(1.02) translateY(0);
+    opacity: 0.72;
   }
   100% {
     opacity: 1;
-    transform: scale(1) translateY(0);
   }
 }
 
 .taskCard.entering {
-  animation: taskEntry 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: taskEntry 0.16s ease-out;
 }
 
 /* Subtle bounce for nearby tasks when dropping */
@@ -573,11 +610,14 @@ body.dragging-task .mainContent::after {
   cursor: grab;
 }
 
+:global(body.dragging-task) .taskCard:hover:not(.dragging) {
+  transform: none;
+  cursor: grabbing;
+}
+
 /* Status column highlight during drag */
 .kanbanColumn.dragOver {
-  transform: scale(1.01);
-  box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.3);
-  transition: all 0.3s ease-out;
+  box-shadow: inset 0 0 0 2px rgba(147, 51, 234, 0.3), 0 0 0 1px rgba(147, 51, 234, 0.15);
 }
 
 /* Loading state for async operations */

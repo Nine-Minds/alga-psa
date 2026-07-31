@@ -1,6 +1,10 @@
 import axios from 'axios';
 import { getEntraCippCredentials } from './cippSecretStore';
 import { normalizeEntraSyncUser } from '../../sync/types';
+import {
+  EntraOperatorError,
+  isTimeoutError,
+} from '../../entraOperatorError';
 import type {
   EntraListManagedTenantsInput,
   EntraListUsersForTenantInput,
@@ -107,6 +111,9 @@ function extractPrimaryDomain(raw: Record<string, unknown>): string | null {
   return null;
 }
 
+/** How long CIPP gets to answer one call before we call it a timeout. */
+const CIPP_REQUEST_TIMEOUT_MS = 20_000;
+
 export class CippProviderAdapter implements EntraProviderAdapter {
   public readonly connectionType = 'cipp' as const;
 
@@ -121,7 +128,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
       const url = `${baseUrl.replace(/\/+$/, '')}${candidate}`;
       try {
         const response = await axios.get(url, {
-          timeout: 20_000,
+          timeout: CIPP_REQUEST_TIMEOUT_MS,
           headers: {
             Authorization: `Bearer ${apiToken}`,
             'X-API-KEY': apiToken,
@@ -132,6 +139,32 @@ export class CippProviderAdapter implements EntraProviderAdapter {
         if (axios.isAxiosError(error) && error.response?.status === 404) {
           lastError = error;
           continue;
+        }
+
+        // A rotated or revoked API key is the usual way a working CIPP
+        // connection stops working, and it is the one an operator can fix.
+        // Raw axios reaches the run history as "Request failed with status
+        // code 401", which names neither the cause nor the remedy.
+        if (axios.isAxiosError(error)) {
+          const status = error.response?.status;
+          if (status === 401 || status === 403) {
+            throw new EntraOperatorError(
+              'credential-rejected',
+              'CIPP rejected the stored API credential. Rotate it from the Connection tab to resume syncing.'
+            );
+          }
+          // A timeout is not a refusal: CIPP is up and still working, and the
+          // remedy is to try again rather than to go looking at the connection.
+          if (isTimeoutError(error)) {
+            throw new EntraOperatorError(
+              'timeout',
+              `CIPP did not answer within ${Math.round(CIPP_REQUEST_TIMEOUT_MS / 1000)} seconds. It may still be gathering the directory — try again in a moment.`
+            );
+          }
+          throw new EntraOperatorError(
+            'unreachable',
+            `CIPP could not be reached${status ? ` (HTTP ${status})` : ''}. The sync will retry on its next run.`
+          );
         }
 
         throw error;

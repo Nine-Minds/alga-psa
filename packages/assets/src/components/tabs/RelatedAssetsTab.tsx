@@ -10,6 +10,7 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import useSWR, { useSWRConfig } from 'swr';
 import { createAssetRelationship, deleteAssetRelationship, getAssetRelationships, listAssets } from '../../actions/assetActions';
+import { unwrapAssetActionResult } from '../../actions/assetActionErrors';
 import { Input } from '@alga-psa/ui/components/Input';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -30,7 +31,7 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
 
   const { data: relationships, isLoading: isLoadingRelationships, mutate: mutateRelationships } = useSWR(
     asset?.asset_id ? ['asset', asset.asset_id, 'relationships'] : null,
-    ([, id]) => getAssetRelationships(id)
+    ([, id]) => getAssetRelationships(id).then(unwrapAssetActionResult)
   );
 
   const existingLinkedIds = useMemo(() => {
@@ -50,12 +51,12 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
       : null,
     async () => {
       // Keep it simple: list assets for the same client, filter locally
-      return await listAssets({
+      return unwrapAssetActionResult(await listAssets({
         client_id: asset.client_id,
         search: searchTerm,
         page: 1,
         limit: 10
-      } as any);
+      } as any));
     }
   );
 
@@ -85,11 +86,11 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
 
     setIsSaving(true);
     try {
-      await createAssetRelationship({
+      unwrapAssetActionResult(await createAssetRelationship({
         parent_asset_id: asset.asset_id,
         child_asset_id: selectedAssetId,
         relationship_type: relationshipType || 'related'
-      });
+      }));
 
       toast.success(t('relatedAssetsTab.success.linked', { defaultValue: 'Asset linked' }));
       setIsLinkDialogOpen(false);
@@ -109,7 +110,7 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
 
   const handleUnlink = useCallback(async (parentId: string, childId: string) => {
     try {
-      await deleteAssetRelationship(parentId, childId);
+      unwrapAssetActionResult(await deleteAssetRelationship(parentId, childId));
       toast.success(t('relatedAssetsTab.success.unlinked', { defaultValue: 'Asset unlinked' }));
       await mutateRelationships();
       mutate(['asset', asset.asset_id]);

@@ -254,6 +254,40 @@ const COPY = {
     textCancelHeader: 'POLITYKA ANULOWANIA',
   },
 };
+SUBJECTS.pt = 'Agendamento confirmado - {{serviceName}} em {{appointmentDate}}';
+COPY.pt = {
+  headerLabel: 'Agendamento confirmado',
+  headerSub: 'Seu agendamento foi aprovado',
+  greeting: 'Olá{{#if requesterName}} {{requesterName}}{{/if}},',
+  intro: 'Ótima notícia! Sua solicitação de agendamento foi aprovada e confirmada. Será um prazer atendê-lo(a).',
+  appointmentTitle: 'Seu agendamento',
+  service: 'Serviço',
+  date: 'Data',
+  time: 'Horário',
+  duration: 'Duração',
+  durationUnit: 'minutos',
+  technicianTitle: 'Técnico atribuído',
+  technicianEmail: 'Email:',
+  technicianPhone: 'Telefone:',
+  calendarButton: 'Adicionar ao calendário',
+  cancellationTitle: 'Política de cancelamento',
+  rescheduleMsg: 'Se precisar remarcar ou cancelar este agendamento, entre em contato com pelo menos {{minimumNoticeHours}} horas de antecedência pelo email {{contactEmail}}{{#if contactPhone}} ou ligue para {{contactPhone}}{{/if}}.',
+  reminderMsg: 'Enviaremos um lembrete antes do seu agendamento. Até breve!',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Agendamento confirmado',
+  textAppointmentHeader: 'SEU AGENDAMENTO',
+  textService: 'Serviço',
+  textDate: 'Data',
+  textTime: 'Horário',
+  textDuration: 'Duração',
+  textDurationUnit: 'minutos',
+  textTechHeader: 'TÉCNICO ATRIBUÍDO',
+  textTechEmail: 'Email',
+  textTechPhone: 'Telefone',
+  textCalendar: 'Adicionar ao calendário',
+  textCancelHeader: 'POLÍTICA DE CANCELAMENTO',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

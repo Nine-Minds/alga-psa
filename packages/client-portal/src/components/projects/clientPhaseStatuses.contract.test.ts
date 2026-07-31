@@ -17,6 +17,8 @@ describe('client portal phase status contracts', () => {
     expect(actionSource).toContain('const loadStatusesForScope = async (scopedPhaseId?: string | null) => {');
     expect(actionSource).toContain("query.andWhere('psm.phase_id', scopedPhaseId);");
     expect(actionSource).toContain("query.whereNull('psm.phase_id');");
+    expect(actionSource).toContain("scopedDb.tenantJoin(query, 'standard_statuses as ss'");
+    expect(actionSource).not.toContain(".leftJoin('standard_statuses as ss'");
     expect(actionSource).toContain('let statuses = phaseId ? await loadStatusesForScope(phaseId) : [];');
     expect(actionSource).toContain('statuses = await loadStatusesForScope();');
   });

@@ -1,4 +1,8 @@
 {
+  "escalationManager": {
+    "unsavedChanges_one": "{{count}} niet-opgeslagen wijziging",
+    "unsavedChanges_other": "{{count}} niet-opgeslagen wijzigingen"
+  },
   "page": {
     "title": "Beheerdersinstellingen"
   },
@@ -34,7 +38,7 @@
   },
   "general": {
     "title": "Algemene instellingen",
-    "description": "Beheer uw organisatienaam en standaardklant. De standaardklant wordt gebruikt voor configuratiedoeleinden en vertegenwoordigt uw MSP.",
+    "description": "Beheer uw organisatienaam en kies welke klantregistratie uw eigen bedrijf vertegenwoordigt. De gegevens van die klant verschijnen op facturen, offertes en communicatie naar klanten.",
     "fields": {
       "organizationName": {
         "label": "Organisatienaam"
@@ -49,14 +53,24 @@
       "saveDefaultTimezone": "Standaard tijdzone opslaan"
     },
     "clients": {
-      "title": "Klanten",
+      "title": "Uw bedrijf",
+      "help": "De klant die als uw bedrijf is gemarkeerd, is uw eigen organisatie. De naam, het adres en het logo van deze klant verschijnen op facturen, offertes en communicatie naar klanten.",
+      "currentDefault": "Uw bedrijf is momenteel {{name}}.",
+      "yourCompanyBadge": "Uw bedrijf",
       "table": {
         "name": "Naam",
-        "default": "Standaard",
+        "default": "Uw bedrijf (standaard)",
         "actions": "Acties"
       },
       "placeholder": "Selecteer een klant om toe te voegen",
-      "addClient": "Klant toevoegen"
+      "addClient": "Klant toevoegen",
+      "confirmDialog": {
+        "title": "Uw bedrijf wijzigen?",
+        "message": "Hiermee wijzigt u uw bedrijf van {{current}} naar {{next}}. {{next}} vertegenwoordigt dan uw eigen organisatie op facturen, offertes en in e-mails en uitnodigingen aan klanten.",
+        "messageInitial": "Hiermee stelt u {{next}} in als uw bedrijf. {{next}} vertegenwoordigt dan uw eigen organisatie op facturen, offertes en in e-mails en uitnodigingen aan klanten.",
+        "confirm": "Bedrijf wijzigen",
+        "cancel": "Annuleren"
+      }
     },
     "messages": {
       "success": {
@@ -72,6 +86,7 @@
         "updateTimezone": "Kan tijdzone niet bijwerken",
         "selectClient": "Selecteer een klant",
         "clientNotFound": "Klant niet gevonden",
+        "clientAlreadyAdded": "Die klant staat hier al in de lijst",
         "addClient": "Kan klant niet toevoegen",
         "removeClient": "Kan klant niet verwijderen",
         "setDefaultClient": "Kan standaardklant niet instellen",
@@ -146,6 +161,7 @@
       "copying": "Kopiëren...",
       "createUser": "Gebruiker aanmaken",
       "sendInvitation": "Portaaluitnodiging verzenden",
+      "sendTeamInvitation": "Uitnodiging verzenden",
       "cancel": "Annuleren"
     },
     "form": {
@@ -179,7 +195,8 @@
       },
       "passwordAlert": {
         "withPassword": "Door een wachtwoord in te stellen wordt de gebruiker direct aangemaakt. De gebruiker kan meteen inloggen.",
-        "withoutPassword": "Geen wachtwoord vereist — wij sturen een portaaluitnodiging zodat de gebruiker het zelf kan instellen."
+        "withoutPassword": "Geen wachtwoord vereist — wij sturen een portaaluitnodiging zodat de gebruiker het zelf kan instellen.",
+        "withoutPasswordMsp": "Geen wachtwoord vereist — we sturen een e-mailuitnodiging zodat de persoon het zelf kan instellen."
       },
       "requirePasswordChange": "Wachtwoordwijziging vereisen bij eerste aanmelding"
     },
@@ -204,9 +221,11 @@
     "messages": {
       "success": {
         "portalInvitationSent": "Portaaluitnodiging succesvol verzonden!",
+        "teamInvitationSent": "Uitnodiging succesvol verzonden!",
         "clientPortalUserCreated": "Klantenportaalgebruiker succesvol aangemaakt!",
         "copiedVanityLink": "Aangepaste portaalinloglink gekopieerd naar klembord",
-        "copiedCanonicalLink": "Canonieke portaalinloglink gekopieerd naar klembord"
+        "copiedCanonicalLink": "Canonieke portaalinloglink gekopieerd naar klembord",
+        "invitationRevoked": "Uitnodiging ingetrokken"
       },
       "error": {
         "fetchUsers": "Kan gebruikers niet ophalen",
@@ -233,6 +252,7 @@
         "contactNotFound": "Contactpersoon niet gevonden.",
         "contactMissingEmailGeneric": "Het contactpersoon heeft geen e-mailadres. Voeg een e-mailadres toe aan het contactpersoon voordat u een uitnodiging verstuurt.",
         "contactInvalidEmail": "Het contactpersoon heeft een ongeldig e-mailadres. Werk het contactpersoon bij met een geldig e-mailadres voordat u een uitnodiging verstuurt.",
+        "invalidEmail": "Voer een geldig e-mailadres in",
         "noDefaultClient": "Geen standaardklant geconfigureerd voor deze tenant. Stel een standaardklant in bij Algemene instellingen.",
         "noDefaultLocation": "De standaardklant moet een standaardlocatie hebben om portaluitnodigingen te versturen.",
         "noLocationEmail": "De locatie van de standaardklant moet een contact-e-mailadres hebben geconfigureerd.",
@@ -241,8 +261,17 @@
         "roleRequired": "Rol is vereist",
         "invalidRole": "Geselecteerde rol is ongeldig",
         "licenseLimitReached": "U heeft uw MSP-gebruikerslicentielimiet bereikt.",
-        "soloPlanLimit": "Het Solo-abonnement is beperkt tot 1 gebruiker. Upgrade naar Pro om meer gebruikers toe te voegen."
+        "soloPlanLimit": "Het Solo-abonnement is beperkt tot 1 gebruiker. Upgrade naar Pro om meer gebruikers toe te voegen.",
+        "revokeInvitation": "Uitnodiging intrekken mislukt",
+        "invitationNotFound": "Uitnodiging niet gevonden of al gebruikt"
       }
+    },
+    "invitations": {
+      "title": "Openstaande uitnodigingen",
+      "description": "Uitgenodigde teamleden die hun account nog niet hebben ingesteld.",
+      "expiresPrefix": "Verloopt:",
+      "revoke": "Intrekken",
+      "revoking": "Bezig met intrekken..."
     }
   },
   "userDetails": {
@@ -263,6 +292,27 @@
       "reportsTo": {
         "label": "Rapporteert aan",
         "placeholder": "Manager selecteren"
+      },
+      "workSchedule": {
+        "label": "Werktijden",
+        "help": "Wanneer deze persoon aan het werk is. Wordt gebruikt in bezettingsrapporten. Dit is niet de boekbaarheid voor klanten.",
+        "setHours": "Werktijden instellen",
+        "clear": "Wissen",
+        "weeklyTotal": "{{hours}} uur per week",
+        "days": {
+          "0": "Zondag",
+          "1": "Maandag",
+          "2": "Dinsdag",
+          "3": "Woensdag",
+          "4": "Donderdag",
+          "5": "Vrijdag",
+          "6": "Zaterdag"
+        }
+      },
+      "weeklyCapacity": {
+        "label": "Wekelijkse capaciteit (uren)",
+        "placeholder": "bijv. 40",
+        "help": "Alleen gebruikt als hierboven geen werktijden zijn ingesteld."
       },
       "lastLogin": "Laatste aanmelding",
       "roles": "Rollen",
@@ -308,7 +358,9 @@
         "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres",
         "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
         "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
-        "permissionDenied": "Je hebt geen toestemming om gebruikersrollen te wijzigen."
+        "permissionDenied": "Je hebt geen toestemming om gebruikersrollen te wijzigen.",
+        "invalidCapacity": "Wekelijkse capaciteit moet een positief getal zijn.",
+        "invalidWorkSchedule": "Werktijden moeten geldige tijdvakken zijn die eindigen na de starttijd."
       }
     },
     "loading": "Gebruikersdetails laden..."
@@ -359,9 +411,9 @@
         "new": "Nieuw",
         "lead": "Leider"
       },
-      "memberCount": "{{count}} lid",
-      "memberCount_plural": "{{count}} leden",
-      "leadName": "Leider: {{name}}"
+      "leadName": "Leider: {{name}}",
+      "memberCount_one": "{{count}} lid",
+      "memberCount_other": "{{count}} leden"
     },
     "messages": {
       "error": {
@@ -380,7 +432,6 @@
       "display": "Weergave",
       "ticketNumbering": "Ticketnummering",
       "boards": "Borden",
-      "statuses": "Statussen",
       "priorities": "Prioriteiten",
       "categories": "Categorieën",
       "checklistTemplates": "Checklistsjablonen"
@@ -485,7 +536,9 @@
         "boardManager": "Bordverantwoordelijke",
         "order": "Volgorde",
         "itilBoard": "ITIL-bord",
-        "actions": "Acties"
+        "actions": "Acties",
+        "ticketLoad": "Ticketbelasting",
+        "statuses": "Statussen"
       },
       "statusLabels": {
         "active": "Actief",
@@ -504,7 +557,8 @@
         "up": "Omhoog",
         "down": "Omlaag",
         "remove": "Verwijderen",
-        "addStatus": "Status toevoegen"
+        "addStatus": "Status toevoegen",
+        "back": "Terug naar Borden"
       },
       "fields": {
         "boardName": {
@@ -584,6 +638,10 @@
         "liveTimer": {
           "label": "Live tickettimer inschakelen",
           "help": "Toont de live timer en bijgehouden intervallen op tickets in dit bord. Handmatige tijdinvoer blijft beschikbaar."
+        },
+        "defaultBoard": {
+          "label": "Standaardbord voor tickets uit klantportaal",
+          "help": "Nieuwe tickets die via het klantportaal worden ingediend, komen op dit bord terecht. Slechts één bord kan het standaardbord zijn."
         }
       },
       "dialog": {
@@ -707,9 +765,40 @@
           "fetchFailed": "Kan sluitregels voor dit bord niet laden",
           "autoCloseStatusRequired": "Elke automatisch-sluitenregel vereist een triggerstatus en een gesloten doelstatus",
           "autoCloseDaysInvalid": "Inactiviteitsdagen voor automatisch sluiten moeten een positief geheel getal zijn",
-          "autoCloseWarningInvalid": "De waarschuwingstermijn moet kleiner zijn dan het aantal inactiviteitsdagen"
-        }
-      }
+          "autoCloseWarningInvalid": "De waarschuwingstermijn moet kleiner zijn dan het aantal inactiviteitsdagen",
+          "autoCloseSuppressionInvalid": "Meldingen aan agenten en volgers kunnen alleen worden overgeslagen als klantmeldingen worden overgeslagen."
+        },
+        "suppressContactNotificationsLabel": "Klant niet informeren",
+        "suppressContactNotificationsHelp": "Slaat de waarschuwingsmail, de sluitingsmail, de enquête-uitnodiging en de klantportaalmelding over.",
+        "suppressInternalNotificationsLabel": "Ook agenten en volgers niet informeren"
+      },
+      "editor": {
+        "sections": {
+          "general": "Algemeen",
+          "generalHelp": "Naam, beschrijving, zichtbaarheid en standaard",
+          "assignment": "Toewijzing & SLA",
+          "assignmentHelp": "Standaardroutering, SLA en bordbeheerder",
+          "inbound": "E-mail & inkomende antwoorden",
+          "inboundHelp": "Tickets heropenen wanneer klanten per e-mail antwoorden",
+          "close": "Afsluitregels",
+          "closeHelp": "Vereisten voordat een ticket kan worden afgesloten",
+          "automation": "Automatisering",
+          "automationHelp": "Inactieve tickets automatisch sluiten na inactiviteit",
+          "statuses": "Prioriteiten & statussen",
+          "statusesHelp": "Standaardprioriteit en de ticketstatussen voor dit bord",
+          "display": "Weergave & gedrag",
+          "displayHelp": "Live-timer en bordtype"
+        },
+        "saveChanges": "Wijzigingen opslaan",
+        "unsaved": "Niet opgeslagen",
+        "unsavedShort": "Niet-opgeslagen wijzigingen",
+        "unsavedBanner": "Je hebt niet-opgeslagen wijzigingen. Klik op \"Wijzigingen opslaan\" om ze toe te passen.",
+        "allSaved": "Alle wijzigingen opgeslagen",
+        "reopenBadge": "heropenen",
+        "required": "Vereist"
+      },
+      "empty": "Geen borden gevonden.",
+      "searchPlaceholder": "Borden zoeken…"
     },
     "priorities": {
       "title": {
@@ -916,8 +1005,8 @@
       "messages": {
         "success": {
           "deleted": "Interactietype verwijderd",
-          "imported": "{{count}} interactietype geïmporteerd",
-          "imported_plural": "{{count}} interactietypen geïmporteerd"
+          "imported_one": "{{count}} interactietype geïmporteerd",
+          "imported_other": "{{count}} interactietypen geïmporteerd"
         },
         "error": {
           "fetchFailed": "Kan interactietypen niet ophalen",
@@ -1001,6 +1090,15 @@
     "openMenu": "Menu openen"
   },
   "clientPortal": {
+    "features": {
+      "title": "Portaalfuncties",
+      "description": "Kies tot welke selfservicefuncties klanten toegang hebben.",
+      "appointmentsLabel": "Afspraken",
+      "appointmentsHelp": "Sta klanten toe om afspraken in het klantenportaal te bekijken en aan te vragen.",
+      "appointmentsEnabled": "Afspraken zijn nu beschikbaar in het klantenportaal",
+      "appointmentsDisabled": "Afspraken zijn nu verborgen in het klantenportaal",
+      "updateFailed": "De functies van het klantenportaal konden niet worden bijgewerkt"
+    },
     "branding": {
       "title": "Huisstijl en uiterlijk",
       "description": "Pas het uiterlijk van uw klantenportaal aan met uw bedrijfshuisstijl.",
@@ -1011,7 +1109,8 @@
         "primaryColor": "Primaire kleur",
         "secondaryColor": "Secundaire kleur",
         "supportEmail": "Support-e-mail",
-        "supportPhone": "Support-telefoonnummer"
+        "supportPhone": "Support-telefoonnummer",
+        "heroGradient": "Verloop van dashboardkop"
       },
       "help": {
         "companyName": "Dit wordt weergegeven in de koptekst van het klantenportaal",
@@ -1019,7 +1118,12 @@
         "primaryColor": "Wordt gebruikt voor knoppen, links en accenten",
         "secondaryColor": "Wordt gebruikt voor accenten en secundaire acties",
         "supportEmail": "Wordt aan klanten getoond in afspraakbevestigingen en andere uitgaande e-mails als contactadres voor hulp.",
-        "supportPhone": "Optioneel. Wordt naast het support-e-mailadres weergegeven in e-mails aan klanten."
+        "supportPhone": "Optioneel. Wordt naast het support-e-mailadres weergegeven in e-mails aan klanten.",
+        "heroGradient": "Bepaalt het verloop van de welkomstbanner op het klantendashboard."
+      },
+      "heroGradient": {
+        "primaryShades": "Primaire kleur naar primaire tint",
+        "primarySecondary": "Primaire kleur naar secundaire kleur"
       },
       "preview": "Voorbeeld",
       "previewDarkMode": "Voorbeeld donkere modus",
@@ -1049,7 +1153,22 @@
       "milestoneCompleted": "Projectmijlpaal voltooid",
       "dayAgo": "1 dag geleden",
       "createTicket": "Ticket aanmaken",
-      "viewProjects": "Projecten bekijken"
+      "viewProjects": "Projecten bekijken",
+      "activeDevices": "Actieve apparaten",
+      "basicSupport": "Basisondersteuning",
+      "dashboardTitle": "Dashboard",
+      "greeting": "Goedemorgen, Alex 👋",
+      "navAppointments": "Afspraken",
+      "navDashboard": "Dashboard",
+      "navDevices": "Mijn apparaten",
+      "navProjects": "Projecten",
+      "navServiceRequests": "Serviceverzoeken",
+      "navTickets": "Tickets",
+      "serviceRequests": "Serviceverzoeken",
+      "upcomingShort": "Aankomend",
+      "upcomingVisits": "Aankomende bezoeken",
+      "welcomeBack": "Welkom terug",
+      "workspaceSection": "Werkruimte"
     },
     "signInPreview": {
       "portalTitle": "Klantenportaal",
@@ -1118,6 +1237,17 @@
         "step2": "Klik op \"Domein opslaan\" om DNS-verificatie en certificaatprovisioning te starten.",
         "step3": "Gebruik de knop Vernieuwen om de voortgang van provisioning te volgen. We e-mailen uw beheerders als provisioning mislukt.",
         "canonicalHostFallback": "canonieke host"
+      },
+      "appliance": {
+        "helpText": "Wijs deze hostnaam naar uw appliance en laat uw reverse proxy de oorspronkelijke Host-header doorsturen voordat u opslaat.",
+        "checklistTitle": "Reverse proxy instellen",
+        "step1Prefix": "Wijs ",
+        "step1Suffix": " naar deze appliance (een A-record naar het adres, of een CNAME naar uw appliance-host).",
+        "step2": "Beëindig op uw reverse proxy TLS voor het domein en stuur door naar deze appliance op poort 3000, met behoud van de oorspronkelijke Host-header (bijv. proxy_set_header Host $host) en het verzenden van X-Forwarded-Proto: https.",
+        "step3": "Verkrijg en onderhoud het TLS-certificaat voor het domein op uw proxy.",
+        "step4": "Sla het domein hier op — het wordt onmiddellijk geactiveerd. Configureer eerst DNS en uw proxy, omdat portallinks meteen naar dit domein overschakelen.",
+        "docLinkText": "Handleiding voor reverse proxy instellen en probleemoplossing",
+        "neverSeenWarning": "Er hebben nog geen verzoeken {{domain}} bereikt. Controleer of uw reverse proxy de oorspronkelijke Host-header doorstuurt."
       },
       "badges": {
         "pending_dns": "DNS in behandeling",
@@ -1213,6 +1343,176 @@
       "telemetry": {
         "title": "Telemetrie en analyse",
         "description": "Beheer uw telemetrie- en analysevoorkeuren"
+      }
+    },
+    "settingsForm": {
+      "enable": {
+        "label": "Meldingen inschakelen",
+        "description": "Alle meldingen voor deze tenant in- of uitschakelen"
+      },
+      "loading": "Meldingsinstellingen laden...",
+      "loadError": "Kan instellingen niet laden",
+      "save": "Wijzigingen opslaan",
+      "saving": "Opslaan..."
+    },
+    "emailTemplatesUi": {
+      "preview": {
+        "subjectLabel": "Voorbeeld onderwerp",
+        "iframeTitle": "Voorbeeld e-mailsjabloon",
+        "sampleDataNote": "Het voorbeeld gebruikt voorbeeldgegevens. Echte e-mails bevatten echte waarden."
+      },
+      "errors": {
+        "loadFailed": "Sjablonen laden mislukt"
+      },
+      "list": {
+        "loading": "E-mailsjablonen laden...",
+        "templateCount": "({{templateCount}} sjablonen)",
+        "usingCustom": "Aangepast sjabloon wordt gebruikt",
+        "usingStandard": "Standaardsjabloon wordt gebruikt"
+      },
+      "columns": {
+        "name": "Naam",
+        "actions": "Acties"
+      },
+      "fields": {
+        "language": "Taal",
+        "subject": "Onderwerp",
+        "htmlContent": "HTML-inhoud",
+        "textContent": "Tekstinhoud"
+      },
+      "actions": {
+        "collapse": "Inklappen",
+        "expand": "Uitklappen",
+        "edit": "Bewerken",
+        "useStandard": "Standaard gebruiken",
+        "view": "Bekijken",
+        "customize": "Aanpassen",
+        "sending": "Verzenden...",
+        "sendTest": "Test-e-mail verzenden",
+        "close": "Sluiten",
+        "cancel": "Annuleren",
+        "saving": "Opslaan...",
+        "save": "Opslaan"
+      },
+      "description": "Elk gebeurtenistype heeft een standaardsjabloon dat kan worden aangepast. U kunt het standaardsjabloon gebruiken of een aangepaste versie maken.",
+      "filter": {
+        "languages": "Talen",
+        "reset": "Resetten"
+      },
+      "test": {
+        "sentTo": "Test-e-mail verzonden naar {{recipient}}",
+        "failed": "Verzenden van test-e-mail mislukt."
+      },
+      "view": {
+        "title": "Standaardsjabloon: {{name}}"
+      },
+      "tabs": {
+        "source": "Broncode",
+        "preview": "Voorbeeld"
+      },
+      "common": {
+        "notAvailable": "n.v.t."
+      },
+      "edit": {
+        "title": "Aangepast sjabloon bewerken: {{name}}"
+      },
+      "languages": {
+        "en": "Engels",
+        "fr": "Frans",
+        "es": "Spaans",
+        "de": "Duits",
+        "nl": "Nederlands",
+        "it": "Italiaans",
+        "pl": "Pools",
+        "pt": "Portugees"
+      }
+    },
+    "categoriesUi": {
+      "errors": {
+        "loadCategories": "Categorieën laden mislukt",
+        "loadSubtypes": "Notificatiesubtypen laden mislukt",
+        "save": "Notificatie-instellingen opslaan mislukt"
+      },
+      "loading": "Notificatiecategorieën laden...",
+      "toasts": {
+        "saved": "Notificatie-instellingen succesvol opgeslagen",
+        "discarded": "Wijzigingen verwijderd"
+      },
+      "columns": {
+        "name": "Naam",
+        "description": "Beschrijving",
+        "enabled": "Ingeschakeld",
+        "defaultForUsers": "Standaard voor gebruikers",
+        "actions": "Acties"
+      },
+      "tooltips": {
+        "cannotDisable": "Deze categorie kan niet worden uitgeschakeld",
+        "cannotModify": "Deze categorie kan niet worden gewijzigd"
+      },
+      "actions": {
+        "enableAllSubtypes": "Alle subtypen inschakelen",
+        "disableAllSubtypes": "Alle subtypen uitschakelen",
+        "disable": "Uitschakelen",
+        "enable": "Inschakelen",
+        "disableDefault": "Standaard uitschakelen",
+        "enableDefault": "Standaard inschakelen",
+        "discardChanges": "Wijzigingen verwijderen",
+        "saving": "Opslaan...",
+        "saveChanges": "Wijzigingen opslaan",
+        "cancel": "Annuleren"
+      },
+      "help": {
+        "intro": "Bepaal welke soorten e-mailnotificaties beschikbaar zijn en stel standaardwaarden in voor nieuwe gebruikers.",
+        "enabledLabel": "Ingeschakeld:",
+        "enabledDescription": "Bepaalt of dit notificatietype actief is",
+        "defaultLabel": "Standaard voor gebruikers:",
+        "defaultDescription": "Bepaalt of deze notificatie standaard is ingeschakeld voor nieuwe gebruikers"
+      },
+      "unsavedChangesAlert": "U hebt niet-opgeslagen wijzigingen. Klik op \"Wijzigingen opslaan\" om ze toe te passen.",
+      "discardDialog": {
+        "title": "Wijzigingen verwijderen?",
+        "message": "Weet u zeker dat u alle niet-opgeslagen wijzigingen wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+      }
+    },
+    "internalCategoriesUi": {
+      "errors": {
+        "loadCategories": "Categorieën laden mislukt",
+        "loadSubtypes": "Meldingssubtypes laden mislukt",
+        "saveSettings": "Meldingsinstellingen opslaan mislukt"
+      },
+      "loading": "Interne meldingscategorieën laden...",
+      "toasts": {
+        "saveSuccess": "Meldingsinstellingen succesvol opgeslagen",
+        "changesDiscarded": "Wijzigingen verworpen"
+      },
+      "columns": {
+        "name": "Naam",
+        "description": "Beschrijving",
+        "enabled": "Ingeschakeld",
+        "defaultForUsers": "Standaard voor gebruikers",
+        "actions": "Acties"
+      },
+      "actions": {
+        "enableAllSubtypes": "Alle subtypes inschakelen",
+        "disableAllSubtypes": "Alle subtypes uitschakelen",
+        "disable": "Uitschakelen",
+        "enable": "Inschakelen",
+        "disableDefault": "Standaard uitschakelen",
+        "enableDefault": "Standaard inschakelen",
+        "discardChanges": "Wijzigingen verwerpen",
+        "saving": "Opslaan...",
+        "saveChanges": "Wijzigingen opslaan",
+        "cancel": "Annuleren"
+      },
+      "intro": "Bepaal welke interne meldingstypes beschikbaar zijn en stel standaardwaarden in voor nieuwe gebruikers.",
+      "enabledLabel": "Ingeschakeld:",
+      "enabledDescription": "Bepaalt of dit meldingstype actief is in het systeem",
+      "defaultForUsersLabel": "Standaard voor gebruikers:",
+      "defaultForUsersDescription": "Bepaalt of nieuwe gebruikers deze melding standaard ingeschakeld hebben",
+      "unsavedChangesAlert": "U hebt niet-opgeslagen wijzigingen. Klik op \"Wijzigingen opslaan\" om ze toe te passen.",
+      "discardDialog": {
+        "title": "Wijzigingen verwerpen?",
+        "message": "Weet u zeker dat u alle niet-opgeslagen wijzigingen wilt verwerpen? Deze actie kan niet ongedaan worden gemaakt."
       }
     }
   },
@@ -1507,8 +1807,6 @@
     },
     "sessions": {
       "title": "Alle gebruikerssessies",
-      "subtitle": "{{sessionCount}} actieve sessie bij {{userCount}} gebruiker",
-      "subtitle_plural": "{{sessionCount}} actieve sessies bij {{userCount}} gebruikers",
       "filters": {
         "search": "Zoeken",
         "searchPlaceholder": "Zoeken op naam, e-mail, apparaat of IP...",
@@ -1551,13 +1849,21 @@
         "loading": "Sessies laden...",
         "noMatch": "Geen sessies gevonden die overeenkomen met uw zoekopdracht",
         "noSessions": "Geen actieve sessies gevonden"
-      }
+      },
+      "subtitle_one": "{{sessionCount}} actieve sessie bij {{userCount}} gebruiker",
+      "subtitle_other": "{{sessionCount}} actieve sessies bij {{userCount}} gebruikers"
     }
   },
   "ssoBulk": {
     "loading": {
       "title": "Single sign-on",
       "description": "SSO-tools voor bulktoewijzing laden..."
+    },
+    "status": {
+      "title": "Sign-in providers",
+      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
+      "available": "Available",
+      "notConfigured": "Not configured"
     },
     "autoLink": {
       "title": "SSO automatisch instellen voor nieuwe interne gebruikers",
@@ -1749,6 +2055,10 @@
         "label": "RMM",
         "description": "Verbind tools voor monitoring en beheer op afstand"
       },
+      "itDocumentation": {
+        "label": "IT-documentatie",
+        "description": "Verbind IT-documentatieplatformen om klantdocumentatie, assets en inloggegevens in context weer te geven."
+      },
       "communication": {
         "label": "Communicatie",
         "description": "Verbind inbox- en samenwerkingsoppervlakken voor ticketverwerking, operatorworkflows en Microsoft Teams-toegang."
@@ -1781,6 +2091,10 @@
       "rmmSetup": {
         "name": "RMM-integraties",
         "description": "Selecteer en configureer uw RMM-provider"
+      },
+      "hudu": {
+        "name": "Hudu",
+        "description": "Verbind een Hudu-instantie om klantdocumentatie en inloggegevens te bekijken binnen AlgaPSA."
       },
       "email": {
         "name": "Inkomende e-mail",
@@ -1867,5 +2181,97 @@
   "language": {
     "selectLanguage": "Selecteer een taal",
     "languagesUpdated": "Beschikbare talen bijgewerkt"
+  },
+  "settings": {
+    "assetTypes": {
+      "tab": "Assets",
+      "title": "Assettypen",
+      "description": "Beheer de assettypen die beschikbaar zijn in uw assetmodule. Aangepaste typen hebben een veldschema dat hun aanmaak-/bewerkformulieren bepaalt.",
+      "loading": "Assettypen laden...",
+      "table": {
+        "name": "Naam",
+        "builtin": "Ingebouwd",
+        "slug": "Identificatie",
+        "fieldCount": "Velden",
+        "order": "Volgorde",
+        "actions": "Acties",
+        "openMenu": "Menu openen"
+      },
+      "actions": {
+        "addType": "Assettype toevoegen",
+        "edit": "Bewerken",
+        "delete": "Verwijderen",
+        "cancel": "Annuleren",
+        "save": "Opslaan",
+        "create": "Aanmaken",
+        "confirmDelete": "Verwijderen"
+      },
+      "dialog": {
+        "createTitle": "Assettype toevoegen",
+        "editTitle": "Assettype bewerken",
+        "nameLabel": "Naam",
+        "namePlaceholder": "bijv. Firewall",
+        "displayOrderLabel": "Weergavevolgorde",
+        "iconLabel": "Pictogram",
+        "builtinSchemaHint": "Ingebouwde typen gebruiken vaste formulieren die door AlgaPSA worden beheerd; hun veldschema kan daarom niet worden bewerkt. U kunt het type nog wel hernoemen of het pictogram wijzigen."
+      },
+      "deleteDialog": {
+        "title": "Assettype verwijderen",
+        "message": "Hiermee wordt \"{{name}}\" permanent uit uw assettyperegister verwijderd."
+      },
+      "messages": {
+        "created": "Assettype aangemaakt",
+        "updated": "Assettype bijgewerkt",
+        "deleted": "Assettype verwijderd"
+      },
+      "errors": {
+        "fetchFailed": "Kan assettypen niet laden.",
+        "saveFailed": "Kan assettype niet opslaan.",
+        "deleteFailed": "Kan assettype niet verwijderen.",
+        "invalidName": "Voer een naam in voor dit assettype.",
+        "invalidSchema": "Het veldschema is ongeldig. Corrigeer de gemarkeerde velden en probeer het opnieuw.",
+        "reservedSlug": "De identificatie \"{{slug}}\" is gereserveerd voor een ingebouwd type. Kies een andere naam.",
+        "slugConflict": "Er bestaat al een assettype met de identificatie \"{{slug}}\".",
+        "notFound": "Dit assettype bestaat niet meer.",
+        "builtinImmutable": "Bij ingebouwde typen kunnen alleen de naam en het pictogram worden gewijzigd.",
+        "builtinUndeletable": "Ingebouwde typen kunnen niet worden verwijderd.",
+        "inUse": "Dit type wordt nog gebruikt door {{assetCount}} asset(s). Wijs die assets opnieuw toe voordat u het verwijdert.",
+        "unknown": "Er is iets misgegaan."
+      },
+      "editor": {
+        "title": "Velden",
+        "empty": "Nog geen velden. Voeg velden toe om het aanmaak-/bewerkformulier voor dit type op te bouwen.",
+        "addField": "Veld toevoegen",
+        "fieldLabel": "Label",
+        "fieldLabelPlaceholder": "bijv. Serienummer",
+        "fieldKey": "Sleutel",
+        "fieldKeyPlaceholder": "bijv. serial_number",
+        "fieldKind": "Soort",
+        "fieldRequired": "Verplicht",
+        "fieldOptions": "Opties (gescheiden door komma's)",
+        "fieldOptionsPlaceholder": "bijv. Goud, Zilver, Brons",
+        "moveUp": "Veld omhoog verplaatsen",
+        "moveDown": "Veld omlaag verplaatsen",
+        "removeField": "Veld verwijderen",
+        "kinds": {
+          "text": "Tekst",
+          "number": "Getal",
+          "date": "Datum",
+          "select": "Selectie",
+          "url": "URL",
+          "boolean": "Ja / Nee"
+        },
+        "errors": {
+          "invalidKey": "De sleutel moet beginnen met een kleine letter en mag alleen kleine letters, cijfers en underscores bevatten.",
+          "duplicateKey": "Elke veldsleutel moet uniek zijn.",
+          "missingLabel": "Label is verplicht.",
+          "invalidKind": "Kies een geldige veldsoort.",
+          "invalidRequired": "\"Verplicht\" moet aan of uit staan.",
+          "missingOptions": "Selectievelden hebben minstens één optie nodig.",
+          "invalidOptions": "Opties mogen niet leeg zijn.",
+          "invalidField": "Dit veld is ongeldig."
+        }
+      }
+    }
   }
 }

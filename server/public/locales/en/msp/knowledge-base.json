@@ -113,7 +113,8 @@
       "archive": "Archive",
       "delete": "Delete permanently",
       "saveMetadata": "Save Metadata",
-      "saving": "Saving..."
+      "saving": "Saving...",
+      "saveContent": "Save"
     },
     "feedback": {
       "permissionDenied": "Permission denied",
@@ -134,6 +135,10 @@
       "delete": {
         "title": "Delete Article",
         "message": "Are you sure you want to permanently delete \"{{title}}\"? This will remove the article and its content, and cannot be undone."
+      },
+      "archive": {
+        "message": "Are you sure you want to archive \"{{title}}\"? Archived articles are hidden from the client portal and can be deleted permanently later.",
+        "title": "Archive Article"
       }
     },
     "badges": {
@@ -310,6 +315,7 @@
     }
   },
   "common": {
-    "done": "Done"
+    "done": "Done",
+    "cancel": "Cancel"
   }
 }

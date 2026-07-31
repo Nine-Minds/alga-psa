@@ -3,6 +3,7 @@
 'use server';
 
 import { z } from 'zod';
+import { getHierarchicalLocaleAction } from '@alga-psa/tenancy/actions';
 import { ReportEngine } from '../core/ReportEngine';
 import { ReportRegistry } from '../core/ReportRegistry';
 import { ReportResult, ReportValidationError, ReportExecutionError } from '../core/types';
@@ -13,7 +14,8 @@ const ExecuteReportSchema = z.object({
   options: z.object({
     skipCache: z.boolean().optional(),
     forceRefresh: z.boolean().optional(),
-    timeout: z.number().optional()
+    timeout: z.number().optional(),
+    locale: z.string().optional()
   }).optional()
 });
 
@@ -44,8 +46,9 @@ export async function executeReport(
       throw new ReportValidationError(`Report definition not found: ${reportId}`);
     }
     
-    // Execute the report
-    const result = await ReportEngine.execute(definition, parameters, options);
+    // Execute the report, formatting values in the viewer's locale
+    const locale = options.locale ?? (await getHierarchicalLocaleAction());
+    const result = await ReportEngine.execute(definition, parameters, { ...options, locale });
     
     return result;
     

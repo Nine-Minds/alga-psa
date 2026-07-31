@@ -125,6 +125,7 @@ Verification does two checks:
 - Rescheduling PATCHes the same Teams meeting.
 - Cancel / delete attempts to remove the Teams meeting as well.
 - After a recorded meeting ends, `Refresh recordings` can populate transcript documents and recording proxy links.
+- When a technician creates an **Online Meeting** interaction and turns on the **Create Teams meeting** toggle, an attendee picker appears beneath the toggle. Three tabs let the technician build the invite list: **Contacts** (scoped to the linked client if applicable), **Users** (internal staff), or a bare **Email** address typed in directly. The form pre-fills the linked contact's email or the client's default location email. All selected attendees appear in a consolidated badge list before saving. The full attendee list is submitted to Microsoft Graph when the meeting is created; each recipient receives a Teams calendar invite from the organizer account.
 
 ## Troubleshooting
 

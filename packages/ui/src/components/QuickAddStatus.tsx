@@ -10,7 +10,14 @@ import ColorPicker, { SOLID_COLORS } from './ColorPicker';
 import { Circle } from 'lucide-react';
 import type { ItemType, IStatus } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
-import { handleError } from '../lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '../lib/errorHandling';
 import { useTranslation } from 'react-i18next';
 
 export interface QuickAddStatusProps {
@@ -23,13 +30,16 @@ export interface QuickAddStatusProps {
     statusType: ItemType;
     isClosed: boolean;
     color: string;
-  }) => Promise<IStatus>;
+  }) => Promise<IStatus | ActionMessageError | ActionPermissionError>;
   existingStatuses?: Array<{ name: string }>;
   /** Optional trigger element to open the dialog */
   trigger?: React.ReactNode;
   /** Whether to show the color picker (default: true) */
   showColorPicker?: boolean;
 }
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 /**
  * Reusable component for quickly creating a new status.
@@ -91,6 +101,10 @@ export function QuickAddStatus({
         isClosed,
         color: statusColor,
       });
+      if (isReturnedActionError(newStatus)) {
+        setError(getErrorMessage(newStatus));
+        return;
+      }
 
       toast.success(t('quickAddStatus.createdSuccess', 'Status "{{name}}" created successfully', { name: trimmedName }));
       onStatusCreated(newStatus);

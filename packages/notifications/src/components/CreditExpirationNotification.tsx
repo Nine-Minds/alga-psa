@@ -2,6 +2,7 @@
 
 
 import React from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Bell, AlertTriangle, Clock } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -30,6 +31,7 @@ const CreditExpirationNotification: React.FC<CreditExpirationNotificationProps> 
   onDismiss,
   notificationId
 }) => {
+  const { t } = useTranslation('common');
   const totalAmount = expiringCredits.reduce((sum, credit) => sum + credit.remainingAmount, 0);
   const earliestExpiration = expiringCredits.reduce(
     (earliest, credit) => {
@@ -92,7 +94,7 @@ const CreditExpirationNotification: React.FC<CreditExpirationNotificationProps> 
           )}
         </div>
         <CardDescription>
-          {expiringCredits.length} credit{expiringCredits.length !== 1 ? 's' : ''} for {clientName} will expire soon
+          {t('credits.expiringForClient', { defaultValue: '{{count}} credits for {{clientName}} will expire soon', count: expiringCredits.length, clientName })}
         </CardDescription>
       </CardHeader>
       <CardContent>

@@ -12,13 +12,15 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { createTenant, createUser, createClient } from '../../../../test-utils/testDataFactory';
 
 // Mock external dependencies
 vi.mock('server/src/lib/utils/getSecret', () => ({
-  getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+  getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -26,7 +28,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
     getAppSecret: async () => '',
   })),
   secretProvider: {
-    getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+    getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
   },
 }));
 
@@ -65,6 +68,9 @@ let recordFirstResponse: typeof import('@alga-psa/sla/services').recordFirstResp
 let recordResolution: typeof import('@alga-psa/sla/services').recordResolution;
 let handlePriorityChange: typeof import('@alga-psa/sla/services').handlePriorityChange;
 let getSlaStatus: typeof import('@alga-psa/sla/services').getSlaStatus;
+
+const tenantTable = (dbOrTrx: Knex | Knex.Transaction, tenant: string, tableName: string) =>
+  tenantDb(dbOrTrx, tenant).table(tableName);
 
 describe('SLA Service Integration Tests', () => {
   let db: Knex;
@@ -150,8 +156,8 @@ describe('SLA Service Integration Tests', () => {
 
   beforeEach(async () => {
     // Clean up tickets and SLA audit logs before each test
-    await db('sla_audit_log').where({ tenant: tenantId }).delete().catch(() => undefined);
-    await db('tickets').where({ tenant: tenantId }).delete().catch(() => undefined);
+    await tenantTable(db, tenantId, 'sla_audit_log').where({ tenant: tenantId }).delete().catch(() => undefined);
+    await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId }).delete().catch(() => undefined);
   });
 
   // ==========================================================================
@@ -197,14 +203,14 @@ describe('SLA Service Integration Tests', () => {
       });
 
       // Verify ticket was updated
-      const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
       expect(ticket.sla_policy_id).toBe(slaPolicyId);
       expect(ticket.sla_started_at).toBeDefined();
       expect(ticket.sla_response_due_at).toBeDefined();
       expect(ticket.sla_resolution_due_at).toBeDefined();
 
       // Verify audit log
-      const auditLog = await db('sla_audit_log')
+      const auditLog = await tenantTable(db, tenantId, 'sla_audit_log')
         .where({ tenant: tenantId, ticket_id: ticketId, event_type: 'sla_started' })
         .first();
       expect(auditLog).toBeDefined();
@@ -216,7 +222,7 @@ describe('SLA Service Integration Tests', () => {
       await createSlaPolicyTarget(db, tenantId, clientSlaPolicyId, priorityHighId, 15, 60); // 15min response, 1hr resolution
 
       // Assign policy to client
-      await db('clients').where({ tenant: tenantId, client_id: clientId }).update({ sla_policy_id: clientSlaPolicyId });
+      await tenantTable(db, tenantId, 'clients').where({ tenant: tenantId, client_id: clientId }).update({ sla_policy_id: clientSlaPolicyId });
 
       const ticketId = uuidv4();
 
@@ -247,7 +253,7 @@ describe('SLA Service Integration Tests', () => {
       });
 
       // Clean up
-      await db('clients').where({ tenant: tenantId, client_id: clientId }).update({ sla_policy_id: null });
+      await tenantTable(db, tenantId, 'clients').where({ tenant: tenantId, client_id: clientId }).update({ sla_policy_id: null });
     });
 
     it('returns no SLA when no matching policy exists', async () => {
@@ -255,7 +261,7 @@ describe('SLA Service Integration Tests', () => {
       const newClientId = await createClient(db, tenantId, 'No SLA Client');
 
       // Remove default policy temporarily
-      await db('sla_policies').where({ tenant: tenantId, sla_policy_id: slaPolicyId }).update({ is_default: false });
+      await tenantTable(db, tenantId, 'sla_policies').where({ tenant: tenantId, sla_policy_id: slaPolicyId }).update({ is_default: false });
 
       const ticketId = uuidv4();
 
@@ -288,7 +294,7 @@ describe('SLA Service Integration Tests', () => {
       });
 
       // Restore default policy
-      await db('sla_policies').where({ tenant: tenantId, sla_policy_id: slaPolicyId }).update({ is_default: true });
+      await tenantTable(db, tenantId, 'sla_policies').where({ tenant: tenantId, sla_policy_id: slaPolicyId }).update({ is_default: true });
     });
   });
 
@@ -326,7 +332,7 @@ describe('SLA Service Integration Tests', () => {
       });
 
       // Verify ticket was updated
-      const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
       expect(ticket.sla_response_at).toBeDefined();
       expect(ticket.sla_response_met).toBe(true);
     });
@@ -360,7 +366,7 @@ describe('SLA Service Integration Tests', () => {
       });
 
       // Verify ticket was updated
-      const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
       expect(ticket.sla_response_met).toBe(false);
     });
 
@@ -396,7 +402,7 @@ describe('SLA Service Integration Tests', () => {
       });
 
       // Verify first response is preserved
-      const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
       expect(new Date(ticket.sla_response_at).getTime()).toBe(createdAt.getTime() + 15 * 60000);
     });
   });
@@ -434,7 +440,7 @@ describe('SLA Service Integration Tests', () => {
       });
 
       // Verify ticket was updated
-      const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
       expect(ticket.sla_resolution_at).toBeDefined();
       expect(ticket.sla_resolution_met).toBe(true);
     });
@@ -468,7 +474,7 @@ describe('SLA Service Integration Tests', () => {
       });
 
       // Verify ticket was updated
-      const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
       expect(ticket.sla_resolution_met).toBe(false);
     });
   });
@@ -507,14 +513,14 @@ describe('SLA Service Integration Tests', () => {
       });
 
       // Verify ticket has new due dates
-      const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
 
       // New due dates should be earlier (High priority has shorter targets)
       expect(new Date(ticket.sla_response_due_at).getTime()).toBeLessThan(originalResponseDue!.getTime());
       expect(new Date(ticket.sla_resolution_due_at).getTime()).toBeLessThan(originalResolutionDue!.getTime());
 
       // Verify audit log
-      const auditLog = await db('sla_audit_log')
+      const auditLog = await tenantTable(db, tenantId, 'sla_audit_log')
         .where({ tenant: tenantId, ticket_id: ticketId, event_type: 'priority_changed' })
         .first();
       expect(auditLog).toBeDefined();
@@ -545,7 +551,7 @@ describe('SLA Service Integration Tests', () => {
         await recordFirstResponse(trx, tenantId, ticketId, respondedAt, internalUserId);
       });
 
-      const ticketBeforeChange = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      const ticketBeforeChange = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
       const responseDueBefore = ticketBeforeChange.sla_response_due_at;
 
       await db.transaction(async (trx) => {
@@ -553,7 +559,7 @@ describe('SLA Service Integration Tests', () => {
         await handlePriorityChange(trx, tenantId, ticketId, priorityHighId, internalUserId);
       });
 
-      const ticketAfterChange = await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      const ticketAfterChange = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
 
       // Response due should not change since already responded
       expect(ticketAfterChange.sla_response_due_at?.toString()).toBe(responseDueBefore?.toString());
@@ -621,7 +627,7 @@ describe('SLA Service Integration Tests', () => {
 
 async function createContact(db: Knex, tenant: string, clientId: string, email: string): Promise<string> {
   const contactId = uuidv4();
-  await db('contacts').insert({
+  await tenantTable(db, tenant, 'contacts').insert({
     tenant,
     contact_name_id: contactId,
     full_name: 'SLA Test Contact',
@@ -635,20 +641,18 @@ async function createContact(db: Knex, tenant: string, clientId: string, email: 
 
 async function createBoard(db: Knex, tenant: string, name: string): Promise<string> {
   const boardId = uuidv4();
-  await db('boards').insert({
+  await tenantTable(db, tenant, 'boards').insert({
     tenant,
     board_id: boardId,
-    name,
+    board_name: name,
     description: 'Test board for SLA',
-    created_at: db.fn.now(),
-    updated_at: db.fn.now(),
   });
   return boardId;
 }
 
 async function createStatus(db: Knex, tenant: string, name: string, isClosed: boolean): Promise<string> {
   const statusId = uuidv4();
-  await db('statuses').insert({
+  await tenantTable(db, tenant, 'statuses').insert({
     tenant,
     status_id: statusId,
     name,
@@ -661,7 +665,7 @@ async function createStatus(db: Knex, tenant: string, name: string, isClosed: bo
 
 async function createPriority(db: Knex, tenant: string, name: string, orderNumber: number, createdBy: string): Promise<string> {
   const priorityId = uuidv4();
-  await db('priorities').insert({
+  await tenantTable(db, tenant, 'priorities').insert({
     tenant,
     priority_id: priorityId,
     priority_name: name,
@@ -675,7 +679,7 @@ async function createPriority(db: Knex, tenant: string, name: string, orderNumbe
 
 async function createBusinessHoursSchedule(db: Knex, tenant: string, name: string): Promise<string> {
   const scheduleId = uuidv4();
-  await db('business_hours_schedules').insert({
+  await tenantTable(db, tenant, 'business_hours_schedules').insert({
     tenant,
     schedule_id: scheduleId,
     schedule_name: name,
@@ -696,7 +700,7 @@ async function createSlaPolicy(
   isDefault: boolean
 ): Promise<string> {
   const policyId = uuidv4();
-  await db('sla_policies').insert({
+  await tenantTable(db, tenant, 'sla_policies').insert({
     tenant,
     sla_policy_id: policyId,
     policy_name: name,
@@ -718,7 +722,7 @@ async function createSlaPolicyTarget(
   resolutionTimeMinutes: number
 ): Promise<string> {
   const targetId = uuidv4();
-  await db('sla_policy_targets').insert({
+  await tenantTable(db, tenant, 'sla_policy_targets').insert({
     tenant,
     target_id: targetId,
     sla_policy_id: slaPolicyId,
@@ -746,7 +750,7 @@ async function insertTicket(db: Knex, params: {
   priorityId: string;
   boardId: string;
 }): Promise<void> {
-  await db('tickets').insert({
+  await tenantTable(db, params.tenant, 'tickets').insert({
     tenant: params.tenant,
     ticket_id: params.ticketId,
     ticket_number: params.ticketNumber,

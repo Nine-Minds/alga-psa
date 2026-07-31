@@ -43,6 +43,10 @@ import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { FieldConflictBanner } from '@alga-psa/ui/presence/FieldConflictBanner';
 import type { TicketLiveConflictState } from './ticketLiveFields';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface TicketPropertiesProps {
   id?: string;
@@ -433,6 +437,11 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       try {
         // Use the server action to get scheduled hours
         const schedules = await getScheduledHoursForTicket(ticket.ticket_id);
+        if (isReturnedActionError(schedules)) {
+          console.warn('Unable to load scheduled hours:', getErrorMessage(schedules));
+          setAgentSchedules([]);
+          return;
+        }
         setAgentSchedules(schedules);
       } catch (error) {
         console.error('Error fetching scheduled hours:', error);
@@ -551,6 +560,8 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         const result = await getTicketAppointmentRequests(ticket.ticket_id);
         if (result.success && result.data) {
           setAppointmentRequests(result.data);
+        } else if (result.error) {
+          console.warn('Unable to load appointment requests:', result.error);
         }
       } catch (error) {
         console.error('Error fetching appointment requests:', error);

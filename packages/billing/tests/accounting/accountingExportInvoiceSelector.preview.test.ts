@@ -12,6 +12,13 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => {
     throw new Error('not used in these tests');
   }),
+  tenantDb: vi.fn((knex: any) => ({
+    table: (table: string) => knex(table),
+    tenantJoin: (query: any, table: string, left: string, right: string, options?: { type?: string }) => {
+      const method = options?.type === 'left' ? 'leftJoin' : 'join';
+      return query[method](table, left, right);
+    },
+  })),
 }));
 
 // accountingExportService transitively imports '@alga-psa/integrations/runtime'

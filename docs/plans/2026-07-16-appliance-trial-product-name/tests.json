@@ -1,0 +1,20 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: active, expiring, available, expired, and CE-unused appliance trial banner states render Pro and neither previous product name",
+    "implemented": true,
+    "featureIds": ["F001", "F003"]
+  },
+  {
+    "id": "T002",
+    "description": "Validation: all locale JSON and translation-key parity checks pass after the product-name correction",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T003",
+    "description": "Build gates: the full server typecheck and EE production build pass",
+    "implemented": true,
+    "featureIds": ["F001", "F002", "F003"]
+  }
+]

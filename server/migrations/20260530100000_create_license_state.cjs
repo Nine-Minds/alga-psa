@@ -9,7 +9,7 @@
  * SaaS/Stripe resolution.
  *
  * edition_choice : 'ce' | 'ee'  — what was chosen at appliance setup
- * trial_started_at               — set when a 30-day Enterprise trial begins
+ * trial_started_at               — set when a 15-day Enterprise trial begins
  * license_token                  — the signed JWT for an active license (or null)
  * updated_at                     — last modification timestamp
  */

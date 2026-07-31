@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
@@ -15,6 +16,16 @@ applyPlaywrightAuthEnvDefaults();
 const TEST_CONFIG = {
   baseUrl: resolvePlaywrightBaseUrl(),
 };
+
+const WORKFLOW_EVENTS_TEST_BOUNDARY_TENANT = '__workflow_designer_events_test_boundary__';
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function unscopedWorkflowTable(db: Knex, table: string, reason: string) {
+  return tenantDb(db, WORKFLOW_EVENTS_TEST_BOUNDARY_TENANT).unscoped(table, reason);
+}
 
 const ADMIN_PERMISSIONS = [
   {
@@ -61,6 +72,7 @@ type EventSeed = {
 };
 
 type WaitSeed = {
+  tenantId: string;
   waitId: string;
   runId: string;
   stepPath: string;
@@ -73,7 +85,11 @@ type WaitSeed = {
 
 async function createWorkflowDefinition(db: Knex, name: string, version = 1): Promise<WorkflowSeed> {
   const workflowId = uuidv4();
-  const tenantId = (await db('tenants').select('tenant').first())?.tenant;
+  const tenantId = (await unscopedWorkflowTable(
+    db,
+    'tenants',
+    'workflow designer events test seed resolves the active Playwright tenant'
+  ).select('tenant').first())?.tenant;
   if (!tenantId) throw new Error('tenant_id is required to seed workflow definition');
   const now = new Date().toISOString();
   const definition = {
@@ -85,7 +101,7 @@ async function createWorkflowDefinition(db: Knex, name: string, version = 1): Pr
     steps: [],
   };
 
-  await db('workflow_definitions').insert({
+  await tenantTable(db, tenantId, 'workflow_definitions').insert({
     workflow_id: workflowId,
     tenant: tenantId,
     name,
@@ -103,7 +119,7 @@ async function createWorkflowDefinition(db: Knex, name: string, version = 1): Pr
 }
 
 async function createWorkflowRun(db: Knex, run: RunSeed): Promise<void> {
-  await db('workflow_runs').insert({
+  await tenantTable(db, run.tenantId, 'workflow_runs').insert({
     run_id: run.runId,
     workflow_id: run.workflowId,
     workflow_version: run.version,
@@ -119,7 +135,7 @@ async function createWorkflowRun(db: Knex, run: RunSeed): Promise<void> {
 }
 
 async function createWorkflowEvent(db: Knex, event: EventSeed): Promise<void> {
-  await db('workflow_runtime_events').insert({
+  await tenantTable(db, event.tenantId, 'workflow_runtime_events').insert({
     event_id: event.eventId,
     tenant: event.tenantId,
     event_name: event.eventName,
@@ -135,8 +151,9 @@ async function createWorkflowEvent(db: Knex, event: EventSeed): Promise<void> {
 }
 
 async function createWorkflowWait(db: Knex, wait: WaitSeed): Promise<void> {
-  await db('workflow_run_waits').insert({
+  await tenantTable(db, wait.tenantId, 'workflow_run_waits').insert({
     wait_id: wait.waitId,
+    tenant: wait.tenantId,
     run_id: wait.runId,
     step_path: wait.stepPath,
     wait_type: 'EVENT',
@@ -655,6 +672,7 @@ test.describe('Workflow Designer UI - events tab', () => {
       });
       const waitId = uuidv4();
       await createWorkflowWait(db, {
+        tenantId,
         waitId,
         runId,
         stepPath: 'root.steps[0]',
@@ -809,16 +827,16 @@ test.describe('Workflow Designer UI - events tab', () => {
     const marker = `force-event-error-${uuidv4().slice(0, 6)}`;
 
     try {
-      const adminRole = await db('roles')
+      const adminRole = await tenantTable(db, tenantId, 'roles')
         .where({ tenant: tenantId, role_name: 'Admin' })
         .first();
       if (adminRole) {
-        const workflowPermissions = await db('permissions')
+        const workflowPermissions = await tenantTable(db, tenantId, 'permissions')
           .where({ tenant: tenantId, resource: 'workflow' })
           .select('permission_id');
         const workflowPermissionIds = workflowPermissions.map((permission) => permission.permission_id);
         if (workflowPermissionIds.length > 0) {
-          await db('role_permissions')
+          await tenantTable(db, tenantId, 'role_permissions')
             .where({ tenant: tenantId, role_id: adminRole.role_id })
             .whereIn('permission_id', workflowPermissionIds)
             .del();
@@ -863,7 +881,7 @@ test.describe('Workflow Designer UI - events tab', () => {
 
       await openEventsTab(page, tenantId);
       await waitForEventsLoaded(page);
-      await db('workflow_runtime_events').where({ event_id: eventId }).del();
+      await tenantTable(db, tenantId, 'workflow_runtime_events').where({ event_id: eventId }).del();
       await page.getByText(eventName).first().click();
       await expect(page.getByText(/Failed to load event detail|Event not found/i)).toBeVisible();
       await expect(page.locator('#workflow-event-detail-event-id')).toHaveCount(0);

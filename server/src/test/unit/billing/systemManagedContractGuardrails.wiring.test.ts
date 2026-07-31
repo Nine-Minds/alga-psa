@@ -21,7 +21,7 @@ describe('system-managed contract action guardrails wiring', () => {
     expect(contractActionsSource).toContain("'owner_client_id'");
     expect(contractActionsSource).toContain('assertNoSystemManagedIdentityMutation(contractData as Record<string, unknown>, \'create\')');
     expect(contractActionsSource).toContain('assertNoSystemManagedIdentityMutation(updateData as Record<string, unknown>, \'update\')');
-    expect(contractActionsSource).toContain('return await Contract.create(knex, tenant, safeContractData);');
+    expect(contractActionsSource).toContain('const created = await Contract.create(knex, tenant, safeContractData);');
   });
 
   it('system-managed default contracts cannot be deleted manually through backend actions', () => {

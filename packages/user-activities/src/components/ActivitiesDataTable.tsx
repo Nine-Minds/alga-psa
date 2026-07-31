@@ -17,7 +17,7 @@ import { InlinePriorityPicker } from './InlinePriorityPicker';
 import { InlineStatusPicker } from './InlineStatusPicker';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { Calendar, Layers, MessageSquare, Clock, ListChecks, Repeat, Bell } from 'lucide-react';
+import { Calendar, Layers, Ticket, Clock, GitBranch, Repeat, Bell } from 'lucide-react';
 import { getActivityTypeColor } from './constants';
 
 interface ActivitiesDataTableProps {
@@ -60,11 +60,11 @@ const getActivityTypeIcon = (type: ActivityType) => {
     case ActivityType.PROJECT_TASK:
       return <Layers className="h-4 w-4" style={{ color: 'rgb(var(--color-secondary-500))' }} />;
     case ActivityType.TICKET:
-      return <MessageSquare className="h-4 w-4 text-primary-500" />;
+      return <Ticket className="h-4 w-4 text-primary-500" />;
     case ActivityType.TIME_ENTRY:
       return <Clock className="h-4 w-4 text-orange-500" />;
     case ActivityType.WORKFLOW_TASK:
-      return <ListChecks className="h-4 w-4 text-destructive" />;
+      return <GitBranch className="h-4 w-4" style={{ color: 'rgb(var(--color-accent-500))' }} />;
     case ActivityType.NOTIFICATION:
       return <Bell className="h-4 w-4 text-indigo-500" />;
     default:

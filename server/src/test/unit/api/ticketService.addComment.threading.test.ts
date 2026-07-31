@@ -58,8 +58,9 @@ describe('TicketService.addComment threading contract', () => {
 
     const topLevelBranch = body.slice(body.indexOf('} else {'));
 
-    // New thread row is still created for non-replies.
-    expect(topLevelBranch).toContain("await trx('comment_threads').insert({");
+    // New thread row is still created for non-replies (tenant-scoped via the
+    // tenantDb-backed table helper).
+    expect(topLevelBranch).toContain("await tenantScopedTable(trx, 'comment_threads', context.tenant).insert({");
     expect(topLevelBranch).toContain('root_comment_id: apiCommentId,');
     // Top-level visibility still derives from the request body, unchanged.
     expect(topLevelBranch).toContain('apiIsInternal = data.is_internal || false;');

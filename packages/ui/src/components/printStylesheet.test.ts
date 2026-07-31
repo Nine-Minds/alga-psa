@@ -25,7 +25,7 @@ const repoRoot = path.resolve(here, '../../../../');
 const CE_PRINT_CSS = path.join(repoRoot, 'server/src/app/print.css');
 const EE_PRINT_CSS = path.join(
   repoRoot,
-  'ee/packages/workflows/src/components/user-activities/userActivitiesPrint.css',
+  'packages/user-activities/src/components/userActivitiesPrint.css',
 );
 
 interface Rule {

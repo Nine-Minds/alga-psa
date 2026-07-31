@@ -1,5 +1,6 @@
 import { cache } from 'react';
 import { getAssetDetailBundle } from '@alga-psa/assets/actions/assetActions';
+import { assetActionErrorFrom, assetActionErrorMessage } from '@alga-psa/assets/actions/assetActionErrors';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { MspAssetDetailClient } from '@alga-psa/msp-composition/assets';
@@ -20,6 +21,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const { asset_id } = await params;
     const bundle = await getCachedAssetBundle(asset_id);
+    if (assetActionErrorFrom(bundle)) {
+      return { title: 'Asset Details' };
+    }
     if (bundle.asset?.name) {
       return { title: bundle.asset.name };
     }
@@ -46,6 +50,10 @@ export default async function AssetPage({ params }: Props) {
 
   try {
     const bundle = await getCachedAssetBundle(resolvedParams.asset_id);
+    const expected = assetActionErrorFrom(bundle);
+    if (expected) {
+      return <div>{assetActionErrorMessage(expected)}</div>;
+    }
     if (!bundle.asset) {
       const { t } = await getServerTranslation(undefined, 'msp/assets');
       return <div>{t('assetListErrors.assetNotFound')}</div>;

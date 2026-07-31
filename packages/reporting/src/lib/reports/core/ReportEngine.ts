@@ -1,8 +1,9 @@
 // Core ReportEngine for executing report definitions
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
-import { 
+import { LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
+import {
   ReportDefinition, 
   ReportResult, 
   ReportParameters, 
@@ -50,16 +51,35 @@ export class ReportEngine {
       
       // Add tenant and calculated parameters
       const enrichedParameters = this.enrichParameters(parameters, tenant);
+      // Prefer the locale resolved by the caller (user -> client -> tenant
+      // hierarchy). Fall back to the system default locale rather than a
+      // hardcoded US English when no locale is supplied.
+      const locale = options.locale ?? LOCALE_CONFIG.defaultLocale;
       
       // Execute report within transaction
       const result = await withTransaction(knex, async (trx) => {
+        // Resolve the tenant's configured default currency once. Currency metrics whose
+        // definition does not pin a specific currency are formatted in this currency
+        // instead of a hardcoded 'USD'. Defensive: a lookup failure must not fail the report.
+        let defaultCurrency = 'USD';
+        try {
+          const billingSettings = await tenantDb(trx, tenant).table('default_billing_settings')
+            .select('default_currency_code')
+            .first();
+          if (billingSettings?.default_currency_code) {
+            defaultCurrency = billingSettings.default_currency_code;
+          }
+        } catch (error) {
+          console.error('Failed to resolve tenant default currency for report; using USD:', error);
+        }
+
         const metrics: Record<string, any> = {};
-        
+
         // Execute each metric calculation
         for (const metric of definition.metrics) {
           try {
             const value = await this.executeMetric(trx, metric, enrichedParameters);
-            metrics[metric.id] = this.formatMetricValue(value, metric.formatting);
+            metrics[metric.id] = this.formatMetricValue(value, metric.formatting, locale, defaultCurrency);
           } catch (error) {
             console.error(`Error executing metric ${metric.id}:`, error);
             // Continue with other metrics, setting this one to null
@@ -120,7 +140,9 @@ export class ReportEngine {
       
       // Build and execute the query
       const query = QueryBuilder.build(trx, metric.query, parameters);
-      const result = await query;
+      const rawResult = await query;
+      // raw_sql queries resolve to the pg driver's Result object rather than a rows array
+      const result = Array.isArray(rawResult) ? rawResult : ((rawResult as { rows?: any[] })?.rows ?? []);
       
       // Handle different result types
       if (metric.query.aggregation) {
@@ -147,31 +169,31 @@ export class ReportEngine {
   /**
    * Format a metric value according to its formatting options
    */
-  private static formatMetricValue(value: any, formatting?: FormattingOptions): any {
+  private static formatMetricValue(value: any, formatting: FormattingOptions | undefined, locale: string, defaultCurrency: string = 'USD'): any {
     if (!formatting || value === null || value === undefined) {
       return value;
     }
-    
+
     try {
       switch (formatting.type) {
         case 'currency':
           return {
             raw: value,
-            formatted: this.formatCurrency(value, formatting),
+            formatted: this.formatCurrency(value, formatting, locale, defaultCurrency),
             type: 'currency'
           } as FormattedMetricValue;
         
         case 'number':
           return {
             raw: value,
-            formatted: this.formatNumber(value, formatting),
+            formatted: this.formatNumber(value, formatting, locale),
             type: 'number'
           } as FormattedMetricValue;
         
         case 'percentage':
           return {
             raw: value,
-            formatted: this.formatPercentage(value, formatting),
+            formatted: this.formatPercentage(value, formatting, locale),
             type: 'percentage'
           } as FormattedMetricValue;
         
@@ -185,7 +207,7 @@ export class ReportEngine {
         case 'date':
           return {
             raw: value,
-            formatted: this.formatDate(value, formatting),
+            formatted: this.formatDate(value, formatting, locale),
             type: 'date'
           } as FormattedMetricValue;
         
@@ -201,11 +223,14 @@ export class ReportEngine {
   /**
    * Format a value as currency
    */
-  private static formatCurrency(value: number, formatting: FormattingOptions): string {
+  private static formatCurrency(value: number, formatting: FormattingOptions, locale: string, defaultCurrency: string = 'USD'): string {
     const amount = formatting.divisor ? value / formatting.divisor : value;
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: formatting.currency || 'USD',
+      // A metric definition may pin a specific currency (formatting.currency); otherwise
+      // use the tenant's configured default currency (default_billing_settings, resolved in
+      // execute()), falling back to 'USD' only when neither is available.
+      currency: formatting.currency || defaultCurrency || 'USD',
       minimumFractionDigits: formatting.decimals ?? 2,
       maximumFractionDigits: formatting.decimals ?? 2
     }).format(amount);
@@ -214,8 +239,8 @@ export class ReportEngine {
   /**
    * Format a value as a number
    */
-  private static formatNumber(value: number, formatting: FormattingOptions): string {
-    return new Intl.NumberFormat('en-US', {
+  private static formatNumber(value: number, formatting: FormattingOptions, locale: string): string {
+    return new Intl.NumberFormat(locale, {
       minimumFractionDigits: formatting.decimals || 0,
       maximumFractionDigits: formatting.decimals || 0
     }).format(value);
@@ -224,8 +249,8 @@ export class ReportEngine {
   /**
    * Format a value as a percentage
    */
-  private static formatPercentage(value: number, formatting: FormattingOptions): string {
-    return new Intl.NumberFormat('en-US', {
+  private static formatPercentage(value: number, formatting: FormattingOptions, locale: string): string {
+    return new Intl.NumberFormat(locale, {
       style: 'percent',
       minimumFractionDigits: formatting.decimals || 1,
       maximumFractionDigits: formatting.decimals || 1
@@ -249,16 +274,16 @@ export class ReportEngine {
   /**
    * Format a date value
    */
-  private static formatDate(value: string | Date, formatting: FormattingOptions): string {
+  private static formatDate(value: string | Date, formatting: FormattingOptions, locale: string): string {
     const date = typeof value === 'string' ? new Date(value) : value;
     
     if (formatting.dateFormat) {
       // For now, use toLocaleString with basic options
       // Could be enhanced with a proper date formatting library
-      return date.toLocaleString('en-US');
+      return date.toLocaleString(locale);
     }
     
-    return date.toLocaleDateString('en-US');
+    return date.toLocaleDateString(locale);
   }
   
   /**

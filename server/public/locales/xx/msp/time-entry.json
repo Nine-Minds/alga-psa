@@ -29,7 +29,9 @@
       "viewDetails": "11111",
       "manageTimePeriods": "11111",
       "selectWorkItem": "11111",
-      "clearFilter": "11111"
+      "clearFilter": "11111",
+      "remove": "11111",
+      "clear": "11111"
     },
     "states": {
       "inProgress": "11111",
@@ -95,6 +97,24 @@
     },
     "lastEntry": {
       "none": "11111"
+    },
+    "bulk": {
+      "selectedCount": "11111 {{count}} 11111"
+    },
+    "delete": {
+      "success": "11111 {{count}} 11111",
+      "partialFailure": "11111 {{count}} 11111",
+      "error": "11111"
+    },
+    "removePeriod": {
+      "success": "11111 {{count}} 11111",
+      "partialFailure": "11111 {{count}} 11111",
+      "error": "11111"
+    },
+    "remove": {
+      "title": "11111",
+      "message": "11111 {{count}} 11111",
+      "timesheetMessage": "11111 {{count}} 11111"
     }
   },
   "timeEntryForm": {
@@ -121,7 +141,10 @@
       "minimumDuration": "11111",
       "serviceRequired": "11111",
       "timePeriodRange": "11111 {{periodRange}} 11111",
-      "endAfterStartPicker": "11111"
+      "endAfterStartPicker": "11111",
+      "durationSameDay": "11111",
+      "endSameDay": "11111",
+      "invalidTimeRange": "11111"
     }
   },
   "workItemPicker": {
@@ -145,7 +168,9 @@
     "empty": {
       "searching": "11111",
       "noWorkItems": "11111"
-    }
+    },
+    "paymentWarningTitle": "11111",
+    "paymentWarning": "11111"
   },
   "workItemList": {
     "meta": {
@@ -365,6 +390,10 @@
     "active": "11111"
   },
   "intervals": {
+    "createdFromNote_one": "11111 {{count}} 11111",
+    "createdFromNote_other": "11111 {{count}} 11111",
+    "selectedCount_one": "11111 {{count}} 11111",
+    "selectedCount_other": "11111 {{count}} 11111",
     "title": "11111",
     "hideShortIntervals": "11111",
     "totalTime": "11111 {{value}} 11111",
@@ -421,7 +450,8 @@
     "taskUpdated": "11111",
     "saveChangesFailed": "11111",
     "changesSaved": "11111",
-    "workItemDeleted": "11111"
+    "workItemDeleted": "11111",
+    "submitFailed": "11111"
   },
   "bundleNotice": {
     "withNumber": "11111 {{number}} 11111",

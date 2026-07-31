@@ -11,6 +11,7 @@
  */
 
 import { Context } from '@temporalio/activity';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
 import { Knex } from 'knex';
 import type {
@@ -153,7 +154,7 @@ export async function exportTenantData(
     const adminKnex = await getAdminConnection();
 
     // Get tenant info for the export metadata
-    const tenant = await adminKnex('tenants').where({ tenant: tenantId }).first();
+    const tenant = await tenantDb(adminKnex, tenantId).table('tenants').first();
     if (!tenant) {
       return { success: false, error: 'Tenant not found' };
     }

@@ -63,11 +63,11 @@ describe('post-drop recurring obligation identity', () => {
     const root = process.cwd();
     const files = [
       '../packages/billing/src/actions/billingAndTax.ts',
-      '../packages/billing/src/actions/clientCadenceScheduleRegeneration.ts',
+      '../shared/billingClients/clientCadenceScheduleRegeneration.ts',
       '../packages/billing/src/actions/invoiceGeneration.ts',
       '../packages/billing/src/actions/recurringServicePeriodActions.ts',
       '../packages/billing/src/services/invoiceService.ts',
-      '../packages/billing/src/services/bucketUsageService.ts',
+      '../shared/billingClients/bucketUsageService.ts',
       '../packages/billing/src/lib/billing/billingEngine.ts',
     ].map((relativePath) => readFileSync(path.resolve(root, relativePath), 'utf8'));
 

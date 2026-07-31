@@ -5,6 +5,15 @@ const getAllTemplatesMock = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: unknown) => fn,
+  // These exercise the preview/render pipeline, not RBAC. Without this the
+  // real hasPermission runs, which needs a database — the action under test
+  // does not. The rbac subpath is a distinct module id, so it needs its own
+  // mock: actions import hasPermission from either specifier.
+  hasPermission: async () => true,
+}));
+
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: async () => true,
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -70,7 +79,7 @@ describe('renderTemplateOnServer AST integration', () => {
 
   it('renders from inline templateAst override without template lookup by id', async () => {
     const result = await (renderTemplateOnServer as any)(
-      { id: 'test-user' },
+      { id: 'test-user', tenant: 'test-tenant' },
       { tenant: 'test-tenant' },
       null,
       invoiceData,
@@ -93,7 +102,7 @@ describe('renderTemplateOnServer AST integration', () => {
     ]);
 
     const result = await (renderTemplateOnServer as any)(
-      { id: 'test-user' },
+      { id: 'test-user', tenant: 'test-tenant' },
       { tenant: 'test-tenant' },
       'tpl-1',
       invoiceData
@@ -105,7 +114,7 @@ describe('renderTemplateOnServer AST integration', () => {
     expect(getAllTemplatesMock).toHaveBeenCalled();
   });
 
-  it('throws when selected template lacks canonical AST payload', async () => {
+  it('returns typed error when selected template lacks canonical AST payload', async () => {
     getAllTemplatesMock.mockResolvedValueOnce([
       {
         template_id: 'tpl-legacy',
@@ -115,11 +124,13 @@ describe('renderTemplateOnServer AST integration', () => {
 
     await expect(
       (renderTemplateOnServer as any)(
-        { id: 'test-user' },
+        { id: 'test-user', tenant: 'test-tenant' },
         { tenant: 'test-tenant' },
         'tpl-legacy',
         invoiceData
       )
-    ).rejects.toThrow('does not have a canonical templateAst payload');
+    ).resolves.toEqual({
+      actionError: 'Invoice template is missing its design payload. Please choose another template.',
+    });
   });
 });

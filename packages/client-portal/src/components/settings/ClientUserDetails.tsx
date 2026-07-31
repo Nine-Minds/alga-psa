@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IPermission, IUserWithRoles } from '@alga-psa/types';
 import { IUser, IRole } from '@shared/interfaces/user.interfaces';
-import { getCurrentUser, getUserRolesWithPermissions } from '@alga-psa/user-composition/actions';
+import { getCurrentUser, getUserRolesWithPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
 import { 
   getClientUserById, 
   updateClientUser, 
@@ -13,7 +13,7 @@ import {
   getClientUserRoles,
   assignClientUserRole,
   removeClientUserRole
-} from '@alga-psa/client-portal/actions';
+} from '../../actions/client-portal-actions/clientUserActions';
 import { useDrawer } from "@alga-psa/ui";
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -22,11 +22,19 @@ import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Eye, EyeOff, ChevronDown, ChevronUp, X } from 'lucide-react';
 import ClientPasswordChangeForm from './ClientPasswordChangeForm';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface ClientUserDetailsProps {
   userId: string;
   onUpdate: () => void;
 }
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate }) => {
   const { t: tProfile } = useTranslation('client-portal');
@@ -137,6 +145,11 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
         };
         
         const updatedUser = await updateClientUser(user.user_id, updatedUserData);
+        if (isReturnedActionError(updatedUser)) {
+          setError(getErrorMessage(updatedUser));
+          return;
+        }
+
         if (updatedUser) {
           setUser(updatedUser);
           onUpdate();
@@ -155,7 +168,11 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
     if (!selectedRoleId) return;
     
     try {
-      await assignClientUserRole(userId, selectedRoleId);
+      const result = await assignClientUserRole(userId, selectedRoleId);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       // Refresh user roles
       const updatedRoles = await getClientUserRoles(userId);
       setUserRoles(updatedRoles);
@@ -168,7 +185,11 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
   
   const handleRemoveRole = async (roleId: string) => {
     try {
-      await removeClientUserRole(userId, roleId);
+      const result = await removeClientUserRole(userId, roleId);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       // Refresh user roles
       const updatedRoles = await getClientUserRoles(userId);
       setUserRoles(updatedRoles);

@@ -22,7 +22,13 @@ class FakeTicketStatusQueryBuilder {
   private selectedColumns: string[] = [];
   private orderings: Array<{ column: string; direction: 'asc' | 'desc' }> = [];
 
-  where(conditions: Record<string, any>): this {
+  where(conditions: Record<string, any> | string, value?: any): this {
+    if (typeof conditions === 'string') {
+      const column = conditions.includes('.') ? conditions.split('.').pop()! : conditions;
+      this.filters[column] = value;
+      return this;
+    }
+
     Object.assign(this.filters, conditions);
     return this;
   }
@@ -124,6 +130,11 @@ vi.mock('@/lib/db', () => ({
 
 vi.mock('@/lib/auth/rbac', () => ({
   hasPermission: vi.fn(async () => true),
+}));
+
+vi.mock('@/lib/api/rateLimit/enforce', () => ({
+  enforceApiRateLimit: vi.fn(async () => null),
+  shouldBypassRateLimit: vi.fn(() => false),
 }));
 
 vi.mock('@/lib/db/db', () => ({

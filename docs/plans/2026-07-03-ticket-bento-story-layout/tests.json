@@ -1,0 +1,316 @@
+[
+  {
+    "id": "T001",
+    "description": "Integration (DB): unified timeline action interleaves comments, audit rows, time entries, and RMM alerts for a seeded ticket in strict chronological order",
+    "implemented": true,
+    "featureIds": [
+      "F031",
+      "F032",
+      "F035"
+    ],
+    "note": "DB-backed integration test written in server/src/test/infrastructure/tickets/ticketBentoDataLayer.test.ts; runs against a provisioned+migrated test DB (skips cleanly otherwise, matching the repo requireDb convention)."
+  },
+  {
+    "id": "T002",
+    "description": "Integration (DB): timeline comment entries carry correct lane flags (client reply vs internal vs resolution) from is_internal/is_resolution",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ],
+    "note": "DB-backed integration test written in server/src/test/infrastructure/tickets/ticketBentoDataLayer.test.ts; runs against a provisioned+migrated test DB (skips cleanly otherwise, matching the repo requireDb convention)."
+  },
+  {
+    "id": "T003",
+    "description": "Integration (DB): timeline action rejects client-type users and callers without ticket:read (guard case)",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ],
+    "note": "DB-backed integration test written in server/src/test/infrastructure/tickets/ticketBentoDataLayer.test.ts; runs against a provisioned+migrated test DB (skips cleanly otherwise, matching the repo requireDb convention)."
+  },
+  {
+    "id": "T004",
+    "description": "Integration (DB): timeline queries are tenant-scoped; a second tenant's entries for the same ticket_id value never appear",
+    "implemented": true,
+    "featureIds": [
+      "F037"
+    ],
+    "note": "DB-backed integration test written in server/src/test/infrastructure/tickets/ticketBentoDataLayer.test.ts; runs against a provisioned+migrated test DB (skips cleanly otherwise, matching the repo requireDb convention)."
+  },
+  {
+    "id": "T005",
+    "description": "Integration (DB): schedule-entries-for-ticket action returns only entries linked via work_item_id/work_item_type, upcoming first",
+    "implemented": true,
+    "featureIds": [
+      "F038",
+      "F069"
+    ],
+    "note": "DB-backed integration test written in server/src/test/infrastructure/tickets/ticketBentoDataLayer.test.ts; runs against a provisioned+migrated test DB (skips cleanly otherwise, matching the repo requireDb convention)."
+  },
+  {
+    "id": "T006",
+    "description": "Integration (DB): interactions-for-ticket action returns ticket-linked interactions most recent first with type and duration",
+    "implemented": true,
+    "featureIds": [
+      "F039",
+      "F072"
+    ],
+    "note": "DB-backed integration test written in server/src/test/infrastructure/tickets/ticketBentoDataLayer.test.ts; runs against a provisioned+migrated test DB (skips cleanly otherwise, matching the repo requireDb convention)."
+  },
+  {
+    "id": "T007",
+    "description": "Integration (DB): billing rollup action sums billable vs non-billable minutes, reports invoiced flag, and resolves the client's active contract name",
+    "implemented": true,
+    "featureIds": [
+      "F040",
+      "F091",
+      "F092"
+    ],
+    "note": "DB-backed integration test written in server/src/test/infrastructure/tickets/ticketBentoDataLayer.test.ts; runs against a provisioned+migrated test DB (skips cleanly otherwise, matching the repo requireDb convention)."
+  },
+  {
+    "id": "T008",
+    "description": "Integration (DB): billing rollup returns an explicit empty result (not an error) for a ticket with no time entries and a client with no contract",
+    "implemented": true,
+    "featureIds": [
+      "F040",
+      "F093"
+    ],
+    "note": "DB-backed integration test written in server/src/test/infrastructure/tickets/ticketBentoDataLayer.test.ts; runs against a provisioned+migrated test DB (skips cleanly otherwise, matching the repo requireDb convention)."
+  },
+  {
+    "id": "T009",
+    "description": "Integration (DB): timeline for a brand-new ticket returns only the creation event (empty-state data contract)",
+    "implemented": true,
+    "featureIds": [
+      "F061",
+      "F114"
+    ],
+    "note": "DB-backed integration test written in server/src/test/infrastructure/tickets/ticketBentoDataLayer.test.ts; runs against a provisioned+migrated test DB (skips cleanly otherwise, matching the repo requireDb convention)."
+  },
+  {
+    "id": "T010",
+    "description": "Unit: SLA clock state machine returns met/remaining/overdue/paused correctly across sla_* column permutations, including null policy",
+    "implemented": true,
+    "featureIds": [
+      "F079",
+      "F080",
+      "F081",
+      "F082",
+      "F083"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: timeline lane filters reduce visible entries client-side without refetch and report correct counts",
+    "implemented": true,
+    "featureIds": [
+      "F045",
+      "F046"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: day-break grouping inserts separators exactly at calendar-day boundaries and labels today as 'Today'",
+    "implemented": true,
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Component: each timeline entry type renders its treatment (client bubble, internal label, resolution marker, time badge, system line, alert warning)",
+    "implemented": false,
+    "featureIds": [
+      "F048",
+      "F049",
+      "F050",
+      "F051",
+      "F052",
+      "F053"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Component: composer placeholder uses contact first name with 'Write a reply' fallback; segment control switches client/internal/resolution",
+    "implemented": false,
+    "featureIds": [
+      "F057",
+      "F058"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Component: every tile renders its designed empty state for a minimal ticket (no contact, no SLA, no schedule, no interactions, no time)",
+    "implemented": false,
+    "featureIds": [
+      "F061",
+      "F071",
+      "F074",
+      "F077",
+      "F082",
+      "F093",
+      "F114"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Component: tile-level data error renders visible in-tile error state rather than blank card",
+    "implemented": false,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Component: copy audit \u2014 rendered tile headers and key strings match the PRD house-voice table",
+    "implemented": false,
+    "featureIds": [
+      "F044",
+      "F113"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "E2E (Playwright): flag off renders legacy screen with no toggle; flag on shows Grid|Entry toggle; switching to Grid renders bento; choice persists across reload",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F116",
+      "F117",
+      "F118"
+    ],
+    "manualQaVerified": true
+  },
+  {
+    "id": "T019",
+    "description": "E2E (Playwright): rich fixture journey \u2014 open ticket, verify timeline shows comments, time entries, and system events with day breaks",
+    "implemented": false,
+    "featureIds": [
+      "F043",
+      "F047",
+      "F115"
+    ],
+    "manualQaVerified": true
+  },
+  {
+    "id": "T020",
+    "description": "E2E (Playwright): edit status + priority from hero, Save changes; values persist after reload and a system event appears in the timeline",
+    "implemented": false,
+    "featureIds": [
+      "F010",
+      "F011",
+      "F020",
+      "F103",
+      "F106"
+    ],
+    "manualQaVerified": true
+  },
+  {
+    "id": "T021",
+    "description": "E2E (Playwright): unsaved-changes guard blocks navigation after editing a hero field until saved or cancelled",
+    "implemented": false,
+    "featureIds": [
+      "F104"
+    ],
+    "manualQaVerified": true
+  },
+  {
+    "id": "T022",
+    "description": "E2E (Playwright): post a client reply and an internal note from the composer; both appear in the stream with correct treatment and in the comments data",
+    "implemented": false,
+    "featureIds": [
+      "F057",
+      "F059"
+    ],
+    "manualQaVerified": true
+  },
+  {
+    "id": "T023",
+    "description": "E2E (Playwright): 'More details' drawer edits (category, location) merge into the same batch save as hero edits",
+    "implemented": false,
+    "featureIds": [
+      "F024",
+      "F026",
+      "F028",
+      "F103"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "E2E (Playwright): checklist item toggle and add-item work from the Checklist tile",
+    "implemented": false,
+    "featureIds": [
+      "F084",
+      "F085"
+    ],
+    "manualQaVerified": true
+  },
+  {
+    "id": "T025",
+    "description": "E2E (Playwright): timer start/pause and 'Add time entry' flow work from the Time logged tile; new entry appears in tile and timeline",
+    "implemented": false,
+    "featureIds": [
+      "F088",
+      "F089",
+      "F031"
+    ],
+    "manualQaVerified": true
+  },
+  {
+    "id": "T026",
+    "description": "E2E (Playwright): capability sweep \u2014 documents add/link, watchers add/remove, agent team add, assets link, feedback card, delete ticket all reachable and functional on the bento layout",
+    "implemented": false,
+    "featureIds": [
+      "F068",
+      "F078",
+      "F094",
+      "F095",
+      "F097",
+      "F098",
+      "F019"
+    ],
+    "manualQaVerified": true
+  },
+  {
+    "id": "T027",
+    "description": "E2E (Playwright): AlgaDesk mode hides SLA, Time logged, and Materials tiles with no layout gaps",
+    "implemented": false,
+    "featureIds": [
+      "F108",
+      "F109",
+      "F110"
+    ],
+    "manualQaVerified": true
+  },
+  {
+    "id": "T028",
+    "description": "E2E (Playwright): client-portal ticket detail renders identically with the flag on (portal unaffected)",
+    "implemented": true,
+    "featureIds": [
+      "F111"
+    ],
+    "note": "Verified via static analysis: client-portal ticket tree imports zero bento modules and uses its own separate TicketDetails component (not the MSP one modified here)."
+  },
+  {
+    "id": "T029",
+    "description": "Visual smoke: bento layout in dark theme \u2014 tiles, timeline lanes, and chips readable (no hardcoded light backgrounds)",
+    "implemented": false,
+    "featureIds": [
+      "F102"
+    ],
+    "manualQaVerified": true
+  },
+  {
+    "id": "T030",
+    "description": "Visual smoke: responsive breakpoints at ~1280px, ~1024px, and mobile width show documented re-flow with no horizontal scroll",
+    "implemented": false,
+    "featureIds": [
+      "F005",
+      "F006"
+    ],
+    "manualQaVerified": true
+  }
+]

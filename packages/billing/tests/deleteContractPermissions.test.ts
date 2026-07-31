@@ -33,7 +33,11 @@ describe('deleteContract action', () => {
 
     const { deleteContract } = await import('../src/actions/contractActions');
     try {
-      await expect(deleteContract('contract-1')).rejects.toThrow('Permission denied: Cannot delete billing contracts');
+      // The action now reports permission failures as a structured result
+      // instead of throwing.
+      await expect(deleteContract('contract-1')).resolves.toEqual({
+        permissionError: 'Permission denied: Cannot delete billing contracts',
+      });
     } finally {
       errorSpy.mockRestore();
     }

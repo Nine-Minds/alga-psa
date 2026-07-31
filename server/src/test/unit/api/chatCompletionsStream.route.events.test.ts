@@ -198,7 +198,7 @@ describe('POST /api/chat/v1/completions/stream (structured events)', () => {
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
-      error: 'Invalid uiContext payload',
+      error: 'Invalid chat request payload.',
     });
     expect(createStructuredCompletionStreamMock).not.toHaveBeenCalled();
   });
@@ -530,7 +530,7 @@ describe('POST /api/chat/v1/completions/stream (structured events)', () => {
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({
-      error: 'Invalid messages payload',
+      error: 'Invalid chat request payload.',
     });
     expect(createStructuredCompletionStreamMock).not.toHaveBeenCalled();
   });

@@ -2,22 +2,22 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "../lib/utils"
 import { AutomationProps } from "../ui-reflection/types"
-import { AlertCircle, AlertTriangle, CheckCircle2, Info } from "lucide-react"
+import { AlertCircle, AlertTriangle, Bell, CheckCircle2, Info } from "lucide-react"
 
 const alertVariants = cva(
-  "relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground",
+  "relative w-full rounded-lg border p-4 shadow-sm [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground",
   {
     variants: {
       variant: {
-        default: "bg-background text-foreground",
+        default: "bg-alert-default-bg text-foreground",
         destructive:
-          "border-l-4 border-l-destructive border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-destructive bg-alert-destructive-bg",
+          "border-destructive text-[rgb(var(--color-text-800))] [&>svg]:text-destructive bg-alert-destructive-bg",
         success:
-          "border-l-4 border-l-success border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-success bg-alert-success-bg",
+          "border-success text-[rgb(var(--color-text-800))] [&>svg]:text-success bg-alert-success-bg",
         warning:
-          "border-l-4 border-l-warning border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-alert-warning-bg",
+          "border-warning text-[rgb(var(--color-text-800))] [&>svg]:text-warning bg-alert-warning-bg",
         info:
-          "border-l-4 border-l-primary-500 border-y-0 border-r-0 text-[rgb(var(--color-text-800))] [&>svg]:text-primary-500 bg-alert-info-bg",
+          "border-primary-500 text-[rgb(var(--color-text-800))] [&>svg]:text-primary-500 bg-alert-info-bg",
       },
     },
     defaultVariants: {
@@ -41,7 +41,7 @@ function Alert({
     : variant === 'success' ? CheckCircle2
     : variant === 'warning' ? AlertTriangle
     : variant === 'info' ? Info
-    : null;
+    : Bell;
 
   return (
     <div

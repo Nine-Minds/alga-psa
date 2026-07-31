@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { EmailMessage, EmailSendResult, IEmailProvider } from '../../types/email.types';
-import { BaseEmailService } from '@alga-psa/email';
+// BaseEmailService now lives in the @alga-psa/email package. The package index
+// only re-exports its *types*, so the concrete class must be imported from the
+// module subpath.
+import { BaseEmailService } from '@alga-psa/email/BaseEmailService';
 
 vi.mock('@alga-psa/core/logger', () => {
   const stub = {
@@ -14,11 +17,11 @@ vi.mock('@alga-psa/core/logger', () => {
   return { default: stub, logger: stub };
 });
 
-vi.mock('server/src/lib/eventBus/publishers', () => ({
+vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(async () => {}),
 }));
 
-import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 
 function makeProvider(sendResult: EmailSendResult): IEmailProvider {
   return {

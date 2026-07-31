@@ -53,6 +53,7 @@ describe('ApiMetadataController.getDocs', () => {
         },
       }),
     );
+    vi.spyOn(controller as any, 'assertProductApiAccess').mockResolvedValue(undefined);
     vi.spyOn(controller as any, 'checkPermission').mockResolvedValue(undefined);
 
     const response = await handler(request);
@@ -77,6 +78,7 @@ describe('ApiMetadataController.getDocs', () => {
         },
       }),
     );
+    vi.spyOn(controller as any, 'assertProductApiAccess').mockResolvedValue(undefined);
     vi.spyOn(controller as any, 'checkPermission').mockResolvedValue(undefined);
 
     const response = await handler(request);

@@ -63,6 +63,7 @@ vi.mock(
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   handleError: vi.fn(),
+  isActionMessageError: () => false,
   isActionPermissionError: () => false,
 }));
 
@@ -77,6 +78,7 @@ vi.mock('@alga-psa/ui', () => ({
 vi.mock('@alga-psa/ui/context', () => ({
   useSchedulingCallbacks: () => ({
     launchTimeEntry: launchTimeEntryMock,
+    launchScheduleEntry: vi.fn(),
     fetchTimeEntriesForTicket: vi.fn(),
     deleteTimeEntry: vi.fn(),
   }),
@@ -103,6 +105,12 @@ vi.mock('@alga-psa/ui/services', () => ({
 
 vi.mock('@alga-psa/ui/components', () => ({
   ResponseStateBadge: () => <div data-testid="response-state" />,
+  ContentCard: ({ children, title }: { children?: React.ReactNode; title?: string }) => (
+    <div data-testid="content-card">
+      {title ? <div>{title}</div> : null}
+      {children}
+    </div>
+  ),
 }));
 
 vi.mock('@alga-psa/ui/presence/PresenceBar', () => ({
@@ -172,10 +180,18 @@ vi.mock('@alga-psa/tickets/actions', () => ({
   removeTeamFromTicket: vi.fn().mockResolvedValue(undefined),
 }));
 
+// TicketDetails now imports findBoardById from the direct action module rather
+// than the package barrel (barrel→relative import migration); mock that path too
+// so the board timer-policy lookup resolves to the same spy.
+vi.mock('../../../actions/board-actions/boardActions', () => ({
+  findBoardById: (...args: unknown[]) => findBoardByIdMock(...args),
+}));
+
 vi.mock('@alga-psa/user-composition/actions', () => ({
   findUserById: vi.fn().mockResolvedValue(null),
   getCurrentUser: vi.fn().mockResolvedValue(null),
   getCurrentUserPermissions: vi.fn().mockResolvedValue([]),
+  searchUsersForMentions: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('@alga-psa/reference-data/actions', () => ({

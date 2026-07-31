@@ -21,6 +21,14 @@ vi.mock('@alga-psa/db', () => ({
   getConnection: (...args: any[]) => getConnectionMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
   createTenantKnex: vi.fn(),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+    tenantJoin: (query: any, _table?: string, _left?: string, _right?: string, options: any = {}) => {
+      const join = options?.type === 'left' ? query.leftJoin : query.join;
+      return typeof join === 'function' ? join.call(query) : query;
+    },
+  }),
 }));
 
 vi.mock('@alga-psa/validation', () => ({
@@ -52,6 +60,10 @@ vi.mock('@alga-psa/formatting/blocknoteUtils', () => ({
 
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(),
+}));
+
+vi.mock('@alga-psa/tickets/lib/liveUpdates', () => ({
+  publishTicketUpdate: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
@@ -90,6 +102,19 @@ function createClientPortalTrx(overrides: {
             first: vi.fn().mockResolvedValue(overrides.defaultBoard ?? null),
           }),
         };
+      }
+
+      if (table === 'tickets as t') {
+        const builder: any = {
+          select: vi.fn(() => builder),
+          where: vi.fn(() => builder),
+          modify: vi.fn((cb: (query: any) => void) => {
+            cb(builder);
+            return builder;
+          }),
+          first: vi.fn().mockResolvedValue(overrides.ticket ?? null),
+        };
+        return builder;
       }
 
       if (table === 'tickets') {
@@ -194,7 +219,9 @@ describe('client portal board-scoped ticket status validation', () => {
 
     const { updateTicketStatus } = await import('./client-tickets');
 
-    await expect(updateTicketStatus('ticket-1', 'board-2-closed')).rejects.toThrow('Failed to update ticket status');
+    await expect(updateTicketStatus('ticket-1', 'board-2-closed')).resolves.toEqual({
+      actionError: 'Selected status is not valid for the ticket board',
+    });
     expect(ticketUpdates).toHaveLength(0);
     expect(publishEventMock).not.toHaveBeenCalled();
   });

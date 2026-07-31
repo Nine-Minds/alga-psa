@@ -12,18 +12,19 @@ describe('ClientContractsTab upcoming renewals widget', () => {
     expect(source).toContain('data-testid="client-contracts-upcoming-renewals-tabs"');
     expect(source).toContain('data-testid="client-contracts-tab-trigger"');
     expect(source).toContain('data-testid="upcoming-renewals-tab-trigger"');
-    expect(source).toContain('Upcoming Renewals ({totalUpcomingRenewals})');
+    expect(source).toContain("defaultValue: 'Upcoming Renewals ({{count}})',");
+    expect(source).toContain('count: totalUpcomingRenewals,');
   });
 
   it('renders an Upcoming Renewals summary widget in the upcoming renewals tab', () => {
     expect(source).toContain("data-testid=\"upcoming-renewals-widget\"");
     expect(source).toContain('Upcoming Renewals');
-    expect(source).toContain('Contracts with renewal decisions due in the next 90 days.');
+    expect(source).toContain('Contracts with renewal decisions due within the selected window.');
     expect(source).toContain("import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';");
     expect(source).toContain('const renewalBucketOptions: SelectOption[] = [');
-    expect(source).toContain("{ value: '0-30', label: `0-30 days (${upcomingRenewalBuckets.days0to30})` }");
-    expect(source).toContain("{ value: '31-60', label: `31-60 days (${upcomingRenewalBuckets.days31to60})` }");
-    expect(source).toContain("{ value: '61-90', label: `61-90 days (${upcomingRenewalBuckets.days61to90})` }");
+    expect(source).toContain("{ value: '30', label: t('clientContracts.upcoming.window.next30', { defaultValue: 'Next 30 days' }) }");
+    expect(source).toContain("{ value: '60', label: t('clientContracts.upcoming.window.next60', { defaultValue: 'Next 60 days' }) }");
+    expect(source).toContain("{ value: '90', label: t('clientContracts.upcoming.window.next90', { defaultValue: 'Next 90 days' }) }");
     expect(source).toContain('data-testid="upcoming-renewals-bucket-filter-dropdown"');
     expect(source).toContain('id="upcoming-renewals-bucket-filter-select"');
   });
@@ -32,19 +33,18 @@ describe('ClientContractsTab upcoming renewals widget', () => {
     expect(source).toContain("from '@alga-psa/billing/actions/renewalsQueueActions';");
     expect(source).toContain('markRenewalQueueItemRenewing');
     expect(source).toContain('markRenewalQueueItemNonRenewing');
-    expect(source).toContain('const [upcomingRenewalBuckets, setUpcomingRenewalBuckets] = useState<UpcomingRenewalBucketCounts>({');
+    expect(source).toContain('const [renewalRows, setRenewalRows] = useState<RenewalQueueRow[]>([]);');
     expect(source).toContain('const syncRenewalRows = (rows: RenewalQueueRow[]) => {');
     expect(source).toContain('const refreshRenewalRows = async () => {');
     expect(source).toContain('const renewalRows = await listRenewalQueueRows();');
     expect(source).toContain('syncRenewalRows(renewalRows);');
   });
 
-  it('filters upcoming renewals list by 0-30, 31-60, and 61-90 buckets with list filtering', () => {
-    expect(source).toContain("const [renewalsBucket, setRenewalsBucket] = useState<UpcomingRenewalBucket>('0-30');");
+  it('filters upcoming renewals list by 30, 60, and 90 day windows with list filtering', () => {
+    expect(source).toContain("const [renewalsWindow, setRenewalsWindow] = useState<UpcomingRenewalWindow>('30');");
     expect(source).toContain("const [renewalsSearchTerm, setRenewalsSearchTerm] = useState('');");
-    expect(source).toContain("if (renewalsBucket === '0-30' && (daysUntilDue < 0 || daysUntilDue > 30)) {");
-    expect(source).toContain("if (renewalsBucket === '31-60' && (daysUntilDue < 31 || daysUntilDue > 60)) {");
-    expect(source).toContain("if (renewalsBucket === '61-90' && (daysUntilDue < 61 || daysUntilDue > 90)) {");
+    expect(source).toContain("type UpcomingRenewalWindow = '30' | '60' | '90' | 'all';");
+    expect(source).toContain("if (renewalsWindow !== 'all' && (daysUntilDue < 0 || daysUntilDue > Number(renewalsWindow))) {");
     expect(source).toContain('data-testid="upcoming-renewals-list-filter"');
     expect(source).toContain('No upcoming renewals for the selected window.');
   });

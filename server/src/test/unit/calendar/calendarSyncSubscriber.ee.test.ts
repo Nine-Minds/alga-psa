@@ -8,7 +8,7 @@ const shared = vi.hoisted(() => ({
 
 const eventHandlers = vi.hoisted(() => new Map<string, Set<(event: any) => Promise<void>>>());
 
-vi.mock('server/src/lib/eventBus', () => ({
+vi.mock('@alga-psa/event-bus', () => ({
   getEventBus: () => ({
     subscribe: async (eventType: string, handler: (event: any) => Promise<void>) => {
       const handlers = eventHandlers.get(eventType) ?? new Set();
@@ -18,7 +18,7 @@ vi.mock('server/src/lib/eventBus', () => ({
   }),
 }));
 
-vi.mock('server/src/lib/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async () => ({
     knex: vi.fn(),
     tenant: 'tenant-1',
@@ -33,7 +33,7 @@ vi.mock('@alga-psa/email', () => ({
   StaticTemplateProcessor: class {},
 }));
 
-vi.mock('@enterprise/lib/services/calendar/CalendarProviderService', () => ({
+vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService', () => ({
   CalendarProviderService: class {
     async getProviders() {
       return shared.providers;
@@ -41,7 +41,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarProviderService', () => ({
   },
 }));
 
-vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
+vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarSyncService', () => ({
   CalendarSyncService: class {
     async syncScheduleEntryToExternal(entryId: string, providerId: string) {
       shared.syncCalls.push({ entryId, providerId });
@@ -87,7 +87,7 @@ describe('enterprise calendarSyncSubscriber', () => {
   });
 
   it('syncs assigned schedule entries to active providers when registered', async () => {
-    const subscriberModule = await import('@enterprise/lib/eventBus/subscribers/calendarSyncSubscriber');
+    const subscriberModule = await import('@alga-psa/ee-calendar/event-bus');
 
     await subscriberModule.registerCalendarSyncSubscriber();
     await publish('SCHEDULE_ENTRY_CREATED', {
@@ -102,7 +102,7 @@ describe('enterprise calendarSyncSubscriber', () => {
   });
 
   it('removes schedule entries from assigned calendars on delete events', async () => {
-    const subscriberModule = await import('@enterprise/lib/eventBus/subscribers/calendarSyncSubscriber');
+    const subscriberModule = await import('@alga-psa/ee-calendar/event-bus');
 
     await subscriberModule.registerCalendarSyncSubscriber();
     await publish('SCHEDULE_ENTRY_DELETED', {

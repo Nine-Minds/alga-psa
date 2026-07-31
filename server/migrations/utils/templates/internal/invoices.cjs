@@ -13,6 +13,7 @@ const TEMPLATES = [
       nl: { title: 'Nieuwe factuur gegenereerd', message: 'Factuur #{{invoiceNumber}} voor {{clientName}} is gegenereerd' },
       it: { title: 'Nuova fattura generata', message: 'La fattura #{{invoiceNumber}} per {{clientName}} è stata generata' },
       pl: { title: 'Nowa faktura utworzona', message: 'Faktura #{{invoiceNumber}} dla {{clientName}} została utworzona' },
+      pt: { title: 'Nova fatura gerada', message: 'A fatura #{{invoiceNumber}} para {{clientName}} foi gerada' },
     },
   },
   {
@@ -26,6 +27,7 @@ const TEMPLATES = [
       nl: { title: 'Betaling ontvangen', message: 'Betaling van {{amount}} ontvangen voor factuur #{{invoiceNumber}}' },
       it: { title: 'Pagamento ricevuto', message: 'Pagamento di {{amount}} ricevuto per la fattura #{{invoiceNumber}}' },
       pl: { title: 'Otrzymano płatność', message: 'Otrzymano płatność {{amount}} za fakturę #{{invoiceNumber}}' },
+      pt: { title: 'Pagamento recebido', message: 'Pagamento de {{amount}} recebido pela fatura #{{invoiceNumber}}' },
     },
   },
   {
@@ -39,6 +41,7 @@ const TEMPLATES = [
       nl: { title: 'Betaling achterstallig', message: 'Factuur #{{invoiceNumber}} is {{daysOverdue}} dagen achterstallig' },
       it: { title: 'Pagamento scaduto', message: 'La fattura #{{invoiceNumber}} è scaduta da {{daysOverdue}} giorni' },
       pl: { title: 'Płatność po terminie', message: 'Faktura #{{invoiceNumber}} jest przeterminowana o {{daysOverdue}} dni' },
+      pt: { title: 'Pagamento vencido', message: 'A fatura #{{invoiceNumber}} está com {{daysOverdue}} dias atrasada' },
     },
   },
 ];

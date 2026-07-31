@@ -3,7 +3,7 @@
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 const GOOGLE_CLIENT_ID_SECRET = 'google_client_id';
 const GOOGLE_CLIENT_SECRET_SECRET = 'google_client_secret';
@@ -130,8 +130,8 @@ export const getGoogleIntegrationStatus = withAuth(async (
         usingSharedOAuthApp: Boolean(gmailClientId && gmailClientSecret && !calendarClientId && !calendarClientSecret)
       }
     };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to load Google integration status' };
+  } catch {
+    return { success: false, error: 'Failed to load Google integration status' };
   }
 });
 
@@ -156,17 +156,17 @@ export const saveGoogleIntegrationSettings = withAuth(async (
     if (!projectId) return { success: false, error: 'Google Cloud project ID is required' };
 
     const gmailClientId = normalizeGoogleClientId(input.gmailClientId ?? '');
-    if (!gmailClientId) return { success: false, error: 'Gmail OAuth Client ID is required' };
+    if (!gmailClientId) return { success: false, error: 'Google OAuth Client ID for staff sign-in and Gmail is required' };
     if (!isLikelyGoogleClientId(gmailClientId)) {
-      return { success: false, error: 'Gmail OAuth Client ID does not look valid' };
+      return { success: false, error: 'Google OAuth Client ID for staff sign-in and Gmail does not look valid' };
     }
 
     const gmailClientSecret = input.gmailClientSecret?.trim();
-    if (!gmailClientSecret) return { success: false, error: 'Gmail OAuth Client Secret is required' };
+    if (!gmailClientSecret) return { success: false, error: 'Google OAuth Client Secret for staff sign-in and Gmail is required' };
 
     const serviceAccountKeyJson = input.serviceAccountKeyJson?.trim();
     if (!serviceAccountKeyJson) {
-      return { success: false, error: 'Service account key JSON is required for Pub/Sub provisioning' };
+      return { success: false, error: 'Service account key JSON is required for inbound Gmail notifications' };
     }
 
     let parsedKey: any;
@@ -203,8 +203,8 @@ export const saveGoogleIntegrationSettings = withAuth(async (
     }
 
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to save Google integration settings' };
+  } catch {
+    return { success: false, error: 'Failed to save Google integration settings' };
   }
 });
 
@@ -217,18 +217,18 @@ export const resetGoogleProvidersToDisconnected = withAuth(async (
     if (!permitted) return { success: false, error: 'Forbidden' };
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Email providers: mark disconnected + clear tokens
-    await knex('email_providers')
-      .where({ tenant, provider_type: 'google' })
+    await db.table('email_providers')
+      .where({ provider_type: 'google' })
       .update({
         status: 'disconnected',
         error_message: null,
         updated_at: knex.fn.now()
       });
 
-    await knex('google_email_provider_config')
-      .where({ tenant })
+    await db.table('google_email_provider_config')
       .update({
         access_token: null,
         refresh_token: null,
@@ -240,16 +240,15 @@ export const resetGoogleProvidersToDisconnected = withAuth(async (
       });
 
     // Calendar providers: mark disconnected + clear tokens + webhook identifiers
-    await knex('calendar_providers')
-      .where({ tenant, provider_type: 'google' })
+    await db.table('calendar_providers')
+      .where({ provider_type: 'google' })
       .update({
         status: 'disconnected',
         error_message: null,
         updated_at: knex.fn.now()
       });
 
-    await knex('google_calendar_provider_config')
-      .where({ tenant })
+    await db.table('google_calendar_provider_config')
       .update({
         access_token: null,
         refresh_token: null,
@@ -267,7 +266,7 @@ export const resetGoogleProvidersToDisconnected = withAuth(async (
       });
 
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to reset Google providers' };
+  } catch {
+    return { success: false, error: 'Failed to reset Google providers' };
   }
 });

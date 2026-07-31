@@ -1,4 +1,6 @@
 exports.seed = async function (knex, tenantId) {
+    const { tenantDb } = await import('@alga-psa/db');
+
     let tenants;
     if (tenantId) {
         tenants = [{ tenant: tenantId }];
@@ -19,14 +21,15 @@ exports.seed = async function (knex, tenantId) {
     ];
 
     for (const { tenant } of tenants) {
-        const existingRoles = await knex('roles').where({ tenant });
+        const db = tenantDb(knex, tenant);
+        const existingRoles = await db.table('roles');
         const existingRoleNames = new Set(existingRoles.map(r => `${r.role_name}-${r.msp}-${r.client}`));
         const rolesToInsert = roleDefinitions
             .filter(role => !existingRoleNames.has(`${role.role_name}-${role.msp}-${role.client}`))
             .map(role => ({ tenant, ...role }));
 
         if (rolesToInsert.length > 0) {
-            await knex('roles').insert(rolesToInsert);
+            await db.table('roles').insert(rolesToInsert);
             console.log(`Inserted ${rolesToInsert.length} Algadesk roles for tenant ${tenant}`);
         } else {
             console.log(`All Algadesk roles already exist for tenant ${tenant}`);

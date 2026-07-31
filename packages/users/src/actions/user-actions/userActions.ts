@@ -3,17 +3,18 @@
 import User from '@alga-psa/db/models/user';
 import { DeletionValidationResult, IUser, IUserRole } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { deleteEntityWithValidation, isEnterprise } from '@alga-psa/core';
+import { isEnterprise } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { hashPassword } from '@alga-psa/core/encryption';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { getUserAvatarUrl } from '@alga-psa/user-composition/lib/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { hasPermission, throwPermissionError } from '@alga-psa/user-composition/lib/permissions';
-import { getUserRoles } from '@alga-psa/user-composition/actions';
+import { getUserRoles } from '@alga-psa/user-composition/actions/userQueryActions';
 import logger from '@alga-psa/core/logger';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -22,6 +23,8 @@ import {
   USER_RESPONSE_FIELD_NAMES,
   type SafeApiUser
 } from '../../services/userResponseSanitizer';
+
+const USER_TENANT_DISCOVERY = 'tenant-discovery';
 
 interface ActionResult {
   success: boolean;
@@ -36,7 +39,9 @@ export type AddUserErrorCode =
   | 'ROLE_CLIENT_NOT_ALLOWED_FOR_MSP'
   | 'EMAIL_ALREADY_EXISTS'
   | 'LICENSE_LIMIT_REACHED'
-  | 'SOLO_PLAN_LIMIT';
+  | 'SOLO_PLAN_LIMIT'
+  | 'PERMISSION_DENIED'
+  | 'USER_CREATE_FAILED';
 
 type AddUserResult =
   | { success: true; user: SafeApiUser }
@@ -45,7 +50,10 @@ type AddUserResult =
 export type UpdateUserErrorCode =
   | 'EMAIL_ALREADY_EXISTS'
   | 'REPORTS_TO_SELF'
-  | 'REPORTS_TO_CYCLE';
+  | 'REPORTS_TO_CYCLE'
+  | 'SCIM_MANAGED_INACTIVE'
+  | 'PERMISSION_DENIED'
+  | 'USER_UPDATE_FAILED';
 
 export type UpdateUserResult =
   | { success: true; user: SafeApiUser | null }
@@ -88,8 +96,8 @@ async function getSafeUserWithRoles(
     throw new Error('Tenant context is required for safe user lookup');
   }
 
-  const user = await trx('users')
-    .where({ user_id: userId, tenant })
+  const user = await tenantDb(trx, tenant).table('users')
+    .where({ user_id: userId })
     .select(USER_RESPONSE_FIELD_NAMES)
     .first();
 
@@ -116,7 +124,9 @@ async function findExistingUserByEmailGlobally(
       criteria.user_type = options.userType;
     }
 
-    let query = trx('users').where(criteria);
+    let query = tenantDb(trx, USER_TENANT_DISCOVERY)
+      .unscoped('users', 'global identity email uniqueness check before tenant selection')
+      .where(criteria);
 
     if (options?.excludeUserId) {
       query = query.whereNot('user_id', options.excludeUserId);
@@ -124,6 +134,63 @@ async function findExistingUserByEmailGlobally(
 
     return await query.first('user_id');
   });
+}
+
+/**
+ * Client-portal callers may only manage client users of their own company
+ * (mirrors assertCanManageClientUser in
+ * packages/client-portal/src/actions/client-portal-actions/clientUserActions.ts).
+ * `hasPermission(user, 'user', ...)` alone is not sufficient: the client
+ * portal 'Admin' role holds client-flagged user management permissions, and
+ * the MSP middleware user_type gate does not apply to server actions.
+ * Internal callers are unaffected (RBAC-gated by the callers). Throws on
+ * denial.
+ */
+async function assertPortalUserManagementScope(
+  currentUser: IUser,
+  tenant: string,
+  knexOrTrx: Knex | Knex.Transaction,
+  targetUserId: string
+): Promise<void> {
+  if (currentUser.user_type !== 'client') {
+    return;
+  }
+
+  if (!currentUser.contact_id) {
+    throw new Error('Permission denied: Client portal admin access is required');
+  }
+
+  const scopedDb = tenantDb(knexOrTrx, tenant);
+
+  const targetUser = await scopedDb.table('users')
+    .where({ user_id: targetUserId, user_type: 'client' })
+    .select('contact_id')
+    .first();
+
+  if (!targetUser) {
+    throw new Error('User not found');
+  }
+
+  const [actorContact, targetContact] = await Promise.all([
+    scopedDb.table('contacts')
+      .where({ contact_name_id: currentUser.contact_id })
+      .select('client_id', 'is_client_admin')
+      .first(),
+    targetUser.contact_id
+      ? scopedDb.table('contacts')
+          .where({ contact_name_id: targetUser.contact_id })
+          .select('client_id')
+          .first()
+      : Promise.resolve(undefined),
+  ]);
+
+  if (!actorContact?.is_client_admin || !actorContact.client_id) {
+    throw new Error('Permission denied: Client portal admin access is required');
+  }
+
+  if (!targetContact?.client_id || targetContact.client_id !== actorContact.client_id) {
+    throw new Error('Permission denied: Cannot manage users for another client');
+  }
 }
 
 /**
@@ -136,7 +203,7 @@ export const checkEmailExistsGlobally = withAuth(async (
   _ctx,
   email: string,
   userType?: 'internal' | 'client'
-): Promise<boolean> => {
+): Promise<boolean | ActionResult> => {
   try {
     const db = await getAdminConnection();
 
@@ -150,12 +217,23 @@ export const checkEmailExistsGlobally = withAuth(async (
         criteria.user_type = userType;
       }
 
-      const existingUser = await trx('users').where(criteria).first('user_id');
+      const existingUser = await tenantDb(trx, USER_TENANT_DISCOVERY)
+        .unscoped('users', 'global identity email uniqueness check before tenant selection')
+        .where(criteria)
+        .first('user_id');
       return !!existingUser;
     });
   } catch (error) {
     logger.error('Error checking email existence globally:', error);
-    throw error; // Preserve original error
+    const message = getErrorMessage(error);
+    if (message.startsWith('Permission denied:')) {
+      return { success: false, error: message };
+    }
+    const dbError = error as { code?: string };
+    if (dbError?.code === '22P02') {
+      return { success: false, error: 'The selected user type or email check input is invalid. Please refresh and try again.' };
+    }
+    throw error;
   }
 });
 
@@ -186,8 +264,8 @@ export const addUser = withAuth(async (
       }
 
       // Validate that the role exists
-      const role = await trx('roles')
-        .where({ role_id: userData.roleId, tenant: tenant || undefined })
+      const role = await tenantDb(trx, tenant).table('roles')
+        .where({ role_id: userData.roleId })
         .first();
 
       if (!role) {
@@ -226,23 +304,21 @@ export const addUser = withAuth(async (
 
       // Check license limits for  MSP (internal) users
       if (userData.userType !== 'client') {
-        const tenantRow = await trx('tenants')
-          .where({ tenant })
+        const tenantRow = await tenantDb(trx, tenant).table('tenants')
           .first('licensed_user_count', 'plan');
 
         if (!tenantRow) {
           throw new Error(`Tenant not found: ${tenant}`);
         }
 
-        const usedResult = await trx('users')
+        const usedResult = await tenantDb(trx, tenant).table('users')
           .where({
-            tenant,
             user_type: 'internal',
             is_inactive: false,
           })
           .count('* as count');
 
-        const used = parseInt(usedResult[0].count as string, 10);
+        const used = parseInt((usedResult as Array<{ count: string }>)[0].count, 10);
         const limit = tenantRow.licensed_user_count as number | null;
         const plan = tenantRow.plan as string | null | undefined;
 
@@ -277,13 +353,13 @@ export const addUser = withAuth(async (
           return {
             success: false,
             code: 'LICENSE_LIMIT_REACHED',
-            error: `You've reached the seat limit (${seatLimit.seats}) of your Alga appliance license.`,
+            error: `You've reached the seat limit (${seatLimit.seats}) of your Alga appliance license. Add seats at nineminds.com/portal, then use "Refresh license now" on the License page.`,
           };
         }
 
       }
 
-      const [newUser] = await trx('users')
+      const [newUser] = await tenantDb(trx, tenant).table('users')
         .insert({
           first_name: userData.firstName,
           last_name: userData.lastName,
@@ -297,7 +373,7 @@ export const addUser = withAuth(async (
           reports_to: userData.reportsTo || undefined
         }).returning(USER_RESPONSE_FIELD_NAMES);
 
-      await trx('user_roles').insert({
+      await tenantDb(trx, tenant).table('user_roles').insert({
         user_id: newUser.user_id,
         role_id: userData.roleId,
         tenant: tenant || undefined
@@ -340,9 +416,38 @@ export const addUser = withAuth(async (
     logger.error('Error adding user:', error);
     const message = getErrorMessage(error);
     if (message.startsWith('Permission denied:')) {
-      throw error;
+      return { success: false, code: 'PERMISSION_DENIED', error: message };
     }
-    throw new Error('Failed to add user');
+    if (message.startsWith('Tenant not found:')) {
+      return {
+        success: false,
+        code: 'USER_CREATE_FAILED',
+        error: 'Tenant not found. Please refresh and try again.',
+      };
+    }
+    const dbError = error as { code?: string; column?: string };
+    if (dbError?.code === '23505') {
+      return {
+        success: false,
+        code: 'EMAIL_ALREADY_EXISTS',
+        error: 'A user with this email address already exists',
+      };
+    }
+    if (dbError?.code === '23503' || dbError?.code === '22P02') {
+      return {
+        success: false,
+        code: 'USER_CREATE_FAILED',
+        error: 'One of the selected user values is invalid or no longer exists. Please refresh and try again.',
+      };
+    }
+    if (dbError?.code === '23502') {
+      return {
+        success: false,
+        code: 'USER_CREATE_FAILED',
+        error: `Missing required user field${dbError.column ? `: ${dbError.column}` : ''}.`,
+      };
+    }
+    throw error;
   }
 });
 
@@ -359,8 +464,12 @@ export const deleteUser = withAuth(async (
         throwPermissionError('delete user');
       }
 
-      return await trx('clients')
-        .where({ account_manager_id: userId, tenant: tenant || undefined })
+      // Client-portal callers may only delete client users of their own
+      // company; internal callers are gated by the RBAC check above.
+      await assertPortalUserManagementScope(user, tenant, trx, userId);
+
+      return await tenantDb(trx, tenant).table('clients')
+        .where({ account_manager_id: userId })
         .first();
     });
 
@@ -387,16 +496,16 @@ export const deleteUser = withAuth(async (
     }
 
     const result = await deleteEntityWithValidation('user', userId, db, tenant, async (trx, tenantId) => {
-      const tenantOrUndef = tenantId || undefined;
       const actorId = user.user_id;
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenantId).table(table);
 
       // Citus does not enforce ON DELETE SET NULL / CASCADE on distributed
       // tables, so every FK pointing at users(tenant, user_id) must be
       // cleared explicitly here regardless of what the migration declared.
 
       // ── Self-FK on users ──────────────────────────────────────────────
-      await trx('users')
-        .where({ reports_to: userId, tenant: tenantOrUndef })
+      await tenantDb(trx, tenantId).table('users')
+        .where({ reports_to: userId })
         .update({ reports_to: null });
 
       // ── Audit / owner columns (nullable) → SET NULL ───────────────────
@@ -444,8 +553,8 @@ export const deleteUser = withAuth(async (
         ['authorization_bundle_rules', 'created_by'],
       ];
       for (const [table, column] of nullColumns) {
-        await trx(table)
-          .where({ [column]: userId, tenant: tenantOrUndef })
+        await tenantScopedTable(table)
+          .where({ [column]: userId })
           .update({ [column]: null });
       }
 
@@ -474,8 +583,8 @@ export const deleteUser = withAuth(async (
         ['tenant_telemetry_settings', 'updated_by'],
       ];
       for (const [table, column] of reassignColumns) {
-        await trx(table)
-          .where({ [column]: userId, tenant: tenantOrUndef })
+        await tenantScopedTable(table)
+          .where({ [column]: userId })
           .update({ [column]: actorId });
       }
 
@@ -503,43 +612,51 @@ export const deleteUser = withAuth(async (
         'user_preferences',
       ];
       for (const table of deleteByUserId) {
-        await trx(table).where({ user_id: userId, tenant: tenantOrUndef }).del();
+        await tenantScopedTable(table).where({ user_id: userId }).del();
       }
 
       // import_jobs uses created_by, not user_id
-      await trx('import_jobs').where({ created_by: userId, tenant: tenantOrUndef }).del();
+      await tenantScopedTable('import_jobs').where({ created_by: userId }).del();
+
+      // Pending invites created by this user live only in metadata JSONB
+      // (no FK), so drop them explicitly — otherwise a departed admin's
+      // outstanding invitations stay acceptable for up to 24h.
+      await tenantScopedTable('user_invitations')
+        .whereRaw("metadata->>'created_by' = ?", [userId])
+        .whereNull('used_at')
+        .del();
 
       // Activity group items must precede groups (items.group_id → groups).
-      await trx('user_activity_group_items')
-        .where({ tenant: tenantOrUndef })
-        .whereIn('group_id', function () {
-          this.select('group_id')
-            .from('user_activity_groups')
-            .where({ user_id: userId, tenant: tenantOrUndef });
-        })
+      await tenantScopedTable('user_activity_group_items')
+        .whereIn(
+          'group_id',
+          tenantScopedTable('user_activity_groups')
+            .select('group_id')
+            .where({ user_id: userId })
+        )
         .del();
-      await trx('user_activity_groups').where({ user_id: userId, tenant: tenantOrUndef }).del();
+      await tenantScopedTable('user_activity_groups').where({ user_id: userId }).del();
 
       // ── EE-only tables (guarded) ──────────────────────────────────────
       if (isEnterprise) {
         if (await trx.schema.hasTable('platform_notification_recipients')) {
-          await trx('platform_notification_recipients')
-            .where({ user_id: userId, tenant: tenantOrUndef })
+          await tenantScopedTable('platform_notification_recipients')
+            .where({ user_id: userId })
             .del();
         }
         if (await trx.schema.hasTable('user_auth_accounts')) {
-          await trx('user_auth_accounts')
-            .where({ user_id: userId, tenant: tenantOrUndef })
+          await tenantScopedTable('user_auth_accounts')
+            .where({ user_id: userId })
             .del();
         }
         if (await trx.schema.hasTable('chats')) {
-          await trx('chats')
-            .where({ user_id: userId, tenant: tenantOrUndef })
+          await tenantScopedTable('chats')
+            .where({ user_id: userId })
             .update({ user_id: null });
         }
       }
 
-      const deleted = await trx('users').where({ user_id: userId, tenant: tenantOrUndef }).del();
+      const deleted = await tenantScopedTable('users').where({ user_id: userId }).del();
       if (!deleted || deleted === 0) {
         throw new Error('User record not found or could not be deleted');
       }
@@ -570,6 +687,27 @@ export const deleteUser = withAuth(async (
     return response;
   } catch (error) {
     logger.error('Error deleting user:', error);
+    const message = getErrorMessage(error);
+    if (message.startsWith('Permission denied:')) {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'PERMISSION_DENIED',
+        message,
+        dependencies: [],
+        alternatives: []
+      };
+    }
+    if (message.includes('not found')) {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'NOT_FOUND',
+        message: 'User not found. It may have already been deleted. Please refresh and try again.',
+        dependencies: [],
+        alternatives: []
+      };
+    }
     return {
       success: false,
       canDelete: false,
@@ -599,10 +737,51 @@ export const updateUser = withAuth(async (
         throwPermissionError('update user');
       }
 
+      // Client-portal callers may only manage client users of their own
+      // company (self-profile updates above are unaffected). Email changes by
+      // portal callers are allowed for in-scope users, matching the
+      // sanctioned portal admin flow (updateClientUser). Internal callers are
+      // gated by the RBAC check above.
+      if (!isOwnProfile) {
+        await assertPortalUserManagementScope(currentUser, tenant, trx, userId);
+      }
+
+      // Defense-in-depth against mass-assignment: this generic profile-update
+      // path must never set privileged identity/credential columns. Dedicated
+      // flows exist for password, 2FA, and role/type/tenant changes. Without
+      // this, a user updating their own profile (isOwnProfile, no permission
+      // gate) could escalate by setting e.g. user_type or disabling their 2FA.
+      const PROTECTED_USER_FIELDS: ReadonlyArray<keyof IUser> = [
+        'tenant', 'user_type', 'hashed_password', 'two_factor_secret', 'two_factor_enabled',
+      ];
+      for (const field of PROTECTED_USER_FIELDS) {
+        if (field in userData) {
+          delete (userData as Record<string, unknown>)[field as string];
+        }
+      }
+
+      if (
+        userData.is_inactive === false
+        && isEnterprise
+        && await trx.schema.hasTable('scim_user_links')
+      ) {
+        const upstreamInactiveLink = await tenantDb(trx, tenant).table('scim_user_links')
+          .where({ user_id: userId, upstream_active: false })
+          .whereNot('link_state', 'unlinked')
+          .first();
+        if (upstreamInactiveLink) {
+          return {
+            success: false,
+            code: 'SCIM_MANAGED_INACTIVE',
+            error: 'This user is inactive in the connected directory. Reactivate them upstream or unlink SCIM management first.',
+          };
+        }
+      }
+
       // If user is being deactivated, clear default_assigned_to on boards
       if (userData.is_inactive === true) {
-        await trx('boards')
-          .where({ default_assigned_to: userId, tenant })
+        await tenantDb(trx, tenant).table('boards')
+          .where({ default_assigned_to: userId })
           .update({ default_assigned_to: null });
       }
 
@@ -634,8 +813,8 @@ export const updateUser = withAuth(async (
         // changing — otherwise editing any field (e.g. setting a manager)
         // would re-validate the unchanged email and could trip on legitimate
         // cross-tenant duplicates.
-        const existing = await trx('users')
-          .where({ user_id: userId, tenant: tenant || undefined })
+        const existing = await tenantDb(trx, tenant).table('users')
+          .where({ user_id: userId })
           .select('email', 'user_type')
           .first();
         const currentEmail = existing?.email?.toLowerCase();
@@ -692,9 +871,38 @@ export const updateUser = withAuth(async (
     logger.error(`Failed to update user with id ${userId}:`, error);
     const message = getErrorMessage(error);
     if (message.startsWith('Permission denied:')) {
-      throw error;
+      return { success: false, code: 'PERMISSION_DENIED', error: message };
     }
-    throw new Error('Failed to update user');
+    if (message === 'User not found') {
+      return {
+        success: false,
+        code: 'USER_UPDATE_FAILED',
+        error: 'User not found. Please refresh and try again.',
+      };
+    }
+    const dbError = error as { code?: string; column?: string };
+    if (dbError?.code === '23505') {
+      return {
+        success: false,
+        code: 'EMAIL_ALREADY_EXISTS',
+        error: 'A user with this email address already exists',
+      };
+    }
+    if (dbError?.code === '23503' || dbError?.code === '22P02') {
+      return {
+        success: false,
+        code: 'USER_UPDATE_FAILED',
+        error: 'One of the selected user values is invalid or no longer exists. Please refresh and try again.',
+      };
+    }
+    if (dbError?.code === '23502') {
+      return {
+        success: false,
+        code: 'USER_UPDATE_FAILED',
+        error: `Missing required user field${dbError.column ? `: ${dbError.column}` : ''}.`,
+      };
+    }
+    throw error;
   }
 });
 
@@ -703,7 +911,7 @@ export const updateUserRoles = withAuth(async (
   { tenant },
   userId: string,
   roleIds: string[]
-): Promise<void> => {
+): Promise<void | ActionResult> => {
   try {
     const {knex: db} = await createTenantKnex();
 
@@ -713,8 +921,8 @@ export const updateUserRoles = withAuth(async (
       }
 
       // Delete existing roles
-      await trx('user_roles')
-        .where({ user_id: userId, tenant: tenant || undefined })
+      await tenantDb(trx, tenant).table('user_roles')
+        .where({ user_id: userId })
         .del();
 
       // Insert new roles
@@ -724,7 +932,7 @@ export const updateUserRoles = withAuth(async (
           role_id: roleId,
           tenant: tenant || undefined
         }));
-        await trx('user_roles').insert(userRoles);
+        await tenantDb(trx, tenant).table('user_roles').insert(userRoles);
       }
     });
 
@@ -744,7 +952,27 @@ export const updateUserRoles = withAuth(async (
     revalidatePath('/settings');
   } catch (error) {
     logger.error(`Failed to update roles for user with id ${userId}:`, error);
-    throw new Error('Failed to update user roles');
+    const message = getErrorMessage(error);
+    if (message.startsWith('Permission denied:')) {
+      return { success: false, error: message };
+    }
+    const dbError = error as { code?: string; column?: string };
+    if (dbError?.code === '22P02' || dbError?.code === '23503') {
+      return {
+        success: false,
+        error: 'One of the selected users or roles is invalid or no longer exists. Please refresh and try again.',
+      };
+    }
+    if (dbError?.code === '23502') {
+      return {
+        success: false,
+        error: `Missing required user role field${dbError.column ? `: ${dbError.column}` : ''}.`,
+      };
+    }
+    if (dbError?.code === '23505') {
+      return { success: false, error: 'That user already has one of the selected roles.' };
+    }
+    throw error;
   }
 });
 
@@ -752,13 +980,18 @@ export async function verifyContactEmail(email: string): Promise<{ exists: boole
   try {
     // Email suffix functionality removed for security - only check contacts
     const contact = await withAdminTransaction(async (trx: Knex.Transaction) => {
-      return await trx('contacts')
-        .join('clients', function() {
-          this.on('clients.client_id', '=', 'contacts.client_id')
-              .andOn('clients.tenant', '=', 'contacts.tenant');
-        })
+      const discoveryDb = tenantDb(trx, USER_TENANT_DISCOVERY);
+      const contactQuery = discoveryDb.unscoped('contacts', 'tenant discovery for client portal registration contact lookup');
+      discoveryDb.tenantJoin(contactQuery, 'clients', 'clients.client_id', 'contacts.client_id');
+
+      return await contactQuery
         .where({ 'contacts.email': email.toLowerCase() })
-        .select('contacts.contact_name_id', 'contacts.client_id', 'contacts.is_inactive', 'contacts.tenant')
+        .select({
+          contact_name_id: 'contacts.contact_name_id',
+          client_id: 'contacts.client_id',
+          is_inactive: 'contacts.is_inactive',
+          tenant: 'contacts.tenant',
+        })
         .first();
     });
 
@@ -774,7 +1007,7 @@ export async function verifyContactEmail(email: string): Promise<{ exists: boole
     };
   } catch (error) {
     logger.error('Failed to verify contact email:', error);
-    throw new Error('Failed to verify contact email');
+    throw error;
   }
 }
 
@@ -793,19 +1026,19 @@ export const registerClientUser = withAuth(async (
       }
 
       // First verify the contact exists and get their tenant
-      const contact = await trx('contacts')
-        .join('clients', function() {
-          this.on('clients.client_id', '=', 'contacts.client_id')
-              .andOn('clients.tenant', '=', 'contacts.tenant');
-        })
+      const discoveryDb = tenantDb(trx, USER_TENANT_DISCOVERY);
+      const contactQuery = discoveryDb.unscoped('contacts', 'tenant discovery for client portal registration contact lookup');
+      discoveryDb.tenantJoin(contactQuery, 'clients', 'clients.client_id', 'contacts.client_id');
+
+      const contact = await contactQuery
         .where({ 'contacts.email': email.toLowerCase() })
-        .select(
-          'contacts.contact_name_id',
-          'contacts.client_id',
-          'contacts.tenant',
-          'contacts.is_inactive',
-          'contacts.full_name'
-        )
+        .select({
+          contact_name_id: 'contacts.contact_name_id',
+          client_id: 'contacts.client_id',
+          tenant: 'contacts.tenant',
+          is_inactive: 'contacts.is_inactive',
+          full_name: 'contacts.full_name',
+        })
         .first();
 
       if (!contact) {
@@ -839,7 +1072,7 @@ export const registerClientUser = withAuth(async (
       const hashedPassword = await hashPassword(password);
       logger.debug('Password hashed successfully');
 
-      const [newUser] = await trx('users')
+      const [newUser] = await tenantDb(trx, contact.tenant).table('users')
         .insert({
           email: email.toLowerCase(),
           username: email.toLowerCase(),
@@ -855,9 +1088,8 @@ export const registerClientUser = withAuth(async (
         .returning(['user_id']);
 
       // Get the default client portal user role (must exist via migrations)
-      const clientRole = await trx('roles')
+      const clientRole = await tenantDb(trx, contact.tenant).table('roles')
         .where({
-          tenant: contact.tenant,
           client: true,
           msp: false
         })
@@ -869,7 +1101,7 @@ export const registerClientUser = withAuth(async (
       }
 
       // Assign the role to the user
-      await trx('user_roles').insert({
+      await tenantDb(trx, contact.tenant).table('user_roles').insert({
         user_id: newUser.user_id,
         role_id: clientRole.role_id,
         tenant: contact.tenant
@@ -879,6 +1111,36 @@ export const registerClientUser = withAuth(async (
     });
   } catch (error) {
     logger.error('Error registering client user:', error);
+    const message = getErrorMessage(error);
+    if (message.startsWith('Permission denied:')) {
+      return {
+        success: false,
+        code: 'REGISTRATION_FAILED',
+        error: message,
+      };
+    }
+    if (message === 'Client portal User role not found for tenant') {
+      return {
+        success: false,
+        code: 'REGISTRATION_FAILED',
+        error: 'Client portal role is not configured for this tenant. Please refresh and try again.',
+      };
+    }
+    const dbError = error as { code?: string };
+    if (dbError?.code === '23505') {
+      return {
+        success: false,
+        code: 'EMAIL_ALREADY_EXISTS',
+        error: 'A user with this email address already exists',
+      };
+    }
+    if (dbError?.code === '23503' || dbError?.code === '22P02') {
+      return {
+        success: false,
+        code: 'REGISTRATION_FAILED',
+        error: 'One of the selected registration records is invalid or no longer exists. Please refresh and try again.',
+      };
+    }
     return {
       success: false,
       code: 'REGISTRATION_FAILED',
@@ -970,6 +1232,15 @@ export const adminChangeUserPassword = withAuth(async (
     // Verify users are in the same tenant
     if (targetUser.tenant !== currentUser.tenant) {
       return { success: false, error: 'Unauthorized: Cannot modify user from different tenant' };
+    }
+
+    // This flow is for MSP staff only. The 'Admin' role-name check below is
+    // also satisfied by the client portal 'Admin' role, so gating on it alone
+    // would let portal admins reset MSP staff passwords. Portal admins must
+    // use the portal's own flow (resetClientUserPassword), which enforces
+    // same-company scoping.
+    if (currentUser.user_type !== 'internal') {
+      return { success: false, error: 'Unauthorized: Internal staff privileges required' };
     }
 
     const currentUserRoles = await getUserRoles(currentUser.user_id);
@@ -1085,7 +1356,7 @@ export const uploadUserAvatar = withAuth(async (
       errorStack: error.stack,
       errorName: error.name
     });
-    return { success: false, error: error.message || 'An unexpected error occurred while uploading the avatar.' };
+    return { success: false, error: 'An unexpected error occurred while uploading the avatar.' };
   }
 });
 
@@ -1155,6 +1426,6 @@ export const deleteUserAvatar = withAuth(async (
       errorStack: error.stack,
       errorName: error.name
     });
-    return { success: false, error: error.message || 'An unexpected error occurred while deleting the avatar.' };
+    return { success: false, error: 'An unexpected error occurred while deleting the avatar.' };
   }
 });

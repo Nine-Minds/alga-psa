@@ -3,27 +3,29 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/formatting/src",
   "projectType": "library",
-  "tags": ["scope:formatting", "type:horizontal"],
+  "tags": [
+    "scope:formatting",
+    "type:horizontal"
+  ],
   "targets": {
     "build": {
       "executor": "nx:run-script",
       "options": {
         "script": "build"
       },
-      "dependsOn": ["^build"]
-    },
-    "test": {
-      "executor": "@nx/vite:test",
-      "outputs": ["{workspaceRoot}/coverage/packages/formatting"],
-      "options": {
-        "passWithNoTests": true
-      }
+      "dependsOn": [
+        "^build"
+      ]
     },
     "lint": {
       "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"],
+      "outputs": [
+        "{options.outputFile}"
+      ],
       "options": {
-        "lintFilePatterns": ["packages/formatting/**/*.{ts,tsx}"]
+        "lintFilePatterns": [
+          "packages/formatting/**/*.{ts,tsx}"
+        ]
       }
     }
   }

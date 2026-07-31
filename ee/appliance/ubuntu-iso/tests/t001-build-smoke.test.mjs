@@ -129,7 +129,7 @@ test('T001 build smoke: remastered ISO is branded and includes the offline appli
   assert.equal(fs.existsSync(path.join(overlayRoot, 'scripts')), true);
   assert.equal(fs.existsSync(path.join(overlayRoot, 'manifests', 'local-path-storage.yaml')), true);
   assert.equal(fs.existsSync(path.join(overlayRoot, 'flux')), true);
-  assert.equal(fs.existsSync(path.join(overlayRoot, 'releases', 'channels')), true);
+  assert.equal(fs.existsSync(path.join(overlayRoot, 'releases')), false);
   assert.equal(fs.existsSync(path.join(overlayRoot, 'status-ui', 'dist', 'index.html')), true);
   assert.equal(fs.existsSync(path.join(overlayRoot, 'status-ui', 'dist', 'setup', 'index.html')), true);
 
@@ -137,7 +137,7 @@ test('T001 build smoke: remastered ISO is branded and includes the offline appli
   assert.equal(fs.readFileSync(path.join(isoRoot, '.disk', 'info'), 'utf8'), 'AlgaPSA Install\n');
   assert.equal(fs.readFileSync(build.labelFile, 'utf8'), 'ALGAPSA_INSTALL\n');
   assert.equal(fs.existsSync(path.join(isoRoot, 'alga-overlay', 'opt', 'alga-appliance', 'host-service')), true);
-  assert.equal(fs.existsSync(path.join(isoRoot, 'alga-overlay', 'opt', 'alga-appliance', 'releases', 'channels')), true);
+  assert.equal(fs.existsSync(path.join(isoRoot, 'alga-overlay', 'opt', 'alga-appliance', 'releases')), false);
 
   const grubConfig = fs.readFileSync(path.join(isoRoot, 'boot', 'grub', 'grub.cfg'), 'utf8');
   assert.match(grubConfig, /menuentry "AlgaPSA Install"/);
@@ -198,7 +198,7 @@ test('T004 Temporal chart waits for schema-safe startup and creates the default 
   assert.match(job.spec.template.spec.containers[0].command.join('\n'), /temporal operator namespace create/);
 });
 
-test('T005 temporal-worker profile injects NEXTAUTH_SECRET from alga-core secrets', () => {
+test('T005 temporal-worker profile injects appliance auth, public URL, and Redis configuration', () => {
   const docs = helmTemplate(temporalWorkerChartPath, temporalWorkerProfileValuesPath);
   const deployment = docs.find((doc) => doc.kind === 'Deployment' && doc.metadata?.name === 'test-release-temporal-worker');
   assert.ok(deployment);
@@ -208,6 +208,14 @@ test('T005 temporal-worker profile injects NEXTAUTH_SECRET from alga-core secret
   assert.deepEqual(nextAuth.valueFrom.secretKeyRef, {
     name: 'alga-core-sebastian-secrets',
     key: 'NEXTAUTH_SECRET'
+  });
+  assert.equal(env.find((entry) => entry.name === 'APPLICATION_URL')?.value, 'http://alga-core.msp.svc.cluster.local:3000');
+  assert.equal(env.find((entry) => entry.name === 'NEXT_PUBLIC_BASE_URL')?.value, 'https://alga.local');
+  assert.equal(env.find((entry) => entry.name === 'REDIS_HOST')?.value, 'redis.msp.svc.cluster.local');
+  assert.equal(env.find((entry) => entry.name === 'REDIS_PORT')?.value, '6379');
+  assert.deepEqual(env.find((entry) => entry.name === 'REDIS_PASSWORD')?.valueFrom.secretKeyRef, {
+    name: 'redis-credentials',
+    key: 'REDIS_PASSWORD'
   });
 });
 

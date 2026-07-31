@@ -56,7 +56,8 @@
       "noOpenTicketsInRange": "Keine offenen Tickets in diesem Zeitraum.",
       "noDate": "Kein Datum",
       "notAvailable": "k. A.",
-      "noEmailChannels": "Es sind keine E-Mail-Kanaele konfiguriert."
+      "noEmailChannels": "Es sind keine E-Mail-Kanaele konfiguriert.",
+      "noCapacity": "nicht verfügbar – keine Kapazität festgelegt"
     },
     "fallbackTitle": "Bericht",
     "dateRange": {
@@ -95,7 +96,12 @@
       "bucketOverageHours": "Kontingentueberziehung",
       "openAssigned": "Offen zugewiesen",
       "activeAssignees": "Aktive Bearbeiter",
-      "avgResolutionTime": "Durchschn. Loesungszeit"
+      "avgResolutionTime": "Durchschn. Loesungszeit",
+      "workedHours": "Geleistete Stunden",
+      "capacityHours": "Kapazitätsstunden",
+      "utilization": "Auslastung",
+      "usersWithoutCapacity": "Fehlende Kapazität",
+      "activeUsers": "Aktive Benutzer"
     },
     "sections": {
       "openByStatus": "Offen nach Status",
@@ -113,7 +119,8 @@
       "upcomingRenewals": "Anstehende Verlaengerungen",
       "bucketUsage": "Kontingentnutzung",
       "performanceByAssignee": "Leistung nach Bearbeiter",
-      "closedByAssignee": "Geschlossen nach Bearbeiter"
+      "closedByAssignee": "Geschlossen nach Bearbeiter",
+      "utilizationByUser": "Auslastung pro Benutzer"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -136,9 +143,13 @@
         "title": "Teamleistung",
         "description": "Teamdurchsatz und Antwortzustand für Arbeitsbereiche mit mehreren Benutzern."
       },
+      "employeeUtilization": {
+        "title": "Mitarbeiterauslastung",
+        "description": "Geleistete Stunden im Verhältnis zur wöchentlichen Kapazität jedes Teammitglieds."
+      },
       "contractReports": {
         "title": "Vertragsberichte",
-        "description": "Vertragserlöse, Verlängerungen, Kontingentnutzung und einfache Rentabilität."
+        "description": "Vertragsumsatz, Verlängerungen, Kontingentnutzung und Rentabilität."
       }
     },
     "table": {
@@ -158,7 +169,11 @@
       "entries": "Eintraege",
       "ticket": "Ticket",
       "entered": "Eingegeben",
-      "age": "Alter"
+      "age": "Alter",
+      "workedHours": "Geleistete Stunden",
+      "capacityHours": "Kapazitätsstunden",
+      "utilization": "Auslastung",
+      "capacityEstimated": "Geschätzt aus der Wochenkapazität; keine Arbeitszeiten festgelegt."
     },
     "statusValues": {
       "connected": "Verbunden",
@@ -220,8 +235,8 @@
         "empty": "Keine vertragsbasierten Kontingente gefunden"
       },
       "profitability": {
-        "title": "Einfacher Rentabilitätsbericht",
-        "description": "Einfache Gewinnmargen sowie Umsatz- vs.-Kosten-Analyse nach Vertrag",
+        "title": "Rentabilitätsbericht",
+        "description": "Kunden-, Vertrags- und Ticketmarge auf Basis der konfigurierten internen Kostensätze.",
         "empty": "Keine Rentabilitätsdaten verfügbar"
       }
     },
@@ -250,6 +265,108 @@
       "upcoming": "Bevorstehend",
       "yes": "Ja",
       "no": "Nein"
+    },
+    "profitability": {
+      "formats": {
+        "percent": "{{value}}%",
+        "hours": "{{value}} Std.",
+        "hourlyRate": "{{value}}/Std.",
+        "ticketWithNumber": "#{{number}} {{title}}",
+        "billableHours": "{{value}} abrechenbare Std.",
+        "listSeparator": ", ",
+        "attributionUncosted": "{{attribution}} (ohne Kostensatz)",
+        "unassignedLine": "{{line}} (nicht zugewiesen)"
+      },
+      "errors": {
+        "load": "Rentabilitätsdaten konnten nicht geladen werden",
+        "title": "Fehler beim Laden der Rentabilität"
+      },
+      "table": {
+        "revenue": "Umsatz",
+        "laborCost": "Arbeitskosten",
+        "materialCost": "Materialkosten",
+        "margin": "Marge",
+        "marginPct": "Marge %",
+        "hours": "Stunden",
+        "ehr": "Eff. Stundensatz",
+        "client": "Kunde",
+        "agreement": "Vertrag",
+        "ticket": "Ticket",
+        "attribution": "Zuordnung",
+        "contractLine": "Position",
+        "cost": "Kosten"
+      },
+      "actions": {
+        "toggleLines": "Positionen ein-/ausblenden",
+        "apply": "Anwenden",
+        "configureCostRates": "Kostensätze konfigurieren",
+        "clearClient": "Alle Kunden",
+        "clearAgreement": "Alle Verträge"
+      },
+      "rowTypes": {
+        "adHoc": "Ad-hoc",
+        "unattributed": "Nicht zugeordnet",
+        "unassigned": "Nicht zugewiesen"
+      },
+      "attribution": {
+        "exact": "Exakt",
+        "allocated": "Umgelegt",
+        "none": "Keine"
+      },
+      "status": {
+        "uncosted": "Ohne Kostensatz"
+      },
+      "filters": {
+        "startDate": "Startdatum",
+        "endDate": "Enddatum"
+      },
+      "timingTooltip": "Der Umsatz wird nach Rechnungsdatum gefiltert. Arbeitskosten werden nach Arbeitsdatum gefiltert. Abgerechnete Materialkosten folgen dem Rechnungsdatum, nicht abgerechnete Materialkosten dem Erstellungsdatum.",
+      "empty": {
+        "costRates": "Es sind keine Kostensätze konfiguriert. Arbeitsstunden werden als ohne Kostensatz angezeigt, bis ein Mandantenstandard oder ein Benutzersatz vorhanden ist.",
+        "clients": "Für diesen Zeitraum sind keine Kunden-Rentabilitätsdaten verfügbar.",
+        "lines": "Keine Details auf Positionsebene für diese Zeile.",
+        "tickets": "Für diese Auswahl sind keine Ticket-Rentabilitätsdaten verfügbar.",
+        "agreements": "Für diese Auswahl sind keine Vertrags-Rentabilitätsdaten verfügbar."
+      },
+      "warnings": {
+        "title": "Berichtswarnungen",
+        "uncostedMinutes": "{{hours}} Stunden ohne Kostensatz",
+        "unattributedMinutes": "{{hours}} nicht zugeordnete Stunden",
+        "unapprovedMinutes": "{{hours}} nicht genehmigte Stunden enthalten",
+        "zeroDuration": "{{count}} Einträge ohne Dauer",
+        "uncostedMaterials": "{{count}} Materialien ohne Kostenangabe",
+        "unconvertedRevenue": "{{count}} nicht umgerechnete Umsatzzeilen",
+        "materialCurrencyMismatch": "{{count}} Währungsabweichungen bei Materialien"
+      },
+      "summary": {
+        "revenue": "Umsatz",
+        "laborCost": "Arbeitskosten",
+        "materialCost": "Materialkosten",
+        "margin": "Marge",
+        "marginPct": "Marge %",
+        "ehr": "Effektiver Stundensatz"
+      },
+      "sections": {
+        "clients": "Kunden",
+        "clientsDescription": "Wählen Sie einen Kunden aus, um Details zu Verträgen und Tickets anzuzeigen.",
+        "agreements": "Verträge für {{client}}",
+        "agreementsDescription": "Ad-hoc- und nicht zugeordnete Zeilen sind enthalten, damit die Summen übereinstimmen.",
+        "linesForAgreement": "Vertragspositionen für {{agreement}}",
+        "tickets": "Tickets",
+        "ticketsForAgreement": "Ticketkosten und -umsatz für {{agreement}}.",
+        "ticketsDescription": "Arbeits- und Materialkosten, zugeordneter Umsatz und Marge auf Ticketebene."
+      },
+      "fallbacks": {
+        "untitledTicket": "Ticket ohne Titel"
+      },
+      "print": {
+        "dateRange": "{{start}} bis {{end}}",
+        "client": "Kunde",
+        "allClients": "Alle Kunden",
+        "agreement": "Vertrag",
+        "allAgreements": "Alle Verträge",
+        "currency": "Währung"
+      }
     }
   },
   "contractPerformance": {

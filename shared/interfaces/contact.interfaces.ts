@@ -91,6 +91,7 @@ export interface CreateContactInput {
   additional_email_addresses?: ContactEmailAddressInput[];
   phone_numbers?: ContactPhoneNumberInput[];
   client_id?: string;
+  inbound_ticket_defaults_id?: string | null;
   role?: string;
   notes?: string;
   is_inactive?: boolean;
@@ -108,6 +109,7 @@ export interface UpdateContactInput {
   additional_email_addresses?: ContactEmailAddressInput[];
   phone_numbers?: ContactPhoneNumberInput[];
   client_id?: string;
+  inbound_ticket_defaults_id?: string | null;
   role?: string;
   notes?: string;
   is_inactive?: boolean;

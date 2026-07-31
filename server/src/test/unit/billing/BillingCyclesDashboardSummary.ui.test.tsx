@@ -76,16 +76,16 @@ vi.mock('@alga-psa/billing/actions/contractActions', () => ({
   getContracts: vi.fn(async () => []),
 }));
 
-vi.mock('@alga-psa/clients/actions', () => ({
-  getAllClientsPaginated: vi.fn(async () => ({
+vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({
+  getAllClientsPaginatedForBilling: vi.fn(async () => ({
     clients: [{ client_id: 'client-1', client_name: 'Acme Co' }],
     totalCount: 1
   })),
-  getClientsWithBillingCycleRangePaginated: vi.fn(async () => ({
+  getClientsWithBillingCycleRangePaginatedForBilling: vi.fn(async () => ({
     clients: [{ client_id: 'client-1', client_name: 'Acme Co' }],
     totalCount: 1
   })),
-  getActiveClientContractsByClientIds: vi.fn(async () => []),
+  getActiveClientContractsByClientIdsForBilling: vi.fn(async () => []),
 }));
 
 describe('Billing → Billing Cycles summary view', () => {

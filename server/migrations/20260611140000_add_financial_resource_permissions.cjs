@@ -9,6 +9,9 @@
  *
  * Admin and Finance MSP roles get the full financial permission set, matching
  * their existing full billing/credit/invoice access.
+ *
+ * Uses raw knex (every query already passes `tenant` explicitly) so the
+ * migration runner does not load the @alga-psa/db ESM package.
  */
 
 const FINANCIAL_PERMISSION_DEFS = [

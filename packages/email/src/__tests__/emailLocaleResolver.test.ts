@@ -29,7 +29,19 @@ function fakeKnex(table: string) {
 }
 
 vi.mock('@alga-psa/db', () => ({
-  getConnection: vi.fn(async () => fakeKnex)
+  getConnection: vi.fn(async () => fakeKnex),
+  // tenantDb facade scopes every query by tenant. The fake knex above is a
+  // single-`where` builder, so merge the tenant filter into the row-specific
+  // predicate (or apply it alone when the caller issues no `.where`).
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => {
+      const base = conn(t);
+      return {
+        where: (cond: Record<string, any>) => base.where({ ...cond, tenant }),
+        first: (...args: any[]) => base.where({ tenant }).first(...args),
+      };
+    },
+  }),
 }));
 
 import { resolveEmailLocale, getTenantDefaultLocale } from '../emailLocaleResolver';

@@ -1,9 +1,18 @@
 /**
  * Form Schema Model
  */
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { IFormSchema } from './formRegistryInterfaces';
 import { v4 as uuidv4 } from 'uuid';
+
+function workflowFormSchemas(knex: Knex, tenant: string): Knex.QueryBuilder<IFormSchema, IFormSchema[]> {
+  return tenantDb(knex, tenant).table<IFormSchema>('workflow_form_schemas');
+}
+
+function systemWorkflowFormDefinitions(knex: Knex, tenant?: string): Knex.QueryBuilder<any, any> {
+  return tenantDb(knex, tenant || '__system_workflow_form_schema_catalog__').table('system_workflow_form_definitions');
+}
 
 export default class FormSchemaModel {
   private static readonly TABLE_NAME = 'workflow_form_schemas';
@@ -16,8 +25,8 @@ export default class FormSchemaModel {
     tenant: string,
     schemaId: string
   ): Promise<IFormSchema | null> {
-    const result = await knex(this.TABLE_NAME)
-      .where({ tenant, schema_id: schemaId })
+    const result = await workflowFormSchemas(knex, tenant)
+      .where({ schema_id: schemaId })
       .first();
     
     return result || null;
@@ -35,7 +44,7 @@ export default class FormSchemaModel {
   ): Promise<IFormSchema | null> {
     if (formType === 'system') {
       // Fetch from system_workflow_form_definitions
-      const systemFormRecord = await knex('system_workflow_form_definitions')
+      const systemFormRecord = await systemWorkflowFormDefinitions(knex, tenant)
         .where({ name: formId }) // In system table, formId is the 'name'
         .modify((queryBuilder) => {
           if (version) {
@@ -71,8 +80,8 @@ export default class FormSchemaModel {
       }
       // Fetch from tenant-specific workflow_form_schemas
       // Tenant-specific schemas are not versioned independently here. Version param is ignored.
-      const result = await knex(this.TABLE_NAME)
-        .where({ tenant, form_id: formId })
+      const result = await workflowFormSchemas(knex, tenant)
+        .where({ form_id: formId })
         .first();
       
       return result || null;
@@ -92,7 +101,7 @@ export default class FormSchemaModel {
     const now = new Date().toISOString();
     const schemaId = `schema-${uuidv4()}`;
     
-    await knex(this.TABLE_NAME)
+    await workflowFormSchemas(knex, tenant)
       .insert({
         ...formSchema,
         schema_id: schemaId,
@@ -115,8 +124,8 @@ export default class FormSchemaModel {
   ): Promise<boolean> {
     const now = new Date().toISOString();
     
-    const result = await knex(this.TABLE_NAME)
-      .where({ tenant, form_id: formId })
+    const result = await workflowFormSchemas(knex, tenant)
+      .where({ form_id: formId })
       .update({
         ...updates,
         updated_at: now
@@ -133,8 +142,8 @@ export default class FormSchemaModel {
     tenant: string,
     formId: string
   ): Promise<boolean> {
-    const result = await knex(this.TABLE_NAME)
-      .where({ tenant, form_id: formId })
+    const result = await workflowFormSchemas(knex, tenant)
+      .where({ form_id: formId })
       .delete();
     
     return result > 0;
@@ -147,8 +156,7 @@ export default class FormSchemaModel {
     knex: Knex,
     tenant: string
   ): Promise<IFormSchema[]> {
-    return knex(this.TABLE_NAME)
-      .where({ tenant })
+    return workflowFormSchemas(knex, tenant)
       .orderBy('created_at', 'desc');
   }
 
@@ -164,8 +172,7 @@ export default class FormSchemaModel {
       return [];
     }
     
-    return knex(this.TABLE_NAME)
-      .where({ tenant })
+    return workflowFormSchemas(knex, tenant)
       .whereIn('form_id', formIds);
   }
 
@@ -177,10 +184,10 @@ export default class FormSchemaModel {
     tenant: string,
     formId: string
   ): Promise<boolean> {
-    const result = await knex(this.TABLE_NAME)
-      .where({ tenant, form_id: formId })
+    const result = await workflowFormSchemas(knex, tenant)
+      .where({ form_id: formId })
       .count('* as count')
-      .first();
+      .first() as { count?: string | number } | undefined;
     
     return parseInt(String(result?.count || '0'), 10) > 0;
   }

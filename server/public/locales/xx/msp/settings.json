@@ -1,4 +1,8 @@
 {
+  "escalationManager": {
+    "unsavedChanges_one": "11111 {{count}} 11111",
+    "unsavedChanges_other": "11111 {{count}} 11111"
+  },
   "page": {
     "title": "11111"
   },
@@ -50,13 +54,23 @@
     },
     "clients": {
       "title": "11111",
+      "help": "11111",
+      "currentDefault": "11111 {{name}} 11111",
+      "yourCompanyBadge": "11111",
       "table": {
         "name": "11111",
         "default": "11111",
         "actions": "11111"
       },
       "placeholder": "11111",
-      "addClient": "11111"
+      "addClient": "11111",
+      "confirmDialog": {
+        "title": "11111",
+        "message": "11111 {{current}} 11111 {{next}} 11111 {{next}} 11111",
+        "messageInitial": "11111 {{next}} 11111 {{next}} 11111",
+        "confirm": "11111",
+        "cancel": "11111"
+      }
     },
     "messages": {
       "success": {
@@ -72,6 +86,7 @@
         "updateTimezone": "11111",
         "selectClient": "11111",
         "clientNotFound": "11111",
+        "clientAlreadyAdded": "11111",
         "addClient": "11111",
         "removeClient": "11111",
         "setDefaultClient": "11111",
@@ -146,6 +161,7 @@
       "copying": "11111",
       "createUser": "11111",
       "sendInvitation": "11111",
+      "sendTeamInvitation": "11111",
       "cancel": "11111"
     },
     "form": {
@@ -179,7 +195,8 @@
       },
       "passwordAlert": {
         "withPassword": "11111",
-        "withoutPassword": "11111"
+        "withoutPassword": "11111",
+        "withoutPasswordMsp": "11111"
       },
       "requirePasswordChange": "11111"
     },
@@ -204,9 +221,11 @@
     "messages": {
       "success": {
         "portalInvitationSent": "11111",
+        "teamInvitationSent": "11111",
         "clientPortalUserCreated": "11111",
         "copiedVanityLink": "11111",
-        "copiedCanonicalLink": "11111"
+        "copiedCanonicalLink": "11111",
+        "invitationRevoked": "11111"
       },
       "error": {
         "fetchUsers": "11111",
@@ -233,6 +252,7 @@
         "contactNotFound": "11111",
         "contactMissingEmailGeneric": "11111",
         "contactInvalidEmail": "11111",
+        "invalidEmail": "11111",
         "noDefaultClient": "11111",
         "noDefaultLocation": "11111",
         "noLocationEmail": "11111",
@@ -241,8 +261,17 @@
         "roleRequired": "11111",
         "invalidRole": "11111",
         "licenseLimitReached": "11111",
-        "soloPlanLimit": "11111"
+        "soloPlanLimit": "11111",
+        "revokeInvitation": "11111",
+        "invitationNotFound": "11111"
       }
+    },
+    "invitations": {
+      "title": "11111",
+      "description": "11111",
+      "expiresPrefix": "11111",
+      "revoke": "11111",
+      "revoking": "11111"
     }
   },
   "userDetails": {
@@ -263,6 +292,27 @@
       "reportsTo": {
         "label": "11111",
         "placeholder": "11111"
+      },
+      "workSchedule": {
+        "label": "11111",
+        "help": "11111",
+        "setHours": "11111",
+        "clear": "11111",
+        "weeklyTotal": "11111 {{hours}} 11111",
+        "days": {
+          "0": "11111",
+          "1": "11111",
+          "2": "11111",
+          "3": "11111",
+          "4": "11111",
+          "5": "11111",
+          "6": "11111"
+        }
+      },
+      "weeklyCapacity": {
+        "label": "11111",
+        "placeholder": "11111",
+        "help": "11111"
       },
       "lastLogin": "11111",
       "roles": "11111",
@@ -308,7 +358,9 @@
         "passwordTooShort": "11111",
         "passwordChangeFailed": "11111",
         "passwordChangeError": "11111",
-        "permissionDenied": "11111"
+        "permissionDenied": "11111",
+        "invalidCapacity": "11111",
+        "invalidWorkSchedule": "11111"
       }
     },
     "loading": "11111"
@@ -359,9 +411,9 @@
         "new": "11111",
         "lead": "11111"
       },
-      "memberCount": "11111 {{count}} 11111",
-      "memberCount_plural": "11111 {{count}} 11111",
-      "leadName": "11111 {{name}} 11111"
+      "leadName": "11111 {{name}} 11111",
+      "memberCount_one": "11111 {{count}} 11111",
+      "memberCount_other": "11111 {{count}} 11111"
     },
     "messages": {
       "error": {
@@ -380,7 +432,6 @@
       "display": "11111",
       "ticketNumbering": "11111",
       "boards": "11111",
-      "statuses": "11111",
       "priorities": "11111",
       "categories": "11111",
       "checklistTemplates": "11111"
@@ -485,7 +536,9 @@
         "boardManager": "11111",
         "order": "11111",
         "itilBoard": "11111",
-        "actions": "11111"
+        "actions": "11111",
+        "ticketLoad": "11111",
+        "statuses": "11111"
       },
       "statusLabels": {
         "active": "11111",
@@ -504,7 +557,8 @@
         "up": "11111",
         "down": "11111",
         "remove": "11111",
-        "addStatus": "11111"
+        "addStatus": "11111",
+        "back": "11111"
       },
       "fields": {
         "boardName": {
@@ -582,6 +636,10 @@
           "suppressAiHelp": "11111"
         },
         "liveTimer": {
+          "label": "11111",
+          "help": "11111"
+        },
+        "defaultBoard": {
           "label": "11111",
           "help": "11111"
         }
@@ -701,15 +759,46 @@
         "inactivityDaysLabel": "11111",
         "warningDaysLabel": "11111",
         "warningDaysPlaceholder": "11111",
+        "suppressContactNotificationsLabel": "11111",
+        "suppressContactNotificationsHelp": "11111",
+        "suppressInternalNotificationsLabel": "11111",
         "ruleEnabledLabel": "11111",
         "removeRule": "11111",
         "messages": {
           "fetchFailed": "11111",
           "autoCloseStatusRequired": "11111",
           "autoCloseDaysInvalid": "11111",
-          "autoCloseWarningInvalid": "11111"
+          "autoCloseWarningInvalid": "11111",
+          "autoCloseSuppressionInvalid": "11111"
         }
-      }
+      },
+      "editor": {
+        "sections": {
+          "general": "11111",
+          "generalHelp": "11111",
+          "assignment": "11111",
+          "assignmentHelp": "11111",
+          "inbound": "11111",
+          "inboundHelp": "11111",
+          "close": "11111",
+          "closeHelp": "11111",
+          "automation": "11111",
+          "automationHelp": "11111",
+          "statuses": "11111",
+          "statusesHelp": "11111",
+          "display": "11111",
+          "displayHelp": "11111"
+        },
+        "saveChanges": "11111",
+        "unsaved": "11111",
+        "unsavedShort": "11111",
+        "unsavedBanner": "11111",
+        "allSaved": "11111",
+        "reopenBadge": "11111",
+        "required": "11111"
+      },
+      "empty": "11111",
+      "searchPlaceholder": "11111"
     },
     "priorities": {
       "title": {
@@ -916,8 +1005,8 @@
       "messages": {
         "success": {
           "deleted": "11111",
-          "imported": "11111 {{count}} 11111",
-          "imported_plural": "11111 {{count}} 11111"
+          "imported_one": "11111 {{count}} 11111",
+          "imported_other": "11111 {{count}} 11111"
         },
         "error": {
           "fetchFailed": "11111",
@@ -1001,6 +1090,15 @@
     "openMenu": "11111"
   },
   "clientPortal": {
+    "features": {
+      "title": "11111",
+      "description": "11111",
+      "appointmentsLabel": "11111",
+      "appointmentsHelp": "11111",
+      "appointmentsEnabled": "11111",
+      "appointmentsDisabled": "11111",
+      "updateFailed": "11111"
+    },
     "branding": {
       "title": "11111",
       "description": "11111",
@@ -1011,7 +1109,8 @@
         "primaryColor": "11111",
         "secondaryColor": "11111",
         "supportEmail": "11111",
-        "supportPhone": "11111"
+        "supportPhone": "11111",
+        "heroGradient": "11111"
       },
       "help": {
         "companyName": "11111",
@@ -1019,7 +1118,12 @@
         "primaryColor": "11111",
         "secondaryColor": "11111",
         "supportEmail": "11111",
-        "supportPhone": "11111"
+        "supportPhone": "11111",
+        "heroGradient": "11111"
+      },
+      "heroGradient": {
+        "primaryShades": "11111",
+        "primarySecondary": "11111"
       },
       "preview": "11111",
       "previewDarkMode": "11111",
@@ -1049,7 +1153,22 @@
       "milestoneCompleted": "11111",
       "dayAgo": "11111",
       "createTicket": "11111",
-      "viewProjects": "11111"
+      "viewProjects": "11111",
+      "activeDevices": "11111",
+      "basicSupport": "11111",
+      "dashboardTitle": "11111",
+      "greeting": "11111",
+      "navAppointments": "11111",
+      "navDashboard": "11111",
+      "navDevices": "11111",
+      "navProjects": "11111",
+      "navServiceRequests": "11111",
+      "navTickets": "11111",
+      "serviceRequests": "11111",
+      "upcomingShort": "11111",
+      "upcomingVisits": "11111",
+      "welcomeBack": "11111",
+      "workspaceSection": "11111"
     },
     "signInPreview": {
       "portalTitle": "11111",
@@ -1118,6 +1237,17 @@
         "step2": "11111",
         "step3": "11111",
         "canonicalHostFallback": "11111"
+      },
+      "appliance": {
+        "helpText": "11111",
+        "checklistTitle": "11111",
+        "step1Prefix": "11111",
+        "step1Suffix": "11111",
+        "step2": "11111",
+        "step3": "11111",
+        "step4": "11111",
+        "docLinkText": "11111",
+        "neverSeenWarning": "11111 {{domain}} 11111"
       },
       "badges": {
         "pending_dns": "11111",
@@ -1213,6 +1343,176 @@
       "telemetry": {
         "title": "11111",
         "description": "11111"
+      }
+    },
+    "settingsForm": {
+      "enable": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "loading": "11111",
+      "loadError": "11111",
+      "save": "11111",
+      "saving": "11111"
+    },
+    "emailTemplatesUi": {
+      "preview": {
+        "subjectLabel": "11111",
+        "iframeTitle": "11111",
+        "sampleDataNote": "11111"
+      },
+      "errors": {
+        "loadFailed": "11111"
+      },
+      "list": {
+        "loading": "11111",
+        "templateCount": "11111 {{templateCount}} 11111",
+        "usingCustom": "11111",
+        "usingStandard": "11111"
+      },
+      "columns": {
+        "name": "11111",
+        "actions": "11111"
+      },
+      "fields": {
+        "language": "11111",
+        "subject": "11111",
+        "htmlContent": "11111",
+        "textContent": "11111"
+      },
+      "actions": {
+        "collapse": "11111",
+        "expand": "11111",
+        "edit": "11111",
+        "useStandard": "11111",
+        "view": "11111",
+        "customize": "11111",
+        "sending": "11111",
+        "sendTest": "11111",
+        "close": "11111",
+        "cancel": "11111",
+        "saving": "11111",
+        "save": "11111"
+      },
+      "description": "11111",
+      "filter": {
+        "languages": "11111",
+        "reset": "11111"
+      },
+      "test": {
+        "sentTo": "11111 {{recipient}} 11111",
+        "failed": "11111"
+      },
+      "view": {
+        "title": "11111 {{name}} 11111"
+      },
+      "tabs": {
+        "source": "11111",
+        "preview": "11111"
+      },
+      "common": {
+        "notAvailable": "11111"
+      },
+      "edit": {
+        "title": "11111 {{name}} 11111"
+      },
+      "languages": {
+        "en": "11111",
+        "fr": "11111",
+        "es": "11111",
+        "de": "11111",
+        "nl": "11111",
+        "it": "11111",
+        "pl": "11111",
+        "pt": "11111"
+      }
+    },
+    "categoriesUi": {
+      "errors": {
+        "loadCategories": "11111",
+        "loadSubtypes": "11111",
+        "save": "11111"
+      },
+      "loading": "11111",
+      "toasts": {
+        "saved": "11111",
+        "discarded": "11111"
+      },
+      "columns": {
+        "name": "11111",
+        "description": "11111",
+        "enabled": "11111",
+        "defaultForUsers": "11111",
+        "actions": "11111"
+      },
+      "tooltips": {
+        "cannotDisable": "11111",
+        "cannotModify": "11111"
+      },
+      "actions": {
+        "enableAllSubtypes": "11111",
+        "disableAllSubtypes": "11111",
+        "disable": "11111",
+        "enable": "11111",
+        "disableDefault": "11111",
+        "enableDefault": "11111",
+        "discardChanges": "11111",
+        "saving": "11111",
+        "saveChanges": "11111",
+        "cancel": "11111"
+      },
+      "help": {
+        "intro": "11111",
+        "enabledLabel": "11111",
+        "enabledDescription": "11111",
+        "defaultLabel": "11111",
+        "defaultDescription": "11111"
+      },
+      "unsavedChangesAlert": "11111",
+      "discardDialog": {
+        "title": "11111",
+        "message": "11111"
+      }
+    },
+    "internalCategoriesUi": {
+      "errors": {
+        "loadCategories": "11111",
+        "loadSubtypes": "11111",
+        "saveSettings": "11111"
+      },
+      "loading": "11111",
+      "toasts": {
+        "saveSuccess": "11111",
+        "changesDiscarded": "11111"
+      },
+      "columns": {
+        "name": "11111",
+        "description": "11111",
+        "enabled": "11111",
+        "defaultForUsers": "11111",
+        "actions": "11111"
+      },
+      "actions": {
+        "enableAllSubtypes": "11111",
+        "disableAllSubtypes": "11111",
+        "disable": "11111",
+        "enable": "11111",
+        "disableDefault": "11111",
+        "enableDefault": "11111",
+        "discardChanges": "11111",
+        "saving": "11111",
+        "saveChanges": "11111",
+        "cancel": "11111"
+      },
+      "intro": "11111",
+      "enabledLabel": "11111",
+      "enabledDescription": "11111",
+      "defaultForUsersLabel": "11111",
+      "defaultForUsersDescription": "11111",
+      "unsavedChangesAlert": "11111",
+      "discardDialog": {
+        "title": "11111",
+        "message": "11111"
       }
     }
   },
@@ -1507,8 +1807,6 @@
     },
     "sessions": {
       "title": "11111",
-      "subtitle": "11111 {{sessionCount}} 11111 {{userCount}} 11111",
-      "subtitle_plural": "11111 {{sessionCount}} 11111 {{userCount}} 11111",
       "filters": {
         "search": "11111",
         "searchPlaceholder": "11111",
@@ -1551,13 +1849,21 @@
         "loading": "11111",
         "noMatch": "11111",
         "noSessions": "11111"
-      }
+      },
+      "subtitle_one": "11111 {{sessionCount}} 11111 {{userCount}} 11111",
+      "subtitle_other": "11111 {{sessionCount}} 11111 {{userCount}} 11111"
     }
   },
   "ssoBulk": {
     "loading": {
       "title": "11111",
       "description": "11111"
+    },
+    "status": {
+      "title": "11111",
+      "caption": "11111",
+      "available": "11111",
+      "notConfigured": "11111"
     },
     "autoLink": {
       "title": "11111",
@@ -1749,6 +2055,10 @@
         "label": "11111",
         "description": "11111"
       },
+      "itDocumentation": {
+        "label": "11111",
+        "description": "11111"
+      },
       "communication": {
         "label": "11111",
         "description": "11111"
@@ -1779,6 +2089,10 @@
         "description": "11111"
       },
       "rmmSetup": {
+        "name": "11111",
+        "description": "11111"
+      },
+      "hudu": {
         "name": "11111",
         "description": "11111"
       },
@@ -1867,5 +2181,97 @@
   "language": {
     "selectLanguage": "11111",
     "languagesUpdated": "11111"
+  },
+  "settings": {
+    "assetTypes": {
+      "tab": "11111",
+      "title": "11111",
+      "description": "11111",
+      "loading": "11111",
+      "table": {
+        "name": "11111",
+        "builtin": "11111",
+        "slug": "11111",
+        "fieldCount": "11111",
+        "order": "11111",
+        "actions": "11111",
+        "openMenu": "11111"
+      },
+      "actions": {
+        "addType": "11111",
+        "edit": "11111",
+        "delete": "11111",
+        "cancel": "11111",
+        "save": "11111",
+        "create": "11111",
+        "confirmDelete": "11111"
+      },
+      "dialog": {
+        "createTitle": "11111",
+        "editTitle": "11111",
+        "nameLabel": "11111",
+        "namePlaceholder": "11111",
+        "displayOrderLabel": "11111",
+        "iconLabel": "11111",
+        "builtinSchemaHint": "11111"
+      },
+      "deleteDialog": {
+        "title": "11111",
+        "message": "11111 {{name}} 11111"
+      },
+      "messages": {
+        "created": "11111",
+        "updated": "11111",
+        "deleted": "11111"
+      },
+      "errors": {
+        "fetchFailed": "11111",
+        "saveFailed": "11111",
+        "deleteFailed": "11111",
+        "invalidName": "11111",
+        "invalidSchema": "11111",
+        "reservedSlug": "11111 {{slug}} 11111",
+        "slugConflict": "11111 {{slug}} 11111",
+        "notFound": "11111",
+        "builtinImmutable": "11111",
+        "builtinUndeletable": "11111",
+        "inUse": "11111 {{assetCount}} 11111",
+        "unknown": "11111"
+      },
+      "editor": {
+        "title": "11111",
+        "empty": "11111",
+        "addField": "11111",
+        "fieldLabel": "11111",
+        "fieldLabelPlaceholder": "11111",
+        "fieldKey": "11111",
+        "fieldKeyPlaceholder": "11111",
+        "fieldKind": "11111",
+        "fieldRequired": "11111",
+        "fieldOptions": "11111",
+        "fieldOptionsPlaceholder": "11111",
+        "moveUp": "11111",
+        "moveDown": "11111",
+        "removeField": "11111",
+        "kinds": {
+          "text": "11111",
+          "number": "11111",
+          "date": "11111",
+          "select": "11111",
+          "url": "11111",
+          "boolean": "11111"
+        },
+        "errors": {
+          "invalidKey": "11111",
+          "duplicateKey": "11111",
+          "missingLabel": "11111",
+          "invalidKind": "11111",
+          "invalidRequired": "11111",
+          "missingOptions": "11111",
+          "invalidOptions": "11111",
+          "invalidField": "11111"
+        }
+      }
+    }
   }
 }

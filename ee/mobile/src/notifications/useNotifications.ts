@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import * as Application from "expo-application";
+import * as Linking from "expo-linking";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { phase2Features } from "../features/phase2";
@@ -16,8 +17,28 @@ import { getStableDeviceId } from "../device/clientMetadata";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { logger } from "../logging/logger";
 import type { RootStackParamList } from "../navigation/types";
+import { listScheduleEntries } from "../api/schedule";
+import { startOfWeek, weekQueryRange } from "../features/schedule/scheduleUtils";
+import { SCHEDULE_REMINDER_KIND, syncScheduleReminders } from "./scheduleReminders";
 
 const STORED_TOKEN_KEY = "alga.mobile.push.registeredToken";
+
+type NotificationData = { ticketId?: string; kind?: string; url?: string };
+
+function navigateFromNotification(
+  data: NotificationData | undefined,
+  navigation: NativeStackNavigationProp<RootStackParamList>,
+): void {
+  if (data?.ticketId) {
+    navigation.navigate("TicketDetail", { ticketId: data.ticketId });
+    return;
+  }
+  if (data?.kind === SCHEDULE_REMINDER_KIND) {
+    // Route through the deep-link layer so the drawer tab resolves the same
+    // way as an external alga://schedule link.
+    void Linking.openURL("alga://schedule");
+  }
+}
 
 // Suppress OS notification when app is in foreground
 Notifications.setNotificationHandler({
@@ -91,23 +112,52 @@ export function useNotifications(): void {
     }
   }, [session?.accessToken, session?.tenantId, refreshSession]);
 
+  // Keep local schedule reminders in sync even when the Schedule tab is
+  // never opened: fetch the current week and (re)schedule reminders.
+  const syncUpcomingReminders = useCallback(async () => {
+    if (!session?.accessToken) return;
+    const config = getAppConfig();
+    if (!config.ok) return;
+
+    try {
+      const client = createApiClient({
+        baseUrl: config.baseUrl,
+        getTenantId: () => session.tenantId,
+        getUserAgentTag: () => "mobile/schedule-reminders",
+        onAuthError: refreshSession,
+      });
+      const { startIso, endIso } = weekQueryRange(startOfWeek(new Date()));
+      const result = await listScheduleEntries(client, {
+        apiKey: session.accessToken,
+        startDate: startIso,
+        endDate: endIso,
+        userId: session.user?.id ?? undefined,
+      });
+      if (result.ok && Array.isArray(result.data.data)) {
+        await syncScheduleReminders(result.data.data, { startIso, endIso });
+      }
+    } catch (err) {
+      logger.warn("[Notifications] Schedule reminder sync failed", { err });
+    }
+  }, [session?.accessToken, session?.tenantId, session?.user?.id, refreshSession]);
+
   // Register after login
   useEffect(() => {
     void registerToken();
-  }, [registerToken]);
+    void syncUpcomingReminders();
+  }, [registerToken, syncUpcomingReminders]);
 
   // Re-register on app resume (token may have rotated)
   useAppResume(() => {
     void registerToken();
+    void syncUpcomingReminders();
   });
 
   // Show in-app toast when notification arrives while app is foregrounded
   useEffect(() => {
     const sub = Notifications.addNotificationReceivedListener((notification) => {
       const { title, body } = notification.request.content;
-      const data = notification.request.content.data as
-        | { ticketId?: string }
-        | undefined;
+      const data = notification.request.content.data as NotificationData | undefined;
 
       showToast({
         message: title || body || "New notification",
@@ -115,7 +165,8 @@ export function useNotifications(): void {
         durationMs: 4000,
       });
 
-      // Navigate to ticket if data is present
+      // Navigate to ticket if data is present. Schedule reminders only toast:
+      // pulling the user away from what they're doing would be disruptive.
       if (data?.ticketId) {
         navigation.navigate("TicketDetail", { ticketId: data.ticketId });
       }
@@ -123,15 +174,11 @@ export function useNotifications(): void {
     return () => sub.remove();
   }, [navigation, showToast]);
 
-  // Handle notification tap → navigate to ticket
+  // Handle notification tap → navigate to the relevant screen
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as
-        | { ticketId?: string }
-        | undefined;
-      if (data?.ticketId) {
-        navigation.navigate("TicketDetail", { ticketId: data.ticketId });
-      }
+      const data = response.notification.request.content.data as NotificationData | undefined;
+      navigateFromNotification(data, navigation);
     });
     return () => sub.remove();
   }, [navigation]);
@@ -140,12 +187,8 @@ export function useNotifications(): void {
   useEffect(() => {
     void Notifications.getLastNotificationResponseAsync().then((response) => {
       if (!response) return;
-      const data = response.notification.request.content.data as
-        | { ticketId?: string }
-        | undefined;
-      if (data?.ticketId) {
-        navigation.navigate("TicketDetail", { ticketId: data.ticketId });
-      }
+      const data = response.notification.request.content.data as NotificationData | undefined;
+      navigateFromNotification(data, navigation);
     });
   }, [navigation]);
 }

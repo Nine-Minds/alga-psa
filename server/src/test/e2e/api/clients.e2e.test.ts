@@ -224,10 +224,12 @@ describe('Clients API E2E Tests', () => {
 
   describe('Client Locations', () => {
     let testClientId: string;
+    let testClientName: string;
 
     beforeEach(async () => {
       // Create a test client for location tests
       const clientData = createClientTestData();
+      testClientName = clientData.client_name;
       const response = await env.apiClient.post('/api/v1/clients', clientData);
       
       if (response.status !== 201) {
@@ -287,6 +289,41 @@ describe('Clients API E2E Tests', () => {
       expect(response.status).toBe(200);
       expect(response.data.data).toBeInstanceOf(Array);
       expect(response.data.data.length).toBeGreaterThan(0);
+    });
+
+    it('keeps one client list row when successive locations are made default', async () => {
+      const firstLocation = createClientLocationTestData({ is_default: true });
+      const secondLocation = createClientLocationTestData({ is_default: true });
+
+      const firstResponse = await env.apiClient.post(
+        `/api/v1/clients/${testClientId}/locations`,
+        firstLocation
+      );
+      const secondResponse = await env.apiClient.post(
+        `/api/v1/clients/${testClientId}/locations`,
+        secondLocation
+      );
+
+      expect(firstResponse.status).toBe(201);
+      expect(secondResponse.status).toBe(201);
+      expect(firstResponse.data.data.is_default).toBe(true);
+      expect(secondResponse.data.data.is_default).toBe(true);
+
+      const locationsResponse = await env.apiClient.get(`/api/v1/clients/${testClientId}/locations`);
+      const defaultLocations = locationsResponse.data.data.filter(
+        (location: { is_default: boolean }) => location.is_default
+      );
+      expect(defaultLocations).toHaveLength(1);
+      expect(defaultLocations[0].location_id).toBe(secondResponse.data.data.location_id);
+
+      const listResponse = await env.apiClient.get(
+        `/api/v1/clients?client_name=${encodeURIComponent(testClientName)}&limit=100&page=1`
+      );
+      expect(listResponse.status).toBe(200);
+      expect(
+        listResponse.data.data.filter((client: { client_id: string }) => client.client_id === testClientId)
+      ).toHaveLength(1);
+      expect(listResponse.data.pagination.total).toBe(1);
     });
   });
 

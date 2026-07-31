@@ -31,11 +31,20 @@ import {
   IAppointmentRequest
 } from '@alga-psa/scheduling/actions';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { Label } from '@alga-psa/ui/components/Label';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const EntryPopupContext = React.createContext<EntryPopupProps | null>(null);
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 interface EntryPopupProps {
   event: IScheduleEntry | null;
@@ -61,6 +70,12 @@ interface EntryPopupProps {
   focusedTechnicianId: string | null;
   canAssignOthers: boolean; // Derived from user_schedule:update permission in parent
   viewOnly?: boolean;
+  /**
+   * Pre-selects a work item for a NEW entry (the `slot` path), so the editor
+   * opens scoped to e.g. a ticket instead of ad-hoc. Ignored when editing an
+   * existing `event`.
+   */
+  initialWorkItem?: Omit<IWorkItem, 'tenant'> | null;
 }
 
 const EntryPopup: React.FC<EntryPopupProps> = ({
@@ -79,7 +94,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   canModifySchedule,
   focusedTechnicianId,
   canAssignOthers,
-  viewOnly = false
+  viewOnly = false,
+  initialWorkItem = null
 }) => {
   const [entryData, setEntryData] = useState<Omit<IScheduleEntry, 'tenant'>>(() => {
     if (event) {
@@ -93,15 +109,15 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     } else if (slot) {
       return {
         entry_id: '',
-        title: '',
+        title: initialWorkItem?.name || '',
         scheduled_start: new Date(slot.start),
         scheduled_end: new Date(slot.end),
         notes: '',
         created_at: new Date(),
         updated_at: new Date(),
-        work_item_id: null,
+        work_item_id: initialWorkItem?.work_item_id ?? null,
         status: 'scheduled',
-        work_item_type: 'ad_hoc',
+        work_item_type: initialWorkItem?.type ?? 'ad_hoc',
         // Use assigned_user_ids from slot if provided, otherwise default to focused technician or current user
         assigned_user_ids: slot.assigned_user_ids || (focusedTechnicianId ? [focusedTechnicianId] : [currentUserId]),
         is_private: false,
@@ -109,22 +125,22 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     } else {
       return {
         entry_id: '',
-        title: '',
+        title: initialWorkItem?.name || '',
         scheduled_start: new Date(),
         scheduled_end: new Date(),
         notes: '',
         created_at: new Date(),
         updated_at: new Date(),
-        work_item_id: null,
+        work_item_id: initialWorkItem?.work_item_id ?? null,
         status: 'scheduled',
-        work_item_type: 'ad_hoc',
+        work_item_type: initialWorkItem?.type ?? 'ad_hoc',
         // Default to focused technician if available, otherwise current user
         assigned_user_ids: focusedTechnicianId ? [focusedTechnicianId] : [currentUserId],
         is_private: false,
       };
     }
   });
-  const [selectedWorkItem, setSelectedWorkItem] = useState<Omit<IWorkItem, 'tenant'> | null>(null);
+  const [selectedWorkItem, setSelectedWorkItem] = useState<Omit<IWorkItem, 'tenant'> | null>(initialWorkItem ?? null);
   const [recurrencePattern, setRecurrencePattern] = useState<IRecurrencePattern | null>(null);
   const [isEditingWorkItem, setIsEditingWorkItem] = useState(false);
   const [availableWorkItems, setAvailableWorkItems] = useState<IWorkItem[]>([]);
@@ -231,14 +247,20 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           // For existing work items, fetch them
           if (selectedWorkItem && selectedWorkItem.work_item_id && selectedWorkItem.type && selectedWorkItem.type !== 'ad_hoc') {
             const items = await getWorkItemById(selectedWorkItem.work_item_id, selectedWorkItem.type);
-            if (items) {
+            if (isReturnedActionError(items)) {
+              toast.error(getErrorMessage(items));
+              setAvailableWorkItems([]);
+            } else if (items) {
               setAvailableWorkItems([items]);
             } else {
               setAvailableWorkItems([]);
             }
           } else if (entryData.work_item_id && entryData.work_item_type && entryData.work_item_type !== 'ad_hoc') {
             const items = await getWorkItemById(entryData.work_item_id, entryData.work_item_type);
-            if (items) {
+            if (isReturnedActionError(items)) {
+              toast.error(getErrorMessage(items));
+              setAvailableWorkItems([]);
+            } else if (items) {
               setAvailableWorkItems([items]);
             } else {
               setAvailableWorkItems([]);
@@ -284,25 +306,34 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         // Fetch work item information if editing an existing entry
         if (event.work_item_id && event.work_item_type !== 'ad_hoc') {
           getWorkItemById(event.work_item_id, event.work_item_type).then((workItem) => {
+            if (isReturnedActionError(workItem)) {
+              toast.error(getErrorMessage(workItem));
+              return;
+            }
             if (workItem) {
               setSelectedWorkItem(workItem);
             }
+          }).catch((error) => {
+            handleError(error, t('entryPopup.errors.loadWorkItem', { defaultValue: 'Failed to load work item.' }));
           });
         }
       } else if (slot) {
         setEntryData({
           entry_id: '',
-          title: '',
+          title: initialWorkItem?.name || '',
           scheduled_start: new Date(slot.start),
           scheduled_end: new Date(slot.end),
           notes: '',
           created_at: new Date(),
           updated_at: new Date(),
-          work_item_id: null,
+          work_item_id: initialWorkItem?.work_item_id ?? null,
           status: 'scheduled',
-          work_item_type: 'ad_hoc',
+          work_item_type: initialWorkItem?.type ?? 'ad_hoc',
           assigned_user_ids: slot.assigned_user_ids || (focusedTechnicianId ? [focusedTechnicianId] : [currentUserId]),
         });
+        if (initialWorkItem) {
+          setSelectedWorkItem(initialWorkItem);
+        }
       }
     };
 

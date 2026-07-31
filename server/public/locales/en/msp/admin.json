@@ -8,7 +8,7 @@
       "close": "Close",
       "edit": "Edit",
       "delete": "Delete",
-      "deleting": "Deleting\u2026",
+      "deleting": "Deleting…",
       "verify": "Verify"
     },
     "states": {
@@ -42,7 +42,7 @@
       }
     },
     "alerts": {
-      "enabled": "\u2713 Telemetry enabled. All categories are enabled by default for new users, but they can opt-out individually if desired.",
+      "enabled": "✓ Telemetry enabled. All categories are enabled by default for new users, but they can opt-out individually if desired.",
       "centralizedControl": "Centralized control: Users cannot opt-out individually. Ensure compliance with local privacy regulations."
     },
     "anonymization": {
@@ -69,17 +69,17 @@
     "privacy": {
       "collectTitle": "What We Collect",
       "collectItems": {
-        "errors": "\u2022 Error information (no sensitive data)",
-        "performance": "\u2022 Performance metrics (page load times, API response times)",
-        "usage": "\u2022 Feature usage patterns (which features are used)",
-        "system": "\u2022 System metrics (for infrastructure optimization)"
+        "errors": "• Error information (no sensitive data)",
+        "performance": "• Performance metrics (page load times, API response times)",
+        "usage": "• Feature usage patterns (which features are used)",
+        "system": "• System metrics (for infrastructure optimization)"
       },
       "excludeTitle": "What We DON'T Collect",
       "excludeItems": {
-        "personalInfo": "\u2022 Personal information (names, emails, addresses)",
-        "clientData": "\u2022 Client data or business information",
-        "passwords": "\u2022 Passwords or authentication tokens",
-        "files": "\u2022 File contents or documents"
+        "personalInfo": "• Personal information (names, emails, addresses)",
+        "clientData": "• Client data or business information",
+        "passwords": "• Passwords or authentication tokens",
+        "files": "• File contents or documents"
       }
     },
     "footer": {
@@ -140,6 +140,14 @@
       "fromAddress": {
         "label": "From Address",
         "placeholder": "noreply@example.com"
+      },
+      "authHint": "Leave username and password blank if your relay accepts mail without authentication.",
+      "security": {
+        "title": "Connection Security",
+        "secure": "Use implicit TLS (SSL on connect, typically port 465)",
+        "requireTls": "Require STARTTLS upgrade (ports 587 / 25)",
+        "verifyCert": "Verify server certificate",
+        "verifyCertHint": "Turn this off only for a trusted relay on your own network that uses a self-signed certificate."
       }
     },
     "resend": {
@@ -169,7 +177,16 @@
       "loadEmailSettings": "Failed to load email settings",
       "saveSettings": "Failed to save settings",
       "addDomain": "Failed to add domain",
-      "verifyDomain": "Failed to verify domain"
+      "verifyDomain": "Failed to verify domain",
+      "testOutbound": "Failed to test outbound email"
+    },
+    "test": {
+      "title": "Test Outbound Email",
+      "description": "Saves the current settings, then verifies the provider connection. Enter an address to also send a test message.",
+      "recipientLabel": "Send test to (optional)",
+      "recipientPlaceholder": "you@example.com",
+      "run": "Test Connection",
+      "testing": "Testing..."
     }
   },
   "microsoft365": {
@@ -240,15 +257,15 @@
     "menu": {
       "edit": "Edit",
       "delete": "Delete",
-      "deleting": "Deleting\u2026"
+      "deleting": "Deleting…"
     },
     "help": {
       "title": "How It Works",
       "items": {
-        "providerReference": "\u2022 Each email provider can reference one ticket defaults configuration",
-        "requiredValues": "\u2022 When an email creates a ticket, these defaults provide required field values",
-        "systemCreator": "\u2022 System-generated tickets will show \"System\" as the creator when entered_by is null",
-        "scenarios": "\u2022 You can create different defaults for different email scenarios (support, billing, etc.)"
+        "providerReference": "• Each email provider can reference one ticket defaults configuration",
+        "requiredValues": "• When an email creates a ticket, these defaults provide required field values",
+        "systemCreator": "• System-generated tickets will show \"System\" as the creator when entered_by is null",
+        "scenarios": "• You can create different defaults for different email scenarios (support, billing, etc.)"
       }
     },
     "errors": {
@@ -362,7 +379,8 @@
         "assignments": "Assignments",
         "simulator": "Simulator",
         "clone": "Clone",
-        "archive": "Archive"
+        "archive": "Archive",
+        "openMenu": "Open menu"
       }
     },
     "workspace": {

@@ -8,6 +8,7 @@
 import logger from '@alga-psa/core/logger';
 import axios from 'axios';
 import { createTenantKnex } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { createNinjaOneClient } from '../ninjaOneClient';
 import type { NinjaOneDevicePatchStatus } from '../../../../interfaces/ninjaone.interfaces';
 
@@ -77,12 +78,12 @@ export async function syncPatchStatus(
       batchSize,
     });
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenantId);
     const client = await createNinjaOneClient(tenantId, undefined, { integrationId });
 
     // Build query for assets to sync
-    let assetsQuery = knex('assets')
-      .where({ tenant })
+    let assetsQuery = db.table('assets')
       .where('rmm_provider', 'ninjaone')
       .whereNotNull('rmm_device_id')
       .whereIn('asset_type', ['workstation', 'server']);
@@ -124,8 +125,8 @@ export async function syncPatchStatus(
             const softwarePatches = totalPending - osPatches;
 
             // Update the extension table with patch data
-            await knex(extensionTable)
-              .where({ tenant, asset_id: asset.asset_id })
+            await db.table(extensionTable)
+              .where({ asset_id: asset.asset_id })
               .update({
                 pending_patches: totalPending,
                 pending_os_patches: osPatches,
@@ -135,8 +136,8 @@ export async function syncPatchStatus(
               });
 
             // Update the main asset's last sync timestamp
-            await knex('assets')
-              .where({ tenant, asset_id: asset.asset_id })
+            await db.table('assets')
+              .where({ asset_id: asset.asset_id })
               .update({
                 last_rmm_sync_at: new Date().toISOString(),
               });
@@ -208,11 +209,12 @@ export async function syncDevicePatchStatus(
   error?: string;
 }> {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenantId);
 
     // Get the asset
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await db.table('assets')
+      .where({ asset_id: assetId })
       .first();
 
     if (!asset) {
@@ -241,8 +243,8 @@ export async function syncDevicePatchStatus(
       : 'server_assets';
 
     // Update extension table
-    await knex(extensionTable)
-      .where({ tenant, asset_id: assetId })
+    await db.table(extensionTable)
+      .where({ asset_id: assetId })
       .update({
         pending_patches: totalPending,
         pending_os_patches: osPatches,
@@ -252,8 +254,8 @@ export async function syncDevicePatchStatus(
       });
 
     // Update main asset
-    await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    await db.table('assets')
+      .where({ asset_id: assetId })
       .update({
         last_rmm_sync_at: new Date().toISOString(),
       });

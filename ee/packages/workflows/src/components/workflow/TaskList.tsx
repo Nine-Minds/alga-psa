@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getUserTasks, claimTask, unclaimTask } from '@alga-psa/workflows/actions/workflow-actions/taskInboxActions';
-import { WorkflowTaskStatus, type TaskDetails, type TaskQueryParams } from '@alga-psa/workflows/persistence';
+import { WorkflowTaskStatus } from '@alga-psa/shared/workflow/persistence/workflowTaskStatus';
+import type { TaskDetails, TaskQueryParams } from '@alga-psa/workflows/persistence';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge, BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { Card } from '@alga-psa/ui/components/Card';
@@ -133,8 +134,7 @@ export function TaskList({
       ));
     } catch (err) {
       setError(t('taskList.errors.claimFailed', {
-        defaultValue: 'Failed to claim task: {{error}}',
-        error: err instanceof Error ? err.message : t('taskList.errors.unknown', { defaultValue: 'Unknown error' }),
+        defaultValue: 'Failed to claim task. Please try again.',
       }));
       console.error('Error claiming task:', err);
     } finally {
@@ -156,8 +156,7 @@ export function TaskList({
       ));
     } catch (err) {
       setError(t('taskList.errors.unclaimFailed', {
-        defaultValue: 'Failed to unclaim task: {{error}}',
-        error: err instanceof Error ? err.message : t('taskList.errors.unknown', { defaultValue: 'Unknown error' }),
+        defaultValue: 'Failed to unclaim task. Please try again.',
       }));
       console.error('Error unclaiming task:', err);
     } finally {

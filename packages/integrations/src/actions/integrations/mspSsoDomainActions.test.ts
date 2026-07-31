@@ -46,6 +46,10 @@ const resolveTxtMock = vi.hoisted(() =>
   vi.fn(async (_hostname: string): Promise<string[][]> => [])
 );
 
+const hasTenantProviderCredentialsMock = vi.hoisted(() =>
+  vi.fn(async (_tenant: string, _provider: string): Promise<boolean> => false)
+);
+
 function normalize(value: string): string {
   const trimmed = value.trim().toLowerCase();
   return trimmed.startsWith('@') ? trimmed.slice(1) : trimmed;
@@ -227,13 +231,25 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: knexMock })),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+    unscoped: (table: string, _reason?: string) => conn(table),
+  }),
 }));
 
 vi.mock('node:dns/promises', () => ({
   resolveTxt: resolveTxtMock,
 }));
 
+// Preserve the real resolution helpers (normalize/validate) the action file relies on; only
+// swap the credential probe, which otherwise reaches the secret provider / Microsoft resolver.
+vi.mock('@alga-psa/auth/lib/sso/mspSsoResolution', async (importActual) => {
+  const actual = await importActual<typeof import('@alga-psa/auth/lib/sso/mspSsoResolution')>();
+  return { ...actual, hasTenantProviderCredentials: hasTenantProviderCredentialsMock };
+});
+
 import {
+  getMspSsoTenantCredentialStatus,
   listMspSsoDomainClaims,
   listMspSsoLoginDomains,
   refreshMspSsoDomainClaimChallenge,
@@ -253,53 +269,55 @@ describe('msp sso domain actions', () => {
     hasChallengeTable = true;
     resolveTxtMock.mockReset();
     resolveTxtMock.mockResolvedValue([]);
+    hasTenantProviderCredentialsMock.mockReset();
+    hasTenantProviderCredentialsMock.mockResolvedValue(false);
   });
 
   it('T004: list action denies unauthorized users and client users', async () => {
     mockUser = { user_id: 'client-1', user_type: 'client' };
-    await expect(listMspSsoLoginDomains()).resolves.toEqual({ success: false, error: 'Forbidden' });
+    await expect(listMspSsoLoginDomains()).resolves.toEqual({ success: false, error: 'Permission denied: You do not have permission to manage MSP SSO login domains.' });
 
     mockUser = { user_id: 'user-1', user_type: 'internal' };
     hasPermissionValue = false;
-    await expect(listMspSsoLoginDomains()).resolves.toEqual({ success: false, error: 'Forbidden' });
+    await expect(listMspSsoLoginDomains()).resolves.toEqual({ success: false, error: 'Permission denied: You do not have permission to manage MSP SSO login domains.' });
   });
 
   it('T004b: lifecycle actions deny unauthorized users and client users', async () => {
     mockUser = { user_id: 'client-1', user_type: 'client' };
     await expect(requestMspSsoDomainClaim({ domain: 'acme.com' })).resolves.toEqual({
       success: false,
-      error: 'Forbidden',
+      error: 'Permission denied: You do not have permission to manage MSP SSO login domains.',
     });
     await expect(refreshMspSsoDomainClaimChallenge({ claimId: 'claim-1' })).resolves.toEqual({
       success: false,
-      error: 'Forbidden',
+      error: 'Permission denied: You do not have permission to manage MSP SSO login domains.',
     });
     await expect(verifyMspSsoDomainClaimOwnership({ claimId: 'claim-1' })).resolves.toEqual({
       success: false,
-      error: 'Forbidden',
+      error: 'Permission denied: You do not have permission to manage MSP SSO login domains.',
     });
     await expect(revokeMspSsoDomainClaim({ claimId: 'claim-1' })).resolves.toEqual({
       success: false,
-      error: 'Forbidden',
+      error: 'Permission denied: You do not have permission to manage MSP SSO login domains.',
     });
 
     mockUser = { user_id: 'user-1', user_type: 'internal' };
     hasPermissionValue = false;
     await expect(requestMspSsoDomainClaim({ domain: 'acme.com' })).resolves.toEqual({
       success: false,
-      error: 'Forbidden',
+      error: 'Permission denied: You do not have permission to manage MSP SSO login domains.',
     });
     await expect(refreshMspSsoDomainClaimChallenge({ claimId: 'claim-1' })).resolves.toEqual({
       success: false,
-      error: 'Forbidden',
+      error: 'Permission denied: You do not have permission to manage MSP SSO login domains.',
     });
     await expect(verifyMspSsoDomainClaimOwnership({ claimId: 'claim-1' })).resolves.toEqual({
       success: false,
-      error: 'Forbidden',
+      error: 'Permission denied: You do not have permission to manage MSP SSO login domains.',
     });
     await expect(revokeMspSsoDomainClaim({ claimId: 'claim-1' })).resolves.toEqual({
       success: false,
-      error: 'Forbidden',
+      error: 'Permission denied: You do not have permission to manage MSP SSO login domains.',
     });
   });
 
@@ -351,7 +369,7 @@ describe('msp sso domain actions', () => {
     });
 
     mockUser = { user_id: 'client-1', user_type: 'client' };
-    await expect(listMspSsoDomainClaims()).resolves.toEqual({ success: false, error: 'Forbidden' });
+    await expect(listMspSsoDomainClaims()).resolves.toEqual({ success: false, error: 'Permission denied: You do not have permission to manage MSP SSO login domains.' });
   });
 
   it('T006/T007: save action persists and normalizes valid domains', async () => {
@@ -638,5 +656,52 @@ describe('msp sso domain actions', () => {
     expect(revokeResult.success).toBe(true);
     expect(revokeResult.claim?.claim_status).toBe('revoked');
     expect(challengeRows.find((row) => row.id === 'challenge-1')?.is_active).toBe(false);
+  });
+
+  describe('getMspSsoTenantCredentialStatus', () => {
+    it('denies client users and users without settings permission (safe default)', async () => {
+      mockUser = { user_id: 'client-1', user_type: 'client' };
+      await expect(getMspSsoTenantCredentialStatus()).resolves.toEqual({
+        success: false,
+        google: false,
+        microsoft: false,
+      });
+
+      mockUser = { user_id: 'user-1', user_type: 'internal' };
+      hasPermissionValue = false;
+      await expect(getMspSsoTenantCredentialStatus()).resolves.toEqual({
+        success: false,
+        google: false,
+        microsoft: false,
+      });
+      expect(hasTenantProviderCredentialsMock).not.toHaveBeenCalled();
+    });
+
+    it('reports both providers absent when no tenant credentials exist', async () => {
+      hasTenantProviderCredentialsMock.mockResolvedValue(false);
+      await expect(getMspSsoTenantCredentialStatus()).resolves.toEqual({
+        success: true,
+        google: false,
+        microsoft: false,
+      });
+    });
+
+    it('reports each provider independently', async () => {
+      hasTenantProviderCredentialsMock.mockImplementation(async (_tenant, provider) => provider === 'google');
+      await expect(getMspSsoTenantCredentialStatus()).resolves.toEqual({
+        success: true,
+        google: true,
+        microsoft: false,
+      });
+    });
+
+    it('returns a safe default when the credential probe throws', async () => {
+      hasTenantProviderCredentialsMock.mockRejectedValue(new Error('secret provider unavailable'));
+      await expect(getMspSsoTenantCredentialStatus()).resolves.toEqual({
+        success: false,
+        google: false,
+        microsoft: false,
+      });
+    });
   });
 });

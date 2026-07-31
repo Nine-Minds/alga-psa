@@ -5,6 +5,9 @@ const isExperimentalFeatureEnabledMock = vi.hoisted(() =>
   vi.fn<(featureKey: string) => Promise<boolean>>(),
 );
 const getCurrentUserMock = vi.hoisted(() => vi.fn());
+const assertPsaChatProductAccessMock = vi.hoisted(() =>
+  vi.fn<() => Promise<Response | null>>(),
+);
 
 const createStructuredCompletionStreamMock = vi.hoisted(() =>
   vi.fn<
@@ -23,6 +26,10 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: getCurrentUserMock,
 }));
 
+vi.mock('@/app/api/chat/productAccess', () => ({
+  assertPsaChatProductAccess: assertPsaChatProductAccessMock,
+}));
+
 vi.mock('@product/chat/entry', () => ({
   ChatCompletionsService: {
     createStructuredCompletionStream: createStructuredCompletionStreamMock,
@@ -37,6 +44,8 @@ describe('POST /api/chat/v1/completions/stream', () => {
     isExperimentalFeatureEnabledMock.mockReset();
     getCurrentUserMock.mockReset();
     getCurrentUserMock.mockResolvedValue({ tenant: 'tenant-1', user_id: 'user-1' });
+    assertPsaChatProductAccessMock.mockReset();
+    assertPsaChatProductAccessMock.mockResolvedValue(null);
     createStructuredCompletionStreamMock.mockReset();
     process.env.EDITION = 'ee';
     delete process.env.NEXT_PUBLIC_EDITION;
@@ -97,6 +106,36 @@ describe('POST /api/chat/v1/completions/stream', () => {
 
     expect(isExperimentalFeatureEnabledMock).toHaveBeenCalledWith('aiAssistant');
     expect(createStructuredCompletionStreamMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns a structured 402 when the gateway rejects the stream', async () => {
+    isExperimentalFeatureEnabledMock.mockResolvedValue(true);
+    createStructuredCompletionStreamMock.mockResolvedValue(
+      (async function* () {
+        throw Object.assign(new Error('402 out of credits'), {
+          name: 'AiCreditsError',
+          reason: 'out_of_credits',
+        });
+      })(),
+    );
+
+    vi.resetModules();
+    const { POST } = await import('@/app/api/chat/v1/completions/stream/route');
+    const request = new NextRequest(
+      new Request('http://example.com/api/chat/v1/completions/stream', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ messages: [{ role: 'user', content: 'Hello' }] }),
+      }),
+    );
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(402);
+    await expect(response.json()).resolves.toEqual({
+      type: 'ai_credits',
+      reason: 'out_of_credits',
+    });
   });
 
   it('returns Content-Type: text/event-stream', async () => {

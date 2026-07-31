@@ -2,11 +2,22 @@
 
 import React, { useState, useEffect } from 'react';
 import { IUser, IUserWithRoles, IRole } from '@alga-psa/types';
-import { findUserById, getCurrentUser, getAllUsers, getUserRoles, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { updateUser, adminChangeUserPassword, getRoles, assignRoleToUser, removeRoleFromUser } from '@alga-psa/users/actions';
+import { findUserById, getCurrentUser, getAllUsers, getUserRoles } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
+import { updateUser, adminChangeUserPassword } from '@alga-psa/users/actions/user-actions/userActions';
+import { getRoles, assignRoleToUser, removeRoleFromUser } from '@alga-psa/users/lib/roleActions';
+import {
+  getUserCapacity,
+  updateUserCapacity,
+  getUserWorkSchedule,
+  updateUserWorkSchedule,
+} from '@alga-psa/scheduling/actions/resourceCapacityActions';
+import { parseWeeklyCapacityHours } from '@alga-psa/scheduling/lib/resourceCapacity';
+import { parseWorkSchedule, weeklyScheduledHours, type WorkScheduleDay } from '@alga-psa/core/workSchedule';
 import { useDrawer } from "@alga-psa/ui";
 import { Text, Flex } from '@radix-ui/themes';
 import { Input } from '@alga-psa/ui/components/Input';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Card } from '@alga-psa/ui/components/Card';
@@ -14,13 +25,32 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import { Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import CollapsiblePasswordChangeForm from './CollapsiblePasswordChangeForm';
-import { getLicenseUsageAction } from '@alga-psa/licensing/actions';
+import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
 import toast from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface UserDetailsProps {
   userId: string;
   onUpdate: () => void;
+}
+
+// Monday first: a work week reads better than a calendar week here.
+const WORK_WEEK_ORDER: WorkScheduleDay['dayOfWeek'][] = [1, 2, 3, 4, 5, 6, 0];
+
+// Weekend days keep a valid window so they satisfy the table's end > start
+// CHECK while contributing no capacity.
+function defaultWorkSchedule(): WorkScheduleDay[] {
+  return WORK_WEEK_ORDER.map((dayOfWeek) => ({
+    dayOfWeek,
+    isWorking: dayOfWeek >= 1 && dayOfWeek <= 5,
+    startTime: '09:00',
+    endTime: '17:00',
+  })).sort((left, right) => left.dayOfWeek - right.dayOfWeek);
 }
 
 const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
@@ -36,9 +66,17 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [reportsTo, setReportsTo] = useState<string>('');
   const [reportsToOptions, setReportsToOptions] = useState<SelectOption[]>([]);
+  const [weeklyCapacity, setWeeklyCapacity] = useState<string>('');
+  const [savedCapacity, setSavedCapacity] = useState<number | null>(null);
+  const [workSchedule, setWorkSchedule] = useState<WorkScheduleDay[]>([]);
+  const [savedSchedule, setSavedSchedule] = useState<WorkScheduleDay[]>([]);
+  const [canEditCapacity, setCanEditCapacity] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { closeDrawer } = useDrawer();
+
+  const isReturnedActionError = (value: unknown) =>
+    isActionMessageError(value) || isActionPermissionError(value);
 
   // Admin password change states
   const [isAdmin, setIsAdmin] = useState(false);
@@ -98,7 +136,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
                   userId={item.user_id}
                   userName={nameLabel}
                   avatarUrl={avatarUrl}
-                  size="sm"
+                  size="xs"
                 />
                 <span className={item.is_inactive ? 'text-muted-foreground' : ''}>
                   {item.is_inactive ? `${nameLabel} ${t('userDetails.status.inactiveTag')}` : nameLabel}
@@ -146,6 +184,28 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
         setEmail(userWithRoles.email);
         setIsActive(!userWithRoles.is_inactive);
         setRoles(userRoles);
+        try {
+          const [capacityResult, scheduleResult] = await Promise.all([
+            getUserCapacity(userId),
+            getUserWorkSchedule(userId),
+          ]);
+          if (capacityResult.success && capacityResult.data) {
+            const capacity = capacityResult.data.maxWeeklyCapacity ?? null;
+            setSavedCapacity(capacity);
+            setWeeklyCapacity(capacity != null ? String(capacity) : '');
+          }
+          if (scheduleResult.success && scheduleResult.data) {
+            setSavedSchedule(scheduleResult.data.days);
+            setWorkSchedule(scheduleResult.data.days);
+          }
+          // Both actions report the same right; either failing to load leaves
+          // this false, so the section stays hidden rather than half-usable.
+          setCanEditCapacity(
+            Boolean(capacityResult.data?.canEdit) && Boolean(scheduleResult.data?.canEdit),
+          );
+        } catch (capacityErr) {
+          console.error('Error fetching user capacity:', capacityErr);
+        }
       } else {
         setError(t('userDetails.messages.error.userNotFound'));
       }
@@ -182,7 +242,11 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
     if (!user || !selectedRole) return;
 
     try {
-      await assignRoleToUser(user.user_id, selectedRole);
+      const result = await assignRoleToUser(user.user_id, selectedRole);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       const updatedRoles = await getUserRoles(user.user_id);
       setRoles(updatedRoles);
       setSelectedRole('');
@@ -200,7 +264,11 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
     if (!user) return;
 
     try {
-      await removeRoleFromUser(user.user_id, roleId);
+      const result = await removeRoleFromUser(user.user_id, roleId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       const updatedRoles = await getUserRoles(user.user_id);
       setRoles(updatedRoles);
       toast.success(t('userDetails.messages.success.roleRemoved'));
@@ -228,6 +296,20 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           }
         }
 
+        // Validate the capacity before any write, so an unparseable value can't
+        // land after the user fields have already been saved.
+        const parsedCapacity = parseWeeklyCapacityHours(weeklyCapacity);
+        if (!parsedCapacity.ok) {
+          toast.error(t('userDetails.messages.error.invalidCapacity'));
+          return;
+        }
+
+        const parsedSchedule = parseWorkSchedule(workSchedule);
+        if (!parsedSchedule.ok) {
+          toast.error(t('userDetails.messages.error.invalidWorkSchedule'));
+          return;
+        }
+
         const updatedUserData: Partial<IUser> = {
           first_name: firstName,
           last_name: lastName,
@@ -242,11 +324,30 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             EMAIL_ALREADY_EXISTS: 'userDetails.messages.error.emailAlreadyExists',
             REPORTS_TO_SELF: 'userDetails.messages.error.reportsToSelf',
             REPORTS_TO_CYCLE: 'userDetails.messages.error.reportsToCycle',
+            SCIM_MANAGED_INACTIVE: 'userDetails.messages.error.scimManagedInactive',
+            PERMISSION_DENIED: 'userDetails.messages.error.permissionDenied',
+            USER_UPDATE_FAILED: 'userDetails.messages.error.updateFailed',
           };
           toast.error(t(errorKeys[result.code], { defaultValue: result.error }));
           return;
         }
         if (result.user) {
+          if (canEditCapacity && parsedCapacity.value !== savedCapacity) {
+            const capacityResult = await updateUserCapacity(user.user_id, parsedCapacity.value);
+            if (!capacityResult.success) {
+              toast.error(capacityResult.error || t('userDetails.messages.error.updateFailed'));
+              return;
+            }
+            setSavedCapacity(parsedCapacity.value);
+          }
+          if (canEditCapacity && JSON.stringify(parsedSchedule.value) !== JSON.stringify(savedSchedule)) {
+            const scheduleResult = await updateUserWorkSchedule(user.user_id, parsedSchedule.value);
+            if (!scheduleResult.success) {
+              toast.error(scheduleResult.error || t('userDetails.messages.error.updateFailed'));
+              return;
+            }
+            setSavedSchedule(parsedSchedule.value);
+          }
           setUser(result.user);
           onUpdate();
           closeDrawer();
@@ -379,6 +480,103 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             allowClear
           />
         </div>
+
+        {/* Hidden outright rather than disabled when the viewer cannot save:
+            these two fields are one unit with one Save button, and a filled-in
+            form that is refused on submit is worse than an absent one. */}
+        {canEditCapacity && (
+        <>
+        <div>
+          <Text as="label" size="2" weight="medium" className="mb-2 block">
+            {t('userDetails.fields.workSchedule.label')}
+          </Text>
+          {workSchedule.length === 0 ? (
+            <Button
+              id="user-work-schedule-add"
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setWorkSchedule(defaultWorkSchedule())}
+            >
+              {t('userDetails.fields.workSchedule.setHours')}
+            </Button>
+          ) : (
+            <div className="space-y-1">
+              {WORK_WEEK_ORDER.map((dayOfWeek) => {
+                const day = workSchedule.find((entry) => entry.dayOfWeek === dayOfWeek);
+                if (!day) return null;
+                const update = (patch: Partial<WorkScheduleDay>) =>
+                  setWorkSchedule((current) =>
+                    current.map((entry) => (entry.dayOfWeek === dayOfWeek ? { ...entry, ...patch } : entry)),
+                  );
+                return (
+                  <div key={dayOfWeek} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`user-work-schedule-working-${dayOfWeek}`}
+                      label={t(`userDetails.fields.workSchedule.days.${dayOfWeek}`)}
+                      checked={day.isWorking}
+                      onChange={(e) => update({ isWorking: e.target.checked })}
+                      containerClassName="w-32"
+                    />
+                    <Input
+                      id={`user-work-schedule-start-${dayOfWeek}`}
+                      type="time"
+                      value={day.startTime}
+                      disabled={!day.isWorking}
+                      onChange={(e) => update({ startTime: e.target.value })}
+                      className="w-32"
+                    />
+                    <Input
+                      id={`user-work-schedule-end-${dayOfWeek}`}
+                      type="time"
+                      value={day.endTime}
+                      disabled={!day.isWorking}
+                      onChange={(e) => update({ endTime: e.target.value })}
+                      className="w-32"
+                    />
+                  </div>
+                );
+              })}
+              <div className="flex items-center justify-between pt-1">
+                <Text size="1" color="gray">
+                  {t('userDetails.fields.workSchedule.weeklyTotal', { hours: weeklyScheduledHours(workSchedule) })}
+                </Text>
+                <Button
+                  id="user-work-schedule-clear"
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setWorkSchedule([])}
+                >
+                  {t('userDetails.fields.workSchedule.clear')}
+                </Button>
+              </div>
+            </div>
+          )}
+          <Text size="1" color="gray" className="mt-1 block">
+            {t('userDetails.fields.workSchedule.help')}
+          </Text>
+        </div>
+
+        <div>
+          <Text as="label" size="2" weight="medium" className="mb-2 block">
+            {t('userDetails.fields.weeklyCapacity.label')}
+          </Text>
+          <Input
+            id="user-weekly-capacity"
+            type="number"
+            min={0}
+            value={weeklyCapacity}
+            onChange={(e) => setWeeklyCapacity(e.target.value)}
+            placeholder={t('userDetails.fields.weeklyCapacity.placeholder')}
+            className="w-full"
+          />
+          <Text size="1" color="gray" className="mt-1 block">
+            {t('userDetails.fields.weeklyCapacity.help')}
+          </Text>
+        </div>
+        </>
+        )}
 
         {/* Last Login Info */}
         {user?.last_login_at && (

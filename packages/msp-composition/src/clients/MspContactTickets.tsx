@@ -6,7 +6,7 @@ import { IBoard, IUser } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -16,16 +16,23 @@ import { useDrawer } from "@alga-psa/ui";
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
+import { useRouter } from 'next/navigation';
+import { buildCreateTicketHref } from '@alga-psa/tickets/lib/createTicketRoute';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
 import { getTicketingDisplaySettings, type TicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { ITag } from '@alga-psa/types';
-import { findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { findTagsByEntityIds } from '@alga-psa/tags/actions/tagActions';
+import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
-import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
-import { getClientById } from '@alga-psa/clients/actions';
+import ClientQuickView from '@alga-psa/clients/components/clients/ClientQuickView';
+import { getClientById } from '@alga-psa/clients/actions/queryActions';
 import { TagFilter } from '@alga-psa/ui/components';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import { MspClientCrossFeatureProvider } from './MspClientCrossFeatureProvider';
@@ -33,6 +40,7 @@ import {
   isTicketStatusOpenFilter,
   TICKET_STATUS_FILTER_OPEN,
 } from '@alga-psa/tickets/lib';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ContactTicketsProps {
   contactId: string;
@@ -45,6 +53,10 @@ interface ContactTicketsProps {
   initialCategories?: ITicketCategory[];
   initialTags?: ITag[];
   initialUsers?: IUser[];
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -72,13 +84,14 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
   initialTags = [],
   initialUsers = []
 }) => {
+  const { t } = useTranslation('msp/contacts');
+  const router = useRouter();
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<IUser | null>(null);
   const [displaySettings, setDisplaySettings] = useState<TicketingDisplaySettings | null>(null);
   const ticketTagsRef = useRef<Record<string, ITag[]>>({});
-  const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
   const { openDrawer } = useDrawer();
 
   // Filter states
@@ -153,6 +166,14 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
       };
 
       const result = await getTicketsForListWithCursor(filters, cursor);
+      if (isReturnedActionError(result)) {
+        handleError(getErrorMessage(result));
+        if (resetTickets) {
+          setTickets([]);
+        }
+        setNextCursor(null);
+        return;
+      }
 
       if (resetTickets) {
         setTickets(result.tickets);
@@ -175,7 +196,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
 
   const handleTicketClick = useCallback(async (ticketId: string) => {
     if (!currentUser) {
-      toast.error('User not authenticated');
+      toast.error(t('contactTabs.tickets.toasts.userNotAuthenticated', { defaultValue: 'User not authenticated' }));
       return;
     }
 
@@ -183,7 +204,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
       const ticketData = await getConsolidatedTicketData(ticketId);
 
       if (!ticketData) {
-        toast.error('Failed to load ticket');
+        toast.error(t('contactTabs.tickets.toasts.loadTicketFailed', { defaultValue: 'Failed to load ticket' }));
         return;
       }
 
@@ -211,7 +232,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
         />
       );
     } catch (error) {
-      handleError(error, 'Failed to open ticket');
+      handleError(error, t('contactTabs.tickets.toasts.openTicketFailed', { defaultValue: 'Failed to open ticket' }));
     }
   }, [currentUser, openDrawer]);
 
@@ -225,20 +246,18 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
       if (client) {
         openDrawer(
           <MspClientCrossFeatureProvider>
-            <ClientDetails
+            <ClientQuickView
               client={client}
-              documents={[]}
-              contacts={[]}
               isInDrawer={true}
               quickView={true}
             />
           </MspClientCrossFeatureProvider>
         );
       } else {
-        toast.error('Client not found');
+        toast.error(t('contactTabs.tickets.toasts.clientNotFound', { defaultValue: 'Client not found' }));
       }
     } catch (error) {
-      handleError(error, 'Failed to load client details');
+      handleError(error, t('contactTabs.tickets.toasts.loadClientFailed', { defaultValue: 'Failed to load client details' }));
     }
   }, [openDrawer]);
 
@@ -259,6 +278,10 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
       try {
         const ticketIds = tickets.map(t => t.ticket_id).filter(Boolean) as string[];
         const tags = await findTagsByEntityIds(ticketIds, 'ticket');
+        if (isTagActionError(tags)) {
+          console.error('Error fetching tags:', tags);
+          return;
+        }
 
         const newTicketTags: Record<string, ITag[]> = {};
         tags.forEach(tag => {
@@ -321,16 +344,24 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
     setIncludeUnassigned(false);
   };
 
-  const handleTicketAdded = useCallback(() => {
-    // Refresh the tickets list
-    loadTickets(undefined, true);
-    setIsQuickAddTicketOpen(false);
+  // Tickets are created via the create-ticket modal route now. This list fetches
+  // client-side, so it won't react to router.refresh(); reload it on the cross-feature
+  // "created" event (mirrored in CreateTicketRouteClient).
+  useEffect(() => {
+    const onCreated = (event: Event) => {
+      const detail = (event as CustomEvent<{ entity?: string }>).detail;
+      if (detail?.entity === 'ticket') {
+        loadTickets(undefined, true);
+      }
+    };
+    window.addEventListener('alga:quick-create:created', onCreated);
+    return () => window.removeEventListener('alga:quick-create:created', onCreated);
   }, [loadTickets]);
 
   if (!currentUser) {
     return (
       <div className="flex items-center justify-center h-32">
-        <span>Loading...</span>
+        <span>{t('contactTabs.tickets.loading', { defaultValue: 'Loading...' })}</span>
       </div>
     );
   }
@@ -341,13 +372,13 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
         {/* Sticky Header and Filters */}
         <div className="sticky top-0 z-40 bg-white rounded-t-lg p-6 border-b border-gray-100">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Contact Tickets</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{t('contactTabs.tickets.title', { defaultValue: 'Contact Tickets' })}</h3>
             <Button
               id="add-contact-ticket-btn"
-              onClick={() => setIsQuickAddTicketOpen(true)}
+              onClick={() => router.push(buildCreateTicketHref({ client: { id: clientId, name: clientName }, contact: { id: contactId, name: contactName } }))}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
             >
-              Add Ticket
+              {t('contactTabs.tickets.addTicket', { defaultValue: 'Add Ticket' })}
             </Button>
           </div>
 
@@ -370,7 +401,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
                 options={initialStatuses}
                 value={selectedStatus}
                 onValueChange={(value) => setSelectedStatus(value)}
-                placeholder="Select Status"
+                placeholder={t('contactTabs.tickets.filters.statusPlaceholder', { defaultValue: 'Select Status' })}
               />
             )}
 
@@ -380,7 +411,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
                 options={initialPriorities}
                 value={selectedPriority}
                 onValueChange={(value) => setSelectedPriority(value)}
-                placeholder="All Priorities"
+                placeholder={t('contactTabs.tickets.filters.allPriorities', { defaultValue: 'All Priorities' })}
               />
             )}
 
@@ -393,7 +424,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
                 filterMode={true}
                 includeUnassigned={includeUnassigned}
                 onUnassignedChange={setIncludeUnassigned}
-                placeholder="All Assignees"
+                placeholder={t('contactTabs.tickets.filters.allAssignees', { defaultValue: 'All Assignees' })}
                 showSearch={true}
                 compactDisplay={true}
               />
@@ -408,7 +439,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
                 selectedCategories={selectedCategories}
                 excludedCategories={excludedCategories}
                 onSelect={handleCategorySelect}
-                placeholder="Filter by category"
+                placeholder={t('contactTabs.tickets.filters.categoryPlaceholder', { defaultValue: 'Filter by category' })}
                 multiSelect={true}
                 showExclude={true}
                 showReset={true}
@@ -421,7 +452,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
 
             <Input
               id="contact-tickets-search-input"
-              placeholder="Search tickets..."
+              placeholder={t('contactTabs.tickets.filters.searchPlaceholder', { defaultValue: 'Search tickets...' })}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-[38px] min-w-[350px] text-sm"
@@ -452,7 +483,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
                 id="contact-tickets-reset-filters-btn"
               >
                 <XCircle className="h-4 w-4" />
-                Reset
+                {t('contactTabs.tickets.filters.reset', { defaultValue: 'Reset' })}
               </Button>
           </div>
         </div>
@@ -467,7 +498,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
             </div>
           ) : tickets.length === 0 ? (
             <div className="text-center py-8 bg-gray-50 rounded-lg">
-              <p className="text-gray-600 mb-4">No tickets found for this contact</p>
+              <p className="text-gray-600 mb-4">{t('contactTabs.tickets.empty', { defaultValue: 'No tickets found for this contact' })}</p>
             </div>
           ) : (
             <>
@@ -503,7 +534,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
                     disabled={isLoading}
                     variant="outline"
                   >
-                    {isLoading ? 'Loading...' : 'Load More Tickets'}
+                    {isLoading ? t('contactTabs.tickets.loadMore.loading', { defaultValue: 'Loading...' }) : t('contactTabs.tickets.loadMore.label', { defaultValue: 'Load More Tickets' })}
                   </Button>
                 </div>
               )}
@@ -511,20 +542,6 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
           )}
         </div>
 
-        {/* Quick Add Ticket Dialog */}
-        <QuickAddTicket
-          open={isQuickAddTicketOpen}
-          onOpenChange={setIsQuickAddTicketOpen}
-          onTicketAdded={handleTicketAdded}
-          prefilledClient={{
-            id: clientId,
-            name: clientName
-          }}
-          prefilledContact={{
-            id: contactId,
-            name: contactName
-          }}
-        />
       </div>
     </ReflectionContainer>
   );

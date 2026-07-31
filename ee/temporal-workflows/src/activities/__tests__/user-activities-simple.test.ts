@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { setupTestDatabase, type TestDatabase } from '../../test-utils/database';
+import { tenantDb } from '@alga-psa/db';
 import { withAdminTransaction } from '@alga-psa/db.js';
 import { v4 as uuidv4 } from 'uuid';
 import { hashPassword, generateSecurePassword } from '@alga-psa/core/encryption';
@@ -17,8 +18,13 @@ async function createAdminUserInDB(
   testDb?: TestDatabase
 ) {
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
+    const tenantScopedDb = tenantDb(trx, input.tenantId);
+
     // Check if user already exists globally
-    const existingUser = await trx('users')
+    const existingUser = await tenantScopedDb.unscoped(
+      'users',
+      'user activity simple test checks global email uniqueness before tenant-scoped insert'
+    )
       .where({ email: input.email.toLowerCase() })
       .first();
 
@@ -34,7 +40,7 @@ async function createAdminUserInDB(
     const hashedPassword = await hashPassword(temporaryPassword);
 
     // Create user record
-    await trx('users').insert({
+    await tenantScopedDb.table('users').insert({
       user_id: userId,
       tenant: input.tenantId,
       first_name: input.firstName,
@@ -49,17 +55,14 @@ async function createAdminUserInDB(
     });
 
     // Get or create Admin role
-    let adminRole = await trx('roles')
-      .where({ 
-        tenant: input.tenantId,
-      })
+    let adminRole = await tenantScopedDb.table('roles')
       .whereRaw('LOWER(role_name) = ?', ['admin'])
       .first();
 
     if (!adminRole) {
       // Create Admin role if it doesn't exist
       const roleId = uuidv4();
-      await trx('roles').insert({
+      await tenantScopedDb.table('roles').insert({
         role_id: roleId,
         tenant: input.tenantId,
         role_name: 'Admin',
@@ -71,7 +74,7 @@ async function createAdminUserInDB(
     }
 
     // Assign Admin role to user
-    await trx('user_roles').insert({
+    await tenantScopedDb.table('user_roles').insert({
       user_id: userId,
       role_id: adminRole.role_id,
       tenant: input.tenantId,
@@ -80,11 +83,8 @@ async function createAdminUserInDB(
 
     // If a client was created, associate the user as the account manager
     if (input.clientId) {
-      await trx('clients')
-        .where({ 
-          client_id: input.clientId,
-          tenant: input.tenantId 
-        })
+      await tenantScopedDb.table('clients')
+        .where({ client_id: input.clientId })
         .update({ 
           account_manager_id: userId,
           updated_at: new Date(),
@@ -106,36 +106,29 @@ async function createAdminUserInDB(
 
 async function rollbackUserInDB(userId: string, tenantId: string): Promise<void> {
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
+    const tenantScopedDb = tenantDb(trx, tenantId);
+
     // Remove user preferences
-    await trx('user_preferences')
+    await tenantScopedDb.table('user_preferences')
       .where({ user_id: userId })
       .del();
 
     // Remove user roles
-    await trx('user_roles')
-      .where({ 
-        user_id: userId,
-        tenant: tenantId 
-      })
+    await tenantScopedDb.table('user_roles')
+      .where({ user_id: userId })
       .del();
 
     // Remove user as account manager from clients
-    await trx('clients')
-      .where({ 
-        account_manager_id: userId,
-        tenant: tenantId 
-      })
+    await tenantScopedDb.table('clients')
+      .where({ account_manager_id: userId })
       .update({ 
         account_manager_id: null,
         updated_at: new Date(),
       });
 
     // Remove the user
-    await trx('users')
-      .where({ 
-        user_id: userId,
-        tenant: tenantId 
-      })
+    await tenantScopedDb.table('users')
+      .where({ user_id: userId })
       .del();
   });
 }

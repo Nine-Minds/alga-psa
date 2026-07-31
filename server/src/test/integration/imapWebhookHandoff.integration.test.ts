@@ -14,6 +14,17 @@ const firstMock = vi.fn(async () => providerRow);
 
 const knexMock = vi.fn((table: string) => {
   tableReads.push(table);
+  // Product gate: getTenantProduct reads tenants.product_code over the
+  // admin connection before the handler proceeds.
+  if (table.startsWith('tenants')) {
+    const tenantsBuilder: any = {
+      select: () => tenantsBuilder,
+      where: () => tenantsBuilder,
+      andWhere: () => tenantsBuilder,
+      first: async () => ({ product_code: 'psa' }),
+    };
+    return tenantsBuilder;
+  }
   if (table !== 'email_providers') {
     throw new Error(`Unexpected table read in IMAP webhook handler: ${table}`);
   }
@@ -106,6 +117,21 @@ describe('IMAP webhook handoff', () => {
         messageId: '<imap-msg-77@example.com>',
       },
     });
+  });
+
+  it('T008: a paused IMAP provider returns a deliberate skip and does not enqueue', async () => {
+    providerRow.inbound_paused_at = '2026-07-23T18:00:00.000Z';
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
+
+    const response = await POST(makePointerRequest());
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      success: true,
+      skipped: true,
+      reason: 'Provider inbound ingestion is paused',
+    });
+    expect(enqueueUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
   });
 
   it('T006: IMAP callback success waits for durable enqueue completion', async () => {

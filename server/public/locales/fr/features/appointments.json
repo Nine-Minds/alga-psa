@@ -121,13 +121,16 @@
     "approved": "Approuvé",
     "cancelButton": "Annuler le rendez-vous",
     "teamsMeeting": "Réunion Teams",
-    "joinTeamsMeeting": "Rejoindre la réunion Teams"
+    "joinTeamsMeeting": "Rejoindre la réunion Teams",
+    "downloadRecording": "Télécharger l'enregistrement",
+    "viewTranscript": "Voir la transcription"
   },
   "cancel": {
     "title": "Annuler le rendez-vous",
     "message": "Êtes-vous sûr de vouloir annuler cette demande de rendez-vous ? Cette action ne peut pas être annulée.",
     "confirm": "Oui, annuler",
-    "messageWithTeamsWarning": "Êtes-vous sûr de vouloir annuler cette demande de rendez-vous ? Cette action est irréversible. La réunion Microsoft Teams associée sera également supprimée."
+    "messageWithTeamsWarning": "Êtes-vous sûr de vouloir annuler cette demande de rendez-vous ? Cette action est irréversible. La réunion Microsoft Teams associée sera également supprimée.",
+    "teamsMeetingCleanupNotice": "La réunion Microsoft Teams associée est en cours d'annulation ; les participants la verront disparaître de leur calendrier sous peu."
   },
   "ticketSection": {
     "title": "Demandes de rendez-vous",

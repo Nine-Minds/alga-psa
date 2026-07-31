@@ -21,7 +21,9 @@ describe('Contact details normalized phone wiring', () => {
 
   it('T019: ContactDetailsView shows the derived default phone from phone_numbers instead of relying on a scalar phone_number field', () => {
     expect(contactDetailsViewSource).toContain('contact.phone_numbers.map((phone) => (');
-    expect(contactDetailsViewSource).toContain("{phone.is_default ? ' • Default' : ''}");
+    expect(contactDetailsViewSource).toContain(
+      "{phone.is_default ? ` • ${t('contactDetailsView.fields.defaultPhone', { defaultValue: 'Default' })}` : ''}"
+    );
     expect(contactDetailsViewSource).not.toMatch(/\bcontact\.phone_number\b/);
   });
 });

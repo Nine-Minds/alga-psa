@@ -1,8 +1,8 @@
 'use server';
 
 import { isEnterprise } from '@alga-psa/core/features';
-import { createTenantKnex } from '@alga-psa/db';
-import { ADD_ONS } from '@alga-psa/types';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { tenantHasTeamsAddOn } from '../../teams/teamsAddOnGate';
 
 type TeamsInstallStatus = 'not_configured' | 'install_pending' | 'active' | 'error';
 
@@ -28,17 +28,6 @@ function normalizeString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-async function tenantHasTeamsAddOn(knex: any, tenantId: string): Promise<boolean> {
-  const row = await knex('tenant_addons')
-    .where({ tenant: tenantId, addon_key: ADD_ONS.TEAMS })
-    .andWhere((builder: any) => {
-      builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
-    })
-    .first('addon_key');
-
-  return Boolean(row);
-}
-
 export async function getTeamsMeetingCapability(
   tenantId: string
 ): Promise<TeamsMeetingCapabilityResult> {
@@ -51,8 +40,7 @@ export async function getTeamsMeetingCapability(
     return { available: false, reason: 'addon_required', recordingsAvailable: false, recordingReason: 'meeting_unavailable' };
   }
 
-  const integration = await knex<TeamsMeetingCapabilityRow>('teams_integrations')
-    .where({ tenant: tenantId })
+  const integration = await tenantDb(knex, tenantId).table<TeamsMeetingCapabilityRow>('teams_integrations')
     .first();
 
   if (!integration || integration.install_status !== 'active' || !integration.selected_profile_id) {

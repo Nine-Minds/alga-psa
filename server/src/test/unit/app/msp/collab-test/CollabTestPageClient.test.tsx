@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, fireEvent, waitFor, cleanup } from '@testing-library/react';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
@@ -55,6 +55,10 @@ describe('CollabTestPageClient', () => {
     vi.clearAllMocks();
     useSearchParamsMock.mockReturnValue(new URLSearchParams());
     getBlockContentMock.mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it('creates a document and navigates to the new doc id', async () => {

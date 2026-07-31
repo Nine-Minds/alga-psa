@@ -52,7 +52,9 @@ vi.mock('@alga-psa/db', async () => {
   const actual = await vi.importActual<any>('@alga-psa/db');
   return {
     ...actual,
-    createTenantKnex: vi.fn(async () => ({ knex: {} })),
+    // knex must be callable: hardDeleteInvoice queries
+    // tenant_external_entity_mappings directly before opening the transaction.
+    createTenantKnex: vi.fn(async () => ({ knex: createMockTrx() })),
     withTransaction: vi.fn(async (_knex: any, callback: any) => callback(createMockTrx())),
   };
 });
@@ -103,9 +105,9 @@ describe('hardDeleteInvoice recurring detail safeguards', () => {
   it('T205: blocks hard deletion once canonical recurring detail periods exist on the invoice', async () => {
     const { hardDeleteInvoice } = await import('../src/actions/invoiceModification.ts');
 
-    await expect(hardDeleteInvoice('invoice-1')).rejects.toThrow(
-      'Cannot delete invoice invoice-1: canonical recurring detail periods already exist. Cancel the invoice instead of deleting it.'
-    );
+    await expect(hardDeleteInvoice('invoice-1')).resolves.toEqual({
+      actionError: 'Cannot delete invoice invoice-1: canonical recurring detail periods already exist. Cancel the invoice instead of deleting it.',
+    });
 
     expect(state.queriedTables).toContain('invoices');
     expect(state.queriedTables).toContain('invoice_charge_details as iid');

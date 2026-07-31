@@ -12,7 +12,7 @@ const testState = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => (...args: any[]) =>
-    action({ user_id: testState.userId, tenant: testState.tenant }, { tenant: testState.tenant }, ...args),
+    action({ user_id: testState.userId, tenant: testState.tenant, user_type: 'internal' }, { tenant: testState.tenant }, ...args),
 }));
 
 vi.mock('@alga-psa/db', async () => {

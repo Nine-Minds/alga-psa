@@ -11,7 +11,8 @@
       "resyncing": "{{providerName}} opnieuw synchroniseren...",
       "resyncError": "Het opnieuw synchroniseren van de IMAP-provider is mislukt",
       "resyncStarted": "Hersynchronisatie gestart voor {{providerName}}.",
-      "enterpriseOnly": "Microsoft 365 inkomende e-mail is alleen beschikbaar in Enterprise Edition."
+      "enterpriseOnly": "Microsoft 365 inkomende e-mail is alleen beschikbaar in Enterprise Edition.",
+      "loadProvidersError": "Failed to load email providers"
     },
     "editDrawer": {
       "title": "E-mailprovider bewerken",
@@ -33,7 +34,8 @@
     },
     "nav": {
       "providers": "Aanbieders",
-      "defaults": "Standaardinstellingen"
+      "defaults": "Standaardinstellingen",
+      "inboundRules": "Inkomende regels"
     },
     "setup": {
       "title": "Installatie-instructies",
@@ -142,6 +144,7 @@
     },
     "badges": {
       "disabled": "Gehandicapt",
+      "paused": "Gepauzeerd",
       "connected": "Aangesloten",
       "disconnected": "Verbinding verbroken",
       "error": "Fout",
@@ -165,15 +168,29 @@
       "reconnectOauth": "Maak opnieuw verbinding met OAuth",
       "resyncing": "Opnieuw synchroniseren…",
       "resyncMailbox": "Postbus opnieuw synchroniseren",
+      "pause": "Inkomende e-mail pauzeren",
+      "resume": "Inkomende e-mail hervatten",
       "delete": "Aanbieder verwijderen"
     },
+    "feedback": {
+      "paused": "Inkomende e-mail gepauzeerd.",
+      "resumed": "Inkomende e-mail hervat.",
+      "pauseError": "Kan de pauzestatus van inkomende e-mail niet wijzigen."
+    },
+    "pausedHelp": "Berichten die binnenkomen terwijl deze mailbox is gepauzeerd, worden niet met terugwerkende kracht geïmporteerd.",
     "fields": {
       "status": "Status",
       "lastSync": "Laatste synchronisatie",
+      "lastIngested": "Laatst ingelezen",
+      "delivery": "Levering",
       "created": "Gemaakt",
       "subscription": "Abonnement",
       "defaults": "Ticketstandaarden",
       "error": "Fout:"
+    },
+    "delivery": {
+      "polling": "Polling elke 3 minuten",
+      "webhook": "Realtime levering: actief"
     },
     "values": {
       "active": "Actief",
@@ -241,7 +258,8 @@
         "oauthInitiateFailed": "Kan OAuth niet starten",
         "popupBlocked": "Kan de OAuth-pop-up niet openen. Sta pop-ups toe voor deze site.",
         "closedEarly": "Autorisatievenster gesloten vóór voltooiing. Probeer het opnieuw.",
-        "authorizationFailed": "Autorisatie mislukt"
+        "authorizationFailed": "Autorisatie mislukt",
+        "senderDisplayNameInvalid": "Weergavenaam mag geen aanhalingstekens, punthaken of regeleinden bevatten"
       },
       "requiredFields": {
         "providerName": "Configuratienaam",
@@ -291,7 +309,8 @@
         "popupBlocked": "Kan de OAuth-pop-up niet openen. Sta pop-ups toe voor deze site.",
         "closedEarly": "Het autorisatievenster werd gesloten voordat het werd voltooid.",
         "authorizationFailed": "Autorisatie mislukt",
-        "popupFailed": "OAuth-pop-up mislukt"
+        "popupFailed": "OAuth-pop-up mislukt",
+        "configureFailed": "Failed to configure Gmail provider"
       },
       "messages": {
         "setupIncomplete": "Provider opgeslagen maar installatie onvolledig: {{error}}",
@@ -347,7 +366,8 @@
         "mailboxInvalid": "Een geldig postvak is vereist (bijvoorbeeld gebruiker@domein.com, gebruiker@localhost, gebruiker@testserver of gebruiker)",
         "hostRequired": "IMAP-host is vereist",
         "usernameRequired": "IMAP-gebruikersnaam is vereist",
-        "oauthInitiateFailed": "Kan IMAP OAuth niet starten"
+        "oauthInitiateFailed": "Kan IMAP OAuth niet starten",
+        "senderDisplayNameInvalid": "Weergavenaam mag geen aanhalingstekens, punthaken of regeleinden bevatten"
       },
       "basic": {
         "title": "Basisinstellingen",
@@ -704,7 +724,8 @@
       "refreshStatusFailed": "Kan domeinstatus niet vernieuwen",
       "domainRemovalScheduled": "Domeinverwijdering gepland",
       "domainRemovalScheduledWithClear": "Domeinverwijdering gepland en afzenderadres voor ticketing gewist",
-      "removeDomainFailed": "Kan domein niet verwijderen"
+      "removeDomainFailed": "Kan domein niet verwijderen",
+      "testOutboundFailed": "Testen van uitgaande e-mail mislukt"
     },
     "tabs": {
       "inboundEmail": "Inkomende e-mail",
@@ -738,11 +759,27 @@
         "usernamePlaceholder": "uw-email@voorbeeld.nl",
         "passwordLabel": "Wachtwoord",
         "passwordPlaceholder": "Voer wachtwoord in",
+        "authHint": "Laat gebruikersnaam en wachtwoord leeg als uw relay e-mail zonder authenticatie accepteert.",
         "fromLabel": "Afzenderadres",
         "fromPlaceholder": "noreply@voorbeeld.nl",
         "fromHelp": "Het standaard afzenderadres voor uitgaande e-mails.",
+        "security": {
+          "title": "Verbindingsbeveiliging",
+          "secure": "Impliciete TLS gebruiken (SSL bij verbinden, doorgaans poort 465)",
+          "requireTls": "STARTTLS-upgrade vereisen (poorten 587 / 25)",
+          "verifyCert": "Servercertificaat verifiëren",
+          "verifyCertHint": "Schakel dit alleen uit voor een vertrouwde relay op uw eigen netwerk met een zelfondertekend certificaat."
+        },
         "savingButton": "Opslaan…",
-        "saveButton": "SMTP-instellingen opslaan"
+        "saveButton": "SMTP-instellingen opslaan",
+        "test": {
+          "title": "Uitgaande e-mail testen",
+          "description": "Slaat de huidige instellingen op en verifieert vervolgens de verbinding met de provider. Voer een adres in om ook een testbericht te verzenden.",
+          "recipientLabel": "Test verzenden naar (optioneel)",
+          "recipientPlaceholder": "jij@voorbeeld.com",
+          "testingButton": "Bezig met testen...",
+          "runButton": "Verbinding testen"
+        }
       },
       "ticketingFrom": {
         "title": "Afzenderadres voor ticketing",
@@ -761,6 +798,9 @@
         "customPlaceholder": "support@{{domain}}",
         "customSmtpHelp": "Gebruik een domein dat uw SMTP-server mag gebruiken als afzender. Een niet-overeenkomend domein kan bezorgingsfouten of spamfiltering veroorzaken.",
         "customManagedHelp": "Moet overeenkomen met {{domain}}. Als dit geen van uw inkomende inboxen is, werkt de verwerking van inkomende tickets mogelijk niet.",
+        "nameLabel": "Weergavenaam afzender",
+        "namePlaceholder": "Support",
+        "nameHelp": "Wordt weergegeven als afzendernaam in ticketmeldingen. Laat leeg om de geconfigureerde naam van de mailbox of de bordnaam te gebruiken.",
         "warningTitle": "Let op",
         "errorTitle": "Corrigeer het afzenderadres",
         "clearButton": "Afzenderadres wissen",
@@ -834,7 +874,153 @@
       "missingHelp": "We hebben dit record nog niet gedetecteerd in DNS. Controleer of het bestaat in uw DNS-provider met de exacte waarde zoals hierboven weergegeven.",
       "mismatchHelp": "Het DNS-record bestaat, maar de waarde komt niet overeen met wat Resend verwacht.",
       "matchedHelp": "De gedetecteerde waarde komt overeen met de verwachte waarde.",
-      "unknownHelp": "We hebben het DNS nog niet gecontroleerd. Controleer DNS opnieuw om verificatie uit te voeren."
+      "unknownHelp": "We hebben het DNS nog niet gecontroleerd. Controleer DNS opnieuw om verificatie uit te voeren.",
+      "hostLabel": "Host",
+      "fqdnLabel": "Volledige naam",
+      "valueLabel": "Waarde",
+      "copyHostAriaLabel": "Host kopiëren",
+      "copyFqdnAriaLabel": "Volledige naam kopiëren",
+      "hostHint": "Tip: voer bij uw DNS-provider alleen de hierboven getoonde Host in. De meeste providers (Namecheap, GoDaddy, Cloudflare en andere) voegen “{{domain}}” automatisch toe. Als u de volledige naam plakt, wordt het domein herhaald (…{{domain}}.{{domain}}) en wordt het record nooit geverifieerd."
+    }
+  },
+  "inboundRules": {
+    "actions": {
+      "addRule": "Regel toevoegen",
+      "aiClassify": "Classificeren met AI",
+      "aiClassifyUpsell": "Vereist de AI-assistent-add-on",
+      "extractAssign": "Klant toewijzen op basis van geëxtraheerde tekst",
+      "setDestination": "Naar bestemming routeren",
+      "skip": "E-mail overslaan (geen ticket)"
+    },
+    "badges": {
+      "allMailboxes": "Alle mailboxen"
+    },
+    "empty": {
+      "description": "Maak een regel om statusupdate-e-mails over te slaan of tickets toe te wijzen aan klanten die in de onderwerpregel worden genoemd.",
+      "title": "Geen inkomende regels geconfigureerd"
+    },
+    "errors": {
+      "aliasAdd": "Kan alias niet toevoegen",
+      "delete": "Kan regel niet verwijderen",
+      "load": "Kan inkomende regels niet laden",
+      "reorder": "Kan volgorde van regels niet wijzigen",
+      "save": "Kan regel niet opslaan",
+      "test": "Kan regel niet testen",
+      "update": "Kan regel niet bijwerken"
+    },
+    "extraction": {
+      "after": "Tekst na markering",
+      "before": "Tekst vóór markering",
+      "between": "Tekst tussen scheidingstekens",
+      "regex": "Reguliere expressie (geavanceerd)"
+    },
+    "fields": {
+      "bodyText": "Berichttekst",
+      "fromAddress": "Afzenderadres",
+      "fromDomain": "Afzenderdomein",
+      "subject": "Onderwerp",
+      "toAddress": "Aan/CC-adres"
+    },
+    "form": {
+      "action": "Actie",
+      "active": "Actief",
+      "addCondition": "Voorwaarde toevoegen",
+      "aiAllowAssign": "Mag klanten toewijzen",
+      "aiAllowSkip": "Mag e-mails overslaan",
+      "aiInstruction": "Instructie",
+      "aiInstructionPlaceholder": "bv. Bepaal over welke klant deze monitoringwaarschuwing gaat.",
+      "aiUpsell": "Classificeren met AI is beschikbaar met de Enterprise AI-assistent-add-on — e-mails worden op intentie geclassificeerd, zonder patronen om te onderhouden.",
+      "cancel": "Annuleren",
+      "conditions": "Voorwaarden (alle moeten overeenkomen)",
+      "create": "Regel aanmaken",
+      "createTitle": "Inkomende regel aanmaken",
+      "description": "Bepaal wanneer de regel van toepassing is en wat er met de e-mail gebeurt. Gebruik de tester hieronder om dit met een voorbeeld te controleren voordat je opslaat.",
+      "destination": "Bestemming (standaardwaarden voor tickets)",
+      "destinationPlaceholder": "Selecteer een set standaardwaarden",
+      "editTitle": "Inkomende regel bewerken",
+      "endDelimiter": "Eindscheidingsteken",
+      "extractFrom": "Extraheren uit",
+      "extractionTemplate": "Extractie",
+      "fallbackDestination": "Terugvalbestemming",
+      "first": "Eerste",
+      "last": "Laatste",
+      "mailboxes": "Toepassen op mailboxen",
+      "mailboxesHint": "Laat alles uitgevinkt om deze regel op elke mailbox toe te passen.",
+      "marker": "Markeringstekst",
+      "markerPlaceholder": "bv. Klant:",
+      "matchHint": "De geëxtraheerde tekst wordt vergeleken met klantnamen en klantaliassen (niet hoofdlettergevoelig).",
+      "name": "Regelnaam",
+      "namePlaceholder": "bv. Huntress-klantroutering",
+      "noMailboxes": "Nog geen mailboxen geconfigureerd.",
+      "noMatchFallback": "Naar een terugvalbestemming routeren",
+      "noMatchProceed": "Doorgaan met volgende regels / normale verwerking",
+      "noMatchSkip": "De e-mail overslaan",
+      "occurrence": "Voorkomen",
+      "onNoMatch": "Als geen klant overeenkomt",
+      "pattern": "Patroon (capturegroep 1 is de klantnaam)",
+      "regexPlaceholder": "Reguliere expressie",
+      "saving": "Opslaan…",
+      "startDelimiter": "Beginscheidingsteken",
+      "update": "Regel bijwerken",
+      "valuePlaceholder": "Waarde"
+    },
+    "header": {
+      "description": "Match inkomende e-mail op afzender of onderwerp om ruis over te slaan, de juiste klant toe te wijzen of naar een bestemming te routeren. Regels worden op volgorde uitgevoerd; de eerste match wint.",
+      "title": "Regels voor inkomende e-mail"
+    },
+    "help": {
+      "items": {
+        "aliases": "• Geëxtraheerde namen worden vergeleken met klantnamen en aliassen. Beheer aliassen op het klantrecord, of voeg ze toe vanuit de regeltester.",
+        "audit": "• Overgeslagen e-mails blijven controleerbaar in de diagnostiek van e-mailverwerking, gelabeld met de regel die ze heeft overgeslagen.",
+        "order": "• Regels worden van boven naar beneden uitgevoerd op nieuwe inkomende e-mail; de eerste overeenkomende regel is van toepassing.",
+        "replies": "• Antwoorden op bestaande tickets worden altijd opmerkingen — regels raken ze nooit aan."
+      },
+      "title": "Hoe het werkt"
+    },
+    "loading": "Inkomende regels laden...",
+    "menu": {
+      "delete": "Verwijderen",
+      "deleting": "Verwijderen…",
+      "edit": "Bewerken"
+    },
+    "operators": {
+      "contains": "bevat",
+      "endsWith": "eindigt op",
+      "equals": "is gelijk aan",
+      "matchesRegex": "komt overeen met regex",
+      "startsWith": "begint met"
+    },
+    "summary": {
+      "aiClassify": "Classificeren met AI",
+      "extractAssign": "Klant toewijzen op basis van {{source}}",
+      "setDestination": "Naar bestemming routeren",
+      "skip": "E-mail overslaan (geen ticket)"
+    },
+    "tester": {
+      "alias": "alias",
+      "aliasAdd": "Alias toevoegen",
+      "aliasAdded": "Alias toegevoegd. Voer de test opnieuw uit om de match te zien.",
+      "aliasAdding": "Toevoegen…",
+      "aliasClientPlaceholder": "Selecteer een klant",
+      "aliasLabel": "\"{{value}}\" toevoegen als alias van",
+      "body": "Berichttekst",
+      "clientMatched": "Klant gematcht via {{source}}",
+      "clientName": "klantnaam",
+      "extracted": "Geëxtraheerde waarde:",
+      "from": "Van",
+      "noClient": "Geen klant gematcht",
+      "outcome": {
+        "assignClient": "Ticket toegewezen aan klant \"{{client}}\"",
+        "fallback": "Geen klant gematcht — ticket gerouteerd naar de terugvalbestemming",
+        "none": "Regel gaf geen resultaat — normale verwerking gaat door",
+        "setDestination": "Ticket gerouteerd naar de geselecteerde bestemming",
+        "skip": "E-mail overgeslagen — geen ticket aangemaakt"
+      },
+      "run": "Test uitvoeren",
+      "running": "Testen…",
+      "subject": "Onderwerp",
+      "title": "Deze regel testen",
+      "to": "Aan"
     }
   }
 }

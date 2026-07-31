@@ -106,7 +106,10 @@ export function verifyResendWebhookSignature(params: {
 }): { verified: boolean; reason?: string } {
   const webhookSecret = params.webhookSecret?.trim();
   if (!webhookSecret) {
-    return { verified: true, reason: 'no_secret_configured' };
+    // Fail closed: an unconfigured secret means we cannot authenticate the
+    // webhook. The tenant is derived from the (otherwise attacker-controlled)
+    // payload, so process nothing until a secret is configured.
+    return { verified: false, reason: 'no_secret_configured' };
   }
 
   const svixId = getFirstHeader(params.headers, 'svix-id');

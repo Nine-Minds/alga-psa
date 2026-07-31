@@ -8,7 +8,7 @@
 import { Knex } from 'knex';
 import axios from 'axios';
 import { createTenantKnex } from '@/lib/db';
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 
 /**
@@ -143,9 +143,9 @@ export class NinjaOneSyncEngine {
   private async getDefaultAuditUserId(): Promise<string | null> {
     if (!this.knex) return null;
 
+    const db = tenantDb(this.knex, this.tenantId);
     // Query for any user in the tenant to use for audit trail
-    const user = await this.knex('users')
-      .where({ tenant: this.tenantId })
+    const user = await db.table('users')
       .select('user_id')
       .first();
 
@@ -590,9 +590,8 @@ export class NinjaOneSyncEngine {
       const device = await this.client!.getDevice(deviceId);
 
       // Find the organization mapping
-      const mapping = await this.knex!('rmm_organization_mappings')
+      const mapping = await tenantDb(this.knex!, this.tenantId).table('rmm_organization_mappings')
         .where({
-          tenant: this.tenantId,
           integration_id: this.integrationId,
           external_organization_id: String(device.organizationId),
         })
@@ -740,9 +739,10 @@ export class NinjaOneSyncEngine {
 
     return await withTransaction(this.knex!, async (trx: Knex.Transaction) => {
       const now = new Date().toISOString();
+      const db = tenantDb(trx, this.tenantId);
 
       // Insert base asset
-      const [asset] = await trx('assets')
+      const [asset] = await db.table('assets')
         .insert({
           tenant: this.tenantId,
           asset_type: createRequest.asset_type,
@@ -768,7 +768,7 @@ export class NinjaOneSyncEngine {
       const assetType = createRequest.asset_type;
       if (assetType && mappingResult.extensionFields) {
         const extensionTable = `${assetType}_assets`;
-        await trx(extensionTable).insert({
+        await db.table(extensionTable).insert({
           tenant: this.tenantId,
           asset_id: asset.asset_id,
           ...mappingResult.extensionFields,
@@ -776,7 +776,7 @@ export class NinjaOneSyncEngine {
       }
 
       // Create external entity mapping
-      await trx('tenant_external_entity_mappings').insert({
+      await db.table('tenant_external_entity_mappings').insert({
         id: trx.raw('gen_random_uuid()'),
         tenant: this.tenantId,
         integration_type: 'ninjaone',
@@ -796,7 +796,7 @@ export class NinjaOneSyncEngine {
 
       // Create asset history record (only if we have an audit user)
       if (this.auditUserId) {
-        await trx('asset_history').insert({
+        await db.table('asset_history').insert({
           tenant: this.tenantId,
           asset_id: asset.asset_id,
           changed_by: this.auditUserId,
@@ -846,10 +846,11 @@ export class NinjaOneSyncEngine {
 
     return await withTransaction(this.knex!, async (trx: Knex.Transaction) => {
       const now = new Date().toISOString();
+      const db = tenantDb(trx, this.tenantId);
 
       // Update base asset
-      const [asset] = await trx('assets')
-        .where({ tenant: this.tenantId, asset_id: assetId })
+      const [asset] = await db.table('assets')
+        .where({ asset_id: assetId })
         .update({
           name: baseFields.name,
           serial_number: baseFields.serial_number || '',
@@ -867,16 +868,16 @@ export class NinjaOneSyncEngine {
         const extensionTable = `${assetType}_assets`;
 
         // Check if extension record exists
-        const existingExtension = await trx(extensionTable)
-          .where({ tenant: this.tenantId, asset_id: assetId })
+        const existingExtension = await db.table(extensionTable)
+          .where({ asset_id: assetId })
           .first();
 
         if (existingExtension) {
-          await trx(extensionTable)
-            .where({ tenant: this.tenantId, asset_id: assetId })
+          await db.table(extensionTable)
+            .where({ asset_id: assetId })
             .update(extensionFields);
         } else {
-          await trx(extensionTable).insert({
+          await db.table(extensionTable).insert({
             tenant: this.tenantId,
             asset_id: assetId,
             ...extensionFields,
@@ -885,9 +886,8 @@ export class NinjaOneSyncEngine {
       }
 
       // Update external entity mapping
-      await trx('tenant_external_entity_mappings')
+      await db.table('tenant_external_entity_mappings')
         .where({
-          tenant: this.tenantId,
           integration_type: 'ninjaone',
           alga_entity_type: 'asset',
           external_entity_id: String(device.id),
@@ -904,7 +904,7 @@ export class NinjaOneSyncEngine {
 
       // Create asset history record (only if we have an audit user)
       if (this.auditUserId) {
-        await trx('asset_history').insert({
+        await db.table('asset_history').insert({
           tenant: this.tenantId,
           asset_id: assetId,
           changed_by: this.auditUserId,
@@ -940,8 +940,8 @@ export class NinjaOneSyncEngine {
   ): Promise<void> {
     const now = new Date().toISOString();
 
-    await this.knex!('assets')
-      .where({ tenant: this.tenantId, asset_id: assetId })
+    await tenantDb(this.knex!, this.tenantId).table('assets')
+      .where({ asset_id: assetId })
       .update({
         agent_status: device.offline ? 'offline' : 'online',
         last_seen_at: unixTimestampToIso(device.lastContact),
@@ -966,9 +966,8 @@ export class NinjaOneSyncEngine {
       const ninjaDeviceIds = new Set(devices.map(d => String(d.id)));
 
       // Find Alga assets that no longer exist in NinjaOne
-      const existingMappings = await this.knex!('tenant_external_entity_mappings')
+      const existingMappings = await tenantDb(this.knex!, this.tenantId).table('tenant_external_entity_mappings')
         .where({
-          tenant: this.tenantId,
           integration_type: 'ninjaone',
           alga_entity_type: 'asset',
           external_realm_id: mapping.external_organization_id,
@@ -997,9 +996,10 @@ export class NinjaOneSyncEngine {
     const now = new Date().toISOString();
 
     await withTransaction(this.knex!, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, this.tenantId);
       // Update asset status to inactive
-      await trx('assets')
-        .where({ tenant: this.tenantId, asset_id: assetId })
+      await db.table('assets')
+        .where({ asset_id: assetId })
         .update({
           status: 'inactive',
           agent_status: 'offline',
@@ -1007,9 +1007,8 @@ export class NinjaOneSyncEngine {
         });
 
       // Update mapping status
-      await trx('tenant_external_entity_mappings')
+      await db.table('tenant_external_entity_mappings')
         .where({
-          tenant: this.tenantId,
           integration_type: 'ninjaone',
           alga_entity_id: assetId,
         })
@@ -1021,7 +1020,7 @@ export class NinjaOneSyncEngine {
 
       // Create history record (only if we have an audit user)
       if (this.auditUserId) {
-        await trx('asset_history').insert({
+        await db.table('asset_history').insert({
           tenant: this.tenantId,
           asset_id: assetId,
           changed_by: this.auditUserId,
@@ -1049,28 +1048,25 @@ export class NinjaOneSyncEngine {
     alga_entity_id: string;
     external_entity_id: string;
   } | null> {
-	    const mapping = await this.knex!('tenant_external_entity_mappings')
-	      .join('assets', (join) => {
-	        // alga_entity_id is stored as string; assets.asset_id is UUID.
-	        // Compare as text to avoid varchar=uuid operator errors.
-	        (join as any)
-	          .on(
-	            this.knex!.raw(
-	              'assets.asset_id::text = tenant_external_entity_mappings.alga_entity_id'
-	            )
-	          )
-	          .andOn('tenant_external_entity_mappings.tenant', '=', 'assets.tenant');
-	      })
+    const knex = this.knex!;
+    const db = tenantDb(knex, this.tenantId);
+    const query = db.table('tenant_external_entity_mappings as m');
+    db.tenantJoin(query, 'assets as a', 'a.tenant', 'm.tenant', {
+      on(join) {
+        // alga_entity_id is stored as string; assets.asset_id is UUID.
+        // Compare as text to avoid varchar=uuid operator errors.
+        join.andOn(knex.raw('a.asset_id::text = m.alga_entity_id'));
+      },
+    });
+    const mapping = await query
       .where({
-        'tenant_external_entity_mappings.tenant': this.tenantId,
-        'tenant_external_entity_mappings.integration_type': 'ninjaone',
-        'tenant_external_entity_mappings.alga_entity_type': 'asset',
-        'tenant_external_entity_mappings.external_entity_id': String(deviceId),
-        'assets.status': 'active',
+        'm.integration_type': 'ninjaone',
+        'm.alga_entity_type': 'asset',
+        'm.external_entity_id': String(deviceId),
+        'a.status': 'active',
       })
-      .where('assets.tenant', this.tenantId)
-      .select('tenant_external_entity_mappings.alga_entity_id', 'tenant_external_entity_mappings.external_entity_id')
-      .first();
+      .select('m.alga_entity_id as alga_entity_id', 'm.external_entity_id as external_entity_id')
+      .first<{ alga_entity_id: string; external_entity_id: string }>();
 
     return mapping || null;
   }
@@ -1079,8 +1075,8 @@ export class NinjaOneSyncEngine {
    * Get asset by ID
    */
   private async getAssetById(assetId: string): Promise<Asset | null> {
-    const asset = await this.knex!('assets')
-      .where({ tenant: this.tenantId, asset_id: assetId })
+    const asset = await tenantDb(this.knex!, this.tenantId).table('assets')
+      .where({ asset_id: assetId })
       .first();
     return asset || null;
   }
@@ -1091,9 +1087,8 @@ export class NinjaOneSyncEngine {
   private async getOrganizationMappings(
     organizationIds?: number[]
   ): Promise<RmmOrganizationMapping[]> {
-    const query = this.knex!('rmm_organization_mappings')
+    const query = tenantDb(this.knex!, this.tenantId).table('rmm_organization_mappings')
       .where({
-        tenant: this.tenantId,
         integration_id: this.integrationId,
         auto_sync_assets: true,
       })
@@ -1110,8 +1105,8 @@ export class NinjaOneSyncEngine {
    * Update organization mapping last synced timestamp
    */
   private async updateOrganizationMappingLastSynced(mappingId: string): Promise<void> {
-    await this.knex!('rmm_organization_mappings')
-      .where({ tenant: this.tenantId, mapping_id: mappingId })
+    await tenantDb(this.knex!, this.tenantId).table('rmm_organization_mappings')
+      .where({ mapping_id: mappingId })
       .update({ last_synced_at: new Date().toISOString() });
   }
 
@@ -1130,8 +1125,8 @@ export class NinjaOneSyncEngine {
       updateData.sync_error = undefined;
     }
 
-    await this.knex!('rmm_integrations')
-      .where({ tenant: this.tenantId, integration_id: this.integrationId })
+    await tenantDb(this.knex!, this.tenantId).table('rmm_integrations')
+      .where({ integration_id: this.integrationId })
       .update(updateData);
   }
 
@@ -1160,8 +1155,8 @@ export class NinjaOneSyncEngine {
       updateData.sync_error = undefined;
     }
 
-    await this.knex!('rmm_integrations')
-      .where({ tenant: this.tenantId, integration_id: this.integrationId })
+    await tenantDb(this.knex!, this.tenantId).table('rmm_integrations')
+      .where({ integration_id: this.integrationId })
       .update(updateData);
   }
 
@@ -1480,10 +1475,11 @@ export async function syncSingleDeviceByAssetId(
   assetId: string
 ): Promise<Asset> {
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenantId);
 
   // Look up the asset to get rmm_device_id and integration info
-  const asset = await knex('assets')
-    .where({ tenant: tenantId, asset_id: assetId })
+  const asset = await db.table('assets')
+    .where({ asset_id: assetId })
     .first();
 
   if (!asset) {
@@ -1495,9 +1491,8 @@ export async function syncSingleDeviceByAssetId(
   }
 
   // Find the integration for this tenant
-  const integration = await knex('rmm_integrations')
+  const integration = await db.table('rmm_integrations')
     .where({
-      tenant: tenantId,
       provider: 'ninjaone',
       is_active: true,
     })

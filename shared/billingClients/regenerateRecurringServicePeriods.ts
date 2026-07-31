@@ -21,6 +21,7 @@ export interface IRecurringServicePeriodRegenerationConflict {
 export interface RegenerateRecurringServicePeriodsInput {
   existingRecords: IRecurringServicePeriodRecord[];
   candidateRecords: IRecurringServicePeriodRecord[];
+  candidateCoverageEnd?: ISO8601String;
   regeneratedAt: ISO8601String;
   sourceRuleVersion: string;
   sourceRunKey: string;
@@ -61,6 +62,59 @@ function sortRecords(records: IRecurringServicePeriodRecord[]) {
   });
 }
 
+function toDateOnly(value: ISO8601String) {
+  return value.slice(0, 10);
+}
+
+function normalizeRangeForComparison(
+  range: IRecurringServicePeriodRecord['servicePeriod'] | IRecurringServicePeriodRecord['invoiceWindow'],
+) {
+  return {
+    ...range,
+    start: toDateOnly(range.start),
+    end: toDateOnly(range.end),
+  };
+}
+
+function normalizeActivityWindowForComparison(
+  range: IRecurringServicePeriodRecord['activityWindow'],
+) {
+  if (!range) {
+    return null;
+  }
+
+  return {
+    ...range,
+    start: range.start ? toDateOnly(range.start) : undefined,
+    end: range.end ? toDateOnly(range.end) : undefined,
+  };
+}
+
+function buildSchedulePeriodKey(record: Pick<IRecurringServicePeriodRecord, 'scheduleKey' | 'periodKey'>) {
+  return `${record.scheduleKey}\u0000${record.periodKey}`;
+}
+
+function buildMaxRevisionBySchedulePeriod(records: IRecurringServicePeriodRecord[]) {
+  const maxRevisionBySchedulePeriod = new Map<string, number>();
+  for (const record of records) {
+    const key = buildSchedulePeriodKey(record);
+    const currentMax = maxRevisionBySchedulePeriod.get(key) ?? 0;
+    if (record.revision > currentMax) {
+      maxRevisionBySchedulePeriod.set(key, record.revision);
+    }
+  }
+  return maxRevisionBySchedulePeriod;
+}
+
+function resolveNextRevision(
+  record: Pick<IRecurringServicePeriodRecord, 'scheduleKey' | 'periodKey'>,
+  requestedRevision: number,
+  maxRevisionBySchedulePeriod: Map<string, number>,
+) {
+  const existingMaxRevision = maxRevisionBySchedulePeriod.get(buildSchedulePeriodKey(record)) ?? 0;
+  return Math.max(requestedRevision, existingMaxRevision + 1);
+}
+
 function isPreservedOverrideRecord(record: IRecurringServicePeriodRecord) {
   return (
     record.provenance.kind === 'user_edited'
@@ -71,6 +125,13 @@ function isPreservedOverrideRecord(record: IRecurringServicePeriodRecord) {
   );
 }
 
+function startsAtOrAfterCoverageEnd(
+  record: IRecurringServicePeriodRecord,
+  candidateCoverageEnd: ISO8601String | undefined,
+) {
+  return Boolean(candidateCoverageEnd && toDateOnly(record.servicePeriod.start) >= toDateOnly(candidateCoverageEnd));
+}
+
 function areEquivalentFutureRecords(
   existing: IRecurringServicePeriodRecord,
   candidate: IRecurringServicePeriodRecord,
@@ -78,16 +139,16 @@ function areEquivalentFutureRecords(
   return JSON.stringify({
     cadenceOwner: existing.cadenceOwner,
     duePosition: existing.duePosition,
-    servicePeriod: existing.servicePeriod,
-    invoiceWindow: existing.invoiceWindow,
-    activityWindow: existing.activityWindow ?? null,
+    servicePeriod: normalizeRangeForComparison(existing.servicePeriod),
+    invoiceWindow: normalizeRangeForComparison(existing.invoiceWindow),
+    activityWindow: normalizeActivityWindowForComparison(existing.activityWindow ?? null),
     timingMetadata: existing.timingMetadata ?? null,
   }) === JSON.stringify({
     cadenceOwner: candidate.cadenceOwner,
     duePosition: candidate.duePosition,
-    servicePeriod: candidate.servicePeriod,
-    invoiceWindow: candidate.invoiceWindow,
-    activityWindow: candidate.activityWindow ?? null,
+    servicePeriod: normalizeRangeForComparison(candidate.servicePeriod),
+    invoiceWindow: normalizeRangeForComparison(candidate.invoiceWindow),
+    activityWindow: normalizeActivityWindowForComparison(candidate.activityWindow ?? null),
     timingMetadata: candidate.timingMetadata ?? null,
   });
 }
@@ -106,7 +167,10 @@ function buildOverrideConflict(
     };
   }
 
-  if (JSON.stringify(existing.servicePeriod) !== JSON.stringify(candidate.servicePeriod)) {
+  if (
+    JSON.stringify(normalizeRangeForComparison(existing.servicePeriod))
+    !== JSON.stringify(normalizeRangeForComparison(candidate.servicePeriod))
+  ) {
     return {
       kind: 'service_period_mismatch',
       recordId: existing.recordId,
@@ -116,7 +180,10 @@ function buildOverrideConflict(
     };
   }
 
-  if (JSON.stringify(existing.invoiceWindow) !== JSON.stringify(candidate.invoiceWindow)) {
+  if (
+    JSON.stringify(normalizeRangeForComparison(existing.invoiceWindow))
+    !== JSON.stringify(normalizeRangeForComparison(candidate.invoiceWindow))
+  ) {
     return {
       kind: 'invoice_window_mismatch',
       recordId: existing.recordId,
@@ -126,7 +193,9 @@ function buildOverrideConflict(
     };
   }
 
-  if (JSON.stringify(existing.activityWindow ?? null) !== JSON.stringify(candidate.activityWindow ?? null)) {
+  const existingActivityWindow = normalizeActivityWindowForComparison(existing.activityWindow ?? null);
+  const candidateActivityWindow = normalizeActivityWindowForComparison(candidate.activityWindow ?? null);
+  if (JSON.stringify(existingActivityWindow) !== JSON.stringify(candidateActivityWindow)) {
     return {
       kind: 'activity_window_mismatch',
       recordId: existing.recordId,
@@ -142,6 +211,7 @@ function buildOverrideConflict(
 export function regenerateRecurringServicePeriods(
   input: RegenerateRecurringServicePeriodsInput,
 ): IRecurringServicePeriodRegenerationPlan {
+  const maxRevisionBySchedulePeriod = buildMaxRevisionBySchedulePeriod(input.existingRecords);
   const existingRecords = sortRecords(
     input.existingRecords.filter((record) => record.lifecycleState !== 'archived' && record.lifecycleState !== 'superseded'),
   );
@@ -175,6 +245,12 @@ export function regenerateRecurringServicePeriods(
     }
 
     if (!candidate) {
+      if (startsAtOrAfterCoverageEnd(existing, input.candidateCoverageEnd)) {
+        preservedRecords.push(existing);
+        activeRecords.push(existing);
+        continue;
+      }
+
       supersededRecords.push({
         ...existing,
         lifecycleState: 'superseded',
@@ -189,7 +265,7 @@ export function regenerateRecurringServicePeriods(
       continue;
     }
 
-    const revision = existing.revision + 1;
+    const revision = resolveNextRevision(candidate, existing.revision + 1, maxRevisionBySchedulePeriod);
     const regeneratedRecord: IRecurringServicePeriodRecord = {
       ...candidate,
       recordId: recordIdFactory({
@@ -223,8 +299,20 @@ export function regenerateRecurringServicePeriods(
   }
 
   for (const candidate of candidateRecords.slice(candidateIndex)) {
-    newRecords.push(candidate);
-    activeRecords.push(candidate);
+    const revision = resolveNextRevision(candidate, candidate.revision, maxRevisionBySchedulePeriod);
+    const newRecord = revision === candidate.revision
+      ? candidate
+      : {
+          ...candidate,
+          recordId: recordIdFactory({
+            scheduleKey: candidate.scheduleKey,
+            periodKey: candidate.periodKey,
+            revision,
+          }),
+          revision,
+        };
+    newRecords.push(newRecord);
+    activeRecords.push(newRecord);
   }
 
   return {

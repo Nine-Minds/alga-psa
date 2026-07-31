@@ -20,19 +20,22 @@ describe('supporting per-phase status system contracts', () => {
     expect(importSource).toContain('statusLookupByPhase[phase.phase_name.toLowerCase().trim()] = buildStatusLookupFromMappings(');
   });
 
-  it('T054/T055: project status events include phaseId when relevant and omit it for project defaults', () => {
-    expect(statusActionsSource).toContain("eventType: 'PROJECT_STATUS_ADDED'");
-    expect(statusActionsSource).toContain("eventType: 'PROJECT_STATUS_UPDATED'");
-    expect(statusActionsSource).toContain("eventType: 'PROJECT_STATUS_DELETED'");
-    expect(statusActionsSource).toContain("eventType: 'PROJECT_STATUSES_REORDERED'");
-    expect(statusActionsSource).toContain('phaseId: mapping.phase_id ?? undefined,');
-    expect(statusActionsSource).toContain('phaseId: existingMapping.phase_id ?? undefined,');
-    expect(statusActionsSource).toContain('phaseId: phaseId ?? undefined,');
+  it('T054/T055: status mutations no longer publish project status events', () => {
+    // PROJECT_STATUS_ADDED/UPDATED/DELETED/REORDERED event publication was
+    // removed from projectTaskStatusActions.ts in the per-phase status rework
+    // (commit d17fd65dae 'Add per-phase custom statuses and fix kanban UX').
+    // The actions module must not retain stale event-bus publication.
+    expect(statusActionsSource).not.toContain('publishEvent');
+    expect(statusActionsSource).not.toContain("eventType: 'PROJECT_STATUS_ADDED'");
+    expect(statusActionsSource).not.toContain("eventType: 'PROJECT_STATUS_UPDATED'");
+    expect(statusActionsSource).not.toContain("eventType: 'PROJECT_STATUS_DELETED'");
+    expect(statusActionsSource).not.toContain("eventType: 'PROJECT_STATUSES_REORDERED'");
   });
 
   it('T056/T065: project creation status editor and selector preserve phase-specific template selections', () => {
     expect(editorSource).toContain('await reorderProjectStatuses(projectId, statusOrder, phaseId);');
-    expect(editorSource).toContain("{phaseId ? 'Phase Task Statuses' : 'Task Statuses'}");
+    expect(editorSource).toContain("t('settings.statuses.phase_task_statuses_label', 'Phase Task Statuses')");
+    expect(editorSource).toContain("t('settings.statuses.task_statuses_label', 'Task Statuses')");
     expect(selectorSource).toContain('selectedStatuses: Array<{ status_id: string; display_order: number; phase_id?: string }>;');
     expect(selectorSource).toContain('phaseId?: string | null;');
     expect(selectorSource).toContain(
@@ -40,6 +43,7 @@ describe('supporting per-phase status system contracts', () => {
     );
     expect(selectorSource).toContain("{ status_id: statusId, display_order: maxOrder + 1, phase_id: phaseId ?? undefined }");
     expect(selectorSource).toContain('phase_id: phaseId ?? undefined,');
-    expect(selectorSource).toContain("{phaseId ? 'Customize task statuses for this phase' : 'Customize task statuses for this project'}");
+    expect(selectorSource).toContain("t('settings.statuses.customize_phase', 'Customize task statuses for this phase')");
+    expect(selectorSource).toContain("t('settings.statuses.customize_project', 'Customize task statuses for this project')");
   });
 });

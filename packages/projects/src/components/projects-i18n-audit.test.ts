@@ -44,6 +44,8 @@ describe('T002: static i18n wiring audit', () => {
     'PrefillFromTicketDialog.tsx',
     'TaskListView.tsx',
     'TaskCard.tsx',
+    'StatusColumn.tsx',
+    'ProjectPage.tsx',
     'PhaseQuickAdd.tsx',
     // Sub-batch B: project-templates
     'project-templates/TemplateEditor.tsx',
@@ -120,13 +122,10 @@ describe('T002: static i18n wiring audit', () => {
 
 describe('T002: confirmed zero-string components', () => {
   const zeroStringFiles = [
-    'StatusColumn.tsx',
     'KanbanBoard.tsx',
-    'ProjectPage.tsx',
     'KanbanZoomControl.tsx',
     'DonutChart.tsx',
     'TaskQuickAdd.tsx',
-    'TaskEdit.tsx',
     'HoursProgressBar.tsx',
     'settings/projects/TaskPrioritySettings.tsx',
   ];
@@ -161,15 +160,27 @@ describe('T001: lang-pack key parity', () => {
     return paths;
   }
 
+  // i18next plural-category suffixes (CLDR). Languages like Polish need
+  // _few/_many plural forms that English does not have, so parity for plural
+  // variants is checked on the base key instead of requiring identical keys.
+  const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/;
+  const toBasePath = (p: string): string => p.replace(PLURAL_SUFFIX, '');
+
   const en = readJson<Record<string, unknown>>(`${localesDir}/en/${namespace}`);
   const enPaths = collectLeafPaths(en);
+  const enBasePaths = new Set(enPaths.map(toBasePath));
 
   for (const lang of ['fr', 'es', 'de', 'nl', 'it', 'pl', 'xx', 'yy']) {
     it(`${lang} locale has same key count as en (${enPaths.length} keys)`, () => {
       const locale = readJson<Record<string, unknown>>(`${localesDir}/${lang}/${namespace}`);
       const localePaths = collectLeafPaths(locale);
-      const missingInLocale = enPaths.filter(p => !localePaths.includes(p));
-      const extraInLocale = localePaths.filter(p => !enPaths.includes(p));
+      const localeBasePaths = new Set(localePaths.map(toBasePath));
+      const missingInLocale = enPaths.filter(
+        p => !localePaths.includes(p) && !localeBasePaths.has(toBasePath(p))
+      );
+      const extraInLocale = localePaths.filter(
+        p => !enPaths.includes(p) && !enBasePaths.has(toBasePath(p))
+      );
 
       expect(missingInLocale, `keys missing in ${lang}`).toEqual([]);
       expect(extraInLocale, `extra keys in ${lang}`).toEqual([]);
@@ -344,10 +355,16 @@ describe('T014: global quick-create ProjectQuickAdd i18n coverage', () => {
     expect(getLeaf(pseudo, 'quickAdd.title')).toBe('11111');
   });
 
-  it('ProjectQuickAdd is imported by the global QuickCreateDialog', () => {
+  it('ProjectQuickAdd is reached through the global quick-create project route', () => {
     const quickCreate = read(
       '../../../../server/src/components/layout/QuickCreateDialog.tsx'
     );
-    expect(quickCreate).toContain('ProjectQuickAdd');
+    const projectRoute = read(
+      '../../../../server/src/app/msp/_components/CreateProjectRouteClient.tsx'
+    );
+    expect(quickCreate).toContain("project: () => '/msp/create-project'");
+    expect(quickCreate).toContain('router.push(QUICK_CREATE_HREFS[type]())');
+    expect(projectRoute).toContain("import ProjectQuickAdd from '@alga-psa/projects/components/ProjectQuickAdd'");
+    expect(projectRoute).toContain('<ProjectQuickAdd');
   });
 });

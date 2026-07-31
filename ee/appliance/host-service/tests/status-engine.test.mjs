@@ -29,8 +29,8 @@ test('collectStatusSnapshot reads local state and kubeconfig-driven kubectl outp
   const setupInputsFile = path.join(tmp, 'setup-inputs.json');
   const releaseSelectionFile = path.join(tmp, 'release-selection.json');
   fs.writeFileSync(stateFile, JSON.stringify({ phase: 'flux', status: 'flux-source-complete' }));
-  fs.writeFileSync(setupInputsFile, JSON.stringify({ channel: 'stable', appHostname: 'http://192.0.2.10:3000', repoBranch: 'feature/on-premise-email-processing' }));
-  fs.writeFileSync(releaseSelectionFile, JSON.stringify({ selectedChannel: 'stable', repoBranch: 'feature/on-premise-email-processing' }));
+  fs.writeFileSync(setupInputsFile, JSON.stringify({ channel: 'stable', appHostname: 'http://192.0.2.10:3000', releaseRef: '' }));
+  fs.writeFileSync(releaseSelectionFile, JSON.stringify({ selectedChannel: 'stable', selectedReleaseVersion: '1.0.0', registryHost: 'ghcr.io', repository: 'nine-minds/alga-appliance-release', manifestDigest: 'sha256:release' }));
 
   const kubectlPath = path.join(fakeBin, 'kubectl');
   fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
@@ -70,9 +70,9 @@ exit 1
 
     assert.equal(snapshot.currentPhase, 'flux');
     assert.equal(snapshot.status, 'flux-source-complete');
-    assert.equal(snapshot.setupInputs.repoBranch, 'feature/on-premise-email-processing');
+    assert.equal(snapshot.setupInputs.channel, 'stable');
     assert.equal(snapshot.urls.loginUrl, 'http://192.0.2.10:3000');
-    assert.equal(snapshot.releaseSelection.repoBranch, 'feature/on-premise-email-processing');
+    assert.equal(snapshot.releaseSelection.manifestDigest, 'sha256:release');
     assert.equal(snapshot.kubernetes.nodes.length, 1);
     assert.equal(snapshot.kubernetes.nodes[0].ready, true);
     assert.equal(snapshot.kubernetes.podCount, 2);
@@ -89,7 +89,7 @@ test('collectStatusSnapshot includes UI contract fields for live status page', (
   const stateFile = path.join(tmp, 'install-state.json');
   const fakeBin = path.join(tmp, 'bin');
   fs.mkdirSync(fakeBin, { recursive: true });
-  fs.writeFileSync(stateFile, JSON.stringify({ phase: 'github-release-source', status: 'release-config-complete', lastAction: 'Release selection persisted.' }));
+  fs.writeFileSync(stateFile, JSON.stringify({ phase: 'registry-release-source', status: 'release-config-complete', lastAction: 'Release selection persisted.' }));
 
   const kubectlPath = path.join(fakeBin, 'kubectl');
   fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash

@@ -13,12 +13,28 @@ export {
   convertQuoteToDraftContract,
   convertQuoteToDraftContractAndInvoice,
   convertQuoteToDraftInvoice,
+  convertQuoteToDraftSalesOrder,
   type QuoteToContractConversionResult,
   type QuoteToBothConversionResult,
   type QuoteToInvoiceConversionResult,
+  type QuoteToSalesOrderConversionResult,
 } from './quoteConversionService';
 export { ContractLineServiceConfigurationService } from './contractLineServiceConfigurationService';
 export { ClientContractServiceConfigurationService } from './clientContractServiceConfigurationService';
+export {
+  computeEntryAmounts,
+  validateAllocation,
+  evaluatePhaseReadiness,
+  evaluateDateReadiness,
+  computeCapWriteDown,
+  detectThresholdCrossings,
+  computeDepositReconciliation,
+} from './projectBillingService';
+export type {
+  AllocationValidationResult,
+  CapWriteDownResult,
+  DepositReconciliationEntry,
+} from './projectBillingService';
 
 // Accounting export services
 export { AccountingExportService, type ExternalTaxImporter } from './accountingExportService';
@@ -35,7 +51,7 @@ export {
 } from '../repositories/accountingExportRepository';
 
 // Accounting adapters
-export { AccountingAdapterRegistry } from '../adapters/accounting/registry';
+export { AccountingAdapterRegistry, ADAPTER_EXPORT_CAPABILITIES } from '../adapters/accounting/registry';
 export { QuickBooksOnlineAdapter, buildQboPrivateNoteForPurchaseOrder } from '../adapters/accounting/quickBooksOnlineAdapter';
 export { QuickBooksCSVAdapter, buildQuickBooksCsvMemo } from '../adapters/accounting/quickBooksCSVAdapter';
 export { QuickBooksDesktopAdapter } from '../adapters/accounting/quickBooksDesktopAdapter';
@@ -79,8 +95,15 @@ export {
 export { WorkflowTaskSyncExceptionService } from './accountingSync/syncExceptionService';
 export {
   enqueueInvoiceAutoExport,
+  enqueueVendorBillAutoExport,
+  enqueueVendorBillExportRetry,
   satisfyExportOpsForManualBatch
 } from './accountingSync/syncProducers';
+export {
+  resolveConnectedAccountingIntegration,
+  type ConnectedAccountingIntegration,
+  type ConnectedAccountingAdapterType
+} from './accountingSync/connectedAccountingIntegration';
 export type { SyncExceptionService, SyncExceptionInput, SyncExceptionType } from './accountingSync/syncExceptions.types';
 export {
   emptyCycleStats,

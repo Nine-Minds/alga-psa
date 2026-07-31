@@ -2,7 +2,7 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import TicketDetails from '../TicketDetails';
 
@@ -87,6 +87,7 @@ vi.mock('@alga-psa/ui/context', () => ({
   useSchedulingCallbacks: () => ({
     renderAgentSchedule: vi.fn(),
     launchTimeEntry: vi.fn(),
+    launchScheduleEntry: vi.fn(),
     fetchTimeEntriesForTicket: vi.fn(),
     deleteTimeEntry: vi.fn(),
   }),
@@ -130,6 +131,12 @@ vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
 
 vi.mock('@alga-psa/ui/components', () => ({
   ResponseStateBadge: () => <div data-testid="response-state" />,
+  ContentCard: ({ children, title }: { children?: React.ReactNode; title?: string }) => (
+    <div data-testid="content-card">
+      {title ? <div>{title}</div> : null}
+      {children}
+    </div>
+  ),
 }));
 
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
@@ -176,6 +183,7 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   findUserById: vi.fn().mockResolvedValue(null),
   getCurrentUser: vi.fn().mockResolvedValue(null),
   getCurrentUserPermissions: vi.fn().mockResolvedValue([]),
+  searchUsersForMentions: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('@alga-psa/tickets/actions', () => ({
@@ -246,7 +254,7 @@ vi.mock('../../actions/comment-actions/clipboardImageDraftActions', () => ({
   deleteDraftClipboardImages: vi.fn().mockResolvedValue(undefined),
 }));
 
-describe('TicketDetails renderCreateProjectTask', () => {
+describe('TicketDetails toolbar actions', () => {
   const baseTicket = {
     ticket_id: 'ticket-1',
     ticket_number: 'T-001',
@@ -269,6 +277,10 @@ describe('TicketDetails renderCreateProjectTask', () => {
     attributes: {}
   };
 
+  beforeEach(() => {
+    lastTicketInfoProps = null;
+  });
+
   it('renders renderCreateProjectTask button in header', () => {
     const renderCreateProjectTask = vi.fn();
 
@@ -286,5 +298,33 @@ describe('TicketDetails renderCreateProjectTask', () => {
     render(<TicketDetails initialTicket={baseTicket as any} />);
 
     expect(lastTicketInfoProps.renderProjectTaskActions).toBeUndefined();
+  });
+
+  it('exposes the resolve-and-close action for an open ticket with a closed board status', () => {
+    render(
+      <TicketDetails
+        initialTicket={baseTicket as any}
+        statusOptions={[
+          { value: 'status-1', label: 'Open', board_id: 'board-1', is_closed: false },
+          { value: 'status-closed', label: 'Resolved', board_id: 'board-1', is_closed: true },
+        ]}
+      />
+    );
+
+    expect(lastTicketInfoProps.onResolveAndClose).toEqual(expect.any(Function));
+    expect(lastTicketInfoProps.resolveAndCloseDisabled).toBe(false);
+  });
+
+  it('hides the resolve-and-close action after the ticket is closed', () => {
+    render(
+      <TicketDetails
+        initialTicket={{ ...baseTicket, status_id: 'status-closed' } as any}
+        statusOptions={[
+          { value: 'status-closed', label: 'Resolved', board_id: 'board-1', is_closed: true },
+        ]}
+      />
+    );
+
+    expect(lastTicketInfoProps.onResolveAndClose).toBeUndefined();
   });
 });

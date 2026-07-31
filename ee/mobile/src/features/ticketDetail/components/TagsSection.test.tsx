@@ -21,7 +21,8 @@ vi.mock("../../../ui/components/SectionHeader", () => ({
     ),
 }));
 
-import { TagsSection, getReadableTextColor, getTagChipColors } from "./TagsSection";
+import { TagsSection } from "./TagsSection";
+import { generateEntityColor, getTagChipColors } from "../../../ui/tagColors";
 
 function render(
   props: Partial<React.ComponentProps<typeof TagsSection>> = {},
@@ -121,11 +122,10 @@ describe("TagsSection", () => {
     expect(styleOf(label).color).toBe("#92400E");
   });
 
-  it("falls back to theme chip colors when no color is set", () => {
+  it("generates deterministic colors from the tag text when no color is set", () => {
     const renderer = render({ tags: [makeTag("m1", "plain")] });
     const chip = tagChip(renderer, "plain");
-    expect(styleOf(chip).backgroundColor).not.toBeUndefined();
-    expect(styleOf(chip).backgroundColor).not.toBe("#11182B");
+    expect(styleOf(chip).backgroundColor).toBe(generateEntityColor("plain").background);
   });
 
   it("calls onRemoveTag for the chip's remove button", () => {
@@ -166,40 +166,9 @@ describe("TagsSection", () => {
   });
 });
 
-describe("getReadableTextColor", () => {
-  it("returns white on dark backgrounds", () => {
-    expect(getReadableTextColor("#000000")).toBe("#FFFFFF");
-    expect(getReadableTextColor("#1E3A8A")).toBe("#FFFFFF");
-  });
-
-  it("returns a dark color on light backgrounds", () => {
-    expect(getReadableTextColor("#FFFFFF")).toBe("#1F2937");
-    expect(getReadableTextColor("#FEF3C7")).toBe("#1F2937");
-  });
-});
-
 describe("getTagChipColors", () => {
-  const fallback = { bg: "#EEE-bg", text: "#333-text", border: "#CCC-border" };
-
-  it("uses the fallback palette when background_color is missing or invalid", () => {
-    expect(getTagChipColors({ background_color: null, text_color: null }, fallback)).toEqual({
-      backgroundColor: "#EEE-bg",
-      textColor: "#333-text",
-      borderColor: "#CCC-border",
-    });
-    expect(getTagChipColors({ background_color: "red", text_color: "#FFFFFF" }, fallback).backgroundColor).toBe("#EEE-bg");
-  });
-
-  it("derives a readable text color when only the background is set", () => {
-    expect(getTagChipColors({ background_color: "#000000", text_color: null }, fallback)).toEqual({
-      backgroundColor: "#000000",
-      textColor: "#FFFFFF",
-      borderColor: "#000000",
-    });
-  });
-
   it("keeps both colors when provided", () => {
-    expect(getTagChipColors({ background_color: "#FEF3C7", text_color: "#92400E" }, fallback)).toEqual({
+    expect(getTagChipColors({ tag_text: "vip", background_color: "#FEF3C7", text_color: "#92400E" }, "light")).toEqual({
       backgroundColor: "#FEF3C7",
       textColor: "#92400E",
       borderColor: "#FEF3C7",

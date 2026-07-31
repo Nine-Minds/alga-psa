@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 /**
  * Thin knex helpers over tenant_external_entity_mappings — the single ledger
@@ -30,14 +31,17 @@ export class SyncMappingLedger {
     private readonly integrationType: string
   ) {}
 
+  private table<Row extends object = ExternalEntityMappingRow>() {
+    return tenantDb(this.knex, this.tenantId).table<Row>(TABLE);
+  }
+
   async findByExternalId(
     algaEntityType: string,
     externalEntityId: string,
     targetRealm?: string | null
   ): Promise<ExternalEntityMappingRow | undefined> {
-    const query = this.knex<ExternalEntityMappingRow>(TABLE)
+    const query = this.table<ExternalEntityMappingRow>()
       .where({
-        tenant: this.tenantId,
         integration_type: this.integrationType,
         alga_entity_type: algaEntityType,
         external_entity_id: externalEntityId
@@ -56,9 +60,8 @@ export class SyncMappingLedger {
     algaEntityType: string,
     algaEntityId: string
   ): Promise<ExternalEntityMappingRow | undefined> {
-    return this.knex<ExternalEntityMappingRow>(TABLE)
+    return this.table<ExternalEntityMappingRow>()
       .where({
-        tenant: this.tenantId,
         integration_type: this.integrationType,
         alga_entity_type: algaEntityType,
         alga_entity_id: algaEntityId
@@ -74,7 +77,7 @@ export class SyncMappingLedger {
     syncStatus?: string;
     metadata?: Record<string, unknown> | null;
   }): Promise<ExternalEntityMappingRow> {
-    const [row] = await this.knex<ExternalEntityMappingRow>(TABLE)
+    const [row] = await this.table<ExternalEntityMappingRow>()
       .insert({
         tenant: this.tenantId,
         integration_type: this.integrationType,
@@ -110,15 +113,15 @@ export class SyncMappingLedger {
       update.last_synced_at = this.knex.fn.now();
     }
 
-    await this.knex(TABLE)
-      .where({ tenant: this.tenantId, id })
+    await this.table()
+      .where({ id })
       .update(update);
   }
 
   /** Counts by sync_status for the health panel. */
   async countByStatus(): Promise<Record<string, number>> {
-    const rows = await this.knex(TABLE)
-      .where({ tenant: this.tenantId, integration_type: this.integrationType })
+    const rows = await this.table()
+      .where({ integration_type: this.integrationType })
       .select('sync_status')
       .count<{ sync_status: string | null; count: string }[]>('* as count')
       .groupBy('sync_status');

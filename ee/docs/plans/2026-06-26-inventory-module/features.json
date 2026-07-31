@@ -1,0 +1,1256 @@
+[
+  {
+    "id": "F001",
+    "description": "[P0] Scaffold packages/inventory package (actions/components/index) wired into the monorepo build and TS project refs",
+    "implemented": true,
+    "prdRefs": [
+      "15"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "[P0] Add inventory TypeScript interfaces in packages/types/src/interfaces/inventory.interfaces.ts for all new entities",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "[P0] Migration: create stock_locations (location_type CHECK, assigned_user_id, manager_user_id, is_default partial-unique per tenant, unique (tenant,name), is_active)",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "[P0] Migration: create product_inventory_settings (1:1 service_catalog; track_stock, is_serialized, is_kit, creates_asset_on_delivery, reorder_point/qty, average_cost+currency, default_location_id, preferred_vendor_id)",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "[P0] Migration: create vendors (vendor_name, contacts, payment_terms, account_number, is_active; unique (tenant,vendor_name))",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "[P0] Migration: backfill distinct service_catalog.vendor freeform \u2192 vendors rows; set product_inventory_settings.preferred_vendor_id; mark legacy text column deprecated",
+    "implemented": true,
+    "prdRefs": [
+      "12"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "[P0] Migration: create stock_levels (PK tenant,service_id,location_id; quantity_on_hand, reserved_quantity, held_quantity, reorder_point override)",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "[P0] Migration: create stock_units (serial_number, mac_address, status CHECK 8 states, location/client/asset, allocated_so_line_id, warranty_expires_at/term, loan_due_at, unit_cost+currency, received/delivered_at, source_po_id; unique (tenant,service_id,serial), unique (tenant,mac) WHERE mac NOT NULL; indexes status/serial/mac/asset/client)",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "[P0] Migration: create stock_movements (append-only; movement_type CHECK 12 types, from/to location, unit_id, quantity, unit_cost+currency, cogs_cost, reason, source_doc_type/id, performed_by; no updated_at)",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "[P0] Migration: create purchase_orders + purchase_order_lines (status CHECK; is_drop_ship, drop_ship_client_id, drop_ship_address; line source_so_line_id, quantity_received)",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "[P0] Migration: create sales_orders + sales_order_lines (status CHECK; invoice_mode, allocation_mode, client_po_number; line fulfillment_type, parent_so_line_id, quantity_fulfilled, quantity_invoiced)",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "[P0] Migration: create kit_components (PK tenant,kit_service_id,component_service_id; quantity)",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "[P0] Migration: create stock_transfers + stock_transfer_lines (status CHECK dispatched/received/cancelled; dispatched/received by+at)",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "[P0] Migration: create rma_cases (rma_type, status CHECK 11 states, returned/replacement unit, vendor, rma_reference, dead_unit_due_date, dead_unit_returned_at, opened/closed_at)",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "[P0] Migration: add nullable assets.service_id (FK service_catalog) + assets.stock_unit_id (FK stock_units)",
+    "implemented": true,
+    "prdRefs": [
+      "5",
+      "7"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "[P0] Migration: seed exactly one default stock_locations row per existing tenant",
+    "implemented": true,
+    "prdRefs": [
+      "12"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "[P0] Migration: register permissions (inventory/vendor/purchase_order/sales_order/stock_transfer CRUD; stock_location read/update) and grant to admin role per tenant",
+    "implemented": true,
+    "prdRefs": [
+      "8"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "[P0] Reversible down() for every inventory migration (drop in dependency order)",
+    "implemented": true,
+    "prdRefs": [
+      "12"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "[P0] Movement primitive service: write a stock_movement and update stock_levels/unit-status atomically within withTransaction (single chokepoint all flows use)",
+    "implemented": true,
+    "prdRefs": [
+      "5",
+      "6"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "[P0] Reconciliation utility: recompute stock_levels and serialized on-hand by replaying stock_movements (for repair + tests)",
+    "implemented": true,
+    "prdRefs": [
+      "11"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "[P1] stock_locations: list action",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "[P1] stock_locations: create action enforcing single is_default per tenant",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "[P1] stock_locations: update action",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "[P1] stock_locations: deactivate action, guarded against deactivating a location that still holds stock",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "[P1] stock_locations: set manager_user_id (alert routing) and assigned_user_id (van/tech)",
+    "implemented": true,
+    "prdRefs": [
+      "8",
+      "9"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "[P1] product_inventory_settings: enable inventory on a product (create row, track_stock=true)",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "[P1] product_inventory_settings: toggle is_serialized, guarded when units already exist",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "[P1] product_inventory_settings: toggle is_kit, guarded when product is referenced",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "[P1] product_inventory_settings: set reorder_point/qty, default_location, preferred_vendor, creates_asset_on_delivery",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "[P1] Surface product_inventory_settings merged into product read/detail (IService extension)",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "[P1] ProductsManager UI: per-product Inventory panel (flags + reorder/location/vendor fields)",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "[P1] Inventory nav section + /msp/inventory routing scaffolding (MSP-only)",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "[P1] Locations management screen (list/create/edit/deactivate, set manager/tech)",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "[P1] Guard: only item_kind='product' rows may receive product_inventory_settings (action-layer)",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "[P1] Guard: settings/cost currency aligns with product cost_currency",
+    "implemented": true,
+    "prdRefs": [
+      "13"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "[P2] stock_levels: read on-hand/available for a product across all locations",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "[P2] stock_levels: read all stock at a location (location detail)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "[P2] stock_units: create/list/get; search by serial_number",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "[P2] stock_units: search by mac_address",
+    "implemented": true,
+    "prdRefs": [
+      "2"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "[P2] stock_units: detail view (status, location/client/asset, warranty, full movement history)",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "[P2] Manual receipt (no PO): non-serialized increments on_hand + writes receipt movement",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "[P2] Manual receipt (no PO): serialized creates units (serial+MAC+warranty) + per-unit receipt movements",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "[P2] Moving-average cost recompute on receipt for non-serialized products",
+    "implemented": true,
+    "prdRefs": [
+      "10"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "[P2] Adjust flow (non-serialized): \u00b1 quantity with required reason + adjust movement",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "[P2] Adjust flow (serialized): loss\u2192retired / found\u2192in_stock with required reason",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "[P2] Retire/dispose flow (serialized unit\u2192retired; non-serialized on_hand\u2212)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "[P2] Compute available = on_hand \u2212 reserved \u2212 held everywhere availability is shown/used",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "[P2] Serialized on_hand counts only in_stock units (excludes in_transit/on_loan/returned/in_rma/delivered/retired)",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "[P2] Movements ledger screen (filter by product/location/type/date/unit)",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "[P2] Enforce movement immutability (no update/delete actions exposed)",
+    "implemented": true,
+    "prdRefs": [
+      "11"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "[P2] Negative/insufficient on_hand soft-warn payload surfaced to callers (warning, not block)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "[P2] Enforce serial uniqueness (tenant,service_id,serial_number)",
+    "implemented": true,
+    "prdRefs": [
+      "5"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "[P2] Enforce MAC uniqueness tenant-wide where mac_address NOT NULL",
+    "implemented": true,
+    "prdRefs": [
+      "5",
+      "11"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "[P2] Per-unit movement history query (unit detail + advisory)",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "[P2] Fault/security advisory lookup: find units (in-stock + deployed) by serial/MAC list",
+    "implemented": true,
+    "prdRefs": [
+      "2",
+      "4"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "[P3] vendors: list/get",
+    "implemented": true,
+    "prdRefs": [
+      "3"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "[P3] vendors: create (unique name)",
+    "implemented": true,
+    "prdRefs": [
+      "3"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "[P3] vendors: update",
+    "implemented": true,
+    "prdRefs": [
+      "3"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "[P3] vendors: deactivate, guarded if referenced by open POs",
+    "implemented": true,
+    "prdRefs": [
+      "3"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "[P3] purchase_orders: create draft (vendor, currency, ship_to_location)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "[P3] purchase_order_lines: add/edit/remove (service_id, qty_ordered, unit_cost)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "[P3] PO status transition draft\u2192open (submit)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "[P3] PO cancel, guarded if any line received",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "[P3] Receive against PO line (non-serialized): increment on_hand, qty_received, avg cost, receipt movement",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "[P3] Receive against PO line (serialized): create units (serial+MAC+warranty, source_po_id) + movements",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "[P3] Partial-receipt handling: PO status open\u2192partially_received\u2192received",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "[P3] Over-receipt allowed with warning",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "[P3] Purchase Orders list/detail screens",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "[P3] Receiving UI (per-line, serial/MAC/warranty capture)",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "[P3] Vendors management screen",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "[P3] Guard: PO currency vs product cost_currency",
+    "implemented": true,
+    "prdRefs": [
+      "13"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "[P3] PO number generation (per-tenant unique sequence)",
+    "implemented": true,
+    "prdRefs": [
+      "13"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "[P4] sales_orders: create draft (client, currency, ship_to, invoice_mode, allocation_mode, client_po_number)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "[P4] sales_order_lines: add/edit/remove (service_id, qty, unit_price, tax_rate_id, fulfillment_type)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "[P4] SO status transition draft\u2192confirmed",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "[P4] On confirm soft allocation: serialized in_stock\u2192allocated (+allocated_so_line_id); non-serialized reserved_quantity+=qty",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "[P4] On confirm hard-hold (allocation_mode=hard): held_quantity+=qty / units hard-held",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "[P4] Allocation reversal on SO edit/cancel (release reserved/held; units\u2192in_stock)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "[P4] Availability check at confirm: flag backordered qty = ordered \u2212 available",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "[P4] Fulfill SO line (from_stock): consume flow; qty_fulfilled+=; SO status partial/fulfilled",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "[P4] Consume (serialized): pick unit (selected serial/MAC or FIFO)\u2192delivered, set client/delivered_at, clear location",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "[P4] Consume: capture COGS on movement (unit_cost serialized / average_cost non-serialized)",
+    "implemented": true,
+    "prdRefs": [
+      "10"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "[P4] Consume: decrement on_hand, release reservation/hold for the consumed qty",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "[P4] Hard-hold poach guard: consume cannot take a unit/qty hard-held by another SO",
+    "implemented": true,
+    "prdRefs": [
+      "6",
+      "11"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "[P4] Asset linkage on delivery: call assets createAsset (ABAC), set asset.service_id/stock_unit_id + unit.asset_id; carry serial/MAC/warranty",
+    "implemented": true,
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "[P4] creates_asset_on_delivery gating (skip asset creation when false)",
+    "implemented": true,
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "[P4] Materials hook: addTicketMaterial consumes stock for track_stock products (source_doc_type=ticket_material)",
+    "implemented": true,
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "[P4] Materials hook: addProjectMaterial consumes stock (source_doc_type=project_material)",
+    "implemented": true,
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "[P4] Serial/MAC picker in ticket/project material dialog for serialized products",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "[P4] Material delete (unbilled) writes compensating movement / reverts unit",
+    "implemented": true,
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "[P4] Invoicing on-fulfillment: emit billable charge into existing invoice-generation engine on fulfill",
+    "implemented": true,
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "[P4] Invoicing manual: 'Generate invoice' from selected SO lines on demand",
+    "implemented": true,
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "[P4] quantity_invoiced shared ledger guard (\u2264 ordered; invoice_item\u2194so_line link; no double-bill across both paths)",
+    "implemented": true,
+    "prdRefs": [
+      "7",
+      "11"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "[P4] Partial ship \u2192 partial invoice correctness (counters advance independently)",
+    "implemented": true,
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "[P4] Sales Orders list/detail screens",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "[P4] SO create/edit UI (lines, allocation/invoice mode, fulfillment_type)",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "[P4] Backorder \u2192 suggested draft PO from SO line (source_so_line_id link)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "[P4] Contract seam: recurring contract billing does NOT consume stock (no movement emitted)",
+    "implemented": true,
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "[P4] SO cancel (release allocations; guard if fulfilled/invoiced)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "[P4] Guard: SO currency vs line/product currency",
+    "implemented": true,
+    "prdRefs": [
+      "13"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "[P5] Kit definition: kit_components CRUD (add/remove components + quantity)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "[P5] Guard: a kit cannot contain a kit (single-level BOM)",
+    "implemented": true,
+    "prdRefs": [
+      "3"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "[P5] Kit explosion on SO add: parent kit line + component lines (parent_so_line_id)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "[P5] Exploded kit component lines decrement each component from stock on fulfill",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "[P5] Kit with non-stocked component (license/labor) rides on SO without stock decrement",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "[P5] Editing kit parent line qty scales component quantities",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "[P5] Kit management UI (component editor in product Inventory panel)",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "[P5] Kit pricing roll-up behavior defined (sum-of-components vs independent kit price)",
+    "implemented": true,
+    "prdRefs": [
+      "13"
+    ]
+  },
+  {
+    "id": "F109",
+    "description": "[P6] Transfer dispatch: create stock_transfers (dispatched); transfer_out movements; source on_hand\u2212; serialized units\u2192in_transit",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "[P6] Transfer receive: \u2192received; transfer_in movements; dest on_hand+; serialized units\u2192in_stock at dest",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "[P6] Transfer cancel before receipt returns units/qty to source",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F112",
+    "description": "[P6] In-transit stock excluded from destination available until received",
+    "implemented": true,
+    "prdRefs": [
+      "5",
+      "6"
+    ]
+  },
+  {
+    "id": "F113",
+    "description": "[P6] Transfers UI (dispatch/receive, in-transit list)",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F114",
+    "description": "[P6] Loaner out: loan_out movement; unit in_stock\u2192on_loan; set client+loan_due_at; no COGS/no invoice",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F115",
+    "description": "[P6] Loaner return: loan_in movement; on_loan\u2192in_stock",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F116",
+    "description": "[P6] Loaners-out report (where/since/due back)",
+    "implemented": true,
+    "prdRefs": [
+      "9",
+      "10"
+    ]
+  },
+  {
+    "id": "F117",
+    "description": "[P6] Restock return: return_restock movement; on_hand+ (sellable); serialized delivered\u2192in_stock",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F118",
+    "description": "[P6] Restock return optional restocking fee + credit memo",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F119",
+    "description": "[P6] RMA case create (standard): open, returned_unit, client, asset, reason",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F120",
+    "description": "[P6] RMA standard: receive return (delivered\u2192returned; return_defective movement; not sellable)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F121",
+    "description": "[P6] RMA standard: send to vendor (rma_out; \u2192in_rma; vendor+rma_reference)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F122",
+    "description": "[P6] RMA standard resolve: replacement (rma_in new unit; replacement_unit_id; \u2192replaced)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F123",
+    "description": "[P6] RMA standard resolve: repair (in_rma\u2192in_stock) / credit (\u2192retired,credited) / scrap (retired,closed)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F124",
+    "description": "[P6] RMA advance-replacement create (rma_type=advance_replacement)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F125",
+    "description": "[P6] RMA advance: replacement received (rma_in; new unit in_stock)\u2192replacement_received",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F126",
+    "description": "[P6] RMA advance: replacement deployed (ship to client; relink same asset; update serial/MAC)\u2192replacement_deployed",
+    "implemented": true,
+    "prdRefs": [
+      "6",
+      "7"
+    ]
+  },
+  {
+    "id": "F127",
+    "description": "[P6] RMA advance: dead_unit_owed with dead_unit_due_date clock",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F128",
+    "description": "[P6] RMA advance: dead unit returned (return_defective\u2192rma_out; dead_unit_returned_at)\u2192closed",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F129",
+    "description": "[P6] RMA advance: deadline missed \u2192 charged \u2192 closed",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F130",
+    "description": "[P6] RMA case list/detail UI (standard + advance)",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F131",
+    "description": "[P6] Dead-units-owed aging widget (sorted by days remaining)",
+    "implemented": true,
+    "prdRefs": [
+      "9",
+      "10"
+    ]
+  },
+  {
+    "id": "F132",
+    "description": "[P6] RMA replacement updates linked asset serial/MAC + clears old unit asset_id",
+    "implemented": true,
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F133",
+    "description": "[P7] Low-stock detection (available \u2264 per-location reorder override else product default) for track_stock products",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F134",
+    "description": "[P7] Per-location alert routing to manager_user_id (no global firehose)",
+    "implemented": true,
+    "prdRefs": [
+      "8",
+      "9"
+    ]
+  },
+  {
+    "id": "F135",
+    "description": "[P7] Low-stock dashboard widget (per location) + report",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F136",
+    "description": "[P7] Create PO from low-stock (grouped by preferred_vendor; suggested qty)",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F137",
+    "description": "[P7] Drop-ship: SO line fulfillment_type=drop_ship \u2192 PO is_drop_ship + drop_ship_client",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F138",
+    "description": "[P7] Drop-ship: combined receipt+delivery creates delivered unit+asset+invoice with NO on_hand touch",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F139",
+    "description": "[P7] Drop-ship serialized: capture serial/MAC/warranty at drop-ship confirm",
+    "implemented": true,
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F140",
+    "description": "[P7] Location-scoped write/adjust enforcement (tech\u2192own van+home; manager/admin\u2192all)",
+    "implemented": true,
+    "prdRefs": [
+      "8"
+    ]
+  },
+  {
+    "id": "F141",
+    "description": "[P7] Permission checks on all inventory actions (inventory/vendor/po/so/transfer/location resources)",
+    "implemented": true,
+    "prdRefs": [
+      "8"
+    ]
+  },
+  {
+    "id": "F142",
+    "description": "[P7] Stock side-effects from billing flows run under billing:create (no double-gate)",
+    "implemented": true,
+    "prdRefs": [
+      "8"
+    ]
+  },
+  {
+    "id": "F143",
+    "description": "[P7] Inventory value report (\u03a3 on_hand \u00d7 cost) per location + total",
+    "implemented": true,
+    "prdRefs": [
+      "10"
+    ]
+  },
+  {
+    "id": "F144",
+    "description": "[P7] Margin/COGS report (sell \u2212 COGS per sale/period)",
+    "implemented": true,
+    "prdRefs": [
+      "10"
+    ]
+  },
+  {
+    "id": "F145",
+    "description": "[P7] Units screen: combined serial/MAC search + status/location/client filters",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F146",
+    "description": "[P7] Stock screen: on-hand/available by product \u00d7 location with low-stock highlight",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F147",
+    "description": "[P7] Expiring-warranty report/widget",
+    "implemented": true,
+    "prdRefs": [
+      "9",
+      "10"
+    ]
+  },
+  {
+    "id": "F148",
+    "description": "[P7] Open POs / open SOs dashboard widgets",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F149",
+    "description": "[P7] Inventory dashboard composition (assemble widgets)",
+    "implemented": true,
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F150",
+    "description": "[P7] Optional: surface Xero IsTrackedAsInventory awareness alignment (read-only flag)",
+    "implemented": true,
+    "prdRefs": [
+      "7",
+      "10"
+    ]
+  },
+  {
+    "id": "F151",
+    "description": "[P7] Extend product delete guard: block delete when stock_units/levels/movements exist",
+    "implemented": true,
+    "prdRefs": [
+      "11"
+    ]
+  },
+  {
+    "id": "F152",
+    "description": "[P7] Material\u2192stock idempotency (no double-decrement on retry)",
+    "implemented": true,
+    "prdRefs": [
+      "11"
+    ]
+  },
+  {
+    "id": "F153",
+    "description": "[P7] Currency handling on SO invoicing (line currency flows to invoice)",
+    "implemented": true,
+    "prdRefs": [
+      "13"
+    ]
+  },
+  {
+    "id": "F154",
+    "description": "[P7] Audit: performed_by stamped on every movement (and surfaced in ledger UI)",
+    "implemented": true,
+    "prdRefs": [
+      "8"
+    ]
+  },
+  {
+    "id": "F155",
+    "description": "[P7] Client-portal guard: inventory surfaces are MSP-only (not exposed to client portal)",
+    "implemented": true,
+    "prdRefs": [
+      "8"
+    ]
+  }
+]

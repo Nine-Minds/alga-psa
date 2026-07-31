@@ -1,0 +1,62 @@
+[
+  {
+    "id": "F001",
+    "description": "Add appliance status landing behavior that detects setup mode and automatically redirects authenticated users from `/` to `/setup/`.",
+    "prdRefs": ["Goals 1", "Acceptance 1"],
+    "implemented": false
+  },
+  {
+    "id": "F002",
+    "description": "Add a prominent Continue setup CTA on the appliance `/` status page for setup-required or setup-reeditable states.",
+    "prdRefs": ["Goals 1", "Acceptance 2"],
+    "implemented": false
+  },
+  {
+    "id": "F003",
+    "description": "Restructure appliance `/setup/` into a progressive flow where install code entry is shown first and remaining setup fields are hidden until a code is entered.",
+    "prdRefs": ["Goals 2", "Acceptance 3"],
+    "implemented": false
+  },
+  {
+    "id": "F004",
+    "description": "Move appliance release channel and release pin controls under an Advanced disclosure on `/setup/`.",
+    "prdRefs": ["Goals 3", "Acceptance 4"],
+    "implemented": false
+  },
+  {
+    "id": "F005",
+    "description": "Change nm-store Essentials appliance registration action to return only non-secret confirmation fields to the browser.",
+    "prdRefs": ["Goals 4", "Acceptance 5"],
+    "implemented": false
+  },
+  {
+    "id": "F006",
+    "description": "Change nm-store Essentials appliance success UI to show email confirmation/instructions without rendering install code or ISO URL.",
+    "prdRefs": ["Goals 4", "Acceptance 6"],
+    "implemented": false
+  },
+  {
+    "id": "F007",
+    "description": "Change nm-store paid appliance thank-you flow to avoid displaying install code or ISO URL for newly registered and already-provisioned sessions.",
+    "prdRefs": ["Goals 4", "Acceptance 7"],
+    "implemented": false
+  },
+  {
+    "id": "F008",
+    "description": "Preserve server-side appliance registration/reissue email behavior so emails still contain the install code and stable ISO download link.",
+    "prdRefs": ["Goals 5", "Acceptance 8"],
+    "implemented": false
+  },
+  {
+    "id": "F009",
+    "description": "Add or update tests that prove browser-facing nm-store appliance actions/provisioning do not expose install code or download URL.",
+    "prdRefs": ["Acceptance 9"],
+    "implemented": false
+  },
+  {
+    "id": "F010",
+    "description": "Run targeted validation for appliance UI and nm-store changed paths; document any residual warnings or unrelated failures.",
+    "prdRefs": ["Acceptance 10"],
+    "implemented": false
+  }
+]

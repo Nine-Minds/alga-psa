@@ -2,11 +2,74 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, spawn } from 'node:child_process';
 
 const socketPath = process.env.ALGA_HOST_AGENT_SOCKET || '/run/alga-appliance/host-agent.sock';
 const socketGid = Number(process.env.ALGA_HOST_AGENT_SOCKET_GID || 10001);
 const commandTimeoutMs = Number(process.env.ALGA_HOST_AGENT_COMMAND_TIMEOUT_MS || 20000);
+
+// --- Control-plane upgrade (host-agent driven) -----------------------------
+// The control-plane pod serves the Manage UI, so it cannot cleanly upgrade
+// itself: the request is killed when its own Deployment is Recreate'd. The
+// host-agent (this process, root, on the host, NOT a k8s pod) runs the proven
+// bootstrap control-plane apply instead, so the swap survives the pod restart.
+const applianceRoot = process.env.ALGA_APPLIANCE_ROOT || '/opt/alga-appliance';
+const bootstrapScript = process.env.ALGA_APPLIANCE_BOOTSTRAP_SCRIPT || `${applianceRoot}/scripts/bootstrap-control-plane.sh`;
+const cpUpgradeStatusFile = process.env.ALGA_APPLIANCE_CP_UPGRADE_STATUS_FILE || '/var/lib/alga-appliance/control-plane-upgrade.json';
+const cpUpgradeLogFile = process.env.ALGA_APPLIANCE_CP_UPGRADE_LOG_FILE || '/var/lib/alga-appliance/control-plane-upgrade.log';
+
+let cpUpgradeInFlight = false;
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function writeCpUpgradeStatus(status, extra = {}) {
+  try {
+    fs.mkdirSync(path.dirname(cpUpgradeStatusFile), { recursive: true, mode: 0o750 });
+    fs.writeFileSync(cpUpgradeStatusFile, `${JSON.stringify({ status, updatedAt: nowIso(), ...extra })}\n`, { mode: 0o600 });
+  } catch {
+    // Best effort: the status file is advisory; the digest compare in
+    // /api/manage/status is the source of truth for "is the upgrade applied".
+  }
+}
+
+function startControlPlaneUpgrade() {
+  if (cpUpgradeInFlight) {
+    return { ok: true, started: false, alreadyRunning: true };
+  }
+  cpUpgradeInFlight = true;
+  writeCpUpgradeStatus('running', { startedAt: nowIso() });
+
+  let logFd = 'ignore';
+  try {
+    fs.mkdirSync(path.dirname(cpUpgradeLogFile), { recursive: true, mode: 0o750 });
+    logFd = fs.openSync(cpUpgradeLogFile, 'a', 0o600);
+  } catch {
+    logFd = 'ignore';
+  }
+
+  const child = spawn(bootstrapScript, ['--control-plane-only'], {
+    env: process.env,
+    stdio: ['ignore', logFd, logFd]
+  });
+  if (typeof logFd === 'number') {
+    try { fs.closeSync(logFd); } catch {}
+  }
+  child.on('error', (err) => {
+    cpUpgradeInFlight = false;
+    writeCpUpgradeStatus('blocked', { message: `Failed to start control-plane upgrade: ${err.message}`, finishedAt: nowIso() });
+  });
+  child.on('exit', (code) => {
+    cpUpgradeInFlight = false;
+    if (code === 0) {
+      writeCpUpgradeStatus('complete', { finishedAt: nowIso() });
+    } else {
+      writeCpUpgradeStatus('blocked', { message: `control-plane upgrade exited with code ${code}`, finishedAt: nowIso() });
+    }
+  });
+  return { ok: true, started: true };
+}
 
 function redactText(value) {
   return String(value)
@@ -40,9 +103,7 @@ function supportBundlePayload() {
     ['host/ip-addresses.txt', 'ip addr'],
     ['host/routes.txt', 'ip route'],
     ['host/resolv-conf.txt', 'cat /etc/resolv.conf'],
-    ['host/dns-lookup-github.txt', 'getent hosts raw.githubusercontent.com'],
     ['host/dns-lookup-ghcr.txt', 'getent hosts ghcr.io'],
-    ['host/https-github.txt', 'curl -I --max-time 10 https://raw.githubusercontent.com'],
     ['host/https-ghcr.txt', 'curl -I --max-time 10 https://ghcr.io/v2/']
   ];
 
@@ -69,6 +130,14 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'POST' && req.url === '/v1/support-bundle') {
     json(res, 200, supportBundlePayload());
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/v1/control-plane/upgrade') {
+    // Kick off the control-plane apply and return immediately. The work
+    // continues here on the host while the control-plane pod is Recreate'd.
+    const result = startControlPlaneUpgrade();
+    json(res, 202, result);
     return;
   }
 

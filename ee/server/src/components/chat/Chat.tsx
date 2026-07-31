@@ -29,6 +29,30 @@ import {
   type ChatMentionPopupHandle,
 } from './ChatMentionPopup';
 import type { MentionableEntity } from '../../lib/chat-actions/searchEntitiesForMention';
+import type { AiCreditsErrorReason } from '../../lib/aiGateway/types';
+import { getAiAccountSummary } from '../../lib/actions/aiUsageActions';
+
+/** Chat AI-credits blocked state, derived from a 402 { type: 'ai_credits', reason } response. */
+type AiCreditsBlock = { reason: AiCreditsErrorReason; balanceCredits?: number };
+
+/**
+ * Parse an AI-credits 402 body ({ type: 'ai_credits', reason }) from a chat
+ * route response. Returns the reason when it matches, otherwise null.
+ */
+async function parseAiCreditsBlock(response: Response): Promise<AiCreditsErrorReason | null> {
+  if (response.status !== 402) {
+    return null;
+  }
+  try {
+    const data = await response.clone().json();
+    if (data?.type === 'ai_credits' && typeof data.reason === 'string') {
+      return data.reason as AiCreditsErrorReason;
+    }
+  } catch {
+    // Not an AI-credits payload; fall through.
+  }
+  return null;
+}
 
 import './chat.css';
 
@@ -361,6 +385,7 @@ export const Chat: React.FC<ChatProps> = ({
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
+  const [aiBlocked, setAiBlocked] = useState<AiCreditsBlock | null>(null);
   const autoSendRef = useRef(false);
   const aiContext = useAIChatContext();
   const streamAbortControllerRef = useRef<AbortController | null>(null);
@@ -771,6 +796,31 @@ export const Chat: React.FC<ChatProps> = ({
     setIsExecutingFunction(false);
   }, [pendingFunction]);
 
+  // Enter a blocking AI-credits state from a 402 { type: 'ai_credits', reason }.
+  // For out_of_credits, best-effort fetch the balance for the panel; the state
+  // is set immediately regardless so the panel always renders.
+  const handleAiCreditsBlock = useCallback((reason: AiCreditsErrorReason) => {
+    setAiBlocked({ reason });
+    setIncomingMessage('');
+    setIsFunction(false);
+    setGeneratingResponse(false);
+    streamingTextRef.current = null;
+    streamAbortControllerRef.current = null;
+    if (reason === 'out_of_credits') {
+      getAiAccountSummary()
+        .then((summary) => {
+          setAiBlocked((prev) =>
+            prev && prev.reason === 'out_of_credits'
+              ? { ...prev, balanceCredits: summary.totalBalanceCredits }
+              : prev,
+          );
+        })
+        .catch(() => {
+          // Balance is optional in the panel.
+        });
+    }
+  }, []);
+
   const handleSend = useCallback(async (
     trimmedMessage: string,
     options?: {
@@ -781,6 +831,7 @@ export const Chat: React.FC<ChatProps> = ({
   ) => {
     const reuseExistingUserMessage = options?.reuseExistingUserMessage ?? false;
     setFunctionError(null);
+    setAiBlocked(null);
     setPendingContinuation(null);
     setEditingMessageIndex(null);
     setFullMessageStatus(null);
@@ -890,6 +941,11 @@ export const Chat: React.FC<ChatProps> = ({
       });
 
       if (!response.ok) {
+        const blockedReason = await parseAiCreditsBlock(response);
+        if (blockedReason) {
+          handleAiCreditsBlock(blockedReason);
+          return;
+        }
         let errorMessage = t('chat.errors.requestFailedStatus', { status: response.status });
         try {
           const data = await response.json();
@@ -1079,6 +1135,7 @@ export const Chat: React.FC<ChatProps> = ({
     addAssistantMessageToPersistence,
     aiContext,
     mentions,
+    handleAiCreditsBlock,
     t,
   ]);
 
@@ -1147,6 +1204,13 @@ export const Chat: React.FC<ChatProps> = ({
 
       const data = await response.json();
       if (!response.ok) {
+        if (response.status === 402 && data?.type === 'ai_credits' && typeof data.reason === 'string') {
+          handleAiCreditsBlock(data.reason as AiCreditsErrorReason);
+          setIsExecutingFunction(false);
+          setPendingFunctionStatus('idle');
+          setPendingFunctionAction('none');
+          return;
+        }
         throw new Error(data?.error || t('chat.errors.requestFailedStatus', { status: response.status }));
       }
 
@@ -1260,7 +1324,7 @@ export const Chat: React.FC<ChatProps> = ({
       executeAbortControllerRef.current = null;
       setIsExecutingFunction(false);
     }
-  }, [pendingFunction, chatId, addAssistantMessageToPersistence, aiContext, t]);
+  }, [pendingFunction, chatId, addAssistantMessageToPersistence, aiContext, handleAiCreditsBlock, t]);
 
   const persistedDisplayMessages = (messages as DisplayChatMessage[]).filter(
     (message) => resolveDisplayMessageRole(message) !== 'function',
@@ -1880,6 +1944,60 @@ export const Chat: React.FC<ChatProps> = ({
                 </div>
               )}
             </>
+          )}
+          {aiBlocked && (
+            <div className="ai-credits-block" id="chat-ai-credits-block" role="alert">
+              {aiBlocked.reason === 'no_subscription' && (
+                <div className="ai-credits-block__panel ai-credits-block__panel--upsell">
+                  <h3 className="ai-credits-block__title">
+                    {t('aiCredits.noSubscription.title', { defaultValue: 'AI is a paid add-on' })}
+                  </h3>
+                  <p className="ai-credits-block__body">
+                    {t('aiCredits.noSubscription.body', {
+                      defaultValue:
+                        'Subscribe to the AI add-on to use Alga AI. Your plan includes a monthly credit allotment.',
+                    })}
+                  </p>
+                  <a className="ai-credits-block__link" href="/msp/account" id="chat-ai-credits-subscribe-link">
+                    {t('aiCredits.noSubscription.cta', { defaultValue: 'View AI Usage settings' })}
+                  </a>
+                </div>
+              )}
+              {aiBlocked.reason === 'out_of_credits' && (
+                <div className="ai-credits-block__panel ai-credits-block__panel--empty">
+                  <h3 className="ai-credits-block__title">
+                    {t('aiCredits.outOfCredits.title', { defaultValue: 'Out of AI credits' })}
+                  </h3>
+                  <p className="ai-credits-block__body">
+                    {aiBlocked.balanceCredits !== undefined
+                      ? t('aiCredits.outOfCredits.bodyWithBalance', {
+                          defaultValue:
+                            'Your balance is {{balance}} credits. Top up to keep using Alga AI.',
+                          balance: aiBlocked.balanceCredits.toLocaleString(),
+                        })
+                      : t('aiCredits.outOfCredits.body', {
+                          defaultValue: 'Top up to keep using Alga AI.',
+                        })}
+                  </p>
+                  <a className="ai-credits-block__link" href="/msp/account" id="chat-ai-credits-topup-link">
+                    {t('aiCredits.outOfCredits.cta', { defaultValue: 'Buy top-up credits' })}
+                  </a>
+                </div>
+              )}
+              {aiBlocked.reason === 'consent_required' && (
+                <div className="ai-credits-block__panel ai-credits-block__panel--consent">
+                  <h3 className="ai-credits-block__title">
+                    {t('aiCredits.consentRequired.title', { defaultValue: 'Data-sharing consent required' })}
+                  </h3>
+                  <p className="ai-credits-block__body">
+                    {t('aiCredits.consentRequired.body', {
+                      defaultValue:
+                        'An administrator must accept AI data-sharing terms on this appliance before AI can be used.',
+                    })}
+                  </p>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

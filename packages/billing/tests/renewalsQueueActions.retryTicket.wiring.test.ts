@@ -11,7 +11,7 @@ describe('renewalsQueueActions retry renewal ticket wiring', () => {
     expect(source).toContain("import { TicketModel } from '@shared/models/ticketModel';");
     expect(source).toContain('export type RenewalTicketRetryResult = {');
     expect(source).toContain('export const retryRenewalQueueTicketCreation = withAuth(async (');
-    expect(source).toContain("throw new Error('Renewal ticket automation columns are not available');");
+    expect(source).toContain("const missingDefaultsError = 'Missing renewal ticket routing defaults for create_ticket policy';");
     expect(source).toContain("throw new Error('Manual retry is only available for due renewal cycles');");
     expect(source).toContain("whereRaw(\"(attributes::jsonb ->> 'idempotency_key') = ?\", [idempotencyKey])");
     expect(source).toContain('const idempotencyKey = buildRenewalTicketIdempotencyKey({');

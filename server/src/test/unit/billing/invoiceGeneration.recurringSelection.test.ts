@@ -58,6 +58,11 @@ describe('invoice generation recurring selection', () => {
       {
         recurringTimingSelections,
         recurringTimingSelectionSource: 'persisted',
+        nonContractSelection: {
+          include: false,
+          timeEntryIds: [],
+          usageRecordIds: [],
+        },
       },
     );
     expect(billingEngine.calculateBilling).not.toHaveBeenCalled();
@@ -123,6 +128,11 @@ describe('invoice generation recurring selection', () => {
       {
         recurringTimingSelections,
         recurringTimingSelectionSource: 'persisted',
+        nonContractSelection: {
+          include: false,
+          timeEntryIds: [],
+          usageRecordIds: [],
+        },
       },
     );
     expect(billingEngine.calculateBilling).not.toHaveBeenCalled();
@@ -207,6 +217,11 @@ describe('invoice generation recurring selection', () => {
       {
         recurringTimingSelections,
         recurringTimingSelectionSource: 'persisted',
+        nonContractSelection: {
+          include: false,
+          timeEntryIds: [],
+          usageRecordIds: [],
+        },
       },
     );
     expect(result.charges.map((charge: any) => charge.type)).toEqual([

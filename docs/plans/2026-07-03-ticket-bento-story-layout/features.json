@@ -1,0 +1,983 @@
+[
+  {
+    "id": "F001",
+    "description": "PostHog feature flag `ticket-bento-layout` gates visibility of the Grid|Entry layout toggle on the MSP ticket detail screen",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1",
+      "Rollout"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Flag off (or toggle set to Entry) renders the existing TicketDetails layout with no behavioral or visual change and no toggle when flag is off",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1",
+      "Rollout"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Toggle set to Grid renders new TicketBentoLayout component from the same consolidated ticket payload (no duplicate fetch)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1",
+      "Data"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Bento grid shell: 12-column responsive grid with hero band (span 12), left rail (span 3), timeline (span 6), right rail (span 3)",
+    "implemented": true,
+    "prdRefs": [
+      "UX/Grid regions"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Responsive collapse at ~1024-1279px: rails re-span and right rail flows under left rail",
+    "implemented": true,
+    "prdRefs": [
+      "UX/Responsive"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Responsive collapse below 1024px: single column ordered hero, timeline, SLA clocks, checklist, remaining tiles; no horizontal scroll",
+    "implemented": true,
+    "prdRefs": [
+      "UX/Responsive"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Shared bento tile primitive (header, title, optional action slot, body) built on ContentCard styling with theme tokens",
+    "implemented": true,
+    "prdRefs": [
+      "UX/Grid regions",
+      "Theming"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Tile-level error state: a tile whose data errors shows a visible error message inside the tile (fail fast, no blank cards)",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Hero band shows ticket number (mono), inline-editable title, and created/updated metadata line",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Hero band status control: editable select styled as chip, wired to existing dirty-field tracking",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Hero band priority control: editable select with priority color dot",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Hero band board control: editable select",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Hero band assignee control: editable agent picker with avatar",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Hero band due date control: editable date/time picker",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Hero band response-state chip with copy 'Waiting on us' / 'Waiting on client' / 'No reply needed', editable via existing response-state options",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2",
+      "Copy"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Hero band tags row: view, add, and remove tags using the existing tag manager",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Hero band resolution-SLA countdown slab (compact) sourced from the same computation as the SLA clocks tile",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2",
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Hero band actions: Create task and Link to task preserved (existing handlers/render props)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Hero band action: Delete ticket with existing confirmation flow",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Hero band action: Save changes button reflecting dirty state (disabled when clean), plus Cancel to revert",
+    "implemented": false,
+    "prdRefs": [
+      "FR-2",
+      "FR-2 batch save"
+    ],
+    "deferred": true,
+    "deferralReason": "Superseded by design: hero controls persist immediately via handleSelectChange (decision 2026-07-03); batch Save/Cancel exists in the All fields drawer via TicketInfo."
+  },
+  {
+    "id": "F021",
+    "description": "Prev/next ticket navigation and back-to-tickets link preserved in the top bar/hero",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Ticket origin badge (e.g. created via inbound email) preserved in hero band",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Presence bar (live viewers) preserved on the new layout",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "'More details' drawer from hero exposes category and subcategory pickers",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2",
+      "Open Q1"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "'More details' drawer exposes ITIL impact/urgency fields (when board is ITIL-enabled)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "'More details' drawer exposes location picker",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "'More details' drawer exposes contact override picker",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "'More details' drawer fields participate in the same dirty-field/batch-save pipeline as hero fields",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Email notification logs drawer remains reachable from the new layout",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance 3"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Escalation state (escalated flag/level) visible in hero when set",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Timeline data: extend unified timeline to interleave time entries (work_item_id + work_item_type='TICKET') as 'time' lane entries",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3",
+      "Data 1"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Timeline data: interleave RMM alerts (rmm_alerts.ticket_id) as 'alert' lane entries with severity, device name, occurrence count",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3",
+      "Data 1"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Timeline data: comments carry lane (client reply vs internal note vs resolution) derived from is_internal/is_resolution",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Timeline data: audit rows keep curated diff summaries (existing curatedTicketDiff) for system lane display",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Timeline action returns entries sorted by occurrence time with stable ordering for same-timestamp entries",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Timeline action remains withAuth + ticket:read gated and hard-blocked for client-type users",
+    "implemented": true,
+    "prdRefs": [
+      "FR-7",
+      "Security"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Timeline action is tenant-scoped in every new query (tenant column in joins/filters)",
+    "implemented": true,
+    "prdRefs": [
+      "Data 3",
+      "Security"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "New read action: schedule entries for ticket (schedule_entries by work_item_id/work_item_type), upcoming first",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4",
+      "Data 2"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "New read action: interactions for ticket (interactions.ticket_id) with type, duration, date, most recent first",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4",
+      "Data 2"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "New read action: billing rollup for ticket (billable vs non-billable minutes, invoiced flag, active contract name for the client)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5",
+      "Data 2"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "New tile reads load without blocking first paint of hero + timeline (parallel or per-tile fetch)",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Consolidated fetch not duplicated: tiles reuse payload fields already returned by getConsolidatedTicketData where available",
+    "implemented": true,
+    "prdRefs": [
+      "Data"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Timeline tile renders inline in the center column (replaces drawer-only access when flag on)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Timeline header copy: title 'Timeline', subtitle 'Replies, time, and system changes in one place'",
+    "implemented": true,
+    "prdRefs": [
+      "Copy"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Lane filter pills: Everything / Replies / Time / System / Alerts with live counts",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3",
+      "Copy"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Filter pills toggle lanes client-side without refetch and are buttons with aria-pressed",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3",
+      "Accessibility"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Day-break separators between calendar days, labeled with plain dates and 'Today'",
+    "implemented": true,
+    "prdRefs": [
+      "UX/Timeline"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Client reply rendering: author, timestamp, bubble treatment, client-lane accent",
+    "implemented": true,
+    "prdRefs": [
+      "UX/Timeline"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Internal note rendering: visually distinct treatment with 'Internal' label",
+    "implemented": true,
+    "prdRefs": [
+      "UX/Timeline"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Resolution comments render with a 'Resolution' marker",
+    "implemented": true,
+    "prdRefs": [
+      "UX/Timeline"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Time entry rendering: actor, duration badge, notes line",
+    "implemented": true,
+    "prdRefs": [
+      "UX/Timeline"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "System event rendering: compact single-line with curated change summary and actor",
+    "implemented": true,
+    "prdRefs": [
+      "UX/Timeline"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Alert rendering: warning treatment with alert type, device, occurrence count",
+    "implemented": true,
+    "prdRefs": [
+      "UX/Timeline"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Sort toggle oldest-first/newest-first with choice persisted per user; composer stays at bottom in oldest-first (default) order",
+    "implemented": true,
+    "prdRefs": [
+      "Open Q2"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Comment reactions preserved on timeline comment entries",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance 3"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Comment edit/delete affordances preserved for permitted users on timeline comment entries",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance 3"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Reply composer at timeline bottom with client/internal/resolution segment control",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Composer placeholder copy: 'Reply to {contact first name}\u2026' with fallback 'Write a reply'",
+    "implemented": true,
+    "prdRefs": [
+      "Copy"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Composer uses the existing rich-text editor and addTicketComment save path; new comment appears in stream after save",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Composer attachment affordance preserved (matches current comment attachment behavior)",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance 3"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Timeline empty state: 'Nothing yet. The ticket was opened {date}.'",
+    "implemented": true,
+    "prdRefs": [
+      "Copy",
+      "UX/Empty states"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Timeline keyboard navigation: entries and controls reachable and operable by keyboard",
+    "implemented": true,
+    "prdRefs": [
+      "Accessibility"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Request tile: description content (rich text render) with edit affordance wired to existing description save",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Request tile shows origin line (source/channel) and created-by",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Contact tile: contact name, email, phone, location from consolidated payload",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "Contact tile: opens existing ContactDetailsView drawer (injected render prop preserved)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Contact tile: client name opens existing ClientQuickView (injected render prop preserved)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Assets tile: AssociatedAssets relocated into left rail as a tile (injected node preserved)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Next visit tile: upcoming schedule entries for this ticket with date block, title, assignee, time range",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "Next visit tile shows most recent past entry dimmed when no upcoming entries exist alongside data",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "Next visit empty state: 'Nothing scheduled' with a schedule action linking to dispatch/scheduling",
+    "implemented": true,
+    "prdRefs": [
+      "Copy"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Calls and emails tile: interactions for this ticket with type icon, title, date",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "Calls and emails tile links to the full interactions view for the ticket/client",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Calls and emails empty state: 'No calls or emails logged'",
+    "implemented": true,
+    "prdRefs": [
+      "Copy"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Request tile handles long descriptions with clamped preview and expand",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Left rail tiles render in defined order: Request, Contact, Assets, Next visit, Calls and emails",
+    "implemented": true,
+    "prdRefs": [
+      "UX/Grid regions"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Contact tile empty state when ticket has no contact: shows client only with add-contact affordance",
+    "implemented": true,
+    "prdRefs": [
+      "UX/Empty states"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Assets tile add/link asset affordance preserved from current AssociatedAssets",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance 3"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "SLA clocks tile: response clock state (met in Xm / Xm left / overdue by X / paused) from sla_* columns",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "SLA clocks tile: resolution clock with progress ring/bar showing percent of window elapsed",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "SLA clocks tile shows policy name chip and pause note when status pauses the clock",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "SLA clocks empty state: 'No SLA policy applies'",
+    "implemented": true,
+    "prdRefs": [
+      "Copy"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "SLA computation shared between hero slab and SLA tile (single source, reusing existing sla status logic)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2",
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "Checklist tile: items with completion checkboxes, progress count, add-item action (existing checklist actions)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "Checklist tile: progress bar reflecting completed/total",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "Time logged tile: total hours headline and entry count ('11h across 4 entries')",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5",
+      "Copy"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "Time logged tile: per-day mini bar chart of logged time",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "Time logged tile: session timer controls (start/pause/stop + elapsed display) preserved via useTicketTimeTracking",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "Time logged tile: 'Add time entry' opens the existing time entry dialog flow",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "Time logged tile: interval management (tracked intervals) reachable via existing injected IntervalManagement",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "Billing tile: billable vs non-billable hours and invoiced state ('Not invoiced yet')",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5",
+      "Copy"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "Billing tile: governing contract name with 'Covered by contract' line when contract link resolves",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5",
+      "Copy"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "Billing tile empty state: 'No time logged yet'; tile hidden when billing permission absent",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5",
+      "FR-7"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "Team and watchers tile: agent team row (assignee + additional agents) with existing add/remove and schedule drawer",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5",
+      "Open Q5"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "Team and watchers tile: watchers row with existing watch-list add/remove (contact/internal/email tabs preserved)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "Materials tile: existing TicketMaterialsCard relocated, AlgaDesk-gated",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5",
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "Customer feedback tile: existing survey summary card relocated",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "Documents tile: existing documents section relocated (new/upload/link actions preserved)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "Right rail tiles render in defined order: SLA clocks, Checklist, Time logged, Billing, Team and watchers, Materials, Customer feedback, Documents",
+    "implemented": true,
+    "prdRefs": [
+      "UX/Grid regions"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "Knowledge base tile (stretch): suggested articles from naive title/tag match, labeled 'Suggested'",
+    "implemented": false,
+    "prdRefs": [
+      "Open Q4"
+    ],
+    "deferred": true,
+    "deferralReason": "Stretch feature deferred by resolved product decision (PRD Open Question 4)."
+  },
+  {
+    "id": "F101",
+    "description": "Per-tile section ids stable and unique for reflection UI (every interactive element has an id)",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "All tiles styled with CSS variable tokens and dark: variants; both themes verified",
+    "implemented": true,
+    "prdRefs": [
+      "Theming"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "Dirty-field tracking spans hero + more-details drawer and merges into one batch save (parity with handleBatchSaveChanges)",
+    "implemented": false,
+    "prdRefs": [
+      "FR-2"
+    ],
+    "deferred": true,
+    "deferralReason": "Superseded by design: hero uses immediate-save semantics, not batch; drawer TicketInfo retains batch save."
+  },
+  {
+    "id": "F104",
+    "description": "Unsaved-changes guard (UnsavedChangesProvider) active across all editable bento surfaces",
+    "implemented": false,
+    "prdRefs": [
+      "FR-2"
+    ],
+    "deferred": true,
+    "deferralReason": "Superseded by design: immediate-save hero fields create no unsaved state; the All fields drawer (TicketInfo) retains the unsaved-changes guard."
+  },
+  {
+    "id": "F105",
+    "description": "Live-edit conflict props (liveFieldConflicts/liveEditingUsers/liveHighlightedFields) wired to hero and drawer fields",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "Save updates propagate to timeline and tiles via existing router.refresh flow",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "TicketDetails state extraction: bento layout consumes the same state/handlers without forking write logic (single source for save handlers)",
+    "implemented": true,
+    "prdRefs": [
+      "Data",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "AlgaDesk hideSlaStatus hides SLA tile and hero SLA slab; grid re-flows without gaps",
+    "implemented": true,
+    "prdRefs": [
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F109",
+    "description": "AlgaDesk hideTimeEntry hides Time logged tile and timer controls; grid re-flows",
+    "implemented": true,
+    "prdRefs": [
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "AlgaDesk hideMaterials hides Materials tile; grid re-flows",
+    "implemented": true,
+    "prdRefs": [
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "Client-portal ticket view render path untouched (no imports from new bento modules)",
+    "implemented": true,
+    "prdRefs": [
+      "Non-goals"
+    ]
+  },
+  {
+    "id": "F112",
+    "description": "Activity drawer entry point remains functional while flag is in rollout",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout"
+    ]
+  },
+  {
+    "id": "F113",
+    "description": "All UI copy strings match the PRD house-voice table (audited against the table)",
+    "implemented": true,
+    "prdRefs": [
+      "Copy"
+    ]
+  },
+  {
+    "id": "F114",
+    "description": "Bento layout renders correctly for a minimal ticket (no contact, no SLA, no entries) using designed empty states everywhere",
+    "implemented": true,
+    "prdRefs": [
+      "UX/Empty states"
+    ]
+  },
+  {
+    "id": "F115",
+    "description": "Bento layout renders correctly for a data-rich ticket (fixture TIC1001-scale: comments, time, checklist, assets, alerts)",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance 5"
+    ]
+  },
+  {
+    "id": "F116",
+    "description": "Segmented control labeled 'Grid | Entry' in the ticket screen header switches layouts without a full page reload",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1",
+      "Rollout"
+    ]
+  },
+  {
+    "id": "F117",
+    "description": "Layout choice (Grid vs Entry) persists per user and applies on subsequent ticket loads",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1",
+      "Rollout"
+    ]
+  },
+  {
+    "id": "F118",
+    "description": "Default layout is Entry for users who have never used the toggle",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1",
+      "Rollout"
+    ]
+  }
+]

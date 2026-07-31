@@ -91,7 +91,8 @@
         "single": "Alleen dit evenement",
         "future": "Deze en toekomstige gebeurtenissen",
         "all": "Alle evenementen"
-      }
+      },
+      "messageWithTeamsWarning": "Weet u zeker dat u deze planningsinvoer wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt. Hiermee wordt ook de Microsoft Teams-vergadering verwijderd."
     },
     "print": {
       "title": "Planningsagenda",
@@ -128,11 +129,16 @@
       "assignTechnicianRequired": "Wijs een technicus toe",
       "approve": "Kan het verzoek niet goedkeuren",
       "declineReasonRequired": "Geef een reden op voor de weigering",
-      "decline": "Kan het verzoek niet weigeren"
+      "decline": "Kan het verzoek niet weigeren",
+      "reschedule": "Kan afspraak niet opnieuw plannen",
+      "rescheduleDateRequired": "Kies een nieuwe datum en tijd",
+      "generateTeamsMeeting": "Kan de Microsoft Teams-vergadering niet aanmaken"
     },
     "feedback": {
       "approved": "Afspraakverzoek goedgekeurd",
-      "declined": "Afspraakverzoek afgewezen"
+      "declined": "Afspraakverzoek afgewezen",
+      "rescheduled": "Afspraak opnieuw gepland",
+      "teamsMeetingGenerated": "Microsoft Teams-vergadering aangemaakt"
     },
     "filters": {
       "statusLabel": "Filter op status",
@@ -175,13 +181,15 @@
         "requestedTime": "Gevraagde tijd",
         "duration": "Duur",
         "status": "Status",
-        "linkedTicket": "Gekoppeld kaartje",
+        "linkedTicket": "Gekoppeld ticket",
         "description": "Beschrijving",
         "teamsMeeting": "Teams-vergadering"
       },
       "actions": {
-        "joinTeamsMeeting": "Deelnemen aan Teams-vergadering"
-      }
+        "joinTeamsMeeting": "Deelnemen aan Teams-vergadering",
+        "generateTeamsMeeting": "Teams-vergadering aanmaken"
+      },
+      "teamsMeetingMissing": "Deze goedgekeurde afspraak heeft nog geen Teams-vergaderlink."
     },
     "approval": {
       "title": "Goedkeuringsdetails",
@@ -200,6 +208,12 @@
       "actions": {
         "approve": "Goedkeuren",
         "decline": "Afwijzen"
+      },
+      "teamsMeetingFailure": {
+        "title": "De Microsoft Teams-vergadering kon niet worden aangemaakt",
+        "description": "De afspraak is niet goedgekeurd. Probeer de vergadering opnieuw aan te maken, of keur goed zonder vergadering en maak er later een aan.",
+        "retry": "Opnieuw proberen",
+        "approveWithout": "Goedkeuren zonder vergadering"
       }
     },
     "decline": {
@@ -212,6 +226,18 @@
       },
       "actions": {
         "confirm": "Bevestig de weigering",
+        "cancel": "Annuleren"
+      }
+    },
+    "reschedule": {
+      "title": "Opnieuw plannen",
+      "teamsNote": "Deelnemers ontvangen een bijgewerkte uitnodiging voor de Microsoft Teams-vergadering.",
+      "fields": {
+        "newDateTime": "Nieuwe datum en tijd"
+      },
+      "actions": {
+        "open": "Afspraak opnieuw plannen",
+        "confirm": "Herplanning bevestigen",
         "cancel": "Annuleren"
       }
     }
@@ -546,7 +572,9 @@
         "title": "Goedgekeurde afspraak",
         "descriptionWithDate": "Deze afspraak kwam voort uit een verzoek van een klant en werd goedgekeurd op {{date}}.",
         "description": "Deze afspraak is ontstaan ​​vanuit een verzoek van een cliënt.",
-        "joinTeamsMeeting": "Deelnemen aan Teams-vergadering"
+        "joinTeamsMeeting": "Deelnemen aan Teams-vergadering",
+        "downloadRecording": "Opname downloaden",
+        "viewTranscript": "Transcriptie bekijken"
       },
       "pending": {
         "title": "Afspraakverzoek in behandeling",
@@ -629,6 +657,32 @@
       "single": "Alleen dit evenement",
       "future": "Deze en toekomstige gebeurtenissen",
       "all": "Alle evenementen"
+    },
+    "errors": {
+      "loadWorkItem": "Failed to load work item."
     }
+  },
+  "actions": {
+    "print": "Afdrukken",
+    "printOptions": "Afdrukopties"
+  },
+  "interactionDetails": {
+    "fields": {
+      "client": "Klant",
+      "contact": "Contact",
+      "duration": "Duur",
+      "endTime": "Eindtijd",
+      "notes": "Notities",
+      "startTime": "Starttijd",
+      "status": "Status",
+      "title": "Titel",
+      "user": "Gebruiker"
+    },
+    "noClient": "Geen klant gekoppeld",
+    "noContact": "Geen contact gekoppeld",
+    "noTitle": "Geen titel",
+    "notAvailable": "N.v.t.",
+    "title": "Interactiedetails",
+    "unknownUser": "Onbekend"
   }
 }

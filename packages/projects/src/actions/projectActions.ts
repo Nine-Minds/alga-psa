@@ -22,28 +22,31 @@ import type {
   ProjectStatus,
   ProjectWithPhases,
 } from '@alga-psa/types';
-import { getAllUsers, findUserById } from '@alga-psa/user-composition/actions';
+import { getAllUsers, findUserById } from '@alga-psa/user-composition/actions/userQueryActions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- server action calling another server action; cannot use React context composition
 import { getContactByContactNameId } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { z } from 'zod';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { createProjectSchema, updateProjectSchema, projectPhaseSchema } from '../schemas/project.schemas';
 import { OrderingService } from '../lib/orderingUtils';
+import { projectKanbanHiddenStatusesKey } from '../lib/kanbanPreferences';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import {
   buildProjectStatusChangedPayload,
   buildProjectUpdatedPayload,
 } from '@alga-psa/workflow-streams';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { deleteEntityTags, deleteEntitiesTags } from '@alga-psa/tags/lib/tagCleanup';
-import { permissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { actionError, isActionMessageError, isActionPermissionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { filterAuthorizedTicketIds } from './projectTaskActions';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
+import { revalidatePath } from 'next/cache';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -54,9 +57,145 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 
+type ProjectActionError = ActionMessageError | ActionPermissionError;
+
+type ProjectScheduleAmountRow = {
+    schedule_entry_id: string;
+    amount: number | string | null;
+    percentage: number | string | null;
+    status: string;
+    display_order: number;
+    created_at: Date | string;
+};
+
+function computeProjectScheduleAmountsForNotification(
+    totalPriceValue: number | string | null,
+    entries: ProjectScheduleAmountRow[]
+): Map<string, number> {
+    const totalPrice = totalPriceValue == null ? null : Number(totalPriceValue);
+    const result = new Map<string, number>();
+    if (totalPrice == null) {
+        for (const entry of entries) {
+            result.set(entry.schedule_entry_id, entry.amount == null ? 0 : Number(entry.amount));
+        }
+        return result;
+    }
+
+    const percentageScale = 10_000n;
+    const denominator = 100n * percentageScale;
+    const activeEntries = entries.filter((entry) => entry.status !== 'canceled');
+    const baseAmounts: number[] = [];
+    let exactNumerator = 0n;
+    for (const entry of activeEntries) {
+        if (entry.amount != null) {
+            const amount = Number(entry.amount);
+            baseAmounts.push(amount);
+            exactNumerator += BigInt(amount) * denominator;
+            continue;
+        }
+        const scaledPercentage = BigInt(Math.round(Number(entry.percentage ?? 0) * Number(percentageScale)));
+        const numerator = BigInt(totalPrice) * scaledPercentage;
+        baseAmounts.push(Number((numerator + denominator / 2n) / denominator));
+        exactNumerator += numerator;
+    }
+    if (baseAmounts.length > 0 && exactNumerator === BigInt(totalPrice) * denominator) {
+        baseAmounts[baseAmounts.length - 1] = totalPrice
+            - baseAmounts.slice(0, -1).reduce((sum, amount) => sum + amount, 0);
+    }
+
+    let activeIndex = 0;
+    for (const entry of entries) {
+        if (entry.status === 'canceled') {
+            const amount = entry.amount != null
+                ? Number(entry.amount)
+                : Number((BigInt(totalPrice) * BigInt(Math.round(Number(entry.percentage ?? 0) * Number(percentageScale)))
+                    + denominator / 2n) / denominator);
+            result.set(entry.schedule_entry_id, amount);
+        } else {
+            result.set(entry.schedule_entry_id, baseAmounts[activeIndex++] ?? 0);
+        }
+    }
+    return result;
+}
+
+export type ProjectUpdateResult = IProject & {
+    deposit_reconciliation_needed?: boolean;
+    products_moved_to_hold?: number;
+};
+
 const PROJECT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
 const PROJECT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
 const PROJECT_LIST_SEARCH_TYPES = ['project', 'project_phase', 'project_task', 'project_task_comment'] as const;
+
+const EXPECTED_PROJECT_ACTION_ERROR_PREFIXES = [
+    'No projects available with valid phases',
+    'No projects found',
+    'Phase not found',
+    'Project not found',
+    'Project phase not found',
+    'Project status not found',
+];
+
+function projectActionErrorFrom(error: unknown): ProjectActionError | null {
+    if (isActionMessageError(error) || isActionPermissionError(error)) {
+        return error as ProjectActionError;
+    }
+
+    const issues = (error as { issues?: unknown })?.issues;
+    if (Array.isArray(issues) && issues.length > 0) {
+        return actionError('Project validation failed. Please review the project details and try again.');
+    }
+
+    if (error instanceof Error) {
+        if (error.message.includes('Permission denied')) {
+            return permissionError(error.message);
+        }
+        if (EXPECTED_PROJECT_ACTION_ERROR_PREFIXES.some((message) => error.message.startsWith(message))) {
+            return actionError(error.message);
+        }
+        if (error.message.startsWith('Project ') && error.message.includes(' not found in tenant ')) {
+            return actionError('Project not found');
+        }
+    }
+
+    const dbError = error as { code?: string; column?: string };
+    if (dbError?.code === '22P02') {
+        return actionError('One of the selected project values is invalid. Please refresh and try again.');
+    }
+    if (dbError?.code === '23502') {
+        return actionError(`Missing required project field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    }
+    if (dbError?.code === '23503') {
+        return actionError('One of the selected project records no longer exists. Please refresh and try again.');
+    }
+    if (dbError?.code === '23505') {
+        return actionError('This project change conflicts with an existing record. Please refresh and try again.');
+    }
+    if (dbError?.code === '23514') {
+        return actionError('One of the project values is not allowed. Please review the form and try again.');
+    }
+
+    return null;
+}
+
+function projectDeleteErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+        if (error.message.includes('Permission denied')) {
+            return error.message;
+        }
+        if (error.message.includes('not found')) {
+            return 'Project not found';
+        }
+        if (error.message.includes('violates foreign key constraint')) {
+            return 'Cannot delete project because it has associated records';
+        }
+        if (error.message.includes('connection') || error.message.includes('timeout')) {
+            return 'Database connection issue. Please try again.';
+        }
+    }
+
+    return 'Unable to delete project. Please refresh and try again.';
+}
 
 const extendedCreateProjectSchema = createProjectSchema.extend({
   assigned_to: z.string().nullable().optional(),
@@ -77,6 +216,66 @@ const extendedUpdateProjectSchema = updateProjectSchema.extend({
   assigned_to: data.assigned_to || null,
   contact_name_id: data.contact_name_id || null
 }));
+
+type DbConnection = Knex | Knex.Transaction;
+
+function tenantScopedTable(
+  conn: DbConnection,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
+function tenantScopedDerivedTableSql(
+  facade: ReturnType<typeof tenantDb>,
+  tableName: string,
+  alias: string,
+): { subquery: Knex.QueryBuilder; sql: string; bindings: Knex.RawBinding[] } {
+  const subquery = facade
+    .subquery(tableName)
+    .select('*')
+    .as(alias);
+  const scoped = subquery.toSQL();
+
+  return {
+    subquery,
+    sql: `(${scoped.sql}) ${alias}`,
+    bindings: scoped.bindings as Knex.RawBinding[],
+  };
+}
+
+function tenantJoinSubquerySql(
+  facade: ReturnType<typeof tenantDb>,
+  conn: DbConnection,
+  subquery: Knex.QueryBuilder | Knex.Raw,
+  left: string | Knex.Raw,
+  right: string | Knex.Raw,
+  options: Parameters<ReturnType<typeof tenantDb>['tenantJoinSubquery']>[4]
+): { sql: string; bindings: Knex.RawBinding[] } {
+  const fragmentSource = (conn as Knex)('__tenant_join_fragment__').select(conn.raw('1'));
+
+  facade.tenantJoinSubquery(
+    fragmentSource,
+    subquery as unknown as Knex.QueryBuilder,
+    left as unknown as string,
+    right as unknown as string,
+    options
+  );
+
+  const compiled = fragmentSource.toSQL();
+  const marker = ' from "__tenant_join_fragment__" ';
+  const markerIndex = compiled.sql.indexOf(marker);
+
+  if (markerIndex < 0) {
+    throw new Error('Tenant join subquery SQL fragment marker was not present in compiled SQL.');
+  }
+
+  return {
+    sql: compiled.sql.slice(markerIndex + marker.length),
+    bindings: compiled.bindings as Knex.RawBinding[],
+  };
+}
 
 async function checkPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<ActionPermissionError | null> {
     try {
@@ -101,8 +300,8 @@ async function getContactFullNameByContactNameId(params: {
     tenant: string;
     contactNameId: string;
 }): Promise<string | null> {
-    const row = await params.knexOrTrx('contacts')
-        .where({ tenant: params.tenant, contact_name_id: params.contactNameId })
+    const row = await tenantScopedTable(params.knexOrTrx, 'contacts', params.tenant)
+        .where({ contact_name_id: params.contactNameId })
         .first<{ full_name: string }>('full_name');
     return row?.full_name ?? null;
 }
@@ -130,8 +329,8 @@ async function resolveAuthorizationSubjectForUser(
   let roleIds = extractRoleIdsFromUser(user);
   if (roleIds.length === 0) {
     try {
-      const roleRows = await trx('user_roles')
-        .where({ tenant, user_id: user.user_id })
+      const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
+        .where({ user_id: user.user_id })
         .select<{ role_id: string }[]>('role_id');
       roleIds = roleRows.map((row) => row.role_id);
     } catch {
@@ -140,8 +339,8 @@ async function resolveAuthorizationSubjectForUser(
   }
 
   const [teamRows, managedRows] = await Promise.all([
-    trx('team_members').where({ tenant, user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
-    trx('users').where({ tenant, reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
+    tenantScopedTable(trx, 'team_members', tenant).where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
+    tenantScopedTable(trx, 'users', tenant).where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
   ]);
 
   return {
@@ -250,8 +449,8 @@ async function resolveProjectIdForPhase(
   tenant: string,
   phaseId: string
 ): Promise<string | null> {
-  const row = await trx('project_phases')
-    .where({ tenant, phase_id: phaseId })
+  const row = await tenantScopedTable(trx, 'project_phases', tenant)
+    .where({ phase_id: phaseId })
     .first<{ project_id: string }>('project_id');
 
   return row?.project_id ?? null;
@@ -262,8 +461,8 @@ async function resolveProjectIdsForStatus(
   tenant: string,
   statusId: string
 ): Promise<string[]> {
-  const rows = await trx('project_status_mappings')
-    .where({ tenant, status_id: statusId })
+  const rows = await tenantScopedTable(trx, 'project_status_mappings', tenant)
+    .where({ status_id: statusId })
     .select<{ project_id: string }[]>('project_id');
 
   return Array.from(new Set(rows.map((row) => row.project_id)));
@@ -273,10 +472,20 @@ export const getAllClientsForProjects = withAuth(async (_user, { tenant }): Prom
   const { knex: db } = await createTenantKnex();
 
   const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
-    return trx('clients').select('*').where('tenant', tenant).orderBy('client_name', 'asc');
+    return tenantScopedTable(trx, 'clients', tenant).select('*').orderBy('client_name', 'asc');
   });
 
-  return clients as IClient[];
+  if (clients.length === 0) {
+    return [];
+  }
+
+  // Batch-resolve logo URLs once (no N+1) so the projects table can show real logos.
+  const logoUrlsMap = await getClientLogoUrlsBatch(clients.map((c: any) => c.client_id), tenant);
+
+  return clients.map((c: any) => ({
+    ...c,
+    logoUrl: logoUrlsMap.get(c.client_id) ?? null,
+  })) as IClient[];
 });
 
 export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[] | ActionPermissionError> => {
@@ -355,6 +564,37 @@ export const searchProjectListIds = withAuth(async (
   const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
+    const searchIndex = tenantScopedDerivedTableSql(scopedDb, 'app_search_index', 'si');
+    const projectTasks = tenantScopedDerivedTableSql(scopedDb, 'project_tasks', 'pt');
+    const projectPhases = tenantScopedDerivedTableSql(scopedDb, 'project_phases', 'ph');
+    const projectTaskCommentJoin = tenantJoinSubquerySql(
+      scopedDb,
+      trx,
+      projectTasks.subquery,
+      trx.raw('??::text', ['pt.task_id']),
+      'si.parent_id',
+      {
+        type: 'left',
+        rootTenantColumn: 'si.tenant',
+        joinedTenantColumn: 'pt.tenant',
+        on: (join) => {
+          join.andOn('si.object_type', '=', trx.raw("'project_task_comment'"));
+        },
+      }
+    );
+    const projectPhaseJoin = tenantJoinSubquerySql(
+      scopedDb,
+      trx,
+      projectPhases.subquery,
+      'ph.phase_id',
+      'pt.phase_id',
+      {
+        type: 'left',
+        rootTenantColumn: 'pt.tenant',
+        joinedTenantColumn: 'ph.tenant',
+      }
+    );
     const result = await trx.raw<{ rows: Array<{ project_id: string }> }>(
       `
         WITH q AS (
@@ -371,17 +611,11 @@ export const searchProjectListIds = withAuth(async (
               WHEN si.object_type IN ('project_phase', 'project_task') THEN si.parent_id
               WHEN si.object_type = 'project_task_comment' THEN ph.project_id::text
             END AS project_id
-          FROM app_search_index si
+          FROM ${searchIndex.sql}
           CROSS JOIN q
-          LEFT JOIN project_tasks pt
-            ON si.object_type = 'project_task_comment'
-            AND pt.tenant = si.tenant
-            AND pt.task_id::text = si.parent_id
-          LEFT JOIN project_phases ph
-            ON ph.tenant = pt.tenant
-            AND ph.phase_id = pt.phase_id
-          WHERE si.tenant = ?::uuid
-            AND si.object_type = ANY(?::text[])
+          ${projectTaskCommentJoin.sql}
+          ${projectPhaseJoin.sql}
+          WHERE si.object_type = ANY(?::text[])
             AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
             AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
             AND (si.is_internal_only = false OR ?::boolean = true)
@@ -414,7 +648,9 @@ export const searchProjectListIds = withAuth(async (
         prefixTsquery,
         rawSearch,
         identifier,
-        tenant,
+        ...searchIndex.bindings,
+        ...projectTaskCommentJoin.bindings,
+        ...projectPhaseJoin.bindings,
         [...PROJECT_LIST_SEARCH_TYPES],
         ['project:read'],
         user.user_id,
@@ -429,8 +665,7 @@ export const searchProjectListIds = withAuth(async (
       return [];
     }
 
-    const matchedProjects = await trx('projects')
-      .where({ tenant })
+    const matchedProjects = await tenantScopedTable(trx, 'projects', tenant)
       .whereIn('project_id', projectIds)
       .select<IProject[]>('project_id', 'assigned_to', 'client_id');
     const authorizedProjects = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, matchedProjects);
@@ -456,33 +691,30 @@ export const getProjectsWithPhases = withAuth(async (
     if (denied) return denied;
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+      const statusMappingsQuery = tenantScopedTable(trx, 'project_status_mappings as psm', tenant);
+      db.tenantJoin(statusMappingsQuery, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
+      db.tenantJoin(statusMappingsQuery, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+      statusMappingsQuery
+        .select(
+          'psm.project_status_mapping_id as mapping_id',
+          'psm.project_id',
+          'psm.phase_id',
+          trx.raw("COALESCE(psm.custom_name, s.name, ss.name) as name"),
+          trx.raw("COALESCE(s.is_closed, ss.is_closed, false) as is_closed"),
+          'psm.display_order'
+        )
+        .orderBy('psm.display_order');
+
       const [projects, phases, statusMappings] = await Promise.all([
-        trx('projects')
-          .where({ tenant })
+        tenantScopedTable(trx, 'projects', tenant)
           .select('project_id', 'project_name', 'is_inactive', 'client_id', 'assigned_to')
           .orderBy('project_name'),
-        trx('project_phases')
-          .where({ tenant })
+        tenantScopedTable(trx, 'project_phases', tenant)
           .select('phase_id', 'project_id', 'phase_name', 'wbs_code')
           .orderBy('wbs_code'),
         // Fetch all project status mappings with resolved names
-        trx('project_status_mappings as psm')
-          .leftJoin('statuses as s', function () {
-            this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
-          })
-          .leftJoin('standard_statuses as ss', function () {
-            this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-          })
-          .where('psm.tenant', tenant)
-          .select(
-            'psm.project_status_mapping_id as mapping_id',
-            'psm.project_id',
-            'psm.phase_id',
-            trx.raw("COALESCE(psm.custom_name, s.name, ss.name) as name"),
-            trx.raw("COALESCE(s.is_closed, ss.is_closed, false) as is_closed"),
-            'psm.display_order'
-          )
-          .orderBy('psm.display_order'),
+        statusMappingsQuery,
       ]);
 
       // Group phases by project
@@ -583,7 +815,7 @@ export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: 
       );
 
       if (authorizedProjects.length === 0) {
-        throw new Error('No projects found');
+        return [];
       }
 
       const treeData = await Promise.all(authorizedProjects.map(async (project): Promise<{
@@ -671,7 +903,7 @@ export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: 
         );
 
       if (validTreeData.length === 0) {
-        throw new Error('No projects available with valid phases');
+        return [];
       }
 
       return validTreeData;
@@ -682,7 +914,7 @@ export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: 
   }
 });
 
-export const updatePhase = withAuth(async (user, { tenant }, phaseId: string, phaseData: Partial<IProjectPhase>): Promise<IProjectPhase | ActionPermissionError> => {
+export const updatePhase = withAuth(async (user, { tenant }, phaseId: string, phaseData: Partial<IProjectPhase>): Promise<IProjectPhase | ProjectActionError> => {
     try {
         // Skip validation in development mode since we're handling the types correctly
         const { knex } = await createTenantKnex();
@@ -718,17 +950,178 @@ export const updatePhase = withAuth(async (user, { tenant }, phaseId: string, ph
         return updatedPhase;
     } catch (error) {
         console.error('Error updating project phase:', error);
-        if (typeof error === 'string' && error.includes('Permission denied')) {
-            return permissionError(error);
-        }
-        if (error instanceof Error && error.message.includes('Permission denied')) {
-            return permissionError(error.message);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
         throw error;
     }
 });
 
-export const deletePhase = withAuth(async (user, { tenant }, phaseId: string): Promise<void | ActionPermissionError> => {
+export const markPhaseComplete = withAuth(async (
+    user,
+    { tenant },
+    phaseId: string
+): Promise<{
+    phase: IProjectPhase;
+    ready_entries: { entry_id: string; description: string }[];
+}> => {
+    const { knex } = await createTenantKnex();
+    if (!await hasPermission(user, 'project', 'update', knex)) {
+        throw new Error('Permission denied: Cannot update project');
+    }
+
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const projectId = await resolveProjectIdForPhase(trx, tenant, phaseId);
+        if (!projectId) throw new Error('Project phase not found');
+        await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+
+        const completedAt = new Date().toISOString();
+        const [updatedPhase] = await tenantScopedTable(trx, 'project_phases', tenant)
+            .where({ phase_id: phaseId })
+            .whereNull('completed_at')
+            .update({ completed_at: completedAt, updated_at: completedAt })
+            .returning('*') as IProjectPhase[];
+        const phase = updatedPhase ?? await ProjectModel.getPhaseById(trx, tenant, phaseId);
+        if (!phase) throw new Error('Project phase not found');
+
+        // LEVERAGE: friction phase-readiness-invariant — projects duplicates the billing readiness transition because feature packages cannot depend on each other; move this invariant behind a horizontal project-billing boundary when that layer exists.
+        // projects cannot depend on @alga-psa/billing without introducing a
+        // feature-package dependency cycle, so readiness is evaluated here
+        // with the same optimistic pending predicate as the billing service.
+        const readyRows = await tenantScopedTable(trx, 'project_billing_schedule_entries', tenant)
+            .where({
+                phase_id: phaseId,
+                trigger_type: 'phase',
+                status: 'pending',
+            })
+            .update({
+                status: 'ready',
+                ready_at: completedAt,
+                updated_at: completedAt,
+            })
+            .returning(['schedule_entry_id', 'config_id', 'description', 'requires_payment_before_work', 'display_order', 'created_at']) as Array<{
+                schedule_entry_id: string;
+                config_id: string;
+                description: string;
+                requires_payment_before_work: boolean;
+                display_order: number;
+                created_at: Date | string;
+            }>;
+        readyRows.sort((left, right) => left.display_order - right.display_order
+            || String(left.created_at).localeCompare(String(right.created_at))
+            || left.schedule_entry_id.localeCompare(right.schedule_entry_id));
+
+        const configIds = Array.from(new Set((await tenantScopedTable(trx, 'project_billing_schedule_entries', tenant)
+            .whereIn('schedule_entry_id', readyRows.map((entry) => entry.schedule_entry_id))
+            .select('config_id') as Array<{ config_id: string }>).map((entry) => entry.config_id)));
+        const computedAmountByEntryId = new Map<string, number>();
+        for (const configId of configIds) {
+            const config = await tenantScopedTable(trx, 'project_billing_configs', tenant)
+                .where({ config_id: configId })
+                .select('total_price')
+                .first() as { total_price: number | string | null } | undefined;
+            const entries = await tenantScopedTable(trx, 'project_billing_schedule_entries', tenant)
+                .where({ config_id: configId })
+                .select('schedule_entry_id', 'amount', 'percentage', 'status', 'display_order', 'created_at')
+                .orderBy('display_order', 'asc')
+                .orderBy('created_at', 'asc')
+                .orderBy('schedule_entry_id', 'asc') as ProjectScheduleAmountRow[];
+            for (const [entryId, amount] of computeProjectScheduleAmountsForNotification(config?.total_price ?? null, entries)) {
+                computedAmountByEntryId.set(entryId, amount);
+            }
+        }
+
+        return {
+            phase,
+            projectId,
+            ready_entries: readyRows.map((entry) => ({
+                entry_id: entry.schedule_entry_id,
+                description: entry.description,
+            })),
+            ready_events: readyRows.map((entry) => ({
+                entryId: entry.schedule_entry_id,
+                configId: entry.config_id,
+                description: entry.description,
+                requiresPaymentBeforeWork: entry.requires_payment_before_work,
+                computedAmount: computedAmountByEntryId.get(entry.schedule_entry_id) ?? 0,
+            })),
+        };
+    });
+
+    for (const entry of result.ready_events) {
+        await publishEvent({
+            eventType: 'PROJECT_MILESTONE_READY',
+            payload: {
+                tenantId: tenant,
+                projectId: result.projectId,
+                entryId: entry.entryId,
+                description: entry.description,
+                computedAmount: entry.computedAmount,
+                trigger: 'phase',
+            },
+        });
+        await publishEvent({
+            eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
+            payload: {
+                tenantId: tenant,
+                projectId: result.projectId,
+                configId: entry.configId,
+                entryId: entry.entryId,
+                description: entry.description,
+                status: 'ready',
+                previousStatus: 'pending',
+                requiresPaymentBeforeWork: entry.requiresPaymentBeforeWork,
+                userId: user.user_id,
+            },
+        });
+    }
+
+    revalidatePath(`/msp/projects/${result.projectId}`);
+    return { phase: result.phase, ready_entries: result.ready_entries };
+});
+
+export const reopenPhase = withAuth(async (
+    user,
+    { tenant },
+    phaseId: string
+): Promise<IProjectPhase> => {
+    const { knex } = await createTenantKnex();
+    if (!await hasPermission(user, 'project', 'update', knex)) {
+        throw new Error('Permission denied: Cannot update project');
+    }
+
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const projectId = await resolveProjectIdForPhase(trx, tenant, phaseId);
+        if (!projectId) throw new Error('Project phase not found');
+        await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+
+        const reopenedAt = new Date().toISOString();
+        const [phase] = await tenantScopedTable(trx, 'project_phases', tenant)
+            .where({ phase_id: phaseId })
+            .update({ completed_at: null, updated_at: reopenedAt })
+            .returning('*') as IProjectPhase[];
+        if (!phase) throw new Error('Project phase not found');
+
+        await tenantScopedTable(trx, 'project_billing_schedule_entries', tenant)
+            .where({
+                phase_id: phaseId,
+                trigger_type: 'phase',
+                status: 'ready',
+            })
+            .update({
+                status: 'pending',
+                ready_at: null,
+                updated_at: reopenedAt,
+            });
+        return { phase, projectId };
+    });
+
+    revalidatePath(`/msp/projects/${result.projectId}`);
+    return result.phase;
+});
+
+export const deletePhase = withAuth(async (user, { tenant }, phaseId: string): Promise<void | ProjectActionError> => {
     try {
         const { knex } = await createTenantKnex();
         const denied = await checkPermission(user, 'project', 'delete', knex);
@@ -759,11 +1152,15 @@ export const deletePhase = withAuth(async (user, { tenant }, phaseId: string): P
         }
     } catch (error) {
         console.error('Error deleting project phase:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });
 
-export const addProjectPhase = withAuth(async (user, { tenant }, phaseData: Omit<IProjectPhase, 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<IProjectPhase | ActionPermissionError> => {
+export const addProjectPhase = withAuth(async (user, { tenant }, phaseData: Omit<IProjectPhase, 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<IProjectPhase | ProjectActionError> => {
     try {
         const validatedData = validateData(projectPhaseSchema.omit({
             phase_id: true,
@@ -842,11 +1239,16 @@ export const addProjectPhase = withAuth(async (user, { tenant }, phaseData: Omit
         return createdPhase;
     } catch (error) {
         console.error('Error adding project phase:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });
 
-export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, beforePhaseId?: string | null, afterPhaseId?: string | null): Promise<void | ActionPermissionError> => {
+export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, beforePhaseId?: string | null, afterPhaseId?: string | null): Promise<void | ProjectActionError> => {
+    try {
     const { knex: db } = await createTenantKnex();
 
     const denied = await checkPermission(user, 'project', 'update', db);
@@ -854,8 +1256,8 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
         // Get the phase being moved
-        const phase = await trx('project_phases')
-            .where({ phase_id: phaseId, tenant })
+        const phase = await tenantScopedTable(trx, 'project_phases', tenant)
+            .where({ phase_id: phaseId })
             .select('project_id')
             .first();
 
@@ -869,16 +1271,16 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
         let afterKey: string | null = null;
 
         if (beforePhaseId) {
-            const beforePhase = await trx('project_phases')
-                .where({ phase_id: beforePhaseId, tenant })
+            const beforePhase = await tenantScopedTable(trx, 'project_phases', tenant)
+                .where({ phase_id: beforePhaseId })
                 .select('order_key')
                 .first();
             beforeKey = beforePhase?.order_key || null;
         }
 
         if (afterPhaseId) {
-            const afterPhase = await trx('project_phases')
-                .where({ phase_id: afterPhaseId, tenant })
+            const afterPhase = await tenantScopedTable(trx, 'project_phases', tenant)
+                .where({ phase_id: afterPhaseId })
                 .select('order_key')
                 .first();
             afterKey = afterPhase?.order_key || null;
@@ -888,8 +1290,8 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
             // Use OrderingService for key generation
             const newOrderKey = OrderingService.generateKeyForPosition(beforeKey, afterKey);
 
-            await trx('project_phases')
-                .where({ phase_id: phaseId, tenant })
+            await tenantScopedTable(trx, 'project_phases', tenant)
+                .where({ phase_id: phaseId })
                 .update({
                     order_key: newOrderKey,
                     updated_at: trx.fn.now()
@@ -906,15 +1308,19 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
 
             // Try to recover by regenerating all order keys for the project
             const { regenerateOrderKeysForPhases } = await import('./regenerateOrderKeys');
-            await regenerateOrderKeysForPhases(phase.project_id);
+            const { isProjectOrderKeyActionError } = await import('./projectOrderKeyActionErrors');
+            const regenerationResult = await regenerateOrderKeysForPhases(phase.project_id);
+            if (isProjectOrderKeyActionError(regenerationResult)) {
+                throw regenerationResult;
+            }
 
             // Try again with fresh order keys
-            const freshBeforePhase = beforePhaseId ? await trx('project_phases')
-                .where({ phase_id: beforePhaseId, tenant })
+            const freshBeforePhase = beforePhaseId ? await tenantScopedTable(trx, 'project_phases', tenant)
+                .where({ phase_id: beforePhaseId })
                 .select('order_key')
                 .first() : null;
-            const freshAfterPhase = afterPhaseId ? await trx('project_phases')
-                .where({ phase_id: afterPhaseId, tenant })
+            const freshAfterPhase = afterPhaseId ? await tenantScopedTable(trx, 'project_phases', tenant)
+                .where({ phase_id: afterPhaseId })
                 .select('order_key')
                 .first() : null;
 
@@ -923,8 +1329,8 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
 
             const newOrderKey = OrderingService.generateKeyForPosition(freshBeforeKey, freshAfterKey);
 
-            await trx('project_phases')
-                .where({ phase_id: phaseId, tenant })
+            await tenantScopedTable(trx, 'project_phases', tenant)
+                .where({ phase_id: phaseId })
                 .update({
                     order_key: newOrderKey,
                     updated_at: trx.fn.now()
@@ -936,6 +1342,14 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
             });
         }
     });
+    } catch (error) {
+        console.error('Error reordering project phase:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
+        throw error;
+    }
 });
 
 export const getProject = withAuth(async (user, { tenant }, projectId: string): Promise<IProject | null | ActionPermissionError> => {
@@ -1008,7 +1422,7 @@ export const createProject = withAuth(async (
     /** If true, skip publishing events (useful when called within another action's transaction) */
     skipEvents?: boolean;
   }
-): Promise<IProject | ActionPermissionError> => {
+): Promise<IProject | ActionPermissionError | ActionMessageError> => {
     try {
         const { knex: permKnex } = await createTenantKnex();
         const denied = await checkPermission(user, 'project', 'create', permKnex);
@@ -1018,7 +1432,7 @@ export const createProject = withAuth(async (
         const projectStatuses = await getProjectStatusesInternal(tenant, user);
 
         if (projectStatuses.length === 0) {
-            throw new Error('No project statuses found');
+            return actionError('Project statuses are not configured. Add at least one project status before creating projects.');
         }
 
         const { knex } = await createTenantKnex();
@@ -1043,7 +1457,7 @@ export const createProject = withAuth(async (
         console.log(`[createProject] selectedTaskStatusIds:`, selectedTaskStatusIds);
 
         if (taskStatusesToUse.length === 0) {
-            throw new Error('No project task statuses found. Please ensure task statuses are configured.');
+            return actionError('Project task statuses are not configured. Add at least one task status before creating projects.');
         }
 
         const validatedData = validateData(createProjectSchema, projectData);
@@ -1141,7 +1555,7 @@ export const createProject = withAuth(async (
             // Fetch the full project details including contact and assigned user
             const project = await ProjectModel.getById(trx, tenant, newProject.project_id);
             if (!project) {
-                throw new Error('Failed to fetch created project details');
+                throw new Error('Created project could not be reloaded after insert.');
             }
             return project;
         };
@@ -1168,6 +1582,13 @@ export const createProject = withAuth(async (
         return fullProject;
     } catch (error) {
         console.error('Error creating project:', error);
+        if (error instanceof Error && error.message === 'Failed to fetch created project details') {
+            return actionError('Project could not be created because its details could not be loaded. Please try again.');
+        }
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });
@@ -1184,7 +1605,73 @@ async function getProjectStatusesInternal(tenant: string, user: IUser): Promise<
     });
 }
 
-export const updateProject = withAuth(async (user, { tenant }, projectId: string, projectData: Partial<IProject>): Promise<IProject | ActionPermissionError> => {
+async function closeProjectBillingSchedule(
+    trx: Knex.Transaction,
+    tenant: string,
+    projectId: string
+): Promise<{ depositReconciliationNeeded: boolean; productsMovedToHold: number } | null> {
+    const config = await tenantScopedTable(trx, 'project_billing_configs', tenant)
+        .where({ project_id: projectId })
+        .select('config_id', 'total_price')
+        .first<{ config_id: string; total_price: string | number | null }>();
+    if (!config) return null;
+
+    const db = tenantDb(trx, tenant);
+    const totalsQuery = tenantScopedTable(trx, 'project_billing_schedule_entries as entry', tenant);
+    db.tenantJoin(
+        totalsQuery,
+        'invoice_charges as charge',
+        'entry.invoice_charge_id',
+        'charge.item_id',
+        { type: 'left' }
+    );
+    const totals = await totalsQuery
+        .where({
+            'entry.config_id': config.config_id,
+            'entry.status': 'invoiced',
+        })
+        .select(
+            trx.raw(`COALESCE(SUM(
+                CASE WHEN entry.entry_type = 'deposit' THEN
+                    COALESCE(charge.total_price, entry.amount, ROUND((entry.percentage * ?) / 100), 0)
+                ELSE 0 END
+            ), 0) AS invoiced_deposits`, [Number(config.total_price ?? 0)]),
+            trx.raw(`COALESCE(SUM(
+                CASE WHEN entry.entry_type = 'milestone' THEN
+                    COALESCE(charge.total_price, entry.amount, ROUND((entry.percentage * ?) / 100), 0)
+                ELSE 0 END
+            ), 0) AS invoiced_milestones`, [Number(config.total_price ?? 0)])
+        )
+        .first<{ invoiced_deposits: string | number; invoiced_milestones: string | number }>();
+
+    const canceledAt = new Date().toISOString();
+    let productsMovedToHold = 0;
+    const entriesToCancel = await tenantScopedTable(trx, 'project_billing_schedule_entries', tenant)
+        .where({ config_id: config.config_id })
+        .whereIn('status', ['pending', 'ready', 'approved'])
+        .select('schedule_entry_id') as Array<{ schedule_entry_id: string }>;
+    if (entriesToCancel.length > 0) {
+        productsMovedToHold = await tenantScopedTable(trx, 'project_materials', tenant)
+            .where({ billing_destination: 'schedule_entry', is_billed: false })
+            .whereIn('billing_schedule_entry_id', entriesToCancel.map((entry) => entry.schedule_entry_id))
+            .update({
+                billing_destination: 'on_hold',
+                billing_schedule_entry_id: null,
+                updated_at: canceledAt,
+            });
+    }
+    await tenantScopedTable(trx, 'project_billing_schedule_entries', tenant)
+        .where({ config_id: config.config_id })
+        .whereIn('status', ['pending', 'ready', 'approved'])
+        .update({ status: 'canceled', updated_at: canceledAt });
+
+    return {
+        depositReconciliationNeeded: Number(totals?.invoiced_deposits ?? 0) > Number(totals?.invoiced_milestones ?? 0),
+        productsMovedToHold,
+    };
+}
+
+export const updateProject = withAuth(async (user, { tenant }, projectId: string, projectData: Partial<IProject>): Promise<ProjectUpdateResult | ProjectActionError> => {
     try {
         // Remove tenant field if present in projectData
         const { tenant: tenantField, ...safeProjectData } = projectData;
@@ -1195,7 +1682,7 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
         const denied = await checkPermission(user, 'project', 'update', knex);
         if (denied) return denied;
 
-        const { beforeProject, updatedProject } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const { beforeProject, updatedProject, billingCloseResult } = await withTransaction(knex, async (trx: Knex.Transaction) => {
             const beforeProject = await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
             let project = await ProjectModel.update(trx, tenant, projectId, validatedData);
 
@@ -1210,7 +1697,11 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
                     });
                 }
             }
-            return { beforeProject, updatedProject: project };
+            const transitionedToClosed = beforeProject.is_closed !== true && project.is_closed === true;
+            const billingCloseResult = transitionedToClosed
+                ? await closeProjectBillingSchedule(trx, tenant, projectId)
+                : undefined;
+            return { beforeProject, updatedProject: project, billingCloseResult };
         });
 
         // If assigned_to was updated, fetch the full user details and publish event
@@ -1281,9 +1772,24 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
             }),
         });
 
-        return updatedProject;
+        revalidatePath(`/msp/projects/${projectId}`);
+        if (billingCloseResult !== undefined) {
+            revalidatePath('/msp/billing');
+        }
+        const depositReconciliationNeeded = billingCloseResult?.depositReconciliationNeeded ?? false;
+        const productsMovedToHold = billingCloseResult?.productsMovedToHold ?? 0;
+        return billingCloseResult === undefined
+            ? updatedProject
+            : Object.assign(updatedProject, {
+                deposit_reconciliation_needed: depositReconciliationNeeded,
+                products_moved_to_hold: productsMovedToHold,
+            });
     } catch (error) {
         console.error('Error updating project:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });
@@ -1304,14 +1810,13 @@ export const deleteProject = withAuth(async (
 
             await deleteEntityTags(trx, projectId, 'project');
 
-            const phaseIds = await trx('project_phases')
-                .where({ project_id: projectId, tenant: tenantId })
+            const phaseIds = await tenantScopedTable(trx as Knex.Transaction, 'project_phases', tenantId)
+                .where({ project_id: projectId })
                 .pluck('phase_id');
 
             if (phaseIds.length > 0) {
-                const taskIds = await trx('project_tasks')
+                const taskIds = await tenantScopedTable(trx as Knex.Transaction, 'project_tasks', tenantId)
                     .whereIn('phase_id', phaseIds)
-                    .andWhere('tenant', tenantId)
                     .pluck('task_id');
 
                 if (taskIds.length > 0) {
@@ -1320,8 +1825,15 @@ export const deleteProject = withAuth(async (
             }
 
             // Clean up child records owned by the project
-            await trx('project_ticket_links').where({ project_id: projectId, tenant: tenantId }).delete();
-            await trx('email_reply_tokens').where({ project_id: projectId, tenant: tenantId }).delete();
+            await tenantScopedTable(trx as Knex.Transaction, 'project_ticket_links', tenantId).where({ project_id: projectId }).delete();
+            await tenantScopedTable(trx as Knex.Transaction, 'email_reply_tokens', tenantId).where({ project_id: projectId }).delete();
+
+            // Drop every user's per-project "hidden kanban columns" preference for
+            // this project — those rows reference this project by setting name and
+            // would otherwise be orphaned once the project is gone.
+            await tenantScopedTable(trx as Knex.Transaction, 'user_preferences', tenantId)
+                .where({ setting_name: projectKanbanHiddenStatusesKey(projectId) })
+                .delete();
 
             await ProjectModel.delete(trx, tenantId, projectId);
         });
@@ -1351,14 +1863,14 @@ export const deleteProject = withAuth(async (
             success: false,
             canDelete: false,
             code: 'VALIDATION_FAILED',
-            message: error instanceof Error ? error.message : 'Failed to delete project',
+            message: projectDeleteErrorMessage(error),
             dependencies: [],
             alternatives: []
         };
     }
 });
 
-export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: string): Promise<ActionPermissionError | {
+export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: string): Promise<ProjectActionError | {
     project: IProject;
     phases: IProjectPhase[];
     statuses: ProjectStatus[];
@@ -1410,7 +1922,7 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
         let contact: { full_name: string } | undefined;
         if (project.contact_name_id) {
             const contactData = await withTransaction(knex, async (trx: Knex.Transaction) => {
-                return await trx('contacts')
+                return await tenantDb(trx, tenant).table('contacts')
                     .where({ contact_name_id: project.contact_name_id })
                     .select('full_name')
                     .first();
@@ -1429,6 +1941,10 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
         };
     } catch (error) {
         console.error('Error getting project metadata:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });
@@ -1437,7 +1953,7 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
 async function getAllClientsForProjectsInternal(tenant: string): Promise<IClient[]> {
     const { knex: db } = await createTenantKnex();
     const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return trx('clients').select('*').where('tenant', tenant).orderBy('client_name', 'asc');
+        return tenantScopedTable(trx, 'clients', tenant).select('*').orderBy('client_name', 'asc');
     });
     return clients as IClient[];
 }
@@ -1508,10 +2024,10 @@ async function fetchStatusesForMappings(
 
     const [standardStatusRows, customStatusRows] = await Promise.all([
         standardIds.length > 0
-            ? trx<IStandardStatus>('standard_statuses').whereIn('standard_status_id', standardIds)
+            ? tenantDb(trx, tenant).table<IStandardStatus>('standard_statuses').whereIn('standard_status_id', standardIds)
             : [],
         customIds.length > 0
-            ? trx<IStatus>('statuses').whereIn('status_id', customIds).andWhere('tenant', tenant)
+            ? tenantScopedTable(trx, 'statuses', tenant).whereIn('status_id', customIds)
             : []
     ]);
 
@@ -1573,7 +2089,7 @@ function mapStatusMappingsToStatuses(
     return statuses.filter((status): status is ProjectStatus => status !== null);
 }
 
-export const getProjectDetails = withAuth(async (user, { tenant }, projectId: string): Promise<ActionPermissionError | {
+export const getProjectDetails = withAuth(async (user, { tenant }, projectId: string): Promise<ProjectActionError | {
     project: IProject;
     phases: IProjectPhase[];
     tasks: IProjectTask[];
@@ -1664,11 +2180,15 @@ export const getProjectDetails = withAuth(async (user, { tenant }, projectId: st
         };
     } catch (error) {
         console.error('Error fetching project details:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });
 
-export const updateProjectStructure = withAuth(async (user, { tenant }, projectId: string, updates: { phases: Partial<IProjectPhase>[]; tasks: Partial<IProjectTask>[] }): Promise<void | ActionPermissionError> => {
+export const updateProjectStructure = withAuth(async (user, { tenant }, projectId: string, updates: { phases: Partial<IProjectPhase>[]; tasks: Partial<IProjectTask>[] }): Promise<void | ProjectActionError> => {
     try {
         const { knex } = await createTenantKnex();
         const denied = await checkPermission(user, 'project', 'update', knex);
@@ -1680,6 +2200,10 @@ export const updateProjectStructure = withAuth(async (user, { tenant }, projectI
         });
     } catch (error) {
         console.error('Error updating project structure:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });
@@ -1713,22 +2237,31 @@ export const getProjectStatusesByPhase = withAuth(async (
     user,
     { tenant },
     projectId: string
-): Promise<Record<string, ProjectStatus[]>> => {
-    const { knex } = await createTenantKnex();
+): Promise<Record<string, ProjectStatus[]> | ProjectActionError> => {
+    try {
+        const { knex } = await createTenantKnex();
 
-    // Resolve every phase's statuses inside a single transaction, verifying
-    // access once. The actual resolution batches all phases into 3 queries
-    // total (see resolveAllPhaseStatusesInternal) rather than querying per
-    // phase, which previously also opened a transaction per phase.
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        if (!await hasPermission(user, 'project', 'read', trx)) {
-            throw new Error('Permission denied: Cannot read project');
+        // Resolve every phase's statuses inside a single transaction, verifying
+        // access once. The actual resolution batches all phases into 3 queries
+        // total (see resolveAllPhaseStatusesInternal) rather than querying per
+        // phase, which previously also opened a transaction per phase.
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            if (!await hasPermission(user, 'project', 'read', trx)) {
+                throw new Error('Permission denied: Cannot read project');
+            }
+            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+
+            const phases = await ProjectModel.getPhases(trx, tenant, projectId);
+            return resolveAllPhaseStatusesInternal(trx, tenant, projectId, phases);
+        });
+    } catch (error) {
+        console.error('Error fetching project statuses by phase:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
-
-        const phases = await ProjectModel.getPhases(trx, tenant, projectId);
-        return resolveAllPhaseStatusesInternal(trx, tenant, projectId, phases);
-    });
+        throw error;
+    }
 });
 
 // Resolve the effective statuses for every phase in 3 queries total, regardless
@@ -1742,10 +2275,9 @@ async function resolveAllPhaseStatusesInternal(
     projectId: string,
     phases: IProjectPhase[]
 ): Promise<Record<string, ProjectStatus[]>> {
-    const allMappings = await trx<IProjectStatusMapping>('project_status_mappings')
+    const allMappings = await tenantScopedTable(trx, 'project_status_mappings', tenant)
         .where('project_id', projectId)
-        .andWhere('tenant', tenant)
-        .orderBy('display_order');
+        .orderBy('display_order') as IProjectStatusMapping[];
 
     // Split into per-phase groups and the project-level defaults (phase_id null).
     // Iteration order follows the display_order sort, so each group stays ordered.
@@ -1784,7 +2316,7 @@ async function resolveAllPhaseStatusesInternal(
     return result;
 }
 
-export const addStatusToProject = withAuth(async (user, { tenant }, projectId: string, statusData: Omit<IStatus, 'status_id' | 'created_at' | 'updated_at'>): Promise<IStatus | ActionPermissionError> => {
+export const addStatusToProject = withAuth(async (user, { tenant }, projectId: string, statusData: Omit<IStatus, 'status_id' | 'created_at' | 'updated_at'>): Promise<IStatus | ProjectActionError> => {
     try {
         const { knex } = await createTenantKnex();
         const denied = await checkPermission(user, 'project', 'update', knex);
@@ -1796,6 +2328,10 @@ export const addStatusToProject = withAuth(async (user, { tenant }, projectId: s
         });
     } catch (error) {
         console.error('Error adding status to task:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });
@@ -1807,7 +2343,7 @@ export const updateProjectStatus = withAuth(async (
     statusId: string,
     statusData: Partial<IStatus>,
     mappingData: Partial<IProjectStatusMapping>
-): Promise<IStatus | ActionPermissionError> => {
+): Promise<IStatus | ProjectActionError> => {
     try {
         const { knex } = await createTenantKnex();
         const denied = await checkPermission(user, 'project', 'update', knex);
@@ -1844,11 +2380,15 @@ export const updateProjectStatus = withAuth(async (
         return updatedStatus;
     } catch (error) {
         console.error('Error updating project status:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });
 
-export const deleteProjectStatus = withAuth(async (user, { tenant }, statusId: string): Promise<void | ActionPermissionError> => {
+export const deleteProjectStatus = withAuth(async (user, { tenant }, statusId: string): Promise<void | ProjectActionError> => {
     try {
         const { knex } = await createTenantKnex();
         const denied = await checkPermission(user, 'project', 'delete', knex);
@@ -1867,6 +2407,10 @@ export const deleteProjectStatus = withAuth(async (user, { tenant }, statusId: s
         });
     } catch (error) {
         console.error('Error deleting project status:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });

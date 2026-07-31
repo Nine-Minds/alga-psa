@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import ScheduleEntry from '../../../../models/scheduleEntry';
 import { IEditScope } from '@alga-psa/types';
 import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
@@ -252,6 +253,13 @@ function redactPrivateEntry(entry: SchedulingEntrySummary): SchedulingEntrySumma
   };
 }
 
+function tenantScopedTable(
+  tx: Pick<TenantTxContext, 'tenantId' | 'trx'>,
+  table: string
+): Knex.QueryBuilder {
+  return tenantDb(tx.trx, tx.tenantId).table(table);
+}
+
 async function detectConflicts(
   tx: TenantTxContext,
   params: {
@@ -263,11 +271,13 @@ async function detectConflicts(
 ): Promise<ConflictRow[]> {
   if (params.assignedUserIds.length === 0) return [];
 
-  const rows = await tx.trx('schedule_entries as se')
-    .join('schedule_entry_assignees as sea', function joinAssignees(this: Knex.JoinClause) {
-      this.on('se.tenant', 'sea.tenant').andOn('se.entry_id', 'sea.entry_id');
-    })
-    .where({ 'se.tenant': tx.tenantId })
+  const db = tenantDb(tx.trx, tx.tenantId);
+  const conflictsQuery = db.table('schedule_entries as se');
+  db.tenantJoin(conflictsQuery, 'schedule_entry_assignees as sea', 'se.entry_id', 'sea.entry_id', {
+    rootTenantColumn: 'se.tenant',
+  });
+
+  const rows = await conflictsQuery
     .whereIn('sea.user_id', params.assignedUserIds)
     .andWhere('se.scheduled_start', '<', params.requestedEndIso)
     .andWhere('se.scheduled_end', '>', params.requestedStartIso)
@@ -284,7 +294,7 @@ async function detectConflicts(
       'sea.user_id'
     );
 
-  return rows as ConflictRow[];
+  return rows as unknown as ConflictRow[];
 }
 
 async function ensureTechnicianEligibility(
@@ -301,8 +311,8 @@ async function ensureTechnicianEligibility(
     });
   }
 
-  const users = await tx.trx('users')
-    .where({ tenant: tx.tenantId, user_type: 'internal', is_inactive: false })
+  const users = await tenantScopedTable(tx, 'users')
+    .where({ user_type: 'internal', is_inactive: false })
     .whereIn('user_id', uniqueUserIds)
     .select('user_id');
 
@@ -317,16 +327,17 @@ async function ensureTechnicianEligibility(
     });
   }
 
-  const technicianRows = await tx.trx('user_roles as ur')
-    .join('roles as r', function joinRoles(this: Knex.JoinClause) {
-      this.on('ur.tenant', 'r.tenant').andOn('ur.role_id', 'r.role_id');
-    })
-    .where({ 'ur.tenant': tx.tenantId })
+  const db = tenantDb(tx.trx, tx.tenantId);
+  const technicianQuery = db.table('user_roles as ur');
+  db.tenantJoin(technicianQuery, 'roles as r', 'ur.role_id', 'r.role_id', {
+    rootTenantColumn: 'ur.tenant',
+  });
+  const technicianRows = await technicianQuery
     .whereIn('ur.user_id', uniqueUserIds)
     .whereRaw('lower(r.role_name) = ?', ['technician'])
     .select('ur.user_id');
 
-  const technicianUsers = new Set(technicianRows.map((row: { user_id: string }) => row.user_id));
+  const technicianUsers = new Set((technicianRows as unknown as Array<{ user_id: string }>).map((row) => row.user_id));
   const ineligibleUsers = uniqueUserIds.filter((id) => !technicianUsers.has(id));
   if (ineligibleUsers.length > 0) {
     throwActionError(ctx, {
@@ -415,14 +426,16 @@ export function registerSchedulingActions(): void {
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'user_schedule', action: 'create' });
 
-      const user = await tx.trx('users').where({ tenant: tx.tenantId, user_id: input.user_id }).first();
+      const user = await tenantScopedTable(tx, 'users').where({ user_id: input.user_id }).first();
       if (!user) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'User not found' });
 
-      const technicianRole = await tx.trx('user_roles as ur')
-        .join('roles as r', function joinRoles(this: Knex.JoinClause) {
-          this.on('ur.tenant', 'r.tenant').andOn('ur.role_id', 'r.role_id');
-        })
-        .where({ 'ur.tenant': tx.tenantId, 'ur.user_id': input.user_id })
+      const db = tenantDb(tx.trx, tx.tenantId);
+      const technicianRoleQuery = db.table('user_roles as ur');
+      db.tenantJoin(technicianRoleQuery, 'roles as r', 'ur.role_id', 'r.role_id', {
+        rootTenantColumn: 'ur.tenant',
+      });
+      const technicianRole = await technicianRoleQuery
+        .where({ 'ur.user_id': input.user_id })
         .whereRaw('lower(r.role_name) = ?', ['technician'])
         .first();
       if (!technicianRole) {
@@ -430,10 +443,10 @@ export function registerSchedulingActions(): void {
       }
 
       if (input.link.type === 'ticket') {
-        const ticket = await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_id: input.link.id }).first();
+        const ticket = await tenantScopedTable(tx, 'tickets').where({ ticket_id: input.link.id }).first();
         if (!ticket) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found' });
       } else {
-        const task = await tx.trx('project_tasks').where({ tenant: tx.tenantId, task_id: input.link.id }).first();
+        const task = await tenantScopedTable(tx, 'project_tasks').where({ task_id: input.link.id }).first();
         if (!task) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Project task not found' });
       }
 
@@ -443,14 +456,18 @@ export function registerSchedulingActions(): void {
         throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'window.start must be before window.end' });
       }
 
-      const findConflicts = async (s: Date, e: Date) => tx.trx('schedule_entries as se')
-        .join('schedule_entry_assignees as sea', function joinAssignees(this: Knex.JoinClause) {
-          this.on('se.tenant', 'sea.tenant').andOn('se.entry_id', 'sea.entry_id');
-        })
-        .where({ 'se.tenant': tx.tenantId, 'sea.user_id': input.user_id })
-        .andWhere('se.scheduled_start', '<', e.toISOString())
-        .andWhere('se.scheduled_end', '>', s.toISOString())
-        .select('se.*');
+      const findConflicts = async (s: Date, e: Date): Promise<Array<{ entry_id: string; scheduled_end: string | Date }>> => {
+        const conflictQuery = db.table('schedule_entries as se');
+        db.tenantJoin(conflictQuery, 'schedule_entry_assignees as sea', 'se.entry_id', 'sea.entry_id', {
+          rootTenantColumn: 'se.tenant',
+        });
+        const rows = await conflictQuery
+          .where('sea.user_id', input.user_id)
+          .andWhere('se.scheduled_start', '<', e.toISOString())
+          .andWhere('se.scheduled_end', '>', s.toISOString())
+          .select('se.*');
+        return rows as unknown as Array<{ entry_id: string; scheduled_end: string | Date }>;
+      };
 
       let conflicts = await findConflicts(start, end);
       if (conflicts.length && input.conflict_mode === 'fail') {
@@ -472,7 +489,7 @@ export function registerSchedulingActions(): void {
 
       const entryId = uuidv4();
       const nowIso = new Date().toISOString();
-      await tx.trx('schedule_entries').insert({
+      await tenantScopedTable(tx, 'schedule_entries').insert({
         tenant: tx.tenantId,
         entry_id: entryId,
         title: input.title ?? 'Scheduled work',
@@ -485,7 +502,7 @@ export function registerSchedulingActions(): void {
         created_at: nowIso,
         updated_at: nowIso,
       });
-      await tx.trx('schedule_entry_assignees').insert({
+      await tenantScopedTable(tx, 'schedule_entry_assignees').insert({
         tenant: tx.tenantId,
         entry_id: entryId,
         user_id: input.user_id,
@@ -497,7 +514,7 @@ export function registerSchedulingActions(): void {
         const overlapping = await findConflicts(start, end);
         for (const other of overlapping) {
           if (other.entry_id === entryId) continue;
-          await tx.trx('schedule_conflicts').insert({
+          await tenantScopedTable(tx, 'schedule_conflicts').insert({
             tenant: tx.tenantId,
             conflict_id: uuidv4(),
             entry_id_1: entryId,
@@ -517,6 +534,161 @@ export function registerSchedulingActions(): void {
       });
 
       return { schedule_event_id: entryId, assigned_user_id: input.user_id, start: start.toISOString(), end: end.toISOString() };
+    }),
+  });
+
+  // ---------------------------------------------------------------------------
+  // scheduling.create_entry — like assign_user, but the work-item link is
+  // optional (ad-hoc entries) and multiple technicians can be assigned.
+  // ---------------------------------------------------------------------------
+  registry.register({
+    id: 'scheduling.create_entry',
+    version: 1,
+    inputSchema: z.object({
+      assigned_user_ids: z.array(withWorkflowPicker(uuidSchema, 'Assigned user', 'user')).min(1)
+        .describe('Technicians to schedule'),
+      title: z.string().trim().min(1).describe('Schedule entry title'),
+      window: z.object({
+        start: isoDateTimeSchema.describe('Start time (ISO)'),
+        end: isoDateTimeSchema.describe('End time (ISO)'),
+        timezone: z.string().optional().describe('IANA timezone (informational)'),
+      }),
+      link: z.object({
+        type: z.enum(['ticket', 'project_task']).describe('Work item type'),
+        id: uuidSchema.describe('Work item id'),
+      }).optional().describe('Optional work item link; omit for an ad-hoc entry'),
+      notes: z.string().optional().describe('Notes'),
+      conflict_mode: conflictModeSchema.default('fail').describe('Conflict handling mode'),
+    }),
+    outputSchema: z.object({
+      entry_id: uuidSchema,
+      assigned_user_ids: z.array(uuidSchema),
+      start: isoDateTimeSchema,
+      end: isoDateTimeSchema,
+      work_item_id: uuidSchema.nullable(),
+      work_item_type: z.string(),
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Create Schedule Entry',
+      category: 'Business Operations',
+      description: 'Create a schedule entry for one or more technicians, with or without a linked work item',
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'user_schedule', action: 'create' });
+
+      const assignedUserIds = normalizeStringArray(input.assigned_user_ids);
+      await ensureTechnicianEligibility(ctx, tx, assignedUserIds);
+
+      if (input.link) {
+        if (input.link.type === 'ticket') {
+          const ticket = await tenantScopedTable(tx, 'tickets').where({ ticket_id: input.link.id }).first();
+          if (!ticket) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found' });
+        } else {
+          const task = await tenantScopedTable(tx, 'project_tasks').where({ task_id: input.link.id }).first();
+          if (!task) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Project task not found' });
+        }
+      }
+
+      let start = new Date(input.window.start);
+      let end = new Date(input.window.end);
+      if (!(start.getTime() < end.getTime())) {
+        throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'window.start must be before window.end' });
+      }
+
+      const entryId = uuidv4();
+      const findConflicts = (s: Date, e: Date) => detectConflicts(tx, {
+        assignedUserIds,
+        requestedStartIso: s.toISOString(),
+        requestedEndIso: e.toISOString(),
+        targetSeriesId: entryId,
+      });
+
+      let conflicts = await findConflicts(start, end);
+      if (conflicts.length && (input.conflict_mode ?? 'fail') === 'fail') {
+        throwActionError(ctx, {
+          category: 'ActionError',
+          code: 'CONFLICT',
+          message: 'Schedule conflict detected',
+          details: { conflicting_user_ids: normalizeStringArray(conflicts.map((row) => row.user_id)) },
+        });
+      }
+
+      if (conflicts.length && input.conflict_mode === 'shift') {
+        const latestEnd = conflicts
+          .map((row) => new Date(row.scheduled_end).getTime())
+          .reduce((a, b) => Math.max(a, b), start.getTime());
+        const durationMs = end.getTime() - start.getTime();
+        start = new Date(latestEnd);
+        end = new Date(latestEnd + durationMs);
+        conflicts = await findConflicts(start, end);
+        if (conflicts.length) {
+          throwActionError(ctx, { category: 'ActionError', code: 'CONFLICT', message: 'Unable to shift schedule entry to a non-conflicting window' });
+        }
+      }
+
+      const nowIso = new Date().toISOString();
+      await tenantScopedTable(tx, 'schedule_entries').insert({
+        tenant: tx.tenantId,
+        entry_id: entryId,
+        title: input.title,
+        work_item_id: input.link?.id ?? null,
+        scheduled_start: start.toISOString(),
+        scheduled_end: end.toISOString(),
+        status: 'scheduled',
+        notes: input.notes ?? null,
+        work_item_type: input.link?.type ?? 'ad_hoc',
+        created_at: nowIso,
+        updated_at: nowIso,
+      });
+      for (const userId of assignedUserIds) {
+        await tenantScopedTable(tx, 'schedule_entry_assignees').insert({
+          tenant: tx.tenantId,
+          entry_id: entryId,
+          user_id: userId,
+          created_at: nowIso,
+          updated_at: nowIso,
+        });
+      }
+
+      if (input.conflict_mode === 'override') {
+        const overlapping = await findConflicts(start, end);
+        for (const other of overlapping) {
+          if (other.entry_id === entryId) continue;
+          await tenantScopedTable(tx, 'schedule_conflicts').insert({
+            tenant: tx.tenantId,
+            conflict_id: uuidv4(),
+            entry_id_1: entryId,
+            entry_id_2: other.entry_id,
+            conflict_type: 'overlap',
+            resolved: false,
+            created_at: nowIso,
+            updated_at: nowIso,
+          });
+        }
+      }
+
+      await writeRunAudit(ctx, tx, {
+        operation: 'workflow_action:scheduling.create_entry',
+        changedData: {
+          entry_id: entryId,
+          assigned_user_ids: assignedUserIds,
+          start: start.toISOString(),
+          end: end.toISOString(),
+          link: input.link ?? null,
+        },
+        details: { action_id: 'scheduling.create_entry', action_version: 1, schedule_event_id: entryId },
+      });
+
+      return {
+        entry_id: entryId,
+        assigned_user_ids: assignedUserIds,
+        start: start.toISOString(),
+        end: end.toISOString(),
+        work_item_id: input.link?.id ?? null,
+        work_item_type: input.link?.type ?? 'ad_hoc',
+      };
     }),
   });
 
@@ -594,8 +766,8 @@ export function registerSchedulingActions(): void {
         return await withTenantTransaction(ctx, async (tx) => {
           await requirePermission(ctx, tx, { resource: 'user_schedule', action: 'read' });
 
-          const queryBuilder = tx.trx('schedule_entries as se')
-            .where({ 'se.tenant': tx.tenantId })
+          const db = tenantDb(tx.trx, tx.tenantId);
+          const queryBuilder = db.table('schedule_entries as se')
             .orderBy('se.scheduled_start', 'asc')
             .limit(input.limit ?? 25)
             .select('se.*');
@@ -625,13 +797,12 @@ export function registerSchedulingActions(): void {
                   .orWhereRaw("coalesce(se.notes, '') ILIKE ? ESCAPE E'\\\\'", [`%${escaped}%`]);
               }).andWhere(function searchableDetails(this: Knex.QueryBuilder) {
                 this.whereRaw('coalesce(se.is_private, false) = false')
-                  .orWhereExists(function assignedToActor(this: Knex.QueryBuilder) {
-                    this.select(tx.trx.raw('1'))
-                      .from('schedule_entry_assignees as search_sea')
-                      .whereRaw('search_sea.tenant = se.tenant')
+                  .orWhereExists(
+                    db.subquery('schedule_entry_assignees as search_sea')
+                      .select(tx.trx.raw('1'))
                       .whereRaw('search_sea.entry_id = se.entry_id')
-                      .where('search_sea.user_id', tx.actorUserId);
-                  });
+                      .where('search_sea.user_id', tx.actorUserId)
+                  );
                 if (canSearchAllPrivateDetails) {
                   this.orWhereRaw('true');
                 }
@@ -640,21 +811,19 @@ export function registerSchedulingActions(): void {
           }
           const assignedUserIdsFilter = input.assigned_user_ids ?? [];
           if (assignedUserIdsFilter.length > 0) {
-            queryBuilder.whereExists(function whereAssigned(this: Knex.QueryBuilder) {
-              this.select(tx.trx.raw('1'))
-                .from('schedule_entry_assignees as sea')
-                .whereRaw('sea.tenant = se.tenant')
+            queryBuilder.whereExists(
+              db.subquery('schedule_entry_assignees as sea')
+                .select(tx.trx.raw('1'))
                 .whereRaw('sea.entry_id = se.entry_id')
-                .whereIn('sea.user_id', assignedUserIdsFilter);
-            });
+                .whereIn('sea.user_id', assignedUserIdsFilter)
+            );
           }
 
-          const rows = await queryBuilder;
-          const entryIds = rows.map((row: { entry_id: string }) => row.entry_id);
+          const rows = (await queryBuilder) as unknown as Array<Record<string, unknown> & { entry_id: string }>;
+          const entryIds = rows.map((row) => row.entry_id);
 
           const assignmentRows = entryIds.length
-            ? await tx.trx('schedule_entry_assignees')
-              .where({ tenant: tx.tenantId })
+            ? await tenantScopedTable(tx, 'schedule_entry_assignees')
               .whereIn('entry_id', entryIds)
               .select('entry_id', 'user_id')
             : [];
@@ -667,7 +836,7 @@ export function registerSchedulingActions(): void {
           }
 
           const entries: SchedulingEntrySummary[] = [];
-          for (const row of rows as Array<Record<string, unknown>>) {
+          for (const row of rows) {
             const parsed = parseSchedulingEntrySummary({
               entry_id: row.entry_id,
               original_entry_id: (row.original_entry_id as string | null | undefined) ?? null,
@@ -838,7 +1007,7 @@ export function registerSchedulingActions(): void {
             const nowIso = new Date().toISOString();
             const uniqueConflicts = Array.from(new Set(detectedConflicts.map((row) => row.entry_id))).filter((id) => id !== updatedEntry.entry_id);
             for (const conflictingEntryId of uniqueConflicts) {
-              await tx.trx('schedule_conflicts').insert({
+              await tenantScopedTable(tx, 'schedule_conflicts').insert({
                 tenant: tx.tenantId,
                 conflict_id: uuidv4(),
                 entry_id_1: updatedEntry.entry_id,

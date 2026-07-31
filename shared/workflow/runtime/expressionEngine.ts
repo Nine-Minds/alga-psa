@@ -1,6 +1,6 @@
 import jsonata from 'jsonata';
 import type { Expr } from './types';
-import { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from './expressionFunctions';
+import { WORKFLOW_EXPRESSION_FUNCTIONS, WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from './expressionFunctions';
 
 const MAX_OUTPUT_BYTES = 256 * 1024;
 const DEFAULT_TIMEOUT_MS = 25;
@@ -32,44 +32,25 @@ export async function evaluateExpressionSource(
 
 export function validateExpressionSource(source: string): void {
   const normalizedSource = normalizeExpressionSource(source);
-  const functionCalls = extractFunctionCalls(normalizedSource);
+  const expr = jsonata(normalizedSource);
+  // Access AST to ensure parse happens now; jsonata throws on invalid syntax
+  const ast = expr.ast();
+  const functionCalls = extractFunctionCalls(ast);
   for (const fn of functionCalls) {
     const normalizedFn = fn.startsWith('$') ? fn.slice(1) : fn;
     if (!allowedFunctions.has(normalizedFn)) {
       throw new Error(`Expression uses disallowed function: ${normalizedFn}`);
     }
   }
-  const expr = jsonata(normalizedSource);
-  // Access AST to ensure parse happens now; jsonata throws on invalid syntax
-  expr.ast();
 }
 
 export function compileExpression(expr: Expr): CompiledExpression {
   const normalizedSource = normalizeExpressionSource(expr.$expr);
   validateExpressionSource(normalizedSource);
   const compiled = jsonata(normalizedSource);
-  compiled.registerFunction('nowIso', () => new Date().toISOString());
-  compiled.registerFunction('coalesce', (...args: unknown[]) => {
-    for (const arg of args) {
-      if (arg !== null && arg !== undefined) return arg;
-    }
-    return null;
-  });
-  compiled.registerFunction('len', (value: unknown) => {
-    if (typeof value === 'string' || Array.isArray(value)) {
-      return value.length;
-    }
-    return 0;
-  });
-  compiled.registerFunction('toString', (value: unknown) => {
-    if (value === null || value === undefined) return '';
-    return String(value);
-  });
-  compiled.registerFunction('append', (list: unknown, value: unknown) => {
-    const base = Array.isArray(list) ? list : list === null || list === undefined ? [] : [list];
-    const toAdd = Array.isArray(value) ? value : [value];
-    return base.concat(toAdd);
-  });
+  for (const fn of WORKFLOW_EXPRESSION_FUNCTIONS) {
+    compiled.registerFunction(fn.name, fn.implementation as (...args: unknown[]) => unknown);
+  }
 
   return {
     source: expr.$expr,
@@ -116,14 +97,81 @@ function normalizeExpressionSource(source: string): string {
   );
 }
 
-function extractFunctionCalls(source: string): string[] {
+function extractFunctionCalls(ast: unknown): string[] {
   const calls: string[] = [];
-  const regex = /([A-Za-z_$][A-Za-z0-9_]*)\s*\(/g;
-  let match;
-  while ((match = regex.exec(source)) !== null) {
-    calls.push(match[1]);
-  }
+  const seen = new WeakSet<object>();
+
+  const visit = (node: unknown): void => {
+    if (!node || typeof node !== 'object') return;
+    if (seen.has(node)) return;
+    seen.add(node);
+
+    if (Array.isArray(node)) {
+      for (const item of node) visit(item);
+      return;
+    }
+
+    const astNode = node as Record<string, unknown>;
+    if (astNode.type === 'lambda') {
+      throw new Error('Expression uses a function definition (lambda), which is not allowed');
+    }
+
+    if (astNode.type === 'function' || astNode.type === 'partial') {
+      if ((astNode.procedure as Record<string, unknown> | undefined)?.type === 'lambda') {
+        throw new Error('Expression uses a function definition (lambda), which is not allowed');
+      }
+      const calleeName = getProcedureName(astNode.procedure);
+      if (!calleeName) {
+        throw new Error('Expression uses a dynamic or computed function call, which is not allowed');
+      }
+      calls.push(calleeName);
+    }
+
+    if (astNode.type === 'apply') {
+      // `x ~> f` is function application: the right-hand side must resolve to
+      // an allowlist-checkable name (or be a call node, validated on visit).
+      const rhs = astNode.rhs as Record<string, unknown> | undefined;
+      const appliedName = getProcedureName(astNode.rhs);
+      if (appliedName) {
+        calls.push(appliedName);
+      } else if (!rhs || (rhs.type !== 'function' && rhs.type !== 'partial' && rhs.type !== 'lambda')) {
+        throw new Error('Expression applies (~>) a value that cannot be validated against the function allowlist');
+      }
+    }
+
+    for (const value of Object.values(astNode)) {
+      visit(value);
+    }
+  };
+
+  visit(ast);
   return calls;
+}
+
+function getProcedureName(procedure: unknown): string | null {
+  if (!procedure || typeof procedure !== 'object' || Array.isArray(procedure)) {
+    return null;
+  }
+
+  const node = procedure as Record<string, unknown>;
+  if ((node.type === 'variable' || node.type === 'name') && typeof node.value === 'string') {
+    return node.value;
+  }
+
+  if (node.type === 'path' && Array.isArray(node.steps)) {
+    for (let index = node.steps.length - 1; index >= 0; index -= 1) {
+      const stepName = getProcedureName(node.steps[index]);
+      if (stepName) {
+        return stepName;
+      }
+    }
+  }
+
+  if (node.type === 'block' && Array.isArray(node.expressions) && node.expressions.length === 1) {
+    return getProcedureName(node.expressions[0]);
+  }
+
+  return null;
 }
 
 function isJsonSerializable(value: unknown): boolean {

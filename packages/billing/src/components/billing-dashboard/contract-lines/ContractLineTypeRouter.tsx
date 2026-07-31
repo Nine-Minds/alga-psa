@@ -8,11 +8,15 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getContractLineById } from '@alga-psa/billing/actions/contractLineAction';
 import { IContractLine } from '@alga-psa/types';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 // Import the specialized components
 import { FixedPlanConfiguration } from './FixedContractLineConfiguration';
 import { HourlyPlanConfiguration } from './HourlyContractLineConfiguration';
 import { UsagePlanConfiguration } from './UsageContractLineConfiguration';
+
+const isReturnedActionError = (value: unknown): boolean =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface PlanTypeRouterProps {
   contractLineId: string;
@@ -29,6 +33,10 @@ export function PlanTypeRouter({ contractLineId }: PlanTypeRouterProps) {
     setError(null);
     try {
       const plan = await getContractLineById(contractLineId);
+      if (isReturnedActionError(plan)) {
+        setError(getErrorMessage(plan));
+        return;
+      }
       if (plan) {
         setPlanType(plan.contract_line_type);
       } else {

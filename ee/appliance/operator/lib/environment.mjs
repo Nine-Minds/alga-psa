@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import os from 'node:os';
-import { defaultChannelName, defaultReleaseVersion, listChannels, listPublishedReleases } from './releases.mjs';
 import {
   fileExists,
   listSiteIds,
@@ -57,11 +56,6 @@ export function discoverEnvironment(options = {}) {
   const siteIds = listSiteIds(configBaseDir);
   const selectedSite = resolveSelectedSiteId(siteIds, options);
   const site = selectedSite.siteId ? resolveSitePaths(configBaseDir, selectedSite.siteId) : null;
-  const releases = listPublishedReleases(runtime.releasesDir);
-  const channels = listChannels(runtime.releasesDir);
-  const defaultChannel = defaultChannelName(runtime.releasesDir);
-  const resolvedDefaultReleaseVersion = defaultReleaseVersion(runtime.releasesDir);
-
   const discoveredNodeIp =
     options.nodeIp || (site ? readTextIfExists(site.nodeIpFile) : null) || null;
   const discoveredAppUrl =
@@ -78,10 +72,6 @@ export function discoverEnvironment(options = {}) {
       kubeconfig: options.kubeconfig || site?.kubeconfig || null,
       talosconfig: options.talosconfig || site?.talosconfig || null,
     },
-    releases,
-    channels,
-    defaultChannel,
-    defaultReleaseVersion: resolvedDefaultReleaseVersion,
     nodeIp: discoveredNodeIp,
     appUrl: discoveredAppUrl,
   };

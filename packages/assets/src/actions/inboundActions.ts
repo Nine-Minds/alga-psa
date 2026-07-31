@@ -1,4 +1,4 @@
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { ingestNormalizedRmmDeviceSnapshot } from '@alga-psa/shared/rmm/sharedAssetIngestionService';
 import type { NormalizedRmmExternalDeviceSnapshot } from '@alga-psa/shared/rmm/contracts';
 import type { RmmProvider } from '@alga-psa/types';
@@ -16,13 +16,12 @@ const KNOWN_RMM_PROVIDERS = new Set<RmmProvider>([
   'huntress',
 ]);
 
-type SupportedPlainAssetType = 'workstation' | 'server' | 'network_device' | 'mobile_device' | 'printer' | 'unknown';
-
 interface UpsertAssetByExternalIdMappedValues extends Record<string, unknown> {
   external_id: string;
   client_id?: string;
   client_external_id?: string;
-  asset_type?: SupportedPlainAssetType;
+  // Any asset_type_registry slug (built-in or custom tenant type).
+  asset_type?: string;
   name?: string;
   asset_tag?: string;
   serial_number?: string;
@@ -43,10 +42,9 @@ const upsertAssetByExternalIdAction: InboundActionDefinition<UpsertAssetByExtern
     { name: 'client_external_id', type: 'string', required: false, description: 'External client ID to resolve' },
     {
       name: 'asset_type',
-      type: 'enum',
+      type: 'string',
       required: false,
-      description: 'Asset type for plain asset upsert',
-      enumValues: ['workstation', 'server', 'network_device', 'mobile_device', 'printer', 'unknown'],
+      description: 'Asset type slug for plain asset upsert (any registry type, built-in or custom)',
     },
     { name: 'name', type: 'string', required: false, description: 'Asset display name' },
     { name: 'asset_tag', type: 'string', required: false, description: 'Asset tag' },
@@ -137,14 +135,14 @@ const upsertAssetByExternalIdAction: InboundActionDefinition<UpsertAssetByExtern
       }
 
       if (lookup) {
-        const [updated] = await trx('assets')
-          .where({ tenant: ctx.tenant, asset_id: lookup.algaEntityId })
+        const [updated] = await tenantDb(trx, ctx.tenant).table('assets')
+          .where({ asset_id: lookup.algaEntityId })
           .update(payload)
           .returning<{ asset_id: string; name: string }[]>(['asset_id', 'name']);
         return updated;
       }
 
-      const [created] = await trx('assets')
+      const [created] = await tenantDb(trx, ctx.tenant).table('assets')
         .insert({
           tenant: ctx.tenant,
           ...payload,

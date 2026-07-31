@@ -29,7 +29,9 @@
       "viewDetails": "Afficher les détails",
       "manageTimePeriods": "Gérer les périodes",
       "selectWorkItem": "Sélectionner un élément de travail",
-      "clearFilter": "Effacer le filtre"
+      "clearFilter": "Effacer le filtre",
+      "remove": "Supprimer",
+      "clear": "Effacer"
     },
     "states": {
       "inProgress": "En cours",
@@ -95,6 +97,24 @@
     },
     "lastEntry": {
       "none": "Aucune entrée"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} sélectionné(s)"
+    },
+    "delete": {
+      "success": "{{count}} feuille(s) de temps supprimée(s)",
+      "partialFailure": "{{count}} feuille(s) de temps n'ont pas pu être supprimée(s)",
+      "error": "Échec de la suppression des feuilles de temps"
+    },
+    "removePeriod": {
+      "success": "{{count}} période(s) supprimée(s)",
+      "partialFailure": "{{count}} période(s) n'ont pas pu être supprimée(s)",
+      "error": "Échec de la suppression des périodes"
+    },
+    "remove": {
+      "title": "Supprimer les éléments inutilisés",
+      "message": "Supprimer {{count}} période(s) sélectionnée(s) ? Les périodes de paie inutilisées sont supprimées pour toute l'organisation, ainsi que tout brouillon vide qui y est enregistré. Cette action est irréversible.",
+      "timesheetMessage": "Supprimer {{count}} feuille(s) de temps inutilisée(s) ? Seuls les brouillons de feuilles de temps vides sont supprimés et cette action est irréversible."
     }
   },
   "timeEntryForm": {
@@ -121,7 +141,10 @@
       "minimumDuration": "La durée minimale est de 1 minute",
       "serviceRequired": "Un service est requis pour les entrées de temps",
       "timePeriodRange": "La date doit être comprise dans la période actuelle ({{periodRange}})",
-      "endAfterStartPicker": "L'heure de fin doit être postérieure à l'heure de début"
+      "endAfterStartPicker": "L'heure de fin doit être postérieure à l'heure de début",
+      "durationSameDay": "La durée doit se terminer le même jour",
+      "endSameDay": "L'heure de fin doit être le même jour que l'heure de début",
+      "invalidTimeRange": "Saisissez une plage horaire valide"
     }
   },
   "workItemPicker": {
@@ -145,7 +168,9 @@
     "empty": {
       "searching": "Recherche...",
       "noWorkItems": "Aucun élément de travail trouvé"
-    }
+    },
+    "paymentWarningTitle": "Avertissement de paiement préalable",
+    "paymentWarning": "Le paiement est requis pour un jalon de facturation de projet signalé et n’a pas été confirmé. Confirmez le paiement avant de poursuivre le travail."
   },
   "workItemList": {
     "meta": {
@@ -365,7 +390,11 @@
     "active": "Actif"
   },
   "intervals": {
-    "title": "Intervalles horaires des billets",
+    "createdFromNote_one": "Créé à partir de {{count}} intervalle",
+    "createdFromNote_other": "Créé à partir de {{count}} intervalles",
+    "selectedCount_one": "{{count}} intervalle sélectionné",
+    "selectedCount_other": "{{count}} intervalles sélectionnés",
+    "title": "Intervalles de temps des tickets",
     "hideShortIntervals": "Masquer les intervalles inférieurs à 1 minute",
     "totalTime": "Durée totale: {{value}}",
     "selectedOne": "{{count}} intervalle sélectionné",
@@ -386,7 +415,7 @@
       "noIntervalsThisTicket": "Aucun intervalle trouvé pour ce ticket",
       "noIntervalsLongerThanMinute": "Aucun intervalle de plus d'une minute trouvé"
     },
-    "entryName": "Entrée de l'heure du billet",
+    "entryName": "Entrée de temps du ticket",
     "messages": {
       "cannotFindTimeSheet": "Impossible de créer une saisie de temps - impossible de trouver ou de créer une feuille de temps",
       "mergeFirst": "Veuillez fusionner les intervalles avant de créer une entrée de temps",
@@ -421,7 +450,8 @@
     "taskUpdated": "Tâche mise à jour avec succès",
     "saveChangesFailed": "Échec de l'enregistrement des modifications",
     "changesSaved": "Modifications enregistrées avec succès",
-    "workItemDeleted": "Élément de travail supprimé avec succès"
+    "workItemDeleted": "Élément de travail supprimé avec succès",
+    "submitFailed": "Failed to submit time sheet"
   },
   "bundleNotice": {
     "withNumber": "Ce ticket est groupé sous {{number}}. Le temps du groupe est généralement enregistré sur le ticket principal.",

@@ -8,9 +8,9 @@ import { SoftwareInventoryTab } from './tabs/SoftwareInventoryTab';
 import { MaintenanceSchedulesTab } from './tabs/MaintenanceSchedulesTab';
 import { RelatedAssetsTab } from './tabs/RelatedAssetsTab';
 import { DocumentsPasswordsTab } from './tabs/DocumentsPasswordsTab';
-import { AuditLogTab } from './tabs/AuditLogTab';
+import { AssetTimeline } from './AssetTimeline';
 import type { Asset } from '@alga-psa/types';
-import { History, LayoutGrid, CalendarDays, FileText, Network, Lock } from 'lucide-react';
+import { History, LayoutGrid, CalendarDays, Network, Lock } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface AssetDetailTabsProps {
@@ -92,10 +92,12 @@ export const AssetDetailTabs: React.FC<AssetDetailTabsProps> = ({ asset }) => {
       content: <DocumentsPasswordsTab asset={asset} />
     },
     {
-      id: 'audit-log',
-      label: t('assetDetailTabs.tabs.auditLog', { defaultValue: 'Audit Log' }),
-      icon: FileText,
-      content: <AuditLogTab assetId={asset.asset_id} />
+      // Replaces the old Audit Log tab: record changes are one lane of a
+      // merged spine, alongside service, maintenance and system milestones.
+      id: 'timeline',
+      label: t('assetDetailTabs.tabs.timeline', { defaultValue: 'Timeline' }),
+      icon: History,
+      content: <AssetTimeline id="asset-detail-timeline" asset={asset} />
     }
   ];
 

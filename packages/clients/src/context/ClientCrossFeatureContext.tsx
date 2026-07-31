@@ -2,6 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 import type { ITicket, ITicketCategory, IBoard, IUser, ITag, ISlaPolicy, SurveyClientSatisfactionSummary, IOnlineMeeting } from '@alga-psa/types';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 export interface QuickAddTicketRenderProps {
   id?: string;
@@ -28,6 +29,11 @@ export interface SurveySummaryRenderProps {
 
 export interface ClientAssetsRenderProps {
   clientId: string;
+}
+
+export interface ClientOpportunitiesRenderProps {
+  clientId: string;
+  clientName: string;
 }
 
 export interface ClientTicketsRenderProps {
@@ -100,13 +106,17 @@ export interface ClientCrossFeatureCallbacks {
   getTicketFormOptions: () => Promise<TicketFormOptions>;
   renderSurveySummaryCard: (props: SurveySummaryRenderProps) => ReactNode;
   renderClientAssets: (props: ClientAssetsRenderProps) => ReactNode;
+  /** Optional: the Opportunities tab on client detail (provided by the composition layer when the module is available). */
+  renderClientOpportunities?: (props: ClientOpportunitiesRenderProps) => ReactNode;
   renderClientTickets: (props: ClientTicketsRenderProps) => ReactNode;
   renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;
   renderContractWizard?: (props: ContractWizardRenderProps) => ReactNode;
   renderContractQuickAdd?: (props: ContractQuickAddRenderProps) => ReactNode;
+  /** Open a ticket in the shared drawer, keeping the current page underneath. */
+  openTicketDetails?: (ticketId: string) => Promise<void>;
   getTeamsMeetingCapability?: () => Promise<TeamsMeetingCapability>;
   scheduleTeamsMeeting?: (input: ScheduleTeamsMeetingFromClientInput) => Promise<ScheduleTeamsMeetingFromClientResult>;
-  refreshMeetingRecordings?: (meetingId: string) => Promise<IOnlineMeeting>;
+  refreshMeetingRecordings?: (meetingId: string) => Promise<IOnlineMeeting | ActionMessageError | ActionPermissionError>;
   getSlaPolicies: () => Promise<ISlaPolicy[]>;
 }
 

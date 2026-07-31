@@ -3,15 +3,81 @@
  */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { ENTRA_SYNC_FEATURE_FLAG } from '@alga-psa/integrations/components/settings/integrations/integrationsFeatureFlags';
 
 const useSearchParamsMock = vi.hoisted(() => vi.fn());
 const useFeatureFlagMock = vi.hoisted(() => vi.fn());
 
+/** Answer per flag key, so one flag can be off while the others are on. */
+function setFlags(values: Record<string, boolean>): void {
+  useFeatureFlagMock.mockImplementation((flagKey: string) => ({
+    enabled: values[flagKey] ?? false,
+    loading: false,
+    error: null,
+  }));
+}
+
 vi.mock('next/navigation', () => ({
   useSearchParams: useSearchParamsMock,
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
 }));
+
+// Resolve integration category labels/descriptions against the real msp/settings
+// translation bundle (the page calls t(key) without defaultValues).
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const path = await import('node:path');
+  const { createRequire } = await import('node:module');
+  const require = createRequire(import.meta.url);
+  const settings = require(
+    path.resolve(process.cwd(), 'public/locales/en/msp/settings.json'),
+  );
+  const get = (obj: any, key: string) =>
+    key.split('.').reduce((acc, part) => (acc == null ? undefined : acc[part]), obj);
+  const t = (key: string, options?: any) => {
+    const template = get(settings, key) ?? options?.defaultValue ?? key;
+    if (typeof template !== 'string') {
+      return key;
+    }
+    return template.replace(/\{\{(\w+)\}\}/g, (match: string, name: string) =>
+      options && options[name] != null ? String(options[name]) : match,
+    );
+  };
+  return {
+    useTranslation: () => ({ t, i18n: { language: 'en' } }),
+    useFormatters: () => ({
+      formatDate: (d: Date | string) => String(d),
+      formatNumber: (n: number) => String(n),
+      formatCurrency: (n: number) => String(n),
+      formatRelativeTime: (d: Date | string) => String(d),
+    }),
+    useI18n: () => ({ locale: 'en' }),
+    useOptionalI18n: () => ({ locale: 'en' }),
+    detectClientLocale: () => 'en',
+    I18nProvider: ({ children }: any) => children,
+  };
+});
+
+// Drive edition exclusively via NEXT_PUBLIC_EDITION (the process-wide EDITION is
+// 'enterprise' in the test env and would otherwise freeze isEnterprise true).
+vi.mock('../../../../../../packages/integrations/src/lib/calendarAvailability', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../../../packages/integrations/src/lib/calendarAvailability')>();
+  const isCalendarEnterpriseEdition = (env: NodeJS.ProcessEnv = process.env) =>
+    (env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise';
+  return {
+    ...actual,
+    isCalendarEnterpriseEdition,
+    getVisibleIntegrationCategoryIds: (isEE = isCalendarEnterpriseEdition()) =>
+      actual.getVisibleIntegrationCategoryIds(isEE),
+    resolveIntegrationSettingsCategory: (requested: string | null | undefined, isEE = isCalendarEnterpriseEdition()) =>
+      actual.resolveIntegrationSettingsCategory(requested, isEE),
+    getVisibleUserProfileTabs: (isEE = isCalendarEnterpriseEdition()) =>
+      actual.getVisibleUserProfileTabs(isEE),
+    resolveUserProfileTab: (requested: string | null | undefined, isEE = isCalendarEnterpriseEdition()) =>
+      actual.resolveUserProfileTab(requested, isEE),
+  };
+});
 
 vi.mock('@alga-psa/ui/hooks', async () => {
   const actual = await vi.importActual<object>('@alga-psa/ui/hooks');
@@ -23,14 +89,15 @@ vi.mock('@alga-psa/ui/hooks', async () => {
 
 vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
   __esModule: true,
-  default: ({ tabs, defaultTab }: { tabs: Array<{ label: string; content: React.ReactNode }>; defaultTab: string }) => {
-    const selected = tabs.find((tab) => tab.label === defaultTab) ?? tabs[0];
+  default: ({ tabs, defaultTab }: { tabs: Array<{ id: string; label: string; content: React.ReactNode }>; defaultTab: string }) => {
+    // The page selects tabs by id (matches the real CustomTabs contract), not label.
+    const selected = tabs.find((tab) => tab.id === defaultTab) ?? tabs[0];
 
     return (
       <div data-testid="custom-tabs-mock">
         <div>
           {tabs.map((tab) => (
-            <span key={tab.label}>{tab.label}</span>
+            <span key={tab.id}>{tab.label}</span>
           ))}
         </div>
         <div>{selected?.content}</div>
@@ -60,9 +127,12 @@ vi.mock('@alga-psa/integrations/components', () => ({
   CalendarIntegrationsSettings: () => <div data-testid="calendar-integrations-settings-stub" />,
 }));
 
-vi.mock('@enterprise/components/settings/integrations/EntraIntegrationSettings', () => ({
+// The Identity category renders Entra's summary card; the surface itself has its own route.
+vi.mock('@alga-psa/integrations/entra/components/entry', () => ({
   __esModule: true,
-  default: () => <div data-testid="entra-integration-settings-shell">Entra Settings Shell</div>,
+  EntraIntegrationSummaryCard: () => (
+    <div data-testid="entra-integration-settings-shell">Loading Entra integration settings...</div>
+  ),
 }));
 
 vi.mock('@product/billing/entry', () => ({
@@ -74,21 +144,23 @@ describe('IntegrationsSettingsPage Entra placement', () => {
   const originalEdition = process.env.NEXT_PUBLIC_EDITION;
 
   beforeEach(() => {
+    // RTL auto-cleanup only registers for the first test file in the shared
+    // fork (externalized @testing-library/react is cached process-wide), so
+    // clean up explicitly to keep renders from leaking across tests.
+    cleanup();
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
 
     useSearchParamsMock.mockReturnValue({
       get: (key: string) => (key === 'category' ? 'identity' : null),
     });
 
-    useFeatureFlagMock.mockReturnValue({
-      enabled: true,
-      isLoading: false,
-      error: null,
-      value: true,
-    });
+    // Key-aware: the Identity tab now hangs off one specific flag, so a blanket
+    // "all flags on/off" mock can no longer tell the two cases apart.
+    setFlags({ [ENTRA_SYNC_FEATURE_FLAG]: true });
   });
 
   afterEach(() => {
+    cleanup();
     if (originalEdition === undefined) {
       delete process.env.NEXT_PUBLIC_EDITION;
     } else {
@@ -110,32 +182,8 @@ describe('IntegrationsSettingsPage Entra placement', () => {
     expect(screen.getByText('Loading Entra integration settings...')).toBeInTheDocument();
   });
 
-  it('hides Entra settings surface when entra-integration-ui flag is disabled', async () => {
-    useFeatureFlagMock.mockReturnValue({
-      enabled: false,
-      isLoading: false,
-      error: null,
-      value: false,
-    });
-
-    const { default: IntegrationsSettingsPage } = await import(
-      '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
-    );
-
-    render(<IntegrationsSettingsPage />);
-
-    expect(screen.queryByText('Identity')).not.toBeInTheDocument();
-    expect(screen.queryByText('Identity Integrations')).not.toBeInTheDocument();
-    expect(screen.queryByText('Loading Entra integration settings...')).not.toBeInTheDocument();
-  });
-
-  it('shows Entra settings surface when entra-integration-ui flag is enabled', async () => {
-    useFeatureFlagMock.mockReturnValue({
-      enabled: true,
-      isLoading: false,
-      error: null,
-      value: true,
-    });
+  it('shows Entra settings surface regardless of unrelated feature flags', async () => {
+    setFlags({ [ENTRA_SYNC_FEATURE_FLAG]: true, 'some-other-flag': false });
 
     const { default: IntegrationsSettingsPage } = await import(
       '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
@@ -145,9 +193,38 @@ describe('IntegrationsSettingsPage Entra placement', () => {
 
     expect(screen.getByText('Identity')).toBeInTheDocument();
     expect(screen.getByText('Identity Integrations')).toBeInTheDocument();
-    expect(
-      screen.queryByText('Loading Entra integration settings...') ||
-      screen.queryByTestId('entra-integration-settings-shell')
-    ).toBeTruthy();
+    expect(screen.getByText('Loading Entra integration settings...')).toBeInTheDocument();
+  });
+
+  it('hides the Identity tab entirely when the entra-sync flag is off', async () => {
+    setFlags({ [ENTRA_SYNC_FEATURE_FLAG]: false });
+
+    const { default: IntegrationsSettingsPage } = await import(
+      '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
+    );
+
+    render(<IntegrationsSettingsPage />);
+
+    // Dropping the only entry empties the category, and an empty category is
+    // filtered out — so the tab goes, not just its contents.
+    expect(screen.queryByText('Identity')).not.toBeInTheDocument();
+    expect(screen.queryByText('Identity Integrations')).not.toBeInTheDocument();
+    expect(screen.queryByText('Loading Entra integration settings...')).not.toBeInTheDocument();
+    // The rest of the page is untouched.
+    expect(screen.getByTestId('custom-tabs-mock')).toBeInTheDocument();
+  });
+
+  it('keeps the tab hidden while the flag is still resolving', async () => {
+    // A rollout gate that renders on optimistically flashes the feature at
+    // everyone for as long as PostHog takes to answer.
+    useFeatureFlagMock.mockReturnValue({ enabled: false, loading: true, error: null });
+
+    const { default: IntegrationsSettingsPage } = await import(
+      '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
+    );
+
+    render(<IntegrationsSettingsPage />);
+
+    expect(screen.queryByText('Identity')).not.toBeInTheDocument();
   });
 });

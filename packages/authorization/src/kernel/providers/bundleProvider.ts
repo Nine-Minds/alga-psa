@@ -7,7 +7,7 @@ import type {
   ScopeConstraint,
 } from '../contracts';
 import { ALLOW_ALL_SCOPE } from '../scope';
-import { evaluateRelationshipTemplate } from '../relationships';
+import { evaluateRelationshipTemplate } from '../relationshipTemplates';
 
 export interface BundleNarrowingRule {
   id: string;

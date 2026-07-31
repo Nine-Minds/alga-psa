@@ -3,7 +3,7 @@
 import React from 'react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { TicketResponseState } from '@alga-psa/types';
-import { ResponseStateBadge } from '@alga-psa/ui/components';
+import { ResponseStateBadge } from '@alga-psa/ui/components/tickets/ResponseStateBadge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ResponseStateSelectProps {

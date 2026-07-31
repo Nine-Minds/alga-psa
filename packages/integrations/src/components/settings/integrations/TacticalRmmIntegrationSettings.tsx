@@ -8,10 +8,13 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Eye, EyeOff, RefreshCw, Save, Unlink } from 'lucide-react';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 import {
   backfillTacticalRmmAlerts,
   disconnectTacticalRmmIntegration,
@@ -25,11 +28,17 @@ import {
   syncTacticalRmmDevices,
   testTacticalRmmConnection,
   updateTacticalRmmOrganizationMapping,
-  type TacticalRmmAuthMode,
-} from '@alga-psa/integrations/actions';
-import type { IClient } from '@alga-psa/types';
-import { getIntegrationClients } from '../../../actions/clientLookupActions';
+} from '../../../actions/integrations/tacticalRmmActions';
+import { getRmmIntegrationIdByProvider } from '../../../actions/integrations/rmmAlertRuleActions';
+import type { TacticalRmmAuthMode } from '../../../lib/rmm/tacticalrmm/shared';
+import { RmmAlertAutomationSettings } from './RmmAlertAutomationSettings';
+import type { IClient, IContact, ColumnDefinition } from '@alga-psa/types';
+import { getIntegrationClients, getIntegrationContacts } from '../../../actions/clientLookupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+
+function getActionFailureMessage(result: { error?: string } | null | undefined, fallback: string): string {
+  return result?.error || fallback;
+}
 
 export function TacticalRmmIntegrationSettings() {
   const { t } = useTranslation('msp/integrations');
@@ -71,23 +80,28 @@ export function TacticalRmmIntegrationSettings() {
   const [connectionSummary, setConnectionSummary] = React.useState<Awaited<ReturnType<typeof getTacticalRmmConnectionSummary>>['summary'] | null>(null);
   const [orgMappings, setOrgMappings] = React.useState<NonNullable<Awaited<ReturnType<typeof listTacticalRmmOrganizationMappings>>['mappings']>>([]);
   const [clients, setClients] = React.useState<IClient[]>([]);
+  const [contacts, setContacts] = React.useState<IContact[]>([]);
+  const { renderQuickAddContact } = useQuickAddClient();
+  const [quickAddContactFor, setQuickAddContactFor] = React.useState<{ mappingId: string; clientId: string } | null>(null);
   const [clientsLoading, setClientsLoading] = React.useState(false);
   const [clientFilterState, setClientFilterState] = React.useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = React.useState<'all' | 'company' | 'individual'>('all');
   const [webhookInfo, setWebhookInfo] = React.useState<Awaited<ReturnType<typeof getTacticalRmmWebhookInfo>>['webhook'] | null>(null);
   const [showWebhookSecret, setShowWebhookSecret] = React.useState(false);
+  const [integrationId, setIntegrationId] = React.useState<string | null>(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     setSuccess(null);
     try {
-      const [res, summaryRes] = await Promise.all([
+      const [res, summaryRes, idRes] = await Promise.all([
         getTacticalRmmSettings(),
         getTacticalRmmConnectionSummary(),
+        getRmmIntegrationIdByProvider({ provider: 'tacticalrmm' }),
       ]);
       if (!res.success) {
-        setError(t('integrations.rmm.tactical.errors.loadSettings', { defaultValue: 'Failed to load Tactical RMM settings' }));
+        setError(getActionFailureMessage(res, t('integrations.rmm.tactical.errors.loadSettings', { defaultValue: 'Failed to load Tactical RMM settings' })));
         return;
       }
 
@@ -95,6 +109,7 @@ export function TacticalRmmIntegrationSettings() {
       setAuthMode(res.config?.authMode || 'api_key');
       setCredentialsStatus(res.credentials || null);
       setConnectionSummary(summaryRes.success ? (summaryRes.summary || null) : null);
+      if (idRes.success && idRes.data?.integrationId) setIntegrationId(idRes.data.integrationId);
 
       if (res.credentials?.username) setUsername(res.credentials.username);
     } finally {
@@ -105,7 +120,7 @@ export function TacticalRmmIntegrationSettings() {
   const loadOrgMappings = React.useCallback(async () => {
     const res = await listTacticalRmmOrganizationMappings();
     if (!res.success) {
-      setError(t('integrations.rmm.tactical.errors.loadOrgMappings', { defaultValue: 'Failed to load organization mappings' }));
+      setError(getActionFailureMessage(res, t('integrations.rmm.tactical.errors.loadOrgMappings', { defaultValue: 'Failed to load organization mappings' })));
       return;
     }
     setOrgMappings(res.mappings || []);
@@ -133,10 +148,15 @@ export function TacticalRmmIntegrationSettings() {
     const run = async () => {
       setClientsLoading(true);
       try {
-        const data = await getIntegrationClients(true);
-        setClients(data as any);
+        const [clientsData, contactsData] = await Promise.all([
+          getIntegrationClients(true),
+          getIntegrationContacts(false),
+        ]);
+        setClients(clientsData as any);
+        setContacts((contactsData as any) ?? []);
       } catch (e) {
         setClients([]);
+        setContacts([]);
       } finally {
         setClientsLoading(false);
       }
@@ -164,8 +184,9 @@ export function TacticalRmmIntegrationSettings() {
         password: authMode === 'knox' ? password : undefined,
       });
       if (!res.success) {
-        setError(t('integrations.rmm.tactical.errors.saveConfig', { defaultValue: 'Failed to save Tactical RMM configuration' }));
-        toast({ title: t('integrations.rmm.tactical.toasts.saveFailedTitle', { defaultValue: 'Save failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
+        const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.saveConfig', { defaultValue: 'Failed to save Tactical RMM configuration' }));
+        setError(message);
+        toast({ title: t('integrations.rmm.tactical.toasts.saveFailedTitle', { defaultValue: 'Save failed' }), description: message, variant: 'destructive' });
         return;
       }
 
@@ -193,8 +214,9 @@ export function TacticalRmmIntegrationSettings() {
           setError(t('integrations.rmm.tactical.errors.totpRequired', { defaultValue: 'TOTP is required. Enter your current code and test again.' }));
           return;
         }
-        setError(t('integrations.rmm.tactical.errors.connectionTest', { defaultValue: 'Connection test failed' }));
-        toast({ title: t('integrations.rmm.tactical.toasts.connectionFailedTitle', { defaultValue: 'Connection failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
+        const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.connectionTest', { defaultValue: 'Connection test failed' }));
+        setError(message);
+        toast({ title: t('integrations.rmm.tactical.toasts.connectionFailedTitle', { defaultValue: 'Connection failed' }), description: message, variant: 'destructive' });
         return;
       }
 
@@ -216,8 +238,9 @@ export function TacticalRmmIntegrationSettings() {
     try {
       const res = await disconnectTacticalRmmIntegration();
       if (!res.success) {
-        setError(t('integrations.rmm.tactical.errors.disconnect', { defaultValue: 'Disconnect failed' }));
-        toast({ title: t('integrations.rmm.tactical.toasts.disconnectFailedTitle', { defaultValue: 'Disconnect failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
+        const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.disconnect', { defaultValue: 'Disconnect failed' }));
+        setError(message);
+        toast({ title: t('integrations.rmm.tactical.toasts.disconnectFailedTitle', { defaultValue: 'Disconnect failed' }), description: message, variant: 'destructive' });
         return;
       }
       setSuccess(t('integrations.rmm.tactical.success.disconnected', { defaultValue: 'Disconnected.' }));
@@ -238,8 +261,9 @@ export function TacticalRmmIntegrationSettings() {
     try {
       const res = await syncTacticalRmmOrganizations();
       if (!res.success) {
-        setError(t('integrations.rmm.tactical.errors.syncOrgs', { defaultValue: 'Organization sync failed' }));
-        toast({ title: t('integrations.rmm.tactical.toasts.syncFailedTitle', { defaultValue: 'Sync failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
+        const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.syncOrgs', { defaultValue: 'Organization sync failed' }));
+        setError(message);
+        toast({ title: t('integrations.rmm.tactical.toasts.syncFailedTitle', { defaultValue: 'Sync failed' }), description: message, variant: 'destructive' });
         return;
       }
       setSuccess(
@@ -262,8 +286,9 @@ export function TacticalRmmIntegrationSettings() {
     try {
       const res = await syncTacticalRmmDevices();
       if (!res.success) {
-        setError(t('integrations.rmm.tactical.errors.syncDevices', { defaultValue: 'Device sync failed' }));
-        toast({ title: t('integrations.rmm.tactical.toasts.syncFailedTitle', { defaultValue: 'Sync failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
+        const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.syncDevices', { defaultValue: 'Device sync failed' }));
+        setError(message);
+        toast({ title: t('integrations.rmm.tactical.toasts.syncFailedTitle', { defaultValue: 'Sync failed' }), description: message, variant: 'destructive' });
         return;
       }
       setSuccess(
@@ -279,20 +304,28 @@ export function TacticalRmmIntegrationSettings() {
     }
   };
 
-  const handleUpdateMapping = async (mappingId: string, patch: { clientId?: string | null; autoSyncAssets?: boolean }) => {
+  const handleUpdateMapping = async (mappingId: string, patch: { clientId?: string | null; defaultContactId?: string | null; autoSyncAssets?: boolean }) => {
     setError(null);
     const res = await updateTacticalRmmOrganizationMapping({
       mappingId,
       clientId: patch.clientId,
+      defaultContactId: patch.defaultContactId,
       autoSyncAssets: patch.autoSyncAssets,
     });
     if (!res.success) {
-      setError(t('integrations.rmm.tactical.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
-      toast({ title: t('integrations.rmm.tactical.toasts.updateFailedTitle', { defaultValue: 'Update failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
+      const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
+      setError(message);
+      toast({ title: t('integrations.rmm.tactical.toasts.updateFailedTitle', { defaultValue: 'Update failed' }), description: message, variant: 'destructive' });
       return;
     }
     await loadOrgMappings();
   };
+
+  const handleClientChange = (mappingId: string, clientId: string | null) =>
+    handleUpdateMapping(mappingId, { clientId, defaultContactId: null });
+
+  const handleDefaultContactChange = (mappingId: string, contactId: string) =>
+    handleUpdateMapping(mappingId, { defaultContactId: contactId || null });
 
   const handleBackfillAlerts = async () => {
     setBackfillingAlerts(true);
@@ -301,8 +334,9 @@ export function TacticalRmmIntegrationSettings() {
     try {
       const res = await backfillTacticalRmmAlerts();
       if (!res.success) {
-        setError(t('integrations.rmm.tactical.errors.backfillAlerts', { defaultValue: 'Alert backfill failed' }));
-        toast({ title: t('integrations.rmm.tactical.toasts.backfillFailedTitle', { defaultValue: 'Backfill failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
+        const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.backfillAlerts', { defaultValue: 'Alert backfill failed' }));
+        setError(message);
+        toast({ title: t('integrations.rmm.tactical.toasts.backfillFailedTitle', { defaultValue: 'Backfill failed' }), description: message, variant: 'destructive' });
         return;
       }
       setSuccess(
@@ -325,8 +359,9 @@ export function TacticalRmmIntegrationSettings() {
     try {
       const res = await ingestTacticalRmmSoftwareInventory();
       if (!res.success) {
-        setError(t('integrations.rmm.tactical.errors.ingestSoftware', { defaultValue: 'Software ingestion failed' }));
-        toast({ title: t('integrations.rmm.tactical.toasts.ingestionFailedTitle', { defaultValue: 'Ingestion failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
+        const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.ingestSoftware', { defaultValue: 'Software ingestion failed' }));
+        setError(message);
+        toast({ title: t('integrations.rmm.tactical.toasts.ingestionFailedTitle', { defaultValue: 'Ingestion failed' }), description: message, variant: 'destructive' });
         return;
       }
       setSuccess(
@@ -342,7 +377,80 @@ export function TacticalRmmIntegrationSettings() {
     }
   };
 
+  const orgMappingColumns: ColumnDefinition<(typeof orgMappings)[number]>[] = [
+    {
+      title: t('integrations.rmm.tactical.mappings.org', { defaultValue: 'Tactical Organization' }),
+      dataIndex: 'external_organization_name',
+      render: (_v, m) => (
+        <div className="min-w-0">
+          <div className="text-sm font-medium truncate">
+            {m.external_organization_name || m.external_organization_id}
+          </div>
+          <div className="text-xs text-muted-foreground truncate">
+            {t('integrations.rmm.tactical.tacticalIdLabel', { defaultValue: 'Tactical ID: {{id}}', id: m.external_organization_id })}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: t('integrations.rmm.tactical.mappings.client', { defaultValue: 'Alga Client' }),
+      dataIndex: 'client_id',
+      sortable: false,
+      render: (_v, m) => (
+        <ClientPicker
+          id={`tacticalrmm-org-client-picker-${m.mapping_id}`}
+          clients={clients}
+          selectedClientId={m.client_id || null}
+          onSelect={(clientId) => handleClientChange(m.mapping_id, clientId)}
+          filterState={clientFilterState}
+          onFilterStateChange={setClientFilterState}
+          clientTypeFilter={clientTypeFilter}
+          onClientTypeFilterChange={setClientTypeFilter}
+          placeholder={clientsLoading
+            ? t('integrations.rmm.tactical.client.loading', { defaultValue: 'Loading clients…' })
+            : t('integrations.rmm.tactical.client.select', { defaultValue: 'Select client' })}
+          fitContent
+          triggerVariant="outline"
+          triggerSize="sm"
+          className="min-w-[220px]"
+        />
+      ),
+    },
+    {
+      title: t('integrations.rmm.tactical.mappings.defaultContact', { defaultValue: 'Default Contact' }),
+      dataIndex: 'default_contact_id',
+      sortable: false,
+      render: (_v, m) => (
+        <ContactPicker
+          id={`tacticalrmm-default-contact-${m.mapping_id}`}
+          contacts={contacts}
+          value={m.default_contact_id ?? ''}
+          onValueChange={(contactId) => handleDefaultContactChange(m.mapping_id, contactId)}
+          clientId={m.client_id ?? undefined}
+          disabled={!m.client_id}
+          buttonWidth="fit"
+          placeholder={t('integrations.rmm.tactical.contact.select', { defaultValue: 'Select contact' })}
+          className="min-w-[220px]"
+          onAddNew={m.client_id ? () => setQuickAddContactFor({ mappingId: m.mapping_id, clientId: m.client_id! }) : undefined}
+        />
+      ),
+    },
+    {
+      title: t('integrations.rmm.tactical.autoSync', { defaultValue: 'Auto-sync' }),
+      dataIndex: 'auto_sync_assets',
+      sortable: false,
+      render: (_v, m) => (
+        <Switch
+          id={`tacticalrmm-org-autosync-${m.mapping_id}`}
+          checked={Boolean(m.auto_sync_assets)}
+          onCheckedChange={(checked) => handleUpdateMapping(m.mapping_id, { autoSyncAssets: checked })}
+        />
+      ),
+    },
+  ];
+
   return (
+    <>
     <Card id="tacticalrmm-integration-settings-card">
       <CardHeader>
         <CardTitle>{t('integrations.rmm.tactical.title', { defaultValue: 'Tactical RMM' })}</CardTitle>
@@ -425,15 +533,182 @@ export function TacticalRmmIntegrationSettings() {
             <Label htmlFor="tacticalrmm-instance-url">{t('integrations.rmm.tactical.fields.instanceUrl', { defaultValue: 'Instance URL' })}</Label>
             <Input
               id="tacticalrmm-instance-url"
-              placeholder="https://rmm.example.com"
+              placeholder="https://api.example.com"
               value={instanceUrl}
               onChange={(e) => setInstanceUrl(e.target.value)}
               disabled={loading || saving || disconnecting}
             />
             <div className="text-xs text-muted-foreground">
-              {t('integrations.rmm.tactical.fields.instanceUrlHelp', { defaultValue: 'Use your Tactical base URL (no trailing /api).' })}
+              {t('integrations.rmm.tactical.fields.instanceUrlHelp', { defaultValue: 'Use your Tactical API host — the api. subdomain, e.g. https://api.example.com. Not the dashboard (rmm.) URL, and no trailing /api.' })}
             </div>
           </div>
+
+          <Alert variant="info">
+            <AlertDescription className="text-xs">
+              {t('integrations.rmm.tactical.fields.betaApiNote', { defaultValue: "Requires Tactical's Beta API to be enabled on the server: set BETA_API_ENABLED = True in Tactical, then restart it. Without the Beta API, the connection test and sync will fail." })}
+            </AlertDescription>
+          </Alert>
+
+          <div className="space-y-2">
+            <Label htmlFor="tacticalrmm-auth-mode">{t('integrations.rmm.tactical.auth.mode', { defaultValue: 'Authentication' })}</Label>
+            <CustomSelect
+              id="tacticalrmm-auth-mode"
+              className="!w-auto"
+              value={authMode}
+              onValueChange={(v) => {
+                setAuthMode(v as TacticalRmmAuthMode);
+                setTotpRequired(false);
+                setTotpCode('');
+                setError(null);
+                setSuccess(null);
+              }}
+              options={[
+                { value: 'api_key', label: t('integrations.rmm.tactical.auth.apiKey', { defaultValue: 'API key' }) },
+                { value: 'knox', label: t('integrations.rmm.tactical.auth.knoxOption', { defaultValue: 'Username/password (Knox token)' }) },
+              ]}
+            />
+          </div>
+
+          {authMode === 'api_key' ? (
+            <div className="space-y-2">
+              <Label htmlFor="tacticalrmm-api-key">{t('integrations.rmm.tactical.auth.apiKey', { defaultValue: 'API key' })}</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="tacticalrmm-api-key"
+                  type={showApiKey ? 'text' : 'password'}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder={credentialsStatus?.apiKeyMasked ? credentialsStatus.apiKeyMasked : t('integrations.rmm.tactical.auth.enterApiKey', { defaultValue: 'Enter API key' })}
+                  disabled={loading || saving || disconnecting}
+                />
+                <Button
+                  id="tacticalrmm-toggle-api-key-visibility"
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowApiKey((s) => !s)}
+                  disabled={loading || saving || disconnecting}
+                >
+                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              {credentialsStatus?.hasApiKey && (
+                <div className="text-xs text-muted-foreground">
+                  {t('integrations.rmm.tactical.auth.saved', { defaultValue: 'Saved: {{value}}', value: credentialsStatus.apiKeyMasked })}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="tacticalrmm-username">{t('integrations.rmm.tactical.auth.username', { defaultValue: 'Username' })}</Label>
+                <Input
+                  id="tacticalrmm-username"
+                  className="!w-auto"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder={t('integrations.rmm.tactical.auth.enterUsername', { defaultValue: 'Enter username' })}
+                  disabled={loading || saving || disconnecting}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tacticalrmm-password">{t('integrations.rmm.tactical.auth.password', { defaultValue: 'Password' })}</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="tacticalrmm-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={credentialsStatus?.hasKnoxCredentials
+                      ? t('integrations.rmm.tactical.auth.savedEnterToUpdate', { defaultValue: 'Saved (enter to update)' })
+                      : t('integrations.rmm.tactical.auth.enterPassword', { defaultValue: 'Enter password' })}
+                    disabled={loading || saving || disconnecting}
+                  />
+                  <Button
+                    id="tacticalrmm-toggle-password-visibility"
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowPassword((s) => !s)}
+                    disabled={loading || saving || disconnecting}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              {totpRequired && (
+                <div className="space-y-2">
+                  <Label htmlFor="tacticalrmm-totp">{t('integrations.rmm.tactical.auth.totp', { defaultValue: 'TOTP code' })}</Label>
+                  <Input
+                    id="tacticalrmm-totp"
+                    value={totpCode}
+                    onChange={(e) => setTotpCode(e.target.value)}
+                    placeholder="123456"
+                    disabled={testing || disconnecting}
+                  />
+                </div>
+              )}
+
+              {credentialsStatus?.hasKnoxToken && (
+                <div className="text-xs text-muted-foreground">
+                  {t('integrations.rmm.tactical.auth.knoxTokenSaved', { defaultValue: 'Knox token saved: {{value}}', value: credentialsStatus.knoxTokenMasked })}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              id="tacticalrmm-save-config"
+              type="button"
+              onClick={handleSave}
+              disabled={!canSave || saving || loading || disconnecting}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {saving
+                ? t('integrations.rmm.tactical.actions.saving', { defaultValue: 'Saving...' })
+                : t('integrations.rmm.tactical.actions.save', { defaultValue: 'Save' })}
+            </Button>
+
+            <Button
+              id="tacticalrmm-test-connection"
+              type="button"
+              variant="secondary"
+              onClick={handleTestConnection}
+              disabled={testing || loading || disconnecting || (totpRequired && !totpCode.trim())}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${testing ? 'animate-spin' : ''}`} />
+              {testing
+                ? t('integrations.rmm.tactical.actions.testing', { defaultValue: 'Testing...' })
+                : t('integrations.rmm.tactical.actions.testConnection', { defaultValue: 'Test Connection' })}
+            </Button>
+
+            <Button
+              id="tacticalrmm-disconnect"
+              type="button"
+              variant="destructive"
+              onClick={handleDisconnect}
+              disabled={disconnecting || loading}
+            >
+              <Unlink className="h-4 w-4 mr-2" />
+              {disconnecting
+                ? t('integrations.rmm.tactical.actions.disconnecting', { defaultValue: 'Disconnecting...' })
+                : t('integrations.rmm.tactical.actions.disconnect', { defaultValue: 'Disconnect' })}
+            </Button>
+          </div>
+
+          {!loading && credentialsStatus && (
+            <div className="text-xs text-muted-foreground">
+              {credentialsStatus.hasApiKey || credentialsStatus.hasKnoxCredentials
+                ? t('integrations.rmm.tactical.statusLine.configured', { defaultValue: 'Status: Configured' })
+                : t('integrations.rmm.tactical.statusLine.notConfigured', { defaultValue: 'Status: Not configured' })}
+            </div>
+          )}
+
+          {loading && (
+            <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              {t('integrations.rmm.tactical.loadingSettings', { defaultValue: 'Loading Tactical RMM settings...' })}
+            </div>
+          )}
 
           <div className="rounded-md border bg-background p-4">
             <div className="flex items-start justify-between gap-3">
@@ -483,49 +758,12 @@ export function TacticalRmmIntegrationSettings() {
                 {t('integrations.rmm.tactical.sections.orgMappingEmpty', { defaultValue: 'No organizations found. Run "Sync Clients" first.' })}
               </div>
             ) : (
-              <div className="space-y-2">
-                {orgMappings.map((m) => (
-                  <div key={m.mapping_id} className="flex flex-col lg:flex-row lg:items-center gap-3 rounded border p-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">
-                        {m.external_organization_name || m.external_organization_id}
-                      </div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {t('integrations.rmm.tactical.tacticalIdLabel', { defaultValue: 'Tactical ID: {{id}}', id: m.external_organization_id })}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <ClientPicker
-                        id={`tacticalrmm-org-client-picker-${m.mapping_id}`}
-                        clients={clients}
-                        selectedClientId={m.client_id || null}
-                        onSelect={(clientId) => handleUpdateMapping(m.mapping_id, { clientId })}
-                        filterState={clientFilterState}
-                        onFilterStateChange={setClientFilterState}
-                        clientTypeFilter={clientTypeFilter}
-                        onClientTypeFilterChange={setClientTypeFilter}
-                        placeholder={clientsLoading
-                          ? t('integrations.rmm.tactical.client.loading', { defaultValue: 'Loading clients…' })
-                          : t('integrations.rmm.tactical.client.select', { defaultValue: 'Select client' })}
-                        fitContent
-                        triggerVariant="outline"
-                        triggerSize="sm"
-                        className="min-w-[220px]"
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id={`tacticalrmm-org-autosync-${m.mapping_id}`}
-                        checked={Boolean(m.auto_sync_assets)}
-                        onCheckedChange={(checked) => handleUpdateMapping(m.mapping_id, { autoSyncAssets: checked })}
-                      />
-                      <span className="text-sm">{t('integrations.rmm.tactical.autoSync', { defaultValue: 'Auto-sync' })}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <DataTable
+                id="tacticalrmm-org-mappings"
+                data={orgMappings}
+                columns={orgMappingColumns}
+                pagination
+              />
             )}
           </div>
 
@@ -579,7 +817,7 @@ export function TacticalRmmIntegrationSettings() {
               <div className="space-y-1">
                 <div className="text-sm font-medium">{t('integrations.rmm.tactical.sections.softwareInventory', { defaultValue: 'Software Inventory' })}</div>
                 <div className="text-xs text-muted-foreground">
-                  {t('integrations.rmm.tactical.sections.softwareInventoryDescription', { defaultValue: 'Optional: ingest cached software inventory via Tactical /api/software/ (no per-agent refresh calls).' })}
+                  {t('integrations.rmm.tactical.sections.softwareInventoryDescription', { defaultValue: 'Optional: ingest cached software inventory via Tactical /software/ (no per-agent refresh calls).' })}
                 </div>
               </div>
               <Button
@@ -686,167 +924,36 @@ export function TacticalRmmIntegrationSettings() {
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="tacticalrmm-auth-mode">{t('integrations.rmm.tactical.auth.mode', { defaultValue: 'Authentication' })}</Label>
-            <CustomSelect
-              id="tacticalrmm-auth-mode"
-              value={authMode}
-              onValueChange={(v) => {
-                setAuthMode(v as TacticalRmmAuthMode);
-                setTotpRequired(false);
-                setTotpCode('');
-                setError(null);
-                setSuccess(null);
-              }}
-              options={[
-                { value: 'api_key', label: t('integrations.rmm.tactical.auth.apiKey', { defaultValue: 'API key' }) },
-                { value: 'knox', label: t('integrations.rmm.tactical.auth.knoxOption', { defaultValue: 'Username/password (Knox token)' }) },
-              ]}
-            />
-          </div>
-
-          {authMode === 'api_key' ? (
-            <div className="space-y-2">
-              <Label htmlFor="tacticalrmm-api-key">{t('integrations.rmm.tactical.auth.apiKey', { defaultValue: 'API key' })}</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="tacticalrmm-api-key"
-                  type={showApiKey ? 'text' : 'password'}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={credentialsStatus?.apiKeyMasked ? credentialsStatus.apiKeyMasked : t('integrations.rmm.tactical.auth.enterApiKey', { defaultValue: 'Enter API key' })}
-                  disabled={loading || saving || disconnecting}
-                />
-                <Button
-                  id="tacticalrmm-toggle-api-key-visibility"
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowApiKey((s) => !s)}
-                  disabled={loading || saving || disconnecting}
-                >
-                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-              {credentialsStatus?.hasApiKey && (
-                <div className="text-xs text-muted-foreground">
-                  {t('integrations.rmm.tactical.auth.saved', { defaultValue: 'Saved: {{value}}', value: credentialsStatus.apiKeyMasked })}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="tacticalrmm-username">{t('integrations.rmm.tactical.auth.username', { defaultValue: 'Username' })}</Label>
-                <Input
-                  id="tacticalrmm-username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder={t('integrations.rmm.tactical.auth.enterUsername', { defaultValue: 'Enter username' })}
-                  disabled={loading || saving || disconnecting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tacticalrmm-password">{t('integrations.rmm.tactical.auth.password', { defaultValue: 'Password' })}</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="tacticalrmm-password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={credentialsStatus?.hasKnoxCredentials
-                      ? t('integrations.rmm.tactical.auth.savedEnterToUpdate', { defaultValue: 'Saved (enter to update)' })
-                      : t('integrations.rmm.tactical.auth.enterPassword', { defaultValue: 'Enter password' })}
-                    disabled={loading || saving || disconnecting}
-                  />
-                  <Button
-                    id="tacticalrmm-toggle-password-visibility"
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowPassword((s) => !s)}
-                    disabled={loading || saving || disconnecting}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-              {totpRequired && (
-                <div className="space-y-2">
-                  <Label htmlFor="tacticalrmm-totp">{t('integrations.rmm.tactical.auth.totp', { defaultValue: 'TOTP code' })}</Label>
-                  <Input
-                    id="tacticalrmm-totp"
-                    value={totpCode}
-                    onChange={(e) => setTotpCode(e.target.value)}
-                    placeholder="123456"
-                    disabled={testing || disconnecting}
-                  />
-                </div>
-              )}
-
-              {credentialsStatus?.hasKnoxToken && (
-                <div className="text-xs text-muted-foreground">
-                  {t('integrations.rmm.tactical.auth.knoxTokenSaved', { defaultValue: 'Knox token saved: {{value}}', value: credentialsStatus.knoxTokenMasked })}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            <Button
-              id="tacticalrmm-save-config"
-              type="button"
-              onClick={handleSave}
-              disabled={!canSave || saving || loading || disconnecting}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {saving
-                ? t('integrations.rmm.tactical.actions.saving', { defaultValue: 'Saving...' })
-                : t('integrations.rmm.tactical.actions.save', { defaultValue: 'Save' })}
-            </Button>
-
-            <Button
-              id="tacticalrmm-test-connection"
-              type="button"
-              variant="secondary"
-              onClick={handleTestConnection}
-              disabled={testing || loading || disconnecting || (totpRequired && !totpCode.trim())}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${testing ? 'animate-spin' : ''}`} />
-              {testing
-                ? t('integrations.rmm.tactical.actions.testing', { defaultValue: 'Testing...' })
-                : t('integrations.rmm.tactical.actions.testConnection', { defaultValue: 'Test Connection' })}
-            </Button>
-
-            <Button
-              id="tacticalrmm-disconnect"
-              type="button"
-              variant="destructive"
-              onClick={handleDisconnect}
-              disabled={disconnecting || loading}
-            >
-              <Unlink className="h-4 w-4 mr-2" />
-              {disconnecting
-                ? t('integrations.rmm.tactical.actions.disconnecting', { defaultValue: 'Disconnecting...' })
-                : t('integrations.rmm.tactical.actions.disconnect', { defaultValue: 'Disconnect' })}
-            </Button>
-          </div>
-
-          {!loading && credentialsStatus && (
-            <div className="text-xs text-muted-foreground">
-              {credentialsStatus.hasApiKey || credentialsStatus.hasKnoxCredentials
-                ? t('integrations.rmm.tactical.statusLine.configured', { defaultValue: 'Status: Configured' })
-                : t('integrations.rmm.tactical.statusLine.notConfigured', { defaultValue: 'Status: Not configured' })}
-            </div>
-          )}
-
-          {loading && (
-            <div className="text-sm text-muted-foreground flex items-center gap-2">
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              {t('integrations.rmm.tactical.loadingSettings', { defaultValue: 'Loading Tactical RMM settings...' })}
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>
+
+    {connectionSummary?.isActive && integrationId && (
+      <RmmAlertAutomationSettings integrationId={integrationId} provider="tacticalrmm" />
+    )}
+
+    {renderQuickAddContact({
+      isOpen: !!quickAddContactFor,
+      onClose: () => setQuickAddContactFor(null),
+      onContactAdded: (newContact) => {
+        setContacts((prev) => {
+          const i = prev.findIndex((c) => c.contact_name_id === newContact.contact_name_id);
+          if (i >= 0) {
+            const next = [...prev];
+            next[i] = newContact;
+            return next;
+          }
+          return [...prev, newContact];
+        });
+        if (quickAddContactFor) {
+          handleDefaultContactChange(quickAddContactFor.mappingId, newContact.contact_name_id);
+        }
+        setQuickAddContactFor(null);
+      },
+      clients,
+      selectedClientId: quickAddContactFor?.clientId ?? null,
+    })}
+    </>
   );
 }
 

@@ -30,7 +30,7 @@ What took time or failed:
 2. Rerunning bootstrap with `--dns-servers 1.1.1.1,8.8.8.8` allowed Talos/Kubernetes to come up.
 3. `ee/appliance/appliance bootstrap` generated Talos config and bootstrapped Kubernetes successfully, but fresh reset failed with `reset-appliance-data.sh: line 167: target: unbound variable`.
 4. The operator wrapper later ignored or mishandled explicit kubeconfig/talosconfig reuse and overwrote the local Talos config, breaking `talosctl` auth while Kubernetes remained usable.
-5. Script-level `ee/appliance/scripts/bootstrap-appliance.sh --bootstrap-mode recover --kubeconfig ...` continued the app install.
+5. Script-level `historical removed bootstrap script --bootstrap-mode recover --kubeconfig ...` continued the app install.
 6. `alga-core` image pull took around 16 minutes for `ghcr.io/nine-minds/alga-psa-ee:94446747`.
 7. `db-0` was stuck in `CreateContainerConfigError` with `failed to create subPath directory for volumeMount "db-data"`.
 8. Manually creating `/mnt/data` in the Postgres PVC and deleting `db-0` fixed Postgres.
@@ -64,14 +64,14 @@ ee/appliance/appliance bootstrap --bootstrap-mode fresh \
   --network-mode dhcp \
   --dns-servers 1.1.1.1,8.8.8.8 \
   --install-disk /dev/sda \
-  --repo-url https://github.com/nine-minds/alga-psa \
-  --repo-branch release/1.0-rc5
+  --historical-removed-repo-url https://github.com/nine-minds/alga-psa \
+  --historical-removed-branch-override release/1.0-rc5
 ```
 
 Continue app install with existing kubeconfig:
 
 ```bash
-ee/appliance/scripts/bootstrap-appliance.sh --bootstrap-mode recover \
+historical removed bootstrap script --bootstrap-mode recover \
   --release-version 1.0-rc5 \
   --site-id appliance-single-node \
   --profile talos-single-node \
@@ -80,8 +80,8 @@ ee/appliance/scripts/bootstrap-appliance.sh --bootstrap-mode recover \
   --app-url http://192.168.64.8:3000 \
   --dns-servers 1.1.1.1,8.8.8.8 \
   --kubeconfig ~/.alga-psa-appliance/appliance-single-node/kubeconfig \
-  --repo-url https://github.com/nine-minds/alga-psa \
-  --repo-branch release/1.0-rc5
+  --historical-removed-repo-url https://github.com/nine-minds/alga-psa \
+  --historical-removed-branch-override release/1.0-rc5
 ```
 
 Fix observed Postgres subPath issue manually:
@@ -181,7 +181,7 @@ Suggested implementation order:
 - Updated `ee/appliance/operator/lib/format.mjs` so CLI/TUI summary includes canonical rollup lines and workload section includes tier readiness lines when canonical status is present.
 - Updated `ee/appliance/operator/lib/lifecycle.mjs` bootstrap phase detector patterns to emit phase markers for `Storage`, `Core App`, and `Background Services`.
 - Added lifecycle test coverage for new phase marker detection in `ee/appliance/operator/tests/lifecycle-cli.test.mjs`.
-- Updated `ee/appliance/scripts/bootstrap-appliance.sh` with:
+- Updated `historical removed bootstrap script` with:
   - `generate_status_token` helper.
   - `STATUS_TOKEN_PATH` under site config (`~/.alga-psa-appliance/<site-id>/status-token` via resolved config dir).
   - `ensure_status_token` to reuse persisted token when present or generate a new token.
@@ -192,13 +192,13 @@ Suggested implementation order:
 ### Decisions / Rationale
 
 - Added canonical data as `status.canonical` instead of replacing the current status object to keep backward compatibility with existing formatter/TUI paths and allow incremental migration.
-- Mapped `gitRevision` to release manifest branch metadata for now (`release.metadata.app.releaseBranch`) because manifests currently do not include a commit SHA field.
+- Mapped `gitRevision` to release manifest branch metadata for now (`release.metadata.app.historicalReleaseBranch`) because manifests currently do not include a commit SHA field.
 
 ### Commands Run
 
 - `node --test ee/appliance/operator/tests/status.test.mjs`
 - `node --test ee/appliance/operator/tests/lifecycle-cli.test.mjs ee/appliance/operator/tests/format.test.mjs ee/appliance/operator/tests/status.test.mjs`
-- `bash ee/appliance/scripts/bootstrap-appliance.sh --release-version 1.0-rc5 --bootstrap-mode fresh --node-ip 192.0.2.10 --hostname alga-appliance --app-url https://psa.example.test --interface enp0s1 --network-mode dhcp --repo-url https://github.com/example/alga-psa.git --repo-branch main --config-dir <tmp> --dry-run`
+- `bash historical removed bootstrap script --release-version 1.0-rc5 --bootstrap-mode fresh --node-ip 192.0.2.10 --hostname alga-appliance --app-url https://psa.example.test --interface enp0s1 --network-mode dhcp --historical-removed-repo-url https://github.com/example/alga-psa.git --historical-removed-branch-override main --config-dir <tmp> --dry-run`
 
 ### Gotchas
 
@@ -225,7 +225,7 @@ Suggested implementation order:
 
 ### Validation Run
 
-- `bash -n ee/appliance/scripts/bootstrap-appliance.sh`
+- `bash -n historical removed bootstrap script`
 - `kubectl apply --dry-run=client -f ee/appliance/flux/base/platform/appliance-status.yaml`
 - `bash ee/appliance/tests/run-plan-tests.sh` (still fails in this environment at existing check: `release-version must follow x.y.z`)
 
@@ -461,7 +461,7 @@ Suggested implementation order:
 
 ### F022-F028 Implementation Details
 
-- Updated `ee/appliance/scripts/bootstrap-appliance.sh`:
+- Updated `historical removed bootstrap script`:
   - Added `validate_background_image_tags()` with GHCR manifest existence checks for background images.
   - Emits `Release artifact blocker` with missing image list and remediation when tags are absent.
   - Added `--skip-image-tag-validation` escape hatch.
@@ -486,10 +486,10 @@ Suggested implementation order:
 ### Validation (F022-F028)
 
 - `node --test ee/appliance/operator/tests/status.test.mjs`
-- `bash -n ee/appliance/scripts/bootstrap-appliance.sh`
+- `bash -n historical removed bootstrap script`
 - `bash -n ee/appliance/scripts/reset-appliance-data.sh`
 - `bash ee/appliance/scripts/reset-appliance-data.sh --kubeconfig /tmp/example.kubeconfig --force --dry-run`
-- `bash ee/appliance/scripts/bootstrap-appliance.sh ... --dry-run` (validated image-validation phase output and status URL/token output)
+- `bash historical removed bootstrap script ... --dry-run` (validated image-validation phase output and status URL/token output)
 - `bash ee/appliance/tests/run-plan-tests.sh` currently still stops at pre-existing `release-version must follow x.y.z` check in build-images dry-run section.
 
 
@@ -706,8 +706,8 @@ ee/appliance/appliance bootstrap --bootstrap-mode fresh \
   --network-mode dhcp \
   --dns-servers 1.1.1.1,8.8.8.8 \
   --install-disk /dev/sda \
-  --repo-url https://github.com/nine-minds/alga-psa \
-  --repo-branch release/1.0-rc5
+  --historical-removed-repo-url https://github.com/nine-minds/alga-psa \
+  --historical-removed-branch-override release/1.0-rc5
 ```
 
 ### Result
@@ -790,8 +790,8 @@ timeout 240 ee/appliance/appliance bootstrap --bootstrap-mode fresh \
   --network-mode dhcp \
   --dns-servers 1.1.1.1,8.8.8.8 \
   --install-disk /dev/sda \
-  --repo-url https://github.com/nine-minds/alga-psa \
-  --repo-branch release/1.0-rc5
+  --historical-removed-repo-url https://github.com/nine-minds/alga-psa \
+  --historical-removed-branch-override release/1.0-rc5
 ```
 
 - Result:
@@ -861,8 +861,8 @@ timeout 240 ee/appliance/appliance bootstrap --bootstrap-mode fresh \
   --network-mode dhcp \
   --dns-servers 1.1.1.1,8.8.8.8 \
   --install-disk /dev/sda \
-  --repo-url https://github.com/nine-minds/alga-psa \
-  --repo-branch release/1.0-rc5
+  --historical-removed-repo-url https://github.com/nine-minds/alga-psa \
+  --historical-removed-branch-override release/1.0-rc5
 ```
 
 Result:
@@ -912,8 +912,8 @@ timeout 180 ee/appliance/appliance bootstrap --bootstrap-mode fresh \
   --network-mode dhcp \
   --dns-servers 1.1.1.1,8.8.8.8 \
   --install-disk /dev/sda \
-  --repo-url https://github.com/nine-minds/alga-psa \
-  --repo-branch release/1.0-rc5
+  --historical-removed-repo-url https://github.com/nine-minds/alga-psa \
+  --historical-removed-branch-override release/1.0-rc5
 ```
 
 Result:
@@ -956,8 +956,8 @@ timeout 240 ee/appliance/appliance bootstrap --bootstrap-mode fresh \
   --network-mode dhcp \
   --dns-servers 1.1.1.1,8.8.8.8 \
   --install-disk /dev/sda \
-  --repo-url https://github.com/nine-minds/alga-psa \
-  --repo-branch release/1.0-rc5
+  --historical-removed-repo-url https://github.com/nine-minds/alga-psa \
+  --historical-removed-branch-override release/1.0-rc5
 ```
 
 Result:
@@ -1003,8 +1003,8 @@ timeout 180 ee/appliance/appliance bootstrap --bootstrap-mode fresh \
   --network-mode dhcp \
   --dns-servers 1.1.1.1,8.8.8.8 \
   --install-disk /dev/sda \
-  --repo-url https://github.com/nine-minds/alga-psa \
-  --repo-branch release/1.0-rc5
+  --historical-removed-repo-url https://github.com/nine-minds/alga-psa \
+  --historical-removed-branch-override release/1.0-rc5
 ```
 
 Result:
@@ -1050,8 +1050,8 @@ timeout 180 ee/appliance/appliance bootstrap --bootstrap-mode fresh \
   --network-mode dhcp \
   --dns-servers 1.1.1.1,8.8.8.8 \
   --install-disk /dev/sda \
-  --repo-url https://github.com/nine-minds/alga-psa \
-  --repo-branch release/1.0-rc5
+  --historical-removed-repo-url https://github.com/nine-minds/alga-psa \
+  --historical-removed-branch-override release/1.0-rc5
 ```
 
 Result:
@@ -1136,16 +1136,16 @@ Allow appliance smoke tests to use the remote branch corresponding to the curren
 
 ### Changes
 
-- Added `--repo-branch current` to `ee/appliance/scripts/bootstrap-appliance.sh`.
-- Added remote branch validation for `--repo-branch current`; Flux still fetches from `--repo-url`, so the branch must exist on that remote.
+- Added `--historical-removed-branch-override current` to `historical removed bootstrap script`.
+- Added remote branch validation for `--historical-removed-branch-override current`; Flux still fetches from `--historical-removed-repo-url`, so the branch must exist on that remote.
 - Added `--require-remote-branch` for explicit branch names when the same remote-existence validation is desired.
 - Added warnings for uncommitted local changes and local commits that are not present on the remote branch.
 - Bootstrap now prints a Flux source summary showing repo URL, branch, path, source mode, release version, and release manifest branch. Mismatches are allowed and called out because development tests commonly use release artifacts with manifests/charts from a feature branch.
-- Updated appliance skills with the branch-under-test workflow and the release-version-versus-repo-branch distinction.
+- Updated appliance skills with the branch-under-test workflow and the release-version-versus-historical-branch-override distinction.
 
 ### Validation
 
-- `ee/appliance/tests/run-plan-tests.sh` now creates a temporary bare Git remote, pushes the current branch to it, and verifies `--repo-branch current` resolves and validates correctly.
+- `ee/appliance/tests/run-plan-tests.sh` now creates a temporary bare Git remote, pushes the current branch to it, and verifies `--historical-removed-branch-override current` resolves and validates correctly.
 - Also verifies `--require-remote-branch` fails fast when an explicit branch is missing from the configured remote.
 
 ## 2026-04-30 Status UX Image Pull Clarification

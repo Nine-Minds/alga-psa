@@ -2,6 +2,7 @@ import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 
@@ -18,6 +19,37 @@ type CreatedIds = {
   clientContractId?: string;
 };
 let createdIds: CreatedIds = {};
+
+function tenantTable<Row extends object = Record<string, unknown>>(
+  connection: Knex,
+  tenant: string,
+  tableExpression: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(connection, tenant).table<Row>(tableExpression);
+}
+
+function tenantRows(connection: Knex): Knex.QueryBuilder<Record<string, unknown>, Record<string, unknown>[]> {
+  return tenantDb(connection, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
+async function hasSchemaTable(connection: Knex, tableName: string): Promise<boolean> {
+  const row = await tenantDb(connection, '__test_schema__')
+    .unscoped('information_schema.tables', 'test schema table existence assertion')
+    .where({ table_schema: 'public', table_name: tableName })
+    .first('table_name');
+  return Boolean(row);
+}
+
+function dateOnly(value: unknown): string | null {
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+  if (typeof value === 'string') {
+    return value.slice(0, 10);
+  }
+  return null;
+}
 
 vi.mock('server/src/lib/db', async () => {
   const actual = await vi.importActual<typeof import('server/src/lib/db')>('server/src/lib/db');
@@ -98,11 +130,10 @@ describe('createClientContractFromWizard', () => {
     createdIds = {};
     const serviceTypeId = uuidv4();
     const serviceTypeName = `Managed Services ${serviceTypeId.slice(0, 8)}`;
-    await db('service_types').insert({
+    await tenantTable(db, tenantId, 'service_types').insert({
       id: serviceTypeId,
       tenant: tenantId,
       name: serviceTypeName,
-      billing_method: 'fixed',
       order_number: Math.floor(Math.random() * 1000000),
       created_at: db.fn.now(),
       updated_at: db.fn.now()
@@ -110,7 +141,7 @@ describe('createClientContractFromWizard', () => {
     createdIds.serviceTypeId = serviceTypeId;
 
     const serviceId = uuidv4();
-    await db('service_catalog').insert({
+    await tenantTable(db, tenantId, 'service_catalog').insert({
       tenant: tenantId,
       service_id: serviceId,
       service_name: 'Emerald City Security',
@@ -126,7 +157,7 @@ describe('createClientContractFromWizard', () => {
 
     const clientId = uuidv4();
     const clientName = `Emerald City ${clientId.slice(0, 8)}`;
-    await db('clients').insert({
+    await tenantTable(db, tenantId, 'clients').insert({
       tenant: tenantId,
       client_id: clientId,
       client_name: clientName,
@@ -162,39 +193,116 @@ describe('createClientContractFromWizard', () => {
     createdIds.contractId = result.contract_id;
     createdIds.contractLineId = result.contract_line_id ?? undefined;
 
-    const clientContract = await db('client_contracts')
+    const clientContract = await tenantTable(db, tenantId, 'client_contracts')
       .where({ tenant: tenantId, client_id: clientId, contract_id: result.contract_id })
       .first();
     expect(clientContract).toBeTruthy();
     createdIds.clientContractId = clientContract?.client_contract_id;
 
-    expect(await db.schema.hasTable('client_contract_lines')).toBe(false);
-    expect(await db.schema.hasTable('client_contract_services')).toBe(false);
+    expect(await hasSchemaTable(db, 'client_contract_lines')).toBe(false);
+    expect(await hasSchemaTable(db, 'client_contract_services')).toBe(false);
 
-    const contractLine = await db('contract_lines')
+    const contractLine = await tenantTable(db, tenantId, 'contract_lines')
       .where({ tenant: tenantId, contract_line_id: result.contract_line_id })
       .first();
     expect(contractLine).toBeTruthy();
     expect(contractLine?.contract_id).toBe(result.contract_id);
     expect(contractLine?.enable_proration).toBe(true);
 
-    const contractLineService = await db('contract_line_services')
+    const contractLineService = await tenantTable(db, tenantId, 'contract_line_services')
       .where({ tenant: tenantId, contract_line_id: result.contract_line_id, service_id: serviceId })
       .first();
     expect(contractLineService).toBeTruthy();
 
-    const contractLineConfig = await db('contract_line_service_configuration')
+    const contractLineConfig = await tenantTable(db, tenantId, 'contract_line_service_configuration')
       .where({ tenant: tenantId, contract_line_id: result.contract_line_id, service_id: serviceId })
       .first();
     expect(contractLineConfig).toBeTruthy();
     expect(contractLineConfig?.configuration_type).toBe('Fixed');
 
-    const fixedConfig = await db('contract_line_service_fixed_config')
+    const fixedConfig = await tenantTable(db, tenantId, 'contract_line_service_fixed_config')
       .where({ tenant: tenantId, config_id: contractLineConfig?.config_id })
       .first();
     expect(fixedConfig).toBeTruthy();
     expect(Number(fixedConfig?.base_rate ?? 0)).toBe(10000);
 
+  });
+
+  it('bounds client-cadence service periods to an end-dated contract assignment', async () => {
+    createdIds = {};
+    const serviceTypeId = await insertServiceType(db, tenantId, 'fixed');
+    createdIds.serviceTypeId = serviceTypeId;
+
+    const serviceId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Bounded Client Cadence Service',
+      billingMethod: 'fixed',
+      itemKind: 'service',
+      defaultRate: 10000,
+      unitOfMeasure: 'month',
+    });
+    createdIds.serviceId = serviceId;
+
+    const clientId = await insertClient(db, tenantId, 'Bounded Cadence Client');
+    createdIds.clientId = clientId;
+
+    const contractEnd = '2026-09-16';
+    const result = await createClientContractFromWizard({
+      contract_name: 'Bounded Client Cadence Contract',
+      description: 'regression coverage for end-dated recurring periods',
+      client_id: clientId,
+      start_date: '2026-07-18',
+      end_date: contractEnd,
+      billing_frequency: 'monthly',
+      cadence_owner: 'client',
+      enable_proration: true,
+      fixed_base_rate: 10000,
+      fixed_services: [{ service_id: serviceId, quantity: 1 }],
+      hourly_services: [],
+      usage_services: [],
+      po_required: false,
+    });
+
+    expect(result).not.toHaveProperty('actionError');
+    if ('actionError' in result) {
+      throw new Error(result.actionError);
+    }
+
+    createdIds.contractId = result.contract_id;
+    createdIds.contractLineId = result.contract_line_id ?? undefined;
+    const clientContract = await tenantTable(db, tenantId, 'client_contracts')
+      .where({ tenant: tenantId, contract_id: result.contract_id, client_id: clientId })
+      .first('client_contract_id');
+    createdIds.clientContractId = clientContract?.client_contract_id;
+
+    const periods = await tenantTable(db, tenantId, 'recurring_service_periods')
+      .where({
+        tenant: tenantId,
+        obligation_id: result.contract_line_id,
+        cadence_owner: 'client',
+      })
+      .whereNot('lifecycle_state', 'superseded')
+      .orderBy('service_period_start', 'asc');
+
+    expect(periods.length).toBeGreaterThan(0);
+    expect(
+      periods.every((period) => {
+        const start = dateOnly(period.service_period_start);
+        return start !== null && start < contractEnd;
+      }),
+    ).toBe(true);
+
+    const straddlingPeriod = periods.find((period) => {
+      const start = dateOnly(period.service_period_start);
+      const end = dateOnly(period.service_period_end);
+      return start !== null && end !== null && start < contractEnd && end > contractEnd;
+    });
+    expect(straddlingPeriod).toBeDefined();
+    expect(dateOnly(straddlingPeriod?.activity_window_end)).toBe(contractEnd);
+    expect(
+      dateOnly(straddlingPeriod?.activity_window_start)! <
+        dateOnly(straddlingPeriod?.activity_window_end)!,
+    ).toBe(true);
   });
 
   it('T013: accepts fixed services even when catalog billing_method is non-fixed', async () => {
@@ -253,22 +361,24 @@ describe('createClientContractFromWizard', () => {
     const clientId = await insertClient(db, tenantId, 'Fixed Rejection Client');
     createdIds.clientId = clientId;
 
-    await expect(
-      createClientContractFromWizard({
-        contract_name: 'Fixed Product Rejection Contract',
-        description: 'reject product in fixed services',
-        client_id: clientId,
-        start_date: '2025-10-01',
-        end_date: null,
-        billing_frequency: 'monthly',
-        enable_proration: true,
-        fixed_base_rate: 4200,
-        fixed_services: [{ service_id: productId, quantity: 1 }],
-        hourly_services: [],
-        usage_services: [],
-        po_required: false,
-      })
-    ).rejects.toThrow('must be a service to be added to fixed fee contract lines');
+    const result = await createClientContractFromWizard({
+      contract_name: 'Fixed Product Rejection Contract',
+      description: 'reject product in fixed services',
+      client_id: clientId,
+      start_date: '2025-10-01',
+      end_date: null,
+      billing_frequency: 'monthly',
+      enable_proration: true,
+      fixed_base_rate: 4200,
+      fixed_services: [{ service_id: productId, quantity: 1 }],
+      hourly_services: [],
+      usage_services: [],
+      po_required: false,
+    });
+
+    expect(result).toMatchObject({
+      actionError: 'Catalog item "Fixed Line Product" must be a service to be added to fixed fee contract lines.',
+    });
   });
 
   it('T015: accepts hourly services even when catalog billing_method is non-hourly', async () => {
@@ -328,23 +438,25 @@ describe('createClientContractFromWizard', () => {
     const clientId = await insertClient(db, tenantId, 'Hourly Rejection Client');
     createdIds.clientId = clientId;
 
-    await expect(
-      createClientContractFromWizard({
-        contract_name: 'Hourly Product Rejection Contract',
-        description: 'reject product in hourly services',
-        client_id: clientId,
-        start_date: '2025-10-01',
-        end_date: null,
-        billing_frequency: 'monthly',
-        enable_proration: false,
-        fixed_services: [],
-        hourly_services: [{ service_id: productId, hourly_rate: 3500 }],
-        usage_services: [],
-        minimum_billable_time: 15,
-        round_up_to_nearest: 15,
-        po_required: false,
-      })
-    ).rejects.toThrow('must be a service to be added to hourly contract lines');
+    const result = await createClientContractFromWizard({
+      contract_name: 'Hourly Product Rejection Contract',
+      description: 'reject product in hourly services',
+      client_id: clientId,
+      start_date: '2025-10-01',
+      end_date: null,
+      billing_frequency: 'monthly',
+      enable_proration: false,
+      fixed_services: [],
+      hourly_services: [{ service_id: productId, hourly_rate: 3500 }],
+      usage_services: [],
+      minimum_billable_time: 15,
+      round_up_to_nearest: 15,
+      po_required: false,
+    });
+
+    expect(result).toMatchObject({
+      actionError: 'Catalog item "Hourly Line Product" must be a service to be added to hourly contract lines.',
+    });
   });
 
   it('T017: accepts usage services even when catalog billing_method is non-usage', async () => {
@@ -402,21 +514,23 @@ describe('createClientContractFromWizard', () => {
     const clientId = await insertClient(db, tenantId, 'Usage Rejection Client');
     createdIds.clientId = clientId;
 
-    await expect(
-      createClientContractFromWizard({
-        contract_name: 'Usage Product Rejection Contract',
-        description: 'reject product in usage services',
-        client_id: clientId,
-        start_date: '2025-10-01',
-        end_date: null,
-        billing_frequency: 'monthly',
-        enable_proration: false,
-        fixed_services: [],
-        hourly_services: [],
-        usage_services: [{ service_id: productId, unit_rate: 1800, unit_of_measure: 'unit' }],
-        po_required: false,
-      })
-    ).rejects.toThrow('must be a service to be added to usage contract lines');
+    const result = await createClientContractFromWizard({
+      contract_name: 'Usage Product Rejection Contract',
+      description: 'reject product in usage services',
+      client_id: clientId,
+      start_date: '2025-10-01',
+      end_date: null,
+      billing_frequency: 'monthly',
+      enable_proration: false,
+      fixed_services: [],
+      hourly_services: [],
+      usage_services: [{ service_id: productId, unit_rate: 1800, unit_of_measure: 'unit' }],
+      po_required: false,
+    });
+
+    expect(result).toMatchObject({
+      actionError: 'Catalog item "Usage Line Product" must be a service to be added to usage contract lines.',
+    });
   });
 
   it('T021: resolves fixed-mode prefill from service+mode+currency defaults when no fixed override is provided', async () => {
@@ -460,12 +574,12 @@ describe('createClientContractFromWizard', () => {
     });
     createdIds.contractId = result.contract_id;
 
-    const fixedLine = await db('contract_lines')
+    const fixedLine = await tenantTable(db, tenantId, 'contract_lines')
       .where({ tenant: tenantId, contract_id: result.contract_id, contract_line_type: 'Fixed' })
       .first();
     expect(fixedLine).toBeTruthy();
 
-    const config = await db('contract_line_service_configuration')
+    const config = await tenantTable(db, tenantId, 'contract_line_service_configuration')
       .where({
         tenant: tenantId,
         contract_line_id: fixedLine!.contract_line_id,
@@ -475,7 +589,7 @@ describe('createClientContractFromWizard', () => {
       .first();
     expect(config).toBeTruthy();
 
-    const fixedConfig = await db('contract_line_service_fixed_config')
+    const fixedConfig = await tenantTable(db, tenantId, 'contract_line_service_fixed_config')
       .where({ tenant: tenantId, config_id: config!.config_id })
       .first();
     expect(Number(fixedConfig?.base_rate ?? 0)).toBe(9900);
@@ -524,19 +638,12 @@ describe('createClientContractFromWizard', () => {
     });
     createdIds.contractId = result.contract_id;
 
-    const hourlyLine = await db('contract_lines')
+    const hourlyLine = await tenantTable(db, tenantId, 'contract_lines')
       .where({ tenant: tenantId, contract_id: result.contract_id, contract_line_type: 'Hourly' })
       .first();
     expect(hourlyLine).toBeTruthy();
 
-    const lineService = await db('contract_line_services')
-      .where({
-        tenant: tenantId,
-        contract_line_id: hourlyLine!.contract_line_id,
-        service_id: serviceId,
-      })
-      .first();
-    expect(Number(lineService?.unit_price ?? 0)).toBe(8700);
+    expect(await readHourlyRate(db, tenantId, hourlyLine!.contract_line_id, serviceId)).toBe(8700);
   });
 
   it('T023: resolves usage-mode prefill from service+mode+currency defaults when no usage override is provided', async () => {
@@ -580,19 +687,12 @@ describe('createClientContractFromWizard', () => {
     });
     createdIds.contractId = result.contract_id;
 
-    const usageLine = await db('contract_lines')
+    const usageLine = await tenantTable(db, tenantId, 'contract_lines')
       .where({ tenant: tenantId, contract_id: result.contract_id, contract_line_type: 'Usage' })
       .first();
     expect(usageLine).toBeTruthy();
 
-    const lineService = await db('contract_line_services')
-      .where({
-        tenant: tenantId,
-        contract_line_id: usageLine!.contract_line_id,
-        service_id: serviceId,
-      })
-      .first();
-    expect(Number(lineService?.unit_price ?? 0)).toBe(6400);
+    expect(await readUsageRate(db, tenantId, usageLine!.contract_line_id, serviceId)).toBe(6400);
   });
 
   it('T024: explicit fixed/hourly/usage overrides supersede catalog mode defaults', async () => {
@@ -670,15 +770,18 @@ describe('createClientContractFromWizard', () => {
     });
     createdIds.contractId = result.contract_id;
 
-    const lines = await db('contract_lines')
+    const lines = await tenantTable(db, tenantId, 'contract_lines')
       .where({ tenant: tenantId, contract_id: result.contract_id })
       .select('contract_line_id', 'contract_line_type');
     const lineIdByType = new Map(lines.map((line) => [line.contract_line_type, line.contract_line_id]));
 
-    const fixedConfig = await db('contract_line_service_fixed_config')
-      .join('contract_line_service_configuration as cfg', function () {
-        this.on('contract_line_service_fixed_config.config_id', '=', 'cfg.config_id');
-      })
+    const fixedConfig = await tenantDb(db, tenantId)
+      .tenantJoin(
+        tenantTable(db, tenantId, 'contract_line_service_fixed_config'),
+        'contract_line_service_configuration as cfg',
+        'contract_line_service_fixed_config.config_id',
+        'cfg.config_id'
+      )
       .where({
         'contract_line_service_fixed_config.tenant': tenantId,
         'cfg.contract_line_id': lineIdByType.get('Fixed'),
@@ -687,33 +790,37 @@ describe('createClientContractFromWizard', () => {
       .first('contract_line_service_fixed_config.base_rate');
     expect(Number(fixedConfig?.base_rate ?? 0)).toBe(7777);
 
-    const hourlyLineService = await db('contract_line_services')
-      .where({
-        tenant: tenantId,
-        contract_line_id: lineIdByType.get('Hourly'),
-        service_id: hourlyServiceId,
-      })
-      .first('unit_price');
-    expect(Number(hourlyLineService?.unit_price ?? 0)).toBe(8888);
-
-    const usageLineService = await db('contract_line_services')
-      .where({
-        tenant: tenantId,
-        contract_line_id: lineIdByType.get('Usage'),
-        service_id: usageServiceId,
-      })
-      .first('unit_price');
-    expect(Number(usageLineService?.unit_price ?? 0)).toBe(9999);
+    expect(await readHourlyRate(db, tenantId, lineIdByType.get('Hourly')!, hourlyServiceId)).toBe(8888);
+    expect(await readUsageRate(db, tenantId, lineIdByType.get('Usage')!, usageServiceId)).toBe(9999);
   });
 });
 
+// The wizard persists resolved hourly rates on contract_line_service_hourly_configs
+// (keyed by the line+service configuration) and resolved usage unit rates on the
+// configuration row's custom_rate.
+async function readHourlyRate(connection: Knex, tenant: string, contractLineId: string, serviceId: string) {
+  const config = await tenantTable(connection, tenant, 'contract_line_service_configuration')
+    .where({ tenant, contract_line_id: contractLineId, service_id: serviceId })
+    .first('config_id');
+  const hourlyConfig = await tenantTable(connection, tenant, 'contract_line_service_hourly_configs')
+    .where({ tenant, config_id: config?.config_id })
+    .first('hourly_rate');
+  return Number(hourlyConfig?.hourly_rate ?? 0);
+}
+
+async function readUsageRate(connection: Knex, tenant: string, contractLineId: string, serviceId: string) {
+  const config = await tenantTable(connection, tenant, 'contract_line_service_configuration')
+    .where({ tenant, contract_line_id: contractLineId, service_id: serviceId })
+    .first('custom_rate');
+  return Number(config?.custom_rate ?? 0);
+}
+
 async function insertServiceType(connection: Knex, tenant: string, billingMethod: 'fixed' | 'hourly' | 'usage') {
   const serviceTypeId = uuidv4();
-  await connection('service_types').insert({
+  await tenantTable(connection, tenant, 'service_types').insert({
     id: serviceTypeId,
     tenant,
     name: `Service Type ${serviceTypeId.slice(0, 8)}`,
-    billing_method: billingMethod,
     order_number: Math.floor(Math.random() * 1000000),
     created_at: connection.fn.now(),
     updated_at: connection.fn.now(),
@@ -734,7 +841,7 @@ async function insertCatalogItem(
   }
 ) {
   const serviceId = uuidv4();
-  await connection('service_catalog').insert({
+  await tenantTable(connection, tenant, 'service_catalog').insert({
     tenant,
     service_id: serviceId,
     service_name: options.serviceName,
@@ -752,7 +859,7 @@ async function insertCatalogItem(
 
 async function insertClient(connection: Knex, tenant: string, clientNamePrefix: string) {
   const clientId = uuidv4();
-  await connection('clients').insert({
+  await tenantTable(connection, tenant, 'clients').insert({
     tenant,
     client_id: clientId,
     client_name: `${clientNamePrefix} ${clientId.slice(0, 8)}`,
@@ -774,7 +881,7 @@ async function insertModeDefault(
     rate: number;
   }
 ) {
-  await connection('service_catalog_mode_defaults').insert({
+  await tenantTable(connection, params.tenant, 'service_catalog_mode_defaults').insert({
     tenant: params.tenant,
     service_id: params.serviceId,
     billing_mode: params.billingMode,
@@ -786,13 +893,13 @@ async function insertModeDefault(
 }
 
 async function ensureTenant(connection: Knex): Promise<string> {
-  const existing = await connection('tenants').first<{ tenant: string }>('tenant');
+  const existing = await tenantRows(connection).first<{ tenant: string }>('tenant');
   if (existing?.tenant) {
     return existing.tenant;
   }
 
   const newTenantId = uuidv4();
-  await connection('tenants').insert({
+  await tenantRows(connection).insert({
     tenant: newTenantId,
     client_name: 'Contract Wizard Integration Tenant',
     email: 'contract-wizard@test.co',
@@ -809,7 +916,7 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
 
   const safeDelete = async (table: string, where: Record<string, unknown>) => {
     try {
-      await db(table).where(where).del();
+      await tenantTable(db, tenantId, table).where(where).del();
     } catch {
       // ignore cleanup issues
     }
@@ -820,7 +927,7 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
       return;
     }
     try {
-      await db(table).whereIn(column, values).andWhere({ tenant: tenantId }).del();
+      await tenantTable(db, tenantId, table).whereIn(column, values).del();
     } catch {
       // ignore cleanup issues
     }
@@ -834,6 +941,10 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
   }
 
   if (ids.contractLineId) {
+    await safeDelete('recurring_service_periods', {
+      tenant: tenantId,
+      obligation_id: ids.contractLineId,
+    });
     await safeDelete('contract_line_service_bucket_config', {
       tenant: tenantId,
       contract_line_id: ids.contractLineId

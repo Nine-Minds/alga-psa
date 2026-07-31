@@ -91,7 +91,8 @@
         "single": "55555",
         "future": "55555",
         "all": "55555"
-      }
+      },
+      "messageWithTeamsWarning": "55555"
     },
     "print": {
       "title": "55555",
@@ -128,11 +129,16 @@
       "assignTechnicianRequired": "55555",
       "approve": "55555",
       "declineReasonRequired": "55555",
-      "decline": "55555"
+      "decline": "55555",
+      "reschedule": "55555",
+      "rescheduleDateRequired": "55555",
+      "generateTeamsMeeting": "55555"
     },
     "feedback": {
       "approved": "55555",
-      "declined": "55555"
+      "declined": "55555",
+      "rescheduled": "55555",
+      "teamsMeetingGenerated": "55555"
     },
     "filters": {
       "statusLabel": "55555",
@@ -180,8 +186,10 @@
         "description": "55555"
       },
       "actions": {
-        "joinTeamsMeeting": "55555"
-      }
+        "joinTeamsMeeting": "55555",
+        "generateTeamsMeeting": "55555"
+      },
+      "teamsMeetingMissing": "55555"
     },
     "approval": {
       "title": "55555",
@@ -200,6 +208,12 @@
       "actions": {
         "approve": "55555",
         "decline": "55555"
+      },
+      "teamsMeetingFailure": {
+        "title": "55555",
+        "description": "55555",
+        "retry": "55555",
+        "approveWithout": "55555"
       }
     },
     "decline": {
@@ -211,6 +225,18 @@
         "reason": "55555"
       },
       "actions": {
+        "confirm": "55555",
+        "cancel": "55555"
+      }
+    },
+    "reschedule": {
+      "title": "55555",
+      "teamsNote": "55555",
+      "fields": {
+        "newDateTime": "55555"
+      },
+      "actions": {
+        "open": "55555",
         "confirm": "55555",
         "cancel": "55555"
       }
@@ -546,7 +572,9 @@
         "title": "55555",
         "descriptionWithDate": "55555 {{date}} 55555",
         "description": "55555",
-        "joinTeamsMeeting": "55555"
+        "joinTeamsMeeting": "55555",
+        "downloadRecording": "55555",
+        "viewTranscript": "55555"
       },
       "pending": {
         "title": "55555",
@@ -629,6 +657,32 @@
       "single": "55555",
       "future": "55555",
       "all": "55555"
+    },
+    "errors": {
+      "loadWorkItem": "55555"
     }
+  },
+  "actions": {
+    "print": "55555",
+    "printOptions": "55555"
+  },
+  "interactionDetails": {
+    "fields": {
+      "client": "55555",
+      "contact": "55555",
+      "duration": "55555",
+      "endTime": "55555",
+      "notes": "55555",
+      "startTime": "55555",
+      "status": "55555",
+      "title": "55555",
+      "user": "55555"
+    },
+    "noClient": "55555",
+    "noContact": "55555",
+    "noTitle": "55555",
+    "notAvailable": "55555",
+    "title": "55555",
+    "unknownUser": "55555"
   }
 }

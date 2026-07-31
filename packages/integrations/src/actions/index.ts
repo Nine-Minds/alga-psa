@@ -67,6 +67,11 @@ export {
   getHostedMicrosoftConfig
 } from './email-actions/emailProviderActions';
 export {
+  pauseEmailProvider,
+  resumeEmailProvider,
+  type EmailProviderPauseActionResult
+} from './email-actions/inboundPauseActions';
+export {
   getEmailDomains,
   addEmailDomain,
   verifyEmailDomain,
@@ -74,7 +79,8 @@ export {
 } from './email-actions/emailDomainActions';
 export {
   getEmailSettings,
-  updateEmailSettings
+  updateEmailSettings,
+  testOutboundEmail
 } from './email-actions/emailSettingsActions';
 export {
   getInboundTicketDefaults,
@@ -132,14 +138,31 @@ export {
   refreshMspSsoDomainClaimChallenge,
   verifyMspSsoDomainClaimOwnership,
   revokeMspSsoDomainClaim,
+  getMspSsoTenantCredentialStatus,
+  type MspSsoTenantCredentialStatusResult,
 } from './integrations/mspSsoDomainActions';
 export {
   getTeamsIntegrationStatus,
   runTeamsDiagnostics,
   sendTeamsTestMessage,
   saveTeamsIntegrationSettings,
+  validateTeamsGraphCredentials,
+  probeTeamsGraphPermissions,
+  validateTeamsBotConnector,
+  listTeamsDeliveries,
+  listTeamsAuditEvents,
+  getTeamsAddonPurchaseAccess,
   type TeamsDiagnosticsReport,
   type TeamsTestMessageResult,
+  type TeamsGraphCredentialValidationResult,
+  type TeamsGraphPermissionsProbeResult,
+  type TeamsBotConnectorValidationResult,
+  type TeamsDeliveriesPage,
+  type TeamsAuditEventsPage,
+  type TeamsDeliveryLogRow,
+  type TeamsAuditLogRow,
+  type ListTeamsDeliveriesParams,
+  type ListTeamsAuditEventsParams,
 } from './integrations/teamsActions';
 export {
   getTeamsAppPackageStatus,
@@ -147,16 +170,24 @@ export {
 export {
   initiateEntraDirectOAuth,
   connectEntraCipp,
+  testEntraCippCredentials,
+  runEntraPreflight,
+  getEntraConfirmedMappings,
+  getEntraSyncSchedule,
+  canManageEntraIntegration,
+  saveEntraSyncSchedule,
   getEntraIntegrationStatus,
   updateEntraFieldSyncConfig,
   connectEntraIntegration,
   getEntraReconciliationQueue,
   resolveEntraQueueToExisting,
   resolveEntraQueueToNew,
+  dismissEntraQueueItem,
   validateEntraDirectConnection,
   validateEntraCippConnection,
   disconnectEntraIntegration,
   getEntraSyncRunHistory,
+  getEntraSyncRunDetail,
   discoverEntraManagedTenants,
   getEntraMappingPreview,
   listEntraMappingGroups,
@@ -173,10 +204,17 @@ export {
   type EntraMappingGroupOption,
   type EntraSyncHistoryRun,
   type EntraSyncHistoryResponse,
+  type EntraSyncRunDetail,
+  type EntraSyncRunTenantResult,
   type EntraReconciliationQueueItem,
   type EntraReconciliationQueueResponse,
   type EntraQueueResolutionResponse,
   type EntraFieldSyncConfig,
+  type EntraConfirmedMapping,
+  type EntraPreflightBucketId,
+  type EntraPreflightIdentity,
+  type EntraPreflightResponse,
+  type EntraSyncScheduleSettings,
 } from './integrations/entraActions';
 export {
   getTacticalRmmSettings,
@@ -193,6 +231,23 @@ export {
   ingestTacticalRmmSoftwareInventory,
   syncTacticalRmmSingleAgent,
 } from './integrations/tacticalRmmActions';
+export {
+  listRmmAlertRules,
+  createRmmAlertRule,
+  updateRmmAlertRule,
+  deleteRmmAlertRule,
+  reorderRmmAlertRules,
+  listRmmMaintenanceWindows,
+  createRmmMaintenanceWindow,
+  updateRmmMaintenanceWindow,
+  deleteRmmMaintenanceWindow,
+  getRmmAlertRuleFormOptions,
+  getRmmAlertPollingSettings,
+  updateRmmAlertPollingSettings,
+  getRmmIntegrationIdByProvider,
+  type RmmAlertRuleFormOptions,
+  type RmmAlertPollingSettingsView,
+} from './integrations/rmmAlertRuleActions';
 export {
   TACTICAL_WEBHOOK_HEADER_NAME,
   type TacticalRmmAuthMode,

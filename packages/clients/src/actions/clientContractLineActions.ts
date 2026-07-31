@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import type { IClientContractLine } from '@alga-psa/types';
@@ -10,6 +10,82 @@ import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/r
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
 import { withAuth } from '@alga-psa/auth';
+import { assertMspPermission } from '../lib/authHelpers';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+export type ClientContractLineMutationResult = void | ActionMessageError | ActionPermissionError;
+
+function clientContractLineActionErrorFrom(error: unknown): ActionMessageError | ActionPermissionError | null {
+  if (error instanceof Error) {
+    const message = error.message;
+    if (message.includes('Permission denied:')) {
+      return permissionError(message);
+    }
+    if (/unauthorized|not authenticated|must sign in/i.test(message)) {
+      return permissionError('You must be signed in to manage client contract lines.');
+    }
+    if (message.includes('Assignment-scoped client contract line identity is required')) {
+      return actionError('Please refresh the contract assignment and try again.');
+    }
+    if (
+      message.includes('Cannot replace contract line assignment after it has authoritative recurring detail periods') ||
+      message.includes('Cannot deactivate contract line assignment before') ||
+      message.includes('Cannot set end date to')
+    ) {
+      return actionError(message);
+    }
+    if (message.includes('Contract line mutation is ambiguous for assignment')) {
+      return actionError('This contract line is shared by multiple active assignments. Edit the specific contract assignment before changing its lines.');
+    }
+    if (
+      message.includes('not found') ||
+      message.includes('not associated with client contract') ||
+      message.includes('missing template provenance')
+    ) {
+      return actionError(message);
+    }
+    if (message.includes('A contract line with the same details already exists for this client')) {
+      return actionError(message);
+    }
+  }
+
+  const dbError = error as { code?: string; constraint?: string; column?: string };
+  if (dbError?.code === '23505') {
+    return actionError('A contract line with these details already exists for this client.');
+  }
+  if (dbError?.code === '22P02') {
+    return actionError('The selected client or contract line is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required contract line field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected contract line reference is no longer valid. Please refresh and try again.');
+  }
+
+  return null;
+}
+
+const assertCanReadClientContractLines = (user: any) =>
+  assertMspPermission(
+    user,
+    'client',
+    'read',
+    'Permission denied: Cannot read client contract lines'
+  );
+
+const assertCanUpdateClientContractLines = (user: any) =>
+  assertMspPermission(
+    user,
+    'client',
+    'update',
+    'Permission denied: Cannot update client contract lines'
+  );
 
 const parseClientContractLineIdentity = (value: string): { clientContractId?: string; contractLineId: string } => {
   const match = value.match(/^contract-([0-9a-fA-F-]{36})-([0-9a-fA-F-]{36})$/);
@@ -39,16 +115,17 @@ const assertSharedHeaderMutationIsExplicit = async (
   tenant: string,
   identity: { clientContractId: string; contractLineId: string },
 ): Promise<void> => {
-  const selectedAssignment = await trx('client_contracts')
-    .where({ tenant, client_contract_id: identity.clientContractId })
+  const scopedDb = tenantDb(trx, tenant);
+
+  const selectedAssignment = await scopedDb.table('client_contracts')
+    .where({ client_contract_id: identity.clientContractId })
     .first('client_id', 'contract_id');
   if (!selectedAssignment) {
     throw new Error(`Client contract ${identity.clientContractId} not found.`);
   }
 
-  const assignmentCountRow = await trx('client_contracts')
+  const assignmentCountRow = await scopedDb.table('client_contracts')
     .where({
-      tenant,
       client_id: selectedAssignment.client_id,
       contract_id: selectedAssignment.contract_id,
       is_active: true,
@@ -63,9 +140,8 @@ const assertSharedHeaderMutationIsExplicit = async (
     );
   }
 
-  const lineExists = await trx('contract_lines as cl')
+  const lineExists = await scopedDb.table('contract_lines as cl')
     .where({
-      'cl.tenant': tenant,
       'cl.contract_line_id': identity.contractLineId,
       'cl.contract_id': selectedAssignment.contract_id,
     })
@@ -83,13 +159,12 @@ async function getLatestHistoricalInvoicedEndDate(db: any, tenant: string, clien
   const identity = parseClientContractLineIdentity(clientContractLineId);
 
   // First, get the client_contract_id associated with the clientContractLineId
-  const planInfoQuery = db('contract_lines as cl')
-    .join('client_contracts as cc', function(this: Knex.JoinClause) {
-      this.on('cl.contract_id', '=', 'cc.contract_id')
-          .andOn('cl.tenant', '=', 'cc.tenant');
-    })
+  const scopedDb = tenantDb(db, tenant);
+  const planInfoQuery = scopedDb.table('contract_lines as cl');
+  scopedDb.tenantJoin(planInfoQuery, 'client_contracts as cc', 'cl.contract_id', 'cc.contract_id');
+  planInfoQuery
     .select('cc.client_id', 'cl.contract_line_id', 'cc.client_contract_id')
-    .where({ 'cl.contract_line_id': identity.contractLineId, 'cl.tenant': tenant });
+    .where({ 'cl.contract_line_id': identity.contractLineId });
 
   if (identity.clientContractId) {
     planInfoQuery.andWhere('cc.client_contract_id', identity.clientContractId);
@@ -105,21 +180,18 @@ async function getLatestHistoricalInvoicedEndDate(db: any, tenant: string, clien
 
   // Check for invoices with items linked to this specific client_contract via client_contract_id
   // This ensures we only check invoices generated from THIS specific contract assignment
-  const latestInvoice = await db('invoices as i')
-    .join('invoice_charges as ii', function(this: Knex.JoinClause) {
-      this.on('i.invoice_id', '=', 'ii.invoice_id')
-          .andOn('i.tenant', '=', 'ii.tenant');
-    })
-    .join('client_contracts as cc', function(this: Knex.JoinClause) {
-      this.on('ii.client_contract_id', '=', 'cc.client_contract_id')
-          .andOn('ii.tenant', '=', 'cc.tenant');
-    })
+  const latestInvoiceQuery = scopedDb.table('invoices as i');
+  scopedDb.tenantJoin(latestInvoiceQuery, 'invoice_charges as ii', 'i.invoice_id', 'ii.invoice_id');
+  scopedDb.tenantJoin(latestInvoiceQuery, 'client_contracts as cc', 'ii.client_contract_id', 'cc.client_contract_id');
+  const latestInvoice = await latestInvoiceQuery
     .where({
       'cc.client_contract_id': client_contract_id,
-      'cc.tenant': tenant
     })
     .orderBy('i.invoice_date', 'desc')
-    .select('i.billing_period_end', 'i.invoice_date')
+    .select({
+      billing_period_end: 'i.billing_period_end',
+      invoice_date: 'i.invoice_date',
+    })
     .first();
 
   // If we found an invoice, determine the appropriate date to return
@@ -147,16 +219,14 @@ async function getLatestAuthoritativeRecurringPeriodEndDate(
   tenant: string,
   clientContractLineId: string,
 ): Promise<Temporal.PlainDate | null> {
-  const canonicalDetail = await db('invoice_charge_details as iid')
-    .join('contract_line_service_configuration as clsc', function(this: Knex.JoinClause) {
-      this.on('iid.config_id', '=', 'clsc.config_id')
-        .andOn('iid.tenant', '=', 'clsc.tenant');
-    })
-    .where('iid.tenant', tenant)
+  const scopedDb = tenantDb(db, tenant);
+  const canonicalDetailQuery = scopedDb.table('invoice_charge_details as iid');
+  scopedDb.tenantJoin(canonicalDetailQuery, 'contract_line_service_configuration as clsc', 'iid.config_id', 'clsc.config_id');
+  const canonicalDetail = await canonicalDetailQuery
     .andWhere('clsc.contract_line_id', clientContractLineId)
     .whereNotNull('iid.service_period_end')
     .orderBy('iid.service_period_end', 'desc')
-    .first('iid.service_period_end');
+    .first({ service_period_end: 'iid.service_period_end' });
 
   if (canonicalDetail?.service_period_end) {
     return toPlainDate(canonicalDetail.service_period_end);
@@ -214,10 +284,9 @@ async function getExistingCadenceOwner(
   tenant: string,
   clientContractLineId: string,
 ): Promise<IClientContractLine['cadence_owner']> {
-  const existingLine = await trx('contract_lines')
+  const existingLine = await tenantDb(trx, tenant).table('contract_lines')
     .where({
       contract_line_id: clientContractLineId,
-      tenant,
     })
     .first('cadence_owner');
 
@@ -230,27 +299,21 @@ export const getClientContractLine = withAuth(async (
   { tenant },
   clientId: string,
   clientContractId?: string
-): Promise<IClientContractLine[]> => {
+): Promise<IClientContractLine[] | ActionMessageError | ActionPermissionError> => {
   try {
+    await assertCanReadClientContractLines(_user);
+
     const { knex: db } = await createTenantKnex();
     const clientContractLine: IClientContractLine[] = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const query = trx('contract_lines as cl')
-        .join('client_contracts as cc', function () {
-          this.on('cc.contract_id', '=', 'cl.contract_id')
-            .andOn('cc.tenant', '=', 'cl.tenant');
-        })
-        .join('contracts as co', function () {
-          this.on('co.contract_id', '=', 'cl.contract_id')
-            .andOn('co.tenant', '=', 'cl.tenant');
-        })
-        .leftJoin('service_categories as sc', function () {
-          this.on('sc.category_id', '=', 'cl.service_category')
-            .andOn('sc.tenant', '=', 'cl.tenant');
-        })
+      const scopedDb = tenantDb(trx, tenant);
+      const query = scopedDb.table('contract_lines as cl');
+      scopedDb.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'cl.contract_id');
+      scopedDb.tenantJoin(query, 'contracts as co', 'co.contract_id', 'cl.contract_id');
+      scopedDb.tenantJoin(query, 'service_categories as sc', 'sc.category_id', 'cl.service_category', { type: 'left' });
+      query
         .where({
           'cc.client_id': clientId,
           'cl.is_active': true,
-          'cl.tenant': tenant
         })
         .select([
           'cl.*',
@@ -285,8 +348,10 @@ export const getClientContractLine = withAuth(async (
       };
     });
   } catch (error) {
+    const expected = clientContractLineActionErrorFrom(error);
+    if (expected) return expected;
     console.error('Error fetching client contract line:', error);
-    throw new Error('Failed to fetch client contract line');
+    throw error;
   }
 });
 
@@ -295,8 +360,10 @@ export const updateClientContractLine = withAuth(async (
   { tenant },
   clientContractLineId: string,
   updates: Partial<IClientContractLine>
-): Promise<void> => {
+): Promise<ClientContractLineMutationResult> => {
   try {
+    await assertCanUpdateClientContractLines(_user);
+
     const { knex: db } = await createTenantKnex();
     const identity = ensureAssignmentScopedIdentity(parseClientContractLineIdentity(clientContractLineId));
     const latestInvoicedPeriodEnd = await getLatestAuthoritativeRecurringPeriodEndDate(db, tenant, clientContractLineId);
@@ -320,10 +387,9 @@ export const updateClientContractLine = withAuth(async (
 
       validUpdates.cadence_owner = cadenceOwner;
 
-      return await trx('contract_lines')
+      return await tenantDb(trx, tenant).table('contract_lines')
         .where({
           contract_line_id: identity.contractLineId,
-          tenant
         })
         .update(validUpdates);
     });
@@ -333,7 +399,9 @@ export const updateClientContractLine = withAuth(async (
     }
   } catch (error) {
     console.error('Error updating client contract line:', error);
-    throw new Error('Failed to update client contract line');
+    const expected = clientContractLineActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -341,8 +409,10 @@ export const addClientContractLine = withAuth(async (
   _user,
   { tenant },
   newBilling: Omit<IClientContractLine, 'client_contract_line_id' | 'tenant'>
-): Promise<void> => {
+): Promise<ClientContractLineMutationResult> => {
   try {
+    await assertCanUpdateClientContractLines(_user);
+
     const { knex: db } = await createTenantKnex();
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -351,8 +421,10 @@ export const addClientContractLine = withAuth(async (
         throw new Error('client_contract_id is required');
       }
 
-      const clientContract = await trx('client_contracts')
-        .where({ tenant, client_contract_id: newBilling.client_contract_id })
+      const db = tenantDb(trx, tenant);
+
+      const clientContract = await db.table('client_contracts')
+        .where({ client_contract_id: newBilling.client_contract_id })
         .first('template_contract_id', 'contract_id');
 
       if (!clientContract?.contract_id) {
@@ -367,8 +439,8 @@ export const addClientContractLine = withAuth(async (
       }
 
       // Get the template line to copy
-      const templateLine = await trx('contract_lines')
-        .where({ tenant, contract_line_id: newBilling.contract_line_id })
+      const templateLine = await db.table('contract_lines')
+        .where({ contract_line_id: newBilling.contract_line_id })
         .first();
 
       if (!templateLine) {
@@ -377,9 +449,8 @@ export const addClientContractLine = withAuth(async (
       const templateRecurringStorage = normalizeLiveRecurringStorage(templateLine);
 
       // Check if this contract already has a line from the same template
-      const existingLine = await trx('contract_lines')
+      const existingLine = await db.table('contract_lines')
         .where({
-          tenant,
           contract_id: clientContract.contract_id,
           is_active: true
         })
@@ -395,7 +466,7 @@ export const addClientContractLine = withAuth(async (
       const newContractLineId = trx.raw('gen_random_uuid()');
       const startDate = newBilling.start_date ? new Date(newBilling.start_date) : new Date();
 
-      const [created] = await trx('contract_lines')
+      const [created] = await db.table('contract_lines')
         .insert({
           contract_line_id: newContractLineId,
           tenant,
@@ -435,12 +506,14 @@ export const addClientContractLine = withAuth(async (
     });
   } catch (error: any) {
     console.error('Error adding client contract line:', error);
+    const expected = clientContractLineActionErrorFrom(error);
+    if (expected) return expected;
     if (error.code === 'ER_NO_SUCH_TABLE') {
-      throw new Error('Database table not found');
+      return actionError('Client contract line storage is unavailable. Please try again later.');
     } else if (error.code === 'ER_BAD_FIELD_ERROR') {
-      throw new Error('Invalid database field');
+      return actionError('Client contract line data is invalid. Please refresh and try again.');
     } else {
-      throw new Error(error.message || 'Failed to add client contract line');
+      return actionError('Failed to add client contract line.');
     }
   }
 });
@@ -449,8 +522,10 @@ export const removeClientContractLine = withAuth(async (
   _user,
   { tenant },
   clientContractLineId: string
-): Promise<void> => {
+): Promise<ClientContractLineMutationResult> => {
   try {
+    await assertCanUpdateClientContractLines(_user);
+
     const { knex: db } = await createTenantKnex();
     const identity = ensureAssignmentScopedIdentity(parseClientContractLineIdentity(clientContractLineId));
 
@@ -463,10 +538,9 @@ export const removeClientContractLine = withAuth(async (
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       await assertSharedHeaderMutationIsExplicit(trx, tenant, identity);
-      return await trx('contract_lines')
+      return await tenantDb(trx, tenant).table('contract_lines')
         .where({
           contract_line_id: identity.contractLineId,
-          tenant
         })
         .update({ is_active: false }); // end_date removed as it's not on contract_lines
     });
@@ -476,8 +550,9 @@ export const removeClientContractLine = withAuth(async (
     }
   } catch (error: any) {
     console.error('Error removing client contract line:', error);
-    // Preserve the original error message if it exists
-    throw new Error(error.message || 'Failed to remove client contract line');
+    const expected = clientContractLineActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -486,8 +561,10 @@ export const editClientContractLine = withAuth(async (
   { tenant },
   clientContractLineId: string,
   updates: Partial<IClientContractLine>
-): Promise<void> => {
+): Promise<ClientContractLineMutationResult> => {
   try {
+    await assertCanUpdateClientContractLines(_user);
+
     const { knex: db } = await createTenantKnex();
     const identity = ensureAssignmentScopedIdentity(parseClientContractLineIdentity(clientContractLineId));
 
@@ -533,10 +610,9 @@ export const editClientContractLine = withAuth(async (
         ...validUpdates
       } = updateData as any;
 
-      return await trx('contract_lines')
+      return await tenantDb(trx, tenant).table('contract_lines')
         .where({
           contract_line_id: identity.contractLineId,
-          tenant
         })
         .update(validUpdates);
     });
@@ -546,7 +622,8 @@ export const editClientContractLine = withAuth(async (
     }
   } catch (error: any) {
     console.error('Error editing client contract line:', error);
-    // Preserve the original error message if it exists
-    throw new Error(error.message || 'Failed to edit client contract line');
+    const expected = clientContractLineActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });

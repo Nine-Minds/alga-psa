@@ -6,6 +6,7 @@ import type { AddOnKey } from '@alga-psa/types';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
 import { getStripeService, AppleIapBillingError } from '../stripe/StripeService';
 import { getConnection } from '@/lib/db/db';
+import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { sendCancellationRequestEmail } from '@alga-psa/email/sendCancellationRequestEmail';
 import {
@@ -19,6 +20,25 @@ import {
   IStripeCustomer,
   IScheduledLicenseChange,
 } from 'server/src/interfaces/subscription.interfaces';
+
+async function hasAccountManagementAccess(): Promise<boolean> {
+  return await checkAccountManagementPermission();
+}
+
+function permissionDenied(error = 'Permission denied') {
+  return { success: false as const, error };
+}
+
+function appleIapBillingActionMessage(error: AppleIapBillingError): string {
+  switch (error.code) {
+    case 'iap_upgrade_requires_transition':
+      return 'Plan changes require moving this Apple-managed subscription to direct billing first.';
+    case 'iap_addons_unavailable':
+      return 'Add-ons are not available while your subscription is managed by Apple.';
+    case 'iap_seat_changes_unavailable':
+      return 'Seat changes are not available while your subscription is managed by Apple.';
+  }
+}
 
 /**
  * Server action to get the current license usage for the session tenant
@@ -49,7 +69,7 @@ export async function getLicenseUsageAction(): Promise<{
     console.error('Error getting license usage:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get license usage',
+      error: 'Failed to get license usage',
     };
   }
 }
@@ -83,6 +103,10 @@ export async function getInvoicePreviewAction(
         success: false,
         error: 'Not authenticated',
       };
+    }
+
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
     }
 
     // Validate quantity - must be a positive integer
@@ -124,7 +148,7 @@ export async function getInvoicePreviewAction(
     logger.error('[getInvoicePreviewAction] Error getting invoice preview:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get invoice preview',
+      error: 'Failed to get invoice preview',
     };
   }
 }
@@ -155,6 +179,10 @@ export async function createLicenseCheckoutSessionAction(
         success: false,
         error: 'Not authenticated',
       };
+    }
+
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
     }
 
     // Validate quantity - must be a positive integer
@@ -225,7 +253,7 @@ export async function createLicenseCheckoutSessionAction(
       } else if (error.message.includes('insufficient')) {
         errorMessage = 'Payment failed due to insufficient funds. Please try a different payment method.';
       } else {
-        errorMessage = error.message;
+        errorMessage = 'Failed to process license update. Please try again.';
       }
     }
 
@@ -274,15 +302,15 @@ export async function getLicensePricingAction(): Promise<{
     }
 
     const knex = await getConnection(session.user.tenant);
+    const db = tenantDb(knex, session.user.tenant);
 
     // Try to get pricing from the tenant's actual subscription
-    const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where({ tenant: session.user.tenant })
+    const subscription = await db.table<IStripeSubscription>('stripe_subscriptions')
       .whereIn('status', ['active', 'trialing', 'past_due'])
       .first();
 
     if (subscription) {
-      const price = await knex<IStripePrice>('stripe_prices')
+      const price = await db.table<IStripePrice>('stripe_prices')
         .where({ stripe_price_id: subscription.stripe_price_id })
         .first();
 
@@ -330,7 +358,7 @@ export async function getLicensePricingAction(): Promise<{
     logger.error('[getLicensePricingAction] Error getting license pricing:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get license pricing',
+      error: 'Failed to get license pricing',
     };
   }
 }
@@ -350,25 +378,27 @@ export async function getSubscriptionInfoAction(): Promise<IGetSubscriptionInfoR
       };
     }
 
-    const knex = await getConnection(session.user.tenant);
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('Permission denied');
+    }
 
-    // Get active subscription with related price info
-    const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where({
-        tenant: session.user.tenant,
-        status: 'active',
-      })
+    const knex = await getConnection(session.user.tenant);
+    const db = tenantDb(knex, session.user.tenant);
+
+    // Get active, trialing, or past_due subscription with related price info
+    const subscription = await db.table<IStripeSubscription>('stripe_subscriptions')
+      .whereIn('status', ['active', 'trialing', 'past_due'])
       .first();
 
     if (!subscription) {
       return {
         success: false,
-        error: 'No active subscription found',
+        error: 'No active, trialing, or past due subscription found',
       };
     }
 
     // Get price info
-    const price = await knex<IStripePrice>('stripe_prices')
+    const price = await db.table<IStripePrice>('stripe_prices')
       .where({
         stripe_price_id: subscription.stripe_price_id,
       })
@@ -403,7 +433,7 @@ export async function getSubscriptionInfoAction(): Promise<IGetSubscriptionInfoR
     logger.error('[getSubscriptionInfoAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get subscription info',
+      error: 'Failed to get subscription info',
     };
   }
 }
@@ -423,7 +453,12 @@ export async function getPaymentMethodInfoAction(): Promise<IGetPaymentMethodRes
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
+    }
+
     const knex = await getConnection(session.user.tenant);
+    const db = tenantDb(knex, session.user.tenant);
     const stripeService = getStripeService();
     if (!(await stripeService.isConfigured())) {
       return {
@@ -433,8 +468,7 @@ export async function getPaymentMethodInfoAction(): Promise<IGetPaymentMethodRes
     }
 
     // Get customer from database
-    const customer = await knex<IStripeCustomer>('stripe_customers')
-      .where({ tenant: session.user.tenant })
+    const customer = await db.table<IStripeCustomer>('stripe_customers')
       .first();
 
     if (!customer) {
@@ -483,7 +517,7 @@ export async function getPaymentMethodInfoAction(): Promise<IGetPaymentMethodRes
     logger.error('[getPaymentMethodInfoAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get payment method',
+      error: 'Failed to get payment method',
     };
   }
 }
@@ -503,7 +537,12 @@ export async function getRecentInvoicesAction(limit: number = 10): Promise<IGetI
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
+    }
+
     const knex = await getConnection(session.user.tenant);
+    const db = tenantDb(knex, session.user.tenant);
     const stripeService = getStripeService();
     if (!(await stripeService.isConfigured())) {
       return {
@@ -513,8 +552,7 @@ export async function getRecentInvoicesAction(limit: number = 10): Promise<IGetI
     }
 
     // Get customer from database
-    const customer = await knex<IStripeCustomer>('stripe_customers')
-      .where({ tenant: session.user.tenant })
+    const customer = await db.table<IStripeCustomer>('stripe_customers')
       .first();
 
     if (!customer) {
@@ -560,7 +598,7 @@ export async function getRecentInvoicesAction(limit: number = 10): Promise<IGetI
     logger.error('[getRecentInvoicesAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get invoices',
+      error: 'Failed to get invoices',
     };
   }
 }
@@ -580,7 +618,12 @@ export async function createCustomerPortalSessionAction(): Promise<IUpdatePaymen
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
+    }
+
     const knex = await getConnection(session.user.tenant);
+    const db = tenantDb(knex, session.user.tenant);
     const stripeService = getStripeService();
     if (!(await stripeService.isConfigured())) {
       return {
@@ -590,8 +633,7 @@ export async function createCustomerPortalSessionAction(): Promise<IUpdatePaymen
     }
 
     // Get customer from database
-    const customer = await knex<IStripeCustomer>('stripe_customers')
-      .where({ tenant: session.user.tenant })
+    const customer = await db.table<IStripeCustomer>('stripe_customers')
       .first();
 
     if (!customer) {
@@ -618,7 +660,7 @@ export async function createCustomerPortalSessionAction(): Promise<IUpdatePaymen
     logger.error('[createCustomerPortalSessionAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to create portal session',
+      error: 'Failed to create portal session',
     };
   }
 }
@@ -644,30 +686,34 @@ export async function sendCancellationFeedbackAction(
       };
     }
 
-    const knex = await getConnection(session.user.tenant);
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to cancel the subscription');
+    }
 
-    // Get subscription details
-    const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where({ tenant: session.user.tenant, status: 'active' })
+    const knex = await getConnection(session.user.tenant);
+    const db = tenantDb(knex, session.user.tenant);
+
+    // Get subscription details (active, trialing, or past_due — all are cancelable)
+    const subscription = await db.table<IStripeSubscription>('stripe_subscriptions')
+      .whereIn('status', ['active', 'trialing', 'past_due'])
       .first();
 
     if (!subscription) {
       return {
         success: false,
-        error: 'No active subscription found',
+        error: 'No active, trialing, or past due subscription found',
       };
     }
 
     // Get pricing info
-    const price = await knex<IStripePrice>('stripe_prices')
+    const price = await db.table<IStripePrice>('stripe_prices')
       .where({ stripe_price_id: subscription.stripe_price_id })
       .first();
 
     const monthlyCost = price ? (price.unit_amount / 100) * subscription.quantity : 0;
 
     // Get tenant info
-    const tenant = await knex('tenants')
-      .where({ tenant: session.user.tenant })
+    const tenant = await db.table('tenants')
       .first('client_name', 'email');
 
     // Import the email function dynamically
@@ -700,7 +746,7 @@ export async function sendCancellationFeedbackAction(
     logger.error('[sendCancellationFeedbackAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to send cancellation feedback',
+      error: 'Failed to send cancellation feedback',
     };
   }
 }
@@ -720,7 +766,12 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to cancel the subscription');
+    }
+
     const knex = await getConnection(session.user.tenant);
+    const db = tenantDb(knex, session.user.tenant);
     const stripeService = getStripeService();
     if (!(await stripeService.isConfigured())) {
       return {
@@ -729,18 +780,18 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
       };
     }
 
-    // Get active subscription
-    const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where({
-        tenant: session.user.tenant,
-        status: 'active',
-      })
+    // Get active, trialing, or past_due subscription. Trialing subs cancel just like
+    // active ones via cancel_at_period_end: Stripe treats the trial as the current
+    // period, so the subscription cancels at trial_end and the customer is never
+    // charged. past_due subs cancel at period end too, stopping further dunning.
+    const subscription = await db.table<IStripeSubscription>('stripe_subscriptions')
+      .whereIn('status', ['active', 'trialing', 'past_due'])
       .first();
 
     if (!subscription) {
       return {
         success: false,
-        error: 'No active subscription found',
+        error: 'No active, trialing, or past due subscription found',
       };
     }
 
@@ -777,7 +828,7 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
 
     // Update local database (clear schedule metadata if present)
     const { scheduled_quantity, schedule_id, ...remainingMetadata } = subscription.metadata || {};
-    await knex<IStripeSubscription>('stripe_subscriptions')
+    await db.table<IStripeSubscription>('stripe_subscriptions')
       .where({
         stripe_subscription_id: subscription.stripe_subscription_id,
       })
@@ -795,9 +846,8 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
 
     // Send cancellation request received email (fire-and-forget, don't block the response)
     try {
-      const tenant = await knex('tenants')
+      const tenant = await db.table('tenants')
         .select('email', 'client_name', 'company_name')
-        .where({ tenant: session.user.tenant })
         .first();
 
       if (tenant?.email) {
@@ -828,7 +878,7 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
     logger.error('[cancelSubscriptionAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to cancel subscription',
+      error: 'Failed to cancel subscription',
     };
   }
 }
@@ -839,10 +889,10 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
  */
 export async function getActiveUserCount(tenantId: string): Promise<number> {
   const knex = await getConnection(tenantId);
+  const db = tenantDb(knex, tenantId);
 
-  const result = await knex('users')
+  const result = await db.table('users')
     .where({
-      tenant: tenantId,
       user_type: 'internal',
       is_inactive: false
     })
@@ -898,10 +948,10 @@ export async function reduceLicenseCount(
     }
 
     const knex = await getConnection(tenantId);
+    const db = tenantDb(knex, tenantId);
 
     // Get current license count
-    const tenant = await knex('tenants')
-      .where({ tenant: tenantId })
+    const tenant = await db.table('tenants')
       .first('licensed_user_count');
 
     if (!tenant) {
@@ -946,12 +996,9 @@ export async function reduceLicenseCount(
       };
     }
 
-    // Get subscription details for effective date
-    const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where({
-        tenant: tenantId,
-        status: 'active',
-      })
+    // Get subscription details for effective date (active or trialing)
+    const subscription = await db.table<IStripeSubscription>('stripe_subscriptions')
+      .whereIn('status', ['active', 'trialing'])
       .first();
 
     if (!subscription || !subscription.current_period_end) {
@@ -980,7 +1027,7 @@ export async function reduceLicenseCount(
     logger.error('[reduceLicenseCount] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to reduce license count',
+      error: 'Failed to reduce license count',
     };
   }
 }
@@ -1016,6 +1063,10 @@ export async function reduceLicenseCountAction(
       };
     }
 
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to reduce license count');
+    }
+
     logger.info(
       `[reduceLicenseCountAction] Reducing licenses for tenant ${session.user.tenant} to ${newQuantity}`
     );
@@ -1025,7 +1076,7 @@ export async function reduceLicenseCountAction(
     logger.error('[reduceLicenseCountAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to reduce license count',
+      error: 'Failed to reduce license count',
     };
   }
 }
@@ -1047,6 +1098,10 @@ export async function getScheduledLicenseChangesAction(): Promise<{
         success: false,
         error: 'Not authenticated',
       };
+    }
+
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('Permission denied');
     }
 
     logger.info(`[getScheduledLicenseChangesAction] Getting scheduled changes for tenant ${session.user.tenant}`);
@@ -1083,7 +1138,7 @@ export async function getScheduledLicenseChangesAction(): Promise<{
     logger.error('[getScheduledLicenseChangesAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get scheduled license changes',
+      error: 'Failed to get scheduled license changes',
     };
   }
 }
@@ -1120,7 +1175,7 @@ export async function upgradeTierAction(
       if (err instanceof AppleIapBillingError) {
         // UI should have routed to startIapUpgradeAction in this case, but
         // surface a clear error if someone clicked the wrong button.
-        return { success: false, error: err.message };
+        return { success: false, error: appleIapBillingActionMessage(err) };
       }
       throw err;
     }
@@ -1128,7 +1183,7 @@ export async function upgradeTierAction(
     logger.error('[upgradeTierAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to upgrade plan',
+      error: 'Failed to upgrade plan',
     };
   }
 }
@@ -1162,7 +1217,7 @@ export async function downgradeTierAction(
     logger.error('[downgradeTierAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to downgrade plan',
+      error: 'Failed to downgrade plan',
     };
   }
 }
@@ -1216,7 +1271,7 @@ export async function purchaseAddOnAction(
     logger.error('[purchaseAddOnAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to purchase add-on',
+      error: 'Failed to purchase add-on',
     };
   }
 }
@@ -1249,7 +1304,7 @@ export async function cancelAddOnAction(
     logger.error('[cancelAddOnAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to cancel add-on',
+      error: 'Failed to cancel add-on',
     };
   }
 }
@@ -1290,7 +1345,7 @@ export async function getUpgradePreviewAction(
     logger.error('[getUpgradePreviewAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get upgrade preview',
+      error: 'Failed to get upgrade preview',
     };
   }
 }
@@ -1322,7 +1377,7 @@ export async function switchBillingIntervalAction(
     logger.error('[switchBillingIntervalAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to switch billing interval',
+      error: 'Failed to switch billing interval',
     };
   }
 }
@@ -1359,7 +1414,7 @@ export async function getIntervalSwitchPreviewAction(
     logger.error('[getIntervalSwitchPreviewAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get interval switch preview',
+      error: 'Failed to get interval switch preview',
     };
   }
 }
@@ -1394,7 +1449,7 @@ export async function startPremiumTrialAction(
     logger.error('[startPremiumTrialAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to start Premium trial',
+      error: 'Failed to start Premium trial',
     };
   }
 }
@@ -1426,8 +1481,8 @@ export async function startSelfServicePremiumTrialAction(): Promise<{ success: b
 
     // Verify the tenant is on an active (non-trialing) Pro subscription
     const knex = await getConnection(session.user.tenant);
-    const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
-      .where('tenant', session.user.tenant)
+    const db = tenantDb(knex, session.user.tenant);
+    const subscription = await db.table<IStripeSubscription>('stripe_subscriptions')
       .whereIn('status', ['active', 'trialing'])
       .first();
 
@@ -1450,7 +1505,7 @@ export async function startSelfServicePremiumTrialAction(): Promise<{ success: b
     logger.error('[startSelfServicePremiumTrialAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to start Premium trial',
+      error: 'Failed to start Premium trial',
     };
   }
 }
@@ -1481,7 +1536,7 @@ export async function startSoloProTrialAction(): Promise<{ success: boolean; err
     logger.error('[startSoloProTrialAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to start Pro trial',
+      error: 'Failed to start Pro trial',
     };
   }
 }
@@ -1515,7 +1570,7 @@ export async function confirmPremiumTrialAction(
     logger.error('[confirmPremiumTrialAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to confirm Premium upgrade',
+      error: 'Failed to confirm Premium upgrade',
     };
   }
 }
@@ -1546,7 +1601,7 @@ export async function revertPremiumTrialAction(): Promise<{ success: boolean; er
     logger.error('[revertPremiumTrialAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to cancel Premium trial',
+      error: 'Failed to cancel Premium trial',
     };
   }
 }
@@ -1565,8 +1620,8 @@ export async function sendPremiumTrialRequestAction(
     }
 
     const knex = await getConnection(session.user.tenant);
-    const tenant = await knex('tenants')
-      .where('tenant', session.user.tenant)
+    const tenant = await tenantDb(knex, session.user.tenant)
+      .table('tenants')
       .select('tenant', 'client_name', 'email', 'plan')
       .first();
 
@@ -1592,7 +1647,7 @@ export async function sendPremiumTrialRequestAction(
     logger.error('[sendPremiumTrialRequestAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to send trial request',
+      error: 'Failed to send trial request',
     };
   }
 }
@@ -1629,8 +1684,8 @@ export async function getIapBillingContextAction(): Promise<{
     }
 
     const knex = await getConnection(session.user.tenant);
-    const tenant = await knex('tenants')
-      .where({ tenant: session.user.tenant })
+    const db = tenantDb(knex, session.user.tenant);
+    const tenant = await db.table('tenants')
       .first<{ billing_source: string | null }>('billing_source');
 
     const billingSource = (tenant?.billing_source ?? 'stripe') as 'stripe' | 'apple_iap';
@@ -1639,8 +1694,7 @@ export async function getIapBillingContextAction(): Promise<{
       return { success: true, data: { billingSource, iap: null } };
     }
 
-    const iap = await knex('apple_iap_subscriptions')
-      .where({ tenant: session.user.tenant })
+    const iap = await db.table('apple_iap_subscriptions')
       .whereIn('status', ['active', 'grace_period'])
       .orderBy('created_at', 'desc')
       .first<{
@@ -1676,7 +1730,7 @@ export async function getIapBillingContextAction(): Promise<{
     logger.error('[getIapBillingContextAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get billing context',
+      error: 'Failed to get billing context',
     };
   }
 }
@@ -1748,7 +1802,7 @@ export async function startIapUpgradeAction(
     logger.error('[startIapUpgradeAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to start Apple upgrade',
+      error: 'Failed to start Apple upgrade',
     };
   }
 }
@@ -1782,7 +1836,7 @@ export async function cancelIapTransitionAction(): Promise<{
     logger.error('[cancelIapTransitionAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to cancel transition',
+      error: 'Failed to cancel transition',
     };
   }
 }

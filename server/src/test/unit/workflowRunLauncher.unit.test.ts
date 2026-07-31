@@ -37,8 +37,10 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   }
 }));
 
-vi.mock('@alga-psa/workflows/runtime', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/workflows/runtime')>();
+// The launcher imports the runtime from '@alga-psa/workflows/runtime/core',
+// so the mock must target that module id.
+vi.mock('@alga-psa/workflows/runtime/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/workflows/runtime/core')>();
   class WorkflowRuntimeV2Mock {
     async startRun(...args: unknown[]) {
       return startRunMock(...args);

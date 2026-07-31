@@ -3,6 +3,31 @@ import type { KeyboardTypeOptions } from "react-native";
 import { Text, TextInput as RNTextInput, View } from "react-native";
 import { useTheme } from "../ThemeContext";
 
+export type NumericMode = "integer" | "signed" | "decimal" | "signedDecimal";
+
+// iPads present a full keyboard regardless of keyboardType, so numeric fields
+// must sanitize what they accept rather than trust the keyboard layout.
+export function sanitizeNumericText(text: string, mode: NumericMode): string {
+  if (mode === "integer") return text.replace(/[^0-9]/g, "");
+  if (mode === "signed") {
+    const negative = text.trimStart().startsWith("-");
+    const digits = text.replace(/[^0-9]/g, "");
+    return negative ? `-${digits}` : digits;
+  }
+  const negative = mode === "signedDecimal" && text.trimStart().startsWith("-");
+  const normalized = text.replace(/,/g, ".").replace(/[^0-9.]/g, "");
+  const [head, ...rest] = normalized.split(".");
+  const digits = rest.length > 0 ? `${head}.${rest.join("")}` : head;
+  return negative ? `-${digits}` : digits;
+}
+
+const NUMERIC_KEYBOARDS: Record<NumericMode, KeyboardTypeOptions> = {
+  integer: "number-pad",
+  signed: "numbers-and-punctuation",
+  decimal: "decimal-pad",
+  signedDecimal: "numbers-and-punctuation",
+};
+
 export function TextInput({
   value,
   onChangeText,
@@ -14,6 +39,7 @@ export function TextInput({
   multiline = false,
   minHeight,
   keyboardType,
+  numericMode,
   autoCapitalize,
   autoCorrect,
   accessibilityLabel,
@@ -29,6 +55,8 @@ export function TextInput({
   multiline?: boolean;
   minHeight?: number;
   keyboardType?: KeyboardTypeOptions;
+  /** Restrict input to numbers; also picks a matching keyboard when keyboardType is not set. */
+  numericMode?: NumericMode;
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
   autoCorrect?: boolean;
   accessibilityLabel?: string;
@@ -36,6 +64,10 @@ export function TextInput({
 }) {
   const theme = useTheme();
   const hasError = Boolean(error);
+  const handleChangeText = numericMode
+    ? (text: string) => onChangeText(sanitizeNumericText(text, numericMode))
+    : onChangeText;
+  const effectiveKeyboardType = keyboardType ?? (numericMode ? NUMERIC_KEYBOARDS[numericMode] : undefined);
 
   return (
     <View>
@@ -63,12 +95,12 @@ export function TextInput({
       >
         <RNTextInput
           value={value}
-          onChangeText={onChangeText}
+          onChangeText={handleChangeText}
           placeholder={placeholder}
           placeholderTextColor={theme.colors.placeholder}
           editable={!disabled}
           multiline={multiline}
-          keyboardType={keyboardType}
+          keyboardType={effectiveKeyboardType}
           autoCapitalize={autoCapitalize}
           autoCorrect={autoCorrect}
           accessibilityLabel={accessibilityLabel ?? label}

@@ -1,7 +1,7 @@
-'use server'
-
+// Internal server-side helpers. Callers must enforce auth/RBAC before invoking.
 import { revalidatePath } from 'next/cache';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { IInteraction } from '@alga-psa/types';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildInteractionLoggedPayload } from '@alga-psa/workflow-streams';
@@ -38,9 +38,8 @@ function maybeUserActor(user: any) {
 }
 
 export async function getDefaultInteractionStatusId(trx: Knex.Transaction, tenant: string): Promise<string> {
-  const defaultStatus = await trx('statuses')
+  const defaultStatus = await tenantDb(trx, tenant).table('statuses')
     .where({
-      tenant,
       is_default: true,
       status_type: 'interaction'
     })
@@ -99,8 +98,8 @@ export async function createInteractionRecord({
 
   let resolvedClientId = interactionData.client_id;
   if (!resolvedClientId && interactionData.contact_name_id) {
-    const contact = await trx('contacts')
-      .where({ tenant, contact_name_id: interactionData.contact_name_id })
+    const contact = await tenantDb(trx, tenant).table('contacts')
+      .where({ contact_name_id: interactionData.contact_name_id })
       .select('client_id')
       .first();
     resolvedClientId = contact?.client_id ?? null;
@@ -112,20 +111,41 @@ export async function createInteractionRecord({
 
   const { interaction_id: _ignoredInteractionId, ...insertData } = interactionData;
 
-  return await InteractionModel.addInteraction({
+  if (interactionData.opportunity_id) {
+    const opportunity = await tenantDb(trx, tenant).table('opportunities')
+      .where({ opportunity_id: interactionData.opportunity_id })
+      .select('client_id')
+      .first();
+    if (!opportunity || opportunity.client_id !== resolvedClientId) {
+      throw new Error('Opportunity not found for interaction client');
+    }
+  }
+
+  const interaction = await InteractionModel.addInteraction({
     ...insertData,
     client_id: resolvedClientId,
     status_id,
     tenant,
     interaction_date: interactionData.interaction_date ?? new Date(),
   } as Omit<IInteraction, 'interaction_id'>, tenant, trx);
+
+  if (interaction.opportunity_id) {
+    const activityAt = interaction.interaction_date instanceof Date
+      ? interaction.interaction_date.toISOString()
+      : new Date(interaction.interaction_date).toISOString();
+    await tenantDb(trx, tenant).table('opportunities')
+      .where({ opportunity_id: interaction.opportunity_id })
+      .update({ last_activity_at: activityAt, updated_at: new Date().toISOString() });
+  }
+
+  return interaction;
 }
 
 export async function publishInteractionCreatedSideEffects({
   tenant,
   user,
   interaction,
-  changedFields = ['title', 'notes', 'client_id', 'contact_name_id', 'ticket_id'],
+  changedFields = ['title', 'notes', 'client_id', 'contact_name_id', 'ticket_id', 'opportunity_id'],
 }: PublishInteractionSideEffectsParams): Promise<void> {
   const occurredAt =
     interaction.interaction_date instanceof Date

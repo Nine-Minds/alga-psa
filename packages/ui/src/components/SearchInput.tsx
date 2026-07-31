@@ -90,7 +90,7 @@ export function SearchInput({
       <input
         {...textProps}
         type="text"
-        className={`border-2 border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary/20 rounded-md pl-10 pr-8 py-2 outline-none bg-white ${className}`}
+        className={`border border-border focus:border-transparent focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] rounded-md pl-10 pr-8 py-2 outline-none bg-white ${className}`}
         value={value}
         onChange={handleChange}
         ref={ref}

@@ -322,7 +322,7 @@ export const ContactPicker = ({
                       contactId={contact.contact_name_id}
                       contactName={contact.full_name}
                       avatarUrl={contact.avatarUrl || null}
-                      size="xs"
+                      size="sm"
                     />
                     <div className="flex-1">
                       <div>{contact.full_name}</div>

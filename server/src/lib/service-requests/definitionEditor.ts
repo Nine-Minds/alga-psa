@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import {
   listServiceRequestExecutionProviders,
   listServiceRequestFormBehaviorProviders,
@@ -95,6 +96,7 @@ export async function getServiceRequestDefinitionEditorData(
   tenant: string,
   definitionId: string
 ): Promise<ServiceRequestDefinitionEditorData | null> {
+  const db = tenantDb(knex, tenant);
   const availableExecutionProviders = listServiceRequestExecutionProviders().map((provider) => ({
     key: provider.key,
     displayName: provider.displayName,
@@ -109,8 +111,8 @@ export async function getServiceRequestDefinitionEditorData(
     displayName: provider.displayName,
   }));
 
-  const definition = (await knex('service_request_definitions')
-    .where({ tenant, definition_id: definitionId })
+  const definition = (await db.table('service_request_definitions')
+    .where({ definition_id: definitionId })
     .first()) as ServiceRequestDefinitionEditorRow | undefined;
 
   if (!definition) {
@@ -118,24 +120,23 @@ export async function getServiceRequestDefinitionEditorData(
   }
 
   const [availableCategories, categoryRow, serviceRow, latestPublishedVersion] = await Promise.all([
-    knex('service_categories')
-      .where({ tenant })
+    db.table('service_categories')
       .orderBy('category_name', 'asc')
       .select('category_id', 'category_name') as Promise<ServiceRequestCategoryRow[]>,
     definition.category_id
-      ? knex('service_categories')
-          .where({ tenant, category_id: definition.category_id })
+      ? db.table('service_categories')
+          .where({ category_id: definition.category_id })
           .select('category_name')
           .first<{ category_name: string }>()
       : Promise.resolve(undefined),
     definition.linked_service_id
-      ? knex('service_catalog')
-          .where({ tenant, service_id: definition.linked_service_id })
+      ? db.table('service_catalog')
+          .where({ service_id: definition.linked_service_id })
           .select('service_name')
           .first<{ service_name: string }>()
       : Promise.resolve(undefined),
-    knex('service_request_definition_versions')
-      .where({ tenant, definition_id: definitionId })
+    db.table('service_request_definition_versions')
+      .where({ definition_id: definitionId })
       .orderBy('version_number', 'desc')
       .select('version_number', 'published_at', 'published_by')
       .first<ServiceRequestPublishedVersionRow>(),

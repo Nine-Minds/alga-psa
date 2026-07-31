@@ -19,20 +19,16 @@ The supported v1 appliance has four main layers:
 
 The setup/status UI sits on top of these layers and hides raw command surfaces for normal use.
 
-Talos artifacts still exist in this repository for legacy internal/support work, but they are not the supported customer install path for Ubuntu v1.
-
 ## Core Directories
 
 Relevant repo paths:
 
 - `ee/appliance/`
-  - appliance release manifests, Flux topology, host service, Ubuntu ISO workspace, and legacy support scripts
+  - Flux topology, host service, Ubuntu ISO workspace, and support scripts
 - `ee/appliance/ubuntu-iso/`
   - Ubuntu installer ISO build workspace
 - `ee/appliance/host-service/`
   - setup/status/update service used by the Ubuntu appliance
-- `ee/appliance/releases/`
-  - appliance release manifests and channel pointers
 - `ee/appliance/flux/`
   - GitOps topology and profile values
 - `ee/appliance/flux/profiles/single-node/`
@@ -45,28 +41,34 @@ Relevant repo paths:
 An appliance release couples:
 
 - appliance release version
-- app release version
-- app release branch
 - exact pinned application image tags
-- appliance values profile
+- control-plane image tag
+- Flux config bundle digest
+- chart versions
+- appliance values profile and profile values
 
-The release contract is stored in:
-
-```text
-ee/appliance/releases/<release>/release.json
-```
-
-This is the authoritative install and upgrade contract. Use the release manifest, not remembered ad hoc image tags or URLs.
-
-The active release manifest no longer carries Talos ISO, Talos installer, Kubernetes version, or OS image metadata. Ubuntu/k3s host installation is handled by the appliance installer and host service, while application image selection is release-manifest driven.
-
-Channels are separate pointers under:
+Release metadata is published as an OCI artifact:
 
 ```text
-ee/appliance/releases/channels/<channel>.json
+ghcr.io/nine-minds/alga-appliance-release:<version>
+ghcr.io/nine-minds/alga-appliance-release:<channel>
 ```
 
-They select a `releaseVersion` and Flux source `repoBranch`.
+The release manifest JSON is the OCI artifact config blob. Channels such as `stable` and `nightly` are OCI tags. The local `ee/appliance/releases` tree and local publish scripts have been removed.
+
+Publishing is owned by the Argo workflow in:
+
+```text
+~/nm-kube-config/alga-psa/workflows/composite/alga-psa-build-migrate-deploy.yaml
+```
+
+For stable channel publishing, use:
+
+```text
+promote-release=true
+publish-appliance-release=true
+appliance-release-channel=stable
+```
 
 ## Config And Access Files
 
@@ -84,9 +86,7 @@ Common files include:
 - install state
 - release selection
 - setup/status tokens
-- packaged Flux/profile/release assets
-
-Legacy Talos scripts may still persist operator files under `~/.alga-psa-appliance/<site-id>/`, but that is not the primary supported Ubuntu install path.
+- packaged Flux/profile assets
 
 ## Bootstrap Model
 
@@ -94,23 +94,21 @@ Supported bootstrap is driven by the Ubuntu appliance setup/status service.
 
 High-level responsibilities include:
 
-- validate DNS and outbound access to GitHub/GHCR
+- validate DNS and outbound access to GHCR
 - install k3s
 - install storage prerequisites
 - install Flux
-- resolve channel and release metadata
+- resolve channel and release metadata from OCI
 - render runtime values from the selected release manifest
 - apply release-selection ConfigMaps and secrets
-- apply the Flux GitRepository/Kustomization source
+- apply the Flux OCIRepository/Kustomization source
 - surface progress and blockers through the status UI
-
-Legacy Talos bootstrap scripts remain in `ee/appliance/scripts/` for internal support and engineering fallbacks, but they should not be treated as the default customer workflow.
 
 ## Release Selection And Upgrades
 
 Customer-facing upgrades are release-based, not raw-tag-based.
 
-The setup/status service resolves a channel, fetches the selected release manifest, patches runtime values ConfigMaps with pinned image tags, records release selection, and asks Flux/Helm to reconcile.
+The setup/status service resolves a channel, fetches the selected release manifest from OCI, patches runtime values ConfigMaps with pinned image tags, records release selection, updates the pinned Flux config bundle digest, and asks Flux/Helm to reconcile.
 
 Important behavior:
 
@@ -123,7 +121,7 @@ Important behavior:
 The appliance uses three key namespaces:
 
 - `flux-system`
-  - Flux controllers and Git source objects
+  - Flux controllers and OCI source objects
 - `alga-system`
   - appliance release coordination and Helm release state
 - `msp`
@@ -169,8 +167,8 @@ This is deliberately a practical operator model, not a full cluster log backend.
 The appliance assumes:
 
 - stable host reachability during setup
-- working DNS resolution for GitHub and GHCR
-- outbound HTTPS access to GitHub/GHCR or a supported proxy path
+- working DNS resolution for GHCR
+- outbound HTTPS access to GHCR or a supported proxy path
 - a known public app URL configured during setup
 
 The app URL is injected into runtime values and used for public-facing application URL settings.
@@ -185,12 +183,12 @@ Persistent application state lives on PVC-backed storage. Reset and fresh-instal
 
 k3s provides the Kubernetes runtime. Flux owns application reconciliation.
 
-Flux applies the appliance topology and Helm releases from:
+Flux applies the appliance topology and Helm releases from the pinned config bundle referenced by the selected release manifest. Source content corresponds to:
 
 - `ee/appliance/flux/base/`
 - `ee/appliance/flux/profiles/single-node/`
 
-The status view summarizes Flux and Helm health, but the underlying deployment model remains GitOps-driven.
+The status view summarizes Flux and Helm health, but the underlying deployment model remains GitOps-style reconciliation from OCI artifacts.
 
 ## Support Bundles
 
@@ -203,23 +201,22 @@ The bundle is meant to capture enough data to diagnose:
 - workload failures
 - storage and bootstrap problems
 
-Legacy Talos node diagnostics may still be collected when a Talos context is explicitly supplied, but they are not part of the supported Ubuntu appliance baseline.
-
 ## Lower-Level Commands
 
 The setup/status UI is the preferred interface.
 
 Lower-level scripts remain available for advanced support and automation:
 
-- `ee/appliance/scripts/upgrade-appliance.sh`
 - `ee/appliance/scripts/reset-appliance-data.sh`
 - `ee/appliance/scripts/collect-support-bundle.sh`
+- `ee/appliance/scripts/repair-release.sh`
 
-Talos-era scripts such as `bootstrap-appliance.sh` and `build-images.sh` are legacy/internal unless explicitly used by engineering or support.
+Install and app-channel update flows are not driven by local lifecycle scripts in this repository.
 
 ## Related Reading
 
 - `README.md`
 - `quick-start.md`
 - `operators-manual.md`
+- `architecture.md`
 - `../premise/README.md` — legacy Talos reference only

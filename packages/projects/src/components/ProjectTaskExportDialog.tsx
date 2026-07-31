@@ -6,7 +6,14 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Download, Check, FileSpreadsheet } from 'lucide-react';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { exportProjectTasksToCSV } from '../actions/projectTaskExportActions';
 import type { IProjectPhase } from '@alga-psa/types';
 import { useTranslation } from 'react-i18next';
@@ -42,6 +49,10 @@ const EXPORT_FIELDS = [
 ];
 
 const ALL_FIELD_KEYS = EXPORT_FIELDS.map(f => f.key);
+
+function isReturnedActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
   isOpen,
@@ -121,12 +132,21 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
 
     try {
       const orderedFields = ALL_FIELD_KEYS.filter(k => selectedFields.has(k));
-      const { csv, count } = await exportProjectTasksToCSV(
+      const result = await exportProjectTasksToCSV(
         projectId,
         isSelectionMode ? [] : Array.from(selectedPhaseIds),
         orderedFields,
         isSelectionMode ? Array.from(selectedTaskIds!) : undefined,
       );
+      if (isReturnedActionError(result)) {
+        const message = getErrorMessage(result);
+        setError(message);
+        setStep('configure');
+        handleError(result, message);
+        return;
+      }
+
+      const { csv, count } = result;
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -142,7 +162,7 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
       setExportedCount(count);
       setStep('complete');
     } catch (err) {
-      setError(err instanceof Error ? err.message : exportT('failed', 'Failed to export tasks'));
+      setError(exportT('failed', 'Failed to export tasks'));
       setStep('configure');
       handleError(err, exportT('failed', 'Failed to export tasks'));
     }
@@ -201,9 +221,8 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
             {isSelectionMode && (
               <div className="mb-4 rounded-lg border border-primary-200 bg-primary-50 dark:border-[rgb(var(--color-primary-700))] dark:bg-[rgb(var(--color-primary-900))] p-3">
                 <p className="text-sm text-primary-700 dark:text-[rgb(var(--color-primary-200))]">
-                  {exportT('selectedTasksNotice', 'Exporting {{count}} selected task{{plural}}.', {
+                  {exportT('selectedTasksNotice', 'Exporting {{count}} selected tasks.', {
                     count: selectedTaskIds!.size,
-                    plural: selectedTaskIds!.size === 1 ? '' : 's',
                   })}
                 </p>
               </div>
@@ -236,17 +255,16 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
                       checked={selectedPhaseIds.has(phase.phase_id)}
                       onChange={() => togglePhase(phase.phase_id)}
                       size="sm"
-                      containerClassName="mb-0"
                       skipRegistration
                     />
                   ))}
                 </div>
               </div>
               <p className="mt-1.5 text-xs text-gray-500 dark:text-[rgb(var(--color-text-500))]">
-                {exportT('phasesSelected', '{{selected}} of {{total}} phase{{plural}} selected', {
+                {exportT('phasesSelected', '{{selected}} of {{total}} phases selected', {
+                  count: phases.length,
                   selected: selectedPhaseIds.size,
                   total: phases.length,
-                  plural: phases.length === 1 ? '' : 's',
                 })}
               </p>
             </div>
@@ -289,7 +307,6 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
                       checked={selectedFields.has(field.key)}
                       onChange={() => toggleField(field.key)}
                       size="sm"
-                      containerClassName="mb-0"
                       skipRegistration
                     />
                   ))}
@@ -322,9 +339,8 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
             </div>
             <h3 className="text-lg font-medium mb-2">{exportT('completeTitle', 'Export Complete')}</h3>
             <p className="text-gray-600 dark:text-[rgb(var(--color-text-400))]">
-              {exportT('success', 'Successfully exported {{count}} task{{plural}} to CSV.', {
+              {exportT('success', 'Successfully exported {{count}} tasks to CSV.', {
                 count: exportedCount,
-                plural: exportedCount === 1 ? '' : 's',
               })}
             </p>
           </div>

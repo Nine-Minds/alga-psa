@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest';
-import { 
-  setupE2ETestEnvironment, 
-  E2ETestEnvironment 
+import { tenantDb } from '@alga-psa/db';
+import {
+  setupE2ETestEnvironment,
+  createTestUserWithPermissions,
+  E2ETestEnvironment
 } from '../utils/e2eTestSetup';
 import { 
   createTestTicket,
@@ -26,16 +28,21 @@ describe('Ticket API E2E Tests', () => {
   let statusIds: { open: string; inProgress: string; closed: string };
   let priorityIds: { low: string; medium: string; high: string };
   let boardId: string;
+  let secondaryUserId: string;
+  let extraAgentId: string;
+  let teamId: string;
+
+  function tenantTable(table: string) {
+    return tenantDb(env.db, env.tenant).table(table);
+  }
 
   beforeAll(async () => {
     env = await setupE2ETestEnvironment();
 
     // Set up test data - create necessary entities
-    const db = env.db;
-    
     // Get the default board created by setupE2ETestEnvironment
-    const existingBoard = await db('boards')
-      .where({ tenant: env.tenant, is_default: true })
+    const existingBoard = await tenantTable('boards')
+      .where({ is_default: true })
       .first();
     
     if (existingBoard) {
@@ -43,7 +50,7 @@ describe('Ticket API E2E Tests', () => {
     } else {
       // Create a test board if none exists
       boardId = uuidv4();
-      await db('boards').insert({
+      await tenantTable('boards').insert({
         board_id: boardId,
         board_name: 'Test Board',
         tenant: env.tenant,
@@ -52,14 +59,14 @@ describe('Ticket API E2E Tests', () => {
     }
 
     // Get existing statuses created by setupE2ETestEnvironment
-    const newStatus = await db('statuses')
-      .where({ tenant: env.tenant, board_id: boardId, name: 'New', status_type: 'ticket' })
+    const newStatus = await tenantTable('statuses')
+      .where({ board_id: boardId, name: 'New', status_type: 'ticket' })
       .first();
-    const inProgressStatus = await db('statuses')
-      .where({ tenant: env.tenant, board_id: boardId, name: 'In Progress', status_type: 'ticket' })
+    const inProgressStatus = await tenantTable('statuses')
+      .where({ board_id: boardId, name: 'In Progress', status_type: 'ticket' })
       .first();
-    const closedStatus = await db('statuses')
-      .where({ tenant: env.tenant, board_id: boardId, name: 'Closed', status_type: 'ticket' })
+    const closedStatus = await tenantTable('statuses')
+      .where({ board_id: boardId, name: 'Closed', status_type: 'ticket' })
       .first();
 
     statusIds = {
@@ -69,14 +76,14 @@ describe('Ticket API E2E Tests', () => {
     };
 
     // Get existing priorities created by setupE2ETestEnvironment
-    const lowPriority = await db('priorities')
-      .where({ tenant: env.tenant, priority_name: 'Low' })
+    const lowPriority = await tenantTable('priorities')
+      .where({ priority_name: 'Low' })
       .first();
-    const mediumPriority = await db('priorities')
-      .where({ tenant: env.tenant, priority_name: 'Medium' })
+    const mediumPriority = await tenantTable('priorities')
+      .where({ priority_name: 'Medium' })
       .first();
-    const highPriority = await db('priorities')
-      .where({ tenant: env.tenant, priority_name: 'High' })
+    const highPriority = await tenantTable('priorities')
+      .where({ priority_name: 'High' })
       .first();
 
     priorityIds = {
@@ -86,13 +93,32 @@ describe('Ticket API E2E Tests', () => {
     };
     
     // Priorities should already be created by setupE2ETestEnvironment
+
+    // Extra internal users + a team for the assignment / agent / team suites.
+    secondaryUserId = await createTestUserWithPermissions(env.db, env.tenant, []);
+    extraAgentId = await createTestUserWithPermissions(env.db, env.tenant, []);
+
+    teamId = uuidv4();
+    await tenantTable('teams').insert({
+      tenant: env.tenant,
+      team_id: teamId,
+      team_name: `Test Team ${teamId}`,
+      manager_id: env.userId
+    });
+    await tenantTable('team_members').insert([
+      { tenant: env.tenant, team_id: teamId, user_id: env.userId },
+      { tenant: env.tenant, team_id: teamId, user_id: secondaryUserId }
+    ]);
   });
 
   afterAll(async () => {
     if (env) {
       // Clean up any remaining test data - delete in order to respect foreign keys
-      await env.db('comments').where('tenant', env.tenant).delete();
-      await env.db('tickets').where('tenant', env.tenant).delete();
+      await tenantTable('comments').delete();
+      await tenantTable('ticket_resources').delete();
+      await tenantTable('tickets').delete();
+      await tenantTable('team_members').where({ team_id: teamId }).delete();
+      await tenantTable('teams').where({ team_id: teamId }).delete();
       await env.cleanup();
     }
   });
@@ -160,7 +186,7 @@ describe('Ticket API E2E Tests', () => {
       it('should create ticket with all optional fields', async () => {
         // First create a contact for the ticket
         const contactId = uuidv4();
-        await env.db('contacts').insert({
+        await tenantTable('contacts').insert({
           contact_name_id: contactId,
           tenant: env.tenant,
           client_id: env.clientId,
@@ -488,7 +514,7 @@ describe('Ticket API E2E Tests', () => {
     afterEach(async () => {
       // Clean up created tickets
       for (const ticket of searchableTickets) {
-        await env.db('tickets').where('ticket_id', ticket.ticket_id).delete();
+        await tenantTable('tickets').where('ticket_id', ticket.ticket_id).delete();
       }
     });
 
@@ -734,6 +760,267 @@ describe('Ticket API E2E Tests', () => {
       assertSuccess(response);
 
       expect(response.data.data.assigned_to).toBeNull();
+    });
+
+    // Regression for #3025: ticket_resources holds an FK on
+    // (tenant, ticket_id, assigned_to), so a ticket with additional agents used
+    // to reject every reassignment with 400 "Invalid reference".
+    it('should reassign a ticket that has additional agents', async () => {
+      await env.apiClient.put(
+        `${API_BASE}/${testTicket.ticket_id}/assignment`,
+        { assigned_to: env.userId }
+      );
+      await tenantTable('ticket_resources').insert({
+        tenant: env.tenant,
+        ticket_id: testTicket.ticket_id,
+        assigned_to: env.userId,
+        additional_user_id: extraAgentId,
+        role: 'support',
+        assigned_at: new Date()
+      });
+
+      const response = await env.apiClient.put(
+        `${API_BASE}/${testTicket.ticket_id}/assignment`,
+        { assigned_to: secondaryUserId }
+      );
+      assertSuccess(response);
+
+      expect(response.data.data.assigned_to).toBe(secondaryUserId);
+      const resources = await tenantTable('ticket_resources')
+        .where({ ticket_id: testTicket.ticket_id })
+        .select('*');
+      expect(resources).toHaveLength(1);
+      expect(resources[0].assigned_to).toBe(secondaryUserId);
+      expect(resources[0].additional_user_id).toBe(extraAgentId);
+      expect(resources[0].role).toBe('support');
+    });
+
+    it('should absorb an additional agent who becomes the primary assignee', async () => {
+      await env.apiClient.put(
+        `${API_BASE}/${testTicket.ticket_id}/assignment`,
+        { assigned_to: env.userId }
+      );
+      await tenantTable('ticket_resources').insert({
+        tenant: env.tenant,
+        ticket_id: testTicket.ticket_id,
+        assigned_to: env.userId,
+        additional_user_id: secondaryUserId,
+        role: 'support',
+        assigned_at: new Date()
+      });
+
+      const response = await env.apiClient.put(
+        `${API_BASE}/${testTicket.ticket_id}/assignment`,
+        { assigned_to: secondaryUserId }
+      );
+      assertSuccess(response);
+
+      expect(response.data.data.assigned_to).toBe(secondaryUserId);
+      const resources = await tenantTable('ticket_resources')
+        .where({ ticket_id: testTicket.ticket_id })
+        .select('*');
+      expect(resources).toHaveLength(0);
+    });
+
+    it('should reassign a ticket with additional agents via the generic update', async () => {
+      await env.apiClient.put(
+        `${API_BASE}/${testTicket.ticket_id}/assignment`,
+        { assigned_to: env.userId }
+      );
+      await tenantTable('ticket_resources').insert({
+        tenant: env.tenant,
+        ticket_id: testTicket.ticket_id,
+        assigned_to: env.userId,
+        additional_user_id: extraAgentId,
+        role: 'support',
+        assigned_at: new Date()
+      });
+
+      const response = await env.apiClient.put(
+        `${API_BASE}/${testTicket.ticket_id}`,
+        { assigned_to: secondaryUserId }
+      );
+      assertSuccess(response);
+
+      expect(response.data.data.assigned_to).toBe(secondaryUserId);
+      const resources = await tenantTable('ticket_resources')
+        .where({ ticket_id: testTicket.ticket_id })
+        .select('*');
+      expect(resources).toHaveLength(1);
+      expect(resources[0].assigned_to).toBe(secondaryUserId);
+    });
+  });
+
+  describe('Ticket Agents (/api/v1/tickets/:id/agents)', () => {
+    let testTicket: any;
+
+    beforeEach(async () => {
+      testTicket = await createTestTicket(env.db, env.tenant, {
+        title: 'Ticket for Agents',
+        client_id: env.clientId,
+        board_id: boardId,
+        status_id: statusIds.open,
+        priority_id: priorityIds.medium,
+        assigned_to: env.userId
+      });
+    });
+
+    it('should list the primary and additional agents', async () => {
+      await env.apiClient.post(`${API_BASE}/${testTicket.ticket_id}/agents`, {
+        user_id: extraAgentId
+      });
+
+      const response = await env.apiClient.get(`${API_BASE}/${testTicket.ticket_id}/agents`);
+      assertSuccess(response);
+
+      expect(response.data.data.primary_agent.user_id).toBe(env.userId);
+      expect(response.data.data.additional_agents).toHaveLength(1);
+      expect(response.data.data.additional_agents[0]).toMatchObject({
+        user_id: extraAgentId,
+        role: 'support'
+      });
+    });
+
+    it('should add an additional agent with an explicit role', async () => {
+      const response = await env.apiClient.post(
+        `${API_BASE}/${testTicket.ticket_id}/agents`,
+        { user_id: extraAgentId, role: 'reviewer' }
+      );
+      assertSuccess(response, 201);
+
+      expect(response.data.data.additional_agents[0]).toMatchObject({
+        user_id: extraAgentId,
+        role: 'reviewer'
+      });
+      const resources = await tenantTable('ticket_resources')
+        .where({ ticket_id: testTicket.ticket_id })
+        .select('*');
+      expect(resources).toHaveLength(1);
+      expect(resources[0].assigned_to).toBe(env.userId);
+    });
+
+    it('should reject a duplicate additional agent', async () => {
+      await env.apiClient.post(`${API_BASE}/${testTicket.ticket_id}/agents`, {
+        user_id: extraAgentId
+      });
+
+      const response = await env.apiClient.post(
+        `${API_BASE}/${testTicket.ticket_id}/agents`,
+        { user_id: extraAgentId }
+      );
+      assertError(response, 409);
+    });
+
+    it('should promote the user to primary agent on an unassigned ticket', async () => {
+      const unassigned = await createTestTicket(env.db, env.tenant, {
+        title: 'Unassigned ticket for agents',
+        client_id: env.clientId,
+        board_id: boardId,
+        status_id: statusIds.open,
+        priority_id: priorityIds.medium
+      });
+
+      const response = await env.apiClient.post(
+        `${API_BASE}/${unassigned.ticket_id}/agents`,
+        { user_id: extraAgentId }
+      );
+      assertSuccess(response, 201);
+
+      expect(response.data.data.primary_agent.user_id).toBe(extraAgentId);
+      expect(response.data.data.additional_agents).toHaveLength(0);
+    });
+
+    it('should remove an additional agent by user id', async () => {
+      await env.apiClient.post(`${API_BASE}/${testTicket.ticket_id}/agents`, {
+        user_id: extraAgentId
+      });
+
+      const response = await env.apiClient.delete(
+        `${API_BASE}/${testTicket.ticket_id}/agents/${extraAgentId}`
+      );
+      expect(response.status).toBe(204);
+
+      const list = await env.apiClient.get(`${API_BASE}/${testTicket.ticket_id}/agents`);
+      expect(list.data.data.additional_agents).toHaveLength(0);
+    });
+
+    it('should return 404 when removing a user who is not an additional agent', async () => {
+      const response = await env.apiClient.delete(
+        `${API_BASE}/${testTicket.ticket_id}/agents/${extraAgentId}`
+      );
+      assertError(response, 404);
+    });
+  });
+
+  describe('Ticket Team Assignment (/api/v1/tickets/:id/team)', () => {
+    let testTicket: any;
+
+    beforeEach(async () => {
+      testTicket = await createTestTicket(env.db, env.tenant, {
+        title: 'Ticket for Team Assignment',
+        client_id: env.clientId,
+        board_id: boardId,
+        status_id: statusIds.open,
+        priority_id: priorityIds.medium
+      });
+    });
+
+    it('should assign a team, defaulting the primary agent to the team lead', async () => {
+      const response = await env.apiClient.put(
+        `${API_BASE}/${testTicket.ticket_id}/team`,
+        { team_id: teamId }
+      );
+      assertSuccess(response);
+
+      expect(response.data.data.assigned_team_id).toBe(teamId);
+      expect(response.data.data.assigned_to).toBe(env.userId);
+
+      const resources = await tenantTable('ticket_resources')
+        .where({ ticket_id: testTicket.ticket_id })
+        .select('*');
+      expect(resources).toHaveLength(1);
+      expect(resources[0]).toMatchObject({
+        assigned_to: env.userId,
+        additional_user_id: secondaryUserId,
+        role: 'team_member'
+      });
+    });
+
+    it('should remove the team and its team members by default', async () => {
+      await env.apiClient.put(`${API_BASE}/${testTicket.ticket_id}/team`, { team_id: teamId });
+
+      const response = await env.apiClient.delete(`${API_BASE}/${testTicket.ticket_id}/team`);
+      assertSuccess(response);
+
+      expect(response.data.data.assigned_team_id).toBeNull();
+      const resources = await tenantTable('ticket_resources')
+        .where({ ticket_id: testTicket.ticket_id })
+        .select('*');
+      expect(resources).toHaveLength(0);
+    });
+
+    it('should keep the team members when mode is keep_all', async () => {
+      await env.apiClient.put(`${API_BASE}/${testTicket.ticket_id}/team`, { team_id: teamId });
+
+      const response = await env.apiClient.delete(
+        `${API_BASE}/${testTicket.ticket_id}/team`,
+        { data: { mode: 'keep_all' } }
+      );
+      assertSuccess(response);
+
+      expect(response.data.data.assigned_team_id).toBeNull();
+      const resources = await tenantTable('ticket_resources')
+        .where({ ticket_id: testTicket.ticket_id })
+        .select('*');
+      expect(resources).toHaveLength(1);
+    });
+
+    it('should return 404 for an unknown team', async () => {
+      const response = await env.apiClient.put(
+        `${API_BASE}/${testTicket.ticket_id}/team`,
+        { team_id: uuidv4() }
+      );
+      assertError(response, 404);
     });
   });
 

@@ -9,7 +9,7 @@ describe('appointment request Teams transaction discipline', () => {
   );
 
   it('creates Teams meetings before the approval write transaction consumes the result', () => {
-    const createIndex = source.indexOf('preparedTeamsMeeting = await teamsMeetingService.createTeamsMeeting');
+    const createIndex = source.indexOf('const outcome = await teamsMeetingService.createTeamsMeetingWithResult');
     const writeTransactionIndex = source.indexOf('result = await withTransaction');
 
     expect(createIndex).toBeGreaterThan(-1);
@@ -21,13 +21,14 @@ describe('appointment request Teams transaction discipline', () => {
       source.indexOf('createdMeetingForCompensation = null', writeTransactionIndex)
     );
     expect(approvalWriteTransaction).not.toContain('.createTeamsMeeting(');
+    expect(approvalWriteTransaction).not.toContain('.createTeamsMeetingWithResult(');
   });
 
   it('keeps reschedule Graph updates after the DB transaction returns', () => {
     const rescheduleStart = source.indexOf('export const updateAppointmentRequestDateTime');
     const rescheduleSource = source.slice(rescheduleStart);
     const transactionIndex = rescheduleSource.indexOf('const result = await withTransaction');
-    const updateIndex = rescheduleSource.indexOf('teamsMeetingService.updateTeamsMeeting(result.teamsMeetingUpdateInput)');
+    const updateIndex = rescheduleSource.indexOf('teamsMeetingService.updateTeamsMeetingWithResult(result.teamsMeetingUpdateInput)');
 
     expect(rescheduleStart).toBeGreaterThan(-1);
     expect(transactionIndex).toBeGreaterThan(-1);
@@ -39,6 +40,7 @@ describe('appointment request Teams transaction discipline', () => {
       rescheduleSource.indexOf('let teamsMeetingWarning', transactionIndex)
     );
     expect(rescheduleTransaction).not.toContain('.updateTeamsMeeting(');
+    expect(rescheduleTransaction).not.toContain('.updateTeamsMeetingWithResult(');
   });
 
   it('keeps schedule delete Graph calls after the DB transaction returns', () => {

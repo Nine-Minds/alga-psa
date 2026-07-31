@@ -39,8 +39,10 @@ class LookupQuery {
 
   constructor(private readonly rows: Row[]) {}
 
-  where(filters: Row): this {
-    this.filters = { ...this.filters, ...filters };
+  where(filters: Row | string, value?: unknown): this {
+    this.filters = typeof filters === 'string'
+      ? { ...this.filters, [filters]: value }
+      : { ...this.filters, ...filters };
     return this;
   }
 
@@ -50,7 +52,7 @@ class LookupQuery {
 
   async first(): Promise<Row | undefined> {
     return this.rows.find((row) =>
-      Object.entries(this.filters).every(([key, value]) => row[key] === value),
+      Object.entries(this.filters).every(([key, value]) => row[key.split('.').pop()!] === value),
     );
   }
 }

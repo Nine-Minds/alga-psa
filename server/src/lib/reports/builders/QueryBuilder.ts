@@ -1,6 +1,7 @@
 // QueryBuilder utility for constructing database queries from report definitions
 
 import { Knex } from 'knex';
+import { getTenantTableScope, parseTableExpression, tenantDb } from '@alga-psa/db';
 import { 
   QueryDefinition, 
   ReportParameters, 
@@ -33,12 +34,12 @@ export class QueryBuilder {
         return this.buildParameterizedRawSql(trx, rawSql, parameters);
       }
 
-      let query = trx(queryDef.table);
+      let query = this.buildRootQuery(trx, queryDef, parameters);
       
       // Add joins
       if (queryDef.joins && queryDef.joins.length > 0) {
         for (const join of queryDef.joins) {
-          query = this.applyJoin(query, join);
+          query = this.applyJoin(trx, query, join, parameters);
         }
       }
       
@@ -110,11 +111,51 @@ export class QueryBuilder {
   /**
    * Apply a join to the query
    */
-  private static applyJoin(
-    query: Knex.QueryBuilder,
-    join: JoinDefinition
+  private static buildRootQuery(
+    trx: Knex.Transaction,
+    queryDef: QueryDefinition,
+    parameters: ReportParameters
   ): Knex.QueryBuilder {
-    
+    const tenant = this.reportTenant(parameters);
+
+    if (!tenant) {
+      return trx(queryDef.table);
+    }
+
+    return tenantDb(trx, tenant).table(queryDef.table);
+  }
+
+  private static applyJoin(
+    trx: Knex.Transaction,
+    query: Knex.QueryBuilder,
+    join: JoinDefinition,
+    parameters: ReportParameters
+  ): Knex.QueryBuilder {
+    const tenant = this.reportTenant(parameters);
+    const nonTenantConditions = join.on.filter(condition => !this.isTenantEqualityJoinCondition(condition));
+
+    if (tenant && nonTenantConditions.length > 0 && (join.type === 'inner' || join.type === 'left')) {
+      const [primaryCondition, ...additionalConditions] = nonTenantConditions;
+      const operator = primaryCondition.operator || '=';
+
+      if (operator === '=') {
+        return tenantDb(trx, tenant).tenantJoin(
+          query,
+          join.table,
+          primaryCondition.left,
+          primaryCondition.right,
+          {
+            type: join.type,
+            on: (builder) => {
+              for (const condition of additionalConditions) {
+                builder.on(condition.left, condition.operator || '=', condition.right);
+              }
+            },
+          }
+        );
+      }
+    }
+
     const joinMethod = this.getJoinMethod(join.type);
     
     return (query as any)[joinMethod](join.table, (builder: any) => {
@@ -156,6 +197,10 @@ export class QueryBuilder {
 
     if (rawField) {
       this.assertSafeSqlExpression(rawField, 'raw filter field');
+    }
+
+    if (this.isTenantScopeFilter(filter, value, parameters)) {
+      return query;
     }
 
     // Skip filters with empty/null/undefined values (except for is_null/is_not_null operators)
@@ -262,12 +307,29 @@ export class QueryBuilder {
     this.assertSafeRawSelect(rawSql);
 
     const bindings: unknown[] = [];
-    const processedSql = rawSql.replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (_match, key: string) => {
-      if (!(key in parameters)) {
-        throw new ReportExecutionError(`Parameter placeholder '${key}' not found in parameters`);
+    const processedSql = rawSql.replace(/\{\{([^{}]+)\}\}/g, (_match, placeholder: string) => {
+      if (placeholder !== placeholder.trim()) {
+        throw new ReportExecutionError(`Raw SQL contains an invalid placeholder '${placeholder}'`);
       }
 
-      bindings.push(parameters[key]);
+      if (placeholder.startsWith('tenant_table:')) {
+        return this.buildTenantTableRawSql(
+          trx,
+          placeholder.slice('tenant_table:'.length),
+          parameters,
+          bindings
+        );
+      }
+
+      if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(placeholder)) {
+        throw new ReportExecutionError(`Raw SQL contains an invalid placeholder '${placeholder}'`);
+      }
+
+      if (!(placeholder in parameters)) {
+        throw new ReportExecutionError(`Parameter placeholder '${placeholder}' not found in parameters`);
+      }
+
+      bindings.push(parameters[placeholder]);
       return '?';
     });
 
@@ -276,6 +338,41 @@ export class QueryBuilder {
     }
 
     return trx.raw(processedSql, bindings as Knex.RawBinding[]) as unknown as Knex.QueryBuilder;
+  }
+
+  private static buildTenantTableRawSql(
+    trx: Knex.Transaction,
+    tableExpression: string,
+    parameters: ReportParameters,
+    bindings: unknown[]
+  ): string {
+    const tenant = this.reportTenant(parameters);
+
+    if (!tenant) {
+      throw new ReportExecutionError('Raw SQL tenant table placeholder requires a tenant parameter');
+    }
+
+    this.assertSafeTenantTableExpression(tableExpression);
+
+    const parsed = parseTableExpression(tableExpression);
+    const scope = getTenantTableScope(parsed.tableName);
+
+    if (!scope) {
+      throw new ReportExecutionError(`No tenant table metadata registered for ${parsed.tableName}`);
+    }
+
+    if (scope.scope !== 'tenant') {
+      throw new ReportExecutionError(`Raw SQL tenant table placeholder requires tenant table metadata for ${parsed.tableName}`);
+    }
+
+    const scopedTableSql = tenantDb(trx, tenant)
+      .table(tableExpression)
+      .select('*')
+      .toSQL();
+
+    bindings.push(...scopedTableSql.bindings);
+
+    return `(${scopedTableSql.sql}) as ${this.quoteIdentifier(trx, parsed.rootAlias)}`;
   }
 
   /**
@@ -319,6 +416,38 @@ export class QueryBuilder {
       throw new ReportExecutionError(`${context} contains a forbidden SQL control token`);
     }
   }
+
+  private static assertSafeTenantTableExpression(tableExpression: string): void {
+    const trimmedExpression = tableExpression.trim();
+
+    if (!trimmedExpression) {
+      throw new ReportExecutionError('Raw SQL tenant table expression cannot be empty');
+    }
+
+    if (trimmedExpression !== tableExpression) {
+      throw new ReportExecutionError('Raw SQL tenant table expression cannot have leading or trailing whitespace');
+    }
+
+    this.assertNoSqlControlTokens(trimmedExpression, 'raw SQL tenant table expression');
+
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)?(?:\s+(?:as\s+)?[a-zA-Z_][a-zA-Z0-9_]*)?$/i.test(trimmedExpression)) {
+      throw new ReportExecutionError(`Raw SQL tenant table expression '${trimmedExpression}' is invalid`);
+    }
+
+    if (/\b(select|from|join|where|union|on|using|insert|update|delete|drop|alter|truncate|create|grant|revoke|execute|call|do|copy|merge|set|with)\b/i.test(trimmedExpression)) {
+      throw new ReportExecutionError(`Raw SQL tenant table expression '${trimmedExpression}' contains a forbidden SQL token`);
+    }
+  }
+
+  private static quoteIdentifier(trx: Knex.Transaction, identifier: string): string {
+    const quotedIdentifier = trx.raw('??', [identifier]).toSQL();
+
+    if (quotedIdentifier.bindings.length > 0) {
+      throw new ReportExecutionError(`Unable to quote SQL identifier '${identifier}'`);
+    }
+
+    return quotedIdentifier.sql;
+  }
   /**
    * Resolve filter values, handling parameter placeholders
    */
@@ -336,6 +465,35 @@ export class QueryBuilder {
     }
 
     return value;
+  }
+
+  private static reportTenant(parameters: ReportParameters): string | null {
+    const tenant = parameters.tenant;
+    return typeof tenant === 'string' && tenant.trim() ? tenant : null;
+  }
+
+  private static isTenantScopeFilter(
+    filter: FilterDefinition,
+    resolvedValue: unknown,
+    parameters: ReportParameters
+  ): boolean {
+    const tenant = this.reportTenant(parameters);
+    return Boolean(
+      tenant
+        && filter.operator === 'eq'
+        && resolvedValue === tenant
+        && this.isTenantColumn(filter.field)
+    );
+  }
+
+  private static isTenantEqualityJoinCondition(condition: { left: string; right: string; operator?: string }): boolean {
+    return (condition.operator || '=') === '='
+      && this.isTenantColumn(condition.left)
+      && this.isTenantColumn(condition.right);
+  }
+
+  private static isTenantColumn(column: string): boolean {
+    return column === 'tenant' || column.endsWith('.tenant');
   }
 
   /**

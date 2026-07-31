@@ -6,7 +6,9 @@ import { getTenantBrandingByDomain, getTenantLocaleByDomain } from '@alga-psa/te
 import { getSession } from '@alga-psa/auth';
 import { isValidTenantSlug } from '@shared/utils/tenantSlug';
 import { UserSession } from '@alga-psa/db/models/UserSession';
+import { recordPortalDomainSeen } from '@/lib/portal-domains/portalDomainSeen';
 import type { Metadata } from 'next';
+import { PortalBrandingStyles } from '@/lib/auth/portalBranding';
 
 export const metadata: Metadata = {
   title: 'Client Portal Sign In',
@@ -22,6 +24,13 @@ export default async function ClientSignInPage({
 
   // Get portalDomain from query parameter (set by middleware for vanity domains)
   const portalDomain = typeof params?.portalDomain === 'string' ? params.portalDomain : null;
+
+  // Reaching this page with a portalDomain proves a request arrived bearing that
+  // vanity Host (i.e. the operator's proxy forwarded it). Record it best-effort so
+  // Settings can warn when an active appliance domain is never actually reachable.
+  if (portalDomain) {
+    void recordPortalDomainSeen(portalDomain);
+  }
 
   // Get tenant slug from query parameter
   const tenantParam = typeof params?.tenant === 'string' ? params.tenant : '';
@@ -82,7 +91,8 @@ export default async function ClientSignInPage({
 
   return (
     <I18nWrapper portal="client" initialLocale={locale || undefined}>
-      <ClientPortalSignIn branding={branding} />
+      <PortalBrandingStyles branding={branding} />
+      <ClientPortalSignIn branding={branding} portalDomain={portalDomain || undefined} />
     </I18nWrapper>
   );
 }

@@ -57,6 +57,12 @@ setup:
     lockTimeoutSeconds: 1800
     lockStaleSeconds: 120
     lockHeartbeatSeconds: 10
+    # Temporal connection for the initial-tenant workflow (appliance only).
+    # address defaults to temporal-frontend.<release namespace>.svc.cluster.local:7233.
+    temporal:
+      address: ""
+      namespace: "default"
+      taskQueue: "tenant-workflows"
   waitForBootstrap:
     image:
       # Optional lightweight image with psql used by the app initContainer while
@@ -119,6 +125,18 @@ temporal:
   address: "temporal-frontend.temporal.svc.cluster.local:7233"
   namespace: "default"
   portalDomainTaskQueue: "portal-domain-workflows"
+  # Job-runner backend override. Leave empty to let the app pick by edition
+  # (EE -> temporal, CE -> pgboss). Set to "temporal" on EE deployments as a
+  # belt-and-suspenders override of the edition default.
+  jobRunnerType: ""
+
+# Optional JSON override for event.wait correlation derivation paths
+# (WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON). Empty = built-in
+# defaults from shared/workflow/runtime/correlationDefaults.ts. Keep in
+# lockstep with the workflow-worker chart's correlationPathsJson — the server
+# validates event.wait publishability against the same config the worker
+# routes with.
+correlationPathsJson: ""
 
 # Development Pod Configuration
 devPod:
@@ -489,6 +507,16 @@ secrets_provider:
     appSecretPath: "kv/data/app/secrets"
     # Path template for tenant secrets
     tenantSecretPathTemplate: "kv/data/tenants/{tenantId}/secrets"
+
+# Shared tenant-secret store on the single-node appliance. When enabled, mounts
+# a hostPath into the server pod and points the filesystem secret provider at it
+# via SECRET_FS_BASE_PATH, so tenant secrets the server writes are visible to
+# other appliance services (e.g. email-service) that mount the same hostPath.
+# Disabled by default → cloud/hosted rendering is unchanged.
+sharedTenantSecrets:
+  enabled: false
+  hostPath: /var/lib/alga-appliance/tenant-secrets
+  mountPath: /shared-tenant-secrets
 
 # Development environment configuration
 devEnv:

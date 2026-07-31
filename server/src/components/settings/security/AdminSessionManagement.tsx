@@ -11,13 +11,14 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   getAllSessionsAction,
   revokeSessionAction,
   type SessionWithUser,
-} from '@alga-psa/auth/actions';
-import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+} from '@alga-psa/auth/actions/session-actions/sessionActions';
+import { getAllUsers } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import type { IUserWithRoles } from '@alga-psa/types';
 import {
   Monitor,
@@ -60,6 +61,9 @@ export default function AdminSessionManagement() {
         getAllSessionsAction(),
         getAllUsers(true, undefined) // Include inactive users, all types
       ]);
+      if (isActionPermissionError(sessionsData)) {
+        throw sessionsData;
+      }
       setSessions(sessionsData.sessions);
       setFilteredSessions(sessionsData.sessions);
       setUsers(usersData);
@@ -153,6 +157,10 @@ export default function AdminSessionManagement() {
       setRevoking(sessionId);
       const result = await revokeSessionAction(sessionId);
 
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+
       if (result.is_current) {
         toast.success(t('security.sessions.messages.loggingOut'));
         // Redirect to login after a short delay
@@ -235,9 +243,11 @@ export default function AdminSessionManagement() {
           <div>
             <CardTitle>{t('security.sessions.title')}</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              {sessions.length === 1 && totalUsers === 1
-                ? t('security.sessions.subtitle', { sessionCount: sessions.length, userCount: totalUsers })
-                : t('security.sessions.subtitle_plural', { sessionCount: sessions.length, userCount: totalUsers })}
+              {t('security.sessions.subtitle', {
+                count: sessions.length,
+                sessionCount: sessions.length,
+                userCount: totalUsers,
+              })}
             </p>
           </div>
         </div>

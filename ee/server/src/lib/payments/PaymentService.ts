@@ -10,6 +10,7 @@
  */
 
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from 'server/src/lib/db/db';
 import logger from '@alga-psa/core/logger';
 import {
@@ -68,6 +69,10 @@ export class PaymentService {
     this.tenantId = tenantId;
   }
 
+  private tenantTable<Row extends object>(tableExpression: string): Knex.QueryBuilder<Row, Row[]> {
+    return tenantDb(this.knex, this.tenantId).table<Row>(tableExpression);
+  }
+
   /**
    * Creates a PaymentService instance for a tenant.
    */
@@ -103,9 +108,8 @@ export class PaymentService {
    * Gets the enabled payment provider configuration.
    */
   private async getProviderConfig(): Promise<IPaymentProviderConfig | null> {
-    const config = await this.knex<IPaymentProviderConfig>('payment_provider_configs')
+    const config = await this.tenantTable<IPaymentProviderConfig>('payment_provider_configs')
       .where({
-        tenant: this.tenantId,
         is_enabled: true,
       })
       .orderBy('is_default', 'desc')
@@ -153,9 +157,8 @@ export class PaymentService {
     }
 
     // Check for existing active payment link
-    const existingLink = await this.knex<IInvoicePaymentLink>('invoice_payment_links')
+    const existingLink = await this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
       .where({
-        tenant: this.tenantId,
         invoice_id: invoiceId,
         provider_type: this.provider.providerType,
         status: 'active',
@@ -217,8 +220,8 @@ export class PaymentService {
     const cancelUrl = `${baseUrl}/client-portal/billing/invoices/${invoiceId}`;
 
     // Compute balance due: gross total minus credits already applied minus prior payments
-    const priorPaymentsRow = await this.knex('invoice_payments')
-      .where({ tenant: this.tenantId, invoice_id: invoiceId })
+    const priorPaymentsRow = await tenantDb(this.knex, this.tenantId).table('invoice_payments')
+      .where({ invoice_id: invoiceId })
       .sum('amount as total')
       .first();
     const priorPayments = parseInt(priorPaymentsRow?.total || '0', 10);
@@ -268,9 +271,8 @@ export class PaymentService {
    */
   async processWebhookEvent(event: PaymentWebhookEvent): Promise<WebhookProcessingResult> {
     // Check for duplicate event (idempotency)
-    const existingEvent = await this.knex<IPaymentWebhookEvent>('payment_webhook_events')
+    const existingEvent = await this.tenantTable<IPaymentWebhookEvent>('payment_webhook_events')
       .where({
-        tenant: this.tenantId,
         provider_type: event.provider,
         external_event_id: event.eventId,
       })
@@ -301,9 +303,9 @@ export class PaymentService {
     };
 
     if (!existingEvent) {
-      await this.knex<IPaymentWebhookEvent>('payment_webhook_events').insert(eventRecord as any);
+      await this.tenantTable<IPaymentWebhookEvent>('payment_webhook_events').insert(eventRecord as any);
     } else {
-      await this.knex<IPaymentWebhookEvent>('payment_webhook_events')
+      await this.tenantTable<IPaymentWebhookEvent>('payment_webhook_events')
         .where({ event_id: existingEvent.event_id })
         .update({ processing_status: 'processing' });
     }
@@ -312,9 +314,8 @@ export class PaymentService {
       const result = await this.handleWebhookEvent(event);
 
       // Update event as processed
-      await this.knex<IPaymentWebhookEvent>('payment_webhook_events')
+      await this.tenantTable<IPaymentWebhookEvent>('payment_webhook_events')
         .where({
-          tenant: this.tenantId,
           provider_type: event.provider,
           external_event_id: event.eventId,
         })
@@ -330,9 +331,8 @@ export class PaymentService {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
       // Update event as failed
-      await this.knex<IPaymentWebhookEvent>('payment_webhook_events')
+      await this.tenantTable<IPaymentWebhookEvent>('payment_webhook_events')
         .where({
-          tenant: this.tenantId,
           provider_type: event.provider,
           external_event_id: event.eventId,
         })
@@ -415,9 +415,8 @@ export class PaymentService {
     }
 
     // Check if already recorded (from checkout.session.completed)
-    const existingPayment = await this.knex('invoice_payments')
+    const existingPayment = await tenantDb(this.knex, this.tenantId).table('invoice_payments')
       .where({
-        tenant: this.tenantId,
         invoice_id: event.invoiceId,
         reference_number: event.paymentIntentId,
       })
@@ -502,8 +501,9 @@ export class PaymentService {
 
     // Record the refund using a transaction
     const refundId = await this.knex.transaction(async (trx) => {
+      const db = tenantDb(trx, this.tenantId);
       // Insert refund record (negative amount to indicate refund)
-      const [refund] = await trx('invoice_payments')
+      const [refund] = await db.table('invoice_payments')
         .insert({
           tenant: this.tenantId,
           invoice_id: event.invoiceId,
@@ -517,9 +517,8 @@ export class PaymentService {
         .returning('payment_id');
 
       // Calculate net payments after refund
-      const totalPayments = await trx('invoice_payments')
+      const totalPayments = await db.table('invoice_payments')
         .where({
-          tenant: this.tenantId,
           invoice_id: event.invoiceId,
         })
         .sum('amount as total')
@@ -539,9 +538,8 @@ export class PaymentService {
       // If netPaid >= total_amount - credit_applied, stay as 'paid'
 
       if (newStatus !== invoice.status) {
-        await trx('invoices')
+        await db.table('invoices')
           .where({
-            tenant: this.tenantId,
             invoice_id: event.invoiceId,
           })
           .update({
@@ -741,9 +739,8 @@ export class PaymentService {
     invoiceId: string,
     status: 'completed' | 'expired' | 'cancelled'
   ): Promise<void> {
-    await this.knex<IInvoicePaymentLink>('invoice_payment_links')
+    await this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
       .where({
-        tenant: this.tenantId,
         invoice_id: invoiceId,
         status: 'active',
       })
@@ -757,8 +754,7 @@ export class PaymentService {
    * Gets an invoice by ID.
    */
   private async getInvoice(invoiceId: string): Promise<InvoiceData | null> {
-    const result = await this.knex<InvoiceData>('invoices')
-      .where('tenant', this.tenantId)
+    const result = await this.tenantTable<InvoiceData>('invoices')
       .where('invoice_id', invoiceId)
       .first();
     return result || null;
@@ -771,8 +767,8 @@ export class PaymentService {
    */
   private async getClient(clientId: string): Promise<ClientData | null> {
     // Get client basic info
-    const client = await this.knex('clients')
-      .where('tenant', this.tenantId)
+    const db = tenantDb(this.knex, this.tenantId);
+    const client = await db.table('clients')
       .where('client_id', clientId)
       .select('client_id', 'client_name')
       .first();
@@ -782,8 +778,7 @@ export class PaymentService {
     }
 
     // Get email from billing location or default location
-    const location = await this.knex('client_locations')
-      .where('tenant', this.tenantId)
+    const location = await db.table('client_locations')
       .where('client_id', clientId)
       .where(function() {
         this.where('is_billing_address', true)
@@ -808,9 +803,8 @@ export class PaymentService {
       return null;
     }
 
-    const link = await this.knex<IInvoicePaymentLink>('invoice_payment_links')
+    const link = await this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
       .where({
-        tenant: this.tenantId,
         invoice_id: invoiceId,
         provider_type: this.provider.providerType,
       })
@@ -828,9 +822,8 @@ export class PaymentService {
    * Gets the active payment link for an invoice.
    */
   async getActivePaymentLink(invoiceId: string): Promise<IInvoicePaymentLink | null> {
-    const result = await this.knex<IInvoicePaymentLink>('invoice_payment_links')
+    const result = await this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
       .where({
-        tenant: this.tenantId,
         invoice_id: invoiceId,
         status: 'active',
       })

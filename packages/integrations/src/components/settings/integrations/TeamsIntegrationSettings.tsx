@@ -6,8 +6,10 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import {
   getMicrosoftIntegrationStatus,
   getTeamsAppPackageStatus,
@@ -15,19 +17,34 @@ import {
   runTeamsDiagnostics,
   saveTeamsIntegrationSettings,
   sendTeamsTestMessage,
+  validateTeamsGraphCredentials,
+  probeTeamsGraphPermissions,
+  validateTeamsBotConnector,
+  type TeamsGraphCredentialValidationResult,
+  type TeamsGraphPermissionsProbeResult,
+  type TeamsBotConnectorValidationResult,
 } from '../../../actions';
 import {
   AlertTriangle,
   ArrowUpRight,
   CheckCircle2,
   Download,
+  ExternalLink,
   MessageSquareShare,
   Package,
   RefreshCw,
   Save,
   Send,
+  ShieldCheck,
 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { TeamsDeliveryLogViewer } from './teams/TeamsDeliveryLogViewer';
+import { TeamsAuditLogViewer } from './teams/TeamsAuditLogViewer';
+import { TeamsTroubleshootingPanel } from './teams/TeamsTroubleshootingPanel';
+import { TeamsPaywallCard } from './teams/TeamsPaywallCard';
+import { TeamsAddonExpiredBanner } from './teams/TeamsAddonExpiredBanner';
+import { TeamsStaleManifestWarning } from './teams/TeamsStaleManifestWarning';
+import { teamsRunbookHref, type TeamsRunbookSection } from './teams/teamsRunbook';
 
 type MicrosoftIntegrationStatus = Awaited<ReturnType<typeof getMicrosoftIntegrationStatus>>;
 type MicrosoftProfile = NonNullable<MicrosoftIntegrationStatus['profiles']>[number];
@@ -39,12 +56,16 @@ type TeamsDiagnosticsReport = Awaited<ReturnType<typeof runTeamsDiagnostics>>;
 type TeamsDiagnosticsStep = TeamsDiagnosticsReport['steps'][number];
 type TeamsTestMessageResult = Awaited<ReturnType<typeof sendTeamsTestMessage>>;
 
+type TeamsNotificationChannelValue = 'activity_feed' | 'bot_dm' | 'both';
+
 type TeamsFormState = {
   selectedProfileId: string;
   enabledCapabilities: string[];
   notificationCategories: string[];
+  notificationChannels: Record<string, TeamsNotificationChannelValue>;
   allowedActions: string[];
   defaultMeetingOrganizerUpn: string;
+  sendMeetingInvites: boolean;
   downloadRecordings: boolean;
   exposeRecordingsInPortal: boolean;
 };
@@ -77,6 +98,14 @@ function getTeamsNotificationOptions(t: TranslateFn) {
   ];
 }
 
+function getTeamsNotificationChannelOptions(t: TranslateFn): Array<{ value: TeamsNotificationChannelValue; label: string }> {
+  return [
+    { value: 'activity_feed', label: t('integrations.teams.settings.notifications.channel.activityFeed', { defaultValue: 'Activity feed' }) },
+    { value: 'bot_dm', label: t('integrations.teams.settings.notifications.channel.botDm', { defaultValue: 'Bot DM' }) },
+    { value: 'both', label: t('integrations.teams.settings.notifications.channel.both', { defaultValue: 'Both' }) },
+  ];
+}
+
 function getTeamsAllowedActionOptions(t: TranslateFn) {
   return [
     { value: 'assign_ticket', label: t('integrations.teams.settings.actions.assignTicket.label', { defaultValue: 'Assign ticket' }), description: t('integrations.teams.settings.actions.assignTicket.description', { defaultValue: 'Allow ticket assignment quick actions.' }) },
@@ -91,8 +120,10 @@ const EMPTY_FORM_STATE: TeamsFormState = {
   selectedProfileId: '',
   enabledCapabilities: [],
   notificationCategories: [],
+  notificationChannels: {},
   allowedActions: [],
   defaultMeetingOrganizerUpn: '',
+  sendMeetingInvites: true,
   downloadRecordings: false,
   exposeRecordingsInPortal: false,
 };
@@ -288,8 +319,10 @@ function mapIntegrationToForm(integration?: TeamsIntegration | null): TeamsFormS
     selectedProfileId: integration?.selectedProfileId ?? '',
     enabledCapabilities: integration?.enabledCapabilities ?? [...TEAMS_CAPABILITY_VALUES],
     notificationCategories: integration?.notificationCategories ?? [...TEAMS_NOTIFICATION_VALUES],
+    notificationChannels: (integration?.notificationChannels ?? {}) as Record<string, TeamsNotificationChannelValue>,
     allowedActions: integration?.allowedActions ?? [...TEAMS_ALLOWED_ACTION_VALUES],
     defaultMeetingOrganizerUpn: integration?.defaultMeetingOrganizerUpn ?? '',
+    sendMeetingInvites: integration?.sendMeetingInvites !== false,
     downloadRecordings: Boolean(integration?.downloadRecordings),
     exposeRecordingsInPortal: Boolean(integration?.exposeRecordingsInPortal),
   };
@@ -319,10 +352,58 @@ async function getDownloadErrorMessage(response: Response, t: TranslateFn): Prom
   return text.trim() || t('integrations.teams.settings.errors.downloadPackage', { defaultValue: 'Failed to download Teams app package' });
 }
 
+const WIZARD_STEP_I18N_KEY: Record<string, string> = {
+  'microsoft-profile': 'microsoftProfile',
+  'graph-permissions': 'graphPermissions',
+  'bot-framework': 'botFramework',
+  activate: 'activate',
+  package: 'package',
+  sideload: 'sideload',
+  verify: 'verify',
+};
+
+const WIZARD_STEP_DEFAULT_TITLE: Record<string, string> = {
+  'microsoft-profile': 'Microsoft profile',
+  'graph-permissions': 'Graph permissions',
+  'bot-framework': 'Bot Framework registration',
+  activate: 'Activate Teams',
+  package: 'Generate and download package',
+  sideload: 'Sideload the app',
+  verify: 'Verify',
+};
+
+function permissionSlug(permission: string): string {
+  return permission.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
+}
+
+function RunbookLink({
+  id,
+  section,
+  label,
+}: {
+  id: string;
+  section: TeamsRunbookSection;
+  label: string;
+}) {
+  return (
+    <a
+      id={id}
+      href={teamsRunbookHref(section)}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-2 hover:underline"
+    >
+      <ExternalLink className="h-3 w-3" />
+      {label}
+    </a>
+  );
+}
+
 export function TeamsIntegrationSettings() {
   const { t } = useTranslation('msp/integrations');
   const TEAMS_CAPABILITY_OPTIONS = React.useMemo(() => getTeamsCapabilityOptions(t), [t]);
   const TEAMS_NOTIFICATION_OPTIONS = React.useMemo(() => getTeamsNotificationOptions(t), [t]);
+  const TEAMS_NOTIFICATION_CHANNEL_OPTIONS = React.useMemo(() => getTeamsNotificationChannelOptions(t), [t]);
   const TEAMS_ALLOWED_ACTION_OPTIONS = React.useMemo(() => getTeamsAllowedActionOptions(t), [t]);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
@@ -340,6 +421,12 @@ export function TeamsIntegrationSettings() {
   const [diagnosticsReport, setDiagnosticsReport] = React.useState<TeamsDiagnosticsReport | null>(null);
   const [testMessageResult, setTestMessageResult] = React.useState<TeamsTestMessageResult | null>(null);
   const [formState, setFormState] = React.useState<TeamsFormState>(EMPTY_FORM_STATE);
+  const [profileValidation, setProfileValidation] = React.useState<TeamsGraphCredentialValidationResult | null>(null);
+  const [profileValidating, setProfileValidating] = React.useState(false);
+  const [permissionsProbe, setPermissionsProbe] = React.useState<TeamsGraphPermissionsProbeResult | null>(null);
+  const [permissionsProbing, setPermissionsProbing] = React.useState(false);
+  const [botValidation, setBotValidation] = React.useState<TeamsBotConnectorValidationResult | null>(null);
+  const [botValidating, setBotValidating] = React.useState(false);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -438,6 +525,16 @@ export function TeamsIntegrationSettings() {
     }));
   }, []);
 
+  const updateNotificationChannel = React.useCallback((category: string, channel: TeamsNotificationChannelValue) => {
+    setFormState((current) => ({
+      ...current,
+      notificationChannels: {
+        ...current.notificationChannels,
+        [category]: channel,
+      },
+    }));
+  }, []);
+
   const handleSave = React.useCallback(async (nextInstallStatus?: TeamsIntegration['installStatus']) => {
     setSaving(true);
     setError(null);
@@ -454,8 +551,10 @@ export function TeamsIntegrationSettings() {
         installStatus: resolvedStatus,
         enabledCapabilities: formState.enabledCapabilities as any,
         notificationCategories: formState.notificationCategories as any,
+        notificationChannels: formState.notificationChannels as any,
         allowedActions: formState.allowedActions as any,
         defaultMeetingOrganizerUpn: formState.defaultMeetingOrganizerUpn.trim() || null,
+        sendMeetingInvites: formState.sendMeetingInvites,
         downloadRecordings: formState.downloadRecordings,
         exposeRecordingsInPortal: formState.exposeRecordingsInPortal,
         lastError: null,
@@ -567,11 +666,89 @@ export function TeamsIntegrationSettings() {
     }
   }, [t]);
 
+  const handleValidateProfile = React.useCallback(async () => {
+    setProfileValidating(true);
+    try {
+      const result = await validateTeamsGraphCredentials();
+      setProfileValidation(result);
+    } catch (err: any) {
+      setProfileValidation({ status: 'failed', reason: 'network_error', message: err?.message || t('integrations.teams.settings.wizard.validate.error', { defaultValue: 'Validation failed' }) });
+    } finally {
+      setProfileValidating(false);
+    }
+  }, [t]);
+
+  const handleProbePermissions = React.useCallback(async () => {
+    setPermissionsProbing(true);
+    try {
+      const result = await probeTeamsGraphPermissions();
+      setPermissionsProbe(result);
+    } catch (err: any) {
+      setPermissionsProbe({ status: 'failed', reason: 'network_error', message: err?.message || t('integrations.teams.settings.wizard.validate.error', { defaultValue: 'Validation failed' }) });
+    } finally {
+      setPermissionsProbing(false);
+    }
+  }, [t]);
+
+  const handleValidateBot = React.useCallback(async () => {
+    setBotValidating(true);
+    try {
+      const result = await validateTeamsBotConnector();
+      setBotValidation(result);
+    } catch (err: any) {
+      setBotValidation({ status: 'failed', reason: 'network_error', message: err?.message || t('integrations.teams.settings.wizard.validate.error', { defaultValue: 'Validation failed' }) });
+    } finally {
+      setBotValidating(false);
+    }
+  }, [t]);
+
   const recentDeliveryStep = diagnosticsReport?.steps.find((step) => step.id === 'recent_delivery_health');
   const recentDeliveryData = recentDeliveryStep?.data as {
     lastSuccess?: { createdAt?: string | null; status?: string | null; errorMessage?: string | null } | null;
     lastFailure?: { createdAt?: string | null; status?: string | null; errorMessage?: string | null; errorCode?: string | null } | null;
   } | undefined;
+
+  const addOnState = currentIntegration?.addOnState ?? teamsStatus?.addOnState;
+  const isAddonAbsent = Boolean(teamsStatus && !teamsStatus.success && teamsStatus.addOnState === 'absent');
+  const isAddonExpired = addOnState === 'expired';
+
+  // F059: client-side stale-manifest detection. The freshly-generated package (this
+  // session) wins over the persisted metadata so regeneration clears the warning.
+  const persistedPackageMeta = (currentIntegration?.packageMetadata ?? null) as
+    | { baseUrl?: unknown; webApplicationInfo?: { id?: unknown } }
+    | null;
+  const packageBaseUrl =
+    packageStatus?.baseUrl
+    ?? (typeof persistedPackageMeta?.baseUrl === 'string' ? persistedPackageMeta.baseUrl : undefined);
+  const packageProfileClientId =
+    packageStatus?.webApplicationInfo?.id
+    ?? (typeof persistedPackageMeta?.webApplicationInfo?.id === 'string' ? persistedPackageMeta.webApplicationInfo.id : undefined);
+  const deploymentBaseUrl = microsoftStatus?.success ? microsoftStatus.baseUrl : undefined;
+  const currentProfileClientId = selectedProfile?.clientId;
+  const packageStale = Boolean(packageBaseUrl) && (
+    (Boolean(deploymentBaseUrl) && packageBaseUrl !== deploymentBaseUrl)
+    || (Boolean(currentProfileClientId) && Boolean(packageProfileClientId) && packageProfileClientId !== currentProfileClientId)
+  );
+
+  // F053: wizard step completion + resume target.
+  const profileValidated = profileValidation?.status === 'ok';
+  const profileComplete = Boolean(selectedProfile);
+  const permissionsComplete = permissionsProbe ? permissionsProbe.status === 'ok' : profileComplete;
+  const botComplete = botValidation ? botValidation.status === 'ok' : Boolean(currentIntegration?.botConnectorConfigured);
+  const activateComplete = installStatus === 'install_pending' || installStatus === 'active';
+  const packageComplete = Boolean(packageStatus) || Boolean(currentIntegration?.packageMetadata);
+  const verifyComplete = installStatus === 'active';
+  const wizardSteps: Array<{ id: string; section: TeamsRunbookSection; complete: boolean }> = [
+    { id: 'microsoft-profile', section: 'entraApp', complete: profileComplete },
+    { id: 'graph-permissions', section: 'graphPermissions', complete: permissionsComplete },
+    { id: 'bot-framework', section: 'botRegistration', complete: botComplete },
+    { id: 'activate', section: 'activate', complete: activateComplete },
+    { id: 'package', section: 'package', complete: packageComplete },
+    { id: 'sideload', section: 'package', complete: packageComplete },
+    { id: 'verify', section: 'verify', complete: verifyComplete },
+  ];
+  const firstIncompleteStepId = (wizardSteps.find((step) => !step.complete) ?? wizardSteps[wizardSteps.length - 1]).id;
+  const showWizard = Boolean(teamsStatus?.success) && !isActive;
 
   if (loading) {
     return (
@@ -582,8 +759,236 @@ export function TeamsIntegrationSettings() {
     );
   }
 
+  if (isAddonAbsent) {
+    return (
+      <div className="space-y-6">
+        <TeamsPaywallCard />
+      </div>
+    );
+  }
+
+  const viewGuideLabel = t('integrations.teams.settings.runbook.viewGuide', { defaultValue: 'View setup guide' });
+
+  const renderWizardStepControls = (stepId: string) => {
+    switch (stepId) {
+      case 'microsoft-profile':
+        return (
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button id="teams-validate-profile" variant="secondary" onClick={() => void handleValidateProfile()} disabled={profileValidating}>
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                {profileValidating
+                  ? t('integrations.teams.settings.wizard.validate.validating', { defaultValue: 'Validating...' })
+                  : t('integrations.teams.settings.wizard.validate.profile', { defaultValue: 'Validate Microsoft profile' })}
+              </Button>
+              <RunbookLink id="teams-wizard-runbook-microsoft-profile" section="entraApp" label={viewGuideLabel} />
+            </div>
+            {profileValidation ? (
+              <Alert variant={profileValidation.status === 'ok' ? 'default' : 'destructive'}>
+                {profileValidation.status === 'ok' ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                <AlertDescription>
+                  {profileValidation.status === 'ok'
+                    ? t('integrations.teams.settings.wizard.validate.profileOk', { defaultValue: 'Microsoft profile credentials are valid.' })
+                    : profileValidation.message}
+                </AlertDescription>
+              </Alert>
+            ) : null}
+          </div>
+        );
+      case 'graph-permissions':
+        return (
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button id="teams-probe-permissions" variant="secondary" onClick={() => void handleProbePermissions()} disabled={permissionsProbing}>
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                {permissionsProbing
+                  ? t('integrations.teams.settings.wizard.validate.validating', { defaultValue: 'Validating...' })
+                  : t('integrations.teams.settings.wizard.validate.permissions', { defaultValue: 'Probe Graph permissions' })}
+              </Button>
+              <RunbookLink id="teams-wizard-runbook-graph-permissions" section="graphPermissions" label={viewGuideLabel} />
+            </div>
+            {permissionsProbe && permissionsProbe.status === 'failed' ? (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>{permissionsProbe.message}</AlertDescription>
+              </Alert>
+            ) : null}
+            {permissionsProbe && (permissionsProbe.status === 'ok' || permissionsProbe.status === 'missing_permissions') ? (
+              <div className="space-y-2">
+                <Alert variant={permissionsProbe.status === 'ok' ? 'default' : 'warning'}>
+                  {permissionsProbe.status === 'ok' ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                  <AlertDescription>
+                    {permissionsProbe.status === 'ok'
+                      ? t('integrations.teams.settings.wizard.validate.permissionsOk', { defaultValue: 'All required Graph permissions are granted.' })
+                      : permissionsProbe.message}
+                  </AlertDescription>
+                </Alert>
+                <ul className="space-y-1">
+                  {permissionsProbe.permissions.map((entry) => (
+                    <li
+                      key={entry.permission}
+                      id={`teams-permission-${permissionSlug(entry.permission)}`}
+                      className="flex items-center justify-between gap-3 rounded-md border bg-muted/10 px-3 py-1.5"
+                    >
+                      <span className="font-mono text-xs">{entry.permission}</span>
+                      <Badge variant={entry.granted ? 'success' : 'error'}>
+                        {entry.granted
+                          ? t('integrations.teams.settings.wizard.validate.permissionGranted', { defaultValue: 'Granted' })
+                          : t('integrations.teams.settings.wizard.validate.permissionMissing', { defaultValue: 'Missing' })}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        );
+      case 'bot-framework':
+        return (
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button id="teams-validate-bot" variant="secondary" onClick={() => void handleValidateBot()} disabled={botValidating}>
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                {botValidating
+                  ? t('integrations.teams.settings.wizard.validate.validating', { defaultValue: 'Validating...' })
+                  : t('integrations.teams.settings.wizard.validate.bot', { defaultValue: 'Validate Bot Framework connector' })}
+              </Button>
+              <RunbookLink id="teams-wizard-runbook-bot-framework" section="botRegistration" label={viewGuideLabel} />
+            </div>
+            {botValidation ? (
+              <Alert variant={botValidation.status === 'ok' ? 'default' : 'destructive'}>
+                {botValidation.status === 'ok' ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                <AlertDescription>
+                  {botValidation.status === 'ok'
+                    ? t('integrations.teams.settings.wizard.validate.botOk', { defaultValue: 'Bot Framework credentials are valid ({{appId}}).', appId: botValidation.appId })
+                    : botValidation.message}
+                </AlertDescription>
+              </Alert>
+            ) : null}
+          </div>
+        );
+      case 'activate':
+        return (
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                id="teams-wizard-activate"
+                onClick={() => void handleSave('active')}
+                disabled={saving || !canPersist || !profileValidated}
+              >
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                {t('integrations.teams.settings.actions.activate', { defaultValue: 'Activate Teams' })}
+              </Button>
+              <RunbookLink id="teams-wizard-runbook-activate" section="activate" label={viewGuideLabel} />
+            </div>
+            {!profileValidated ? (
+              <p id="teams-wizard-activation-blocked" className="text-xs text-muted-foreground">
+                {t('integrations.teams.settings.wizard.activationBlocked', { defaultValue: 'Validate the Microsoft profile above before activating Teams.' })}
+              </p>
+            ) : null}
+          </div>
+        );
+      case 'package':
+        return (
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs text-muted-foreground">
+              {t('integrations.teams.settings.wizard.step.package.hint', { defaultValue: 'Use the Teams Package card below to generate and download the app package.' })}
+            </span>
+            <RunbookLink id="teams-wizard-runbook-package" section="package" label={viewGuideLabel} />
+          </div>
+        );
+      case 'sideload':
+        return (
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs text-muted-foreground">
+              {t('integrations.teams.settings.wizard.step.sideload.body', { defaultValue: 'Upload the downloaded package to the Teams admin center (Manage apps → Upload new app) or sideload it from the Teams client.' })}
+            </span>
+            <RunbookLink id="teams-wizard-runbook-sideload" section="package" label={viewGuideLabel} />
+          </div>
+        );
+      case 'verify':
+        return (
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs text-muted-foreground">
+              {t('integrations.teams.settings.wizard.step.verify.hint', { defaultValue: 'Use the Diagnostics & Test Message card below to verify the setup end-to-end.' })}
+            </span>
+            <RunbookLink id="teams-wizard-runbook-verify" section="verify" label={viewGuideLabel} />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const renderWizard = () => (
+    <Card id="teams-setup-wizard">
+      <CardHeader>
+        <CardTitle>{t('integrations.teams.settings.wizard.title', { defaultValue: 'Guided Teams setup' })}</CardTitle>
+        <CardDescription>
+          {t('integrations.teams.settings.wizard.description', { defaultValue: 'Complete each step to get Microsoft Teams working for this tenant.' })}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {wizardSteps.map((step, index) => {
+          const key = WIZARD_STEP_I18N_KEY[step.id];
+          const isCurrent = step.id === firstIncompleteStepId;
+          const statusBadge = step.complete
+            ? { label: t('integrations.teams.settings.wizard.status.complete', { defaultValue: 'Complete' }), variant: 'success' as const }
+            : isCurrent
+              ? { label: t('integrations.teams.settings.wizard.status.current', { defaultValue: 'Current' }), variant: 'warning' as const }
+              : { label: t('integrations.teams.settings.wizard.status.incomplete', { defaultValue: 'Incomplete' }), variant: 'secondary' as const };
+          return (
+            <div
+              key={step.id}
+              id={`teams-wizard-step-${step.id}`}
+              data-current={isCurrent ? 'true' : 'false'}
+              className="space-y-2 rounded-md border p-3"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="text-sm font-medium">
+                  {index + 1}. {t(`integrations.teams.settings.wizard.step.${key}.title`, { defaultValue: WIZARD_STEP_DEFAULT_TITLE[step.id] })}
+                </div>
+                <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t(`integrations.teams.settings.wizard.step.${key}.description`, { defaultValue: WIZARD_STEP_DEFAULT_TITLE[step.id] })}
+              </p>
+              {renderWizardStepControls(step.id)}
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="space-y-6">
+      {isAddonExpired ? <TeamsAddonExpiredBanner /> : null}
+
+      {packageStale ? (
+        <TeamsStaleManifestWarning
+          onRegenerate={() => void handlePackageRefresh()}
+          regenerating={packageLoading}
+          canRegenerate={hasSavedPackageContext}
+        />
+      ) : null}
+
+      {showWizard ? renderWizard() : null}
+
+      {isActive && currentIntegration?.botConnectorConfigured === false ? (
+        <Alert id="teams-bot-credentials-banner" variant="warning">
+          <AlertDescription>
+            {t('integrations.teams.settings.botCredentialsBanner.message', {
+              defaultValue:
+                'The Teams bot cannot reply: bot connector credentials (TEAMS_BOT_APP_ID / TEAMS_BOT_APP_TENANT_ID / TEAMS_BOT_APP_PASSWORD) are not configured on the server.',
+            })}{' '}
+            {t('integrations.teams.settings.botCredentialsBanner.hint', {
+              defaultValue: 'Run diagnostics below for details.',
+            })}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       {error ? (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
@@ -714,6 +1119,27 @@ export function TeamsIntegrationSettings() {
                 </div>
 
                 <label className="flex items-start gap-3 rounded-md border p-3">
+                  <Switch
+                    id="send-meeting-invites-switch"
+                    checked={formState.sendMeetingInvites}
+                    onCheckedChange={(checked) => {
+                      setFormState((current) => ({
+                        ...current,
+                        sendMeetingInvites: Boolean(checked),
+                      }));
+                    }}
+                  />
+                  <div>
+                    <div className="text-sm font-medium">
+                      {t('integrations.teams.settings.meetings.sendMeetingInvites.label', { defaultValue: 'Send calendar invites to participants' })}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {t('integrations.teams.settings.meetings.sendMeetingInvites.description', { defaultValue: 'Attendees receive native Outlook/Teams calendar invites for generated meetings.' })}
+                    </div>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 rounded-md border p-3">
                   <Checkbox
                     id="teams-download-recordings"
                     checked={formState.downloadRecordings}
@@ -780,19 +1206,37 @@ export function TeamsIntegrationSettings() {
               <div className="space-y-3">
                 <div className="text-sm font-medium">{t('integrations.teams.settings.section.notifications', { defaultValue: 'Notifications' })}</div>
                 {TEAMS_NOTIFICATION_OPTIONS.map((option) => (
-                  <label key={option.value} className="flex items-start gap-3 rounded-md border p-3">
-                    <Checkbox
-                      id={`teams-notification-${option.value}`}
-                      checked={formState.notificationCategories.includes(option.value)}
-                      onChange={(event) =>
-                        updateCheckboxGroup('notificationCategories', option.value, event.target.checked)
-                      }
-                    />
-                    <div>
-                      <div className="text-sm font-medium">{option.label}</div>
-                      <div className="text-xs text-muted-foreground">{option.description}</div>
-                    </div>
-                  </label>
+                  <div key={option.value} className="space-y-2 rounded-md border p-3">
+                    <label className="flex items-start gap-3">
+                      <Checkbox
+                        id={`teams-notification-${option.value}`}
+                        checked={formState.notificationCategories.includes(option.value)}
+                        onChange={(event) =>
+                          updateCheckboxGroup('notificationCategories', option.value, event.target.checked)
+                        }
+                      />
+                      <div>
+                        <div className="text-sm font-medium">{option.label}</div>
+                        <div className="text-xs text-muted-foreground">{option.description}</div>
+                      </div>
+                    </label>
+                    {formState.notificationCategories.includes(option.value) ? (
+                      <div className="pl-7">
+                        <div className="mb-1 text-xs text-muted-foreground">
+                          {t('integrations.teams.settings.notifications.channel.label', { defaultValue: 'Delivery channel' })}
+                        </div>
+                        <CustomSelect
+                          id={`notification-channel-select-${option.value.replace(/_/g, '-')}`}
+                          options={TEAMS_NOTIFICATION_CHANNEL_OPTIONS}
+                          value={formState.notificationChannels[option.value] ?? 'activity_feed'}
+                          onValueChange={(value) =>
+                            updateNotificationChannel(option.value, value as TeamsNotificationChannelValue)
+                          }
+                          size="sm"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
                 ))}
               </div>
 
@@ -1066,6 +1510,14 @@ export function TeamsIntegrationSettings() {
           ) : null}
         </CardContent>
       </Card>
+
+      {isActive ? (
+        <>
+          <TeamsDeliveryLogViewer />
+          <TeamsAuditLogViewer />
+          <TeamsTroubleshootingPanel />
+        </>
+      ) : null}
     </div>
   );
 }

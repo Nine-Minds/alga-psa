@@ -15,6 +15,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ArrowDown, ArrowUp, Check, Pencil, Plus, Trash2 } from 'lucide-react';
 
 type EditableAdditionalEmailRow = ContactEmailAddressInput & {
@@ -43,15 +44,22 @@ type NormalizedContactEmailAddresses = ContactEmailAddressesEditorChange;
 
 const CANONICAL_EMAIL_TYPES: readonly ContactEmailCanonicalType[] = CONTACT_EMAIL_CANONICAL_TYPES ?? [];
 
-const CANONICAL_EMAIL_TYPE_OPTIONS = CANONICAL_EMAIL_TYPES.map((value) => ({
-  value,
-  label: value.charAt(0).toUpperCase() + value.slice(1),
-}));
+type TranslateFn = (key: string, options?: { defaultValue?: string;[key: string]: unknown }) => string;
 
-const EMAIL_TYPE_OPTIONS = [
-  ...CANONICAL_EMAIL_TYPE_OPTIONS,
-  { value: 'custom', label: 'Custom' },
-];
+function buildEmailTypeOptions(t: TranslateFn): Array<{ value: string; label: string }> {
+  return [
+    ...CANONICAL_EMAIL_TYPES.map((value) => ({
+      value,
+      label: t(`contactEmailAddressesEditor.emailTypes.${value}`, {
+        defaultValue: value.charAt(0).toUpperCase() + value.slice(1),
+      }),
+    })),
+    {
+      value: 'custom',
+      label: t('contactEmailAddressesEditor.emailTypes.custom', { defaultValue: 'Custom' }),
+    },
+  ];
+}
 
 const EMAIL_ROW_ERROR_PATTERN = /^Additional email (\d+):/;
 const EMAIL_ADDRESS_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -283,13 +291,16 @@ function getRowKey(row: EditableAdditionalEmailRow, index: number): string {
   return `local:${row._localId ?? `${index}`}`;
 }
 
-function getEmailRowLabel(row: ContactEmailRowInput): string {
+function getEmailRowLabel(row: ContactEmailRowInput, t: TranslateFn): string {
   if (row.canonical_type === null) {
-    return row.custom_type?.trim() || 'Custom';
+    return row.custom_type?.trim()
+      || t('contactEmailAddressesEditor.emailTypes.custom', { defaultValue: 'Custom' });
   }
 
   const canonicalType = row.canonical_type ?? 'work';
-  return canonicalType.charAt(0).toUpperCase() + canonicalType.slice(1);
+  return t(`contactEmailAddressesEditor.emailTypes.${canonicalType}`, {
+    defaultValue: canonicalType.charAt(0).toUpperCase() + canonicalType.slice(1),
+  });
 }
 
 function getVisibleValidationErrors(
@@ -369,9 +380,12 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
   onMoveDown,
   onRemove,
 }) => {
+  const { t } = useTranslation('msp/contacts');
   const typeValue = row.canonical_type === null ? 'custom' : row.canonical_type ?? 'work';
-  const summaryLabel = getEmailRowLabel(row);
-  const summaryEmail = row.email_address?.trim() || 'No email entered yet';
+  const summaryLabel = getEmailRowLabel(row, t);
+  const summaryEmail = row.email_address?.trim()
+    || t('contactEmailAddressesEditor.row.noEmailYet', { defaultValue: 'No email entered yet' });
+  const emailTypeOptions = useMemo(() => buildEmailTypeOptions(t), [t]);
   const customTypeOptions = useMemo(
     () => buildCustomTypeOptions(customTypeSuggestions),
     [customTypeSuggestions]
@@ -387,7 +401,7 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
                 {summaryLabel}
               </span>
               <span className="text-xs text-[rgb(var(--color-text-500))]">
-                Additional email {index + 1}
+                {t('contactEmailAddressesEditor.row.title', { number: index + 1, defaultValue: `Additional email ${index + 1}` })}
               </span>
             </div>
             <div className="truncate text-sm font-medium text-[rgb(var(--color-text-900))]">
@@ -404,7 +418,7 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
               options={[
                 {
                   value: `email-${index}`,
-                  label: 'Default',
+                  label: t('contactEmailAddressesEditor.row.defaultLabel', { defaultValue: 'Default' }),
                 },
               ]}
               orientation="horizontal"
@@ -419,10 +433,10 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
               onClick={onToggleExpanded}
               disabled={disabled}
               className="inline-flex items-center gap-1.5"
-              aria-label={`Edit additional email ${index + 1}`}
+              aria-label={t('contactEmailAddressesEditor.row.edit', { number: index + 1, defaultValue: `Edit additional email ${index + 1}` })}
             >
               <Pencil className="h-4 w-4" />
-              Edit
+              {t('contactEmailAddressesEditor.row.editLabel', { defaultValue: 'Edit' })}
             </Button>
             {showReorderControls && (
               <>
@@ -433,7 +447,7 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
                   size="sm"
                   onClick={onMoveUp}
                   disabled={disabled || !canMoveUp}
-                  aria-label={`Move additional email ${index + 1} up`}
+                  aria-label={t('contactEmailAddressesEditor.row.moveUp', { number: index + 1, defaultValue: `Move additional email ${index + 1} up` })}
                 >
                   <ArrowUp className="h-4 w-4" />
                 </Button>
@@ -444,7 +458,7 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
                   size="sm"
                   onClick={onMoveDown}
                   disabled={disabled || !canMoveDown}
-                  aria-label={`Move additional email ${index + 1} down`}
+                  aria-label={t('contactEmailAddressesEditor.row.moveDown', { number: index + 1, defaultValue: `Move additional email ${index + 1} down` })}
                 >
                   <ArrowDown className="h-4 w-4" />
                 </Button>
@@ -457,7 +471,7 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
               size="sm"
               onClick={onRemove}
               disabled={disabled}
-              aria-label={`Remove additional email ${index + 1}`}
+              aria-label={t('contactEmailAddressesEditor.row.remove', { number: index + 1, defaultValue: `Remove additional email ${index + 1}` })}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -471,8 +485,12 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
     <Card className="p-4" data-testid={`${id}-row-${index}`}>
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div>
-          <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">Additional email {index + 1}</div>
-          <div className="text-xs text-muted-foreground">Stored as a non-default email address</div>
+          <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+            {t('contactEmailAddressesEditor.row.title', { number: index + 1, defaultValue: `Additional email ${index + 1}` })}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {t('contactEmailAddressesEditor.row.secondaryDescription', { defaultValue: 'Stored as a non-default email address' })}
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 lg:justify-end">
           <RadioGroup
@@ -483,7 +501,7 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
             options={[
               {
                 value: `email-${index}`,
-                label: 'Default',
+                label: t('contactEmailAddressesEditor.row.defaultLabel', { defaultValue: 'Default' }),
               },
             ]}
             orientation="horizontal"
@@ -499,10 +517,10 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
               onClick={onToggleExpanded}
               disabled={disabled}
               className="inline-flex items-center gap-1.5"
-              aria-label={`Done editing additional email ${index + 1}`}
+              aria-label={t('contactEmailAddressesEditor.row.done', { number: index + 1, defaultValue: `Done editing additional email ${index + 1}` })}
             >
               <Check className="h-4 w-4" />
-              Done
+              {t('contactEmailAddressesEditor.row.doneLabel', { defaultValue: 'Done' })}
             </Button>
           )}
           {showReorderControls && (
@@ -514,7 +532,7 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
                 size="sm"
                 onClick={onMoveUp}
                 disabled={disabled || !canMoveUp}
-                aria-label={`Move additional email ${index + 1} up`}
+                aria-label={t('contactEmailAddressesEditor.row.moveUp', { number: index + 1, defaultValue: `Move additional email ${index + 1} up` })}
               >
                 <ArrowUp className="h-4 w-4" />
               </Button>
@@ -525,7 +543,7 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
                 size="sm"
                 onClick={onMoveDown}
                 disabled={disabled || !canMoveDown}
-                aria-label={`Move additional email ${index + 1} down`}
+                aria-label={t('contactEmailAddressesEditor.row.moveDown', { number: index + 1, defaultValue: `Move additional email ${index + 1} down` })}
               >
                 <ArrowDown className="h-4 w-4" />
               </Button>
@@ -538,7 +556,7 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
             size="sm"
             onClick={onRemove}
             disabled={disabled}
-            aria-label={`Remove additional email ${index + 1}`}
+            aria-label={t('contactEmailAddressesEditor.row.remove', { number: index + 1, defaultValue: `Remove additional email ${index + 1}` })}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -548,7 +566,7 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(240px,0.9fr)] xl:items-start">
         <div className="space-y-1">
           <Label htmlFor={`${id}-email-${index}`} className="block text-gray-700">
-            Email Address
+            {t('contactEmailAddressesEditor.fields.emailAddress', { defaultValue: 'Email Address' })}
           </Label>
           <Input
             id={`${id}-email-${index}`}
@@ -556,13 +574,13 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
             value={row.email_address ?? ''}
             onChange={(event) => onChange({ email_address: event.target.value })}
             onBlur={onBlur}
-            placeholder="name@example.com"
+            placeholder={t('contactEmailAddressesEditor.fields.emailPlaceholder', { defaultValue: 'name@example.com' })}
             disabled={disabled}
           />
         </div>
         <div className="space-y-1">
           <Label htmlFor={`${id}-type-${index}`} className="block text-gray-700">
-            Email Label
+            {t('contactEmailAddressesEditor.fields.emailLabel', { defaultValue: 'Email Label' })}
           </Label>
           <CustomSelect
             id={`${id}-type-${index}`}
@@ -578,25 +596,25 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
                 custom_type: null,
               });
             }}
-            options={EMAIL_TYPE_OPTIONS}
+            options={emailTypeOptions}
             disabled={disabled}
             className="h-[42px] rounded-md"
           />
           {typeValue === 'custom' && (
             <div className="space-y-1">
               <Label htmlFor={`${id}-custom-type-${index}`} className="block text-[rgb(var(--color-text-700))]">
-                Custom Email Label
+                {t('contactEmailAddressesEditor.fields.customEmailLabel', { defaultValue: 'Custom Email Label' })}
               </Label>
               <SearchableSelect
                 id={`${id}-custom-type-${index}`}
                 value={row.custom_type ?? ''}
                 onChange={(nextValue) => onChange({ canonical_type: null, custom_type: nextValue })}
                 options={customTypeOptions}
-                placeholder="Select or enter a custom email label"
-                searchPlaceholder="Search or enter a custom email label..."
-                emptyMessage="No matching custom email labels."
+                placeholder={t('contactEmailAddressesEditor.fields.customTypePlaceholder', { defaultValue: 'Select or enter a custom email label' })}
+                searchPlaceholder={t('contactEmailAddressesEditor.fields.customTypeSearchPlaceholder', { defaultValue: 'Search or enter a custom email label...' })}
+                emptyMessage={t('contactEmailAddressesEditor.fields.customTypeEmpty', { defaultValue: 'No matching custom email labels.' })}
                 allowCustomValue={true}
-                customValueLabel={(nextValue) => `Use "${nextValue}"`}
+                customValueLabel={(nextValue) => t('contactEmailAddressesEditor.fields.customTypeUseValue', { value: nextValue, defaultValue: `Use "${nextValue}"` })}
                 disabled={disabled}
                 className="h-[42px] rounded-md"
                 dropdownMode="overlay"
@@ -633,6 +651,8 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
   errorMessages,
   onValidationChange,
 }) => {
+  const { t } = useTranslation('msp/contacts');
+  const emailTypeOptions = useMemo(() => buildEmailTypeOptions(t), [t]);
   const primaryEmailDomId = primaryEmailInputId ?? `${id}-primary-email`;
   const normalizedValue = useMemo(() => normalizeDraftContactEmailAddresses(value), [value]);
   const [primaryEmail, setPrimaryEmail] = useState(normalizedValue.email);
@@ -951,10 +971,10 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
       <div className="flex items-center justify-between gap-3">
         <div>
           <Label className="text-sm font-medium text-gray-900">
-            Email Addresses
+            {t('contactEmailAddressesEditor.title', { defaultValue: 'Email Addresses' })}
           </Label>
           <p className="text-xs text-gray-500">
-            Add one or more email addresses and choose exactly one default.
+            {t('contactEmailAddressesEditor.description', { defaultValue: 'Add one or more email addresses and choose exactly one default.' })}
           </p>
         </div>
         <Button
@@ -967,15 +987,19 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
           className="inline-flex items-center gap-2"
         >
           <Plus className="h-4 w-4" />
-          Add Email
+          {t('contactEmailAddressesEditor.actions.addEmail', { defaultValue: 'Add Email' })}
         </Button>
       </div>
 
       <Card className="p-4" data-testid={`${id}-primary-row`}>
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <div>
-            <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">Primary email</div>
-            <div className="text-xs text-muted-foreground">This remains the default address stored on the contact record</div>
+            <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+              {t('contactEmailAddressesEditor.primary.title', { defaultValue: 'Primary email' })}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t('contactEmailAddressesEditor.primary.description', { defaultValue: 'This remains the default address stored on the contact record' })}
+            </div>
           </div>
           <RadioGroup
             id={`${id}-default-primary`}
@@ -985,7 +1009,7 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
             options={[
               {
                 value: 'email-primary',
-                label: 'Default',
+                label: t('contactEmailAddressesEditor.row.defaultLabel', { defaultValue: 'Default' }),
               },
             ]}
             orientation="horizontal"
@@ -997,44 +1021,44 @@ const ContactEmailAddressesEditor: React.FC<ContactEmailAddressesEditorProps> = 
         <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(240px,0.9fr)] xl:items-start">
           <div className="space-y-1">
             <Label htmlFor={primaryEmailDomId} className="block text-gray-700">
-              Email Address
+              {t('contactEmailAddressesEditor.fields.emailAddress', { defaultValue: 'Email Address' })}
             </Label>
             <Input
               id={primaryEmailDomId}
               type="email"
               value={primaryEmail}
               onChange={(event) => handlePrimaryEmailChange(event.target.value)}
-              placeholder="name@example.com"
+              placeholder={t('contactEmailAddressesEditor.fields.emailPlaceholder', { defaultValue: 'name@example.com' })}
               disabled={disabled}
             />
           </div>
           <div className="space-y-1">
             <Label htmlFor={`${id}-primary-type`} className="block text-gray-700">
-              Email Label
+              {t('contactEmailAddressesEditor.fields.emailLabel', { defaultValue: 'Email Label' })}
             </Label>
             <CustomSelect
               id={`${id}-primary-type`}
               value={primaryTypeValue}
               onValueChange={handlePrimaryTypeChange}
-              options={EMAIL_TYPE_OPTIONS}
+              options={emailTypeOptions}
               disabled={disabled}
               className="h-[42px] rounded-md"
             />
             {primaryTypeValue === 'custom' && (
               <div className="space-y-1">
                 <Label htmlFor={`${id}-primary-custom-type`} className="block text-[rgb(var(--color-text-700))]">
-                  Custom Email Label
+                  {t('contactEmailAddressesEditor.fields.customEmailLabel', { defaultValue: 'Custom Email Label' })}
                 </Label>
                 <SearchableSelect
                   id={`${id}-primary-custom-type`}
                   value={primaryCustomType ?? ''}
                   onChange={handlePrimaryCustomTypeChange}
                   options={primaryCustomTypeOptions}
-                  placeholder="Select or enter a custom email label"
-                  searchPlaceholder="Search or enter a custom email label..."
-                  emptyMessage="No matching custom email labels."
+                  placeholder={t('contactEmailAddressesEditor.fields.customTypePlaceholder', { defaultValue: 'Select or enter a custom email label' })}
+                  searchPlaceholder={t('contactEmailAddressesEditor.fields.customTypeSearchPlaceholder', { defaultValue: 'Search or enter a custom email label...' })}
+                  emptyMessage={t('contactEmailAddressesEditor.fields.customTypeEmpty', { defaultValue: 'No matching custom email labels.' })}
                   allowCustomValue={true}
-                  customValueLabel={(nextValue) => `Use "${nextValue}"`}
+                  customValueLabel={(nextValue) => t('contactEmailAddressesEditor.fields.customTypeUseValue', { value: nextValue, defaultValue: `Use "${nextValue}"` })}
                   disabled={disabled}
                   className="h-[42px] rounded-md"
                   dropdownMode="overlay"

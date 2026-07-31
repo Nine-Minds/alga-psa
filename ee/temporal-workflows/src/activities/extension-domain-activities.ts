@@ -1,9 +1,12 @@
 import { getAdminConnection, retryOnAdminReadOnly } from '@alga-psa/db/admin.js';
+import { tenantDb } from '@alga-psa/db';
 import { computeDomain as sharedComputeDomain } from '@alga-psa/shared/extensions/domain.js';
 import type { Knex } from 'knex';
 import { KubeConfig, CustomObjectsApi } from '@kubernetes/client-node';
 import { ApiException } from '@kubernetes/client-node/dist/gen/apis/exception.js';
 import { ApplicationFailure } from '@temporalio/activity';
+
+const EXTENSION_DOMAIN_INSTALL_DISCOVERY_TENANT = '__extension_domain_install_discovery__';
 
 export interface ComputeDomainInput {
   tenantId: string;
@@ -76,7 +79,11 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
             await retryOnAdminReadOnly(
               async () => {
                 const knex: Knex = await getAdminConnection();
-                await knex('tenant_extension_install')
+                await tenantDb(knex, EXTENSION_DOMAIN_INSTALL_DISCOVERY_TENANT)
+                  .unscoped(
+                    'tenant_extension_install',
+                    'extension domain normalization updates by runner domain before tenant is known'
+                  )
                   .where({ runner_domain: domainName })
                   .update({ runner_domain: newDomain, updated_at: knex.fn.now() });
               },
@@ -208,28 +215,27 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
       },
     };
 
-    // Check if exists
-    let exists = false;
+    // Fetch current object (if any): we need its resourceVersion to replace, and its
+    // ref to decide whether a write is necessary at all.
+    let current: any;
     try {
-      await co.getNamespacedCustomObject({
+      current = await co.getNamespacedCustomObject({
         group,
         version,
         namespace,
         plural,
         name,
       });
-      exists = true;
     } catch (e: any) {
       const { status, reason, message, body } = formatHttpError(e);
       const isNotFound = status === 404 || reason === 'NotFound' || /not\s*found/i.test(message);
-      if (isNotFound) {
-        exists = false;
-      } else {
+      if (!isNotFound) {
         throw new Error(`domainmapping.get failed: status=${status} body=${body}`);
       }
+      current = undefined;
     }
 
-    if (!exists) {
+    if (!current) {
       try {
         await co.createNamespacedCustomObject({
           group,
@@ -245,7 +251,14 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
       return { applied: true, ref: { namespace, name, kind: 'DomainMapping', group, version } };
     }
 
-    // Replace object if exists to ensure correct ref
+    const liveMeta = current.metadata ?? current.body?.metadata;
+    const liveRef = current.spec?.ref?.name ?? current.body?.spec?.ref?.name;
+    // Already mapped to the desired service: idempotent no-op, no write needed.
+    if (liveRef === kservice) {
+      return { applied: false, ref: { namespace, name, kind: 'DomainMapping', group, version } };
+    }
+
+    // Replace requires the live resourceVersion, else the API rejects the update (422).
     try {
       await co.replaceNamespacedCustomObject({
         group,
@@ -253,7 +266,10 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
         namespace,
         plural,
         name,
-        body: desired,
+        body: {
+          ...desired,
+          metadata: { ...desired.metadata, resourceVersion: liveMeta?.resourceVersion },
+        },
       });
     } catch (e: any) {
       const { status, body } = formatHttpError(e);
@@ -306,7 +322,12 @@ export async function updateInstallStatus(input: UpdateInstallStatusInput): Prom
         update.runner_domain = runnerDomainToSet;
       }
 
-      let q = knex('tenant_extension_install').update(update);
+      let q = tenantDb(knex, EXTENSION_DOMAIN_INSTALL_DISCOVERY_TENANT)
+        .unscoped(
+          'tenant_extension_install',
+          'extension domain status update resolves installs by id or runner domain before tenant is known'
+        )
+        .update(update);
 
       if (input.installId) {
         q = q.where({ id: input.installId });

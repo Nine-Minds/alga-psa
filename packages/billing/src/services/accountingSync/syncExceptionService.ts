@@ -1,6 +1,7 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import logger from '@alga-psa/core/logger';
+import { tenantDb } from '@alga-psa/db';
 import type { SyncExceptionInput, SyncExceptionService, SyncExceptionType } from './syncExceptions.types';
 
 /**
@@ -24,14 +25,17 @@ export class WorkflowTaskSyncExceptionService implements SyncExceptionService {
     private readonly tenantId: string
   ) {}
 
+  private scopedDb() {
+    return tenantDb(this.knex, this.tenantId);
+  }
+
   /**
    * The inbox only surfaces tasks assigned to the viewer's user id or role ids,
    * so exception tasks must carry the tenant's admin role to be visible.
    */
   private getAdminRoleId(): Promise<string | null> {
     if (!this.adminRoleIdPromise) {
-      this.adminRoleIdPromise = this.knex('roles')
-        .where({ tenant: this.tenantId })
+      this.adminRoleIdPromise = this.scopedDb().table('roles')
         .whereRaw('LOWER(role_name) = ?', ['admin'])
         .first<{ role_id: string } | undefined>('role_id')
         .then((row) => row?.role_id ?? null)
@@ -41,9 +45,8 @@ export class WorkflowTaskSyncExceptionService implements SyncExceptionService {
   }
 
   private openTaskQuery(type: SyncExceptionType, entityType: string, entityId: string) {
-    return this.knex('workflow_tasks')
+    return this.scopedDb().table('workflow_tasks')
       .where({
-        tenant: this.tenantId,
         task_definition_type: 'system',
         system_task_definition_task_type: type
       })
@@ -65,8 +68,8 @@ export class WorkflowTaskSyncExceptionService implements SyncExceptionService {
     const existing = await this.openTaskQuery(input.type, input.entityType, input.entityId).first();
 
     if (existing) {
-      await this.knex('workflow_tasks')
-        .where({ tenant: this.tenantId, task_id: existing.task_id })
+      await this.scopedDb().table('workflow_tasks')
+        .where({ task_id: existing.task_id })
         .update({
           context_data: JSON.stringify(contextData),
           updated_at: new Date().toISOString()
@@ -76,7 +79,7 @@ export class WorkflowTaskSyncExceptionService implements SyncExceptionService {
 
     const adminRoleId = await this.getAdminRoleId();
 
-    await this.knex('workflow_tasks').insert({
+    await this.scopedDb().table('workflow_tasks').insert({
       task_id: uuidv4(),
       tenant: this.tenantId,
       execution_id: uuidv4(), // standalone inbox task; no workflow execution behind it
@@ -111,8 +114,8 @@ export class WorkflowTaskSyncExceptionService implements SyncExceptionService {
 
   /** Open exception count for the health panel. */
   async countOpen(): Promise<number> {
-    const row = await this.knex('workflow_tasks')
-      .where({ tenant: this.tenantId, task_definition_type: 'system' })
+    const row = await this.scopedDb().table('workflow_tasks')
+      .where({ task_definition_type: 'system' })
       .whereIn('system_task_definition_task_type', [
         'accounting_sync_drift',
         'accounting_sync_unmapped_payment',

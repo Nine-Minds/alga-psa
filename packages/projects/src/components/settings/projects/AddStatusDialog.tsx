@@ -9,6 +9,11 @@ import {
 } from '@alga-psa/projects/actions/projectTaskStatusActions';
 import type { IStatus } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from 'react-i18next';
 
 interface AddStatusDialogProps {
@@ -16,6 +21,10 @@ interface AddStatusDialogProps {
   phaseId?: string | null;
   onClose: () => void;
   onAdded: () => void;
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 export function AddStatusDialog({ projectId, phaseId, onClose, onAdded }: AddStatusDialogProps) {
@@ -41,9 +50,13 @@ export function AddStatusDialog({ projectId, phaseId, onClose, onAdded }: AddSta
     setSubmitting(true);
     try {
       // Add existing status from library to project
-      await addStatusToProject(projectId, {
+      const result = await addStatusToProject(projectId, {
         status_id: selectedStatusId
       }, phaseId);
+      if (isReturnedActionError(result)) {
+        alert(getErrorMessage(result));
+        return;
+      }
 
       onAdded();
       onClose();

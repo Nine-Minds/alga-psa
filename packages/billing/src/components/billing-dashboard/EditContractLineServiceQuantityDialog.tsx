@@ -96,9 +96,9 @@ export function EditContractLineServiceQuantityDialog({
     try {
       await onSave(contractLineId, serviceId, validatedQuantity);
       onOpenChange(false); // Close dialog on successful save
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error saving quantity:', err);
-      setError(err.message || t('editQuantityDialog.errors.saveFailed', {
+      setError(t('editQuantityDialog.errors.saveFailed', {
         defaultValue: 'Failed to update quantity. Please try again.',
       }));
     } finally {

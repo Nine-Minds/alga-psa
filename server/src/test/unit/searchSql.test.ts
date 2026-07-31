@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildTsvectorSql } from '../../lib/search/sql';
+import { buildTsvectorSql } from '@alga-psa/search/sql';
 
 describe('search SQL helpers', () => {
   it('T021 builds weighted tsvector SQL using process_large_lexemes', () => {

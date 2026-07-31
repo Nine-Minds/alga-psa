@@ -9,16 +9,19 @@
  * @see ee/docs/plans/asset-detail-view-enhancement.md §1.4.2
  */
 
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import {
   createBlockDocument,
   getBlockContent,
   updateBlockContent,
-} from '@alga-psa/block-content/actions';
+} from '@alga-psa/block-content/actions/blockContentActions';
 import type { IDocument } from '@alga-psa/types';
+import {
+  assetActionErrorFrom,
+  type AssetActionError,
+} from './assetActionErrors';
 
 export interface AssetNoteContent {
   document: IDocument | null;
@@ -26,22 +29,26 @@ export interface AssetNoteContent {
   lastUpdated: string | null;
 }
 
+function tenantScopedTable(conn: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder<any, any> {
+  return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
+}
+
 /**
  * Get note content for an asset
  * Returns the BlockNote content if the asset has a linked notes document
  */
-export const getAssetNoteContent = withAuth(async (_user, { tenant }, assetId: string): Promise<AssetNoteContent> => {
+export const getAssetNoteContent = withAuth(async (_user, { tenant }, assetId: string): Promise<AssetNoteContent | AssetActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
     // Get the asset to find notes_document_id
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await tenantScopedTable(knex, tenant, 'assets')
+      .where({ asset_id: assetId })
       .select('notes_document_id')
       .first();
 
     if (!asset) {
-      throw new Error('Asset not found');
+      return assetActionErrorFrom(new Error('Asset not found'))!;
     }
 
     // If no notes document exists yet, return empty content
@@ -54,8 +61,8 @@ export const getAssetNoteContent = withAuth(async (_user, { tenant }, assetId: s
     }
 
     // Get the document
-    const document = await knex('documents')
-      .where({ tenant, document_id: asset.notes_document_id })
+    const document = await tenantScopedTable(knex, tenant, 'documents')
+      .where({ document_id: asset.notes_document_id })
       .first() as IDocument | undefined;
 
     if (!document) {
@@ -68,6 +75,10 @@ export const getAssetNoteContent = withAuth(async (_user, { tenant }, assetId: s
 
     // Get the block content
     const blockContent = await getBlockContent(asset.notes_document_id);
+    const blockContentError = assetActionErrorFrom(blockContent);
+    if (blockContentError) {
+      return blockContentError;
+    }
 
     let parsedBlockData: unknown | null = null;
     if (blockContent?.block_data) {
@@ -91,7 +102,11 @@ export const getAssetNoteContent = withAuth(async (_user, { tenant }, assetId: s
     };
   } catch (error) {
     console.error('Error getting asset note content:', error);
-    throw new Error('Failed to get asset note content');
+    const expectedError = assetActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -104,41 +119,51 @@ export const saveAssetNote = withAuth(async (
   { tenant },
   assetId: string,
   blockData: unknown
-): Promise<{ document_id: string }> => {
+): Promise<{ document_id: string } | AssetActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
     // Get the asset
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await tenantScopedTable(knex, tenant, 'assets')
+      .where({ asset_id: assetId })
       .select('asset_id', 'name', 'notes_document_id')
       .first();
 
     if (!asset) {
-      throw new Error('Asset not found');
+      return assetActionErrorFrom(new Error('Asset not found'))!;
     }
 
     if (asset.notes_document_id) {
       // Update existing document
-      await updateBlockContent(asset.notes_document_id, {
+      const updateResult = await updateBlockContent(asset.notes_document_id, {
         block_data: blockData,
         user_id: user.user_id,
       });
+      const updateError = assetActionErrorFrom(updateResult);
+      if (updateError) {
+        return updateError;
+      }
 
       return { document_id: asset.notes_document_id };
     } else {
       // Create new document and link to asset
-      const { document_id } = await createBlockDocument({
+      const createResult = await createBlockDocument({
         document_name: `${asset.name} Notes`,
         user_id: user.user_id,
         block_data: blockData,
         entityId: assetId,
         entityType: 'asset',
       });
+      const createError = assetActionErrorFrom(createResult);
+      if (createError) {
+        return createError;
+      }
+
+      const { document_id } = createResult;
 
       // Update asset with notes_document_id
-      await knex('assets')
-        .where({ tenant, asset_id: assetId })
+      await tenantScopedTable(knex, tenant, 'assets')
+        .where({ asset_id: assetId })
         .update({
           notes_document_id: document_id,
           updated_at: knex.fn.now(),
@@ -148,7 +173,11 @@ export const saveAssetNote = withAuth(async (
     }
   } catch (error) {
     console.error('Error saving asset note:', error);
-    throw new Error('Failed to save asset note');
+    const expectedError = assetActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -161,24 +190,28 @@ export const deleteAssetNote = withAuth(async (
   { tenant },
   assetId: string,
   deleteDocument: boolean = false
-): Promise<void> => {
+): Promise<void | AssetActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
     // Get the asset
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await tenantScopedTable(knex, tenant, 'assets')
+      .where({ asset_id: assetId })
       .select('notes_document_id')
       .first();
 
-    if (!asset || !asset.notes_document_id) {
+    if (!asset) {
+      return assetActionErrorFrom(new Error('Asset not found'))!;
+    }
+
+    if (!asset.notes_document_id) {
       return; // No notes to delete
     }
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Unlink the document from the asset
-      await trx('assets')
-        .where({ tenant, asset_id: assetId })
+      await tenantScopedTable(trx, tenant, 'assets')
+        .where({ asset_id: assetId })
         .update({
           notes_document_id: null,
           updated_at: trx.fn.now(),
@@ -187,23 +220,27 @@ export const deleteAssetNote = withAuth(async (
       // Optionally delete the document entirely
       if (deleteDocument) {
         // Delete block content first (due to FK)
-        await trx('document_block_content')
-          .where({ tenant, document_id: asset.notes_document_id })
+        await tenantScopedTable(trx, tenant, 'document_block_content')
+          .where({ document_id: asset.notes_document_id })
           .delete();
 
         // Delete document associations
-        await trx('document_associations')
-          .where({ tenant, document_id: asset.notes_document_id })
+        await tenantScopedTable(trx, tenant, 'document_associations')
+          .where({ document_id: asset.notes_document_id })
           .delete();
 
         // Delete the document
-        await trx('documents')
-          .where({ tenant, document_id: asset.notes_document_id })
+        await tenantScopedTable(trx, tenant, 'documents')
+          .where({ document_id: asset.notes_document_id })
           .delete();
       }
     });
   } catch (error) {
     console.error('Error deleting asset note:', error);
-    throw new Error('Failed to delete asset note');
+    const expectedError = assetActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });

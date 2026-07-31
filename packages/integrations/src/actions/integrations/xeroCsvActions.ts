@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getXeroCsvTaxImportService } from '../../services/xeroCsvTaxImportService';
@@ -13,6 +13,12 @@ import {
   type ClientImportOptions
 } from '../../services/xeroCsvClientSyncService';
 import logger from '@alga-psa/core/logger';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 /**
  * Xero CSV integration settings stored in tenant_settings.settings.
@@ -35,6 +41,21 @@ const DEFAULT_SETTINGS: XeroCsvSettings = {
   setupAcknowledged: false
 };
 
+type XeroCsvActionError = ActionMessageError | ActionPermissionError;
+
+export type XeroCsvSettingsActionResult = XeroCsvSettings | XeroCsvActionError;
+export type XeroCsvTaxImportPreviewActionResult = TaxImportPreviewResult | XeroCsvActionError;
+export type XeroCsvTaxImportActionResult = TaxImportResult | XeroCsvActionError;
+export type XeroCsvClientExportActionResult = ClientExportResult | XeroCsvActionError;
+export type XeroCsvClientImportPreviewActionResult = ClientImportPreviewResult | XeroCsvActionError;
+export type XeroCsvClientImportActionResult = ClientImportResult | XeroCsvActionError;
+export type XeroCsvClientMappingsActionResult = Array<{
+  clientId: string;
+  clientName: string;
+  xeroContactName: string;
+  lastSyncedAt: string | null;
+}> | XeroCsvActionError;
+
 /**
  * Get Xero CSV integration settings for the current tenant.
  */
@@ -43,9 +64,9 @@ export const getXeroCsvSettings = withAuth(async (
   { tenant }
 ): Promise<XeroCsvSettings> => {
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
 
-  const tenantSettings = await knex('tenant_settings')
-    .where({ tenant })
+  const tenantSettings = await db.table('tenant_settings')
     .select('settings')
     .first();
 
@@ -65,17 +86,17 @@ export const updateXeroCsvSettings = withAuth(async (
   user,
   { tenant },
   updates: Partial<XeroCsvSettings>
-): Promise<XeroCsvSettings> => {
+): Promise<XeroCsvSettingsActionResult> => {
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
 
   const canManageIntegrations = await hasPermission(user, 'billing_settings', 'update');
   if (!canManageIntegrations) {
-    throw new Error('User does not have permission to manage integration settings');
+    return permissionError('User does not have permission to manage integration settings');
   }
 
   // Get current settings
-  const existingRow = await knex('tenant_settings')
-    .where({ tenant })
+  const existingRow = await db.table('tenant_settings')
     .select('settings')
     .first();
 
@@ -96,14 +117,13 @@ export const updateXeroCsvSettings = withAuth(async (
   const now = new Date();
 
   if (existingRow) {
-    await knex('tenant_settings')
-      .where({ tenant })
+    await db.table('tenant_settings')
       .update({
         settings: JSON.stringify(newSettings),
         updated_at: now
       });
   } else {
-    await knex('tenant_settings').insert({
+    await db.table('tenant_settings').insert({
       tenant,
       settings: JSON.stringify(newSettings),
       onboarding_completed: false,
@@ -132,14 +152,14 @@ export const previewXeroCsvTaxImport = withAuth(async (
   user,
   { tenant },
   csvContent: string
-): Promise<TaxImportPreviewResult> => {
+): Promise<XeroCsvTaxImportPreviewActionResult> => {
   const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
   if (!canManageBilling) {
-    throw new Error('User does not have permission to manage billing');
+    return permissionError('User does not have permission to manage billing');
   }
 
   if (!csvContent || csvContent.trim().length === 0) {
-    throw new Error('CSV content is required');
+    return actionError('CSV content is required');
   }
 
   const service = getXeroCsvTaxImportService();
@@ -163,14 +183,14 @@ export const executeXeroCsvTaxImport = withAuth(async (
   user,
   { tenant },
   csvContent: string
-): Promise<TaxImportResult> => {
+): Promise<XeroCsvTaxImportActionResult> => {
   const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
   if (!canManageBilling) {
-    throw new Error('User does not have permission to manage billing');
+    return permissionError('User does not have permission to manage billing');
   }
 
   if (!csvContent || csvContent.trim().length === 0) {
-    throw new Error('CSV content is required');
+    return actionError('CSV content is required');
   }
 
   const service = getXeroCsvTaxImportService();
@@ -207,10 +227,10 @@ export const exportClientsToXeroCsv = withAuth(async (
   user,
   { tenant },
   clientIds?: string[]
-): Promise<ClientExportResult> => {
+): Promise<XeroCsvClientExportActionResult> => {
   const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
   if (!canManageBilling) {
-    throw new Error('User does not have permission to manage billing');
+    return permissionError('User does not have permission to manage billing');
   }
 
   const service = getXeroCsvClientSyncService();
@@ -233,14 +253,14 @@ export const previewXeroCsvClientImport = withAuth(async (
   { tenant },
   csvContent: string,
   options?: Partial<ClientImportOptions>
-): Promise<ClientImportPreviewResult> => {
+): Promise<XeroCsvClientImportPreviewActionResult> => {
   const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
   if (!canManageBilling) {
-    throw new Error('User does not have permission to manage billing');
+    return permissionError('User does not have permission to manage billing');
   }
 
   if (!csvContent || csvContent.trim().length === 0) {
-    throw new Error('CSV content is required');
+    return actionError('CSV content is required');
   }
 
   const service = getXeroCsvClientSyncService();
@@ -265,14 +285,14 @@ export const executeXeroCsvClientImport = withAuth(async (
   { tenant },
   csvContent: string,
   options?: Partial<ClientImportOptions>
-): Promise<ClientImportResult> => {
+): Promise<XeroCsvClientImportActionResult> => {
   const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
   if (!canManageBilling) {
-    throw new Error('User does not have permission to manage billing');
+    return permissionError('User does not have permission to manage billing');
   }
 
   if (!csvContent || csvContent.trim().length === 0) {
-    throw new Error('CSV content is required');
+    return actionError('CSV content is required');
   }
 
   const service = getXeroCsvClientSyncService();
@@ -297,15 +317,10 @@ export const executeXeroCsvClientImport = withAuth(async (
 export const getXeroCsvClientMappings = withAuth(async (
   user,
   _ctx
-): Promise<Array<{
-  clientId: string;
-  clientName: string;
-  xeroContactName: string;
-  lastSyncedAt: string | null;
-}>> => {
+): Promise<XeroCsvClientMappingsActionResult> => {
   const canReadBilling = await hasPermission(user, 'billing_settings', 'read');
   if (!canReadBilling) {
-    throw new Error('User does not have permission to view billing settings');
+    return permissionError('User does not have permission to view billing settings');
   }
 
   const service = getXeroCsvClientSyncService();

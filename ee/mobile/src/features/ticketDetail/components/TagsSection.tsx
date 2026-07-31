@@ -6,33 +6,8 @@ import type { TicketTag } from "../../../api/tags";
 import { Card } from "../../../ui/components/Card";
 import { SectionHeader } from "../../../ui/components/SectionHeader";
 import { useTheme } from "../../../ui/ThemeContext";
+import { getTagChipColors } from "../../../ui/tagColors";
 import { ActionChip } from "./ActionChip";
-
-const HEX_COLOR = /^#[0-9a-f]{6}$/i;
-
-export function getReadableTextColor(backgroundHex: string): string {
-  const r = parseInt(backgroundHex.slice(1, 3), 16);
-  const g = parseInt(backgroundHex.slice(3, 5), 16);
-  const b = parseInt(backgroundHex.slice(5, 7), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.6 ? "#1F2937" : "#FFFFFF";
-}
-
-export function getTagChipColors(
-  tag: Pick<TicketTag, "background_color" | "text_color">,
-  fallback: { bg: string; text: string; border: string },
-): { backgroundColor: string; textColor: string; borderColor: string } {
-  const background = typeof tag.background_color === "string" && HEX_COLOR.test(tag.background_color)
-    ? tag.background_color
-    : null;
-  if (!background) {
-    return { backgroundColor: fallback.bg, textColor: fallback.text, borderColor: fallback.border };
-  }
-  const text = typeof tag.text_color === "string" && HEX_COLOR.test(tag.text_color)
-    ? tag.text_color
-    : getReadableTextColor(background);
-  return { backgroundColor: background, textColor: text, borderColor: background };
-}
 
 export function TagsSection({
   tags,
@@ -54,11 +29,9 @@ export function TagsSection({
   onRemoveTag: (tag: TicketTag) => void;
 }) {
   const { t } = useTranslation("tickets");
-  const { colors, spacing, typography } = useTheme();
+  const { mode, colors, spacing, typography } = useTheme();
 
   if (hidden) return null;
-
-  const fallbackChip = colors.badge.neutral;
 
   return (
     <Card accessibilityLabel={t("tags.title", { defaultValue: "Tags" })}>
@@ -92,7 +65,7 @@ export function TagsSection({
       ) : (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.md }}>
           {tags.map((tag) => {
-            const chip = getTagChipColors(tag, fallbackChip);
+            const chip = getTagChipColors(tag, mode);
             return (
               <View
                 key={tag.tag_id}

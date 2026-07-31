@@ -1,14 +1,10 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card } from '@alga-psa/ui/components/Card';
-import { Button } from '@alga-psa/ui/components/Button';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Coins, FileText, Receipt } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import type { IService, IClient } from '@alga-psa/types';
 import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/billing/actions/serviceActions';
+import { listInvoiceableSalesOrdersForBilling, type InvoiceableSalesOrderForBilling } from '@alga-psa/billing/actions/salesOrderInvoicingActions';
 import AutomaticInvoices from '../AutomaticInvoices';
 import ManualInvoices from '../ManualInvoices';
 import PrepaymentInvoices from '../PrepaymentInvoices';
@@ -16,36 +12,39 @@ import SuccessDialog from '@alga-psa/ui/components/SuccessDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from 'react-i18next';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+export type InvoiceType = 'automatic' | 'manual' | 'prepayment';
 
 interface GenerateTabProps {
   initialServices: IService[];
+  // Invoice type is owned by InvoicingHub (the selector rides the tab-bar row).
+  invoiceType: InvoiceType;
   onGenerateSuccess: () => void;
   refreshTrigger: number;
-}
-
-type InvoiceType = 'automatic' | 'manual' | 'prepayment';
-
-interface SelectOption {
-  value: string;
-  label: React.JSX.Element;
-  textValue?: string;
+  sourceSalesOrderId?: string | null;
 }
 
 const GenerateTab: React.FC<GenerateTabProps> = ({
   initialServices,
+  invoiceType,
   onGenerateSuccess,
-  refreshTrigger
+  refreshTrigger,
+  sourceSalesOrderId
 }) => {
   const { t } = useTranslation('msp/invoicing');
-  const router = useRouter();
   const { enabled: billingEnabled } = useFeatureFlag('billing-enabled');
-  const [invoiceType, setInvoiceType] = useState<InvoiceType>('automatic');
   const [error, setError] = useState<string | null>(null);
   const [clients, setClients] = useState<IClient[]>([]);
   const [services, setServices] = useState<IService[]>([]);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [internalRefreshTrigger, setInternalRefreshTrigger] = useState(0);
+  const [invoiceableSalesOrders, setInvoiceableSalesOrders] = useState<InvoiceableSalesOrderForBilling[]>([]);
 
   // Only load clients and services for manual/prepayment invoices
   useEffect(() => {
@@ -56,12 +55,26 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
 
   const loadManualInvoiceData = async () => {
     try {
-      const [clientsData, servicesData] = await Promise.all([
+      const [clientsData, servicesData, invoiceableSalesOrdersData] = await Promise.all([
         getAllClientsForBilling(),
-        getServices(1, 999, { item_kind: 'any' })
+        getServices(1, 999, { item_kind: 'any' }),
+        invoiceType === 'manual' ? listInvoiceableSalesOrdersForBilling() : Promise.resolve([])
       ]);
 
+      if (isActionMessageError(clientsData) || isActionPermissionError(clientsData)) {
+        setClients([]);
+        setError(getErrorMessage(clientsData));
+        return;
+      }
+
       setClients(clientsData);
+      setInvoiceableSalesOrders(invoiceableSalesOrdersData);
+
+      if (isActionMessageError(servicesData) || isActionPermissionError(servicesData)) {
+        setServices([]);
+        setError(getErrorMessage(servicesData));
+        return;
+      }
 
       if (servicesData && Array.isArray(servicesData.services)) {
         setServices(servicesData.services);
@@ -82,62 +95,10 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
     onGenerateSuccess();
   };
 
-  const handleViewDrafts = () => {
-    setShowSuccessDialog(false);
-    router.push('/msp/billing?tab=invoicing&subtab=drafts');
+  const handleRefreshNeeded = () => {
+    setInternalRefreshTrigger(prev => prev + 1);
+    onGenerateSuccess();
   };
-
-  const allInvoiceTypeOptions: SelectOption[] = [
-    {
-      value: 'automatic',
-      textValue: t('generateTab.types.automatic', { defaultValue: 'Automatic Invoices' }),
-      label: (
-        <div className="flex items-center gap-2">
-          <Receipt className="h-4 w-4" />
-          <span>{t('generateTab.types.automatic', { defaultValue: 'Automatic Invoices' })}</span>
-        </div>
-      )
-    },
-    {
-      value: 'manual',
-      textValue: t('generateTab.types.manual', { defaultValue: 'Manual Invoice' }),
-      label: (
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4" />
-          <span>{t('generateTab.types.manual', { defaultValue: 'Manual Invoice' })}</span>
-        </div>
-      )
-    },
-    {
-      value: 'prepayment',
-      textValue: t('generateTab.types.prepayment', { defaultValue: 'Prepayment' }),
-      label: (
-        <div className="flex items-center gap-2">
-          <Coins className="h-4 w-4" />
-          <span>{t('generateTab.types.prepayment', { defaultValue: 'Prepayment' })}</span>
-        </div>
-      )
-    }
-  ];
-
-  const invoiceTypeOptions = useMemo(() => {
-    if (billingEnabled) {
-      return allInvoiceTypeOptions;
-    }
-    return allInvoiceTypeOptions.filter(option => option.value !== 'prepayment');
-  }, [billingEnabled]);
-
-  const invoiceTypeDescription = {
-    automatic: t('generateTab.descriptions.automatic', {
-      defaultValue: 'Use invoice windows to review due recurring service periods before generating a recurring batch.',
-    }),
-    manual: t('generateTab.descriptions.manual', {
-      defaultValue: 'Use manual invoices for one-off or adjustment lines. They do not redefine recurring service periods.',
-    }),
-    prepayment: t('generateTab.descriptions.prepayment', {
-      defaultValue: 'Use prepayment and credit flows for financial value that should stay separate from recurring service-period coverage.',
-    }),
-  } satisfies Record<InvoiceType, string>;
 
   const renderContent = () => {
     switch (invoiceType) {
@@ -145,6 +106,7 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
         return (
           <AutomaticInvoices
             onGenerateSuccess={handleGenerateSuccess}
+            onRefreshNeeded={handleRefreshNeeded}
             refreshTrigger={refreshTrigger + internalRefreshTrigger}
           />
         );
@@ -154,6 +116,8 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
             clients={clients}
             services={services}
             onGenerateSuccess={handleGenerateSuccess}
+            invoiceableSalesOrders={invoiceableSalesOrders}
+            sourceSalesOrderId={sourceSalesOrderId}
           />
         );
       case 'prepayment':
@@ -173,34 +137,16 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
 
   return (
     <>
-      <div className="space-y-4">
-        <Card>
-          <div className="p-4">
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-2">
-                {t('generateTab.fields.invoiceType', { defaultValue: 'Invoice Type' })}
-              </label>
-              <CustomSelect
-                value={invoiceType}
-                onValueChange={(value: string) => setInvoiceType(value as InvoiceType)}
-                options={invoiceTypeOptions}
-                className="w-full md:w-80"
-              />
-              <p className="mt-2 text-sm text-muted-foreground">
-                {invoiceTypeDescription[invoiceType]}
-              </p>
-            </div>
+      {/* The invoice-type selector lives in the tab bar (InvoicingHub); every
+          invoice type renders its own elevated surface, so the content rests
+          directly on the page background — one level of elevation, not three. */}
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-            {error && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            {renderContent()}
-          </div>
-        </Card>
-      </div>
+      {renderContent()}
 
       <SuccessDialog
         isOpen={showSuccessDialog}

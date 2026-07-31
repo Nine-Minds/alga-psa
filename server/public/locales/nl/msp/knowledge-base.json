@@ -113,7 +113,8 @@
       "archive": "Archiveren",
       "saveMetadata": "Metagegevens opslaan",
       "saving": "Opslaan...",
-      "delete": "Permanent verwijderen"
+      "delete": "Permanent verwijderen",
+      "saveContent": "Opslaan"
     },
     "feedback": {
       "permissionDenied": "Toestemming geweigerd",
@@ -160,6 +161,10 @@
       "delete": {
         "title": "Artikel verwijderen",
         "message": "Weet u zeker dat u \"{{title}}\" permanent wilt verwijderen? Dit verwijdert het artikel en de inhoud en kan niet ongedaan worden gemaakt."
+      },
+      "archive": {
+        "message": "Weet u zeker dat u \"{{title}}\" wilt archiveren? Gearchiveerde artikelen zijn verborgen in het klantportaal en kunnen later definitief worden verwijderd.",
+        "title": "Artikel archiveren"
       }
     }
   },
@@ -310,6 +315,7 @@
     }
   },
   "common": {
-    "done": "Klaar"
+    "done": "Klaar",
+    "cancel": "Annuleren"
   }
 }

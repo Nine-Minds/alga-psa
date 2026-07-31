@@ -23,10 +23,10 @@ describe('contract line cadence_owner compatibility wiring', () => {
     expect(modelSource).toContain('return normalizeLiveRecurringStorage(line);');
     expect(modelSource).toContain("cadence_owner: recurringAuthoringPolicy.cadenceOwner,");
     expect(clientActionsSource).toContain(
-      "const cadenceOwner = updates.cadence_owner ?? await getExistingCadenceOwner(trx, tenant, clientContractLineId);",
+      "const cadenceOwner = updates.cadence_owner ?? await getExistingCadenceOwner(trx, tenant, identity.contractLineId);",
     );
     expect(clientActionsSource).toContain(
-      "updateData.cadence_owner =\n        updates.cadence_owner ?? await getExistingCadenceOwner(trx, tenant, clientContractLineId);",
+      "updateData.cadence_owner =\n        updates.cadence_owner ?? await getExistingCadenceOwner(trx, tenant, identity.contractLineId);",
     );
   });
 });

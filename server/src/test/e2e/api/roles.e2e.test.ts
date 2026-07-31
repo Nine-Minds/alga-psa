@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { tenantDb } from '@alga-psa/db';
 import { 
   setupE2ETestEnvironment,
   E2ETestEnvironment
@@ -16,6 +17,14 @@ describe('Roles API E2E Tests', () => {
   let createdRoleIds: string[] = [];
   let testPermissionIds: string[] = [];
 
+  function tenantTable(table: string) {
+    return tenantDb(env.db, env.tenant).table(table);
+  }
+
+  function tenantTableFor(tenant: string, table: string) {
+    return tenantDb(env.db, tenant).table(table);
+  }
+
   beforeAll(async () => {
     // Setup test environment
     env = await setupE2ETestEnvironment({
@@ -24,8 +33,7 @@ describe('Roles API E2E Tests', () => {
     });
 
     // Get some permission IDs for testing
-    const permissions = await env.db('permissions')
-      .where('tenant', env.tenant)
+    const permissions = await tenantTable('permissions')
       .select('permission_id')
       .limit(3);
     testPermissionIds = permissions.map(p => p.permission_id);
@@ -35,8 +43,8 @@ describe('Roles API E2E Tests', () => {
     // Clean up any created roles
     for (const roleId of createdRoleIds) {
       try {
-        await env.db('role_permissions').where('role_id', roleId).delete();
-        await env.db('roles').where('role_id', roleId).delete();
+        await tenantTable('role_permissions').where('role_id', roleId).delete();
+        await tenantTable('roles').where('role_id', roleId).delete();
       } catch (error) {
         // Ignore errors during cleanup
       }
@@ -68,7 +76,7 @@ describe('Roles API E2E Tests', () => {
     it('should list roles with pagination', async () => {
       // Create a few test roles
       for (let i = 0; i < 3; i++) {
-        const role = await env.db('roles').insert({
+        const role = await tenantTable('roles').insert({
           role_id: uuidv4(),
           role_name: `List Test Role ${i} ${Date.now()}`,
           description: 'Test description',
@@ -92,7 +100,7 @@ describe('Roles API E2E Tests', () => {
 
     it('should get a specific role', async () => {
       // Create a test role
-      const role = await env.db('roles').insert({
+      const role = await tenantTable('roles').insert({
         role_id: uuidv4(),
         role_name: `Get Test Role ${Date.now()}`,
         description: 'Test description',
@@ -111,7 +119,7 @@ describe('Roles API E2E Tests', () => {
 
     it('should update a role', async () => {
       // Create a test role
-      const role = await env.db('roles').insert({
+      const role = await tenantTable('roles').insert({
         role_id: uuidv4(),
         role_name: `Update Test Role ${Date.now()}`,
         description: 'Original description',
@@ -134,7 +142,7 @@ describe('Roles API E2E Tests', () => {
 
     it('should delete a role', async () => {
       // Create a test role
-      const role = await env.db('roles').insert({
+      const role = await tenantTable('roles').insert({
         role_id: uuidv4(),
         role_name: `Delete Test Role ${Date.now()}`,
         description: 'To be deleted',
@@ -147,9 +155,8 @@ describe('Roles API E2E Tests', () => {
       assertSuccess(response, 204);
 
       // Verify role is deleted
-      const checkRole = await env.db('roles')
+      const checkRole = await tenantTable('roles')
         .where('role_id', role[0].role_id)
-        .where('tenant', env.tenant)
         .first();
       expect(checkRole).toBeUndefined();
     });
@@ -160,7 +167,7 @@ describe('Roles API E2E Tests', () => {
 
     beforeEach(async () => {
       // Create a test role for permission tests
-      const role = await env.db('roles').insert({
+      const role = await tenantTable('roles').insert({
         role_id: uuidv4(),
         role_name: `Permission Test Role ${Date.now()}`,
         description: 'For permission tests',
@@ -179,9 +186,8 @@ describe('Roles API E2E Tests', () => {
       assertSuccess(response);
 
       // Verify permissions were assigned
-      const assignedPermissions = await env.db('role_permissions')
+      const assignedPermissions = await tenantTable('role_permissions')
         .where('role_id', testRoleId)
-        .where('tenant', env.tenant)
         .select('permission_id');
       
       expect(assignedPermissions.length).toBe(testPermissionIds.length);
@@ -190,7 +196,7 @@ describe('Roles API E2E Tests', () => {
     it('should get role permissions', async () => {
       // First assign some permissions
       for (const permId of testPermissionIds) {
-        await env.db('role_permissions').insert({
+        await tenantTable('role_permissions').insert({
           role_id: testRoleId,
           permission_id: permId,
           tenant: env.tenant,
@@ -218,7 +224,7 @@ describe('Roles API E2E Tests', () => {
   describe('Role Cloning', () => {
     it('should clone an existing role', async () => {
       // Create a source role with permissions
-      const sourceRole = await env.db('roles').insert({
+      const sourceRole = await tenantTable('roles').insert({
         role_id: uuidv4(),
         role_name: `Source Role ${Date.now()}`,
         description: 'Role to clone',
@@ -229,7 +235,7 @@ describe('Roles API E2E Tests', () => {
       createdRoleIds.push(sourceRole[0].role_id);
 
       // Add permissions to source role
-      await env.db('role_permissions').insert({
+      await tenantTable('role_permissions').insert({
         role_id: sourceRole[0].role_id,
         permission_id: testPermissionIds[0],
         tenant: env.tenant,
@@ -295,7 +301,7 @@ describe('Roles API E2E Tests', () => {
 
     it('should return 403 without permission', async () => {
       // Create a user without role permissions
-      const restrictedUser = await env.db('users').insert({
+      const restrictedUser = await tenantTable('users').insert({
         user_id: uuidv4(),
         tenant: env.tenant,
         username: `restricted-${Date.now()}`,
@@ -310,7 +316,7 @@ describe('Roles API E2E Tests', () => {
       const plaintextKey = 'restricted-key-' + Date.now();
       const hashedKey = require('crypto').createHash('sha256').update(plaintextKey).digest('hex');
       
-      const restrictedKey = await env.db('api_keys').insert({
+      const restrictedKey = await tenantTable('api_keys').insert({
         api_key_id: uuidv4(),
         api_key: hashedKey,
         user_id: restrictedUser[0].user_id,
@@ -336,8 +342,8 @@ describe('Roles API E2E Tests', () => {
       assertError(response, 403);
 
       // Cleanup
-      await env.db('api_keys').where('api_key_id', restrictedKey[0].api_key_id).delete();
-      await env.db('users').where('user_id', restrictedUser[0].user_id).delete();
+      await tenantTable('api_keys').where('api_key_id', restrictedKey[0].api_key_id).delete();
+      await tenantTable('users').where('user_id', restrictedUser[0].user_id).delete();
     });
 
     it('should return 400 for invalid data', async () => {
@@ -358,7 +364,7 @@ describe('Roles API E2E Tests', () => {
       const roleName = `Unique Role ${Date.now()}`;
       
       // Create first role
-      const firstRole = await env.db('roles').insert({
+      const firstRole = await tenantTable('roles').insert({
         role_id: uuidv4(),
         role_name: roleName,
         description: 'First role',
@@ -381,7 +387,7 @@ describe('Roles API E2E Tests', () => {
     it('should not access roles from other tenants', async () => {
       // Create another tenant
       const otherTenant = uuidv4();
-      await env.db('tenants').insert({
+      await tenantTableFor(otherTenant, 'tenants').insert({
         tenant: otherTenant,
         client_name: 'Other Company',
         email: 'other@client.com',
@@ -390,7 +396,7 @@ describe('Roles API E2E Tests', () => {
       });
 
       // Create role in other tenant
-      const otherRole = await env.db('roles').insert({
+      const otherRole = await tenantTableFor(otherTenant, 'roles').insert({
         role_id: uuidv4(),
         role_name: 'Other Tenant Role',
         description: 'Should not be accessible',
@@ -404,8 +410,8 @@ describe('Roles API E2E Tests', () => {
       assertError(response, 404);
 
       // Cleanup
-      await env.db('roles').where('role_id', otherRole[0].role_id).delete();
-      await env.db('tenants').where('tenant', otherTenant).delete();
+      await tenantTableFor(otherTenant, 'roles').where('role_id', otherRole[0].role_id).delete();
+      await tenantTableFor(otherTenant, 'tenants').delete();
     });
   });
 });

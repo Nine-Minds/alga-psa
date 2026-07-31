@@ -1,0 +1,183 @@
+[
+  {
+    "id": "F301",
+    "description": "CE migration: asset_type_registry tenant table (greenfield-Citus pattern: tenant first, distribute inline, transaction:false); unique (tenant, slug); no RLS (post-20260509 architecture)",
+    "implemented": true,
+    "commitGroup": "type-registry-schema",
+    "prdRefs": [
+      "Data model & constraints"
+    ]
+  },
+  {
+    "id": "F302",
+    "description": "Migration seeds six built-ins for existing tenants; tenant-onboarding path seeds them for future tenants (standard_statuses lesson)",
+    "implemented": true,
+    "commitGroup": "type-registry-schema",
+    "prdRefs": [
+      "Data model & constraints"
+    ]
+  },
+  {
+    "id": "F303",
+    "description": "fields_schema contract + validation: field {key, label, kind: text|number|date|select|url|boolean, required?, options?}; key rules; select needs options",
+    "implemented": true,
+    "commitGroup": "type-registry-model",
+    "prdRefs": [
+      "D1"
+    ]
+  },
+  {
+    "id": "F304",
+    "description": "Registry model: list/get/create/update/delete; slug generation + reserved-slug collision guard; delete blocked while assets use the slug; built-ins immutable schema (name/icon editable)",
+    "implemented": true,
+    "commitGroup": "type-registry-model",
+    "prdRefs": [
+      "Data model & constraints"
+    ]
+  },
+  {
+    "id": "F305",
+    "description": "Server actions for registry CRUD gated by asset.update (read by asset.read); typed result envelopes",
+    "implemented": true,
+    "commitGroup": "type-registry-model",
+    "prdRefs": [
+      "D3"
+    ]
+  },
+  {
+    "id": "F306",
+    "description": "Settings > Asset Types page: registry list (built-ins flagged), create/edit drawer, delete with in-use guard messaging",
+    "implemented": true,
+    "commitGroup": "type-management-ui",
+    "prdRefs": [
+      "D2"
+    ]
+  },
+  {
+    "id": "F307",
+    "description": "Schema editor in the drawer: add/remove/reorder field rows, kind picker, required toggle, select options editor",
+    "implemented": true,
+    "commitGroup": "type-management-ui",
+    "prdRefs": [
+      "D1"
+    ]
+  },
+  {
+    "id": "F308",
+    "description": "Asset create/edit type selects source the registry (built-ins + custom) instead of the hardcoded six",
+    "implemented": true,
+    "commitGroup": "asset-forms",
+    "prdRefs": [
+      "D2"
+    ]
+  },
+  {
+    "id": "F309",
+    "description": "Custom-type selected -> schema-driven fields panel renders; values read/write assets.attributes[key]; required enforcement; built-in types keep extension panels untouched",
+    "implemented": true,
+    "commitGroup": "asset-forms",
+    "prdRefs": [
+      "D1"
+    ]
+  },
+  {
+    "id": "F310",
+    "description": "createAsset/updateAsset accept custom slugs (validated against registry) and attributes payload for schema fields",
+    "implemented": true,
+    "commitGroup": "asset-forms",
+    "prdRefs": [
+      "D1"
+    ]
+  },
+  {
+    "id": "F311",
+    "description": "Asset list + filters render custom types (registry label/icon); type filter options from registry",
+    "implemented": true,
+    "commitGroup": "asset-display",
+    "prdRefs": [
+      "D2"
+    ]
+  },
+  {
+    "id": "F312",
+    "description": "Asset detail renders the custom type's schema fields panel (read view) alongside existing panels",
+    "implemented": true,
+    "commitGroup": "asset-display",
+    "prdRefs": [
+      "D2"
+    ]
+  },
+  {
+    "id": "F313",
+    "description": "Asset dashboard by-type breakdowns include custom types with registry labels",
+    "implemented": true,
+    "commitGroup": "dashboards-reports",
+    "prdRefs": [
+      "D2"
+    ]
+  },
+  {
+    "id": "F314",
+    "description": "Asset reporting/export surfaces resolve custom type labels via the registry",
+    "implemented": true,
+    "commitGroup": "dashboards-reports",
+    "prdRefs": [
+      "D2"
+    ]
+  },
+  {
+    "id": "F315",
+    "description": "Hudu layout map type select sources the registry (custom types targetable); resolver returns slugs",
+    "implemented": true,
+    "commitGroup": "hudu-tie-in",
+    "prdRefs": [
+      "Hudu tie-in (EE)"
+    ]
+  },
+  {
+    "id": "F316",
+    "description": "'Create type from this layout': fetch layout field definitions, generate slug/name/fields_schema, persist type + layout assignment in one action",
+    "implemented": true,
+    "commitGroup": "hudu-tie-in",
+    "prdRefs": [
+      "Hudu tie-in (EE)"
+    ]
+  },
+  {
+    "id": "F317",
+    "description": "Import onto a custom type projects Hudu field values onto matching schema keys (normalized label) in addition to hudu_fields",
+    "implemented": true,
+    "commitGroup": "hudu-tie-in",
+    "prdRefs": [
+      "Hudu tie-in (EE)"
+    ]
+  },
+  {
+    "id": "F318",
+    "description": "All new strings keyed via t() with en + de/es/fr/it/nl/pl/pt entries; static scans extended where applicable",
+    "implemented": true,
+    "commitGroup": "i18n-types",
+    "prdRefs": [
+      "Definition of done"
+    ]
+  },
+  {
+    "id": "F319",
+    "description": "RBAC sweep: registry actions enforce asset.update/read; built-in six behave exactly as before (extension tables, forms, existing tests green)",
+    "implemented": true,
+    "commitGroup": "regression-types",
+    "prdRefs": [
+      "D3",
+      "Definition of done"
+    ]
+  },
+  {
+    "id": "F320",
+    "description": "Citus smoke: migration applies cleanly on a Citus-enabled chain (distribution + colocation verified; no RLS per post-20260509 architecture)",
+    "implemented": true,
+    "commitGroup": "regression-types",
+    "prdRefs": [
+      "Data model & constraints"
+    ]
+  }
+]

@@ -11,11 +11,17 @@ const normalizeKey = (key: string) => key.split('.').pop() ?? key;
 
 class FakeQuery {
   private filters: Record<string, unknown> = {};
+  private inFilters: Record<string, readonly unknown[]> = {};
 
   constructor(
     private readonly table: string,
     private readonly rows: RowSet,
   ) {}
+
+  whereIn(column: string, values: readonly unknown[]) {
+    this.inFilters[normalizeKey(column)] = values;
+    return this;
+  }
 
   where(columnOrFilters: string | Record<string, unknown>, value?: unknown) {
     if (typeof columnOrFilters === 'string') {
@@ -62,8 +68,10 @@ class FakeQuery {
 
   private filteredRows() {
     const rows = this.rows[this.table] ?? [];
-    return rows.filter((row) =>
-      Object.entries(this.filters).every(([key, value]) => row[normalizeKey(key)] === value),
+    return rows.filter(
+      (row) =>
+        Object.entries(this.filters).every(([key, value]) => row[normalizeKey(key)] === value) &&
+        Object.entries(this.inFilters).every(([key, values]) => values.includes(row[normalizeKey(key)])),
     );
   }
 }
@@ -79,6 +87,14 @@ function createFakeKnex(rows: RowSet) {
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnex(...args),
   withTransaction: async (_knex: unknown, fn: any) => fn(_knex),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+    unscoped: (table: string) => conn(table),
+    tenantJoin: (builder: any, table: string, left: string, right: string, options: any = {}) =>
+      options.type === 'left'
+        ? builder.leftJoin(table, left, right)
+        : builder.join(table, left, right),
+  }),
 }));
 
 vi.mock('@alga-psa/auth/withAuth', () => ({

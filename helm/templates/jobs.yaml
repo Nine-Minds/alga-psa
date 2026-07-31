@@ -192,6 +192,11 @@ spec:
                 log "SETUP_RUN_MIGRATIONS is disabled; skipping migrations"
               fi
 
+              # LEVERAGE: friction builtin-content-distribution — hosted gates seeds off after
+              # first run, so new built-in content only reaches existing tenants via
+              # hand-written readd_* migrations; the appliance variant
+              # (appliance-bootstrap-configmap.yaml) instead replays seeds ungated on every
+              # upgrade. Same divergence, see the marker there.
               if is_enabled "${SETUP_RUN_SEEDS:-true}"; then
                 if check_seeds_status; then
                   log "Seeds already exist; skipping"
@@ -233,6 +238,14 @@ spec:
             {{- if .Values.setup.applianceBootstrap.enabled }}
             - name: SEEDS_DIR
               value: "/app/ee/server/seeds/onboarding"
+            # Initial tenant creation runs the hosted tenantCreationWorkflow on
+            # the appliance Temporal (deployed concurrently with this job).
+            - name: TEMPORAL_ADDRESS
+              value: {{ .Values.setup.applianceBootstrap.temporal.address | default (printf "temporal-frontend.%s.svc.cluster.local:7233" (include "sebastian.namespace" .)) | quote }}
+            - name: TEMPORAL_NAMESPACE
+              value: {{ .Values.setup.applianceBootstrap.temporal.namespace | default "default" | quote }}
+            - name: TEMPORAL_TASK_QUEUE
+              value: {{ .Values.setup.applianceBootstrap.temporal.taskQueue | default "tenant-workflows" | quote }}
             {{- end }}
 
             # Secret provider configuration for setup jobs
@@ -246,11 +259,12 @@ spec:
             {{- end }}
 
             {{- if .Values.setup.applianceBootstrap.enabled }}
-            # Appliance bootstrap hashes the initial admin password with PBKDF2
-            # peppered by getSecret('nextauth_secret','NEXTAUTH_SECRET'); getSecret
-            # consults the env provider FIRST, which looks up the *lowercase*
-            # secret name. Bind both names to the shared cluster secret so the
-            # bootstrap and the server resolve the identical pepper.
+            # The initial admin password is hashed by the temporal-worker (which
+            # binds the same NEXTAUTH_SECRET pepper from this cluster secret via
+            # auth.nextauthSecretSecret). These bindings remain for the seed/knex
+            # paths this job still runs: getSecret consults the env provider
+            # FIRST, which looks up the *lowercase* secret name, so bind both
+            # names to the shared cluster secret.
             - name: nextauth_secret
               valueFrom:
                 secretKeyRef:

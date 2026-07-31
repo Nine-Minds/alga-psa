@@ -8,24 +8,23 @@ const {
   getEntraMappingPreviewMock,
   confirmEntraMappingsMock,
   listEntraMappingGroupsMock,
-  skipEntraTenantMappingMock,
-  importEntraTenantAsClientMock,
   getAllClientsMock,
 } = vi.hoisted(() => ({
   getEntraMappingPreviewMock: vi.fn(),
   confirmEntraMappingsMock: vi.fn(),
   listEntraMappingGroupsMock: vi.fn(),
-  skipEntraTenantMappingMock: vi.fn(),
-  importEntraTenantAsClientMock: vi.fn(),
   getAllClientsMock: vi.fn(),
 }));
+
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const { createLocaleTranslationMock } = await import('../utils/localeTranslationMock');
+  return createLocaleTranslationMock('msp/integrations');
+});
 
 vi.mock('@alga-psa/integrations/actions', () => ({
   getEntraMappingPreview: getEntraMappingPreviewMock,
   confirmEntraMappings: confirmEntraMappingsMock,
   listEntraMappingGroups: listEntraMappingGroupsMock,
-  skipEntraTenantMapping: skipEntraTenantMappingMock,
-  importEntraTenantAsClient: importEntraTenantAsClientMock,
 }));
 
 vi.mock('@alga-psa/clients/actions', () => ({
@@ -80,13 +79,15 @@ describe('EntraTenantMappingTable client selection', () => {
       success: true,
       data: { confirmedMappings: 1 },
     });
-    skipEntraTenantMappingMock.mockResolvedValue({ data: { skipped: true } });
     listEntraMappingGroupsMock.mockResolvedValue({ success: true, data: { groups: [] } });
-    importEntraTenantAsClientMock.mockResolvedValue({
-      success: true,
-      data: { clientId: 'client-import-default', managedTenantId: 'managed-import-default' },
-    });
   });
+
+  // Each row now carries three selects (client, entitlement group, provisioning
+  // mode), so the client picker has to be addressed by id rather than by role.
+  const clientPickerIn = (row: HTMLElement, managedTenantId: string): HTMLSelectElement =>
+    within(row).getByTestId(
+      `client-picker-entra-client-picker-${managedTenantId}`
+    ) as HTMLSelectElement;
 
   it('T059: supports selecting candidate clients for fuzzy and unmatched rows', async () => {
     getEntraMappingPreviewMock.mockResolvedValue({
@@ -136,14 +137,20 @@ describe('EntraTenantMappingTable client selection', () => {
     expect(fuzzyRow).toBeTruthy();
     expect(unmatchedRow).toBeTruthy();
 
-    const fuzzySelect = within(fuzzyRow as HTMLElement).getByTestId('client-picker-entra-client-picker-managed-fuzzy') as HTMLSelectElement;
-    const unmatchedSelect = within(unmatchedRow as HTMLElement).getByTestId('client-picker-entra-client-picker-managed-unmatched') as HTMLSelectElement;
+    // Re-query between the two changes: the table re-renders on the first
+    // selection, so a node captured beforehand can be detached by the second.
+    const pickerIn = (label: string, managedTenantId: string) =>
+      clientPickerIn(screen.getByText(label).closest('tr') as HTMLElement, managedTenantId);
 
-    fireEvent.change(fuzzySelect, { target: { value: 'client-alpha' } });
-    fireEvent.change(unmatchedSelect, { target: { value: 'client-beta' } });
+    fireEvent.change(pickerIn('Fuzzy Tenant', 'managed-fuzzy'), {
+      target: { value: 'client-alpha' },
+    });
+    fireEvent.change(pickerIn('Unmatched Tenant', 'managed-unmatched'), {
+      target: { value: 'client-beta' },
+    });
 
-    expect(fuzzySelect.value).toBe('client-alpha');
-    expect(unmatchedSelect.value).toBe('client-beta');
+    expect(pickerIn('Fuzzy Tenant', 'managed-fuzzy').value).toBe('client-alpha');
+    expect(pickerIn('Unmatched Tenant', 'managed-unmatched').value).toBe('client-beta');
 
     await waitFor(() => {
       expect(onSummaryChange).toHaveBeenCalledWith(
@@ -199,18 +206,18 @@ describe('EntraTenantMappingTable client selection', () => {
     await screen.findByText('Auto Tenant One');
     await screen.findByText('Auto Tenant Two');
 
-    fireEvent.click(screen.getByRole('button', { name: 'integrations.entra.tenantMapping.actions.preselectExact' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Preselect Exact Matches' }));
 
     const rowOne = screen.getByText('Auto Tenant One').closest('tr') as HTMLElement;
     const rowTwo = screen.getByText('Auto Tenant Two').closest('tr') as HTMLElement;
-    const selectOne = within(rowOne).getByTestId('client-picker-entra-client-picker-managed-auto-1') as HTMLSelectElement;
-    const selectTwo = within(rowTwo).getByTestId('client-picker-entra-client-picker-managed-auto-2') as HTMLSelectElement;
+    const selectOne = clientPickerIn(rowOne, 'managed-auto-1');
+    const selectTwo = clientPickerIn(rowTwo, 'managed-auto-2');
 
     expect(selectOne.value).toBe('client-one');
     expect(selectTwo.value).toBe('client-two');
   });
 
-  it('T130: importing an unmapped tenant updates status badge to Imported rather than Auto-matched', async () => {
+  it('T144: create-new is provisional until the reviewed decisions are confirmed', async () => {
     getEntraMappingPreviewMock.mockResolvedValue({
       data: {
         autoMatched: [],
@@ -226,41 +233,38 @@ describe('EntraTenantMappingTable client selection', () => {
         ],
       },
     });
-    getAllClientsMock
-      .mockResolvedValueOnce([{ client_id: 'client-existing', client_name: 'Existing Client' }])
-      .mockResolvedValueOnce([
-        { client_id: 'client-existing', client_name: 'Existing Client' },
-        { client_id: 'client-imported-130', client_name: 'Unmapped Import Tenant' },
-      ]);
-    importEntraTenantAsClientMock.mockResolvedValue({
-      success: true,
-      data: { managedTenantId: 'managed-unmapped-130', clientId: 'client-imported-130' },
-    });
+    getAllClientsMock.mockResolvedValue([
+      { client_id: 'client-existing', client_name: 'Existing Client' },
+    ]);
 
     render(<EntraTenantMappingTable />);
 
     await screen.findByText('Unmapped Import Tenant');
     const initialRow = screen.getByText('Unmapped Import Tenant').closest('tr') as HTMLElement;
-    expect(within(initialRow).getByText('integrations.entra.tenantMapping.states.unmatched')).toBeTruthy();
+    expect(within(initialRow).getByText('Unmatched')).toBeTruthy();
 
-    fireEvent.click(within(initialRow).getByRole('button', { name: 'integrations.entra.tenantMapping.actions.import' }));
+    fireEvent.click(within(initialRow).getByRole('button', { name: 'Import as new client' }));
 
+    const reviewedRow = screen.getByText('Unmapped Import Tenant').closest('tr') as HTMLElement;
+    expect(within(reviewedRow).getAllByText('Import as new client').length).toBeGreaterThan(0);
+    expect(confirmEntraMappingsMock).not.toHaveBeenCalled();
+    expect(getAllClientsMock).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Selected Mappings' }));
     await waitFor(() => {
-      expect(importEntraTenantAsClientMock).toHaveBeenCalledWith({
-        managedTenantId: 'managed-unmapped-130',
+      expect(confirmEntraMappingsMock).toHaveBeenCalledWith({
+        mappings: [
+          expect.objectContaining({
+            managedTenantId: 'managed-unmapped-130',
+            clientId: null,
+            mappingState: 'create_new',
+          }),
+        ],
       });
-    });
-
-    await waitFor(() => {
-      const updatedRow = screen.getAllByText('Unmapped Import Tenant')[0].closest('tr') as HTMLElement;
-      expect(within(updatedRow).getByText('integrations.entra.tenantMapping.states.imported')).toBeTruthy();
-      expect(within(updatedRow).queryByText('integrations.entra.tenantMapping.states.autoMatched')).toBeNull();
-      const updatedSelect = within(updatedRow).getByTestId('client-picker-entra-client-picker-managed-unmapped-130') as HTMLSelectElement;
-      expect(updatedSelect.value).toBe('client-imported-130');
     });
   });
 
-  it('T030: confirming selected mappings persists client mapping override fields and updated terminology', async () => {
+  it('T131: confirming selected mappings persists manual unmatched selections', async () => {
     getEntraMappingPreviewMock.mockResolvedValue({
       data: {
         autoMatched: [],
@@ -287,9 +291,8 @@ describe('EntraTenantMappingTable client selection', () => {
     render(<EntraTenantMappingTable />);
 
     await screen.findByText('Unmatched Confirm Tenant');
-    expect(screen.getByText('Managed Microsoft tenant to Client mappings')).toBeTruthy();
     const row = screen.getByText('Unmatched Confirm Tenant').closest('tr') as HTMLElement;
-    const select = within(row).getByTestId('client-picker-entra-client-picker-managed-unmatched-131') as HTMLSelectElement;
+    const select = clientPickerIn(row, 'managed-unmatched-131');
     fireEvent.change(select, { target: { value: 'client-131' } });
 
     const modeSelect = row.querySelector(
@@ -298,7 +301,7 @@ describe('EntraTenantMappingTable client selection', () => {
     expect(modeSelect).toBeTruthy();
     fireEvent.change(modeSelect as HTMLSelectElement, { target: { value: 'workflow_managed' } });
 
-    const confirmButton = screen.getByRole('button', { name: 'integrations.entra.tenantMapping.actions.confirmSelected' });
+    const confirmButton = screen.getByRole('button', { name: 'Confirm Selected Mappings' });
     fireEvent.click(confirmButton);
 
     await waitFor(() => {
@@ -375,7 +378,8 @@ describe('EntraTenantMappingTable client selection', () => {
       );
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'integrations.entra.tenantMapping.actions.skip' }));
+    const reviewRow = screen.getByText('Review 65').closest('tr') as HTMLElement;
+    fireEvent.click(within(reviewRow).getByRole('button', { name: 'Skip' }));
 
     await waitFor(() => {
       expect(onSummaryChange).toHaveBeenCalledWith(
@@ -388,7 +392,7 @@ describe('EntraTenantMappingTable client selection', () => {
     });
   });
 
-  it('T022: selecting a broad entitlement group shows warning copy that all enabled users become eligible', async () => {
+  it('T022: selecting a broad entitlement group warns that every enabled user becomes eligible', async () => {
     getEntraMappingPreviewMock.mockResolvedValue({
       data: {
         autoMatched: [],
@@ -419,32 +423,34 @@ describe('EntraTenantMappingTable client selection', () => {
     await screen.findByText('Warning Tenant');
 
     const row = screen.getByText('Warning Tenant').closest('tr') as HTMLElement;
-    const clientSelect = within(row).getByTestId(
-      'client-picker-entra-client-picker-managed-warning-22'
-    ) as HTMLSelectElement;
-    fireEvent.change(clientSelect, { target: { value: 'client-22' } });
+    fireEvent.change(clientPickerIn(row, 'managed-warning-22'), {
+      target: { value: 'client-22' },
+    });
 
-    const groupSelect = row.querySelector(
-      '#entra-entitlement-group-managed-warning-22'
-    ) as HTMLSelectElement | null;
+    const groupSelect = (screen.getByText('Warning Tenant').closest('tr') as HTMLElement)
+      .querySelector('#entra-entitlement-group-managed-warning-22') as HTMLSelectElement | null;
     expect(groupSelect).toBeTruthy();
     if (!groupSelect) {
       throw new Error('entitlement group select not found');
     }
     fireEvent.focus(groupSelect);
     await waitFor(() => {
-      expect(listEntraMappingGroupsMock).toHaveBeenCalledWith({ managedTenantId: 'managed-warning-22' });
+      expect(listEntraMappingGroupsMock).toHaveBeenCalledWith({
+        managedTenantId: 'managed-warning-22',
+      });
     });
     fireEvent.change(groupSelect, { target: { value: 'group-all-users' } });
 
-    expect(
-      within(row).getByText(
-        'Warning: every enabled user in this Entra group will be eligible for client portal access.'
-      )
-    ).toBeTruthy();
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'Warning: every enabled user in this Entra group will be eligible for client portal access.'
+        )
+      ).toBeTruthy();
+    });
   });
 
-  it('preserves saved client portal provisioning overrides from mapping preview', async () => {
+  it('restores saved client portal provisioning overrides and re-confirms them unchanged', async () => {
     getEntraMappingPreviewMock.mockResolvedValue({
       data: {
         autoMatched: [
@@ -454,6 +460,8 @@ describe('EntraTenantMappingTable client selection', () => {
             displayName: 'Saved Override Tenant',
             primaryDomain: 'saved.example.com',
             sourceUserCount: 4,
+            mappingState: 'mapped',
+            mappedClientId: 'client-saved',
             existingMapping: {
               clientId: 'client-saved',
               mappingState: 'mapped',
@@ -482,11 +490,7 @@ describe('EntraTenantMappingTable client selection', () => {
 
     await screen.findByText('Saved Override Tenant');
     const row = screen.getByText('Saved Override Tenant').closest('tr') as HTMLElement;
-    expect(
-      (within(row).getByTestId(
-        'client-picker-entra-client-picker-managed-saved-override'
-      ) as HTMLSelectElement).value
-    ).toBe('client-saved');
+    expect(clientPickerIn(row, 'managed-saved-override').value).toBe('client-saved');
     expect(
       (row.querySelector('#entra-provisioning-mode-managed-saved-override') as HTMLSelectElement)
         .value
@@ -499,11 +503,7 @@ describe('EntraTenantMappingTable client selection', () => {
       (row.querySelector('#entra-default-role-managed-saved-override') as HTMLInputElement).value
     ).toBe('Finance');
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'integrations.entra.tenantMapping.actions.confirmSelected',
-      })
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Selected Mappings' }));
 
     await waitFor(() => {
       expect(confirmEntraMappingsMock).toHaveBeenCalledWith({
@@ -513,86 +513,6 @@ describe('EntraTenantMappingTable client selection', () => {
             clientId: 'client-saved',
             clientPortalEntraProvisioningMode: 'disabled',
             clientPortalEntitlementGroupId: 'group-saved',
-            clientPortalDefaultRoleName: 'Finance',
-          }),
-        ],
-      });
-    });
-  });
-
-  it('persists portal provisioning settings after importing an Entra tenant as a client', async () => {
-    getEntraMappingPreviewMock.mockResolvedValue({
-      data: {
-        autoMatched: [],
-        fuzzyCandidates: [],
-        unmatched: [
-          {
-            managedTenantId: 'managed-import-default',
-            entraTenantId: 'entra-import-default',
-            displayName: 'Imported Tenant',
-            primaryDomain: 'imported.example.com',
-            sourceUserCount: 8,
-          },
-        ],
-      },
-    });
-    getAllClientsMock
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        { client_id: 'client-import-default', client_name: 'Imported Tenant' },
-      ]);
-    confirmEntraMappingsMock.mockResolvedValue({
-      success: true,
-      data: { confirmedMappings: 1 },
-    });
-
-    render(<EntraTenantMappingTable />);
-
-    await screen.findByText('Imported Tenant');
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'integrations.entra.tenantMapping.actions.import',
-      })
-    );
-
-    await waitFor(() => {
-      expect(importEntraTenantAsClientMock).toHaveBeenCalledWith({
-        managedTenantId: 'managed-import-default',
-      });
-    });
-
-    const row = screen.getByText('Imported Tenant').closest('tr') as HTMLElement;
-    await waitFor(() => {
-      expect(
-        (within(row).getByTestId(
-          'client-picker-entra-client-picker-managed-import-default'
-        ) as HTMLSelectElement).value
-      ).toBe('client-import-default');
-    });
-
-    fireEvent.change(
-      row.querySelector('#entra-provisioning-mode-managed-import-default') as HTMLSelectElement,
-      { target: { value: 'built_in' } }
-    );
-    fireEvent.change(
-      row.querySelector('#entra-default-role-managed-import-default') as HTMLInputElement,
-      { target: { value: 'Finance' } }
-    );
-
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'integrations.entra.tenantMapping.actions.confirmSelected',
-      })
-    );
-
-    await waitFor(() => {
-      expect(confirmEntraMappingsMock).toHaveBeenCalledWith({
-        mappings: [
-          expect.objectContaining({
-            managedTenantId: 'managed-import-default',
-            clientId: 'client-import-default',
-            mappingState: 'mapped',
-            clientPortalEntraProvisioningMode: 'built_in',
             clientPortalDefaultRoleName: 'Finance',
           }),
         ],

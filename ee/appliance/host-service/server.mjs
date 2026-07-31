@@ -5,11 +5,28 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { URL } from 'node:url';
+import { WebSocketServer } from 'ws';
 import { collectStatusSnapshotAsync } from './status-engine.mjs';
 import { createKubectlQueue } from './kubectl-queue.mjs';
-import { persistSetupInputs, validateSetupInputs, runNetworkChecks } from './setup-engine.mjs';
+import { persistSetupInputs, validateSetupInputs, runNetworkChecks, resolveReleaseManifest } from './setup-engine.mjs';
 import { generateSupportBundle } from './support-bundle.mjs';
 import { runAppChannelUpdate } from './update-engine.mjs';
+import { createNativeKubernetesAdapter } from './kubernetes-client-adapter.mjs';
+import { PodExecManager } from './pod-exec-manager.mjs';
+import { PortForwardManager } from './port-forward-manager.mjs';
+import { ensurePodAccessRbac } from './pod-access-rbac.mjs';
+import { accessError, PodAccessError, requestHasSameOrigin } from './pod-access-common.mjs';
+import {
+  collectManageStatus,
+  applyLicense,
+  redeemClaimCode,
+  applyAppUrl,
+  requestControlPlaneUpgrade,
+} from './manage-engine.mjs';
+import {
+  readInitialAdminIdentity,
+  runInitialAdminPasswordReset,
+} from './admin-password-reset.mjs';
 import {
   authPhase,
   isAuthenticated,
@@ -26,10 +43,12 @@ import {
 
 const port = Number(process.env.ALGA_APPLIANCE_PORT || 8080);
 const stateFile = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
-const setupInputsFile = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/etc/alga-appliance/setup-inputs.json';
-const releaseSelectionFile = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/etc/alga-appliance/release-selection.json';
+const setupInputsFile = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/var/lib/alga-appliance/setup-inputs.json';
+const releaseSelectionFile = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/var/lib/alga-appliance/release-selection.json';
 const kubeconfigPath = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
 const staticUiDir = process.env.ALGA_APPLIANCE_STATUS_UI_DIR || '/opt/alga-appliance/status-ui/dist';
+const cpUpgradeStatusFile = process.env.ALGA_APPLIANCE_CP_UPGRADE_STATUS_FILE || '/var/lib/alga-appliance/control-plane-upgrade.json';
+const hostAgentSocket = process.env.ALGA_APPLIANCE_HOST_AGENT_SOCKET || '/run/alga-appliance/host-agent.sock';
 const STATUS_CACHE_TTL_MS = Number(process.env.ALGA_APPLIANCE_STATUS_CACHE_TTL_MS || 10_000);
 const KUBECTL_REQUEST_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_REQUEST_TIMEOUT_MS || 20_000);
 const KUBECTL_STATUS_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_STATUS_TIMEOUT_MS || 20_000);
@@ -38,6 +57,25 @@ const KUBECTL_LOG_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_LOG_TIM
 const NETWORK_PROBE_TTL_MS = Number(process.env.ALGA_APPLIANCE_NETWORK_PROBE_TTL_MS || 20_000);
 const NETWORK_PROBE_FAILURE_DEBOUNCE = Number(process.env.ALGA_APPLIANCE_NETWORK_PROBE_DEBOUNCE || 2);
 const kubectlQueue = createKubectlQueue({ name: 'host-service-kubectl' });
+const podAccessAdapter = createNativeKubernetesAdapter({ kubeconfigPath });
+const podExecManager = new PodExecManager({ adapter: podAccessAdapter });
+const portForwardManager = new PortForwardManager({ adapter: podAccessAdapter });
+let podAccessCapability = {
+  state: 'checking',
+  available: false,
+  migrated: false,
+  message: 'Checking Kubernetes pod-access permissions.',
+};
+ensurePodAccessRbac(podAccessAdapter).then((result) => {
+  podAccessCapability = result;
+}).catch((error) => {
+  podAccessCapability = {
+    state: 'unavailable',
+    available: false,
+    migrated: false,
+    message: error instanceof Error ? error.message : String(error),
+  };
+});
 let cachedStatusSnapshot = null;
 let cachedStatusSnapshotAt = 0;
 let cachedNetworkProbe = null;
@@ -61,8 +99,8 @@ function networkProbeRelevant(installState) {
   if (!installState) return false;
   const phase = String(installState.phase || '').toLowerCase();
   const failurePhase = String(installState.failure?.phase || '').toLowerCase();
-  const earlyPhases = ['setup', 'dns', 'network', 'github-release-source', 'release'];
-  return earlyPhases.includes(phase) || ['network', 'dns', 'github-release-source'].includes(failurePhase);
+  const earlyPhases = ['setup', 'dns', 'network', 'registry-release-source', 'release'];
+  return earlyPhases.includes(phase) || ['network', 'dns', 'registry-release-source'].includes(failurePhase);
 }
 
 function networkProbeInputs() {
@@ -135,7 +173,7 @@ const AUTO_RETRY_MAX_ATTEMPTS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_MAX
 const AUTO_RETRY_BASE_MS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_BASE_MS || 15_000);
 const AUTO_RETRY_MAX_MS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_MAX_MS || 300_000);
 const RECONCILE_INTERVAL_MS = Number(process.env.ALGA_APPLIANCE_RECONCILE_INTERVAL_MS || 15_000);
-const NETWORK_CLASS_PHASES = ['network', 'dns', 'github-release-source'];
+const NETWORK_CLASS_PHASES = ['network', 'dns', 'registry-release-source'];
 const retryStateFile = path.join(path.dirname(stateFile), 'auto-retry-state.json');
 let reconcileRunning = false;
 
@@ -314,6 +352,71 @@ async function readJsonBody(req) {
   return Object.fromEntries(new URLSearchParams(body));
 }
 
+async function readPodAccessJson(req) {
+  const declaredLength = Number(req.headers['content-length'] || 0);
+  if (declaredLength > 16 * 1024) {
+    throw new PodAccessError('request_too_large', 'Request body exceeds 16 KiB.', 413);
+  }
+  const body = await new Promise((resolve, reject) => {
+    let data = '';
+    let bytes = 0;
+    let settled = false;
+    req.on('data', (chunk) => {
+      if (settled) return;
+      bytes += chunk.length;
+      if (bytes > 16 * 1024) {
+        settled = true;
+        req.resume();
+        reject(new PodAccessError('request_too_large', 'Request body exceeds 16 KiB.', 413));
+        return;
+      }
+      data += chunk.toString('utf8');
+    });
+    req.on('end', () => {
+      if (!settled) {
+        settled = true;
+        resolve(data);
+      }
+    });
+    req.on('error', (error) => {
+      if (!settled) {
+        settled = true;
+        reject(error);
+      }
+    });
+  });
+  try {
+    return JSON.parse(body || '{}');
+  } catch {
+    throw new PodAccessError('invalid_json', 'Request body must be valid JSON.', 400);
+  }
+}
+
+function requireSameOrigin(req, res) {
+  if (requestHasSameOrigin(req)) return true;
+  jsonResponse(res, 403, { code: 'origin_rejected', error: 'Request origin does not match the appliance management UI.' });
+  return false;
+}
+
+function requirePodAccessCapability(res) {
+  if (podAccessCapability.available) return true;
+  jsonResponse(res, 503, {
+    code: 'pod_access_unavailable',
+    error: podAccessCapability.message || 'Pod access is not available.',
+    capability: podAccessCapability,
+  });
+  return false;
+}
+
+function podAccessErrorResponse(res, error) {
+  const access = accessError(error);
+  jsonResponse(res, access.status || 502, {
+    code: access.code,
+    error: access.message,
+    details: access.details,
+  });
+}
+
 function passwordPolicyError(value) {
   if (typeof value !== 'string' || value.length < 8) return 'Use at least 8 characters.';
   if (!/[a-z]/.test(value)) return 'Include a lowercase letter.';
@@ -461,6 +564,7 @@ function runQueuedKubectl(command, options = {}) {
     onStart: options.onStart,
     onDone: options.onDone,
     signal: options.signal
+    ,stdin: options.stdin
   });
 }
 
@@ -472,6 +576,74 @@ async function runKubectlJson(args, timeoutMs = KUBECTL_API_TIMEOUT_MS, signal) 
   } catch (error) {
     return { ...result, ok: false, status: 1, value: null, stderr: error instanceof Error ? error.message : 'Invalid JSON from kubectl.' };
   }
+}
+
+// kubectl adapter for manage-engine: json/run/apply/quote backed by the queue.
+const manageKube = {
+  json: (args) => runKubectlJson(args),
+  run: (args, options = {}) => runQueuedKubectl(kubectlCommand(args), options),
+  quote: (value) => shellQuote(value),
+  apply: async (manifest) => {
+    const tmp = path.join(os.tmpdir(), `alga-manage-${process.pid}-${Date.now()}.json`);
+    try {
+      fs.writeFileSync(tmp, JSON.stringify(manifest), { mode: 0o600 });
+      return await runQueuedKubectl(kubectlCommand(`apply -f ${shellQuote(tmp)}`));
+    } finally {
+      try { fs.unlinkSync(tmp); } catch { /* best effort */ }
+    }
+  }
+};
+
+// Resolve the channel's current release manifest (best-effort, cached 60s).
+// /api/manage/status is polled by the Manage view and, since the Overview
+// gained an "update available" banner, by the status page too — without this
+// cache every poll would hit the OCI registry twice. On a resolve failure the
+// last-known-good value is kept so update availability doesn't flap during
+// transient registry hiccups.
+// LEVERAGE: pattern appliance-channel-digest-drift — same TTL/last-good shape
+// as resolveControlPlaneRef below.
+const RELEASE_RESOLVE_TTL_MS = 60_000;
+const releaseResolveCache = new Map();
+function resolveReleaseManifestCached(reference, options = {}) {
+  const key = `${options.registryHost || ''}|${options.releaseRepository || ''}|${String(reference || 'stable')}`;
+  const cached = releaseResolveCache.get(key);
+  if (cached && (Date.now() - cached.at) < RELEASE_RESOLVE_TTL_MS) {
+    return Promise.resolve(cached.value);
+  }
+  return resolveReleaseManifest(reference, options).then((value) => {
+    releaseResolveCache.set(key, { value, at: Date.now() });
+    return value;
+  }).catch((error) => {
+    if (cached) return cached.value;
+    throw error;
+  });
+}
+
+// Resolve the channel-pinned control-plane image ref (best-effort, cached 60s)
+// by running the same resolver bootstrap-control-plane.sh uses.
+const CP_RESOLVE_TTL_MS = 60_000;
+const cpResolveCache = new Map();
+function resolveControlPlaneRef(channel) {
+  const key = String(channel || 'stable');
+  const cached = cpResolveCache.get(key);
+  if (cached && (Date.now() - cached.at) < CP_RESOLVE_TTL_MS) {
+    return Promise.resolve(cached.ref);
+  }
+  return new Promise((resolve) => {
+    const resolver = new URL('./resolve-control-plane-image.mjs', import.meta.url).pathname;
+    const child = spawn(process.execPath, [resolver, '--channel', key, '--selection-file', releaseSelectionFile], {
+      env: process.env,
+      timeout: 12_000
+    });
+    let out = '';
+    child.stdout.on('data', (chunk) => { out += chunk; });
+    child.on('error', () => { resolve(cached ? cached.ref : null); });
+    child.on('close', () => {
+      const ref = out.trim() || null;
+      cpResolveCache.set(key, { ref, at: Date.now() });
+      resolve(ref);
+    });
+  });
 }
 
 function validKubeName(value) {
@@ -545,6 +717,11 @@ function summarizePod(item) {
     containers: (item.spec?.containers || []).map((container) => ({
       name: container.name,
       image: container.image,
+      ports: (container.ports || []).map((port) => ({
+        name: port.name || null,
+        containerPort: port.containerPort,
+        protocol: port.protocol || 'TCP'
+      })),
       ready: statuses.find((status) => status.name === container.name)?.ready || false,
       restarts: statuses.find((status) => status.name === container.name)?.restartCount || 0,
       state: statuses.find((status) => status.name === container.name)?.state || null
@@ -566,8 +743,8 @@ function preflightGuidanceForPhase(phase) {
   if (phase === 'network') {
     return 'Confirm outbound HTTPS connectivity and proxy/firewall egress rules to required endpoints.';
   }
-  if (phase === 'github-release-source') {
-    return 'Confirm access to raw.githubusercontent.com and selected channel file for the configured repo/branch.';
+  if (phase === 'registry-release-source') {
+    return 'Confirm outbound HTTPS to ghcr.io and that the selected appliance release channel exists.';
   }
   return 'Review host and network prerequisites, then retry setup.';
 }
@@ -674,6 +851,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/auth/logout') {
+    podExecManager.closeAll('management-logout');
     jsonResponseWithCookie(res, 200, { ok: true }, clearSessionCookieHeader());
     return;
   }
@@ -881,6 +1059,68 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (url.pathname === '/api/k8s/access-capability') {
+    if (!requireAuth(req, res)) return;
+    jsonResponse(res, 200, { capability: podAccessCapability });
+    return;
+  }
+
+  if (url.pathname === '/api/k8s/port-forwards') {
+    if (!requireAuth(req, res)) return;
+    const method = (req.method || 'GET').toUpperCase();
+    if (method === 'GET') {
+      jsonResponse(res, 200, {
+        capability: podAccessCapability,
+        forwards: portForwardManager.list(),
+      });
+      return;
+    }
+    if (method !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use GET or POST.' });
+      return;
+    }
+    if (!requireSameOrigin(req, res) || !requirePodAccessCapability(res)) return;
+    try {
+      const payload = await readPodAccessJson(req);
+      const forward = await portForwardManager.create(payload, {
+        bindAddress: req.socket?.localAddress,
+        clientAddress: clientIp(req),
+      });
+      jsonResponse(res, 201, { forward });
+    } catch (error) {
+      podAccessErrorResponse(res, error);
+    }
+    return;
+  }
+
+  const forwardRoute = url.pathname.match(/^\/api\/k8s\/port-forwards\/(forward-[a-f0-9]{20})(?:\/(extend))?$/);
+  if (forwardRoute) {
+    if (!requireAuth(req, res)) return;
+    if (!requireSameOrigin(req, res) || !requirePodAccessCapability(res)) return;
+    const [, forwardId, action] = forwardRoute;
+    const method = (req.method || 'GET').toUpperCase();
+    try {
+      if (!action && method === 'DELETE') {
+        if (!portForwardManager.stop(forwardId)) {
+          jsonResponse(res, 404, { code: 'forward_not_found', error: 'Port forward was not found.' });
+          return;
+        }
+        jsonResponse(res, 200, { ok: true });
+        return;
+      }
+      if (action === 'extend' && method === 'POST') {
+        const payload = await readPodAccessJson(req);
+        const forward = portForwardManager.extend(forwardId, payload.durationMinutes);
+        jsonResponse(res, 200, { forward });
+        return;
+      }
+      jsonResponse(res, 405, { error: 'Method not allowed for this port-forward operation.' });
+    } catch (error) {
+      podAccessErrorResponse(res, error);
+    }
+    return;
+  }
+
   if (url.pathname === '/api/support-bundle') {
     if (!requireAuth(req, res)) return;
     if ((req.method || 'GET').toUpperCase() !== 'POST') {
@@ -926,6 +1166,111 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (url.pathname === '/api/manage/status') {
+    if (!requireAuth(req, res)) return;
+    const status = await collectManageStatus({
+      kube: manageKube,
+      releaseSelectionFile,
+      installStateFile: stateFile,
+      cpUpgradeStatusFile,
+      resolveControlPlaneRef,
+      resolveReleaseManifest: resolveReleaseManifestCached
+    });
+    try {
+      const identity = await readInitialAdminIdentity(manageKube);
+      status.adminPasswordReset = {
+        available: identity.available,
+        email: identity.email,
+      };
+    } catch {
+      status.adminPasswordReset = { available: false, email: null };
+    }
+    jsonResponse(res, 200, status);
+    return;
+  }
+
+  if (url.pathname === '/api/admin-password-reset') {
+    if (!requireAuth(req, res)) return;
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
+      return;
+    }
+    const payload = await readJsonBody(req);
+    const result = await runInitialAdminPasswordReset({
+      kube: manageKube,
+      password: payload?.password,
+      passwordConfirm: payload?.passwordConfirm,
+    });
+    if (result.ok) {
+      jsonResponse(res, 200, {
+        ok: true,
+        message: 'The original Alga administrator password was reset.',
+      });
+    } else {
+      jsonResponse(res, result.status || 502, {
+        error: result.error || 'The password reset did not complete successfully.',
+      });
+    }
+    return;
+  }
+
+  if (url.pathname === '/api/control-plane/upgrade') {
+    if (!requireAuth(req, res)) return;
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
+      return;
+    }
+    const result = await requestControlPlaneUpgrade({ hostAgentSocket });
+    if (result.ok) jsonResponse(res, 202, result.result || { ok: true, started: true });
+    else jsonResponse(res, result.status || 502, { error: result.error });
+    return;
+  }
+
+  if (url.pathname === '/api/license/apply') {
+    if (!requireAuth(req, res)) return;
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
+      return;
+    }
+    const payload = await readJsonBody(req);
+    const result = await applyLicense({ licenseKey: payload?.licenseKey, kube: manageKube });
+    if (result.ok) jsonResponse(res, 200, { ok: true });
+    else jsonResponse(res, result.status || 400, { error: result.error });
+    return;
+  }
+
+  if (url.pathname === '/api/license/redeem') {
+    if (!requireAuth(req, res)) return;
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
+      return;
+    }
+    const payload = await readJsonBody(req);
+    const result = await redeemClaimCode({ claimCode: payload?.claimCode, kube: manageKube });
+    if (result.ok) jsonResponse(res, 200, { ok: true, result: result.result });
+    else jsonResponse(res, result.status || 400, { error: result.error });
+    return;
+  }
+
+  if (url.pathname === '/api/settings/app-url') {
+    if (!requireAuth(req, res)) return;
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
+      return;
+    }
+    const payload = await readJsonBody(req);
+    const result = await applyAppUrl({
+      appHostname: payload?.appHostname,
+      dnsMode: payload?.dnsMode,
+      dnsServers: payload?.dnsServers,
+      kube: manageKube,
+      releaseSelectionFile
+    });
+    if (result.ok) jsonResponse(res, 200, { ok: true });
+    else jsonResponse(res, result.status || 400, { error: result.error });
+    return;
+  }
+
   if (url.pathname === '/api/updates') {
     if (!requireAuth(req, res)) return;
     if ((req.method || 'GET').toUpperCase() !== 'POST') {
@@ -943,9 +1288,12 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    const result = await runAppChannelUpdate({ channel });
-    res.writeHead(result.ok ? 200 : 412, { 'content-type': 'application/json' });
-    res.end(JSON.stringify(result));
+    // Kick the update off and return immediately. The control-plane pod survives
+    // an app-channel update (only the app pod restarts), so it runs to completion
+    // here while the Manage UI polls /api/manage/status (install-state).
+    runAppChannelUpdate({ channel }).catch(() => {});
+    res.writeHead(202, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, started: true }));
     return;
   }
 
@@ -1181,6 +1529,73 @@ const server = http.createServer(async (req, res) => {
 server.listen(port, '0.0.0.0', () => {
   process.stdout.write(`alga-appliance host service listening on :${port}\n`);
 });
+
+const execWebSocketServer = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
+
+function rejectWebSocket(socket, status, message) {
+  if (socket.destroyed) return;
+  socket.write(`HTTP/1.1 ${status}\r\nConnection: close\r\nContent-Type: text/plain\r\nContent-Length: ${Buffer.byteLength(message)}\r\n\r\n${message}`);
+  socket.destroy();
+}
+
+server.on('upgrade', (req, socket, head) => {
+  let url;
+  try {
+    url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+  } catch {
+    rejectWebSocket(socket, '400 Bad Request', 'Invalid WebSocket URL.');
+    return;
+  }
+  if (url.pathname !== '/api/k8s/exec') {
+    rejectWebSocket(socket, '404 Not Found', 'WebSocket endpoint not found.');
+    return;
+  }
+  if (!isAuthenticated(req)) {
+    rejectWebSocket(socket, '401 Unauthorized', 'Sign in to the appliance management UI.');
+    return;
+  }
+  if (!requestHasSameOrigin(req)) {
+    rejectWebSocket(socket, '403 Forbidden', 'WebSocket origin does not match the appliance management UI.');
+    return;
+  }
+  if (!podAccessCapability.available) {
+    rejectWebSocket(socket, '503 Service Unavailable', podAccessCapability.message || 'Pod access is unavailable.');
+    return;
+  }
+  const target = {
+    namespace: url.searchParams.get('namespace'),
+    pod: url.searchParams.get('pod'),
+    container: url.searchParams.get('container'),
+    shell: url.searchParams.get('shell') || 'auto',
+    columns: url.searchParams.get('columns') || 100,
+    rows: url.searchParams.get('rows') || 30,
+  };
+  execWebSocketServer.handleUpgrade(req, socket, head, (webSocket) => {
+    podExecManager.attach(webSocket, target, { clientAddress: clientIp(req) }).catch((error) => {
+      const access = accessError(error, 'exec_start_failed');
+      if (webSocket.readyState === 1) {
+        webSocket.send(JSON.stringify({ type: 'error', code: access.code, message: access.message }));
+        webSocket.close(1008, String(access.code).slice(0, 120));
+      }
+    });
+  });
+});
+
+let shuttingDown = false;
+function shutdownControlPlane(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  process.stdout.write(`alga-appliance host service shutting down (${signal})\n`);
+  podExecManager.shutdown();
+  portForwardManager.shutdown();
+  execWebSocketServer.close();
+  server.close(() => process.exit(0));
+  const forceExit = setTimeout(() => process.exit(0), 5_000);
+  forceExit.unref();
+}
+
+process.once('SIGTERM', () => shutdownControlPlane('SIGTERM'));
+process.once('SIGINT', () => shutdownControlPlane('SIGINT'));
 
 if (!AUTO_RETRY_DISABLED) {
   const reconcileTimer = setInterval(() => { reconcileBlockedSetup().catch(() => {}); }, RECONCILE_INTERVAL_MS);

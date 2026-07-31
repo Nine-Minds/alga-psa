@@ -12,6 +12,8 @@ const activities = proxyActivities<{
     workflowId: string;
     runType: 'single-tenant';
     initiatedBy?: string;
+    scopeManagedTenantId?: string | null;
+    scopeClientId?: string | null;
   }): Promise<{ runId: string }>;
   loadMappedTenantsActivity(input: {
     tenantId: string;
@@ -67,6 +69,9 @@ export async function entraTenantSyncWorkflow(
     workflowId,
     runType: 'single-tenant',
     initiatedBy: input.actor?.userId,
+    // History names the client a run touched, not just its type.
+    scopeManagedTenantId: input.managedTenantId,
+    scopeClientId: input.clientId ?? null,
   });
 
   log.info('Starting Entra tenant sync workflow', {

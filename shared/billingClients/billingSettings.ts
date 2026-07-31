@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { ensureDefaultContractForClient } from './defaultContract';
 
 export type ClientBillingSettings = {
@@ -23,8 +24,9 @@ async function ensureClientBillingSettingsRowInTransaction(
   trx: Knex.Transaction,
   params: { tenant: string; clientId: string }
 ): Promise<{ created: boolean }> {
-  const existing = await trx('client_billing_settings')
-    .where({ tenant: params.tenant, client_id: params.clientId })
+  const db = tenantDb(trx, params.tenant);
+  const existing = await db.table('client_billing_settings')
+    .where({ client_id: params.clientId })
     .select('client_id')
     .first();
   if (existing) {
@@ -32,18 +34,17 @@ async function ensureClientBillingSettingsRowInTransaction(
     return { created: false };
   }
 
-  const defaults = await trx('default_billing_settings')
-    .where({ tenant: params.tenant })
-    .first()
+  const defaults = await db.table('default_billing_settings')
     .select(
       'zero_dollar_invoice_handling',
       'suppress_zero_dollar_invoices',
       'credit_expiration_days',
       'credit_expiration_notification_days',
       'enable_credit_expiration'
-    );
+    )
+    .first();
 
-  await trx('client_billing_settings').insert({
+  await db.table('client_billing_settings').insert({
     tenant: params.tenant,
     client_id: params.clientId,
     zero_dollar_invoice_handling: defaults?.zero_dollar_invoice_handling ?? 'normal',
@@ -77,8 +78,8 @@ export async function getClientBillingSettings(
   tenant: string,
   clientId: string
 ): Promise<ClientBillingSettings | null> {
-  const row = await knexOrTrx<DbClientBillingSettings>('client_billing_settings')
-    .where({ tenant, client_id: clientId })
+  const row = await tenantDb(knexOrTrx, tenant).table<DbClientBillingSettings>('client_billing_settings')
+    .where({ client_id: clientId })
     .first()
     .select(
       'zero_dollar_invoice_handling',
@@ -113,7 +114,7 @@ export async function updateClientBillingSettings(
   }
 
   if (settings === null) {
-    await knexOrTrx('client_billing_settings').where({ tenant, client_id: clientId }).del();
+    await tenantDb(knexOrTrx, tenant).table('client_billing_settings').where({ client_id: clientId }).del();
     return;
   }
 
@@ -135,8 +136,8 @@ export async function updateClientBillingSettings(
   }
 
   await ensureClientBillingSettingsRow(knexOrTrx, { tenant, clientId });
-  await knexOrTrx('client_billing_settings')
-    .where({ tenant, client_id: clientId })
+  await tenantDb(knexOrTrx, tenant).table('client_billing_settings')
+    .where({ client_id: clientId })
     .update({ ...updates, updated_at: knexOrTrx.fn.now() });
 }
 

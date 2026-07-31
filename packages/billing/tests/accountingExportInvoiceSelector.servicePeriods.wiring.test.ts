@@ -8,7 +8,9 @@ const source = readFileSync(
 
 describe('accountingExportInvoiceSelector service-period wiring', () => {
   it('prefers canonical detail periods and does not emit invoice-header fallback service periods for live export lines', () => {
-    expect(source).toContain(".leftJoin('invoice_charge_details as iid'");
+    expect(source).toContain(
+      "db.tenantJoin(query, 'invoice_charge_details as iid', 'ch.item_id', 'iid.item_id', { type: 'left' });"
+    );
     expect(source).toContain("'iid.service_period_start as detail_service_period_start'");
     expect(source).toContain("'iid.service_period_end as detail_service_period_end'");
     expect(source).toContain('const hasCanonicalDetailPeriods = recurringDetailPeriods.length > 0;');

@@ -5,7 +5,8 @@ import {
   createPublicAppointmentRequestSchema,
   CreatePublicAppointmentRequestInput
 } from '@/lib/schemas/appointmentSchemas';
-import { getTenantIdBySlug } from '@alga-psa/db';
+import { getTenantIdBySlug, resolveEffectiveTimeZone, normalizeIanaTimeZone, tenantDb } from '@alga-psa/db';
+import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { getConnection } from '@/lib/db/db';
 import { getServicesForPublicBooking } from '@alga-psa/client-portal/services/availabilityService';
 import { SystemEmailService } from '@alga-psa/email';
@@ -171,9 +172,9 @@ export async function POST(req: NextRequest) {
 
     // Verify tenant exists
     const knex = await getConnection(tenantId);
-    const tenant = await knex('tenants')
-      .where({ tenant: tenantId })
-      .first('tenant', 'client_name');
+    const db = tenantDb(knex, tenantId);
+    const tenant = await db.table('tenants')
+      .first('tenant', 'client_name', 'suspended_at');
 
     if (!tenant) {
       logger.warn('[public-appointment-request] Tenant not found', {
@@ -187,6 +188,24 @@ export async function POST(req: NextRequest) {
           error: 'Invalid tenant'
         },
         { status: 400 }
+      );
+    }
+
+    // Suspended tenants (cancelled, pending deletion) must not accept
+    // bookings: a human submitter would otherwise believe a defunct MSP will
+    // respond. Neutral copy — no tenant-status detail leaked.
+    if (tenant.suspended_at) {
+      logger.info('[public-appointment-request] Rejecting request for suspended tenant', {
+        tenantId,
+        ip: clientIp
+      });
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Booking is temporarily unavailable. Please try again later.'
+        },
+        { status: 503 }
       );
     }
 
@@ -220,7 +239,7 @@ export async function POST(req: NextRequest) {
     const appointmentRequestId = uuidv4();
     const now = new Date();
 
-    await knex('appointment_requests').insert({
+    await db.table('appointment_requests').insert({
       appointment_request_id: appointmentRequestId,
       tenant: tenantId,
       client_id: null,
@@ -256,6 +275,14 @@ export async function POST(req: NextRequest) {
       ip: clientIp
     });
 
+    // requested_date/requested_time are the requester's wall-clock in requester_timezone.
+    const requesterTz = normalizeIanaTimeZone(validatedData.requester_timezone || null);
+    const requestInstant = fromZonedTime(
+      `${validatedData.requested_date}T${validatedData.requested_time}:00`,
+      requesterTz
+    );
+    const requesterTzLabel = ` (${formatInTimeZone(requestInstant, requesterTz, 'zzz')})`;
+
     // Send confirmation email to requester
     try {
       const emailService = SystemEmailService.getInstance();
@@ -269,7 +296,7 @@ export async function POST(req: NextRequest) {
         requesterEmail: validatedData.email,
         serviceName: service.service_name,
         requestedDate: await formatDate(validatedData.requested_date, 'en'),
-        requestedTime: await formatTime(validatedData.requested_time, 'en'),
+        requestedTime: `${await formatTime(validatedData.requested_time, 'en')}${requesterTzLabel}`,
         duration: service.default_duration || 60,
         referenceNumber: referenceNumber,
         responseTime: '24 hours',
@@ -321,13 +348,13 @@ export async function POST(req: NextRequest) {
 
       // Only notify the resolved set (preferred technician + approvers)
       if (notifyUserIds.size > 0) {
-        const staffUsers = await knex('users')
-          .where({ tenant: tenantId, user_type: 'internal' })
+        const staffUsers = await db.table('users')
+          .where({ user_type: 'internal' })
           .whereIn('user_id', Array.from(notifyUserIds))
           .where(function() {
             this.where('is_inactive', false).orWhereNull('is_inactive');
           })
-          .select('user_id', 'email', 'first_name', 'last_name');
+          .select('user_id', 'email', 'first_name', 'last_name', 'timezone');
 
         // Get preferred technician name for email
         let preferredTechnicianName = 'Not specified';
@@ -338,7 +365,11 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        const tenantDefaultTz = await resolveEffectiveTimeZone(knex, tenantId, null);
+
         for (const staffUser of staffUsers) {
+          // Staff see the request in their own timezone, labeled.
+          const staffTz = staffUser.timezone ? normalizeIanaTimeZone(staffUser.timezone) : tenantDefaultTz;
           await emailService.sendNewAppointmentRequest(staffUser.email, {
             requesterName: validatedData.name,
             requesterEmail: validatedData.email,
@@ -346,8 +377,8 @@ export async function POST(req: NextRequest) {
             companyName: validatedData.company || undefined,
             clientName: validatedData.company || 'Public Request',
             serviceName: service.service_name,
-            requestedDate: await formatDate(validatedData.requested_date, 'en'),
-            requestedTime: await formatTime(validatedData.requested_time, 'en'),
+            requestedDate: await formatDate(formatInTimeZone(requestInstant, staffTz, 'yyyy-MM-dd'), 'en'),
+            requestedTime: `${await formatTime(formatInTimeZone(requestInstant, staffTz, 'HH:mm'), 'en')} (${formatInTimeZone(requestInstant, staffTz, 'zzz')})`,
             duration: service.default_duration || 60,
             preferredTechnician: preferredTechnicianName,
             description: validatedData.message || undefined,

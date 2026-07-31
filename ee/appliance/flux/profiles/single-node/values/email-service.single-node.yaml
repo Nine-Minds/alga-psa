@@ -33,3 +33,32 @@ db:
   adminPasswordSecret:
     name: db-credentials
     key: DB_PASSWORD_SUPERUSER
+
+# Point inbound IMAP webhooks at the in-cluster alga-core server (alga-core runs
+# hostNetwork, so http://server:3000 is unresolvable in k3s) and source the
+# webhook secret from the alga-core server secret so the HMAC matches.
+webhook:
+  url: "http://alga-core-sebastian.msp.svc.cluster.local:3000/api/email/webhooks/imap"
+  secretKeyRef:
+    name: alga-core-sebastian-secrets
+    key: IMAP_WEBHOOK_SECRET
+
+# Source the application secrets from the alga-core server secret so the crypto
+# key (used to decrypt tenant IMAP credentials) and auth secrets match.
+appSecrets:
+  existingSecret: alga-core-sebastian-secrets
+  keys:
+    cryptoKey: CRYPTR_KEY        # NOTE: alga-core stores the crypto key under CRYPTR_KEY
+    nextauthSecret: NEXTAUTH_SECRET
+    tokenSecretKey: TOKEN_SECRET_KEY
+
+# Share the tenant-secret store with alga-core via a host directory so this
+# service can read the IMAP passwords alga-core writes via the filesystem
+# secret provider.
+sharedTenantSecrets:
+  enabled: true
+
+# Block startup until the server database has been bootstrapped (email_providers
+# table exists) so the service does not crashloop during first-run migrations.
+waitForBootstrap:
+  enabled: true

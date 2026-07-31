@@ -8,13 +8,17 @@ const {
   createLogMock: vi.fn()
 }));
 
-vi.mock('@alga-psa/workflows/persistence/workflowRunModelV2', () => ({
+// WorkflowRuntimeV2 (shared/workflow/runtime/runtime/workflowRuntimeV2.ts) imports
+// these models via relative paths into shared/workflow/persistence, so the mocks
+// must target the shared module ids (the EE package files are just re-export shims
+// with a different module id).
+vi.mock('@shared/workflow/persistence/workflowRunModelV2', () => ({
   default: {
     create: (...args: unknown[]) => createRunMock(...args)
   }
 }));
 
-vi.mock('@alga-psa/workflows/persistence/workflowRunLogModelV2', () => ({
+vi.mock('@shared/workflow/persistence/workflowRunLogModelV2', () => ({
   default: {
     create: (...args: unknown[]) => createLogMock(...args)
   }

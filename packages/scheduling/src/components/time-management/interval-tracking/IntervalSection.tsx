@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { TicketInterval, TicketIntervalGroup } from '@alga-psa/types';
 import { IntervalTrackingService } from '@alga-psa/ui/services';
@@ -9,7 +9,7 @@ import { formatDuration, calculateTotalDuration, secondsToMinutes, groupInterval
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Clock, TicketCheck, Trash } from 'lucide-react';
-import type { ITimeEntry, ITimePeriodView, ITimeSheet } from '@alga-psa/types';
+import type { ITimeEntry, ITimePeriodView, ITimeSheetView } from '@alga-psa/types';
 import { fetchOrCreateTimeSheet } from '../../../actions/timeEntryActions';
 import TimeEntryDialog from '../time-entry/time-sheet/TimeEntryDialog';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -39,7 +39,7 @@ export function IntervalSection({
   const [isLoading, setIsLoading] = useState(true);
   const [isTimeEntryDialogOpen, setIsTimeEntryDialogOpen] = useState(false);
   const [timeEntryData, setTimeEntryData] = useState<Partial<ITimeEntry> | null>(null);
-  const [timeSheet, setTimeSheet] = useState<ITimeSheet | null>(null);
+  const [timeSheet, setTimeSheet] = useState<ITimeSheetView | null>(null);
   
   const intervalService = useMemo(() => new IntervalTrackingService(), []);
   
@@ -120,6 +120,10 @@ export function IntervalSection({
       
       try {
         const sheet = await fetchOrCreateTimeSheet(userId, timePeriod.period_id);
+        if (isActionMessageError(sheet) || isActionPermissionError(sheet)) {
+          toast.error(getErrorMessage(sheet));
+          return;
+        }
         setTimeSheet(sheet);
         
         // Update timePeriod with timeSheetId for use in TimeEntryDialog
@@ -146,6 +150,10 @@ export function IntervalSection({
     if (!timeSheet) {
       try {
         const sheet = await fetchOrCreateTimeSheet(userId, timePeriod.period_id);
+        if (isActionMessageError(sheet) || isActionPermissionError(sheet)) {
+          toast.error(getErrorMessage(sheet));
+          return;
+        }
         setTimeSheet(sheet);
       } catch (error) {
         console.error('Error fetching/creating time sheet:', error);

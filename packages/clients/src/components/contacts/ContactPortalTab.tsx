@@ -36,6 +36,18 @@ import {
   updateClientUser
 } from '../../actions/contact-actions/portalInvitationBridgeActions';
 import type { InvitationHistoryItem, PortalInvitationErrorCode } from '@alga-psa/portal-shared/types';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import { useToast } from '@alga-psa/ui';
+import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
+import { Input } from '@alga-psa/ui/components/Input';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string>> = {
   PERMISSION_DENIED_INVITE: 'contactPortalTab.toast.errors.permissionDeniedInvite',
@@ -60,11 +72,8 @@ const GENERIC_PORTAL_INVITE_ERROR_CODES: ReadonlySet<PortalInvitationErrorCode> 
   'INVITATION_FAILED',
   'REVOKE_FAILED'
 ]);
-import { useToast } from '@alga-psa/ui';
-import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
-import { Input } from '@alga-psa/ui/components/Input';
-import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const FULL_ACCESS_VALUE = '__full_access__';
 
@@ -135,6 +144,14 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   const [editingVisibilityGroupId, setEditingVisibilityGroupId] = useState<string | null>(null);
   const { toast } = useToast();
 
+  const showReturnedActionError = (error: ActionMessageError | ActionPermissionError) => {
+    toast({
+      title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+      description: getErrorMessage(error),
+      variant: 'destructive'
+    });
+  };
+
   useEffect(() => {
     loadData();
   }, [contact.contact_name_id]);
@@ -147,6 +164,17 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   const loadData = async () => {
     setIsLoading(true);
     try {
+      if (!contact.client_id) {
+        setExistingUser(null);
+        setUserRoles([]);
+        setClientRoles([]);
+        setVisibilityGroups([]);
+        setVisibilityBoards([]);
+        setSelectedVisibilityGroupId(null);
+        setInvitationHistory([]);
+        return;
+      }
+
       // Check for existing user
       const { user, error } = await getUserByContactId(contact.contact_name_id);
       if (!error && user) {
@@ -167,8 +195,19 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
         getClientPortalVisibilityBoardsByClient(contact.contact_name_id),
       ]);
 
-      setVisibilityGroups(groupRows || []);
-      setVisibilityBoards(boardRows || []);
+      if (isReturnedActionError(groupRows)) {
+        showReturnedActionError(groupRows);
+        setVisibilityGroups([]);
+      } else {
+        setVisibilityGroups(groupRows || []);
+      }
+
+      if (isReturnedActionError(boardRows)) {
+        showReturnedActionError(boardRows);
+        setVisibilityBoards([]);
+      } else {
+        setVisibilityBoards(boardRows || []);
+      }
       setSelectedVisibilityGroupId(contact.portal_visibility_group_id || null);
 
       // Load invitation history
@@ -199,7 +238,12 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
 
     try {
       setIsUpdating(true);
-      await assignClientPortalVisibilityGroupToContact(contact.contact_name_id, groupId);
+      const result = await assignClientPortalVisibilityGroupToContact(contact.contact_name_id, groupId);
+      if (isReturnedActionError(result)) {
+        setSelectedVisibilityGroupId(previousValue);
+        showReturnedActionError(result);
+        return;
+      }
       toast({
         title: 'Success',
         description: 'Contact visibility assignment updated'
@@ -209,7 +253,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       console.error('Error assigning visibility group:', error);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to assign visibility group',
+        description: 'Failed to assign visibility group',
         variant: 'destructive'
       });
     } finally {
@@ -239,29 +283,41 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
     setIsUpdating(true);
     try {
       if (editingVisibilityGroupId) {
-        await updateClientPortalVisibilityGroupForContact(contact.contact_name_id, editingVisibilityGroupId, {
+        const result = await updateClientPortalVisibilityGroupForContact(contact.contact_name_id, editingVisibilityGroupId, {
           name: trimmedName,
           description: visibilityGroupDescription.trim() || null,
           boardIds: visibilityGroupBoardIds
         });
+        if (isReturnedActionError(result)) {
+          showReturnedActionError(result);
+          return;
+        }
         toast({ title: 'Success', description: 'Visibility group updated' });
       } else {
-        await createClientPortalVisibilityGroupForContact(contact.contact_name_id, {
+        const result = await createClientPortalVisibilityGroupForContact(contact.contact_name_id, {
           name: trimmedName,
           description: visibilityGroupDescription.trim() || null,
           boardIds: visibilityGroupBoardIds
         });
+        if (isReturnedActionError(result)) {
+          showReturnedActionError(result);
+          return;
+        }
         toast({ title: 'Success', description: 'Visibility group created' });
       }
 
       resetVisibilityGroupForm();
       const updatedGroups = await getClientPortalVisibilityGroupsForContact(contact.contact_name_id);
-      setVisibilityGroups(updatedGroups || []);
+      if (isReturnedActionError(updatedGroups)) {
+        showReturnedActionError(updatedGroups);
+      } else {
+        setVisibilityGroups(updatedGroups || []);
+      }
     } catch (error) {
       console.error('Failed to save visibility group:', error);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to save visibility group',
+        description: 'Failed to save visibility group',
         variant: 'destructive'
       });
     } finally {
@@ -272,6 +328,10 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   const handleEditVisibilityGroup = async (groupId: string) => {
     try {
       const group = await getClientPortalVisibilityGroupById(contact.contact_name_id, groupId);
+      if (isReturnedActionError(group)) {
+        showReturnedActionError(group);
+        return;
+      }
       setEditingVisibilityGroupId(group.group_id);
       setVisibilityGroupName(group.name);
       setVisibilityGroupDescription(group.description || '');
@@ -293,18 +353,26 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
 
     setIsUpdating(true);
     try {
-      await deleteClientPortalVisibilityGroupForContact(contact.contact_name_id, groupId);
+      const result = await deleteClientPortalVisibilityGroupForContact(contact.contact_name_id, groupId);
+      if (isReturnedActionError(result)) {
+        showReturnedActionError(result);
+        return;
+      }
       if (selectedVisibilityGroupId === groupId) {
         setSelectedVisibilityGroupId(null);
       }
       const updatedGroups = await getClientPortalVisibilityGroupsForContact(contact.contact_name_id);
-      setVisibilityGroups(updatedGroups || []);
+      if (isReturnedActionError(updatedGroups)) {
+        showReturnedActionError(updatedGroups);
+      } else {
+        setVisibilityGroups(updatedGroups || []);
+      }
       toast({ title: 'Success', description: 'Visibility group deleted' });
     } catch (error) {
       console.error('Failed to delete visibility group:', error);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to delete visibility group',
+        description: 'Failed to delete visibility group',
         variant: 'destructive'
       });
     } finally {
@@ -524,7 +592,15 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
 
     setIsUpdating(true);
     try {
-      await assignRoleToUser(existingUser.user_id, selectedRoleId);
+      const result = await assignRoleToUser(existingUser.user_id, selectedRoleId);
+      if (isReturnedActionError(result)) {
+        toast({
+          title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+          description: getErrorMessage(result),
+          variant: "destructive"
+        });
+        return;
+      }
 
       toast({
         title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }),
@@ -558,7 +634,15 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
 
     setIsUpdating(true);
     try {
-      await removeRoleFromUser(existingUser.user_id, roleId);
+      const result = await removeRoleFromUser(existingUser.user_id, roleId);
+      if (isReturnedActionError(result)) {
+        toast({
+          title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+          description: getErrorMessage(result),
+          variant: "destructive"
+        });
+        return;
+      }
 
       toast({
         title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }),
@@ -588,6 +672,34 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
         showTable={false}
         noCard={false}
       />
+    );
+  }
+
+  if (!contact.client_id) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              {t('contactPortalTab.title', { defaultValue: 'Client Portal Access' })}
+            </CardTitle>
+            <CardDescription>
+              {t('contactPortalTab.description', { defaultValue: 'Manage client portal access and permissions for this contact' })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                {t('contactPortalTab.noClient.description', {
+                  defaultValue: 'Assign this contact to a client to manage portal access.'
+                })}
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -763,7 +875,24 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                       }
                       setIsUpdating(true);
                       try {
-                        await updateClientUser(existingUser.user_id, { is_inactive: !checked });
+                        const updateResult = await updateClientUser(existingUser.user_id, { is_inactive: !checked });
+                        if (isReturnedActionError(updateResult)) {
+                          toast({
+                            title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+                            description: getErrorMessage(updateResult),
+                            variant: "destructive"
+                          });
+                          return;
+                        }
+                        if (!updateResult) {
+                          toast({
+                            title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
+                            description: t('contactPortalTab.toast.userNotFound', { defaultValue: 'Client user not found' }),
+                            variant: "destructive"
+                          });
+                          return;
+                        }
+
                         toast({
                           title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }),
                           description: checked
@@ -899,7 +1028,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                       <div className="space-y-1">
                         <p className="text-sm font-medium">{group.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {group.board_count} board{group.board_count === 1 ? '' : 's'}
+                          {t('contactPortalTab.boardCount', { defaultValue: '{{count}} boards', count: group.board_count })}
                         </p>
                         {group.description ? (
                           <p className="text-xs text-muted-foreground">{group.description}</p>

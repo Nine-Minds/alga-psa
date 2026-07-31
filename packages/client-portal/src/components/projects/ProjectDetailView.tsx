@@ -14,6 +14,7 @@ import {
 } from '@alga-psa/client-portal/actions';
 import ClientKanbanBoard from './ClientKanbanBoard';
 import ClientTaskListView from './ClientTaskListView';
+import ProjectBillingSummarySection from './ProjectBillingSummarySection';
 import { LayoutGrid, List } from 'lucide-react';
 
 interface ProjectDetailViewProps {
@@ -306,6 +307,9 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
           </div>
         </div>
       )}
+
+      {/* Read-only billing summary (renders only when show_billing is enabled). */}
+      <ProjectBillingSummarySection projectId={project.project_id} />
     </div>
   );
 }

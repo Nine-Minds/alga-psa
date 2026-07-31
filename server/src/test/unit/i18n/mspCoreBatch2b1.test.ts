@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 const repoRoot = path.resolve(__dirname, '../../../../..');
 const localeRoot = path.join(repoRoot, 'server/public/locales');
-const productionLocales = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl'] as const;
+const productionLocales = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt'] as const;
 const pseudoLocales = ['xx', 'yy'] as const;
 
 const readJson = (relativePath: string): Record<string, unknown> =>
@@ -80,7 +80,8 @@ describe('MSP core locale batch 2b-1', () => {
       'nav.billing.invoiceLayouts': 'Invoice Layouts',
       'nav.billing.billingCycles': 'Billing Cycles',
       'nav.billing.servicePeriods': 'Service Periods',
-      'nav.billing.serviceCatalog': 'Service Catalog',
+      'nav.billing.credits': 'Credits',
+      'nav.billing.serviceCatalog': 'Services',
       'nav.billing.products': 'Products',
       'nav.billing.taxRates': 'Tax Rates',
       'nav.billing.usageTracking': 'Usage Tracking',

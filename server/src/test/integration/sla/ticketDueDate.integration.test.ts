@@ -13,13 +13,15 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { createClient, createTenant, createUser } from '../../../../test-utils/testDataFactory';
 
 // Mock dependencies
 vi.mock('server/src/lib/utils/getSecret', () => ({
-  getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+  getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -27,7 +29,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
     getAppSecret: async () => '',
   })),
   secretProvider: {
-    getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''),
+    getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
+    (envVar && process.env[envVar]) || fallback || ''),
   },
 }));
 
@@ -78,6 +81,7 @@ describe('Ticket Due Date Integration Tests', () => {
   let priorityId: string;
 
   const HOOK_TIMEOUT = 180_000;
+  const scopedTable = (tenant: string, tableName: string) => tenantDb(db, tenant).table(tableName);
 
   beforeAll(async () => {
     process.env.DB_HOST = process.env.DB_HOST || 'localhost';
@@ -100,16 +104,14 @@ describe('Ticket Due Date Integration Tests', () => {
 
     // Create required reference data for tenant 1
     boardId = uuidv4();
-    await db('boards').insert({
+    await scopedTable(tenantId, 'boards').insert({
       tenant: tenantId,
       board_id: boardId,
-      name: 'Test Board',
-      created_at: new Date(),
-      updated_at: new Date(),
+      board_name: 'Test Board',
     });
 
     statusId = uuidv4();
-    await db('statuses').insert({
+    await scopedTable(tenantId, 'statuses').insert({
       tenant: tenantId,
       status_id: statusId,
       name: 'Open',
@@ -119,7 +121,7 @@ describe('Ticket Due Date Integration Tests', () => {
     });
 
     priorityId = uuidv4();
-    await db('priorities').insert({
+    await scopedTable(tenantId, 'priorities').insert({
       tenant: tenantId,
       priority_id: priorityId,
       priority_name: 'Normal',
@@ -141,9 +143,10 @@ describe('Ticket Due Date Integration Tests', () => {
   } = {}): Promise<string> {
     const ticketId = uuidv4();
     const ticketNumber = `TEST-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    const ticketTenantId = options.tenantIdOverride ?? tenantId;
 
-    await db('tickets').insert({
-      tenant: options.tenantIdOverride ?? tenantId,
+    await scopedTable(ticketTenantId, 'tickets').insert({
+      tenant: ticketTenantId,
       ticket_id: ticketId,
       ticket_number: ticketNumber,
       title: 'Test Ticket',
@@ -164,7 +167,7 @@ describe('Ticket Due Date Integration Tests', () => {
       const dueDate = new Date('2025-03-15T14:00:00.000Z');
       const ticketId = await createTestTicket({ dueDate });
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -177,7 +180,7 @@ describe('Ticket Due Date Integration Tests', () => {
     it('should create ticket without due_date (null by default)', async () => {
       const ticketId = await createTestTicket();
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -191,11 +194,11 @@ describe('Ticket Due Date Integration Tests', () => {
       const ticketId = await createTestTicket({ dueDate: initialDueDate });
 
       // Update the due date
-      await db('tickets')
+      await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .update({ due_date: newDueDate, updated_at: new Date() });
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -207,17 +210,17 @@ describe('Ticket Due Date Integration Tests', () => {
       const ticketId = await createTestTicket({ dueDate });
 
       // Verify due_date is set
-      let ticket = await db('tickets')
+      let ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
       expect(ticket.due_date).not.toBeNull();
 
       // Clear the due date
-      await db('tickets')
+      await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .update({ due_date: null, updated_at: new Date() });
 
-      ticket = await db('tickets')
+      ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -229,7 +232,7 @@ describe('Ticket Due Date Integration Tests', () => {
       const dueDateUTC = new Date('2025-06-15T12:00:00.000Z');
       const ticketId = await createTestTicket({ dueDate: dueDateUTC });
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -267,7 +270,7 @@ describe('Ticket Due Date Integration Tests', () => {
 
     it('should filter overdue tickets (due_date < now)', async () => {
       const now = new Date();
-      const overdueTickets = await db('tickets')
+      const overdueTickets = await scopedTable(tenantId, 'tickets')
         .where({ tenant: tenantId })
         .whereNotNull('due_date')
         .where('due_date', '<', now)
@@ -280,7 +283,7 @@ describe('Ticket Due Date Integration Tests', () => {
 
     it('should filter upcoming tickets (due_date > now)', async () => {
       const now = new Date();
-      const upcomingTickets = await db('tickets')
+      const upcomingTickets = await scopedTable(tenantId, 'tickets')
         .where({ tenant: tenantId })
         .whereNotNull('due_date')
         .where('due_date', '>', now)
@@ -297,7 +300,7 @@ describe('Ticket Due Date Integration Tests', () => {
       const todayEnd = new Date();
       todayEnd.setHours(23, 59, 59, 999);
 
-      const todayTickets = await db('tickets')
+      const todayTickets = await scopedTable(tenantId, 'tickets')
         .where({ tenant: tenantId })
         .whereNotNull('due_date')
         .whereBetween('due_date', [todayStart, todayEnd])
@@ -308,7 +311,7 @@ describe('Ticket Due Date Integration Tests', () => {
     });
 
     it('should filter tickets with no due date', async () => {
-      const ticketsWithoutDueDate = await db('tickets')
+      const ticketsWithoutDueDate = await scopedTable(tenantId, 'tickets')
         .where({ tenant: tenantId })
         .whereNull('due_date')
         .select('ticket_id');
@@ -330,7 +333,7 @@ describe('Ticket Due Date Integration Tests', () => {
       const ticketId1 = await createTestTicket({ dueDate: date1 });
       const ticketId2 = await createTestTicket({ dueDate: date2 });
 
-      const sortedTickets = await db('tickets')
+      const sortedTickets = await scopedTable(tenantId, 'tickets')
         .where({ tenant: tenantId })
         .whereIn('ticket_id', [ticketId1, ticketId2, ticketId3])
         .orderBy('due_date', 'asc')
@@ -350,7 +353,7 @@ describe('Ticket Due Date Integration Tests', () => {
       const ticketId2 = await createTestTicket({ dueDate: date2 });
       const ticketId3 = await createTestTicket({ dueDate: date3 });
 
-      const sortedTickets = await db('tickets')
+      const sortedTickets = await scopedTable(tenantId, 'tickets')
         .where({ tenant: tenantId })
         .whereIn('ticket_id', [ticketId1, ticketId2, ticketId3])
         .orderBy('due_date', 'desc')
@@ -369,7 +372,7 @@ describe('Ticket Due Date Integration Tests', () => {
       const ticketIdNull = await createTestTicket({ dueDate: null });
       const ticketId2 = await createTestTicket({ dueDate: date2 });
 
-      const sortedTickets = await db('tickets')
+      const sortedTickets = await scopedTable(tenantId, 'tickets')
         .where({ tenant: tenantId })
         .whereIn('ticket_id', [ticketId1, ticketIdNull, ticketId2])
         .orderByRaw('due_date ASC NULLS LAST')
@@ -385,16 +388,14 @@ describe('Ticket Due Date Integration Tests', () => {
     it('should not allow access to tickets from other tenants', async () => {
       // Create a ticket in tenant 2
       const board2Id = uuidv4();
-      await db('boards').insert({
+      await scopedTable(tenant2Id, 'boards').insert({
         tenant: tenant2Id,
         board_id: board2Id,
-        name: 'Test Board 2',
-        created_at: new Date(),
-        updated_at: new Date(),
+        board_name: 'Test Board 2',
       });
 
       const status2Id = uuidv4();
-      await db('statuses').insert({
+      await scopedTable(tenant2Id, 'statuses').insert({
         tenant: tenant2Id,
         status_id: status2Id,
         name: 'Open',
@@ -405,7 +406,7 @@ describe('Ticket Due Date Integration Tests', () => {
 
       const user2Id = await createUser(db, tenant2Id, { first_name: 'Tenant2', last_name: 'User' });
       const priority2Id = uuidv4();
-      await db('priorities').insert({
+      await scopedTable(tenant2Id, 'priorities').insert({
         tenant: tenant2Id,
         priority_id: priority2Id,
         priority_name: 'Normal',
@@ -417,7 +418,7 @@ describe('Ticket Due Date Integration Tests', () => {
       const ticketId = uuidv4();
       const dueDate = new Date('2025-05-01T12:00:00.000Z');
 
-      await db('tickets').insert({
+      await scopedTable(tenant2Id, 'tickets').insert({
         tenant: tenant2Id,
         ticket_id: ticketId,
         ticket_number: `TEST-TENANT2-${Date.now()}`,
@@ -432,14 +433,14 @@ describe('Ticket Due Date Integration Tests', () => {
       });
 
       // Try to query from tenant 1's perspective
-      const ticketFromTenant1 = await db('tickets')
+      const ticketFromTenant1 = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
       expect(ticketFromTenant1).toBeUndefined();
 
       // Query from tenant 2's perspective should work
-      const ticketFromTenant2 = await db('tickets')
+      const ticketFromTenant2 = await scopedTable(tenant2Id, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenant2Id })
         .first();
 
@@ -454,7 +455,7 @@ describe('Ticket Due Date Integration Tests', () => {
       const tenant1TicketId = await createTestTicket({ dueDate });
 
       // Get all tickets due on that date for tenant 1
-      const tenant1Tickets = await db('tickets')
+      const tenant1Tickets = await scopedTable(tenantId, 'tickets')
         .where({ tenant: tenantId })
         .whereNotNull('due_date')
         .whereRaw('DATE(due_date) = DATE(?)', [dueDate])
@@ -464,7 +465,7 @@ describe('Ticket Due Date Integration Tests', () => {
       expect(tenant1TicketIds).toContain(tenant1TicketId);
 
       // Query for tenant 2 should not include tenant 1 tickets
-      const tenant2Tickets = await db('tickets')
+      const tenant2Tickets = await scopedTable(tenant2Id, 'tickets')
         .where({ tenant: tenant2Id })
         .whereNotNull('due_date')
         .whereRaw('DATE(due_date) = DATE(?)', [dueDate])
@@ -480,7 +481,7 @@ describe('Ticket Due Date Integration Tests', () => {
       const farFutureDueDate = new Date('2099-12-31T23:59:59.000Z');
       const ticketId = await createTestTicket({ dueDate: farFutureDueDate });
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -491,7 +492,7 @@ describe('Ticket Due Date Integration Tests', () => {
       const midnightUTC = new Date('2025-07-04T00:00:00.000Z');
       const ticketId = await createTestTicket({ dueDate: midnightUTC });
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 
@@ -505,7 +506,7 @@ describe('Ticket Due Date Integration Tests', () => {
       const endOfDayUTC = new Date('2025-07-04T23:59:59.999Z');
       const ticketId = await createTestTicket({ dueDate: endOfDayUTC });
 
-      const ticket = await db('tickets')
+      const ticket = await scopedTable(tenantId, 'tickets')
         .where({ ticket_id: ticketId, tenant: tenantId })
         .first();
 

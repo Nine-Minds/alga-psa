@@ -30,7 +30,7 @@ import {
   addTaskDependency
 } from '../actions/projectTaskActions';
 import { getCurrentUser, getUserAvatarUrlsBatchAction, searchUsersForMentions } from '@alga-psa/user-composition/actions';
-import { findTagsByEntityId, createTagsForEntity } from '@alga-psa/tags/actions';
+import { findTagsByEntityId, createTagsForEntity, isTagActionError } from '@alga-psa/tags/actions';
 import { QuickAddTagPicker, TagManager } from '@alga-psa/tags/components';
 import type { PendingTag } from '@alga-psa/types';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -48,7 +48,12 @@ import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
 import RemoveTeamDialog from './RemoveTeamDialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { toast } from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { TaskTypeSelector } from './TaskTypeSelector';
 import { getTaskTypes } from '../actions/projectTaskActions';
 import { ITaskType } from '@alga-psa/types';
@@ -61,13 +66,15 @@ import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossF
 import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
 import { useTicketIntegration } from '../context/TicketIntegrationContext';
+import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useDrawer } from '@alga-psa/ui';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
 import PrefillFromTicketDialog from './PrefillFromTicketDialog';
-import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { getTeams, getTeamAvatarUrlsBatchAction, isTeamActionError } from '@alga-psa/teams/actions';
 import type { ITeam } from '@alga-psa/types';
 import { TaskPrefillFields } from '../lib/taskTicketMapping';
 import { buildTaskTimeEntryContext } from '../lib/timeEntryContext';
@@ -81,6 +88,10 @@ import { useTranslation } from 'react-i18next';
 import checklistDnd from './ChecklistDragDrop.module.css';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 export interface TaskFormPrefillData extends TaskPrefillFields {
   pendingTicketLink?: IProjectTicketLinkWithDetails | null;
@@ -126,6 +137,8 @@ export default function TaskForm({
   printTitle,
 }: TaskFormProps): React.JSX.Element {
   const { t } = useTranslation(['features/projects', 'common']);
+  const { enabled: projectBillingUiEnabled } = useFeatureFlag('project-billing-ui', { defaultValue: false });
+  const billingIntegration = useProjectBillingIntegration();
   const { createDocumentAssociations, deleteDocument, removeDocumentAssociations } = useDocumentsCrossFeature();
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
   const ticketLinksRef = useRef<TaskTicketLinksRef>(null);
@@ -169,7 +182,7 @@ export default function TaskForm({
       ? Number(task?.estimated_hours) / 60
       : prefillData?.estimated_hours ?? 0
   );
-  const [actualHours, setActualHours] = useState<number>(Number(task?.actual_hours) / 60 || 0);
+  const actualHours = Number(task?.actual_hours) / 60 || 0;
   const [dueDate, setDueDate] = useState<Date | undefined>(
     task?.due_date
       ? new Date(task.due_date)
@@ -370,7 +383,11 @@ export default function TaskForm({
 
         // Fetch task types
         const types = await getTaskTypes();
-        setTaskTypes(types);
+        if (isReturnedActionError(types)) {
+          toast.error(getErrorMessage(types));
+        } else {
+          setTaskTypes(types);
+        }
 
         // Fetch services for time entry prefill
         const servicesResponse = await getServices(1, 999);
@@ -380,8 +397,8 @@ export default function TaskForm({
         if (phase.project_id) {
           try {
             const projectDetailsResult = await getProjectDetails(phase.project_id);
-            if (isActionPermissionError(projectDetailsResult)) {
-              handleError(projectDetailsResult.permissionError);
+            if (isReturnedActionError(projectDetailsResult)) {
+              handleError(getErrorMessage(projectDetailsResult));
             } else {
               setAllProjectTasks(projectDetailsResult.tasks);
             }
@@ -399,18 +416,30 @@ export default function TaskForm({
             // Only fetch if not available on the task object
             console.log('Fetching checklist items from API');
             const existingChecklistItems = await getTaskChecklistItems(task.task_id);
-            setChecklistItems(existingChecklistItems);
+            if (isReturnedActionError(existingChecklistItems)) {
+              toast.error(getErrorMessage(existingChecklistItems));
+            } else {
+              setChecklistItems(existingChecklistItems);
+            }
           }
 
           // Always fetch resources to ensure we have the latest data
           const resources = await getTaskResourcesAction(task.task_id);
-          setTaskResources(resources);
-          setInitialTaskResources(resources); // Track initial state for hasChanges()
-          setResourcesLoaded(true); // Mark resources as loaded
+          if (isReturnedActionError(resources)) {
+            toast.error(getErrorMessage(resources));
+          } else {
+            setTaskResources(resources);
+            setInitialTaskResources(resources); // Track initial state for hasChanges()
+            setResourcesLoaded(true); // Mark resources as loaded
+          }
 
           // Fetch tags
           const tags = await findTagsByEntityId(task.task_id, 'project_task');
-          setTaskTags(tags);
+          if (isTagActionError(tags)) {
+            console.error('Error fetching task tags:', tags);
+          } else {
+            setTaskTags(tags);
+          }
         }
       } catch (error) {
         console.error('Error fetching initial data:', error);
@@ -423,6 +452,10 @@ export default function TaskForm({
     const loadTeams = async () => {
       try {
         const fetchedTeams = await getTeams();
+        if (isTeamActionError(fetchedTeams)) {
+          console.warn('Cannot load teams for task assignment:', fetchedTeams);
+          return;
+        }
         setTeams(fetchedTeams);
       } catch (error) {
         console.error('Failed to load teams:', error);
@@ -462,6 +495,11 @@ export default function TaskForm({
         try {
           console.log('Fetching task dependencies from API');
           const dependencies = await getTaskDependencies(task.task_id);
+          if (isReturnedActionError(dependencies)) {
+            toast.error(getErrorMessage(dependencies));
+            setTaskDependencies({ predecessors: [], successors: [] });
+            return;
+          }
           setTaskDependencies(dependencies);
         } catch (error) {
           console.error('Error fetching task dependencies:', error);
@@ -615,6 +653,10 @@ export default function TaskForm({
         selectedPhaseId,
         isCrossProjectMove ? undefined : selectedStatusId // Only pass status ID for same-project moves
       );
+      if (isReturnedActionError(movedTask)) {
+        toast.error(getErrorMessage(movedTask));
+        return;
+      }
 
       if (movedTask) {
         // For cross-project moves, use the status mapping that moveTaskToPhase determined
@@ -630,7 +672,6 @@ export default function TaskForm({
           assigned_to: assignedUser || null,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
-          actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
           due_date: dueDate || null,
           checklist_items: checklistItems,
           phase_id: selectedPhaseId,
@@ -638,6 +679,10 @@ export default function TaskForm({
           task_type_key: selectedTaskType
         };
         const updatedTask = await updateTaskWithChecklist(movedTask.task_id, taskData);
+        if (isReturnedActionError(updatedTask)) {
+          toast.error(getErrorMessage(updatedTask));
+          return;
+        }
         onSubmit(updatedTask);
       }
 
@@ -663,8 +708,16 @@ export default function TaskForm({
 
     if (task?.task_id) {
       try {
-        await assignTeamToProjectTask(task.task_id, teamId);
+        const assignResult = await assignTeamToProjectTask(task.task_id, teamId);
+        if (isReturnedActionError(assignResult)) {
+          toast.error(getErrorMessage(assignResult));
+          return;
+        }
         const resources = await getTaskResourcesAction(task.task_id);
+        if (isReturnedActionError(resources)) {
+          toast.error(getErrorMessage(resources));
+          return;
+        }
         setTaskResources(resources);
         setInitialTaskResources(resources);
         toast.success(taskFormT('teamAssignedSuccess', 'Team assigned successfully'));
@@ -730,10 +783,18 @@ export default function TaskForm({
       return;
     }
     try {
-      await removeTeamFromProjectTask(task.task_id, { mode, keepUserIds });
+      const removeResult = await removeTeamFromProjectTask(task.task_id, { mode, keepUserIds });
+      if (isReturnedActionError(removeResult)) {
+        toast.error(getErrorMessage(removeResult));
+        return;
+      }
       setAssignedTeamId(null);
       if (shouldClearPrimary) setAssignedUser(null);
       const resources = await getTaskResourcesAction(task.task_id);
+      if (isReturnedActionError(resources)) {
+        toast.error(getErrorMessage(resources));
+        return;
+      }
       setTaskResources(resources);
       setInitialTaskResources(resources);
       toast.success(taskFormT('teamRemovedSuccess', 'Team removed successfully'));
@@ -816,6 +877,10 @@ export default function TaskForm({
             selectedPhaseId,
             isCrossProjectMove ? undefined : selectedStatusId
           );
+          if (isReturnedActionError(movedTask)) {
+            toast.error(getErrorMessage(movedTask));
+            return;
+          }
 
           if (movedTask) {
             taskToUpdate = movedTask;
@@ -833,7 +898,6 @@ export default function TaskForm({
           assigned_to: finalAssignedTo,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
-          actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
           due_date: dueDate || null,
           priority_id: selectedPriorityId,
           checklist_items: checklistItems,
@@ -843,11 +907,18 @@ export default function TaskForm({
           service_id: selectedServiceId
         };
         resultTask = await updateTaskWithChecklist(taskToUpdate.task_id, taskData);
+        if (isReturnedActionError(resultTask)) {
+          toast.error(getErrorMessage(resultTask));
+          return;
+        }
 
         // Save any temporarily stored additional agents (added while task had no primary agent)
         if (tempTaskResources.length > 0) {
           try {
-            await addTaskResourcesAction(taskToUpdate.task_id, tempTaskResources.map(r => r.additional_user_id));
+            const resourceResult = await addTaskResourcesAction(taskToUpdate.task_id, tempTaskResources.map(r => r.additional_user_id));
+            if (isReturnedActionError(resourceResult)) {
+              toast.error(getErrorMessage(resourceResult));
+            }
           } catch (agentError) {
             console.error('Failed to add additional agents:', agentError);
           }
@@ -865,7 +936,6 @@ export default function TaskForm({
           assigned_to: finalAssignedTo,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
-          actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
           due_date: dueDate || null, // Use selected due date or null
           priority_id: selectedPriorityId,
           phase_id: phase.phase_id,
@@ -875,21 +945,34 @@ export default function TaskForm({
 
         // Create the task first
         resultTask = await addTaskToPhase(phase.phase_id, taskData, checklistItems);
+        if (isReturnedActionError(resultTask)) {
+          toast.error(getErrorMessage(resultTask));
+          return;
+        }
 
         if (resultTask) {
           let linkingFailed = false;
           try {
             if (assignedTeamId) {
-              await assignTeamToProjectTask(resultTask.task_id, assignedTeamId);
+              const assignResult = await assignTeamToProjectTask(resultTask.task_id, assignedTeamId);
+              if (isReturnedActionError(assignResult)) {
+                throw new Error(getErrorMessage(assignResult));
+              }
             }
             // Add task resources
             if (tempTaskResources.length > 0) {
-              await addTaskResourcesAction(resultTask.task_id, tempTaskResources.map(r => r.additional_user_id));
+              const resourceResult = await addTaskResourcesAction(resultTask.task_id, tempTaskResources.map(r => r.additional_user_id));
+              if (isReturnedActionError(resourceResult)) {
+                throw new Error(getErrorMessage(resourceResult));
+              }
             }
 
             // Add ticket links using the actual task ID and phase ID
             for (const link of pendingTicketLinks) {
-              await addTicketLinkAction(phase.project_id, resultTask.task_id, link.ticket_id, phase.phase_id);
+              const linkResult = await addTicketLinkAction(phase.project_id, resultTask.task_id, link.ticket_id, phase.phase_id);
+              if (isReturnedActionError(linkResult)) {
+                throw new Error(getErrorMessage(linkResult));
+              }
             }
 
             // Create document associations for pending documents
@@ -903,7 +986,10 @@ export default function TaskForm({
             if (dependenciesRef.current) {
               const pendingDeps = dependenciesRef.current.getPendingDependencies();
               for (const dep of pendingDeps) {
-                await addTaskDependency(resultTask.task_id, dep.targetTaskId, dep.dependencyType, 0, undefined);
+                const dependencyResult = await addTaskDependency(resultTask.task_id, dep.targetTaskId, dep.dependencyType, 0, undefined);
+                if (isReturnedActionError(dependencyResult)) {
+                  throw new Error(getErrorMessage(dependencyResult));
+                }
               }
             }
           } catch (error) {
@@ -957,7 +1043,6 @@ export default function TaskForm({
       if (assignedTeamId !== null) return true;
       if (checklistItems.length > 0) return true;
       if (estimatedHours > 0) return true; // Only if actually entered a value
-      if (actualHours > 0) return true; // Only if actually entered a value
       if (dueDate !== undefined) return true;
       if (tempTaskResources.length > 0) return true;
       if (pendingTicketLinks.length > 0) return true;
@@ -995,7 +1080,6 @@ export default function TaskForm({
     if (selectedStatusId !== task.project_status_mapping_id) return true;
     // Use || 0 to handle null/undefined consistently with initial state
     if (estimatedHours !== (Number(task.estimated_hours) / 60 || 0)) return true;
-    if (actualHours !== (Number(task.actual_hours) / 60 || 0)) return true;
     if (normalizeNullable(assignedUser) !== normalizeNullable(task.assigned_to)) return true;
     if (normalizeNullable(assignedTeamId) !== normalizeNullable(task.assigned_team_id)) return true;
     if (normalizeNullable(selectedPriorityId) !== normalizeNullable(task.priority_id)) return true;
@@ -1111,9 +1195,8 @@ export default function TaskForm({
       }
 
       if (failureCount > 0) {
-        toast.error(taskFormT('documentCleanupFailure', '{{count}} document{{plural}} could not be deleted and will remain in Documents', {
+        toast.error(taskFormT('documentCleanupFailure', '{{count}} documents could not be deleted and will remain in Documents', {
           count: failureCount,
-          plural: failureCount === 1 ? '' : 's',
         }));
       }
     } finally {
@@ -1136,7 +1219,10 @@ export default function TaskForm({
       for (const ticket of sessionCreatedTickets) {
         try {
           // Remove any ticket links first to avoid FK constraint violations
-          await deleteTaskTicketLinksByTicketIdAction(ticket.ticket_id);
+          const unlinkResult = await deleteTaskTicketLinksByTicketIdAction(ticket.ticket_id);
+          if (isReturnedActionError(unlinkResult)) {
+            throw new Error(getErrorMessage(unlinkResult));
+          }
           await deleteTicket(ticket.ticket_id);
         } catch (error) {
           console.error(`Failed to delete ticket ${ticket.ticket_id}:`, error);
@@ -1145,9 +1231,8 @@ export default function TaskForm({
       }
 
       if (failureCount > 0) {
-        toast.error(taskFormT('ticketCleanupFailure', '{{count}} ticket{{plural}} could not be deleted', {
+        toast.error(taskFormT('ticketCleanupFailure', '{{count}} tickets could not be deleted', {
           count: failureCount,
-          plural: failureCount === 1 ? '' : 's',
         }));
       }
     } finally {
@@ -1273,7 +1358,11 @@ export default function TaskForm({
 
     setIsSubmitting(true);
     try {
-      await deleteTask(task.task_id);
+      const result = await deleteTask(task.task_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(taskFormT('deletedSuccess', 'Task deleted successfully'));
       onSubmit(null);
       onClose();
@@ -1346,6 +1435,10 @@ export default function TaskForm({
       // Existing task with unchanged primary agent: one batched insert + refetch.
       try {
         const updatedResources = await addTaskResourcesAction(task.task_id, toAdd);
+        if (isReturnedActionError(updatedResources)) {
+          toast.error(getErrorMessage(updatedResources));
+          return;
+        }
         setTaskResources(updatedResources);
         toast.success(taskFormT('agentAddedSuccess', 'Agent added successfully'));
       } catch (error: any) {
@@ -1395,7 +1488,11 @@ export default function TaskForm({
       if (assignmentId.startsWith('temp-')) {
         setTempTaskResources(prev => prev.filter(r => r.assignment_id !== assignmentId));
       } else {
-        await removeTaskResourceAction(assignmentId);
+        const removeResult = await removeTaskResourceAction(assignmentId);
+        if (isReturnedActionError(removeResult)) {
+          toast.error(getErrorMessage(removeResult));
+          return;
+        }
         setTaskResources(taskResources.filter(r => r.assignment_id !== assignmentId));
       }
     } catch (error) {
@@ -1558,6 +1655,9 @@ export default function TaskForm({
         >
           {printableHeader && (
             <div className="app-print-section">{printableHeader}</div>
+          )}
+          {projectBillingUiEnabled && billingIntegration && (
+            <billingIntegration.PaymentWarningBanner projectId={phase.project_id} />
           )}
           {/* Full width Title with Status dropdown */}
           <div>
@@ -1754,6 +1854,7 @@ export default function TaskForm({
                 {taskFormT('estimatedHoursLabel', 'Estimated Hours')}
               </label>
               <Input
+                id="task-estimated-hours-input"
                 type="number"
                 min="0"
                 step="0.5"
@@ -1767,13 +1868,18 @@ export default function TaskForm({
                 {taskFormT('actualHoursLabel', 'Actual Hours')}
               </label>
               <Input
+                id="task-actual-hours-input"
                 type="number"
                 min="0"
                 step="0.5"
                 value={actualHours}
-                onChange={(e) => setActualHours(Number(e.target.value))}
+                readOnly
+                aria-readonly="true"
                 className="w-full"
               />
+              <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
+                {taskFormT('actualHoursDerivedHelp', 'Calculated from linked time entries')}
+              </p>
             </div>
             {/* Row 5: Assigned To and Additional Agents in one row */}
             <div className="col-span-2">
@@ -1998,7 +2104,6 @@ export default function TaskForm({
                           checked={item.completed}
                           onChange={(e) => updateChecklistItem(index, 'completed', e.target.checked)}
                           className="flex-none"
-                          containerClassName=""
                         />
                         {isItemEditing ? (
                           <div className="flex-1">
@@ -2099,6 +2204,10 @@ export default function TaskForm({
               refreshDependencies={async () => {
                 try {
                   const dependencies = await getTaskDependencies(task.task_id);
+                  if (isReturnedActionError(dependencies)) {
+                    toast.error(getErrorMessage(dependencies));
+                    return;
+                  }
                   setTaskDependencies(dependencies);
                 } catch (error) {
                   console.error('Error refreshing dependencies:', error);
@@ -2229,10 +2338,8 @@ export default function TaskForm({
 
           return (
             <div>
-              <p>{taskFormT('documentsCleanupIntro', 'You have {{count}} document{{plural}} that {{wasWere}} {{cleanupType}}:', {
+              <p>{taskFormT('documentsCleanupIntro', 'You have {{count}} documents that were {{cleanupType}}:', {
                 count: docsToShow.length,
-                plural: docsToShow.length === 1 ? '' : 's',
-                wasWere: docsToShow.length === 1 ? 'was' : 'were',
                 cleanupType,
               })}</p>
               <ul className="list-disc list-inside mt-2 text-sm">
@@ -2272,9 +2379,8 @@ export default function TaskForm({
         message={(() => {
           return (
             <div>
-              <p>{taskFormT('createdTicketsIntro', 'You created {{count}} ticket{{plural}} during this session:', {
+              <p>{taskFormT('createdTicketsIntro', 'You created {{count}} tickets during this session:', {
                 count: sessionCreatedTickets.length,
-                plural: sessionCreatedTickets.length === 1 ? '' : 's',
               })}</p>
               <ul className="list-disc list-inside mt-2 text-sm">
                 {sessionCreatedTickets.slice(0, 5).map(ticket => (
@@ -2350,6 +2456,10 @@ export default function TaskForm({
                 targetPhaseId,
                 options
               );
+              if (isReturnedActionError(duplicatedTask)) {
+                toast.error(getErrorMessage(duplicatedTask));
+                return;
+              }
               toast.success(taskFormT('duplicatedSuccess', 'Task "{{taskName}}" duplicated successfully!', {
                 taskName: duplicateTaskDetails.originalTaskName,
               }));

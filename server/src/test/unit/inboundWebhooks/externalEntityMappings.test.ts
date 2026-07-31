@@ -44,6 +44,7 @@ function createWriteKnex(existingMapping: Record<string, unknown> | null, writte
     first: vi.fn().mockResolvedValue(existingMapping),
   };
   const insertQuery = {
+    where: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
     onConflict: vi.fn().mockReturnThis(),
     merge: vi.fn().mockReturnThis(),
@@ -65,7 +66,7 @@ describe('external entity mapping helpers', () => {
   it('T004: lookupAlgaEntityByExternalId scopes by tenant and webhook integration_type', async () => {
     const mapping = {
       id: 'mapping-1',
-      tenant_id: 'tenant-1',
+      tenant: 'tenant-1',
       integration_type: 'connectwise-alerts',
       alga_entity_type: 'ticket',
       alga_entity_id: 'ticket-1',
@@ -88,8 +89,9 @@ describe('external entity mapping helpers', () => {
     );
 
     expect(calls.table).toHaveBeenCalledWith('tenant_external_entity_mappings');
+    // tenantDb applies the tenant predicate as a qualified column on the root query.
+    expect(calls.where).toHaveBeenCalledWith('tenant_external_entity_mappings.tenant', 'tenant-1');
     expect(calls.where).toHaveBeenCalledWith({
-      tenant_id: 'tenant-1',
       integration_type: 'connectwise-alerts',
       alga_entity_type: 'ticket',
       external_entity_id: 'alert-123',
@@ -104,7 +106,7 @@ describe('external entity mapping helpers', () => {
 
   it('T004a: writeEntityMapping upserts on tenant integration entity and Alga id, with duplicate same mapping idempotent', async () => {
     const existingMapping = {
-      tenant_id: 'tenant-1',
+      tenant: 'tenant-1',
       integration_type: 'connectwise-alerts',
       alga_entity_type: 'ticket',
       alga_entity_id: 'ticket-1',
@@ -131,15 +133,15 @@ describe('external entity mapping helpers', () => {
       { knex: knex as any, metadata: { source: 'unit-test' } },
     );
 
+    expect(lookupQuery.where).toHaveBeenCalledWith('tenant_external_entity_mappings.tenant', 'tenant-1');
     expect(lookupQuery.where).toHaveBeenCalledWith({
-      tenant_id: 'tenant-1',
       integration_type: 'connectwise-alerts',
       external_entity_id: 'alert-123',
     });
     expect(lookupQuery.whereNull).toHaveBeenCalledWith('external_realm_id');
     expect(insertQuery.insert).toHaveBeenCalledWith(
       expect.objectContaining({
-        tenant_id: 'tenant-1',
+        tenant: 'tenant-1',
         integration_type: 'connectwise-alerts',
         alga_entity_type: 'ticket',
         alga_entity_id: 'ticket-1',
@@ -150,7 +152,7 @@ describe('external entity mapping helpers', () => {
       }),
     );
     expect(insertQuery.onConflict).toHaveBeenCalledWith([
-      'tenant_id',
+      'tenant',
       'integration_type',
       'alga_entity_type',
       'alga_entity_id',

@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuid4 } from 'uuid';
 import type { IClientTaxSettings, ITaxRateDetails as ITaxRate, ITaxComponent, TaxSource } from '@alga-psa/types';
 
@@ -7,8 +8,8 @@ export async function getClientTaxSettings(
   tenant: string,
   clientId: string
 ): Promise<IClientTaxSettings | null> {
-  const row = await knexOrTrx<IClientTaxSettings>('client_tax_settings')
-    .where({ client_id: clientId, tenant })
+  const row = await tenantDb(knexOrTrx, tenant).table<IClientTaxSettings>('client_tax_settings')
+    .where({ client_id: clientId })
     .first();
   return row ?? null;
 }
@@ -19,15 +20,16 @@ export async function updateClientTaxSettings(
   clientId: string,
   taxSettings: Omit<IClientTaxSettings, 'tenant'>
 ): Promise<IClientTaxSettings | null> {
-  await knexOrTrx<IClientTaxSettings>('client_tax_settings')
-    .where({ client_id: clientId, tenant })
+  const db = tenantDb(knexOrTrx, tenant);
+  await db.table<IClientTaxSettings>('client_tax_settings')
+    .where({ client_id: clientId })
     .update({
       is_reverse_charge_applicable: taxSettings.is_reverse_charge_applicable,
       tax_source_override: taxSettings.tax_source_override ?? null
     });
 
-  const updated = await knexOrTrx<IClientTaxSettings>('client_tax_settings')
-    .where({ client_id: clientId, tenant })
+  const updated = await db.table<IClientTaxSettings>('client_tax_settings')
+    .where({ client_id: clientId })
     .first();
 
   return updated ?? null;
@@ -38,10 +40,10 @@ export async function createDefaultTaxSettings(
   tenant: string,
   clientId: string
 ): Promise<IClientTaxSettings> {
+  const db = tenantDb(knexOrTrx, tenant);
   // Get the first active tax rate to use as the default
-  const defaultTaxRate = await knexOrTrx<ITaxRate>('tax_rates')
-    .where('tenant', tenant)
-    .andWhere('is_active', true)
+  const defaultTaxRate = await db.table<ITaxRate>('tax_rates')
+    .where('is_active', true)
     .orderBy('created_at', 'asc')
     .first();
 
@@ -49,7 +51,7 @@ export async function createDefaultTaxSettings(
     throw new Error('No active tax rates found in the system to assign as default.');
   }
 
-  const [taxSettings] = await knexOrTrx<IClientTaxSettings>('client_tax_settings')
+  const [taxSettings] = await db.table<IClientTaxSettings>('client_tax_settings')
     .insert({
       client_id: clientId,
       is_reverse_charge_applicable: false,
@@ -57,7 +59,7 @@ export async function createDefaultTaxSettings(
     })
     .returning('*');
 
-  await knexOrTrx('client_tax_rates').insert({
+  await db.table('client_tax_rates').insert({
     client_id: clientId,
     tax_rate_id: defaultTaxRate.tax_rate_id,
     is_default: true,
@@ -66,7 +68,7 @@ export async function createDefaultTaxSettings(
   });
 
   const tax_component_id = uuid4();
-  await knexOrTrx<ITaxComponent>('tax_components').insert({
+  await db.table<ITaxComponent>('tax_components').insert({
     tax_component_id,
     tax_rate_id: defaultTaxRate.tax_rate_id,
     name: 'Default Tax',
@@ -84,8 +86,8 @@ export async function getClientTaxExemptStatus(
   tenant: string,
   clientId: string
 ): Promise<{ is_tax_exempt: boolean; tax_exemption_certificate?: string } | null> {
-  const row = await knexOrTrx('clients')
-    .where({ client_id: clientId, tenant })
+  const row = await tenantDb(knexOrTrx, tenant).table('clients')
+    .where({ client_id: clientId })
     .first()
     .select('is_tax_exempt', 'tax_exemption_certificate');
 
@@ -113,7 +115,7 @@ export async function updateClientTaxExemptStatus(
     updateData.tax_exemption_certificate = '';
   }
 
-  await knexOrTrx('clients').where({ client_id: clientId, tenant }).update(updateData);
+  await tenantDb(knexOrTrx, tenant).table('clients').where({ client_id: clientId }).update(updateData);
   return updateData;
 }
 
@@ -127,8 +129,9 @@ export async function getEffectiveTaxSourceForClient(
   tenant: string,
   clientId: string
 ): Promise<ClientTaxSourceInfo> {
-  const clientSettings = await knexOrTrx('client_tax_settings')
-    .where({ client_id: clientId, tenant })
+  const db = tenantDb(knexOrTrx, tenant);
+  const clientSettings = await db.table('client_tax_settings')
+    .where({ client_id: clientId })
     .select('tax_source_override')
     .first();
 
@@ -139,8 +142,7 @@ export async function getEffectiveTaxSourceForClient(
     };
   }
 
-  const tenantSettings = await knexOrTrx('tenant_settings')
-    .where({ tenant })
+  const tenantSettings = await db.table('tenant_settings')
     .select('default_tax_source', 'allow_external_tax_override')
     .first();
 
@@ -154,8 +156,7 @@ export async function canClientOverrideTaxSource(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string
 ): Promise<boolean> {
-  const tenantSettings = await knexOrTrx('tenant_settings')
-    .where({ tenant })
+  const tenantSettings = await tenantDb(knexOrTrx, tenant).table('tenant_settings')
     .select('allow_external_tax_override')
     .first();
 

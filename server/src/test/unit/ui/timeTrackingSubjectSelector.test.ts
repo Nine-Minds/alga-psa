@@ -12,7 +12,7 @@ describe('/msp/time-entry subject selector (static)', () => {
     const src = readRepoFile(
       'packages/scheduling/src/components/time-management/time-entry/TimeTracking.tsx'
     );
-    expect(src).toContain('useState(currentUser.user_id)');
+    expect(src).toContain('useState(requestedSubjectUserId ?? currentUser.user_id)');
     expect(src).toContain("useFeatureFlag(\n    'delegated-time-entry'");
     expect(src).toContain('const showSubjectSelector = isDelegatedTimeEntryUIEnabled && subjectUsers.length > 1');
   });

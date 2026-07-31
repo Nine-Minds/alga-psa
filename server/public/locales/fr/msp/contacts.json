@@ -65,7 +65,8 @@
     },
     "lastPhoneTypeUsage": {
       "title": "Dernière utilisation du type de téléphone",
-      "message": "Le type de téléphone personnalisé suivant{{suffix}} n’est plus utilisé par aucun contact : {{labels}}. Supprimer la définition du type{{definitionSuffix}} ou le conserver pour une utilisation future ?",
+      "message_one": "Le type de téléphone personnalisé suivant n’est plus utilisé par aucun contact : {{labels}}. Supprimer la définition du type ou la conserver pour une utilisation future ?",
+      "message_other": "Les types de téléphone personnalisés suivants ne sont plus utilisés par aucun contact : {{labels}}. Supprimer les définitions de types ou les conserver pour une utilisation future ?",
       "deleteType": "Supprimer le type",
       "keepType": "Conserver le type"
     },
@@ -115,7 +116,8 @@
       "inboundTicketDestinationHelp": "Si défini, cela remplace la destination du client pour ce contact expéditeur exact. Priorité : remplacement du contact -> destination du client -> valeur par défaut du fournisseur.",
       "tags": "Étiquettes",
       "notes": "Notes",
-      "status": "Statut"
+      "status": "Statut",
+      "phone": "Téléphone"
     },
     "status": {
       "label": "Statut",
@@ -264,6 +266,47 @@
       "message": "{{count}} contacts existent déjà. Voulez-vous les mettre à jour avec les nouvelles données ?"
     }
   },
+  "contactEmailAddressesEditor": {
+    "title": "Adresses e-mail",
+    "description": "Ajoutez une ou plusieurs adresses e-mail et choisissez exactement une adresse par défaut.",
+    "actions": {
+      "addEmail": "Ajouter un e-mail"
+    },
+    "emailTypes": {
+      "work": "Professionnel",
+      "personal": "Personnel",
+      "billing": "Facturation",
+      "other": "Autre",
+      "custom": "Personnalisé"
+    },
+    "primary": {
+      "title": "E-mail principal",
+      "description": "Cette adresse reste l'adresse par défaut enregistrée sur la fiche du contact"
+    },
+    "row": {
+      "title": "E-mail supplémentaire {{number}}",
+      "secondaryDescription": "Enregistré comme adresse e-mail non par défaut",
+      "defaultLabel": "Par défaut",
+      "noEmailYet": "Aucun e-mail saisi pour le moment",
+      "editLabel": "Modifier",
+      "edit": "Modifier l'e-mail supplémentaire {{number}}",
+      "doneLabel": "Terminé",
+      "done": "Terminer la modification de l'e-mail supplémentaire {{number}}",
+      "moveUp": "Monter l'e-mail supplémentaire {{number}}",
+      "moveDown": "Descendre l'e-mail supplémentaire {{number}}",
+      "remove": "Supprimer l'e-mail supplémentaire {{number}}"
+    },
+    "fields": {
+      "emailAddress": "Adresse e-mail",
+      "emailPlaceholder": "nom@exemple.com",
+      "emailLabel": "Type d'e-mail",
+      "customEmailLabel": "Type d'e-mail personnalisé",
+      "customTypePlaceholder": "Sélectionnez ou saisissez un type d'e-mail personnalisé",
+      "customTypeSearchPlaceholder": "Recherchez ou saisissez un type d'e-mail personnalisé...",
+      "customTypeEmpty": "Aucun type d'e-mail personnalisé correspondant.",
+      "customTypeUseValue": "Utiliser \"{{value}}\""
+    }
+  },
   "contactPhoneNumbersEditor": {
     "title": "Numéros de téléphone",
     "description": "Éditeur de numéros de téléphone avec gestion des types, validation, valeurs par défaut et prise en charge des extensions",
@@ -312,6 +355,8 @@
     }
   },
   "contactPortalTab": {
+    "boardCount_one": "{{count}} tableau",
+    "boardCount_other": "{{count}} tableaux",
     "title": "Accès au portail",
     "description": "Gestion de l’accès au portail client pour un contact, y compris les invitations et les mises à jour de rôles",
     "loadingDescription": "Chargement des informations du portail...",
@@ -320,6 +365,9 @@
     "noAccess": {
       "title": "Aucun accès au portail",
       "description": "Ce contact n’a pas encore accès au portail client"
+    },
+    "noClient": {
+      "description": "Associez ce contact à un client pour gérer l’accès au portail."
     },
     "portalAdmin": {
       "label": "Administrateur du portail",
@@ -402,7 +450,8 @@
         "noLocationEmail": "L'emplacement du client par défaut doit avoir une adresse e-mail de contact configurée.",
         "noBaseUrl": "L'URL de base n'est pas configurée pour les invitations au portail.",
         "invitationNotFound": "Invitation introuvable ou déjà utilisée."
-      }
+      },
+      "userNotFound": "Client user not found"
     }
   },
   "quickAddContact": {
@@ -567,13 +616,15 @@
       "name": "Nom",
       "email": "E-mail",
       "phoneNumber": "Numéro de téléphone",
-      "actions": "Actions"
+      "actions": "Actions",
+      "role": "Rôle"
     },
     "filter": {
       "show": "Afficher :",
       "active": "Contacts actifs",
       "inactive": "Contacts inactifs",
-      "all": "Tous les contacts"
+      "all": "Tous les contacts",
+      "searchPlaceholder": "Rechercher des contacts..."
     },
     "actions": {
       "openMenu": "Ouvrir le menu",
@@ -599,7 +650,7 @@
     "description": "Zone de téléversement pour les images de profil des contacts"
   },
   "contactNotesPanel": {
-    "title": "Notes et infos rapides",
+    "title": "Notes",
     "description": "Panneau de notes enrichies avec affichage de la note héritée et actions enregistrer/réessayer",
     "legacy": {
       "initialNote": "Note initiale"
@@ -614,6 +665,44 @@
     "messages": {
       "saveSuccess": "Notes enregistrées",
       "saveFailed": "Échec de l'enregistrement des notes"
+    }
+  },
+  "actions": {
+    "print": "Imprimer",
+    "printOptions": "Options d'impression"
+  },
+  "contactTabs": {
+    "tickets": {
+      "addTicket": "Ajouter un ticket",
+      "empty": "Aucun ticket trouvé pour ce contact",
+      "filters": {
+        "allAssignees": "Tous les assignés",
+        "allPriorities": "Toutes les priorités",
+        "categoryPlaceholder": "Filtrer par catégorie",
+        "reset": "Réinitialiser",
+        "searchPlaceholder": "Rechercher des tickets...",
+        "statusPlaceholder": "Sélectionner un statut"
+      },
+      "loadMore": {
+        "label": "Charger plus de tickets",
+        "loading": "Chargement..."
+      },
+      "loading": "Chargement...",
+      "title": "Tickets du contact",
+      "toasts": {
+        "clientNotFound": "Client introuvable",
+        "loadClientFailed": "Échec du chargement des détails du client",
+        "loadTicketFailed": "Échec du chargement du ticket",
+        "openTicketFailed": "Échec de l'ouverture du ticket",
+        "userNotAuthenticated": "Utilisateur non authentifié"
+      }
+    }
+  },
+  "contactBento": {
+    "toast": {
+      "saved": "Contact mis a jour",
+      "saveFailed": "Impossible de mettre a jour le contact",
+      "saveFailedDescription": "The contact could not be updated. Please try again."
     }
   }
 }

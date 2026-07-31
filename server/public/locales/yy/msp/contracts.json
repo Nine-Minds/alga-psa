@@ -259,7 +259,8 @@
       "invoices": "55555",
       "lines": "55555",
       "overview": "55555",
-      "pricing": "55555"
+      "pricing": "55555",
+      "simulator": "55555"
     },
     "validation": {
       "billingFrequencyRequired": "55555",
@@ -1156,6 +1157,12 @@
         "active": "55555",
         "inactive": "55555"
       }
+    },
+    "simulation": {
+      "client": "55555",
+      "hypothetical": "55555",
+      "open": "55555",
+      "title": "55555"
     }
   },
   "quickStart": {
@@ -1321,6 +1328,10 @@
       "saveDraft": "55555",
       "saving": "55555",
       "completing": "55555"
+    },
+    "simulation": {
+      "description": "55555",
+      "title": "55555"
     }
   },
   "wizardBasics": {
@@ -1431,7 +1442,9 @@
         "noticePeriodDays_other": "55555 {{count}} 55555",
         "ongoing": "55555",
         "renewalTermMonths_one": "55555 {{count}} 55555",
-        "renewalTermMonths_other": "55555 {{count}} 55555"
+        "renewalTermMonths_other": "55555 {{count}} 55555",
+        "noticePeriodDays": "55555 {{count}} 55555",
+        "renewalTermMonths": "55555 {{count}} 55555"
       }
     },
     "template": {
@@ -1501,11 +1514,14 @@
       "productItem": "55555 {{index}} 55555",
       "products": "55555",
       "quantity": "55555",
-      "selectProductPlaceholder": "55555"
+      "selectProductPlaceholder": "55555",
+      "catalogPriceInCurrency": "55555 {{currency}} 55555"
     },
     "validation": {
       "noDefaultPriceEnterUnitPrice": "55555",
-      "productMissingPrice": "55555"
+      "productMissingPrice": "55555",
+      "noCurrencyPriceEnterUnitPrice": "55555 {{currency}} 55555",
+      "noCurrencyPriceWithLegacyHint": "55555 {{currency}} 55555 {{rate}} 55555 {{currency}} 55555"
     }
   },
   "wizardHourly": {
@@ -1528,7 +1544,9 @@
       "hourlyServices": "55555",
       "selectServicePlaceholder": "55555",
       "serviceItem": "55555 {{index}} 55555",
-      "setBucketOfHours": "55555"
+      "setBucketOfHours": "55555",
+      "noCurrencyPriceEnterRate": "55555 {{currency}} 55555",
+      "noCurrencyPriceWithLegacyHint": "55555 {{currency}} 55555 {{rate}} 55555 {{currency}} 55555"
     },
     "minimumBillableTime": {
       "hint": "55555",
@@ -1586,7 +1604,9 @@
       "setBucketAllocation": "55555",
       "unitOfMeasure": "55555",
       "unitOfMeasureHint": "55555",
-      "unitOfMeasurePlaceholder": "55555"
+      "unitOfMeasurePlaceholder": "55555",
+      "noCurrencyPriceEnterRate": "55555 {{currency}} 55555",
+      "noCurrencyPriceWithLegacyHint": "55555 {{currency}} 55555 {{rate}} 55555 {{currency}} 55555"
     },
     "summary": {
       "labels": {
@@ -2058,6 +2078,240 @@
         "contract": "55555",
         "client": "55555"
       }
+    }
+  },
+  "contractSimulator": {
+    "assumptions": {
+      "empty": "55555",
+      "hoursUnit": "55555",
+      "inputLabel": "55555 {{unit}} 55555 {{service}} 55555",
+      "loadReplay": "55555",
+      "periodLabel": "55555 {{number}} 55555",
+      "replayEnd": "55555",
+      "replayStart": "55555",
+      "replayTitle": "55555",
+      "rowLabel": "55555 {{service}} 55555 {{unit}} 55555",
+      "subtitle": "55555",
+      "title": "55555",
+      "useRecent": "55555",
+      "varyByPeriod": "55555",
+      "arrearsHint": "55555",
+      "advanceHint": "55555",
+      "invoicePeriodLabel": "55555 {{period}} 55555",
+      "overrideInputLabel": "55555 {{period}} 55555 {{unit}} 55555 {{service}} 55555",
+      "zeroActivity": "55555",
+      "averageLoaded": "55555 {{window}} 55555 {{count}} 55555",
+      "replayLoaded": "55555 {{window}} 55555 {{count}} 55555 {{changed}} 55555",
+      "replayRangeLoaded": "55555 {{count}} 55555 {{window}} 55555",
+      "prefillNextStep": "55555",
+      "prefillUnchanged": "55555 {{window}} 55555",
+      "loadingHistory": "55555",
+      "prefillChange": "55555 {{before}} 55555 {{after}} 55555 {{unit}} 55555",
+      "prefillOverrides": "55555 {{count}} 55555"
+    },
+    "compare": {
+      "added": "55555",
+      "changed": "55555",
+      "horizonImpact": "55555 {{count}} 55555",
+      "horizonImpactHint": "55555",
+      "noChange": "55555",
+      "removed": "55555"
+    },
+    "emptyScenario": {
+      "description": "55555",
+      "title": "55555"
+    },
+    "diagnostics": {
+      "title": "55555"
+    },
+    "explanation": {
+      "amount": "55555",
+      "close": "55555",
+      "inputs": "55555",
+      "noBreakdown": "55555",
+      "steps": "55555",
+      "title": "55555"
+    },
+    "featureName": "55555",
+    "invoiceDetail": {
+      "columns": {
+        "amount": "55555",
+        "line": "55555",
+        "qty": "55555",
+        "rate": "55555"
+      },
+      "draftNote": "55555",
+      "billedInAdvance": "55555",
+      "billedInArrears": "55555",
+      "explainHint": "55555",
+      "renderedPreview": "55555",
+      "invoicePeriod": "55555 {{start}} 55555 {{end}} 55555",
+      "servicePeriod": "55555 {{start}} 55555 {{end}} 55555",
+      "subtotal": "55555",
+      "tax": "55555",
+      "title": "55555 {{period}} 55555",
+      "total": "55555"
+    },
+    "loadFailed": "55555",
+    "loadingSnapshot": "55555",
+    "preparingDraft": "55555",
+    "markers": {
+      "bucketOverage": "55555",
+      "cadenceCoincidence": "55555",
+      "contractEnd": "55555",
+      "oneTime": "55555",
+      "prorated": "55555"
+    },
+    "replay": {
+      "actualInvoice": "55555 {{number}} 55555",
+      "issued": "55555",
+      "previewIssued": "55555",
+      "projected": "55555",
+      "simulatedDelta": "55555"
+    },
+    "runBar": {
+      "compareToggle": "55555",
+      "horizonOption": "55555 {{count}} 55555",
+      "lastRun": "55555 {{count}} 55555",
+      "neverRun": "55555",
+      "simulate": "55555",
+      "simulating": "55555",
+      "stale": "55555",
+      "staleBanner": "55555",
+      "updateSimulation": "55555"
+    },
+    "scenario": {
+      "addAdjustment": "55555",
+      "advancedChanges": "55555",
+      "advancedSummary": "55555 {{schedules}} 55555 {{discounts}} 55555 {{adjustments}} 55555",
+      "addBucket": "55555",
+      "addCatalogService": "55555",
+      "addCatalogServiceOption": "55555",
+      "addDiscount": "55555",
+      "addIncludedHours": "55555",
+      "addIncludedUnits": "55555",
+      "addLine": "55555",
+      "addSchedule": "55555",
+      "addTier": "55555",
+      "adjustments": "55555",
+      "allocationRate": "55555",
+      "catalogRate": "55555",
+      "allLines": "55555",
+      "bucketIncluded": "55555 {{hours}} 55555",
+      "cadence": {
+        "client": "55555",
+        "contract": "55555"
+      },
+      "defaultRate": "55555",
+      "discountTypes": {
+        "fixed": "55555",
+        "percentage": "55555"
+      },
+      "discounts": "55555",
+      "fields": {
+        "adjustmentAmount": "55555",
+        "adjustmentDescription": "55555",
+        "adjustmentPeriod": "55555",
+        "billingFrequency": "55555",
+        "billingTiming": "55555",
+        "bucketQuantity": "55555",
+        "cadenceOwner": "55555",
+        "configurationType": "55555",
+        "discountLine": "55555",
+        "discountName": "55555",
+        "discountType": "55555",
+        "discountValue": "55555",
+        "lineName": "55555",
+        "lineType": "55555",
+        "minimumBillableMinutes": "55555",
+        "minimumUsage": "55555",
+        "includedHours": "55555",
+        "includedUnits": "55555",
+        "overtimeRate": "55555",
+        "overtimeThreshold": "55555",
+        "roundUpMinutes": "55555",
+        "scheduleEffectiveDate": "55555",
+        "scheduleEndDate": "55555",
+        "scheduleRate": "55555",
+        "serviceQuantity": "55555",
+        "tierMaximum": "55555",
+        "tierMinimum": "55555",
+        "tierRate": "55555",
+        "usageUnit": "55555"
+      },
+      "frequencies": {
+        "annually": "55555",
+        "monthly": "55555",
+        "quarterly": "55555",
+        "semi-annually": "55555"
+      },
+      "licenseSuffix": "55555",
+      "lineCount": "55555 {{count}} 55555",
+      "lineSummary": "55555 {{type}} 55555 {{frequency}} 55555 {{timing}} 55555 {{services}} 55555",
+      "oneService": "55555",
+      "serviceCount": "55555 {{count}} 55555",
+      "collapseDetailsFor": "55555 {{line}} 55555",
+      "editDetails": "55555",
+      "editDetailsFor": "55555 {{line}} 55555",
+      "modified": "55555",
+      "newAdjustmentName": "55555",
+      "newDiscountName": "55555",
+      "newLineName": "55555 {{number}} 55555",
+      "oneTime": "55555",
+      "overtime": "55555",
+      "placeholders": {
+        "minimum": "55555",
+        "minimumMinutes": "55555",
+        "overtimeRate": "55555",
+        "roundMinutes": "55555",
+        "thresholdHours": "55555"
+      },
+      "pricingSchedules": "55555",
+      "productUnitPrice": "55555",
+      "hourlyRate": "55555",
+      "usageRate": "55555",
+      "overageRate": "55555",
+      "serviceBaseRate": "55555",
+      "rateOverriddenByLine": "55555",
+      "fromServiceRates": "55555",
+      "proration": "55555",
+      "removeAdjustment": "55555",
+      "removeDiscount": "55555",
+      "removeLine": "55555",
+      "removeSchedule": "55555",
+      "removeTier": "55555",
+      "removeService": "55555",
+      "recurringLinePrice": "55555",
+      "resetAll": "55555",
+      "resetLine": "55555",
+      "rollover": "55555",
+      "tieredPricing": "55555",
+      "timing": {
+        "advance": "55555",
+        "arrears": "55555"
+      },
+      "types": {
+        "bucket": "55555",
+        "fixed": "55555",
+        "hourly": "55555",
+        "usage": "55555"
+      },
+      "title": "55555"
+    },
+    "timeline": {
+      "deltaDown": "55555 {{amount}} 55555",
+      "deltaUp": "55555 {{amount}} 55555",
+      "empty": "55555",
+      "noDelta": "55555",
+      "noPreviousDelta": "55555",
+      "invoicePeriod": "55555",
+      "periodAria": "55555 {{period}} 55555 {{total}} 55555",
+      "previousDelta": "55555 {{sign}} 55555 {{amount}} 55555 {{period}} 55555",
+      "title": "55555"
+    },
+    "unavailable": {
+      "description": "55555",
+      "title": "55555"
     }
   }
 }

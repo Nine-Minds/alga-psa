@@ -33,7 +33,8 @@
       "resources": "Zasoby",
       "more": "Więcej",
       "apps": "Aplikacje"
-    }
+    },
+    "licenses": "Licencje"
   },
   "dashboard": {
     "title": "Panel",
@@ -131,7 +132,8 @@
           "declined": "Wizyta odrzucona: {{name}}",
           "cancelled": "Wizyta anulowana: {{name}}"
         }
-      }
+      },
+      "algadeskEmptyHint": "Gdy zgłoszenia zostaną zaktualizowane, zobaczysz je tutaj."
     },
     "devices": {
       "title": "Twoje urządzenia",
@@ -278,7 +280,9 @@
         "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje.",
         "registrationFailed": "Nie udało się zakończyć rejestracji. Spróbuj ponownie."
       }
-    }
+    },
+    "captchaRequired": "Ukończ poniższą weryfikację, a następnie zaloguj się ponownie.",
+    "tooManyAttempts": "Zbyt wiele nieudanych prób logowania. Poczekaj kilka minut przed kolejną próbą."
   },
   "account": {
     "title": "Konto",
@@ -434,6 +438,10 @@
       "disabled": "Wyłączone"
     },
     "notifications": {
+      "unreadCount_one": "{{count}} nieprzeczytane powiadomienie",
+      "unreadCount_few": "{{count}} nieprzeczytane powiadomienia",
+      "unreadCount_many": "{{count}} nieprzeczytanych powiadomień",
+      "unreadCount_other": "{{count}} nieprzeczytanych powiadomień",
       "title": "Ustawienia powiadomień",
       "email": "Powiadomienia e-mail",
       "ticketUpdates": "Aktualizacje zgłoszeń",

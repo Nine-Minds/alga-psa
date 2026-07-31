@@ -1,17 +1,12 @@
 {
   "page": {
-    "title": "Gestione crediti",
-    "creditsOverview": "Panoramica crediti",
-    "overviewDescription": "Gestisci i crediti e i trasferimenti del cliente",
-    "overviewDescriptionWithExpiration": "Gestisci i crediti del cliente, incluse le date di scadenza, e i trasferimenti",
-    "expirationSummary": "Riepilogo scadenza crediti",
-    "expirationSummaryDescription": "Panoramica dei crediti in scadenza a breve",
-    "usageTrends": "Andamenti di utilizzo dei crediti",
-    "usageTrendsDescription": "Andamento storico dell'utilizzo dei crediti"
+    "title": "Gestione crediti"
   },
   "columns": {
     "creditId": "ID credito",
     "client": "Cliente",
+    "balance": "Saldo",
+    "balanceOf": "di {{amount}}",
     "created": "Creato il",
     "description": "Descrizione",
     "context": "Contesto",
@@ -20,34 +15,31 @@
     "expires": "Scade il",
     "status": "Stato",
     "actions": "Azioni",
-    "discrepancy": "Scostamento",
-    "detected": "Rilevato il",
-    "expectedBalance": "Saldo previsto",
-    "actualBalance": "Saldo effettivo",
     "amountAvailable": "Importo disponibile",
     "expiration": "Scadenza",
     "select": "Seleziona"
   },
+  "filters": {
+    "allClients": "Tutti i clienti",
+    "allStatuses": "Tutti gli stati"
+  },
   "status": {
     "active": "Attivo",
     "expired": "Scaduto",
-    "expiringSoon": "In scadenza ({{days}} giorni)",
-    "open": "Aperto",
-    "inReview": "In revisione",
-    "resolved": "Risolto",
     "never": "Mai",
-    "na": "N/D"
+    "na": "N/D",
+    "depleted": "Esaurito",
+    "expiringSoonShort": "In scadenza",
+    "expiringSoon_one": "Scade tra {{count}} giorno",
+    "expiringSoon_other": "Scade tra {{count}} giorni"
   },
   "actions": {
     "view": "Visualizza",
     "edit": "Modifica",
     "expire": "Scade",
-    "resolve": "Risolvi",
     "addCredit": "Aggiungi credito",
     "cancel": "Annulla",
-    "backToCredits": "Torna ai crediti",
     "viewAllCredits": "Vedi tutti i crediti",
-    "runReconciliation": "Esegui riconciliazione",
     "running": "In esecuzione...",
     "reset": "Reimposta",
     "applyCredit": "Applica credito",
@@ -55,84 +47,27 @@
     "select": "Seleziona",
     "selected": "Selezionato",
     "saveChanges": "Salva modifiche",
-    "saving": "Salvataggio..."
-  },
-  "tabs": {
-    "activeCredits": "Crediti attivi",
-    "allCredits": "Tutti i crediti",
-    "expiredCredits": "Crediti scaduti"
+    "saving": "Salvataggio...",
+    "transfer": "Trasferisci"
   },
   "settings": {
-    "title": "Impostazioni di scadenza dei crediti",
-    "creditExpiration": "Scadenza del credito:",
-    "enabled": "Abilitata",
-    "disabled": "Disabilitata",
-    "expirationPeriod": "Periodo di scadenza:",
-    "daysUnit": "{{count}} giorni",
-    "notificationDays": "Giorni di notifica:",
-    "none": "Nessuno"
-  },
-  "charts": {
-    "expirationSummary": "Riepilogo scadenza crediti",
-    "expirationSummaryDescription": "Panoramica dei crediti in scadenza a breve",
-    "usageTrends": "Andamenti di utilizzo dei crediti",
-    "usageTrendsDescription": "Andamento storico dell'utilizzo dei crediti",
-    "lessThan7Days": "< 7 giorni",
-    "lessThan30Days": "< 30 giorni",
-    "lessThan90Days": "< 90 giorni",
-    "greaterThan90Days": "> 90 giorni",
-    "creditsIssued": "Crediti emessi",
-    "creditsApplied": "Crediti applicati",
-    "creditsExpired": "Crediti scaduti",
-    "statusDistribution": "Distribuzione per stato",
-    "statusDistributionDescription": "Panoramica degli stati dei report di riconciliazione",
-    "discrepancyTrends": "Andamenti degli scostamenti",
-    "discrepancyTrendsDescription": "Andamenti mensili degli scostamenti dei crediti",
-    "numberOfDiscrepancies": "Numero di scostamenti",
-    "totalAmount": "Importo totale",
-    "months": {
-      "jan": "Gen",
-      "feb": "feb",
-      "mar": "Mar",
-      "apr": "apr",
-      "may": "Mag",
-      "jun": "Giu"
-    }
+    "loadErrorPrefix": "Error loading credit expiration settings:",
+    "captionEnabled": "Scadenza del credito: {{days}} giorni",
+    "captionDisabled": "Scadenza del credito: disattivata",
+    "captionReminders": "promemoria {{reminders}} giorni prima",
+    "editInSettings": "Modifica in Impostazioni di fatturazione"
   },
   "stats": {
     "totalActiveCredits": "Totale crediti attivi",
     "expiringIn30Days": "In scadenza entro 30 giorni",
     "totalCreditsApplied": "Totale crediti applicati",
-    "totalCreditsExpired": "Totale crediti scaduti",
-    "totalDiscrepancies": "Totale scostamenti",
-    "totalDiscrepancyAmount": "Importo totale degli scostamenti",
-    "openIssues": "Problemi aperti"
+    "totalCreditsExpired": "Totale crediti scaduti"
   },
   "management": {
     "title": "Gestione crediti",
-    "recentCredits": "Crediti recenti",
-    "recentCreditsDescription": "Visualizza e gestisci i crediti del cliente. I crediti restano artefatti finanziari e i periodi di servizio ricorrenti compaiono solo quando la fattura di origine aveva una copertura canonica.",
-    "addCreditPlaceholder": "Il modulo per importo e dettagli del credito verrebbe implementato qui.",
-    "loadErrorPrefix": "Errore durante il caricamento dei crediti:",
-    "noDataReturned": "Nessun dato restituito dal server",
-    "noCreditsFound": "Nessun credito trovato"
-  },
-  "reconciliation": {
-    "title": "Dashboard di riconciliazione crediti",
-    "selectClient": "Seleziona cliente",
-    "status": "Stato",
-    "allStatuses": "Tutti gli stati",
-    "fromDate": "Data iniziale",
-    "toDate": "Data finale",
-    "reconciliationReports": "Report di riconciliazione",
-    "reconciliationReportsDescription": "Visualizza e gestisci gli scostamenti del saldo crediti",
-    "validationResult": "Validazione completata: trovati {{balanceCount}} scostamenti di saldo e {{trackingCount}} problemi di tracciamento.",
-    "tabs": {
-      "all": "Tutti",
-      "open": "Aperto",
-      "inReview": "In revisione",
-      "resolved": "Risolto"
-    }
+    "noCreditsFound": "Nessun credito trovato",
+    "noMatchingCredits": "Nessun credito corrisponde a questi filtri",
+    "loadFailed": "Impossibile caricare i crediti. Riprova."
   },
   "application": {
     "title": "Applica credito",
@@ -160,17 +95,67 @@
     "creditOrderNote": "I crediti vengono applicati in ordine di scadenza (prima i più vecchi)"
   },
   "expirationDialog": {
-    "title": "Modifica scadenza del credito",
-    "description": "Aggiorna la data di scadenza di questo credito.",
-    "creditAmount": "Importo del credito:",
-    "remainingAmount": "Importo residuo:",
+    "title": "Modifica data di scadenza",
+    "creditAmount": "Originale",
+    "remainingAmount": "Rimanente",
     "created": "Creato il:",
-    "currentExpiration": "Scadenza attuale:",
+    "currentExpiration": "Scadenza attuale",
     "noExpiration": "Nessuna scadenza",
-    "removeExpiration": "Rimuovi data di scadenza",
     "newExpirationDate": "Nuova data di scadenza",
     "pastDateError": "La data di scadenza non può essere nel passato",
-    "updateError": "Si è verificato un errore durante l'aggiornamento della data di scadenza"
+    "updateError": "Si è verificato un errore durante l'aggiornamento della data di scadenza",
+    "updateSuccess": "Scadenza del credito aggiornata",
+    "clearHint": "Cancella la data per rimuovere la scadenza."
+  },
+  "viewDialog": {
+    "title": "Dettagli del credito",
+    "loadFailed": "Impossibile caricare i dettagli del credito.",
+    "invoice": "Fattura",
+    "transactions": "Transazioni correlate",
+    "transactionType": "Tipo",
+    "date": "Data",
+    "amount": "Importo",
+    "noTransactions": "Nessuna transazione correlata trovata."
+  },
+  "expireDialog": {
+    "title": "Scadi credito",
+    "reasonLabel": "Motivo (facoltativo)",
+    "reasonPlaceholder": "Spiega perché questo credito sta scadendo...",
+    "success": "Credito scaduto",
+    "error": "Si è verificato un errore durante la scadenza del credito",
+    "expiring": "Scadenza...",
+    "confirm": "Scadi credito",
+    "creditAmount": "Originale",
+    "remainingAmount": "Rimanente",
+    "warning": "Il cliente perde il rimanente di {{amount}}. Non puoi annullare."
+  },
+  "transferDialog": {
+    "title": "Trasferisci credito",
+    "description": "Sposta il credito da questo cliente a un altro.",
+    "fields": {
+      "targetClient": "Al cliente",
+      "amount": "Importo",
+      "reason": "Motivo (facoltativo)"
+    },
+    "placeholders": {
+      "reason": "Perché questo credito viene trasferito?"
+    },
+    "hints": {
+      "amount": "Fino a {{amount}} disponibile"
+    },
+    "impact": {
+      "current": "Rimanente attuale",
+      "after": "Rimanente dopo il trasferimento"
+    },
+    "errors": {
+      "selectClient": "Seleziona un cliente per il trasferimento",
+      "validAmount": "Inserisci un importo maggiore di zero",
+      "exceedsRemaining": "Il trasferimento non può superare il rimanente di {{amount}}"
+    },
+    "success": "Credito trasferito",
+    "error": "Si è verificato un errore durante il trasferimento del credito",
+    "transferring": "Trasferimento...",
+    "confirm": "Trasferisci credito"
   },
   "context": {
     "lineageMissing": "Genealogia mancante",
@@ -181,5 +166,30 @@
     "recurringLineagePreserved": "La genealogia dell'origine ricorrente è stata preservata",
     "financialOnly": "Solo finanziario",
     "noRecurringServicePeriod": "Nessun periodo di servizio ricorrente"
+  },
+  "addCredit": {
+    "description": "Il credito è subito disponibile per il cliente.",
+    "fields": {
+      "client": "Cliente",
+      "amount": "Importo",
+      "description": "Descrizione (facoltativa)",
+      "expirationDate": "Data di scadenza (facoltativa)"
+    },
+    "placeholders": {
+      "amount": "Inserisci importo",
+      "description": "Motivo del credito",
+      "expirationDate": "Seleziona la data di scadenza"
+    },
+    "hints": {
+      "expirationDate": "Lascia vuoto per usare la scadenza predefinita."
+    },
+    "submitting": "Aggiunta in corso...",
+    "success": "Credito aggiunto correttamente",
+    "errors": {
+      "allFieldsRequired": "Seleziona un cliente e inserisci un importo",
+      "validAmount": "Inserisci un importo valido",
+      "loadClientsFailed": "Impossibile caricare i clienti. Riprova.",
+      "submitFailed": "Impossibile aggiungere il credito. Riprova."
+    }
   }
 }

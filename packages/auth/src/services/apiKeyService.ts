@@ -1,4 +1,5 @@
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, isTenantSuspended, tenantDb } from '@alga-psa/db';
+import type { Knex } from 'knex';
 import crypto from 'crypto';
 
 interface ApiKey {
@@ -19,6 +20,29 @@ interface ApiKey {
 }
 
 export class ApiKeyService {
+  private static apiKeysQuery(knex: Knex, tenant: string) {
+    return tenantDb(knex, tenant).table<ApiKey>('api_keys');
+  }
+
+  /**
+   * Why an otherwise-valid key must not authenticate: deactivated owning
+   * user (missing user counts as inactive) or suspended tenant. Errors
+   * propagate to validateApiKey's catch, which fails closed.
+   */
+  private static async getKeyGateReason(
+    knex: Knex,
+    tenant: string,
+    userId: string
+  ): Promise<'user_inactive' | 'tenant_suspended' | null> {
+    const user = await tenantDb(knex, tenant)
+      .table('users')
+      .where({ user_id: userId })
+      .first('is_inactive');
+    if (!user || user.is_inactive) return 'user_inactive';
+    if (await isTenantSuspended(knex, tenant)) return 'tenant_suspended';
+    return null;
+  }
+
   /**
    * Generate a new API key
    * @returns A cryptographically secure random string
@@ -78,7 +102,7 @@ export class ApiKeyService {
         metadata: options?.metadata ?? null,
       };
 
-      const [record] = await knex('api_keys').insert(insertPayload).returning('*');
+      const [record] = await this.apiKeysQuery(knex, tenant).insert(insertPayload).returning('*');
 
       if (!record) {
         throw new Error(`Failed to create API key for user ${userId} in tenant ${tenant}`);
@@ -112,11 +136,10 @@ export class ApiKeyService {
     
     try {
       // Find the API key record using the hashed value
-      const record = await knex('api_keys')
+      const record = await this.apiKeysQuery(knex, tenant)
         .where({
           api_key: hashedKey,
           active: true,
-          tenant
         })
         .where((builder) => {
           builder.whereNull('expires_at')
@@ -129,16 +152,24 @@ export class ApiKeyService {
         return null;
       }
 
+      // A deactivated owner or a suspended tenant (cancelled, pending
+      // deletion) must not authenticate. Reversible: reactivation restores
+      // the same keys untouched.
+      const gateReason = await this.getKeyGateReason(knex, tenant, record.user_id);
+      if (gateReason) {
+        console.log(`API key rejected (${gateReason}) in tenant ${tenant}`);
+        return null;
+      }
+
       if (
         record.usage_limit !== null &&
         record.usage_limit !== undefined &&
         record.usage_count >= record.usage_limit
       ) {
         // Deactivate keys that have reached their usage limit
-        await knex('api_keys')
+        await this.apiKeysQuery(knex, tenant)
           .where({
             api_key_id: record.api_key_id,
-            tenant
           })
           .update({
             active: false,
@@ -148,10 +179,9 @@ export class ApiKeyService {
       }
 
       // Update last_used_at timestamp
-      await knex('api_keys')
+      await this.apiKeysQuery(knex, tenant)
         .where({
           api_key_id: record.api_key_id,
-          tenant
         })
         .update({
           updated_at: knex.fn.now(),
@@ -176,10 +206,9 @@ export class ApiKeyService {
     }
 
     try {
-      const result = await knex('api_keys')
+      const result = await this.apiKeysQuery(knex, tenant)
         .where({
           api_key_id: apiKeyId,
-          tenant,
         })
         .update({
           active: false,
@@ -206,10 +235,9 @@ export class ApiKeyService {
     }
 
     try {
-      return await knex('api_keys')
+      return await this.apiKeysQuery(knex, tenant)
         .where({
           user_id: userId,
-          tenant,
         })
         .orderBy('created_at', 'desc');
     } catch (error) {
@@ -229,13 +257,12 @@ export class ApiKeyService {
     }
 
     try {
-      return await knex('api_keys')
+      const db = tenantDb(knex, tenant);
+      const query = db.table<ApiKey>('api_keys');
+      db.tenantJoin(query, 'users', 'api_keys.user_id', 'users.user_id');
+
+      return await query
         .select('api_keys.*', 'users.username', 'users.first_name', 'users.last_name')
-        .join('users', function() {
-          this.on('api_keys.user_id', '=', 'users.user_id')
-              .andOn('users.tenant', '=', 'api_keys.tenant');
-        })
-        .where('api_keys.tenant', tenant)
         .orderBy('api_keys.created_at', 'desc');
     } catch (error) {
       console.error(`Error listing API keys in tenant ${tenant}:`, error);
@@ -254,10 +281,9 @@ export class ApiKeyService {
     }
 
     try {
-      const result = await knex('api_keys')
+      const result = await this.apiKeysQuery(knex, tenant)
         .where({
           api_key_id: apiKeyId,
-          tenant,
         })
         .update({
           active: false,
@@ -289,16 +315,16 @@ export class ApiKeyService {
     }
 
     // Deactivate any keys that are still marked active but have expired
-    await knex('api_keys')
-      .where({ user_id: userId, tenant, active: true })
+    await this.apiKeysQuery(knex, tenant)
+      .where({ user_id: userId, active: true })
       .whereNotNull('expires_at')
       .where('expires_at', '<', knex.fn.now())
       .update({ active: false, updated_at: knex.fn.now() });
 
     // Delete all inactive keys older than the retention period
     const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
-    const deleted = await knex('api_keys')
-      .where({ user_id: userId, tenant, active: false })
+    const deleted = await this.apiKeysQuery(knex, tenant)
+      .where({ user_id: userId, active: false })
       .where('created_at', '<', cutoff)
       .del();
 
@@ -319,10 +345,9 @@ export class ApiKeyService {
       throw new Error(`Tenant context mismatch while consuming API key ${apiKeyId}`);
     }
 
-    const updated = await knex('api_keys')
+    const updated = await this.apiKeysQuery(knex, tenant)
       .where({
         api_key_id: apiKeyId,
-        tenant,
         active: true,
       })
       .increment('usage_count', increment)
@@ -339,10 +364,9 @@ export class ApiKeyService {
       usageLimit !== undefined &&
       usageCount >= usageLimit
     ) {
-      await knex('api_keys')
+      await this.apiKeysQuery(knex, tenant)
         .where({
           api_key_id: apiKeyId,
-          tenant,
         })
         .update({
           active: false,

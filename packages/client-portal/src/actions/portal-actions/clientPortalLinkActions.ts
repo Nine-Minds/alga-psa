@@ -12,10 +12,14 @@ export interface TenantPortalLinkResult {
   tenantSlug: string;
 }
 
+export type TenantPortalLinkActionResult =
+  | { success: true; data: TenantPortalLinkResult }
+  | { success: false; error: string };
+
 export const getTenantPortalLoginLink = withAuth(async (
   _user,
   { tenant }
-): Promise<TenantPortalLinkResult> => {
+): Promise<TenantPortalLinkActionResult> => {
   const { knex } = await createTenantKnex();
 
   const tenantSlug = await getTenantSlugForTenant(tenant);
@@ -24,9 +28,12 @@ export const getTenantPortalLoginLink = withAuth(async (
 
     if (portalDomain && portalDomain.status === 'active' && portalDomain.domain) {
       return {
-        url: `https://${portalDomain.domain}/auth/client-portal/signin`,
-        source: 'vanity',
-        tenantSlug,
+        success: true,
+        data: {
+          url: `https://${portalDomain.domain}/auth/client-portal/signin`,
+          source: 'vanity',
+          tenantSlug,
+        },
       };
     }
 
@@ -36,7 +43,7 @@ export const getTenantPortalLoginLink = withAuth(async (
       (process.env.HOST ? `https://${process.env.HOST}` : '');
 
     if (!canonicalBase) {
-      throw new Error('NEXTAUTH_URL (or NEXT_PUBLIC_BASE_URL) must be configured to compute canonical login links');
+      return { success: false, error: 'Client portal login links are not configured.' };
     }
 
     const loginUrl = new URL(
@@ -46,15 +53,18 @@ export const getTenantPortalLoginLink = withAuth(async (
     loginUrl.searchParams.set('tenant', tenantSlug);
 
     return {
-      url: loginUrl.toString(),
-      source: 'canonical',
-      tenantSlug,
+      success: true,
+      data: {
+        url: loginUrl.toString(),
+        source: 'canonical',
+        tenantSlug,
+      },
     };
   } catch (error) {
     logger.error('[getTenantPortalLoginLink] Failed to build login link', {
       tenant,
       error: error instanceof Error ? error.message : error,
     });
-    throw error;
+    return { success: false, error: 'Failed to build client portal login link.' };
   }
 });

@@ -22,7 +22,7 @@ describe('createClientTicket asset linking contract', () => {
   });
 
   it('inserts an asset_associations row with relationship_type "affected"', () => {
-    expect(source).toContain("trx('asset_associations').insert");
+    expect(source).toContain("tenantDb(trx, tenant).table('asset_associations').insert");
     expect(source).toMatch(/relationship_type:\s*['"]affected['"]/);
     expect(source).toMatch(/entity_type:\s*['"]ticket['"]/);
   });

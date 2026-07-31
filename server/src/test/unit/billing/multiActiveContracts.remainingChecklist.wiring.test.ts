@@ -21,7 +21,7 @@ describe('multi-active remaining checklist wiring coverage', () => {
     const invoiceQueriesSource = readRepo('packages/billing/src/actions/invoiceQueries.ts');
 
     expect(billingAndTaxSource).toContain('clientContractId: row.client_contract_id ?? row.contract_id ?? null');
-    expect(billingAndTaxSource).toContain('purchaseOrderScopeKey: row.client_contract_id ?? null');
+    expect(billingAndTaxSource).toContain('purchaseOrderScopeKey: row.po_required ? row.client_contract_id ?? null : null');
     expect(invoiceGenerationSource).toContain('calculateBillingForSelectionInput');
     expect(invoiceGenerationSource).toContain('getSingleClientContractIdFromCharges');
     expect(invoiceQueriesSource).toContain("'invoices.client_contract_id': contractId");
@@ -32,11 +32,12 @@ describe('multi-active remaining checklist wiring coverage', () => {
     expect(source).toContain('const existingAssignments = clientContractsMap[contract.client_id] ?? [];');
     expect(source).toContain('existingAssignments.push({');
     expect(source).toContain('No active assignments');
-    expect(source).toContain('Assignment {assignment.clientContractId.slice(0, 8)}');
+    expect(source).toContain('id: assignment.clientContractId.slice(0, 8),');
+    expect(source).toContain("defaultValue: 'Assignment {{id}}',");
   });
 
   it('T066: bucket ambiguity failures include actionable assignment context', () => {
-    const serviceSource = readRepo('packages/billing/src/services/bucketUsageService.ts');
+    const serviceSource = readRepo('shared/billingClients/bucketUsageService.ts');
     const testSource = readRepo('server/src/test/unit/billing/bucketUsageService.periods.test.ts');
     expect(serviceSource).toContain('Ambiguous bucket usage assignment resolution for client');
     expect(serviceSource).toContain('Matched assignments: ${clientPlan.client_contract_id}, ${conflictingClientPlan.client_contract_id}.');
@@ -47,7 +48,7 @@ describe('multi-active remaining checklist wiring coverage', () => {
   it('T067: recurring preview rendering includes assignment context for same-named contracts', () => {
     const automaticInvoicesSource = readRepo('packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx');
     expect(automaticInvoicesSource).toContain('const getRecurringAssignmentContext =');
-    expect(automaticInvoicesSource).toContain('Assignment line');
+    expect(automaticInvoicesSource).toContain('Assigned contract line');
     expect(automaticInvoicesSource).toContain('contract-assignment-context-');
   });
 
@@ -60,7 +61,10 @@ describe('multi-active remaining checklist wiring coverage', () => {
     expect(wizardSource).toContain('createClientContractAssignment(trx, tenant, {');
     expect(clientActionsSource).toContain('createClientContractAssignment(trx, tenant, {');
     expect(clientModelSource).toContain('createClientContractAssignment(db, tenant, {');
-    expect(mixedCurrencyIntegrationSource).toContain("expect(warningOrError?.message).toContain('currency');");
+    // The mixed-currency policy test now asserts the stronger invariant:
+    // contracts derive currency from the client, so a mixed state cannot be
+    // constructed (was: a warning-message expectation).
+    expect(mixedCurrencyIntegrationSource).toContain("expect(currencies).toEqual(['USD', 'USD']);");
   });
 
   it('T069: activation/reactivation logic remains free of sibling-active singleton blockers', () => {

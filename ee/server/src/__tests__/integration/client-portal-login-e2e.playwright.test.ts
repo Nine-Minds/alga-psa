@@ -1,7 +1,18 @@
 import { test, expect } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import { encode } from '@auth/core/jwt';
-import { knex as createKnex } from 'knex';
+import { knex as createKnex, type Knex } from 'knex';
 import { PLAYWRIGHT_DB_CONFIG } from './utils/playwrightDatabaseConfig';
+
+const TEST_DISCOVERY_TENANT = '__client_portal_login_e2e_test__';
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function unscopedTestTable(db: Knex, table: string, reason: string) {
+  return tenantDb(db, TEST_DISCOVERY_TENANT).unscoped(table, reason);
+}
 
 function normalizeBaseUrl(raw?: string): string {
   if (!raw || raw.length === 0) return '';
@@ -22,39 +33,53 @@ function adminDb() {
   });
 }
 
-async function getSeededUser(db: any, email?: string) {
+async function getSeededUser(db: Knex, email?: string) {
   if (email) {
-    const row = await db('users').where({ email: email.toLowerCase() }).first();
+    const row = await unscopedTestTable(
+      db,
+      'users',
+      'client portal login e2e test locates seeded user by email before tenant context exists'
+    ).where({ email: email.toLowerCase() }).first();
     if (row) return row;
   }
-  const any = await db('users').first();
+  const any = await unscopedTestTable(
+    db,
+    'users',
+    'client portal login e2e test locates any seeded user before tenant context exists'
+  ).first();
   if (!any) throw new Error('No seeded users found. Check seeds.');
   return any;
 }
 
-import type { Knex } from 'knex';
-
 async function ensureClientUser(db: Knex): Promise<any> {
   // Try to find an existing client user with contact
-  const existing = await db('users')
+  const existing = await unscopedTestTable(
+    db,
+    'users',
+    'client portal login e2e test locates any client portal user before tenant context exists'
+  )
     .where({ user_type: 'client' })
     .whereNotNull('contact_id')
     .first();
   if (existing) return existing;
 
   // Otherwise, pick a contact and a user within the same tenant and convert that user
-  const contact = await db('contacts').select(['tenant', 'contact_name_id']).first();
+  const contact = await unscopedTestTable(
+    db,
+    'contacts',
+    'client portal login e2e test locates any seeded contact before tenant context exists'
+  ).select(['tenant', 'contact_name_id']).first();
   if (!contact) throw new Error('No contacts seeded; cannot prepare client portal user.');
 
   // Prefer a user from the same tenant
-  const user = await db('users').where({ tenant: contact.tenant }).first();
+  const user = await tenantTable(db, contact.tenant, 'users').where({ tenant: contact.tenant }).first();
   if (!user) throw new Error('No users found in tenant to convert to client portal user.');
 
-  await db('users')
+  await tenantTable(db, contact.tenant, 'users')
     .where({ user_id: user.user_id, tenant: contact.tenant })
     .update({ user_type: 'client', contact_id: contact.contact_name_id });
 
-  const updated = await db('users')
+  const updated = await tenantTable(db, contact.tenant, 'users')
     .where({ user_id: user.user_id, tenant: contact.tenant })
     .first();
   return updated;
@@ -89,7 +114,7 @@ async function setSessionCookie(page: any, user: any, baseUrl: string) {
 test.describe('Client portal dashboard via session cookie', () => {
   test.setTimeout(180_000); // allow first-run migrations/server start
 
-  let db: any;
+  let db: Knex;
   const vanityBase = normalizeBaseUrl(process.env.CLIENT_PORTAL_TEST_VANITY_BASE_URL) || 'http://portal.acme.local:3000';
   const vanityDashboardUrl = `${vanityBase}/client-portal/dashboard`;
 

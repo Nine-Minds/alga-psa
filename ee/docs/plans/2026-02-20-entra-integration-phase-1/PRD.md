@@ -50,8 +50,8 @@ Today there is no EE Entra workflow that does this end-to-end with deterministic
 
 1. MSP admin/internal user opens Integrations and enables Entra connection.
 2. MSP user completes Direct Microsoft partner auth setup.
-3. MSP user runs discovery and reviews mapping suggestions.
-4. MSP user confirms mappings and starts initial sync.
+3. MSP user runs discovery and reviews mapping suggestions, choosing an existing client, create-new intent, or skip for each tenant.
+4. MSP user confirms those decisions and explicitly starts initial sync; the workflow provisions approved create-new clients before synchronizing their contacts.
 5. MSP user reviews sync outcomes, ambiguous matches, and per-tenant status.
 6. MSP user triggers manual sync (all mapped tenants or single client).
 
@@ -69,6 +69,8 @@ Client portal users do not see or access Entra setup/sync surfaces.
 4. Show per-tenant sync result summaries and ambiguous contact queue.
 5. Add client-level “Sync Entra Now” action on client details (flag-gated).
 6. No hidden writes during preview screens; writes only after explicit confirm.
+7. The Clients table user count reflects the latest completed sync and agrees with the sync detail; while a run is queued or running, the previous count remains visibly non-final rather than being presented as freshly synchronized.
+8. Row controls on the mapping review screen select provisional decisions only. Client creation and skip persistence do not happen from individual row clicks; one explicit confirmation commits the reviewed decision set.
 
 ## Requirements
 
@@ -78,14 +80,17 @@ Client portal users do not see or access Entra setup/sync surfaces.
 2. Feature flags gate all user-visible Entra settings and client actions.
 3. Partner-level auth is Direct Microsoft partner OAuth only (CIPP descoped from Phase 1).
 4. Tenant discovery persists discovered managed tenants.
-5. Mapping flow supports exact-domain auto-match, fuzzy candidates, manual assignment, skip.
-6. Initial sync creates contact links and new contacts where needed.
+5. Mapping flow supports exact-domain auto-match, fuzzy candidates, manual assignment, approved create-new intent, and skip as reviewable decisions committed together.
+6. An explicitly started initial or manual sync idempotently provisions clients for approved create-new mappings before creating contact links and new contacts where needed.
 7. Ongoing sync updates links and status with additive, non-destructive behavior.
 8. Disabled/deleted Entra users mark linked contacts inactive (never delete).
 9. Optional per-field sync toggles control whether selected Entra fields may overwrite local contact fields.
 10. Ambiguous user matches are queued for manual review.
 11. Manual sync actions support all tenants and single-client scope.
 12. All sync execution paths use Temporal workflows/activities.
+13. Each successful, non-dry-run tenant sync persists the sync-observed eligible Entra user count, including zero, with the time that count was observed.
+14. Confirmed client mappings prefer the latest completed-sync user count, fall back to the discovery count before any successful sync, and refresh after a manually started workflow reaches a terminal state.
+15. Scheduled recurring sync processes resolved mappings only and never provisions clients from pending create-new decisions.
 
 ### Non-functional Requirements
 
@@ -102,6 +107,8 @@ Client portal users do not see or access Entra setup/sync surfaces.
 3. Add sync run tables for parent run + per-tenant run details in `ee/server/migrations`.
 4. Add Entra contact-link and ambiguous reconciliation tables in `ee/server/migrations`.
 5. Add EE columns for Entra identifiers/sync metadata on `clients` and `contacts` where needed.
+6. Store the latest completed-sync eligible user count and observation timestamp separately from the discovery-sourced `source_user_count`, so discovery caching cannot make a completed sync appear inconsistent.
+7. Represent an approved create-new decision in `entra_client_tenant_mappings` with `mapping_state='create_new'` and a null `client_id`; after idempotent provisioning, replace it with an active `mapped` decision pointing at the created client.
 
 ### Connection adapters
 
@@ -174,3 +181,6 @@ Resolved / removed:
 4. Disabled/deleted Entra users mark linked contacts inactive, not deleted.
 5. Client portal users cannot view or execute Entra features.
 6. Turning feature flags off hides user-visible Entra surfaces immediately.
+7. After a single-client sync completes, the Clients table refreshes without a discovery rerun or manual page reload and shows the same eligible user count reported by that sync; failed or dry-run workflows do not replace the last successful count.
+8. Reviewing row choices creates no clients and persists no per-row skip/import mutation; confirming the decision set stores mapped/create-new/skipped states, and an explicitly started sync creates each approved new client at most once before syncing contacts.
+9. Scheduled sync ignores create-new decisions, so discovery or an unattended schedule cannot create Alga clients without an explicit operator-approved synchronization action.

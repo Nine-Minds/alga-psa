@@ -17,7 +17,7 @@ describe('system-managed default contract list/detail guards', () => {
 
     expect(source).toContain('System-managed default');
     expect(source).toContain('Created automatically for uncontracted work');
-    expect(source).toContain('Attribution-only. Created automatically for uncontracted work.');
+    expect(source).toContain("t('contractDetail.systemManaged.createdAutomatically', {");
     expect(source).toContain('const isSystemManagedDefault = record.is_system_managed_default === true;');
     expect(source).toContain('!isSystemManagedDefault && (record.assignment_status ?? record.status) === \'active\'');
     expect(source).toContain('!isSystemManagedDefault && (record.assignment_status ?? record.status) === \'terminated\'');
@@ -37,8 +37,10 @@ describe('system-managed default contract list/detail guards', () => {
     expect(source).toContain('Ownership is system-managed for this default contract.');
     expect(source).toContain('disabled={isSystemManagedDefault}');
     expect(source).toContain('disabled={isSaving || isSystemManagedDefault}');
-    expect(source).toContain('<TabsTrigger value="lines" disabled={isSystemManagedDefault}>Contract Lines</TabsTrigger>');
-    expect(source).toContain('<TabsTrigger value="pricing" disabled={isSystemManagedDefault}>Pricing Schedules</TabsTrigger>');
+    expect(source).toContain('<TabsTrigger value="lines" disabled={isSystemManagedDefault}>');
+    expect(source).toContain('<TabsTrigger value="pricing" disabled={isSystemManagedDefault}>');
+    expect(source).toContain("t('contractDetail.tabs.lines', { defaultValue: 'Contract Lines' })");
+    expect(source).toContain("t('contractDetail.tabs.pricing', { defaultValue: 'Pricing Schedules' })");
     expect(source).toContain('isReadOnly={isSystemManagedDefault}');
     expect(source).toContain('{!isSystemManagedDefault ? (');
     expect(source).toContain('id="delete-contract-btn"');

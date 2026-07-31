@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use server'
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { requireTenantId } from '@alga-psa/db';
 import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
@@ -9,6 +9,14 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { BillingEngine } from '../lib/billing/billingEngine';
+import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
+import ProjectBillingConfig from '../models/projectBillingConfig';
+import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
+import {
+  computeCapWriteDown,
+  detectThresholdCrossings,
+  isFirstProjectCapOverage,
+} from '../services/projectBillingService';
 import ClientContractLine from '../models/clientContractLine';
 import { Session } from 'next-auth';
 import {
@@ -64,8 +72,35 @@ import {
   detectRecurringApprovalBlockers,
   formatApprovalBlockedReason,
 } from './recurringApprovalBlockers';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 const POSTGRES_UNDEFINED_TABLE = '42P01';
+type InvoiceGenerationActionError = ActionMessageError | ActionPermissionError;
+
+function isReturnedActionError(value: unknown): value is InvoiceGenerationActionError {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      (
+        typeof (value as { actionError?: unknown }).actionError === 'string' ||
+        typeof (value as { permissionError?: unknown }).permissionError === 'string'
+      )
+  );
+}
+
+function unwrapBillingHelperResult<T>(value: T | InvoiceGenerationActionError): T {
+  if (isReturnedActionError(value)) {
+    throw new Error('permissionError' in value ? value.permissionError : value.actionError);
+  }
+
+  return value;
+}
 
 function isMissingRelationError(error: unknown): boolean {
   return Boolean(
@@ -98,6 +133,30 @@ function isProductCharge(charge: IBillingCharge): charge is IProductCharge {
 
 function isLicenseCharge(charge: IBillingCharge): charge is ILicenseCharge {
   return charge.type === 'license';
+}
+
+function isProjectScheduleCharge(charge: IBillingCharge): boolean {
+  return charge.type === 'project_milestone' || charge.type === 'project_deposit';
+}
+
+function getProjectChargeMetadata(charge: IBillingCharge): {
+  projectId: string;
+  projectName: string;
+  projectNumber: string;
+} | null {
+  const candidate = charge as IBillingCharge & {
+    project_id?: string;
+    project_name?: string;
+    project_number?: string;
+  };
+  if (!candidate.project_id || !candidate.project_name) {
+    return null;
+  }
+  return {
+    projectId: candidate.project_id,
+    projectName: candidate.project_name,
+    projectNumber: candidate.project_number ?? '',
+  };
 }
 
 function getSingleClientContractIdFromCharges(charges: IBillingCharge[]): string | null {
@@ -225,6 +284,251 @@ function hasPersistedInvoiceContent(billingResult: IBillingResult): boolean {
   );
 }
 
+type ProjectCapPersistenceDelta = {
+  configId: string;
+  projectId: string;
+  cap: number;
+  billedAfter: number;
+  billed: number;
+  writtenDown: number;
+  writtenDownBefore: number;
+  writtenDownAfter: number;
+  notifiedThresholds: number[];
+};
+
+async function prepareProjectCapChargesForPersistence(
+  trx: Knex.Transaction,
+  charges: IBillingCharge[],
+): Promise<ProjectCapPersistenceDelta[]> {
+  type ProjectCapCharge = IBillingCharge & {
+    project_billing_config_id: string;
+    project_cap_original_amount?: number;
+    project_cap_original_tax_amount?: number;
+    write_down_amount?: number;
+    write_down_reason?: 'project_cap';
+  };
+  const chargesByConfig = new Map<string, ProjectCapCharge[]>();
+
+  for (const charge of charges) {
+    const candidate = charge as IBillingCharge & {
+      project_billing_config_id?: string;
+      project_cap_original_amount?: number;
+      project_cap_original_tax_amount?: number;
+      write_down_amount?: number;
+      write_down_reason?: 'project_cap';
+    };
+    if (!candidate.project_billing_config_id) {
+      continue;
+    }
+    const grouped = chargesByConfig.get(candidate.project_billing_config_id) ?? [];
+    grouped.push(candidate as ProjectCapCharge);
+    chargesByConfig.set(candidate.project_billing_config_id, grouped);
+  }
+
+  const deltas: ProjectCapPersistenceDelta[] = [];
+  for (const [configId, configCharges] of chargesByConfig) {
+    const config = await ProjectBillingConfig.getById(configId, trx);
+    if (!config || config.cap_amount === null) {
+      continue;
+    }
+
+    await ProjectBillingCapUsage.ensureRow(configId, trx);
+    const usage = await ProjectBillingCapUsage.getForUpdate(configId, trx);
+    if (!usage) {
+      throw new Error(`Project billing cap usage ${configId} could not be locked`);
+    }
+
+    const previousBilled = usage.billed_amount;
+    const previousWrittenDown = usage.written_down_amount;
+    let runningBilled = previousBilled;
+    let billedDelta = 0;
+    let writtenDownDelta = 0;
+
+    for (const charge of configCharges) {
+      const originalAmount = charge.project_cap_original_amount
+        ?? charge.total + (charge.write_down_amount ?? 0);
+      const originalTaxAmount = charge.project_cap_original_tax_amount
+        ?? charge.tax_amount
+        ?? 0;
+      charge.project_cap_original_amount = originalAmount;
+      charge.project_cap_original_tax_amount = originalTaxAmount;
+
+      const result = computeCapWriteDown(
+        config.cap_amount,
+        runningBilled,
+        originalAmount,
+      );
+      charge.total = result.billable;
+      charge.write_down_amount = result.writtenDown;
+      charge.write_down_reason = result.writtenDown > 0 ? 'project_cap' : undefined;
+      charge.tax_amount = originalAmount > 0
+        ? Math.round(originalTaxAmount * (result.billable / originalAmount))
+        : 0;
+      runningBilled += result.billable;
+      billedDelta += result.billable;
+      writtenDownDelta += result.writtenDown;
+    }
+
+    const notifiedThresholds = detectThresholdCrossings(
+      config.cap_amount,
+      previousBilled,
+      runningBilled,
+      config.cap_notify_thresholds,
+      usage.notified_thresholds,
+    );
+
+    await ProjectBillingCapUsage.increment(
+      configId,
+      { billed: billedDelta, writtenDown: writtenDownDelta },
+      trx,
+    );
+    for (const threshold of notifiedThresholds) {
+      await ProjectBillingCapUsage.recordNotifiedThreshold(configId, threshold, trx);
+    }
+
+    deltas.push({
+      configId,
+      projectId: config.project_id,
+      cap: config.cap_amount,
+      billedAfter: runningBilled,
+      billed: billedDelta,
+      writtenDown: writtenDownDelta,
+      writtenDownBefore: previousWrittenDown,
+      writtenDownAfter: previousWrittenDown + writtenDownDelta,
+      notifiedThresholds,
+    });
+  }
+
+  return deltas;
+}
+
+async function persistProjectScheduleCharges(
+  trx: Knex.Transaction,
+  invoiceId: string,
+  charges: IBillingCharge[],
+  client: IClient,
+  tenant: string,
+  userId: string,
+): Promise<number> {
+  if (charges.length === 0) {
+    return 0;
+  }
+
+  let subtotal = 0;
+  const now = Temporal.Now.instant().toString();
+  let exportServiceIds: Awaited<ReturnType<typeof ensureProjectScheduleExportServices>> | null = null;
+
+  for (const charge of charges) {
+    const projectCharge = charge as IBillingCharge & {
+      schedule_entry_id: string;
+    };
+    let itemId: string | null = null;
+    if (charge.total !== 0 || (charge.tax_amount || 0) !== 0) {
+      exportServiceIds ??= await ensureProjectScheduleExportServices(trx, tenant);
+      itemId = uuidv4();
+      await tenantDb(trx, tenant).table('invoice_charges').insert({
+        item_id: itemId,
+        invoice_id: invoiceId,
+        service_id: charge.serviceId ?? exportServiceIds[charge.type as 'project_milestone' | 'project_deposit'],
+        description: charge.serviceName,
+        quantity: charge.quantity ?? 1,
+        unit_price: charge.rate,
+        net_amount: charge.total,
+        tax_amount: charge.tax_amount || 0,
+        tax_region: charge.tax_region || client.tax_region,
+        tax_rate: charge.tax_rate || 0,
+        total_price: charge.total + (charge.tax_amount || 0),
+        is_manual: false,
+        is_discount: false,
+        is_taxable: charge.is_taxable ?? false,
+        created_by: userId,
+        created_at: now,
+        tenant,
+      });
+    }
+
+    const transitioned = await ProjectBillingScheduleEntry.transitionStatus(
+      projectCharge.schedule_entry_id,
+      'approved',
+      'invoiced',
+      {
+        invoice_id: invoiceId,
+        invoice_charge_id: itemId,
+      },
+      trx,
+    );
+    if (!transitioned) {
+      throw new Error(
+        `Project billing schedule entry ${projectCharge.schedule_entry_id} is no longer approved`,
+      );
+    }
+    subtotal += charge.total;
+  }
+
+  return subtotal;
+}
+
+async function ensureProjectScheduleExportServices(
+  trx: Knex.Transaction,
+  tenant: string,
+): Promise<Record<'project_milestone' | 'project_deposit', string>> {
+  await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?))', [`project-billing-export-services:${tenant}`]);
+  const db = tenantDb(trx, tenant);
+  let serviceType = await db.table('service_types')
+    .where({ name: 'Project Billing' })
+    .first('id');
+  if (!serviceType) {
+    const maxOrder = await db.table('service_types').max({ max_order: 'order_number' }).first();
+    [serviceType] = await db.table('service_types').insert({
+      id: uuidv4(),
+      tenant,
+      name: 'Project Billing',
+      description: 'System services used to map project billing charges to accounting items',
+      is_active: true,
+      order_number: Number(maxOrder?.max_order ?? 0) + 1,
+    }).returning('id');
+  }
+
+  const definitions = [
+    {
+      chargeType: 'project_milestone' as const,
+      serviceName: 'Project Milestone',
+      description: 'Project milestone billing charge',
+    },
+    {
+      chargeType: 'project_deposit' as const,
+      serviceName: 'Project Deposit',
+      description: 'Project deposit billing charge',
+    },
+  ];
+  const result = {} as Record<'project_milestone' | 'project_deposit', string>;
+  for (const definition of definitions) {
+    let service = await db.table('service_catalog')
+      .where({
+        service_name: definition.serviceName,
+        item_kind: 'service',
+        custom_service_type_id: serviceType.id,
+      })
+      .first('service_id');
+    if (!service) {
+      [service] = await db.table('service_catalog').insert({
+        service_id: uuidv4(),
+        tenant,
+        service_name: definition.serviceName,
+        description: definition.description,
+        custom_service_type_id: serviceType.id,
+        billing_method: 'fixed',
+        default_rate: 0,
+        unit_of_measure: 'Each',
+        item_kind: 'service',
+        is_active: true,
+      }).returning('service_id');
+    }
+    result[definition.chargeType] = String(service.service_id);
+  }
+  return result;
+}
+
 type RecurringBridgeMetadata = {
   billingCycleId?: string | null;
 };
@@ -264,6 +568,114 @@ function buildPreviewInvoiceFailure(
   };
 }
 
+function previewInvoiceErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return 'An error occurred while previewing the invoice';
+  }
+
+  const { message } = error;
+  if (message.startsWith('Permission denied:')) {
+    return message;
+  }
+
+  if (message.startsWith('Recurring service periods were not materialized')) {
+    return message;
+  }
+
+  if (/^Billing cycle .+ not found for client .+$/.test(message)) {
+    return 'Billing cycle not found';
+  }
+
+  if (/^Billing cycle .+ has invalid dates/.test(message)) {
+    return 'Billing cycle has invalid dates';
+  }
+
+  if (/^Billing Error: Client .+ has active contracts in multiple currencies \(.+\)\. Mixed currency billing is not supported\.$/.test(message)) {
+    return 'This client has active contracts in multiple currencies. Mixed currency billing is not supported.';
+  }
+
+  if (/^Client .+ not found in tenant .+$/.test(message)) {
+    return 'Client not found';
+  }
+
+  const expectedMessages = new Set([
+    'Grouped recurring selection inputs must share the same client and invoice window.',
+    'Invalid billing cycle dates',
+    'Invoice period cannot span billing cycle change',
+    'No active contract lines found for this client in the selected billing period.',
+    'No recurring execution windows selected',
+    'No recurring selections were provided for preview.',
+    'Recurring selector input execution window kind is not supported.',
+    'Recurring selector input is missing client-cadence assignment identity (schedule key).',
+    'Recurring selector input is missing contract-cadence assignment identity (contract line).',
+  ]);
+
+  return expectedMessages.has(message)
+    ? message
+    : 'An error occurred while previewing the invoice';
+}
+
+function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied')) {
+      return permissionError(error.message);
+    }
+
+    if (error.message === 'Billing cycle not found') {
+      return actionError('Billing cycle not found. It may have been updated or deleted. Please refresh and try again.');
+    }
+    if (error.message === 'Invoice not found') {
+      return actionError('Invoice not found. It may have been updated or deleted. Please refresh and try again.');
+    }
+    if (error.message === 'Invalid billing cycle dates') {
+      return actionError('Billing cycle has invalid dates. Please review the cycle and try again.');
+    }
+    if (
+      error.message === 'No recurring execution windows selected' ||
+      error.message === 'No billing settings found' ||
+      error.message === 'Nothing to bill' ||
+      error.message === 'Project billing configuration not found' ||
+      error.message === 'Project is configured for recurring invoice generation' ||
+      error.message === 'Recurring selector input execution window kind is not supported.' ||
+      error.message === 'Unable to generate a unique invoice number after multiple attempts.' ||
+      error.message.startsWith('Purchase Order is required') ||
+      error.message.startsWith('Client ') ||
+      error.message.startsWith('Service "') ||
+      error.message.startsWith('Invoice already exists for this recurring execution window') ||
+      error.message.startsWith('Recurring service periods were not materialized') ||
+      error.message.includes('Mixed currency billing is not supported')
+    ) {
+      return actionError(error.message);
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected invoice values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required invoice field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected invoice, client, contract, or billing record no longer exists. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('A conflicting invoice already exists. Please refresh and try again.');
+  }
+
+  return null;
+}
+
+async function withInvoiceGenerationActionErrors<T>(work: () => Promise<T>): Promise<T | InvoiceGenerationActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = invoiceGenerationActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+}
+
 function buildDuplicateRecurringInvoiceError(input: {
   selectorInput: IRecurringDueSelectionInput;
   invoiceId: string;
@@ -293,9 +705,8 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
     && executionWindow.periodKey
   ) {
     const linkedRow = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
-      return trx('recurring_service_periods')
+      return tenantDb(trx, params.tenant).table('recurring_service_periods')
         .where({
-          tenant: params.tenant,
           cadence_owner: 'client',
           schedule_key: executionWindow.scheduleKey,
           period_key: executionWindow.periodKey,
@@ -314,9 +725,8 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
     && executionWindow.contractLineId
   ) {
     const linkedRow = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
-      return trx('recurring_service_periods')
+      return tenantDb(trx, params.tenant).table('recurring_service_periods')
         .where({
-          tenant: params.tenant,
           obligation_type: 'contract_line',
           obligation_id: executionWindow.contractLineId,
           invoice_window_start: params.selectorInput.windowStart,
@@ -344,22 +754,15 @@ async function resolveCanonicalClientCadenceSelectorInput(params: {
 
   const recurringServicePeriod = await withTransaction(
     params.knex,
-    async (trx: Knex.Transaction) =>
-      trx('recurring_service_periods as rsp')
-        .join('contract_lines as cl', function () {
-          this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
-            .andOn('cl.tenant', '=', 'rsp.tenant');
-        })
-        .join('contracts as ct', function () {
-          this.on('ct.contract_id', '=', 'cl.contract_id')
-            .andOn('ct.tenant', '=', 'cl.tenant');
-        })
-        .join('clients as c', function () {
-          this.on('c.client_id', '=', 'ct.owner_client_id')
-            .andOn('c.tenant', '=', 'ct.tenant');
-        })
+    async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, params.tenant);
+      const query = db.table('recurring_service_periods as rsp');
+      db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
+      db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+      db.tenantJoin(query, 'clients as c', 'c.client_id', 'ct.owner_client_id');
+
+      return query
         .where({
-          'rsp.tenant': params.tenant,
           'rsp.cadence_owner': 'client',
           'c.client_id': params.clientId,
           'rsp.invoice_window_start': normalizedWindowStart,
@@ -369,7 +772,8 @@ async function resolveCanonicalClientCadenceSelectorInput(params: {
         .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
         .orderBy('rsp.service_period_start', 'asc')
         .orderBy('rsp.revision', 'asc')
-        .first('rsp.schedule_key', 'rsp.period_key'),
+        .first('rsp.schedule_key', 'rsp.period_key');
+    },
   );
 
   if (!recurringServicePeriod?.schedule_key || !recurringServicePeriod?.period_key) {
@@ -407,21 +811,15 @@ async function resolveCanonicalSelectorInputsForClientWindow(params: {
   const normalizedWindowEnd = normalizeRecurringWindowDate(params.windowEnd);
 
   const buildWindowRowsQuery = (trx: Knex.Transaction) =>
-    trx('recurring_service_periods as rsp')
-      .join('contract_lines as cl', function () {
-        this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
-          .andOn('cl.tenant', '=', 'rsp.tenant');
-      })
-      .join('contracts as ct', function () {
-        this.on('ct.contract_id', '=', 'cl.contract_id')
-          .andOn('ct.tenant', '=', 'cl.tenant');
-      })
-      .join('clients as c', function () {
-        this.on('c.client_id', '=', 'ct.owner_client_id')
-          .andOn('c.tenant', '=', 'ct.tenant');
-      })
+    (() => {
+      const db = tenantDb(trx, params.tenant);
+      const query = db.table('recurring_service_periods as rsp');
+      db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
+      db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+      db.tenantJoin(query, 'clients as c', 'c.client_id', 'ct.owner_client_id');
+      return query;
+    })()
       .where({
-        'rsp.tenant': params.tenant,
         'c.client_id': params.clientId,
         'rsp.invoice_window_start': normalizedWindowStart,
         'rsp.invoice_window_end': normalizedWindowEnd,
@@ -505,18 +903,14 @@ async function assertClientCadenceWindowFullyMaterialized(params: {
 }): Promise<void> {
   const activeRecurringLineRows = await withTransaction(
     params.knex,
-    async (trx: Knex.Transaction) =>
-      trx('client_contracts as cc')
-        .join('contracts as ct', function () {
-          this.on('ct.contract_id', '=', 'cc.contract_id')
-            .andOn('ct.tenant', '=', 'cc.tenant');
-        })
-        .join('contract_lines as cl', function () {
-          this.on('cl.contract_id', '=', 'ct.contract_id')
-            .andOn('cl.tenant', '=', 'ct.tenant');
-        })
+    async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, params.tenant);
+      const query = db.table('client_contracts as cc');
+      db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
+      db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
+
+      return query
         .where({
-          'cc.tenant': params.tenant,
           'cc.client_id': params.clientId,
           'cc.is_active': true,
           'cl.cadence_owner': 'client',
@@ -528,7 +922,8 @@ async function assertClientCadenceWindowFullyMaterialized(params: {
           this.where('cc.end_date', '>=', params.windowStart)
             .orWhereNull('cc.end_date');
         })
-        .select('cl.contract_line_id'),
+        .select('cl.contract_line_id');
+    },
   );
 
   const activeRecurringLineIds = Array.from(
@@ -545,9 +940,8 @@ async function assertClientCadenceWindowFullyMaterialized(params: {
   const materializedRows = await withTransaction(
     params.knex,
     async (trx: Knex.Transaction) =>
-      trx('recurring_service_periods')
+      tenantDb(trx, params.tenant).table('recurring_service_periods')
         .where({
-          tenant: params.tenant,
           cadence_owner: 'client',
           invoice_window_start: params.windowStart,
           invoice_window_end: params.windowEnd,
@@ -599,22 +993,15 @@ async function normalizeRecurringSelectorInput(params: {
   if (params.selectorInput.executionWindow.kind === 'client_cadence_window') {
     const recurringServicePeriod = await withTransaction(
       params.knex,
-      async (trx: Knex.Transaction) =>
-        trx('recurring_service_periods as rsp')
-          .join('contract_lines as cl', function () {
-            this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
-              .andOn('cl.tenant', '=', 'rsp.tenant');
-          })
-          .join('contracts as ct', function () {
-            this.on('ct.contract_id', '=', 'cl.contract_id')
-              .andOn('ct.tenant', '=', 'cl.tenant');
-          })
-          .join('clients as c', function () {
-            this.on('c.client_id', '=', 'ct.owner_client_id')
-              .andOn('c.tenant', '=', 'ct.tenant');
-          })
+      async (trx: Knex.Transaction) => {
+        const db = tenantDb(trx, params.tenant);
+        const query = db.table('recurring_service_periods as rsp');
+        db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
+        db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+        db.tenantJoin(query, 'clients as c', 'c.client_id', 'ct.owner_client_id');
+
+        return query
           .where({
-            'rsp.tenant': params.tenant,
             'rsp.cadence_owner': 'client',
             'rsp.schedule_key': params.selectorInput.executionWindow.scheduleKey,
             'rsp.period_key': params.selectorInput.executionWindow.periodKey,
@@ -626,7 +1013,8 @@ async function normalizeRecurringSelectorInput(params: {
           .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
           .orderBy('rsp.service_period_start', 'asc')
           .orderBy('rsp.revision', 'asc')
-          .first('rsp.schedule_key', 'rsp.period_key'),
+          .first('rsp.schedule_key', 'rsp.period_key');
+      },
     );
 
     if (!recurringServicePeriod?.schedule_key || !recurringServicePeriod?.period_key) {
@@ -656,21 +1044,14 @@ async function normalizeRecurringSelectorInput(params: {
     const recurringServicePeriod = await withTransaction(
       params.knex,
       async (trx: Knex.Transaction) => {
-        const query = trx('recurring_service_periods as rsp')
-          .join('contract_lines as cl', function () {
-            this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
-              .andOn('cl.tenant', '=', 'rsp.tenant');
-          })
-          .join('contracts as ct', function () {
-            this.on('ct.contract_id', '=', 'cl.contract_id')
-              .andOn('ct.tenant', '=', 'cl.tenant');
-          })
-          .join('clients as c', function () {
-            this.on('c.client_id', '=', 'ct.owner_client_id')
-              .andOn('c.tenant', '=', 'ct.tenant');
-          })
+        const db = tenantDb(trx, params.tenant);
+        const query = db.table('recurring_service_periods as rsp');
+        db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
+        db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+        db.tenantJoin(query, 'clients as c', 'c.client_id', 'ct.owner_client_id');
+
+        query
           .where({
-            'rsp.tenant': params.tenant,
             'rsp.cadence_owner': 'contract',
             'rsp.obligation_type': 'contract_line',
             'rsp.invoice_window_start': normalizedWindowStart,
@@ -900,24 +1281,20 @@ async function resolveApprovalBlockerRowsForSelectorInputs(params: {
     scheduleKey?: string | null;
   }> = [];
 
-  const persistedWindowRows = await withTransaction(params.knex, async (trx: Knex.Transaction) =>
-    trx('recurring_service_periods as rsp')
-      .join('contract_lines as cl', function joinContractLines() {
-        this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
-          .andOn('cl.tenant', '=', 'rsp.tenant');
-      })
-      .join('contracts as ct', function joinContracts() {
-        this.on('ct.contract_id', '=', 'cl.contract_id')
-          .andOn('ct.tenant', '=', 'cl.tenant');
-      })
-      .where('rsp.tenant', params.tenant)
+  const persistedWindowRows = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
+    const db = tenantDb(trx, params.tenant);
+    const query = db.table('recurring_service_periods as rsp');
+    db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
+    db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+
+    return query
       .where('ct.owner_client_id', canonicalSelection.clientId)
       .where('rsp.invoice_window_start', canonicalSelection.windowStart)
       .where('rsp.invoice_window_end', canonicalSelection.windowEnd)
       .whereIn('rsp.obligation_type', ['contract_line', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE])
       .whereIn('rsp.lifecycle_state', [...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES])
-      .select('rsp.obligation_id', 'rsp.service_period_start', 'rsp.service_period_end', 'rsp.schedule_key'),
-  );
+      .select('rsp.obligation_id', 'rsp.service_period_start', 'rsp.service_period_end', 'rsp.schedule_key');
+  });
 
   for (const row of persistedWindowRows) {
     resolvedRows.push({
@@ -1090,7 +1467,8 @@ export const getPurchaseOrderOverageForSelectionInput = withAuth(async (
   user,
   { tenant },
   selectorInput: IRecurringDueSelectionInput,
-): Promise<PurchaseOrderOverageResult | null> => {
+): Promise<PurchaseOrderOverageResult | null | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
   const { knex } = await createTenantKnex();
 
   if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
@@ -1102,13 +1480,15 @@ export const getPurchaseOrderOverageForSelectionInput = withAuth(async (
     tenant,
     selectorInput,
   });
+  });
 });
 
 export const getPurchaseOrderOverageForBillingCycle = withAuth(async (
   user,
   { tenant },
   billing_cycle_id: string
-): Promise<PurchaseOrderOverageResult | null> => {
+): Promise<PurchaseOrderOverageResult | null | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
   const { knex } = await createTenantKnex();
 
   const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -1116,8 +1496,8 @@ export const getPurchaseOrderOverageForBillingCycle = withAuth(async (
       throw new Error('Permission denied: Cannot generate invoices');
     }
 
-    return await trx('client_billing_cycles')
-      .where({ billing_cycle_id, tenant })
+    return await tenantDb(trx, tenant).table('client_billing_cycles')
+      .where({ billing_cycle_id })
       .first();
   });
 
@@ -1136,7 +1516,7 @@ export const getPurchaseOrderOverageForBillingCycle = withAuth(async (
   } else if (effective_date) {
     const effectiveDateUTC = toISOTimestamp(toPlainDate(effective_date));
     cycleStart = effectiveDateUTC;
-    cycleEnd = await getNextBillingDate(client_id, effectiveDateUTC);
+    cycleEnd = unwrapBillingHelperResult(await getNextBillingDate(client_id, effectiveDateUTC));
   } else {
     throw new Error('Invalid billing cycle dates');
   }
@@ -1151,6 +1531,7 @@ export const getPurchaseOrderOverageForBillingCycle = withAuth(async (
       windowStart: cycleStart,
       windowEnd: cycleEnd,
     }),
+  });
   });
 });
 
@@ -1223,27 +1604,30 @@ async function adaptToWasmViewModel(
   if (tenant) {
     const { knex } = await createTenantKnex(tenant); // Get knex instance again if needed
     const tenantClientLink = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('tenant_companies')
-        .where({ tenant: tenant, is_default: true })
+      return await tenantDb(trx, tenant).table('tenant_companies')
+        .where({ is_default: true })
         .select('client_id')
         .first();
     });
 
     if (tenantClientLink) {
       const tenantClientDetails = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('clients as c')
-          .leftJoin('client_locations as cl', function() {
-            this.on('c.client_id', '=', 'cl.client_id')
-                .andOn('c.tenant', '=', 'cl.tenant')
-                .andOn('cl.is_default', '=', trx.raw('true'));
-          })
+        const db = tenantDb(trx, tenant);
+        const query = db.table('clients as c');
+        db.tenantJoin(query, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
+          type: 'left',
+          on(join) {
+            join.andOn('cl.is_default', '=', trx.raw('true'));
+          },
+        });
+
+        return await query
           .select(
             'c.client_name',
             'cl.address_line1 as address'
           )
           .where({
             'c.client_id': tenantClientLink.client_id,
-            'c.tenant': tenant
           })
           .first();
       });
@@ -1299,8 +1683,8 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     .sort()
     .join('|');
 
-  const clientForValidation = await knex('clients')
-    .where({ client_id, tenant })
+  const clientForValidation = await tenantDb(knex, tenant).table('clients')
+    .where({ client_id })
     .select('client_name')
     .first();
 
@@ -1332,12 +1716,19 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
 
   const client = await getClientDetails(knex, tenant, client_id);
   const previewInvoiceDate = Temporal.Now.plainDateISO().toString();
-  const due_date = await getDueDate(client_id, previewInvoiceDate);
+  const due_date = unwrapBillingHelperResult(await getDueDate(client_id, previewInvoiceDate));
   const chargesByContractGroup: { [key: string]: IBillingCharge[] } = {};
+  const chargesByProjectGroup: { [key: string]: IBillingCharge[] } = {};
   const nonContractAssociatedCharges: IBillingCharge[] = [];
 
   for (const charge of billingResult.charges) {
-    if (charge.client_contract_id && charge.contract_name) {
+    const projectMetadata = getProjectChargeMetadata(charge);
+    if (projectMetadata) {
+      if (!chargesByProjectGroup[projectMetadata.projectId]) {
+        chargesByProjectGroup[projectMetadata.projectId] = [];
+      }
+      chargesByProjectGroup[projectMetadata.projectId].push(charge);
+    } else if (charge.client_contract_id && charge.contract_name) {
       const contractKey = charge.contract_name;
       if (!chargesByContractGroup[contractKey]) {
         chargesByContractGroup[contractKey] = [];
@@ -1452,6 +1843,55 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     });
   }
 
+  for (const charges of Object.values(chargesByProjectGroup)) {
+    const metadata = getProjectChargeMetadata(charges[0]);
+    if (!metadata) continue;
+
+    const projectGroupHeaderId = 'preview-' + uuidv4();
+    invoiceItems.push({
+      item_id: projectGroupHeaderId,
+      invoice_id: `preview-${previewInvoiceKey}`,
+      description: `Project: ${metadata.projectName}`,
+      quantity: 1,
+      unit_price: 0,
+      total_price: 0,
+      net_amount: 0,
+      tax_amount: 0,
+      tax_rate: 0,
+      is_manual: false,
+      is_bundle_header: true,
+      rate: 0,
+    });
+
+    charges.forEach((charge) => {
+      const recurringSummary = resolvePreviewRecurringSummary(charge);
+      invoiceItems.push({
+        item_id: 'preview-' + uuidv4(),
+        invoice_id: `preview-${previewInvoiceKey}`,
+        service_id: charge.serviceId,
+        description: charge.serviceName || 'Project charge',
+        quantity: getChargeQuantity(charge),
+        unit_price: getChargeUnitPrice(charge),
+        total_price: charge.total,
+        tax_amount: charge.tax_amount || 0,
+        tax_rate: charge.tax_rate || 0,
+        tax_region: charge.tax_region || '',
+        net_amount: charge.total - (charge.tax_amount || 0),
+        is_manual: false,
+        parent_item_id: projectGroupHeaderId,
+        rate: charge.rate,
+        service_period_start: recurringSummary.servicePeriodStart,
+        service_period_end: recurringSummary.servicePeriodEnd,
+        billing_timing: recurringSummary.billingTiming,
+        recurring_detail_periods: recurringSummary.recurringDetailPeriods?.map((period) => ({
+          service_period_start: period.servicePeriodStart ?? null,
+          service_period_end: period.servicePeriodEnd ?? null,
+          billing_timing: period.billingTiming ?? null,
+        })),
+      });
+    });
+  }
+
   const previewTax = await calculatePreviewTax(
     billingResult.charges,
     client_id,
@@ -1553,11 +1993,11 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
     return fallbackSelectorInput
       ? buildPreviewInvoiceFailure(
           fallbackSelectorInput,
-          error instanceof Error ? error.message : 'An error occurred while previewing the invoice',
+          previewInvoiceErrorMessage(error),
         )
       : {
           success: false,
-          error: error instanceof Error ? error.message : 'An error occurred while previewing the invoice',
+          error: previewInvoiceErrorMessage(error),
         };
   }
 });
@@ -1590,7 +2030,7 @@ export const previewInvoiceForSelectionInput = withAuth(async (
   } catch (error) {
     return buildPreviewInvoiceFailure(
       normalizedSelectorInput,
-      error instanceof Error ? error.message : 'An error occurred while previewing the invoice',
+      previewInvoiceErrorMessage(error),
     );
   }
 });
@@ -1609,10 +2049,9 @@ export const previewInvoice = withAuth(async (
     }
 
     const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('client_billing_cycles')
+      return await tenantDb(trx, tenant).table('client_billing_cycles')
         .where({
           billing_cycle_id,
-          tenant
         })
         .first();
     });
@@ -1635,7 +2074,7 @@ export const previewInvoice = withAuth(async (
     } else if (effective_date) {
       cycleStart = normalizeRecurringWindowDate(effective_date);
       cycleEnd = normalizeRecurringWindowDate(
-        await getNextBillingDate(client_id, cycleStart),
+        unwrapBillingHelperResult(await getNextBillingDate(client_id, cycleStart)),
       );
     } else {
       throw new Error('Invalid billing cycle dates');
@@ -1661,22 +2100,223 @@ export const previewInvoice = withAuth(async (
     return selectorInput
       ? buildPreviewInvoiceFailure(
           selectorInput,
-          error instanceof Error ? error.message : 'An error occurred while previewing the invoice',
+          previewInvoiceErrorMessage(error),
         )
       : {
           success: false,
-          error: error instanceof Error ? error.message : 'An error occurred while previewing the invoice'
+          error: previewInvoiceErrorMessage(error)
         };
   }
 });
 
 // Update return type to the interface InvoiceViewModel
+export const generateProjectInvoice = withAuth(async (
+  user,
+  { tenant },
+  projectId: string,
+  entryIds?: string[],
+): Promise<{ invoice_id: string; warnings: string[] } | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
+  if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
+    throw new Error('Permission denied: Cannot generate invoices');
+  }
+
+  const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
+  const projectQuery = db.table('projects as project');
+  db.tenantJoin(projectQuery, 'project_billing_configs as config', 'project.project_id', 'config.project_id');
+  const project = await projectQuery
+    .where('project.project_id', projectId)
+    .select(
+      'project.project_id',
+      'project.client_id',
+      'project.start_date',
+      'project.created_at',
+      'config.invoice_mode',
+    )
+    .first();
+
+  if (!project) {
+    throw new Error('Project billing configuration not found');
+  }
+  if (project.invoice_mode !== 'standalone') {
+    throw new Error('Project is configured for recurring invoice generation');
+  }
+
+  const billingEngine = new BillingEngine();
+  const billingResult = await billingEngine.calculateProjectBilling(projectId, entryIds);
+  if (billingResult.error) {
+    throw new Error(billingResult.error);
+  }
+  if (billingResult.charges.length === 0) {
+    throw new Error(billingResult.warnings?.[0] ?? 'Nothing to bill');
+  }
+  const hasNonZeroContent = billingResult.charges.some((charge) => charge.total !== 0 || (charge.tax_amount || 0) !== 0);
+  if (!hasNonZeroContent) {
+    throw new Error('A product-only phase needs at least one billable assigned product before an invoice can be created.');
+  }
+
+  const cycleStart = toISOTimestamp(toPlainDate(project.start_date ?? project.created_at));
+  const cycleEnd = toISOTimestamp(Temporal.Now.plainDateISO().add({ days: 1 }));
+  const createdInvoice = await createInvoiceFromBillingResult(
+    billingResult,
+    project.client_id,
+    cycleStart,
+    cycleEnd,
+    null,
+    user.user_id,
+    { projectId },
+  );
+
+  return {
+    invoice_id: createdInvoice.invoice_id,
+    warnings: billingResult.warnings ?? [],
+  };
+  });
+});
+
+export interface SeparateProjectProductInvoiceReviewRow {
+  project_material_id: string;
+  service_id: string;
+  service_name: string;
+  description: string | null;
+  quantity: number;
+  rate: number;
+  currency_code: string;
+  total: number;
+}
+
+export interface SeparateProjectProductInvoiceReview {
+  project_id: string;
+  client_id: string;
+  rows: SeparateProjectProductInvoiceReviewRow[];
+}
+
+async function loadSeparateProjectProductRows(
+  knex: Knex,
+  tenant: string,
+  projectId: string,
+  materialIds?: string[],
+): Promise<{ client_id: string; start_date: string | Date | null; created_at: string | Date; rows: SeparateProjectProductInvoiceReviewRow[] }> {
+  const db = tenantDb(knex, tenant);
+  const project = await db.table('projects')
+    .where({ project_id: projectId })
+    .first('project_id', 'client_id', 'start_date', 'created_at');
+  if (!project) throw new Error('Project not found');
+
+  const query = db.table('project_materials as material');
+  db.tenantJoin(query, 'service_catalog as service', 'material.service_id', 'service.service_id');
+  query.where({
+    'material.project_id': projectId,
+    'material.is_billed': false,
+    'material.billing_destination': 'separate',
+  });
+  if (materialIds) query.whereIn('material.project_material_id', materialIds);
+  const rows = await query
+    .select(
+      'material.project_material_id',
+      'material.service_id',
+      'service.service_name',
+      'material.description',
+      'material.quantity',
+      'material.rate',
+      'material.currency_code',
+    )
+    .orderBy('material.created_at', 'asc');
+
+  return {
+    client_id: project.client_id,
+    start_date: project.start_date,
+    created_at: project.created_at,
+    rows: rows.map((row: Omit<SeparateProjectProductInvoiceReviewRow, 'total'>) => ({
+      ...row,
+      quantity: Number(row.quantity),
+      rate: Number(row.rate),
+      total: Number(row.quantity) * Number(row.rate),
+    })),
+  };
+}
+
+export const getSeparateProjectProductInvoiceReview = withAuth(async (
+  user,
+  { tenant },
+  projectId: string,
+): Promise<SeparateProjectProductInvoiceReview | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
+    if (!await hasPermission(user, 'project', 'read')) {
+      throw new Error('Permission denied: Cannot read project products');
+    }
+    if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
+      throw new Error('Permission denied: Cannot generate invoices');
+    }
+    const { knex } = await createTenantKnex();
+    const result = await loadSeparateProjectProductRows(knex, tenant, projectId);
+    return { project_id: projectId, client_id: result.client_id, rows: result.rows };
+  });
+});
+
+export const createSeparateProjectProductInvoices = withAuth(async (
+  user,
+  { tenant },
+  projectId: string,
+  selectedMaterialIds: string[],
+): Promise<{ invoices: Array<{ invoice_id: string; currency_code: string; product_count: number }> } | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
+    if (!await hasPermission(user, 'project', 'update')) {
+      throw new Error('Permission denied: Cannot update project products');
+    }
+    if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
+      throw new Error('Permission denied: Cannot generate invoices');
+    }
+    const uniqueIds = [...new Set(selectedMaterialIds)];
+    if (uniqueIds.length === 0) throw new Error('Select at least one product to invoice');
+
+    const { knex } = await createTenantKnex();
+    const selection = await loadSeparateProjectProductRows(knex, tenant, projectId, uniqueIds);
+    if (selection.rows.length !== uniqueIds.length) {
+      throw new Error('One or more selected products are no longer eligible for a separate invoice. Refresh and review the batch.');
+    }
+    const rowsByCurrency = selection.rows.reduce((groups, row) => {
+      const group = groups.get(row.currency_code) ?? [];
+      group.push(row);
+      groups.set(row.currency_code, group);
+      return groups;
+    }, new Map<string, SeparateProjectProductInvoiceReviewRow[]>());
+
+    const cycleStart = toISOTimestamp(toPlainDate(selection.start_date ?? selection.created_at));
+    const cycleEnd = toISOTimestamp(Temporal.Now.plainDateISO().add({ days: 1 }));
+    const invoices: Array<{ invoice_id: string; currency_code: string; product_count: number }> = [];
+    for (const [currencyCode, rows] of rowsByCurrency) {
+      const billingResult = await new BillingEngine().calculateSeparateProjectProductBilling(
+        projectId,
+        rows.map((row) => row.project_material_id),
+        currencyCode,
+      );
+      if (billingResult.charges.length !== rows.length) {
+        throw new Error(`The ${currencyCode} product selection changed before the invoice could be created. Refresh and try again.`);
+      }
+      const invoice = await createInvoiceFromBillingResult(
+        billingResult,
+        selection.client_id,
+        cycleStart,
+        cycleEnd,
+        null,
+        user.user_id,
+        { projectId },
+      );
+      invoices.push({ invoice_id: invoice.invoice_id, currency_code: currencyCode, product_count: rows.length });
+    }
+    return { invoices };
+  });
+});
+
 export const generateInvoice = withAuth(async (
   user,
   { tenant },
   billing_cycle_id: string,
   options: { allowPoOverage?: boolean } = {}
-): Promise<InvoiceViewModel | null> => {
+): Promise<InvoiceViewModel | null | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
   // Get billing cycle details
   const { knex } = await createTenantKnex();
 
@@ -1686,10 +2326,9 @@ export const generateInvoice = withAuth(async (
       throw new Error('Permission denied: Cannot generate invoices');
     }
 
-    return await trx('client_billing_cycles')
+    return await tenantDb(trx, tenant).table('client_billing_cycles')
       .where({
         billing_cycle_id,
-        tenant
       })
       .first();
   });
@@ -1709,7 +2348,7 @@ export const generateInvoice = withAuth(async (
   } else if (effective_date) {
     cycleStart = normalizeRecurringWindowDate(effective_date);
     cycleEnd = normalizeRecurringWindowDate(
-      await getNextBillingDate(client_id, cycleStart),
+      unwrapBillingHelperResult(await getNextBillingDate(client_id, cycleStart)),
     );
   } else {
     throw new Error('Invalid billing cycle dates');
@@ -1755,6 +2394,7 @@ export const generateInvoice = withAuth(async (
     options,
     bridgeMetadata: { billingCycleId: billing_cycle_id },
   });
+  });
 });
 
 export const generateInvoiceForSelectionInput = withAuth(async (
@@ -1763,7 +2403,8 @@ export const generateInvoiceForSelectionInput = withAuth(async (
   selectorInput: IRecurringDueSelectionInput,
   options: { allowPoOverage?: boolean } = {},
   bridgeMetadata?: RecurringBridgeMetadata,
-): Promise<InvoiceViewModel | null> => {
+): Promise<InvoiceViewModel | null | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
   if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
     throw new Error('Permission denied: invoice create or generate required');
   }
@@ -1794,6 +2435,7 @@ export const generateInvoiceForSelectionInput = withAuth(async (
     options,
     bridgeMetadata,
   });
+  });
 });
 
 async function generateInvoiceForNormalizedSelectionInputs(params: {
@@ -1811,8 +2453,8 @@ async function generateInvoiceForNormalizedSelectionInputs(params: {
   const cycleStart = normalizedSelectorInput.windowStart;
   const cycleEnd = normalizedSelectorInput.windowEnd;
 
-  const clientForValidation = await knex('clients')
-    .where({ client_id, tenant })
+  const clientForValidation = await tenantDb(knex, tenant).table('clients')
+    .where({ client_id })
     .select('client_name')
     .first();
   if (clientForValidation) {
@@ -1904,10 +2546,10 @@ async function generateInvoiceForNormalizedSelectionInputs(params: {
   }
 
   const clientSettings = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return trx('client_billing_settings').where({ client_id, tenant }).first();
+    return tenantDb(trx, tenant).table('client_billing_settings').where({ client_id }).first();
   });
   const defaultSettings = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return trx('default_billing_settings').where({ tenant }).first();
+    return tenantDb(trx, tenant).table('default_billing_settings').first();
   });
   const settings = clientSettings || defaultSettings;
   if (!settings) {
@@ -1965,7 +2607,8 @@ export const generateInvoiceForSelectionInputs = withAuth(async (
   selectorInputs: IRecurringDueSelectionInput[],
   options: { allowPoOverage?: boolean } = {},
   bridgeMetadata?: RecurringBridgeMetadata,
-): Promise<InvoiceViewModel | null> => {
+): Promise<InvoiceViewModel | null | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
   if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
     throw new Error('Permission denied: invoice create or generate required');
   }
@@ -2003,6 +2646,7 @@ export const generateInvoiceForSelectionInputs = withAuth(async (
     options,
     bridgeMetadata,
   });
+  });
 });
 
 export const generateInvoiceNumber = withAuth(async (
@@ -2026,7 +2670,8 @@ export const generateInvoicePDF = withAuth(async (
   user,
   { tenant },
   invoiceId: string
-): Promise<{ file_id: string }> => {
+): Promise<{ file_id: string } | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
   const { knex } = await createTenantKnex();
 
   // Check permissions
@@ -2038,8 +2683,8 @@ export const generateInvoicePDF = withAuth(async (
   const pdfGenerationService = createPDFGenerationService(tenant);
 
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('invoices')
-      .where({ invoice_id: invoiceId, tenant })
+    return await tenantDb(trx, tenant).table('invoices')
+      .where({ invoice_id: invoiceId })
       .first(['invoice_number']);
   });
 
@@ -2054,6 +2699,7 @@ export const generateInvoicePDF = withAuth(async (
   });
 
   return { file_id: fileRecord.file_id };
+  });
 });
 
 export const downloadInvoicePDF = withAuth(async (
@@ -2061,7 +2707,8 @@ export const downloadInvoicePDF = withAuth(async (
   { tenant },
   invoiceId: string,
   templateId?: string | null
-): Promise<{ pdfData: number[]; invoiceNumber: string }> => {
+): Promise<{ pdfData: number[]; invoiceNumber: string } | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
   try {
     console.log('[downloadInvoicePDF] Called with invoiceId:', invoiceId, 'templateId:', templateId);
 
@@ -2074,8 +2721,8 @@ export const downloadInvoicePDF = withAuth(async (
 
     // Get invoice details
     const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('invoices')
-        .where({ invoice_id: invoiceId, tenant })
+      return await tenantDb(trx, tenant).table('invoices')
+        .where({ invoice_id: invoiceId })
         .first();
     });
 
@@ -2104,6 +2751,7 @@ export const downloadInvoicePDF = withAuth(async (
     console.error('[downloadInvoicePDF] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     throw error;
   }
+  });
 });
 
 export const createInvoiceFromBillingResult = withAuth(async (
@@ -2114,7 +2762,8 @@ export const createInvoiceFromBillingResult = withAuth(async (
   cycleStart: ISO8601String,
   cycleEnd: ISO8601String,
   billing_cycle_id: string | null,
-  userId: string
+  userId: string,
+  options: { projectId?: string } = {},
 ): Promise<IInvoice> => {
   // Verify that the userId matches the current user
   if (user.user_id !== userId) {
@@ -2142,7 +2791,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
     throw new Error(`Client '${client.client_name}' does not have a default tax region configured. Please set one before generating invoices.`);
   }
   const currentDate = Temporal.Now.plainDateISO().toString();
-  const due_date = await getDueDate(clientId, currentDate);
+  const due_date = unwrapBillingHelperResult(await getDueDate(clientId, currentDate));
   // taxService initialized above
   // let subtotal = 0; // Subtotal will be calculated by persistInvoiceCharges
 
@@ -2158,6 +2807,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
   // Create base invoice object
   const invoiceData = {
     client_id: clientId,
+    ...(options.projectId ? { project_id: options.projectId } : {}),
     client_contract_id: clientContractId,
     po_number: invoicePoNumber,
     invoice_date: toISODate(Temporal.PlainDate.from(currentDate)),
@@ -2195,7 +2845,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
           throw new Error('Permission denied: Cannot create invoices');
         }
 
-        return await trx('invoices').insert(invoiceData).returning('*');
+        return await tenantDb(trx, tenant).table('invoices').insert(invoiceData).returning('*');
       });
       newInvoice = insertedInvoice;
       break;
@@ -2207,7 +2857,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
         error.constraint === 'unique_invoice_number_per_tenant') {
         retryCount++;
         if (retryCount >= maxRetries) {
-          throw new Error('Failed to generate unique invoice number after multiple attempts');
+          throw new Error('Unable to generate a unique invoice number after multiple attempts.');
         }
       } else {
         throw error;
@@ -2216,9 +2866,10 @@ export const createInvoiceFromBillingResult = withAuth(async (
   }
 
   if (!newInvoice) {
-    throw new Error('Failed to create invoice');
+    throw new Error('Invoice creation completed without returning an invoice.');
   }
 
+  let persistedCapDeltas: ProjectCapPersistenceDelta[] = [];
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Permission already checked in previous transaction, no need to recheck
     // Just use currentUser that we already validated
@@ -2239,42 +2890,78 @@ export const createInvoiceFromBillingResult = withAuth(async (
       },
       expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now
     };
-    const calculatedSubtotal = await persistInvoiceCharges(
+    const capDeltas = await prepareProjectCapChargesForPersistence(
+      trx,
+      billingResult.charges,
+    );
+    persistedCapDeltas = capDeltas;
+    const projectScheduleCharges = billingResult.charges.filter(isProjectScheduleCharge);
+    const standardCharges = billingResult.charges.filter((charge) => !isProjectScheduleCharge(charge));
+    const standardSubtotal = await persistInvoiceCharges(
       trx,
       newInvoice!.invoice_id,
-      billingResult.charges,
+      standardCharges,
       client,
       sessionObject,
       tenant
     );
+    const projectScheduleSubtotal = await persistProjectScheduleCharges(
+      trx,
+      newInvoice!.invoice_id,
+      projectScheduleCharges,
+      client,
+      tenant,
+      userId,
+    );
+    const calculatedSubtotal = standardSubtotal + projectScheduleSubtotal;
 
     // Mark ticket/project materials in this billing window as billed by this invoice.
     // These materials were included by BillingEngine as non-contract charges (like usage/time).
     try {
       const billedAt = Temporal.Now.instant().toString();
-      await trx('ticket_materials')
-        .where({ tenant, client_id: client.client_id, is_billed: false })
-        .andWhere('currency_code', '=', billingResult.currency_code || 'USD')
-        .andWhere('created_at', '>=', cycleStart)
-        .andWhere('created_at', '<', cycleEnd)
-        .update({
-          is_billed: true,
-          billed_invoice_id: newInvoice!.invoice_id,
-          billed_at: billedAt,
-          updated_at: billedAt
-        });
+      const materialCharges = billingResult.charges.filter((charge): charge is IProductCharge => (
+        charge.type === 'product'
+        && Boolean((charge as IProductCharge).material_source_id)
+        && Boolean((charge as IProductCharge).material_source_type)
+      ));
+      const projectMaterialIds = materialCharges
+        .filter((charge) => charge.material_source_type === 'project')
+        .map((charge) => charge.material_source_id!);
+      const ticketMaterialIds = materialCharges
+        .filter((charge) => charge.material_source_type === 'ticket')
+        .map((charge) => charge.material_source_id!);
 
-      await trx('project_materials')
-        .where({ tenant, client_id: client.client_id, is_billed: false })
-        .andWhere('currency_code', '=', billingResult.currency_code || 'USD')
-        .andWhere('created_at', '>=', cycleStart)
-        .andWhere('created_at', '<', cycleEnd)
-        .update({
-          is_billed: true,
-          billed_invoice_id: newInvoice!.invoice_id,
-          billed_at: billedAt,
-          updated_at: billedAt
-        });
+      if (projectMaterialIds.length > 0) {
+        const uniqueProjectMaterialIds = [...new Set(projectMaterialIds)];
+        const updatedCount = await tenantDb(trx, tenant).table('project_materials')
+          .where({ is_billed: false })
+          .whereIn('project_material_id', uniqueProjectMaterialIds)
+          .update({
+            is_billed: true,
+            billed_invoice_id: newInvoice!.invoice_id,
+            billed_at: billedAt,
+            updated_at: billedAt
+          });
+        if (updatedCount !== uniqueProjectMaterialIds.length) {
+          throw new Error('A project product changed before the invoice could be committed. Refresh and try again.');
+        }
+      }
+      if (ticketMaterialIds.length > 0) {
+        const uniqueTicketMaterialIds = [...new Set(ticketMaterialIds)];
+        const updatedCount = await tenantDb(trx, tenant).table('ticket_materials')
+          .where({ is_billed: false })
+          .whereIn('ticket_material_id', uniqueTicketMaterialIds)
+          .update({
+            is_billed: true,
+            billed_invoice_id: newInvoice!.invoice_id,
+            billed_at: billedAt,
+            updated_at: billedAt
+          });
+        if (updatedCount !== uniqueTicketMaterialIds.length) {
+          throw new Error('A ticket product changed before the invoice could be committed. Refresh and try again.');
+        }
+
+      }
     } catch (err) {
       if (!isMissingRelationError(err)) {
         throw err;
@@ -2302,7 +2989,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
         tenant,
         created_by: userId
       };
-      await trx('invoice_charges').insert(discountItem);
+      await tenantDb(trx, tenant).table('invoice_charges').insert(discountItem);
       discountSubtotalAdjustment += netAmount; // Add negative amount
     }
 
@@ -2325,8 +3012,8 @@ export const createInvoiceFromBillingResult = withAuth(async (
     const creditToApply = Math.min(availableCredit, Math.ceil(totalAmount));
 
     // Update the invoice with subtotal, tax, and total amount
-    await trx('invoices')
-      .where({ invoice_id: newInvoice!.invoice_id, tenant })
+    await tenantDb(trx, tenant).table('invoices')
+      .where({ invoice_id: newInvoice!.invoice_id })
       .update({
         subtotal: finalSubtotal,
         tax: finalTax,
@@ -2343,7 +3030,129 @@ export const createInvoiceFromBillingResult = withAuth(async (
       invoiceData.invoice_number
       // expirationDate is optional and not needed here
     );
+
+    // Keep the action result aligned with the totals committed above. This is
+    // especially important when persistence re-applies a project cap and
+    // changes the previewed charge totals.
+    newInvoice = {
+      ...newInvoice!,
+      subtotal: finalSubtotal,
+      tax: finalTax,
+      total_amount: Math.ceil(totalAmount),
+      credit_applied: 0,
+    };
+
+    if (capDeltas.length > 0) {
+      const invoiceTransaction = await tenantDb(trx, tenant).table('transactions')
+        .where({
+          invoice_id: newInvoice!.invoice_id,
+          type: 'invoice_generated',
+        })
+        .orderBy('created_at', 'desc')
+        .first('transaction_id', 'metadata');
+      if (!invoiceTransaction) {
+        throw new Error(`Invoice transaction for ${newInvoice!.invoice_id} was not found`);
+      }
+      const existingMetadata = invoiceTransaction.metadata
+        && typeof invoiceTransaction.metadata === 'object'
+        ? invoiceTransaction.metadata
+        : {};
+      await tenantDb(trx, tenant).table('transactions')
+        .where({ transaction_id: invoiceTransaction.transaction_id })
+        .update({
+          metadata: {
+            ...existingMetadata,
+            project_billing_cap_deltas: capDeltas,
+            project_billing_cap_rolled_back: false,
+          },
+        });
+    }
+
+  }).catch(async (error) => {
+    // The invoice header is allocated separately so unique invoice-number
+    // retries stay small. Compensate a failed content transaction immediately;
+    // callers must never be left with an empty orphan draft.
+    try {
+      await withTransaction(knex, async (trx: Knex.Transaction) => {
+        await tenantDb(trx, tenant).table('invoices')
+          .where({ invoice_id: newInvoice!.invoice_id, status: 'draft' })
+          .delete();
+      });
+    } catch (cleanupError) {
+      console.error(
+        `[createInvoiceFromBillingResult] Failed to remove orphan invoice ${newInvoice.invoice_id}`,
+        cleanupError,
+      );
+    }
+    throw error;
   });
+
+  const invoicedScheduleRows = await knex('project_billing_schedule_entries as entry')
+    .join('project_billing_configs as config', function joinProjectBillingConfig() {
+      this.on('config.tenant', '=', 'entry.tenant')
+        .andOn('config.config_id', '=', 'entry.config_id');
+    })
+    .where('entry.tenant', tenant)
+    .andWhere('entry.invoice_id', newInvoice.invoice_id)
+    .select<Array<{
+      schedule_entry_id: string;
+      config_id: string;
+      project_id: string;
+      description: string;
+      requires_payment_before_work: boolean;
+    }>>(
+      'entry.schedule_entry_id',
+      'entry.config_id',
+      'config.project_id',
+      'entry.description',
+      'entry.requires_payment_before_work',
+    );
+  for (const entry of invoicedScheduleRows) {
+    await publishEvent({
+      eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
+      payload: {
+        tenantId: tenant,
+        projectId: entry.project_id,
+        configId: entry.config_id,
+        entryId: entry.schedule_entry_id,
+        description: entry.description,
+        status: 'invoiced',
+        previousStatus: 'approved',
+        requiresPaymentBeforeWork: entry.requires_payment_before_work,
+        userId,
+        changes: { invoiceId: newInvoice.invoice_id },
+      },
+    });
+  }
+
+  for (const delta of persistedCapDeltas) {
+    for (const threshold of delta.notifiedThresholds) {
+      await publishEvent({
+        eventType: 'PROJECT_BUDGET_THRESHOLD_REACHED',
+        payload: {
+          tenantId: tenant,
+          projectId: delta.projectId,
+          threshold,
+          billed: delta.billedAfter,
+          cap: delta.cap,
+        },
+      });
+    }
+    if (isFirstProjectCapOverage(delta.writtenDownBefore, delta.writtenDownAfter)) {
+      await publishEvent({
+        eventType: 'PROJECT_BUDGET_EXCEEDED',
+        payload: {
+          tenantId: tenant,
+          projectId: delta.projectId,
+          invoiceId: newInvoice.invoice_id,
+          billed: delta.billedAfter,
+          attempted: delta.billedAfter + delta.writtenDownAfter,
+          cap: delta.cap,
+          writtenDown: delta.writtenDownAfter,
+        },
+      });
+    }
+  }
 
   // Track analytics
   const { analytics, AnalyticsEvents } = await getAnalyticsAsync();

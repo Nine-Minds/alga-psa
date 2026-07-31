@@ -6,7 +6,20 @@
 import type {
   HuntressAgent,
   HuntressIncidentReport,
+  HuntressRemediation,
+  HuntressRemediationParameter,
 } from '../../../../interfaces/huntress.interfaces';
+
+/**
+ * The Huntress API sometimes returns fields typed here as arrays (e.g. a
+ * remediation's `parameters`) as objects or scalars. Coerce so a malformed
+ * incident can't throw inside content building — an uncaught throw fails the
+ * whole poll and, because the cursor only advances past successes, the bad
+ * incident is retried forever and wedges the integration.
+ */
+function asArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
 
 /**
  * Portal deep link. The path is the standard incident-report route; the exact
@@ -58,7 +71,7 @@ export function buildTicketBody(
   lines.push(`**Severity:** ${incident.severity}`);
   lines.push(`**Status:** ${incident.status}`);
   if (incident.platform) lines.push(`**Platform:** ${incident.platform}`);
-  const indicators = incident.indicator_types
+  const indicators = asArray<string>(incident.indicator_types)
     .map((t) => `${t} (${incident.indicator_counts?.[t] ?? '?'})`)
     .join(', ');
   if (indicators) lines.push(`**Indicators:** ${indicators}`);
@@ -91,12 +104,15 @@ export function buildTicketBody(
     lines.push('');
   }
 
-  const remediations = incident.remediations?.items ?? [];
+  const remediations = asArray<HuntressRemediation>(incident.remediations?.items);
   if (remediations.length > 0) {
     lines.push('## Remediations');
     lines.push('');
     for (const r of remediations) {
-      const params = (r.parameters ?? []).map((p) => p.description).join(', ');
+      const params = asArray<HuntressRemediationParameter>(r.parameters)
+        .map((p) => p?.description)
+        .filter(Boolean)
+        .join(', ');
       lines.push(`- [${r.status ?? 'unknown'}] ${r.action ?? r.type}${params ? `: ${params}` : ''}`);
     }
     if (incident.remediations?.has_more) {

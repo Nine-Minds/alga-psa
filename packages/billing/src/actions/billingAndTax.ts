@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { ISO8601String } from '@alga-psa/types';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import { withTransaction } from '@alga-psa/db';
@@ -21,6 +21,7 @@ import {
     IRecurringDueWorkMaterializationGap,
     IRecurringDueWorkPaginatedResponse,
     IRecurringDueWorkRow,
+    RecurringDueWorkChargeType,
     RECURRING_RANGE_SEMANTICS,
 } from '@alga-psa/types';
 import { DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES } from '@alga-psa/types';
@@ -45,9 +46,15 @@ import {
 import { BillingEngine } from '../lib/billing/billingEngine';
 import {
     detectRecurringApprovalBlockers,
+    detectRecurringApprovalWarnings,
     formatApprovalBlockedReason,
     type RecurringApprovalBlockerCounts,
+    type RecurringApprovalWarnings,
 } from './recurringApprovalBlockers';
+import {
+    permissionError,
+    type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 // Types for paginated billing periods
 export interface BillingPeriodWithMeta extends IClientContractLineCycle {
@@ -101,6 +108,7 @@ interface PersistedRecurringDueWorkDbRow {
     contract_name?: string | null;
     contract_line_id?: string | null;
     contract_line_name?: string | null;
+    contract_line_type?: string | null;
     is_system_managed_default?: boolean | null;
     client_contract_id?: string | null;
     po_required?: boolean | null;
@@ -277,16 +285,12 @@ function buildAvailableBillingPeriodsBaseQuery(
     tenant: string,
     options: FetchBillingPeriodsOptions,
 ) {
-    const query = trx('client_billing_cycles as cbc')
-        .join('clients as c', function () {
-            this.on('c.client_id', '=', 'cbc.client_id')
-                .andOn('c.tenant', '=', 'cbc.tenant');
-        })
-        .leftJoin('invoices as i', function () {
-            this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
-                .andOn('i.tenant', '=', 'cbc.tenant');
-        })
-        .where('cbc.tenant', tenant)
+    const db = tenantDb(trx, tenant);
+    const query = db.table('client_billing_cycles as cbc');
+    db.tenantJoin(query, 'clients as c', 'c.client_id', 'cbc.client_id');
+    db.tenantJoin(query, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id', { type: 'left' });
+
+    query
         .whereNotNull('cbc.period_end_date')
         .whereNull('i.invoice_id');
 
@@ -363,36 +367,27 @@ async function fetchPersistedRecurringDueWorkDbRows(
 ): Promise<PersistedRecurringDueWorkDbRow[]> {
     const dueStates = [...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES];
 
-    const contractLineRowsQuery = trx('recurring_service_periods as rsp')
-        .join('contract_lines as cl', function () {
-            this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
-                .andOn('cl.tenant', '=', 'rsp.tenant');
-        })
-        .join('contracts as ct', function () {
-            this.on('ct.contract_id', '=', 'cl.contract_id')
-                .andOn('ct.tenant', '=', 'cl.tenant');
-        })
-        .join('clients as c', function () {
-            this.on('c.client_id', '=', 'ct.owner_client_id')
-                .andOn('c.tenant', '=', 'ct.tenant');
-        })
-        .leftJoin('client_contracts as cc', function () {
-            this.on('cc.contract_id', '=', 'ct.contract_id')
-                .andOn('cc.client_id', '=', 'c.client_id')
-                .andOn('cc.tenant', '=', 'rsp.tenant')
+    const db = tenantDb(trx, tenant);
+    const contractLineRowsQuery = db.table('recurring_service_periods as rsp');
+    db.tenantJoin(contractLineRowsQuery, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
+    db.tenantJoin(contractLineRowsQuery, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+    db.tenantJoin(contractLineRowsQuery, 'clients as c', 'c.client_id', 'ct.owner_client_id');
+    db.tenantJoin(contractLineRowsQuery, 'client_contracts as cc', 'cc.contract_id', 'ct.contract_id', {
+        type: 'left',
+        on(join) {
+            join.andOn('cc.client_id', '=', 'c.client_id')
                 .andOn('cc.is_active', '=', trx.raw('?', [true]));
-        })
-        .leftJoin('client_tax_settings as cts', function () {
-            this.on('cts.client_id', '=', 'c.client_id')
-                .andOn('cts.tenant', '=', 'rsp.tenant');
-        })
-        .leftJoin('client_billing_cycles as cbc', function () {
-            this.on('cbc.client_id', '=', 'c.client_id')
-                .andOn('cbc.tenant', '=', 'rsp.tenant')
-                .andOn('cbc.period_start_date', '=', 'rsp.invoice_window_start')
+        },
+    });
+    db.tenantJoin(contractLineRowsQuery, 'client_tax_settings as cts', 'cts.client_id', 'c.client_id', { type: 'left' });
+    db.tenantJoin(contractLineRowsQuery, 'client_billing_cycles as cbc', 'cbc.client_id', 'c.client_id', {
+        type: 'left',
+        on(join) {
+            join.andOn('cbc.period_start_date', '=', 'rsp.invoice_window_start')
                 .andOn('cbc.period_end_date', '=', 'rsp.invoice_window_end');
-        })
-        .where('rsp.tenant', tenant)
+        },
+    });
+    contractLineRowsQuery
         .where('rsp.obligation_type', 'contract_line')
         .where((builder) =>
             builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
@@ -420,6 +415,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
             'ct.is_system_managed_default',
             'cl.contract_line_id',
             'cl.contract_line_name',
+            'cl.contract_line_type',
             'cc.client_contract_id',
             'cc.po_required',
             'ct.currency_code',
@@ -431,38 +427,28 @@ async function fetchPersistedRecurringDueWorkDbRows(
         dateColumn: 'rsp.service_period_start',
     });
 
-    const clientContractLineRowsQuery = trx('recurring_service_periods as rsp')
-        .join('contract_lines as cl', function () {
-            // Post-drop compatibility: client-cadence recurring rows still use
-            // obligation_type=client_contract_line, but obligation_id resolves to contract_line_id.
-            this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
-                .andOn('cl.tenant', '=', 'rsp.tenant');
-        })
-        .join('contracts as ct', function () {
-            this.on('ct.contract_id', '=', 'cl.contract_id')
-                .andOn('ct.tenant', '=', 'cl.tenant');
-        })
-        .join('clients as c', function () {
-            this.on('c.client_id', '=', 'ct.owner_client_id')
-                .andOn('c.tenant', '=', 'ct.tenant');
-        })
-        .leftJoin('client_contracts as cc', function () {
-            this.on('cc.contract_id', '=', 'ct.contract_id')
-                .andOn('cc.client_id', '=', 'c.client_id')
-                .andOn('cc.tenant', '=', 'rsp.tenant')
+    const clientContractLineRowsQuery = db.table('recurring_service_periods as rsp');
+    // Post-drop compatibility: client-cadence recurring rows still use
+    // obligation_type=client_contract_line, but obligation_id resolves to contract_line_id.
+    db.tenantJoin(clientContractLineRowsQuery, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
+    db.tenantJoin(clientContractLineRowsQuery, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+    db.tenantJoin(clientContractLineRowsQuery, 'clients as c', 'c.client_id', 'ct.owner_client_id');
+    db.tenantJoin(clientContractLineRowsQuery, 'client_contracts as cc', 'cc.contract_id', 'ct.contract_id', {
+        type: 'left',
+        on(join) {
+            join.andOn('cc.client_id', '=', 'c.client_id')
                 .andOn('cc.is_active', '=', trx.raw('?', [true]));
-        })
-        .leftJoin('client_tax_settings as cts', function () {
-            this.on('cts.client_id', '=', 'c.client_id')
-                .andOn('cts.tenant', '=', 'rsp.tenant');
-        })
-        .leftJoin('client_billing_cycles as cbc', function () {
-            this.on('cbc.client_id', '=', 'c.client_id')
-                .andOn('cbc.tenant', '=', 'rsp.tenant')
-                .andOn('cbc.period_start_date', '=', 'rsp.invoice_window_start')
+        },
+    });
+    db.tenantJoin(clientContractLineRowsQuery, 'client_tax_settings as cts', 'cts.client_id', 'c.client_id', { type: 'left' });
+    db.tenantJoin(clientContractLineRowsQuery, 'client_billing_cycles as cbc', 'cbc.client_id', 'c.client_id', {
+        type: 'left',
+        on(join) {
+            join.andOn('cbc.period_start_date', '=', 'rsp.invoice_window_start')
                 .andOn('cbc.period_end_date', '=', 'rsp.invoice_window_end');
-        })
-        .where('rsp.tenant', tenant)
+        },
+    });
+    clientContractLineRowsQuery
         .where('rsp.obligation_type', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE)
         .where((builder) =>
             builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
@@ -490,6 +476,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
             'ct.is_system_managed_default',
             'cl.contract_line_id',
             'cl.contract_line_name',
+            'cl.contract_line_type',
             'cc.client_contract_id',
             'cc.po_required',
             'ct.currency_code',
@@ -521,18 +508,14 @@ async function fetchClientCadenceMaterializationGaps(
         return [];
     }
 
-    const activeRecurringRows = await trx('client_contracts as cc')
-        .join('contracts as ct', function () {
-            // template_contract_id is provenance only; live recurring rows belong to the
-            // client-owned contract and its cloned contract_lines.
-            this.on('ct.contract_id', '=', 'cc.contract_id')
-                .andOn('ct.tenant', '=', 'cc.tenant');
-        })
-        .join('contract_lines as cl', function () {
-            this.on('cl.contract_id', '=', 'ct.contract_id')
-                .andOn('cl.tenant', '=', 'ct.tenant');
-        })
-        .where('cc.tenant', tenant)
+    const db = tenantDb(trx, tenant);
+    const activeRecurringRowsQuery = db.table('client_contracts as cc');
+    // template_contract_id is provenance only; live recurring rows belong to the
+    // client-owned contract and its cloned contract_lines.
+    db.tenantJoin(activeRecurringRowsQuery, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
+    db.tenantJoin(activeRecurringRowsQuery, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
+
+    const activeRecurringRows = await activeRecurringRowsQuery
         .whereIn('cc.client_id', clientIds)
         .where('cc.is_active', true)
         .where((builder) =>
@@ -652,12 +635,72 @@ async function fetchClientCadenceMaterializationGaps(
                 servicePeriodEnd: dueWorkRow.servicePeriodEnd,
                 reason: 'missing_service_period_materialization',
                 detail:
-                    'Recurring service periods were not materialized for this canonical client-cadence execution window.',
+                    "This client's billing schedule changed, so these charges are out of date and need to be rebuilt before they can be invoiced.",
             });
         }
     }
 
     return materializationGaps;
+}
+
+async function filterRepairableMaterializationGaps(
+    trx: BillingQueryExecutor,
+    tenant: string,
+    gaps: RecurringDueWorkMaterializationGap[],
+): Promise<RecurringDueWorkMaterializationGap[]> {
+    if (gaps.length === 0) {
+        return gaps;
+    }
+
+    const db = tenantDb(trx, tenant);
+    const scheduleKeys = Array.from(new Set(gaps.map((gap) => gap.scheduleKey).filter(Boolean)));
+    const periodKeys = Array.from(new Set(gaps.map((gap) => gap.periodKey).filter(Boolean)));
+
+    const liveRows = await db.table('recurring_service_periods')
+        .whereIn('schedule_key', scheduleKeys)
+        .whereIn('period_key', periodKeys)
+        .whereNotIn('lifecycle_state', ['superseded', 'archived'])
+        .select('schedule_key', 'period_key') as Array<{
+            schedule_key: string;
+            period_key: string;
+        }>;
+
+    const liveGapKeys = new Set(
+        liveRows.map((row) => `${row.schedule_key}:${row.period_key}`),
+    );
+
+    const billedRows = await db.table('recurring_service_periods')
+        .whereIn('schedule_key', scheduleKeys)
+        .where((builder) => {
+            builder.where('lifecycle_state', 'billed')
+                .orWhereNotNull('invoice_charge_detail_id');
+        })
+        .select('schedule_key', 'service_period_end') as Array<{
+            schedule_key: string;
+            service_period_end: ISO8601String | null;
+        }>;
+
+    const billedBoundaryByScheduleKey = new Map<string, ISO8601String>();
+    for (const row of billedRows) {
+        if (!row.service_period_end) {
+            continue;
+        }
+
+        const rowBoundary = normalizeDateOnly(row.service_period_end) as ISO8601String;
+        const currentBoundary = billedBoundaryByScheduleKey.get(row.schedule_key);
+        if (!currentBoundary || rowBoundary > currentBoundary) {
+            billedBoundaryByScheduleKey.set(row.schedule_key, rowBoundary);
+        }
+    }
+
+    return gaps.filter((gap) => {
+        if (liveGapKeys.has(`${gap.scheduleKey}:${gap.periodKey}`)) {
+            return false;
+        }
+
+        const billedBoundary = billedBoundaryByScheduleKey.get(gap.scheduleKey);
+        return !billedBoundary || gap.servicePeriodEnd > billedBoundary;
+    });
 }
 
 function mapPersistedRecurringDueWorkDbRowsToRows(
@@ -715,13 +758,36 @@ function mapPersistedRecurringDueWorkDbRowsToRows(
             attribution,
         });
 
+        const chargeType = normalizeChargeType(row.contract_line_type);
+        const rowWithChargeType = (chargeType
+            ? { ...dueWorkRow, chargeType }
+            : dueWorkRow) as IRecurringDueWorkRow;
+
         return missingAttribution
             ? {
-                ...dueWorkRow,
+                ...rowWithChargeType,
                 blockedReason,
             } as IRecurringDueWorkRow
-            : dueWorkRow;
+            : rowWithChargeType;
     });
+}
+
+/**
+ * Coerce the raw `contract_lines.contract_line_type` value into the known charge
+ * type union, dropping anything unexpected so the UI never renders a stray tag.
+ */
+function normalizeChargeType(
+    raw: string | null | undefined,
+): RecurringDueWorkChargeType | null {
+    switch (raw) {
+        case 'Fixed':
+        case 'Hourly':
+        case 'Usage':
+        case 'Bucket':
+            return raw;
+        default:
+            return null;
+    }
 }
 
 async function fetchClientBillingMetadataById(
@@ -733,12 +799,11 @@ async function fetchClientBillingMetadataById(
         return new Map();
     }
 
-    const rows = await trx('clients as c')
-        .leftJoin('client_tax_settings as cts', function () {
-            this.on('cts.client_id', '=', 'c.client_id')
-                .andOn('cts.tenant', '=', 'c.tenant');
-        })
-        .where('c.tenant', tenant)
+    const db = tenantDb(trx, tenant);
+    const query = db.table('clients as c');
+    db.tenantJoin(query, 'client_tax_settings as cts', 'cts.client_id', 'c.client_id', { type: 'left' });
+
+    const rows = await query
         .whereIn('c.client_id', clientIds)
         .select(
             'c.client_id',
@@ -832,11 +897,91 @@ async function fetchUnresolvedNonContractDueWorkRows(
             rows.push({
                 ...dueWorkRow,
                 amountCents: charge.total,
+                chargeType: isTimeCharge ? 'Hourly' : 'Usage',
             } as IRecurringDueWorkRow);
         }
     }
 
     return rows;
+}
+
+/**
+ * Fixed contract-line amounts are deterministic before generation (Σ service
+ * base-rate × qty ± custom rate ± proration), so we surface them in the listing
+ * as confirmed "known now" amounts rather than "calculated at generation". This
+ * reuses the billing engine's own fixed-price calculation (single source of
+ * truth) and is batched per (client, service period) to bound the query cost.
+ * Best-effort: rows that can't be priced are left as pending.
+ */
+async function attachFixedContractLineAmountsToRows(
+    rows: IRecurringDueWorkRow[],
+    dbRows: PersistedRecurringDueWorkDbRow[],
+): Promise<void> {
+    // Client-cadence rows carry contractLineId: null (canonical identity is
+    // execution-window based), so resolve the contract line + invoice window via
+    // the DB row by record_id. The engine prices fixed lines off the INVOICE
+    // WINDOW (it derives the covered service period itself), so we group and
+    // query by window, not by service period.
+    const lineIdByRecordId = new Map<string, string>();
+    const invoiceWindowByRecordId = new Map<string, { start: ISO8601String; end: ISO8601String }>();
+    for (const dbRow of dbRows) {
+        if (!dbRow.record_id) {
+            continue;
+        }
+        if (dbRow.contract_line_id) {
+            lineIdByRecordId.set(dbRow.record_id, dbRow.contract_line_id);
+        }
+        if (dbRow.invoice_window_start && dbRow.invoice_window_end) {
+            invoiceWindowByRecordId.set(dbRow.record_id, {
+                start: normalizeDateOnly(dbRow.invoice_window_start) as ISO8601String,
+                end: normalizeDateOnly(dbRow.invoice_window_end) as ISO8601String,
+            });
+        }
+    }
+    const lineIdForRow = (row: IRecurringDueWorkRow): string | undefined =>
+        (row.contractLineId ?? (row.recordId ? lineIdByRecordId.get(row.recordId) : undefined)) || undefined;
+    const invoiceWindowForRow = (row: IRecurringDueWorkRow) =>
+        row.recordId ? invoiceWindowByRecordId.get(row.recordId) : undefined;
+
+    const fixedRows = rows.filter(
+        (row) =>
+            (row as { chargeType?: string | null }).chargeType === 'Fixed'
+            && Boolean(lineIdForRow(row))
+            && Boolean(invoiceWindowForRow(row))
+            && typeof (row as { amountCents?: number | null }).amountCents !== 'number',
+    );
+    if (fixedRows.length === 0) {
+        return;
+    }
+
+    const engine = new BillingEngine();
+    const groups = new Map<string, { clientId: string; start: ISO8601String; end: ISO8601String; members: IRecurringDueWorkRow[] }>();
+    for (const row of fixedRows) {
+        const window = invoiceWindowForRow(row)!;
+        const key = `${row.clientId}|${window.start}|${window.end}`;
+        let group = groups.get(key);
+        if (!group) {
+            group = { clientId: row.clientId, start: window.start, end: window.end, members: [] };
+            groups.set(key, group);
+        }
+        group.members.push(row);
+    }
+
+    for (const group of groups.values()) {
+        let amounts: Map<string, number>;
+        try {
+            amounts = await engine.previewFixedChargeAmountsForInvoiceWindow(group.clientId, group.start, group.end);
+        } catch {
+            continue;
+        }
+        for (const row of group.members) {
+            const lineId = lineIdForRow(row);
+            const amount = lineId ? amounts.get(String(lineId)) : undefined;
+            if (typeof amount === 'number' && Number.isFinite(amount)) {
+                (row as { amountCents?: number | null }).amountCents = amount;
+            }
+        }
+    }
 }
 
 function buildRecurringDueWorkInvoiceCandidates(
@@ -919,6 +1064,15 @@ function buildRecurringDueWorkInvoiceCandidates(
                 .slice(-1)[0] as ISO8601String;
             const cadenceSources = Array.from(new Set(members.map((member) => member.cadenceSource))).sort();
             const canGenerate = members.every((member) => member.canGenerate);
+            // A candidate is "not yet due" (rather than blocked) when the only
+            // reason it cannot generate is that its invoice window has not opened
+            // yet — every member is early, and none has a real data problem.
+            const everyMemberEarly = members.length > 0 && members.every((member) => member.isEarly === true);
+            const anyAttributionIncomplete = members.some((member) => member.attribution?.isComplete === false);
+            const notYetDue = !canGenerate && everyMemberEarly && !anyAttributionIncomplete;
+            const availableOnDate = notYetDue
+                ? (members.map((member) => member.invoiceWindowStart).sort()[0] ?? null)
+                : null;
             const explicitContractCount = members.filter(
                 (member) => member.attribution?.source === 'explicit_contract',
             ).length;
@@ -960,7 +1114,11 @@ function buildRecurringDueWorkInvoiceCandidates(
                 splitReasons: [...candidate.splitReasons],
                 memberCount: members.length,
                 canGenerate,
-                blockedReason: canGenerate ? null : 'One or more included obligations are not eligible for generation.',
+                notYetDue,
+                availableOnDate,
+                blockedReason: canGenerate || notYetDue
+                    ? null
+                    : 'One or more included obligations are not eligible for generation.',
                 attributionSummary: {
                     explicitContractCount,
                     systemManagedDefaultContractCount,
@@ -1046,6 +1204,8 @@ function applyClientCadenceMaterializationGapBlocks(
         return {
             ...candidate,
             canGenerate: false,
+            notYetDue: false,
+            availableOnDate: null,
             blockedReason:
                 'Recurring service periods are partially materialized for this window. Repair service periods before generation.',
         };
@@ -1105,10 +1265,29 @@ function applyRecurringApprovalBlocksToInvoiceCandidates(
             ...candidate,
             members,
             canGenerate: false,
+            notYetDue: false,
+            availableOnDate: null,
             blockedReason: formatApprovalBlockedReason(approvalBlockedEntryCount),
             approvalBlockedEntryCount,
             hasApprovalBlockers: true,
         };
+    });
+}
+
+function applyRecurringApprovalWarningsToInvoiceCandidates(
+    invoiceCandidates: IRecurringDueWorkInvoiceCandidate[],
+    warningsByExecutionIdentityKey: RecurringApprovalWarnings,
+): IRecurringDueWorkInvoiceCandidate[] {
+    return invoiceCandidates.map((candidate) => {
+        const members = candidate.members.map((member) => ({
+            ...member,
+            warnings: warningsByExecutionIdentityKey.get(member.executionIdentityKey) ?? [],
+        }));
+        const warnings = Array.from(new Map(
+            members.flatMap((member) => member.warnings ?? [])
+                .map((warning) => [warning.code, warning]),
+        ).values());
+        return { ...candidate, members, warnings };
     });
 }
 
@@ -1157,14 +1336,14 @@ export const getClientTaxRate = withAuth(async (
     { tenant },
     taxRegion: string,
     date: ISO8601String
-): Promise<number> => {
+): Promise<number | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        throw new Error('Permission denied');
+        return permissionError('Permission denied: billing read required');
     }
 
     const { knex } = await createTenantKnex();
     const taxRates = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('tax_rates')
+        return await tenantDb(trx, tenant).table('tax_rates')
             .where({
                 region_code: taxRegion, // Changed from region
                 tenant
@@ -1186,9 +1365,9 @@ export const getAvailableBillingPeriods = withAuth(async (
     user,
     { tenant },
     options: FetchBillingPeriodsOptions = {}
-): Promise<PaginatedBillingPeriodsResult> => {
+): Promise<PaginatedBillingPeriodsResult | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        throw new Error('Permission denied');
+        return permissionError('Permission denied: billing read required');
     }
 
     const {
@@ -1207,16 +1386,12 @@ export const getAvailableBillingPeriods = withAuth(async (
         const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
             // Build base query
             const buildBaseQuery = () => {
-                const query = trx('client_billing_cycles as cbc')
-                    .join('clients as c', function () {
-                        this.on('c.client_id', '=', 'cbc.client_id')
-                            .andOn('c.tenant', '=', 'cbc.tenant');
-                    })
-                    .leftJoin('invoices as i', function () {
-                        this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
-                            .andOn('i.tenant', '=', 'cbc.tenant');
-                    })
-                    .where('cbc.tenant', tenant)
+                const db = tenantDb(trx, tenant);
+                const query = db.table('client_billing_cycles as cbc');
+                db.tenantJoin(query, 'clients as c', 'c.client_id', 'cbc.client_id');
+                db.tenantJoin(query, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id', { type: 'left' });
+
+                query
                     .whereNotNull('cbc.period_end_date')
                     .whereNull('i.invoice_id');
 
@@ -1272,7 +1447,7 @@ export const getAvailableBillingPeriods = withAuth(async (
                 )
                 .orderBy('cbc.period_end_date', 'desc')
                 .limit(pageSize)
-                .offset(offset);
+                .offset(offset) as unknown as Array<Omit<BillingPeriodWithMeta, 'can_generate' | 'is_early'>>;
 
             // Process periods with flags
             const currentPlainDate = toPlainDate(currentDate);
@@ -1328,9 +1503,9 @@ export const getAvailableRecurringDueWork = withAuth(async (
     user,
     { tenant },
     options: FetchRecurringDueWorkOptions = {},
-): Promise<PaginatedRecurringDueWorkResult> => {
+): Promise<PaginatedRecurringDueWorkResult | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        throw new Error('Permission denied');
+        return permissionError('Permission denied: billing read required');
     }
 
     const {
@@ -1341,28 +1516,29 @@ export const getAvailableRecurringDueWork = withAuth(async (
     const asOf = options.dateRange?.to ?? toISODate(Temporal.Now.plainDateISO());
 
     try {
-        const candidateBillingPeriods = await fetchAvailableBillingPeriodsUnpaginated(
-            knex,
-            tenant,
-            options,
-        );
-        const clientMetadataById = await fetchClientBillingMetadataById(
-            knex,
-            tenant,
-            Array.from(
-                new Set(candidateBillingPeriods.map((period) => period.client_id).filter(Boolean)),
+        // candidateBillingPeriods and persistedDbRows both derive straight from
+        // `options`, so fetch them concurrently. clientMetadataById and
+        // rawMaterializationGaps both depend only on candidateBillingPeriods, so they
+        // run concurrently once it resolves. knex is a pooled connection (no shared
+        // transaction here), so these parallel queries are safe.
+        const [candidateBillingPeriods, persistedDbRows] = await Promise.all([
+            fetchAvailableBillingPeriodsUnpaginated(knex, tenant, options),
+            fetchPersistedRecurringDueWorkDbRows(knex, tenant, options),
+        ]);
+        const [clientMetadataById, rawMaterializationGaps] = await Promise.all([
+            fetchClientBillingMetadataById(
+                knex,
+                tenant,
+                Array.from(
+                    new Set(candidateBillingPeriods.map((period) => period.client_id).filter(Boolean)),
+                ),
             ),
-        );
-        const rawMaterializationGaps = await fetchClientCadenceMaterializationGaps(
-            knex,
-            tenant,
-            candidateBillingPeriods,
-        );
-        const persistedDbRows = await fetchPersistedRecurringDueWorkDbRows(
-            knex,
-            tenant,
-            options,
-        );
+            fetchClientCadenceMaterializationGaps(
+                knex,
+                tenant,
+                candidateBillingPeriods,
+            ),
+        ]);
         const groupingMetadataByRecordId = new Map<string, RecurringDueWorkGroupingMetadata>(
             persistedDbRows.map((row) => [
                 row.record_id,
@@ -1380,10 +1556,17 @@ export const getAvailableRecurringDueWork = withAuth(async (
             asOf,
             groupingMetadataByRecordId,
         );
+        // Surface deterministic fixed-line amounts as confirmed "known now" values.
+        await attachFixedContractLineAmountsToRows(persistedRows, persistedDbRows);
         const persistedIdentityKeys = new Set(
             persistedRows.map((row) => row.executionIdentityKey),
         );
-        const materializationGaps = rawMaterializationGaps.filter(
+        const repairableMaterializationGaps = await filterRepairableMaterializationGaps(
+            knex,
+            tenant,
+            rawMaterializationGaps,
+        );
+        const materializationGaps = repairableMaterializationGaps.filter(
             (gap) => !persistedIdentityKeys.has(gap.executionIdentityKey),
         );
         const backfillSuppressionKeys = new Set(
@@ -1444,16 +1627,32 @@ export const getAvailableRecurringDueWork = withAuth(async (
                 scheduleKey: row.scheduleKey ?? null,
             })),
         });
+        const approvalWarningsByExecutionIdentityKey = await detectRecurringApprovalWarnings({
+            knex,
+            tenant,
+            rows: [...readyPersistedRows, ...unresolvedNonContractRows].map((row) => ({
+                executionIdentityKey: row.executionIdentityKey,
+                clientId: row.clientId,
+                servicePeriodStart: row.servicePeriodStart,
+                servicePeriodEnd: row.servicePeriodEnd,
+                contractLineId: row.contractLineId ?? null,
+                scheduleKey: row.scheduleKey ?? null,
+            })),
+        });
         const approvalBlockedInvoiceCandidates = applyRecurringApprovalBlocksToInvoiceCandidates(
             blockedInvoiceCandidates,
             approvalBlockedEntryCountsByExecutionIdentityKey,
         );
-        const total = approvalBlockedInvoiceCandidates.length;
+        const warnedInvoiceCandidates = applyRecurringApprovalWarningsToInvoiceCandidates(
+            approvalBlockedInvoiceCandidates,
+            approvalWarningsByExecutionIdentityKey,
+        );
+        const total = warnedInvoiceCandidates.length;
         const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
         const offset = (page - 1) * pageSize;
 
         return {
-            invoiceCandidates: approvalBlockedInvoiceCandidates.slice(offset, offset + pageSize),
+            invoiceCandidates: warnedInvoiceCandidates.slice(offset, offset + pageSize),
             materializationGaps,
             total,
             page,
@@ -1484,14 +1683,14 @@ export const getDueDate = withAuth(async (
     { tenant },
     clientId: string,
     invoiceDate: ISO8601String
-): Promise<ISO8601String> => {
+): Promise<ISO8601String | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        throw new Error('Permission denied');
+        return permissionError('Permission denied: billing read required');
     }
 
     const { knex } = await createTenantKnex();
     const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('clients')
+        return await tenantDb(trx, tenant).table('clients')
             .where({
                 client_id: clientId,
                 tenant
@@ -1521,14 +1720,14 @@ export const getNextBillingDate = withAuth(async (
     { tenant },
     clientId: string,
     currentEndDate: ISO8601String
-): Promise<ISO8601String> => {
+): Promise<ISO8601String | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        throw new Error('Permission denied');
+        return permissionError('Permission denied: billing read required');
     }
 
     const { knex } = await createTenantKnex();
     const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('client_billing_cycles')
+        return await tenantDb(trx, tenant).table('client_billing_cycles')
             .where({
                 client_id: clientId,
                 tenant
@@ -1639,6 +1838,11 @@ export interface IPaymentTermOption {
   name: string; // e.g., 'Net 15', 'Net 30'
 }
 
+type PaymentTermOptionRow = IPaymentTermOption & {
+  is_active?: boolean;
+  sort_order?: number;
+};
+
 /**
  * Fetches the list of available payment terms.
  * TODO: Implement actual logic - query a table or return a predefined list.
@@ -1653,10 +1857,16 @@ export const getPaymentTermsList = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const terms = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('payment_terms')
-        .select('term_code as id', 'term_name as name')
+      return await tenantDb(trx, tenant).unscoped<PaymentTermOptionRow>(
+        'payment_terms',
+        'optional global payment terms reference table; current migrations store client payment_terms as a column'
+      )
+        .select({
+          id: 'term_code',
+          name: 'term_name',
+        })
         // Assuming an 'is_active' flag exists for filtering relevant terms
-        .where({ is_active: true })
+        .where('is_active', true)
         // Assuming a 'sort_order' column exists for consistent ordering
         .orderBy('sort_order', 'asc');
     });

@@ -26,7 +26,8 @@ export type RmmAgentStatus = 'online' | 'offline' | 'overdue' | 'unknown';
 
 export interface Asset {
   asset_id: string;
-  asset_type: 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer' | 'unknown';
+  /** Registry slug: a built-in or a custom tenant asset_type_registry type. */
+  asset_type: string;
   client_id: string;
   asset_tag: string;
   serial_number?: string;
@@ -353,7 +354,8 @@ export function isPrinterAsset(asset: unknown): asset is PrinterAsset {
 
 // Request interfaces
 export interface CreateAssetRequest {
-  asset_type: 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer' | 'unknown';
+  /** Registry slug: a built-in or a custom tenant asset_type_registry type. */
+  asset_type: string;
   client_id: string;
   asset_tag: string;
   name: string;

@@ -91,7 +91,8 @@
       "userRoles": "11111",
       "policies": "11111",
       "apiKeys": "11111",
-      "webhooks": "11111"
+      "webhooks": "11111",
+      "userProvisioning": "11111"
     },
     "loading": {
       "roles": "11111",
@@ -101,7 +102,88 @@
       "apiKeys": "11111",
       "webhooks": "11111",
       "sso": "11111",
-      "sessions": "11111"
+      "sessions": "11111",
+      "userProvisioning": "11111"
+    },
+    "scim": {
+      "title": "11111",
+      "description": "11111",
+      "loading": "11111",
+      "status": {
+        "enabled": "11111",
+        "disabled": "11111"
+      },
+      "errors": {
+        "load": "11111",
+        "update": "11111"
+      },
+      "upgrade": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "setup": {
+        "title": "11111",
+        "description": "11111",
+        "create": "11111"
+      },
+      "connection": {
+        "title": "11111",
+        "description": "11111",
+        "url": "11111",
+        "copyUrl": "11111",
+        "oneTimeToken": "11111",
+        "oneTimeWarning": "11111",
+        "rotate": "11111",
+        "revokePrevious": "11111",
+        "enabled": "11111",
+        "disableWarning": "11111"
+      },
+      "health": {
+        "title": "11111",
+        "lastRequest": "11111",
+        "lastSuccess": "11111",
+        "tokenAge": "11111",
+        "lastError": "11111"
+      },
+      "mapping": {
+        "title": "11111",
+        "description": "11111",
+        "match": "11111",
+        "matchValue": "11111",
+        "scope": "11111",
+        "scopeValue": "11111",
+        "unsupported": "11111",
+        "unsupportedValue": "11111"
+      },
+      "links": {
+        "title": "11111",
+        "user": "11111",
+        "directory": "11111",
+        "state": "11111",
+        "action": "11111",
+        "drift": "11111",
+        "active": "11111",
+        "inactive": "11111",
+        "accessOn": "11111",
+        "accessOff": "11111",
+        "unlink": "11111",
+        "empty": "11111"
+      },
+      "unresolved": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "state": {
+        "active": "11111",
+        "inactive": "11111"
+      }
+    },
+    "sso": {
+      "advanced": {
+        "title": "11111",
+        "description": "11111",
+        "inertNotice": "11111"
+      }
     },
     "userRoles": {
       "title": "11111",
@@ -149,8 +231,6 @@
     },
     "sessions": {
       "title": "11111",
-      "subtitle": "11111 {{sessionCount}} 11111 {{userCount}} 11111",
-      "subtitle_plural": "11111 {{sessionCount}} 11111 {{userCount}} 11111",
       "filters": {
         "search": "11111",
         "searchPlaceholder": "11111",
@@ -195,7 +275,9 @@
         "loading": "11111",
         "noMatch": "11111",
         "noSessions": "11111"
-      }
+      },
+      "subtitle_one": "11111 {{sessionCount}} 11111 {{userCount}} 11111",
+      "subtitle_other": "11111 {{sessionCount}} 11111 {{userCount}} 11111"
     },
     "webhooks": {
       "title": "11111",
@@ -576,7 +658,8 @@
         "description": "11111",
         "descriptionPlaceholder": "11111",
         "expiration": "11111",
-        "submit": "11111"
+        "submit": "11111",
+        "createFailed": "11111"
       },
       "list": {
         "title": "11111",
@@ -602,7 +685,8 @@
           "active": "11111",
           "inactive": "11111"
         },
-        "deactivate": "11111"
+        "deactivate": "11111",
+        "deactivateFailed": "11111"
       },
       "newKeyDialog": {
         "title": "11111",

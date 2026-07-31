@@ -87,6 +87,18 @@ secrets:
   cryptoKey: "change-me-in-prod"
   imapWebhookSecret: "change-me-in-prod"
 
+# Source the application secrets (crypto/nextauth/token) from an existing
+# Kubernetes secret instead of this chart's own "<fullname>-secrets". When
+# existingSecret is empty (default) the chart-managed secret is used, so
+# cloud/hosted rendering is unchanged. The on-prem appliance points these at
+# the alga-core server secret so both services share identical keys.
+appSecrets:
+  existingSecret: ""        # when set, source app secrets from this k8s secret
+  keys:
+    cryptoKey: CRYPTO_KEY
+    nextauthSecret: NEXTAUTH_SECRET
+    tokenSecretKey: TOKEN_SECRET_KEY
+
 vaultAgent:
   enabled: false
   role: email-service
@@ -137,6 +149,26 @@ affinity: {}
 extraEnv: []
 extraVolumes: []
 extraVolumeMounts: []
+
+# Shared tenant-secret store on the single-node appliance. When enabled, mounts
+# a hostPath into the pod and points the filesystem secret provider at it via
+# SECRET_FS_BASE_PATH so this service reads the same tenant secrets alga-core
+# writes. Disabled by default → cloud/hosted rendering is unchanged.
+sharedTenantSecrets:
+  enabled: false
+  hostPath: /var/lib/alga-appliance/tenant-secrets
+  mountPath: /shared-tenant-secrets
+
+# Wait-for-bootstrap init container. When enabled, polls the server database
+# until the email_providers table exists so the service does not crashloop on
+# Postgres undefined_table errors while migrations are still running. Disabled
+# by default → cloud/hosted rendering is unchanged.
+waitForBootstrap:
+  enabled: false
+  image:
+    name: ankane/pgvector
+    tag: latest
+  pullPolicy: IfNotPresent
 
 namespace: ""
 

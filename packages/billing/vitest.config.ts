@@ -5,11 +5,32 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
-    testTimeout: 10000,
+    setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
+    include: [
+      'tests/**/*.test.ts',
+      'tests/**/*.test.tsx',
+      'src/actions/projectBillingActions.contract.test.ts',
+      'src/lib/billing/compute/**/*.test.ts',
+      'src/schemas/**/*.test.ts',
+    ],
+    testTimeout: 20000,
+    // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing
+    // setup work had half the budget of a test doing the same work — which is
+    // how hoisting a module compile out of a test made it fail sooner.
+    hookTimeout: 20000,
+    // Inline next-auth/@auth/core/next so vite transforms them and the next/server
+    // alias below applies to next-auth's internal `import "next/server"`. Without it
+    // the contract-wizard / automatic-invoices component suites render-crash on a
+    // fresh CI install ("Cannot find module next/server"). Matches tickets.
+    server: {
+      deps: {
+        inline: ['next-auth', '@auth/core', 'next'],
+      },
+    },
   },
   resolve: {
     alias: [
+      { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
       {
         find: /^@alga-psa\/billing\/(.*)$/,
         replacement: `${path.resolve(__dirname, './src')}/$1`,
@@ -33,6 +54,34 @@ export default defineConfig({
       {
         find: /^@alga-psa\/core\/logger$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/logger.ts')}`,
+      },
+      {
+        find: /^@alga-psa\/db\/(admin|connection|tenant|workDate)$/,
+        replacement: `${path.resolve(__dirname, '../db/src/lib')}/$1.ts`,
+      },
+      {
+        find: /^@alga-psa\/auth\/sso\/entry$/,
+        replacement: path.resolve(__dirname, '../auth/src/components/SsoProviderButtons.tsx'),
+      },
+      {
+        find: /^@alga-psa\/auth\/(session|rbac|withAuth|apiAuth|nextAuthOptions|getCurrentUser)$/,
+        replacement: `${path.resolve(__dirname, '../auth/src/lib')}/$1.ts`,
+      },
+      {
+        find: /^@alga-psa\/auth\/types\/next-auth$/,
+        replacement: path.resolve(__dirname, '../auth/src/types/next-auth.ts'),
+      },
+      {
+        find: /^@alga-psa\/product-extension-actions$/,
+        replacement: path.resolve(__dirname, '../product-extension-actions/oss/entry.ts'),
+      },
+      {
+        find: /^@enterprise$/,
+        replacement: path.resolve(__dirname, '../ee/src/index.ts'),
+      },
+      {
+        find: /^@enterprise\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../ee/src')}/$1`,
       },
       {
         find: /^@alga-psa\/([^/]+)\/(.*)$/,

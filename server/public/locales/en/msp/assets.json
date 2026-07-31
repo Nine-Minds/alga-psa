@@ -101,7 +101,8 @@
     "selection": {
       "selectAllVisibleAssets": "Select all visible assets",
       "selectAsset": "Select asset {{name}}",
-      "selectedAssets": "{{count}} asset{{suffix}} selected",
+      "selectedAssets_one": "{{count}} asset selected",
+      "selectedAssets_other": "{{count}} assets selected",
       "clearSelection": "Clear selection",
       "bulkActionsComingSoon": "Bulk actions coming soon"
     },
@@ -121,7 +122,9 @@
       "agent": "Agent",
       "client": "Client",
       "location": "Location",
-      "actions": "Actions"
+      "actions": "Actions",
+      "patching": "Patching",
+      "coverage": "Coverage"
     },
     "metrics": {
       "totalAssets": {
@@ -216,6 +219,49 @@
         "title": "Print options",
         "description": "Choose which columns to include when printing assets."
       }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "Clear",
+        "delete": "Delete",
+        "selectedCount": "{{count}} selected",
+        "setLocation": "Set location",
+        "setStatus": "Set status"
+      },
+      "actions": {
+        "apply": "Apply",
+        "applying": "Applying...",
+        "deleteAssets": "Delete",
+        "deleting": "Deleting...",
+        "updateLocation": "Location update",
+        "updateStatus": "Status update"
+      },
+      "deleteDialog": {
+        "description": "Delete {{count}} selected asset(s). Assets with dependencies may be skipped.",
+        "title": "Delete selected assets"
+      },
+      "errors": {
+        "deleteFailed": "Unable to delete selected assets.",
+        "updateLocationFailed": "Unable to update selected asset locations.",
+        "updateStatusFailed": "Unable to update selected assets."
+      },
+      "locationDialog": {
+        "clearLocation": "Clear location",
+        "customLocation": "Custom location",
+        "customPlaceholder": "Enter a custom location or area",
+        "description": "Update {{count}} selected asset(s).",
+        "loadingLocations": "Loading locations...",
+        "savedDisabled": "Saved client locations are available only when all selected assets are visible and belong to one client.",
+        "savedLocation": "Saved client location",
+        "selectLocation": "Select location",
+        "title": "Set asset location"
+      },
+      "partialFailure": "{{action}} completed for {{succeeded}} asset(s); {{failed}} failed.",
+      "statusDialog": {
+        "description": "Update {{count}} selected asset(s).",
+        "title": "Set asset status"
+      },
+      "success": "{{action}} completed for {{count}} asset(s)."
     }
   },
   "assetDashboardGrid": {
@@ -341,9 +387,12 @@
     },
     "relative": {
       "momentsAgo": "moments ago",
-      "minutesAgo": "{{count}} minute{{suffix}} ago",
-      "hoursAgo": "{{count}} hour{{suffix}} ago",
-      "daysAgo": "{{count}} day{{suffix}} ago"
+      "minutesAgo_one": "{{count}} minute ago",
+      "minutesAgo_other": "{{count}} minutes ago",
+      "hoursAgo_one": "{{count}} hour ago",
+      "hoursAgo_other": "{{count}} hours ago",
+      "daysAgo_one": "{{count}} day ago",
+      "daysAgo_other": "{{count}} days ago"
     }
   },
   "assetDetailHeader": {
@@ -373,7 +422,7 @@
       "maintenance": "Maintenance",
       "relatedAssets": "Related Assets",
       "documentsPasswords": "Documents & Passwords",
-      "auditLog": "Audit Log"
+      "timeline": "Timeline"
     }
   },
   "assetDetailView": {
@@ -501,7 +550,8 @@
       "loadFailed": "Failed to load asset details",
       "clientsLoadFailed": "Unable to load clients",
       "locationsLoadFailed": "Unable to load locations for this client",
-      "updateFailed": "Failed to update asset"
+      "updateFailed": "Failed to update asset",
+      "validation": "Please fix the highlighted fields before saving."
     },
     "actions": {
       "viewClient": "View client",
@@ -553,7 +603,8 @@
       "serialNumber": "Serial Number",
       "status": "Status",
       "purchaseDate": "Purchase Date",
-      "warrantyEndDate": "Warranty End Date"
+      "warrantyEndDate": "Warranty End Date",
+      "assetType": "Type"
     },
     "placeholders": {
       "loadingClients": "Loading clients…",
@@ -596,7 +647,8 @@
       "networkDevice": "Network Device Details",
       "server": "Server Details",
       "mobileDevice": "Mobile Device Details",
-      "printer": "Printer Details"
+      "printer": "Printer Details",
+      "custom": "{{typeName}} Details"
     }
   },
   "assetFormClient": {
@@ -707,7 +759,8 @@
     "actions": {
       "addAsset": "Add Asset",
       "showLess": "Show less",
-      "moreAssets": "{{count}} more asset{{suffix}}"
+      "moreAssets_one": "{{count}} more asset",
+      "moreAssets_other": "{{count}} more assets"
     },
     "errors": {
       "loadAvailableAssets": "Failed to load available assets",
@@ -719,8 +772,10 @@
       "removeFailed": "Failed to remove asset association"
     },
     "success": {
-      "associated": "{{count}} asset{{suffix}} associated successfully",
-      "associatedPartial": "{{count}} asset{{suffix}} associated successfully, {{failed}} failed (may already be associated)",
+      "associated_one": "{{count}} asset associated successfully",
+      "associated_other": "{{count}} assets associated successfully",
+      "associatedPartial_one": "{{count}} asset associated successfully, {{failed}} failed (may already be associated)",
+      "associatedPartial_other": "{{count}} assets associated successfully, {{failed}} failed (may already be associated)",
       "removed": "Asset association removed"
     },
     "empty": {
@@ -743,7 +798,8 @@
         "placeholder": "Type..."
       },
       "actions": {
-        "addAssets": "Add Asset{{suffix}}"
+        "addAssets_one": "Add Asset",
+        "addAssets_other": "Add Assets"
       }
     },
     "table": {
@@ -853,7 +909,9 @@
       "assetTagRequired": "Asset Tag *",
       "typeRequired": "Type *",
       "status": "Status",
-      "serialNumber": "Serial Number"
+      "serialNumber": "Serial Number",
+      "customLocationOption": "Custom location",
+      "location": "Location"
     },
     "placeholders": {
       "workstationOsType": "e.g., Windows, macOS, Linux",
@@ -869,7 +927,11 @@
       "assetTag": "Enter asset tag",
       "selectType": "Select type",
       "selectStatus": "Select status",
-      "serialNumber": "Enter serial number"
+      "serialNumber": "Enter serial number",
+      "customLocation": "Enter a custom location or area",
+      "loadingLocations": "Loading locations...",
+      "selectClientFirst": "Select a client first",
+      "selectLocation": "Select location"
     },
     "sections": {
       "typeSpecificDetails": "Type-specific Details"
@@ -884,7 +946,8 @@
       "network_device": "Network Device",
       "server": "Server",
       "mobile_device": "Mobile Device",
-      "printer": "Printer"
+      "printer": "Printer",
+      "unknown": "Unknown"
     },
     "networkDeviceTypes": {
       "switch": "Switch",
@@ -939,11 +1002,12 @@
     }
   },
   "assetNotesPanel": {
-    "title": "Notes & Quick Info",
+    "title": "Notes",
     "description": "Rich-text notes panel for asset-specific notes and quick operational context",
     "errors": {
       "loadTitle": "Notes failed to load",
-      "unknown": "Unknown error"
+      "unknown": "Unknown error",
+      "loadDescription": "Could not load notes. Please try again."
     },
     "lastUpdated": "Last updated: {{value}}"
   },
@@ -966,6 +1030,10 @@
     "empty": "No hardware data available",
     "emptyStorage": "No storage drives detected"
   },
+  "huduDocumentationCard": {
+    "title": "Hudu Documentation",
+    "syncedAt": "Last synced from Hudu: {{value}}"
+  },
   "rmmVitalsPanel": {
     "title": "RMM Vitals & Connectivity",
     "description": "RMM vitals panel for heartbeat, monitoring, and endpoint health details",
@@ -979,7 +1047,8 @@
       "uptime": "Uptime",
       "lastSync": "Last RMM Sync",
       "network": "Network",
-      "networkValue": "LAN IP: {{lan}} | WAN IP: {{wan}}"
+      "networkValue": "LAN IP: {{lan}} | WAN IP: {{wan}}",
+      "taniumCriticality": "Tanium Criticality"
     },
     "values": {
       "never": "Never"
@@ -1046,17 +1115,6 @@
   "utilizationBar": {
     "title": "Utilization Bar",
     "description": "Shared progress bar component for utilization and percentage-based asset metrics"
-  },
-  "auditLogTab": {
-    "title": "Audit Log",
-    "description": "Asset audit history tab for timeline events and record changes",
-    "changedBy": "Changed by {{name}}",
-    "userFallback": "user {{id}}",
-    "empty": "No audit history available.",
-    "changeTypes": {
-      "created": "Created",
-      "updated": "Updated"
-    }
   },
   "createMaintenanceScheduleDialog": {
     "title": "Create Maintenance Schedule",
@@ -1136,13 +1194,19 @@
       "actions": "Actions"
     },
     "frequency": {
-      "every": "Every {{count}} {{frequency}}{{suffix}}",
+      "every_one": "Every {{frequency}}",
+      "every_other": "Every {{count}} {{frequency}}",
       "units": {
-        "daily": "day",
-        "weekly": "week",
-        "monthly": "month",
-        "quarterly": "quarter",
-        "yearly": "year"
+        "daily_one": "day",
+        "daily_other": "days",
+        "weekly_one": "week",
+        "weekly_other": "weeks",
+        "monthly_one": "month",
+        "monthly_other": "months",
+        "quarterly_one": "quarter",
+        "quarterly_other": "quarters",
+        "yearly_one": "year",
+        "yearly_other": "years"
       }
     },
     "status": {
@@ -1278,5 +1342,153 @@
     "activeAlerts": "Active Alerts",
     "acknowledge": "Acknowledge",
     "createTicket": "Create Ticket"
+  },
+  "actions": {
+    "print": "Print",
+    "printOptions": "Print options",
+    "printSelected": "Print selected ({{count}})"
+  },
+  "crossFeature": {
+    "loadTicketFailed": "Failed to load ticket",
+    "openTicketFailed": "Failed to open ticket"
+  },
+  "assetTypeBreakdown": {
+    "title": "Assets by type"
+  },
+  "customTypeDetailsPanel": {
+    "title": "{{name}} Details",
+    "values": {
+      "yes": "Yes",
+      "no": "No"
+    }
+  },
+  "assetBento": {
+    "health": "Health",
+    "security": "Security",
+    "openTickets": "Open tickets",
+    "warranty": "Warranty",
+    "identity": "Identity",
+    "tag": "Tag",
+    "serial": "Serial",
+    "status": "Status",
+    "location": "Location",
+    "purchased": "Purchased",
+    "warrantyEnds": "Warranty ends",
+    "hardware": "Hardware",
+    "os": "OS",
+    "cpu": "CPU",
+    "cores": "Cores",
+    "ram": "RAM",
+    "ip": "IP",
+    "noHardware": "No hardware details recorded.",
+    "notes": "Notes",
+    "liveVitals": "Live vitals",
+    "checkedIn": "Checked in",
+    "neverCheckedIn": "Never checked in",
+    "memory": "Memory",
+    "disk": "Disk",
+    "uptime": "Uptime",
+    "signedIn": "Signed in",
+    "securityTitle": "Security",
+    "antivirus": "Antivirus",
+    "pendingPatches": "Pending patches",
+    "failedPatches": "Failed patches",
+    "lastScan": "Last scan",
+    "agentVersion": "Agent",
+    "noRelated": "Not linked to any other asset.",
+    "manage": "Manage",
+    "reportedFacts": "Reported facts",
+    "more": "Everything else",
+    "views": "Asset views",
+    "editAsset": "Edit asset",
+    "viewAll": "View all",
+    "open": "Open",
+    "close": "Close",
+    "packagesReported": "{{count}} packages reported",
+    "noSoftware": "No software inventory reported.",
+    "noService": "No tickets reference this asset.",
+    "activeSchedules": "Active schedules",
+    "compliance": "Compliance",
+    "lastDone": "Last done",
+    "noMaintenance": "Nothing scheduled.",
+    "docsHint": "Attachments and credentials for this asset."
+  },
+  "assetTimeline": {
+    "title": "Timeline",
+    "empty": "Nothing recorded for this asset yet.",
+    "emptyLane": "No {{lane}} events recorded.",
+    "moreEvents": "Showing {{shown}} of {{total}} events.",
+    "lanes": {
+      "all": "All",
+      "service": "Service",
+      "changes": "Changes",
+      "maintenance": "Maintenance",
+      "system": "System"
+    },
+    "events": {
+      "maintenancePerformed": "Maintenance performed",
+      "lastReboot": "Last reboot",
+      "patchScan": "Patch scan",
+      "patchScanDetail": "{{pending}} pending, {{failed}} failed",
+      "purchased": "Purchased"
+    },
+    "changeTypes": {
+      "created": "Created",
+      "updated": "Updated",
+      "status_change": "Status changed",
+      "location_change": "Location changed",
+      "rmm_linked": "RMM linked",
+      "hardware_upgrade": "Hardware upgraded",
+      "warranty_updated": "Warranty updated"
+    }
+  },
+  "assetSignals": {
+    "warranty": {
+      "daysLeft": "{{count}}d left",
+      "expiresToday": "expires today",
+      "expiredAgo": "expired {{count}}d ago"
+    },
+    "duration": {
+      "dayHour": "{{days}}d {{hours}}h",
+      "hourMinute": "{{hours}}h {{minutes}}m",
+      "minute": "{{minutes}}m"
+    },
+    "age": {
+      "justNow": "just now",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago"
+    },
+    "patching": {
+      "failed": "{{count}} failed",
+      "pending": "{{count}} pending",
+      "upToDate": "up to date"
+    }
+  },
+  "assetCells": {
+    "agent": {
+      "unmanaged": "unmanaged",
+      "noAgent": "no RMM agent",
+      "seen": "seen {{age}}",
+      "neverSeen": "never seen"
+    },
+    "agentStatus": {
+      "online": "online",
+      "offline": "offline",
+      "overdue": "overdue",
+      "unknown": "unknown"
+    },
+    "patching": {
+      "scanned": "scanned {{age}}",
+      "neverScanned": "never scanned"
+    },
+    "coverage": {
+      "noWarrantyDate": "no warranty date"
+    },
+    "status": {
+      "active": "active",
+      "inactive": "inactive",
+      "maintenance": "maintenance"
+    }
   }
 }

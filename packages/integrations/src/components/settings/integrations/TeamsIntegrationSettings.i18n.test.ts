@@ -69,6 +69,8 @@ const REQUIRED_MEETINGS_KEYS = [
   'organizer.placeholder',
   'organizer.help',
   'organizer.resolved',
+  'sendMeetingInvites.label',
+  'sendMeetingInvites.description',
   'downloadRecordings.label',
   'downloadRecordings.description',
   'exposeRecordingsInPortal.label',

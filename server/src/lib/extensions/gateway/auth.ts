@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getSession } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 export interface ExtProxyUserInfo {
@@ -18,9 +19,8 @@ export interface ExtProxyUserInfo {
 async function getTenantClientName(tenantId: string): Promise<string> {
   try {
     const knex = await getAdminConnection();
-    const row = await knex('tenants')
+    const row = await tenantDb(knex, tenantId).table('tenants')
       .select('client_name')
-      .where('tenant', tenantId)
       .first();
     return row?.client_name || '';
   } catch (error) {
@@ -36,15 +36,12 @@ async function getTenantClientName(tenantId: string): Promise<string> {
  */
 async function getUserClientId(userId: string, tenantId: string): Promise<string | undefined> {
   const knex = await getAdminConnection();
-  // Single JOIN query with tenant in join predicate (Citus best practice)
-  const result = await knex('users as u')
+  const db = tenantDb(knex, tenantId);
+  const query = db.table('users as u')
     .select('c.client_id')
-    .join('contacts as c', function() {
-      this.on('c.contact_name_id', '=', 'u.contact_id')
-          .andOn('c.tenant', '=', 'u.tenant');
-    })
-    .where('u.user_id', userId)
-    .where('u.tenant', tenantId)
+    .where('u.user_id', userId);
+  const result = await db
+    .tenantJoin(query, 'contacts as c', 'c.contact_name_id', 'u.contact_id')
     .first();
 
   return result?.client_id || undefined;
@@ -109,22 +106,24 @@ export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUse
 }
 
 export async function getTenantFromAuth(req: NextRequest): Promise<string> {
-  // Minimal scaffolding:
-  // - Prefer internal header `x-alga-tenant` (e.g., set by edge/auth middleware)
-  // - Fallback to DEV_TENANT_ID for local development
-  // - Otherwise, reject (to avoid running as a fake tenant)
-  const h = req.headers.get('x-alga-tenant');
-  if (h && h.trim()) return h.trim();
-
-  // Accept legacy header used by admin/publishing clients.
-  const legacy = req.headers.get('x-tenant-id');
-  if (legacy && legacy.trim()) return legacy.trim();
-
   const session = await getSession();
   const sessionTenant = (session?.user as any)?.tenant;
+  const h = req.headers.get('x-alga-tenant')?.trim();
+  const legacy = req.headers.get('x-tenant-id')?.trim();
+
   if (sessionTenant && String(sessionTenant).trim()) {
-    return String(sessionTenant).trim();
+    const tenant = String(sessionTenant).trim();
+    if ((h && h !== tenant) || (legacy && legacy !== tenant)) {
+      throw new Error('tenant_mismatch');
+    }
+    return tenant;
   }
+
+  // Header-based tenant selection is only allowed for non-browser/internal callers
+  // that do not already have a session tenant. A browser user must never be able
+  // to switch tenants by supplying x-alga-tenant/x-tenant-id.
+  if (h) return h;
+  if (legacy) return legacy;
 
   const dev = process.env.DEV_TENANT_ID;
   if (dev && dev.trim()) return dev.trim();

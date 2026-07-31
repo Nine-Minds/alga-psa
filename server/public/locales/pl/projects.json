@@ -1,0 +1,15 @@
+{
+  "projectPrint": {
+    "tasks": {
+      "fields": {
+        "assignee": "Osoba przypisana",
+        "description": "Opis",
+        "dueDate": "Termin",
+        "estimatedHours": "Szacowane godziny",
+        "phase": "Faza",
+        "status": "Status",
+        "wbsCode": "Kod WBS"
+      }
+    }
+  }
+}

@@ -49,3 +49,31 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     throw e;
   }
 }
+
+// Toggle an agent's active flag (the reversible soft-disable).
+export async function PATCH(req: NextRequest): Promise<NextResponse> {
+  if (!isEnterpriseEdition()) return NextResponse.json({ error: 'Enterprise feature' }, { status: 404 });
+  const { authenticateMcpAdmin, setAgentActive } = await import('@product/mcp/entry');
+  const admin = await authenticateMcpAdmin(req);
+  if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const body = (await req.json().catch(() => ({}))) as { agentId?: string; active?: boolean };
+  if (!body.agentId || typeof body.active !== 'boolean') {
+    return NextResponse.json({ error: '"agentId" and a boolean "active" are required.' }, { status: 400 });
+  }
+  await setAgentActive(admin.tenant, body.agentId, body.active);
+  return NextResponse.json({ ok: true });
+}
+
+// Permanently remove an agent (irreversible — tears down roles, audit, backing user).
+export async function DELETE(req: NextRequest): Promise<NextResponse> {
+  if (!isEnterpriseEdition()) return NextResponse.json({ error: 'Enterprise feature' }, { status: 404 });
+  const { authenticateMcpAdmin, deleteAgent } = await import('@product/mcp/entry');
+  const admin = await authenticateMcpAdmin(req);
+  if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const agentId = req.nextUrl.searchParams.get('agentId');
+  if (!agentId) return NextResponse.json({ error: '"agentId" is required.' }, { status: 400 });
+  await deleteAgent(admin.tenant, agentId);
+  return NextResponse.json({ ok: true });
+}

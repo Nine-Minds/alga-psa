@@ -2,6 +2,7 @@ import { useFocusEffect, type CompositeScreenProps } from "@react-navigation/nat
 import type { DrawerScreenProps } from "@react-navigation/drawer";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ActivityIndicator, FlatList, Modal, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { EmptyState, ErrorState, LoadingState } from "../ui/states";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
@@ -15,7 +16,7 @@ import { getTicketById, getTicketPriorities, getTicketStats, getTicketStatuses, 
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
 import type { Theme } from "../ui/themes";
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { logger } from "../logging/logger";
 import { Badge } from "../ui/components/Badge";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
@@ -29,6 +30,8 @@ import { AgentPickerModal } from "../features/ticketDetail/components/AgentPicke
 import { TagPickerModal } from "../features/ticketDetail/components/TagPickerModal";
 import { withClientFilter, withContactFilter } from "./ticketsClientFilter";
 import { addTagFilter, normalizeSavedTags, removeTagFilter, withTagsFilter } from "./ticketsTagsFilter";
+import { computeVisibleTagCount, TAG_CHIP_MAX_TEXT_WIDTH } from "./ticketRowTags";
+import { getTagChipColors } from "../ui/tagColors";
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<TicketsStackParamList, "TicketsList">,
@@ -108,6 +111,7 @@ export function TicketsListScreen({ navigation, route }: Props) {
 
   const [items, setItems] = useState<TicketListItem[]>([]);
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState<number | null>(null);
   const [hasNext, setHasNext] = useState(true);
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -229,6 +233,7 @@ export function TicketsListScreen({ navigation, route }: Props) {
   useEffect(() => {
     if (!listCacheKey) return;
     const cached = getCachedTicketsList(listCacheKey);
+    setTotal(null);
     if (!cached || typeof cached !== "object") {
       setItems([]);
       setPage(1);
@@ -299,6 +304,7 @@ export function TicketsListScreen({ navigation, route }: Props) {
       setItems((prev) => (replace ? nextItems : [...prev, ...nextItems]));
       setPage(result.data.pagination.page);
       setHasNext(result.data.pagination.hasNext);
+      setTotal(typeof result.data.pagination.total === "number" ? result.data.pagination.total : null);
 
       if (replace && pageToLoad === 1) {
         const refreshedIso = new Date().toISOString();
@@ -474,25 +480,6 @@ export function TicketsListScreen({ navigation, route }: Props) {
     );
   }
 
-  if (initialLoading && items.length === 0) {
-    return <LoadingState message={t("list.loadingTickets")} />;
-  }
-
-  if (error && items.length === 0) {
-    const title = pendingOfflineRetry ? t("list.offlineTitle") : t("list.unableToLoad");
-    return (
-      <ErrorState
-        title={title}
-        description={error}
-        action={
-          <PrimaryButton disabled={isOffline} onPress={() => void refresh()}>
-            {t("common:retry")}
-          </PrimaryButton>
-        }
-      />
-    );
-  }
-
   const hasActiveFilters =
     Boolean(clientFilterId) ||
     Boolean(contactFilterId) ||
@@ -507,8 +494,27 @@ export function TicketsListScreen({ navigation, route }: Props) {
     filters.sortOrder !== DEFAULT_FILTERS.sortOrder ||
     search.trim() !== "";
 
-  if (!error && items.length === 0 && !hasActiveFilters) {
-    return (
+  // The body switches between loading/error/empty/list states, but the
+  // FiltersModal must stay mounted at a stable tree position throughout —
+  // otherwise selecting a filter (which triggers a reload) unmounts the
+  // modal mid-interaction and it visibly closes and reopens.
+  let body: ReactNode;
+  if (initialLoading && items.length === 0) {
+    body = <LoadingState message={t("list.loadingTickets")} />;
+  } else if (error && items.length === 0) {
+    body = (
+      <ErrorState
+        title={pendingOfflineRetry ? t("list.offlineTitle") : t("list.unableToLoad")}
+        description={error}
+        action={
+          <PrimaryButton disabled={isOffline} onPress={() => void refresh()}>
+            {t("common:retry")}
+          </PrimaryButton>
+        }
+      />
+    );
+  } else if (!error && items.length === 0 && !hasActiveFilters) {
+    body = (
       <EmptyState
         title={t("list.noTickets")}
         description={t("list.noTicketsDescription")}
@@ -520,10 +526,8 @@ export function TicketsListScreen({ navigation, route }: Props) {
         }
       />
     );
-  }
-
-  if (!error && items.length === 0 && hasActiveFilters) {
-    return (
+  } else if (!error && items.length === 0 && hasActiveFilters) {
+    body = (
       <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
         <View style={{ padding: theme.spacing.lg }}>
           <View style={{ flexDirection: "row" }}>
@@ -595,18 +599,6 @@ export function TicketsListScreen({ navigation, route }: Props) {
               {t("filters.clearAll")}
             </PrimaryButton>
           }
-        />
-        <FiltersModal
-          theme={theme}
-          visible={filtersOpen}
-          client={client}
-          apiKey={session.accessToken}
-          tenantId={session.tenantId ?? null}
-          filters={filters}
-          setFilters={setFilters}
-          canFilterMe={Boolean(session?.user?.id)}
-          baseUrl={config.ok ? config.baseUrl : null}
-          onClose={() => setFiltersOpen(false)}
         />
       </View>
     );
@@ -703,8 +695,8 @@ export function TicketsListScreen({ navigation, route }: Props) {
     </View>
   );
 
-  return (
-    <View style={{ flex: 1 }}>
+  if (body === undefined) {
+    body = (
       <FlatList
         data={items}
         keyExtractor={keyExtractor}
@@ -729,6 +721,12 @@ export function TicketsListScreen({ navigation, route }: Props) {
         updateCellsBatchingPeriod={50}
         windowSize={7}
       />
+    );
+  }
+
+  return (
+    <View style={{ flex: 1 }}>
+      {body}
 
       <FiltersModal
         theme={theme}
@@ -740,6 +738,8 @@ export function TicketsListScreen({ navigation, route }: Props) {
         setFilters={setFilters}
         canFilterMe={Boolean(session?.user?.id)}
         baseUrl={config.ok ? config.baseUrl : null}
+        resultsTotal={total}
+        resultsLoading={initialLoading}
         onClose={() => setFiltersOpen(false)}
       />
     </View>
@@ -943,6 +943,8 @@ function FiltersModal({
   setFilters,
   canFilterMe,
   baseUrl,
+  resultsTotal,
+  resultsLoading,
   onClose,
 }: {
   theme: Theme;
@@ -954,9 +956,12 @@ function FiltersModal({
   setFilters: Dispatch<SetStateAction<TicketListFilters>>;
   canFilterMe: boolean;
   baseUrl: string | null;
+  resultsTotal: number | null;
+  resultsLoading: boolean;
   onClose: () => void;
 }) {
   const { t } = useTranslation("tickets");
+  const insets = useSafeAreaInsets();
   const [statusOptions, setStatusOptions] = useState<TicketStatus[]>([]);
   const [statusOptionsLoading, setStatusOptionsLoading] = useState(false);
   const [statusOptionsError, setStatusOptionsError] = useState<string | null>(null);
@@ -1032,10 +1037,36 @@ function FiltersModal({
     };
   }, [apiKey, client, priorityOptions.length, tenantId, visible]);
 
+  const viewResultsLabel = resultsLoading
+    ? t("filters.viewResultsLoading")
+    : resultsTotal !== null
+      ? t("filters.viewResultsCount", { count: resultsTotal })
+      : t("filters.viewResults");
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={{ padding: theme.spacing.lg, paddingBottom: theme.spacing.xl }}>
+      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          paddingHorizontal: theme.spacing.lg,
+          paddingTop: insets.top + theme.spacing.sm,
+          paddingBottom: theme.spacing.sm,
+        }}
+      >
         <Text style={{ ...theme.typography.title, color: theme.colors.text }}>{t("filters.title")}</Text>
+        <Pressable
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t("common:close")}
+          hitSlop={12}
+        >
+          <Feather name="x" size={22} color={theme.colors.text} />
+        </Pressable>
+      </View>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.xl }}>
 
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{t("filters.status")}</Text>
         <OptionRow
@@ -1288,18 +1319,57 @@ function FiltersModal({
           onChange={(sortOrder) => setFilters({ ...filters, sortOrder })}
         />
 
-        <View style={{ flexDirection: "row", marginTop: theme.spacing.xl }}>
-          <PrimaryButton
-            onPress={() =>
-              setFilters({ ...DEFAULT_FILTERS })
-            }
-          >
-            {t("common:clear")}
-          </PrimaryButton>
-          <View style={{ width: theme.spacing.sm }} />
-          <PrimaryButton onPress={onClose}>{t("common:done")}</PrimaryButton>
-        </View>
       </ScrollView>
+
+      <View
+        style={{
+          flexDirection: "row",
+          gap: theme.spacing.sm,
+          padding: theme.spacing.lg,
+          paddingBottom: Math.max(insets.bottom, theme.spacing.lg),
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.border,
+          backgroundColor: theme.colors.background,
+        }}
+      >
+        <Pressable
+          onPress={() => setFilters({ ...DEFAULT_FILTERS })}
+          accessibilityRole="button"
+          accessibilityLabel={t("filters.clearAll")}
+          style={({ pressed }) => ({
+            flex: 1,
+            paddingVertical: theme.spacing.md,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            backgroundColor: theme.colors.card,
+            alignItems: "center",
+            opacity: pressed ? 0.9 : 1,
+          })}
+        >
+          <Text style={{ ...theme.typography.body, color: theme.colors.text, fontWeight: "600" }}>
+            {t("filters.clearAll")}
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={viewResultsLabel}
+          style={({ pressed }) => ({
+            flex: 1,
+            paddingVertical: theme.spacing.md,
+            borderRadius: 10,
+            backgroundColor: theme.colors.primary,
+            alignItems: "center",
+            opacity: pressed ? 0.9 : 1,
+          })}
+        >
+          <Text style={{ ...theme.typography.body, color: theme.colors.textInverse, fontWeight: "600" }}>
+            {viewResultsLabel}
+          </Text>
+        </Pressable>
+      </View>
+      </View>
     </Modal>
   );
 }
@@ -1360,6 +1430,14 @@ const TicketRow = memo(function TicketRow({
   const updatedLabel = useMemo(() => (updated ? formatDateShort(updated) : ""), [updated]);
   const status = item.status_name ?? t("common:unknown");
   const priority = item.priority_name ?? null;
+  const tags = Array.isArray(item.tags) ? item.tags : [];
+
+  const [tagsRowWidth, setTagsRowWidth] = useState(0);
+  const visibleTagCount = useMemo(
+    () => computeVisibleTagCount(tags.map((tag) => tag.tag_text), tagsRowWidth),
+    [tags, tagsRowWidth],
+  );
+  const hiddenTagCount = tags.length - visibleTagCount;
 
   return (
     <Pressable
@@ -1385,11 +1463,59 @@ const TicketRow = memo(function TicketRow({
         {item.title}
       </Text>
 
-      <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm, gap: theme.spacing.sm }}>
         <Badge label={status} tone={item.status_is_closed ? "neutral" : "info"} />
-        {priority ? <View style={{ width: theme.spacing.sm }} /> : null}
         {priority ? <Badge label={priority} tone={priorityTone(priority)} /> : null}
       </View>
+
+      {tags.length > 0 ? (
+        <View
+          onLayout={(e) => {
+            const width = Math.round(e.nativeEvent.layout.width);
+            setTagsRowWidth((prev) => (prev === width ? prev : width));
+          }}
+          style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", marginTop: theme.spacing.sm, gap: theme.spacing.xs }}
+        >
+          {tags.slice(0, visibleTagCount).map((tag) => {
+            const chip = getTagChipColors(tag, theme.mode);
+            return (
+              <View
+                key={tag.tag_id}
+                accessibilityLabel={t("tags.tagAccessibility", { tag: tag.tag_text, defaultValue: "Tag {{tag}}" })}
+                style={{
+                  paddingHorizontal: theme.spacing.sm,
+                  paddingVertical: 4,
+                  borderRadius: theme.borderRadius.full,
+                  borderWidth: 1,
+                  borderColor: chip.borderColor,
+                  backgroundColor: chip.backgroundColor,
+                }}
+              >
+                <Text numberOfLines={1} style={{ ...theme.typography.caption, color: chip.textColor, fontWeight: "600", maxWidth: TAG_CHIP_MAX_TEXT_WIDTH }}>
+                  {tag.tag_text}
+                </Text>
+              </View>
+            );
+          })}
+          {hiddenTagCount > 0 ? (
+            <View
+              accessibilityLabel={t("tags.moreTags", { count: hiddenTagCount, defaultValue: "{{count}} more tags" })}
+              style={{
+                paddingHorizontal: theme.spacing.sm,
+                paddingVertical: 4,
+                borderRadius: theme.borderRadius.full,
+                borderWidth: 1,
+                borderColor: theme.colors.badge.neutral.border,
+                backgroundColor: theme.colors.badge.neutral.bg,
+              }}
+            >
+              <Text style={{ ...theme.typography.caption, color: theme.colors.badge.neutral.text, fontWeight: "600" }}>
+                +{hiddenTagCount}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
 
       {item.assigned_to_name ? (
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>

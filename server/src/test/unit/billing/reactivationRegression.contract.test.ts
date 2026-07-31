@@ -29,14 +29,15 @@ function section(source: string, start: string, end: string): string {
 function createFakeKnex(tables: Record<string, Row[]>) {
   return ((tableName: string) => {
     let rows = [...(tables[tableName] ?? [])];
+    const columnName = (key: string) => key.includes('.') ? key.split('.').pop()! : key;
 
     const builder = {
       where(criteria: string | Row, value?: unknown) {
         if (typeof criteria === 'string') {
-          rows = rows.filter((row) => row[criteria] === value);
+          rows = rows.filter((row) => row[columnName(criteria)] === value);
         } else {
           rows = rows.filter((row) =>
-            Object.entries(criteria).every(([key, expected]) => row[key] === expected),
+            Object.entries(criteria).every(([key, expected]) => row[columnName(key)] === expected),
           );
         }
         return builder;
@@ -86,18 +87,19 @@ describe('tenant reactivation regression contract', () => {
       'export async function linkSubscriptionToExistingTenant(',
       'export async function stampReactivationSubscriptionMetadata',
     );
-    expect(linkActivity).toContain("knex('stripe_subscriptions')");
-    expect(linkActivity).toContain("trx('stripe_customers')");
+    expect(linkActivity).toContain("tenantScopedDb.table('stripe_subscriptions')");
+    expect(linkActivity).toContain("tenantScopedTrx.table('stripe_customers')");
     expect(linkActivity).toContain('insertStripeSubscriptionForTenant(trx');
     expect(linkActivity).not.toContain("trx('tenants')");
     expect(linkActivity).not.toContain("knex('tenants')");
+    expect(linkActivity).not.toContain(".table('tenants')");
 
     const subscriptionHelper = section(
       tenantOps,
       'export async function insertStripeSubscriptionForTenant(',
       '/**\n * Create a new tenant',
     );
-    expect(subscriptionHelper).toContain("await trx('stripe_subscriptions')");
+    expect(subscriptionHelper).toContain("await tenantDb(trx, input.tenantId).table('stripe_subscriptions')");
     expect(subscriptionHelper).toContain('tenant: input.tenantId');
     expect(subscriptionHelper).toContain('stripe_customer_id: input.stripeCustomerInternalId');
     expect(subscriptionHelper).not.toContain("trx('tenants')");
@@ -121,7 +123,7 @@ describe('tenant reactivation regression contract', () => {
     expect(route).toContain('if (!pendingDeletion?.reactivatable)');
     expect(route).toContain("'past_window'");
     expect(route).toContain('status: 409');
-    expect(route).toContain("knex('pending_reactivation_refunds').insert");
+    expect(route).toContain("tenantDb(knex, input.tenantId).table('pending_reactivation_refunds').insert");
   });
 
   it('T052/T053: confirmed deletions remain reactivatable and display the effective deletion date', async () => {

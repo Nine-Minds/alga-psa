@@ -1,7 +1,7 @@
 'use server';
 
 import type { IService } from '@alga-psa/types';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { Knex } from 'knex';
 
@@ -12,13 +12,22 @@ export interface PaginatedServicesResponse {
   pageSize: number;
 }
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 export const getServices = withAuth(async (_user, { tenant }, page: number = 1, pageSize: number = 999): Promise<PaginatedServicesResponse> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const offset = (page - 1) * pageSize;
 
-    const base = trx('service_catalog as sc').where({ 'sc.tenant': tenant, 'sc.item_kind': 'service' });
+    const base = tenantScopedTable(trx, 'service_catalog as sc', tenant)
+      .where({ 'sc.item_kind': 'service' });
 
     const countRow = await base.clone().count('* as count').first();
     const totalCount = parseInt((countRow?.count as any) ?? '0', 10);

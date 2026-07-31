@@ -1,4 +1,6 @@
 exports.seed = async function(knex, tenantId) {
+    const { tenantDb } = await import('@alga-psa/db');
+
     // Use provided tenantId or seed all tenants
     let tenants;
     if (tenantId) {
@@ -37,7 +39,43 @@ exports.seed = async function(knex, tenantId) {
         { resource: 'contact', action: 'read', msp: true, client: false, description: 'View contacts' },
         { resource: 'contact', action: 'update', msp: true, client: false, description: 'Update contacts' },
         { resource: 'contact', action: 'delete', msp: true, client: false, description: 'Delete contacts' },
-        
+
+        // Interaction permissions (calls, notes, check-ins, activity — gated by interactionActions;
+        // interaction:read is required by the Contacts page and portal-invite flow)
+        { resource: 'interaction', action: 'create', msp: true, client: false, description: 'Create interactions (calls, notes, check-ins, activity)' },
+        { resource: 'interaction', action: 'read', msp: true, client: false, description: 'View interactions' },
+        { resource: 'interaction', action: 'update', msp: true, client: false, description: 'Update interactions' },
+        { resource: 'interaction', action: 'delete', msp: true, client: false, description: 'Delete interactions' },
+
+        // Inventory module permissions (MSP-only; granted to the MSP Admin role,
+        // mirrors migration 20260626100600_add_inventory_permissions). Without these
+        // the Add Sales Order / stock-location / inventory server actions fail the
+        // RBAC check even for Admin (e.g. "Permission denied: sales_order create required").
+        { resource: 'inventory', action: 'create', msp: true, client: false, description: 'Create inventory records' },
+        { resource: 'inventory', action: 'read', msp: true, client: false, description: 'View inventory records' },
+        { resource: 'inventory', action: 'update', msp: true, client: false, description: 'Update inventory records' },
+        { resource: 'inventory', action: 'delete', msp: true, client: false, description: 'Delete inventory records' },
+        { resource: 'vendor', action: 'create', msp: true, client: false, description: 'Create vendors' },
+        { resource: 'vendor', action: 'read', msp: true, client: false, description: 'View vendors' },
+        { resource: 'vendor', action: 'update', msp: true, client: false, description: 'Update vendors' },
+        { resource: 'vendor', action: 'delete', msp: true, client: false, description: 'Delete vendors' },
+        { resource: 'purchase_order', action: 'create', msp: true, client: false, description: 'Create purchase orders' },
+        { resource: 'purchase_order', action: 'read', msp: true, client: false, description: 'View purchase orders' },
+        { resource: 'purchase_order', action: 'update', msp: true, client: false, description: 'Update purchase orders' },
+        { resource: 'purchase_order', action: 'delete', msp: true, client: false, description: 'Delete purchase orders' },
+        { resource: 'sales_order', action: 'create', msp: true, client: false, description: 'Create sales orders' },
+        { resource: 'sales_order', action: 'read', msp: true, client: false, description: 'View sales orders' },
+        { resource: 'sales_order', action: 'update', msp: true, client: false, description: 'Update sales orders' },
+        { resource: 'sales_order', action: 'delete', msp: true, client: false, description: 'Delete sales orders' },
+        { resource: 'stock_transfer', action: 'create', msp: true, client: false, description: 'Create stock transfers' },
+        { resource: 'stock_transfer', action: 'read', msp: true, client: false, description: 'View stock transfers' },
+        { resource: 'stock_transfer', action: 'update', msp: true, client: false, description: 'Update stock transfers' },
+        { resource: 'stock_transfer', action: 'delete', msp: true, client: false, description: 'Delete stock transfers' },
+        { resource: 'stock_location', action: 'create', msp: true, client: false, description: 'Create stock locations' },
+        { resource: 'stock_location', action: 'read', msp: true, client: false, description: 'View stock locations' },
+        { resource: 'stock_location', action: 'update', msp: true, client: false, description: 'Update stock locations' },
+        { resource: 'stock_location', action: 'delete', msp: true, client: false, description: 'Delete stock locations' },
+
         // Credit permissions
         { resource: 'credit', action: 'create', msp: true, client: false, description: 'Create credits' },
         { resource: 'credit', action: 'read', msp: true, client: false, description: 'View credits' },
@@ -247,8 +285,10 @@ exports.seed = async function(knex, tenantId) {
 
     // Process each tenant
     for (const { tenant } of tenants) {
+        const db = tenantDb(knex, tenant);
+
         // Check which permissions already exist
-        const existingPermissions = await knex('permissions').where({ tenant });
+        const existingPermissions = await db.table('permissions');
         const existingPermMap = new Map();
         existingPermissions.forEach(p => {
             const key = `${p.resource}:${p.action}:${p.msp ? 'msp' : 'client'}`;
@@ -272,7 +312,7 @@ exports.seed = async function(knex, tenantId) {
         }
 
         if (permissionsToInsert.length > 0) {
-            await knex('permissions').insert(permissionsToInsert);
+            await db.table('permissions').insert(permissionsToInsert);
             console.log(`Inserted ${permissionsToInsert.length} new permissions for tenant ${tenant}`);
         } else {
             console.log(`All permissions already exist for tenant ${tenant}`);

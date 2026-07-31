@@ -30,7 +30,7 @@ test('formatStatusReport includes canonical rollup and tier readiness when avail
     cluster: { apiReachable: true, status: 'healthy', nodeReadiness: [] },
     flux: { status: 'healthy', helmStatus: 'healthy', sources: [], kustomizations: [], helmReleases: [] },
     workloads: { status: 'degraded', components: [] },
-    release: { selectedReleaseVersion: '1.0.0', appUrl: 'https://psa.example.com', metadata: {} },
+    release: { selectedReleaseVersion: '1.0.0', appUrl: 'https://psa.example.com', appVersion: '1.0.0', manifestDigest: 'sha256:release' },
     configPaths: { configDir: '/tmp/site', kubeconfig: '/tmp/kubeconfig', talosconfig: '/tmp/talosconfig' },
     canonical: {
       rollup: { state: 'ready_with_background_issues', message: 'Background services need attention.' },

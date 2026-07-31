@@ -114,9 +114,14 @@ function createFakeKnex(state: DbState) {
         toInsert.id = toInsert.id ?? `mapping_${++nextMappingId}`;
       }
 
+      if (this.table === 'assets' && !toInsert.asset_id) {
+        toInsert.asset_id = `asset_${++nextAssetId}`;
+      }
+
       rows.push(toInsert);
 
-      // Support onConflict merge for workstation/server assets only.
+      // Support onConflict merge for workstation/server assets only, plus
+      // insert(...).returning([...]) used by direct asset creation in the sync engine.
       return {
         onConflict: (_cols: string[]) => ({
           merge: async (mergePatch: any) => {
@@ -126,6 +131,10 @@ function createFakeKnex(state: DbState) {
             Object.assign(match, mergePatch);
           },
         }),
+        returning: async (cols?: string[] | string) => {
+          const colsArr = typeof cols === 'string' ? [cols] : cols;
+          return [applySelect(toInsert, colsArr as any)];
+        },
       };
     }
 
@@ -156,6 +165,12 @@ vi.mock('@alga-psa/core/secrets', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: knexMock })),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('@alga-psa/assets/actions/assetActions', () => ({
@@ -187,8 +202,8 @@ vi.mock('@alga-psa/integrations/lib/rmm/tacticalrmm/tacticalApiClient', async ()
 
   class TacticalRmmClientMock {
     async listAllBeta(args: { path: string; params?: any }) {
-      if (args.path === '/api/beta/v1/site/') return tacticalSites;
-      if (args.path === '/api/beta/v1/agent/') {
+      if (args.path === '/beta/v1/site/') return tacticalSites;
+      if (args.path === '/beta/v1/agent/') {
         const clientId = String(args.params?.client_id ?? '');
         return tacticalAgentsByClientId[clientId] ?? [];
       }

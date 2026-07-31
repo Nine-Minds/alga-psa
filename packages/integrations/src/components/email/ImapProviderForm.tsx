@@ -21,6 +21,10 @@ import type { EmailProvider } from './types';
 import { createEmailProvider, updateEmailProvider } from '@alga-psa/integrations/actions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getInboundTicketDefaults } from '@alga-psa/integrations/actions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type ImapProviderFormData = {
   providerName: string;
@@ -198,9 +202,14 @@ export function ImapProviderForm({
         ? await updateEmailProvider(provider.id, payload, true)
         : await createEmailProvider(payload, true);
 
+      if (isActionMessageError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+
       onSuccess(result.provider);
     } catch (err: any) {
-      setError(err.message);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

@@ -29,13 +29,15 @@ import {
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
 import type { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
-import { Clock3, Copy, FileText, Layers, Link as LinkIcon, ListChecks, Settings2, ShieldCheck } from 'lucide-react';
+import { Clock3, FileText, Layers, Link as LinkIcon, ListChecks, Settings2, ShieldCheck } from 'lucide-react';
 import AssetDocuments from './AssetDocuments';
+import { CustomTypeDetailsPanel } from './panels/CustomTypeDetailsPanel';
 import CreateTicketFromAssetButton from './CreateTicketFromAssetButton';
 import DeleteAssetButton from './DeleteAssetButton';
 import { RemoteAccessButton } from './RemoteAccessButton';
 import { AssetAlertsSection } from './AssetAlertsSection';
 import { AssetPatchStatusSection } from './AssetPatchStatusSection';
+import { AssetTimeline } from './AssetTimeline';
 import { AssetSoftwareInventory } from './AssetSoftwareInventory';
 import { ASSET_DRAWER_TABS, type AssetDrawerTab } from './AssetDetailDrawer.types';
 
@@ -231,9 +233,13 @@ export function AssetDetailDrawerClient({
     visibleAssetId,
   ]);
 
+  // Matches the client quick view and the asset edit drawer at 900px. This
+  // previously passed no width (falling back to Drawer's `w-fit`) around a
+  // hardcoded 560px inner box, so it read as a different, narrower system —
+  // most obviously when opened on top of the 900px client drawer.
   return (
-    <Drawer id="asset-detail-drawer" isOpen={isOpen} onClose={onClose}>
-      <div className="w-[560px] max-w-full space-y-6">
+    <Drawer id="asset-detail-drawer" isOpen={isOpen} onClose={onClose} width="min(900px, 92vw)">
+      <div className="w-full space-y-4">
         <header className="flex items-center justify-between">
           <div className="space-y-1">
             <h1 className="text-xl font-semibold text-gray-900">
@@ -397,22 +403,17 @@ function renderOverviewTab({ asset, maintenanceReport, history, router, statusBa
       {/* RMM Software Inventory - Shows installed software for workstations/servers */}
       <AssetSoftwareInventory asset={asset} />
 
-      {history && history.length > 0 && (
-        <Card className="space-y-4 p-4" {...withDataAutomationId({ id: 'asset-drawer-overview-history' })}>
-          <SectionTitle icon={<Copy className="h-4 w-4" />} title={t('assetDetailDrawer.overview.recentLifecycleEvents', { defaultValue: 'Recent lifecycle events' })} />
-          <ul className="space-y-3">
-            {history.slice(0, 5).map(event => (
-              <li key={event.history_id} className="flex items-start gap-3">
-                <div className="h-2 w-2 translate-y-2 rounded-full bg-primary-500" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-900 capitalize">{formatTitleCase(event.change_type)}</p>
-                  <p className="text-xs text-gray-500">{formatRelative(event.changed_at, t)}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+      {/* One merged spine in place of the old change-only "Recent lifecycle
+          events" card. Prefetched data is passed through so opening the drawer
+          still costs no extra round trip. */}
+      <AssetTimeline
+        id="asset-drawer-timeline"
+        asset={asset}
+        compact
+        maxRows={6}
+        initialHistory={history}
+        initialMaintenance={maintenanceReport}
+      />
     </div>
   );
 }
@@ -549,6 +550,9 @@ function renderConfigurationTab({ asset, t }: ConfigurationTabProps) {
       </Card>
 
       {renderTypeSpecificConfiguration(asset, t)}
+
+      {/* Custom-type asset attributes (renders nothing for built-in types). */}
+      <CustomTypeDetailsPanel asset={asset} />
     </div>
   );
 }
@@ -788,25 +792,22 @@ function formatRelative(value: string, t: TranslationFn) {
   }
   if (minutes < 60) {
     return t('assetDetailDrawer.relative.minutesAgo', {
-      defaultValue: '{{count}} minute{{suffix}} ago',
-      count: minutes,
-      suffix: minutes === 1 ? '' : 's'
+      defaultValue: '{{count}} minutes ago',
+      count: minutes
     });
   }
   const hours = Math.floor(minutes / 60);
   if (hours < 24) {
     return t('assetDetailDrawer.relative.hoursAgo', {
-      defaultValue: '{{count}} hour{{suffix}} ago',
-      count: hours,
-      suffix: hours === 1 ? '' : 's'
+      defaultValue: '{{count}} hours ago',
+      count: hours
     });
   }
   const days = Math.floor(hours / 24);
   if (days < 7) {
     return t('assetDetailDrawer.relative.daysAgo', {
-      defaultValue: '{{count}} day{{suffix}} ago',
-      count: days,
-      suffix: days === 1 ? '' : 's'
+      defaultValue: '{{count}} days ago',
+      count: days
     });
   }
   return date.toLocaleDateString();

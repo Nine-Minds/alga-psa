@@ -117,6 +117,21 @@ const COPY = {
     textView: 'Zobacz zadanie pod adresem',
   },
 };
+SUBJECTS.pt = 'Tarefa atualizada: {{task.name}}';
+COPY.pt = {
+  headerLabel: 'Tarefa atualizada',
+  intro: 'Uma tarefa foi atualizada no projeto {{project.name}}:',
+  taskName: 'Nome da tarefa',
+  status: 'Status',
+  progress: 'Progresso',
+  updatedBy: 'Atualizada por',
+  viewButton: 'Ver tarefa',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Tarefa atualizada',
+  textIntro: 'Uma tarefa foi atualizada no projeto {{project.name}}:',
+  textView: 'Ver tarefa em',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

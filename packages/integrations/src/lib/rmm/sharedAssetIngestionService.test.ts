@@ -1,6 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ingestNormalizedRmmDeviceSnapshot } from './sharedAssetIngestionService';
 import type { NormalizedRmmExternalDeviceSnapshot } from './contracts';
+
+// The shared service uses the real tenantDb, whose scoped-query machinery emits
+// an alias-qualified two-arg `.where('table.tenant', value)` the fake knex below
+// does not understand. Mock tenantDb to delegate with object-form tenant scoping.
+vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+    unscoped: (table: string) => conn(table),
+  }),
+}));
 
 type DbState = {
   assets: Array<any>;

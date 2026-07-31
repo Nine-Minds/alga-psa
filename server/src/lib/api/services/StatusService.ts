@@ -33,11 +33,9 @@ export class StatusService extends BaseService<IStatus> {
     } = options;
 
     // Build base query
-    let dataQuery = knex('statuses')
-      .where('tenant', context.tenant);
+    let dataQuery = this.buildTenantScopedQuery(knex, context);
 
-    let countQuery = knex('statuses')
-      .where('tenant', context.tenant);
+    let countQuery = this.buildTenantScopedQuery(knex, context);
 
     // Apply type filter
     if (filters.type) {
@@ -106,11 +104,8 @@ export class StatusService extends BaseService<IStatus> {
   async getById(id: string, context: ServiceContext): Promise<IStatus | null> {
     const { knex } = await this.getKnex();
 
-    const status = await knex('statuses')
-      .where({
-        status_id: id,
-        tenant: context.tenant
-      })
+    const status = await this.buildTenantScopedQuery(knex, context)
+      .where('status_id', id)
       .first();
 
     if (status?.status_type === 'ticket' && !status.board_id) {

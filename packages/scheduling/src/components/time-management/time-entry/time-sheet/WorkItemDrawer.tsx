@@ -6,7 +6,12 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getWorkItemById } from '@alga-psa/scheduling/actions';
 import { getCurrentUser, getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+    getErrorMessage,
+    handleError,
+    isActionMessageError,
+    isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import EntryPopup from '../../../schedule/EntryPopup';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { useSchedulingCrossFeature } from '../../../../context/SchedulingCrossFeatureContext';
@@ -19,6 +24,10 @@ interface WorkItemDrawerProps {
 }
 
 type ScheduleUpdateData = Omit<IScheduleEntry, 'tenant'> & { updateType?: string };
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+    return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 function LoadingState(): React.JSX.Element {
     return (
@@ -148,6 +157,10 @@ export function WorkItemDrawer({
 
                 case 'project_task': {
                     const taskData = await getTaskById(workItem.work_item_id);
+                    if (isReturnedActionError(taskData)) {
+                        toast.error(getErrorMessage(taskData));
+                        return null;
+                    }
                     if (!taskData) {
                         toast.error(t('workItemDrawer.errors.failedTask', { defaultValue: 'Failed to load task' }));
                         return null;
@@ -163,6 +176,11 @@ export function WorkItemDrawer({
                         getProjectMetadata(phase.project_id),
                         getProjectTreeData(phase.project_id)
                     ]);
+
+                    if (isReturnedActionError(projectMetadata)) {
+                        toast.error(getErrorMessage(projectMetadata));
+                        return null;
+                    }
 
                     if (!projectMetadata || !('phases' in projectMetadata) || !('users' in projectMetadata)) {
                         toast.error(t('workItemDrawer.errors.failedTaskProjectMetadata', {
@@ -196,6 +214,11 @@ export function WorkItemDrawer({
 
                     if (!currentUser) {
                         toast.error(t('workItemDrawer.errors.noUserSession', { defaultValue: 'No user session found' }));
+                        return null;
+                    }
+
+                    if (isReturnedActionError(adHocData)) {
+                        toast.error(getErrorMessage(adHocData));
                         return null;
                     }
 

@@ -10,7 +10,8 @@ import { addManualItemsToInvoice } from '@alga-psa/billing/actions/invoiceModifi
 import type { IInvoiceCharge } from 'server/src/interfaces/invoice.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
-process.env.DB_PORT = '5432';
+process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
+
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
 const {
@@ -22,23 +23,15 @@ const {
 
 describe('Contract Invoice Manual Credit', () => {
   let context: TestContext;
-  let mockedTenantId = '11111111-1111-1111-1111-111111111111';
-  let mockedUserId = 'mock-user-id';
 
   vi.mock('server/src/lib/auth/rbac', () => ({
     hasPermission: vi.fn(() => Promise.resolve(true))
   }));
 
-  vi.mock('@alga-psa/auth', () => ({
-    getSession: vi.fn(async () => ({
-      user: {
-        id: mockedUserId,
-        tenant: mockedTenantId
-      }
-    })),
-    withAuth: (fn: unknown) => fn,
-    withAuthCheck: (fn: unknown) => fn
-  }));
+  vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
+  return createAuthModuleMock();
+});
 
   vi.mock('server/src/lib/analytics/posthog', () => ({
     analytics: {
@@ -89,16 +82,18 @@ describe('Contract Invoice Manual Credit', () => {
         custom_rate: null
       });
 
-    await context.db('client_contract_lines')
-      .where({
-        tenant: context.tenantId,
-        client_contract_line_id: clientContractLineId
-      })
-      .update({
-        client_contract_id: clientContractId,
-        contract_line_id: contractLineId,
-        is_active: true
-      });
+    if (await context.db.schema.hasTable('client_contract_lines')) {
+      await context.db('client_contract_lines')
+        .where({
+          tenant: context.tenantId,
+          client_contract_line_id: clientContractLineId
+        })
+        .update({
+          client_contract_id: clientContractId,
+          contract_line_id: contractLineId,
+          is_active: true
+        });
+    }
   }
 
   async function ensureClientBillingSettings(
@@ -150,26 +145,22 @@ describe('Contract Invoice Manual Credit', () => {
       userType: 'internal'
     });
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     await configureDefaultTax();
   }, 60000);
 
   beforeEach(async () => {
     context = await resetContext();
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
     await configureDefaultTax();
   }, 30000);
 
@@ -299,12 +290,18 @@ describe('Contract Invoice Manual Credit', () => {
 
     expect(contractDetail).toBeTruthy();
 
-    const linkedContractLine = await context.db('client_contract_lines')
-      .where({
-        tenant: context.tenantId,
-        contract_line_id: contractLineId
+    // Post-drop the line's client linkage is contract_lines.contract_id ->
+    // client_contracts, not the removed client_contract_lines row.
+    const linkedContractLine = await context.db('contract_lines')
+      .join('client_contracts', function joinOnContract() {
+        this.on('client_contracts.contract_id', 'contract_lines.contract_id')
+          .andOn('client_contracts.tenant', 'contract_lines.tenant');
       })
-      .first();
+      .where({
+        'contract_lines.tenant': context.tenantId,
+        'contract_lines.contract_line_id': contractLineId
+      })
+      .first('contract_lines.contract_line_id');
 
     expect(linkedContractLine).toBeTruthy();
     expect(contractDetail?.config_id).toBeTruthy();

@@ -12,6 +12,7 @@
  */
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type {
   IScheduleEntry,
   IRecurrencePattern,
@@ -21,6 +22,14 @@ import type {
 } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { generateOccurrences } from '../utils/recurrenceUtils';
+
+function tenantScopedTable(
+  knexOrTrx: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(knexOrTrx, tenant).table(table);
+}
 
 /**
  * Schedule Entry model with tenant-explicit methods.
@@ -46,26 +55,26 @@ const ScheduleEntry = {
     }
 
     // Verify entries exist in the correct tenant
-    const validEntries = await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
+    const validEntries = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
       .whereIn('entry_id', validEntryIds)
       .select('entry_id');
 
-    const validEntrySet = new Set(validEntries.map(e => e.entry_id));
+    const validEntrySet = new Set(validEntries.map((e: { entry_id: string }) => e.entry_id));
     const invalidEntryIds = validEntryIds.filter(id => !validEntrySet.has(id));
 
     if (invalidEntryIds.length > 0) {
       throw new Error(`Schedule entries ${invalidEntryIds.join(', ')} not found in tenant ${tenant}`);
     }
 
-    const assignments = await knexOrTrx('schedule_entry_assignees')
-      .where('schedule_entry_assignees.tenant', tenant)
-      .whereIn('entry_id', validEntryIds)
-      .join('users', function () {
-        this.on('schedule_entry_assignees.user_id', '=', 'users.user_id')
-          .andOn('schedule_entry_assignees.tenant', '=', 'users.tenant');
-      })
-      .select('entry_id', 'schedule_entry_assignees.user_id');
+    const db = tenantDb(knexOrTrx, tenant);
+    const assignmentsQuery = db.table('schedule_entry_assignees')
+      .whereIn('entry_id', validEntryIds);
+    db.tenantJoin(assignmentsQuery, 'users', 'schedule_entry_assignees.user_id', 'users.user_id');
+    const assignments = await assignmentsQuery
+      .select({
+        entry_id: 'schedule_entry_assignees.entry_id',
+        user_id: 'schedule_entry_assignees.user_id',
+      });
 
     // Group by entry_id
     return assignments.reduce(
@@ -94,9 +103,8 @@ const ScheduleEntry = {
     }
 
     // Verify entry exists in the correct tenant
-    const entryExists = await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
-      .andWhere('entry_id', entry_id)
+    const entryExists = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+      .where('entry_id', entry_id)
       .first();
 
     if (!entryExists) {
@@ -104,20 +112,18 @@ const ScheduleEntry = {
     }
 
     // Delete existing assignments
-    await knexOrTrx('schedule_entry_assignees')
-      .where('schedule_entry_assignees.tenant', tenant)
-      .andWhere('entry_id', entry_id)
+    await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
+      .where('entry_id', entry_id)
       .del();
 
     // Insert new assignments
     if (userIds.length > 0) {
       // Verify all users exist in the correct tenant
-      const validUsers = await knexOrTrx('users')
-        .where('users.tenant', tenant)
+      const validUsers = await tenantScopedTable(knexOrTrx, 'users', tenant)
         .whereIn('user_id', userIds)
         .select('user_id');
 
-      const validUserIds = validUsers.map(u => u.user_id);
+      const validUserIds = validUsers.map((u: { user_id: string }) => u.user_id);
       const invalidUserIds = userIds.filter(id => !validUserIds.includes(id));
 
       if (invalidUserIds.length > 0) {
@@ -131,7 +137,7 @@ const ScheduleEntry = {
           user_id,
         })
       );
-      await knexOrTrx('schedule_entry_assignees').insert(assignments);
+      await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant).insert(assignments);
     }
   },
 
@@ -155,8 +161,7 @@ const ScheduleEntry = {
     const endDateStr = end.toISOString().split('T')[0];
     let holidays: IHoliday[] = [];
     try {
-      holidays = await knexOrTrx('holidays')
-        .where('tenant', tenant)
+      holidays = await tenantScopedTable(knexOrTrx, 'holidays', tenant)
         .whereNull('schedule_id') // Only global holidays (not schedule-specific SLA holidays)
         .where(function () {
           this.whereBetween('holiday_date', [startDateStr, endDateStr])
@@ -168,8 +173,7 @@ const ScheduleEntry = {
     }
 
     // Get master recurring entries that might have occurrences in the range
-    const masterEntries = await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
+    const masterEntries = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
       .where('is_recurring', true)
       .whereNotNull('recurrence_pattern')
       .whereNull('original_entry_id')
@@ -285,8 +289,7 @@ const ScheduleEntry = {
     // Recurring masters are excluded here because they are represented
     // by the virtual instances generated below — including them would
     // cause a duplicate on the first occurrence day.
-    const regularEntries = (await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
+    const regularEntries = (await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
       .whereNull('original_entry_id')
       .andWhere(function () {
         this.where('is_recurring', false).orWhereNull('is_recurring');
@@ -335,8 +338,7 @@ const ScheduleEntry = {
       throw new Error('Tenant context is required for getting earliest schedule entry');
     }
 
-    const entry = (await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
+    const entry = (await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
       .orderBy('scheduled_start', 'asc')
       .first()) as (IScheduleEntry & { entry_id: string }) | undefined;
 
@@ -370,9 +372,8 @@ const ScheduleEntry = {
       throw new Error('Tenant context is required for getting schedule entry');
     }
 
-    const entry = (await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
-      .andWhere('entry_id', entry_id)
+    const entry = (await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+      .where('entry_id', entry_id)
       .first()) as (IScheduleEntry & { entry_id: string }) | undefined;
 
     if (!entry) return undefined;
@@ -429,7 +430,7 @@ const ScheduleEntry = {
     };
 
     // Create main entry
-    const [createdEntry] = await knexOrTrx('schedule_entries')
+    const [createdEntry] = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
       .insert(entryData)
       .returning('*');
 
@@ -470,9 +471,8 @@ const ScheduleEntry = {
     const virtualTimestamp = timestamp ? new Date(parseInt(timestamp, 10)) : undefined;
 
     // Get the master entry
-    const originalEntry = await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
-      .andWhere('entry_id', masterEntryId)
+    const originalEntry = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+      .where('entry_id', masterEntryId)
       .first();
 
     if (!originalEntry) {
@@ -494,7 +494,7 @@ const ScheduleEntry = {
             );
 
             const standaloneId = uuidv4();
-            await knexOrTrx('schedule_entries').insert({
+            await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant).insert({
               entry_id: standaloneId,
               title: entry.title || originalEntry.title,
               scheduled_start: entry.scheduled_start || originalEntry.scheduled_start,
@@ -532,9 +532,8 @@ const ScheduleEntry = {
               exceptions: [...(originalPattern.exceptions || []), exceptionDate],
             };
 
-            await knexOrTrx('schedule_entries')
-              .where('schedule_entries.tenant', tenant)
-              .andWhere('entry_id', masterEntryId)
+            await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+              .where('entry_id', masterEntryId)
               .update({
                 recurrence_pattern: JSON.stringify(updatedPattern),
               });
@@ -577,9 +576,8 @@ const ScheduleEntry = {
               ),
             };
 
-            await knexOrTrx('schedule_entries')
-              .where('schedule_entries.tenant', tenant)
-              .andWhere('entry_id', masterEntryId)
+            await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+              .where('entry_id', masterEntryId)
               .update({
                 recurrence_pattern: JSON.stringify(futureOriginalPattern),
               });
@@ -617,7 +615,7 @@ const ScheduleEntry = {
               is_private: entry.is_private !== undefined ? entry.is_private : originalEntry.is_private,
             };
 
-            await knexOrTrx('schedule_entries').insert(newMasterEntry);
+            await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant).insert(newMasterEntry);
 
             const masterAssignees = await ScheduleEntry.getAssignedUserIds(
               knexOrTrx,
@@ -655,9 +653,8 @@ const ScheduleEntry = {
                 }
               : originalPattern;
 
-            const [updatedMasterEntry] = await knexOrTrx('schedule_entries')
-              .where('schedule_entries.tenant', tenant)
-              .andWhere('entry_id', masterEntryId)
+            const [updatedMasterEntry] = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+              .where('entry_id', masterEntryId)
               .update({
                 title: entry.title || originalEntry.title,
                 scheduled_start: entry.scheduled_start || originalEntry.scheduled_start,
@@ -733,9 +730,8 @@ const ScheduleEntry = {
     }
 
     // Update the entry
-    const [updatedEntry] = await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
-      .andWhere('entry_id', masterEntryId)
+    const [updatedEntry] = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+      .where('entry_id', masterEntryId)
       .update(updateData)
       .returning('*');
 
@@ -782,9 +778,8 @@ const ScheduleEntry = {
     const virtualTimestamp = timestamp ? new Date(parseInt(timestamp, 10)) : undefined;
 
     // Get the master entry
-    const originalEntry = await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
-      .andWhere('entry_id', masterEntryId)
+    const originalEntry = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+      .where('entry_id', masterEntryId)
       .first();
 
     if (!originalEntry) {
@@ -809,9 +804,8 @@ const ScheduleEntry = {
                 exceptions: [...(originalPattern.exceptions || []), exceptionDate],
               };
 
-              await knexOrTrx('schedule_entries')
-                .where('schedule_entries.tenant', tenant)
-                .andWhere('entry_id', masterEntryId)
+              await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+                .where('entry_id', masterEntryId)
                 .update({
                   recurrence_pattern: JSON.stringify(updatedPattern),
                 });
@@ -849,7 +843,7 @@ const ScheduleEntry = {
                   exceptions: [...(originalPattern.exceptions || []), exceptionDate],
                 };
 
-                await knexOrTrx('schedule_entries').insert({
+                await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant).insert({
                   entry_id: newMasterId,
                   title: originalEntry.title,
                   scheduled_start: nextOccurrence,
@@ -879,14 +873,12 @@ const ScheduleEntry = {
               }
 
               // Delete assignees then original master
-              await knexOrTrx('schedule_entry_assignees')
-                .where('schedule_entry_assignees.tenant', tenant)
-                .andWhere('entry_id', masterEntryId)
+              await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
+                .where('entry_id', masterEntryId)
                 .del();
 
-              await knexOrTrx('schedule_entries')
-                .where('schedule_entries.tenant', tenant)
-                .andWhere('entry_id', masterEntryId)
+              await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+                .where('entry_id', masterEntryId)
                 .del();
 
               return true;
@@ -909,9 +901,8 @@ const ScheduleEntry = {
                   ) || [],
               };
 
-              await knexOrTrx('schedule_entries')
-                .where('schedule_entries.tenant', tenant)
-                .andWhere('entry_id', masterEntryId)
+              await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+                .where('entry_id', masterEntryId)
                 .update({
                   recurrence_pattern: JSON.stringify(updatedPattern),
                 });
@@ -919,14 +910,12 @@ const ScheduleEntry = {
               return true;
             } else {
               // Master entry in FUTURE mode = delete entire series
-              await knexOrTrx('schedule_entry_assignees')
-                .where('schedule_entry_assignees.tenant', tenant)
-                .andWhere('entry_id', masterEntryId)
+              await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
+                .where('entry_id', masterEntryId)
                 .del();
 
-              await knexOrTrx('schedule_entries')
-                .where('schedule_entries.tenant', tenant)
-                .andWhere('entry_id', masterEntryId)
+              await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+                .where('entry_id', masterEntryId)
                 .del();
 
               return true;
@@ -935,14 +924,12 @@ const ScheduleEntry = {
 
           case 'all': {
             // Delete assignees first, then the master entry
-            await knexOrTrx('schedule_entry_assignees')
-              .where('schedule_entry_assignees.tenant', tenant)
-              .andWhere('entry_id', masterEntryId)
+            await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
+              .where('entry_id', masterEntryId)
               .del();
 
-            const deletedCount = await knexOrTrx('schedule_entries')
-              .where('schedule_entries.tenant', tenant)
-              .andWhere('entry_id', masterEntryId)
+            const deletedCount = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+              .where('entry_id', masterEntryId)
               .del();
 
             return deletedCount > 0;
@@ -952,14 +939,12 @@ const ScheduleEntry = {
     }
 
     // Non-recurring path: simple delete
-    await knexOrTrx('schedule_entry_assignees')
-      .where('schedule_entry_assignees.tenant', tenant)
-      .andWhere('entry_id', entry_id)
+    await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
+      .where('entry_id', entry_id)
       .del();
 
-    const deletedCount = await knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
-      .andWhere('entry_id', entry_id)
+    const deletedCount = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+      .where('entry_id', entry_id)
       .del();
 
     return deletedCount > 0;
@@ -978,9 +963,8 @@ const ScheduleEntry = {
       throw new Error('Tenant context is required for getting schedule entries by work item');
     }
 
-    const entries = (await knexOrTrx('schedule_entries')
+    const entries = (await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
       .where({
-        'schedule_entries.tenant': tenant,
         work_item_id: workItemId,
         work_item_type: workItemType,
       })
@@ -1016,19 +1000,17 @@ const ScheduleEntry = {
     }
 
     // Get entry IDs assigned to this user
-    let assignmentQuery = knexOrTrx('schedule_entry_assignees')
-      .where('schedule_entry_assignees.tenant', tenant)
-      .andWhere('user_id', userId)
+    const assignmentQuery = tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
+      .where('user_id', userId)
       .select('entry_id');
 
     const assignmentResult = await assignmentQuery;
-    const entryIds = assignmentResult.map(a => a.entry_id);
+    const entryIds = assignmentResult.map((a: { entry_id: string }) => a.entry_id);
 
     if (entryIds.length === 0) return [];
 
     // Get the actual entries
-    let entriesQuery = knexOrTrx('schedule_entries')
-      .where('schedule_entries.tenant', tenant)
+    let entriesQuery = tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
       .whereIn('entry_id', entryIds);
 
     if (start && end) {

@@ -17,7 +17,10 @@ vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   handleError: vi.fn(),
 }));
 
-const mockExistingLinks: IDocumentShareLink[] = [
+// vi.hoisted: the documents/actions mock factory below runs while this
+// module's imports evaluate — plain consts would still be in their TDZ then.
+const { mockExistingLinks, mockCreateShareLink } = vi.hoisted(() => {
+  const links = [
   {
     share_id: 'share-1',
     tenant: 'tenant-1',
@@ -50,7 +53,7 @@ const mockExistingLinks: IDocumentShareLink[] = [
   },
 ];
 
-const mockCreateShareLink = vi.fn().mockResolvedValue({
+  const create = vi.fn().mockResolvedValue({
   shareLink: {
     share_id: 'share-new',
     tenant: 'tenant-1',
@@ -66,6 +69,8 @@ const mockCreateShareLink = vi.fn().mockResolvedValue({
     revoked_at: null,
     revoked_by: null,
   },
+  });
+  return { mockExistingLinks: links, mockCreateShareLink: create };
 });
 
 vi.mock('@alga-psa/documents/actions', async () => {
@@ -116,8 +121,8 @@ vi.mock('@alga-psa/ui/components/Badge', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ children, open }: { children: React.ReactNode; open: boolean }) =>
-    open ? <div data-testid="dialog">{children}</div> : null,
+  Dialog: ({ children, isOpen }: { children: React.ReactNode; isOpen: boolean }) =>
+    isOpen ? <div data-testid="dialog">{children}</div> : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
@@ -162,7 +167,8 @@ describe('ShareLinkDialog', () => {
       expect(screen.getByTestId('dialog')).toBeInTheDocument();
     });
 
-    // Should have select for share type
+    // The create form (and its share-type select) is behind the toggle.
+    fireEvent.click(screen.getByText('Create New Share Link'));
     expect(screen.getByTestId('select')).toBeInTheDocument();
   });
 
@@ -281,8 +287,9 @@ describe('ShareLinkDialog', () => {
     );
 
     await waitFor(() => {
-      // Should show download count - the mock has 5 downloads for first link
-      expect(screen.getByText(/5/)).toBeInTheDocument();
+      // The count renders only for capped links: the second mock link has
+      // download_count 10 of max_downloads 100.
+      expect(screen.getByText(/10\/100 downloads/)).toBeInTheDocument();
     });
   });
 });

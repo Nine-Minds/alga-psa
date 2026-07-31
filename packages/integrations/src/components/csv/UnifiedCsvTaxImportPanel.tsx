@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useRef } from 'react';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { StringDateRangePicker } from '@alga-psa/ui/components/DateRangePicker';
@@ -15,6 +16,12 @@ import {
 } from '@alga-psa/integrations/actions';
 import type { TaxImportPreviewResult, TaxImportResult } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import { getCsvResponseErrorMessage } from './csvResponseErrors';
 
 type ImportSource = 'xero' | 'quickbooks';
 
@@ -55,6 +62,7 @@ interface QuickBooksImportResult {
 
 export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImportPanelProps) {
   const { t } = useTranslation('msp/integrations');
+  const { money } = useCurrencyFormat();
   const [source, setSource] = useState<ImportSource>('xero');
   const [file, setFile] = useState<File | null>(null);
   const [csvContent, setCsvContent] = useState<string | null>(null);
@@ -136,13 +144,19 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
       setError(t('integrations.csv.taxImport.errors.selectFile', { defaultValue: 'Please select a CSV file' }));
       return;
     }
+    const fallbackMessage = t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' });
     setIsValidating(true);
     setError(null);
     try {
       const result = await previewXeroCsvTaxImport(csvContent);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setXeroPreviewResult(result);
     } catch (err) {
-      setError(t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
+      console.error('Failed to validate Xero CSV tax import:', err);
+      setError(fallbackMessage);
     } finally {
       setIsValidating(false);
     }
@@ -154,10 +168,15 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
       setError(t('integrations.csv.taxImport.errors.selectFile', { defaultValue: 'Please select a CSV file' }));
       return;
     }
+    const fallbackMessage = t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' });
     setIsImporting(true);
     setError(null);
     try {
       const result = await executeXeroCsvTaxImport(csvContent);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setXeroImportResult(result);
       if (result.success || result.successCount > 0) {
         onImportComplete?.({
@@ -166,7 +185,8 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
         });
       }
     } catch (err) {
-      setError(t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
+      console.error('Failed to import Xero CSV tax data:', err);
+      setError(fallbackMessage);
     } finally {
       setIsImporting(false);
     }
@@ -178,6 +198,7 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
       setError(t('integrations.csv.taxImport.errors.selectFileAndRange', { defaultValue: 'Please select a file and date range' }));
       return;
     }
+    const fallbackMessage = t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' });
     setIsValidating(true);
     setError(null);
     try {
@@ -191,13 +212,19 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
           dryRun: true
         })
       });
-      const result = await response.json();
+      const result = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
+        setError(getCsvResponseErrorMessage(result, fallbackMessage));
+        return;
+      }
+      if (!result) {
+        setError(fallbackMessage);
+        return;
       }
       setQbValidationResult(result.validation);
     } catch (err) {
-      setError(t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
+      console.error('Failed to validate QuickBooks CSV tax import:', err);
+      setError(fallbackMessage);
     } finally {
       setIsValidating(false);
     }
@@ -209,6 +236,7 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
       setError(t('integrations.csv.taxImport.errors.selectFileAndRange', { defaultValue: 'Please select a file and date range' }));
       return;
     }
+    const fallbackMessage = t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' });
     setIsImporting(true);
     setError(null);
     try {
@@ -222,9 +250,14 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
           dryRun: false
         })
       });
-      const result: QuickBooksImportResult = await response.json();
+      const result = await response.json().catch(() => null) as QuickBooksImportResult | null;
       if (!response.ok) {
-        throw new Error(t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
+        setError(getCsvResponseErrorMessage(result, fallbackMessage));
+        return;
+      }
+      if (!result) {
+        setError(fallbackMessage);
+        return;
       }
       setQbImportResult(result);
       if (result.success && result.importId) {
@@ -234,7 +267,8 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
         });
       }
     } catch (err) {
-      setError(t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
+      console.error('Failed to import QuickBooks CSV tax data:', err);
+      setError(fallbackMessage);
     } finally {
       setIsImporting(false);
     }
@@ -249,10 +283,7 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
     : qbValidationResult?.valid && !isValidating;
 
   const formatCurrency = (cents: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(cents / 100);
+    return money(cents);
   };
 
   return (

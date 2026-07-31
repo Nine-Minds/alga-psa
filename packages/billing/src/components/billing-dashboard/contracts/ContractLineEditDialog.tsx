@@ -61,9 +61,12 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
     try {
       await onSave(line.contract_line_id, rateCents, billingTiming);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('contractLineEdit.errors.failedToSaveChanges', {
-        defaultValue: 'Failed to save changes',
-      }));
+      console.error('Failed to save contract line:', err);
+      setError(err instanceof Error
+        ? err.message
+        : t('contractLineEdit.errors.failedToSaveChanges', {
+          defaultValue: 'Failed to save changes',
+        }));
       setIsSaving(false);
     }
   };

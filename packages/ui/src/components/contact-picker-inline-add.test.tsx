@@ -173,7 +173,11 @@ describe('ContactPicker', () => {
     option.focus();
     expect(document.activeElement).toBe(option);
 
-    await user.keyboard('{Enter}');
+    // Dispatch Enter to the option directly rather than via user.keyboard():
+    // the picker's open-dropdown rAF (ContactPicker focus-search effect) can
+    // fire during user-event's internal await on a slow runner and steal
+    // focus back to the search input, sending the keydown to the wrong node.
+    fireEvent.keyDown(option, { key: 'Enter' });
 
     expect(onValueChange).toHaveBeenCalledWith('contact-1');
     expect(screen.queryByRole('listbox', { name: /contacts/i })).toBeNull();

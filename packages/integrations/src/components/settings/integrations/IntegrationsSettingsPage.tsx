@@ -11,6 +11,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { ENTRA_SYNC_FEATURE_FLAG } from './integrationsFeatureFlags';
 import {
   Building2,
   Monitor,
@@ -20,18 +22,16 @@ import {
   Cloud,
   Shield,
   Lock,
+  BookOpen,
 } from 'lucide-react';
 import AccountingIntegrationsSetup from './AccountingIntegrationsSetup';
 import RmmIntegrationsSetup from './RmmIntegrationsSetup';
-import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
-import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
-import { MicrosoftIntegrationSettings } from './MicrosoftIntegrationSettings';
-import { MspSsoLoginDomainsSettings } from './MspSsoLoginDomainsSettings';
+import { EmailProviderConfiguration } from '../../email/EmailProviderConfiguration';
+import { ProviderCredentialsWorkbench } from './ProviderCredentialsWorkbench';
 import { CalendarEnterpriseIntegrationSettings } from './CalendarEnterpriseIntegrationSettings';
 import { TeamsEnterpriseIntegrationSettings } from './TeamsEnterpriseIntegrationSettings';
 import dynamic from 'next/dynamic';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getVisibleIntegrationCategoryIds,
@@ -58,7 +58,27 @@ const StripeConnectionSettings = dynamic(
   }
 );
 
-import { EntraIntegrationSettings } from '@alga-psa/integrations/entra/components/entry';
+import { EntraIntegrationSummaryCard } from '@alga-psa/integrations/entra/components/entry';
+import { useHuduIntegrationEnabled } from './useHuduIntegrationEnabled';
+
+// Dynamic import for Hudu (EE feature) — `@enterprise` resolves to the real EE
+// component in EE builds and to the CE placeholder stub in CE builds.
+const HuduIntegrationSettings = dynamic(
+  () => import('@enterprise/components/settings/integrations/HuduIntegrationSettings'),
+  {
+    loading: () => (
+      <Card>
+        <CardContent className="py-8">
+          <div className="flex flex-col items-center justify-center gap-2">
+            <Spinner size="md" />
+            <span className="text-sm text-muted-foreground">Loading Hudu integration settings...</span>
+          </div>
+        </CardContent>
+      </Card>
+    ),
+    ssr: false,
+  }
+);
 
 // Integration category definitions
 interface IntegrationCategory {
@@ -124,8 +144,12 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
 }) => {
   const { t } = useTranslation('msp/settings');
   const isEEAvailable = isCalendarEnterpriseEdition();
-  const entraUiFlag = useFeatureFlag('entra-integration-ui', { defaultValue: false });
-  const isEntraUiEnabled = isEEAvailable && entraUiFlag.enabled;
+  const huduGate = useHuduIntegrationEnabled();
+  const isHuduEnabled = huduGate.enabled;
+  // Gates the Identity tab only. Off while the flag is still loading and off if
+  // PostHog cannot be reached, so the tab appears once it is known to be on
+  // rather than flashing and withdrawing.
+  const { enabled: isEntraSyncFlagEnabled } = useFeatureFlag(ENTRA_SYNC_FEATURE_FLAG);
   const searchParams = useSearchParams();
   const categoryParam = searchParams?.get('category');
   const visibleCategoryIds = useMemo(() => getVisibleIntegrationCategoryIds(isEEAvailable), [isEEAvailable]);
@@ -171,6 +195,21 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
         }
       ],
     },
+    ...(isHuduEnabled ? [{
+      id: 'it-documentation',
+      label: t('integrations.categories.itDocumentation.label'),
+      description: t('integrations.categories.itDocumentation.description'),
+      icon: BookOpen,
+      integrations: [
+        {
+          id: 'hudu',
+          name: t('integrations.items.hudu.name'),
+          description: t('integrations.items.hudu.description'),
+          component: HuduIntegrationSettings,
+          isEE: true,
+        },
+      ],
+    }] : []),
     {
       id: 'communication',
       label: t('integrations.categories.communication.label'),
@@ -240,23 +279,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           description: isEEAvailable
             ? t('integrations.items.google.description.ee')
             : t('integrations.items.google.description.oss'),
-          component: () => (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t('integrations.items.google.cardTitle')}</CardTitle>
-                  <CardDescription>
-                    {isEEAvailable
-                      ? t('integrations.items.google.cardDescription.ee')
-                      : t('integrations.items.google.cardDescription.oss')}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-              <GoogleIntegrationSettings />
-              <MicrosoftIntegrationSettings canUseTeams={canUseTeams} />
-              <MspSsoLoginDomainsSettings />
-            </div>
-          ),
+          component: () => <ProviderCredentialsWorkbench canUseTeams={canUseTeams} isEnterpriseEdition={isEEAvailable} />,
         },
       ],
     },
@@ -266,12 +289,17 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
       description: t('integrations.categories.identity.description'),
       icon: Shield,
       integrations: [
-        ...(isEntraUiEnabled ? [{
+        // Dropping the entry empties the category, and the existing
+        // "filter out empty categories" rule below takes the tab with it —
+        // which is also why a future non-Entra identity integration would
+        // keep the tab rather than inherit this flag.
+        ...(isEEAvailable && isEntraSyncFlagEnabled ? [{
           id: 'entra',
           name: t('integrations.items.entra.name'),
           description: t('integrations.items.entra.description'),
+          // Entra owns its own route now; the category keeps a summary and a way in.
           component: canUseEntraSync
-            ? () => <EntraIntegrationSettings canUseCipp={canUseCipp} />
+            ? () => <EntraIntegrationSummaryCard />
             : () => (
                 <AddOnRequiredNotice
                   featureName={t('integrations.items.entra.name')}
@@ -298,7 +326,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
         }] : []),
       ],
     },
-  ], [canUseCipp, canUseEntraSync, canUseTeams, isEEAvailable, isEntraUiEnabled, t]);
+  ], [canUseCipp, canUseEntraSync, canUseTeams, isEEAvailable, isEntraSyncFlagEnabled, isHuduEnabled, t]);
 
   // Filter out empty categories
   const visibleCategories = categories.filter((category) => {
@@ -315,20 +343,21 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
     icon: <category.icon className="w-4 h-4" />,
     content: (
       <div className="space-y-6">
-        {/* Category header */}
-        <div className="rounded-xl border bg-muted/30 px-6 py-8 text-center">
-          <div className="mx-auto flex max-w-3xl flex-col items-center gap-3">
-            <div className="flex items-center justify-center gap-3">
-              <category.icon className="h-7 w-7 text-primary" />
-              <h2 className="text-3xl font-bold tracking-tight">
-                {t('integrations.categoryHeading', { label: category.label })}
-              </h2>
+        {category.id !== 'providers' && (
+          <div className="rounded-xl border bg-muted/30 px-6 py-8 text-center">
+            <div className="mx-auto flex max-w-3xl flex-col items-center gap-3">
+              <div className="flex items-center justify-center gap-3">
+                <category.icon className="h-7 w-7 text-primary" />
+                <h2 className="text-3xl font-bold tracking-tight">
+                  {t('integrations.categoryHeading', { label: category.label })}
+                </h2>
+              </div>
+              <p className="max-w-2xl text-sm text-muted-foreground">
+                {category.description}
+              </p>
             </div>
-            <p className="max-w-2xl text-sm text-muted-foreground">
-              {category.description}
-            </p>
           </div>
-        </div>
+        )}
 
         {/* Integration components */}
         {category.integrations.length > 0 ? (
@@ -362,7 +391,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           if (category) {
             setSelectedCategory(category.id);
             const currentSearchParams = new URLSearchParams(window.location.search);
-            currentSearchParams.set('tab', 'integrations');
+            currentSearchParams.delete('tab');
             currentSearchParams.set('category', category.id);
             const newUrl = `${window.location.pathname}?${currentSearchParams.toString()}`;
             window.history.pushState({}, '', newUrl);

@@ -4,17 +4,15 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } fr
 import type { DeletionValidationResult, IDocument } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
 import type { IClient, ITag } from '@alga-psa/types';
-import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { TagManager } from '@alga-psa/tags/components';
-import { findTagsByEntityId } from '@alga-psa/tags/actions';
+import { findTagsByEntityId, isTagActionError } from '@alga-psa/tags/actions';
 import { useTags } from '@alga-psa/tags/context';
 import { getAllUsersBasicAsync, getCurrentUserAsync } from '../../lib/usersHelpers';
 import type { ISlaPolicy } from '@alga-psa/types';
 import { BillingCycleType } from '@alga-psa/types';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateClientName } from '@alga-psa/validation';
+import { validateClientName } from '@alga-psa/validation';
 import ClientContactsList from '../contacts/ClientContactsList';
+import QuickAddContact from '../contacts/QuickAddContact';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import BillingConfiguration from './BillingConfiguration';
@@ -45,13 +43,14 @@ import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { PrintableDetailHeader, type PrintableDetailField } from '@alga-psa/ui/components/PrintableDetailHeader';
-import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import InteractionsFeed from '../interactions/InteractionsFeed';
 import { IInteraction } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { getAllClients } from '../../actions/queryActions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import ClientLocations from './ClientLocations';
@@ -68,11 +67,16 @@ import ClientContractLineDashboard from './ClientContractLineDashboard';
 import { ClientNotesPanel } from './panels/ClientNotesPanel';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
-import QuickAddContact from '../contacts/QuickAddContact';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
-import { ClientLanguagePreference } from './ClientLanguagePreference';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
@@ -81,7 +85,20 @@ import {
   isTerminalEntraRunStatus,
   resolveEntraClientSyncStartState,
   shouldShowEntraSyncAction,
-} from './clientDetailsEntraSyncAction';
+  } from './clientDetailsEntraSyncAction';
+import { useEntraSyncPermission } from './useEntraSyncPermission';
+
+function isClientActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
+import { ClientDetailsTabContent } from './ClientDetailsTabContent';
+import ClientCommandCenter from './command-center/ClientCommandCenter';
+import HuduClientTab from './HuduClientTab';
+import HuduClientPasswordsTab from './HuduClientPasswordsTab';
+import HuduClientDocumentsSection from './HuduClientDocumentsSection';
+import { useHuduClientTab } from './useHuduClientTab';
+import { useClientEquipmentTab } from './useClientEquipmentTab';
+import { ClientEquipmentTab } from './ClientEquipmentTab';
 
 const EMPTY_CONTACTS: IContact[] = [];
 const EMPTY_DOCUMENTS: IDocument[] = [];
@@ -217,17 +234,27 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   isAlgaDeskMode = false,
 }) => {
   const { t } = useTranslation('msp/clients');
-  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientTickets, getSlaPolicies } = useClientCrossFeature();
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientOpportunities, renderClientTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
+  const opportunitiesModuleFlag = useFeatureFlag('opportunities-module', { defaultValue: false });
+  const opportunitiesModuleEnabled =
+    typeof opportunitiesModuleFlag === 'boolean' ? opportunitiesModuleFlag : opportunitiesModuleFlag?.enabled ?? false;
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
+  const [isAddContactOpen, setIsAddContactOpen] = useState(false);
+  // Bumped after quick-adds so the command center refetches the pulse cards.
+  const [pulseRefreshNonce, setPulseRefreshNonce] = useState(0);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [currentUser, setCurrentUser] = useState<IUser | null>(null);
   const [internalUsers, setInternalUsers] = useState<IUser[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isDocumentSelectorOpen, setIsDocumentSelectorOpen] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  // Options for the parent-client picker (Additional Info).
+  const [allClients, setAllClients] = useState<IClient[]>([]);
+  const [parentFilterState, setParentFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  const [parentTypeFilter, setParentTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isDeletingLogo, setIsDeletingLogo] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
@@ -253,7 +280,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
   const [locationsRefreshKey, setLocationsRefreshKey] = useState(0);
   const [tags, setTags] = useState<ITag[]>([]);
-  const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [defaultContactOptions, setDefaultContactOptions] = useState<IContact[]>(contacts);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
@@ -270,12 +296,18 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const entraClientSyncFlag = useFeatureFlag('entra-integration-client-sync-action', {
     defaultValue: false,
   });
+  const entraSyncPermission = useEntraSyncPermission();
   const showEntraSyncAction = shouldShowEntraSyncAction(
     isEEAvailable ? 'enterprise' : process.env.NEXT_PUBLIC_EDITION,
     entraClientSyncFlag.enabled,
-    editedClient
+    editedClient,
+    entraSyncPermission.canManage
   );
   const shouldRenderPsaOnlyClientSurfaces = !isAlgaDeskMode;
+  // F070: EE + Hudu connected + this client mapped.
+  const huduClientTab = useHuduClientTab(client.client_id);
+  // F023: shown only when the current user has inventory:read.
+  const clientEquipmentTab = useClientEquipmentTab();
 
   const fetchEntraSyncRunStatus = useCallback(async (runId: string): Promise<string | null> => {
     const response = await fetch(`/api/integrations/entra/sync/runs/${encodeURIComponent(runId)}`, {
@@ -457,7 +489,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
     } catch (error: any) {
       console.error('Failed to delete client:', error);
-      toast.error(error.message || t('clientDetails.deleteError'));
+      toast.error(t('clientDetails.deleteError'));
     } finally {
       setIsDeleteProcessing(false);
     }
@@ -493,7 +525,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
       if (result.contactsDeactivated > 0) {
         toast.success(t('clientDetails.deactivateWithContactsSuccess', {
-          defaultValue: 'Client and {{count}} contact(s) have been deactivated successfully.',
+          defaultValue: 'Client and {{count}} contacts have been deactivated successfully.',
           count: result.contactsDeactivated,
         }));
       } else {
@@ -617,7 +649,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
       if (reactivateContacts && result.contactsReactivated > 0) {
         toast.success(t('clientDetails.reactivateWithContactsSuccess', {
-          defaultValue: 'Client and {{count}} contact(s) have been reactivated successfully.',
+          defaultValue: 'Client and {{count}} contacts have been reactivated successfully.',
           count: result.contactsReactivated,
         }));
       } else {
@@ -655,7 +687,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
       if (deactivateContacts && result.contactsDeactivated > 0) {
         toast.success(t('clientDetails.deactivateWithContactsSuccess', {
-          defaultValue: 'Client and {{count}} contact(s) have been deactivated successfully.',
+          defaultValue: 'Client and {{count}} contacts have been deactivated successfully.',
           count: result.contactsDeactivated,
         }));
       } else {
@@ -726,6 +758,14 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     fetchUser();
   }, []);
 
+  // Options for the parent-client picker; an empty list just leaves the
+  // picker's dropdown empty, so a failed load is visible rather than silent.
+  useEffect(() => {
+    getAllClients(false)
+      .then(setAllClients)
+      .catch((error) => console.error('Error fetching clients for parent picker:', error));
+  }, []);
+
   // Fetch MSP users once or when needed
   useEffect(() => {
     const fetchAllUsers = async () => {
@@ -749,6 +789,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       if (!currentUser) return;
       try {
         const options = await getTicketFormOptions();
+        if (isClientActionError(options)) {
+          console.error('Error fetching ticket form options:', getErrorMessage(options));
+          return;
+        }
         setTicketFormOptions({
           statusOptions: options.statusOptions,
           priorityOptions: options.priorityOptions,
@@ -770,6 +814,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     const fetchTags = async () => {
       try {
         const clientTags = await findTagsByEntityId(client.client_id, 'client');
+        if (isTagActionError(clientTags)) {
+          console.error('Error fetching tags:', clientTags);
+          setTags([]);
+          return;
+        }
         setTags(clientTags);
       } catch (error) {
         console.error('Error fetching tags:', error);
@@ -938,8 +987,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         account_manager_id: editedClientRef.current.account_manager_id === '' ? null : editedClientRef.current.account_manager_id,
       };
       const updatedClientResult = await updateClient(client.client_id, dataToUpdate);
-      // Assuming updateClient returns the full updated client object matching IClient
-      const updatedClient = updatedClientResult as IClient; // Cast if necessary, or adjust based on actual return type
+      if (isClientActionError(updatedClientResult)) {
+        handleError(updatedClientResult);
+        return;
+      }
+
+      const updatedClient = updatedClientResult as IClient;
       setEditedClient(updatedClient);
       setHasUnsavedChanges(false);
       setHasAttemptedSubmit(false);
@@ -1007,6 +1060,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const handleBillingConfigSave = useCallback(async (updatedBillingConfig: Partial<IClient>) => {
     try {
       const updatedClient = await updateClient(client.client_id, updatedBillingConfig);
+      if (isClientActionError(updatedClient)) {
+        throw new Error(getErrorMessage(updatedClient));
+      }
+
       setEditedClient(prevClient => {
         const newClient = { ...prevClient };
         Object.keys(updatedBillingConfig).forEach(key => {
@@ -1016,11 +1073,13 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       });
     } catch (error) {
       console.error('Error updating client:', error);
+      throw error;
     }
   }, [client.client_id]);
 
   const handleTicketAdded = (ticket: ITicket) => {
     setIsQuickAddTicketOpen(false);
+    setPulseRefreshNonce((nonce) => nonce + 1);
   };
 
   const handleInteractionAdded = (newInteraction: IInteraction) => {
@@ -1040,6 +1099,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     const params = new URLSearchParams(searchParams?.toString() || '');
     params.set('tab', tabValue);
     memoizedRouter.push(`${pathname}?${params.toString()}`);
+  }, [pathname, memoizedRouter, searchParams]);
+
+  // Command-center focus views sync ?tab= with replace (no history spam), and
+  // clear it when the focus view closes (D3).
+  const handleFocusTabUrlChange = useCallback((tabId: string | null) => {
+    const params = new URLSearchParams(searchParams?.toString() || '');
+    if (tabId) {
+      params.set('tab', tabId);
+    } else {
+      params.delete('tab');
+    }
+    const queryString = params.toString();
+    memoizedRouter.replace(queryString ? `${pathname}?${queryString}` : pathname);
   }, [pathname, memoizedRouter, searchParams]);
 
   const clientActiveContacts = useMemo(() => {
@@ -1087,6 +1159,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       try {
         const rows = await listClientInboundEmailDomains(editedClient.client_id);
         if (cancelled) return;
+        if (isClientActionError(rows)) {
+          toast.error(getErrorMessage(rows));
+          return;
+        }
         setInboundEmailDomains((rows ?? []).map((r: any) => ({ id: r.id, domain: r.domain })));
       } catch (error) {
         // Non-blocking; if this fails we don't want to prevent other client edits.
@@ -1105,6 +1181,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       try {
         const rows = await listInboundTicketDestinationOptions();
         if (cancelled) return;
+        if (isClientActionError(rows)) {
+          console.error('Failed to load inbound ticket destination options:', getErrorMessage(rows));
+          setInboundDestinationOptions([]);
+          return;
+        }
         const options = (rows ?? []).map((row: any) => ({
           value: row.id,
           label: row.is_active
@@ -1138,6 +1219,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     setIsInboundDomainBusy(true);
     try {
       const created = await addClientInboundEmailDomain(editedClient.client_id, domain);
+      if (isClientActionError(created)) {
+        toast.error(getErrorMessage(created));
+        return;
+      }
       setInboundEmailDomains((prev) => {
         const next = [...prev, { id: (created as any).id, domain: (created as any).domain }].filter(
           (d, idx, arr) => idx === arr.findIndex((x) => x.id === d.id)
@@ -1148,7 +1233,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setInboundDomainDraft('');
       toast.success(t('clientDetails.inboundDomainAdded'));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('clientDetails.inboundDomainAddFailed'));
+      console.error('Failed to add inbound email domain:', error);
+      toast.error(t('clientDetails.inboundDomainAddFailed'));
     } finally {
       setIsInboundDomainBusy(false);
     }
@@ -1158,11 +1244,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     if (!domainId) return;
     setIsInboundDomainBusy(true);
     try {
-      await removeClientInboundEmailDomain(editedClient.client_id, domainId);
+      const result = await removeClientInboundEmailDomain(editedClient.client_id, domainId);
+      if (isClientActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       setInboundEmailDomains((prev) => prev.filter((d) => d.id !== domainId));
       toast.success(t('clientDetails.inboundDomainRemoved'));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('clientDetails.inboundDomainRemoveFailed'));
+      console.error('Failed to remove inbound email domain:', error);
+      toast.error(t('clientDetails.inboundDomainRemoveFailed'));
     } finally {
       setIsInboundDomainBusy(false);
     }
@@ -1178,6 +1269,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       try {
         const rows = await listClientNameAliases(editedClient.client_id);
         if (cancelled) return;
+        if (isClientActionError(rows)) {
+          toast.error(getErrorMessage(rows));
+          return;
+        }
         setClientNameAliases((rows ?? []).map((r: any) => ({ id: r.id, alias: r.alias })));
       } catch (error) {
         // Non-blocking; if this fails we don't want to prevent other client edits.
@@ -1195,6 +1290,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     setIsAliasBusy(true);
     try {
       const created = await addClientNameAlias(editedClient.client_id, alias);
+      if (isClientActionError(created)) {
+        toast.error(getErrorMessage(created));
+        return;
+      }
       setClientNameAliases((prev) => {
         const next = [...prev, { id: (created as any).id, alias: (created as any).alias }].filter(
           (a, idx, arr) => idx === arr.findIndex((x) => x.id === a.id)
@@ -1205,7 +1304,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setAliasDraft('');
       toast.success(t('clientDetails.nameAliasAdded', { defaultValue: 'Alias added' }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('clientDetails.nameAliasAddFailed', { defaultValue: 'Failed to add alias' }));
+      console.error('Failed to add client alias:', error);
+      toast.error(t('clientDetails.nameAliasAddFailed', { defaultValue: 'Failed to add alias' }));
     } finally {
       setIsAliasBusy(false);
     }
@@ -1215,11 +1315,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     if (!aliasId) return;
     setIsAliasBusy(true);
     try {
-      await removeClientNameAlias(editedClient.client_id, aliasId);
+      const result = await removeClientNameAlias(editedClient.client_id, aliasId);
+      if (isClientActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       setClientNameAliases((prev) => prev.filter((a) => a.id !== aliasId));
       toast.success(t('clientDetails.nameAliasRemoved', { defaultValue: 'Alias removed' }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('clientDetails.nameAliasRemoveFailed', { defaultValue: 'Failed to remove alias' }));
+      console.error('Failed to remove client alias:', error);
+      toast.error(t('clientDetails.nameAliasRemoveFailed', { defaultValue: 'Failed to remove alias' }));
     } finally {
       setIsAliasBusy(false);
     }
@@ -1230,417 +1335,47 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       id: 'details',
       label: t('clientDetails.details', { defaultValue: 'Details' }),
       content: (
-        <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left Column - All Form Fields */}
-            <div className="space-y-6">
-              <TextDetailItem
-                label={t('clientDetails.clientName', { defaultValue: 'Client Name' })}
-                value={editedClient.client_name}
-                onEdit={(value) => handleFieldChange('client_name', value)}
-                automationId="client-name-field"
-                validate={validateClientName}
-              />
-                           
-              <FieldContainer
-                label={t('clientDetails.accountManager', { defaultValue: 'Account Manager' })}
-                fieldType="select"
-                value={editedClient.account_manager_full_name || ''}
-                helperText="Select the account manager for this client"
-                automationId="account-manager-field"
-              >
-                <Text as="label" size="2" className="text-gray-700 font-medium">
-                  {t('clientDetails.accountManager', { defaultValue: 'Account Manager' })}
-                </Text>
-                <UserPicker
-                  value={editedClient.account_manager_id || ''}
-                  onValueChange={(value) => handleFieldChange('account_manager_id', value)}
-                  users={internalUsers}
-                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                  disabled={isLoadingUsers}
-                  placeholder={isLoadingUsers
-                    ? t('clientDetails.loadingUsers', { defaultValue: 'Loading users...' })
-                    : t('quickAddClient.selectAccountManager', { defaultValue: 'Select Account Manager' })}
-                  buttonWidth="full"
-                />
-              </FieldContainer>
-
-              <FieldContainer
-                label={t('clientDetails.defaultContact', { defaultValue: 'Default contact' })}
-                fieldType="select"
-                value={editedClient.properties?.primary_contact_id || ''}
-                helperText="Used when inbound email sender is not a known contact but matches this client by configured inbound email domain."
-                automationId="default-contact-field"
-              >
-                <Text as="label" size="2" className="text-gray-700 font-medium">
-                  {t('clientDetails.defaultContact', { defaultValue: 'Default contact' })}
-                </Text>
-                <ContactPicker
-                  id="client-default-contact-select"
-                  contacts={clientActiveContacts}
-                  value={editedClient.properties?.primary_contact_id || ''}
-                  onValueChange={handleDefaultContactChange}
-                  clientId={editedClient.client_id}
-                  label={t('clientDetails.defaultContact', { defaultValue: 'Default contact' })}
-                  placeholder={clientActiveContacts.length
-                    ? t('clientDetails.selectDefaultContact', { defaultValue: 'Select default contact' })
-                    : t('clientDetails.noActiveContacts', { defaultValue: 'No active contacts' })}
-                  onAddNew={() => setIsQuickAddContactOpen(true)}
-                />
-                <QuickAddContact
-                  isOpen={isQuickAddContactOpen}
-                  onClose={() => setIsQuickAddContactOpen(false)}
-                  onContactAdded={(newContact) => {
-                    setDefaultContactOptions((prevContacts) => {
-                      const existingIndex = prevContacts.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
-                      if (existingIndex >= 0) {
-                        const nextContacts = [...prevContacts];
-                        nextContacts[existingIndex] = newContact;
-                        return nextContacts;
-                      }
-                      return [...prevContacts, newContact];
-                    });
-                    handleDefaultContactChange(newContact.contact_name_id);
-                    setIsQuickAddContactOpen(false);
-                  }}
-                  clients={[editedClient]}
-                  selectedClientId={editedClient.client_id}
-                />
-              </FieldContainer>
-
-              <FieldContainer
-                label={t('clientDetails.inboundTicketDestination', { defaultValue: 'Inbound ticket destination' })}
-                fieldType="select"
-                value={editedClient.inbound_ticket_defaults_id || ''}
-                helperText={t('clientDetails.inboundDestinationPrecedence', {
-                  defaultValue: 'Precedence: Contact override -> Client destination -> Provider default.',
-                })}
-                automationId="client-inbound-ticket-destination-field"
-              >
-                <Text as="label" size="2" className="text-gray-700 font-medium">
-                  {t('clientDetails.inboundTicketDestination', { defaultValue: 'Inbound ticket destination' })}
-                </Text>
-                <CustomSelect
-                  id="client-inbound-ticket-destination-select"
-                  value={editedClient.inbound_ticket_defaults_id || ''}
-                  onValueChange={(value) => handleFieldChange('inbound_ticket_defaults_id', value)}
-                  options={inboundDestinationOptions}
-                  allowClear={true}
-                  placeholder={
-                    isInboundDestinationOptionsLoading
-                      ? t('clientDetails.loadingDestinations', { defaultValue: 'Loading destinations...' })
-                      : t('clientDetails.providerDefault', { defaultValue: 'Provider default' })
-                  }
-                  disabled={isInboundDestinationOptionsLoading}
-                />
-                <Text size="1" className="text-gray-500">
-                  {t('clientDetails.inboundDestinationPrecedence', {
-                    defaultValue: 'Precedence: Contact override -> Client destination -> Provider default.',
-                  })}
-                </Text>
-              </FieldContainer>
-
-              <FieldContainer
-                label={t('clientDetails.inboundEmailDomains', { defaultValue: 'Inbound email domains' })}
-                fieldType="textField"
-                value={inboundEmailDomains.map((d) => d.domain).join(', ')}
-                helperText="Only these domains will be used for inbound email domain matching (e.g. acme.com). Domains must be unique across clients."
-                automationId="client-inbound-email-domains-field"
-              >
-                <Text as="label" size="2" className="text-gray-700 font-medium">
-                  {t('clientDetails.inboundEmailDomains', { defaultValue: 'Inbound email domains' })}
-                </Text>
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <Input
-                      id="client-inbound-email-domain-input"
-                      type="text"
-                      value={inboundDomainDraft}
-                      onChange={(e) => setInboundDomainDraft(e.target.value)}
-                      placeholder="acme.com"
-                      className="flex-1"
-                      autoComplete="off"
-                      data-bwignore
-                      data-1p-ignore
-                      data-lpignore="true"
-                      data-form-type="other"
-                    />
-                    <Button
-                      id="client-inbound-email-domain-add"
-                      type="button"
-                      variant="default"
-                      disabled={isInboundDomainBusy || !normalizeInboundDomain(inboundDomainDraft)}
-                      onClick={handleAddInboundDomain}
-                    >
-                      Add
-                    </Button>
-                  </div>
-
-                  {inboundEmailDomains.length > 0 ? (
-                    <div className="space-y-2">
-                      {inboundEmailDomains.map((d) => (
-                        <div key={d.id} className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2">
-                          <Text size="2" className="text-gray-800">{d.domain}</Text>
-                          <Button
-                            id={`client-inbound-email-domain-remove-${d.id}`}
-                            type="button"
-                            variant="ghost"
-                            disabled={isInboundDomainBusy}
-                            onClick={() => handleRemoveInboundDomain(d.id)}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <Text size="1" className="text-gray-500">
-                      {t('clientDetails.noInboundDomains', {
-                        defaultValue: 'No inbound email domains configured. Domain matching will not be used.',
-                      })}
-                    </Text>
-                  )}
-                </div>
-              </FieldContainer>
-
-              <FieldContainer
-                label={t('clientDetails.nameAliases', { defaultValue: 'Matching aliases' })}
-                fieldType="textField"
-                value={clientNameAliases.map((a) => a.alias).join(', ')}
-                helperText="Alternate names for this client as they appear in third-party emails (e.g. monitoring alert subjects). Used by inbound email rules; aliases must be unique across clients."
-                automationId="client-name-aliases-field"
-              >
-                <Text as="label" size="2" className="text-gray-700 font-medium">
-                  {t('clientDetails.nameAliases', { defaultValue: 'Matching aliases' })}
-                </Text>
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <Input
-                      id="client-name-alias-input"
-                      type="text"
-                      value={aliasDraft}
-                      onChange={(e) => setAliasDraft(e.target.value)}
-                      placeholder="ACME Corp"
-                      className="flex-1"
-                      autoComplete="off"
-                      data-bwignore
-                      data-1p-ignore
-                      data-lpignore="true"
-                      data-form-type="other"
-                    />
-                    <Button
-                      id="client-name-alias-add"
-                      type="button"
-                      variant="default"
-                      disabled={isAliasBusy || !aliasDraft.trim()}
-                      onClick={handleAddClientNameAlias}
-                    >
-                      Add
-                    </Button>
-                  </div>
-
-                  {clientNameAliases.length > 0 ? (
-                    <div className="space-y-2">
-                      {clientNameAliases.map((a) => (
-                        <div key={a.id} className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2">
-                          <Text size="2" className="text-gray-800">{a.alias}</Text>
-                          <Button
-                            id={`client-name-alias-remove-${a.id}`}
-                            type="button"
-                            variant="ghost"
-                            disabled={isAliasBusy}
-                            onClick={() => handleRemoveClientNameAlias(a.id)}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <Text size="1" className="text-gray-500">
-                      {t('clientDetails.noNameAliases', {
-                        defaultValue: 'No aliases configured. The client name itself always matches.',
-                      })}
-                    </Text>
-                  )}
-                </div>
-              </FieldContainer>
-
-              <FieldContainer
-                label={t('clientDetails.slaPolicy', { defaultValue: 'SLA Policy' })}
-                fieldType="select"
-                value={slaPolicies.find(p => p.sla_policy_id === editedClient.sla_policy_id)?.policy_name || ''}
-                helperText="Select the SLA policy for this client"
-                automationId="sla-policy-field"
-              >
-                <Text as="label" size="2" className="text-gray-700 font-medium">
-                  {t('clientDetails.slaPolicy', { defaultValue: 'SLA Policy' })}
-                </Text>
-                <CustomSelect
-                  id="sla-policy-select"
-                  value={editedClient.sla_policy_id || ''}
-                  onValueChange={(value) => handleFieldChange('sla_policy_id', value === '' ? null : value)}
-                  options={[
-                    { value: '', label: t('common.states.none', { defaultValue: 'None' }) },
-                    ...slaPolicies.map((policy) => ({
-                      value: policy.sla_policy_id,
-                      label: policy.is_default
-                        ? t('clientDetails.defaultPolicy', {
-                            defaultValue: '{{name}} (Default)',
-                            name: policy.policy_name,
-                          })
-                        : policy.policy_name
-                    }))
-                  ]}
-                  disabled={isLoadingSlaPolicies}
-                  placeholder={isLoadingSlaPolicies
-                    ? t('clientDetails.loadingPolicies', { defaultValue: 'Loading policies...' })
-                    : t('clientDetails.selectSlaPolicy', { defaultValue: 'Select SLA Policy' })}
-                />
-              </FieldContainer>
-
-              <TextDetailItem
-                label={t('quickAddClient.websiteUrl', { defaultValue: 'Website URL' })}
-                value={editedClient.properties?.website || ''}
-                onEdit={(value) => handleFieldChange('properties.website', value)}
-                automationId="website-field"
-                validate={validateWebsiteUrl}
-              />
-
-              <TextDetailItem
-                label={t('clientDetails.industry', { defaultValue: 'Industry' })}
-                value={editedClient.properties?.industry || ''}
-                onEdit={(value) => handleFieldChange('properties.industry', value)}
-                automationId="industry-field"
-                validate={validateIndustry}
-              />
-
-              <TextDetailItem
-                label={t('clientDetails.companySize', { defaultValue: 'Company Size' })}
-                value={editedClient.properties?.company_size || ''}
-                onEdit={(value) => handleFieldChange('properties.company_size', value)}
-                automationId="company-size-field"
-                validate={validateCompanySize}
-              />
-              
-              <TextDetailItem
-                label={t('clientDetails.annualRevenue', { defaultValue: 'Annual Revenue' })}
-                value={editedClient.properties?.annual_revenue || ''}
-                onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
-                automationId="annual-revenue-field"
-                validate={validateAnnualRevenue}
-              />
-
-              {/* Language Preference */}
-              <div className="space-y-2">
-                <ClientLanguagePreference
-                  clientId={editedClient.client_id}
-                  clientName={editedClient.client_name}
-                  showCard={false}
-                />
-              </div>
-
-              {/* Status and Client Type in 2 columns */}
-              <div className="grid grid-cols-5 gap-4">
-
-                {/* Client Type */}
-                <div className="space-y-2 col-span-2">
-                  <Text as="label" size="2" className="text-gray-700 font-medium">
-                    {t('clientDetails.clientType', { defaultValue: 'Client Type' })}
-                  </Text>
-                  <CustomSelect
-                    id="client-type-select"
-                    value={editedClient.client_type || 'company'}
-                    onValueChange={(value) => handleFieldChange('client_type', value)}
-                    options={[
-                      { value: 'company', label: t('quickAddClient.company', { defaultValue: 'Company' }) },
-                      { value: 'individual', label: t('quickAddClient.individual', { defaultValue: 'Individual' }) }
-                    ]}
-                    placeholder={t('clientDetails.selectClientType', { defaultValue: 'Select client type' })}
-                    className="!w-fit"
-                  />
-                </div>
-                <div className="col-span-3">
-                  <SwitchDetailItem
-                    value={!editedClient.is_inactive || false}
-                    onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
-                    automationId="client-status-field"
-                    statusLabel={t('clientDetails.status.label', { defaultValue: 'Status' })}
-                    helperLabel={t('clientDetails.status.helper', {
-                      defaultValue: 'Set client status as active or inactive',
-                    })}
-                    activeLabel={t('common.states.active', { defaultValue: 'Active' })}
-                    inactiveLabel={t('common.states.inactive', { defaultValue: 'Inactive' })}
-                  />
-                </div>
-              </div>
-
-              {/* Tags */}
-              <div className="space-y-2">
-                <Text as="label" size="2" className="text-gray-700 font-medium">Tags</Text>
-                <TagManager
-                  id={`${id}-tags`}
-                  entityId={editedClient.client_id}
-                  entityType="client"
-                  initialTags={tags}
-                  onTagsChange={handleTagsChange}
-                  useInlineInput={isInDrawer}
-                />
-              </div>
-            </div>
-            
-            {/* Right Column - Client Locations Only */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Text as="label" size="2" className="text-gray-700 font-medium">
-                  {t('clientDetails.clientLocations', { defaultValue: 'Client Locations' })}
-                </Text>
-                <Button
-                  id="locations-button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setIsLocationsDialogOpen(true)}
-                  className="text-sm"
-                >
-                  {t('clientDetails.manageLocations', { defaultValue: 'Manage Locations' })}
-                </Button>
-              </div>
-              <div>
-                <ClientLocations
-                  key={locationsRefreshKey}
-                  clientId={editedClient.client_id}
-                  isEditing={false}
-                />
-              </div>
-              {!isAlgaDeskMode ? renderSurveySummaryCard({ summary: surveySummary }) : null}
-            </div>
-          </div>
-          
-          <Flex gap="4" justify="end" align="center" className="pt-6">
-            {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
-              <Text size="2" className="text-red-600 mr-2" role="alert">
-                {t('clientDetails.requiredFields', { defaultValue: 'Please fill in all required fields' })}
-              </Text>
-            )}
-            <Button
-              id="save-client-changes-btn"
-              onClick={handleSave}
-              disabled={isSaving}
-              className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSaving
-                ? t('common.actions.saving', { defaultValue: 'Saving...' })
-                : t('clientDetails.saveChanges', { defaultValue: 'Save Changes' })}
-            </Button>
-            <Button
-              id="add-ticket-btn"
-              onClick={() => setIsQuickAddTicketOpen(true)}
-              variant="default"
-            >
-              {t('clientDetails.addTicket', { defaultValue: 'Add Ticket' })}
-            </Button>
-          </Flex>
-        </div>
+        <ClientDetailsTabContent
+          id={id}
+          editedClient={editedClient}
+          tags={tags}
+          internalUsers={internalUsers}
+          isLoadingUsers={isLoadingUsers}
+          clientActiveContacts={clientActiveContacts}
+          setDefaultContactOptions={setDefaultContactOptions}
+          fieldErrors={fieldErrors}
+          hasAttemptedSubmit={hasAttemptedSubmit}
+          slaPolicies={slaPolicies}
+          isLoadingSlaPolicies={isLoadingSlaPolicies}
+          isInDrawer={isInDrawer}
+          locationsRefreshKey={locationsRefreshKey}
+          surveySummary={surveySummary}
+          isAlgaDeskMode={isAlgaDeskMode}
+          inboundDestinationOptions={inboundDestinationOptions}
+          isInboundDestinationOptionsLoading={isInboundDestinationOptionsLoading}
+          inboundEmailDomains={inboundEmailDomains}
+          inboundDomainDraft={inboundDomainDraft}
+          setInboundDomainDraft={setInboundDomainDraft}
+          isInboundDomainBusy={isInboundDomainBusy}
+          normalizeInboundDomain={normalizeInboundDomain}
+          clientNameAliases={clientNameAliases}
+          aliasDraft={aliasDraft}
+          setAliasDraft={setAliasDraft}
+          isAliasBusy={isAliasBusy}
+          isSaving={isSaving}
+          t={t}
+          onFieldChange={handleFieldChange}
+          onDefaultContactChange={handleDefaultContactChange}
+          onAddInboundDomain={handleAddInboundDomain}
+          onRemoveInboundDomain={handleRemoveInboundDomain}
+          onAddClientNameAlias={handleAddClientNameAlias}
+          onRemoveClientNameAlias={handleRemoveClientNameAlias}
+          onTagsChange={handleTagsChange}
+          onManageLocations={() => setIsLocationsDialogOpen(true)}
+          onSave={handleSave}
+          onAddTicket={() => setIsQuickAddTicketOpen(true)}
+          renderSurveySummaryCard={renderSurveySummaryCard}
+        />
       )
     },
     {
@@ -1672,6 +1407,22 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       label: t('clientDetails.assets', { defaultValue: 'Assets' }),
       content: shouldRenderPsaOnlyClientSurfaces ? renderClientAssets({ clientId: client.client_id }) : null,
     },
+    // F022/F023: inventory Equipment tab — PSA-only, and only when inventory:read.
+    ...((shouldRenderPsaOnlyClientSurfaces && clientEquipmentTab.visible) ? [{
+      id: 'equipment',
+      label: t('clientDetails.equipment', { defaultValue: 'Equipment' }),
+      content: <ClientEquipmentTab clientId={client.client_id} />,
+    }] : []),
+    // Opportunities tab — PSA-only, behind the module flag, injected by the composition layer.
+    ...((shouldRenderPsaOnlyClientSurfaces && opportunitiesModuleEnabled && renderClientOpportunities) ? [{
+      id: 'opportunities',
+      label: t('clientDetails.opportunities', { defaultValue: 'Opportunities' }),
+      content: (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          {renderClientOpportunities({ clientId: client.client_id, clientName: client.client_name })}
+        </div>
+      ),
+    }] : []),
     {
       id: 'billing',
       label: t('clientDetails.billing', { defaultValue: 'Billing' }),
@@ -1725,6 +1476,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             }) : (
               <div>{t('common.states.loading', { defaultValue: 'Loading...' })}</div>
             )}
+            {huduClientTab.visible && (
+              <HuduClientDocumentsSection clientId={client.client_id} />
+            )}
           </div>
         ) : null
       )
@@ -1746,6 +1500,29 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       content: (
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
           <div className="grid grid-cols-2 gap-4">
+            <FieldContainer
+              label={t('clientDetails.lifecycleStatus', { defaultValue: 'Lifecycle' })}
+              fieldType="select"
+              value={editedClient.lifecycle_status ?? 'active'}
+              helperText={t('clientDetails.lifecycleStatusHelper', {
+                defaultValue: 'Prospects are available to sales workflows but hidden from operational client lists by default.',
+              })}
+              automationId="client-lifecycle-field"
+            >
+              <Text as="label" size="2" className="text-gray-700 font-medium">
+                {t('clientDetails.lifecycleStatus', { defaultValue: 'Lifecycle' })}
+              </Text>
+              <CustomSelect
+                id="client-lifecycle-select"
+                value={editedClient.lifecycle_status ?? 'active'}
+                onValueChange={(value) => handleFieldChange('lifecycle_status', value)}
+                options={[
+                  { value: 'prospect', label: t('clientLifecycle.prospect', { defaultValue: 'Prospect' }) },
+                  { value: 'active', label: t('clientLifecycle.active', { defaultValue: 'Active client' }) },
+                  { value: 'former', label: t('clientLifecycle.former', { defaultValue: 'Former client' }) },
+                ]}
+              />
+            </FieldContainer>
             <TextDetailItem
               label="Tax ID"
               value={editedClient.properties?.tax_id ?? ""}
@@ -1758,12 +1535,52 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               onEdit={(value) => handleFieldChange('properties.payment_terms', value)}
               automationId="payment-terms-field"
             />
-            <TextDetailItem
-              label={t('clientDetails.parentClient', { defaultValue: 'Parent Client' })}
-              value={editedClient.properties?.parent_client_name ?? ""}
-              onEdit={(value) => handleFieldChange('properties.parent_client_name', value)}
-              automationId="parent-client-field"
-            />
+            <div className="space-y-2" data-automation-id="parent-client-field">
+              <Text as="label" size="2" className="text-gray-700 font-medium">
+                {t('clientDetails.parentClient', { defaultValue: 'Parent Client' })}
+              </Text>
+              <div className="flex items-center gap-2">
+                <ClientPicker
+                  id="parent-client-picker"
+                  clients={allClients}
+                  selectedClientId={editedClient.properties?.parent_client_id ?? null}
+                  onSelect={(parentId) => {
+                    const parent = allClients.find((candidate) => candidate.client_id === parentId);
+                    handleFieldChange('properties.parent_client_id', parentId ?? '');
+                    handleFieldChange('properties.parent_client_name', parent?.client_name ?? '');
+                  }}
+                  filterState={parentFilterState}
+                  onFilterStateChange={setParentFilterState}
+                  clientTypeFilter={parentTypeFilter}
+                  onClientTypeFilterChange={setParentTypeFilter}
+                  disabledClientIds={new Set([client.client_id])}
+                  disabledTooltip={t('clientDetails.parentClientSelf', { defaultValue: 'A client cannot be its own parent' })}
+                  placeholder={t('clientDetails.parentClientPlaceholder', { defaultValue: 'No parent client' })}
+                />
+                {editedClient.properties?.parent_client_id && (
+                  <Button
+                    id="parent-client-clear"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      handleFieldChange('properties.parent_client_id', '');
+                      handleFieldChange('properties.parent_client_name', '');
+                    }}
+                  >
+                    {t('clientDetails.parentClientClear', { defaultValue: 'Clear' })}
+                  </Button>
+                )}
+              </div>
+              {/* Legacy free-text value (pre-picker) — shown until a real parent is linked. */}
+              {!editedClient.properties?.parent_client_id && editedClient.properties?.parent_client_name && (
+                <Text size="1" className="text-gray-500">
+                  {t('clientDetails.parentClientLegacy', {
+                    defaultValue: 'Previously entered as text: {{name}}',
+                    name: editedClient.properties.parent_client_name,
+                  })}
+                </Text>
+              )}
+            </div>
             <FieldContainer
               label={t('clientDetails.timezone', { defaultValue: 'Timezone' })}
               fieldType="select"
@@ -1781,12 +1598,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 onValueChange={(value) => handleFieldChange('timezone', value)}
               />
             </FieldContainer>
-            <TextDetailItem
-              label={t('clientDetails.lastContactDate', { defaultValue: 'Last Contact Date' })}
-              value={editedClient.properties?.last_contact_date ?? ""}
-              onEdit={(value) => handleFieldChange('properties.last_contact_date', value)}
-              automationId="last-contact-date-field"
-            />
           </div>
           
           <Flex gap="4" justify="end" align="center">
@@ -1799,11 +1610,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               id="save-additional-info-btn"
               onClick={handleSave}
               disabled={isSaving}
-              className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving
                 ? t('common.actions.saving', { defaultValue: 'Saving...' })
-                : t('clientDetails.saveChanges', { defaultValue: 'Save Changes' })}
+                : t('clientDetails.saveChanges', { defaultValue: 'Save' })}
             </Button>
           </Flex>
         </div>
@@ -1834,11 +1644,31 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           />
         </div>
       )
-    }
+    },
+    // EE-only Hudu tabs: registered only when EE + flag + connected + mapped (F070/F080).
+    ...(huduClientTab.visible ? [{
+      id: 'hudu',
+      label: t('clientDetails.huduTab', { defaultValue: 'Hudu' }),
+      content: (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <HuduClientTab clientId={client.client_id} />
+        </div>
+      )
+    }, {
+      id: 'hudu-passwords',
+      label: t('clientDetails.huduPasswordsTab', { defaultValue: 'Passwords' }),
+      content: (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <HuduClientPasswordsTab clientId={client.client_id} />
+        </div>
+      )
+    }] : [])
   ], [
     editedClient,
     internalUsers,
     isLoadingUsers,
+    clientActiveContacts,
+    setDefaultContactOptions,
     slaPolicies,
     isLoadingSlaPolicies,
     t,
@@ -1853,6 +1683,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     handleSave,
     isSaving,
     setIsQuickAddTicketOpen,
+    isAlgaDeskMode,
     ticketFormOptions,
     client.client_id,
     client.client_name,
@@ -1863,14 +1694,24 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     isInboundDestinationOptionsLoading,
     inboundEmailDomains,
     inboundDomainDraft,
+    setInboundDomainDraft,
     isInboundDomainBusy,
     handleAddInboundDomain,
     handleRemoveInboundDomain,
     normalizeInboundDomain,
+    clientNameAliases,
+    aliasDraft,
+    setAliasDraft,
+    isAliasBusy,
+    handleAddClientNameAlias,
+    handleRemoveClientNameAlias,
+    renderSurveySummaryCard,
     currentUser,
     documents,
     memoizedRouter,
-    interactions
+    interactions,
+    huduClientTab.visible,
+    clientEquipmentTab.visible
   ]);
 
   const tabContent = useMemo(() => {
@@ -2026,13 +1867,39 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             ] satisfies PrintableDetailField[]}
           />
         </div>
-        <CustomTabs
-          tabs={quickView ? [tabContent[0]] : tabContent}
-          // In quick view we only render the Details tab. Force default to details
-          // to avoid a mismatch with the current page's ?tab= query (e.g. "Tickets").
-          defaultTab={quickView ? 'details' : searchParams?.get('tab')?.toLowerCase() || 'details'}
-          onTabChange={handleTabChange}
-        />
+        {(quickView || isInDrawer) ? (
+          <CustomTabs
+            tabs={quickView ? [tabContent[0]] : tabContent}
+            // In quick view we only render the Details tab. Force default to details
+            // to avoid a mismatch with the current page's ?tab= query (e.g. "Tickets").
+            defaultTab={quickView ? 'details' : searchParams?.get('tab')?.toLowerCase() || 'details'}
+            onTabChange={handleTabChange}
+          />
+        ) : (
+          // Full-page client screen: command center replaces the tab bar (D1);
+          // legacy tab contents stay reachable as focus views via the registry (D2).
+          <ClientCommandCenter
+            idPrefix={`${id}-cc`}
+            clientId={client.client_id}
+            tabs={tabContent}
+            initialTabId={searchParams?.get('tab')?.toLowerCase() || null}
+            onTabUrlChange={handleFocusTabUrlChange}
+            hasUnsavedRecordChanges={hasUnsavedChanges}
+            onDiscardRecordChanges={() => {
+              setEditedClient(client);
+              setHasUnsavedChanges(false);
+            }}
+            onNewTicket={() => setIsQuickAddTicketOpen(true)}
+            onManageLocations={() => setIsLocationsDialogOpen(true)}
+            onAddContact={() => setIsAddContactOpen(true)}
+            onOpenTicketDetails={openTicketDetails ?? null}
+            refreshNonce={pulseRefreshNonce}
+            surveySummary={surveySummary}
+            renderSurveySummaryCard={renderSurveySummaryCard}
+            isAlgaDeskMode={isAlgaDeskMode}
+            t={t}
+          />
+        )}
 
         {renderQuickAddTicket({
           id: `${id}-quick-add-ticket`,
@@ -2044,6 +1911,17 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             name: editedClient.client_name,
           },
         })}
+
+        <QuickAddContact
+          isOpen={isAddContactOpen}
+          onClose={() => setIsAddContactOpen(false)}
+          onContactAdded={() => {
+            setIsAddContactOpen(false);
+            setPulseRefreshNonce((nonce) => nonce + 1);
+          }}
+          clients={allClients.length ? allClients : [client]}
+          selectedClientId={client.client_id}
+        />
 
         <Dialog
           isOpen={isLocationsDialogOpen}

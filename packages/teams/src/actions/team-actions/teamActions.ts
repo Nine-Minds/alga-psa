@@ -2,11 +2,17 @@
 
 import Team from '../../models/team';
 import type { DeletionValidationResult, IRole, ITeam, ITeamMember, IUser, IUserWithRoles } from '@alga-psa/types';
-import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
+import { permissionError, type ActionMessageError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { teamActionErrorFrom, type TeamActionError } from './teamActionErrors';
+
+export type TeamMutationResult = ITeam | ActionMessageError | ActionPermissionError;
+export type TeamReadResult = ITeam | TeamActionError;
+export type TeamsReadResult = ITeam[] | TeamActionError;
+export type TeamsBasicReadResult = Omit<ITeam, 'members'>[] | TeamActionError;
 
 async function getUsersWithRoles(
   trx: Knex | Knex.Transaction,
@@ -18,19 +24,16 @@ async function getUsersWithRoles(
   }
 
   const userIds = members.map((member) => member.user_id);
-  const users = await trx<IUser>('users')
+  const db = tenantDb(trx, tenant);
+  const users = await db.table<IUser>('users')
     .select('*')
-    .whereIn('user_id', userIds)
-    .where('tenant', tenant);
+    .whereIn('user_id', userIds);
 
-  const roles = await trx<IRole>('roles')
-    .join('user_roles', function () {
-      this.on('roles.role_id', '=', 'user_roles.role_id')
-        .andOn('roles.tenant', '=', 'user_roles.tenant');
-    })
+  const rolesQuery = db.table<IRole>('roles');
+  db.tenantJoin(rolesQuery, 'user_roles', 'roles.role_id', 'user_roles.role_id');
+
+  const roles = await rolesQuery
     .whereIn('user_roles.user_id', userIds)
-    .where('user_roles.tenant', tenant)
-    .where('roles.tenant', tenant)
     .select('roles.*', 'user_roles.user_id as user_id');
 
   const rolesByUser = new Map<string, IRole[]>();
@@ -52,11 +55,11 @@ async function getUsersWithRoles(
   }));
 }
 
-export const createTeam = withAuth(async (user, { tenant }, teamData: Omit<ITeam, 'members'> & { members?: IUserWithRoles[] }): Promise<ITeam> => {
+export const createTeam = withAuth(async (user, { tenant }, teamData: Omit<ITeam, 'members'> & { members?: IUserWithRoles[] }): Promise<TeamMutationResult> => {
   const { knex: db } = await createTenantKnex();
   const canCreate = await hasPermission(user, 'user_settings', 'create', db);
   if (!canCreate) {
-    throw new Error('Permission denied: cannot create team.');
+    return permissionError('Permission denied: cannot create team.');
   }
 
   try {
@@ -103,7 +106,9 @@ export const createTeam = withAuth(async (user, { tenant }, teamData: Omit<ITeam
     return await getTeamByIdInternal(db, tenant, createdTeam.team_id);
   } catch (error) {
     console.error(error);
-    throw new Error('Failed to create team');
+    const expected = teamActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -119,11 +124,11 @@ async function getTeamByIdInternal(knex: Knex, tenant: string, teamId: string): 
   return { ...team, members };
 }
 
-export const updateTeam = withAuth(async (user, { tenant }, teamId: string, teamData: Partial<ITeam>): Promise<ITeam> => {
+export const updateTeam = withAuth(async (user, { tenant }, teamId: string, teamData: Partial<ITeam>): Promise<TeamMutationResult> => {
   const { knex } = await createTenantKnex();
   const canUpdate = await hasPermission(user, 'user_settings', 'update', knex);
   if (!canUpdate) {
-    throw new Error('Permission denied: cannot update team.');
+    return permissionError('Permission denied: cannot update team.');
   }
 
   try {
@@ -131,7 +136,9 @@ export const updateTeam = withAuth(async (user, { tenant }, teamId: string, team
     return await getTeamByIdInternal(knex, tenant, teamId);
   } catch (error) {
     console.error(error);
-    throw new Error('Failed to update team');
+    const expected = teamActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -177,11 +184,11 @@ export const deleteTeam = withAuth(async (
   }
 });
 
-export const addUserToTeam = withAuth(async (user, { tenant }, teamId: string, userId: string): Promise<ITeam> => {
+export const addUserToTeam = withAuth(async (user, { tenant }, teamId: string, userId: string): Promise<TeamMutationResult> => {
   const { knex } = await createTenantKnex();
   const canUpdate = await hasPermission(user, 'user_settings', 'update', knex);
   if (!canUpdate) {
-    throw new Error('Permission denied: cannot modify team members.');
+    return permissionError('Permission denied: cannot modify team members.');
   }
 
   try {
@@ -189,15 +196,17 @@ export const addUserToTeam = withAuth(async (user, { tenant }, teamId: string, u
     return await getTeamByIdInternal(knex, tenant, teamId);
   } catch (error) {
     console.error(error);
-    throw new Error('Failed to add user to team');
+    const expected = teamActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
-export const removeUserFromTeam = withAuth(async (user, { tenant }, teamId: string, userId: string): Promise<ITeam> => {
+export const removeUserFromTeam = withAuth(async (user, { tenant }, teamId: string, userId: string): Promise<TeamMutationResult> => {
   const { knex } = await createTenantKnex();
   const canUpdate = await hasPermission(user, 'user_settings', 'update', knex);
   if (!canUpdate) {
-    throw new Error('Permission denied: cannot modify team members.');
+    return permissionError('Permission denied: cannot modify team members.');
   }
 
   try {
@@ -211,22 +220,26 @@ export const removeUserFromTeam = withAuth(async (user, { tenant }, teamId: stri
     return await getTeamByIdInternal(knex, tenant, teamId);
   } catch (error: any) {
     console.error(error);
-    throw error.message?.includes('team lead') ? error : new Error('Failed to remove user from team');
+    const expected = teamActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
-export const getTeamById = withAuth(async (user, { tenant }, teamId: string): Promise<ITeam> => {
+export const getTeamById = withAuth(async (user, { tenant }, teamId: string): Promise<TeamReadResult> => {
   const { knex } = await createTenantKnex();
   const canRead = await hasPermission(user, 'user_settings', 'read', knex);
   if (!canRead) {
-    throw new Error('Permission denied: cannot view team.');
+    return permissionError('Permission denied: cannot view team.');
   }
 
   try {
     return await getTeamByIdInternal(knex, tenant, teamId);
   } catch (error) {
     console.error(error);
-    throw new Error('Failed to fetch team');
+    const expected = teamActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -234,26 +247,28 @@ export const getTeamById = withAuth(async (user, { tenant }, teamId: string): Pr
  * Lightweight version of getTeams — returns team rows without loading members.
  * Use when you only need team_id, team_name, manager_id (e.g., for display badges).
  */
-export const getTeamsBasic = withAuth(async (user, { tenant }): Promise<Omit<ITeam, 'members'>[]> => {
+export const getTeamsBasic = withAuth(async (user, { tenant }): Promise<TeamsBasicReadResult> => {
   const { knex } = await createTenantKnex();
   const canRead = await hasPermission(user, 'user_settings', 'read', knex);
   if (!canRead) {
-    throw new Error('Permission denied: cannot view teams.');
+    return permissionError('Permission denied: cannot view teams.');
   }
 
   try {
     return await Team.getAll(knex, tenant);
   } catch (error) {
     console.error(error);
-    throw new Error('Failed to fetch teams');
+    const expected = teamActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
-export const getTeams = withAuth(async (user, { tenant }): Promise<ITeam[]> => {
+export const getTeams = withAuth(async (user, { tenant }): Promise<TeamsReadResult> => {
   const { knex } = await createTenantKnex();
   const canRead = await hasPermission(user, 'user_settings', 'read', knex);
   if (!canRead) {
-    throw new Error('Permission denied: cannot view teams.');
+    return permissionError('Permission denied: cannot view teams.');
   }
 
   try {
@@ -266,7 +281,9 @@ export const getTeams = withAuth(async (user, { tenant }): Promise<ITeam[]> => {
     return teamsWithMembers;
   } catch (error) {
     console.error(error);
-    throw new Error('Failed to fetch teams');
+    const expected = teamActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -276,31 +293,33 @@ export interface TeamChanges {
   removeUserIds: string[];
 }
 
-export const saveTeamChanges = withAuth(async (user, { tenant }, teamId: string, changes: TeamChanges): Promise<ITeam> => {
+export const saveTeamChanges = withAuth(async (user, { tenant }, teamId: string, changes: TeamChanges): Promise<TeamMutationResult> => {
   const { knex } = await createTenantKnex();
   const canUpdate = await hasPermission(user, 'user_settings', 'update', knex);
   if (!canUpdate) {
-    throw new Error('Permission denied: cannot modify team.');
+    return permissionError('Permission denied: cannot modify team.');
   }
 
   try {
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+
       // Assign manager if changed
       if (changes.managerId) {
         await Team.update(trx, tenant, teamId, { manager_id: changes.managerId });
 
         // Demote any existing leads to 'member'
-        await trx('team_members')
-          .where({ team_id: teamId, tenant, role: 'lead' })
+        await db.table('team_members')
+          .where({ team_id: teamId, role: 'lead' })
           .update({ role: 'member' });
 
         // Add or promote the new manager
-        const existingMember = await trx('team_members')
-          .where({ team_id: teamId, user_id: changes.managerId, tenant })
+        const existingMember = await db.table('team_members')
+          .where({ team_id: teamId, user_id: changes.managerId })
           .first();
         if (existingMember) {
-          await trx('team_members')
-            .where({ team_id: teamId, user_id: changes.managerId, tenant })
+          await db.table('team_members')
+            .where({ team_id: teamId, user_id: changes.managerId })
             .update({ role: 'lead' });
         } else {
           await Team.addMember(trx, tenant, teamId, changes.managerId, 'lead');
@@ -320,17 +339,17 @@ export const saveTeamChanges = withAuth(async (user, { tenant }, teamId: string,
           throw new Error('Cannot remove the team lead. Please assign a new team lead first.');
         }
 
-        await trx('team_members')
-          .where({ team_id: teamId, tenant })
+        await db.table('team_members')
+          .where({ team_id: teamId })
           .whereIn('user_id', changes.removeUserIds)
           .del();
       }
 
       // Batch add members (with inactive user validation)
       if (changes.addUserIds.length > 0) {
-        const activeUsers = await trx('users')
+        const activeUsers = await db.table('users')
           .select('user_id')
-          .where({ tenant, is_inactive: false })
+          .where({ is_inactive: false })
           .whereIn('user_id', changes.addUserIds);
 
         const activeUserIds = new Set(activeUsers.map((u: { user_id: string }) => u.user_id));
@@ -339,7 +358,7 @@ export const saveTeamChanges = withAuth(async (user, { tenant }, teamId: string,
           throw new Error('Cannot add inactive users to team');
         }
 
-        await trx('team_members').insert(
+        await db.table('team_members').insert(
           changes.addUserIds.map(userId => ({
             team_id: teamId,
             user_id: userId,
@@ -353,35 +372,39 @@ export const saveTeamChanges = withAuth(async (user, { tenant }, teamId: string,
     return await getTeamByIdInternal(knex, tenant, teamId);
   } catch (error) {
     console.error(error);
-    throw new Error('Failed to save team changes');
+    const expected = teamActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
-export const assignManagerToTeam = withAuth(async (user, { tenant }, teamId: string, userId: string): Promise<ITeam> => {
+export const assignManagerToTeam = withAuth(async (user, { tenant }, teamId: string, userId: string): Promise<TeamMutationResult> => {
   const { knex } = await createTenantKnex();
   const canUpdate = await hasPermission(user, 'user_settings', 'update', knex);
   if (!canUpdate) {
-    throw new Error('Permission denied: cannot assign team manager.');
+    return permissionError('Permission denied: cannot assign team manager.');
   }
 
   try {
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+
       // Update team manager
       await Team.update(trx, tenant, teamId, { manager_id: userId });
 
       // Demote any existing leads to 'member'
-      await trx('team_members')
-        .where({ team_id: teamId, tenant, role: 'lead' })
+      await db.table('team_members')
+        .where({ team_id: teamId, role: 'lead' })
         .update({ role: 'member' });
 
       // Add or promote the new manager
-      const existingMember = await trx('team_members')
-        .where({ team_id: teamId, user_id: userId, tenant })
+      const existingMember = await db.table('team_members')
+        .where({ team_id: teamId, user_id: userId })
         .first();
       if (existingMember) {
-        await trx('team_members')
-          .where({ team_id: teamId, user_id: userId, tenant })
+        await db.table('team_members')
+          .where({ team_id: teamId, user_id: userId })
           .update({ role: 'lead' });
       } else {
         await Team.addMember(trx, tenant, teamId, userId, 'lead');
@@ -391,6 +414,8 @@ export const assignManagerToTeam = withAuth(async (user, { tenant }, teamId: str
     return await getTeamByIdInternal(knex, tenant, teamId);
   } catch (error) {
     console.error(error);
-    throw new Error('Failed to assign manager to team');
+    const expected = teamActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });

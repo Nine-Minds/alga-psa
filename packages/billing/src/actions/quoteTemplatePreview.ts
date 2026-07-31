@@ -139,6 +139,7 @@ export const runAuthoritativeQuoteTemplatePreview = withAuth(
       };
     } catch (error: any) {
       const isEvaluationError = error instanceof TemplateEvaluationError;
+      const runtimeMessage = 'Template evaluation failed unexpectedly.';
       return {
         success: false,
         sourceHash,
@@ -159,12 +160,12 @@ export const runAuthoritativeQuoteTemplatePreview = withAuth(
                 {
                   kind: 'runtime',
                   severity: 'error',
-                  message: error?.message || String(error),
-                  raw: String(error?.message || error),
+                  message: runtimeMessage,
+                  raw: runtimeMessage,
                 },
               ],
           error: isEvaluationError ? error.message : 'Evaluation failed.',
-          details: error?.message || String(error),
+          details: isEvaluationError ? error.message : runtimeMessage,
         },
         render: {
           status: 'idle',

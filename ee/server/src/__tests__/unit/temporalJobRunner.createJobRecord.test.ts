@@ -75,7 +75,7 @@ describe('TemporalJobRunner createJobRecord user attribution', () => {
   });
 
   it('uses a real tenant user_id when scheduling recurring jobs without explicit userId', async () => {
-    const { TemporalJobRunner } = await import('@ee/lib/jobs/runners/TemporalJobRunner');
+    const { TemporalJobRunner } = await import('@alga-psa/jobs/runners/TemporalJobRunner');
     TemporalJobRunner.reset();
 
     const runner = await TemporalJobRunner.create({

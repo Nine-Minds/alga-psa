@@ -62,18 +62,18 @@ That is better than recovering by removing the control-plane taint manually afte
 Check this layer when:
 
 - Flux controllers are running but releases do not progress
-- the cluster still seems to be reconciling old repo content
+- the cluster still seems to be reconciling an old OCI config-bundle artifact
 - `HelmRelease` objects exist but do not pick up new changes
 
 Common issues:
 
-- `source-controller` cannot fetch the Git repository because cluster egress is broken
-- the source artifact is stale even though the branch moved
-- the wrong branch or path is configured for the appliance profile
+- `source-controller` cannot fetch the OCIRepository because cluster egress is broken
+- the source artifact is stale even though the channel changed
+- the wrong config-bundle digest or path is configured for the appliance profile
 
 Operational rule:
 
-- verify `GitRepository` readiness and revision before assuming a chart fix is in-cluster
+- verify `OCIRepository` readiness and artifact revision before assuming a chart fix is in-cluster
 
 Do not keep debugging a Helm failure if Flux is still serving an older artifact.
 

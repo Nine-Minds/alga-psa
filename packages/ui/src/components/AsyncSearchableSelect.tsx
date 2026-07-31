@@ -326,10 +326,17 @@ export function AsyncSearchableSelect({
               ))}
 
               {hasMore && (
-                <div className="flex items-center justify-center px-2 py-2">
+                <div className="flex items-center justify-center gap-2 px-2 py-2 text-xs text-[rgb(var(--color-text-400))]">
                   {loadingMore && (
-                    <Loader2 className="h-4 w-4 animate-spin text-[rgb(var(--color-text-300))]" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-[rgb(var(--color-text-300))]" />
                   )}
+                  <span>
+                    {t('form.showingOfTotal', {
+                      defaultValue: 'Showing {{shown}} of {{total}} — type to narrow',
+                      shown: options.length,
+                      total,
+                    })}
+                  </span>
                 </div>
               )}
             </>
@@ -348,7 +355,16 @@ export function AsyncSearchableSelect({
   );
 
   return (
-    <div className={label ? 'mb-4' : ''} id={id} data-automation-type="async-searchable-select">
+    /* `className` was declared, destructured and then applied to nothing —
+       ServiceCatalogPicker forwards it faithfully into the void. It lands on
+       the root, which is also the only way a caller can undo the mb-4 below:
+       that margin assumes a stacked form, and in a horizontal row it pushes
+       the control 16px above the baseline of whatever sits beside it. */
+    <div
+      className={cn(label ? 'mb-4' : '', className)}
+      id={id}
+      data-automation-type="async-searchable-select"
+    >
       {label && <label className="block text-sm font-medium text-[rgb(var(--color-text-600))] mb-1">{label}</label>}
 
       <div className="relative">

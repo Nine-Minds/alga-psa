@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { tenantDb } from '@alga-psa/db';
 import { 
   setupE2ETestEnvironment, 
   E2ETestEnvironment 
@@ -21,6 +22,14 @@ const API_BASE = '/api/v1/time-entries';
 
 describe('Time Entries API E2E Tests', () => {
   let env: E2ETestEnvironment;
+
+  function tenantTable(table: string) {
+    return tenantDb(env.db, env.tenant).table(table);
+  }
+
+  function tenantTableFor(tenant: string, table: string) {
+    return tenantDb(env.db, tenant).table(table);
+  }
 
   beforeEach(async () => {
     env = await setupE2ETestEnvironment();
@@ -101,7 +110,7 @@ describe('Time Entries API E2E Tests', () => {
 
       it('should compute work_date in user timezone and bucket to the correct period', async () => {
         // Force a non-UTC timezone so we can test around local midnight.
-        await env.db('users')
+        await tenantTable('users')
           .where({ tenant: env.tenant, user_id: env.userId })
           .update({ timezone: 'America/Los_Angeles' });
 
@@ -143,7 +152,7 @@ describe('Time Entries API E2E Tests', () => {
         expect(response.data.data.work_timezone).toBe('America/Los_Angeles');
 
         // Verify the server attached the entry to the period containing work_date (period1).
-        const sheet = await env.db('time_sheets')
+        const sheet = await tenantTable('time_sheets')
           .where({ tenant: env.tenant, id: response.data.data.time_sheet_id })
           .first();
         expect(sheet?.period_id).toBe(period1.period_id);
@@ -256,7 +265,7 @@ describe('Time Entries API E2E Tests', () => {
         const otherUserId = uuidv4();
         
         // Create the other tenant
-        await env.db('tenants').insert({
+        await tenantTableFor(otherTenant, 'tenants').insert({
           tenant: otherTenant,
           client_name: `Other Tenant ${otherTenant}`,
           phone_number: '555-0200',
@@ -270,7 +279,7 @@ describe('Time Entries API E2E Tests', () => {
         });
         
         // Create client for other tenant
-        await env.db('clients').insert({
+        await tenantTableFor(otherTenant, 'clients').insert({
           client_id: otherClientId,
           tenant: otherTenant,
           client_name: 'Other Client',
@@ -278,7 +287,7 @@ describe('Time Entries API E2E Tests', () => {
         });
         
         // Create user for other tenant
-        await env.db('users').insert({
+        await tenantTableFor(otherTenant, 'users').insert({
           user_id: otherUserId,
           tenant: otherTenant,
           username: `other_user_${otherUserId}`,
@@ -538,7 +547,7 @@ describe('Time Entries API E2E Tests', () => {
       
       // Create another user directly in DB (simpler for testing)
       const otherUserId = uuidv4();
-      await env.db('users').insert({
+      await tenantTable('users').insert({
         user_id: otherUserId,
         tenant: env.tenant,
         username: `testuser_${otherUserId.substring(0, 8)}`,
@@ -991,7 +1000,7 @@ describe('Time Entries API E2E Tests', () => {
     it('should enforce read permissions for listing', async () => {
       // Create a new user without any roles
       const restrictedUserId = uuidv4();
-      await env.db('users').insert({
+      await tenantTable('users').insert({
         user_id: restrictedUserId,
         tenant: env.tenant,
         username: `restricted_${restrictedUserId}`,
@@ -1007,7 +1016,7 @@ describe('Time Entries API E2E Tests', () => {
       const plaintextKey = `test_${uuidv4()}`;
       const hashedKey = require('crypto').createHash('sha256').update(plaintextKey).digest('hex');
       
-      await env.db('api_keys')
+      await tenantTable('api_keys')
         .insert({
           api_key_id: uuidv4(),
           api_key: hashedKey,
@@ -1030,7 +1039,7 @@ describe('Time Entries API E2E Tests', () => {
     it('should enforce create permissions', async () => {
       // Create a new user without any roles
       const restrictedUserId = uuidv4();
-      await env.db('users').insert({
+      await tenantTable('users').insert({
         user_id: restrictedUserId,
         tenant: env.tenant,
         username: `restricted_${restrictedUserId}`,
@@ -1046,7 +1055,7 @@ describe('Time Entries API E2E Tests', () => {
       const plaintextKey = `test_${uuidv4()}`;
       const hashedKey = require('crypto').createHash('sha256').update(plaintextKey).digest('hex');
       
-      await env.db('api_keys')
+      await tenantTable('api_keys')
         .insert({
           api_key_id: uuidv4(),
           api_key: hashedKey,
@@ -1085,7 +1094,7 @@ describe('Time Entries API E2E Tests', () => {
 
       // Create a new user without any roles
       const restrictedUserId = uuidv4();
-      await env.db('users').insert({
+      await tenantTable('users').insert({
         user_id: restrictedUserId,
         tenant: env.tenant,
         username: `restricted_${restrictedUserId}`,
@@ -1101,7 +1110,7 @@ describe('Time Entries API E2E Tests', () => {
       const plaintextKey = `test_${uuidv4()}`;
       const hashedKey = require('crypto').createHash('sha256').update(plaintextKey).digest('hex');
       
-      await env.db('api_keys')
+      await tenantTable('api_keys')
         .insert({
           api_key_id: uuidv4(),
           api_key: hashedKey,
@@ -1140,7 +1149,7 @@ describe('Time Entries API E2E Tests', () => {
 
       // Create a new user without any roles
       const restrictedUserId = uuidv4();
-      await env.db('users').insert({
+      await tenantTable('users').insert({
         user_id: restrictedUserId,
         tenant: env.tenant,
         username: `restricted_${restrictedUserId}`,
@@ -1156,7 +1165,7 @@ describe('Time Entries API E2E Tests', () => {
       const plaintextKey = `test_${uuidv4()}`;
       const hashedKey = require('crypto').createHash('sha256').update(plaintextKey).digest('hex');
       
-      await env.db('api_keys')
+      await tenantTable('api_keys')
         .insert({
           api_key_id: uuidv4(),
           api_key: hashedKey,
@@ -1200,7 +1209,7 @@ describe('Time Entries API E2E Tests', () => {
       const otherUserId = uuidv4();
       
       // Create the other tenant
-      await env.db('tenants').insert({
+      await tenantTableFor(otherTenant, 'tenants').insert({
         tenant: otherTenant,
         client_name: `Other Tenant ${otherTenant}`,
         phone_number: '555-0200',
@@ -1214,7 +1223,7 @@ describe('Time Entries API E2E Tests', () => {
       });
       
       // Create client for other tenant
-      await env.db('clients').insert({
+      await tenantTableFor(otherTenant, 'clients').insert({
         client_id: otherClientId,
         tenant: otherTenant,
         client_name: 'Other Client',
@@ -1222,7 +1231,7 @@ describe('Time Entries API E2E Tests', () => {
       });
       
       // Create user for other tenant
-      await env.db('users').insert({
+      await tenantTableFor(otherTenant, 'users').insert({
         user_id: otherUserId,
         tenant: otherTenant,
         username: `other_user_${otherUserId}`,

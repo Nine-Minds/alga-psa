@@ -40,6 +40,25 @@ vi.mock('@alga-psa/workflows/runtime/core', () => ({
   generateIdempotencyKey: () => 'generated-idempotency-key',
   initializeWorkflowRuntimeV2: mocks.initializeWorkflowRuntimeV2,
   createSecretResolverFromProvider: (provider: unknown) => provider,
+  applyRedactions: (value: unknown) => {
+    if (Array.isArray(value)) {
+      return value.map((entry) => (entry && typeof entry === 'object' && 'secretRef' in entry ? { ...entry, secretRef: '[REDACTED]' } : entry));
+    }
+    if (value && typeof value === 'object') {
+      const redact = (input: unknown): unknown => {
+        if (Array.isArray(input)) return input.map(redact);
+        if (!input || typeof input !== 'object') return input;
+        const result: Record<string, unknown> = {};
+        for (const [key, val] of Object.entries(input as Record<string, unknown>)) {
+          result[key] = key === 'secretRef' ? '[REDACTED]' : redact(val);
+        }
+        return result;
+      };
+      return redact(value);
+    }
+    return value;
+  },
+  safeSerialize: (value: unknown) => JSON.parse(JSON.stringify(value)),
   workflowStepQuotaService: {
     reserveStepStart: mocks.reserveStepStart,
   },
@@ -207,7 +226,252 @@ describe('workflow-runtime-v2 activities', () => {
           title_text: 'rendered compose output',
         },
       }),
+      'tenant-1',
     );
+    // error_json must stay out of non-failure writes: the worker can deploy
+    // ahead of the migration that adds the column.
+    expect(mocks.updateInvocation.mock.calls[0][2]).not.toHaveProperty('error_json');
+    expect(mocks.createInvocation.mock.calls[0][1]).not.toHaveProperty('error_json');
+  });
+
+  it('falls back to a plain failure update when error_json column is missing (42703)', async () => {
+    const { executeWorkflowRuntimeV2ActionStep } = await import('../workflow-runtime-v2-activities');
+
+    mocks.actionHandler.mockRejectedValueOnce(new Error('boom'));
+    mocks.updateInvocation.mockImplementationOnce(async () => {
+      const undefinedColumn = new Error('column "error_json" of relation "workflow_action_invocations" does not exist');
+      (undefinedColumn as Error & { code?: string }).code = '42703';
+      throw undefinedColumn;
+    });
+
+    await expect(
+      executeWorkflowRuntimeV2ActionStep({
+        runId: 'run-migration-lag',
+        stepPath: 'root.steps[1]',
+        stepId: 'step-migration-lag',
+        tenantId: 'tenant-1',
+        step: {
+          type: 'action.call',
+          config: {
+            actionId: 'integration.call',
+            version: 1,
+          },
+        },
+        scopes: {
+          payload: {},
+          workflow: {},
+          lexical: [],
+          meta: {},
+          error: null,
+          system: {
+            runId: 'run-migration-lag',
+            workflowId: 'workflow-1',
+            workflowVersion: 3,
+            tenantId: 'tenant-1',
+            definitionHash: 'definition-hash',
+            runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+          },
+        },
+      }),
+    ).rejects.toMatchObject({ message: 'boom' });
+
+    expect(mocks.updateInvocation).toHaveBeenCalledTimes(2);
+    const retryPayload = mocks.updateInvocation.mock.calls[1][2];
+    expect(retryPayload).toMatchObject({ status: 'FAILED', error_message: 'boom' });
+    expect(retryPayload).not.toHaveProperty('error_json');
+  });
+
+  it('persists normalized structured error_json while keeping error_message unchanged', async () => {
+    const { executeWorkflowRuntimeV2ActionStep } = await import('../workflow-runtime-v2-activities');
+
+    mocks.actionHandler.mockRejectedValueOnce({
+      category: 'IntegrationError',
+      code: 'RATE_LIMITED',
+      message: 'Provider rate limit exceeded',
+      details: {
+        apiKey: 'plain-secret',
+        secretRef: 'provider-secret',
+        nested: {
+          token: 'nested-token',
+          stack: 'nested stack',
+        },
+        stack: 'top stack',
+      },
+      nodePath: 'root.steps[2]',
+      at: '2026-07-16T12:00:00.000Z',
+    });
+
+    await expect(executeWorkflowRuntimeV2ActionStep({
+      runId: 'run-failed-action',
+      stepPath: 'root.steps[1]',
+      stepId: 'step-failed-action',
+      tenantId: 'tenant-1',
+      step: {
+        type: 'action.call',
+        config: {
+          actionId: 'integration.call',
+          version: 1,
+        },
+      },
+      scopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        meta: {},
+        error: null,
+        system: {
+          runId: 'run-failed-action',
+          workflowId: 'workflow-1',
+          workflowVersion: 3,
+          tenantId: 'tenant-1',
+          definitionHash: 'definition-hash',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    })).rejects.toMatchObject({
+      category: 'IntegrationError',
+      code: 'RATE_LIMITED',
+      message: 'Provider rate limit exceeded',
+    });
+
+    expect(mocks.updateInvocation).toHaveBeenCalledWith(
+      expect.anything(),
+      'invocation-1',
+      expect.objectContaining({
+        status: 'FAILED',
+        error_message: 'Provider rate limit exceeded',
+        error_json: {
+          category: 'IntegrationError',
+          code: 'RATE_LIMITED',
+          message: 'Provider rate limit exceeded',
+          nodePath: 'root.steps[2]',
+          at: '2026-07-16T12:00:00.000Z',
+          details: {
+            apiKey: '[REDACTED]',
+            secretRef: '[REDACTED]',
+            nested: {
+              token: '[REDACTED]',
+            },
+          },
+        },
+      }),
+      'tenant-1',
+    );
+  });
+
+  it('truncates oversized structured error details', async () => {
+    const { executeWorkflowRuntimeV2ActionStep } = await import('../workflow-runtime-v2-activities');
+
+    mocks.actionHandler.mockRejectedValueOnce({
+      category: 'ActionError',
+      code: 'INTERNAL_ERROR',
+      message: 'Large failure',
+      details: {
+        body: 'x'.repeat(40 * 1024),
+      },
+      nodePath: 'root.steps[1]',
+      at: '2026-07-16T12:00:00.000Z',
+    });
+
+    await expect(executeWorkflowRuntimeV2ActionStep({
+      runId: 'run-large-error',
+      stepPath: 'root.steps[1]',
+      stepId: 'step-large-error',
+      tenantId: 'tenant-1',
+      step: {
+        type: 'action.call',
+        config: {
+          actionId: 'integration.call',
+          version: 1,
+        },
+      },
+      scopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        meta: {},
+        error: null,
+        system: {
+          runId: 'run-large-error',
+          workflowId: 'workflow-1',
+          workflowVersion: 3,
+          tenantId: 'tenant-1',
+          definitionHash: 'definition-hash',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    })).rejects.toMatchObject({
+      category: 'ActionError',
+      code: 'INTERNAL_ERROR',
+      message: 'Large failure',
+    });
+
+    const failedUpdate = mocks.updateInvocation.mock.calls.find((call) => call[2]?.status === 'FAILED');
+    expect(failedUpdate?.[2]).toMatchObject({
+      error_message: 'Large failure',
+      error_json: {
+        category: 'ActionError',
+        code: 'INTERNAL_ERROR',
+        message: 'Large failure',
+        nodePath: 'root.steps[1]',
+        at: '2026-07-16T12:00:00.000Z',
+        details: {
+          truncated: true,
+          max: 32 * 1024,
+        },
+      },
+    });
+    expect(JSON.stringify(failedUpdate?.[2].error_json).length).toBeLessThanOrEqual(32 * 1024);
+  });
+
+  it('truncates oversized astral-character messages without splitting surrogate pairs', async () => {
+    const { executeWorkflowRuntimeV2ActionStep } = await import('../workflow-runtime-v2-activities');
+
+    mocks.actionHandler.mockRejectedValueOnce({
+      category: 'ActionError',
+      code: 'INTERNAL_ERROR',
+      message: '🍄'.repeat(20 * 1024),
+      nodePath: 'root.steps[1]',
+      at: '2026-07-16T12:00:00.000Z',
+    });
+
+    await expect(executeWorkflowRuntimeV2ActionStep({
+      runId: 'run-emoji-error',
+      stepPath: 'root.steps[1]',
+      stepId: 'step-emoji-error',
+      tenantId: 'tenant-1',
+      step: {
+        type: 'action.call',
+        config: {
+          actionId: 'integration.call',
+          version: 1,
+        },
+      },
+      scopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        meta: {},
+        error: null,
+        system: {
+          runId: 'run-emoji-error',
+          workflowId: 'workflow-1',
+          workflowVersion: 3,
+          tenantId: 'tenant-1',
+          definitionHash: 'definition-hash',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    })).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+
+    const failedUpdate = mocks.updateInvocation.mock.calls.find((call) => call[2]?.status === 'FAILED');
+    const persistedMessage = failedUpdate?.[2].error_json.message as string;
+    expect(persistedMessage.endsWith('...[truncated]')).toBe(true);
+    // A lone surrogate would serialize as an unpaired \udXXX escape, which
+    // Postgres jsonb rejects — the failure record itself would fail to write.
+    const loneSurrogate = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(^|[^\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+    expect(loneSurrogate.test(persistedMessage)).toBe(false);
+    expect(Buffer.byteLength(JSON.stringify(failedUpdate?.[2].error_json), 'utf8')).toBeLessThanOrEqual(32 * 1024);
   });
 
   it('projects STARTED step only after successful quota reservation', async () => {

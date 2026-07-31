@@ -11,6 +11,8 @@ export * from './appliance-license-activities';
 export * from './portal-domain-activities';
 export * from './email-domain-activities';
 export * from './job-activities';
+export * from './maintenance-fanout-activities';
+export * from './marketing-activities';
 export * from './email-webhook-maintenance-activities';
 export * from './calendar-webhook-maintenance-activities';
 export * from './ninjaone-sync-activities';
@@ -23,6 +25,8 @@ export * from './tenant-export-activities';
 export * from './sla-activities';
 export * from './premium-trial-activities';
 export * from './appliance-check-in-activities';
+export * from './appliance-license-redeem-activities';
+export * from './product-upgrade-activities';
 // Exclude generateTemporaryPassword and sendWelcomeEmail to avoid duplicates with email-activities
 export {
   getTenant,

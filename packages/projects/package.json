@@ -20,17 +20,23 @@
     "./models": {
       "types": "./dist/models/index.d.ts",
       "import": "./dist/models/index.mjs"
+    },
+    "./services": {
+      "types": "./dist/services/index.d.ts",
+      "import": "./dist/services/index.mjs"
     }
   },
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@alga-psa/authorization": "*",
     "@alga-psa/clients": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/inventory": "*",
     "@alga-psa/documents": "*",
     "@alga-psa/formatting": "*",
     "@alga-psa/shared": "*",

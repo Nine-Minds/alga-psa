@@ -10,7 +10,10 @@ import { GoogleCalendarAdapter } from './providers/GoogleCalendarAdapter';
 import { MicrosoftCalendarAdapter } from './providers/MicrosoftCalendarAdapter';
 import { BaseCalendarAdapter } from './providers/base/BaseCalendarAdapter';
 import { runWithTenant, createTenantKnex } from '../../lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
+
+const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
 export class CalendarWebhookProcessor {
   private syncService: CalendarSyncService;
@@ -56,21 +59,19 @@ export class CalendarWebhookProcessor {
         // Update health table to track webhook receipt
         try {
           const now = new Date().toISOString();
-          const existing = await knex('calendar_provider_health')
+          const existing = await tenantDb(knex, provider.tenant).table('calendar_provider_health')
             .where('calendar_provider_id', provider.id)
-            .andWhere('tenant', provider.tenant)
             .first();
 
           if (existing) {
-            await knex('calendar_provider_health')
+            await tenantDb(knex, provider.tenant).table('calendar_provider_health')
               .where('calendar_provider_id', provider.id)
-              .andWhere('tenant', provider.tenant)
               .update({
                 last_webhook_received_at: now,
                 updated_at: now
               });
           } else {
-            await knex('calendar_provider_health')
+            await tenantDb(knex, provider.tenant).table('calendar_provider_health')
               .insert({
                 calendar_provider_id: provider.id,
                 tenant: provider.tenant,
@@ -124,10 +125,9 @@ export class CalendarWebhookProcessor {
 
           if (change.changeType === 'deleted') {
             try {
-              const mapping = await knex('calendar_event_mappings')
+              const mapping = await tenantDb(knex, provider.tenant).table('calendar_event_mappings')
                 .where('external_event_id', change.id)
                 .andWhere('calendar_provider_id', provider.id)
-                .andWhere('tenant', provider.tenant)
                 .first();
 
               if (!mapping) {
@@ -231,21 +231,19 @@ export class CalendarWebhookProcessor {
         // Update health table to track webhook receipt
         try {
           const now = new Date().toISOString();
-          const existing = await knex('calendar_provider_health')
+          const existing = await tenantDb(knex, provider.tenant).table('calendar_provider_health')
             .where('calendar_provider_id', provider.id)
-            .andWhere('tenant', provider.tenant)
             .first();
 
           if (existing) {
-            await knex('calendar_provider_health')
+            await tenantDb(knex, provider.tenant).table('calendar_provider_health')
               .where('calendar_provider_id', provider.id)
-              .andWhere('tenant', provider.tenant)
               .update({
                 last_webhook_received_at: now,
                 updated_at: now
               });
           } else {
-            await knex('calendar_provider_health').insert({
+            await tenantDb(knex, provider.tenant).table('calendar_provider_health').insert({
               calendar_provider_id: provider.id,
               tenant: provider.tenant,
               last_webhook_received_at: now,
@@ -296,10 +294,9 @@ export class CalendarWebhookProcessor {
 
           if (change.changeType === 'deleted') {
             try {
-              const mapping = await knex('calendar_event_mappings')
+              const mapping = await tenantDb(knex, provider.tenant).table('calendar_event_mappings')
                 .where('external_event_id', change.id)
                 .andWhere('calendar_provider_id', provider.id)
-                .andWhere('tenant', provider.tenant)
                 .first();
 
               if (!mapping) {
@@ -476,10 +473,9 @@ export class CalendarWebhookProcessor {
           for (const change of queuedChanges) {
             if (change.changeType === 'deleted') {
               try {
-                const mapping = await knex('calendar_event_mappings')
+                const mapping = await tenantDb(knex, provider.tenant).table('calendar_event_mappings')
                   .where('external_event_id', change.id)
                   .andWhere('calendar_provider_id', provider.id)
-                  .andWhere('tenant', provider.tenant)
                   .first();
 
                 if (!mapping) {
@@ -549,11 +545,17 @@ export class CalendarWebhookProcessor {
   private async getProviderByGoogleSubscription(subscriptionName: string): Promise<CalendarProviderConfig | null> {
     try {
       const knex = await getAdminConnection();
-      const row = await knex('google_calendar_provider_config as gc')
-        .join('calendar_providers as cp', function() {
-          this.on('gc.calendar_provider_id', '=', 'cp.id')
-            .andOn('gc.tenant', '=', 'cp.tenant');
-        })
+      const discoveryDb = tenantDb(knex, PROVIDER_TENANT_DISCOVERY);
+      const query = discoveryDb.unscoped(
+        'google_calendar_provider_config as gc',
+        'tenant discovery from Google calendar Pub/Sub provider config'
+      );
+
+      discoveryDb.tenantJoin(query, 'calendar_providers as cp', 'gc.calendar_provider_id', 'cp.id', {
+        rootTenantColumn: 'gc.tenant',
+      });
+
+      const row = await query
         .where('gc.pubsub_subscription_name', subscriptionName)
         .andWhere('cp.is_active', true)
         .first({
@@ -575,11 +577,17 @@ export class CalendarWebhookProcessor {
   private async getProviderByGoogleChannelId(channelId: string): Promise<CalendarProviderConfig | null> {
     try {
       const knex = await getAdminConnection();
-      const row = await knex('google_calendar_provider_config as gc')
-        .join('calendar_providers as cp', function() {
-          this.on('gc.calendar_provider_id', '=', 'cp.id')
-            .andOn('gc.tenant', '=', 'cp.tenant');
-        })
+      const discoveryDb = tenantDb(knex, PROVIDER_TENANT_DISCOVERY);
+      const query = discoveryDb.unscoped(
+        'google_calendar_provider_config as gc',
+        'tenant discovery from Google calendar channel provider config'
+      );
+
+      discoveryDb.tenantJoin(query, 'calendar_providers as cp', 'gc.calendar_provider_id', 'cp.id', {
+        rootTenantColumn: 'gc.tenant',
+      });
+
+      const row = await query
         .where('gc.webhook_subscription_id', channelId)
         .andWhere('cp.is_active', true)
         .first({
@@ -604,11 +612,17 @@ export class CalendarWebhookProcessor {
   private async getProviderByMicrosoftSubscription(subscriptionId: string): Promise<CalendarProviderConfig | null> {
     try {
       const knex = await getAdminConnection();
-      const row = await knex('microsoft_calendar_provider_config as mc')
-        .join('calendar_providers as cp', function() {
-          this.on('mc.calendar_provider_id', '=', 'cp.id')
-            .andOn('mc.tenant', '=', 'cp.tenant');
-        })
+      const discoveryDb = tenantDb(knex, PROVIDER_TENANT_DISCOVERY);
+      const query = discoveryDb.unscoped(
+        'microsoft_calendar_provider_config as mc',
+        'tenant discovery from Microsoft calendar provider config'
+      );
+
+      discoveryDb.tenantJoin(query, 'calendar_providers as cp', 'mc.calendar_provider_id', 'cp.id', {
+        rootTenantColumn: 'mc.tenant',
+      });
+
+      const row = await query
         .where('mc.webhook_subscription_id', subscriptionId)
         .andWhere('cp.is_active', true)
         .first({

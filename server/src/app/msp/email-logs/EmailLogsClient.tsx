@@ -4,9 +4,13 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Card } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { Label } from '@alga-psa/ui/components/Label';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogHeader } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
 import {
   getEmailLogMetrics,
   getEmailLogs,
@@ -60,12 +64,12 @@ function parseEmailList(value: unknown): string[] {
   return [];
 }
 
-function formatSentAt(value: unknown): string {
+function formatSentAt(value: unknown, locale: string): string {
   const date = value instanceof Date ? value : new Date(String(value));
   if (Number.isNaN(date.getTime())) {
     return '—';
   }
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(locale, {
     month: 'short',
     day: '2-digit',
     year: 'numeric',
@@ -75,7 +79,9 @@ function formatSentAt(value: unknown): string {
 }
 
 export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLogsClientProps) {
-  const { t } = useTranslation('msp/admin');
+  const { t, i18n } = useTranslation('msp/admin');
+  // Active UI locale from the i18n provider; falls back to the i18next default.
+  const uiLocale = i18n.language || LOCALE_CONFIG.defaultLocale;
   const seedLogs = initialLogs ?? EMPTY_LOGS;
   const [metrics, setMetrics] = useState<EmailLogMetrics>(initialMetrics ?? EMPTY_METRICS);
   const [logs, setLogs] = useState(seedLogs.data);
@@ -85,24 +91,48 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
   const [sortBy, setSortBy] = useState<NonNullable<EmailLogFilters['sortBy']>>('sent_at');
   const [sortDirection, setSortDirection] = useState<NonNullable<EmailLogFilters['sortDirection']>>('desc');
 
+  // LEVERAGE: pattern datatable-filter-paging — server variant: filter state + debounced text filters + reset-page-to-1 on every filter/sort change + fetch state machine, re-implemented per table; no list-controller layer
   const [status, setStatus] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [recipientEmail, setRecipientEmail] = useState<string>('');
   const [ticketNumber, setTicketNumber] = useState<string>('');
+  const [debouncedRecipient, setDebouncedRecipient] = useState<string>('');
+  const [debouncedTicket, setDebouncedTicket] = useState<string>('');
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [isLoading, setIsLoading] = useState(false);
   const [selected, setSelected] = useState<EmailSendingLogListRecord | null>(null);
-  const hasInitializedTextFilterEffect = useRef(false);
-  const hasInitializedDiscreteFilterEffect = useRef(false);
+  const skipInitialFetchRef = useRef(Boolean(initialLogs));
+  const requestSequenceRef = useRef(0);
 
   const fetchMetrics = useCallback(async () => {
     const result = await getEmailLogMetrics();
     setMetrics(result);
   }, []);
 
-  const fetchLogs = useCallback(
-    async (next: Partial<EmailLogFilters> = {}) => {
+  // Debounce text-based filters to avoid spamming server actions.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (recipientEmail !== debouncedRecipient || ticketNumber !== debouncedTicket) {
+        setDebouncedRecipient(recipientEmail);
+        setDebouncedTicket(ticketNumber);
+        setPage(1);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [recipientEmail, ticketNumber, debouncedRecipient, debouncedTicket]);
+
+  useEffect(() => {
+    if (skipInitialFetchRef.current) {
+      skipInitialFetchRef.current = false;
+      return;
+    }
+
+    const requestSequence = ++requestSequenceRef.current;
+
+    const fetchLogs = async () => {
       setIsLoading(true);
       try {
         const result = await getEmailLogs({
@@ -113,47 +143,34 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
           startDate: startDate || undefined,
           endDate: endDate || undefined,
           status: status ? (status as any) : undefined,
-          recipientEmail: recipientEmail || undefined,
-          ticketNumber: ticketNumber || undefined,
-          ...next,
+          recipientEmail: debouncedRecipient || undefined,
+          ticketNumber: debouncedTicket || undefined,
         });
+
+        if (requestSequence !== requestSequenceRef.current) return;
+
         setLogs(result.data);
         setTotal(result.total);
-        setPage(result.page);
-        setPageSize(result.pageSize);
       } finally {
-        setIsLoading(false);
+        if (requestSequence === requestSequenceRef.current) {
+          setIsLoading(false);
+        }
       }
-    },
-    [page, pageSize, sortBy, sortDirection, startDate, endDate, status, recipientEmail, ticketNumber]
-  );
+    };
 
-  // Debounce text-based filters to avoid spamming server actions
-  useEffect(() => {
-    if (!hasInitializedTextFilterEffect.current) {
-      hasInitializedTextFilterEffect.current = true;
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      void fetchLogs({ page: 1 });
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [recipientEmail, ticketNumber, fetchLogs]);
-
-  // Immediate refresh for discrete filters
-  useEffect(() => {
-    if (!hasInitializedDiscreteFilterEffect.current) {
-      hasInitializedDiscreteFilterEffect.current = true;
-      if (!initialLogs) {
-        void fetchLogs({ page: 1 });
-      }
-      return;
-    }
-
-    void fetchLogs({ page: 1 });
-  }, [status, startDate, endDate, fetchLogs, initialLogs]);
+    void fetchLogs();
+  }, [
+    page,
+    pageSize,
+    sortBy,
+    sortDirection,
+    status,
+    startDate,
+    endDate,
+    debouncedRecipient,
+    debouncedTicket,
+    refreshKey,
+  ]);
 
   useEffect(() => {
     if (initialMetrics) return;
@@ -165,7 +182,7 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
       {
         title: t('emailLogs.table.time'),
         dataIndex: 'sent_at',
-        render: (value) => formatSentAt(value),
+        render: (value) => formatSentAt(value, uiLocale),
       },
       {
         title: t('emailLogs.table.ticket'),
@@ -202,7 +219,7 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
         },
       },
     ];
-  }, [t]);
+  }, [t, uiLocale]);
 
   const failedRatePct = Math.round((metrics.failedRate ?? 0) * 100);
 
@@ -228,26 +245,51 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
       <Card className="p-6">
         <div className="mb-4 flex flex-col gap-3">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-            <Input
-              id="email-logs-filter-start-date"
-              type="date"
-              label={t('emailLogs.filters.startDate')}
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-            <Input
-              id="email-logs-filter-end-date"
-              type="date"
-              label={t('emailLogs.filters.endDate')}
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
             <div>
-              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">{t('emailLogs.filters.status')}</label>
+              <Label className="block mb-1" htmlFor="email-logs-filter-start-date">{t('emailLogs.filters.startDate')}</Label>
+              <DatePicker
+                id="email-logs-filter-start-date"
+                label={t('emailLogs.filters.startDate')}
+                placeholder={t('emailLogs.filters.startDate')}
+                clearable
+                className="w-full"
+                value={dateFromString(startDate)}
+                onChange={(date) => {
+                  setStartDate(dateToString(date));
+                  setPage(1);
+                }}
+              />
+            </div>
+            <div>
+              <Label className="block mb-1" htmlFor="email-logs-filter-end-date">{t('emailLogs.filters.endDate')}</Label>
+              <DatePicker
+                id="email-logs-filter-end-date"
+                label={t('emailLogs.filters.endDate')}
+                placeholder={t('emailLogs.filters.endDate')}
+                clearable
+                className="w-full"
+                value={dateFromString(endDate)}
+                onChange={(date) => {
+                  setEndDate(dateToString(date));
+                  setPage(1);
+                }}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="email-logs-filter-status"
+                className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1"
+              >
+                {t('emailLogs.filters.status')}
+              </label>
               <select
+                id="email-logs-filter-status"
                 className="w-full h-10 rounded-md border border-[rgb(var(--color-border-400))] bg-white px-3 text-sm"
                 value={status}
-                onChange={(e) => setStatus(e.target.value)}
+                onChange={(e) => {
+                  setStatus(e.target.value);
+                  setPage(1);
+                }}
               >
                 <option value="">{t('emailLogs.filters.statusOptions.all')}</option>
                 <option value="sent">{t('emailLogs.filters.statusOptions.sent')}</option>
@@ -280,7 +322,7 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
               id="email-logs-refresh"
               variant="outline"
               onClick={() => {
-                void fetchLogs({ page: 1 });
+                setRefreshKey((key) => key + 1);
                 void fetchMetrics();
               }}
               disabled={isLoading}
@@ -297,14 +339,10 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
           currentPage={page}
           pageSize={pageSize}
           totalItems={total}
-          onPageChange={(nextPage) => {
-            setPage(nextPage);
-            void fetchLogs({ page: nextPage });
-          }}
+          onPageChange={(nextPage) => setPage(nextPage)}
           onItemsPerPageChange={(nextSize) => {
             setPageSize(nextSize);
             setPage(1);
-            void fetchLogs({ page: 1, pageSize: nextSize });
           }}
           manualSorting
           sortBy={sortBy}
@@ -313,7 +351,6 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
             setSortBy(nextSortBy as any);
             setSortDirection(nextDirection);
             setPage(1);
-            void fetchLogs({ page: 1, sortBy: nextSortBy as any, sortDirection: nextDirection });
           }}
           onRowClick={(record) => setSelected(record)}
         />
@@ -342,7 +379,7 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <div className="text-xs text-[rgb(var(--color-text-500))]">{t('emailLogs.detail.sentAt')}</div>
-                  <div className="text-sm text-[rgb(var(--color-text-900))]">{formatSentAt(selected.sent_at)}</div>
+                  <div className="text-sm text-[rgb(var(--color-text-900))]">{formatSentAt(selected.sent_at, uiLocale)}</div>
                 </div>
                 <div>
                   <div className="text-xs text-[rgb(var(--color-text-500))]">{t('emailLogs.detail.status')}</div>

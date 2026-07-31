@@ -230,7 +230,9 @@ describe('search index source event publishing contracts', () => {
   });
 
   it('T068 interaction, schedule, time-entry, board, category, and tag CRUD emit events', () => {
-    const interactionSource = readRepoFile('packages/clients/src/actions/interactionActions.ts');
+    const interactionSource =
+      readRepoFile('packages/clients/src/actions/interactionActions.ts') +
+      readRepoFile('packages/clients/src/actions/interactionCreateHelper.ts');
     const scheduleSource = readRepoFile('packages/scheduling/src/actions/scheduleActions.ts');
     const timeEntrySource =
       readRepoFile('packages/scheduling/src/actions/timeEntryCrudActions.ts') +

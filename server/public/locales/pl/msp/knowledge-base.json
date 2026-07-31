@@ -113,7 +113,8 @@
       "archive": "Archiwizuj",
       "saveMetadata": "Zapisz metadane",
       "saving": "Zapisywanie...",
-      "delete": "Usuń trwale"
+      "delete": "Usuń trwale",
+      "saveContent": "Zapisz"
     },
     "feedback": {
       "permissionDenied": "Odmowa pozwolenia",
@@ -160,6 +161,10 @@
       "delete": {
         "title": "Usuń artykuł",
         "message": "Czy na pewno chcesz trwale usunąć \"{{title}}\"? Spowoduje to usunięcie artykułu wraz z jego zawartością i nie można tego cofnąć."
+      },
+      "archive": {
+        "message": "Czy na pewno chcesz zarchiwizować „{{title}}”? Zarchiwizowane artykuły są ukryte w portalu klienta i można je później trwale usunąć.",
+        "title": "Archiwizuj artykuł"
       }
     }
   },
@@ -310,6 +315,7 @@
     }
   },
   "common": {
-    "done": "Gotowe"
+    "done": "Gotowe",
+    "cancel": "Anuluj"
   }
 }

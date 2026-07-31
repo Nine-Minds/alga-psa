@@ -113,7 +113,8 @@
       "archive": "Archivia",
       "saveMetadata": "Salva metadati",
       "saving": "Salvataggio...",
-      "delete": "Elimina definitivamente"
+      "delete": "Elimina definitivamente",
+      "saveContent": "Salva"
     },
     "feedback": {
       "permissionDenied": "Autorizzazione negata",
@@ -160,6 +161,10 @@
       "delete": {
         "title": "Elimina articolo",
         "message": "Sei sicuro di voler eliminare definitivamente \"{{title}}\"? Questo rimuoverà l'articolo e il suo contenuto e non può essere annullato."
+      },
+      "archive": {
+        "message": "Sei sicuro di voler archiviare \"{{title}}\"? Gli articoli archiviati sono nascosti dal portale clienti e possono essere eliminati definitivamente in seguito.",
+        "title": "Archivia articolo"
       }
     }
   },
@@ -310,6 +315,7 @@
     }
   },
   "common": {
-    "done": "Fatto"
+    "done": "Fatto",
+    "cancel": "Annulla"
   }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { billingOverviewReport } from '../../../lib/reports/definitions/billing/overview';
+import { billingOverviewReport } from '@alga-psa/reporting/lib/reports/definitions/billing/overview';
 
 describe('billing overview report post-drop definition', () => {
   it('derives active billing clients from surviving client-owned contract structures', () => {

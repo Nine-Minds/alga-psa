@@ -2,12 +2,61 @@
 
 import type { IPriority, DeletionValidationResult } from '@alga-psa/types';
 import Priority from '../models/priority';
-import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import { Knex } from 'knex';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import type { Knex } from 'knex';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
+import {
+  actionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import type { PriorityActionError } from './priorityActionErrors';
+
+const tenantScopedTable = (trx: Knex | Knex.Transaction, table: string, tenant: string) =>
+  tenantDb(trx, tenant).table(table);
+
+function priorityActionErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (
+    message === 'ITIL standard priorities cannot be edited' ||
+    /^Priority .+ not found/.test(message)
+  ) {
+    return message;
+  }
+
+  return fallback;
+}
+
+function priorityActionErrorFrom(error: unknown): PriorityActionError | null {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (message === 'ITIL standard priorities cannot be edited') {
+    return actionError(message);
+  }
+  if (/^Priority .+ not found/.test(message)) {
+    return actionError('Priority not found.');
+  }
+  if (message === 'Board not found') {
+    return actionError('The selected board no longer exists.');
+  }
+
+  const dbError = error as { code?: string; column?: string; constraint?: string };
+  if (dbError?.code === '23505') {
+    return actionError('A priority with these details already exists.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required priority field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected priority reference is no longer valid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23514' || dbError?.code === '22P02') {
+    return actionError('Invalid priority data provided. Please check the priority details.');
+  }
+
+  return null;
+}
 
 export const getAllPriorities = withAuth(async (_user, { tenant }, itemType?: 'ticket' | 'project_task') => {
   const { knex: db } = await createTenantKnex();
@@ -17,7 +66,7 @@ export const getAllPriorities = withAuth(async (_user, { tenant }, itemType?: 't
       return priorities;
     } catch (error) {
       console.error(`Error fetching priorities for tenant ${tenant}:`, error);
-      throw new Error(`Failed to fetch priorities for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -39,12 +88,15 @@ export const findPriorityById = withAuth(async (_user, { tenant }, id: string) =
       return priority;
     } catch (error) {
       console.error(`Error finding priority for tenant ${tenant}:`, error);
-      throw new Error(`Failed to find priority for tenant ${tenant}`);
+      if (priorityActionErrorFrom(error)) {
+        return null;
+      }
+      throw error;
     }
   });
 });
 
-export const createPriority = withAuth(async (user, { tenant }, priorityData: Omit<IPriority, 'priority_id' | 'tenant' | 'created_by' | 'created_at'>): Promise<IPriority> => {
+export const createPriority = withAuth(async (user, { tenant }, priorityData: Omit<IPriority, 'priority_id' | 'tenant' | 'created_by' | 'created_at'>): Promise<IPriority | PriorityActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -57,7 +109,11 @@ export const createPriority = withAuth(async (user, { tenant }, priorityData: Om
       return newPriority;
     } catch (error) {
       console.error(`Error creating priority for tenant ${tenant}:`, error);
-      throw new Error(`Failed to create priority for tenant ${tenant}`);
+      const expected = priorityActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
     }
   });
 });
@@ -143,14 +199,14 @@ export const deletePriority = withAuth(async (
       success: false,
       canDelete: false,
       code: 'VALIDATION_FAILED',
-      message: error instanceof Error ? error.message : `Failed to delete priority for tenant ${tenant}`,
+      message: priorityActionErrorMessage(error, 'Priority could not be deleted.'),
       dependencies: [],
       alternatives: []
     };
   }
 });
 
-export const updatePriority = withAuth(async (_user, { tenant }, priorityId: string, priorityData: Partial<IPriority>): Promise<IPriority> => {
+export const updatePriority = withAuth(async (_user, { tenant }, priorityId: string, priorityData: Partial<IPriority>): Promise<IPriority | PriorityActionError> => {
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -167,7 +223,11 @@ export const updatePriority = withAuth(async (_user, { tenant }, priorityId: str
       return updatedPriority;
     } catch (error) {
       console.error(`Error updating priority ${priorityId} for tenant ${tenant}:`, error);
-      throw new Error(error instanceof Error ? error.message : `Failed to update priority for tenant ${tenant}`);
+      const expected = priorityActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
     }
   });
 });
@@ -181,19 +241,18 @@ export const getPrioritiesByBoardType = withAuth(async (_user, { tenant }, board
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Get the board's priority type
-      const board = await trx('boards')
+      const board = await tenantScopedTable(trx, 'boards', tenant)
         .select('priority_type')
-        .where({ tenant, board_id: boardId })
-        .first();
+        .where({ board_id: boardId })
+        .first() as { priority_type?: string | null } | undefined;
 
       if (!board) {
-        throw new Error(`Board ${boardId} not found`);
+        return [];
       }
 
       // Get priorities based on board's priority type
-      let query = trx('priorities')
-        .select('*')
-        .where({ tenant });
+      let query = tenantScopedTable(trx, 'priorities', tenant)
+        .select('*') as Knex.QueryBuilder;
 
       if (itemType) {
         query = query.where({ item_type: itemType });
@@ -210,10 +269,10 @@ export const getPrioritiesByBoardType = withAuth(async (_user, { tenant }, board
         });
       }
 
-      return query.orderBy('order_number', 'asc');
+      return await query.orderBy('order_number', 'asc') as IPriority[];
     } catch (error) {
       console.error(`Error fetching priorities for board ${boardId}:`, error);
-      throw new Error(`Failed to fetch priorities for board ${boardId}`);
+      throw error;
     }
   });
 });
@@ -233,11 +292,10 @@ export const findPriorityByName = withAuth(async (_user, { tenant }, name: strin
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const priority = await trx('priorities')
+      const priority = await tenantScopedTable(trx, 'priorities', tenant)
         .select('priority_id as id', 'priority_name as name', 'order_number', 'color')
-        .where('tenant', tenant)
         .whereRaw('LOWER(priority_name) = LOWER(?)', [name])
-        .first();
+        .first() as FindPriorityByNameOutput | undefined;
 
       return priority || null;
     } catch (error) {

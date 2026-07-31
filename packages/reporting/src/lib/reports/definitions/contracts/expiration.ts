@@ -91,8 +91,9 @@ export const contractExpirationReport: ReportDefinition = {
         ]
       },
       formatting: {
+        // Currency intentionally omitted; resolved to the tenant default at run
+        // time by the ReportEngine (formatting.currency path, owned by WS1).
         type: 'currency',
-        currency: 'USD',
         divisor: 100
       }
     },

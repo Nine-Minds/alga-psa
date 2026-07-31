@@ -12,7 +12,7 @@ import { getAllContacts } from '@alga-psa/clients/actions';
 import { getRecentInteractions, getInteractionStatuses } from '@alga-psa/clients/actions';
 import { getAllInteractionTypes } from '@alga-psa/clients/actions';
 import { useDrawer } from "@alga-psa/ui";
-import { InteractionDetails } from '@alga-psa/clients/components';
+import InteractionDetails from './InteractionDetails';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
@@ -28,6 +28,17 @@ import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutoma
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import QuickAddContact from '../contacts/QuickAddContact';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface OverallInteractionsFeedProps {
   users: IUser[];
@@ -45,6 +56,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
   isCollapsed = false,
   onToggleCollapse
 }) => {
+  const { t } = useTranslation('msp/clients');
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
   const [statuses, setStatuses] = useState<any[]>([]);
@@ -62,6 +74,10 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
   const [allContacts, setAllContacts] = useState<IContact[]>(contacts);
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const { openDrawer } = useDrawer();
+  const [interactionsLoadErrorMessage, setInteractionsLoadErrorMessage] = useState<string | null>(null);
+  const [typesLoadErrorMessage, setTypesLoadErrorMessage] = useState<string | null>(null);
+  const [statusesLoadErrorMessage, setStatusesLoadErrorMessage] = useState<string | null>(null);
+  const loadErrorMessage = interactionsLoadErrorMessage ?? typesLoadErrorMessage ?? statusesLoadErrorMessage;
 
   // UI Reflection System Integration
   const { automationIdProps: searchInputProps } = useAutomationIdAndRegister<FormFieldComponent>({
@@ -120,6 +136,10 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
   const fetchInteractionTypes = async () => {
     try {
       const types = await getAllInteractionTypes();
+      if (isReturnedActionError(types)) {
+        setTypesLoadErrorMessage(getErrorMessage(types));
+        return;
+      }
       // Sort to ensure system types appear first
       const sortedTypes = types.sort((a, b) => {
         // If both are system types or both are tenant types, sort by name
@@ -129,29 +149,47 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
         // System types ('created_at' exists) come first
         return 'created_at' in a ? -1 : 1;
       });
+      setTypesLoadErrorMessage(null);
       setInteractionTypes(sortedTypes);
     } catch (error) {
       console.error('Error fetching interaction types:', error);
+      setTypesLoadErrorMessage(t('interactions.feed.typesLoadFailed', { defaultValue: 'Interaction types could not be loaded. Please try again.' }));
     }
   };
 
   const fetchStatuses = async () => {
     try {
       const statusList = await getInteractionStatuses();
+      if (isReturnedActionError(statusList)) {
+        setStatuses([]);
+        setStatusesLoadErrorMessage(getErrorMessage(statusList));
+        return;
+      }
+      setStatusesLoadErrorMessage(null);
       setStatuses(statusList);
     } catch (error) {
       console.error('Error fetching interaction statuses:', error);
+      setStatuses([]);
+      setStatusesLoadErrorMessage(t('interactions.overall.statusesLoadFailed', { defaultValue: 'Interaction statuses could not be loaded. Please try again.' }));
     }
   };
 
   const fetchInteractions = useCallback(async () => {
     try {
       const fetchedInteractions = await getRecentInteractions({});
+      if (isReturnedActionError(fetchedInteractions)) {
+        setInteractions([]);
+        setInteractionsLoadErrorMessage(getErrorMessage(fetchedInteractions));
+        return;
+      }
+      setInteractionsLoadErrorMessage(null);
       setInteractions(fetchedInteractions);
     } catch (error) {
       console.error('Error fetching interactions:', error);
+      setInteractions([]);
+      setInteractionsLoadErrorMessage(t('interactions.feed.loadFailed', { defaultValue: 'Interactions could not be loaded. Please try again.' }));
     }
-  }, []);
+  }, [t]);
 
   const fetchContacts = async () => {
     try {
@@ -173,14 +211,14 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
 
   const typeFilterOptions = useMemo(
     () => [
-      { value: 'all', label: 'All Types' },
+      { value: 'all', label: t('interactions.feed.allTypes', { defaultValue: 'All Types' }) },
       ...interactionTypes.map((type) => ({
         value: type.type_id,
         label: getTypeLabel(type),
         textValue: type.type_name
       }))
     ],
-    [interactionTypes]
+    [interactionTypes, t]
   );
 
   const filteredInteractions = useMemo(() => {
@@ -302,8 +340,8 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
           <CollapseToggleButton
             id="expand-interactions-button"
             isCollapsed={true}
-            collapsedLabel="Expand Recent Interactions"
-            expandedLabel="Collapse Recent Interactions"
+            collapsedLabel={t('interactions.overall.expand', { defaultValue: 'Expand Recent Interactions' })}
+            expandedLabel={t('interactions.overall.collapse', { defaultValue: 'Collapse Recent Interactions' })}
             expandDirection="left"
             onClick={onToggleCollapse}
             className="mt-2"
@@ -312,12 +350,12 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
       ) : (
       <div className="bg-white shadow rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">Recent Interactions</h2>
+        <h2 className="text-xl font-bold">{t('interactions.overall.title', { defaultValue: 'Recent Interactions' })}</h2>
         <CollapseToggleButton
           id="collapse-interactions-button"
           isCollapsed={false}
-          collapsedLabel="Expand Recent Interactions"
-          expandedLabel="Collapse Recent Interactions"
+          collapsedLabel={t('interactions.overall.expand', { defaultValue: 'Expand Recent Interactions' })}
+          expandedLabel={t('interactions.overall.collapse', { defaultValue: 'Collapse Recent Interactions' })}
           expandDirection="left"
           onClick={onToggleCollapse}
         />
@@ -330,7 +368,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
-              placeholder="Search interactions"
+              placeholder={t('interactions.feed.searchPlaceholder', { defaultValue: 'Search interactions' })}
               className="w-full h-full py-3"
             />
           </div>
@@ -344,7 +382,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
             className="flex-shrink-0 whitespace-nowrap"
           >
             <XCircle className="mr-2 h-4 w-4" />
-            Reset
+            {t('interactions.feed.reset', { defaultValue: 'Reset' })}
           </Button>
         ) : (
           <Button
@@ -354,7 +392,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
             className="flex-shrink-0 whitespace-nowrap"
           >
             <Filter className="mr-2" />
-            Filter
+            {t('interactions.feed.filter', { defaultValue: 'Filter' })}
           </Button>
         )}
       </div>
@@ -362,7 +400,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
       <Dialog
         isOpen={isFilterDialogOpen}
         onClose={() => setIsFilterDialogOpen(false)}
-        title="Filter Interactions"
+        title={t('interactions.feed.filterDialogTitle', { defaultValue: 'Filter Interactions' })}
         disableFocusTrap
         footer={
           <div className="flex justify-between w-full">
@@ -374,13 +412,13 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
               className="text-gray-500 hover:text-gray-700 flex items-center gap-1"
             >
               <XCircle className="h-4 w-4" />
-              Reset
+              {t('interactions.feed.reset', { defaultValue: 'Reset' })}
             </Button>
             <Button
               id="apply-filters-button"
               onClick={handleApplyFilters}
             >
-              Apply Filters
+              {t('interactions.feed.applyFilters', { defaultValue: 'Apply Filters' })}
             </Button>
           </div>
         }
@@ -391,14 +429,14 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
               options={typeFilterOptions}
               value={interactionTypeId}
               onValueChange={setInteractionTypeId}
-              placeholder="Interaction Type"
+              placeholder={t('interactions.feed.typePlaceholder', { defaultValue: 'Interaction Type' })}
             />
             <UserPicker
               users={users}
               value={userPickerValue}
               onValueChange={handleUserChange}
               getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-              placeholder="All Users"
+              placeholder={t('interactions.overall.allUsers', { defaultValue: 'All Users' })}
               buttonWidth="full"
             />      
             <div className="space-y-2">
@@ -418,7 +456,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
               contacts={filteredContacts}
               value={contactPickerValue}
               onValueChange={handleContactChange}
-              placeholder={selectedClient === 'all' ? "All Contacts" : "Contacts from selected client"}
+              placeholder={selectedClient === 'all' ? t('interactions.overall.allContacts', { defaultValue: 'All Contacts' }) : t('interactions.overall.contactsFromClient', { defaultValue: 'Contacts from selected client' })}
               buttonWidth="full"
               onAddNew={() => setIsQuickAddContactOpen(true)}
             />
@@ -443,7 +481,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
             />
             <CustomSelect
               options={[
-                { value: 'all', label: 'All Statuses' },
+                { value: 'all', label: t('interactions.overall.allStatuses', { defaultValue: 'All Statuses' }) },
                 ...statuses.map((status) => ({
                   value: status.status_id,
                   label: status.name
@@ -451,28 +489,28 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
               ]}
               value={selectedStatus}
               onValueChange={setSelectedStatus}
-              placeholder="Status"
+              placeholder={t('interactions.overall.statusPlaceholder', { defaultValue: 'Status' })}
             />
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Interaction Start Time</label>
+                <label className="text-sm font-medium">{t('interactions.overall.startTimeLabel', { defaultValue: 'Interaction Start Time' })}</label>
                 <DateTimePicker
                   {...startTimePickerProps}
                   value={startTime}
                   onChange={setStartTime}
-                  placeholder="Filter from this start time"
-                  label="Start Time"
+                  placeholder={t('interactions.overall.startTimePlaceholder', { defaultValue: 'Filter from this start time' })}
+                  label={t('interactions.overall.startTime', { defaultValue: 'Start Time' })}
                 />
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-medium">Interaction End Time</label>
+                <label className="text-sm font-medium">{t('interactions.overall.endTimeLabel', { defaultValue: 'Interaction End Time' })}</label>
                 <DateTimePicker
                   {...endTimePickerProps}
                   value={endTime}
                   onChange={setEndTime}
-                  placeholder="Filter until this end time"
-                  label="End Time"
+                  placeholder={t('interactions.overall.endTimePlaceholder', { defaultValue: 'Filter until this end time' })}
+                  label={t('interactions.overall.endTime', { defaultValue: 'End Time' })}
                   minDate={startTime}
                 />
               </div>
@@ -481,6 +519,11 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
         </DialogContent>
       </Dialog>
       
+      {loadErrorMessage ? (
+        <div role="alert" className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {loadErrorMessage}
+        </div>
+      ) : null}
       <ul className="space-y-4 overflow-y-auto max-h-[calc(100vh-300px)]">
         {filteredInteractions.map((interaction: IInteraction): React.JSX.Element => (
           <li key={interaction.interaction_id} className="flex items-start space-x-3 p-2 hover:bg-gray-100 rounded cursor-pointer" onClick={() => handleInteractionClick(interaction)}>
@@ -497,7 +540,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
                 {interaction.client_name && ` (${interaction.client_name})`}
               </p>
               <div className="flex items-center gap-2 text-xs text-gray-400">
-                <span>By {interaction.user_name}</span>
+                <span>{t('interactions.overall.byUser', { defaultValue: 'By {{name}}', name: interaction.user_name })}</span>
                 {interaction.status_name && (
                   <>
                     <span>•</span>

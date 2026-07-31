@@ -63,6 +63,7 @@ interface TreeSelectProps<T extends string = string> extends AutomationProps {
   addNewLabel?: string;
   showSearch?: boolean;
   searchPlaceholder?: string;
+  searchInputId?: string;
   // When set, a single Include/Exclude mode toggle is shown at the top of the dropdown
   // instead of per-row include + exclude controls. Each row then toggles membership in
   // the active mode's set, avoiding contradictory "include some / exclude others" state.
@@ -94,6 +95,7 @@ function TreeSelect<T extends string>({
   addNewLabel = 'Add new',
   showSearch = false,
   searchPlaceholder,
+  searchInputId,
   modeToggle = false,
   onModeChange,
   headerContent,
@@ -657,6 +659,7 @@ function TreeSelect<T extends string>({
                   )}
                   {showSearch && (
                     <input
+                      id={searchInputId}
                       ref={searchInputRef}
                       type="text"
                       value={searchTerm}

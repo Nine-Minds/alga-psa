@@ -34,6 +34,10 @@ const hoisted = vi.hoisted(() => {
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: hoisted.createTenantKnexMock,
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+    unscoped: (table: string) => conn(table),
+  }),
 }));
 
 import {

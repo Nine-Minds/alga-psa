@@ -8,11 +8,21 @@ const withTransactionMock = vi.fn();
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
+  withOptionalAuth: (action: any) => async (...args: any[]) =>
+    action(currentUser, { tenant: currentUser.tenant }, ...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+    tenantJoin: (query: any, _table?: string, _left?: string, _right?: string, options: any = {}) => {
+      const join = options?.type === 'left' ? query.leftJoin : query.join;
+      return typeof join === 'function' ? join.call(query) : query;
+    },
+  }),
 }));
 
 vi.mock('next/headers.js', () => ({
@@ -25,6 +35,12 @@ function buildChain(result: any) {
   builder.leftJoin = vi.fn(() => builder);
   builder.join = vi.fn(() => builder);
   builder.where = vi.fn(() => builder);
+  builder.whereIn = vi.fn(() => builder);
+  builder.whereNotNull = vi.fn(() => builder);
+  builder.modify = vi.fn((callback: (query: any) => void) => {
+    callback(builder);
+    return builder;
+  });
   builder.groupBy = vi.fn(() => builder);
   builder.orderBy = vi.fn(() => builder);
   builder.limit = vi.fn().mockResolvedValue(result);
@@ -36,11 +52,17 @@ function buildTrx(invoiceRows: any[]) {
   return Object.assign(
     ((table: string) => {
       if (table === 'contacts') {
+        const contactRow = {
+          contact_name_id: 'contact-1',
+          client_id: 'client-1',
+          portal_visibility_group_id: null,
+        };
         return {
           where: vi.fn(() => ({
             select: vi.fn(() => ({
-              first: vi.fn().mockResolvedValue({ client_id: 'client-1' }),
+              first: vi.fn().mockResolvedValue(contactRow),
             })),
+            first: vi.fn().mockResolvedValue(contactRow),
           })),
         };
       }
@@ -54,6 +76,15 @@ function buildTrx(invoiceRows: any[]) {
       }
 
       if (table === 'asset_maintenance_history') {
+        return buildChain([]);
+      }
+
+      if (
+        table === 'quotes' ||
+        table === 'projects' ||
+        table === 'service_request_submissions' ||
+        table === 'appointment_requests as ar'
+      ) {
         return buildChain([]);
       }
 
@@ -98,6 +129,7 @@ describe('client dashboard recent invoice activity recurring periods', () => {
     expect(activities).toEqual([
       {
         type: 'invoice',
+        name: 'INV-1001',
         title: 'Invoice INV-1001 generated',
         timestamp: '2026-02-02T10:00:00.000Z',
         description: 'Service period: 2026-01-01 to 2026-02-01 • Total amount: $125.00',

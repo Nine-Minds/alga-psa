@@ -5,6 +5,7 @@
  * NOTE: estimated_hours is stored in MINUTES (not hours) in the database
  */
 const crypto = require('crypto');
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
 
 // Use Node.js built-in crypto.randomUUID() instead of uuid package
 const uuidv4 = () => crypto.randomUUID();
@@ -329,26 +330,26 @@ function buildTemplateData(tenant, templateId, statusMappingIds) {
  * Find existing statuses or create if missing, then create status mappings for template
  * Uses: To Do, In Progress, Blocked, Done
  */
-async function getOrCreateStandardStatusMappings(knex, tenant, templateId) {
+async function getOrCreateStandardStatusMappings(db, tenant, templateId) {
   const statusMappings = [];
   const statusMappingIds = [];
 
   for (const standardStatus of STANDARD_STATUSES) {
     // Look up existing status by name (case-insensitive)
-    let status = await knex('statuses')
-      .where({ tenant, status_type: 'project_task' })
+    let status = await db.table('statuses')
+      .where({ status_type: 'project_task' })
       .whereRaw('LOWER(name) = LOWER(?)', [standardStatus.name])
       .first();
 
     // Create only if not found (fallback for missing statuses like "Blocked")
     if (!status) {
-      const maxOrder = await knex('statuses')
-        .where({ tenant, status_type: 'project_task' })
+      const maxOrder = await db.table('statuses')
+        .where({ status_type: 'project_task' })
         .max('order_number as max')
         .first();
 
       const newStatusId = uuidv4();
-      await knex('statuses').insert({
+      await db.table('statuses').insert({
         tenant,
         status_id: newStatusId,
         name: standardStatus.name,
@@ -380,18 +381,18 @@ async function getOrCreateStandardStatusMappings(knex, tenant, templateId) {
 }
 
 exports.seed = async function (knex) {
-  const tenant = await knex('tenants').select('tenant').first();
-  if (!tenant) {
-    console.log('No tenant found, skipping Alice in Wonderland project template seed');
+  const context = await getFirstTenantSeedContext(knex, {
+    skipMessage: 'No tenant found, skipping Alice in Wonderland project template seed',
+  });
+  if (!context) {
     return;
   }
 
-  const tenantId = tenant.tenant;
+  const { db, tenantId } = context;
 
   // Check if template already exists
-  const existing = await knex('project_templates')
+  const existing = await db.table('project_templates')
     .where({
-      tenant: tenantId,
       template_name: TEMPLATE_NAME
     })
     .first();
@@ -402,18 +403,17 @@ exports.seed = async function (knex) {
   }
 
   // Get a user for created_by (optional, can be null for system templates)
-  const user = await knex('users')
-    .where('tenant', tenantId)
+  const user = await db.table('users')
     .first();
 
   const templateId = uuidv4();
 
   // Get or create standard status mappings (To Do, In Progress, Done)
   const { mappings: statusMappings, mappingIds: statusMappingIds } =
-    await getOrCreateStandardStatusMappings(knex, tenantId, templateId);
+    await getOrCreateStandardStatusMappings(db, tenantId, templateId);
 
   // Insert in correct order: template first, then status mappings, then phases, then tasks
-  await knex('project_templates').insert({
+  await db.table('project_templates').insert({
     tenant: tenantId,
     template_id: templateId,
     template_name: TEMPLATE_NAME,
@@ -423,13 +423,13 @@ exports.seed = async function (knex) {
     use_count: 0
   });
 
-  await knex('project_template_status_mappings').insert(statusMappings);
+  await db.table('project_template_status_mappings').insert(statusMappings);
 
   // Build and insert phases and tasks
   const data = buildTemplateData(tenantId, templateId, statusMappingIds);
 
-  await knex('project_template_phases').insert(data.phases);
-  await knex('project_template_tasks').insert(data.tasks);
+  await db.table('project_template_phases').insert(data.phases);
+  await db.table('project_template_tasks').insert(data.tasks);
 
   console.log('Created Alice in Wonderland project template: "Down the Rabbit Hole Migration"');
   console.log('  "Curiouser and curiouser!" - Alice');

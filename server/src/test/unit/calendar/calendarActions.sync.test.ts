@@ -10,20 +10,58 @@ const {
   };
 });
 
-vi.mock('@alga-psa/auth', () => ({
-  withAuth: (action: (user: any, ctx: { tenant: string }, ...args: any[]) => Promise<any>) =>
-    (...args: any[]) => action({ tenant: 'tenant-1', user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
-}));
-
+// The concrete EE sync logic now lives in the ee-calendar package. The shared
+// wrapper in @alga-psa/integrations only gates on edition and forwards to
+// syncCalendarProviderImpl. Test the EE implementation directly with the
+// service/adapter/db boundaries mocked so server-only deps stay out of jsdom.
 vi.mock('@alga-psa/db', async () => ({
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    scoped: (t: string) => conn(t),
+    subquery: (t: string) => conn(t),
+    parentScopedTable: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+    tenantJoinSubquery: (q: any, sub: any, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(sub) ?? q) : (q.join?.(sub) ?? q),
+    tenantWhereColumn: (q: any) => q,
+  }),
   createTenantKnex: mockCreateTenantKnex,
   runWithTenant: mockRunWithTenant,
   withTransaction: async (knex: any, callback: (trx: any) => Promise<any>) => callback(knex),
 }));
 
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecretProviderInstance: vi.fn(async () => ({
+    getAppSecret: vi.fn(async () => undefined),
+    getTenantSecret: vi.fn(async () => undefined),
+  })),
+}));
+
+// Stub the heavy provider adapters (googleapis/axios/google-auth-library) so the
+// EE actions module can be imported in jsdom without pulling server-only deps.
+vi.mock('@alga-psa/ee-calendar/lib/services/calendar/providers/GoogleCalendarAdapter', () => ({
+  GoogleCalendarAdapter: vi.fn().mockImplementation(() => ({
+    connect: vi.fn(async () => undefined),
+    registerWebhookSubscription: vi.fn(async () => undefined),
+  })),
+}));
+
+vi.mock('@alga-psa/ee-calendar/lib/services/calendar/providers/MicrosoftCalendarAdapter', () => ({
+  MicrosoftCalendarAdapter: vi.fn().mockImplementation(() => ({
+    connect: vi.fn(async () => undefined),
+    registerWebhookSubscription: vi.fn(async () => undefined),
+  })),
+}));
+
+vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarWebhookMaintenanceService', () => ({
+  CalendarWebhookMaintenanceService: vi.fn().mockImplementation(() => ({})),
+}));
+
 const mockGetProvider = vi.fn();
 const mockUpdateProviderStatus = vi.fn();
-vi.mock('@enterprise/lib/services/calendar/CalendarProviderService', () => ({
+vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService', () => ({
   CalendarProviderService: vi.fn().mockImplementation(() => ({
     getProvider: mockGetProvider,
     updateProviderStatus: mockUpdateProviderStatus,
@@ -32,14 +70,16 @@ vi.mock('@enterprise/lib/services/calendar/CalendarProviderService', () => ({
 
 const mockSyncScheduleEntryToExternal = vi.fn();
 const mockSyncExternalEventToSchedule = vi.fn();
-vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
+vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarSyncService', () => ({
   CalendarSyncService: vi.fn().mockImplementation(() => ({
     syncScheduleEntryToExternal: mockSyncScheduleEntryToExternal,
     syncExternalEventToSchedule: mockSyncExternalEventToSchedule,
   }))
 }));
 
-import { syncCalendarProvider } from '@alga-psa/integrations/actions/calendarActions';
+import { syncCalendarProviderImpl } from '@alga-psa/ee-calendar/lib/actions/integrations/calendarActions';
+
+const authUser = { user_id: 'user-1', tenant: 'tenant-1', user_type: 'internal' } as any;
 
 function buildQuery(data: any[]) {
   const query: any = {
@@ -49,7 +89,12 @@ function buildQuery(data: any[]) {
       }
       return query;
     }),
-    andWhere: vi.fn().mockReturnThis(),
+    andWhere: vi.fn().mockImplementation((arg: any) => {
+      if (typeof arg === 'function') {
+        arg.call(query);
+      }
+      return query;
+    }),
     join: vi.fn().mockReturnThis(),
     select: vi.fn().mockResolvedValue(data),
     modify: vi.fn().mockImplementation((cb) => {
@@ -108,7 +153,7 @@ describe('syncCalendarProvider manual flows', () => {
     mockSyncScheduleEntryToExternal.mockResolvedValue({ success: true, externalEventId: 'ext-1' });
     mockSyncExternalEventToSchedule.mockResolvedValue({ success: true, scheduleEntryId: 'entry-1' });
 
-    const result = await syncCalendarProvider('provider-1');
+    const result = await syncCalendarProviderImpl(authUser, { tenant: 'tenant-1' }, 'provider-1');
 
     expect(result).toEqual({ success: true, started: true });
     await vi.waitFor(() => {
@@ -135,7 +180,7 @@ describe('syncCalendarProvider manual flows', () => {
     mockSyncScheduleEntryToExternal.mockResolvedValue({ success: true });
     mockSyncExternalEventToSchedule.mockResolvedValue({ success: true });
 
-    const result = await syncCalendarProvider('provider-2');
+    const result = await syncCalendarProviderImpl(authUser, { tenant: 'tenant-1' }, 'provider-2');
 
     expect(result).toEqual({ success: true, started: true });
     await vi.waitFor(() => {

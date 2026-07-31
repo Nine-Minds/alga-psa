@@ -185,7 +185,7 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnbo
 
   const updateUrlSelection = (nextSelection: AccountingIntegrationId) => {
     const currentSearchParams = new URLSearchParams(window.location.search);
-    currentSearchParams.set('tab', 'integrations');
+    currentSearchParams.delete('tab');
     currentSearchParams.set('category', 'accounting');
     currentSearchParams.set('accounting_integration', nextSelection);
     const newUrl = `${window.location.pathname}?${currentSearchParams.toString()}`;

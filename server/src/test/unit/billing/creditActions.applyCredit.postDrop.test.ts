@@ -6,6 +6,18 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    scoped: (t: string) => conn(t),
+    subquery: (t: string) => conn(t),
+    parentScopedTable: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+    tenantJoinSubquery: (q: any, sub: any, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(sub) ?? q) : (q.join?.(sub) ?? q),
+    tenantWhereColumn: (q: any) => q,
+  }),
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
   auditLog: vi.fn(async () => undefined),
@@ -30,13 +42,6 @@ vi.mock('@shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders', 
 
 vi.mock('../../../../../packages/billing/src/actions/invoiceGeneration', () => ({
   generateInvoiceNumber: vi.fn(async () => 'INV-001'),
-}));
-
-vi.mock('../../../../../packages/billing/src/actions/creditReconciliationActions', () => ({
-  validateCreditBalanceWithoutCorrection: vi.fn(async () => ({
-    isValid: true,
-    actualBalance: 0,
-  })),
 }));
 
 vi.mock('../../../../../packages/billing/src/models/clientContractLine', () => ({
@@ -91,31 +96,30 @@ function createCreditApplicationTrx() {
     allocations: [] as Row[],
   };
 
+  const RAW = Symbol('knex.raw');
+
   const trx: any = (tableName: string) => {
     if (tableName === 'client_contract_lines') {
       throw new Error('relation "client_contract_lines" does not exist');
     }
 
     if (tableName === 'invoices') {
-      let matchedInvoice = state.invoice;
       const builder: any = {
         where: vi.fn((_criteria: any) => builder),
         select: vi.fn((_columns: any) => builder),
-        first: vi.fn(async () => matchedInvoice),
-        increment: vi.fn((column: string, amount: number) => {
-          matchedInvoice = {
-            ...matchedInvoice,
-            [column]: Number(matchedInvoice[column] ?? 0) + amount,
-          };
-          state.invoice = matchedInvoice;
-          return builder;
-        }),
-        decrement: vi.fn(async (column: string, amount: number) => {
-          matchedInvoice = {
-            ...matchedInvoice,
-            [column]: Number(matchedInvoice[column] ?? 0) - amount,
-          };
-          state.invoice = matchedInvoice;
+        first: vi.fn(async () => state.invoice),
+        update: vi.fn(async (payload: Row) => {
+          // Source updates only credit_applied via trx.raw('COALESCE(credit_applied, 0) + ?')
+          // Invoice totals are intentionally immutable after finalization.
+          const next = { ...state.invoice };
+          for (const [column, value] of Object.entries(payload)) {
+            if (value && typeof value === 'object' && (value as any)[RAW]) {
+              next[column] = Number(next[column] ?? 0) + Number((value as any).amount);
+            } else {
+              next[column] = value;
+            }
+          }
+          state.invoice = next;
           return 1;
         }),
       };
@@ -151,11 +155,18 @@ function createCreditApplicationTrx() {
     }
 
     if (tableName === 'credit_tracking') {
+      let summing = false;
       const builder: any = {
         where: vi.fn((_criteriaOrColumn: any, _value?: any, _extra?: any) => builder),
+        andWhere: vi.fn((_criteriaOrColumn: any, _value?: any, _extra?: any) => builder),
         whereNot: vi.fn(() => builder),
         orderBy: vi.fn(() => builder),
-        first: vi.fn(async () => undefined),
+        sum: vi.fn(() => { summing = true; return builder; }),
+        first: vi.fn(async () =>
+          summing
+            ? { total: state.creditEntries.reduce((acc, row) => acc + Number(row.remaining_amount), 0) }
+            : undefined,
+        ),
         then: (resolve: (value: Row[]) => unknown, reject?: (reason: unknown) => unknown) =>
           Promise.resolve(state.creditEntries).then(resolve, reject),
         [Symbol.asyncIterator]: undefined,
@@ -187,6 +198,12 @@ function createCreditApplicationTrx() {
           whereCriteria = criteria;
           return builder;
         }),
+        select: vi.fn((_columns: any) => builder),
+        first: vi.fn(async () =>
+          state.transactions.find((row) =>
+            Object.entries(whereCriteria ?? {}).every(([key, value]) => row[key] === value),
+          ) ?? null,
+        ),
         update: vi.fn(async (payload: Row) => {
           const index = state.transactions.findIndex((row) =>
             Object.entries(whereCriteria ?? {}).every(([key, value]) => row[key] === value),
@@ -205,6 +222,11 @@ function createCreditApplicationTrx() {
 
     throw new Error(`Unexpected table ${tableName}`);
   };
+
+  trx.raw = vi.fn((_sql: string, bindings?: any[]) => ({
+    [RAW]: true,
+    amount: Array.isArray(bindings) ? bindings[0] : bindings,
+  }));
 
   return { trx, state };
 }
@@ -231,9 +253,14 @@ describe('credit application post-drop behavior', () => {
       ),
     ).resolves.toBeUndefined();
 
-    expect(state.client.credit_balance).toBe(2000);
+    // The client cache column no longer exists; the balance is derived from
+    // credit_tracking, so the mock client row must be untouched.
+    expect(state.client.credit_balance).toBe(5000);
+    expect(state.client.updated_at).toBeNull();
     expect(state.invoice.credit_applied).toBe(3000);
-    expect(state.invoice.total_amount).toBe(7000);
+    // Invoice totals are immutable after finalization; only credit_applied moves
+    // (balance due is derived as total − credit − payments).
+    expect(state.invoice.total_amount).toBe(10000);
     expect(state.allocations).toHaveLength(1);
     expect(state.transactions).toHaveLength(1);
     expect(state.transactions[0].related_transaction_id).toBe('tx-credit-1');

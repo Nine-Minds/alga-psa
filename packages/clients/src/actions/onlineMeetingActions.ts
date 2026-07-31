@@ -1,8 +1,9 @@
 'use server'
 
 import type { IOnlineMeeting } from '@alga-psa/types';
-import { withAuth, hasPermission } from '@alga-psa/auth';
+import { withAuth } from '@alga-psa/auth';
 import OnlineMeetingModel from '../models/onlineMeeting';
+import { assertMspPermission } from '../lib/authHelpers';
 
 export const getOnlineMeetingForInteraction = withAuth(async (
   user,
@@ -13,9 +14,7 @@ export const getOnlineMeetingForInteraction = withAuth(async (
     throw new Error('Interaction ID is required');
   }
 
-  if (!(await hasPermission(user, 'interaction', 'read'))) {
-    throw new Error('Forbidden');
-  }
+  await assertMspPermission(user, 'interaction', 'read', 'Forbidden');
 
   return await OnlineMeetingModel.getByInteractionId(interactionId, tenant);
 });

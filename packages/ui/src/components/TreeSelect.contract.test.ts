@@ -15,7 +15,7 @@ describe('tree select add-new contract', () => {
     expect(source).toContain('{onAddNew && (');
     expect(source).toContain('border-t border-gray-200');
     expect(source).toContain('<Plus className="h-4 w-4" />');
-    expect(source).toContain('<span>{addNewLabel}</span>');
+    expect(source).toContain('{addNewLabel}');
   });
 
   it('T039: TreeSelect guards the add-new UI behind the optional onAddNew prop', () => {
@@ -23,6 +23,6 @@ describe('tree select add-new contract', () => {
 
     expect(source).toContain('onAddNew?: () => void;');
     expect(source).toContain('{onAddNew && (');
-    expect(source).toContain("addNewLabel = '+ Add new'");
+    expect(source).toContain("addNewLabel = 'Add new'");
   });
 });

@@ -3,6 +3,7 @@ import { DockerServiceManager } from './docker-service-manager';
 import { MailHogClient } from './mailhog-client';
 import { EmailTestFactory } from './email-test-factory';
 import { MailHogPollingService } from '../../../services/email/MailHogPollingService';
+import { tenantDb } from '@alga-psa/db';
 
 export interface E2ETestContextOptions extends TestContextOptions {
   /**
@@ -344,7 +345,7 @@ export class E2ETestContext extends TestContext {
     while (Date.now() - startTime < timeout) {
       try {
         // Check for new tickets (using correct column name)
-        const recentTickets = await this.db('tickets')
+        const recentTickets = await tenantDb(this.db, this.tenantId).table('tickets')
           .where('entered_at', '>', new Date(startTime)) // Use entered_at instead of created_at
           .count('* as count')
           .first();

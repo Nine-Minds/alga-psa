@@ -1,0 +1,15 @@
+{
+  "projectPrint": {
+    "tasks": {
+      "fields": {
+        "assignee": "Toegewezen aan",
+        "description": "Beschrijving",
+        "dueDate": "Vervaldatum",
+        "estimatedHours": "Geschatte uren",
+        "phase": "Fase",
+        "status": "Status",
+        "wbsCode": "WBS-code"
+      }
+    }
+  }
+}

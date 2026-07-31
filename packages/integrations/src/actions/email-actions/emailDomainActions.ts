@@ -4,8 +4,12 @@
 
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import {
+  actionError,
+  type ActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface DomainStatus {
   domain: string;
@@ -21,15 +25,16 @@ interface DomainStatus {
   providerDomainId?: string;
 }
 
+type EmailDomainActionError = ActionMessageError;
+
 export const getEmailDomains = withAuth(async (
   _user,
   { tenant }
-): Promise<DomainStatus[]> => {
+): Promise<DomainStatus[] | EmailDomainActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
-    const domains = await knex('email_domains')
-      .where({ tenant_id: tenant })
+    const domains = await tenantDb(knex, tenant).table('email_domains')
       .select('*')
       .orderBy('created_at', 'desc');
 
@@ -46,7 +51,7 @@ export const getEmailDomains = withAuth(async (
     return domainStatuses;
   } catch (error: any) {
     console.error('Error fetching domains:', error);
-    throw new Error('Failed to fetch domains');
+    return actionError('Failed to fetch domains');
   }
 });
 
@@ -54,23 +59,25 @@ export const addEmailDomain = withAuth(async (
   user,
   { tenant },
   domainName: string
-): Promise<{ success: boolean; message: string }> => {
+): Promise<{ success: boolean; message: string } | EmailDomainActionError> => {
   // Validate domain format
   const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9])*$/;
   if (!domainRegex.test(domainName)) {
-    throw new Error('Invalid domain format');
+    return actionError('Invalid domain format');
   }
 
   const { knex } = await createTenantKnex();
 
   try {
+    const db = tenantDb(knex, tenant);
+
     // Check if domain already exists
-    const existing = await knex('email_domains')
-      .where({ tenant: tenant, domain_name: domainName })
+    const existing = await db.table('email_domains')
+      .where({ domain_name: domainName })
       .first();
 
     if (existing) {
-      throw new Error('Domain already exists');
+      return actionError('Domain already exists');
     }
 
     // Insert domain record
@@ -82,7 +89,7 @@ export const addEmailDomain = withAuth(async (
       updated_at: new Date()
     };
 
-    await knex('email_domains').insert(domainData);
+    await db.table('email_domains').insert(domainData);
 
     return {
       success: true,
@@ -90,7 +97,13 @@ export const addEmailDomain = withAuth(async (
     };
   } catch (error: any) {
     console.error('Error adding domain:', error);
-    throw new Error(error.message || 'Failed to add domain');
+    if (error?.code === '23505') {
+      return actionError('Domain already exists');
+    }
+    if (error?.code === '23514') {
+      return actionError('Invalid domain format');
+    }
+    return actionError('Failed to add domain. Please try again.');
   }
 });
 
@@ -98,17 +111,17 @@ export const verifyEmailDomain = withAuth(async (
   user,
   { tenant },
   domainName: string
-): Promise<{ success: boolean; message: string }> => {
+): Promise<{ success: boolean; message: string } | EmailDomainActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
     // Check if domain exists
-    const domain = await knex('email_domains')
-      .where({ tenant: tenant, domain_name: domainName })
+    const domain = await tenantDb(knex, tenant).table('email_domains')
+      .where({ domain_name: domainName })
       .first();
 
     if (!domain) {
-      throw new Error('Domain not found');
+      return actionError('Domain not found');
     }
 
     return {
@@ -117,7 +130,7 @@ export const verifyEmailDomain = withAuth(async (
     };
   } catch (error: any) {
     console.error('Error verifying domain:', error);
-    throw new Error(error.message || 'Failed to verify domain');
+    return actionError('Failed to verify domain. Please try again.');
   }
 });
 
@@ -125,17 +138,19 @@ export const deleteEmailDomain = withAuth(async (
   _user,
   { tenant },
   domainName: string
-): Promise<{ success: boolean; message: string }> => {
+): Promise<{ success: boolean; message: string } | EmailDomainActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
+    const db = tenantDb(knex, tenant);
+
     // Check if domain exists
-    const domain = await knex('email_domains')
-      .where({ tenant: tenant, domain_name: domainName })
+    const domain = await db.table('email_domains')
+      .where({ domain_name: domainName })
       .first();
 
     if (!domain) {
-      throw new Error('Domain not found');
+      return actionError('Domain not found');
     }
 
     // Delete from provider if it was successfully created
@@ -151,8 +166,8 @@ export const deleteEmailDomain = withAuth(async (
     }
 
     // Delete from database
-    await knex('email_domains')
-      .where({ tenant: tenant, domain_name: domainName })
+    await db.table('email_domains')
+      .where({ domain_name: domainName })
       .del();
 
     return {
@@ -161,6 +176,9 @@ export const deleteEmailDomain = withAuth(async (
     };
   } catch (error: any) {
     console.error('Error deleting domain:', error);
-    throw new Error(error.message || 'Failed to delete domain');
+    if (error?.code === '23503') {
+      return actionError('Domain is still referenced and cannot be deleted.');
+    }
+    return actionError('Failed to delete domain. Please try again.');
   }
 });

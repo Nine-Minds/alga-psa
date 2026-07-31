@@ -45,6 +45,7 @@ function formatDateTime(value: string, unknownLabel: string): string {
 }
 
 export function MyRequestsTable({ rows, labels }: MyRequestsTableProps) {
+  // LEVERAGE: friction datatable-client-paging — re-derives page/size state + reset handler DataTable already owns internally
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const columns = useMemo<ColumnDefinition<MyRequestsTableRow>[]>(

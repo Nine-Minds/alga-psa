@@ -13,6 +13,7 @@ import { Checkbox } from './Checkbox';
 import { Button } from './Button';
 import type { ITeam } from '@alga-psa/types';
 import TeamAvatar from './TeamAvatar';
+import { useTranslation } from '../lib/i18n/client';
 
 export type GetTeamAvatarUrlsBatch = (teamIds: string[], tenant: string) => Promise<Map<string, string | null>>;
 
@@ -68,6 +69,7 @@ const MultiUserAndTeamPicker = ({
   onUserClick,
   'data-automation-id': dataAutomationId
 }: MultiUserAndTeamPickerProps & AutomationProps) => {
+  const { t } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
@@ -98,12 +100,15 @@ const MultiUserAndTeamPicker = ({
   const validTeamValues = teamValues.filter(id => teamIds.has(id));
 
   useEffect(() => {
-    if (!isOpen || !getTeamAvatarUrlsBatch || teams.length === 0) return;
+    if (!getTeamAvatarUrlsBatch || teams.length === 0) return;
 
     const tenant = teams[0]?.tenant;
     if (!tenant) return;
 
-    const teamIdsToFetch = teams
+    // Selected teams render in the collapsed trigger, so fetch those eagerly;
+    // the full list only once the dropdown opens.
+    const wantedTeams = isOpen ? teams : teams.filter((team) => validTeamValues.includes(team.team_id));
+    const teamIdsToFetch = wantedTeams
       .map((team) => team.team_id)
       .filter((teamId) => !fetchedTeamIdsRef.current.has(teamId));
 
@@ -124,7 +129,7 @@ const MultiUserAndTeamPicker = ({
     };
 
     fetchTeamAvatars();
-  }, [isOpen, teams, getTeamAvatarUrlsBatch]);
+  }, [isOpen, teams, getTeamAvatarUrlsBatch, validTeamValues]);
 
   // If values contained stale IDs, notify parent to clean them up
   // Use a ref to prevent infinite loops - only clean once per unique values array
@@ -350,7 +355,7 @@ const MultiUserAndTeamPicker = ({
     const hasSelection = selectedUsers.length > 0 || includeUnassigned || selectedTeams.length > 0;
 
     if (!hasSelection) {
-      return <span className="text-gray-500">{loading ? 'Loading users...' : placeholder}</span>;
+      return <span className="text-gray-500">{loading ? t('pickers.loadingUsers', { defaultValue: 'Loading users...' }) : placeholder}</span>;
     }
 
     // Compact display mode (for filters)
@@ -359,7 +364,7 @@ const MultiUserAndTeamPicker = ({
         return (
           <div className="flex items-center gap-2">
             <UserMinus className="w-4 h-4 text-gray-500" />
-            <span>Unassigned</span>
+            <span>{t('pickers.unassigned', { defaultValue: 'Unassigned' })}</span>
           </div>
         );
       }
@@ -428,7 +433,7 @@ const MultiUserAndTeamPicker = ({
               ? `${firstUser.first_name || ''} ${firstUser.last_name || ''}`.trim().split(' ')[0]
               : firstTeam
                 ? (firstTeam.team_name || 'Team')
-                : 'Unassigned'}
+                : t('pickers.unassigned', { defaultValue: 'Unassigned' })}
             {additionalCount > 0 && ` +${additionalCount}`}
           </span>
         </div>
@@ -441,7 +446,7 @@ const MultiUserAndTeamPicker = ({
         {includeUnassigned && (
           <div className="flex items-center gap-1 bg-gray-100 rounded-full pl-2 pr-2 py-1">
             <UserMinus className="w-3 h-3 text-gray-500" />
-            <span className="text-sm">Unassigned</span>
+            <span className="text-sm">{t('pickers.unassigned', { defaultValue: 'Unassigned' })}</span>
             <div
               role="button"
               tabIndex={0}
@@ -480,7 +485,7 @@ const MultiUserAndTeamPicker = ({
                 userId={user.user_id}
                 userName={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
                 avatarUrl={avatarUrls[user.user_id] || null}
-                size={size === 'sm' ? 'sm' : 'md'}
+                size="xs"
               />
               <span>{`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}</span>
             </div>
@@ -507,14 +512,12 @@ const MultiUserAndTeamPicker = ({
             className="flex items-center gap-1 bg-gray-100 rounded-full pl-1 pr-2 py-1"
           >
             <div className="flex items-center gap-1">
-              <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
-                <TeamAvatar
-                  teamId={team.team_id}
-                  teamName={team.team_name || 'Unnamed Team'}
-                  avatarUrl={teamAvatarUrls[team.team_id] ?? null}
-                  size="xs"
-                />
-              </div>
+              <TeamAvatar
+                teamId={team.team_id}
+                teamName={team.team_name || 'Unnamed Team'}
+                avatarUrl={teamAvatarUrls[team.team_id] ?? null}
+                size="xs"
+              />
               <span>{team.team_name || 'Unnamed Team'}</span>
             </div>
             <div
@@ -562,7 +565,7 @@ const MultiUserAndTeamPicker = ({
               <Input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Search users..."
+                placeholder={t('pickers.searchUsers', { defaultValue: 'Search users...' })}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full px-3 py-2 pl-9 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
@@ -576,7 +579,7 @@ const MultiUserAndTeamPicker = ({
         {/* Unassigned option (filter mode only) */}
         {filterMode && (
           <div
-            className="px-3 py-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]"
+            className="px-3 py-1.5 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]"
             onClick={handleUnassignedToggle}
           >
             <Checkbox
@@ -585,7 +588,7 @@ const MultiUserAndTeamPicker = ({
               onChange={handleUnassignedToggle}
             />
             <UserMinus className="w-4 h-4 text-gray-400" />
-            <span className="text-sm">Unassigned</span>
+            <span className="text-sm">{t('pickers.unassigned', { defaultValue: 'Unassigned' })}</span>
           </div>
         )}
 
@@ -620,14 +623,16 @@ const MultiUserAndTeamPicker = ({
           }}
         >
           {loading ? (
-            <div className="px-3 py-2 text-sm text-gray-500">Loading users...</div>
+            <div className="px-3 py-2 text-sm text-gray-500">{t('pickers.loadingUsers', { defaultValue: 'Loading users...' })}</div>
           ) : error ? (
-            <div className="px-3 py-2 text-sm text-red-500">Error loading users</div>
+            <div className="px-3 py-2 text-sm text-red-500">{t('pickers.errorLoadingUsers', { defaultValue: 'Error loading users' })}</div>
           ) : (
             <>
               {filteredUsers.length === 0 && filteredTeams.length === 0 ? (
                 <div className="px-3 py-2 text-sm text-gray-500">
-                  {searchQuery ? 'No results found' : 'No users available'}
+                  {searchQuery
+                    ? t('form.noResults', { defaultValue: 'No results found' })
+                    : t('pickers.noUsersAvailable', { defaultValue: 'No users available' })}
                 </div>
               ) : (
                 <>
@@ -639,7 +644,7 @@ const MultiUserAndTeamPicker = ({
                       <div
                         key={user.user_id}
                         className={`
-                          relative flex items-center px-3 py-2 text-sm rounded cursor-pointer
+                          relative flex items-center px-3 py-1.5 text-sm rounded cursor-pointer
                           hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${isSelected ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-50))]' : ''}
                         `}
                         onClick={() => handleUserToggle(user.user_id)}
@@ -649,14 +654,14 @@ const MultiUserAndTeamPicker = ({
                             id={`user-${user.user_id}`}
                             checked={isSelected}
                             onChange={() => handleUserToggle(user.user_id)}
-                            className="mr-3"
+                            className="mr-2"
                           />
                         </div>
                         <UserAvatar
                           userId={user.user_id}
                           userName={userName}
                           avatarUrl={avatarUrls[user.user_id] || null}
-                          size="sm"
+                          size="xs"
                         />
                         <span className="ml-2">{userName}</span>
                       </div>
@@ -675,7 +680,7 @@ const MultiUserAndTeamPicker = ({
                       <div
                         key={team.team_id}
                         className={`
-                          relative flex items-center px-3 py-2 text-sm rounded cursor-pointer
+                          relative flex items-center px-3 py-1.5 text-sm rounded cursor-pointer
                           hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${isSelected ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-50))]' : ''}
                         `}
                         onClick={() => onTeamValuesChange?.(isSelected ? teamValues.filter(id => id !== team.team_id) : [...teamValues, team.team_id])}
@@ -685,17 +690,15 @@ const MultiUserAndTeamPicker = ({
                             id={`team-${team.team_id}`}
                             checked={isSelected}
                             onChange={() => onTeamValuesChange?.(isSelected ? teamValues.filter(id => id !== team.team_id) : [...teamValues, team.team_id])}
-                            className="mr-3"
+                            className="mr-2"
                           />
                         </div>
-                        <div className="h-7 w-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
-                          <TeamAvatar
-                            teamId={team.team_id}
-                            teamName={team.team_name || 'Unnamed Team'}
-                            avatarUrl={teamAvatarUrls[team.team_id] ?? null}
-                            size="xs"
-                          />
-                        </div>
+                        <TeamAvatar
+                          teamId={team.team_id}
+                          teamName={team.team_name || 'Unnamed Team'}
+                          avatarUrl={teamAvatarUrls[team.team_id] ?? null}
+                          size="sm"
+                        />
                         <div className="ml-2 flex flex-col">
                           <span>{team.team_name || 'Unnamed Team'}</span>
                           <span className="text-xs text-gray-500">{memberCount} members · Lead: {leadName}</span>

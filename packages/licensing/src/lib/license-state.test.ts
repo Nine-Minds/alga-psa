@@ -4,11 +4,11 @@ import { clearLicenseVerifyCache } from './verify-license';
 
 // Fixture tokens from verify-license.test.ts (signed with v1-test key).
 const VALID_PRO_TOKEN =
-  'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InYxLXRlc3QifQ.eyJpc3MiOiJuaW5lbWluZHMtbGljZW5zZSIsInN1YiI6ImxpY190ZXN0MDAxIiwiY3VzdCI6IlRlc3QgQ29ycCIsInRpZXIiOiJwcm8iLCJpYXQiOjE3ODAxNjc1MTgsImV4cCI6MTgxMTcwMzUxOH0.CjBrb4ksHYRH3a8I_mlAxp81P4GgqzV8ggQ-yzQ0BYBIxz1maJp-tanhp_6olr5Vep21sMZmYYCSnXeivuoVJA';
+  'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InYxLXRlc3QifQ.eyJpc3MiOiJuaW5lbWluZHMtbGljZW5zZSIsImN1c3QiOiJUZXN0IENvcnAiLCJzdWIiOiJsaWNfdGVzdDAwMSIsInRpZXIiOiJwcm8iLCJpYXQiOjE3ODM4MjMxNTMsImV4cCI6MTgxNTM1OTE1M30.E3uQWkwlsZ0MKSpTrb88yptO0zLIKEQJM0sHrDMiMFyXdviYplhSBDfGr4vU9T5eBDJpoCZ0urRXMwA22Ow8Rg';
 const EXPIRED_TOKEN =
-  'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InYxLXRlc3QifQ.eyJpc3MiOiJuaW5lbWluZHMtbGljZW5zZSIsInN1YiI6ImxpY190ZXN0MDAyIiwiY3VzdCI6IlRlc3QgQ29ycCIsInRpZXIiOiJwcm8iLCJpYXQiOjE3NDU2MDc1MTgsImV4cCI6MTc3NzU3NTUxOH0.jzvr_nIahZogR8AwnEvY4OYyj43QLWTrQdm945EbAZ-ji1Hm09TwLxa7I6cPKGHAjOLXMiTm3Y-X8V9zqSY_4A';
+  'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InYxLXRlc3QifQ.eyJpc3MiOiJuaW5lbWluZHMtbGljZW5zZSIsImN1c3QiOiJUZXN0IENvcnAiLCJzdWIiOiJsaWNfdGVzdDAwMiIsInRpZXIiOiJwcm8iLCJpYXQiOjE3MjA3NTExNTMsImV4cCI6MTc1MjI4NzE1M30.htsL34WWTjMpA0Go8mPxqZ8HY4I8qmqawzhCqNaqmAK9XMVgiOX13tOQ2WVx-N2ljpAkAzMkKue5b-32KOsUlQ';
 const PREMIUM_TOKEN =
-  'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InYxLXRlc3QifQ.eyJpc3MiOiJuaW5lbWluZHMtbGljZW5zZSIsInN1YiI6ImxpY190ZXN0MDAzIiwiY3VzdCI6IlRlc3QgQ29ycCIsInRpZXIiOiJwcmVtaXVtIiwiaWF0IjoxNzgwMTY3NTE4LCJleHAiOjE4MTE3MDM1MTh9.qG550P5on5B4NsC7SDRj1Lqjpb9FjiEPxHw-fS19RCHGqBlEx6dAns0ijRkWkbBvDABxAg9MQvdD82I1eJwCMQ';
+  'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InYxLXRlc3QifQ.eyJpc3MiOiJuaW5lbWluZHMtbGljZW5zZSIsImN1c3QiOiJUZXN0IENvcnAiLCJzdWIiOiJsaWNfdGVzdDAwMyIsInRpZXIiOiJwcmVtaXVtIiwiaWF0IjoxNzgzODIzMTUzLCJleHAiOjE4MTUzNTkxNTN9.hv7CKr60F7gQ96UNuk2wlhvHiNzdRMoCEcWP5HVM5P0_bICxVz5n1zaCHbgonvceNp5VH-qVcAgaUTfbEZIw1w';
 
 function makeRow(overrides: Partial<LicenseStateRow> = {}): LicenseStateRow {
   return {
@@ -49,18 +49,18 @@ describe('resolveSelfHostTier', () => {
   });
 
   // T010: active trial → premium
-  it('returns premium during an active 30-day trial', () => {
+  it('returns premium during an active 15-day trial', () => {
     const trialStart = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000); // 5 days ago
     const result = resolveSelfHostTier(makeRow({ trial_started_at: trialStart }));
     expect(result?.state).toBe('trial');
     expect(result?.tier).toBe('premium');
     expect(result?.daysRemaining).toBeGreaterThan(0);
-    expect(result?.daysRemaining).toBeLessThanOrEqual(25);
+    expect(result?.daysRemaining).toBeLessThanOrEqual(10);
   });
 
   // T011: trial expired → essentials
-  it('returns essentials after the 30-day trial window elapses', () => {
-    const trialStart = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000); // 31 days ago
+  it('returns essentials after the 15-day trial window elapses', () => {
+    const trialStart = new Date(Date.now() - 16 * 24 * 60 * 60 * 1000); // 16 days ago
     const result = resolveSelfHostTier(makeRow({ trial_started_at: trialStart }));
     expect(result?.state).toBe('trial_expired');
     expect(result?.tier).toBe('essentials');

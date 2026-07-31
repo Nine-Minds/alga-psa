@@ -21,14 +21,14 @@ import {
 import { ArrowLeft, ChevronDown, ChevronRight, MoreVertical } from 'lucide-react';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import type { IClient, IContact, IQuote, IQuoteDocumentTemplate, IQuoteListItem, QuoteConversionPreview, QuoteStatus } from '@alga-psa/types';
-import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
-import { getDefaultBillingSettings } from '@alga-psa/billing/actions';
+import { isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
+import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
 import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '../../../actions/billingClientLocationActions';
-import { addQuoteItem, approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, createQuote, createQuoteFromTemplate, createQuoteRevision, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuotes, removeQuoteItem, reorderQuoteItems, requestQuoteApprovalChanges, resendQuote, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
+import { addQuoteItem, approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuote, createQuoteFromTemplate, createQuoteRevision, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuotes, removeQuoteItem, reorderQuoteItems, requestQuoteApprovalChanges, resendQuote, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
-import { getContactsForPicker } from '@alga-psa/user-composition/actions';
+import { getContactsForPicker } from '@alga-psa/user-composition/actions/contactQueryActions';
 import QuoteLineItemsEditor from './QuoteLineItemsEditor';
 import {
   pickDefaultLocation,
@@ -41,6 +41,12 @@ import { calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDra
 interface QuoteFormProps {
   quoteId?: string | null;
   initialIsTemplate?: boolean;
+  initialContext?: {
+    clientId?: string;
+    contactId?: string;
+    opportunityId?: string;
+    title?: string;
+  };
   onCancel: () => void;
   onSaved: (quoteId: string) => void;
 }
@@ -93,7 +99,16 @@ const formatRelativeMinutes = (iso?: string | null): string | null => {
   return when.toLocaleString();
 };
 
-const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = false, onCancel, onSaved }) => {
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
+
+const QuoteForm: React.FC<QuoteFormProps> = ({
+  quoteId,
+  initialIsTemplate = false,
+  initialContext,
+  onCancel,
+  onSaved,
+}) => {
   const { t } = useTranslation('msp/quotes');
   const { formatCurrency: formatLocalizedCurrency, formatDate } = useFormatters();
   const isEditMode = Boolean(quoteId && quoteId !== 'new');
@@ -151,7 +166,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
   const [sendMessage, setSendMessage] = useState('');
   const [approvalDialogMode, setApprovalDialogMode] = useState<'approve' | 'changes' | null>(null);
   const [approvalComment, setApprovalComment] = useState('');
-  const [conversionMode, setConversionMode] = useState<'contract' | 'invoice' | 'both' | null>(null);
+  const [conversionMode, setConversionMode] = useState<'contract' | 'invoice' | 'both' | 'sales_order' | null>(null);
   const [conversionPreview, setConversionPreview] = useState<QuoteConversionPreview | null>(null);
   const [isConversionDialogOpen, setIsConversionDialogOpen] = useState(false);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
@@ -170,6 +185,10 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       }
       try {
         const locations = await getActiveClientLocationsForBilling(form.client_id);
+        if (isActionPermissionError(locations) || isActionMessageError(locations)) {
+          if (!cancelled) setClientLocations([]);
+          return;
+        }
         if (cancelled) return;
         setClientLocations(locations);
       } catch (locationError) {
@@ -246,6 +265,12 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       ]);
 
       setApprovalRequired(!isActionPermissionError(approvalSettings) && approvalSettings.approvalRequired === true);
+      if (isActionPermissionError(fetchedContacts) || isActionMessageError(fetchedContacts)) {
+        throw new Error(getErrorMessage(fetchedContacts));
+      }
+      if (isActionPermissionError(fetchedClients) || isActionMessageError(fetchedClients)) {
+        throw new Error(getErrorMessage(fetchedClients));
+      }
 
       setClients(fetchedClients);
       setContacts(fetchedContacts);
@@ -288,6 +313,9 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
 
         setForm({
           ...EMPTY_FORM,
+          client_id: initialContext?.clientId ?? '',
+          contact_id: initialContext?.contactId ?? '',
+          title: initialContext?.title ?? '',
           currency_code: defaultCurrency,
           quote_date: today.toISOString().slice(0, 10),
           valid_until: validUntil.toISOString().slice(0, 10),
@@ -426,6 +454,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         tax: 0,
         total_amount: 0,
         currency_code: form.currency_code,
+        opportunity_id: initialContext?.opportunityId ?? quote?.opportunity_id ?? null,
         is_template: isTemplate,
         template_id: documentTemplateId || null,
       };
@@ -440,7 +469,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         result = await createQuote(payload as any);
       }
 
-      if (!result || isActionPermissionError(result)) {
+      if (!result || isReturnedActionError(result)) {
         throw new Error(
           result
             ? getErrorMessage(result)
@@ -490,8 +519,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
 
           if (item.quote_item_id) {
             const updatedItem = await updateQuoteItem(item.quote_item_id, sharedPayload);
-            if ('permissionError' in updatedItem) {
-              throw new Error(updatedItem.permissionError);
+            if (isReturnedActionError(updatedItem)) {
+              throw new Error(getErrorMessage(updatedItem));
             }
 
             nextLineItems = nextLineItems.map((draftItem) => draftItem.local_id === item.local_id ? {
@@ -508,8 +537,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
             ...sharedPayload,
           });
 
-          if ('permissionError' in createdItem) {
-            throw new Error(createdItem.permissionError);
+          if (isReturnedActionError(createdItem)) {
+            throw new Error(getErrorMessage(createdItem));
           }
 
           nextLineItems = nextLineItems.map((draftItem) => {
@@ -544,15 +573,18 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         const removedQuoteItemIds = persistedQuoteItemIds.filter((itemId) => !currentQuoteItemIds.includes(itemId));
         for (const removedQuoteItemId of removedQuoteItemIds) {
           const removalResult = await removeQuoteItem(removedQuoteItemId);
+          if (isReturnedActionError(removalResult)) {
+            throw new Error(getErrorMessage(removalResult));
+          }
           if (typeof removalResult !== 'boolean') {
-            throw new Error(removalResult.permissionError);
+            throw new Error(t('quoteForm.errors.removeItem', { defaultValue: 'Failed to remove quote item' }));
           }
         }
 
         if (currentQuoteItemIds.length > 0) {
           const reorderedItems = await reorderQuoteItems(result.quote_id, currentQuoteItemIds);
-          if ('permissionError' in reorderedItems) {
-            throw new Error(reorderedItems.permissionError);
+          if (isReturnedActionError(reorderedItems)) {
+            throw new Error(getErrorMessage(reorderedItems));
           }
           nextLineItems = reorderedItems.map(createDraftQuoteItemFromQuoteItem);
         }
@@ -587,8 +619,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       setError(null);
       setNotice(null);
       const result = await action();
-      if (result && typeof result === 'object' && 'permissionError' in result) {
-        throw new Error((result as { permissionError: string }).permissionError);
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
       setQuote(result as IQuote);
       return result;
@@ -729,7 +761,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       setIsWorking(true);
       setError(null);
       const result = await createQuoteRevision(quote.quote_id);
-      if ('permissionError' in result) throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) throw new Error(getErrorMessage(result));
       onSaved(result.quote_id);
     } catch (actionError) {
       setError(
@@ -750,7 +782,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       setIsWorking(true);
       setError(null);
       const result = await duplicateQuote(quote.quote_id);
-      if ('permissionError' in result) throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) throw new Error(getErrorMessage(result));
       onSaved(result.quote_id);
     } catch (actionError) {
       setError(
@@ -769,7 +801,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       setIsWorking(true);
       setError(null);
       const result = await downloadQuotePdf(quote.quote_id);
-      if (result && typeof result === 'object' && 'permissionError' in result) throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) throw new Error(getErrorMessage(result));
       const { pdfData, quoteNumber } = result as { pdfData: number[]; quoteNumber: string };
       const blob = new Blob([new Uint8Array(pdfData)], { type: 'application/pdf' });
       const blobUrl = window.URL.createObjectURL(blob);
@@ -801,15 +833,31 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
     return oneTimeItems.some((item) => !item.is_discount);
   }, [quote]);
   const canConvertToBoth = canConvertToContract && canConvertToInvoice;
+  // Product one-time lines are what convert to a sales order (F002/D2).
+  const canConvertToSalesOrder = useMemo(
+    () =>
+      Boolean(
+        (quote?.quote_items || []).some(
+          (item) =>
+            item.service_item_kind === 'product' &&
+            !item.is_recurring &&
+            !item.is_discount &&
+            (!item.is_optional || item.is_selected !== false),
+        ),
+      ),
+    [quote],
+  );
 
-  const handleOpenConversionDialog = async (mode: 'contract' | 'invoice' | 'both') => {
+  const handleOpenConversionDialog = async (mode: 'contract' | 'invoice' | 'both' | 'sales_order') => {
     if (!quote) return;
     try {
       setIsPreviewLoading(true);
       setError(null);
       setConversionMode(mode);
       const preview = await getQuoteConversionPreview(quote.quote_id);
-      if ('permissionError' in preview) throw new Error(preview.permissionError);
+      if (isActionMessageError(preview) || isActionPermissionError(preview)) {
+        throw new Error(getErrorMessage(preview));
+      }
       setConversionPreview(preview);
       setIsConversionDialogOpen(true);
     } catch (previewError) {
@@ -832,7 +880,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       setError(null);
       if (conversionMode === 'contract') {
         const result = await convertQuoteToContract(quote.quote_id);
-        if ('permissionError' in result) throw new Error(result.permissionError);
+        if (isActionMessageError(result) || isActionPermissionError(result)) throw new Error(getErrorMessage(result));
         setQuote(result.quote);
         setNotice(
           t('quoteForm.notices.createdDraftContract', {
@@ -842,7 +890,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         );
       } else if (conversionMode === 'invoice') {
         const result = await convertQuoteToInvoice(quote.quote_id);
-        if ('permissionError' in result) throw new Error(result.permissionError);
+        if (isActionMessageError(result) || isActionPermissionError(result)) throw new Error(getErrorMessage(result));
         setQuote(result.quote);
         setNotice(
           t('quoteForm.notices.createdDraftInvoice', {
@@ -850,9 +898,19 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
             name: result.invoice.invoice_number,
           }),
         );
+      } else if (conversionMode === 'sales_order') {
+        const result = await convertQuoteToSalesOrder(quote.quote_id);
+        if (isActionMessageError(result) || isActionPermissionError(result)) throw new Error(getErrorMessage(result));
+        setQuote(result.quote);
+        setNotice(
+          t('quoteDetail.notices.createdSalesOrder', {
+            defaultValue: 'Created draft sales order {{number}}. Product lines will bill on fulfillment.',
+            number: result.so_number,
+          }),
+        );
       } else {
         const result = await convertQuoteToBoth(quote.quote_id);
-        if ('permissionError' in result) throw new Error(result.permissionError);
+        if (isActionMessageError(result) || isActionPermissionError(result)) throw new Error(getErrorMessage(result));
         setQuote(result.quote);
         setNotice(
           t('quoteForm.notices.createdDraftContractAndInvoice', {
@@ -1021,6 +1079,12 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
   };
 
   const primaryAction = resolvePrimaryAction();
+  // The primary button is only rendered when `primaryAction && !isReadOnly`
+  // (see the header/footer action rows). Overflow de-duplication must key off
+  // the same visibility, otherwise a primary action that is computed but hidden
+  // (e.g. conversions on an accepted/read-only quote) gets filtered out of the
+  // overflow menu too and becomes unreachable.
+  const isPrimaryActionVisible = Boolean(primaryAction) && !isReadOnly;
 
   // Secondary inline button (e.g. "Request changes" pairs with "Approve",
   // "Save quote" pairs with "Send to client" on drafts).
@@ -1065,8 +1129,12 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       if (canConvertToContract) items.push({ id: 'quote-form-convert-contract', label: t('quoteForm.actions.convertToContract', { defaultValue: 'Convert to contract' }), onClick: () => void handleOpenConversionDialog('contract'), disabled: isWorking || isPreviewLoading });
       if (canConvertToInvoice) items.push({ id: 'quote-form-convert-invoice', label: t('quoteForm.actions.convertToInvoice', { defaultValue: 'Convert to invoice' }), onClick: () => void handleOpenConversionDialog('invoice'), disabled: isWorking || isPreviewLoading });
       if (canConvertToBoth) items.push({ id: 'quote-form-convert-both', label: t('quoteForm.actions.convertToBoth', { defaultValue: 'Convert to both' }), onClick: () => void handleOpenConversionDialog('both'), disabled: isWorking || isPreviewLoading });
-      // Remove the item whose id matches the primary so we don't duplicate.
-      return items.filter((i) => i.id !== primaryAction?.id);
+      if (canConvertToSalesOrder) items.push({ id: 'quote-form-convert-sales-order', label: t('quoteForm.actions.convertToSalesOrder', { defaultValue: 'Convert to sales order' }), onClick: () => void handleOpenConversionDialog('sales_order'), disabled: isWorking || isPreviewLoading });
+      // Remove the item whose id matches the primary ONLY when the primary
+      // button is actually rendered; otherwise keep it so the action stays
+      // reachable (accepted quotes are read-only, so their conversion primary
+      // is hidden and must remain available in the overflow menu).
+      return items.filter((i) => !isPrimaryActionVisible || i.id !== primaryAction?.id);
     }
     return [];
   };
@@ -1800,7 +1868,9 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
                 ? t('quoteConversion.actions.contract', { defaultValue: 'Create Draft Contract' })
                 : conversionMode === 'invoice'
                   ? t('quoteConversion.actions.invoice', { defaultValue: 'Create Draft Invoice' })
-                  : t('quoteConversion.actions.both', { defaultValue: 'Create Both Records' })}
+                  : conversionMode === 'sales_order'
+                    ? t('quoteConversion.actions.salesOrder', { defaultValue: 'Create Sales Order' })
+                    : t('quoteConversion.actions.both', { defaultValue: 'Create Both Records' })}
             </Button>
           </div>
         )}

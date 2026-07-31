@@ -1,13 +1,18 @@
 /* Unified Calendar Styles */
 
-/* Override ALL react-day-picker default colors */
-.rdp-root,
-.rdp,
-[class*="rdp"] {
-  --rdp-accent: rgb(var(--color-primary-500)) !important;
-  --rdp-accent-color: rgb(var(--color-primary-500)) !important;
-  --rdp-background-color: rgb(var(--color-primary-500)) !important;
-  --rdp-selected-color: rgb(var(--color-primary-500)) !important;
+/* react-day-picker v9 variables (defaults in react-day-picker/src/style.css) */
+.rdp-root {
+  --rdp-accent-color: rgb(var(--color-primary-500));
+  --rdp-accent-background-color: rgba(var(--color-primary-500), 0.15);
+  --rdp-today-color: rgb(var(--color-primary-500));
+  --rdp-day-width: 2.5rem;
+  --rdp-day-height: 2.5rem;
+  --rdp-day_button-width: 100%;
+  --rdp-day_button-height: 100%;
+  --rdp-day_button-border: 1px solid transparent;
+  --rdp-day_button-border-radius: 0.5rem;
+  --rdp-selected-border: 1px solid rgb(var(--color-primary-500));
+  --rdp-outside-opacity: 0.5;
 }
 
 /* Calendar Color Palette - Using established brand colors */

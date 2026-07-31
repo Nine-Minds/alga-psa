@@ -91,7 +91,8 @@
         "single": "Nur dieses Ereignis",
         "future": "Dieses und zukünftige Ereignisse",
         "all": "Alle Ereignisse"
-      }
+      },
+      "messageWithTeamsWarning": "Möchten Sie diesen Zeitplaneintrag wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden. Dadurch wird auch die Microsoft Teams-Besprechung gelöscht."
     },
     "print": {
       "title": "Terminagenda",
@@ -128,11 +129,16 @@
       "assignTechnicianRequired": "Bitte weisen Sie einen Techniker zu",
       "approve": "Die Anfrage konnte nicht genehmigt werden",
       "declineReasonRequired": "Bitte geben Sie einen Grund für die Ablehnung an",
-      "decline": "Anfrage konnte nicht abgelehnt werden"
+      "decline": "Anfrage konnte nicht abgelehnt werden",
+      "reschedule": "Termin konnte nicht verschoben werden",
+      "rescheduleDateRequired": "Bitte wählen Sie ein neues Datum und eine neue Uhrzeit",
+      "generateTeamsMeeting": "Die Microsoft Teams-Besprechung konnte nicht erstellt werden"
     },
     "feedback": {
       "approved": "Terminanfrage genehmigt",
-      "declined": "Terminanfrage abgelehnt"
+      "declined": "Terminanfrage abgelehnt",
+      "rescheduled": "Termin verschoben",
+      "teamsMeetingGenerated": "Microsoft Teams-Besprechung erstellt"
     },
     "filters": {
       "statusLabel": "Nach Status filtern",
@@ -180,8 +186,10 @@
         "teamsMeeting": "Teams-Besprechung"
       },
       "actions": {
-        "joinTeamsMeeting": "An Teams-Besprechung teilnehmen"
-      }
+        "joinTeamsMeeting": "An Teams-Besprechung teilnehmen",
+        "generateTeamsMeeting": "Teams-Besprechung erstellen"
+      },
+      "teamsMeetingMissing": "Dieser genehmigte Termin hat noch keinen Teams-Besprechungslink."
     },
     "approval": {
       "title": "Genehmigungsdetails",
@@ -200,6 +208,12 @@
       "actions": {
         "approve": "Genehmigen",
         "decline": "Ablehnen"
+      },
+      "teamsMeetingFailure": {
+        "title": "Die Microsoft Teams-Besprechung konnte nicht erstellt werden",
+        "description": "Der Termin wurde nicht genehmigt. Versuchen Sie die Besprechungserstellung erneut oder genehmigen Sie ohne Besprechung und erstellen Sie diese später.",
+        "retry": "Wiederholen",
+        "approveWithout": "Ohne Besprechung genehmigen"
       }
     },
     "decline": {
@@ -212,6 +226,18 @@
       },
       "actions": {
         "confirm": "Ablehnung bestätigen",
+        "cancel": "Abbrechen"
+      }
+    },
+    "reschedule": {
+      "title": "Verschieben",
+      "teamsNote": "Die Teilnehmer erhalten eine aktualisierte Einladung zur Microsoft Teams-Besprechung.",
+      "fields": {
+        "newDateTime": "Neues Datum und Uhrzeit"
+      },
+      "actions": {
+        "open": "Termin verschieben",
+        "confirm": "Verschiebung bestätigen",
         "cancel": "Abbrechen"
       }
     }
@@ -546,7 +572,9 @@
         "title": "Genehmigter Termin",
         "descriptionWithDate": "Dieser Termin entstand aus einer Kundenanfrage und wurde am {{date}} genehmigt.",
         "description": "Dieser Termin entstand aus einer Kundenanfrage.",
-        "joinTeamsMeeting": "An Teams-Besprechung teilnehmen"
+        "joinTeamsMeeting": "An Teams-Besprechung teilnehmen",
+        "downloadRecording": "Aufzeichnung herunterladen",
+        "viewTranscript": "Transkript anzeigen"
       },
       "pending": {
         "title": "Ausstehende Terminanfrage",
@@ -629,6 +657,32 @@
       "single": "Nur dieses Ereignis",
       "future": "Dieses und zukünftige Ereignisse",
       "all": "Alle Ereignisse"
+    },
+    "errors": {
+      "loadWorkItem": "Failed to load work item."
     }
+  },
+  "actions": {
+    "print": "Drucken",
+    "printOptions": "Druckoptionen"
+  },
+  "interactionDetails": {
+    "fields": {
+      "client": "Kunde",
+      "contact": "Kontakt",
+      "duration": "Dauer",
+      "endTime": "Endzeit",
+      "notes": "Notizen",
+      "startTime": "Startzeit",
+      "status": "Status",
+      "title": "Titel",
+      "user": "Benutzer"
+    },
+    "noClient": "Kein Kunde zugeordnet",
+    "noContact": "Kein Kontakt zugeordnet",
+    "noTitle": "Kein Titel",
+    "notAvailable": "k. A.",
+    "title": "Interaktionsdetails",
+    "unknownUser": "Unbekannt"
   }
 }

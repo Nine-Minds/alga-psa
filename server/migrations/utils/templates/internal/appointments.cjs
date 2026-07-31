@@ -13,6 +13,7 @@ const TEMPLATES = [
       nl: { title: 'Afspraakverzoek ingediend', message: 'Uw afspraakverzoek voor {{serviceName}} op {{requestedDate}} is ingediend en wacht op goedkeuring.' },
       it: { title: 'Richiesta di appuntamento inviata', message: 'La tua richiesta di appuntamento per {{serviceName}} il {{requestedDate}} è stata inviata ed è in attesa di approvazione.' },
       pl: { title: 'Wniosek o wizytę wysłany', message: 'Twój wniosek o wizytę na {{serviceName}} w dniu {{requestedDate}} został wysłany i oczekuje na zatwierdzenie.' },
+      pt: { title: 'Solicitação de agendamento enviada', message: 'Sua solicitação de nomeação para {{serviceName}} em {{requestedDate}} foi enviada e está pendente de aprovação.' },
     },
   },
   {
@@ -26,6 +27,7 @@ const TEMPLATES = [
       nl: { title: 'Nieuw afspraakverzoek van {{clientName}}', message: '{{requesterName}} heeft een afspraak aangevraagd voor {{serviceName}} op {{requestedDate}} om {{requestedTime}}.' },
       it: { title: 'Nuova richiesta di appuntamento da {{clientName}}', message: '{{requesterName}} ha richiesto un appuntamento per {{serviceName}} il {{requestedDate}} alle {{requestedTime}}.' },
       pl: { title: 'Nowy wniosek o wizytę od {{clientName}}', message: '{{requesterName}} poprosił(a) o wizytę na {{serviceName}} w dniu {{requestedDate}} o {{requestedTime}}.' },
+      pt: { title: 'Nova solicitação de agendamento de {{clientName}}', message: '{{requesterName}} solicitou um agendamento para {{serviceName}} em {{requestedDate}} em {{requestedTime}}.' },
     },
   },
   {
@@ -39,6 +41,7 @@ const TEMPLATES = [
       nl: { title: 'Afspraak bevestigd!', message: 'Uw afspraak voor {{serviceName}} op {{appointmentDate}} om {{appointmentTime}} is bevestigd. Toegewezen technicus: {{technicianName}}.' },
       it: { title: 'Appuntamento confermato!', message: 'Il tuo appuntamento per {{serviceName}} il {{appointmentDate}} alle {{appointmentTime}} è stato confermato. Tecnico assegnato: {{technicianName}}.' },
       pl: { title: 'Wizyta potwierdzona!', message: 'Twoja wizyta na {{serviceName}} w dniu {{appointmentDate}} o {{appointmentTime}} została potwierdzona. Przypisany technik: {{technicianName}}.' },
+      pt: { title: 'Agendamento confirmado!', message: 'Sua nomeação para {{serviceName}} em {{appointmentDate}} em {{appointmentTime}} foi confirmada. Técnico designado: {{technicianName}}.' },
     },
   },
   {
@@ -52,6 +55,7 @@ const TEMPLATES = [
       nl: { title: 'Update afspraakverzoek', message: 'Uw afspraakverzoek voor {{serviceName}} kon niet worden geaccepteerd. {{declineReason}}' },
       it: { title: 'Aggiornamento richiesta di appuntamento', message: 'La tua richiesta di appuntamento per {{serviceName}} non ha potuto essere accolta. {{declineReason}}' },
       pl: { title: 'Aktualizacja wniosku o wizytę', message: 'Nie udało się zrealizować wniosku o wizytę na {{serviceName}}. {{declineReason}}' },
+      pt: { title: 'Atualização de solicitação de agendamento', message: 'Sua solicitação de agendamento para {{serviceName}} não pôde ser atendida. {{declineReason}}' },
     },
   },
   {
@@ -65,6 +69,7 @@ const TEMPLATES = [
       nl: { title: 'Afspraakverzoek geannuleerd', message: 'Uw afspraakverzoek voor {{serviceName}} op {{requestedDate}} is succesvol geannuleerd.' },
       it: { title: 'Richiesta di appuntamento cancellata', message: 'La tua richiesta di appuntamento per {{serviceName}} il {{requestedDate}} è stata cancellata con successo.' },
       pl: { title: 'Wniosek o wizytę anulowany', message: 'Twój wniosek o wizytę na {{serviceName}} w dniu {{requestedDate}} został pomyślnie anulowany.' },
+      pt: { title: 'Solicitação de agendamento cancelada', message: 'Sua solicitação de agendamento para {{serviceName}} em {{requestedDate}} foi cancelada com sucesso.' },
     },
   },
   {
@@ -78,6 +83,7 @@ const TEMPLATES = [
       nl: { title: 'Afspraakverzoek geannuleerd', message: '{{requesterName}} heeft zijn/haar afspraakverzoek voor {{serviceName}} op {{requestedDate}} geannuleerd.' },
       it: { title: 'Richiesta di appuntamento cancellata', message: '{{requesterName}} ha cancellato la sua richiesta di appuntamento per {{serviceName}} il {{requestedDate}}.' },
       pl: { title: 'Wniosek o wizytę anulowany', message: '{{requesterName}} anulował(a) wniosek o wizytę na {{serviceName}} w dniu {{requestedDate}}.' },
+      pt: { title: 'Solicitação de agendamento cancelada', message: '{{requesterName}} cancelou sua solicitação de agendamento para {{serviceName}} em {{requestedDate}}.' },
     },
   },
   {
@@ -91,6 +97,7 @@ const TEMPLATES = [
       nl: { title: 'Nieuwe afspraak toegewezen', message: 'Er is een afspraak voor {{serviceName}} op {{appointmentDate}} om {{appointmentTime}} aan u toegewezen. Klant: {{clientName}}.' },
       it: { title: 'Nuovo appuntamento assegnato', message: 'Ti è stato assegnato un appuntamento per {{serviceName}} il {{appointmentDate}} alle {{appointmentTime}}. Cliente: {{clientName}}.' },
       pl: { title: 'Nowa wizyta przypisana', message: 'Przypisano Ci wizytę na {{serviceName}} w dniu {{appointmentDate}} o {{appointmentTime}}. Klient: {{clientName}}.' },
+      pt: { title: 'Novo agendamento atribuído', message: 'Você recebeu um agendamento para {{serviceName}} em {{appointmentDate}} em {{appointmentTime}}. Cliente: {{clientName}}.' },
     },
   },
 ];

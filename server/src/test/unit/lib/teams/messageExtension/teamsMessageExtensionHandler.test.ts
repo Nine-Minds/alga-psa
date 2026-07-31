@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { TicketService } from 'server/src/lib/api/services/TicketService';
-import { ContactService } from 'server/src/lib/api/services/ContactService';
 import {
   handleTeamsMessageExtensionActivity,
   type TeamsMessageExtensionActivity,
@@ -17,6 +15,8 @@ const {
   executeTeamsActionMock,
   listAvailableTeamsActionsMock,
   listPendingApprovalsForTeamsMock,
+  searchTeamsTicketsMock,
+  searchTeamsContactsMock,
   createTicketWithRetryMock,
   getTeamsRuntimeAvailabilityMock,
 } = vi.hoisted(() => ({
@@ -29,15 +29,17 @@ const {
   executeTeamsActionMock: vi.fn(),
   listAvailableTeamsActionsMock: vi.fn(),
   listPendingApprovalsForTeamsMock: vi.fn(),
+  searchTeamsTicketsMock: vi.fn(),
+  searchTeamsContactsMock: vi.fn(),
   createTicketWithRetryMock: vi.fn(),
   getTeamsRuntimeAvailabilityMock: vi.fn(),
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/teams/resolveTeamsTenantContext', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/resolveTeamsTenantContext', () => ({
   resolveTeamsTenantContext: resolveTeamsTenantContextMock,
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/teams/resolveTeamsLinkedUser', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/resolveTeamsLinkedUser', () => ({
   resolveTeamsLinkedUser: resolveTeamsLinkedUserMock,
 }));
 
@@ -50,21 +52,21 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
   };
 });
 
-vi.mock('../../../../../../../ee/server/src/lib/actions/integrations/teamsActions', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/actions/integrations/teamsActions', () => ({
   getTeamsIntegrationExecutionStateImpl: getTeamsIntegrationExecutionStateMock,
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/teams/teamsDeepLinks', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/teamsDeepLinks', () => ({
   buildTeamsMessageExtensionResultDeepLinkFromPsaUrl: vi.fn(
     (_baseUrl: string, _appId: string, psaUrl: string) => `https://teams.test/deeplink?target=${encodeURIComponent(psaUrl)}`
   ),
 }));
 
-vi.mock('server/src/lib/auth/rbac', () => ({
+vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: hasPermissionMock,
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/teams/actions/teamsActionRegistry', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/actions/teamsActionRegistry', () => ({
   executeTeamsAction: executeTeamsActionMock,
   listAvailableTeamsActions: listAvailableTeamsActionsMock,
   listTeamsActionDefinitions: () => [
@@ -76,8 +78,10 @@ vi.mock('../../../../../../../ee/server/src/lib/teams/actions/teamsActionRegistr
   ],
 }));
 
-vi.mock('server/src/lib/teams/approvals/queryPendingApprovalsForTeams', () => ({
-  listPendingApprovalsForTeams: listPendingApprovalsForTeamsMock,
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/teamsPsaData', () => ({
+  listPendingApprovalsForTeams: (...args: unknown[]) => listPendingApprovalsForTeamsMock(...args),
+  searchTeamsTickets: (...args: unknown[]) => searchTeamsTicketsMock(...args),
+  searchTeamsContacts: (...args: unknown[]) => searchTeamsContactsMock(...args),
 }));
 
 vi.mock('@shared/models/ticketModel', () => ({
@@ -86,7 +90,7 @@ vi.mock('@shared/models/ticketModel', () => ({
   },
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/teams/getTeamsRuntimeAvailability', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/getTeamsRuntimeAvailability', () => ({
   getTeamsRuntimeAvailability: (...args: unknown[]) => getTeamsRuntimeAvailabilityMock(...args),
 }));
 
@@ -412,12 +416,8 @@ describe('teamsMessageExtensionHandler', () => {
       }
     );
 
-    vi.spyOn(TicketService.prototype, 'search').mockResolvedValue([
-      { ticket_id: 'ticket-1' } as any,
-    ]);
-    vi.spyOn(ContactService.prototype, 'search').mockResolvedValue([
-      { contact_name_id: 'contact-1', client_id: 'client-1' } as any,
-    ]);
+    searchTeamsTicketsMock.mockResolvedValue([{ ticket_id: 'ticket-1' }]);
+    searchTeamsContactsMock.mockResolvedValue([{ contact_name_id: 'contact-1', client_id: 'client-1' }]);
   });
 
   it('T311/T313/T315/T317: search returns ticket, task, contact, and approval matches for the Teams query command', async () => {
@@ -447,8 +447,8 @@ describe('teamsMessageExtensionHandler', () => {
 
   it('T312/T314/T316/T318/T325/T326: search suppresses entity types the user cannot read and returns a recoverable empty-state message', async () => {
     hasPermissionMock.mockImplementation(async (_user: IUserWithRoles, resource: string) => resource === 'ticket');
-    vi.spyOn(TicketService.prototype, 'search').mockResolvedValue([]);
-    vi.spyOn(ContactService.prototype, 'search').mockResolvedValue([]);
+    searchTeamsTicketsMock.mockResolvedValue([]);
+    searchTeamsContactsMock.mockResolvedValue([]);
     listPendingApprovalsForTeamsMock.mockResolvedValue([]);
     createTenantKnexMock.mockResolvedValue({
       knex: vi.fn(() => ({
@@ -1437,11 +1437,10 @@ describe('teamsMessageExtensionHandler', () => {
       microsoftTenantId: 'entra-tenant-1',
       requiredCapability: 'message_extension',
     });
-    expect(TicketService.prototype.search).toHaveBeenCalledWith(
-      expect.anything(),
+    expect(searchTeamsTicketsMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        tenant: 'tenant-1',
-        userId: 'user-1',
+        tenantId: 'tenant-1',
+        query: 'vpn',
       })
     );
     expect(createTenantKnexMock).toHaveBeenCalledWith('tenant-1');
@@ -1546,8 +1545,8 @@ describe('teamsMessageExtensionHandler', () => {
         surface: 'message_extension',
       })
     );
-    expect(TicketService.prototype.search).toHaveBeenCalled();
-    expect(ContactService.prototype.search).toHaveBeenCalled();
+    expect(searchTeamsTicketsMock).toHaveBeenCalled();
+    expect(searchTeamsContactsMock).toHaveBeenCalled();
     expect(createTenantKnexMock).toHaveBeenCalledWith('tenant-1');
     expect(listPendingApprovalsForTeamsMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1558,12 +1557,12 @@ describe('teamsMessageExtensionHandler', () => {
   });
 
   it('T327/T328: search supports paged result windows via Teams queryOptions and rejects invalid pagination values', async () => {
-    vi.spyOn(TicketService.prototype, 'search').mockResolvedValue([
-      { ticket_id: 'ticket-1' } as any,
-      { ticket_id: 'ticket-2' } as any,
-      { ticket_id: 'ticket-3' } as any,
+    searchTeamsTicketsMock.mockResolvedValue([
+      { ticket_id: 'ticket-1' },
+      { ticket_id: 'ticket-2' },
+      { ticket_id: 'ticket-3' },
     ]);
-    vi.spyOn(ContactService.prototype, 'search').mockResolvedValue([]);
+    searchTeamsContactsMock.mockResolvedValue([]);
     listPendingApprovalsForTeamsMock.mockResolvedValue([]);
     createTenantKnexMock.mockResolvedValue({
       knex: vi.fn(() => ({
@@ -1640,11 +1639,10 @@ describe('teamsMessageExtensionHandler', () => {
       'Ticket ticket-2',
       'Ticket ticket-3',
     ]);
-    expect(TicketService.prototype.search).toHaveBeenCalledWith(
+    expect(searchTeamsTicketsMock).toHaveBeenCalledWith(
       expect.objectContaining({
         limit: 3,
-      }),
-      expect.anything()
+      })
     );
     expect(invalidPaginationResponse).toEqual({
       composeExtension: {

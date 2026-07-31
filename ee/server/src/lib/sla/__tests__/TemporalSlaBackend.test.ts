@@ -4,31 +4,44 @@ import { TemporalSlaBackend } from '../TemporalSlaBackend';
 const startMock = vi.fn();
 const signalMock = vi.fn();
 const queryMock = vi.fn();
+const dbMocks = vi.hoisted(() => {
+  const chain: any = {
+    where: vi.fn(),
+    select: vi.fn(),
+    first: vi.fn().mockResolvedValue({ tenant: 'tenant-1' }),
+  };
+  chain.where.mockReturnValue(chain);
+  chain.select.mockReturnValue(chain);
+
+  const unscoped = vi.fn(() => chain);
+  return {
+    chain,
+    getConnection: vi.fn(async () => ({})),
+    tenantDb: vi.fn(() => ({ unscoped })),
+    unscoped,
+  };
+});
 
 vi.mock('@temporalio/client', () => ({
   Connection: {
     connect: vi.fn(async () => ({})),
   },
-  Client: vi.fn().mockImplementation(() => ({
-    workflow: {
-      start: startMock,
-      getHandle: vi.fn(() => ({
-        signal: signalMock,
-        query: queryMock,
-      })),
-    },
-  })),
+  Client: vi.fn().mockImplementation(function () {
+    return {
+      workflow: {
+        start: startMock,
+        getHandle: vi.fn(() => ({
+          signal: signalMock,
+          query: queryMock,
+        })),
+      },
+    };
+  }),
 }));
 
 vi.mock('@alga-psa/db', () => ({
-  getConnection: vi.fn(async () => {
-    const chain: any = {
-      where: vi.fn().mockReturnThis(),
-      select: vi.fn().mockReturnThis(),
-      first: vi.fn().mockResolvedValue({ tenant: 'tenant-1' }),
-    };
-    return ((_: string) => chain) as any;
-  }),
+  getConnection: dbMocks.getConnection,
+  tenantDb: dbMocks.tenantDb,
 }));
 
 describe('TemporalSlaBackend', () => {
@@ -36,6 +49,12 @@ describe('TemporalSlaBackend', () => {
     startMock.mockClear();
     signalMock.mockClear();
     queryMock.mockClear();
+    dbMocks.getConnection.mockClear();
+    dbMocks.tenantDb.mockClear();
+    dbMocks.unscoped.mockClear();
+    dbMocks.chain.where.mockClear();
+    dbMocks.chain.select.mockClear();
+    dbMocks.chain.first.mockClear();
   });
 
   it('startSlaTracking starts workflow with correct ID', async () => {
@@ -76,6 +95,21 @@ describe('TemporalSlaBackend', () => {
     const backend = new TemporalSlaBackend();
     await backend.pauseSla('ticket-1', 'status_pause');
     expect(signalMock).toHaveBeenCalledWith('pause', { reason: 'status_pause' });
+  });
+
+  it('resolves ticket tenant through an explicit unscoped discovery boundary', async () => {
+    const backend = new TemporalSlaBackend();
+    await backend.pauseSla('ticket-1', 'status_pause');
+
+    expect(dbMocks.tenantDb).toHaveBeenCalledWith(
+      expect.anything(),
+      '__temporal_sla_ticket_discovery__'
+    );
+    expect(dbMocks.unscoped).toHaveBeenCalledWith(
+      'tickets',
+      'resolve tenant id for SLA workflow ticket handle'
+    );
+    expect(dbMocks.chain.where).toHaveBeenCalledWith({ ticket_id: 'ticket-1' });
   });
 
   it('resumeSla sends resume signal', async () => {

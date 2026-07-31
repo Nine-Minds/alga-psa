@@ -11,7 +11,13 @@ import {
 const envSnapshot = { ...process.env };
 
 afterEach(() => {
-  process.env = { ...envSnapshot };
+  // Restore IN PLACE: modules that captured `process.env` by reference
+  // (e.g. `import { env } from 'node:process'`) would keep reading the
+  // old object if this reassigned process.env.
+  for (const key of Object.keys(process.env)) {
+    if (!(key in envSnapshot)) delete process.env[key];
+  }
+  Object.assign(process.env, envSnapshot);
 });
 
 describe('session utilities', () => {
@@ -43,6 +49,9 @@ describe('session utilities', () => {
 
   it('returns cookie config aligned with environment', () => {
     process.env.NODE_ENV = 'production';
+    // nx-invoked runs load the repo-root .env, which sets an http:// NEXTAUTH_URL;
+    // pin it so isSecureCookieEnvironment() reflects this test's scenario.
+    process.env.NEXTAUTH_URL = 'https://example.com';
     const config = getSessionCookieConfig();
     expect(config.options?.secure).toBe(true);
     expect(config.options?.httpOnly).toBe(true);

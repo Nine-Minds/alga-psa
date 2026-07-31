@@ -23,6 +23,7 @@ import GenericPlanServicesList from './GenericContractLineServicesList';
 import { IContractLine, IService as IBillingService } from '@alga-psa/types'; // Use IService from billing.interfaces
 import { ServiceHourlyConfigForm } from './ServiceHourlyConfigForm';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import {
     upsertPlanServiceHourlyConfiguration, // Correct action import
     upsertUserTypeRatesForConfig // Added import for user type rates action
@@ -32,6 +33,7 @@ import {
     IContractLineServiceConfiguration,
     IUserTypeRate
 } from '@alga-psa/types';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 // Removed incorrect import: import { IService } from '@alga-psa/types';
 // Removed incorrect import: import { isDeepStrictEqual } from 'util';
 
@@ -70,6 +72,9 @@ function isEqual(a: unknown, b: unknown): boolean {
   return true;
 }
 
+const isReturnedActionError = (value: unknown): boolean =>
+    isActionMessageError(value) || isActionPermissionError(value);
+
 // --- Local Type Definitions ---
 
 // Combined interface for state management - using config_id
@@ -105,6 +110,7 @@ export function HourlyPlanConfiguration({
   className = '',
 }: HourlyPlanConfigurationProps) {
   const { t } = useTranslation('msp/contract-lines');
+  const { symbol } = useCurrencyFormat();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   // Plan-wide state
   const [plan, setPlan] = useState<HourlyPlanData | null>(null);
@@ -161,7 +167,12 @@ export function HourlyPlanConfiguration({
     setPlanValidationErrors({});
     try {
       // Fetch base plan details
-      const fetchedPlan = await getContractLineById(contractLineId) as HourlyPlanData;
+      const fetchedPlanResult = await getContractLineById(contractLineId);
+      if (isReturnedActionError(fetchedPlanResult)) {
+        setError(getErrorMessage(fetchedPlanResult));
+        return;
+      }
+      const fetchedPlan = fetchedPlanResult as HourlyPlanData | null;
       if (!fetchedPlan || fetchedPlan.contract_line_type !== 'Hourly') {
         setError(t('configuration.hourly.errors.invalidPlanTypeOrNotFound', {
           defaultValue: 'Invalid plan type or plan not found.',
@@ -204,6 +215,10 @@ export function HourlyPlanConfiguration({
 
       // Fetch services and their configurations using the correct action
       const servicesWithConfigsResult = await getContractLineServicesWithConfigurations(contractLineId);
+      if (isReturnedActionError(servicesWithConfigsResult)) {
+        setError(getErrorMessage(servicesWithConfigsResult));
+        return;
+      }
 
       // Process results, mapping to IPlanServiceWithHourlyConfig
       const processedConfigs: IPlanServiceWithHourlyConfig[] = servicesWithConfigsResult.map((item) => {
@@ -368,7 +383,11 @@ export function HourlyPlanConfiguration({
       };
 
       if (plan?.contract_line_id) {
-        await updateContractLine(plan.contract_line_id, planData);
+        const updateResult = await updateContractLine(plan.contract_line_id, planData);
+        if (isReturnedActionError(updateResult)) {
+          setPlanBasicsErrors([getErrorMessage(updateResult)]);
+          return;
+        }
       }
 
       await fetchPlanData();
@@ -433,7 +452,7 @@ export function HourlyPlanConfiguration({
                 // Check if hourly fields actually changed
                 const initialConfig = initialServiceConfigs.find(ic => ic.config_id === config.config_id);
                 if (!isEqual(config.hourly_config, initialConfig?.hourly_config)) {
-                    await upsertPlanServiceHourlyConfiguration(
+                    const hourlyConfigResult = await upsertPlanServiceHourlyConfiguration(
                         contractLineId,
                         config.service_id,
                         {
@@ -442,10 +461,18 @@ export function HourlyPlanConfiguration({
                             round_up_to_nearest: config.hourly_config.round_up_to_nearest ?? null,
                         }
                     );
+                    if (isReturnedActionError(hourlyConfigResult)) {
+                        setSaveError(getErrorMessage(hourlyConfigResult));
+                        serviceSaveFailed = true;
+                        break;
+                    }
                 }
             }
 
             // --- Save User Type Rates ---
+            if (serviceSaveFailed) {
+                break;
+            }
             // Check if rates changed for this config
             const initialConfigForRates = initialServiceConfigs.find(ic => ic.config_id === config.config_id);
             if (!isEqual(config.user_type_rates, initialConfigForRates?.user_type_rates)) {
@@ -455,7 +482,12 @@ export function HourlyPlanConfiguration({
                      rate: r.rate,
                  }));
                  // Call the new action
-                 await upsertUserTypeRatesForConfig(config.config_id, ratesToSave);
+                 const ratesResult = await upsertUserTypeRatesForConfig(config.config_id, ratesToSave);
+                 if (isReturnedActionError(ratesResult)) {
+                    setSaveError(getErrorMessage(ratesResult));
+                    serviceSaveFailed = true;
+                    break;
+                 }
             }
         }
         // Update initial state for services after successful save
@@ -464,14 +496,9 @@ export function HourlyPlanConfiguration({
     } catch (err: any) {
         serviceSaveFailed = true;
         console.error('Error saving service configuration:', err);
-        // Extract Zod error messages if available
-        const message = err.message?.includes("Validation Error:")
-            ? err.message
-            : t('configuration.hourly.errors.failedToSaveServiceConfiguration', {
-                defaultValue: 'Failed to save service configuration: {{message}}',
-                message: err.message || t('common.tryAgain', { defaultValue: 'Please try again.' }),
-              });
-        setSaveError(message);
+        setSaveError(t('configuration.hourly.errors.failedToSaveServiceConfiguration', {
+          defaultValue: 'Failed to save service configuration. Please try again.',
+        }));
         // Potentially map Zod errors back to serviceValidationErrors state here if needed
     }
 
@@ -518,7 +545,11 @@ export function HourlyPlanConfiguration({
         // }
 
         if (planChanged) {
-            await updateContractLine(contractLineId, planUpdatePayload);
+            const updateResult = await updateContractLine(contractLineId, planUpdatePayload);
+            if (isReturnedActionError(updateResult)) {
+                setSaveError(getErrorMessage(updateResult));
+                return;
+            }
             // Update initial plan data after successful save
             setInitialPlanData(prev => ({ ...prev, ...planUpdatePayload }));
         }
@@ -530,8 +561,7 @@ export function HourlyPlanConfiguration({
     } catch (err: any) {
         console.error('Error saving plan-wide configuration:', err);
         setSaveError(t('configuration.hourly.errors.failedToSavePlanWideConfiguration', {
-          defaultValue: 'Failed to save plan-wide configuration: {{message}}',
-          message: err.message || t('common.tryAgain', { defaultValue: 'Please try again.' }),
+          defaultValue: 'Failed to save plan-wide configuration. Please try again.',
         }));
     } finally {
         setSaving(false);
@@ -645,7 +675,7 @@ export function HourlyPlanConfiguration({
                                       })}
                                     </Label>
                                     <div className="relative">
-                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                                       <Input
                                         id="overtime-rate"
                                         type="text"

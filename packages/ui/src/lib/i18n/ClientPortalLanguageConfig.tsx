@@ -158,7 +158,7 @@ export function ClientPortalLanguageConfig({
                 key={locale}
                 className="flex items-center space-x-3"
               >
-                <div className="[&>div]:mb-0">
+                <div>
                   <Checkbox
                     id={`locale-${locale}`}
                     label={

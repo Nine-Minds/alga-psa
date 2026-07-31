@@ -356,6 +356,9 @@ async function handle(
     if (error instanceof AccessError) {
       return applyCorsHeaders(json(error.status, { error: error.message }), corsOrigin);
     }
+    if (error?.message === 'tenant_mismatch') {
+      return applyCorsHeaders(json(403, { error: 'tenant_mismatch' }), corsOrigin);
+    }
     if (error instanceof RunnerConfigError) {
       console.error('[ext-proxy] Runner configuration error:', error.message);
       return applyCorsHeaders(json(500, { error: 'Runner not configured' }), corsOrigin);

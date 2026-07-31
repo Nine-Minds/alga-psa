@@ -25,6 +25,11 @@ import {
   type InboundEmailRuleRecord,
 } from '../../../actions/email-actions/inboundEmailRulesActions';
 import { getEmailProviders } from '../../../actions/email-actions/emailProviderActions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 export interface InboundEmailRulesManagerProps {
   onRulesChange?: () => void;
@@ -40,6 +45,9 @@ export function InboundEmailRulesManager({ onRulesChange }: InboundEmailRulesMan
   const [editingRule, setEditingRule] = useState<InboundEmailRuleRecord | null>(null);
   const [busyRuleId, setBusyRuleId] = useState<string | null>(null);
 
+  const isReturnedActionError = (value: unknown) =>
+    isActionMessageError(value) || isActionPermissionError(value);
+
   useEffect(() => {
     loadRules();
     loadProviders();
@@ -50,9 +58,14 @@ export function InboundEmailRulesManager({ onRulesChange }: InboundEmailRulesMan
       setLoading(true);
       setError(null);
       const data = await getInboundEmailRules();
+      if (isReturnedActionError(data)) {
+        setError(getErrorMessage(data));
+        setRules([]);
+        return;
+      }
       setRules(data.rules ?? []);
     } catch (err: any) {
-      setError(err?.message ?? t('inboundRules.errors.load', { defaultValue: 'Failed to load inbound rules' }));
+      setError(getErrorMessage(err) ?? t('inboundRules.errors.load', { defaultValue: 'Failed to load inbound rules' }));
     } finally {
       setLoading(false);
     }
@@ -119,11 +132,16 @@ export function InboundEmailRulesManager({ onRulesChange }: InboundEmailRulesMan
   const handleToggleActive = async (rule: InboundEmailRuleRecord, isActive: boolean) => {
     try {
       setBusyRuleId(rule.id);
-      const { rule: updated } = await setInboundEmailRuleActive(rule.id, isActive);
+      const result = await setInboundEmailRuleActive(rule.id, isActive);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+      const { rule: updated } = result;
       setRules((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
       onRulesChange?.();
     } catch (err: any) {
-      setError(err?.message ?? t('inboundRules.errors.update', { defaultValue: 'Failed to update rule' }));
+      setError(getErrorMessage(err) ?? t('inboundRules.errors.update', { defaultValue: 'Failed to update rule' }));
     } finally {
       setBusyRuleId(null);
     }
@@ -133,11 +151,15 @@ export function InboundEmailRulesManager({ onRulesChange }: InboundEmailRulesMan
     try {
       setBusyRuleId(rule.id);
       setError(null);
-      await deleteInboundEmailRule(rule.id);
+      const result = await deleteInboundEmailRule(rule.id);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setRules((prev) => prev.filter((r) => r.id !== rule.id));
       onRulesChange?.();
     } catch (err: any) {
-      setError(err?.message ?? t('inboundRules.errors.delete', { defaultValue: 'Failed to delete rule' }));
+      setError(getErrorMessage(err) ?? t('inboundRules.errors.delete', { defaultValue: 'Failed to delete rule' }));
     } finally {
       setBusyRuleId(null);
     }
@@ -151,11 +173,17 @@ export function InboundEmailRulesManager({ onRulesChange }: InboundEmailRulesMan
     reordered.splice(target, 0, moved);
     setRules(reordered);
     try {
-      const { rules: persisted } = await reorderInboundEmailRules(reordered.map((r) => r.id));
+      const result = await reorderInboundEmailRules(reordered.map((r) => r.id));
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        await loadRules();
+        return;
+      }
+      const { rules: persisted } = result;
       setRules(persisted);
       onRulesChange?.();
     } catch (err: any) {
-      setError(err?.message ?? t('inboundRules.errors.reorder', { defaultValue: 'Failed to reorder rules' }));
+      setError(getErrorMessage(err) ?? t('inboundRules.errors.reorder', { defaultValue: 'Failed to reorder rules' }));
       await loadRules();
     }
   };

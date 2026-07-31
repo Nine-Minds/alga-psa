@@ -2,22 +2,9 @@
 
 // App shell: quick-create modal used in the MSP header.
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { QuickAddAsset } from '@alga-psa/assets/components/QuickAddAsset';
-import { QuickAddTicket } from '@alga-psa/tickets/components';
-import QuickAddClient from '@alga-psa/clients/components/clients/QuickAddClient';
-import QuickAddContact from '@alga-psa/clients/components/contacts/QuickAddContact';
-import ProjectQuickAdd from '@alga-psa/projects/components/ProjectQuickAdd';
-import { QuickAddProduct, QuickAddService } from '@alga-psa/billing/components';
-import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
-import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import { ITicket, IClient, IContact, IProject } from '@alga-psa/types';
-import { getAllClients } from '@alga-psa/clients/actions';
-import { getServiceTypesForSelection } from '@alga-psa/billing/actions';
-import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { buildCreateTicketHref } from '@alga-psa/tickets/lib/createTicketRoute';
 
 export type QuickCreateType = 'ticket' | 'client' | 'contact' | 'project' | 'asset' | 'service' | 'product' | null;
 
@@ -26,252 +13,28 @@ interface QuickCreateDialogProps {
   onClose: () => void;
 }
 
+const QUICK_CREATE_HREFS: Record<Exclude<QuickCreateType, null>, () => string> = {
+  ticket: () => buildCreateTicketHref(),
+  client: () => '/msp/create-client',
+  contact: () => '/msp/create-contact',
+  project: () => '/msp/create-project',
+  asset: () => '/msp/create-asset',
+  service: () => '/msp/create-service',
+  product: () => '/msp/create-product',
+};
+
 export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
-  const { t } = useTranslation('msp/core');
   const router = useRouter();
-  const [clients, setClients] = useState<IClient[]>([]);
-  const [isLoadingClients, setIsLoadingClients] = useState(false);
-  const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; is_standard?: boolean }[]>([]);
-  const [isLoadingServiceTypes, setIsLoadingServiceTypes] = useState(false);
 
-  // Load clients when needed for projects and contacts
+  // Quick creation is routed so heavy feature dialogs stay out of the app-shell graph.
+  // Soft navigation from /msp/* is intercepted by the @modal slot; hard loads render
+  // the matching full create page.
   useEffect(() => {
-    if ((type === 'project' || type === 'contact') && clients.length === 0) {
-      setIsLoadingClients(true);
-      getAllClients(false)
-        .then(setClients)
-        .catch((error) => {
-          handleError(
-            error,
-            t('quickCreate.errors.loadClients', { defaultValue: 'Failed to load clients' })
-          );
-        })
-        .finally(() => setIsLoadingClients(false));
-    }
-  }, [type, clients.length, t]);
+    if (!type) return;
 
-  // Load service types when needed for services
-  useEffect(() => {
-    if (type === 'service') {
-      setIsLoadingServiceTypes(true);
-      getServiceTypesForSelection()
-        .then(setServiceTypes)
-        .catch((error) => {
-          handleError(
-            error,
-            t('quickCreate.errors.loadServiceTypes', {
-              defaultValue: 'Failed to load service types',
-            })
-          );
-        })
-        .finally(() => setIsLoadingServiceTypes(false));
-    }
-  }, [type, t]);
-
-  const handleAssetAdded = () => {
-    toast.success(
-      t('quickCreate.success.asset', { defaultValue: 'Asset created successfully' })
-    );
+    router.push(QUICK_CREATE_HREFS[type]());
     onClose();
-    // Refresh the page to update any list that might be showing assets
-    router.refresh();
-  };
-
-  const handleTicketAdded = (ticket: ITicket) => {
-    toast.success(
-      t('quickCreate.success.ticket', {
-        defaultValue: 'Ticket #{{number}} created successfully',
-        number: ticket.ticket_number,
-      })
-    );
-    onClose();
-    // Refresh the page to update any list that might be showing tickets
-    router.refresh();
-  };
-
-  const handleClientAdded = (client: IClient) => {
-    toast.success(
-      t('quickCreate.success.client', {
-        defaultValue: 'Client "{{name}}" created successfully',
-        name: client.client_name,
-      })
-    );
-    onClose();
-    // Refresh the page to update any list that might be showing clients
-    router.refresh();
-  };
-
-  const handleContactAdded = (contact: IContact) => {
-    const contactName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'Contact';
-    toast.success(
-      t('quickCreate.success.contact', {
-        defaultValue: '{{name}} added successfully',
-        name: contactName,
-      })
-    );
-    onClose();
-    // Refresh the page to update any list that might be showing contacts
-    router.refresh();
-  };
-
-  const handleProjectAdded = (project: IProject) => {
-    toast.success(
-      t('quickCreate.success.project', {
-        defaultValue: 'Project "{{name}}" created successfully',
-        name: project.project_name,
-      })
-    );
-    onClose();
-    // Refresh the page to update any list that might be showing projects
-    router.refresh();
-  };
-
-  const handleServiceAdded = () => {
-    toast.success(
-      t('quickCreate.success.service', { defaultValue: 'Service created successfully' })
-    );
-    onClose();
-    // Refresh the page to update any list that might be showing services
-    router.refresh();
-  };
-
-  const handleProductAdded = () => {
-    toast.success(
-      t('quickCreate.success.product', { defaultValue: 'Product created successfully' })
-    );
-    onClose();
-    // Refresh the page to update any list that might be showing products
-    router.refresh();
-  };
-
-  const handleServiceTypesChange = () => {
-    // Refresh service types after inline create/update/delete
-    getServiceTypesForSelection()
-      .then(setServiceTypes)
-      .catch((error) => {
-        console.error('Failed to refresh service types:', error);
-      });
-  };
-
-  // Handle QuickAddAsset which uses a different dialog pattern
-  if (type === 'asset') {
-    return (
-      <QuickAddAsset
-        onAssetAdded={handleAssetAdded}
-        onClose={onClose}
-        defaultOpen={true}
-      />
-    );
-  }
-
-  // Handle QuickAddTicket
-  if (type === 'ticket') {
-    return (
-      <QuickAddTicket
-        open={true}
-        onOpenChange={(open) => {
-          if (!open) onClose();
-        }}
-        onTicketAdded={handleTicketAdded}
-      />
-    );
-  }
-
-  // Handle QuickAddClient
-  if (type === 'client') {
-    return (
-      <QuickAddClient
-        open={true}
-        onOpenChange={(open) => {
-          if (!open) onClose();
-        }}
-        onClientAdded={handleClientAdded}
-      />
-    );
-  }
-
-  // Handle QuickAddContact
-  if (type === 'contact') {
-    if (isLoadingClients) {
-      return (
-        <Dialog isOpen={true} onClose={onClose} title={t('quickCreate.dialogTitles.contact', { defaultValue: 'Add New Contact' })}>
-          <DialogContent className="max-w-2xl">
-            <div className="flex justify-center items-center p-8">
-              <LoadingIndicator />
-            </div>
-          </DialogContent>
-        </Dialog>
-      );
-    }
-
-    return (
-      <QuickAddContact
-        isOpen={true}
-        onClose={onClose}
-        onContactAdded={handleContactAdded}
-        clients={clients}
-      />
-    );
-  }
-
-  // Handle ProjectQuickAdd (has its own dialog wrapper)
-  if (type === 'project') {
-    if (isLoadingClients) {
-      return (
-        <Dialog isOpen={true} onClose={onClose} title={t('quickCreate.dialogTitles.project', { defaultValue: 'Add New Project' })}>
-          <DialogContent className="max-w-2xl">
-            <div className="flex justify-center items-center p-8">
-              <LoadingIndicator />
-            </div>
-          </DialogContent>
-        </Dialog>
-      );
-    }
-
-    return (
-      <ProjectQuickAdd
-        onClose={onClose}
-        onProjectAdded={handleProjectAdded}
-        clients={clients}
-      />
-    );
-  }
-
-  // Handle QuickAddService
-  if (type === 'service') {
-    if (isLoadingServiceTypes) {
-      return (
-        <Dialog isOpen={true} onClose={onClose} title={t('quickCreate.dialogTitles.service', { defaultValue: 'Add New Service' })}>
-          <DialogContent className="max-w-2xl">
-            <div className="flex justify-center items-center p-8">
-              <LoadingIndicator />
-            </div>
-          </DialogContent>
-        </Dialog>
-      );
-    }
-
-    return (
-      <QuickAddService
-        isOpen={true}
-        onClose={onClose}
-        onServiceAdded={handleServiceAdded}
-        allServiceTypes={serviceTypes}
-        onServiceTypesChange={handleServiceTypesChange}
-      />
-    );
-  }
-
-  // Handle QuickAddProduct
-  if (type === 'product') {
-    return (
-      <QuickAddProduct
-        isOpen={true}
-        onClose={onClose}
-        onProductAdded={handleProductAdded}
-      />
-    );
-  }
+  }, [type, router, onClose]);
 
   return null;
 }

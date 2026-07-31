@@ -23,12 +23,11 @@ import {
   getAllClientsPaginated,
   deleteClient,
   validateClientDeletion,
-  importClientsFromCSV,
   exportClientsToCSV,
   markClientInactiveWithContacts,
   markClientActiveWithContacts,
 } from '@alga-psa/clients/actions';
-import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
+import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
 import { TagFilter } from '@alga-psa/ui/components';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
@@ -44,7 +43,7 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import Drawer from '@alga-psa/ui/components/Drawer';
-import ClientDetails from './ClientDetails';
+import ClientQuickView from './ClientQuickView';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import toast from 'react-hot-toast';
 import { DeleteEntityDialog, handleError, useClientDrawer } from '@alga-psa/ui';
@@ -52,11 +51,19 @@ import { useTagPermissions } from '@alga-psa/tags/hooks';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const COMPANY_VIEW_MODE_SETTING = 'client_list_view_mode';
 const CLIENTS_GRID_PAGE_SIZE_SETTING = 'clients_grid_page_size';
 const CLIENTS_LIST_PAGE_SIZE_SETTING = 'clients_list_page_size';
 const CLIENTS_PRINT_PAGE_SIZE = 5000;
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const formatClientPrintAddress = (client: IClient): string => {
   return [
@@ -103,6 +110,7 @@ interface ClientResultsProps {
   searchTerm: string;
   filterStatus: 'all' | 'active' | 'inactive';
   clientTypeFilter: 'all' | 'company' | 'individual';
+  lifecycleFilter: 'all' | 'prospect' | 'active' | 'former';
   selectedTags: string[];
   viewMode: 'grid' | 'list';
   selectedClients: string[];
@@ -130,6 +138,7 @@ const ClientResults = memo(({
   searchTerm,
   filterStatus,
   clientTypeFilter,
+  lifecycleFilter,
   selectedTags,
   viewMode,
   selectedClients,
@@ -180,6 +189,7 @@ const ClientResults = memo(({
           statusFilter: filterStatus,
           searchTerm: searchTerm || undefined,
           clientTypeFilter,
+          lifecycleFilter,
           selectedTags,
           loadLogos: true,
           sortBy,
@@ -198,7 +208,7 @@ const ClientResults = memo(({
     };
 
     loadClients();
-  }, [currentPage, pageSize, filterStatus, searchTerm, clientTypeFilter, selectedTags, sortBy, sortDirection]);
+  }, [currentPage, pageSize, filterStatus, searchTerm, clientTypeFilter, lifecycleFilter, selectedTags, sortBy, sortDirection]);
 
   // Fetch tags when clients change
   useEffect(() => {
@@ -216,19 +226,27 @@ const ClientResults = memo(({
         ]);
 
         const newClientTags: Record<string, ITag[]> = {};
-        clientTags.forEach(tag => {
-          if (!newClientTags[tag.tagged_id]) {
-            newClientTags[tag.tagged_id] = [];
-          }
-          newClientTags[tag.tagged_id].push(tag);
-        });
+        if (isTagActionError(clientTags)) {
+          console.error('Error fetching client tags:', clientTags);
+        } else {
+          clientTags.forEach(tag => {
+            if (!newClientTags[tag.tagged_id]) {
+              newClientTags[tag.tagged_id] = [];
+            }
+            newClientTags[tag.tagged_id].push(tag);
+          });
+        }
 
         setLocalClientTags(newClientTags);
-        setAllUniqueTags(allTags);
+        const safeAllTags = isTagActionError(allTags) ? [] : allTags;
+        if (isTagActionError(allTags)) {
+          console.error('Error fetching all client tags:', allTags);
+        }
+        setAllUniqueTags(safeAllTags);
         
         // Notify parent component about loaded tags
         if (onClientTagsLoaded) {
-          onClientTagsLoaded(newClientTags, allTags);
+          onClientTagsLoaded(newClientTags, safeAllTags);
         }
       } catch (error) {
         console.error('Error fetching tags:', error);
@@ -338,6 +356,20 @@ const Clients: React.FC = () => {
   const searchParams = useSearchParams();
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // This list fetches its own data client-side, so router.refresh() (used by the global
+  // quick-create) won't reload it. Listen for the quick-create "created" event and re-fetch.
+  // Event name is mirrored in QuickCreateDialog.tsx.
+  useEffect(() => {
+    const onCreated = (event: Event) => {
+      const detail = (event as CustomEvent<{ entity?: string }>).detail;
+      if (detail?.entity === 'client') {
+        setRefreshKey((prev) => prev + 1);
+      }
+    };
+    window.addEventListener('alga:quick-create:created', onCreated);
+    return () => window.removeEventListener('alga:quick-create:created', onCreated);
+  }, []);
+
   useEffect(() => {
     if (searchParams) {
       const create = searchParams.get('create');
@@ -404,6 +436,7 @@ const Clients: React.FC = () => {
   const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [lifecycleFilter, setLifecycleFilter] = useState<'all' | 'prospect' | 'active' | 'former'>('active');
   const [isMultiDeleteDialogOpen, setIsMultiDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [multiDeleteError, setMultiDeleteError] = useState<string | null>(null);
@@ -440,15 +473,11 @@ const Clients: React.FC = () => {
   // For multi-delete functionality, we need to track clients
   
   const formatClientCountLabel = useCallback((count: number) => {
-    return count === 1
-      ? t('clientsPage.entities.client', { defaultValue: 'client' })
-      : t('clientsPage.entities.clients', { defaultValue: 'clients' });
+    return t('clientsPage.entities.client', { count, defaultValue_one: 'client', defaultValue_other: 'clients' });
   }, [t]);
 
   const formatContactCountLabel = useCallback((count: number) => {
-    return count === 1
-      ? t('clientsPage.entities.contact', { defaultValue: 'contact' })
-      : t('clientsPage.entities.contacts', { defaultValue: 'contacts' });
+    return t('clientsPage.entities.contact', { count, defaultValue_one: 'contact', defaultValue_other: 'contacts' });
   }, [t]);
 
   const formatSelectedSummary = useCallback((count: number) => {
@@ -559,9 +588,10 @@ const Clients: React.FC = () => {
       searchTerm !== '' || 
       filterStatus !== 'active' || 
       clientTypeFilter !== 'all' || 
+      lifecycleFilter !== 'active' ||
       selectedTags.length > 0;
     setIsFiltered(hasFilters);
-  }, [searchTerm, filterStatus, clientTypeFilter, selectedTags]);
+  }, [searchTerm, filterStatus, clientTypeFilter, lifecycleFilter, selectedTags]);
 
   // Tags will be loaded by ClientResults component
 
@@ -856,9 +886,8 @@ const Clients: React.FC = () => {
 
       if (failCount > 0) {
         toast.error(t('clientsPage.bulkInactiveFailed', {
-          defaultValue: '{{count}} {{clientsLabel}} could not be marked as inactive.',
+          defaultValue: '{{count}} clients could not be marked as inactive.',
           count: failCount,
-          clientsLabel: formatClientCountLabel(failCount),
         }));
       }
       if (successCount > 0) {
@@ -872,10 +901,8 @@ const Clients: React.FC = () => {
           }));
         } else {
           toast.success(t('clientsPage.bulkInactiveSuccess', {
-            defaultValue: '{{count}} {{clientsLabel}} {{verb}} been marked as inactive successfully.',
+            defaultValue: '{{count}} clients have been marked as inactive successfully.',
             count: successCount,
-            clientsLabel: formatClientCountLabel(successCount),
-            verb: successCount === 1 ? 'has' : 'have',
           }));
         }
       }
@@ -920,9 +947,8 @@ const Clients: React.FC = () => {
 
       if (failCount > 0) {
         toast.error(t('clientsPage.bulkReactivateFailed', {
-          defaultValue: '{{count}} {{clientsLabel}} could not be reactivated.',
+          defaultValue: '{{count}} clients could not be reactivated.',
           count: failCount,
-          clientsLabel: formatClientCountLabel(failCount),
         }));
       }
       if (successCount > 0) {
@@ -936,10 +962,8 @@ const Clients: React.FC = () => {
           }));
         } else {
           toast.success(t('clientsPage.bulkReactivateSuccess', {
-            defaultValue: '{{count}} {{clientsLabel}} {{verb}} been reactivated successfully.',
+            defaultValue: '{{count}} clients have been reactivated successfully.',
             count: successCount,
-            clientsLabel: formatClientCountLabel(successCount),
-            verb: successCount === 1 ? 'has' : 'have',
           }));
         }
       }
@@ -975,6 +999,7 @@ const Clients: React.FC = () => {
     setSearchTerm('');
     setFilterStatus('active');
     setClientTypeFilter('all');
+    setLifecycleFilter('active');
     setSelectedTags([]);
     setCurrentPage(1);
     setIsFiltered(false);
@@ -1035,10 +1060,8 @@ const Clients: React.FC = () => {
         setMultiDeleteError(null);
         setMultiDeleteResults(null);
         toast.success(t('clientsPage.bulkDeleteSuccess', {
-          defaultValue: '{{count}} {{clientsLabel}} {{verb}} been deleted successfully.',
+          defaultValue: '{{count}} clients have been deleted successfully.',
           count: successfulDeletes.length,
-          clientsLabel: formatClientCountLabel(successfulDeletes.length),
-          verb: successfulDeletes.length === 1 ? 'has' : 'have',
         }));
       } else {
         // Store structured results for better UI display
@@ -1097,10 +1120,8 @@ const Clients: React.FC = () => {
           }));
         } else {
           toast.success(t('clientsPage.bulkInactiveShortSuccess', {
-            defaultValue: '{{count}} {{clientsLabel}} {{verb}} been marked as inactive.',
+            defaultValue: '{{count}} clients have been marked as inactive.',
             count: successCount,
-            clientsLabel: formatClientCountLabel(successCount),
-            verb: successCount === 1 ? 'has' : 'have',
           }));
         }
       }
@@ -1139,6 +1160,10 @@ const Clients: React.FC = () => {
       }
       
       const csvData = await exportClientsToCSV(clientsToExport);
+      if (isReturnedActionError(csvData)) {
+        toast.error(getErrorMessage(csvData));
+        return;
+      }
       
       const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
       
@@ -1154,9 +1179,8 @@ const Clients: React.FC = () => {
       }
       
       toast.success(t('clientsPage.exportSuccess', {
-        defaultValue: 'Exported {{count}} {{clientsLabel}} to CSV',
+        defaultValue: 'Exported {{count}} clients to CSV',
         count: clientsToExport.length,
-        clientsLabel: formatClientCountLabel(clientsToExport.length),
       }));
     } catch (error) {
       console.error('Error exporting clients to CSV:', error);
@@ -1172,6 +1196,10 @@ const Clients: React.FC = () => {
         clientsToPrint.map((client) => client.client_id),
         'client'
       );
+      if (isTagActionError(tags)) {
+        console.error('Error hydrating print client tags:', tags);
+        return;
+      }
       const nextClientTags: Record<string, ITag[]> = {};
       tags.forEach((tag) => {
         if (!nextClientTags[tag.tagged_id]) {
@@ -1217,6 +1245,7 @@ const Clients: React.FC = () => {
       statusFilter: filterStatus,
       searchTerm,
       clientTypeFilter,
+      lifecycleFilter,
       selectedTags,
       loadLogos: false,
       sortBy,
@@ -1227,6 +1256,7 @@ const Clients: React.FC = () => {
     setPrintClients(response.clients);
   }, [
     clientTypeFilter,
+    lifecycleFilter,
     filterStatus,
     hydratePrintClientTags,
     loadedClients,
@@ -1316,14 +1346,10 @@ const Clients: React.FC = () => {
     onAfterPrint: () => setPrintClients([]),
   });
 
-  const handleImportComplete = async (clients: IClient[], updateExisting: boolean) => {
-    try {
-      await importClientsFromCSV(clients, updateExisting);
-      setIsImportDialogOpen(false);
-      router.refresh();
-    } catch (error) {
-      console.error('Error importing clients:', error);
-    }
+  const handleImportComplete = async () => {
+    setIsImportDialogOpen(false);
+    await refreshClients();
+    router.refresh();
   };
 
   if (viewMode === null || areClientPreferencesLoading) {
@@ -1466,6 +1492,25 @@ const Clients: React.FC = () => {
 
             <div className="w-48 shrink-0">
               <CustomSelect
+                id="lifecycle-filter"
+                value={lifecycleFilter}
+                onValueChange={(value) => {
+                  setLifecycleFilter(value as 'all' | 'prospect' | 'active' | 'former');
+                  setCurrentPage(1);
+                }}
+                options={[
+                  { value: 'active', label: t('clientLifecycle.active', { defaultValue: 'Active clients' }) },
+                  { value: 'prospect', label: t('clientLifecycle.prospect', { defaultValue: 'Prospects' }) },
+                  { value: 'former', label: t('clientLifecycle.former', { defaultValue: 'Former clients' }) },
+                  { value: 'all', label: t('clientLifecycle.all', { defaultValue: 'All lifecycle stages' }) }
+                ]}
+                placeholder={t('clientsPage.filterByLifecycle', { defaultValue: 'Filter by lifecycle' })}
+                label={t('clientsPage.lifecycleFilterLabel', { defaultValue: 'Lifecycle Filter' })}
+              />
+            </div>
+
+            <div className="w-48 shrink-0">
+              <CustomSelect
                 id="client-type-filter"
                 value={clientTypeFilter}
                 onValueChange={(value) => {
@@ -1511,7 +1556,7 @@ const Clients: React.FC = () => {
 
       {/* Delete */}
       <div className="flex items-center gap-8 mb-6 ms-4">
-        <div className="[&>div]:mb-0 [&>div]:flex [&>div]:items-center">
+        <div className="[&>div]:flex [&>div]:items-center">
           <Checkbox
             id="select-all-clients"
             checked={selectedClients.length > 0}
@@ -1590,6 +1635,7 @@ const Clients: React.FC = () => {
         searchTerm={searchTerm}
         filterStatus={filterStatus}
         clientTypeFilter={clientTypeFilter}
+        lifecycleFilter={lifecycleFilter}
         selectedTags={selectedTags}
         viewMode={viewMode!}
         selectedClients={selectedClients}
@@ -1647,10 +1693,8 @@ const Clients: React.FC = () => {
                   <Alert variant="success">
                     <AlertDescription>
                       {t('clientsPage.multiDeleteSuccessSummary', {
-                        defaultValue: '{{count}} {{clientsLabel}} {{verb}} successfully deleted.',
+                        defaultValue: '{{count}} clients were successfully deleted.',
                         count: multiDeleteResults.successCount,
-                        clientsLabel: formatClientCountLabel(multiDeleteResults.successCount),
-                        verb: multiDeleteResults.successCount === 1 ? 'was' : 'were',
                       })}
                     </AlertDescription>
                   </Alert>
@@ -1663,9 +1707,8 @@ const Clients: React.FC = () => {
                       <AlertDescription>
                         <p className="font-semibold mb-2">
                           {t('clientsPage.multiDeleteFailedSummary', {
-                            defaultValue: '{{count}} {{clientsLabel}} could not be deleted',
+                            defaultValue: '{{count}} clients could not be deleted',
                             count: multiDeleteResults.failedClients.length,
-                            clientsLabel: formatClientCountLabel(multiDeleteResults.failedClients.length),
                           })}
                         </p>
                         <p className="text-sm">
@@ -1712,9 +1755,8 @@ const Clients: React.FC = () => {
             ) : (
               <p className="text-gray-600">
                 {t('clientsPage.deleteSelectedPrompt', {
-                  defaultValue: 'Are you sure you want to delete {{count}} selected {{clientsLabel}}? This action cannot be undone.',
+                  defaultValue: 'Are you sure you want to delete {{count}} selected clients? This action cannot be undone.',
                   count: selectedClients.length,
-                  clientsLabel: formatClientCountLabel(selectedClients.length),
                 })}
               </p>
             )}
@@ -1780,7 +1822,7 @@ const Clients: React.FC = () => {
       <ClientsImportDialog
         isOpen={isImportDialogOpen}
         onClose={() => setIsImportDialogOpen(false)}
-        onImportComplete={(clients, updateExisting) => void handleImportComplete(clients, updateExisting)}
+        onImportComplete={() => void handleImportComplete()}
       />
       
       {/* Quick View Drawer */}
@@ -1795,7 +1837,7 @@ const Clients: React.FC = () => {
         }}
       >
         {quickViewClient && (
-          <ClientDetails
+          <ClientQuickView
             client={quickViewClient}
             isInDrawer={true}
             quickView={true}

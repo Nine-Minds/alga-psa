@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { getServiceRequestDefinitionEditorData } from '../../lib/service-requests/definitionEditor';
 import {
@@ -17,9 +18,23 @@ describe('service request enterprise authoring panel gating', () => {
     return Object.prototype.hasOwnProperty.call(columns, columnName);
   }
 
+  function tenantTable(tenant: string, table: string) {
+    return tenantDb(db, tenant).table(table);
+  }
+
+  function tenantRows() {
+    return tenantDb(db, '__test_tenant_fixture__')
+      .unscoped('tenants', 'test fixture creates and removes tenant rows');
+  }
+
+  function schemaTable(table: string) {
+    return tenantDb(db, '__test_schema__')
+      .unscoped(table, 'columnInfo reads schema metadata, not tenant rows');
+  }
+
   beforeAll(async () => {
     db = await createTestDbConnection({ runSeeds: false });
-    tenantColumns = await db('tenants').columnInfo();
+    tenantColumns = await schemaTable('tenants').columnInfo();
   });
 
   afterAll(async () => {
@@ -36,7 +51,7 @@ describe('service request enterprise authoring panel gating', () => {
     const tenant = uuidv4();
     const definitionId = uuidv4();
 
-    await db('tenants').insert({
+    await tenantRows().insert({
       tenant,
       ...(hasColumn(tenantColumns, 'company_name')
         ? { company_name: `Tenant ${tenant.slice(0, 8)}` }
@@ -46,7 +61,7 @@ describe('service request enterprise authoring panel gating', () => {
       ...(hasColumn(tenantColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
     });
 
-    await db('service_request_definitions').insert({
+    await tenantTable(tenant, 'service_request_definitions').insert({
       tenant,
       definition_id: definitionId,
       name: 'EE Authoring Panel Request',
@@ -83,7 +98,7 @@ describe('service request enterprise authoring panel gating', () => {
     const tenant = uuidv4();
     const definitionId = uuidv4();
 
-    await db('tenants').insert({
+    await tenantRows().insert({
       tenant,
       ...(hasColumn(tenantColumns, 'company_name')
         ? { company_name: `Tenant ${tenant.slice(0, 8)}` }
@@ -93,7 +108,7 @@ describe('service request enterprise authoring panel gating', () => {
       ...(hasColumn(tenantColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
     });
 
-    await db('service_request_definitions').insert({
+    await tenantTable(tenant, 'service_request_definitions').insert({
       tenant,
       definition_id: definitionId,
       name: 'CE Authoring Panel Request',

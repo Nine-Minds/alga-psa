@@ -2,7 +2,26 @@
 import * as React from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// useFormatters requires an I18nProvider; these tests render the panel
+// standalone, so substitute locale-stable formatters.
+vi.mock('@alga-psa/ui/lib/i18n/client', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    useFormatters: () => ({
+      formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) =>
+        new Intl.DateTimeFormat('en-US', options).format(typeof date === 'string' ? new Date(date) : date),
+      formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
+        new Intl.NumberFormat('en-US', options).format(value),
+      formatCurrency: (value: number, currency: string, options?: Intl.NumberFormatOptions) =>
+        new Intl.NumberFormat('en-US', { style: 'currency', currency, ...options }).format(value),
+      formatRelativeTime: (date: Date | string) => String(date),
+    }),
+  };
+});
+
 import { TimeEntryChangeRequestPanel } from '../src/components/time-management/time-entry/time-sheet/TimeEntryChangeRequestFeedback';
 
 describe('TimeEntryChangeRequestPanel', () => {

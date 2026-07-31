@@ -2,9 +2,60 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
+import path from 'node:path';
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
+
+// The sidebar Chat references i18n keys (chat.inputPlaceholder, chat.send,
+// chat.function.approve, ...) without a defaultValue. The shared setup mock would
+// surface raw keys, so resolve them against the real English chat catalog via a
+// stable singleton `t` (built once at module load to stay referentially stable).
+const chatCatalog = JSON.parse(
+  readFileSync(
+    path.resolve(__dirname, '../../../public/locales/en/msp/chat.json'),
+    'utf8',
+  ),
+) as Record<string, unknown>;
+
+const resolveCatalogKey = (key: string): string | undefined => {
+  const value = key.split('.').reduce<unknown>((acc, segment) => {
+    if (acc && typeof acc === 'object') {
+      return (acc as Record<string, unknown>)[segment];
+    }
+    return undefined;
+  }, chatCatalog);
+  return typeof value === 'string' ? value : undefined;
+};
+
+const stableT = (
+  key: string,
+  options?: string | { defaultValue?: string; [k: string]: unknown },
+) => {
+  if (typeof options === 'string') {
+    return options;
+  }
+  const template = resolveCatalogKey(key) ?? options?.defaultValue ?? key;
+  return template.replace(/\{\{(\w+)\}\}/g, (match: string, name: string) => {
+    const v = options?.[name];
+    return v === undefined ? match : String(v);
+  });
+};
+
+const stableI18n = { language: 'en' };
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({ t: stableT, i18n: stableI18n }),
+}));
+
+vi.mock('@product/chat/context', () => ({
+  useAIChatContext: () => ({
+    pathname: '/msp',
+    screen: { key: 'msp', label: 'MSP Portal' },
+  }),
+  AIChatContextProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
 
 import RightSidebar from '@ee/components/layout/RightSidebar';
 import {
@@ -14,17 +65,32 @@ import {
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
+// RightSidebar gates rendering on the AI Assistant add-on, resolved from the
+// session-backed TierContext. Stub the hook so the chat surface renders without
+// wiring up a full NextAuth session.
+vi.mock('server/src/context/TierContext', () => ({
+  useTier: () => ({ hasAddOn: () => true }),
+  TierProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 vi.mock('next/image', () => ({
   __esModule: true,
   default: () => null,
 }));
 
-vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  __esModule: true,
-  Dialog: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
+vi.mock('@alga-psa/ui/components/Dialog', () => {
+  const passthrough = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
+  return {
+    __esModule: true,
+    Dialog: passthrough,
+    DialogContent: passthrough,
+    DialogFooter: passthrough,
+    DialogHeader: passthrough,
+    DialogTitle: passthrough,
+    DialogDescription: passthrough,
+    DialogTrigger: passthrough,
+  };
+});
 
 vi.mock('@alga-psa/ui/components/Button', () => ({
   __esModule: true,
@@ -77,6 +143,12 @@ const createControlledSseResponse = () => {
     },
   };
 };
+
+// jsdom does not implement Element.scrollTo; the Chat auto-scrolls on new
+// messages, so provide a no-op.
+if (!Element.prototype.scrollTo) {
+  Element.prototype.scrollTo = function scrollTo() {};
+}
 
 describe('RightSidebar (streaming)', () => {
   beforeEach(() => {
@@ -134,7 +206,7 @@ describe('RightSidebar (streaming)', () => {
       />,
     );
 
-    fireEvent.change(await screen.findByPlaceholderText('Send a message'), {
+    fireEvent.change(await screen.findByPlaceholderText('Send a message', {}, { timeout: 5000 }), {
       target: { value: 'Ping' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'SEND' }));
@@ -217,7 +289,7 @@ describe('RightSidebar (streaming)', () => {
       />,
     );
 
-    fireEvent.change(await screen.findByPlaceholderText('Send a message'), {
+    fireEvent.change(await screen.findByPlaceholderText('Send a message', {}, { timeout: 5000 }), {
       target: { value: 'Ping' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'SEND' }));

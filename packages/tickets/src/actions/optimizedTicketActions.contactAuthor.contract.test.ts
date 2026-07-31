@@ -11,7 +11,7 @@ describe('MSP consolidated ticket data contact authorship contract', () => {
   it('T023: returns comments path with contact_id support in consolidated payload assembly', () => {
     const source = readOptimizedTicketActionsSource();
 
-    expect(source).toContain("trx('comments')");
+    expect(source).toContain("tenantScopedTable(trx, 'comments', tenant)");
     expect(source).toContain('comments,');
     expect(source).toContain('comment.contact_id');
   });
@@ -23,5 +23,15 @@ describe('MSP consolidated ticket data contact authorship contract', () => {
     expect(source).toContain('commentContacts.reduce');
     expect(source).toContain('full_name: contact.full_name');
     expect(source).toContain('contactMap,');
+  });
+});
+
+describe('MSP consolidated ticket data category scoping contract', () => {
+  it('T025: scopes hydrated ticket categories to the ticket board before client refresh', () => {
+    const source = readOptimizedTicketActionsSource();
+
+    expect(source).toContain("getTicketCategoriesByBoard so the hydrated dropdown doesn't briefly");
+    expect(source).toContain("where({ board_id: ticket.board_id })");
+    expect(source).toContain("where('is_from_itil_standard', true)");
   });
 });

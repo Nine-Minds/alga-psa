@@ -9,7 +9,6 @@
  * - Financial reporting and analytics
  * - Payment method management
  * - Transaction history and auditing
- * - Financial reconciliation processes
  * - Bulk financial operations
  *
  * Financial analytics intentionally stay on invoice / transaction document
@@ -17,7 +16,7 @@
  * that are explicitly service-period aware.
  */
 
-import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { hasPermission } from '../../auth/rbac';
@@ -25,7 +24,30 @@ import { auditLog } from '../../logging/auditLog';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
-import { runScheduledCreditBalanceValidation } from '@alga-psa/billing/actions/creditReconciliationActions';
+import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
+import {
+  BadRequestError,
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  UnauthorizedError,
+} from '../middleware/apiMiddleware';
+
+function throwTaxCalculationApiError(error: unknown): never {
+  if (!(error instanceof Error)) {
+    throw error;
+  }
+
+  if (/^Client .+ not found in tenant .+$/.test(error.message)) {
+    throw new NotFoundError('Client not found');
+  }
+
+  if (/^No active tax rate\(s\) found for region .+ on date .+$/.test(error.message)) {
+    throw new NotFoundError(error.message);
+  }
+
+  throw error;
+}
 
 // Import types from schemas and interfaces
 import {
@@ -54,6 +76,7 @@ import {
   CreatePaymentMethodRequest,
   UpdatePaymentMethodRequest,
   PaymentMethodResponse,
+  PaymentMethodListQuery,
   
   // Contract Line types
   CreateContractLineRequest,
@@ -64,10 +87,6 @@ import {
   CreateTaxRateRequest,
   UpdateTaxRateRequest,
   TaxRateResponse,
-  
-  // Reconciliation types
-  CreateCreditReconciliationReportRequest,
-  CreditReconciliationReportResponse,
   
   // Reporting types
   AccountBalanceReport,
@@ -86,8 +105,7 @@ import {
   
   // Enums
   TransactionType,
-  InvoiceStatus,
-  ReconciliationStatus
+  InvoiceStatus
 } from '../schemas/financialSchemas';
 
 import {
@@ -96,7 +114,6 @@ import {
   PaymentMethod,
   IContractLine,
   ITaxRate,
-  ICreditReconciliationReport,
   IDefaultBillingSettings,
   IClientContractLineSettings
 } from '../../../interfaces/billing.interfaces';
@@ -262,11 +279,11 @@ export class FinancialService extends BaseService<ITransaction> {
     context: ServiceContext
   ): Promise<void> {
     if (!context.user) {
-      throw new Error('Authentication required');
+      throw new UnauthorizedError('Authentication required');
     }
 
     if (!await hasPermission(context.user, resource, operation)) {
-      throw new Error(`Permission denied: Cannot ${operation} ${resource}`);
+      throw new ForbiddenError(`Permission denied: Cannot ${operation} ${resource}`);
     }
   }
 
@@ -287,8 +304,8 @@ export class FinancialService extends BaseService<ITransaction> {
     
     return withTransaction(knex, async (trx) => {
       // Calculate balance after transaction
-      const lastTransaction = await trx('transactions')
-        .where({ client_id: data.client_id, tenant: context.tenant })
+      const lastTransaction = await tenantDb(trx, context.tenant).table('transactions')
+        .where('client_id', data.client_id)
         .orderBy('created_at', 'desc')
         .first();
       
@@ -302,19 +319,11 @@ export class FinancialService extends BaseService<ITransaction> {
         created_at: new Date().toISOString()
       };
 
-      const [transaction] = await trx('transactions')
+      const [transaction] = await tenantDb(trx, context.tenant).table('transactions')
         .insert(transactionData)
         .returning('*');
 
-      // Update client credit balance if this is a credit-related transaction
-      if (['credit_issuance', 'credit_application', 'credit_adjustment'].includes(data.type)) {
-        await trx('clients')
-          .where({ client_id: data.client_id, tenant: context.tenant })
-          .update({
-            credit_balance: balanceAfter,
-            updated_at: new Date().toISOString()
-          });
-      }
+      // Client credit balance is derived from credit_tracking; nothing to sync.
 
       // Audit log
       await auditLog(trx, {
@@ -344,11 +353,8 @@ export class FinancialService extends BaseService<ITransaction> {
     
     const { knex } = await this.getKnex();
     
-    const transaction = await knex('transactions')
-      .where({
-        transaction_id: transactionId,
-        tenant: context.tenant
-      })
+    const transaction = await tenantDb(knex, context.tenant).table('transactions')
+      .where('transaction_id', transactionId)
       .first();
 
     if (!transaction) return null;
@@ -384,13 +390,12 @@ export class FinancialService extends BaseService<ITransaction> {
       order = 'desc'
     } = query;
 
-    let dataQuery = knex('transactions as t')
-      .leftJoin('clients as c', 't.client_id', 'c.client_id')
-      .leftJoin('invoices as i', 't.invoice_id', 'i.invoice_id')
-      .where('t.tenant', context.tenant);
+    const scopedDb = tenantDb(knex, context.tenant);
+    let dataQuery = scopedDb.table('transactions as t');
+    dataQuery = scopedDb.tenantJoin(dataQuery, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
+    dataQuery = scopedDb.tenantJoin(dataQuery, 'invoices as i', 't.invoice_id', 'i.invoice_id', { type: 'left' });
 
-    let countQuery = knex('transactions')
-      .where('tenant', context.tenant);
+    let countQuery = scopedDb.table('transactions');
 
     // Apply filters
     if (client_id) {
@@ -453,7 +458,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
     const [transactions, [{ count }]] = await Promise.all([
       dataQuery,
-      countQuery.count('* as count')
+      countQuery.count('* as count') as unknown as Promise<Array<{ count: string }>>
     ]);
 
     const transactionsWithLinks = transactions.map(transaction => ({
@@ -467,12 +472,140 @@ export class FinancialService extends BaseService<ITransaction> {
     };
   }
 
+  /**
+   * List invoices for financial operations.
+   */
+  async listInvoices(
+    query: InvoiceListQuery,
+    context: ServiceContext
+  ): Promise<ListResult<FinancialResponse<InvoiceResponse>>> {
+    const { knex } = await this.getKnex();
+
+    const {
+      page = 1,
+      limit = 25,
+      client_id,
+      status,
+      billing_cycle_id,
+      due_date_from,
+      due_date_to,
+      amount_min,
+      amount_max,
+      is_manual,
+      has_credit_applied,
+      search,
+      sort = 'created_at',
+      order = 'desc',
+    } = query;
+
+    const sortableFields = new Set([
+      'created_at',
+      'updated_at',
+      'invoice_number',
+      'invoice_date',
+      'due_date',
+      'total_amount',
+      'status',
+    ]);
+    const sortField = sortableFields.has(String(sort)) ? String(sort) : 'created_at';
+
+    const scopedDb = tenantDb(knex, context.tenant);
+    let dataQuery = scopedDb.table('invoices as i');
+    dataQuery = scopedDb.tenantJoin(dataQuery, 'clients as c', 'i.client_id', 'c.client_id', { type: 'left' });
+
+    let countQuery = scopedDb.table('invoices as i');
+
+    if (client_id) {
+      dataQuery = dataQuery.where('i.client_id', client_id);
+      countQuery = countQuery.where('i.client_id', client_id);
+    }
+
+    if (status) {
+      dataQuery = dataQuery.where('i.status', status);
+      countQuery = countQuery.where('i.status', status);
+    }
+
+    if (billing_cycle_id) {
+      dataQuery = dataQuery.where('i.billing_cycle_id', billing_cycle_id);
+      countQuery = countQuery.where('i.billing_cycle_id', billing_cycle_id);
+    }
+
+    if (due_date_from) {
+      dataQuery = dataQuery.where('i.due_date', '>=', due_date_from);
+      countQuery = countQuery.where('i.due_date', '>=', due_date_from);
+    }
+
+    if (due_date_to) {
+      dataQuery = dataQuery.where('i.due_date', '<=', due_date_to);
+      countQuery = countQuery.where('i.due_date', '<=', due_date_to);
+    }
+
+    if (amount_min !== undefined) {
+      dataQuery = dataQuery.where('i.total_amount', '>=', amount_min);
+      countQuery = countQuery.where('i.total_amount', '>=', amount_min);
+    }
+
+    if (amount_max !== undefined) {
+      dataQuery = dataQuery.where('i.total_amount', '<=', amount_max);
+      countQuery = countQuery.where('i.total_amount', '<=', amount_max);
+    }
+
+    if (is_manual !== undefined) {
+      dataQuery = dataQuery.where('i.is_manual', is_manual);
+      countQuery = countQuery.where('i.is_manual', is_manual);
+    }
+
+    if (has_credit_applied !== undefined) {
+      if (has_credit_applied) {
+        dataQuery = dataQuery.where('i.credit_applied', '>', 0);
+        countQuery = countQuery.where('i.credit_applied', '>', 0);
+      } else {
+        dataQuery = dataQuery.where(builder => {
+          builder.whereNull('i.credit_applied').orWhere('i.credit_applied', 0);
+        });
+        countQuery = countQuery.where(builder => {
+          builder.whereNull('i.credit_applied').orWhere('i.credit_applied', 0);
+        });
+      }
+    }
+
+    if (search) {
+      dataQuery = dataQuery.where(builder => {
+        builder.whereILike('i.invoice_number', `%${search}%`)
+          .orWhereILike('c.client_name', `%${search}%`);
+      });
+      countQuery = countQuery.whereILike('i.invoice_number', `%${search}%`);
+    }
+
+    const [invoices, [{ count }]] = await Promise.all([
+      dataQuery
+        .select('i.*', 'c.client_name')
+        .orderBy(`i.${sortField}`, order)
+        .limit(limit)
+        .offset((page - 1) * limit),
+      countQuery.count('* as count') as unknown as Promise<Array<{ count: string }>>,
+    ]);
+
+    return {
+      data: invoices.map(invoice => ({
+        data: invoice,
+        links: this.generateHATEOASLinks('invoices', invoice.invoice_id, context),
+      })),
+      total: parseInt(count as string, 10),
+    };
+  }
+
   // ============================================================================
   // CREDIT MANAGEMENT
   // ============================================================================
 
   /**
-   * Apply credit to an invoice using existing credit actions
+   * Apply credit to an invoice.
+   *
+   * Delegates to the canonical apply-credit engine
+   * (creditActions.applyCreditToInvoiceInternal) so this REST path, the
+   * invoice REST path, and the UI server action produce identical ledger
+   * state for the same input.
    */
   async applyCreditToInvoice(
     request: ApplyCreditToInvoiceRequest,
@@ -481,150 +614,41 @@ export class FinancialService extends BaseService<ITransaction> {
     await this.validatePermissions('update', 'credit', context);
 
     const { knex } = await this.getKnex();
-    const tenant = context.tenant;
 
-    return withTransaction(knex, async (trx) => {
-      // Get the invoice and its currency
-      const invoice = await trx('invoices')
-        .where({ invoice_id: request.invoice_id, tenant })
-        .select('credit_applied', 'currency_code', 'subtotal', 'tax', 'total_amount')
-        .first();
+    // Verify the invoice exists up front so the REST contract still 404s.
+    const invoice = await tenantDb(knex, context.tenant).table('invoices')
+      .where('invoice_id', request.invoice_id)
+      .select('invoice_id')
+      .first();
+    if (!invoice) {
+      throw new NotFoundError(`Invoice ${request.invoice_id} not found`);
+    }
 
-      if (!invoice) {
-        throw new Error(`Invoice ${request.invoice_id} not found`);
-      }
+    const { appliedAmount } = await applyCreditToInvoiceInternal(
+      context.tenant,
+      context.userId,
+      request.client_id,
+      request.invoice_id,
+      request.requested_amount
+    );
 
-      const invoiceCurrency = invoice.currency_code || 'USD';
-
-      // Check already-applied credit
-      const existingAllocations = await trx('credit_allocations')
-        .where({ invoice_id: request.invoice_id, tenant })
-        .sum('amount as total_applied')
-        .first();
-      const alreadyApplied = Number(existingAllocations?.total_applied || 0);
-
-      const invoiceFullAmount = Number(invoice.subtotal) + Number(invoice.tax);
-      const maxAdditional = Math.max(0, invoiceFullAmount - alreadyApplied);
-      let requestedAmount = Math.min(request.requested_amount, maxAdditional);
-
-      if (requestedAmount <= 0) {
-        return {
-          data: { success: true, appliedAmount: 0 },
-          links: []
-        };
-      }
-
-      // Get client credit balance (lock row to prevent concurrent over-application)
-      const [client] = await trx('clients')
-        .where({ client_id: request.client_id, tenant })
-        .select('credit_balance')
-        .forUpdate();
-      const availableCredit = client.credit_balance || 0;
-
-      if (availableCredit <= 0) {
-        return { data: { success: true, appliedAmount: 0 }, links: [] };
-      }
-
-      // Get active credit entries in the same currency (FIFO by expiration, locked for update)
-      const now = new Date().toISOString();
-      const creditEntries = await trx('credit_tracking')
-        .where({ client_id: request.client_id, tenant, is_expired: false, currency_code: invoiceCurrency })
-        .where(function() {
-          this.whereNull('expiration_date').orWhere('expiration_date', '>', now);
-        })
-        .where('remaining_amount', '>', 0)
-        .orderBy([
-          { column: 'expiration_date', order: 'asc', nulls: 'last' },
-          { column: 'created_at', order: 'asc' }
-        ])
-        .forUpdate();
-
-      if (creditEntries.length === 0) {
-        return { data: { success: true, appliedAmount: 0 }, links: [] };
-      }
-
-      let remainingRequested = requestedAmount;
-      let totalApplied = 0;
-
-      for (const credit of creditEntries) {
-        if (remainingRequested <= 0) break;
-        const applyAmount = Math.min(remainingRequested, Number(credit.remaining_amount));
-        if (applyAmount <= 0) continue;
-
-        await trx('credit_tracking')
-          .where({ credit_id: credit.credit_id, tenant })
-          .update({ remaining_amount: Number(credit.remaining_amount) - applyAmount, updated_at: now });
-
-        totalApplied += applyAmount;
-        remainingRequested -= applyAmount;
-      }
-
-      if (totalApplied <= 0) {
-        return { data: { success: true, appliedAmount: 0 }, links: [] };
-      }
-
-      const newBalance = availableCredit - totalApplied;
-
-      // Create credit application transaction
-      const [creditTransaction] = await trx('transactions').insert({
-        transaction_id: uuidv4(),
-        client_id: request.client_id,
-        invoice_id: request.invoice_id,
-        amount: -totalApplied,
-        type: 'credit_application',
-        status: 'completed',
-        description: `Applied credit to invoice ${request.invoice_id}`,
-        created_at: now,
-        balance_after: newBalance,
-        tenant,
-        currency_code: invoiceCurrency
-      }).returning('*');
-
-      // Create credit allocation record
-      await trx('credit_allocations').insert({
-        allocation_id: uuidv4(),
-        transaction_id: creditTransaction.transaction_id,
-        invoice_id: request.invoice_id,
-        amount: totalApplied,
-        created_at: now,
-        tenant
-      });
-
-      // Update invoice (read-then-update to avoid Citus-unsafe SET col = col +/- val)
-      const currentInvoice = await trx('invoices')
-        .where({ invoice_id: request.invoice_id, tenant })
-        .select('credit_applied', 'total_amount')
-        .forUpdate()
-        .first();
-      await trx('invoices')
-        .where({ invoice_id: request.invoice_id, tenant })
-        .update({
-          credit_applied: Number(currentInvoice.credit_applied || 0) + totalApplied,
-        });
-
-      // Update client balance
-      await trx('clients')
-        .where({ client_id: request.client_id, tenant })
-        .update({ credit_balance: newBalance, updated_at: now });
-
-      return {
-        data: { success: true, appliedAmount: totalApplied },
-        links: [
-          {
-            rel: 'invoice',
-            href: `/api/v1/financial/invoices/${request.invoice_id}`,
-            method: 'GET',
-            description: 'View updated invoice'
-          },
-          {
-            rel: 'client-credits',
-            href: `/api/v1/financial/credits?client_id=${request.client_id}`,
-            method: 'GET',
-            description: 'View client credits'
-          }
-        ]
-      };
-    });
+    return {
+      data: { success: true, appliedAmount },
+      links: [
+        {
+          rel: 'invoice',
+          href: `/api/v1/financial/invoices/${request.invoice_id}`,
+          method: 'GET',
+          description: 'View updated invoice'
+        },
+        {
+          rel: 'client-credits',
+          href: `/api/v1/financial/credits?client_id=${request.client_id}`,
+          method: 'GET',
+          description: 'View client credits'
+        }
+      ]
+    };
   }
 
   /**
@@ -640,53 +664,26 @@ export class FinancialService extends BaseService<ITransaction> {
     const tenant = context.tenant;
 
     // Verify client exists
-    const client = await knex('clients')
-      .where({ client_id: request.client_id, tenant })
+    const client = await tenantDb(knex, tenant).table('clients')
+      .where('client_id', request.client_id)
       .first();
     if (!client) {
-      throw new Error('Client not found');
+      throw new NotFoundError('Client not found');
     }
 
     const createdInvoice = await withTransaction(knex, async (trx) => {
       const now = new Date().toISOString();
       const clientCurrency = client.default_currency_code || 'USD';
 
-      // Determine credit expiration settings
-      const clientSettings = await trx('client_billing_settings')
-        .where({ client_id: request.client_id, tenant })
-        .first();
-      const defaultSettings = await trx('default_billing_settings')
-        .where({ tenant })
-        .first();
-
-      let isCreditExpirationEnabled = true;
-      if (clientSettings?.enable_credit_expiration !== undefined) {
-        isCreditExpirationEnabled = clientSettings.enable_credit_expiration;
-      } else if (defaultSettings?.enable_credit_expiration !== undefined) {
-        isCreditExpirationEnabled = defaultSettings.enable_credit_expiration;
-      }
-
-      let expirationDays: number | undefined;
-      if (clientSettings?.credit_expiration_days !== undefined) {
-        expirationDays = clientSettings.credit_expiration_days;
-      } else if (defaultSettings?.credit_expiration_days !== undefined) {
-        expirationDays = defaultSettings.credit_expiration_days;
-      }
-
-      let expirationDate: string | undefined = request.manual_expiration_date;
-      if (isCreditExpirationEnabled && !expirationDate && expirationDays && expirationDays > 0) {
-        const expDate = new Date();
-        expDate.setDate(expDate.getDate() + expirationDays);
-        expirationDate = expDate.toISOString();
-      } else if (!isCreditExpirationEnabled) {
-        expirationDate = undefined;
-      }
-
       // Generate invoice number
       const invoiceNumber = await SharedNumberingService.getNextNumber('INVOICE', { knex: trx, tenant });
 
-      // Create prepayment invoice
-      const [invoice] = await trx('invoices')
+      // Create the prepayment invoice. No credit is issued here: the
+      // credit_issuance transaction and credit_tracking entry are created at
+      // finalization, so a draft prepayment grants nothing. Only a manually
+      // chosen expiration is stamped on the invoice; when null, finalization
+      // resolves the client/default settings at issue time.
+      const [invoice] = await tenantDb(trx, tenant).table('invoices')
         .insert({
           client_id: request.client_id,
           tenant,
@@ -702,50 +699,13 @@ export class FinancialService extends BaseService<ITransaction> {
           billing_period_start: now,
           billing_period_end: now,
           credit_applied: 0,
-          currency_code: clientCurrency
+          currency_code: clientCurrency,
+          is_prepayment: true,
+          credit_expiration_date: request.manual_expiration_date
+            ? new Date(request.manual_expiration_date).toISOString()
+            : null
         })
         .returning('*');
-
-      // Get current balance
-      const lastTx = await trx('transactions')
-        .where({ client_id: request.client_id, tenant })
-        .orderBy('created_at', 'desc')
-        .first();
-      const currentBalance = lastTx?.balance_after || 0;
-      const newBalance = currentBalance + request.amount;
-
-      // Create credit issuance transaction
-      const transactionId = uuidv4();
-      await trx('transactions').insert({
-        transaction_id: transactionId,
-        client_id: request.client_id,
-        invoice_id: invoice.invoice_id,
-        amount: request.amount,
-        type: 'credit_issuance',
-        status: 'completed',
-        description: 'Credit issued from prepayment',
-        created_at: now,
-        balance_after: newBalance,
-        tenant,
-        expiration_date: expirationDate,
-        currency_code: clientCurrency
-      });
-
-      // Create credit tracking entry
-      const creditId = uuidv4();
-      await trx('credit_tracking').insert({
-        credit_id: creditId,
-        tenant,
-        client_id: request.client_id,
-        transaction_id: transactionId,
-        amount: request.amount,
-        remaining_amount: request.amount,
-        created_at: now,
-        expiration_date: expirationDate,
-        is_expired: false,
-        updated_at: now,
-        currency_code: clientCurrency
-      });
 
       return invoice;
     });
@@ -769,43 +729,43 @@ export class FinancialService extends BaseService<ITransaction> {
     const tenant = context.tenant;
 
     if (request.amount <= 0) {
-      throw new Error('Transfer amount must be greater than zero');
+      throw new BadRequestError('Transfer amount must be greater than zero');
     }
 
     return withTransaction(knex, async (trx) => {
       // Get source credit
-      const sourceCredit = await trx('credit_tracking')
-        .where({ credit_id: request.source_credit_id, tenant })
+      const sourceCredit = await tenantDb(trx, tenant).table('credit_tracking')
+        .where('credit_id', request.source_credit_id)
         .first();
 
       if (!sourceCredit) {
-        throw new Error(`Source credit with ID ${request.source_credit_id} not found`);
+        throw new NotFoundError(`Source credit with ID ${request.source_credit_id} not found`);
       }
       if (sourceCredit.is_expired) {
-        throw new Error('Cannot transfer from an expired credit');
+        throw new ConflictError('Cannot transfer from an expired credit');
       }
       if (Number(sourceCredit.remaining_amount) < request.amount) {
-        throw new Error(`Insufficient remaining amount (${sourceCredit.remaining_amount}) for transfer of ${request.amount}`);
+        throw new ConflictError(`Insufficient remaining amount (${sourceCredit.remaining_amount}) for transfer of ${request.amount}`);
       }
 
       // Verify target client
-      const targetClient = await trx('clients')
-        .where({ client_id: request.target_client_id, tenant })
+      const targetClient = await tenantDb(trx, tenant).table('clients')
+        .where('client_id', request.target_client_id)
         .first();
       if (!targetClient) {
-        throw new Error(`Target client with ID ${request.target_client_id} not found`);
+        throw new NotFoundError(`Target client with ID ${request.target_client_id} not found`);
       }
 
       const now = new Date().toISOString();
 
       // 1. Reduce source credit remaining amount
       const newSourceRemaining = Number(sourceCredit.remaining_amount) - request.amount;
-      await trx('credit_tracking')
-        .where({ credit_id: request.source_credit_id, tenant })
+      await tenantDb(trx, tenant).table('credit_tracking')
+        .where('credit_id', request.source_credit_id)
         .update({ remaining_amount: newSourceRemaining, updated_at: now });
 
       // 2. Create transfer-out transaction for source
-      await trx('transactions').insert({
+      await tenantDb(trx, tenant).table('transactions').insert({
         transaction_id: uuidv4(),
         client_id: sourceCredit.client_id,
         amount: -request.amount,
@@ -818,18 +778,9 @@ export class FinancialService extends BaseService<ITransaction> {
         metadata: { transfer_to: request.target_client_id, transfer_reason: request.reason || 'Administrative transfer' }
       });
 
-      // 3. Update source client balance
-      const [sourceClient] = await trx('clients')
-        .where({ client_id: sourceCredit.client_id, tenant })
-        .select('credit_balance');
-      const newSourceBalance = Number(sourceClient.credit_balance) - request.amount;
-      await trx('clients')
-        .where({ client_id: sourceCredit.client_id, tenant })
-        .update({ credit_balance: newSourceBalance, updated_at: now });
-
-      // 4. Create transfer-in transaction for target
+      // 3. Create transfer-in transaction for target
       const targetTransactionId = uuidv4();
-      await trx('transactions').insert({
+      await tenantDb(trx, tenant).table('transactions').insert({
         transaction_id: targetTransactionId,
         client_id: request.target_client_id,
         amount: request.amount,
@@ -841,15 +792,10 @@ export class FinancialService extends BaseService<ITransaction> {
         metadata: { transfer_from: sourceCredit.client_id, transfer_reason: request.reason || 'Administrative transfer', source_credit_id: request.source_credit_id }
       });
 
-      // 5. Update target client balance
-      const newTargetBalance = Number(targetClient.credit_balance) + request.amount;
-      await trx('clients')
-        .where({ client_id: request.target_client_id, tenant })
-        .update({ credit_balance: newTargetBalance, updated_at: now });
-
-      // 6. Create new credit tracking for target
+      // 4. Create new credit tracking for target
+      // (both clients' derived balances move via the tracking rows)
       const newCreditId = uuidv4();
-      const [newCredit] = await trx('credit_tracking').insert({
+      const [newCredit] = await tenantDb(trx, tenant).table('credit_tracking').insert({
         credit_id: newCreditId,
         tenant,
         client_id: request.target_client_id,
@@ -886,7 +832,7 @@ export class FinancialService extends BaseService<ITransaction> {
     } = query;
 
     if (!client_id) {
-      throw new Error('Client ID is required for credit listing');
+      throw new BadRequestError('Client ID is required for credit listing');
     }
 
     const { knex } = await this.getKnex();
@@ -894,31 +840,23 @@ export class FinancialService extends BaseService<ITransaction> {
     const offset = (page - 1) * limit;
 
     // Build base query
-    let baseQuery = knex('credit_tracking')
-      .where({ 'credit_tracking.client_id': client_id, 'credit_tracking.tenant': tenant });
+    let baseQuery = tenantDb(knex, tenant).table('credit_tracking')
+      .where('credit_tracking.client_id', client_id);
 
     if (!include_expired) {
       baseQuery = baseQuery.where('credit_tracking.is_expired', false);
     }
 
     // Count
-    const [{ count }] = await baseQuery.clone().count('credit_id as count');
+    const [{ count }] = (await baseQuery.clone().count('credit_id as count')) as Array<{ count: string }>;
     const total = parseInt(count as string);
 
     // Fetch credits with transaction details
     const credits = await baseQuery
       .clone()
       .select('credit_tracking.*')
-      .leftJoin('transactions', function() {
-        this.on('credit_tracking.transaction_id', '=', 'transactions.transaction_id')
-          .andOn('credit_tracking.tenant', '=', 'transactions.tenant');
-      })
-      .select(
-        'transactions.description as transaction_description',
-        'transactions.type as transaction_type',
-        'transactions.invoice_id',
-        'transactions.created_at as transaction_date'
-      )
+      .modify((q) => tenantDb(knex, tenant).tenantJoin(q, 'transactions', 'credit_tracking.transaction_id', 'transactions.transaction_id', { type: 'left' }))
+      .select({ transaction_description: 'transactions.description', transaction_type: 'transactions.type', invoice_id: 'transactions.invoice_id', transaction_date: 'transactions.created_at' })
       .orderBy([
         { column: 'is_expired', order: 'asc' },
         { column: 'expiration_date', order: 'asc', nulls: 'last' },
@@ -938,75 +876,7 @@ export class FinancialService extends BaseService<ITransaction> {
     };
   }
 
-  /**
-   * Validate credit balance for a client
-   */
-  async validateCreditBalance(
-    clientId: string,
-    context: ServiceContext
-  ): Promise<FinancialResponse<CreditValidationResult>> {
-    await this.validatePermissions('read', 'credit', context);
-
-    const { knex } = await this.getKnex();
-    const tenant = context.tenant;
-
-    // Sum credit-related transactions
-    const transactions = await knex('transactions')
-      .where({ client_id: clientId, tenant })
-      .whereIn('type', [
-        'credit_issuance', 'credit_application', 'credit_adjustment',
-        'credit_expiration', 'credit_transfer', 'credit_issuance_from_negative_invoice'
-      ])
-      .orderBy('created_at', 'asc');
-
-    let calculatedBalance = 0;
-    for (const tx of transactions) {
-      calculatedBalance += Number(tx.amount);
-    }
-
-    // Get client's actual balance
-    const client = await knex('clients')
-      .where({ client_id: clientId, tenant })
-      .select('credit_balance')
-      .first();
-
-    const actualBalance = Number(client?.credit_balance || 0);
-    const expectedBalance = calculatedBalance;
-    const difference = expectedBalance - actualBalance;
-    const isValid = Math.abs(difference) < 0.01;
-
-    const lastTransaction = transactions.length > 0 ? transactions[transactions.length - 1] : undefined;
-
-    return {
-      data: {
-        is_valid: isValid,
-        actual_balance: actualBalance,
-        expected_balance: expectedBalance,
-        difference,
-        last_transaction: lastTransaction ? {
-          ...lastTransaction,
-          status: lastTransaction.status || 'pending',
-          tenant: lastTransaction.tenant || ''
-        } as unknown as any : undefined
-      },
-      links: [
-        {
-          rel: 'client',
-          href: `/api/v1/clients/${clientId}`,
-          method: 'GET',
-          description: 'View client details'
-        },
-        {
-          rel: 'reconciliation-reports',
-          href: `/api/v1/financial/reconciliation?client_id=${clientId}`,
-          method: 'GET',
-          description: 'View reconciliation reports'
-        }
-      ]
-    };
-  }
-
-  // ============================================================================
+    // ============================================================================
   // BILLING AND INVOICING
   // ============================================================================
 
@@ -1039,7 +909,7 @@ export class FinancialService extends BaseService<ITransaction> {
           charge.total,
           periodEnd,
           charge.tax_region || 'default'
-        );
+        ).catch(throwTaxCalculationApiError);
         totalTaxAmount += taxResult.taxAmount;
       }
     }
@@ -1102,15 +972,12 @@ export class FinancialService extends BaseService<ITransaction> {
 
       // If this is set as default, unset other defaults for the client
       if (data.is_default) {
-        await trx('payment_methods')
-          .where({
-            client_id: data.client_id,
-            tenant: context.tenant
-          })
+        await tenantDb(trx, context.tenant).table('payment_methods')
+          .where('client_id', data.client_id)
           .update({ is_default: false });
       }
 
-      const [paymentMethod] = await trx('payment_methods')
+      const [paymentMethod] = await tenantDb(trx, context.tenant).table('payment_methods')
         .insert(paymentMethodData)
         .returning('*');
 
@@ -1143,6 +1010,95 @@ export class FinancialService extends BaseService<ITransaction> {
     });
   }
 
+  /**
+   * List payment methods.
+   */
+  async listPaymentMethods(
+    query: PaymentMethodListQuery,
+    context: ServiceContext
+  ): Promise<ListResult<FinancialResponse<PaymentMethodResponse>>> {
+    const { knex } = await this.getKnex();
+
+    const {
+      page = 1,
+      limit = 25,
+      client_id,
+      type,
+      is_default,
+      exclude_deleted = true,
+      search,
+      sort = 'created_at',
+      order = 'desc',
+    } = query;
+
+    const sortableFields = new Set(['created_at', 'updated_at', 'type', 'is_default']);
+    const sortField = sortableFields.has(String(sort)) ? String(sort) : 'created_at';
+
+    const scopedDb = tenantDb(knex, context.tenant);
+    let dataQuery = scopedDb.table('payment_methods as pm');
+    dataQuery = scopedDb.tenantJoin(dataQuery, 'clients as c', 'pm.client_id', 'c.client_id', { type: 'left' });
+
+    let countQuery = scopedDb.table('payment_methods as pm');
+
+    if (client_id) {
+      dataQuery = dataQuery.where('pm.client_id', client_id);
+      countQuery = countQuery.where('pm.client_id', client_id);
+    }
+
+    if (type) {
+      dataQuery = dataQuery.where('pm.type', type);
+      countQuery = countQuery.where('pm.type', type);
+    }
+
+    if (is_default !== undefined) {
+      dataQuery = dataQuery.where('pm.is_default', is_default);
+      countQuery = countQuery.where('pm.is_default', is_default);
+    }
+
+    if (exclude_deleted) {
+      dataQuery = dataQuery.where('pm.is_deleted', false);
+      countQuery = countQuery.where('pm.is_deleted', false);
+    }
+
+    if (search) {
+      dataQuery = dataQuery.where(builder => {
+        builder.whereILike('c.client_name', `%${search}%`)
+          .orWhereILike('pm.last4', `%${search}%`);
+      });
+      countQuery = countQuery.whereILike('pm.last4', `%${search}%`);
+    }
+
+    const [paymentMethods, [{ count }]] = await Promise.all([
+      dataQuery
+        .select('pm.*', 'c.client_name')
+        .orderBy(`pm.${sortField}`, order)
+        .limit(limit)
+        .offset((page - 1) * limit),
+      countQuery.count('* as count') as unknown as Promise<Array<{ count: string }>>,
+    ]);
+
+    return {
+      data: paymentMethods.map(paymentMethod => ({
+        data: paymentMethod,
+        links: [
+          {
+            rel: 'self',
+            href: `/api/v1/financial/payment-methods/${paymentMethod.payment_method_id}`,
+            method: 'GET',
+            description: 'Get payment method details',
+          },
+          {
+            rel: 'client',
+            href: `/api/v1/clients/${paymentMethod.client_id}`,
+            method: 'GET',
+            description: 'View client details',
+          },
+        ],
+      })),
+      total: parseInt(count as string, 10),
+    };
+  }
+
   // ============================================================================
   // FINANCIAL REPORTING
   // ============================================================================
@@ -1159,29 +1115,24 @@ export class FinancialService extends BaseService<ITransaction> {
       await this.validatePermissions('read', 'financial_report', context);
     }
     
-    const { knex } = await this.getKnex();
+    const { knex, tenant: defaultTenant } = await this.getKnex();
+    const tenant = context?.tenant || defaultTenant;
     const reportDate = asOfDate || new Date().toISOString();
     
     // Get current credit balance
-    const client = await knex('clients')
-      .where({
-        client_id: clientId,
-        tenant: context?.tenant || await this.getKnex().then(({tenant}) => tenant)
-      })
+    const client = await tenantDb(knex, tenant).table('clients')
+      .where('client_id', clientId)
       .first();
 
     if (!client) {
-      throw new Error('Client not found');
+      throw new NotFoundError('Client not found');
     }
 
     // Get available (non-expired) credits
     const now = new Date().toISOString();
-    const availableCredits = await knex('credit_tracking')
-      .where({
-        client_id: clientId,
-        tenant: client.tenant,
-        is_expired: false
-      })
+    const availableCredits = await tenantDb(knex, tenant).table('credit_tracking')
+      .where('client_id', clientId)
+      .where('is_expired', false)
       .where(function() {
         this.whereNull('expiration_date')
             .orWhere('expiration_date', '>', now);
@@ -1189,47 +1140,36 @@ export class FinancialService extends BaseService<ITransaction> {
       .sum('remaining_amount as total');
 
     // Get expired credits
-    const expiredCredits = await knex('credit_tracking')
-      .where({
-        client_id: clientId,
-        tenant: client.tenant,
-        is_expired: true
-      })
+    const expiredCredits = await tenantDb(knex, tenant).table('credit_tracking')
+      .where('client_id', clientId)
+      .where('is_expired', true)
       .sum('amount as total');
 
     // Get pending invoices (balance due is derived: total − credit applied)
-    const pendingInvoices = (await knex('invoices')
-      .where({
-        client_id: clientId,
-        tenant: client.tenant,
-        status: 'sent'
-      })
+    const pendingInvoices = (await tenantDb(knex, tenant).table('invoices')
+      .where('client_id', clientId)
+      .where('status', 'sent')
       .sum(knex.raw('total_amount - COALESCE(credit_applied, 0) as total'))) as Array<{ total: string | number | null }>;
 
     // Get overdue invoices
-    const overdueInvoices = (await knex('invoices')
-      .where({
-        client_id: clientId,
-        tenant: client.tenant,
-        status: 'overdue'
-      })
+    const overdueInvoices = (await tenantDb(knex, tenant).table('invoices')
+      .where('client_id', clientId)
+      .where('status', 'overdue')
       .sum(knex.raw('total_amount - COALESCE(credit_applied, 0) as total'))) as Array<{ total: string | number | null }>;
 
     // Get last payment
-    const lastPayment = await knex('transactions')
-      .where({
-        client_id: clientId,
-        tenant: client.tenant,
-        type: 'payment'
-      })
+    const lastPayment = await tenantDb(knex, tenant).table('transactions')
+      .where('client_id', clientId)
+      .where('type', 'payment')
       .orderBy('created_at', 'desc')
       .first();
 
     const report: AccountBalanceReport = {
       client_id: clientId,
-      current_balance: client.credit_balance || 0,
-      available_credit: Number(availableCredits[0]?.total) || 0,
-      expired_credit: Number(expiredCredits[0]?.total) || 0,
+      // Derived: current balance IS the available (non-expired) credit.
+      current_balance: Number((availableCredits as Array<{ total: string }>)[0]?.total) || 0,
+      available_credit: Number((availableCredits as Array<{ total: string }>)[0]?.total) || 0,
+      expired_credit: Number((expiredCredits as Array<{ total: string }>)[0]?.total) || 0,
       pending_invoices: Number(pendingInvoices[0]?.total) || 0,
       overdue_amount: Number(overdueInvoices[0]?.total) || 0,
       last_payment_date: lastPayment?.created_at,
@@ -1267,14 +1207,14 @@ export class FinancialService extends BaseService<ITransaction> {
       await this.validatePermissions('read', 'financial_report', context);
     }
     
-    const { knex } = await this.getKnex();
-    const tenant = context?.tenant || await this.getKnex().then(({tenant}) => tenant);
+    const { knex, tenant: defaultTenant } = await this.getKnex();
+    const tenant = context?.tenant || defaultTenant;
     const reportDate = new Date().toISOString();
     const now = new Date();
 
-    let query = knex('invoices as i')
-      .join('clients as c', 'i.client_id', 'c.client_id')
-      .where('i.tenant', tenant)
+    const scopedDb = tenantDb(knex, tenant);
+    let query = scopedDb.table('invoices as i');
+    query = scopedDb.tenantJoin(query, 'clients as c', 'i.client_id', 'c.client_id')
       .whereIn('i.status', ['sent', 'overdue']);
 
     if (clientId) {
@@ -1396,7 +1336,7 @@ export class FinancialService extends BaseService<ITransaction> {
     }
 
     // Revenue analytics
-    let revenueQuery = knex('invoices')
+    let revenueQuery = tenantDb(knex, context.tenant).table('invoices')
       .select(
         knex.raw(`${dateGrouping} as period`),
         knex.raw('SUM(total_amount) as total_revenue'),
@@ -1407,7 +1347,6 @@ export class FinancialService extends BaseService<ITransaction> {
         knex.raw('COUNT(*) as invoice_count'),
         knex.raw('AVG(total_amount) as average_invoice_value')
       )
-      .where('tenant', context.tenant)
       .whereIn('status', ['sent', 'paid'])
       .modify((qb) => {
         if (date_from && date_to) {
@@ -1418,14 +1357,13 @@ export class FinancialService extends BaseService<ITransaction> {
       .orderBy('period');
 
     // Credit analytics
-    let creditQuery = knex('transactions')
+    let creditQuery = tenantDb(knex, context.tenant).table('transactions')
       .select(
         knex.raw(`${dateGrouping} as period`),
         knex.raw('SUM(CASE WHEN type IN (\'credit_issuance\', \'credit_issuance_from_negative_invoice\') THEN amount ELSE 0 END) as credits_issued'),
         knex.raw('SUM(CASE WHEN type = \'credit_application\' THEN ABS(amount) ELSE 0 END) as credits_applied'),
         knex.raw('SUM(CASE WHEN type = \'credit_expiration\' THEN ABS(amount) ELSE 0 END) as credits_expired')
       )
-      .where('tenant', context.tenant)
       .whereIn('type', [
         'credit_issuance',
         'credit_issuance_from_negative_invoice',
@@ -1453,15 +1391,18 @@ export class FinancialService extends BaseService<ITransaction> {
     // Calculate additional credit metrics
     const creditAnalytics = await Promise.all(
       creditData.map(async (period: any) => {
-        // Get credit balance at end of period
-        const balanceQuery = knex('clients')
-          .sum('credit_balance as total_balance')
-          .where('tenant', context.tenant);
-        
+        // Current derived credit balance (sum of non-expired remainders)
+        const balanceQuery = tenantDb(knex, context.tenant).table('credit_tracking')
+          .where('is_expired', false)
+          .where((qb: any) => {
+            qb.whereNull('expiration_date').orWhere('expiration_date', '>', new Date().toISOString());
+          })
+          .sum('remaining_amount as total_balance');
+
         if (client_id) {
           balanceQuery.where('client_id', client_id);
         }
-        
+
         const balanceResult = await balanceQuery.first();
         const creditBalance = Number(balanceResult?.total_balance) || 0;
         
@@ -1519,147 +1460,6 @@ export class FinancialService extends BaseService<ITransaction> {
   }
 
   // ============================================================================
-  // RECONCILIATION MANAGEMENT
-  // ============================================================================
-
-  /**
-   * Run credit reconciliation for clients
-   */
-  async runCreditReconciliation(
-    clientId?: string,
-    context?: ServiceContext
-  ): Promise<FinancialResponse<{
-    totalClients: number;
-    balanceValidCount: number;
-    balanceDiscrepancyCount: number;
-    missingTrackingCount: number;
-    inconsistentTrackingCount: number;
-    errorCount: number;
-  }>> {
-    if (context) {
-      await this.validatePermissions('update', 'credit', context);
-    }
-    
-    const userId = context?.userId || 'system';
-    const result = await runScheduledCreditBalanceValidation(clientId, userId);
-
-    return {
-      data: result,
-      links: context ? [
-        {
-          rel: 'reconciliation-reports',
-          href: `/api/v1/financial/reconciliation${clientId ? `?client_id=${clientId}` : ''}`,
-          method: 'GET',
-          description: 'View reconciliation reports'
-        }
-      ] : []
-    };
-  }
-
-  /**
-   * Resolve a reconciliation report
-   */
-  async resolveReconciliationReport(
-    reportId: string,
-    notes?: string,
-    context?: ServiceContext
-  ): Promise<FinancialResponse<ICreditReconciliationReport>> {
-    if (context) {
-      await this.validatePermissions('update', 'credit', context);
-    }
-
-    const { knex } = await this.getKnex();
-    const tenant = context?.tenant || (await this.getKnex()).tenant;
-    const userId = context?.userId || 'system';
-
-    const resolvedReport = await withTransaction(knex, async (trx) => {
-      // Get the report
-      const report = await trx('credit_reconciliation_reports')
-        .where({ report_id: reportId, tenant })
-        .first();
-
-      if (!report) {
-        throw new Error(`Reconciliation report ${reportId} not found`);
-      }
-      if (report.status === 'resolved') {
-        throw new Error(`Reconciliation report ${reportId} is already resolved`);
-      }
-
-      const now = new Date().toISOString();
-
-      // Create adjustment transaction
-      const transactionId = uuidv4();
-      await trx('transactions').insert({
-        transaction_id: transactionId,
-        client_id: report.client_id,
-        amount: report.difference,
-        type: 'credit_adjustment',
-        status: 'completed',
-        description: `Credit balance correction from reconciliation report ${reportId}`,
-        created_at: now,
-        balance_after: report.expected_balance,
-        tenant
-      });
-
-      // Update client balance
-      await trx('clients')
-        .where({ client_id: report.client_id, tenant })
-        .update({ credit_balance: report.expected_balance, updated_at: now });
-
-      // Resolve the report
-      const [resolved] = await trx('credit_reconciliation_reports')
-        .where({ report_id: reportId, tenant })
-        .update({
-          status: 'resolved',
-          resolution_date: now,
-          resolution_user: userId,
-          resolution_notes: notes,
-          resolution_transaction_id: transactionId,
-          updated_at: now
-        })
-        .returning('*');
-
-      // Audit log
-      await auditLog(trx, {
-        userId,
-        operation: 'credit_balance_correction',
-        tableName: 'clients',
-        recordId: report.client_id,
-        changedData: {
-          previous_balance: report.actual_balance,
-          corrected_balance: report.expected_balance
-        },
-        details: {
-          action: 'Credit balance corrected from reconciliation report',
-          report_id: reportId,
-          difference: report.difference,
-          notes: notes || 'No notes provided'
-        }
-      });
-
-      return resolved;
-    });
-
-    return {
-      data: resolvedReport,
-      links: context ? [
-        {
-          rel: 'self',
-          href: `/api/v1/financial/reconciliation/${reportId}`,
-          method: 'GET',
-          description: 'View reconciliation report'
-        },
-        {
-          rel: 'client',
-          href: `/api/v1/clients/${resolvedReport.client_id}`,
-          method: 'GET',
-          description: 'View client details'
-        }
-      ] : []
-    };
-  }
-
-  // ============================================================================
   // BULK OPERATIONS
   // ============================================================================
 
@@ -1688,11 +1488,8 @@ export class FinancialService extends BaseService<ITransaction> {
           
           switch (operation.operation) {
             case 'finalize':
-              result = await trx('invoices')
-                .where({
-                  invoice_id: invoiceId,
-                  tenant: context.tenant
-                })
+              result = await tenantDb(trx, context.tenant).table('invoices')
+                .where('invoice_id', invoiceId)
                 .update({
                   status: 'sent',
                   finalized_at: new Date().toISOString()
@@ -1701,11 +1498,8 @@ export class FinancialService extends BaseService<ITransaction> {
               break;
               
             case 'cancel':
-              result = await trx('invoices')
-                .where({
-                  invoice_id: invoiceId,
-                  tenant: context.tenant
-                })
+              result = await tenantDb(trx, context.tenant).table('invoices')
+                .where('invoice_id', invoiceId)
                 .update({
                   status: 'cancelled'
                 })
@@ -1715,11 +1509,8 @@ export class FinancialService extends BaseService<ITransaction> {
             case 'apply_credit':
               // This would need additional parameters in the operation
               const creditAmount = operation.parameters?.credit_amount || 0;
-              const invoice = await trx('invoices')
-                .where({
-                  invoice_id: invoiceId,
-                  tenant: context.tenant
-                })
+              const invoice = await tenantDb(trx, context.tenant).table('invoices')
+                .where('invoice_id', invoiceId)
                 .first();
               
               if (invoice && creditAmount > 0) {
@@ -1729,7 +1520,7 @@ export class FinancialService extends BaseService<ITransaction> {
               break;
               
             default:
-              throw new Error(`Unsupported operation: ${operation.operation}`);
+              throw new BadRequestError(`Unsupported operation: ${operation.operation}`);
           }
           
           results.push({
@@ -1789,7 +1580,8 @@ export class FinancialService extends BaseService<ITransaction> {
    * `approve` and `reject` set the transaction status. `reverse` posts a
    * compensating transaction (negated amount, linked to the original via
    * related_transaction_id), recomputes the running balance, marks the original
-   * reversed, and keeps the client's credit_balance in sync for credit types.
+   * reversed. Available credit is derived from credit-tracking rows, so there
+   * is no client balance cache to synchronize.
    * Each id is processed independently; one failure does not abort the rest.
    */
   async bulkTransactionOperation(
@@ -1799,43 +1591,41 @@ export class FinancialService extends BaseService<ITransaction> {
     await this.validatePermissions('update', 'transaction', context);
 
     const { knex } = await this.getKnex();
-    const CREDIT_TYPES = ['credit_issuance', 'credit_application', 'credit_adjustment', 'credit_transfer', 'credit_expiration'];
-
     return withTransaction(knex, async (trx) => {
       const results: Array<{ id: string; success: boolean; error?: string; result?: any }> = [];
 
       for (const transactionId of operation.transaction_ids) {
         try {
-          const existing = await trx('transactions')
-            .where({ transaction_id: transactionId, tenant: context.tenant })
+          const existing = await tenantDb(trx, context.tenant).table('transactions')
+            .where('transaction_id', transactionId)
             .first();
           if (!existing) {
-            throw new Error('Transaction not found');
+            throw new NotFoundError('Transaction not found');
           }
 
           let result: any;
           switch (operation.operation) {
             case 'approve':
-              [result] = await trx('transactions')
-                .where({ transaction_id: transactionId, tenant: context.tenant })
+              [result] = await tenantDb(trx, context.tenant).table('transactions')
+                .where('transaction_id', transactionId)
                 .update({ status: 'completed' })
                 .returning('*');
               break;
 
             case 'reject':
-              [result] = await trx('transactions')
-                .where({ transaction_id: transactionId, tenant: context.tenant })
+              [result] = await tenantDb(trx, context.tenant).table('transactions')
+                .where('transaction_id', transactionId)
                 .update({ status: 'rejected' })
                 .returning('*');
               break;
 
             case 'reverse': {
               if (existing.status === 'reversed') {
-                throw new Error('Transaction is already reversed');
+                throw new ConflictError('Transaction is already reversed');
               }
               const reversalAmount = -Number(existing.amount);
-              const lastTransaction = await trx('transactions')
-                .where({ client_id: existing.client_id, tenant: context.tenant })
+              const lastTransaction = await tenantDb(trx, context.tenant).table('transactions')
+                .where('client_id', existing.client_id)
                 .orderBy('created_at', 'desc')
                 .first();
               const balanceAfter = Number(lastTransaction?.balance_after || 0) + reversalAmount;
@@ -1845,7 +1635,7 @@ export class FinancialService extends BaseService<ITransaction> {
                 : ['refund_full', 'refund_partial'].includes(existing.type) ? 'refund_reversal'
                 : 'credit_adjustment';
 
-              const [reversal] = await trx('transactions')
+              const [reversal] = await tenantDb(trx, context.tenant).table('transactions')
                 .insert({
                   transaction_id: uuidv4(),
                   client_id: existing.client_id,
@@ -1862,21 +1652,16 @@ export class FinancialService extends BaseService<ITransaction> {
                 })
                 .returning('*');
 
-              await trx('transactions')
-                .where({ transaction_id: transactionId, tenant: context.tenant })
+              await tenantDb(trx, context.tenant).table('transactions')
+                .where('transaction_id', transactionId)
                 .update({ status: 'reversed' });
 
-              if (CREDIT_TYPES.includes(existing.type)) {
-                await trx('clients')
-                  .where({ client_id: existing.client_id, tenant: context.tenant })
-                  .update({ credit_balance: balanceAfter, updated_at: new Date().toISOString() });
-              }
               result = reversal;
               break;
             }
 
             default:
-              throw new Error(`Unsupported operation: ${operation.operation}`);
+              throw new BadRequestError(`Unsupported operation: ${operation.operation}`);
           }
 
           results.push({ id: transactionId, success: true, result });
@@ -1922,8 +1707,8 @@ export class FinancialService extends BaseService<ITransaction> {
   /**
    * Bulk expire / extend-expiration / transfer existing credits.
    *
-   * `expire` forfeits the unused remainder (credit_expiration transaction +
-   * client balance reduction) and flags the credit. `extend_expiration` moves
+   * `expire` forfeits the unused remainder (credit_expiration transaction;
+   * the derived balance drops with the tracking row) and flags the credit. `extend_expiration` moves
    * the expiration date. `transfer` reuses transferCredit() to move the
    * remaining amount to another client. Each credit is processed in its own
    * transaction so a single failure is isolated (transferCredit manages its own
@@ -1945,13 +1730,13 @@ export class FinancialService extends BaseService<ITransaction> {
         if (operation.operation === 'transfer') {
           const targetClientId = operation.parameters?.target_client_id;
           if (!targetClientId) {
-            throw new Error('target_client_id is required for transfer');
+            throw new BadRequestError('target_client_id is required for transfer');
           }
-          const credit = await knex('credit_tracking')
-            .where({ credit_id: creditId, tenant: context.tenant })
+          const credit = await tenantDb(knex, context.tenant).table('credit_tracking')
+            .where('credit_id', creditId)
             .first();
           if (!credit) {
-            throw new Error('Credit not found');
+            throw new NotFoundError('Credit not found');
           }
           const transferred = await this.transferCredit({
             user_id: context.userId,
@@ -1963,25 +1748,25 @@ export class FinancialService extends BaseService<ITransaction> {
           result = transferred.data;
         } else {
           result = await withTransaction(knex, async (trx) => {
-            const credit = await trx('credit_tracking')
-              .where({ credit_id: creditId, tenant: context.tenant })
+            const credit = await tenantDb(trx, context.tenant).table('credit_tracking')
+              .where('credit_id', creditId)
               .first();
             if (!credit) {
-              throw new Error('Credit not found');
+              throw new NotFoundError('Credit not found');
             }
             const now = new Date().toISOString();
 
             if (operation.operation === 'expire') {
               if (credit.is_expired) {
-                throw new Error('Credit is already expired');
+                throw new ConflictError('Credit is already expired');
               }
               const remaining = Number(credit.remaining_amount);
               if (remaining > 0) {
-                const [client] = await trx('clients')
-                  .where({ client_id: credit.client_id, tenant: context.tenant })
-                  .select('credit_balance');
-                const newBalance = Number(client?.credit_balance || 0) - remaining;
-                await trx('transactions').insert({
+                const lastTransaction = await tenantDb(trx, context.tenant).table('transactions')
+                  .where('client_id', credit.client_id)
+                  .orderBy('created_at', 'desc')
+                  .first();
+                await tenantDb(trx, context.tenant).table('transactions').insert({
                   transaction_id: uuidv4(),
                   client_id: credit.client_id,
                   amount: -remaining,
@@ -1989,17 +1774,14 @@ export class FinancialService extends BaseService<ITransaction> {
                   status: 'completed',
                   description: operation.parameters?.reason || `Credit ${creditId} expired`,
                   created_at: now,
-                  balance_after: newBalance,
+                  balance_after: Number(lastTransaction?.balance_after || 0) - remaining,
                   tenant: context.tenant,
                   related_transaction_id: credit.transaction_id,
                   currency_code: credit.currency_code
                 });
-                await trx('clients')
-                  .where({ client_id: credit.client_id, tenant: context.tenant })
-                  .update({ credit_balance: newBalance, updated_at: now });
               }
-              const [updated] = await trx('credit_tracking')
-                .where({ credit_id: creditId, tenant: context.tenant })
+              const [updated] = await tenantDb(trx, context.tenant).table('credit_tracking')
+                .where('credit_id', creditId)
                 .update({ is_expired: true, remaining_amount: 0, updated_at: now })
                 .returning('*');
               return updated;
@@ -2008,16 +1790,16 @@ export class FinancialService extends BaseService<ITransaction> {
             if (operation.operation === 'extend_expiration') {
               const newExpiration = operation.parameters?.expiration_date;
               if (!newExpiration) {
-                throw new Error('parameters.expiration_date is required for extend_expiration');
+                throw new BadRequestError('parameters.expiration_date is required for extend_expiration');
               }
-              const [updated] = await trx('credit_tracking')
-                .where({ credit_id: creditId, tenant: context.tenant })
+              const [updated] = await tenantDb(trx, context.tenant).table('credit_tracking')
+                .where('credit_id', creditId)
                 .update({ expiration_date: newExpiration, is_expired: false, updated_at: now })
                 .returning('*');
               return updated;
             }
 
-            throw new Error(`Unsupported operation: ${operation.operation}`);
+            throw new BadRequestError(`Unsupported operation: ${operation.operation}`);
           });
         }
 
@@ -2070,10 +1852,25 @@ export class FinancialService extends BaseService<ITransaction> {
    * Get payment terms list
    */
   async getPaymentTerms(context?: ServiceContext): Promise<FinancialResponse<Array<{ id: string; name: string }>>> {
-    const { knex } = await this.getKnex();
+    const { knex, tenant } = await this.getKnex();
 
-    const terms = await knex('payment_terms')
-      .select('term_code as id', 'term_name as name')
+    const hasPaymentTermsTable = await knex.schema.hasTable('payment_terms');
+    if (!hasPaymentTermsTable) {
+      return {
+        data: [
+          { id: 'due_on_receipt', name: 'Due on receipt' },
+          { id: 'net_15', name: 'Net 15' },
+          { id: 'net_30', name: 'Net 30' },
+        ],
+        links: []
+      };
+    }
+
+    const terms = await tenantDb(knex, tenant).unscoped(
+      'payment_terms',
+      'optional global payment terms reference table; clients store selected payment_terms as a column'
+    )
+      .select({ id: 'term_code', name: 'term_name' })
       .where({ is_active: true })
       .orderBy('sort_order', 'asc');
 
@@ -2102,7 +1899,7 @@ export class FinancialService extends BaseService<ITransaction> {
       amount,
       date || new Date().toISOString(),
       taxRegion
-    );
+    ).catch(throwTaxCalculationApiError);
 
     return {
       data: result,

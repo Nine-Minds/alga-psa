@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import {
@@ -8,6 +8,10 @@ import {
   IStatusSlaPauseConfig,
   SlaPauseReason
 } from '../types';
+import {
+  SlaActionError,
+  slaActionErrorFrom,
+} from './slaActionErrors';
 
 export interface ISlaPauseConfigStatusOption {
   status_id: string;
@@ -23,10 +27,9 @@ async function getBoardOwnedTicketStatus(
   tenant: string,
   statusId: string
 ) {
-  return trx('statuses')
+  return tenantDb(trx, tenant).table('statuses')
     .select('status_id')
     .where({
-      tenant,
       status_id: statusId,
       status_type: 'ticket'
     })
@@ -59,9 +62,10 @@ export const getSlaSettings = withAuth(async (_user, { tenant }): Promise<ISlaSe
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      const scopedDb = tenantDb(trx, tenant);
+
       // Try to get existing settings
-      let settings = await trx('sla_settings')
-        .where({ tenant })
+      let settings = await scopedDb.table('sla_settings')
         .first();
 
       // If no settings exist, create default settings
@@ -71,7 +75,7 @@ export const getSlaSettings = withAuth(async (_user, { tenant }): Promise<ISlaSe
           pause_on_awaiting_client: true,
         };
 
-        const [inserted] = await trx('sla_settings')
+        const [inserted] = await scopedDb.table('sla_settings')
           .insert(defaultSettings)
           .returning('*');
 
@@ -86,7 +90,7 @@ export const getSlaSettings = withAuth(async (_user, { tenant }): Promise<ISlaSe
       } as ISlaSettings;
     } catch (error) {
       console.error(`Error fetching SLA settings for tenant ${tenant}:`, error);
-      throw new Error(`Failed to fetch SLA settings for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -95,22 +99,22 @@ export const getSlaSettings = withAuth(async (_user, { tenant }): Promise<ISlaSe
  * Update SLA settings for the current tenant.
  * Creates settings if they don't exist (upsert pattern).
  */
-export const updateSlaSettings = withAuth(async (_user, { tenant }, settings: Partial<ISlaSettings>): Promise<ISlaSettings> => {
+export const updateSlaSettings = withAuth(async (_user, { tenant }, settings: Partial<ISlaSettings>): Promise<ISlaSettings | SlaActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      const scopedDb = tenantDb(trx, tenant);
+
       // Check if settings exist
-      const existingSettings = await trx('sla_settings')
-        .where({ tenant })
+      const existingSettings = await scopedDb.table('sla_settings')
         .first();
 
       let result;
 
       if (existingSettings) {
         // Update existing settings
-        const [updated] = await trx('sla_settings')
-          .where({ tenant })
+        const [updated] = await scopedDb.table('sla_settings')
           .update({
             pause_on_awaiting_client: settings.pause_on_awaiting_client ?? existingSettings.pause_on_awaiting_client,
             updated_at: trx.fn.now(),
@@ -120,7 +124,7 @@ export const updateSlaSettings = withAuth(async (_user, { tenant }, settings: Pa
         result = updated;
       } else {
         // Insert new settings
-        const [inserted] = await trx('sla_settings')
+        const [inserted] = await scopedDb.table('sla_settings')
           .insert({
             tenant,
             pause_on_awaiting_client: settings.pause_on_awaiting_client ?? true,
@@ -137,8 +141,13 @@ export const updateSlaSettings = withAuth(async (_user, { tenant }, settings: Pa
         updated_at: result.updated_at,
       } as ISlaSettings;
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error updating SLA settings for tenant ${tenant}:`, error);
-      throw new Error(`Failed to update SLA settings for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -155,13 +164,12 @@ export const getStatusSlaPauseConfigs = withAuth(async (_user, { tenant }): Prom
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const configs = await trx('status_sla_pause_config as config')
-        .join('statuses as status', function () {
-          this.on('config.tenant', '=', 'status.tenant')
-            .andOn('config.status_id', '=', 'status.status_id');
-        })
+      const scopedDb = tenantDb(trx, tenant);
+      const configsQuery = scopedDb.table<any>('status_sla_pause_config as config');
+      scopedDb.tenantJoin(configsQuery, 'statuses as status', 'config.status_id', 'status.status_id');
+
+      const configs = await configsQuery
         .where({
-          'config.tenant': tenant,
           'status.status_type': 'ticket',
         })
         .whereNotNull('status.board_id')
@@ -176,7 +184,7 @@ export const getStatusSlaPauseConfigs = withAuth(async (_user, { tenant }): Prom
       }));
     } catch (error) {
       console.error(`Error fetching status SLA pause configs for tenant ${tenant}:`, error);
-      throw new Error(`Failed to fetch status SLA pause configs for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -189,13 +197,12 @@ export const getSlaPauseConfigForStatus = withAuth(async (_user, { tenant }, sta
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const config = await trx('status_sla_pause_config as config')
-        .join('statuses as status', function () {
-          this.on('config.tenant', '=', 'status.tenant')
-            .andOn('config.status_id', '=', 'status.status_id');
-        })
+      const scopedDb = tenantDb(trx, tenant);
+      const configQuery = scopedDb.table<any>('status_sla_pause_config as config');
+      scopedDb.tenantJoin(configQuery, 'statuses as status', 'config.status_id', 'status.status_id');
+
+      const config = await configQuery
         .where({
-          'config.tenant': tenant,
           'config.status_id': statusId,
           'status.status_type': 'ticket',
         })
@@ -216,7 +223,7 @@ export const getSlaPauseConfigForStatus = withAuth(async (_user, { tenant }, sta
       } as IStatusSlaPauseConfig;
     } catch (error) {
       console.error(`Error fetching SLA pause config for status ${statusId}:`, error);
-      throw new Error(`Failed to fetch SLA pause config for status ${statusId}`);
+      throw error;
     }
   });
 });
@@ -230,24 +237,26 @@ export const setStatusSlaPauseConfig = withAuth(async (
   { tenant },
   statusId: string,
   pausesSla: boolean
-): Promise<IStatusSlaPauseConfig> => {
+): Promise<IStatusSlaPauseConfig | SlaActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       await assertBoardOwnedTicketStatus(trx, tenant, statusId);
 
+      const scopedDb = tenantDb(trx, tenant);
+
       // Check if config exists for this status
-      const existingConfig = await trx('status_sla_pause_config')
-        .where({ tenant, status_id: statusId })
+      const existingConfig = await scopedDb.table('status_sla_pause_config')
+        .where({ status_id: statusId })
         .first();
 
       let result;
 
       if (existingConfig) {
         // Update existing config
-        const [updated] = await trx('status_sla_pause_config')
-          .where({ tenant, status_id: statusId })
+        const [updated] = await scopedDb.table('status_sla_pause_config')
+          .where({ status_id: statusId })
           .update({
             pauses_sla: pausesSla,
           })
@@ -256,7 +265,7 @@ export const setStatusSlaPauseConfig = withAuth(async (
         result = updated;
       } else {
         // Insert new config
-        const [inserted] = await trx('status_sla_pause_config')
+        const [inserted] = await scopedDb.table('status_sla_pause_config')
           .insert({
             tenant,
             status_id: statusId,
@@ -275,8 +284,13 @@ export const setStatusSlaPauseConfig = withAuth(async (
         created_at: result.created_at,
       } as IStatusSlaPauseConfig;
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error setting SLA pause config for status ${statusId}:`, error);
-      throw new Error(`Failed to set SLA pause config for status ${statusId}`);
+      throw error;
     }
   });
 });
@@ -289,7 +303,7 @@ export const bulkUpdateStatusSlaPauseConfigs = withAuth(async (
   _user,
   { tenant },
   configs: Array<{ statusId: string; pausesSla: boolean }>
-): Promise<IStatusSlaPauseConfig[]> => {
+): Promise<IStatusSlaPauseConfig[] | SlaActionError> => {
   const { knex: db } = await createTenantKnex();
 
   if (configs.length === 0) {
@@ -298,6 +312,8 @@ export const bulkUpdateStatusSlaPauseConfigs = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      const scopedDb = tenantDb(trx, tenant);
+
       for (const config of configs) {
         await assertBoardOwnedTicketStatus(trx, tenant, config.statusId);
       }
@@ -306,16 +322,16 @@ export const bulkUpdateStatusSlaPauseConfigs = withAuth(async (
 
       for (const config of configs) {
         // Check if config exists for this status
-        const existingConfig = await trx('status_sla_pause_config')
-          .where({ tenant, status_id: config.statusId })
+        const existingConfig = await scopedDb.table('status_sla_pause_config')
+          .where({ status_id: config.statusId })
           .first();
 
         let result;
 
         if (existingConfig) {
           // Update existing config
-          const [updated] = await trx('status_sla_pause_config')
-            .where({ tenant, status_id: config.statusId })
+          const [updated] = await scopedDb.table('status_sla_pause_config')
+            .where({ status_id: config.statusId })
             .update({
               pauses_sla: config.pausesSla,
             })
@@ -324,7 +340,7 @@ export const bulkUpdateStatusSlaPauseConfigs = withAuth(async (
           result = updated;
         } else {
           // Insert new config
-          const [inserted] = await trx('status_sla_pause_config')
+          const [inserted] = await scopedDb.table('status_sla_pause_config')
             .insert({
               tenant,
               status_id: config.statusId,
@@ -346,8 +362,13 @@ export const bulkUpdateStatusSlaPauseConfigs = withAuth(async (
 
       return results;
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error bulk updating SLA pause configs for tenant ${tenant}:`, error);
-      throw new Error(`Failed to bulk update SLA pause configs for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -364,13 +385,12 @@ export const getBoardOwnedTicketStatusesForSlaPauseConfig = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const rows = await trx('statuses as status')
-        .join('boards as board', function () {
-          this.on('status.tenant', '=', 'board.tenant')
-            .andOn('status.board_id', '=', 'board.board_id');
-        })
+      const scopedDb = tenantDb(trx, tenant);
+      const rowsQuery = scopedDb.table<any>('statuses as status');
+      scopedDb.tenantJoin(rowsQuery, 'boards as board', 'status.board_id', 'board.board_id');
+
+      const rows = await rowsQuery
         .where({
-          'status.tenant': tenant,
           'status.status_type': 'ticket',
         })
         .whereNotNull('status.board_id')
@@ -397,7 +417,7 @@ export const getBoardOwnedTicketStatusesForSlaPauseConfig = withAuth(async (
       }));
     } catch (error) {
       console.error(`Error fetching board-owned ticket statuses for tenant ${tenant}:`, error);
-      throw new Error(`Failed to fetch board-owned ticket statuses for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -424,9 +444,11 @@ export const shouldSlaBePaused = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      const scopedDb = tenantDb(trx, tenant);
+
       // Get the ticket's current state
-      const ticket = await trx('tickets')
-        .where({ tenant, ticket_id: ticketId })
+      const ticket = await scopedDb.table('tickets')
+        .where({ ticket_id: ticketId })
         .select('status_id', 'response_state')
         .first();
 
@@ -435,8 +457,7 @@ export const shouldSlaBePaused = withAuth(async (
       }
 
       // Get SLA settings
-      let slaSettings = await trx('sla_settings')
-        .where({ tenant })
+      let slaSettings = await scopedDb.table('sla_settings')
         .first();
 
       // Use default settings if none exist
@@ -455,8 +476,8 @@ export const shouldSlaBePaused = withAuth(async (
       }
 
       // Check 2: Status-based pause
-      const statusPauseConfig = await trx('status_sla_pause_config')
-        .where({ tenant, status_id: ticket.status_id })
+      const statusPauseConfig = await scopedDb.table('status_sla_pause_config')
+        .where({ status_id: ticket.status_id })
         .first();
 
       if (statusPauseConfig?.pauses_sla) {
@@ -472,8 +493,11 @@ export const shouldSlaBePaused = withAuth(async (
         reason: null,
       };
     } catch (error) {
+      if (error instanceof Error && error.message === `Ticket ${ticketId} not found`) {
+        throw error;
+      }
       console.error(`Error checking SLA pause status for ticket ${ticketId}:`, error);
-      throw new Error(`Failed to check SLA pause status for ticket ${ticketId}`);
+      throw error;
     }
   });
 });
@@ -482,19 +506,24 @@ export const shouldSlaBePaused = withAuth(async (
  * Delete a status SLA pause configuration.
  * Useful when a status is deleted or when you want to remove the override.
  */
-export const deleteStatusSlaPauseConfig = withAuth(async (_user, { tenant }, statusId: string): Promise<boolean> => {
+export const deleteStatusSlaPauseConfig = withAuth(async (_user, { tenant }, statusId: string): Promise<boolean | SlaActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const deleted = await trx('status_sla_pause_config')
-        .where({ tenant, status_id: statusId })
+      const deleted = await tenantDb(trx, tenant).table('status_sla_pause_config')
+        .where({ status_id: statusId })
         .delete();
 
       return deleted > 0;
     } catch (error) {
+      const expectedError = slaActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+
       console.error(`Error deleting SLA pause config for status ${statusId}:`, error);
-      throw new Error(`Failed to delete SLA pause config for status ${statusId}`);
+      throw error;
     }
   });
 });
@@ -510,9 +539,8 @@ export const deleteStatusSlaPauseConfig = withAuth(async (_user, { tenant }, sta
  */
 export const getResponseStateTrackingSetting = withAuth(async (_user, { tenant }): Promise<boolean> => {
   const { knex: db } = await createTenantKnex();
-  const row = await db('tenant_settings')
+  const row = await tenantDb(db, tenant).table('tenant_settings')
     .select('ticket_display_settings')
-    .where({ tenant })
     .first();
   return (row?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
 });
@@ -523,10 +551,10 @@ export const getResponseStateTrackingSetting = withAuth(async (_user, { tenant }
 export const updateResponseStateTrackingSetting = withAuth(async (_user, { tenant }, enabled: boolean): Promise<boolean> => {
   const { knex: db } = await createTenantKnex();
   const now = new Date();
+  const scopedDb = tenantDb(db, tenant);
 
-  const existingRow = await db('tenant_settings')
+  const existingRow = await scopedDb.table('tenant_settings')
     .select('ticket_display_settings', 'settings')
-    .where({ tenant })
     .first();
 
   const currentDisplay = (existingRow?.ticket_display_settings as any) || {};
@@ -540,7 +568,7 @@ export const updateResponseStateTrackingSetting = withAuth(async (_user, { tenan
     ticketing: { ...ticketing, display: { ...display, responseStateTrackingEnabled: enabled } },
   };
 
-  await db('tenant_settings')
+  await scopedDb.table('tenant_settings')
     .insert({
       tenant,
       ticket_display_settings: JSON.stringify(mergedDisplay),

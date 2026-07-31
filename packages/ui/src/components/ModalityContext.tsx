@@ -14,3 +14,12 @@ export const useModality = () => React.useContext(ModalityContext);
 export const InsideDialogContext = React.createContext(false);
 
 export const useInsideDialog = () => React.useContext(InsideDialogContext);
+
+/**
+ * True inside Drawer content specifically (Drawer also sets InsideDialogContext,
+ * which cannot distinguish drawers from dialogs). Lets forms pick the matching
+ * submit shortcut: panel.submit in a drawer, page.save/dialog.submit elsewhere.
+ */
+export const InsideDrawerContext = React.createContext(false);
+
+export const useInsideDrawer = () => React.useContext(InsideDrawerContext);

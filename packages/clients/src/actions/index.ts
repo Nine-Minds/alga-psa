@@ -9,6 +9,7 @@
 // Re-export all client actions as legacy aliases
 // These will be gradually migrated to client-specific implementations
 export * from './clientActions';
+export * from './clientLifecycleActions';
 export * from './clientLocationActions';
 export * from './clientLocaleActions';
 export * from './clientTaxRateActions';
@@ -21,12 +22,13 @@ export * from './inboundTicketDestinationActions';
 export * from './countryActions';
 export * from './contact-actions';
 export * from './interactionActions';
-export * from './interactionCreateHelper';
 export * from './interactionTypeActions';
 export * from './onlineMeetingActions';
 export * from './contactAvatarActions';
 export * from './queryActions';
 export * from './entraClientSyncActions';
+export * from './clientPulseActions';
+export * from './clientTimelineActions';
 
 // TODO: Create client-specific action files with dual-write logic:
 // - clientActions.ts (replaces clientActions.ts)

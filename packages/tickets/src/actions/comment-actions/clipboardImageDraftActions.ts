@@ -1,10 +1,12 @@
 'use server';
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { Knex } from 'knex';
 
 type DraftClipboardImageDeleteFailureReason =
+  | 'invalid_request'
+  | 'permission_denied'
   | 'missing_document'
   | 'not_ticket_attachment'
   | 'has_other_associations'
@@ -47,36 +49,68 @@ function isImageMimeType(mimeType: string | null): boolean {
   return Boolean(mimeType && mimeType.toLowerCase().startsWith('image/'));
 }
 
+function tenantScopedTable<Row extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
+}
+
+function requestFailure(
+  documentIds: string[],
+  reason: Extract<DraftClipboardImageDeleteFailureReason, 'invalid_request' | 'permission_denied'>,
+  detail: string
+): DeleteDraftClipboardImagesResult {
+  const uniqueDocumentIds = Array.from(new Set(documentIds.filter(Boolean)));
+  const failureIds = uniqueDocumentIds.length > 0 ? uniqueDocumentIds : ['request'];
+  return {
+    deletedDocumentIds: [],
+    failures: failureIds.map((documentId) => ({
+      documentId,
+      reason,
+      detail,
+    })),
+  };
+}
+
 export const deleteDraftClipboardImages = withAuth(
   async (
     user,
     { tenant },
     input: DeleteDraftClipboardImagesInput
   ): Promise<DeleteDraftClipboardImagesResult> => {
+    const requestedDocumentIds = Array.isArray(input?.documentIds) ? input.documentIds : [];
     if (!tenant) {
-      throw new Error('Tenant is required.');
+      return requestFailure(requestedDocumentIds, 'invalid_request', 'Tenant is required.');
     }
-    if (!input.ticketId) {
-      throw new Error('ticketId is required.');
+    if (!input?.ticketId) {
+      return requestFailure(requestedDocumentIds, 'invalid_request', 'ticketId is required.');
     }
-    if (!Array.isArray(input.documentIds) || input.documentIds.length === 0) {
+    if (requestedDocumentIds.length === 0) {
       return { deletedDocumentIds: [], failures: [] };
     }
 
     const hasDeletePermission = await hasPermission(user, 'document', 'delete');
     if (!hasDeletePermission) {
-      throw new Error('Permission denied: cannot delete document attachments.');
+      return requestFailure(
+        requestedDocumentIds,
+        'permission_denied',
+        'Permission denied: cannot delete document attachments.'
+      );
     }
 
-    const uniqueDocumentIds = Array.from(new Set(input.documentIds.filter(Boolean)));
+    const uniqueDocumentIds = Array.from(new Set(requestedDocumentIds.filter(Boolean)));
     const { knex } = await createTenantKnex();
 
     const evaluation = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const candidates = await trx('documents as d')
-        .join('document_associations as da', function joinAssociations() {
-          this.on('da.document_id', '=', 'd.document_id').andOn('da.tenant', '=', 'd.tenant');
-        })
-        .where('d.tenant', tenant)
+      const candidates = await tenantDb(trx, tenant)
+        .tenantJoin(
+          tenantScopedTable(trx, 'documents as d', tenant),
+          'document_associations as da',
+          'da.document_id',
+          'd.document_id'
+        )
         .whereIn('d.document_id', uniqueDocumentIds)
         .andWhere('da.entity_type', 'ticket')
         .andWhere('da.entity_id', input.ticketId)
@@ -89,9 +123,12 @@ export const deleteDraftClipboardImages = withAuth(
         );
 
       const byId = new Map(candidates.map((candidate) => [candidate.document_id, candidate]));
-      const documentAssociations = await trx('document_associations')
+      const documentAssociations = await tenantScopedTable<{
+        document_id: string;
+        entity_id: string;
+        entity_type: string;
+      }>(trx, 'document_associations', tenant)
         .select('document_id', 'entity_id', 'entity_type')
-        .where('tenant', tenant)
         .whereIn('document_id', uniqueDocumentIds);
       const associationsByDocumentId = new Map<
         string,
@@ -164,8 +201,7 @@ export const deleteDraftClipboardImages = withAuth(
         const referenceTokens = [candidate.file_id, candidate.document_id].filter(Boolean) as string[];
         let referencedByComment = false;
         if (referenceTokens.length > 0) {
-          const commentQuery = trx('comments')
-            .where({ tenant })
+          const commentQuery = tenantScopedTable(trx, 'comments', tenant)
             .andWhere(function containsReference() {
               referenceTokens.forEach((token, index) => {
                 const pattern = `%${token}%`;

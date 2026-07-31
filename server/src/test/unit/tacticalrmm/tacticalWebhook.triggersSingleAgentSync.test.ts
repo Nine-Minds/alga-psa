@@ -95,7 +95,32 @@ vi.mock('@alga-psa/core/secrets', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  isTenantSuspended: vi.fn(async () => false),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    scoped: (t: string) => conn(t),
+    subquery: (t: string) => conn(t),
+    parentScopedTable: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+    tenantJoinSubquery: (q: any, sub: any, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(sub) ?? q) : (q.join?.(sub) ?? q),
+    tenantWhereColumn: (q: any) => q,
+  }),
   createTenantKnex: vi.fn(async () => ({ knex: knexMock })),
+}));
+
+vi.mock('@alga-psa/shared/rmm/alerts', async () => {
+  const actual: any = await vi.importActual('@alga-psa/shared/rmm/alerts');
+  return {
+    ...actual,
+    processRmmAlertEvent: vi.fn(async () => ({ outcome: 'recorded_only', alertId: 'alert-1', warnings: [] })),
+  };
+});
+
+vi.mock('@alga-psa/integrations/lib/rmm/alerts/pipelineDeps', () => ({
+  buildRmmAlertPipelineDeps: vi.fn(() => ({})),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -109,7 +134,7 @@ vi.mock('@alga-psa/integrations/lib/rmm/tacticalrmm/tacticalApiClient', async ()
 
   class TacticalRmmClientMock {
     async request(args: { method: string; path: string }) {
-      const m = String(args.path).match(/\/api\/beta\/v1\/agent\/([^/]+)\//);
+      const m = String(args.path).match(/\/(?:api\/)?beta\/v1\/agent\/([^/]+)\//);
       if (!m) throw new Error(`Unexpected request path: ${args.path}`);
       const agentId = decodeURIComponent(m[1]!);
       const agent = tacticalAgentById[agentId];
@@ -226,9 +251,12 @@ describe('Tactical webhook triggers single-agent sync', () => {
     const res = await POST(req);
     expect(res.status).toBe(200);
 
-    // Alert recorded
-    expect(state.rmm_alerts).toHaveLength(1);
-    expect(state.rmm_alerts[0]?.external_device_id).toBe('a1');
+    // Alert handed to the shared pipeline
+    const { processRmmAlertEvent } = await import('@alga-psa/shared/rmm/alerts');
+    expect(processRmmAlertEvent).toHaveBeenCalledTimes(1);
+    expect((processRmmAlertEvent as any).mock.calls[0][1]).toEqual(
+      expect.objectContaining({ externalDeviceId: 'a1', provider: 'tacticalrmm' })
+    );
 
     // Asset updated by syncSingleAgent
     const asset = state.assets.find((a) => a.asset_id === 'asset_1');

@@ -2,6 +2,7 @@ import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 
@@ -22,6 +23,19 @@ type CreatedIds = {
 
 let createdIds: CreatedIds = { templateIds: [], contractLineIds: [], contractIds: [] };
 
+function tenantTable<Row extends object = Record<string, unknown>>(
+  connection: Knex,
+  tenant: string,
+  tableExpression: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(connection, tenant).table<Row>(tableExpression);
+}
+
+function tenantRows(connection: Knex): Knex.QueryBuilder<Record<string, unknown>, Record<string, unknown>[]> {
+  return tenantDb(connection, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
 vi.mock('server/src/lib/db', async () => {
   const actual = await vi.importActual<typeof import('server/src/lib/db')>('server/src/lib/db');
   return {
@@ -37,6 +51,58 @@ vi.mock('server/src/lib/tenant', () => ({
   getTenantFromHeaders: vi.fn(() => tenantId ?? null)
 }));
 
+// The wizard actions are withAuth-wrapped via @alga-psa/auth; without this the
+// real wrapper throws AuthenticationError under the test session. Inline (not
+// createAuthModuleMock): the dynamic-import factory deadlocks at collect when
+// testMocks is also imported statically.
+const authRef: { user: any; tenant: string } = { user: null, tenant: '' };
+vi.mock('@alga-psa/auth', () => ({
+  getCurrentUser: vi.fn(async () => authRef.user),
+  getSession: vi.fn(async () =>
+    authRef.user ? { user: { id: authRef.user.user_id, tenant: authRef.tenant } } : null
+  ),
+  hasPermission: vi.fn(async () => true),
+  throwPermissionError: (action: string, additionalInfo?: string): never => {
+    throw new Error(`Permission denied: Cannot ${action}${additionalInfo ? `. ${additionalInfo}` : ''}`);
+  },
+  withAuth: (action: any) => async (...args: any[]) => {
+    if (!authRef.user) throw new Error('User not authenticated');
+    return action(authRef.user, { tenant: authRef.tenant }, ...args);
+  },
+  withOptionalAuth: (action: any) => async (...args: any[]) =>
+    action(authRef.user ?? null, authRef.user ? { tenant: authRef.tenant } : null, ...args),
+  withAuthCheck: (action: any) => async (...args: any[]) => {
+    if (!authRef.user) throw new Error('User not authenticated');
+    return action(authRef.user, ...args);
+  },
+}));
+
+// contractWizardActions imports withAuth from the subpath, not the bare module.
+// Like the real wrapper, run the action inside runWithTenant so requireTenantId
+// finds the AsyncLocalStorage tenant context.
+vi.mock('@alga-psa/auth/withAuth', () => ({
+  withAuth: (action: any) => async (...args: any[]) => {
+    if (!authRef.user) throw new Error('User not authenticated');
+    const { runWithTenant } = await import('@alga-psa/db');
+    return runWithTenant(authRef.tenant, () => action(authRef.user, { tenant: authRef.tenant }, ...args));
+  },
+  withOptionalAuth: (action: any) => async (...args: any[]) =>
+    action(authRef.user ?? null, authRef.user ? { tenant: authRef.tenant } : null, ...args),
+  withAuthCheck: (action: any) => async (...args: any[]) => {
+    if (!authRef.user) throw new Error('User not authenticated');
+    return action(authRef.user, ...args);
+  },
+}));
+
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
+    getCurrentTenantId: vi.fn(async () => tenantId ?? null)
+  };
+});
+
 describe('createContractTemplateFromWizard with Currency Support', () => {
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
@@ -51,7 +117,11 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
 
     db = await createTestDbConnection();
     tenantId = await ensureTenant(db);
-    setupCommonMocks({ tenantId, permissionCheck: () => true });
+    const { createUser } = await import('../../../test-utils/testDataFactory');
+    const wizardUserId = await createUser(db, tenantId, { username: 'contract-wizard-currency-user' });
+    authRef.user = { user_id: wizardUserId, tenant: tenantId, user_type: 'internal', roles: [] };
+    authRef.tenant = tenantId;
+    setupCommonMocks({ tenantId, userId: wizardUserId, permissionCheck: () => true });
     ({ createContractTemplateFromWizard, createClientContractFromWizard, getContractTemplateSnapshotForClientWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
   }, 120_000);
 
@@ -69,11 +139,10 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
   it('creates a template with USD currency and persists it correctly', async () => {
     const serviceTypeId = uuidv4();
     const serviceTypeName = `Service Type ${serviceTypeId.slice(0, 8)}`;
-    await db('service_types').insert({
+    await tenantTable(db, tenantId, 'service_types').insert({
       id: serviceTypeId,
       tenant: tenantId,
       name: serviceTypeName,
-      billing_method: 'fixed',
       order_number: Math.floor(Math.random() * 1000000),
       created_at: db.fn.now(),
       updated_at: db.fn.now()
@@ -81,7 +150,7 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     createdIds.serviceTypeId = serviceTypeId;
 
     const serviceId = uuidv4();
-    await db('service_catalog').insert({
+    await tenantTable(db, tenantId, 'service_catalog').insert({
       tenant: tenantId,
       service_id: serviceId,
       service_name: 'Test Service',
@@ -120,13 +189,13 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     }
 
     // Verify template was saved with correct currency_code
-    const template = await db('contract_templates')
+    const template = await tenantTable(db, tenantId, 'contract_templates')
       .where({ tenant: tenantId, template_id: result.contract_id })
       .first();
 
     expect(template).toBeTruthy();
     expect(template?.template_name).toBe('USD Template Test');
-    expect(template?.currency_code).toBe('USD');
+    expect(template).not.toHaveProperty('currency_code');
     expect(template?.default_billing_frequency).toBe('monthly');
     expect(template?.template_description).toBe('Template with USD currency');
   });
@@ -134,11 +203,10 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
   it('creates a template with EUR currency and persists it correctly', async () => {
     const serviceTypeId = uuidv4();
     const serviceTypeName = `Service Type ${serviceTypeId.slice(0, 8)}`;
-    await db('service_types').insert({
+    await tenantTable(db, tenantId, 'service_types').insert({
       id: serviceTypeId,
       tenant: tenantId,
       name: serviceTypeName,
-      billing_method: 'fixed',
       order_number: Math.floor(Math.random() * 1000000),
       created_at: db.fn.now(),
       updated_at: db.fn.now()
@@ -146,7 +214,7 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     createdIds.serviceTypeId = serviceTypeId;
 
     const serviceId = uuidv4();
-    await db('service_catalog').insert({
+    await tenantTable(db, tenantId, 'service_catalog').insert({
       tenant: tenantId,
       service_id: serviceId,
       service_name: 'Test Service EUR',
@@ -185,24 +253,23 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     }
 
     // Verify template was saved with correct currency_code
-    const template = await db('contract_templates')
+    const template = await tenantTable(db, tenantId, 'contract_templates')
       .where({ tenant: tenantId, template_id: result.contract_id })
       .first();
 
     expect(template).toBeTruthy();
     expect(template?.template_name).toBe('EUR Template Test');
-    expect(template?.currency_code).toBe('EUR');
+    expect(template).not.toHaveProperty('currency_code');
     expect(template?.default_billing_frequency).toBe('monthly');
   });
 
   it('creates a template with GBP currency and persists it correctly', async () => {
     const serviceTypeId = uuidv4();
     const serviceTypeName = `Service Type ${serviceTypeId.slice(0, 8)}`;
-    await db('service_types').insert({
+    await tenantTable(db, tenantId, 'service_types').insert({
       id: serviceTypeId,
       tenant: tenantId,
       name: serviceTypeName,
-      billing_method: 'hourly',
       order_number: Math.floor(Math.random() * 1000000),
       created_at: db.fn.now(),
       updated_at: db.fn.now()
@@ -210,7 +277,7 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     createdIds.serviceTypeId = serviceTypeId;
 
     const serviceId = uuidv4();
-    await db('service_catalog').insert({
+    await tenantTable(db, tenantId, 'service_catalog').insert({
       tenant: tenantId,
       service_id: serviceId,
       service_name: 'Hourly Service GBP',
@@ -249,24 +316,23 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     }
 
     // Verify template was saved with correct currency_code
-    const template = await db('contract_templates')
+    const template = await tenantTable(db, tenantId, 'contract_templates')
       .where({ tenant: tenantId, template_id: result.contract_id })
       .first();
 
     expect(template).toBeTruthy();
     expect(template?.template_name).toBe('GBP Hourly Template');
-    expect(template?.currency_code).toBe('GBP');
+    expect(template).not.toHaveProperty('currency_code');
     expect(template?.default_billing_frequency).toBe('monthly');
   });
 
   it('creates templates with multiple currencies in same tenant', async () => {
     const serviceTypeId = uuidv4();
     const serviceTypeName = `Service Type ${serviceTypeId.slice(0, 8)}`;
-    await db('service_types').insert({
+    await tenantTable(db, tenantId, 'service_types').insert({
       id: serviceTypeId,
       tenant: tenantId,
       name: serviceTypeName,
-      billing_method: 'fixed',
       order_number: Math.floor(Math.random() * 1000000),
       created_at: db.fn.now(),
       updated_at: db.fn.now()
@@ -274,7 +340,7 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     createdIds.serviceTypeId = serviceTypeId;
 
     const serviceId = uuidv4();
-    await db('service_catalog').insert({
+    await tenantTable(db, tenantId, 'service_catalog').insert({
       tenant: tenantId,
       service_id: serviceId,
       service_name: 'Multi Currency Service',
@@ -323,38 +389,37 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     }
 
     // Verify both templates exist with correct currencies
-    const usdTemplate = await db('contract_templates')
+    const usdTemplate = await tenantTable(db, tenantId, 'contract_templates')
       .where({ tenant: tenantId, template_id: usdResult.contract_id })
       .first();
-    expect(usdTemplate?.currency_code).toBe('USD');
+    expect(usdTemplate).not.toHaveProperty('currency_code');
 
-    const jpyTemplate = await db('contract_templates')
+    const jpyTemplate = await tenantTable(db, tenantId, 'contract_templates')
       .where({ tenant: tenantId, template_id: jpyResult.contract_id })
       .first();
-    expect(jpyTemplate?.currency_code).toBe('JPY');
+    expect(jpyTemplate).not.toHaveProperty('currency_code');
 
     // Verify both templates are persisted separately
-    const allTemplates = await db('contract_templates')
+    const allTemplates = await tenantTable(db, tenantId, 'contract_templates')
       .where({ tenant: tenantId })
       .whereIn('template_id', [usdResult.contract_id, jpyResult.contract_id])
-      .select('template_id', 'currency_code', 'template_name');
+      .select('template_id', 'template_name');
 
     expect(allTemplates).toHaveLength(2);
     const usdEntry = allTemplates.find(t => t.template_id === usdResult.contract_id);
     const jpyEntry = allTemplates.find(t => t.template_id === jpyResult.contract_id);
 
-    expect(usdEntry?.currency_code).toBe('USD');
-    expect(jpyEntry?.currency_code).toBe('JPY');
+    expect(usdEntry).not.toHaveProperty('currency_code');
+    expect(jpyEntry).not.toHaveProperty('currency_code');
   });
 
   it('creates draft template with currency and verifies status and currency', async () => {
     const serviceTypeId = uuidv4();
     const serviceTypeName = `Service Type ${serviceTypeId.slice(0, 8)}`;
-    await db('service_types').insert({
+    await tenantTable(db, tenantId, 'service_types').insert({
       id: serviceTypeId,
       tenant: tenantId,
       name: serviceTypeName,
-      billing_method: 'fixed',
       order_number: Math.floor(Math.random() * 1000000),
       created_at: db.fn.now(),
       updated_at: db.fn.now()
@@ -362,7 +427,7 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     createdIds.serviceTypeId = serviceTypeId;
 
     const serviceId = uuidv4();
-    await db('service_catalog').insert({
+    await tenantTable(db, tenantId, 'service_catalog').insert({
       tenant: tenantId,
       service_id: serviceId,
       service_name: 'Draft Service',
@@ -398,13 +463,13 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     }
 
     // Verify draft template was saved with correct currency_code and status
-    const template = await db('contract_templates')
+    const template = await tenantTable(db, tenantId, 'contract_templates')
       .where({ tenant: tenantId, template_id: result.contract_id })
       .first();
 
     expect(template).toBeTruthy();
     expect(template?.template_status).toBe('draft');
-    expect(template?.currency_code).toBe('CAD');
+    expect(template).not.toHaveProperty('currency_code');
     expect(template?.default_billing_frequency).toBe('quarterly');
   });
 
@@ -412,11 +477,10 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     // First, create a template with EUR currency
     const serviceTypeId = uuidv4();
     const serviceTypeName = `Service Type ${serviceTypeId.slice(0, 8)}`;
-    await db('service_types').insert({
+    await tenantTable(db, tenantId, 'service_types').insert({
       id: serviceTypeId,
       tenant: tenantId,
       name: serviceTypeName,
-      billing_method: 'fixed',
       order_number: Math.floor(Math.random() * 1000000),
       created_at: db.fn.now(),
       updated_at: db.fn.now()
@@ -424,7 +488,7 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     createdIds.serviceTypeId = serviceTypeId;
 
     const serviceId = uuidv4();
-    await db('service_catalog').insert({
+    await tenantTable(db, tenantId, 'service_catalog').insert({
       tenant: tenantId,
       service_id: serviceId,
       service_name: 'EUR Inherited Service',
@@ -456,17 +520,18 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     }
 
     // Verify template was created with EUR
-    const template = await db('contract_templates')
+    const template = await tenantTable(db, tenantId, 'contract_templates')
       .where({ tenant: tenantId, template_id: templateResult.contract_id })
       .first();
-    expect(template?.currency_code).toBe('EUR');
+    expect(template).not.toHaveProperty('currency_code');
 
     // Create a client to associate the contract with
     const clientId = uuidv4();
-    await db('clients').insert({
+    await tenantTable(db, tenantId, 'clients').insert({
       client_id: clientId,
       tenant: tenantId,
       client_name: 'Test Client for EUR Contract',
+      default_currency_code: 'EUR',
       created_at: db.fn.now(),
       updated_at: db.fn.now()
     });
@@ -492,7 +557,7 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     }
 
     // Verify contract was created with EUR currency
-    const contract = await db('contracts')
+    const contract = await tenantTable(db, tenantId, 'contracts')
       .where({ tenant: tenantId, contract_id: contractResult.contract_id })
       .first();
 
@@ -503,11 +568,10 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
 
   it('creates contract with JPY currency from template and preserves currency', async () => {
     const serviceTypeId = uuidv4();
-    await db('service_types').insert({
+    await tenantTable(db, tenantId, 'service_types').insert({
       id: serviceTypeId,
       tenant: tenantId,
       name: `JPY Service Type ${serviceTypeId.slice(0, 8)}`,
-      billing_method: 'hourly',
       order_number: Math.floor(Math.random() * 1000000),
       created_at: db.fn.now(),
       updated_at: db.fn.now()
@@ -515,7 +579,7 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     createdIds.serviceTypeId = serviceTypeId;
 
     const serviceId = uuidv4();
-    await db('service_catalog').insert({
+    await tenantTable(db, tenantId, 'service_catalog').insert({
       tenant: tenantId,
       service_id: serviceId,
       service_name: 'JPY Hourly Service',
@@ -548,10 +612,11 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
 
     // Create client
     const clientId = uuidv4();
-    await db('clients').insert({
+    await tenantTable(db, tenantId, 'clients').insert({
       client_id: clientId,
       tenant: tenantId,
       client_name: 'JPY Contract Client',
+      default_currency_code: 'JPY',
       created_at: db.fn.now(),
       updated_at: db.fn.now()
     });
@@ -577,12 +642,12 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     }
 
     // Verify both template and contract have JPY
-    const template = await db('contract_templates')
+    const template = await tenantTable(db, tenantId, 'contract_templates')
       .where({ tenant: tenantId, template_id: templateResult.contract_id })
       .first();
-    expect(template?.currency_code).toBe('JPY');
+    expect(template).not.toHaveProperty('currency_code');
 
-    const contract = await db('contracts')
+    const contract = await tenantTable(db, tenantId, 'contracts')
       .where({ tenant: tenantId, contract_id: contractResult.contract_id })
       .first();
     expect(contract?.currency_code).toBe('JPY');
@@ -590,13 +655,13 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
 });
 
 async function ensureTenant(connection: Knex): Promise<string> {
-  const existing = await connection('tenants').first<{ tenant: string }>('tenant');
+  const existing = await tenantRows(connection).first<{ tenant: string }>('tenant');
   if (existing?.tenant) {
     return existing.tenant;
   }
 
   const newTenantId = uuidv4();
-  await connection('tenants').insert({
+  await tenantRows(connection).insert({
     tenant: newTenantId,
     client_name: 'Template Currency Integration Test Tenant',
     email: 'template-currency-test@test.co',
@@ -613,7 +678,7 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
 
   const safeDelete = async (table: string, where: Record<string, unknown>) => {
     try {
-      await db(table).where(where).del();
+      await tenantTable(db, tenantId, table).where(where).del();
     } catch {
       // ignore cleanup issues
     }
@@ -624,7 +689,7 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
       return;
     }
     try {
-      await db(table).whereIn(column, values).andWhere({ tenant: tenantId }).del();
+      await tenantTable(db, tenantId, table).whereIn(column, values).del();
     } catch {
       // ignore cleanup issues
     }

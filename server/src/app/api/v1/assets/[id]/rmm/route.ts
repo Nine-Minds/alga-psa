@@ -7,6 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { getAssetRmmData } from '@/lib/actions/asset-actions/rmmActions';
+import { rmmErrorResponse, rmmRouteErrorFrom } from './rmmRouteErrors';
 
 export async function GET(
   request: Request,
@@ -37,6 +38,10 @@ export async function GET(
     });
   } catch (error) {
     console.error('Failed to get asset RMM data:', error);
+    const expectedError = rmmRouteErrorFrom(error);
+    if (expectedError) {
+      return rmmErrorResponse(expectedError);
+    }
     return NextResponse.json(
       { error: 'Failed to get RMM data' },
       { status: 500 }

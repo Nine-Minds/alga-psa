@@ -176,7 +176,7 @@ const COPY = {
   },
   pl: {
     headerLabel: 'Nowy komentarz',
-    intro: '<strong>{{comment.authorName}}</strong> dodał(a) komentarz do zgłoszenia <strong>{{ticket.clientName}}</strong>.',
+    intro: '<strong>{{comment.author}}</strong> dodał(a) komentarz do zgłoszenia <strong>{{ticket.clientName}}</strong>.',
     badgePrefix: 'Zgłoszenie #',
     priority: 'Priorytet',
     status: 'Status',
@@ -188,7 +188,7 @@ const COPY = {
     category: null, /* PL omits Category row */
     location: null, /* PL omits Location row */
     commentLabel: 'Treść komentarza',
-    commentVar: '{{comment.body}}',
+    commentVar: '{{comment.content}}',
     viewButton: 'Zobacz zgłoszenie',
     footer: 'Powered by Alga PSA',
     textHeader: 'Nowy komentarz',
@@ -201,6 +201,32 @@ const COPY = {
     isSimplified: true,
   },
 };
+SUBJECTS.pt = 'Novo comentário • {{ticket.title}}';
+COPY.pt = {
+  headerLabel: 'Novo comentário adicionado',
+  intro: 'Um novo comentário foi adicionado a um ticket para <strong>{{ticket.clientName}}</strong>.',
+  badgePrefix: 'Ticket #',
+  priority: 'Prioridade',
+  status: 'Status',
+  commentBy: 'Comentado por',
+  commentByVar: '{{comment.author}}',
+  assignedTo: 'Atribuído a',
+  requester: 'Solicitante',
+  board: 'Quadro',
+  category: 'Categoria',
+  location: 'Localização',
+  commentLabel: '&#x1F4AC; Comentário',
+  commentVar: '{{{comment.content}}}',
+  viewButton: 'Ver ticket',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Novo comentário adicionado',
+  textCommentBy: 'Comentado por',
+  textAssigned: 'Atribuído a',
+  textRequester: 'Solicitante',
+  textComment: 'Comentário',
+  textView: 'Ver ticket',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtmlStandard(c) {
@@ -315,7 +341,7 @@ ${c.textView}: {{ticket.url}}`;
 function buildTextPl(c) {
   return `${c.textHeader}
 
-{{comment.authorName}} dodał(a) komentarz do zgłoszenia {{ticket.clientName}}.
+{{comment.author}} dodał(a) komentarz do zgłoszenia {{ticket.clientName}}.
 
 Zgłoszenie #{{ticket.id}} • {{ticket.title}}
 ${c.priority}: {{ticket.priority}}

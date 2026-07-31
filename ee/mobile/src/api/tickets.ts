@@ -21,6 +21,13 @@ export type SuccessResponse<T> = {
   meta?: unknown;
 };
 
+export type TicketListTag = {
+  tag_id: string;
+  tag_text: string;
+  background_color?: string | null;
+  text_color?: string | null;
+};
+
 export type TicketListItem = {
   ticket_id: string;
   ticket_number: string;
@@ -35,6 +42,7 @@ export type TicketListItem = {
   updated_at?: string | null;
   entered_at?: string | null;
   closed_at?: string | null;
+  tags?: TicketListTag[] | null;
 };
 
 export type TicketRichAttributes = {
@@ -113,6 +121,7 @@ export type ListTicketsParams = {
   filters?: {
     is_open?: boolean;
     is_closed?: boolean;
+    client_id?: string;
     assigned_to?: string;
     has_assignment?: boolean;
     priority_name?: string;
@@ -439,5 +448,31 @@ export function toggleCommentReaction(
     path: `/api/v1/tickets/${params.ticketId}/comments/${params.commentId}/reactions`,
     headers: { "x-api-key": params.apiKey },
     body: { emoji: params.emoji },
+  });
+}
+
+// --- Linked assets ---
+
+export type TicketAsset = {
+  asset_id: string;
+  asset_tag?: string | null;
+  name: string;
+  status?: string | null;
+  asset_type?: string | null;
+  serial_number?: string | null;
+  client_name?: string | null;
+  relationship_type?: string | null;
+};
+
+/** Assets linked to this ticket (asset_associations, written from either side). */
+export function getTicketAssets(
+  client: ApiClient,
+  params: { apiKey: string; ticketId: string; signal?: AbortSignal },
+): Promise<ApiResult<SuccessResponse<TicketAsset[]>>> {
+  return client.request<SuccessResponse<TicketAsset[]>>({
+    method: "GET",
+    path: `/api/v1/tickets/${params.ticketId}/assets`,
+    signal: params.signal,
+    headers: { "x-api-key": params.apiKey },
   });
 }

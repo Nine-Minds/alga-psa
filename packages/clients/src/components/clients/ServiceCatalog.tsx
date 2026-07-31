@@ -6,6 +6,7 @@ import { ColumnDefinition, IService, IServiceCategory } from '@alga-psa/types';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Pencil, Trash2, Check, X } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 interface ServiceCatalogProps {
     services: IService[];
@@ -23,6 +24,7 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
     onAdd
 }) => {
     const { t } = useTranslation('msp/clients');
+    const { money } = useCurrencyFormat();
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState<string>('');
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -82,7 +84,7 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
             dataIndex: 'default_rate',
             render: (value) => (
                 <span className="text-[rgb(var(--color-text-700))]">
-                    ${typeof value === 'number' ? value.toFixed(2) : value}
+                    {money(Math.round(Number(value) * 100))}
                 </span>
             ),
         },

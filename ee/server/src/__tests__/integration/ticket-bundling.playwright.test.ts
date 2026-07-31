@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -15,6 +16,10 @@ applyPlaywrightAuthEnvDefaults();
 const TEST_CONFIG = {
   baseUrl: resolvePlaywrightBaseUrl(),
 };
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
 
 async function waitForUIState(page: Page): Promise<void> {
   await page.waitForFunction(() => Boolean((window as any).__UI_STATE__), null, { timeout: 30_000 });
@@ -48,12 +53,12 @@ async function selectTicketById(page: Page, ticketId: string): Promise<void> {
 }
 
 async function ensureDefaultClientLocation(db: Knex, tenantId: string, clientId: string, email: string) {
-  const existing = await db('client_locations')
+  const existing = await tenantTable(db, tenantId, 'client_locations')
     .where({ tenant: tenantId, client_id: clientId, is_default: true, is_active: true })
     .first('location_id');
   if (existing) return;
 
-  await db('client_locations').insert({
+  await tenantTable(db, tenantId, 'client_locations').insert({
     tenant: tenantId,
     location_id: uuidv4(),
     client_id: clientId,
@@ -72,7 +77,7 @@ async function ensureDefaultClientLocation(db: Knex, tenantId: string, clientId:
 
 async function createContact(db: Knex, tenantId: string, clientId: string, email: string, fullName: string) {
   const id = uuidv4();
-  await db('contacts').insert({
+  await tenantTable(db, tenantId, 'contacts').insert({
     tenant: tenantId,
     contact_name_id: id,
     full_name: fullName,
@@ -85,9 +90,9 @@ async function createContact(db: Knex, tenantId: string, clientId: string, email
 }
 
 async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: string) {
-  const existingBoard = await db('boards').where({ tenant: tenantId }).first<{ board_id: string }>('board_id');
+  const existingBoard = await tenantTable(db, tenantId, 'boards').where({ tenant: tenantId }).first<{ board_id: string }>('board_id');
   if (!existingBoard?.board_id) {
-    await db('boards').insert({
+    await tenantTable(db, tenantId, 'boards').insert({
       tenant: tenantId,
       board_id: uuidv4(),
       board_name: 'Test Board',
@@ -99,11 +104,11 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
     });
   }
 
-  const existingOpenStatus = await db('statuses')
+  const existingOpenStatus = await tenantTable(db, tenantId, 'statuses')
     .where({ tenant: tenantId, status_type: 'ticket', is_closed: false })
     .first<{ status_id: string }>('status_id');
   if (!existingOpenStatus?.status_id) {
-    await db('statuses').insert({
+    await tenantTable(db, tenantId, 'statuses').insert({
       tenant: tenantId,
       status_id: uuidv4(),
       name: 'Open',
@@ -116,11 +121,11 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
     });
   }
 
-  const existingClosedStatus = await db('statuses')
+  const existingClosedStatus = await tenantTable(db, tenantId, 'statuses')
     .where({ tenant: tenantId, status_type: 'ticket', is_closed: true })
     .first<{ status_id: string }>('status_id');
   if (!existingClosedStatus?.status_id) {
-    await db('statuses').insert({
+    await tenantTable(db, tenantId, 'statuses').insert({
       tenant: tenantId,
       status_id: uuidv4(),
       name: 'Closed',
@@ -133,9 +138,9 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
     });
   }
 
-  const existingPriority = await db('priorities').where({ tenant: tenantId }).first<{ priority_id: string }>('priority_id');
+  const existingPriority = await tenantTable(db, tenantId, 'priorities').where({ tenant: tenantId }).first<{ priority_id: string }>('priority_id');
   if (!existingPriority?.priority_id) {
-    await db('priorities').insert({
+    await tenantTable(db, tenantId, 'priorities').insert({
       tenant: tenantId,
       priority_id: uuidv4(),
       priority_name: 'Normal',
@@ -147,8 +152,8 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
     });
   }
 
-  const board = await db('boards').where({ tenant: tenantId }).first<{ board_id: string }>('board_id');
-  const statusOpen = await db('statuses')
+  const board = await tenantTable(db, tenantId, 'boards').where({ tenant: tenantId }).first<{ board_id: string }>('board_id');
+  const statusOpen = await tenantTable(db, tenantId, 'statuses')
     .where({ tenant: tenantId, is_closed: false })
     .andWhere(function () {
       this.where('item_type', 'ticket').orWhere('status_type', 'ticket');
@@ -156,7 +161,7 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
     .orderBy('is_default', 'desc')
     .orderBy('order_number', 'asc')
     .first<{ status_id: string }>('status_id');
-  const priority = await db('priorities')
+  const priority = await tenantTable(db, tenantId, 'priorities')
     .where({ tenant: tenantId })
     .orderBy('order_number', 'asc')
     .first<{ priority_id: string }>('priority_id');
@@ -185,7 +190,7 @@ async function insertTicket(db: Knex, params: {
   updatedAtOffsetMs?: number;
 }) {
   const now = new Date(Date.now() + (params.updatedAtOffsetMs ?? 0));
-  await db('tickets').insert({
+  await tenantTable(db, params.tenant, 'tickets').insert({
     tenant: params.tenant,
     ticket_id: params.ticketId,
     ticket_number: params.ticketNumber,
@@ -365,7 +370,7 @@ test('Ticket bundling: multi-client confirmation, add-child confirmation, promot
     const clientA = tenantData.client!.clientId;
     await ensureDefaultClientLocation(db, tenantId, clientA, `a-${uuidv4().slice(0, 6)}@example.com`);
     const clientB = uuidv4();
-    await db('clients').insert({
+    await tenantTable(db, tenantId, 'clients').insert({
       tenant: tenantId,
       client_id: clientB,
       client_name: `Client B ${uuidv4().slice(0, 6)}`,
@@ -435,7 +440,7 @@ test('Ticket bundling: multi-client confirmation, add-child confirmation, promot
     await waitForDialogOverlaysToClear(page);
     await expect(page.locator('#ticket-bundle-master-banner')).toContainText('(2 children)', { timeout: 30_000 });
     await expect(page.locator('#ticket-bundle-master-panel').getByRole('link', { name: otherClientNumber2 })).toBeVisible({ timeout: 15_000 });
-    const otherClient2Record = await db('tickets')
+    const otherClient2Record = await tenantTable(db, tenantId, 'tickets')
       .where({ tenant: tenantId, ticket_id: otherClientTicket2Id })
       .first('master_ticket_id');
     expect(otherClient2Record?.master_ticket_id).toBe(masterId);

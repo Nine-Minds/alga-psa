@@ -20,7 +20,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const LOCALES_DIR = path.resolve(__dirname, '../server/public/locales');
+const LOCALES_DIR = process.env.LOCALES_DIR
+  ? path.resolve(process.env.LOCALES_DIR)
+  : path.resolve(__dirname, '../server/public/locales');
 const REFERENCE_LOCALE = 'en';
 
 const PSEUDO_LOCALES = ['xx', 'yy'];
@@ -68,6 +70,37 @@ function extractVars(str) {
   if (!matches) return [];
   // Keep only simple variable tokens (no commas = no i18next formatting syntax)
   return matches.filter((m) => !m.includes(',')).sort();
+}
+
+/**
+ * CLDR plural support. i18next v4 stores count-based keys as base_<category>.
+ * A locale must provide every category its plural rules produce for integer
+ * counts (0..100) — e.g. Polish needs one/few/many — plus 'other', the
+ * universal i18next fallback. Categories that only apply to huge numbers
+ * (e.g. French 'many' at 1e6) are intentionally not required.
+ */
+const PLURAL_SUFFIXES = ['zero', 'one', 'two', 'few', 'many', 'other'];
+
+function pluralBase(key) {
+  const idx = key.lastIndexOf('_');
+  if (idx === -1) return null;
+  const suffix = key.slice(idx + 1);
+  return PLURAL_SUFFIXES.includes(suffix) ? { base: key.slice(0, idx), suffix } : null;
+}
+
+const categoriesCache = new Map();
+function requiredCategories(locale) {
+  if (categoriesCache.has(locale)) return categoriesCache.get(locale);
+  let cats = new Set();
+  try {
+    const pr = new Intl.PluralRules(locale);
+    for (let i = 0; i <= 100; i++) cats.add(pr.select(i));
+  } catch {
+    cats = new Set(['one']);
+  }
+  cats.add('other');
+  categoriesCache.set(locale, cats);
+  return cats;
 }
 
 /**
@@ -156,8 +189,27 @@ for (const locale of allLocales) {
     const enKeys = collectKeys(enData);
     const localeKeys = collectKeys(localeData);
 
-    // Missing keys
+    // Plural sets in English: base -> Map(suffix -> value)
+    const enPluralSets = new Map();
+    for (const [key, value] of enKeys) {
+      const p = pluralBase(key);
+      if (p) {
+        if (!enPluralSets.has(p.base)) enPluralSets.set(p.base, new Map());
+        enPluralSets.get(p.base).set(p.suffix, value);
+      }
+    }
+
+    // Legacy i18next v3 `_plural` keys never resolve under v4 plural mode.
+    for (const key of localeKeys.keys()) {
+      if (key.endsWith('_plural')) {
+        error(`${file}: Legacy "_plural" key "${key}" — migrate to CLDR suffixes (_one/_other/…)`);
+      }
+    }
+
+    // Missing keys (non-plural English keys compare 1:1)
     for (const [key, enValue] of enKeys) {
+      const p = pluralBase(key);
+      if (p && enPluralSets.has(p.base)) continue; // handled per plural set below
       if (!localeKeys.has(key)) {
         error(`${file}: Missing key "${key}"`);
       } else if (!isPseudo) {
@@ -170,11 +222,33 @@ for (const locale of allLocales) {
       }
     }
 
-    // Extra keys
-    for (const key of localeKeys.keys()) {
-      if (!enKeys.has(key)) {
-        warn(`${file}: Extra key "${key}" not in English`);
+    // Plural sets: the locale must cover its own required CLDR categories.
+    const localeCats = requiredCategories(isPseudo ? REFERENCE_LOCALE : locale);
+    for (const [base, enForms] of enPluralSets) {
+      for (const cat of localeCats) {
+        if (!localeKeys.has(`${base}_${cat}`)) {
+          error(`${file}: Missing plural form "${base}_${cat}" (required for ${isPseudo ? REFERENCE_LOCALE : locale})`);
+        }
       }
+      if (isPseudo) continue;
+      const enReference = enForms.get('other') ?? [...enForms.values()][0];
+      for (const suffix of PLURAL_SUFFIXES) {
+        const key = `${base}_${suffix}`;
+        if (!localeKeys.has(key)) continue;
+        const enVars = extractVars(enForms.get(suffix) ?? enReference);
+        const localeVars = extractVars(localeKeys.get(key));
+        if (enVars.length > 0 && JSON.stringify(enVars) !== JSON.stringify(localeVars)) {
+          error(`${file}: Key "${key}" — variable mismatch. English: ${enVars.join(', ')} | ${locale}: ${localeVars.join(', ')}`);
+        }
+      }
+    }
+
+    // Extra keys (locale-required plural categories are not "extra")
+    for (const key of localeKeys.keys()) {
+      if (enKeys.has(key)) continue;
+      const p = pluralBase(key);
+      if (p && enPluralSets.has(p.base)) continue;
+      warn(`${file}: Extra key "${key}" not in English`);
     }
   }
 

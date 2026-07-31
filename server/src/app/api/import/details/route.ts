@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getImportJobDetails } from '@/lib/imports/importActions';
+import { importErrorResponse } from '../importRouteErrors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,9 +18,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(details);
   } catch (error) {
     console.error('[API] /import/details', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to load import job details' },
-      { status: 500 }
-    );
+    return importErrorResponse(error, 'Failed to load import job details');
   }
 }

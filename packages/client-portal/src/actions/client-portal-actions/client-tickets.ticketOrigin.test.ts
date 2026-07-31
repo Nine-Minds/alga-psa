@@ -10,6 +10,8 @@ const withTransactionMock = vi.fn();
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
+  withOptionalAuth: (action: any) => async (...args: any[]) =>
+    action(currentUser, { tenant: currentUser.tenant }, ...args),
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
 }));
 
@@ -17,6 +19,14 @@ vi.mock('@alga-psa/db', () => ({
   getConnection: (...args: any[]) => getConnectionMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
   createTenantKnex: vi.fn(),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+    tenantJoin: (query: any, _table?: string, _left?: string, _right?: string, options: any = {}) => {
+      const join = options?.type === 'left' ? query.leftJoin : query.join;
+      return typeof join === 'function' ? join.call(query) : query;
+    },
+  }),
 }));
 
 vi.mock('@alga-psa/documents/lib/blocknoteUtils', () => ({
@@ -41,6 +51,10 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(),
+}));
+
+vi.mock('@alga-psa/tickets/lib/liveUpdates', () => ({
+  publishTicketUpdate: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@alga-psa/users/actions', () => ({
@@ -71,6 +85,27 @@ function makeTicket(overrides: Record<string, unknown> = {}) {
   };
 }
 
+// Generic chain-/thenable query-builder stand-in. Every builder method returns the
+// same builder (so the SUT can chain arbitrarily), `modify` invokes its callback, and
+// awaiting the builder resolves to `result`. Used for the ticket_resources/comments/
+// users subqueries the refactored SUT builds via tenantDb(trx, tenant).table(...) and
+// then awaits directly inside Promise.all.
+function makeChainable(result: any = []) {
+  const builder: any = {};
+  for (const method of [
+    'select', 'distinct', 'where', 'whereRaw', 'whereNotNull', 'whereIn',
+    'orWhereIn', 'join', 'leftJoin', 'innerJoin', 'orderBy', 'as', 'first',
+  ]) {
+    builder[method] = vi.fn(() => builder);
+  }
+  builder.modify = vi.fn((callback: (query: any) => void) => {
+    if (typeof callback === 'function') callback(builder);
+    return builder;
+  });
+  builder.then = (resolve: any, reject?: any) => Promise.resolve(result).then(resolve, reject);
+  return builder;
+}
+
 function buildTrx(params: { ticket: Record<string, unknown> | undefined }) {
   return Object.assign(
     (table: string) => {
@@ -93,28 +128,33 @@ function buildTrx(params: { ticket: Record<string, unknown> | undefined }) {
       }
 
       if (table === 'tickets as t') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          leftJoin: vi.fn().mockReturnThis(),
-          where: vi.fn().mockReturnThis(),
-          first: vi.fn().mockResolvedValue(params.ticket),
-        };
+        // The SUT builds the ticket query then awaits the builder itself inside
+        // Promise.all (it no longer captures `.first()`), so the builder must be
+        // thenable and resolve to the ticket.
+        const builder = makeChainable();
+        builder.then = (resolve: any, reject?: any) =>
+          Promise.resolve(params.ticket).then(resolve, reject);
+        return builder;
       }
 
       if (table === 'comments') {
-        return {
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockResolvedValue([]),
-          }),
-        };
+        // The conversations query selects/joins/filters before ordering; the
+        // chainable builder is thenable and resolves to no comments.
+        return makeChainable();
       }
 
-      if (table === 'documents as d') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          join: vi.fn().mockReturnThis(),
-          where: vi.fn().mockResolvedValue([]),
-        };
+      // Additional-agent / comment / assigned / involved-users subqueries plus the
+      // client-visible documents and linked-assets queries, all awaited directly.
+      if (
+        table === 'ticket_resources as tr' ||
+        table === 'ticket_resources as tr2' ||
+        table === 'comments as c' ||
+        table === 'tickets as assigned_ticket' ||
+        table === 'users as u' ||
+        table === 'documents as d' ||
+        table === 'asset_associations as aa'
+      ) {
+        return makeChainable();
       }
 
       throw new Error(`Unexpected table: ${table}`);

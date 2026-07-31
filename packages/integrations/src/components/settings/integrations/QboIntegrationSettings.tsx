@@ -14,7 +14,7 @@ import {
   disconnectQbo,
   getQboConnectionStatus,
   saveQboCredentials
-} from '@alga-psa/integrations/actions';
+} from '../../../actions/qboActions';
 import { QboLiveMappingManager } from '../../qbo/QboLiveMappingManager';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -114,7 +114,7 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
       });
 
       if (!result.success) {
-        setError(t('integrations.qbo.settings.errors.saveCredentials', { defaultValue: 'Failed to save QuickBooks credentials.' }));
+        setError(result.error ?? t('integrations.qbo.settings.errors.saveCredentials', { defaultValue: 'Failed to save QuickBooks credentials.' }));
         return;
       }
 
@@ -135,7 +135,7 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
     try {
       const result = await disconnectQbo();
       if (!result.success) {
-        setError(t('integrations.qbo.settings.errors.disconnect', { defaultValue: 'Failed to disconnect QuickBooks.' }));
+        setError(result.error ?? t('integrations.qbo.settings.errors.disconnect', { defaultValue: 'Failed to disconnect QuickBooks.' }));
         return;
       }
 

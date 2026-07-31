@@ -1,3 +1,5 @@
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
+
 /**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
@@ -20,10 +22,12 @@ exports.seed = async function(knex) {
   console.log('Seed 67: Fresh database detected, seeding initial notification data...');
 
   // Get the first tenant from the tenants table
-  const tenant = await knex('tenants').first('tenant');
-  if (!tenant) {
+  const context = await getFirstTenantSeedContext(knex);
+  if (!context) {
     throw new Error('No tenant found in tenants table');
   }
+
+  const { tenantId, db } = context;
 
   // Insert default categories (system-wide)
   const categories = await knex('notification_categories').insert([
@@ -177,8 +181,8 @@ exports.seed = async function(knex) {
   ]);
 
   // Insert default notification settings
-  await knex('notification_settings').insert({
-    tenant: tenant.tenant,
+  await db.table('notification_settings').insert({
+    tenant: tenantId,
     is_enabled: true,
     rate_limit_per_minute: 60
   });

@@ -1,7 +1,4 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import test from 'node:test';
 import { collectStatus } from '../lib/status.mjs';
 
@@ -23,31 +20,14 @@ class MockCaptureRunner {
   }
 }
 
-function buildEnv(releasesDir) {
+function buildEnv() {
   return {
-    runtime: { assetRoot: '/tmp', releasesDir },
+    runtime: { assetRoot: '/tmp' },
     site: { siteId: 'appliance-single-node', configDir: '/tmp/config' },
     paths: { kubeconfig: '/tmp/kubeconfig', talosconfig: '/tmp/talosconfig' },
     nodeIp: '10.0.0.2',
     appUrl: 'https://psa.example.com',
   };
-}
-
-function releaseFixtureDir() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'appliance-release-fixture-'));
-  const releaseDir = path.join(root, '1.0.0');
-  fs.mkdirSync(releaseDir, { recursive: true });
-  fs.writeFileSync(
-    path.join(releaseDir, 'release.json'),
-    JSON.stringify({
-      releaseVersion: '1.0.0',
-      app: {
-        version: '1.0.0',
-        releaseBranch: 'release/1.0.0',
-      },
-    }),
-  );
-  return root;
 }
 
 function readyCondition(status = 'True', message = '') {
@@ -91,7 +71,7 @@ function healthyResponses() {
     },
     'kubectl --kubeconfig /tmp/kubeconfig -n alga-system get configmap/appliance-release-selection -o json': {
       ok: true,
-      output: JSON.stringify({ data: { releaseVersion: '1.0.0' } }),
+      output: JSON.stringify({ data: { releaseVersion: '1.0.0', selectedChannel: 'stable', appVersion: '1.0.0', manifestDigest: 'sha256:release' } }),
     },
     'kubectl --kubeconfig /tmp/kubeconfig -n alga-system get configmap/appliance-values-alga-core -o json': {
       ok: true,
@@ -141,15 +121,14 @@ function healthyResponses() {
 }
 
 test('T001: canonical status shape includes release, urls, rollup, tiers, blockers, components, and events', async () => {
-  const releasesDir = releaseFixtureDir();
-  const status = await collectStatus(buildEnv(releasesDir), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(healthyResponses()),
   });
 
   assert.equal(status.canonical.siteId, 'appliance-single-node');
   assert.equal(status.canonical.release.selectedReleaseVersion, '1.0.0');
   assert.equal(status.canonical.release.appVersion, '1.0.0');
-  assert.equal(status.canonical.release.gitRevision, 'release/1.0.0@sha1:1234abcd');
+  assert.equal(status.canonical.release.gitRevision, 'sha1:1234abcd');
   assert.equal(status.canonical.urls.loginUrl, 'https://psa.example.com');
   assert.equal(status.canonical.urls.statusUrl, 'http://10.0.0.2:8080');
   assert.equal(status.canonical.rollup.state, 'fully_healthy');
@@ -177,7 +156,7 @@ test('T002: login-ready with background failures rolls up as ready_with_backgrou
       ],
     }),
   };
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
 
@@ -193,7 +172,7 @@ test('T003: core blocker keeps LOGIN_READY false and rollup failed_action_requir
     ok: true,
     output: JSON.stringify({ spec: { replicas: 1 }, status: { readyReplicas: 0 } }),
   };
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
 
@@ -203,8 +182,7 @@ test('T003: core blocker keeps LOGIN_READY false and rollup failed_action_requir
 });
 
 test('T004: status dashboard model includes talos, cluster, flux, workloads, release, and config paths', async () => {
-  const releasesDir = releaseFixtureDir();
-  const status = await collectStatus(buildEnv(releasesDir), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(healthyResponses()),
   });
 
@@ -222,7 +200,7 @@ test('T004: status dashboard model includes talos, cluster, flux, workloads, rel
 test('T005: talos-only state reports Kubernetes availability as blocker', async () => {
   const responses = healthyResponses();
   responses['kubectl --kubeconfig /tmp/kubeconfig get --raw=/readyz'] = { ok: false, output: 'connection refused' };
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
   assert.equal(status.connectivityMode, 'talos-only');
@@ -236,7 +214,7 @@ test('T005: cluster-down with talos unreachable reports talos blocker', async ()
     output: 'dial tcp timeout',
   };
   responses['kubectl --kubeconfig /tmp/kubeconfig get --raw=/readyz'] = { ok: false, output: 'connection refused' };
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
   assert.equal(status.connectivityMode, 'degraded');
@@ -251,7 +229,7 @@ test('T005: flux-degraded state reports Flux blocker', async () => {
       items: [{ metadata: { name: 'alga-appliance' }, status: { conditions: readyCondition('False', 'reconcile failed') } }],
     }),
   };
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
   assert.equal(status.topBlocker.layer, 'Flux source/reconcile failure');
@@ -263,7 +241,7 @@ test('T005: workload-unhealthy state reports workload blocker', async () => {
     ok: true,
     output: JSON.stringify({ spec: { replicas: 1 }, status: { readyReplicas: 0 } }),
   };
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
   assert.equal(status.workloads.status, 'unhealthy');
@@ -287,7 +265,7 @@ test('T004: DNS resolver failures are classified with explicit DNS remediation g
     }),
   };
 
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
 
@@ -317,7 +295,7 @@ test('T005: Postgres subPath failure is classified as a core storage blocker', a
     }),
   };
 
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
 
@@ -347,7 +325,7 @@ test('T006: workflow-worker missing image tag is classified as background-only b
     }),
   };
 
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
 
@@ -378,7 +356,7 @@ test('T007: alga-core missing image tag is classified as login-blocking blocker'
     }),
   };
 
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
 
@@ -409,7 +387,7 @@ test('T008: image pull context canceled is classified as retryable interruption'
     }),
   };
 
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
 
@@ -447,7 +425,7 @@ test('image tag not found takes precedence over older interrupted pull events', 
     }),
   };
 
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
 
@@ -471,7 +449,7 @@ test('recent events keep the latest entries instead of stale oldest entries', as
     }),
   };
 
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
 
@@ -487,7 +465,7 @@ test('Talos client auth failure does not block LOGIN_READY when Kubernetes and c
     output: 'x509: certificate signed by unknown authority',
   };
 
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
 
@@ -518,7 +496,7 @@ test('active core image pull reports installing state with size estimate instead
     }),
   };
 
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
 
@@ -557,7 +535,7 @@ test('T009: helm timeout with db subPath failure reports db storage blocker as t
     }),
   };
 
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
 
@@ -592,7 +570,7 @@ test('T010: bootstrap job completion plus seeded users query sets BOOTSTRAP_READ
     output: '7\n',
   };
 
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
 
@@ -634,7 +612,7 @@ test('bootstrap job log error is promoted into canonical blocker and rollup', as
     ].join('\n'),
   };
 
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
 
@@ -668,7 +646,7 @@ test('T011: Temporal schema compatibility errors are classified with autosetup g
     }),
   };
 
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
 
@@ -698,7 +676,7 @@ test('T012: Temporal UI service-link collision errors are classified with disabl
     }),
   };
 
-  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+  const status = await collectStatus(buildEnv(), {
     runner: new MockCaptureRunner(responses),
   });
 

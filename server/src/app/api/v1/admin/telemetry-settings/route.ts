@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { isUsageStatsEnabled } from 'server/src/config/telemetry';
@@ -17,10 +18,11 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = currentUser.user_id;
+    const db = tenantDb(knex, tenantId);
 
     // Verify user has admin permissions
-    const userRole = await knex('users')
-      .where({ user_id: userId, tenant: tenantId })
+    const userRole = await db.table('users')
+      .where({ user_id: userId })
       .select('role')
       .first();
 
@@ -65,10 +67,11 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = currentUser.user_id;
+    const db = tenantDb(knex, tenantId);
 
     // Verify user has admin permissions
-    const userRole = await knex('users')
-      .where({ user_id: userId, tenant: tenantId })
+    const userRole = await db.table('users')
+      .where({ user_id: userId })
       .select('role')
       .first();
 

@@ -285,6 +285,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     onVisibleRowsChange,
     onItemsPerPageChange,
     itemsPerPageOptions,
+    expandedRowRender,
   } = props;
   const { t } = useTranslation('common');
   const defaultItemsPerPageOptions = useMemo(() => [
@@ -465,6 +466,10 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     [columns, visibleColumnIds, columnLayout, fittedSizeOverrides]
   );
 
+  // LEVERAGE: friction datatable-client-paging — half-controlled paging: the table keeps its own
+  // page/size state AND syncs from controlled props, and renders the items-per-page selector but
+  // delegates the size change back to the parent. So every client-side consumer must re-derive
+  // page/size state + a reset-to-page-1 handler just to use built-in pagination (see ~13 sites).
   const [{ pageIndex, pageSize: currentPageSize }, setPagination] = React.useState({
     pageIndex: currentPage - 1,
     pageSize,
@@ -694,7 +699,9 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
               </svg>
               {t('dataTable.columnsHidden', {
                 count: columns.length - visibleColumnIds.length,
-                defaultValue: '{{count}} columns hidden due to limited space.',
+                defaultValue: columns.length - visibleColumnIds.length === 1
+                  ? '{{count}} column hidden.'
+                  : '{{count}} columns hidden.',
               })}{' '}
               <button
                 type="button"
@@ -740,14 +747,29 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                         header.column.getToggleSortingHandler()?.(event);
                       } : undefined}
                       className={cn(
-                        'group relative h-8 whitespace-nowrap border-b border-r border-[rgb(var(--color-border-100)/0.82)] px-3 py-1.5 text-[12px] font-medium text-[rgb(var(--color-text-500))] transition-colors first:pl-4 last:border-r-0 last:pr-4',
-                        isSortable && 'cursor-pointer hover:bg-[rgb(var(--color-border-100)/0.62)] hover:text-[rgb(var(--color-text-700))]',
-                        colDef?.headerClassName?.includes('text-center') ? 'text-center' : 'text-left',
+                        'group relative h-8 whitespace-nowrap border-b border-r border-[rgb(var(--color-border-200)/0.7)] px-3 py-1.5 text-[12px] font-medium text-[rgb(var(--color-text-500))] transition-colors first:pl-4 last:border-r-0 last:pr-4',
+                        isSortable && 'cursor-pointer hover:bg-[rgb(var(--color-border-200)/0.2)] hover:text-[rgb(var(--color-text-700))]',
+                        colDef?.headerClassName?.includes('text-center')
+                          ? 'text-center'
+                          : colDef?.headerClassName?.includes('text-right')
+                            ? 'text-right'
+                            : 'text-left',
                         colDef?.headerClassName ?? ''
                       )}
                       style={{ width: header.getSize() }}
                     >
-                        <div className={`flex min-w-0 items-center gap-1.5 ${colDef?.headerClassName?.includes('text-center') ? 'justify-center' : ''}`}>
+                        {/* The header is a flex row, so text-align alone cannot
+                            move it — it needs a matching justify. text-center was
+                            handled and text-right was not, which left numeric
+                            columns with right-aligned values under a
+                            left-aligned label. */}
+                        <div
+                          className={cn(
+                            'flex min-w-0 items-center gap-1.5',
+                            colDef?.headerClassName?.includes('text-center') && 'justify-center',
+                            colDef?.headerClassName?.includes('text-right') && 'justify-end'
+                          )}
+                        >
                           <OverflowTooltipSpan className="min-w-0 overflow-hidden text-ellipsis" text={headerTitle}>{flexRender(header.column.columnDef.header, header.getContext())}</OverflowTooltipSpan>
                           {isSortable && (
                             <span className="shrink-0 text-[rgb(var(--color-text-400))]">
@@ -801,14 +823,18 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                 </tr>
               ))}
             </thead>
-            <tbody className="divide-y divide-[rgb(var(--color-border-100)/0.72)] bg-[rgb(var(--color-card))]">
-              {table.getPaginationRowModel().rows.map((row): React.JSX.Element => {
+            <tbody className="divide-y divide-[rgb(var(--color-border-200)/0.7)] bg-[rgb(var(--color-card))]">
+              {table.getPaginationRowModel().rows.map((row, rowIndex): React.JSX.Element => {
                 // Use the id property if it exists in the data, otherwise use row.id
                 const rowId = ('id' in row.original) ? (row.original as { id: string }).id : row.id;
                 const extraRowClass = typeof rowClassName === 'function' ? rowClassName(row.original as any) : '';
+                const expanded = expandedRowRender
+                  ? expandedRowRender(row.original as T, rowIndex)
+                  : null;
+                const visibleCellCount = row.getVisibleCells().length;
                 return (
+                  <React.Fragment key={`row_group_${rowId}`}>
                   <tr
-                    key={`row_${rowId}`}
                     onClick={(e) => handleRowClick(e, row)}
                     className={`
                     bg-[rgb(var(--color-card))]
@@ -837,7 +863,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                           key={`cell_${rowId}_${columnId}_${cellIndex}`}
                           id={cellId}
                           content={cellContent}
-                          className={`h-8 max-w-0 overflow-hidden border-r border-[rgb(var(--color-border-100)/0.72)] px-3 py-1.5 text-[13px] leading-4 text-[rgb(var(--color-text-700))] align-middle first:pl-4 last:border-r-0 last:pr-4 ${columnDef?.cellClassName ?? ''}`}
+                          className={`h-8 max-w-0 overflow-hidden border-r border-[rgb(var(--color-border-200)/0.7)] px-3 py-1.5 text-[13px] leading-4 text-[rgb(var(--color-text-700))] align-middle first:pl-4 last:border-r-0 last:pr-4 ${columnDef?.cellClassName ?? ''}`}
                           style={{ width: cell.column.getSize() }}
                         >
                           <div className="min-w-0">
@@ -847,13 +873,32 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                       );
                     })}
                   </tr>
+                  {expanded ? (
+                    /* `!border-t-0` beats the tbody's divide-y, which would
+                       otherwise draw a line between a row and its own detail —
+                       separating the two things that belong together. The left
+                       rule does the opposite job: it ties the panel to the row
+                       above it. */
+                    <tr
+                      key={`row_detail_${rowId}`}
+                      className="!border-t-0 bg-[rgb(var(--color-border-50)/0.4)]"
+                      data-automation-id={id ? `${id}-expanded-${rowId}` : undefined}
+                    >
+                      <td colSpan={visibleCellCount} className="p-0">
+                        <div className="border-l-2 border-[rgb(var(--color-primary-400))] px-4 py-3">
+                          {expanded}
+                        </div>
+                      </td>
+                    </tr>
+                  ) : null}
+                  </React.Fragment>
                 );
               })}
             </tbody>
           </table>
         </div>
         {pagination && safeData.length > 0 && (totalPages > 1 || onItemsPerPageChange) && (
-          <div className="border-t border-[rgb(var(--color-border-100)/0.72)]">
+          <div className="border-t border-[rgb(var(--color-border-200)/0.7)]">
             <Pagination
               id={id ? `${id}-pagination` : 'datatable-pagination'}
               currentPage={pageIndex + 1}

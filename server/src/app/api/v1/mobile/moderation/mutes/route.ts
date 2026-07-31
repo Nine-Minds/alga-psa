@@ -3,6 +3,7 @@ import { ZodError, z } from 'zod';
 import { handleApiError, ValidationError } from '@/lib/api/middleware/apiMiddleware';
 import { authenticateApiKeyRequest } from '@/lib/api/middleware/apiAuthMiddleware';
 import { appendRateLimitHeaders } from '@/lib/api/rateLimit/responseHeaders';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
 
 /**
@@ -26,8 +27,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const apiRequest = await authenticateApiKeyRequest(req, { allowBearerToken: true });
     const { tenant, userId } = apiRequest.context!;
     const knex = await getConnection(null);
-    const rows = await knex('user_content_mutes')
-      .where({ tenant, user_id: userId })
+    const rows = await tenantDb(knex, tenant).table('user_content_mutes')
+      .where({ user_id: userId })
       .select<{ muted_user_id: string }[]>(['muted_user_id']);
     return appendRateLimitHeaders(
       NextResponse.json({ mutedUserIds: rows.map((r) => r.muted_user_id) }),
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     const knex = await getConnection(null);
-    await knex('user_content_mutes')
+    await tenantDb(knex, tenant).table('user_content_mutes')
       .insert({
         tenant,
         user_id: userId,

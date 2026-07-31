@@ -4,7 +4,12 @@
  */
 
 import type { Knex } from 'knex';
+import logger from '@alga-psa/core/logger';
 import { createTenantKnex, withTransaction } from '../lib/tenant';
+import { tenantDb } from '../lib/tenantDb';
+
+const tableColumnsCache = new Map<string, Promise<Set<string>>>();
+const warnedMissingAuditFields = new Set<string>();
 
 // Import and re-export for services
 export interface ListOptions {
@@ -102,8 +107,12 @@ export abstract class BaseService<T = any> {
   /**
    * Build base query with tenant filtering
    */
-  protected buildBaseQuery(knex: Knex, context: ServiceContext): Knex.QueryBuilder {
-    let query = knex(this.tableName).where(this.tenantColumn, context.tenant);
+  protected buildTenantScopedQuery(conn: Knex | Knex.Transaction, context: ServiceContext): Knex.QueryBuilder {
+    return tenantDb(conn, context.tenant).table(this.tableName);
+  }
+
+  protected buildBaseQuery(conn: Knex | Knex.Transaction, context: ServiceContext): Knex.QueryBuilder {
+    let query = this.buildTenantScopedQuery(conn, context);
 
     if (this.softDelete) {
       query = query.whereNull('deleted_at');
@@ -199,6 +208,54 @@ export abstract class BaseService<T = any> {
   }
 
   /**
+   * Get the columns available on this service's table.
+   */
+  protected async getTableColumns(conn: Knex | Knex.Transaction): Promise<Set<string>> {
+    let columnsPromise = tableColumnsCache.get(this.tableName);
+
+    if (!columnsPromise) {
+      columnsPromise = conn(this.tableName)
+        .columnInfo()
+        .then(columnInfo => new Set(Object.keys(columnInfo)))
+        .catch(error => {
+          tableColumnsCache.delete(this.tableName);
+          throw error;
+        });
+      tableColumnsCache.set(this.tableName, columnsPromise);
+    }
+
+    return columnsPromise;
+  }
+
+  /**
+   * Remove generated audit fields that are not present on the target table.
+   */
+  protected async filterAuditFields(
+    conn: Knex | Knex.Transaction,
+    data: any
+  ): Promise<any> {
+    const tableColumns = await this.getTableColumns(conn);
+    const auditFields = new Set(Object.values(this.auditFields));
+    const filteredData = { ...data };
+
+    for (const field of auditFields) {
+      if (Object.prototype.hasOwnProperty.call(filteredData, field) && !tableColumns.has(field)) {
+        delete filteredData[field];
+
+        const warningKey = `${this.tableName}:${field}`;
+        if (!warnedMissingAuditFields.has(warningKey)) {
+          warnedMissingAuditFields.add(warningKey);
+          logger.warn(
+            `[db/BaseService] table "${this.tableName}" has no column "${field}"; skipping audit field`
+          );
+        }
+      }
+    }
+
+    return filteredData;
+  }
+
+  /**
    * List resources with filtering, sorting, and pagination
    */
   async list(options: ListOptions, context: ServiceContext): Promise<ListResult<T>> {
@@ -254,8 +311,13 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const auditedData = this.addCreateAuditFields(data, context);
-      const [result] = await trx(this.tableName).insert(auditedData).returning('*');
+      const auditedData = await this.filterAuditFields(
+        trx,
+        this.addCreateAuditFields(data, context)
+      );
+      const [result] = await this.buildTenantScopedQuery(trx, context)
+        .insert(auditedData)
+        .returning('*');
       return result as T;
     });
   }
@@ -267,11 +329,13 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const auditedData = this.addUpdateAuditFields(data, context);
+      const auditedData = await this.filterAuditFields(
+        trx,
+        this.addUpdateAuditFields(data, context)
+      );
 
-      const [result] = await trx(this.tableName)
+      const [result] = await this.buildTenantScopedQuery(trx, context)
         .where(this.primaryKey, id)
-        .where(this.tenantColumn, context.tenant)
         .update(auditedData)
         .returning('*');
 
@@ -291,19 +355,20 @@ export abstract class BaseService<T = any> {
 
     return withTransaction(knex, async (trx) => {
       if (this.softDelete) {
-        const auditedData = this.addUpdateAuditFields(
-          { deleted_at: new Date().toISOString() },
-          context
+        const auditedData = await this.filterAuditFields(
+          trx,
+          this.addUpdateAuditFields(
+            { deleted_at: new Date().toISOString() },
+            context
+          )
         );
 
-        await trx(this.tableName)
+        await this.buildTenantScopedQuery(trx, context)
           .where(this.primaryKey, id)
-          .where(this.tenantColumn, context.tenant)
           .update(auditedData);
       } else {
-        await trx(this.tableName)
+        await this.buildTenantScopedQuery(trx, context)
           .where(this.primaryKey, id)
-          .where(this.tenantColumn, context.tenant)
           .delete();
       }
     });
@@ -330,7 +395,9 @@ export abstract class BaseService<T = any> {
 
     return withTransaction(knex, async (trx) => {
       const auditedData = data.map(item => this.addCreateAuditFields(item, context));
-      const results = await trx(this.tableName).insert(auditedData).returning('*');
+      const results = await this.buildTenantScopedQuery(trx, context)
+        .insert(auditedData)
+        .returning('*');
       return results as T[];
     });
   }
@@ -344,9 +411,8 @@ export abstract class BaseService<T = any> {
       for (const update of updates) {
         const auditedData = this.addUpdateAuditFields(update.data, context);
 
-        const [result] = await trx(this.tableName)
+        const [result] = await this.buildTenantScopedQuery(trx, context)
           .where(this.primaryKey, update.id)
-          .where(this.tenantColumn, context.tenant)
           .update(auditedData)
           .returning('*');
 
@@ -369,14 +435,12 @@ export abstract class BaseService<T = any> {
           context
         );
 
-        await trx(this.tableName)
+        await this.buildTenantScopedQuery(trx, context)
           .whereIn(this.primaryKey, ids)
-          .where(this.tenantColumn, context.tenant)
           .update(auditedData);
       } else {
-        await trx(this.tableName)
+        await this.buildTenantScopedQuery(trx, context)
           .whereIn(this.primaryKey, ids)
-          .where(this.tenantColumn, context.tenant)
           .delete();
       }
     });

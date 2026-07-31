@@ -31,6 +31,7 @@ vi.mock('next-auth/react', () => ({
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  detectClientLocale: () => 'en',
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown> | string) => {
       const defaultValue = typeof options === 'string' ? options : String(options?.defaultValue ?? key);
@@ -106,7 +107,7 @@ vi.mock('@alga-psa/ui/components/ContactAvatar', () => ({
   default: () => <div>Contact avatar</div>,
 }));
 
-vi.mock('@alga-psa/notifications/components', () => ({
+vi.mock('@alga-psa/notifications/components/NotificationBell', () => ({
   NotificationBell: () => <div>Notifications</div>,
 }));
 
@@ -122,7 +123,7 @@ vi.mock('../../../components/layout/PaymentFailedBanner', () => ({
   PaymentFailedBanner: () => <div>Payment failed banner</div>,
 }));
 
-vi.mock('@alga-psa/user-composition/actions', () => ({
+vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
   getCurrentUser: vi.fn().mockResolvedValue({
     user_id: 'user-1',
     user_type: 'internal',
@@ -137,11 +138,15 @@ vi.mock('@alga-psa/user-composition/hooks', () => ({
   useContactAvatar: () => ({ avatarUrl: null }),
 }));
 
-vi.mock('@alga-psa/auth/actions', () => ({
+vi.mock('@alga-psa/auth/actions/permission-actions', () => ({
   checkAccountManagementPermission: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock('@alga-psa/jobs/actions', () => ({
+vi.mock('@alga-psa/licensing/actions/license-actions', () => ({
+  isSelfHostLicensingAction: vi.fn().mockResolvedValue(false),
+}));
+
+vi.mock('@alga-psa/jobs/actions/job-actions', () => ({
   getQueueMetricsAction: vi.fn().mockResolvedValue({
     active: 3,
     queued: 5,

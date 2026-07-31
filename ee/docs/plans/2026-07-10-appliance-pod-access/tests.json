@@ -1,0 +1,44 @@
+[
+  {
+    "id": "T001",
+    "description": "Host-service boundary checks verify session, origin, capability, request-size, pod-port metadata, and malformed target input wiring.",
+    "implemented": true,
+    "featureIds": ["F012", "F013", "F014", "F019", "F033", "F036"]
+  },
+  {
+    "id": "T002",
+    "description": "Exec manager test: native stream messages, Auto bash-to-sh fallback, resize, idle timeout, and disconnect cleanup behave correctly with an injected adapter.",
+    "implemented": true,
+    "featureIds": ["F009", "F015", "F016", "F017", "F018", "F020", "F035"]
+  },
+  {
+    "id": "T003",
+    "description": "Port-forward manager test: random allocation, extension, stop, and exact expiry close the in-memory listener.",
+    "implemented": true,
+    "featureIds": ["F023", "F024", "F026", "F028", "F029", "F031", "F032", "F034", "F035"]
+  },
+  {
+    "id": "T004",
+    "description": "RBAC migration test: only pods/exec and pods/portforward create rules are added, repeat execution is a no-op, and failure produces an unavailable Access capability.",
+    "implemented": true,
+    "featureIds": ["F037", "F038", "F039"]
+  },
+  {
+    "id": "T005",
+    "description": "Pod summary contract check: declared container ports are returned alongside existing pod metadata.",
+    "implemented": true,
+    "featureIds": ["F005", "F022", "F041"]
+  },
+  {
+    "id": "T006",
+    "description": "Production status-UI build succeeds with the Access tab, xterm terminal, selectors, forward form, active list, warning, and structured error states.",
+    "implemented": true,
+    "featureIds": ["F001", "F002", "F003", "F004", "F006", "F007", "F008", "F010", "F011", "F021", "F025", "F027", "F030", "F036", "F040"]
+  },
+  {
+    "id": "T007",
+    "description": "Control-plane packaging smoke test proves all runtime modules and dependencies are included while existing route packaging checks remain green.",
+    "implemented": true,
+    "featureIds": ["F040", "F041"]
+  }
+]

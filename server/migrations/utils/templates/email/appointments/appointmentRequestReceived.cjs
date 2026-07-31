@@ -227,6 +227,36 @@ const COPY = {
     textNextHeader: 'CO DALEJ?',
   },
 };
+SUBJECTS.pt = 'Solicitação de agendamento recebida - {{serviceName}}';
+COPY.pt = {
+  headerLabel: 'Solicitação recebida',
+  headerSub: 'Recebemos sua solicitação de agendamento',
+  greeting: 'Olá{{#if requesterName}} {{requesterName}}{{/if}},',
+  intro: 'Obrigado por enviar sua solicitação de agendamento. Recebemos sua solicitação e nossa equipe a analisará em breve.',
+  referencePrefix: 'Referência: ',
+  detailsTitle: 'Detalhes da solicitação',
+  service: 'Serviço:',
+  requestedDate: 'Data solicitada:',
+  requestedTime: 'Horário solicitado:',
+  duration: 'Duração:',
+  durationUnit: 'minutos',
+  preferredTechnician: 'Técnico preferido:',
+  nextTitle: 'O que acontece agora?',
+  nextBody: 'Nossa equipe analisará sua solicitação e confirmará a disponibilidade. Você receberá uma notificação por email quando seu agendamento for aprovado ou se forem necessárias alterações. Normalmente respondemos em {{responseTime}}.',
+  contactMsg: 'Se tiver dúvidas ou precisar fazer alterações na sua solicitação, entre em contato pelo email {{contactEmail}}{{#if contactPhone}} ou ligue para {{contactPhone}}{{/if}}.',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Solicitação de agendamento recebida',
+  textRefLabel: 'Número de referência',
+  textDetailsHeader: 'DETALHES DA SOLICITAÇÃO',
+  textService: 'Serviço',
+  textRequestedDate: 'Data solicitada',
+  textRequestedTime: 'Horário solicitado',
+  textDuration: 'Duração',
+  textDurationUnit: 'minutos',
+  textPreferredTechnician: 'Técnico preferido',
+  textNextHeader: 'O QUE ACONTECE AGORA?',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

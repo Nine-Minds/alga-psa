@@ -117,6 +117,8 @@ export interface IQuoteWithClient extends IQuote {
 
 export interface IQuoteListItem extends IQuote {
   client_name?: string | null;
+  /** Real uploaded client logo URL (batched); null when none. */
+  logoUrl?: string | null;
   display_quote_number: string;
 }
 

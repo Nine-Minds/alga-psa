@@ -56,6 +56,18 @@ vi.mock('@tiptap/extension-collaboration-caret', () => ({
 vi.mock('@alga-psa/ui/editor', () => ({
   Emoticon: { name: 'emoticon-extension' },
   createYjsProvider: (...args: unknown[]) => createYjsProviderMock(...args),
+  MentionNode: { name: 'mention-node-extension' },
+  AiResponseBlock: { name: 'ai-response-block-extension' },
+  EmojiSuggestionExtension: {
+    name: 'emoji-suggestion-extension',
+    configure: () => ({ name: 'emoji-suggestion-extension' }),
+  },
+  MentionSuggestionExtension: {
+    name: 'mention-suggestion-extension',
+    configure: () => ({ name: 'mention-suggestion-extension' }),
+  },
+  EmojiSuggestionPopup: () => null,
+  MentionSuggestionPopup: () => null,
 }));
 
 vi.mock('y-prosemirror', () => ({
@@ -111,7 +123,7 @@ describe('CollaborativeEditor', () => {
       />
     );
 
-    expect(collaborationConfigure).toHaveBeenCalledWith({ document: ydoc });
+    expect(collaborationConfigure).toHaveBeenCalledWith({ document: ydoc, field: 'prosemirror' });
     expect(collaborationCaretConfigure).toHaveBeenCalledWith({
       provider: providerMock,
       user: expect.objectContaining({
@@ -119,6 +131,7 @@ describe('CollaborativeEditor', () => {
         name: 'Editor One',
         color: expect.any(String),
       }),
+      render: expect.any(Function),
     });
   });
 
@@ -353,12 +366,17 @@ describe('CollaborativeEditor', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
+    // The status effect registers one 'synced' listener immediately; the content
+    // initialization effect registers a second one-shot 'synced' listener once
+    // the editor is ready and the provider is still unsynced. Wait for that
+    // second listener before emitting so the init promise actually resolves.
     await waitFor(() => {
-      expect(providerMock.on).toHaveBeenCalledWith('synced', expect.any(Function));
+      expect(providerListeners.get('synced')?.size ?? 0).toBeGreaterThanOrEqual(2);
     });
 
-    act(() => {
+    await act(async () => {
       emitProviderEvent('synced', { state: true });
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     await waitFor(() => {

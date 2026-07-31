@@ -11,10 +11,19 @@ import { addTaskDependency, removeTaskDependency } from '../actions/projectTaskA
 import { useDrawer } from "@alga-psa/ui";
 import TaskEdit from './TaskEdit';
 import { useTranslation } from 'react-i18next';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 // Stable empty arrays to prevent useEffect dependency churn from default parameters
 const EMPTY_PREDECESSORS: IProjectTaskDependency[] = [];
 const EMPTY_SUCCESSORS: IProjectTaskDependency[] = [];
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 interface TaskDependenciesProps {
   task?: IProjectTask;
@@ -186,12 +195,17 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
     setError(null);
     setIsLoading(true);
     try {
-      await addTaskDependency(task.task_id, taskId, selectedType, 0, undefined);
+      const result = await addTaskDependency(task.task_id, taskId, selectedType, 0, undefined);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setSelectedType('blocked_by');
       setIsAdding(false);
       if (refreshDependencies) refreshDependencies();
-    } catch (err: any) {
-      setError(err.message || depsT('addError', 'Failed to add dependency'));
+    } catch (err) {
+      console.error('Failed to add task dependency:', err);
+      setError(depsT('addError', 'Failed to add dependency'));
     } finally {
       setIsLoading(false);
     }
@@ -207,10 +221,15 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
     setError(null);
     setIsLoading(true);
     try {
-      await removeTaskDependency(dependencyId);
+      const result = await removeTaskDependency(dependencyId);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       if (refreshDependencies) refreshDependencies();
-    } catch (err: any) {
-      setError(err.message || depsT('removeError', 'Failed to remove dependency'));
+    } catch (err) {
+      console.error('Failed to remove task dependency:', err);
+      setError(depsT('removeError', 'Failed to remove dependency'));
     } finally {
       setIsLoading(false);
     }
@@ -230,12 +249,21 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
     setError(null);
     setIsLoading(true);
     try {
-      await removeTaskDependency(oldDependencyId);
-      await addTaskDependency(task.task_id, newTaskId, editingType, 0, undefined);
+      const removeResult = await removeTaskDependency(oldDependencyId);
+      if (isReturnedActionError(removeResult)) {
+        setError(getErrorMessage(removeResult));
+        return;
+      }
+      const addResult = await addTaskDependency(task.task_id, newTaskId, editingType, 0, undefined);
+      if (isReturnedActionError(addResult)) {
+        setError(getErrorMessage(addResult));
+        return;
+      }
       setEditingId(null);
       if (refreshDependencies) refreshDependencies();
-    } catch (err: any) {
-      setError(err.message || depsT('updateError', 'Failed to update dependency'));
+    } catch (err) {
+      console.error('Failed to update task dependency:', err);
+      setError(depsT('updateError', 'Failed to update dependency'));
     } finally {
       setIsLoading(false);
     }

@@ -117,6 +117,21 @@ const COPY = {
     textView: 'Zobacz projekt pod adresem',
   },
 };
+SUBJECTS.pt = 'Meta concluída: {{milestone.name}}';
+COPY.pt = {
+  headerLabel: 'Meta concluída',
+  intro: 'Uma meta foi concluída no projeto {{project.name}}:',
+  milestone: 'Meta',
+  completionDate: 'Data de conclusão',
+  completedBy: 'Concluído por',
+  projectProgress: 'Progresso do projeto',
+  viewButton: 'Ver projeto',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Meta concluída',
+  textIntro: 'Uma meta foi concluída no projeto {{project.name}}:',
+  textView: 'Ver projeto em',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

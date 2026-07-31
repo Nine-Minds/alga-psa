@@ -7,12 +7,13 @@ const mocks = vi.hoisted(() => {
       throw new Error(`Unexpected table ${tableName}`);
     }
 
-    return {
-      insert: vi.fn(async (payload: Record<string, any>) => {
-        insertedInvoices.push(payload);
-        return [payload];
-      }),
-    };
+    const builder: Record<string, any> = {};
+    builder.where = vi.fn(() => builder);
+    builder.insert = vi.fn(async (payload: Record<string, any>) => {
+      insertedInvoices.push(payload);
+      return [payload];
+    });
+    return builder;
   });
 
   const knex = {
@@ -89,6 +90,10 @@ vi.mock('@alga-psa/auth', () => ({
   getSession: vi.fn(async () => ({ user: { id: 'user-1' } })),
 }));
 
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
+}));
+
 vi.mock('../../../../../packages/billing/src/services/invoiceService', () => ({
   validateSessionAndTenant: mocks.validateSessionAndTenant,
   getClientDetails: mocks.getClientDetails,
@@ -121,6 +126,10 @@ vi.mock('../../../../../packages/billing/src/actions/invoiceGeneration', () => (
 
 vi.mock('../../../../../packages/billing/src/actions/taxSourceActions', () => ({
   getInitialInvoiceTaxSource: mocks.getInitialInvoiceTaxSource,
+}));
+
+vi.mock('../../../../../packages/billing/src/actions/billingAndTax', () => ({
+  getDueDate: vi.fn(async () => '2025-02-01'),
 }));
 
 vi.mock('../../../../../packages/billing/src/lib/authHelpers', () => ({

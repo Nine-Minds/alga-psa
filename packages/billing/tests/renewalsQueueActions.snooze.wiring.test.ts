@@ -12,9 +12,8 @@ describe('renewalsQueueActions snooze wiring', () => {
     expect(source).toContain('export const snoozeRenewalQueueItem = withAuth(async (');
     expect(source).toContain("throw new Error('Client contract id is required');");
     expect(source).toContain("throw new Error('Snooze target date is required');");
-    expect(source).toContain("schema?.hasColumn?.('client_contracts', 'snoozed_until') ?? false");
-    expect(source).toContain("throw new Error('Renewals queue snooze columns are not available');");
     expect(source).toContain('const normalizedSnoozedUntil = snoozedUntil.trim().slice(0, 10);');
+    expect(source).toContain('const parsedSnoozeDate = new Date(normalizedSnoozedUntil);');
     expect(source).toContain("throw new Error('Snooze target date is invalid');");
     expect(source).toContain('if (normalizedSnoozedUntil <= getTodayDateOnly()) {');
     expect(source).toContain("throw new Error('Snooze target date must be in the future');");

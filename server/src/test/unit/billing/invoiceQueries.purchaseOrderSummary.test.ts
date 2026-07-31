@@ -47,8 +47,23 @@ vi.mock('@alga-psa/auth', () => ({
       ),
 }));
 
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
+}));
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
+  runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
+  getTenantContext: vi.fn(async () => 'tenant-1'),
+  getTenantIdBySlug: vi.fn(async () => 'tenant-1'),
+  withTransaction: vi.fn(async (knex: any, handler: (trx: any) => Promise<unknown>) => handler(knex)),
+  registerAfterCommit: vi.fn(),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('../../../../../packages/billing/src/services/purchaseOrderService', () => ({
@@ -68,10 +83,10 @@ describe('invoiceQueries purchase order summary assignment scope', () => {
   it('T043: PO summary remains tied to invoice.client_contract_id and does not drift to sibling assignments', async () => {
     const result = await getInvoicePurchaseOrderSummary('invoice-1');
 
-    expect(mocks.invoiceBuilder.where).toHaveBeenCalledWith({
-      tenant: 'tenant-1',
-      invoice_id: 'invoice-1',
-    });
+    // Tenant scoping now lives in the tenantDb facade (applied as where({ tenant }))
+    // while the action adds the invoice predicate separately.
+    expect(mocks.invoiceBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-1' });
+    expect(mocks.invoiceBuilder.where).toHaveBeenCalledWith({ invoice_id: 'invoice-1' });
     expect(mocks.getClientContractPurchaseOrderContext).toHaveBeenCalledWith({
       knex: mocks.knex,
       tenant: 'tenant-1',

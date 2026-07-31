@@ -17,6 +17,7 @@ type TranslationOptions = {
 const replaceMock = vi.fn();
 const getCurrentUserMock = vi.fn();
 const getCurrentUserPermissionsMock = vi.fn();
+const getUserPreferenceMock = vi.fn();
 const getConsolidatedTicketListDataMock = vi.fn();
 const getTicketingDisplaySettingsMock = vi.fn();
 const getTeamsMock = vi.fn();
@@ -146,6 +147,8 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
   };
 
   return {
+    detectClientLocale: () => 'en',
+    useOptionalI18n: () => null,
     I18nProvider: ({
       children,
       initialLocale = 'en',
@@ -202,6 +205,17 @@ vi.mock('@/components/layout/DefaultLayout', () => ({
   ),
 }));
 
+vi.mock('server/src/components/layout/DefaultLayout', () => ({
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="default-layout">{children}</div>
+  ),
+}));
+
+vi.mock('server/src/components/layout/Header', () => ({
+  QUICK_CREATE_OPEN_EVENT: 'alga:quick-create:open',
+  default: () => null,
+}));
+
 vi.mock('@alga-psa/tags/context', () => ({
   TagProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -225,26 +239,65 @@ vi.mock('@/context/TierContext', () => ({
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: (...args: unknown[]) => getCurrentUserMock(...args),
   getCurrentUserPermissions: (...args: unknown[]) => getCurrentUserPermissionsMock(...args),
+  getUserPreference: (...args: unknown[]) => getUserPreferenceMock(...args),
+}));
+
+vi.mock('@/lib/productAccess', () => ({
+  getCurrentTenantProduct: async () => 'psa',
+}));
+
+vi.mock('@/context/ProductContext', () => ({
+  ProductProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useProduct: () => ({
+    productCode: 'psa',
+    isMisconfigured: false,
+    isPsa: true,
+    isAlgaDesk: false,
+    isLoading: false,
+  }),
+}));
+
+vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({
+  KeyboardShortcutsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@/hooks/useKeyboardShortcutPreferenceStorage', () => ({
+  useKeyboardShortcutPreferenceStorage: () => ({
+    value: {},
+    setValue: () => {},
+    storage: {
+      load: () => ({}),
+      save: () => {},
+    },
+  }),
 }));
 
 vi.mock('@alga-psa/tickets/actions/optimizedTicketActions', () => ({
   getConsolidatedTicketListData: (...args: unknown[]) => getConsolidatedTicketListDataMock(...args),
 }));
 
+vi.mock('@alga-psa/tickets/actions/ticketActions', () => ({}));
+
 vi.mock('@alga-psa/tickets/actions/ticketDisplaySettings', () => ({
   getTicketingDisplaySettings: (...args: unknown[]) => getTicketingDisplaySettingsMock(...args),
 }));
 
-vi.mock('@alga-psa/teams/actions', () => ({
-  getTeams: (...args: unknown[]) => getTeamsMock(...args),
+vi.mock('@alga-psa/tickets/lib', () => ({
+  isTicketStatusOpenFilter: (value: unknown) => value === 'open',
+  TICKET_STATUS_FILTER_OPEN: 'open',
 }));
 
-vi.mock('@alga-psa/msp-composition/tickets', async () => {
+vi.mock('@alga-psa/teams/actions', () => ({
+  getTeams: (...args: unknown[]) => getTeamsMock(...args),
+  isTeamActionError: (value: unknown) => Boolean(value && typeof value === 'object' && 'error' in value),
+}));
+
+vi.mock('@alga-psa/msp-composition/tickets/MspTicketsPageClient', async () => {
   const ReactModule = await import('react');
   const { useTranslation } = await import('@alga-psa/ui/lib/i18n/client');
 
   return {
-    MspTicketsPageClient: () => {
+    default: function MockTicketsPageClient() {
       const { t } = useTranslation('features/tickets');
 
       return (
@@ -307,10 +360,10 @@ async function renderTicketsList(locale: keyof typeof translations = 'en') {
   render(
     <MspLayoutClient
       session={null}
+      productCode="psa"
       needsOnboarding={false}
       initialSidebarCollapsed={false}
       initialLocale={locale}
-      i18nEnabled={true}
     >
       {page}
     </MspLayoutClient>
@@ -323,8 +376,9 @@ describe('/msp/tickets i18n integration', () => {
     vi.clearAllMocks();
     pathname = '/msp/tickets';
 
-    getCurrentUserMock.mockResolvedValue({ id: 'user-1' });
+    getCurrentUserMock.mockResolvedValue({ id: 'user-1', user_id: 'user-1' });
     getCurrentUserPermissionsMock.mockResolvedValue(['ticket:update']);
+    getUserPreferenceMock.mockResolvedValue(null);
     getConsolidatedTicketListDataMock.mockResolvedValue({
       options: {},
       tickets: [],

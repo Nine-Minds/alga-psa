@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { randomUUID } from 'crypto';
 
+// Import the implementation module directly: the package entrypoint
+// '@alga-psa/auth' is globally mocked in src/test/setup.ts, which would
+// otherwise swallow the real OTT helpers (and their test seams) under test.
 import {
   issuePortalDomainOtt,
   consumePortalDomainOtt,
@@ -8,16 +11,21 @@ import {
   __setPortalDomainOttConnectionFactoryForTests,
   __resetPortalDomainOttTestState,
   type PortalDomainSessionOtt,
-} from '@alga-psa/auth';
+} from '../../../../packages/auth/src/lib/PortalDomainSessionToken';
 import type { PortalDomainRecord } from 'server/src/models/PortalDomainModel';
-import type { PortalSessionTokenPayload } from '@alga-psa/auth';
-import { analytics } from 'server/src/lib/analytics/posthog';
+import type { PortalSessionTokenPayload } from '../../../../packages/auth/src/lib/session';
+import logger from '@alga-psa/core/logger';
 
-vi.mock('server/src/lib/analytics/posthog', () => ({
-  analytics: {
-    capture: vi.fn().mockResolvedValue(undefined),
-  },
-}));
+// The OTT helpers emit lifecycle events through the shared logger.
+vi.mock('@alga-psa/core/logger', () => {
+  const stub = {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  };
+  return { default: stub, logger: stub };
+});
 
 type PortalDomainSessionOttRow = {
   id: string;
@@ -166,7 +174,7 @@ function createFakeKnex(state: FakeDbState): FakeKnex {
 }
 
 describe('PortalDomainSessionToken helpers', () => {
-  const captureMock = vi.mocked(analytics.capture);
+  const infoMock = vi.mocked(logger.info);
   let state: FakeDbState;
 
   const activeDomain: PortalDomainRecord = {
@@ -200,7 +208,7 @@ describe('PortalDomainSessionToken helpers', () => {
     };
 
     __setPortalDomainOttConnectionFactoryForTests(async () => createFakeKnex(state) as unknown as any);
-    captureMock.mockClear();
+    infoMock.mockClear();
   });
 
   afterEach(() => {
@@ -223,10 +231,9 @@ describe('PortalDomainSessionToken helpers', () => {
     expect(token.length).toBeGreaterThan(40);
     expect(record.metadata.targetDomain).toBe('portal.example.com');
     expect(state.portal_domain_session_otts).toHaveLength(1);
-    expect(captureMock).toHaveBeenCalledWith(
+    expect(infoMock).toHaveBeenCalledWith(
       'portal_domain.ott_issued',
-      expect.objectContaining({ tenant: 'tenant-1', portal_domain_id: 'domain-1' }),
-      'user-1',
+      expect.objectContaining({ tenant: 'tenant-1', portal_domain_id: 'domain-1', user_id: 'user-1' }),
     );
   });
 
@@ -263,10 +270,9 @@ describe('PortalDomainSessionToken helpers', () => {
 
     expect(consumed).not.toBeNull();
     expect((consumed as PortalDomainSessionOtt).consumedAt).toBeInstanceOf(Date);
-    expect(captureMock).toHaveBeenCalledWith(
+    expect(infoMock).toHaveBeenCalledWith(
       'portal_domain.ott_consumed',
-      expect.objectContaining({ tenant: 'tenant-1', portal_domain_id: 'domain-1' }),
-      'user-1',
+      expect.objectContaining({ tenant: 'tenant-1', portal_domain_id: 'domain-1', user_id: 'user-1' }),
     );
 
     const secondAttempt = await consumePortalDomainOtt({
@@ -276,10 +282,9 @@ describe('PortalDomainSessionToken helpers', () => {
     });
 
     expect(secondAttempt).toBeNull();
-    expect(captureMock).toHaveBeenCalledWith(
+    expect(infoMock).toHaveBeenCalledWith(
       'portal_domain.ott_failed',
-      expect.objectContaining({ reason: 'already_consumed' }),
-      'user-1',
+      expect.objectContaining({ reason: 'already_consumed', user_id: 'user-1' }),
     );
   });
 
@@ -303,10 +308,9 @@ describe('PortalDomainSessionToken helpers', () => {
     });
 
     expect(result).toBeNull();
-    expect(captureMock).toHaveBeenCalledWith(
+    expect(infoMock).toHaveBeenCalledWith(
       'portal_domain.ott_failed',
-      expect.objectContaining({ reason: 'expired' }),
-      'user-1',
+      expect.objectContaining({ reason: 'expired', user_id: 'user-1' }),
     );
   });
 

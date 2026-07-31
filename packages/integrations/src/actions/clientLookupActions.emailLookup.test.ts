@@ -26,6 +26,13 @@ const trxMock = vi.fn((table: string) => {
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
   withTransaction: async (knex: any, callback: any) => callback(knex),
+  // The mock-knex builder applies tenant scoping implicitly via its table
+  // resolver and expects the production chain (`.select().where().first()`),
+  // so delegate straight to the connection without a leading `.where({tenant})`.
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -136,6 +143,30 @@ describe('integration contact email lookup helpers', () => {
         email: 'ada@example.com',
         client_name: 'Acme Corp',
       },
+    });
+    expect(createContactMock).not.toHaveBeenCalled();
+  });
+
+  it('returns a user-safe action error when an existing email belongs to another client', async () => {
+    getContactByEmailMock.mockResolvedValue({
+      contact_name_id: 'contact-1',
+      full_name: 'Ada Lovelace',
+      email: 'ada@example.com',
+      client_id: 'client-2',
+      role: 'Engineer',
+      default_phone_number: null,
+      phone_numbers: [],
+      additional_email_addresses: [],
+    });
+
+    const { createOrFindIntegrationContactByEmail } = await import('./clientLookupActions');
+    const result = await createOrFindIntegrationContactByEmail({
+      email: 'ada@example.com',
+      clientId: 'client-1',
+    });
+
+    expect(result).toEqual({
+      actionError: 'This email is already associated with Acme Corp',
     });
     expect(createContactMock).not.toHaveBeenCalled();
   });

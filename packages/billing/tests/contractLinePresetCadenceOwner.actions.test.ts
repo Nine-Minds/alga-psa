@@ -10,6 +10,10 @@ let currentTrx: any;
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnex(...args),
   withTransaction: async (_knex: unknown, fn: any) => fn(currentTrx),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -67,17 +71,30 @@ vi.mock('../src/models/contractLinePresetFixedConfig', () => ({
 }));
 
 const fixedConfigUpsert = vi.fn();
+// The source instantiates these with `new`, so the mocks must be constructable classes.
 vi.mock('../src/models/contractLineFixedConfig', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    upsert: (...args: any[]) => fixedConfigUpsert(...args),
-  })),
+  default: class MockContractLineFixedConfig {
+    upsert(...args: any[]) {
+      return fixedConfigUpsert(...args);
+    }
+  },
 }));
 
 const createConfiguration = vi.fn();
 vi.mock('../src/services/contractLineServiceConfigurationService', () => ({
-  ContractLineServiceConfigurationService: vi.fn().mockImplementation(() => ({
-    createConfiguration: (...args: any[]) => createConfiguration(...args),
-  })),
+  ContractLineServiceConfigurationService: class MockContractLineServiceConfigurationService {
+    createConfiguration(...args: any[]) {
+      return createConfiguration(...args);
+    }
+  },
+}));
+
+// Post-creation service-period sync is a side effect outside the scope of
+// these persistence tests; stub it so the mock trx does not need the full
+// contract_lines/contracts join surface.
+const syncRecurringServicePeriods = vi.fn(async () => undefined);
+vi.mock('../src/actions/recurringServicePeriodSync', () => ({
+  syncRecurringServicePeriodsForContractLine: (...args: any[]) => syncRecurringServicePeriods(...args),
 }));
 
 const makeTrx = () => {

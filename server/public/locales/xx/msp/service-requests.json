@@ -264,7 +264,8 @@
       "formBehaviorNotObject": "11111",
       "formBehaviorInvalid": "11111",
       "visibilityNotObject": "11111",
-      "visibilityInvalid": "11111"
+      "visibilityInvalid": "11111",
+      "saveAllPartial": "11111 {{sections}} 11111"
     }
   }
 }

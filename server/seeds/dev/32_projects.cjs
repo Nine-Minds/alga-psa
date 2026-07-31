@@ -1,23 +1,26 @@
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
+
 exports.seed = async function (knex) {
-    const tenant = await knex('tenants').select('tenant').first();
-    if (!tenant) return;
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
+
+    const { tenantId, db } = context;
 
     // Generate project numbers
     const projectNumber1 = await knex.raw(
         `SELECT generate_next_number(:tenant::uuid, 'PROJECT') as number`,
-        { tenant: tenant.tenant }
+        { tenant: tenantId }
     );
     const projectNumber2 = await knex.raw(
         `SELECT generate_next_number(:tenant::uuid, 'PROJECT') as number`,
-        { tenant: tenant.tenant }
+        { tenant: tenantId }
     );
 
     // Insert projects
-    const [wonderlandProject, emeraldCityProject] = await knex('projects').insert([
+    const [wonderlandProject, emeraldCityProject] = await db.table('projects').insert([
         {
-            tenant: tenant.tenant,
-            client_id: knex('clients').where({
-                tenant: tenant.tenant,
+            tenant: tenantId,
+            client_id: db.table('clients').where({
                 client_name: 'Wonderland'
             }).select('client_id'),
             project_name: 'Wonderland Expansion',
@@ -25,17 +28,15 @@ exports.seed = async function (knex) {
             start_date: knex.raw("CURRENT_DATE - INTERVAL '2 months'"),
             end_date: knex.raw("CURRENT_DATE + INTERVAL '10 months'"),
             wbs_code: '1',
-            status: knex('statuses').where({
-                tenant: tenant.tenant,
+            status: db.table('statuses').where({
                 name: 'Casting in Progress',
                 'status_type': 'project'
             }).select('status_id').first(),
             project_number: projectNumber1.rows[0].number
         },
         {
-            tenant: tenant.tenant,
-            client_id: knex('clients').where({
-                tenant: tenant.tenant,
+            tenant: tenantId,
+            client_id: db.table('clients').where({
                 client_name: 'Emerald City'
             }).select('client_id'),
             project_name: 'Emerald City Beautification',
@@ -43,8 +44,7 @@ exports.seed = async function (knex) {
             start_date: knex.raw("CURRENT_DATE - INTERVAL '1 month'"),
             end_date: knex.raw("CURRENT_DATE + INTERVAL '5 months'"),
             wbs_code: '2',
-            status: knex('statuses').where({
-                tenant: tenant.tenant,
+            status: db.table('statuses').where({
                 name: 'Casting in Progress',
                 'status_type': 'project'
             }).select('status_id').first(),

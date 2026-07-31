@@ -1,13 +1,15 @@
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
+
 exports.seed = async function(knex) {
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
+
+    const { tenantId, db } = context;
+
     // First clear any existing client locations
-    await knex('client_locations').del();
+    await db.table('client_locations').del();
 
-    // Get tenant and clients
-    const tenant = await knex('tenants').select('tenant').first();
-    if (!tenant) return;
-
-    const clients = await knex('clients')
-        .where('tenant', tenant.tenant)
+    const clients = await db.table('clients')
         .select('client_id', 'client_name');
 
     // Create locations for each client based on their existing address
@@ -17,7 +19,7 @@ exports.seed = async function(knex) {
         if (client.client_name === 'Emerald City') {
             clientLocations.push({
                 location_id: knex.raw('gen_random_uuid()'),
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 client_id: client.client_id,
                 location_name: 'Main Office',
                 address_line1: '1010 Emerald Street',
@@ -41,7 +43,7 @@ exports.seed = async function(knex) {
             // Add a second location for Emerald City
             clientLocations.push({
                 location_id: knex.raw('gen_random_uuid()'),
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 client_id: client.client_id,
                 location_name: 'Warehouse',
                 address_line1: '2020 Yellow Brick Road',
@@ -62,7 +64,7 @@ exports.seed = async function(knex) {
         } else if (client.client_name === 'Wonderland') {
             clientLocations.push({
                 location_id: knex.raw('gen_random_uuid()'),
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 client_id: client.client_id,
                 location_name: 'Headquarters',
                 address_line1: '42 Rabbit Hole Lane',
@@ -86,7 +88,7 @@ exports.seed = async function(knex) {
         } else if (client.client_name === 'White Rabbit') {
             clientLocations.push({
                 location_id: knex.raw('gen_random_uuid()'),
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 client_id: client.client_id,
                 location_name: 'Rabbit Hole',
                 address_line1: '42 Rabbit Hole Lane',
@@ -110,6 +112,6 @@ exports.seed = async function(knex) {
     }
 
     if (clientLocations.length > 0) {
-        await knex('client_locations').insert(clientLocations);
+        await db.table('client_locations').insert(clientLocations);
     }
 };

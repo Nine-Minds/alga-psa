@@ -38,14 +38,17 @@ const Pagination = ({
     variant = 'full',
     className = '',
     showTotalItems = false,
-    itemLabel = 'items',
+    itemLabel,
     onItemsPerPageChange,
     itemsPerPageOptions
 }: PaginationProps) => {
     const { t } = useTranslation('common');
 
     const resolvedItemLabel =
-        itemLabel || t('pagination.itemsLabel', 'items');
+        itemLabel || t('pagination.itemsLabel', {
+            count: totalItems,
+            defaultValue: totalItems === 1 ? 'item' : 'items',
+        });
 
     const resolvedItemsPerPageOptions =
         (itemsPerPageOptions && itemsPerPageOptions.length > 0)

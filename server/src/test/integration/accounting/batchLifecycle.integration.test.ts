@@ -28,6 +28,7 @@ class StubQuickBooksAdapter implements AccountingExportAdapter {
   capabilities(): AccountingExportAdapterCapabilities {
     return {
       deliveryMode: 'api',
+      supportedExportTypes: ['invoice'],
       supportsPartialRetry: true,
       supportsInvoiceUpdates: true
     };
@@ -36,10 +37,10 @@ class StubQuickBooksAdapter implements AccountingExportAdapter {
   async transform(context: AccountingExportAdapterContext): Promise<AccountingExportTransformResult> {
     return {
       documents: context.lines.map((line) => ({
-        documentId: `invoice-${line.invoice_id}`,
+        documentId: `invoice-${line.document_id}`,
         lineIds: [line.line_id],
         payload: {
-          invoiceId: line.invoice_id,
+          invoiceId: line.document_id,
           amountCents: line.amount_cents
         }
       }))
@@ -50,7 +51,7 @@ class StubQuickBooksAdapter implements AccountingExportAdapter {
     return {
       deliveredLines: context.lines.map((line) => ({
         lineId: line.line_id,
-        externalDocumentRef: `QB-${line.invoice_id}`
+        externalDocumentRef: `QB-${line.document_id}`
       }))
     };
   }
@@ -124,7 +125,7 @@ describe('Accounting export batch lifecycle integration', () => {
     const adapterRegistry = new AccountingAdapterRegistry([new StubQuickBooksAdapter()]);
     service = new AccountingExportService(repository, adapterRegistry);
     vi.spyOn(AccountingExportRepository, 'create').mockResolvedValue(repository);
-    const resolver = new AccountingMappingResolver(ctx.db);
+    const resolver = new AccountingMappingResolver(ctx.db, undefined, ctx.tenantId);
     vi.spyOn(AccountingMappingResolver, 'create').mockResolvedValue(resolver);
   }, HOOK_TIMEOUT);
 
@@ -155,6 +156,25 @@ describe('Accounting export batch lifecycle integration', () => {
       created_at: now,
       updated_at: now
     });
+
+    // Map the customer too, so the batch clears validation and reaches
+    // "ready" — this suite exercises the batch lifecycle, not the
+    // customer-provisioning gate. Idempotent: tests may seed several
+    // invoices for the same test client.
+    await ctx.db('tenant_external_entity_mappings')
+      .insert({
+        id: uuidv4(),
+        tenant: ctx.tenantId,
+        integration_type: 'quickbooks_online',
+        alga_entity_type: 'client',
+        alga_entity_id: ctx.clientId,
+        external_entity_id: `QBO-CUST-${uuidv4()}`,
+        sync_status: 'synced',
+        created_at: now,
+        updated_at: now
+      })
+      .onConflict()
+      .ignore();
 
     const invoiceId = uuidv4();
 
@@ -208,8 +228,8 @@ describe('Accounting export batch lifecycle integration', () => {
       lines: [
         {
           batch_id: batch.batch_id,
-          invoice_id: invoiceId,
-          invoice_charge_id: chargeId,
+          document_id: invoiceId,
+          document_line_id: chargeId,
           client_id: ctx.clientId,
           amount_cents: 5000,
           currency_code: 'USD',

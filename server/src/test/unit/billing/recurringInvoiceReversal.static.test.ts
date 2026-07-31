@@ -24,9 +24,9 @@ describe('recurring invoice reversal flow', () => {
       .split('export const hardDeleteRecurringInvoice')[1]
       .split('export const getInvoicedBillingCycles')[0];
 
-    expect(reverseSection).toContain('await hardDeleteInvoice(params.invoiceId);');
+    expect(reverseSection).toContain('await hardDeleteInvoiceForBillingCycle(params.invoiceId);');
     expect(reverseSection).not.toContain('params.billingCycleId');
-    expect(deleteSection).toContain('await hardDeleteInvoice(params.invoiceId);');
+    expect(deleteSection).toContain('await hardDeleteInvoiceForBillingCycle(params.invoiceId);');
     expect(deleteSection).not.toContain('params.billingCycleId');
     expect(invoiceModificationSource).toContain('await releaseRecurringServicePeriodInvoiceLinkageForInvoice(');
     expect(invoiceModificationSource).toContain("lifecycle_state: 'locked'");

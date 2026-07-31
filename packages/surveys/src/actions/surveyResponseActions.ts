@@ -1,6 +1,6 @@
 'use server';
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { z } from 'zod';
 
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
@@ -15,6 +15,10 @@ import {
   buildCsatAlertTriggeredPayload,
   buildSurveyResponseReceivedPayload,
 } from '@alga-psa/workflow-streams';
+import {
+  actionError,
+  type ActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const SURVEY_INVITATIONS_TABLE = 'survey_invitations';
 const SURVEY_RESPONSES_TABLE = 'survey_responses';
@@ -38,6 +42,8 @@ export type SubmitSurveyResponseInput = z.input<typeof submitResponseSchema>;
 export type SubmitSurveyResponseResult = {
   responseId: string;
 };
+
+export type SurveyResponseActionError = ActionMessageError;
 
 export type SurveyInvitationView = {
   invitationId: string;
@@ -86,15 +92,66 @@ type TicketRow = {
   contact_name?: string | null;
 };
 
+function isSurveyResponseActionError(value: unknown): value is SurveyResponseActionError {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    typeof (value as { actionError?: unknown }).actionError === 'string'
+  );
+}
+
+function surveyResponseActionErrorFrom(error: unknown): SurveyResponseActionError | null {
+  if (isSurveyResponseActionError(error)) {
+    return error;
+  }
+
+  if (error instanceof z.ZodError) {
+    const firstIssue = error.issues[0];
+    return actionError(firstIssue?.message || 'Survey response data is invalid. Please review your feedback and try again.');
+  }
+
+  if (error instanceof Error) {
+    const message = error.message;
+    if (
+      message === 'Survey token is required.' ||
+      message === 'Invalid or expired survey token.' ||
+      message === 'Survey token has expired.' ||
+      message === 'Survey already completed.' ||
+      message === 'Survey has already been completed' ||
+      message === 'Survey invitation not found for token'
+    ) {
+      return actionError('This feedback link is no longer valid or has already been used.');
+    }
+    if (message === 'Rating is outside the allowed range for this survey') {
+      return actionError('Select a rating from the choices shown before submitting.');
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('This feedback link is invalid or expired.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required feedback field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('This feedback link is no longer connected to an active ticket. Please contact your technician.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('This survey has already been completed.');
+  }
+
+  return null;
+}
+
 export async function getSurveyInvitationForToken(token: string): Promise<SurveyInvitationView> {
   const { tenant, invitation } = await resolveSurveyTenantFromToken(token);
 
   await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex();
 
-    await knex(SURVEY_INVITATIONS_TABLE)
+    await tenantDb(knex, tenant).table(SURVEY_INVITATIONS_TABLE)
       .where({
-        tenant,
         invitation_id: invitation.invitationId,
       })
       .whereNull('opened_at')
@@ -113,7 +170,17 @@ export async function getSurveyInvitationForToken(token: string): Promise<Survey
   };
 }
 
-export async function submitSurveyResponse(input: SubmitSurveyResponseInput): Promise<SubmitSurveyResponseResult> {
+export async function submitSurveyResponse(input: SubmitSurveyResponseInput): Promise<SubmitSurveyResponseResult | SurveyResponseActionError> {
+  try {
+    return await submitSurveyResponseInternal(input);
+  } catch (error) {
+    const expected = surveyResponseActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+}
+
+async function submitSurveyResponseInternal(input: SubmitSurveyResponseInput): Promise<SubmitSurveyResponseResult> {
   const parsed = submitResponseSchema.parse(input);
   const trimmedComment = parsed.comment?.trim();
   const comment = trimmedComment && trimmedComment.length > 0 ? trimmedComment : null;
@@ -130,9 +197,9 @@ export async function submitSurveyResponse(input: SubmitSurveyResponseInput): Pr
     const { knex } = await createTenantKnex();
 
     return withTransaction(knex, async (trx) => {
-      const invitationRow = await trx<InvitationRow>(SURVEY_INVITATIONS_TABLE)
+      const db = tenantDb(trx, tenant);
+      const invitationRow = await db.table<InvitationRow>(SURVEY_INVITATIONS_TABLE)
         .where({
-          tenant,
           invitation_id: invitation.invitationId,
           survey_token_hash: hashedToken,
         })
@@ -150,7 +217,7 @@ export async function submitSurveyResponse(input: SubmitSurveyResponseInput): Pr
       const sentAt = invitationRow.sent_at ? toDate(invitationRow.sent_at) : null;
       const responseTimeSeconds = sentAt ? calculateSecondsBetween(sentAt, new Date()) : null;
 
-      const [responseRow] = await trx<ResponseRow>(SURVEY_RESPONSES_TABLE)
+      const [responseRow] = await db.table<ResponseRow>(SURVEY_RESPONSES_TABLE)
         .insert({
           tenant,
           template_id: invitation.templateId,
@@ -166,23 +233,27 @@ export async function submitSurveyResponse(input: SubmitSurveyResponseInput): Pr
         .returning('*');
 
       if (!responseRow) {
-        throw new Error('Failed to save survey response');
+        throw new Error('Survey response insert completed without returning a record.');
       }
 
-      await trx(SURVEY_INVITATIONS_TABLE)
-        .where({ tenant, invitation_id: invitation.invitationId })
+      await db.table(SURVEY_INVITATIONS_TABLE)
+        .where({ invitation_id: invitation.invitationId })
         .update({
           responded: true,
           responded_at: trx.fn.now(),
         });
 
-      const ticketRow = await trx<TicketRow>(`${TICKETS_TABLE} as t`)
-        .leftJoin(`${CLIENTS_TABLE} as c`, function joinClients() {
-          this.on('t.client_id', '=', 'c.client_id').andOn('t.tenant', '=', 'c.tenant');
-        })
-        .leftJoin(`${CONTACTS_TABLE} as co`, function joinContacts() {
-          this.on('t.contact_name_id', '=', 'co.contact_name_id').andOn('t.tenant', '=', 'co.tenant');
-        })
+      const ticketQuery = db.table<TicketRow>(`${TICKETS_TABLE} as t`);
+      db.tenantJoin(ticketQuery, `${CLIENTS_TABLE} as c`, 't.client_id', 'c.client_id', {
+        type: 'left',
+        rootTenantColumn: 't.tenant',
+      });
+      db.tenantJoin(ticketQuery, `${CONTACTS_TABLE} as co`, 't.contact_name_id', 'co.contact_name_id', {
+        type: 'left',
+        rootTenantColumn: 't.tenant',
+      });
+
+      const ticketRow = await ticketQuery
         .select(
           't.ticket_id',
           't.ticket_number',
@@ -192,7 +263,7 @@ export async function submitSurveyResponse(input: SubmitSurveyResponseInput): Pr
           'c.client_name',
           'co.full_name as contact_name'
         )
-        .where({ 't.tenant': tenant, 't.ticket_id': invitation.ticketId })
+        .where('t.ticket_id', invitation.ticketId)
         .first();
 
       return { response: responseRow, ticket: ticketRow ?? null };

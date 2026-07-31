@@ -49,6 +49,34 @@ import { getEmailLogsForTicket } from '@alga-psa/email/actions';
 
 const getEmailLogsForTicketMock = vi.mocked(getEmailLogsForTicket);
 
+const TOGGLE_SELECTOR = '[data-automation-id="ticket-email-notifications-toggle"]';
+
+function isCardExpanded(): boolean {
+  const toggle = document.querySelector(TOGGLE_SELECTOR);
+  return !!toggle?.querySelector('.lucide-chevron-down');
+}
+
+/**
+ * The card is rendered in a collapsible ContentCard that also auto-expands when
+ * its `count` (logs.length) transitions from 0 to >0 after the async fetch
+ * resolves. That auto-expand races with a manual toggle click, so instead of
+ * a single click we poll: if the card is collapsed, click the toggle, and keep
+ * checking until it reports expanded (chevron-down). This is deterministic for
+ * both the empty/loading cases (manual expand) and the populated cases (where
+ * either the manual click or the auto-expand wins).
+ */
+async function expandCard(user: ReturnType<typeof userEvent.setup>) {
+  await waitFor(async () => {
+    if (!isCardExpanded()) {
+      const toggle = document.querySelector(TOGGLE_SELECTOR) as HTMLButtonElement;
+      if (toggle) {
+        await user.click(toggle);
+      }
+    }
+    expect(isCardExpanded()).toBe(true);
+  });
+}
+
 describe('TicketEmailNotifications', () => {
   afterEach(() => cleanup());
 
@@ -70,7 +98,7 @@ describe('TicketEmailNotifications', () => {
 
     expect(screen.queryByText('No email notifications found.')).toBeNull();
 
-    await user.click(screen.getByRole('button', { name: /show/i }));
+    await expandCard(user);
     await waitFor(() => {
       expect(screen.getByText('No email notifications found.')).toBeTruthy();
     });
@@ -87,7 +115,7 @@ describe('TicketEmailNotifications', () => {
 
     render(<TicketEmailNotifications ticketId="ticket-1" />);
 
-    await user.click(screen.getByRole('button', { name: /show/i }));
+    await expandCard(user);
     expect(screen.getByText('Loading…')).toBeTruthy();
 
     resolveFetch!([]);
@@ -111,7 +139,7 @@ describe('TicketEmailNotifications', () => {
 
     render(<TicketEmailNotifications ticketId="ticket-1" />);
 
-    await user.click(screen.getByRole('button', { name: /show/i }));
+    await expandCard(user);
 
     await waitFor(() => {
       expect(screen.getByText('Hello')).toBeTruthy();
@@ -138,7 +166,7 @@ describe('TicketEmailNotifications', () => {
     ]);
 
     render(<TicketEmailNotifications ticketId="ticket-1" />);
-    await user.click(screen.getByRole('button', { name: /show/i }));
+    await expandCard(user);
 
     await waitFor(() => {
       expect(screen.getByText('Boom')).toBeTruthy();
@@ -162,7 +190,7 @@ describe('TicketEmailNotifications', () => {
     getEmailLogsForTicketMock.mockResolvedValueOnce(logs.slice(0, 21)); // limit+1
 
     render(<TicketEmailNotifications ticketId="ticket-1" />);
-    await user.click(screen.getByRole('button', { name: /show/i }));
+    await expandCard(user);
 
     await waitFor(() => {
       expect(screen.getByText('S0')).toBeTruthy();
@@ -191,7 +219,7 @@ describe('TicketEmailNotifications', () => {
       .mockResolvedValueOnce(logs); // after load more (limit+1 big enough)
 
     render(<TicketEmailNotifications ticketId="ticket-1" />);
-    await user.click(screen.getByRole('button', { name: /show/i }));
+    await expandCard(user);
 
     await waitFor(() => {
       expect(screen.getByText('S0')).toBeTruthy();

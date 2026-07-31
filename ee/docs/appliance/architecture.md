@@ -81,8 +81,8 @@ The host does as little as possible. See
 - **`alga-appliance.sysusers`** — reserves the `alga` group (GID 10001) used for
   the host-agent socket.
 
-> Note: `scripts/bootstrap-appliance.sh` / `bootstrap-site.sh` and
-> `schematics/` are the **legacy Talos** path, not used by the Ubuntu ISO.
+> Note: the old script-driven Talos bootstrap/upgrade path has been removed from
+> `ee/appliance`; supported installs use the Ubuntu host setup/status service.
 
 ### The Kubernetes-hosted control plane
 The setup/status brain. See [`ee/appliance/control-plane/`](../../appliance/control-plane/)
@@ -91,8 +91,8 @@ and [`ee/appliance/host-service/`](../../appliance/host-service/):
 - **`control-plane/Dockerfile`** — multi-stage: builds the Next.js status UI from
   `status-ui/`, then a runtime image with `bash/curl/kubectl/flux` that bundles the
   `host-service/*.mjs`, `manifests/`, and `flux/` trees. Runs as UID 10001.
-  *(It intentionally does **not** bake `releases/` — release metadata is resolved
-  from the registry at setup time.)*
+  *(It intentionally does **not** bake release metadata — setup/update resolve
+  selected channels from the OCI artifact registry at runtime.)*
 - **`control-plane/manifests/`** — `namespace.yaml`, `rbac.yaml`,
   `workload.yaml` (the `appliance-control-plane` Deployment: 1 replica,
   `hostNetwork`, hostPort 8080, mounts the host state dir + setup-token secret),
@@ -148,21 +148,18 @@ GitOps definitions, published to the registry as the **config bundle**:
 > (OCIRepository/HelmRepository/GitRepository) + Kustomization at **`v1`** and
 > HelmRelease at **`v2`**. Don't reintroduce `v1beta2`.
 
-### Release metadata (`ee/appliance/releases/`)
-- `schema.json` — JSON Schema for `release.json`.
-- `releases/<version>/release.json` — the app image tags (`algaCore`,
-  `workflowWorker`, `emailService`, `temporalWorker`), the values profile, and
-  the release branch. **This is what you edit to pin a new app image.**
-- `channels/` — `stable.json` / `nightly.json` historical pointers.
+### Release metadata and publishing
+- Release metadata is an OCI artifact at `ghcr.io/nine-minds/alga-appliance-release`.
+- The release manifest JSON is the artifact config blob: app image tags,
+  chart versions, Flux config-bundle digest, control-plane image ref, values
+  profile, and profile values.
+- Channels such as `stable` and `nightly` are OCI tags on that release artifact.
+- Publishing is owned by the Argo workflow in
+  `~/nm-kube-config/alga-psa/workflows/composite/alga-psa-build-migrate-deploy.yaml`.
+  For stable releases use `promote-release=true`,
+  `publish-appliance-release=true`, and `appliance-release-channel=stable`.
 
-### Publish & build tooling (`ee/appliance/scripts/`)
-- `publish-appliance-release.sh` — packages + pushes everything to
-  `ghcr.io/nine-minds`: the 6 Helm charts, the Flux **config bundle** (`flux push
-  artifact`, digest captured), the **control-plane image**, and the **release
-  manifest** (`oras`, tagged `:<version>` + `:<channel>`).
-- `build-release-manifest.py` — assembles the release-manifest JSON (images +
-  chart versions + config-bundle digest + control-plane ref + profile values)
-  that `publish-appliance-release.sh` pushes.
+### Host/control-plane scripts (`ee/appliance/scripts/`)
 - `bootstrap-control-plane.sh` — the host bootstrap: start k3s, import the baked
   image, resolve + pull the channel control-plane image, apply the Deployment,
   report handoff.
@@ -179,7 +176,7 @@ GitOps definitions, published to the registry as the **config bundle**:
   late-commands copy the overlay into `/target` and enable the systemd units, then
   reboot.
 - `overlay/` — the host filesystem injected into the install: everything lands at
-  `/opt/alga-appliance/` (scripts, host-service, flux, manifests, releases),
+  `/opt/alga-appliance/` (scripts, host-service, flux, manifests, status UI),
   plus the systemd units and `/etc/alga-appliance/`.
 - `scripts/build-ubuntu-appliance-iso.sh` — entrypoint (`--base-iso`,
   `--release-version`). Calls `stage-host-artifacts.sh` (which builds the
@@ -187,9 +184,10 @@ GitOps definitions, published to the registry as the **config bundle**:
 - `output/` — the built `alga-appliance-ubuntu-<version>.iso` + `.sha256`.
 
 ### Operator CLI (`ee/appliance/operator/`)
-`ee/appliance/appliance` → `operator/lib/cli.mjs`: a TUI/CLI
-(`tui`/`bootstrap`/`upgrade`/`reset`/`status`/`support-bundle`) that shells out to
-the scripts above. Useful on a running box for status and lifecycle actions.
+`ee/appliance/appliance` → `operator/lib/cli.mjs`: a TUI/CLI for status,
+support bundles, repair helpers, and destructive reset. It no longer exposes the
+removed bootstrap/upgrade commands; installs and app-channel updates are handled
+by the host/control-plane setup and update engines.
 
 ---
 
@@ -247,9 +245,10 @@ appliance pulls all of it anonymously from `ghcr.io/nine-minds` (public read).
 
 **Consequences for what needs rebuilding:**
 
-- **App image change** (e.g. a fix in `server/`) → build `alga-psa-ee`, pin the new
-  tag in `releases/<ver>/release.json`, re-run `publish-appliance-release.sh`. **No
-  ISO, no control-plane rebuild.**
+- **App image change** (e.g. a fix in `server/`) → build `alga-psa-ee`, then run
+  the `~/nm-kube-config` Argo workflow with `publish-appliance-release=true` and
+  the desired channel (for stable: `appliance-release-channel=stable`). **No ISO,
+  no control-plane rebuild.**
 - **Control-plane / setup-UI / engine change** → rebuild + publish the
   control-plane image; the next boot rolls to it from the registry. **No ISO.**
 - **ISO re-burn only** for: k3s / base OS / Flux controllers / systemd units / the
@@ -269,8 +268,8 @@ for the full contract (publish side, consume side, decisions).
 | Change the setup wizard | `ee/appliance/status-ui/app/setup/page.tsx` |
 | Change the setup API / flow | `ee/appliance/host-service/server.mjs`, `setup-engine.mjs` |
 | Change what the app stack is / Helm values | `ee/appliance/flux/base/`, `flux/profiles/single-node/values/` |
-| Pin a new app image | `ee/appliance/releases/<ver>/release.json` |
-| Publish a release to ghcr | `ee/appliance/scripts/publish-appliance-release.sh` |
+| Pin a new app image | `~/nm-kube-config/alga-psa/workflows/composite/alga-psa-build-migrate-deploy.yaml` (`appliance-release-source-ref` / `appliance-release-version`) |
+| Publish a release to ghcr | Argo workflow with `publish-appliance-release=true` |
 | Rebuild the control-plane image | `ee/appliance/control-plane/Dockerfile` |
 | Build the ISO | `ee/appliance/ubuntu-iso/scripts/build-ubuntu-appliance-iso.sh` |
 | Diagnose a running box | `ee/appliance/host-service/status-engine.mjs`, `operator/`, `bin/alga-control-plane-reapply` |

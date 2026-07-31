@@ -1,4 +1,32 @@
 {
+  "clientNameCell": {
+    "noClient": "Geen klant"
+  },
+  "reactions": {
+    "add": "Reageren",
+    "ariaSummary_one": "{{emoji}} {{count}} reactie",
+    "ariaSummary_other": "{{emoji}} {{count}} reacties",
+    "ariaYouReacted": ", jij hebt gereageerd"
+  },
+  "credits": {
+    "expiresInDaysOn_one": "Verloopt over {{count}} dag, op {{date}}",
+    "expiresInDaysOn_other": "Verloopt over {{count}} dagen, op {{date}}",
+    "expiringForClient_one": "{{count}} tegoed van {{clientName}} verloopt binnenkort",
+    "expiringForClient_other": "{{count}} tegoeden van {{clientName}} verlopen binnenkort"
+  },
+  "staleAction": {
+    "message": "Deze pagina is verouderd. Vernieuw de pagina om live-updates en acties te herstellen."
+  },
+  "licenseBanner": {
+    "trialExpiresIn_one": "De Pro-proefperiode verloopt over {{count}} dag. Voer een licentiesleutel in om Pro-functies te behouden.",
+    "trialExpiresIn_other": "De Pro-proefperiode verloopt over {{count}} dagen. Voer een licentiesleutel in om Pro-functies te behouden.",
+    "trialDaysRemaining_one": "Pro-proefperiode actief — nog {{count}} dag.",
+    "trialDaysRemaining_other": "Pro-proefperiode actief — nog {{count}} dagen.",
+    "trialAvailable": "Essentials-functies zijn actief. Start een gratis Pro-proefperiode van 15 dagen om alle functies te ontgrendelen.",
+    "trialExpired": "De Pro-proefperiode is verlopen. De installatie gebruikt nu Essentials-functies.",
+    "licenseExpiresIn_one": "De licentie verloopt over {{count}} dag. Verleng om serviceonderbreking te voorkomen.",
+    "licenseExpiresIn_other": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen."
+  },
   "nav": {
     "dashboard": "Dashboard",
     "tickets": "Tickets",
@@ -48,7 +76,8 @@
     "resetPrintOptions": "Afdrukopties resetten",
     "share": "Delen",
     "done": "Klaar",
-    "continue": "Doorgaan"
+    "continue": "Doorgaan",
+    "printSelected": "Geselecteerde afdrukken ({{count}})"
   },
   "status": {
     "loading": "Bezig met laden...",
@@ -301,7 +330,9 @@
     "ariaLabel": "Paginering",
     "totalItems": "{{count}} {{itemLabel}} in totaal",
     "totalRecordsInline": "({{count}} records in totaal)",
-    "pageOf": "Pagina {{current}} van {{total}}"
+    "pageOf": "Pagina {{current}} van {{total}}",
+    "itemsLabel_one": "element",
+    "itemsLabel_other": "elementen"
   },
   "documents": {
     "title": "Documenten",
@@ -462,7 +493,10 @@
         "visible": "Zichtbaar voor klant",
         "hidden": "Alleen intern"
       },
-      "clientVisibilityLabel": "Zichtbaarheid voor klant"
+      "clientVisibilityLabel": "Zichtbaarheid voor klant",
+      "entityOptions": {
+        "all": "Alle entiteiten"
+      }
     },
     "selector": {
       "title": "Documenten selecteren",
@@ -490,7 +524,10 @@
       "uploadingProgress": "{{current}} van {{total}} uploaden",
       "pending": "In behandeling",
       "error": "Document kon niet worden geüpload",
-      "fileError": "Bestand kon niet worden geüpload"
+      "fileError": "Bestand kon niet worden geüpload",
+      "associatedEntityTypeLabel": "Koppelen aan",
+      "noAssociation": "Geen koppeling",
+      "selectAssociatedEntityError": "Selecteer een gekoppelde entiteit voordat je uploadt."
     },
     "folders": {
       "root": "Hoofdmap",
@@ -549,7 +586,24 @@
     "downloadVideo": "Video downloaden",
     "downloadAsPdf": "Downloaden als PDF",
     "downloadAsMarkdown": "Downloaden als Markdown",
-    "move": "Verplaatsen"
+    "move": "Verplaatsen",
+    "associatedEntityPicker": {
+      "allEntities": "Alle entiteiten",
+      "loadingClients": "Klanten laden...",
+      "loadingContacts": "Contactpersonen laden...",
+      "noEntityTypes": "Geen entiteitstypen gevonden",
+      "typeLabel": "Type gekoppelde entiteit",
+      "typePlaceholder": "Selecteer entiteitstype",
+      "typeSearchPlaceholder": "Entiteitstypen zoeken...",
+      "entityLabel": "{{entityType}}",
+      "entityPlaceholder": "Selecteer {{entityType}}",
+      "entitySearchPlaceholder": "{{entityType}} zoeken...",
+      "noEntities": "Geen {{entityType}} gevonden"
+    },
+    "huduTab": {
+      "documentsTabLabel": "Documenten",
+      "tabLabel": "Hudu"
+    }
   },
   "fields": {
     "notes": "Notities"
@@ -919,7 +973,8 @@
       "revoke": "Intrekken",
       "revoking": "Intrekken...",
       "loggingOut": "Uitloggen...",
-      "logoutFromOther": "Uitloggen van {{count}} ander apparaat{{count, plural, one {} other {en}}}"
+      "logoutFromOther_one": "Uitloggen van {{count}} ander apparaat",
+      "logoutFromOther_other": "Uitloggen van {{count}} andere apparaten"
     },
     "confirmations": {
       "logoutCurrent": "Dit zal u uitloggen van uw huidige sessie. Weet u het zeker?",
@@ -1009,7 +1064,10 @@
     "deleteCommentAriaLabel": "Commentaar verwijderen",
     "deleteComment": "Commentaar verwijderen",
     "deleteCommentConfirmation": "Weet u zeker dat u dit commentaar wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
-    "update": "Bijwerken"
+    "update": "Bijwerken",
+    "create": "Aanmaken",
+    "replyComment": "Reageren op opmerking",
+    "saving": "Opslaan..."
   },
   "enums": {
     "addOnDescription": {
@@ -1022,11 +1080,20 @@
     "fromDate": "Van",
     "toDate": "Tot",
     "noResults": "Geen resultaten gevonden",
-    "searchPlaceholder": "Zoeken..."
+    "searchPlaceholder": "Zoeken...",
+    "showingOfTotal": "{{shown}} van {{total}} weergegeven — typ om te verfijnen"
   },
   "pickers": {
     "addNewClient": "Nieuwe klant toevoegen",
-    "addNewContact": "Nieuwe contactpersoon toevoegen"
+    "addNewContact": "Nieuwe contactpersoon toevoegen",
+    "loadingUsers": "Gebruikers laden...",
+    "errorLoadingUsers": "Fout bij laden van gebruikers",
+    "searchUsers": "Gebruikers zoeken...",
+    "unassigned": "Niet toegewezen",
+    "noUsersAvailable": "Geen gebruikers beschikbaar",
+    "searchBoards": "Boards zoeken...",
+    "searchBoardsLabel": "Boards zoeken",
+    "noBoardsFound": "Geen boards gevonden"
   },
   "tagFilter": {
     "placeholder": "Filter op tags...",
@@ -1180,6 +1247,10 @@
     "columnsHidden_other": "{{count}} kolommen verborgen wegens beperkte ruimte.",
     "showAll": "Alles tonen",
     "showingAllColumns": "Alle kolommen worden getoond; scroll horizontaal om ze te zien.",
-    "showLess": "Minder tonen"
+    "showLess": "Minder tonen",
+    "columnsHidden": "{{count}} kolommen verborgen vanwege beperkte ruimte."
+  },
+  "richTextEditorSkeleton": {
+    "loading": "Editor laden…"
   }
 }

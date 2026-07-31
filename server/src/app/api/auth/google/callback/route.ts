@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers.js';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
 import { configureGmailProvider } from '@alga-psa/integrations/actions/email-actions/configureGmailProvider';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
@@ -82,7 +83,7 @@ export async function GET(request: NextRequest) {
         provider: 'google',
         success: false,
         error,
-        errorDescription: errorDescription || ''
+        errorDescription: 'Google authorization failed. Please try again.'
       });
     }
 
@@ -210,16 +211,11 @@ export async function GET(request: NextRequest) {
       if (stateData.providerId) {
         try {
           console.log(`💾 Saving OAuth tokens to database for provider: ${stateData.providerId}`);
-          const { knex, tenant } = await createTenantKnex();
+          const { knex } = await createTenantKnex();
+          const db = tenantDb(knex, stateData.tenant);
           
-          await knex('google_email_provider_config')
+          await db.table('google_email_provider_config')
             .where('email_provider_id', stateData.providerId)
-            .modify((qb: any) => {
-              // Use the current tenant from context/cookies when available
-              if (tenant) {
-                qb.andWhere('tenant', tenant);
-              }
-            })
             .update({
               access_token: access_token,
               refresh_token: refresh_token || null,
@@ -231,11 +227,8 @@ export async function GET(request: NextRequest) {
 
           // Mark provider connection as connected and clear any previous error
           try {
-            await knex('email_providers')
+            await db.table('email_providers')
               .where('id', stateData.providerId)
-              .modify((qb: any) => {
-                if (tenant) qb.andWhere('tenant', tenant);
-              })
               .update({
                 status: 'connected',
                 updated_at: knex.fn.now(),
@@ -258,10 +251,10 @@ export async function GET(request: NextRequest) {
         try {
           await runWithTenant(stateData.tenant, async () => {
             const { knex } = await createTenantKnex();
-            const googleConfig = await knex('google_email_provider_config')
+            const db = tenantDb(knex, stateData.tenant);
+            const googleConfig = await db.table('google_email_provider_config')
               .select('project_id')
               .where('email_provider_id', stateData.providerId)
-              .andWhere('tenant', stateData.tenant)
               .first();
 
             if (googleConfig?.project_id) {
@@ -302,7 +295,7 @@ export async function GET(request: NextRequest) {
         provider: 'google',
         success: false,
         error: 'token_exchange_failed',
-        errorDescription: tokenError.response?.data?.error_description || tokenError.message
+        errorDescription: 'Google authorization failed. Please try again.'
       });
     }
   } catch (error: any) {
@@ -313,7 +306,7 @@ export async function GET(request: NextRequest) {
       provider: 'google',
       success: false,
       error: 'unexpected_error',
-      errorDescription: error?.message || 'Unexpected error'
+      errorDescription: 'Google authorization failed. Please try again.'
     })).toString('base64');
     return new NextResponse(`<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Google OAuth Callback</title></head><body><script>(function(){try{var p=JSON.parse(atob('${encoded}'));(window.opener||window.parent).postMessage(p,'*')}catch(_){}try{window.close()}catch(_){}setTimeout(function(){if(!window.closed){document.body.innerHTML='<p>Authorization failed. You can close this window.</p>'}},100)})();</script></body></html>`, { status: 200, headers: { 'Content-Type': 'text/html' } });
   }

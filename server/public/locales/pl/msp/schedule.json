@@ -32,7 +32,7 @@
   "calendar": {
     "legend": {
       "types": {
-        "ticket": "Bilet",
+        "ticket": "Zgłoszenie",
         "projectTask": "Zadanie projektowe",
         "nonBillableCategory": "Kategoria niepodlegająca rozliczeniu",
         "adHoc": "Wpis ad hoc",
@@ -91,7 +91,8 @@
         "single": "Tylko to wydarzenie",
         "future": "To i przyszłe wydarzenia",
         "all": "Wszystkie wydarzenia"
-      }
+      },
+      "messageWithTeamsWarning": "Czy na pewno chcesz usunąć ten wpis harmonogramu? Tej operacji nie można cofnąć. Spowoduje to również usunięcie spotkania Microsoft Teams."
     },
     "print": {
       "title": "Agenda harmonogramu",
@@ -123,16 +124,21 @@
   "requests": {
     "errors": {
       "load": "Nie udało się załadować próśb o spotkanie",
-      "ticketNotFound": "Nie znaleziono biletu",
-      "loadTicket": "Nie udało się załadować biletu",
+      "ticketNotFound": "Nie znaleziono zgłoszenia",
+      "loadTicket": "Nie udało się załadować zgłoszenia",
       "assignTechnicianRequired": "Proszę przypisać technika",
       "approve": "Nie udało się zatwierdzić prośby",
       "declineReasonRequired": "Podaj powód odrzucenia",
-      "decline": "Nie udało się odrzucić prośby"
+      "decline": "Nie udało się odrzucić prośby",
+      "reschedule": "Nie udało się zmienić terminu",
+      "rescheduleDateRequired": "Wybierz nową datę i godzinę",
+      "generateTeamsMeeting": "Nie udało się utworzyć spotkania Microsoft Teams"
     },
     "feedback": {
       "approved": "Prośba o spotkanie została zatwierdzona",
-      "declined": "Prośba o spotkanie została odrzucona"
+      "declined": "Prośba o spotkanie została odrzucona",
+      "rescheduled": "Termin zmieniony",
+      "teamsMeetingGenerated": "Utworzono spotkanie Microsoft Teams"
     },
     "filters": {
       "statusLabel": "Filtruj według stanu",
@@ -153,7 +159,7 @@
       "loading": "Ładowanie żądań...",
       "empty": "Nie znaleziono żądań {{status}}",
       "duration": "{{count}} minut",
-      "ticketFallback": "Bilet #{{ticket}}",
+      "ticketFallback": "Zgłoszenie #{{ticket}}",
       "fallbacks": {
         "publicRequest": "Żądanie publiczne"
       }
@@ -175,13 +181,15 @@
         "requestedTime": "Żądany czas",
         "duration": "Czas trwania",
         "status": "Status",
-        "linkedTicket": "Połączony bilet",
+        "linkedTicket": "Połączone zgłoszenie",
         "description": "Opis",
         "teamsMeeting": "Spotkanie Teams"
       },
       "actions": {
-        "joinTeamsMeeting": "Dołącz do spotkania Teams"
-      }
+        "joinTeamsMeeting": "Dołącz do spotkania Teams",
+        "generateTeamsMeeting": "Utwórz spotkanie Teams"
+      },
+      "teamsMeetingMissing": "Ten zatwierdzony termin nie ma jeszcze linku do spotkania Teams."
     },
     "approval": {
       "title": "Szczegóły zatwierdzenia",
@@ -189,17 +197,23 @@
         "assignedTechnician": "Przypisz technika *",
         "finalDateTime": "Ostateczna data i godzina",
         "internalNotes": "Notatki wewnętrzne (opcjonalnie)",
-        "linkedTicket": "Link do biletu (opcjonalnie)",
+        "linkedTicket": "Link do zgłoszenia (opcjonalnie)",
         "generateTeamsMeeting": "Wygeneruj link do spotkania Microsoft Teams"
       },
       "placeholders": {
         "assignedTechnician": "Wybierz technika",
         "internalNotes": "Dodaj wszelkie notatki wewnętrzne...",
-        "linkedTicket": "Wprowadź identyfikator biletu, aby połączyć..."
+        "linkedTicket": "Wprowadź identyfikator zgłoszenia, aby połączyć..."
       },
       "actions": {
         "approve": "Zatwierdź",
         "decline": "Odrzuć"
+      },
+      "teamsMeetingFailure": {
+        "title": "Nie udało się utworzyć spotkania Microsoft Teams",
+        "description": "Termin nie został zatwierdzony. Spróbuj ponownie utworzyć spotkanie lub zatwierdź bez spotkania i utwórz je później.",
+        "retry": "Ponów",
+        "approveWithout": "Zatwierdź bez spotkania"
       }
     },
     "decline": {
@@ -212,6 +226,18 @@
       },
       "actions": {
         "confirm": "Potwierdź odrzucenie",
+        "cancel": "Anuluj"
+      }
+    },
+    "reschedule": {
+      "title": "Zmień termin",
+      "teamsNote": "Uczestnicy otrzymają zaktualizowane zaproszenie na spotkanie Microsoft Teams.",
+      "fields": {
+        "newDateTime": "Nowa data i godzina"
+      },
+      "actions": {
+        "open": "Zmień termin spotkania",
+        "confirm": "Potwierdź zmianę terminu",
         "cancel": "Anuluj"
       }
     }
@@ -546,7 +572,9 @@
         "title": "Zatwierdzone spotkanie",
         "descriptionWithDate": "To spotkanie powstało na prośbę klienta i zostało zatwierdzone {{date}}.",
         "description": "Spotkanie to powstało na prośbę klienta.",
-        "joinTeamsMeeting": "Dołącz do spotkania Teams"
+        "joinTeamsMeeting": "Dołącz do spotkania Teams",
+        "downloadRecording": "Pobierz nagranie",
+        "viewTranscript": "Zobacz transkrypcję"
       },
       "pending": {
         "title": "Oczekujące żądanie spotkania",
@@ -629,6 +657,32 @@
       "single": "Tylko to wydarzenie",
       "future": "To i przyszłe wydarzenia",
       "all": "Wszystkie wydarzenia"
+    },
+    "errors": {
+      "loadWorkItem": "Failed to load work item."
     }
+  },
+  "actions": {
+    "print": "Drukuj",
+    "printOptions": "Opcje drukowania"
+  },
+  "interactionDetails": {
+    "fields": {
+      "client": "Klient",
+      "contact": "Kontakt",
+      "duration": "Czas trwania",
+      "endTime": "Czas zakończenia",
+      "notes": "Notatki",
+      "startTime": "Czas rozpoczęcia",
+      "status": "Status",
+      "title": "Tytuł",
+      "user": "Użytkownik"
+    },
+    "noClient": "Brak powiązanego klienta",
+    "noContact": "Brak powiązanego kontaktu",
+    "noTitle": "Brak tytułu",
+    "notAvailable": "N/D",
+    "title": "Szczegóły interakcji",
+    "unknownUser": "Nieznany"
   }
 }

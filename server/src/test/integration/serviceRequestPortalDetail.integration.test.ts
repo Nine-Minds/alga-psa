@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { getVisiblePublishedServiceRequestDefinitionDetail } from '../../lib/service-requests/portalDetail';
 import {
@@ -10,6 +11,15 @@ import {
 
 describe('service request portal detail', () => {
   let db: Knex;
+
+  function tenantTable(tenant: string, table: string) {
+    return tenantDb(db, tenant).table(table);
+  }
+
+  function tenantRows() {
+    return tenantDb(db, '__test_tenant_fixture__')
+      .unscoped('tenants', 'test fixture creates and removes tenant rows');
+  }
 
   beforeAll(async () => {
     db = await createTestDbConnection({ runSeeds: false });
@@ -29,13 +39,13 @@ describe('service request portal detail', () => {
     const requesterUserId = uuidv4();
     const clientId = uuidv4();
 
-    await db('tenants').insert({
+    await tenantRows().insert({
       tenant,
       client_name: `Tenant ${tenant.slice(0, 8)}`,
       email: `tenant-${tenant.slice(0, 8)}@example.com`,
     });
 
-    await db('service_request_definitions').insert({
+    await tenantTable(tenant, 'service_request_definitions').insert({
       tenant,
       definition_id: definitionId,
       name: 'Draft Name Changed',
@@ -54,7 +64,7 @@ describe('service request portal detail', () => {
       lifecycle_state: 'published',
     });
 
-    await db('service_request_definition_versions').insert({
+    await tenantTable(tenant, 'service_request_definition_versions').insert({
       tenant,
       version_id: versionId,
       definition_id: definitionId,
@@ -123,13 +133,13 @@ describe('service request portal detail', () => {
     const requesterUserId = uuidv4();
     const clientId = uuidv4();
 
-    await db('tenants').insert({
+    await tenantRows().insert({
       tenant,
       client_name: `Tenant ${tenant.slice(0, 8)}`,
       email: `tenant-${tenant.slice(0, 8)}@example.com`,
     });
 
-    await db('service_request_definitions').insert({
+    await tenantTable(tenant, 'service_request_definitions').insert({
       tenant,
       definition_id: definitionId,
       name: 'Draft-hidden request',
@@ -143,7 +153,7 @@ describe('service request portal detail', () => {
       lifecycle_state: 'published',
     });
 
-    await db('service_request_definition_versions').insert({
+    await tenantTable(tenant, 'service_request_definition_versions').insert({
       tenant,
       version_id: versionId,
       definition_id: definitionId,

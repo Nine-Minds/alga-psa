@@ -1,17 +1,12 @@
 {
   "page": {
-    "title": "Kreditverwaltung",
-    "creditsOverview": "Kreditübersicht",
-    "overviewDescription": "Verwalten Sie die Gutschriften und Übertragungen Ihres Kunden",
-    "overviewDescriptionWithExpiration": "Verwalten Sie die Gutschriften Ihres Kunden einschließlich Ablaufdaten und Übertragungen",
-    "expirationSummary": "Ablaufübersicht der Gutschriften",
-    "expirationSummaryDescription": "Übersicht über bald ablaufende Gutschriften",
-    "usageTrends": "Nutzungstrends der Gutschriften",
-    "usageTrendsDescription": "Historische Muster der Gutschriftnutzung"
+    "title": "Kreditverwaltung"
   },
   "columns": {
     "creditId": "Kredit-ID",
     "client": "Kunde",
+    "balance": "Saldo",
+    "balanceOf": "von {{amount}}",
     "created": "Erstellt am",
     "description": "Beschreibung",
     "context": "Kontext",
@@ -20,34 +15,31 @@
     "expires": "Läuft ab am",
     "status": "Status",
     "actions": "Aktionen",
-    "discrepancy": "Abweichung",
-    "detected": "Erkannt am",
-    "expectedBalance": "Erwarteter Saldo",
-    "actualBalance": "Tatsächlicher Saldo",
     "amountAvailable": "Verfügbarer Betrag",
     "expiration": "Ablauf",
     "select": "Auswählen"
   },
+  "filters": {
+    "allClients": "Alle Kunden",
+    "allStatuses": "Alle Status"
+  },
   "status": {
     "active": "Aktiv",
     "expired": "Abgelaufen",
-    "expiringSoon": "Läuft bald ab ({{days}} Tage)",
-    "open": "Offen",
-    "inReview": "In Prüfung",
-    "resolved": "Gelöst",
     "never": "Nie",
-    "na": "n. z."
+    "na": "n. z.",
+    "depleted": "Aufgebraucht",
+    "expiringSoonShort": "Läuft bald ab",
+    "expiringSoon_one": "Läuft in {{count}} Tag ab",
+    "expiringSoon_other": "Läuft in {{count}} Tagen ab"
   },
   "actions": {
     "view": "Anzeigen",
     "edit": "Bearbeiten",
     "expire": "Verfallen lassen",
-    "resolve": "Beheben",
     "addCredit": "Gutschrift hinzufügen",
     "cancel": "Abbrechen",
-    "backToCredits": "Zurück zu Gutschriften",
     "viewAllCredits": "Alle Gutschriften anzeigen",
-    "runReconciliation": "Abstimmung starten",
     "running": "Läuft...",
     "reset": "Zurücksetzen",
     "applyCredit": "Gutschrift anwenden",
@@ -55,84 +47,27 @@
     "select": "Auswählen",
     "selected": "Ausgewählt",
     "saveChanges": "Änderungen speichern",
-    "saving": "Wird gespeichert..."
-  },
-  "tabs": {
-    "activeCredits": "Aktive Gutschriften",
-    "allCredits": "Alle Gutschriften",
-    "expiredCredits": "Abgelaufene Gutschriften"
+    "saving": "Wird gespeichert...",
+    "transfer": "Übertragen"
   },
   "settings": {
-    "title": "Einstellungen zur Ablaufzeit von Gutschriften",
-    "creditExpiration": "Gültigkeit der Gutschrift:",
-    "enabled": "Aktiviert",
-    "disabled": "Deaktiviert",
-    "expirationPeriod": "Ablaufzeitraum:",
-    "daysUnit": "{{count}} Tage",
-    "notificationDays": "Benachrichtigungstage:",
-    "none": "Keine"
-  },
-  "charts": {
-    "expirationSummary": "Ablaufübersicht der Gutschriften",
-    "expirationSummaryDescription": "Übersicht über bald ablaufende Gutschriften",
-    "usageTrends": "Nutzungstrends der Gutschriften",
-    "usageTrendsDescription": "Historische Muster der Gutschriftnutzung",
-    "lessThan7Days": "< 7 Tage",
-    "lessThan30Days": "< 30 Tage",
-    "lessThan90Days": "< 90 Tage",
-    "greaterThan90Days": "> 90 Tage",
-    "creditsIssued": "Ausgegebene Gutschriften",
-    "creditsApplied": "Verwendete Gutschriften",
-    "creditsExpired": "Abgelaufene Gutschriften",
-    "statusDistribution": "Statusverteilung",
-    "statusDistributionDescription": "Überblick über die Status der Abstimmungsberichte",
-    "discrepancyTrends": "Trends bei Abweichungen",
-    "discrepancyTrendsDescription": "Monatliche Trends bei Gutschriftsabweichungen",
-    "numberOfDiscrepancies": "Anzahl der Abweichungen",
-    "totalAmount": "Gesamtbetrag",
-    "months": {
-      "jan": "Jan.",
-      "feb": "Feb.",
-      "mar": "Mär",
-      "apr": "Apr.",
-      "may": "Mai",
-      "jun": "Jun."
-    }
+    "loadErrorPrefix": "Error loading credit expiration settings:",
+    "captionEnabled": "Gutschriftablauf: {{days}} Tage",
+    "captionDisabled": "Gutschriftablauf: aus",
+    "captionReminders": "Erinnerungen {{reminders}} Tage vorher",
+    "editInSettings": "In den Abrechnungseinstellungen bearbeiten"
   },
   "stats": {
     "totalActiveCredits": "Summe aktiver Gutschriften",
     "expiringIn30Days": "Läuft in 30 Tagen ab",
     "totalCreditsApplied": "Summe verwendeter Gutschriften",
-    "totalCreditsExpired": "Summe abgelaufener Gutschriften",
-    "totalDiscrepancies": "Gesamtzahl der Abweichungen",
-    "totalDiscrepancyAmount": "Gesamtbetrag der Abweichungen",
-    "openIssues": "Offene Fälle"
+    "totalCreditsExpired": "Summe abgelaufener Gutschriften"
   },
   "management": {
     "title": "Kreditverwaltung",
-    "recentCredits": "Aktuelle Gutschriften",
-    "recentCreditsDescription": "Sehen und verwalten Sie die Gutschriften Ihres Kunden. Gutschriften bleiben finanzielle Artefakte, und wiederkehrende Leistungszeiträume erscheinen nur dann, wenn die Ursprungsrechnung eine kanonische Abdeckung hatte.",
-    "addCreditPlaceholder": "Das Formular für Gutschriftbetrag und Details würde hier implementiert.",
-    "loadErrorPrefix": "Fehler beim Laden der Gutschriften:",
-    "noDataReturned": "Vom Server wurden keine Daten zurückgegeben",
-    "noCreditsFound": "Keine Gutschriften gefunden"
-  },
-  "reconciliation": {
-    "title": "Dashboard zur Gutschriftenabstimmung",
-    "selectClient": "Kunden auswählen",
-    "status": "Status",
-    "allStatuses": "Alle Status",
-    "fromDate": "Von Datum",
-    "toDate": "Bis Datum",
-    "reconciliationReports": "Abstimmungsberichte",
-    "reconciliationReportsDescription": "Gutschrift-Saldoabweichungen anzeigen und verwalten",
-    "validationResult": "Validierung abgeschlossen: {{balanceCount}} Saldoabweichungen und {{trackingCount}} Nachverfolgungsprobleme gefunden.",
-    "tabs": {
-      "all": "Alle",
-      "open": "Offen",
-      "inReview": "In Prüfung",
-      "resolved": "Gelöst"
-    }
+    "noCreditsFound": "Keine Gutschriften gefunden",
+    "noMatchingCredits": "Keine Gutschriften entsprechen diesen Filtern",
+    "loadFailed": "Gutschriften konnten nicht geladen werden. Erneut versuchen."
   },
   "application": {
     "title": "Gutschrift anwenden",
@@ -160,17 +95,67 @@
     "creditOrderNote": "Gutschriften werden nach Ablaufdatum angewendet (älteste zuerst)"
   },
   "expirationDialog": {
-    "title": "Ablauf der Gutschrift ändern",
-    "description": "Aktualisieren Sie das Ablaufdatum für diese Gutschrift.",
-    "creditAmount": "Gutschriftbetrag:",
-    "remainingAmount": "Verbleibender Betrag:",
+    "title": "Ablaufdatum bearbeiten",
+    "creditAmount": "Ursprünglich",
+    "remainingAmount": "Verbleibend",
     "created": "Erstellt am:",
-    "currentExpiration": "Aktueller Ablauf:",
+    "currentExpiration": "Aktueller Ablauf",
     "noExpiration": "Kein Ablauf",
-    "removeExpiration": "Ablaufdatum entfernen",
     "newExpirationDate": "Neues Ablaufdatum",
     "pastDateError": "Das Ablaufdatum darf nicht in der Vergangenheit liegen",
-    "updateError": "Beim Aktualisieren des Ablaufdatums ist ein Fehler aufgetreten"
+    "updateError": "Beim Aktualisieren des Ablaufdatums ist ein Fehler aufgetreten",
+    "updateSuccess": "Kreditablauf aktualisiert",
+    "clearHint": "Löschen Sie das Datum, um den Ablauf zu entfernen."
+  },
+  "viewDialog": {
+    "title": "Kreditdetails",
+    "loadFailed": "Kreditdetails konnten nicht geladen werden.",
+    "invoice": "Rechnung",
+    "transactions": "Zugehörige Transaktionen",
+    "transactionType": "Typ",
+    "date": "Datum",
+    "amount": "Betrag",
+    "noTransactions": "Keine zugehörigen Transaktionen gefunden."
+  },
+  "expireDialog": {
+    "title": "Kredit verfallen lassen",
+    "reasonLabel": "Grund (optional)",
+    "reasonPlaceholder": "Erklären Sie, warum dieser Kredit verfällt...",
+    "success": "Kredit verfallen",
+    "error": "Beim Verfallen des Kredits ist ein Fehler aufgetreten",
+    "expiring": "Verfällt...",
+    "confirm": "Kredit verfallen lassen",
+    "creditAmount": "Ursprünglich",
+    "remainingAmount": "Verbleibend",
+    "warning": "Der Kunde verliert das Restguthaben von {{amount}}. Dies kann nicht rückgängig gemacht werden."
+  },
+  "transferDialog": {
+    "title": "Gutschrift übertragen",
+    "description": "Gutschrift von diesem Kunden an einen anderen übertragen.",
+    "fields": {
+      "targetClient": "An Kunden",
+      "amount": "Betrag",
+      "reason": "Grund (optional)"
+    },
+    "placeholders": {
+      "reason": "Warum wird diese Gutschrift übertragen?"
+    },
+    "hints": {
+      "amount": "Bis zu {{amount}} verfügbar"
+    },
+    "impact": {
+      "current": "Aktuelles Restguthaben",
+      "after": "Restguthaben nach Übertragung"
+    },
+    "errors": {
+      "selectClient": "Wählen Sie einen Kunden für die Übertragung",
+      "validAmount": "Geben Sie einen Betrag größer als null ein",
+      "exceedsRemaining": "Die Übertragung darf das Restguthaben von {{amount}} nicht überschreiten"
+    },
+    "success": "Gutschrift übertragen",
+    "error": "Beim Übertragen der Gutschrift ist ein Fehler aufgetreten",
+    "transferring": "Übertragen...",
+    "confirm": "Gutschrift übertragen"
   },
   "context": {
     "lineageMissing": "Herkunft fehlt",
@@ -181,5 +166,30 @@
     "recurringLineagePreserved": "Herkunft der wiederkehrenden Quelle bleibt erhalten",
     "financialOnly": "Nur finanziell",
     "noRecurringServicePeriod": "Kein wiederkehrender Leistungszeitraum"
+  },
+  "addCredit": {
+    "description": "Die Gutschrift steht dem Kunden sofort zur Verfügung.",
+    "fields": {
+      "client": "Kunde",
+      "amount": "Betrag",
+      "description": "Beschreibung (optional)",
+      "expirationDate": "Ablaufdatum (optional)"
+    },
+    "placeholders": {
+      "amount": "Betrag eingeben",
+      "description": "Grund für das Guthaben",
+      "expirationDate": "Ablaufdatum auswählen"
+    },
+    "hints": {
+      "expirationDate": "Leer lassen, um den Standardablauf zu verwenden."
+    },
+    "submitting": "Wird hinzugefügt...",
+    "success": "Guthaben erfolgreich hinzugefügt",
+    "errors": {
+      "allFieldsRequired": "Bitte wählen Sie einen Kunden aus und geben Sie einen Betrag ein",
+      "validAmount": "Bitte geben Sie einen gültigen Betrag ein",
+      "loadClientsFailed": "Kunden konnten nicht geladen werden. Bitte erneut versuchen.",
+      "submitFailed": "Guthaben konnte nicht hinzugefügt werden. Bitte erneut versuchen."
+    }
   }
 }

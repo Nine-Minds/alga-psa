@@ -3,14 +3,14 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Text, render, useApp, useInput, useStdout } from 'ink';
 import { selectDiscoveredSite } from './environment.mjs';
 import { formatStatusReport, formatStatusSummary } from './format.mjs';
-import { runBootstrap, runRepairRelease, runReset, runSupportBundle, runUpgrade } from './lifecycle.mjs';
+import { runRepairRelease, runReset, runSupportBundle } from './lifecycle.mjs';
 import { collectStatus } from './status.mjs';
 import { listAppliancePods, readPodLogsSince, readPodLogsTail } from './workloads.mjs';
 
 const ACTION_GROUPS = [
   {
     title: 'Operations',
-    actions: ['Bootstrap', 'Upgrade', 'Status', 'Workloads'],
+    actions: ['Status', 'Workloads'],
   },
   {
     title: 'System',
@@ -19,8 +19,6 @@ const ACTION_GROUPS = [
 ];
 const ACTIONS = ACTION_GROUPS.flatMap((group) => group.actions);
 
-const BOOTSTRAP_MODES = ['recover', 'fresh'];
-const NETWORK_MODES = ['dhcp', 'static'];
 const YES_NO_OPTIONS = ['yes', 'no'];
 const BRAND_PRIMARY = 'magentaBright';
 const BRAND_SECONDARY = 'cyanBright';
@@ -181,39 +179,6 @@ function mapProgressEvent(event) {
   return event.line || '';
 }
 
-function makeBootstrapDefaults(env) {
-  const releaseVersion = env.defaultReleaseVersion || env.releases.at(-1) || '';
-  const releaseSource = (env.channels || []).length ? 'channel' : 'release';
-  const nodeIp = env.nodeIp || '';
-  const appUrl = env.appUrl || (nodeIp ? `http://${nodeIp}:3000` : '');
-  const siteId = env.site?.siteId || env.suggestedSiteId || 'appliance-single-node';
-
-  return {
-    siteId,
-    releaseSource,
-    channel: env.defaultChannel || env.channels?.[0] || '',
-    releaseVersion,
-    bootstrapMode: 'recover',
-    nodeIp,
-    hostname: siteId,
-    appUrl,
-    networkMode: 'dhcp',
-    interface: 'enp0s1',
-    staticAddress: '',
-    staticGateway: '',
-    dnsServers: '',
-  };
-}
-
-function makeUpgradeDefaults(env) {
-  return {
-    releaseSource: (env.channels || []).length ? 'channel' : 'release',
-    channel: env.defaultChannel || env.channels?.[0] || '',
-    releaseVersion: env.defaultReleaseVersion || env.releases.at(-1) || '',
-    reconcileAfterApply: 'yes',
-  };
-}
-
 function makeResetDefaults(env) {
   return {
     challenge: '',
@@ -358,7 +323,7 @@ function Header({ env, status }) {
     React.createElement(
       Text,
       { color: TEXT_MUTED },
-      `Release: ${status?.release?.selectedReleaseVersion || env.defaultReleaseVersion || 'unknown'}`,
+      `Release: ${status?.release?.selectedReleaseVersion || 'unknown'}`,
     ),
     ...renderLines(lines.slice(0, 2), 'header-summary', { fallbackColor: TEXT_MUTED }),
   );
@@ -554,7 +519,7 @@ function RunningSummaryPane({ env, status, formType }) {
   return React.createElement(
     Box,
     { borderStyle: 'round', borderColor: BRAND_PRIMARY, paddingX: 1, flexDirection: 'column' },
-    React.createElement(Text, { bold: true, color: BRAND_PRIMARY }, `${formType || 'Bootstrap'} status`),
+    React.createElement(Text, { bold: true, color: BRAND_PRIMARY }, `${formType || 'Operation'} status`),
     React.createElement(Text, { color: BRAND_SECONDARY }, `Status page: ${statusUrl}`),
     React.createElement(Text, { color: TEXT_MUTED }, `Login URL: ${loginUrl}`),
     React.createElement(Text, { color: rollup.state === 'failed_action_required' ? COLOR_ERROR : BRAND_SECONDARY }, `Install state: ${rollup.state || canonical.status || 'unknown'}`),
@@ -673,30 +638,11 @@ function MainPane({
   if (view === 'form') {
     const fields = formFields(formType, env);
     const title = `${formType} Form`;
-    const noReleases = (formType === 'Bootstrap' || formType === 'Upgrade') && !(env.releases || []).length && !(env.channels || []).length;
-
-    if (noReleases) {
-      return React.createElement(
-        Box,
-        { borderStyle: 'round', borderColor: COLOR_WARN, paddingX: 1, flexDirection: 'column', flexGrow: 1 },
-        React.createElement(Text, { bold: true, color: COLOR_WARN }, `${formType} Unavailable`),
-        React.createElement(Text, { color: TEXT_MUTED }, 'No published appliance releases were found.'),
-        React.createElement(Text, { color: TEXT_MUTED }, 'Next step: publish a release manifest under ee/appliance/releases.'),
-        React.createElement(Text, { color: TEXT_MUTED }, 'Press Esc to return.'),
-      );
-    }
 
     return React.createElement(
       Box,
       { borderStyle: 'round', borderColor: BRAND_PRIMARY, paddingX: 1, flexDirection: 'column', flexGrow: 1 },
       React.createElement(Text, { bold: true, color: BRAND_PRIMARY }, title),
-      formType === 'Upgrade'
-        ? React.createElement(
-            Text,
-            { color: COLOR_WARN },
-            `Current release: ${status?.release?.selectedReleaseVersion || 'unknown'} (no auto-rollback policy)`,
-          )
-        : null,
       formType === 'Reset'
         ? React.createElement(
             Box,
@@ -729,9 +675,6 @@ function MainPane({
       ...Object.entries(formValues).map(([key, value]) =>
         React.createElement(Text, { key, color: TEXT_MUTED }, `${key}: ${String(value)}`),
       ),
-      formType === 'Upgrade'
-        ? React.createElement(Text, { color: COLOR_WARN }, 'No auto-rollback: failures require support-bundle + manual investigation.')
-        : null,
       formType === 'Repair Release'
         ? React.createElement(Text, { color: COLOR_WARN }, 'Repair will clean up failed alga-core workloads before reconciling the release.')
         : null,
@@ -765,34 +708,6 @@ function MainPane({
 }
 
 function formFields(formType, env) {
-  const releaseSourceOptions = (env.channels || []).length ? ['channel', 'release'] : ['release'];
-  if (formType === 'Bootstrap') {
-    return [
-      ...(env.site ? [] : [{ key: 'siteId', label: 'Site ID', type: 'text' }]),
-      { key: 'releaseSource', label: 'Release Source', type: 'select', options: releaseSourceOptions },
-      { key: 'channel', label: 'Channel', type: 'select', options: env.channels || [] },
-      { key: 'releaseVersion', label: 'Release Version', type: 'select', options: env.releases || [] },
-      { key: 'bootstrapMode', label: 'Bootstrap Mode', type: 'select', options: BOOTSTRAP_MODES },
-      { key: 'nodeIp', label: 'Node IP', type: 'text' },
-      { key: 'hostname', label: 'Hostname', type: 'text' },
-      { key: 'appUrl', label: 'App URL', type: 'text' },
-      { key: 'networkMode', label: 'Network Mode', type: 'select', options: NETWORK_MODES },
-      { key: 'interface', label: 'Interface', type: 'text' },
-      { key: 'staticAddress', label: 'Static Address CIDR', type: 'text' },
-      { key: 'staticGateway', label: 'Static Gateway', type: 'text' },
-      { key: 'dnsServers', label: 'DNS Servers CSV', type: 'text' },
-    ];
-  }
-
-  if (formType === 'Upgrade') {
-    return [
-      { key: 'releaseSource', label: 'Release Source', type: 'select', options: releaseSourceOptions },
-      { key: 'channel', label: 'Channel', type: 'select', options: env.channels || [] },
-      { key: 'releaseVersion', label: 'Release Version', type: 'select', options: env.releases || [] },
-      { key: 'reconcileAfterApply', label: 'Reconcile After Apply', type: 'select', options: YES_NO_OPTIONS },
-    ];
-  }
-
   if (formType === 'Reset') {
     return [{ key: 'challenge', label: `Type ${makeResetDefaults(env).expected}`, type: 'text' }];
   }
@@ -812,12 +727,6 @@ function formFields(formType, env) {
 }
 
 function initFormValues(formType, env) {
-  if (formType === 'Bootstrap') {
-    return makeBootstrapDefaults(env);
-  }
-  if (formType === 'Upgrade') {
-    return makeUpgradeDefaults(env);
-  }
   if (formType === 'Reset') {
     return makeResetDefaults(env);
   }
@@ -996,27 +905,7 @@ function TuiApp({ initialEnv, actions, onExit }) {
 
     try {
       let output;
-      if (formType === 'Bootstrap') {
-        const releaseOptions = formValues.releaseSource === 'channel'
-          ? { channel: formValues.channel, releaseVersion: undefined }
-          : { releaseVersion: formValues.releaseVersion, channel: undefined };
-        output = await actions.runBootstrap(env, {
-          ...formValues,
-          ...releaseOptions,
-          siteId: formValues.siteId,
-          onProgress: (event) => append(mapProgressEvent(event)),
-        });
-      } else if (formType === 'Upgrade') {
-        const releaseOptions = formValues.releaseSource === 'channel'
-          ? { channel: formValues.channel, releaseVersion: undefined }
-          : { releaseVersion: formValues.releaseVersion, channel: undefined };
-        output = await actions.runUpgrade(env, {
-          ...formValues,
-          ...releaseOptions,
-          reconcileAfterApply: formValues.reconcileAfterApply !== 'no',
-          onProgress: (event) => append(mapProgressEvent(event)),
-        });
-      } else if (formType === 'Reset') {
+      if (formType === 'Reset') {
         output = await actions.runReset(env, {
           onProgress: (event) => append(mapProgressEvent(event)),
         });
@@ -1036,18 +925,13 @@ function TuiApp({ initialEnv, actions, onExit }) {
       }
 
       if (!output.ok) {
-        const supportHint = formType === 'Upgrade' ? ' Next step: collect support bundle.' : '';
         const layer = output.failureLayer ? ` Failure layer: ${output.failureLayer}.` : '';
         setResult({
           ok: false,
-          message: `${formType} failed.${layer}${supportHint}`.trim(),
+          message: `${formType} failed.${layer}`.trim(),
         });
       } else {
         setResult({ ok: true, message: `${formType} completed successfully.` });
-        if (formType === 'Bootstrap' && !env.site) {
-          const bootstrapSiteId = formValues.siteId || env.suggestedSiteId || 'appliance-single-node';
-          setEnv((current) => selectDiscoveredSite(current, bootstrapSiteId));
-        }
       }
     } catch (err) {
       setResult({ ok: false, message: `${formType} failed: ${err.message || String(err)}` });
@@ -1164,9 +1048,9 @@ function TuiApp({ initialEnv, actions, onExit }) {
     setNotice('');
     setResult(null);
 
-    if (action !== 'Bootstrap' && !env.site) {
+    if (!env.site) {
       if (!(env.siteIds || []).length) {
-        setNotice('No appliance sites discovered yet. Run Bootstrap first.');
+        setNotice('No appliance sites discovered. Run setup from the appliance web UI first.');
         setView('home');
         return;
       }
@@ -1377,17 +1261,12 @@ function TuiApp({ initialEnv, actions, onExit }) {
 
     if (view === 'form') {
       const fields = formFields(formType, env);
-      const noReleases = (formType === 'Bootstrap' || formType === 'Upgrade') && !(env.releases || []).length && !(env.channels || []).length;
 
       if (key.escape) {
         setView('home');
         setFormType('');
         setFormValues({});
         setFormIndex(0);
-        return;
-      }
-
-      if (noReleases) {
         return;
       }
 
@@ -1464,7 +1343,7 @@ function TuiApp({ initialEnv, actions, onExit }) {
       { flexDirection: 'column', width: '100%' },
       React.createElement(RunningSummaryPane, { env, status, formType }),
       React.createElement(Box, { marginTop: 1 }, React.createElement(ProgressPane, { lines: progressLines, maxLines: 24 })),
-      React.createElement(Box, { marginTop: 1 }, React.createElement(HelpStrip, { view, busy, formName: formType || 'Bootstrap' })),
+      React.createElement(Box, { marginTop: 1 }, React.createElement(HelpStrip, { view, busy, formName: formType || 'Operation' })),
     );
   }
 
@@ -1532,8 +1411,6 @@ function TuiApp({ initialEnv, actions, onExit }) {
 function createTuiActions(overrides = {}) {
   return {
     collectStatus: overrides.collectStatus || collectStatus,
-    runBootstrap: overrides.runBootstrap || runBootstrap,
-    runUpgrade: overrides.runUpgrade || runUpgrade,
     runRepairRelease: overrides.runRepairRelease || runRepairRelease,
     runReset: overrides.runReset || runReset,
     runSupportBundle: overrides.runSupportBundle || runSupportBundle,

@@ -87,13 +87,13 @@ Ubuntu replaces Talos for the supported v1 appliance product. The plan should no
 From the Talos/status work, likely useful source material:
 
 ```text
-ee/appliance/scripts/bootstrap-appliance.sh
-ee/appliance/scripts/upgrade-appliance.sh
+historical removed bootstrap script
+historical removed upgrade script
 ee/appliance/status-ui/
 ee/appliance/flux/base/
-ee/appliance/releases/channels/stable.json
-ee/appliance/releases/channels/nightly.json
-ee/appliance/releases/<version>/release.json
+historical local stable channel metadata (removed)
+historical local nightly channel metadata (removed)
+historical local release metadata (removed)
 ee/appliance/operator/lib/status.mjs
 ee/appliance/operator/lib/tui.mjs
 ```
@@ -180,7 +180,7 @@ Minimum live validation environment should include:
 - (2026-05-01) **F018 completed**: Added Flux installation phase `installFlux()` to setup workflow after successful k3s + storage phases.
 - Flux behavior: runs `flux install --namespace flux-system --kubeconfig /etc/rancher/k3s/k3s.yaml` by default, persists phase states (`flux-install-running|complete|blocked`), and records actionable failure details.
 - Added test coverage in `setup-engine.workflow.test.mjs` for successful Flux phase execution via a mocked command.
-- (2026-05-01) **F019 completed**: Added `resolveChannelMetadata()` phase that resolves selected channel metadata directly from GitHub channel files and extracts `releaseVersion` + `repoBranch` for workflow use.
+- (2026-05-01) **F019 completed**: Added `resolveChannelMetadata()` phase that resolves selected channel metadata directly from GitHub channel files and extracts `releaseVersion` + `historicalBranchOverride` for workflow use.
 - (2026-05-01) **F020 completed**: Added `applyFluxSource()` phase that applies Flux `GitRepository` + `Kustomization` resources against the selected branch/path (`./ee/appliance/flux/base`) using host kubeconfig.
 - (2026-05-01) **F021 completed**: Flux source configuration now normalizes SSH-style GitHub URLs (`git@github.com:org/repo.git`) into public HTTPS format before applying source manifests.
 - Added test coverage for channel metadata resolution and GitHub URL normalization in `ee/appliance/host-service/tests/setup-engine.workflow.test.mjs`.
@@ -195,7 +195,7 @@ Minimum live validation environment should include:
 - (2026-05-01) **F025 completed**: Added readiness tier computation in `status-engine.mjs` with explicit booleans for `platformReady`, `coreReady`, `bootstrapReady`, `loginReady`, `backgroundReady`, and `fullyHealthy`.
 - (2026-05-01) **F026 completed**: Enforced readiness semantics so background workload issues (`email-service`, `temporal`, `workflow-worker`, `temporal-worker`) degrade `backgroundReady` without blocking `loginReady`.
 - Added regression test in `status-engine.test.mjs` proving `loginReady` remains true when `temporal-worker` is unhealthy while core/platform/bootstrap remain ready.
-- (2026-05-02) **F027 completed**: Added normalized failure classification output in `ee/appliance/host-service/status-engine.mjs` (`network`, `dns`, `github-release-source`, `k3s`, `flux`, `storage`, `app-bootstrap`, `app-readiness`, `background-services`).
+- (2026-05-02) **F027 completed**: Added normalized failure classification output in `ee/appliance/host-service/status-engine.mjs` (`network`, `dns`, `historical-git-release-source`, `k3s`, `flux`, `storage`, `app-bootstrap`, `app-readiness`, `background-services`).
 - Classification now derives from persisted setup/install state plus live pod/warning signals and is exposed in `collectStatusSnapshot().failures` for consistent host status/debug consumers.
 - (2026-05-02) **F028 completed**: Expanded host status surfaces to include operator-useful failure context (current phase, last action, suspected cause, suggested next step, retry safety, and log commands) in both `/api/status` and status-mode HTML response from `server.mjs`.
 - (2026-05-02) **F036 completed**: Improved preflight blocker visibility in `/setup` POST failure rendering: explicit preflight/no-k3s-started message for DNS/network/GitHub release-source failures plus targeted proxy/firewall/DNS guidance text before install begins.

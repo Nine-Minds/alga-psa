@@ -20,6 +20,18 @@ vi.mock('@alga-psa/core/secrets', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    scoped: (t: string) => conn(t),
+    subquery: (t: string) => conn(t),
+    parentScopedTable: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+    tenantJoinSubquery: (q: any, sub: any, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(sub) ?? q) : (q.join?.(sub) ?? q),
+    tenantWhereColumn: (q: any) => q,
+  }),
   createTenantKnex: vi.fn(async () => ({ knex: knexMock })),
 }));
 
@@ -64,8 +76,8 @@ describe('Tactical RMM connection test (Knox) TOTP payload behavior', () => {
     vi.spyOn(axios, 'post').mockImplementation(async (url: any, data: any) => {
       const u = String(url);
       posted.push({ url: u, data });
-      if (u.endsWith('/api/v2/checkcreds/')) return { data: { totp: true } } as any;
-      if (u.endsWith('/api/v2/login/')) return { data: { token: 'token_totp' } } as any;
+      if (u.endsWith('/v2/checkcreds/')) return { data: { totp: true } } as any;
+      if (u.endsWith('/v2/login/')) return { data: { token: 'token_totp' } } as any;
       throw new Error(`Unexpected POST: ${u}`);
     });
     vi.spyOn(axios, 'get').mockResolvedValue({ data: [] } as any);
@@ -77,7 +89,7 @@ describe('Tactical RMM connection test (Knox) TOTP payload behavior', () => {
     const res = await testTacticalRmmConnection({} as any, { tenant: 'tenant_1' }, { totpCode: '123456' });
     expect(res.success).toBe(true);
 
-    const login = posted.find((p) => p.url.endsWith('/api/v2/login/'));
+    const login = posted.find((p) => p.url.endsWith('/v2/login/'));
     expect(login?.data?.twofactor).toBe('123456');
   });
 
@@ -86,8 +98,8 @@ describe('Tactical RMM connection test (Knox) TOTP payload behavior', () => {
     vi.spyOn(axios, 'post').mockImplementation(async (url: any, data: any) => {
       const u = String(url);
       posted.push({ url: u, data });
-      if (u.endsWith('/api/v2/checkcreds/')) return { data: { totp: false } } as any;
-      if (u.endsWith('/api/v2/login/')) return { data: { token: 'token_plain' } } as any;
+      if (u.endsWith('/v2/checkcreds/')) return { data: { totp: false } } as any;
+      if (u.endsWith('/v2/login/')) return { data: { token: 'token_plain' } } as any;
       throw new Error(`Unexpected POST: ${u}`);
     });
     vi.spyOn(axios, 'get').mockResolvedValue({ data: [] } as any);
@@ -99,7 +111,7 @@ describe('Tactical RMM connection test (Knox) TOTP payload behavior', () => {
     const res = await testTacticalRmmConnection({} as any, { tenant: 'tenant_1' });
     expect(res.success).toBe(true);
 
-    const login = posted.find((p) => p.url.endsWith('/api/v2/login/'));
+    const login = posted.find((p) => p.url.endsWith('/v2/login/'));
     expect(login?.data?.twofactor).toBeUndefined();
   });
 });

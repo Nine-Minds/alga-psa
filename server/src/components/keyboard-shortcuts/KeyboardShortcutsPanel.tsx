@@ -486,7 +486,10 @@ export default function KeyboardShortcutsPanel(): React.JSX.Element {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'rgb(var(--color-text-500))', fontSize: 13 }}>
                 {t('settings.hint', { defaultValue: 'Hover a key to preview, click to rebind. Toggle modifier layers above to see prefixed shortcuts.' })}
                 <span style={{ fontSize: 11, color: 'rgb(var(--color-text-400))' }}>
-                  {t('settings.modHint', { defaultValue: `mod resolves to ${platform === 'mac' ? '⌘' : 'Ctrl'} on this device` })}
+                  {t('settings.modHint', {
+                    modKey: platform === 'mac' ? '⌘' : 'Ctrl',
+                    defaultValue: 'mod resolves to {{modKey}} on this device',
+                  })}
                 </span>
               </div>
             )}

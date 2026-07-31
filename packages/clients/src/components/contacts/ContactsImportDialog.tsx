@@ -31,6 +31,11 @@ import {
   parseContactCsvEmailType,
 } from '../../lib/contactCsvEmailFields';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface ContactsImportDialogProps {
   isOpen: boolean;
@@ -50,6 +55,9 @@ type ContactCsvImportData = Omit<Partial<IContact>, 'additional_email_addresses'
   primary_email_custom_type?: string | null;
   tags?: string;
 };
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
   isOpen,
@@ -178,10 +186,9 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
 
       setColumnMappings(autoMappings);
       setStep('mapping');
-    } catch (error) {
+    } catch {
       setErrors([t('contactsImportDialog.errors.readingCsv', {
-        defaultValue: 'Error reading CSV file: {{message}}',
-        message: error instanceof Error ? error.message : t('contactsImportDialog.errors.unknownError', { defaultValue: 'Unknown error' })
+        defaultValue: 'Error reading CSV file. Please check the file and try again.',
       })]);
     }
   };
@@ -271,6 +278,11 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         });
 
         const existingEmails = await checkExistingEmails(emails);
+        if (isReturnedActionError(existingEmails)) {
+          setErrors([getErrorMessage(existingEmails)]);
+          return;
+        }
+
         const existingEmailSet = new Set(existingEmails.map(e => e.toLowerCase()));
 
         // Add isExisting property to results
@@ -295,7 +307,8 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         setValidationResults(resultsWithExisting);
         setStep('preview');
       } catch (error) {
-        setErrors([error instanceof Error ? error.message : t('contactsImportDialog.errors.processingCsv', { defaultValue: 'Error processing CSV data' })]);
+        console.error('Error processing contact CSV data:', error);
+        setErrors([t('contactsImportDialog.errors.processingCsv', { defaultValue: 'Error processing CSV data' })]);
       } finally {
         setIsProcessing(false);
       }
@@ -348,6 +361,11 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         transformedData,
         importOptions.updateExisting
       );
+      if (isReturnedActionError(results)) {
+        setErrors([getErrorMessage(results)]);
+        setStep('results');
+        return;
+      }
 
       setImportResults(results);
       setProcessingDetails(prev => ({
@@ -369,7 +387,8 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         setStep('results');
       }
     } catch (error) {
-      setErrors([error instanceof Error ? error.message : t('contactsImportDialog.errors.importFailed', { defaultValue: 'Import failed' })]);
+      console.error('Error importing contacts:', error);
+      setErrors([t('contactsImportDialog.errors.importFailed', { defaultValue: 'Import failed' })]);
       setStep('results');
     } finally {
     }

@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { publishServiceRequestDefinition, type ServiceRequestDefinitionVersionRecord } from './definitionPublishing';
 import { validateBasicFormSchema } from './basicFormBuilder';
 import {
@@ -30,8 +31,9 @@ export async function validateServiceRequestDefinitionForPublish(
   tenant: string,
   definitionId: string
 ): Promise<ServiceRequestPublishValidationResult> {
-  const definition = (await knex('service_request_definitions')
-    .where({ tenant, definition_id: definitionId })
+  const db = tenantDb(knex, tenant);
+  const definition = (await db.table('service_request_definitions')
+    .where({ definition_id: definitionId })
     .first()) as ServiceRequestDefinitionForValidation | undefined;
 
   if (!definition) {
@@ -55,8 +57,8 @@ export async function validateServiceRequestDefinitionForPublish(
   }
 
   if (definition.linked_service_id) {
-    const linkedService = await knex('service_catalog')
-      .where({ tenant, service_id: definition.linked_service_id })
+    const linkedService = await db.table('service_catalog')
+      .where({ service_id: definition.linked_service_id })
       .select('service_id', 'is_active')
       .first<{ service_id: string; is_active?: boolean | null }>();
 

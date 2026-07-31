@@ -3,8 +3,8 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { DocumentSelector } from '@alga-psa/documents/components';
-import { getDocumentByFileId, toggleDocumentVisibility } from '@alga-psa/documents/actions';
+import DocumentSelector from '@alga-psa/documents/components/DocumentSelector';
+import { getDocumentByFileId, toggleDocumentVisibility } from '@alga-psa/documents/actions/documentActions';
 import { AlertTriangle, Eye, ImageIcon } from 'lucide-react';
 import type { IDocument } from '@alga-psa/types';
 

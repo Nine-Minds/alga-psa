@@ -68,7 +68,7 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   ),
 }));
 
-vi.mock('@alga-psa/ui/components', () => ({
+vi.mock('@alga-psa/ui/components/tickets/PrioritySelect', () => ({
   PrioritySelect: ({
     value,
     options,

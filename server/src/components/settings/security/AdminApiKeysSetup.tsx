@@ -23,6 +23,11 @@ import {
 } from '@/lib/actions/apiKeyRateLimitActions';
 import { Search, RotateCcw } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 export interface AdminApiKey {
   api_key_id: string;
@@ -69,10 +74,12 @@ export default function AdminApiKeysSetup() {
   const [savingRateLimitKeyId, setSavingRateLimitKeyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // LEVERAGE: friction datatable-client-paging — re-derives page/size state + reset handler DataTable already owns internally
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // LEVERAGE: pattern datatable-filter-paging — filter state + debounced search + reset-page-to-1 + client filtering re-implemented per table; no list-controller layer
   // Filter state
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -154,6 +161,12 @@ export default function AdminApiKeysSetup() {
     }
 
     const views = await getApiRateLimitsForKeys(keys.map((key) => key.api_key_id));
+    if (isActionMessageError(views) || isActionPermissionError(views)) {
+      setError(getErrorMessage(views));
+      setRateLimitsByKey({});
+      setRateLimitDrafts({});
+      return;
+    }
     const nextViews = Object.fromEntries(views.map((view) => [view.apiKeyId, view]));
     const nextDrafts = Object.fromEntries(
       views.map((view) => [view.apiKeyId, view.override ?? view.effective]),
@@ -166,6 +179,13 @@ export default function AdminApiKeysSetup() {
   const loadApiKeys = async () => {
     try {
       const keysRaw = await adminListApiKeys();
+      if (isActionMessageError(keysRaw) || isActionPermissionError(keysRaw)) {
+        setApiKeys([]);
+        setRateLimitsByKey({});
+        setRateLimitDrafts({});
+        setError(getErrorMessage(keysRaw));
+        return;
+      }
       // Map string date fields to Date objects
       const formattedKeys = keysRaw.map((key: any) => ({
         ...key,
@@ -216,6 +236,10 @@ export default function AdminApiKeysSetup() {
     try {
       setSavingRateLimitKeyId(apiKeyId);
       const updatedView = await setApiRateLimitForKey(apiKeyId, draft);
+      if (isActionMessageError(updatedView) || isActionPermissionError(updatedView)) {
+        setError(getErrorMessage(updatedView));
+        return;
+      }
       setRateLimitsByKey((previous) => ({ ...previous, [apiKeyId]: updatedView }));
       seedRateLimitDraft(updatedView);
       setEditingRateLimitKeyId(null);
@@ -232,6 +256,10 @@ export default function AdminApiKeysSetup() {
     try {
       setSavingRateLimitKeyId(apiKeyId);
       const updatedView = await clearApiRateLimitForKey(apiKeyId);
+      if (isActionMessageError(updatedView) || isActionPermissionError(updatedView)) {
+        setError(getErrorMessage(updatedView));
+        return;
+      }
       setRateLimitsByKey((previous) => ({ ...previous, [apiKeyId]: updatedView }));
       seedRateLimitDraft(updatedView);
       if (editingRateLimitKeyId === apiKeyId) {
@@ -248,7 +276,11 @@ export default function AdminApiKeysSetup() {
 
   const handleDeactivateKey = async (keyId: string) => {
     try {
-      await adminDeactivateApiKey(keyId);
+      const result = await adminDeactivateApiKey(keyId);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       await loadApiKeys();
       setError(null);
     } catch (error) {

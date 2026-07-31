@@ -11,20 +11,20 @@ function signSvix(secret: string, timestamp: string, payload: string): string {
 }
 
 describe('verifyResendWebhookSignature', () => {
-  it('accepts when secret is not configured', () => {
+  it('rejects (fails closed) when secret is not configured', () => {
     const headers = new Headers({
       'svix-id': 'msg_123',
       'svix-timestamp': String(Math.floor(Date.now() / 1000)),
       'svix-signature': 'v1,abc',
     });
 
-    expect(
-      verifyResendWebhookSignature({
-        payload: '{"ok":true}',
-        headers,
-        webhookSecret: undefined,
-      }).verified
-    ).toBe(true);
+    const result = verifyResendWebhookSignature({
+      payload: '{"ok":true}',
+      headers,
+      webhookSecret: undefined,
+    });
+    expect(result.verified).toBe(false);
+    expect(result.reason).toBe('no_secret_configured');
   });
 
   it('verifies a valid svix signature with whsec_ secret', () => {

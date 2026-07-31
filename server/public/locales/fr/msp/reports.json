@@ -56,7 +56,8 @@
       "noOpenTicketsInRange": "Aucun ticket ouvert dans cette période.",
       "noDate": "Aucune date",
       "notAvailable": "n/d",
-      "noEmailChannels": "Aucun canal e-mail n’est configure."
+      "noEmailChannels": "Aucun canal e-mail n’est configure.",
+      "noCapacity": "n/d — aucune capacité définie"
     },
     "fallbackTitle": "Rapport",
     "dateRange": {
@@ -95,7 +96,12 @@
       "bucketOverageHours": "Depassement de forfait",
       "openAssigned": "Ouverts assignes",
       "activeAssignees": "Assignes actifs",
-      "avgResolutionTime": "Temps moyen de resolution"
+      "avgResolutionTime": "Temps moyen de resolution",
+      "workedHours": "Heures travaillées",
+      "capacityHours": "Heures de capacité",
+      "utilization": "Utilisation",
+      "usersWithoutCapacity": "Capacité manquante",
+      "activeUsers": "Utilisateurs actifs"
     },
     "sections": {
       "openByStatus": "Ouverts par statut",
@@ -113,7 +119,8 @@
       "upcomingRenewals": "Renouvellements a venir",
       "bucketUsage": "Utilisation du forfait",
       "performanceByAssignee": "Performance par assigne",
-      "closedByAssignee": "Fermes par assigne"
+      "closedByAssignee": "Fermes par assigne",
+      "utilizationByUser": "Utilisation par utilisateur"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -136,9 +143,13 @@
         "title": "Performance de l’équipe",
         "description": "Débit de l’équipe et responsable de la réponse pour les espaces multi-utilisateurs."
       },
+      "employeeUtilization": {
+        "title": "Utilisation des employés",
+        "description": "Heures travaillées par rapport à la capacité hebdomadaire de chaque membre de l’équipe."
+      },
       "contractReports": {
         "title": "Rapports de contrats",
-        "description": "Revenus de contrat, renouvellements, utilisation des forfaits et rentabilité simple."
+        "description": "Revenus de contrat, renouvellements, utilisation des forfaits et rentabilité."
       }
     },
     "table": {
@@ -158,7 +169,11 @@
       "entries": "Entrees",
       "ticket": "Ticket",
       "entered": "Saisi",
-      "age": "Age"
+      "age": "Age",
+      "workedHours": "Heures travaillées",
+      "capacityHours": "Heures de capacité",
+      "utilization": "Utilisation",
+      "capacityEstimated": "Estimé à partir de la capacité hebdomadaire ; aucune heure de travail définie."
     },
     "statusValues": {
       "connected": "Connecte",
@@ -220,8 +235,8 @@
         "empty": "Aucun contrat basé sur un forfait trouvé"
       },
       "profitability": {
-        "title": "Rapport de rentabilité simplifié",
-        "description": "Analyse de base des marges bénéficiaires et du chiffre d'affaires par rapport aux coûts par contrat",
+        "title": "Rapport de rentabilité",
+        "description": "Marge par client, contrat et ticket selon les taux de coût internes configurés.",
         "empty": "Aucune donnée de rentabilité disponible"
       }
     },
@@ -250,6 +265,108 @@
       "upcoming": "À venir",
       "yes": "Oui",
       "no": "Non"
+    },
+    "profitability": {
+      "formats": {
+        "percent": "{{value}}%",
+        "hours": "{{value}} h",
+        "hourlyRate": "{{value}}/h",
+        "ticketWithNumber": "#{{number}} {{title}}",
+        "billableHours": "{{value}} h facturables",
+        "listSeparator": ", ",
+        "attributionUncosted": "{{attribution}} (non valorisé)",
+        "unassignedLine": "{{line}} (non assigné)"
+      },
+      "errors": {
+        "load": "Impossible de charger les données de rentabilité",
+        "title": "Erreur lors du chargement de la rentabilité"
+      },
+      "table": {
+        "revenue": "Chiffre d'affaires",
+        "laborCost": "Coût de main-d'œuvre",
+        "materialCost": "Coût des matériaux",
+        "margin": "Marge",
+        "marginPct": "% de marge",
+        "hours": "Heures",
+        "ehr": "TH effectif",
+        "client": "Client",
+        "agreement": "Contrat",
+        "ticket": "Ticket",
+        "attribution": "Attribution",
+        "contractLine": "Ligne",
+        "cost": "Coût"
+      },
+      "actions": {
+        "toggleLines": "Afficher/masquer les lignes",
+        "apply": "Appliquer",
+        "configureCostRates": "Configurer les taux de coût",
+        "clearClient": "Tous les clients",
+        "clearAgreement": "Tous les contrats"
+      },
+      "rowTypes": {
+        "adHoc": "Ad hoc",
+        "unattributed": "Non attribué",
+        "unassigned": "Non assigné"
+      },
+      "attribution": {
+        "exact": "Exacte",
+        "allocated": "Répartie",
+        "none": "Aucune"
+      },
+      "status": {
+        "uncosted": "Non valorisé"
+      },
+      "filters": {
+        "startDate": "Date de début",
+        "endDate": "Date de fin"
+      },
+      "timingTooltip": "Le chiffre d'affaires est filtré par date de facture. Le coût de main-d'œuvre est filtré par date de travail. Le coût des matériaux facturés suit la date de facture ; celui des matériaux non facturés suit la date de création.",
+      "empty": {
+        "costRates": "Les taux de coût ne sont pas configurés. Les heures de main-d'œuvre apparaissent comme non valorisées tant qu'aucun taux par défaut du locataire ou taux utilisateur n'existe.",
+        "clients": "Aucune donnée de rentabilité client disponible pour cette période.",
+        "lines": "Aucun détail par ligne de contrat pour cette entrée.",
+        "tickets": "Aucune donnée de rentabilité des tickets disponible pour cette sélection.",
+        "agreements": "Aucune donnée de rentabilité par contrat disponible pour cette sélection."
+      },
+      "warnings": {
+        "title": "Avertissements du rapport",
+        "uncostedMinutes": "{{hours}} heures non valorisées",
+        "unattributedMinutes": "{{hours}} heures non attribuées",
+        "unapprovedMinutes": "{{hours}} heures non approuvées incluses",
+        "zeroDuration": "{{count}} saisies à durée nulle",
+        "uncostedMaterials": "{{count}} matériaux non valorisés",
+        "unconvertedRevenue": "{{count}} lignes de chiffre d'affaires non converties",
+        "materialCurrencyMismatch": "{{count}} incohérences de devise sur les matériaux"
+      },
+      "summary": {
+        "revenue": "Chiffre d'affaires",
+        "laborCost": "Coût de main-d'œuvre",
+        "materialCost": "Coût des matériaux",
+        "margin": "Marge",
+        "marginPct": "% de marge",
+        "ehr": "Taux horaire effectif"
+      },
+      "sections": {
+        "clients": "Clients",
+        "clientsDescription": "Sélectionnez un client pour explorer ses contrats et ses tickets.",
+        "agreements": "Contrats de {{client}}",
+        "agreementsDescription": "Les lignes ad hoc et non attribuées sont incluses afin que les totaux concordent.",
+        "linesForAgreement": "Lignes de contrat pour {{agreement}}",
+        "tickets": "Tickets",
+        "ticketsForAgreement": "Coût et chiffre d'affaires des tickets pour {{agreement}}.",
+        "ticketsDescription": "Main-d'œuvre, coût des matériaux, chiffre d'affaires attribué et marge au niveau des tickets."
+      },
+      "fallbacks": {
+        "untitledTicket": "Ticket sans titre"
+      },
+      "print": {
+        "dateRange": "Du {{start}} au {{end}}",
+        "client": "Client",
+        "allClients": "Tous les clients",
+        "agreement": "Contrat",
+        "allAgreements": "Tous les contrats",
+        "currency": "Devise"
+      }
     }
   },
   "contractPerformance": {

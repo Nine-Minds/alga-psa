@@ -290,6 +290,12 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('../../../../../packages/billing/src/services/invoiceService', () => ({
@@ -462,6 +468,11 @@ describe('invoice preview recurring timing', () => {
           },
         },
         recurringTimingSelectionSource: 'persisted',
+        nonContractSelection: {
+          include: false,
+          timeEntryIds: [],
+          usageRecordIds: [],
+        },
       },
     );
     expect(result).toEqual({
@@ -734,6 +745,11 @@ describe('invoice preview recurring timing', () => {
           },
         },
         recurringTimingSelectionSource: 'persisted',
+        nonContractSelection: {
+          include: false,
+          timeEntryIds: [],
+          usageRecordIds: [],
+        },
       },
     );
     expect(result).toMatchObject({ success: true });
@@ -904,7 +920,7 @@ describe('invoice preview recurring timing', () => {
 
     expect(previewResult).toMatchObject({
       success: false,
-      error: 'Billing email is required before generating recurring invoices.',
+      error: 'An error occurred while previewing the invoice',
       executionIdentityKey: selectorInput.executionWindow.identityKey,
     });
     expect(previewResult).not.toHaveProperty('billingCycleId');
@@ -956,10 +972,9 @@ describe('invoice preview recurring timing', () => {
       windowEnd: '2025-03-08',
     });
 
-    await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
-      message:
+    await expect(generateInvoiceForSelectionInput(selectorInput)).resolves.toEqual({
+      actionError:
         'Purchase Order is required for this contract but has not been provided. Please add a PO number to the contract before generating invoices.',
-      executionIdentityKey: selectorInput.executionWindow.identityKey,
     });
   });
 });

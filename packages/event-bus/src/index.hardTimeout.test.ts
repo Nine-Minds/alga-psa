@@ -78,6 +78,14 @@ describe('EventBus Redis consumer hard-timeout', () => {
     // Add 1000ms to allow the loop to detect the first subscription before calling xReadGroup.
     await vi.advanceTimersByTimeAsync(16000);
 
+    // After the hard timeout the bus resets the client and reschedules the
+    // consumer loop via setTimeout(..., 0); that next iteration is what
+    // re-creates the Redis client. Keep advancing (bounded) until it runs —
+    // the exact tick it lands on depends on the loop's internal scheduling.
+    for (let i = 0; i < 20 && createdClients.length < 2; i++) {
+      await vi.advanceTimersByTimeAsync(1000);
+    }
+
     expect(createdClients.length).toBeGreaterThanOrEqual(2);
     expect(createdClients[0].disconnect).toHaveBeenCalled();
 

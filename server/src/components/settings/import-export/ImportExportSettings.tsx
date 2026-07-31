@@ -79,10 +79,13 @@ const ImportExportSettings = (): React.JSX.Element => {
 
     // Preserve the tab parameter for import-export
     if (!currentSearchParams.has('tab')) {
-      currentSearchParams.set('tab', 'import-export');
+      currentSearchParams.delete('tab');
     }
 
-    const newUrl = `/msp/settings?${currentSearchParams.toString()}`;
+    const query = currentSearchParams.toString();
+    const newUrl = query
+      ? `${window.location.pathname}?${query}`
+      : window.location.pathname;
     window.history.pushState({}, '', newUrl);
   }, []);
 

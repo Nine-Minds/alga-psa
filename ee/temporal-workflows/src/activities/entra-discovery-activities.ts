@@ -1,6 +1,6 @@
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db/tenant';
-import { retryOnTenantReadOnly } from '@alga-psa/db';
+import { retryOnTenantReadOnly, tenantDb } from '@alga-psa/db';
 import { getEntraProviderAdapter } from '@ee/lib/integrations/entra/providers';
 import type { EntraConnectionType } from '@ee/interfaces/entra.interfaces';
 import type {
@@ -17,9 +17,8 @@ export async function discoverManagedTenantsActivity(
 
   const activeConnection = await runWithTenant(input.tenantId, async () => {
     const { knex } = await createTenantKnex();
-    return knex('entra_partner_connections')
+    return tenantDb(knex, input.tenantId).table('entra_partner_connections')
       .where({
-        tenant: input.tenantId,
         is_active: true,
       })
       .orderBy('updated_at', 'desc')
@@ -44,9 +43,9 @@ export async function discoverManagedTenantsActivity(
     () =>
       runWithTenant(input.tenantId, async () => {
         const { knex } = await createTenantKnex();
-        const now = knex.fn.now();
+        const now = new Date().toISOString();
 
-        await knex('entra_managed_tenants')
+        await tenantDb(knex, input.tenantId).table('entra_managed_tenants')
           .insert(
             discovered.map((item) => ({
               tenant: input.tenantId,

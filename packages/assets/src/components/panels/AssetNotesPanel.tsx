@@ -42,7 +42,7 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
     <Card className="bg-white">
       <CardHeader className="pb-2">
         <div className="flex flex-row items-center justify-between">
-          <CardTitle>{t('assetNotesPanel.title', { defaultValue: 'Notes & Quick Info' })}</CardTitle>
+          <CardTitle>{t('assetNotesPanel.title', { defaultValue: 'Notes' })}</CardTitle>
           <Button 
             id="save-asset-note-btn"
             variant="ghost" 
@@ -70,9 +70,7 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
               <AlertDescription>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm">
-                    {error instanceof Error
-                      ? error.message
-                      : t('assetNotesPanel.errors.unknown', { defaultValue: 'Unknown error' })}
+                    {t('assetNotesPanel.errors.loadDescription', { defaultValue: 'Could not load notes. Please try again.' })}
                   </span>
                   <Button
                     id="retry-asset-notes-btn"

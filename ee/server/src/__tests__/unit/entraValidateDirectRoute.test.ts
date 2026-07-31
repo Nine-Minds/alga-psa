@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const requireEntraUiFlagEnabledMock = vi.fn();
+const requireEntraAccessMock = vi.fn();
 const resolveMicrosoftCredentialsForTenantMock = vi.fn();
 const getSecretProviderInstanceMock = vi.fn();
 const refreshEntraDirectTokenMock = vi.fn();
@@ -8,7 +8,7 @@ const updateEntraConnectionValidationMock = vi.fn();
 const axiosGetMock = vi.fn();
 
 vi.mock('@ee/app/api/integrations/entra/_guards', () => ({
-  requireEntraUiFlagEnabled: requireEntraUiFlagEnabledMock,
+  requireEntraAccess: requireEntraAccessMock,
 }));
 
 vi.mock('@ee/lib/integrations/entra/auth/microsoftCredentialResolver', () => ({
@@ -39,7 +39,7 @@ vi.mock('axios', () => ({
 describe('validate-direct route', () => {
   beforeEach(() => {
     vi.resetModules();
-    requireEntraUiFlagEnabledMock.mockReset();
+    requireEntraAccessMock.mockReset();
     resolveMicrosoftCredentialsForTenantMock.mockReset();
     getSecretProviderInstanceMock.mockReset();
     refreshEntraDirectTokenMock.mockReset();
@@ -48,7 +48,7 @@ describe('validate-direct route', () => {
   });
 
   it('T038: succeeds with valid credentials and reachable managed-tenant list', async () => {
-    requireEntraUiFlagEnabledMock.mockResolvedValue({
+    requireEntraAccessMock.mockResolvedValue({
       tenantId: 'tenant-38',
       userId: 'user-38',
     });

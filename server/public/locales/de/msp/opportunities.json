@@ -1,0 +1,414 @@
+{
+  "common": {
+    "back": "Zurück",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "saveChanges": "Änderungen speichern"
+  },
+  "opportunities": {
+    "board": {
+      "daysQuiet": "{{count}}d ruhig",
+      "nextDue": "Weiter: {{date}}",
+      "recentlyClosed": "Kürzlich geschlossen"
+    },
+    "clientTab": {
+      "emptyBody": "Erstellen Sie eines oder lassen Sie den Weg mit einem Angebot beginnen.",
+      "emptyTitle": "Für diesen Kunden gibt es noch keine Möglichkeiten"
+    },
+    "commitments": {
+      "add": "Nehmen Sie es auf",
+      "coveredByQuote": "Abgedeckt von {{quote}}",
+      "declined": "Abgelehnt – passiert nicht",
+      "help": "Schreiben Sie jedes Versprechen auf, sobald es Ihren Mund verlässt. Für jedes Angebot wird ein Angebotsbeleg festgelegt oder es wird abgelehnt, bevor das Geschäft abgeschlossen wird.",
+      "openCount": "{{count}} ungelöst – blockiert knapp gewonnen",
+      "placeholder": "z.B. E-Mail-Migration im Onboarding enthalten",
+      "resolve": "Lösen Sie…",
+      "status": {
+        "agreement_line": "Vereinbarungslinie",
+        "declined": "abgelehnt",
+        "open": "offen",
+        "project_task": "Projektaufgabe",
+        "quote_line": "Angebotszeile"
+      },
+      "title": "Verpflichtungen"
+    },
+    "completeDialog": {
+      "due": "Fällig",
+      "nextAction": "Nächste Aktion",
+      "placeholder": "z.B. Gehen Sie dem Vorschlag weiter nach",
+      "submit": "Als nächstes ausfüllen und planen",
+      "title": "Fertig. Was passiert als nächstes?"
+    },
+    "confidence": {
+      "committed": "Engagiert",
+      "high": "Hoch",
+      "low": "Niedrig",
+      "medium": "Mittel"
+    },
+    "createDialog": {
+      "client": "Kunde",
+      "dealTitle": "Titel",
+      "due": "Fällig",
+      "expectedClose": "Nahe erwartet",
+      "nextAction": "Erste Aktion",
+      "nextActionPlaceholder": "z.B. Senden Sie den Bewertungsvorschlag",
+      "submit": "Chance schaffen",
+      "title": "Neue Chance",
+      "titlePlaceholder": "z.B. Managed-Services-Vereinbarung"
+    },
+    "deleteDialog": {
+      "body": "{{number}} dauerhaft löschen? Dies kann nicht rückgängig gemacht werden. Opportunities mit verknüpften Angeboten können nicht gelöscht werden.",
+      "title": "Gelegenheit löschen"
+    },
+  "detail": {
+    "backToList": "Zurück zu Verkaufschancen",
+      "confidence": "Ihr Vertrauen",
+      "confidenceNote": "Vertrauen liegt bei Ihnen; Die Bühne kommt von Beweisen. Die beiden werden verglichen, nie zusammengeführt.",
+      "createQuote": "Angebot erstellen",
+      "draftFollowUp": "Entwerfen Sie das Follow-up",
+      "due": "fällig {{date}}",
+      "evidence": "Beweise",
+      "expectedClose": "Nahe erwartet",
+      "hardware": "Hardware",
+      "linkQuote": "Link vorhanden",
+      "markLost": "Mark hat verloren",
+      "markWon": "Mark hat gewonnen",
+      "metadataTitle": "Gelegenheit",
+      "nextAction": "Nächste Aktion",
+      "nextActionOverdue": "Nächste Aktion · überfällig",
+      "noQuotes": "Noch kein Angebot. Durch ein gesendetes Angebot wird dieser Deal automatisch in den Status „Vorgeschlagen“ verschoben.",
+      "oneTime": "Einmalig",
+      "owner": "Besitzer",
+      "quotes": "Zitate",
+      "quoteTitle": "Angebot für {{title}}",
+      "recurring": "Wiederkehrend",
+      "setStageHint": "Wählen Sie einen Kontrollpunkt aus, um die Bühne zu bereiten",
+      "timeline": "Zeitleiste",
+      "unlinkQuote": "Verknüpfung aufheben",
+      "value": "Wert",
+      "valuesFromQuote": "aus akzeptiertem Angebot",
+      "whyNumber": "{{number}} befindet sich in ",
+      "whyPeriod": "."
+    },
+    "draft": {
+      "body": "Körper",
+      "copied": "Kopiert. Fügen Sie es in Ihre E-Mail ein.",
+      "copy": "Kopieren",
+      "instructions": "Sagen Sie dem Agenten, was er ändern soll",
+      "instructionsPlaceholder": "z.B. kürzer, wärmer, formeller",
+      "loadingRecipient": "Verlinkter Kontakt wird überprüft...",
+      "noRecipient": "Verknüpfen Sie einen Kontakt vor dem Senden mit einer primären E-Mail-Adresse.",
+      "recipient": "Wird über den E-Mail-Anbieter Ihres Mandanten an {{recipient}} gesendet.",
+      "regenerate": "Umschreiben",
+      "send": "Follow-up senden",
+      "sent": "Follow-up gesendet und zum Deal protokolliert.",
+      "subject": "Betreff",
+      "title": "Folgeentwurf"
+    },
+    "editDialog": {
+      "title": "Gelegenheit bearbeiten"
+    },
+    "forecast": {
+      "basis": "Gezählt, weil",
+      "calibrated": "kalibriert",
+      "ceiling": "Obergrenze – evidenzgewichtet",
+      "deal": "Deal",
+      "floor": "Boden – unterzeichnet und mündlich",
+      "floorCol": "Boden",
+      "note": "Dieses Quartal. Die Gewichtungen stammen aus Beweisphasen und werden durch die eigenen Abschlussquoten jedes Verkäufers ersetzt, sobald er zwanzig abgeschlossene Geschäfte in der Vergangenheit hat.",
+      "plusOneTime": "+ {{amount}} einmalig",
+      "weighted": "{{stage}} · gewichtet {{pct}} %",
+      "won": "Habe diese Periode gewonnen"
+    },
+    "ladder": "Beweisleiter",
+    "setStage": "Phase auf {{stage}} setzen",
+    "linkQuoteDialog": {
+      "confirm": "Link-Zitat",
+      "empty": "Für diesen Kunden sind keine nicht verknüpften Angebote verfügbar.",
+      "title": "Verknüpfen Sie ein vorhandenes Angebot"
+    },
+    "list": {
+      "confidence": "Vertrauen",
+      "deal": "Deal",
+      "mrr": "Wiederkehrend",
+      "nextAction": "Nächste Aktion",
+      "oneTime": "Einmalig",
+      "owner": "Besitzer",
+      "stage": "Bühne"
+    },
+    "loseDialog": {
+      "lostTo": "Verloren gegen",
+      "notes": "Notizen",
+      "notesPlaceholder": "Alles in der Zukunft – das sollten Sie wissen",
+      "reasonPlaceholder": "Warum ist es gestorben?",
+      "submit": "Mark hat verloren",
+      "title": "Mark hat verloren"
+    },
+    "lossReason": {
+      "chose_competitor": "Wählte einen Konkurrenten",
+      "no_budget": "Kein Budget",
+      "no_response": "Sie verstummten",
+      "not_a_fit": "Passt nicht",
+      "other": "Andere",
+      "price": "Preis",
+      "timing": "Timing"
+    },
+    "meeting": {
+      "daysAgo": "Vor {{count}} Tagen",
+      "done": "Pipeline überprüft. {{count}} Deals in der Akte.",
+      "evidenceSays": "Beweise sagen",
+      "gap": "Die Konfidenz beträgt {{confidence}}, aber die Evidenz endet bei {{stage}}. Was hat der Kunde tatsächlich getan?",
+      "keys": "← zurück · → überprüft",
+      "markReviewed": "Bewertet → weiter",
+      "next": "Nächste Aktion:",
+      "noAction": "keine gesetzt",
+      "progress": "Deal {{n}} von {{total}}",
+      "repSays": "Besitzer sagt",
+      "reviewed": "Bewertet",
+      "silence": "Letzte Berührung"
+    },
+    "new": "Neue Chance",
+    "onePager": {
+      "average": "Monatlicher Durchschnitt",
+      "billed": "In Rechnung gestellt",
+      "month": "Monat",
+      "printTitle": "{{client}} – Supportausgaben, letzte 12 Monate",
+      "summary": "{{client}} hat in den letzten 12 Monaten {{total}} für den stündlichen Support bezahlt. Das sind durchschnittlich {{avg}} pro Monat.",
+      "title": "Zeit und Material, letzte 12 Monate"
+    },
+    "oneTime": "einmalig",
+    "oneTimeAmount": "{{amount}} einmalig",
+    "pageTitle": "Chancen",
+    "perMonthSuffix": "/Mo",
+    "prospect": "Aussicht",
+    "queue": {
+      "actions": "Aktionen",
+      "allClear": "Alles klar. Für jedes offene Geschäft ist ein nächster Schritt geplant.",
+      "bottom": "Das ist alles. Nichts anderes braucht dich heute.",
+      "cardsView": "Karten",
+      "completeAction": "Fertig → Weiter einstellen",
+      "completeActionFor": "Aktion für {{title}} abschließen",
+      "daysOverdue": "{{count}} Tage überfällig",
+      "daysQuiet": "{{count}} Tage ruhig",
+      "doToday": "Tun Sie es noch heute",
+      "goingQuiet": "Es wird still",
+      "greetingAfternoon": "Guten Tag, {{name}}.",
+      "greetingEvening": "Guten Abend, {{name}}.",
+      "greetingMorning": "Guten Morgen, {{name}}.",
+      "lesson": {
+        "reviewPipeline": "Überprüfen Sie die Pipeline",
+        "viewAssessmentDeals": "Bewertungsangebote ansehen"
+      },
+      "markLost": "Mark hat verloren",
+      "moneyFound": "Geld gefunden",
+      "moneyFoundSource": "aus Abrechnungen, Verträgen und Vermögenswerten",
+      "needsYou_one": "{{count}} Ding braucht dich heute.",
+      "needsYou_other": "{{count}} Dinge brauchen dich heute.",
+      "nothingDue": "Heute ist nichts fällig.",
+      "openDeal": "Offener Deal",
+      "openDealNamed": "Öffnen Sie {{title}}",
+      "reviewDraft": "Überprüfen Sie den Entwurf",
+      "snooze": "Schlummern",
+      "snoozeNamed": "Schlummern {{title}}",
+      "stakesMrr": "{{amount}}/Monat liegt in Ihren eigenen Daten, nichts wurde eingegeben.",
+      "stakesNrr": "{{amount}} der Projektarbeit steckt in Ihren eigenen Daten.",
+      "table": {
+        "actions": "Aktionen",
+        "client": "Kunde",
+        "due": "Fällig",
+        "nextAction": "Nächste Aktion",
+        "value": "Wert"
+      },
+      "tableView": "Tisch",
+      "viewLabel": "Warteschlangenansicht"
+    },
+    "snapshot": {
+      "actionsDue": "Maßnahmen fällig",
+      "empty": "Noch keine offenen Stellen.",
+      "loading": "Gelegenheits-Snapshot wird geladen",
+      "mrr": "{{amount}} MRR",
+      "nrr": "{{amount}} NRR",
+      "open": "Offene Möglichkeiten",
+      "openCount": "Offene Möglichkeiten",
+      "opportunityCount_one": "{{count}} Gelegenheit",
+      "opportunityCount_other": "{{count}} Möglichkeiten",
+      "pipelineByStage": "Pipeline nach Etappe",
+      "stalled": "Ins Stocken geraten",
+      "subtitle": "Offene Pipeline und Folgearbeiten, die Aufmerksamkeit erfordern.",
+      "title": "Momentaufnahme einer Gelegenheit",
+      "unavailable": "Opportunity-Gesamtwerte sind vorübergehend nicht verfügbar. Offene Möglichkeiten zur Weiterarbeit."
+    },
+    "stage": {
+      "assessment": "Bewertung",
+      "identified": "Identifiziert",
+      "lost": "Verloren",
+      "proposed": "Vorgeschlagen",
+      "qualified": "Qualifiziert",
+      "verbal": "Verbal",
+      "won": "Gewonnen"
+    },
+    "status": {
+      "lost": "Verloren",
+      "won": "Gewonnen"
+    },
+    "suggestedActions": {
+      "bookAssessment": "Buchbewertung",
+      "confirmDecisionMaker": "Bestätigen Sie den Entscheider",
+      "confirmRequirements": "Bestätigen Sie Anforderungen und Budget",
+      "confirmStartDate": "Startdatum bestätigen",
+      "followUpQuote": "Folgen Sie dem Angebot",
+      "label": "Empfohlene nächste Maßnahmen",
+      "prepareQuote": "Angebot erstellen",
+      "reviewFindings": "Überprüfen Sie die Beurteilungsergebnisse",
+      "scheduleDiscovery": "Planen Sie einen Discovery-Anruf",
+      "scheduleProposalReview": "Planen Sie die Überprüfung des Vorschlags",
+      "sendContract": "Vertrag senden"
+    },
+    "suggestionHow": {
+      "assetAging_one": "Führen Sie eine Aktualisierung für {{count}} veraltetes Asset durch.",
+      "assetAging_other": "Führen Sie eine Aktualisierung für {{count}} veraltete Assets durch.",
+      "inboundLead": "Bleiben Sie dran, solange das Interesse groß ist.",
+      "renewal": "Beginnen Sie das Erneuerungsgespräch mit {{clientName}} vor Ablauf der Frist.",
+      "tmConversion": "Vergleichen Sie nachlaufende T&M-Ausgaben mit einer wiederkehrenden Vereinbarung.",
+      "whitespace": "Zeigen Sie {{clientName}} die fehlende {{serviceName}}-Abdeckung an."
+    },
+    "suggestions": {
+      "accept": "Chance schaffen",
+      "dismiss": "Entlassen",
+      "emptyBody": "Generatoren überwachen Ihre Verträge, Abrechnungen und Vermögenswerte und decken hier Geschäfte auf, sobald sie diese finden.",
+      "emptyTitle": "Im Moment keine Vorschläge",
+      "intro": "In Ihren Daten gefunden. Akzeptieren Sie, um die Gelegenheit zu schaffen, oder schließen Sie sie ab, und sie bleibt weg.",
+      "seeNumbers": "Siehe die Zahlen",
+      "snooze": "Schlummern"
+    },
+    "suggestionTitles": {
+      "assetAging": "{{clientName}} Asset-Aktualisierung",
+      "inboundLead": "{{clientName}} Inbound-Chance",
+      "renewal": "{{contractName}} Verlängerung",
+      "tmConversion": "{{clientName}} Konvertierung der T&M-Vereinbarung",
+      "whitespace": "{{clientName}}: {{serviceName}} Gelegenheit"
+    },
+    "tabs": {
+      "board": "Vorstand",
+      "forecast": "Prognose",
+      "meeting": "Treffen",
+      "pipeline": "Pipeline",
+      "queue": "Warteschlange",
+      "suggestions": "Vorschläge"
+    },
+  "timeline": {
+    "created": "Verkaufschance erstellt",
+      "empty": "Noch nichts protokolliert. Abgeschlossene Aktionen landen hier von alleine."
+    },
+    "toast": {
+      "actionCompleted": "Fertig. Nächste Aktion geplant.",
+      "created": "Gelegenheit geschaffen",
+      "deleted": "Gelegenheit gelöscht",
+      "lost": "Als verschollen markiert",
+      "qualified": "Qualifizierter Kontrollpunkt aufgezeichnet",
+      "quoteLinked": "Zitat verlinkt",
+      "quoteUnlinked": "Zitat nicht verlinkt",
+      "saved": "Gespeichert",
+      "snoozed": "Ein paar Tage lang geschlafen",
+      "stageSet": "Bühne auf {{stage}} eingestellt",
+      "suggestionAccepted": "Aus dem Vorschlag entstandene Gelegenheit",
+      "suggestionDismissed": "Entlassen. Es wird nicht zurückkommen.",
+      "suggestionSnoozed": "Eine Woche lang geschlafen",
+      "whitespaceSuggestionCreated": "Vorschlag zur Überprüfung bereit",
+      "whitespaceSuggestionDismissed": "Dieser Vorschlag wurde zuvor abgelehnt",
+      "whitespaceSuggestionKnown": "Dieser Vorschlag ist bereits bekannt",
+      "won": "Gewonnen"
+    },
+    "type": {
+      "expansion": "Erweiterung",
+      "new_logo": "Neuer Kunde",
+      "project": "Projekt",
+      "renewal": "Erneuerung"
+    },
+    "valuesDialog": {
+      "hardware": "Hardware",
+      "mrr": "Wiederkehrend (monatlich)",
+      "note": "Dies sind Ihre Schätzungen. Ein akzeptiertes Zitat ersetzt sie durch die reellen Zahlen.",
+      "nrr": "Einmalige Leistungen",
+      "title": "Geschätzter Wert"
+    },
+    "whitespace": {
+      "adoption": "{{pct}} % Ihrer Vertragskunden kaufen dies",
+      "client": "Kunde",
+      "empty": "Das Raster wird ausgefüllt, sobald Kunden aktive Vereinbarungen getroffen haben.",
+      "sell": "Starten Sie {{category}} für {{client}}",
+      "subtitle": "Was jeder Vertragskunde kauft. Eine leere Zelle ist ein Gespräch, das Sie noch nicht geführt haben.",
+      "title": "Das ganze Buch"
+    },
+    "why": {
+      "actionDue": {
+        "deadlinePast_one": " und {{count}} Tag nach Ihrer eigenen Frist.",
+        "deadlinePast_other": " und {{count}} Tage nach Ihrer eigenen Frist.",
+        "dueToday": "Heute fällig",
+        "inboundChase_one": " Sie haben seit Ihrer letzten Antwort einmal geschrieben.",
+        "inboundChase_other": " Sie haben seit Ihrer letzten Antwort {{count}} Mal geschrieben.",
+        "pastDue_one": "{{count}} Tage überfällig",
+        "pastDue_other": "{{count}} Tage überfällig",
+        "proposalAge_one": "Tag {{count}} seit dem Vorschlag",
+        "proposalAge_other": "Tag {{count}} seit dem Vorschlag",
+        "proposalAgeShort_one": "{{count}} Tag.",
+        "proposalAgeShort_other": "{{count}} Tage.",
+        "quoteIntro": "{{clientName}} hatte ein Angebot für {{quoteNumber}} "
+      },
+      "assetAging": {
+        "age_one": "{{count}} Asset älter als {{oldestYears}} Jahre",
+        "age_other": "{{count}} Vermögenswerte, die älter als {{oldestYears}} Jahre sind",
+        "quoteRefresh": " bei {{clientName}}. Zitieren Sie die Aktualisierung, bevor sie zu einem Ausfallticket wird."
+      },
+      "forClient": " für {{clientName}}.",
+      "goingQuiet": {
+        "nudge": " bei {{clientName}}. Deals, die so ruhig sind, scheitern normalerweise ohne einen Anstoß.",
+        "paperworkMissing": ". Der Papierkram ging nie raus.",
+        "quietAge_one": "Ruhe für {{count}} Tag",
+        "quietAge_other": "Ruhe seit {{count}} Tagen",
+        "verbalAge_one": "{{count}} Tag seit ihrem mündlichen Ja",
+        "verbalAge_other": "{{count}} Tage seit ihrem mündlichen Ja"
+      },
+      "inboundLead": {
+        "raisedHand": "{{clientName}} hob die Hand",
+        "source": " über {{formName}}. Das Inbound-Interesse lässt schnell nach."
+      },
+      "lesson": {
+        "assessmentGap_one": " Sie haben im {{count}} Monat keinen Vorschlag gemacht. Bezahlte Beurteilungen sind Ihr stärkster Eröffnungszug.",
+        "assessmentGap_other": " Sie haben seit {{count}} Monaten keinen Vorschlag mehr gemacht. Bezahlte Beurteilungen sind Ihr stärkster Eröffnungszug.",
+        "assessmentRate": "Sie schließen {{wonPerFive}} von jeweils 5 von Ihnen vorgeschlagenen Bewertungen ab.",
+        "quoteVelocity": "Angebote, die Sie innerhalb einer Woche senden, schließen {{ratio}}x so oft",
+        "quoteVelocityCompared": " als diejenigen, die warten."
+      },
+      "renewal": {
+        "age_one": "Verlängert sich in {{count}} Tag",
+        "age_other": "Verlängert sich in {{count}} Tagen",
+        "startNow": ". Wenn Sie jetzt beginnen, wird das Gespräch über die Erneuerung nicht überstürzt geführt."
+      },
+      "tmConversion": {
+        "counted_one": "{{count}} Kunde hat mehr für T&M bezahlt, als eine Vereinbarung kostet",
+        "counted_other": "{{count}} Kunden zahlten mehr für T&M, als eine Vereinbarung kostet",
+        "named": "{{clientNames}} hat mehr für T&M bezahlt, als eine Vereinbarung kostet",
+        "trailing": " in den letzten 12 Monaten. Der One-Pager macht es zu seiner Idee."
+      },
+      "whitespace": {
+        "comparable": " noch von dir. Das tut jeder vergleichbare Kunde.",
+        "missing": "{{clientName}} kauft {{serviceName}} nicht"
+      }
+    },
+    "winDialog": {
+      "body": "Der Deal wird als gewonnen abgeschlossen. Wandeln Sie das akzeptierte Angebot anschließend auf dem Angebotsbildschirm in eine Vereinbarung um.",
+      "bodyProspect": "{{client}} wird ein aktiver Kunde. Wandeln Sie das akzeptierte Angebot anschließend auf dem Angebotsbildschirm in eine Vereinbarung um.",
+      "confirm": "Mark hat gewonnen",
+      "convertQuote": "Konvertieren Sie ein angenommenes Angebot in einen Vertragsentwurf (optional)",
+      "noConvertQuote": "Wandeln Sie ein Angebot nicht um",
+      "noProject": "Erstellen Sie kein Projekt",
+      "projectName": "Projektname",
+      "projectStart": "Startdatum",
+      "projectStatus": "Ausgangszustand",
+      "projectTemplate": "Erstellen Sie ein Onboarding-Projekt (optional)",
+      "title": "Mark hat gewonnen"
+    }
+  }
+}

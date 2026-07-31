@@ -14,7 +14,6 @@ import { TENANT_TIERS, TenantTier, tierAtLeast } from './tenantTiers';
 export enum TIER_FEATURES {
   INTEGRATIONS = 'INTEGRATIONS',
   EXTENSIONS = 'EXTENSIONS',
-  MANAGED_EMAIL = 'MANAGED_EMAIL',
   SSO = 'SSO',
   ADVANCED_ASSETS = 'ADVANCED_ASSETS',
   CLIENT_PORTAL_ADMIN = 'CLIENT_PORTAL_ADMIN',
@@ -23,7 +22,15 @@ export enum TIER_FEATURES {
   ENTRA_SYNC = 'ENTRA_SYNC',
   CIPP = 'CIPP',
   TEAMS_INTEGRATION = 'TEAMS_INTEGRATION',
+  SCIM_PROVISIONING = 'SCIM_PROVISIONING',
   ADVANCED_AUTHORIZATION_BUNDLES = 'ADVANCED_AUTHORIZATION_BUNDLES',
+}
+
+// Namespace member instead of an enum member so older exhaustive UI label maps
+// remain source-compatible while edition-gated server code gets a distinct key.
+export namespace TIER_FEATURES {
+  export const OPPORTUNITY_MANAGEMENT = 'OPPORTUNITY_MANAGEMENT' as TIER_FEATURES;
+  export const CONTRACT_SIMULATOR = 'CONTRACT_SIMULATOR' as TIER_FEATURES;
 }
 
 /**
@@ -37,21 +44,22 @@ export type TierFeature = TIER_FEATURES;
 export const FEATURE_MINIMUM_TIER: Record<TIER_FEATURES, TenantTier> = {
   [TIER_FEATURES.INTEGRATIONS]: 'solo',
   [TIER_FEATURES.EXTENSIONS]: 'solo',
-  [TIER_FEATURES.MANAGED_EMAIL]: 'solo',
   [TIER_FEATURES.SSO]: 'solo',
   [TIER_FEATURES.ADVANCED_ASSETS]: 'solo',
   [TIER_FEATURES.CLIENT_PORTAL_ADMIN]: 'solo',
   // Available to all tiers; a usage cap (planned: 150 workflow steps) will be enforced separately rather than tier-gated.
   [TIER_FEATURES.WORKFLOW_DESIGNER]: 'solo',
   [TIER_FEATURES.MOBILE_ACCESS]: 'solo',
-  [TIER_FEATURES.ENTRA_SYNC]: 'premium',
-  [TIER_FEATURES.CIPP]: 'premium',
+  [TIER_FEATURES.ENTRA_SYNC]: 'pro',
+  [TIER_FEATURES.CIPP]: 'pro',
   [TIER_FEATURES.TEAMS_INTEGRATION]: 'pro',
+  [TIER_FEATURES.SCIM_PROVISIONING]: 'pro',
   [TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]: 'premium',
+  [TIER_FEATURES.OPPORTUNITY_MANAGEMENT]: 'premium',
+  [TIER_FEATURES.CONTRACT_SIMULATOR]: 'pro',
 } as const;
 
 const ADD_ON_ONLY_FEATURES = new Set<TIER_FEATURES>([
-  TIER_FEATURES.ENTRA_SYNC,
   TIER_FEATURES.TEAMS_INTEGRATION,
 ]);
 

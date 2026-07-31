@@ -23,6 +23,7 @@ describe('Contract detail client-owned semantics wiring', () => {
     expect(detailSource).toContain('Client Ownership');
     expect(detailSource).toContain('Owner Client');
     expect(detailSource).toContain("Live client status is controlled by the assignment lifecycle below.");
-    expect(detailSource).toContain("{isLiveClientContract ? 'Assignment Status' : 'Status'}");
+    expect(detailSource).toContain("? t('contractDetail.headerCard.assignmentStatus', { defaultValue: 'Assignment Status' })");
+    expect(detailSource).toContain(": t('common.labels.status', { defaultValue: 'Status' })}");
   });
 });

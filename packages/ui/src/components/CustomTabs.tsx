@@ -5,11 +5,17 @@ import * as Tabs from '@radix-ui/react-tabs';
 import { AutomationProps } from '../ui-reflection/types';
 import { type LucideIcon, ChevronDown } from 'lucide-react';
 
+// LEVERAGE: pattern duplicate-tabs-components — Radix-based twin of Tabs.tsx (hand-rolled) with the same default underline look but a data-driven API; ~32 vs ~21 consumers split along package-extraction lines. Consolidate to a single tabs layer.
+
 export interface TabContent {
   id: string;
-  label: string;
+  // ReactNode (not just string) so a trigger can carry inline chrome such as a
+  // count pill next to its label; existing string labels remain valid.
+  label: React.ReactNode;
   content: React.ReactNode;
   icon?: LucideIcon | React.ReactNode;
+  /** Hide only the tab trigger while keeping its URL-addressable content mounted. */
+  hideTrigger?: boolean;
 }
 
 export interface TabGroup {
@@ -42,6 +48,11 @@ export interface CustomTabsProps {
   };
   extraContent?: React.ReactNode;
   /**
+   * Optional content rendered at the START of the tab list, before the triggers
+   * (e.g. a page title sharing the tab-bar row). Mirrors extraContent (end).
+   */
+  startContent?: React.ReactNode;
+  /**
    * Optional prefix applied to tab trigger ids to satisfy unique id requirements
    */
   idPrefix?: string;
@@ -57,6 +68,7 @@ export const CustomTabs = ({
   beforeTabChange,
   tabStyles,
   extraContent,
+  startContent,
   idPrefix,
   orientation = 'horizontal',
 }: CustomTabsProps & AutomationProps) => {
@@ -193,6 +205,7 @@ export const CustomTabs = ({
       }}
     >
       <Tabs.List className={`${defaultListClass} ${tabStyles?.list || ''}`}>
+        {startContent}
         {renderGroupedTabs ? (
           groups.map((group, groupIndex) => {
             const isExpanded = expandedSections[groupIndex] !== false; // Default to true
@@ -212,7 +225,7 @@ export const CustomTabs = ({
                     </p>
                   </button>
                 )}
-                {isExpanded && group.tabs.map((tab, tabIndex): React.JSX.Element => {
+                {isExpanded && group.tabs.filter((tab) => !tab.hideTrigger).map((tab, tabIndex): React.JSX.Element => {
                   const IconComponent = tab.icon;
                   const hasIcon = !!IconComponent;
                   const iconClassName = hasIcon ? 'flex items-center gap-2' : '';
@@ -233,7 +246,7 @@ export const CustomTabs = ({
             );
           })
         ) : (
-          allTabs.map((tab, index): React.JSX.Element => {
+          allTabs.filter((tab) => !tab.hideTrigger).map((tab, index): React.JSX.Element => {
             const IconComponent = tab.icon;
             const hasIcon = !!IconComponent;
             const iconClassName = hasIcon 

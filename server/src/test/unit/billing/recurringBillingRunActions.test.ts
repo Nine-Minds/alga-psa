@@ -8,6 +8,7 @@ import { mapClientCadenceInvoiceCandidatesToRecurringRunTargets } from '../../..
 
 const mocks = vi.hoisted(() => ({
   getCurrentUserAsync: vi.fn(),
+  hasPermissionAsync: vi.fn(async () => true),
   generateInvoiceForSelectionInput: vi.fn(),
   generateInvoiceForSelectionInputs: vi.fn(),
   publishWorkflowEvent: vi.fn(),
@@ -19,6 +20,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../../../../../packages/billing/src/lib/authHelpers', () => ({
   getCurrentUserAsync: mocks.getCurrentUserAsync,
+  hasPermissionAsync: mocks.hasPermissionAsync,
 }));
 
 vi.mock('../../../../../packages/billing/src/actions/invoiceGeneration', () => ({
@@ -417,7 +419,7 @@ describe('recurring billing run actions', () => {
       failures: [
         expect.objectContaining({
           executionIdentityKey: blockedTarget.executionWindow.identityKey,
-          errorMessage: 'Blocked until approval: 2 unapproved entries.',
+          errorMessage: 'Failed to generate invoice for this billing cycle.',
         }),
       ],
     });

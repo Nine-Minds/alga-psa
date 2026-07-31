@@ -13,8 +13,10 @@ describe('quick add asset client creation wiring contract', () => {
     const source = read('./QuickAddAsset.tsx');
 
     expect(source).toContain('onAddNew={() => setIsQuickAddClientOpen(true)}');
-    expect(source).toContain('open={isQuickAddClientOpen}');
-    expect(source).toContain('setClients((prevClients) => {');
+    expect(source).toContain('renderQuickAddClient({');
+    expect(source).toContain('open: isQuickAddClientOpen,');
+    expect(source).toContain('onOpenChange: setIsQuickAddClientOpen,');
+    expect(source).toContain('setClients(prev => [...prev, newClient]);');
     expect(source).toContain('setSelectedClientId(newClient.client_id);');
     expect(source).toContain('clearErrorIfSubmitted();');
   });

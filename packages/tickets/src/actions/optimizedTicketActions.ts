@@ -16,10 +16,17 @@ import type {
   IUserWithRoles,
   TicketResponseState,
 } from '@alga-psa/types';
-import { withTransaction, registerAfterCommit } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import {
+  withTransaction,
+  registerAfterCommit,
+  createTenantKnex,
+  tenantDb,
+  resolveUserTimeZone,
+  normalizeIanaTimeZone,
+  type TenantScopedQuery,
+} from '@alga-psa/db';
 import { Knex } from 'knex';
-import { revalidatePath } from 'next/cache';
+import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
@@ -36,7 +43,6 @@ import {
   ticketListFiltersSchema
 } from '../schemas/ticket.schema';
 import { Temporal } from '@js-temporal/polyfill';
-import { resolveUserTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
@@ -57,11 +63,15 @@ import {
   BundleAuthorizationKernelProvider,
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
+  compileTenantScopedResourceReadAuthorizationSql,
   type AuthorizationRecord,
   type AuthorizationSubject,
+  type RelationshipRule,
+  type RelationshipSqlCompileResult,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility';
+import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
+import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
@@ -72,6 +82,29 @@ import {
   TICKET_STATUS_FILTER_ALL,
   TICKET_STATUS_FILTER_OPEN,
 } from '../lib/ticketStatusFilter';
+import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import { actionError } from '@alga-psa/ui/lib/errorHandling';
+
+function isTicketActionError(value: unknown): value is TicketActionError {
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (
+      typeof candidate.actionError === 'string' ||
+      typeof candidate.permissionError === 'string'
+    )
+  );
+}
+
+function ticketListActionErrorFrom(error: unknown): TicketActionError | null {
+  const issues = (error as { issues?: unknown })?.issues;
+  if (Array.isArray(issues) && issues.length > 0) {
+    return actionError('Ticket list filters are no longer valid. Refresh the page and try again.');
+  }
+
+  return ticketActionErrorFrom(error);
+}
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -82,6 +115,29 @@ function getEmailEventChannel(): string {
 
 const TICKET_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
 const TICKET_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder;
+}
+
+function tenantLeftJoin(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  builder: Knex.QueryBuilder,
+  table: string,
+  left: string,
+  right: string,
+  options: { rootTenantColumn?: string; on?: (join: Knex.JoinClause) => void } = {}
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).tenantJoin(builder, table, left, right, {
+    ...options,
+    type: 'left',
+  });
+}
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into tickets.
@@ -108,18 +164,18 @@ async function resolveAuthorizationSubjectForUser(
   tenant: string,
   user: IUserWithRoles
 ): Promise<AuthorizationSubject> {
-  const roleRows = await trx('user_roles')
-    .where({ tenant, user_id: user.user_id })
+  const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
+    .where({ user_id: user.user_id })
     .select<{ role_id: string }[]>('role_id')
     .catch(() => []);
 
-  const teamRows = await trx('team_members')
-    .where({ tenant, user_id: user.user_id })
+  const teamRows = await tenantScopedTable(trx, 'team_members', tenant)
+    .where({ user_id: user.user_id })
     .select<{ team_id: string }[]>('team_id')
     .catch(() => []);
 
-  const managedRows = await trx('users')
-    .where({ tenant, reports_to: user.user_id })
+  const managedRows = await tenantScopedTable(trx, 'users', tenant)
+    .where({ reports_to: user.user_id })
     .select<{ user_id: string }[]>('user_id')
     .catch(() => []);
 
@@ -136,16 +192,13 @@ async function resolveAuthorizationSubjectForUser(
 }
 
 function toTicketAuthorizationRecord(
-  ticket: Partial<ITicket>,
-  additionalUserIds: string[] = []
+  ticket: Partial<ITicket>
 ): AuthorizationRecord {
-  // `tickets.assigned_to` is the primary assignee; `ticket_resources.additional_user_id`
-  // holds co-assignees ("additional agents"). Both should authorize via own_or_assigned.
+  // Only the primary assignee grants ticket read authorization. Do not trust
+  // `ticket_resources.additional_user_id` as an authorization assignment because
+  // time-entry workflows can create those rows without ticket row-level access.
   const assignees = new Set<string>();
   if (ticket.assigned_to) assignees.add(ticket.assigned_to);
-  for (const id of additionalUserIds) {
-    if (id) assignees.add(id);
-  }
   return {
     id: ticket.ticket_id ?? null,
     ownerUserId: ticket.entered_by ?? null,
@@ -154,28 +207,6 @@ function toTicketAuthorizationRecord(
     boardId: ticket.board_id ?? null,
     teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
   };
-}
-
-async function fetchTicketAdditionalUserIds(
-  trx: Knex.Transaction | Knex,
-  tenant: string,
-  ticketIds: string[]
-): Promise<Map<string, string[]>> {
-  const map = new Map<string, string[]>();
-  if (ticketIds.length === 0) {
-    return map;
-  }
-  const rows = await trx('ticket_resources')
-    .where({ tenant })
-    .whereIn('ticket_id', ticketIds)
-    .whereNotNull('additional_user_id')
-    .select<{ ticket_id: string; additional_user_id: string }[]>('ticket_id', 'additional_user_id');
-  for (const row of rows) {
-    const ids = map.get(row.ticket_id) ?? [];
-    ids.push(row.additional_user_id);
-    map.set(row.ticket_id, ids);
-  }
-  return map;
 }
 
 async function resolveClientSelectedBoardIds(
@@ -208,11 +239,23 @@ async function createTicketAuthorizationContext(
   authorizationKernel: ReturnType<typeof createAuthorizationKernel>;
   selectedBoardIds: string[] | undefined;
   requestCache: RequestLocalAuthorizationCache;
+  ticketReadBundleNarrowingRules: Awaited<ReturnType<typeof resolveBundleNarrowingRulesForEvaluation>>;
 }> {
   const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
   const selectedBoardIds = await resolveClientSelectedBoardIds(trx, tenant, user);
   const relationshipRules =
     selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' as const }];
+  const requestCache = new RequestLocalAuthorizationCache();
+  const ticketReadBundleNarrowingRules = await resolveBundleNarrowingRulesForEvaluation(trx, {
+    subject: authorizationSubject,
+    resource: {
+      type: 'ticket',
+      action: 'read',
+    },
+    selectedBoardIds,
+    requestCache,
+    knex: trx,
+  });
 
   return {
     authorizationSubject,
@@ -222,8 +265,16 @@ async function createTicketAuthorizationContext(
       }),
       bundleProvider: new BundleAuthorizationKernelProvider({
         resolveRules: async (input) => {
+          if (input.resource.type === 'ticket' && input.resource.action === 'read') {
+            return ticketReadBundleNarrowingRules;
+          }
+
           try {
-            return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+            return await resolveBundleNarrowingRulesForEvaluation(trx, {
+              ...input,
+              requestCache,
+              knex: trx,
+            });
           } catch {
             return [];
           }
@@ -232,7 +283,8 @@ async function createTicketAuthorizationContext(
       rbacEvaluator: async () => true,
     }),
     selectedBoardIds,
-    requestCache: new RequestLocalAuthorizationCache(),
+    requestCache,
+    ticketReadBundleNarrowingRules,
   };
 }
 
@@ -241,14 +293,6 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
   context: Awaited<ReturnType<typeof createTicketAuthorizationContext>>,
   tickets: T[]
 ): Promise<T[]> {
-  const ticketIds = tickets
-    .map((ticket) => ticket.ticket_id)
-    .filter((id): id is string => typeof id === 'string' && id.length > 0);
-  const additionalUserIdsByTicket = await fetchTicketAdditionalUserIds(
-    trx,
-    context.authorizationSubject.tenant,
-    ticketIds
-  );
 
   const decisions = await Promise.all(
     tickets.map((ticket) => {
@@ -263,10 +307,7 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
           action: 'read',
           id: ticket.ticket_id,
         },
-        record: toTicketAuthorizationRecord(
-          ticket,
-          additionalUserIdsByTicket.get(ticket.ticket_id) ?? []
-        ),
+        record: toTicketAuthorizationRecord(ticket),
         selectedBoardIds: context.selectedBoardIds,
         requestCache: context.requestCache,
         knex: trx,
@@ -277,6 +318,31 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
   return tickets.filter((_, index) => decisions[index]?.allowed);
 }
 
+type TicketAuthorizationContext = Awaited<ReturnType<typeof createTicketAuthorizationContext>>;
+
+function applyTicketReadAuthorizationSql(
+  query: TenantScopedQuery,
+  trx: Knex.Transaction,
+  tenant: string,
+  context: TicketAuthorizationContext
+): RelationshipSqlCompileResult {
+  // Built-in narrowing for client-portal users mirrors createTicketAuthorizationContext.
+  const builtinRules: RelationshipRule[] =
+    context.selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' }];
+
+  return compileTenantScopedResourceReadAuthorizationSql(query, {
+    resourceType: 'ticket',
+    action: 'read',
+    builtinRules,
+    bundleRules: context.ticketReadBundleNarrowingRules,
+    ctx: {
+      subject: context.authorizationSubject,
+      selectedBoardIds: context.selectedBoardIds,
+      adapter: createTicketRelationshipSqlAdapter(trx, tenant),
+    },
+  });
+}
+
 async function updateTicketResponseStateFromComment(
   trx: Knex.Transaction,
   tenant: string,
@@ -285,9 +351,9 @@ async function updateTicketResponseStateFromComment(
   isInternal: boolean,
   userId: string | null
 ): Promise<{ previousState: TicketResponseState; newState: TicketResponseState }> {
-  const ticket = await trx('tickets')
+  const ticket = await tenantScopedTable(trx, 'tickets', tenant)
     .select('response_state')
-    .where({ ticket_id: ticketId, tenant })
+    .where({ ticket_id: ticketId })
     .first();
 
   const previousState = (ticket?.response_state || null) as TicketResponseState;
@@ -304,8 +370,8 @@ async function updateTicketResponseStateFromComment(
   }
 
   if (newState !== previousState) {
-    await trx('tickets')
-      .where({ ticket_id: ticketId, tenant })
+    await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ ticket_id: ticketId })
       .update({ response_state: newState });
 
     registerAfterCommit(trx, () =>
@@ -313,8 +379,11 @@ async function updateTicketResponseStateFromComment(
         eventType: 'TICKET_RESPONSE_STATE_CHANGED',
         payload: {
           tenantId: tenant,
+          occurredAt: new Date().toISOString(),
           ticketId,
           userId,
+          previousResponseState: previousState,
+          newResponseState: newState,
           previousState,
           newState,
           trigger: 'comment',
@@ -354,10 +423,11 @@ async function safePublishEvent(eventType: string, payload: any) {
  * Consolidated function to get all ticket data for the ticket details page
  * This reduces multiple network calls by fetching all related data in a single server action
  */
-export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticketId: string) => {
+export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticketId: string): Promise<any> => {
   const {knex: db} = await createTenantKnex();
 
-  return withTransaction(db, async (trx) => {
+  try {
+    return await withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'read', trx)) {
       throw new Error('Permission denied: Cannot view ticket');
     }
@@ -365,7 +435,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     try {
 
     // Fetch ticket with status and location info
-    const ticket = await trx('tickets as t')
+    const ticketQuery = tenantScopedTable(trx, 'tickets as t', tenant)
       .select(
         't.*',
         's.name as status_name',
@@ -387,19 +457,11 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         'cl.is_billing_address',
         'cl.is_shipping_address',
         'cl.is_default as location_is_default'
-      )
-      .leftJoin('statuses as s', function() {
-        this.on('t.status_id', 's.status_id')
-           .andOn('t.tenant', 's.tenant')
-      })
-      .leftJoin('client_locations as cl', function() {
-        this.on('t.location_id', 'cl.location_id')
-           .andOn('t.tenant', 'cl.tenant')
-      })
-      .where({
-        't.ticket_id': ticketId,
-        't.tenant': tenant
-      })
+      );
+    tenantLeftJoin(trx, tenant, ticketQuery, 'statuses as s', 't.status_id', 's.status_id');
+    tenantLeftJoin(trx, tenant, ticketQuery, 'client_locations as cl', 't.location_id', 'cl.location_id');
+    const ticket = await ticketQuery
+      .where({ 't.ticket_id': ticketId })
       .first();
 
     if (!ticket) {
@@ -430,74 +492,95 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       categories
     ] = await Promise.all([
       // Comments
-      trx('comments')
+      tenantScopedTable(trx, 'comments', tenant)
         .where({
-          ticket_id: ticketId,
-          tenant: tenant
+          ticket_id: ticketId
         })
         .orderBy('created_at', 'asc'),
       
       // Documents
-      trx('documents as d')
-        .select('d.*')
-        .leftJoin('document_associations as da', function() {
-          this.on('d.document_id', 'da.document_id')
-             .andOn('d.tenant', 'da.tenant')
-        })
+      tenantLeftJoin(
+        trx,
+        tenant,
+        tenantScopedTable(trx, 'documents as d', tenant)
+          .select('d.*'),
+        'document_associations as da',
+        'd.document_id',
+        'da.document_id'
+      )
         .where({
           'da.entity_id': ticketId,
-          'da.entity_type': 'ticket',
-          'd.tenant': tenant
+          'da.entity_type': 'ticket'
         }),
       
-      trx('clients as c')
+      tenantLeftJoin(
+        trx,
+        tenant,
+        tenantScopedTable(trx, 'clients as c', tenant)
         .select(
           'c.*',
           'da.document_id'
-        )
-        .leftJoin('document_associations as da', function() {
-          this.on('da.entity_id', '=', 'c.client_id')
-              .andOn('da.tenant', '=', 'c.tenant')
-              .andOnVal('da.entity_type', '=', 'client');
-        })
-        .where({ 'c.tenant': tenant })
+        ),
+        'document_associations as da',
+        'c.client_id',
+        'da.entity_id',
+        { on: (join) => join.andOnVal('da.entity_type', '=', 'client') }
+      )
         .orderBy('c.client_name', 'asc'),
 
-      trx('ticket_resources')
+      tenantScopedTable(trx, 'ticket_resources', tenant)
         .where({
-          ticket_id: ticketId,
-          tenant: tenant
+          ticket_id: ticketId
         }),
       
       // Users - removed document joins that were causing duplicates
       // Avatar URLs are fetched later using getUserAvatarUrl()
-      trx('users')
-        .where({ tenant })
+      tenantScopedTable(trx, 'users', tenant)
+        .where('user_type', 'internal')
+        .where('is_inactive', false)
         .orderBy('first_name', 'asc'),
       
       // Statuses
-      trx('statuses')
+      tenantScopedTable(trx, 'statuses', tenant)
         .where({
-          tenant: tenant,
           status_type: 'ticket'
         })
         .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
       
       // Boards
-      trx('boards')
-        .where({ tenant })
+      tenantScopedTable(trx, 'boards', tenant)
         .orderBy('board_name', 'asc'),
       
       // Priorities - fetch only tenant-specific ticket priorities
-      trx('priorities')
-        .where({ tenant, item_type: 'ticket' })
+      tenantScopedTable(trx, 'priorities', tenant)
+        .where({ item_type: 'ticket' })
         .orderBy('priority_name', 'asc'),
       
-      // Categories
-      trx('categories')
-        .where({ tenant })
-        .orderBy('category_name', 'asc')
+      // Categories for the ticket's current board. This must match
+      // getTicketCategoriesByBoard so the hydrated dropdown doesn't briefly
+      // show tenant-wide categories before the client-side board fetch returns.
+      (async () => {
+        if (!ticket.board_id) {
+          return tenantScopedTable(trx, 'categories', tenant)
+            .orderBy('category_name', 'asc');
+        }
+
+        const ticketBoard = await tenantScopedTable(trx, 'boards', tenant)
+          .where({ board_id: ticket.board_id })
+          .select('category_type')
+          .first();
+
+        if (ticketBoard?.category_type === 'itil') {
+          return tenantScopedTable(trx, 'categories', tenant)
+            .where('is_from_itil_standard', true)
+            .orderBy('category_name', 'asc');
+        }
+
+        return tenantScopedTable(trx, 'categories', tenant)
+          .where({ board_id: ticket.board_id })
+          .orderBy('category_name', 'asc');
+      })()
     ]);
 
     // --- Add Logo URL Processing for the fetched 'clients' list ---
@@ -508,12 +591,11 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     let fileIdMap: Record<string, string> = {};
     if (documentIds.length > 0) {
-      const fileRecords = await trx('documents')
+      const fileRecords = await tenantScopedTable(trx, 'documents', tenant)
         .select('document_id', 'file_id')
-        .whereIn('document_id', documentIds)
-        .andWhere({ tenant });
+        .whereIn('document_id', documentIds);
 
-      fileIdMap = fileRecords.reduce((acc, record) => {
+      fileIdMap = fileRecords.reduce((acc: Record<string, string>, record: { document_id: string; file_id?: string | null }) => {
         if (record.file_id) {
           acc[record.document_id] = record.file_id;
         }
@@ -545,37 +627,41 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     
     if (ticket.client_id) {
       [client, contacts, locations] = await Promise.all([
-        trx('clients as c')
-          .select(
-            'c.*',
-            'd.file_id'
-          )
-          .leftJoin('document_associations as da', function() {
-            this.on('da.entity_id', '=', 'c.client_id')
-                .andOn('da.tenant', '=', 'c.tenant')
-                .andOnVal('da.entity_type', '=', 'client');
-          })
-          .leftJoin('documents as d', function() {
-             this.on('d.document_id', '=', 'da.document_id')
-                .andOn('d.tenant', '=', 'c.tenant');
-          })
+        tenantLeftJoin(
+          trx,
+          tenant,
+          tenantLeftJoin(
+            trx,
+            tenant,
+            tenantScopedTable(trx, 'clients as c', tenant)
+              .select(
+                'c.*',
+                'd.file_id'
+              ),
+            'document_associations as da',
+            'c.client_id',
+            'da.entity_id',
+            { on: (join) => join.andOnVal('da.entity_type', '=', 'client') }
+          ),
+          'documents as d',
+          'da.document_id',
+          'd.document_id',
+          { rootTenantColumn: 'c.tenant' }
+        )
           .where({
-            'c.client_id': ticket.client_id,
-            'c.tenant': tenant
+            'c.client_id': ticket.client_id
           })
           .first(),
 
-        trx('contacts')
+        tenantScopedTable(trx, 'contacts', tenant)
           .where({
-            client_id: ticket.client_id,
-            tenant: tenant
+            client_id: ticket.client_id
           })
           .orderBy('full_name', 'asc'),
           
-        trx('client_locations')
+        tenantScopedTable(trx, 'client_locations', tenant)
           .where({
             client_id: ticket.client_id,
-            tenant: tenant,
             is_active: true
           })
           .orderBy('is_default', 'desc')
@@ -596,52 +682,48 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     }
 
     if (ticket.contact_name_id) {
-      contactInfo = await trx('contacts')
+      contactInfo = await tenantScopedTable(trx, 'contacts', tenant)
         .where({
-          contact_name_id: ticket.contact_name_id,
-          tenant: tenant
+          contact_name_id: ticket.contact_name_id
         })
         .first();
     }
 
     // Fetch created by user
     const createdByUser = ticket.entered_by ? 
-      await trx('users')
+      await tenantScopedTable(trx, 'users', tenant)
         .where({
-          user_id: ticket.entered_by,
-          tenant: tenant
+          user_id: ticket.entered_by
         })
         .first() : null;
 
     // Fetch board
     const board = ticket.board_id ?
-      await trx('boards')
+      await tenantScopedTable(trx, 'boards', tenant)
         .where({
-          board_id: ticket.board_id,
-          tenant: tenant
+          board_id: ticket.board_id
         })
         .first() : null;
     if (board && (board.enable_live_ticket_timer === null || board.enable_live_ticket_timer === undefined)) {
       board.enable_live_ticket_timer = true;
     }
 
-    // Process user data for userMap, including avatar URLs
-    const usersWithAvatars = await Promise.all(users.map(async (user: any) => {
-      let avatarUrl: string | null = null;
-      try {
-        avatarUrl = await getUserAvatarUrl(user.user_id, tenant);
-      } catch (imgError) {
-        console.error(`Error fetching avatar URL for user ${user.user_id}:`, imgError);
-        avatarUrl = null;
-      }
-
-      return {
-        ...user,
-        avatarUrl,
-      };
+    // Resolve avatar URLs in one batch (2 queries) instead of a DB transaction per
+    // tenant user — the per-user path scaled O(users) and dominated ticket-open latency.
+    const userAvatarUrls = await getEntityImageUrlsBatch(
+      'user',
+      users.map((user: any) => user.user_id),
+      tenant,
+    ).catch((imgError) => {
+      console.error('Error batch-fetching user avatar URLs:', imgError);
+      return new Map<string, string | null>();
+    });
+    const usersWithAvatars = users.map((user: any) => ({
+      ...user,
+      avatarUrl: userAvatarUrls.get(user.user_id) ?? null,
     }));
 
-    const userMap = usersWithAvatars.reduce((acc, user) => {
+    const userMap = usersWithAvatars.reduce((acc: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>, user: { user_id: string; first_name?: string | null; last_name?: string | null; email?: string; user_type: string; avatarUrl: string | null }) => {
       acc[user.user_id] = {
         user_id: user.user_id,
         first_name: user.first_name || '',
@@ -662,13 +744,12 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     );
 
     const commentContacts = commentContactIds.length > 0
-      ? await trx('contacts')
+      ? await tenantScopedTable(trx, 'contacts', tenant)
         .select('contact_name_id', 'full_name', 'email')
         .whereIn('contact_name_id', commentContactIds)
-        .andWhere({ tenant })
       : [];
 
-    const contactMap = commentContacts.reduce((acc, contact) => {
+    const contactMap = commentContacts.reduce((acc: Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>, contact: { contact_name_id: string; full_name?: string | null; email?: string | null }) => {
       acc[contact.contact_name_id] = {
         contact_id: contact.contact_name_id,
         full_name: contact.full_name || '',
@@ -687,38 +768,40 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       board_id: status.board_id ?? null,
     }));
 
-    const agentOptions = users.map((agent) => ({
+    const agentOptions = (users as Array<{ user_id: string; first_name?: string | null; last_name?: string | null }>).map((agent) => ({
       value: agent.user_id,
       label: `${agent.first_name} ${agent.last_name}`
     }));
 
-    const boardOptions = boards
-      .filter(board => board.board_id !== undefined)
+    const boardOptions = (boards as Array<{ board_id?: string; board_name?: string | null }>)
+      .filter((board): board is { board_id: string; board_name?: string | null } => board.board_id !== undefined)
       .map((board) => ({
         value: board.board_id,
         label: board.board_name || ""
       }));
 
-    const priorityOptions = priorities.map((priority) => ({
+    const priorityOptions = (priorities as Array<{ priority_id: string; priority_name: string; color?: string | null }>).map((priority) => ({
       value: priority.priority_id,
       label: priority.priority_name,
       color: priority.color
     }));
 
     // Get scheduled hours for ticket
-    const scheduleEntries = await trx('schedule_entries as se')
-      .select(
-        'se.*',
-        'sea.user_id'
-      )
-      .leftJoin('schedule_entry_assignees as sea', function() {
-        this.on('se.entry_id', 'sea.entry_id')
-           .andOn('se.tenant', 'sea.tenant')
-      })
+    const scheduleEntries = await tenantLeftJoin(
+      trx,
+      tenant,
+      tenantScopedTable(trx, 'schedule_entries as se', tenant)
+        .select(
+          'se.*',
+          'sea.user_id'
+        ),
+      'schedule_entry_assignees as sea',
+      'se.entry_id',
+      'sea.entry_id'
+    )
       .where({
         'se.work_item_id': ticketId,
-        'se.work_item_type': 'ticket',
-        'se.tenant': tenant
+        'se.work_item_type': 'ticket'
       });
 
     // Calculate scheduled hours per agent
@@ -796,11 +879,11 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     // Bundle context (master/child + settings + children list)
     const masterTicketId = normalizedTicketData.master_ticket_id ?? null;
     const bundleRootId = masterTicketId ?? ticketId;
-    const bundleSettings = await trx('ticket_bundle_settings')
-      .where({ tenant, master_ticket_id: bundleRootId })
+    const bundleSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+      .where({ master_ticket_id: bundleRootId })
       .first();
 
-    const rawBundleChildren = await trx('tickets as ct')
+    const rawBundleChildrenQuery = tenantScopedTable(trx, 'tickets as ct', tenant)
       .select(
         'ct.ticket_id',
         'ct.ticket_number',
@@ -814,16 +897,15 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         'ct.assigned_to',
         'ct.board_id',
         'ct.assigned_team_id'
-      )
-      .leftJoin('clients as comp', function() {
-        this.on('ct.client_id', 'comp.client_id')
-          .andOn('ct.tenant', 'comp.tenant');
-      })
-      .where({ 'ct.tenant': tenant, 'ct.master_ticket_id': bundleRootId })
+      );
+    tenantLeftJoin(trx, tenant, rawBundleChildrenQuery, 'clients as comp', 'ct.client_id', 'comp.client_id');
+    const rawBundleChildren = await rawBundleChildrenQuery
+      .where({ 'ct.master_ticket_id': bundleRootId })
       .orderBy('ct.updated_at', 'desc');
 
     const rawBundleMaster = masterTicketId
-      ? await trx('tickets as mt')
+      ? await (async () => {
+        const masterQuery = tenantScopedTable(trx, 'tickets as mt', tenant)
         .select(
           'mt.ticket_id',
           'mt.ticket_number',
@@ -837,13 +919,12 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           'mt.assigned_to',
           'mt.board_id',
           'mt.assigned_team_id'
-        )
-        .leftJoin('clients as comp', function() {
-          this.on('mt.client_id', 'comp.client_id')
-            .andOn('mt.tenant', 'comp.tenant');
-        })
-        .where({ 'mt.tenant': tenant, 'mt.ticket_id': masterTicketId })
-        .first()
+        );
+        tenantLeftJoin(trx, tenant, masterQuery, 'clients as comp', 'mt.client_id', 'comp.client_id');
+        return masterQuery
+          .where({ 'mt.ticket_id': masterTicketId })
+          .first();
+      })()
       : null;
 
     const bundleChildren = await filterAuthorizedTickets(trx, authorizationContext, rawBundleChildren);
@@ -857,27 +938,23 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     // Aggregated child inbound replies surfaced on master (view-only; not duplicated onto master)
     const aggregatedChildClientComments = isBundleMaster
-      ? await trx('comments as c')
+      ? await (async () => {
+        const commentsQuery = tenantScopedTable(trx, 'comments as c', tenant)
         .select(
           'c.*',
           'ct.ticket_id as child_ticket_id',
           'ct.ticket_number as child_ticket_number',
           'ct.title as child_ticket_title',
           'comp.client_name as child_client_name'
-        )
-        .leftJoin('tickets as ct', function() {
-          this.on('c.ticket_id', 'ct.ticket_id')
-            .andOn('c.tenant', 'ct.tenant');
-        })
-        .leftJoin('clients as comp', function() {
-          this.on('ct.client_id', 'comp.client_id')
-            .andOn('ct.tenant', 'comp.tenant');
-        })
-        .where({ 'c.tenant': tenant })
-        .andWhere('c.is_internal', false)
-        .andWhere('ct.master_ticket_id', ticketId)
-        .orderBy('c.created_at', 'desc')
-        .limit(200)
+        );
+        tenantLeftJoin(trx, tenant, commentsQuery, 'tickets as ct', 'c.ticket_id', 'ct.ticket_id');
+        tenantLeftJoin(trx, tenant, commentsQuery, 'clients as comp', 'ct.client_id', 'comp.client_id');
+        return commentsQuery
+          .where('c.is_internal', false)
+          .andWhere('ct.master_ticket_id', ticketId)
+          .orderBy('c.created_at', 'desc')
+          .limit(200);
+      })()
       : [];
 
     const filteredAggregatedChildClientComments = isBundleMaster
@@ -948,10 +1025,21 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       agentSchedules: agentSchedulesList
     };
     } catch (error) {
+      const expected = ticketActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
       console.error('Failed to fetch consolidated ticket data:', error);
-      throw new Error('Failed to fetch ticket data');
+      throw error;
     }
   });
+  } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -965,49 +1053,21 @@ async function buildTicketListBaseQuery(
   tenant: string,
   user: { user_id: string; user_type?: string; clientId?: string | null },
   validatedFilters: ITicketListFilters
-): Promise<{ builder: Knex.QueryBuilder }> {
+): Promise<{ builder: Knex.QueryBuilder; scopedQuery: TenantScopedQuery }> {
     const parsedStatusFilter = parseTicketStatusFilterValue(validatedFilters.statusId);
-    let baseQuery = trx('tickets as t')
-      .leftJoin('tickets as mt', function() {
-        this.on('t.master_ticket_id', 'mt.ticket_id')
-          .andOn('t.tenant', 'mt.tenant');
-      })
-      .leftJoin('statuses as s', function() {
-        this.on('t.status_id', 's.status_id')
-           .andOn('t.tenant', 's.tenant')
-      })
-      .leftJoin('priorities as p', function() {
-        this.on('t.priority_id', 'p.priority_id')
-           .andOn('t.tenant', 'p.tenant')
-           .andOnVal('p.item_type', '=', 'ticket')
-      })
-      .leftJoin('boards as c', function() {
-        this.on('t.board_id', 'c.board_id')
-           .andOn('t.tenant', 'c.tenant')
-      })
-      .leftJoin('categories as cat', function() {
-        this.on('t.category_id', 'cat.category_id')
-           .andOn('t.tenant', 'cat.tenant')
-      })
-      .leftJoin('clients as comp', function() {
-        this.on('t.client_id', 'comp.client_id')
-           .andOn('t.tenant', 'comp.tenant')
-      })
-      .leftJoin('users as u', function() {
-        this.on('t.entered_by', 'u.user_id')
-           .andOn('t.tenant', 'u.tenant')
-      })
-      .leftJoin('users as au', function() {
-        this.on('t.assigned_to', 'au.user_id')
-           .andOn('t.tenant', 'au.tenant')
-      })
-      .leftJoin('teams as tm', function() {
-        this.on('t.assigned_team_id', 'tm.team_id')
-           .andOn('t.tenant', 'tm.tenant')
-      })
-      .where({
-        't.tenant': tenant
-      });
+    const scopedQuery = tenantDb(trx, tenant).scoped('tickets as t');
+    let baseQuery = scopedQuery.builder;
+    tenantLeftJoin(trx, tenant, baseQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'statuses as s', 't.status_id', 's.status_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'priorities as p', 't.priority_id', 'p.priority_id', {
+      on: (join) => join.andOnVal('p.item_type', '=', 'ticket'),
+    });
+    tenantLeftJoin(trx, tenant, baseQuery, 'boards as c', 't.board_id', 'c.board_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'categories as cat', 't.category_id', 'cat.category_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'clients as comp', 't.client_id', 'comp.client_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'users as u', 't.entered_by', 'u.user_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'users as au', 't.assigned_to', 'au.user_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id');
 
     // Bundle view filter: hide children in bundled view
     if (validatedFilters.bundleView === 'bundled') {
@@ -1033,9 +1093,8 @@ async function buildTicketListBaseQuery(
         }
       });
     } else if (validatedFilters.boardFilterState !== 'all') {
-      const boardSubquery = trx('boards')
+      const boardSubquery = tenantScopedTable(trx, 'boards', tenant)
         .select('board_id')
-        .where('tenant', tenant)
         .where('is_inactive', validatedFilters.boardFilterState === 'inactive');
 
       baseQuery = baseQuery.whereIn('t.board_id', boardSubquery);
@@ -1055,13 +1114,12 @@ async function buildTicketListBaseQuery(
     }
 
     if (shouldApplyOpenOnlyStatusFilter(validatedFilters.statusId, validatedFilters.showOpenOnly)) {
-      baseQuery = baseQuery.whereExists(function() {
-        this.select('*')
-            .from('statuses')
-            .whereRaw('statuses.status_id = t.status_id')
-            .andWhere('statuses.is_closed', false)
-            .andWhere('statuses.tenant', tenant);
-      });
+      baseQuery = baseQuery.whereExists(
+        tenantScopedTable(trx, 'statuses', tenant)
+          .select('*')
+          .whereRaw('statuses.status_id = t.status_id')
+          .andWhere('statuses.is_closed', false)
+      );
     } else if (parsedStatusFilter.kind === 'name') {
       baseQuery = baseQuery.where('s.name', parsedStatusFilter.statusName);
     } else if (parsedStatusFilter.kind === 'id') {
@@ -1122,13 +1180,12 @@ async function buildTicketListBaseQuery(
       if (validatedFilters.bundleView === 'bundled') {
         baseQuery = baseQuery.where(function(this: any) {
           this.where('t.client_id', validatedFilters.clientId)
-            .orWhereExists(function(this: any) {
-              this.select('*')
-                .from('tickets as tc')
-                .whereRaw('tc.tenant = t.tenant')
-                .andWhereRaw('tc.master_ticket_id = t.ticket_id')
-                .andWhere('tc.client_id', validatedFilters.clientId);
-            });
+            .orWhereExists(
+              tenantScopedTable(trx, 'tickets as tc', tenant)
+                .select('*')
+                .whereRaw('tc.master_ticket_id = t.ticket_id')
+                .andWhere('tc.client_id', validatedFilters.clientId)
+            );
         });
       } else {
         baseQuery = baseQuery.where('t.client_id', validatedFilters.clientId);
@@ -1139,13 +1196,12 @@ async function buildTicketListBaseQuery(
       if (validatedFilters.bundleView === 'bundled') {
         baseQuery = baseQuery.where(function(this: any) {
           this.where('t.contact_name_id', validatedFilters.contactId)
-            .orWhereExists(function(this: any) {
-              this.select('*')
-                .from('tickets as tc')
-                .whereRaw('tc.tenant = t.tenant')
-                .andWhereRaw('tc.master_ticket_id = t.ticket_id')
-                .andWhere('tc.contact_name_id', validatedFilters.contactId);
-            });
+            .orWhereExists(
+              tenantScopedTable(trx, 'tickets as tc', tenant)
+                .select('*')
+                .whereRaw('tc.master_ticket_id = t.ticket_id')
+                .andWhere('tc.contact_name_id', validatedFilters.contactId)
+            );
         });
       } else {
         baseQuery = baseQuery.where('t.contact_name_id', validatedFilters.contactId);
@@ -1156,17 +1212,12 @@ async function buildTicketListBaseQuery(
 
     // Apply tag filter if provided
     if (validatedFilters.tags && validatedFilters.tags.length > 0) {
-      baseQuery = baseQuery.whereIn('t.ticket_id', function() {
-        this.select('tm.tagged_id')
-          .from('tag_mappings as tm')
-          .join('tag_definitions as td', function() {
-            this.on('tm.tenant', '=', 'td.tenant')
-                .andOn('tm.tag_id', '=', 'td.tag_id');
-          })
-          .where('tm.tagged_type', 'ticket')
-          .andWhere('tm.tenant', tenant)
-          .whereIn('td.tag_text', validatedFilters.tags as string[]);
-      });
+      const tagSubquery = tenantScopedTable(trx, 'tag_mappings as tm', tenant)
+        .select('tm.tagged_id')
+        .where('tm.tagged_type', 'ticket')
+        .whereIn('td.tag_text', validatedFilters.tags as string[]);
+      tenantDb(trx, tenant).tenantJoin(tagSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+      baseQuery = baseQuery.whereIn('t.ticket_id', tagSubquery);
     }
 
     // Apply assignee filter if provided
@@ -1325,7 +1376,10 @@ async function buildTicketListBaseQuery(
     // Wrap in object to prevent Promise thenable unwrapping.
     // Knex query builders have .then(), so returning one from an async function
     // would execute the query instead of returning the builder.
-    return { builder: baseQuery };
+    return {
+      builder: baseQuery,
+      scopedQuery: scopedQuery.withBuilder(baseQuery),
+    };
 }
 
 function buildTicketListSearchPrefixTsquery(raw: string): string | null {
@@ -1341,6 +1395,79 @@ function buildTicketListSearchPrefixTsquery(raw: string): string | null {
   }
 
   return tokens.map((token) => `${token}:*`).join(' & ');
+}
+
+function tenantScopedDerivedTableSql(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  tableName: string,
+  alias: string
+): { sql: string; bindings: Knex.RawBinding[] } {
+  const scoped = tenantDb(conn, tenant)
+    .table(tableName)
+    .select('*')
+    .toSQL();
+
+  return {
+    sql: `(${scoped.sql}) ${alias}`,
+    bindings: scoped.bindings as Knex.RawBinding[],
+  };
+}
+
+function tenantWhereColumnSql(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  leftTenantColumn: string,
+  rightTenantColumn: string
+): { sql: string; bindings: Knex.RawBinding[] } {
+  const fragmentSource = (conn as Knex)('__tenant_where_fragment__').select(conn.raw('1'));
+
+  tenantDb(conn, tenant).tenantWhereColumn(fragmentSource, leftTenantColumn, rightTenantColumn);
+
+  const compiled = fragmentSource.toSQL();
+  const marker = ' where ';
+  const markerIndex = compiled.sql.indexOf(marker);
+
+  if (markerIndex < 0) {
+    throw new Error('Tenant where-column SQL fragment marker was not present in compiled SQL.');
+  }
+
+  return {
+    sql: compiled.sql.slice(markerIndex + marker.length),
+    bindings: compiled.bindings as Knex.RawBinding[],
+  };
+}
+
+function tenantJoinSubquerySql(
+  facade: ReturnType<typeof tenantDb>,
+  conn: Knex | Knex.Transaction,
+  subquery: Knex.QueryBuilder | Knex.Raw,
+  left: string | Knex.Raw,
+  right: string | Knex.Raw,
+  options: Parameters<ReturnType<typeof tenantDb>['tenantJoinSubquery']>[4]
+): { sql: string; bindings: Knex.RawBinding[] } {
+  const fragmentSource = (conn as Knex)('__tenant_join_fragment__').select(conn.raw('1'));
+
+  facade.tenantJoinSubquery(
+    fragmentSource,
+    subquery as unknown as Knex.QueryBuilder,
+    left as unknown as string,
+    right as unknown as string,
+    options
+  );
+
+  const compiled = fragmentSource.toSQL();
+  const marker = ' from "__tenant_join_fragment__" ';
+  const markerIndex = compiled.sql.indexOf(marker);
+
+  if (markerIndex < 0) {
+    throw new Error('Tenant join subquery SQL fragment marker was not present in compiled SQL.');
+  }
+
+  return {
+    sql: compiled.sql.slice(markerIndex + marker.length),
+    bindings: compiled.bindings as Knex.RawBinding[],
+  };
 }
 
 function applyTicketListIndexedSearchFilter(
@@ -1366,6 +1493,8 @@ function applyTicketListIndexedSearchFilter(
       : 'si.client_scope_id IS NULL';
   const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
   const ilikePattern = `%${rawSearch}%`;
+  const searchIndex = tenantScopedDerivedTableSql(trx, tenant, 'app_search_index', 'si');
+  const titleSearchTickets = tenantScopedDerivedTableSql(trx, tenant, 'tickets', 't2');
 
   // Citus cannot push down an OR that mixes correlated EXISTS against two different
   // distributed tables (app_search_index vs tickets). Rewrite as UNION ALL of
@@ -1376,7 +1505,7 @@ function applyTicketListIndexedSearchFilter(
           CASE WHEN si.object_type = 'ticket_comment' THEN si.parent_id::uuid
                ELSE si.object_id::uuid END AS ticket_id,
           si.tenant
-        FROM app_search_index si
+        FROM ${searchIndex.sql}
         CROSS JOIN (
           SELECT
             websearch_to_tsquery('english', ?) AS tsq,
@@ -1384,8 +1513,7 @@ function applyTicketListIndexedSearchFilter(
             ?::text AS raw,
             ?::text AS identifier
         ) q
-        WHERE si.tenant = ?::uuid
-          AND si.object_type = ANY(?::text[])
+        WHERE si.object_type = ANY(?::text[])
           AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
           AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
           AND (si.is_internal_only = false OR ?::boolean = true)
@@ -1403,12 +1531,12 @@ function applyTicketListIndexedSearchFilter(
           )
   `;
   const legABindings: Knex.RawBinding[] = [
+    ...searchIndex.bindings,
     rawSearch,
     prefixTsquery,
     prefixTsquery,
     rawSearch,
     identifier,
-    tenant,
     ['ticket', 'ticket_comment'],
     ['ticket:read'],
     user.user_id,
@@ -1419,21 +1547,29 @@ function applyTicketListIndexedSearchFilter(
 
   const legB = `
         SELECT t2.ticket_id, t2.tenant
-        FROM tickets t2
-        WHERE t2.tenant = ?::uuid
-          AND (t2.title ILIKE ? OR t2.ticket_number ILIKE ?)
+        FROM ${titleSearchTickets.sql}
+        WHERE (t2.title ILIKE ? OR t2.ticket_number ILIKE ?)
   `;
-  const legBBindings: Knex.RawBinding[] = [tenant, ilikePattern, ilikePattern];
+  const legBBindings: Knex.RawBinding[] = [
+    ...titleSearchTickets.bindings,
+    ilikePattern,
+    ilikePattern,
+  ];
 
   // Leg A also surfaces bundled-child matches under the master when bundleView='bundled':
   // a search-index hit on a child ticket (or its comment) maps to the master ticket id.
   let legD = '';
   const legDBindings: Knex.RawBinding[] = [];
   if (includeBundledChildren) {
+    const bundledSearchIndex = tenantScopedDerivedTableSql(trx, tenant, 'app_search_index', 'si');
+    const childTickets = tenantScopedDerivedTableSql(trx, tenant, 'tickets', 'child');
+    const titleSearchChildTickets = tenantScopedDerivedTableSql(trx, tenant, 'tickets', 'tc');
+    const childSearchIndexTenantPredicate = tenantWhereColumnSql(trx, tenant, 'child.tenant', 'si.tenant');
+
     legD = `
         UNION ALL
         SELECT child.master_ticket_id AS ticket_id, child.tenant
-        FROM app_search_index si
+        FROM ${bundledSearchIndex.sql}
         CROSS JOIN (
           SELECT
             websearch_to_tsquery('english', ?) AS tsq,
@@ -1441,15 +1577,14 @@ function applyTicketListIndexedSearchFilter(
             ?::text AS raw,
             ?::text AS identifier
         ) q
-        JOIN tickets child
-          ON child.tenant = si.tenant
+        JOIN ${childTickets.sql}
+          ON ${childSearchIndexTenantPredicate.sql}
          AND child.master_ticket_id IS NOT NULL
          AND (
            (si.object_type = 'ticket' AND child.ticket_id::text = si.object_id)
            OR (si.object_type = 'ticket_comment' AND child.ticket_id::text = si.parent_id)
          )
-        WHERE si.tenant = ?::uuid
-          AND si.object_type = ANY(?::text[])
+        WHERE si.object_type = ANY(?::text[])
           AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
           AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
           AND (si.is_internal_only = false OR ?::boolean = true)
@@ -1468,46 +1603,59 @@ function applyTicketListIndexedSearchFilter(
 
         UNION ALL
         SELECT tc.master_ticket_id AS ticket_id, tc.tenant
-        FROM tickets tc
-        WHERE tc.tenant = ?::uuid
-          AND tc.master_ticket_id IS NOT NULL
+        FROM ${titleSearchChildTickets.sql}
+        WHERE tc.master_ticket_id IS NOT NULL
           AND (tc.title ILIKE ? OR tc.ticket_number ILIKE ?)
     `;
     legDBindings.push(
+      ...bundledSearchIndex.bindings,
       rawSearch,
       prefixTsquery,
       prefixTsquery,
       rawSearch,
       identifier,
-      tenant,
+      ...childTickets.bindings,
+      ...childSearchIndexTenantPredicate.bindings,
       ['ticket', 'ticket_comment'],
       ['ticket:read'],
       user.user_id,
       isInternalUser,
       user.user_id,
       ...clientScopeBindings,
-      tenant,
+      ...titleSearchChildTickets.bindings,
       ilikePattern,
       ilikePattern,
     );
   }
 
   const unionSql = `
-    INNER JOIN (
+    (
       SELECT DISTINCT ticket_id, tenant FROM (
         ${legA}
         UNION ALL
         ${legB}
         ${legD}
       ) u
-    ) as sm ON sm.ticket_id = t.ticket_id AND sm.tenant = t.tenant
+    ) as sm
   `;
-
-  return baseQuery.joinRaw(unionSql, [
+  const unionBindings: Knex.RawBinding[] = [
     ...legABindings,
     ...legBBindings,
     ...legDBindings,
-  ] as unknown as Knex.Value[]);
+  ];
+  const searchMatchesJoin = tenantJoinSubquerySql(
+    tenantDb(trx, tenant),
+    trx,
+    trx.raw(unionSql, unionBindings),
+    'sm.ticket_id',
+    't.ticket_id',
+    {
+      rootTenantColumn: 't.tenant',
+      joinedTenantColumn: 'sm.tenant',
+    }
+  );
+
+  return baseQuery.joinRaw(searchMatchesJoin.sql, searchMatchesJoin.bindings as unknown as Knex.Value[]);
 }
 
 /**
@@ -1548,6 +1696,39 @@ function applyTicketListSort(
 }
 
 /**
+ * Get the ORDER BY clause as a raw SQL string for use in window functions.
+ * Mirrors applyTicketListSort but returns a string instead of modifying a query.
+ */
+function getTicketListSortOrderByClause(validatedFilters: ITicketListFilters): string {
+    const sortBy = validatedFilters.sortBy ?? 'entered_at';
+    const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
+    const sortColumnMap: Record<string, { column?: string; rawExpression?: string }> = {
+      ticket_number: { column: 't.ticket_number' },
+      title: { column: 't.title' },
+      status_name: { column: 's.name' },
+      priority_name: { column: 'p.priority_name' },
+      board_name: { column: 'c.board_name' },
+      category_name: { column: 'cat.category_name' },
+      client_name: { column: 'comp.client_name' },
+      entered_at: { column: 't.entered_at' },
+      entered_by_name: { rawExpression: "COALESCE(CONCAT(u.first_name, ' ', u.last_name), '')" },
+      due_date: { column: 't.due_date' }
+    };
+    const selectedSort = sortColumnMap[sortBy] || sortColumnMap.entered_at;
+
+    let primarySort: string;
+    if (selectedSort.rawExpression) {
+      primarySort = `${selectedSort.rawExpression} ${sortDirection}`;
+    } else if (selectedSort.column) {
+      primarySort = `${selectedSort.column} ${sortDirection}`;
+    } else {
+      primarySort = `t.entered_at ${sortDirection}`;
+    }
+
+    return `${primarySort}, t.ticket_id DESC`;
+}
+
+/**
  * Validate and clean filter values, clearing "$undefined" string sentinel values.
  */
 function cleanFilterValues(validatedFilters: ITicketListFilters): ITicketListFilters {
@@ -1566,6 +1747,161 @@ function cleanFilterValues(validatedFilters: ITicketListFilters): ITicketListFil
     return validatedFilters;
 }
 
+function buildTicketListItemsQuery(
+  trx: Knex.Transaction,
+  tenant: string,
+  baseQuery: Knex.QueryBuilder
+): Knex.QueryBuilder {
+  const db = tenantDb(trx, tenant);
+  const bundleStats = db.table('tickets as tc')
+    .select(
+      'tc.master_ticket_id',
+      'tc.tenant',
+      trx.raw('COUNT(*)::int as bundle_child_count'),
+      trx.raw('array_agg(DISTINCT tc.client_id) FILTER (WHERE tc.client_id IS NOT NULL) as child_client_ids')
+    )
+    .whereNotNull('tc.master_ticket_id')
+    .groupBy('tc.master_ticket_id', 'tc.tenant')
+    .as('bs');
+  const additionalAgents = db.table('ticket_resources as tr')
+    .select(
+      'tr.ticket_id',
+      'tr.tenant',
+      trx.raw('COUNT(*) FILTER (WHERE tr.additional_user_id IS NOT NULL)::int as additional_agent_count'),
+      trx.raw(`COALESCE(
+        json_agg(
+          json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))
+        ) FILTER (WHERE uu.user_id IS NOT NULL),
+        '[]'::json
+      ) as additional_agents`)
+    )
+    .groupBy('tr.ticket_id', 'tr.tenant')
+    .as('ags');
+
+  db.tenantJoin(additionalAgents, 'users as uu', 'tr.additional_user_id', 'uu.user_id', {
+    type: 'left',
+    rootTenantColumn: 'tr.tenant',
+  });
+
+  const query = baseQuery.clone();
+  db.tenantJoinSubquery(query, bundleStats, 'bs.master_ticket_id', 't.ticket_id', {
+    type: 'left',
+    rootTenantColumn: 't.tenant',
+    joinedTenantColumn: 'bs.tenant',
+  });
+  db.tenantJoinSubquery(query, additionalAgents, 'ags.ticket_id', 't.ticket_id', {
+    type: 'left',
+    rootTenantColumn: 't.tenant',
+    joinedTenantColumn: 'ags.tenant',
+  });
+
+  return query
+    .select(
+      // Ticket columns (explicit list avoids fetching large unused columns)
+      't.ticket_id', 't.ticket_number', 't.title', 't.url',
+      't.board_id', 't.client_id', 't.location_id', 't.contact_name_id',
+      't.status_id', 't.category_id', 't.subcategory_id', 't.priority_id',
+      't.entered_by', 't.updated_by', 't.closed_by',
+      't.assigned_to', 't.assigned_team_id',
+      't.entered_at', 't.updated_at', 't.closed_at', 't.due_date',
+      't.is_closed', 't.attributes',
+      't.master_ticket_id', 't.tenant',
+      't.itil_impact', 't.itil_urgency', 't.itil_priority_level',
+      't.response_state', 't.ticket_origin',
+      't.sla_policy_id', 't.sla_started_at',
+      't.sla_response_due_at', 't.sla_response_at', 't.sla_response_met',
+      't.sla_resolution_due_at', 't.sla_resolution_at', 't.sla_resolution_met',
+      't.sla_paused_at', 't.sla_total_pause_minutes',
+      // Bundle stats from pre-aggregated JOIN
+      trx.raw('COALESCE(bs.bundle_child_count, 0) as bundle_child_count'),
+      trx.raw(`COALESCE(
+        (SELECT COUNT(DISTINCT cid) FROM unnest(
+          array_append(COALESCE(bs.child_client_ids, ARRAY[]::uuid[]), t.client_id)
+        ) AS cid WHERE cid IS NOT NULL),
+        0
+      )::int as bundle_distinct_client_count`),
+      // Joined display columns
+      'mt.ticket_number as bundle_master_ticket_number',
+      's.name as status_name',
+      'p.priority_name',
+      'p.color as priority_color',
+      'c.board_name',
+      'cat.category_name',
+      'comp.client_name',
+      trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
+      trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
+      'tm.team_name as assigned_team_name',
+      // Additional agents from pre-aggregated JOIN
+      trx.raw('COALESCE(ags.additional_agent_count, 0)::int as additional_agent_count'),
+      trx.raw("COALESCE(ags.additional_agents, '[]'::json) as additional_agents"),
+    );
+}
+
+function mapTicketListItems(tickets: any[]): ITicketListItem[] {
+  return tickets.map((ticket: any): ITicketListItem => {
+    const {
+      status_id,
+      priority_id,
+      board_id,
+      category_id,
+      entered_by,
+      status_name,
+      priority_name,
+      priority_color,
+      board_name,
+      category_name,
+      client_name,
+      entered_by_name,
+      assigned_to_name,
+      assigned_team_name,
+      additional_agent_count,
+      additional_agents,
+      bundle_child_count,
+      bundle_distinct_client_count,
+      bundle_master_ticket_number,
+      // NOTE: Legacy ITIL fields removed - now using unified system
+      ...rest
+    } = ticket;
+
+    const convertedRest = convertDates(rest);
+    // Clean up null optional fields to undefined for type compatibility
+    if (convertedRest.itil_impact === null) {
+      convertedRest.itil_impact = undefined;
+    }
+    if (convertedRest.itil_urgency === null) {
+      convertedRest.itil_urgency = undefined;
+    }
+    if (convertedRest.itil_priority_level === null) {
+      convertedRest.itil_priority_level = undefined;
+    }
+    if (convertedRest.due_date === null) {
+      convertedRest.due_date = undefined;
+    }
+    return {
+      ...convertedRest,
+      status_id: status_id || null,
+      priority_id: priority_id || null,
+      board_id: board_id || null,
+      category_id: category_id || null,
+      entered_by: entered_by || null,
+      status_name: status_name || 'Unknown',
+      priority_name: priority_name || 'Unknown',
+      priority_color: priority_color || '#6B7280',
+      board_name: board_name || 'Unknown',
+      category_name: category_name || 'Unknown',
+      client_name: client_name || 'Unknown',
+      entered_by_name: entered_by_name || 'Unknown',
+      assigned_to_name: assigned_to_name || null,
+      assigned_team_name: assigned_team_name || null,
+      additional_agent_count: additional_agent_count || 0,
+      additional_agents: additional_agents || [],
+      bundle_child_count: typeof bundle_child_count === 'number' ? bundle_child_count : Number.parseInt(String(bundle_child_count ?? '0'), 10) || 0,
+      bundle_distinct_client_count: typeof bundle_distinct_client_count === 'number' ? bundle_distinct_client_count : Number.parseInt(String(bundle_distinct_client_count ?? '0'), 10) || 0,
+      bundle_master_ticket_number: bundle_master_ticket_number ?? null
+    };
+  });
+}
+
 /**
  * Get tickets for list with page-based pagination
  * This replaces cursor-based pagination with traditional page-based approach
@@ -1576,169 +1912,68 @@ export const getTicketsForList = withAuth(async (
   filters: ITicketListFilters,
   page: number = 1,
   pageSize: number = 10
-): Promise<{ tickets: ITicketListItem[], totalCount: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> } }> => {
+): Promise<{ tickets: ITicketListItem[], totalCount: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> } } | TicketActionError> => {
   const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view tickets');
-    }
-
     try {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view tickets');
+      }
+
       const validatedFilters = cleanFilterValues(
         validateData(ticketListFiltersSchema, filters) as ITicketListFilters
       );
 
     // Build base query for filtering
-    const { builder: baseQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
+    const { builder: baseQuery, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
     const authorizationContext = await createTicketAuthorizationContext(
       trx,
       tenant,
       user as IUserWithRoles
     );
 
-    // Build query for results before pagination so authorization can narrow rows first.
-    // R2: Select explicit columns instead of t.* to reduce response size
-    // R3: Use pre-aggregated LEFT JOINs instead of correlated subqueries
-    const paginatedQuery = baseQuery
-      .clone()
-      .joinRaw(`LEFT JOIN (
-        SELECT
-          tc.master_ticket_id,
-          tc.tenant,
-          COUNT(*)::int as bundle_child_count,
-          array_agg(DISTINCT tc.client_id) FILTER (WHERE tc.client_id IS NOT NULL) as child_client_ids
-        FROM tickets tc
-        WHERE tc.master_ticket_id IS NOT NULL AND tc.tenant = ?
-        GROUP BY tc.master_ticket_id, tc.tenant
-      ) as bs ON bs.master_ticket_id = t.ticket_id AND bs.tenant = t.tenant`, [tenant])
-      .joinRaw(`LEFT JOIN (
-        SELECT
-          tr.ticket_id,
-          tr.tenant,
-          COUNT(*) FILTER (WHERE tr.additional_user_id IS NOT NULL)::int as additional_agent_count,
-          COALESCE(
-            json_agg(
-              json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))
-            ) FILTER (WHERE uu.user_id IS NOT NULL),
-            '[]'::json
-          ) as additional_agents
-        FROM ticket_resources tr
-        LEFT JOIN users uu ON tr.additional_user_id = uu.user_id AND tr.tenant = uu.tenant
-        WHERE tr.tenant = ?
-        GROUP BY tr.ticket_id, tr.tenant
-      ) as ags ON ags.ticket_id = t.ticket_id AND ags.tenant = t.tenant`, [tenant])
-      .select(
-        // Ticket columns (explicit list avoids fetching large unused columns)
-        't.ticket_id', 't.ticket_number', 't.title', 't.url',
-        't.board_id', 't.client_id', 't.location_id', 't.contact_name_id',
-        't.status_id', 't.category_id', 't.subcategory_id', 't.priority_id',
-        't.entered_by', 't.updated_by', 't.closed_by',
-        't.assigned_to', 't.assigned_team_id',
-        't.entered_at', 't.updated_at', 't.closed_at', 't.due_date',
-        't.is_closed', 't.attributes',
-        't.master_ticket_id', 't.tenant',
-        't.itil_impact', 't.itil_urgency', 't.itil_priority_level',
-        't.response_state', 't.ticket_origin',
-        't.sla_policy_id', 't.sla_started_at',
-        't.sla_response_due_at', 't.sla_response_at', 't.sla_response_met',
-        't.sla_resolution_due_at', 't.sla_resolution_at', 't.sla_resolution_met',
-        't.sla_paused_at', 't.sla_total_pause_minutes',
-        // Bundle stats from pre-aggregated JOIN
-        trx.raw('COALESCE(bs.bundle_child_count, 0) as bundle_child_count'),
-        trx.raw(`COALESCE(
-          (SELECT COUNT(DISTINCT cid) FROM unnest(
-            array_append(COALESCE(bs.child_client_ids, ARRAY[]::uuid[]), t.client_id)
-          ) AS cid WHERE cid IS NOT NULL),
-          0
-        )::int as bundle_distinct_client_count`),
-        // Joined display columns
-        'mt.ticket_number as bundle_master_ticket_number',
-        's.name as status_name',
-        'p.priority_name',
-        'p.color as priority_color',
-        'c.board_name',
-        'cat.category_name',
-        'comp.client_name',
-        trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
-        trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
-        'tm.team_name as assigned_team_name',
-        // Additional agents from pre-aggregated JOIN
-        trx.raw('COALESCE(ags.additional_agent_count, 0)::int as additional_agent_count'),
-        trx.raw("COALESCE(ags.additional_agents, '[]'::json) as additional_agents"),
+    let totalCount = 0;
+    let ticketListItems: ITicketListItem[] = [];
+    const normalizedPage = Math.max(1, Number.isFinite(page) ? Math.floor(page) : 1);
+    const normalizedPageSize = Math.max(1, Number.isFinite(pageSize) ? Math.floor(pageSize) : 10);
+    const offset = (normalizedPage - 1) * normalizedPageSize;
+    const scopedBaseQuery = scopedQuery.clone();
+    const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
+
+    if (authSqlResult.supported) {
+      const countQuery = scopedBaseQuery.builder
+        .clone()
+        .clearSelect()
+        .clearOrder()
+        .countDistinct<{ count: string | number }[]>({ count: 't.ticket_id' })
+        .first();
+
+      const pageQuery = applyTicketListSort(
+        buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder),
+        validatedFilters
+      )
+        .limit(normalizedPageSize)
+        .offset(offset);
+
+      const [countRow, pageTickets] = await Promise.all([countQuery, pageQuery]);
+      totalCount = Number((countRow as { count?: string | number } | undefined)?.count ?? 0);
+      ticketListItems = mapTicketListItems(pageTickets);
+    } else {
+      // Future ABAC templates/constraints may not be representable in SQL yet.
+      // Fall back to the exact JS kernel path instead of risking overexposure.
+      const tickets = await applyTicketListSort(
+        buildTicketListItemsQuery(trx, tenant, baseQuery),
+        validatedFilters
       );
-
-    const tickets = await applyTicketListSort(paginatedQuery, validatedFilters);
-    const authorizedTickets = await filterAuthorizedTickets(trx, authorizationContext, tickets);
-    const totalCount = authorizedTickets.length;
-    const paginatedAuthorizedTickets = authorizedTickets.slice(
-      (page - 1) * pageSize,
-      (page - 1) * pageSize + pageSize
-    );
-
-    // Transform and validate the data
-    const ticketListItems = paginatedAuthorizedTickets.map((ticket: any): ITicketListItem => {
-      const {
-        status_id,
-        priority_id,
-        board_id,
-        category_id,
-        entered_by,
-        status_name,
-        priority_name,
-        priority_color,
-        board_name,
-        category_name,
-        client_name,
-        entered_by_name,
-        assigned_to_name,
-        assigned_team_name,
-        additional_agent_count,
-        additional_agents,
-        bundle_child_count,
-        bundle_distinct_client_count,
-        bundle_master_ticket_number,
-        // NOTE: Legacy ITIL fields removed - now using unified system
-        ...rest
-      } = ticket;
-
-      const convertedRest = convertDates(rest);
-      // Clean up null optional fields to undefined for type compatibility
-      if (convertedRest.itil_impact === null) {
-        convertedRest.itil_impact = undefined;
-      }
-      if (convertedRest.itil_urgency === null) {
-        convertedRest.itil_urgency = undefined;
-      }
-      if (convertedRest.itil_priority_level === null) {
-        convertedRest.itil_priority_level = undefined;
-      }
-      if (convertedRest.due_date === null) {
-        convertedRest.due_date = undefined;
-      }
-      return {
-        ...convertedRest,
-        status_id: status_id || null,
-        priority_id: priority_id || null,
-        board_id: board_id || null,
-        category_id: category_id || null,
-        entered_by: entered_by || null,
-        status_name: status_name || 'Unknown',
-        priority_name: priority_name || 'Unknown',
-        priority_color: priority_color || '#6B7280',
-        board_name: board_name || 'Unknown',
-        category_name: category_name || 'Unknown',
-        client_name: client_name || 'Unknown',
-        entered_by_name: entered_by_name || 'Unknown',
-        assigned_to_name: assigned_to_name || null,
-        assigned_team_name: assigned_team_name || null,
-        additional_agent_count: additional_agent_count || 0,
-        additional_agents: additional_agents || [],
-        bundle_child_count: typeof bundle_child_count === 'number' ? bundle_child_count : Number.parseInt(String(bundle_child_count ?? '0'), 10) || 0,
-        bundle_distinct_client_count: typeof bundle_distinct_client_count === 'number' ? bundle_distinct_client_count : Number.parseInt(String(bundle_distinct_client_count ?? '0'), 10) || 0,
-        bundle_master_ticket_number: bundle_master_ticket_number ?? null
-      };
-    });
+      const authorizedTickets = await filterAuthorizedTickets(trx, authorizationContext, tickets);
+      totalCount = authorizedTickets.length;
+      const paginatedAuthorizedTickets = authorizedTickets.slice(
+        (page - 1) * pageSize,
+        (page - 1) * pageSize + pageSize
+      );
+      ticketListItems = mapTicketListItems(paginatedAuthorizedTickets);
+    }
 
     // Fetch metadata in parallel: avatar URLs, team avatar URLs, ticket tags
     const ticketIds = ticketListItems
@@ -1747,6 +1982,9 @@ export const getTicketsForList = withAuth(async (
 
     const agentUserIds = new Set<string>();
     ticketListItems.forEach((ticket: ITicketListItem) => {
+      if (ticket.assigned_to) {
+        agentUserIds.add(ticket.assigned_to);
+      }
       ticket.additional_agents?.forEach((agent: { user_id: string }) => {
         agentUserIds.add(agent.user_id);
       });
@@ -1759,7 +1997,14 @@ export const getTicketsForList = withAuth(async (
       }
     });
 
-    const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows] = await Promise.all([
+    const clientIds = new Set<string>();
+    ticketListItems.forEach((ticket: ITicketListItem) => {
+      if (ticket.client_id) {
+        clientIds.add(ticket.client_id);
+      }
+    });
+
+    const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows, clientLogoUrlsMap] = await Promise.all([
       agentUserIds.size > 0
         ? getEntityImageUrlsBatch('user', Array.from(agentUserIds), tenant)
         : Promise.resolve(new Map<string, string | null>()),
@@ -1767,12 +2012,13 @@ export const getTicketsForList = withAuth(async (
         ? getEntityImageUrlsBatch('team', Array.from(teamIds), tenant)
         : Promise.resolve(new Map<string, string | null>()),
       ticketIds.length > 0
-        ? trx('tag_mappings as tm')
-            .join('tag_definitions as td', function() {
-              this.on('tm.tenant', '=', 'td.tenant')
-                .andOn('tm.tag_id', '=', 'td.tag_id');
-            })
-            .where('tm.tenant', tenant)
+        ? tenantDb(trx, tenant)
+            .tenantJoin(
+              tenantScopedTable(trx, 'tag_mappings as tm', tenant),
+              'tag_definitions as td',
+              'tm.tag_id',
+              'td.tag_id'
+            )
             .whereIn('tm.tagged_id', ticketIds)
             .where('tm.tagged_type', 'ticket')
             .select(
@@ -1786,7 +2032,15 @@ export const getTicketsForList = withAuth(async (
               'td.text_color'
             )
         : Promise.resolve([]),
+      clientIds.size > 0
+        ? getClientLogoUrlsBatch(Array.from(clientIds), tenant)
+        : Promise.resolve(new Map<string, string | null>()),
     ]);
+
+    // Attach batched client logo URLs to each row (single query, no N+1).
+    ticketListItems.forEach((ticket: ITicketListItem) => {
+      ticket.client_logo_url = ticket.client_id ? (clientLogoUrlsMap.get(ticket.client_id) ?? null) : null;
+    });
 
     // Convert Maps to Records for serialization
     const agentAvatarUrls: Record<string, string | null> = {};
@@ -1823,8 +2077,12 @@ export const getTicketsForList = withAuth(async (
       }
     };
     } catch (error) {
+      const expected = ticketListActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
       console.error('Failed to fetch tickets:', error);
-      throw new Error('Failed to fetch tickets');
+      throw error;
     }
   });
 });
@@ -1837,34 +2095,53 @@ export const getAllMatchingTicketIds = withAuth(async (
   user,
   { tenant },
   filters: ITicketListFilters
-): Promise<string[]> => {
+): Promise<string[] | TicketActionError> => {
   const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view tickets');
+    try {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view tickets');
+      }
+
+      const validatedFilters = cleanFilterValues(
+        validateData(ticketListFiltersSchema, filters) as ITicketListFilters
+      );
+
+      const { builder: baseQuery, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
+      const authorizationContext = await createTicketAuthorizationContext(
+        trx,
+        tenant,
+        user as IUserWithRoles
+      );
+
+      const scopedBaseQuery = scopedQuery.clone();
+      const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
+      const rows = authSqlResult.supported
+        ? await scopedBaseQuery.builder
+            .clearSelect()
+            .clearOrder()
+            .select('t.ticket_id')
+        : await filterAuthorizedTickets(
+            trx,
+            authorizationContext,
+            await baseQuery
+              .clone()
+              .clearSelect()
+              .clearOrder()
+              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id')
+          );
+
+      const ticketIds: Array<string | null | undefined> = rows.map((row: { ticket_id?: string | null }) => row.ticket_id);
+      return ticketIds.filter((ticketId): ticketId is string => typeof ticketId === 'string' && ticketId.length > 0);
+    } catch (error) {
+      const expected = ticketListActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      console.error('Failed to fetch matching ticket IDs:', error);
+      throw error;
     }
-
-    const validatedFilters = cleanFilterValues(
-      validateData(ticketListFiltersSchema, filters) as ITicketListFilters
-    );
-
-    const { builder: baseQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
-    const authorizationContext = await createTicketAuthorizationContext(
-      trx,
-      tenant,
-      user as IUserWithRoles
-    );
-
-    const rows = await baseQuery
-      .clone()
-      .clearSelect()
-      .clearOrder()
-      .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id');
-    const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, rows);
-    return authorizedRows
-      .map((row: { ticket_id?: string | null }) => row.ticket_id)
-      .filter((ticketId): ticketId is string => typeof ticketId === 'string' && ticketId.length > 0);
   });
 });
 
@@ -1879,7 +2156,7 @@ export const getTicketBoardIds = withAuth(async (
   user,
   { tenant },
   ticketIds: string[]
-): Promise<Array<{ ticket_id: string; board_id: string | null }>> => {
+): Promise<Array<{ ticket_id: string; board_id: string | null }> | TicketActionError> => {
   const uniqueIds = Array.from(
     new Set(ticketIds.filter((id): id is string => typeof id === 'string' && id.length > 0))
   );
@@ -1890,29 +2167,48 @@ export const getTicketBoardIds = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view tickets');
+    try {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view tickets');
+      }
+
+      const authorizationContext = await createTicketAuthorizationContext(
+        trx,
+        tenant,
+        user as IUserWithRoles
+      );
+
+      const boardQuery = tenantDb(trx, tenant).scoped('tickets as t');
+      boardQuery.builder
+        .whereIn('t.ticket_id', uniqueIds)
+        .select('t.ticket_id', 't.board_id');
+      const authSqlResult = applyTicketReadAuthorizationSql(boardQuery, trx, tenant, authorizationContext);
+
+      const rows: Array<{ ticket_id?: string | null; board_id?: string | null }> = authSqlResult.supported
+        ? await boardQuery.builder
+        : await filterAuthorizedTickets(
+            trx,
+            authorizationContext,
+            await tenantScopedTable(trx, 'tickets as t', tenant)
+              .whereIn('t.ticket_id', uniqueIds)
+              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id')
+          );
+
+      return rows
+        .filter((row: { ticket_id?: string | null }): row is { ticket_id: string; board_id?: string | null } =>
+          typeof row.ticket_id === 'string' && row.ticket_id.length > 0)
+        .map((row) => ({
+          ticket_id: row.ticket_id,
+          board_id: row.board_id ?? null,
+        }));
+    } catch (error) {
+      const expected = ticketListActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      console.error('Failed to fetch ticket board IDs:', error);
+      throw error;
     }
-
-    const authorizationContext = await createTicketAuthorizationContext(
-      trx,
-      tenant,
-      user as IUserWithRoles
-    );
-
-    const rows = await trx('tickets as t')
-      .where('t.tenant', tenant)
-      .whereIn('t.ticket_id', uniqueIds)
-      .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id');
-
-    const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, rows);
-    return authorizedRows
-      .filter((row: { ticket_id?: string | null }): row is { ticket_id: string; board_id?: string | null } =>
-        typeof row.ticket_id === 'string' && row.ticket_id.length > 0)
-      .map((row) => ({
-        ticket_id: row.ticket_id,
-        board_id: row.board_id ?? null,
-      }));
   });
 });
 
@@ -1924,141 +2220,140 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
   const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view ticket options');
-    }
-
     try {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view ticket options');
+      }
 
-    // Fetch all options in parallel
-    const [
-      statuses,
-      priorities,
-      boards,
-      categories,
-      clients,
-      users,
-      tags
-    ] = await Promise.all([
-      trx('statuses')
+      // Fetch all options in parallel
+      const scopedDb = tenantDb(trx, tenant);
+      const ticketTagMappingsQuery = scopedDb.table('tag_mappings as tm')
+        .select(trx.raw('1'))
+        .whereRaw('?? = ??', ['tm.tag_id', 'td.tag_id']);
+      scopedDb.tenantWhereColumn(ticketTagMappingsQuery, 'tm.tenant', 'td.tenant');
+
+      const [
+        statuses,
+        priorities,
+        boards,
+        categories,
+        clients,
+        users,
+        tags
+      ] = await Promise.all([
+      tenantScopedTable(trx, 'statuses', tenant)
         .where({
-          tenant: tenant,
           status_type: 'ticket'  // Changed from item_type to status_type
         })
         .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
 
       // Fetch only tenant-specific ticket priorities (includes ITIL ones copied to tenant)
-      trx('priorities')
-        .where({ tenant, item_type: 'ticket' })
+      tenantScopedTable(trx, 'priorities', tenant)
+        .where({ item_type: 'ticket' })
         .orderBy('order_number', 'asc')
         .orderBy('priority_name', 'asc'),
       
-      trx('boards')
-        .where({ tenant })
+      tenantScopedTable(trx, 'boards', tenant)
         .orderBy('board_name', 'asc'),
 
       // Fetch only tenant-specific categories (includes ITIL ones copied to tenant)
-      trx('categories')
-        .where({ tenant })
+      tenantScopedTable(trx, 'categories', tenant)
         .orderBy('display_order', 'asc')
         .orderBy('category_name', 'asc'),
       
-      trx('clients as c')
+      tenantScopedTable(trx, 'clients as c', tenant)
         .select('c.*')
-        .where({ 'c.tenant': tenant })
         .orderBy('c.client_name', 'asc'),
 
-      trx('users')
-        .where({ tenant })
+      tenantScopedTable(trx, 'users', tenant)
         .orderBy('first_name', 'asc'),
 
       // Fetch all unique tags for tickets (with colors, filtering orphans)
       // Use DISTINCT ON for deduplication by tag_text (PostgreSQL-specific but works with Citus)
-      trx.raw(`
-        SELECT DISTINCT ON (td.tag_text) td.tag_id, td.tag_text, td.background_color, td.text_color
-        FROM tag_definitions td
-        WHERE td.tenant = ?
-          AND td.tagged_type = 'ticket'
-          AND EXISTS (
-            SELECT 1 FROM tag_mappings tm
-            WHERE tm.tenant = td.tenant AND tm.tag_id = td.tag_id
-          )
-        ORDER BY td.tag_text ASC, td.created_at ASC
-      `, [tenant])
+      scopedDb.table('tag_definitions as td')
+        .distinctOn('td.tag_text')
+        .select('td.tag_id', 'td.tag_text', 'td.background_color', 'td.text_color')
+        .where('td.tagged_type', 'ticket')
+        .whereExists(ticketTagMappingsQuery)
+        .orderBy('td.tag_text', 'asc')
+        .orderBy('td.created_at', 'asc')
     ]);
 
-    // Format options for dropdowns
-    const statusOptions = [
-      { value: TICKET_STATUS_FILTER_OPEN, label: 'All open statuses' },
-      { value: TICKET_STATUS_FILTER_ALL, label: 'All Statuses' },
-      ...statuses.map((status: any) => ({
-        value: status.status_id,
-        label: status.name || "",
-        className: status.is_closed ? 'bg-gray-200 text-gray-600' : undefined,
-        statusName: status.name || "",
-        boardId: status.board_id || null,
-        isClosed: Boolean(status.is_closed),
-      }))
-    ];
+      // Format options for dropdowns
+      const statusOptions = [
+        { value: TICKET_STATUS_FILTER_OPEN, label: 'All open statuses' },
+        { value: TICKET_STATUS_FILTER_ALL, label: 'All Statuses' },
+        ...statuses.map((status: any) => ({
+          value: status.status_id,
+          label: status.name || "",
+          className: status.is_closed ? 'bg-gray-200 text-gray-600' : undefined,
+          statusName: status.name || "",
+          boardId: status.board_id || null,
+          isClosed: Boolean(status.is_closed),
+        }))
+      ];
 
-    const priorityOptions = [
-      { value: 'all', label: 'All Priorities' },
-      ...priorities.map((priority: any) => ({
-        value: priority.priority_id,
-        label: priority.priority_name,
-        color: priority.color
-      }))
-    ];
+      const priorityOptions = [
+        { value: 'all', label: 'All Priorities' },
+        ...priorities.map((priority: any) => ({
+          value: priority.priority_id,
+          label: priority.priority_name,
+          color: priority.color
+        }))
+      ];
 
-    const boardOptions: IBoard[] = boards.filter((board: IBoard) => board.board_id !== undefined);
+      const boardOptions: IBoard[] = boards.filter((board: IBoard) => board.board_id !== undefined);
 
-    const agentOptions = users.map((user: any) => ({
-      value: user.user_id,
-      label: `${user.first_name} ${user.last_name}`
-    }));
+      const agentOptions = users.map((user: any) => ({
+        value: user.user_id,
+        label: `${user.first_name} ${user.last_name}`
+      }));
 
-    // --- Add Logo URL Processing ---
-    const clientsData = clients; 
+      // --- Add Logo URL Processing ---
+      const clientsData = clients as IClient[];
 
-    // Process clients to add logoUrl using batch loading
-    const clientIds = clientsData.map(c => c.client_id);
-    const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+      // Process clients to add logoUrl using batch loading
+      const clientIds = clientsData.map((c: IClient) => c.client_id);
+      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
     
-    const clientsWithLogos = clientsData.map((clientData) => {
-      const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
+      const clientsWithLogos = clientsData.map((clientData: IClient) => {
+        const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
+        return {
+          ...clientData,
+          properties: clientData.properties || {},
+          logoUrl,
+        };
+      });
+      // --- End Logo URL Processing ---
+
+      // Use tenant categories directly (includes ITIL ones if copied)
+
       return {
-        ...clientData,
-        properties: clientData.properties || {},
-        logoUrl,
+        statusOptions,
+        priorityOptions,
+        boardOptions,
+        agentOptions,
+        categories,
+        clients: clientsWithLogos, // Return clients with logos
+        users,
+        tags: (tags || []).map((tag: any) => ({
+          tag_id: tag.tag_id,
+          tag_text: tag.tag_text,
+          tagged_id: '',
+          tagged_type: 'ticket' as const,
+          tenant: tenant,
+          background_color: tag.background_color,
+          text_color: tag.text_color
+        }))
       };
-    });
-    // --- End Logo URL Processing ---
-
-    // Use tenant categories directly (includes ITIL ones if copied)
-
-    return {
-      statusOptions,
-      priorityOptions,
-      boardOptions,
-      agentOptions,
-      categories,
-      clients: clientsWithLogos, // Return clients with logos
-      users,
-      // Handle raw query result format (tags comes from trx.raw which returns { rows: [...] })
-      tags: (tags?.rows || []).map((tag: any) => ({
-        tag_id: tag.tag_id,
-        tag_text: tag.tag_text,
-        tagged_id: '',
-        tagged_type: 'ticket' as const,
-        tenant: tenant,
-        background_color: tag.background_color,
-        text_color: tag.text_color
-      }))
-    };
     } catch (error) {
+      const expected = ticketActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
       console.error('Failed to fetch ticket form options:', error);
-      throw new Error('Failed to fetch ticket form options');
+      throw error;
     }
   });
 });
@@ -2077,6 +2372,10 @@ export interface UpdateTicketInTransactionOptions {
   /** Close despite unmet close rules; honored only with ticket:close_override. */
   overrideCloseRules?: boolean;
   overrideCloseRulesReason?: string | null;
+  /** Skip customer-facing ticket notifications for this update operation. */
+  suppressContactNotifications?: boolean;
+  /** Also skip internal staff notifications; requires suppressContactNotifications. */
+  suppressInternalNotifications?: boolean;
   /** Automation exemption from close rules (workflow/import/auto-close/portal); audit-logged. */
   bypassCloseRules?: { source: CloseRuleBypassSource };
   /**
@@ -2099,10 +2398,16 @@ export async function updateTicketInTransaction(
     try {
       // Validate update data
       const validatedData = validateData(ticketUpdateSchema, data);
+      const suppressContactNotifications = options?.suppressContactNotifications === true;
+      const suppressInternalNotifications = options?.suppressInternalNotifications === true;
+
+      if (suppressInternalNotifications && !suppressContactNotifications) {
+        throw new Error('suppressInternalNotifications requires suppressContactNotifications');
+      }
 
     // Get current ticket state before update
-    const currentTicket = await trx('tickets')
-      .where({ ticket_id: id, tenant: tenant })
+    const currentTicket = await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ ticket_id: id })
       .first();
 
     if (!currentTicket) {
@@ -2143,8 +2448,7 @@ export async function updateTicketInTransaction(
         const priorityNamePattern = `P${priorityLevel} -%`;
 
         // Get the corresponding ITIL priority record from tenant's priorities table
-        const itilPriorityRecord = await trx('priorities')
-          .where('tenant', tenant)
+        const itilPriorityRecord = await tenantScopedTable(trx, 'priorities', tenant)
           .where('is_from_itil_standard', true)
           .where('priority_name', 'like', priorityNamePattern)
           .where('item_type', 'ticket')
@@ -2160,7 +2464,6 @@ export async function updateTicketInTransaction(
     // Check if we're updating the assigned_to field
     const isChangingAssignment = 'assigned_to' in updateData &&
                                 updateData.assigned_to !== currentTicket.assigned_to;
-    const updatedFields = diffTicketFields(currentTicket, updateData as Record<string, unknown>);
     const isBoardChange =
       'board_id' in updateData &&
       !!updateData.board_id &&
@@ -2177,8 +2480,8 @@ export async function updateTicketInTransaction(
 
       if (newSubcategoryId) {
         // If setting a subcategory, verify it's a valid child of the category
-        const subcategory = await trx('categories')
-          .where({ category_id: newSubcategoryId, tenant: tenant })
+        const subcategory = await tenantScopedTable(trx, 'categories', tenant)
+          .where({ category_id: newSubcategoryId })
           .first();
 
         if (subcategory && subcategory.parent_category !== newCategoryId) {
@@ -2207,12 +2510,17 @@ export async function updateTicketInTransaction(
     }
 
     // Get the status before and after update to check for closure
-    const oldStatus = await trx('statuses')
+    const oldStatus = await tenantScopedTable(trx, 'statuses', tenant)
       .where({
-        status_id: currentTicket.status_id,
-        tenant: tenant
+        status_id: currentTicket.status_id
       })
       .first();
+    const newStatus = updateData.status_id
+      ? await tenantScopedTable(trx, 'statuses', tenant)
+          .where({ status_id: updateData.status_id })
+          .first()
+      : oldStatus;
+    const isClosingTicket = Boolean(newStatus?.is_closed && !oldStatus?.is_closed);
 
     const isSystemActor = options?.systemActor === true;
 
@@ -2222,10 +2530,7 @@ export async function updateTicketInTransaction(
     // unless gates pass, a permissioned override applies, or the caller is an
     // exempt automation path (bypassCloseRules).
     if ('status_id' in updateData && updateData.status_id && updateData.status_id !== currentTicket.status_id) {
-      const nextStatus = await trx('statuses')
-        .where({ status_id: updateData.status_id, tenant: tenant })
-        .first();
-      if (nextStatus?.is_closed && !oldStatus?.is_closed) {
+      if (isClosingTicket) {
         const merged = { ...currentTicket, ...updateData };
         await enforceTicketCloseRules(trx, tenant, {
           ticket: {
@@ -2252,6 +2557,17 @@ export async function updateTicketInTransaction(
       }
     }
 
+    // A public resolution comment moves the ticket to awaiting_client just
+    // before the UI closes it. Persist the close and response-state reset in
+    // the same write so a closed ticket never reloads as awaiting a response.
+    const clearsResponseStateOnClose =
+      isClosingTicket &&
+      (currentTicket.response_state != null || updateData.response_state != null);
+    if (clearsResponseStateOnClose) {
+      updateData.response_state = null;
+    }
+    const updatedFields = diffTicketFields(currentTicket, updateData as Record<string, unknown>);
+
     let updatedTicket;
     
     // If we're changing the assigned_to field, we need to handle the ticket_resources table
@@ -2259,18 +2575,16 @@ export async function updateTicketInTransaction(
       // Use the existing transaction instead of creating a nested one
         // Step 1: Delete any ticket_resources where the new assigned_to is an additional_user_id
         // to avoid constraint violations after the update
-        await trx('ticket_resources')
+        await tenantScopedTable(trx, 'ticket_resources', tenant)
           .where({
-            tenant: tenant,
             ticket_id: id,
             additional_user_id: updateData.assigned_to
           })
           .delete();
         
         // Step 2: Get existing resources with the old assigned_to value
-        const existingResources = await trx('ticket_resources')
+        const existingResources = await tenantScopedTable(trx, 'ticket_resources', tenant)
           .where({
-            tenant: tenant,
             ticket_id: id,
             assigned_to: currentTicket.assigned_to
           })
@@ -2289,9 +2603,8 @@ export async function updateTicketInTransaction(
         
         // Step 4: Delete the existing resources with the old assigned_to
         if (existingResources.length > 0) {
-          await trx('ticket_resources')
+          await tenantScopedTable(trx, 'ticket_resources', tenant)
             .where({
-              tenant: tenant,
               ticket_id: id,
               assigned_to: currentTicket.assigned_to
             })
@@ -2299,14 +2612,14 @@ export async function updateTicketInTransaction(
         }
         
         // Step 5: Update the ticket with the new assigned_to
-        const [updated] = await trx('tickets')
-          .where({ ticket_id: id, tenant: tenant })
+        const [updated] = await tenantScopedTable(trx, 'tickets', tenant)
+          .where({ ticket_id: id })
           .update(updateData)
           .returning('*');
           
         // Step 6: Re-create the resources with the new assigned_to
         for (const resourceData of resourcesToRecreate) {
-          await trx('ticket_resources').insert({
+          await tenantScopedTable(trx, 'ticket_resources', tenant).insert({
             ...resourceData,
             assigned_to: updateData.assigned_to
           });
@@ -2315,8 +2628,8 @@ export async function updateTicketInTransaction(
         updatedTicket = updated;
     } else {
       // Regular update without changing assignment
-      [updatedTicket] = await trx('tickets')
-        .where({ ticket_id: id, tenant: tenant })
+      [updatedTicket] = await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: id })
         .update(updateData)
         .returning('*');
     }
@@ -2324,16 +2637,6 @@ export async function updateTicketInTransaction(
     if (!updatedTicket) {
       throw new Error('Ticket not found or update failed');
     }
-
-    // Get the new status if it was updated
-    const newStatus = updateData.status_id ? 
-      await trx('statuses')
-        .where({ 
-          status_id: updateData.status_id,
-          tenant: tenant
-        })
-        .first() :
-      oldStatus;
 
     // Emit expanded domain transition events for workflow v2 triggers.
     const occurredAt = new Date().toISOString();
@@ -2443,8 +2746,8 @@ export async function updateTicketInTransaction(
     // Keep the ticket row's denormalized close flag aligned with the selected status.
     if (updateData.status_id !== undefined && updateData.status_id !== currentTicket.status_id) {
       const nextIsClosed = !!newStatus?.is_closed;
-      await trx('tickets')
-        .where({ ticket_id: id, tenant: tenant })
+      await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: id })
         .update({ is_closed: nextIsClosed });
       updatedTicket.is_closed = nextIsClosed;
     }
@@ -2454,14 +2757,14 @@ export async function updateTicketInTransaction(
     // lives in the audit row instead.
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
       const closedBy = isSystemActor ? null : user.user_id;
-      await trx('tickets')
-        .where({ ticket_id: id, tenant: tenant })
+      await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: id })
         .update({ closed_at: occurredAt, closed_by: closedBy });
       updatedTicket.closed_at = occurredAt;
       updatedTicket.closed_by = closedBy;
     } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
-      await trx('tickets')
-        .where({ ticket_id: id, tenant: tenant })
+      await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: id })
         .update({ closed_at: null, closed_by: null });
       updatedTicket.closed_at = null;
       updatedTicket.closed_by = null;
@@ -2513,6 +2816,8 @@ export async function updateTicketInTransaction(
               : { userId: user.user_id, closedByUserId: user.user_id }),
             closedAt: occurredAt,
             changes: structuredChanges,
+            suppressContactNotifications,
+            suppressInternalNotifications,
           },
           ctx: workflowCtx,
           eventName: 'Ticket Closed',
@@ -2555,6 +2860,8 @@ export async function updateTicketInTransaction(
             newAssigneeType: 'user',
             assignedAt: occurredAt,
             changes: structuredChanges,
+            suppressContactNotifications,
+            suppressInternalNotifications,
           },
           ctx: workflowCtx,
           eventName: 'Ticket Assigned',
@@ -2571,6 +2878,8 @@ export async function updateTicketInTransaction(
             userId: user.user_id,
             updatedByUserId: user.user_id,
             changes: structuredChanges,
+            suppressContactNotifications,
+            suppressInternalNotifications,
           },
           ctx: workflowCtx,
           eventName: 'Ticket Updated',
@@ -2608,6 +2917,14 @@ export async function updateTicketInTransaction(
           userId: user.user_id,
           displayName: formatLiveUpdateDisplayName(user),
         };
+    const notificationSuppressionDetails = suppressContactNotifications
+      ? {
+          notification_suppression: {
+            suppress_contact_notifications: true,
+            suppress_internal_notifications: suppressInternalNotifications,
+          },
+        }
+      : undefined;
     const curated = await buildCuratedTicketDiffWithLabels(
       trx,
       tenant,
@@ -2649,21 +2966,26 @@ export async function updateTicketInTransaction(
         source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
         occurredAt,
         changes: curated,
+        details: notificationSuppressionDetails,
       });
     }
 
-    // Publish response state change event if response_state was explicitly changed
+    // Publish response state changes from explicit edits and the automatic
+    // open-to-closed reset.
     if ('response_state' in updateData && updateData.response_state !== currentTicket.response_state) {
       registerAfterCommit(trx, () =>
         publishEvent({
           eventType: 'TICKET_RESPONSE_STATE_CHANGED',
           payload: {
             tenantId: tenant,
+            occurredAt,
             ticketId: id,
             userId: user.user_id,
+            previousResponseState: currentTicket.response_state || null,
+            newResponseState: updateData.response_state || null,
             previousState: currentTicket.response_state || null,
             newState: updateData.response_state || null,
-            trigger: 'manual',
+            trigger: clearsResponseStateOnClose ? 'close' : 'manual',
           },
         }),
         `TICKET_RESPONSE_STATE_CHANGED ticket=${id}`
@@ -2671,8 +2993,8 @@ export async function updateTicketInTransaction(
     }
 
     // If this is a bundle master in sync_updates mode, propagate selected workflow updates to children.
-    const bundleSettings = await trx('ticket_bundle_settings')
-      .where({ tenant, master_ticket_id: id })
+    const bundleSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+      .where({ master_ticket_id: id })
       .first();
 
     if (bundleSettings?.mode === 'sync_updates') {
@@ -2684,8 +3006,8 @@ export async function updateTicketInTransaction(
       }
 
       if (Object.keys(propagateFields).length > 0) {
-        const childTickets = await trx('tickets')
-          .where({ tenant, master_ticket_id: id })
+        const childTickets = await tenantScopedTable(trx, 'tickets', tenant)
+          .where({ master_ticket_id: id })
           .select(['ticket_id', ...Object.keys(propagateFields)]);
 
         const childPublishes = childTickets
@@ -2693,13 +3015,14 @@ export async function updateTicketInTransaction(
             ticketId: childTicket.ticket_id as string,
             updatedFields: diffTicketFields(childTicket, propagateFields),
           }))
-          .filter((childPublish) => childPublish.updatedFields.length > 0);
+          .filter((childPublish: { ticketId: string; updatedFields: ReturnType<typeof diffTicketFields> }) =>
+            childPublish.updatedFields.length > 0);
 
         const propagate: Record<string, any> = { ...propagateFields };
         propagate.updated_by = user.user_id;
         propagate.updated_at = new Date().toISOString();
-        await trx('tickets')
-          .where({ tenant, master_ticket_id: id })
+        await tenantScopedTable(trx, 'tickets', tenant)
+          .where({ master_ticket_id: id })
           .update(propagate);
 
         for (const childPublish of childPublishes) {
@@ -2717,6 +3040,11 @@ export async function updateTicketInTransaction(
             `ticket-live-update ticket=${childPublish.ticketId}`
           );
         }
+        // Child closes publish no TICKET_CLOSED of their own — silent or not.
+        // The master's TICKET_CLOSED carries the suppression flags, and the
+        // close subscriber both emails and (when suppressed) skips child
+        // requesters from that single event. Publishing per-child events only
+        // on silent closes made the silent path noisier than a normal close.
       }
     }
 
@@ -2730,7 +3058,7 @@ export async function updateTicketInTransaction(
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error('Failed to update ticket');
+      throw new Error('Ticket update failed with a non-Error exception.');
     }
 }
 
@@ -2739,17 +3067,31 @@ export const updateTicketWithCache = withAuth(async (
   { tenant },
   id: string,
   data: Partial<ITicket>,
-  options?: Pick<UpdateTicketInTransactionOptions, 'overrideCloseRules' | 'overrideCloseRulesReason'>,
-) => {
-  const { knex: db } = await createTenantKnex();
+  options?: Pick<
+    UpdateTicketInTransactionOptions,
+    | 'overrideCloseRules'
+    | 'overrideCloseRulesReason'
+    | 'suppressContactNotifications'
+    | 'suppressInternalNotifications'
+  >,
+): Promise<'success' | TicketActionError> => {
+  try {
+    const { knex: db } = await createTenantKnex();
 
-  return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'update', trx)) {
-      throw new Error('Permission denied: Cannot update ticket');
+    return await withTransaction(db, async (trx) => {
+      if (!await hasPermission(user, 'ticket', 'update', trx)) {
+        throw new Error('Permission denied: Cannot update ticket');
+      }
+
+      return updateTicketInTransaction(trx, user as IUserWithRoles, tenant, id, data, options);
+    });
+  } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-
-    return updateTicketInTransaction(trx, user as IUserWithRoles, tenant, id, data, options);
-  });
+    throw error;
+  }
 });
 
 /**
@@ -2771,16 +3113,26 @@ export const addTicketCommentWithCache = withAuth(async (
   content: string,
   isInternal: boolean,
   isResolution: boolean,
-  closesTicket: boolean = false
-): Promise<IComment> => {
+  closesTicket: boolean = false,
+  notificationSuppression?: Pick<
+    UpdateTicketInTransactionOptions,
+    'suppressContactNotifications' | 'suppressInternalNotifications'
+  >,
+): Promise<IComment | TicketActionError> => {
   const {knex: db} = await createTenantKnex();
 
-  return withTransaction(db, async (trx) => {
+  const suppressContactNotifications = notificationSuppression?.suppressContactNotifications === true;
+  const suppressInternalNotifications = notificationSuppression?.suppressInternalNotifications === true;
+  if (suppressInternalNotifications && !suppressContactNotifications) {
+    throw new Error('suppressInternalNotifications requires suppressContactNotifications');
+  }
+
+  return withTransaction(db, async (trx): Promise<IComment | TicketActionError> => {
+    try {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
       throw new Error('Permission denied: Cannot add comment');
     }
 
-    try {
     const authorType: 'internal' | 'client' | 'unknown' =
       user.user_type === 'client' ? 'client' : 'internal';
 
@@ -2789,10 +3141,9 @@ export const addTicketCommentWithCache = withAuth(async (
     }
 
     // Verify ticket exists
-    const ticket = await trx('tickets')
+    const ticket = await tenantScopedTable(trx, 'tickets', tenant)
       .where({
-        ticket_id: ticketId,
-        tenant: tenant
+        ticket_id: ticketId
       })
       .first();
 
@@ -2818,14 +3169,14 @@ export const addTicketCommentWithCache = withAuth(async (
     );
     const generatedIds = idsResult.rows?.[0] as { comment_id: string; thread_id: string } | undefined;
     if (!generatedIds?.comment_id || !generatedIds?.thread_id) {
-      throw new Error('Failed to generate comment/thread identifiers');
+      throw new Error('Database UUID generation did not return comment/thread identifiers.');
     }
     const newCommentId = generatedIds.comment_id;
     const threadId = generatedIds.thread_id;
     const effectiveIsInternal = authorType === 'internal' ? isInternal : false;
     const nowIso = new Date().toISOString();
 
-    await trx('comment_threads').insert({
+    await tenantDb(trx, tenant).table('comment_threads').insert({
       tenant,
       thread_id: threadId,
       ticket_id: ticketId,
@@ -2838,7 +3189,7 @@ export const addTicketCommentWithCache = withAuth(async (
       created_by: user.user_id || null,
     });
 
-    const [newComment] = await trx('comments').insert({
+    const [newComment] = await tenantDb(trx, tenant).table<IComment>('comments').insert({
       tenant,
       comment_id: newCommentId,
       thread_id: threadId,
@@ -2876,20 +3227,19 @@ export const addTicketCommentWithCache = withAuth(async (
 
     // If this is a bundle master in sync_updates mode, mirror public comments to children (idempotent).
     if (!isInternal) {
-      const bundleSettings = await trx('ticket_bundle_settings')
-        .where({ tenant, master_ticket_id: ticketId })
+      const bundleSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+        .where({ master_ticket_id: ticketId })
         .first();
 
       if (bundleSettings?.mode === 'sync_updates') {
-        const children = await trx('tickets')
+        const children = await tenantScopedTable(trx, 'tickets', tenant)
           .select('ticket_id')
-          .where({ tenant, master_ticket_id: ticketId });
+          .where({ master_ticket_id: ticketId });
 
         const now = new Date().toISOString();
         for (const child of children) {
-          const existingMirror = await trx('ticket_bundle_mirrors')
+          const existingMirror = await tenantScopedTable(trx, 'ticket_bundle_mirrors', tenant)
             .where({
-              tenant,
               source_comment_id: newComment.comment_id,
               child_ticket_id: child.ticket_id,
             })
@@ -2906,10 +3256,10 @@ export const addTicketCommentWithCache = withAuth(async (
             | { comment_id: string; thread_id: string }
             | undefined;
           if (!childGenerated?.comment_id || !childGenerated?.thread_id) {
-            throw new Error('Failed to generate mirrored comment/thread identifiers');
+            throw new Error('Database UUID generation did not return mirrored comment/thread identifiers.');
           }
 
-          await trx('comment_threads').insert({
+          await tenantDb(trx, tenant).table('comment_threads').insert({
             tenant,
             thread_id: childGenerated.thread_id,
             ticket_id: child.ticket_id,
@@ -2922,7 +3272,7 @@ export const addTicketCommentWithCache = withAuth(async (
             created_by: null,
           });
 
-          await trx('comments').insert({
+          await tenantDb(trx, tenant).table('comments').insert({
             tenant,
             comment_id: childGenerated.comment_id,
             thread_id: childGenerated.thread_id,
@@ -2937,7 +3287,7 @@ export const addTicketCommentWithCache = withAuth(async (
             created_at: now,
           });
 
-          await trx('ticket_bundle_mirrors')
+          await tenantDb(trx, tenant).table('ticket_bundle_mirrors')
             .insert({
               tenant,
               source_comment_id: newComment.comment_id,
@@ -2956,7 +3306,9 @@ export const addTicketCommentWithCache = withAuth(async (
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
+          occurredAt: newComment.created_at ?? new Date().toISOString(),
           ticketId: ticketId,
+          commentId: newComment.comment_id,
           userId: user.user_id,
           comment: {
             id: newComment.comment_id,
@@ -2964,7 +3316,9 @@ export const addTicketCommentWithCache = withAuth(async (
             author: `${user.first_name} ${user.last_name}`,
             isInternal,
             authorType,
-          }
+          },
+          suppressContactNotifications,
+          suppressInternalNotifications,
         }
       }),
       `TICKET_COMMENT_ADDED ticket=${ticketId}`
@@ -2982,7 +3336,7 @@ export const addTicketCommentWithCache = withAuth(async (
 
       const events = buildTicketCommunicationWorkflowEvents({
         ticketId,
-        messageId: newComment.comment_id,
+        messageId: newCommentId,
         visibility: isInternal ? 'internal' : 'public',
         author: { authorType: 'user', authorId: user.user_id },
         channel: 'ui',
@@ -3051,8 +3405,12 @@ export const addTicketCommentWithCache = withAuth(async (
 
     return newComment;
     } catch (error) {
+      const expected = ticketActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
       console.error('Failed to add ticket comment:', error);
-      throw new Error('Failed to add ticket comment');
+      throw error;
     }
   });
 });
@@ -3067,9 +3425,20 @@ export async function addTicketCommentWithCacheForCurrentUser(
   content: string,
   isInternal: boolean,
   isResolution: boolean,
-  closesTicket: boolean = false
-): Promise<IComment> {
-  return addTicketCommentWithCache(ticketId, content, isInternal, isResolution, closesTicket);
+  closesTicket: boolean = false,
+  notificationSuppression?: Pick<
+    UpdateTicketInTransactionOptions,
+    'suppressContactNotifications' | 'suppressInternalNotifications'
+  >,
+): Promise<IComment | TicketActionError> {
+  return addTicketCommentWithCache(
+    ticketId,
+    content,
+    isInternal,
+    isResolution,
+    closesTicket,
+    notificationSuppression,
+  );
 }
 
 /**
@@ -3083,32 +3452,54 @@ export const getConsolidatedTicketListData = withAuth(async (
   page: number = 1,
   pageSize: number = 10
 ) => {
-  const {knex: db} = await createTenantKnex();
+  try {
+    const {knex: db} = await createTenantKnex();
 
-  return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view tickets');
+    return await withTransaction(db, async (trx) => {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        const expected = ticketActionErrorFrom(new Error('Permission denied: Cannot view tickets'));
+        if (expected) {
+          return expected;
+        }
+      }
+
+      try {
+        // Fetch filter options and tickets in parallel
+        const [formOptions, ticketsData] = await Promise.all([
+          getTicketFormOptions(),
+          getTicketsForList(filters, page, pageSize)
+        ]);
+
+        if (isTicketActionError(formOptions)) {
+          return formOptions;
+        }
+        if (isTicketActionError(ticketsData)) {
+          return ticketsData;
+        }
+
+        // Return consolidated data
+        return {
+          options: formOptions,
+          tickets: ticketsData.tickets,
+          totalCount: ticketsData.totalCount,
+          metadata: ticketsData.metadata
+        };
+      } catch (error) {
+        const expected = ticketListActionErrorFrom(error);
+        if (expected) {
+          return expected;
+        }
+        console.error('Failed to fetch consolidated ticket list data:', error);
+        throw error;
+      }
+    });
+  } catch (error) {
+    const expected = ticketListActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-
-    try {
-      // Fetch filter options and tickets in parallel
-      const [formOptions, ticketsData] = await Promise.all([
-        getTicketFormOptions(),
-        getTicketsForList(filters, page, pageSize)
-      ]);
-
-      // Return consolidated data
-      return {
-        options: formOptions,
-        tickets: ticketsData.tickets,
-        totalCount: ticketsData.totalCount,
-        metadata: ticketsData.metadata
-      };
-    } catch (error) {
-      console.error('Failed to fetch consolidated ticket list data:', error);
-      throw new Error('Failed to fetch ticket list data');
-    }
-  });
+    throw error;
+  }
 });
 
 /**
@@ -3125,15 +3516,24 @@ export const fetchTicketsWithPagination = withAuth(async (
   const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view tickets');
-    }
-
     try {
-      return await getTicketsForList(filters, page, pageSize);
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view tickets');
+      }
+
+      const result = await getTicketsForList(filters, page, pageSize);
+      if (isTicketActionError(result)) {
+        return result;
+      }
+
+      return result;
     } catch (error) {
+      const expected = ticketListActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
       console.error('Failed to fetch tickets:', error);
-      throw new Error('Failed to fetch tickets');
+      throw error;
     }
   });
 });
@@ -3146,118 +3546,103 @@ export const fetchBundleChildrenForMaster = withAuth(async (
   user,
   { tenant },
   masterTicketId: string
-): Promise<ITicketListItem[]> => {
+): Promise<ITicketListItem[] | TicketActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view tickets');
+    try {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view tickets');
+      }
+
+      const authorizationContext = await createTicketAuthorizationContext(
+        trx,
+        tenant,
+        user as IUserWithRoles
+      );
+
+      const childrenQuery = tenantScopedTable(trx, 'tickets as t', tenant);
+      tenantLeftJoin(trx, tenant, childrenQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id');
+      tenantLeftJoin(trx, tenant, childrenQuery, 'statuses as s', 't.status_id', 's.status_id');
+      tenantLeftJoin(trx, tenant, childrenQuery, 'priorities as p', 't.priority_id', 'p.priority_id', {
+        on: (join) => join.andOnVal('p.item_type', '=', 'ticket'),
+      });
+      tenantLeftJoin(trx, tenant, childrenQuery, 'boards as c', 't.board_id', 'c.board_id');
+      tenantLeftJoin(trx, tenant, childrenQuery, 'categories as cat', 't.category_id', 'cat.category_id');
+      tenantLeftJoin(trx, tenant, childrenQuery, 'clients as comp', 't.client_id', 'comp.client_id');
+      tenantLeftJoin(trx, tenant, childrenQuery, 'users as u', 't.entered_by', 'u.user_id');
+      tenantLeftJoin(trx, tenant, childrenQuery, 'users as au', 't.assigned_to', 'au.user_id');
+      tenantLeftJoin(trx, tenant, childrenQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id');
+
+      const rows = await childrenQuery
+        .select(
+          't.*',
+          's.name as status_name',
+          'p.priority_name',
+          'p.color as priority_color',
+          'c.board_name',
+          'cat.category_name',
+          'comp.client_name as client_name',
+          trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
+          trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
+          'tm.team_name as assigned_team_name',
+          'mt.ticket_number as bundle_master_ticket_number'
+        )
+        .where({ 't.master_ticket_id': masterTicketId })
+        .orderBy('t.updated_at', 'desc');
+
+      const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, rows);
+
+      return authorizedRows.map((ticket: any): ITicketListItem => {
+        const {
+          status_id,
+          priority_id,
+          board_id,
+          category_id,
+          entered_by,
+          status_name,
+          priority_name,
+          priority_color,
+          board_name,
+          category_name,
+          client_name,
+          entered_by_name,
+          assigned_to_name,
+          assigned_team_name,
+          bundle_master_ticket_number,
+          ...rest
+        } = ticket;
+
+        return {
+          ...rest,
+          status_id: status_id || null,
+          priority_id: priority_id || null,
+          board_id: board_id || null,
+          category_id: category_id || null,
+          entered_by: entered_by || null,
+          status_name: status_name || 'Unknown',
+          priority_name: priority_name || 'Unknown',
+          priority_color: priority_color || '#6B7280',
+          board_name: board_name || 'Unknown',
+          category_name: category_name || 'Unknown',
+          client_name: client_name || 'Unknown',
+          entered_by_name: entered_by_name || 'Unknown',
+          assigned_to_name: assigned_to_name || 'Unknown',
+          assigned_team_name: assigned_team_name || null,
+          // Children are not masters; keep these fields stable for the list UI.
+          bundle_child_count: 0,
+          bundle_distinct_client_count: 0,
+          bundle_master_ticket_number: bundle_master_ticket_number ?? null,
+        };
+      });
+    } catch (error) {
+      const expected = ticketListActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      console.error('Failed to fetch bundle children:', error);
+      throw error;
     }
-
-    const authorizationContext = await createTicketAuthorizationContext(
-      trx,
-      tenant,
-      user as IUserWithRoles
-    );
-
-    const rows = await trx('tickets as t')
-      .leftJoin('tickets as mt', function () {
-        this.on('t.master_ticket_id', 'mt.ticket_id')
-          .andOn('t.tenant', 'mt.tenant');
-      })
-      .leftJoin('statuses as s', function () {
-        this.on('t.status_id', 's.status_id')
-          .andOn('t.tenant', 's.tenant');
-      })
-      .leftJoin('priorities as p', function () {
-        this.on('t.priority_id', 'p.priority_id')
-          .andOn('t.tenant', 'p.tenant')
-          .andOnVal('p.item_type', '=', 'ticket');
-      })
-      .leftJoin('boards as c', function () {
-        this.on('t.board_id', 'c.board_id')
-          .andOn('t.tenant', 'c.tenant');
-      })
-      .leftJoin('categories as cat', function () {
-        this.on('t.category_id', 'cat.category_id')
-          .andOn('t.tenant', 'cat.tenant');
-      })
-      .leftJoin('clients as comp', function () {
-        this.on('t.client_id', 'comp.client_id')
-          .andOn('t.tenant', 'comp.tenant');
-      })
-      .leftJoin('users as u', function () {
-        this.on('t.entered_by', 'u.user_id')
-          .andOn('t.tenant', 'u.tenant');
-      })
-      .leftJoin('users as au', function () {
-        this.on('t.assigned_to', 'au.user_id')
-          .andOn('t.tenant', 'au.tenant');
-      })
-      .leftJoin('teams as tm', function () {
-        this.on('t.assigned_team_id', 'tm.team_id')
-          .andOn('t.tenant', 'tm.tenant');
-      })
-      .select(
-        't.*',
-        's.name as status_name',
-        'p.priority_name',
-        'p.color as priority_color',
-        'c.board_name',
-        'cat.category_name',
-        'comp.client_name as client_name',
-        trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
-        trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
-        'tm.team_name as assigned_team_name',
-        'mt.ticket_number as bundle_master_ticket_number'
-      )
-      .where({ 't.tenant': tenant, 't.master_ticket_id': masterTicketId })
-      .orderBy('t.updated_at', 'desc');
-
-    const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, rows);
-
-    return authorizedRows.map((ticket: any): ITicketListItem => {
-      const {
-        status_id,
-        priority_id,
-        board_id,
-        category_id,
-        entered_by,
-        status_name,
-        priority_name,
-        priority_color,
-        board_name,
-        category_name,
-        client_name,
-        entered_by_name,
-        assigned_to_name,
-        assigned_team_name,
-        bundle_master_ticket_number,
-        ...rest
-      } = ticket;
-
-      return {
-        ...rest,
-        status_id: status_id || null,
-        priority_id: priority_id || null,
-        board_id: board_id || null,
-        category_id: category_id || null,
-        entered_by: entered_by || null,
-        status_name: status_name || 'Unknown',
-        priority_name: priority_name || 'Unknown',
-        priority_color: priority_color || '#6B7280',
-        board_name: board_name || 'Unknown',
-        category_name: category_name || 'Unknown',
-        client_name: client_name || 'Unknown',
-        entered_by_name: entered_by_name || 'Unknown',
-        assigned_to_name: assigned_to_name || 'Unknown',
-        assigned_team_name: assigned_team_name || null,
-        // Children are not masters; keep these fields stable for the list UI.
-        bundle_child_count: 0,
-        bundle_distinct_client_count: 0,
-        bundle_master_ticket_number: bundle_master_ticket_number ?? null,
-      };
-    });
   });
 });
 
@@ -3271,10 +3656,13 @@ export const getTicketsForListWithCursor = withAuth(async (
   filters: ITicketListFilters,
   cursor?: string,
   limit: number = 50
-): Promise<{ tickets: ITicketListItem[], nextCursor: string | null }> => {
+): Promise<{ tickets: ITicketListItem[], nextCursor: string | null } | TicketActionError> => {
   // For backward compatibility, we'll use page 1 with the specified limit
   // This doesn't support cursor pagination anymore, but prevents breaking existing code
   const result = await getTicketsForList(filters, 1, limit);
+  if (isTicketActionError(result)) {
+    return result;
+  }
 
   return {
     tickets: result.tickets,
@@ -3311,12 +3699,65 @@ export const getAdjacentTicketIds = withAuth(async (
       validateData(ticketListFiltersSchema, filters) as ITicketListFilters
     );
 
-    const { builder: baseQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
+    const { builder: baseQuery, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
     const authorizationContext = await createTicketAuthorizationContext(
       trx,
       tenant,
       user as IUserWithRoles
     );
+    const scopedBaseQuery = scopedQuery.clone();
+    const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
+
+    if (authSqlResult.supported) {
+      const sortOrderBy = getTicketListSortOrderByClause(validatedFilters);
+      const innerQuery = scopedBaseQuery.builder
+        .clone()
+        .clearSelect()
+        .clearOrder()
+        .select(
+          't.ticket_id',
+          't.ticket_number',
+          trx.raw(`LAG(t.ticket_id) OVER (ORDER BY ${sortOrderBy}) as prev_ticket_id`),
+          trx.raw(`LAG(t.ticket_number) OVER (ORDER BY ${sortOrderBy}) as prev_ticket_number`),
+          trx.raw(`LEAD(t.ticket_id) OVER (ORDER BY ${sortOrderBy}) as next_ticket_id`),
+          trx.raw(`LEAD(t.ticket_number) OVER (ORDER BY ${sortOrderBy}) as next_ticket_number`),
+          trx.raw(`ROW_NUMBER() OVER (ORDER BY ${sortOrderBy}) as rn`),
+          trx.raw('COUNT(*) OVER () as total_count')
+        );
+
+      const results = await trx
+        .select('*')
+        .from(innerQuery.as('windowed'))
+        .where('ticket_id', currentTicketId);
+
+      if (results.length === 0) {
+        const countRow = await scopedBaseQuery.builder
+          .clone()
+          .clearSelect()
+          .clearOrder()
+          .countDistinct<{ count: string | number }[]>({ count: 't.ticket_id' })
+          .first();
+
+        return {
+          prevTicketId: null,
+          nextTicketId: null,
+          prevTicketNumber: null,
+          nextTicketNumber: null,
+          currentPosition: 0,
+          totalCount: Number((countRow as { count?: string | number } | undefined)?.count ?? 0),
+        };
+      }
+
+      const row = results[0];
+      return {
+        prevTicketId: row.prev_ticket_id ?? null,
+        nextTicketId: row.next_ticket_id ?? null,
+        prevTicketNumber: row.prev_ticket_number ?? null,
+        nextTicketNumber: row.next_ticket_number ?? null,
+        currentPosition: Number.parseInt(String(row.rn), 10),
+        totalCount: Number.parseInt(String(row.total_count), 10),
+      };
+    }
 
     const orderedRows = await applyTicketListSort(
       baseQuery.clone().clearSelect().select('t.ticket_id', 't.ticket_number', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id'),

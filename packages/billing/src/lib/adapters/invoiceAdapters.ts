@@ -10,7 +10,6 @@ import type {
   WasmInvoiceLocationGroup,
   DateValue,
 } from '@alga-psa/types';
-import type { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 // toPlainDate is likely not needed here as we format to string for Wasm
 
@@ -252,85 +251,6 @@ export function buildInvoiceLocationGroups(items: WasmInvoiceLineItem[]): WasmIn
 }
 
 /**
- * Resolve each line item's `location_id` against `client_locations` via a
- * single batched tenant-scoped query and attach the full location object to
- * the item. Also populates `groupsByLocation` + `hasMultipleLocations` on the
- * view model. Mutates and returns the given view model. Safe to call when
- * no item carries a location_id (no-op in that case).
- */
-export async function enrichInvoiceViewModelWithLocations(
-  knexOrTrx: Knex | Knex.Transaction,
-  tenant: string,
-  viewModel: WasmInvoiceViewModel,
-): Promise<WasmInvoiceViewModel> {
-  const items = viewModel.items ?? [];
-
-  const locationIds = Array.from(
-    new Set(
-      items
-        .map((item) => item.location_id)
-        .filter((id): id is string => typeof id === 'string' && id.trim().length > 0),
-    ),
-  );
-
-  let locationsById = new Map<string, WasmInvoiceLineItemLocation>();
-
-  if (locationIds.length > 0) {
-    try {
-      const rows = await knexOrTrx('client_locations')
-        .select(
-          'location_id as id',
-          'location_name',
-          'address_line1',
-          'address_line2',
-          'address_line3',
-          'city',
-          'state_province',
-          'postal_code',
-          'country_code',
-          'country_name',
-          'region_code',
-        )
-        .where({ tenant })
-        .whereIn('location_id', locationIds);
-
-      for (const row of rows) {
-        const record = row as Record<string, unknown>;
-        const base: WasmInvoiceLineItemLocation = {
-          id: String(record.id),
-          location_name: (record.location_name as string | null) ?? null,
-          address_line1: (record.address_line1 as string | null) ?? null,
-          address_line2: (record.address_line2 as string | null) ?? null,
-          address_line3: (record.address_line3 as string | null) ?? null,
-          city: (record.city as string | null) ?? null,
-          state_province: (record.state_province as string | null) ?? null,
-          postal_code: (record.postal_code as string | null) ?? null,
-          country_code: (record.country_code as string | null) ?? null,
-          country_name: (record.country_name as string | null) ?? null,
-          region_code: (record.region_code as string | null) ?? null,
-        };
-        locationsById.set(base.id, { ...base, full_address: buildLocationAddressBlock(base) });
-      }
-    } catch (error) {
-      console.error('[enrichInvoiceViewModelWithLocations] Failed to load client_locations:', error);
-    }
-  }
-
-  for (const item of items) {
-    if (item.location_id && locationsById.has(item.location_id)) {
-      item.location = locationsById.get(item.location_id) ?? null;
-    } else if (!item.location) {
-      item.location = null;
-    }
-  }
-
-  viewModel.groupsByLocation = buildInvoiceLocationGroups(items);
-  viewModel.hasMultipleLocations = locationsById.size >= 2;
-
-  return viewModel;
-}
-
-/**
  * Enriches a WasmInvoiceViewModel with recurring/one-time grouped item
  * collections and their separate subtotals, tax, and totals.
  * Derives grouping from existing timing fields — no database migration needed.
@@ -399,7 +319,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
       const rawTax = toFiniteNumber((dbData as any).tax);
       const rawTotal = toFiniteNumber((dbData as any).total ?? (dbData as any).total_amount);
       const rawItemTotalsSum = (dbData.invoice_charges ?? []).reduce(
-        (sum: number, item: IInvoiceCharge) => sum + toFiniteNumber(item.total_price),
+        (sum: number, item: IInvoiceCharge) => sum + toFiniteNumber(item.net_amount ?? item.total_price),
         0
       );
       const useLegacyMajorUnits = looksLikeLegacyMajorUnitPayload({
@@ -448,12 +368,19 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           description: String(item.description ?? ''),
           quantity: toFiniteNumber(item.quantity),
           unitPrice: toMinorUnits(item.unit_price),
-          total: toMinorUnits(item.total_price),
+          total: toMinorUnits(item.net_amount ?? item.total_price),
           taxAmount: toMinorUnits(item.tax_amount),
           servicePeriodStart: summaryStart,
           servicePeriodEnd: summaryEnd,
           billingTiming: summaryBillingTiming,
           recurringDetailPeriods: normalizedDetailPeriods,
+          ...((item as any).item_type === 'project'
+            ? {
+                category: (item as any).category ?? undefined,
+                itemType: 'project' as const,
+                projectPhaseName: (item as any).project_phase_name ?? null,
+              }
+            : {}),
           location_id: item.location_id ?? null,
           location: null,
         };
@@ -473,6 +400,14 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           address: String(dbData.client?.address ?? 'N/A'),
         },
         poNumber: (dbData as any).po_number ?? null,
+        ...((dbData as any).project_name
+          ? {
+              projectName: String((dbData as any).project_name),
+              projectNumber: (dbData as any).project_number
+                ? String((dbData as any).project_number)
+                : null,
+            }
+          : {}),
         recurringServicePeriodStart: recurringServicePeriodSummary.recurringServicePeriodStart,
         recurringServicePeriodEnd: recurringServicePeriodSummary.recurringServicePeriodEnd,
         recurringServicePeriodLabel: recurringServicePeriodSummary.recurringServicePeriodLabel,

@@ -7,11 +7,10 @@ const source = readFileSync(
 );
 
 describe('renewalsQueueActions note audit wiring', () => {
-  it('persists optional action notes on queue mutations when last_action_note column is available', () => {
+  it('persists optional action notes on queue mutations', () => {
     expect(source).toContain('const normalizeActionNote = (note: string | null | undefined): string | null => {');
     expect(source).toContain('const withActionNote = (');
-    expect(source).toContain('last_action_note: note');
-    expect(source).toContain("schema?.hasColumn?.('client_contracts', 'last_action_note') ?? false");
+    expect(source).toContain('? { ...updateData, last_action_note: note }');
     expect(source).toContain('const normalizedNote = normalizeActionNote(note);');
     expect(source).toContain('withActionNote(');
   });

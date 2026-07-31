@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { EntraSyncUser } from './types';
 
 export interface UpsertEntraContactLinkInput {
@@ -12,9 +13,9 @@ export async function upsertEntraContactLinkActive(
   trx: Knex.Transaction,
   input: UpsertEntraContactLinkInput
 ): Promise<void> {
-  const now = trx.fn.now();
+  const now = new Date().toISOString();
 
-  await trx('entra_contact_links')
+  await tenantDb(trx, input.tenantId).table('entra_contact_links')
     .insert({
       tenant: input.tenantId,
       contact_name_id: input.contactNameId,

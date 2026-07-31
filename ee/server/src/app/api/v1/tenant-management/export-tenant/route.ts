@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { observabilityLogger } from '@/lib/observability/logging';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
@@ -7,6 +8,7 @@ import {
   startTenantExportWorkflow,
   type TenantExportInput,
 } from '@ee/lib/tenant-management/workflowClient';
+import { tenantManagementRouteError } from '../tenantManagementRouteErrors';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
@@ -105,7 +107,8 @@ export async function POST(req: NextRequest) {
 
     // Verify target tenant exists
     const knex = await getAdminConnection();
-    const targetTenant = await knex('tenants').where({ tenant: tenantId }).first();
+    const auditLogs = tenantDb(knex, MASTER_BILLING_TENANT_ID).table('extension_audit_logs');
+    const targetTenant = await tenantDb(knex, tenantId).table('tenants').first();
     if (!targetTenant) {
       return NextResponse.json({ success: false, error: 'Tenant not found' }, { status: 404 });
     }
@@ -121,7 +124,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Log to unified extension audit table
-    const [auditRecord] = await knex('extension_audit_logs')
+    const [auditRecord] = await auditLogs
       .insert({
         tenant: MASTER_BILLING_TENANT_ID,
         event_type: 'tenant.export_data',
@@ -146,8 +149,8 @@ export async function POST(req: NextRequest) {
 
     if (!workflowResult.available || !workflowResult.result) {
       // Update audit record with failure
-      await knex('extension_audit_logs')
-        .where({ tenant: MASTER_BILLING_TENANT_ID, log_id: auditRecord.log_id })
+      await auditLogs
+        .where({ log_id: auditRecord.log_id })
         .update({
           status: 'failed',
           error_message: workflowResult.error || 'Temporal workflow client not available',
@@ -186,8 +189,8 @@ export async function POST(req: NextRequest) {
       });
 
       // Update audit record to show workflow is in progress
-      await knex('extension_audit_logs')
-        .where({ tenant: MASTER_BILLING_TENANT_ID, log_id: auditRecord.log_id })
+      await auditLogs
+        .where({ log_id: auditRecord.log_id })
         .update({
           status: 'in_progress',
           details: JSON.stringify({
@@ -211,8 +214,8 @@ export async function POST(req: NextRequest) {
     // Workflow completed
     if (!exportResult.success) {
       // Update audit record with failure
-      await knex('extension_audit_logs')
-        .where({ tenant: MASTER_BILLING_TENANT_ID, log_id: auditRecord.log_id })
+      await auditLogs
+        .where({ log_id: auditRecord.log_id })
         .update({
           status: 'failed',
           error_message: exportResult.error || 'Export failed',
@@ -225,8 +228,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Update audit record with success
-    await knex('extension_audit_logs')
-      .where({ tenant: MASTER_BILLING_TENANT_ID, log_id: auditRecord.log_id })
+    await auditLogs
+      .where({ log_id: auditRecord.log_id })
       .update({
         status: 'completed',
         details: JSON.stringify({
@@ -268,7 +271,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const routeError = tenantManagementRouteError(error, 'Failed to export tenant data.');
 
     observabilityLogger.error('Export tenant data failed', error, {
       event_type: 'tenant_management_action_failed',
@@ -277,7 +280,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: false,
-      error: errorMessage,
-    }, { status: 500 });
+      error: routeError.error,
+    }, { status: routeError.status });
   }
 }

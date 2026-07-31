@@ -63,5 +63,10 @@
     "noPermission": "You don't have permission to do that.",
     "saveFailed": "Unable to save. Please try again.",
     "deleteFailed": "Unable to delete. Please try again."
+  },
+  "reminders": {
+    "channelName": "Schedule reminders",
+    "fallbackTitle": "Upcoming schedule entry",
+    "body": "Starts at {{time}}"
   }
 }

@@ -12,7 +12,7 @@
       "save": "Speichern",
       "saveChanges": "Änderungen speichern",
       "saveChangesDirty": "Änderungen speichern *",
-      "saving": "Sparen..."
+      "saving": "Speichern..."
     },
     "errors": {
       "errorWithMessage": "Fehler: {{message}}"
@@ -212,7 +212,7 @@
     "actions": {
       "cancel": "Stornieren",
       "createPreset": "Erstellen Sie eine Vertragszeilenvorgabe",
-      "saving": "Sparen...",
+      "saving": "Speichern...",
       "updatePreset": "Vertragszeilenvorgabe aktualisieren"
     },
     "basics": {

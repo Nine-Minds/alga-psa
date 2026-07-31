@@ -53,6 +53,13 @@ vi.mock('@/lib/db/db', () => ({
   getConnection: vi.fn(async () => ({})),
 }));
 
+// authenticate() now gates on tenant product; the suite's stub connections
+// can't serve the tenants.product_code read.
+vi.mock('@/lib/productAccess', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/productAccess')>()),
+  getTenantProduct: vi.fn(async () => 'psa'),
+}));
+
 vi.mock('@alga-psa/core/logger', () => ({
   default: {
     warn: (...args: unknown[]) => testState.loggerWarnMock(...args),

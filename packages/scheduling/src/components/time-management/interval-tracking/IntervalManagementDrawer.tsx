@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { TicketInterval, TicketIntervalGroup } from '@alga-psa/types';
 import { IntervalTrackingService } from '@alga-psa/ui/services';
@@ -14,6 +15,7 @@ import TimeEntryDialog from '../time-entry/time-sheet/TimeEntryDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { getCurrentTimePeriod } from '../../../actions/timePeriodsActions';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface IntervalManagementDrawerProps {
   isOpen: boolean;
@@ -31,6 +33,7 @@ export function IntervalManagementDrawer({
   userId,
   onCreateTimeEntry
 }: IntervalManagementDrawerProps) {
+  const { t } = useTranslation('msp/time-entry');
   const [intervals, setIntervals] = useState<TicketInterval[]>([]);
   const [selectedIntervalIds, setSelectedIntervalIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,6 +51,11 @@ export function IntervalManagementDrawer({
     const fetchCurrentPeriod = async () => {
       try {
         const period = await getCurrentTimePeriod();
+        if (isActionMessageError(period) || isActionPermissionError(period)) {
+          console.error('Error fetching current time period:', getErrorMessage(period));
+          setCurrentTimePeriod(null);
+          return;
+        }
         setCurrentTimePeriod(period);
         
         // Additional check to ensure we have a valid period
@@ -62,6 +70,10 @@ export function IntervalManagementDrawer({
         if (fetchOrCreateTimeSheet && userId && period.period_id) {
           try {
             const timeSheet = await fetchOrCreateTimeSheet(userId, period.period_id);
+            if (isActionMessageError(timeSheet) || isActionPermissionError(timeSheet)) {
+              console.error('Error fetching/creating time sheet:', getErrorMessage(timeSheet));
+              return;
+            }
             console.log('Time sheet fetched/created:', timeSheet);
             // Update the timePeriod object to include the time sheet ID for later use
             setCurrentTimePeriod(prev => prev ? {
@@ -397,7 +409,7 @@ export function IntervalManagementDrawer({
           <Card className="p-3 bg-blue-50 dark:bg-blue-900/20">
             <div className="flex items-center justify-between">
               <div>
-                <span className="font-medium">{selectedIntervalIds.length} interval{selectedIntervalIds.length !== 1 ? 's' : ''} selected</span>
+                <span className="font-medium">{t('intervals.selectedCount', { defaultValue: '{{count}} intervals selected', count: selectedIntervalIds.length })}</span>
                 <span className="ml-2 text-sm">
                   ({formatDuration(selectedDuration)})
                 </span>

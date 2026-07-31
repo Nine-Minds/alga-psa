@@ -137,6 +137,9 @@ export async function POST(req: Request) {
     const code = e?.code ?? "INTERNAL_ERROR";
     const message = typeof e?.message === "string" ? e.message : "Unexpected error during delete";
     log("ext_bundles.abort.error", { actor, key, message, code, status });
-    return jsonResponse({ error: message, code }, status);
+    return jsonResponse({
+      error: status >= 500 ? "Failed to abort extension bundle upload." : message,
+      code,
+    }, status);
   }
 }

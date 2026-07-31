@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     logger.error('[XeroCsvTaxImport] Error', { error: error.message });
     return NextResponse.json(
-      { error: error.message ?? 'Internal server error' },
+      { error: 'Failed to import Xero CSV tax data.' },
       { status: 500 }
     );
   }

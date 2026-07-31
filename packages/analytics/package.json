@@ -19,13 +19,14 @@
   },
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@alga-psa/db": "*",
     "@alga-psa/tenancy": "*",
     "posthog-node": "^4.18.0",
-    "uuid": "^10.0.0",
+    "uuid": "^11.1.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {

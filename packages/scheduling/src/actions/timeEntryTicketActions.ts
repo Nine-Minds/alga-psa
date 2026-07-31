@@ -1,7 +1,7 @@
 'use server';
 
 import type { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { formatISO } from 'date-fns';
 import type {
@@ -20,6 +20,10 @@ import {
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { resolveManagedSubjectUserIds } from './timeEntryDelegationAuth';
 import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
+import {
+  timeSheetActionErrorFrom,
+  type TimeSheetActionError,
+} from './timeSheetActionErrors';
 
 interface RawRow {
   entry_id: string;
@@ -73,17 +77,13 @@ export async function fetchTimeEntriesForTicketCore(
     throw new Error('Permission denied: Cannot read time entries');
   }
 
-  const rows: RawRow[] = await db('time_entries')
-    .leftJoin('users', function joinUsers() {
-      this.on('time_entries.user_id', '=', 'users.user_id')
-        .andOn('time_entries.tenant', '=', 'users.tenant');
-    })
-    .leftJoin('service_catalog', function joinServices() {
-      this.on('time_entries.service_id', '=', 'service_catalog.service_id')
-        .andOn('time_entries.tenant', '=', 'service_catalog.tenant');
-    })
+  const scopedDb = tenantDb(db, tenant);
+  const query = scopedDb.table('time_entries');
+  scopedDb.tenantJoin(query, 'users', 'time_entries.user_id', 'users.user_id', { type: 'left' });
+  scopedDb.tenantJoin(query, 'service_catalog', 'time_entries.service_id', 'service_catalog.service_id', { type: 'left' });
+
+  const rows: RawRow[] = await query
     .where({
-      'time_entries.tenant': tenant,
       'time_entries.work_item_type': 'ticket',
       'time_entries.work_item_id': ticketId,
     })
@@ -209,8 +209,14 @@ export const fetchTimeEntriesForTicket = withAuth(async (
   user,
   { tenant },
   ticketId: string,
-): Promise<TicketTimeEntriesSummary> => {
-  await assertPsaOnlyTenantAccess(tenant, 'scheduling_time_actions');
-  const { knex: db } = await createTenantKnex();
-  return fetchTimeEntriesForTicketCore(user, tenant, db, ticketId);
+): Promise<TicketTimeEntriesSummary | TimeSheetActionError> => {
+  try {
+    await assertPsaOnlyTenantAccess(tenant, 'scheduling_time_actions');
+    const { knex: db } = await createTenantKnex();
+    return fetchTimeEntriesForTicketCore(user, tenant, db, ticketId);
+  } catch (error) {
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });

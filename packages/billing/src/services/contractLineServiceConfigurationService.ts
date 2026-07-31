@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import {
   IContractLineServiceConfiguration,
   IContractLineServiceFixedConfig,
@@ -174,7 +174,8 @@ export class ContractLineServiceConfigurationService {
             config_id: configId,
             unit_of_measure: (typeConfig as IContractLineServiceUsageConfig)?.unit_of_measure ?? 'Unit',
             enable_tiered_pricing: (typeConfig as IContractLineServiceUsageConfig)?.enable_tiered_pricing ?? false,
-            minimum_usage: (typeConfig as IContractLineServiceUsageConfig)?.minimum_usage ?? 0
+            minimum_usage: (typeConfig as IContractLineServiceUsageConfig)?.minimum_usage ?? 0,
+            base_rate: (typeConfig as IContractLineServiceUsageConfig)?.base_rate ?? null,
           });
           
           // Add rate tiers if provided
@@ -192,8 +193,8 @@ export class ContractLineServiceConfigurationService {
           
         case 'Bucket':
           // Fetch service default rate for defaulting
-          const service = await trx('service_catalog')
-            .where({ service_id: baseConfig.service_id, tenant: this.tenant })
+          const service = await tenantDb(trx, this.tenant).table('service_catalog')
+            .where({ service_id: baseConfig.service_id })
             .select('default_rate')
             .first();
           const serviceDefaultRate = service?.default_rate;

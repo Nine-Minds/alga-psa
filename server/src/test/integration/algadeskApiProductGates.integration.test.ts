@@ -3,6 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
 import type { Knex } from 'knex';
 
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
 function hashApiKey(plainTextKey: string): string {
@@ -17,9 +18,11 @@ describe('algadesk API key product gates (integration)', () => {
   });
 
   it('RT011: allows representative AlgaDesk endpoints and denies PSA-only endpoints with structured 403', async () => {
-    process.env.DB_NAME_SERVER = 'test_database';
-    process.env.DB_HOST = 'localhost';
-    process.env.DB_PORT = '5432';
+    // Fallback-only (||): unconditional writes poison later files' bootstraps
+    // in the shared fork (see emailAttachmentIngestion).
+    process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'test_database';
+    process.env.DB_HOST = process.env.DB_HOST || 'localhost';
+    process.env.DB_PORT = process.env.DB_PORT || '5432';
     process.env.DB_USER_SERVER = process.env.DB_USER_SERVER || 'app_user';
     process.env.DB_PASSWORD_SERVER = process.env.DB_PASSWORD_SERVER || 'postpass123';
 
@@ -41,11 +44,18 @@ describe('algadesk API key product gates (integration)', () => {
     const apiKeyId = randomUUID();
     const plainApiKey = `algadesk-rt011-${randomUUID()}`;
 
-    const tenantColumns = await db('tenants').columnInfo();
-    const userColumns = await db('users').columnInfo();
-    const apiKeyColumns = await db('api_keys').columnInfo();
+    const schemaTable = (table: string) =>
+      tenantDb(db!, '__test_schema__').unscoped(table, 'columnInfo reads schema metadata, not tenant rows');
+    const tenantRows = () =>
+      tenantDb(db!, '__test_tenant_fixture__')
+        .unscoped('tenants', 'test fixture creates and removes tenant rows');
+    const tenantTable = (table: string) => tenantDb(db!, tenantId).table(table);
 
-    await db('tenants').insert({
+    const tenantColumns = await schemaTable('tenants').columnInfo();
+    const userColumns = await schemaTable('users').columnInfo();
+    const apiKeyColumns = await schemaTable('api_keys').columnInfo();
+
+    await tenantRows().insert({
       tenant: tenantId,
       ...(Object.prototype.hasOwnProperty.call(tenantColumns, 'company_name')
         ? { company_name: 'AlgaDesk RT011 Tenant' }
@@ -56,7 +66,7 @@ describe('algadesk API key product gates (integration)', () => {
       ...(Object.prototype.hasOwnProperty.call(tenantColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
     });
 
-    await db('users').insert({
+    await tenantTable('users').insert({
       tenant: tenantId,
       user_id: userId,
       username: `algadesk-rt011-${tenantId.slice(0, 8)}`,
@@ -68,7 +78,7 @@ describe('algadesk API key product gates (integration)', () => {
       ...(Object.prototype.hasOwnProperty.call(userColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
     });
 
-    await db('api_keys').insert({
+    await tenantTable('api_keys').insert({
       api_key_id: apiKeyId,
       tenant: tenantId,
       user_id: userId,
@@ -110,8 +120,8 @@ describe('algadesk API key product gates (integration)', () => {
       expect(deniedBody.error?.code).toBe('PRODUCT_ACCESS_DENIED');
     }
 
-    await db('api_keys').where({ tenant: tenantId }).del();
-    await db('users').where({ tenant: tenantId }).del();
-    await db('tenants').where({ tenant: tenantId }).del();
+    await tenantTable('api_keys').del();
+    await tenantTable('users').del();
+    await tenantRows().where({ tenant: tenantId }).del();
   }, 180_000);
 });

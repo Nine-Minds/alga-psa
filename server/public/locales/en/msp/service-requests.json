@@ -264,7 +264,8 @@
       "formBehaviorNotObject": "Form behavior config must be a JSON object",
       "formBehaviorInvalid": "Invalid form behavior JSON",
       "visibilityNotObject": "Visibility config must be a JSON object",
-      "visibilityInvalid": "Invalid visibility JSON"
+      "visibilityInvalid": "Invalid visibility JSON",
+      "saveAllPartial": "Some sections couldn't be saved: {{sections}}"
     }
   }
 }

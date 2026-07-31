@@ -1,16 +1,30 @@
 'use server'
 
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
-import { Knex } from 'knex';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import { IStatus, ItemType } from '@alga-psa/types';
 import { createWorkItemStatusNameFilterValue } from './workItemStatusFilter';
+import { actionError } from '@alga-psa/ui/lib/errorHandling';
+import { statusActionErrorFrom, type StatusActionError } from './statusActionErrors';
 
 type StatusSearchEventType = 'STATUS_CREATED' | 'STATUS_UPDATED' | 'STATUS_DELETED';
+
+const statusesQuery = (trx: Knex | Knex.Transaction, tenant: string) =>
+  tenantDb(trx, tenant).table<IStatus>('statuses');
+
+function statusDeleteErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (message === 'Status not found') {
+    return message;
+  }
+
+  return 'Failed to delete status';
+}
 
 // Keeps the app-wide search index in sync when project / project_task statuses
 // change. Failures are swallowed: the daily search reconcile job is the backstop.
@@ -43,8 +57,7 @@ export const getStatuses = withAuth(async (_user, { tenant }, type?: ItemType, b
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Build query
-      const query = trx<IStatus>('statuses')
-        .where({ tenant })
+      const query = statusesQuery(trx, tenant)
         .select('*')
         .orderBy('order_number');
 
@@ -74,9 +87,8 @@ export const getTicketStatuses = withAuth(async (_user, { tenant }, boardId?: st
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Fetch statuses for the current tenant
-      const statuses = await trx<IStatus>('statuses')
+      const statuses = await statusesQuery(trx, tenant)
         .where({
-          tenant,
           status_type: 'ticket' as ItemType
         })
         .modify((queryBuilder) => {
@@ -85,7 +97,7 @@ export const getTicketStatuses = withAuth(async (_user, { tenant }, boardId?: st
           }
         })
         .select('*')
-        .orderBy('order_number');
+        .orderBy('order_number') as IStatus[];
 
       return statuses;
     });
@@ -95,22 +107,21 @@ export const getTicketStatuses = withAuth(async (_user, { tenant }, boardId?: st
   }
 });
 
-export const createStatus = withAuth(async (user, { tenant }, statusData: Omit<IStatus, 'status_id' | 'tenant'>): Promise<IStatus> => {
+export const createStatus = withAuth(async (user, { tenant }, statusData: Omit<IStatus, 'status_id' | 'tenant'>): Promise<IStatus | StatusActionError> => {
   if (!statusData.name || statusData.name.trim() === '') {
-    throw new Error('Status name is required');
+    return actionError('Status name is required');
   }
 
   if (statusData.status_type === ('ticket' as ItemType)) {
-    throw new Error('Ticket statuses must be managed from board settings');
+    return actionError('Ticket statuses must be managed from board settings');
   }
 
   const {knex: db} = await createTenantKnex();
   try {
     const newStatus = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Check if status with same name already exists
-      const existingStatus = await trx('statuses')
+      const existingStatus = await statusesQuery(trx, tenant)
         .where({
-          tenant,
           name: statusData.name,
           status_type: statusData.status_type
         })
@@ -122,24 +133,22 @@ export const createStatus = withAuth(async (user, { tenant }, statusData: Omit<I
 
       // Get highest order_number if none specified
       if (!statusData.order_number) {
-        const maxOrder = await trx('statuses')
+        const maxOrder = await statusesQuery(trx, tenant)
           .where({
-            tenant,
             status_type: statusData.status_type
           })
           .max('order_number as max')
-          .first();
+          .first() as { max?: number | string | null } | undefined;
         
-        statusData.order_number = (maxOrder?.max || 0) + 10;
+        statusData.order_number = Number(maxOrder?.max || 0) + 10;
       }
 
       // Check if we should set as default
       let isDefault = statusData.is_default || false;
       if (isDefault && !statusData.is_closed) {
         // Check if there's already a default status of this type
-        const existingDefault = await trx('statuses')
+        const existingDefault = await statusesQuery(trx, tenant)
           .where({ 
-            tenant, 
             is_default: true,
             status_type: statusData.status_type 
           })
@@ -147,9 +156,8 @@ export const createStatus = withAuth(async (user, { tenant }, statusData: Omit<I
         
         if (existingDefault) {
           // Unset the existing default
-          await trx('statuses')
+          await statusesQuery(trx, tenant)
             .where({ 
-              tenant, 
               is_default: true,
               status_type: statusData.status_type 
             })
@@ -162,7 +170,7 @@ export const createStatus = withAuth(async (user, { tenant }, statusData: Omit<I
         isDefault = false;
       }
       
-      const [status] = await trx<IStatus>('statuses')
+      const [status] = await tenantDb(trx, tenant).table<IStatus>('statuses')
         .insert({
           ...statusData,
           tenant,
@@ -186,31 +194,29 @@ export const createStatus = withAuth(async (user, { tenant }, statusData: Omit<I
 
   } catch (error) {
     console.error('Error creating status:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Failed to create status');
+    const expected = statusActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
-export const updateStatus = withAuth(async (_user, { tenant }, statusId: string, statusData: Partial<IStatus>) => {
+export const updateStatus = withAuth(async (_user, { tenant }, statusId: string, statusData: Partial<IStatus>): Promise<IStatus | StatusActionError> => {
   if (!statusId) {
-    throw new Error('Status ID is required');
+    return actionError('Status ID is required');
   }
 
   if (statusData.name && statusData.name.trim() === '') {
-    throw new Error('Status name cannot be empty');
+    return actionError('Status name cannot be empty');
   }
 
   const {knex: db} = await createTenantKnex();
   try {
     const updatedStatus = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const currentStatus = await trx<IStatus>('statuses')
+      const currentStatus = await statusesQuery(trx, tenant)
         .where({
-          tenant,
           status_id: statusId
         })
-        .first();
+        .first() as IStatus | undefined;
 
       if (!currentStatus) {
         throw new Error('Status not found');
@@ -223,9 +229,8 @@ export const updateStatus = withAuth(async (_user, { tenant }, statusId: string,
 
       // Check if new name conflicts with existing status
       if (statusData.name) {
-        const existingStatus = await trx('statuses')
+        const existingStatus = await statusesQuery(trx, tenant)
           .where({
-            tenant,
             name: statusData.name,
             status_type: effectiveStatusType
           })
@@ -251,17 +256,15 @@ export const updateStatus = withAuth(async (_user, { tenant }, statusId: string,
 
       // If setting as default, unset any other default status of the same type
       if (is_default) {
-        const currentStatus = await trx<IStatus>('statuses')
+        const currentStatus = await statusesQuery(trx, tenant)
           .where({
-            tenant,
             status_id: statusId
           })
-          .first();
+          .first() as IStatus | undefined;
 
         if (currentStatus) {
-          await trx<IStatus>('statuses')
+          await statusesQuery(trx, tenant)
             .where({
-              tenant,
               status_type: currentStatus.status_type,
               is_default: true
             })
@@ -270,9 +273,8 @@ export const updateStatus = withAuth(async (_user, { tenant }, statusId: string,
         }
       }
 
-      const [updatedStatus] = await trx<IStatus>('statuses')
+      const [updatedStatus] = await statusesQuery(trx, tenant)
         .where({
-          tenant,
           status_id: statusId
         })
         .update({
@@ -285,7 +287,7 @@ export const updateStatus = withAuth(async (_user, { tenant }, statusId: string,
           ...(is_custom !== undefined && { is_custom }),
           ...(is_default !== undefined && { is_default })
         })
-        .returning('*');
+        .returning('*') as IStatus[];
 
       if (!updatedStatus) {
         throw new Error('Status not found');
@@ -304,10 +306,9 @@ export const updateStatus = withAuth(async (_user, { tenant }, statusId: string,
     return updatedStatus;
   } catch (error) {
     console.error('Error updating status:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Failed to update status');
+    const expected = statusActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -320,7 +321,7 @@ export interface StatusOption {
   className?: string;
 }
 
-export const getWorkItemStatusOptions = withAuth(async (_user, { tenant }, itemType?: ItemType | ItemType[]): Promise<StatusOption[]> => {
+export const getWorkItemStatusOptions = withAuth(async (_user, { tenant }, itemType?: ItemType | ItemType[]): Promise<StatusOption[] | StatusActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -329,16 +330,15 @@ export const getWorkItemStatusOptions = withAuth(async (_user, { tenant }, itemT
         ? (Array.isArray(itemType) ? itemType : [itemType])
         : ['ticket', 'project_task'];
 
-      const statusesQuery = trx('statuses')
-        .where({ tenant: tenant })
+      const statusesQueryBuilder = statusesQuery(trx, tenant)
         .select('status_id', 'name', 'order_number', 'is_closed')
         .orderBy('order_number', 'asc')
         .orderBy('name', 'asc');
 
       if (itemTypesToFetch.length > 0) {
-        statusesQuery.whereIn('status_type', itemTypesToFetch);
+        statusesQueryBuilder.whereIn('status_type', itemTypesToFetch);
       }
-      const statuses = await statusesQuery;
+      const statuses = await statusesQueryBuilder as Array<{ name?: string | null; is_closed?: boolean | null }>;
 
       // Deduplicate by status name. Per-board ticket statuses can produce
       // multiple rows with the same name; the filter selects by name so a
@@ -367,7 +367,9 @@ export const getWorkItemStatusOptions = withAuth(async (_user, { tenant }, itemT
 
   } catch (error) {
     console.error('Error fetching work item status options:', error);
-    throw new Error('Failed to fetch work item status options');
+    const expected = statusActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -389,12 +391,11 @@ export const deleteStatus = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
-    const currentStatus = await knex<IStatus>('statuses')
+    const currentStatus = await statusesQuery(knex, tenant)
       .where({
-        tenant,
         status_id: statusId,
       })
-      .first();
+      .first() as IStatus | undefined;
 
     if (currentStatus?.status_type === ('ticket' as ItemType)) {
       return {
@@ -408,9 +409,8 @@ export const deleteStatus = withAuth(async (
     }
 
     const result = await deleteEntityWithValidation('status', statusId, knex, tenant, async (trx, tenantId) => {
-      const deletedCount = await trx('statuses')
+      const deletedCount = await statusesQuery(trx, tenantId)
         .where({
-          tenant: tenantId,
           status_id: statusId
         })
         .del();
@@ -441,7 +441,7 @@ export const deleteStatus = withAuth(async (
       success: false,
       canDelete: false,
       code: 'VALIDATION_FAILED',
-      message: error instanceof Error ? error.message : 'Failed to delete status',
+      message: statusDeleteErrorMessage(error),
       dependencies: [],
       alternatives: []
     };
@@ -469,12 +469,11 @@ export const findStatusByName = withAuth(async (_user, { tenant }, input: FindSt
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const status = await trx('statuses')
+    const status = await statusesQuery(trx, tenant)
       .select('status_id as id', 'name', 'item_type', 'is_closed', 'is_default')
-      .where('tenant', tenant)
       .whereRaw('LOWER(name) = LOWER(?)', [input.name])
       .where('item_type', input.item_type)
-      .first();
+      .first() as FindStatusByNameOutput | undefined;
 
     return status || null;
   });

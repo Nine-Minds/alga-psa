@@ -34,11 +34,38 @@ const mockState = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@/lib/services/apiKeyServiceForApi', () => ({
-  ApiKeyServiceForApi: {
-    validateApiKeyAnyTenant: vi.fn(async () => mockState.validateResult),
-    validateApiKeyForTenant: vi.fn(async () => mockState.validateResult),
-  },
+// The route authenticates via authenticateApiKeyRequest, which (in production)
+// validates the key AND resolves the full user/tenant context from the DB. For
+// this unit test we mock the boundary directly: a non-null validateResult yields
+// an authenticated request whose context carries { tenant, userId }; otherwise
+// we throw the same UnauthorizedError the real middleware would, so handleApiError
+// maps it to a 401.
+class FakeUnauthorizedError extends Error {
+  statusCode = 401;
+  code = 'UNAUTHORIZED';
+  constructor(message = 'Unauthorized') {
+    super(message);
+    this.name = 'UnauthorizedError';
+  }
+}
+
+vi.mock('@/lib/api/middleware/apiAuthMiddleware', () => ({
+  authenticateApiKeyRequest: vi.fn(async (req: Request) => {
+    const hasAuth =
+      Boolean(req.headers.get('authorization')) || Boolean(req.headers.get('x-api-key'));
+    if (!hasAuth) {
+      throw new FakeUnauthorizedError('API key required');
+    }
+    if (!mockState.validateResult) {
+      throw new FakeUnauthorizedError('Invalid API key');
+    }
+    const authed = req as Request & { context?: Record<string, unknown> };
+    authed.context = {
+      tenant: mockState.validateResult.tenant,
+      userId: mockState.validateResult.user_id,
+    };
+    return authed;
+  }),
 }));
 
 vi.mock('@/lib/mobileAuth/appleSignIn', () => ({
@@ -72,8 +99,10 @@ function makeFakeKnex() {
     _where: [] as Record<string, unknown>[],
     _whereNot: [] as Record<string, unknown>[],
 
-    where(w: Record<string, unknown>) {
-      this._where.push(w);
+    where(w: Record<string, unknown> | string, value?: unknown) {
+      // tenantDb scopes each root query with where('<table>.tenant', tenant);
+      // normalize the qualified column to its bare name so tenant scoping stays visible.
+      this._where.push(typeof w === 'string' ? { [w.split('.').pop() as string]: value } : w);
       return this;
     },
     whereNot(w: Record<string, unknown>) {
@@ -99,7 +128,7 @@ function makeFakeKnex() {
       return Promise.resolve([]);
     },
     update(patch: Record<string, unknown>) {
-      const whereClause = this._where[0] ?? {};
+      const whereClause = Object.assign({}, ...this._where);
       if (this._table === 'users') {
         mockState.userUpdates.push({ where: whereClause, update: patch });
       } else if (this._table === 'api_keys') {
@@ -109,7 +138,7 @@ function makeFakeKnex() {
     },
     del() {
       if (this._table === 'apple_user_identities') {
-        mockState.appleIdentityDeletes.push(this._where[0] ?? {});
+        mockState.appleIdentityDeletes.push(Object.assign({}, ...this._where));
       }
       return Promise.resolve(1);
     },

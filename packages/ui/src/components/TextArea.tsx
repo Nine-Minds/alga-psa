@@ -145,8 +145,8 @@ export function TextArea({
           w-full max-w-4xl
           ${textAreaSizeClasses[size]}
           border
-          border-[rgb(var(--color-border-400))]
-          rounded-md
+          border-border
+          rounded-lg
           shadow-sm
           focus:outline-none
           focus:ring-2

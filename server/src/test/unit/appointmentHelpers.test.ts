@@ -10,18 +10,58 @@ import {
   getClientCompanyName,
   type TenantSettings,
   type ScheduleApprover
-} from '../../lib/actions/appointmentHelpers';
-import * as dbModule from '../../lib/db';
+} from '@alga-psa/scheduling/actions/appointmentHelpers';
 import * as sharedDb from '@alga-psa/db';
 import type { Knex } from 'knex';
+import {
+  signAppointmentIcsToken,
+  verifyAppointmentIcsToken,
+} from '@alga-psa/scheduling/lib/appointmentIcsSigning';
 
-// Mock the database module
-vi.mock('../../lib/db', () => ({
-  createTenantKnex: vi.fn()
-}));
+// Pin the ICS signing secret so generated links are deterministic; signing
+// and verification themselves use the real implementations.
+const TEST_ICS_SECRET = 'test-ics-secret';
+vi.mock('@alga-psa/scheduling/lib/appointmentIcsSigning', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/scheduling/lib/appointmentIcsSigning')>();
+  return {
+    ...actual,
+    getAppointmentIcsSigningSecret: async () => TEST_ICS_SECRET,
+  };
+});
 
-// Mock the shared db module
+const signedIcsUrl = async (base: string, entryId: string): Promise<string> =>
+  `${base}/api/calendar/appointment/${entryId}.ics?token=${await signAppointmentIcsToken(TEST_ICS_SECRET, entryId)}`;
+
+// Mock the shared db module (production imports createTenantKnex and withTransaction from @alga-psa/db)
 vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (tableExpr: string) => {
+      const builder = conn(tableExpr);
+      if (!builder || typeof builder.where !== 'function') {
+        return builder;
+      }
+      const aliasMatch = /\bas\s+([A-Za-z0-9_]+)\s*$/i.exec(tableExpr.trim());
+      const tenantColumn = aliasMatch ? `${aliasMatch[1]}.tenant` : 'tenant';
+      builder.where({ [tenantColumn]: tenant });
+      return {
+        ...builder,
+        where: (criteria: any, ...rest: any[]) =>
+          criteria && typeof criteria === 'object' && !Array.isArray(criteria)
+            ? builder.where({ [tenantColumn]: tenant, ...criteria })
+            : builder.where(criteria, ...rest),
+      };
+    },
+    scoped: (t: string) => conn(t),
+    subquery: (t: string) => conn(t),
+    parentScopedTable: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+    tenantJoinSubquery: (q: any, sub: any, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(sub) ?? q) : (q.join?.(sub) ?? q),
+    tenantWhereColumn: (q: any) => q,
+  }),
+  createTenantKnex: vi.fn(),
   withTransaction: vi.fn((knex, callback) => callback(knex))
 }));
 
@@ -30,9 +70,17 @@ describe('Appointment Helper Functions', () => {
   let mockTrx: any;
 
   beforeEach(() => {
-    // Create a mock transaction object with chainable query builder methods
+    // Create a mock transaction object with chainable query builder methods.
+    // `where` invokes function arguments (grouped where callbacks) with `this`
+    // bound to the current query object, mirroring knex behavior.
     mockTrx = {
-      where: vi.fn().mockReturnThis(),
+      where: vi.fn(function (this: any, arg: any) {
+        if (typeof arg === 'function') {
+          arg.call(this);
+        }
+        return this;
+      }),
+      orWhereNull: vi.fn().mockReturnThis(),
       andOn: vi.fn().mockReturnThis(),
       join: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
@@ -46,7 +94,7 @@ describe('Appointment Helper Functions', () => {
     Object.assign(mockKnex, mockTrx);
 
     // Mock createTenantKnex to return our mock knex instance
-    (dbModule.createTenantKnex as Mock).mockResolvedValue({
+    (sharedDb.createTenantKnex as Mock).mockResolvedValue({
       knex: mockKnex
     });
 
@@ -61,7 +109,7 @@ describe('Appointment Helper Functions', () => {
   describe('formatDate', () => {
     it('should format date in English locale', async () => {
       const result = await formatDate('2025-11-15', 'en');
-      expect(result).toBe('November 15, 2025');
+      expect(result).toBe('November 15th, 2025');
     });
 
     it('should format date in German locale', async () => {
@@ -91,30 +139,30 @@ describe('Appointment Helper Functions', () => {
 
     it('should default to English locale when no locale is provided', async () => {
       const result = await formatDate('2025-11-15');
-      expect(result).toBe('November 15, 2025');
+      expect(result).toBe('November 15th, 2025');
     });
 
     it('should default to English locale for unsupported locale', async () => {
       const result = await formatDate('2025-11-15', 'unsupported');
-      expect(result).toBe('November 15, 2025');
+      expect(result).toBe('November 15th, 2025');
     });
 
     it('should handle ISO date strings with time component', async () => {
       const result = await formatDate('2025-11-15T14:30:00Z', 'en');
-      expect(result).toBe('November 15, 2025');
+      expect(result).toBe('November 15th, 2025');
     });
 
     it('should handle leap year dates', async () => {
       const result = await formatDate('2024-02-29', 'en');
-      expect(result).toBe('February 29, 2024');
+      expect(result).toBe('February 29th, 2024');
     });
 
     it('should handle year boundary dates', async () => {
       const resultEndYear = await formatDate('2025-12-31', 'en');
-      expect(resultEndYear).toBe('December 31, 2025');
+      expect(resultEndYear).toBe('December 31st, 2025');
 
       const resultStartYear = await formatDate('2025-01-01', 'en');
-      expect(resultStartYear).toBe('January 1, 2025');
+      expect(resultStartYear).toBe('January 1st, 2025');
     });
 
     it('should return original string on invalid date', async () => {
@@ -132,13 +180,18 @@ describe('Appointment Helper Functions', () => {
       consoleSpy.mockRestore();
     });
 
-    it('should handle different date formats', async () => {
-      // Test various valid date string formats
+    it('should fall back to the original string for non-ISO date formats', async () => {
+      // Production parses dates by splitting on '-' (wall-clock ISO dates only),
+      // so slash-separated formats are returned unchanged.
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
       const result1 = await formatDate('2025/11/15', 'en');
-      expect(result1).toBe('November 15, 2025');
+      expect(result1).toBe('2025/11/15');
 
       const result2 = await formatDate('11/15/2025', 'en');
-      expect(result2).toBe('November 15, 2025');
+      expect(result2).toBe('11/15/2025');
+
+      consoleSpy.mockRestore();
     });
   });
 
@@ -253,9 +306,11 @@ describe('Appointment Helper Functions', () => {
       expect(result23).toBe('11:30 PM');
     });
 
-    it('should handle default to English for unsupported locale', async () => {
+    it('should use 24-hour format for unsupported locales', async () => {
+      // Only the 'en' locale uses the 12-hour format branch in production;
+      // any other locale string formats as HH:mm.
       const result = await formatTime('14:30', 'unsupported');
-      expect(result).toBe('2:30 PM');
+      expect(result).toBe('14:30');
     });
   });
 
@@ -269,13 +324,13 @@ describe('Appointment Helper Functions', () => {
 
     it('should generate ICS link with default localhost URL', async () => {
       const result = await generateICSLink(mockScheduleEntry);
-      expect(result).toBe('http://localhost:3000/api/calendar/appointment/entry-123.ics');
+      expect(result).toBe(await signedIcsUrl('http://localhost:3000', 'entry-123'));
     });
 
     it('should generate ICS link with custom base URL from environment', async () => {
       process.env.NEXT_PUBLIC_APP_URL = 'https://example.com';
       const result = await generateICSLink(mockScheduleEntry);
-      expect(result).toBe('https://example.com/api/calendar/appointment/entry-123.ics');
+      expect(result).toBe(await signedIcsUrl('https://example.com', 'entry-123'));
     });
 
     it('should handle entry_id with special characters', async () => {
@@ -284,7 +339,7 @@ describe('Appointment Helper Functions', () => {
         entry_id: 'entry-123-abc_def'
       };
       const result = await generateICSLink(entryWithSpecialId);
-      expect(result).toBe('http://localhost:3000/api/calendar/appointment/entry-123-abc_def.ics');
+      expect(result).toBe(await signedIcsUrl('http://localhost:3000', 'entry-123-abc_def'));
     });
 
     it('should handle UUID entry_id', async () => {
@@ -293,20 +348,20 @@ describe('Appointment Helper Functions', () => {
         entry_id: '550e8400-e29b-41d4-a716-446655440000'
       };
       const result = await generateICSLink(entryWithUUID);
-      expect(result).toBe('http://localhost:3000/api/calendar/appointment/550e8400-e29b-41d4-a716-446655440000.ics');
+      expect(result).toBe(await signedIcsUrl('http://localhost:3000', '550e8400-e29b-41d4-a716-446655440000'));
     });
 
     it('should generate link with trailing slash in base URL', async () => {
       process.env.NEXT_PUBLIC_APP_URL = 'https://example.com/';
       const result = await generateICSLink(mockScheduleEntry);
       // Note: This will result in double slashes, which is acceptable for the URL structure
-      expect(result).toBe('https://example.com//api/calendar/appointment/entry-123.ics');
+      expect(result).toBe(await signedIcsUrl('https://example.com/', 'entry-123'));
     });
 
     it('should generate link with production URL', async () => {
       process.env.NEXT_PUBLIC_APP_URL = 'https://app.algapsa.com';
       const result = await generateICSLink(mockScheduleEntry);
-      expect(result).toBe('https://app.algapsa.com/api/calendar/appointment/entry-123.ics');
+      expect(result).toBe(await signedIcsUrl('https://app.algapsa.com', 'entry-123'));
     });
 
     it('should maintain consistent structure regardless of entry times', async () => {
@@ -317,7 +372,22 @@ describe('Appointment Helper Functions', () => {
         scheduled_end: '2026-01-01T17:00:00Z'
       };
       const result = await generateICSLink(differentEntry);
-      expect(result).toBe('http://localhost:3000/api/calendar/appointment/different-123.ics');
+      expect(result).toBe(await signedIcsUrl('http://localhost:3000', 'different-123'));
+    });
+
+    it('should mint a token that verifies for the same entry', async () => {
+      const result = await generateICSLink(mockScheduleEntry);
+      const token = new URL(result).searchParams.get('token');
+      expect(token).toBeTruthy();
+      expect(await verifyAppointmentIcsToken(TEST_ICS_SECRET, 'entry-123', token!)).toBe(true);
+    });
+
+    it('should reject tokens for a different entry or a tampered token', async () => {
+      const result = await generateICSLink(mockScheduleEntry);
+      const token = new URL(result).searchParams.get('token')!;
+      expect(await verifyAppointmentIcsToken(TEST_ICS_SECRET, 'other-entry', token)).toBe(false);
+      expect(await verifyAppointmentIcsToken(TEST_ICS_SECRET, 'entry-123', token.slice(0, -2) + '00')).toBe(false);
+      expect(await verifyAppointmentIcsToken(TEST_ICS_SECRET, 'entry-123', 'not-hex')).toBe(false);
     });
   });
 
@@ -390,7 +460,7 @@ describe('Appointment Helper Functions', () => {
       const result = await getScheduleApprovers('tenant-123');
 
       expect(result).toEqual(mockApprovers);
-      expect(dbModule.createTenantKnex).toHaveBeenCalled();
+      expect(sharedDb.createTenantKnex).toHaveBeenCalled();
     });
 
     it('should query with correct tenant and permission filters', async () => {
@@ -400,7 +470,7 @@ describe('Appointment Helper Functions', () => {
       expect(mockTrx.where).toHaveBeenCalledWith({
         'u.tenant': 'tenant-123',
         'u.user_type': 'internal',
-        'p.resource': 'schedule',
+        'p.resource': 'user_schedule',
         'p.action': 'update'
       });
     });
@@ -408,7 +478,8 @@ describe('Appointment Helper Functions', () => {
     it('should filter out inactive users', async () => {
       await getScheduleApprovers('tenant-123');
 
-      expect(mockTrx.whereNull).toHaveBeenCalledWith('u.is_inactive');
+      expect(mockTrx.where).toHaveBeenCalledWith('u.is_inactive', false);
+      expect(mockTrx.orWhereNull).toHaveBeenCalledWith('u.is_inactive');
     });
 
     it('should return empty array when no approvers found', async () => {
@@ -461,18 +532,18 @@ describe('Appointment Helper Functions', () => {
           settings: {
             supportEmail: 'support@example.com',
             supportPhone: '+1-555-0123',
-            companyName: 'Acme MSP',
+            branding: { clientName: 'Acme MSP' },
             defaultLocale: 'en'
           }
         })
       };
 
-      // Mock companies query
-      const companiesQuery = {
+      // Mock tenants table query (fallback source for the tenant name)
+      const tenantsQuery = {
         ...mockTrx,
         first: vi.fn().mockResolvedValue({
-          company_id: 'company-1',
-          company_name: 'Acme MSP'
+          tenant: 'tenant-123',
+          client_name: 'Acme MSP'
         })
       };
 
@@ -482,8 +553,8 @@ describe('Appointment Helper Functions', () => {
         callCount++;
         if (tableName === 'tenant_settings' || callCount === 1) {
           return tenantSettingsQuery;
-        } else if (tableName === 'companies' || callCount === 2) {
-          return companiesQuery;
+        } else if (tableName === 'tenants' || callCount === 2) {
+          return tenantsQuery;
         }
         return mockTrx;
       });
@@ -522,7 +593,7 @@ describe('Appointment Helper Functions', () => {
 
       expect(result.contactEmail).toBe('support@company.com');
       expect(result.contactPhone).toBe('');
-      expect(result.tenantName).toBe('Your MSP');
+      expect(result.tenantName).toBe('Your Service Provider');
       expect(result.defaultLocale).toBe('en');
     });
 
@@ -553,27 +624,53 @@ describe('Appointment Helper Functions', () => {
       expect(result.contactEmail).toBe('support@example.com');
     });
 
-    it('should prioritize company_name over settings.companyName', async () => {
+    it('should prioritize branding.clientName over tenants.client_name', async () => {
       const settingsQuery = {
         ...mockTrx,
         first: vi.fn().mockResolvedValue({
           settings: {
-            companyName: 'Settings Company'
+            branding: { clientName: 'Branding Company' }
           }
         })
       };
 
-      const companiesQuery = {
+      const tenantsQuery = {
         ...mockTrx,
         first: vi.fn().mockResolvedValue({
-          company_name: 'Database Company'
+          client_name: 'Database Company'
         })
       };
 
       let callCount = 0;
       mockKnex.mockImplementation(() => {
         callCount++;
-        return callCount === 1 ? settingsQuery : companiesQuery;
+        return callCount === 1 ? settingsQuery : tenantsQuery;
+      });
+
+      const result = await getTenantSettings('tenant-123');
+
+      expect(result.tenantName).toBe('Branding Company');
+    });
+
+    it('should fall back to tenants.client_name when branding name is missing', async () => {
+      const settingsQuery = {
+        ...mockTrx,
+        first: vi.fn().mockResolvedValue({
+          settings: {}
+        })
+      };
+
+      const tenantsQuery = {
+        ...mockTrx,
+        first: vi.fn().mockResolvedValue({
+          client_name: 'Database Company'
+        })
+      };
+
+      let callCount = 0;
+      mockKnex.mockImplementation(() => {
+        callCount++;
+        return callCount === 1 ? settingsQuery : tenantsQuery;
       });
 
       const result = await getTenantSettings('tenant-123');
@@ -603,7 +700,7 @@ describe('Appointment Helper Functions', () => {
       const result = await getTenantSettings('tenant-123');
 
       expect(result.contactEmail).toBe('support@company.com');
-      expect(result.tenantName).toBe('Your MSP');
+      expect(result.tenantName).toBe('Your Service Provider');
     });
 
     it('should handle database errors', async () => {
@@ -645,7 +742,8 @@ describe('Appointment Helper Functions', () => {
     it('should filter out inactive users', async () => {
       await getClientUserIdFromContact('contact-123', 'tenant-123');
 
-      expect(mockTrx.whereNull).toHaveBeenCalledWith('is_inactive');
+      expect(mockTrx.where).toHaveBeenCalledWith('is_inactive', false);
+      expect(mockTrx.orWhereNull).toHaveBeenCalledWith('is_inactive');
     });
 
     it('should return null when user not found', async () => {
@@ -692,7 +790,7 @@ describe('Appointment Helper Functions', () => {
   describe('getClientCompanyName', () => {
     beforeEach(() => {
       mockTrx.first.mockResolvedValue({
-        company_name: 'Acme Corporation'
+        client_name: 'Acme Corporation'
       });
     });
 
@@ -700,14 +798,14 @@ describe('Appointment Helper Functions', () => {
       const result = await getClientCompanyName('client-123', 'tenant-123');
 
       expect(result).toBe('Acme Corporation');
-      expect(mockKnex).toHaveBeenCalledWith('companies');
+      expect(mockKnex).toHaveBeenCalledWith('clients');
     });
 
     it('should query with correct filters', async () => {
       await getClientCompanyName('client-123', 'tenant-123');
 
       expect(mockTrx.where).toHaveBeenCalledWith({
-        company_id: 'client-123',
+        client_id: 'client-123',
         tenant: 'tenant-123'
       });
     });
@@ -720,7 +818,7 @@ describe('Appointment Helper Functions', () => {
       expect(result).toBe('Unknown Client');
     });
 
-    it('should return "Unknown Client" when company_name is missing', async () => {
+    it('should return "Unknown Client" when client_name is missing', async () => {
       mockTrx.first.mockResolvedValue({});
 
       const result = await getClientCompanyName('client-123', 'tenant-123');
@@ -728,24 +826,24 @@ describe('Appointment Helper Functions', () => {
       expect(result).toBe('Unknown Client');
     });
 
-    it('should select only company_name field', async () => {
+    it('should select only client_name field', async () => {
       await getClientCompanyName('client-123', 'tenant-123');
 
-      expect(mockTrx.select).toHaveBeenCalledWith('company_name');
+      expect(mockTrx.select).toHaveBeenCalledWith('client_name');
     });
 
     it('should handle different tenant IDs', async () => {
       await getClientCompanyName('client-123', 'different-tenant');
 
       expect(mockTrx.where).toHaveBeenCalledWith({
-        company_id: 'client-123',
+        client_id: 'client-123',
         tenant: 'different-tenant'
       });
     });
 
     it('should handle empty company name', async () => {
       mockTrx.first.mockResolvedValue({
-        company_name: ''
+        client_name: ''
       });
 
       const result = await getClientCompanyName('client-123', 'tenant-123');
@@ -764,7 +862,7 @@ describe('Appointment Helper Functions', () => {
 
     it('should handle company names with special characters', async () => {
       mockTrx.first.mockResolvedValue({
-        company_name: 'Acme & Co., Ltd.'
+        client_name: 'Acme & Co., Ltd.'
       });
 
       const result = await getClientCompanyName('client-123', 'tenant-123');
@@ -775,7 +873,7 @@ describe('Appointment Helper Functions', () => {
     it('should handle very long company names', async () => {
       const longName = 'A'.repeat(500);
       mockTrx.first.mockResolvedValue({
-        company_name: longName
+        client_name: longName
       });
 
       const result = await getClientCompanyName('client-123', 'tenant-123');

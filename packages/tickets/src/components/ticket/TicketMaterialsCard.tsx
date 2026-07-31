@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -8,13 +8,20 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Trash2, Package, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ContentCard } from '@alga-psa/ui/components';
 import AsyncSearchableSelect, { type SelectOption } from '@alga-psa/ui/components/AsyncSearchableSelect';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
-import type { ITicketMaterial, IServicePrice } from '@alga-psa/types';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import type { ITicketMaterial, IServicePrice, IStockUnit } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   listTicketMaterials,
@@ -22,22 +29,50 @@ import {
   deleteTicketMaterial,
   searchServiceCatalogForPicker,
   getServicePrices,
+  listAvailableStockUnitsForMaterial,
 } from '../../actions/materialCatalogActions';
+import {
+  getProductAvailability,
+  type ProductAvailability,
+} from '@alga-psa/inventory/actions/availabilityActions';
 
 interface TicketMaterialsCardProps {
   id?: string;
   ticketId: string;
   clientId?: string | null;
+  /** Server-started materials promise; when provided the mount fetch is skipped. */
+  initialMaterials?: Promise<ITicketMaterial[] | ActionMessageError | ActionPermissionError>;
+}
+
+function isReturnedActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
+
+// On-hand badge for tracked products in the picker (F012): red at zero, amber at/below
+// reorder point, plain otherwise. Untracked products and rows whose stock fields haven't
+// loaded yet (undefined) get no badge.
+function onHandBadge(fields: {
+  track_stock?: boolean;
+  on_hand_total?: number | null;
+  reorder_point?: number | null;
+}): SelectOption['badge'] | undefined {
+  if (!fields.track_stock || fields.on_hand_total == null) return undefined;
+  const onHand = fields.on_hand_total;
+  const variant =
+    onHand <= 0 ? 'danger' : fields.reorder_point != null && onHand <= fields.reorder_point ? 'warning' : 'secondary';
+  return { text: `On hand: ${onHand}`, variant };
 }
 
 export default function TicketMaterialsCard({
   id = 'ticket-materials-card',
   ticketId,
   clientId,
+  initialMaterials,
 }: TicketMaterialsCardProps) {
   const { t } = useTranslation('features/tickets');
+  const { money, currencyCode } = useCurrencyFormat();
   const [materials, setMaterials] = useState<ITicketMaterial[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialMaterials);
   const [isAdding, setIsAdding] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -47,9 +82,18 @@ export default function TicketMaterialsCard({
   const [selectedProductLabel, setSelectedProductLabel] = useState<string>('');
   const [productPrices, setProductPrices] = useState<IServicePrice[]>([]);
   const [selectedCurrency, setSelectedCurrency] = useState<string>('');
+  const [selectedCatalogCost, setSelectedCatalogCost] = useState<{ cost: number; currency: string } | null>(null);
+  const catalogCostByProductId = useRef(new Map<string, { cost: number; currency: string } | null>());
   const [quantity, setQuantity] = useState<number>(1);
   const [description, setDescription] = useState<string>('');
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
+  // Serialized stock unit picker (only shown when the product has in-stock units)
+  const [availableUnits, setAvailableUnits] = useState<IStockUnit[]>([]);
+  const [selectedUnitId, setSelectedUnitId] = useState<string>('');
+  // Per-location on-hand for the selected tracked product (F013), advisory only.
+  const [availability, setAvailability] = useState<ProductAvailability | null>(null);
+  // Inline add error (F018) — e.g. insufficient stock — shown in the form so the user's inputs survive.
+  const [addError, setAddError] = useState<string | null>(null);
 
   // Load materials
   const loadMaterials = useCallback(async () => {
@@ -58,6 +102,11 @@ export default function TicketMaterialsCard({
     setIsLoading(true);
     try {
       const data = await listTicketMaterials(ticketId);
+      if (isReturnedActionError(data)) {
+        handleError(data, t('errors.loadMaterials', 'Failed to load materials'));
+        setMaterials([]);
+        return;
+      }
       setMaterials(data);
     } catch (error) {
       handleError(error, t('errors.loadMaterials', 'Failed to load materials'));
@@ -66,7 +115,30 @@ export default function TicketMaterialsCard({
     }
   }, [ticketId, t]);
 
+  // Server-started materials ride the RSC payload; the mount fetch is skipped.
+  const skipMaterialsFetch = useRef(Boolean(initialMaterials));
   useEffect(() => {
+    if (!initialMaterials) return;
+    let cancelled = false;
+    initialMaterials.then((data) => {
+      if (cancelled) return;
+      if (isReturnedActionError(data)) {
+        handleError(data, t('errors.loadMaterials', 'Failed to load materials'));
+        setMaterials([]);
+        return;
+      }
+      setMaterials(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialMaterials]);
+
+  useEffect(() => {
+    if (skipMaterialsFetch.current) {
+      skipMaterialsFetch.current = false;
+      return;
+    }
     loadMaterials();
   }, [loadMaterials]);
 
@@ -81,10 +153,16 @@ export default function TicketMaterialsCard({
         is_active: true,
       });
 
-      const options: SelectOption[] = result.items.map((item) => ({
-        value: item.service_id,
-        label: item.sku ? `${item.service_name} (${item.sku})` : item.service_name,
-      }));
+      const options: SelectOption[] = result.items.map((item) => {
+        catalogCostByProductId.current.set(item.service_id, item.cost == null || !item.cost_currency
+          ? null
+          : { cost: item.cost, currency: item.cost_currency });
+        return {
+          value: item.service_id,
+          label: item.sku ? `${item.service_name} (${item.sku})` : item.service_name,
+          badge: onHandBadge(item),
+        };
+      });
 
       return { options, total: result.totalCount };
     },
@@ -122,6 +200,47 @@ export default function TicketMaterialsCard({
     loadPrices();
   }, [selectedProductId]);
 
+  // Load available serialized stock units when a product is selected
+  useEffect(() => {
+    if (!selectedProductId) {
+      setAvailableUnits([]);
+      setSelectedUnitId('');
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const units = await listAvailableStockUnitsForMaterial(selectedProductId);
+        if (!cancelled) {
+          setAvailableUnits(units);
+          setSelectedUnitId('');
+        }
+      } catch {
+        if (!cancelled) setAvailableUnits([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedProductId]);
+
+  // Per-location on-hand for the selected product (F013). Advisory only — a failure
+  // (e.g. the availability action unavailable) leaves the form fully usable.
+  useEffect(() => {
+    if (!selectedProductId) {
+      setAvailability(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const [result] = await getProductAvailability([selectedProductId]);
+        if (!cancelled) setAvailability(result ?? null);
+      } catch {
+        if (!cancelled) setAvailability(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedProductId]);
+
   // Get selected price details
   const selectedPrice = productPrices.find(p => p.currency_code === selectedCurrency);
 
@@ -142,9 +261,15 @@ export default function TicketMaterialsCard({
       return;
     }
 
+    if (availableUnits.length > 0 && !selectedUnitId) {
+      toast.error(t('validation.materials.unitRequired', 'Please select a serial/unit to deliver'));
+      return;
+    }
+
     setIsAdding(true);
+    setAddError(null);
     try {
-      await addTicketMaterial({
+      const result = await addTicketMaterial({
         ticket_id: ticketId,
         client_id: clientId,
         service_id: selectedProductId,
@@ -152,19 +277,29 @@ export default function TicketMaterialsCard({
         rate: selectedPrice.rate,
         currency_code: selectedPrice.currency_code,
         description: description.trim() || null,
+        unit_id: selectedUnitId || null,
       });
+      if (isReturnedActionError(result)) {
+        setAddError(getErrorMessage(result));
+        return;
+      }
 
       toast.success(t('materials.addSuccess', 'Material added'));
       setShowAddForm(false);
       setSelectedProductId('');
+      setSelectedCatalogCost(null);
       setSelectedProductLabel('');
       setProductPrices([]);
       setSelectedCurrency('');
       setQuantity(1);
       setDescription('');
+      setAvailableUnits([]);
+      setSelectedUnitId('');
       await loadMaterials();
     } catch (error) {
-      handleError(error, t('errors.addMaterial', 'Failed to add material'));
+      // Inline so the user keeps their inputs and sees the exact reason (e.g. the
+      // available quantity the backend reports for insufficient stock) (F018).
+      setAddError(error instanceof Error ? error.message : t('errors.addMaterial', 'Failed to add material'));
     } finally {
       setIsAdding(false);
     }
@@ -177,7 +312,12 @@ export default function TicketMaterialsCard({
     const previousMaterials = materials;
     setMaterials(prev => prev.filter(m => m.ticket_material_id !== materialId));
     try {
-      await deleteTicketMaterial(materialId);
+      const result = await deleteTicketMaterial(materialId);
+      if (isReturnedActionError(result)) {
+        setMaterials(previousMaterials);
+        handleError(result, t('errors.removeMaterial', 'Failed to remove material'));
+        return;
+      }
       toast.success(t('materials.removeSuccess', 'Material removed'));
     } catch (error) {
       // Revert on failure
@@ -195,7 +335,7 @@ export default function TicketMaterialsCard({
   const unbilledByCurrency = materials
     .filter(m => !m.is_billed)
     .reduce((acc, m) => {
-      const curr = m.currency_code || 'USD';
+      const curr = m.currency_code || currencyCode;
       if (!acc[curr]) acc[curr] = 0;
       acc[curr] += calculateTotal(m);
       return acc;
@@ -203,7 +343,7 @@ export default function TicketMaterialsCard({
 
   const currencyOptions = productPrices.map(p => ({
     value: p.currency_code,
-    label: `${p.currency_code} - ${formatCurrencyFromMinorUnits(p.rate, 'en-US', p.currency_code)}`,
+    label: `${p.currency_code} - ${money(p.rate, p.currency_code)}`,
   }));
 
   return (
@@ -211,7 +351,7 @@ export default function TicketMaterialsCard({
       <ContentCard
         id={id}
         collapsible
-        defaultExpanded={false}
+        defaultExpanded={materials.length > 0}
         title={t('materials.title', 'Materials')}
         headerIcon={<Package className="w-5 h-5" />}
         count={materials.length}
@@ -233,7 +373,9 @@ export default function TicketMaterialsCard({
                 onChange={(value, option) => {
                   setSelectedProductId(value);
                   setSelectedProductLabel(option?.label ?? '');
+                  setSelectedCatalogCost(catalogCostByProductId.current.get(value) ?? null);
                   setSelectedCurrency('');
+                  setAddError(null);
                 }}
                 loadOptions={loadProductOptions}
                 limit={10}
@@ -262,7 +404,7 @@ export default function TicketMaterialsCard({
                   </div>
                 ) : productPrices.length === 1 ? (
                   <div className="h-10 px-3 py-2 bg-white border rounded-md text-gray-700 flex items-center">
-                    {formatCurrencyFromMinorUnits(productPrices[0].rate, 'en-US', productPrices[0].currency_code)}
+                    {money(productPrices[0].rate, productPrices[0].currency_code)}
                   </div>
                 ) : (
                   <CustomSelect
@@ -273,6 +415,17 @@ export default function TicketMaterialsCard({
                     placeholder={t('materials.selectCurrency', 'Select currency...')}
                   />
                 )}
+              </div>
+            )}
+
+            {selectedProductId && (
+              <div className="space-y-2">
+                <Label>{t('materials.catalogUnitCost', 'Catalog unit cost')}</Label>
+                <div className="h-10 px-3 py-2 bg-gray-100 border rounded-md text-gray-700 flex items-center">
+                  {selectedCatalogCost
+                    ? money(selectedCatalogCost.cost, selectedCatalogCost.currency)
+                    : t('materials.costNotConfigured', 'Not configured')}
+                </div>
               </div>
             )}
 
@@ -292,11 +445,27 @@ export default function TicketMaterialsCard({
                 <Label>{t('materials.total', 'Total')}</Label>
                 <div className="h-10 px-3 py-2 bg-white border rounded-md text-gray-700 flex items-center">
                   {selectedPrice
-                    ? formatCurrencyFromMinorUnits(selectedPrice.rate * quantity, 'en-US', selectedPrice.currency_code)
+                    ? money(selectedPrice.rate * quantity, selectedPrice.currency_code)
                     : '-'}
                 </div>
               </div>
             </div>
+
+            {availableUnits.length > 0 && (
+              <div className="space-y-2">
+                <Label>{t('materials.serialUnit', 'Serial / MAC (serialized product)')}</Label>
+                <CustomSelect
+                  id={`${id}-unit-select`}
+                  options={availableUnits.map((u) => ({
+                    value: u.unit_id,
+                    label: u.mac_address ? `${u.serial_number} — ${u.mac_address}` : u.serial_number,
+                  }))}
+                  value={selectedUnitId}
+                  onValueChange={setSelectedUnitId}
+                  placeholder={t('materials.selectUnit', 'Select a unit to deliver...')}
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor={`${id}-description`}>
@@ -311,6 +480,24 @@ export default function TicketMaterialsCard({
               />
             </div>
 
+            {availability?.track_stock && availability.locations.length > 0 && (
+              <div id={`${id}-availability`} className="text-xs text-gray-500 space-y-0.5">
+                <div className="font-medium text-gray-600">{t('materials.onHandByLocation', 'On hand by location')}</div>
+                {availability.locations.map((loc) => (
+                  <div key={loc.location_id} className="flex justify-between">
+                    <span>{loc.location_name}</span>
+                    <span className="tabular-nums">{loc.on_hand}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {addError && (
+              <div id={`${id}-add-error`} className="text-sm text-red-600">
+                {addError}
+              </div>
+            )}
+
             <div className="flex justify-end space-x-2">
               <Button
                 {...withDataAutomationId({ id: `${id}-cancel-add-btn` })}
@@ -319,11 +506,13 @@ export default function TicketMaterialsCard({
                 onClick={() => {
                   setShowAddForm(false);
                   setSelectedProductId('');
+                  setSelectedCatalogCost(null);
                   setSelectedProductLabel('');
                   setProductPrices([]);
                   setSelectedCurrency('');
                   setQuantity(1);
                   setDescription('');
+                  setAddError(null);
                 }}
               >
                 {t('actions.cancel', 'Cancel')}
@@ -389,10 +578,10 @@ export default function TicketMaterialsCard({
                       </td>
                       <td className="py-2 text-right">{material.quantity}</td>
                       <td className="py-2 text-right">
-                        {formatCurrencyFromMinorUnits(material.rate, 'en-US', material.currency_code)}
+                        {money(material.rate, material.currency_code)}
                       </td>
                       <td className="py-2 text-right font-medium">
-                        {formatCurrencyFromMinorUnits(calculateTotal(material), 'en-US', material.currency_code)}
+                        {money(calculateTotal(material), material.currency_code)}
                       </td>
                       <td className="py-2 text-center">
                         {material.is_billed ? (
@@ -435,7 +624,7 @@ export default function TicketMaterialsCard({
                         {t('materials.unbilled', 'Unbilled ({{currency}}):', { currency: curr })}{' '}
                       </span>
                       <span className="font-semibold">
-                        {formatCurrencyFromMinorUnits(total, 'en-US', curr)}
+                        {money(total, curr)}
                       </span>
                     </div>
                   ))}

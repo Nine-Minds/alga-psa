@@ -8,9 +8,15 @@ import { ITag } from '@alga-psa/types';
 import { ITaskResource } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
 import { extractTaskDescriptionText } from '../lib/taskRichText';
+import {
+  projectKanbanHiddenStatusesKey,
+  getKanbanStatusIdentity,
+  normalizeHiddenStatusIds,
+  toggleHiddenStatusId,
+} from '../lib/kanbanPreferences';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTaskTypes } from '../actions/projectTaskActions';
-import { findTagsByEntityId, findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { findTagsByEntityId, findTagsByEntityIds, isTagActionError } from '@alga-psa/tags/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { getTaskCommentCountsBatch } from '../actions/projectTaskCommentActions';
 import { TagFilter } from '@alga-psa/ui/components';
@@ -26,11 +32,21 @@ import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
 import TaskListView from './TaskListView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
-import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase } from '../actions/projectActions';
+import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase, markPhaseComplete, reopenPhase } from '../actions/projectActions';
+import { checkCurrentUserPermissions } from '@alga-psa/auth/actions';
+import type { ProjectBillingOverview } from '@alga-psa/types';
+import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
+import { derivePhaseBillingBadges, getCurrentDateInUserTimeZone } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getProjectTaskData, assignTeamToProjectTask, removeTeamFromProjectTask, bulkAddTagsToTasks } from '../actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { toast } from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
 import MoveTaskDialog from './MoveTaskDialog';
@@ -48,30 +64,47 @@ import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
-import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus } from 'lucide-react';
+import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus, EyeOff, Eye, Receipt } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { Popover, PopoverTrigger, PopoverContent } from '@alga-psa/ui/components/Popover';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
 import { useUserPreferencesBatch } from '@alga-psa/user-composition/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { getTeams, getTeamAvatarUrlsBatchAction, isTeamActionError } from '@alga-psa/teams/actions';
 import type { ITeam } from '@alga-psa/types';
 import RemoveTeamDialog from './RemoveTeamDialog';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
 const PROJECT_KANBAN_ZOOM_LEVEL_SETTING = 'project_kanban_zoom_level';
 const PROJECT_HEADER_PINNED_SETTING = 'project_header_pinned';
 const PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING = 'project_kanban_sticky_status_names';
+// Per-user, per-project set of status identities the user has chosen to hide
+// from the kanban board (see kanbanPreferences for the setting name / value shape).
+// Purely visual (does not change the admin `is_visible` config) — it just
+// declutters the board to make dragging across columns easier.
 const PROJECT_LIST_DENSITY_LEVEL_SETTING = 'project_list_density_level';
 const PROJECT_LIST_COLUMN_WIDTHS_SETTING = 'project_list_column_widths';
 // Legacy localStorage key previously used by TaskListView; reused for one-time
 // hydration so existing per-project widths survive the move to server prefs.
 const projectListColumnWidthsLegacyKey = (projectId: string) =>
   `tasklistview-column-sizing:${projectId}`;
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
+
+function unwrapActionResult<T>(value: T | { actionError: string } | { permissionError: string }): T {
+  if (isReturnedActionError(value)) {
+    throw new Error(getErrorMessage(value));
+  }
+  return value;
+}
 
 // Row density (zoom) presets for the list view, mirroring the tickets table.
 // Indexed by level/10 (0..10); each scales row vertical padding + font size,
@@ -107,6 +140,7 @@ const PROJECT_LIST_DENSITY_PRESETS: readonly ProjectListDensityPreset[] = [
 const STATUS_FALLBACK_BACKGROUNDS = ['#f3f4f6', '#e0e7ff', '#dcfce7', '#fef9c3'];
 const STATUS_FALLBACK_BADGES = ['#e5e7eb', '#c7d2fe', '#bbf7d0', '#fef08a'];
 const STATUS_FALLBACK_BORDERS = ['#d1d5db', '#a5b4fc', '#86efac', '#fde047'];
+type TaskLayoutSnapshot = Map<string, { left: number; top: number }>;
 
 // Task type icons for the filter dropdown
 const taskTypeIcons: Record<string, React.ComponentType<any>> = {
@@ -188,6 +222,7 @@ interface ProjectDetailProps {
   onTagsUpdate?: (tags: ITag[], allTagTexts: string[]) => void;
   initialTaskId?: string | null;
   initialPhaseId?: string | null;
+  initialViewMode?: 'kanban' | 'list' | 'billing' | null;
   onUrlUpdate?: (phaseId: string | null, taskId: string | null) => void;
 }
 
@@ -202,25 +237,40 @@ export default function ProjectDetail({
   onTagsUpdate,
   initialTaskId,
   initialPhaseId,
+  initialViewMode,
   onUrlUpdate
 }: ProjectDetailProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const { money } = useCurrencyFormat();
+  const {
+    enabled: projectBillingUiEnabled,
+    loading: projectBillingUiLoading,
+  } = useFeatureFlag('project-billing-ui', { defaultValue: false });
+  // Billing surfaces are injected from the composition layer (billing package
+  // implements them); null when no provider is mounted → billing UI hidden.
+  const billingIntegration = useProjectBillingIntegration();
   useTagPermissions(['project', 'project_task']);
   const { getDocumentCountsForEntities } = useDocumentsCrossFeature();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
   // Batch-load all user preferences in a single server action (instead of 5 separate calls)
-  type ProjectViewMode = 'kanban' | 'list';
+  type ProjectViewMode = 'kanban' | 'list' | 'billing';
   // Column widths are scoped per project (each project can show different
   // columns), so the preference key includes the project id.
   const columnWidthsPrefKey = `${PROJECT_LIST_COLUMN_WIDTHS_SETTING}:${project.project_id}`;
+  // Hidden kanban columns are scoped per project and keyed by the underlying
+  // status identity (`standard_status_id` for standard statuses, `status_id` for
+  // custom statuses). This survives phase customization/reversion because those
+  // flows replace mapping rows while preserving the underlying status identity.
+  const hiddenStatusesPrefKey = projectKanbanHiddenStatusesKey(project.project_id);
   const prefs = useUserPreferencesBatch([
     { key: PROJECT_VIEW_MODE_SETTING, defaultValue: 'kanban' as ProjectViewMode, debounceMs: 300 },
     { key: PROJECT_PHASES_PANEL_VISIBLE_SETTING, defaultValue: true, debounceMs: 300 },
     { key: PROJECT_KANBAN_ZOOM_LEVEL_SETTING, defaultValue: 50, debounceMs: 300 },
     { key: PROJECT_HEADER_PINNED_SETTING, defaultValue: false, debounceMs: 300 },
     { key: PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING, defaultValue: false, debounceMs: 300 },
+    { key: hiddenStatusesPrefKey, defaultValue: [] as string[], debounceMs: 300 },
     { key: PROJECT_LIST_DENSITY_LEVEL_SETTING, defaultValue: PROJECT_LIST_DENSITY_DEFAULT, debounceMs: 300 },
     {
       key: columnWidthsPrefKey,
@@ -234,6 +284,7 @@ export default function ProjectDetail({
   const { value: kanbanZoomLevel, setValue: setKanbanZoomLevel } = prefs[PROJECT_KANBAN_ZOOM_LEVEL_SETTING];
   const { value: isHeaderPinned, setValue: setIsHeaderPinned } = prefs[PROJECT_HEADER_PINNED_SETTING];
   const { value: showStickyStatusNames, setValue: setShowStickyStatusNames } = prefs[PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING];
+  const { value: hiddenKanbanStatusIds, setValue: setHiddenKanbanStatusIds } = prefs[hiddenStatusesPrefKey];
   const { value: listDensityLevel, setValue: setListDensityLevel } = prefs[PROJECT_LIST_DENSITY_LEVEL_SETTING];
   const { value: listColumnWidths, setValue: setListColumnWidths } = prefs[columnWidthsPrefKey];
   const listDensity = useMemo(() => {
@@ -303,7 +354,20 @@ export default function ProjectDetail({
     spentHours: number;
     remainingHours: number;
   } | null>(null);
- 
+
+  // Project billing (option 3 — "Billing" as a third view + ambient signals)
+  const [canViewBilling, setCanViewBilling] = useState(false);
+  const [canManageBilling, setCanManageBilling] = useState(false);
+  const [canCompletePhase, setCanCompletePhase] = useState(false);
+  const [billingOverview, setBillingOverview] = useState<ProjectBillingOverview | null>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [billingHighlightEntryId, setBillingHighlightEntryId] = useState<string | null>(null);
+  const [billingToday, setBillingToday] = useState<string | null>(null);
+
+  useEffect(() => {
+    setBillingToday(getCurrentDateInUserTimeZone());
+  }, []);
+
   // State for the Move Task Dialog
   const [isMoveTaskDialogOpen, setIsMoveTaskDialogOpen] = useState(false);
   const [taskToMove, setTaskToMove] = useState<IProjectTask | null>(null);
@@ -410,6 +474,11 @@ export default function ProjectDetail({
           return [];
         });
         if (stale) return;
+        if (isTagActionError(tags)) {
+          console.warn('Failed to fetch project tags, continuing without tags:', tags);
+          setProjectTags([]);
+          return;
+        }
 
         setProjectTags(tags);
 
@@ -556,6 +625,180 @@ export default function ProjectDetail({
     ).length;
   }, [filteredTasks, phaseStatusLookup]);
 
+  // Resolve the viewer's billing/phase permissions once. Billing read gates the
+  // whole view + ambient signals (F115); the invoice create/generate set gates
+  // mutations; project:update gates phase completion (F154 — not billing).
+  useEffect(() => {
+    let stale = false;
+    checkCurrentUserPermissions([
+      { resource: 'billing', action: 'read' },
+      { resource: 'invoice', action: 'create' },
+      { resource: 'invoice', action: 'generate' },
+      { resource: 'project', action: 'update' },
+    ]).then((results) => {
+      if (stale) return;
+      const granted = (resource: string, action: string) =>
+        results.some((r) => r.resource === resource && r.action === action && r.granted);
+      setCanViewBilling(granted('billing', 'read'));
+      setCanManageBilling(granted('invoice', 'create') || granted('invoice', 'generate'));
+      setCanCompletePhase(granted('project', 'update'));
+    }).catch(() => { if (!stale) { setCanViewBilling(false); setCanManageBilling(false); } });
+    return () => { stale = true; };
+  }, [project.project_id]);
+
+  // Load the billing overview for the badges, chips, and billing view. Refreshed
+  // after any billing mutation so the whole screen reflects the new state.
+  const refreshBilling = useCallback(async () => {
+    if (!canViewBilling || !billingIntegration) { setBillingOverview(null); return; }
+    setBillingLoading(true);
+    try {
+      const overview = await billingIntegration.fetchOverview(project.project_id);
+      if (isActionMessageError(overview) || isActionPermissionError(overview)) {
+        console.error('Error loading project billing overview:', getErrorMessage(overview));
+        setBillingOverview(null);
+        return;
+      }
+      setBillingOverview(overview);
+    } catch (error) {
+      console.error('Error loading project billing overview:', error);
+      setBillingOverview(null);
+    } finally {
+      setBillingLoading(false);
+    }
+  }, [canViewBilling, billingIntegration, project.project_id]);
+
+  useEffect(() => { void refreshBilling(); }, [refreshBilling]);
+
+  // Phase → billing badge (F136) and phase → "all tasks closed" (F138) maps.
+  const phaseBillingBadges = useMemo(() => (
+    projectBillingUiEnabled && billingOverview?.config
+      ? derivePhaseBillingBadges(billingOverview.entries, billingOverview.config.currency, billingToday)
+      : {}
+  ), [billingOverview, billingToday, projectBillingUiEnabled]);
+
+  const phaseAllTasksClosed = useMemo(() => {
+    const result: Record<string, boolean> = {};
+    const perPhase: Record<string, { total: number; closed: number }> = {};
+    for (const task of projectTasks) {
+      const phaseId = task.phase_id;
+      if (!phaseId) continue;
+      const bucket = perPhase[phaseId] ?? (perPhase[phaseId] = { total: 0, closed: 0 });
+      bucket.total += 1;
+      if (phaseStatusLookup.get(task.project_status_mapping_id)?.is_closed === true) bucket.closed += 1;
+    }
+    for (const [phaseId, counts] of Object.entries(perPhase)) {
+      result[phaseId] = counts.total > 0 && counts.closed === counts.total;
+    }
+    return result;
+  }, [projectTasks, phaseStatusLookup]);
+
+  // A persisted Billing preference is ambient discovery, not direct access.
+  // Keep explicit ?view=billing links functional while the UI flag is off.
+  useEffect(() => {
+    if (
+      !isViewModeLoading
+      && !projectBillingUiLoading
+      && viewMode === 'billing'
+      && (!canViewBilling || !billingIntegration || (!projectBillingUiEnabled && initialViewMode !== 'billing'))
+    ) {
+      setViewMode('kanban');
+    }
+  }, [
+    isViewModeLoading,
+    projectBillingUiLoading,
+    viewMode,
+    canViewBilling,
+    billingIntegration,
+    projectBillingUiEnabled,
+    initialViewMode,
+    setViewMode,
+  ]);
+
+  // A ?view= URL parameter (e.g. the Invoicing Hub's review-queue links)
+  // overrides the persisted view preference once per navigation; the billing
+  // target additionally waits for the permission check so the RBAC fallback
+  // above cannot race it.
+  const appliedInitialViewRef = useRef(false);
+  useEffect(() => {
+    if (appliedInitialViewRef.current || !initialViewMode || isViewModeLoading) return;
+    if (initialViewMode === 'billing' && !canViewBilling) return;
+    appliedInitialViewRef.current = true;
+    if (viewMode !== initialViewMode) {
+      setViewMode(initialViewMode);
+    }
+  }, [initialViewMode, isViewModeLoading, canViewBilling, viewMode, setViewMode]);
+
+  const handleMarkPhaseComplete = useCallback(async (phase: IProjectPhase) => {
+    try {
+      const result = await markPhaseComplete(phase.phase_id);
+      setProjectPhases((prev) => prev.map((p) => (p.phase_id === phase.phase_id ? result.phase : p)));
+      void refreshBilling();
+      const readyEntry = result.ready_entries[0];
+      if (readyEntry && canViewBilling && projectBillingUiEnabled) {
+        // F139 — deep link into the billing view and highlight the freshly ready entry.
+        toast.success(
+          (toastRef) => (
+            <span className="flex items-center gap-2">
+              {t('phases.completeReadyToast', '{{description}} is ready to bill', { description: readyEntry.description })}
+              <button
+                type="button"
+                className="font-semibold text-primary-600 underline"
+                onClick={() => {
+                  setBillingHighlightEntryId(readyEntry.entry_id);
+                  setViewMode('billing');
+                  toast.dismiss(toastRef.id);
+                }}
+              >
+                {t('phases.viewInBilling', 'View')}
+              </button>
+            </span>
+          ),
+          { duration: 8000 },
+        );
+      } else {
+        toast.success(t('phases.markedComplete', 'Phase marked complete'));
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    }
+  }, [refreshBilling, canViewBilling, projectBillingUiEnabled, t, setViewMode]);
+
+  const handleReopenPhase = useCallback(async (phase: IProjectPhase) => {
+    try {
+      const updated = await reopenPhase(phase.phase_id);
+      setProjectPhases((prev) => prev.map((p) => (p.phase_id === phase.phase_id ? updated : p)));
+      void refreshBilling();
+      toast.success(t('phases.reopened', 'Phase reopened'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    }
+  }, [refreshBilling, t]);
+
+  // Shared ViewSwitcher options; the Billing option appears only with billing
+  // read permission (F113/F115).
+  const viewSwitcherOptions = useMemo(() => {
+    const options: { value: ProjectViewMode; label: string; icon: typeof LayoutGrid }[] = [
+      { value: 'kanban', label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
+      { value: 'list', label: t('listView', 'List'), icon: List },
+    ];
+    if (canViewBilling && projectBillingUiEnabled && billingIntegration) {
+      options.push({ value: 'billing', label: t('billingView', 'Billing'), icon: Receipt });
+    }
+    return options;
+  }, [t, canViewBilling, projectBillingUiEnabled, billingIntegration]);
+
+  const readyEntryCount = useMemo(
+    () => (billingOverview?.entries ?? []).filter((entry) => entry.status === 'ready').length,
+    [billingOverview],
+  );
+
+  // The deep-link highlight is a one-shot cue; clear it after a few seconds.
+  useEffect(() => {
+    if (!billingHighlightEntryId) return;
+    const timer = setTimeout(() => setBillingHighlightEntryId(null), 6000);
+    return () => clearTimeout(timer);
+  }, [billingHighlightEntryId]);
+
   // Fetch all project task data on mount (shared by list view, sidebar counts, and filtering)
   useEffect(() => {
     let stale = false;
@@ -566,6 +809,14 @@ export default function ProjectDetail({
           getProjectStatusesByPhase(project.project_id),
         ]);
         if (stale) return;
+        if (isReturnedActionError(data)) {
+          handleError(data);
+          return;
+        }
+        if (isReturnedActionError(phaseStatuses)) {
+          handleError(phaseStatuses);
+          return;
+        }
         setAllProjectTasks(data.tasks);
         setAllProjectTaskResources(data.taskResources);
         setAllProjectTaskTags(data.taskTags);
@@ -666,6 +917,7 @@ export default function ProjectDetail({
   const scrollbarThumbRef = useRef<HTMLDivElement>(null);
   const dragAbortRef = useRef<AbortController | null>(null);
   const stickyStatusStripRef = useRef<HTMLDivElement>(null);
+  const taskLayoutAnimationsRef = useRef<Map<string, Animation>>(new Map());
   const [kanbanHeaderHeight, setKanbanHeaderHeight] = useState(0);
   const [phasesPanelHeight, setPhasesPanelHeight] = useState<number | null>(null);
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -676,6 +928,77 @@ export default function ProjectDetail({
   });
   const phasesContainerRef = useRef<HTMLDivElement>(null);
   const pageContainerRef = useRef<HTMLDivElement>(null);
+
+  const captureTaskLayout = useCallback((): TaskLayoutSnapshot => {
+    const container = kanbanBoardRef.current;
+    const snapshot: TaskLayoutSnapshot = new Map();
+    if (!container) return snapshot;
+
+    container.querySelectorAll<HTMLElement>('[data-kanban-column-tasks="true"] [data-task-id]').forEach((element) => {
+      const taskId = element.dataset.taskId;
+      if (!taskId) return;
+
+      const rect = element.getBoundingClientRect();
+      snapshot.set(taskId, { left: rect.left, top: rect.top });
+    });
+
+    return snapshot;
+  }, []);
+
+  const playTaskLayoutAnimation = useCallback((beforeLayout: TaskLayoutSnapshot, excludedTaskIds: Set<string>) => {
+    if (beforeLayout.size === 0) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    window.requestAnimationFrame(() => {
+      const container = kanbanBoardRef.current;
+      if (!container) return;
+
+      container.querySelectorAll<HTMLElement>('[data-kanban-column-tasks="true"] [data-task-id]').forEach((element) => {
+        const taskId = element.dataset.taskId;
+        if (!taskId || excludedTaskIds.has(taskId) || typeof element.animate !== 'function') return;
+
+        const before = beforeLayout.get(taskId);
+        if (!before) return;
+
+        const after = element.getBoundingClientRect();
+        const deltaX = before.left - after.left;
+        const deltaY = before.top - after.top;
+        if (Math.abs(deltaX) < 0.5 && Math.abs(deltaY) < 0.5) return;
+
+        taskLayoutAnimationsRef.current.get(taskId)?.cancel();
+        element.style.willChange = 'transform';
+        const animation = element.animate(
+          [
+            { transform: `translate(${deltaX}px, ${deltaY}px)` },
+            { transform: 'translate(0, 0)' },
+          ],
+          {
+            duration: 180,
+            easing: 'cubic-bezier(0.2, 0, 0, 1)',
+          },
+        );
+
+        taskLayoutAnimationsRef.current.set(taskId, animation);
+        const clearAnimation = () => {
+          if (taskLayoutAnimationsRef.current.get(taskId) === animation) {
+            taskLayoutAnimationsRef.current.delete(taskId);
+            element.style.willChange = '';
+          }
+        };
+
+        animation.addEventListener('finish', clearAnimation, { once: true });
+        animation.addEventListener('cancel', clearAnimation, { once: true });
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    const animations = taskLayoutAnimationsRef.current;
+    return () => {
+      animations.forEach((animation) => animation.cancel());
+      animations.clear();
+    };
+  }, []);
 
   // Dynamically set min-height on pageContainer so it fills exactly the remaining
   // viewport, eliminating the dead-zone scroll caused by a static min-height: 100vh.
@@ -731,6 +1054,57 @@ export default function ProjectDetail({
       .sort((a, b) => a.display_order - b.display_order),
     [projectStatuses]
   );
+  // Per-user "hidden" columns are a purely visual filter layered on top of the
+  // admin-configured visible statuses. Hidden ids are the underlying status
+  // identities, not mapping ids, so the preference survives phase customization.
+  const hiddenStatusIdentitySet = useMemo(
+    () => new Set(normalizeHiddenStatusIds(hiddenKanbanStatusIds)),
+    [hiddenKanbanStatusIds]
+  );
+  const visibleStatusByMappingId = useMemo(
+    () => new Map(visibleKanbanStatuses.map((status) => [status.project_status_mapping_id, status])),
+    [visibleKanbanStatuses]
+  );
+  const forceVisibleStatusMappingIds = useMemo(() => {
+    const ids = new Set<string>();
+    const addIfHidden = (statusMappingId: string) => {
+      const status = visibleStatusByMappingId.get(statusMappingId);
+      if (status && hiddenStatusIdentitySet.has(getKanbanStatusIdentity(status))) {
+        ids.add(statusMappingId);
+      }
+    };
+    if (searchQuery.trim()) {
+      for (const task of filteredTasks) {
+        addIfHidden(task.project_status_mapping_id);
+      }
+    }
+    if (selectedTask?.project_status_mapping_id) {
+      addIfHidden(selectedTask.project_status_mapping_id);
+    }
+    return ids;
+  }, [filteredTasks, hiddenStatusIdentitySet, searchQuery, selectedTask?.project_status_mapping_id, visibleStatusByMappingId]);
+  const displayedKanbanStatuses = useMemo(
+    () => visibleKanbanStatuses.filter(
+      (status) => (
+        !hiddenStatusIdentitySet.has(getKanbanStatusIdentity(status)) ||
+        forceVisibleStatusMappingIds.has(status.project_status_mapping_id)
+      )
+    ),
+    [visibleKanbanStatuses, hiddenStatusIdentitySet, forceVisibleStatusMappingIds]
+  );
+  const hiddenVisibleStatusCount = useMemo(
+    () => visibleKanbanStatuses.filter(
+      (status) => hiddenStatusIdentitySet.has(getKanbanStatusIdentity(status))
+    ).length,
+    [visibleKanbanStatuses, hiddenStatusIdentitySet]
+  );
+  const toggleKanbanStatusHidden = useCallback((status: ProjectStatus) => {
+    const statusIdentity = getKanbanStatusIdentity(status);
+    setHiddenKanbanStatusIds((prev: string[]) => toggleHiddenStatusId(prev, statusIdentity));
+  }, [setHiddenKanbanStatusIds]);
+  const showAllKanbanStatuses = useCallback(() => {
+    setHiddenKanbanStatusIds([]);
+  }, [setHiddenKanbanStatusIds]);
   const statusTaskCounts = useMemo(() => {
     return filteredTasks.reduce<Record<string, number>>((counts, task) => {
       const statusId = task.project_status_mapping_id;
@@ -1028,7 +1402,7 @@ export default function ProjectDetail({
       dragAbortRef.current?.abort();
       dragAbortRef.current = null;
     };
-  }, [showStickyStatusNames, viewMode, kanbanZoomLevel, visibleKanbanStatuses.length, selectedPhase?.phase_id, isLoadingTasks, updateKanbanScrollbarThumb]);
+  }, [showStickyStatusNames, viewMode, kanbanZoomLevel, displayedKanbanStatuses.length, selectedPhase?.phase_id, isLoadingTasks, updateKanbanScrollbarThumb]);
 
   // Track header height so the sticky status strip can stack below it when both are active
   useEffect(() => {
@@ -1086,7 +1460,7 @@ export default function ProjectDetail({
       for (const task of tasksToMove) {
         try {
           if (task.phase_id !== newPhaseId) {
-            await moveTaskToPhase(
+            const moveResult = await moveTaskToPhase(
               task.task_id,
               newPhaseId,
               newStatusMappingId,
@@ -1094,6 +1468,11 @@ export default function ProjectDetail({
               prevBefore,
               safeAfter,
             );
+            if (isReturnedActionError(moveResult)) {
+              toast.error(getErrorMessage(moveResult));
+              failed++;
+              continue;
+            }
             crossPhaseMoved++;
           } else {
             const updatedTask = await updateTaskStatus(
@@ -1102,6 +1481,11 @@ export default function ProjectDetail({
               prevBefore,
               safeAfter,
             );
+            if (isReturnedActionError(updatedTask)) {
+              toast.error(getErrorMessage(updatedTask));
+              failed++;
+              continue;
+            }
             statusUpdatedById.set(task.task_id, updatedTask);
           }
           prevBefore = task.task_id;
@@ -1165,21 +1549,29 @@ export default function ProjectDetail({
       // Check if we're moving to a different phase
       if (task.phase_id !== newPhaseId) {
         // Move to different phase with new status
-        await moveTaskToPhase(taskId, newPhaseId, newStatusMappingId);
+        const moveResult = await moveTaskToPhase(taskId, newPhaseId, newStatusMappingId);
+        if (isReturnedActionError(moveResult)) {
+          toast.error(getErrorMessage(moveResult));
+          return;
+        }
         setAllProjectTasks(prev => prev.map(t =>
           t.task_id === taskId ? { ...t, phase_id: newPhaseId, project_status_mapping_id: newStatusMappingId } : t
         ));
         toast.success(t('projectDetail.taskMovedToNewPhase', 'Task moved to new phase'));
       } else if (task.project_status_mapping_id !== newStatusMappingId) {
         // Same phase, different status
-        await updateTaskStatus(taskId, newStatusMappingId, beforeTaskId, afterTaskId);
+        const updatedTask = await updateTaskStatus(taskId, newStatusMappingId, beforeTaskId, afterTaskId);
+        if (isReturnedActionError(updatedTask)) {
+          toast.error(getErrorMessage(updatedTask));
+          return;
+        }
         setAllProjectTasks(prev => prev.map(t =>
           t.task_id === taskId ? { ...t, project_status_mapping_id: newStatusMappingId } : t
         ));
         toast.success(t('projectDetail.taskStatusUpdated', 'Task status updated'));
       } else {
         // Same phase and status - just reorder
-        await reorderTask(taskId, beforeTaskId, afterTaskId);
+        unwrapActionResult(await reorderTask(taskId, beforeTaskId, afterTaskId));
         toast.success(t('projectDetail.taskReordered', 'Task reordered'));
       }
     } catch (error) {
@@ -1251,7 +1643,11 @@ export default function ProjectDetail({
         }
 
         setPriorities(allPriorities);
-        setTaskTypes(types);
+        if (isReturnedActionError(types)) {
+          handleError(types);
+        } else {
+          setTaskTypes(types);
+        }
       } catch (error) {
         if (!stale) handleError(error, 'Failed to load initial data');
       }
@@ -1318,7 +1714,12 @@ export default function ProjectDetail({
 
       setIsLoadingTasks(true);
       try {
-        const { tasks, ticketLinks, taskResources, taskDependencies, checklistItems, taskTags: phaseTags } = await getTasksForPhase(selectedPhase.phase_id);
+        const phaseData = await getTasksForPhase(selectedPhase.phase_id);
+        if (isReturnedActionError(phaseData)) {
+          handleError(phaseData);
+          return;
+        }
+        const { tasks, ticketLinks, taskResources, taskDependencies, checklistItems, taskTags: phaseTags } = phaseData;
         if (stale) return;
 
         // Add checklist items to tasks from batch-loaded data
@@ -1393,6 +1794,10 @@ export default function ProjectDetail({
       try {
         const allTeams = await getTeams();
         if (stale) return;
+        if (isTeamActionError(allTeams)) {
+          console.warn('Cannot load teams for project task display:', allTeams);
+          return;
+        }
         setTeams(allTeams);
         const namesMap: Record<string, string> = {};
         allTeams.forEach(team => {
@@ -1432,6 +1837,10 @@ export default function ProjectDetail({
     const loadTaskAndSelectPhase = async () => {
       try {
         const task = await getTaskById(initialTaskId);
+        if (isReturnedActionError(task)) {
+          toast.error(getErrorMessage(task));
+          return;
+        }
         if (!task) {
           toast.error(t('projectDetail.taskNotFound', 'Task not found'));
           return;
@@ -1516,6 +1925,13 @@ export default function ProjectDetail({
       try {
         const taskIds = projectTasks.map(task => task.task_id);
         const counts = await getTaskCommentCountsBatch(taskIds);
+        if (isReturnedActionError(counts)) {
+          if (!stale) {
+            toast.error(getErrorMessage(counts));
+            setTaskCommentCounts({});
+          }
+          return;
+        }
         if (!stale) setTaskCommentCounts(counts);
       } catch (error) {
         if (!stale) {
@@ -1600,6 +2016,11 @@ export default function ProjectDetail({
       for (const task of samePhaseTasks) {
         try {
           const updatedTask = await updateTaskStatus(task.task_id, targetStatusId, prevBefore, afterTaskId);
+          if (isReturnedActionError(updatedTask)) {
+            toast.error(getErrorMessage(updatedTask));
+            failed++;
+            continue;
+          }
           statusUpdatedById.set(task.task_id, updatedTask);
           prevBefore = task.task_id;
         } catch (error) {
@@ -1611,13 +2032,19 @@ export default function ProjectDetail({
       // Move cross-phase tasks into the current phase at the target status
       for (const task of otherPhaseTasks) {
         try {
-          await moveTaskToPhase(task.task_id, currentPhaseId, targetStatusId);
+          unwrapActionResult(await moveTaskToPhase(task.task_id, currentPhaseId, targetStatusId));
           movedInCount++;
         } catch (error) {
           console.error(`Failed to move task ${task.task_id}:`, error);
           failed++;
         }
       }
+
+      const movedTaskIds = new Set<string>([
+        ...statusUpdatedById.keys(),
+        ...otherPhaseTasks.map(t => t.task_id),
+      ]);
+      const beforeLayout = captureTaskLayout();
 
       if (otherPhaseTasks.length > 0) {
         // Cross-phase tasks now belong to this phase. Update the project-wide list
@@ -1634,6 +2061,7 @@ export default function ProjectDetail({
           return t;
         }));
         setStatusVersion(v => v + 1);
+        playTaskLayoutAnimation(beforeLayout, movedTaskIds);
       } else {
         // Pure same-phase status change — update in place to avoid a reload flicker
         const applyUpdate = (t: IProjectTask): IProjectTask => {
@@ -1644,6 +2072,7 @@ export default function ProjectDetail({
         };
         setProjectTasks(prev => prev.map(applyUpdate));
         setAllProjectTasks(prev => prev.map(applyUpdate));
+        playTaskLayoutAnimation(beforeLayout, movedTaskIds);
 
         setAnimatingTasks(prev => {
           const next = new Set(prev);
@@ -1696,77 +2125,93 @@ export default function ProjectDetail({
       return;
     }
 
-    try {
-      // Check if this is a status change or reorder
-      if (task.project_status_mapping_id !== targetStatusId) {
-        // Status change with position
-        const updatedTask = await updateTaskStatus(draggedTaskId, targetStatusId, beforeTaskId, afterTaskId);
-        const checklistItems = await getTaskChecklistItems(draggedTaskId);
-        const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
-        
-        // Remove from current status and add to new status
-        setProjectTasks(prevTasks => {
-          const newTasks = prevTasks.filter(t => t.task_id !== draggedTaskId);
-          return [...newTasks, taskWithChecklist];
+    // Capture order keys for the drop position up front (used for both the
+    // optimistic update and, on failure, the rollback).
+    const beforeTask = beforeTaskId ? projectTasks.find(t => t.task_id === beforeTaskId) : null;
+    const afterTask = afterTaskId ? projectTasks.find(t => t.task_id === afterTaskId) : null;
+    const newOrderKey = generateKeyBetween(beforeTask?.order_key || null, afterTask?.order_key || null);
+
+    // Helper to play the entry animation in the destination position.
+    const animateDroppedTask = () => {
+      setAnimatingTasks(prev => new Set(prev).add(draggedTaskId));
+      setTimeout(() => {
+        setAnimatingTasks(prev => {
+          const next = new Set(prev);
+          next.delete(draggedTaskId);
+          return next;
         });
-        
-        // Add animation state
-        setAnimatingTasks(prev => new Set(prev).add(draggedTaskId));
-        
-        // Remove the entering animation after a delay
-        setTimeout(() => {
-          setAnimatingTasks(prev => {
-            const next = new Set(prev);
-            next.delete(draggedTaskId);
-            return next;
-          });
-        }, 500);
-        
-        toast.success(t('projectDetail.taskMovedToNewStatus', 'Task moved to new status'));
-      } else {
-        // Reorder within same status - use the new reorderTask function
-        await reorderTask(draggedTaskId, beforeTaskId, afterTaskId);
-        
-        // Update local state to reflect the new order immediately
-        // Generate a new order key for the moved task
-        
-        // Get the order keys from the before/after tasks
-        let beforeKey: string | null = null;
-        let afterKey: string | null = null;
-        
-        if (beforeTaskId) {
-          const beforeTask = projectTasks.find(t => t.task_id === beforeTaskId);
-          beforeKey = beforeTask?.order_key || null;
+      }, 500);
+    };
+
+    if (task.project_status_mapping_id !== targetStatusId) {
+      // Status change with position.
+      //
+      // Apply the move to local state *immediately* (optimistically) so the
+      // card appears in the target column right away. Previously we awaited the
+      // server round-trips before updating state, which let the card flash back
+      // into its original column (at full opacity, once the drag ghost cleared)
+      // until the request resolved.
+      const beforeLayout = captureTaskLayout();
+      setProjectTasks(prevTasks =>
+        prevTasks.map((t): IProjectTask =>
+          t.task_id === draggedTaskId
+            ? { ...t, project_status_mapping_id: targetStatusId, order_key: newOrderKey }
+            : t
+        )
+      );
+      playTaskLayoutAnimation(beforeLayout, new Set([draggedTaskId]));
+      animateDroppedTask();
+
+      try {
+        const updatedTask = await updateTaskStatus(draggedTaskId, targetStatusId, beforeTaskId, afterTaskId);
+        if (isReturnedActionError(updatedTask)) {
+          setProjectTasks(prevTasks =>
+            prevTasks.map((t): IProjectTask =>
+              t.task_id === draggedTaskId
+                ? { ...t, project_status_mapping_id: task.project_status_mapping_id, order_key: task.order_key }
+                : t
+            )
+          );
+          toast.error(getErrorMessage(updatedTask));
+          return;
         }
-        
-        if (afterTaskId) {
-          const afterTask = projectTasks.find(t => t.task_id === afterTaskId);
-          afterKey = afterTask?.order_key || null;
-        }
-        
-        const newOrderKey = generateKeyBetween(beforeKey, afterKey);
-        
-        // Update the task with the new order key
+        const checklistItems = unwrapActionResult(await getTaskChecklistItems(draggedTaskId));
+        const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
+
+        // Reconcile with the authoritative server values (final order_key, etc.).
         setProjectTasks(prevTasks =>
-          prevTasks.map((t): IProjectTask =>
-            t.task_id === draggedTaskId ? { ...t, order_key: newOrderKey } : t
-          )
+          prevTasks.map((t): IProjectTask => (t.task_id === draggedTaskId ? taskWithChecklist : t))
         );
-        
-        // Add animation state
-        setAnimatingTasks(prev => new Set(prev).add(draggedTaskId));
-        
-        // Remove the entering animation after a delay
-        setTimeout(() => {
-          setAnimatingTasks(prev => {
-            const next = new Set(prev);
-            next.delete(draggedTaskId);
-            return next;
-          });
-        }, 500);
+
+        toast.success(t('projectDetail.taskMovedToNewStatus', 'Task moved to new status'));
+      } catch (error) {
+        // Roll back the optimistic move on failure.
+        setProjectTasks(prevTasks =>
+          prevTasks.map((t): IProjectTask => (t.task_id === draggedTaskId ? task : t))
+        );
+        handleError(error, 'Failed to move task');
       }
-    } catch (error) {
-      handleError(error, 'Failed to move task');
+    } else {
+      // Reorder within the same status. Update local order immediately, then
+      // persist; roll back if the request fails.
+      const beforeLayout = captureTaskLayout();
+      setProjectTasks(prevTasks =>
+        prevTasks.map((t): IProjectTask =>
+          t.task_id === draggedTaskId ? { ...t, order_key: newOrderKey } : t
+        )
+      );
+      playTaskLayoutAnimation(beforeLayout, new Set([draggedTaskId]));
+      animateDroppedTask();
+
+      try {
+        unwrapActionResult(await reorderTask(draggedTaskId, beforeTaskId, afterTaskId));
+      } catch (error) {
+        // Roll back the optimistic reorder on failure.
+        setProjectTasks(prevTasks =>
+          prevTasks.map((t): IProjectTask => (t.task_id === draggedTaskId ? task : t))
+        );
+        handleError(error, 'Failed to move task');
+      }
     }
   };
 
@@ -1911,8 +2356,8 @@ export default function ProjectDetail({
       if (!draggedPhase) return;
       
       const reorderResult = await reorderPhase(draggedPhaseId, beforePhaseId, afterPhaseId);
-      if (isActionPermissionError(reorderResult)) {
-        handleError(reorderResult.permissionError);
+      if (isReturnedActionError(reorderResult)) {
+        handleError(getErrorMessage(reorderResult));
         return;
       }
 
@@ -2048,7 +2493,7 @@ export default function ProjectDetail({
           // Omit the status mapping so moveTaskToPhase performs phase-aware
           // status remapping — passing the source status can land a task on a
           // mapping that isn't valid for the target phase's status set.
-          const movedTask = await moveTaskToPhase(id, targetPhase.phase_id);
+          const movedTask = unwrapActionResult(await moveTaskToPhase(id, targetPhase.phase_id));
           movedById.set(id, movedTask);
           success++;
         } catch (error) {
@@ -2100,12 +2545,12 @@ export default function ProjectDetail({
       // Omit the status mapping so moveTaskToPhase performs phase-aware status
       // remapping — passing the source status can land the task on a mapping
       // that isn't valid for the target phase's status set.
-      const updatedTask = await moveTaskToPhase(
+      const updatedTask = unwrapActionResult(await moveTaskToPhase(
         moveConfirmation.taskId,
         moveConfirmation.targetPhase.phase_id,
-      );
+      ));
 
-      const checklistItems = await getTaskChecklistItems(moveConfirmation.taskId);
+      const checklistItems = unwrapActionResult(await getTaskChecklistItems(moveConfirmation.taskId));
       const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
       setProjectTasks(prevTasks =>
@@ -2147,10 +2592,12 @@ export default function ProjectDetail({
       const activePhase = selectedPhase || currentPhase;
 
       if (activePhase && newTask.wbs_code.startsWith(activePhase.wbs_code)) {
-        const [checklistItems, taskResources] = await Promise.all([
+        const [checklistResult, taskResourcesResult] = await Promise.all([
           getTaskChecklistItems(newTask.task_id),
           getTaskResourcesAction(newTask.task_id)
         ]);
+        const checklistItems = unwrapActionResult(checklistResult);
+        const taskResources = unwrapActionResult(taskResourcesResult);
         const taskWithChecklist = { ...newTask, checklist_items: checklistItems };
 
         setProjectTasks((prevTasks) => [...prevTasks, taskWithChecklist]);
@@ -2230,10 +2677,12 @@ export default function ProjectDetail({
     if (updatedTask) {
       try {
         // Fetch checklist items and task resources in parallel
-        const [checklistItems, taskResources] = await Promise.all([
+        const [checklistResult, taskResourcesResult] = await Promise.all([
           getTaskChecklistItems(updatedTask.task_id),
           getTaskResourcesAction(updatedTask.task_id)
         ]);
+        const checklistItems = unwrapActionResult(checklistResult);
+        const taskResources = unwrapActionResult(taskResourcesResult);
         const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
         // Update kanban view data
@@ -2328,9 +2777,13 @@ export default function ProjectDetail({
         actual_hours: Number(task.actual_hours) || 0,
         checklist_items: task.checklist_items
       });
+      if (isReturnedActionError(updatedTask)) {
+        toast.error(getErrorMessage(updatedTask));
+        return;
+      }
 
       if (updatedTask) {
-        const checklistItems = await getTaskChecklistItems(taskId);
+        const checklistItems = unwrapActionResult(await getTaskChecklistItems(taskId));
         const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
         // Update kanban view data
@@ -2369,6 +2822,10 @@ export default function ProjectDetail({
         checklist_items: task.checklist_items,
         ...updates,
       });
+      if (isReturnedActionError(updatedTask)) {
+        toast.error(getErrorMessage(updatedTask));
+        return;
+      }
 
       if (updatedTask) {
         // Inline list edits (status, priority, due date, hours, etc.) never
@@ -2384,12 +2841,14 @@ export default function ProjectDetail({
   };
 
   const refreshTaskAfterTeamChange = async (taskId: string) => {
-    const [updatedTask, resources] = await Promise.all([
+    const [updatedTaskResult, resourcesResult] = await Promise.all([
       getTaskById(taskId),
       getTaskResourcesAction(taskId),
     ]);
+    const updatedTask = unwrapActionResult(updatedTaskResult);
+    const resources = unwrapActionResult(resourcesResult);
     if (!updatedTask) return;
-    const checklistItems = await getTaskChecklistItems(taskId);
+    const checklistItems = unwrapActionResult(await getTaskChecklistItems(taskId));
     const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
     setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
@@ -2403,7 +2862,7 @@ export default function ProjectDetail({
 
   const performTeamAssign = async (taskId: string, teamId: string) => {
     try {
-      await assignTeamToProjectTask(taskId, teamId);
+      unwrapActionResult(await assignTeamToProjectTask(taskId, teamId));
       await refreshTaskAfterTeamChange(taskId);
       toast.success(t('projectDetail.teamAssignedSuccess', 'Team assigned successfully'));
     } catch (error) {
@@ -2418,7 +2877,7 @@ export default function ProjectDetail({
 
     if (task.assigned_team_id) {
       try {
-        const resources = await getTaskResourcesAction(taskId);
+        const resources = unwrapActionResult(await getTaskResourcesAction(taskId));
         setPendingTaskTeamMembers(resources.filter((r: any) => r.role === 'team_member'));
       } catch (error) {
         console.error('Failed to load task resources for team switch dialog:', error);
@@ -2439,7 +2898,7 @@ export default function ProjectDetail({
     if (!pendingTeamAssign) return;
     const { taskId, teamId } = pendingTeamAssign;
     try {
-      await removeTeamFromProjectTask(taskId, { mode, keepUserIds });
+      unwrapActionResult(await removeTeamFromProjectTask(taskId, { mode, keepUserIds }));
       await performTeamAssign(taskId, teamId);
     } catch (error) {
       handleError(error, t('projectDetail.assignTeamFailed', 'Failed to assign team'));
@@ -2472,8 +2931,8 @@ export default function ProjectDetail({
         start_date: editingStartDate || null,
         end_date: editingEndDate || null
       });
-      if (isActionPermissionError(updatedPhase)) {
-        handleError(updatedPhase.permissionError);
+      if (isReturnedActionError(updatedPhase)) {
+        handleError(getErrorMessage(updatedPhase));
         return;
       }
 
@@ -2519,8 +2978,8 @@ export default function ProjectDetail({
 
     try {
       const deleteResult = await deletePhase(deletePhaseConfirmation.phaseId);
-      if (isActionPermissionError(deleteResult)) {
-        handleError(deleteResult.permissionError);
+      if (isReturnedActionError(deleteResult)) {
+        handleError(getErrorMessage(deleteResult));
         return;
       }
       setProjectPhases(prevPhases =>
@@ -2559,7 +3018,7 @@ export default function ProjectDetail({
 
   const handleReorderTasks = async (updates: { taskId: string, newWbsCode: string }[]) => {
     try {
-      await reorderTasksInStatus(updates);
+      unwrapActionResult(await reorderTasksInStatus(updates));
       // Update local state to reflect the new order
       const updatedTasks = [...projectTasks];
       updates.forEach(({taskId, newWbsCode}) => {
@@ -2596,11 +3055,14 @@ export default function ProjectDetail({
 
     try {
         // Fetch necessary details for the dialog toggles
-        const [resources, links, checklist] = await Promise.all([
+        const [resourcesResult, linksResult, checklistResult] = await Promise.all([
             getTaskResourcesAction(task.task_id),
             getTaskTicketLinksAction(task.task_id),
             getTaskChecklistItems(task.task_id)
         ]);
+        const resources = unwrapActionResult(resourcesResult);
+        const links = unwrapActionResult(linksResult);
+        const checklist = unwrapActionResult(checklistResult);
 
         setTaskToDuplicate(task);
         setDuplicateTaskToggleDetails({
@@ -2627,14 +3089,14 @@ export default function ProjectDetail({
 
     console.log(`Moving task ${taskToMove.task_id} to phase ${targetPhaseId} with status ${targetStatusId}`);
     try {
-      const movedTask = await moveTaskToPhase(
+      const movedTask = unwrapActionResult(await moveTaskToPhase(
         taskToMove.task_id,
         targetPhaseId,
         targetStatusId
-      );
+      ));
 
       if (movedTask) {
-        const checklistItems = await getTaskChecklistItems(movedTask.task_id);
+        const checklistItems = unwrapActionResult(await getTaskChecklistItems(movedTask.task_id));
         const taskWithDetails = { ...movedTask, checklist_items: checklistItems };
 
         // Check if the task was moved to a different phase than the currently selected one
@@ -2688,7 +3150,7 @@ export default function ProjectDetail({
 
     for (const taskId of ids) {
       try {
-        const movedTask = await moveTaskToPhase(taskId, targetPhaseId, targetStatusId);
+        const movedTask = unwrapActionResult(await moveTaskToPhase(taskId, targetPhaseId, targetStatusId));
         if (movedTask) {
           moved.push(movedTask);
         } else {
@@ -2744,7 +3206,12 @@ export default function ProjectDetail({
 
     for (const taskId of ids) {
       try {
-        await deleteTaskAction(taskId);
+        const result = await deleteTaskAction(taskId);
+        if (isReturnedActionError(result)) {
+          toast.error(getErrorMessage(result));
+          failed.push(taskId);
+          continue;
+        }
         deleted.push(taskId);
       } catch (error) {
         console.error(`Failed to delete task ${taskId}:`, error);
@@ -2804,7 +3271,7 @@ export default function ProjectDetail({
           // A user assignment should become the primary assignee. The UI renders the
           // team over the user, so any existing team assignment must be removed first.
           if (task.assigned_team_id) {
-            await removeTeamFromProjectTask(taskId, { mode: 'remove_all' });
+            unwrapActionResult(await removeTeamFromProjectTask(taskId, { mode: 'remove_all' }));
             resourcesToRefresh.push(taskId);
           }
           const updatedTask = await updateTaskWithChecklist(taskId, {
@@ -2815,8 +3282,13 @@ export default function ProjectDetail({
             actual_hours: Number(task.actual_hours) || 0,
             checklist_items: task.checklist_items,
           });
+          if (isReturnedActionError(updatedTask)) {
+            toast.error(getErrorMessage(updatedTask));
+            failed++;
+            continue;
+          }
           if (updatedTask) {
-            const checklistItems = await getTaskChecklistItems(taskId);
+            const checklistItems = unwrapActionResult(await getTaskChecklistItems(taskId));
             const taskWithChecklist = { ...updatedTask, assigned_team_id: null, checklist_items: checklistItems };
             setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
             setAllProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
@@ -2834,7 +3306,7 @@ export default function ProjectDetail({
         const refreshed = await Promise.all(
           resourcesToRefresh.map(async (id) => {
             try {
-              return [id, await getTaskResourcesAction(id)] as const;
+              return [id, unwrapActionResult(await getTaskResourcesAction(id))] as const;
             } catch (error) {
               console.error(`Failed to refresh resources for task ${id}:`, error);
               return null;
@@ -2888,9 +3360,9 @@ export default function ProjectDetail({
           // can't surface the per-task keep/remove prompt, so we mirror the
           // single-user-assign path (which always removes the prior team).
           if (task.assigned_team_id) {
-            await removeTeamFromProjectTask(taskId, { mode: 'remove_all' });
+            unwrapActionResult(await removeTeamFromProjectTask(taskId, { mode: 'remove_all' }));
           }
-          await assignTeamToProjectTask(taskId, teamId);
+          unwrapActionResult(await assignTeamToProjectTask(taskId, teamId));
           await refreshTaskAfterTeamChange(taskId);
           success++;
         } catch (error) {
@@ -2933,6 +3405,10 @@ export default function ProjectDetail({
         // the per-task tag state via the existing handler.
         try {
           const refreshed = await findTagsByEntityIds(result.updatedIds, 'project_task');
+          if (isTagActionError(refreshed)) {
+            console.error('Failed to refresh task tags after bulk add:', refreshed);
+            return;
+          }
           const byTask = new Map<string, ITag[]>();
           for (const id of result.updatedIds) byTask.set(id, []);
           for (const tag of refreshed) {
@@ -2981,6 +3457,42 @@ export default function ProjectDetail({
   const renderHeader = () => {
     const completionPercentage = (completedTasksCount / filteredTasks.length) * 100 || 0;
 
+    // Billing view header (F114): "Billing" heading + model/ready chips; task
+    // search and filters are intentionally hidden.
+    if (viewMode === 'billing') {
+      const config = billingOverview?.config;
+      const modelChipLabel = !config
+        ? t('billing.header.notEnabled', 'Not enabled')
+        : config.billing_model === 'fixed_price'
+          ? t('billing.header.fixedChip', 'Fixed price · {{total}}', {
+            total: money(config.total_price ?? 0, config.currency ?? undefined),
+          })
+          : t('billing.header.tmChip', 'Time & materials');
+      return (
+        <div className="mb-4 flex-shrink-0">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-xl font-bold">{t('billing.header.title', 'Billing')}</h2>
+            <span className="inline-flex items-center rounded-full bg-[rgb(var(--color-border-100))] px-2.5 py-0.5 text-xs font-semibold text-[rgb(var(--color-text-600))]">
+              {modelChipLabel}
+            </span>
+            {readyEntryCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                {t('billing.header.readyChip', '{{count}} ready to bill', { count: readyEntryCount })}
+              </span>
+            )}
+            <div className="ml-auto">
+              <ViewSwitcher
+                currentView={viewMode}
+                onChange={(v) => setViewMode(v as ProjectViewMode)}
+                options={viewSwitcherOptions}
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (viewMode === 'list') {
       return (
         <div className="mb-4 space-y-3 flex-shrink-0">
@@ -3019,10 +3531,7 @@ export default function ProjectDetail({
               <ViewSwitcher
                 currentView={viewMode}
                 onChange={(v) => setViewMode(v as ProjectViewMode)}
-                options={[
-                  { value: 'kanban', label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
-                  { value: 'list', label: t('listView', 'List'), icon: List }
-                ]}
+                options={viewSwitcherOptions}
               />
             </div>
           </div>
@@ -3211,6 +3720,79 @@ export default function ProjectDetail({
               zoomLevel={kanbanZoomLevel}
               onZoomChange={setKanbanZoomLevel}
             />
+            <Popover>
+              <Tooltip content={t('projectDetail.showHideColumns', 'Show/hide columns')}>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="kanban-column-visibility-toggle"
+                    variant="ghost"
+                    size="sm"
+                    className={`relative p-1.5 h-auto w-auto transition-colors ${
+                      hiddenVisibleStatusCount > 0
+                        ? 'bg-primary-100 text-primary-600'
+                        : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                    aria-label={t('projectDetail.showHideColumns', 'Show/hide columns')}
+                  >
+                    <EyeOff className="h-4 w-4" />
+                    {hiddenVisibleStatusCount > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-500 px-1 text-[10px] font-semibold leading-none text-white">
+                        {hiddenVisibleStatusCount}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+              </Tooltip>
+              <PopoverContent align="end" className="w-64 p-2">
+                <div className="flex items-center justify-between px-1 pb-1.5">
+                  <span className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
+                    {t('projectDetail.columns', 'Columns')}
+                  </span>
+                  <Button
+                    id="kanban-show-all-columns"
+                    variant="ghost"
+                    size="xs"
+                    onClick={showAllKanbanStatuses}
+                    disabled={hiddenVisibleStatusCount === 0}
+                    className="text-xs"
+                  >
+                    {t('projectDetail.showAll', 'Show all')}
+                  </Button>
+                </div>
+                <div className="max-h-72 overflow-y-auto">
+                  {visibleKanbanStatuses.length === 0 ? (
+                    <p className="px-1 py-2 text-sm text-gray-500">
+                      {t('projectDetail.noColumns', 'No columns available')}
+                    </p>
+                  ) : (
+                    visibleKanbanStatuses.map((status) => {
+                      const isHidden = hiddenStatusIdentitySet.has(getKanbanStatusIdentity(status));
+                      return (
+                        <button
+                          key={status.project_status_mapping_id}
+                          type="button"
+                          onClick={() => toggleKanbanStatusHidden(status)}
+                          className="flex w-full items-center gap-2 rounded-sm px-1.5 py-1.5 text-left text-sm transition-colors hover:bg-muted"
+                        >
+                          {isHidden
+                            ? <EyeOff className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                            : <Eye className="h-4 w-4 flex-shrink-0 text-primary-600" />}
+                          {status.color && (
+                            <span
+                              className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                              style={{ backgroundColor: status.color }}
+                            />
+                          )}
+                          <span className={`min-w-0 flex-1 truncate ${isHidden ? 'text-gray-400' : 'text-[rgb(var(--color-text-900))]'}`}>
+                            {status.custom_name || status.name}
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
             <Tooltip content={showStickyStatusNames ? t('projectDetail.hideStickyStatusNames', 'Hide sticky status names') : t('projectDetail.showStickyStatusNames', 'Show sticky status names')}>
               <Button
                 id="sticky-status-names-toggle-kanban"
@@ -3246,10 +3828,7 @@ export default function ProjectDetail({
             <ViewSwitcher
               currentView={viewMode}
               onChange={(v) => setViewMode(v as ProjectViewMode)}
-              options={[
-                { value: 'kanban', label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
-                { value: 'list', label: t('listView', 'List'), icon: List }
-              ]}
+              options={viewSwitcherOptions}
             />
           </div>
         </div>
@@ -3443,6 +4022,23 @@ export default function ProjectDetail({
 
   // Render the scrollable content (kanban board or list view)
   const renderContent = () => {
+    // Billing view rendering (option 3): billing workspace replaces the board.
+    if (viewMode === 'billing') {
+      if (!billingIntegration) return null;
+      return (
+        <billingIntegration.BillingView
+          projectId={project.project_id}
+          clientId={project.client_id ?? null}
+          phases={projectPhases}
+          overview={billingOverview}
+          loading={billingLoading && billingOverview === null}
+          canManage={canManageBilling}
+          highlightEntryId={billingHighlightEntryId}
+          onChanged={() => { void refreshBilling(); }}
+        />
+      );
+    }
+
     // List view rendering
     if (viewMode === 'list') {
       if (!projectTaskDataLoaded) {
@@ -3494,6 +4090,11 @@ export default function ProjectDetail({
               setShowQuickAdd(true);
             }
           }}
+          phaseBillingBadges={phaseBillingBadges}
+          phaseAllTasksClosed={phaseAllTasksClosed}
+          canCompletePhase={canCompletePhase}
+          onMarkPhaseComplete={handleMarkPhaseComplete}
+          onReopenPhase={handleReopenPhase}
           onTaskTagsChange={handleTaskTagsChange}
           onAssigneeChange={(taskId, newAssigneeId) => handleAssigneeChange(taskId, newAssigneeId)}
           onTeamAssign={handleTeamAssign}
@@ -3534,13 +4135,40 @@ export default function ProjectDetail({
       <div className={styles.kanbanWrapper}>
         {isLoadingTasks ? (
           <KanbanBoardSkeleton />
+        ) : displayedKanbanStatuses.length === 0 && hiddenVisibleStatusCount > 0 ? (
+          // Every visible column has been hidden by the user — the board would
+          // otherwise be blank with no per-column controls to recover from, so
+          // surface an explicit "show all" affordance here.
+          <div
+            id="kanban-all-columns-hidden"
+            className="flex flex-col items-center justify-center gap-3 py-16 text-center"
+          >
+            <EyeOff className="h-8 w-8 text-gray-300" />
+            <div>
+              <p className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+                {t('projectDetail.allColumnsHidden', 'All columns are hidden')}
+              </p>
+              <p className="mt-1 text-sm text-gray-500">
+                {t('projectDetail.allColumnsHiddenHint', 'Show one or more columns to see your tasks.')}
+              </p>
+            </div>
+            <Button
+              id="kanban-show-all-columns-empty"
+              variant="outline"
+              size="sm"
+              onClick={showAllKanbanStatuses}
+            >
+              <Eye className="mr-1.5 h-4 w-4" />
+              {t('projectDetail.showAllColumns', 'Show all columns')}
+            </Button>
+          </div>
         ) : (
           <KanbanBoard
             tasks={projectTasks}
             phaseTasks={filteredTasks}
             users={users}
             taskTypes={taskTypes}
-            statuses={visibleKanbanStatuses}
+            statuses={displayedKanbanStatuses}
             isAddingTask={isAddingTask}
             selectedPhase={!!selectedPhase}
             ticketLinks={phaseTicketLinks}
@@ -3561,6 +4189,7 @@ export default function ProjectDetail({
             searchWholeWord={searchWholeWord}
             zoomLevel={kanbanZoomLevel}
             hideHeader={showStickyStatusNames}
+            revealedHiddenStatusIds={forceVisibleStatusMappingIds}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onAddCard={handleAddCard}
@@ -3576,6 +4205,7 @@ export default function ProjectDetail({
             onEditTaskClick={handleTaskSelected}
             onDeleteTaskClick={handleDeleteTaskClick}
             onTaskTagsChange={handleTaskTagsChange}
+            onHideColumn={toggleKanbanStatusHidden}
           />
         )}
       </div>
@@ -3588,13 +4218,16 @@ export default function ProjectDetail({
         className={styles.mainContent}
         onDragOver={handleDragOver}
       >
+        {projectBillingUiEnabled && billingIntegration && (
+          <billingIntegration.PaymentWarningBanner projectId={project.project_id} className="mb-3 flex-shrink-0" />
+        )}
         <div className={styles.contentWrapper}>
           {/* Phases panel - collapsible in kanban view */}
-          {viewMode === 'kanban' && (
+          {(viewMode === 'kanban' || viewMode === 'billing') && (
             <div
                 ref={phasesContainerRef}
                 className={`${styles.phasesContainer} ${isPhasesPanelVisible ? styles.phasesContainerExpanded : styles.phasesContainerCollapsed}`}
-                style={phasesPanelHeight && isPhasesPanelVisible ? { height: `${phasesPanelHeight}px`, maxHeight: `${phasesPanelHeight}px` } : undefined}
+                style={viewMode === 'kanban' && phasesPanelHeight && isPhasesPanelVisible ? { height: `${phasesPanelHeight}px`, maxHeight: `${phasesPanelHeight}px` } : undefined}
               >
               {/* Toggle button */}
               <CollapseToggleButton
@@ -3609,6 +4242,7 @@ export default function ProjectDetail({
               {/* Phases panel content */}
               <div className={`${styles.phasesList} ${isPhasesPanelVisible ? styles.phasesListVisible : styles.phasesListHidden}`}>
                 <ProjectPhases
+                  viewMode={viewMode}
                   phases={projectPhases}
                   projectId={project.project_id}
                   selectedPhase={selectedPhase}
@@ -3647,6 +4281,11 @@ export default function ProjectDetail({
                   onDragEnd={handlePhaseDragEnd}
                   onStatusesChanged={() => setStatusVersion(v => v + 1)}
                   onImport={() => setShowImportDialog(true)}
+                  phaseBillingBadges={phaseBillingBadges}
+                  phaseAllTasksClosed={phaseAllTasksClosed}
+                  canCompletePhase={canCompletePhase}
+                  onMarkPhaseComplete={handleMarkPhaseComplete}
+                  onReopenPhase={handleReopenPhase}
                 />
               </div>
             </div>
@@ -3657,28 +4296,30 @@ export default function ProjectDetail({
               className={`${styles.kanbanHeader} ${isHeaderPinned ? styles.kanbanHeaderPinned : ''}`}
             >
               {renderHeader()}
-              <div className={styles.kanbanScrollbarShell}>
-                <div
-                  ref={scrollbarTrackRef}
-                  className={styles.kanbanScrollbarTrack}
-                  onPointerDown={handleKanbanScrollbarTrackPointerDown}
-                >
+              {viewMode !== 'billing' && (
+                <div className={styles.kanbanScrollbarShell}>
                   <div
-                    data-kanban-scrollbar-thumb="true"
-                    ref={scrollbarThumbRef}
-                    className={styles.kanbanScrollbarThumb}
-                    onPointerDown={handleKanbanScrollbarThumbPointerDown}
-                    onKeyDown={handleKanbanScrollbarKeyDown}
-                    role="scrollbar"
-                    aria-controls="kanban-scroll-container"
-                    aria-orientation="horizontal"
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={0}
-                    tabIndex={0}
-                  />
+                    ref={scrollbarTrackRef}
+                    className={styles.kanbanScrollbarTrack}
+                    onPointerDown={handleKanbanScrollbarTrackPointerDown}
+                  >
+                    <div
+                      data-kanban-scrollbar-thumb="true"
+                      ref={scrollbarThumbRef}
+                      className={styles.kanbanScrollbarThumb}
+                      onPointerDown={handleKanbanScrollbarThumbPointerDown}
+                      onKeyDown={handleKanbanScrollbarKeyDown}
+                      role="scrollbar"
+                      aria-controls="kanban-scroll-container"
+                      aria-orientation="horizontal"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={0}
+                      tabIndex={0}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
             {/* Independent sticky status strip */}
             {showStickyStatusNames && viewMode === 'kanban' && (
@@ -3688,7 +4329,7 @@ export default function ProjectDetail({
               >
                 <div className={styles.kanbanStatusStripScroller} ref={stickyStatusStripRef}>
                   <div className={styles.kanbanStatusStripTrack}>
-                    {visibleKanbanStatuses.map((status, index) => {
+                    {displayedKanbanStatuses.map((status, index) => {
                       const { itemStyle, countStyle } = getStatusStripStyles(status, index);
                       const stripTaskIds = filteredTasks
                         .filter(t => t.project_status_mapping_id === status.project_status_mapping_id)
@@ -3715,7 +4356,7 @@ export default function ProjectDetail({
                               indeterminate={stripSomeSelected && !stripAllSelected}
                               onChange={() => setTasksSelected(stripTaskIds, !stripAllSelected)}
                               size="sm"
-                              containerClassName="mb-0 flex-shrink-0"
+                              containerClassName="flex-shrink-0"
                               skipRegistration
                             />
                           )}
@@ -3859,13 +4500,13 @@ export default function ProjectDetail({
           onConfirm={async (targetPhaseId: string, options: DuplicateOptions) => {
             if (!taskToDuplicate) return;
             try {
-              const newTask = await duplicateTaskToPhase(
+              const newTask = unwrapActionResult(await duplicateTaskToPhase(
                 taskToDuplicate.task_id,
                 targetPhaseId,
                 options
-              );
+              ));
               
-              const checklistItems = await getTaskChecklistItems(newTask.task_id);
+              const checklistItems = unwrapActionResult(await getTaskChecklistItems(newTask.task_id));
               const taskWithChecklist = { ...newTask, checklist_items: checklistItems };
               setProjectTasks(prev => [...prev, taskWithChecklist]);
               // Add to allProjectTasks for filtered counts
@@ -3974,7 +4615,12 @@ export default function ProjectDetail({
           onConfirm={async () => {
             if (!taskToDelete) return;
             try {
-              await deleteTaskAction(taskToDelete.task_id);
+              const result = await deleteTaskAction(taskToDelete.task_id);
+              if (isReturnedActionError(result)) {
+                toast.error(getErrorMessage(result));
+                setTaskToDelete(null);
+                return;
+              }
               setProjectTasks(prev => prev.filter(t => t.task_id !== taskToDelete.task_id));
               // Remove from allProjectTasks for filtered counts
               setAllProjectTasks(prev => prev.filter(t => t.task_id !== taskToDelete.task_id));

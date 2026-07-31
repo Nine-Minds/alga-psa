@@ -5,12 +5,20 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { MoreVertical, PlusCircle, Info } from 'lucide-react';
 
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -24,6 +32,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 import { ITaxComponent } from '@alga-psa/types';
 import { ColumnDefinition } from '@alga-psa/types';
@@ -32,7 +41,7 @@ import {
   createTaxComponent,
   updateTaxComponent,
   deleteTaxComponent,
-} from '@alga-psa/billing/actions';
+} from '../../../actions/taxSettingsActions';
 
 // Zod schema for form validation
 const taxComponentSchema = z.object({
@@ -46,6 +55,11 @@ const taxComponentSchema = z.object({
 
 type TaxComponentFormData = z.infer<typeof taxComponentSchema>;
 
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+const isReturnedActionError = (value: unknown): value is ReturnedActionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
+
 interface TaxComponentEditorProps {
   taxRateId: string;
   isReadOnly?: boolean;
@@ -53,6 +67,7 @@ interface TaxComponentEditorProps {
 
 export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxComponentEditorProps) {
   const { t } = useTranslation('msp/billing-settings');
+  const { money } = useCurrencyFormat();
   const [components, setComponents] = useState<ITaxComponent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -87,6 +102,11 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
     setIsLoading(true);
     try {
       const fetchedComponents = await getTaxComponentsByTaxRate(taxRateId);
+      if (isReturnedActionError(fetchedComponents)) {
+        setComponents([]);
+        handleError(fetchedComponents, t('tax.components.errors.load', { defaultValue: 'Failed to load tax components.' }));
+        return;
+      }
       setComponents(fetchedComponents);
     } catch (error) {
       handleError(error, t('tax.components.errors.load', { defaultValue: 'Failed to load tax components.' }));
@@ -155,25 +175,27 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
       : t('tax.components.errors.create', { defaultValue: 'Failed to create tax component.' });
 
     try {
-      if (isEditing) {
-        await updateTaxComponent(editingComponent.tax_component_id, {
-          name: data.name,
-          rate: data.rate,
-          sequence: data.sequence,
-          is_compound: data.is_compound,
-          start_date: data.start_date || undefined,
-          end_date: data.end_date || undefined,
-        });
-      } else {
-        await createTaxComponent({
-          tax_rate_id: taxRateId,
-          name: data.name,
-          rate: data.rate,
-          sequence: data.sequence,
-          is_compound: data.is_compound,
-          start_date: data.start_date || undefined,
-          end_date: data.end_date || undefined,
-        });
+      const result = editingComponent
+        ? await updateTaxComponent(editingComponent.tax_component_id, {
+            name: data.name,
+            rate: data.rate,
+            sequence: data.sequence,
+            is_compound: data.is_compound,
+            start_date: data.start_date || undefined,
+            end_date: data.end_date || undefined,
+          })
+        : await createTaxComponent({
+            tax_rate_id: taxRateId,
+            name: data.name,
+            rate: data.rate,
+            sequence: data.sequence,
+            is_compound: data.is_compound,
+            start_date: data.start_date || undefined,
+            end_date: data.end_date || undefined,
+          });
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
       }
       toast.success(successMessage);
       await fetchComponents();
@@ -190,7 +212,11 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
     setIsSubmitting(true);
 
     try {
-      await deleteTaxComponent(componentToDelete.tax_component_id);
+      const result = await deleteTaxComponent(componentToDelete.tax_component_id);
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
+      }
       toast.success(t('tax.components.toast.deleted', { defaultValue: 'Tax component deleted successfully.' }));
       await fetchComponents();
       handleCloseDeleteDialog();
@@ -380,7 +406,7 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
           <div className="bg-muted/50 rounded-lg p-4 mt-4">
             <h5 className="text-sm font-medium mb-2">
               {t('tax.components.preview.title', {
-                amount: `$${calculatePreview.baseAmount.toFixed(2)}`,
+                amount: money(Math.round(calculatePreview.baseAmount * 100)),
                 defaultValue: 'Calculation Preview ({{amount}} base)'
               })}
             </h5>
@@ -392,13 +418,13 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
                       ? t('tax.components.preview.compoundSuffix', { defaultValue: ', compound' })
                       : ''}):
                   </span>
-                  <span>${item.tax.toFixed(2)}</span>
+                  <span>{money(Math.round(item.tax * 100))}</span>
                 </div>
               ))}
               <div className="border-t pt-1 mt-1 flex justify-between font-medium">
                 <span>{t('tax.components.preview.totalTax', { defaultValue: 'Total Tax:' })}</span>
                 <span>
-                  ${calculatePreview.totalTax.toFixed(2)} (
+                  {money(Math.round(calculatePreview.totalTax * 100))} (
                   {t('tax.components.preview.effective', {
                     rate: calculatePreview.effectiveRate.toFixed(2),
                     defaultValue: 'Effective: {{rate}}%'
@@ -536,11 +562,21 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
               <Label htmlFor="tax-component-start-date-field">
                 {t('tax.components.fields.startDate.label', { defaultValue: 'Start Date (Optional)' })}
               </Label>
-              <Input
-                id="tax-component-start-date-field"
-                type="date"
-                {...form.register('start_date')}
-                disabled={isSubmitting}
+              <Controller
+                control={form.control}
+                name="start_date"
+                render={({ field }) => (
+                  <DatePicker
+                    id="tax-component-start-date-field"
+                    label={t('tax.components.fields.startDate.label', { defaultValue: 'Start Date (Optional)' })}
+                    placeholder={t('tax.components.fields.startDate.label', { defaultValue: 'Start Date (Optional)' })}
+                    clearable
+                    className="w-full"
+                    disabled={isSubmitting}
+                    value={dateFromString(field.value)}
+                    onChange={(date) => field.onChange(dateToString(date))}
+                  />
+                )}
               />
             </div>
 
@@ -548,11 +584,21 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
               <Label htmlFor="tax-component-end-date-field">
                 {t('tax.components.fields.endDate.label', { defaultValue: 'End Date (Optional)' })}
               </Label>
-              <Input
-                id="tax-component-end-date-field"
-                type="date"
-                {...form.register('end_date')}
-                disabled={isSubmitting}
+              <Controller
+                control={form.control}
+                name="end_date"
+                render={({ field }) => (
+                  <DatePicker
+                    id="tax-component-end-date-field"
+                    label={t('tax.components.fields.endDate.label', { defaultValue: 'End Date (Optional)' })}
+                    placeholder={t('tax.components.fields.endDate.label', { defaultValue: 'End Date (Optional)' })}
+                    clearable
+                    className="w-full"
+                    disabled={isSubmitting}
+                    value={dateFromString(field.value)}
+                    onChange={(date) => field.onChange(dateToString(date))}
+                  />
+                )}
               />
             </div>
           </div>

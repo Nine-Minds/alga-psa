@@ -23,7 +23,11 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getAsset, updateAsset } from '../actions/assetActions';
+import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { formatClientLocation } from '../lib/formatClientLocation';
+import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
+import { buildAssetTypeOptions, findCustomAssetType, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
+import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
 import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
@@ -35,6 +39,12 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface AssetFormProps {
   assetId: string;
+  /**
+   * Called instead of navigating after a successful save. The /edit route
+   * leaves this unset and keeps navigating to the detail page; the edit drawer
+   * passes a handler so saving closes the drawer without leaving the page.
+   */
+  onSaved?: () => void;
 }
 
 type AssetFormData = Omit<CreateAssetRequest, 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer'> & {
@@ -53,7 +63,7 @@ const NETWORK_DEVICE_TYPE_VALUES = ['switch', 'router', 'firewall', 'access_poin
 const STORAGE_TYPE_VALUES = ['ssd', 'hdd', 'nvme'] as const;
 const OS_TYPE_VALUES = ['windows', 'macos', 'linux'] as const;
 
-export default function AssetForm({ assetId }: AssetFormProps) {
+export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
   const { t } = useTranslation('msp/assets');
   const [asset, setAsset] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,6 +80,10 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   const [locationsError, setLocationsError] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [customLocation, setCustomLocation] = useState('');
+  // F309: custom-type schema field values (assets.attributes[key]); kept
+  // across type switches per PRD D4 so re-selecting a type restores values.
+  const [customAttributes, setCustomAttributes] = useState<Record<string, unknown>>({});
+  const [attributeErrors, setAttributeErrors] = useState<Record<string, string>>({});
   const clientDrawer = useClientDrawer();
 
   useRegisterUIComponent({
@@ -92,6 +106,20 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   });
   
   const router = useRouter();
+
+  // F308: type select sources the tenant registry (built-ins first with their
+  // existing labels, then custom types by registry name).
+  const registryEntries = useAssetTypeRegistry(true);
+  const assetTypeOptions = useMemo(
+    () => buildAssetTypeOptions(registryEntries, t, { includeUnknown: true }),
+    [registryEntries, t]
+  );
+  const selectedCustomType = useMemo(
+    () => findCustomAssetType(registryEntries, formData.asset_type),
+    [registryEntries, formData.asset_type]
+  );
+  const customTypeFields = selectedCustomType?.fields_schema ?? [];
+
   const statusOptions = useMemo(() => (
     STATUS_OPTION_VALUES.map((value) => ({
       value,
@@ -146,7 +174,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   useEffect(() => {
     const loadAsset = async () => {
       try {
-        const data = await getAsset(assetId);
+        const data = unwrapAssetActionResult(await getAsset(assetId));
         if (!data) {
           setLoadError(t('assetForm.errors.assetNotFound', { defaultValue: 'Asset not found' }));
           return;
@@ -231,6 +259,11 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         });
         setCustomLocation(data.location || '');
         setSelectedLocationId(data.location_id ?? (data.location ? 'custom' : ''));
+        setCustomAttributes(
+          data.attributes && typeof data.attributes === 'object' && !Array.isArray(data.attributes)
+            ? { ...data.attributes }
+            : {}
+        );
       } catch (error) {
         console.error('Error loading asset:', error);
         setLoadError(t('assetForm.errors.loadFailed', { defaultValue: 'Failed to load asset details' }));
@@ -427,9 +460,9 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     }));
   };
 
-  const handleOpenClientDrawer = () => {
+  const handleOpenClientDrawer = (initialPanel?: 'locations') => {
     if (formData.client_id && clientDrawer) {
-      clientDrawer.openClientDrawer(formData.client_id);
+      clientDrawer.openClientDrawer(formData.client_id, initialPanel ? { initialPanel } : undefined);
     }
   };
 
@@ -491,7 +524,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     if (!formData.workstation) return null;
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
             {t('assetForm.fields.osType', { defaultValue: 'OS Type' })}
@@ -586,7 +619,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     if (!formData.network_device) return null;
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
             {t('assetForm.fields.deviceType', { defaultValue: 'Device Type' })}
@@ -657,7 +690,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     if (!formData.server) return null;
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
             {t('assetForm.fields.osType', { defaultValue: 'OS Type' })}
@@ -760,7 +793,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     if (!formData.mobile_device) return null;
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
             {t('assetForm.fields.osType', { defaultValue: 'OS Type' })}
@@ -841,7 +874,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     if (!formData.printer) return null;
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
             {t('assetForm.fields.model', { defaultValue: 'Model' })}
@@ -903,6 +936,21 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     e.preventDefault();
     if (!asset) return;
 
+    // F309: required enforcement for custom-type schema fields, inline.
+    const attributeIssues = selectedCustomType
+      ? validateAttributesAgainstSchema(customTypeFields, customAttributes, { requireAll: true })
+      : [];
+    if (attributeIssues.length > 0) {
+      setAttributeErrors(Object.fromEntries(attributeIssues.map((issue) => [issue.key, issue.message])));
+      const summary = t('assetForm.errors.validation', {
+        defaultValue: 'Please fix the highlighted fields before saving.',
+      });
+      setSaveError(summary);
+      toast.error(summary);
+      return;
+    }
+    setAttributeErrors({});
+
     setSaving(true);
     setSaveError(null);
     setFieldErrors({});
@@ -921,6 +969,11 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         // Ensure optional fields are undefined instead of empty strings
         location: formData.location?.trim() || undefined,
         serial_number: formData.serial_number?.trim() || undefined,
+        // F309/F310: submit only schema-declared keys — the server merges into
+        // assets.attributes so sibling namespaces (e.g. hudu_fields) survive.
+        attributes: selectedCustomType
+          ? pickSchemaAttributes(customTypeFields, customAttributes)
+          : undefined,
       };
 
       // Format workstation data if it exists
@@ -1016,9 +1069,14 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         )
       ) as UpdateAssetRequest;
 
-      await updateAsset(assetId, cleanedData);
-      router.push(`/msp/assets/${assetId}`);
-      router.refresh();
+      unwrapAssetActionResult(await updateAsset(assetId, cleanedData));
+      if (onSaved) {
+        onSaved();
+        router.refresh();
+      } else {
+        router.push(`/msp/assets/${assetId}`);
+        router.refresh();
+      }
     } catch (error) {
       console.error('Error updating asset:', error);
 
@@ -1070,7 +1128,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   }
 
   return (
-    <div id="asset-form-container" className="space-y-6">
+    <div id="asset-form-container" className="space-y-4">
       <div id="asset-form-header" className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-[rgb(var(--color-text-900))]">
           {t('assetForm.heading', { defaultValue: 'Edit Asset' })}
@@ -1082,9 +1140,9 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         onSubmit={(event) => {
           void handleSubmit(event);
         }}
-        className="space-y-6"
+        className="space-y-4"
       >
-        <Card id="basic-info-section" className="p-6 border border-[rgb(var(--color-border-200))] space-y-6">
+        <Card id="basic-info-section" className="p-4 border border-[rgb(var(--color-border-200))] space-y-4">
           <div id="asset-type-icon" className="flex flex-col items-center">
             {getAssetTypeIcon()}
             <Text size="5" weight="medium" className="text-[rgb(var(--color-text-900))]">
@@ -1094,14 +1152,14 @@ export default function AssetForm({ assetId }: AssetFormProps) {
             </Text>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div>
               <Text size="4" weight="medium" className="text-[rgb(var(--color-text-900))]">
                 {t('assetForm.sections.clientAndLocation', {
                   defaultValue: 'Client & Location'
                 })}
               </Text>
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
                 <div>
                   <label htmlFor="asset-client-select" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
                     {t('assetForm.fields.client', { defaultValue: 'Client' })}
@@ -1186,15 +1244,33 @@ export default function AssetForm({ assetId }: AssetFormProps) {
                     />
                   )}
                   {formData.client_id && (
-                    <Link
-                      href={`/msp/clients/${formData.client_id}?panel=locations`}
-                      className="mt-2 inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-500"
-                    >
-                      {t('assetForm.actions.manageClientLocations', {
-                        defaultValue: 'Manage client locations'
-                      })}
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Link>
+                    clientDrawer ? (
+                      // Stay in the drawer — navigating to the client page would
+                      // discard the half-edited asset form behind it. No
+                      // ExternalLink icon here: nothing is being left.
+                      <button
+                        type="button"
+                        id="asset-form-edit-locations"
+                        onClick={() => handleOpenClientDrawer('locations')}
+                        className="mt-2 inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-500"
+                      >
+                        <MapPin className="h-3.5 w-3.5" />
+                        {t('assetForm.actions.manageClientLocations', {
+                          defaultValue: 'Manage client locations'
+                        })}
+                      </button>
+                    ) : (
+                      <Link
+                        id="asset-form-edit-locations"
+                        href={`/msp/clients/${formData.client_id}?panel=locations`}
+                        className="mt-2 inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-500"
+                      >
+                        {t('assetForm.actions.manageClientLocations', {
+                          defaultValue: 'Manage client locations'
+                        })}
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Link>
+                    )
                   )}
                 </div>
               </div>
@@ -1204,107 +1280,147 @@ export default function AssetForm({ assetId }: AssetFormProps) {
               <Text size="4" weight="medium" className="text-[rgb(var(--color-text-900))]">
                 {t('assetForm.sections.assetBasics', { defaultValue: 'Asset Basics' })}
               </Text>
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                      {t('assetForm.fields.name', { defaultValue: 'Name' })}
-                    </label>
-                    <Input
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      required
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="asset_tag" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                      {t('assetForm.fields.assetTag', { defaultValue: 'Asset Tag' })}
-                    </label>
-                    <Input
-                      id="asset_tag"
-                      name="asset_tag"
-                      value={formData.asset_tag}
-                      onChange={handleInputChange}
-                      required
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="serial_number" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                      {t('assetForm.fields.serialNumber', { defaultValue: 'Serial Number' })}
-                    </label>
-                    <Input
-                      id="serial_number"
-                      name="serial_number"
-                      value={formData.serial_number}
-                      onChange={handleInputChange}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="status" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                      {t('assetForm.fields.status', { defaultValue: 'Status' })}
-                    </label>
-                    <CustomSelect
-                      id="status-select"
-                      value={formData.status}
-                      onValueChange={handleSelectChange}
-                      options={statusOptions}
-                      className="mt-1"
-                    />
-                  </div>
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                <div className="md:col-span-2">
+                  <label htmlFor="name" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    {t('assetForm.fields.name', { defaultValue: 'Name' })}
+                  </label>
+                  <Input
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                    className="mt-1"
+                  />
                 </div>
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="purchase_date" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                      {t('assetForm.fields.purchaseDate', { defaultValue: 'Purchase Date' })}
-                    </label>
-                    <DatePicker
-                      id="purchase_date"
-                      value={formData.purchase_date ? new Date(formData.purchase_date) : undefined}
-                      onChange={(date) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          purchase_date: date ? date.toISOString().split('T')[0] : ''
-                        }));
-                      }}
-                      placeholder={t('assetForm.placeholders.selectPurchaseDate', {
-                        defaultValue: 'Select purchase date'
-                      })}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="warranty_end_date" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                      {t('assetForm.fields.warrantyEndDate', {
-                        defaultValue: 'Warranty End Date'
-                      })}
-                    </label>
-                    <DatePicker
-                      id="warranty_end_date"
-                      value={formData.warranty_end_date ? new Date(formData.warranty_end_date) : undefined}
-                      onChange={(date) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          warranty_end_date: date ? date.toISOString().split('T')[0] : ''
-                        }));
-                      }}
-                      placeholder={t('assetForm.placeholders.selectWarrantyEndDate', {
-                        defaultValue: 'Select warranty end date'
-                      })}
-                    />
-                  </div>
+                <div>
+                  <label htmlFor="asset_tag" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    {t('assetForm.fields.assetTag', { defaultValue: 'Asset Tag' })}
+                  </label>
+                  <Input
+                    id="asset_tag"
+                    name="asset_tag"
+                    value={formData.asset_tag}
+                    onChange={handleInputChange}
+                    required
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="serial_number" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    {t('assetForm.fields.serialNumber', { defaultValue: 'Serial Number' })}
+                  </label>
+                  <Input
+                    id="serial_number"
+                    name="serial_number"
+                    value={formData.serial_number}
+                    onChange={handleInputChange}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="asset-type-select" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    {t('assetForm.fields.assetType', { defaultValue: 'Type' })}
+                  </label>
+                  <CustomSelect
+                    id="asset-type-select"
+                    value={formData.asset_type}
+                    onValueChange={(value) => {
+                      // D4: switching type keeps attributes values — fields
+                      // not in the new schema simply stop rendering.
+                      setFormData(prev => ({ ...prev, asset_type: value }));
+                      setAttributeErrors({});
+                    }}
+                    options={assetTypeOptions}
+                    disabled={saving}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="status" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    {t('assetForm.fields.status', { defaultValue: 'Status' })}
+                  </label>
+                  <CustomSelect
+                    id="status-select"
+                    value={formData.status}
+                    onValueChange={handleSelectChange}
+                    options={statusOptions}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="purchase_date" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                    {t('assetForm.fields.purchaseDate', { defaultValue: 'Purchase Date' })}
+                  </label>
+                  <DatePicker
+                    id="purchase_date"
+                    value={formData.purchase_date ? new Date(formData.purchase_date) : undefined}
+                    onChange={(date) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        purchase_date: date ? date.toISOString().split('T')[0] : ''
+                      }));
+                    }}
+                    placeholder={t('assetForm.placeholders.selectPurchaseDate', {
+                      defaultValue: 'Select purchase date'
+                    })}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="warranty_end_date" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                    {t('assetForm.fields.warrantyEndDate', {
+                      defaultValue: 'Warranty End Date'
+                    })}
+                  </label>
+                  <DatePicker
+                    id="warranty_end_date"
+                    value={formData.warranty_end_date ? new Date(formData.warranty_end_date) : undefined}
+                    onChange={(date) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        warranty_end_date: date ? date.toISOString().split('T')[0] : ''
+                      }));
+                    }}
+                    placeholder={t('assetForm.placeholders.selectWarrantyEndDate', {
+                      defaultValue: 'Select warranty end date'
+                    })}
+                  />
                 </div>
               </div>
             </div>
           </div>
         </Card>
 
-        {(asset.workstation || asset.network_device || asset.server || asset.mobile_device || asset.printer) && (
-          <Card id="type-specific-details" className="p-6 border border-[rgb(var(--color-border-200))]">
-            <Text size="5" weight="medium" className="block mb-6 text-[rgb(var(--color-text-900))]">
+        {selectedCustomType && customTypeFields.length > 0 && (
+          <Card id="custom-type-details" className="p-4 border border-[rgb(var(--color-border-200))]">
+            <Text size="5" weight="medium" className="block mb-3 text-[rgb(var(--color-text-900))]">
+              {t('assetForm.typeDetails.custom', {
+                defaultValue: '{{typeName}} Details',
+                typeName: selectedCustomType.name
+              })}
+            </Text>
+            <CustomTypeFieldsPanel
+              fields={customTypeFields}
+              values={customAttributes}
+              errors={attributeErrors}
+              onChange={(key, value) => {
+                setCustomAttributes(prev => ({ ...prev, [key]: value }));
+                setAttributeErrors(prev => {
+                  if (!(key in prev)) return prev;
+                  const { [key]: _removed, ...rest } = prev;
+                  return rest;
+                });
+              }}
+              idPrefix="asset-edit"
+              disabled={saving}
+            />
+          </Card>
+        )}
+
+        {formData.asset_type === asset.asset_type && (asset.workstation || asset.network_device || asset.server || asset.mobile_device || asset.printer) && (
+          <Card id="type-specific-details" className="p-4 border border-[rgb(var(--color-border-200))]">
+            <Text size="5" weight="medium" className="block mb-3 text-[rgb(var(--color-text-900))]">
               {asset.workstation
                 ? t('assetForm.typeDetails.workstation', { defaultValue: 'Workstation Details' })
                 : asset.network_device
@@ -1329,7 +1445,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
           </Card>
         )}
 
-        <div id="form-actions" className="flex justify-end gap-4">
+        <div id="form-actions" className="flex justify-end gap-2">
           <Button
             id="cancel-button"
             type="button"

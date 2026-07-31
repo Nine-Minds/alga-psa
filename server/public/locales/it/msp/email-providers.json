@@ -11,7 +11,8 @@
       "resyncing": "Risincronizzazione {{providerName}} in corso...",
       "resyncError": "Impossibile risincronizzare il provider IMAP",
       "resyncStarted": "La risincronizzazione è iniziata per {{providerName}}.",
-      "enterpriseOnly": "La posta elettronica in entrata di Microsoft 365 è disponibile solo in Enterprise Edition."
+      "enterpriseOnly": "La posta elettronica in entrata di Microsoft 365 è disponibile solo in Enterprise Edition.",
+      "loadProvidersError": "Failed to load email providers"
     },
     "editDrawer": {
       "title": "Modifica provider di posta elettronica",
@@ -33,7 +34,8 @@
     },
     "nav": {
       "providers": "Fornitori",
-      "defaults": "Predefiniti"
+      "defaults": "Predefiniti",
+      "inboundRules": "Regole in entrata"
     },
     "setup": {
       "title": "Istruzioni per l'installazione",
@@ -142,6 +144,7 @@
     },
     "badges": {
       "disabled": "Disabilitato",
+      "paused": "In pausa",
       "connected": "Collegato",
       "disconnected": "Disconnesso",
       "error": "Errore",
@@ -165,15 +168,29 @@
       "reconnectOauth": "Riconnetti OAuth",
       "resyncing": "Risincronizzazione in corso...",
       "resyncMailbox": "Risincronizza casella di posta",
+      "pause": "Sospendi email in arrivo",
+      "resume": "Riprendi email in arrivo",
       "delete": "Elimina fornitore"
     },
+    "feedback": {
+      "paused": "Email in arrivo sospese.",
+      "resumed": "Email in arrivo riprese.",
+      "pauseError": "Impossibile modificare lo stato di pausa delle email in arrivo."
+    },
+    "pausedHelp": "I messaggi ricevuti mentre questa casella è in pausa non vengono importati retroattivamente.",
     "fields": {
       "status": "Stato",
       "lastSync": "Ultima sincronizzazione",
+      "lastIngested": "Ultima acquisizione",
+      "delivery": "Consegna",
       "created": "Creato",
       "subscription": "Sottoscrizione",
       "defaults": "Impostazioni predefinite dei ticket",
       "error": "Errore:"
+    },
+    "delivery": {
+      "polling": "Polling ogni 3 minuti",
+      "webhook": "Consegna in tempo reale: attiva"
     },
     "values": {
       "active": "Attivo",
@@ -241,7 +258,8 @@
         "oauthInitiateFailed": "Impossibile avviare OAuth",
         "popupBlocked": "Impossibile aprire il popup OAuth. Si prega di consentire i popup per questo sito.",
         "closedEarly": "Finestra di autorizzazione chiusa prima del completamento. Per favore riprova.",
-        "authorizationFailed": "Autorizzazione fallita"
+        "authorizationFailed": "Autorizzazione fallita",
+        "senderDisplayNameInvalid": "Il nome visualizzato non può contenere virgolette, parentesi angolari o interruzioni di riga"
       },
       "requiredFields": {
         "providerName": "Nome configurazione",
@@ -291,7 +309,8 @@
         "popupBlocked": "Impossibile aprire il popup OAuth. Si prega di consentire i popup per questo sito.",
         "closedEarly": "La finestra di autorizzazione è stata chiusa prima del completamento.",
         "authorizationFailed": "Autorizzazione fallita",
-        "popupFailed": "Il popup OAuth non è riuscito"
+        "popupFailed": "Il popup OAuth non è riuscito",
+        "configureFailed": "Failed to configure Gmail provider"
       },
       "messages": {
         "setupIncomplete": "Fornitore salvato ma configurazione incompleta: {{error}}",
@@ -347,7 +366,8 @@
         "mailboxInvalid": "È richiesta una casella di posta valida (ad esempio utente@dominio.com, utente@localhost, utente@test-server o utente)",
         "hostRequired": "L'host IMAP è obbligatorio",
         "usernameRequired": "Il nome utente IMAP è obbligatorio",
-        "oauthInitiateFailed": "Impossibile avviare IMAP OAuth"
+        "oauthInitiateFailed": "Impossibile avviare IMAP OAuth",
+        "senderDisplayNameInvalid": "Il nome visualizzato non può contenere virgolette, parentesi angolari o interruzioni di riga"
       },
       "basic": {
         "title": "Impostazioni di base",
@@ -704,7 +724,8 @@
       "refreshStatusFailed": "Impossibile aggiornare lo stato del dominio",
       "domainRemovalScheduled": "Rimozione del dominio pianificata",
       "domainRemovalScheduledWithClear": "Rimozione del dominio pianificata e indirizzo mittente per ticketing cancellato",
-      "removeDomainFailed": "Impossibile rimuovere il dominio"
+      "removeDomainFailed": "Impossibile rimuovere il dominio",
+      "testOutboundFailed": "Test dell'e-mail in uscita non riuscito"
     },
     "tabs": {
       "inboundEmail": "Email in entrata",
@@ -738,11 +759,27 @@
         "usernamePlaceholder": "la-tua-email@esempio.it",
         "passwordLabel": "Password",
         "passwordPlaceholder": "Inserisci la password",
+        "authHint": "Lascia vuoti nome utente e password se il tuo relay accetta la posta senza autenticazione.",
         "fromLabel": "Indirizzo mittente",
         "fromPlaceholder": "noreply@esempio.it",
         "fromHelp": "Indirizzo mittente predefinito per le email in uscita.",
+        "security": {
+          "title": "Sicurezza della connessione",
+          "secure": "Usa TLS implicito (SSL alla connessione, in genere porta 465)",
+          "requireTls": "Richiedi l'aggiornamento STARTTLS (porte 587 / 25)",
+          "verifyCert": "Verifica il certificato del server",
+          "verifyCertHint": "Disattiva questa opzione solo per un relay attendibile sulla tua rete che utilizza un certificato autofirmato."
+        },
         "savingButton": "Salvataggio…",
-        "saveButton": "Salva impostazioni SMTP"
+        "saveButton": "Salva impostazioni SMTP",
+        "test": {
+          "title": "Prova e-mail in uscita",
+          "description": "Salva le impostazioni attuali, quindi verifica la connessione al provider. Inserisci un indirizzo per inviare anche un messaggio di prova.",
+          "recipientLabel": "Invia prova a (facoltativo)",
+          "recipientPlaceholder": "tu@esempio.com",
+          "testingButton": "Prova in corso...",
+          "runButton": "Prova connessione"
+        }
       },
       "ticketingFrom": {
         "title": "Indirizzo mittente per ticketing",
@@ -761,6 +798,9 @@
         "customPlaceholder": "supporto@{{domain}}",
         "customSmtpHelp": "Usa un dominio da cui il tuo server SMTP è autorizzato a inviare. Un dominio non corrispondente può causare errori di consegna o filtraggio antispam.",
         "customManagedHelp": "Deve corrispondere a {{domain}}. Se non è una delle tue caselle di posta in entrata, l'elaborazione dei ticket in entrata potrebbe non funzionare.",
+        "nameLabel": "Nome visualizzato del mittente",
+        "namePlaceholder": "Supporto",
+        "nameHelp": "Mostrato come nome del mittente nelle notifiche dei ticket. Lascia vuoto per usare il nome configurato della casella postale o il nome della bacheca.",
         "warningTitle": "Attenzione",
         "errorTitle": "Correggi l'indirizzo mittente",
         "clearButton": "Cancella indirizzo mittente",
@@ -834,7 +874,153 @@
       "missingHelp": "Non abbiamo ancora rilevato questo record nel DNS. Verifica che esista nel tuo provider DNS con il valore esatto mostrato sopra.",
       "mismatchHelp": "Il record DNS esiste, ma il valore non corrisponde a quello atteso da Resend.",
       "matchedHelp": "Il valore rilevato corrisponde a quello atteso.",
-      "unknownHelp": "Non abbiamo ancora verificato il DNS. Riverifica il DNS per eseguire la verifica."
+      "unknownHelp": "Non abbiamo ancora verificato il DNS. Riverifica il DNS per eseguire la verifica.",
+      "hostLabel": "Host",
+      "fqdnLabel": "Nome completo",
+      "valueLabel": "Valore",
+      "copyHostAriaLabel": "Copia host",
+      "copyFqdnAriaLabel": "Copia nome completo",
+      "hostHint": "Suggerimento: nel tuo provider DNS, inserisci solo l'Host mostrato sopra. La maggior parte dei provider (Namecheap, GoDaddy, Cloudflare e altri) aggiunge automaticamente “{{domain}}”. Se incolli il nome completo, il dominio viene ripetuto (…{{domain}}.{{domain}}) e il record non verrà mai verificato."
+    }
+  },
+  "inboundRules": {
+    "actions": {
+      "addRule": "Aggiungi regola",
+      "aiClassify": "Classifica con IA",
+      "aiClassifyUpsell": "Richiede il componente aggiuntivo AI Assistant",
+      "extractAssign": "Assegna cliente dal testo estratto",
+      "setDestination": "Instrada verso una destinazione",
+      "skip": "Ignora email (nessun ticket)"
+    },
+    "badges": {
+      "allMailboxes": "Tutte le caselle di posta"
+    },
+    "empty": {
+      "description": "Crea una regola per ignorare le email di aggiornamento di stato o assegnare i ticket ai clienti citati nell'oggetto.",
+      "title": "Nessuna regola in entrata configurata"
+    },
+    "errors": {
+      "aliasAdd": "Impossibile aggiungere l'alias",
+      "delete": "Impossibile eliminare la regola",
+      "load": "Impossibile caricare le regole in entrata",
+      "reorder": "Impossibile riordinare le regole",
+      "save": "Impossibile salvare la regola",
+      "test": "Impossibile testare la regola",
+      "update": "Impossibile aggiornare la regola"
+    },
+    "extraction": {
+      "after": "Testo dopo il marcatore",
+      "before": "Testo prima del marcatore",
+      "between": "Testo tra i delimitatori",
+      "regex": "Espressione regolare (avanzato)"
+    },
+    "fields": {
+      "bodyText": "Testo del corpo",
+      "fromAddress": "Indirizzo mittente",
+      "fromDomain": "Dominio mittente",
+      "subject": "Oggetto",
+      "toAddress": "Indirizzo A/CC"
+    },
+    "form": {
+      "action": "Azione",
+      "active": "Attiva",
+      "addCondition": "Aggiungi condizione",
+      "aiAllowAssign": "Può assegnare clienti",
+      "aiAllowSkip": "Può ignorare email",
+      "aiInstruction": "Istruzione",
+      "aiInstructionPlaceholder": "es. Determina a quale cliente si riferisce questo avviso di monitoraggio.",
+      "aiUpsell": "Classifica con IA è disponibile con il componente aggiuntivo Enterprise AI Assistant — le email vengono classificate in base all'intento, senza pattern da gestire.",
+      "cancel": "Annulla",
+      "conditions": "Condizioni (devono corrispondere tutte)",
+      "create": "Crea regola",
+      "createTitle": "Crea regola in entrata",
+      "description": "Definisci quando la regola corrisponde e cosa succede all'email. Usa il tester qui sotto per verificarla su un esempio prima di salvare.",
+      "destination": "Destinazione (valori predefiniti del ticket)",
+      "destinationPlaceholder": "Seleziona un set di valori predefiniti",
+      "editTitle": "Modifica regola in entrata",
+      "endDelimiter": "Delimitatore finale",
+      "extractFrom": "Estrai da",
+      "extractionTemplate": "Estrazione",
+      "fallbackDestination": "Destinazione di fallback",
+      "first": "Prima",
+      "last": "Ultima",
+      "mailboxes": "Applica alle caselle di posta",
+      "mailboxesHint": "Non selezionarne nessuna per applicare questa regola a tutte le caselle di posta.",
+      "marker": "Testo del marcatore",
+      "markerPlaceholder": "es. Cliente:",
+      "matchHint": "Il testo estratto viene confrontato con i nomi e gli alias dei clienti (senza distinzione tra maiuscole e minuscole).",
+      "name": "Nome della regola",
+      "namePlaceholder": "es. Instradamento clienti Huntress",
+      "noMailboxes": "Nessuna casella di posta ancora configurata.",
+      "noMatchFallback": "Instrada verso una destinazione di fallback",
+      "noMatchProceed": "Continua con le regole successive / elaborazione normale",
+      "noMatchSkip": "Ignora l'email",
+      "occurrence": "Occorrenza",
+      "onNoMatch": "Se nessun cliente corrisponde",
+      "pattern": "Pattern (il gruppo di cattura 1 è il nome del cliente)",
+      "regexPlaceholder": "Espressione regolare",
+      "saving": "Salvataggio…",
+      "startDelimiter": "Delimitatore iniziale",
+      "update": "Aggiorna regola",
+      "valuePlaceholder": "Valore"
+    },
+    "header": {
+      "description": "Abbina le email in entrata per mittente o oggetto per ignorare il rumore, assegnare il cliente giusto o instradarle verso una destinazione. Le regole vengono eseguite in ordine; vince la prima corrispondenza.",
+      "title": "Regole email in entrata"
+    },
+    "help": {
+      "items": {
+        "aliases": "• I nomi estratti corrispondono ai nomi e agli alias dei clienti. Gestisci gli alias nella scheda del cliente o aggiungili dal tester delle regole.",
+        "audit": "• Le email ignorate restano verificabili nella diagnostica di elaborazione email, contrassegnate con la regola che le ha ignorate.",
+        "order": "• Le regole vengono eseguite dall'alto verso il basso sulle nuove email in entrata; si applica la prima regola corrispondente.",
+        "replies": "• Le risposte ai ticket esistenti diventano sempre commenti — le regole non le toccano mai."
+      },
+      "title": "Come funziona"
+    },
+    "loading": "Caricamento regole in entrata...",
+    "menu": {
+      "delete": "Elimina",
+      "deleting": "Eliminazione…",
+      "edit": "Modifica"
+    },
+    "operators": {
+      "contains": "contiene",
+      "endsWith": "termina con",
+      "equals": "è uguale a",
+      "matchesRegex": "corrisponde alla regex",
+      "startsWith": "inizia con"
+    },
+    "summary": {
+      "aiClassify": "Classifica con IA",
+      "extractAssign": "Assegna cliente da {{source}}",
+      "setDestination": "Instrada verso una destinazione",
+      "skip": "Ignora email (nessun ticket)"
+    },
+    "tester": {
+      "alias": "alias",
+      "aliasAdd": "Aggiungi alias",
+      "aliasAdded": "Alias aggiunto. Esegui di nuovo il test per vederlo corrispondere.",
+      "aliasAdding": "Aggiunta…",
+      "aliasClientPlaceholder": "Seleziona un cliente",
+      "aliasLabel": "Aggiungi \"{{value}}\" come alias di",
+      "body": "Testo del corpo",
+      "clientMatched": "Cliente abbinato tramite {{source}}",
+      "clientName": "nome del cliente",
+      "extracted": "Valore estratto:",
+      "from": "Da",
+      "noClient": "Nessun cliente corrispondente",
+      "outcome": {
+        "assignClient": "Ticket assegnato al cliente \"{{client}}\"",
+        "fallback": "Nessun cliente corrispondente — ticket instradato verso la destinazione di fallback",
+        "none": "La regola non ha prodotto un esito — l'elaborazione normale continua",
+        "setDestination": "Ticket instradato verso la destinazione selezionata",
+        "skip": "Email ignorata — nessun ticket creato"
+      },
+      "run": "Esegui test",
+      "running": "Test in corso…",
+      "subject": "Oggetto",
+      "title": "Testa questa regola",
+      "to": "A"
     }
   }
 }

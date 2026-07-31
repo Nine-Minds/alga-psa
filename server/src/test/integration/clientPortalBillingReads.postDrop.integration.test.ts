@@ -58,6 +58,14 @@ vi.mock('@alga-psa/auth', () => ({
         { tenant: tenantId },
         ...args,
       ),
+  hasPermission: vi.fn(async () => true),
+  getCurrentUser: vi.fn(async () => ({
+    user_id: userId,
+    tenant: tenantId,
+    contact_id: contactId,
+    user_type: 'client',
+    roles: [{ role_name: 'Client User' }],
+  })),
 }));
 
 describe('Client portal billing reads post-drop integration', () => {

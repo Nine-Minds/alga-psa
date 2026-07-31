@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { promises as fs } from 'node:fs';
+import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import { E2ETestContext } from '../utils/test-context-e2e';
 import {
@@ -18,6 +20,10 @@ const TEST_CONFIG = {
 
 const ONE_BY_ONE_PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4//8/AwAI/AL+ZPxxsAAAAABJRU5ErkJggg==';
+
+function tenantTable<Row extends object = Record<string, any>>(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table<Row>(table);
+}
 
 test.describe('Document permissions', () => {
   let context: E2ETestContext;
@@ -135,8 +141,8 @@ test.describe('Document permissions', () => {
     console.log('[Permission Test] ✓ Document visible in UI');
 
     // Verify document was uploaded to database
-    const dbDocument = await db('documents')
-      .where({ tenant: tenantId, document_name: fileName })
+    const dbDocument = await tenantTable(db, tenantId, 'documents')
+      .where({ document_name: fileName })
       .first();
 
     expect(dbDocument).toBeDefined();
@@ -230,8 +236,8 @@ test.describe('Document permissions', () => {
         const hasError = await errorToast.isVisible({ timeout: 3000 }).catch(() => false);
 
         // Should show error (if implemented) or document shouldn't be in DB
-        const dbDoc = await db('documents')
-          .where({ tenant: tenantId, document_name: fileName })
+        const dbDoc = await tenantTable(db, tenantId, 'documents')
+          .where({ document_name: fileName })
           .first();
 
         // Either should show error toast OR document shouldn't be created
@@ -278,7 +284,7 @@ test.describe('Document permissions', () => {
     const billingDocName = `billing-doc-${Date.now()}.png`;
 
     // Insert document linked to billing/invoice
-    await db('documents').insert({
+    await tenantTable(db, tenantId, 'documents').insert({
       document_id: uuidv4(),
       tenant: tenantId,
       document_name: billingDocName,
@@ -290,14 +296,15 @@ test.describe('Document permissions', () => {
     });
 
     // Now remove billing permission
-    await db('role_permissions')
-      .whereIn('permission_id', function() {
-        this.select('permission_id')
-          .from('permissions')
-          .where('resource', 'billing')
-          .orWhere('resource', 'invoice');
-      })
-      .andWhere('tenant', tenantId)
+    const scopedDb = tenantDb(db, tenantId);
+    const billingPermissionIds = scopedDb
+      .table('permissions')
+      .select('permission_id')
+      .whereIn('resource', ['billing', 'invoice']);
+
+    await scopedDb
+      .table('role_permissions')
+      .whereIn('permission_id', billingPermissionIds)
       .delete();
 
     // Login and check documents page

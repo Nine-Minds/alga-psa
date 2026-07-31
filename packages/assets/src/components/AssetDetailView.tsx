@@ -1,10 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { AssetDetailHeader } from './AssetDetailHeader';
-import { AssetMetricsBanner } from './AssetMetricsBanner';
-import { AssetDashboardGrid } from './AssetDashboardGrid';
-import { AssetDetailTabs } from './AssetDetailTabs';
+import { AssetBentoLayout } from './AssetBentoLayout';
 import { useAssetDetail } from '@alga-psa/assets/hooks/useAssetDetail';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
@@ -27,6 +25,9 @@ export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => 
     refreshRmmData, 
     isRefreshing 
   } = useAssetDetail(assetId);
+  // Shared by the header's Edit action and the layout's tiles so there is only
+  // ever one drawer open, with one rail.
+  const [focusView, setFocusView] = useState<string | null>(null);
 
   if (isLoading && !asset) {
     return (
@@ -55,14 +56,15 @@ export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => 
   }
 
   return (
-    <div className="grow shrink-0 bg-gray-50">
+    <div className="grow shrink-0">
       <AssetDetailHeader 
         asset={asset} 
         onRefresh={refreshRmmData}
         isRefreshing={isRefreshing}
+        onEdit={() => setFocusView('edit')}
       />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" data-print-region data-print-title={asset.name}>
+      <div className="px-4 sm:px-6 lg:px-8 py-6" data-print-region data-print-title={asset.name}>
         <div className="app-print-section">
           <PrintableDetailHeader
             title={asset.name}
@@ -95,22 +97,19 @@ export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => 
             ] satisfies PrintableDetailField[]}
           />
         </div>
-        <AssetMetricsBanner
-          metrics={metrics}
-          isLoading={isLoading}
-        />
-
-        <AssetDashboardGrid
+        {/* Bento layout: hero + 3/6/3 mosaic with the timeline as the centre
+            spine, matching the ticket and client surfaces. Replaces the metrics
+            banner, the 2/1 panel grid and the tab strip — the heavy panels are
+            one hop away in the layout's focus drawer, and inventory provenance
+            is rendered inside it. */}
+        <AssetBentoLayout
           asset={asset}
+          metrics={metrics}
           rmmData={rmmData}
           assetFacts={assetFacts}
-          metrics={metrics}
-          isLoading={isLoading}
-          onRefreshRmm={refreshRmmData}
-          isRefreshingRmm={isRefreshing}
+          focusView={focusView}
+          onFocusChange={setFocusView}
         />
-
-        <AssetDetailTabs asset={asset} />
       </div>
     </div>
   );

@@ -139,12 +139,15 @@ export function mapLevelIoDeviceToSnapshot(args: {
       pendingOsPatches: args.pendingOsPatches ?? null,
       cpuModel: cpu?.model ?? null,
       cpuCores: device.cpu_cores ?? cpu?.cores ?? null,
-      ramGb: typeof device.total_memory === 'number' ? roundTo2(device.total_memory / BYTES_PER_GB) : null,
+      // ram_gb is an integer column; round to whole GB (matches NinjaOne's getRamGb).
+      // roundTo2 here produced decimals like 15.74 that Postgres rejects for type integer.
+      ramGb: typeof device.total_memory === 'number' ? Math.round(device.total_memory / BYTES_PER_GB) : null,
       diskUsage: mapLevelIoDiskUsage(device),
       systemInfo: {
         manufacturer: device.manufacturer ?? null,
         model: device.model ?? null,
         fullOperatingSystem: device.operating_system?.full_operating_system ?? null,
+        osEndOfLife: device.operating_system?.end_of_life ?? device.security?.os_end_of_life ?? false,
         securityScore: device.security?.score ?? device.security_score ?? null,
         securityRisk: device.security?.risk ?? null,
         patchSecurityRisk: device.security?.patch_security_risk ?? null,

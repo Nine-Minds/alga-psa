@@ -27,6 +27,10 @@ import {
 } from '@alga-psa/integrations/actions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getInboundTicketDefaults } from '@alga-psa/integrations/actions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type MicrosoftProviderFormData = {
   providerName: string;
@@ -181,10 +185,15 @@ export function MicrosoftProviderForm({
         ? await updateEmailProvider(provider.id, payload)
         : await createEmailProvider(payload);
 
+      if (isActionMessageError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+
       onSuccess(result.provider);
 
     } catch (err: any) {
-      setError(err.message);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -228,6 +237,9 @@ export function MicrosoftProviderForm({
         };
 
         const result = await upsertEmailProvider(payload);
+        if (isActionMessageError(result)) {
+          throw new Error(getErrorMessage(result));
+        }
         providerId = result.provider.id;
       }
 
@@ -285,9 +297,10 @@ export function MicrosoftProviderForm({
 
       window.addEventListener('message', messageHandler);
 
-    } catch (err: any) {
+    } catch (err) {
       setOauthStatus('error');
-      setError(err.message);
+      console.error('Failed to start Microsoft authorization:', err);
+      setError(t('forms.microsoft.validation.authorizationFailed', { defaultValue: 'Authorization failed' }));
     }
   };
 

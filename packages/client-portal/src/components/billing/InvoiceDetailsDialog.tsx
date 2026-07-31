@@ -19,7 +19,7 @@ import {
 } from '@alga-psa/billing/components/billing-dashboard/locations';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface InvoiceDetailsDialogProps {
   invoiceId: string | null;
@@ -28,6 +28,11 @@ interface InvoiceDetailsDialogProps {
   formatCurrency: (amount: number, currencyCode?: string) => string;
   formatDate: (date: string | { toString(): string } | undefined | null) => string;
 };
+
+const isBillingActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
   invoiceId,
@@ -148,6 +153,11 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
       setError(null);
       try {
         const invoiceData = await getClientInvoiceById(invoiceId);
+        if (isBillingActionError(invoiceData)) {
+          setInvoice(null);
+          setError(getErrorMessage(invoiceData));
+          return;
+        }
         setInvoice(invoiceData);
       } catch (err) {
         console.error('Error fetching invoice details:', err);
@@ -173,6 +183,10 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
       }
       try {
         const locations = await getActiveClientLocationsForBilling(clientId);
+        if (isActionPermissionError(locations) || isActionMessageError(locations)) {
+          if (!cancelled) setClientLocations([]);
+          return;
+        }
         if (!cancelled) setClientLocations(locations);
       } catch (locationError) {
         console.error('Failed to load client locations for invoice details:', locationError);
@@ -194,6 +208,11 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
     try {
       toast.success(t('invoice.downloadStarted', 'Preparing PDF download...'));
       const result = await downloadClientInvoicePdf(invoiceId);
+
+      if (isBillingActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
 
       if (result.success && result.fileId) {
         // Trigger download
@@ -224,6 +243,11 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
     try {
       toast.success(t('invoice.emailStarted', 'Sending invoice email...'));
       const result = await sendClientInvoiceEmail(invoiceId);
+
+      if (isBillingActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
 
       if (result.success) {
         toast.success(t('invoice.emailSent', 'Invoice email sent successfully.'));
@@ -280,7 +304,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
         </td>
         <td className="px-3 py-2">{item.quantity}</td>
         <td className="px-3 py-2">{formatCurrency(item.unit_price, invoice.currencyCode)}</td>
-        <td className="px-3 py-2">{formatCurrency(item.total_price, invoice.currencyCode)}</td>
+        <td className="px-3 py-2">{formatCurrency(item.net_amount ?? item.total_price, invoice.currencyCode)}</td>
       </tr>
     );
 
@@ -352,7 +376,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
               <div className="space-y-4 mt-2" id="client-invoice-items-by-location">
                 {locationGroups.map((group) => {
                   const subtotal = group.items.reduce(
-                    (sum, item) => sum + (Number(item.total_price) || 0),
+                    (sum, item) => sum + (Number(item.net_amount ?? item.total_price) || 0),
                     0,
                   );
                   return (

@@ -22,11 +22,20 @@ describe('phase-aware project status action contracts', () => {
   });
 
   it('T016/T017: getProjectStatusMappings and reorderProjectStatuses scope queries to a phase or project defaults', () => {
-    expect(projectTaskStatusActionsSource).toContain(
-      'async function getScopedProjectStatusMappings('
+    // The scoped-mapping helper now lives in lib/projectStatusMappingUtils and
+    // is imported by the actions module.
+    const statusMappingUtilsSource = readFileSync(
+      path.resolve(actionsRoot, '../lib/projectStatusMappingUtils.ts'),
+      'utf8'
     );
-    expect(projectTaskStatusActionsSource).toContain("query.andWhere('psm.phase_id', phaseId);");
-    expect(projectTaskStatusActionsSource).toContain("query.whereNull('psm.phase_id');");
+    expect(statusMappingUtilsSource).toContain(
+      'export async function getScopedProjectStatusMappings('
+    );
+    expect(statusMappingUtilsSource).toContain("query.andWhere('psm.phase_id', phaseId);");
+    expect(statusMappingUtilsSource).toContain("query.whereNull('psm.phase_id');");
+    expect(projectTaskStatusActionsSource).toContain(
+      "import { getScopedProjectStatusMappings, ProjectStatusMappingDetails } from '../lib/projectStatusMappingUtils';"
+    );
     expect(projectTaskStatusActionsSource).toContain(
       'export const getProjectStatusMappings = withAuth(async ('
     );

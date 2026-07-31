@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
+import { tenantDb } from './tenantDb';
 
 export function normalizeIanaTimeZone(timeZone: string | null | undefined): string {
   if (!timeZone) return 'UTC';
@@ -42,14 +43,60 @@ export function computeWorkDateFields(startTime: string | Date, timeZone: string
   };
 }
 
+/**
+ * Truncate an instant down to the minute (drop seconds and milliseconds).
+ *
+ * Time entries are authored and displayed at minute granularity (HH:MM pickers,
+ * whole-minute durations), but several write paths stamp real wall-clock instants —
+ * most notably the start/stop timer — leaving stray seconds behind. When start and
+ * end land on different seconds, a genuine 29m29s span renders as a clean
+ * 10:30–11:00 yet rounds to 29: the "off by one minute" duration bug. Normalizing on
+ * write keeps the stored instant consistent with what the UI shows. Seconds are
+ * timezone invariant, so flooring the epoch to the minute is unambiguous across zones.
+ */
+export function truncateToMinute(value: string | Date): Date {
+  const epochMs = toTemporalInstant(value).epochMilliseconds;
+  return new Date(Math.floor(epochMs / 60000) * 60000);
+}
+
 export async function resolveUserTimeZone(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   userId: string
 ): Promise<string> {
-  const row = await knexOrTrx('users')
-    .where({ tenant, user_id: userId })
+  const row = await tenantDb(knexOrTrx, tenant).table('users')
+    .where({ user_id: userId })
     .select('timezone')
     .first();
   return normalizeIanaTimeZone(row?.timezone ?? null);
+}
+
+/**
+ * Resolve the effective timezone for a user within a tenant.
+ * Resolution chain: user timezone -> tenant timezone -> UTC.
+ */
+export async function resolveEffectiveTimeZone(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  userId?: string | null
+): Promise<string> {
+  if (userId) {
+    const userRow = await tenantDb(knexOrTrx, tenant).table('users')
+      .where({ user_id: userId })
+      .select('timezone')
+      .first();
+    if (userRow?.timezone) {
+      return normalizeIanaTimeZone(userRow.timezone);
+    }
+  }
+
+  const settingsRow = await tenantDb(knexOrTrx, tenant).table('tenant_settings')
+    .select('settings')
+    .first();
+  const tenantTz = settingsRow?.settings?.timezone;
+  if (tenantTz && typeof tenantTz === 'string') {
+    return normalizeIanaTimeZone(tenantTz);
+  }
+
+  return 'UTC';
 }

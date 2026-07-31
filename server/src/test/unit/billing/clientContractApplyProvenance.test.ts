@@ -17,6 +17,13 @@ vi.mock('@alga-psa/auth', () => ({
     fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
 }));
 
+// The action gates on assertMspPermission (real RBAC over a DB the unit test
+// doesn't have); grant it so the domain logic under test actually runs.
+vi.mock('../../../../../packages/clients/src/lib/authHelpers', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  assertMspPermission: vi.fn(async () => {}),
+}));
+
 vi.mock('../../../../../packages/clients/src/models/clientContract.ts', () => ({
   default: {
     getById: (...args: any[]) => getById(...args),

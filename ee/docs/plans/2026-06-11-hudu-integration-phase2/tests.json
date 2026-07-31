@@ -1,0 +1,461 @@
+[
+  {
+    "id": "T201",
+    "description": "listAssetLayouts returns typed {id, name} list from a mocked 200",
+    "implemented": true,
+    "commitGroup": "hudu-client-ext",
+    "featureIds": [
+      "F201"
+    ]
+  },
+  {
+    "id": "T202",
+    "description": "listAssetLayouts maps 401 to the typed auth error kind",
+    "implemented": true,
+    "commitGroup": "hudu-client-ext",
+    "featureIds": [
+      "F201",
+      "F203"
+    ]
+  },
+  {
+    "id": "T203",
+    "description": "listAllArticles passes page + search params and returns one typed page",
+    "implemented": true,
+    "commitGroup": "hudu-client-ext",
+    "featureIds": [
+      "F202"
+    ]
+  },
+  {
+    "id": "T204",
+    "description": "listAllArticles maps 429 to the typed rate-limit error kind",
+    "implemented": true,
+    "commitGroup": "hudu-client-ext",
+    "featureIds": [
+      "F202",
+      "F203"
+    ]
+  },
+  {
+    "id": "T205",
+    "description": "Layout map repository round-trips jsonb on hudu_integrations.settings",
+    "implemented": true,
+    "commitGroup": "layout-type-config",
+    "featureIds": [
+      "F204"
+    ]
+  },
+  {
+    "id": "T206",
+    "description": "setHuduAssetLayoutMap returns 403 without system_settings update; 404 when flag off",
+    "implemented": true,
+    "commitGroup": "layout-type-config",
+    "featureIds": [
+      "F205"
+    ]
+  },
+  {
+    "id": "T207",
+    "description": "Heuristic: server/desktop/laptop/printer/phone/switch/router keywords map to expected types; unmatched -> unknown",
+    "implemented": true,
+    "commitGroup": "layout-type-config",
+    "featureIds": [
+      "F206"
+    ]
+  },
+  {
+    "id": "T208",
+    "description": "Settings block renders live layouts with heuristic prefill; Save persists the map",
+    "implemented": true,
+    "commitGroup": "layout-type-config",
+    "featureIds": [
+      "F207"
+    ]
+  },
+  {
+    "id": "T209",
+    "description": "Import of an asset whose layout is unconfigured creates asset_type 'unknown'",
+    "implemented": true,
+    "commitGroup": "layout-type-config",
+    "featureIds": [
+      "F208"
+    ]
+  },
+  {
+    "id": "T210",
+    "description": "Serial exact match outranks name exact for the same pair",
+    "implemented": true,
+    "commitGroup": "asset-matcher",
+    "featureIds": [
+      "F209"
+    ]
+  },
+  {
+    "id": "T211",
+    "description": "Name fuzzy respects 0.8 threshold and legal-suffix stripping",
+    "implemented": true,
+    "commitGroup": "asset-matcher",
+    "featureIds": [
+      "F209"
+    ]
+  },
+  {
+    "id": "T212",
+    "description": "Two assets with empty serials never serial-match",
+    "implemented": true,
+    "commitGroup": "asset-matcher",
+    "featureIds": [
+      "F210"
+    ]
+  },
+  {
+    "id": "T213",
+    "description": "Greedy one-to-one: no Alga asset claimed twice; already-mapped rows and assets excluded",
+    "implemented": true,
+    "commitGroup": "asset-matcher",
+    "featureIds": [
+      "F209"
+    ]
+  },
+  {
+    "id": "T214",
+    "description": "Asset mapping set/clear persists alga_entity_type='asset' rows with metadata; one-to-one conflicts return typed errors",
+    "implemented": true,
+    "commitGroup": "asset-mapping-data",
+    "featureIds": [
+      "F211"
+    ]
+  },
+  {
+    "id": "T215",
+    "description": "Client and asset mappings coexist for the same tenant (unique index scoping regression)",
+    "implemented": true,
+    "commitGroup": "asset-mapping-data",
+    "featureIds": [
+      "F211"
+    ]
+  },
+  {
+    "id": "T216",
+    "description": "getHuduAssetMappings composes assets + mappings + suggestions into the view model",
+    "implemented": true,
+    "commitGroup": "asset-mapping-data",
+    "featureIds": [
+      "F212"
+    ]
+  },
+  {
+    "id": "T217",
+    "description": "set/clear mapping actions: 403 without asset update RBAC; 404 with flag off",
+    "implemented": true,
+    "commitGroup": "asset-mapping-data",
+    "featureIds": [
+      "F213",
+      "F238"
+    ]
+  },
+  {
+    "id": "T218",
+    "description": "importHuduAsset creates the Alga asset (name/serial/type/client) and the mapping row together",
+    "implemented": true,
+    "commitGroup": "asset-import",
+    "featureIds": [
+      "F214"
+    ]
+  },
+  {
+    "id": "T219",
+    "description": "asset_tag uses primary_serial when free; falls back to hudu-<id> on collision or missing serial",
+    "implemented": true,
+    "commitGroup": "asset-import",
+    "featureIds": [
+      "F215"
+    ]
+  },
+  {
+    "id": "T220",
+    "description": "Imported asset gets the same default status as the manual create form",
+    "implemented": true,
+    "commitGroup": "asset-import",
+    "featureIds": [
+      "F216"
+    ]
+  },
+  {
+    "id": "T221",
+    "description": "importHuduAsset returns 403 without asset create RBAC",
+    "implemented": true,
+    "commitGroup": "asset-import",
+    "featureIds": [
+      "F214",
+      "F238"
+    ]
+  },
+  {
+    "id": "T222",
+    "description": "Bulk import isolates per-item failures and reports {created, failed} accurately",
+    "implemented": true,
+    "commitGroup": "asset-import",
+    "featureIds": [
+      "F217"
+    ]
+  },
+  {
+    "id": "T223",
+    "description": "Bulk import stops on 429 with typed error + partial summary",
+    "implemented": true,
+    "commitGroup": "asset-import",
+    "featureIds": [
+      "F218"
+    ]
+  },
+  {
+    "id": "T224",
+    "description": "Sync updates changed name/serial_number on mapped Alga assets (Hudu wins)",
+    "implemented": true,
+    "commitGroup": "asset-sync",
+    "featureIds": [
+      "F219"
+    ]
+  },
+  {
+    "id": "T225",
+    "description": "Sync leaves non-synced fields and asset_type untouched",
+    "implemented": true,
+    "commitGroup": "asset-sync",
+    "featureIds": [
+      "F220"
+    ]
+  },
+  {
+    "id": "T226",
+    "description": "Archived/missing Hudu asset sets stale:true; reappearance clears it",
+    "implemented": true,
+    "commitGroup": "asset-sync",
+    "featureIds": [
+      "F221"
+    ]
+  },
+  {
+    "id": "T227",
+    "description": "Sync deletes nothing: assets and mapping rows survive all sync paths",
+    "implemented": true,
+    "commitGroup": "asset-sync",
+    "featureIds": [
+      "F220"
+    ]
+  },
+  {
+    "id": "T228",
+    "description": "Sync stamps last_synced_at and returns {updated, unchanged, stale} counts",
+    "implemented": true,
+    "commitGroup": "asset-sync",
+    "featureIds": [
+      "F222"
+    ]
+  },
+  {
+    "id": "T229",
+    "description": "Sync returns 403 without asset update RBAC",
+    "implemented": true,
+    "commitGroup": "asset-sync",
+    "featureIds": [
+      "F222",
+      "F238"
+    ]
+  },
+  {
+    "id": "T230",
+    "description": "Assets manager renders counters and per-row badges incl. Stale",
+    "implemented": true,
+    "commitGroup": "asset-mapping-ui",
+    "featureIds": [
+      "F223"
+    ]
+  },
+  {
+    "id": "T231",
+    "description": "Picking an Alga asset stages only (Pending badge, save bar); Save commits set/clear",
+    "implemented": true,
+    "commitGroup": "asset-mapping-ui",
+    "featureIds": [
+      "F224"
+    ]
+  },
+  {
+    "id": "T232",
+    "description": "Suggestion: confirmed by Save; dismissible (excluded from Save); revert restores",
+    "implemented": true,
+    "commitGroup": "asset-mapping-ui",
+    "featureIds": [
+      "F224"
+    ]
+  },
+  {
+    "id": "T233",
+    "description": "Row Import triggers the import action and re-renders the row as Mapped",
+    "implemented": true,
+    "commitGroup": "asset-mapping-ui",
+    "featureIds": [
+      "F225"
+    ]
+  },
+  {
+    "id": "T234",
+    "description": "'Import all unmatched' renders the summary; one failure doesn't abort the rest",
+    "implemented": true,
+    "commitGroup": "asset-mapping-ui",
+    "featureIds": [
+      "F225"
+    ]
+  },
+  {
+    "id": "T235",
+    "description": "Sync button shows last-synced timestamp and result summary",
+    "implemented": true,
+    "commitGroup": "asset-mapping-ui",
+    "featureIds": [
+      "F226"
+    ]
+  },
+  {
+    "id": "T236",
+    "description": "Import/Sync affordances hidden without asset create/update RBAC",
+    "implemented": true,
+    "commitGroup": "asset-mapping-ui",
+    "featureIds": [
+      "F227"
+    ]
+  },
+  {
+    "id": "T237",
+    "description": "Client Documents tab section lists articles with deep-links for a mapped client",
+    "implemented": true,
+    "commitGroup": "client-docs-section",
+    "featureIds": [
+      "F228",
+      "F229"
+    ]
+  },
+  {
+    "id": "T238",
+    "description": "Section absent when unmapped, disconnected, or flag off",
+    "implemented": true,
+    "commitGroup": "client-docs-section",
+    "featureIds": [
+      "F229"
+    ]
+  },
+  {
+    "id": "T239",
+    "description": "Hudu fetch error shows inline section error; native documents list still renders",
+    "implemented": true,
+    "commitGroup": "client-docs-section",
+    "featureIds": [
+      "F230"
+    ]
+  },
+  {
+    "id": "T240",
+    "description": "Global action resolves company->client via cache + mappings; unmapped companies marked",
+    "implemented": true,
+    "commitGroup": "global-docs",
+    "featureIds": [
+      "F231"
+    ]
+  },
+  {
+    "id": "T241",
+    "description": "Global action passes search + page through; exactly one Hudu page per call",
+    "implemented": true,
+    "commitGroup": "global-docs",
+    "featureIds": [
+      "F231"
+    ]
+  },
+  {
+    "id": "T242",
+    "description": "Global action guard chain: 401 unauth, 403 RBAC, 404 flag off; CE route 501s",
+    "implemented": true,
+    "commitGroup": "global-docs",
+    "featureIds": [
+      "F231",
+      "F238"
+    ]
+  },
+  {
+    "id": "T243",
+    "description": "useHuduDocumentsTab visible only when EE + flag + connected",
+    "implemented": true,
+    "commitGroup": "global-docs",
+    "featureIds": [
+      "F232"
+    ]
+  },
+  {
+    "id": "T244",
+    "description": "Documents Hudu tab renders rows; search refetches; prev/next paginate",
+    "implemented": true,
+    "commitGroup": "global-docs",
+    "featureIds": [
+      "F233"
+    ]
+  },
+  {
+    "id": "T245",
+    "description": "CE build contains no EE import leakage for the Documents tab (stub/static check)",
+    "implemented": true,
+    "commitGroup": "global-docs",
+    "featureIds": [
+      "F234"
+    ]
+  },
+  {
+    "id": "T246",
+    "description": "All new t() keys resolve to non-empty strings in en locale JSONs",
+    "implemented": true,
+    "commitGroup": "i18n-phase2",
+    "featureIds": [
+      "F235",
+      "F237"
+    ]
+  },
+  {
+    "id": "T247",
+    "description": "Hardcoded-string sweep passes for all new Phase 2 components",
+    "implemented": true,
+    "commitGroup": "i18n-phase2",
+    "featureIds": [
+      "F235",
+      "F237"
+    ]
+  },
+  {
+    "id": "T248",
+    "description": "All 7 non-en locales contain every new key",
+    "implemented": true,
+    "commitGroup": "i18n-phase2",
+    "featureIds": [
+      "F236"
+    ]
+  },
+  {
+    "id": "T249",
+    "description": "Phase 1 Hudu suites (company mapping, passwords, tabs, guards) stay green",
+    "implemented": true,
+    "commitGroup": "regression-phase2",
+    "featureIds": [
+      "F239"
+    ]
+  },
+  {
+    "id": "T250",
+    "description": "tenant_external_entity_mappings schema unchanged (no pull-only columns added)",
+    "implemented": true,
+    "commitGroup": "regression-phase2",
+    "featureIds": [
+      "F239"
+    ]
+  }
+]

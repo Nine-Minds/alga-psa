@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import type { ITeam } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 
 const TeamModel = {
@@ -12,7 +13,7 @@ const TeamModel = {
       throw new Error('manager_id is required when creating a team');
     }
 
-    const [createdTeam] = await knexOrTrx<ITeam>('teams')
+    const [createdTeam] = await tenantDb(knexOrTrx, tenant).table<ITeam>('teams')
       .insert({
         ...teamData,
         team_id: uuidv4(),
@@ -28,17 +29,13 @@ const TeamModel = {
   },
 
   getAll: async (knexOrTrx: Knex | Knex.Transaction, tenant: string): Promise<ITeam[]> => {
-    return await knexOrTrx<ITeam>('teams')
-      .whereNotNull('tenant')
-      .andWhere('tenant', tenant)
+    return await tenantDb(knexOrTrx, tenant).table<ITeam>('teams')
       .select('*');
   },
 
   get: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, team_id: string): Promise<ITeam | undefined> => {
-    return await knexOrTrx<ITeam>('teams')
+    return await tenantDb(knexOrTrx, tenant).table<ITeam>('teams')
       .select('*')
-      .whereNotNull('tenant')
-      .andWhere('tenant', tenant)
       .andWhere('team_id', team_id)
       .first();
   },
@@ -49,9 +46,7 @@ const TeamModel = {
     team_id: string,
     team: Partial<ITeam>
   ): Promise<void> => {
-    await knexOrTrx<ITeam>('teams')
-      .whereNotNull('tenant')
-      .andWhere('tenant', tenant)
+    await tenantDb(knexOrTrx, tenant).table<ITeam>('teams')
       .andWhere('team_id', team_id)
       .update(team);
   },
@@ -66,15 +61,13 @@ const TeamModel = {
     const trx = isTransaction ? (knexOrTrx as Knex.Transaction) : await (knexOrTrx as Knex).transaction();
 
     try {
-      await trx('team_members')
-        .whereNotNull('tenant')
-        .andWhere('tenant', tenant)
+      const db = tenantDb(trx, tenant);
+
+      await db.table('team_members')
         .andWhere('team_id', team_id)
         .del();
 
-      await trx<ITeam>('teams')
-        .whereNotNull('tenant')
-        .andWhere('tenant', tenant)
+      await db.table<ITeam>('teams')
         .andWhere('team_id', team_id)
         .del();
 
@@ -96,10 +89,9 @@ const TeamModel = {
     user_id: string,
     role: 'member' | 'lead' = 'member'
   ): Promise<void> => {
-    const user = await knexOrTrx('users')
+    const db = tenantDb(knexOrTrx, tenant);
+    const user = await db.table('users')
       .select('is_inactive')
-      .whereNotNull('tenant')
-      .andWhere('tenant', tenant)
       .andWhere('user_id', user_id)
       .first();
 
@@ -107,13 +99,11 @@ const TeamModel = {
       throw new Error(`Cannot add inactive user to team in tenant ${tenant}`);
     }
 
-    await knexOrTrx('team_members').insert({ team_id, user_id, tenant, role });
+    await db.table('team_members').insert({ team_id, user_id, tenant, role });
   },
 
   removeMember: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, team_id: string, user_id: string): Promise<void> => {
-    await knexOrTrx('team_members')
-      .whereNotNull('tenant')
-      .andWhere('tenant', tenant)
+    await tenantDb(knexOrTrx, tenant).table('team_members')
       .andWhere('team_id', team_id)
       .andWhere('user_id', user_id)
       .del();
@@ -124,16 +114,14 @@ const TeamModel = {
     tenant: string,
     team_id: string
   ): Promise<Array<{ user_id: string; role: 'member' | 'lead' }>> => {
-    const members = await knexOrTrx('team_members')
-      .select('team_members.user_id', 'team_members.role')
-      .join('users', function() {
-        this.on('team_members.user_id', '=', 'users.user_id')
-          .andOn('team_members.tenant', '=', 'users.tenant');
-      })
-      .whereNotNull('team_members.tenant')
-      .andWhere('team_members.tenant', tenant)
+    const db = tenantDb(knexOrTrx, tenant);
+    const query = db.table('team_members');
+    db.tenantJoin(query, 'users', 'team_members.user_id', 'users.user_id');
+
+    const members = (await query
+      .select('team_members.user_id as user_id', 'team_members.role as role')
       .andWhere('team_members.team_id', team_id)
-      .andWhere('users.is_inactive', false);
+      .andWhere('users.is_inactive', false)) as unknown as Array<{ user_id: string; role: 'member' | 'lead' }>;
     return members.map((member): { user_id: string; role: 'member' | 'lead' } => ({
       user_id: member.user_id,
       role: member.role

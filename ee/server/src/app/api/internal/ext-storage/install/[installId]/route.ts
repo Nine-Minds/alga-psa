@@ -7,6 +7,7 @@ import {
   StorageValidationError,
 } from '@ee/lib/extensions/storage/v2/errors';
 import { resolveInstallIdFromParamsOrUrl } from '@ee/lib/next/routeParams';
+import { isValidRunnerToken } from '@ee/lib/extensions/runnerAuth';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,8 +82,13 @@ function getStatusForErrorCode(code: string): number {
 function mapError(error: unknown): NextResponse {
   if (error instanceof StorageServiceError || error instanceof StorageValidationError) {
     const status = getStatusForErrorCode(error.code);
+    const isServerError = status >= 500;
     return NextResponse.json(
-      { error: error.message, code: error.code, details: error.details ?? null },
+      {
+        error: isServerError ? 'Storage operation failed.' : error.message,
+        code: error.code,
+        details: isServerError ? null : error.details ?? null,
+      },
       { status }
     );
   }
@@ -99,12 +105,11 @@ function mapError(error: unknown): NextResponse {
 }
 
 function ensureRunnerAuth(req: NextRequest): void {
-  const expected = process.env.RUNNER_STORAGE_API_TOKEN || process.env.RUNNER_SERVICE_TOKEN;
-  if (!expected) {
-    throw new StorageServiceError('UNAUTHORIZED', 'Runner token not configured');
-  }
-  const provided = req.headers.get('x-runner-auth');
-  if (!provided || provided !== expected) {
+  if (!isValidRunnerToken(
+    req.headers.get('x-runner-auth'),
+    process.env.RUNNER_STORAGE_API_TOKEN,
+    process.env.RUNNER_SERVICE_TOKEN,
+  )) {
     throw new StorageServiceError('UNAUTHORIZED', 'Invalid runner token');
   }
 }

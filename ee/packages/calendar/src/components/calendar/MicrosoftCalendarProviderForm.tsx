@@ -56,7 +56,12 @@ export function MicrosoftCalendarProviderForm({
   const [providerSetupReady, setProviderSetupReady] = useState(false);
   const [providerSetupLoading, setProviderSetupLoading] = useState(true);
   const [providerSetupReasonCode, setProviderSetupReasonCode] = useState<
-    'unsupported_consumer' | 'binding_not_configured' | 'profile_missing' | 'profile_credentials_missing' | null
+    | 'unsupported_consumer'
+    | 'binding_not_configured'
+    | 'profile_missing'
+    | 'profile_capability_missing'
+    | 'profile_credentials_missing'
+    | null
   >(null);
   const { t } = useTranslation('msp/calendar');
 
@@ -191,7 +196,7 @@ export function MicrosoftCalendarProviderForm({
 
     } catch (error: any) {
       setOAuthStatus('error');
-      setOAuthError(error.message || t('calendar.providers.common.oauth.initiateFailed', { defaultValue: 'Failed to initiate OAuth' }));
+      setOAuthError(t('calendar.providers.common.oauth.initiateFailed', { defaultValue: 'Failed to initiate OAuth' }));
     }
   };
 
@@ -230,7 +235,7 @@ export function MicrosoftCalendarProviderForm({
         onSuccess();
       }
     } catch (error: any) {
-      form.setError('root', { message: error.message || t('calendar.providers.common.errors.saveFailed', { defaultValue: 'Failed to save provider' }) });
+      form.setError('root', { message: t('calendar.providers.common.errors.saveFailed', { defaultValue: 'Failed to save provider' }) });
     } finally {
       setIsSubmitting(false);
     }

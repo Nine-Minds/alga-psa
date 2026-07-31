@@ -48,6 +48,15 @@ vi.mock('@alga-psa/db', () => ({
     const trx = vi.fn((table: string) => makeQueryBuilder(table));
     return callback(trx);
   }),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+  }),
+}));
+
+// sendEmail publishes outbound-email lifecycle events (F071); stub the publisher
+// so this round-trip test doesn't reach the real event bus.
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: vi.fn(async () => {}),
 }));
 
 vi.mock('@alga-psa/shared/workflow/actions/emailWorkflowActions', () => ({

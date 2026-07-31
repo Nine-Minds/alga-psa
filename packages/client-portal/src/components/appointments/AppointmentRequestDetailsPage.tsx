@@ -109,6 +109,11 @@ export function AppointmentRequestDetailsPage() {
       const result = await cancelAppointmentRequest({ appointment_request_id: appointmentRequestId });
       if (result.success) {
         toast.success(t('messages.cancelSuccess', 'Appointment request cancelled'));
+        if (result.teamsMeetingWarning) {
+          toast(t('cancel.teamsMeetingCleanupNotice', {
+            defaultValue: 'The linked Microsoft Teams meeting is being cancelled; attendees will see it removed from their calendars shortly.',
+          }), { icon: 'ℹ️' });
+        }
         setShowCancelConfirmation(false);
         loadAppointment();
       } else {

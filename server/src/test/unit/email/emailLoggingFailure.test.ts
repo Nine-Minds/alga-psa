@@ -22,6 +22,12 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
+// BaseEmailService.sendEmail publishes outbound-email lifecycle events (F071);
+// stub the publisher so this logging-failure test doesn't hit the real event bus.
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: vi.fn(async () => {}),
+}));
+
 import { BaseEmailService } from '@alga-psa/email/BaseEmailService';
 
 const capabilities: EmailProviderCapabilities = {

@@ -3,23 +3,23 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/reporting/src",
   "projectType": "library",
-  "tags": ["scope:reporting", "type:horizontal"],
+  "tags": [
+    "scope:reporting",
+    "type:horizontal"
+  ],
   "targets": {
     "build": {
       "executor": "nx:noop"
     },
-    "test": {
-      "executor": "@nx/vite:test",
-      "outputs": ["{workspaceRoot}/coverage/packages/reporting"],
-      "options": {
-        "passWithNoTests": true
-      }
-    },
     "lint": {
       "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"],
+      "outputs": [
+        "{options.outputFile}"
+      ],
       "options": {
-        "lintFilePatterns": ["packages/reporting/**/*.{ts,tsx}"]
+        "lintFilePatterns": [
+          "packages/reporting/**/*.{ts,tsx}"
+        ]
       }
     }
   }

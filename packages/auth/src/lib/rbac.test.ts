@@ -7,7 +7,8 @@ vi.mock('@alga-psa/db/models/user', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: vi.fn(async () => ({ knex: {} }))
+  createTenantKnex: vi.fn(async () => ({ knex: {} })),
+  runWithTenant: vi.fn(async (_tenant: string, fn: () => Promise<unknown>) => fn())
 }));
 
 import { hasPermission, checkMultiplePermissions } from './rbac';

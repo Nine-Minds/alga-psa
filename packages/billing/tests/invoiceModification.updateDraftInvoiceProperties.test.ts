@@ -183,7 +183,9 @@ describe('updateDraftInvoiceProperties', () => {
         invoiceDate: '2026-04-20',
         dueDate: '2026-05-20',
       })
-    ).rejects.toThrow('Invoice number already exists. Choose a different number.');
+    ).resolves.toEqual({
+      actionError: 'Invoice number already exists. Choose a different number.',
+    });
 
     expect(state.updates).toHaveLength(0);
   });
@@ -202,7 +204,9 @@ describe('updateDraftInvoiceProperties', () => {
         invoiceDate: '2026-04-21',
         dueDate: '2026-05-21',
       })
-    ).rejects.toThrow('Only draft invoices can be edited');
+    ).resolves.toEqual({
+      actionError: 'Only draft invoices can be edited',
+    });
 
     expect(state.updates).toHaveLength(0);
   });

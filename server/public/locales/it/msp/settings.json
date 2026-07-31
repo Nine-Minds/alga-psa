@@ -1,4 +1,8 @@
 {
+  "escalationManager": {
+    "unsavedChanges_one": "{{count}} modifica non salvata",
+    "unsavedChanges_other": "{{count}} modifiche non salvate"
+  },
   "page": {
     "title": "Impostazioni di amministrazione"
   },
@@ -34,7 +38,7 @@
   },
   "general": {
     "title": "Impostazioni generali",
-    "description": "Gestisca il nome dell'organizzazione e il cliente predefinito. Il cliente predefinito viene utilizzato per scopi di configurazione e rappresenta il Suo MSP.",
+    "description": "Gestisca il nome dell'organizzazione e scelga quale scheda cliente rappresenta la Sua azienda. I dati di quel cliente compaiono su fatture, preventivi e comunicazioni ai clienti.",
     "fields": {
       "organizationName": {
         "label": "Nome dell'organizzazione"
@@ -49,14 +53,24 @@
       "saveDefaultTimezone": "Salva fuso orario predefinito"
     },
     "clients": {
-      "title": "Clienti",
+      "title": "La Sua azienda",
+      "help": "Il cliente contrassegnato come la Sua azienda rappresenta la Sua organizzazione. Nome, indirizzo e logo di questo cliente compaiono su fatture, preventivi e comunicazioni ai clienti.",
+      "currentDefault": "Attualmente la Sua azienda è {{name}}.",
+      "yourCompanyBadge": "La Sua azienda",
       "table": {
         "name": "Nome",
-        "default": "Predefinito",
+        "default": "La Sua azienda (predefinito)",
         "actions": "Azioni"
       },
       "placeholder": "Selezioni un cliente da aggiungere",
-      "addClient": "Aggiungi cliente"
+      "addClient": "Aggiungi cliente",
+      "confirmDialog": {
+        "title": "Modificare la Sua azienda?",
+        "message": "Questa operazione cambierà la Sua azienda da {{current}} a {{next}}. {{next}} rappresenterà la Sua organizzazione su fatture, preventivi ed e-mail e inviti destinati ai clienti.",
+        "messageInitial": "Questa operazione imposterà {{next}} come la Sua azienda. {{next}} rappresenterà la Sua organizzazione su fatture, preventivi ed e-mail e inviti destinati ai clienti.",
+        "confirm": "Modifica azienda",
+        "cancel": "Annulla"
+      }
     },
     "messages": {
       "success": {
@@ -72,6 +86,7 @@
         "updateTimezone": "Impossibile aggiornare il fuso orario",
         "selectClient": "Selezioni un cliente",
         "clientNotFound": "Cliente non trovato",
+        "clientAlreadyAdded": "Questo cliente è già presente nell’elenco",
         "addClient": "Impossibile aggiungere il cliente",
         "removeClient": "Impossibile rimuovere il cliente",
         "setDefaultClient": "Impossibile impostare il cliente predefinito",
@@ -146,6 +161,7 @@
       "copying": "Copia in corso...",
       "createUser": "Crea utente",
       "sendInvitation": "Invia invito al portale",
+      "sendTeamInvitation": "Invia invito",
       "cancel": "Annulla"
     },
     "form": {
@@ -179,7 +195,8 @@
       },
       "passwordAlert": {
         "withPassword": "L'impostazione di una password creera immediatamente l'utente. Potra accedere subito.",
-        "withoutPassword": "Nessuna password richiesta: invieremo un invito al portale per consentire all'utente di impostarla."
+        "withoutPassword": "Nessuna password richiesta: invieremo un invito al portale per consentire all'utente di impostarla.",
+        "withoutPasswordMsp": "Nessuna password richiesta: invieremo un invito via e-mail affinché la persona la imposti da sé."
       },
       "requirePasswordChange": "Richiedi cambio password al primo accesso"
     },
@@ -204,9 +221,11 @@
     "messages": {
       "success": {
         "portalInvitationSent": "Invito al portale inviato con successo!",
+        "teamInvitationSent": "Invito inviato con successo!",
         "clientPortalUserCreated": "Utente del portale clienti creato con successo!",
         "copiedVanityLink": "Link personalizzato di accesso al portale copiato negli appunti",
-        "copiedCanonicalLink": "Link canonico di accesso al portale copiato negli appunti"
+        "copiedCanonicalLink": "Link canonico di accesso al portale copiato negli appunti",
+        "invitationRevoked": "Invito revocato"
       },
       "error": {
         "fetchUsers": "Impossibile recuperare gli utenti",
@@ -233,6 +252,7 @@
         "contactNotFound": "Contatto non trovato.",
         "contactMissingEmailGeneric": "Il contatto non ha un indirizzo e-mail. Aggiungi un indirizzo e-mail al contatto prima di inviare un invito.",
         "contactInvalidEmail": "Il contatto ha un indirizzo e-mail non valido. Aggiorna il contatto con un indirizzo e-mail valido prima di inviare un invito.",
+        "invalidEmail": "Inserisci un indirizzo e-mail valido",
         "noDefaultClient": "Nessun client predefinito configurato per questo tenant. Imposta un client predefinito nelle Impostazioni generali.",
         "noDefaultLocation": "Il client predefinito deve avere una sede predefinita configurata per inviare inviti al portale.",
         "noLocationEmail": "La sede del client predefinito deve avere un indirizzo e-mail di contatto configurato.",
@@ -241,8 +261,17 @@
         "roleRequired": "Il ruolo è obbligatorio",
         "invalidRole": "Il ruolo selezionato non è valido",
         "licenseLimitReached": "Hai raggiunto il limite di licenze utente MSP.",
-        "soloPlanLimit": "Il piano Solo è limitato a 1 utente. Passa a Pro per aggiungere altri utenti."
+        "soloPlanLimit": "Il piano Solo è limitato a 1 utente. Passa a Pro per aggiungere altri utenti.",
+        "revokeInvitation": "Impossibile revocare l'invito",
+        "invitationNotFound": "Invito non trovato o già utilizzato"
       }
+    },
+    "invitations": {
+      "title": "Inviti in sospeso",
+      "description": "Membri del team invitati che non hanno ancora configurato il proprio account.",
+      "expiresPrefix": "Scade:",
+      "revoke": "Revoca",
+      "revoking": "Revoca in corso..."
     }
   },
   "userDetails": {
@@ -263,6 +292,27 @@
       "reportsTo": {
         "label": "Riporta a",
         "placeholder": "Seleziona responsabile"
+      },
+      "workSchedule": {
+        "label": "Orario di lavoro",
+        "help": "Quando questa persona è in servizio. Usato nei report di utilizzo. Non è la disponibilità di prenotazione per i clienti.",
+        "setHours": "Imposta orario di lavoro",
+        "clear": "Cancella",
+        "weeklyTotal": "{{hours}} h a settimana",
+        "days": {
+          "0": "Domenica",
+          "1": "Lunedì",
+          "2": "Martedì",
+          "3": "Mercoledì",
+          "4": "Giovedì",
+          "5": "Venerdì",
+          "6": "Sabato"
+        }
+      },
+      "weeklyCapacity": {
+        "label": "Capacità settimanale (ore)",
+        "placeholder": "es. 40",
+        "help": "Usato solo se sopra non è impostato alcun orario di lavoro."
       },
       "lastLogin": "Ultimo accesso",
       "roles": "Ruoli",
@@ -308,7 +358,9 @@
         "emailAlreadyExists": "Esiste già un utente con questo indirizzo e-mail",
         "reportsToSelf": "Un utente non può riferire a se stesso",
         "reportsToCycle": "Questo creerebbe una catena di riporto circolare",
-        "permissionDenied": "Non disponi delle autorizzazioni per modificare i ruoli utente."
+        "permissionDenied": "Non disponi delle autorizzazioni per modificare i ruoli utente.",
+        "invalidCapacity": "La capacità settimanale deve essere un numero positivo.",
+        "invalidWorkSchedule": "L'orario di lavoro deve essere un intervallo valido che termina dopo l'inizio."
       }
     },
     "loading": "Caricamento dettagli utente..."
@@ -359,9 +411,9 @@
         "new": "Nuovo",
         "lead": "Responsabile"
       },
-      "memberCount": "{{count}} membro",
-      "memberCount_plural": "{{count}} membri",
-      "leadName": "Responsabile: {{name}}"
+      "leadName": "Responsabile: {{name}}",
+      "memberCount_one": "{{count}} membro",
+      "memberCount_other": "{{count}} membri"
     },
     "messages": {
       "error": {
@@ -380,7 +432,6 @@
       "display": "Visualizzazione",
       "ticketNumbering": "Numerazione ticket",
       "boards": "Bacheche",
-      "statuses": "Stati",
       "priorities": "Priorita",
       "categories": "Categorie",
       "checklistTemplates": "Modelli di checklist"
@@ -485,7 +536,9 @@
         "boardManager": "Responsabile della bacheca",
         "order": "Ordine",
         "itilBoard": "Bacheca ITIL",
-        "actions": "Azioni"
+        "actions": "Azioni",
+        "ticketLoad": "Carico di ticket",
+        "statuses": "Stati"
       },
       "statusLabels": {
         "active": "Attivo",
@@ -504,7 +557,8 @@
         "up": "Su",
         "down": "Giù",
         "remove": "Rimuovi",
-        "addStatus": "Aggiungi stato"
+        "addStatus": "Aggiungi stato",
+        "back": "Torna alle Bacheche"
       },
       "fields": {
         "boardName": {
@@ -584,6 +638,10 @@
         "liveTimer": {
           "label": "Attiva timer ticket in tempo reale",
           "help": "Mostra il timer in tempo reale e gli intervalli registrati sui ticket di questa bacheca. L'inserimento manuale del tempo rimane disponibile."
+        },
+        "defaultBoard": {
+          "label": "Bacheca predefinita per i ticket del portale clienti",
+          "help": "I nuovi ticket inviati dal portale clienti vengono assegnati a questa bacheca. Solo una bacheca può essere quella predefinita."
         }
       },
       "dialog": {
@@ -707,9 +765,40 @@
           "fetchFailed": "Impossibile caricare le regole di chiusura per questa bacheca",
           "autoCloseStatusRequired": "Ogni regola di chiusura automatica richiede uno stato di attivazione e uno stato di chiusura target",
           "autoCloseDaysInvalid": "I giorni di inattività per la chiusura automatica devono essere un numero intero positivo",
-          "autoCloseWarningInvalid": "Il preavviso di avviso deve essere inferiore ai giorni di inattività"
-        }
-      }
+          "autoCloseWarningInvalid": "Il preavviso di avviso deve essere inferiore ai giorni di inattività",
+          "autoCloseSuppressionInvalid": "Le notifiche ad agenti e osservatori possono essere saltate solo se vengono saltate le notifiche al cliente."
+        },
+        "suppressContactNotificationsLabel": "Non notificare il cliente",
+        "suppressContactNotificationsHelp": "Salta l'e-mail di avviso, l'e-mail di chiusura, l'invito al sondaggio e la notifica del portale clienti.",
+        "suppressInternalNotificationsLabel": "Non notificare anche agenti e osservatori"
+      },
+      "editor": {
+        "sections": {
+          "general": "Generale",
+          "generalHelp": "Nome, descrizione, visibilità e predefinito",
+          "assignment": "Assegnazione e SLA",
+          "assignmentHelp": "Instradamento predefinito, SLA e responsabile della bacheca",
+          "inbound": "Email e risposte in arrivo",
+          "inboundHelp": "Riapri i ticket quando i clienti rispondono via email",
+          "close": "Regole di chiusura",
+          "closeHelp": "Requisiti prima che un ticket possa essere chiuso",
+          "automation": "Automazione",
+          "automationHelp": "Chiudi automaticamente i ticket inattivi dopo un periodo di inattività",
+          "statuses": "Priorità e stati",
+          "statusesHelp": "Priorità predefinita e gli stati dei ticket per questa bacheca",
+          "display": "Visualizzazione e comportamento",
+          "displayHelp": "Timer dal vivo e tipo di bacheca"
+        },
+        "saveChanges": "Salva modifiche",
+        "unsaved": "Non salvato",
+        "unsavedShort": "Modifiche non salvate",
+        "unsavedBanner": "Hai modifiche non salvate. Fai clic su «Salva modifiche» per applicarle.",
+        "allSaved": "Tutte le modifiche salvate",
+        "reopenBadge": "riapri",
+        "required": "Obbligatorio"
+      },
+      "empty": "Nessuna bacheca trovata.",
+      "searchPlaceholder": "Cerca bacheche…"
     },
     "priorities": {
       "title": {
@@ -916,8 +1005,8 @@
       "messages": {
         "success": {
           "deleted": "Tipo di interazione eliminato",
-          "imported": "{{count}} tipo di interazione importato",
-          "imported_plural": "{{count}} tipi di interazione importati"
+          "imported_one": "{{count}} tipo di interazione importato",
+          "imported_other": "{{count}} tipi di interazione importati"
         },
         "error": {
           "fetchFailed": "Impossibile recuperare i tipi di interazione",
@@ -1001,6 +1090,15 @@
     "openMenu": "Apri menu"
   },
   "clientPortal": {
+    "features": {
+      "title": "Funzionalità del portale",
+      "description": "Scelga a quali funzionalità self-service possono accedere i clienti.",
+      "appointmentsLabel": "Appuntamenti",
+      "appointmentsHelp": "Consenta ai clienti di visualizzare e richiedere appuntamenti dal portale clienti.",
+      "appointmentsEnabled": "Gli appuntamenti sono ora disponibili nel portale clienti",
+      "appointmentsDisabled": "Gli appuntamenti sono ora nascosti nel portale clienti",
+      "updateFailed": "Impossibile aggiornare le funzionalità del portale clienti"
+    },
     "branding": {
       "title": "Branding e aspetto",
       "description": "Personalizzi l'aspetto del Suo portale clienti con il marchio della Sua azienda.",
@@ -1011,7 +1109,8 @@
         "primaryColor": "Colore primario",
         "secondaryColor": "Colore secondario",
         "supportEmail": "E-mail di supporto",
-        "supportPhone": "Telefono di supporto"
+        "supportPhone": "Telefono di supporto",
+        "heroGradient": "Gradiente dell’intestazione della dashboard"
       },
       "help": {
         "companyName": "Verra visualizzato nell'intestazione del portale clienti",
@@ -1019,7 +1118,12 @@
         "primaryColor": "Utilizzato per pulsanti, link e evidenziazioni",
         "secondaryColor": "Utilizzato per accenti e azioni secondarie",
         "supportEmail": "Viene mostrata ai clienti nelle conferme degli appuntamenti e in altre e-mail in uscita come indirizzo di contatto per ricevere assistenza.",
-        "supportPhone": "Facoltativo. Viene mostrato accanto all'e-mail di supporto nelle e-mail rivolte ai clienti."
+        "supportPhone": "Facoltativo. Viene mostrato accanto all'e-mail di supporto nelle e-mail rivolte ai clienti.",
+        "heroGradient": "Controlla il gradiente del banner di benvenuto nella dashboard cliente."
+      },
+      "heroGradient": {
+        "primaryShades": "Dal colore primario a una tonalità primaria",
+        "primarySecondary": "Dal colore primario al colore secondario"
       },
       "preview": "Anteprima",
       "previewDarkMode": "Anteprima modalita scura",
@@ -1049,7 +1153,22 @@
       "milestoneCompleted": "Traguardo del progetto completato",
       "dayAgo": "1 giorno fa",
       "createTicket": "Crea ticket",
-      "viewProjects": "Visualizza progetti"
+      "viewProjects": "Visualizza progetti",
+      "activeDevices": "Dispositivi attivi",
+      "basicSupport": "Supporto Base",
+      "dashboardTitle": "Dashboard",
+      "greeting": "Buongiorno, Alex 👋",
+      "navAppointments": "Appuntamenti",
+      "navDashboard": "Dashboard",
+      "navDevices": "I miei dispositivi",
+      "navProjects": "Progetti",
+      "navServiceRequests": "Richieste di servizio",
+      "navTickets": "Ticket",
+      "serviceRequests": "Richieste di servizio",
+      "upcomingShort": "In arrivo",
+      "upcomingVisits": "Prossime visite",
+      "welcomeBack": "Bentornato",
+      "workspaceSection": "Area di lavoro"
     },
     "signInPreview": {
       "portalTitle": "Portale clienti",
@@ -1118,6 +1237,17 @@
         "step2": "Clicchi su \"Salva dominio\" per attivare la verifica DNS e il provisioning del certificato.",
         "step3": "Utilizzi il pulsante Aggiorna per controllare l'avanzamento del provisioning. Invieremo un'email ai Suoi amministratori se il provisioning fallisce.",
         "canonicalHostFallback": "host canonico"
+      },
+      "appliance": {
+        "helpText": "Punta questo nome host alla tua appliance e fai in modo che il tuo reverse proxy inoltri l'header Host originale prima di salvare.",
+        "checklistTitle": "Configurazione del reverse proxy",
+        "step1Prefix": "Punta ",
+        "step1Suffix": " a questa appliance (un record A al suo indirizzo o un CNAME al tuo host appliance).",
+        "step2": "Sul tuo reverse proxy, termina TLS per il dominio e inoltra a questa appliance sulla porta 3000, preservando l'header Host originale (es. proxy_set_header Host $host) e inviando X-Forwarded-Proto: https.",
+        "step3": "Ottieni e mantieni il certificato TLS per il dominio sul tuo proxy.",
+        "step4": "Salva il dominio qui — si attiva immediatamente. Configura prima il DNS e il tuo proxy, poiché i link del portale passano subito a questo dominio.",
+        "docLinkText": "Guida alla configurazione e risoluzione dei problemi del reverse proxy",
+        "neverSeenWarning": "Nessuna richiesta ha ancora raggiunto {{domain}}. Verifica che il tuo reverse proxy inoltri l'header Host originale."
       },
       "badges": {
         "pending_dns": "DNS in attesa",
@@ -1213,6 +1343,176 @@
       "telemetry": {
         "title": "Telemetria e analisi",
         "description": "Gestisca le Sue preferenze di telemetria e analisi"
+      }
+    },
+    "settingsForm": {
+      "enable": {
+        "label": "Abilita notifiche",
+        "description": "Attiva o disattiva tutte le notifiche per questo tenant"
+      },
+      "loading": "Caricamento impostazioni di notifica...",
+      "loadError": "Impossibile caricare le impostazioni",
+      "save": "Salva modifiche",
+      "saving": "Salvataggio..."
+    },
+    "emailTemplatesUi": {
+      "preview": {
+        "subjectLabel": "Anteprima oggetto",
+        "iframeTitle": "Anteprima del modello di email",
+        "sampleDataNote": "L'anteprima utilizza dati di esempio. Le email reali conterranno valori reali."
+      },
+      "errors": {
+        "loadFailed": "Impossibile caricare i modelli"
+      },
+      "list": {
+        "loading": "Caricamento dei modelli di email...",
+        "templateCount": "({{templateCount}} modelli)",
+        "usingCustom": "Utilizzo del modello personalizzato",
+        "usingStandard": "Utilizzo del modello standard"
+      },
+      "columns": {
+        "name": "Nome",
+        "actions": "Azioni"
+      },
+      "fields": {
+        "language": "Lingua",
+        "subject": "Oggetto",
+        "htmlContent": "Contenuto HTML",
+        "textContent": "Contenuto testuale"
+      },
+      "actions": {
+        "collapse": "Comprimi",
+        "expand": "Espandi",
+        "edit": "Modifica",
+        "useStandard": "Usa standard",
+        "view": "Visualizza",
+        "customize": "Personalizza",
+        "sending": "Invio in corso...",
+        "sendTest": "Invia email di prova",
+        "close": "Chiudi",
+        "cancel": "Annulla",
+        "saving": "Salvataggio...",
+        "save": "Salva"
+      },
+      "description": "Ogni tipo di evento ha un modello standard che può essere personalizzato. Puoi usare il modello standard o creare una versione personalizzata.",
+      "filter": {
+        "languages": "Lingue",
+        "reset": "Reimposta"
+      },
+      "test": {
+        "sentTo": "Email di prova inviata a {{recipient}}",
+        "failed": "Impossibile inviare l'email di prova."
+      },
+      "view": {
+        "title": "Modello standard: {{name}}"
+      },
+      "tabs": {
+        "source": "Codice sorgente",
+        "preview": "Anteprima"
+      },
+      "common": {
+        "notAvailable": "N/D"
+      },
+      "edit": {
+        "title": "Modifica modello personalizzato: {{name}}"
+      },
+      "languages": {
+        "en": "Inglese",
+        "fr": "Francese",
+        "es": "Spagnolo",
+        "de": "Tedesco",
+        "nl": "Olandese",
+        "it": "Italiano",
+        "pl": "Polacco",
+        "pt": "Portoghese"
+      }
+    },
+    "categoriesUi": {
+      "errors": {
+        "loadCategories": "Caricamento delle categorie non riuscito",
+        "loadSubtypes": "Caricamento dei sottotipi di notifica non riuscito",
+        "save": "Salvataggio delle impostazioni di notifica non riuscito"
+      },
+      "loading": "Caricamento delle categorie di notifica...",
+      "toasts": {
+        "saved": "Impostazioni di notifica salvate correttamente",
+        "discarded": "Modifiche annullate"
+      },
+      "columns": {
+        "name": "Nome",
+        "description": "Descrizione",
+        "enabled": "Abilitato",
+        "defaultForUsers": "Predefinito per gli utenti",
+        "actions": "Azioni"
+      },
+      "tooltips": {
+        "cannotDisable": "Questa categoria non può essere disabilitata",
+        "cannotModify": "Questa categoria non può essere modificata"
+      },
+      "actions": {
+        "enableAllSubtypes": "Abilita tutti i sottotipi",
+        "disableAllSubtypes": "Disabilita tutti i sottotipi",
+        "disable": "Disabilita",
+        "enable": "Abilita",
+        "disableDefault": "Disabilita predefinito",
+        "enableDefault": "Abilita predefinito",
+        "discardChanges": "Annulla modifiche",
+        "saving": "Salvataggio...",
+        "saveChanges": "Salva modifiche",
+        "cancel": "Annulla"
+      },
+      "help": {
+        "intro": "Controlla quali tipi di notifica via e-mail sono disponibili e imposta i valori predefiniti per i nuovi utenti.",
+        "enabledLabel": "Abilitato:",
+        "enabledDescription": "Determina se questo tipo di notifica è attivo",
+        "defaultLabel": "Predefinito per gli utenti:",
+        "defaultDescription": "Definisce se i nuovi utenti hanno questa notifica abilitata per impostazione predefinita"
+      },
+      "unsavedChangesAlert": "Hai modifiche non salvate. Fai clic su \"Salva modifiche\" per applicarle.",
+      "discardDialog": {
+        "title": "Annullare le modifiche?",
+        "message": "Sei sicuro di voler annullare tutte le modifiche non salvate? Questa azione non può essere annullata."
+      }
+    },
+    "internalCategoriesUi": {
+      "errors": {
+        "loadCategories": "Impossibile caricare le categorie",
+        "loadSubtypes": "Impossibile caricare i sottotipi di notifica",
+        "saveSettings": "Impossibile salvare le impostazioni di notifica"
+      },
+      "loading": "Caricamento delle categorie di notifiche interne...",
+      "toasts": {
+        "saveSuccess": "Impostazioni di notifica salvate correttamente",
+        "changesDiscarded": "Modifiche annullate"
+      },
+      "columns": {
+        "name": "Nome",
+        "description": "Descrizione",
+        "enabled": "Abilitato",
+        "defaultForUsers": "Predefinito per gli utenti",
+        "actions": "Azioni"
+      },
+      "actions": {
+        "enableAllSubtypes": "Abilita tutti i sottotipi",
+        "disableAllSubtypes": "Disabilita tutti i sottotipi",
+        "disable": "Disabilita",
+        "enable": "Abilita",
+        "disableDefault": "Disabilita predefinito",
+        "enableDefault": "Abilita predefinito",
+        "discardChanges": "Annulla modifiche",
+        "saving": "Salvataggio...",
+        "saveChanges": "Salva modifiche",
+        "cancel": "Annulla"
+      },
+      "intro": "Controlla quali tipi di notifiche interne sono disponibili e imposta i valori predefiniti per i nuovi utenti.",
+      "enabledLabel": "Abilitato:",
+      "enabledDescription": "Determina se questo tipo di notifica è attivo nel sistema",
+      "defaultForUsersLabel": "Predefinito per gli utenti:",
+      "defaultForUsersDescription": "Determina se i nuovi utenti hanno questa notifica abilitata per impostazione predefinita",
+      "unsavedChangesAlert": "Hai modifiche non salvate. Fai clic su \"Salva modifiche\" per applicarle.",
+      "discardDialog": {
+        "title": "Annullare le modifiche?",
+        "message": "Sei sicuro di voler annullare tutte le modifiche non salvate? Questa azione non può essere annullata."
       }
     }
   },
@@ -1507,8 +1807,6 @@
     },
     "sessions": {
       "title": "Tutte le sessioni utente",
-      "subtitle": "{{sessionCount}} sessione attiva su {{userCount}} utente",
-      "subtitle_plural": "{{sessionCount}} sessioni attive su {{userCount}} utenti",
       "filters": {
         "search": "Cerca",
         "searchPlaceholder": "Cerca per nome, email, dispositivo o IP...",
@@ -1551,13 +1849,21 @@
         "loading": "Caricamento sessioni...",
         "noMatch": "Nessuna sessione corrisponde alla Sua ricerca",
         "noSessions": "Nessuna sessione attiva trovata"
-      }
+      },
+      "subtitle_one": "{{sessionCount}} sessione attiva su {{userCount}} utente",
+      "subtitle_other": "{{sessionCount}} sessioni attive su {{userCount}} utenti"
     }
   },
   "ssoBulk": {
     "loading": {
       "title": "SSO",
       "description": "Caricamento degli strumenti di assegnazione SSO in blocco..."
+    },
+    "status": {
+      "title": "Sign-in providers",
+      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
+      "available": "Available",
+      "notConfigured": "Not configured"
     },
     "autoLink": {
       "title": "Configuri automaticamente l'SSO per i nuovi utenti interni",
@@ -1749,6 +2055,10 @@
         "label": "RMM",
         "description": "Collega strumenti di monitoraggio e gestione remota"
       },
+      "itDocumentation": {
+        "label": "Documentazione IT",
+        "description": "Collega piattaforme di documentazione IT per mostrare nel contesto documentazione, asset e credenziali dei clienti."
+      },
       "communication": {
         "label": "Comunicazione",
         "description": "Collega superfici di posta in arrivo e collaborazione per l'elaborazione dei ticket, i flussi di lavoro degli operatori e l'accesso a Microsoft Teams."
@@ -1781,6 +2091,10 @@
       "rmmSetup": {
         "name": "Integrazioni RMM",
         "description": "Seleziona e configura il tuo fornitore RMM"
+      },
+      "hudu": {
+        "name": "Hudu",
+        "description": "Connetti un'istanza Hudu per visualizzare la documentazione e le credenziali dei clienti all'interno di AlgaPSA."
       },
       "email": {
         "name": "E-mail in entrata",
@@ -1867,5 +2181,97 @@
   "language": {
     "selectLanguage": "Seleziona una lingua",
     "languagesUpdated": "Lingue disponibili aggiornate"
+  },
+  "settings": {
+    "assetTypes": {
+      "tab": "Risorse",
+      "title": "Tipi di risorsa",
+      "description": "Gestisci i tipi di risorsa disponibili nel modulo risorse. I tipi personalizzati hanno uno schema di campi che determina i loro moduli di creazione/modifica.",
+      "loading": "Caricamento dei tipi di risorsa...",
+      "table": {
+        "name": "Nome",
+        "builtin": "Integrato",
+        "slug": "Identificatore",
+        "fieldCount": "Campi",
+        "order": "Ordine",
+        "actions": "Azioni",
+        "openMenu": "Apri menu"
+      },
+      "actions": {
+        "addType": "Aggiungi tipo di risorsa",
+        "edit": "Modifica",
+        "delete": "Elimina",
+        "cancel": "Annulla",
+        "save": "Salva",
+        "create": "Crea",
+        "confirmDelete": "Elimina"
+      },
+      "dialog": {
+        "createTitle": "Aggiungi tipo di risorsa",
+        "editTitle": "Modifica tipo di risorsa",
+        "nameLabel": "Nome",
+        "namePlaceholder": "es. Firewall",
+        "displayOrderLabel": "Ordine di visualizzazione",
+        "iconLabel": "Icona",
+        "builtinSchemaHint": "I tipi integrati usano moduli fissi gestiti da AlgaPSA, quindi il loro schema di campi non può essere modificato. Puoi comunque rinominare il tipo o cambiarne l'icona."
+      },
+      "deleteDialog": {
+        "title": "Elimina tipo di risorsa",
+        "message": "Questa operazione rimuove definitivamente \"{{name}}\" dal registro dei tipi di risorsa."
+      },
+      "messages": {
+        "created": "Tipo di risorsa creato",
+        "updated": "Tipo di risorsa aggiornato",
+        "deleted": "Tipo di risorsa eliminato"
+      },
+      "errors": {
+        "fetchFailed": "Impossibile caricare i tipi di risorsa.",
+        "saveFailed": "Impossibile salvare il tipo di risorsa.",
+        "deleteFailed": "Impossibile eliminare il tipo di risorsa.",
+        "invalidName": "Inserisci un nome per questo tipo di risorsa.",
+        "invalidSchema": "Lo schema di campi non è valido. Correggi i campi evidenziati e riprova.",
+        "reservedSlug": "L'identificatore \"{{slug}}\" è riservato a un tipo integrato. Scegli un altro nome.",
+        "slugConflict": "Esiste già un tipo di risorsa con l'identificatore \"{{slug}}\".",
+        "notFound": "Questo tipo di risorsa non esiste più.",
+        "builtinImmutable": "I tipi integrati consentono solo la modifica di nome e icona.",
+        "builtinUndeletable": "I tipi integrati non possono essere eliminati.",
+        "inUse": "Questo tipo è ancora utilizzato da {{assetCount}} risorsa/e. Riassegna quelle risorse prima di eliminarlo.",
+        "unknown": "Qualcosa è andato storto."
+      },
+      "editor": {
+        "title": "Campi",
+        "empty": "Ancora nessun campo. Aggiungi campi per costruire il modulo di creazione/modifica di questo tipo.",
+        "addField": "Aggiungi campo",
+        "fieldLabel": "Etichetta",
+        "fieldLabelPlaceholder": "es. Numero di serie",
+        "fieldKey": "Chiave",
+        "fieldKeyPlaceholder": "es. serial_number",
+        "fieldKind": "Tipo",
+        "fieldRequired": "Obbligatorio",
+        "fieldOptions": "Opzioni (separate da virgola)",
+        "fieldOptionsPlaceholder": "es. Oro, Argento, Bronzo",
+        "moveUp": "Sposta campo in su",
+        "moveDown": "Sposta campo in giù",
+        "removeField": "Rimuovi campo",
+        "kinds": {
+          "text": "Testo",
+          "number": "Numero",
+          "date": "Data",
+          "select": "Selezione",
+          "url": "URL",
+          "boolean": "Sì / No"
+        },
+        "errors": {
+          "invalidKey": "La chiave deve iniziare con una lettera minuscola e usare solo lettere minuscole, numeri e trattini bassi.",
+          "duplicateKey": "Ogni chiave di campo deve essere univoca.",
+          "missingLabel": "L'etichetta è obbligatoria.",
+          "invalidKind": "Scegli un tipo di campo valido.",
+          "invalidRequired": "\"Obbligatorio\" deve essere attivato o disattivato.",
+          "missingOptions": "I campi di selezione richiedono almeno un'opzione.",
+          "invalidOptions": "Le opzioni non possono essere vuote.",
+          "invalidField": "Questo campo non è valido."
+        }
+      }
+    }
   }
 }

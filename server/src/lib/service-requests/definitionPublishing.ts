@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { publishServiceRequestDefinitionSearchEvent } from './searchEvents';
 
 export interface PublishServiceRequestDefinitionInput {
@@ -59,16 +60,18 @@ export async function publishServiceRequestDefinition(
   const { knex, tenant, definitionId, publishedBy = null } = input;
 
   const createdVersion = await knex.transaction(async (trx) => {
-    const definition = (await trx('service_request_definitions')
-      .where({ tenant, definition_id: definitionId })
+    const db = tenantDb(trx, tenant);
+
+    const definition = (await db.table('service_request_definitions')
+      .where({ definition_id: definitionId })
       .first()) as ServiceRequestDefinitionRow | undefined;
 
     if (!definition) {
       throw new Error('Service request definition not found');
     }
 
-    const currentMaxVersion = await trx('service_request_definition_versions')
-      .where({ tenant, definition_id: definitionId })
+    const currentMaxVersion = await db.table('service_request_definition_versions')
+      .where({ definition_id: definitionId })
       .max<{ maxVersion: string | number | null }>('version_number as maxVersion')
       .first();
 
@@ -76,20 +79,20 @@ export async function publishServiceRequestDefinition(
 
     const [categoryRow, linkedServiceRow] = await Promise.all([
       definition.category_id
-        ? trx('service_categories')
-            .where({ tenant, category_id: definition.category_id })
+        ? db.table('service_categories')
+            .where({ category_id: definition.category_id })
             .select('category_name')
             .first<{ category_name: string }>()
         : Promise.resolve(undefined),
       definition.linked_service_id
-        ? trx('service_catalog')
-            .where({ tenant, service_id: definition.linked_service_id })
+        ? db.table('service_catalog')
+            .where({ service_id: definition.linked_service_id })
             .select('service_name')
             .first<{ service_name: string }>()
         : Promise.resolve(undefined),
     ]);
 
-    const [createdVersion] = (await trx('service_request_definition_versions')
+    const [createdVersion] = (await db.table('service_request_definition_versions')
       .insert({
         tenant,
         definition_id: definitionId,
@@ -113,7 +116,7 @@ export async function publishServiceRequestDefinition(
       })
       .returning('*')) as ServiceRequestDefinitionVersionRecord[];
 
-    await trx('service_request_definitions').where({ tenant, definition_id: definitionId }).update({
+    await db.table('service_request_definitions').where({ definition_id: definitionId }).update({
       lifecycle_state: 'published',
       published_by: publishedBy,
       published_at: trx.fn.now(),

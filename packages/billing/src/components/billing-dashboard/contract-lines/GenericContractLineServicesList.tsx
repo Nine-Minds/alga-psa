@@ -17,11 +17,11 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import { IContractLine, IContractLineService, IService, IServiceCategory } from '@alga-psa/types';
 import { getContractLineServicesWithConfigurations, addServiceToContractLine, removeServiceFromContractLine } from '@alga-psa/billing/actions/contractLineServiceActions';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import { getContractLineById } from '@alga-psa/billing/actions/contractLineAction'; // Import action to get plan details
 import { getContractById } from '@alga-psa/billing/actions/contractActions';
 import { getCurrencySymbol } from '@alga-psa/core'; // Import currency helper
-import { getServiceCategories } from '@alga-psa/billing/actions'; // Added import
+import { getServiceCategories } from '@alga-psa/billing/actions/categoryActions'; // Added import
 // Removed useTenant import as it wasn't used
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
@@ -29,6 +29,15 @@ import ContractLineServiceForm from './ContractLineServiceForm'; // Adjusted pat
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { IContractLineServiceConfiguration } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 // Define billing method options
 const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; labelKey: string; defaultLabel: string }> = [
@@ -58,6 +67,7 @@ interface EnhancedPlanService extends IContractLineService {
 
 const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contractLineId, onServicesChanged, disableEditing = false }) => {
   const { t } = useTranslation('msp/contract-lines');
+  const { money } = useCurrencyFormat();
   const [planServices, setPlanServices] = useState<EnhancedPlanService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   // Removed serviceCategories state
@@ -108,6 +118,15 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
         ? servicesResponse
         : (servicesResponse.services || []);
 
+      if (isReturnedActionError(servicesWithConfigurations)) {
+        setError(getErrorMessage(servicesWithConfigurations));
+        return;
+      }
+      if (isReturnedActionError(planDetails)) {
+        setError(getErrorMessage(planDetails));
+        return;
+      }
+
       if (!planDetails) {
         throw new Error(t('services.generic.errors.contractLineNotFound', {
           defaultValue: 'Contract line with ID {{id}} not found.',
@@ -120,6 +139,10 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       // Fetch contract to get currency
       if (planDetails.contract_id) {
         const contract = await getContractById(planDetails.contract_id);
+        if (isReturnedActionError(contract)) {
+          setError(getErrorMessage(contract));
+          return;
+        }
         if (contract?.currency_code) {
           setContractCurrency(contract.currency_code);
         }
@@ -200,12 +223,16 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
             rate = Math.round(parseFloat(customRates[serviceId]) * 100); // Convert to cents
           }
 
-          await addServiceToContractLine(
+          const result = await addServiceToContractLine(
             contractLineId,
             serviceId,
             1, // Default quantity
             rate
           );
+          if (isReturnedActionError(result)) {
+            setError(getErrorMessage(result));
+            return;
+          }
         }
       }
       await fetchData(); // Ensure data is fetched before calling callback
@@ -224,7 +251,11 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
     if (!contractLineId) return;
 
     try {
-      await removeServiceFromContractLine(contractLineId, serviceId);
+      const result = await removeServiceFromContractLine(contractLineId, serviceId);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       await fetchData(); // Ensure data is fetched before calling callback
       onServicesChanged?.(); // Call the callback if provided
     } catch (error) {
@@ -323,7 +354,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       render: (value, record) => {
         const rate = value !== undefined ? value : record.default_rate;
         // Display rate directly as decimal
-        return rate !== undefined ? `$${parseFloat(rate).toFixed(2)}` : t('common.notAvailable', { defaultValue: 'N/A' });
+        return rate !== undefined ? money(Math.round(Number(rate) * 100)) : t('common.notAvailable', { defaultValue: 'N/A' });
       },
     },
     {
@@ -481,7 +512,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
                           key={service.service_id}
                           className={`flex items-center space-x-2 p-2 hover:bg-muted/50 rounded ${!hasCurrencyPrice ? 'bg-warning/10' : ''}`}
                         >
-                          <div className="[&>div]:mb-0">
+                          <div>
                             <Checkbox
                               id={`add-generic-service-${service.service_id}`}
                               checked={isSelected}

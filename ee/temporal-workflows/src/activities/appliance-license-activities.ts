@@ -7,7 +7,9 @@
  */
 
 import { Context } from '@temporalio/activity';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { emailService } from '../services/email-service';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 
@@ -72,6 +74,11 @@ export interface UpsertLicenseContractInput {
 export interface UpsertLicenseContractResult {
   contractId: string;
   clientContractId: string;
+}
+
+interface ExistingLicenseContractRow {
+  client_contract_id: string;
+  contract_id: string;
 }
 
 export interface StoreLicenseDocumentInput {
@@ -140,19 +147,17 @@ export async function upsertLicenseContract(
   log.info('upsertLicenseContract', { clientId: input.clientId, tier: input.tier });
 
   const knex = await getAdminConnection();
+  const db = tenantDb(knex, input.tenant);
 
   // Check for existing contract for this subscription
-  const existing = await knex('client_contracts')
-    .join('contracts', function () {
-      this.on('client_contracts.contract_id', 'contracts.contract_id')
-        .andOn('client_contracts.tenant', 'contracts.tenant');
-    })
-    .where({
-      'client_contracts.client_id': input.clientId,
-      'client_contracts.tenant': input.tenant,
-    })
-    .whereRaw("contracts.contract_description LIKE ?", [`%stripe_sub:${input.stripeSubId}%`])
-    .first('client_contracts.client_contract_id as client_contract_id', 'contracts.contract_id as contract_id');
+  const existingQuery = db.table('client_contracts')
+    .where({ 'client_contracts.client_id': input.clientId })
+    .whereRaw("contracts.contract_description LIKE ?", [`%stripe_sub:${input.stripeSubId}%`]);
+  db.tenantJoin(existingQuery, 'contracts', 'client_contracts.contract_id', 'contracts.contract_id');
+  const existing = await existingQuery.first(
+    'client_contracts.client_contract_id as client_contract_id',
+    'contracts.contract_id as contract_id',
+  ) as ExistingLicenseContractRow | undefined;
 
   const startDate = new Date();
   const endDate = new Date(input.exp * 1000);
@@ -161,8 +166,8 @@ export async function upsertLicenseContract(
 
   if (existing) {
     // Update end date + status on renewal
-    await knex('client_contracts')
-      .where({ client_contract_id: existing.client_contract_id, tenant: input.tenant })
+    await db.table('client_contracts')
+      .where({ client_contract_id: existing.client_contract_id })
       .update({
         end_date: endDate,
         renewal_mode: renewalMode,
@@ -177,7 +182,7 @@ export async function upsertLicenseContract(
 
   // Create new contract + assignment
   const contractId = uuidv4();
-  await knex('contracts').insert({
+  await db.table('contracts').insert({
     contract_id: contractId,
     tenant: input.tenant,
     contract_name: `Alga Appliance License — ${input.tier}`,
@@ -192,7 +197,7 @@ export async function upsertLicenseContract(
   });
 
   const clientContractId = uuidv4();
-  await knex('client_contracts').insert({
+  await db.table('client_contracts').insert({
     client_contract_id: clientContractId,
     tenant: input.tenant,
     client_id: input.clientId,
@@ -208,7 +213,7 @@ export async function upsertLicenseContract(
 
   // Insert a license contract_line (informational — tier + seats)
   const lineId = uuidv4();
-  await knex('contract_lines').insert({
+  await db.table('contract_lines').insert({
     contract_line_id: lineId,
     tenant: input.tenant,
     contract_id: contractId,
@@ -229,16 +234,16 @@ export async function upsertLicenseContract(
  * prefer inbound_ticket_defaults.entered_by, else the tenant's first user.
  */
 async function resolveSystemUserId(knex: Knex, tenant: string): Promise<string | null> {
-  const inbound = await knex('inbound_ticket_defaults')
-    .where({ tenant, is_active: true })
+  const db = tenantDb(knex, tenant);
+  const inbound = await db.table('inbound_ticket_defaults')
+    .where({ is_active: true })
     .whereNotNull('entered_by')
     .orderBy('updated_at', 'desc')
     .first('entered_by')
     .catch(() => undefined);
   if (inbound?.entered_by) return inbound.entered_by as string;
 
-  const user = await knex('users')
-    .where({ tenant })
+  const user = await db.table('users')
     .orderBy('created_at', 'asc')
     .first('user_id');
   return (user?.user_id as string) ?? null;
@@ -252,6 +257,7 @@ export async function storeLicenseDocument(
   log.info('storeLicenseDocument', { clientId: input.clientId });
 
   const knex = await getAdminConnection();
+  const db = tenantDb(knex, input.tenant);
   const documentId = uuidv4();
   const expDate = new Date(input.exp * 1000).toISOString().split('T')[0];
 
@@ -262,7 +268,7 @@ export async function storeLicenseDocument(
 
   // documents requires user_id + created_by (real users); content is inline text;
   // the timestamp column is entered_at (there is no created_at on documents).
-  await knex('documents').insert({
+  await db.table('documents').insert({
     document_id: documentId,
     tenant: input.tenant,
     document_name: `Alga Appliance License — ${input.tier} (expires ${expDate})`,
@@ -275,7 +281,7 @@ export async function storeLicenseDocument(
   });
 
   // Associate to client (so it shows in portal Documents). No created_by column.
-  await knex('document_associations').insert({
+  await db.table('document_associations').insert({
     association_id: uuidv4(),
     tenant: input.tenant,
     document_id: documentId,
@@ -286,7 +292,7 @@ export async function storeLicenseDocument(
 
   // Also associate to contract (for bookkeeping)
   if (input.contractId) {
-    await knex('document_associations').insert({
+    await db.table('document_associations').insert({
       association_id: uuidv4(),
       tenant: input.tenant,
       document_id: documentId,
@@ -322,13 +328,14 @@ export async function deliverLicenseEmail(
 
   // Record delivery on the submission
   const knex = await getAdminConnection();
+  const db = tenantDb(knex, input.tenant);
   const licenseExpiry = new Date(input.exp * 1000).toISOString().split('T')[0];
   const notes = input.transport.startsWith('connected')
     ? `License claim code: ${input.claimCode} (paste into /msp/licenses → Connect this appliance)`
     : `License JWT delivered. Paste into /msp/licenses → Enter license key. Expires: ${licenseExpiry}`;
 
-  await knex('service_request_submissions')
-    .where({ submission_id: input.submissionId, tenant: input.tenant })
+  await db.table('service_request_submissions')
+    .where({ submission_id: input.submissionId })
     .update({
       workflow_execution_id: input.claimCode
         ? `license-issued-connected:${input.claimCode}`
@@ -353,20 +360,97 @@ export async function revokeLicenseEntitlement(
   // Mark the contract terminated. PG can't UPDATE two tables at once, so resolve
   // the matching contract(s) first, then update each table separately.
   const knex = await getAdminConnection();
-  const matches = await knex('contracts')
-    .where({ tenant: input.tenant, owner_client_id: input.clientId })
+  const db = tenantDb(knex, input.tenant);
+  const matches = await db.table('contracts')
+    .where({ owner_client_id: input.clientId })
     .whereRaw('contract_description LIKE ?', [`%stripe_sub:${input.stripeSubId}%`])
     .select('contract_id');
   const contractIds = matches.map((m: { contract_id: string }) => m.contract_id);
   if (contractIds.length === 0) return;
 
-  await knex('contracts')
-    .where({ tenant: input.tenant })
+  await db.table('contracts')
     .whereIn('contract_id', contractIds)
     .update({ status: 'terminated', updated_at: knex.fn.now() });
 
-  await knex('client_contracts')
-    .where({ tenant: input.tenant })
+  await db.table('client_contracts')
     .whereIn('contract_id', contractIds)
     .update({ is_active: false, updated_at: knex.fn.now() });
+}
+
+// ── Appliance Essentials (free) registration ────────────────────────────────
+//
+// The free Essentials order has no Stripe entitlement: it mints a registry
+// tenant + a one-time install code and emails the operator. nm-store starts the
+// workflow; these activities run on this worker, which already holds the
+// alga-license service auth (c4Post) and the shared email service — so a
+// transient Postgres 53300 on the mint is retried by Temporal, not lost.
+
+export interface RegisterEssentialsTenantInput {
+  submissionId: string;
+  companyName: string;
+  contactName?: string;
+  contactEmail: string;
+}
+
+export interface RegisterEssentialsTenantResult {
+  tenantId: string;
+  installCode: string;
+}
+
+export interface DeliverEssentialsInstallEmailInput {
+  to: string;
+  companyName: string;
+  installCode: string;
+  downloadUrl: string;
+}
+
+/** Mint a registry tenant + one-time install code for the free Essentials edition. */
+export async function registerEssentialsTenant(
+  input: RegisterEssentialsTenantInput,
+): Promise<RegisterEssentialsTenantResult> {
+  const log = logger();
+  log.info('registerEssentialsTenant', { submissionId: input.submissionId });
+
+  const res = (await c4Post('/register-tenant', {
+    company_name: input.companyName,
+    contact_email: input.contactEmail,
+    contact_name: input.contactName,
+    edition: 'essentials',
+  })) as { tenant_id: string; install_code: string };
+
+  return { tenantId: res.tenant_id, installCode: res.install_code };
+}
+
+/** Email the operator their install code + ISO download link (shared email service). */
+export async function deliverEssentialsInstallEmail(
+  input: DeliverEssentialsInstallEmailInput,
+): Promise<void> {
+  const log = logger();
+  log.info('deliverEssentialsInstallEmail', { to: input.to });
+
+  const svc = await emailService;
+  await svc.sendEmail({
+    to: input.to,
+    subject: 'Your AlgaPSA appliance install code',
+    html: renderEssentialsInstallEmail(input),
+    metadata: { kind: 'appliance-essentials-install-code' },
+  });
+}
+
+function escapeApplianceHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string),
+  );
+}
+
+function renderEssentialsInstallEmail(input: DeliverEssentialsInstallEmailInput): string {
+  return `
+    <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;color:#111">
+      <h2>Your AlgaPSA appliance is ready to install</h2>
+      <p>Thanks for registering <strong>${escapeApplianceHtml(input.companyName)}</strong> for an on-prem AlgaPSA appliance (Essentials).</p>
+      <p>Enter this <strong>install code</strong> on the appliance setup screen. It binds the appliance to your account:</p>
+      <p style="font-family:monospace;font-size:24px;letter-spacing:0.15em;background:#f3f4f6;padding:16px 20px;border-radius:8px;text-align:center">${escapeApplianceHtml(input.installCode)}</p>
+      <p><a href="${input.downloadUrl}" style="display:inline-block;background:#7c3aed;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none">Download the appliance ISO</a></p>
+      <p style="color:#6b7280;font-size:13px">The install code is single-use. If you reinstall, re-issue a fresh one from your account.</p>
+    </div>`;
 }

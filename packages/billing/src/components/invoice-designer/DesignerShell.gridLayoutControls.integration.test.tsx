@@ -98,10 +98,15 @@ describe('DesignerShell grid layout controls', () => {
     expect(screen.getByRole('button', { name: 'Columns: 3 equal columns' })).toBeTruthy();
   });
 
-  it('keeps the grid column presets visible when the selected node starts in flex mode', () => {
+  it('reveals the grid column presets once a flex node is switched to grid layout', () => {
     seedSelectedLayoutNode({ display: 'flex', flexDirection: 'column' });
 
     render(<DesignerShell />);
+
+    // Since 440765f642 the presets are gated behind grid mode: flex nodes
+    // show only the layout-mode toggle until Grid is chosen.
+    expect(screen.queryByRole('button', { name: 'Columns: 1 column' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Layout: Grid' }));
 
     expect(screen.getByRole('button', { name: 'Columns: 1 column' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Columns: 2 equal columns' })).toBeTruthy();
@@ -209,10 +214,11 @@ describe('DesignerShell grid layout controls', () => {
     expect(inactivePreset.className).toContain('dark:hover:bg-slate-800');
   });
 
-  it('switches a flex layout into grid mode when a grid preset is chosen', () => {
+  it('switches a flex layout into grid mode via the layout toggle, then applies a preset', () => {
     seedSelectedLayoutNode({ display: 'flex', flexDirection: 'column' });
 
     render(<DesignerShell />);
+    fireEvent.click(screen.getByRole('button', { name: 'Layout: Grid' }));
     fireEvent.click(screen.getByRole('button', { name: 'Columns: 2 equal columns' }));
 
     const layout = (useInvoiceDesignerStore.getState().nodesById['container-1'].props as any)?.layout;
@@ -226,7 +232,9 @@ describe('DesignerShell grid layout controls', () => {
     render(<DesignerShell />);
 
     expect(document.querySelector('[data-automation-id="designer-container-layout-controls"]')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Columns: 1 column' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Layout: Grid' })).toBeTruthy();
+    // Presets appear once the section is in grid mode.
+    fireEvent.click(screen.getByRole('button', { name: 'Layout: Grid' }));
+    expect(screen.getByRole('button', { name: 'Columns: 1 column' })).toBeTruthy();
   });
 });

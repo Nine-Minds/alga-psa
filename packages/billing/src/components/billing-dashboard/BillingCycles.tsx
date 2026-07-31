@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Card, CardHeader, CardContent } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -28,6 +29,14 @@ import { IContract } from '@alga-psa/types';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { DateRangePicker, type DateRange } from '@alga-psa/ui/components/DateRangePicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const getDefaultStartDate = () => {
   const date = new Date();
@@ -139,6 +148,13 @@ const BillingCycles: React.FC = () => {
         getContracts()
       ]);
 
+      const expectedLoadError = [cycles, clientsResponse, allContracts].find(isReturnedActionError);
+      if (expectedLoadError) {
+        setError(getErrorMessage(expectedLoadError));
+        setLoading(false);
+        return;
+      }
+
       setBillingCycles(cycles);
       setClients(clientsResponse.clients);
       setTotalCount(clientsResponse.totalCount);
@@ -167,6 +183,15 @@ const BillingCycles: React.FC = () => {
         getActiveClientContractsByClientIdsForBilling(clientIds),
         getClientBillingScheduleSummaries(clientIds)
       ]);
+
+      if (isReturnedActionError(clientAssignedContracts)) {
+        setError(getErrorMessage(clientAssignedContracts));
+        return;
+      }
+      if (isReturnedActionError(scheduleSummaries)) {
+        setError(getErrorMessage(scheduleSummaries));
+        return;
+      }
 
       // Build active assignment map per client.
       const clientContractsMap: {
@@ -277,6 +302,7 @@ const BillingCycles: React.FC = () => {
     {
       title: t('billingCycles.columns.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
+      render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={record.logoUrl ?? null} />,
     },
     {
       title: t('billingCycles.columns.contract', { defaultValue: 'Contract' }),

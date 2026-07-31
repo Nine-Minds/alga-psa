@@ -10,7 +10,7 @@ import {
   withAdminTransactionRetryReadOnly,
   retryOnAdminReadOnly,
 } from '@alga-psa/db/admin.js';
-import { withTransaction, isReadOnlyError } from '@alga-psa/db';
+import { tenantDb, isReadOnlyError } from '@alga-psa/db';
 import { getRedisStreamClient } from '@alga-psa/workflow-streams';
 
 import { createNinjaOneClient, NinjaOneClient } from '@ee/lib/integrations/ninjaone/ninjaOneClient';
@@ -35,7 +35,7 @@ import type {
   RmmSyncResult,
   RmmSyncStatus,
 } from '@ee/interfaces/rmm.interfaces';
-import type { Asset } from '@/interfaces/asset.interfaces';
+import type { Asset } from '@alga-psa/types';
 
 export interface SyncOptions {
   organizationIds?: number[];
@@ -116,8 +116,7 @@ class NinjaOneSyncWorker {
   private async getDefaultAuditUserId(): Promise<string | null> {
     if (!this.knex) return null;
 
-    const user = await this.knex('users')
-      .where({ tenant: this.tenantId })
+    const user = await tenantDb(this.knex, this.tenantId).table('users')
       .select('user_id')
       .first();
 
@@ -439,9 +438,8 @@ class NinjaOneSyncWorker {
 
     const device = await this.client!.getDevice(deviceId);
 
-    const mapping = await this.knex!('rmm_organization_mappings')
+    const mapping = await tenantDb(this.knex!, this.tenantId).table('rmm_organization_mappings')
       .where({
-        tenant: this.tenantId,
         integration_id: this.integrationId,
         external_organization_id: String(device.organizationId),
       })
@@ -571,7 +569,7 @@ class NinjaOneSyncWorker {
     return await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
       const now = new Date().toISOString();
 
-      const [asset] = await trx('assets')
+      const [asset] = await tenantDb(trx, this.tenantId).table('assets')
         .insert({
           tenant: this.tenantId,
           asset_type: createRequest.asset_type,
@@ -595,14 +593,14 @@ class NinjaOneSyncWorker {
       const assetType = createRequest.asset_type;
       if (assetType && mappingResult.extensionFields) {
         const extensionTable = `${assetType}_assets`;
-        await trx(extensionTable).insert({
+        await tenantDb(trx, this.tenantId).table(extensionTable).insert({
           tenant: this.tenantId,
           asset_id: asset.asset_id,
           ...mappingResult.extensionFields,
         });
       }
 
-      await trx('tenant_external_entity_mappings').insert({
+      await tenantDb(trx, this.tenantId).table('tenant_external_entity_mappings').insert({
         id: trx.raw('gen_random_uuid()'),
         tenant: this.tenantId,
         integration_type: 'ninjaone',
@@ -621,7 +619,7 @@ class NinjaOneSyncWorker {
       });
 
       if (this.auditUserId) {
-        await trx('asset_history').insert({
+        await tenantDb(trx, this.tenantId).table('asset_history').insert({
           tenant: this.tenantId,
           asset_id: asset.asset_id,
           changed_by: this.auditUserId,
@@ -670,8 +668,8 @@ class NinjaOneSyncWorker {
       const now = new Date().toISOString();
 
       // Get current asset to check if client_id needs updating
-      const currentAsset = await trx('assets')
-        .where({ tenant: this.tenantId, asset_id: assetId })
+      const currentAsset = await tenantDb(trx, this.tenantId).table('assets')
+        .where({ asset_id: assetId })
         .first();
 
       const updateData: Record<string, unknown> = {
@@ -698,23 +696,23 @@ class NinjaOneSyncWorker {
         });
       }
 
-      const [asset] = await trx('assets')
-        .where({ tenant: this.tenantId, asset_id: assetId })
+      const [asset] = await tenantDb(trx, this.tenantId).table('assets')
+        .where({ asset_id: assetId })
         .update(updateData)
         .returning('*');
 
       if (extensionFields && assetType !== 'unknown') {
         const extensionTable = `${assetType}_assets`;
-        const existingExtension = await trx(extensionTable)
-          .where({ tenant: this.tenantId, asset_id: assetId })
+        const existingExtension = await tenantDb(trx, this.tenantId).table(extensionTable)
+          .where({ asset_id: assetId })
           .first();
 
         if (existingExtension) {
-          await trx(extensionTable)
-            .where({ tenant: this.tenantId, asset_id: assetId })
+          await tenantDb(trx, this.tenantId).table(extensionTable)
+            .where({ asset_id: assetId })
             .update(extensionFields);
         } else {
-          await trx(extensionTable).insert({
+          await tenantDb(trx, this.tenantId).table(extensionTable).insert({
             tenant: this.tenantId,
             asset_id: assetId,
             ...extensionFields,
@@ -722,9 +720,8 @@ class NinjaOneSyncWorker {
         }
       }
 
-      await trx('tenant_external_entity_mappings')
+      await tenantDb(trx, this.tenantId).table('tenant_external_entity_mappings')
         .where({
-          tenant: this.tenantId,
           integration_type: 'ninjaone',
           alga_entity_type: 'asset',
           external_entity_id: String(device.id),
@@ -754,7 +751,7 @@ class NinjaOneSyncWorker {
           historyChanges.reason = 'Device organization mapping correction';
         }
 
-        await trx('asset_history').insert({
+        await tenantDb(trx, this.tenantId).table('asset_history').insert({
           tenant: this.tenantId,
           asset_id: assetId,
           changed_by: this.auditUserId,
@@ -780,8 +777,8 @@ class NinjaOneSyncWorker {
     const now = new Date().toISOString();
 
     await this.runWriteWithRetry('updateAssetLastSeen', (knex) =>
-      knex('assets')
-        .where({ tenant: this.tenantId, asset_id: assetId })
+      tenantDb(knex, this.tenantId).table('assets')
+        .where({ asset_id: assetId })
         .update({
           agent_status: device.offline ? 'offline' : 'online',
           last_seen_at: unixTimestampToIso(device.lastContact),
@@ -800,9 +797,8 @@ class NinjaOneSyncWorker {
       );
       const ninjaDeviceIds = new Set(devices.map((d) => String(d.id)));
 
-      const existingMappings = await this.knex!('tenant_external_entity_mappings')
+      const existingMappings = await tenantDb(this.knex!, this.tenantId).table('tenant_external_entity_mappings')
         .where({
-          tenant: this.tenantId,
           integration_type: 'ninjaone',
           alga_entity_type: 'asset',
           external_realm_id: mapping.external_organization_id,
@@ -825,17 +821,16 @@ class NinjaOneSyncWorker {
     const now = new Date().toISOString();
 
     await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
-      await trx('assets')
-        .where({ tenant: this.tenantId, asset_id: assetId })
+      await tenantDb(trx, this.tenantId).table('assets')
+        .where({ asset_id: assetId })
         .update({
           status: 'inactive',
           agent_status: 'offline',
           updated_at: now,
         });
 
-      await trx('tenant_external_entity_mappings')
+      await tenantDb(trx, this.tenantId).table('tenant_external_entity_mappings')
         .where({
-          tenant: this.tenantId,
           integration_type: 'ninjaone',
           alga_entity_id: assetId,
         })
@@ -846,7 +841,7 @@ class NinjaOneSyncWorker {
         });
 
       if (this.auditUserId) {
-        await trx('asset_history').insert({
+        await tenantDb(trx, this.tenantId).table('asset_history').insert({
           tenant: this.tenantId,
           asset_id: assetId,
           changed_by: this.auditUserId,
@@ -871,33 +866,36 @@ class NinjaOneSyncWorker {
     alga_entity_id: string;
     external_entity_id: string;
   } | null> {
-    const mapping = await this.knex!('tenant_external_entity_mappings')
-      .join('assets', (join) => {
-        (join as any)
-          .on(
-            this.knex!.raw(
-              'assets.asset_id::text = tenant_external_entity_mappings.alga_entity_id'
-            )
-          )
-          .andOn('tenant_external_entity_mappings.tenant', '=', 'assets.tenant');
-      })
+    const db = tenantDb(this.knex!, this.tenantId);
+    const query = db.table('tenant_external_entity_mappings')
       .where({
-        'tenant_external_entity_mappings.tenant': this.tenantId,
         'tenant_external_entity_mappings.integration_type': 'ninjaone',
         'tenant_external_entity_mappings.alga_entity_type': 'asset',
         'tenant_external_entity_mappings.external_entity_id': String(deviceId),
         'assets.status': 'active',
       })
-      .where('assets.tenant', this.tenantId)
-      .select('tenant_external_entity_mappings.alga_entity_id', 'tenant_external_entity_mappings.external_entity_id')
-      .first();
+      .select({
+        alga_entity_id: 'tenant_external_entity_mappings.alga_entity_id',
+        external_entity_id: 'tenant_external_entity_mappings.external_entity_id',
+      });
+    db.tenantJoin(query, 'assets', 'tenant_external_entity_mappings.tenant', 'assets.tenant', {
+      on: (join) => {
+        (join as any)
+          .andOn(
+            this.knex!.raw(
+              'assets.asset_id::text = tenant_external_entity_mappings.alga_entity_id'
+            )
+          );
+      },
+    });
+    const mapping = await query.first();
 
     return mapping || null;
   }
 
   private async getAssetById(assetId: string): Promise<Asset | null> {
-    const asset = await this.knex!('assets')
-      .where({ tenant: this.tenantId, asset_id: assetId })
+    const asset = await tenantDb(this.knex!, this.tenantId).table<Asset>('assets')
+      .where({ asset_id: assetId })
       .first();
     return asset || null;
   }
@@ -905,9 +903,8 @@ class NinjaOneSyncWorker {
   private async getOrganizationMappings(
     organizationIds?: number[]
   ): Promise<RmmOrganizationMapping[]> {
-    const query = this.knex!('rmm_organization_mappings')
+    const query = tenantDb(this.knex!, this.tenantId).table<RmmOrganizationMapping>('rmm_organization_mappings')
       .where({
-        tenant: this.tenantId,
         integration_id: this.integrationId,
         auto_sync_assets: true,
       })
@@ -923,9 +920,8 @@ class NinjaOneSyncWorker {
   private async getOrganizationMappingByExternalId(
     externalOrganizationId: number
   ): Promise<RmmOrganizationMapping | null> {
-    const mapping = await this.knex!('rmm_organization_mappings')
+    const mapping = await tenantDb(this.knex!, this.tenantId).table('rmm_organization_mappings')
       .where({
-        tenant: this.tenantId,
         integration_id: this.integrationId,
         external_organization_id: String(externalOrganizationId),
       })
@@ -937,8 +933,8 @@ class NinjaOneSyncWorker {
 
   private async updateOrganizationMappingLastSynced(mappingId: string): Promise<void> {
     await this.runWriteWithRetry('updateOrganizationMappingLastSynced', (knex) =>
-      knex('rmm_organization_mappings')
-        .where({ tenant: this.tenantId, mapping_id: mappingId })
+      tenantDb(knex, this.tenantId).table('rmm_organization_mappings')
+        .where({ mapping_id: mappingId })
         .update({ last_synced_at: new Date().toISOString() })
     );
   }
@@ -956,8 +952,8 @@ class NinjaOneSyncWorker {
     }
 
     await this.runWriteWithRetry('updateSyncStatus', (knex) =>
-      knex('rmm_integrations')
-        .where({ tenant: this.tenantId, integration_id: this.integrationId })
+      tenantDb(knex, this.tenantId).table('rmm_integrations')
+        .where({ integration_id: this.integrationId })
         .update(updateData)
     );
   }
@@ -985,8 +981,8 @@ class NinjaOneSyncWorker {
     }
 
     await this.runWriteWithRetry('updateIntegrationAfterSync', (knex) =>
-      knex('rmm_integrations')
-        .where({ tenant: this.tenantId, integration_id: this.integrationId })
+      tenantDb(knex, this.tenantId).table('rmm_integrations')
+        .where({ integration_id: this.integrationId })
         .update(updateData)
     );
   }
@@ -1157,8 +1153,8 @@ export async function syncNinjaOneOrganizationsActivity(input: {
       }
     };
 
-    const integration = await knex('rmm_integrations')
-      .where({ tenant: tenantId, integration_id: integrationId, provider: 'ninjaone' })
+    const integration = await tenantDb(knex, tenantId).table('rmm_integrations')
+      .where({ integration_id: integrationId, provider: 'ninjaone' })
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -1166,8 +1162,8 @@ export async function syncNinjaOneOrganizationsActivity(input: {
     }
 
     await writeWithRetry('markSyncing', () =>
-      knex('rmm_integrations')
-        .where({ tenant: tenantId, integration_id: integrationId })
+      tenantDb(knex, tenantId).table('rmm_integrations')
+        .where({ integration_id: integrationId })
         .update({
           sync_status: 'syncing',
           updated_at: knex.fn.now(),
@@ -1181,9 +1177,8 @@ export async function syncNinjaOneOrganizationsActivity(input: {
 
     for (const org of organizations) {
       try {
-        const existingMapping = await knex('rmm_organization_mappings')
+        const existingMapping = await tenantDb(knex, tenantId).table('rmm_organization_mappings')
           .where({
-            tenant: tenantId,
             integration_id: integration.integration_id,
             external_organization_id: String(org.id),
           })
@@ -1191,8 +1186,8 @@ export async function syncNinjaOneOrganizationsActivity(input: {
 
         if (existingMapping) {
           await writeWithRetry('updateOrgMapping', () =>
-            knex('rmm_organization_mappings')
-              .where({ tenant: tenantId, mapping_id: existingMapping.mapping_id })
+            tenantDb(knex, tenantId).table('rmm_organization_mappings')
+              .where({ mapping_id: existingMapping.mapping_id })
               .update({
                 external_organization_name: org.name,
                 metadata: JSON.stringify({ description: org.description, tags: org.tags }),
@@ -1202,7 +1197,7 @@ export async function syncNinjaOneOrganizationsActivity(input: {
           itemsUpdated++;
         } else {
           await writeWithRetry('insertOrgMapping', () =>
-            knex('rmm_organization_mappings').insert({
+            tenantDb(knex, tenantId).table('rmm_organization_mappings').insert({
               tenant: tenantId,
               integration_id: integration.integration_id,
               external_organization_id: String(org.id),
@@ -1222,8 +1217,8 @@ export async function syncNinjaOneOrganizationsActivity(input: {
     }
 
     await writeWithRetry('markCompleted', () =>
-      knex('rmm_integrations')
-        .where({ tenant: tenantId, integration_id: integrationId })
+      tenantDb(knex, tenantId).table('rmm_integrations')
+        .where({ integration_id: integrationId })
         .update({
           sync_status: 'completed',
           last_sync_at: knex.fn.now(),
@@ -1252,8 +1247,8 @@ export async function syncNinjaOneOrganizationsActivity(input: {
       await retryOnAdminReadOnly(
         async () => {
           const knex = await getAdminConnection();
-          await knex('rmm_integrations')
-            .where({ tenant: input.tenantId, integration_id: input.integrationId })
+          await tenantDb(knex, input.tenantId).table('rmm_integrations')
+            .where({ integration_id: input.integrationId })
             .update({
               sync_status: 'error',
               sync_error: errorMessage,

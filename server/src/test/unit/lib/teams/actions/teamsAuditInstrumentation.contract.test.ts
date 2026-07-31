@@ -36,13 +36,16 @@ describe('Teams action audit instrumentation contract', () => {
     expect(registry).toContain('writeTeamsAuditEvent');
   });
 
-  it('threads Microsoft user id from Teams bot, message extension, and quick-action activities into action requests', () => {
+  it('threads the verified Microsoft user id from Teams bot, message extension, and quick-action activities into action requests', () => {
+    // Since the E1 inbound-security hardening, the Microsoft user id is
+    // sourced from the verified Bot Framework token claim first and only
+    // falls back to the activity body when no verified identity is present.
     expect(registry).toContain('microsoftUserId?: string | null');
-    expect(botHandler).toContain('const microsoftUserId = getMicrosoftAccountId(activity)');
     expect(botHandler).toContain('microsoftUserId: params.microsoftUserId');
-    expect(messageExtensionHandler).toContain('microsoftUserId: getMicrosoftAccountId(activity)');
+    expect(botHandler).toMatch(/verifiedIdentity\?\.microsoftUserId/);
     expect(messageExtensionHandler).toContain('microsoftUserId: params.microsoftUserId');
-    expect(quickActionHandler).toContain('microsoftUserId: getMicrosoftAccountId(activity)');
+    expect(messageExtensionHandler).toMatch(/verifiedIdentity\?\.microsoftUserId\s*\|\|\s*getMicrosoftAccountId\(activity\)/);
     expect(quickActionHandler).toContain('microsoftUserId: params.microsoftUserId');
+    expect(quickActionHandler).toMatch(/verifiedIdentity\?\.microsoftUserId\s*\|\|\s*getMicrosoftAccountId\(activity\)/);
   });
 });

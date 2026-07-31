@@ -28,8 +28,12 @@
         "group": "Groupe",
         "servicePeriod": "Période de service",
         "invoiceWindow": "Fenêtre de facture",
-        "included": "Compris"
-      }
+        "included": "Compris",
+        "charge": "Type",
+        "status": "Statut",
+        "amount": "Montant"
+      },
+      "pageScopeNote": "{{count}} groupe(s) sur cette page"
     },
     "groups": {
       "item": "{{count}} article",
@@ -41,9 +45,6 @@
       "line": "Ligne {{count}}",
       "line_one": "Ligne {{count}}",
       "line_other": "Lignes {{count}}",
-      "obligationCount": "Obligation {{count}}",
-      "obligationCount_one": "Obligation {{count}}",
-      "obligationCount_other": "Obligations {{count}}",
       "includedCount": "{{count}} article inclus",
       "includedCount_one": "{{count}} article inclus",
       "includedCount_other": "Articles {{count}} inclus",
@@ -58,7 +59,10 @@
       "canCombine": "Peut être combiné en une seule facture",
       "separate": "Doit facturer séparément",
       "blocked": "Contient des éléments bloqués",
-      "notReady": "Pas prêt à facturer"
+      "notReady": "Pas prêt à facturer",
+      "upcoming": "Pas encore exigible",
+      "upcomingDetail": "Cette période est facturée à terme échu, elle ne peut donc être facturée qu’une fois la période de service terminée.",
+      "upcomingDetailWithDate": "Cette période est facturée à terme échu, elle peut donc être facturée à partir du {{date}}, une fois la période de service terminée."
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "La fenêtre de facturation diffère",
@@ -75,6 +79,7 @@
         "servicePeriod": "Période de service"
       },
       "pendingAmount": "Montant en attente",
+      "billableOn": "Facturable le {{date}}",
       "attributionWarning": "Métadonnées d'attribution d'attribution manquantes",
       "blockedUntilApproval": "Bloqué jusqu'à approbation : {{count}} entrée non approuvée.",
       "blockedUntilApproval_one": "Bloqué jusqu'à approbation : {{count}} entrée non approuvée.",
@@ -204,7 +209,13 @@
         "scheduleKey": "Clé de planification"
       },
       "reviewLink": "Examiner les périodes de service",
-      "helpText": "Réparez les enregistrements canoniques de période de service au lieu de générer une ligne de facture de compatibilité."
+      "helpText": "Réparez les enregistrements canoniques de période de service au lieu de générer une ligne de facture de compatibilité.",
+      "fixAll": "Tout réparer",
+      "fixAllBusy": "Reconstruction…",
+      "fixAllResult": "{{schedules}} planning(s) reconstruit(s) pour {{clients}} client(s).",
+      "fixAllNoop": "Tous les plannings de facturation sont déjà à jour. Tout élément encore listé ci-dessous doit être examiné individuellement.",
+      "fixAllError": "Impossible de reconstruire les périodes de service. Veuillez réessayer.",
+      "fixAllDenied": "Vous n’avez pas l’autorisation de reconstruire les périodes de service."
     },
     "errors": {
       "title": "Des erreurs se sont produites lors de la finalisation des factures :",
@@ -213,6 +224,61 @@
     },
     "loading": {
       "billingData": "Chargement des données de facturation"
+    },
+    "views": {
+      "all": "Tout",
+      "ready": "Prêt",
+      "combinable": "Combinable",
+      "attention": "Attention requise",
+      "notYetDue": "Pas encore dû"
+    },
+    "status": {
+      "ready": "Prêt",
+      "combine": "Combiner",
+      "separate": "Séparé",
+      "notYetDue": "Pas encore dû",
+      "approval": "Approbation",
+      "blocked": "Bloqué"
+    },
+    "chargeTags": {
+      "fixed": "FIX",
+      "hourly": "T&M",
+      "usage": "USE",
+      "bucket": "BKT"
+    },
+    "summary": {
+      "selected": "{{count}} sélectionné(s)",
+      "breakdown": "{{invoices}} facture(s) · {{combine}} combinées · {{separate}} séparées",
+      "knownNow": "connu maintenant",
+      "knownPlusAtGeneration": "connu maintenant · {{count}} calculé à la génération",
+      "atGenerationLines": "{{count}} élément(s)",
+      "empty": "Sélectionnez des groupes ou des éléments pour prévisualiser ou générer des factures.",
+      "pageScope": "{{groups}} groupe(s) · {{obligations}} élément(s)"
+    },
+    "amount": {
+      "atGeneration": "Calculé à la génération",
+      "plusAtGeneration": "+ {{count}} à la génération"
+    },
+    "window": {
+      "open": "Ouverte",
+      "opensOn": "Ouvre le {{date}}",
+      "notOpen": "Pas encore ouverte"
+    },
+    "legend": {
+      "confirmed": "Montant connu maintenant",
+      "atGeneration": "Calculé à la génération",
+      "combine": "Combiner en une facture",
+      "separate": "À facturer séparément",
+      "notYetDue": "Pas encore dû"
+    },
+    "filters": {
+      "title": "Filtres",
+      "windowOpen": "Fenêtre ouverte",
+      "charge": "Type",
+      "currency": "Devise",
+      "any": "tout",
+      "clear": "Effacer",
+      "countSummary": "{{groups}} groupe(s) · {{obligations}} élément(s)"
     }
   },
   "manualInvoices": {
@@ -223,11 +289,15 @@
     "fields": {
       "client": "Client",
       "invoiceNumber": "Numéro de facture",
-      "invoiceNumberOptional": "Numéro de facture (facultatif)"
+      "invoiceNumberOptional": "Numéro de facture (facultatif)",
+      "sourceSalesOrder": "Source sales order (optional)"
     },
     "placeholders": {
       "selectClient": "Sélectionnez un client",
-      "invoiceNumberOptional": "Laisser vide pour générer automatiquement"
+      "invoiceNumberOptional": "Laisser vide pour générer automatiquement",
+      "sourceSalesOrder": "Select a fulfilled or manually billable sales order",
+      "searchSalesOrders": "Search sales orders...",
+      "noInvoiceableSalesOrders": "No invoiceable sales orders found."
     },
     "automatedItems": {
       "title": "Éléments de campagne automatisés",
@@ -244,7 +314,9 @@
       "addDiscount": "Ajouter une remise",
       "generate": "Générer une facture",
       "saveChanges": "Enregistrer les modifications",
-      "processing": "Traitement..."
+      "processing": "Traitement...",
+      "generateSalesOrderInvoice": "Generate Sales Order Invoice",
+      "clearSalesOrderSource": "Clear sales order source"
     },
     "labels": {
       "total": "Total"
@@ -266,11 +338,29 @@
       "loadItems": "Erreur lors du chargement des éléments de facture",
       "refresh": "Une erreur s'est produite lors de l'actualisation des données de facture.",
       "updateFailed": "Erreur lors de la mise à jour de la facture",
-      "generateFailed": "Erreur lors de la génération de la facture"
+      "generateFailed": "Erreur lors de la génération de la facture",
+      "NO_BILLING_EMAIL": "{{clientName}} n'a pas d'adresse e-mail de facturation. Ajoutez une adresse e-mail à l'emplacement de facturation du client, puis réessayez.",
+      "CLIENT_NOT_FOUND": "Le client sélectionné est introuvable. Actualisez la page et réessayez.",
+      "SERVICE_NOT_FOUND": "Le service {{serviceId}} est introuvable. Actualisez la page et réessayez.",
+      "INVALID_QUANTITY": "La quantité doit être supérieure à zéro.",
+      "NO_TAX_RATE": "Aucun taux de taxe actif n'a été trouvé pour {{region}} à la date du {{date}}.",
+      "DISCOUNT_TARGET_NOT_FOUND": "Le service {{serviceId}} associé à cette remise est introuvable.",
+      "INVOICE_NUMBER_CONFLICT": "Ce numéro de facture est déjà utilisé.",
+      "PERMISSION_DENIED": "Vous n'êtes pas autorisé à créer ou à mettre à jour cette facture.",
+      "UNEXPECTED": "Une erreur s'est produite lors de la génération de la facture. Indiquez la référence {{ref}} lorsque vous contactez le support.",
+      "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
+      "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
+      "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+    },
+    "warnings": {
+      "noBillingEmail": "Ce client n'a pas d'adresse e-mail de facturation. Ajoutez une adresse e-mail à son emplacement de facturation avant de générer la facture."
     },
     "errorFallback": {
       "title": "Quelque chose s'est mal passé",
       "retry": "Réessayer"
+    },
+    "salesOrderContext": {
+      "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
     }
   },
   "draftsTab": {
@@ -285,7 +375,8 @@
       "invoiceDate": "Date de la facture",
       "dueDate": "Date d'échéance",
       "status": "Statut",
-      "actions": "Actes"
+      "actions": "Actes",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "finalize": "Finaliser",
@@ -315,12 +406,12 @@
       "bulkFinalizeSkipped_other": "{{count}} factures n'ont pas pu être finalisées et ont été ignorées."
     },
     "reverseDialog": {
-      "title": "Contre-version de facture",
       "title_other": "Contrepasser les factures provisoires",
       "message_one": "L'annulation de ce brouillon de facture le supprimera et libérera toutes les entrées de temps ou enregistrements d'utilisation liés. Cette action ne peut pas être annulée.",
       "message_other": "L'annulation des factures provisoires {{count}} les supprimera et libérera toutes les entrées de temps ou enregistrements d'utilisation liés. Cette action ne peut pas être annulée.",
       "confirm": "Brouillon inversé",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "title_one": "Contre-version de facture"
     },
     "pendingTaxDialog": {
       "title": "Facture en attente de la taxe externe",
@@ -340,7 +431,8 @@
       "amount": "Montant",
       "finalizedDate": "Date de finalisation",
       "status": "Statut",
-      "actions": "Actes"
+      "actions": "Actes",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "downloadPdfs": "Télécharger des PDF",
@@ -364,7 +456,8 @@
       "pdfFailed": "Échec de la génération du PDF. Veuillez réessayer.",
       "bulkPdfFailed": "Échec de la génération des fichiers PDF. Veuillez réessayer.",
       "unfinalizeFailed": "Échec de la finalisation de la facture. Veuillez réessayer.",
-      "bulkUnfinalizeFailed": "Échec de la finalisation des factures. Veuillez réessayer."
+      "bulkUnfinalizeFailed": "Échec de la finalisation des factures. Veuillez réessayer.",
+      "bulkUnfinalizeInvoiceFailed": "Impossible de rouvrir {{invoiceNumber}} : {{reason}}"
     }
   },
   "recurringServicePeriods": {
@@ -578,13 +671,21 @@
       "reverseDraft": "Brouillon inversé",
       "sendEmail": "Envoyer un e-mail",
       "unfinalize": "Définaliser",
-      "viewSourceQuote": "Afficher le devis source"
+      "viewSourceQuote": "Afficher le devis source",
+      "applyCredit": "Appliquer un crédit",
+      "driftAccept": "Accepter la version QuickBooks",
+      "driftReexport": "Réexporter vers QuickBooks",
+      "syncNow": "Synchroniser avec QuickBooks",
+      "viewInQbo": "Afficher dans QuickBooks",
+      "voidInvoice": "Annuler la facture"
     },
     "loading": "Chargement de l'aperçu...",
     "empty": "Sélectionnez une facture à prévisualiser",
     "error": "Impossible d'afficher l'aperçu",
     "errorDescription": "Impossible d'afficher l'aperçu. Des données peuvent être manquantes.",
     "errors": {
+      "notFound": "Facture introuvable.",
+      "noTemplates": "Aucun modèle de facture disponible.",
       "loadFailed": "Échec du chargement de l'aperçu : {{message}}",
       "actionFailed": "Échec de {{action}}. Veuillez réessayer.",
       "actionLabels": {
@@ -594,6 +695,17 @@
         "sendEmail": "envoyer un email",
         "unfinalize": "définaliser la facture"
       }
+    },
+    "applyCreditDialog": {
+      "title": "Appliquer un crédit"
+    },
+    "voidDialog": {
+      "title": "Annuler la facture",
+      "description": "L'annulation de cette facture est définitive. Veuillez indiquer un motif.",
+      "reasonPlaceholder": "Motif de l'annulation...",
+      "cancel": "Annuler",
+      "confirm": "Annuler la facture",
+      "voiding": "Annulation…"
     }
   },
   "templateEditor": {
@@ -897,7 +1009,9 @@
       "description": "Description",
       "quantity": "Quantité",
       "rate": "Taux",
-      "amount": "Montant"
+      "amount": "Montant",
+      "salesOrder": "Commande client",
+      "cogsMargin": "Coût des ventes / Marge"
     },
     "labels": {
       "contractSubtotal": "Sous-total du contrat :",
@@ -911,7 +1025,23 @@
     "tabs": {
       "generate": "Générer",
       "drafts": "Brouillons",
-      "finalized": "Finalisée"
+      "finalized": "Finalisée",
+      "projectBilling": "Project Billing"
+    }
+  },
+  "invoiceSyncBadge": {
+    "states": {
+      "notSynced": "Non synchronisé",
+      "queued": "En file d'attente",
+      "synced": "Synchronisé",
+      "drift": "Écart",
+      "error": "Erreur de synchronisation",
+      "voided": "Annulée"
+    },
+    "tooltip": {
+      "qboNumberPrefix": "QBO #",
+      "lastSynced": "Dernière synchronisation :",
+      "viewInQuickBooks": "Voir dans QuickBooks"
     }
   },
   "templateManager": {
@@ -1525,6 +1655,72 @@
         "label": "Adresse du locataire",
         "description": "L'adresse de votre entreprise."
       }
+    },
+    "canvas": {
+      "templateBoundary": "Limite du modèle"
+    },
+    "dragOverlay": {
+      "component": "Composant"
+    }
+  },
+  "projectBilling": {
+    "subtitle": "Ready milestones and deposits awaiting approval across all projects.",
+    "bulkActions": "Actions ({{count}})",
+    "loading": "Loading project billing queue...",
+    "empty": "Nothing is waiting for review. Ready milestones and deposits will appear here.",
+    "columns": {
+      "project": "Project",
+      "client": "Client",
+      "description": "Description",
+      "amount": "Amount",
+      "trigger": "Trigger",
+      "daysWaiting": "Days waiting",
+      "actions": "Actions"
+    },
+    "trigger": {
+      "phase": "Phase {{phase}} completed {{date}}",
+      "date": "Date reached",
+      "manual": "Manual"
+    },
+    "actions": {
+      "approve": "Approve",
+      "approveInvoiceNow": "Approve & invoice now",
+      "hold": "Hold",
+      "cancel": "Cancel",
+      "approveSelected": "Approve selected",
+      "holdSelected": "Hold selected"
+    },
+    "toasts": {
+      "approved": "Entry approved.",
+      "approvedWithWarning": "Entry approved. {{warning}}",
+      "invoiced": "Entry approved and invoiced.",
+      "bulkApproved": "{{count}} entries approved.",
+      "bulkApproveFailed": "{{count}} entries could not be approved (e.g. {{reason}}).",
+      "held": "Entry placed on hold.",
+      "bulkHeld": "{{count}} entries placed on hold.",
+      "bulkHoldFailed": "{{count}} entries could not be held (e.g. {{reason}}).",
+      "canceled": "Entry canceled."
+    },
+    "errors": {
+      "loadFailed": "Failed to load the project billing review queue. Please try again.",
+      "approveFailed": "Failed to approve the entry.",
+      "invoiceFailed": "Failed to approve and invoice the entry.",
+      "holdFailed": "Failed to place the entry on hold.",
+      "cancelFailed": "Failed to cancel the entry."
+    },
+    "holdDialog": {
+      "title": "Hold entry",
+      "titlePlural": "Hold {{count}} entries",
+      "description": "Holding returns the entry to pending until it is made ready again. A reason is required.",
+      "reasonPlaceholder": "Reason for holding...",
+      "cancel": "Cancel",
+      "confirm": "Hold"
+    },
+    "cancelDialog": {
+      "title": "Cancel entry",
+      "message": "Canceling this schedule entry removes it from billing. This cannot be undone.",
+      "confirm": "Cancel entry",
+      "dismiss": "Keep entry"
     }
   }
 }

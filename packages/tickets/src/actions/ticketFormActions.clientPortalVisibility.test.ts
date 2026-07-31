@@ -15,9 +15,19 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
+  tenantDb: (conn: any) => ({
+    table: (table: string) => conn(table),
+    tenantJoin: (query: any) => query.join?.() ?? query,
+  }),
 }));
 
 vi.mock('@alga-psa/reference-data/actions', () => ({
+  getTicketStatuses: vi.fn(),
+  getAllPriorities: vi.fn(),
+  getPrioritiesByBoardType: (...args: any[]) => getPrioritiesByBoardTypeMock(...args),
+}));
+
+vi.mock('@alga-psa/reference-data/actions/priorityActions', () => ({
   getTicketStatuses: vi.fn(),
   getAllPriorities: vi.fn(),
   getPrioritiesByBoardType: (...args: any[]) => getPrioritiesByBoardTypeMock(...args),
@@ -37,7 +47,11 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   getAllUsers: vi.fn(),
 }));
 
-vi.mock('../lib/clientPortalVisibility', () => ({
+vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
+  getAllUsers: vi.fn(),
+}));
+
+vi.mock('../lib/clientPortalVisibility.server', () => ({
   getClientContactVisibilityContext: (...args: any[]) => getClientContactVisibilityContextMock(...args),
 }));
 
@@ -67,15 +81,11 @@ describe('client ticket form visibility restrictions', () => {
 
         if (table === 'boards') {
           return {
-            where: vi.fn().mockReturnValue({
-              andWhere: vi.fn().mockReturnValue({
-                whereIn: vi.fn().mockReturnValue({
-                  select: vi.fn().mockResolvedValue([
-                    { board_id: 'board-2', board_name: 'HR' },
-                    { board_id: 'board-3', board_name: 'Support' },
-                  ]),
-                }),
-              }),
+            andWhere: vi.fn().mockReturnValue({
+              whereIn: vi.fn().mockResolvedValue([
+                { board_id: 'board-2', board_name: 'HR' },
+                { board_id: 'board-3', board_name: 'Support' },
+              ]),
             }),
           };
         }
@@ -115,15 +125,11 @@ describe('client ticket form visibility restrictions', () => {
 
         if (table === 'boards') {
           return {
-            where: vi.fn().mockReturnValue({
-              andWhere: vi.fn().mockReturnValue({
-                whereIn: vi.fn().mockReturnValue({
-                  select: vi.fn().mockResolvedValue([
-                    { board_id: 'board-7', board_name: 'VIP' },
-                    { board_id: 'board-9', board_name: 'General' },
-                  ]),
-                }),
-              }),
+            andWhere: vi.fn().mockReturnValue({
+              whereIn: vi.fn().mockResolvedValue([
+                { board_id: 'board-7', board_name: 'VIP' },
+                { board_id: 'board-9', board_name: 'General' },
+              ]),
             }),
           };
         }
@@ -149,11 +155,9 @@ describe('client ticket form visibility restrictions', () => {
 
   it('T008: ticket creation board options exclude inactive boards even when visibility group includes them', async () => {
     const activeFilterMock = vi.fn(() => ({
-      whereIn: vi.fn().mockReturnValue({
-        select: vi.fn().mockResolvedValue([
-          { board_id: 'board-active', board_name: 'Active Board' },
-        ]),
-      }),
+      whereIn: vi.fn().mockResolvedValue([
+        { board_id: 'board-active', board_name: 'Active Board' },
+      ]),
     }));
 
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
@@ -168,9 +172,7 @@ describe('client ticket form visibility restrictions', () => {
 
         if (table === 'boards') {
           return {
-            where: vi.fn().mockReturnValue({
-              andWhere: activeFilterMock,
-            }),
+            andWhere: activeFilterMock,
           };
         }
 

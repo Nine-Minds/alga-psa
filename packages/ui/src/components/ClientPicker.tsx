@@ -6,12 +6,14 @@ import { FocusScope } from '@radix-ui/react-focus-scope';
 import { RemoveScroll } from 'react-remove-scroll';
 import { ChevronDown, Plus } from 'lucide-react';
 import type { VariantProps } from 'class-variance-authority';
-import type { IClient } from '@alga-psa/types';
+import type { IClient, ITag } from '@alga-psa/types';
 
 import { Input } from './Input';
 import CustomSelect from './CustomSelect';
 import { Button, buttonVariants } from './Button';
 import ClientAvatar from './ClientAvatar';
+import { TagFilter } from './tags/TagFilter';
+import { useClientTags } from '../context/ClientTagsContext';
 import type { EntityAvatarProps } from './EntityAvatar';
 import { useTranslation } from '../lib/i18n/client';
 
@@ -22,16 +24,18 @@ import { CommonActions } from '../ui-reflection/actionBuilders';
 
 type ButtonVariant = VariantProps<typeof buttonVariants>['variant'];
 type ButtonSize = VariantProps<typeof buttonVariants>['size'];
+type ClientFilterState = 'all' | 'active' | 'inactive';
+type ClientTypeFilter = 'all' | 'company' | 'individual';
 
 interface ClientPickerProps {
   id?: string;
   clients?: IClient[];
   onSelect: (clientId: string | null) => void;
   selectedClientId: string | null;
-  filterState: 'all' | 'active' | 'inactive';
-  onFilterStateChange: (state: 'all' | 'active' | 'inactive') => void;
-  clientTypeFilter: 'all' | 'company' | 'individual';
-  onClientTypeFilterChange: (type: 'all' | 'company' | 'individual') => void;
+  filterState?: ClientFilterState;
+  onFilterStateChange?: (state: ClientFilterState) => void;
+  clientTypeFilter?: ClientTypeFilter;
+  onClientTypeFilterChange?: (type: ClientTypeFilter) => void;
   disabledClientIds?: Set<string>;
   disabledTooltip?: string;
   fitContent?: boolean;
@@ -115,41 +119,110 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   'data-automation-type': dataAutomationType = 'picker',
 }) => {
   const { t } = useTranslation('common');
+  const { fetchClientTags } = useClientTags();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [internalFilterState, setInternalFilterState] = useState<ClientFilterState>(filterState ?? 'active');
+  const [internalClientTypeFilter, setInternalClientTypeFilter] = useState<ClientTypeFilter>(clientTypeFilter ?? 'all');
+  const [clientTags, setClientTags] = useState<ITag[]>([]);
+  const [selectedTagFilters, setSelectedTagFilters] = useState<string[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0, width: 0 });
+  const [dropdownCoords, setDropdownCoords] = useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+    width: number;
+    listMaxHeight: number;
+  }>({ top: 0, left: 0, width: 0, listMaxHeight: 320 });
 
   const selectedClient = useMemo(
     () => clients.find((c) => c.client_id === selectedClientId),
     [clients, selectedClientId]
   );
 
+  useEffect(() => {
+    if (!isOpen || !fetchClientTags || clients.length === 0) return;
+    let cancelled = false;
+    fetchClientTags(clients.map((client) => client.client_id))
+      .then((tags) => {
+        if (!cancelled) setClientTags(tags);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, fetchClientTags, clients]);
+
+  const tagTextsByClientId = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const tag of clientTags) {
+      let texts = map.get(tag.tagged_id);
+      if (!texts) {
+        texts = new Set<string>();
+        map.set(tag.tagged_id, texts);
+      }
+      texts.add(tag.tag_text);
+    }
+    return map;
+  }, [clientTags]);
+
+  const uniqueFilterTags = useMemo(() => {
+    const byText = new Map<string, ITag>();
+    for (const tag of clientTags) {
+      if (!byText.has(tag.tag_text)) byText.set(tag.tag_text, tag);
+    }
+    return Array.from(byText.values()).sort((a, b) => a.tag_text.localeCompare(b.tag_text));
+  }, [clientTags]);
+
+  const showTagFilter = uniqueFilterTags.length > 0;
+  const resolvedFilterState = filterState ?? internalFilterState;
+  const resolvedClientTypeFilter = clientTypeFilter ?? internalClientTypeFilter;
+
+  const handleFilterStateChange = (state: ClientFilterState) => {
+    if (filterState === undefined) {
+      setInternalFilterState(state);
+    }
+    onFilterStateChange?.(state);
+  };
+
+  const handleClientTypeFilterChange = (type: ClientTypeFilter) => {
+    if (clientTypeFilter === undefined) {
+      setInternalClientTypeFilter(type);
+    }
+    onClientTypeFilterChange?.(type);
+  };
+
   const filteredClients = useMemo(() => {
     return clients
       .filter((client) => {
         const matchesSearch = client.client_name.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesState =
-          filterState === 'all'
+          resolvedFilterState === 'all'
             ? true
-            : filterState === 'active'
+            : resolvedFilterState === 'active'
               ? !client.is_inactive
-              : filterState === 'inactive'
+              : resolvedFilterState === 'inactive'
                 ? client.is_inactive
                 : true;
         const matchesClientType =
-          clientTypeFilter === 'all'
+          resolvedClientTypeFilter === 'all'
             ? true
-            : clientTypeFilter === 'company'
+            : resolvedClientTypeFilter === 'company'
               ? client.client_type === 'company'
-              : clientTypeFilter === 'individual'
+              : resolvedClientTypeFilter === 'individual'
                 ? client.client_type === 'individual'
                 : true;
+        const matchesTags =
+          selectedTagFilters.length === 0
+            ? true
+            : selectedTagFilters.some((tagText) =>
+                tagTextsByClientId.get(client.client_id)?.has(tagText)
+              );
 
-        return matchesSearch && matchesState && matchesClientType;
+        return matchesSearch && matchesState && matchesClientType && matchesTags;
       })
       .sort((a, b) => {
         const aDisabled = disabledClientIds?.has(a.client_id) ?? false;
@@ -157,7 +230,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
         if (aDisabled !== bDisabled) return aDisabled ? 1 : -1;
         return a.client_name.localeCompare(b.client_name);
       });
-  }, [clients, filterState, clientTypeFilter, searchTerm, disabledClientIds]);
+  }, [clients, resolvedFilterState, resolvedClientTypeFilter, searchTerm, disabledClientIds, selectedTagFilters, tagTextsByClientId]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -187,9 +260,10 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
 
     const buttonRect = triggerRef.current.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
     const margin = 16;
 
-    const dropdownWidth = Math.min(400, Math.max(buttonRect.width, 250));
+    const dropdownWidth = Math.min(420, Math.max(buttonRect.width, 300));
 
     const spaceOnRight = viewportWidth - buttonRect.right;
     const spaceOnLeft = buttonRect.left;
@@ -204,12 +278,25 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
       }
     }
 
+    // Search + filter header, and the optional add-new footer, surround the list.
+    const chromeHeight = 125 + (onAddNew ? 49 : 0);
+    const minListHeight = 150;
+    const maxListHeight = 320;
+
+    const spaceBelow = viewportHeight - buttonRect.bottom - 4 - margin;
+    const spaceAbove = buttonRect.top - 4 - margin;
+    const showAbove = spaceBelow < chromeHeight + minListHeight && spaceAbove > spaceBelow;
+    const available = (showAbove ? spaceAbove : spaceBelow) - chromeHeight;
+    const listMaxHeight = Math.max(minListHeight, Math.min(maxListHeight, available));
+
     setDropdownCoords({
-      top: buttonRect.bottom + 4,
+      top: showAbove ? undefined : buttonRect.bottom + 4,
+      bottom: showAbove ? viewportHeight - buttonRect.top + 4 : undefined,
       left,
       width: dropdownWidth,
+      listMaxHeight,
     });
-  }, []);
+  }, [onAddNew]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -333,7 +420,13 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
       <div
         ref={dropdownRef}
         className="fixed z-[10000] bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden"
-        style={{ top: dropdownCoords.top, left: dropdownCoords.left, width: dropdownCoords.width, pointerEvents: 'auto' }}
+        style={{
+          top: dropdownCoords.top,
+          bottom: dropdownCoords.bottom,
+          left: dropdownCoords.left,
+          width: dropdownCoords.width,
+          pointerEvents: 'auto',
+        }}
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
@@ -350,21 +443,41 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
               autoFocus
               className="h-9"
             />
+            {showTagFilter && (
+              <TagFilter
+                id={`${id}-tag-filter`}
+                tags={uniqueFilterTags}
+                selectedTags={selectedTagFilters}
+                onToggleTag={(tagText) => {
+                  setSelectedTagFilters((current) =>
+                    current.includes(tagText)
+                      ? current.filter((text) => text !== tagText)
+                      : [...current, tagText]
+                  );
+                }}
+                onClearTags={() => setSelectedTagFilters([])}
+                modal
+                align="start"
+                contentClassName="z-[10001]"
+              />
+            )}
           </div>
           <div className="flex items-center gap-2 mt-2">
             <CustomSelect
-              value={filterState}
-              onValueChange={(value) => onFilterStateChange(value as any)}
+              id={`${id}-state-filter`}
+              value={resolvedFilterState}
+              onValueChange={(value) => handleFilterStateChange(value as ClientFilterState)}
               options={opts}
               placeholder="Filter"
-              className="flex-1"
+              className="flex-1 min-w-0"
             />
             <CustomSelect
-              value={clientTypeFilter}
-              onValueChange={(value) => onClientTypeFilterChange(value as any)}
+              id={`${id}-type-filter`}
+              value={resolvedClientTypeFilter}
+              onValueChange={(value) => handleClientTypeFilterChange(value as ClientTypeFilter)}
               options={clientTypes}
               placeholder="Type"
-              className="flex-1"
+              className="flex-1 min-w-0"
             />
           </div>
         </div>
@@ -373,8 +486,8 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
           id={`${id}-listbox`}
           role="listbox"
           aria-label={placeholder}
-          className="max-h-[320px] overflow-y-auto"
-          style={{ overscrollBehavior: 'contain' }}
+          className="overflow-y-auto"
+          style={{ overscrollBehavior: 'contain', maxHeight: dropdownCoords.listMaxHeight }}
           onWheel={(e) => e.stopPropagation()}
         >
           {filteredClients.length === 0 ? (
@@ -397,7 +510,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
                       : `cursor-pointer hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset ${isSelected ? 'bg-gray-50' : ''}`
                   }`}
                 >
-                  <ClientAvatar clientId={client.client_id} clientName={client.client_name} logoUrl={(client as any).logoUrl} size={size} />
+                  <ClientAvatar clientId={client.client_id} clientName={client.client_name} logoUrl={(client as any).logoUrl} size="sm" />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-900 truncate">{client.client_name}</div>
                     <div className="text-xs text-gray-500 truncate">
@@ -469,7 +582,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
                     clientId={selectedClient.client_id}
                     clientName={selectedClient.client_name}
                     logoUrl={(selectedClient as any).logoUrl}
-                    size={size}
+                    size={size === 'xs' ? 'xs' : 'sm'}
                   />
                   <span className="truncate">{selectedClient.client_name}</span>
                 </>

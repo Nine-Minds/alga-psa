@@ -20,6 +20,12 @@ vi.mock('@alga-psa/core/secrets', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: knexMock })),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('@alga-psa/assets/actions/assetActions', () => ({
@@ -39,7 +45,7 @@ vi.mock('@alga-psa/integrations/lib/rmm/tacticalrmm/tacticalApiClient', async ()
   class TacticalRmmClientMock {
     async request(args: any) {
       requestCalls.push({ method: String(args.method), path: String(args.path) });
-      if (args.method === 'GET' && args.path === '/api/software/') return tacticalSoftwareRows;
+      if (args.method === 'GET' && args.path === '/software/') return tacticalSoftwareRows;
       throw new Error(`Unexpected Tactical request: ${args.method} ${args.path}`);
     }
     async listAllBeta(_args: any) {
@@ -198,7 +204,7 @@ describe('Tactical software inventory ingest (bulk)', () => {
     vi.useRealTimers();
   });
 
-  it('ingests via GET /api/software/ without per-agent refresh calls and writes normalized software tables', async () => {
+  it('ingests via GET /software/ without per-agent refresh calls and writes normalized software tables', async () => {
     const { ingestTacticalRmmSoftwareInventory } = await import(
       '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
     );
@@ -206,7 +212,7 @@ describe('Tactical software inventory ingest (bulk)', () => {
     const res = await ingestTacticalRmmSoftwareInventory({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
     expect(res.success).toBe(true);
 
-    expect(requestCalls).toEqual([{ method: 'GET', path: '/api/software/' }]);
+    expect(requestCalls).toEqual([{ method: 'GET', path: '/software/' }]);
     expect(requestCalls.some((c) => c.method === 'PUT')).toBe(false);
 
     expect(res.items_processed).toBe(3);

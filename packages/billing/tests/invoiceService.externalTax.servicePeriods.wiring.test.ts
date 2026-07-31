@@ -9,7 +9,9 @@ describe('invoiceService external tax recurring timing wiring', () => {
   it('keeps external and pending-external tax paths driven by imported tax amounts rather than recurring service-period fields', () => {
     expect(source).toContain('External tax remains amount-authoritative');
     expect(source).toContain("if (taxSource === 'external') {");
-    expect(source).toContain(".select('item_id', 'net_amount', 'external_tax_amount');");
+    expect(source).toContain(
+      ".select<{ item_id: string; net_amount?: unknown; external_tax_amount?: unknown }[]>(\n        'item_id',\n        'net_amount',\n        'external_tax_amount'\n      );"
+    );
     expect(source).toContain("if (taxSource === 'pending_external') {");
     expect(externalBranch).not.toContain('service_period_start');
     expect(externalBranch).not.toContain('service_period_end');

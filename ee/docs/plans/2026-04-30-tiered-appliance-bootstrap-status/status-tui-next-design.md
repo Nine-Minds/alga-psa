@@ -55,7 +55,7 @@ During a running bootstrap, the TUI uses a two-pane layout:
    - current operation
    - current blocker/root cause when known
 2. Scrolling lower pane:
-   - live `bootstrap-appliance.sh` output
+   - live `historical removed bootstrap script` output
    - phase markers
    - failure line(s)
 

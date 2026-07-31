@@ -10,9 +10,11 @@ describe('CollaborativeEditor styles', () => {
     );
     const contents = readFileSync(cssPath, 'utf8');
 
+    // The collaboration cursor label class was renamed from
+    // `.collaboration-cursor__label` to `.collaboration-caret__label` and now
+    // uses the design-system `--color-text-*` token scale rather than the
+    // legacy 0/900 endpoints.
     expect(contents).toContain('.collaboration-caret__label');
-    expect(contents).toContain('.collaboration-cursor__label');
-    expect(contents).toContain('--color-text-0');
-    expect(contents).toContain('--color-text-900');
+    expect(contents).toContain('--color-text-');
   });
 });

@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 import { buildRecurringServicePeriodRecord } from '../../test-utils/recurringTimingFixtures';
 
@@ -21,6 +21,28 @@ vi.mock('@alga-psa/billing/actions/recurringServicePeriodActions', () => ({
   listRecurringServicePeriodScheduleSummaries: mocks.listRecurringServicePeriodScheduleSummaries,
   previewRecurringServicePeriodRegeneration: mocks.previewRecurringServicePeriodRegeneration,
   repairMissingRecurringServicePeriods: mocks.repairMissingRecurringServicePeriods,
+}));
+
+// TagContext consumers in the rendered tree fire refetchTags; the real action
+// rejects without a DB and the unhandled rejection fails the suite run.
+vi.mock('@alga-psa/tags/actions', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  getAllTags: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: string | Record<string, unknown>) => {
+      if (typeof options === 'string') {
+        return options;
+      }
+      const template = (options?.defaultValue as string | undefined) ?? key;
+      return template.replace(/\{\{(\w+)\}\}/g, (match, name: string) => {
+        const value = options?.[name];
+        return value === undefined || value === null ? match : String(value);
+      });
+    },
+  }),
 }));
 
 const { default: RecurringServicePeriodsTab } = await import(
@@ -192,9 +214,17 @@ describe('RecurringServicePeriodsTab UI', () => {
     });
   });
 
-  it('T065: billing dashboard keeps the service-period management surface wired for recurring troubleshooting and repair', () => {
-    const { billingTabDefinitions } = require(
-      `${process.cwd()}/../packages/billing/src/components/billing-dashboard/billingTabsConfig.ts`
+  // RTL's auto-cleanup registers only in the first test file that imports it
+  // per fork (it is externalized, so its module state is process-wide). When
+  // another file runs first, renders leak across tests here and getByTestId
+  // finds duplicate tables. Clean up explicitly, like the sibling ui tests.
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('T065: billing dashboard keeps the service-period management surface wired for recurring troubleshooting and repair', async () => {
+    const { billingTabDefinitions } = await import(
+      '../../../../../packages/billing/src/components/billing-dashboard/billingTabsConfig'
     );
 
     expect(billingTabDefinitions).toEqual(

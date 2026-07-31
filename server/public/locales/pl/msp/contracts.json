@@ -14,7 +14,7 @@
       "save": "Ratować",
       "saveChanges": "Zapisz zmiany",
       "saveChangesDirty": "Zapisz zmiany *",
-      "saving": "Oszczędność...",
+      "saving": "Zapisywanie...",
       "view": "Pogląd",
       "openMenu": "Otwórz menu"
     },
@@ -45,7 +45,7 @@
     },
     "tabs": {
       "clientContracts": "Umowy klienckie",
-      "drafts": "Warcaby",
+      "drafts": "Wersje robocze",
       "templates": "Szablony"
     },
     "moneyPlaceholder": "—",
@@ -259,7 +259,8 @@
       "invoices": "Faktury",
       "lines": "Linie kontraktowe",
       "overview": "Przegląd",
-      "pricing": "Harmonogramy cenowe"
+      "pricing": "Harmonogramy cenowe",
+      "simulator": "Symuluj"
     },
     "validation": {
       "billingFrequencyRequired": "Wymagana jest częstotliwość rozliczeń.",
@@ -1156,6 +1157,12 @@
         "active": "Aktywne",
         "inactive": "Nieaktywne"
       }
+    },
+    "simulation": {
+      "client": "Kontekst klienta",
+      "hypothetical": "Hipotetyczny profil klienta",
+      "open": "Symuluj",
+      "title": "Symulacja szablonu"
     }
   },
   "quickStart": {
@@ -1321,6 +1328,10 @@
       "saveDraft": "Zapisz jako wersję roboczą",
       "saving": "Zapisywanie...",
       "completing": "Kończenie..."
+    },
+    "simulation": {
+      "description": "Przetestuj tę niezapisaną wersję roboczą z zakładaną aktywnością. Symulacja niczego nie zapisuje ani nie wystawia.",
+      "title": "Symuluj przed utworzeniem"
     }
   },
   "wizardBasics": {
@@ -1431,7 +1442,13 @@
         "noticePeriodDays_other": "{{count}} dni",
         "ongoing": "Ciągła",
         "renewalTermMonths_one": "Liczba miesięcy: {{count}}",
-        "renewalTermMonths_other": "Liczba miesięcy: {{count}}"
+        "renewalTermMonths_other": "Liczba miesięcy: {{count}}",
+        "noticePeriodDays": "{{count}} dni",
+        "renewalTermMonths": "Liczba miesięcy: {{count}}",
+        "noticePeriodDays_few": "{{count}} dni",
+        "noticePeriodDays_many": "{{count}} dni",
+        "renewalTermMonths_few": "Liczba miesięcy: {{count}}",
+        "renewalTermMonths_many": "Liczba miesięcy: {{count}}"
       }
     },
     "template": {
@@ -1501,11 +1518,14 @@
       "productItem": "Produkt {{index}}",
       "products": "Produkty",
       "quantity": "Ilość",
-      "selectProductPlaceholder": "Wybierz produkt"
+      "selectProductPlaceholder": "Wybierz produkt",
+      "catalogPriceInCurrency": "Cena katalogowa w {{currency}}:"
     },
     "validation": {
       "noDefaultPriceEnterUnitPrice": "Nie ustawiono ceny domyślnej. Wprowadź cenę jednostkową.",
-      "productMissingPrice": "Ten produkt nie ma ceny domyślnej ani nadpisania. Nie można go rozliczać, dopóki nie wprowadzisz ceny jednostkowej."
+      "productMissingPrice": "Ten produkt nie ma ceny domyślnej ani nadpisania. Nie można go rozliczać, dopóki nie wprowadzisz ceny jednostkowej.",
+      "noCurrencyPriceEnterUnitPrice": "Brak ceny w {{currency}} w katalogu. Wprowadź cenę jednostkową.",
+      "noCurrencyPriceWithLegacyHint": "Brak ceny w {{currency}} w katalogu. Starsza domyślna stawka: {{rate}}. Wprowadź cenę jednostkową w {{currency}}."
     }
   },
   "wizardHourly": {
@@ -1528,7 +1548,9 @@
       "hourlyServices": "Usługi godzinowe",
       "selectServicePlaceholder": "Wybierz usługę",
       "serviceItem": "Usługa {{index}}",
-      "setBucketOfHours": "Ustaw pakiet godzin"
+      "setBucketOfHours": "Ustaw pakiet godzin",
+      "noCurrencyPriceEnterRate": "Brak ceny w {{currency}} w katalogu. Wprowadź stawkę godzinową.",
+      "noCurrencyPriceWithLegacyHint": "Brak ceny w {{currency}} w katalogu. Starsza domyślna stawka: {{rate}}. Wprowadź stawkę godzinową w {{currency}}."
     },
     "minimumBillableTime": {
       "hint": "np. 15 minut — dowolny wpis czasu krótszy od tego zostanie zaokrąglony w górę",
@@ -1586,7 +1608,9 @@
       "setBucketAllocation": "Ustaw alokację pakietu",
       "unitOfMeasure": "Jednostka miary",
       "unitOfMeasureHint": "Wybierz jednostkę, według której rozliczana jest ta usługa.",
-      "unitOfMeasurePlaceholder": "np. GB, wywołanie API, użytkownik"
+      "unitOfMeasurePlaceholder": "np. GB, wywołanie API, użytkownik",
+      "noCurrencyPriceEnterRate": "Brak ceny w {{currency}} w katalogu. Wprowadź stawkę jednostkową.",
+      "noCurrencyPriceWithLegacyHint": "Brak ceny w {{currency}} w katalogu. Starsza domyślna stawka: {{rate}}. Wprowadź stawkę jednostkową w {{currency}}."
     },
     "summary": {
       "labels": {
@@ -2058,6 +2082,240 @@
         "contract": "Jeśli zapiszesz tę cykliczną linię, przyszłe okresy zostałyby zmaterializowane w podglądzie typu rocznicowego zakotwiczonym na 8. dniu przed wygenerowaniem faktur.",
         "client": "Jeśli zapiszesz tę cykliczną linię, przyszłe okresy zostałyby zmaterializowane w podglądzie harmonogramu rozliczeń klienta przed wygenerowaniem faktur."
       }
+    }
+  },
+  "contractSimulator": {
+    "assumptions": {
+      "advanceHint": "Każda faktura rozlicza swój bieżący okres usługi.",
+      "arrearsHint": "Każda faktura rozlicza poprzedni okres usługi.",
+      "averageLoaded": "Wczytano średnią aktywność z {{window}}. Zmieniono {{count}} zakładanych wartości.",
+      "empty": "Scenariusz tylko ze stałą ceną — nic do założenia.",
+      "hoursUnit": "godz.",
+      "inputLabel": "Zakładane {{unit}} na okres usługi — {{service}}",
+      "invoicePeriodLabel": "Faktura {{period}}",
+      "loadReplay": "Wczytaj aktywność i faktury",
+      "loadingHistory": "Wczytywanie historycznej aktywności…",
+      "overrideInputLabel": "Faktura {{period}} — {{unit}} z jej okresu usługi — {{service}}",
+      "periodLabel": "P{{number}}",
+      "prefillChange": "Wczytana wartość: {{before}} → {{after}} {{unit}} na okres usługi",
+      "prefillNextStep": "Zaktualizowane wartości są wyróżnione. Zaktualizuj symulację, aby ponownie przeliczyć faktury.",
+      "prefillOverrides": "Wczytano wartości okresów: {{count}}",
+      "prefillUnchanged": "Wartości wczytane z {{window}} odpowiadają bieżącej zakładanej aktywności.",
+      "replayEnd": "Do",
+      "replayLoaded": "Wczytano historyczną aktywność z {{window}} wraz z {{count}} wystawionymi fakturami. Zmieniono {{changed}} zakładanych wartości.",
+      "replayRangeLoaded": "Wczytano historyczną aktywność i {{count}} wystawionych faktur z {{window}}. Zakładana aktywność bez zmian.",
+      "replayStart": "Od",
+      "replayTitle": "Porównaj z wcześniejszymi fakturami",
+      "rowLabel": "{{service}} — zakładane {{unit}} na okres usługi",
+      "subtitle": "Wprowadź oczekiwaną pracę lub zużycie dla każdego okresu usługi. Przy rozliczaniu z dołu każda faktura korzysta z poprzedniego okresu usługi.",
+      "title": "Zakładana aktywność",
+      "useRecent": "Użyj średniej z ostatnich 3 okresów rozliczeniowych",
+      "varyByPeriod": "Ustaw aktywność dla każdej faktury",
+      "zeroActivity": "Ta usługa nic nie wnosi, dopóki zakładana aktywność nie będzie większa od zera."
+    },
+    "compare": {
+      "added": "Dodano",
+      "changed": "Zmieniono",
+      "horizonImpact": "Łączna zmiana w {{count}} okresach rozliczeniowych",
+      "horizonImpactHint": "W porównaniu z bieżącym kontraktem",
+      "noChange": "Brak symulowanych zmian",
+      "removed": "Usunięto z bieżącego kontraktu"
+    },
+    "diagnostics": {
+      "title": "Uwagi do symulacji"
+    },
+    "emptyScenario": {
+      "description": "Ta umowa nie ma pozycji umowy. Najpierw dodaj pozycje umowy, a następnie wróć, aby przeprowadzić symulację.",
+      "title": "Na razie nie ma czego symulować"
+    },
+    "explanation": {
+      "amount": "Kwota",
+      "close": "Zamknij",
+      "inputs": "Dane wejściowe",
+      "noBreakdown": "Brak dostępnego zestawienia",
+      "steps": "Obliczenia",
+      "title": "Zestawienie opłaty"
+    },
+    "featureName": "Symulator umów",
+    "invoiceDetail": {
+      "billedInAdvance": "Rozliczane z góry",
+      "billedInArrears": "Rozliczane z dołu",
+      "columns": {
+        "amount": "Kwota",
+        "line": "Pozycja",
+        "qty": "Ilość",
+        "rate": "Stawka"
+      },
+      "draftNote": "wersja robocza, nie wystawiona",
+      "explainHint": "Pokaż, jak obliczono tę kwotę",
+      "invoicePeriod": "Okres faktury: {{start}} – {{end}}",
+      "renderedPreview": "Podgląd układu faktury",
+      "servicePeriod": "Okres usługi: {{start}} – {{end}}",
+      "subtotal": "Suma częściowa",
+      "tax": "Podatek",
+      "title": "Symulowana faktura {{period}}",
+      "total": "Razem"
+    },
+    "loadFailed": "Nie udało się załadować scenariusza umowy.",
+    "loadingSnapshot": "Ładowanie scenariusza…",
+    "markers": {
+      "bucketOverage": "Przekroczenie pakietu",
+      "cadenceCoincidence": "Nakładanie się cykli",
+      "contractEnd": "Koniec kontraktu",
+      "oneTime": "Jednorazowe",
+      "prorated": "Proporcjonalne"
+    },
+    "preparingDraft": "Przygotowywanie symulacji…",
+    "replay": {
+      "actualInvoice": "Wystawiona faktura {{number}}",
+      "issued": "wystawiona",
+      "previewIssued": "Podgląd wystawionej faktury",
+      "projected": "symulowane",
+      "simulatedDelta": "symulowana różnica"
+    },
+    "runBar": {
+      "compareToggle": "Pokaż zmiany względem bieżącego kontraktu",
+      "horizonOption": "{{count}} okresów rozliczeniowych",
+      "lastRun": "Symulacja aktualna · {{count}} okresów rozliczeniowych",
+      "neverRun": "Jeszcze nie symulowano",
+      "simulate": "Symuluj",
+      "simulating": "Symulowanie…",
+      "stale": "Zmiany nie zostały zasymulowane",
+      "staleBanner": "Te kwoty pochodzą z poprzedniej symulacji. Zaktualizuj symulację, aby uwzględnić najnowsze zmiany.",
+      "updateSimulation": "Zaktualizuj symulację"
+    },
+    "scenario": {
+      "addAdjustment": "+ dodaj korektę",
+      "addBucket": "Dodaj godziny w pakiecie",
+      "addCatalogService": "Dodaj usługę z katalogu",
+      "addCatalogServiceOption": "+ Dodaj usługę z katalogu…",
+      "addDiscount": "+ dodaj rabat",
+      "addIncludedHours": "Dodaj godziny w pakiecie",
+      "addIncludedUnits": "Dodaj jednostki w pakiecie",
+      "addLine": "Dodaj linię",
+      "addSchedule": "+ dodaj harmonogram",
+      "addTier": "+ dodaj próg",
+      "adjustments": "Korekty",
+      "advancedChanges": "Zaawansowane zmiany w kontrakcie",
+      "advancedSummary": "Harmonogramy: {{schedules}} · rabaty: {{discounts}} · korekty: {{adjustments}}",
+      "allLines": "wszystkie linie",
+      "allocationRate": "Stawka alokacji",
+      "bucketIncluded": "Obejmuje {{hours}} godz.; powyższa stawka to stawka za nadwyżkę",
+      "cadence": {
+        "client": "Użyj harmonogramu rozliczeń klienta",
+        "contract": "Użyj harmonogramu linii kontraktowej"
+      },
+      "catalogRate": "Stawka katalogowa",
+      "collapseDetailsFor": "Zwiń szczegóły dla {{line}}",
+      "defaultRate": "domyślna",
+      "discountTypes": {
+        "fixed": "stały",
+        "percentage": "procentowy"
+      },
+      "discounts": "Rabaty",
+      "editDetails": "Edytuj reguły",
+      "editDetailsFor": "Edytuj szczegóły dla {{line}}",
+      "fields": {
+        "adjustmentAmount": "Kwota korekty w dolarach",
+        "adjustmentDescription": "Opis korekty",
+        "adjustmentPeriod": "Okres korekty",
+        "billingFrequency": "Częstotliwość rozliczeń",
+        "billingTiming": "Moment rozliczenia",
+        "bucketQuantity": "Ilość w pakiecie",
+        "cadenceOwner": "Harmonogram rozliczeń",
+        "configurationType": "Metoda rozliczania usługi",
+        "discountLine": "Linia rabatu",
+        "discountName": "Nazwa rabatu",
+        "discountType": "Typ rabatu",
+        "discountValue": "Wartość rabatu",
+        "includedHours": "Godziny w pakiecie",
+        "includedUnits": "Jednostki w pakiecie",
+        "lineName": "Nazwa linii kontraktowej",
+        "lineType": "Typ linii",
+        "minimumBillableMinutes": "Minimalne rozliczane minuty",
+        "minimumUsage": "Minimalne zużycie",
+        "overtimeRate": "Stawka za nadgodziny ($/godz.)",
+        "overtimeThreshold": "Próg nadgodzin (godziny)",
+        "roundUpMinutes": "Zaokrąglaj do minut",
+        "scheduleEffectiveDate": "Data wejścia w życie harmonogramu",
+        "scheduleEndDate": "Data zakończenia harmonogramu",
+        "scheduleRate": "Stawka harmonogramu w dolarach",
+        "serviceQuantity": "Liczba licencji lub produktów",
+        "tierMaximum": "Maksimum progu",
+        "tierMinimum": "Minimum progu",
+        "tierRate": "Stawka progu w dolarach",
+        "usageUnit": "Jednostka zużycia"
+      },
+      "frequencies": {
+        "annually": "Rocznie",
+        "monthly": "Miesięcznie",
+        "quarterly": "Kwartalnie",
+        "semi-annually": "Co pół roku"
+      },
+      "fromServiceRates": "Ze stawek usługi",
+      "hourlyRate": "Stawka godzinowa",
+      "licenseSuffix": " · licencja",
+      "lineCount": "{{count}} pozycji",
+      "lineSummary": "{{type}} · {{frequency}} · {{timing}} · {{services}}",
+      "modified": "Zmodyfikowano",
+      "newAdjustmentName": "Korekta jednorazowa",
+      "newDiscountName": "Rabat scenariusza",
+      "newLineName": "Linia scenariusza {{number}}",
+      "oneService": "1 usługa",
+      "oneTime": "jednorazowe",
+      "overageRate": "Stawka za przekroczenie",
+      "overtime": "nadgodziny",
+      "placeholders": {
+        "minimum": "minimum",
+        "minimumMinutes": "minimalne minuty",
+        "overtimeRate": "nadgodziny $/godz.",
+        "roundMinutes": "zaokrąglenie w minutach",
+        "thresholdHours": "godziny progu"
+      },
+      "pricingSchedules": "Harmonogramy cenowe",
+      "productUnitPrice": "Cena jednostkowa",
+      "proration": "rozliczenie proporcjonalne",
+      "rateOverriddenByLine": "Stawka zastąpiona cykliczną ceną linii",
+      "recurringLinePrice": "Cykliczna cena linii",
+      "removeAdjustment": "Usuń korektę",
+      "removeDiscount": "Usuń rabat",
+      "removeLine": "Usuń",
+      "removeSchedule": "Usuń harmonogram cenowy",
+      "removeService": "usuń",
+      "removeTier": "Usuń próg",
+      "resetAll": "Resetuj wszystko",
+      "resetLine": "Przywróć",
+      "rollover": "przeniesienie",
+      "serviceBaseRate": "Stawka bazowa usługi",
+      "serviceCount": "Usługi: {{count}}",
+      "tieredPricing": "ceny progowe",
+      "timing": {
+        "advance": "Rozliczaj z góry",
+        "arrears": "Rozliczaj z dołu"
+      },
+      "title": "Zmiany w kontrakcie",
+      "types": {
+        "bucket": "Pakiet godzin",
+        "fixed": "Stała",
+        "hourly": "Godzinowa",
+        "usage": "Zużycie"
+      },
+      "usageRate": "Stawka za zużycie"
+    },
+    "timeline": {
+      "deltaDown": "−{{amount}} względem bieżącego kontraktu",
+      "deltaUp": "+{{amount}} względem bieżącego kontraktu",
+      "empty": "Uruchom symulację, aby zobaczyć nadchodzące okresy rozliczeniowe i sprawdzić każdą opłatę.",
+      "invoicePeriod": "Okres faktury",
+      "noDelta": "bez zmian wzgl. aktywnej",
+      "noPreviousDelta": "brak zmian wzgl. poprzedniej",
+      "periodAria": "{{period}}, {{total}}",
+      "previousDelta": "{{sign}}{{amount}} względem faktury {{period}}",
+      "title": "Symulowane okresy faktur"
+    },
+    "unavailable": {
+      "description": "Symulator umów jest dostępny w wersji Enterprise Alga PSA.",
+      "title": "Funkcja Enterprise"
     }
   }
 }

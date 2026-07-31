@@ -24,6 +24,7 @@ import {
   signalWorkflowRuntimeV2HumanTask,
 } from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
 import { resolveWorkflowEventCorrelation } from '@alga-psa/workflows/lib/workflowEventCorrelation';
+import { isTenantSuspended, tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@shared/db/admin.js';
 import type { Knex } from 'knex';
 
@@ -153,6 +154,20 @@ export class WorkflowRuntimeV2EventStreamWorker {
     const knex = await getAdminConnection();
     const processedAt = new Date().toISOString();
 
+    // Suspended tenants (cancelled, pending deletion) get their events acked
+    // without starting any workflow runs. isTenantSuspended fails open, so a
+    // flag-read error can never stall the stream for active tenants.
+    if (await isTenantSuspended(knex, event.tenant)) {
+      logger.debug('[WorkflowRuntimeV2EventStreamWorker] Skipping event for suspended tenant', {
+        workerId: this.workerId,
+        eventId: event.event_id,
+        eventType: event.event_type,
+        tenant: event.tenant,
+        event: 'workflow_event_tenant_suspended',
+      });
+      return;
+    }
+
     // Idempotency: if we already ingested this event_id, do not start runs again.
     const existing = await WorkflowRuntimeEventModelV2.getById(knex, event.event_id, event.tenant).catch(() => null);
     if (existing) {
@@ -200,17 +215,31 @@ export class WorkflowRuntimeV2EventStreamWorker {
 
     const signaledRuns = new Set<string>();
     let deliveryError: string | null = null;
-    const missingCorrelationWarning = correlation.key
+    const correlationKeys = correlation.keys.length > 0
+      ? correlation.keys
+      : (correlation.key ? [correlation.key] : []);
+    const missingCorrelationWarning = correlationKeys.length > 0
       ? null
       : `Missing workflow correlation key (${correlation.detail})`;
-    if (correlation.key) {
-      const candidateWaits = await WorkflowRunWaitModelV2.listEventWaitCandidates(
-        knex,
-        event.event_type,
-        correlation.key,
-        event.tenant,
-        ['event', 'human']
-      );
+    if (correlationKeys.length > 0) {
+      // A wait may be keyed on any derivable identifier (e.g. invoiceId OR
+      // clientId), so candidates are collected for every derived key.
+      const waitKeyByWaitId = new Map<string, string>();
+      const candidateWaits: Awaited<ReturnType<typeof WorkflowRunWaitModelV2.listEventWaitCandidates>> = [];
+      for (const correlationKey of correlationKeys) {
+        const keyCandidates = await WorkflowRunWaitModelV2.listEventWaitCandidates(
+          knex,
+          event.event_type,
+          correlationKey,
+          event.tenant,
+          ['event', 'human']
+        );
+        for (const candidate of keyCandidates) {
+          if (waitKeyByWaitId.has(candidate.wait_id)) continue;
+          waitKeyByWaitId.set(candidate.wait_id, correlationKey);
+          candidateWaits.push(candidate);
+        }
+      }
       const waitsByRun = new Map<string, Awaited<ReturnType<typeof WorkflowRunModelV2.getById>>>();
       const getRun = async (candidateRunId: string) => {
         if (!waitsByRun.has(candidateRunId)) {
@@ -242,7 +271,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
               runId: wait.run_id,
               eventId: event.event_id,
               eventName: event.event_type,
-              correlationKey: correlation.key,
+              correlationKey: waitKeyByWaitId.get(wait.wait_id) ?? correlation.key,
               payload,
               receivedAt: processedAt,
             });
@@ -285,6 +314,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
     );
 
     const startedRuns: string[] = [];
+    const payloadValidationErrors: string[] = [];
     const skipStats = {
       noVersion: 0,
       missingSchemaRef: 0,
@@ -364,6 +394,28 @@ export class WorkflowRuntimeV2EventStreamWorker {
       const validation = schemaRegistry.get(workflowPayloadSchemaRef).safeParse(workflowPayload);
       if (!validation.success) {
         skipStats.payloadValidationFailed += 1;
+        const workflowKey = workflow.key ?? workflow.workflow_id;
+        const issues = validation.error.issues.map((issue) => ({
+          path: issue.path.join('.'),
+          code: issue.code,
+          message: issue.message,
+        }));
+        const validationMessage = `Payload validation failed for workflow ${workflowKey} (${workflow.workflow_id}) using ${workflowPayloadSchemaRef}: ${JSON.stringify(issues)}`;
+        payloadValidationErrors.push(validationMessage);
+        logger.warn('[WorkflowRuntimeV2EventStreamWorker] Payload validation failed; skipping workflow launch', {
+          workerId: this.workerId,
+          eventId: event.event_id,
+          eventType: event.event_type,
+          tenant: event.tenant,
+          workflowId: workflow.workflow_id,
+          workflowKey,
+          payloadSchemaRef: workflowPayloadSchemaRef,
+          sourcePayloadSchemaRef: effectiveSourceSchemaRef,
+          issues,
+        });
+        // Persistence happens after the workflow loop, and only when nothing
+        // launched or signaled: an event that matched another workflow must
+        // not read as an error in Run Studio.
         continue;
       }
 
@@ -435,6 +487,11 @@ export class WorkflowRuntimeV2EventStreamWorker {
         error_message: deliveryError,
         processed_at: processedAt,
       });
+    } else if (payloadValidationErrors.length > 0 && startedRuns.length === 0 && signaledRuns.size === 0) {
+      await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
+        error_message: payloadValidationErrors.join('\n'),
+        processed_at: processedAt,
+      }, event.tenant);
     } else if (missingCorrelationWarning && startedRuns.length === 0 && signaledRuns.size === 0) {
       await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
         error_message: missingCorrelationWarning,
@@ -447,15 +504,16 @@ export class WorkflowRuntimeV2EventStreamWorker {
     knexOrTrx: Knex | Knex.Transaction,
     opts: { tenantId: string; eventType: string }
   ): Promise<string | null> {
-    const tenantRow = await knexOrTrx('event_catalog')
-      .where({ tenant: opts.tenantId, event_type: opts.eventType })
+    const db = tenantDb(knexOrTrx, opts.tenantId);
+    const tenantRow = await db.table('event_catalog')
+      .where({ event_type: opts.eventType })
       .first(['payload_schema_ref'])
       .catch(() => null);
 
     const tenantRef = tenantRow && typeof (tenantRow as any).payload_schema_ref === 'string' ? String((tenantRow as any).payload_schema_ref) : null;
     if (tenantRef) return tenantRef;
 
-    const systemRow = await knexOrTrx('system_event_catalog')
+    const systemRow = await db.table('system_event_catalog')
       .where({ event_type: opts.eventType })
       .first(['payload_schema_ref'])
       .catch(() => null);

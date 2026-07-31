@@ -1,3 +1,4 @@
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import type { TemplateFieldDisplayFormat, TemplateValueFormat } from '@alga-psa/types';
 
 type AddressRecord = Record<string, unknown>;
@@ -11,23 +12,42 @@ const asTrimmedString = (value: unknown): string => (typeof value === 'string' ?
 
 const isNullish = (value: unknown): value is null | undefined => value === null || value === undefined;
 
-const formatCurrency = (value: number, currencyCode: string) => {
+// Last-resort fallbacks when the template metadata carries no locale or an
+// invalid currency; template rendering normally supplies both.
+const FALLBACK_LOCALE = 'en-US';
+const FALLBACK_CURRENCY = 'USD';
+
+const formatCurrency = (value: number, currencyCode: string, locale?: string) => {
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(locale || FALLBACK_LOCALE, {
       style: 'currency',
-      currency: currencyCode || 'USD',
+      currency: currencyCode || FALLBACK_CURRENCY,
     }).format(value / 100);
   } catch {
-    return `$${(value / 100).toFixed(2)}`;
+    return formatCurrencyFromMinorUnits(value, FALLBACK_LOCALE, FALLBACK_CURRENCY);
   }
 };
 
 const formatDate = (value: string) => {
+  const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+    const parsedDateOnly = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+    const isValidDateOnly =
+      parsedDateOnly.getUTCFullYear() === Number(year) &&
+      parsedDateOnly.getUTCMonth() === Number(month) - 1 &&
+      parsedDateOnly.getUTCDate() === Number(day);
+    if (isValidDateOnly) {
+      return parsedDateOnly.toLocaleDateString('en-US', { timeZone: 'UTC' });
+    }
+  }
+
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return parsed.toLocaleDateString('en-US');
+  // Pin UTC so rendered dates don't depend on the server process timezone.
+  return parsed.toLocaleDateString('en-US', { timeZone: 'UTC' });
 };
 
 export const normalizeFieldFormat = (value: unknown): TemplateValueFormat => {
@@ -119,10 +139,17 @@ const formatAddressValue = (
 const formatPrimitiveValue = (
   value: unknown,
   format: TemplateValueFormat,
-  currencyCode: string
+  currencyCode: string,
+  locale?: string
 ): ResolvedFieldDisplayValue => {
   if (isNullish(value)) {
     return { text: null, multiline: false };
+  }
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      return { text: null, multiline: false };
+    }
+    return formatPrimitiveValue(value.toISOString(), format, currencyCode, locale);
   }
   if (typeof value === 'string') {
     if (value.length === 0) {
@@ -138,7 +165,7 @@ const formatPrimitiveValue = (
     }
     if (format === 'currency') {
       const asNumber = Number(value);
-      const text = Number.isFinite(asNumber) ? formatCurrency(asNumber, currencyCode) : value;
+      const text = Number.isFinite(asNumber) ? formatCurrency(asNumber, currencyCode, locale) : value;
       return { text, multiline: text.includes('\n') };
     }
     return { text: value, multiline: value.includes('\n') };
@@ -148,7 +175,7 @@ const formatPrimitiveValue = (
       return { text: null, multiline: false };
     }
     if (format === 'currency') {
-      return { text: formatCurrency(value, currencyCode), multiline: false };
+      return { text: formatCurrency(value, currencyCode, locale), multiline: false };
     }
     if (format === 'date') {
       return { text: formatDate(String(value)), multiline: false };
@@ -165,6 +192,7 @@ export const formatTemplateFieldValue = (params: {
   value: unknown;
   format: unknown;
   currencyCode: string;
+  locale?: string;
   displayFormat?: TemplateFieldDisplayFormat | null;
 }): ResolvedFieldDisplayValue => {
   const normalizedFormat = normalizeFieldFormat(params.format);
@@ -172,5 +200,5 @@ export const formatTemplateFieldValue = (params: {
   if (displayFormat === 'single-line' || displayFormat === 'multiline' || displayFormat === 'raw') {
     return formatAddressValue(params.value, displayFormat);
   }
-  return formatPrimitiveValue(params.value, normalizedFormat, params.currencyCode);
+  return formatPrimitiveValue(params.value, normalizedFormat, params.currencyCode, params.locale);
 };

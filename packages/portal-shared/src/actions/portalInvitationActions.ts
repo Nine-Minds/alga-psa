@@ -1,7 +1,7 @@
 'use server'
 
 import { randomBytes } from 'node:crypto';
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, runWithTenant } from '@alga-psa/db';
 import { PortalInvitationService } from '../services/PortalInvitationService';
 import { getTenantSlugForTenant } from '@alga-psa/db';
 import { getPortalDomainStatusForTenant } from '@alga-psa/tenancy/server';
@@ -9,6 +9,7 @@ import { getSystemEmailService, TenantEmailService, sendPortalInvitationEmail } 
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
 import type { IUserWithRoles, IUser } from '@alga-psa/types';
+import type { Knex } from 'knex';
 import type {
   SendInvitationResult,
   VerifyTokenResult,
@@ -18,6 +19,7 @@ import type {
   PortalInvitationErrorCode,
   SendPortalInvitationOptions,
   PortalInvitationEntraPrelink,
+  ClientUserActionError,
 } from '../types';
 
 class PortalInvitationError extends Error {
@@ -44,12 +46,193 @@ function normalizeCreateClientPortalUserError(
 
   if (error instanceof Error) {
     const message = error.message.trim();
-    if (message) {
+    if (message === 'Tenant is required') {
+      return { message: 'Tenant context is required', errorCode: 'TENANT_CONTEXT_REQUIRED' };
+    }
+    if (message === 'Contact not found. Provide contact details to create a new contact.') {
+      return { message, errorCode: 'CONTACT_NOT_FOUND' };
+    }
+    if (message === 'A user account already exists for this contact') {
+      return { message, errorCode: 'USER_EXISTS_FOR_CONTACT' };
+    }
+    if (
+      message === 'A user with this email already exists in this organization' ||
+      message === 'A user with this username already exists in this organization'
+    ) {
+      return { message, errorCode: 'PORTAL_USER_ALREADY_EXISTS' };
+    }
+    if (
+      message === 'A user with this email address already exists' ||
+      message === 'A user with this username already exists for this user type' ||
+      message === 'One or more invalid role IDs provided' ||
+      message.startsWith('Password must be') ||
+      message.startsWith('Username must be') ||
+      message === 'Valid email is required'
+    ) {
       return { message, errorCode: 'CREATE_USER_FAILED' };
     }
   }
 
   return { message: 'Failed to create client portal user', errorCode: 'CREATE_USER_FAILED' };
+}
+
+function normalizeSendPortalInvitationError(
+  error: unknown
+): { message?: string; errorCode: PortalInvitationErrorCode } {
+  if (error instanceof PortalInvitationError) {
+    return { message: error.message.trim() || undefined, errorCode: error.errorCode };
+  }
+
+  if (error instanceof Error) {
+    const message = error.message.trim();
+    if (message === 'Unauthorized') {
+      return {
+        message: 'Permission denied: Cannot invite users',
+        errorCode: 'PERMISSION_DENIED_INVITE'
+      };
+    }
+    if (message === 'Tenant is required') {
+      return { message: 'Tenant context is required', errorCode: 'TENANT_CONTEXT_REQUIRED' };
+    }
+    if (message === 'Contact not found') {
+      return { message, errorCode: 'CONTACT_NOT_FOUND' };
+    }
+    if (message.startsWith('Too many attempts.')) {
+      return { message, errorCode: 'INVITATION_FAILED' };
+    }
+    if (message === 'Failed to create invitation') {
+      return { errorCode: 'INVITATION_FAILED' };
+    }
+  }
+
+  return { errorCode: 'INVITATION_FAILED' };
+}
+
+type DbConnection = Knex | Knex.Transaction;
+
+interface PortalContactAuthContext {
+  contact_name_id: string;
+  client_id: string | null;
+  is_client_admin?: boolean;
+}
+
+function isClientPortalUser(user: IUserWithRoles): boolean {
+  return user.user_type === 'client';
+}
+
+function isMspUser(user: IUserWithRoles): boolean {
+  return user.user_type === 'internal';
+}
+
+async function getContactAuthContext(
+  db: DbConnection,
+  tenant: string,
+  contactId: string
+): Promise<PortalContactAuthContext | null> {
+  const contact = await tenantDb(db, tenant).table('contacts')
+    .select('contact_name_id', 'client_id', 'is_client_admin')
+    .where({ contact_name_id: contactId })
+    .first();
+
+  return contact ?? null;
+}
+
+async function getClientPortalActorContact(
+  user: IUserWithRoles,
+  tenant: string,
+  db: DbConnection
+): Promise<PortalContactAuthContext | null> {
+  if (!isClientPortalUser(user) || !user.contact_id) {
+    return null;
+  }
+
+  return getContactAuthContext(db, tenant, user.contact_id);
+}
+
+async function canManageClientPortalTargetClient(
+  user: IUserWithRoles,
+  tenant: string,
+  db: DbConnection,
+  action: 'read' | 'create' | 'update' | 'invite',
+  targetClientId: string | null
+): Promise<boolean> {
+  const canUseAction = await hasPermission(user, 'user', action, db);
+  if (!canUseAction) {
+    return false;
+  }
+
+  if (isMspUser(user)) {
+    return true;
+  }
+
+  if (!isClientPortalUser(user) || !targetClientId) {
+    return false;
+  }
+
+  const actorContact = await getClientPortalActorContact(user, tenant, db);
+  return !!actorContact?.is_client_admin && actorContact.client_id === targetClientId;
+}
+
+async function canManageClientPortalTargetContact(
+  user: IUserWithRoles,
+  tenant: string,
+  db: DbConnection,
+  action: 'read' | 'create' | 'update' | 'invite',
+  targetContactId: string
+): Promise<boolean> {
+  const targetContact = await getContactAuthContext(db, tenant, targetContactId);
+  return canManageClientPortalTargetClient(
+    user,
+    tenant,
+    db,
+    action,
+    targetContact?.client_id ?? null
+  );
+}
+
+async function resolveInvitationTargetClientId(
+  db: DbConnection,
+  tenant: string,
+  invitationId: string
+): Promise<string | null | undefined> {
+  const scopedDb = tenantDb(db, tenant);
+  const invitationQuery = scopedDb.table('portal_invitations as pi')
+    .where({
+      'pi.invitation_id': invitationId
+    })
+    .select('c.client_id')
+    .first();
+  scopedDb.tenantJoin(invitationQuery, 'contacts as c', 'pi.contact_id', 'c.contact_name_id', { type: 'left' });
+  const invitation = await invitationQuery as { client_id?: string | null } | undefined;
+
+  if (!invitation) {
+    return undefined;
+  }
+
+  return invitation.client_id ?? null;
+}
+
+async function resolveClientUserTargetClientId(
+  db: DbConnection,
+  tenant: string,
+  userId: string
+): Promise<string | null | undefined> {
+  const scopedDb = tenantDb(db, tenant);
+  const targetUserQuery = scopedDb.table('users as u')
+    .where({
+      'u.user_id': userId,
+      'u.user_type': 'client'
+    })
+    .select('c.client_id')
+    .first();
+  scopedDb.tenantJoin(targetUserQuery, 'contacts as c', 'u.contact_id', 'c.contact_name_id', { type: 'left' });
+  const targetUser = await targetUserQuery as { client_id?: string | null } | undefined;
+
+  if (!targetUser) {
+    return undefined;
+  }
+
+  return targetUser.client_id ?? null;
 }
 
 export const createClientPortalUser = withAuth(async (
@@ -60,8 +243,19 @@ export const createClientPortalUser = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    // RBAC: ensure user has permission to create users
-    const canCreate = await hasPermission(user, 'user', 'create', knex);
+    const normalizedContactClientId = params.contact?.clientId && params.contact.clientId.trim() !== '' ? params.contact.clientId : null;
+    const existingContactForAuth = params.contactId
+      ? await getContactAuthContext(knex, tenant, params.contactId)
+      : null;
+    const targetClientIdForAuth = existingContactForAuth?.client_id ?? normalizedContactClientId;
+
+    const canCreate = await canManageClientPortalTargetClient(
+      user,
+      tenant,
+      knex,
+      'create',
+      targetClientIdForAuth
+    );
     if (!canCreate) {
       return {
         success: false,
@@ -85,17 +279,19 @@ export const createClientPortalUser = withAuth(async (
 
     // Create user and assign role
     const result = await knex.transaction(async (trx) => {
+      const scopedDb = tenantDb(trx, tenant);
+
       // 1) Resolve or create contact
       let contact: any = null;
 
       if (params.contactId) {
-        contact = await trx('contacts')
-          .where({ tenant, contact_name_id: params.contactId })
+        contact = await scopedDb.table('contacts')
+          .where({ contact_name_id: params.contactId })
           .first();
         if (!contact && params.contact) {
           // Create new contact since provided ID not found and details are available
           const normalizedClientId = params.contact.clientId && params.contact.clientId.trim() !== '' ? params.contact.clientId : null
-          const [createdContact] = await trx('contacts')
+          const [createdContact] = await scopedDb.table('contacts')
             .insert({
               tenant,
               contact_name_id: trx.raw('gen_random_uuid()'),
@@ -115,8 +311,8 @@ export const createClientPortalUser = withAuth(async (
       if (!contact && params.contact) {
         // Try to find by email + client; else create
         const normalizedClientId = params.contact.clientId && params.contact.clientId.trim() !== '' ? params.contact.clientId : null;
-        const q = trx('contacts')
-          .where({ tenant, email: params.contact.email.toLowerCase() });
+        const q = scopedDb.table('contacts')
+          .where({ email: params.contact.email.toLowerCase() });
         if (normalizedClientId) {
           q.andWhere('client_id', normalizedClientId);
         } else {
@@ -124,7 +320,7 @@ export const createClientPortalUser = withAuth(async (
         }
         contact = await q.first();
         if (!contact) {
-          const [createdContact] = await trx('contacts')
+          const [createdContact] = await scopedDb.table('contacts')
             .insert({
               tenant,
               contact_name_id: trx.raw('gen_random_uuid()'),
@@ -163,8 +359,8 @@ export const createClientPortalUser = withAuth(async (
       }
 
       // 2) Ensure no existing user for contact
-      const existingUser = await trx('users')
-        .where({ tenant, contact_id: contact.contact_name_id })
+      const existingUser = await scopedDb.table('users')
+        .where({ contact_id: contact.contact_name_id })
         .first();
       if (existingUser) {
         throw new Error('A user account already exists for this contact');
@@ -176,16 +372,14 @@ export const createClientPortalUser = withAuth(async (
       const lastName = nameParts.slice(1).join(' ') || undefined;
 
       // Enforce uniqueness across tenant (regardless of user_type)
-      const existingByEmailAnyType = await trx('users')
-        .where({ tenant })
-        .andWhere('email', contact.email.toLowerCase())
+      const existingByEmailAnyType = await scopedDb.table('users')
+        .where('email', contact.email.toLowerCase())
         .first();
       if (existingByEmailAnyType) {
         throw new Error('A user with this email already exists in this organization');
       }
-      const existingByUsernameAnyType = await trx('users')
-        .where({ tenant })
-        .andWhere('username', contact.email)
+      const existingByUsernameAnyType = await scopedDb.table('users')
+        .where('username', contact.email)
         .first();
       if (existingByUsernameAnyType) {
         throw new Error('A user with this username already exists in this organization');
@@ -194,7 +388,7 @@ export const createClientPortalUser = withAuth(async (
       // 3a) Insert user within the same transaction to satisfy FK on (tenant, contact_id)
       const { hashPassword } = await import('@alga-psa/core/encryption');
       const hashedPassword = await hashPassword(params.password);
-      const [created] = await trx('users')
+      const [created] = await scopedDb.table('users')
         .insert({
           tenant,
           user_id: trx.raw('gen_random_uuid()'),
@@ -218,8 +412,8 @@ export const createClientPortalUser = withAuth(async (
       // 4) Assign role (prefer UI-selected roleId; fallback to contact's admin flag)
       let targetRoleId: string | undefined = undefined;
       if (params.roleId) {
-        const uiRole = await trx('roles')
-          .where({ tenant, role_id: params.roleId })
+        const uiRole = await scopedDb.table('roles')
+          .where({ role_id: params.roleId, client: true })
           .first();
         if (uiRole) {
           targetRoleId = uiRole.role_id;
@@ -228,8 +422,8 @@ export const createClientPortalUser = withAuth(async (
       if (!targetRoleId) {
         // Use actual role names from seeds: "Admin" or "User"
         const roleName = contact?.is_client_admin ? 'Admin' : 'User';
-        const fallbackRole = await trx('roles')
-          .where({ tenant, role_name: roleName, client: true })
+        const fallbackRole = await scopedDb.table('roles')
+          .where({ role_name: roleName, client: true })
           .first();
         if (fallbackRole) {
           targetRoleId = fallbackRole.role_id;
@@ -238,7 +432,7 @@ export const createClientPortalUser = withAuth(async (
         }
       }
       if (targetRoleId) {
-        await trx('user_roles').insert({ user_id: created.user_id, role_id: targetRoleId, tenant });
+        await scopedDb.table('user_roles').insert({ user_id: created.user_id, role_id: targetRoleId, tenant });
       }
 
       // 5) Set password-related preferences
@@ -291,8 +485,7 @@ export const sendPortalInvitation = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    // RBAC: ensure user has permission to invite users
-    const canInvite = await hasPermission(user, 'user', 'invite', knex);
+    const canInvite = await canManageClientPortalTargetContact(user, tenant, knex, 'invite', contactId);
     if (!canInvite) {
       return {
         success: false,
@@ -313,17 +506,22 @@ export const sendPortalInvitation = withAuth(async (
       const systemEmailService = await getSystemEmailService();
       emailConfigured = await systemEmailService.isConfigured();
       if (!emailConfigured) {
+        // If a provider was configured but failed to initialize (e.g. an SMTP
+        // auth/TLS error), report the real cause instead of "disabled".
+        const initError = await tenantEmailService.getInitializationError();
         return {
           success: false,
-          error: 'Email service is disabled or not configured',
+          error: initError
+            ? `Email provider not ready: ${initError}`
+            : 'Email service is disabled or not configured',
           errorCode: 'EMAIL_NOT_CONFIGURED'
         };
       }
     }
 
     // Get contact details
-    const contact = await knex('contacts')
-      .where({ tenant, contact_name_id: contactId })
+    const contact = await tenantDb(knex, tenant).table('contacts')
+      .where({ contact_name_id: contactId })
       .first();
 
     if (!contact) {
@@ -349,8 +547,8 @@ export const sendPortalInvitation = withAuth(async (
     }
 
     // Do not send invitations for contacts that already have a portal user
-    const existingUserForContact = await knex('users')
-      .where({ tenant, contact_id: contactId })
+    const existingUserForContact = await tenantDb(knex, tenant).table('users')
+      .where({ contact_id: contactId })
       .first();
 
     if (existingUserForContact) {
@@ -363,10 +561,15 @@ export const sendPortalInvitation = withAuth(async (
 
     // Use a transaction to ensure atomicity
     const result = await knex.transaction(async (trx) => {
+      const scopedDb = tenantDb(trx, tenant);
+
       // Create invitation within transaction
       const invitationResult = await PortalInvitationService.createInvitationWithTransaction(contactId, trx);
       if (!invitationResult.success) {
-        throw new Error(invitationResult.error || 'Failed to create invitation');
+        throw new PortalInvitationError(
+          invitationResult.error || 'Portal invitation could not be created. Please try again.',
+          'INVITATION_FAILED'
+        );
       }
 
       if (options?.entraPrelink?.providerAccountId && invitationResult.invitationId) {
@@ -381,17 +584,14 @@ export const sendPortalInvitation = withAuth(async (
       }
 
       // Get the tenant's default client (MSP client) for reply-to email
-      const tenantDefaultClient = await trx('tenant_companies')
-        .join('clients', function() {
-          this.on('clients.client_id', '=', 'tenant_companies.client_id')
-              .andOn('clients.tenant', '=', 'tenant_companies.tenant');
-        })
+      const tenantDefaultClientQuery = scopedDb.table('tenant_companies')
         .where({ 
-          'tenant_companies.tenant': tenant,
           'tenant_companies.is_default': true 
         })
         .select('clients.*')
         .first();
+      scopedDb.tenantJoin(tenantDefaultClientQuery, 'clients', 'clients.client_id', 'tenant_companies.client_id');
+      const tenantDefaultClient = await tenantDefaultClientQuery as any;
       
       if (!tenantDefaultClient) {
         throw new PortalInvitationError(
@@ -401,9 +601,8 @@ export const sendPortalInvitation = withAuth(async (
       }
       
       // Get MSP client's default location for reply-to email
-      const mspLocation = await trx('client_locations')
+      const mspLocation = await scopedDb.table('client_locations')
         .where({ 
-          tenant, 
           client_id: tenantDefaultClient.client_id,
           is_default: true,
           is_active: true
@@ -417,17 +616,25 @@ export const sendPortalInvitation = withAuth(async (
         );
       }
 
-      if (!mspLocation.email) {
+      // Support contact shown in the invitation is the tenant's own support
+      // desk (Settings -> Client Portal -> Branding), falling back to the
+      // default client's location contact.
+      const tenantSettingsRow = await scopedDb.table('tenant_settings').first() as any;
+      const tenantSettings = tenantSettingsRow?.settings || {};
+      const supportEmail: string = tenantSettings.supportEmail || mspLocation.email;
+      const supportPhone: string = tenantSettings.supportPhone || mspLocation.phone || '';
+
+      if (!supportEmail) {
         throw new PortalInvitationError(
-          'Default client\'s location must have a contact email configured',
+          'A support email must be configured in Client Portal settings, or on the default client\'s location',
           'NO_LOCATION_EMAIL'
         );
       }
-      
+
       // Get the client's client info for the email template
-      const clientClient = contact.client_id ? await trx('clients')
-        .where({ tenant, client_id: contact.client_id })
-        .first() : null;
+      const clientClient = contact.client_id ? await scopedDb.table('clients')
+        .where({ client_id: contact.client_id })
+        .first() as any : null;
 
       const tenantSlug = await getTenantSlugForTenant(tenant);
 
@@ -472,12 +679,13 @@ export const sendPortalInvitation = withAuth(async (
       await sendPortalInvitationEmail({
         email: contact.email,
         contactName: contact.full_name,
-        clientName: clientClient?.client_name || tenantDefaultClient.client_name,  // Client's client name or MSP name
+        clientName: clientClient?.client_name || tenantDefaultClient.client_name,  // Recipient's own client name
+        tenantName: tenantDefaultClient.client_name,  // MSP name (sender of the invitation)
         portalLink: portalSetupUrl,
         expirationTime: expirationTime,
         tenant: tenant,
-        clientLocationEmail: mspLocation.email,  // MSP's email for reply-to
-        clientLocationPhone: mspLocation.phone || 'Not provided',  // MSP's phone
+        supportEmail,  // MSP's support email for reply-to
+        supportPhone,  // MSP's support phone
         fromName: `${tenantDefaultClient.client_name} Portal`,  // MSP's name for the portal
         clientId: contact.client_id  // Pass client ID (stored in company_id field) for locale resolution
       });
@@ -489,15 +697,11 @@ export const sendPortalInvitation = withAuth(async (
       };
     }).catch((error) => {
       console.error('Transaction failed:', error);
-      const errorCode: PortalInvitationErrorCode =
-        error instanceof PortalInvitationError ? error.errorCode : 'INVITATION_FAILED';
-      // Leave `error` unset when there is no specific message so clients fall
-      // back to their localized generic string instead of hardcoded English.
-      const message = error instanceof Error ? error.message.trim() : '';
+      const normalized = normalizeSendPortalInvitationError(error);
       return {
         success: false,
-        error: message || undefined,
-        errorCode
+        error: normalized.message,
+        errorCode: normalized.errorCode
       };
     });
 
@@ -505,10 +709,8 @@ export const sendPortalInvitation = withAuth(async (
 
   } catch (error) {
     console.error('Error sending portal invitation:', error);
-    const errorCode: PortalInvitationErrorCode =
-      error instanceof PortalInvitationError ? error.errorCode : 'INVITATION_FAILED';
-    const message = error instanceof Error ? error.message.trim() : '';
-    return { success: false, error: message || undefined, errorCode };
+    const normalized = normalizeSendPortalInvitationError(error);
+    return { success: false, error: normalized.message, errorCode: normalized.errorCode };
   }
 });
 
@@ -606,14 +808,18 @@ export async function completePortalSetup(
         } as CompleteSetupResult;
       }
 
-      const assertMicrosoftOAuthLinkAvailable = async (userId?: string, db = knex) => {
+      const scopedDb = tenantDb(knex, tenant);
+
+      const assertMicrosoftOAuthLinkAvailable = async (
+        userId?: string,
+        db: DbConnection = knex
+      ) => {
         if (!prelinkedOAuth?.providerAccountId || prelinkedOAuth.provider !== 'microsoft') {
           return;
         }
 
-        const existingProviderAccountQuery = db('user_auth_accounts')
+        const existingProviderAccountQuery = tenantDb(db, tenant).table('user_auth_accounts')
           .where({
-            tenant,
             provider: 'microsoft',
             provider_account_id: prelinkedOAuth.providerAccountId,
           });
@@ -630,7 +836,7 @@ export async function completePortalSetup(
         }
       };
 
-      const acquireMicrosoftOAuthLinkLock = async (db = knex) => {
+      const acquireMicrosoftOAuthLinkLock = async (db: DbConnection = knex) => {
         if (!prelinkedOAuth?.providerAccountId || prelinkedOAuth.provider !== 'microsoft') {
           return;
         }
@@ -644,13 +850,13 @@ export async function completePortalSetup(
         );
       };
 
-      const upsertMicrosoftOAuthLink = async (userId: string, trx = knex) => {
+      const upsertMicrosoftOAuthLink = async (userId: string, trx: DbConnection = knex) => {
         if (!prelinkedOAuth?.providerAccountId || prelinkedOAuth.provider !== 'microsoft') {
           return;
         }
 
         try {
-          await trx('user_auth_accounts')
+          await tenantDb(trx, tenant).table('user_auth_accounts')
             .insert({
               tenant,
               user_id: userId,
@@ -676,7 +882,7 @@ export async function completePortalSetup(
         }
       };
 
-      const createDefaultUserPreferences = async (userId: string, db = knex) => {
+      const createDefaultUserPreferences = async (userId: string, db: DbConnection = knex) => {
         const defaultPreferences = {
           theme: 'light',
           language: 'en',
@@ -687,7 +893,7 @@ export async function completePortalSetup(
         };
 
         for (const [settingName, settingValue] of Object.entries(defaultPreferences)) {
-          await db('user_preferences').insert({
+          await tenantDb(db, tenant).table('user_preferences').insert({
             user_id: userId,
             setting_name: settingName,
             setting_value: JSON.stringify(settingValue),
@@ -697,7 +903,7 @@ export async function completePortalSetup(
         }
       };
 
-      const createPortalUserInTransaction = async (db = knex) => {
+      const createPortalUserInTransaction = async (db: DbConnection = knex) => {
         const { hashPassword } = await import('@alga-psa/core/encryption');
         const passwordForStorage = normalizedPassword || randomBytes(32).toString('hex');
         const hashedPassword = await hashPassword(passwordForStorage);
@@ -706,7 +912,7 @@ export async function completePortalSetup(
         const firstName = nameParts[0] || fullName;
         const lastName = nameParts.slice(1).join(' ') || null;
 
-        const [user] = await db('users')
+        const [user] = await tenantDb(db, tenant).table('users')
           .insert({
             user_id: db.raw('gen_random_uuid()'),
             username: contact.email.toLowerCase(),
@@ -734,8 +940,8 @@ export async function completePortalSetup(
       };
 
       // Check if user already exists
-      const existingUser = await knex('users')
-        .where({ tenant, contact_id: contact.contact_name_id })
+      const existingUser = await scopedDb.table('users')
+        .where({ contact_id: contact.contact_name_id })
         .first();
 
       if (existingUser) {
@@ -749,12 +955,12 @@ export async function completePortalSetup(
             if (normalizedPassword) {
               const { hashPassword } = await import('@alga-psa/core/encryption');
               const hashedPassword = await hashPassword(normalizedPassword);
-              await trx('users')
-                .where({ user_id: existingUser.user_id, tenant })
+              await tenantDb(trx, tenant).table('users')
+                .where({ user_id: existingUser.user_id })
                 .update({ hashed_password: hashedPassword, is_inactive: false, updated_at: trx.raw('now()') });
             } else {
-              await trx('users')
-                .where({ user_id: existingUser.user_id, tenant })
+              await tenantDb(trx, tenant).table('users')
+                .where({ user_id: existingUser.user_id })
                 .update({ is_inactive: false, updated_at: trx.raw('now()') });
             }
 
@@ -822,6 +1028,9 @@ export async function completePortalSetup(
 
       let newUser;
       try {
+        // The Entra pre-link has to land in the same transaction as the user row:
+        // a portal user created without its provider link would be a passwordless
+        // account nobody can sign in to.
         newUser = await knex.transaction(async (trx) => {
           await acquireMicrosoftOAuthLinkLock(trx);
           await assertMicrosoftOAuthLinkAvailable(undefined, trx);
@@ -831,33 +1040,30 @@ export async function completePortalSetup(
         });
       } catch (error) {
         console.error('Error creating user account:', error);
+        const normalized = normalizeCreateClientPortalUserError(error);
         return {
           success: false,
-          error: error instanceof PortalInvitationError
-            ? error.message
-            : error instanceof Error
-              ? error.message
-              : 'Failed to create user account',
-          errorCode: error instanceof PortalInvitationError ? error.errorCode : 'CREATE_USER_FAILED'
+          error: normalized.message,
+          errorCode: normalized.errorCode
         } as CompleteSetupResult;
       }
 
       // Assign appropriate role based on contact's is_client_admin flag
       try {
         // Get the full contact details to check is_client_admin
-        const fullContact = await knex('contacts')
-          .where({ tenant, contact_name_id: contact.contact_name_id })
+        const fullContact = await scopedDb.table('contacts')
+          .where({ contact_name_id: contact.contact_name_id })
           .first();
         
         // Find the appropriate role - use actual role names from seeds: "Admin" or "User"
         const roleName = fullContact?.is_client_admin ? 'Admin' : 'User';
-        const role = await knex('roles')
-          .where({ tenant, role_name: roleName, client: true })
+        const role = await scopedDb.table('roles')
+          .where({ role_name: roleName, client: true })
           .first();
         
         if (role) {
           // Assign the role to the user
-          await knex('user_roles').insert({
+          await scopedDb.table('user_roles').insert({
             user_id: newUser.user_id,
             role_id: role.role_id,
             tenant
@@ -919,11 +1125,16 @@ export async function completePortalSetup(
  * Get invitation history for a contact
  */
 export const getPortalInvitations = withAuth(async (
-  _user: IUserWithRoles,
-  _ctx: AuthContext,
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
   contactId: string
 ): Promise<InvitationHistoryItem[]> => {
   try {
+    const { knex } = await createTenantKnex();
+    if (!await canManageClientPortalTargetContact(user, tenant, knex, 'read', contactId)) {
+      return [];
+    }
+
     const invitations = await PortalInvitationService.getInvitationHistory(contactId);
 
     return invitations.map(invitation => {
@@ -955,11 +1166,29 @@ export const getPortalInvitations = withAuth(async (
  * Revoke a portal invitation
  */
 export const revokePortalInvitation = withAuth(async (
-  _user: IUserWithRoles,
-  _ctx: AuthContext,
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
   invitationId: string
 ): Promise<{ success: boolean; error?: string; errorCode?: PortalInvitationErrorCode }> => {
   try {
+    const { knex } = await createTenantKnex();
+    const targetClientId = await resolveInvitationTargetClientId(knex, tenant, invitationId);
+    if (targetClientId === undefined) {
+      return {
+        success: false,
+        error: 'Invitation not found or already used',
+        errorCode: 'INVITATION_NOT_FOUND'
+      };
+    }
+
+    if (!await canManageClientPortalTargetClient(user, tenant, knex, 'invite', targetClientId)) {
+      return {
+        success: false,
+        error: 'Permission denied: Cannot revoke portal invitations',
+        errorCode: 'PERMISSION_DENIED_INVITE'
+      };
+    }
+
     const revoked = await PortalInvitationService.revokeInvitation(invitationId);
 
     if (!revoked) {
@@ -974,8 +1203,7 @@ export const revokePortalInvitation = withAuth(async (
 
   } catch (error) {
     console.error('Error revoking portal invitation:', error);
-    const message = error instanceof Error ? error.message.trim() : '';
-    return { success: false, error: message || undefined, errorCode: 'REVOKE_FAILED' };
+    return { success: false, errorCode: 'REVOKE_FAILED' };
   }
 });
 
@@ -984,23 +1212,36 @@ export const revokePortalInvitation = withAuth(async (
  * Kept here to support MSP contact portal-management flows from a lower layer.
  */
 export const updateClientUser = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext,
   userId: string,
   userData: Partial<IUser>
-): Promise<IUser | null> => {
+): Promise<IUser | null | ClientUserActionError> => {
   try {
     const { knex } = await createTenantKnex();
+    const targetClientId = await resolveClientUserTargetClientId(knex, tenant, userId);
+    if (targetClientId === undefined) {
+      return null;
+    }
 
-    const [updatedUser] = await knex('users')
-      .where({ user_id: userId, tenant })
+    if (!await canManageClientPortalTargetClient(user, tenant, knex, 'update', targetClientId)) {
+      return { permissionError: 'Permission denied: Cannot update client users' };
+    }
+
+    const allowedUpdates: Partial<IUser> = {};
+    if (Object.prototype.hasOwnProperty.call(userData, 'is_inactive')) {
+      allowedUpdates.is_inactive = userData.is_inactive;
+    }
+
+    const [updatedUser] = await tenantDb(knex, tenant).table('users')
+      .where({ user_id: userId, user_type: 'client' })
       .update({
-        ...userData,
+        ...allowedUpdates,
         updated_at: new Date().toISOString()
       })
-      .returning('*');
+      .returning('*') as IUser[];
 
-    return updatedUser || null;
+    return updatedUser || { actionError: 'Client user not found' };
   } catch (error) {
     console.error('Error updating client user:', error);
     throw error;

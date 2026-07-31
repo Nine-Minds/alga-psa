@@ -94,8 +94,8 @@ export function generateSupportBundle(options = {}) {
   const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
   const outputDir = options.outputDir || DEFAULT_OUTPUT_DIR;
   const stateFile = options.stateFile || '/var/lib/alga-appliance/install-state.json';
-  const releaseSelectionFile = options.releaseSelectionFile || '/etc/alga-appliance/release-selection.json';
-  const setupInputsFile = options.setupInputsFile || '/etc/alga-appliance/setup-inputs.json';
+  const releaseSelectionFile = options.releaseSelectionFile || '/var/lib/alga-appliance/release-selection.json';
+  const setupInputsFile = options.setupInputsFile || '/var/lib/alga-appliance/setup-inputs.json';
   const runCommand = options.runCommand || shellRun;
   const hostAgentSocket = options.hostAgentSocket || process.env.ALGA_APPLIANCE_HOST_AGENT_SOCKET || '/run/alga-appliance/host-agent.sock';
   const tempDir = options.tempDir || fs.mkdtempSync(path.join(os.tmpdir(), 'alga-ubuntu-support-'));
@@ -146,9 +146,7 @@ export function generateSupportBundle(options = {}) {
     captureCommand(path.join(tempDir, 'host', 'ip-addresses.txt'), 'ip addr', runCommand);
     captureCommand(path.join(tempDir, 'host', 'routes.txt'), 'ip route', runCommand);
     captureCommand(path.join(tempDir, 'host', 'resolv-conf.txt'), 'cat /etc/resolv.conf', runCommand);
-    captureCommand(path.join(tempDir, 'host', 'dns-lookup-github.txt'), 'getent hosts raw.githubusercontent.com', runCommand);
     captureCommand(path.join(tempDir, 'host', 'dns-lookup-ghcr.txt'), 'getent hosts ghcr.io', runCommand);
-    captureCommand(path.join(tempDir, 'host', 'https-github.txt'), 'curl -I --max-time 10 https://raw.githubusercontent.com', runCommand);
     captureCommand(path.join(tempDir, 'host', 'https-ghcr.txt'), 'curl -I --max-time 10 https://ghcr.io/v2/', runCommand);
   }
 

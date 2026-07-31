@@ -8,7 +8,7 @@ import { ApiFinancialController } from 'server/src/lib/api/controllers/ApiFinanc
 
 export async function GET(request: Request) {
   const controller = new ApiFinancialController();
-  return await controller.list()(request as any);
+  return await controller.listPaymentMethods()(request as any);
 }
 
 export async function POST(request: Request) {

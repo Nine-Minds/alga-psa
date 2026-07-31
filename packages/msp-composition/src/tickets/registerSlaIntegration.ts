@@ -8,7 +8,8 @@
  */
 import { SlaBackendFactory } from '@alga-psa/sla/services/backends';
 import { configureItilSlaForBoard } from '@alga-psa/sla/services/itilSlaService';
-import { registerSlaCancellation, registerItilSlaConfiguration } from '@alga-psa/tickets/actions';
+import { registerItilSlaConfiguration } from '@alga-psa/tickets/services/itilStandardsService';
+import { registerSlaCancellation } from '@alga-psa/tickets/actions/ticketActions';
 
 let registered = false;
 

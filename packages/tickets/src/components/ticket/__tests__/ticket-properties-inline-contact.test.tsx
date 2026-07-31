@@ -1,3 +1,4 @@
+/* @vitest-environment jsdom */
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -79,6 +80,7 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 
 vi.mock('@alga-psa/ui/components', () => ({
   ContentCard: ({ children }: any) => <div>{children}</div>,
+  useContentCardVariant: () => 'default',
 }));
 
 vi.mock('@alga-psa/core', () => ({

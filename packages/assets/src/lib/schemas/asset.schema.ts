@@ -96,7 +96,8 @@ const printerAssetSchema = z.object({
 
 export const assetSchema = z.object({
   asset_id: z.string().uuid(),
-  asset_type: z.enum(['workstation', 'network_device', 'server', 'mobile_device', 'printer', 'unknown']),
+  // Built-in slug or tenant asset_type_registry slug (custom types).
+  asset_type: z.string().min(1),
   client_id: z.string().uuid(),
   asset_tag: z.string(),
   serial_number: z.string().optional(),
@@ -109,6 +110,7 @@ export const assetSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   tenant: z.string().uuid(),
+  attributes: z.record(z.unknown()).nullable().optional(),
   client: assetClientInfoSchema.optional(),
   relationships: z.array(assetRelationshipSchema).optional(),
   workstation: workstationAssetSchema.optional(),
@@ -189,7 +191,9 @@ export const assetMaintenanceHistorySchema = z.object({
 });
 
 export const createAssetSchema = z.object({
-  asset_type: z.enum(['workstation', 'network_device', 'server', 'mobile_device', 'printer', 'unknown']),
+  // Built-in slug or tenant asset_type_registry slug; registry membership is
+  // enforced in the action layer (typed 'invalid_asset_type' error).
+  asset_type: z.string().min(1),
   client_id: z.string().uuid(),
   asset_tag: z.string(),
   name: z.string(),
@@ -203,7 +207,8 @@ export const createAssetSchema = z.object({
   network_device: network_device_asset_schema.omit({ tenant: true, asset_id: true }).optional(),
   server: serverAssetSchema.omit({ tenant: true, asset_id: true }).optional(),
   mobile_device: mobileDeviceAssetSchema.omit({ tenant: true, asset_id: true }).optional(),
-  printer: printerAssetSchema.omit({ tenant: true, asset_id: true }).optional()
+  printer: printerAssetSchema.omit({ tenant: true, asset_id: true }).optional(),
+  attributes: z.record(z.unknown()).optional()
 });
 
 export const updateAssetSchema = createAssetSchema

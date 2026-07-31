@@ -1,14 +1,17 @@
-exports.seed = async function (knex) {
-    // Get the tenant ID
-    const tenant = await knex('tenants').select('tenant').first();
-    if (!tenant) return;
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
 
-    return knex('ticket_resources').insert([
+exports.seed = async function (knex) {
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
+
+    const { tenantId, db } = context;
+
+    return db.table('ticket_resources').insert([
         {
-            tenant: tenant.tenant,
-            ticket_id: knex('tickets').where({ tenant: tenant.tenant, title: 'Enhance Emerald City Gardens' }).select('ticket_id').first(),
-            assigned_to: knex('users').where({ tenant: tenant.tenant, username: 'scarecrow' }).select('user_id').first(),
-            additional_user_id: knex('users').where({ tenant: tenant.tenant, username: 'glinda' }).select('user_id').first(),
+            tenant: tenantId,
+            ticket_id: db.table('tickets').where({ title: 'Enhance Emerald City Gardens' }).select('ticket_id').first(),
+            assigned_to: db.table('users').where({ username: 'scarecrow' }).select('user_id').first(),
+            additional_user_id: db.table('users').where({ username: 'glinda' }).select('user_id').first(),
             role: 'Consultant',
             assigned_at: knex.raw("CURRENT_TIMESTAMP - INTERVAL '3 days' - INTERVAL '4 hours'")
         }

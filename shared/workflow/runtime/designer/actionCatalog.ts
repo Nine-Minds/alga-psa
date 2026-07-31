@@ -29,6 +29,12 @@ export type WorkflowDesignerCatalogRecord = {
   defaultActionId?: string;
   description?: string;
   actions: WorkflowDesignerCatalogAction[];
+  /**
+   * False when the record's integration is not connected for the tenant.
+   * Availability gates ADDING (palette) — existing steps still render from
+   * the record so the editor can explain why they will fail at run time.
+   */
+  available?: boolean;
 };
 
 export type WorkflowDesignerCatalogSourceAction = {
@@ -139,6 +145,15 @@ const BUILT_IN_CATALOG_SEEDS: BuiltInCatalogSeed[] = [
     description: 'Create and track CRM activity records.',
     defaultActionId: 'crm.create_activity_note',
     modules: ['crm']
+  },
+  {
+    groupKey: 'activities',
+    label: 'Activities',
+    iconToken: 'activities',
+    tileKind: 'core-object',
+    description: 'Resolve user activity groups and file activities like tickets into them.',
+    defaultActionId: 'activities.find_group',
+    modules: ['activities']
   },
   {
     groupKey: 'data-store',

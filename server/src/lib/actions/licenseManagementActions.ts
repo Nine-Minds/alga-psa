@@ -3,9 +3,15 @@
 import { getCurrentUser } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
+  isActionPermissionError,
+  permissionError,
+  type ActionPermissionErrorShape,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   getLicenseStateRow,
   upsertLicenseState,
   resolveSelfHostTier,
+  isLicenseVerifyFailure,
   type ResolvedLicenseState,
   type LicenseStateKind,
 } from '@alga-psa/licensing';
@@ -34,26 +40,28 @@ export interface LicenseStatus {
   tenantId: string | null;
 }
 
-async function assertAdminPermission() {
+type LicenseAdminUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
+type LicenseMutationResult = { success: boolean; error?: string; status?: LicenseStatus };
+export type LicenseStatusResult = LicenseStatus | ActionPermissionErrorShape;
+
+async function assertAdminPermission(): Promise<LicenseAdminUser | ActionPermissionErrorShape> {
   // Must use getCurrentUser (returns a full IUserWithRoles with user_id) — the
   // raw NextAuth session.user exposes `id`, not `user_id`, and hasPermission
   // binds user_roles.user_id, so passing session.user yields an undefined-binding
   // SQL error rather than a permission check.
   const user = await getCurrentUser();
-  if (!user) throw new Error('Unauthorized');
+  if (!user) return permissionError('Unauthorized. Sign in to manage licensing.');
   const allowed = await hasPermission(user, 'account_management', 'read');
-  if (!allowed) throw new Error('Forbidden: account_management permission required');
+  if (!allowed) return permissionError('Permission denied: account_management read required');
   // Returned so callers can bind license checks to this install's tenant.
   return user;
 }
 
-/**
- * Returns the current license status for self-hosted installs.
- * In SaaS mode (no license_state row) returns { selfHostMode: false }.
- */
-export async function getLicenseStatus(): Promise<LicenseStatus> {
-  const user = await assertAdminPermission();
+function permissionFailureResult(error: ActionPermissionErrorShape): LicenseMutationResult {
+  return { success: false, error: error.permissionError };
+}
 
+async function getLicenseStatusForUser(user: LicenseAdminUser): Promise<LicenseStatus> {
   const row = await getLicenseStateRow();
   if (!row) {
     return { selfHostMode: false, state: null, tier: null, expiresAt: null, daysRemaining: null, customer: null, trialUsed: false, connected: false, lastCheckinAt: null, tenantId: user.tenant ?? null };
@@ -83,14 +91,29 @@ export async function getLicenseStatus(): Promise<LicenseStatus> {
 }
 
 /**
+ * Returns the current license status for self-hosted installs.
+ * In SaaS mode (no license_state row) returns { selfHostMode: false }.
+ */
+export async function getLicenseStatus(): Promise<LicenseStatusResult> {
+  const user = await assertAdminPermission();
+  if (isActionPermissionError(user)) {
+    return user;
+  }
+  return getLicenseStatusForUser(user);
+}
+
+/**
  * Verifies and stores a signed license token.
  * Rejects invalid/expired/wrong-kid tokens.
  */
-export async function submitLicense(token: string): Promise<{ success: boolean; error?: string; status?: LicenseStatus }> {
+export async function submitLicense(token: string): Promise<LicenseMutationResult> {
   const user = await assertAdminPermission();
+  if (isActionPermissionError(user)) {
+    return permissionFailureResult(user);
+  }
 
   const result = verifyLicense(token.trim());
-  if (!result.valid) {
+  if (isLicenseVerifyFailure(result)) {
     return { success: false, error: `License is invalid: ${result.reason}` };
   }
   if (result.claims.exp * 1000 <= Date.now()) {
@@ -104,16 +127,19 @@ export async function submitLicense(token: string): Promise<{ success: boolean; 
 
   await upsertLicenseState({ license_token: token.trim() });
 
-  const status = await getLicenseStatus();
+  const status = await getLicenseStatusForUser(user);
   return { success: true, status };
 }
 
 /**
- * Starts the one-time 30-day Enterprise trial.
+ * Starts the one-time 15-day Enterprise trial.
  * Blocked if: trial already used, or a valid license is already active.
  */
-export async function startTrial(): Promise<{ success: boolean; error?: string; status?: LicenseStatus }> {
+export async function startTrial(): Promise<LicenseMutationResult> {
   const user = await assertAdminPermission();
+  if (isActionPermissionError(user)) {
+    return permissionFailureResult(user);
+  }
 
   const row = await getLicenseStateRow();
   if (!row) return { success: false, error: 'Not a self-hosted install' };
@@ -129,8 +155,63 @@ export async function startTrial(): Promise<{ success: boolean; error?: string; 
 
   await upsertLicenseState({ trial_started_at: new Date(), edition_choice: 'ee' });
 
-  const status = await getLicenseStatus();
+  const status = await getLicenseStatusForUser(user);
   return { success: true, status };
+}
+
+/**
+ * Immediately check in with the alga-license service and store any re-signed
+ * license. The daily check-in does this on its own schedule; this action backs
+ * the License page's "Refresh license now" button so a seat or tier change made
+ * in the customer portal takes effect right away (the service re-signs whenever
+ * the held token no longer matches the entitlement).
+ */
+export async function refreshLicenseNow(): Promise<LicenseMutationResult> {
+  const user = await assertAdminPermission();
+  if (isActionPermissionError(user)) {
+    return permissionFailureResult(user);
+  }
+
+  const row = await getLicenseStateRow();
+  if (!row) return { success: false, error: 'Not a self-hosted install' };
+  if (!row.appliance_credential || !row.check_in_url) {
+    return { success: false, error: 'This appliance is not connected for automatic refresh. Activate a claim code first.' };
+  }
+
+  let currentLicenseSub: string | undefined;
+  if (row.license_token) {
+    const v = verifyLicense(row.license_token);
+    if (v.valid) currentLicenseSub = v.claims.sub;
+  }
+
+  try {
+    const res = await fetch(row.check_in_url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ appliance_credential: row.appliance_credential, current_license_sub: currentLicenseSub }),
+    });
+
+    if (!res.ok) {
+      return { success: false, error: `License service returned HTTP ${res.status}. Try again shortly.` };
+    }
+
+    const body = await res.json() as { status: 'ok' | 'no_change' | 'revoked'; jwt?: string };
+    if (body.status === 'revoked') {
+      // Soft revocation: keep the stored token (it grace-expires on its own exp).
+      await upsertLicenseState({ last_checkin_at: new Date() } as any);
+      return { success: false, error: 'This license has been revoked. Contact support if this is unexpected.' };
+    }
+
+    await upsertLicenseState({
+      ...(body.status === 'ok' && body.jwt ? { license_token: body.jwt } : {}),
+      last_checkin_at: new Date(),
+    } as any);
+
+    const status = await getLicenseStatusForUser(user);
+    return { success: true, status };
+  } catch (err) {
+    return { success: false, error: 'License refresh failed. Try again shortly.' };
+  }
 }
 
 /**
@@ -140,8 +221,11 @@ export async function startTrial(): Promise<{ success: boolean; error?: string; 
  */
 export async function connectAppliance(
   claimCode: string
-): Promise<{ success: boolean; error?: string; status?: LicenseStatus }> {
+): Promise<LicenseMutationResult> {
   const user = await assertAdminPermission();
+  if (isActionPermissionError(user)) {
+    return permissionFailureResult(user);
+  }
 
   const row = await getLicenseStateRow();
   if (!row) return { success: false, error: 'Not a self-hosted install' };
@@ -149,8 +233,11 @@ export async function connectAppliance(
   const serviceUrl = process.env.ALGA_LICENSE_SERVICE_URL;
   if (!serviceUrl) return { success: false, error: 'License service URL not configured' };
 
-  // Derive a stable install id from the existing license state id
-  const applianceId = `appliance-${row.id}-${crypto.createHash('sha256').update(String(row.id)).digest('hex').slice(0, 8)}`;
+  // Re-registration must retain the appliance identity and credential lineage.
+  // LEVERAGE: pattern license-state-writers — keep this identity resolution in
+  // sync with the appliance Temporal redemption activity.
+  const applianceId = row.appliance_id
+    ?? `appliance-${row.id}-${crypto.createHash('sha256').update(String(row.id)).digest('hex').slice(0, 8)}`;
 
   try {
     // Send tenant_id so the alga-license service can bind the issued JWT (its
@@ -168,7 +255,7 @@ export async function connectAppliance(
         expired_claim_code: 'Claim code has expired. Request a new one from the portal.',
         consumed_claim_code: 'Claim code has already been used.',
       };
-      return { success: false, error: codeMap[body.code ?? ''] ?? body.error ?? 'Registration failed' };
+      return { success: false, error: codeMap[body.code ?? ''] ?? 'Registration failed. Check the claim code and try again.' };
     }
 
     const { appliance_credential, first_jwt, check_in_url } = await res.json() as {
@@ -188,9 +275,9 @@ export async function connectAppliance(
       last_checkin_at: new Date(),
     } as any);
 
-    const status = await getLicenseStatus();
+    const status = await getLicenseStatusForUser(user);
     return { success: true, status };
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Connection failed' };
+    return { success: false, error: 'Connection failed. Check the claim code and try again.' };
   }
 }

@@ -17,6 +17,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { CategoryService } from '@/lib/api/services/CategoryService';
 import { AssetService } from '@/lib/api/services/AssetService';
@@ -52,6 +53,20 @@ function hasColumn(columns: ColumnInfoMap, columnName: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, columnName);
 }
 
+function tenantTable(tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function tenantRows() {
+  return tenantDb(db, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
+function schemaTable(table: string) {
+  return tenantDb(db, '__test_schema__')
+    .unscoped(table, 'columnInfo reads schema metadata, not tenant rows');
+}
+
 function context(fixture: Fixture) {
   return { tenant: fixture.tenantId, userId: fixture.userId, db };
 }
@@ -61,16 +76,16 @@ function injectDb(service: any, fixture: Fixture) {
 }
 
 async function cleanupTenant(tenantId: string): Promise<void> {
-  await db('asset_associations').where({ tenant: tenantId }).del();
-  await db('tickets').where({ tenant: tenantId }).del();
-  await db('categories').where({ tenant: tenantId }).del();
-  await db('assets').where({ tenant: tenantId }).del();
-  await db('statuses').where({ tenant: tenantId }).del();
-  await db('priorities').where({ tenant: tenantId }).del();
-  await db('boards').where({ tenant: tenantId }).del();
-  await db('clients').where({ tenant: tenantId }).del();
-  await db('users').where({ tenant: tenantId }).del();
-  await db('tenants').where({ tenant: tenantId }).del();
+  await tenantTable(tenantId, 'asset_associations').del();
+  await tenantTable(tenantId, 'tickets').del();
+  await tenantTable(tenantId, 'categories').del();
+  await tenantTable(tenantId, 'assets').del();
+  await tenantTable(tenantId, 'statuses').del();
+  await tenantTable(tenantId, 'priorities').del();
+  await tenantTable(tenantId, 'boards').del();
+  await tenantTable(tenantId, 'clients').del();
+  await tenantTable(tenantId, 'users').del();
+  await tenantRows().where({ tenant: tenantId }).del();
 }
 
 async function createFixture(): Promise<Fixture> {
@@ -85,7 +100,7 @@ async function createFixture(): Promise<Fixture> {
 
   tenantsToCleanup.add(tenantId);
 
-  await db('tenants').insert({
+  await tenantRows().insert({
     tenant: tenantId,
     ...(hasColumn(tenantColumns, 'company_name')
       ? { company_name: `Tenant ${tenantId.slice(0, 8)}` }
@@ -95,7 +110,7 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(tenantColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('users').insert({
+  await tenantTable(tenantId, 'users').insert({
     tenant: tenantId,
     user_id: userId,
     username: `user-${tenantId.slice(0, 8)}`,
@@ -105,7 +120,7 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(userColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('clients').insert({
+  await tenantTable(tenantId, 'clients').insert({
     tenant: tenantId,
     client_id: clientId,
     client_name: `Client ${tenantId.slice(0, 8)}`,
@@ -115,7 +130,7 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(clientColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('boards').insert({
+  await tenantTable(tenantId, 'boards').insert({
     tenant: tenantId,
     board_id: boardId,
     board_name: 'Support',
@@ -128,7 +143,7 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(boardColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('priorities').insert({
+  await tenantTable(tenantId, 'priorities').insert({
     tenant: tenantId,
     priority_id: priorityId,
     priority_name: 'High',
@@ -140,7 +155,7 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(priorityColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('statuses').insert({
+  await tenantTable(tenantId, 'statuses').insert({
     tenant: tenantId,
     status_id: statusId,
     ...(hasColumn(statusColumns, 'board_id') ? { board_id: boardId } : {}),
@@ -155,7 +170,7 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(statusColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('assets').insert({
+  await tenantTable(tenantId, 'assets').insert({
     tenant: tenantId,
     asset_id: assetId,
     ...(hasColumn(assetColumns, 'asset_type') ? { asset_type: 'workstation' } : {}),
@@ -167,7 +182,7 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(assetColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('tickets').insert({
+  await tenantTable(tenantId, 'tickets').insert({
     tenant: tenantId,
     ticket_id: ticketId,
     ticket_number: `TIC-${tenantId.slice(0, 8)}`,
@@ -190,14 +205,14 @@ describe('asset/ticket/category API service integration', () => {
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     db = await createTestDbConnection({ runSeeds: false });
-    tenantColumns = await db('tenants').columnInfo();
-    userColumns = await db('users').columnInfo();
-    clientColumns = await db('clients').columnInfo();
-    boardColumns = await db('boards').columnInfo();
-    statusColumns = await db('statuses').columnInfo();
-    priorityColumns = await db('priorities').columnInfo();
-    assetColumns = await db('assets').columnInfo();
-    ticketColumns = await db('tickets').columnInfo();
+    tenantColumns = await schemaTable('tenants').columnInfo();
+    userColumns = await schemaTable('users').columnInfo();
+    clientColumns = await schemaTable('clients').columnInfo();
+    boardColumns = await schemaTable('boards').columnInfo();
+    statusColumns = await schemaTable('statuses').columnInfo();
+    priorityColumns = await schemaTable('priorities').columnInfo();
+    assetColumns = await schemaTable('assets').columnInfo();
+    ticketColumns = await schemaTable('tickets').columnInfo();
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {
@@ -230,8 +245,8 @@ describe('asset/ticket/category API service integration', () => {
     expect(created.display_order).toBe(0);
 
     // Row landed in `categories`, not the non-existent `ticket_categories`.
-    const persisted = await db('categories')
-      .where({ tenant: fixture.tenantId, category_id: created.category_id })
+    const persisted = await tenantTable(fixture.tenantId, 'categories')
+      .where({ category_id: created.category_id })
       .first();
     expect(persisted).toBeDefined();
 
@@ -265,7 +280,7 @@ describe('asset/ticket/category API service integration', () => {
 
   it('reads an asset<->ticket link from both directions', async () => {
     const fixture = await createFixture();
-    await db('asset_associations').insert({
+    await tenantTable(fixture.tenantId, 'asset_associations').insert({
       tenant: fixture.tenantId,
       asset_id: fixture.assetId,
       entity_id: fixture.ticketId,
@@ -306,8 +321,8 @@ describe('asset/ticket/category API service integration', () => {
     expect(created.entity_type).toBe('ticket');
     expect(created.relationship_type).toBe('affected');
 
-    const row = await db('asset_associations')
-      .where({ tenant: fixture.tenantId, asset_id: fixture.assetId, entity_id: fixture.ticketId, entity_type: 'ticket' })
+    const row = await tenantTable(fixture.tenantId, 'asset_associations')
+      .where({ asset_id: fixture.assetId, entity_id: fixture.ticketId, entity_type: 'ticket' })
       .first();
     expect(row).toBeDefined();
     expect(row.notes).toBe('from asset');
@@ -318,8 +333,8 @@ describe('asset/ticket/category API service integration', () => {
     ).rejects.toThrow(/already linked/i);
 
     await assetService.unlinkTicket(fixture.assetId, fixture.ticketId, context(fixture));
-    const afterDelete = await db('asset_associations')
-      .where({ tenant: fixture.tenantId, asset_id: fixture.assetId, entity_id: fixture.ticketId })
+    const afterDelete = await tenantTable(fixture.tenantId, 'asset_associations')
+      .where({ asset_id: fixture.assetId, entity_id: fixture.ticketId })
       .first();
     expect(afterDelete).toBeUndefined();
 
@@ -347,8 +362,8 @@ describe('asset/ticket/category API service integration', () => {
     ).rejects.toThrow(/already linked/i);
 
     await ticketService.unlinkAsset(fixture.ticketId, fixture.assetId, context(fixture));
-    const afterDelete = await db('asset_associations')
-      .where({ tenant: fixture.tenantId, asset_id: fixture.assetId, entity_id: fixture.ticketId })
+    const afterDelete = await tenantTable(fixture.tenantId, 'asset_associations')
+      .where({ asset_id: fixture.assetId, entity_id: fixture.ticketId })
       .first();
     expect(afterDelete).toBeUndefined();
   }, HOOK_TIMEOUT);

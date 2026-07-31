@@ -101,7 +101,7 @@ const ContactPickerDialog = ({
             contactId={record.contact_name_id}
             contactName={record.full_name}
             avatarUrl={record.avatarUrl || null}
-            size="sm"
+            size="xs"
             className="mr-2"
           />
           <span>{value}</span>

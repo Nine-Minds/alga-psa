@@ -1,4 +1,32 @@
 {
+  "clientNameCell": {
+    "noClient": "Nessun cliente"
+  },
+  "reactions": {
+    "add": "Reagisci",
+    "ariaSummary_one": "{{emoji}} {{count}} reazione",
+    "ariaSummary_other": "{{emoji}} {{count}} reazioni",
+    "ariaYouReacted": ", hai reagito"
+  },
+  "credits": {
+    "expiresInDaysOn_one": "Scade tra {{count}} giorno, il {{date}}",
+    "expiresInDaysOn_other": "Scade tra {{count}} giorni, il {{date}}",
+    "expiringForClient_one": "{{count}} credito di {{clientName}} scadrà presto",
+    "expiringForClient_other": "{{count}} crediti di {{clientName}} scadranno presto"
+  },
+  "staleAction": {
+    "message": "Questa pagina non è aggiornata. Aggiornala per ripristinare gli aggiornamenti e le azioni."
+  },
+  "licenseBanner": {
+    "trialExpiresIn_one": "La prova Pro scade tra {{count}} giorno. Inserisci una chiave di licenza per mantenere le funzionalità Pro.",
+    "trialExpiresIn_other": "La prova Pro scade tra {{count}} giorni. Inserisci una chiave di licenza per mantenere le funzionalità Pro.",
+    "trialDaysRemaining_one": "Prova Pro attiva — {{count}} giorno rimanente.",
+    "trialDaysRemaining_other": "Prova Pro attiva — {{count}} giorni rimanenti.",
+    "trialAvailable": "Le funzionalità Essentials sono attive. Avvia una prova Pro gratuita di 15 giorni per sbloccare tutte le funzionalità.",
+    "trialExpired": "La prova Pro è scaduta. L'installazione ora utilizza le funzionalità Essentials.",
+    "licenseExpiresIn_one": "La licenza scade tra {{count}} giorno. Rinnova per evitare interruzioni del servizio.",
+    "licenseExpiresIn_other": "La licenza scade tra {{count}} giorni. Rinnova per evitare interruzioni del servizio."
+  },
   "nav": {
     "dashboard": "Dashboard",
     "tickets": "Ticket",
@@ -48,7 +76,8 @@
     "resetPrintOptions": "Reimposta opzioni di stampa",
     "share": "Condividi",
     "done": "Fatto",
-    "continue": "Continua"
+    "continue": "Continua",
+    "printSelected": "Stampa selezionati ({{count}})"
   },
   "status": {
     "loading": "Caricamento...",
@@ -345,7 +374,9 @@
     "ariaLabel": "Paginazione",
     "totalItems": "{{count}} {{itemLabel}} totali",
     "totalRecordsInline": "({{count}} record totali)",
-    "pageOf": "Pagina {{current}} di {{total}}"
+    "pageOf": "Pagina {{current}} di {{total}}",
+    "itemsLabel_one": "elemento",
+    "itemsLabel_other": "elementi"
   },
   "documents": {
     "title": "Documenti",
@@ -506,7 +537,10 @@
         "visible": "Visibile al cliente",
         "hidden": "Solo interno"
       },
-      "clientVisibilityLabel": "Visibilità cliente"
+      "clientVisibilityLabel": "Visibilità cliente",
+      "entityOptions": {
+        "all": "Tutte le entità"
+      }
     },
     "selector": {
       "title": "Seleziona documenti",
@@ -534,7 +568,10 @@
       "uploadingProgress": "Caricamento {{current}} di {{total}}",
       "pending": "In attesa",
       "error": "Impossibile caricare il documento",
-      "fileError": "Impossibile caricare il file"
+      "fileError": "Impossibile caricare il file",
+      "associatedEntityTypeLabel": "Associa a",
+      "noAssociation": "Nessuna associazione",
+      "selectAssociatedEntityError": "Seleziona un'entità associata prima di caricare."
     },
     "folders": {
       "root": "Radice",
@@ -593,7 +630,24 @@
     "downloadVideo": "Scarica video",
     "downloadAsPdf": "Scarica come PDF",
     "downloadAsMarkdown": "Scarica come Markdown",
-    "move": "Sposta"
+    "move": "Sposta",
+    "associatedEntityPicker": {
+      "allEntities": "Tutte le entità",
+      "loadingClients": "Caricamento clienti...",
+      "loadingContacts": "Caricamento contatti...",
+      "noEntityTypes": "Nessun tipo di entità trovato",
+      "typeLabel": "Tipo di entità associata",
+      "typePlaceholder": "Seleziona tipo di entità",
+      "typeSearchPlaceholder": "Cerca tipi di entità...",
+      "entityLabel": "{{entityType}}",
+      "entityPlaceholder": "Seleziona {{entityType}}",
+      "entitySearchPlaceholder": "Cerca {{entityType}}...",
+      "noEntities": "Nessun risultato per {{entityType}}"
+    },
+    "huduTab": {
+      "documentsTabLabel": "Documenti",
+      "tabLabel": "Hudu"
+    }
   },
   "surveys": {
     "common": {
@@ -919,7 +973,8 @@
       "revoke": "Revoca",
       "revoking": "Revoca in corso...",
       "loggingOut": "Disconnessione...",
-      "logoutFromOther": "Disconnetti da {{count}} altro dispositivo{{count, plural, one {} other {i}}}"
+      "logoutFromOther_one": "Disconnetti da {{count}} altro dispositivo",
+      "logoutFromOther_other": "Disconnetti da {{count}} altri dispositivi"
     },
     "confirmations": {
       "logoutCurrent": "Questo ti disconnetterà dalla tua sessione corrente. Sei sicuro?",
@@ -1009,7 +1064,10 @@
     "deleteCommentAriaLabel": "Elimina commento",
     "deleteComment": "Elimina commento",
     "deleteCommentConfirmation": "Sei sicuro di voler eliminare questo commento? Questa azione non può essere annullata.",
-    "update": "Aggiorna"
+    "update": "Aggiorna",
+    "create": "Crea",
+    "replyComment": "Rispondi al commento",
+    "saving": "Salvataggio..."
   },
   "enums": {
     "addOnDescription": {
@@ -1022,11 +1080,20 @@
     "fromDate": "Dal",
     "toDate": "Al",
     "noResults": "Nessun risultato trovato",
-    "searchPlaceholder": "Cerca..."
+    "searchPlaceholder": "Cerca...",
+    "showingOfTotal": "Visualizzati {{shown}} di {{total}} — digita per restringere"
   },
   "pickers": {
     "addNewClient": "Aggiungi nuovo cliente",
-    "addNewContact": "Aggiungi nuovo contatto"
+    "addNewContact": "Aggiungi nuovo contatto",
+    "loadingUsers": "Caricamento utenti...",
+    "errorLoadingUsers": "Errore durante il caricamento degli utenti",
+    "searchUsers": "Cerca utenti...",
+    "unassigned": "Non assegnato",
+    "noUsersAvailable": "Nessun utente disponibile",
+    "searchBoards": "Cerca bacheche...",
+    "searchBoardsLabel": "Cerca bacheche",
+    "noBoardsFound": "Nessuna bacheca trovata"
   },
   "tagFilter": {
     "placeholder": "Filtra per tag...",
@@ -1180,6 +1247,10 @@
     "columnsHidden_other": "{{count}} colonne nascoste per spazio limitato.",
     "showAll": "Mostra tutto",
     "showingAllColumns": "Vengono mostrate tutte le colonne; scorri orizzontalmente per vederle.",
-    "showLess": "Mostra meno"
+    "showLess": "Mostra meno",
+    "columnsHidden": "{{count}} colonne nascoste per mancanza di spazio."
+  },
+  "richTextEditorSkeleton": {
+    "loading": "Caricamento editor…"
   }
 }

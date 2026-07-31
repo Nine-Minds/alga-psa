@@ -31,6 +31,13 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isEnterprise } from '@alga-psa/core/features';
 import { buildWebhookPayloadExpressionPathOptions } from '@shared/workflow/expression-authoring/adapters/webhookPayloadContextAdapter';
 import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   deleteWebhook,
   getWebhookStatsSnapshot,
   listWebhookDeliveries,
@@ -70,6 +77,10 @@ import { InboundWebhookMappingFieldRow } from './inbound/InboundWebhookMappingFi
 import { parseFieldMappingValue } from '@/lib/inboundWebhooks/fieldMappingMode';
 
 const inboundWebhookWorkflowHandlersEnabled = isEnterprise;
+
+function isServerActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 // Entities live in a static registry; this turns the readonly field arrays
 // into mutable string[] for the UI render layer.
@@ -527,6 +538,7 @@ function InboundWebhooksListView() {
   const [lastDeliveries, setLastDeliveries] = useState<Record<string, InboundWebhookDelivery | null>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // LEVERAGE: friction datatable-client-paging — re-derives page/size state + reset handler DataTable already owns internally
   const [tableCurrentPage, setTableCurrentPage] = useState(1);
   const [tablePageSize, setTablePageSize] = useState(10);
   const [identityDialogOpen, setIdentityDialogOpen] = useState(false);
@@ -572,6 +584,23 @@ function InboundWebhooksListView() {
         listInboundWebhookActions(),
         inboundWebhookWorkflowHandlersEnabled ? listInboundWorkflowOptions() : Promise.resolve([]),
       ]);
+      if (isServerActionError(configs)) {
+        setError(getErrorMessage(configs));
+        setWebhooks([]);
+        setInboundActions([]);
+        setWorkflowOptions([]);
+        return;
+      }
+      if (isServerActionError(actionDefinitions)) {
+        setError(getErrorMessage(actionDefinitions));
+        setInboundActions([]);
+        return;
+      }
+      if (isServerActionError(workflows)) {
+        setError(getErrorMessage(workflows));
+        setWorkflowOptions([]);
+        return;
+      }
       setWebhooks(configs);
       setInboundActions(actionDefinitions);
       setWorkflowOptions(workflows);
@@ -584,10 +613,18 @@ function InboundWebhooksListView() {
             1,
             1,
           );
-          return [webhook.inboundWebhookId, page.data[0] ?? null] as const;
+          return [
+            webhook.inboundWebhookId,
+            isServerActionError(page) ? null : page.data[0] ?? null,
+            isServerActionError(page) ? getErrorMessage(page) : null,
+          ] as const;
         }),
       );
-      setLastDeliveries(Object.fromEntries(deliveryEntries));
+      setLastDeliveries(Object.fromEntries(deliveryEntries.map(([id, delivery]) => [id, delivery])));
+      const firstDeliveryError = deliveryEntries.find(([, , message]) => message)?.[2];
+      if (firstDeliveryError) {
+        setError(firstDeliveryError);
+      }
     } catch (loadError) {
       console.error('Failed to load inbound webhooks:', loadError);
       setError(loadError instanceof Error ? loadError.message : t('security.webhooks.inbound.messages.loadFailed'));
@@ -610,6 +647,11 @@ function InboundWebhooksListView() {
         inboundWebhookId: webhookId,
         status: status === 'all' ? undefined : status,
       }, page, 10);
+      if (isServerActionError(deliveriesPage)) {
+        setInboundDeliveryPage(null);
+        setError(getErrorMessage(deliveriesPage));
+        return;
+      }
       setInboundDeliveryPage(deliveriesPage);
       setError(null);
     } catch (deliveryError) {
@@ -948,6 +990,10 @@ function InboundWebhooksListView() {
 
     try {
       const updated = await captureSamplePayload(identityForm.inboundWebhookId);
+      if (isServerActionError(updated)) {
+        setError(getErrorMessage(updated));
+        return;
+      }
       setIdentityForm((current) => ({
         ...current,
         sampleCaptureExpiresAt: updated.sampleCaptureExpiresAt,
@@ -988,6 +1034,10 @@ function InboundWebhooksListView() {
 
     try {
       const updated = await setInboundWebhookActiveState(identityForm.inboundWebhookId, checked);
+      if (isServerActionError(updated)) {
+        setError(getErrorMessage(updated));
+        return;
+      }
       setIdentityForm((current) => ({
         ...current,
         isActive: updated.isActive,
@@ -1014,6 +1064,10 @@ function InboundWebhooksListView() {
     setIsReplayInFlight(true);
     try {
       const replayed = await replayInboundDelivery(replayConfirmDeliveryId);
+      if (isServerActionError(replayed)) {
+        setError(getErrorMessage(replayed));
+        return;
+      }
       setSelectedInboundDelivery(replayed);
       const reloadTargetId = viewWebhookId ?? identityForm.inboundWebhookId;
       if (reloadTargetId) {
@@ -1041,6 +1095,10 @@ function InboundWebhooksListView() {
         (line) => t('security.webhooks.messages.invalidHeaderLine', { line }),
       );
       const delivery = await sendInboundWebhookTest(identityForm.inboundWebhookId, { body, headers });
+      if (isServerActionError(delivery)) {
+        setError(getErrorMessage(delivery));
+        return;
+      }
       setSelectedInboundDelivery(delivery);
       setTestDialogOpen(false);
       await loadInboundDialogDeliveries(identityForm.inboundWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter);
@@ -1060,6 +1118,10 @@ function InboundWebhooksListView() {
     }
     try {
       const result = await upsertInboundWebhook(buildInboundWebhookUpsertPayload(identityForm));
+      if (isServerActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setIdentityForm((current) => ({
         ...current,
         inboundWebhookId: result.webhook.inboundWebhookId,
@@ -1097,6 +1159,10 @@ function InboundWebhooksListView() {
 
     try {
       const result = await rotateInboundWebhookSecret(identityForm.inboundWebhookId);
+      if (isServerActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setWebhooks((current) => current.map((webhook) => (
         webhook.inboundWebhookId === result.webhook.inboundWebhookId ? result.webhook : webhook
       )));
@@ -2043,6 +2109,7 @@ function OutboundWebhooksSetup() {
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'deliveries'>('list');
+  // LEVERAGE: friction datatable-client-paging — re-derives page/size state + reset handler DataTable already owns internally
   const [tableCurrentPage, setTableCurrentPage] = useState(1);
   const [tablePageSize, setTablePageSize] = useState(10);
 
@@ -2062,10 +2129,16 @@ function OutboundWebhooksSetup() {
     setRevealedSecret(null);
   }, []);
 
-  const loadDeliveries = useCallback(async (webhookId: string, page: number = 1) => {
+  const loadDeliveries = useCallback(async (webhookId: string, page: number = 1): Promise<boolean> => {
     const result = await listWebhookDeliveries(webhookId, page, DELIVERY_PAGE_SIZE);
+    if (isServerActionError(result)) {
+      setDeliveries(null);
+      setError(getErrorMessage(result));
+      return false;
+    }
     setDeliveries(result);
     setDeliveryPage(page);
+    return true;
   }, []);
 
   const loadData = useCallback(async (preferredWebhookId?: string | null) => {
@@ -2076,6 +2149,20 @@ function OutboundWebhooksSetup() {
         listWebhookEvents(),
         getWebhookStatsSnapshot(),
       ]);
+      if (isServerActionError(nextWebhooks)) {
+        setError(getErrorMessage(nextWebhooks));
+        setWebhooks([]);
+        return;
+      }
+      if (isServerActionError(nextEventOptions)) {
+        setError(getErrorMessage(nextEventOptions));
+        setEventOptions([]);
+        return;
+      }
+      if (isServerActionError(nextStats)) {
+        setError(getErrorMessage(nextStats));
+        return;
+      }
       setWebhooks(nextWebhooks);
       setEventOptions(nextEventOptions);
       setStats(nextStats);
@@ -2087,7 +2174,9 @@ function OutboundWebhooksSetup() {
       if (matchedWebhook) {
         setSelectedWebhookId(matchedWebhook.webhookId);
         setFormState(buildFormState(matchedWebhook));
-        await loadDeliveries(matchedWebhook.webhookId, 1);
+        if (!(await loadDeliveries(matchedWebhook.webhookId, 1))) {
+          return;
+        }
       } else if (preferredWebhookId === null) {
         resetForm();
       }
@@ -2119,8 +2208,9 @@ function OutboundWebhooksSetup() {
     setStatusMessage(null);
     setViewMode('deliveries');
     try {
-      await loadDeliveries(webhook.webhookId, 1);
-      setError(null);
+      if (await loadDeliveries(webhook.webhookId, 1)) {
+        setError(null);
+      }
     } catch (loadError) {
       console.error('Failed to load webhook deliveries:', loadError);
       setError(t('security.webhooks.messages.loadDeliveriesFailed'));
@@ -2146,7 +2236,11 @@ function OutboundWebhooksSetup() {
     }
     try {
       setSaving(true);
-      await deleteWebhook(webhook.webhookId);
+      const result = await deleteWebhook(webhook.webhookId);
+      if (isServerActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       await loadData(null);
       setStatusMessage(t('security.webhooks.messages.deleteSuccess'));
       setError(null);
@@ -2198,6 +2292,10 @@ function OutboundWebhooksSetup() {
         rateLimitPerMin: 100,
         isActive: formState.isActive,
       });
+      if (isServerActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
 
       const wasUpdate = Boolean(formState.webhookId);
       await loadData(result.webhook.webhookId);
@@ -2225,6 +2323,10 @@ function OutboundWebhooksSetup() {
     try {
       setTesting(true);
       const result = await sendWebhookTest(selectedWebhook.webhookId);
+      if (isServerActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       await loadData(selectedWebhook.webhookId);
       setStatusMessage(
         result.success
@@ -2252,6 +2354,10 @@ function OutboundWebhooksSetup() {
     try {
       setRotating(true);
       const result = await rotateWebhookSecret(selectedWebhook.webhookId);
+      if (isServerActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       await loadData(selectedWebhook.webhookId);
       setRevealedSecret(result.signingSecret);
       setStatusMessage(t('security.webhooks.messages.secretRotated'));
@@ -2272,6 +2378,10 @@ function OutboundWebhooksSetup() {
     try {
       setSaving(true);
       const updated = await setWebhookActiveState(selectedWebhook.webhookId, !selectedWebhook.isActive);
+      if (isServerActionError(updated)) {
+        setError(getErrorMessage(updated));
+        return;
+      }
       await loadData(updated.webhookId);
       setStatusMessage(updated.isActive
         ? t('security.webhooks.messages.resumed')
@@ -2289,6 +2399,10 @@ function OutboundWebhooksSetup() {
     try {
       setSaving(true);
       const updated = await setWebhookActiveState(webhook.webhookId, !webhook.isActive);
+      if (isServerActionError(updated)) {
+        setError(getErrorMessage(updated));
+        return;
+      }
       await loadData(updated.webhookId);
       setStatusMessage(updated.isActive
         ? t('security.webhooks.messages.resumed')
@@ -2308,7 +2422,11 @@ function OutboundWebhooksSetup() {
     }
 
     try {
-      await retryWebhookDelivery(selectedWebhook.webhookId, delivery.deliveryId);
+      const result = await retryWebhookDelivery(selectedWebhook.webhookId, delivery.deliveryId);
+      if (isServerActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setStatusMessage(t('security.webhooks.messages.retryQueued', { eventId: delivery.eventId }));
       setError(null);
     } catch (retryError) {
@@ -2585,7 +2703,9 @@ function OutboundWebhooksSetup() {
             onRotateSecret={handleRotateSecret}
             onToggleActive={handleToggleActive}
             onRetry={handleRetryDelivery}
-            onLoadDeliveries={loadDeliveries}
+            onLoadDeliveries={(webhookId, page) => {
+              void loadDeliveries(webhookId, page);
+            }}
             t={t}
           />
         </Card>
@@ -2730,7 +2850,6 @@ function PayloadFieldSelector(props: {
                   label={field}
                   checked={selected.has(field)}
                   onChange={(event) => toggleField(entity, field, event.target.checked)}
-                  containerClassName="mb-0"
                 />
               ))}
             </div>
@@ -2792,7 +2911,6 @@ function ConfigurationTabBody(props: {
                 label={eventType}
                 checked={formState.eventTypes.includes(eventType)}
                 onChange={(event) => handleEventToggle(eventType, event.target.checked)}
-                containerClassName="mb-0"
               />
             ))}
           </div>
@@ -2850,14 +2968,12 @@ function ConfigurationTabBody(props: {
             label={t('security.webhooks.form.verifySsl')}
             checked={formState.verifySsl}
             onChange={(event) => handleFieldChange('verifySsl', event.target.checked)}
-            containerClassName="mb-0"
           />
           <Checkbox
             id="webhook-is-active"
             label={t('security.webhooks.form.webhookActive')}
             checked={formState.isActive}
             onChange={(event) => handleFieldChange('isActive', event.target.checked)}
-            containerClassName="mb-0"
           />
         </div>
       </div>

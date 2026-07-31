@@ -56,7 +56,7 @@ describe('validateDeletion', () => {
 
     await validateDeletion(trx, config, 'ticket-123', 'tenant-1');
 
-    expect(builder.where).toHaveBeenCalledWith({ tenant: 'tenant-1' });
+    expect(builder.where).toHaveBeenCalledWith('projects.tenant', 'tenant-1');
     expect(builder.andWhere).toHaveBeenCalledWith('ticket_id', 'ticket-123');
   });
 

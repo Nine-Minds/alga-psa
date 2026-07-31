@@ -11,6 +11,11 @@ import type { SurveyInvitationView } from '@alga-psa/surveys/actions/surveyRespo
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { interpolateFallback } from '@alga-psa/ui/lib/i18n/interpolateFallback';
 import { RatingButton, RatingDisplay, type RatingType } from '../shared/RatingDisplay';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  type ActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface SurveyResponsePageProps {
   token: string;
@@ -19,6 +24,8 @@ interface SurveyResponsePageProps {
 }
 
 type SubmissionState = 'idle' | 'submitting' | 'success' | 'error';
+const isSurveyResponseActionError = (value: unknown): value is ActionMessageError =>
+  isActionMessageError(value);
 
 export function SurveyResponsePage({ token, invitation, initialRating }: SurveyResponsePageProps) {
   const { t } = useTranslation('msp/surveys');
@@ -49,11 +56,16 @@ export function SurveyResponsePage({ token, invitation, initialRating }: SurveyR
     setStatus('submitting');
     setError(null);
     try {
-      await submitSurveyResponse({
+      const result = await submitSurveyResponse({
         token,
         rating,
         comment: commentText.trim() || undefined,
       });
+      if (isSurveyResponseActionError(result)) {
+        setError(getErrorMessage(result));
+        setStatus('error');
+        return;
+      }
       setStatus('success');
     } catch (err) {
       console.error('[SurveyResponsePage] Failed to submit survey response', err);

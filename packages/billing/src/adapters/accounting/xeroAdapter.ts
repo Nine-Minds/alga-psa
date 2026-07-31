@@ -20,7 +20,7 @@ import {
   XeroTrackingCategoryOption,
   XeroTaxComponentPayload
 } from '@alga-psa/integrations/lib/xero/xeroClientService';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
 import { CompanyAccountingSyncService } from '../../services/companySync/companySyncService';
 import { KnexCompanyMappingRepository } from '../../services/companySync/companyMappingRepository';
@@ -132,6 +132,7 @@ export class XeroAdapter implements AccountingExportAdapter {
   capabilities(): AccountingExportAdapterCapabilities {
     return {
       deliveryMode: 'api',
+      supportedExportTypes: ['invoice'],
       supportsPartialRetry: true,
       supportsInvoiceUpdates: true,
       supportsTaxDelegation: true,
@@ -158,7 +159,7 @@ export class XeroAdapter implements AccountingExportAdapter {
     const chargesById = await this.loadCharges(knex, tenantId, context);
     const clientData = await this.loadClients(knex, tenantId, context, invoicesById);
 
-    const linesByInvoice = groupBy(context.lines, (line) => line.invoice_id);
+    const linesByInvoice = groupBy(context.lines, (line) => line.document_id);
     const documents: AccountingExportDocument[] = [];
 
     for (const [invoiceId, exportLines] of linesByInvoice.entries()) {
@@ -246,19 +247,20 @@ export class XeroAdapter implements AccountingExportAdapter {
       let detectedLineAmountType: LineAmountType | undefined;
 
       for (const line of exportLines) {
-        if (!line.invoice_charge_id) {
+        if (!line.document_line_id) {
           throw new AppError('XERO_LINE_MISSING_CHARGE', `Export line ${line.line_id} missing invoice_charge_id`);
         }
 
-        const charge = chargesById.get(line.invoice_charge_id);
+        const charge = chargesById.get(line.document_line_id);
         if (!charge) {
-          throw new AppError('XERO_CHARGE_NOT_FOUND', `Charge ${line.invoice_charge_id} missing for invoice ${invoiceId}`);
+          throw new AppError('XERO_CHARGE_NOT_FOUND', `Charge ${line.document_line_id} missing for invoice ${invoiceId}`);
         }
         if (!charge.service_id) {
           throw new AppError('XERO_SERVICE_MISSING', `Charge ${charge.item_id} missing service_id for invoice ${invoiceId}`);
         }
 
         const serviceMapping = await resolver.resolveServiceMapping({
+          tenantId: context.batch.tenant,
           adapterType: this.type,
           serviceId: charge.service_id,
           targetRealm: context.batch.target_realm
@@ -277,6 +279,7 @@ export class XeroAdapter implements AccountingExportAdapter {
         // Resolve tax mapping - needed for both delegation and non-delegation
         const taxMapping = charge.tax_region
           ? await resolver.resolveTaxCodeMapping({
+              tenantId: context.batch.tenant,
               adapterType: this.type,
               taxRegionId: charge.tax_region,
               targetRealm: context.batch.target_realm
@@ -337,7 +340,7 @@ export class XeroAdapter implements AccountingExportAdapter {
 
         const payload: XeroInvoiceLinePayload = {
           lineId: line.line_id,
-          externalLineItemId: knownChargeToXeroLineItemId.get(line.invoice_charge_id) ?? null,
+          externalLineItemId: knownChargeToXeroLineItemId.get(line.document_line_id) ?? null,
           amountCents: netAmountCents,
           description,
           quantity: coerceChargeDecimal(charge.quantity) ?? 1,
@@ -357,7 +360,7 @@ export class XeroAdapter implements AccountingExportAdapter {
         };
 
         lineItems.push(payload);
-        chargeIds.push(line.invoice_charge_id);
+        chargeIds.push(line.document_line_id);
         invoiceTotal += netAmountCents;
       }
 
@@ -521,12 +524,12 @@ export class XeroAdapter implements AccountingExportAdapter {
     tenantId: string,
     context: AccountingExportAdapterContext
   ): Promise<Map<string, DbInvoice>> {
-    const invoiceIds = Array.from(new Set(context.lines.map((line) => line.invoice_id)));
+    const invoiceIds = Array.from(new Set(context.lines.map((line) => line.document_id)));
     if (invoiceIds.length === 0) {
       return new Map();
     }
 
-    const rows = await knex<DbInvoice>('invoices')
+    const rows = await tenantDb(knex, tenantId).table<DbInvoice>('invoices')
       .select(
         'invoice_id',
         'invoice_number',
@@ -536,7 +539,6 @@ export class XeroAdapter implements AccountingExportAdapter {
         'client_id',
         'currency_code'
       )
-      .where('tenant', tenantId)
       .whereIn('invoice_id', invoiceIds);
 
     return new Map(rows.map((row) => [row.invoice_id, row]));
@@ -548,14 +550,14 @@ export class XeroAdapter implements AccountingExportAdapter {
     context: AccountingExportAdapterContext
   ): Promise<Map<string, DbCharge>> {
     const chargeIds = context.lines
-      .map((line) => line.invoice_charge_id)
+      .map((line) => line.document_line_id)
       .filter((id): id is string => Boolean(id));
 
     if (chargeIds.length === 0) {
       return new Map();
     }
 
-    const rows = await knex<DbCharge>('invoice_charges')
+    const rows = await tenantDb(knex, tenantId).table<DbCharge>('invoice_charges')
       .select(
         'item_id',
         'invoice_id',
@@ -568,7 +570,6 @@ export class XeroAdapter implements AccountingExportAdapter {
         'tax_amount',
         'tax_region'
       )
-      .where('tenant', tenantId)
       .whereIn('item_id', chargeIds);
 
     return new Map(rows.map((row) => [row.item_id, row]));
@@ -598,17 +599,15 @@ export class XeroAdapter implements AccountingExportAdapter {
       return { clients: new Map(), mappings: new Map() };
     }
 
-    const clients = await knex<DbClient>('clients')
+    const clients = await tenantDb(knex, tenantId).table<DbClient>('clients')
       .select('client_id', 'client_name', 'billing_email')
-      .where('tenant', tenantId)
       .whereIn('client_id', Array.from(clientIds));
 
     const clientMap = new Map(clients.map((client) => [client.client_id, client]));
 
-    const mappingRows = await knex<MappingRowRaw>('tenant_external_entity_mappings')
+    const mappingRows = await tenantDb(knex, tenantId).table<MappingRowRaw>('tenant_external_entity_mappings')
       .select('*')
-      .where('tenant', tenantId)
-      .andWhere('integration_type', this.type)
+      .where('integration_type', this.type)
       .whereIn('alga_entity_type', ['client'])
       .whereIn('alga_entity_id', Array.from(clientIds))
       .modify((qb) => {
@@ -660,9 +659,8 @@ export class XeroAdapter implements AccountingExportAdapter {
 
       // Look up charge-to-line mapping from invoice metadata
       // This was stored during export to enable robust matching
-      const mappingRow = await knex('tenant_external_entity_mappings')
+      const mappingRow = await tenantDb(knex, tenantId).table<MappingRowRaw>('tenant_external_entity_mappings')
         .where({
-          tenant: tenantId,
           integration_type: this.type,
           alga_entity_type: 'invoice',
           external_entity_id: externalInvoiceRef
@@ -811,7 +809,7 @@ export class XeroAdapter implements AccountingExportAdapter {
     lineId: string
   ): string | undefined {
     const line = context.lines.find(l => l.line_id === lineId);
-    return line?.invoice_id;
+    return line?.document_id;
   }
 }
 

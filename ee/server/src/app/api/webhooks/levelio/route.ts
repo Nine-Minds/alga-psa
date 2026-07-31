@@ -7,9 +7,11 @@
  */
 
 import { NextResponse } from 'next/server';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, isTenantSuspended, tenantDb } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { processRmmAlertEvent, type NormalizedRmmAlertEvent } from '@alga-psa/shared/rmm/alerts';
+import { buildRmmAlertPipelineDeps } from '@alga-psa/integrations/lib/rmm/alerts/pipelineDeps';
 import {
   createLevelIoClient,
   LEVELIO_WEBHOOK_SECRET_KEY,
@@ -71,8 +73,20 @@ export async function POST(req: Request) {
     const message = description ? `${name}: ${description}` : name;
 
     const { knex } = await createTenantKnex();
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    const db = tenantDb(knex, tenant);
+
+    // Suspended tenants (cancelled, pending deletion) get a 200 ack with no
+    // processing so the remote RMM neither retries nor alerts.
+    if (await isTenantSuspended(knex, tenant)) {
+      console.debug('[LevelIO webhook] Ignoring alert for suspended tenant', {
+        tenant,
+        event: 'rmm_webhook_tenant_suspended',
+      });
+      return NextResponse.json({ ok: true, recorded: false, reason: 'tenant_suspended' }, { status: 200 });
+    }
+
+    const integration = await db.table('rmm_integrations')
+      .where({ provider: PROVIDER })
       .first(['integration_id']);
 
     if (!integration?.integration_id) {
@@ -82,9 +96,8 @@ export async function POST(req: Request) {
 
     // Associate to asset when possible via external entity mapping.
     let assetId: string | undefined;
-    const mapping = await knex('tenant_external_entity_mappings')
+    const mapping = await db.table('tenant_external_entity_mappings')
       .where({
-        tenant,
         integration_type: PROVIDER,
         alga_entity_type: 'asset',
         external_entity_id: deviceId,
@@ -111,40 +124,28 @@ export async function POST(req: Request) {
       // ignore
     }
 
-    const existing = await knex('rmm_alerts')
-      .where({
-        tenant,
-        integration_id: integration.integration_id,
-        external_alert_id: externalAlertId,
-      })
-      .first(['alert_id']);
-
-    const baseRow = {
-      tenant,
-      integration_id: integration.integration_id,
-      external_alert_id: externalAlertId,
-      external_device_id: deviceId,
-      asset_id: assetId || null,
+    // Alert handling (windows, rules, dedup, ticketing, lifecycle) lives in
+    // the shared provider-agnostic pipeline.
+    const normalized: NormalizedRmmAlertEvent = {
+      tenantId: tenant,
+      integrationId: integration.integration_id,
+      provider: PROVIDER,
+      kind: status === 'resolved' ? 'reset' : 'triggered',
+      externalAlertId,
+      externalDeviceId: deviceId,
+      conditionIdentity: body.policy_id ? String(body.policy_id) : name,
+      activityType: 'levelio_webhook',
+      alertClass: name,
+      sourceType: 'levelio_webhook',
       severity,
-      priority: null,
-      source_type: 'levelio_webhook',
-      status,
       message,
-      device_name: body.hostname ? String(body.hostname) : null,
-      metadata: body,
-      triggered_at: body.alert_time ? String(body.alert_time) : new Date().toISOString(),
-      resolved_at: status === 'resolved' ? new Date().toISOString() : null,
-      updated_at: knex.fn.now(),
+      deviceName: body.hostname ? String(body.hostname) : null,
+      externalOrganizationId: body.group_id != null ? String(body.group_id) : null,
+      occurredAt: parseOccurredAt(body.alert_time ? String(body.alert_time) : ''),
+      raw: body as Record<string, unknown>,
     };
 
-    if (existing?.alert_id) {
-      await knex('rmm_alerts')
-        .where({ tenant, alert_id: existing.alert_id })
-        .update(baseRow);
-    } else {
-      await knex('rmm_alerts')
-        .insert({ ...baseRow, created_at: knex.fn.now() });
-    }
+    const result = await processRmmAlertEvent({ knex, deps: buildRmmAlertPipelineDeps() }, normalized);
 
     // Best-effort: refresh the affected device without blocking the response.
     try {
@@ -166,8 +167,20 @@ export async function POST(req: Request) {
       // ignore — the alert is already recorded.
     }
 
-    return NextResponse.json({ ok: true, recorded: true }, { status: 200 });
+    return NextResponse.json({ ok: true, recorded: true, outcome: result.outcome }, { status: 200 });
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Webhook error' }, { status: 500 });
+    console.error('[Level.io webhook] Failed to process webhook:', err);
+    return NextResponse.json({ error: 'Webhook could not be processed.' }, { status: 500 });
   }
+}
+
+/** alert_time may be ISO or epoch seconds; fall back to now. */
+function parseOccurredAt(value: string): string {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 1_000_000_000) {
+    const millis = numeric > 1_000_000_000_000 ? numeric : numeric * 1000;
+    return new Date(millis).toISOString();
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
 }

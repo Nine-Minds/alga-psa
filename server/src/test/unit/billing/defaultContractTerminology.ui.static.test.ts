@@ -16,7 +16,7 @@ describe('default-contract terminology copy contracts', () => {
     const source = fs.readFileSync(contractInfoBannerPath, 'utf8');
 
     expect(source).toContain('Time will be routed to the system-managed default contract.');
-    expect(source).toContain("contractInfo.contractName || 'System-managed default contract'");
+    expect(source).toContain("contractInfo.contractName || t('contractInfo.defaultContract', { defaultValue: 'System-managed default contract' })");
     expect(source).toContain('Multiple contract lines are eligible for this date. Select a contract line to persist assignment.');
   });
 

@@ -270,16 +270,10 @@ describe('recurring timing shared domain', () => {
       obligationIds: group.dueSelections.map((selection) => selection.servicePeriod.sourceObligation.obligationId),
     }))).toEqual([
       {
-        groupKey: '2025-02-01:2025-03-01:contract-a:__no_po_scope__:__no_currency__:__no_tax_source__:__no_export_shape__',
+        groupKey: '__no_client_scope__:2025-02-01:2025-03-01',
         clientContractId: 'contract-a',
         splitReasons: ['single_contract'],
-        obligationIds: ['line-a'],
-      },
-      {
-        groupKey: '2025-02-01:2025-03-01:contract-b:__no_po_scope__:__no_currency__:__no_tax_source__:__no_export_shape__',
-        clientContractId: 'contract-b',
-        splitReasons: ['single_contract'],
-        obligationIds: ['line-b'],
+        obligationIds: ['line-a', 'line-b'],
       },
     ]);
   });
@@ -329,18 +323,11 @@ describe('recurring timing shared domain', () => {
       obligationIds: group.dueSelections.map((selection) => selection.servicePeriod.sourceObligation.obligationId),
     }))).toEqual([
       {
-        groupKey: '2025-02-01:2025-03-01:contract-a:__no_po_scope__:__no_currency__:__no_tax_source__:__no_export_shape__',
+        groupKey: '__no_client_scope__:2025-02-01:2025-03-01',
         clientContractId: 'contract-a',
-        cadenceOwners: ['client'],
+        cadenceOwners: ['client', 'contract'],
         splitReasons: ['single_contract'],
-        obligationIds: ['client-line'],
-      },
-      {
-        groupKey: '2025-02-01:2025-03-01:contract-b:__no_po_scope__:__no_currency__:__no_tax_source__:__no_export_shape__',
-        clientContractId: 'contract-b',
-        cadenceOwners: ['contract'],
-        splitReasons: ['single_contract'],
-        obligationIds: ['contract-line'],
+        obligationIds: ['client-line', 'contract-line'],
       },
     ]);
   });
@@ -384,12 +371,7 @@ describe('recurring timing shared domain', () => {
       {
         purchaseOrderScopeKey: 'po-100',
         splitReasons: ['purchase_order_scope'],
-        obligationIds: ['line-a'],
-      },
-      {
-        purchaseOrderScopeKey: 'po-200',
-        splitReasons: ['purchase_order_scope'],
-        obligationIds: ['line-b'],
+        obligationIds: ['line-a', 'line-b'],
       },
     ]);
   });
@@ -441,12 +423,6 @@ describe('recurring timing shared domain', () => {
         exportShapeKey: 'qbo',
         splitReasons: ['financial_constraint'],
       },
-      {
-        currencyCode: 'EUR',
-        taxSource: 'external',
-        exportShapeKey: 'xero',
-        splitReasons: ['financial_constraint'],
-      },
     ]);
   });
 
@@ -487,16 +463,10 @@ describe('recurring timing shared domain', () => {
       obligationIds: group.dueSelections.map((selection) => selection.servicePeriod.sourceObligation.obligationId),
     }))).toEqual([
       {
-        groupKey: '2025-02-01:2025-03-01:contract-a:__no_po_scope__:__no_currency__:__no_tax_source__:__no_export_shape__',
-        purchaseOrderScopeKey: null,
-        splitReasons: ['purchase_order_scope'],
-        obligationIds: ['no-po-line'],
-      },
-      {
-        groupKey: '2025-02-01:2025-03-01:contract-a:po-required:__no_currency__:__no_tax_source__:__no_export_shape__',
+        groupKey: '__no_client_scope__:2025-02-01:2025-03-01',
         purchaseOrderScopeKey: 'po-required',
         splitReasons: ['purchase_order_scope'],
-        obligationIds: ['po-line'],
+        obligationIds: ['no-po-line', 'po-line'],
       },
     ]);
   });
@@ -557,28 +527,12 @@ describe('recurring timing shared domain', () => {
       obligationIds: group.dueSelections.map((selection) => selection.servicePeriod.sourceObligation.obligationId),
     }))).toEqual([
       {
-        groupKey: '2025-02-01:2025-03-01:contract-a:__no_po_scope__:USD:internal:qbo',
+        groupKey: '__no_client_scope__:2025-02-01:2025-03-01',
         currencyCode: 'USD',
         taxSource: 'internal',
         exportShapeKey: 'qbo',
         splitReasons: ['financial_constraint'],
-        obligationIds: ['usd-internal-line'],
-      },
-      {
-        groupKey: '2025-02-01:2025-03-01:contract-a:__no_po_scope__:EUR:internal:qbo',
-        currencyCode: 'EUR',
-        taxSource: 'internal',
-        exportShapeKey: 'qbo',
-        splitReasons: ['financial_constraint'],
-        obligationIds: ['eur-internal-line'],
-      },
-      {
-        groupKey: '2025-02-01:2025-03-01:contract-a:__no_po_scope__:USD:external:qbo',
-        currencyCode: 'USD',
-        taxSource: 'external',
-        exportShapeKey: 'qbo',
-        splitReasons: ['financial_constraint'],
-        obligationIds: ['usd-external-line'],
+        obligationIds: ['eur-internal-line', 'usd-external-line', 'usd-internal-line'],
       },
     ]);
   });

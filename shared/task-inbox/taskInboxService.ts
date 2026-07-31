@@ -1,10 +1,19 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import WorkflowTaskModel, {
   WorkflowTaskStatus,
   publishWorkflowTaskSearchEvent,
 } from '../workflow/persistence/workflowTaskModel';
 import { TaskCreationParams } from '../workflow/persistence/taskInboxInterfaces';
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  table: string,
+): Knex.QueryBuilder<any, any> {
+  return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
+}
 
 /**
  * Service for managing workflow tasks in the Task Inbox system
@@ -35,10 +44,9 @@ export class TaskInboxService {
       let systemTaskDefinitionTaskTypeForTask: string | null = null;
 
       // 1. Attempt to find tenantTaskDef
-      const tenantTaskDef = await knex('workflow_task_definitions')
+      const tenantTaskDef = await tenantScopedTable(knex, tenant, 'workflow_task_definitions')
         .where({
           form_id: params.taskType,
-          tenant: tenant, // Current tenant
         })
         .first();
 
@@ -47,7 +55,8 @@ export class TaskInboxService {
         resolvedDefinitionType = 'tenant';
       } else {
         // 2. If tenantTaskDef not found, attempt to find systemTaskDef
-        const systemTaskDef = await knex('system_workflow_task_definitions')
+        // System workflow task definitions are global task catalogs; tenant definitions are resolved first above.
+        const systemTaskDef = await tenantScopedTable(knex, tenant, 'system_workflow_task_definitions')
           .where({
             task_type: params.taskType,
           })
@@ -192,7 +201,7 @@ export class TaskInboxService {
         const tempTaskType = `inline_task_${formId}`;
 
         // Create the temporary form in the tenant's workflow_form_definitions table
-        await trx('workflow_form_definitions').insert({
+        await tenantScopedTable(trx, tenant, 'workflow_form_definitions').insert({
           form_id: formId,
           tenant: tenant,
           name: `Inline Form - ${params.title}`,
@@ -207,7 +216,7 @@ export class TaskInboxService {
         });
 
         // Add the form schema
-        await trx('workflow_form_schemas').insert({
+        await tenantScopedTable(trx, tenant, 'workflow_form_schemas').insert({
           schema_id: uuidv4(),
           form_id: formId,
           tenant: tenant,
@@ -220,7 +229,7 @@ export class TaskInboxService {
 
         // Create a task definition in the tenant's task definitions table
         const taskDefinitionId = uuidv4();
-        await trx('workflow_task_definitions').insert({
+        await tenantScopedTable(trx, tenant, 'workflow_task_definitions').insert({
           task_definition_id: taskDefinitionId,
           tenant: tenant,
           name: tempTaskType,
@@ -237,7 +246,7 @@ export class TaskInboxService {
         const taskId = uuidv4();
 
         // Insert the task with references to the tenant task definition
-        await trx('workflow_tasks').insert({
+        await tenantScopedTable(trx, tenant, 'workflow_tasks').insert({
           task_id: taskId,
           tenant: tenant,
           execution_id: executionId,
@@ -294,8 +303,8 @@ export class TaskInboxService {
   async cleanupTemporaryForms(knex: Knex, tenant: string): Promise<number> {
     try {
       // First get the IDs of all temporary forms for this tenant
-      const tempForms = await knex('workflow_form_definitions')
-        .where({ tenant: tenant, is_temporary: true })
+      const tempForms = await tenantScopedTable(knex, tenant, 'workflow_form_definitions')
+        .where({ is_temporary: true })
         .select('form_id');
 
       if (tempForms.length === 0) {
@@ -305,20 +314,18 @@ export class TaskInboxService {
       const formIds = tempForms.map((f: { form_id: string }) => f.form_id);
 
       // Delete task definitions that reference these forms
-      await knex('workflow_task_definitions')
-        .where({ tenant: tenant })
+      await tenantScopedTable(knex, tenant, 'workflow_task_definitions')
         .whereIn('form_id', formIds)
         .delete();
 
       // Delete schemas
-      await knex('workflow_form_schemas')
-        .where({ tenant: tenant })
+      await tenantScopedTable(knex, tenant, 'workflow_form_schemas')
         .whereIn('form_id', formIds)
         .delete();
 
       // Then delete the forms themselves
-      const deletedCount = await knex('workflow_form_definitions')
-        .where({ tenant: tenant, is_temporary: true })
+      const deletedCount = await tenantScopedTable(knex, tenant, 'workflow_form_definitions')
+        .where({ is_temporary: true })
         .delete();
 
       return deletedCount;
@@ -337,7 +344,11 @@ export class TaskInboxService {
   async cleanupAllTemporaryForms(knex: Knex): Promise<number> {
     try {
       // Get distinct tenants that have temporary forms
-      const tenants = await knex('workflow_form_definitions')
+      const tenants = await tenantDb(knex, '__temporary_form_cleanup_discovery__')
+        .unscoped<{ tenant: string; is_temporary: boolean }>(
+          'workflow_form_definitions',
+          'temporary form cleanup intentionally discovers tenants with temporary forms'
+        )
         .where({ is_temporary: true })
         .distinct('tenant')
         .pluck('tenant');

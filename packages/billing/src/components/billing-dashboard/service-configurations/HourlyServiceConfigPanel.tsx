@@ -9,6 +9,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { IContractLineServiceHourlyConfig, IUserTypeRate } from '@alga-psa/types';
 import { Trash2 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 interface HourlyServiceConfigPanelProps {
   configuration: Partial<IContractLineServiceHourlyConfig>;
@@ -28,6 +29,7 @@ export function HourlyServiceConfigPanel({
   disabled = false
 }: HourlyServiceConfigPanelProps) {
   const { t } = useTranslation('msp/service-catalog');
+  const { money } = useCurrencyFormat();
   const [minimumBillableTime, setMinimumBillableTime] = useState(configuration.minimum_billable_time || 15);
   const [roundUpToNearest, setRoundUpToNearest] = useState(configuration.round_up_to_nearest || 15);
   const [newUserType, setNewUserType] = useState('');
@@ -251,7 +253,7 @@ export function HourlyServiceConfigPanel({
                   {userTypeRates.map((item, index) => (
                     <div key={index} className="grid grid-cols-3 gap-2 items-center mb-1">
                       <div>{userTypeOptions.find(opt => opt.value === item.user_type)?.label || item.user_type}</div>
-                      <div>${(item.rate / 100).toFixed(2)}</div> {/* Display in dollars */}
+                      <div>{money(Number(item.rate))}</div>
                       <Button
                         type="button"
                         onClick={() => handleRemoveUserTypeRate(index)}

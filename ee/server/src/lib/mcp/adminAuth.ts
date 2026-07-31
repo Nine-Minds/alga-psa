@@ -2,7 +2,13 @@ import { NextRequest } from 'next/server';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getUserRoles } from '@alga-psa/auth/actions';
+import { createTenantKnex } from '@alga-psa/db';
+import User from '@alga-psa/db/models/user';
 import type { IRole } from '@alga-psa/types';
+
+function rolesIncludeAdmin(roles: IRole[]): boolean {
+  return roles.some((r) => (r.role_name ?? '').toLowerCase() === 'admin');
+}
 
 export interface McpAdminContext {
   tenant: string;
@@ -22,7 +28,16 @@ export async function authenticateMcpAdmin(req: NextRequest): Promise<McpAdminCo
   const key = req.headers.get('x-api-key') ?? bearer;
   if (key) {
     const record = await ApiKeyServiceForApi.validateApiKeyAnyTenant(key);
-    return record ? { tenant: record.tenant, userId: record.user_id ?? null } : null;
+    if (!record || !record.user_id) {
+      return null;
+    }
+    // Enforce the same Admin requirement as the session path. Previously ANY
+    // valid API key was accepted here, letting a non-admin key holder call the
+    // MCP provisioning endpoints (create agents / register IdP providers) and
+    // self-escalate by minting an internal user bound to the Admin role.
+    const { knex } = await createTenantKnex(record.tenant);
+    const roles = await User.getUserRoles(knex, record.user_id, record.tenant);
+    return rolesIncludeAdmin(roles) ? { tenant: record.tenant, userId: record.user_id } : null;
   }
 
   // 2. Session (admin UI) — internal Admin users only.
@@ -30,8 +45,7 @@ export async function authenticateMcpAdmin(req: NextRequest): Promise<McpAdminCo
     const user = await getCurrentUser();
     if (user && user.user_type === 'internal' && user.tenant) {
       const roles: IRole[] = await getUserRoles(user.user_id);
-      const isAdmin = roles.some((r) => (r.role_name ?? '').toLowerCase() === 'admin');
-      if (isAdmin) return { tenant: user.tenant, userId: user.user_id };
+      if (rolesIncludeAdmin(roles)) return { tenant: user.tenant, userId: user.user_id };
     }
   } catch {
     // not authenticated

@@ -1,0 +1,15 @@
+{
+  "projectPrint": {
+    "tasks": {
+      "fields": {
+        "assignee": "Zugewiesen an",
+        "description": "Beschreibung",
+        "dueDate": "Fälligkeitsdatum",
+        "estimatedHours": "Geschätzte Stunden",
+        "phase": "Phase",
+        "status": "Status",
+        "wbsCode": "PSP-Code"
+      }
+    }
+  }
+}

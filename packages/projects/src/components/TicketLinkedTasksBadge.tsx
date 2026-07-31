@@ -1,12 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ClipboardList, ExternalLink, Loader2, Lock } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Popover, PopoverTrigger, PopoverContent } from '@alga-psa/ui/components/Popover';
 import { useDrawer } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from 'react-i18next';
 import type { ITicketLinkedTask } from '@alga-psa/types';
 import { getLinkedTasksForTicketAction, getTaskWithDetails } from '../actions/projectTaskActions';
@@ -15,10 +20,17 @@ import TaskEdit from './TaskEdit';
 
 interface TicketLinkedTasksBadgeProps {
   ticketId: string;
+  /** Server-started linked-tasks promise; skips the mount fetch when provided. */
+  initialTasks?: Promise<ITicketLinkedTask[] | { actionError: string } | { permissionError: string }>;
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 export default function TicketLinkedTasksBadge({
   ticketId,
+  initialTasks,
 }: TicketLinkedTasksBadgeProps): React.JSX.Element | null {
   const { t } = useTranslation(['features/projects', 'common']);
   const [linkedTasks, setLinkedTasks] = useState<ITicketLinkedTask[]>([]);
@@ -26,12 +38,39 @@ export default function TicketLinkedTasksBadge({
   const [openingTaskId, setOpeningTaskId] = useState<string | null>(null);
   const { openDrawer, closeDrawer } = useDrawer();
 
+  const skipFirstTasksFetch = useRef(Boolean(initialTasks));
   useEffect(() => {
+    if (!initialTasks) return;
+    let mounted = true;
+    initialTasks.then((tasks) => {
+      if (!mounted) return;
+      if (isReturnedActionError(tasks)) {
+        handleError(tasks);
+        setLinkedTasks([]);
+        setLoading(false);
+        return;
+      }
+      setLinkedTasks(tasks || []);
+      setLoading(false);
+    });
+    return () => { mounted = false; };
+  }, [initialTasks]);
+
+  useEffect(() => {
+    if (skipFirstTasksFetch.current) {
+      skipFirstTasksFetch.current = false;
+      return;
+    }
     let mounted = true;
     const fetchLinkedTasks = async () => {
       try {
         const tasks = await getLinkedTasksForTicketAction(ticketId);
         if (mounted) {
+          if (isReturnedActionError(tasks)) {
+            handleError(tasks);
+            setLinkedTasks([]);
+            return;
+          }
           setLinkedTasks(tasks || []);
         }
       } catch (error) {
@@ -57,13 +96,18 @@ export default function TicketLinkedTasksBadge({
         getProjectDetails(task.project_id),
       ]);
 
+      if (isReturnedActionError(taskDetails)) {
+        toast.error(getErrorMessage(taskDetails));
+        return;
+      }
+
       if (!taskDetails) {
         toast.error(t('dialogs.ticketLinkedTasks.loadFailed', 'Failed to load task'));
         return;
       }
 
-      if (isActionPermissionError(projectDetailsResult)) {
-        handleError(projectDetailsResult.permissionError);
+      if (isReturnedActionError(projectDetailsResult)) {
+        handleError(getErrorMessage(projectDetailsResult));
         return;
       }
 

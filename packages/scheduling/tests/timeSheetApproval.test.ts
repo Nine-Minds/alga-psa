@@ -3,6 +3,25 @@ import * as React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { flushSync } from 'react-dom';
 import { createRoot, Root } from 'react-dom/client';
+import { waitFor } from '@testing-library/react';
+
+// useFormatters requires an I18nProvider; these tests render the component
+// standalone, so substitute locale-stable formatters.
+vi.mock('@alga-psa/ui/lib/i18n/client', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    useFormatters: () => ({
+      formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) =>
+        new Intl.DateTimeFormat('en-US', options).format(typeof date === 'string' ? new Date(date) : date),
+      formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
+        new Intl.NumberFormat('en-US', options).format(value),
+      formatCurrency: (value: number, currency: string, options?: Intl.NumberFormatOptions) =>
+        new Intl.NumberFormat('en-US', { style: 'currency', currency, ...options }).format(value),
+      formatRelativeTime: (date: Date | string) => String(date),
+    }),
+  };
+});
 
 vi.mock('@alga-psa/ui/components/Badge', () => ({
   Badge: ({ children }: { children: React.ReactNode }) => React.createElement('span', null, children),
@@ -121,6 +140,7 @@ describe('TimeSheetApproval', () => {
             end_time: '2026-03-02T10:00:00.000Z',
             created_at: '2026-03-02T10:00:00.000Z',
             updated_at: '2026-03-02T10:00:00.000Z',
+            work_date: '2026-03-02',
             billable_duration: 60,
             notes: 'Needs follow-up',
             user_id: 'user-1',
@@ -150,10 +170,11 @@ describe('TimeSheetApproval', () => {
 
     await flushUi();
 
-    const toggleButton = container.querySelector('button[title="Show Details"]');
-    if (!toggleButton) {
-      throw new Error('Show Details button not found');
-    }
+    const toggleButton = await waitFor(() => {
+      const button = container.querySelector('button[title="Show Details"]');
+      expect(button).not.toBeNull();
+      return button as HTMLButtonElement;
+    });
     toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();
 
@@ -196,17 +217,19 @@ describe('TimeSheetApproval', () => {
 
     await flushUi();
 
-    const toggleButton = container.querySelector('button[title="Show Details"]');
-    if (!toggleButton) {
-      throw new Error('Show Details button not found');
-    }
+    const toggleButton = await waitFor(() => {
+      const button = container.querySelector('button[title="Show Details"]');
+      expect(button).not.toBeNull();
+      return button as HTMLButtonElement;
+    }, { timeout: 5_000 });
     toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();
 
-    const suggestionInput = container.querySelector('textarea');
-    if (!suggestionInput) {
-      throw new Error('Suggestion input not found');
-    }
+    const suggestionInput = await waitFor(() => {
+      const input = container.querySelector('textarea');
+      expect(input).not.toBeNull();
+      return input as HTMLTextAreaElement;
+    }, { timeout: 5_000 });
 
     const valueSetter = Object.getOwnPropertyDescriptor(
       HTMLTextAreaElement.prototype,
@@ -218,20 +241,23 @@ describe('TimeSheetApproval', () => {
     suggestionInput.dispatchEvent(new Event('change', { bubbles: true }));
     await flushUi();
 
-    let requestChangesButton = Array.from(container.querySelectorAll('button')).find(
-      node => node.textContent?.includes('Request Changes'),
-    );
-    if (!requestChangesButton) {
-      throw new Error('Request Changes button not found');
-    }
+    let requestChangesButton = await waitFor(() => {
+      const button = Array.from(container.querySelectorAll('button')).find(
+        node => node.textContent?.includes('Request Changes'),
+      );
+      expect(button).toBeDefined();
+      return button as HTMLButtonElement;
+    }, { timeout: 5_000 });
     requestChangesButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();
 
-    expect(updateTimeEntryApprovalStatus).toHaveBeenLastCalledWith({
+    // Generous wait: under Nx parallel CI load the async click handler can
+    // outlast a single-tick flush (observed CI-only act-warning failures).
+    await waitFor(() => expect(updateTimeEntryApprovalStatus).toHaveBeenLastCalledWith({
       entryId: 'entry-1',
       approvalStatus: 'CHANGES_REQUESTED',
       changeRequestComment: 'Please break out travel time separately.',
-    });
+    }), { timeout: 5_000 });
 
     updateTimeEntryApprovalStatus.mockClear();
 
@@ -244,27 +270,29 @@ describe('TimeSheetApproval', () => {
     renderApprovalDrawer();
     await flushUi();
 
-    const freshToggleButton = container.querySelector('button[title="Show Details"]');
-    if (!freshToggleButton) {
-      throw new Error('Show Details button not found');
-    }
+    const freshToggleButton = await waitFor(() => {
+      const button = container.querySelector('button[title="Show Details"]');
+      expect(button).not.toBeNull();
+      return button as HTMLButtonElement;
+    }, { timeout: 5_000 });
     freshToggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();
 
-    requestChangesButton = Array.from(container.querySelectorAll('button')).find(
-      node => node.textContent?.includes('Request Changes'),
-    );
-    if (!requestChangesButton) {
-      throw new Error('Request Changes button not found');
-    }
+    requestChangesButton = await waitFor(() => {
+      const button = Array.from(container.querySelectorAll('button')).find(
+        node => node.textContent?.includes('Request Changes'),
+      );
+      expect(button).toBeDefined();
+      return button as HTMLButtonElement;
+    }, { timeout: 5_000 });
     requestChangesButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();
 
-    expect(updateTimeEntryApprovalStatus).toHaveBeenLastCalledWith({
+    await waitFor(() => expect(updateTimeEntryApprovalStatus).toHaveBeenLastCalledWith({
       entryId: 'entry-1',
       approvalStatus: 'CHANGES_REQUESTED',
       changeRequestComment: undefined,
-    });
+    }), { timeout: 5_000 });
   });
 
   it('shows existing per-entry feedback in the manager approval drawer', async () => {
@@ -277,6 +305,7 @@ describe('TimeSheetApproval', () => {
         end_time: '2026-03-02T10:00:00.000Z',
         created_at: '2026-03-02T10:00:00.000Z',
         updated_at: '2026-03-02T10:00:00.000Z',
+        work_date: '2026-03-02',
         billable_duration: 60,
         notes: 'Needs follow-up',
         user_id: 'user-1',
@@ -320,10 +349,11 @@ describe('TimeSheetApproval', () => {
 
     await flushUi();
 
-    const toggleButton = container.querySelector('button[title="Show Details"]');
-    if (!toggleButton) {
-      throw new Error('Show Details button not found');
-    }
+    const toggleButton = await waitFor(() => {
+      const button = container.querySelector('button[title="Show Details"]');
+      expect(button).not.toBeNull();
+      return button as HTMLButtonElement;
+    });
     toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();
 
@@ -351,7 +381,9 @@ describe('TimeSheetApproval', () => {
     requestChangesButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();
 
-    expect(container.textContent).toContain('Please correct the service classification.');
-    expect(container.querySelector('[data-feedback-state="unresolved"]')).not.toBeNull();
+    await waitFor(() => {
+      expect(container.textContent).toContain('Please correct the service classification.');
+      expect(container.querySelector('[data-feedback-state="unresolved"]')).not.toBeNull();
+    }, { timeout: 5_000 });
   });
 });

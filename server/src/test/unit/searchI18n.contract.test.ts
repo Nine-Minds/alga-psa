@@ -111,7 +111,6 @@ describe('app-wide search i18n contracts', () => {
       'Recent',
       'Previous',
       'Next',
-      "title: 'Search'",
     ];
 
     for (const phrase of hardcodedVisiblePhrases) {

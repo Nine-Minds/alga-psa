@@ -1,10 +1,31 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import Comment from '../../../../packages/tickets/src/models/comment';
 
 describe('ticket comment threading model', () => {
   let knex: Knex;
+
+  function scopedDb(tenant: string) {
+    return tenantDb(knex, tenant);
+  }
+
+  function tenantTable(tenant: string, table: string) {
+    return scopedDb(tenant).table(table);
+  }
+
+  async function ticketUserContext() {
+    const discoveryDb = tenantDb(knex, '__test_discovery__');
+    const query = discoveryDb.unscoped(
+      'tickets as t',
+      'test discovery of seeded ticket/user context for comment model threading'
+    );
+    discoveryDb.tenantJoin(query, 'users as u', 'u.tenant', 't.tenant');
+    return query
+      .select('t.tenant', 't.ticket_id', 'u.user_id')
+      .first();
+  }
 
   beforeAll(async () => {
     knex = await createTestDbConnection();
@@ -15,10 +36,7 @@ describe('ticket comment threading model', () => {
   });
 
   it('T014: creates a new comment thread for a top-level ticket comment', async () => {
-    const context = await knex('tickets as t')
-      .join('users as u', 'u.tenant', 't.tenant')
-      .select('t.tenant', 't.ticket_id', 'u.user_id')
-      .first();
+    const context = await ticketUserContext();
     expect(context).toBeTruthy();
 
     const commentId = await Comment.insert(knex, context.tenant, {
@@ -32,14 +50,14 @@ describe('ticket comment threading model', () => {
     });
 
     try {
-      const comment = await knex('comments')
+      const comment = await tenantTable(context.tenant, 'comments')
         .select('comment_id', 'thread_id', 'parent_comment_id')
         .where({ tenant: context.tenant, comment_id: commentId })
         .first();
       expect(comment?.thread_id).toBeTruthy();
       expect(comment?.parent_comment_id).toBeNull();
 
-      const thread = await knex('comment_threads')
+      const thread = await tenantTable(context.tenant, 'comment_threads')
         .select('thread_id', 'ticket_id', 'project_task_id', 'root_comment_id', 'reply_count')
         .where({ tenant: context.tenant, thread_id: comment.thread_id })
         .first();
@@ -51,22 +69,19 @@ describe('ticket comment threading model', () => {
         reply_count: 0,
       });
     } finally {
-      const comment = await knex('comments')
+      const comment = await tenantTable(context.tenant, 'comments')
         .select('thread_id')
         .where({ tenant: context.tenant, comment_id: commentId })
         .first();
-      await knex('comments').where({ tenant: context.tenant, comment_id: commentId }).delete();
+      await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant, comment_id: commentId }).delete();
       if (comment?.thread_id) {
-        await knex('comment_threads').where({ tenant: context.tenant, thread_id: comment.thread_id }).delete();
+        await tenantTable(context.tenant, 'comment_threads').where({ tenant: context.tenant, thread_id: comment.thread_id }).delete();
       }
     }
   });
 
   it('T015: replies inherit the parent comment thread', async () => {
-    const context = await knex('tickets as t')
-      .join('users as u', 'u.tenant', 't.tenant')
-      .select('t.tenant', 't.ticket_id', 'u.user_id')
-      .first();
+    const context = await ticketUserContext();
     expect(context).toBeTruthy();
 
     const rootCommentId = await Comment.insert(knex, context.tenant, {
@@ -83,7 +98,7 @@ describe('ticket comment threading model', () => {
     let replyCommentId: string | undefined;
 
     try {
-      const root = await knex('comments')
+      const root = await tenantTable(context.tenant, 'comments')
         .select('thread_id')
         .where({ tenant: context.tenant, comment_id: rootCommentId })
         .first();
@@ -100,7 +115,7 @@ describe('ticket comment threading model', () => {
         parent_comment_id: rootCommentId,
       });
 
-      const reply = await knex('comments')
+      const reply = await tenantTable(context.tenant, 'comments')
         .select('thread_id', 'parent_comment_id')
         .where({ tenant: context.tenant, comment_id: replyCommentId })
         .first();
@@ -110,26 +125,29 @@ describe('ticket comment threading model', () => {
       });
     } finally {
       if (replyCommentId) {
-        await knex('comments').where({ tenant: context.tenant, comment_id: replyCommentId }).delete();
+        await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant, comment_id: replyCommentId }).delete();
       }
-      await knex('comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
+      await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
       if (threadId) {
-        await knex('comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
+        await tenantTable(context.tenant, 'comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
       }
     }
   });
 
   it('T016: rejects replies whose parent belongs to a different ticket', async () => {
-    const tenant = await knex('tenants').select('tenant').first();
+    const tenant = await tenantDb(knex, '__test_discovery__')
+      .unscoped('tenants', 'test discovery of seeded tenant for cross-ticket comment threading')
+      .select('tenant')
+      .first();
     expect(tenant).toBeTruthy();
 
-    const user = await knex('users')
+    const user = await tenantTable(tenant.tenant, 'users')
       .select('user_id')
       .where({ tenant: tenant.tenant })
       .first();
     expect(user).toBeTruthy();
 
-    const tickets = await knex('tickets')
+    const tickets = await tenantTable(tenant.tenant, 'tickets')
       .select('tenant', 'ticket_id')
       .where({ tenant: tenant.tenant })
       .orderBy('ticket_id')
@@ -139,6 +157,7 @@ describe('ticket comment threading model', () => {
     const [parentTicket, otherTicket] = tickets;
     const parentContext = { ...parentTicket, user_id: user.user_id };
     const otherTicketContext = { ...otherTicket, user_id: user.user_id };
+    const context = parentContext;
     const parentCommentId = await Comment.insert(knex, parentContext.tenant, {
       ticket_id: parentContext.ticket_id,
       user_id: parentContext.user_id,
@@ -152,7 +171,7 @@ describe('ticket comment threading model', () => {
     let threadId: string | undefined;
 
     try {
-      const parent = await knex('comments')
+      const parent = await tenantTable(context.tenant, 'comments')
         .select('thread_id')
         .where({ tenant: parentContext.tenant, comment_id: parentCommentId })
         .first();
@@ -169,19 +188,16 @@ describe('ticket comment threading model', () => {
         parent_comment_id: parentCommentId,
       })).rejects.toThrow('Parent comment must belong to the same ticket');
     } finally {
-      await knex('comments').where({ tenant: parentContext.tenant, parent_comment_id: parentCommentId }).delete();
-      await knex('comments').where({ tenant: parentContext.tenant, comment_id: parentCommentId }).delete();
+      await tenantTable(context.tenant, 'comments').where({ tenant: parentContext.tenant, parent_comment_id: parentCommentId }).delete();
+      await tenantTable(context.tenant, 'comments').where({ tenant: parentContext.tenant, comment_id: parentCommentId }).delete();
       if (threadId) {
-        await knex('comment_threads').where({ tenant: parentContext.tenant, thread_id: threadId }).delete();
+        await tenantTable(context.tenant, 'comment_threads').where({ tenant: parentContext.tenant, thread_id: threadId }).delete();
       }
     }
   });
 
   it('T017: rejects replies to a soft-deleted parent comment', async () => {
-    const context = await knex('tickets as t')
-      .join('users as u', 'u.tenant', 't.tenant')
-      .select('t.tenant', 't.ticket_id', 'u.user_id')
-      .first();
+    const context = await ticketUserContext();
     expect(context).toBeTruthy();
 
     const parentCommentId = await Comment.insert(knex, context.tenant, {
@@ -197,13 +213,13 @@ describe('ticket comment threading model', () => {
     let threadId: string | undefined;
 
     try {
-      const parent = await knex('comments')
+      const parent = await tenantTable(context.tenant, 'comments')
         .select('thread_id')
         .where({ tenant: context.tenant, comment_id: parentCommentId })
         .first();
       threadId = parent.thread_id;
 
-      await knex('comments')
+      await tenantTable(context.tenant, 'comments')
         .where({ tenant: context.tenant, comment_id: parentCommentId })
         .update({ deleted_at: new Date().toISOString() });
 
@@ -218,19 +234,16 @@ describe('ticket comment threading model', () => {
         parent_comment_id: parentCommentId,
       })).rejects.toThrow('Cannot reply to a deleted comment');
     } finally {
-      await knex('comments').where({ tenant: context.tenant, parent_comment_id: parentCommentId }).delete();
-      await knex('comments').where({ tenant: context.tenant, comment_id: parentCommentId }).delete();
+      await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant, parent_comment_id: parentCommentId }).delete();
+      await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant, comment_id: parentCommentId }).delete();
       if (threadId) {
-        await knex('comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
+        await tenantTable(context.tenant, 'comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
       }
     }
   });
 
   it('T018: rejects reply visibility that differs from the thread root', async () => {
-    const context = await knex('tickets as t')
-      .join('users as u', 'u.tenant', 't.tenant')
-      .select('t.tenant', 't.ticket_id', 'u.user_id')
-      .first();
+    const context = await ticketUserContext();
     expect(context).toBeTruthy();
 
     const clientRootId = await Comment.insert(knex, context.tenant, {
@@ -252,7 +265,7 @@ describe('ticket comment threading model', () => {
       is_resolution: false,
     });
 
-    const roots = await knex('comments')
+    const roots = await tenantTable(context.tenant, 'comments')
       .select('comment_id', 'thread_id')
       .where({ tenant: context.tenant })
       .whereIn('comment_id', [clientRootId, internalRootId]);
@@ -281,19 +294,16 @@ describe('ticket comment threading model', () => {
         parent_comment_id: internalRootId,
       })).rejects.toThrow('Reply visibility must match the thread root visibility');
     } finally {
-      await knex('comments').where({ tenant: context.tenant }).whereIn('parent_comment_id', [clientRootId, internalRootId]).delete();
-      await knex('comments').where({ tenant: context.tenant }).whereIn('comment_id', [clientRootId, internalRootId]).delete();
+      await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant }).whereIn('parent_comment_id', [clientRootId, internalRootId]).delete();
+      await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant }).whereIn('comment_id', [clientRootId, internalRootId]).delete();
       if (threadIds.length > 0) {
-        await knex('comment_threads').where({ tenant: context.tenant }).whereIn('thread_id', threadIds).delete();
+        await tenantTable(context.tenant, 'comment_threads').where({ tenant: context.tenant }).whereIn('thread_id', threadIds).delete();
       }
     }
   });
 
   it('T019: inserting a reply increments reply_count and bumps last_activity_at', async () => {
-    const context = await knex('tickets as t')
-      .join('users as u', 'u.tenant', 't.tenant')
-      .select('t.tenant', 't.ticket_id', 'u.user_id')
-      .first();
+    const context = await ticketUserContext();
     expect(context).toBeTruthy();
 
     const rootCommentId = await Comment.insert(knex, context.tenant, {
@@ -310,10 +320,9 @@ describe('ticket comment threading model', () => {
     let replyCommentId: string | undefined;
 
     try {
-      const before = await knex('comments as c')
-        .join('comment_threads as ct', function() {
-          this.on('c.tenant', 'ct.tenant').andOn('c.thread_id', 'ct.thread_id');
-        })
+      const beforeQuery = tenantTable(context.tenant, 'comments as c');
+      scopedDb(context.tenant).tenantJoin(beforeQuery, 'comment_threads as ct', 'c.thread_id', 'ct.thread_id');
+      const before = await beforeQuery
         .select('ct.thread_id', 'ct.reply_count', 'ct.last_activity_at')
         .where('c.tenant', context.tenant)
         .where('c.comment_id', rootCommentId)
@@ -331,7 +340,7 @@ describe('ticket comment threading model', () => {
         parent_comment_id: rootCommentId,
       });
 
-      const after = await knex('comment_threads')
+      const after = await tenantTable(context.tenant, 'comment_threads')
         .select('reply_count', 'last_activity_at')
         .where({ tenant: context.tenant, thread_id: threadId })
         .first();
@@ -341,20 +350,17 @@ describe('ticket comment threading model', () => {
       );
     } finally {
       if (replyCommentId) {
-        await knex('comments').where({ tenant: context.tenant, comment_id: replyCommentId }).delete();
+        await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant, comment_id: replyCommentId }).delete();
       }
-      await knex('comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
+      await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
       if (threadId) {
-        await knex('comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
+        await tenantTable(context.tenant, 'comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
       }
     }
   });
 
   it('T077: concurrent replies on the same thread both increment reply_count', async () => {
-    const context = await knex('tickets as t')
-      .join('users as u', 'u.tenant', 't.tenant')
-      .select('t.tenant', 't.ticket_id', 'u.user_id')
-      .first();
+    const context = await ticketUserContext();
     expect(context).toBeTruthy();
 
     const rootCommentId = await Comment.insert(knex, context.tenant, {
@@ -371,7 +377,7 @@ describe('ticket comment threading model', () => {
     let replyCommentIds: string[] = [];
 
     try {
-      const root = await knex('comments')
+      const root = await tenantTable(context.tenant, 'comments')
         .select('thread_id')
         .where({ tenant: context.tenant, comment_id: rootCommentId })
         .first();
@@ -400,13 +406,13 @@ describe('ticket comment threading model', () => {
         }),
       ]);
 
-      const thread = await knex('comment_threads')
+      const thread = await tenantTable(context.tenant, 'comment_threads')
         .select('reply_count')
         .where({ tenant: context.tenant, thread_id: threadId })
         .first();
       expect(thread.reply_count).toBe(2);
 
-      const replies = await knex('comments')
+      const replies = await tenantTable(context.tenant, 'comments')
         .select('comment_id', 'thread_id', 'parent_comment_id')
         .where({ tenant: context.tenant, parent_comment_id: rootCommentId })
         .whereIn('comment_id', replyCommentIds);
@@ -419,20 +425,17 @@ describe('ticket comment threading model', () => {
       }
     } finally {
       if (replyCommentIds.length > 0) {
-        await knex('comments').where({ tenant: context.tenant }).whereIn('comment_id', replyCommentIds).delete();
+        await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant }).whereIn('comment_id', replyCommentIds).delete();
       }
-      await knex('comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
+      await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
       if (threadId) {
-        await knex('comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
+        await tenantTable(context.tenant, 'comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
       }
     }
   });
 
   it('T020: deleting a leaf reply hard-deletes it and decrements reply_count', async () => {
-    const context = await knex('tickets as t')
-      .join('users as u', 'u.tenant', 't.tenant')
-      .select('t.tenant', 't.ticket_id', 'u.user_id')
-      .first();
+    const context = await ticketUserContext();
     expect(context).toBeTruthy();
 
     const rootCommentId = await Comment.insert(knex, context.tenant, {
@@ -449,7 +452,7 @@ describe('ticket comment threading model', () => {
     let replyCommentId: string | undefined;
 
     try {
-      const root = await knex('comments')
+      const root = await tenantTable(context.tenant, 'comments')
         .select('thread_id')
         .where({ tenant: context.tenant, comment_id: rootCommentId })
         .first();
@@ -466,7 +469,7 @@ describe('ticket comment threading model', () => {
         parent_comment_id: rootCommentId,
       });
 
-      const beforeDelete = await knex('comment_threads')
+      const beforeDelete = await tenantTable(context.tenant, 'comment_threads')
         .select('reply_count')
         .where({ tenant: context.tenant, thread_id: threadId })
         .first();
@@ -474,33 +477,30 @@ describe('ticket comment threading model', () => {
 
       await Comment.delete(knex, context.tenant, replyCommentId);
 
-      const deletedReply = await knex('comments')
+      const deletedReply = await tenantTable(context.tenant, 'comments')
         .select('comment_id')
         .where({ tenant: context.tenant, comment_id: replyCommentId })
         .first();
       expect(deletedReply).toBeUndefined();
 
-      const afterDelete = await knex('comment_threads')
+      const afterDelete = await tenantTable(context.tenant, 'comment_threads')
         .select('reply_count')
         .where({ tenant: context.tenant, thread_id: threadId })
         .first();
       expect(afterDelete.reply_count).toBe(0);
     } finally {
       if (replyCommentId) {
-        await knex('comments').where({ tenant: context.tenant, comment_id: replyCommentId }).delete();
+        await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant, comment_id: replyCommentId }).delete();
       }
-      await knex('comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
+      await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
       if (threadId) {
-        await knex('comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
+        await tenantTable(context.tenant, 'comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
       }
     }
   });
 
   it('T021: deleting a root with children soft-deletes it and leaves children intact', async () => {
-    const context = await knex('tickets as t')
-      .join('users as u', 'u.tenant', 't.tenant')
-      .select('t.tenant', 't.ticket_id', 'u.user_id')
-      .first();
+    const context = await ticketUserContext();
     expect(context).toBeTruthy();
 
     const rootCommentId = await Comment.insert(knex, context.tenant, {
@@ -517,7 +517,7 @@ describe('ticket comment threading model', () => {
     let replyCommentId: string | undefined;
 
     try {
-      const root = await knex('comments')
+      const root = await tenantTable(context.tenant, 'comments')
         .select('thread_id')
         .where({ tenant: context.tenant, comment_id: rootCommentId })
         .first();
@@ -536,7 +536,7 @@ describe('ticket comment threading model', () => {
 
       await Comment.delete(knex, context.tenant, rootCommentId);
 
-      const deletedRoot = await knex('comments')
+      const deletedRoot = await tenantTable(context.tenant, 'comments')
         .select('comment_id', 'note', 'markdown_content', 'deleted_at')
         .where({ tenant: context.tenant, comment_id: rootCommentId })
         .first();
@@ -547,7 +547,7 @@ describe('ticket comment threading model', () => {
       });
       expect(deletedRoot.deleted_at).toBeTruthy();
 
-      const child = await knex('comments')
+      const child = await tenantTable(context.tenant, 'comments')
         .select('comment_id', 'parent_comment_id')
         .where({ tenant: context.tenant, comment_id: replyCommentId })
         .first();
@@ -557,20 +557,17 @@ describe('ticket comment threading model', () => {
       });
     } finally {
       if (replyCommentId) {
-        await knex('comments').where({ tenant: context.tenant, comment_id: replyCommentId }).delete();
+        await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant, comment_id: replyCommentId }).delete();
       }
-      await knex('comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
+      await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
       if (threadId) {
-        await knex('comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
+        await tenantTable(context.tenant, 'comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
       }
     }
   });
 
   it('T022: getAllbyTicketId returns threading fields including soft-deleted roots', async () => {
-    const context = await knex('tickets as t')
-      .join('users as u', 'u.tenant', 't.tenant')
-      .select('t.tenant', 't.ticket_id', 'u.user_id')
-      .first();
+    const context = await ticketUserContext();
     expect(context).toBeTruthy();
 
     const rootCommentId = await Comment.insert(knex, context.tenant, {
@@ -587,7 +584,7 @@ describe('ticket comment threading model', () => {
     let replyCommentId: string | undefined;
 
     try {
-      const root = await knex('comments')
+      const root = await tenantTable(context.tenant, 'comments')
         .select('thread_id')
         .where({ tenant: context.tenant, comment_id: rootCommentId })
         .first();
@@ -625,11 +622,11 @@ describe('ticket comment threading model', () => {
       expect(readReply?.deleted_at ?? null).toBeNull();
     } finally {
       if (replyCommentId) {
-        await knex('comments').where({ tenant: context.tenant, comment_id: replyCommentId }).delete();
+        await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant, comment_id: replyCommentId }).delete();
       }
-      await knex('comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
+      await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
       if (threadId) {
-        await knex('comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
+        await tenantTable(context.tenant, 'comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
       }
     }
   });

@@ -37,6 +37,12 @@ export { z } from 'zod';
 // Client-side validation helpers used by UI/forms
 export * from './lib/clientFormValidation';
 
+// Password policy (auth concern, kept separate from form-field validators)
+export { validatePassword, getPasswordRequirements } from './lib/passwordValidation';
+
+// Shared password policy as a Zod schema (delegates to validatePassword)
+export { passwordSchema } from './lib/schemas';
+
 // Tenant slug utilities
 export {
   buildTenantPortalSlug,

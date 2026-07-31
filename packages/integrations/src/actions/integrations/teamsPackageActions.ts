@@ -3,7 +3,7 @@
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getTeamsAvailability, resolveTeamsAvailability } from '../../lib/teamsAvailability';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
 import type { TeamsAppPackageStatusResponse } from './teamsContracts';
@@ -32,6 +32,15 @@ interface MicrosoftProfileRow {
   tenant_id: string;
   client_secret_ref: string;
   is_archived: boolean;
+}
+
+function teamsPackageErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : '';
+  if (message === 'Forbidden' || message.includes('Permission denied')) {
+    return 'Forbidden';
+  }
+
+  return fallback;
 }
 
 interface TeamsAppManifest {
@@ -307,7 +316,7 @@ function buildPersistedPackageMetadata(baseUrl: string, tenant: string, manifest
 }
 
 async function getTeamsIntegrationRow(knex: any, tenant: string): Promise<TeamsIntegrationRow | undefined> {
-  const row = await knex('teams_integrations').where({ tenant }).first();
+  const row = await tenantDb(knex, tenant).table<TeamsIntegrationRow>('teams_integrations').first();
   return row || undefined;
 }
 
@@ -316,7 +325,7 @@ async function getMicrosoftProfileRow(
   tenant: string,
   profileId: string
 ): Promise<MicrosoftProfileRow | undefined> {
-  const row = await knex('microsoft_profiles').where({ tenant, profile_id: profileId }).first();
+  const row = await tenantDb(knex, tenant).table<MicrosoftProfileRow>('microsoft_profiles').where({ profile_id: profileId }).first();
   return row || undefined;
 }
 
@@ -387,8 +396,7 @@ async function getTeamsAppPackageStatusImpl(
     const manifest = buildTeamsAppManifest(baseUrl, tenant, profile);
     const packageMetadata = buildPersistedPackageMetadata(baseUrl, tenant, manifest);
 
-    await knex('teams_integrations')
-      .where({ tenant })
+    await tenantDb(knex, tenant).table('teams_integrations')
       .update({
         app_id: profile.client_id,
         bot_id: profile.client_id,
@@ -426,7 +434,7 @@ async function getTeamsAppPackageStatusImpl(
       },
     };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to build Teams app package' };
+    return { success: false, error: teamsPackageErrorMessage(err, 'Failed to build Teams app package') };
   }
 }
 

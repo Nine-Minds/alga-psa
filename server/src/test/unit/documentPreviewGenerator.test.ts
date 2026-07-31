@@ -41,7 +41,7 @@ vi.mock('sharp', () => {
   };
 });
 
-vi.mock('server/src/lib/storage/StorageService', () => ({
+vi.mock('@alga-psa/storage/StorageService', () => ({
   StorageService: {
     uploadFile: vi.fn(),
   },
@@ -56,7 +56,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 }));
 
 import sharpModule from 'sharp';
-import { StorageService } from 'server/src/lib/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { createTenantKnex } from 'server/src/lib/db';
 import { generateDocumentPreviews } from '@/lib/utils/documentPreviewGenerator';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';

@@ -39,6 +39,7 @@ function makeQueryBuilder(firstResult: unknown) {
   const builder: any = {
     select: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
+    whereNotNull: vi.fn().mockReturnThis(),
     andWhereRaw: vi.fn().mockReturnThis(),
     andWhere: vi.fn((arg: unknown) => {
       if (typeof arg === 'function') {
@@ -50,6 +51,7 @@ function makeQueryBuilder(firstResult: unknown) {
       }
       return builder;
     }),
+    orderBy: vi.fn().mockReturnThis(),
     first: vi.fn().mockResolvedValue(firstResult),
   };
 
@@ -59,6 +61,9 @@ function makeQueryBuilder(firstResult: unknown) {
 vi.mock('@alga-psa/db', () => ({
   withAdminTransaction: (callback: (trx: any) => Promise<any>) =>
     withAdminTransactionMock(callback),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+  }),
 }));
 
 vi.mock('../../../workflow/actions/emailWorkflowActions', () => ({
@@ -88,7 +93,15 @@ describe('processInboundEmailInApp', () => {
 
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
       const trx = vi.fn((table: string) => {
-        if (table === 'tickets as t' || table === 'comments as c') {
+        if (
+          table === 'tickets as t' ||
+          table === 'comments as c' ||
+          table === 'email_sending_logs' ||
+          table === 'comment_threads' ||
+          table === 'tickets' ||
+          table === 'statuses' ||
+          table === 'boards'
+        ) {
           return makeQueryBuilder(undefined);
         }
         throw new Error(`Unexpected table in unit test: ${table}`);

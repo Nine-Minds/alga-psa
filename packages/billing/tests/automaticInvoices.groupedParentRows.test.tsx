@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 let mockDueWorkResponse: any;
@@ -32,6 +32,17 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: vi.fn(),
     replace: vi.fn(),
+  }),
+}));
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (key: string, opts?: { defaultValue?: string } & Record<string, unknown>) =>
+      (opts && typeof opts.defaultValue === 'string' ? opts.defaultValue : key),
+  }),
+  useFormatters: () => ({
+    formatDate: (value: unknown) => String(value),
+    formatCurrency: (value: number) => `$${value}`,
   }),
 }));
 
@@ -101,11 +112,28 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: ({ containerClassName: _containerClassName, ...props }: any) => <input {...props} />,
 }));
 vi.mock('@alga-psa/ui/components/Checkbox', () => ({
-  Checkbox: ({ indeterminate: _indeterminate, ...props }: any) => (
+  // The component drives parent-row selection through onClick (for shift-range
+  // support) and calls event.preventDefault(). On a native jsdom checkbox that
+  // cancels the click activation and reverts `.checked`, so we hand the
+  // component a no-op preventDefault instead.
+  Checkbox: ({ indeterminate: _indeterminate, onClick, ...props }: any) => (
     <input
       type="checkbox"
       data-indeterminate={_indeterminate ? 'true' : 'false'}
       {...props}
+      onClick={
+        onClick
+          ? (event: any) => {
+            onClick({
+              shiftKey: event.shiftKey,
+              metaKey: event.metaKey,
+              ctrlKey: event.ctrlKey,
+              stopPropagation: () => event.stopPropagation(),
+              preventDefault: () => {},
+            });
+          }
+          : undefined
+      }
     />
   ),
 }));
@@ -234,9 +262,10 @@ describe('AutomaticInvoices grouped parent rows', () => {
       expect(screen.getByTestId('automatic-invoices-table-row-count')).toHaveTextContent('1');
     });
 
-    expect(screen.getByText('Each parent row groups due obligations by client and invoice window. Child obligations remain the atomic execution units.')).toBeInTheDocument();
     expect(screen.getByTestId('automatic-invoices-table')).toBeInTheDocument();
     expect(screen.getAllByTestId('automatic-invoices-table-row')).toHaveLength(1);
+    // One parent row collapses the two child obligations into a single grouped row.
+    expect(screen.getByText('2 line items')).toBeInTheDocument();
   });
 
   it('renders parent summary child count, aggregate amount, and invoice window (T002)', async () => {
@@ -245,10 +274,11 @@ describe('AutomaticInvoices grouped parent rows', () => {
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await waitFor(() => {
-      expect(screen.getByText('2 obligations')).toBeInTheDocument();
+      expect(screen.getByText('2 line items')).toBeInTheDocument();
     });
 
-    expect(screen.getAllByText('2026-03-01 to 2026-04-01').length).toBeGreaterThan(0);
+    // The grouped Service Period column renders the candidate's compact window.
+    expect(screen.getAllByText('2026-03-01').length).toBeGreaterThan(0);
     expect(screen.getByText('$300.00')).toBeInTheDocument();
   });
 
@@ -260,14 +290,16 @@ describe('AutomaticInvoices grouped parent rows', () => {
     const expandButton = await screen.findByRole('button', { name: 'Expand' });
     fireEvent.click(expandButton);
 
-    expect(
-      await screen.findByTestId('child-row-parent-group:client-1:2026-03-01:2026-04-01-exec-1'),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Execution exec-1')).toBeInTheDocument();
-    expect(screen.getAllByText('Cadence: Contract anniversary').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Billing timing: Advance').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Service period: 2026-03-01 to 2026-04-01').length).toBeGreaterThan(0);
-    expect(screen.getByText('$125.00')).toBeInTheDocument();
+    // Expanding surfaces each child execution row (identified by its child checkbox).
+    await waitFor(() => {
+      expect(
+        document.getElementById('select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1'),
+      ).not.toBeNull();
+    });
+    expect((await screen.findAllByText('Assigned work item')).length).toBeGreaterThan(0);
+    // Cadence and billing timing share one compact line in the grouped grid.
+    expect((await screen.findAllByText('Contract anniversary · Advance')).length).toBeGreaterThan(0);
+    expect(await screen.findByText('$125.00')).toBeInTheDocument();
   });
 
   it('is combinable only when all ready children share client/currency/PO/tax/export scope (T004)', async () => {
@@ -377,8 +409,10 @@ describe('AutomaticInvoices grouped parent rows', () => {
     });
     fireEvent.click(parentCheckbox);
 
-    expect(parentCheckbox.checked).toBe(true);
-    expect(screen.getByText('Generate Invoices for Selected Periods (2)')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(parentCheckbox.checked).toBe(true);
+    });
+    expect(screen.getByText('Generate Invoices (2)')).toBeInTheDocument();
   });
 
   it('non-combinable parent stays disabled while child rows remain selectable (T010)', async () => {
@@ -478,11 +512,11 @@ describe('AutomaticInvoices grouped parent rows', () => {
       'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1',
     ) as HTMLInputElement;
 
-    expect(
-      screen.getByTestId('child-row-parent-group:client-1:2026-03-01:2026-04-01-exec-2'),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Contains blocked items')).toBeInTheDocument();
-    expect(screen.queryByText('Must invoice separately')).not.toBeInTheDocument();
+    // The blocked child row stays visible (its child checkbox is present) while the
+    // group reports a Blocked status rather than a Separate one.
+    expect(blockedChild).not.toBeNull();
+    expect(screen.getByText('Blocked')).toBeInTheDocument();
+    expect(screen.queryByText('Separate')).not.toBeInTheDocument();
     expect(blockedChild.disabled).toBe(true);
     expect(blockedChild.checked).toBe(false);
     expect(readyChild.checked).toBe(true);
@@ -505,7 +539,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('preview-invoice-count-summary')).toHaveTextContent(
-        'This selection will generate 1 invoice.',
+        'This selection will generate one combined invoice.',
       );
     });
     expect(mockPreviewGroupedInvoicesForSelectionInputs).toHaveBeenCalledTimes(1);
@@ -534,7 +568,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('preview-invoice-count-summary')).toHaveTextContent(
-        'This selection will generate 2 invoices.',
+        'This selection will generate 2 separate invoices.',
       );
     });
   });
@@ -600,7 +634,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
       'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1',
     ) as HTMLInputElement;
     fireEvent.click(childOne);
-    fireEvent.click(screen.getByRole('button', { name: 'Generate Invoices for Selected Periods (1)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Invoices (1)' }));
 
     await waitFor(() => {
       expect(mockGenerateGroupedInvoicesAsRecurringBillingRun).toHaveBeenCalledTimes(1);
@@ -639,19 +673,37 @@ describe('AutomaticInvoices grouped parent rows', () => {
         'select-parent-group:client-1:2026-03-01:2026-04-01',
       ) as HTMLInputElement | null;
       expect(checkbox).not.toBeNull();
+      expect(checkbox).toBeEnabled();
       return checkbox as HTMLInputElement;
     });
     fireEvent.click(parentCheckbox);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Preview Selected' }));
+    await waitFor(() => {
+      expect(parentCheckbox).toBeChecked();
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    });
+    expect(parentCheckbox).toBeChecked();
+    const previewButton = await screen.findByRole('button', { name: 'Preview Selected' });
+    const generateButton = await screen.findByRole('button', { name: 'Generate Invoices (1)' });
+    await waitFor(() => {
+      expect(previewButton).toBeEnabled();
+      expect(generateButton).toBeEnabled();
+    });
+    fireEvent.click(previewButton);
     await waitFor(() => {
       expect(screen.getByTestId('preview-invoice-count-summary')).toHaveTextContent(
-        'This selection will generate 1 invoice.',
+        'This selection will generate one combined invoice.',
       );
     });
     expect(screen.queryByTestId('grouped-preview-unavailable-copy')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Generate Invoices for Selected Periods (1)' }));
+    const liveGenerateButton = await screen.findByRole('button', { name: 'Generate Invoices (1)' });
+    await waitFor(() => {
+      expect(liveGenerateButton).toBeEnabled();
+    });
+    fireEvent.click(liveGenerateButton);
     await waitFor(() => {
       expect(mockGenerateGroupedInvoicesAsRecurringBillingRun).toHaveBeenCalledTimes(1);
     });

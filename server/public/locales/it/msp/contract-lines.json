@@ -12,7 +12,7 @@
       "save": "Salva",
       "saveChanges": "Salva modifiche",
       "saveChangesDirty": "Salva modifiche *",
-      "saving": "Risparmio..."
+      "saving": "Salvataggio..."
     },
     "errors": {
       "errorWithMessage": "Errore: {{message}}"
@@ -212,7 +212,7 @@
     "actions": {
       "cancel": "Cancellare",
       "createPreset": "Crea preimpostazione linea contratto",
-      "saving": "Risparmio...",
+      "saving": "Salvataggio...",
       "updatePreset": "Aggiorna la preimpostazione della linea di contratto"
     },
     "basics": {

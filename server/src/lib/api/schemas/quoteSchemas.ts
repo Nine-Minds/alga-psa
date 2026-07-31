@@ -80,7 +80,12 @@ export const createQuoteApiSchema = z.object({
   internal_notes: z.string().optional().nullable(),
   client_notes: z.string().optional().nullable(),
   terms_and_conditions: z.string().optional().nullable(),
-  currency_code: z.string().trim().length(3).default('USD'),
+  // DD-2/F-2: no static 'USD' default. When omitted, QuoteService.create
+  // resolves the currency from the client's default_currency_code, then the
+  // tenant's default_billing_settings.default_currency_code, and sets it
+  // explicitly before insert (the quotes.currency_code DB column is NOT NULL
+  // DEFAULT 'USD', so an unset value would otherwise silently become USD).
+  currency_code: z.string().trim().length(3).optional(),
   tax_source: taxSourceSchema.default('internal'),
   is_template: z.boolean().default(false),
   template_id: uuidSchema.optional().nullable(),

@@ -16,6 +16,7 @@ import type { Knex } from 'knex';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 const HOOK_TIMEOUT = 180_000;
 
@@ -24,6 +25,27 @@ let mockDb: Knex;
 let testTenantId: string;
 let testClientId: string;
 let testUserId: string;
+
+function tenantTable<Row extends object = Record<string, unknown>>(
+  connection: Knex,
+  tenant: string,
+  tableExpression: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(connection, tenant).table<Row>(tableExpression);
+}
+
+function tenantRows(connection: Knex): Knex.QueryBuilder<Record<string, unknown>, Record<string, unknown>[]> {
+  return tenantDb(connection, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
+async function hasSchemaTable(connection: Knex, tableName: string): Promise<boolean> {
+  const row = await tenantDb(connection, '__test_schema__')
+    .unscoped('information_schema.tables', 'test schema table existence check')
+    .where({ table_schema: 'public', table_name: tableName })
+    .first('table_name');
+  return Boolean(row);
+}
 
 describe('Invoice Status Management Integration', () => {
   beforeAll(async () => {
@@ -66,10 +88,10 @@ describe('Invoice Status Management Integration', () => {
     ];
 
     for (const table of invoiceRelatedTables) {
-      const hasTable = await mockDb.schema.hasTable(table);
+      const hasTable = await hasSchemaTable(mockDb, table);
       if (hasTable) {
         try {
-          await mockDb(table).where({ tenant: testTenantId }).del();
+          await tenantTable(mockDb, testTenantId, table).where({ tenant: testTenantId }).del();
         } catch {
           // Ignore errors if table has different structure
         }
@@ -77,7 +99,7 @@ describe('Invoice Status Management Integration', () => {
     }
 
     // Now safe to delete invoices
-    await mockDb('invoices').where({ tenant: testTenantId }).del();
+    await tenantTable(mockDb, testTenantId, 'invoices').where({ tenant: testTenantId }).del();
   }, HOOK_TIMEOUT);
 
   describe('Credit Application Status Transitions', () => {
@@ -99,7 +121,7 @@ describe('Invoice Status Management Integration', () => {
       });
 
       // Check invoice status
-      const invoice = await mockDb('invoices')
+      const invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
 
@@ -121,7 +143,7 @@ describe('Invoice Status Management Integration', () => {
         userId: testUserId,
       });
 
-      const invoice = await mockDb('invoices')
+      const invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
 
@@ -142,7 +164,7 @@ describe('Invoice Status Management Integration', () => {
         userId: testUserId,
       });
 
-      let invoice = await mockDb('invoices')
+      let invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
 
@@ -155,7 +177,7 @@ describe('Invoice Status Management Integration', () => {
         userId: testUserId,
       });
 
-      invoice = await mockDb('invoices')
+      invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
 
@@ -168,7 +190,7 @@ describe('Invoice Status Management Integration', () => {
         userId: testUserId,
       });
 
-      invoice = await mockDb('invoices')
+      invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
 
@@ -191,7 +213,7 @@ describe('Invoice Status Management Integration', () => {
         userId: testUserId,
       });
 
-      const invoice = await mockDb('invoices')
+      const invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
 
@@ -210,7 +232,7 @@ describe('Invoice Status Management Integration', () => {
         userId: testUserId,
       });
 
-      const invoice = await mockDb('invoices')
+      const invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
 
@@ -238,7 +260,7 @@ describe('Invoice Status Management Integration', () => {
         userId: testUserId,
       });
 
-      let invoice = await mockDb('invoices')
+      let invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
 
@@ -252,7 +274,7 @@ describe('Invoice Status Management Integration', () => {
         userId: testUserId,
       });
 
-      invoice = await mockDb('invoices')
+      invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
 
@@ -279,7 +301,7 @@ describe('Invoice Status Management Integration', () => {
         userId: testUserId,
       });
 
-      let invoice = await mockDb('invoices')
+      let invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
 
@@ -292,7 +314,7 @@ describe('Invoice Status Management Integration', () => {
         userId: testUserId,
       });
 
-      invoice = await mockDb('invoices')
+      invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
 
@@ -314,7 +336,7 @@ describe('Invoice Status Management Integration', () => {
         userId: testUserId,
       });
 
-      let invoice = await mockDb('invoices')
+      let invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
 
@@ -327,7 +349,7 @@ describe('Invoice Status Management Integration', () => {
         userId: testUserId,
       });
 
-      invoice = await mockDb('invoices')
+      invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
 
@@ -354,7 +376,7 @@ describe('Invoice Status Management Integration', () => {
       ).rejects.toThrow(/cancelled/i);
 
       // Invoice should remain cancelled
-      const invoice = await mockDb('invoices')
+      const invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
 
@@ -375,7 +397,7 @@ describe('Invoice Status Management Integration', () => {
         })
       ).rejects.toThrow(/draft/i);
 
-      const invoice = await mockDb('invoices')
+      const invoice = await tenantTable(mockDb, testTenantId, 'invoices')
         .where({ invoice_id: invoiceId, tenant: testTenantId })
         .first();
 
@@ -464,11 +486,11 @@ async function runMigrationsAndSeeds(connection: Knex): Promise<void> {
 
 async function setupTestData(db: Knex): Promise<{ tenantId: string; clientId: string; userId: string }> {
   // Get or create tenant
-  const existingTenant = await db('tenants').first<{ tenant: string }>('tenant');
+  const existingTenant = await tenantRows(db).first<{ tenant: string }>('tenant');
   const tenantId = existingTenant?.tenant || uuidv4();
 
   if (!existingTenant) {
-    await db('tenants').insert({
+    await tenantRows(db).insert({
       tenant: tenantId,
       company_name: 'Invoice Status Test Tenant',
       email: 'invoice-test@test.co',
@@ -479,7 +501,7 @@ async function setupTestData(db: Knex): Promise<{ tenantId: string; clientId: st
 
   // Create test client
   const clientId = uuidv4();
-  await db('clients').insert({
+  await tenantTable(db, tenantId, 'clients').insert({
     client_id: clientId,
     tenant: tenantId,
     client_name: 'Test Client for Invoice Status',
@@ -490,7 +512,7 @@ async function setupTestData(db: Knex): Promise<{ tenantId: string; clientId: st
 
   // Create test user
   const userId = uuidv4();
-  await db('users').insert({
+  await tenantTable(db, tenantId, 'users').insert({
     user_id: userId,
     tenant: tenantId,
     username: 'invoice_test_user',
@@ -519,7 +541,7 @@ async function createTestInvoice(
 ): Promise<string> {
   const invoiceId = uuidv4();
 
-  await db('invoices').insert({
+  await tenantTable(db, tenantId, 'invoices').insert({
     invoice_id: invoiceId,
     tenant: tenantId,
     client_id: clientId,
@@ -552,7 +574,7 @@ async function applyCredit(
   invoiceId: string,
   options: ApplyCreditOptions
 ): Promise<void> {
-  const invoice = await db('invoices')
+  const invoice = await tenantTable(db, tenantId, 'invoices')
     .where({ invoice_id: invoiceId, tenant: tenantId })
     .first();
 
@@ -569,9 +591,9 @@ async function applyCredit(
   }
 
   // Insert credit record if table exists (optional tracking)
-  const hasCreditsTable = await db.schema.hasTable('invoice_credits');
+  const hasCreditsTable = await hasSchemaTable(db, 'invoice_credits');
   if (hasCreditsTable) {
-    await db('invoice_credits').insert({
+    await tenantTable(db, tenantId, 'invoice_credits').insert({
       credit_id: uuidv4(),
       invoice_id: invoiceId,
       credit_amount: options.creditAmount,
@@ -587,7 +609,7 @@ async function applyCredit(
   const newCreditApplied = (invoice.credit_applied || 0) + options.creditAmount;
 
   // Calculate total payments
-  const payments = await db('invoice_payments')
+  const payments = await tenantTable(db, tenantId, 'invoice_payments')
     .where({ invoice_id: invoiceId, tenant: tenantId })
     .sum('amount as total');
   const totalPayments = parseInt(payments[0]?.total || '0', 10);
@@ -602,7 +624,7 @@ async function applyCredit(
     newStatus = 'partially_applied';
   }
 
-  await db('invoices')
+  await tenantTable(db, tenantId, 'invoices')
     .where({ invoice_id: invoiceId, tenant: tenantId })
     .update({
       credit_applied: newCreditApplied,
@@ -625,7 +647,7 @@ async function recordPayment(
   invoiceId: string,
   options: RecordPaymentOptions
 ): Promise<void> {
-  const invoice = await db('invoices')
+  const invoice = await tenantTable(db, tenantId, 'invoices')
     .where({ invoice_id: invoiceId, tenant: tenantId })
     .first();
 
@@ -642,7 +664,7 @@ async function recordPayment(
   }
 
   // Insert payment record
-  await db('invoice_payments').insert({
+  await tenantTable(db, tenantId, 'invoice_payments').insert({
     payment_id: uuidv4(),
     invoice_id: invoiceId,
     tenant: tenantId,
@@ -654,7 +676,7 @@ async function recordPayment(
   });
 
   // Calculate total payments
-  const payments = await db('invoice_payments')
+  const payments = await tenantTable(db, tenantId, 'invoice_payments')
     .where({ invoice_id: invoiceId, tenant: tenantId })
     .sum('amount as total');
   const totalPayments = parseInt(payments[0]?.total || '0', 10);
@@ -670,7 +692,7 @@ async function recordPayment(
     newStatus = 'partially_applied';
   }
 
-  await db('invoices')
+  await tenantTable(db, tenantId, 'invoices')
     .where({ invoice_id: invoiceId, tenant: tenantId })
     .update({
       status: newStatus,
@@ -690,7 +712,7 @@ async function recordRefund(
   invoiceId: string,
   options: RecordRefundOptions
 ): Promise<void> {
-  const invoice = await db('invoices')
+  const invoice = await tenantTable(db, tenantId, 'invoices')
     .where({ invoice_id: invoiceId, tenant: tenantId })
     .first();
 
@@ -699,7 +721,7 @@ async function recordRefund(
   }
 
   // Insert refund as negative payment
-  await db('invoice_payments').insert({
+  await tenantTable(db, tenantId, 'invoice_payments').insert({
     payment_id: uuidv4(),
     invoice_id: invoiceId,
     tenant: tenantId,
@@ -712,7 +734,7 @@ async function recordRefund(
   });
 
   // Calculate net payments (including refunds)
-  const payments = await db('invoice_payments')
+  const payments = await tenantTable(db, tenantId, 'invoice_payments')
     .where({ invoice_id: invoiceId, tenant: tenantId })
     .sum('amount as total');
   const netPayments = parseInt(payments[0]?.total || '0', 10);
@@ -730,7 +752,7 @@ async function recordRefund(
     newStatus = 'partially_applied';
   }
 
-  await db('invoices')
+  await tenantTable(db, tenantId, 'invoices')
     .where({ invoice_id: invoiceId, tenant: tenantId })
     .update({
       status: newStatus,

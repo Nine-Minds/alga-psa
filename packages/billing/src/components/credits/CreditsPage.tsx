@@ -1,40 +1,13 @@
-import type { ICreditExpirationSettings, ICreditTracking } from '@alga-psa/types';
+import type { ICreditExpirationSettings } from '@alga-psa/types';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getCreditExpirationSettings } from '../../actions/creditExpirationSettingsActions';
-import { listCredits } from './actions';
 import CreditsPageClient from './CreditsPageClient';
 
-type CreditRow = ICreditTracking & {
-  transaction_description?: string;
-  invoice_number?: string;
-};
+type CreditExpirationSettingsResult = ICreditExpirationSettings | ActionMessageError | ActionPermissionError;
 
-interface CreditsListResult {
-  success: boolean;
-  data?: {
-    credits: CreditRow[];
-  };
-  error?: string;
-}
+export default async function CreditsPage() {
+  // Tenant-wide expiration policy for the caption line.
+  const settings: CreditExpirationSettingsResult = await getCreditExpirationSettings(null);
 
-export default async function CreditsPage({ params }: { params: Promise<{ clientId?: string }> }) {
-  const resolvedParams = await params;
-  const clientId = resolvedParams.clientId || '00000000-0000-0000-0000-000000000000';
-
-  const [settings, activeCreditsResult, allCreditsResult]: [
-    ICreditExpirationSettings,
-    CreditsListResult,
-    CreditsListResult,
-  ] = await Promise.all([
-    getCreditExpirationSettings(clientId),
-    listCredits(clientId, false),
-    listCredits(clientId, true),
-  ]);
-
-  return (
-    <CreditsPageClient
-      settings={settings}
-      activeCreditsResult={activeCreditsResult}
-      allCreditsResult={allCreditsResult}
-    />
-  );
+  return <CreditsPageClient settings={settings} />;
 }

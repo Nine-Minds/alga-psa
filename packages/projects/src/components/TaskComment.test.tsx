@@ -1,5 +1,7 @@
 /** @vitest-environment jsdom */
 
+import '@testing-library/jest-dom/vitest';
+
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -13,6 +15,7 @@ vi.mock('@alga-psa/ui/editor', () => ({
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
   searchUsersForMentions: vi.fn(),
+  getCurrentUserAvatarUrl: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({

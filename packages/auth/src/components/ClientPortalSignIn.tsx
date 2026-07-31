@@ -20,9 +20,10 @@ type TenantBranding = {
 
 interface ClientPortalSignInProps {
   branding?: TenantBranding | null;
+  portalDomain?: string;
 }
 
-export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps) {
+export default function ClientPortalSignIn({ branding, portalDomain }: ClientPortalSignInProps) {
   const { t } = useTranslation('client-portal');
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });

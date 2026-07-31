@@ -1,10 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { ContactService } from 'server/src/lib/api/services/ContactService';
-import { ProjectService } from 'server/src/lib/api/services/ProjectService';
-import { TicketService } from 'server/src/lib/api/services/TicketService';
-import { TimeEntryService } from 'server/src/lib/api/services/TimeEntryService';
-import { TimeSheetService } from 'server/src/lib/api/services/TimeSheetService';
 import {
   executeTeamsAction,
   listAvailableTeamsActions,
@@ -23,6 +18,7 @@ const {
   createTenantKnexMock,
   getReportsToSubordinateIdsMock,
   isFeatureFlagEnabledMock,
+  teamsPsaDataMocks,
 } = vi.hoisted(() => ({
   getTeamsIntegrationExecutionStateMock: vi.fn(),
   buildTeamsBotResultDeepLinkFromPsaUrlMock: vi.fn(),
@@ -32,6 +28,22 @@ const {
   createTenantKnexMock: vi.fn(),
   getReportsToSubordinateIdsMock: vi.fn(),
   isFeatureFlagEnabledMock: vi.fn(),
+  teamsPsaDataMocks: {
+    addTeamsTicketComment: vi.fn(),
+    approveTeamsTimeSheet: vi.fn(),
+    createTeamsTimeEntry: vi.fn(),
+    getTeamsApprovalById: vi.fn(),
+    getTeamsContactById: vi.fn(),
+    getTeamsProjectTaskById: vi.fn(),
+    getTeamsTicketById: vi.fn(),
+    getTeamsTimeEntryById: vi.fn(),
+    listAssignedOpenTeamsTickets: vi.fn(),
+    listPendingApprovalsForTeams: vi.fn(),
+    requestChangesForTeamsTimeSheet: vi.fn(),
+    resolveTeamsTicketByReference: vi.fn(),
+    searchTeamsTickets: vi.fn(),
+    updateTeamsTicketAssignee: vi.fn(),
+  },
 }));
 
 vi.mock('@alga-psa/db', async () => {
@@ -49,17 +61,19 @@ vi.mock('@alga-psa/core', () => ({
   isFeatureFlagEnabled: isFeatureFlagEnabledMock,
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/actions/integrations/teamsActions', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/actions/integrations/teamsActions', () => ({
   getTeamsIntegrationExecutionStateImpl: getTeamsIntegrationExecutionStateMock,
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/teams/teamsDeepLinks', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/teamsDeepLinks', () => ({
   buildTeamsBotResultDeepLinkFromPsaUrl: buildTeamsBotResultDeepLinkFromPsaUrlMock,
   buildTeamsMessageExtensionResultDeepLinkFromPsaUrl: buildTeamsMessageExtensionResultDeepLinkFromPsaUrlMock,
   buildTeamsPersonalTabDeepLinkFromPsaUrl: buildTeamsPersonalTabDeepLinkFromPsaUrlMock,
 }));
 
-vi.mock('server/src/lib/auth/rbac', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/teamsPsaData', () => teamsPsaDataMocks);
+
+vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: hasPermissionMock,
 }));
 
@@ -198,11 +212,11 @@ describe('teamsActionRegistry', () => {
   });
 
   it('resolves ticket, project-task, approval, time-entry, and contact targets through shared entity resolvers', async () => {
-    vi.spyOn(TicketService.prototype, 'getById').mockResolvedValue({ ticket_id: 'ticket-1' } as any);
-    vi.spyOn(ProjectService.prototype, 'getTaskById').mockResolvedValue({ task_id: 'task-1', project_id: 'project-1' } as any);
-    vi.spyOn(TimeSheetService.prototype, 'getById').mockResolvedValue({ id: 'approval-1' } as any);
-    vi.spyOn(TimeEntryService.prototype, 'getById').mockResolvedValue({ entry_id: 'entry-1' } as any);
-    vi.spyOn(ContactService.prototype, 'getById').mockResolvedValue({ contact_name_id: 'contact-1', client_id: 'client-1' } as any);
+    teamsPsaDataMocks.resolveTeamsTicketByReference.mockResolvedValue({ ticket_id: 'ticket-1' } as any);
+    teamsPsaDataMocks.getTeamsProjectTaskById.mockResolvedValue({ task_id: 'task-1', project_id: 'project-1' } as any);
+    teamsPsaDataMocks.getTeamsApprovalById.mockResolvedValue({ id: 'approval-1' } as any);
+    teamsPsaDataMocks.getTeamsTimeEntryById.mockResolvedValue({ entry_id: 'entry-1' } as any);
+    teamsPsaDataMocks.getTeamsContactById.mockResolvedValue({ contact_name_id: 'contact-1', client_id: 'client-1' } as any);
 
     const user = buildUser();
 
@@ -276,7 +290,7 @@ describe('teamsActionRegistry', () => {
   });
 
   it('maps successful lookup results into Teams-safe summaries with Teams-tab and PSA deep links for the invoking surface', async () => {
-    vi.spyOn(TicketService.prototype, 'getById').mockResolvedValue({
+    teamsPsaDataMocks.resolveTeamsTicketByReference.mockResolvedValue({
       ticket_id: 'ticket-1',
       title: 'Broken VPN',
     } as any);
@@ -315,8 +329,10 @@ describe('teamsActionRegistry', () => {
         },
         {
           type: 'psa',
+          // When package metadata supplies a baseUrl the PSA fallback link is now
+          // absolute (relative only when no baseUrl is configured).
           label: 'Open in full PSA',
-          url: '/msp/tickets/ticket-1',
+          url: 'https://example.test/msp/tickets/ticket-1',
         },
       ]);
     }
@@ -347,29 +363,9 @@ describe('teamsActionRegistry', () => {
       },
     ];
 
-    createTenantKnexMock.mockResolvedValue({
-      knex: Object.assign(
-        vi.fn(() => {
-          const query = Promise.resolve(approvalRows) as any;
-          const builder = {
-            join: vi.fn().mockReturnThis(),
-            where: vi.fn().mockReturnThis(),
-            whereIn: vi.fn().mockReturnThis(),
-            select: vi.fn().mockReturnThis(),
-            orderBy: vi.fn().mockReturnThis(),
-            limit: vi.fn().mockReturnThis(),
-            distinct: vi.fn().mockReturnThis(),
-            then: query.then.bind(query),
-            catch: query.catch.bind(query),
-            finally: query.finally.bind(query),
-          };
-          return builder;
-        }),
-        {
-          ref: vi.fn((value: string) => value),
-        }
-      ),
-    });
+    // my_approvals now resolves through the shared listPendingApprovalsForTeams
+    // helper rather than a raw knex query in the registry.
+    teamsPsaDataMocks.listPendingApprovalsForTeams.mockResolvedValue(approvalRows as any);
 
     const result = await executeTeamsAction({
       actionId: 'my_approvals',
@@ -398,7 +394,7 @@ describe('teamsActionRegistry', () => {
           entityType: 'approval',
           links: [
             { type: 'teams_tab', label: 'Open in Teams tab', url: 'https://teams.test/bot-link' },
-            { type: 'psa', label: 'Open in full PSA', url: '/msp/time-sheet-approvals?approvalId=approval-1' },
+            { type: 'psa', label: 'Open in full PSA', url: 'https://example.test/msp/time-sheet-approvals?approvalId=approval-1' },
           ],
         }),
         expect.objectContaining({
@@ -439,7 +435,7 @@ describe('teamsActionRegistry', () => {
 
   it('wraps mutating ticket actions with central permission checks before calling PSA services', async () => {
     hasPermissionMock.mockResolvedValue(false);
-    const updateSpy = vi.spyOn(TicketService.prototype, 'update').mockResolvedValue({ ticket_id: 'ticket-1' } as any);
+    teamsPsaDataMocks.updateTeamsTicketAssignee.mockResolvedValue({ ticket_id: 'ticket-1' } as any);
 
     const result = await executeTeamsAction({
       actionId: 'assign_ticket',
@@ -461,12 +457,12 @@ describe('teamsActionRegistry', () => {
         code: 'forbidden',
       },
     });
-    expect(updateSpy).not.toHaveBeenCalled();
+    expect(teamsPsaDataMocks.updateTeamsTicketAssignee).not.toHaveBeenCalled();
   });
 
   it('passes optional Teams message metadata through shared ticket note and reply mutations', async () => {
-    const addCommentSpy = vi.spyOn(TicketService.prototype, 'addComment').mockResolvedValue({ comment_id: 'comment-1' } as any);
-    vi.spyOn(TicketService.prototype, 'getById').mockResolvedValue({ ticket_id: 'ticket-1', title: 'Broken VPN' } as any);
+    teamsPsaDataMocks.addTeamsTicketComment.mockResolvedValue({ comment_id: 'comment-1' } as any);
+    teamsPsaDataMocks.resolveTeamsTicketByReference.mockResolvedValue({ ticket_id: 'ticket-1', title: 'Broken VPN' } as any);
 
     await executeTeamsAction({
       actionId: 'add_note',
@@ -504,38 +500,34 @@ describe('teamsActionRegistry', () => {
       },
     });
 
-    expect(addCommentSpy).toHaveBeenNthCalledWith(
-      1,
-      'ticket-1',
-      {
-        comment_text: 'Captured from Teams',
-        is_internal: true,
-        metadata: {
-          message_id: 'message-1',
-          link_to_message: 'https://teams.example.test/messages/1',
-        },
+    expect(teamsPsaDataMocks.addTeamsTicketComment).toHaveBeenNthCalledWith(1, {
+      ticketId: 'ticket-1',
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      commentText: 'Captured from Teams',
+      isInternal: true,
+      metadata: {
+        message_id: 'message-1',
+        link_to_message: 'https://teams.example.test/messages/1',
       },
-      expect.any(Object)
-    );
-    expect(addCommentSpy).toHaveBeenNthCalledWith(
-      2,
-      'ticket-1',
-      {
-        comment_text: 'Customer-ready reply from Teams',
-        is_internal: false,
-        metadata: {
-          message_id: 'message-2',
-          link_to_message: 'https://teams.example.test/messages/2',
-        },
+    });
+    expect(teamsPsaDataMocks.addTeamsTicketComment).toHaveBeenNthCalledWith(2, {
+      ticketId: 'ticket-1',
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      commentText: 'Customer-ready reply from Teams',
+      isInternal: false,
+      metadata: {
+        message_id: 'message-2',
+        link_to_message: 'https://teams.example.test/messages/2',
       },
-      expect.any(Object)
-    );
+    });
   });
 
   it('deduplicates repeated mutation submits by idempotency key so the underlying mutation only runs once', async () => {
-    const updateSpy = vi.spyOn(TicketService.prototype, 'update').mockResolvedValue({ ticket_id: 'ticket-1' } as any);
-    const addCommentSpy = vi.spyOn(TicketService.prototype, 'addComment').mockResolvedValue({ comment_id: 'comment-1' } as any);
-    vi.spyOn(TicketService.prototype, 'getById').mockResolvedValue({ ticket_id: 'ticket-1', title: 'Broken VPN' } as any);
+    teamsPsaDataMocks.updateTeamsTicketAssignee.mockResolvedValue({ ticket_id: 'ticket-1' } as any);
+    teamsPsaDataMocks.addTeamsTicketComment.mockResolvedValue({ comment_id: 'comment-1' } as any);
+    teamsPsaDataMocks.resolveTeamsTicketByReference.mockResolvedValue({ ticket_id: 'ticket-1', title: 'Broken VPN' } as any);
 
     const request = {
       actionId: 'assign_ticket' as const,
@@ -558,8 +550,8 @@ describe('teamsActionRegistry', () => {
 
     expect(first.success).toBe(true);
     expect(second.success).toBe(true);
-    expect(updateSpy).toHaveBeenCalledTimes(1);
-    expect(addCommentSpy).toHaveBeenCalledTimes(1);
+    expect(teamsPsaDataMocks.updateTeamsTicketAssignee).toHaveBeenCalledTimes(1);
+    expect(teamsPsaDataMocks.addTeamsTicketComment).toHaveBeenCalledTimes(1);
     expect(second.metadata.idempotentReplay).toBe(true);
   });
 
@@ -570,7 +562,7 @@ describe('teamsActionRegistry', () => {
         packageMetadata: null,
       })
     );
-    vi.spyOn(TicketService.prototype, 'getById').mockResolvedValue({ ticket_id: 'ticket-1' } as any);
+    teamsPsaDataMocks.resolveTeamsTicketByReference.mockResolvedValue({ ticket_id: 'ticket-1' } as any);
 
     const result = await executeTeamsAction({
       actionId: 'open_record',
@@ -603,13 +595,13 @@ describe('teamsActionRegistry', () => {
   });
 
   it('reuses the existing time-entry and approval services for Teams mutations', async () => {
-    const createSpy = vi.spyOn(TimeEntryService.prototype, 'create').mockResolvedValue({
+    teamsPsaDataMocks.createTeamsTimeEntry.mockResolvedValue({
       entry_id: 'entry-1',
       project_id: 'project-8',
     } as any);
-    const approvalSpy = vi.spyOn(TimeSheetService.prototype, 'requestChanges').mockResolvedValue({ id: 'approval-1' } as any);
-    vi.spyOn(ProjectService.prototype, 'getTaskById').mockResolvedValue({ task_id: 'task-9', project_id: 'project-8' } as any);
-    vi.spyOn(TimeSheetService.prototype, 'getById').mockResolvedValue({ id: 'approval-1' } as any);
+    teamsPsaDataMocks.requestChangesForTeamsTimeSheet.mockResolvedValue({ id: 'approval-1' } as any);
+    teamsPsaDataMocks.getTeamsProjectTaskById.mockResolvedValue({ task_id: 'task-9', project_id: 'project-8' } as any);
+    teamsPsaDataMocks.getTeamsApprovalById.mockResolvedValue({ id: 'approval-1' } as any);
 
     const logTime = await executeTeamsAction({
       actionId: 'log_time',
@@ -629,14 +621,15 @@ describe('teamsActionRegistry', () => {
     });
 
     expect(logTime.success).toBe(true);
-    expect(createSpy).toHaveBeenCalledWith(
+    expect(teamsPsaDataMocks.createTeamsTimeEntry).toHaveBeenCalledWith(
       expect.objectContaining({
-        work_item_type: 'project_task',
-        work_item_id: 'task-9',
-        start_time: '2026-03-07T10:00:00.000Z',
-        end_time: '2026-03-07T10:30:00.000Z',
-      }),
-      expect.any(Object)
+        tenantId: 'tenant-1',
+        actorUserId: 'user-1',
+        workItemType: 'project_task',
+        workItemId: 'task-9',
+        startTime: '2026-03-07T10:00:00.000Z',
+        endTime: '2026-03-07T10:30:00.000Z',
+      })
     );
 
     const approval = await executeTeamsAction({
@@ -655,14 +648,13 @@ describe('teamsActionRegistry', () => {
     });
 
     expect(approval.success).toBe(true);
-    expect(approvalSpy).toHaveBeenCalledWith(
-      'approval-1',
-      {
-        change_reason: 'Please update the submitted notes',
-        detailed_feedback: 'Please update the submitted notes',
-      },
-      expect.any(Object)
-    );
+    expect(teamsPsaDataMocks.requestChangesForTeamsTimeSheet).toHaveBeenCalledWith({
+      approvalId: 'approval-1',
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      changeReason: 'Please update the submitted notes',
+      detailedFeedback: 'Please update the submitted notes',
+    });
   });
 
   it('marks actions unavailable when Teams is not active for the tenant', async () => {

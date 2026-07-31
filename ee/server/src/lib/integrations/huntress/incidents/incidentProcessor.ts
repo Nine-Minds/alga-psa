@@ -5,8 +5,9 @@
  */
 
 import { Knex } from 'knex';
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
+import { publishRmmTicketCreated } from '@alga-psa/shared/rmm/alerts';
 import type {
   HuntressAgent,
   HuntressIncidentReport,
@@ -48,11 +49,11 @@ export async function processIncident(
   deps: ProcessIncidentDeps
 ): Promise<ProcessIncidentResult> {
   const externalAlertId = String(incident.id);
+  const db = tenantDb(knex, tenantId);
 
   try {
-    const existingAlert = await knex('rmm_alerts')
+    const existingAlert = await db.table('rmm_alerts')
       .where({
-        tenant: tenantId,
         integration_id: integration.integration_id,
         external_alert_id: externalAlertId,
       })
@@ -60,9 +61,8 @@ export async function processIncident(
 
     let mapping =
       incident.organization_id != null
-        ? await knex('rmm_organization_mappings')
+        ? await db.table('rmm_organization_mappings')
             .where({
-              tenant: tenantId,
               integration_id: integration.integration_id,
               external_organization_id: String(incident.organization_id),
             })
@@ -76,7 +76,7 @@ export async function processIncident(
       const org = await deps
         .getOrganization(incident.organization_id)
         .catch(() => null);
-      const [inserted] = await knex('rmm_organization_mappings')
+      const [inserted] = await db.table('rmm_organization_mappings')
         .insert({
           tenant: tenantId,
           mapping_id: knex.raw('gen_random_uuid()'),
@@ -93,9 +93,8 @@ export async function processIncident(
         .returning('*');
       mapping =
         inserted ??
-        (await knex('rmm_organization_mappings')
+        (await db.table('rmm_organization_mappings')
           .where({
-            tenant: tenantId,
             integration_id: integration.integration_id,
             external_organization_id: String(incident.organization_id),
           })
@@ -148,14 +147,15 @@ export async function processIncident(
     };
 
     const ticketId = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const txDb = tenantDb(trx, tenantId);
       let alertId: string;
       if (existingAlert) {
         alertId = existingAlert.alert_id;
-        await trx('rmm_alerts')
-          .where({ tenant: tenantId, alert_id: alertId })
+        await txDb.table('rmm_alerts')
+          .where({ alert_id: alertId })
           .update(alertColumns);
       } else {
-        const [inserted] = await trx('rmm_alerts')
+        const [inserted] = await txDb.table('rmm_alerts')
           .insert({
             tenant: tenantId,
             integration_id: integration.integration_id,
@@ -183,11 +183,19 @@ export async function processIncident(
           note: buildCreationNote(incident),
           sourceReference: externalAlertId,
           assetId: matchedAssetId,
+          defaultContactId: action.unmapped ? null : mapping?.default_contact_id ?? null,
         });
 
-        await trx('rmm_alerts')
-          .where({ tenant: tenantId, alert_id: alertId })
+        await txDb.table('rmm_alerts')
+          .where({ alert_id: alertId })
           .update({ ticket_id: ticket.ticket_id, asset_id: matchedAssetId });
+
+        await publishRmmTicketCreated({
+          trx,
+          tenantId,
+          ticketId: ticket.ticket_id,
+          source: 'huntress',
+        });
 
         if (matchedAssetId && agent) {
           await upsertEntityMapping(trx, tenantId, incident, agent, matchedAssetId);
@@ -203,8 +211,8 @@ export async function processIncident(
           buildUpdateNote(action.previousStatus, incident)
         );
         if (action.close && integration.settings.closedStatusId) {
-          await trx('tickets')
-            .where({ tenant: tenantId, ticket_id: existingAlert.ticket_id })
+          await txDb.table('tickets')
+            .where({ ticket_id: existingAlert.ticket_id })
             .update({ status_id: integration.settings.closedStatusId, updated_at: now });
         }
         return existingAlert.ticket_id as string;
@@ -232,8 +240,8 @@ async function matchAsset(
   clientId: string,
   agent: HuntressAgent
 ): Promise<string | null> {
-  const candidates = await knex('assets')
-    .where({ tenant: tenantId, client_id: clientId })
+  const candidates = await tenantDb(knex, tenantId).table('assets')
+    .where({ client_id: clientId })
     .whereRaw('LOWER(name) = ?', [String(agent.hostname).toLowerCase()])
     .select('asset_id', 'serial_number');
 
@@ -252,15 +260,15 @@ async function upsertEntityMapping(
   agent: HuntressAgent,
   assetId: string
 ): Promise<void> {
-  const existing = await trx('tenant_external_entity_mappings')
+  const db = tenantDb(trx, tenantId);
+  const existing = await db.table('tenant_external_entity_mappings')
     .where({
-      tenant: tenantId,
       integration_type: 'huntress',
       external_entity_id: String(agent.id),
     })
     .first();
   if (existing) {
-    await trx('tenant_external_entity_mappings')
+    await db.table('tenant_external_entity_mappings')
       .where({ id: existing.id })
       .update({
         alga_entity_id: assetId,
@@ -270,7 +278,7 @@ async function upsertEntityMapping(
       });
     return;
   }
-  await trx('tenant_external_entity_mappings').insert({
+  await db.table('tenant_external_entity_mappings').insert({
     tenant: tenantId,
     integration_type: 'huntress',
     alga_entity_type: 'asset',

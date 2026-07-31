@@ -4,10 +4,6 @@ vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(async () => ({ id: 'user_1', tenant: 'tenant_1' })),
 }));
 
-vi.mock('server/src/lib/auth/rbac', () => ({
-  hasPermission: vi.fn(async () => true),
-}));
-
 vi.mock('server/src/lib/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} as any, tenant: 'tenant_1' })),
 }));
@@ -26,7 +22,7 @@ vi.mock('@alga-psa/workflows/runtime', async () => {
 });
 
 import { listWorkflowSchemaRefsAction } from '@alga-psa/workflows/actions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
+import { hasPermission } from '@alga-psa/auth';
 import { getSchemaRegistry } from '@alga-psa/workflows/runtime';
 
 describe('workflow schema registry actions', () => {

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { Client, Connection } from '@temporalio/client';
 import { Worker } from '@temporalio/worker';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import * as activities from '../../activities';
 import { tenantCreationWorkflow } from '../../workflows/tenant-creation-workflow';
@@ -108,29 +109,36 @@ async function setupTestDatabase(): Promise<TestDatabase> {
     async cleanup() {
       try {
         // Clean up test data - be careful to only clean test-created records
-        for (const userId of createdUsers) {
-          await db('user_preferences').where({ user_id: userId }).del();
-          await db('user_roles').where({ user_id: userId }).del();
+        for (const tenantId of createdTenants) {
+          const tenantScopedDb = tenantDb(db, tenantId);
+          for (const userId of createdUsers) {
+            await tenantScopedDb.table('user_preferences').where({ user_id: userId }).del();
+            await tenantScopedDb.table('user_roles').where({ user_id: userId }).del();
+          }
         }
         
         for (const tenantId of createdTenants) {
+          const tenantScopedDb = tenantDb(db, tenantId);
           // Clear references first
-          await db('clients').where({ tenant: tenantId }).update({ account_manager_id: null });
-          await db('user_roles').where({ tenant: tenantId }).del();
-          await db('tenant_companies').where({ tenant: tenantId }).del();
-          await db('clients').where({ tenant: tenantId }).del();
-          await db('client_contract_lines').where({ tenant: tenantId }).del();
-          await db('contract_lines').where({ tenant: tenantId }).del();
-          await db('statuses').where({ tenant: tenantId }).del();
-          await db('roles').where({ tenant: tenantId }).del();
+          await tenantScopedDb.table('clients').update({ account_manager_id: null });
+          await tenantScopedDb.table('user_roles').del();
+          await tenantScopedDb.table('tenant_companies').del();
+          await tenantScopedDb.table('clients').del();
+          await tenantScopedDb.table('client_contract_lines').del();
+          await tenantScopedDb.table('contract_lines').del();
+          await tenantScopedDb.table('statuses').del();
+          await tenantScopedDb.table('roles').del();
         }
         
         // Remove users and tenants
-        for (const userId of createdUsers) {
-          await db('users').where({ user_id: userId }).del();
+        for (const tenantId of createdTenants) {
+          const tenantScopedDb = tenantDb(db, tenantId);
+          for (const userId of createdUsers) {
+            await tenantScopedDb.table('users').where({ user_id: userId }).del();
+          }
         }
         for (const tenantId of createdTenants) {
-          await db('tenants').where({ tenant: tenantId }).del();
+          await tenantDb(db, tenantId).table('tenants').del();
         }
       } catch (error) {
         console.error('Cleanup error:', error);
@@ -141,33 +149,33 @@ async function setupTestDatabase(): Promise<TestDatabase> {
     
     async getTenant(tenantId: string) {
       createdTenants.push(tenantId);
-      return await db('tenants').where({ tenant: tenantId }).first();
+      return await tenantDb(db, tenantId).table('tenants').first();
     },
     
     async getUserById(userId: string, tenantId: string) {
       createdUsers.push(userId);
-      return await db('users').where({ user_id: userId, tenant: tenantId }).first();
+      return await tenantDb(db, tenantId).table('users').where({ user_id: userId }).first();
     },
     
     async getUserRoles(userId: string, tenantId: string) {
-      return await db('user_roles as ur')
-        .join('roles as r', (join) => {
-          join.on('ur.role_id', 'r.role_id').andOn('ur.tenant', 'r.tenant');
-        })
-        .where({ 'ur.user_id': userId, 'ur.tenant': tenantId })
+      const tenantScopedDb = tenantDb(db, tenantId);
+      const query = tenantScopedDb.table('user_roles as ur');
+      tenantScopedDb.tenantJoin(query, 'roles as r', 'ur.role_id', 'r.role_id');
+      return await query
+        .where({ 'ur.user_id': userId })
         .select('r.*', 'ur.*');
     },
     
     async getClientsForTenant(tenantId: string) {
-      return await db('clients').where({ tenant: tenantId }).select('*');
+      return await tenantDb(db, tenantId).table('clients').select('*');
     },
     
     async getRolesForTenant(tenantId: string) {
-      return await db('roles').where({ tenant: tenantId }).select('*');
+      return await tenantDb(db, tenantId).table('roles').select('*');
     },
     
     async getStatusesForTenant(tenantId: string) {
-      return await db('statuses').where({ tenant: tenantId }).select('*');
+      return await tenantDb(db, tenantId).table('statuses').select('*');
     }
   };
 }

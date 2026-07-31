@@ -4,8 +4,12 @@ on:
   pull_request:
     paths:
       - 'server/public/locales/**'
+      - 'packages/**'
+      - 'server/src/**'
+      - 'ee/server/src/**'
       - 'scripts/validate-translations.cjs'
       - 'scripts/generate-pseudo-locales.cjs'
+      - 'scripts/find-missing-i18n-keys.cjs'
 
 jobs:
   validate:
@@ -23,3 +27,19 @@ jobs:
 
       - name: Validate translation keys
         run: node scripts/validate-translations.cjs
+
+  find-missing-keys:
+    name: Missing locale keys
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Scan components for unresolved i18n keys
+        run: node scripts/find-missing-i18n-keys.cjs

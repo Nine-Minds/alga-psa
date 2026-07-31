@@ -101,7 +101,8 @@
     "selection": {
       "selectAllVisibleAssets": "55555",
       "selectAsset": "55555 {{name}} 55555",
-      "selectedAssets": "55555 {{count}} 55555 {{suffix}} 55555",
+      "selectedAssets_one": "55555 {{count}} 55555",
+      "selectedAssets_other": "55555 {{count}} 55555",
       "clearSelection": "55555",
       "bulkActionsComingSoon": "55555"
     },
@@ -121,7 +122,9 @@
       "agent": "55555",
       "client": "55555",
       "location": "55555",
-      "actions": "55555"
+      "actions": "55555",
+      "patching": "55555",
+      "coverage": "55555"
     },
     "metrics": {
       "totalAssets": {
@@ -216,6 +219,49 @@
         "title": "55555",
         "description": "55555"
       }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "55555",
+        "delete": "55555",
+        "selectedCount": "55555 {{count}} 55555",
+        "setLocation": "55555",
+        "setStatus": "55555"
+      },
+      "actions": {
+        "apply": "55555",
+        "applying": "55555",
+        "deleteAssets": "55555",
+        "deleting": "55555",
+        "updateLocation": "55555",
+        "updateStatus": "55555"
+      },
+      "deleteDialog": {
+        "description": "55555 {{count}} 55555",
+        "title": "55555"
+      },
+      "errors": {
+        "deleteFailed": "55555",
+        "updateLocationFailed": "55555",
+        "updateStatusFailed": "55555"
+      },
+      "locationDialog": {
+        "clearLocation": "55555",
+        "customLocation": "55555",
+        "customPlaceholder": "55555",
+        "description": "55555 {{count}} 55555",
+        "loadingLocations": "55555",
+        "savedDisabled": "55555",
+        "savedLocation": "55555",
+        "selectLocation": "55555",
+        "title": "55555"
+      },
+      "partialFailure": "55555 {{action}} 55555 {{succeeded}} 55555 {{failed}} 55555",
+      "statusDialog": {
+        "description": "55555 {{count}} 55555",
+        "title": "55555"
+      },
+      "success": "55555 {{action}} 55555 {{count}} 55555"
     }
   },
   "assetDashboardGrid": {
@@ -341,9 +387,12 @@
     },
     "relative": {
       "momentsAgo": "55555",
-      "minutesAgo": "55555 {{count}} 55555 {{suffix}} 55555",
-      "hoursAgo": "55555 {{count}} 55555 {{suffix}} 55555",
-      "daysAgo": "55555 {{count}} 55555 {{suffix}} 55555"
+      "minutesAgo_one": "55555 {{count}} 55555",
+      "minutesAgo_other": "55555 {{count}} 55555",
+      "hoursAgo_one": "55555 {{count}} 55555",
+      "hoursAgo_other": "55555 {{count}} 55555",
+      "daysAgo_one": "55555 {{count}} 55555",
+      "daysAgo_other": "55555 {{count}} 55555"
     }
   },
   "assetDetailHeader": {
@@ -373,7 +422,7 @@
       "maintenance": "55555",
       "relatedAssets": "55555",
       "documentsPasswords": "55555",
-      "auditLog": "55555"
+      "timeline": "55555"
     }
   },
   "assetDetailView": {
@@ -501,7 +550,8 @@
       "loadFailed": "55555",
       "clientsLoadFailed": "55555",
       "locationsLoadFailed": "55555",
-      "updateFailed": "55555"
+      "updateFailed": "55555",
+      "validation": "55555"
     },
     "actions": {
       "viewClient": "55555",
@@ -553,7 +603,8 @@
       "serialNumber": "55555",
       "status": "55555",
       "purchaseDate": "55555",
-      "warrantyEndDate": "55555"
+      "warrantyEndDate": "55555",
+      "assetType": "55555"
     },
     "placeholders": {
       "loadingClients": "55555",
@@ -596,7 +647,8 @@
       "networkDevice": "55555",
       "server": "55555",
       "mobileDevice": "55555",
-      "printer": "55555"
+      "printer": "55555",
+      "custom": "55555 {{typeName}} 55555"
     }
   },
   "assetFormClient": {
@@ -707,7 +759,8 @@
     "actions": {
       "addAsset": "55555",
       "showLess": "55555",
-      "moreAssets": "55555 {{count}} 55555 {{suffix}} 55555"
+      "moreAssets_one": "55555 {{count}} 55555",
+      "moreAssets_other": "55555 {{count}} 55555"
     },
     "errors": {
       "loadAvailableAssets": "55555",
@@ -719,8 +772,10 @@
       "removeFailed": "55555"
     },
     "success": {
-      "associated": "55555 {{count}} 55555 {{suffix}} 55555",
-      "associatedPartial": "55555 {{count}} 55555 {{suffix}} 55555 {{failed}} 55555",
+      "associated_one": "55555 {{count}} 55555",
+      "associated_other": "55555 {{count}} 55555",
+      "associatedPartial_one": "55555 {{count}} 55555 {{failed}} 55555",
+      "associatedPartial_other": "55555 {{count}} 55555 {{failed}} 55555",
       "removed": "55555"
     },
     "empty": {
@@ -743,7 +798,8 @@
         "placeholder": "55555"
       },
       "actions": {
-        "addAssets": "55555 {{suffix}} 55555"
+        "addAssets_one": "55555",
+        "addAssets_other": "55555"
       }
     },
     "table": {
@@ -853,7 +909,9 @@
       "assetTagRequired": "55555",
       "typeRequired": "55555",
       "status": "55555",
-      "serialNumber": "55555"
+      "serialNumber": "55555",
+      "customLocationOption": "55555",
+      "location": "55555"
     },
     "placeholders": {
       "workstationOsType": "55555",
@@ -869,7 +927,11 @@
       "assetTag": "55555",
       "selectType": "55555",
       "selectStatus": "55555",
-      "serialNumber": "55555"
+      "serialNumber": "55555",
+      "customLocation": "55555",
+      "loadingLocations": "55555",
+      "selectClientFirst": "55555",
+      "selectLocation": "55555"
     },
     "sections": {
       "typeSpecificDetails": "55555"
@@ -884,7 +946,8 @@
       "network_device": "55555",
       "server": "55555",
       "mobile_device": "55555",
-      "printer": "55555"
+      "printer": "55555",
+      "unknown": "55555"
     },
     "networkDeviceTypes": {
       "switch": "55555",
@@ -943,7 +1006,8 @@
     "description": "55555",
     "errors": {
       "loadTitle": "55555",
-      "unknown": "55555"
+      "unknown": "55555",
+      "loadDescription": "55555"
     },
     "lastUpdated": "55555 {{value}} 55555"
   },
@@ -966,6 +1030,10 @@
     "empty": "55555",
     "emptyStorage": "55555"
   },
+  "huduDocumentationCard": {
+    "title": "55555",
+    "syncedAt": "55555 {{value}} 55555"
+  },
   "rmmVitalsPanel": {
     "title": "55555",
     "description": "55555",
@@ -979,7 +1047,8 @@
       "uptime": "55555",
       "lastSync": "55555",
       "network": "55555",
-      "networkValue": "55555 {{lan}} 55555 {{wan}} 55555"
+      "networkValue": "55555 {{lan}} 55555 {{wan}} 55555",
+      "taniumCriticality": "55555"
     },
     "values": {
       "never": "55555"
@@ -1046,17 +1115,6 @@
   "utilizationBar": {
     "title": "55555",
     "description": "55555"
-  },
-  "auditLogTab": {
-    "title": "55555",
-    "description": "55555",
-    "changedBy": "55555 {{name}} 55555",
-    "userFallback": "55555 {{id}} 55555",
-    "empty": "55555",
-    "changeTypes": {
-      "created": "55555",
-      "updated": "55555"
-    }
   },
   "createMaintenanceScheduleDialog": {
     "title": "55555",
@@ -1136,13 +1194,19 @@
       "actions": "55555"
     },
     "frequency": {
-      "every": "55555 {{count}} 55555 {{frequency}} 55555 {{suffix}} 55555",
+      "every_one": "55555 {{frequency}} 55555",
+      "every_other": "55555 {{count}} 55555 {{frequency}} 55555",
       "units": {
-        "daily": "55555",
-        "weekly": "55555",
-        "monthly": "55555",
-        "quarterly": "55555",
-        "yearly": "55555"
+        "daily_one": "55555",
+        "daily_other": "55555",
+        "weekly_one": "55555",
+        "weekly_other": "55555",
+        "monthly_one": "55555",
+        "monthly_other": "55555",
+        "quarterly_one": "55555",
+        "quarterly_other": "55555",
+        "yearly_one": "55555",
+        "yearly_other": "55555"
       }
     },
     "status": {
@@ -1278,5 +1342,153 @@
     "activeAlerts": "55555",
     "acknowledge": "55555",
     "createTicket": "55555"
+  },
+  "actions": {
+    "print": "55555",
+    "printOptions": "55555",
+    "printSelected": "55555 {{count}} 55555"
+  },
+  "crossFeature": {
+    "loadTicketFailed": "55555",
+    "openTicketFailed": "55555"
+  },
+  "assetTypeBreakdown": {
+    "title": "55555"
+  },
+  "customTypeDetailsPanel": {
+    "title": "55555 {{name}} 55555",
+    "values": {
+      "yes": "55555",
+      "no": "55555"
+    }
+  },
+  "assetBento": {
+    "health": "55555",
+    "security": "55555",
+    "openTickets": "55555",
+    "warranty": "55555",
+    "identity": "55555",
+    "tag": "55555",
+    "serial": "55555",
+    "status": "55555",
+    "location": "55555",
+    "purchased": "55555",
+    "warrantyEnds": "55555",
+    "hardware": "55555",
+    "os": "55555",
+    "cpu": "55555",
+    "cores": "55555",
+    "ram": "55555",
+    "ip": "55555",
+    "noHardware": "55555",
+    "notes": "55555",
+    "liveVitals": "55555",
+    "checkedIn": "55555",
+    "neverCheckedIn": "55555",
+    "memory": "55555",
+    "disk": "55555",
+    "uptime": "55555",
+    "signedIn": "55555",
+    "securityTitle": "55555",
+    "antivirus": "55555",
+    "pendingPatches": "55555",
+    "failedPatches": "55555",
+    "lastScan": "55555",
+    "agentVersion": "55555",
+    "noRelated": "55555",
+    "manage": "55555",
+    "reportedFacts": "55555",
+    "more": "55555",
+    "views": "55555",
+    "editAsset": "55555",
+    "viewAll": "55555",
+    "open": "55555",
+    "close": "55555",
+    "packagesReported": "55555 {{count}} 55555",
+    "noSoftware": "55555",
+    "noService": "55555",
+    "activeSchedules": "55555",
+    "compliance": "55555",
+    "lastDone": "55555",
+    "noMaintenance": "55555",
+    "docsHint": "55555"
+  },
+  "assetTimeline": {
+    "title": "55555",
+    "empty": "55555",
+    "emptyLane": "55555 {{lane}} 55555",
+    "moreEvents": "55555 {{shown}} 55555 {{total}} 55555",
+    "lanes": {
+      "all": "55555",
+      "service": "55555",
+      "changes": "55555",
+      "maintenance": "55555",
+      "system": "55555"
+    },
+    "events": {
+      "maintenancePerformed": "55555",
+      "lastReboot": "55555",
+      "patchScan": "55555",
+      "patchScanDetail": "55555 {{pending}} 55555 {{failed}} 55555",
+      "purchased": "55555"
+    },
+    "changeTypes": {
+      "created": "55555",
+      "updated": "55555",
+      "status_change": "55555",
+      "location_change": "55555",
+      "rmm_linked": "55555",
+      "hardware_upgrade": "55555",
+      "warranty_updated": "55555"
+    }
+  },
+  "assetSignals": {
+    "warranty": {
+      "daysLeft": "55555 {{count}} 55555",
+      "expiresToday": "55555",
+      "expiredAgo": "55555 {{count}} 55555"
+    },
+    "duration": {
+      "dayHour": "55555 {{days}} 55555 {{hours}} 55555",
+      "hourMinute": "55555 {{hours}} 55555 {{minutes}} 55555",
+      "minute": "55555 {{minutes}} 55555"
+    },
+    "age": {
+      "justNow": "55555",
+      "minutesAgo": "55555 {{count}} 55555",
+      "hoursAgo": "55555 {{count}} 55555",
+      "daysAgo": "55555 {{count}} 55555"
+    },
+    "patching": {
+      "failed": "55555 {{count}} 55555",
+      "pending": "55555 {{count}} 55555",
+      "upToDate": "55555"
+    }
+  },
+  "assetCells": {
+    "agent": {
+      "unmanaged": "55555",
+      "noAgent": "55555",
+      "seen": "55555 {{age}} 55555",
+      "neverSeen": "55555"
+    },
+    "agentStatus": {
+      "online": "55555",
+      "offline": "55555",
+      "overdue": "55555",
+      "unknown": "55555"
+    },
+    "patching": {
+      "scanned": "55555 {{age}} 55555",
+      "neverScanned": "55555"
+    },
+    "coverage": {
+      "noWarrantyDate": "55555"
+    },
+    "status": {
+      "active": "55555",
+      "inactive": "55555",
+      "maintenance": "55555"
+    }
   }
 }

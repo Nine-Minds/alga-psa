@@ -15,10 +15,11 @@ test('persistMaintenanceMetadata writes v1 manual update posture and app metadat
   fs.writeFileSync(releaseSelectionFile, JSON.stringify({
     selectedChannel: 'stable',
     selectedReleaseVersion: '1.2.3',
-    repoUrl: 'https://github.com/Nine-Minds/alga-psa',
-    repoBranch: 'main'
+    registryHost: 'ghcr.io',
+    repository: 'nine-minds/alga-appliance-release',
+    manifestDigest: 'sha256:release'
   }));
-  fs.writeFileSync(installStateFile, JSON.stringify({ status: 'update-complete', phase: 'github-release-source' }));
+  fs.writeFileSync(installStateFile, JSON.stringify({ status: 'update-complete', phase: 'registry-release-source' }));
   fs.writeFileSync(osReleaseFile, 'ID=ubuntu\nVERSION_ID="24.04"\nPRETTY_NAME="Ubuntu 24.04 LTS"\n');
 
   const result = persistMaintenanceMetadata({

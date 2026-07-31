@@ -12,6 +12,7 @@ function createTenantKnex(planByTenant: Record<string, string>) {
     if (table === 'stripe_subscriptions') {
       return {
         where: () => ({
+          whereIn: () => ({ first: async () => null }),
           first: async () => null,
         }),
       };
@@ -848,23 +849,27 @@ describe('StripeService tier pricing', () => {
       }
 
       if (table === 'stripe_subscriptions') {
+        const subscriptionRow = {
+          tenant: 'tenant-pro',
+          stripe_subscription_id: 'sub_db_pro',
+          stripe_subscription_external_id: 'sub_ext_pro',
+          stripe_subscription_item_id: 'si_pro_seat',
+          stripe_customer_id: 'cust_db_pro',
+          stripe_price_id: 'price_record_pro_seat',
+          status: 'active',
+          quantity: 5,
+          stripe_base_item_id: null,
+          stripe_base_price_id: null,
+          billing_interval: 'month',
+          metadata: {},
+          current_period_end: new Date('2026-04-26T00:00:00.000Z'),
+        };
         return {
           where: (criteria: Record<string, any>) => ({
-            first: async () => ({
-              tenant: 'tenant-pro',
-              stripe_subscription_id: 'sub_db_pro',
-              stripe_subscription_external_id: 'sub_ext_pro',
-              stripe_subscription_item_id: 'si_pro_seat',
-              stripe_customer_id: 'cust_db_pro',
-              stripe_price_id: 'price_record_pro_seat',
-              status: 'active',
-              quantity: 5,
-              stripe_base_item_id: null,
-              stripe_base_price_id: null,
-              billing_interval: 'month',
-              metadata: {},
-              current_period_end: new Date('2026-04-26T00:00:00.000Z'),
+            whereIn: (_column: string, _values: string[]) => ({
+              first: async () => subscriptionRow,
             }),
+            first: async () => subscriptionRow,
             update: async (values: Record<string, any>) => {
               subscriptionUpdates.push({ criteria, values });
               return 1;

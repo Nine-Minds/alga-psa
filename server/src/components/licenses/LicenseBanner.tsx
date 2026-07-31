@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRouter } from 'next/navigation';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
 import type { LicenseStatus } from '@/lib/actions/licenseManagementActions';
 
@@ -16,12 +18,19 @@ import type { LicenseStatus } from '@/lib/actions/licenseManagementActions';
  * TierContext so it remains accurate regardless of session freshness.
  */
 export default function LicenseBanner() {
+  const { t } = useTranslation('common');
   const router = useRouter();
   const [status, setStatus] = useState<LicenseStatus | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    getLicenseStatus().then(setStatus).catch(() => {});
+    getLicenseStatus()
+      .then((result) => {
+        if (!isActionPermissionError(result)) {
+          setStatus(result);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   if (!status?.selfHostMode || dismissed) return null;
@@ -35,25 +44,25 @@ export default function LicenseBanner() {
   switch (state) {
     case 'trial':
       if (daysRemaining !== null && daysRemaining <= 7) {
-        message = `Enterprise trial expires in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}. Enter a license key to keep Enterprise features.`;
+        message = t('licenseBanner.trialExpiresIn', { defaultValue: 'Pro trial expires in {{count}} days. Enter a license key to keep Pro features.', count: daysRemaining });
         urgency = 'warning';
       } else if (daysRemaining !== null) {
-        message = `Enterprise trial active — ${daysRemaining} days remaining.`;
+        message = t('licenseBanner.trialDaysRemaining', { defaultValue: 'Pro trial active — {{count}} days remaining.', count: daysRemaining });
         urgency = 'info';
       }
       break;
     case 'trial_available':
       // Fresh install, trial not yet used — invite, don't warn.
-      message = 'Running Essentials features. Start a free 30-day Enterprise trial to unlock all features.';
+      message = t('licenseBanner.trialAvailable', { defaultValue: 'Running Essentials features. Start a free 15-day Pro trial to unlock all features.' });
       urgency = 'info';
       break;
     case 'trial_expired':
-      message = 'Enterprise trial has expired. The install is now running Essentials features.';
+      message = t('licenseBanner.trialExpired', { defaultValue: 'Pro trial has expired. The install is now running Essentials features.' });
       urgency = 'warning';
       break;
     case 'licensed':
       if (daysRemaining !== null && daysRemaining <= 14) {
-        message = `License expires in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}. Renew to avoid service interruption.`;
+        message = t('licenseBanner.licenseExpiresIn', { defaultValue: 'License expires in {{count}} days. Renew to avoid service interruption.', count: daysRemaining });
         urgency = daysRemaining <= 3 ? 'error' : 'warning';
       }
       break;
@@ -68,7 +77,7 @@ export default function LicenseBanner() {
     case 'ce':
       // CE installs: only show if they haven't used their trial yet.
       if (!status.trialUsed) {
-        message = 'Running Essentials features. Start a free 30-day Enterprise trial to unlock all features.';
+        message = t('licenseBanner.trialAvailable', { defaultValue: 'Running Essentials features. Start a free 15-day Pro trial to unlock all features.' });
         urgency = 'info';
       }
       break;

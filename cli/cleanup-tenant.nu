@@ -373,12 +373,17 @@ def "main cleanup" [
         "asset_ticket_associations" "asset_document_associations" "asset_relationships"
         "asset_history" "asset_associations" "asset_software"
         "workstation_assets" "server_assets" "network_device_assets" "mobile_device_assets" "printer_assets"
+        # Asset type registry (RESTRICT FK to tenants; delete before tenants)
+        "asset_type_registry"
 
         # Software catalog
         "software_catalog"
 
         # RMM
         "rmm_alert_rules" "rmm_alerts" "rmm_organization_mappings" "rmm_integrations"
+
+        # Hudu integration (one connection row per tenant)
+        "hudu_integrations"
 
         # Survey
         "survey_responses" "survey_invitations" "survey_triggers" "survey_templates"
@@ -415,7 +420,7 @@ def "main cleanup" [
         "contract_line_preset_fixed_config" "contract_line_preset_services" "contract_line_presets"
 
         # Contract templates (must be deleted before contracts)
-        "contract_template_compare_view" "contract_template_line_defaults"
+        "contract_template_line_defaults"
         "contract_template_line_fixed_config" "contract_template_line_service_bucket_config"
         "contract_template_line_service_configuration" "contract_template_line_service_hourly_config"
         "contract_template_line_service_usage_config" "contract_template_line_services"
@@ -448,6 +453,13 @@ def "main cleanup" [
         # Contract Lines
         "contract_lines" "payment_methods"
         
+        # Marketing module (children first; campaigns/channels last)
+        "marketing_sequence_sends" "marketing_engagements" "social_post_targets"
+        "social_posts" "marketing_sequence_enrollments" "marketing_sequence_steps"
+        "marketing_sequences" "marketing_capture_forms" "marketing_content"
+        "marketing_contact_state" "marketing_suppressions" "marketing_channels"
+        "marketing_campaigns"
+
         # Interactions must come BEFORE tickets (tickets reference interactions in some cases)
         "interactions" "interaction_types"
         
@@ -638,11 +650,15 @@ def "main cleanup" [
     for table in $tables {
         # Check if table has tenant column
         let check_query = (
-            "SELECT column_name " +
-            "FROM information_schema.columns " +
-            "WHERE table_name = '" + $table + "' " +
-            "AND column_name IN ('tenant', 'tenant_id') " +
-            "AND table_schema = 'public' " +
+            "SELECT c.column_name " +
+            "FROM information_schema.columns c " +
+            "JOIN information_schema.tables t " +
+            "ON t.table_schema = c.table_schema AND t.table_name = c.table_name " +
+            "WHERE c.table_name = '" + $table + "' " +
+            "AND c.column_name IN ('tenant', 'tenant_id') " +
+            "AND c.table_schema = 'public' " +
+            "AND t.table_type = 'BASE TABLE' " +
+            "ORDER BY CASE c.column_name WHEN 'tenant' THEN 1 WHEN 'tenant_id' THEN 2 END " +
             "LIMIT 1"
         )
         

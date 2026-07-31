@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { hasPermission } from 'server/src/lib/auth/rbac';
 import {
   handleTeamsQuickActionActivity,
   handleTeamsQuickActionRequest,
@@ -14,6 +13,7 @@ const {
   createTenantKnexMock,
   hasPermissionMock,
   getTeamsRuntimeAvailabilityMock,
+  verifyTeamsBotRequestMock,
 } = vi.hoisted(() => ({
   resolveTeamsTenantContextMock: vi.fn(),
   resolveTeamsLinkedUserMock: vi.fn(),
@@ -23,6 +23,12 @@ const {
   createTenantKnexMock: vi.fn(),
   hasPermissionMock: vi.fn(),
   getTeamsRuntimeAvailabilityMock: vi.fn(),
+  verifyTeamsBotRequestMock: vi.fn(),
+}));
+
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/bot/teamsBotJwtVerifier', () => ({
+  verifyTeamsBotRequest: verifyTeamsBotRequestMock,
+  resetTeamsBotJwksCacheForTests: vi.fn(),
 }));
 
 vi.mock('@alga-psa/db', async (importOriginal) => {
@@ -34,24 +40,24 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
   };
 });
 
-vi.mock('server/src/lib/auth/rbac', () => ({
+vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: hasPermissionMock,
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/teams/resolveTeamsTenantContext', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/resolveTeamsTenantContext', () => ({
   resolveTeamsTenantContext: resolveTeamsTenantContextMock,
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/teams/resolveTeamsLinkedUser', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/resolveTeamsLinkedUser', () => ({
   resolveTeamsLinkedUser: resolveTeamsLinkedUserMock,
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/teams/actions/teamsActionRegistry', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/actions/teamsActionRegistry', () => ({
   executeTeamsAction: executeTeamsActionMock,
   listAvailableTeamsActions: listAvailableTeamsActionsMock,
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/teams/getTeamsRuntimeAvailability', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/getTeamsRuntimeAvailability', () => ({
   getTeamsRuntimeAvailability: (...args: unknown[]) => getTeamsRuntimeAvailabilityMock(...args),
 }));
 
@@ -126,6 +132,7 @@ describe('teamsQuickActionHandler', () => {
     getUserWithRolesMock.mockResolvedValue(buildUser());
     hasPermissionMock.mockResolvedValue(true);
     getTeamsRuntimeAvailabilityMock.mockResolvedValue(null);
+    verifyTeamsBotRequestMock.mockResolvedValue({ status: 'verified', payload: {} });
     listAvailableTeamsActionsMock.mockResolvedValue([
       {
         actionId: 'assign_ticket',
@@ -526,7 +533,7 @@ describe('teamsQuickActionHandler', () => {
     expect(response.status).toBe(400);
     expect(payload).toEqual({
       error: 'invalid_json',
-      message: 'The Teams quick-action request body must be valid JSON.',
+      message: 'The Teams request body must be valid JSON.',
     });
   });
 

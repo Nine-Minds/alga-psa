@@ -71,7 +71,7 @@
       "hints": "Conseils"
     },
     "hint": {
-      "body": "Continuez à taper pour effectuer une recherche dans la liste complète des actifs. Les billets et la recherche de clients arriveront ultérieurement.",
+      "body": "Continuez à taper pour effectuer une recherche dans la liste complète des actifs. Les tickets et la recherche de clients arriveront ultérieurement.",
       "badge": "À venir"
     },
     "values": {
@@ -101,7 +101,8 @@
     "selection": {
       "selectAllVisibleAssets": "Sélectionnez tous les éléments visibles",
       "selectAsset": "Sélectionnez l'élément {{name}}",
-      "selectedAssets": "{{count}} élément{{suffix}} sélectionné",
+      "selectedAssets_one": "{{count}} élément sélectionné",
+      "selectedAssets_other": "{{count}} éléments sélectionnés",
       "clearSelection": "Effacer la sélection",
       "bulkActionsComingSoon": "Actions groupées à venir"
     },
@@ -121,7 +122,9 @@
       "agent": "Agent",
       "client": "Client",
       "location": "Emplacement",
-      "actions": "Actes"
+      "actions": "Actes",
+      "patching": "Correctifs",
+      "coverage": "Couverture"
     },
     "metrics": {
       "totalAssets": {
@@ -216,6 +219,49 @@
         "title": "Options d'impression",
         "description": "Choisissez les colonnes à inclure lors de l'impression des actifs."
       }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "Effacer",
+        "delete": "Supprimer",
+        "selectedCount": "{{count}} sélectionné(s)",
+        "setLocation": "Définir l'emplacement",
+        "setStatus": "Définir le statut"
+      },
+      "actions": {
+        "apply": "Appliquer",
+        "applying": "Application...",
+        "deleteAssets": "Supprimer",
+        "deleting": "Suppression...",
+        "updateLocation": "Mise à jour de l'emplacement",
+        "updateStatus": "Mise à jour du statut"
+      },
+      "deleteDialog": {
+        "description": "Supprimer {{count}} actif(s) sélectionné(s). Les actifs ayant des dépendances peuvent être ignorés.",
+        "title": "Supprimer les actifs sélectionnés"
+      },
+      "errors": {
+        "deleteFailed": "Impossible de supprimer les actifs sélectionnés.",
+        "updateLocationFailed": "Impossible de mettre à jour les emplacements des actifs sélectionnés.",
+        "updateStatusFailed": "Impossible de mettre à jour les actifs sélectionnés."
+      },
+      "locationDialog": {
+        "clearLocation": "Effacer l'emplacement",
+        "customLocation": "Emplacement personnalisé",
+        "customPlaceholder": "Saisissez un emplacement ou une zone personnalisée",
+        "description": "Mettre à jour {{count}} actif(s) sélectionné(s).",
+        "loadingLocations": "Chargement des emplacements...",
+        "savedDisabled": "Les emplacements clients enregistrés ne sont disponibles que lorsque tous les actifs sélectionnés sont visibles et appartiennent à un seul client.",
+        "savedLocation": "Emplacement client enregistré",
+        "selectLocation": "Sélectionner un emplacement",
+        "title": "Définir l'emplacement des actifs"
+      },
+      "partialFailure": "{{action}} terminée pour {{succeeded}} actif(s) ; {{failed}} en échec.",
+      "statusDialog": {
+        "description": "Mettre à jour {{count}} actif(s) sélectionné(s).",
+        "title": "Définir le statut des actifs"
+      },
+      "success": "{{action}} terminée pour {{count}} actif(s)."
     }
   },
   "assetDashboardGrid": {
@@ -233,7 +279,7 @@
     "tabs": {
       "overview": "Aperçu",
       "maintenance": "Entretien",
-      "tickets": "Billets",
+      "tickets": "Tickets",
       "configuration": "Configuration",
       "documents": "Documents"
     },
@@ -283,7 +329,7 @@
       "linked": "Lié {{date}}",
       "client": "Client : {{name}}",
       "assignee": "Destinataire : {{name}}",
-      "openTicket": "Billet ouvert"
+      "openTicket": "Ticket ouvert"
     },
     "configuration": {
       "coreAttributes": "Attributs de base",
@@ -341,9 +387,12 @@
     },
     "relative": {
       "momentsAgo": "il y a quelques instants",
-      "minutesAgo": "Il y a {{count}} minute{{suffix}}",
-      "hoursAgo": "Il y a {{count}} heure{{suffix}}",
-      "daysAgo": "Il y a {{count}} jour{{suffix}}"
+      "minutesAgo_one": "Il y a {{count}} minute",
+      "minutesAgo_other": "Il y a {{count}} minutes",
+      "hoursAgo_one": "Il y a {{count}} heure",
+      "hoursAgo_other": "Il y a {{count}} heures",
+      "daysAgo_one": "Il y a {{count}} jour",
+      "daysAgo_other": "Il y a {{count}} jours"
     }
   },
   "assetDetailHeader": {
@@ -373,7 +422,7 @@
       "maintenance": "Entretien",
       "relatedAssets": "Actifs associés",
       "documentsPasswords": "Documents et mots de passe",
-      "auditLog": "Journal d'audit"
+      "timeline": "Chronologie"
     }
   },
   "assetDetailView": {
@@ -501,7 +550,8 @@
       "loadFailed": "Échec du chargement des détails de l'actif",
       "clientsLoadFailed": "Impossible de charger les clients",
       "locationsLoadFailed": "Impossible de charger les emplacements pour ce client",
-      "updateFailed": "Échec de la mise à jour de l'élément"
+      "updateFailed": "Échec de la mise à jour de l'élément",
+      "validation": "Veuillez corriger les champs mis en évidence avant d'enregistrer."
     },
     "actions": {
       "viewClient": "Afficher le client",
@@ -553,7 +603,8 @@
       "serialNumber": "Numéro de série",
       "status": "Statut",
       "purchaseDate": "Date d'achat",
-      "warrantyEndDate": "Date de fin de garantie"
+      "warrantyEndDate": "Date de fin de garantie",
+      "assetType": "Type"
     },
     "placeholders": {
       "loadingClients": "Chargement des clients…",
@@ -596,7 +647,8 @@
       "networkDevice": "Détails du périphérique réseau",
       "server": "Détails du serveur",
       "mobileDevice": "Détails de l'appareil mobile",
-      "printer": "Détails de l'imprimante"
+      "printer": "Détails de l'imprimante",
+      "custom": "Détails de {{typeName}}"
     }
   },
   "assetFormClient": {
@@ -609,7 +661,7 @@
     "description": "Cartes métriques et cumuls pour les tickets, la maintenance, la disponibilité et les indicateurs de santé des actifs",
     "labels": {
       "healthStatus": "État de santé",
-      "openTickets": "Billets ouverts",
+      "openTickets": "Tickets ouverts",
       "securityStatus": "Statut de sécurité",
       "warranty": "Garantie"
     },
@@ -707,7 +759,8 @@
     "actions": {
       "addAsset": "Ajouter un actif",
       "showLess": "Afficher moins",
-      "moreAssets": "{{count}} plus d'actif{{suffix}}"
+      "moreAssets_one": "{{count}} actif de plus",
+      "moreAssets_other": "{{count}} actifs de plus"
     },
     "errors": {
       "loadAvailableAssets": "Échec du chargement des ressources disponibles",
@@ -719,8 +772,10 @@
       "removeFailed": "Échec de la suppression de l'association d'éléments"
     },
     "success": {
-      "associated": "{{count}} actif{{suffix}} associé avec succès",
-      "associatedPartial": "{{count}} actif{{suffix}} associé avec succès, {{failed}} a échoué (peut-être déjà associé)",
+      "associated_one": "{{count}} actif associé avec succès",
+      "associated_other": "{{count}} actifs associés avec succès",
+      "associatedPartial_one": "{{count}} actif associé avec succès, {{failed}} en échec (peut-être déjà associé)",
+      "associatedPartial_other": "{{count}} actifs associés avec succès, {{failed}} en échec (peut-être déjà associés)",
       "removed": "Association d'éléments supprimée"
     },
     "empty": {
@@ -743,7 +798,8 @@
         "placeholder": "Taper..."
       },
       "actions": {
-        "addAssets": "Ajouter un actif{{suffix}}"
+        "addAssets_one": "Ajouter un actif",
+        "addAssets_other": "Ajouter des actifs"
       }
     },
     "table": {
@@ -785,12 +841,12 @@
     "fields": {
       "title": "Titre",
       "description": "Description",
-      "board": "Conseil",
+      "board": "Tableau",
       "status": "Statut",
       "priority": "Priorité"
     },
     "placeholders": {
-      "title": "Entrez le titre du billet",
+      "title": "Entrez le titre du ticket",
       "description": "Décrivez le problème...",
       "loadingBoards": "Chargement des planches...",
       "selectBoard": "Sélectionnez le tableau...",
@@ -853,7 +909,9 @@
       "assetTagRequired": "Étiquette d'actif *",
       "typeRequired": "Taper *",
       "status": "Statut",
-      "serialNumber": "Numéro de série"
+      "serialNumber": "Numéro de série",
+      "customLocationOption": "Emplacement personnalisé",
+      "location": "Emplacement"
     },
     "placeholders": {
       "workstationOsType": "par exemple, Windows, macOS, Linux",
@@ -869,7 +927,11 @@
       "assetTag": "Saisir le numéro d'actif",
       "selectType": "Sélectionnez le type",
       "selectStatus": "Sélectionnez le statut",
-      "serialNumber": "Entrez le numéro de série"
+      "serialNumber": "Entrez le numéro de série",
+      "customLocation": "Entrez un emplacement ou une zone personnalisée",
+      "loadingLocations": "Chargement des emplacements...",
+      "selectClientFirst": "Sélectionnez d'abord un client",
+      "selectLocation": "Sélectionnez un emplacement"
     },
     "sections": {
       "typeSpecificDetails": "Détails spécifiques au type"
@@ -884,7 +946,8 @@
       "network_device": "Périphérique réseau",
       "server": "Serveur",
       "mobile_device": "Appareil mobile",
-      "printer": "Imprimante"
+      "printer": "Imprimante",
+      "unknown": "Inconnu"
     },
     "networkDeviceTypes": {
       "switch": "Changer",
@@ -912,9 +975,9 @@
     },
     "relative": {
       "justNow": "Tout à l' heure",
-      "minutesAgo": "il y a {{count}} mois",
+      "minutesAgo": "il y a {{count}} min",
       "hoursAgo": "Il y a {{count}}h",
-      "daysAgo": "Il y a {{count}}d"
+      "daysAgo": "Il y a {{count}} j"
     }
   },
   "assetInfoPanel": {
@@ -939,11 +1002,12 @@
     }
   },
   "assetNotesPanel": {
-    "title": "Notes et informations rapides",
+    "title": "Notes",
     "description": "Panneau de notes en texte enrichi pour des notes spécifiques aux actifs et un contexte opérationnel rapide",
     "errors": {
       "loadTitle": "Les notes n'ont pas pu être chargées",
-      "unknown": "Erreur inconnue"
+      "unknown": "Erreur inconnue",
+      "loadDescription": "Could not load notes. Please try again."
     },
     "lastUpdated": "Dernière mise à jour : {{value}}"
   },
@@ -966,6 +1030,10 @@
     "empty": "Aucune donnée matérielle disponible",
     "emptyStorage": "Aucun lecteur de stockage détecté"
   },
+  "huduDocumentationCard": {
+    "title": "Documentation Hudu",
+    "syncedAt": "Dernière synchronisation depuis Hudu : {{value}}"
+  },
   "rmmVitalsPanel": {
     "title": "RMM Vitalités et connectivité",
     "description": "Panneau RMM Vitals pour les détails sur le rythme cardiaque, la surveillance et l'état des points finaux",
@@ -979,7 +1047,8 @@
       "uptime": "Temps de disponibilité",
       "lastSync": "Dernière synchronisation RMM",
       "network": "Réseau",
-      "networkValue": "LAN IP : {{lan}} | WAN IP : {{wan}}"
+      "networkValue": "LAN IP : {{lan}} | WAN IP : {{wan}}",
+      "taniumCriticality": "Criticité Tanium"
     },
     "values": {
       "never": "Jamais"
@@ -1046,17 +1115,6 @@
   "utilizationBar": {
     "title": "Barre d'utilisation",
     "description": "Composant de barre de progression partagé pour l'utilisation et les mesures d'actifs basées sur un pourcentage"
-  },
-  "auditLogTab": {
-    "title": "Journal d'audit",
-    "description": "Onglet Historique d'audit des actifs pour les événements de la chronologie et les modifications enregistrées",
-    "changedBy": "Modifié par {{name}}",
-    "userFallback": "utilisateur {{id}}",
-    "empty": "Aucun historique d'audit disponible.",
-    "changeTypes": {
-      "created": "Créé",
-      "updated": "Mis à jour"
-    }
   },
   "createMaintenanceScheduleDialog": {
     "title": "Créer un calendrier de maintenance",
@@ -1136,13 +1194,19 @@
       "actions": "Actes"
     },
     "frequency": {
-      "every": "Tous les {{count}} {{frequency}}{{suffix}}",
+      "every_one": "Chaque {{frequency}}",
+      "every_other": "Tous les {{count}} {{frequency}}",
       "units": {
-        "daily": "jour",
-        "weekly": "semaine",
-        "monthly": "mois",
-        "quarterly": "quart",
-        "yearly": "année"
+        "daily_one": "jour",
+        "daily_other": "jours",
+        "weekly_one": "semaine",
+        "weekly_other": "semaines",
+        "monthly_one": "mois",
+        "monthly_other": "mois",
+        "quarterly_one": "trimestre",
+        "quarterly_other": "trimestres",
+        "yearly_one": "année",
+        "yearly_other": "années"
       }
     },
     "status": {
@@ -1233,7 +1297,7 @@
       "createTicket": "Créer un ticket"
     },
     "table": {
-      "ticketId": "Identifiant du billet",
+      "ticketId": "Identifiant du ticket",
       "subject": "Sujet",
       "status": "Statut",
       "priority": "Priorité",
@@ -1278,5 +1342,153 @@
     "activeAlerts": "Alertes actives",
     "acknowledge": "Accuser réception",
     "createTicket": "Créer un ticket"
+  },
+  "actions": {
+    "print": "Imprimer",
+    "printOptions": "Options d'impression",
+    "printSelected": "Imprimer la sélection ({{count}})"
+  },
+  "crossFeature": {
+    "loadTicketFailed": "Échec du chargement du ticket",
+    "openTicketFailed": "Échec de l'ouverture du ticket"
+  },
+  "assetTypeBreakdown": {
+    "title": "Actifs par type"
+  },
+  "customTypeDetailsPanel": {
+    "title": "Détails de {{name}}",
+    "values": {
+      "yes": "Oui",
+      "no": "Non"
+    }
+  },
+  "assetBento": {
+    "health": "État",
+    "security": "Sécurité",
+    "openTickets": "Tickets ouverts",
+    "warranty": "Garantie",
+    "identity": "Identité",
+    "tag": "Étiquette",
+    "serial": "Numéro de série",
+    "status": "Statut",
+    "location": "Emplacement",
+    "purchased": "Acheté",
+    "warrantyEnds": "Fin de garantie",
+    "hardware": "Matériel",
+    "os": "Système d'exploitation",
+    "cpu": "Processeur",
+    "cores": "Cœurs",
+    "ram": "RAM",
+    "ip": "IP",
+    "noHardware": "Aucun détail matériel enregistré.",
+    "notes": "Notes",
+    "liveVitals": "Constantes en direct",
+    "checkedIn": "Dernier contact",
+    "neverCheckedIn": "Jamais contacté",
+    "memory": "Mémoire",
+    "disk": "Disque",
+    "uptime": "Temps de fonctionnement",
+    "signedIn": "Connecté",
+    "securityTitle": "Sécurité",
+    "antivirus": "Antivirus",
+    "pendingPatches": "Correctifs en attente",
+    "failedPatches": "Correctifs en échec",
+    "lastScan": "Dernière analyse",
+    "agentVersion": "Agent",
+    "noRelated": "Lié à aucun autre actif.",
+    "manage": "Gérer",
+    "reportedFacts": "Données remontées",
+    "more": "Tout le reste",
+    "views": "Vues de l'actif",
+    "editAsset": "Modifier l'actif",
+    "viewAll": "Tout afficher",
+    "open": "Ouvrir",
+    "close": "Fermer",
+    "packagesReported": "{{count}} paquets remontés",
+    "noSoftware": "Aucun inventaire logiciel remonté.",
+    "noService": "Aucun ticket ne référence cet actif.",
+    "activeSchedules": "Planifications actives",
+    "compliance": "Conformité",
+    "lastDone": "Dernière réalisée",
+    "noMaintenance": "Rien de planifié.",
+    "docsHint": "Pièces jointes et identifiants de cet actif."
+  },
+  "assetTimeline": {
+    "title": "Chronologie",
+    "empty": "Rien n'est encore enregistré pour cet actif.",
+    "emptyLane": "Aucun événement {{lane}} enregistré.",
+    "moreEvents": "Affichage de {{shown}} événements sur {{total}}.",
+    "lanes": {
+      "all": "Tout",
+      "service": "Service",
+      "changes": "Modifications",
+      "maintenance": "Entretien",
+      "system": "Système"
+    },
+    "events": {
+      "maintenancePerformed": "Entretien effectué",
+      "lastReboot": "Dernier redémarrage",
+      "patchScan": "Analyse des correctifs",
+      "patchScanDetail": "{{pending}} en attente, {{failed}} en échec",
+      "purchased": "Acheté"
+    },
+    "changeTypes": {
+      "created": "Créé",
+      "updated": "Mis à jour",
+      "status_change": "Statut modifié",
+      "location_change": "Emplacement modifié",
+      "rmm_linked": "RMM lié",
+      "hardware_upgrade": "Matériel mis à niveau",
+      "warranty_updated": "Garantie mise à jour"
+    }
+  },
+  "assetSignals": {
+    "warranty": {
+      "daysLeft": "{{count}} j restants",
+      "expiresToday": "expire aujourd'hui",
+      "expiredAgo": "expirée il y a {{count}} j"
+    },
+    "duration": {
+      "dayHour": "{{days}} j {{hours}} h",
+      "hourMinute": "{{hours}} h {{minutes}} min",
+      "minute": "{{minutes}} min"
+    },
+    "age": {
+      "justNow": "à l'instant",
+      "minutesAgo": "il y a {{count}} min",
+      "hoursAgo": "il y a {{count}} h",
+      "daysAgo": "il y a {{count}} j"
+    },
+    "patching": {
+      "failed": "{{count}} en échec",
+      "pending": "{{count}} en attente",
+      "upToDate": "à jour"
+    }
+  },
+  "assetCells": {
+    "agent": {
+      "unmanaged": "non géré",
+      "noAgent": "aucun agent RMM",
+      "seen": "vu {{age}}",
+      "neverSeen": "jamais vu"
+    },
+    "agentStatus": {
+      "online": "en ligne",
+      "offline": "hors ligne",
+      "overdue": "en retard",
+      "unknown": "inconnu"
+    },
+    "patching": {
+      "scanned": "analysé {{age}}",
+      "neverScanned": "jamais analysé"
+    },
+    "coverage": {
+      "noWarrantyDate": "aucune date de garantie"
+    },
+    "status": {
+      "active": "actif",
+      "inactive": "inactif",
+      "maintenance": "entretien"
+    }
   }
 }

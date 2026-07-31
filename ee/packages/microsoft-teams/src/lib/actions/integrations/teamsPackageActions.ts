@@ -1,7 +1,7 @@
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
 import { getTeamsAvailability, resolveTeamsAvailability } from '../../teams/teamsAvailability';
 import {
@@ -10,6 +10,7 @@ import {
 } from '../../teams/teamsDeepLinks';
 import type { TeamsAppPackageStatusResponse } from '../../teams/teamsContracts';
 import type { TeamsInstallStatus } from '../../teams/teamsShared';
+import { getTeamsManifestBotCommands } from '../../teams/bot/teamsBotCommands';
 
 interface TeamsIntegrationRow {
   tenant: string;
@@ -130,7 +131,7 @@ interface PersistedTeamsPackageMetadata {
 }
 
 const TEAMS_MANIFEST_VERSION = '1.24';
-const TEAMS_PACKAGE_VERSION = '1.0.1';
+const TEAMS_PACKAGE_VERSION = '1.1.0';
 
 function isClientPortalUser(user: any): boolean {
   return user?.user_type === 'client';
@@ -217,14 +218,9 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
         commandLists: [
           {
             scopes: ['personal', 'groupChat'],
-            commands: [
-              { title: 'my tickets', description: 'Show the technician work queue.' },
-              { title: 'ticket <id>', description: 'Open a specific ticket summary.' },
-              { title: 'assign ticket', description: 'Assign a ticket from Teams.' },
-              { title: 'add note', description: 'Append an internal note.' },
-              { title: 'reply to contact', description: 'Send a customer-facing reply.' },
-              { title: 'log time', description: 'Create a time entry.' },
-            ],
+            // Single source of truth: the same definitions the bot handler
+            // recognizes (Teams caps this list at 10 commands).
+            commands: getTeamsManifestBotCommands(),
           },
         ],
       },
@@ -296,12 +292,12 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
 }
 
 async function getTeamsIntegrationRow(knex: any, tenant: string): Promise<TeamsIntegrationRow | undefined> {
-  const row = await knex('teams_integrations').where({ tenant }).first();
+  const row = await tenantDb(knex, tenant).table<TeamsIntegrationRow>('teams_integrations').first();
   return row || undefined;
 }
 
 async function getMicrosoftProfileRow(knex: any, tenant: string, profileId: string): Promise<MicrosoftProfileRow | undefined> {
-  const row = await knex('microsoft_profiles').where({ tenant, profile_id: profileId }).first();
+  const row = await tenantDb(knex, tenant).table<MicrosoftProfileRow>('microsoft_profiles').where({ profile_id: profileId }).first();
   return row || undefined;
 }
 
@@ -372,8 +368,7 @@ export async function getTeamsAppPackageStatusImpl(
       webApplicationInfo: manifest.webApplicationInfo,
     };
 
-    await knex('teams_integrations')
-      .where({ tenant })
+    await tenantDb(knex, tenant).table('teams_integrations')
       .update({
         app_id: profile.client_id,
         bot_id: profile.client_id,

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { publishServiceRequestDefinition } from '../../lib/service-requests/definitionPublishing';
 import { saveServiceRequestDefinitionDraft } from '../../lib/service-requests/definitionManagement';
@@ -14,6 +15,15 @@ import { getVisiblePublishedServiceRequestDefinitionDetail } from '../../lib/ser
 
 describe('service request definition lifecycle', () => {
   let db: Knex;
+
+  function tenantTable(tenant: string, table: string) {
+    return tenantDb(db, tenant).table(table);
+  }
+
+  function tenantRows() {
+    return tenantDb(db, '__test_tenant_fixture__')
+      .unscoped('tenants', 'test fixture creates and removes tenant rows');
+  }
 
   beforeAll(async () => {
     db = await createTestDbConnection({ runSeeds: false });
@@ -29,13 +39,13 @@ describe('service request definition lifecycle', () => {
     const tenant = uuidv4();
     const definitionId = uuidv4();
 
-    await db('tenants').insert({
+    await tenantRows().insert({
       tenant,
       client_name: `Tenant ${tenant.slice(0, 8)}`,
       email: `tenant-${tenant.slice(0, 8)}@example.com`,
     });
 
-    await db('service_request_definitions').insert({
+    await tenantTable(tenant, 'service_request_definitions').insert({
       tenant,
       definition_id: definitionId,
       name: 'Access Request',
@@ -49,7 +59,7 @@ describe('service request definition lifecycle', () => {
       definitionId,
     });
 
-    await db('service_request_submissions').insert({
+    await tenantTable(tenant, 'service_request_submissions').insert({
       tenant,
       submission_id: uuidv4(),
       definition_id: definitionId,
@@ -65,10 +75,10 @@ describe('service request definition lifecycle', () => {
     const publishedAfterArchive = await listPublishedServiceRequestDefinitions(db, tenant);
     expect(publishedAfterArchive).toHaveLength(0);
 
-    const storedVersions = await db('service_request_definition_versions')
+    const storedVersions = await tenantTable(tenant, 'service_request_definition_versions')
       .where({ tenant, definition_id: definitionId })
       .count<{ count: string }[]>('* as count');
-    const storedSubmissions = await db('service_request_submissions')
+    const storedSubmissions = await tenantTable(tenant, 'service_request_submissions')
       .where({ tenant, definition_id: definitionId })
       .count<{ count: string }[]>('* as count');
 
@@ -80,13 +90,13 @@ describe('service request definition lifecycle', () => {
     const tenant = uuidv4();
     const definitionId = uuidv4();
 
-    await db('tenants').insert({
+    await tenantRows().insert({
       tenant,
       client_name: `Tenant ${tenant.slice(0, 8)}`,
       email: `tenant-${tenant.slice(0, 8)}@example.com`,
     });
 
-    await db('service_request_definitions').insert({
+    await tenantTable(tenant, 'service_request_definitions').insert({
       tenant,
       definition_id: definitionId,
       name: 'Archive / Unarchive Request',
@@ -109,7 +119,7 @@ describe('service request definition lifecycle', () => {
     await archiveServiceRequestDefinition(db, tenant, definitionId);
     await unarchiveServiceRequestDefinition(db, tenant, definitionId);
 
-    const definition = await db('service_request_definitions')
+    const definition = await tenantTable(tenant, 'service_request_definitions')
       .where({ tenant, definition_id: definitionId })
       .first('lifecycle_state', 'published_at', 'published_by');
 
@@ -127,13 +137,13 @@ describe('service request definition lifecycle', () => {
     const tenant = uuidv4();
     const definitionId = uuidv4();
 
-    await db('tenants').insert({
+    await tenantRows().insert({
       tenant,
       client_name: `Tenant ${tenant.slice(0, 8)}`,
       email: `tenant-${tenant.slice(0, 8)}@example.com`,
     });
 
-    await db('service_request_definitions').insert({
+    await tenantTable(tenant, 'service_request_definitions').insert({
       tenant,
       definition_id: definitionId,
       name: 'Hardware Request',
@@ -155,7 +165,7 @@ describe('service request definition lifecycle', () => {
 
     await createDraftFromLatestPublishedVersion(db, tenant, definitionId);
 
-    await db('service_request_definitions').where({ tenant, definition_id: definitionId }).update({
+    await tenantTable(tenant, 'service_request_definitions').where({ tenant, definition_id: definitionId }).update({
       name: 'Hardware Request (Revised)',
       execution_config: { boardId: 'hardware-priority' },
       updated_at: db.fn.now(),
@@ -167,7 +177,7 @@ describe('service request definition lifecycle', () => {
       definitionId,
     });
 
-    const versions = await db('service_request_definition_versions')
+    const versions = await tenantTable(tenant, 'service_request_definition_versions')
       .where({ tenant, definition_id: definitionId })
       .orderBy('version_number', 'asc')
       .select('version_number', 'name', 'execution_config');
@@ -194,13 +204,13 @@ describe('service request definition lifecycle', () => {
     const requesterUserId = uuidv4();
     const clientId = uuidv4();
 
-    await db('tenants').insert({
+    await tenantRows().insert({
       tenant,
       client_name: `Tenant ${tenant.slice(0, 8)}`,
       email: `tenant-${tenant.slice(0, 8)}@example.com`,
     });
 
-    await db('service_request_definitions').insert({
+    await tenantTable(tenant, 'service_request_definitions').insert({
       tenant,
       definition_id: definitionId,
       name: 'Account Access',

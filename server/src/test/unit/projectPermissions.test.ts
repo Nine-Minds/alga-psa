@@ -51,23 +51,34 @@ vi.mock('@alga-psa/projects/models/project', () => ({
   },
 }));
 
-// Mock the userActions with both required functions
-vi.mock('@alga-psa/users/actions', () => ({
+// Mock the user query actions with both required functions
+vi.mock('@alga-psa/user-composition/actions', () => ({
   getAllUsers: vi.fn().mockResolvedValue([]),
   findUserById: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('@alga-psa/auth', () => {
   const getCurrentUser = vi.fn();
+  const withAuth = (action: any) => async (...args: any[]) => {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('No authenticated user found');
+    }
+    return action(user, { tenant: user.tenant }, ...args);
+  };
+  const withOptionalAuth = (action: any) => async (...args: any[]) => {
+    const user = await getCurrentUser();
+    if (!user) {
+      return action(null, null, ...args);
+    }
+    return action(user, { tenant: user.tenant }, ...args);
+  };
   return {
     getCurrentUser,
-    withAuth: (action: any) => async (...args: any[]) => {
-      const user = await getCurrentUser();
-      if (!user) {
-        throw new Error('No authenticated user found');
-      }
-      return action(user, { tenant: user.tenant }, ...args);
-    },
+    getSession: vi.fn().mockResolvedValue(null),
+    withAuth,
+    withAuthCheck: withAuth,
+    withOptionalAuth,
   };
 });
 
@@ -113,15 +124,60 @@ vi.mock('@alga-psa/core', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: vi.fn().mockResolvedValue({
-    knex: {
-      transaction: vi.fn().mockImplementation((callback: any) => callback({})),
-    },
-    tenant: '550e8400-e29b-41d4-a716-446655440000'
-  }),
-  withTransaction: vi.fn().mockImplementation(async (knex, callback) => callback({})),
-}));
+vi.mock('@alga-psa/db', () => {
+  // Generic chainable, awaitable query-builder fake: every chained call
+  // returns the builder, awaiting it resolves to an empty result set. The
+  // authorization kernel path issues real-looking queries (team_members,
+  // user_roles, ...) through the trx, so the fake must be callable.
+  const makeBuilder = () => {
+    const builder: any = {};
+    const chainMethods = [
+      'where', 'andWhere', 'orWhere', 'whereIn', 'whereNotIn', 'whereNull', 'whereNotNull',
+      'select', 'distinct', 'join', 'leftJoin', 'innerJoin', 'orderBy', 'groupBy',
+      'limit', 'offset', 'returning', 'modify', 'forUpdate', 'andOn', 'on',
+    ];
+    for (const method of chainMethods) {
+      builder[method] = () => builder;
+    }
+    builder.first = () => Promise.resolve(undefined);
+    builder.pluck = () => Promise.resolve([]);
+    // count() now feeds either a direct await (resolves to the rows array) or a
+    // chained .first() (resolves to the single count row), so return a hybrid
+    // thenable rather than a bare Promise.
+    builder.count = () => ({
+      first: () => Promise.resolve({ count: '0' }),
+      then: (resolve: any, reject: any) => Promise.resolve([{ count: '0' }]).then(resolve, reject),
+      catch: (reject: any) => Promise.resolve([{ count: '0' }]).catch(reject),
+    });
+    builder.insert = () => Promise.resolve([]);
+    builder.update = () => Promise.resolve(0);
+    builder.del = () => Promise.resolve(0);
+    builder.delete = () => Promise.resolve(0);
+    builder.then = (resolve: any, reject: any) => Promise.resolve([]).then(resolve, reject);
+    builder.catch = (reject: any) => Promise.resolve([]).catch(reject);
+    return builder;
+  };
+
+  const fakeKnex: any = (_table: string) => makeBuilder();
+  fakeKnex.raw = () => Promise.resolve({ rows: [] });
+  fakeKnex.fn = { now: () => new Date() };
+  fakeKnex.transaction = (callback: any) => callback(fakeKnex);
+
+  return {
+    createTenantKnex: vi.fn().mockResolvedValue({
+      knex: fakeKnex,
+      tenant: '550e8400-e29b-41d4-a716-446655440000'
+    }),
+    requireTenantId: vi.fn().mockResolvedValue('550e8400-e29b-41d4-a716-446655440000'),
+    withTransaction: vi.fn().mockImplementation(async (_knex, callback) => callback(fakeKnex)),
+    tenantDb: (conn: any, _tenant: string) => ({
+      table: (t: string) => conn(t),
+      unscoped: (t: string) => conn(t),
+      tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+        o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+    }),
+  };
+});
 
 import { getCurrentUser } from '@alga-psa/auth';
 

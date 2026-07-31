@@ -2,9 +2,17 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import { TicketModel } from '@shared/models/ticketModel';
 import { TicketService } from '@/lib/api/services/TicketService';
+
+vi.mock('@alga-psa/formatting/avatarUtils', () => ({
+  getClientLogoUrl: vi.fn().mockResolvedValue(null),
+  getContactAvatarUrl: vi.fn().mockResolvedValue(null),
+  getUserAvatarUrl: vi.fn().mockResolvedValue(null),
+}));
 
 const HOOK_TIMEOUT = 180_000;
 
@@ -14,6 +22,7 @@ type ReadSurfaceFixture = {
   tenantId: string;
   userId: string;
   clientId: string;
+  contactId: string;
   boardAId: string;
   boardBId: string;
   boardAStatusId: string;
@@ -34,15 +43,31 @@ function hasColumn(columns: ColumnInfoMap, columnName: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, columnName);
 }
 
+function tenantTable(tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function tenantRows() {
+  return tenantDb(db, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
+function schemaTable(table: string) {
+  return tenantDb(db, '__test_schema__')
+    .unscoped(table, 'columnInfo reads schema metadata, not tenant rows');
+}
+
 async function cleanupTenant(tenantId: string): Promise<void> {
-  await db('tickets').where({ tenant: tenantId }).del();
-  await db('next_number').where({ tenant: tenantId }).del();
-  await db('statuses').where({ tenant: tenantId }).del();
-  await db('priorities').where({ tenant: tenantId }).del();
-  await db('boards').where({ tenant: tenantId }).del();
-  await db('clients').where({ tenant: tenantId }).del();
-  await db('users').where({ tenant: tenantId }).del();
-  await db('tenants').where({ tenant: tenantId }).del();
+  await tenantTable(tenantId, 'tickets').del();
+  await tenantTable(tenantId, 'contact_phone_numbers').del();
+  await tenantTable(tenantId, 'contacts').del();
+  await tenantTable(tenantId, 'next_number').del();
+  await tenantTable(tenantId, 'statuses').del();
+  await tenantTable(tenantId, 'priorities').del();
+  await tenantTable(tenantId, 'boards').del();
+  await tenantTable(tenantId, 'clients').del();
+  await tenantTable(tenantId, 'users').del();
+  await tenantRows().where({ tenant: tenantId }).del();
 }
 
 async function createFixture(): Promise<ReadSurfaceFixture> {
@@ -57,7 +82,7 @@ async function createFixture(): Promise<ReadSurfaceFixture> {
 
   tenantsToCleanup.add(tenantId);
 
-  await db('tenants').insert({
+  await tenantRows().insert({
     tenant: tenantId,
     ...(hasColumn(tenantColumns, 'company_name')
       ? { company_name: `Tenant ${tenantId.slice(0, 8)}` }
@@ -67,7 +92,7 @@ async function createFixture(): Promise<ReadSurfaceFixture> {
     ...(hasColumn(tenantColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('users').insert({
+  await tenantTable(tenantId, 'users').insert({
     tenant: tenantId,
     user_id: userId,
     username: `user-${tenantId.slice(0, 8)}`,
@@ -78,7 +103,7 @@ async function createFixture(): Promise<ReadSurfaceFixture> {
     ...(hasColumn(userColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('clients').insert({
+  await tenantTable(tenantId, 'clients').insert({
     tenant: tenantId,
     client_id: clientId,
     client_name: `Client ${tenantId.slice(0, 8)}`,
@@ -89,7 +114,27 @@ async function createFixture(): Promise<ReadSurfaceFixture> {
     ...(hasColumn(clientColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('boards').insert([
+  const contact = await db.transaction((trx) => ContactModel.createContact({
+    full_name: 'Ticket Contact',
+    email: `contact-${tenantId.slice(0, 8)}@example.com`,
+    client_id: clientId,
+    phone_numbers: [
+      {
+        phone_number: '555-0200',
+        canonical_type: 'work',
+        is_default: true,
+        display_order: 0,
+      },
+      {
+        phone_number: '555-0201',
+        canonical_type: 'mobile',
+        is_default: false,
+        display_order: 1,
+      },
+    ],
+  }, tenantId, trx));
+
+  await tenantTable(tenantId, 'boards').insert([
     {
       tenant: tenantId,
       board_id: boardAId,
@@ -120,7 +165,7 @@ async function createFixture(): Promise<ReadSurfaceFixture> {
     },
   ]);
 
-  await db('priorities').insert({
+  await tenantTable(tenantId, 'priorities').insert({
     tenant: tenantId,
     priority_id: priorityId,
     priority_name: 'High',
@@ -133,7 +178,7 @@ async function createFixture(): Promise<ReadSurfaceFixture> {
     ...(hasColumn(priorityColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('statuses').insert([
+  await tenantTable(tenantId, 'statuses').insert([
     {
       tenant: tenantId,
       status_id: boardAStatusId,
@@ -172,6 +217,7 @@ async function createFixture(): Promise<ReadSurfaceFixture> {
     tenantId,
     userId,
     clientId,
+    contactId: contact.contact_name_id,
     boardAId,
     boardBId,
     boardAStatusId,
@@ -187,6 +233,7 @@ async function seedTickets(fixture: ReadSurfaceFixture): Promise<void> {
         title: 'Board A Search Ticket',
         description: 'Open board A ticket',
         client_id: fixture.clientId,
+        contact_id: fixture.contactId,
         board_id: fixture.boardAId,
         status_id: fixture.boardAStatusId,
         priority_id: fixture.priorityId,
@@ -237,12 +284,12 @@ describe('Ticket status read surfaces integration', () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     process.env.DB_PORT = process.env.DB_PORT || '5432';
     db = await createTestDbConnection({ runSeeds: false });
-    tenantColumns = await db('tenants').columnInfo();
-    userColumns = await db('users').columnInfo();
-    boardColumns = await db('boards').columnInfo();
-    clientColumns = await db('clients').columnInfo();
-    statusColumns = await db('statuses').columnInfo();
-    priorityColumns = await db('priorities').columnInfo();
+    tenantColumns = await schemaTable('tenants').columnInfo();
+    userColumns = await schemaTable('users').columnInfo();
+    boardColumns = await schemaTable('boards').columnInfo();
+    clientColumns = await schemaTable('clients').columnInfo();
+    statusColumns = await schemaTable('statuses').columnInfo();
+    priorityColumns = await schemaTable('priorities').columnInfo();
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {
@@ -329,5 +376,27 @@ describe('Ticket status read surfaces integration', () => {
     expect(Object.keys(stats.tickets_by_status)).toEqual(
       expect.arrayContaining([fixture.boardAStatusId, fixture.boardBStatusId])
     );
+  }, HOOK_TIMEOUT);
+
+  it('returns one ticket with the default phone when its contact has sibling phone rows', async () => {
+    const fixture = await createFixture();
+    await seedTickets(fixture);
+    const service = createService();
+    const ticket = await tenantTable(fixture.tenantId, 'tickets')
+      .where({ title: 'Board A Search Ticket' })
+      .first<{ ticket_id: string }>();
+    if (!ticket) {
+      throw new Error('Expected the ticket sibling-phone fixture to exist');
+    }
+
+    const result = await service.getById(ticket.ticket_id, {
+      tenant: fixture.tenantId,
+    } as any);
+
+    expect(result).toMatchObject({
+      ticket_id: ticket.ticket_id,
+      contact_name: 'Ticket Contact',
+      contact_phone: '555-0200',
+    });
   }, HOOK_TIMEOUT);
 });

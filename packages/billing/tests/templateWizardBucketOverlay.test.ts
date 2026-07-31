@@ -10,8 +10,18 @@ const createContractTemplateFromWizard = vi.fn(async () => ({ contract_id: 'temp
 const checkTemplateNameExists = vi.fn(async () => false);
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) =>
-    isOpen ? React.createElement('div', { 'data-testid': 'dialog' }, children) : null,
+  // The wizard renders WizardNavigation through the Dialog footer prop now,
+  // so the mock must render the footer alongside the children.
+  Dialog: ({
+    isOpen,
+    children,
+    footer,
+  }: {
+    isOpen: boolean;
+    children: React.ReactNode;
+    footer?: React.ReactNode;
+  }) =>
+    isOpen ? React.createElement('div', { 'data-testid': 'dialog' }, children, footer) : null,
 }));
 
 vi.mock('@alga-psa/ui/components/onboarding/WizardProgress', () => ({

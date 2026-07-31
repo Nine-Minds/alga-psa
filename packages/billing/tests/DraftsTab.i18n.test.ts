@@ -86,7 +86,7 @@ describe('DraftsTab i18n wiring contract', () => {
       'draftsTab.empty.title',
       'draftsTab.empty.description',
       'draftsTab.actions.generateInvoices',
-      'draftsTab.reverseDialog.title',
+      'draftsTab.reverseDialog.title_one',
       'draftsTab.reverseDialog.title_other',
       'draftsTab.reverseDialog.message_one',
       'draftsTab.reverseDialog.message_other',

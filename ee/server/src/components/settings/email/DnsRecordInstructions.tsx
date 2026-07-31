@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Copy, CheckCircle2, AlertTriangle, XCircle, Clock } from 'lucide-react';
+import { Copy, CheckCircle2, AlertTriangle, XCircle, Clock, Info } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -14,6 +14,7 @@ interface DnsRecordInstructionsProps {
   emptyMessage?: string;
   detections?: DnsLookupResult[];
   lastCheckedAt?: string | null;
+  domain?: string;
 }
 
 type DetectionStatus = 'matched' | 'mismatch' | 'missing' | 'unknown';
@@ -58,6 +59,23 @@ const formatTimestamp = (value?: string | null) => {
 const buildRecordKey = (record: DnsRecord) =>
   `${record.type}:${record.name}:${record.value ?? ''}`.toLowerCase();
 
+// Most DNS providers append the apex domain automatically, so the "host"
+// users should enter is the record name with the apex stripped (or `@` for the apex itself).
+const toHostLabel = (name: string, domain?: string): string => {
+  if (!domain) {
+    return name;
+  }
+  const lowerName = name.toLowerCase();
+  const lowerDomain = domain.toLowerCase();
+  if (lowerName === lowerDomain) {
+    return '@';
+  }
+  if (lowerName.endsWith(`.${lowerDomain}`)) {
+    return name.slice(0, name.length - domain.length - 1);
+  }
+  return name;
+};
+
 function getDetectionStatus(record: DnsRecord, detection?: DnsLookupResult): DetectionStatus {
   if (!detection) {
     return 'unknown';
@@ -69,6 +87,47 @@ function getDetectionStatus(record: DnsRecord, detection?: DnsLookupResult): Det
     return 'missing';
   }
   return 'mismatch';
+}
+
+function CopyField({
+  label,
+  value,
+  onCopy,
+  ariaLabel,
+  buttonId,
+  automationId,
+  muted,
+}: {
+  label: string;
+  value: string;
+  onCopy: (value: string) => void;
+  ariaLabel: string;
+  buttonId: string;
+  automationId?: string;
+  muted?: boolean;
+}) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-gray-500">{label}</Label>
+      <div className="flex items-start gap-2">
+        <code
+          className={`flex-1 break-all rounded bg-gray-100 px-2 py-1 text-xs ${muted ? 'text-gray-500' : 'text-gray-800'}`}
+        >
+          {value}
+        </code>
+        <Button
+          id={buttonId}
+          variant="ghost"
+          size="sm"
+          onClick={() => onCopy(value)}
+          aria-label={ariaLabel}
+          data-automation-id={automationId}
+        >
+          <Copy className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 function DetectedValues({ values }: { values: string[] }) {
@@ -91,7 +150,7 @@ function DetectedValues({ values }: { values: string[] }) {
   );
 }
 
-export default function DnsRecordInstructions({ records, emptyMessage, detections, lastCheckedAt }: DnsRecordInstructionsProps) {
+export default function DnsRecordInstructions({ records, emptyMessage, detections, lastCheckedAt, domain }: DnsRecordInstructionsProps) {
   const { t } = useTranslation('msp/email-providers');
 
   if (!records || records.length === 0) {
@@ -131,7 +190,15 @@ export default function DnsRecordInstructions({ records, emptyMessage, detection
         <div className="text-xs text-gray-500">{t('managed.dnsRecords.lastCheckedNoRecords', { checkedAt: lastCheckedReadable })}</div>
       ) : null}
 
+      {domain ? (
+        <div className="flex gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
+          <Info className="h-4 w-4 shrink-0 mt-0.5" />
+          <p>{t('managed.dnsRecords.hostHint', { domain })}</p>
+        </div>
+      ) : null}
+
       {records.map((record, index) => {
+        const host = toHostLabel(record.name, domain);
         const detection = detectionMap.get(buildRecordKey(record));
         const status = getDetectionStatus(record, detection);
         const statusStyle = STATUS_STYLES[status];
@@ -144,26 +211,40 @@ export default function DnsRecordInstructions({ records, emptyMessage, detection
             data-record-type={record.type}
             data-dns-status={status}
           >
-            <CardContent className="py-4 space-y-2">
+            <CardContent className="py-4 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold uppercase text-gray-500">{record.type}</span>
-                  <span className="text-sm text-gray-700">{record.name}</span>
-                </div>
-              <Button
-                id={`managed-domain-dns-copy-${record.type}-${index}`}
-                variant="ghost"
-                size="sm"
-                onClick={() => handleCopy(record.value)}
-                aria-label={t('managed.dnsRecords.copyAriaLabel')}
-                data-automation-id="managed-domain-copy-dns"
-              >
-                <Copy className="h-4 w-4 mr-2" />
-                {t('managed.dnsRecords.copyButton')}
-              </Button>
-            </div>
+                <span className="text-xs font-semibold uppercase text-gray-500">{record.type}</span>
+              </div>
 
-            <div className="text-sm text-gray-800 break-all">{record.value}</div>
+              <CopyField
+                label={t('managed.dnsRecords.hostLabel')}
+                value={host}
+                onCopy={handleCopy}
+                ariaLabel={t('managed.dnsRecords.copyHostAriaLabel')}
+                buttonId={`managed-domain-dns-copy-host-${record.type}-${index}`}
+                automationId="managed-domain-copy-dns-host"
+              />
+
+              {host !== record.name ? (
+                <CopyField
+                  label={t('managed.dnsRecords.fqdnLabel')}
+                  value={record.name}
+                  onCopy={handleCopy}
+                  ariaLabel={t('managed.dnsRecords.copyFqdnAriaLabel')}
+                  buttonId={`managed-domain-dns-copy-fqdn-${record.type}-${index}`}
+                  automationId="managed-domain-copy-dns-fqdn"
+                  muted
+                />
+              ) : null}
+
+              <CopyField
+                label={t('managed.dnsRecords.valueLabel')}
+                value={record.value}
+                onCopy={handleCopy}
+                ariaLabel={t('managed.dnsRecords.copyAriaLabel')}
+                buttonId={`managed-domain-dns-copy-${record.type}-${index}`}
+                automationId="managed-domain-copy-dns"
+              />
 
             <div className="flex flex-wrap gap-2 items-center">
               <span

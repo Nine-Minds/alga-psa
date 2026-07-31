@@ -1,4 +1,32 @@
 {
+  "clientNameCell": {
+    "noClient": "No Client"
+  },
+  "reactions": {
+    "add": "React",
+    "ariaSummary_one": "{{emoji}} {{count}} reaction",
+    "ariaSummary_other": "{{emoji}} {{count}} reactions",
+    "ariaYouReacted": ", you reacted"
+  },
+  "credits": {
+    "expiresInDaysOn_one": "Expires in {{count}} day on {{date}}",
+    "expiresInDaysOn_other": "Expires in {{count}} days on {{date}}",
+    "expiringForClient_one": "{{count}} credit for {{clientName}} will expire soon",
+    "expiringForClient_other": "{{count}} credits for {{clientName}} will expire soon"
+  },
+  "staleAction": {
+    "message": "This page is out of date. Refresh to restore live updates and actions."
+  },
+  "licenseBanner": {
+    "trialExpiresIn_one": "Pro trial expires in {{count}} day. Enter a license key to keep Pro features.",
+    "trialExpiresIn_other": "Pro trial expires in {{count}} days. Enter a license key to keep Pro features.",
+    "trialDaysRemaining_one": "Pro trial active — {{count}} day remaining.",
+    "trialDaysRemaining_other": "Pro trial active — {{count}} days remaining.",
+    "trialAvailable": "Running Essentials features. Start a free 15-day Pro trial to unlock all features.",
+    "trialExpired": "Pro trial has expired. The install is now running Essentials features.",
+    "licenseExpiresIn_one": "License expires in {{count}} day. Renew to avoid service interruption.",
+    "licenseExpiresIn_other": "License expires in {{count}} days. Renew to avoid service interruption."
+  },
   "nav": {
     "dashboard": "Dashboard",
     "tickets": "Tickets",
@@ -48,7 +76,8 @@
     "resetPrintOptions": "Reset print options",
     "share": "Share",
     "done": "Done",
-    "continue": "Continue"
+    "continue": "Continue",
+    "printSelected": "Print selected ({{count}})"
   },
   "form": {
     "selectPlaceholder": "Select...",
@@ -56,11 +85,20 @@
     "fromDate": "From date",
     "toDate": "To date",
     "noResults": "No results found",
-    "searchPlaceholder": "Search..."
+    "searchPlaceholder": "Search...",
+    "showingOfTotal": "Showing {{shown}} of {{total}} — type to narrow"
   },
   "pickers": {
     "addNewClient": "Add new client",
-    "addNewContact": "Add new contact"
+    "addNewContact": "Add new contact",
+    "loadingUsers": "Loading users...",
+    "errorLoadingUsers": "Error loading users",
+    "searchUsers": "Search users...",
+    "unassigned": "Unassigned",
+    "noUsersAvailable": "No users available",
+    "searchBoards": "Search boards...",
+    "searchBoardsLabel": "Search Boards",
+    "noBoardsFound": "No boards found"
   },
   "tagFilter": {
     "placeholder": "Filter by tags...",
@@ -356,6 +394,8 @@
     "first": "First",
     "last": "Last",
     "itemsLabel": "items",
+    "itemsLabel_one": "item",
+    "itemsLabel_other": "items",
     "itemsPerPageOption": "{{count}} items/page",
     "itemsPerPagePlaceholder": "Items per page",
     "reflectionLabel": "Pagination",
@@ -373,15 +413,15 @@
     "remove": "Remove",
     "detach": "Detach",
     "preview": "Preview",
-    "linkDocuments": "Link Documents",
+    "linkDocuments": "Link existing",
     "editDocument": "Edit Document",
     "viewDocument": "View Document",
     "downloadToPlay": "Download to Play",
     "delete": "Delete",
     "deletePermanently": "Delete Permanently",
     "previewUnavailable": "Preview unavailable",
-    "newDocument": "New Document",
-    "uploadFile": "Upload File",
+    "newDocument": "Add document",
+    "uploadFile": "Upload file",
     "deleteTitle": "Permanently Delete Document",
     "deleteMessage": "Are you sure you want to permanently delete \"{{name}}\" from the system?\\n\\nThis will remove the file entirely and it will no longer be available anywhere. This action cannot be undone.",
     "deleteVideoTitle": "Permanently Delete Video",
@@ -524,7 +564,10 @@
         "visible": "Client Visible",
         "hidden": "Internal Only"
       },
-      "clientVisibilityLabel": "Client Visibility"
+      "clientVisibilityLabel": "Client Visibility",
+      "entityOptions": {
+        "all": "All Entities"
+      }
     },
     "selector": {
       "title": "Select Documents",
@@ -552,7 +595,10 @@
       "uploadingProgress": "Uploading {{current}} of {{total}}",
       "pending": "Pending",
       "error": "Failed to upload document",
-      "fileError": "Failed to upload file"
+      "fileError": "Failed to upload file",
+      "associatedEntityTypeLabel": "Associate With",
+      "noAssociation": "No association",
+      "selectAssociatedEntityError": "Select an associated entity before uploading."
     },
     "folders": {
       "root": "Root",
@@ -611,7 +657,24 @@
     "downloadVideo": "Download Video",
     "downloadAsPdf": "Download as PDF",
     "downloadAsMarkdown": "Download as Markdown",
-    "move": "Move"
+    "move": "Move",
+    "associatedEntityPicker": {
+      "allEntities": "All Entities",
+      "loadingClients": "Loading clients...",
+      "loadingContacts": "Loading contacts...",
+      "noEntityTypes": "No entity types found",
+      "typeLabel": "Associated Entity Type",
+      "typePlaceholder": "Select entity type",
+      "typeSearchPlaceholder": "Search entity types...",
+      "entityLabel": "{{entityType}}",
+      "entityPlaceholder": "Select {{entityType}}",
+      "entitySearchPlaceholder": "Search {{entityType}}...",
+      "noEntities": "No {{entityType}} found"
+    },
+    "huduTab": {
+      "documentsTabLabel": "Documents",
+      "tabLabel": "Hudu"
+    }
   },
   "surveys": {
     "common": {
@@ -952,7 +1015,10 @@
     "deleteCommentAriaLabel": "Delete comment",
     "deleteComment": "Delete Comment",
     "deleteCommentConfirmation": "Are you sure you want to delete this comment? This action cannot be undone.",
-    "update": "Update"
+    "update": "Update",
+    "create": "Create",
+    "replyComment": "Reply to comment",
+    "saving": "Saving..."
   },
   "sessionManagement": {
     "title": "Active Sessions",
@@ -982,7 +1048,8 @@
       "revoke": "Revoke",
       "revoking": "Revoking...",
       "loggingOut": "Logging out...",
-      "logoutFromOther": "Logout from {{count}} other device{{count, plural, one {} other {s}}}"
+      "logoutFromOther_one": "Logout from {{count}} other device",
+      "logoutFromOther_other": "Logout from {{count}} other devices"
     },
     "confirmations": {
       "logoutCurrent": "This will log you out of your current session. Are you sure?",
@@ -1176,10 +1243,14 @@
     }
   },
   "dataTable": {
-    "columnsHidden_one": "{{count}} column hidden due to limited space.",
-    "columnsHidden_other": "{{count}} columns hidden due to limited space.",
+    "columnsHidden_one": "{{count}} column hidden.",
+    "columnsHidden_other": "{{count}} columns hidden.",
     "showAll": "Show all",
     "showingAllColumns": "Showing all columns; scroll horizontally to see them.",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "columnsHidden": "{{count}} columns hidden due to limited space."
+  },
+  "richTextEditorSkeleton": {
+    "loading": "Loading editor…"
   }
 }

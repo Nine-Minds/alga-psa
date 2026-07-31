@@ -10,6 +10,11 @@ export {
   getWorkflowIntegrationModuleRegistry,
   type WorkflowIntegrationModuleDefinition
 } from './registries/integrationModuleRegistry';
+export {
+  WorkflowModuleAvailabilityRegistry,
+  getWorkflowModuleAvailabilityRegistry,
+  type WorkflowModuleAvailabilityResolver
+} from './registries/moduleAvailabilityRegistry';
 export { registerWorkflowEmailProvider, getWorkflowEmailProvider, resetWorkflowEmailProvider } from './registries/workflowEmailRegistry';
 export type { WorkflowEmailProvider } from './registries/workflowEmailRegistry';
 export { WorkflowRuntimeV2 } from './runtime/workflowRuntimeV2';
@@ -18,6 +23,27 @@ export {
   validateWorkflowDefinition,
   type PublishValidationResult
 } from './validation/publishValidation';
+export {
+  simulateWorkflowDefinition,
+  applyTriggerPayloadMapping,
+  type WorkflowSimulationFixtures,
+  type WorkflowSimulationInvocation,
+  type WorkflowSimulationIssue,
+  type WorkflowSimulationOptions,
+  type WorkflowSimulationOutcome,
+  type WorkflowSimulationResult,
+  type WorkflowSimulationTraceEntry
+} from './simulation/simulator';
+export { buildSampleFromJsonSchema } from './simulation/samplePayload';
+export { buildWorkflowAuthoringGuide, type WorkflowAuthoringGuide } from './designer/authoringGuide';
+export { listWorkflowExpressionFunctions } from './expressionFunctions';
+export {
+  DEFAULT_WORKFLOW_EVENT_CORRELATION_PATHS,
+  WORKFLOW_EVENT_CORRELATION_PATHS_ENV,
+  getWorkflowEventCorrelationPaths,
+  type CorrelationPathsResolution
+} from './correlationDefaults';
+export { didYouMean, findNearestName, levenshteinDistance } from './validation/didYouMean';
 export * from './actions/composeText';
 export {
   validateInputMapping,

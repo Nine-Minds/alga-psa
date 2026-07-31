@@ -26,7 +26,8 @@
       "sendReminder": "55555",
       "sendToClient": "55555",
       "setAsDefault": "55555",
-      "submitForApproval": "55555"
+      "submitForApproval": "55555",
+      "done": "55555"
     },
     "badges": {
       "standard": "55555"
@@ -149,7 +150,10 @@
       "back": "55555",
       "moreActions": "55555",
       "cancel": "55555",
-      "previewPdf": "55555"
+      "previewPdf": "55555",
+      "backToQuotes": "55555",
+      "backToTemplates": "55555",
+      "convertToSalesOrder": "55555"
     },
     "headings": {
       "editQuote": "55555",
@@ -227,7 +231,8 @@
       "notFound": "55555",
       "save": "55555",
       "saveFailed": "55555",
-      "workflowAction": "55555 {{action}} 55555"
+      "workflowAction": "55555 {{action}} 55555",
+      "removeItem": "55555"
     },
     "loading": "55555",
     "notices": {
@@ -348,7 +353,9 @@
       "openConvertedContract": "55555",
       "openConvertedInvoice": "55555",
       "preview": "55555",
-      "saveAsTemplate": "55555"
+      "saveAsTemplate": "55555",
+      "back": "55555",
+      "openConvertedSalesOrder": "55555 {{number}} 55555"
     },
     "sections": {
       "activityLog": "55555",
@@ -414,7 +421,10 @@
     },
     "labels": {
       "phase": "55555 {{phase}} 55555",
-      "templateQuote": "55555"
+      "templateQuote": "55555",
+      "customItem": "55555",
+      "optional": "55555",
+      "recurring": "55555"
     },
     "loading": "55555",
     "notices": {
@@ -425,18 +435,26 @@
       "sent": "55555",
       "submittedForApproval": "55555",
       "templateAssigned": "55555",
-      "templateCleared": "55555"
+      "templateCleared": "55555",
+      "createdSalesOrder": "55555 {{number}} 55555"
     },
     "preview": {
       "loading": "55555"
     },
     "table": {
-      "description": "55555"
+      "description": "55555",
+      "billing": "55555",
+      "quantity": "55555",
+      "total": "55555",
+      "unitPrice": "55555"
     },
     "locations": {
       "groupHeading": "55555",
       "unassigned": "55555",
       "subtotal": "55555"
+    },
+    "availability": {
+      "onHand": "55555 {{count}} 55555"
     }
   },
   "quoteLineItems": {
@@ -539,7 +557,10 @@
       "contact": "55555",
       "internal": "55555"
     },
-    "removeAriaLabel": "55555 {{email}} 55555"
+    "removeAriaLabel": "55555 {{email}} 55555",
+    "errors": {
+      "contactsLoadFailed": "55555"
+    }
   },
   "quoteConversion": {
     "title": "55555",
@@ -555,6 +576,10 @@
         "description": "55555"
       },
       "both": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "salesOrder": {
         "label": "55555",
         "description": "55555"
       }
@@ -594,12 +619,19 @@
       "convertQuote": "55555",
       "invoice": "55555",
       "both": "55555",
-      "converting": "55555"
+      "converting": "55555",
+      "salesOrder": "55555"
     },
     "errors": {
       "convert": "55555",
       "load": "55555",
       "title": "55555"
+    },
+    "salesOrder": {
+      "successTitle": "55555 {{number}} 55555",
+      "successBody": "55555",
+      "openSalesOrders": "55555",
+      "note": "55555"
     }
   },
   "quoteApproval": {
@@ -721,7 +753,10 @@
     },
     "pipeline": {
       "render": "55555",
-      "shape": "55555"
+      "shape": "55555",
+      "renderFailed": "55555",
+      "shapeFailed": "55555",
+      "shapingFailed": "55555"
     },
     "tabs": {
       "code": "55555",

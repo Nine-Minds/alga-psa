@@ -26,7 +26,8 @@
       "sendReminder": "Invia promemoria",
       "sendToClient": "Invia al cliente",
       "setAsDefault": "Imposta come predefinito",
-      "submitForApproval": "Invia per l'approvazione"
+      "submitForApproval": "Invia per l'approvazione",
+      "done": "Fatto"
     },
     "badges": {
       "standard": "Standard"
@@ -69,7 +70,7 @@
     "states": {
       "generating": "Generazione...",
       "loading": "Caricamento...",
-      "saving": "Risparmio...",
+      "saving": "Salvataggio...",
       "sending": "Invio..."
     }
   },
@@ -149,7 +150,10 @@
       "back": "Indietro",
       "moreActions": "Altre azioni",
       "cancel": "Annulla",
-      "previewPdf": "Anteprima PDF"
+      "previewPdf": "Anteprima PDF",
+      "backToQuotes": "Torna ai preventivi",
+      "backToTemplates": "Torna ai modelli di preventivo",
+      "convertToSalesOrder": "Converti in ordine di vendita"
     },
     "headings": {
       "editQuote": "Modifica preventivo",
@@ -227,7 +231,8 @@
       "notFound": "Citazione non trovata",
       "save": "Impossibile salvare il preventivo",
       "saveFailed": "Salvataggio del preventivo non riuscito",
-      "workflowAction": "Impossibile {{action}}"
+      "workflowAction": "Impossibile {{action}}",
+      "removeItem": "Failed to remove quote item"
     },
     "loading": "Caricamento modulo preventivo...",
     "notices": {
@@ -348,7 +353,9 @@
       "openConvertedContract": "Apri contratto convertito",
       "openConvertedInvoice": "Apri fattura convertita",
       "preview": "Anteprima",
-      "saveAsTemplate": "Salva come modello"
+      "saveAsTemplate": "Salva come modello",
+      "back": "Indietro",
+      "openConvertedSalesOrder": "Convertito in {{number}}"
     },
     "sections": {
       "activityLog": "Registro delle attività",
@@ -414,7 +421,10 @@
     },
     "labels": {
       "phase": "Fase: {{phase}}",
-      "templateQuote": "Preventivo modello"
+      "templateQuote": "Preventivo modello",
+      "customItem": "Elemento personalizzato",
+      "optional": "Facoltativo",
+      "recurring": "Ricorrente"
     },
     "loading": "Caricamento dettagli preventivo...",
     "notices": {
@@ -425,18 +435,26 @@
       "sent": "Preventivo inviato al cliente.",
       "submittedForApproval": "Preventivo inviato per l'approvazione interna.",
       "templateAssigned": "Modello di documento assegnato.",
-      "templateCleared": "Modello di documento deselezionato (utilizzando l'impostazione predefinita)."
+      "templateCleared": "Modello di documento deselezionato (utilizzando l'impostazione predefinita).",
+      "createdSalesOrder": "Creato l'ordine di vendita in bozza {{number}}. Le righe di prodotto verranno fatturate all'evasione."
     },
     "preview": {
       "loading": "Caricamento anteprima..."
     },
     "table": {
-      "description": "Descrizione"
+      "description": "Descrizione",
+      "billing": "Fatturazione",
+      "quantity": "Qtà",
+      "total": "Totale",
+      "unitPrice": "Prezzo unitario"
     },
     "locations": {
       "groupHeading": "Sede",
       "unassigned": "Voci senza sede",
       "subtotal": "Subtotale sede"
+    },
+    "availability": {
+      "onHand": "Disponibili: {{count}}"
     }
   },
   "quoteLineItems": {
@@ -539,7 +557,10 @@
       "contact": "Contatto",
       "internal": "Interno"
     },
-    "removeAriaLabel": "Rimuovi {{email}}"
+    "removeAriaLabel": "Rimuovi {{email}}",
+    "errors": {
+      "contactsLoadFailed": "Could not load client contacts."
+    }
   },
   "quoteConversion": {
     "title": "Converti preventivo",
@@ -557,6 +578,10 @@
       "both": {
         "label": "Contratto + Fattura",
         "description": "Crea sia una bozza di contratto (per articoli ricorrenti) che una bozza di fattura (per articoli una tantum)."
+      },
+      "salesOrder": {
+        "label": "Ordine di vendita (righe prodotto)",
+        "description": "Sposta le righe di prodotto una tantum in un ordine di vendita in bozza che viene fatturato all'evasione. Queste righe sono escluse dalla fattura in bozza, così nulla viene fatturato due volte."
       }
     },
     "sections": {
@@ -594,12 +619,19 @@
       "convertQuote": "Converti preventivo",
       "invoice": "Crea bozza di fattura",
       "both": "Crea entrambi i record",
-      "converting": "Conversione..."
+      "converting": "Conversione...",
+      "salesOrder": "Crea ordine di vendita"
     },
     "errors": {
       "convert": "Impossibile convertire il preventivo",
       "load": "Impossibile caricare l'anteprima della conversione",
       "title": "Errore"
+    },
+    "salesOrder": {
+      "successTitle": "Ordine di vendita {{number}} creato",
+      "successBody": "Le righe di prodotto verranno fatturate all'evasione.",
+      "openSalesOrders": "Apri ordini di vendita",
+      "note": "Le righe di prodotto una tantum passano a un ordine di vendita in bozza (fatturato all'evasione) e sono escluse da qualsiasi conversione in fattura bozza, così nulla viene fatturato due volte."
     }
   },
   "quoteApproval": {
@@ -721,7 +753,10 @@
     },
     "pipeline": {
       "render": "Rendering",
-      "shape": "Forma"
+      "shape": "Forma",
+      "renderFailed": "Rendering non riuscito.",
+      "shapeFailed": "Shaping non riuscito.",
+      "shapingFailed": "Shaping non riuscito."
     },
     "tabs": {
       "code": "Codice",

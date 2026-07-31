@@ -6,7 +6,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const redirectMock = vi.fn();
 const getSessionMock = vi.fn();
 const getSessionWithRevocationCheckMock = vi.fn();
-const isEnabledMock = vi.fn();
 
 const CardMock = vi.fn((props: { children?: React.ReactNode }) => null);
 const CollabTestPageClientMock = vi.fn(() => null);
@@ -18,12 +17,6 @@ vi.mock('next/navigation', () => ({
 vi.mock('@alga-psa/auth', () => ({
   getSession: getSessionMock,
   getSessionWithRevocationCheck: getSessionWithRevocationCheckMock,
-}));
-
-vi.mock('@/lib/feature-flags/featureFlags', () => ({
-  featureFlags: {
-    isEnabled: isEnabledMock,
-  },
 }));
 
 vi.mock('@alga-psa/ui/components/Card', () => ({
@@ -41,29 +34,29 @@ describe('CollabTestPage', () => {
     vi.clearAllMocks();
     getSessionMock.mockReset();
     getSessionWithRevocationCheckMock.mockReset();
-    isEnabledMock.mockReset();
   });
 
-  it('renders a feature unavailable message when collaborative editing is disabled', async () => {
+  it('renders a missing tenant message when the session has no tenant context', async () => {
     getSessionWithRevocationCheckMock.mockResolvedValue({
       user: {
         id: 'user-1',
-        tenant: 'tenant-1',
+        tenant: null,
         user_type: 'internal',
         name: 'Editor One',
       },
     });
-    isEnabledMock.mockResolvedValue(false);
 
     const result = await CollabTestPage();
 
     expect(redirectMock).not.toHaveBeenCalled();
     expect(CardMock).not.toHaveBeenCalled();
     expect((result as any)?.type).toBe(CardMock);
-    expect((result as any)?.props?.children).toBe('Feature not available.');
+    expect((result as any)?.props?.children).toBe(
+      'Missing tenant context for collaborative editing.'
+    );
   });
 
-  it('renders the collab test client when collaborative editing is enabled', async () => {
+  it('renders the collab test client when a tenant-scoped session is present', async () => {
     getSessionWithRevocationCheckMock.mockResolvedValue({
       user: {
         id: 'user-2',
@@ -72,7 +65,6 @@ describe('CollabTestPage', () => {
         name: 'Editor Two',
       },
     });
-    isEnabledMock.mockResolvedValue(true);
 
     const result = await CollabTestPage();
 

@@ -267,8 +267,8 @@ paid. Suggested build order (each independently verifiable):
 1. **Presigned URL owner.** Lean: alga-license mints the presigned URL (holds the
    MinIO creds; nm-store stays DB-less and just relays). Confirm MinIO is the ISO
    store and the appliance release process publishes the "current" ISO to a known
-   key. Where does the appliance ISO live today (the `ee/appliance/releases/…`
-   process)?
+   key. Current appliance release metadata is published by the `~/nm-kube-config`
+   Argo workflow to OCI, not from local files in `alga-psa`.
 2. **`/register-tenant` vs Stripe ordering for paid.** Does nm-store call
    `/register-tenant` before or after Stripe checkout completes? Lean: create the
    registry row at form submit (`status=registered`), attach the entitlement on

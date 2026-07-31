@@ -15,6 +15,30 @@ vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   isActionPermissionError: () => false,
 }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', () => {
+  // Mirror the English locale plural entries the hook relies on in production
+  // (server/public/locales/en/features/tickets.json).
+  const translations: Record<string, string> = {
+    'messages.pastedImagesDeleted_one': 'Deleted {{count}} pasted image.',
+    'messages.pastedImagesDeleted_other': 'Deleted {{count}} pasted images.',
+    'messages.pastedImagesDeleteFailed_one': 'Could not delete {{count}} pasted image.',
+    'messages.pastedImagesDeleteFailed_other': 'Could not delete {{count}} pasted images.',
+  };
+  return {
+    useTranslation: () => ({
+      t: (key: string, options?: Record<string, unknown>) => {
+        const count = typeof options?.count === 'number' ? options.count : undefined;
+        const pluralKey = count !== undefined ? `${key}_${count === 1 ? 'one' : 'other'}` : key;
+        let template = translations[pluralKey] ?? translations[key];
+        if (!template) {
+          template = typeof options?.defaultValue === 'string' ? options.defaultValue : key;
+        }
+        return count !== undefined ? template.replace(/\{\{count\}\}/g, String(count)) : template;
+      },
+    }),
+  };
+});
+
 vi.mock('react-hot-toast', () => ({
   toast: {
     error: vi.fn(),

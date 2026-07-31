@@ -84,17 +84,31 @@ vi.mock('./sso/mspSsoResolution', () => ({
   getMspSsoSigningSecret: async () => 'unit-test-secret',
   parseAndVerifyMspSsoResolutionCookie: vi.fn(() => null),
 }));
-vi.mock('@alga-psa/db/models/UserSession', () => ({ UserSession: {} }));
+vi.mock('@alga-psa/db/models/UserSession', () => ({
+  UserSession: {
+    create: vi.fn(async () => 'session-1'),
+    isRevoked: vi.fn(async () => false),
+    updateLocation: vi.fn(),
+  },
+}));
 vi.mock('./ipAddress', () => ({ getClientIp: vi.fn() }));
 vi.mock('./deviceFingerprint', () => ({ generateDeviceFingerprint: vi.fn(), getDeviceInfo: vi.fn() }));
-vi.mock('./geolocation', () => ({ getLocationFromIp: vi.fn() }));
-vi.mock('@alga-psa/db', () => ({ getConnection: vi.fn() }));
+vi.mock('./geolocation', () => ({ getLocationFromIp: vi.fn(async () => null) }));
+vi.mock('@alga-psa/db', () => ({
+  getConnection: vi.fn(),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+    unscoped: (table: string) => conn(table),
+  }),
+}));
 vi.mock('./PortalDomainModel', () => ({ getPortalDomain: vi.fn(), getPortalDomainByHostname: vi.fn() }));
 vi.mock('@alga-psa/db/models/user', () => ({ default: { updateLastLogin: (...args: unknown[]) => updateLastLoginMock(...args) } }));
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: vi.fn(async () => ((table: string) => makeTableQuery(table))),
 }));
-vi.mock('@alga-psa/core/logger', () => ({ default: { debug: vi.fn(), trace: vi.fn(), error: vi.fn() } }));
+vi.mock('@alga-psa/core/logger', () => ({
+  default: { debug: vi.fn(), trace: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
 
 const { getAuthOptions } = await import('./nextAuthOptions');
 

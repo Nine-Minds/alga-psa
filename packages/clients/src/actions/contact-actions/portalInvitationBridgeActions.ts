@@ -5,13 +5,14 @@ import {
   getPortalInvitations as getPortalInvitationsAction,
   revokePortalInvitation as revokePortalInvitationAction,
   updateClientUser as updateClientUserAction
-} from '@alga-psa/portal-shared/actions';
+} from '@alga-psa/portal-shared/actions/portalInvitationActions';
 import type { IUser } from '@alga-psa/types';
 import type {
   SendInvitationResult,
   InvitationHistoryItem,
   PortalInvitationErrorCode,
-  SendPortalInvitationOptions
+  SendPortalInvitationOptions,
+  ClientUserActionError
 } from '@alga-psa/portal-shared/types';
 
 export async function sendPortalInvitation(
@@ -31,6 +32,9 @@ export async function revokePortalInvitation(
   return revokePortalInvitationAction(invitationId);
 }
 
-export async function updateClientUser(userId: string, data: { is_inactive?: boolean }): Promise<IUser | null> {
+export async function updateClientUser(
+  userId: string,
+  data: { is_inactive?: boolean }
+): Promise<IUser | null | ClientUserActionError> {
   return updateClientUserAction(userId, data);
 }

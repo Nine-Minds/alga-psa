@@ -26,7 +26,8 @@
       "sendReminder": "Herinnering verzenden",
       "sendToClient": "Verzenden naar klant",
       "setAsDefault": "Instellen als standaard",
-      "submitForApproval": "Ter goedkeuring indienen"
+      "submitForApproval": "Ter goedkeuring indienen",
+      "done": "Klaar"
     },
     "badges": {
       "standard": "Standaard"
@@ -69,7 +70,7 @@
     "states": {
       "generating": "Genereren...",
       "loading": "Laden...",
-      "saving": "Besparing...",
+      "saving": "Opslaan...",
       "sending": "Verzenden..."
     }
   },
@@ -149,7 +150,10 @@
       "back": "Terug",
       "moreActions": "Meer acties",
       "cancel": "Annuleren",
-      "previewPdf": "Pdf-voorvertoning"
+      "previewPdf": "Pdf-voorvertoning",
+      "backToQuotes": "Terug naar offertes",
+      "backToTemplates": "Terug naar offertesjablonen",
+      "convertToSalesOrder": "Converteren naar verkooporder"
     },
     "headings": {
       "editQuote": "Offerte bewerken",
@@ -227,7 +231,8 @@
       "notFound": "Offerte niet gevonden",
       "save": "Kan offerte niet opslaan",
       "saveFailed": "Het opslaan van de offerte is mislukt",
-      "workflowAction": "Kan {{action}} niet gebruiken"
+      "workflowAction": "Kan {{action}} niet gebruiken",
+      "removeItem": "Failed to remove quote item"
     },
     "loading": "Offerteformulier laden...",
     "notices": {
@@ -348,7 +353,9 @@
       "openConvertedContract": "Open geconverteerd contract",
       "openConvertedInvoice": "Open de geconverteerde factuur",
       "preview": "Voorbeeld",
-      "saveAsTemplate": "Opslaan als sjabloon"
+      "saveAsTemplate": "Opslaan als sjabloon",
+      "back": "Terug",
+      "openConvertedSalesOrder": "Geconverteerd naar {{number}}"
     },
     "sections": {
       "activityLog": "Activiteitenlogboek",
@@ -414,7 +421,10 @@
     },
     "labels": {
       "phase": "Fase: {{phase}}",
-      "templateQuote": "Sjabloonofferte"
+      "templateQuote": "Sjabloonofferte",
+      "customItem": "Aangepast item",
+      "optional": "Optioneel",
+      "recurring": "Terugkerend"
     },
     "loading": "Offertegegevens laden...",
     "notices": {
@@ -425,18 +435,26 @@
       "sent": "Offerte verzonden naar de klant.",
       "submittedForApproval": "Offerte ingediend voor interne goedkeuring.",
       "templateAssigned": "Documentsjabloon toegewezen.",
-      "templateCleared": "Documentsjabloon gewist (standaard gebruikt)."
+      "templateCleared": "Documentsjabloon gewist (standaard gebruikt).",
+      "createdSalesOrder": "Concept-verkooporder {{number}} aangemaakt. Productregels worden bij levering gefactureerd."
     },
     "preview": {
       "loading": "Voorbeeld laden..."
     },
     "table": {
-      "description": "Beschrijving"
+      "description": "Beschrijving",
+      "billing": "Facturering",
+      "quantity": "Aantal",
+      "total": "Totaal",
+      "unitPrice": "Eenheidsprijs"
     },
     "locations": {
       "groupHeading": "Locatie",
       "unassigned": "Items zonder locatie",
       "subtotal": "Subtotaal locatie"
+    },
+    "availability": {
+      "onHand": "Op voorraad: {{count}}"
     }
   },
   "quoteLineItems": {
@@ -539,7 +557,10 @@
       "contact": "Contactpersoon",
       "internal": "Intern"
     },
-    "removeAriaLabel": "{{email}} verwijderen"
+    "removeAriaLabel": "{{email}} verwijderen",
+    "errors": {
+      "contactsLoadFailed": "Could not load client contacts."
+    }
   },
   "quoteConversion": {
     "title": "Offerte converteren",
@@ -557,6 +578,10 @@
       "both": {
         "label": "Contract + Factuur",
         "description": "Creëert zowel een conceptcontract (voor terugkerende artikelen) als een conceptfactuur (voor eenmalige artikelen)."
+      },
+      "salesOrder": {
+        "label": "Verkooporder (productregels)",
+        "description": "Verplaatst eenmalige productregels naar een concept-verkooporder die bij levering wordt gefactureerd. Deze regels worden uitgesloten van de conceptfactuur, zodat niets dubbel wordt gefactureerd."
       }
     },
     "sections": {
@@ -594,12 +619,19 @@
       "convertQuote": "Offerte converteren",
       "invoice": "Conceptfactuur maken",
       "both": "Maak beide records",
-      "converting": "Converteren..."
+      "converting": "Converteren...",
+      "salesOrder": "Verkooporder aanmaken"
     },
     "errors": {
       "convert": "Kan offerte niet converteren",
       "load": "Kan het conversievoorbeeld niet laden",
       "title": "Fout"
+    },
+    "salesOrder": {
+      "successTitle": "Verkooporder {{number}} aangemaakt",
+      "successBody": "Productregels worden bij levering gefactureerd.",
+      "openSalesOrders": "Verkooporders openen",
+      "note": "Eenmalige productregels gaan naar een concept-verkooporder (gefactureerd bij levering) en worden uitgesloten van elke conversie naar een conceptfactuur, zodat niets dubbel wordt gefactureerd."
     }
   },
   "quoteApproval": {
@@ -721,7 +753,10 @@
     },
     "pipeline": {
       "render": "Veroorzaken",
-      "shape": "Vorm"
+      "shape": "Vorm",
+      "renderFailed": "Renderen mislukt.",
+      "shapeFailed": "Shape mislukt.",
+      "shapingFailed": "Shaping mislukt."
     },
     "tabs": {
       "code": "Code",

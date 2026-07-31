@@ -1,12 +1,10 @@
-import { resolveReleaseReference } from './releases.mjs';
 import { ShellRunner } from './runner.mjs';
-import { resolveSitePaths } from './runtime-paths.mjs';
 
 function nowStamp() {
   return new Date().toISOString().replace('T', ' ').replace('Z', 'Z');
 }
 
-const BOOTSTRAP_PHASE_PATTERNS = [
+const LIFECYCLE_PHASE_PATTERNS = [
   { phase: 'Talos', re: /(Talos|talosctl|maintenance API|secure Talos API)/i },
   { phase: 'Kubernetes', re: /(Kubernetes API|kubeconfig|node .*Ready|kubectl)/i },
   { phase: 'Storage', re: /(local-path|storage smoke|install-storage|provisioner|pvc)/i },
@@ -34,20 +32,13 @@ export function classifyFailure(output) {
   return 'unknown';
 }
 
-function detectBootstrapPhase(line) {
-  for (const pattern of BOOTSTRAP_PHASE_PATTERNS) {
+function detectLifecyclePhase(line) {
+  for (const pattern of LIFECYCLE_PHASE_PATTERNS) {
     if (pattern.re.test(line)) {
       return pattern.phase;
     }
   }
   return null;
-}
-
-function normalizeReleaseReference(env, options = {}) {
-  return resolveReleaseReference(env.runtime.releasesDir, {
-    releaseVersion: options.releaseVersion,
-    channel: options.channel,
-  });
 }
 
 function buildScriptArgs(flagMap) {
@@ -110,65 +101,6 @@ async function runLifecycleScript({ script, args, runner, cwd, onProgress, phase
   };
 }
 
-export async function runBootstrap(env, options = {}) {
-  const releaseRef = normalizeReleaseReference(env, options);
-  const releaseVersion = releaseRef.releaseVersion;
-  const siteId = options.siteId || env.site?.siteId || env.suggestedSiteId || 'appliance-single-node';
-  const derivedSite = env.site || (env.configBaseDir ? resolveSitePaths(env.configBaseDir, siteId) : null);
-  const args = buildScriptArgs({
-    'site-id': siteId,
-    'release-version': releaseVersion,
-    channel: releaseRef.channel,
-    'bootstrap-mode': options.bootstrapMode,
-    'node-ip': options.nodeIp || env.nodeIp,
-    hostname: options.hostname,
-    'app-url': options.appUrl || env.appUrl,
-    interface: options.interface,
-    'network-mode': options.networkMode,
-    'static-address': options.staticAddress,
-    'static-gateway': options.staticGateway,
-    'dns-servers': options.dnsServers,
-    'config-dir': options.configDir || derivedSite?.configDir,
-    kubeconfig: options.kubeconfig,
-    talosconfig: options.talosconfig,
-    'repo-url': options.repoUrl,
-    'repo-branch': options.repoBranch || releaseRef.channelMetadata?.repoBranch,
-    'prepull-images': options.prepullImages,
-    'dry-run': options.dryRun,
-  });
-
-  return runLifecycleScript({
-    script: env.runtime.bootstrapScript,
-    args,
-    runner: options.runner,
-    cwd: env.runtime.assetRoot,
-    onProgress: options.onProgress,
-    phaseDetector: detectBootstrapPhase,
-  });
-}
-
-export async function runUpgrade(env, options = {}) {
-  const releaseRef = normalizeReleaseReference(env, options);
-  const releaseVersion = releaseRef.releaseVersion;
-  const args = buildScriptArgs({
-    'release-version': releaseVersion,
-    channel: releaseRef.channel,
-    kubeconfig: options.kubeconfig || env.paths.kubeconfig,
-    'config-dir': options.configDir || env.site.configDir,
-    profile: options.profile,
-    'skip-reconcile': options.reconcileAfterApply === false,
-    'dry-run': options.dryRun,
-  });
-
-  return runLifecycleScript({
-    script: env.runtime.upgradeScript,
-    args,
-    runner: options.runner,
-    cwd: env.runtime.assetRoot,
-    onProgress: options.onProgress,
-  });
-}
-
 export async function runRepairRelease(env, options = {}) {
   const args = buildScriptArgs({
     kubeconfig: options.kubeconfig || env.paths.kubeconfig,
@@ -185,7 +117,7 @@ export async function runRepairRelease(env, options = {}) {
     runner: options.runner,
     cwd: env.runtime.assetRoot,
     onProgress: options.onProgress,
-    phaseDetector: detectBootstrapPhase,
+    phaseDetector: detectLifecyclePhase,
   });
 }
 

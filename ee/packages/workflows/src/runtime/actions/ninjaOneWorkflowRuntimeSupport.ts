@@ -22,17 +22,28 @@ type NinjaOneTokenResponse = {
   expires_in: number;
 };
 
+export type NinjaOneRunScriptPayload = {
+  type: 'SCRIPT' | 'ACTION';
+  id?: number;
+  uid?: string;
+  parameters?: string;
+  runAs?: string;
+};
+
 export type NinjaOneWorkflowClient = {
   getDevice(deviceId: number): Promise<Record<string, unknown>>;
   getDevices(params?: { pageSize?: number; df?: string }): Promise<Record<string, unknown>[]>;
   getAlerts(params?: { pageSize?: number }): Promise<Record<string, unknown>[]>;
   rebootDevice(deviceId: number): Promise<void>;
   resetAlert(alertUid: string): Promise<void>;
+  getScriptingOptions(deviceId: number): Promise<Record<string, unknown>>;
+  runScript(deviceId: number, payload: NinjaOneRunScriptPayload): Promise<unknown>;
 };
 
 type FetchRequestOptions = {
   method?: 'GET' | 'POST';
   query?: Record<string, string | number | undefined>;
+  body?: unknown;
   retryOnUnauthorized?: boolean;
 };
 
@@ -208,6 +219,7 @@ class FetchNinjaOneWorkflowClient implements NinjaOneWorkflowClient {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
+      ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
     });
 
     if (response.status === 401 && options.retryOnUnauthorized !== false) {
@@ -272,6 +284,22 @@ class FetchNinjaOneWorkflowClient implements NinjaOneWorkflowClient {
 
   async resetAlert(alertUid: string): Promise<void> {
     await this.request(`/alert/${encodeURIComponent(alertUid)}/reset`, { method: 'POST' });
+  }
+
+  async getScriptingOptions(deviceId: number): Promise<Record<string, unknown>> {
+    const { data } = await this.request(`/device/${deviceId}/scripting/options`);
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      throw new Error(`NinjaOne scripting options for device ${deviceId} returned an unexpected response`);
+    }
+    return data as Record<string, unknown>;
+  }
+
+  async runScript(deviceId: number, payload: NinjaOneRunScriptPayload): Promise<unknown> {
+    const { data } = await this.request(`/device/${deviceId}/script/run`, {
+      method: 'POST',
+      body: payload,
+    });
+    return data;
   }
 }
 

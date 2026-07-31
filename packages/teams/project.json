@@ -3,23 +3,23 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/teams/src",
   "projectType": "library",
-  "tags": ["scope:teams", "type:horizontal"],
+  "tags": [
+    "scope:teams",
+    "type:horizontal"
+  ],
   "targets": {
     "build": {
       "executor": "nx:noop"
     },
-    "test": {
-      "executor": "@nx/vite:test",
-      "outputs": ["{workspaceRoot}/coverage/packages/teams"],
-      "options": {
-        "passWithNoTests": true
-      }
-    },
     "lint": {
       "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"],
+      "outputs": [
+        "{options.outputFile}"
+      ],
       "options": {
-        "lintFilePatterns": ["packages/teams/**/*.{ts,tsx}"]
+        "lintFilePatterns": [
+          "packages/teams/**/*.{ts,tsx}"
+        ]
       }
     }
   }

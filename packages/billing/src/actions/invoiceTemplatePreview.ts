@@ -8,6 +8,7 @@ import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
 import { exportWorkspaceToTemplateAst } from '../components/invoice-designer/ast/workspaceAst';
 import { evaluateTemplateAst, TemplateEvaluationError } from '../lib/invoice-template-ast/evaluator';
+import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { validateTemplateAst } from '../lib/invoice-template-ast/schema';
 
@@ -52,10 +53,33 @@ type AuthoritativePreviewResult = {
   };
 };
 
+function previewFailureResult(message: string, details?: string): AuthoritativePreviewResult {
+  return {
+    success: false,
+    sourceHash: null,
+    generatedSource: null,
+    compile: {
+      status: 'error',
+      diagnostics: [
+        {
+          kind: 'runtime',
+          severity: 'error',
+          message,
+          raw: message,
+        },
+      ],
+      error: message,
+      details,
+    },
+    render: { status: 'idle', html: null, css: null, contentHeightPx: null },
+    verification: { status: 'idle', mismatches: [] },
+  };
+}
+
 export const runAuthoritativeInvoiceTemplatePreview = withAuth(
   async (user, _context, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
     if (!await hasPermission(user, 'billing', 'read')) {
-      throw new Error('Permission denied: billing read required');
+      return previewFailureResult('Permission denied: billing read required');
     }
 
     const hasWorkspaceNodes =
@@ -121,7 +145,11 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
     }
 
     try {
-      const evaluation = evaluateTemplateAst(validation.ast, input.invoiceData as unknown as Record<string, unknown>);
+      const evaluation = evaluateTemplateAst(
+        validation.ast,
+        input.invoiceData as unknown as Record<string, unknown>,
+        { bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES }
+      );
       const rendered = await renderEvaluatedTemplateAst(validation.ast, evaluation);
       return {
         success: true,
@@ -144,6 +172,7 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
       };
     } catch (error: any) {
       const isEvaluationError = error instanceof TemplateEvaluationError;
+      const runtimeMessage = 'Template evaluation failed unexpectedly.';
       return {
         success: false,
         sourceHash,
@@ -164,12 +193,12 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
                 {
                   kind: 'runtime',
                   severity: 'error',
-                  message: error?.message || String(error),
-                  raw: String(error?.message || error),
+                  message: runtimeMessage,
+                  raw: runtimeMessage,
                 },
               ],
           error: isEvaluationError ? error.message : 'Evaluation failed.',
-          details: error?.message || String(error),
+          details: isEvaluationError ? error.message : runtimeMessage,
         },
         render: {
           status: 'idle',

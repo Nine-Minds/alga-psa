@@ -37,7 +37,22 @@ vi.mock('react-hot-toast', () => ({
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   handleError: (...args: unknown[]) => mockHandleError(...args),
+  isActionMessageError: () => false,
+  isActionPermissionError: () => false,
 }));
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => {
+  // Stable singleton: the component keys a useEffect on `t`; a fresh function
+  // per hook call re-fires the effect every render (async re-render loop).
+  const t = (key: string, options?: Record<string, unknown>) => {
+    const text = typeof options?.defaultValue === 'string' ? options.defaultValue : key;
+    return text.replace(/{{\s*([^{}\s]+)\s*}}/g, (_match, name: string) =>
+      String(options?.[name] ?? '')
+    );
+  };
+  const translation = { t };
+  return { useTranslation: () => translation };
+});
 
 vi.mock('@alga-psa/ui/ui-reflection/useRegisterUIComponent', () => ({
   useRegisterUIComponent: () => ({}),
@@ -52,11 +67,12 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ isOpen, title, children }: any) =>
+  Dialog: ({ isOpen, title, children, footer }: any) =>
     isOpen ? (
       <div>
         <h1>{title}</h1>
         {children}
+        {footer}
       </div>
     ) : null,
 }));

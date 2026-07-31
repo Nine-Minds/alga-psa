@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { withTenantScope } from '../utils/tenantScopedBuilderDouble';
 
 const createTenantKnexMock = vi.fn();
 const runWithTenantMock = vi.fn();
@@ -31,9 +32,9 @@ describe('confirmEntraMappings client linkage updates', () => {
         const chain = {
           first: managedTenantFirstMock,
         };
-        return {
+        return withTenantScope({
           where: vi.fn(() => chain),
-        };
+        });
       }
 
       if (table === 'entra_client_tenant_mappings') {
@@ -41,19 +42,19 @@ describe('confirmEntraMappings client linkage updates', () => {
           first: activeMappingFirstMock,
           update: deactivateUpdateMock,
         };
-        return {
+        return withTenantScope({
           where: vi.fn(() => chain),
           insert: mappingInsertMock,
-        };
+        });
       }
 
       if (table === 'clients') {
         const chain = {
           update: clientsUpdateMock,
         };
-        return {
+        return withTenantScope({
           where: vi.fn(() => chain),
-        };
+        });
       }
 
       throw new Error(`Unexpected table ${table}`);
@@ -131,9 +132,9 @@ describe('confirmEntraMappings client linkage updates', () => {
         const chain = {
           first: managedTenantFirstMock,
         };
-        return {
+        return withTenantScope({
           where: vi.fn(() => chain),
-        };
+        });
       }
 
       if (table === 'entra_client_tenant_mappings') {
@@ -141,19 +142,19 @@ describe('confirmEntraMappings client linkage updates', () => {
           first: activeMappingFirstMock,
           update: deactivateUpdateMock,
         };
-        return {
+        return withTenantScope({
           where: vi.fn(() => chain),
           insert: mappingInsertMock,
-        };
+        });
       }
 
       if (table === 'clients') {
         const chain = {
           update: vi.fn(async () => 1),
         };
-        return {
+        return withTenantScope({
           where: vi.fn(() => chain),
-        };
+        });
       }
 
       throw new Error(`Unexpected table ${table}`);

@@ -7,7 +7,7 @@ import {
   completePortalSetup as completePortalSetupAction,
   getPortalInvitations as getPortalInvitationsAction,
   revokePortalInvitation as revokePortalInvitationAction,
-} from '@alga-psa/portal-shared/actions';
+} from '@alga-psa/portal-shared/actions/portalInvitationActions';
 import type {
   SendInvitationResult as SharedSendInvitationResult,
   VerifyTokenResult as SharedVerifyTokenResult,

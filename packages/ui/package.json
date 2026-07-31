@@ -3,6 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "sideEffects": [
+    "**/*.css",
+    "**/*.scss",
+    "*.css",
+    "*.scss"
+  ],
   "main": "./dist/index.mjs",
   "types": "./src/index.ts",
   "exports": {
@@ -13,6 +19,10 @@
     "./components": {
       "types": "./src/components/index.ts",
       "import": "./dist/components/index.mjs"
+    },
+    "./components/bento": {
+      "types": "./src/components/bento/index.ts",
+      "import": "./dist/components/bento/index.mjs"
     },
     "./components/*": {
       "types": "./src/components/*.tsx",
@@ -80,6 +90,7 @@
     }
   },
   "scripts": {
+    "test": "vitest run",
     "build": "tsup",
     "typecheck": "tsc --noEmit"
   },

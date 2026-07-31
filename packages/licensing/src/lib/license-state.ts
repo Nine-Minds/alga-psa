@@ -52,7 +52,7 @@ export interface ResolvedLicenseState {
   daysRemaining: number | null;
 }
 
-const TRIAL_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
+const TRIAL_DURATION_MS = 15 * 24 * 60 * 60 * 1000;
 
 /**
  * Reads the license_state singleton from the admin DB.
@@ -60,6 +60,7 @@ const TRIAL_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
  */
 export async function getLicenseStateRow(): Promise<LicenseStateRow | null> {
   const knex = await getAdminConnection();
+  // Admin-scoped singleton: keep raw admin DB access so tenantDb fails closed.
   const row = await knex('license_state').orderBy('id').first();
   return row ?? null;
 }
@@ -72,6 +73,7 @@ export async function upsertLicenseState(
   fields: Partial<Omit<LicenseStateRow, 'id' | 'updated_at'>>
 ): Promise<void> {
   const knex = await getAdminConnection();
+  // Admin-scoped singleton: keep raw admin DB access so tenantDb fails closed.
   const existing = await knex('license_state').first('id');
   if (existing) {
     await knex('license_state')
@@ -88,7 +90,7 @@ export async function upsertLicenseState(
  *
  * Resolution order (per spec):
  *   1. Valid unexpired license → license.tier
- *   2. Active 30-day trial     → 'premium'
+ *   2. Active 15-day trial     → 'premium'
  *   3. Everything else         → 'essentials'
  *
  * Returns null when passed null (no row → caller falls through to SaaS logic).
@@ -218,6 +220,22 @@ export async function isSelfHostLicensing(): Promise<boolean> {
     return resolveSelfHostTier(await getLicenseStateRow()) !== null;
   } catch {
     return false;
+  }
+}
+
+export class HostingRequiredError extends Error {
+  public readonly statusCode = 403;
+  public readonly code = 'HOSTING_REQUIRED';
+
+  constructor(featureLabel = 'This feature') {
+    super(`${featureLabel} is only available on hosted installs.`);
+    this.name = 'HostingRequiredError';
+  }
+}
+
+export async function assertHostedInstall(featureLabel?: string): Promise<void> {
+  if (await isSelfHostLicensing()) {
+    throw new HostingRequiredError(featureLabel);
   }
 }
 

@@ -11,3 +11,4 @@ export { default as AssociatedAssets } from './AssociatedAssets';
 
 export * from './AssetDetailDrawer.types';
 export { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
+export { default as AssetTypesManager } from './settings/AssetTypesManager';

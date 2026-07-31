@@ -53,6 +53,28 @@ export async function saveEntraDirectRefreshToken(
   );
 }
 
+/**
+ * The whole stored token set, for callers that have to put it back. Saving a
+ * new set is destructive — there is one slot per tenant — so anything that
+ * overwrites it before a step that can still fail needs the predecessor in
+ * hand to restore.
+ */
+export async function getEntraDirectTokenSet(tenant: string): Promise<EntraDirectTokenSet | null> {
+  const secretProvider = await getSecretProviderInstance();
+  const [accessToken, refreshToken, expiresAt, scope] = await Promise.all([
+    secretProvider.getTenantSecret(tenant, ENTRA_DIRECT_SECRET_KEYS.accessToken),
+    secretProvider.getTenantSecret(tenant, ENTRA_DIRECT_SECRET_KEYS.refreshToken),
+    secretProvider.getTenantSecret(tenant, ENTRA_DIRECT_SECRET_KEYS.tokenExpiresAt),
+    secretProvider.getTenantSecret(tenant, ENTRA_DIRECT_SECRET_KEYS.tokenScope),
+  ]);
+
+  if (!accessToken || !refreshToken || !expiresAt) {
+    return null;
+  }
+
+  return { accessToken, refreshToken, expiresAt, scope: scope || null };
+}
+
 export async function clearEntraDirectTokenSet(tenant: string): Promise<void> {
   const secretProvider = await getSecretProviderInstance();
 

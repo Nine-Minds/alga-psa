@@ -8,9 +8,16 @@ const isExperimentalFeatureEnabledMock = vi.hoisted(() => vi.fn<
 const chatCompletionsHandleExecuteMock = vi.hoisted(() => vi.fn<
   (req: Request) => Promise<Response>
 >());
+const assertPsaChatProductAccessMock = vi.hoisted(() => vi.fn<
+  () => Promise<Response | null>
+>());
 
 vi.mock('@alga-psa/tenancy/actions', () => ({
   isExperimentalFeatureEnabled: isExperimentalFeatureEnabledMock,
+}));
+
+vi.mock('@/app/api/chat/productAccess', () => ({
+  assertPsaChatProductAccess: assertPsaChatProductAccessMock,
 }));
 
 vi.mock('@product/chat/entry', () => ({
@@ -26,6 +33,8 @@ describe('POST /api/chat/v1/execute', () => {
   beforeEach(() => {
     isExperimentalFeatureEnabledMock.mockReset();
     chatCompletionsHandleExecuteMock.mockReset();
+    assertPsaChatProductAccessMock.mockReset();
+    assertPsaChatProductAccessMock.mockResolvedValue(null);
     process.env.EDITION = 'ee';
     delete process.env.NEXT_PUBLIC_EDITION;
   });

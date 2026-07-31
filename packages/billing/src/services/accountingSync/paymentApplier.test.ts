@@ -1,9 +1,15 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
+// These are single-call unit tests, so canned mocks suffice. For multi-step
+// sequences against stateful QBO behavior (CDC replay, balances, races), use
+// the simulator in ./testing/qboSimulator.ts — see ./testing/README.md.
+
 // Mock recordExternalPayment/reverseExternalPayment before importing the module under test
 vi.mock('./recordExternalPayment', () => ({
   recordExternalPayment: vi.fn(async () => ({ success: true, paymentId: 'pay-1', paymentRecorded: true })),
   reverseExternalPayment: vi.fn(async () => ({ success: true, paymentId: 'rev-1', paymentRecorded: true })),
+  isNonPayableInvoiceStatus: (status: string | null | undefined) =>
+    status === 'cancelled' || status === 'draft' || status === 'void',
   computeBalanceDue: vi.fn(
     ({ totalAmount, creditApplied, totalPaid }: { totalAmount: number; creditApplied: number; totalPaid: number }) =>
       totalAmount - creditApplied - totalPaid
@@ -46,10 +52,12 @@ function makeFakeExceptions() {
  *  so the double-entry guard passes through in normal tests.
  */
 function makeFakeKnex(invoiceRow: any = { status: 'sent', total_amount: 20000, credit_applied: 0 }) {
-  const first = vi.fn(async () => invoiceRow);
-  const select = vi.fn(() => ({ first }));
-  const where = vi.fn(() => ({ select, first }));
-  const trx: any = Object.assign(vi.fn(() => ({ where })), {
+  const query: any = {
+    where: vi.fn(() => query),
+    select: vi.fn(() => query),
+    first: vi.fn(async () => invoiceRow)
+  };
+  const trx: any = Object.assign(vi.fn(() => query), {
     transaction: vi.fn(async (cb: any) => cb(trx)),
     fn: { now: vi.fn() }
   });
@@ -339,6 +347,114 @@ describe('paymentApplier', () => {
     expect(stats.paymentsApplied).toBe(1);
   });
 
+  it('passes QBO TxnDate through as the payment date (month-boundary correctness)', async () => {
+    const invMap = { id: 'imap-1', alga_entity_id: 'alga-inv-1', external_entity_id: 'inv-ext-001', sync_status: 'synced', metadata: {} };
+    const ledger = makeFakeLedger(null);
+    ledger.findByExternalId
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(invMap);
+
+    await applyExternalPaymentChange(
+      {
+        knex: makeFakeKnex(),
+        tenantId: 't1',
+        adapterType: 'quickbooks_online',
+        targetRealm: 'r1',
+        ledger: ledger as any,
+        exceptions: makeFakeExceptions(),
+        stats: emptyCycleStats()
+      },
+      makeInvoiceChange({
+        payload: {
+          PaymentRefNum: 'REF-EOM',
+          TotalAmt: 200.0,
+          TxnDate: '2026-07-31',
+          Line: [{ Amount: 200.0, LinkedTxn: [{ TxnType: 'Invoice', TxnId: 'inv-ext-001' }] }]
+        }
+      })
+    );
+
+    expect(recordExternalPayment).toHaveBeenCalledWith(
+      expect.anything(),
+      't1',
+      expect.objectContaining({
+        paymentDate: new Date('2026-07-31'),
+        transactionMetadata: expect.objectContaining({ qbo_txn_date: '2026-07-31' })
+      })
+    );
+  });
+
+  it('labels credit-application payments distinctly from cash payments', async () => {
+    const invMap = { id: 'imap-1', alga_entity_id: 'alga-inv-1', external_entity_id: 'inv-ext-001', sync_status: 'synced', metadata: {} };
+    const ledger = makeFakeLedger(null);
+    ledger.findByExternalId
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(invMap);
+
+    await applyExternalPaymentChange(
+      {
+        knex: makeFakeKnex(),
+        tenantId: 't1',
+        adapterType: 'quickbooks_online',
+        targetRealm: 'r1',
+        ledger: ledger as any,
+        exceptions: makeFakeExceptions(),
+        stats: emptyCycleStats()
+      },
+      makeInvoiceChange({
+        payload: {
+          TotalAmt: 0,
+          Line: [
+            { Amount: 150.0, LinkedTxn: [{ TxnType: 'Invoice', TxnId: 'inv-ext-001' }] },
+            { Amount: 150.0, LinkedTxn: [{ TxnType: 'CreditMemo', TxnId: 'cm-ext-9' }] }
+          ]
+        }
+      })
+    );
+
+    expect(recordExternalPayment).toHaveBeenCalledWith(
+      expect.anything(),
+      't1',
+      expect.objectContaining({
+        notes: expect.stringMatching(/^QuickBooks credit applied /),
+        transactionMetadata: expect.objectContaining({ qbo_payment_kind: 'credit_application' })
+      })
+    );
+  });
+
+  it('cash payments keep the plain payment label', async () => {
+    const invMap = { id: 'imap-1', alga_entity_id: 'alga-inv-1', external_entity_id: 'inv-ext-001', sync_status: 'synced', metadata: {} };
+    const ledger = makeFakeLedger(null);
+    ledger.findByExternalId
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(invMap);
+
+    await applyExternalPaymentChange(
+      {
+        knex: makeFakeKnex(),
+        tenantId: 't1',
+        adapterType: 'quickbooks_online',
+        targetRealm: 'r1',
+        ledger: ledger as any,
+        exceptions: makeFakeExceptions(),
+        stats: emptyCycleStats()
+      },
+      makeInvoiceChange()
+    );
+
+    expect(recordExternalPayment).toHaveBeenCalledWith(
+      expect.anything(),
+      't1',
+      expect.objectContaining({
+        notes: expect.stringMatching(/^QuickBooks payment /),
+        transactionMetadata: expect.objectContaining({ qbo_payment_kind: 'payment' })
+      })
+    );
+  });
+
   it('inserted mapping metadata includes sync_token and allocations', async () => {
     const invMap = { id: 'imap-1', alga_entity_id: 'alga-inv-1', external_entity_id: 'inv-ext-001', sync_status: 'synced', metadata: {} };
     const ledger = makeFakeLedger(null);
@@ -377,16 +493,154 @@ describe('paymentApplier', () => {
  * AND supports knex.transaction (used by the happy path).
  */
 function makeKnexWithInvoice(invoiceRow: any): any {
-  const first = vi.fn(async () => invoiceRow);
-  const select = vi.fn(() => ({ first }));
-  const where = vi.fn(() => ({ select, first }));
-  const table = vi.fn(() => ({ where }));
+  const query: any = {
+    where: vi.fn(() => query),
+    select: vi.fn(() => query),
+    first: vi.fn(async () => invoiceRow)
+  };
+  const table = vi.fn(() => query);
   const trx: any = Object.assign(table, {
     transaction: vi.fn(async (cb: any) => cb(trx)),
     fn: { now: vi.fn() }
   });
   return trx;
 }
+
+describe('paymentApplier — non-payable invoice guard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(recordExternalPayment).mockResolvedValue({
+      success: true,
+      paymentId: 'pay-1',
+      paymentRecorded: true
+    });
+    vi.mocked(reverseExternalPayment).mockResolvedValue({
+      success: true,
+      paymentId: 'rev-1',
+      paymentRecorded: true
+    });
+  });
+
+  it('NEW payment targeting a cancelled mapped invoice creates an exception and does not apply', async () => {
+    const invoiceMapping = {
+      id: 'imap-1',
+      alga_entity_id: 'alga-inv-1',
+      external_entity_id: 'inv-ext-001',
+      sync_status: 'synced',
+      metadata: {}
+    };
+    const cancelledInvoice = { status: 'cancelled', total_amount: 20000, credit_applied: 0 };
+
+    const ledger = makeFakeLedger(null);
+    ledger.findByExternalId
+      .mockResolvedValueOnce(null)           // credit_application echo probe
+      .mockResolvedValueOnce(null)           // payment not in ledger (NEW)
+      .mockResolvedValueOnce(invoiceMapping); // invoice mapping found
+
+    const exceptions = makeFakeExceptions();
+    const stats = emptyCycleStats();
+
+    await applyExternalPaymentChange(
+      {
+        knex: makeKnexWithInvoice(cancelledInvoice),
+        tenantId: 't1',
+        adapterType: 'quickbooks_online',
+        targetRealm: 'r1',
+        ledger: ledger as any,
+        exceptions,
+        stats
+      },
+      makeInvoiceChange()
+    );
+
+    expect(recordExternalPayment).not.toHaveBeenCalled();
+    expect(reverseExternalPayment).not.toHaveBeenCalled();
+    expect(ledger.insert).not.toHaveBeenCalled();
+    expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'accounting_sync_unmapped_payment',
+        entityType: 'external_payment',
+        entityId: 'pay-ext-001',
+        context: expect.objectContaining({
+          reason: 'targets_non_payable_invoice',
+          targets: [
+            expect.objectContaining({
+              alga_invoice_id: 'alga-inv-1',
+              external_invoice_id: 'inv-ext-001',
+              invoice_status: 'cancelled'
+            })
+          ]
+        })
+      })
+    );
+    expect(stats.paymentsSkipped).toBe(1);
+    expect(stats.exceptionsCreated).toBe(1);
+  });
+
+  it('edited mapped payment targeting a draft invoice creates an exception before reversing old allocations', async () => {
+    const existing = {
+      id: 'pmap-1',
+      alga_entity_id: 'old-pay-id',
+      sync_status: 'synced',
+      metadata: {
+        sync_token: '2',
+        deleted: false,
+        allocations: [
+          { invoiceId: 'alga-inv-1', externalInvoiceId: 'inv-ext-001', amountCents: 15000, algaPaymentId: 'pay-old' }
+        ]
+      }
+    };
+    const invoiceMapping = {
+      id: 'imap-1',
+      alga_entity_id: 'alga-inv-1',
+      external_entity_id: 'inv-ext-001',
+      sync_status: 'synced',
+      metadata: {}
+    };
+
+    const ledger = makeFakeLedger(existing);
+    ledger.findByExternalId
+      .mockResolvedValueOnce(null)          // credit_application echo probe
+      .mockResolvedValueOnce(existing)      // existing payment mapping
+      .mockResolvedValueOnce(invoiceMapping); // invoice mapping found
+
+    const exceptions = makeFakeExceptions();
+    const stats = emptyCycleStats();
+
+    await applyExternalPaymentChange(
+      {
+        knex: makeKnexWithInvoice({ status: 'draft', total_amount: 20000, credit_applied: 0 }),
+        tenantId: 't1',
+        adapterType: 'quickbooks_online',
+        targetRealm: 'r1',
+        ledger: ledger as any,
+        exceptions,
+        stats
+      },
+      makeInvoiceChange({ syncToken: '4' })
+    );
+
+    expect(reverseExternalPayment).not.toHaveBeenCalled();
+    expect(recordExternalPayment).not.toHaveBeenCalled();
+    expect(ledger.update).not.toHaveBeenCalled();
+    expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'accounting_sync_unmapped_payment',
+        context: expect.objectContaining({
+          reason: 'targets_non_payable_invoice',
+          targets: [
+            expect.objectContaining({
+              invoice_status: 'draft'
+            })
+          ]
+        })
+      })
+    );
+    expect(stats.paymentsSkipped).toBe(1);
+    expect(stats.paymentsReversed).toBe(0);
+    expect(stats.exceptionsCreated).toBe(1);
+  });
+});
 
 describe('paymentApplier — over-application guard', () => {
   beforeEach(() => {

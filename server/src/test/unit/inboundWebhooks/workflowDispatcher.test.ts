@@ -90,7 +90,6 @@ describe('inbound webhook workflow dispatcher', () => {
       triggerFireKey: 'inbound-webhook:delivery-1',
       eventType: 'INBOUND_WEBHOOK_RECEIVED',
       sourcePayloadSchemaRef: 'payload.InboundWebhookReceived.v1',
-      execute: true,
       executionKey: 'inbound-webhook:delivery-1',
     });
     expect(outcome).toEqual({
@@ -139,7 +138,6 @@ describe('inbound webhook workflow dispatcher', () => {
       expect.objectContaining({
         workflowId: 'workflow-visible',
         tenantId: 'tenant-a',
-        execute: true,
         triggerType: 'event',
         eventType: 'INBOUND_WEBHOOK_RECEIVED',
         triggerFireKey: 'inbound-webhook:delivery-visible-1',
@@ -229,7 +227,6 @@ describe('inbound webhook workflow dispatcher', () => {
     expect(mocks.launchPublishedWorkflowRun).toHaveBeenCalledWith(
       knex,
       expect.objectContaining({
-        execute: true,
         executionKey: 'inbound-webhook:delivery-3',
       }),
     );

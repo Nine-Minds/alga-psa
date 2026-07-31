@@ -12,8 +12,8 @@ describe('renewalsQueueActions assign-owner wiring', () => {
     expect(source).toContain('export const assignRenewalQueueItemOwner = withAuth(async (');
     expect(source).toContain("throw new Error('Client contract id is required');");
     expect(source).toContain("throw new Error('Assigned owner must be a user id string or null');");
-    expect(source).toContain("schema?.hasColumn?.('client_contracts', 'assigned_to') ?? false");
-    expect(source).toContain("throw new Error('Renewals queue assignment columns are not available');");
+    expect(source).toContain("throw new Error('Cross-tenant owner identifier is not allowed');");
+    expect(source).toContain("throw new Error('Assigned owner was not found in this tenant');");
     expect(source).toContain('const normalizedAssignedTo = typeof assignedTo === \'string\' && assignedTo.trim().length > 0');
     expect(source).toContain("throw new Error('Renewal work item not found');");
     expect(source).toContain('assigned_to: normalizedAssignedTo,');

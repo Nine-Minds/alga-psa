@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
@@ -45,6 +46,10 @@ function createTextFileBuffer(content: string): Buffer {
 
 test.describe('Document upload and preview', () => {
   let context: E2ETestContext;
+
+  function tenantTable(tenantId: string, table: string) {
+    return tenantDb(context.db, tenantId).table(table);
+  }
 
   test.beforeAll(async () => {
     context = new E2ETestContext({
@@ -172,7 +177,7 @@ test.describe('Document upload and preview', () => {
     await page.waitForTimeout(1000); // Wait for view to switch
 
     // Verify document was saved to database
-    const dbDocument = await context.db('documents')
+    const dbDocument = await tenantTable(tenantId, 'documents')
       .where({
         tenant: tenantId,
         document_name: fileName,
@@ -188,7 +193,7 @@ test.describe('Document upload and preview', () => {
     expect(dbDocument.user_id).toBe(tenantData.adminUser.userId);
 
     // Verify file was uploaded to MinIO/S3
-    const fileStoreRecord = await context.db('external_files')
+    const fileStoreRecord = await tenantTable(tenantId, 'external_files')
       .where({ file_id: dbDocument.file_id })
       .first();
 
@@ -302,7 +307,7 @@ test.describe('Document upload and preview', () => {
     await expect(heading).toBeVisible({ timeout: 30_000 });
 
     // Verify database storage
-    const dbDocument = await context.db('documents')
+    const dbDocument = await tenantTable(tenantId, 'documents')
       .where({
         tenant: tenantId,
         document_name: fileName,
@@ -317,7 +322,7 @@ test.describe('Document upload and preview', () => {
     expect(dbDocument.storage_path).toBeDefined();
 
     // Verify file was uploaded to MinIO
-    const fileStoreRecord = await context.db('external_files')
+    const fileStoreRecord = await tenantTable(tenantId, 'external_files')
       .where({ file_id: dbDocument.file_id })
       .first();
 
@@ -415,7 +420,7 @@ test.describe('Document upload and preview', () => {
     await page.waitForTimeout(1000); // Wait for view to switch
 
     // Verify database storage with complete metadata
-    const dbDocument = await context.db('documents')
+    const dbDocument = await tenantTable(tenantId, 'documents')
       .where({
         tenant: tenantId,
         document_name: fileName,
@@ -432,7 +437,7 @@ test.describe('Document upload and preview', () => {
     expect(dbDocument.entered_at).toBeDefined();
 
     // Verify file was uploaded to MinIO
-    const fileStoreRecord = await context.db('external_files')
+    const fileStoreRecord = await tenantTable(tenantId, 'external_files')
       .where({ file_id: dbDocument.file_id })
       .first();
 
@@ -534,7 +539,7 @@ test.describe('Document upload and preview', () => {
     await expect(heading).toBeVisible({ timeout: 30_000 });
 
     // Verify database storage
-    const dbDocument = await context.db('documents')
+    const dbDocument = await tenantTable(tenantId, 'documents')
       .where({
         tenant: tenantId,
         document_name: fileName,
@@ -548,7 +553,7 @@ test.describe('Document upload and preview', () => {
     expect(dbDocument.file_id).toBeDefined();
 
     // Verify file was uploaded to MinIO
-    const fileStoreRecord = await context.db('external_files')
+    const fileStoreRecord = await tenantTable(tenantId, 'external_files')
       .where({ file_id: dbDocument.file_id })
       .first();
 
@@ -672,7 +677,7 @@ test.describe('Document upload and preview', () => {
     const testFolderPath = `/Test Folder ${Date.now()}`;
 
     // Create folder in database directly for testing
-    await context.db('documents')
+    await tenantTable(tenantId, 'documents')
       .insert({
         document_id: uuidv4(),
         tenant: tenantId,
@@ -739,7 +744,7 @@ test.describe('Document upload and preview', () => {
     await expect(heading).toBeVisible({ timeout: 30_000 });
 
     // Verify document was saved with correct folder path
-    const dbDocument = await context.db('documents')
+    const dbDocument = await tenantTable(tenantId, 'documents')
       .where({
         tenant: tenantId,
         document_name: fileName,
@@ -790,7 +795,7 @@ test.describe('Document upload and preview', () => {
     await browseButton.waitFor({ state: 'visible', timeout: 10_000 });
 
     // Get initial document count
-    const initialCount = await context.db('documents')
+    const initialCount = await tenantTable(tenantId, 'documents')
       .where({ tenant: tenantId })
       .count('* as count')
       .first();
@@ -804,7 +809,7 @@ test.describe('Document upload and preview', () => {
     await expect(uploadLabel).not.toBeVisible({ timeout: 5_000 });
 
     // Verify no new documents were created
-    const finalCount = await context.db('documents')
+    const finalCount = await tenantTable(tenantId, 'documents')
       .where({ tenant: tenantId })
       .count('* as count')
       .first();

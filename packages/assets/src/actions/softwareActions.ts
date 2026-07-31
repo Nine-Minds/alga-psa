@@ -8,7 +8,7 @@
  * @see ee/docs/plans/asset-detail-view-enhancement.md §1.4
  */
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import {
   AssetSoftwareDisplayItem,
@@ -22,6 +22,12 @@ import {
   SoftwareType,
   UpdateSoftwareCatalogRequest,
 } from '@alga-psa/types';
+import type { Knex } from 'knex';
+import { assetActionErrorFrom, type AssetActionError } from './assetActionErrors';
+
+function tenantScopedTable(knex: Knex, tenant: string, table: string): Knex.QueryBuilder<any, any> {
+  return tenantDb(knex, tenant).table(table) as Knex.QueryBuilder<any, any>;
+}
 
 /**
  * Get software installed on an asset
@@ -31,7 +37,7 @@ export const getAssetSoftware = withAuth(async (
   _user,
   { tenant },
   params: AssetSoftwareQueryParams
-): Promise<AssetSoftwareListResponse> => {
+): Promise<AssetSoftwareListResponse | AssetActionError> => {
   const { knex } = await createTenantKnex();
 
   const {
@@ -46,8 +52,7 @@ export const getAssetSoftware = withAuth(async (
 
   try {
     // Base query using the view for convenience
-    let query = knex('v_asset_software_details')
-      .where('tenant', tenant)
+    let query = tenantScopedTable(knex, tenant, 'v_asset_software_details')
       .where('asset_id', asset_id);
 
     // Filter by current status
@@ -98,7 +103,7 @@ export const getAssetSoftware = withAuth(async (
       .limit(limit)
       .offset(offset);
 
-    const software: AssetSoftwareDisplayItem[] = rows.map(row => ({
+    const software: AssetSoftwareDisplayItem[] = rows.map((row: any) => ({
       software_id: row.software_id,
       name: row.name,
       publisher: row.publisher,
@@ -120,20 +125,23 @@ export const getAssetSoftware = withAuth(async (
       limit,
     };
   } catch (error) {
+    const expected = assetActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error getting asset software:', error);
-    throw new Error('Failed to get asset software');
+    throw error;
   }
 });
 
 /**
  * Get software summary statistics for an asset
  */
-export const getAssetSoftwareSummary = withAuth(async (_user, { tenant }, assetId: string): Promise<AssetSoftwareSummary> => {
+export const getAssetSoftwareSummary = withAuth(async (_user, { tenant }, assetId: string): Promise<AssetSoftwareSummary | AssetActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
-    const baseQuery = () => knex('v_asset_software_details')
-      .where('tenant', tenant)
+    const baseQuery = () => tenantScopedTable(knex, tenant, 'v_asset_software_details')
       .where('asset_id', assetId)
       .where('is_current', true);
 
@@ -202,8 +210,12 @@ export const getAssetSoftwareSummary = withAuth(async (_user, { tenant }, assetI
       recently_installed_count,
     };
   } catch (error) {
+    const expected = assetActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error getting asset software summary:', error);
-    throw new Error('Failed to get asset software summary');
+    throw error;
   }
 });
 
@@ -214,7 +226,7 @@ export const searchSoftwareFleetWide = withAuth(async (
   _user,
   { tenant },
   params: SoftwareSearchParams
-): Promise<SoftwareSearchResponse> => {
+): Promise<SoftwareSearchResponse | AssetActionError> => {
   const { knex } = await createTenantKnex();
 
   const {
@@ -230,8 +242,8 @@ export const searchSoftwareFleetWide = withAuth(async (
 
   try {
     // Build base query for software catalog
-    let catalogQuery = knex('software_catalog as sc')
-      .where('sc.tenant', tenant);
+    const db = tenantDb(knex, tenant);
+    let catalogQuery = db.table('software_catalog as sc');
 
     // Apply filters
     if (search) {
@@ -263,6 +275,10 @@ export const searchSoftwareFleetWide = withAuth(async (
 
     // Get paginated software entries with install counts
     const offset = (page - 1) * limit;
+    const currentAssetSoftware = db.table('asset_software')
+      .select('software_id', 'asset_id')
+      .where('is_current', true)
+      .as('asw');
     let softwareQuery = catalogQuery.clone()
       .select(
         'sc.software_id',
@@ -273,19 +289,15 @@ export const searchSoftwareFleetWide = withAuth(async (
         'sc.is_managed',
         'sc.is_security_relevant'
       )
-      .leftJoin('asset_software as asw', function() {
-        this.on('asw.tenant', '=', 'sc.tenant')
-          .andOn('asw.software_id', '=', 'sc.software_id')
-          .andOn('asw.is_current', '=', knex.raw('true'));
-      });
+      .leftJoin(currentAssetSoftware, 'asw.software_id', 'sc.software_id');
 
     // Filter by client if specified
     if (client_id) {
+      const tenantAssets = db.table('assets')
+        .select('asset_id', 'client_id')
+        .as('a');
       softwareQuery = softwareQuery
-        .leftJoin('assets as a', function() {
-          this.on('a.tenant', '=', 'asw.tenant')
-            .andOn('a.asset_id', '=', 'asw.asset_id');
-        })
+        .leftJoin(tenantAssets, 'a.asset_id', 'asw.asset_id')
         .where('a.client_id', client_id);
     }
 
@@ -299,8 +311,7 @@ export const searchSoftwareFleetWide = withAuth(async (
     // For each software, get the assets that have it installed
     const results: SoftwareSearchResult[] = [];
     for (const sw of softwareRows) {
-      let assetsQuery = knex('v_asset_software_details')
-        .where('tenant', tenant)
+      let assetsQuery = tenantScopedTable(knex, tenant, 'v_asset_software_details')
         .where('software_id', sw.software_id)
         .where('is_current', true);
 
@@ -329,7 +340,7 @@ export const searchSoftwareFleetWide = withAuth(async (
         is_managed: Boolean(sw.is_managed),
         is_security_relevant: Boolean(sw.is_security_relevant),
         install_count: parseInt(String(sw.install_count), 10),
-        assets: assetRows.map(a => ({
+        assets: assetRows.map((a: any) => ({
           asset_id: a.asset_id,
           asset_name: a.asset_name,
           asset_type: a.asset_type,
@@ -348,8 +359,12 @@ export const searchSoftwareFleetWide = withAuth(async (
       limit,
     };
   } catch (error) {
+    const expected = assetActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error searching software fleet-wide:', error);
-    throw new Error('Failed to search software');
+    throw error;
   }
 });
 
@@ -361,7 +376,7 @@ export const updateSoftwareCatalogEntry = withAuth(async (
   { tenant },
   softwareId: string,
   updates: UpdateSoftwareCatalogRequest
-): Promise<void> => {
+): Promise<void | AssetActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -378,13 +393,17 @@ export const updateSoftwareCatalogEntry = withAuth(async (
     }
 
     if (Object.keys(updateData).length > 0) {
-      await knex('software_catalog')
-        .where({ tenant, software_id: softwareId })
+      await tenantScopedTable(knex, tenant, 'software_catalog')
+        .where({ software_id: softwareId })
         .update(updateData);
     }
   } catch (error) {
+    const expected = assetActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error updating software catalog entry:', error);
-    throw new Error('Failed to update software catalog entry');
+    throw error;
   }
 });
 
@@ -399,7 +418,7 @@ export const getRecentSoftwareChanges = withAuth(async (
 ): Promise<{
   installed: AssetSoftwareDisplayItem[];
   uninstalled: AssetSoftwareDisplayItem[];
-}> => {
+} | AssetActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -407,8 +426,7 @@ export const getRecentSoftwareChanges = withAuth(async (
     sinceDate.setDate(sinceDate.getDate() - days);
 
     // Recently installed
-    const installed = await knex('v_asset_software_details')
-      .where('tenant', tenant)
+    const installed = await tenantScopedTable(knex, tenant, 'v_asset_software_details')
       .where('asset_id', assetId)
       .where('is_current', true)
       .where('first_seen_at', '>=', sinceDate.toISOString())
@@ -429,8 +447,7 @@ export const getRecentSoftwareChanges = withAuth(async (
       .orderBy('first_seen_at', 'desc');
 
     // Recently uninstalled
-    const uninstalled = await knex('v_asset_software_details')
-      .where('tenant', tenant)
+    const uninstalled = await tenantScopedTable(knex, tenant, 'v_asset_software_details')
       .where('asset_id', assetId)
       .where('is_current', false)
       .where('uninstalled_at', '>=', sinceDate.toISOString())
@@ -451,7 +468,7 @@ export const getRecentSoftwareChanges = withAuth(async (
       .orderBy('uninstalled_at', 'desc');
 
     return {
-      installed: installed.map(row => ({
+      installed: installed.map((row: any) => ({
         software_id: row.software_id,
         name: row.name,
         publisher: row.publisher,
@@ -465,7 +482,7 @@ export const getRecentSoftwareChanges = withAuth(async (
         is_managed: row.is_managed,
         is_security_relevant: row.is_security_relevant,
       })),
-      uninstalled: uninstalled.map(row => ({
+      uninstalled: uninstalled.map((row: any) => ({
         software_id: row.software_id,
         name: row.name,
         publisher: row.publisher,
@@ -481,7 +498,11 @@ export const getRecentSoftwareChanges = withAuth(async (
       })),
     };
   } catch (error) {
+    const expected = assetActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error getting recent software changes:', error);
-    throw new Error('Failed to get recent software changes');
+    throw error;
   }
 });

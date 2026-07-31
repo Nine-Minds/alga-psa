@@ -5,6 +5,10 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronDown, X } from 'lucide-
 import { DayPicker } from 'react-day-picker';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
+import type { Locale } from 'date-fns';
+import { useOptionalI18n } from '../lib/i18n/client';
+import { LOCALE_CONFIG } from '../lib/i18n/config';
+import { getDateFnsLocale } from '../lib/dateFnsLocale';
 // Import default styles first, then our overrides
 import 'react-day-picker/dist/style.css';
 import '../styles/calendar.css';
@@ -26,9 +30,10 @@ interface MonthYearSelectProps {
   value: Date;
   onChange: (date: Date) => void;
   fromDate: Date;
+  locale: Locale;
 }
 
-const MonthYearSelect = ({ value, onChange, fromDate }: MonthYearSelectProps) => {
+const MonthYearSelect = ({ value, onChange, fromDate, locale }: MonthYearSelectProps) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
   
@@ -60,7 +65,7 @@ const MonthYearSelect = ({ value, onChange, fromDate }: MonthYearSelectProps) =>
         aria-label="Select month and year"
         aria-expanded={isOpen}
       >
-        {format(value, 'MMMM yyyy')}
+        {format(value, 'MMMM yyyy', { locale })}
         <ChevronDown className="h-4 w-4 opacity-50" />
       </button>
       
@@ -84,7 +89,7 @@ const MonthYearSelect = ({ value, onChange, fromDate }: MonthYearSelectProps) =>
                 date.getMonth() === value.getMonth() && date.getFullYear() === value.getFullYear() && 'selected'
               )}
             >
-              {format(date, 'MMMM yyyy')}
+              {format(date, 'MMMM yyyy', { locale })}
             </button>
           ))}
         </div>
@@ -103,6 +108,8 @@ function Calendar({
   mode = 'single',
   ...props
 }: CalendarProps) {
+  const i18n = useOptionalI18n();
+  const dateFnsLocale = getDateFnsLocale(i18n?.locale ?? LOCALE_CONFIG.defaultLocale);
   const [monthYear, setMonthYear] = React.useState<Date>(selected || new Date());
   const fromDate = props.fromDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   const today = React.useMemo(() => normalizeDate(new Date()), []);
@@ -153,6 +160,7 @@ function Calendar({
           value={monthYear}
           onChange={setMonthYear}
           fromDate={fromDate}
+          locale={dateFnsLocale}
         />
         <div className="rdp-nav">
           <button
@@ -176,6 +184,7 @@ function Calendar({
       {/* @ts-ignore - DayPicker has complex discriminated union types for mode/selected/onSelect */}
       <DayPicker
         showOutsideDays={showOutsideDays}
+        locale={dateFnsLocale}
         className={cn('rdp', className)}
         classNames={{
           ...classNames,

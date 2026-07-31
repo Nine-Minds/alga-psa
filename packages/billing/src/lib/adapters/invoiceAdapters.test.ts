@@ -146,6 +146,72 @@ describe('mapDbInvoiceToWasmViewModel', () => {
     expect(mapped?.total).toBe(94830);
   });
 
+  it('maps tax-bearing line totals from net amounts while keeping tax in invoice totals', () => {
+    const mapped = mapDbInvoiceToWasmViewModel({
+      invoice_number: 'INV-TAXED',
+      invoice_date: '2026-07-30',
+      due_date: '2026-08-15',
+      currency_code: 'USD',
+      client: { name: 'Taxed Client', address: '1 Main St' },
+      invoice_charges: [
+        {
+          item_id: 'milestone-1',
+          description: 'Project milestone',
+          quantity: 1,
+          unit_price: 10_000,
+          net_amount: 10_000,
+          tax_amount: 800,
+          total_price: 10_800,
+        },
+      ],
+      subtotal: 10_000,
+      tax: 800,
+      total: null,
+    });
+
+    expect(mapped?.items[0]).toMatchObject({ total: 10_000, taxAmount: 800 });
+    expect(mapped?.subtotal).toBe(10_000);
+    expect(mapped?.tax).toBe(800);
+    expect(mapped?.total).toBe(10_800);
+  });
+
+  it('leaves discount and zero-tax line displays unchanged', () => {
+    const mapped = mapDbInvoiceToWasmViewModel({
+      invoice_number: 'INV-NO-TAX',
+      invoice_date: '2026-07-30',
+      due_date: '2026-08-15',
+      currency_code: 'USD',
+      client: { name: 'No Tax Client', address: '2 Main St' },
+      invoice_charges: [
+        {
+          item_id: 'service-1',
+          description: 'Service',
+          quantity: 1,
+          unit_price: 10_000,
+          net_amount: 10_000,
+          tax_amount: 0,
+          total_price: 10_000,
+        },
+        {
+          item_id: 'discount-1',
+          description: 'Discount',
+          quantity: 1,
+          unit_price: -1_000,
+          net_amount: -1_000,
+          tax_amount: 0,
+          total_price: -1_000,
+        },
+      ],
+      subtotal: 9_000,
+      tax: 0,
+      total: 9_000,
+    });
+
+    expect(mapped?.items.map((item) => item.total)).toEqual([10_000, -1_000]);
+    expect(mapped?.subtotal).toBe(9_000);
+    expect(mapped?.total).toBe(9_000);
+  });
+
   it('maps tenant snapshot details when provided by the invoice query payload', () => {
     const mapped = mapDbInvoiceToWasmViewModel({
       invoice_number: 'INV-601',

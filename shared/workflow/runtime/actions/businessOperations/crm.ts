@@ -18,6 +18,7 @@ import {
   getQuoteApprovalWorkflowSettings,
   quoteStatusSchema,
 } from './crmWorkerDal';
+import { tenantDb } from '@alga-psa/db';
 import {
   uuidSchema,
   isoDateTimeSchema,
@@ -66,6 +67,14 @@ const visibilitySchema = z.enum(['internal', 'client_visible']);
 const onEmptySchema = z.enum(['return_empty', 'error']);
 const supportedActivityTagTargetTypes = ['ticket', 'contact', 'client'] as const;
 type SupportedActivityTagTargetType = Extract<TaggedEntityType, typeof supportedActivityTagTargetTypes[number]>;
+
+function tenantScopedTable(tx: TenantTxContext, table: string): Knex.QueryBuilder {
+  return tenantDb(tx.trx, tx.tenantId).table(table);
+}
+
+function tenantScopedTableForTenant(trx: Knex.Transaction, tenantId: string, table: string): Knex.QueryBuilder {
+  return tenantDb(trx, tenantId).table(table);
+}
 
 const activitySummarySchema = z.object({
   activity_id: uuidSchema,
@@ -538,8 +547,8 @@ async function validateInteractionTypeId(
   fieldName: 'type_id'
 ): Promise<void> {
   const [tenantType, systemType] = await Promise.all([
-    tx.trx('interaction_types').where({ tenant: tx.tenantId, type_id: typeId }).first(),
-    tx.trx('system_interaction_types').where({ type_id: typeId }).first(),
+    tenantScopedTable(tx, 'interaction_types').where('type_id', typeId).first(),
+    tenantScopedTable(tx, 'system_interaction_types').where({ type_id: typeId }).first(),
   ]);
 
   if (tenantType || systemType) {
@@ -560,8 +569,8 @@ async function validateInteractionStatusId(
   statusId: string,
   fieldName: 'status_id'
 ): Promise<void> {
-  const status = await tx.trx('statuses')
-    .where({ tenant: tx.tenantId, status_id: statusId, status_type: 'interaction' })
+  const status = await tenantScopedTable(tx, 'statuses')
+    .where({ status_id: statusId, status_type: 'interaction' })
     .first();
 
   if (status) {
@@ -577,9 +586,8 @@ async function validateInteractionStatusId(
 }
 
 async function getDefaultInteractionStatusId(ctx: any, tx: TenantTxContext): Promise<string> {
-  const status = await tx.trx('statuses')
+  const status = await tenantScopedTable(tx, 'statuses')
     .where({
-      tenant: tx.tenantId,
       status_type: 'interaction',
       is_default: true,
     })
@@ -601,27 +609,18 @@ async function fetchActivityDetailRow(
   tenantId: string,
   activityId: string
 ): Promise<Record<string, unknown> | null> {
-  return await trx('interactions as i')
-    .leftJoin('clients as c', function joinClients() {
-      this.on('i.tenant', 'c.tenant').andOn('i.client_id', 'c.client_id');
-    })
-    .leftJoin('contacts as ct', function joinContacts() {
-      this.on('i.tenant', 'ct.tenant').andOn('i.contact_name_id', 'ct.contact_name_id');
-    })
-    .leftJoin('tickets as tk', function joinTickets() {
-      this.on('i.tenant', 'tk.tenant').andOn('i.ticket_id', 'tk.ticket_id');
-    })
-    .leftJoin('users as u', function joinUsers() {
-      this.on('i.tenant', 'u.tenant').andOn('i.user_id', 'u.user_id');
-    })
-    .leftJoin('statuses as st', function joinStatuses() {
-      this.on('i.tenant', 'st.tenant').andOn('i.status_id', 'st.status_id');
-    })
-    .leftJoin('interaction_types as it', function joinInteractionTypes() {
-      this.on('i.tenant', 'it.tenant').andOn('i.type_id', 'it.type_id');
-    })
-    .leftJoin('system_interaction_types as sit', 'i.type_id', 'sit.type_id')
-    .where({ 'i.tenant': tenantId, 'i.interaction_id': activityId })
+  const db = tenantDb(trx, tenantId);
+  const query = db.table('interactions as i');
+  db.tenantJoin(query, 'clients as c', 'i.client_id', 'c.client_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+  db.tenantJoin(query, 'contacts as ct', 'i.contact_name_id', 'ct.contact_name_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+  db.tenantJoin(query, 'tickets as tk', 'i.ticket_id', 'tk.ticket_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+  db.tenantJoin(query, 'users as u', 'i.user_id', 'u.user_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+  db.tenantJoin(query, 'statuses as st', 'i.status_id', 'st.status_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+  db.tenantJoin(query, 'interaction_types as it', 'i.type_id', 'it.type_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+  db.tenantJoin(query, 'system_interaction_types as sit', 'i.type_id', 'sit.type_id', { type: 'left' });
+
+  return await query
+    .where('i.interaction_id', activityId)
     .select(
       'i.interaction_id',
       'i.type_id',
@@ -734,15 +733,15 @@ async function resolveQuoteRecipients(
 ): Promise<string[]> {
   const [contactRecipient, clientRecipient] = await Promise.all([
     quote.contact_id
-      ? trx('contacts')
+      ? tenantScopedTableForTenant(trx, tenantId, 'contacts')
         .select('email')
-        .where({ tenant: tenantId, contact_name_id: quote.contact_id })
+        .where('contact_name_id', quote.contact_id)
         .first<{ email?: string | null }>()
       : Promise.resolve(null),
     quote.client_id
-      ? trx('clients')
+      ? tenantScopedTableForTenant(trx, tenantId, 'clients')
         .select('billing_email')
-        .where({ tenant: tenantId, client_id: quote.client_id })
+        .where('client_id', quote.client_id)
         .first<{ billing_email?: string | null }>()
       : Promise.resolve(null),
   ]);
@@ -883,8 +882,8 @@ async function ensureQuoteContactBelongsToClient(
 ): Promise<void> {
   if (!contactId) return;
 
-  const contact = await tx.trx('contacts')
-    .where({ tenant: tx.tenantId, contact_name_id: contactId })
+  const contact = await tenantScopedTable(tx, 'contacts')
+    .where('contact_name_id', contactId)
     .first();
 
   if (!contact) {
@@ -967,23 +966,29 @@ async function resolveQuoteAuthorizationSubject(
 ): Promise<AuthorizationSubject> {
   const roleRows = await runAuthorizationLookupInSavepoint(
     trx,
-    () => trx('user_roles').where({ tenant: tenantId, user_id: actorUserId }).select<{ role_id: string }[]>('role_id'),
+    () => tenantScopedTableForTenant(trx, tenantId, 'user_roles')
+      .where('user_id', actorUserId)
+      .select<{ role_id: string }[]>('role_id'),
     []
   );
   const teamRows = await runAuthorizationLookupInSavepoint(
     trx,
-    () => trx('team_members').where({ tenant: tenantId, user_id: actorUserId }).select<{ team_id: string }[]>('team_id'),
+    () => tenantScopedTableForTenant(trx, tenantId, 'team_members')
+      .where('user_id', actorUserId)
+      .select<{ team_id: string }[]>('team_id'),
     []
   );
   const managedRows = await runAuthorizationLookupInSavepoint(
     trx,
-    () => trx('users').where({ tenant: tenantId, reports_to: actorUserId }).select<{ user_id: string }[]>('user_id'),
+    () => tenantScopedTableForTenant(trx, tenantId, 'users')
+      .where('reports_to', actorUserId)
+      .select<{ user_id: string }[]>('user_id'),
     []
   );
   const userRow = await runAuthorizationLookupInSavepoint(
     trx,
-    () => trx('users')
-      .where({ tenant: tenantId, user_id: actorUserId })
+    () => tenantScopedTableForTenant(trx, tenantId, 'users')
+      .where('user_id', actorUserId)
       .select<{ user_type?: string | null; contact_id?: string | null; client_id?: string | null }>('user_type', 'contact_id', 'client_id')
       .first(),
     null
@@ -1042,7 +1047,7 @@ async function getAuthorizedQuoteForMutation(
   quoteId: string,
   deniedMessage: string
 ): Promise<Record<string, unknown>> {
-  const quote = await tx.trx('quotes').where({ tenant: tx.tenantId, quote_id: quoteId }).first();
+  const quote = await tenantScopedTable(tx, 'quotes').where('quote_id', quoteId).first();
   if (!quote) {
     throwActionError(ctx, {
       category: 'ActionError',
@@ -1096,12 +1101,12 @@ async function resolveInteractionStatus(
 ): Promise<{ status_id: string; status_name: string }> {
   let statusRow: Record<string, unknown> | undefined;
   if (params.statusId) {
-    statusRow = await tx.trx('statuses')
-      .where({ tenant: tx.tenantId, status_type: 'interaction', status_id: params.statusId })
+    statusRow = await tenantScopedTable(tx, 'statuses')
+      .where({ status_type: 'interaction', status_id: params.statusId })
       .first();
   } else if (params.statusName) {
-    statusRow = await tx.trx('statuses')
-      .where({ tenant: tx.tenantId, status_type: 'interaction' })
+    statusRow = await tenantScopedTable(tx, 'statuses')
+      .where('status_type', 'interaction')
       .whereRaw('lower(trim(name)) = lower(trim(?))', [params.statusName])
       .first();
   }
@@ -1160,8 +1165,7 @@ export function registerCrmActions(): void {
         await requirePermission(ctx, tx, { resource: 'settings', action: 'update' });
 
         const normalizedTypeName = normalizeInteractionTypeName(input.type_name);
-        const existing = await tx.trx('interaction_types')
-          .where({ tenant: tx.tenantId })
+        const existing = await tenantScopedTable(tx, 'interaction_types')
           .whereRaw('lower(trim(type_name)) = ?', [normalizedTypeName])
           .first();
 
@@ -1190,15 +1194,14 @@ export function registerCrmActions(): void {
         const typeId = uuidv4();
 
         const displayOrder = input.display_order ?? await (async () => {
-          const row = await tx.trx('interaction_types')
-            .where({ tenant: tx.tenantId })
+          const row = await tenantScopedTable(tx, 'interaction_types')
             .max<{ max?: number | string }>('display_order as max')
             .first();
           return Number(row?.max ?? -1) + 1;
         })();
 
         try {
-          await tx.trx('interaction_types').insert({
+          await tenantScopedTable(tx, 'interaction_types').insert({
             tenant: tx.tenantId,
             type_id: typeId,
             type_name: input.type_name.trim(),
@@ -1284,8 +1287,8 @@ export function registerCrmActions(): void {
         }
 
         try {
-          const updatedCount = await tx.trx('interactions')
-            .where({ tenant: tx.tenantId, interaction_id: input.activity_id })
+          const updatedCount = await tenantScopedTable(tx, 'interactions')
+            .where({ interaction_id: input.activity_id })
             .update({ status_id: targetStatus.status_id });
           if (!updatedCount) {
             throwActionError(ctx, {
@@ -1350,7 +1353,7 @@ export function registerCrmActions(): void {
         await requirePermission(ctx, tx, { resource: 'billing', action: 'create' });
         await requirePermission(ctx, tx, { resource: 'billing', action: 'read' });
 
-        const client = await tx.trx('clients').where({ tenant: tx.tenantId, client_id: input.client_id }).first();
+        const client = await tenantScopedTable(tx, 'clients').where({ client_id: input.client_id }).first();
         if (!client) {
           throwActionError(ctx, {
             category: 'ActionError',
@@ -1571,7 +1574,7 @@ export function registerCrmActions(): void {
           });
         }
 
-        const client = await tx.trx('clients').where({ tenant: tx.tenantId, client_id: input.client_id }).first();
+        const client = await tenantScopedTable(tx, 'clients').where({ client_id: input.client_id }).first();
         if (!client) {
           throwActionError(ctx, {
             category: 'ActionError',
@@ -1720,8 +1723,8 @@ export function registerCrmActions(): void {
         const sortOrder = input.sortOrder ?? 'desc';
 
         const buildQuery = () => {
-          const query = tx.trx('quotes')
-            .where({ tenant: tx.tenantId, is_template: input.is_template ?? false });
+          const query = tenantScopedTable(tx, 'quotes')
+            .where({ is_template: input.is_template ?? false });
 
           if (input.quote_id) query.andWhere('quote_id', input.quote_id);
           if (input.quote_number) query.andWhere('quote_number', input.quote_number);
@@ -2032,8 +2035,8 @@ export function registerCrmActions(): void {
       withTenantTransaction(ctx, async (tx) => {
         await requirePermission(ctx, tx, { resource: 'interaction', action: 'update' });
 
-        const interaction = await tx.trx('interactions')
-          .where({ tenant: tx.tenantId, interaction_id: input.activity_id })
+        const interaction = await tenantScopedTable(tx, 'interactions')
+          .where({ interaction_id: input.activity_id })
           .first();
         if (!interaction) {
           throwActionError(ctx, {
@@ -2067,9 +2070,8 @@ export function registerCrmActions(): void {
             {}
           );
 
-          const existingMapping = await tx.trx('tag_mappings')
+          const existingMapping = await tenantScopedTable(tx, 'tag_mappings')
             .where({
-              tenant: tx.tenantId,
               tag_id: definition.tag_id,
               tagged_id: tagTarget.id,
               tagged_type: tagTarget.type,
@@ -2235,37 +2237,37 @@ export function registerCrmActions(): void {
       let targetSummary: Record<string, unknown> | null = null;
 
       if (input.target.type === 'client') {
-        const client = await tx.trx('clients').where({ tenant: tx.tenantId, client_id: input.target.id }).first();
+        const client = await tenantScopedTable(tx, 'clients').where({ client_id: input.target.id }).first();
         if (!client) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Client not found' });
         clientId = input.target.id;
         targetSummary = { client_id: input.target.id, client_name: client.client_name ?? null };
       } else if (input.target.type === 'contact') {
-        const contact = await tx.trx('contacts').where({ tenant: tx.tenantId, contact_name_id: input.target.id }).first();
+        const contact = await tenantScopedTable(tx, 'contacts').where({ contact_name_id: input.target.id }).first();
         if (!contact) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Contact not found' });
         contactId = input.target.id;
         clientId = (contact.client_id as string | null) ?? null;
         targetSummary = { contact_id: input.target.id, full_name: contact.full_name ?? null, email: contact.email ?? null, client_id: clientId };
       } else if (input.target.type === 'ticket') {
-        const ticket = await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_id: input.target.id }).first();
+        const ticket = await tenantScopedTable(tx, 'tickets').where({ ticket_id: input.target.id }).first();
         if (!ticket) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found' });
         ticketId = input.target.id;
         clientId = (ticket.client_id as string | null) ?? null;
         contactId = (ticket.contact_name_id as string | null) ?? null;
         targetSummary = { ticket_id: input.target.id, ticket_number: ticket.ticket_number ?? null, title: ticket.title ?? null, client_id: clientId };
       } else if (input.target.type === 'project') {
-        const project = await tx.trx('projects').where({ tenant: tx.tenantId, project_id: input.target.id }).first();
+        const project = await tenantScopedTable(tx, 'projects').where({ project_id: input.target.id }).first();
         if (!project) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Project not found' });
         projectId = input.target.id;
         clientId = (project.client_id as string | null) ?? null;
         targetSummary = { project_id: input.target.id, project_name: project.project_name ?? null, client_id: clientId };
       }
 
-      const noteType = await tx.trx('system_interaction_types').where({ type_name: 'Note' }).first();
+      const noteType = await tenantScopedTable(tx, 'system_interaction_types').where({ type_name: 'Note' }).first();
       if (!noteType) throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'System interaction type Note missing' });
 
       const noteId = uuidv4();
       const nowIso = new Date().toISOString();
-      await tx.trx('interactions').insert({
+      await tenantScopedTable(tx, 'interactions').insert({
         tenant: tx.tenantId,
         interaction_id: noteId,
         type_id: noteType.type_id,
@@ -2327,27 +2329,16 @@ export function registerCrmActions(): void {
           await requirePermission(ctx, tx, { resource: 'ticket', action: 'read' });
         }
 
-        const query = tx.trx('interactions as i')
-          .leftJoin('clients as c', function joinClients() {
-            this.on('i.tenant', 'c.tenant').andOn('i.client_id', 'c.client_id');
-          })
-          .leftJoin('contacts as ct', function joinContacts() {
-            this.on('i.tenant', 'ct.tenant').andOn('i.contact_name_id', 'ct.contact_name_id');
-          })
-          .leftJoin('tickets as tk', function joinTickets() {
-            this.on('i.tenant', 'tk.tenant').andOn('i.ticket_id', 'tk.ticket_id');
-          })
-          .leftJoin('users as u', function joinUsers() {
-            this.on('i.tenant', 'u.tenant').andOn('i.user_id', 'u.user_id');
-          })
-          .leftJoin('statuses as st', function joinStatuses() {
-            this.on('i.tenant', 'st.tenant').andOn('i.status_id', 'st.status_id');
-          })
-          .leftJoin('interaction_types as it', function joinInteractionTypes() {
-            this.on('i.tenant', 'it.tenant').andOn('i.type_id', 'it.type_id');
-          })
-          .leftJoin('system_interaction_types as sit', 'i.type_id', 'sit.type_id')
-          .where('i.tenant', tx.tenantId)
+        const db = tenantDb(tx.trx, tx.tenantId);
+        const query = db.table('interactions as i');
+        db.tenantJoin(query, 'clients as c', 'i.client_id', 'c.client_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+        db.tenantJoin(query, 'contacts as ct', 'i.contact_name_id', 'ct.contact_name_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+        db.tenantJoin(query, 'tickets as tk', 'i.ticket_id', 'tk.ticket_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+        db.tenantJoin(query, 'users as u', 'i.user_id', 'u.user_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+        db.tenantJoin(query, 'statuses as st', 'i.status_id', 'st.status_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+        db.tenantJoin(query, 'interaction_types as it', 'i.type_id', 'it.type_id', { type: 'left', rootTenantColumn: 'i.tenant' });
+        db.tenantJoin(query, 'system_interaction_types as sit', 'i.type_id', 'sit.type_id', { type: 'left' });
+        query
           .select(
             'i.interaction_id',
             'i.type_id',
@@ -2484,8 +2475,8 @@ export function registerCrmActions(): void {
         };
 
         try {
-          const updatedCount = await tx.trx('interactions')
-            .where({ tenant: tx.tenantId, interaction_id: input.activity_id })
+          const updatedCount = await tenantScopedTable(tx, 'interactions')
+            .where({ interaction_id: input.activity_id })
             .update(updatePatch);
           if (!updatedCount) {
             throwActionError(ctx, {
@@ -2566,8 +2557,8 @@ export function registerCrmActions(): void {
         let resolvedContactId = input.contact_id ?? null;
 
         if (resolvedContactId) {
-          const contact = await tx.trx('contacts')
-            .where({ tenant: tx.tenantId, contact_name_id: resolvedContactId })
+          const contact = await tenantScopedTable(tx, 'contacts')
+            .where({ contact_name_id: resolvedContactId })
             .first();
           if (!contact) {
             throwActionError(ctx, {
@@ -2598,7 +2589,7 @@ export function registerCrmActions(): void {
           });
         }
 
-        const client = await tx.trx('clients').where({ tenant: tx.tenantId, client_id: resolvedClientId }).first();
+        const client = await tenantScopedTable(tx, 'clients').where({ client_id: resolvedClientId }).first();
         if (!client) {
           throwActionError(ctx, {
             category: 'ActionError',
@@ -2609,7 +2600,7 @@ export function registerCrmActions(): void {
         }
 
         if (input.ticket_id) {
-          const ticket = await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_id: input.ticket_id }).first();
+          const ticket = await tenantScopedTable(tx, 'tickets').where({ ticket_id: input.ticket_id }).first();
           if (!ticket) {
             throwActionError(ctx, {
               category: 'ActionError',
@@ -2644,7 +2635,7 @@ export function registerCrmActions(): void {
         await validateInteractionStatusId(ctx, tx, statusId, 'status_id');
 
         const ownerUserId = input.assigned_user_id ?? input.owner_user_id ?? tx.actorUserId;
-        const owner = await tx.trx('users').where({ tenant: tx.tenantId, user_id: ownerUserId }).first();
+        const owner = await tenantScopedTable(tx, 'users').where({ user_id: ownerUserId }).first();
         if (!owner) {
           throwActionError(ctx, {
             category: 'ActionError',
@@ -2663,7 +2654,7 @@ export function registerCrmActions(): void {
         const interactionId = uuidv4();
 
         try {
-          await tx.trx('interactions').insert({
+          await tenantScopedTable(tx, 'interactions').insert({
             tenant: tx.tenantId,
             interaction_id: interactionId,
             type_id: input.type_id,
@@ -2836,8 +2827,8 @@ export function registerCrmActions(): void {
         }
 
         const sentAt = new Date().toISOString();
-        await tx.trx('quotes')
-          .where({ tenant: tx.tenantId, quote_id: input.quote_id })
+        await tenantScopedTable(tx, 'quotes')
+          .where({ quote_id: input.quote_id })
           .update({
             status: 'sent',
             sent_at: sentAt,
@@ -2845,7 +2836,7 @@ export function registerCrmActions(): void {
             updated_at: sentAt,
           });
 
-        const updatedQuote = await tx.trx('quotes').where({ tenant: tx.tenantId, quote_id: input.quote_id }).first();
+        const updatedQuote = await tenantScopedTable(tx, 'quotes').where({ quote_id: input.quote_id }).first();
         if (!updatedQuote) {
           throwActionError(ctx, {
             category: 'ActionError',

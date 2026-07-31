@@ -11,6 +11,7 @@ import { ContainerComponent, AutomationProps, FormFieldComponent } from '@alga-p
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { Button } from '@alga-psa/ui/components/Button';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
+import { useTranslation } from '../../../lib/i18n/client';
 
 interface BoardPickerProps {
   id?: string;
@@ -36,6 +37,7 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
   modal = true,
   "data-automation-type": dataAutomationType = 'picker'
 }) => {
+  const { t } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef<HTMLButtonElement>(null);
@@ -188,7 +190,7 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
             data-automation-type={dataAutomationType}
           >
             <span className={`flex-1 text-left ${!selectedBoardId ? 'text-gray-400' : ''}`}>
-              {selectedBoard?.board_name || (selectedBoardId ? `Loading...` : placeholder)}
+              {selectedBoard?.board_name || (selectedBoardId ? t('status.loading', { defaultValue: 'Loading...' }) : placeholder)}
             </span>
             <ChevronDown className="h-4 w-4 text-gray-500" />
           </Button>
@@ -230,12 +232,12 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
                 <Input
                   ref={searchInputRef}
                   id={`${id}-search`}
-                  placeholder="Search boards..."
+                  placeholder={t('pickers.searchBoards', { defaultValue: 'Search boards...' })}
                   value={searchTerm}
                   onChange={(e) => {
                     setSearchTerm(e.target.value);
                   }}
-                  label="Search Boards"
+                  label={t('pickers.searchBoardsLabel', { defaultValue: 'Search Boards' })}
                 />
               </div>
             </div>
@@ -249,7 +251,7 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
               }}
             >
               {filteredBoards.length === 0 ? (
-                <div className="px-4 py-2 text-gray-500">No boards found</div>
+                <div className="px-4 py-2 text-gray-500">{t('pickers.noBoardsFound', { defaultValue: 'No boards found' })}</div>
               ) : (
                 filteredBoards.map((board): React.JSX.Element => (
                   <Button

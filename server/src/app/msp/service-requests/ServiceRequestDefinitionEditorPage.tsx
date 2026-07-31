@@ -33,9 +33,16 @@ import BackNav from '@alga-psa/ui/components/BackNav';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
-import { MspTicketDetailsContainerClient } from '@alga-psa/msp-composition/tickets';
+import MspTicketDetailsContainerClient from '@alga-psa/msp-composition/tickets/MspTicketDetailsContainerClient';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { toast } from 'react-hot-toast';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { TFunction } from 'i18next';
 import { ServiceRequestCard } from '../../client-portal/request-services/ServiceRequestCard';
@@ -161,6 +168,9 @@ interface TicketRoutingBoardConfig {
   display_itil_impact?: boolean;
   display_itil_urgency?: boolean;
 }
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const FORM_FIELD_TYPES: Array<FormField['type']> = [
   'short-text',
@@ -469,7 +479,7 @@ function FormFieldEditorCard({
         <Checkbox
           id={`service-request-form-required-${key}`}
           label={t('editor.form.required')}
-          containerClassName="mb-0 min-h-10"
+          containerClassName="min-h-10"
           checked={Boolean(field.required)}
           onChange={async (event) => {
             await updateServiceRequestFormFieldAction(definitionId, key, {
@@ -588,7 +598,7 @@ function FormFieldPreview({
       <Checkbox
         key={key}
         id={`service-request-form-preview-checkbox-${key}`}
-        containerClassName="mb-0 items-start"
+        containerClassName="items-start"
         checked={defaultBooleanValue}
         disabled
         onChange={() => {}}
@@ -764,7 +774,7 @@ export default function ServiceRequestDefinitionEditorPage() {
       replaceDrawer(
         <div className="bg-gray-100">
           <MspTicketDetailsContainerClient
-            ticketData={ticketData}
+            ticketData={ticketData as any}
             surveySummary={surveySummary ?? null}
           />
         </div>,
@@ -800,6 +810,13 @@ export default function ServiceRequestDefinitionEditorPage() {
     setTicketRoutingLoading(true);
     try {
       const boardData = await getServiceRequestTicketRoutingBoardDataAction(nextBoardId);
+      if (isReturnedActionError(boardData)) {
+        toast.error(getErrorMessage(boardData));
+        setTicketRoutingStatuses([]);
+        setTicketRoutingCategories([]);
+        setTicketRoutingBoardConfig(null);
+        return;
+      }
       setTicketRoutingStatuses(boardData.statuses as ITicketStatus[]);
       setTicketRoutingCategories(boardData.categories as ITicketCategory[]);
       setTicketRoutingBoardConfig(
@@ -971,6 +988,13 @@ export default function ServiceRequestDefinitionEditorPage() {
     setTicketRoutingLoading(true);
     try {
       const boardData = await getServiceRequestTicketRoutingBoardDataAction(nextBoardId);
+      if (isReturnedActionError(boardData)) {
+        toast.error(getErrorMessage(boardData));
+        setTicketRoutingStatuses([]);
+        setTicketRoutingCategories([]);
+        setTicketRoutingBoardConfig(null);
+        return;
+      }
       const nextStatuses = boardData.statuses as ITicketStatus[];
       const nextBoardConfig = (boardData.boardConfig as TicketRoutingBoardConfig | null) ?? null;
       setTicketRoutingStatuses(nextStatuses);

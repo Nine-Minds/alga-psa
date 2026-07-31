@@ -15,6 +15,7 @@ export { default as TicketListSkeleton } from './TicketListSkeleton';
 export { default as TicketingDashboard } from './TicketingDashboard';
 export { default as TicketingDashboardContainer } from './TicketingDashboardContainer';
 
+export { default as BoardsSettings } from './settings/BoardsSettings';
 export { default as CategoriesSettings } from './settings/CategoriesSettings';
 export { default as DisplaySettings } from './settings/DisplaySettings';
 

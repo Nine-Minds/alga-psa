@@ -1,7 +1,9 @@
 import type { IService } from '@/interfaces/billing.interfaces';
-import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
+import { normalizeGtin } from '@alga-psa/core';
+import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { publishServiceCatalogSearchEvent } from './ServiceCatalogService';
+import { ConflictError, NotFoundError } from '../middleware/apiMiddleware';
 
 type SortField = 'service_name' | 'billing_method' | 'default_rate';
 
@@ -12,13 +14,32 @@ type FilterOptions = {
   is_license?: boolean;
 };
 
+function rethrowProductUniqueViolation(error: unknown): never {
+  const databaseError = error as { code?: string; constraint?: string };
+
+  if (databaseError?.code === '23505') {
+    if (databaseError.constraint?.includes('service_catalog_product_barcode_unique')) {
+      throw new ConflictError(
+        'A product with this barcode already exists. Use a different barcode or edit the existing product.'
+      );
+    }
+    if (databaseError.constraint?.includes('service_catalog_product_sku_unique')) {
+      throw new ConflictError(
+        'A product with this SKU already exists. Use a different SKU or edit the existing product.'
+      );
+    }
+  }
+
+  throw error;
+}
+
 export class ProductCatalogService extends BaseService<IService> {
   constructor() {
     super({
       tableName: 'service_catalog',
       primaryKey: 'service_id',
       tenantColumn: 'tenant',
-      searchableFields: ['service_name', 'description', 'sku'],
+      searchableFields: ['service_name', 'description', 'sku', 'barcode'],
       defaultSort: 'service_name',
       defaultOrder: 'asc'
     });
@@ -27,6 +48,7 @@ export class ProductCatalogService extends BaseService<IService> {
   async list(options: ListOptions, context: ServiceContext): Promise<ListResult<IService>> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
+    const db = tenantDb(knex, tenant);
 
     const page = options.page ?? 1;
     const limit = options.limit ?? 25;
@@ -51,13 +73,16 @@ export class ProductCatalogService extends BaseService<IService> {
           query.where('sc.category_id', filters.category_id);
         }
       }
-      if (filters.search) {
-        const term = `%${filters.search}%`;
+      const trimmedSearch = filters.search?.trim();
+      if (trimmedSearch) {
+        const term = `%${trimmedSearch}%`;
+        const barcodeTerm = `%${normalizeGtin(trimmedSearch)}%`;
         query.andWhere((builder: any) => {
           builder
             .whereILike('sc.service_name', term)
             .orWhereILike('sc.description', term)
-            .orWhereILike('sc.sku', term);
+            .orWhereILike('sc.sku', term)
+            .orWhereILike('sc.barcode', barcodeTerm);
         });
       }
       return query;
@@ -69,7 +94,7 @@ export class ProductCatalogService extends BaseService<IService> {
       default_rate: 'sc.default_rate'
     };
 
-    const baseQuery = knex('service_catalog as sc').where({ 'sc.tenant': tenant });
+    const baseQuery = db.table('service_catalog as sc');
 
     // Count
     const countResult = await applyFilters(baseQuery.clone())
@@ -79,12 +104,7 @@ export class ProductCatalogService extends BaseService<IService> {
 
     // Data query with join
     const productsQuery = applyFilters(
-      baseQuery
-        .clone()
-        .leftJoin('service_types as st', function (this: any) {
-          this.on('sc.custom_service_type_id', '=', 'st.id')
-            .andOn('sc.tenant', '=', 'st.tenant');
-        })
+      db.tenantJoin(baseQuery.clone(), 'service_types as st', 'sc.custom_service_type_id', 'st.id', { type: 'left' })
         .select(
           'sc.service_id',
           'sc.service_name',
@@ -98,6 +118,7 @@ export class ProductCatalogService extends BaseService<IService> {
           'sc.item_kind',
           'sc.is_active',
           'sc.sku',
+          'sc.barcode',
           knex.raw('CAST(sc.cost AS FLOAT) as cost'),
           'sc.cost_currency',
           'sc.vendor',
@@ -125,8 +146,7 @@ export class ProductCatalogService extends BaseService<IService> {
     // Fetch prices for returned products
     const serviceIds = productsData.map((s: any) => s.service_id);
     const allPrices = serviceIds.length > 0
-      ? await knex('service_prices')
-          .where({ tenant })
+      ? await db.table('service_prices')
           .whereIn('service_id', serviceIds)
           .select('*')
       : [];
@@ -159,13 +179,10 @@ export class ProductCatalogService extends BaseService<IService> {
   async getById(id: string, context: ServiceContext): Promise<IService | null> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
+    const db = tenantDb(knex, tenant);
 
-    const product = await knex('service_catalog as sc')
-      .leftJoin('service_types as st', function (this: any) {
-        this.on('sc.custom_service_type_id', '=', 'st.id')
-          .andOn('sc.tenant', '=', 'st.tenant');
-      })
-      .where({ 'sc.service_id': id, 'sc.tenant': tenant })
+    const product = await db.tenantJoin(db.table('service_catalog as sc'), 'service_types as st', 'sc.custom_service_type_id', 'st.id', { type: 'left' })
+      .where('sc.service_id', id)
       .select(
         'sc.*',
         knex.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
@@ -177,8 +194,8 @@ export class ProductCatalogService extends BaseService<IService> {
     if (!product) return null;
     if (product.item_kind !== 'product') return null;
 
-    const prices = await knex('service_prices')
-      .where({ service_id: id, tenant })
+    const prices = await db.table('service_prices')
+      .where('service_id', id)
       .select('*');
 
     return { ...product, prices } as IService;
@@ -196,8 +213,24 @@ export class ProductCatalogService extends BaseService<IService> {
       ...rest
     } = rawData;
 
+    // DD-2/F-2: resolve the product cost currency when not explicitly provided.
+    // Products are tenant-scoped (no client_id), so precedence is:
+    // explicit input -> tenant default (default_billing_settings) -> 'USD'.
+    // We read default_billing_settings directly with the tenant-scoped knex
+    // rather than calling resolveClientBillingCurrency() (a withAuth action that
+    // would double-resolve auth/tenant). Set explicitly because
+    // service_catalog.cost_currency DB column defaults to 'USD' when unset.
+    let costCurrency = rest.cost_currency;
+    if (!costCurrency) {
+      const billingSettings = await tenantDb(knex, tenant).table('default_billing_settings')
+        .select('default_currency_code')
+        .first();
+      costCurrency = billingSettings?.default_currency_code || 'USD';
+    }
+
     const productData = {
       ...rest,
+      cost_currency: costCurrency,
       item_kind: 'product',
       billing_method: 'usage',
       unit_of_measure: unit_of_measure ?? 'each',
@@ -207,11 +240,17 @@ export class ProductCatalogService extends BaseService<IService> {
         : rest.default_rate,
       tax_rate_id: rest.tax_rate_id || null,
       category_id: rest.category_id ?? null,
+      barcode: normalizeGtin(rest.barcode ?? '') || null,
     };
 
-    const [created] = await knex('service_catalog')
-      .insert(productData)
-      .returning('*');
+    let created: IService;
+    try {
+      [created] = await tenantDb(knex, tenant).table<IService>('service_catalog')
+        .insert(productData)
+        .returning('*');
+    } catch (error) {
+      rethrowProductUniqueViolation(error);
+    }
 
     // Set prices if provided
     if (prices && prices.length > 0) {
@@ -232,23 +271,33 @@ export class ProductCatalogService extends BaseService<IService> {
     const tenant = context.tenant;
 
     // Verify it's a product
-    const existing = await knex('service_catalog')
-      .where({ service_id: id, tenant })
+    const existing = await tenantDb(knex, tenant).table('service_catalog')
+      .where('service_id', id)
       .select('item_kind')
       .first();
     if (!existing || existing.item_kind !== 'product') {
-      throw new Error('Resource not found or permission denied');
+      throw new NotFoundError('Resource not found or permission denied');
     }
 
     const { prices, billing_method: _billing_method, service_type_name: _, ...updateData } = data as any;
+    const normalizedUpdateData = {
+      ...updateData,
+      ...(updateData.barcode !== undefined
+        ? { barcode: normalizeGtin(updateData.barcode ?? '') || null }
+        : {}),
+    };
 
-    await knex('service_catalog')
-      .where({ service_id: id, tenant })
-      .update({
-        ...updateData,
-        item_kind: 'product',
-        billing_method: 'usage'
-      });
+    try {
+      await tenantDb(knex, tenant).table('service_catalog')
+        .where('service_id', id)
+        .update({
+          ...normalizedUpdateData,
+          item_kind: 'product',
+          billing_method: 'usage'
+        });
+    } catch (error) {
+      rethrowProductUniqueViolation(error);
+    }
 
     // Update prices if provided
     if (prices) {
@@ -258,7 +307,7 @@ export class ProductCatalogService extends BaseService<IService> {
     await publishServiceCatalogSearchEvent('SERVICE_CATALOG_UPDATED', tenant, id, {
       userId: context.userId,
       itemKind: 'product',
-      changedFields: Object.keys(updateData),
+      changedFields: Object.keys(normalizedUpdateData),
     });
 
     return this.getById(id, context) as Promise<IService>;
@@ -268,8 +317,8 @@ export class ProductCatalogService extends BaseService<IService> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
 
-    await knex('service_catalog')
-      .where({ service_id: id, tenant })
+    await tenantDb(knex, tenant).table('service_catalog')
+      .where('service_id', id)
       .delete();
 
     await publishServiceCatalogSearchEvent('SERVICE_CATALOG_DELETED', tenant, id, {
@@ -285,12 +334,12 @@ export class ProductCatalogService extends BaseService<IService> {
     prices: Array<{ currency_code: string; rate: number }>
   ): Promise<void> {
     // Delete existing prices and insert new ones
-    await knex('service_prices')
-      .where({ service_id: serviceId, tenant })
+    await tenantDb(knex, tenant).table('service_prices')
+      .where('service_id', serviceId)
       .delete();
 
     if (prices.length > 0) {
-      await knex('service_prices').insert(
+      await tenantDb(knex, tenant).table('service_prices').insert(
         prices.map((p) => ({
           service_id: serviceId,
           tenant,

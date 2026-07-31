@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { getActionRegistryV2 } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
 import { throwActionError } from '../../../../../../shared/workflow/runtime/actions/businessOperations/shared';
 import type { ActionContext } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
+import { registerIntegrationWorkflowModule, rmmIntegrationAvailability } from '../integrationModules';
+import { workflowTenantTable } from '../../lib/workflowTenantDb';
 
 const loadNinjaOneRuntimeSupport = () => import('./ninjaOneWorkflowRuntimeSupport');
 
@@ -59,8 +61,8 @@ async function requireNinjaOneIntegration(ctx: ActionContext): Promise<{
     throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'Database connection unavailable' });
   }
 
-  const integration = await knex('rmm_integrations')
-    .where({ tenant: tenantId, provider: 'ninjaone', is_active: true })
+  const integration = await workflowTenantTable(knex, tenantId, 'rmm_integrations')
+    .where({ provider: 'ninjaone', is_active: true })
     .whereNotNull('connected_at')
     .first();
   if (!integration) {
@@ -99,6 +101,22 @@ const normalizeNinjaDevice = (device: any, source: 'local' | 'ninjaone') => {
     node_class: device.nodeClass ?? null,
     source
   };
+};
+
+const normalizeNinjaScriptingOptions = (options: Record<string, unknown>) => {
+  const collect = (value: unknown, type: string) =>
+    (Array.isArray(value) ? value : [])
+      .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+      .map((item) => ({
+        id: typeof item.id === 'number' ? item.id : null,
+        uid: typeof item.uid === 'string' ? item.uid : null,
+        name: typeof item.name === 'string' ? item.name : null,
+        type
+      }));
+  return [
+    ...collect(options.scripts, 'SCRIPT'),
+    ...collect(options.actions ?? (options as Record<string, unknown>).builtInActions, 'ACTION')
+  ];
 };
 
 const normalizeNinjaAlert = (alert: any) => ({
@@ -147,8 +165,8 @@ export function registerNinjaOneWorkflowActionsV2(): void {
     },
     handler: async (input, ctx) => {
       const { tenantId, knex, integrationId } = await requireNinjaOneIntegration(ctx);
-      let rows = await knex('assets')
-        .where({ tenant: tenantId, rmm_provider: 'ninjaone' })
+      let rows = await workflowTenantTable(knex, tenantId, 'assets')
+        .where({ rmm_provider: 'ninjaone' })
         .whereNotNull('rmm_device_id')
         .modify((qb: any) => {
           if (input.asset_id) qb.andWhere('asset_id', input.asset_id);
@@ -162,7 +180,7 @@ export function registerNinjaOneWorkflowActionsV2(): void {
             });
           }
         })
-        .limit(input.limit);
+        .limit(input.limit ?? 50);
 
       const localDevices = rows.map((row: any) => normalizeNinjaDevice(row, 'local'));
       if (!input.live) {
@@ -244,6 +262,89 @@ export function registerNinjaOneWorkflowActionsV2(): void {
   });
 
   registry.register({
+    id: 'ninjaone.devices.scripting_options',
+    version: 1,
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    inputSchema: z.object({
+      device_id: ninjaOneDeviceIdSchema
+    }),
+    outputSchema: z.object({
+      scripts: z.array(z.object({
+        id: z.number().int().nullable(),
+        uid: z.string().nullable(),
+        name: z.string().nullable(),
+        type: z.string().nullable()
+      })),
+      count: z.number().int()
+    }),
+    ui: {
+      label: 'List runnable scripts',
+      description: 'List the scripts and built-in actions that can run on a NinjaOne device.',
+      category: 'NinjaOne',
+      icon: 'ninjaone'
+    },
+    handler: async (input, ctx) => {
+      const { tenantId, integrationId } = await requireNinjaOneIntegration(ctx);
+      const { createNinjaOneWorkflowClient } = await loadNinjaOneRuntimeSupport();
+      const client = await createNinjaOneWorkflowClient(tenantId, integrationId);
+      const options = await client.getScriptingOptions(input.device_id);
+      const scripts = normalizeNinjaScriptingOptions(options);
+      return { scripts, count: scripts.length };
+    }
+  });
+
+  registry.register({
+    id: 'ninjaone.devices.run_script',
+    version: 1,
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    inputSchema: z.object({
+      device_id: ninjaOneDeviceIdSchema,
+      type: z.enum(['SCRIPT', 'ACTION']).default('SCRIPT'),
+      script_id: z.coerce.number().int().positive().optional(),
+      action_uid: z.string().uuid().optional(),
+      parameters: z.string().optional(),
+      run_as: z.string().optional()
+    }).superRefine((value, ctx2) => {
+      if (value.type === 'SCRIPT' && value.script_id === undefined) {
+        ctx2.addIssue({ code: z.ZodIssueCode.custom, message: 'script_id is required when type is SCRIPT' });
+      }
+      if (value.type === 'ACTION' && !value.action_uid) {
+        ctx2.addIssue({ code: z.ZodIssueCode.custom, message: 'action_uid is required when type is ACTION' });
+      }
+    }),
+    outputSchema: z.object({
+      run_requested: z.boolean(),
+      external_device_id: z.string(),
+      vendor_response: z.unknown().nullable()
+    }),
+    ui: {
+      label: 'Run script',
+      description: 'Run a stored script or built-in action on a NinjaOne device.',
+      category: 'NinjaOne',
+      icon: 'ninjaone'
+    },
+    handler: async (input, ctx) => {
+      const { tenantId, integrationId } = await requireNinjaOneIntegration(ctx);
+      const { createNinjaOneWorkflowClient } = await loadNinjaOneRuntimeSupport();
+      const client = await createNinjaOneWorkflowClient(tenantId, integrationId);
+      const vendorResponse = await client.runScript(input.device_id, {
+        type: input.type ?? 'SCRIPT',
+        ...(input.script_id !== undefined ? { id: input.script_id } : {}),
+        ...(input.action_uid ? { uid: input.action_uid } : {}),
+        ...(input.parameters !== undefined ? { parameters: input.parameters } : {}),
+        ...(input.run_as !== undefined ? { runAs: input.run_as } : {})
+      });
+      return {
+        run_requested: true,
+        external_device_id: String(input.device_id),
+        vendor_response: vendorResponse ?? null
+      };
+    }
+  });
+
+  registry.register({
     id: 'ninjaone.alerts.list_active',
     version: 1,
     sideEffectful: false,
@@ -265,10 +366,10 @@ export function registerNinjaOneWorkflowActionsV2(): void {
     handler: async (input, ctx) => {
       const { tenantId, knex, integrationId } = await requireNinjaOneIntegration(ctx);
       if (!input.live) {
-        const rows = await knex('rmm_alerts')
-          .where({ tenant: tenantId, integration_id: integrationId, status: 'active' })
+        const rows = await workflowTenantTable(knex, tenantId, 'rmm_alerts')
+          .where({ integration_id: integrationId, status: 'active' })
           .orderBy('triggered_at', 'desc')
-          .limit(input.limit);
+          .limit(input.limit ?? 50);
         const alerts = rows.map((row: any) => normalizeNinjaAlert(row));
         return { alerts, count: alerts.length };
       }
@@ -303,8 +404,8 @@ export function registerNinjaOneWorkflowActionsV2(): void {
     handler: async (input, ctx) => {
       const { tenantId, knex, integrationId } = await requireNinjaOneIntegration(ctx);
       const externalId = input.external_alert_id ?? input.alert_uid;
-      const row = await knex('rmm_alerts')
-        .where({ tenant: tenantId, integration_id: integrationId, external_alert_id: externalId })
+      const row = await workflowTenantTable(knex, tenantId, 'rmm_alerts')
+        .where({ integration_id: integrationId, external_alert_id: externalId })
         .first();
       if (!row) {
         throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Alert not found' });
@@ -340,8 +441,8 @@ export function registerNinjaOneWorkflowActionsV2(): void {
       const { createNinjaOneWorkflowClient } = await loadNinjaOneRuntimeSupport();
       const client = await createNinjaOneWorkflowClient(tenantId, integrationId);
       await client.resetAlert(alertId);
-      await knex('rmm_alerts')
-        .where({ tenant: tenantId, integration_id: integrationId, external_alert_id: alertId })
+      await workflowTenantTable(knex, tenantId, 'rmm_alerts')
+        .where({ integration_id: integrationId, external_alert_id: alertId })
         .update({ status: 'acknowledged', updated_at: new Date().toISOString() });
       return {
         acknowledged: true,
@@ -351,4 +452,30 @@ export function registerNinjaOneWorkflowActionsV2(): void {
   });
 
   ninjaOneRegistered = true;
+}
+
+export function registerNinjaOneWorkflowModule(): void {
+  registerIntegrationWorkflowModule({
+    module: {
+      groupKey: 'app:ninjaone',
+      label: 'NinjaOne',
+      description: 'NinjaOne RMM actions for devices and alerts.',
+      tileKind: 'app',
+      iconToken: 'ninjaone',
+      defaultActionId: 'ninjaone.devices.find',
+      allowedActionIds: [
+        'ninjaone.devices.find',
+        'ninjaone.devices.sync',
+        'ninjaone.devices.reboot',
+        'ninjaone.devices.scripting_options',
+        'ninjaone.devices.run_script',
+        'ninjaone.alerts.list_active',
+        'ninjaone.alerts.get',
+        'ninjaone.alerts.reset'
+      ],
+      availabilityKey: 'rmm:ninjaone'
+    },
+    availability: rmmIntegrationAvailability('ninjaone'),
+    registerActions: () => registerNinjaOneWorkflowActionsV2()
+  });
 }

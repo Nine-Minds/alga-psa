@@ -4,29 +4,31 @@ import React, { useCallback, useMemo } from 'react';
 import type { TicketIntegrationContextType } from '@alga-psa/projects/context/TicketIntegrationContext';
 import { getTicketsForList, deleteTicket as deleteTicketAction } from '@alga-psa/tickets/actions/ticketActions';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
-import { getTicketCategories } from '@alga-psa/tickets/actions';
-import { getAllBoards } from '@alga-psa/reference-data/actions';
+import { getTicketCategories } from '@alga-psa/tickets/actions/ticketCategoryActions';
+import { getAllBoards } from '@alga-psa/reference-data/actions/boardActions';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import { PrioritySelect } from '@alga-psa/ui/components';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { useDrawer } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export function useTicketIntegrationValue(): TicketIntegrationContextType {
+  const { t } = useTranslation('features/tickets');
   const { openDrawer } = useDrawer();
 
   const openTicketInDrawer = useCallback(async (ticketId: string) => {
     try {
       const user = await getCurrentUser();
       if (!user) {
-        toast.error('No user session found');
+        toast.error(t('integration.noUserSession', { defaultValue: 'No user session found' }));
         return;
       }
       const ticketData = await getConsolidatedTicketData(ticketId);
       if (!ticketData) {
-        toast.error('Failed to load ticket');
+        toast.error(t('integration.loadTicketFailed', { defaultValue: 'Failed to load ticket' }));
         return;
       }
       openDrawer(
@@ -55,7 +57,7 @@ export function useTicketIntegrationValue(): TicketIntegrationContextType {
       );
     } catch (error) {
       console.error('Error loading ticket:', error);
-      toast.error('Failed to load ticket');
+      toast.error(t('integration.loadTicketFailed', { defaultValue: 'Failed to load ticket' }));
     }
   }, [openDrawer]);
 

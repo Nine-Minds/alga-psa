@@ -16,14 +16,14 @@ const initialTenant = {
 
 test('validateSetupInputs rejects invalid custom DNS values', () => {
   assert.throws(
-    () => validateSetupInputs({ channel: 'stable', dnsMode: 'custom', dnsServers: '8.8.8.8,not-an-ip', repoUrl: 'https://github.com/Nine-Minds/alga-psa.git', ...initialTenant }),
+    () => validateSetupInputs({ channel: 'stable', dnsMode: 'custom', dnsServers: '8.8.8.8,not-an-ip', ...initialTenant }),
     /Invalid custom DNS server/
   );
 });
 
 test('validateSetupInputs requires matching initial admin password confirmation', () => {
   assert.throws(
-    () => validateSetupInputs({ channel: 'stable', dnsMode: 'system', repoUrl: 'https://github.com/Nine-Minds/alga-psa.git', ...initialTenant, adminPasswordConfirm: 'Different!1' }),
+    () => validateSetupInputs({ channel: 'stable', dnsMode: 'system', ...initialTenant, adminPasswordConfirm: 'Different!1' }),
     /confirmation does not match/
   );
 });
@@ -39,8 +39,6 @@ test('runSetupPreflight blocks early when no system resolvers are present', asyn
     appHostname: 'psa.example.com',
     dnsMode: 'system',
     dnsServers: '',
-    repoUrl: 'https://github.com/Nine-Minds/alga-psa.git',
-    repoBranch: 'main',
     ...initialTenant
   });
 

@@ -22,10 +22,18 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator
 } from '@alga-psa/ui/components/DropdownMenu';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 export interface InboundTicketDefaultsManagerProps {
   onDefaultsChange?: () => void;
 }
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicketDefaultsManagerProps) {
   const { t } = useTranslation('msp/admin');
@@ -54,6 +62,10 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
     const loadOptions = async () => {
       try {
         const data = await getTicketFieldOptions();
+        if (isReturnedActionError(data)) {
+          setError(getErrorMessage(data));
+          return;
+        }
         setFieldOptions(data.options);
       } catch (err) {
         // Keep options empty on failure; UI will fall back to IDs
@@ -68,9 +80,13 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
       setError(null);
       
       const data = await getInboundTicketDefaults();
+      if (data.error) {
+        setError(data.error);
+      }
       setDefaults(data.defaults || []);
     } catch (err: any) {
-      setError(err.message || t('inboundDefaults.errors.load', { defaultValue: 'Failed to load ticket defaults' }));
+      console.error('Failed to load inbound ticket defaults:', err);
+      setError(t('inboundDefaults.errors.load', { defaultValue: 'Failed to load ticket defaults' }));
     } finally {
       setLoading(false);
     }
@@ -98,11 +114,15 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
       setDeleting(id);
       setError(null);
       
-      await deleteInboundTicketDefaults(id);
+      const result = await deleteInboundTicketDefaults(id);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setDefaults(prev => prev.filter(d => d.id !== id));
       onDefaultsChange?.();
     } catch (err: any) {
-      setError(err.message || t('inboundDefaults.errors.delete', { defaultValue: 'Failed to delete ticket defaults' }));
+      setError(getErrorMessage(err) || t('inboundDefaults.errors.delete', { defaultValue: 'Failed to delete ticket defaults' }));
     } finally {
       setDeleting(null);
     }

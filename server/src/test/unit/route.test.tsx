@@ -8,9 +8,9 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('GET route', () => {
-  it('redirects to /auth/signin', async () => {
+  it('redirects to /auth/msp/signin', async () => {
     await GET();
-    
-    expect(redirect).toHaveBeenCalledWith('/auth/signin');
+
+    expect(redirect).toHaveBeenCalledWith('/auth/msp/signin');
   });
 });

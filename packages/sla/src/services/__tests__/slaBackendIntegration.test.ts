@@ -48,13 +48,28 @@ function seedPolicy(trx: ReturnType<typeof createAdvancedMockTrx>) {
 
 describe('SLA backend integration', () => {
   const originalEdition = process.env.EDITION;
+  const originalNextPublicEdition = process.env.NEXT_PUBLIC_EDITION;
 
   beforeEach(() => {
     vi.resetModules();
+    // isEnterprise (packages/core features) checks both EDITION and
+    // NEXT_PUBLIC_EDITION. Nx auto-loads the repo root .env, which sets
+    // NEXT_PUBLIC_EDITION=enterprise, so clear it to make each test's
+    // EDITION assignment authoritative regardless of how vitest is invoked.
+    delete process.env.NEXT_PUBLIC_EDITION;
   });
 
   afterEach(() => {
-    process.env.EDITION = originalEdition;
+    if (originalEdition === undefined) {
+      delete process.env.EDITION;
+    } else {
+      process.env.EDITION = originalEdition;
+    }
+    if (originalNextPublicEdition === undefined) {
+      delete process.env.NEXT_PUBLIC_EDITION;
+    } else {
+      process.env.NEXT_PUBLIC_EDITION = originalNextPublicEdition;
+    }
   });
 
   it('EE ticket start triggers Temporal workflow after commit dispatch', async () => {

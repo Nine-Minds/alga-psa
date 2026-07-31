@@ -3,7 +3,10 @@ import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   const tag = 'Assets';
 
-  const AssetType = zOpenApi.enum(['workstation', 'network_device', 'server', 'mobile_device', 'printer', 'unknown']);
+  // Any registry slug (built-in workstation/network_device/server/mobile_device/
+  // printer/unknown, or a custom tenant type), so a free-form string rather than
+  // a fixed enum.
+  const AssetType = zOpenApi.string().describe('Asset type slug from the tenant asset type registry.');
 
   const AssetListQuery = registry.registerSchema(
     'AssetListQuery',
