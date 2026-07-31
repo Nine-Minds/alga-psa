@@ -8,7 +8,7 @@ type EntraGuardPermission = 'read' | 'update';
 
 export async function requireEntraAccess(
   requiredPermission: EntraGuardPermission = 'read'
-): Promise<Response | { tenantId: string; userId: string }> {
+): Promise<Response | { tenantId: string; userId: string; user: NonNullable<Awaited<ReturnType<typeof getCurrentUser>>> }> {
   const user = await getCurrentUser();
 
   if (!user || !user.user_id || !user.tenant) {
@@ -58,5 +58,5 @@ export async function requireEntraAccess(
     throw error;
   }
 
-  return { tenantId: user.tenant, userId: user.user_id };
+  return { tenantId: user.tenant, userId: user.user_id, user };
 }

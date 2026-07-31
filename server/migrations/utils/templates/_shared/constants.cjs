@@ -26,7 +26,7 @@ const COMMENT_LABEL_COLOR = '#1e40af';
 const FONT_STACK = "Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
 const HEADING_FONT = "Poppins,system-ui,sans-serif";
 
-const SUPPORTED_LANGUAGES = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl'];
+const SUPPORTED_LANGUAGES = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt'];
 
 module.exports = {
   BRAND_GRADIENT,

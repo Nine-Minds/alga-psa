@@ -152,6 +152,49 @@ describe('msgraph emulator', () => {
     expect(notifications[0].value[0].clientState).toBe('secret-state');
   });
 
+  it('serves seedable Entra organization and directory user collections', async () => {
+    const organization = await controlPost('/control/msgraph/seed/organization', {
+      id: 'tenant-contoso',
+      displayName: 'Contoso MSP',
+      primaryDomain: 'contoso.example',
+    });
+    expect(organization.ok).toBe(true);
+
+    const directoryUser = await controlPost('/control/msgraph/seed/directory-user', {
+      id: 'user-ada',
+      displayName: 'Ada Lovelace',
+      givenName: 'Ada',
+      surname: 'Lovelace',
+      mail: 'ada@contoso.example',
+      userPrincipalName: 'ada@contoso.example',
+      accountEnabled: true,
+      jobTitle: 'Engineer',
+      businessPhones: ['+1 555 0100'],
+    });
+    expect(directoryUser.ok).toBe(true);
+
+    const headers = { authorization: `Bearer ${accessToken}` };
+    const organizations = await (await fetch(`${base}/v1.0/organization`, { headers })).json();
+    expect(organizations.value).toEqual([
+      expect.objectContaining({
+        id: 'tenant-contoso',
+        displayName: 'Contoso MSP',
+        verifiedDomains: expect.arrayContaining([
+          expect.objectContaining({ name: 'contoso.example', isDefault: true }),
+        ]),
+      }),
+    ]);
+
+    const users = await (await fetch(`${base}/v1.0/users`, { headers })).json();
+    expect(users.value).toEqual([
+      expect.objectContaining({
+        id: 'user-ada',
+        mail: 'ada@contoso.example',
+        accountEnabled: true,
+      }),
+    ]);
+  });
+
   it('injects operation faults that expire after N uses', async () => {
     await controlPost('/control/msgraph/faults/operation-fault/arm', {
       operation: 'GET /me',

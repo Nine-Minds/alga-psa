@@ -168,6 +168,17 @@ export interface QboItem {
   IncomeAccountRef?: QboRef;
   ExpenseAccountRef?: QboRef;
   AssetAccountRef?: QboRef;
+  Sku?: string;
+  Description?: string;
+  UnitPrice?: number;
+  PurchaseCost?: number;
+  Active?: boolean;
+  Taxable?: boolean;
+  SubItem?: boolean;
+  ParentRef?: QboRef;
+  FullyQualifiedName?: string;
+  SalesTaxCodeRef?: QboRef;
+  MetaData?: QboMetaData;
   // Add other relevant fields
 }
 

@@ -33,6 +33,14 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   getQboCustomers: async (...args: unknown[]) => getQboCustomersMock(...args),
 }));
 
+// Flag off by default: these contracts describe the original three-step wizard.
+// The flag-gated Products & Services step has its own contract suite.
+const useFeatureFlagMock = vi.hoisted(() => vi.fn(() => false));
+vi.mock('@alga-psa/ui/hooks', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  useFeatureFlag: (...args: unknown[]) => useFeatureFlagMock(...(args as [])),
+}));
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Fixtures
 // ──────────────────────────────────────────────────────────────────────────────

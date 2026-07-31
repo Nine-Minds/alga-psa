@@ -10365,6 +10365,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "number",
           "minimum": 0
         },
+        "default_currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        },
         "preferred_payment_method": {
           "type": "string"
         },
@@ -11082,6 +11087,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "credit_limit": {
           "type": "number",
           "minimum": 0
+        },
+        "default_currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
         },
         "preferred_payment_method": {
           "type": "string"
@@ -18072,330 +18082,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "anyOf": [
-            {
-              "type": "object",
-              "additionalProperties": {}
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": {}
-              }
-            }
-          ]
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {}
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "post-_api_v1_financial_reconciliation_run",
-    "method": "post",
-    "path": "/api/v1/financial/reconciliation/run",
-    "displayName": "Run financial reconciliation",
-    "summary": "Run financial reconciliation",
-    "description": "Triggers FinancialService.runCreditReconciliation(). Optional client_id query narrows reconciliation target.",
-    "tags": [
-      "Financial"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "page",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "sort",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "order",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "asc",
-            "desc"
-          ]
-        }
-      },
-      {
-        "name": "search",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "created_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "created_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "updated_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "updated_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "client_id",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "invoice_id",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "type",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "status",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "amount_min",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "amount_max",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "include_expired",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "expiring_soon",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "has_remaining",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "has_expiration",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "date_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "date_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "group_by",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "day",
-            "week",
-            "month"
-          ]
-        }
-      },
-      {
-        "name": "include_projections",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "as_of_date",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "anyOf": [
-            {
-              "type": "object",
-              "additionalProperties": {}
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": {}
-              }
-            }
-          ]
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {}
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "post-_api_v1_financial_reconciliation_id_resolve",
-    "method": "post",
-    "path": "/api/v1/financial/reconciliation/{id}/resolve",
-    "displayName": "Resolve reconciliation report",
-    "summary": "Resolve reconciliation report",
-    "description": "Resolves one reconciliation report by id with optional operator notes.",
-    "tags": [
-      "Financial"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Path UUID parameter resolved by ApiBaseController.extractIdFromPath().",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Path UUID parameter resolved by ApiBaseController.extractIdFromPath()."
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {
-        "notes": {
-          "type": "string"
-        }
-      }
-    },
     "responseBodySchema": {
       "type": "object",
       "properties": {
@@ -52574,7 +52260,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "checkpoint": {
           "type": "string",
           "enum": [
-            "qualified"
+            "identified",
+            "qualified",
+            "assessment",
+            "proposed",
+            "verbal"
           ]
         },
         "detail": {

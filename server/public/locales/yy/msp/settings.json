@@ -54,13 +54,23 @@
     },
     "clients": {
       "title": "55555",
+      "help": "55555",
+      "currentDefault": "55555 {{name}} 55555",
+      "yourCompanyBadge": "55555",
       "table": {
         "name": "55555",
         "default": "55555",
         "actions": "55555"
       },
       "placeholder": "55555",
-      "addClient": "55555"
+      "addClient": "55555",
+      "confirmDialog": {
+        "title": "55555",
+        "message": "55555 {{current}} 55555 {{next}} 55555 {{next}} 55555",
+        "messageInitial": "55555 {{next}} 55555 {{next}} 55555",
+        "confirm": "55555",
+        "cancel": "55555"
+      }
     },
     "messages": {
       "success": {
@@ -76,6 +86,7 @@
         "updateTimezone": "55555",
         "selectClient": "55555",
         "clientNotFound": "55555",
+        "clientAlreadyAdded": "55555",
         "addClient": "55555",
         "removeClient": "55555",
         "setDefaultClient": "55555",

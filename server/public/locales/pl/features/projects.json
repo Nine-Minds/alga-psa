@@ -549,7 +549,16 @@
     "unknownProduct": "Nieznany produkt",
     "billed": "Rozliczono",
     "pending": "Oczekujące",
-    "unbilledTotal": "Nierozliczone ({{currency}}):"
+    "unbilledTotal": "Nierozliczone ({{currency}}):",
+    "priceCurrency": "Price currency", "salePrice": "Sale price", "catalogUnitCost": "Catalog unit cost", "costNotConfigured": "Not configured",
+    "invoiceDestination": "Invoice", "invoiceNextProject": "Next project invoice", "invoiceSeparate": "Separate product invoice",
+    "invoiceProjectCompletion": "When project is completed", "invoiceOnHold": "On hold", "currencySeparateHelp": "Products in a different currency use a separate product invoice.",
+    "invoiceColumn": "Invoice", "editProduct": "Edit product", "removeProduct": "Remove product", "salePriceOverrideHelp": "This price applies only to this project product row.",
+    "updateFailed": "Failed to update product", "updatedSuccess": "Product updated", "createProductInvoices": "Create product invoices",
+    "invoiceReviewTitle": "Review product invoices", "invoiceReviewHelp": "Eligible products are preselected. One draft invoice will be created per currency.",
+    "invoiceReviewFailed": "Failed to load invoice review", "invoiceCreateFailed": "Failed to create product invoices", "invoiceCreatedSuccess": "{{count}} draft product invoice(s) created",
+    "createDrafts": "Create drafts", "draftPreview": "{{currency}} draft ({{count}} products)", "invoiceLinksHelp": "Draft invoices were created. Open each currency group to review it.",
+    "currencyDraftLink": "{{currency}} draft invoice", "productCount": "{{count}} products", "productsMovedToHoldOnClose": "{{count}} linked product(s) moved to On hold because their billing event was canceled."
   },
   "export": {
     "title": "Eksportuj zadania projektu",
@@ -601,7 +610,7 @@
     "requiredFields": "Wymagane:",
     "requiredFieldsList": "task_name",
     "optionalFields": "Opcjonalne:",
-    "optionalFieldsList": "phase_name, task_description, assigned_to, estimated_hours, actual_hours, due_date, priority, service, task_type, status, tags",
+    "optionalFieldsList": "phase_name, task_description, assigned_to, estimated_hours, due_date, priority, service, task_type, status, tags",
     "noteLabel": "Notatka:",
     "defaultPhaseNote": "Zadania bez nazwy fazy zostaną pogrupowane w „{{phaseName}}”",
     "downloadTemplate": "Pobierz szablon CSV",
@@ -1635,6 +1644,7 @@
       "manualSub": "Wyzwalacz ręczny",
       "phaseRemoved": "Ręcznie · faza usunięta",
       "phaseTrigger": "Ukończenie fazy",
+      "phaseOverdue": "Data zakończenia fazy minęła — oznacz fazę jako ukończoną, aby przygotować ten wpis",
       "approve": "Zatwierdź",
       "approveInvoice": "Zatwierdź i zafakturuj",
       "hold": "Wstrzymaj",
@@ -1655,7 +1665,10 @@
       "holdReasonRequired": "Powód wstrzymania jest wymagany",
       "heldReason": "Wstrzymane: {{reason}}",
       "releaseHold": "Zwolnij wstrzymanie",
-      "holdReleased": "Wstrzymanie zwolnione"
+      "holdReleased": "Wstrzymanie zwolnione", "productsMovedToHold": "{{count}} linked product(s) moved to On hold", "setProjectTotal": "Set project total to {{amount}}",
+      "recalculateTitle": "Recalculate project total", "currentProjectTotal": "Current project total", "currentScheduleSum": "Current schedule sum",
+      "resultingProjectTotal": "Resulting project total", "recalculateWarning": "Editable percentage entries will become fixed-dollar entries so the displayed amounts do not move.",
+      "confirmSetProjectTotal": "Set project total", "totalRecalculated": "Project total updated from the schedule"
     },
     "entry": {
       "addTitle": "Dodaj kamień milowy lub zaliczkę",
@@ -1704,9 +1717,9 @@
       "saving": "Zapisywanie...",
       "errorAmount": "Wprowadź limit większy od zera"
     },
+    "generateProjectInvoice": "Wygeneruj fakturę projektu",
+    "generatingProjectInvoice": "Generowanie faktury...",
     "tm": {
-      "generateInvoice": "Wygeneruj fakturę projektu",
-      "generatingInvoice": "Generowanie faktury...",
       "invoiceGenerated": "Faktura projektu wygenerowana"
     },
     "overrides": {

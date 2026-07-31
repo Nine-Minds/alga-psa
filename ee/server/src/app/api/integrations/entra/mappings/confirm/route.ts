@@ -2,6 +2,7 @@ import { badRequest, dynamic, ok, parseJsonBody, runtime } from '../../_response
 import { requireEntraAccess } from '../../_guards';
 import { confirmEntraMappings, type ConfirmEntraMappingInput } from '@enterprise/lib/integrations/entra/mapping/confirmMappingsService';
 import { findManagedTenantAssignmentConflicts } from '@enterprise/lib/integrations/entra/mapping/validation';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 export { dynamic, runtime };
 
@@ -41,6 +42,23 @@ export async function POST(request: Request): Promise<Response> {
   const conflicts = findManagedTenantAssignmentConflicts(normalizedMappings);
   if (conflicts.length > 0) {
     return badRequest(conflicts[0].message);
+  }
+
+  const invalidMappedDecision = normalizedMappings.find(
+    (mapping) => mapping.mappingState === 'mapped' && !mapping.clientId
+  );
+  if (invalidMappedDecision) {
+    return badRequest('A mapped Entra tenant decision requires a client ID.');
+  }
+
+  if (normalizedMappings.some((mapping) => mapping.mappingState === 'create_new')) {
+    const canCreateClient = await hasPermission(accessGate.user, 'client', 'create');
+    if (!canCreateClient) {
+      return Response.json(
+        { success: false, error: 'Forbidden: insufficient permissions to create clients' },
+        { status: 403 }
+      );
+    }
   }
 
   const result = await confirmEntraMappings({

@@ -20,7 +20,7 @@ import { EntraDirectConsentDialog } from './EntraDirectConsentDialog';
 import { normalizeEntraFieldSyncConfig } from './fieldSyncModel';
 import { PilotSyncControl } from './PilotSyncControl';
 import { PreConsentDisclosure } from './PreConsentDisclosure';
-import { SetupLadder } from './SetupLadder';
+import { WizardProgress } from '@alga-psa/ui/components/onboarding/WizardProgress';
 import {
   ENTRA_SETUP_STEP_SHORT_LABEL_KEYS,
   deriveEntraSetupSteps,
@@ -97,12 +97,13 @@ export function EntraSetupWizard({
   // entirely on any tenant whose domain happened to auto-match, landing the
   // operator on "Preview & pilot" being told to go back and map something.
   const mappedCount = status?.mappedTenantCount ?? 0;
+  const approvedMappingCount = mappedCount + (status?.pendingCreateTenantCount ?? 0);
 
   const isConnected = status?.status === 'connected';
   const steps: EntraSetupStep[] = deriveEntraSetupSteps({
     isConnected,
     hasDiscovery: Boolean(status?.lastDiscoveryAt),
-    hasConfirmedMappings: mappedCount > 0,
+    hasConfirmedMappings: approvedMappingCount > 0,
   });
   const furthest = steps.find((step) => step.state === 'current') ?? steps[0];
 
@@ -253,6 +254,7 @@ export function EntraSetupWizard({
     return (
       <PilotSyncControl
         onPilotStarted={onStatusChanged}
+        approvedMappingCount={approvedMappingCount}
         fieldSyncConfig={fieldSyncConfig}
         onFieldSyncConfigChange={setFieldSyncConfig}
         onFieldSyncSaved={onStatusChanged}
@@ -300,11 +302,14 @@ export function EntraSetupWizard({
         </div>
 
         <div className="mt-4">
-          <SetupLadder
+          <WizardProgress
             id="entra-setup-ladder"
-            steps={steps}
-            labels={ladderLabels}
-            onRevisit={setRevisiting}
+            steps={steps.map((step) => ({
+              id: step.id,
+              label: ladderLabels[step.id],
+              state: step.state,
+            }))}
+            onStepClick={(_index, step) => setRevisiting(step.id as EntraSetupStepId)}
           />
         </div>
       </div>

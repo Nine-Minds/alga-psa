@@ -27,4 +27,15 @@ describe('CE invoice sync-status capability probe', () => {
     expect(hookSource).toContain('invoiceIds.length > 0 && Object.keys(result).length === 0');
     expect(hookSource).toContain('setHidden(true)');
   });
+
+  it('returns no statuses when QuickBooks is not connected', () => {
+    const statusAction = actionSource.slice(
+      actionSource.indexOf('export const getInvoiceSyncStatuses'),
+      actionSource.indexOf('export interface AccountingSyncRealmInfo'),
+    );
+
+    expect(statusAction).toContain('const realm = await resolveDefaultRealm(knex, tenant).catch(() => null);');
+    expect(statusAction).toContain('if (!realm)');
+    expect(statusAction.indexOf('if (!realm)')).toBeLessThan(statusAction.indexOf("table('tenant_external_entity_mappings')"));
+  });
 });

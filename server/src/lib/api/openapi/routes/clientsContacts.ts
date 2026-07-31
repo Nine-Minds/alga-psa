@@ -65,6 +65,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       payment_terms: zOpenApi.string().optional(),
       billing_cycle: zOpenApi.enum(['weekly', 'bi-weekly', 'monthly', 'quarterly', 'semi-annually', 'annually']),
       credit_limit: zOpenApi.number().min(0).optional(),
+      default_currency_code: zOpenApi.string().min(3).max(3).optional(),
       preferred_payment_method: zOpenApi.string().optional(),
       auto_invoice: zOpenApi.boolean().optional(),
       invoice_delivery_method: zOpenApi.enum(['email', 'mail', 'portal']).optional(),

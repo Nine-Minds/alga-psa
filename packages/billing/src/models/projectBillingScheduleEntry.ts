@@ -50,6 +50,7 @@ export type ProjectBillingStatusTransitionExtra = Partial<Omit<
 export interface ScheduleEntryView extends IProjectBillingScheduleEntry {
   computed_amount: number;
   phase_name: string | null;
+  phase_end_date: Date | string | null;
   invoice_number: string | null;
   phase_deleted: boolean;
 }
@@ -265,6 +266,7 @@ const ProjectBillingScheduleEntry = {
         'p.client_id',
         'client.client_name',
         'phase.phase_name',
+        'phase.end_date as phase_end_date',
         'invoice.invoice_number'
       )
       .orderBy('e.ready_at', 'asc')
@@ -328,6 +330,7 @@ const ProjectBillingScheduleEntry = {
         client_id,
         client_name,
         phase_name,
+        phase_end_date,
         invoice_number,
         ...entryData
       } = row as Record<string, unknown>;
@@ -338,6 +341,9 @@ const ProjectBillingScheduleEntry = {
           ...entry,
           computed_amount: computedByEntryId.get(entry.schedule_entry_id) ?? 0,
           phase_name: typeof phase_name === 'string' ? phase_name : null,
+          phase_end_date: phase_end_date instanceof Date || typeof phase_end_date === 'string'
+            ? phase_end_date
+            : null,
           invoice_number: typeof invoice_number === 'string' ? invoice_number : null,
           phase_deleted: entry.phase_id !== null && !phase_name
         },

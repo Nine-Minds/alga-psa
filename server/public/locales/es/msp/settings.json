@@ -38,7 +38,7 @@
   },
   "general": {
     "title": "Configuración general",
-    "description": "Administre el nombre de su organización y el cliente predeterminado. El cliente predeterminado se utiliza con fines de configuración y representa a su MSP.",
+    "description": "Administre el nombre de su organización y elija qué registro de cliente representa a su propia empresa. Los datos de ese cliente aparecen en facturas, presupuestos y comunicaciones con los clientes.",
     "fields": {
       "organizationName": {
         "label": "Nombre de la organización"
@@ -53,14 +53,24 @@
       "saveDefaultTimezone": "Guardar zona horaria predeterminada"
     },
     "clients": {
-      "title": "Clientes",
+      "title": "Su empresa",
+      "help": "El cliente marcado como su empresa es su propia organización. Su nombre, dirección y logotipo aparecen en facturas, presupuestos y comunicaciones con los clientes.",
+      "currentDefault": "Actualmente su empresa es {{name}}.",
+      "yourCompanyBadge": "Su empresa",
       "table": {
         "name": "Nombre",
-        "default": "Predeterminado",
+        "default": "Su empresa (predeterminado)",
         "actions": "Acciones"
       },
       "placeholder": "Seleccione un cliente para agregar",
-      "addClient": "Agregar cliente"
+      "addClient": "Agregar cliente",
+      "confirmDialog": {
+        "title": "¿Cambiar su empresa?",
+        "message": "Esto cambiará su empresa de {{current}} a {{next}}. {{next}} representará a su propia organización en facturas, presupuestos y en los correos e invitaciones dirigidos a los clientes.",
+        "messageInitial": "Esto establecerá {{next}} como su empresa. {{next}} representará a su propia organización en facturas, presupuestos y en los correos e invitaciones dirigidos a los clientes.",
+        "confirm": "Cambiar empresa",
+        "cancel": "Cancelar"
+      }
     },
     "messages": {
       "success": {
@@ -76,6 +86,7 @@
         "updateTimezone": "Error al actualizar la zona horaria",
         "selectClient": "Seleccione un cliente",
         "clientNotFound": "Cliente no encontrado",
+        "clientAlreadyAdded": "Ese cliente ya está en la lista",
         "addClient": "Error al agregar el cliente",
         "removeClient": "Error al eliminar el cliente",
         "setDefaultClient": "Error al establecer el cliente predeterminado",

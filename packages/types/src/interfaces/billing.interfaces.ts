@@ -176,6 +176,8 @@ export interface IProductCharge extends IBillingCharge, TenantEntity {
   rate: number;
   total: number;
   type: 'product';
+  material_source_type?: 'ticket' | 'project';
+  material_source_id?: string;
 }
 
 export interface ILicenseCharge extends IBillingCharge, TenantEntity {
@@ -422,6 +424,8 @@ export interface IProductCharge extends IBillingCharge, TenantEntity {
   quantity: number;
   rate: number;
   total: number;
+  material_source_type?: 'ticket' | 'project';
+  material_source_id?: string;
 }
 
 export interface ILicenseCharge extends IBillingCharge, TenantEntity {

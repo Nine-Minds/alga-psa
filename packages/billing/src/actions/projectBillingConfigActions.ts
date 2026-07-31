@@ -67,6 +67,12 @@ export type UpdateProjectBillingConfigActionInput = Partial<Omit<
   'project_id'
 >>;
 
+export interface RecalculateProjectTotalResult {
+  config: IProjectBillingConfig;
+  entries: ScheduleEntryView[];
+  rollup: { allocated: number; total: number; delta: 0 };
+}
+
 export interface UpsertPhaseRateOverrideActionInput {
   phase_id: string;
   service_id?: string | null;
@@ -191,15 +197,22 @@ async function listScheduleEntryViews(
       ? []
       : tenantDb(connection, tenant).table('project_phases')
         .whereIn('phase_id', phaseIds)
-        .select<{ phase_id: string; phase_name: string }[]>('phase_id', 'phase_name'),
+        .select<{ phase_id: string; phase_name: string; end_date: Date | string | null }[]>(
+          'phase_id',
+          'phase_name',
+          'end_date',
+        ),
     invoiceIds.length === 0
       ? []
       : tenantDb(connection, tenant).table('invoices')
         .whereIn('invoice_id', invoiceIds)
         .select<{ invoice_id: string; invoice_number: string }[]>('invoice_id', 'invoice_number'),
   ]);
-  const phaseNames = new Map<string, string>(
-    phaseRows.map((row): [string, string] => [row.phase_id, row.phase_name]),
+  const phasesById = new Map<string, { name: string; endDate: Date | string | null }>(
+    phaseRows.map((row): [string, { name: string; endDate: Date | string | null }] => [
+      row.phase_id,
+      { name: row.phase_name, endDate: row.end_date },
+    ]),
   );
   const invoiceNumbers = new Map<string, string>(
     invoiceRows.map((row): [string, string] => [row.invoice_id, row.invoice_number]),
@@ -208,12 +221,14 @@ async function listScheduleEntryViews(
 
   return entries.map((entry, index) => {
     const phaseDeleted = entry.trigger_type === 'phase'
-      && (entry.phase_id === null || !phaseNames.has(entry.phase_id));
+      && (entry.phase_id === null || !phasesById.has(entry.phase_id));
+    const phase = entry.phase_id ? phasesById.get(entry.phase_id) : undefined;
     return {
       ...entry,
       trigger_type: phaseDeleted ? 'manual' : entry.trigger_type,
       computed_amount: computedAmounts[index],
-      phase_name: entry.phase_id ? phaseNames.get(entry.phase_id) ?? null : null,
+      phase_name: phase?.name ?? null,
+      phase_end_date: phase?.endDate ?? null,
       invoice_number: entry.invoice_id ? invoiceNumbers.get(entry.invoice_id) ?? null : null,
       phase_deleted: phaseDeleted,
     };
@@ -535,6 +550,110 @@ export const updateProjectBillingConfig = withAuth(withProjectBillingActionError
     },
   });
   return result;
+}));
+
+export const recalculateProjectTotalFromSchedule = withAuth(withProjectBillingActionErrors(async (
+  user,
+  { tenant },
+  configId: string,
+  expectedDelta: number,
+): Promise<RecalculateProjectTotalResult> => {
+  const { knex } = await createTenantKnex();
+  await assertProjectBillingMutationPermission(user, knex);
+
+  const result = await withTransaction(knex, async (trx) => {
+    const db = tenantDb(trx, tenant);
+    const lockedConfig = await db.table('project_billing_configs')
+      .where({ config_id: configId })
+      .forUpdate()
+      .first();
+    if (!lockedConfig) throw new Error('Project billing config not found');
+    if (lockedConfig.billing_model !== 'fixed_price' || lockedConfig.total_price == null) {
+      throw new Error('Only fixed-price project schedules can recalculate the project total');
+    }
+    await db.table('project_billing_schedule_entries')
+      .where({ config_id: configId })
+      .forUpdate()
+      .select('schedule_entry_id');
+
+    const config = await ProjectBillingConfig.getById(configId, trx);
+    if (!config) throw new Error('Project billing config not found');
+    const entries = await ProjectBillingScheduleEntry.listByConfig(configId, trx);
+    const allocation = validateAllocation(config, entries);
+    if (allocation.delta <= 0) {
+      throw new Error('The schedule is no longer under-allocated. Refresh and review the current amounts.');
+    }
+    if (allocation.delta !== expectedDelta) {
+      throw new Error('The schedule changed before the project total could be recalculated. Refresh and try again.');
+    }
+
+    const displayedAmounts = computeEntryAmounts(config, entries);
+    const updatedAt = new Date().toISOString();
+    for (let index = 0; index < entries.length; index += 1) {
+      const entry = entries[index];
+      if (
+        entry.status !== 'canceled'
+        && entry.frozen_amount === null
+        && entry.percentage !== null
+        && ['pending', 'ready', 'held'].includes(entry.status)
+      ) {
+        await db.table('project_billing_schedule_entries')
+          .where({ schedule_entry_id: entry.schedule_entry_id })
+          .update({
+            amount: displayedAmounts[index],
+            percentage: null,
+            updated_at: updatedAt,
+          });
+      }
+    }
+
+    const newTotal = entries.reduce(
+      (sum, entry, index) => entry.status === 'canceled' ? sum : sum + displayedAmounts[index],
+      0,
+    );
+    const refreshedEntries = await ProjectBillingScheduleEntry.listByConfig(configId, trx);
+    const updatedConfig = await persistProjectBillingConfigUpdate(
+      configId,
+      { total_price: newTotal },
+      refreshedEntries,
+      trx,
+    );
+    const finalEntries = await ProjectBillingScheduleEntry.listByConfig(configId, trx);
+    const finalAllocation = validateAllocation(updatedConfig, finalEntries);
+    if (!finalAllocation.ok) {
+      throw new Error('Project total recalculation did not produce a balanced schedule');
+    }
+
+    const amounts = computeEntryAmounts(updatedConfig, finalEntries);
+    return {
+      projectId: updatedConfig.project_id,
+      config: updatedConfig,
+      entries: finalEntries.map((entry, index) => ({
+        ...entry,
+        computed_amount: amounts[index],
+        phase_name: null,
+        phase_end_date: null,
+        invoice_number: null,
+        phase_deleted: false,
+      })),
+      rollup: { allocated: newTotal, total: newTotal, delta: 0 as const },
+    };
+  });
+
+  revalidateProjectBilling(result.projectId);
+  await publishEvent({
+    eventType: 'PROJECT_BILLING_CONFIG_UPDATED',
+    payload: {
+      tenantId: tenant,
+      projectId: result.projectId,
+      configId,
+      billingModel: result.config.billing_model,
+      invoiceMode: result.config.invoice_mode,
+      userId: user.user_id,
+      changes: { total_price: result.config.total_price, source: 'schedule_recalculation' },
+    },
+  });
+  return { config: result.config, entries: result.entries, rollup: result.rollup };
 }));
 
 export const deleteProjectBillingConfig = withAuth(withProjectBillingActionErrors(async (

@@ -453,7 +453,11 @@
           "unlinkFailed": "Nie udało się odłączyć tego klienta.",
           "hidePreview": "Ukryj podgląd",
           "previewLoading": "Odczytywanie katalogu {{client}} z Microsoft…",
-          "previewLoadingHint": "Czas zależy od liczby użytkowników klienta."
+          "previewLoadingHint": "Czas zależy od liczby użytkowników klienta.",
+          "previousCount": "Poprzednia wartość",
+          "syncFinished": "Synchronizacja klienta {{client}} zakończona.",
+          "syncing": "Synchronizowanie…",
+          "syncTrackingFailed": "Synchronizacja została uruchomiona, ale ta strona nie mogła śledzić jej do końca. Odśwież stronę, aby zobaczyć najnowszy wynik."
         },
         "connection": {
           "changeAction": "Zmień połączenie",
@@ -601,6 +605,7 @@
       },
       "pilot": {
         "actions": {
+          "createAndSync": "Utwórz zatwierdzonych klientów i synchronizuj",
           "preview": "Podgląd zmian",
           "previewing": "Trwa podgląd…",
           "syncOne": "Synchronizuj tego klienta",
@@ -617,6 +622,7 @@
           "syncFailed": "Nie udało się uruchomić synchronizacji."
         },
         "gateNote": "Najpierw zsynchronizuj jednego klienta. Reszta odblokuje się po zakończeniu jego przebiegu.",
+        "pendingCreate": "Zatwierdzeni nowi klienci ({{count}}) zostaną utworzeni przez tę jawną synchronizację. Zaplanowane synchronizacje nie mogą ich tworzyć.",
         "previewPrompt": "Zobacz podgląd zmian dla tego klienta, zanim cokolwiek zostanie zapisane.",
         "remainingStarted": "Uruchomiono synchronizację dla pozostałych {{count}} klientów.",
         "started": "Uruchomiono synchronizację dla {{client}}."

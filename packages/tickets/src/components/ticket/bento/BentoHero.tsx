@@ -980,7 +980,7 @@ export function BentoHero({
           </Alert>
         ) : null}
 
-        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
           <HeroField label={t('bento.hero.status', 'Status')}>
             {renderLiveField('status_id', '', (
               <CustomSelect
@@ -1105,6 +1105,7 @@ export function BentoHero({
                 onChange={handleDueDateChange}
                 placeholder={t('bento.hero.noDueDate', 'No due date')}
                 disabled={isFrozen('due_date')}
+                collapsible
               />
             ))}
           </HeroField>

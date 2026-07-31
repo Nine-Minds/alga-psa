@@ -38,7 +38,7 @@
   },
   "general": {
     "title": "Configurações Gerais",
-    "description": "Gerencie o nome da sua organização e o cliente padrão. O cliente padrão é usado para fins de configuração e representa seu MSP.",
+    "description": "Gerencie o nome da sua organização e escolha qual registro de cliente representa sua própria empresa. Os dados desse cliente aparecem em faturas, orçamentos e comunicações com clientes.",
     "fields": {
       "organizationName": {
         "label": "Nome da organização"
@@ -53,14 +53,24 @@
       "saveDefaultTimezone": "Salvar fuso horário padrão"
     },
     "clients": {
-      "title": "Clientes",
+      "title": "Sua empresa",
+      "help": "O cliente marcado como sua empresa representa sua própria organização. O nome, o endereço e o logotipo desse cliente aparecem em faturas, orçamentos e comunicações com clientes.",
+      "currentDefault": "Atualmente, sua empresa é {{name}}.",
+      "yourCompanyBadge": "Sua empresa",
       "table": {
         "name": "Nome",
-        "default": "Padrão",
+        "default": "Sua empresa (padrão)",
         "actions": "Ações"
       },
       "placeholder": "Selecione um cliente para adicionar",
-      "addClient": "Adicionar cliente"
+      "addClient": "Adicionar cliente",
+      "confirmDialog": {
+        "title": "Alterar sua empresa?",
+        "message": "Isso alterará sua empresa de {{current}} para {{next}}. {{next}} passará a representar sua própria organização em faturas, orçamentos e em e-mails e convites enviados a clientes.",
+        "messageInitial": "Isso definirá {{next}} como sua empresa. {{next}} passará a representar sua própria organização em faturas, orçamentos e em e-mails e convites enviados a clientes.",
+        "confirm": "Alterar empresa",
+        "cancel": "Cancelar"
+      }
     },
     "messages": {
       "success": {
@@ -76,6 +86,7 @@
         "updateTimezone": "Falha ao atualizar o fuso horário",
         "selectClient": "Selecione um cliente",
         "clientNotFound": "Cliente não encontrado",
+        "clientAlreadyAdded": "Esse cliente já está na lista",
         "addClient": "Falha ao adicionar cliente",
         "removeClient": "Falha ao remover cliente",
         "setDefaultClient": "Falha ao definir o cliente padrão",

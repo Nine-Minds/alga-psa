@@ -1920,4 +1920,41 @@ describe('BillingEngine', () => {
     });
   });
 
+  describe('project billing target lookup', () => {
+    it('derives project completion from the related status instead of the projects table', async () => {
+      const project = {
+        project_id: 'project-1',
+        client_id: mockClientId,
+        start_date: new Date('2023-01-01T00:00:00Z'),
+        created_at: new Date('2022-12-01T00:00:00Z'),
+        is_closed: true,
+      };
+      const projectBuilder = buildChainableQuery({ firstResult: project });
+      const knex = vi.fn((table: string) => {
+        if (table === 'projects as project') {
+          return projectBuilder;
+        }
+        return buildChainableQuery();
+      }) as any;
+      knex.raw = vi.fn().mockReturnValue('RAW');
+      (billingEngine as any).knex = knex;
+
+      const result = await (billingEngine as any).loadProjectBillingTarget('project-1');
+
+      expect(result).toEqual(project);
+      expect(projectBuilder.where).toHaveBeenCalledWith('project.project_id', 'project-1');
+      expect(projectBuilder.leftJoin).toHaveBeenCalledWith(
+        'statuses as project_status',
+        expect.any(Function),
+      );
+      expect(projectBuilder.first).toHaveBeenCalledWith(
+        'project.project_id',
+        'project.client_id',
+        'project.start_date',
+        'project.created_at',
+        'project_status.is_closed',
+      );
+    });
+  });
+
 });

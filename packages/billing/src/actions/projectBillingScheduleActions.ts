@@ -115,6 +115,24 @@ async function loadEntryContext(
   return { entry, config, projectId: config.project_id };
 }
 
+async function moveLinkedProductsToHold(
+  connection: Knex | Knex.Transaction,
+  tenant: string,
+  entryId: string,
+): Promise<number> {
+  return tenantDb(connection, tenant).table('project_materials')
+    .where({
+      billing_schedule_entry_id: entryId,
+      billing_destination: 'schedule_entry',
+      is_billed: false,
+    })
+    .update({
+      billing_destination: 'on_hold',
+      billing_schedule_entry_id: null,
+      updated_at: new Date().toISOString(),
+    });
+}
+
 async function assertValidTrigger(
   connection: Knex | Knex.Transaction,
   tenant: string,
@@ -165,8 +183,8 @@ async function scheduleEntryView(
     context.entry.phase_id
       ? tenantDb(connection, tenant).table('project_phases')
         .where({ phase_id: context.entry.phase_id })
-        .select('phase_name')
-        .first<{ phase_name: string }>()
+        .select('phase_name', 'end_date')
+        .first<{ phase_name: string; end_date: Date | string | null }>()
       : null,
     context.entry.invoice_id
       ? tenantDb(connection, tenant).table('invoices')
@@ -182,6 +200,7 @@ async function scheduleEntryView(
     trigger_type: phaseDeleted ? 'manual' : context.entry.trigger_type,
     computed_amount: amounts[entryIndex],
     phase_name: phase?.phase_name ?? null,
+    phase_end_date: phase?.end_date ?? null,
     invoice_number: invoice?.invoice_number ?? null,
     phase_deleted: phaseDeleted,
   };
@@ -461,7 +480,7 @@ export const deleteScheduleEntry = withAuth(withProjectBillingActionErrors(async
   user,
   { tenant },
   entryId: string,
-): Promise<void> => {
+): Promise<{ products_moved_to_hold: number }> => {
   const { knex } = await createTenantKnex();
   await assertProjectBillingMutationPermission(user, knex);
   const deleted = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -469,10 +488,11 @@ export const deleteScheduleEntry = withAuth(withProjectBillingActionErrors(async
     if (context.entry.status !== 'pending' && context.entry.status !== 'canceled') {
       throw new Error('Only pending or canceled schedule entries can be deleted');
     }
+    const productsMovedToHold = await moveLinkedProductsToHold(trx, tenant, entryId);
     if (!await ProjectBillingScheduleEntry.delete(entryId, trx)) {
       throw new Error('Project billing schedule entry not found');
     }
-    return { projectId: context.projectId, entry: context.entry };
+    return { projectId: context.projectId, entry: context.entry, productsMovedToHold };
   });
   revalidateProjectBilling(deleted.projectId);
   await publishScheduleEvent({
@@ -482,6 +502,7 @@ export const deleteScheduleEntry = withAuth(withProjectBillingActionErrors(async
     projectId: deleted.projectId,
     entry: deleted.entry,
   });
+  return { products_moved_to_hold: deleted.productsMovedToHold };
 }));
 
 export const markEntryReady = withAuth(withProjectBillingActionErrors(async (
@@ -680,11 +701,12 @@ export const cancelScheduleEntry = withAuth(withProjectBillingActionErrors(async
   user,
   { tenant },
   entryId: string,
-): Promise<ScheduleEntryView> => {
+): Promise<ScheduleEntryView & { products_moved_to_hold: number }> => {
   const { knex } = await createTenantKnex();
   await assertProjectBillingMutationPermission(user, knex);
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const context = await loadEntryContext(trx, entryId);
+    const productsMovedToHold = await moveLinkedProductsToHold(trx, tenant, entryId);
     if (context.entry.status === 'invoiced') {
       throw new Error('Invoiced schedule entries cannot be canceled');
     }
@@ -693,6 +715,7 @@ export const cancelScheduleEntry = withAuth(withProjectBillingActionErrors(async
         entry: await scheduleEntryView(trx, tenant, entryId, context.config),
         projectId: context.projectId,
         previousStatus: context.entry.status,
+        productsMovedToHold,
       };
     }
     const transitioned = await transitionEntry(
@@ -702,7 +725,7 @@ export const cancelScheduleEntry = withAuth(withProjectBillingActionErrors(async
       context.entry.status,
       'canceled',
     );
-    return { ...transitioned, previousStatus: context.entry.status };
+    return { ...transitioned, previousStatus: context.entry.status, productsMovedToHold };
   });
   revalidateProjectBilling(result.projectId);
   if (result.previousStatus !== 'canceled') {
@@ -715,7 +738,7 @@ export const cancelScheduleEntry = withAuth(withProjectBillingActionErrors(async
       previousStatus: result.previousStatus,
     });
   }
-  return result.entry;
+  return { ...result.entry, products_moved_to_hold: result.productsMovedToHold };
 }));
 
 export const bulkApproveEntries = withAuth(withProjectBillingActionErrors(async (

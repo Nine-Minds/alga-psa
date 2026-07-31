@@ -38,7 +38,7 @@
   },
   "general": {
     "title": "Impostazioni generali",
-    "description": "Gestisca il nome dell'organizzazione e il cliente predefinito. Il cliente predefinito viene utilizzato per scopi di configurazione e rappresenta il Suo MSP.",
+    "description": "Gestisca il nome dell'organizzazione e scelga quale scheda cliente rappresenta la Sua azienda. I dati di quel cliente compaiono su fatture, preventivi e comunicazioni ai clienti.",
     "fields": {
       "organizationName": {
         "label": "Nome dell'organizzazione"
@@ -53,14 +53,24 @@
       "saveDefaultTimezone": "Salva fuso orario predefinito"
     },
     "clients": {
-      "title": "Clienti",
+      "title": "La Sua azienda",
+      "help": "Il cliente contrassegnato come la Sua azienda rappresenta la Sua organizzazione. Nome, indirizzo e logo di questo cliente compaiono su fatture, preventivi e comunicazioni ai clienti.",
+      "currentDefault": "Attualmente la Sua azienda è {{name}}.",
+      "yourCompanyBadge": "La Sua azienda",
       "table": {
         "name": "Nome",
-        "default": "Predefinito",
+        "default": "La Sua azienda (predefinito)",
         "actions": "Azioni"
       },
       "placeholder": "Selezioni un cliente da aggiungere",
-      "addClient": "Aggiungi cliente"
+      "addClient": "Aggiungi cliente",
+      "confirmDialog": {
+        "title": "Modificare la Sua azienda?",
+        "message": "Questa operazione cambierà la Sua azienda da {{current}} a {{next}}. {{next}} rappresenterà la Sua organizzazione su fatture, preventivi ed e-mail e inviti destinati ai clienti.",
+        "messageInitial": "Questa operazione imposterà {{next}} come la Sua azienda. {{next}} rappresenterà la Sua organizzazione su fatture, preventivi ed e-mail e inviti destinati ai clienti.",
+        "confirm": "Modifica azienda",
+        "cancel": "Annulla"
+      }
     },
     "messages": {
       "success": {
@@ -76,6 +86,7 @@
         "updateTimezone": "Impossibile aggiornare il fuso orario",
         "selectClient": "Selezioni un cliente",
         "clientNotFound": "Cliente non trovato",
+        "clientAlreadyAdded": "Questo cliente è già presente nell’elenco",
         "addClient": "Impossibile aggiungere il cliente",
         "removeClient": "Impossibile rimuovere il cliente",
         "setDefaultClient": "Impossibile impostare il cliente predefinito",
