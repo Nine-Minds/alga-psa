@@ -18,6 +18,7 @@ interface ManagedDomainServiceLike {
   }>;
   activateDomain: (domain: string) => Promise<void>;
   deleteDomain: (domain: string) => Promise<void>;
+  markDomainFailed: (domain: string, reason: string) => Promise<void>;
   startDomainVerification?: (domainId: string) => Promise<DomainVerificationResult>;
 }
 
@@ -155,4 +156,22 @@ export async function deleteManagedEmailDomain(
   await service.deleteDomain(input.domain);
 
   logger.info('deleteManagedEmailDomain:success', input);
+}
+
+export interface MarkManagedEmailDomainFailedInput {
+  tenantId: string;
+  domain: string;
+  reason: string;
+}
+
+export async function markManagedEmailDomainFailed(
+  input: MarkManagedEmailDomainFailedInput
+): Promise<void> {
+  const logger = log();
+  logger.info('markManagedEmailDomainFailed:start', input);
+
+  const service = await buildService(input.tenantId);
+  await service.markDomainFailed(input.domain, input.reason);
+
+  logger.info('markManagedEmailDomainFailed:success', input);
 }

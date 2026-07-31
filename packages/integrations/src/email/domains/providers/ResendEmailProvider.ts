@@ -252,9 +252,9 @@ export class ResendEmailProvider implements IEmailProvider {
 
       if (statusCode === 403 && providerMessage?.toLowerCase().includes('registered already')) {
         const existing = await this.findDomainByName(domain).catch(() => null);
-        if (existing && existing.status !== 'verified') {
+        if (existing) {
           logger.warn(
-            `[ResendEmailProvider:${this.providerId}] Domain already exists with status ${existing.status}, returning existing DNS records`
+            `[ResendEmailProvider:${this.providerId}] Domain already exists with status ${existing.status}, adopting existing domain`
           );
           const { normalizedStatus } = this.normalizeDomainStatus(existing.status);
           return {
@@ -275,7 +275,18 @@ export class ResendEmailProvider implements IEmailProvider {
   private async findDomainByName(domain: string): Promise<ResendDomainResponse | null> {
     try {
       const response = await this.client!.get<{ data: ResendDomainResponse[] }>('/domains');
-      return response.data.data.find((entry) => entry.name.toLowerCase() === domain.toLowerCase()) ?? null;
+      const match = response.data.data.find((entry) => entry.name.toLowerCase() === domain.toLowerCase()) ?? null;
+      if (!match) {
+        return null;
+      }
+
+      try {
+        // The list endpoint omits `records`; fetch the full domain for DNS records
+        const detail = await this.client!.get<ResendDomainResponse>(`/domains/${match.id}`);
+        return detail.data;
+      } catch {
+        return match;
+      }
     } catch (error) {
       logger.warn(`[ResendEmailProvider:${this.providerId}] Unable to fetch existing domains`, {
         error: (error as any)?.response?.data || (error as any)?.message || error,
@@ -477,9 +488,9 @@ export class ResendEmailProvider implements IEmailProvider {
     };
   }
 
-  private transformResendRecords(records: ResendDomainResponse['records'], domain?: string): DnsRecord[] {
+  private transformResendRecords(records: ResendDomainResponse['records'] | undefined, domain?: string): DnsRecord[] {
     const suffix = domain?.toLowerCase().replace(/\.$/, '');
-    return records.map((record) => ({
+    return (records ?? []).map((record) => ({
       type: record.type.toUpperCase() as DnsRecord['type'],
       name: this.ensureAbsoluteRecordName(record.name, suffix),
       value: record.value,

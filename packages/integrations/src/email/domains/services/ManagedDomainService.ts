@@ -358,8 +358,43 @@ export class ManagedDomainService {
 
     await tenantDb(this.knex, this.tenantId).table(EMAIL_DOMAINS_TABLE)
       .where({ domain_name: domain })
+      .delete();
+
+    const settings = await tenantDb(this.knex, this.tenantId).table(TENANT_EMAIL_SETTINGS_TABLE)
+      .first();
+
+    if (settings) {
+      const rawCustomDomains = settings.custom_domains;
+      const customDomains: string[] = Array.isArray(rawCustomDomains)
+        ? rawCustomDomains
+        : typeof rawCustomDomains === 'string'
+          ? JSON.parse(rawCustomDomains)
+          : [];
+      const remainingDomains = customDomains.filter((entry) => entry !== domain);
+
+      const updates: Record<string, unknown> = {};
+      if (settings.default_from_domain === domain) {
+        updates.default_from_domain = null;
+      }
+      if (remainingDomains.length !== customDomains.length) {
+        updates.custom_domains = JSON.stringify(remainingDomains);
+      }
+
+      if (Object.keys(updates).length > 0) {
+        updates.updated_at = new Date();
+        await tenantDb(this.knex, this.tenantId).table(TENANT_EMAIL_SETTINGS_TABLE)
+          .update(updates);
+      }
+    }
+  }
+
+  async markDomainFailed(domain: string, reason: string): Promise<void> {
+    await tenantDb(this.knex, this.tenantId).table(EMAIL_DOMAINS_TABLE)
+      .where({ domain_name: domain })
+      .whereNot({ status: 'verified' })
       .update({
-        status: 'deleted',
+        status: 'failed',
+        failure_reason: reason,
         updated_at: new Date(),
       });
   }
