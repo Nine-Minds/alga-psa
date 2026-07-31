@@ -2,11 +2,8 @@
  * Pure compute layer for billing charge math, shared by production invoice
  * generation (BillingEngine load -> delegate) and the EE contract simulator.
  *
- * Compute modules perform no I/O of their own: every external lookup flows
- * through the injected ChargeComputeTaxPorts, so a caller that supplies
- * read-only ports gets a guaranteed write-free computation. The engine
- * supplies ports backed by its cached helpers + TaxService, preserving
- * production behavior exactly.
+ * Compute modules perform no I/O. Callers resolve tax, region, and client
+ * settings during their load phase and pass the synchronous context below.
  */
 
 import type { ISO8601String } from "@alga-psa/types";
@@ -37,20 +34,19 @@ export interface ChargeComputeTaxResult {
 }
 
 /**
- * The tax/region lookups the charge math consumes. Production backs these
- * with BillingEngine's memoized helpers and TaxService (which may provision
- * default tax settings); the simulator backs them with strictly read-only
- * equivalents.
+ * The tax/region lookups the charge math consumes. Production and simulation
+ * preload tenant-scoped tax rows before entering deterministic charge math;
+ * only the production load phase may provision missing default tax settings.
  */
-export interface ChargeComputeTaxPorts {
+export interface ChargeComputeTaxContext {
   getTaxInfoFromService(service: {
     service_id?: string;
     tax_rate_id?: string | null;
-  }): Promise<ChargeComputeTaxInfo>;
+  }): ChargeComputeTaxInfo;
   getLocationTaxRegionCode(
     locationId: string | null | undefined,
-  ): Promise<string | null>;
-  getClientDefaultTaxRegionCode(clientId: string): Promise<string | null>;
+  ): string | null;
+  getClientDefaultTaxRegionCode(clientId: string): string | null;
   calculateTax(
     clientId: string,
     netAmountInCents: number,
@@ -58,8 +54,11 @@ export interface ChargeComputeTaxPorts {
     regionCode: string,
     isTaxable: boolean,
     currencyCode: string,
-  ): Promise<ChargeComputeTaxResult>;
+  ): ChargeComputeTaxResult;
 }
+
+/** @deprecated Use ChargeComputeTaxContext. */
+export type ChargeComputeTaxPorts = ChargeComputeTaxContext;
 
 export interface ChargeComputeClient {
   client_id: string;

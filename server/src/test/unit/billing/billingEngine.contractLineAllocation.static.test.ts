@@ -17,6 +17,13 @@ describe('billingEngine allocation and regression guards', () => {
     ),
     'utf8',
   );
+  const bucketComputeSource = readFileSync(
+    path.resolve(
+      import.meta.dirname,
+      '../../../../../packages/billing/src/lib/billing/compute/computeBucketCharges.ts',
+    ),
+    'utf8',
+  );
 
   it('T028: time query has no unconditional null-line fallback and gates null-line allocation by unique service matches', () => {
     expect(source).toContain('this.whereNull("time_entries.contract_line_id").whereIn(');
@@ -48,9 +55,10 @@ describe('billingEngine allocation and regression guards', () => {
   });
 
   it('T040: bucket overage billing behavior remains in the billing path', () => {
-    expect(source).toContain('overageMinutes');
-    expect(source).toContain('overageRate');
-    expect(source).toContain('type: "bucket"');
+    expect(source).toContain('computeBucketCharges(');
+    expect(bucketComputeSource).toContain('overageRate');
+    expect(bucketComputeSource).toContain('billedOverage');
+    expect(bucketComputeSource).toContain('type: "bucket"');
   });
 
   it('T041: recurring usage charges preserve configuration identity for invoice linkage', () => {

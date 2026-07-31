@@ -462,7 +462,12 @@ async function getStandardServiceTypeId(
       query = query.where({ billing_method: billingMethod });
     }
 
-    const record = await query.first<{ id: string }>('id');
+    // `query` is a union of tenant-scoped and plain Knex builders; their
+    // generic `select` overloads do not intersect cleanly even though both
+    // support this projection at runtime.
+    const record = (await (query as Knex.QueryBuilder)
+      .select('id')
+      .first()) as { id: string } | undefined;
     if (record?.id) {
       return record.id as string;
     }

@@ -6,7 +6,16 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { ScenarioLine, SimulationHorizon } from '@alga-psa/types';
+import type {
+  ContractSimulationResult,
+  ScenarioLine,
+  SimulationHorizon,
+} from '@alga-psa/types';
+import { compareSimulations } from '@ee/lib/billing/simulator/compareSimulations';
+import {
+  aggregateActivityAssumptions,
+  buildRecentAssumptionPeriods,
+} from '@ee/lib/billing/simulator/activityAssumptions';
 import {
   assignServicePeriodsToInvoicePeriods,
   buildInvoicePeriods,
@@ -341,6 +350,253 @@ describe('synthetic usage', () => {
         enable_tiered_pricing: false,
       },
       rateTiers: [],
+    });
+  });
+});
+
+describe('compareSimulations', () => {
+  const result = (
+    lines: ContractSimulationResult['periods'][number]['lines'],
+  ): ContractSimulationResult => ({
+    scenario_id: 'scenario',
+    currency_code: 'USD',
+    horizon: { start_date: '2026-08-01', period_count: 1 },
+    diagnostics: [],
+    periods: [
+      {
+        index: 0,
+        period_start: '2026-08-01',
+        period_end: '2026-08-31',
+        label: 'Aug 2026',
+        lines,
+        subtotal: lines.reduce((sum, line) => sum + line.net_amount, 0),
+        tax: lines.reduce((sum, line) => sum + line.tax_amount, 0),
+        total: lines.reduce((sum, line) => sum + line.total, 0),
+        markers: [],
+        invoice_view_model: {
+          invoiceNumber: 'SIM-1',
+          issueDate: '2026-08-01',
+          dueDate: '2026-08-31',
+          tenantClient: null,
+          customer: { name: 'Acme', address: 'N/A' },
+          items: [],
+          subtotal: 0,
+          tax: 0,
+          total: 0,
+          currencyCode: 'USD',
+        },
+      },
+    ],
+  });
+  const line = (overrides: Record<string, unknown> = {}) => ({
+    line_key: 'line-1',
+    service_id: 'svc-1',
+    service_name: 'Managed service',
+    charge_type: 'fixed',
+    quantity_label: '1 month',
+    rate_label: '$100.00',
+    net_amount: 10000,
+    tax_amount: 0,
+    total: 10000,
+    explanation: null,
+    ...overrides,
+  });
+
+  it('reports changed, added, and removed lines with period and horizon deltas', () => {
+    const baseline = result([
+      line(),
+      line({
+        line_key: 'removed-line',
+        service_id: 'removed',
+        service_name: 'Removed service',
+        total: 2500,
+        net_amount: 2500,
+      }),
+    ]);
+    const scenario = result([
+      line({ total: 12500, net_amount: 12500 }),
+      line({
+        line_key: 'added-line',
+        service_id: 'added',
+        service_name: 'Added service',
+        total: 4000,
+        net_amount: 4000,
+      }),
+    ]);
+
+    const comparison = compareSimulations(baseline, scenario);
+    expect(comparison.periods[0].lines).toEqual([
+      expect.objectContaining({ kind: 'added', delta: 4000 }),
+      expect.objectContaining({ kind: 'changed', delta: 2500 }),
+      expect.objectContaining({ kind: 'removed', delta: -2500 }),
+    ]);
+    expect(comparison.periods[0].total_delta).toBe(4000);
+    expect(comparison.horizon_total_delta).toBe(4000);
+  });
+});
+
+describe('historical activity assumptions', () => {
+  const scenario = {
+    scenario_id: 'scenario-history',
+    name: 'History',
+    contract_id: 'contract-1',
+    is_system_managed_default: false,
+    client_binding: { kind: 'client' as const, client_id: 'client-1', client_name: 'Acme' },
+    invoice_schedule: MONTHLY_FIRST,
+    billing_frequency: 'monthly',
+    contract_start_date: '2026-01-01',
+    contract_end_date: null,
+    currency_code: 'USD',
+    pricing_schedules: [],
+    assumptions: {},
+    horizon: { start_date: '2026-08-12', period_count: 3 },
+    lines: [
+      buildLine({
+        key: 'hourly-line',
+        origin_contract_line_id: 'hourly-origin',
+        contract_line_type: 'Hourly',
+        services: [
+          {
+            service_id: 'shared-service',
+            service_name: 'Remote support',
+            quantity: 1,
+            custom_rate: 15000,
+            default_rate: 15000,
+            tax_rate_id: null,
+            item_kind: 'service',
+            is_license: false,
+            configuration: {
+              configuration_type: 'Hourly',
+              hourly_rate: 15000,
+              minimum_billable_time: 0,
+              round_up_to_nearest: 0,
+              user_type_rates: [],
+            },
+          },
+        ],
+      }),
+      buildLine({
+        key: 'second-hourly-line',
+        origin_contract_line_id: 'second-hourly-origin',
+        contract_line_type: 'Hourly',
+        services: [
+          {
+            service_id: 'shared-service',
+            service_name: 'Remote support',
+            quantity: 1,
+            custom_rate: 15000,
+            default_rate: 15000,
+            tax_rate_id: null,
+            item_kind: 'service',
+            is_license: false,
+            configuration: {
+              configuration_type: 'Hourly',
+              hourly_rate: 15000,
+              minimum_billable_time: 0,
+              round_up_to_nearest: 0,
+              user_type_rates: [],
+            },
+          },
+        ],
+      }),
+      buildLine({
+        key: 'usage-line',
+        origin_contract_line_id: 'usage-origin',
+        contract_line_type: 'Usage',
+        services: [
+          {
+            service_id: 'usage-service',
+            service_name: 'Devices',
+            quantity: 1,
+            custom_rate: 100,
+            default_rate: 100,
+            tax_rate_id: null,
+            item_kind: 'service',
+            is_license: false,
+            configuration: {
+              configuration_type: 'Usage',
+              unit_of_measure: 'device',
+              enable_tiered_pricing: false,
+              minimum_usage: null,
+              base_rate: 100,
+              tiers: [],
+            },
+          },
+        ],
+      }),
+    ],
+  };
+  const periods = [
+    { start: '2026-05-01', endExclusive: '2026-06-01' },
+    { start: '2026-06-01', endExclusive: '2026-07-01' },
+    { start: '2026-07-01', endExclusive: '2026-08-01' },
+  ];
+
+  it('builds the prior production-anchored invoice windows', () => {
+    expect(buildRecentAssumptionPeriods(scenario, 3)).toEqual(periods.map((period) => ({
+      start: `${period.start}T00:00:00Z`,
+      endExclusive: `${period.endExclusive}T00:00:00Z`,
+    })));
+  });
+
+  it('aggregates assigned time and usage while rejecting ambiguous unassigned activity', () => {
+    const assumptions = aggregateActivityAssumptions({
+      scenario,
+      periods,
+      mode: 'average',
+      timeRows: [
+        {
+          contract_line_id: 'hourly-origin',
+          service_id: 'shared-service',
+          entry_date: '2026-05-15',
+          billable_duration: 120,
+        },
+        {
+          contract_line_id: null,
+          service_id: 'shared-service',
+          entry_date: '2026-06-15',
+          billable_duration: 600,
+        },
+      ],
+      usageRows: [
+        {
+          contract_line_id: 'usage-origin',
+          service_id: 'usage-service',
+          usage_date: '2026-07-15',
+          quantity: 30,
+        },
+      ],
+    });
+
+    expect(assumptions['hourly-line:shared-service'].flat).toBeCloseTo(2 / 3);
+    expect(assumptions['second-hourly-line:shared-service']).toBeUndefined();
+    expect(assumptions['usage-line:usage-service'].flat).toBe(10);
+  });
+
+  it('populates replay overrides period by period', () => {
+    const assumptions = aggregateActivityAssumptions({
+      scenario,
+      periods,
+      mode: 'replay',
+      timeRows: [
+        {
+          contract_line_id: 'hourly-origin',
+          service_id: 'shared-service',
+          entry_date: '2026-05-15',
+          billable_duration: 60,
+        },
+        {
+          contract_line_id: 'hourly-origin',
+          service_id: 'shared-service',
+          entry_date: '2026-07-15',
+          billable_duration: 180,
+        },
+      ],
+      usageRows: [],
+    });
+    expect(assumptions['hourly-line:shared-service']).toEqual({
+      flat: 0,
+      overrides: { 0: 1, 1: 0, 2: 3 },
     });
   });
 });

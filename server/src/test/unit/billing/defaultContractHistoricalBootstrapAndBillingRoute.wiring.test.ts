@@ -33,7 +33,8 @@ describe('historical bootstrap + default-contract billing route wiring', () => {
     expect(sharedBillingScheduleSource).toContain('regenerateHistoricalClientBillingCyclesFromBootstrap');
     expect(sharedBillingScheduleSource).toContain("Cannot move billing history earlier than invoiced history boundary");
 
-    expect(billingEngineSource).toContain('const isSystemManagedDefault = (clientContractLine as { is_system_managed_default?: boolean | null })');
+    expect(billingEngineSource).toContain('const isSystemManagedDefault =');
+    expect(billingEngineSource).toContain('(clientContractLine as { is_system_managed_default?: boolean | null })');
     expect(billingEngineSource).toContain('const cadenceOwner = isSystemManagedDefault');
     expect(billingEngineSource).toContain('? "client"');
     expect(timeComputeSource).toContain('if (serviceConfig && !isSystemManagedDefault) {');

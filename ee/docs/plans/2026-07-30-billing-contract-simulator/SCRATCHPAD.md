@@ -23,7 +23,14 @@
 - (2026-07-30) Added the compute-test include glob; all 10 fixed/hourly compute tests now execute and pass.
 - (2026-07-30) Scenario snapshots now retain effective invoice schedule anchors, line location/overtime fields, system-default provenance, and catalog product/license identity.
 - (2026-07-30) Usage pricing was extracted without moving its DB allocation/query rules; production and simulator now share minimum, custom/currency rate, tier, tax, and explanation behavior.
+- (2026-07-30) Bucket pricing and its one-period (non-compounding) rollover transition are shared; simulation threads state in memory and production now derives overage from base plus persisted rollover instead of the previous base-only fallback.
+- (2026-07-30) Product/license quantity pricing and discount/adjustment ordering are shared with production. Scenario snapshots preserve raw service/config quantity and override inputs and distinguish currency-specific prices from legacy catalog defaults.
 - (2026-07-30) Existing untracked `.smoke-tmp/` predates this implementation pass and must remain untouched.
+- (2026-07-30) All production charge families now delegate to deterministic shared compute; database resolution, reconciliation, persistence, numbering, event publication, and analytics remain outside the arithmetic boundary.
+- (2026-07-30) Dedicated contract templates require their own snapshot path because their header and line records do not appear in the live-contract tables; template snapshots now load services, configurations, buckets, cadence/timing/proration, prices, tiers, and schedules directly.
+- (2026-07-30) Missing product/license currency prices must be diagnosed while validating the scenario, even when the selected horizon contains no due charge for that line. Due-period-only validation can otherwise silently hide an unpriceable contract.
+- (2026-07-30) Real headed browser coverage uses isolated Next output directories. CE composition is exercised with webpack because the current Turbopack development route tree omits existing MSP/auth routes under CE aliases; the webpack production composition resolves those routes correctly.
+- (2026-07-30) Verification completed: shared compute/golden tests 28/28; full billing unit corpus 621 passed with 1 existing todo; full billing DB integration 89/89; migrated-schema simulator integration 7/7; simulator component/unit tests 23/23; headed EE Playwright 2/2; headed CE Playwright 1/1; billing/server/EE typechecks; and isolated CE plus EE production builds.
 
 ## Commands / Runbooks
 

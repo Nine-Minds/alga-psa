@@ -2,7 +2,7 @@
 
 - Slug: `billing-contract-simulator`
 - Date: `2026-07-30`
-- Status: Approved design; implementation in progress
+- Status: Complete
 - Design source: [`docs/plans/2026-07-30-billing-contract-simulator-plan.md`](../../../../docs/plans/2026-07-30-billing-contract-simulator-plan.md)
 
 ## Summary

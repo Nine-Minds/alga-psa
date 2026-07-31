@@ -7,11 +7,14 @@ import PaymentSettingsComponent from '@ee/components/settings/billing/PaymentSet
 import StripeConnectionSettingsComponent from '@ee/components/settings/integrations/StripeConnectionSettings';
 import PaymentSettingsConfigComponent from '@ee/components/settings/billing/PaymentSettingsConfig';
 import ContractSimulatorWorkspace from '@ee/components/billing/simulator/ContractSimulatorWorkspace';
+import ContractDraftSimulatorComponent from '@ee/components/billing/simulator/ContractDraftSimulator';
+import type { ContractDraftSimulationInput } from '@alga-psa/types';
 
 interface ContractSimulatorProps {
   contractId: string;
   clientContractId: string | null;
   clientId: string | null;
+  forceProfile?: boolean;
 }
 
 // Import OSS stubs for features not yet implemented in EE
@@ -29,6 +32,9 @@ export const PaymentSettingsConfig = () => <PaymentSettingsConfigComponent />;
 export const ContractSimulator = (props: ContractSimulatorProps) => (
   <ContractSimulatorWorkspace {...props} />
 );
+export const ContractDraftSimulator = ({ draft }: { draft: ContractDraftSimulationInput }) => (
+  <ContractDraftSimulatorComponent draft={draft} />
+);
 
 // Default export
 export default {
@@ -40,4 +46,5 @@ export default {
   StripeConnectionSettings,
   PaymentSettingsConfig,
   ContractSimulator,
+  ContractDraftSimulator,
 };

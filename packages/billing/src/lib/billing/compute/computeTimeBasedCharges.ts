@@ -78,7 +78,10 @@ export interface TimeBasedChargeComputeInputs {
   contractCurrency: string;
   /** Project-billing hooks; production wires these to ProjectBillingContext, the simulator passes null. */
   resolvePhaseRateOverride?:
-    | ((phaseId: string | null | undefined, serviceId: string) => TimeBasedPhaseRateOverride | null)
+    | ((
+        phaseId: string | null | undefined,
+        serviceId: string,
+      ) => TimeBasedPhaseRateOverride | null)
     | null;
   getProjectChargeConfig?:
     | ((projectId: string) => TimeBasedProjectChargeConfig | undefined)
@@ -101,10 +104,10 @@ function formatHours(hours: number): string {
   return Number.isInteger(hours) ? String(hours) : hours.toFixed(2);
 }
 
-export async function computeTimeBasedCharges(
+export function computeTimeBasedCharges(
   inputs: TimeBasedChargeComputeInputs,
   taxPorts: ChargeComputeTaxPorts,
-): Promise<TimeBasedChargeComputeResult> {
+): TimeBasedChargeComputeResult {
   const {
     billingPeriod,
     clientContractLine,
@@ -121,206 +124,203 @@ export async function computeTimeBasedCharges(
   const { servicePeriodStart, servicePeriodEnd } = timing;
   const explanations: ChargeExplanation[] = [];
 
-  const timeBasedChargesPromises = timeEntries.map(
-    async (entry): Promise<ITimeBasedCharge> => {
-      const startDateTime = Temporal.PlainDateTime.from(
-        entry.start_time.toISOString().replace("Z", ""),
-      );
-      const endDateTime = Temporal.PlainDateTime.from(
-        entry.end_time.toISOString().replace("Z", ""),
-      );
+  const charges = timeEntries.map((entry): ITimeBasedCharge => {
+    const startDateTime = Temporal.PlainDateTime.from(
+      entry.start_time.toISOString().replace("Z", ""),
+    );
+    const endDateTime = Temporal.PlainDateTime.from(
+      entry.end_time.toISOString().replace("Z", ""),
+    );
 
-      const serviceConfig = serviceConfigMap.get(entry.service_id);
-      const isSystemManagedDefault =
-        (clientContractLine as { is_system_managed_default?: boolean | null })
-          .is_system_managed_default === true;
+    const serviceConfig = serviceConfigMap.get(entry.service_id);
+    const isSystemManagedDefault =
+      (clientContractLine as { is_system_managed_default?: boolean | null })
+        .is_system_managed_default === true;
 
-      const rawDurationMinutes = startDateTime.until(endDateTime, {
-        largestUnit: "minutes",
-      }).minutes;
-      let durationMinutes = rawDurationMinutes;
-      let minimumApplied = false;
-      let roundingApplied = false;
+    const rawDurationMinutes = startDateTime.until(endDateTime, {
+      largestUnit: "minutes",
+    }).minutes;
+    let durationMinutes = rawDurationMinutes;
+    let minimumApplied = false;
+    let roundingApplied = false;
 
-      if (serviceConfig && !isSystemManagedDefault) {
-        if (durationMinutes < serviceConfig.config.minimum_billable_time) {
-          durationMinutes = serviceConfig.config.minimum_billable_time;
-          minimumApplied = durationMinutes !== rawDurationMinutes;
-        }
+    if (serviceConfig && !isSystemManagedDefault) {
+      if (durationMinutes < serviceConfig.config.minimum_billable_time) {
+        durationMinutes = serviceConfig.config.minimum_billable_time;
+        minimumApplied = durationMinutes !== rawDurationMinutes;
+      }
 
-        if (serviceConfig.config.round_up_to_nearest > 0) {
-          const remainder =
-            durationMinutes % serviceConfig.config.round_up_to_nearest;
-          if (remainder > 0) {
-            durationMinutes +=
-              serviceConfig.config.round_up_to_nearest - remainder;
-            roundingApplied = true;
-          }
+      if (serviceConfig.config.round_up_to_nearest > 0) {
+        const remainder =
+          durationMinutes % serviceConfig.config.round_up_to_nearest;
+        if (remainder > 0) {
+          durationMinutes +=
+            serviceConfig.config.round_up_to_nearest - remainder;
+          roundingApplied = true;
         }
       }
+    }
 
-      // Bill the fractional hours that remain after the minimum-billable-time
-      // and round-up-to-nearest rules; the rate is per hour, so the quantity
-      // must carry the partial hour.
-      const duration = durationMinutes / 60;
+    // Bill the fractional hours that remain after the minimum-billable-time
+    // and round-up-to-nearest rules; the rate is per hour, so the quantity
+    // must carry the partial hour.
+    const duration = durationMinutes / 60;
 
-      // Resolve rate, preferring overrides over the currency-specific catalog
-      // price: per-entry custom rate -> per-user-type rate -> service_prices
-      // row in the contract's currency. No fallback to the currency-untagged
-      // legacy service_catalog.default_rate.
-      const userTypeRate =
-        !isSystemManagedDefault &&
-        serviceConfig &&
-        entry.user_type != null &&
-        serviceConfig.userTypeRates.has(entry.user_type)
-          ? (serviceConfig.userTypeRates.get(entry.user_type) as number)
-          : undefined;
-      const resolvedRate =
-        entry.custom_rate ??
-        userTypeRate ??
-        (entry.currency_rate != null ? Number(entry.currency_rate) : undefined);
-      const phaseOverride =
-        resolvePhaseRateOverride?.(entry.project_phase_id, entry.service_id) ??
-        null;
-      if (resolvedRate === undefined && phaseOverride?.rate === undefined) {
-        throw new Error(
-          `Missing pricing for time entry on service "${entry.service_name}" (${entry.service_id}) in ${contractCurrency}. ` +
-            `Add a ${contractCurrency} price in the service catalog or set a custom rate on the time entry / contract line.`,
-        );
-      }
-      const effectiveServiceId =
-        phaseOverride?.override_service_id ?? entry.service_id;
-      const effectiveServiceName =
-        phaseOverride?.override_service_name ?? entry.service_name;
-      const effectiveTaxRateId =
-        phaseOverride?.override_tax_rate_id ?? entry.tax_rate_id;
-      const rate = Math.ceil(phaseOverride?.rate ?? (Number(resolvedRate) || 0));
-
-      let total = Math.round(duration * rate);
-      let overtimeDetail: { regularHours: number; overtimeHours: number; overtimeRate: number } | null =
-        null;
-      if (
-        plan.enable_overtime &&
-        plan.overtime_threshold &&
-        duration > plan.overtime_threshold
-      ) {
-        const regularHours = plan.overtime_threshold;
-        const overtimeHours = duration - regularHours;
-        const overtimeRate = plan.overtime_rate || rate * 1.5;
-        total = Math.round(regularHours * rate + overtimeHours * overtimeRate);
-        overtimeDetail = { regularHours, overtimeHours, overtimeRate };
-      }
-
-      const { taxRegion: serviceTaxRegion, isTaxable } =
-        await taxPorts.getTaxInfoFromService({
-          service_id: effectiveServiceId,
-          tax_rate_id: effectiveTaxRateId,
-        });
-
-      let taxAmount = 0;
-      let taxRate = 0;
-      const effectiveTaxRegion =
-        serviceTaxRegion ??
-        (await taxPorts.getLocationTaxRegionCode(
-          clientContractLine.location_id,
-        )) ??
-        (await taxPorts.getClientDefaultTaxRegionCode(client.client_id)) ??
-        undefined;
-
-      if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
-        try {
-          const taxResult = await taxPorts.calculateTax(
-            client.client_id,
-            total,
-            billingPeriod.endDate,
-            effectiveTaxRegion,
-            true,
-            clientContractLine.currency_code || "USD",
-          );
-          taxRate = taxResult.taxRate;
-          taxAmount = taxResult.taxAmount;
-        } catch (error) {
-          console.error(
-            `Error calculating initial tax for time entry ${entry.entry_id}:`,
-            error,
-          );
-        }
-      }
-
-      const projectConfig = entry.project_id
-        ? getProjectChargeConfig?.(entry.project_id)
+    // Resolve rate, preferring overrides over the currency-specific catalog
+    // price: per-entry custom rate -> per-user-type rate -> service_prices
+    // row in the contract's currency. No fallback to the currency-untagged
+    // legacy service_catalog.default_rate.
+    const userTypeRate =
+      !isSystemManagedDefault &&
+      serviceConfig &&
+      entry.user_type != null &&
+      serviceConfig.userTypeRates.has(entry.user_type)
+        ? (serviceConfig.userTypeRates.get(entry.user_type) as number)
         : undefined;
+    const resolvedRate =
+      entry.custom_rate ??
+      userTypeRate ??
+      (entry.currency_rate != null ? Number(entry.currency_rate) : undefined);
+    const phaseOverride =
+      resolvePhaseRateOverride?.(entry.project_phase_id, entry.service_id) ??
+      null;
+    if (resolvedRate === undefined && phaseOverride?.rate === undefined) {
+      throw new Error(
+        `Missing pricing for time entry on service "${entry.service_name}" (${entry.service_id}) in ${contractCurrency}. ` +
+          `Add a ${contractCurrency} price in the service catalog or set a custom rate on the time entry / contract line.`,
+      );
+    }
+    const effectiveServiceId =
+      phaseOverride?.override_service_id ?? entry.service_id;
+    const effectiveServiceName =
+      phaseOverride?.override_service_name ?? entry.service_name;
+    const effectiveTaxRateId =
+      phaseOverride?.override_tax_rate_id ?? entry.tax_rate_id;
+    const rate = Math.ceil(phaseOverride?.rate ?? (Number(resolvedRate) || 0));
 
-      const explanationInputs = [
-        {
-          label: "Rate",
-          value: `${formatCents(rate, contractCurrency)} / hr${entry.custom_rate != null ? " (entry custom rate)" : userTypeRate !== undefined ? " (user-type rate)" : ""}`,
-        },
-        { label: "Hours", value: `${formatHours(duration)} hrs` },
-      ];
-      const steps: string[] = [];
-      if (minimumApplied || roundingApplied) {
-        steps.push(
-          `${rawDurationMinutes} min${minimumApplied ? ` → minimum ${serviceConfig!.config.minimum_billable_time} min` : ""}${roundingApplied ? ` → rounded up to ${durationMinutes} min` : ""} = ${formatHours(duration)} hrs`,
-        );
-      }
-      if (overtimeDetail) {
-        steps.push(
-          `${formatHours(overtimeDetail.regularHours)} hrs × ${formatCents(rate, contractCurrency)} + ${formatHours(overtimeDetail.overtimeHours)} hrs × ${formatCents(overtimeDetail.overtimeRate, contractCurrency)} = ${formatCents(total, contractCurrency)}`,
-        );
-      } else {
-        steps.push(
-          `${formatHours(duration)} hrs × ${formatCents(rate, contractCurrency)} = ${formatCents(total, contractCurrency)}`,
-        );
-      }
-      const markers: ChargeExplanation["markers"] = [];
-      if (minimumApplied) markers.push("minimum_applied");
-      if (roundingApplied) markers.push("rounding_applied");
-      if (overtimeDetail) markers.push("overtime");
-      explanations.push({
-        chargeKey: `${serviceConfig?.config.config_id ?? clientContractLine.client_contract_line_id}:${effectiveServiceId}:${entry.entry_id}`,
-        serviceName: effectiveServiceName ?? entry.service_id,
-        chargeType: "time",
-        inputs: explanationInputs,
-        steps,
-        markers,
+    let total = Math.round(duration * rate);
+    let overtimeDetail: {
+      regularHours: number;
+      overtimeHours: number;
+      overtimeRate: number;
+    } | null = null;
+    if (
+      plan.enable_overtime &&
+      plan.overtime_threshold &&
+      duration > plan.overtime_threshold
+    ) {
+      const regularHours = plan.overtime_threshold;
+      const overtimeHours = duration - regularHours;
+      const overtimeRate = plan.overtime_rate || rate * 1.5;
+      total = Math.round(regularHours * rate + overtimeHours * overtimeRate);
+      overtimeDetail = { regularHours, overtimeHours, overtimeRate };
+    }
+
+    const { taxRegion: serviceTaxRegion, isTaxable } =
+      taxPorts.getTaxInfoFromService({
+        service_id: effectiveServiceId,
+        tax_rate_id: effectiveTaxRateId,
       });
 
-      return {
-        serviceId: effectiveServiceId,
-        serviceName: effectiveServiceName as string,
-        config_id: serviceConfig?.config.config_id,
-        client_contract_line_id: clientContractLine.client_contract_line_id,
-        userId: entry.user_id,
-        duration,
-        quantity: duration,
-        rate,
-        total,
-        type: "time",
-        tax_amount: taxAmount,
-        tax_rate: taxRate,
-        tax_region: effectiveTaxRegion,
-        entryId: entry.entry_id,
-        is_taxable: isTaxable,
-        servicePeriodStart,
-        servicePeriodEnd,
-        billingTiming: timing.duePosition,
-        client_contract_id: clientContractLine.client_contract_id || undefined,
-        contract_name: clientContractLine.contract_name || undefined,
-        location_id: clientContractLine.location_id ?? null,
-        ...(projectConfig?.billing_model === "time_and_materials"
-          ? {
-              project_id: projectConfig.project_id,
-              project_name: projectConfig.project_name,
-              project_number: projectConfig.project_number,
-              project_billing_config_id: projectConfig.config_id,
-            }
-          : {}),
-      };
-    },
-  );
+    let taxAmount = 0;
+    let taxRate = 0;
+    const effectiveTaxRegion =
+      serviceTaxRegion ??
+      taxPorts.getLocationTaxRegionCode(clientContractLine.location_id) ??
+      taxPorts.getClientDefaultTaxRegionCode(client.client_id) ??
+      undefined;
 
-  const charges = await Promise.all(timeBasedChargesPromises);
+    if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
+      try {
+        const taxResult = taxPorts.calculateTax(
+          client.client_id,
+          total,
+          billingPeriod.endDate,
+          effectiveTaxRegion,
+          true,
+          clientContractLine.currency_code || "USD",
+        );
+        taxRate = taxResult.taxRate;
+        taxAmount = taxResult.taxAmount;
+      } catch (error) {
+        console.error(
+          `Error calculating initial tax for time entry ${entry.entry_id}:`,
+          error,
+        );
+      }
+    }
+
+    const projectConfig = entry.project_id
+      ? getProjectChargeConfig?.(entry.project_id)
+      : undefined;
+
+    const explanationInputs = [
+      {
+        label: "Rate",
+        value: `${formatCents(rate, contractCurrency)} / hr${entry.custom_rate != null ? " (entry custom rate)" : userTypeRate !== undefined ? " (user-type rate)" : ""}`,
+      },
+      { label: "Hours", value: `${formatHours(duration)} hrs` },
+    ];
+    const steps: string[] = [];
+    if (minimumApplied || roundingApplied) {
+      steps.push(
+        `${rawDurationMinutes} min${minimumApplied ? ` → minimum ${serviceConfig!.config.minimum_billable_time} min` : ""}${roundingApplied ? ` → rounded up to ${durationMinutes} min` : ""} = ${formatHours(duration)} hrs`,
+      );
+    }
+    if (overtimeDetail) {
+      steps.push(
+        `${formatHours(overtimeDetail.regularHours)} hrs × ${formatCents(rate, contractCurrency)} + ${formatHours(overtimeDetail.overtimeHours)} hrs × ${formatCents(overtimeDetail.overtimeRate, contractCurrency)} = ${formatCents(total, contractCurrency)}`,
+      );
+    } else {
+      steps.push(
+        `${formatHours(duration)} hrs × ${formatCents(rate, contractCurrency)} = ${formatCents(total, contractCurrency)}`,
+      );
+    }
+    const markers: ChargeExplanation["markers"] = [];
+    if (minimumApplied) markers.push("minimum_applied");
+    if (roundingApplied) markers.push("rounding_applied");
+    if (overtimeDetail) markers.push("overtime");
+    explanations.push({
+      chargeKey: `${serviceConfig?.config.config_id ?? clientContractLine.client_contract_line_id}:${effectiveServiceId}:${entry.entry_id}`,
+      serviceName: effectiveServiceName ?? entry.service_id,
+      chargeType: "time",
+      inputs: explanationInputs,
+      steps,
+      markers,
+    });
+
+    return {
+      serviceId: effectiveServiceId,
+      serviceName: effectiveServiceName as string,
+      config_id: serviceConfig?.config.config_id,
+      client_contract_line_id: clientContractLine.client_contract_line_id,
+      userId: entry.user_id,
+      duration,
+      quantity: duration,
+      rate,
+      total,
+      type: "time",
+      tax_amount: taxAmount,
+      tax_rate: taxRate,
+      tax_region: effectiveTaxRegion,
+      entryId: entry.entry_id,
+      is_taxable: isTaxable,
+      servicePeriodStart,
+      servicePeriodEnd,
+      billingTiming: timing.duePosition,
+      client_contract_id: clientContractLine.client_contract_id || undefined,
+      contract_name: clientContractLine.contract_name || undefined,
+      location_id: clientContractLine.location_id ?? null,
+      ...(projectConfig?.billing_model === "time_and_materials"
+        ? {
+            project_id: projectConfig.project_id,
+            project_name: projectConfig.project_name,
+            project_number: projectConfig.project_number,
+            project_billing_config_id: projectConfig.config_id,
+          }
+        : {}),
+    };
+  });
 
   return { charges, explanations };
 }

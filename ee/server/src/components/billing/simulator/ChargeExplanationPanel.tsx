@@ -37,6 +37,9 @@ const ChargeExplanationPanel: React.FC<ChargeExplanationPanelProps> = ({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('contractSimulator.explanation.title', { defaultValue: 'Charge breakdown' })}
       aria-hidden={!open}
       className={cn(
         'absolute inset-y-0 right-0 z-20 flex w-[340px] max-w-full transform flex-col border-l border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] shadow-xl transition-transform duration-300',

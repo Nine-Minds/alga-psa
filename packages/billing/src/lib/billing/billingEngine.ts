@@ -1,9 +1,5 @@
 import { Knex } from "knex";
-import {
-  createTenantKnex,
-  tenantDb,
-  withTransaction,
-} from "@alga-psa/db";
+import { createTenantKnex, tenantDb, withTransaction } from "@alga-psa/db";
 import {
   IBillingPeriod,
   IBillingResult,
@@ -41,8 +37,17 @@ import {
 } from "@alga-psa/types";
 // Use the Temporal polyfill for all date arithmetic and plain‐date handling
 import { Temporal } from "@js-temporal/polyfill";
-import type { ISO8601String, IClient, IRecurringObligationRef } from "@alga-psa/types";
-import { toPlainDate, toISODate, toISOTimestamp, getCurrencySymbol } from "@alga-psa/core";
+import type {
+  ISO8601String,
+  IClient,
+  IRecurringObligationRef,
+} from "@alga-psa/types";
+import {
+  toPlainDate,
+  toISODate,
+  toISOTimestamp,
+  getCurrencySymbol,
+} from "@alga-psa/core";
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
 import {
   calculateServicePeriodCoverage,
@@ -79,7 +84,14 @@ import {
   computeFixedCharges,
   computeTimeBasedCharges,
   computeUsageBasedCharges,
-  type ChargeComputeTaxPorts,
+  computeBucketCharges,
+  computeRecurringQuantityCharges,
+  computeDiscountsAndAdjustments,
+  filterApplicableDiscounts,
+  buildChargeComputeTaxContext,
+  type ChargeComputeClient,
+  type ChargeComputeTaxContext,
+  type LoadedChargeTaxRate,
   type UsageServiceConfigEntry,
 } from "./compute";
 import { ClientContractServiceConfigurationService } from "../../services/clientContractServiceConfigurationService";
@@ -178,7 +190,10 @@ type ProjectAnnotatedCharge = IBillingCharge & {
   write_down_reason?: "project_cap";
 };
 
-type ProjectScheduleCharge = (IProjectMilestoneCharge | IProjectDepositCharge) & {
+type ProjectScheduleCharge = (
+  | IProjectMilestoneCharge
+  | IProjectDepositCharge
+) & {
   project_name: string;
   project_number: string;
   phase_name: string | null;
@@ -188,10 +203,15 @@ type ProjectScheduleCharge = (IProjectMilestoneCharge | IProjectDepositCharge) &
 
 type PersistedRecurringTimingSelectionRecord = Pick<
   IRecurringServicePeriodRecord,
-  "sourceObligation" | "cadenceOwner" | "duePosition" | "servicePeriod" | "activityWindow"
+  | "sourceObligation"
+  | "cadenceOwner"
+  | "duePosition"
+  | "servicePeriod"
+  | "activityWindow"
 >;
 
-type ContractCadenceGenerator = typeof generateMonthlyContractCadenceServicePeriods;
+type ContractCadenceGenerator =
+  typeof generateMonthlyContractCadenceServicePeriods;
 
 const RECURRING_TIMING_ROLLOUT_GUARD_PREFIX =
   "Recurring timing rollout guard blocked mixed legacy/canonical timing state";
@@ -264,14 +284,15 @@ export class BillingEngine {
 
     const db = tenantDb(this.knex, this.tenant);
     const configsQuery = db.table<any>("project_billing_configs as config");
-    db.tenantJoin(configsQuery, "projects as project", "config.project_id", "project.project_id");
+    db.tenantJoin(
+      configsQuery,
+      "projects as project",
+      "config.project_id",
+      "project.project_id",
+    );
     configsQuery
       .where("project.client_id", clientId)
-      .select(
-        "config.*",
-        "project.project_name",
-        "project.project_number",
-      );
+      .select("config.*", "project.project_name", "project.project_number");
     if (projectId) {
       configsQuery.where("project.project_id", projectId);
     }
@@ -281,17 +302,31 @@ export class BillingEngine {
       return null;
     }
 
-    const configs = configRows.map((row): ProjectBillingConfigWithProject => ({
-      ...normalizeProjectBillingConfig(row as Record<string, unknown>),
-      project_name: String(row.project_name),
-      project_number: String(row.project_number ?? ""),
-    }));
+    const configs = configRows.map(
+      (row): ProjectBillingConfigWithProject => ({
+        ...normalizeProjectBillingConfig(row as Record<string, unknown>),
+        project_name: String(row.project_name),
+        project_number: String(row.project_number ?? ""),
+      }),
+    );
     const configIds = configs.map((config) => config.config_id);
-    const configsById = new Map(configs.map((config) => [config.config_id, config]));
-    const configsByProjectId = new Map(configs.map((config) => [config.project_id, config]));
+    const configsById = new Map(
+      configs.map((config) => [config.config_id, config]),
+    );
+    const configsByProjectId = new Map(
+      configs.map((config) => [config.project_id, config]),
+    );
 
-    const entriesQuery = db.table<any>("project_billing_schedule_entries as entry");
-    db.tenantJoin(entriesQuery, "project_phases as phase", "entry.phase_id", "phase.phase_id", { type: "left" });
+    const entriesQuery = db.table<any>(
+      "project_billing_schedule_entries as entry",
+    );
+    db.tenantJoin(
+      entriesQuery,
+      "project_phases as phase",
+      "entry.phase_id",
+      "phase.phase_id",
+      { type: "left" },
+    );
     const entryRows = await entriesQuery
       .whereIn("entry.config_id", configIds)
       .select("entry.*", "phase.phase_name")
@@ -302,7 +337,9 @@ export class BillingEngine {
     const entriesByConfigId = new Map<string, IProjectBillingScheduleEntry[]>();
     const phaseNamesByEntryId = new Map<string, string | null>();
     for (const row of entryRows) {
-      const entry = normalizeProjectBillingScheduleEntry(row as Record<string, unknown>);
+      const entry = normalizeProjectBillingScheduleEntry(
+        row as Record<string, unknown>,
+      );
       const entries = entriesByConfigId.get(entry.config_id) ?? [];
       entries.push(entry);
       entriesByConfigId.set(entry.config_id, entries);
@@ -324,13 +361,39 @@ export class BillingEngine {
     const tmConfigIds = configs
       .filter((config) => config.billing_model === "time_and_materials")
       .map((config) => config.config_id);
-    const overridesByPhaseId = new Map<string, ProjectPhaseRateOverrideWithService[]>();
+    const overridesByPhaseId = new Map<
+      string,
+      ProjectPhaseRateOverrideWithService[]
+    >();
     if (tmConfigIds.length > 0) {
-      const overridesQuery = db.table<any>("project_phase_rate_overrides as rate_override");
-      db.tenantJoin(overridesQuery, "project_phases as phase", "rate_override.phase_id", "phase.phase_id");
-      db.tenantJoin(overridesQuery, "projects as project", "phase.project_id", "project.project_id");
-      db.tenantJoin(overridesQuery, "project_billing_configs as config", "project.project_id", "config.project_id");
-      db.tenantJoin(overridesQuery, "service_catalog as override_service", "rate_override.override_service_id", "override_service.service_id", { type: "left" });
+      const overridesQuery = db.table<any>(
+        "project_phase_rate_overrides as rate_override",
+      );
+      db.tenantJoin(
+        overridesQuery,
+        "project_phases as phase",
+        "rate_override.phase_id",
+        "phase.phase_id",
+      );
+      db.tenantJoin(
+        overridesQuery,
+        "projects as project",
+        "phase.project_id",
+        "project.project_id",
+      );
+      db.tenantJoin(
+        overridesQuery,
+        "project_billing_configs as config",
+        "project.project_id",
+        "config.project_id",
+      );
+      db.tenantJoin(
+        overridesQuery,
+        "service_catalog as override_service",
+        "rate_override.override_service_id",
+        "override_service.service_id",
+        { type: "left" },
+      );
       const overrideRows = await overridesQuery
         .whereIn("config.config_id", tmConfigIds)
         .select(
@@ -357,7 +420,8 @@ export class BillingEngine {
               ? row.override_tax_rate_id
               : null,
           override_default_rate:
-            row.override_default_rate === null || row.override_default_rate === undefined
+            row.override_default_rate === null ||
+            row.override_default_rate === undefined
               ? null
               : Number(row.override_default_rate),
         };
@@ -367,13 +431,17 @@ export class BillingEngine {
       }
     }
 
-    const capUsageRows = tmConfigIds.length === 0
-      ? []
-      : await db.table("project_billing_cap_usage")
-          .whereIn("config_id", tmConfigIds);
+    const capUsageRows =
+      tmConfigIds.length === 0
+        ? []
+        : await db
+            .table("project_billing_cap_usage")
+            .whereIn("config_id", tmConfigIds);
     const capUsageByConfigId = new Map(
       capUsageRows.map((row) => {
-        const usage = normalizeProjectBillingCapUsage(row as Record<string, unknown>);
+        const usage = normalizeProjectBillingCapUsage(
+          row as Record<string, unknown>,
+        );
         return [usage.config_id, usage] as const;
       }),
     );
@@ -400,9 +468,11 @@ export class BillingEngine {
     }
 
     const overrides = context.overridesByPhaseId.get(phaseId) ?? [];
-    return overrides.find((override) => override.service_id === serviceId)
-      ?? overrides.find((override) => override.service_id === null)
-      ?? null;
+    return (
+      overrides.find((override) => override.service_id === serviceId) ??
+      overrides.find((override) => override.service_id === null) ??
+      null
+    );
   }
 
   private getNextBillingDateForCycle(
@@ -478,7 +548,8 @@ export class BillingEngine {
     }
 
     const db = tenantDb(this.knex, this.tenant);
-    const row = await db.table("client_locations")
+    const row = await db
+      .table("client_locations")
       .where({ location_id: locationId })
       .select("region_code")
       .first();
@@ -511,7 +582,8 @@ export class BillingEngine {
     if (service.tax_rate_id) {
       try {
         const db = tenantDb(this.knex, this.tenant);
-        const taxRateInfo = await db.table("tax_rates")
+        const taxRateInfo = await db
+          .table("tax_rates")
           .where({ tax_rate_id: service.tax_rate_id })
           // TODO: Add validity checks if needed (e.g., is_active, date range matching billing period)
           .select("region_code")
@@ -540,28 +612,74 @@ export class BillingEngine {
     }
   }
 
-  /**
-   * Ports handed to the pure compute layer. Backed by the engine's memoized
-   * region lookups and TaxService so extracted math behaves exactly as it did
-   * inline.
-   */
-  private chargeComputeTaxPorts(): ChargeComputeTaxPorts {
-    return {
-      getTaxInfoFromService: (service) => this.getTaxInfoFromService(service),
-      getLocationTaxRegionCode: (locationId) =>
-        this.getLocationTaxRegionCode(locationId),
-      getClientDefaultTaxRegionCode: (clientId) =>
-        this.getClientDefaultTaxRegionCode(clientId),
-      calculateTax: (clientId, netAmountInCents, date, regionCode, isTaxable, currencyCode) =>
-        new TaxService().calculateTax(
-          clientId,
-          netAmountInCents,
-          date,
-          regionCode,
-          isTaxable,
-          currencyCode,
-        ),
-    };
+  /** Load every tax row needed by deterministic charge arithmetic. */
+  private async loadChargeComputeTaxContext(input: {
+    client: ChargeComputeClient;
+    locationId: string | null | undefined;
+    services: Array<{ tax_rate_id?: string | null }>;
+  }): Promise<ChargeComputeTaxContext> {
+    await this.initKnex();
+    if (!this.tenant) throw new Error("tenant context not found");
+    const db = tenantDb(this.knex, this.tenant);
+    const rateRows = await db
+      .table("tax_rates")
+      .select(
+        "tax_rate_id",
+        "region_code",
+        "tax_percentage",
+        "is_active",
+        "start_date",
+        "end_date",
+        "currency_code",
+      );
+    const rates: LoadedChargeTaxRate[] = rateRows.map((rate) => ({
+      taxRateId: rate.tax_rate_id,
+      regionCode: rate.region_code ?? null,
+      percentage: Number(rate.tax_percentage) || 0,
+      isActive: Boolean(rate.is_active),
+      startDate: toISODate(toPlainDate(rate.start_date)),
+      endDate: rate.end_date ? toISODate(toPlainDate(rate.end_date)) : null,
+      currencyCode: rate.currency_code ?? null,
+    }));
+    const rateById = new Map(rates.map((rate) => [rate.taxRateId, rate]));
+    const hasTaxableService = input.services.some((service) => {
+      const rate = service.tax_rate_id
+        ? rateById.get(service.tax_rate_id)
+        : undefined;
+      return Boolean(rate?.regionCode);
+    });
+
+    let settings = await db
+      .table("client_tax_settings")
+      .where({ client_id: input.client.client_id })
+      .select("is_reverse_charge_applicable")
+      .first();
+    // Preserve TaxService.calculateTax's production-only provisioning side
+    // effect, but keep it in this load phase and only when tax would be read.
+    if (!settings && !input.client.is_tax_exempt && hasTaxableService) {
+      await new TaxService().createDefaultTaxSettings(input.client.client_id);
+      settings = await db
+        .table("client_tax_settings")
+        .where({ client_id: input.client.client_id })
+        .select("is_reverse_charge_applicable")
+        .first();
+    }
+
+    const [locationRegion, clientDefaultRegion] = await Promise.all([
+      this.getLocationTaxRegionCode(input.locationId),
+      this.getClientDefaultTaxRegionCode(input.client.client_id),
+    ]);
+    const locationRegions = new Map<string, string | null>();
+    if (input.locationId) locationRegions.set(input.locationId, locationRegion);
+
+    return buildChargeComputeTaxContext({
+      clientId: input.client.client_id,
+      clientIsTaxExempt: Boolean(input.client.is_tax_exempt),
+      reverseCharge: Boolean(settings?.is_reverse_charge_applicable),
+      clientDefaultRegion,
+      locationRegions,
+      rates,
+    });
   }
 
   // Removed getDefaultTaxRatePercentage function as it uses outdated logic
@@ -577,7 +695,8 @@ export class BillingEngine {
     }
 
     const db = tenantDb(this.knex, this.tenant);
-    const client = await db.table("clients")
+    const client = await db
+      .table("clients")
       .where({
         client_id: clientId,
       })
@@ -586,7 +705,8 @@ export class BillingEngine {
       throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
-    const existingInvoice = await db.table("invoices")
+    const existingInvoice = await db
+      .table("invoices")
       .where({
         client_id: clientId,
         billing_cycle_id: billingCycleId,
@@ -627,7 +747,8 @@ export class BillingEngine {
     return this.withPinnedTransaction(async () => {
       await this.initKnex();
       const db = tenantDb(this.knex, this.tenant!);
-      const client = await db.table<IClient>("clients")
+      const client = await db
+        .table<IClient>("clients")
         .where({ client_id: clientId })
         .first();
 
@@ -662,18 +783,22 @@ export class BillingEngine {
       }
 
       const db = tenantDb(this.knex, this.tenant);
-      const project = await db.table("projects")
+      const project = await db
+        .table("projects")
         .where({ project_id: projectId })
         .first("project_id", "client_id", "start_date", "created_at");
       if (!project) {
         throw new Error(`Project ${projectId} not found`);
       }
 
-      const client = await db.table<IClient>("clients")
+      const client = await db
+        .table<IClient>("clients")
         .where({ client_id: project.client_id })
         .first();
       if (!client) {
-        throw new Error(`Client ${project.client_id} not found for project ${projectId}`);
+        throw new Error(
+          `Client ${project.client_id} not found for project ${projectId}`,
+        );
       }
 
       const context = await this.loadProjectBillingContext(
@@ -681,10 +806,14 @@ export class BillingEngine {
         projectId,
       );
       if (!context) {
-        throw new Error(`Project ${projectId} does not have project billing configured`);
+        throw new Error(
+          `Project ${projectId} does not have project billing configured`,
+        );
       }
 
-      const startDate = toISODate(toPlainDate(project.start_date ?? project.created_at));
+      const startDate = toISODate(
+        toPlainDate(project.start_date ?? project.created_at),
+      );
       const endDate = toISODate(Temporal.Now.plainDateISO().add({ days: 1 }));
       return this.calculateBillingForPreparedPeriod(
         project.client_id,
@@ -742,22 +871,24 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    const eligibleLineIds = [...new Set(
-      clientContractLines.map((line) => line.client_contract_line_id),
-    )];
+    const eligibleLineIds = [
+      ...new Set(
+        clientContractLines.map((line) => line.client_contract_line_id),
+      ),
+    ];
 
     if (eligibleLineIds.length === 0) {
       return {};
     }
 
     const db = tenantDb(this.knex, this.tenant);
-    const dueRows = await db.table("recurring_service_periods")
+    const dueRows = await db
+      .table("recurring_service_periods")
       .whereIn("obligation_id", eligibleLineIds)
       .whereIn("obligation_type", [...POST_DROP_RECURRING_OBLIGATION_TYPES])
-      .whereIn(
-        "lifecycle_state",
-        [...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES],
-      )
+      .whereIn("lifecycle_state", [
+        ...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
+      ])
       .where("invoice_window_start", billingPeriod.startDate)
       .where("invoice_window_end", billingPeriod.endDate)
       .whereNull("invoice_charge_detail_id")
@@ -777,7 +908,8 @@ export class BillingEngine {
       );
 
     if (dueRows.length === 0) {
-      const existingMaterializedRow = await db.table("recurring_service_periods")
+      const existingMaterializedRow = await db
+        .table("recurring_service_periods")
         .whereIn("obligation_id", eligibleLineIds)
         .whereIn("obligation_type", [...POST_DROP_RECURRING_OBLIGATION_TYPES])
         .whereNotIn("lifecycle_state", ["archived", "superseded"])
@@ -826,7 +958,8 @@ export class BillingEngine {
         throw new Error("tenant context not found");
       }
       const db = tenantDb(this.knex, this.tenant);
-      const client = await db.table<IClient>("clients")
+      const client = await db
+        .table<IClient>("clients")
         .where({ client_id: clientId })
         .first();
       console.log(
@@ -834,7 +967,8 @@ export class BillingEngine {
       );
 
       // Fetch the specific billing cycle record
-      const cycleRecord = await db.table("client_billing_cycles")
+      const cycleRecord = await db
+        .table("client_billing_cycles")
         .where({
           billing_cycle_id: billingCycleId,
           client_id: clientId, // Ensure it matches the client
@@ -954,8 +1088,8 @@ export class BillingEngine {
     options: CalculateBillingOptions = {},
   ): Promise<ProjectBillingEngineResult> {
     if (
-      !options.projectTarget
-      && options.recurringTimingSelectionSource !== "persisted"
+      !options.projectTarget &&
+      options.recurringTimingSelectionSource !== "persisted"
     ) {
       // Legacy cycle validation is still relevant for cycle-driven/manual runs.
       const validationResult = await this.validateBillingPeriod(
@@ -1056,7 +1190,9 @@ export class BillingEngine {
       options.projectTarget?.projectId,
     );
     const targetProjectConfig = options.projectTarget
-      ? projectBillingContext?.configsByProjectId.get(options.projectTarget.projectId)
+      ? projectBillingContext?.configsByProjectId.get(
+          options.projectTarget.projectId,
+        )
       : undefined;
 
     const recurringTimingSelections = options.recurringTimingSelections
@@ -1147,13 +1283,15 @@ export class BillingEngine {
         options.projectTarget
           ? Promise.resolve([] as IFixedPriceCharge[])
           : this.calculateFixedPriceCharges(
-          clientId,
-          billingPeriod,
-          clientContractLine,
-          cycle,
-          recurringTimingSelections[clientContractLine.client_contract_line_id],
-          options.recurringTimingSelectionSource,
-        ),
+              clientId,
+              billingPeriod,
+              clientContractLine,
+              cycle,
+              recurringTimingSelections[
+                clientContractLine.client_contract_line_id
+              ],
+              options.recurringTimingSelectionSource,
+            ),
         targetProjectConfig?.billing_model === "fixed_price"
           ? Promise.resolve([] as ITimeBasedCharge[])
           : projectBillingContext || options.projectTarget
@@ -1182,40 +1320,46 @@ export class BillingEngine {
         options.projectTarget
           ? Promise.resolve([] as IUsageBasedCharge[])
           : this.calculateUsageBasedCharges(
-          clientId,
-          billingPeriod,
-          clientContractLine,
-          cycle,
-          recurringTimingSelections[clientContractLine.client_contract_line_id],
-          options.recurringTimingSelectionSource,
-        ),
+              clientId,
+              billingPeriod,
+              clientContractLine,
+              cycle,
+              recurringTimingSelections[
+                clientContractLine.client_contract_line_id
+              ],
+              options.recurringTimingSelectionSource,
+            ),
         options.projectTarget
           ? Promise.resolve([] as IBucketCharge[])
           : this.calculateBucketPlanCharges(
-          clientId,
-          billingPeriod,
-          clientContractLine,
-        ),
+              clientId,
+              billingPeriod,
+              clientContractLine,
+            ),
         options.projectTarget
           ? Promise.resolve([] as IProductCharge[])
           : this.calculateProductCharges(
-          clientId,
-          billingPeriod,
-          clientContractLine,
-          cycle,
-          recurringTimingSelections[clientContractLine.client_contract_line_id],
-          options.recurringTimingSelectionSource,
-        ),
+              clientId,
+              billingPeriod,
+              clientContractLine,
+              cycle,
+              recurringTimingSelections[
+                clientContractLine.client_contract_line_id
+              ],
+              options.recurringTimingSelectionSource,
+            ),
         options.projectTarget
           ? Promise.resolve([] as ILicenseCharge[])
           : this.calculateLicenseCharges(
-          clientId,
-          billingPeriod,
-          clientContractLine,
-          cycle,
-          recurringTimingSelections[clientContractLine.client_contract_line_id],
-          options.recurringTimingSelectionSource,
-        ),
+              clientId,
+              billingPeriod,
+              clientContractLine,
+              cycle,
+              recurringTimingSelections[
+                clientContractLine.client_contract_line_id
+              ],
+              options.recurringTimingSelectionSource,
+            ),
       ]);
 
       console.log(`Fixed price charges: ${fixedPriceCharges.length}`);
@@ -1303,33 +1447,37 @@ export class BillingEngine {
     }
 
     const includeTargetProjectActivity =
-      options.projectTarget && targetProjectConfig?.billing_model === "time_and_materials";
+      options.projectTarget &&
+      targetProjectConfig?.billing_model === "time_and_materials";
     if (nonContractSelection?.include || includeTargetProjectActivity) {
       const selection = includeTargetProjectActivity
         ? {
             timeEntryIds: nonContractSelection?.timeEntryIds,
             usageRecordIds: nonContractSelection?.usageRecordIds,
             excludeTimeEntryIds: totalCharges
-              .filter((charge): charge is ITimeBasedCharge => charge.type === "time")
+              .filter(
+                (charge): charge is ITimeBasedCharge => charge.type === "time",
+              )
               .map((charge) => charge.entryId),
           }
         : {
             timeEntryIds: nonContractSelection?.timeEntryIds,
             usageRecordIds: nonContractSelection?.usageRecordIds,
           };
-      const nonContractCharges = projectBillingContext || options.projectTarget
-        ? await this.calculateUnresolvedNonContractCharges(
-            clientId,
-            billingPeriod,
-            selection,
-            projectBillingContext,
-            options.projectTarget,
-          )
-        : await this.calculateUnresolvedNonContractCharges(
-            clientId,
-            billingPeriod,
-            selection,
-          );
+      const nonContractCharges =
+        projectBillingContext || options.projectTarget
+          ? await this.calculateUnresolvedNonContractCharges(
+              clientId,
+              billingPeriod,
+              selection,
+              projectBillingContext,
+              options.projectTarget,
+            )
+          : await this.calculateUnresolvedNonContractCharges(
+              clientId,
+              billingPeriod,
+              selection,
+            );
       totalCharges = totalCharges.concat(nonContractCharges);
     }
 
@@ -1393,9 +1541,10 @@ export class BillingEngine {
       .select("currency_code")
       .count<{ currency_code: string; count: string }[]>({ count: "*" });
 
-    return rows.map((row) => (
-      `${Number(row.count)} materials in ${row.currency_code} were skipped — invoice currency is ${invoiceCurrency}`
-    ));
+    return rows.map(
+      (row) =>
+        `${Number(row.count)} materials in ${row.currency_code} were skipped — invoice currency is ${invoiceCurrency}`,
+    );
   }
 
   private async calculateProjectMilestoneCharges(
@@ -1444,9 +1593,7 @@ export class BillingEngine {
       return [];
     }
 
-    const selectedEntryIds = target?.entryIds
-      ? new Set(target.entryIds)
-      : null;
+    const selectedEntryIds = target?.entryIds ? new Set(target.entryIds) : null;
     const charges: ProjectScheduleCharge[] = [];
 
     for (const config of context.configs) {
@@ -1460,25 +1607,29 @@ export class BillingEngine {
 
       const entries = context.entriesByConfigId.get(config.config_id) ?? [];
       const finalMilestone = entries.findLast(
-        (entry) => entry.entry_type === "milestone" && entry.status !== "canceled",
+        (entry) =>
+          entry.entry_type === "milestone" && entry.status !== "canceled",
       );
-      const depositReconciliation = entryType === "milestone" && finalMilestone
-        ? computeDepositReconciliation(
-            entries.map((entry) => ({
-              entry_type: entry.entry_type,
-              status: entry.status,
-              computed_amount:
-                context.computedAmountsByEntryId.get(entry.schedule_entry_id) ?? 0,
-            })),
-            config.deposit_treatment,
-          )
-        : 0;
+      const depositReconciliation =
+        entryType === "milestone" && finalMilestone
+          ? computeDepositReconciliation(
+              entries.map((entry) => ({
+                entry_type: entry.entry_type,
+                status: entry.status,
+                computed_amount:
+                  context.computedAmountsByEntryId.get(
+                    entry.schedule_entry_id,
+                  ) ?? 0,
+              })),
+              config.deposit_treatment,
+            )
+          : 0;
 
       for (const entry of entries) {
         if (
-          entry.entry_type !== entryType
-          || entry.status !== "approved"
-          || (selectedEntryIds && !selectedEntryIds.has(entry.schedule_entry_id))
+          entry.entry_type !== entryType ||
+          entry.status !== "approved" ||
+          (selectedEntryIds && !selectedEntryIds.has(entry.schedule_entry_id))
         ) {
           continue;
         }
@@ -1489,20 +1640,22 @@ export class BillingEngine {
           );
         }
         const computedAmount = entry.frozen_amount;
-        const amount = entryType === "milestone"
-          && finalMilestone?.schedule_entry_id === entry.schedule_entry_id
-          ? Math.max(0, computedAmount - depositReconciliation)
-          : computedAmount;
-        const effectiveTaxRegion = config.tax_region
-          ?? await this.getClientDefaultTaxRegionCode(client.client_id)
-          ?? undefined;
+        const amount =
+          entryType === "milestone" &&
+          finalMilestone?.schedule_entry_id === entry.schedule_entry_id
+            ? Math.max(0, computedAmount - depositReconciliation)
+            : computedAmount;
+        const effectiveTaxRegion =
+          config.tax_region ??
+          (await this.getClientDefaultTaxRegionCode(client.client_id)) ??
+          undefined;
         let taxAmount = 0;
         let taxRate = 0;
         if (
-          !client.is_tax_exempt
-          && config.is_taxable
-          && effectiveTaxRegion
-          && amount > 0
+          !client.is_tax_exempt &&
+          config.is_taxable &&
+          effectiveTaxRegion &&
+          amount > 0
         ) {
           const taxResult = await new TaxService().calculateTax(
             client.client_id,
@@ -1517,9 +1670,8 @@ export class BillingEngine {
         }
 
         charges.push({
-          type: entryType === "milestone"
-            ? "project_milestone"
-            : "project_deposit",
+          type:
+            entryType === "milestone" ? "project_milestone" : "project_deposit",
           project_id: config.project_id,
           schedule_entry_id: entry.schedule_entry_id,
           project_name: config.project_name,
@@ -1553,13 +1705,14 @@ export class BillingEngine {
     const projectCharges = new Map<string, ProjectAnnotatedCharge[]>();
     for (const charge of charges) {
       if (
-        !("project_billing_config_id" in charge)
-        || typeof charge.project_billing_config_id !== "string"
+        !("project_billing_config_id" in charge) ||
+        typeof charge.project_billing_config_id !== "string"
       ) {
         continue;
       }
       const projectCharge = charge as ProjectAnnotatedCharge;
-      const grouped = projectCharges.get(projectCharge.project_billing_config_id) ?? [];
+      const grouped =
+        projectCharges.get(projectCharge.project_billing_config_id) ?? [];
       grouped.push(projectCharge);
       projectCharges.set(projectCharge.project_billing_config_id, grouped);
     }
@@ -1605,13 +1758,15 @@ export class BillingEngine {
         config.cap_notify_thresholds,
         usage?.notified_thresholds ?? [],
       );
-      thresholdCrossings.push(...crossed.map((threshold) => ({
-        configId,
-        projectId: config.project_id,
-        threshold,
-        previousBilled,
-        newBilled: runningBilled,
-      })));
+      thresholdCrossings.push(
+        ...crossed.map((threshold) => ({
+          configId,
+          projectId: config.project_id,
+          threshold,
+          previousBilled,
+          newBilled: runningBilled,
+        })),
+      );
     }
 
     return { charges, thresholdCrossings };
@@ -1663,9 +1818,24 @@ export class BillingEngine {
 
     const db = tenantDb(this.knex, this.tenant);
     const eligibleLinesQuery = db.table("client_contracts as cc");
-    db.tenantJoin(eligibleLinesQuery, "contracts as c", "c.contract_id", "cc.contract_id");
-    db.tenantJoin(eligibleLinesQuery, "contract_lines as cl", "cl.contract_id", "c.contract_id");
-    db.tenantJoin(eligibleLinesQuery, "contract_line_services as cls", "cls.contract_line_id", "cl.contract_line_id");
+    db.tenantJoin(
+      eligibleLinesQuery,
+      "contracts as c",
+      "c.contract_id",
+      "cc.contract_id",
+    );
+    db.tenantJoin(
+      eligibleLinesQuery,
+      "contract_lines as cl",
+      "cl.contract_id",
+      "c.contract_id",
+    );
+    db.tenantJoin(
+      eligibleLinesQuery,
+      "contract_line_services as cls",
+      "cls.contract_line_id",
+      "cl.contract_line_id",
+    );
 
     const rows = await eligibleLinesQuery
       .where({
@@ -1675,15 +1845,20 @@ export class BillingEngine {
       })
       .where("cc.start_date", "<=", input.workDate)
       .where(function (this: Knex.QueryBuilder) {
-        this.whereNull("cc.end_date").orWhere("cc.end_date", ">=", input.workDate);
+        this.whereNull("cc.end_date").orWhere(
+          "cc.end_date",
+          ">=",
+          input.workDate,
+        );
       })
       .distinct("cl.contract_line_id")
       .select("cl.contract_line_id");
 
     return rows
       .map((row: any) => row.contract_line_id)
-      .filter((lineId: unknown): lineId is string =>
-        typeof lineId === "string" && lineId.length > 0,
+      .filter(
+        (lineId: unknown): lineId is string =>
+          typeof lineId === "string" && lineId.length > 0,
       );
   }
 
@@ -1714,7 +1889,8 @@ export class BillingEngine {
     const excludedTimeEntryIds = new Set(selection?.excludeTimeEntryIds ?? []);
 
     const db = tenantDb(this.knex, this.tenant);
-    const client = await db.table("clients")
+    const client = await db
+      .table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -1728,13 +1904,54 @@ export class BillingEngine {
     const defaultTaxRegion = await this.getClientDefaultTaxRegionCode(clientId);
 
     const timeEntriesQuery = db.table<any>("time_entries");
-    db.tenantJoin(timeEntriesQuery, "users", "time_entries.user_id", "users.user_id");
-    db.tenantJoin(timeEntriesQuery, "service_catalog", "service_catalog.service_id", "time_entries.service_id", { type: "left" });
-    db.tenantJoin(timeEntriesQuery, "project_ticket_links", "time_entries.work_item_id", "project_ticket_links.ticket_id", { type: "left" });
-    db.tenantJoin(timeEntriesQuery, "project_tasks", "time_entries.work_item_id", "project_tasks.task_id", { type: "left" });
-    db.tenantJoin(timeEntriesQuery, "project_phases", "project_tasks.phase_id", "project_phases.phase_id", { type: "left" });
-    db.tenantJoin(timeEntriesQuery, "projects", "project_phases.project_id", "projects.project_id", { type: "left" });
-    db.tenantJoin(timeEntriesQuery, "tickets", "time_entries.work_item_id", "tickets.ticket_id", { type: "left" });
+    db.tenantJoin(
+      timeEntriesQuery,
+      "users",
+      "time_entries.user_id",
+      "users.user_id",
+    );
+    db.tenantJoin(
+      timeEntriesQuery,
+      "service_catalog",
+      "service_catalog.service_id",
+      "time_entries.service_id",
+      { type: "left" },
+    );
+    db.tenantJoin(
+      timeEntriesQuery,
+      "project_ticket_links",
+      "time_entries.work_item_id",
+      "project_ticket_links.ticket_id",
+      { type: "left" },
+    );
+    db.tenantJoin(
+      timeEntriesQuery,
+      "project_tasks",
+      "time_entries.work_item_id",
+      "project_tasks.task_id",
+      { type: "left" },
+    );
+    db.tenantJoin(
+      timeEntriesQuery,
+      "project_phases",
+      "project_tasks.phase_id",
+      "project_phases.phase_id",
+      { type: "left" },
+    );
+    db.tenantJoin(
+      timeEntriesQuery,
+      "projects",
+      "project_phases.project_id",
+      "projects.project_id",
+      { type: "left" },
+    );
+    db.tenantJoin(
+      timeEntriesQuery,
+      "tickets",
+      "time_entries.work_item_id",
+      "tickets.ticket_id",
+      { type: "left" },
+    );
 
     timeEntriesQuery
       .where({
@@ -1759,24 +1976,27 @@ export class BillingEngine {
         .where("time_entries.end_time", "<", billingPeriod.endDate);
     }
 
-    const fixedPriceProjectIds = projectBillingContext?.configs
-      .filter((config) => config.billing_model === "fixed_price")
-      .map((config) => config.project_id) ?? [];
+    const fixedPriceProjectIds =
+      projectBillingContext?.configs
+        .filter((config) => config.billing_model === "fixed_price")
+        .map((config) => config.project_id) ?? [];
     if (fixedPriceProjectIds.length > 0) {
       timeEntriesQuery.where(function (this: Knex.QueryBuilder) {
-        this.whereNull("projects.project_id")
-          .orWhereNotIn("projects.project_id", fixedPriceProjectIds);
+        this.whereNull("projects.project_id").orWhereNotIn(
+          "projects.project_id",
+          fixedPriceProjectIds,
+        );
       });
     }
 
     const timeEntries = await timeEntriesQuery.select(
-        "time_entries.*",
-        "service_catalog.service_name",
-        "service_catalog.default_rate",
-        "service_catalog.tax_rate_id",
-        "project_phases.phase_id as project_phase_id",
-        "projects.project_id as project_id",
-      );
+      "time_entries.*",
+      "service_catalog.service_name",
+      "service_catalog.default_rate",
+      "service_catalog.tax_rate_id",
+      "project_phases.phase_id as project_phase_id",
+      "projects.project_id as project_id",
+    );
 
     for (const entry of timeEntries) {
       if (excludedTimeEntryIds.has(entry.entry_id)) {
@@ -1790,13 +2010,15 @@ export class BillingEngine {
       }
       if (!projectTarget) {
         const workDate = toISODate(toPlainDate(entry.start_time));
-        const eligibleLineIds = await this.getEligibleContractLineIdsForServiceAtDate({
-          clientId,
-          serviceId: entry.service_id,
-          workDate,
-        });
+        const eligibleLineIds =
+          await this.getEligibleContractLineIdsForServiceAtDate({
+            clientId,
+            serviceId: entry.service_id,
+            workDate,
+          });
         if (eligibleLineIds.length === 1) {
-          const updatedCount = await db.table("time_entries")
+          const updatedCount = await db
+            .table("time_entries")
             .where({
               tenant: this.tenant,
               entry_id: entry.entry_id,
@@ -1858,15 +2080,18 @@ export class BillingEngine {
         entry.project_phase_id,
         entry.service_id,
       );
-      const effectiveServiceId = phaseOverride?.override_service_id ?? entry.service_id;
-      const effectiveServiceName = phaseOverride?.override_service_name ?? entry.service_name;
-      const effectiveTaxRateId = phaseOverride?.override_tax_rate_id ?? entry.tax_rate_id;
+      const effectiveServiceId =
+        phaseOverride?.override_service_id ?? entry.service_id;
+      const effectiveServiceName =
+        phaseOverride?.override_service_name ?? entry.service_name;
+      const effectiveTaxRateId =
+        phaseOverride?.override_tax_rate_id ?? entry.tax_rate_id;
       const rate = Math.ceil(
-        phaseOverride?.rate
-          ?? entry.custom_rate
-          ?? phaseOverride?.override_default_rate
-          ?? entry.default_rate
-          ?? 0,
+        phaseOverride?.rate ??
+          entry.custom_rate ??
+          phaseOverride?.override_default_rate ??
+          entry.default_rate ??
+          0,
       );
       const total = Math.round(duration * rate);
       const { taxRegion: serviceTaxRegion, isTaxable } =
@@ -1877,7 +2102,8 @@ export class BillingEngine {
 
       let taxAmount = 0;
       let taxRate = 0;
-      const effectiveTaxRegion = serviceTaxRegion ?? defaultTaxRegion ?? undefined;
+      const effectiveTaxRegion =
+        serviceTaxRegion ?? defaultTaxRegion ?? undefined;
       if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
           const taxServiceInstance = new TaxService();
@@ -1935,7 +2161,13 @@ export class BillingEngine {
     }
 
     const usageRecordsQuery = db.table<any>("usage_tracking");
-    db.tenantJoin(usageRecordsQuery, "service_catalog", "service_catalog.service_id", "usage_tracking.service_id", { type: "left" });
+    db.tenantJoin(
+      usageRecordsQuery,
+      "service_catalog",
+      "service_catalog.service_id",
+      "usage_tracking.service_id",
+      { type: "left" },
+    );
 
     const usageRecords = await usageRecordsQuery
       .where({
@@ -1955,20 +2187,25 @@ export class BillingEngine {
       );
 
     for (const record of usageRecords) {
-      if (selectedUsageRecordIds && !selectedUsageRecordIds.has(record.usage_id)) {
+      if (
+        selectedUsageRecordIds &&
+        !selectedUsageRecordIds.has(record.usage_id)
+      ) {
         continue;
       }
       if (!record.service_id) {
         continue;
       }
       const workDate = toISODate(toPlainDate(record.usage_date));
-      const eligibleLineIds = await this.getEligibleContractLineIdsForServiceAtDate({
-        clientId,
-        serviceId: record.service_id,
-        workDate,
-      });
+      const eligibleLineIds =
+        await this.getEligibleContractLineIdsForServiceAtDate({
+          clientId,
+          serviceId: record.service_id,
+          workDate,
+        });
       if (eligibleLineIds.length === 1) {
-        const updatedCount = await db.table("usage_tracking")
+        const updatedCount = await db
+          .table("usage_tracking")
           .where({
             tenant: this.tenant,
             usage_id: record.usage_id,
@@ -2019,7 +2256,8 @@ export class BillingEngine {
 
       let taxAmount = 0;
       let taxRate = 0;
-      const effectiveTaxRegion = serviceTaxRegion ?? defaultTaxRegion ?? undefined;
+      const effectiveTaxRegion =
+        serviceTaxRegion ?? defaultTaxRegion ?? undefined;
       if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
           const taxServiceInstance = new TaxService();
@@ -2076,7 +2314,8 @@ export class BillingEngine {
     }
 
     const db = tenantDb(knex, this.tenant);
-    const client = await db.table("clients")
+    const client = await db
+      .table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -2094,8 +2333,18 @@ export class BillingEngine {
     // template_contract_id is provenance for draft/review flows only; live billing must
     // read the cloned lines from cc.contract_id.
     const clientContractLinesQuery = db.table<any>("client_contracts as cc");
-    db.tenantJoin(clientContractLinesQuery, "contracts as c", "c.contract_id", "cc.contract_id");
-    db.tenantJoin(clientContractLinesQuery, "contract_lines as cl", "cl.contract_id", "c.contract_id");
+    db.tenantJoin(
+      clientContractLinesQuery,
+      "contracts as c",
+      "c.contract_id",
+      "cc.contract_id",
+    );
+    db.tenantJoin(
+      clientContractLinesQuery,
+      "contract_lines as cl",
+      "cl.contract_id",
+      "c.contract_id",
+    );
 
     const clientContractLines = await clientContractLinesQuery
       .where({
@@ -2180,10 +2429,11 @@ export class BillingEngine {
     clientContractLines: IClientContractLine[];
     billingCycle: string;
   }> {
-    const clientContractLines = await this.getClientContractLinesForBillingPeriod(
-      clientId,
-      billingPeriod,
-    );
+    const clientContractLines =
+      await this.getClientContractLinesForBillingPeriod(
+        clientId,
+        billingPeriod,
+      );
     const billingCycle = await this.getBillingCycle(
       clientId,
       billingPeriod.startDate,
@@ -2202,7 +2452,8 @@ export class BillingEngine {
     }
 
     const db = tenantDb(this.knex, this.tenant);
-    const client = await db.table("clients")
+    const client = await db
+      .table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -2212,7 +2463,8 @@ export class BillingEngine {
       throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
-    const result = (await db.table("client_billing_cycles")
+    const result = (await db
+      .table("client_billing_cycles")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -2223,7 +2475,8 @@ export class BillingEngine {
 
     if (!result) {
       // Check again for existing cycle to handle race conditions
-      const existingCycle = await db.table("client_billing_cycles")
+      const existingCycle = await db
+        .table("client_billing_cycles")
         .where({
           client_id: clientId,
           tenant: this.tenant,
@@ -2245,7 +2498,8 @@ export class BillingEngine {
         await db.table("client_billing_cycles").insert(defaultCycle);
       } catch (error) {
         // If insert fails due to race condition, get the existing record
-        const cycle = await db.table("client_billing_cycles")
+        const cycle = await db
+          .table("client_billing_cycles")
           .where({
             client_id: clientId,
             tenant: this.tenant,
@@ -2281,7 +2535,8 @@ export class BillingEngine {
       }
 
       const db = tenantDb(this.knex, this.tenant);
-      const client = await db.table("clients")
+      const client = await db
+        .table("clients")
         .where({
           client_id: clientId,
           tenant: this.tenant,
@@ -2294,7 +2549,8 @@ export class BillingEngine {
         };
       }
 
-      const cycles = await db.table("client_billing_cycles")
+      const cycles = await db
+        .table("client_billing_cycles")
         .where({
           client_id: clientId,
           tenant: this.tenant,
@@ -2375,7 +2631,10 @@ export class BillingEngine {
     } as IBillingPeriod;
     let lines: IClientContractLine[];
     try {
-      lines = await this.getClientContractLinesForBillingPeriod(clientId, billingPeriod);
+      lines = await this.getClientContractLinesForBillingPeriod(
+        clientId,
+        billingPeriod,
+      );
     } catch {
       return result;
     }
@@ -2418,7 +2677,10 @@ export class BillingEngine {
       }
       const total = charges.reduce(
         (sum, charge) =>
-          sum + (typeof charge.total === "number" && Number.isFinite(charge.total) ? charge.total : 0),
+          sum +
+          (typeof charge.total === "number" && Number.isFinite(charge.total)
+            ? charge.total
+            : 0),
         0,
       );
       if (line.contract_line_id) {
@@ -2490,7 +2752,8 @@ export class BillingEngine {
     // Check for an active pricing schedule that overlaps the due service period.
     if (clientContractLine.contract_id) {
       try {
-        const activePricingSchedule = await db.table("contract_pricing_schedules")
+        const activePricingSchedule = await db
+          .table("contract_pricing_schedules")
           .where({
             tenant: this.tenant,
             contract_id: clientContractLine.contract_id,
@@ -2524,7 +2787,8 @@ export class BillingEngine {
       }
     }
 
-    const client = (await db.table("clients")
+    const client = (await db
+      .table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -2532,15 +2796,14 @@ export class BillingEngine {
       .first()) as IClient;
 
     if (!client) {
-      throw new Error(
-        `Client ${clientId} not found in tenant ${this.tenant}`,
-      );
+      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
 
     // Get the contract line details to determine if this is a fixed fee plan
-    const contractLineDetails = await db.table("contract_lines")
+    const contractLineDetails = await db
+      .table("contract_lines")
       .where({
         contract_line_id: clientContractLine.contract_line_id,
         tenant: client.tenant,
@@ -2550,13 +2813,30 @@ export class BillingEngine {
     // Query services from contract_line_services (the contract definition)
     // Note: client_contract_line_id is actually a contract_line_id value (see getClientContractLinesAndCycle)
     const planServicesQuery = db.table<any>("contract_line_services as cls");
-    db.tenantJoin(planServicesQuery, "contract_line_service_configuration as clsc", "clsc.contract_line_id", "cls.contract_line_id", {
-      on(join) {
-        join.andOn("clsc.service_id", "=", "cls.service_id");
+    db.tenantJoin(
+      planServicesQuery,
+      "contract_line_service_configuration as clsc",
+      "clsc.contract_line_id",
+      "cls.contract_line_id",
+      {
+        on(join) {
+          join.andOn("clsc.service_id", "=", "cls.service_id");
+        },
       },
-    });
-    db.tenantJoin(planServicesQuery, "contract_line_service_fixed_config as clsfc", "clsfc.config_id", "clsc.config_id", { type: "left" });
-    db.tenantJoin(planServicesQuery, "service_catalog as sc", "sc.service_id", "cls.service_id");
+    );
+    db.tenantJoin(
+      planServicesQuery,
+      "contract_line_service_fixed_config as clsfc",
+      "clsfc.config_id",
+      "clsc.config_id",
+      { type: "left" },
+    );
+    db.tenantJoin(
+      planServicesQuery,
+      "service_catalog as sc",
+      "sc.service_id",
+      "cls.service_id",
+    );
 
     const planServices = await planServicesQuery
       .where({
@@ -2585,7 +2865,9 @@ export class BillingEngine {
       // contract_line_services; selecting it from cls_fallback raised
       // "column cls_fallback.config_id does not exist" and aborted billing
       // for any fixed line whose catalog items are all products/licenses.
-      const fallbackServiceQuery = db.table<any>("contract_line_services as cls_fallback");
+      const fallbackServiceQuery = db.table<any>(
+        "contract_line_services as cls_fallback",
+      );
       db.tenantJoin(
         fallbackServiceQuery,
         "contract_line_service_configuration as clsc_fallback",
@@ -2593,11 +2875,20 @@ export class BillingEngine {
         "cls_fallback.contract_line_id",
         {
           on(join) {
-            join.andOn("clsc_fallback.service_id", "=", "cls_fallback.service_id");
+            join.andOn(
+              "clsc_fallback.service_id",
+              "=",
+              "cls_fallback.service_id",
+            );
           },
         },
       );
-      db.tenantJoin(fallbackServiceQuery, "service_catalog as sc", "sc.service_id", "cls_fallback.service_id");
+      db.tenantJoin(
+        fallbackServiceQuery,
+        "service_catalog as sc",
+        "sc.service_id",
+        "cls_fallback.service_id",
+      );
 
       fallbackService =
         (await fallbackServiceQuery
@@ -2629,7 +2920,13 @@ export class BillingEngine {
         planServices,
         fallbackService,
       },
-      this.chargeComputeTaxPorts(),
+      await this.loadChargeComputeTaxContext({
+        client,
+        locationId: clientContractLine.location_id,
+        services: fallbackService
+          ? [...planServices, fallbackService]
+          : planServices,
+      }),
     );
 
     if (advanceGuard) {
@@ -2724,8 +3021,11 @@ export class BillingEngine {
   ): RecurringChargeTimingSelections {
     const recurringTimingSelections: RecurringChargeTimingSelections = {};
 
-    for (const clientContractLine of [...clientContractLines].sort((left, right) =>
-      left.client_contract_line_id.localeCompare(right.client_contract_line_id),
+    for (const clientContractLine of [...clientContractLines].sort(
+      (left, right) =>
+        left.client_contract_line_id.localeCompare(
+          right.client_contract_line_id,
+        ),
     )) {
       if (!this.isRecurringTimingEligibleContractLine(clientContractLine)) {
         continue;
@@ -2758,15 +3058,16 @@ export class BillingEngine {
         );
       }
 
-      const coveragePeriod = record.activityWindow?.start && record.activityWindow?.end
-        ? {
-            start: record.activityWindow.start,
-            end: record.activityWindow.end,
-          }
-        : {
-            start: record.servicePeriod.start,
-            end: record.servicePeriod.end,
-          };
+      const coveragePeriod =
+        record.activityWindow?.start && record.activityWindow?.end
+          ? {
+              start: record.activityWindow.start,
+              end: record.activityWindow.end,
+            }
+          : {
+              start: record.servicePeriod.start,
+              end: record.servicePeriod.end,
+            };
 
       const coverage = calculateServicePeriodCoverage(
         {
@@ -2783,7 +3084,9 @@ export class BillingEngine {
 
       recurringTimingSelections[lineId] = {
         duePosition: record.duePosition,
-        servicePeriodStart: toISODate(toPlainDate(coverage.coveredPeriod.start)),
+        servicePeriodStart: toISODate(
+          toPlainDate(coverage.coveredPeriod.start),
+        ),
         servicePeriodEnd: toISODate(
           toPlainDate(coverage.coveredPeriod.end).subtract({ days: 1 }),
         ),
@@ -2897,8 +3200,9 @@ export class BillingEngine {
       | "advance";
     const currentStart = toISODate(toPlainDate(billingPeriod.startDate));
     const currentEndExclusive = toISODate(toPlainDate(billingPeriod.endDate));
-    const isSystemManagedDefault = (clientContractLine as { is_system_managed_default?: boolean | null })
-      .is_system_managed_default === true;
+    const isSystemManagedDefault =
+      (clientContractLine as { is_system_managed_default?: boolean | null })
+        .is_system_managed_default === true;
     const cadenceOwner = isSystemManagedDefault
       ? "client"
       : resolveCadenceOwner(clientContractLine.cadence_owner);
@@ -3073,27 +3377,29 @@ export class BillingEngine {
         months: contractCadence.monthsPerPeriod,
       }),
     );
-    const servicePeriods = contractCadence.generator({
-      rangeStart,
-      rangeEnd,
-      sourceObligation: input.sourceObligation,
-      duePosition: input.duePosition,
-      anchorDate,
-    }).filter((servicePeriod: IRecurringServicePeriod) => {
-      const contractInvoiceWindow =
-        resolveContractCadenceInvoiceWindowForServicePeriod({
-          servicePeriod,
-          anchorDate,
-          monthsPerPeriod: contractCadence.monthsPerPeriod,
-        });
+    const servicePeriods = contractCadence
+      .generator({
+        rangeStart,
+        rangeEnd,
+        sourceObligation: input.sourceObligation,
+        duePosition: input.duePosition,
+        anchorDate,
+      })
+      .filter((servicePeriod: IRecurringServicePeriod) => {
+        const contractInvoiceWindow =
+          resolveContractCadenceInvoiceWindowForServicePeriod({
+            servicePeriod,
+            anchorDate,
+            monthsPerPeriod: contractCadence.monthsPerPeriod,
+          });
 
-      return (
-        toISODate(toPlainDate(contractInvoiceWindow.start)) ===
-          input.invoiceWindow.start &&
-        toISODate(toPlainDate(contractInvoiceWindow.end)) ===
-          input.invoiceWindow.end
-      );
-    });
+        return (
+          toISODate(toPlainDate(contractInvoiceWindow.start)) ===
+            input.invoiceWindow.start &&
+          toISODate(toPlainDate(contractInvoiceWindow.end)) ===
+            input.invoiceWindow.end
+        );
+      });
 
     if (servicePeriods.length > 1) {
       throw new Error(
@@ -3154,7 +3460,8 @@ export class BillingEngine {
     }
 
     const db = tenantDb(this.knex, this.tenant);
-    const client = await db.table("clients")
+    const client = await db
+      .table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -3165,7 +3472,8 @@ export class BillingEngine {
     }
 
     // Fetch the contract line details to get plan-wide settings
-    const plan = await db.table("contract_lines")
+    const plan = await db
+      .table("contract_lines")
       .where({
         contract_line_id: clientContractLine.contract_line_id,
         tenant: this.tenant,
@@ -3218,8 +3526,10 @@ export class BillingEngine {
       return [];
     }
 
-    const servicePeriodStartExclusive = timingResolution.servicePeriodStartExclusive;
-    const servicePeriodEndExclusive = timingResolution.servicePeriodEndExclusive;
+    const servicePeriodStartExclusive =
+      timingResolution.servicePeriodStartExclusive;
+    const servicePeriodEndExclusive =
+      timingResolution.servicePeriodEndExclusive;
 
     // Create a map of service IDs to their hourly configurations
     const serviceConfigMap = new Map<
@@ -3288,18 +3598,64 @@ export class BillingEngine {
 
     const query = db.table<any>("time_entries");
     db.tenantJoin(query, "users", "time_entries.user_id", "users.user_id");
-    db.tenantJoin(query, "service_catalog", "service_catalog.service_id", "time_entries.service_id", { type: "left" });
-    db.tenantJoin(query, "service_prices as sp", "sp.service_id", "service_catalog.service_id", {
-      type: "left",
-      on(join) {
-        join.andOn("sp.currency_code", "=", knexRef.raw("?", [contractCurrency]));
+    db.tenantJoin(
+      query,
+      "service_catalog",
+      "service_catalog.service_id",
+      "time_entries.service_id",
+      { type: "left" },
+    );
+    db.tenantJoin(
+      query,
+      "service_prices as sp",
+      "sp.service_id",
+      "service_catalog.service_id",
+      {
+        type: "left",
+        on(join) {
+          join.andOn(
+            "sp.currency_code",
+            "=",
+            knexRef.raw("?", [contractCurrency]),
+          );
+        },
       },
-    });
-    db.tenantJoin(query, "project_ticket_links", "time_entries.work_item_id", "project_ticket_links.ticket_id", { type: "left" });
-    db.tenantJoin(query, "project_tasks", "time_entries.work_item_id", "project_tasks.task_id", { type: "left" });
-    db.tenantJoin(query, "project_phases", "project_tasks.phase_id", "project_phases.phase_id", { type: "left" });
-    db.tenantJoin(query, "projects", "project_phases.project_id", "projects.project_id", { type: "left" });
-    db.tenantJoin(query, "tickets", "time_entries.work_item_id", "tickets.ticket_id", { type: "left" });
+    );
+    db.tenantJoin(
+      query,
+      "project_ticket_links",
+      "time_entries.work_item_id",
+      "project_ticket_links.ticket_id",
+      { type: "left" },
+    );
+    db.tenantJoin(
+      query,
+      "project_tasks",
+      "time_entries.work_item_id",
+      "project_tasks.task_id",
+      { type: "left" },
+    );
+    db.tenantJoin(
+      query,
+      "project_phases",
+      "project_tasks.phase_id",
+      "project_phases.phase_id",
+      { type: "left" },
+    );
+    db.tenantJoin(
+      query,
+      "projects",
+      "project_phases.project_id",
+      "projects.project_id",
+      { type: "left" },
+    );
+    db.tenantJoin(
+      query,
+      "tickets",
+      "time_entries.work_item_id",
+      "tickets.ticket_id",
+      { type: "left" },
+    );
 
     query
       .where({
@@ -3352,28 +3708,31 @@ export class BillingEngine {
         .where("time_entries.end_time", "<", servicePeriodEndExclusive);
     }
 
-    const fixedPriceProjectIds = projectBillingContext?.configs
-      .filter((config) => config.billing_model === "fixed_price")
-      .map((config) => config.project_id) ?? [];
+    const fixedPriceProjectIds =
+      projectBillingContext?.configs
+        .filter((config) => config.billing_model === "fixed_price")
+        .map((config) => config.project_id) ?? [];
     if (fixedPriceProjectIds.length > 0) {
       query.where(function (this: Knex.QueryBuilder) {
-        this.whereNull("projects.project_id")
-          .orWhereNotIn("projects.project_id", fixedPriceProjectIds);
+        this.whereNull("projects.project_id").orWhereNotIn(
+          "projects.project_id",
+          fixedPriceProjectIds,
+        );
       });
     }
 
     query.select(
-        "time_entries.*",
-        "service_catalog.service_name",
-        "service_catalog.default_rate",
-        "service_catalog.tax_rate_id",
-        "sp.rate as currency_rate",
-        this.knex.raw(
-          "COALESCE(project_tasks.task_name, tickets.title) as work_item_name",
-        ),
-        "project_phases.phase_id as project_phase_id",
-        "projects.project_id as project_id",
-      );
+      "time_entries.*",
+      "service_catalog.service_name",
+      "service_catalog.default_rate",
+      "service_catalog.tax_rate_id",
+      "sp.rate as currency_rate",
+      this.knex.raw(
+        "COALESCE(project_tasks.task_name, tickets.title) as work_item_name",
+      ),
+      "project_phases.phase_id as project_phase_id",
+      "projects.project_id as project_id",
+    );
 
     const timeEntries = await query;
 
@@ -3400,7 +3759,13 @@ export class BillingEngine {
         getProjectChargeConfig: (projectId) =>
           projectBillingContext?.configsByProjectId.get(projectId),
       },
-      this.chargeComputeTaxPorts(),
+      await this.loadChargeComputeTaxContext({
+        client,
+        locationId: clientContractLine.location_id,
+        services: timeEntries.map(
+          (entry: { tax_rate_id?: string | null }) => entry,
+        ),
+      }),
     );
 
     return charges;
@@ -3420,7 +3785,8 @@ export class BillingEngine {
     }
 
     const db = tenantDb(this.knex, this.tenant);
-    const client = await db.table("clients")
+    const client = await db
+      .table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -3460,8 +3826,10 @@ export class BillingEngine {
       return [];
     }
 
-    const servicePeriodStartExclusive = timingResolution.servicePeriodStartExclusive;
-    const servicePeriodEndExclusive = timingResolution.servicePeriodEndExclusive;
+    const servicePeriodStartExclusive =
+      timingResolution.servicePeriodStartExclusive;
+    const servicePeriodEndExclusive =
+      timingResolution.servicePeriodEndExclusive;
     const servicePeriodStart = timingResolution.servicePeriodStart;
     const servicePeriodEnd = timingResolution.servicePeriodEnd;
 
@@ -3529,13 +3897,29 @@ export class BillingEngine {
       });
 
     const usageRecordQuery = db.table<any>("usage_tracking");
-    db.tenantJoin(usageRecordQuery, "service_catalog", "service_catalog.service_id", "usage_tracking.service_id", { type: "left" });
-    db.tenantJoin(usageRecordQuery, "service_prices as sp", "sp.service_id", "service_catalog.service_id", {
-      type: "left",
-      on(join) {
-        join.andOn("sp.currency_code", "=", knexRef.raw("?", [contractCurrency]));
+    db.tenantJoin(
+      usageRecordQuery,
+      "service_catalog",
+      "service_catalog.service_id",
+      "usage_tracking.service_id",
+      { type: "left" },
+    );
+    db.tenantJoin(
+      usageRecordQuery,
+      "service_prices as sp",
+      "sp.service_id",
+      "service_catalog.service_id",
+      {
+        type: "left",
+        on(join) {
+          join.andOn(
+            "sp.currency_code",
+            "=",
+            knexRef.raw("?", [contractCurrency]),
+          );
+        },
       },
-    });
+    );
 
     usageRecordQuery
       .where({
@@ -3585,7 +3969,11 @@ export class BillingEngine {
         usageRecords,
         contractCurrency,
       },
-      this.chargeComputeTaxPorts(),
+      await this.loadChargeComputeTaxContext({
+        client,
+        locationId: clientContractLine.location_id,
+        services: usageRecords,
+      }),
     );
 
     return charges;
@@ -3604,9 +3992,24 @@ export class BillingEngine {
 
     const db = tenantDb(this.knex, this.tenant);
     const uniqueAssignmentQuery = db.table("client_contracts as cc");
-    db.tenantJoin(uniqueAssignmentQuery, "contracts as c", "c.contract_id", "cc.contract_id");
-    db.tenantJoin(uniqueAssignmentQuery, "contract_lines as cl", "cl.contract_id", "c.contract_id");
-    db.tenantJoin(uniqueAssignmentQuery, "contract_line_services as cls", "cls.contract_line_id", "cl.contract_line_id");
+    db.tenantJoin(
+      uniqueAssignmentQuery,
+      "contracts as c",
+      "c.contract_id",
+      "cc.contract_id",
+    );
+    db.tenantJoin(
+      uniqueAssignmentQuery,
+      "contract_lines as cl",
+      "cl.contract_id",
+      "c.contract_id",
+    );
+    db.tenantJoin(
+      uniqueAssignmentQuery,
+      "contract_line_services as cls",
+      "cls.contract_line_id",
+      "cl.contract_line_id",
+    );
 
     const rows = await uniqueAssignmentQuery
       .where({
@@ -3646,7 +4049,8 @@ export class BillingEngine {
     }
 
     const db = tenantDb(this.knex, this.tenant);
-    const rows = await db.table("contract_line_services")
+    const rows = await db
+      .table("contract_line_services")
       .where({
         tenant: this.tenant,
         contract_line_id: contractLineId,
@@ -3655,8 +4059,9 @@ export class BillingEngine {
 
     return rows
       .map((row: any) => row.service_id)
-      .filter((serviceId: unknown): serviceId is string =>
-        typeof serviceId === "string" && serviceId.length > 0,
+      .filter(
+        (serviceId: unknown): serviceId is string =>
+          typeof serviceId === "string" && serviceId.length > 0,
       );
   }
 
@@ -3694,14 +4099,9 @@ export class BillingEngine {
       return [];
     }
 
-    const {
-      servicePeriodStart,
-      servicePeriodEnd,
-      coverageRatio,
-    } = timingResolution;
-
     const db = tenantDb(this.knex, this.tenant);
-    const client = (await db.table("clients")
+    const client = (await db
+      .table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -3714,22 +4114,39 @@ export class BillingEngine {
 
     const tenant = this.tenant; // Capture tenant value for joins
     let planServicesQuery = db.table<any>("contract_line_services as cls");
-    db.tenantJoin(planServicesQuery, "contract_line_service_configuration as clsc", "clsc.contract_line_id", "cls.contract_line_id", {
-      on(join) {
-        join.andOn("clsc.service_id", "=", "cls.service_id");
+    db.tenantJoin(
+      planServicesQuery,
+      "contract_line_service_configuration as clsc",
+      "clsc.contract_line_id",
+      "cls.contract_line_id",
+      {
+        on(join) {
+          join.andOn("clsc.service_id", "=", "cls.service_id");
+        },
       },
-    });
-    db.tenantJoin(planServicesQuery, "service_catalog as sc", "sc.service_id", "cls.service_id");
-    db.tenantJoin(planServicesQuery, "service_prices as sp", "sp.service_id", "sc.service_id", {
-      type: "left",
-      on: (join) => {
-        join.andOn(
-          "sp.currency_code",
-          "=",
-          this.knex.raw("?", [clientContractLine.currency_code || "USD"]),
-        );
+    );
+    db.tenantJoin(
+      planServicesQuery,
+      "service_catalog as sc",
+      "sc.service_id",
+      "cls.service_id",
+    );
+    db.tenantJoin(
+      planServicesQuery,
+      "service_prices as sp",
+      "sp.service_id",
+      "sc.service_id",
+      {
+        type: "left",
+        on: (join) => {
+          join.andOn(
+            "sp.currency_code",
+            "=",
+            this.knex.raw("?", [clientContractLine.currency_code || "USD"]),
+          );
+        },
       },
-    });
+    );
 
     planServicesQuery
       .where({
@@ -3746,133 +4163,40 @@ export class BillingEngine {
       });
     }
 
-    const planServices = await planServicesQuery
-      .select(
-        "sc.service_id",
-        "sc.service_name",
-        "sc.default_rate",
-        "sc.tax_rate_id",
-        "clsc.config_id",
-        "cls.quantity as service_quantity",
-        "cls.custom_rate as service_line_custom_rate",
-        "clsc.quantity as configuration_quantity",
-        "clsc.custom_rate as configuration_custom_rate",
-        "sp.rate as price_rate",
-      );
+    const planServices = await planServicesQuery.select(
+      "sc.service_id",
+      "sc.service_name",
+      "sc.default_rate",
+      "sc.tax_rate_id",
+      "clsc.config_id",
+      "cls.quantity as service_quantity",
+      "cls.custom_rate as service_line_custom_rate",
+      "clsc.quantity as configuration_quantity",
+      "clsc.custom_rate as configuration_custom_rate",
+      "sp.rate as price_rate",
+    );
 
     if (planServices.length === 0) {
       return [];
     }
 
-    const productChargesPromises = planServices.map(
-      async (service: any): Promise<IProductCharge | ILicenseCharge> => {
-        // Determine tax info using the helper function
-        const { taxRegion: serviceTaxRegion, isTaxable } =
-          await this.getTaxInfoFromService({
-            service_id: service.service_id,
-            tax_rate_id: service.tax_rate_id, // Assuming tax_rate_id is fetched
-          });
-
-        const hasOverride =
-          service.configuration_custom_rate != null ||
-          service.service_line_custom_rate != null;
-        const hasCatalogPrice = service.price_rate != null;
-        if (!hasOverride && !hasCatalogPrice) {
-          const currency = clientContractLine.currency_code || "USD";
-          throw new Error(
-            `Missing pricing for ${chargeType} "${service.service_name}" (${service.service_id}) in ${currency}. ` +
-              `Add a ${currency} price in the product catalog or set a custom rate on the contract line.`,
-          );
-        }
-
-        const rateCandidate =
-          service.configuration_custom_rate ??
-          service.service_line_custom_rate ??
-          service.price_rate ??
-          service.default_rate ??
-          0;
-        const rate = Math.round(Number(rateCandidate) || 0);
-
-        const quantityCandidate =
-          service.configuration_quantity ?? service.service_quantity ?? 1;
-        const quantity = Math.max(
-          1,
-          Math.round(Number(quantityCandidate) || 1),
-        );
-
-        const total = rate * quantity;
-
-        // Calculate tax amount (will be recalculated later)
-        let taxAmount = 0;
-        let taxRate = 0;
-        const effectiveTaxRegion =
-          serviceTaxRegion ??
-          (await this.getLocationTaxRegionCode(clientContractLine.location_id)) ??
-          (await this.getClientDefaultTaxRegionCode(client.client_id)) ??
-          undefined;
-
-        if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
-          try {
-            const taxServiceInstance = new TaxService();
-            const taxResult = await taxServiceInstance.calculateTax(
-              client.client_id,
-              total,
-              servicePeriodEnd,
-              effectiveTaxRegion,
-              true,
-              clientContractLine.currency_code || "USD",
-            );
-            taxRate = taxResult.taxRate;
-            taxAmount = taxResult.taxAmount;
-          } catch (error) {
-            console.error(
-              `Error calculating initial tax for ${chargeType} service ${service.service_id}:`,
-              error,
-            );
-          }
-        }
-
-        const charge: IProductCharge | ILicenseCharge = {
-          type: chargeType,
-          serviceId: service.service_id,
-          config_id: service.config_id,
-          client_contract_line_id: clientContractLine.client_contract_line_id,
-          serviceName: service.service_name,
-          quantity: quantity,
-          rate: rate,
-          total: total,
-          tax_amount: taxAmount,
-          tax_rate: taxRate,
-          tax_region: effectiveTaxRegion, // Use derived region, fallback to location then client default
-          is_taxable: isTaxable,
-          servicePeriodStart,
-          servicePeriodEnd,
-          billingTiming: (clientContractLine.billing_timing ?? "arrears") as
-            | "arrears"
-            | "advance",
-          // Add contract association information when the plan is covered by a contract assignment
-          client_contract_id:
-            clientContractLine.client_contract_id || undefined,
-          contract_name: clientContractLine.contract_name || undefined,
-          location_id: clientContractLine.location_id ?? null,
-          ...(isLicenseCharge
-            ? {
-                period_start: servicePeriodStart,
-                period_end: servicePeriodEnd,
-              }
-            : {}),
-        };
-        return charge;
+    const { charges } = await computeRecurringQuantityCharges(
+      {
+        clientContractLine,
+        client,
+        timing: timingResolution,
+        chargeType,
+        services: planServices,
+        contractCurrency: clientContractLine.currency_code || "USD",
       },
+      await this.loadChargeComputeTaxContext({
+        client,
+        locationId: clientContractLine.location_id,
+        services: planServices,
+      }),
     );
-    const quantityCharges = await Promise.all(productChargesPromises);
 
-    return clientContractLine.enable_proration
-      ? this.applyQuantityChargeCoverageSettlement(
-          quantityCharges,
-          coverageRatio,
-        )
-      : quantityCharges;
+    return charges;
   }
 
   private async calculateProductCharges(
@@ -3927,7 +4251,8 @@ export class BillingEngine {
 
     const tenant = this.tenant;
     const db = tenantDb(this.knex, tenant);
-    const client = (await db.table("clients")
+    const client = (await db
+      .table("clients")
       .where({
         client_id: clientId,
         tenant,
@@ -3942,7 +4267,8 @@ export class BillingEngine {
 
     try {
       if (projectId) {
-        const projectMaterialsQuery = db.table("project_materials as pm")
+        const projectMaterialsQuery = db
+          .table("project_materials as pm")
           .select([
             this.knex.raw(`'project' as source_type`),
             "pm.project_material_id as source_id",
@@ -3956,7 +4282,12 @@ export class BillingEngine {
             "sc.service_name",
             "sc.tax_rate_id",
           ]);
-        db.tenantJoin(projectMaterialsQuery, "service_catalog as sc", "pm.service_id", "sc.service_id");
+        db.tenantJoin(
+          projectMaterialsQuery,
+          "service_catalog as sc",
+          "pm.service_id",
+          "sc.service_id",
+        );
         materialRows = await projectMaterialsQuery.where({
           "pm.tenant": tenant,
           "pm.client_id": clientId,
@@ -3965,7 +4296,8 @@ export class BillingEngine {
           "pm.currency_code": currencyCode,
         });
       } else {
-        const ticketMaterialsQuery = db.table("ticket_materials as tm")
+        const ticketMaterialsQuery = db
+          .table("ticket_materials as tm")
           .select([
             this.knex.raw(`'ticket' as source_type`),
             "tm.ticket_material_id as source_id",
@@ -3979,8 +4311,14 @@ export class BillingEngine {
             "sc.service_name",
             "sc.tax_rate_id",
           ]);
-        db.tenantJoin(ticketMaterialsQuery, "service_catalog as sc", "tm.service_id", "sc.service_id");
-        const projectMaterialsQuery = db.table("project_materials as pm")
+        db.tenantJoin(
+          ticketMaterialsQuery,
+          "service_catalog as sc",
+          "tm.service_id",
+          "sc.service_id",
+        );
+        const projectMaterialsQuery = db
+          .table("project_materials as pm")
           .select([
             this.knex.raw(`'project' as source_type`),
             "pm.project_material_id as source_id",
@@ -3994,7 +4332,12 @@ export class BillingEngine {
             "sc.service_name",
             "sc.tax_rate_id",
           ]);
-        db.tenantJoin(projectMaterialsQuery, "service_catalog as sc", "pm.service_id", "sc.service_id");
+        db.tenantJoin(
+          projectMaterialsQuery,
+          "service_catalog as sc",
+          "pm.service_id",
+          "sc.service_id",
+        );
 
         materialRows = await ticketMaterialsQuery
           .where({
@@ -4065,9 +4408,10 @@ export class BillingEngine {
         }
 
         const description = row.description || row.service_name || "Material";
-        const projectConfig = row.source_type === "project" && row.project_id
-          ? projectBillingContext?.configsByProjectId.get(row.project_id)
-          : undefined;
+        const projectConfig =
+          row.source_type === "project" && row.project_id
+            ? projectBillingContext?.configsByProjectId.get(row.project_id)
+            : undefined;
 
         return {
           type: "product",
@@ -4109,7 +4453,8 @@ export class BillingEngine {
     }
 
     const db = tenantDb(this.knex, this.tenant);
-    const client = await db.table("clients")
+    const client = await db
+      .table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -4121,14 +4466,33 @@ export class BillingEngine {
 
     // Get bucket configurations for this plan
     // Note: client_contract_line_id is actually a contract_line_id value (see getClientContractLinesAndCycle)
-    const bucketConfigQuery = db.table<any>("contract_line_service_configuration as clsc");
-    db.tenantJoin(bucketConfigQuery, "contract_line_services as cls", "clsc.contract_line_id", "cls.contract_line_id", {
-      on(join) {
-        join.andOn("clsc.service_id", "=", "cls.service_id");
+    const bucketConfigQuery = db.table<any>(
+      "contract_line_service_configuration as clsc",
+    );
+    db.tenantJoin(
+      bucketConfigQuery,
+      "contract_line_services as cls",
+      "clsc.contract_line_id",
+      "cls.contract_line_id",
+      {
+        on(join) {
+          join.andOn("clsc.service_id", "=", "cls.service_id");
+        },
       },
-    });
-    db.tenantJoin(bucketConfigQuery, "contract_line_service_bucket_config as clsbc", "clsbc.config_id", "clsc.config_id", { type: "left" });
-    db.tenantJoin(bucketConfigQuery, "service_catalog as sc", "cls.service_id", "sc.service_id");
+    );
+    db.tenantJoin(
+      bucketConfigQuery,
+      "contract_line_service_bucket_config as clsbc",
+      "clsbc.config_id",
+      "clsc.config_id",
+      { type: "left" },
+    );
+    db.tenantJoin(
+      bucketConfigQuery,
+      "service_catalog as sc",
+      "cls.service_id",
+      "sc.service_id",
+    );
 
     const bucketConfigs = await bucketConfigQuery
       .where({
@@ -4151,11 +4515,12 @@ export class BillingEngine {
       return [];
     }
 
-    // Process each bucket configuration
-    const bucketChargesPromises = bucketConfigs.map(
-      async (bucketConfig): Promise<IBucketCharge[]> => {
-        // Pull usage records captured for bucket plans within this billing period
-        const usageRecords = await db.table("bucket_usage")
+    // Load persisted allowance state here; deterministic aggregation, rollover
+    // application, overage pricing, and explanations live in shared compute.
+    const bucketCharges = await Promise.all(
+      bucketConfigs.map(async (bucketConfig): Promise<IBucketCharge[]> => {
+        const usageRecords = await db
+          .table("bucket_usage")
           .where({
             tenant: client.tenant,
             client_id: clientId,
@@ -4166,162 +4531,39 @@ export class BillingEngine {
           .where("period_end", "<=", billingPeriod.endDate)
           .select("*");
 
-        if (usageRecords.length === 0) {
-          return [];
-        }
+        if (usageRecords.length === 0) return [];
 
-        const usageByPeriod = new Map<
-          string,
+        const result = await computeBucketCharges(
           {
-            periodStart: ISO8601String;
-            periodEnd: ISO8601String;
-            minutesUsed: number;
-            overageMinutes: number;
-          }
-        >();
-
-        for (const record of usageRecords) {
-          const periodStart = record.period_start
-            ? toISODate(toPlainDate(record.period_start))
-            : toISODate(toPlainDate(billingPeriod.startDate));
-          const periodEnd = record.period_end
-            ? toISODate(toPlainDate(record.period_end))
-            : toISODate(
-                toPlainDate(billingPeriod.endDate).subtract({ days: 1 }),
-              );
-          const periodKey = `${periodStart}:${periodEnd}`;
-
-          if (!usageByPeriod.has(periodKey)) {
-            usageByPeriod.set(periodKey, {
-              periodStart,
-              periodEnd,
-              minutesUsed: 0,
-              overageMinutes: 0,
-            });
-          }
-
-          const periodUsage = usageByPeriod.get(periodKey)!;
-          const recordMinutesUsed =
-            Number(record.minutes_used ?? 0) ||
-            (record.hours_used !== undefined
-              ? Number(record.hours_used) * 60
-              : 0);
-          const recordOverageMinutes =
-            Number(record.overage_minutes ?? 0) ||
-            (record.overage_hours !== undefined
-              ? Number(record.overage_hours) * 60
-              : 0);
-
-          periodUsage.minutesUsed += recordMinutesUsed;
-          periodUsage.overageMinutes += recordOverageMinutes;
-        }
-
-        const isUsageBucket =
-          contractLine.contract_line_type === "Usage" ||
-          bucketConfig.billing_method === "usage";
-        const configuredQuantity = isUsageBucket
-          ? Number(bucketConfig.total_minutes ?? 0)
-          : bucketConfig.total_minutes ??
-            (bucketConfig.total_hours !== undefined
-              ? Number(bucketConfig.total_hours) * 60
-              : 0);
-
-        const bucketCharges: IBucketCharge[] = [];
-        for (const usagePeriod of Array.from(usageByPeriod.values()).sort((a, b) =>
-          a.periodStart.localeCompare(b.periodStart),
-        )) {
-          let overageQuantity = usagePeriod.overageMinutes;
-          if (!overageQuantity && configuredQuantity) {
-            overageQuantity = Math.max(
-              0,
-              usagePeriod.minutesUsed - configuredQuantity,
-            );
-          }
-
-          const unitsUsed = usagePeriod.minutesUsed;
-          const overageUnits = overageQuantity;
-          const hoursUsed = usagePeriod.minutesUsed / 60;
-          const overageHours = overageQuantity / 60;
-          if ((isUsageBucket ? overageUnits : overageHours) <= 0) {
-            continue;
-          }
-
-          const { taxRegion: serviceTaxRegion, isTaxable } =
-            await this.getTaxInfoFromService({
+            billingPeriod,
+            clientContractLine: contractLine,
+            client,
+            config: {
+              config_id: bucketConfig.config_id,
               service_id: bucketConfig.service_id,
+              service_name: bucketConfig.service_name,
               tax_rate_id: bucketConfig.tax_rate_id,
-            });
-
-          const overageRate = Math.ceil(bucketConfig.overage_rate);
-          const total = Math.ceil((isUsageBucket ? overageUnits : overageHours) * overageRate);
-
-          let taxAmount = 0;
-          let taxRate = 0;
-          const effectiveTaxRegion =
-            serviceTaxRegion ??
-            (await this.getLocationTaxRegionCode(contractLine.location_id)) ??
-            (await this.getClientDefaultTaxRegionCode(client.client_id)) ??
-            undefined;
-
-          if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
-            try {
-              const taxServiceInstance = new TaxService();
-              const taxResult = await taxServiceInstance.calculateTax(
-                client.client_id,
-                total,
-                usagePeriod.periodEnd,
-                effectiveTaxRegion,
-                true,
-                contractLine.currency_code || "USD",
-              );
-              taxRate = taxResult.taxRate;
-              taxAmount = taxResult.taxAmount;
-            } catch (error) {
-              console.error(
-                `Error calculating initial tax for bucket service ${bucketConfig.service_id}:`,
-                error,
-              );
-            }
-          }
-
-          bucketCharges.push({
-            type: "bucket",
-            service_catalog_id: bucketConfig.service_id,
-            serviceName: bucketConfig.service_name,
-            client_contract_line_id: contractLine.client_contract_line_id,
-            rate: overageRate,
-            total: total,
-            hoursUsed: hoursUsed,
-            overageHours: overageHours,
-            overageRate: overageRate,
-            quantity: isUsageBucket ? overageUnits : undefined,
-            isUsageBucket,
-            unitOfMeasure: bucketConfig.unit_of_measure ?? null,
-            unitsUsed: isUsageBucket ? unitsUsed : undefined,
-            includedUnits: isUsageBucket ? Math.max(0, unitsUsed - overageUnits) : undefined,
-            overageUnits: isUsageBucket ? overageUnits : undefined,
-            tax_rate: taxRate,
-            tax_region: effectiveTaxRegion,
-            serviceId: bucketConfig.service_id,
-            config_id: bucketConfig.config_id,
-            tax_amount: taxAmount,
-            is_taxable: isTaxable,
-            servicePeriodStart: usagePeriod.periodStart,
-            servicePeriodEnd: usagePeriod.periodEnd,
-            billingTiming: "arrears",
-            client_contract_id: contractLine.client_contract_id || undefined,
-            contract_name: contractLine.contract_name || undefined,
-            location_id: contractLine.location_id ?? null,
-          });
-        }
-
-        return bucketCharges;
-      },
+              unit_of_measure: bucketConfig.unit_of_measure,
+              billing_method: bucketConfig.billing_method,
+              total_minutes: bucketConfig.total_minutes,
+              total_hours: bucketConfig.total_hours,
+              overage_rate: bucketConfig.overage_rate,
+              allow_rollover: bucketConfig.allow_rollover,
+            },
+            usageRecords,
+            contractCurrency: contractLine.currency_code || "USD",
+          },
+          await this.loadChargeComputeTaxContext({
+            client,
+            locationId: contractLine.location_id,
+            services: [bucketConfig],
+          }),
+        );
+        return result.charges;
+      }),
     );
 
-    const bucketCharges = (await Promise.all(bucketChargesPromises)).flat();
-
-    return bucketCharges;
+    return bucketCharges.flat();
   }
 
   private async hasExistingServicePeriodCharge(
@@ -4338,7 +4580,12 @@ export class BillingEngine {
     // Note: client_contract_line_id is actually a contract_line_id value (see getClientContractLinesAndCycle)
     const db = tenantDb(this.knex, this.tenant);
     const existingChargeQuery = db.table("invoice_charge_details as iid");
-    db.tenantJoin(existingChargeQuery, "contract_line_service_configuration as clsc", "iid.config_id", "clsc.config_id");
+    db.tenantJoin(
+      existingChargeQuery,
+      "contract_line_service_configuration as clsc",
+      "iid.config_id",
+      "clsc.config_id",
+    );
 
     const existing = await existingChargeQuery
       .where("clsc.contract_line_id", clientContractLineId)
@@ -4359,7 +4606,8 @@ export class BillingEngine {
       chargeFamily: "fixed",
     });
 
-    const recurringLinkedCharge = await db.table("recurring_service_periods")
+    const recurringLinkedCharge = await db
+      .table("recurring_service_periods")
       .where("charge_family", "fixed")
       .where("due_position", billingTiming)
       .whereNotNull("invoice_id")
@@ -4395,29 +4643,6 @@ export class BillingEngine {
     return Boolean(recurringLinkedCharge);
   }
 
-  private applyQuantityChargeCoverageSettlement<
-    TCharge extends IProductCharge | ILicenseCharge,
-  >(charges: TCharge[], coverageRatio: number): TCharge[] {
-    const boundedCoverageRatio = Math.max(0, Math.min(coverageRatio, 1));
-
-    return charges.map((charge) => {
-      const originalTotal = Math.ceil(charge.total ?? 0);
-      const originalTax = Math.ceil(charge.tax_amount ?? 0);
-      const proratedTotal = Math.ceil(originalTotal * boundedCoverageRatio);
-      const proratedTax = Math.ceil(originalTax * boundedCoverageRatio);
-      const quantity = Math.max(1, Math.round(charge.quantity ?? 1));
-      const derivedRate =
-        quantity > 0 ? Math.ceil(proratedTotal / quantity) : 0;
-
-      return {
-        ...charge,
-        rate: derivedRate,
-        total: derivedRate * quantity,
-        tax_amount: proratedTax,
-      };
-    });
-  }
-
   private calculatePeriodDaysExclusive(
     start: ISO8601String,
     end: ISO8601String,
@@ -4442,24 +4667,22 @@ export class BillingEngine {
       billingResult.charges,
     );
 
-    let discountTotal = 0;
-    for (const discount of discounts) {
-      if (discount.discount_type === "percentage") {
-        discount.amount = billingResult.totalAmount * discount.value;
-      } else if (discount.discount_type === "fixed") {
-        discount.amount = discount.value;
-      }
-      discountTotal += discount.amount || 0;
-    }
-
-    const finalAmount = billingResult.totalAmount - discountTotal;
-
-    return {
-      ...billingResult,
-      discounts,
-      adjustments: [], // Implement adjustments if needed
-      finalAmount,
-    };
+    return computeDiscountsAndAdjustments({
+      billingResult,
+      billingPeriod,
+      // fetchDiscounts already performed canonical service-period filtering.
+      // Give shared compute an always-overlapping window so it owns amount and
+      // ordering arithmetic without repeating database resolution.
+      discountCandidates: discounts.map((discount) => ({
+        ...discount,
+        start_date: billingPeriod.startDate,
+        end_date: null,
+      })),
+      // Production has never applied the legacy client adjustments table in
+      // invoice generation; preserve that behavior while shared compute can
+      // evaluate explicit simulator adjustments.
+      adjustments: [],
+    }).billingResult;
   }
 
   private async fetchDiscounts(
@@ -4473,7 +4696,8 @@ export class BillingEngine {
     }
 
     const db = tenantDb(this.knex, this.tenant);
-    const client = await db.table("clients")
+    const client = await db
+      .table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -4494,10 +4718,30 @@ export class BillingEngine {
     // Query discounts via client_contracts -> contracts -> contract_lines
     // instead of the deprecated client_contract_lines table
     const discountRowsQuery = db.table("discounts");
-    db.tenantJoin(discountRowsQuery, "contract_line_discounts", "discounts.discount_id", "contract_line_discounts.discount_id");
-    db.tenantJoin(discountRowsQuery, "contract_lines as cl", "cl.contract_line_id", "contract_line_discounts.contract_line_id");
-    db.tenantJoin(discountRowsQuery, "contracts as c", "c.contract_id", "cl.contract_id");
-    db.tenantJoin(discountRowsQuery, "client_contracts as cc", "cc.contract_id", "c.contract_id");
+    db.tenantJoin(
+      discountRowsQuery,
+      "contract_line_discounts",
+      "discounts.discount_id",
+      "contract_line_discounts.discount_id",
+    );
+    db.tenantJoin(
+      discountRowsQuery,
+      "contract_lines as cl",
+      "cl.contract_line_id",
+      "contract_line_discounts.contract_line_id",
+    );
+    db.tenantJoin(
+      discountRowsQuery,
+      "contracts as c",
+      "c.contract_id",
+      "cl.contract_id",
+    );
+    db.tenantJoin(
+      discountRowsQuery,
+      "client_contracts as cc",
+      "cc.contract_id",
+      "c.contract_id",
+    );
 
     const discountRows = (await discountRowsQuery
       .where({
@@ -4518,25 +4762,7 @@ export class BillingEngine {
         "contract_line_discounts.contract_line_id",
       )) as DiscountQueryRow[];
 
-    const filteredDiscounts = discountRows.filter((discount) =>
-      this.discountMatchesEvaluationWindow(
-        discount,
-        billingPeriod,
-        discountWindowsByContractLine,
-      ),
-    );
-
-    return Array.from(
-      new Map(
-        filteredDiscounts.map((discount) => [
-          discount.discount_id,
-          {
-            ...discount,
-            contract_line_id: undefined,
-          } as IDiscount,
-        ]),
-      ).values(),
-    );
+    return filterApplicableDiscounts(discountRows, billingPeriod, charges);
   }
 
   private buildDiscountEvaluationWindowsByContractLine(
@@ -4645,7 +4871,8 @@ export class BillingEngine {
     }
 
     const db = tenantDb(this.knex, this.tenant);
-    const client = await db.table("clients")
+    const client = await db
+      .table("clients")
       .where({
         client_id: clientId,
         tenant: this.tenant,
@@ -4656,7 +4883,10 @@ export class BillingEngine {
     }
 
     const adjustments = await db
-      .unscoped<any>("adjustments", "legacy adjustments table is not schema-backed; scoped manually by validated client tenant")
+      .unscoped<any>(
+        "adjustments",
+        "legacy adjustments table is not schema-backed; scoped manually by validated client tenant",
+      )
       .where({
         client_id: clientId,
         tenant: client.tenant,
@@ -4687,7 +4917,8 @@ export class BillingEngine {
 
     console.log(`Recalculating invoice ${invoiceId}`);
 
-    const invoice = await db.table("invoices")
+    const invoice = await db
+      .table("invoices")
       .where({
         invoice_id: invoiceId,
         tenant,
@@ -4695,12 +4926,11 @@ export class BillingEngine {
       .first();
 
     if (!invoice) {
-      throw new Error(
-        `Invoice ${invoiceId} not found in tenant ${tenant}`,
-      );
+      throw new Error(`Invoice ${invoiceId} not found in tenant ${tenant}`);
     }
 
-    const client = await db.table("clients")
+    const client = await db
+      .table("clients")
       .where({
         client_id: invoice.client_id,
         tenant,

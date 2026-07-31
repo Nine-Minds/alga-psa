@@ -86,6 +86,15 @@ export const ContractSimulator = () => {
   );
 };
 
+export const ContractDraftSimulator = () => (
+  <div className="text-center py-8 text-muted-foreground">
+    <p className="text-lg font-medium">Enterprise Feature</p>
+    <p className="mt-2 text-sm">
+      Draft contract simulation is available in the Enterprise edition of Alga PSA.
+    </p>
+  </div>
+);
+
 export const PaymentSettingsConfig = () => {
   return (
     <div className="text-center py-8 text-muted-foreground">
@@ -106,5 +115,6 @@ export default {
   PaymentSettings,
   StripeConnectionSettings,
   ContractSimulator,
+  ContractDraftSimulator,
   PaymentSettingsConfig,
 };

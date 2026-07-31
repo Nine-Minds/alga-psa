@@ -187,10 +187,10 @@ function fixedChargeKey(charge: IFixedPriceCharge): string {
   return `${charge.config_id ?? charge.client_contract_line_id ?? "line"}:${charge.serviceId ?? "service"}`;
 }
 
-export async function computeFixedCharges(
+export function computeFixedCharges(
   inputs: FixedChargeComputeInputs,
   taxPorts: ChargeComputeTaxPorts,
-): Promise<FixedChargeComputeResult> {
+): FixedChargeComputeResult {
   const {
     clientId,
     billingPeriod,
@@ -366,16 +366,18 @@ export async function computeFixedCharges(
       return { charges: [], explanations: [], advanceGuard: null };
     }
 
-    const { taxRegion: fallbackServiceTaxRegion, isTaxable: fallbackIsTaxable } =
-      await taxPorts.getTaxInfoFromService(fallbackService);
+    const {
+      taxRegion: fallbackServiceTaxRegion,
+      isTaxable: fallbackIsTaxable,
+    } = taxPorts.getTaxInfoFromService(fallbackService);
     const fallbackTaxRegion =
       fallbackServiceTaxRegion ??
-      (await taxPorts.getLocationTaxRegionCode(clientContractLine.location_id)) ??
-      (await taxPorts.getClientDefaultTaxRegionCode(client.client_id));
+      taxPorts.getLocationTaxRegionCode(clientContractLine.location_id) ??
+      taxPorts.getClientDefaultTaxRegionCode(client.client_id);
     let fallbackTaxAmount = 0;
     let fallbackTaxRate = 0;
     if (!client.is_tax_exempt && fallbackIsTaxable && fallbackTaxRegion) {
-      const taxResult = await taxPorts.calculateTax(
+      const taxResult = taxPorts.calculateTax(
         client.client_id,
         baseRateInCents,
         servicePeriodEnd,
@@ -454,73 +456,67 @@ export async function computeFixedCharges(
       return { charges: [], explanations: [], advanceGuard: null };
     }
 
-    const serviceAllocations = await Promise.all(
-      normalizedPlanServices.map(async (service) => {
-        // FMV is based on the service's default rate (cents), not plan overrides.
-        const rateForFMV = Number(service.default_rate || 0);
-        const serviceFMVCents = Math.round(rateForFMV * service.quantity);
+    const serviceAllocations = normalizedPlanServices.map((service) => {
+      // FMV is based on the service's default rate (cents), not plan overrides.
+      const rateForFMV = Number(service.default_rate || 0);
+      const serviceFMVCents = Math.round(rateForFMV * service.quantity);
 
-        const proportion =
-          totalFMVCents !== 0 ? serviceFMVCents / totalFMVCents : 0;
+      const proportion =
+        totalFMVCents !== 0 ? serviceFMVCents / totalFMVCents : 0;
 
-        let prorationFactor = 1.0;
-        let effectiveBaseRateInCents = baseRateInCents;
-        if (planLevelEnableProration) {
-          prorationFactor = coverageRatio;
-          effectiveBaseRateInCents = Math.round(
-            effectiveBaseRateInCents * prorationFactor,
+      let prorationFactor = 1.0;
+      let effectiveBaseRateInCents = baseRateInCents;
+      if (planLevelEnableProration) {
+        prorationFactor = coverageRatio;
+        effectiveBaseRateInCents = Math.round(
+          effectiveBaseRateInCents * prorationFactor,
+        );
+      }
+
+      const allocatedAmount = Math.round(effectiveBaseRateInCents * proportion);
+
+      const { taxRegion: serviceTaxRegion, isTaxable } =
+        taxPorts.getTaxInfoFromService(service);
+
+      let taxAmount = 0;
+      let taxRate = 0;
+      if (!client.is_tax_exempt && isTaxable) {
+        const effectiveTaxRegion =
+          serviceTaxRegion ??
+          taxPorts.getLocationTaxRegionCode(clientContractLine.location_id) ??
+          taxPorts.getClientDefaultTaxRegionCode(client.client_id) ??
+          "";
+        if (effectiveTaxRegion) {
+          const taxResult = taxPorts.calculateTax(
+            client.client_id,
+            allocatedAmount,
+            servicePeriodEnd,
+            effectiveTaxRegion,
+            true,
+            currencyCode,
+          );
+          taxRate = taxResult.taxRate;
+          taxAmount = taxResult.taxAmount;
+        } else {
+          console.warn(
+            `[BillingEngine] No tax region found (from service tax_rate_id or client default via getClientDefaultTaxRegionCode) for service ${service.service_id} / client ${clientId}. Using zero tax rate.`,
           );
         }
+      }
 
-        const allocatedAmount = Math.round(
-          effectiveBaseRateInCents * proportion,
-        );
-
-        const { taxRegion: serviceTaxRegion, isTaxable } =
-          await taxPorts.getTaxInfoFromService(service);
-
-        let taxAmount = 0;
-        let taxRate = 0;
-        if (!client.is_tax_exempt && isTaxable) {
-          const effectiveTaxRegion =
-            serviceTaxRegion ??
-            (await taxPorts.getLocationTaxRegionCode(
-              clientContractLine.location_id,
-            )) ??
-            (await taxPorts.getClientDefaultTaxRegionCode(client.client_id)) ??
-            "";
-          if (effectiveTaxRegion) {
-            const taxResult = await taxPorts.calculateTax(
-              client.client_id,
-              allocatedAmount,
-              servicePeriodEnd,
-              effectiveTaxRegion,
-              true,
-              currencyCode,
-            );
-            taxRate = taxResult.taxRate;
-            taxAmount = taxResult.taxAmount;
-          } else {
-            console.warn(
-              `[BillingEngine] No tax region found (from service tax_rate_id or client default via getClientDefaultTaxRegionCode) for service ${service.service_id} / client ${clientId}. Using zero tax rate.`,
-            );
-          }
-        }
-
-        return {
-          serviceId: service.service_id,
-          serviceName: service.service_name,
-          fmv: serviceFMVCents,
-          proportion,
-          allocatedAmount,
-          isTaxable,
-          taxRate,
-          taxAmount,
-          prorationFactor,
-          effectiveBaseRateInCents,
-        };
-      }),
-    );
+      return {
+        serviceId: service.service_id,
+        serviceName: service.service_name,
+        fmv: serviceFMVCents,
+        proportion,
+        allocatedAmount,
+        isTaxable,
+        taxRate,
+        taxAmount,
+        prorationFactor,
+        effectiveBaseRateInCents,
+      };
+    });
 
     const detailedCharges: IFixedPriceCharge[] = [];
 
@@ -549,11 +545,9 @@ export async function computeFixedCharges(
         tax_rate: allocation.taxRate,
         is_taxable: allocation.isTaxable,
         tax_region:
-          (await taxPorts.getTaxInfoFromService(planService)).taxRegion ??
-          (await taxPorts.getLocationTaxRegionCode(
-            clientContractLine.location_id,
-          )) ??
-          (await taxPorts.getClientDefaultTaxRegionCode(client.client_id)) ??
+          taxPorts.getTaxInfoFromService(planService).taxRegion ??
+          taxPorts.getLocationTaxRegionCode(clientContractLine.location_id) ??
+          taxPorts.getClientDefaultTaxRegionCode(client.client_id) ??
           undefined,
         client_contract_line_id: clientContractLine.client_contract_line_id,
         client_contract_id: clientContractLine.client_contract_id || undefined,
@@ -629,74 +623,62 @@ export async function computeFixedCharges(
       `[BillingEngine] Processing fixed service config for a non-fixed plan type (${contractLineDetails?.contract_line_type}) for plan ${clientContractLine.contract_line_id}. Review this logic.`,
     );
 
-    const fixedCharges: IFixedPriceCharge[] = await Promise.all(
-      normalizedPlanServices.map(
-        async (service): Promise<IFixedPriceCharge> => {
-          const quantity = service.quantity;
+    const fixedCharges: IFixedPriceCharge[] = normalizedPlanServices.map(
+      (service): IFixedPriceCharge => {
+        const quantity = service.quantity;
 
-          const parsedBaseRate =
-            service.service_base_rate !== null &&
-            service.service_base_rate !== undefined
-              ? Number(service.service_base_rate)
-              : null;
-          // service_base_rate is already stored in cents
-          const baseRateInCents =
-            parsedBaseRate !== null && !Number.isNaN(parsedBaseRate)
-              ? Math.round(parsedBaseRate)
-              : Number(service.default_rate ?? 0);
-          const total = baseRateInCents * quantity;
+        const parsedBaseRate =
+          service.service_base_rate !== null &&
+          service.service_base_rate !== undefined
+            ? Number(service.service_base_rate)
+            : null;
+        // service_base_rate is already stored in cents
+        const baseRateInCents =
+          parsedBaseRate !== null && !Number.isNaN(parsedBaseRate)
+            ? Math.round(parsedBaseRate)
+            : Number(service.default_rate ?? 0);
+        const total = baseRateInCents * quantity;
 
-          const { taxRegion: serviceTaxRegion, isTaxable } =
-            await taxPorts.getTaxInfoFromService(service);
+        const { taxRegion: serviceTaxRegion, isTaxable } =
+          taxPorts.getTaxInfoFromService(service);
 
-          const charge: IFixedPriceCharge = {
-            serviceId: service.service_id,
-            serviceName: service.service_name,
-            quantity,
-            rate: baseRateInCents,
-            total,
-            type: "fixed",
-            client_contract_line_id: clientContractLine.client_contract_line_id,
-            client_contract_id:
-              clientContractLine.client_contract_id || undefined,
-            contract_name: clientContractLine.contract_name || undefined,
-            location_id: clientContractLine.location_id ?? null,
-            tax_amount: 0,
-            tax_rate: 0,
-            tax_region:
-              serviceTaxRegion ??
-              (await taxPorts.getLocationTaxRegionCode(
-                clientContractLine.location_id,
-              )) ??
-              (await taxPorts.getClientDefaultTaxRegionCode(
-                client.client_id,
-              )) ??
-              undefined,
-            is_taxable: isTaxable,
-            enable_proration: planLevelEnableProration,
-            config_id: service.config_id,
-            base_rate: baseRateInCents,
-          };
-          if (!client.is_tax_exempt && charge.is_taxable) {
-            const effectiveTaxRegion = charge.tax_region ?? "";
-            if (effectiveTaxRegion) {
-              const taxResult = await taxPorts.calculateTax(
-                client.client_id,
-                charge.total,
-                servicePeriodEnd,
-                effectiveTaxRegion,
-                true,
-                currencyCode,
-              );
-              charge.tax_rate = taxResult.taxRate;
-              charge.tax_amount = taxResult.taxAmount;
-            } else {
-              console.warn(
-                `No effective tax region found for edge-case fixed service ${service.service_id}, using zero tax rate`,
-              );
-              charge.tax_rate = 0;
-              charge.tax_amount = 0;
-            }
+        const charge: IFixedPriceCharge = {
+          serviceId: service.service_id,
+          serviceName: service.service_name,
+          quantity,
+          rate: baseRateInCents,
+          total,
+          type: "fixed",
+          client_contract_line_id: clientContractLine.client_contract_line_id,
+          client_contract_id:
+            clientContractLine.client_contract_id || undefined,
+          contract_name: clientContractLine.contract_name || undefined,
+          location_id: clientContractLine.location_id ?? null,
+          tax_amount: 0,
+          tax_rate: 0,
+          tax_region:
+            serviceTaxRegion ??
+            taxPorts.getLocationTaxRegionCode(clientContractLine.location_id) ??
+            taxPorts.getClientDefaultTaxRegionCode(client.client_id) ??
+            undefined,
+          is_taxable: isTaxable,
+          enable_proration: planLevelEnableProration,
+          config_id: service.config_id,
+          base_rate: baseRateInCents,
+        };
+        if (!client.is_tax_exempt && charge.is_taxable) {
+          const effectiveTaxRegion = charge.tax_region ?? "";
+          if (effectiveTaxRegion) {
+            const taxResult = taxPorts.calculateTax(
+              client.client_id,
+              charge.total,
+              servicePeriodEnd,
+              effectiveTaxRegion,
+              true,
+              currencyCode,
+            );
+            charge.tax_rate = taxResult.taxRate;
+            charge.tax_amount = taxResult.taxAmount;
           } else {
             console.warn(
               `No effective tax region found for edge-case fixed service ${service.service_id}, using zero tax rate`,
@@ -704,27 +686,33 @@ export async function computeFixedCharges(
             charge.tax_rate = 0;
             charge.tax_amount = 0;
           }
+        } else {
+          console.warn(
+            `No effective tax region found for edge-case fixed service ${service.service_id}, using zero tax rate`,
+          );
+          charge.tax_rate = 0;
+          charge.tax_amount = 0;
+        }
 
-          explanations.push({
-            chargeKey: fixedChargeKey(charge),
-            serviceName: service.service_name,
-            chargeType: "fixed",
-            inputs: [
-              {
-                label: "Service rate",
-                value: formatCents(baseRateInCents, currencyCode),
-              },
-              { label: "Quantity", value: String(quantity) },
-            ],
-            steps: [
-              `${formatCents(baseRateInCents, currencyCode)} × ${quantity} = ${formatCents(total, currencyCode)}`,
-            ],
-            markers: [],
-          });
+        explanations.push({
+          chargeKey: fixedChargeKey(charge),
+          serviceName: service.service_name,
+          chargeType: "fixed",
+          inputs: [
+            {
+              label: "Service rate",
+              value: formatCents(baseRateInCents, currencyCode),
+            },
+            { label: "Quantity", value: String(quantity) },
+          ],
+          steps: [
+            `${formatCents(baseRateInCents, currencyCode)} × ${quantity} = ${formatCents(total, currencyCode)}`,
+          ],
+          markers: [],
+        });
 
-          return charge;
-        },
-      ),
+        return charge;
+      },
     );
 
     generatedCharges = fixedCharges;

@@ -1,39 +1,54 @@
-'use server';
+"use server";
 
-import logger from '@alga-psa/core/logger';
+import logger from "@alga-psa/core/logger";
 import type {
   ContractScenario,
+  ContractDraftSimulationInput,
   ContractSimulationResult,
   ContractSimulationUnavailable,
-} from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
-import { withAuth } from '@alga-psa/auth/withAuth';
-import { hasPermission } from '@alga-psa/auth/rbac';
+  ISO8601String,
+  ScenarioAssumptionPrefill,
+} from "@alga-psa/types";
+import { createTenantKnex } from "@alga-psa/db";
+import { withAuth } from "@alga-psa/auth/withAuth";
+import { hasPermission } from "@alga-psa/auth/rbac";
 
 function isEnterpriseBuild(): boolean {
-  return process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  return (
+    process.env.EDITION === "ee" ||
+    process.env.NEXT_PUBLIC_EDITION === "enterprise"
+  );
 }
 
 const UNAVAILABLE: ContractSimulationUnavailable = {
   available: false,
-  reason: 'not_enterprise',
+  reason: "not_enterprise",
 };
 
 async function loadEnterpriseSimulator(): Promise<{
   snapshotContractToScenario: any;
   simulateContractScenario: any;
+  loadRecentAverageAssumptions: any;
+  loadReplayAssumptions: any;
+  draftContractToScenario: any;
 } | null> {
   if (!isEnterpriseBuild()) return null;
   try {
-    const mod = await import('@enterprise/lib/billing/simulator');
+    const mod = await import("@enterprise/lib/billing/simulator");
     return {
       snapshotContractToScenario: (mod as any).snapshotContractToScenario,
       simulateContractScenario: (mod as any).simulateContractScenario,
+      loadRecentAverageAssumptions: (mod as any).loadRecentAverageAssumptions,
+      loadReplayAssumptions: (mod as any).loadReplayAssumptions,
+      draftContractToScenario: (mod as any).draftContractToScenario,
     };
   } catch (error) {
-    logger.debug('[billing/contractSimulationActions] enterprise simulator module not available', {
-      error,
-    });
+    logger.debug(
+      "[billing/contractSimulationActions] enterprise simulator module not available",
+      {
+        error,
+      },
+    );
     return null;
   }
 }
@@ -48,10 +63,12 @@ export const getContractScenarioSnapshot = withAuth(
     user,
     { tenant },
     contractId: string,
-    clientContractId?: string | null
+    clientContractId?: string | null,
+    clientId?: string | null,
+    forceProfile = false,
   ): Promise<ContractScenario | ContractSimulationUnavailable> => {
-    if (!(await hasPermission(user, 'billing', 'read'))) {
-      throw new Error('Permission denied: Cannot read billing');
+    if (!(await hasPermission(user, "billing", "read"))) {
+      throw new Error("Permission denied: Cannot read billing");
     }
 
     const ee = await loadEnterpriseSimulator();
@@ -61,8 +78,26 @@ export const getContractScenarioSnapshot = withAuth(
     return ee.snapshotContractToScenario(knex, tenant, {
       contractId,
       clientContractId: clientContractId ?? null,
+      clientId: clientId ?? null,
+      forceProfile,
     });
-  }
+  },
+);
+
+export const getContractDraftSimulationScenario = withAuth(
+  async (
+    user,
+    { tenant },
+    draft: ContractDraftSimulationInput,
+  ): Promise<ContractScenario | ContractSimulationUnavailable> => {
+    if (!(await hasPermission(user, "billing", "read"))) {
+      throw new Error("Permission denied: Cannot read billing");
+    }
+    const ee = await loadEnterpriseSimulator();
+    if (!ee?.draftContractToScenario) return UNAVAILABLE;
+    const { knex } = await createTenantKnex();
+    return ee.draftContractToScenario(knex, tenant, draft);
+  },
 );
 
 /**
@@ -74,10 +109,10 @@ export const runContractSimulation = withAuth(
   async (
     user,
     { tenant },
-    scenario: ContractScenario
+    scenario: ContractScenario,
   ): Promise<ContractSimulationResult | ContractSimulationUnavailable> => {
-    if (!(await hasPermission(user, 'billing', 'read'))) {
-      throw new Error('Permission denied: Cannot read billing');
+    if (!(await hasPermission(user, "billing", "read"))) {
+      throw new Error("Permission denied: Cannot read billing");
     }
 
     const ee = await loadEnterpriseSimulator();
@@ -85,5 +120,46 @@ export const runContractSimulation = withAuth(
 
     const { knex } = await createTenantKnex();
     return ee.simulateContractScenario(knex, tenant, scenario);
-  }
+  },
+);
+
+export const getRecentContractSimulationAssumptions = withAuth(
+  async (
+    user,
+    { tenant },
+    scenario: ContractScenario,
+    periodCount = 3,
+  ): Promise<ScenarioAssumptionPrefill | ContractSimulationUnavailable> => {
+    if (!(await hasPermission(user, "billing", "read"))) {
+      throw new Error("Permission denied: Cannot read billing");
+    }
+    const ee = await loadEnterpriseSimulator();
+    if (!ee?.loadRecentAverageAssumptions) return UNAVAILABLE;
+    const { knex } = await createTenantKnex();
+    return ee.loadRecentAverageAssumptions(knex, tenant, scenario, periodCount);
+  },
+);
+
+export const getContractSimulationReplayAssumptions = withAuth(
+  async (
+    user,
+    { tenant },
+    scenario: ContractScenario,
+    startDate: ISO8601String,
+    endDateExclusive: ISO8601String,
+  ): Promise<ScenarioAssumptionPrefill | ContractSimulationUnavailable> => {
+    if (!(await hasPermission(user, "billing", "read"))) {
+      throw new Error("Permission denied: Cannot read billing");
+    }
+    const ee = await loadEnterpriseSimulator();
+    if (!ee?.loadReplayAssumptions) return UNAVAILABLE;
+    const { knex } = await createTenantKnex();
+    return ee.loadReplayAssumptions(
+      knex,
+      tenant,
+      scenario,
+      startDate,
+      endDateExclusive,
+    );
+  },
 );

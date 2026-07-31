@@ -1047,11 +1047,19 @@ describe('BillingEngine', () => {
       });
 
       const calculateTaxSpy = vi
-        .spyOn(TaxService.prototype, 'calculateTax')
-        .mockResolvedValue({ taxRate: 8.25, taxAmount: 2000 });
-      vi.spyOn(billingEngine as any, 'getTaxInfoFromService').mockResolvedValue({
-        taxRegion: 'US-CA',
-        isTaxable: true
+        .fn()
+        .mockReturnValue({ taxRate: 8.25, taxAmount: 2000 });
+      vi.spyOn(
+        billingEngine as any,
+        'loadChargeComputeTaxContext'
+      ).mockResolvedValue({
+        getTaxInfoFromService: () => ({
+          taxRegion: 'US-CA',
+          isTaxable: true
+        }),
+        getLocationTaxRegionCode: () => null,
+        getClientDefaultTaxRegionCode: () => 'US-CA',
+        calculateTax: calculateTaxSpy
       });
 
       (billingEngine as any).knex = mockKnex;
@@ -1091,7 +1099,6 @@ describe('BillingEngine', () => {
         true,
         'USD'
       );
-      calculateTaxSpy.mockRestore();
     });
 
     it('T056: bucket recurring charges map overage to the explicit bucket usage service periods', async () => {
@@ -1178,11 +1185,17 @@ describe('BillingEngine', () => {
         return baseKnex(tableName);
       });
 
-      vi.spyOn(TaxService.prototype, 'calculateTax')
-        .mockResolvedValue({ taxRate: 8.25, taxAmount: 0 });
-      vi.spyOn(billingEngine as any, 'getTaxInfoFromService').mockResolvedValue({
-        taxRegion: 'US-CA',
-        isTaxable: true
+      vi.spyOn(
+        billingEngine as any,
+        'loadChargeComputeTaxContext'
+      ).mockResolvedValue({
+        getTaxInfoFromService: () => ({
+          taxRegion: 'US-CA',
+          isTaxable: true
+        }),
+        getLocationTaxRegionCode: () => null,
+        getClientDefaultTaxRegionCode: () => 'US-CA',
+        calculateTax: () => ({ taxRate: 8.25, taxAmount: 0 })
       });
 
       (billingEngine as any).knex = mockKnex;
@@ -1870,7 +1883,7 @@ describe('BillingEngine', () => {
 
   describe('Pricing Schedule Integration', () => {
     it('should query contract pricing schedules by contract id for the active service period overlap', () => {
-      expect(billingEngineSource).toContain('db.table("contract_pricing_schedules")');
+      expect(billingEngineSource).toContain('.table("contract_pricing_schedules")');
       expect(billingEngineSource).toContain('contract_id: clientContractLine.contract_id');
       expect(billingEngineSource).toContain('.where("effective_date", "<", servicePeriodEndExclusive)');
       expect(billingEngineSource).toContain('.orWhere("end_date", ">", servicePeriodStartExclusive);');
@@ -1888,7 +1901,8 @@ describe('BillingEngine', () => {
     });
 
     it('should still continue fixed-charge calculation when no pricing schedule row exists', () => {
-      expect(billingEngineSource).toContain('const activePricingSchedule = await db.table("contract_pricing_schedules")');
+      expect(billingEngineSource).toContain('const activePricingSchedule = await db');
+      expect(billingEngineSource).toContain('.table("contract_pricing_schedules")');
       expect(billingEngineSource).toContain('.first();');
       expect(billingEngineSource).toContain('if (');
       expect(billingEngineSource).toContain('activePricingSchedule &&');

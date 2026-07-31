@@ -25,7 +25,8 @@ const usageComputeSource = readFileSync(
 
 describe('system-managed default runtime billing routing and pricing wiring', () => {
   it('F075: forces client schedule cadence semantics for system-managed default lines', () => {
-    expect(billingEngineSource).toContain('const isSystemManagedDefault = (clientContractLine as { is_system_managed_default?: boolean | null })');
+    expect(billingEngineSource).toContain('const isSystemManagedDefault =');
+    expect(billingEngineSource).toContain('(clientContractLine as { is_system_managed_default?: boolean | null })');
     expect(billingEngineSource).toContain('const cadenceOwner = isSystemManagedDefault');
     expect(billingEngineSource).toContain('? "client"');
     expect(billingEngineSource).toContain(': resolveCadenceOwner(clientContractLine.cadence_owner);');

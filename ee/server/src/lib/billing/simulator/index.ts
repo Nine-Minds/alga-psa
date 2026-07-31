@@ -14,8 +14,21 @@
 export {
   snapshotContractToScenario,
   type SnapshotContractToScenarioParams,
-} from './snapshotContractToScenario';
-export { simulateContractScenario } from './simulateContractScenario';
+} from "./snapshotContractToScenario";
+export { simulateContractScenario } from "./simulateContractScenario";
+export { draftContractToScenario } from "./draftContractToScenario";
+export { validateScenarioTenantScope } from "./validateScenarioTenantScope";
+export { compareSimulations } from "./compareSimulations";
+export {
+  aggregateActivityAssumptions,
+  buildRecentAssumptionPeriods,
+  buildReplayAssumptionPeriods,
+  loadRecentAverageAssumptions,
+  loadReplayAssumptions,
+  type AssumptionPeriodWindow,
+  type HistoricalTimeActivityRow,
+  type HistoricalUsageActivityRow,
+} from "./activityAssumptions";
 export {
   assignServicePeriodsToInvoicePeriods,
   buildInvoicePeriods,
@@ -27,7 +40,7 @@ export {
   type ServicePeriodAssignment,
   type SimulatedInvoicePeriodWindow,
   type SimulatorBillingCycle,
-} from './hypotheticalPeriods';
+} from "./hypotheticalPeriods";
 export {
   assumptionKey,
   buildHourlyServiceConfigMap,
@@ -36,8 +49,8 @@ export {
   resolveAssumedQuantity,
   syntheticConfigId,
   type SyntheticTimeEntryInput,
-} from './syntheticActivity';
+} from "./syntheticActivity";
 export {
   createReadOnlyTaxPorts,
   type ReadOnlyTaxPortsOptions,
-} from './readOnlyTaxPorts';
+} from "./readOnlyTaxPorts";
