@@ -1,4 +1,8 @@
-import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+// Imported from the package rather than server/src: this module is pulled into
+// the Temporal worker bundle, and the server-side publisher barrel drags in
+// @alga-psa/notifications, whose exports resolve to .ts sources that plain Node
+// cannot load from the built worker.
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import type { EntraSyncUser } from './types';
 
 export type WorkflowManagedPortalEventType =
