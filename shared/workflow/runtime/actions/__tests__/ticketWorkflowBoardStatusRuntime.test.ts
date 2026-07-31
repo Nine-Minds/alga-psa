@@ -382,6 +382,7 @@ function createActionContext() {
 const findIds = {
   ticketId: '11111111-1111-4111-8111-111111111111',
   companyId: '22222222-2222-4222-8222-222222222222',
+  boardId: '2b2b2b2b-2b2b-4b2b-8b2b-2b2b2b2b2b2b',
   contactId: '33333333-3333-4333-8333-333333333333',
   statusId: '44444444-4444-4444-8444-444444444444',
   priorityId: '55555555-5555-4555-8555-555555555555',
@@ -405,6 +406,7 @@ function createFindTicket(overrides: TableRow = {}): TableRow {
     title: 'Workflow lookup ticket',
     url: null,
     company_id: findIds.companyId,
+    board_id: findIds.boardId,
     contact_name_id: findIds.contactId,
     status_id: findIds.statusId,
     priority_id: findIds.priorityId,
@@ -859,6 +861,34 @@ describe('ticket workflow runtime board-scoped statuses', () => {
     );
 
     expect(result.ticket.response_state).toBe('awaiting_client');
+  });
+
+  it('T047: tickets.find returns board_id in the ticket summary', async () => {
+    setTenantTx({
+      tickets: [createFindTicket()],
+    });
+
+    const action = getAction('tickets.find');
+    const result = await action.handler(
+      { ticket_id: findIds.ticketId },
+      createActionContext()
+    );
+
+    expect(result.ticket.board_id).toBe(findIds.boardId);
+  });
+
+  it('T048: tickets.find tolerates a ticket without a board', async () => {
+    setTenantTx({
+      tickets: [createFindTicket({ board_id: null })],
+    });
+
+    const action = getAction('tickets.find');
+    const result = await action.handler(
+      { ticket_id: findIds.ticketId },
+      createActionContext()
+    );
+
+    expect(result.ticket.board_id).toBeNull();
   });
 
   it('T043: tickets.find returns oldest comments first by default with truncation metadata', async () => {
