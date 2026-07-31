@@ -19,6 +19,8 @@ import { wasEntraSyncAccepted } from './syncStart';
 interface PilotSyncControlProps {
   /** Called after a pilot sync starts, so the surrounding surface can refresh. */
   onPilotStarted?: () => void | Promise<void>;
+  /** Includes resolved mappings and approved create-new decisions. */
+  approvedMappingCount?: number;
   /**
    * When supplied, the overwrite rules are settable here and the preview runs
    * with them as edited — "turn one on and see what changes" is the question
@@ -49,6 +51,7 @@ function mappingLabel(mapping: EntraConfirmedMapping): string {
  */
 export function PilotSyncControl({
   onPilotStarted,
+  approvedMappingCount = 0,
   fieldSyncConfig,
   onFieldSyncConfigChange,
   onFieldSyncSaved,
@@ -152,13 +155,15 @@ export function PilotSyncControl({
         setError(t('integrations.entra.console.errors.syncNotStarted'));
         return;
       }
-      setMessage(t('integrations.entra.pilot.remainingStarted', { count: remainingCount }));
+      setMessage(t('integrations.entra.pilot.remainingStarted', {
+        count: remainingCount || approvedMappingCount,
+      }));
       await onPilotStarted?.();
       await loadMappings();
     } finally {
       setRemainingBusy(false);
     }
-  }, [loadMappings, onPilotStarted, remainingCount, t]);
+  }, [approvedMappingCount, loadMappings, onPilotStarted, remainingCount, t]);
 
   if (loading) {
     return (
@@ -167,6 +172,31 @@ export function PilotSyncControl({
   }
 
   if (mappings.length === 0) {
+    if (approvedMappingCount > 0) {
+      return (
+        <div className="space-y-3" id="entra-pilot-pending-create">
+          <p className="text-sm text-muted-foreground">
+            {t('integrations.entra.pilot.pendingCreate', { count: approvedMappingCount })}
+          </p>
+          <Button
+            id="entra-pilot-create-and-sync"
+            type="button"
+            onClick={() => void handleSyncRemaining()}
+            disabled={remainingBusy}
+          >
+            {remainingBusy
+              ? t('integrations.entra.pilot.actions.syncingRemaining')
+              : t('integrations.entra.pilot.actions.createAndSync')}
+          </Button>
+          {message ? (
+            <p className="text-sm text-muted-foreground" id="entra-pilot-message">{message}</p>
+          ) : null}
+          {error ? (
+            <p className="text-sm text-destructive" id="entra-pilot-error">{error}</p>
+          ) : null}
+        </div>
+      );
+    }
     return (
       <p className="text-sm text-muted-foreground" id="entra-pilot-empty">
         {t('integrations.entra.pilot.empty')}

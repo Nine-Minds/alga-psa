@@ -104,6 +104,11 @@ export function getCurrentDate(): Temporal.PlainDate {
   return Temporal.Now.plainDateISO();
 }
 
+/** Current calendar date in the viewer's resolved IANA timezone. */
+export function getCurrentDateInUserTimeZone(): string {
+  return Temporal.Now.zonedDateTimeISO(getUserTimeZone()).toPlainDate().toString();
+}
+
 export function parseDateSafe(dateStr: string | null | undefined): Temporal.PlainDate | null {
   if (!dateStr) return null;
   try {
@@ -158,4 +163,3 @@ export function formatMinutesAsHoursAndMinutes(
   }
   return `${hours} ${hourText} ${remainingMinutes} ${minLabel}`;
 }
-

@@ -215,6 +215,22 @@ Controls discovery of the SCIM user-provisioning administration UI while the fea
 - When enabled: The SCIM user-provisioning tab is available to eligible enterprise-edition tenants; existing tier and permission checks still apply.
 - SCIM API routes, backend actions, authentication, schemas, migrations, and provisioning behavior remain active regardless of flag state.
 
+### 14. `qbo-item-import`
+Gates the QuickBooks Online Products & Services import (tenant-scoped for piloting).
+
+**Affected Areas:**
+- **MSP Portal:**
+  - "Products & Services" step in the QuickBooks Reconciliation Wizard (Settings › Integrations › QuickBooks)
+- **Server actions:** `previewQboItemImport` / `executeQboItemImport`
+
+**Behavior:**
+- When disabled: the wizard step is absent (the wizard renders its original three steps),
+  and the server actions throw a typed "not enabled" error rather than silently succeeding.
+- Ledger mappings written by a past import are never retroactively hidden — imported
+  mappings remain valid and the export adapter keeps using them.
+- Also gated by EE edition and billing/service RBAC (`billing_settings:read` for preview;
+  `billing_settings:update` + `service:create` for execute).
+
 ## Implementation Details
 
 ### User Identification

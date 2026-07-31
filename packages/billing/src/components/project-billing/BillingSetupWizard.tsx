@@ -188,6 +188,8 @@ export default function BillingSetupWizard({ projectId, clientId, canManage, onE
                       step="0.01"
                       value={totalText}
                       onChange={(e) => setTotalText(e.target.value)}
+                      // LEVERAGE: pattern number-input-wheel-guard — number inputs can change accidentally while scrolling; the same hazard exists on billing-setup-cap, CapPanel, ScheduleEntryDialog, and PhaseRateOverridesEditor. Consider an Input-level opt-in after the UX rule is settled.
+                      onWheel={(e) => (e.target as HTMLInputElement).blur()}
                       placeholder="0.00"
                     />
                   </div>

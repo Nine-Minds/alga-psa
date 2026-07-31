@@ -453,7 +453,11 @@
           "unlinkFailed": "Non è stato possibile scollegare quel cliente.",
           "hidePreview": "Nascondi anteprima",
           "previewLoading": "Lettura della directory di {{client}} da Microsoft…",
-          "previewLoadingHint": "La durata dipende da quanti utenti ha il cliente."
+          "previewLoadingHint": "La durata dipende da quanti utenti ha il cliente.",
+          "previousCount": "Precedente",
+          "syncFinished": "Sincronizzazione completata per {{client}}.",
+          "syncing": "Sincronizzazione…",
+          "syncTrackingFailed": "La sincronizzazione è stata avviata, ma questa pagina non ha potuto seguirla fino al completamento. Aggiorna per vedere il risultato più recente."
         },
         "connection": {
           "changeAction": "Modifica connessione",
@@ -601,6 +605,7 @@
       },
       "pilot": {
         "actions": {
+          "createAndSync": "Crea i clienti approvati e sincronizza",
           "preview": "Anteprima delle modifiche",
           "previewing": "Anteprima in corso…",
           "syncOne": "Sincronizza questo client",
@@ -617,6 +622,7 @@
           "syncFailed": "Non è stato possibile avviare la sincronizzazione."
         },
         "gateNote": "Sincronizza prima un client. Gli altri si sbloccano quando la sua esecuzione termina.",
+        "pendingCreate": "I nuovi clienti approvati ({{count}}) verranno creati da questa sincronizzazione esplicita. Le sincronizzazioni pianificate non possono crearli.",
         "previewPrompt": "Visualizza in anteprima le modifiche per questo cliente prima di scrivere qualsiasi cosa.",
         "remainingStarted": "Sincronizzazione avviata per i restanti {{count}} client.",
         "started": "Sincronizzazione avviata per {{client}}."

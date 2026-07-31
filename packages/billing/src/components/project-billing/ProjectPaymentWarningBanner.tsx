@@ -15,6 +15,35 @@ interface ProjectPaymentWarningBannerProps {
   className?: string;
 }
 
+function splitFirstSentence(message: string): [string, string] {
+  const match = message.match(/^(.+?[.!?])(?:\s+|$)(.*)$/s);
+  return match ? [match[1], match[2]] : [message, ''];
+}
+
+function EmphasizedWarningMessage({
+  message,
+  invoiceNumber,
+}: {
+  message: string;
+  invoiceNumber?: string;
+}) {
+  const [imperative, remainder] = splitFirstSentence(message);
+  const invoiceParts = invoiceNumber ? remainder.split(invoiceNumber) : [remainder];
+
+  return (
+    <>
+      <strong>{imperative}</strong>
+      {remainder && ' '}
+      {invoiceParts.map((part, index) => (
+        <span key={`${part}-${index}`}>
+          {index > 0 && <strong>{invoiceNumber}</strong>}
+          {part}
+        </span>
+      ))}
+    </>
+  );
+}
+
 export default function ProjectPaymentWarningBanner({
   projectId,
   className,
@@ -49,8 +78,10 @@ export default function ProjectPaymentWarningBanner({
   );
 
   let message = genericMessage;
+  let emphasizedInvoiceNumber: string | undefined;
   if (warning.has_billing_details) {
     const invoiceNumber = warning.invoice_number ?? t('billing.paymentWarning.invoiceFallback', 'the linked invoice');
+    emphasizedInvoiceNumber = invoiceNumber;
     if (warning.kind === 'invoice_preparation') {
       message = t(
         'billing.paymentWarning.preparation',
@@ -78,7 +109,7 @@ export default function ProjectPaymentWarningBanner({
         <span className="font-medium">
           {t('billing.paymentWarning.title', 'Payment prerequisite warning')}
         </span>{' '}
-        {message}
+        <EmphasizedWarningMessage message={message} invoiceNumber={emphasizedInvoiceNumber} />
       </AlertDescription>
     </Alert>
   );

@@ -7,14 +7,10 @@ import { EntraTenantMappingTable } from '@ee/components/settings/integrations/En
 const {
   getEntraMappingPreviewMock,
   confirmEntraMappingsMock,
-  skipEntraTenantMappingMock,
-  importEntraTenantAsClientMock,
   getAllClientsMock,
 } = vi.hoisted(() => ({
   getEntraMappingPreviewMock: vi.fn(),
   confirmEntraMappingsMock: vi.fn(),
-  skipEntraTenantMappingMock: vi.fn(),
-  importEntraTenantAsClientMock: vi.fn(),
   getAllClientsMock: vi.fn(),
 }));
 
@@ -26,8 +22,6 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
 vi.mock('@alga-psa/integrations/actions', () => ({
   getEntraMappingPreview: getEntraMappingPreviewMock,
   confirmEntraMappings: confirmEntraMappingsMock,
-  skipEntraTenantMapping: skipEntraTenantMappingMock,
-  importEntraTenantAsClient: importEntraTenantAsClientMock,
 }));
 
 vi.mock('@alga-psa/clients/actions', () => ({
@@ -81,11 +75,6 @@ describe('EntraTenantMappingTable client selection', () => {
     confirmEntraMappingsMock.mockResolvedValue({
       success: true,
       data: { confirmedMappings: 1 },
-    });
-    skipEntraTenantMappingMock.mockResolvedValue({ data: { skipped: true } });
-    importEntraTenantAsClientMock.mockResolvedValue({
-      success: true,
-      data: { clientId: 'client-import-default', managedTenantId: 'managed-import-default' },
     });
   });
 
@@ -214,7 +203,7 @@ describe('EntraTenantMappingTable client selection', () => {
     expect(selectTwo.value).toBe('client-two');
   });
 
-  it('T130: importing an unmapped tenant updates status badge to Imported rather than Auto-matched', async () => {
+  it('T144: create-new is provisional until the reviewed decisions are confirmed', async () => {
     getEntraMappingPreviewMock.mockResolvedValue({
       data: {
         autoMatched: [],
@@ -230,16 +219,9 @@ describe('EntraTenantMappingTable client selection', () => {
         ],
       },
     });
-    getAllClientsMock
-      .mockResolvedValueOnce([{ client_id: 'client-existing', client_name: 'Existing Client' }])
-      .mockResolvedValueOnce([
-        { client_id: 'client-existing', client_name: 'Existing Client' },
-        { client_id: 'client-imported-130', client_name: 'Unmapped Import Tenant' },
-      ]);
-    importEntraTenantAsClientMock.mockResolvedValue({
-      success: true,
-      data: { managedTenantId: 'managed-unmapped-130', clientId: 'client-imported-130' },
-    });
+    getAllClientsMock.mockResolvedValue([
+      { client_id: 'client-existing', client_name: 'Existing Client' },
+    ]);
 
     render(<EntraTenantMappingTable />);
 
@@ -249,32 +231,22 @@ describe('EntraTenantMappingTable client selection', () => {
 
     fireEvent.click(within(initialRow).getByRole('button', { name: 'Import as new client' }));
 
-    // Importing is gated behind a confirmation dialog so an accidental click cannot create a client.
-    const importConfirmButton = await waitFor(() => {
-      const button = document.getElementById('entra-import-confirm-dialog-confirm');
-      expect(button).not.toBeNull();
-      return button as HTMLElement;
-    });
-    expect(importEntraTenantAsClientMock).not.toHaveBeenCalled();
-    fireEvent.click(importConfirmButton);
+    const reviewedRow = screen.getByText('Unmapped Import Tenant').closest('tr') as HTMLElement;
+    expect(within(reviewedRow).getAllByText('Import as new client').length).toBeGreaterThan(0);
+    expect(confirmEntraMappingsMock).not.toHaveBeenCalled();
+    expect(getAllClientsMock).toHaveBeenCalledTimes(1);
 
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Selected Mappings' }));
     await waitFor(() => {
-      expect(importEntraTenantAsClientMock).toHaveBeenCalledWith({
-        managedTenantId: 'managed-unmapped-130',
+      expect(confirmEntraMappingsMock).toHaveBeenCalledWith({
+        mappings: [
+          expect.objectContaining({
+            managedTenantId: 'managed-unmapped-130',
+            clientId: null,
+            mappingState: 'create_new',
+          }),
+        ],
       });
-    });
-
-    await waitFor(() => {
-      // Scope to the table: the imported client's name now also appears in every row's client picker.
-      const table = document.getElementById('entra-mapping-table') as HTMLElement;
-      const updatedRow = within(table)
-        .getAllByText('Unmapped Import Tenant')
-        .map((node) => node.closest('tr'))
-        .find((row): row is HTMLTableRowElement => row !== null) as HTMLElement;
-      expect(within(updatedRow).getByText('Imported')).toBeTruthy();
-      expect(within(updatedRow).queryByText('Auto-matched')).toBeNull();
-      const updatedSelect = within(updatedRow).getByRole('combobox') as HTMLSelectElement;
-      expect(updatedSelect.value).toBe('client-imported-130');
     });
   });
 
@@ -384,7 +356,8 @@ describe('EntraTenantMappingTable client selection', () => {
       );
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+    const reviewRow = screen.getByText('Review 65').closest('tr') as HTMLElement;
+    fireEvent.click(within(reviewRow).getByRole('button', { name: 'Skip' }));
 
     await waitFor(() => {
       expect(onSummaryChange).toHaveBeenCalledWith(

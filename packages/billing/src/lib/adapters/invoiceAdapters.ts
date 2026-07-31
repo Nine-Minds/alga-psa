@@ -319,7 +319,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
       const rawTax = toFiniteNumber((dbData as any).tax);
       const rawTotal = toFiniteNumber((dbData as any).total ?? (dbData as any).total_amount);
       const rawItemTotalsSum = (dbData.invoice_charges ?? []).reduce(
-        (sum: number, item: IInvoiceCharge) => sum + toFiniteNumber(item.total_price),
+        (sum: number, item: IInvoiceCharge) => sum + toFiniteNumber(item.net_amount ?? item.total_price),
         0
       );
       const useLegacyMajorUnits = looksLikeLegacyMajorUnitPayload({
@@ -368,7 +368,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           description: String(item.description ?? ''),
           quantity: toFiniteNumber(item.quantity),
           unitPrice: toMinorUnits(item.unit_price),
-          total: toMinorUnits(item.total_price),
+          total: toMinorUnits(item.net_amount ?? item.total_price),
           taxAmount: toMinorUnits(item.tax_amount),
           servicePeriodStart: summaryStart,
           servicePeriodEnd: summaryEnd,

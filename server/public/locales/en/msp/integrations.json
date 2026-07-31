@@ -453,7 +453,11 @@
           "unlinkFailed": "That client could not be unlinked.",
           "hidePreview": "Hide preview",
           "previewLoading": "Reading {{client}}'s directory from Microsoft…",
-          "previewLoadingHint": "How long this takes depends on how many users the client has."
+          "previewLoadingHint": "How long this takes depends on how many users the client has.",
+          "previousCount": "Previous",
+          "syncFinished": "Sync finished for {{client}}.",
+          "syncing": "Syncing…",
+          "syncTrackingFailed": "The sync started, but this page could not follow it to completion. Refresh to see its latest result."
         },
         "connection": {
           "changeAction": "Change connection",
@@ -601,6 +605,7 @@
       },
       "pilot": {
         "actions": {
+          "createAndSync": "Create approved clients and sync",
           "preview": "Preview changes",
           "previewing": "Previewing…",
           "syncOne": "Sync this client",
@@ -617,6 +622,7 @@
           "syncFailed": "The sync could not be started."
         },
         "gateNote": "Sync one client first. The rest unlock once its run finishes.",
+        "pendingCreate": "Approved create-new clients ({{count}}) will be created by this explicit sync. Scheduled syncs cannot create them.",
         "previewPrompt": "Preview the changes for this client before anything is written.",
         "remainingStarted": "Sync started for the remaining {{count}} clients.",
         "started": "Sync started for {{client}}."

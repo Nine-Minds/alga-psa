@@ -5,12 +5,10 @@ import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getEntraMappingPreview, confirmEntraMappings } from '@alga-psa/integrations/actions';
-import { skipEntraTenantMapping, importEntraTenantAsClient } from '@alga-psa/integrations/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
-import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import type { IClient } from '@alga-psa/types';
 
 /** The mapping table is the setup surface; a partner with 200 tenants pages it. */
@@ -31,7 +29,7 @@ interface MappingTenantRow {
   displayName: string | null;
   primaryDomain: string | null;
   sourceUserCount: number;
-  state: 'auto_matched' | 'needs_review' | 'unmatched' | 'imported';
+  state: 'auto_matched' | 'needs_review' | 'unmatched' | 'create_new';
   candidates: MappingCandidate[];
   selectedClientId: string | null;
   isSkipped: boolean;
@@ -49,31 +47,6 @@ export interface EntraSkippedTenant {
   primaryDomain: string | null;
 }
 
-/**
- * Existing clients whose name overlaps the Entra tenant's, so the operator sees
- * the duplicate they are about to create before they create it. Deliberately
- * loose — this is a warning, not a matcher.
- */
-function findSimilarClientNames(displayName: string | null, clients: IClient[]): string[] {
-  const normalize = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-  const target = normalize(displayName || '');
-  if (!target) {
-    return [];
-  }
-
-  const targetTokens = target.split(' ').filter((token) => token.length > 2);
-
-  return clients
-    .map((client) => String(client.client_name || ''))
-    .filter((clientName) => {
-      const candidate = normalize(clientName);
-      if (!candidate) return false;
-      if (candidate === target || candidate.includes(target) || target.includes(candidate)) return true;
-      return targetTokens.some((token) => candidate.split(' ').includes(token));
-    })
-    .slice(0, 5);
-}
-
 function formatConfidence(score: number): string {
   return `${Math.round(score * 100)}%`;
 }
@@ -85,15 +58,37 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
 
   const rows: MappingTenantRow[] = [];
 
+  const persistedDecision = (
+    item: any,
+    fallbackState: MappingTenantRow['state'],
+    fallbackClientId: string | null,
+  ): Pick<MappingTenantRow, 'state' | 'selectedClientId' | 'isSkipped'> => {
+    if (item?.mappingState === 'skip_for_now') {
+      return { state: fallbackState, selectedClientId: null, isSkipped: true };
+    }
+    if (item?.mappingState === 'create_new') {
+      return { state: 'create_new', selectedClientId: null, isSkipped: false };
+    }
+    if (item?.mappingState === 'mapped' && item?.mappedClientId) {
+      return {
+        state: fallbackState,
+        selectedClientId: String(item.mappedClientId),
+        isSkipped: false,
+      };
+    }
+    return { state: fallbackState, selectedClientId: fallbackClientId, isSkipped: false };
+  };
+
   for (const item of autoMatched) {
     const match = item?.match || {};
+    const decision = persistedDecision(item, 'auto_matched', String(match.clientId || '') || null);
     rows.push({
       managedTenantId: String(item?.managedTenantId || ''),
       entraTenantId: String(item?.entraTenantId || ''),
       displayName: item?.displayName || null,
       primaryDomain: item?.primaryDomain || null,
       sourceUserCount: Number(item?.sourceUserCount || 0),
-      state: 'auto_matched',
+      state: decision.state,
       candidates: [
         {
           clientId: String(match.clientId || ''),
@@ -102,42 +97,44 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
           reason: (match.reason || 'exact_domain') as MatchReason,
         },
       ],
-      selectedClientId: String(match.clientId || '') || null,
-      isSkipped: false,
+      selectedClientId: decision.selectedClientId,
+      isSkipped: decision.isSkipped,
     });
   }
 
   for (const item of fuzzyCandidates) {
     const candidates = Array.isArray(item?.candidates) ? item.candidates : [];
+    const decision = persistedDecision(item, 'needs_review', null);
     rows.push({
       managedTenantId: String(item?.managedTenantId || ''),
       entraTenantId: String(item?.entraTenantId || ''),
       displayName: item?.displayName || null,
       primaryDomain: item?.primaryDomain || null,
       sourceUserCount: Number(item?.sourceUserCount || 0),
-      state: 'needs_review',
+      state: decision.state,
       candidates: candidates.map((candidate: any) => ({
         clientId: String(candidate?.clientId || ''),
         clientName: String(candidate?.clientName || ''),
         confidenceScore: Number(candidate?.confidenceScore || 0),
         reason: (candidate?.reason || 'fuzzy_name') as MatchReason,
       })),
-      selectedClientId: null,
-      isSkipped: false,
+      selectedClientId: decision.selectedClientId,
+      isSkipped: decision.isSkipped,
     });
   }
 
   for (const item of unmatched) {
+    const decision = persistedDecision(item, 'unmatched', null);
     rows.push({
       managedTenantId: String(item?.managedTenantId || ''),
       entraTenantId: String(item?.entraTenantId || ''),
       displayName: item?.displayName || null,
       primaryDomain: item?.primaryDomain || null,
       sourceUserCount: Number(item?.sourceUserCount || 0),
-      state: 'unmatched',
+      state: decision.state,
       candidates: [],
-      selectedClientId: null,
-      isSkipped: false,
+      selectedClientId: decision.selectedClientId,
+      isSkipped: decision.isSkipped,
     });
   }
 
@@ -165,9 +162,6 @@ export function EntraTenantMappingTable({
   const [error, setError] = React.useState<string | null>(null);
   const [rows, setRows] = React.useState<MappingTenantRow[]>([]);
   const [allClients, setAllClients] = React.useState<IClient[]>([]);
-  const [skippingByRow, setSkippingByRow] = React.useState<Record<string, boolean>>({});
-  const [importingByRow, setImportingByRow] = React.useState<Record<string, boolean>>({});
-  const [importConfirmRow, setImportConfirmRow] = React.useState<MappingTenantRow | null>(null);
   const [confirmingMappings, setConfirmingMappings] = React.useState(false);
   const [confirmFeedback, setConfirmFeedback] = React.useState<string | null>(null);
 
@@ -208,9 +202,13 @@ export function EntraTenantMappingTable({
   }, []);
 
   const summary = React.useMemo<EntraMappingSummary>(() => ({
-    mapped: rows.filter((row) => !row.isSkipped && Boolean(row.selectedClientId)).length,
+    mapped: rows.filter(
+      (row) => !row.isSkipped && (row.state === 'create_new' || Boolean(row.selectedClientId))
+    ).length,
     skipped: rows.filter((row) => row.isSkipped).length,
-    needsReview: rows.filter((row) => !row.isSkipped && row.state === 'needs_review').length,
+    needsReview: rows.filter(
+      (row) => !row.isSkipped && row.state !== 'create_new' && !row.selectedClientId
+    ).length,
   }), [rows]);
 
   const skippedTenants = React.useMemo<EntraSkippedTenant[]>(() => (
@@ -244,13 +242,22 @@ export function EntraTenantMappingTable({
   const mappingsToConfirm = React.useMemo(
     () =>
       rows
-        .filter((row) => !row.isSkipped && row.state !== 'imported' && Boolean(row.selectedClientId))
-        .map((row) => ({
-          managedTenantId: row.managedTenantId,
-          clientId: String(row.selectedClientId),
-          mappingState: 'mapped' as const,
-          confidenceScore: row.candidates[0]?.confidenceScore ?? null,
-        })),
+        .filter(
+          (row) => row.isSkipped || row.state === 'create_new' || Boolean(row.selectedClientId)
+        )
+        .map((row) => {
+          const mappingState = row.isSkipped
+            ? 'skip_for_now' as const
+            : row.state === 'create_new'
+              ? 'create_new' as const
+              : 'mapped' as const;
+          return {
+            managedTenantId: row.managedTenantId,
+            clientId: mappingState === 'mapped' ? String(row.selectedClientId) : null,
+            mappingState,
+            confidenceScore: row.candidates[0]?.confidenceScore ?? null,
+          };
+        }),
     [rows]
   );
 
@@ -258,85 +265,38 @@ export function EntraTenantMappingTable({
     setRows((currentRows) =>
       currentRows.map((row) =>
         row.managedTenantId === managedTenantId
-          ? { ...row, selectedClientId: selectedClientId || null }
+          ? {
+              ...row,
+              state: row.candidates.length > 0 ? 'needs_review' : 'unmatched',
+              selectedClientId: selectedClientId || null,
+              isSkipped: false,
+            }
           : row
       )
     );
   }, []);
 
-  const handleSkip = React.useCallback(async (row: MappingTenantRow) => {
-    if (!row.managedTenantId) {
-      return;
-    }
-
+  const handleSkip = React.useCallback((row: MappingTenantRow) => {
     setConfirmFeedback(null);
-    setSkippingByRow((current) => ({ ...current, [row.managedTenantId]: true }));
-    try {
-      const result = await skipEntraTenantMapping({
-        managedTenantId: row.managedTenantId,
-      });
+    setRows((currentRows) =>
+      currentRows.map((currentRow) =>
+        currentRow.managedTenantId === row.managedTenantId
+          ? { ...currentRow, isSkipped: true, selectedClientId: null }
+          : currentRow
+      )
+    );
+  }, []);
 
-      if ('error' in result) {
-        setError(result.error || t('integrations.entra.tenantMapping.errors.skipFailed'));
-        return;
-      }
-
-      setRows((currentRows) =>
-        currentRows.map((currentRow) =>
-          currentRow.managedTenantId === row.managedTenantId
-            ? { ...currentRow, isSkipped: true, selectedClientId: null }
-            : currentRow
-        )
-      );
-      onPersistedMappingChange?.();
-    } finally {
-      setSkippingByRow((current) => ({ ...current, [row.managedTenantId]: false }));
-    }
-  }, [onPersistedMappingChange]);
-
-  const handleImportAsClient = React.useCallback(async (row: MappingTenantRow) => {
-    if (!row.managedTenantId) {
-      return;
-    }
-
+  const handleImportAsClient = React.useCallback((row: MappingTenantRow) => {
     setConfirmFeedback(null);
-    setImportingByRow((current) => ({ ...current, [row.managedTenantId]: true }));
-    try {
-      const result = await importEntraTenantAsClient({
-        managedTenantId: row.managedTenantId,
-      });
-
-      if ('error' in result) {
-        setError(result.error || t('integrations.entra.tenantMapping.errors.importFailed'));
-        return;
-      }
-
-      // Update the row state locally so the table visually marks it as imported, and update the client picker
-      const clientResult = await getAllClients();
-      if (Array.isArray(clientResult)) {
-        const normalized = clientResult as IClient[];
-        normalized.sort((a, b) => (a.client_name || '').localeCompare(b.client_name || ''));
-        setAllClients(normalized);
-      }
-
-      setRows((currentRows) =>
-        currentRows.map((r) =>
-          r.managedTenantId === row.managedTenantId && 'clientId' in result.data
-            ? { ...r, state: 'imported', selectedClientId: result.data.clientId, isSkipped: false }
-            : r
-        )
-      );
-      onPersistedMappingChange?.();
-      setImportConfirmRow(null);
-    } finally {
-      setImportingByRow((current) => ({ ...current, [row.managedTenantId]: false }));
-    }
-  }, [onPersistedMappingChange]);
-
-  const importSimilarClients = React.useMemo(
-    () => (importConfirmRow ? findSimilarClientNames(importConfirmRow.displayName, allClients) : []),
-    [allClients, importConfirmRow]
-  );
+    setRows((currentRows) =>
+      currentRows.map((currentRow) =>
+        currentRow.managedTenantId === row.managedTenantId
+          ? { ...currentRow, state: 'create_new', selectedClientId: null, isSkipped: false }
+          : currentRow
+      )
+    );
+  }, []);
 
   const handleConfirmSelectedMappings = React.useCallback(async () => {
     if (mappingsToConfirm.length === 0) {
@@ -414,20 +374,20 @@ export function EntraTenantMappingTable({
       render: (_value, row) => {
         const state = row.isSkipped ? 'skipped' : row.state;
         const variant: BadgeVariant =
-          state === 'auto_matched' || state === 'imported' ? 'secondary' : 'outline';
+          state === 'auto_matched' || state === 'create_new' ? 'secondary' : 'outline';
         const labelKey =
           state === 'skipped'
             ? 'skipped'
             : state === 'auto_matched'
               ? 'autoMatched'
-              : state === 'imported'
-                ? 'imported'
-                : state === 'needs_review'
+              : state === 'needs_review'
                   ? 'needsReview'
                   : 'unmatched';
         return (
           <Badge variant={variant} size="sm">
-            {t(`integrations.entra.tenantMapping.states.${labelKey}`)}
+            {state === 'create_new'
+              ? t('integrations.entra.tenantMapping.actions.import')
+              : t(`integrations.entra.tenantMapping.states.${labelKey}`)}
           </Badge>
         );
       },
@@ -459,7 +419,7 @@ export function EntraTenantMappingTable({
       width: '230px',
       sortable: false,
       render: (_value, row) => (
-        <div className={loading || row.isSkipped ? 'pointer-events-none opacity-50' : ''}>
+        <div className={loading ? 'pointer-events-none opacity-50' : ''}>
           <ClientPicker
             id={`entra-client-picker-${row.managedTenantId}`}
             clients={allClients}
@@ -482,37 +442,32 @@ export function EntraTenantMappingTable({
       dataIndex: 'managedTenantId',
       width: '176px',
       sortable: false,
-      render: (_value, row) =>
-        row.state !== 'auto_matched' && row.state !== 'imported' ? (
-          <div className="flex flex-nowrap items-center gap-2">
-            <Button
-              id={`entra-import-row-${row.managedTenantId}`}
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => setImportConfirmRow(row)}
-              disabled={loading || row.isSkipped || Boolean(importingByRow[row.managedTenantId])}
-            >
-              {importingByRow[row.managedTenantId]
-                ? t('integrations.entra.tenantMapping.actions.importing')
-                : t('integrations.entra.tenantMapping.actions.import')}
-            </Button>
-            <Button
-              id={`entra-skip-row-${row.managedTenantId}`}
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => void handleSkip(row)}
-              disabled={loading || row.isSkipped || Boolean(skippingByRow[row.managedTenantId])}
-            >
-              {row.isSkipped
-                ? t('integrations.entra.tenantMapping.actions.skipped')
-                : t('integrations.entra.tenantMapping.actions.skip')}
-            </Button>
-          </div>
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        ),
+      render: (_value, row) => (
+        <div className="flex flex-nowrap items-center gap-2">
+          <Button
+            id={`entra-import-row-${row.managedTenantId}`}
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => handleImportAsClient(row)}
+            disabled={loading}
+          >
+            {t('integrations.entra.tenantMapping.actions.import')}
+          </Button>
+          <Button
+            id={`entra-skip-row-${row.managedTenantId}`}
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => handleSkip(row)}
+            disabled={loading}
+          >
+            {row.isSkipped
+              ? t('integrations.entra.tenantMapping.actions.skipped')
+              : t('integrations.entra.tenantMapping.actions.skip')}
+          </Button>
+        </div>
+      ),
     },
   ];
 
@@ -559,40 +514,6 @@ export function EntraTenantMappingTable({
         pageSize={MAPPING_PAGE_SIZE}
       />
 
-      <ConfirmationDialog
-        id="entra-import-confirm-dialog"
-        isOpen={importConfirmRow !== null}
-        onClose={() => setImportConfirmRow(null)}
-        onConfirm={() => (importConfirmRow ? handleImportAsClient(importConfirmRow) : undefined)}
-        isConfirming={Boolean(importConfirmRow && importingByRow[importConfirmRow.managedTenantId])}
-        title={t('integrations.entra.tenantMapping.importConfirm.title')}
-        message={
-          <div className="min-w-0 space-y-2 text-sm text-muted-foreground">
-            <p>
-              {t('integrations.entra.tenantMapping.importConfirm.body', {
-                tenant: importConfirmRow?.displayName
-                  || importConfirmRow?.primaryDomain
-                  || importConfirmRow?.entraTenantId
-                  || '',
-              })}
-            </p>
-            {importSimilarClients.length > 0 ? (
-              <div>
-                <p className="font-medium text-foreground">
-                  {t('integrations.entra.tenantMapping.importConfirm.similarWarning')}
-                </p>
-                <ul className="mt-1 list-disc pl-4">
-                  {importSimilarClients.map((clientName) => (
-                    <li key={clientName} className="truncate">{clientName}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </div>
-        }
-        confirmLabel={t('integrations.entra.tenantMapping.actions.import')}
-        cancelLabel={t('integrations.entra.tenantMapping.actions.cancel')}
-      />
     </div>
   );
 }

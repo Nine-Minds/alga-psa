@@ -116,6 +116,11 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
     onSelectedIdsChange: setSelected,
   });
 
+  const selectedRows = rows.filter((row) => selected.has(row.entry.schedule_entry_id));
+  const canBulkApproveSelection = selected.size > 0
+    && selectedRows.length === selected.size
+    && selectedRows.every((row) => row.invoice_mode === 'recurring');
+
   const handleSelectAll = (checked: boolean) => {
     setSelected(checked ? new Set(rows.map((row) => row.entry.schedule_entry_id)) : new Set());
   };
@@ -184,7 +189,9 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
   };
 
   const handleBulkApprove = async () => {
-    const ids = Array.from(selected);
+    const ids = selectedRows
+      .filter((row) => row.invoice_mode === 'recurring')
+      .map((row) => row.entry.schedule_entry_id);
     if (ids.length === 0) return;
     setIsBusy(true);
     try {
@@ -385,14 +392,16 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                id={`project-billing-approve-${record.entry.schedule_entry_id}`}
-                onClick={() => handleApprove(record.entry.schedule_entry_id)}
-                className="flex items-center gap-2"
-              >
-                <CheckCircle className="h-4 w-4" />
-                {t('projectBilling.actions.approve', { defaultValue: 'Approve' })}
-              </DropdownMenuItem>
+              {record.invoice_mode === 'recurring' && (
+                <DropdownMenuItem
+                  id={`project-billing-approve-${record.entry.schedule_entry_id}`}
+                  onClick={() => handleApprove(record.entry.schedule_entry_id)}
+                  className="flex items-center gap-2"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  {t('projectBilling.actions.approve', { defaultValue: 'Approve' })}
+                </DropdownMenuItem>
+              )}
               {record.invoice_mode === 'standalone' && (
                 <DropdownMenuItem
                   id={`project-billing-approve-invoice-${record.entry.schedule_entry_id}`}
@@ -450,14 +459,16 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              id="project-billing-bulk-approve"
-              onClick={handleBulkApprove}
-              className="flex items-center gap-2"
-            >
-              <CheckCircle className="h-4 w-4" />
-              {t('projectBilling.actions.approveSelected', { defaultValue: 'Approve selected' })}
-            </DropdownMenuItem>
+            {canBulkApproveSelection && (
+              <DropdownMenuItem
+                id="project-billing-bulk-approve"
+                onClick={handleBulkApprove}
+                className="flex items-center gap-2"
+              >
+                <CheckCircle className="h-4 w-4" />
+                {t('projectBilling.actions.approveSelected', { defaultValue: 'Approve selected' })}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               id="project-billing-bulk-hold"
               onClick={() => openHoldDialog(Array.from(selected))}

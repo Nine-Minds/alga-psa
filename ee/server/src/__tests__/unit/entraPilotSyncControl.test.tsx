@@ -68,6 +68,9 @@ function mapping(overrides: Record<string, unknown> = {}) {
     displayName: 'Contoso Ltd',
     primaryDomain: 'contoso.com',
     sourceUserCount: 12,
+    userCount: 12,
+    userCountSource: 'discovery',
+    userCountObservedAt: null,
     lastSyncedAt: null,
     lastRunStatus: null,
     ...overrides,
@@ -206,5 +209,15 @@ describe('PilotSyncControl', () => {
 
     await waitFor(() => expect(document.getElementById('entra-pilot-empty')).not.toBeNull());
     expect(document.getElementById('entra-pilot-control')).toBeNull();
+  });
+
+  it('T146: explicitly syncs approved create-new decisions when no client exists yet', async () => {
+    getEntraConfirmedMappingsMock.mockResolvedValue({ success: true, data: { mappings: [] } });
+
+    render(<PilotSyncControl approvedMappingCount={1} />);
+
+    await waitFor(() => expect(document.getElementById('entra-pilot-pending-create')).not.toBeNull());
+    fireEvent.click(document.getElementById('entra-pilot-create-and-sync') as HTMLButtonElement);
+    await waitFor(() => expect(startEntraSyncMock).toHaveBeenCalledWith({ scope: 'all-tenants' }));
   });
 });

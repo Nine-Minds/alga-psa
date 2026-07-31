@@ -32,6 +32,35 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
     },
   });
 
+  reg.seeder({
+    name: 'organization',
+    description: 'Add an Entra organization returned by Graph /organization',
+    params: z.object({
+      id: z.string().optional(),
+      displayName: z.string().optional(),
+      primaryDomain: z.string().optional(),
+    }),
+    run: (input) => core.addOrganization(input),
+  });
+
+  reg.seeder({
+    name: 'directory-user',
+    description: 'Add an Entra directory user returned by Graph /users',
+    params: z.object({
+      id: z.string().optional(),
+      displayName: z.string().optional(),
+      givenName: z.string().nullable().optional(),
+      surname: z.string().nullable().optional(),
+      mail: z.string().nullable().optional(),
+      userPrincipalName: z.string().optional(),
+      accountEnabled: z.boolean().optional(),
+      jobTitle: z.string().nullable().optional(),
+      mobilePhone: z.string().nullable().optional(),
+      businessPhones: z.array(z.string()).optional(),
+    }),
+    run: (input) => core.addDirectoryUser(input),
+  });
+
   reg.action({
     name: 'expire-access-tokens',
     description: 'Expire every issued access token so the next Graph call 401s',
@@ -88,6 +117,18 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
     name: 'subscriptions',
     description: 'Change-notification subscriptions (including owning client)',
     get: () => [...core.subscriptions.values()],
+  });
+
+  reg.stateView({
+    name: 'organizations',
+    description: 'Entra organizations',
+    get: () => core.listOrganizations(),
+  });
+
+  reg.stateView({
+    name: 'directory-users',
+    description: 'Entra directory users',
+    get: () => core.listDirectoryUsers(),
   });
 
   reg.stateView({

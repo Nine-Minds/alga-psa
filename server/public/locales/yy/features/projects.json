@@ -1637,6 +1637,7 @@
       "manualSub": "55555",
       "phaseRemoved": "55555",
       "phaseTrigger": "55555",
+      "phaseOverdue": "55555",
       "approve": "55555",
       "approveInvoice": "55555",
       "hold": "55555",
@@ -1715,9 +1716,9 @@
       "saving": "55555",
       "errorAmount": "55555"
     },
+    "generateProjectInvoice": "55555",
+    "generatingProjectInvoice": "55555",
     "tm": {
-      "generateInvoice": "55555",
-      "generatingInvoice": "55555",
       "invoiceGenerated": "55555"
     },
     "overrides": {

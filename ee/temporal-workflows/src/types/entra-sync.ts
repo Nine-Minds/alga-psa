@@ -20,6 +20,9 @@ export interface EntraManagedTenantRef {
   managedTenantId: string;
   entraTenantId: string;
   clientId?: string | null;
+  mappingState?: 'mapped' | 'create_new';
+  displayName?: string | null;
+  primaryDomain?: string | null;
 }
 
 export interface EntraSyncWorkflowInput {
@@ -57,6 +60,13 @@ export interface EntraTenantSyncResult {
   managedTenantId: string;
   clientId: string | null;
   status: EntraSyncRunStatus;
+  /**
+   * Eligible Entra users observed by this tenant sync. Present even when zero;
+   * absent when the directory read or reconciliation did not complete.
+   */
+  eligibleUserCount?: number;
+  /** Dry runs are audit evidence and must not replace the last real count. */
+  isDryRun?: boolean;
   created: number;
   linked: number;
   updated: number;
@@ -101,10 +111,18 @@ export interface UpsertEntraSyncRunActivityOutput {
 export interface LoadMappedTenantsActivityInput {
   tenantId: string;
   managedTenantId?: string;
+  /** Explicit initial/manual runs may resolve operator-approved create-new decisions. */
+  includeCreateNew?: boolean;
 }
 
 export interface LoadMappedTenantsActivityOutput {
   mappings: EntraManagedTenantRef[];
+}
+
+export interface ProvisionEntraClientActivityInput {
+  tenantId: string;
+  mapping: EntraManagedTenantRef;
+  actorUserId?: string;
 }
 
 export interface SyncTenantUsersActivityInput {
