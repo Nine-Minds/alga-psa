@@ -23,7 +23,7 @@ Alternatively, you can directly access it via:
 >
 > Outbound email is sent through **SMTP** (available on all tiers) or **managed
 > Resend domains** (Solo tier and up). On appliance / Essentials-tier installs the
-> outbound provider is locked to SMTP: go to **Settings > Email > Outbound**, fill in
+> outbound provider is locked to SMTP: go to **Settings → Email → Outbound**, fill in
 > the SMTP host, port, username, password, and From address, then save. The outbound
 > domain is derived from the SMTP From address (not from any inbound mailbox), which
 > enables the "Ticketing From" field.
