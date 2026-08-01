@@ -16,6 +16,14 @@ export type QuoteStatus =
   | 'superseded'
   | 'archived';
 
+export const REVISABLE_QUOTE_STATUSES: ReadonlyArray<QuoteStatus> = [
+  'sent',
+  'rejected',
+  'expired',
+  'cancelled',
+  'accepted',
+] as const;
+
 export interface IQuoteItem extends TenantEntity {
   quote_item_id: string;
   quote_id: string;

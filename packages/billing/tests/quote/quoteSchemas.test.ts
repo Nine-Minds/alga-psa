@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { IQuote, IQuoteListItem, QuoteStatus } from '@alga-psa/types';
+import { REVISABLE_QUOTE_STATUSES, type IQuote, type IQuoteListItem, type QuoteStatus } from '@alga-psa/types';
 import {
   createQuoteItemSchema,
   createQuoteSchema,
@@ -53,6 +53,16 @@ describe('Quote types and schemas', () => {
       'cancelled',
       'superseded',
     ]));
+  });
+
+  it('T010a: revisable quote statuses are shared by the model and UI', () => {
+    expect(REVISABLE_QUOTE_STATUSES).toEqual([
+      'sent',
+      'rejected',
+      'expired',
+      'cancelled',
+      'accepted',
+    ]);
   });
 
   it('T011: IQuoteListItem includes joined client fields and display values', () => {

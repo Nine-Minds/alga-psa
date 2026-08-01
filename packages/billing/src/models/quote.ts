@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import type { IQuote, IQuoteListItem, IQuoteWithClient, PaginatedResult, QuoteStatus } from '@alga-psa/types';
+import { REVISABLE_QUOTE_STATUSES, type IQuote, type IQuoteListItem, type IQuoteWithClient, type PaginatedResult, type QuoteStatus } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -357,8 +357,8 @@ const Quote = {
       throw new Error('Quote templates cannot be revised');
     }
 
-    if (!sourceQuote.status || !['sent', 'rejected'].includes(sourceQuote.status)) {
-      throw new Error('Only sent or rejected quotes can be revised');
+    if (!sourceQuote.status || !REVISABLE_QUOTE_STATUSES.includes(sourceQuote.status)) {
+      throw new Error('Only sent, rejected, expired, cancelled, or accepted quotes can be revised');
     }
 
     const rootQuoteId = sourceQuote.parent_quote_id ?? sourceQuote.quote_id;

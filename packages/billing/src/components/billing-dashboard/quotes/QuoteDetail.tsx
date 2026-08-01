@@ -924,6 +924,10 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             <Button id="quote-detail-cancel" variant="outline" onClick={() => void handleCancelQuote()} disabled={isWorking}>{t('common.actions.cancel', { defaultValue: 'Cancel' })}</Button>
           </>
         );
+      case 'rejected':
+      case 'expired':
+      case 'cancelled':
+        return <Button id="quote-detail-revise" onClick={() => void handleReviseQuote()} disabled={isWorking}>{t('common.actions.revise', { defaultValue: 'Revise' })}</Button>;
       case 'accepted':
         return (
           <>
@@ -933,6 +937,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             {canConvertToSalesOrder ? (
               <Button id="quote-detail-convert-sales-order" onClick={() => void handleOpenConversionDialog('sales_order')} disabled={isWorking || isPreviewLoading}>{t('quoteForm.actions.convertToSalesOrder', { defaultValue: 'Convert to Sales Order' })}</Button>
             ) : null}
+            <Button id="quote-detail-revise" variant="outline" onClick={() => void handleReviseQuote()} disabled={isWorking}>{t('common.actions.revise', { defaultValue: 'Revise' })}</Button>
           </>
         );
       case 'approved':
