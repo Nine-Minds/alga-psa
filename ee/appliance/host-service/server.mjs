@@ -10,7 +10,6 @@ import { collectStatusSnapshotAsync } from './status-engine.mjs';
 import { createKubectlQueue } from './kubectl-queue.mjs';
 import { persistSetupInputs, validateSetupInputs, runNetworkChecks, resolveReleaseManifest } from './setup-engine.mjs';
 import { generateSupportBundle } from './support-bundle.mjs';
-import { runAppChannelUpdate } from './update-engine.mjs';
 import { createNativeKubernetesAdapter } from './kubernetes-client-adapter.mjs';
 import { PodExecManager } from './pod-exec-manager.mjs';
 import { PortForwardManager } from './port-forward-manager.mjs';
@@ -538,6 +537,35 @@ function queueSetupWorkflow() {
     new URL('./setup-engine.mjs', import.meta.url).pathname,
     'run',
     '--setup-inputs', setupInputsFile,
+    '--state-file', stateFile,
+    '--release-selection-file', releaseSelectionFile,
+    '--kubeconfig', kubeconfigPath
+  ], {
+    detached: true,
+    stdio: 'ignore',
+    env: process.env
+  });
+  child.unref();
+}
+
+// LEVERAGE: pattern detached-engine-workflow — queueSetupWorkflow and
+// queueUpdateWorkflow duplicate the detached-child spawn shape; a shared
+// queueEngineWorkflow(scriptUrl, args) would collapse them.
+// App-channel updates run in a detached child for the same reason setup does:
+// the engine shells out through spawnSync (storage reconcile, flux reconcile),
+// which would freeze this server's event loop — including /healthz — long
+// enough for the pod's liveness probe to kill the control plane mid-update
+// (alga0002202). The child writes install-state as it goes, so the Manage UI's
+// /api/manage/status polling keeps working while the update runs.
+function queueUpdateWorkflow(channel) {
+  if (process.env.ALGA_APPLIANCE_DISABLE_UPDATE_QUEUE === '1') {
+    return;
+  }
+
+  const child = spawn(process.execPath, [
+    new URL('./update-engine.mjs', import.meta.url).pathname,
+    'run',
+    '--channel', channel,
     '--state-file', stateFile,
     '--release-selection-file', releaseSelectionFile,
     '--kubeconfig', kubeconfigPath
@@ -1288,10 +1316,17 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // Kick the update off and return immediately. The control-plane pod survives
-    // an app-channel update (only the app pod restarts), so it runs to completion
-    // here while the Manage UI polls /api/manage/status (install-state).
-    runAppChannelUpdate({ channel }).catch(() => {});
+    // Record the queued update before spawning so the Manage UI's very next
+    // status poll already reflects it, then hand off to the detached child.
+    fs.mkdirSync(path.dirname(stateFile), { recursive: true, mode: 0o750 });
+    fs.writeFileSync(stateFile, `${JSON.stringify({
+      status: 'update-queued',
+      phase: 'registry-release-source',
+      lastAction: `Update to ${channel} queued; background workflow is starting`,
+      updatedAt: new Date().toISOString(),
+      update: { requestedChannel: channel, scope: 'application-only' }
+    }, null, 2)}\n`, { mode: 0o600 });
+    queueUpdateWorkflow(channel);
     res.writeHead(202, { 'content-type': 'application/json' });
     res.end(JSON.stringify({ ok: true, started: true }));
     return;
