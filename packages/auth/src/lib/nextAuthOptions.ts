@@ -1809,6 +1809,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                                 user_type: extendedUser.user_type,
                                 clientId: extendedUser.clientId,
                                 contactId: extendedUser.contactId,
+                                login_method: providerId,
                             },
                         });
 
@@ -1862,6 +1863,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                                 user_type: extendedUser.user_type,
                                 clientId: extendedUser.clientId,
                                 contactId: extendedUser.contactId,
+                                login_method: 'credentials',
                             },
                         });
 
@@ -2676,6 +2678,7 @@ export const options: NextAuthConfig = {
                                 user_type: extendedUser.user_type,
                                 clientId: extendedUser.clientId,
                                 contactId: extendedUser.contactId,
+                                login_method: providerId,
                             },
                         });
 
@@ -2715,6 +2718,7 @@ export const options: NextAuthConfig = {
                                 user_type: extendedUser.user_type,
                                 clientId: extendedUser.clientId,
                                 contactId: extendedUser.contactId,
+                                login_method: 'credentials',
                             },
                         });
 

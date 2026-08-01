@@ -3,10 +3,19 @@ import { cookies } from 'next/headers.js';
 import { promises as dns } from 'node:dns';
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { UserSession } from '@alga-psa/db/models/UserSession';
 
 import { analytics } from 'server/src/lib/analytics/posthog';
-import { buildSessionCookie, encodePortalSessionToken } from '@alga-psa/auth';
-import { consumePortalDomainOtt } from '@alga-psa/auth';
+import {
+  buildSessionCookie,
+  consumePortalDomainOtt,
+  encodePortalSessionToken,
+  generateDeviceFingerprint,
+  getClientIp,
+  getDeviceInfo,
+  getLocationFromIp,
+  getSessionMaxAge,
+} from '@alga-psa/auth';
 import { getPortalDomainByHostname, normalizeHostname } from 'server/src/models/PortalDomainModel';
 import { resolveRequestProto } from '@/lib/deployment/requestHost';
 
@@ -228,7 +237,54 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const userSnapshot = ottRecord.metadata.userSnapshot;
-    const sessionToken = await encodePortalSessionToken(userSnapshot);
+    const loginMethod = userSnapshot.login_method ?? 'credentials';
+    const existingSessionId = userSnapshot.session_id;
+    let sessionId =
+      typeof existingSessionId === 'string' && existingSessionId.trim().length > 0
+        ? existingSessionId
+        : undefined;
+
+    if (!sessionId) {
+      const ip = getClientIp(request);
+      const userAgent = request.headers.get('user-agent') ?? 'unknown';
+      const deviceFingerprint = generateDeviceFingerprint(userAgent);
+      const deviceInfo = getDeviceInfo(userAgent);
+
+      await UserSession.enforceMaxSessions(portalDomain.tenant, userSnapshot.id, 5);
+      const createdSessionId = await UserSession.create({
+        tenant: portalDomain.tenant,
+        user_id: userSnapshot.id,
+        ip_address: ip,
+        user_agent: userAgent,
+        device_fingerprint: deviceFingerprint,
+        device_name: deviceInfo.name,
+        device_type: deviceInfo.type,
+        location_data: null,
+        expires_at: new Date(Date.now() + getSessionMaxAge() * 1000),
+        login_method: loginMethod,
+      });
+      sessionId = createdSessionId;
+
+      getLocationFromIp(ip)
+        .then((locationData) => {
+          if (locationData) {
+            return UserSession.updateLocation(portalDomain.tenant, createdSessionId, locationData);
+          }
+        })
+        .catch((error) => {
+          logger.warn('Failed to update portal domain session location', {
+            tenant: portalDomain.tenant,
+            sessionId: createdSessionId,
+            error,
+          });
+        });
+    }
+
+    const sessionToken = await encodePortalSessionToken({
+      ...userSnapshot,
+      session_id: sessionId,
+      login_method: loginMethod,
+    });
     const sessionCookie = buildSessionCookie(sessionToken);
     const requestUrl = new URL(request.url);
     const requestScheme = resolveRequestProto(request) ?? requestUrl.protocol.replace(/:$/, '');
