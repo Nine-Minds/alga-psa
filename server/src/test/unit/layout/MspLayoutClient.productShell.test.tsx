@@ -55,6 +55,10 @@ vi.mock('@/context/ProductContext', () => ({
   ProductProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+vi.mock('@/components/licenses/LicenseBanner', () => ({
+  default: () => <div data-testid="license-banner" />,
+}));
+
 vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({
   KeyboardShortcutsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -78,6 +82,7 @@ vi.mock('@/components/product/ProductRouteBoundary', () => ({
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  mockUsePathname.mockReturnValue('/msp/tickets');
 });
 
 const mockGetTenantSettings = vi.mocked(getTenantSettings);
@@ -156,5 +161,79 @@ describe('MspLayoutClient product shell behavior', () => {
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/msp/onboarding');
     });
+  });
+
+  it.each([
+    { onboarding_completed: true, onboarding_skipped: false, label: 'completed' },
+    { onboarding_completed: false, onboarding_skipped: true, label: 'skipped' },
+  ])('shows the self-host license banner after onboarding is $label', async (settings) => {
+    mockGetTenantSettings.mockResolvedValue({
+      tenant: 'tenant-1',
+      onboarding_completed: settings.onboarding_completed,
+      onboarding_skipped: settings.onboarding_skipped,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    render(
+      <MspLayoutClient
+        session={{ user: { tenant: 'tenant-1' } } as any}
+        productCode="psa"
+        needsOnboarding={false}
+        initialSidebarCollapsed={false}
+        selfHostLicensing={true}
+      >
+        <div>psa content</div>
+      </MspLayoutClient>,
+    );
+
+    expect(screen.queryByTestId('license-banner')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('license-banner')).toBeInTheDocument();
+  });
+
+  it('does not show the self-host license banner while onboarding is still required', async () => {
+    mockGetTenantSettings.mockResolvedValue({
+      tenant: 'tenant-1',
+      onboarding_completed: false,
+      onboarding_skipped: false,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    render(
+      <MspLayoutClient
+        session={{ user: { tenant: 'tenant-1' } } as any}
+        productCode="psa"
+        needsOnboarding={false}
+        initialSidebarCollapsed={false}
+        selfHostLicensing={true}
+      >
+        <div>psa content</div>
+      </MspLayoutClient>,
+    );
+
+    expect(screen.queryByTestId('license-banner')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/msp/onboarding');
+    });
+    expect(screen.queryByTestId('license-banner')).not.toBeInTheDocument();
+  });
+
+  it('does not show the self-host license banner on the onboarding page', () => {
+    mockUsePathname.mockReturnValue('/msp/onboarding');
+
+    render(
+      <MspLayoutClient
+        session={{ user: { tenant: 'tenant-1' } } as any}
+        productCode="psa"
+        needsOnboarding={false}
+        initialSidebarCollapsed={false}
+        selfHostLicensing={true}
+      >
+        <div>onboarding content</div>
+      </MspLayoutClient>,
+    );
+
+    expect(screen.queryByTestId('license-banner')).not.toBeInTheDocument();
   });
 });

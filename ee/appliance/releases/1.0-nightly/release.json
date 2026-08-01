@@ -1,0 +1,15 @@
+{
+  "releaseVersion": "1.0-nightly",
+  "generatedAt": "2026-06-08T00:00:00Z",
+  "app": {
+    "version": "1.0-nightly",
+    "releaseBranch": "fix/appliance-image-missing-server-scripts",
+    "valuesProfile": "single-node",
+    "images": {
+      "algaCore": "37147df9",
+      "workflowWorker": "a2cbb43",
+      "emailService": "61e4a00e",
+      "temporalWorker": "a2cbb43"
+    }
+  }
+}

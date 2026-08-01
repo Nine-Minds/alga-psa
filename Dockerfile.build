@@ -10,6 +10,8 @@ RUN apk add \
     curl \
     nano \
     bash
+ENV PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 WORKDIR /app
 
 # Stage for installing dependencies (cache-friendly)
@@ -110,7 +112,20 @@ RUN apk add --no-cache bash \
     ghostscript \
     curl \
     nano \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
     bash
+
+# Use Alpine's Chromium package at runtime instead of Puppeteer's managed
+# browser cache, which is not copied from the builder stage.
+ENV PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 WORKDIR /app
 COPY tsconfig.base.json ./

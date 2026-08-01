@@ -1,145 +1,239 @@
-# Code Context: Non-RBAC (ABAC-candidate) Constraints Across Product Areas
+# Code Context: Appliance Release/Registry Manifest Flow
 
 ## Files Retrieved
 
-1. `server/src/interfaces/authorization.interface.ts` (full) — ABAC scaffold: `IPolicy`, `ICondition` (userAttribute/operator/resourceAttribute) already defined but not wired into enforcement
-2. `packages/auth/src/lib/policy/PolicyEngine.ts` (full) — ABAC policy engine: evaluates conditions (==, !=, contains) comparing user attributes vs resource attributes
-3. `packages/auth/src/lib/attributes/EntityAttributes.ts` (full) — User attributes (user_id, team_id, roles, isAdmin) and Ticket attributes (creator_id, assignee_id, team_id, status, isOverdue)
-4. `packages/auth/src/lib/attributes/AttributeSystem.ts` (full) — Attribute base classes: DBFieldAttribute, ComputedAttribute, StaticAttribute
-5. `packages/auth/src/actions/policyActions.ts` (full) — CRUD for policies, getUserAttributes, getTicketAttributes, evaluateAccess — the ABAC wiring surface
-6. `packages/auth/src/lib/withAuth.ts` (full) — Session auth wrapper; injects user + tenant context
-7. `server/src/lib/auth/rbac.ts` (full) — Core RBAC: `hasPermission()` checks role→permission with msp/client flag gating
-8. `server/src/middleware.ts` (full) — Edge middleware: API key gate, user_type routing (internal→/msp, client→/client-portal)
-9. `packages/tickets/src/lib/clientPortalVisibility.ts` (full) — **Board-level visibility groups**: `getClientContactVisibilityContext()` + `applyVisibilityBoardFilter()` — a concrete ABAC pattern
-10. `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts` (lines 1–220) — **Client→own client_id + visibility group board filter** on ticket queries
-11. `packages/client-portal/src/actions/client-portal-actions/visibilityGroupActions.ts` (lines ~130–165) — **is_client_admin** attribute gate for visibility group management
-12. `packages/client-portal/src/lib/clientAuth.ts` (full) — `getAuthenticatedClientId()`: user→contact→client_id ownership chain
-13. `packages/client-portal/src/actions/client-portal-actions/client-documents.ts` (lines 1–80) — Client document access gated by resolved client_id
-14. `server/src/app/api/documents/view/[fileId]/route.ts` (lines 100–400) — **Rich attribute-based document access**: checks user_type, ownership (own avatar, own contact), client association match, project_task→client ownership, contract→client ownership, ticket→contact/client ownership, is_client_visible flag, tenant-logo public access, same-tenant team avatar access
-15. `packages/scheduling/src/actions/timeEntryDelegationAuth.ts` (full) — **`assertCanActOnBehalf()`**: self / manager-of-subject (team membership + manager_id) / reports-to-chain (teams-v2 flag) / tenant-wide (read_all) — classic ABAC delegation
-16. `packages/scheduling/src/actions/timeSheetActions.ts` (lines 110–200) — **Timesheet approval scoping**: non-read_all users see only team members where they are manager_id; reports-to subordinates via teams-v2 flag
-17. `packages/billing/src/actions/quoteActions.ts` (lines 720–850) — **Quote approval workflow**: status gates (draft→pending_approval→approved), separate `requireQuoteApprovePermission()`
-18. `packages/billing/src/actions/recurringApprovalBlockers.ts` (lines 1–60) — **Billing blocked by time approval status**: invoice generation checks `time_entries.approval_status` != 'APPROVED'
-19. `packages/projects/src/actions/projectTaskCommentActions.ts` (lines 145–175) — **Comment edit: own comment OR internal user** — attribute check on user_id match + user_type
-20. `packages/tags/src/lib/permissions.ts` (full) — Duplicated RBAC with msp/client flag — candidate for ABAC consolidation
-21. `server/src/lib/extensions/gateway/auth.ts` (full) — Extension proxy resolves user_type + client_id for runner forwarding; `assertAccess()` is a TODO stub
-22. `packages/client-portal/src/actions/client-portal-actions/client-billing-metrics.ts` (lines 1–80) — Billing metrics scoped to user's client_id via contact chain
-23. `server/src/lib/api/controllers/ApiBaseController.ts` (lines 1–130) — API key auth + `checkPermission()` — pure RBAC, no ABAC
-24. `server/src/app/api/v1/tickets/[id]/route.ts` area + `ApiTicketController.ts` (full) — Ticket API: pure RBAC (ticket:read/update/delete), no board/client/visibility filtering in API layer
+1. **`ee/appliance/releases/schema.json`** (lines 1-60) — Schema for `release.json` files, defines required fields including `app.images.algaCore`, `workflowWorker`, `emailService`, `temporalWorker`.
+
+2. **`ee/appliance/releases/1.0/release.json`** (all) — Concrete release manifest for v1.0. The `app.images.algaCore` tag is `"eaec6253"`. This is the **source of image tags** consumed by the publish pipeline.
+
+3. **`ee/appliance/releases/channels/stable.json`** (all) — Points channel `"stable"` to `releaseVersion: "1.0"`. Also carries the legacy `repoBranch` field (not used by the OCI path).
+
+4. **`ee/appliance/scripts/build-release-manifest.py`** (all, 88 lines) — Builds the OCI release manifest JSON (`alga.appliance.release/v1`). Reads image tags from `ee/appliance/releases/<version>/release.json`, chart versions from each `Chart.yaml`, profile values from `ee/appliance/flux/profiles/<profile>/values/`, and writes the complete manifest to stdout.
+
+5. **`ee/appliance/scripts/publish-appliance-release.sh`** (all, 121 lines) — The **publish script** that pushes all artifacts to GHCR:
+   - Helm charts → `oci://ghcr.io/nine-minds/charts/<name>`
+   - Flux config bundle → `oci://ghcr.io/nine-minds/alga-appliance-config:<version>`
+   - Release manifest (via `oras push`) → `oci://ghcr.io/nine-minds/alga-appliance-release:<version>` + `:<channel>`
+   - Control-plane image → `ghcr.io/nine-minds/alga-appliance-control-plane`
+
+6. **`ee/appliance/scripts/build-images.sh`** (lines 115-150) — Generates `release.json` from build-time tag arguments (`--alga-core-tag`, etc.) using `render_manifest()`.
+
+7. **`ee/appliance/host-service/setup-engine.mjs`** (key sections: 20-25, 240-400, 850-950, 974-1081, 1117-1200) — The **consume side**:
+   - `resolveReleaseManifest()` — fetches the OCI release manifest from GHCR via HTTP registry API
+   - `resolveChannelMetadata()` — resolves a channel to an immutable release manifest
+   - `applyRuntimeValuesAndReleaseSelection()` — injects `images.algaCore` into profile values as `setup.image.tag` and `server.image.tag`
+   - `applyFluxSource()` — creates Flux `OCIRepository` pinned to `config.digest`
+   - Constants: `DEFAULT_REGISTRY_HOST = 'ghcr.io'`, `DEFAULT_RELEASE_REPOSITORY = 'nine-minds/alga-appliance-release'`
+
+8. **`ee/appliance/host-service/resolve-control-plane-image.mjs`** (all, ~50 lines) — Resolves the control-plane image ref by calling `resolveReleaseManifest()` and emitting `manifest.controlPlane`. Used by `bootstrap-control-plane.sh` for in-place control-plane updates.
+
+9. **`ee/appliance/host-service/update-engine.mjs`** (lines 1-100) — The app-channel update flow: re-resolves the manifest from OCI, applies new runtime values, and reconciles Flux.
+
+10. **`ee/appliance/host-service/status-engine.mjs`** (line 7) — Reads release selection from `release-selection.json`.
+
+11. **`ee/appliance/operator/lib/releases.mjs`** (all, ~85 lines) — Operator-side release resolver for script-driven installs (reads local `release.json` + `channels/*.json`).
+
+12. **`ee/appliance/operator/lib/status.mjs`** (lines 123-145, 840-863) — `parseDesiredAlgaCoreImages()` extracts the desired `setup.image` / `server.image` from ConfigMap values; `parseActualAlgaCoreImages()` reads the live Deployment's init container / main container images; `imageDrift` detection compares them.
+
+13. **`ee/appliance/scripts/repair-release.sh`** (all, ~100 lines) — Repair script that deletes failed bootstrap jobs + alga-core pods, then runs `flux reconcile helmrelease alga-core`.
+
+14. **`ee/appliance/docs/registry-metadata-design.md`** (all, ~90 lines) — Design document for the full OCI-based registry metadata architecture.
+
+15. **`ee/appliance/flux/profiles/single-node/values/alga-core.single-node.yaml`** (lines 1-40) — Profile values template with `setup.image.name: ghcr.io/nine-minds/alga-psa-ee` and `server.image.name: ghcr.io/nine-minds/alga-psa-ee`. Tags are injected at runtime from the manifest.
+
+16. **`ee/appliance/flux/base/releases/alga-core.yaml`** (lines 1-45) — Flux HelmRelease referencing chart `sebastian` from `HelmRepository alga-charts`; values come from ConfigMap `appliance-values-alga-core`.
 
 ---
 
 ## Key Code
 
-### 1. Existing ABAC Scaffold (unwired)
-**`packages/auth/src/lib/policy/PolicyEngine.ts`**
-```ts
-evaluateAccess(user: IUserWithRoles, resource: any, action: string): boolean {
-  for (const policy of this.policies) {
-    if (policy.resource === resource.constructor.name && policy.action === action) {
-      if (this.evaluateConditions(user, resource, policy.conditions)) return true;
+### release.json format (source of truth for image tags)
+
+```json
+// ee/appliance/releases/1.0/release.json
+{
+  "releaseVersion": "1.0",
+  "generatedAt": "2026-06-04T22:00:00Z",
+  "app": {
+    "version": "1.0",
+    "releaseBranch": "release/1.0.0",
+    "valuesProfile": "single-node",
+    "images": {
+      "algaCore": "eaec6253",
+      "workflowWorker": "a2cbb43",
+      "emailService": "61e4a00e",
+      "temporalWorker": "a2cbb43"
     }
   }
-  return false;
-}
-```
-**`packages/auth/src/lib/attributes/EntityAttributes.ts`** — Only User and Ticket entity attributes defined. Missing: Client, Project, Document, Invoice, TimeEntry, Contract, Schedule, Integration entities.
-
-### 2. Client Portal Visibility Groups (ABAC in practice)
-**`packages/tickets/src/lib/clientPortalVisibility.ts`**
-```ts
-export interface ContactVisibilityContext {
-  contactId: string;
-  clientId: string;
-  visibilityGroupId: string | null;
-  visibleBoardIds: string[] | null;  // null = unrestricted
-}
-export function applyVisibilityBoardFilter(query, visibleBoardIds, boardColumn = 't.board_id') {
-  if (visibleBoardIds === null) return query; // unrestricted
-  if (visibleBoardIds.length === 0) { query.whereRaw('1 = 0'); return query; }
-  query.whereIn(boardColumn, visibleBoardIds);
-  return query;
 }
 ```
 
-### 3. Time Entry Delegation Auth (manager-chain ABAC)
-**`packages/scheduling/src/actions/timeEntryDelegationAuth.ts`**
-```ts
-export async function assertCanActOnBehalf(actor, tenant, subjectUserId, db): Promise<DelegationScope> {
-  if (actor.user_id === subjectUserId) return 'self';
-  const canApprove = await hasPermission(actor, 'timesheet', 'approve', db);
-  if (!canApprove) throw new Error('Permission denied');
-  const canReadAll = await hasPermission(actor, 'timesheet', 'read_all', db);
-  if (canReadAll) return 'tenant-wide';
-  if (await isManagerOfSubject(db, tenant, actor.user_id, subjectUserId)) return 'manager';
-  if (reportsToEnabled && await User.isInReportsToChain(db, actor.user_id, subjectUserId)) return 'manager';
-  throw new Error('Permission denied');
+The `algaCore` tag (`"eaec6253"`) is a short SHA — the complete image reference is **`ghcr.io/nine-minds/alga-psa-ee:eaec6253`**. The tag is NOT a full registry URL; it's a tag pushed during CI/image builds.
+
+### OCI release manifest (what gets published to GHCR)
+
+Built by `build-release-manifest.py` (line 68-80):
+```python
+manifest = {
+    "schema": "alga.appliance.release/v1",
+    "version": args.release_version,
+    "channel": args.channel,
+    "valuesProfile": args.profile,
+    "images": images,                    # from release.json -> app.images
+    "controlPlane": args.control_plane or None,
+    "config": {
+        "repository": args.config_repository,
+        "tag": args.config_tag or args.release_version,
+        "digest": args.config_digest,
+    },
+    "charts": charts,                    # chart versions from Chart.yaml
+    "profileValues": profile_values,     # per-service YAML values
 }
 ```
 
-### 4. Document View Access (multi-attribute check)
-**`server/src/app/api/documents/view/[fileId]/route.ts`** (lines 120–330)
-Checks in order:
-- `isTenantLogo` → public
-- `user.user_type === 'internal'` → full access
-- `associatedUserId === user.user_id` → own avatar
-- `associatedContactId === user.contact_id` → own contact avatar
-- `userClientId === associatedClientId` + `is_client_visible` → client doc
-- `associatedUserId && same tenant` → same-tenant avatar
-- team association + same tenant
-- `project_task → project.client_id === userClientId` + `is_client_visible`
-- `contract → billing_plans.company_id === userClientId` + `is_client_visible`
-- `ticket → contact_name_id match OR client_id match` + `is_client_visible`
+### algaCore tag → image injection (consume side)
+
+In `setup-engine.mjs` (lines 974-976):
+```javascript
+if (images.algaCore) {
+    values[`alga-core.${profile}.yaml`] = setYamlScalar(
+        values[`alga-core.${profile}.yaml`],
+        ['setup', 'image', 'tag'], yamlString(images.algaCore));
+    values[`alga-core.${profile}.yaml`] = setYamlScalar(
+        values[`alga-core.${profile}.yaml`],
+        ['server', 'image', 'tag'], yamlString(images.algaCore));
+}
+```
+
+The profile values template already has `setup.image.name: ghcr.io/nine-minds/alga-psa-ee` and `server.image.name: ghcr.io/nine-minds/alga-psa-ee`. So injecting the tag produces the full image reference: **`ghcr.io/nine-minds/alga-psa-ee:eaec6253`**.
+
+### OCI resolution (network path, no git)
+
+`resolveReleaseManifest()` in `setup-engine.mjs` (lines 353-370):
+1. Fetches anonymous pull token: `GET /token?scope=repository:nine-minds/alga-appliance-release:pull`
+2. Fetches manifest: `GET /v2/nine-minds/alga-appliance-release/manifests/<channel>` (e.g., `:stable`)
+3. Reads `config.digest` from the OCI manifest descriptor
+4. Fetches config blob: `GET /v2/nine-minds/alga-appliance-release/blobs/<digest>`
+5. Parses the config blob as the release manifest JSON
+6. Calls `validateReleaseManifest()` which requires `images.algaCore` and `config.digest`
+
+### Flux source: OCIRepository (no GitRepository)
+
+`applyFluxSource()` in `setup-engine.mjs` (lines 1117-1162):
+```yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: alga-appliance
+  namespace: flux-system
+spec:
+  interval: 1m0s
+  url: oci://ghcr.io/nine-minds/alga-appliance-config
+  ref:
+    digest: sha256:...      # pinned by digest from manifest.config.digest
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: alga-appliance
+spec:
+  sourceRef:
+    kind: OCIRepository
+```
+
+The HelmRelease inside the config bundle references OCI charts via `sourceRef: { kind: HelmRepository, name: alga-charts }` with versions pinned by `manifest.charts[name]`.
 
 ---
 
 ## Architecture
 
-### Current Access Control Layers
-1. **Edge Middleware** (`server/src/middleware.ts`): API key presence check, user_type routing (internal vs client)
-2. **RBAC** (`packages/auth/src/lib/rbac.ts` + `server/src/lib/auth/rbac.ts`): `hasPermission(user, resource, action)` — role-based with msp/client flag gating
-3. **ABAC Scaffold** (`packages/auth/src/lib/policy/PolicyEngine.ts`): PolicyEngine + EntityAttributes exist but `evaluateAccess()` is not called anywhere in production code
-4. **Inline Attribute Checks** (scattered): user_type checks, ownership checks, client_id resolution, board visibility filtering, manager-chain checks
-
 ### Data Flow
+
 ```
-Request → Edge Middleware (user_type routing) → Route Handler
-  → withAuth() (session → user + tenant context)
-  → hasPermission() (RBAC check)
-  → Inline attribute checks (non-RBAC constraints)
+CI/build-images.sh                          publish-appliance-release.sh
+    │                                              │
+    │  --alga-core-tag eaec6253                    │
+    ▼                                              ▼
+release.json  ──────►  build-release-manifest.py ──►  oras push → ghcr.io/nine-minds/alga-appliance-release:1.0
+(algaCore: eaec6253)       + charts/versions              + oras tag → :stable
+                           + config digest
+                           + control-plane ref            Also: helm push charts + flux push artifact
+                           + profile values
+
+                              │
+                              ▼  (appliance boot / update)
+                    resolveReleaseManifest()
+                    ↓
+                    GET ghcr.io/v2/.../manifests/stable
+                    ↓
+                    Parse config blob → release manifest JSON
+                    ↓
+                    validateReleaseManifest()
+                      - requires images.algaCore
+                      - requires config.repository + config.digest
+                    ↓
+                    applyRuntimeValuesAndReleaseSelection()
+                      - Injects images.algaCore into setup.image.tag & server.image.tag
+                      - Creates appliance-values-* ConfigMaps
+                      - Creates appliance-release-selection ConfigMap
+                    ↓
+                    applyFluxSource()
+                      - Creates OCIRepository (pinned to config.digest)
+                      - Creates Kustomization
+                    ↓
+                    Flux reconciles → HelmRelease alga-core
+                    → Deployment alga-core-sebastian
+                    → Pod pulls ghcr.io/nine-minds/alga-psa-ee:eaec6253
 ```
 
-### Key Observation
-ABAC constraints are **ad-hoc and scattered** — each product area implements its own attribute resolution and filtering inline rather than going through the PolicyEngine. The PolicyEngine exists but is dormant.
+### Image Reference Pattern
 
----
+All images follow the pattern:
+- **algaCore**: `ghcr.io/nine-minds/alga-psa-ee:<short-sha>` (e.g., `eaec6253`)
+- **workflowWorker**: `ghcr.io/nine-minds/alga-psa-ee-workflow-worker:<short-sha>`
+- **emailService**: `ghcr.io/nine-minds/alga-psa-ee-email-service:<short-sha>`
+- **temporalWorker**: `ghcr.io/nine-minds/alga-psa-ee-temporal-worker:<short-sha>`
 
-## Product Area ABAC Constraint Summary
+The image name is hardcoded in the profile values YAML (`setup.image.name: ghcr.io/nine-minds/alga-psa-ee`). Only the tag is injected dynamically.
 
-| Area | Constraint Type | Where | Pattern |
-|------|----------------|-------|---------|
-| **Tickets** | Board visibility groups | `packages/tickets/src/lib/clientPortalVisibility.ts` | contact→visibility group→board_ids filter |
-| **Tickets** | Client ownership | `packages/client-portal/.../client-tickets.ts:resolveVisibleTicket` | client_id match on ticket |
-| **Tickets** | API layer: no ABAC | `server/src/lib/api/controllers/ApiTicketController.ts` | Pure RBAC only |
-| **Billing/Invoices** | Client scoping | `packages/client-portal/.../client-billing-metrics.ts` | user→contact→client_id filter |
-| **Billing/Quotes** | Approval status gate | `packages/billing/src/actions/quoteActions.ts:800` | status must be 'pending_approval' |
-| **Billing/Recurring** | Time approval blocker | `packages/billing/src/actions/recurringApprovalBlockers.ts` | approval_status != 'APPROVED' blocks invoicing |
-| **Projects/Documents** | Comment ownership | `packages/projects/.../projectTaskCommentActions.ts:152` | own comment OR internal user_type |
-| **Documents** | Multi-entity association | `server/src/app/api/documents/view/[fileId]/route.ts` | client/contact/project/contract/ticket ownership chain |
-| **Documents** | is_client_visible flag | Same file | Client users need doc.is_client_visible=true |
-| **Contacts/Clients** | Client admin gate | `packages/client-portal/.../visibilityGroupActions.ts:140` | is_client_admin attribute check |
-| **Scheduling/Time** | Manager chain delegation | `packages/scheduling/.../timeEntryDelegationAuth.ts` | self / manager / reports-to / tenant-wide |
-| **Scheduling/Time** | Team manager scope | `packages/scheduling/.../timeSheetActions.ts:163` | team_members + manager_id join |
-| **Workflows** | Permission hierarchy | `ee/packages/workflows/.../workflow-schedule-v2-actions.ts:133` | read fallback to view/manage/admin |
-| **Integrations** | TODO stub | `server/src/lib/extensions/gateway/auth.ts:assertAccess()` | `// TODO: implement RBAC and per-tenant endpoint checks` |
+### Channel → Version indirection
+
+- `release.json` files are stored in git under `ee/appliance/releases/<version>/release.json`
+- `channels/stable.json` maps channel name → release version
+- When published, the **channel tag** (`:stable`) on the OCI artifact is the indirection pointer
+- The publish script tags the same artifact with both `:<version>` and `:<channel>`
 
 ---
 
 ## Start Here
 
-Open **`packages/auth/src/lib/policy/PolicyEngine.ts`** — this is the existing ABAC engine. It has the attribute comparison logic but:
-1. It's not called anywhere in production request paths
-2. EntityAttributes only cover User and Ticket (need Client, Project, Document, Invoice, TimeEntry, Contract, etc.)
-3. The `evaluateAccess()` method matches on `resource.constructor.name` which is fragile
+**`ee/appliance/scripts/publish-appliance-release.sh`** — This is the single entry point that ties everything together: it reads from `release.json`, packages charts, pushes the flux config bundle, builds the OCI release manifest, and pushes it to GHCR. Every artifact and step flows from here.
 
-The first task is deciding whether to extend this engine or replace it, then mapping the inline constraints listed above into the chosen ABAC model.
+For the consume/resolution side, start with **`ee/appliance/host-service/setup-engine.mjs`**, specifically:
+- `resolveReleaseManifest()` (~line 353) — the OCI fetch + validation
+- `applyRuntimeValuesAndReleaseSelection()` (~line 943) — image tag injection
+
+### Verification: confirming the pinned algaCore image
+
+On a running appliance, check:
+```bash
+# 1. Read the release selection ConfigMap (shows what was resolved)
+kubectl -n alga-system get configmap appliance-release-selection -o yaml
+# → algaCoreTag, releaseVersion, selectedChannel
+
+# 2. Read the runtime values ConfigMap (shows the injected tag)
+kubectl -n alga-system get configmap appliance-values-alga-core -o yaml
+# → server.image.tag and setup.image.tag show the pinned SHA
+
+# 3. Check the live Deployment image
+kubectl -n msp get deployment alga-core-sebastian -o jsonpath='{.spec.template.spec.containers[0].image}'
+# → ghcr.io/nine-minds/alga-psa-ee:eaec6253
+
+# 4. Operator status (if available) shows imageDrift detection
+alga appliance status  # → compares desired vs actual images
+
+# 5. Pull the OCI release manifest directly using oras
+oras manifest fetch ghcr.io/nine-minds/alga-appliance-release:stable --descriptor \
+  | jq -r '.digest' \
+  | xargs -I{} sh -c 'oras manifest fetch "ghcr.io/nine-minds/alga-appliance-release@{}" | jq -r ".config.digest" | xargs -I{} oras blob fetch "ghcr.io/nine-minds/alga-appliance-release@{}" --output - | jq .'
+```

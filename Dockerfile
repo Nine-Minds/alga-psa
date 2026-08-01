@@ -14,7 +14,20 @@ RUN apk add --no-cache \
     ghostscript \
     curl \
     nano \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
     ffmpeg
+
+# Use Alpine's Chromium package at runtime instead of Puppeteer's managed
+# browser cache, which is not present in the production image.
+ENV PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 WORKDIR /app
 

@@ -76,7 +76,13 @@ export function MspLayoutClient({
   const sessionTenant = session?.user?.tenant;
   const shortcutPreference = useKeyboardShortcutPreferenceStorage({ userId: session?.user?.id });
   const [clientNeedsOnboarding, setClientNeedsOnboarding] = useState(false);
+  const [clientOnboardingCheckComplete, setClientOnboardingCheckComplete] = useState(false);
   const shouldForceOnboarding = needsOnboarding || clientNeedsOnboarding;
+  const canShowLicenseBanner =
+    selfHostLicensing &&
+    !isOnboardingPage &&
+    !shouldForceOnboarding &&
+    clientOnboardingCheckComplete;
 
   useEffect(() => {
     if (shouldForceOnboarding && !isOnboardingPage) {
@@ -88,6 +94,7 @@ export function MspLayoutClient({
     let isCancelled = false;
 
     setClientNeedsOnboarding(false);
+    setClientOnboardingCheckComplete(false);
 
     if (needsOnboarding || isOnboardingPage || !sessionTenant) {
       return () => {
@@ -97,7 +104,12 @@ export function MspLayoutClient({
 
     void getTenantSettings()
       .then((settings) => {
-        if (isCancelled || !settings) {
+        if (isCancelled) {
+          return;
+        }
+
+        if (!settings) {
+          setClientOnboardingCheckComplete(true);
           return;
         }
 
@@ -108,10 +120,16 @@ export function MspLayoutClient({
         if (hasOnboardingFlags && !settings.onboarding_completed && !settings.onboarding_skipped) {
           setClientNeedsOnboarding(true);
           router.replace('/msp/onboarding');
+          return;
         }
+
+        setClientOnboardingCheckComplete(true);
       })
       .catch((error) => {
         console.error('Error checking onboarding status:', error);
+        if (!isCancelled) {
+          setClientOnboardingCheckComplete(true);
+        }
       });
 
     return () => {
@@ -127,7 +145,7 @@ export function MspLayoutClient({
     <AppSessionProvider session={session}>
       <ProductProvider>
         <TierProvider>
-          {selfHostLicensing && <LicenseBanner />}
+          {canShowLicenseBanner && <LicenseBanner />}
           <PostHogUserIdentifier />
           <TagProvider>
             <ClientUIStateProvider

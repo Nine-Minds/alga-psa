@@ -36,6 +36,10 @@ import { getClientBillingCycleAnchor } from '@shared/billingClients/billingSched
 import { backfillRecurringServicePeriods } from '@shared/billingClients/backfillRecurringServicePeriods';
 import { materializeClientCadenceServicePeriods } from '@shared/billingClients/materializeClientCadenceServicePeriods';
 import { materializeContractCadenceServicePeriods } from '@shared/billingClients/materializeContractCadenceServicePeriods';
+import {
+  repairAllClientCadenceServicePeriodsForTenant,
+  type RepairAllClientCadenceServicePeriodsSummary,
+} from './clientCadenceScheduleRegeneration';
 
 const RECURRING_SERVICE_PERIOD_PERMISSION_RESOURCE = 'billing.recurring_service_periods';
 const recurringServicePeriodRecordIdFactory = () => uuidv4();
@@ -1251,4 +1255,29 @@ export const previewRecurringServicePeriodInvoiceLinkageRepair = withAuth(async 
   }
 
   return previewRecurringServicePeriodInvoiceLinkageRepairResult(input);
+});
+
+/**
+ * Heals every drifted client-cadence schedule in the tenant in one pass, so a
+ * customer with stale ledgers from a past cadence change does not have to repair
+ * each schedule by hand. Reuses the same regeneration as the per-schedule repair,
+ * so billed periods are preserved and a clean tenant is a no-op.
+ */
+export const repairAllRecurringServicePeriodsForTenant = withAuth(async (
+  user,
+  { tenant },
+): Promise<RepairAllClientCadenceServicePeriodsSummary | ActionPermissionError> => {
+  const denied = await requireRecurringServicePeriodPermission(
+    user,
+    'regenerate',
+    'Permission denied: Cannot repair recurring service periods',
+  );
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  return withTransaction(knex, async (trx: any) => {
+    return repairAllClientCadenceServicePeriodsForTenant(trx, { tenant });
+  });
 });

@@ -1,0 +1,63 @@
+[
+  { "id": "T001", "implemented": false, "kind": "automated", "featureIds": ["F001", "F002"], "description": "Unit: createEmailService() with provider 'smtp' returns a working sender (no 'not implemented' throw) and the dead ProductionEmailService stubs are gone" },
+  { "id": "T002", "implemented": false, "kind": "automated", "featureIds": ["F001"], "description": "Unit: the Temporal email layer routes a send through the shared packages/email SMTP provider (assert the shared provider is invoked)" },
+  { "id": "T003", "implemented": false, "kind": "automated", "featureIds": ["F002"], "description": "Regression: createEmailService() with provider 'resend' and a valid key still uses Resend (cloud path unbroken)" },
+  { "id": "T004", "implemented": false, "kind": "automated", "featureIds": ["F003"], "description": "Unit: in appliance mode, a system/Temporal send resolves the single tenant's enabled SMTP providerConfig (not env) when one is configured" },
+  { "id": "T005", "implemented": false, "kind": "automated", "featureIds": ["F003"], "description": "Unit: with no tenant provider configured yet, the send falls back to env EMAIL_* config (pre-onboarding path)" },
+  { "id": "T006", "implemented": false, "kind": "smoke", "featureIds": ["F004"], "description": "Smoke: sendWelcomeEmail with a configured SMTP provider delivers a message to a test SMTP sink (e.g. Mailpit) and returns success" },
+  { "id": "T007", "implemented": false, "kind": "smoke", "featureIds": ["F004"], "description": "Smoke: sendWelcomeEmail with no provider configured no-ops cleanly (no crash) and logs that email is unconfigured" },
+  { "id": "T008", "implemented": false, "kind": "automated", "featureIds": ["F005"], "description": "Unit: temporal-worker startupValidation passes with SMTP email and no RESEND_API_KEY" },
+  { "id": "T009", "implemented": false, "kind": "automated", "featureIds": ["F005"], "description": "Unit: temporal-worker startupValidation still fails fast with EMAIL_PROVIDER=resend and no key (cloud safety preserved)" },
+  { "id": "T010", "implemented": false, "kind": "smoke", "featureIds": ["F006"], "description": "Smoke (build): temporal-worker image builds via the Argo/Dockerfile.build path with the packages/email dependency (the build itself is the check for ESM/CJS resolution)" },
+  { "id": "T011", "implemented": false, "kind": "smoke", "featureIds": ["F006"], "description": "Smoke (VM): temporal-worker pod starts healthy on the appliance image with SMTP email config" },
+
+  { "id": "T012", "implemented": false, "kind": "smoke", "featureIds": ["F007"], "description": "Smoke: appliance alga-core values render EMAIL_PROVIDER_TYPE=smtp into the deployment env (helm render / live pod env)" },
+  { "id": "T013", "implemented": false, "kind": "automated", "featureIds": ["F007"], "description": "Unit: with EMAIL_PROVIDER_TYPE=smtp set, Resend is never auto-selected even if a stray RESEND_API_KEY is present" },
+  { "id": "T014", "implemented": false, "kind": "smoke", "featureIds": ["F008"], "description": "Smoke: a system email (non-tenant path) on the appliance sends via the tenant's configured SMTP provider" },
+  { "id": "T015", "implemented": false, "kind": "automated", "featureIds": ["F009"], "description": "Unit: missing SMTP host/user/pass produces an error naming EMAIL_HOST/EMAIL_USERNAME/EMAIL_PASSWORD, never RESEND_API_KEY, on the appliance" },
+  { "id": "T016", "implemented": false, "kind": "smoke", "featureIds": ["F010"], "description": "Smoke (status): status surface shows 'Email: configured' after SMTP is set and 'unconfigured' before" },
+  { "id": "T017", "implemented": false, "kind": "smoke", "featureIds": ["F011"], "description": "Smoke: configuring SMTP in Communications > Outbound Email and saving results in tenant business email being delivered via that SMTP server on the appliance" },
+
+  { "id": "T018", "implemented": false, "kind": "smoke", "featureIds": ["F012", "F013"], "description": "Smoke (VM): the email-service pod can HTTP POST to the configured alga-core webhook endpoint and receive 2xx" },
+  { "id": "T019", "implemented": false, "kind": "smoke", "featureIds": ["F013"], "description": "Smoke: appliance email-service values render a non-empty IMAP_WEBHOOK_URL (not server:3000) into the pod env" },
+  { "id": "T020", "implemented": false, "kind": "automated", "featureIds": ["F013"], "description": "Unit: with webhook.url set, resolveWebhookUrl never returns the http://server:3000 fallback" },
+  { "id": "T021", "implemented": false, "kind": "automated", "featureIds": ["F014"], "description": "Unit: resolveWebhookUrl with no configured URL throws/logs a clear error instead of silently using server:3000" },
+  { "id": "T022", "implemented": false, "kind": "smoke", "featureIds": ["F015"], "description": "Smoke: an inbound IMAP message is fetched, posted to the webhook, authenticated via IMAP_WEBHOOK_SECRET, and produces a ticket/thread on the appliance" },
+  { "id": "T023", "implemented": false, "kind": "smoke", "featureIds": ["F015"], "description": "Smoke (negative): a webhook POST with a wrong/missing secret is rejected (401/403)" },
+
+  { "id": "T024", "implemented": false, "kind": "smoke", "featureIds": ["F016"], "description": "Smoke (VM, single-host): with DNS+TLS in front and NEXTAUTH_URL set to the vanity host, the client portal loads and a client can log in on the vanity domain with existing code only" },
+  { "id": "T026", "implemented": false, "kind": "automated", "featureIds": ["F017"], "description": "Unit: the mark-active admin action inserts/updates a portal_domains row with status='active' via upsertPortalDomain and does NOT enqueue a workflow (workflow client not called)" },
+  { "id": "T027", "implemented": false, "kind": "smoke", "featureIds": ["F018"], "description": "Smoke: on the appliance, adding a custom domain in client-portal settings calls the mark-active path (no Temporal portal-domain run created)" },
+  { "id": "T028", "implemented": false, "kind": "smoke", "featureIds": ["F019"], "description": "Smoke (VM, multi-host): with the LB routing a separate vanity host to the app, an active portal_domains row, and PORTAL_DOMAIN_DNS_CHECK=false, the client portal serves on the vanity host while MSP stays on the main host" },
+  { "id": "T030", "implemented": false, "kind": "automated", "featureIds": ["F018", "F020"], "description": "Regression (unit): in cloud/SaaS mode the custom-domain path still enqueues the provisioning workflow; in appliance mode it does not (appliance gating doesn't leak to cloud)" },
+
+  { "id": "T031", "implemented": false, "kind": "smoke", "featureIds": ["F021"], "description": "Smoke: managed email-domain (SPF/DKIM) settings panel is not rendered in appliance mode" },
+  { "id": "T032", "implemented": false, "kind": "smoke", "featureIds": ["F021"], "description": "Smoke (regression): the managed-domain panel IS rendered in cloud/EE mode" },
+  { "id": "T033", "implemented": false, "kind": "automated", "featureIds": ["F022"], "description": "Unit: managedDomainActions short-circuit in appliance mode and never throw 'requires RESEND_API_KEY' to the operator" },
+
+  { "id": "T034", "implemented": false, "kind": "automated", "featureIds": ["F024"], "description": "Unit: the appliance-mode predicate returns true on the appliance (license_state row / APPLIANCE_MODE) and false in cloud" },
+
+  { "id": "T036", "implemented": false, "kind": "smoke", "featureIds": ["F025"], "description": "Smoke: the check-in task POSTs appliance_credential to check_in_url with the expected request shape (host-service task, validate live)" },
+  { "id": "T037", "implemented": false, "kind": "smoke", "featureIds": ["F025"], "description": "Smoke: the check-in task is scheduled and fires on its interval" },
+  { "id": "T038", "implemented": false, "kind": "smoke", "featureIds": ["F026"], "description": "Smoke (contract): a check-in against the live alga-license refresh endpoint returns a refreshed JWT in the agreed shape" },
+  { "id": "T039", "implemented": false, "kind": "automated", "featureIds": ["F027"], "description": "Unit: a refreshed JWT failing public-key verification is rejected and NOT stored (packages/licensing verify)" },
+  { "id": "T040", "implemented": false, "kind": "automated", "featureIds": ["F027"], "description": "Unit: a validly-signed refreshed JWT passes verification and is accepted" },
+  { "id": "T041", "implemented": false, "kind": "smoke", "featureIds": ["F028"], "description": "Smoke: a successful check-in updates both the license Secret and the license_state row; resolved tier reflects the new token" },
+  { "id": "T042", "implemented": false, "kind": "smoke", "featureIds": ["F029"], "description": "Smoke: a failed check-in retries with backoff and does not crash or block the app" },
+  { "id": "T043", "implemented": false, "kind": "smoke", "featureIds": ["F029"], "description": "Smoke: repeated check-in failures surface a visible warning but the appliance keeps running on the last-valid JWT until exp" },
+  { "id": "T044", "implemented": false, "kind": "smoke", "featureIds": ["F029"], "description": "Smoke: an appliance with no check_in_url (airgap) does not attempt check-in" },
+  { "id": "T045", "implemented": false, "kind": "smoke", "featureIds": ["F030"], "description": "Smoke: License UI shows tier, exp, and last-check-in; 'refresh now' triggers an immediate check-in" },
+  { "id": "T046", "implemented": false, "kind": "smoke", "featureIds": ["F031"], "description": "Smoke: a license within the pre-expiry window shows a warning banner" },
+
+  { "id": "T049", "implemented": false, "kind": "smoke", "featureIds": ["F034"], "description": "Smoke (preflight): reachability check passes when both endpoints are reachable" },
+  { "id": "T050", "implemented": false, "kind": "smoke", "featureIds": ["F034"], "description": "Smoke (preflight): blocking ghcr.io or license.nineminds.com yields a specific, actionable preflight error" },
+
+  { "id": "T052", "implemented": false, "kind": "automated", "featureIds": ["F037"], "description": "Unit: nm-store middleware / billing routes are inert/fail-closed in appliance mode (no nm_store_api_key configured)" },
+  { "id": "T054", "implemented": false, "kind": "automated", "featureIds": ["F038"], "description": "Unit: isLicenseDistributionTenant() returns false on the appliance (no MASTER_BILLING_TENANT_ID match), hiding the Stripe distribution surface" },
+
+  { "id": "T055", "implemented": false, "kind": "smoke", "featureIds": ["F039"], "description": "Smoke (VM, no Resend reachability): fresh appliance + SMTP relay only — system email sends, tenant email sends, Temporal welcome email sends, inbound IMAP creates a ticket" },
+  { "id": "T056", "implemented": false, "kind": "smoke", "featureIds": ["F039"], "description": "Smoke (VM): the welcome/onboarding email (Temporal path) is delivered to the SMTP sink during a real tenant onboarding" },
+  { "id": "T057", "implemented": false, "kind": "smoke", "featureIds": ["F040"], "description": "Smoke: the full Phase-1 change set passes a clean libvirt VM install on the real Argo-built nightly image" },
+  { "id": "T058", "implemented": false, "kind": "smoke", "featureIds": ["F041"], "description": "Smoke: after VM sign-off, release.json/channels pin the validated image and a re-install from that pin is fullyHealthy" },
+  { "id": "T059", "implemented": false, "kind": "smoke", "featureIds": ["F025", "F031"], "description": "Smoke (VM): a connected appliance auto-renews its license across a simulated exp boundary and the pre-expiry warning clears after a successful check-in" }
+]

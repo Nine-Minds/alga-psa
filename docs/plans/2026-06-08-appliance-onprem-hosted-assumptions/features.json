@@ -1,0 +1,54 @@
+[
+  { "id": "F001", "implemented": false, "prdRefs": ["WS1", "B1"], "description": "Temporal email layer (ee/temporal-workflows/src/services/email-service.ts) delegates real sends to the shared packages/email provider; the throwing ProductionEmailService SMTP/SES/SendGrid stubs are removed" },
+  { "id": "F002", "implemented": false, "prdRefs": ["WS1", "B1"], "description": "createEmailService() resolves an SMTP-capable provider without ever throwing 'not implemented'" },
+  { "id": "F003", "implemented": false, "prdRefs": ["WS1", "WS2", "B1"], "description": "System + Temporal sends resolve the tenant-configured SMTP provider (the Outbound Email screen's providerConfigs), with env (EMAIL_*) fallback used only for pre-onboarding/system mail" },
+  { "id": "F004", "implemented": false, "prdRefs": ["WS1", "B1"], "description": "sendWelcomeEmail activity sends via the resolved SMTP provider (no silent no-op, no crash); cleanly falls back/no-ops when no provider is configured yet" },
+  { "id": "F005", "implemented": false, "prdRefs": ["WS1", "B1"], "description": "temporal-worker startup validation no longer hard-fails when email is SMTP-configured and RESEND_API_KEY is absent" },
+  { "id": "F006", "implemented": false, "prdRefs": ["WS1", "R1"], "description": "temporal-worker image builds successfully with the packages/email dependency across the ESM/CJS boundary (validated against the Argo-built image, not just Dockerfile.build)" },
+
+  { "id": "F007", "implemented": false, "prdRefs": ["WS2", "B4"], "description": "Appliance ships EMAIL_PROVIDER_TYPE=smtp as the explicit default so Resend is never auto-detected on the appliance" },
+  { "id": "F008", "implemented": false, "prdRefs": ["WS2", "B2"], "description": "In appliance/self-host mode the system email path (SystemEmailProviderFactory / TenantEmailService) resolves the single tenant's enabled SMTP providerConfig, with env fallback, so the Outbound Email screen is the single source of truth" },
+  { "id": "F009", "implemented": false, "prdRefs": ["WS2", "B4"], "description": "SystemEmailProviderFactory missing-config error messages reference SMTP variables (EMAIL_HOST/USERNAME/PASSWORD), never Resend, on the appliance" },
+  { "id": "F010", "implemented": false, "prdRefs": ["WS2", "B2"], "description": "Appliance status surface shows 'Email: configured/unconfigured' based on the resolved provider" },
+  { "id": "F011", "implemented": false, "prdRefs": ["WS2", "B2"], "description": "Regression-pin: the existing Communications > Outbound Email screen persists SMTP config and that config actually drives tenant business email on the appliance" },
+
+  { "id": "F012", "implemented": false, "prdRefs": ["WS3", "B3"], "description": "alga-core has a stable in-cluster endpoint (Service or matching targetPort) reachable by the email-service pod for IMAP webhook POSTs despite hostNetwork" },
+  { "id": "F013", "implemented": false, "prdRefs": ["WS3", "B3"], "description": "Appliance email-service single-node values set webhook.url to that endpoint; IMAP_WEBHOOK_URL is emitted into the pod env (never falls back to http://server:3000)" },
+  { "id": "F014", "implemented": false, "prdRefs": ["WS3", "B3"], "description": "emailService.resolveWebhookUrl fails loudly with a clear message when no webhook URL is configured instead of silently using the server:3000 fallback" },
+  { "id": "F015", "implemented": false, "prdRefs": ["WS3", "B3"], "description": "IMAP_WEBHOOK_SECRET is shared/consistent between the email-service and alga-core on the appliance so inbound webhook auth succeeds end-to-end" },
+
+  { "id": "F016", "implemented": false, "prdRefs": ["WS4", "B6"], "description": "Documentation for single-host vanity portal: customer LB+cert+DNS pointing the vanity domain at the appliance and setting NEXTAUTH_URL/--app-url to it, using existing code (no Istio/cert-manager/GitOps)" },
+  { "id": "F017", "implemented": false, "prdRefs": ["WS4", "B6"], "description": "An admin action/CLI/seed marks a portal_domains row active for the single tenant by calling the existing upsertPortalDomain with status:'active', bypassing the Temporal workflow" },
+  { "id": "F018", "implemented": false, "prdRefs": ["WS4", "B6"], "description": "On the appliance the client-portal domain-settings UI uses the mark-active path instead of enqueuing the cloud provisioning workflow" },
+  { "id": "F019", "implemented": false, "prdRefs": ["WS4", "B6"], "description": "Documentation for multi-host: LB routes both the MSP host and a separate vanity client-portal host to the app; PORTAL_DOMAIN_DNS_CHECK=false documented" },
+  { "id": "F020", "implemented": false, "prdRefs": ["WS4", "B6"], "description": "The cloud-only portal-domain provisioning workflow (Istio/cert-manager/GitOps) is never enqueued on the appliance (no inert failing runs)" },
+
+  { "id": "F021", "implemented": false, "prdRefs": ["WS5", "B5"], "description": "Managed email-domain (SPF/DKIM) settings UI is hidden in appliance mode" },
+  { "id": "F022", "implemented": false, "prdRefs": ["WS5", "B5"], "description": "managedDomainActions are unreachable/short-circuit in appliance mode rather than throwing 'requires RESEND_API_KEY' to the operator" },
+  { "id": "F023", "implemented": false, "prdRefs": ["WS5", "B5"], "description": "Documentation states appliance SMTP-relay sending does not require managed-domain (SPF/DKIM) verification; the relay/provider handles deliverability" },
+
+  { "id": "F024", "implemented": false, "prdRefs": ["WS4", "WS5", "WS9"], "description": "A single reliable 'appliance/self-host mode' predicate exists and is used consistently for UI/feature gating" },
+
+  { "id": "F025", "implemented": false, "prdRefs": ["WS6a", "B7"], "description": "A connected-appliance license check-in job/task POSTs appliance_credential to the stored check_in_url on a schedule" },
+  { "id": "F026", "implemented": false, "prdRefs": ["WS6a", "B7", "R3"], "description": "The alga-license refresh/check-in endpoint contract (request/response shape + auth) is confirmed or stood up so the check-in has a real server to call" },
+  { "id": "F027", "implemented": false, "prdRefs": ["WS6a", "B7"], "description": "The refreshed JWT from check-in is verified against the baked-in public key before being stored" },
+  { "id": "F028", "implemented": false, "prdRefs": ["WS6a", "B7"], "description": "A successful check-in updates the appliance-license-seed Secret and the license_state row atomically; tier reflects the new token" },
+  { "id": "F029", "implemented": false, "prdRefs": ["WS6a", "B7"], "description": "Check-in failures retry with backoff and are surfaced without crashing the app; airgap appliances (no check_in_url) skip check-in cleanly" },
+  { "id": "F030", "implemented": false, "prdRefs": ["WS6a", "B7"], "description": "License UI shows tier, exp, and (connected) last-check-in time with a manual 'refresh now' action" },
+  { "id": "F031", "implemented": false, "prdRefs": ["WS6a", "B7"], "description": "Pre-expiry warning is shown in the License/status UI when the JWT is approaching exp" },
+
+  { "id": "F032", "implemented": false, "prdRefs": ["WS6b", "B8"], "description": "Documentation states the appliance requires a one-time HTTPS reach to license.nineminds.com/register at install; a fully offline install is an explicit non-goal" },
+
+  { "id": "F033", "implemented": false, "prdRefs": ["WS7", "B9"], "description": "Documented egress allowlist (license.nineminds.com, ghcr.io + container-registry hosts) for appliance install and updates" },
+  { "id": "F034", "implemented": false, "prdRefs": ["WS7", "B9"], "description": "Setup/preflight surfaces reachability checks for license.nineminds.com and ghcr.io with actionable errors" },
+
+  { "id": "F035", "implemented": false, "prdRefs": ["WS8", "B10"], "description": "Documentation records that the *.svc.cluster.local code defaults are appliance-overridden to the msp namespace and must be set explicitly for any non-appliance deploy" },
+
+  { "id": "F036", "implemented": false, "prdRefs": ["WS9", "B11"], "description": "Documented inventory of cloud-only surfaces shipped-but-inert on the appliance (nm-store middleware, billing webhooks, Stripe distribution)" },
+  { "id": "F037", "implemented": false, "prdRefs": ["WS9", "B11"], "description": "Tests pin that nm-store-protected and billing-webhook routes are inert/fail-closed in appliance mode" },
+  { "id": "F038", "implemented": false, "prdRefs": ["WS9", "B11"], "description": "Test pins that isLicenseDistributionTenant() fails closed (Stripe distribution hidden) on the appliance" },
+
+  { "id": "F039", "implemented": false, "prdRefs": ["WS1", "WS2", "WS3"], "description": "End-to-end: a fresh appliance configured with only an SMTP relay sends (system + tenant + Temporal) and receives IMAP email with zero Resend connectivity" },
+  { "id": "F040", "implemented": false, "prdRefs": ["Phasing"], "description": "All changes validated on the real Argo-built appliance image via a libvirt VM install (nightly channel) before promotion to stable" },
+  { "id": "F041", "implemented": false, "prdRefs": ["Phasing"], "description": "release.json / channels pin the validated image once the on-prem fixes pass VM validation" }
+]

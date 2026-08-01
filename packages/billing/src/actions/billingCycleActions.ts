@@ -12,6 +12,7 @@ import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { toPlainDate } from '@alga-psa/core';
+import { applyClientCadenceChange } from './applyClientCadenceChange';
 
 
 export const getBillingCycle = withAuth(async (
@@ -48,16 +49,35 @@ export const updateBillingCycle = withAuth(async (
   }
   const { knex: conn } = await createTenantKnex();
 
+  // Route every cadence change through the shared layer so the scalar, anchor,
+  // cycle windows, and recurring_service_periods ledger stay consistent. A bare
+  // scalar update here used to leave the ledger stale, stranding the client in a
+  // "repair required" state on the invoicing screen.
   await withTransaction(conn, async (trx: Knex.Transaction) => {
-    return await trx('clients')
-      .where({
-        client_id: clientId,
-        tenant
-      })
-      .update({
-        billing_cycle: billingCycle,
-        updated_at: new Date().toISOString()
-      });
+    const settings = await trx('client_billing_settings')
+      .where({ tenant, client_id: clientId })
+      .first()
+      .select(
+        'billing_cycle_anchor_day_of_month',
+        'billing_cycle_anchor_month_of_year',
+        'billing_cycle_anchor_day_of_week',
+        'billing_cycle_anchor_reference_date'
+      );
+
+    await applyClientCadenceChange(trx, tenant, {
+      clientId,
+      billingCycle,
+      // Preserve any existing anchor; normalizeAnchorSettingsForCycle adapts it
+      // to the new cycle (and fills defaults) inside applyClientCadenceChange.
+      anchor: {
+        dayOfMonth: settings?.billing_cycle_anchor_day_of_month ?? null,
+        monthOfYear: settings?.billing_cycle_anchor_month_of_year ?? null,
+        dayOfWeek: settings?.billing_cycle_anchor_day_of_week ?? null,
+        referenceDate: settings?.billing_cycle_anchor_reference_date
+          ? new Date(settings.billing_cycle_anchor_reference_date).toISOString()
+          : null,
+      },
+    });
   });
 });
 

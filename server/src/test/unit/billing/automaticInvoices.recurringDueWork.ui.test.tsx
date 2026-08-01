@@ -953,7 +953,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     );
     const readyTable = screen.getByTestId('automatic-invoices-table');
 
-    expect(within(gapPanel).getByText('Recurring service period repair required')).toBeInTheDocument();
+    expect(within(gapPanel).getByText('These billing schedules need to be rebuilt')).toBeInTheDocument();
     expect(within(gapEntry).getByText('Acme Co')).toBeInTheDocument();
     expect(
       within(gapEntry).getByText(
