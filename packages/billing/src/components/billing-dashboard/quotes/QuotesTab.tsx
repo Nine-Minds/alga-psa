@@ -544,14 +544,14 @@ const QuotesTab: React.FC = () => {
           : isTemplateParam
             ? router.push('/msp/billing?tab=quote-business-templates')
             : router.push('/msp/billing?tab=quotes')}
-        onSaved={() => {
+        onSaved={(savedQuoteId) => {
           void loadData();
           if (opportunityId) {
             router.push(`/msp/opportunities/${opportunityId}`);
           } else if (isTemplateParam) {
             router.push('/msp/billing?tab=quote-business-templates');
           } else {
-            router.push('/msp/billing?tab=quotes');
+            router.push(`/msp/billing?tab=quotes&quoteId=${savedQuoteId}&mode=edit`);
           }
         }}
       />
