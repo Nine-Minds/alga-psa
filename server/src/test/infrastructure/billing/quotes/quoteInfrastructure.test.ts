@@ -1032,6 +1032,70 @@ describe('Quote infrastructure', () => {
     expect(revision.status).toBe('draft');
   });
 
+  it.each(['sent', 'rejected', 'expired', 'cancelled', 'accepted'] as const)(
+    'T072a: Versioning: revising a %s quote copies items, supersedes the source, and records activity',
+    async (status) => {
+      const historyField = {
+        sent: 'sent_at',
+        rejected: 'rejected_at',
+        expired: 'expired_at',
+        cancelled: 'cancelled_at',
+        accepted: 'accepted_at',
+      }[status];
+      const historyTimestamp = '2026-03-14T12:00:00.000Z';
+      const quote = await createFinancialQuote({
+        status,
+        [historyField]: historyTimestamp,
+      });
+      const sourceItem = await QuoteItem.create(context.db, context.tenantId, {
+        quote_id: quote.quote_id,
+        description: `${status} revision source line`,
+        quantity: 1,
+        unit_price: 1000,
+        is_taxable: false,
+        created_by: context.userId,
+      });
+
+      const revision = await Quote.createRevision(context.db, context.tenantId, quote.quote_id, context.userId);
+
+      expect(revision.version).toBe(2);
+      expect(revision.parent_quote_id).toBe(quote.quote_id);
+      expect(revision.status).toBe('draft');
+      expect(revision.quote_items).toHaveLength(1);
+      expect(revision.quote_items?.[0].description).toBe(`${status} revision source line`);
+      expect(revision.quote_items?.[0].quote_item_id).not.toBe(sourceItem.quote_item_id);
+
+      const sourceQuote = await loadQuoteRow(quote.quote_id);
+      expect(sourceQuote.status).toBe('superseded');
+      expect(new Date(sourceQuote[historyField]).toISOString()).toBe(historyTimestamp);
+
+      const activities = await context.db('quote_activities')
+        .where({ tenant: context.tenantId })
+        .whereIn('quote_id', [quote.quote_id, revision.quote_id])
+        .pluck('activity_type');
+      expect(activities).toEqual(expect.arrayContaining(['superseded', 'created_revision']));
+    },
+  );
+
+  it.each(['draft', 'pending_approval', 'approved', 'converted', 'superseded', 'archived'] as const)(
+    'T072b: Versioning: rejects revision from %s status',
+    async (status) => {
+      const quote = await createFinancialQuote({ status });
+
+      await expect(
+        Quote.createRevision(context.db, context.tenantId, quote.quote_id, context.userId),
+      ).rejects.toThrow('Only sent, rejected, expired, cancelled, or accepted quotes can be revised');
+    },
+  );
+
+  it('T072c: Versioning: quote templates cannot be revised', async () => {
+    const template = await createFinancialQuote({ is_template: true });
+
+    await expect(
+      Quote.createRevision(context.db, context.tenantId, template.quote_id, context.userId),
+    ).rejects.toThrow('Quote templates cannot be revised');
+  });
+
   it('T073: Version history: query returns all versions ordered by version number', async () => {
     const quote = await createFinancialQuote({ status: 'sent' });
 

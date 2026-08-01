@@ -23,9 +23,9 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { MoreVertical, Edit, Send, Copy, Download, Trash2, RefreshCw, Bell, FileText, XCircle } from 'lucide-react';
-import type { ColumnDefinition, IQuoteDocumentTemplate, IQuoteListItem, QuoteStatus } from '@alga-psa/types';
-import { listQuotes, downloadQuotePdf, deleteQuote, duplicateQuote, sendQuote } from '../../../actions/quoteActions';
+import { MoreVertical, Edit, Send, Copy, Download, Trash2, RefreshCw, Bell, FileText, XCircle, FilePenLine } from 'lucide-react';
+import { REVISABLE_QUOTE_STATUSES, type ColumnDefinition, type IQuoteDocumentTemplate, type IQuoteListItem, type QuoteStatus } from '@alga-psa/types';
+import { listQuotes, downloadQuotePdf, deleteQuote, duplicateQuote, sendQuote, createQuoteRevision } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import QuoteApprovalDashboard from './QuoteApprovalDashboard';
 import QuoteForm from './QuoteForm';
@@ -55,6 +55,7 @@ interface QuoteSubTabContentProps {
   onDownload: () => Promise<void>;
   onEdit: (quoteId: string) => void;
   onSend: (quoteId: string) => void;
+  onRevise: (quoteId: string) => Promise<void>;
   onDuplicate: (quoteId: string) => Promise<void>;
   onDownloadPdf: (quoteId: string) => Promise<void>;
   onDelete: (quoteId: string) => void;
@@ -70,6 +71,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
   onDownload,
   onEdit,
   onSend,
+  onRevise,
   onDuplicate,
   onDownloadPdf,
   onDelete,
@@ -200,6 +202,16 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
                   <Copy className="h-4 w-4" />
                   {t('common.actions.duplicate', { defaultValue: 'Duplicate' })}
                 </DropdownMenuItem>
+                {REVISABLE_QUOTE_STATUSES.includes(status) && (
+                  <DropdownMenuItem
+                    onClick={() => void onRevise(record.quote_id)}
+                    className="flex items-center gap-2"
+                    id={`revise-quote-${record.quote_id}-menu-item`}
+                  >
+                    <FilePenLine className="h-4 w-4" />
+                    {t('common.actions.revise', { defaultValue: 'Revise' })}
+                  </DropdownMenuItem>
+                )}
                 {status === 'draft' && (
                   <DropdownMenuItem
                     onClick={() => onDelete(record.quote_id)}
@@ -216,7 +228,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
         );
       },
     },
-  ], [formatCurrency, formatDate, onDelete, onDownloadPdf, onDuplicate, onEdit, onSend, t]);
+  ], [formatCurrency, formatDate, onDelete, onDownloadPdf, onDuplicate, onEdit, onRevise, onSend, t]);
 
   if (filteredByStatus.length === 0) {
     return (
@@ -442,6 +454,26 @@ const QuotesTab: React.FC = () => {
     }
   };
 
+  const handleReviseQuote = async (quoteId: string) => {
+    setError(null);
+    try {
+      const result = await createQuoteRevision(quoteId);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+      router.push(`/msp/billing?tab=quotes&quoteId=${result.quote_id}&mode=edit`);
+      void loadData();
+    } catch (err) {
+      console.error('Failed to revise quote:', err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('quoteDetail.errors.revise', { defaultValue: 'Failed to create quote revision.' }),
+      );
+    }
+  };
+
   const handleDeleteQuote = async () => {
     const quoteId = deleteDialogState.quoteId;
     if (!quoteId) return;
@@ -512,14 +544,14 @@ const QuotesTab: React.FC = () => {
           : isTemplateParam
             ? router.push('/msp/billing?tab=quote-business-templates')
             : router.push('/msp/billing?tab=quotes')}
-        onSaved={() => {
+        onSaved={(savedQuoteId) => {
           void loadData();
           if (opportunityId) {
             router.push(`/msp/opportunities/${opportunityId}`);
           } else if (isTemplateParam) {
             router.push('/msp/billing?tab=quote-business-templates');
           } else {
-            router.push('/msp/billing?tab=quotes');
+            router.push(`/msp/billing?tab=quotes&quoteId=${savedQuoteId}&mode=edit`);
           }
         }}
       />
@@ -560,6 +592,7 @@ const QuotesTab: React.FC = () => {
                   onDownload={handleDownloadPdf}
                   onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
                   onSend={(id) => setSendDialogState({ isOpen: true, quoteId: id })}
+                  onRevise={handleReviseQuote}
                   onDuplicate={handleDuplicateQuote}
                   onDownloadPdf={triggerPdfDownload}
                   onDelete={(id) => setDeleteDialogState({ isOpen: true, quoteId: id })}
@@ -580,6 +613,7 @@ const QuotesTab: React.FC = () => {
                   onDownload={handleDownloadPdf}
                   onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
                   onSend={(id) => setSendDialogState({ isOpen: true, quoteId: id })}
+                  onRevise={handleReviseQuote}
                   onDuplicate={handleDuplicateQuote}
                   onDownloadPdf={triggerPdfDownload}
                   onDelete={(id) => setDeleteDialogState({ isOpen: true, quoteId: id })}
@@ -600,6 +634,7 @@ const QuotesTab: React.FC = () => {
                   onDownload={handleDownloadPdf}
                   onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
                   onSend={(id) => setSendDialogState({ isOpen: true, quoteId: id })}
+                  onRevise={handleReviseQuote}
                   onDuplicate={handleDuplicateQuote}
                   onDownloadPdf={triggerPdfDownload}
                   onDelete={(id) => setDeleteDialogState({ isOpen: true, quoteId: id })}

@@ -231,7 +231,36 @@ describe('QuoteDetail accepted optional item review state', () => {
     expect(screen.getByText('Client declined this optional item')).toBeTruthy();
     expect(screen.getByText('Optional security bundle')).toBeTruthy();
     expect(screen.getByText('Optional onboarding workshop')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Revise' })).toBeTruthy();
   });
+
+  it.each(['rejected', 'expired', 'cancelled'] as const)(
+    'T098b: %s quote detail shows a Revise action',
+    async (status) => {
+      getQuoteMock.mockResolvedValueOnce({
+        quote_id: `quote-${status}-1`,
+        quote_number: 'Q-0043',
+        version: 1,
+        client_id: 'client-1',
+        title: `${status} quote`,
+        quote_date: '2026-03-10T00:00:00.000Z',
+        valid_until: '2026-03-25T00:00:00.000Z',
+        status,
+        currency_code: 'USD',
+        subtotal: 10000,
+        discount_total: 0,
+        tax: 0,
+        total_amount: 10000,
+        quote_items: [],
+        activities: [],
+      });
+
+      const QuoteDetail = (await import('../../src/components/billing-dashboard/quotes/QuoteDetail')).default;
+      render(<QuoteDetail quoteId={`quote-${status}-1`} onBack={vi.fn()} onEdit={vi.fn()} onSelectVersion={vi.fn()} />);
+
+      expect(await screen.findByRole('button', { name: 'Revise' })).toBeTruthy();
+    },
+  );
 
   it('T118: converted quotes show links to the created contract and invoice on the detail view', async () => {
     getQuoteMock.mockResolvedValueOnce({
