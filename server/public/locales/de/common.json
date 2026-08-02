@@ -80,8 +80,8 @@
     "printSelected": "Ausgewählte drucken ({{count}})"
   },
   "upgradePrompt": {
-    "editionLabel": "Enterprise-Edition",
-    "defaultCta": "Enterprise entdecken"
+    "editionLabel": "Pro",
+    "defaultCta": "Pro entdecken"
   },
   "status": {
     "loading": "Wird geladen...",

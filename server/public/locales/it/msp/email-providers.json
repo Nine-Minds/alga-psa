@@ -11,7 +11,7 @@
       "resyncing": "Risincronizzazione {{providerName}} in corso...",
       "resyncError": "Impossibile risincronizzare il provider IMAP",
       "resyncStarted": "La risincronizzazione è iniziata per {{providerName}}.",
-      "enterpriseOnly": "La posta elettronica in entrata di Microsoft 365 è disponibile solo in Enterprise Edition.",
+      "enterpriseOnly": "La posta elettronica in entrata di Microsoft 365 è disponibile solo in Pro.",
       "loadProvidersError": "Failed to load email providers"
     },
     "editDrawer": {

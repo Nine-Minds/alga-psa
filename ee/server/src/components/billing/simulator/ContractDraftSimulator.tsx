@@ -32,7 +32,7 @@ export default function ContractDraftSimulator({
           setError(
             t("contractSimulator.unavailable.description", {
               defaultValue:
-                "The contract simulator is available in the Enterprise edition of Alga PSA.",
+                "The contract simulator is available in Alga PSA Pro.",
             }),
           );
           return;

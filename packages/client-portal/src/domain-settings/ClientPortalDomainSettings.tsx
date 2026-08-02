@@ -37,12 +37,12 @@ const ClientPortalDomainSettings = () => {
             <AtSign className="h-5 w-5" />
             Custom Domain
             <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">
-              Enterprise
+              Pro
             </Badge>
           </span>
         </CardTitle>
         <CardDescription>
-          Enterprise tenants can host the portal on a custom domain. Your default hosted address is shown below.
+          Pro tenants can host the portal on a custom domain. Your default hosted address is shown below.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -57,7 +57,7 @@ const ClientPortalDomainSettings = () => {
                   {portalStatus?.canonicalHost ?? '—'}
                 </code>
                 <p className="text-xs text-gray-500">
-                  Upgrade to Enterprise to configure a branded customer portal domain and automated certificates.
+                  Upgrade to Pro to configure a branded customer portal domain and automated certificates.
                 </p>
               </div>
             )}

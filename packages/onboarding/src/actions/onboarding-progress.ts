@@ -514,7 +514,7 @@ async function resolveEmailStep(tenantId: string): Promise<OnboardingStepServerS
         id: 'managed_email',
         status: 'blocked',
         lastUpdated: null,
-        blocker: 'Managed email domains are only available in the Enterprise edition.',
+        blocker: 'Managed email domains are only available in Pro.',
         blockerKey: 'onboarding.blockers.email.enterpriseOnly',
       };
     }

@@ -516,7 +516,7 @@
         "valid": "Microsoft-organisator succesvol geverifieerd.",
         "validWithName": "Geverifieerde Microsoft-gebruiker: {{displayName}}.",
         "reasons": {
-          "eeDisabled": "Verificatie van Teams-vergaderingen is alleen beschikbaar in de Enterprise Edition.",
+          "eeDisabled": "Verificatie van Teams-vergaderingen is alleen beschikbaar in Pro.",
           "notConfigured": "De Teams-integratie moet actief zijn voordat een organisator kan worden geverifieerd.",
           "userNotFound": "Microsoft kon geen gebruiker vinden voor deze organisatorwaarde.",
           "policyMissing": "De Microsoft-gebruiker bestaat, maar de Application Access Policy staat het maken van vergaderingen nog niet toe.",

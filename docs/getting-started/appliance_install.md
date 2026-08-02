@@ -19,7 +19,7 @@ You work in the application on port `3000`. You check its health on port `8080` 
 
 When you register, you receive an **install code** by email. The code binds the appliance to your tenant and applies the correct edition, so you do not pick an edition during setup.
 
-- **Essentials** runs the free, open-source feature set and is community-supported. The application offers a 15-day Enterprise trial you can start at any time from inside the app.
+- **Essentials** runs the free, open-source feature set and is community-supported. The application offers a 15-day Pro trial you can start at any time from inside the app.
 - **Paid editions** add the integration layer, a support contract, and an SLA.
 
 Install codes are single-use. Keep the registration email handy. You enter the code once, in the setup wizard.

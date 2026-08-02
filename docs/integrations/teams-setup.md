@@ -2,7 +2,7 @@
 
 This runbook takes a tenant from zero to a verified, working Microsoft Teams integration: personal tab, bot, message extension, activity-feed notifications, and Teams meetings with recording/transcript capture. Meeting-organizer specifics (Exchange and Teams application access policies, organizer mailbox scoping) live in [Microsoft Teams Meetings Setup](teams-meetings-setup.md); this document links there rather than repeating them.
 
-The Teams integration is an Enterprise Edition add-on. The setup wizard in `Settings -> Integrations -> Microsoft Teams` walks through the same steps and links back to the sections below.
+The Teams integration is an add-on for Pro. The setup wizard in `Settings -> Integrations -> Microsoft Teams` walks through the same steps and links back to the sections below.
 
 ## Overview
 
@@ -31,7 +31,7 @@ The generated Teams app manifest registers the bot under the tenant's Microsoft 
 
 ## Prerequisites
 
-- Alga PSA Enterprise Edition with the Microsoft Teams add-on enabled for the tenant.
+- Alga PSA Pro with the Microsoft Teams add-on enabled for the tenant.
 - An Alga PSA deployment reachable over public HTTPS. `NEXT_PUBLIC_BASE_URL` (or `NEXTAUTH_URL`) must be set to that URL; the Teams app package and webhook URLs are derived from it.
 - Admin access to the Microsoft Entra admin center and the Azure portal.
 - Permission to upload custom apps in the Teams admin center (or a Teams custom-app policy that allows sideloading).

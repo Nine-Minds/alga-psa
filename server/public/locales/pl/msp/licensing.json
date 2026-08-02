@@ -1,11 +1,11 @@
 {
   "reduceModal": {
     "title": "Zmniejsz liczbę licencji",
-    "enterpriseOnly": "Ta funkcja jest dostępna tylko w wersji Enterprise."
+    "enterpriseOnly": "Ta funkcja jest dostępna tylko w Pro."
   },
   "purchaseForm": {
     "title": "Zakup licencji",
-    "enterpriseOnlyHosted": "Zakup licencji jest dostępny w wersji Enterprise dla wdrożeń hostowanych.",
+    "enterpriseOnlyHosted": "Zakup licencji jest dostępny w Pro dla wdrożeń hostowanych.",
     "communityEditionUnlimited": "Samodzielnie hostowana wersja Community Edition ma nieograniczoną liczbę użytkowników bez dodatkowych kosztów."
   },
   "purchasePage": {
@@ -167,8 +167,8 @@
     }
   },
   "workflowDesigner": {
-    "enterpriseHeading": "Funkcja Enterprise",
-    "unavailable": "Projektant przepływów pracy wymaga edycji Enterprise. Proszę dokonać aktualizacji, aby uzyskać dostęp do tej funkcji."
+    "enterpriseHeading": "Funkcja Pro",
+    "unavailable": "Projektant przepływów pracy wymaga Pro. Proszę dokonać aktualizacji, aby uzyskać dostęp do tej funkcji."
   },
   "runStudio": {
     "unavailable": "Workflow Run Studio nie jest dostępne w tej edycji. (runId: {{runId}})"

@@ -12,7 +12,7 @@ export default async function ExtensionsListPage() {
       </h1>
       <p className="text-gray-600 mt-2">
         {t('page.description', {
-          defaultValue: 'Extensions management is available in Enterprise Edition.'
+          defaultValue: 'Extensions management is available in Pro.'
         })}
       </p>
     </div>

@@ -143,7 +143,7 @@
       "title": "Ad-hoc-Element",
       "toggleDoneError": "Element konnte nicht aktualisiert werden."
     },
-    "enterpriseOnly": "Workflow-Aufgaben sind eine Enterprise-Funktion.",
+    "enterpriseOnly": "Workflow-Aufgaben sind eine Pro-Funktion.",
     "nextAction": "Nächste Aktion",
     "overdueSince": "Überfällig seit {{date}}",
     "dueOn": "Fällig am {{date}}",

@@ -3,8 +3,8 @@
     "heading": "Extensions"
   },
   "enterpriseFeature": {
-    "title": "Enterprise Feature",
-    "description": "{{feature}} require Enterprise Edition. Please upgrade to access this feature."
+    "title": "Pro Feature",
+    "description": "{{feature}} require Pro. Please upgrade to access this feature."
   },
   "settings": {
     "title": "Extension Management",
@@ -14,8 +14,8 @@
       "install": "Install"
     },
     "enterpriseOnly": {
-      "title": "Enterprise feature",
-      "description": "Extensions are available in the Enterprise edition of Alga PSA."
+      "title": "Pro feature",
+      "description": "Extensions are available in Alga PSA Pro."
     },
     "links": {
       "needLogs": "Need extension logs?",
@@ -98,10 +98,10 @@
       "description": "Manage extensions"
     },
     "title": "Extensions",
-    "description": "Extensions management is available in Enterprise Edition."
+    "description": "Extensions management is available in Pro."
   },
   "detail": {
-    "metadataTitle": "Extensions - Enterprise Feature",
+    "metadataTitle": "Extensions - Pro Feature",
     "extensionId": "Extension ID: {{id}}"
   },
   "runtime": {
@@ -121,7 +121,7 @@
       "description": "View extension details"
     },
     "title": "Extension Details",
-    "description": "Extension details are available in Enterprise Edition."
+    "description": "Extension details are available in Pro."
   },
   "settingsPage": {
     "metadata": {
@@ -129,7 +129,7 @@
       "description": "Configure extension settings"
     },
     "title": "Extension Settings",
-    "description": "Extension settings are available in Enterprise Edition."
+    "description": "Extension settings are available in Pro."
   },
   "details": {
     "label": "Extension Details",

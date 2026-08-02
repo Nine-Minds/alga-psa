@@ -2310,8 +2310,8 @@
       "title": "Períodos de fatura simulados"
     },
     "unavailable": {
-      "description": "O simulador de contratos está disponível na edição Enterprise do Alga PSA.",
-      "title": "Recurso Enterprise"
+      "description": "O simulador de contratos está disponível no Alga PSA Pro.",
+      "title": "Recurso Pro"
     }
   }
 }

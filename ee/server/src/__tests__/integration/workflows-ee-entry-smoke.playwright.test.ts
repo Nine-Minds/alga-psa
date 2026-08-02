@@ -47,8 +47,8 @@ test('EE build: workflows page loads without CE/OSS stub messaging', async ({ pa
     const workflowPage = new WorkflowDesignerPage(page);
     await workflowPage.goto(TEST_CONFIG.baseUrl);
 
-    await expect(page.getByText('Workflow designer requires Enterprise Edition. Please upgrade to access this feature.')).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: 'Enterprise Feature' })).toHaveCount(0);
+    await expect(page.getByText('Workflow designer requires Pro. Please upgrade to access this feature.')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Pro Feature' })).toHaveCount(0);
     await expect(workflowPage.header).toBeVisible();
   } finally {
     if (tenantData) {
@@ -57,4 +57,3 @@ test('EE build: workflows page loads without CE/OSS stub messaging', async ({ pa
     await db.destroy();
   }
 });
-

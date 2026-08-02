@@ -3,8 +3,8 @@
     "heading": "Estensioni"
   },
   "enterpriseFeature": {
-    "title": "Funzionalità Enterprise",
-    "description": "Per {{feature}} è necessaria l'edizione Enterprise. Effettua l'upgrade per accedere a questa funzionalità."
+    "title": "Funzionalità Pro",
+    "description": "{{feature}} richiede Pro. Effettua l'upgrade per accedere a questa funzionalità."
   },
   "settings": {
     "title": "Gestione estensioni",
@@ -14,8 +14,8 @@
       "install": "Installa"
     },
     "enterpriseOnly": {
-      "title": "Funzionalità Enterprise",
-      "description": "Le estensioni sono disponibili nell'edizione Enterprise di Alga PSA."
+      "title": "Funzionalità Pro",
+      "description": "Le estensioni sono disponibili in Alga PSA Pro."
     },
     "links": {
       "needLogs": "Servono i log delle estensioni?",
@@ -98,10 +98,10 @@
       "description": "Gestisci estensioni"
     },
     "title": "Estensioni",
-    "description": "La gestione delle estensioni è disponibile nell'edizione Enterprise."
+    "description": "La gestione delle estensioni è disponibile in Pro."
   },
   "detail": {
-    "metadataTitle": "Estensioni - Funzionalità Enterprise",
+    "metadataTitle": "Estensioni - Funzionalità Pro",
     "extensionId": "ID estensione: {{id}}"
   },
   "runtime": {
@@ -121,7 +121,7 @@
       "description": "Visualizza i dettagli dell'estensione"
     },
     "title": "Dettagli dell'estensione",
-    "description": "I dettagli dell'estensione sono disponibili nell'edizione Enterprise."
+    "description": "I dettagli dell'estensione sono disponibili in Pro."
   },
   "settingsPage": {
     "metadata": {
@@ -129,7 +129,7 @@
       "description": "Configura le impostazioni delle estensioni"
     },
     "title": "Impostazioni estensioni",
-    "description": "Le impostazioni delle estensioni sono disponibili nell'edizione Enterprise."
+    "description": "Le impostazioni delle estensioni sono disponibili in Pro."
   },
   "details": {
     "label": "Dettagli estensione",

@@ -12,7 +12,7 @@ export default function ExtensionSettings() {
     <div className="text-center py-8">
       <h3 className="text-lg font-medium text-gray-900 mb-2">Extension Settings Not Available</h3>
       <p className="text-gray-600">
-        Extension settings management is available in the Enterprise Edition of Alga PSA.
+        Extension settings management is available in Alga PSA Pro.
       </p>
     </div>
   );

@@ -199,7 +199,7 @@
         "loadFailed": "Unable to load calendar integrations."
       },
       "email": {
-        "enterpriseOnly": "Managed email domains are only available in the Enterprise edition.",
+        "enterpriseOnly": "Managed email domains are only available in Pro.",
         "tenantRequired": "Tenant context is required to load email onboarding status.",
         "loadFailed": "Unable to load managed email domains.",
         "verificationFailed": "Verification for {{domain}} failed."

@@ -273,7 +273,7 @@
   },
   "rightSidebar": {
     "title": "Chat",
-    "enterpriseOnly": "La función de chat solo está disponible en la edición Enterprise."
+    "enterpriseOnly": "La función de chat solo está disponible en Pro."
   },
   "notifications": {
     "messages": {

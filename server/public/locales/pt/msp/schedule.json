@@ -516,7 +516,7 @@
         "valid": "Organizador da Microsoft verificado com sucesso.",
         "validWithName": "Usuário verificado da Microsoft: {{displayName}}.",
         "reasons": {
-          "eeDisabled": "A verificação de reuniões do Teams está disponível apenas na Enterprise Edition.",
+          "eeDisabled": "A verificação de reuniões do Teams está disponível apenas no Pro.",
           "notConfigured": "A integração das equipes deve estar ativa antes que um organizador possa ser verificado.",
           "userNotFound": "A Microsoft não conseguiu encontrar um usuário para esse valor de organizador.",
           "policyMissing": "O usuário Microsoft existe, mas a política de acesso ao aplicativo ainda não permite a criação de reuniões.",

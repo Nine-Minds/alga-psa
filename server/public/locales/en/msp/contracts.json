@@ -2310,8 +2310,8 @@
       "title": "Simulated invoice periods"
     },
     "unavailable": {
-      "description": "The contract simulator is available in the Enterprise edition of Alga PSA.",
-      "title": "Enterprise Feature"
+      "description": "The contract simulator is available in Alga PSA Pro.",
+      "title": "Pro Feature"
     }
   }
 }

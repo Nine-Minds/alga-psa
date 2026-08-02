@@ -3,8 +3,8 @@
     "heading": "Rozszerzenia"
   },
   "enterpriseFeature": {
-    "title": "Funkcja wersji Enterprise",
-    "description": "Do korzystania z {{feature}} wymagana jest wersja Enterprise. Wykonaj uaktualnienie, aby uzyskać dostęp do tej funkcji."
+    "title": "Funkcja Pro",
+    "description": "Korzystanie z {{feature}} wymaga Pro. Wykonaj uaktualnienie, aby uzyskać dostęp do tej funkcji."
   },
   "settings": {
     "title": "Zarządzanie rozszerzeniami",
@@ -14,8 +14,8 @@
       "install": "Instalacja"
     },
     "enterpriseOnly": {
-      "title": "Funkcja wersji Enterprise",
-      "description": "Rozszerzenia są dostępne w wersji Enterprise programu Alga PSA."
+      "title": "Funkcja Pro",
+      "description": "Rozszerzenia są dostępne w Alga PSA Pro."
     },
     "links": {
       "needLogs": "Potrzebujesz logów rozszerzenia?",
@@ -98,10 +98,10 @@
       "description": "Zarządzaj rozszerzeniami"
     },
     "title": "Rozszerzenia",
-    "description": "Zarządzanie rozszerzeniami jest dostępne w wersji Enterprise."
+    "description": "Zarządzanie rozszerzeniami jest dostępne w Pro."
   },
   "detail": {
-    "metadataTitle": "Rozszerzenia - Funkcja wersji Enterprise",
+    "metadataTitle": "Rozszerzenia - Funkcja Pro",
     "extensionId": "Identyfikator rozszerzenia: {{id}}"
   },
   "runtime": {
@@ -121,7 +121,7 @@
       "description": "Wyświetl szczegóły rozszerzenia"
     },
     "title": "Szczegóły rozszerzenia",
-    "description": "Szczegóły rozszerzenia są dostępne w wersji Enterprise."
+    "description": "Szczegóły rozszerzenia są dostępne w Pro."
   },
   "settingsPage": {
     "metadata": {
@@ -129,7 +129,7 @@
       "description": "Skonfiguruj ustawienia rozszerzeń"
     },
     "title": "Ustawienia rozszerzeń",
-    "description": "Ustawienia rozszerzeń są dostępne w wersji Enterprise."
+    "description": "Ustawienia rozszerzeń są dostępne w Pro."
   },
   "details": {
     "label": "Szczegóły rozszerzenia",

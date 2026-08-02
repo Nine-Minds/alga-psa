@@ -556,13 +556,13 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
       <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] py-12 text-center">
         <p className="text-lg font-medium text-[rgb(var(--color-text-900))]">
           {t("contractSimulator.unavailable.title", {
-            defaultValue: "Enterprise Feature",
+            defaultValue: "Pro Feature",
           })}
         </p>
         <p className="mt-2 text-sm text-[rgb(var(--color-text-500))]">
           {t("contractSimulator.unavailable.description", {
             defaultValue:
-              "The contract simulator is available in the Enterprise edition of Alga PSA.",
+              "The contract simulator is available in Alga PSA Pro.",
           })}
         </p>
       </div>

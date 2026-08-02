@@ -516,7 +516,7 @@
         "valid": "Organizzatore Microsoft verificato correttamente.",
         "validWithName": "Utente Microsoft verificato: {{displayName}}.",
         "reasons": {
-          "eeDisabled": "La verifica delle riunioni Teams è disponibile solo nella Enterprise Edition.",
+          "eeDisabled": "La verifica delle riunioni Teams è disponibile solo in Pro.",
           "notConfigured": "L'integrazione Teams deve essere attiva prima di poter verificare un organizzatore.",
           "userNotFound": "Microsoft non ha trovato un utente per questo organizzatore.",
           "policyMissing": "L'utente Microsoft esiste, ma l'Application Access Policy non consente ancora la creazione di riunioni.",

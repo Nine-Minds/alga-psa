@@ -78,8 +78,8 @@ describe('AccountingIntegrationsSetup live Xero contracts', () => {
     ).not.toBeDisabled();
     // No Coming Soon button — QBO is now enabled in EE
     expect(screen.queryByRole('button', { name: 'Coming Soon' })).not.toBeInTheDocument();
-    // Enterprise badge is present (at least one, for Xero and/or QBO)
-    expect(screen.getAllByText('Enterprise').length).toBeGreaterThan(0);
+    // Pro badge is present (at least one, for Xero and/or QBO)
+    expect(screen.getAllByText('Pro').length).toBeGreaterThan(0);
   });
 
   it('T002: non-enterprise mode hides the live Xero option', async () => {
@@ -109,7 +109,7 @@ describe('AccountingIntegrationsSetup live Xero contracts', () => {
     expect(screen.queryByTestId('xero-csv-settings-stub')).not.toBeInTheDocument();
   });
 
-  it('T010: enterprise mode shows the QuickBooks Online card with Enterprise badge and enabled button', async () => {
+  it('T010: enterprise mode shows the QuickBooks Online card with Pro badge and enabled button', async () => {
     const { default: AccountingIntegrationsSetup } = await import('./AccountingIntegrationsSetup');
 
     render(<AccountingIntegrationsSetup />);
@@ -119,7 +119,7 @@ describe('AccountingIntegrationsSetup live Xero contracts', () => {
     expect(
       within(qboCard as HTMLElement).getByRole('button', { name: 'Configure Integration' })
     ).not.toBeDisabled();
-    expect(within(qboCard as HTMLElement).getByText('Enterprise')).toBeInTheDocument();
+    expect(within(qboCard as HTMLElement).getByText('Pro')).toBeInTheDocument();
   });
 
   it('T011: non-enterprise mode hides the QuickBooks Online card', async () => {

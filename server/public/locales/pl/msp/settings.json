@@ -1747,8 +1747,8 @@
       "install": "Instalacja"
     },
     "enterpriseOnly": {
-      "title": "Funkcja wersji Enterprise",
-      "description": "Rozszerzenia są dostępne w wersji Enterprise programu Alga PSA."
+      "title": "Funkcja Pro",
+      "description": "Rozszerzenia są dostępne w Alga PSA Pro."
     },
     "links": {
       "needLogs": "Potrzebujesz logów rozszerzenia?",
@@ -2076,7 +2076,7 @@
   "integrations": {
     "betaNotice": "Niektóre integracje są jeszcze w fazie rozwoju. Prosimy o pracę w środowisku sandbox podczas oceny i dzielenie się opinią, aby pomóc nam w ulepszaniu.",
     "emptyCategory": "Brak dostępnych integracji w tej kategorii.",
-    "rmmEnterpriseNote": "Integracje RMM są dostępne w edycji Enterprise.",
+    "rmmEnterpriseNote": "Integracje RMM są dostępne w Pro.",
     "categoryHeading": "Integracje {{label}}",
     "loading": {
       "payments": "Ładowanie ustawień płatności..."
@@ -2100,7 +2100,7 @@
       },
       "calendar": {
         "label": "Kalendarz",
-        "description": "Synchronizacja kalendarza dostępna wyłącznie w Enterprise dla Google i Outlook utrzymuje zgodność dyspozycji i spotkań z klientami."
+        "description": "Synchronizacja kalendarza dostępna wyłącznie w Pro dla Google i Outlook utrzymuje zgodność dyspozycji i spotkań z klientami."
       },
       "providers": {
         "label": "Dostawcy",

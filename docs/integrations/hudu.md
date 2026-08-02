@@ -3,7 +3,7 @@
 AlgaPSA connects to [Hudu](https://www.hudu.com/), an IT documentation platform,
 so you can see a client's Hudu documentation and credentials without leaving
 AlgaPSA. The integration is **read-only**: AlgaPSA pulls from Hudu and never
-writes back. It is an **Enterprise Edition** feature, and each tenant connects a
+writes back. It is a **Pro** feature, and each tenant connects a
 single Hudu instance.
 
 ## Connect to Hudu

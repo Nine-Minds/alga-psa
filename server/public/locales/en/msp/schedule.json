@@ -516,7 +516,7 @@
         "valid": "Microsoft organizer verified successfully.",
         "validWithName": "Verified Microsoft user: {{displayName}}.",
         "reasons": {
-          "eeDisabled": "Teams meeting verification is only available in Enterprise Edition.",
+          "eeDisabled": "Teams meeting verification is only available in Pro.",
           "notConfigured": "Teams integration must be active before an organizer can be verified.",
           "userNotFound": "Microsoft could not find a user for that organizer value.",
           "policyMissing": "The Microsoft user exists, but the application access policy is not allowing meeting creation yet.",

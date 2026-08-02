@@ -120,11 +120,11 @@ export default function ExtensionManagement() {
         ) : (
           <div className="text-center py-10">
             <div className="text-lg font-medium text-gray-900">
-              {t('settings.enterpriseOnly.title', { defaultValue: 'Enterprise feature' })}
+              {t('settings.enterpriseOnly.title', { defaultValue: 'Pro feature' })}
             </div>
             <p className="text-sm text-gray-600 mt-2">
               {t('settings.enterpriseOnly.description', {
-                defaultValue: 'Extensions are available in the Enterprise edition of Alga PSA.'
+                defaultValue: 'Extensions are available in Alga PSA Pro.'
               })}
             </p>
           </div>

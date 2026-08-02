@@ -425,7 +425,7 @@
       "classifyCandidates": "Classer les candidats",
       "classifying": "Classification…",
       "didNotRun": "Le tri AI ne s'est pas exécuté{{reason}}.",
-      "requiresEnterprise": "Le tri AI nécessite Enterprise et le module complémentaire AI Assistant.",
+      "requiresEnterprise": "Le tri AI nécessite Pro et le module complémentaire AI Assistant.",
       "runFailed": "Le tri AI a échoué.",
       "toggleFailed": "Impossible de modifier le paramètre du tri AI.",
       "toggleLabel": "Tri AI — classer les tickets candidats avec le module complémentaire AI",

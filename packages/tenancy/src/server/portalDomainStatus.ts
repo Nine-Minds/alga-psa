@@ -29,7 +29,7 @@ function formatResponse(record: PortalDomain | null, canonicalHost: string): Por
     domain: record?.domain ?? null,
     canonicalHost,
     status: record?.status ?? 'disabled',
-    statusMessage: record?.statusMessage ?? 'Custom portal domains are available in the Enterprise edition.',
+    statusMessage: record?.statusMessage ?? 'Custom portal domains are available in Pro.',
     lastCheckedAt: toIsoString(record?.lastCheckedAt),
     verificationMethod: record?.verificationMethod ?? 'cname',
     verificationDetails: buildVerificationDetails(record, canonicalHost),
@@ -54,4 +54,3 @@ export async function getPortalDomainStatusForTenant(tenantId: string): Promise<
 
   return formatResponse(record, canonicalHost);
 }
-

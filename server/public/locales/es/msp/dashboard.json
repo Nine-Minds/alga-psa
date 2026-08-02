@@ -171,7 +171,7 @@
         "loadFailed": "No se pudieron cargar las integraciones de calendario."
       },
       "email": {
-        "enterpriseOnly": "Los dominios de correo administrados solo están disponibles en la edición Enterprise.",
+        "enterpriseOnly": "Los dominios de correo administrados solo están disponibles en Pro.",
         "tenantRequired": "Se requiere el contexto del tenant para cargar el estado de onboarding del correo.",
         "loadFailed": "No se pudieron cargar los dominios de correo administrados.",
         "verificationFailed": "La verificación de {{domain}} falló."

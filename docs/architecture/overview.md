@@ -129,7 +129,7 @@ This document provides a high-level architectural overview of the open-source MS
 
 * **Interactions:** Tracks client interactions. See `server/src/lib/models/interactions.ts` and components under `server/src/components/interactions`.
 
-* **Mobile Access (EE):** Native apps for iOS and Android for MSP technicians, available on the App Store and Google Play as an Enterprise Edition feature (`TIER_FEATURES.MOBILE_ACCESS`). Self-hosted Enterprise Edition appliance users can connect the app to their own server by entering the server URL or scanning the **Connect this server** QR code on the MSP dashboard. Open-source Community Edition (CE) self-hosted servers do not support mobile app access; CE builds explicitly reject the mobile token exchange. Sign-in uses the browser-based mobile handoff flow (`/auth/mobile/handoff`) against the selected EE host.
+* **Mobile Access (EE):** Native apps for iOS and Android for MSP technicians, available on the App Store and Google Play as a Pro feature (`TIER_FEATURES.MOBILE_ACCESS`). Self-hosted Pro appliance users can connect the app to their own server by entering the server URL or scanning the **Connect this server** QR code on the MSP dashboard. Open-source Community Edition (CE) self-hosted servers do not support mobile app access; CE builds explicitly reject the mobile token exchange. Sign-in uses the browser-based mobile handoff flow (`/auth/mobile/handoff`) against the selected EE host.
   * Operator configuration for self-hosted EE appliances: set `NEXTAUTH_URL` to the server's public URL, configure at least one SSO provider (Google or Microsoft OAuth), and optionally set `ALGA_MOBILE_HOST_ALLOWLIST` to a comma-separated list of allowed hostnames. If unset or empty, any host is allowed.
   * See `ee/appliance/docs/mobile-app-access.md` for full operator setup.
   * Key files:
@@ -399,7 +399,7 @@ No code has been merged yet – this section serves as an architectural note so 
       ```
     
   * **Implementation Strategies:**
-    * UI Components: Display "Enterprise Feature" messages with upgrade information
+    * UI Components: Display "Pro Feature" messages with upgrade information
     * Services: Return appropriate HTTP responses (e.g., 403 Forbidden) with upgrade messages
     * Storage Providers: Throw clear enterprise-only errors
     * Example:

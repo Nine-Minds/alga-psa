@@ -94,8 +94,8 @@
     "printSelected_many": "Drukuj zaznaczone ({{count}})"
   },
   "upgradePrompt": {
-    "editionLabel": "Wersja Enterprise",
-    "defaultCta": "Poznaj Enterprise"
+    "editionLabel": "Pro",
+    "defaultCta": "Poznaj Pro"
   },
   "status": {
     "loading": "Ładowanie...",

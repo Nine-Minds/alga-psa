@@ -425,7 +425,7 @@
       "classifyCandidates": "Classifica candidati",
       "classifying": "Classificazione…",
       "didNotRun": "Il triage AI non è stato eseguito{{reason}}.",
-      "requiresEnterprise": "Il triage AI richiede Enterprise e il componente aggiuntivo AI Assistant.",
+      "requiresEnterprise": "Il triage AI richiede Pro e il componente aggiuntivo AI Assistant.",
       "runFailed": "Triage AI non riuscito.",
       "toggleFailed": "Impossibile modificare l'impostazione del triage AI.",
       "toggleLabel": "Triage AI — classifica i ticket candidati con il componente aggiuntivo AI",

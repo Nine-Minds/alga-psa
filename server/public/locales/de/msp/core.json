@@ -273,7 +273,7 @@
   },
   "rightSidebar": {
     "title": "Chat",
-    "enterpriseOnly": "Die Chatfunktion ist nur in der Enterprise Edition verfügbar."
+    "enterpriseOnly": "Die Chatfunktion ist nur in Pro verfügbar."
   },
   "notifications": {
     "messages": {

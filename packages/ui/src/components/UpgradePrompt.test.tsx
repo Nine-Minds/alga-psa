@@ -43,12 +43,12 @@ describe('UpgradePrompt', () => {
       </UpgradePrompt>,
     );
 
-    expect(screen.getByText('Enterprise edition')).toBeTruthy();
+    expect(screen.getByText('Pro')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Microsoft Teams integration' })).toBeTruthy();
     expect(screen.getByText('Bring PSA work into Microsoft Teams.')).toBeTruthy();
     expect(screen.getByText('Tenant setup remains unchanged.')).toBeTruthy();
 
-    const cta = screen.getByRole('link', { name: /Explore Enterprise/ });
+    const cta = screen.getByRole('link', { name: /Explore Pro/ });
     expect(cta.getAttribute('href')).toBe(
       'https://www.nineminds.com/documentation/community-vs-enterprise-edition',
     );

@@ -3,8 +3,8 @@
     "heading": "Extensões"
   },
   "enterpriseFeature": {
-    "title": "Recurso Empresarial",
-    "description": "{{feature}} requer Enterprise Edition. Atualize para acessar esse recurso."
+    "title": "Recurso Pro",
+    "description": "{{feature}} requer Pro. Atualize para acessar esse recurso."
   },
   "settings": {
     "title": "Gerenciamento de extensão",
@@ -14,8 +14,8 @@
       "install": "Instalar"
     },
     "enterpriseOnly": {
-      "title": "Recurso empresarial",
-      "description": "As extensões estão disponíveis na edição Enterprise do Alga PSA."
+      "title": "Recurso Pro",
+      "description": "As extensões estão disponíveis no Alga PSA Pro."
     },
     "links": {
       "needLogs": "Precisa de registros de extensão?",
@@ -98,10 +98,10 @@
       "description": "Gerenciar extensões"
     },
     "title": "Extensões",
-    "description": "O gerenciamento de extensões está disponível na Enterprise Edition."
+    "description": "O gerenciamento de extensões está disponível no Pro."
   },
   "detail": {
-    "metadataTitle": "Extensões - Recurso Corporativo",
+    "metadataTitle": "Extensões - Recurso Pro",
     "extensionId": "ID da extensão: {{id}}"
   },
   "runtime": {
@@ -121,7 +121,7 @@
       "description": "Ver detalhes da extensão"
     },
     "title": "Detalhes da extensão",
-    "description": "Os detalhes da extensão estão disponíveis na Enterprise Edition."
+    "description": "Os detalhes da extensão estão disponíveis no Pro."
   },
   "settingsPage": {
     "metadata": {
@@ -129,7 +129,7 @@
       "description": "Definir configurações de extensão"
     },
     "title": "Configurações de extensão",
-    "description": "As configurações de extensão estão disponíveis na Enterprise Edition."
+    "description": "As configurações de extensão estão disponíveis no Pro."
   },
   "details": {
     "label": "Detalhes da extensão",

@@ -11,7 +11,7 @@
       "resyncing": "{{providerName}} opnieuw synchroniseren...",
       "resyncError": "Het opnieuw synchroniseren van de IMAP-provider is mislukt",
       "resyncStarted": "Hersynchronisatie gestart voor {{providerName}}.",
-      "enterpriseOnly": "Microsoft 365 inkomende e-mail is alleen beschikbaar in Enterprise Edition.",
+      "enterpriseOnly": "Microsoft 365 inkomende e-mail is alleen beschikbaar in Pro.",
       "loadProvidersError": "Failed to load email providers"
     },
     "editDrawer": {

@@ -80,8 +80,8 @@
     "printSelected": "Geselecteerde afdrukken ({{count}})"
   },
   "upgradePrompt": {
-    "editionLabel": "Enterprise-editie",
-    "defaultCta": "Enterprise ontdekken"
+    "editionLabel": "Pro",
+    "defaultCta": "Pro ontdekken"
   },
   "status": {
     "loading": "Bezig met laden...",

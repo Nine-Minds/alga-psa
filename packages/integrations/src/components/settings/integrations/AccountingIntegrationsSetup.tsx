@@ -89,7 +89,7 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnbo
           id: 'quickbooks_online',
           title: 'QuickBooks Online',
           description: t('integrations.accounting.setup.options.qbo.description', { defaultValue: 'Connect your realm to sync invoices and manage mappings.' }),
-          badge: { label: t('integrations.accounting.setup.badges.enterprise', { defaultValue: 'Enterprise' }), variant: 'secondary' },
+          badge: { label: t('integrations.accounting.setup.badges.enterprise', { defaultValue: 'Pro' }), variant: 'secondary' },
           highlights: [
             { label: t('integrations.accounting.setup.highlights.sync', { defaultValue: 'Sync' }), value: t('integrations.accounting.setup.highlightValues.twoWay', { defaultValue: '2-way' }) },
             { label: t('integrations.accounting.setup.highlights.delivery', { defaultValue: 'Delivery' }), value: t('integrations.accounting.setup.highlightValues.live', { defaultValue: 'Live' }) }
@@ -100,7 +100,7 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnbo
           id: 'xero',
           title: 'Xero',
           description: t('integrations.accounting.setup.options.xero.description', { defaultValue: 'Connect your organisation with tenant-owned OAuth credentials for live accounting exports and mappings.' }),
-          badge: { label: t('integrations.accounting.setup.badges.enterprise', { defaultValue: 'Enterprise' }), variant: 'secondary' },
+          badge: { label: t('integrations.accounting.setup.badges.enterprise', { defaultValue: 'Pro' }), variant: 'secondary' },
           highlights: [
             { label: t('integrations.accounting.setup.highlights.sync', { defaultValue: 'Sync' }), value: t('integrations.accounting.setup.highlightValues.twoWay', { defaultValue: '2-way' }) },
             { label: t('integrations.accounting.setup.highlights.delivery', { defaultValue: 'Delivery' }), value: t('integrations.accounting.setup.highlightValues.live', { defaultValue: 'Live' }) }

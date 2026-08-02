@@ -11,7 +11,7 @@
       "resyncing": "Resyncing {{providerName}}...",
       "resyncError": "Failed to resync IMAP provider",
       "resyncStarted": "Resync started for {{providerName}}.",
-      "enterpriseOnly": "Microsoft 365 inbound email is only available in Enterprise Edition.",
+      "enterpriseOnly": "Microsoft 365 inbound email is only available in Pro.",
       "loadProvidersError": "Failed to load email providers"
     },
     "editDrawer": {

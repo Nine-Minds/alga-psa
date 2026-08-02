@@ -1741,8 +1741,8 @@
       "install": "Instalar"
     },
     "enterpriseOnly": {
-      "title": "Recurso empresarial",
-      "description": "As extensões estão disponíveis na edição Enterprise do Alga PSA."
+      "title": "Recurso Pro",
+      "description": "As extensões estão disponíveis no Alga PSA Pro."
     },
     "links": {
       "needLogs": "Precisa de registros de extensão?",
@@ -2062,7 +2062,7 @@
   "integrations": {
     "betaNotice": "Algumas integrações ainda estão em desenvolvimento. Trabalhe em um ambiente sandbox ao avaliar e compartilhe seus comentários para nos ajudar a melhorar.",
     "emptyCategory": "Nenhuma integração disponível nesta categoria.",
-    "rmmEnterpriseNote": "As integrações RMM estão disponíveis na edição Enterprise.",
+    "rmmEnterpriseNote": "As integrações RMM estão disponíveis no Pro.",
     "categoryHeading": "Integrações {{label}}",
     "loading": {
       "payments": "Carregando configurações de pagamento..."
@@ -2086,7 +2086,7 @@
       },
       "calendar": {
         "label": "Calendário",
-        "description": "A sincronização de calendário somente empresarial para Google e Outlook mantém o envio e os compromissos do cliente alinhados."
+        "description": "A sincronização de calendário exclusiva do Pro para Google e Outlook mantém o envio e os compromissos do cliente alinhados."
       },
       "providers": {
         "label": "Provedores",

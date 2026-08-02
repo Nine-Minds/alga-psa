@@ -1,11 +1,11 @@
 {
   "reduceModal": {
     "title": "Lizenzen reduzieren",
-    "enterpriseOnly": "Diese Funktion ist nur in der Enterprise-Edition verfügbar."
+    "enterpriseOnly": "Diese Funktion ist nur in Pro verfügbar."
   },
   "purchaseForm": {
     "title": "Lizenzkauf",
-    "enterpriseOnlyHosted": "Der Lizenzkauf ist in der Enterprise-Edition für gehostete Bereitstellungen verfügbar.",
+    "enterpriseOnlyHosted": "Der Lizenzkauf ist in Pro für gehostete Bereitstellungen verfügbar.",
     "communityEditionUnlimited": "Die selbst gehostete Community-Edition unterstützt unbegrenzt viele Benutzer ohne zusätzliche Kosten."
   },
   "purchasePage": {
@@ -167,8 +167,8 @@
     }
   },
   "workflowDesigner": {
-    "enterpriseHeading": "Enterprise-Funktion",
-    "unavailable": "Der Workflow-Designer erfordert die Enterprise Edition. Bitte upgraden Sie, um auf diese Funktion zuzugreifen."
+    "enterpriseHeading": "Pro-Funktion",
+    "unavailable": "Der Workflow-Designer erfordert Pro. Bitte upgraden Sie, um auf diese Funktion zuzugreifen."
   },
   "runStudio": {
     "unavailable": "Workflow Run Studio ist in dieser Edition nicht verfügbar. (runId: {{runId}})"

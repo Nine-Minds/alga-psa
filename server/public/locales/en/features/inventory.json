@@ -425,7 +425,7 @@
       "classifyCandidates": "Classify candidates",
       "classifying": "Classifying…",
       "didNotRun": "AI triage didn't run{{reason}}.",
-      "requiresEnterprise": "AI triage requires Enterprise and the AI Assistant add-on.",
+      "requiresEnterprise": "AI triage requires Pro and the AI Assistant add-on.",
       "runFailed": "AI triage failed.",
       "toggleFailed": "Couldn't change the AI triage setting.",
       "toggleLabel": "AI triage — classify candidate tickets with the AI add-on",

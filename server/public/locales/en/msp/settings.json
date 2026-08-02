@@ -1741,8 +1741,8 @@
       "install": "Install"
     },
     "enterpriseOnly": {
-      "title": "Enterprise feature",
-      "description": "Extensions are available in the Enterprise edition of Alga PSA."
+      "title": "Pro feature",
+      "description": "Extensions are available in Alga PSA Pro."
     },
     "links": {
       "needLogs": "Need extension logs?",
@@ -2062,7 +2062,7 @@
   "integrations": {
     "betaNotice": "Some integrations are still in development. Please work in a sandbox environment when evaluating, and share your feedback to help us improve.",
     "emptyCategory": "No integrations available in this category.",
-    "rmmEnterpriseNote": "RMM integrations are available in the Enterprise edition.",
+    "rmmEnterpriseNote": "RMM integrations are available in Pro.",
     "categoryHeading": "{{label}} Integrations",
     "loading": {
       "payments": "Loading payment settings..."
@@ -2086,7 +2086,7 @@
       },
       "calendar": {
         "label": "Calendar",
-        "description": "Enterprise-only calendar sync for Google and Outlook keeps dispatch and client appointments aligned."
+        "description": "Pro-only calendar sync for Google and Outlook keeps dispatch and client appointments aligned."
       },
       "providers": {
         "label": "Providers",

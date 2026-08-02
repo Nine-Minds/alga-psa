@@ -12,7 +12,7 @@ const nextDir = path.join(serverDir, '.next');
 const nextServerDir = path.join(nextDir, 'server');
 const nextStaticDir = path.join(nextDir, 'static');
 
-const needle = 'Workflow designer requires Enterprise Edition. Please upgrade to access this feature.';
+const needle = 'Workflow designer requires Pro. Please upgrade to access this feature.';
 const needleBytes = Buffer.from(needle, 'utf8');
 
 function walkFiles(rootDir) {
@@ -85,4 +85,3 @@ if (!hits.length) {
 }
 
 console.log(`[guard-ce-workflows-next-build] OK: found workflows CE stub string in CE build output (${hits.length} file(s))`);
-

@@ -32,7 +32,7 @@ export default function ReduceLicensesModal({
         </h2>
         <p className="text-muted-foreground mb-4">
           {t('reduceModal.enterpriseOnly', {
-            defaultValue: 'This feature is only available in the Enterprise Edition.'
+            defaultValue: 'This feature is only available in Pro.'
           })}
         </p>
         <button
