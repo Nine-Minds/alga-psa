@@ -21,6 +21,7 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useRouter } from 'next/navigation';
 import {
   archiveMicrosoftProfile,
   createMicrosoftProfile,
@@ -365,6 +366,7 @@ export function MicrosoftIntegrationSettings({
   canUseTeams = true,
   onStatusChange,
 }: MicrosoftIntegrationSettingsProps) {
+  const router = useRouter();
   const { t } = useTranslation('msp/integrations');
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(true);
@@ -760,7 +762,7 @@ export function MicrosoftIntegrationSettings({
                   id="microsoft-platform-connect-email"
                   type="button"
                   className="mt-3"
-                  onClick={() => window.location.assign('/msp/settings?tab=email')}
+                  onClick={() => router.push('/msp/settings/integrations?category=communication')}
                 >
                   {t('integrations.microsoft.settings.platform.connectAction', { defaultValue: 'Connect Microsoft email' })}
                 </Button>

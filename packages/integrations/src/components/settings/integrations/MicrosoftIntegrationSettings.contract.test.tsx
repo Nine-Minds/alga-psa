@@ -17,6 +17,11 @@ const archiveMicrosoftProfileMock = vi.hoisted(() => vi.fn());
 const setDefaultMicrosoftProfileMock = vi.hoisted(() => vi.fn());
 const resetMicrosoftProvidersToDisconnectedMock = vi.hoisted(() => vi.fn());
 const toastMock = vi.hoisted(() => vi.fn());
+const routerPushMock = vi.hoisted(() => vi.fn());
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: routerPushMock }),
+}));
 
 vi.mock('@alga-psa/integrations/actions', () => ({
   getMicrosoftIntegrationStatus: (...args: unknown[]) => getMicrosoftIntegrationStatusMock(...args),
@@ -278,6 +283,7 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     setDefaultMicrosoftProfileMock.mockReset();
     resetMicrosoftProvidersToDisconnectedMock.mockReset();
     toastMock.mockReset();
+    routerPushMock.mockReset();
     getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus());
     listMicrosoftConsumerBindingsMock.mockResolvedValue({
       success: true,
@@ -359,6 +365,28 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     expect(screen.getByText(/custom Entra app is normally unnecessary/i)).toBeInTheDocument();
     expect(screen.getByText('Which Microsoft app each service uses')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'New app registration' })).toBeInTheDocument();
+  });
+
+  it('opens inbound email provider configuration from the hosted Microsoft CTA', async () => {
+    const user = userEvent.setup();
+    getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus({
+      emailCredentialCapability: {
+        source: 'platform',
+        ready: true,
+        platformReady: true,
+        tenantProfileSelected: false,
+        clientIdConfigured: true,
+        clientSecretConfigured: true,
+        tenantIdConfigured: true,
+        profileId: null,
+      },
+    }));
+
+    render(<MicrosoftIntegrationSettings />);
+
+    await user.click(await screen.findByRole('button', { name: 'Connect Microsoft email' }));
+
+    expect(routerPushMock).toHaveBeenCalledWith('/msp/settings/integrations?category=communication');
   });
 
   it('opens manual app management when platform credentials are unavailable', async () => {
