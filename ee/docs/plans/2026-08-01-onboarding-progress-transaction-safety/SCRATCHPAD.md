@@ -34,6 +34,7 @@ Working notes for eliminating lock timeouts and lost updates when onboarding act
 - (2026-08-01, verification) Full server TypeScript checking exceeds 8 GiB of V8 heap in this checkout; `node --max-old-space-size=16384 node_modules/typescript/bin/tsc --noEmit -p server/tsconfig.json` completes successfully.
 - (2026-08-01, verification) The active workflow port is 3134. Hocuspocus is intentionally excluded from this task's stack gate by human direction recorded on the workflow card.
 - (2026-08-01, verification) A local runtime build starts on port 3134 and `/auth/msp/signin` returns HTTP 200. The shared wire-in database is behind current schema and background schedulers warn that `tenants.suspended_at` is missing; this does not block the onboarding compile/test checks but should not be mistaken for a branch regression.
+- (2026-08-01, mitigation) Replaced the T007 source-string contract with a behavioral action test that invokes all four transaction-owning flows and verifies each passes the active transaction to the internal progress writer without calling the public action.
 
 ## Selected Design
 

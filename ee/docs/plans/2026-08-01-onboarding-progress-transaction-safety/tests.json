@@ -37,7 +37,7 @@
   },
   {
     "id": "T007",
-    "description": "Onboarding action contract/integration: every transaction-wrapped tenant-details, team-members, billing, and ticketing progress write receives the active trx and no transaction callback invokes the public progress action",
+    "description": "Onboarding action unit/integration: every transaction-wrapped tenant-details, team-members, billing, and ticketing progress write receives the active trx and no transaction callback invokes the public progress action",
     "implemented": true,
     "featureIds": ["F009", "F010", "F011", "F012", "F015", "F016"]
   },
