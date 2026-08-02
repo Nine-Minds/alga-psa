@@ -33,7 +33,6 @@ npm run build:ee       # EE, Webpack
 | --- | --- |
 | `server/src` | Shared application and server code. |
 | `packages/ee/src` | Checked-in CE-compatible implementations for the `@ee/*` surface. These files also provide the default TypeScript path targets. |
-| `server/src/empty` | Narrow CE fallbacks and empty shims used by seams that mirror paths under `ee/server/src`. |
 | `ee/server/src` | Enterprise server implementations selected in EE builds. |
 | `packages/product-*/oss` and `packages/product-*/ee` | Package-local implementations selected by stable product entry points. |
 
@@ -60,15 +59,14 @@ generated `ee/server` tree.
 
 ### `@/empty/*`
 
-Use `@/empty/*` for a shared-server seam whose CE implementation belongs in the
-small fallback tree under `server/src/empty`. The normal `@/*` mapping sends the
-CE import there. In an EE build, `server/next.config.mjs` redirects the same
+`@/empty/*` is an established compatibility spelling for a path-mirrored
+edition seam. CE resolves it to `packages/ee/src/*`; EE resolves the same
 relative path to `ee/server/src/*`.
 
-Despite the name, this is an edition-switched seam in an EE build. Use it for
-the established path-mirrored fallbacks. Prefer `@ee/*` for the broader
-package-backed EE surface, or a product alias when the feature already has a
-package entry point.
+Despite the name, it does not resolve to `server/src/empty`. Use it only for
+established imports that already use this spelling. Prefer `@ee/*` for new
+path-mirrored imports, or a product alias when the feature already has a package
+entry point.
 
 ### `@product/*`
 
@@ -96,9 +94,8 @@ for that seam instead of copying a long alias inventory into documentation.
 
 1. Choose a stable import seam. Prefer a product entry point for a packaged
    feature and `@ee/*` for a path-mirrored implementation surface.
-2. Add and export the CE implementation from `packages/ee/src`,
-   `server/src/empty`, or the product package's `oss` entry, as required by the
-   selected seam.
+2. Add and export the CE implementation from `packages/ee/src` or the product
+   package's `oss` entry, as required by the selected seam.
 3. Add the matching EE implementation.
 4. Wire exact and subpath variants in both the Turbopack and Webpack sections of
    `server/next.config.mjs`. Add replacement wiring when the existing seam uses
