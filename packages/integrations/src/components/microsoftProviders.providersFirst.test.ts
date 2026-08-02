@@ -26,12 +26,12 @@ describe('Microsoft providers-first form contracts', () => {
     expect(emailFormSource).not.toContain('clientSecret: z.string');
     expect(emailFormSource).toContain("client_id: ''");
     expect(emailFormSource).toContain("client_secret: ''");
-  });
-
-  it('T019: Microsoft email form shows Providers-first CTA when provider setup is missing', () => {
-    expect(emailFormSource).toContain('Microsoft provider settings are not configured.');
+});
+  it('T019: Microsoft email form keeps tenant-owned app setup behind an advanced CTA', () => {
+    expect(emailFormSource).toContain('Use your own Microsoft app (advanced)');
+    expect(emailFormSource).toContain('This is normally unnecessary on hosted Alga PSA.');
     expect(emailFormSource).toContain('configure-microsoft-providers-link');
-    expect(emailFormSource).toContain('/msp/settings?category=providers');
+    expect(emailFormSource).toContain('/msp/settings?tab=integrations&category=providers');
   });
 
   it('T020/T021: Microsoft calendar form uses providers-first CTA and saves without manual credentials', () => {
@@ -46,7 +46,8 @@ describe('Microsoft providers-first form contracts', () => {
   });
 
   it('T022: Microsoft email persistence derives credentials from tenant providers secrets instead of form fields', () => {
-    expect(emailActionsSource).toContain("resolveMicrosoftConsumerProfileConfig(tenant, 'email')");
+    expect(emailActionsSource).toContain("resolveMicrosoftConsumerProfileConfig(tenant, 'email', {");
+    expect(emailActionsSource).toContain('credentialPreference');
     expect(emailActionsSource).toContain(
       "const effectiveClientId = microsoftProfile.clientId || '';"
     );

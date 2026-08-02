@@ -11,17 +11,19 @@ import {
 } from '@alga-psa/integrations/email/providers/entry';
 import type { EmailProvider } from './types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import type { MicrosoftCredentialCapability } from '../../actions/integrations/providerReadiness';
 
 interface ProviderSetupWizardDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onComplete: (provider: EmailProvider) => void;
   tenant: string;
+  microsoftCredentialCapability?: MicrosoftCredentialCapability | null;
 }
 
 type Step = 'select' | 'setup';
 
-export function ProviderSetupWizardDialog({ isOpen, onClose, onComplete, tenant }: ProviderSetupWizardDialogProps) {
+export function ProviderSetupWizardDialog({ isOpen, onClose, onComplete, tenant, microsoftCredentialCapability }: ProviderSetupWizardDialogProps) {
   const { t } = useTranslation('msp/email-providers');
   const [step, setStep] = useState<Step>('select');
   const [providerType, setProviderType] = useState<'microsoft' | 'google' | 'imap' | null>(null);
@@ -92,7 +94,12 @@ export function ProviderSetupWizardDialog({ isOpen, onClose, onComplete, tenant 
         )}
 
         {step === 'setup' && providerType === 'microsoft' && (
-          <MicrosoftProviderForm tenant={tenant} onSuccess={handleSetupSuccess} onCancel={handleSetupCancel} />
+          <MicrosoftProviderForm
+            tenant={tenant}
+            onSuccess={handleSetupSuccess}
+            onCancel={handleSetupCancel}
+            credentialCapability={microsoftCredentialCapability}
+          />
         )}
 
         {step === 'setup' && providerType === 'google' && (

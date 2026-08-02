@@ -129,7 +129,10 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
-import { resolveMicrosoftConsumerProfileConfig } from './microsoftConsumerProfileResolution';
+import {
+  getMicrosoftPlatformCredentialAvailability,
+  resolveMicrosoftConsumerProfileConfig,
+} from './microsoftConsumerProfileResolution';
 
 describe('resolveMicrosoftConsumerProfileConfig', () => {
   beforeEach(() => {
@@ -228,6 +231,74 @@ describe('resolveMicrosoftConsumerProfileConfig', () => {
       clientSecret: 'env-hosted-client-secret',
       microsoftTenantId: 'env-hosted-tenant-id',
       credentialSource: 'app',
+    });
+  });
+
+  it('reports partial platform credentials through the UI-safe availability helper', async () => {
+    hoisted.state.appSecrets.set('MICROSOFT_CLIENT_ID', 'hosted-client-id');
+
+    await expect(getMicrosoftPlatformCredentialAvailability()).resolves.toEqual({
+      ready: false,
+      clientIdConfigured: true,
+      clientSecretConfigured: false,
+      tenantIdConfigured: false,
+    });
+  });
+
+  it('lets an explicit platform choice bypass a tenant Email binding', async () => {
+    hoisted.state.appSecrets.set('MICROSOFT_CLIENT_ID', 'hosted-client-id');
+    hoisted.state.appSecrets.set('MICROSOFT_CLIENT_SECRET', 'hosted-client-secret');
+    hoisted.state.microsoftProfiles.push({
+      tenant: 'tenant-1',
+      profile_id: 'profile-email',
+      display_name: 'Email Profile',
+      display_name_normalized: 'email profile',
+      client_id: 'tenant-client-id',
+      tenant_id: 'tenant-directory-id',
+      client_secret_ref: 'tenant-secret-ref',
+      capabilities: ['email'],
+      is_default: true,
+      is_archived: false,
+      archived_at: null,
+      created_by: null,
+      updated_by: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    hoisted.state.microsoftConsumerBindings.push({
+      tenant: 'tenant-1',
+      consumer_type: 'email',
+      profile_id: 'profile-email',
+      created_by: null,
+      updated_by: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    hoisted.state.tenantSecrets.set('tenant-1:tenant-secret-ref', 'tenant-client-secret');
+
+    const result = await resolveMicrosoftConsumerProfileConfig('tenant-1', 'email', {
+      credentialPreference: 'platform',
+    });
+
+    expect(result).toMatchObject({
+      status: 'ready',
+      credentialSource: 'app',
+      clientId: 'hosted-client-id',
+      clientSecret: 'hosted-client-secret',
+    });
+  });
+
+  it('does not fall back to platform credentials when the tenant-owned path is explicit', async () => {
+    hoisted.state.appSecrets.set('MICROSOFT_CLIENT_ID', 'hosted-client-id');
+    hoisted.state.appSecrets.set('MICROSOFT_CLIENT_SECRET', 'hosted-client-secret');
+
+    await expect(resolveMicrosoftConsumerProfileConfig('tenant-1', 'email', {
+      credentialPreference: 'tenant',
+    })).resolves.toEqual({
+      status: 'not_configured',
+      tenantId: 'tenant-1',
+      consumerType: 'email',
+      message: 'Email Microsoft profile binding is not configured',
     });
   });
 

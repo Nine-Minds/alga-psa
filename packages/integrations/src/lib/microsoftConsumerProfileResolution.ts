@@ -57,7 +57,15 @@ export interface MicrosoftBindingCandidateProfile {
 }
 
 type ResolverStatus = 'ready' | 'not_configured' | 'invalid_profile';
-type MicrosoftCredentialSource = 'binding' | 'app';
+export type MicrosoftCredentialSource = 'binding' | 'app';
+export type MicrosoftCredentialPreference = 'tenant' | 'platform';
+
+export interface MicrosoftPlatformCredentialAvailability {
+  ready: boolean;
+  clientIdConfigured: boolean;
+  clientSecretConfigured: boolean;
+  tenantIdConfigured: boolean;
+}
 
 export interface MicrosoftConsumerProfileResolution {
   status: ResolverStatus;
@@ -117,19 +125,50 @@ async function getLegacyMicrosoftConfig(
   };
 }
 
-async function resolveHostedMicrosoftEmailConfig(
-  tenantId: string,
+async function loadPlatformMicrosoftEmailConfig(
   secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>
-): Promise<MicrosoftConsumerProfileResolution | null> {
+): Promise<{
+  clientId: string;
+  clientSecret: string;
+  microsoftTenantId: string;
+  tenantIdConfigured: boolean;
+}> {
   const [appClientId, appClientSecret, appTenantId] = await Promise.all([
     secretProvider.getAppSecret(HOSTED_MICROSOFT_CLIENT_ID_SECRET),
     secretProvider.getAppSecret(HOSTED_MICROSOFT_CLIENT_SECRET_SECRET),
     secretProvider.getAppSecret(HOSTED_MICROSOFT_TENANT_ID_SECRET),
   ]);
 
-  const clientId = (appClientId || process.env.MICROSOFT_CLIENT_ID || '').trim();
-  const clientSecret = (appClientSecret || process.env.MICROSOFT_CLIENT_SECRET || '').trim();
-  const microsoftTenantId = normalizeTenantId(appTenantId || process.env.MICROSOFT_TENANT_ID);
+  const rawTenantId = (appTenantId || process.env.MICROSOFT_TENANT_ID || '').trim();
+
+  return {
+    clientId: (appClientId || process.env.MICROSOFT_CLIENT_ID || '').trim(),
+    clientSecret: (appClientSecret || process.env.MICROSOFT_CLIENT_SECRET || '').trim(),
+    microsoftTenantId: normalizeTenantId(rawTenantId),
+    tenantIdConfigured: Boolean(rawTenantId),
+  };
+}
+
+export async function getMicrosoftPlatformCredentialAvailability(): Promise<MicrosoftPlatformCredentialAvailability> {
+  const secretProvider = await getSecretProviderInstance();
+  const config = await loadPlatformMicrosoftEmailConfig(secretProvider);
+
+  const clientIdConfigured = isConfigured(config.clientId);
+  const clientSecretConfigured = isConfigured(config.clientSecret);
+
+  return {
+    ready: clientIdConfigured && clientSecretConfigured,
+    clientIdConfigured,
+    clientSecretConfigured,
+    tenantIdConfigured: config.tenantIdConfigured,
+  };
+}
+
+async function resolveHostedMicrosoftEmailConfig(
+  tenantId: string,
+  secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>
+): Promise<MicrosoftConsumerProfileResolution | null> {
+  const { clientId, clientSecret, microsoftTenantId } = await loadPlatformMicrosoftEmailConfig(secretProvider);
 
   if (!isConfigured(clientId) || !isConfigured(clientSecret)) {
     return null;
@@ -422,7 +461,8 @@ async function ensureMicrosoftConsumerBindingMigration(
 
 export async function resolveMicrosoftConsumerProfileConfig(
   tenantId: string,
-  consumerType: MicrosoftProfileConsumer
+  consumerType: MicrosoftProfileConsumer,
+  options?: { credentialPreference?: MicrosoftCredentialPreference }
 ): Promise<MicrosoftConsumerProfileResolution> {
   if (!(MICROSOFT_PROFILE_CONSUMERS as readonly string[]).includes(consumerType)) {
     return {
@@ -435,10 +475,21 @@ export async function resolveMicrosoftConsumerProfileConfig(
 
   const db = await getAdminConnection();
   const secretProvider = await getSecretProviderInstance();
+
+  if (consumerType === 'email' && options?.credentialPreference === 'platform') {
+    const hostedEmailConfig = await resolveHostedMicrosoftEmailConfig(tenantId, secretProvider);
+    return hostedEmailConfig || {
+      status: 'not_configured',
+      tenantId,
+      consumerType,
+      message: 'Platform Microsoft credentials are not configured',
+    };
+  }
+
   const binding = await ensureMicrosoftConsumerBindingMigration(db, tenantId, consumerType, secretProvider);
 
   if (!binding) {
-    if (consumerType === 'email') {
+    if (consumerType === 'email' && options?.credentialPreference !== 'tenant') {
       const hostedEmailConfig = await resolveHostedMicrosoftEmailConfig(tenantId, secretProvider);
       if (hostedEmailConfig) {
         return hostedEmailConfig;
@@ -465,7 +516,7 @@ export async function resolveMicrosoftConsumerProfileConfig(
   }
 
   if (!profileHasCapability(profile, consumerType)) {
-    if (consumerType === 'email') {
+    if (consumerType === 'email' && options?.credentialPreference !== 'tenant') {
       const hostedEmailConfig = await resolveHostedMicrosoftEmailConfig(tenantId, secretProvider);
       if (hostedEmailConfig) {
         return hostedEmailConfig;

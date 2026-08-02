@@ -63,8 +63,7 @@ export {
   resyncImapProvider,
   testEmailProviderConnection,
   retryMicrosoftSubscriptionRenewal,
-  runMicrosoft365Diagnostics,
-  getHostedMicrosoftConfig
+  runMicrosoft365Diagnostics
 } from './email-actions/emailProviderActions';
 export {
   pauseEmailProvider,

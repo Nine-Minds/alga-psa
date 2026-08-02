@@ -41,6 +41,23 @@
       "title": "Instruções de configuração",
       "microsoft": {
         "title": "Configuração do Microsoft 365",
+        "checkingCredentials": "Checking Microsoft credential availability…",
+        "platform": {
+          "title": "Microsoft sign-in is ready",
+          "description": "Alga PSA supplies the Microsoft application. Add a provider, enter the mailbox details, and connect with Microsoft—no Entra app registration is needed."
+        },
+        "byo": {
+          "summary": "Advanced: use your own Microsoft app",
+          "warning": "This is normally unnecessary on hosted Alga PSA and should be used only when your organization requires its own Entra application.",
+          "description": "Open Settings → Integrations → Providers, expand the Microsoft advanced options, and add your tenant-owned app before returning here."
+        },
+        "manualRequired": "Platform Microsoft credentials are unavailable in this deployment. Configure your own Microsoft app to connect a mailbox.",
+        "tenant": {
+          "title": "Your organization’s Microsoft app is selected",
+          "description": "New Microsoft mailboxes will use the tenant-owned app selected in Providers settings. This choice is preserved even when platform credentials are available.",
+          "incompleteTitle": "Your Microsoft app needs attention",
+          "incompleteDescription": "Finish configuring the Microsoft app selected in Providers settings before connecting a mailbox."
+        },
         "steps": {
           "registerApp": "Registre um aplicativo no Azure AD",
           "permissions": "Configurar permissões de API para Mail.Read",
@@ -250,6 +267,19 @@
       }
     },
     "microsoft": {
+      "hostedOauth": {
+        "sectionTitle": "Connect Microsoft 365",
+        "platformUnavailableDescription": "Platform Microsoft credentials are unavailable in this deployment. Use your own Microsoft app to continue.",
+        "tenantSectionDescription": "Authorize this mailbox with the Microsoft app selected in Providers settings.",
+        "platformSectionDescription": "Alga PSA supplies the Microsoft application. Enter the mailbox details, then sign in with Microsoft.",
+        "platformManagedTitle": "Platform-managed Microsoft app",
+        "platformManagedDescription": "No Entra app registration, client ID, or client secret is required from you.",
+        "byoToggle": "Use your own Microsoft app (advanced)",
+        "byoToggleDescription": "For organizations that deliberately require their own Entra app registration.",
+        "byoWarning": "This is normally unnecessary on hosted Alga PSA. Use it only when your organization requires a tenant-owned Entra application.",
+        "tenantNotConfigured": "Your Microsoft app is not ready yet.",
+        "platformNotConfigured": "Platform Microsoft credentials are unavailable."
+      },
       "validation": {
         "providerNameRequired": "O nome da configuração é obrigatório",
         "emailRequired": "É necessário um endereço de e-mail válido",

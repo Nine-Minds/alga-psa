@@ -5,7 +5,10 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { generateMicrosoftAuthUrl, generateGoogleAuthUrl, generateNonce, type OAuthState } from '../../utils/email/oauthHelpers';
-import { resolveMicrosoftConsumerProfileConfig } from '../../lib/microsoftConsumerProfileResolution';
+import {
+  resolveMicrosoftConsumerProfileConfig,
+  type MicrosoftCredentialPreference,
+} from '../../lib/microsoftConsumerProfileResolution';
 
 export const initiateEmailOAuth = withAuth(async (
   user,
@@ -14,6 +17,7 @@ export const initiateEmailOAuth = withAuth(async (
     provider: 'microsoft' | 'google';
     providerId?: string;
     redirectUri?: string;
+    microsoftCredentialSource?: MicrosoftCredentialPreference;
   }
 ): Promise<{ success: true; authUrl: string; state: string } | { success: false; error: string }> => {
 
@@ -48,7 +52,11 @@ export const initiateEmailOAuth = withAuth(async (
       // Google is always tenant-owned (CE and EE): do not fall back to app-level secrets.
       clientId = (await secretProvider.getTenantSecret(tenant, 'google_client_id')) || null;
     } else {
-      const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(tenant, 'email');
+      const microsoftProfile = params.microsoftCredentialSource
+        ? await resolveMicrosoftConsumerProfileConfig(tenant, 'email', {
+            credentialPreference: params.microsoftCredentialSource,
+          })
+        : await resolveMicrosoftConsumerProfileConfig(tenant, 'email');
       if (microsoftProfile.status !== 'ready') {
         return {
           success: false,
@@ -80,7 +88,8 @@ export const initiateEmailOAuth = withAuth(async (
       redirectUri: effectiveRedirectUri,
       timestamp: Date.now(),
       nonce: generateNonce(),
-      hosted: false
+      hosted: params.microsoftCredentialSource === 'platform',
+      microsoftCredentialSource: params.microsoftCredentialSource,
     };
 
     // For multi-tenant Azure AD apps, always use 'common' for the authorization URL

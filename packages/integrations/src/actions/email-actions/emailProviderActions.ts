@@ -25,7 +25,10 @@ import {
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import type { Microsoft365DiagnosticsReport } from '@alga-psa/shared/interfaces/microsoft365-diagnostics.interfaces';
 import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
-import { resolveMicrosoftConsumerProfileConfig } from '../../lib/microsoftConsumerProfileResolution';
+import {
+  resolveMicrosoftConsumerProfileConfig,
+  type MicrosoftCredentialPreference,
+} from '../../lib/microsoftConsumerProfileResolution';
 
 type EmailProviderActionError = ActionMessageError;
 type EmailProviderSetupActionResult = EmailProviderSetupResult | EmailProviderActionError;
@@ -180,20 +183,6 @@ async function generatePubSubNames(tenantId: string) {
 }
 
 /**
- * Get hosted Microsoft configuration for Enterprise Edition
- */
-export async function getHostedMicrosoftConfig() {
-  const secretProvider = await getSecretProviderInstance();
-  
-  return {
-    client_id: await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID'),
-    client_secret: await secretProvider.getAppSecret('MICROSOFT_CLIENT_SECRET'),
-    tenant_id: await secretProvider.getAppSecret('MICROSOFT_TENANT_ID') || 'common',
-    redirect_uri: await secretProvider.getAppSecret('MICROSOFT_REDIRECT_URI') || 'https://algapsa.com/api/auth/microsoft/callback'
-  };
-}
-
-/**
  * Shared column list for provider queries
  */
 const PROVIDER_COLUMNS = [
@@ -327,12 +316,15 @@ async function persistMicrosoftConfig(
   trx: any,
   tenant: string,
   providerId: string,
-  config?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>
+  config?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>,
+  credentialPreference?: MicrosoftCredentialPreference
 ): Promise<MicrosoftEmailProviderConfig | undefined> {
   if (!config) return undefined;
   if (!tenant) throwExpectedEmailProviderError('Tenant context is required to save Microsoft email configuration');
 
-  const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(tenant, 'email');
+  const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(tenant, 'email', {
+    credentialPreference,
+  });
   if (microsoftProfile.status !== 'ready') {
     throwExpectedEmailProviderError(
       microsoftProfile.message || 'Microsoft Email profile is not configured'
@@ -816,6 +808,7 @@ export const upsertEmailProvider = withAuth(async (
   isActive: boolean;
   inboundTicketDefaultsId?: string;
   microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
+  microsoftCredentialSource?: MicrosoftCredentialPreference;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
 },
@@ -833,7 +826,13 @@ export const upsertEmailProvider = withAuth(async (
       const base = await getOrCreateProvider(trx, tenant, data);
 
       if (data.providerType === 'microsoft') {
-        base.microsoftConfig = await persistMicrosoftConfig(trx, tenant, base.id, data.microsoftConfig);
+        base.microsoftConfig = await persistMicrosoftConfig(
+          trx,
+          tenant,
+          base.id,
+          data.microsoftConfig,
+          data.microsoftCredentialSource
+        );
       } else if (data.providerType === 'google') {
         base.googleConfig = await persistGoogleConfig(trx, tenant, base.id, data.googleConfig);
       } else if (data.providerType === 'imap') {
@@ -930,6 +929,7 @@ export const createEmailProvider = withAuth(async (
   isActive: boolean;
   inboundTicketDefaultsId?: string;
   microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
+  microsoftCredentialSource?: MicrosoftCredentialPreference;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
 },
@@ -952,6 +952,7 @@ export const updateEmailProvider = withAuth(async (
     isActive: boolean;
     inboundTicketDefaultsId?: string;
     microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
+    microsoftCredentialSource?: MicrosoftCredentialPreference;
     googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
     imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   },
@@ -969,7 +970,13 @@ export const updateEmailProvider = withAuth(async (
       const base = await getOrCreateProvider(trx, tenant, data, providerId);
 
       if (data.providerType === 'microsoft') {
-        base.microsoftConfig = await persistMicrosoftConfig(trx, tenant, base.id, data.microsoftConfig);
+        base.microsoftConfig = await persistMicrosoftConfig(
+          trx,
+          tenant,
+          base.id,
+          data.microsoftConfig,
+          data.microsoftCredentialSource
+        );
       } else if (data.providerType === 'google') {
         base.googleConfig = await persistGoogleConfig(trx, tenant, base.id, data.googleConfig);
       } else if (data.providerType === 'imap') {

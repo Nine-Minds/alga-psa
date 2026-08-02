@@ -1518,6 +1518,19 @@
     },
     "microsoft": {
       "settings": {
+        "advanced": {
+          "title": "yyyyy",
+          "description": "yyyyy",
+          "warning": "yyyyy"
+        },
+        "platform": {
+          "title": "yyyyy",
+          "description": "yyyyy",
+          "readyDescription": "yyyyy",
+          "connectAction": "yyyyy",
+          "unavailableTitle": "yyyyy",
+          "unavailableDescription": "yyyyy"
+        },
         "actions": {
           "disconnectProviders": "55555",
           "entraLink": "55555",

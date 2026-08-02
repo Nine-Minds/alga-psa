@@ -298,6 +298,10 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
+vi.mock('@alga-psa/db/admin', () => ({
+  getAdminConnection: async () => hoisted.knexMock,
+}));
+
 import {
   archiveMicrosoftProfile,
   createMicrosoftProfile,
