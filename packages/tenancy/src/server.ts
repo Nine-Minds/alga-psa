@@ -2,6 +2,7 @@ import { headers } from 'next/headers.js';
 import { getTenantContext } from '@alga-psa/db';
 
 export * from './server/portalDomainStatus';
+export * from './server/onboardingProgress';
 
 export async function getTenantForCurrentRequest(fallbackTenant?: string): Promise<string | null> {
   const contextTenant = getTenantContext() ?? null;

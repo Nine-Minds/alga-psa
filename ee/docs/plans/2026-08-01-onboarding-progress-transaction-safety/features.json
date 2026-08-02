@@ -1,0 +1,146 @@
+[
+  {
+    "id": "F001",
+    "description": "A server-only onboarding progress primitive accepts a caller-supplied Knex connection or transaction, authenticated tenant ID, and Partial<WizardData> patch",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Transaction-aware persistence primitive"]
+  },
+  {
+    "id": "F002",
+    "description": "The progress primitive scopes tenant_settings access through tenantDb using the caller's authenticated tenant",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Transaction-aware persistence primitive", "Security / Permissions"]
+  },
+  {
+    "id": "F003",
+    "description": "The progress primitive applies an onboarding_data patch with one tenant-scoped JSONB insert/upsert statement and no preliminary read",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Transaction-aware persistence primitive", "Data / API / Integrations"]
+  },
+  {
+    "id": "F004",
+    "description": "Atomic progress patching creates tenant_settings when the tenant has no existing settings row",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Transaction-aware persistence primitive"]
+  },
+  {
+    "id": "F005",
+    "description": "Atomic progress patching treats both SQL NULL and JSONB literal null onboarding_data as an empty object and preserves unrelated stored top-level fields",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Transaction-aware persistence primitive"]
+  },
+  {
+    "id": "F006",
+    "description": "Incoming progress values replace matching top-level fields while undefined properties remain omitted, preserving current shallow-merge behavior",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Transaction-aware persistence primitive", "Data / API / Integrations"]
+  },
+  {
+    "id": "F007",
+    "description": "The public saveTenantOnboardingProgress action retains authentication, acquires one tenant connection, and delegates to the atomic primitive",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Authenticated action facade", "Security / Permissions"]
+  },
+  {
+    "id": "F008",
+    "description": "The public progress action no longer calls getTenantSettings or performs a separate read/merge/write sequence",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Authenticated action facade"]
+  },
+  {
+    "id": "F009",
+    "description": "The transaction-wrapped tenant-details onboarding flow saves its progress with its existing transaction",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Transaction-owning onboarding actions"]
+  },
+  {
+    "id": "F010",
+    "description": "The transaction-wrapped team-members onboarding flow saves its progress with its existing transaction",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Transaction-owning onboarding actions"]
+  },
+  {
+    "id": "F011",
+    "description": "The transaction-wrapped billing onboarding flow saves its progress with its existing transaction",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Transaction-owning onboarding actions"]
+  },
+  {
+    "id": "F012",
+    "description": "The transaction-wrapped ticketing onboarding flow saves its progress with its existing transaction",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Transaction-owning onboarding actions"]
+  },
+  {
+    "id": "F013",
+    "description": "Ticketing with a valid support email commits settings.supportEmail and ticketing onboarding_data together without opening a competing connection",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows > New tenant administrator completing onboarding", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F014",
+    "description": "A failure in a transaction-owning onboarding action rolls back its progress patch together with the action's related database mutations",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Transaction-owning onboarding actions"]
+  },
+  {
+    "id": "F015",
+    "description": "No transaction callback in the current onboarding action module invokes the authenticated public progress action",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Transaction-owning onboarding actions"]
+  },
+  {
+    "id": "F016",
+    "description": "Non-transactional onboarding callers continue to persist progress through the authenticated public action",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Transaction-owning onboarding actions"]
+  },
+  {
+    "id": "F017",
+    "description": "Step-position saves initiated by one mounted onboarding wizard execute one at a time in step-change order",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Step-position write ordering"]
+  },
+  {
+    "id": "F018",
+    "description": "A failed step-position save is logged and contained so navigation and later queued position saves continue",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Step-position write ordering", "UX / UI Notes"]
+  },
+  {
+    "id": "F019",
+    "description": "Final onboarding waits for the pending step-position queue to settle before validation, ticketing configuration, and completion",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Step-position write ordering"]
+  },
+  {
+    "id": "F020",
+    "description": "A rejected position-only save does not prevent final ticketing configuration or completion",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Step-position write ordering", "UX / UI Notes"]
+  },
+  {
+    "id": "F021",
+    "description": "No pre-completion step-position request remains able to repopulate onboarding_data after completeOnboarding clears it",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > Step-position write ordering"]
+  },
+  {
+    "id": "F022",
+    "description": "Database lock_timeout and idle-in-transaction guardrail configuration remain unchanged",
+    "implemented": true,
+    "prdRefs": ["Non-goals", "Rollout / Migration"]
+  },
+  {
+    "id": "F023",
+    "description": "The DB-backed ticketing regression exercises the real progress persistence implementation instead of mocking it",
+    "implemented": true,
+    "prdRefs": ["Risks and Mitigations", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F024",
+    "description": "A newly installed appliance completes onboarding with a valid support email and retains both support-email settings and ticketing progress",
+    "implemented": false,
+    "prdRefs": ["Rollout / Migration", "Acceptance Criteria (Definition of Done)"]
+  }
+]
