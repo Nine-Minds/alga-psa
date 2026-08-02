@@ -5,10 +5,14 @@ import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import Sidebar from './Sidebar';
 import {
   bottomMenuItems,
+  billingNavigationSections,
+  extensionsNavigationSections,
+  inventoryNavigationSections,
   menuItems as legacyMenuItems,
   navigationSections as originalSections,
   settingsNavigationSections,
   type MenuItem,
+  type MenuEdition,
   type NavigationSection,
 } from '@/config/menuConfig';
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
@@ -52,6 +56,44 @@ export function filterMenuItemsByFeatureAccess(
   }, []);
 }
 
+export function filterMenuItemsByEdition(
+  items: readonly MenuItem[],
+  edition: MenuEdition,
+): MenuItem[] {
+  return items.reduce<MenuItem[]>((visibleItems, item) => {
+    if (item.availableEditions && !item.availableEditions.includes(edition)) {
+      return visibleItems;
+    }
+
+    const filteredSubItems = item.subItems
+      ? filterMenuItemsByEdition(item.subItems, edition)
+      : undefined;
+
+    if (item.subItems && filteredSubItems?.length === 0 && !item.href) {
+      return visibleItems;
+    }
+
+    visibleItems.push({
+      ...item,
+      subItems: filteredSubItems,
+    });
+
+    return visibleItems;
+  }, []);
+}
+
+export function filterNavigationSectionsByEdition(
+  sections: readonly NavigationSection[],
+  edition: MenuEdition,
+): NavigationSection[] {
+  return sections
+    .map((section) => ({
+      ...section,
+      items: filterMenuItemsByEdition(section.items, edition),
+    }))
+    .filter((section) => section.items.length > 0);
+}
+
 export function filterNavigationSectionsByFeatureAccess(
   sections: readonly NavigationSection[],
   hasFeature: (feature: NonNullable<MenuItem['requiredFeature']>) => boolean
@@ -79,7 +121,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [selfHostMode, setSelfHostMode] = useState(false);
   const { hasFeature } = useTier();
-  const { productCode } = useProduct();
+  const { productCode, edition } = useProduct();
   const isAlgaDesk = productCode === 'algadesk';
 
   useEffect(() => {
@@ -150,14 +192,17 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       })
     }));
 
+    const editionSections = filterNavigationSectionsByEdition(filteredSections, edition);
+
     return filterMenuSectionsByProduct(
       productCode,
-      filterNavigationSectionsByFeatureAccess(filteredSections, hasFeature),
+      filterNavigationSectionsByFeatureAccess(editionSections, hasFeature),
     );
-  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, opportunitiesEnabled, marketingEnabled]);
+  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, edition, opportunitiesEnabled, marketingEnabled]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
-    const productSections = filterMenuSectionsByProduct(productCode, settingsNavigationSections);
+    const editionSections = filterNavigationSectionsByEdition(settingsNavigationSections, edition);
+    const productSections = filterMenuSectionsByProduct(productCode, editionSections);
     const opportunitiesFilteredSections = productSections.map((section) => ({
       ...section,
       items: section.items.filter((item) => item.name !== 'Opportunities' || opportunitiesEnabled),
@@ -167,7 +212,20 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       opportunitiesFilteredSections,
       selfHostMode,
     );
-  }, [opportunitiesEnabled, productCode, selfHostMode]);
+  }, [edition, opportunitiesEnabled, productCode, selfHostMode]);
+
+  const billingSections = useMemo(
+    () => filterNavigationSectionsByEdition(billingNavigationSections, edition),
+    [edition],
+  );
+  const extensionsSections = useMemo(
+    () => filterNavigationSectionsByEdition(extensionsNavigationSections, edition),
+    [edition],
+  );
+  const inventorySections = useMemo(
+    () => filterNavigationSectionsByEdition(inventoryNavigationSections, edition),
+    [edition],
+  );
 
   return (
     <Sidebar
@@ -177,6 +235,9 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       appDisplayName={isAlgaDesk ? 'AlgaDesk' : 'AlgaPSA'}
       appLogoAlt={isAlgaDesk ? 'AlgaDesk Logo' : 'AlgaPSA Logo'}
       settingsSectionsOverride={settingsSections}
+      billingSectionsOverride={billingSections}
+      extensionsSectionsOverride={extensionsSections}
+      inventorySectionsOverride={inventorySections}
     />
   );
 }

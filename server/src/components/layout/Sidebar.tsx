@@ -39,6 +39,9 @@ interface SidebarProps {
   appDisplayName?: string;
   appLogoAlt?: string;
   settingsSectionsOverride?: NavigationSection[];
+  billingSectionsOverride?: NavigationSection[];
+  extensionsSectionsOverride?: NavigationSection[];
+  inventorySectionsOverride?: NavigationSection[];
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -54,6 +57,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   appDisplayName = 'AlgaPSA',
   appLogoAlt = 'AlgaPSA Logo',
   settingsSectionsOverride,
+  billingSectionsOverride,
+  extensionsSectionsOverride,
+  inventorySectionsOverride,
 }): React.JSX.Element => {
   const appVersion = getAppVersion();
   const { t } = useTranslation('msp/core');
@@ -234,16 +240,18 @@ const Sidebar: React.FC<SidebarProps> = ({
   // Determine which sections to render based on mode
   const settingsSections: NavigationSection[] = settingsSectionsOverride ?? settingsNavigationSections;
 
-  const billingSections: NavigationSection[] = billingNavigationSections;
+  const billingSections: NavigationSection[] = billingSectionsOverride ?? billingNavigationSections;
+  const extensionSections: NavigationSection[] = extensionsSectionsOverride ?? extensionsNavigationSections;
+  const inventorySections: NavigationSection[] = inventorySectionsOverride ?? inventoryNavigationSections;
 
   const rawSectionsToRender: NavigationSection[] = isSettingsMode
     ? settingsSections
     : isBillingMode
       ? billingSections
       : isExtensionsMode
-        ? extensionsNavigationSections
+        ? extensionSections
         : isInventoryMode
-          ? inventoryNavigationSections
+          ? inventorySections
           : (menuSections ?? defaultNavigationSections);
 
   const sectionsToRender = rawSectionsToRender.map(translateSection);

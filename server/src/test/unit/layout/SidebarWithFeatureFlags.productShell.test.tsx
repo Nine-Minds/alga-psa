@@ -4,8 +4,13 @@
 import React from 'react';
 import { render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TIER_FEATURES } from '@alga-psa/types';
 
-import SidebarWithFeatureFlags from '../../../components/layout/SidebarWithFeatureFlags';
+import SidebarWithFeatureFlags, {
+  filterNavigationSectionsByEdition,
+  filterNavigationSectionsByFeatureAccess,
+} from '../../../components/layout/SidebarWithFeatureFlags';
+import type { NavigationSection } from '../../../config/menuConfig';
 
 const useFeatureFlag = vi.fn();
 const getCurrentUserPermissions = vi.fn();
@@ -47,7 +52,7 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
     useFeatureFlag.mockReturnValue(true);
     getCurrentUserPermissions.mockResolvedValue([]);
     useTier.mockReturnValue({ hasFeature: () => true });
-    useProduct.mockReturnValue({ productCode: 'psa' });
+    useProduct.mockReturnValue({ productCode: 'psa', edition: 'enterprise' });
     getLicenseStatus.mockResolvedValue({ selfHostMode: false });
   });
 
@@ -96,7 +101,7 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
   });
 
   it('T005: AlgaDesk shell keeps only allowed nav and uses AlgaDesk branding labels', async () => {
-    useProduct.mockReturnValue({ productCode: 'algadesk' });
+    useProduct.mockReturnValue({ productCode: 'algadesk', edition: 'enterprise' });
 
     render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
 
@@ -121,7 +126,7 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
   });
 
   it('T005: PSA shell remains unchanged and uses AlgaPSA branding labels', async () => {
-    useProduct.mockReturnValue({ productCode: 'psa' });
+    useProduct.mockReturnValue({ productCode: 'psa', edition: 'enterprise' });
 
     render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
 
@@ -137,7 +142,57 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
     expect(names).toContain('Billing');
     expect(names).toContain('Projects');
     expect(names).toContain('Assets');
+    expect(names.indexOf('Workflows')).toBeLessThan(names.indexOf('System Monitoring'));
+    expect(names.indexOf('System Monitoring')).toBeLessThan(names.indexOf('Extensions'));
     expect(latestProps.appDisplayName).toBe('AlgaPSA');
     expect(latestProps.appLogoAlt).toBe('AlgaPSA Logo');
+  });
+
+  it('hides EE-only navigation in CE and removes the empty Workflows group', async () => {
+    useProduct.mockReturnValue({ productCode: 'psa', edition: 'community' });
+
+    render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
+
+    await waitFor(() => expect(sidebarPropsSpy).toHaveBeenCalled());
+
+    const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
+      menuSections: Array<{ items: Array<{ name: string }> }>;
+      settingsSectionsOverride: Array<{ items: Array<{ name: string }> }>;
+      extensionsSectionsOverride: Array<{ items: Array<{ name: string }> }>;
+    };
+    const mainNames = latestProps.menuSections.flatMap((section) => section.items.map((item) => item.name));
+    const settingsNames = latestProps.settingsSectionsOverride.flatMap((section) =>
+      section.items.map((item) => item.name),
+    );
+
+    expect(mainNames).not.toContain('Workflows');
+    expect(mainNames).not.toContain('Extensions');
+    expect(settingsNames).not.toContain('Extensions');
+    expect(latestProps.extensionsSectionsOverride).toEqual([]);
+  });
+
+  it('recursively keeps CE-visible children and still applies feature access', () => {
+    const Icon = () => null;
+    const sections: NavigationSection[] = [
+      {
+        title: 'Mixed',
+        items: [
+          {
+            name: 'Parent',
+            icon: Icon,
+            subItems: [
+              { name: 'CE child', icon: Icon, href: '/ce' },
+              { name: 'EE child', icon: Icon, href: '/ee', availableEditions: ['enterprise'] },
+              { name: 'Feature child', icon: Icon, href: '/feature', requiredFeature: TIER_FEATURES.EXTENSIONS },
+            ],
+          },
+        ],
+      },
+    ];
+
+    const editionFiltered = filterNavigationSectionsByEdition(sections, 'community');
+    const featureFiltered = filterNavigationSectionsByFeatureAccess(editionFiltered, () => false);
+
+    expect(featureFiltered[0].items[0].subItems?.map((item) => item.name)).toEqual(['CE child']);
   });
 });

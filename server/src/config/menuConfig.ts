@@ -62,6 +62,9 @@ import {
 
 // Navigation modes for the unified sidebar
 export type NavMode = 'main' | 'settings' | 'billing' | 'extensions' | 'inventory';
+export type MenuEdition = 'community' | 'enterprise';
+
+const ENTERPRISE_ONLY_EDITIONS: readonly MenuEdition[] = ['enterprise'];
 
 export interface MenuItem {
   name: string;
@@ -70,6 +73,7 @@ export interface MenuItem {
   href?: string;
   subItems?: MenuItem[];
   requiredFeature?: TIER_FEATURES;
+  availableEditions?: readonly MenuEdition[];
   underConstruction?: boolean;
   requiresSelfHost?: boolean;
 }
@@ -214,8 +218,20 @@ export const navigationSections: NavigationSection[] = [
         translationKey: 'nav.workflows',
         icon: Rocket,
         subItems: [
-          { name: 'Control Panel', translationKey: 'nav.controlPanel', icon: Gauge, href: '/msp/workflow-control' },
-          { name: 'Workflow Editor', translationKey: 'nav.workflowEditor', icon: ListTree, href: '/msp/workflow-editor' },
+          {
+            name: 'Control Panel',
+            translationKey: 'nav.controlPanel',
+            icon: Gauge,
+            href: '/msp/workflow-control',
+            availableEditions: ENTERPRISE_ONLY_EDITIONS,
+          },
+          {
+            name: 'Workflow Editor',
+            translationKey: 'nav.workflowEditor',
+            icon: ListTree,
+            href: '/msp/workflow-editor',
+            availableEditions: ENTERPRISE_ONLY_EDITIONS,
+          },
         ]
       },
       {
@@ -233,6 +249,7 @@ export const navigationSections: NavigationSection[] = [
         icon: Puzzle,
         href: '/msp/extensions',
         requiredFeature: TIER_FEATURES.EXTENSIONS,
+        availableEditions: ENTERPRISE_ONLY_EDITIONS,
       }
     ]
   }
@@ -309,7 +326,13 @@ export const settingsNavigationSections: NavigationSection[] = [
       { name: 'Secrets', translationKey: 'settings.tabs.secrets', icon: KeyRound, href: '/msp/settings/secrets' },
       { name: 'Import/Export', translationKey: 'settings.tabs.importExport', icon: Download, href: '/msp/settings/import-export' },
       { name: 'Integrations', translationKey: 'settings.tabs.integrations', icon: Plug, href: '/msp/settings/integrations' },
-      { name: 'Extensions', translationKey: 'settings.tabs.extensions', icon: Puzzle, href: '/msp/settings?tab=extensions' },
+      {
+        name: 'Extensions',
+        translationKey: 'settings.tabs.extensions',
+        icon: Puzzle,
+        href: '/msp/settings?tab=extensions',
+        availableEditions: ENTERPRISE_ONLY_EDITIONS,
+      },
     ]
   },
   {
@@ -377,7 +400,13 @@ export const extensionsNavigationSections: NavigationSection[] = [
   {
     title: '',
     items: [
-      { name: 'Settings', translationKey: 'sidebar.settings', icon: Settings, href: '/msp/extensions' },
+      {
+        name: 'Settings',
+        translationKey: 'sidebar.settings',
+        icon: Settings,
+        href: '/msp/extensions',
+        availableEditions: ENTERPRISE_ONLY_EDITIONS,
+      },
     ]
   }
 ];
