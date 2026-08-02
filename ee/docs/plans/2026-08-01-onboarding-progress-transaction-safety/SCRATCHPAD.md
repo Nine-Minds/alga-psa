@@ -14,6 +14,7 @@ Working notes for eliminating lock timeouts and lost updates when onboarding act
 - (2026-08-01, confirmed) Harden every current transaction-wrapped onboarding progress save, not only `configureTicketing`.
 - (2026-08-01, confirmed) Use both an atomic server-side JSONB patch and a client-side serialized step-position queue that is settled before completion.
 - (2026-08-01, confirmed) Require automated DB-backed regression coverage and a manual new-appliance smoke test.
+- (2026-08-01, implementation) Keep the authenticated action as the non-transactional facade and export the caller-owned primitive only through `@alga-psa/tenancy/server`.
 
 ## Discoveries / Constraints
 
@@ -28,6 +29,11 @@ Working notes for eliminating lock timeouts and lost updates when onboarding act
 - (2026-08-01) The existing DB-backed test `server/src/test/integration/onboardingBoardTicketStatuses.integration.test.ts` mocks the progress action. It verifies the support email but cannot reproduce or prevent the lock cycle.
 - (2026-08-01) Existing UI coverage in `server/src/test/unit/onboarding/onboardingWizardStepRestore.test.tsx` verifies that step positions are sent, but not that requests are serialized or drained before final completion.
 - (2026-08-01) The worktree already contains an unrelated modification to `package-lock.json`; preserve it.
+- (2026-08-01, implementation) `saveClientInfo`, `addTeamMembers`, `setupBilling`, and `configureTicketing` are the four transaction-owning progress writers; all now call `persistTenantOnboardingProgress(trx, tenant, patch)`.
+- (2026-08-01, verification) The wire-in `.env.localtest` stores Docker secret paths, but this Vitest runtime cannot load the filesystem secret provider. DB tests must receive `DB_PASSWORD_ADMIN` and `DB_PASSWORD_SERVER` from the copied `../secrets/*` files in their process environment.
+- (2026-08-01, verification) Full server TypeScript checking exceeds 8 GiB of V8 heap in this checkout; `node --max-old-space-size=16384 node_modules/typescript/bin/tsc --noEmit -p server/tsconfig.json` completes successfully.
+- (2026-08-01, verification) The active workflow port is 3134. Hocuspocus is intentionally excluded from this task's stack gate by human direction recorded on the workflow card.
+- (2026-08-01, verification) A local runtime build starts on port 3134 and `/auth/msp/signin` returns HTTP 200. The shared wire-in database is behind current schema and background schedulers warn that `tenants.suspended_at` is missing; this does not block the onboarding compile/test checks but should not be mistaken for a branch regression.
 
 ## Selected Design
 
@@ -42,6 +48,15 @@ Working notes for eliminating lock timeouts and lost updates when onboarding act
 - Inspect relevant paths: `rg -n "saveTenantOnboardingProgress|saveOnboardingStepPosition|configureTicketing|tenant_settings" packages/onboarding packages/tenancy server/src/test`.
 - Focused current tests include `server/src/test/integration/onboardingBoardTicketStatuses.integration.test.ts` and `server/src/test/unit/onboarding/onboardingWizardStepRestore.test.tsx`.
 - Planned regression verification should execute real queries against the migrated schema and use an 8-second-or-lower session/transaction `lock_timeout` so the test fails quickly if a second connection reappears.
+- Focused UI regression: `cd server && npx vitest run src/test/unit/onboarding/onboardingWizardStepRestore.test.tsx --coverage.enabled=false`.
+- Focused package regression: `cd packages/onboarding && npm test`; `cd packages/tenancy && npm test`.
+- DB regressions (wire-in target Postgres on 5472): export the copied admin/app passwords from `../secrets/postgres_password` and `../secrets/db_password_server`, then run `npx vitest run src/test/integration/onboardingProgressPersistence.integration.test.ts src/test/integration/onboardingBoardTicketStatuses.integration.test.ts --coverage.enabled=false` from `server/`.
+- Full server typecheck: `node --max-old-space-size=16384 node_modules/typescript/bin/tsc --noEmit -p server/tsconfig.json` from the repository root.
+
+## Implementation Status
+
+- (2026-08-01) Automated implementation and regressions are complete: plan features F001-F023 and tests T001-T011 are marked implemented.
+- (2026-08-01) Fresh-appliance validation remains for the later smoke-test step, so F024 and T012 remain unimplemented.
 
 ## Links / References
 

@@ -21,7 +21,9 @@ const hoisted = vi.hoisted(() => {
   return { stateKey };
 });
 
-const mockedSaveTenantOnboardingProgress = vi.fn(async () => ({ success: true }));
+const mockedSaveTenantOnboardingProgress = vi.fn(async () => {
+  throw new Error('Transaction callbacks must use the caller-owned progress writer');
+});
 const mockedUpdateTenantOnboardingStatus = vi.fn(async () => ({ success: true }));
 const mockedRevalidatePath = vi.fn();
 
@@ -43,7 +45,10 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
       throw new Error('Integration database is not initialised');
     }
 
-    return state.db.transaction((trx) => callback(trx));
+    return state.db.transaction(async (trx) => {
+      await trx.raw(`SET LOCAL lock_timeout = '2s'`);
+      return callback(trx);
+    });
   }),
 }));
 
@@ -261,8 +266,20 @@ describe('Onboarding board-specific ticket statuses', () => {
     }
 
     const settingsRow = await tenantTable(tenantId, 'tenant_settings')
-      .first<{ settings: { supportEmail?: string } | null }>('settings');
+      .first<{
+        settings: { supportEmail?: string } | null;
+        onboarding_data: Record<string, unknown> | null;
+      }>('settings', 'onboarding_data');
     expect(settingsRow?.settings?.supportEmail).toBe('support@example.com');
+    expect(settingsRow?.onboarding_data).toMatchObject({
+      boardName: 'Support',
+      supportEmail: 'support@example.com',
+      categories: [],
+      priorities: [],
+      ticketPrefix: 'TCK',
+      ticketStartNumber: 100,
+    });
+    expect(mockedSaveTenantOnboardingProgress).not.toHaveBeenCalled();
 
     await expect(
       validateOnboardingDefaults(
@@ -270,6 +287,58 @@ describe('Onboarding board-specific ticket statuses', () => {
         { tenant: tenantId }
       )
     ).resolves.toMatchObject({ success: true });
+  });
+
+  it('preserves an existing support email when ticketing receives an invalid address', async () => {
+    const { tenantId, userId } = await seedTenantAndUser();
+    await tenantTable(tenantId, 'tenant_settings').insert({
+      tenant: tenantId,
+      settings: {
+        supportEmail: 'existing@example.com',
+        preservedSetting: true,
+      },
+    });
+
+    const { configureTicketing } = await import(
+      '../../../../packages/onboarding/src/actions/onboarding-actions/onboardingActions'
+    );
+
+    const result = await configureTicketing(
+      { user_id: userId },
+      { tenant: tenantId },
+      {
+        boardName: 'Invalid Email Board',
+        supportEmail: 'not-an-email',
+        isDefaultBoard: true,
+        categories: [],
+        priorities: [],
+        ticketPrefix: 'INV',
+        ticketPaddingLength: 6,
+        ticketStartNumber: 200,
+        statuses: [
+          { name: 'Open', is_closed: false, is_default: true, order_number: 10 },
+        ],
+      }
+    );
+
+    expect(result.success).toBe(true);
+
+    const settingsRow = await tenantTable(tenantId, 'tenant_settings')
+      .first<{
+        settings: { supportEmail?: string; preservedSetting?: boolean } | null;
+        onboarding_data: Record<string, unknown> | null;
+      }>('settings', 'onboarding_data');
+    expect(settingsRow?.settings).toMatchObject({
+      supportEmail: 'existing@example.com',
+      preservedSetting: true,
+    });
+    expect(settingsRow?.onboarding_data).toMatchObject({
+      boardName: 'Invalid Email Board',
+      supportEmail: 'not-an-email',
+      ticketPrefix: 'INV',
+      ticketStartNumber: 200,
+    });
+    expect(mockedSaveTenantOnboardingProgress).not.toHaveBeenCalled();
   });
 
   it('T052: importReferenceData creates ticket statuses on the target board without colliding with another board', async () => {

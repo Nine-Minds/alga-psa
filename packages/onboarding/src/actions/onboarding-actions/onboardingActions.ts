@@ -9,6 +9,7 @@ import { isValidEmail } from '@alga-psa/core';
 import { createClient as createClientInternal } from '@alga-psa/clients/actions/clientActions';
 import { createClientContact } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
+import { persistTenantOnboardingProgress } from '@alga-psa/tenancy/server';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getLicenseUsage } from '../../../../licensing/src/lib/get-license-usage';
@@ -148,7 +149,7 @@ export const saveClientInfo = withAuth(async (
         tenantName: data.tenantName
       };
 
-      await saveTenantOnboardingProgress(progressData);
+      await persistTenantOnboardingProgress(trx, tenant, progressData);
     });
 
     revalidatePath('/msp/onboarding');
@@ -410,7 +411,7 @@ export const addTeamMembers = withAuth(async (
       const successfulMembers = membersToProcess.filter(m => 
         created.includes(m.email)
       );
-      await saveTenantOnboardingProgress({
+      await persistTenantOnboardingProgress(trx, tenant, {
         teamMembers: successfulMembers
       });
     });
@@ -723,7 +724,7 @@ export const setupBilling = withAuth(async (
       }
 
       // Save progress
-      await saveTenantOnboardingProgress({
+      await persistTenantOnboardingProgress(trx, tenant, {
         serviceName: data.serviceName,
         serviceDescription: data.serviceDescription,
         servicePrice: data.servicePrice,
@@ -1022,7 +1023,7 @@ export const configureTicketing = withAuth(async (
       }
 
       // Save progress - convert categories and priorities to strings
-      await saveTenantOnboardingProgress({
+      await persistTenantOnboardingProgress(trx, tenant, {
         boardName: data.boardName,
         supportEmail: data.supportEmail,
         categories: data.categories.map(cat => typeof cat === 'string' ? cat : cat.category_name),

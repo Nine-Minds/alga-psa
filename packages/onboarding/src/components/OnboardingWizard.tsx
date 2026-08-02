@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { WizardProgress } from '@alga-psa/ui/components/onboarding/WizardProgress';
 import { WizardNavigation } from '@alga-psa/ui/components/onboarding/WizardNavigation';
@@ -77,6 +77,7 @@ export function OnboardingWizard({
     () => new Set(Array.from({ length: restoredStep }, (_, i) => i))
   );
   const [attemptedSteps, setAttemptedSteps] = useState<Set<number>>(new Set());
+  const stepPositionSaveQueue = useRef<Promise<void>>(Promise.resolve());
   const currentOriginalStepIndex = activeStepIndexes[currentStep] ?? activeStepIndexes[0] ?? 0;
   const isAlgaDesk = productCode === 'algadesk';
 
@@ -127,13 +128,17 @@ export function OnboardingWizard({
     }
   }, [currentStep, wizardData, debugMode]);
 
-  // Persist the step position on every change so a forced refresh resumes on the
-  // same step instead of restarting the wizard. Fire-and-forget: a failed write only
-  // means the next refresh resumes one step earlier.
+  // Persist positions in order. Each rejection is contained so navigation and later
+  // saves remain non-blocking, while Finish can still drain the full queue.
   useEffect(() => {
     if (testMode) return;
-    saveOnboardingStepPosition(currentStep).catch((error) => {
-      console.error('Failed to persist onboarding step position:', error);
+
+    stepPositionSaveQueue.current = stepPositionSaveQueue.current.then(async () => {
+      try {
+        await saveOnboardingStepPosition(currentStep);
+      } catch (error) {
+        console.error('Failed to persist onboarding step position:', error);
+      }
     });
   }, [currentStep, testMode]);
 
@@ -362,6 +367,10 @@ export function OnboardingWizard({
     
     setIsLoading(true);
     try {
+      // No position write started before completion may remain in flight after
+      // completeOnboarding clears onboarding_data.
+      await stepPositionSaveQueue.current;
+
       // Validate we have required defaults before finishing
       if (wizardData.boardName || wizardData.boardId) {
         const validationResult = await validateOnboardingDefaults();

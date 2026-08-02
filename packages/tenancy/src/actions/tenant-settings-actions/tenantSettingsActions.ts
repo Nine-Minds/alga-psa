@@ -7,6 +7,7 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { WizardData } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import { persistTenantOnboardingProgress } from '../../server/onboardingProgress';
 import {
   actionError,
   permissionError,
@@ -237,41 +238,8 @@ export const saveTenantOnboardingProgress = withAuth(async (
   wizardData: Partial<WizardData>
 ): Promise<void> => {
   try {
-    // Get existing data to merge with
-    const existingSettings = await getTenantSettings();
-    const existingData = existingSettings?.onboarding_data || {};
-
-    const mergedData = {
-      ...existingData,
-      ...wizardData,
-    };
-
     const { knex } = await createTenantKnex();
-
-    // Use a literal timestamp for Citus compatibility
-    const now = new Date();
-
-    // Check if tenant settings already exist
-    const existingRecord = await tenantSettingsQuery(knex, tenant)
-      .first();
-
-    if (existingRecord) {
-      // Update existing settings
-      await tenantSettingsQuery(knex, tenant)
-        .update({
-          onboarding_data: JSON.stringify(mergedData),
-          updated_at: now,
-        });
-    } else {
-      // Insert new settings
-      await tenantSettingsQuery(knex, tenant)
-        .insert({
-          tenant,
-          onboarding_data: JSON.stringify(mergedData),
-          updated_at: now,
-        });
-    }
-
+    await persistTenantOnboardingProgress(knex, tenant, wizardData);
   } catch (error) {
     console.error('Error saving tenant onboarding progress:', error);
     throw error;
