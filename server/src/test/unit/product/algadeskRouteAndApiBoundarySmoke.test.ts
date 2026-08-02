@@ -36,6 +36,8 @@ describe('AlgaDesk route/API boundary smoke', () => {
     // Account page hosts the self-serve AlgaDesk→AlgaPSA upgrade — open to both products.
     expect(resolveProductRouteBehavior('algadesk', '/msp/account')).toBe('allowed');
     expect(resolveProductRouteBehavior('psa', '/msp/account')).toBe('allowed');
+    expect(resolveProductRouteBehavior('algadesk', '/msp/add-ons')).toBe('allowed');
+    expect(resolveProductRouteBehavior('psa', '/msp/add-ons')).toBe('allowed');
   });
 
   it('T019: AlgaDesk API boundary allows ticket/client/contact/KB/email and denies representative PSA-only groups', () => {
