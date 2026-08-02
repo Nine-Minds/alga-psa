@@ -7,6 +7,8 @@ import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
 import '@testing-library/jest-dom';
 
+const getMicrosoftConsumerSetupStatusMock = vi.hoisted(() => vi.fn());
+
 // The component reads the edition at render time; force EE so Microsoft
 // providers stay visible/editable in these tests.
 const prevEditionPublic = process.env.NEXT_PUBLIC_EDITION;
@@ -15,7 +17,6 @@ afterAll(() => {
   if (prevEditionPublic === undefined) delete process.env.NEXT_PUBLIC_EDITION;
   else process.env.NEXT_PUBLIC_EDITION = prevEditionPublic;
 });
-
 // Mock the server actions module the component actually imports
 // (deep path, not the @alga-psa/integrations/actions barrel).
 vi.mock('@alga-psa/integrations/actions/email-actions/emailProviderActions', () => ({
@@ -24,6 +25,10 @@ vi.mock('@alga-psa/integrations/actions/email-actions/emailProviderActions', () 
   testEmailProviderConnection: vi.fn(),
   resyncImapProvider: vi.fn(),
   retryMicrosoftSubscriptionRenewal: vi.fn(),
+}));
+
+vi.mock('@alga-psa/integrations/actions', () => ({
+  getMicrosoftConsumerSetupStatus: (...args: unknown[]) => getMicrosoftConsumerSetupStatusMock(...args),
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
@@ -185,6 +190,20 @@ describe('EmailProviderConfiguration', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    getMicrosoftConsumerSetupStatusMock.mockResolvedValue({
+      success: true,
+      ready: true,
+      credentialCapability: {
+        source: 'platform',
+        ready: true,
+        platformReady: true,
+        tenantProfileSelected: false,
+        clientIdConfigured: true,
+        clientSecretConfigured: true,
+        tenantIdConfigured: true,
+        profileId: null,
+      },
+    });
   });
 
   afterEach(() => {
@@ -213,6 +232,17 @@ describe('EmailProviderConfiguration', () => {
     expect(screen.getAllByText('Test Microsoft').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Test Gmail').length).toBeGreaterThan(0);
     expect(emailProviderActions.getEmailProviders).toHaveBeenCalled();
+  });
+
+  it('shows platform-managed Microsoft setup as the primary hosted path', async () => {
+    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce({ providers: [] } as any);
+
+    render(<EmailProviderConfiguration />);
+
+    expect(await screen.findByText('Microsoft sign-in is ready')).toBeInTheDocument();
+    expect(screen.getByText(/no Entra app registration is needed/i)).toBeInTheDocument();
+    expect(screen.getByText('Advanced: use your own Microsoft app')).toBeInTheDocument();
+    expect(screen.queryByText('Register an application in Azure AD')).not.toBeInTheDocument();
   });
 
   it('should open the setup wizard when add provider button is clicked', async () => {

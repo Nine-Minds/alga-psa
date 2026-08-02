@@ -7,7 +7,9 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { ADD_ONS } from '@alga-psa/types';
 import {
+  getMicrosoftEmailCredentialCapability,
   getMicrosoftProfileReadiness,
+  type MicrosoftCredentialCapability,
   type ProviderReadinessResult,
 } from './providerReadiness';
 import {
@@ -129,6 +131,7 @@ export interface MicrosoftConsumerSetupStatusResponse {
   ready?: boolean;
   profileId?: string | null;
   profileDisplayName?: string;
+  credentialCapability?: MicrosoftCredentialCapability;
   message?: string;
 }
 
@@ -151,6 +154,7 @@ export interface MicrosoftProfileStatusResponse {
     tenantId: string;
     ready: boolean;
   };
+  emailCredentialCapability?: MicrosoftCredentialCapability;
   profiles?: MicrosoftProfileSummary[];
 }
 
@@ -1312,6 +1316,23 @@ export const getMicrosoftConsumerSetupStatus = withAuth(async (
       };
     }
 
+    if (consumerType === 'email') {
+      const credentialCapability = await getMicrosoftEmailCredentialCapability(tenant);
+
+      return {
+        success: true,
+        consumerType,
+        consumerLabel,
+        visible: true,
+        ready: credentialCapability.ready,
+        profileId: credentialCapability.profileId,
+        credentialCapability,
+        message: credentialCapability.ready
+          ? undefined
+          : credentialCapability.message || 'Microsoft email credentials are not configured.',
+      };
+    }
+
     const profile = await resolveMicrosoftProfileForConsumer(tenant, consumerType);
     if (!profile) {
       return {
@@ -1353,6 +1374,9 @@ export const getMicrosoftIntegrationStatus = withAuth(async (
     const baseUrl = await getDeploymentBaseUrl();
     const metadata = getVisibleMicrosoftIntegrationMetadata(baseUrl);
     const mspSsoProfile = await resolveMicrosoftProfileForConsumer(tenant, 'msp_sso');
+    const emailCredentialCapability = isMicrosoftConsumerEnterpriseEdition()
+      ? await getMicrosoftEmailCredentialCapability(tenant)
+      : undefined;
     const visibleProfiles = profiles.map((profile) => ({
       ...profile,
       consumers: getVisibleConsumerLabels(profile.consumers),
@@ -1369,6 +1393,7 @@ export const getMicrosoftIntegrationStatus = withAuth(async (
         tenantId: mspSsoProfile?.tenantId || 'common',
         ready: mspSsoProfile?.readiness.ready || false,
       },
+      emailCredentialCapability,
       profiles: visibleProfiles,
     };
   } catch (err: any) {

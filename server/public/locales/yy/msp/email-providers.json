@@ -41,6 +41,23 @@
       "title": "55555",
       "microsoft": {
         "title": "55555",
+        "checkingCredentials": "yyyyy",
+        "platform": {
+          "title": "yyyyy",
+          "description": "yyyyy"
+        },
+        "byo": {
+          "summary": "yyyyy",
+          "warning": "yyyyy",
+          "description": "yyyyy"
+        },
+        "manualRequired": "yyyyy",
+        "tenant": {
+          "title": "yyyyy",
+          "description": "yyyyy",
+          "incompleteTitle": "yyyyy",
+          "incompleteDescription": "yyyyy"
+        },
         "steps": {
           "registerApp": "55555",
           "permissions": "55555",
@@ -250,6 +267,19 @@
       }
     },
     "microsoft": {
+      "hostedOauth": {
+        "sectionTitle": "yyyyy",
+        "platformUnavailableDescription": "yyyyy",
+        "tenantSectionDescription": "yyyyy",
+        "platformSectionDescription": "yyyyy",
+        "platformManagedTitle": "yyyyy",
+        "platformManagedDescription": "yyyyy",
+        "byoToggle": "yyyyy",
+        "byoToggleDescription": "yyyyy",
+        "byoWarning": "yyyyy",
+        "tenantNotConfigured": "yyyyy",
+        "platformNotConfigured": "yyyyy"
+      },
       "validation": {
         "providerNameRequired": "55555",
         "emailRequired": "55555",

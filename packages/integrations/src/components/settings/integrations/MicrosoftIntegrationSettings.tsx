@@ -40,6 +40,8 @@ import {
   AlertTriangle,
   Archive,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   ExternalLink,
   Pencil,
   Plus,
@@ -380,11 +382,14 @@ export function MicrosoftIntegrationSettings({
   const [isArchiving, setIsArchiving] = React.useState(false);
   const [formState, setFormState] = React.useState<ProfileFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [advancedOpen, setAdvancedOpen] = React.useState(false);
+  const advancedChoiceInitializedRef = React.useRef(false);
 
   const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
   const profiles = status?.success ? status.profiles ?? [] : [];
   const hasProfiles = profiles.length > 0;
   const activeProfiles = profiles.filter((profile) => !profile.isArchived);
+  const emailCredentialCapability = status?.success ? status.emailCredentialCapability : undefined;
   const profileById = React.useMemo(
     () => new Map(profiles.map((profile) => [profile.profileId, profile])),
     [profiles]
@@ -418,6 +423,11 @@ export function MicrosoftIntegrationSettings({
 
     setStatus(statusResult);
     onStatusChange?.(statusResult);
+
+    if (statusResult.success && !advancedChoiceInitializedRef.current) {
+      advancedChoiceInitializedRef.current = true;
+      setAdvancedOpen(!isMicrosoftConsumerEnterpriseEdition() || statusResult.emailCredentialCapability?.source !== 'platform');
+    }
 
     if (!statusResult.success) {
       setBindings([]);
@@ -709,20 +719,13 @@ export function MicrosoftIntegrationSettings({
               <CardTitle>{t('integrations.microsoft.settings.title', { defaultValue: 'Microsoft' })}</CardTitle>
               <CardDescription>
                 {isEnterpriseEdition
-                  ? t('integrations.microsoft.settings.descriptionEe', { defaultValue: "Manage your company's Microsoft app registrations for staff sign-in, Outlook email, calendar sync, and Teams." })
+                  ? emailCredentialCapability?.source === 'platform'
+                    ? t('integrations.microsoft.settings.platform.description', { defaultValue: 'Connect Microsoft 365 with the application supplied by Alga PSA. No Entra app registration is required.' })
+                    : t('integrations.microsoft.settings.descriptionEe', { defaultValue: "Manage your company's Microsoft app registrations for staff sign-in, Outlook email, calendar sync, and Teams." })
                   : t('integrations.microsoft.settings.descriptionCe', { defaultValue: "Manage your company's Microsoft app registration for staff sign-in." })}
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                id="microsoft-entra-console-link"
-                type="button"
-                variant="outline"
-                onClick={() => window.open('https://entra.microsoft.com/', '_blank')}
-              >
-                <ExternalLink className="mr-2 h-4 w-4" />
-                {t('integrations.microsoft.settings.actions.entraLink', { defaultValue: 'Microsoft Entra' })}
-              </Button>
               <Button
                 id="microsoft-settings-refresh"
                 type="button"
@@ -733,10 +736,6 @@ export function MicrosoftIntegrationSettings({
                 <RefreshCw className="mr-2 h-4 w-4" />
                 {t('integrations.microsoft.settings.actions.refresh', { defaultValue: 'Refresh' })}
               </Button>
-              <Button id="microsoft-settings-add-profile" type="button" onClick={openCreateDialog} disabled={loading}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t('integrations.microsoft.settings.actions.newProfile', { defaultValue: 'New app registration' })}
-              </Button>
             </div>
           </div>
         </CardHeader>
@@ -746,6 +745,88 @@ export function MicrosoftIntegrationSettings({
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+
+          {isEnterpriseEdition && emailCredentialCapability?.source === 'platform' && (
+            <Alert>
+              <ShieldCheck className="h-4 w-4" />
+              <AlertDescription>
+                <div className="font-medium">
+                  {t('integrations.microsoft.settings.platform.title', { defaultValue: 'Microsoft email is ready to connect' })}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {t('integrations.microsoft.settings.platform.readyDescription', { defaultValue: 'Alga PSA supplies and manages the Microsoft application. Connect a mailbox without creating an Entra app or entering client credentials.' })}
+                </div>
+                <Button
+                  id="microsoft-platform-connect-email"
+                  type="button"
+                  className="mt-3"
+                  onClick={() => window.location.assign('/msp/settings?tab=email')}
+                >
+                  {t('integrations.microsoft.settings.platform.connectAction', { defaultValue: 'Connect Microsoft email' })}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {isEnterpriseEdition && emailCredentialCapability && emailCredentialCapability.source === 'none' && (
+            <Alert variant="warning">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <div className="font-medium">
+                  {t('integrations.microsoft.settings.platform.unavailableTitle', { defaultValue: 'Platform Microsoft credentials are unavailable' })}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {t('integrations.microsoft.settings.platform.unavailableDescription', { defaultValue: 'This deployment requires a tenant-owned Microsoft app. Use the advanced setup below to add one.' })}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {isEnterpriseEdition && (
+            <Button
+              id="microsoft-advanced-app-toggle"
+              type="button"
+              variant="ghost"
+              className="h-auto w-full justify-start px-0 text-left"
+              onClick={() => setAdvancedOpen((current) => !current)}
+            >
+              {advancedOpen ? <ChevronDown className="mr-2 h-4 w-4" /> : <ChevronRight className="mr-2 h-4 w-4" />}
+              <span>
+                <span className="block font-medium">
+                  {t('integrations.microsoft.settings.advanced.title', { defaultValue: 'Bring your own Microsoft app (advanced)' })}
+                </span>
+                <span className="block text-xs font-normal text-muted-foreground">
+                  {t('integrations.microsoft.settings.advanced.description', { defaultValue: 'Create and manage tenant-owned Entra app registrations for organizations that explicitly require them.' })}
+                </span>
+              </span>
+            </Button>
+          )}
+
+          {(!isEnterpriseEdition || advancedOpen) && (
+            <div id="microsoft-advanced-app-settings" className="space-y-6">
+              {isEnterpriseEdition && emailCredentialCapability?.platformReady && (
+                <Alert variant="warning">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    {t('integrations.microsoft.settings.advanced.warning', { defaultValue: 'A custom Entra app is normally unnecessary on hosted Alga PSA. Continue only when your organization deliberately requires its own application and credentials.' })}
+                  </AlertDescription>
+                </Alert>
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  id="microsoft-entra-console-link"
+                  type="button"
+                  variant="outline"
+                  onClick={() => window.open('https://entra.microsoft.com/', '_blank')}
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  {t('integrations.microsoft.settings.actions.entraLink', { defaultValue: 'Microsoft Entra' })}
+                </Button>
+                <Button id="microsoft-settings-add-profile" type="button" onClick={openCreateDialog} disabled={loading}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t('integrations.microsoft.settings.actions.newProfile', { defaultValue: 'New app registration' })}
+                </Button>
+              </div>
 
           {isEnterpriseEdition && (
             <div className="rounded-lg border bg-muted/20 p-4">
@@ -1070,6 +1151,8 @@ export function MicrosoftIntegrationSettings({
                   </div>
                 );
               })}
+            </div>
+          )}
             </div>
           )}
         </CardContent>

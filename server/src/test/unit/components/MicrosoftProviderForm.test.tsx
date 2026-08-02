@@ -30,6 +30,16 @@ describe('MicrosoftProviderForm', () => {
     tenant: 'test-tenant-123',
     onSuccess: mockOnSuccess,
     onCancel: mockOnCancel,
+    credentialCapability: {
+      source: 'platform' as const,
+      ready: true,
+      platformReady: true,
+      tenantProfileSelected: false,
+      clientIdConfigured: true,
+      clientSecretConfigured: true,
+      tenantIdConfigured: true,
+      profileId: null,
+    },
   };
 
   beforeEach(() => {
@@ -44,8 +54,7 @@ describe('MicrosoftProviderForm', () => {
       },
       writable: true,
     });
-  });
-
+});
   afterEach(() => {
     cleanup();
   });
@@ -171,6 +180,7 @@ describe('MicrosoftProviderForm', () => {
         mailbox: 'test@microsoft.com',
         isActive: true,
         inboundTicketDefaultsId: undefined,
+        microsoftCredentialSource: 'platform',
         microsoftConfig: {
           client_id: '',
           client_secret: '',
@@ -205,6 +215,24 @@ describe('MicrosoftProviderForm', () => {
     await waitFor(() => {
       expect(screen.getByText(/API Error/i)).toBeInTheDocument();
     });
+  });
+
+  it('defaults hosted setup to the platform-managed Microsoft app', () => {
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
+
+    expect(screen.getByText('Platform-managed Microsoft app')).toBeInTheDocument();
+    expect(screen.getByText(/No Entra app registration/i)).toBeInTheDocument();
+    expect(screen.queryByText(/normally unnecessary on hosted/i)).not.toBeInTheDocument();
+  });
+
+  it('reveals tenant-owned app setup only after the advanced toggle is selected', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
+
+    await user.click(screen.getByRole('button', { name: /Use your own Microsoft app/i }));
+
+    expect(screen.getByText(/normally unnecessary on hosted Alga PSA/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Open Providers Settings/i })).toBeInTheDocument();
   });
 
   it('should call onCancel when cancel button is clicked', async () => {

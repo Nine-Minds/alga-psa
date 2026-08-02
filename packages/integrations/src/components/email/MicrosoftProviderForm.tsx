@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -16,7 +16,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { ExternalLink, CheckCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, ChevronDown, ChevronRight, ExternalLink, ShieldCheck } from 'lucide-react';
 import type { EmailProvider } from './types';
 import {
   createEmailProvider,
@@ -31,6 +31,8 @@ import {
   getErrorMessage,
   isActionMessageError,
 } from '@alga-psa/ui/lib/errorHandling';
+import type { MicrosoftCredentialCapability } from '../../actions/integrations/providerReadiness';
+import type { MicrosoftCredentialPreference } from '../../lib/microsoftConsumerProfileResolution';
 
 type MicrosoftProviderFormData = {
   providerName: string;
@@ -44,31 +46,46 @@ type MicrosoftProviderFormData = {
   inboundTicketDefaultsId?: string;
 };
 
-interface MicrosoftProviderFormProps {
+export interface MicrosoftProviderFormProps {
   tenant: string;
   provider?: EmailProvider;
   onSuccess: (provider: EmailProvider) => void;
   onCancel: () => void;
+  credentialCapability?: MicrosoftCredentialCapability | null;
 }
 
 export function MicrosoftProviderForm({ 
   tenant,
   provider, 
   onSuccess, 
-  onCancel 
+  onCancel,
+  credentialCapability,
 }: MicrosoftProviderFormProps) {
   const { t } = useTranslation('msp/email-providers');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [providerSetupReady, setProviderSetupReady] = useState(false);
-  const [providerSetupLoading, setProviderSetupLoading] = useState(true);
-  const [providerSetupMessage, setProviderSetupMessage] = useState<string | null>(null);
+  const [resolvedCredentialCapability, setResolvedCredentialCapability] = useState<MicrosoftCredentialCapability | null>(credentialCapability ?? null);
+  const [providerSetupLoading, setProviderSetupLoading] = useState(credentialCapability === undefined);
+  const [useByoApp, setUseByoApp] = useState(false);
+  const credentialChoiceInitializedRef = useRef(false);
   const [oauthStatus, setOauthStatus] = useState<'idle' | 'authorizing' | 'success' | 'error'>('idle');
   const [oauthMessageReceived, setOauthMessageReceived] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [defaultsOptions, setDefaultsOptions] = useState<{ value: string; label: string }[]>([]);
 
   const isEditing = !!provider;
+  const activeCredentialCapability = credentialCapability !== undefined
+    ? credentialCapability
+    : resolvedCredentialCapability;
+  const selectedCredentialSource: MicrosoftCredentialPreference = useByoApp ? 'tenant' : 'platform';
+  const providerSetupReady = selectedCredentialSource === 'tenant'
+    ? activeCredentialCapability?.source === 'tenant' && activeCredentialCapability.ready
+    : Boolean(activeCredentialCapability?.platformReady);
+  const providerSetupMessage = selectedCredentialSource === 'tenant'
+    ? activeCredentialCapability?.message || null
+    : activeCredentialCapability?.platformReady
+      ? null
+      : t('forms.microsoft.hostedOauth.platformNotConfigured', { defaultValue: 'Platform Microsoft credentials are unavailable.' });
 
   const microsoftProviderSchema = z.object({
     providerName: z.string().min(1, t('forms.microsoft.validation.providerNameRequired', { defaultValue: 'Configuration name is required' })),
@@ -131,20 +148,36 @@ export function MicrosoftProviderForm({
   }, []);
 
   React.useEffect(() => {
+    if (credentialCapability !== undefined) {
+      setProviderSetupLoading(false);
+      return;
+    }
+
     const loadProviderSetupStatus = async () => {
       try {
         const res = await getMicrosoftConsumerSetupStatus('email');
-        setProviderSetupReady(Boolean(res.success && res.ready));
-        setProviderSetupMessage(res.success ? res.message || null : null);
+        setResolvedCredentialCapability(res.success ? res.credentialCapability || null : null);
       } catch {
-        setProviderSetupReady(false);
-        setProviderSetupMessage(null);
+        setResolvedCredentialCapability(null);
       } finally {
         setProviderSetupLoading(false);
       }
     };
     loadProviderSetupStatus();
-  }, []);
+  }, [credentialCapability]);
+
+  React.useEffect(() => {
+    if (credentialChoiceInitializedRef.current || providerSetupLoading) return;
+
+    credentialChoiceInitializedRef.current = true;
+    if (provider?.microsoftConfig?.microsoft_profile_id) {
+      setUseByoApp(true);
+    } else if (provider?.microsoftConfig && provider.microsoftConfig.microsoft_profile_id === null) {
+      setUseByoApp(false);
+    } else {
+      setUseByoApp(activeCredentialCapability?.source !== 'platform');
+    }
+  }, [activeCredentialCapability, provider, providerSetupLoading]);
 
   
 
@@ -169,6 +202,7 @@ export function MicrosoftProviderForm({
         mailbox: data.mailbox,
         isActive: data.isActive,
         inboundTicketDefaultsId: data.inboundTicketDefaultsId,
+        microsoftCredentialSource: selectedCredentialSource,
         microsoftConfig: {
           client_id: '',
           client_secret: '',
@@ -225,6 +259,7 @@ export function MicrosoftProviderForm({
           mailbox: formData.mailbox,
           isActive: formData.isActive,
           inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
+          microsoftCredentialSource: selectedCredentialSource,
           microsoftConfig: {
             client_id: '',
             client_secret: '',
@@ -248,6 +283,7 @@ export function MicrosoftProviderForm({
         provider: 'microsoft',
         redirectUri: formData.redirectUri,
         providerId: providerId,
+        microsoftCredentialSource: selectedCredentialSource,
       });
       if (!oauthInit.success) {
         throw new Error((oauthInit as { success: false; error: string }).error || t('forms.microsoft.validation.oauthInitiateFailed', { defaultValue: 'Failed to initiate OAuth' }));
@@ -300,7 +336,7 @@ export function MicrosoftProviderForm({
     } catch (err) {
       setOauthStatus('error');
       console.error('Failed to start Microsoft authorization:', err);
-      setError(t('forms.microsoft.validation.authorizationFailed', { defaultValue: 'Authorization failed' }));
+      setError(getErrorMessage(err));
     }
   };
 
@@ -428,40 +464,92 @@ export function MicrosoftProviderForm({
       {/* Microsoft OAuth Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('forms.microsoft.oauth.sectionTitle', { defaultValue: 'Microsoft OAuth Configuration' })}</CardTitle>
+          <CardTitle>{t('forms.microsoft.hostedOauth.sectionTitle', { defaultValue: 'Connect Microsoft 365' })}</CardTitle>
           <CardDescription>
-            {t('forms.microsoft.oauth.sectionDescription', { defaultValue: 'Microsoft app credentials are configured in Providers settings and reused here.' })}
-            <Button 
-              id="azure-portal-link"
-              type="button" 
-              variant="link" 
-              className="p-0 h-auto ml-2"
-              onClick={() => window.open('https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade', '_blank')}
-            >
-              <ExternalLink className="h-3 w-3 mr-1" />
-              {t('forms.microsoft.oauth.setupLabel', { defaultValue: 'Microsoft Entra' })}
-            </Button>
+            {useByoApp
+              ? t('forms.microsoft.hostedOauth.tenantSectionDescription', { defaultValue: 'Authorize this mailbox with the Microsoft app selected in Providers settings.' })
+              : t('forms.microsoft.hostedOauth.platformSectionDescription', { defaultValue: 'Alga PSA supplies the Microsoft application. Enter the mailbox details, then sign in with Microsoft.' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!providerSetupLoading && !providerSetupReady && (
+          {!useByoApp && (
             <Alert>
+              <ShieldCheck className="h-4 w-4" />
+              <AlertDescription>
+                <div className="font-medium">
+                  {t('forms.microsoft.hostedOauth.platformManagedTitle', { defaultValue: 'Platform-managed Microsoft app' })}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {t('forms.microsoft.hostedOauth.platformManagedDescription', { defaultValue: 'No Entra app registration, client ID, or client secret is required from you.' })}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <Button
+            id="microsoft-byo-app-toggle"
+            type="button"
+            variant="ghost"
+            className="h-auto w-full justify-start px-0 text-left"
+            onClick={() => setUseByoApp((current) => !current)}
+          >
+            {useByoApp ? <ChevronDown className="mr-2 h-4 w-4" /> : <ChevronRight className="mr-2 h-4 w-4" />}
+            <span>
+              <span className="block font-medium">
+                {t('forms.microsoft.hostedOauth.byoToggle', { defaultValue: 'Use your own Microsoft app (advanced)' })}
+              </span>
+              <span className="block text-xs font-normal text-muted-foreground">
+                {t('forms.microsoft.hostedOauth.byoToggleDescription', { defaultValue: 'For organizations that deliberately require their own Entra app registration.' })}
+              </span>
+            </span>
+          </Button>
+
+          {useByoApp && (
+            <div className="space-y-3 rounded-lg border p-4">
+              <Alert variant="warning">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  {t('forms.microsoft.hostedOauth.byoWarning', { defaultValue: 'This is normally unnecessary on hosted Alga PSA. Use it only when your organization requires a tenant-owned Entra application.' })}
+                </AlertDescription>
+              </Alert>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  id="configure-microsoft-providers-link"
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.location.assign('/msp/settings?tab=integrations&category=providers')}
+                >
+                  {t('forms.common.actions.openProvidersSettings', { defaultValue: 'Open Providers Settings' })}
+                </Button>
+                <Button
+                  id="azure-portal-link"
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open('https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade', '_blank')}
+                >
+                  <ExternalLink className="mr-2 h-3 w-3" />
+                  {t('forms.microsoft.oauth.setupLabel', { defaultValue: 'Microsoft Entra' })}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {!providerSetupLoading && !providerSetupReady && (
+            <Alert variant="warning">
+              <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
                 <div className="space-y-2">
-                  <div className="font-medium">{t('forms.microsoft.oauth.notConfigured', { defaultValue: 'Microsoft provider settings are not configured.' })}</div>
+                  <div className="font-medium">
+                    {useByoApp
+                      ? t('forms.microsoft.hostedOauth.tenantNotConfigured', { defaultValue: 'Your Microsoft app is not ready yet.' })
+                      : t('forms.microsoft.hostedOauth.platformNotConfigured', { defaultValue: 'Platform Microsoft credentials are unavailable.' })}
+                  </div>
                   <div className="text-sm text-muted-foreground">
                     {providerSetupMessage ||
                       t('forms.microsoft.oauth.setupHelp', { defaultValue: 'Configure Providers first in Settings → Integrations → Providers, then return here to authorize this mailbox.' })}
                   </div>
-                  <Button
-                    id="configure-microsoft-providers-link"
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.location.assign('/msp/settings?category=providers')}
-                  >
-                    {t('forms.common.actions.openProvidersSettings', { defaultValue: 'Open Providers Settings' })}
-                  </Button>
                 </div>
               </AlertDescription>
             </Alert>

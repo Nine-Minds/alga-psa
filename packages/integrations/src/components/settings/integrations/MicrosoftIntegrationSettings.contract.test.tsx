@@ -138,6 +138,16 @@ function buildStatus(overrides: Record<string, unknown> = {}) {
       tenantId: 'tenant-guid-1',
       ready: true,
     },
+    emailCredentialCapability: {
+      source: 'tenant',
+      ready: true,
+      platformReady: true,
+      tenantProfileSelected: true,
+      clientIdConfigured: true,
+      clientSecretConfigured: true,
+      tenantIdConfigured: true,
+      profileId: 'profile-1',
+    },
     profiles: [
       {
         profileId: 'profile-1',
@@ -289,8 +299,7 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     setDefaultMicrosoftProfileMock.mockResolvedValue({ success: true });
     resetMicrosoftProvidersToDisconnectedMock.mockResolvedValue({ success: true });
     vi.stubGlobal('open', vi.fn());
-  });
-
+});
   afterEach(() => {
     if (originalEdition === undefined) {
       delete process.env.NEXT_PUBLIC_EDITION;
@@ -322,6 +331,55 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     expect(screen.getAllByText('Outlook Calendar').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Teams').length).toBeGreaterThan(0);
     expect(screen.queryByText('MSP SSO')).not.toBeInTheDocument();
+  });
+
+  it('keeps tenant app management collapsed when hosted platform credentials are ready', async () => {
+    const user = userEvent.setup();
+    getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus({
+      emailCredentialCapability: {
+        source: 'platform',
+        ready: true,
+        platformReady: true,
+        tenantProfileSelected: false,
+        clientIdConfigured: true,
+        clientSecretConfigured: true,
+        tenantIdConfigured: true,
+        profileId: null,
+      },
+    }));
+
+    render(<MicrosoftIntegrationSettings />);
+
+    expect(await screen.findByText('Microsoft email is ready to connect')).toBeInTheDocument();
+    expect(screen.queryByText('Which Microsoft app each service uses')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'New app registration' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Bring your own Microsoft app/i }));
+
+    expect(screen.getByText(/custom Entra app is normally unnecessary/i)).toBeInTheDocument();
+    expect(screen.getByText('Which Microsoft app each service uses')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New app registration' })).toBeInTheDocument();
+  });
+
+  it('opens manual app management when platform credentials are unavailable', async () => {
+    getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus({
+      emailCredentialCapability: {
+        source: 'none',
+        ready: false,
+        platformReady: false,
+        tenantProfileSelected: false,
+        clientIdConfigured: false,
+        clientSecretConfigured: false,
+        tenantIdConfigured: false,
+        profileId: null,
+      },
+    }));
+
+    render(<MicrosoftIntegrationSettings />);
+
+    expect(await screen.findByText('Platform Microsoft credentials are unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Which Microsoft app each service uses')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New app registration' })).toBeInTheDocument();
   });
 
   it('renders CE copy and bindings only for MSP SSO', async () => {

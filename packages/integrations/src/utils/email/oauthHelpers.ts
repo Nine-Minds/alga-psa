@@ -13,6 +13,7 @@ export interface OAuthState {
   timestamp: number;
   nonce: string;
   hosted?: boolean; // indicates EE hosted credential flow
+  microsoftCredentialSource?: 'tenant' | 'platform';
 }
 
 /**
