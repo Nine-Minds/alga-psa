@@ -4,7 +4,7 @@ Ticket: `alga0002211` — Remove stale CE stub-synthesis from `Dockerfile.build`
 
 ## Context
 
-The CE image build currently deletes `ee/server` and then recreates a partial version of it from `server/src/empty`, plus four handwritten JavaScript shims. That mechanism predates the edition-aware aliases now maintained in `server/next.config.mjs`. It has drifted from the real CE fallback surface and can mask missing or incorrect aliases.
+The CE image build currently deletes `ee/server` and then recreates a partial version of it from a legacy fallback tree, plus four handwritten JavaScript shims. That mechanism predates the edition-aware aliases now maintained in `server/next.config.mjs`. It has drifted from the real CE fallback surface and can mask missing or incorrect aliases.
 
 The existing `docs/getting-started/enterprise_edition_architecture.md` describes the former `ee/server`-centric workspace, obsolete package scripts, and a compose overlay that no longer represents the supported build and runtime paths. The replacement should document the configuration that actually selects CE versus EE code today.
 
@@ -16,7 +16,7 @@ Update `Dockerfile.build` in the builder stage:
 
 - Keep `RUN rm -rf /app/ee/server`; CE must not ship or compile the proprietary server tree.
 - Keep `ee/packages/workflows` intact because the workspace symlink is required by dependency installation.
-- Delete the commands that recreate `/app/ee/server/src` from `server/src/empty`.
+- Delete the commands that recreate `/app/ee/server/src` from the legacy fallback tree.
 - Delete the handwritten `lib/extensions/initialize.js` shim.
 - Delete the handwritten `chatStreamService.js`, `temporaryApiKeyService.js`, and `chatCompletionsService.js` shims.
 - Replace the surrounding comments with a short statement that CE resolution is owned by the Next aliases and checked-in fallback modules, so future contributors do not reintroduce build-generated source.
@@ -28,9 +28,9 @@ No product behavior or checked-in fallback implementation should move as part of
 Replace `docs/getting-started/enterprise_edition_architecture.md` with a concise guide derived from the repository's live configuration. Cover:
 
 - **Edition selection:** explain how `EDITION`, `NEXT_PUBLIC_EDITION`, and the `isEE` calculation in `server/next.config.mjs` select community or enterprise behavior. Use the accepted values visible in code and avoid presenting invented package scripts.
-- **Source ownership:** distinguish shared/open server code (`server/src`), checked-in CE fallback modules (`server/src/empty`), enterprise server implementations (`ee/server/src`), and the package-level EE surface (`packages/ee/src`). Mention the separately retained `ee/packages/workflows` workspace where relevant.
-- **`@ee/*` seam:** document that EE builds resolve to `ee/server/src`, while CE builds resolve the same import surface to checked-in files under `server/src/empty`. Make `server/next.config.mjs` the source of truth and explain that CE must never depend on generated `ee/server` files.
-- **`@/empty/*` seam:** describe it as an explicit import of the checked-in no-op/unsupported implementation, independent of edition switching, and clarify when it is preferable to an `@ee/*` import.
+- **Source ownership:** distinguish shared/open server code (`server/src`), checked-in CE-compatible implementations (`packages/ee/src`), and enterprise server implementations (`ee/server/src`). Mention the separately retained `ee/packages/workflows` workspace where relevant.
+- **`@ee/*` seam:** document that CE builds resolve to `packages/ee/src`, while EE builds resolve the same import surface to `ee/server/src`. Make `server/next.config.mjs` the source of truth and explain that CE must never depend on generated `ee/server` files.
+- **`@/empty/*` seam:** describe it as an established compatibility spelling for the same edition-switched, path-mirrored surface: CE resolves it to `packages/ee/src`, and EE resolves it to `ee/server/src`. Clarify that new code should prefer `@ee/*` or a product alias.
 - **`@product/*` seams:** explain that product entry points choose an EE entry or CE entry/fallback in `server/next.config.mjs`; contributors should import the stable product alias rather than reaching across repository directories with relative paths.
 - **Bundler parity:** note that Webpack and Turbopack mappings must be updated together, including exact and directory/subpath variants where the configuration requires them. Point readers to the alias definitions and replacement wiring rather than duplicating a long, drift-prone alias inventory.
 - **Adding a new edition-aware feature:** provide a short checklist: define the stable import seam, add the CE implementation, add the EE implementation, wire both bundlers, avoid direct cross-edition relative imports, and test both editions.
@@ -55,4 +55,4 @@ Do not add tests that merely grep `Dockerfile.build` or assert documentation/sou
 - `Dockerfile.build`
 - `docs/getting-started/enterprise_edition_architecture.md`
 
-Any change to `server/next.config.mjs`, `server/src/empty`, or product entries should occur only if the CE build reveals a real missing mapping; keep such fixes narrowly scoped and document the newly required seam.
+Any change to `server/next.config.mjs`, `packages/ee/src`, or product entries should occur only if the CE build reveals a real missing mapping; keep such fixes narrowly scoped and document the newly required seam.
