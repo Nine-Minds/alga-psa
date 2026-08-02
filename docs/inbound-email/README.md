@@ -14,9 +14,9 @@ This folder hosts everything related to converting inbound emails into Tickets. 
 |----------|-------|
 Set up Microsoft 365 / Entra (Outlook, Exchange Online) | `setup/microsoft.md` |
 Set up Gmail with OAuth | `setup/gmail.md` |
-Set up IMAP with OAuth2 | *(coming soon)* |
+Understand IMAP in-app processing flags | [`setup/imap.md`](setup/imap.md) |
 Refresh an expired Pub/Sub subscription | `setup/refresh-pubsub.md` |
-Understand the overall architecture | `architecture/overall.md` *(coming soon)* |
+Understand the overall architecture | [`architecture/overall.md`](architecture/overall.md) |
 See the email-to-ticket workflow diagram | `architecture/workflow.md` |
 Learn about the single-initialisation Pub/Sub design | `architecture/pubsub.md` |
 Develop or modify an adapter | `development/adapters.md` |
