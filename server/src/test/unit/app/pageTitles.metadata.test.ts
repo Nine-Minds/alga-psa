@@ -110,6 +110,7 @@ describe('route title metadata coverage', () => {
     const staticMspRoutes = [
       ['server/src/app/msp/dashboard/page.tsx', 'Dashboard'],
       ['server/src/app/msp/account/layout.tsx', 'Account'],
+      ['server/src/app/msp/add-ons/layout.tsx', 'Add-ons'],
       ['server/src/app/msp/profile/layout.tsx', 'Profile'],
       ['server/src/app/msp/tickets/page.tsx', 'Tickets'],
       ['server/src/app/msp/clients/page.tsx', 'Clients'],

@@ -8,7 +8,11 @@ import React from 'react';
 import { Card } from '@alga-psa/ui/components/Card';
 import { AlertCircle } from 'lucide-react';
 
-export default function AccountManagement() {
+type AccountManagementProps = {
+  selectedAddOn?: string;
+};
+
+export default function AccountManagement(_props: AccountManagementProps) {
   return (
     <Card className="p-8 text-center">
       <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />

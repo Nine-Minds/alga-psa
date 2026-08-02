@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -76,7 +76,11 @@ const FEATURE_TRANSLATION_KEYS: Record<TIER_FEATURES, string> = {
   [TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]: 'features.advancedAuthorizationBundles',
 };
 
-export default function AccountManagement() {
+type AccountManagementProps = {
+  selectedAddOn?: AddOnKey;
+};
+
+export default function AccountManagement({ selectedAddOn }: AccountManagementProps) {
   const { t } = useTranslation('msp/account');
   const formatAddOnDescription = useFormatAddOnDescription();
   const [loading, setLoading] = useState(true);
@@ -120,6 +124,7 @@ export default function AccountManagement() {
     : aiUsageBillingFlag?.enabled ?? false;
   const { isAlgaDesk } = useProduct();
   const { update: updateSession } = useSession();
+  const focusedAddOnRef = useRef<AddOnKey | null>(null);
 
   // Collapsible sections state
   const [expandedSections, setExpandedSections] = useState({
@@ -146,6 +151,22 @@ export default function AccountManagement() {
   const hasPendingIapTransition = Boolean(iapContext?.iap?.hasPendingTransition);
 
   const router = useRouter();
+
+  useEffect(() => {
+    if (loading || !selectedAddOn || focusedAddOnRef.current === selectedAddOn) {
+      return;
+    }
+
+    const addOnSlug = selectedAddOn.replace(/_/g, '-');
+    const selectedCard = document.getElementById(`account-addon-${addOnSlug}`);
+    if (!selectedCard) {
+      return;
+    }
+
+    focusedAddOnRef.current = selectedAddOn;
+    selectedCard.scrollIntoView({ block: 'center' });
+    selectedCard.focus({ preventScroll: true });
+  }, [loading, selectedAddOn]);
 
   const formatDate = (value?: string | Date | null) => {
     if (!value) return t('common.notAvailable');
@@ -1528,72 +1549,86 @@ export default function AccountManagement() {
         </Card>
       )}
 
-      {tierUpgradeFlowEnabled && addOnCards.map((card) => {
-        const isActive = hasAddOn(card.addOn);
-        const isPurchasing = purchasingAddOn === card.addOn;
-        const isCanceling = cancelingAddOn === card.addOn;
-        const addOnSlug = card.addOn.replace(/_/g, '-');
+      {(tierUpgradeFlowEnabled || selectedAddOn) && (
+        <section id="account-add-ons" aria-labelledby="account-add-ons-heading" className="space-y-4">
+          <h2 id="account-add-ons-heading" className="text-2xl font-semibold">
+            {t('addOns.title')}
+          </h2>
+          {addOnCards.map((card) => {
+            const isActive = hasAddOn(card.addOn);
+            const isPurchasing = purchasingAddOn === card.addOn;
+            const isCanceling = cancelingAddOn === card.addOn;
+            const addOnSlug = card.addOn.replace(/_/g, '-');
+            const isSelected = selectedAddOn === card.addOn;
 
-        return (
-          <Card key={card.addOn}>
-            <CardHeader>
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <CardTitle>{ADD_ON_LABELS[card.addOn]}</CardTitle>
-                  <CardDescription>{formatAddOnDescription(card.addOn)}</CardDescription>
-                </div>
-                <Badge variant={isActive ? 'success' : 'default-muted'}>
-                  {isActive ? t('aiAssistant.statusActive') : t('aiAssistant.statusAvailable')}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">{card.description}</p>
-              {isActive ? (
-                <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-4">
+            return (
+              <Card
+                key={card.addOn}
+                id={`account-addon-${addOnSlug}`}
+                aria-labelledby={`account-addon-${addOnSlug}-heading`}
+                tabIndex={isSelected ? -1 : undefined}
+                className={isSelected ? 'scroll-mt-6 border-primary ring-2 ring-primary/30 focus:outline-none' : undefined}
+              >
+                <CardHeader>
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <h4 className="font-semibold">{card.activeTitle}</h4>
-                      <p className="text-sm text-muted-foreground">{card.activeBody}</p>
+                      <CardTitle id={`account-addon-${addOnSlug}-heading`}>{ADD_ON_LABELS[card.addOn]}</CardTitle>
+                      <CardDescription>{formatAddOnDescription(card.addOn)}</CardDescription>
                     </div>
-                    <Button
-                      id={`cancel-${addOnSlug}-addon-btn`}
-                      variant="outline"
-                      onClick={() => setCancelAddOnConfirm(card.addOn)}
-                      disabled={isCanceling}
-                    >
-                      {isCanceling ? t('aiAssistant.cancelling') : t('aiAssistant.cancel')}
-                    </Button>
+                    <Badge variant={isActive ? 'success' : 'default-muted'}>
+                      {isActive ? t('aiAssistant.statusActive') : t('aiAssistant.statusAvailable')}
+                    </Badge>
                   </div>
-                </div>
-              ) : isIapTenant ? (
-                <div className="rounded-lg border border-muted bg-muted/30 p-4">
-                  <h4 className="font-semibold">{t('aiAssistant.iapUnavailableTitle')}</h4>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {t('aiAssistant.iapUnavailableBody')}
-                  </p>
-                </div>
-              ) : (
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <h4 className="font-semibold">{card.addTitle}</h4>
-                      <p className="text-sm text-muted-foreground">{card.addBody}</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">{card.description}</p>
+                  {isActive ? (
+                    <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <h4 className="font-semibold">{card.activeTitle}</h4>
+                          <p className="text-sm text-muted-foreground">{card.activeBody}</p>
+                        </div>
+                        <Button
+                          id={`cancel-${addOnSlug}-addon-btn`}
+                          variant="outline"
+                          onClick={() => setCancelAddOnConfirm(card.addOn)}
+                          disabled={isCanceling}
+                        >
+                          {isCanceling ? t('aiAssistant.cancelling') : t('aiAssistant.cancel')}
+                        </Button>
+                      </div>
                     </div>
-                    <Button
-                      id={`purchase-${addOnSlug}-addon-btn`}
-                      onClick={() => handlePurchaseAddOn(card.addOn)}
-                      disabled={isPurchasing}
-                    >
-                      {isPurchasing ? t('aiAssistant.startingCheckout') : t('aiAssistant.addButton')}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
+                  ) : isIapTenant ? (
+                    <div className="rounded-lg border border-muted bg-muted/30 p-4">
+                      <h4 className="font-semibold">{t('aiAssistant.iapUnavailableTitle')}</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {t('aiAssistant.iapUnavailableBody')}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <h4 className="font-semibold">{card.addTitle}</h4>
+                          <p className="text-sm text-muted-foreground">{card.addBody}</p>
+                        </div>
+                        <Button
+                          id={`purchase-${addOnSlug}-addon-btn`}
+                          onClick={() => handlePurchaseAddOn(card.addOn)}
+                          disabled={isPurchasing}
+                        >
+                          {isPurchasing ? t('aiAssistant.startingCheckout') : t('aiAssistant.addButton')}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </section>
+      )}
 
       {/* Scheduled License Changes Alert */}
       {scheduledChanges && (

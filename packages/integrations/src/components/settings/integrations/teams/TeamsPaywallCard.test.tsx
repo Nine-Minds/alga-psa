@@ -31,7 +31,7 @@ describe('TeamsPaywallCard (F064)', () => {
     expect(screen.getByText(/recordings and transcripts/i)).toBeInTheDocument();
 
     const cta = await screen.findByRole('link', { name: /Purchase Teams add-on/i });
-    expect(cta).toHaveAttribute('href', '/msp/account');
+    expect(cta).toHaveAttribute('href', '/msp/add-ons?addon=teams');
     expect(document.querySelector('#teams-paywall-non-billing')).not.toBeInTheDocument();
   });
 

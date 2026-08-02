@@ -104,7 +104,18 @@ describe('Teams production-readiness admin experience (E6/E7) contracts', () => 
     const paywall = readRepoFile(`${TEAMS_DIR}/TeamsPaywallCard.tsx`);
     expect(paywall).toContain('id="teams-paywall-card"');
     expect(paywall).toContain('id="teams-paywall-purchase"');
-    expect(paywall).toContain("'/msp/account'");
+    expect(paywall).toContain('getAddOnDestination(ADD_ONS.TEAMS)');
+
+    const addOnNavigation = readRepoFile('packages/integrations/src/lib/addOnNavigation.ts');
+    expect(addOnNavigation).toContain("'/msp/add-ons'");
+
+    const accountManagement = readRepoFile('ee/server/src/components/settings/account/AccountManagement.tsx');
+    expect(accountManagement).toContain('selectedAddOn?: AddOnKey');
+    expect(accountManagement).toContain('id={`account-addon-${addOnSlug}`}');
+    expect(accountManagement).toContain('selectedCard.focus({ preventScroll: true })');
+
+    const ceDestination = readRepoFile('packages/ee/src/components/settings/account/AccountManagement.tsx');
+    expect(ceDestination).toContain('selectedAddOn?: string');
 
     const banner = readRepoFile(`${TEAMS_DIR}/TeamsAddonExpiredBanner.tsx`);
     expect(banner).toContain('id="teams-addon-expired-banner"');

@@ -142,7 +142,7 @@ describe('TeamsIntegrationSettings add-on lifecycle + stale manifest', () => {
     // Configuration/history is preserved: the manage view still renders.
     expect(screen.getByText('Diagnostics & Test Message')).toBeInTheDocument();
     // Same renew destination as the paywall.
-    expect(screen.getByRole('link', { name: /Renew Teams add-on/i })).toHaveAttribute('href', '/msp/account');
+    expect(screen.getByRole('link', { name: /Renew Teams add-on/i })).toHaveAttribute('href', '/msp/add-ons?addon=teams');
   });
 
   it('F065: hides the expired banner when the add-on is active', async () => {

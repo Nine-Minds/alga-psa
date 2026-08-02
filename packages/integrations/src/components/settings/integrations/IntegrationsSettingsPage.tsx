@@ -12,6 +12,7 @@ import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { ADD_ONS, type AddOnKey } from '@alga-psa/types';
 import { ENTRA_SYNC_FEATURE_FLAG } from './integrationsFeatureFlags';
 import {
   Building2,
@@ -38,6 +39,7 @@ import {
   isCalendarEnterpriseEdition,
   resolveIntegrationSettingsCategory,
 } from '../../../lib/calendarAvailability';
+import { getAddOnDestination } from '../../../lib/addOnNavigation';
 
 // Dynamic import for StripeConnectionSettings (EE/OSS modular pattern)
 // Uses dynamic import with type assertion due to TypeScript bundler mode resolution issues
@@ -97,8 +99,9 @@ interface IntegrationItem {
   isEE?: boolean;
 }
 
-function AddOnRequiredNotice({ featureName, addOnName, description }: {
+function AddOnRequiredNotice({ featureName, addOn, addOnName, description }: {
   featureName: string;
+  addOn: AddOnKey;
   addOnName: string;
   description: string;
 }) {
@@ -113,7 +116,7 @@ function AddOnRequiredNotice({ featureName, addOnName, description }: {
       <p className="text-muted-foreground max-w-md mb-6">{description}</p>
       <a
         id={`manage-${addOnName.toLowerCase()}-addon-link`}
-        href="/msp/settings/account"
+        href={getAddOnDestination(addOn)}
         className="inline-flex items-center justify-center px-6 py-3 bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-lg transition-colors"
       >
         Manage add-ons
@@ -243,6 +246,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
             : () => (
                 <AddOnRequiredNotice
                   featureName={t('integrations.items.teams.name')}
+                  addOn={ADD_ONS.TEAMS}
                   addOnName="Teams"
                   description="Purchase the Teams add-on to activate the Microsoft Teams tab, bot, message extension, quick actions, and activity notifications."
                 />
@@ -303,6 +307,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
             : () => (
                 <AddOnRequiredNotice
                   featureName={t('integrations.items.entra.name')}
+                  addOn={ADD_ONS.ENTERPRISE}
                   addOnName="Enterprise"
                   description="Purchase the Enterprise add-on to activate Microsoft Entra Sync, including tenant discovery, client mapping, contact sync, and reconciliation workflows."
                 />

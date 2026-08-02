@@ -257,5 +257,9 @@ describe('IntegrationsSettingsPage Teams placement', () => {
     expect(screen.queryByTestId('teams-integration-disabled-shell')).not.toBeInTheDocument();
     expect(screen.queryByText('Microsoft Teams integration disabled')).not.toBeInTheDocument();
     expect(screen.queryByText('Microsoft Teams integration is disabled for this tenant.')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Manage add-ons' })).toHaveAttribute(
+      'href',
+      '/msp/add-ons?addon=teams',
+    );
   });
 });
