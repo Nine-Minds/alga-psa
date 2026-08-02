@@ -34,6 +34,10 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/calendar/appointment/2187d639-b796-4b0e-b760-8a2576bb435f.ics')).toBe(true);
   });
 
+  it('allows the email watch refresh route to use session auth', () => {
+    expect(shouldSkipApiKeyAuth('/api/email/refresh-watch')).toBe(true);
+  });
+
   it('allows workflow run APIs to use MSP session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/workflow-runs')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/workflow-runs/run-123/audit/export')).toBe(true);
