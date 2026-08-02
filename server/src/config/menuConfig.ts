@@ -13,7 +13,6 @@ import {
   CheckCircle,
   ClipboardList,
   Clock,
-  Coins,
   CreditCard,
   Download,
   FileBarChart,
@@ -430,7 +429,6 @@ export const billingNavigationSections: NavigationSection[] = [
       { name: 'Invoice Layouts', translationKey: 'nav.billing.invoiceLayouts', icon: ReceiptText, href: '/msp/billing?tab=invoice-templates' },
       { name: 'Billing Cycles', translationKey: 'nav.billing.billingCycles', icon: CalendarClock, href: '/msp/billing?tab=billing-cycles' },
       { name: 'Service Periods', translationKey: 'nav.billing.servicePeriods', icon: CalendarClock, href: '/msp/billing?tab=service-periods' },
-      { name: 'Credits', translationKey: 'nav.billing.credits', icon: Coins, href: '/msp/billing/credits' },
     ]
   },
   {
