@@ -1,0 +1,28 @@
+name: EE Import Counterpart Guard
+
+on:
+  pull_request:
+
+jobs:
+  ee-import-counterpart-guard:
+    name: Require CE counterparts for @ee imports
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Test EE import counterpart guard
+        run: node --test scripts/tests/check-ee-import-counterparts.test.mjs
+
+      - name: Check EE import counterparts
+        run: npm run guard:ee-import-counterparts
