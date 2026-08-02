@@ -1,0 +1,20 @@
+[
+  {
+    "id": "F001",
+    "description": "The email refresh-watch route bypasses middleware's API-key-header presence gate so browser session authentication can run in the route handler.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F002",
+    "description": "Unauthenticated refresh-watch requests remain rejected by the route handler without exposing the route as a public endpoint.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Security / Permissions"]
+  },
+  {
+    "id": "F003",
+    "description": "Focused middleware coverage protects the refresh-watch session-authentication allowlist entry from regression.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Non-functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  }
+]

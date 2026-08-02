@@ -1,0 +1,26 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: shouldSkipApiKeyAuth returns true for /api/email/refresh-watch.",
+    "implemented": true,
+    "featureIds": ["F001", "F003"]
+  },
+  {
+    "id": "T002",
+    "description": "HTTP smoke: POST /api/email/refresh-watch without x-api-key reaches the route handler and returns its Unauthorized response when no session is present, not the middleware API-key-missing response.",
+    "implemented": true,
+    "featureIds": ["F001", "F002"]
+  },
+  {
+    "id": "T003",
+    "description": "UI smoke: an authenticated user refreshes Pub/Sub and Watch for a configured Google provider without seeing API key missing.",
+    "implemented": false,
+    "featureIds": ["F001", "F002"]
+  },
+  {
+    "id": "T004",
+    "description": "Build gates: the focused middleware unit test, server typecheck, and isolated CE production build pass.",
+    "implemented": true,
+    "featureIds": ["F001", "F002", "F003"]
+  }
+]
