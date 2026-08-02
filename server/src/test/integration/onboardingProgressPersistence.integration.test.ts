@@ -81,6 +81,22 @@ describe('transaction-safe onboarding progress persistence', () => {
     expect(nullPatchedRow?.onboarding_data).toEqual({ boardName: 'Support' });
   });
 
+  it('treats JSONB literal null as empty onboarding data', async () => {
+    const tenant = await createTenant();
+
+    await tenantTable(tenant).insert({
+      tenant,
+      onboarding_data: db.raw(`'null'::jsonb`),
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+
+    await persistTenantOnboardingProgress(db, tenant, { currentStep: 2 });
+
+    const row = await tenantTable(tenant).first('onboarding_data');
+    expect(row?.onboarding_data).toEqual({ currentStep: 2 });
+  });
+
   it('preserves both patches written concurrently by independent connections', async () => {
     const tenant = await createTenant();
 

@@ -25,7 +25,7 @@
   },
   {
     "id": "F005",
-    "description": "Atomic progress patching treats null onboarding_data as an empty object and preserves unrelated stored top-level fields",
+    "description": "Atomic progress patching treats both SQL NULL and JSONB literal null onboarding_data as an empty object and preserves unrelated stored top-level fields",
     "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements > Transaction-aware persistence primitive"]
   },

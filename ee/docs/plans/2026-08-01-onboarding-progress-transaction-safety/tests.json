@@ -7,7 +7,7 @@
   },
   {
     "id": "T002",
-    "description": "DB integration: patching existing onboarding_data preserves unrelated fields, replaces matching top-level fields, handles null stored data, and omits undefined patch properties",
+    "description": "DB integration: patching existing onboarding_data preserves unrelated fields, replaces matching top-level fields, handles both SQL NULL and JSONB literal null stored data, and omits undefined patch properties",
     "implemented": true,
     "featureIds": ["F003", "F005", "F006"]
   },

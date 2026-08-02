@@ -27,7 +27,7 @@ export async function persistTenantOnboardingProgress(
     .onConflict('tenant')
     .merge({
       onboarding_data: connection.raw(
-        `COALESCE(tenant_settings.onboarding_data, '{}'::jsonb) || ?::jsonb`,
+        `COALESCE(NULLIF(tenant_settings.onboarding_data, 'null'::jsonb), '{}'::jsonb) || ?::jsonb`,
         [patchJson]
       ),
       updated_at: now,

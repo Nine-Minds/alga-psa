@@ -35,6 +35,7 @@ Working notes for eliminating lock timeouts and lost updates when onboarding act
 - (2026-08-01, verification) The active workflow port is 3134. Hocuspocus is intentionally excluded from this task's stack gate by human direction recorded on the workflow card.
 - (2026-08-01, verification) A local runtime build starts on port 3134 and `/auth/msp/signin` returns HTTP 200. The shared wire-in database is behind current schema and background schedulers warn that `tenants.suspended_at` is missing; this does not block the onboarding compile/test checks but should not be mistaken for a branch regression.
 - (2026-08-01, mitigation) Replaced the T007 source-string contract with a behavioral action test that invokes all four transaction-owning flows and verifies each passes the active transaction to the internal progress writer without calling the public action.
+- (2026-08-02, mitigation) Fresh tenant settings can store `onboarding_data` as JSONB literal `null`, which SQL `COALESCE` does not treat as SQL NULL. The atomic patch now normalizes both forms to an empty object, with distinct DB-backed coverage for literal-null step persistence.
 
 ## Selected Design
 
@@ -58,6 +59,7 @@ Working notes for eliminating lock timeouts and lost updates when onboarding act
 
 - (2026-08-01) Automated implementation and regressions are complete: plan features F001-F023 and tests T001-T011 are marked implemented.
 - (2026-08-01) Fresh-appliance validation remains for the later smoke-test step, so F024 and T012 remain unimplemented.
+- (2026-08-02, mitigation verification) The focused persistence and ticketing DB suites pass 7/7, including JSONB literal-null restoration and a transaction-local 2-second `lock_timeout`; the focused action/wizard unit suites pass 10/10; the full server TypeScript check passes with the documented 16 GiB heap.
 
 ## Links / References
 
