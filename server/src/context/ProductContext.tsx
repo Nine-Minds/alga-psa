@@ -4,8 +4,11 @@ import React, { createContext, useContext, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { ProductCode, resolveProductCode } from '@alga-psa/types';
 
+export type ProductEdition = 'community' | 'enterprise';
+
 interface ProductContextValue {
   productCode: ProductCode;
+  edition: ProductEdition;
   isMisconfigured: boolean;
   isPsa: boolean;
   isAlgaDesk: boolean;
@@ -21,6 +24,9 @@ interface ProductProviderProps {
 export function ProductProvider({ children }: ProductProviderProps) {
   const { data: session, status } = useSession();
   const isLoading = status === 'loading';
+  const edition: ProductEdition = process.env.NEXT_PUBLIC_EDITION === 'enterprise'
+    ? 'enterprise'
+    : 'community';
 
   const { productCode, isMisconfigured } = useMemo(() => {
     return resolveProductCode(session?.user?.product_code);
@@ -29,12 +35,13 @@ export function ProductProvider({ children }: ProductProviderProps) {
   const value = useMemo<ProductContextValue>(
     () => ({
       productCode,
+      edition,
       isMisconfigured,
       isPsa: productCode === 'psa',
       isAlgaDesk: productCode === 'algadesk',
       isLoading,
     }),
-    [isLoading, isMisconfigured, productCode],
+    [edition, isLoading, isMisconfigured, productCode],
   );
 
   return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;

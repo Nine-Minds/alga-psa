@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ProductProvider, useProduct } from '../../../context/ProductContext';
 
@@ -16,6 +16,7 @@ vi.mock('next-auth/react', () => ({
 describe('ProductContext', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.stubEnv('NEXT_PUBLIC_EDITION', 'community');
     useSession.mockReturnValue({
       status: 'authenticated',
       data: {
@@ -24,6 +25,10 @@ describe('ProductContext', () => {
         },
       },
     });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -51,6 +56,13 @@ describe('ProductContext', () => {
     const { result } = renderHook(() => useProduct(), { wrapper });
     expect(result.current.productCode).toBe('algadesk');
     expect(result.current.isAlgaDesk).toBe(true);
+  });
+
+  it('exposes the build edition alongside the product', () => {
+    vi.stubEnv('NEXT_PUBLIC_EDITION', 'enterprise');
+
+    const { result } = renderHook(() => useProduct(), { wrapper });
+    expect(result.current.edition).toBe('enterprise');
   });
 
   it('fails closed to psa and marks misconfigured for unknown product code', () => {
