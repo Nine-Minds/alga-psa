@@ -3,7 +3,11 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { runAppChannelUpdate } from '../update-engine.mjs';
+
+const enginePath = path.join(import.meta.dirname, '..', 'update-engine.mjs');
+const serverPath = path.join(import.meta.dirname, '..', 'server.mjs');
 
 test('runAppChannelUpdate applies channel update and persists history without OS/k3s mutation scope', async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-update-engine-'));
@@ -183,6 +187,70 @@ test('app update: helm reconcile exits non-zero and HelmRelease is unreadable ->
   const { result, state } = await runWithReconcileOutcome('false'); // kubectl read itself fails
   assert.equal(result.ok, false);
   assert.equal(state.status, 'update-blocked');
+});
+
+// The update must run in a separate process: the engine's spawnSync steps
+// (storage reconcile, flux reconcile) block the event loop of whichever
+// process runs them, and inside the control-plane server that freezes /healthz
+// long enough for the pod's liveness probe to kill the container mid-update
+// (alga0002202). server.mjs therefore spawns this CLI detached instead of
+// calling runAppChannelUpdate in-process.
+test('server runs app-channel updates in a detached child, never in-process', () => {
+  const server = fs.readFileSync(serverPath, 'utf8');
+  assert.doesNotMatch(server, /runAppChannelUpdate/);
+  assert.match(server, /function queueUpdateWorkflow/);
+  assert.match(server, /update-engine\.mjs/);
+  assert.match(server, /queueUpdateWorkflow\(channel\)/);
+});
+
+test('update-engine CLI reports a blocked terminal state when the update fails cleanly', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-update-cli-'));
+  const stateFile = path.join(tmp, 'install-state.json');
+  const historyFile = path.join(tmp, 'update-history.json');
+
+  // No release-selection.json: the engine refuses the update before touching
+  // storage, the registry, or the cluster — deterministic and offline.
+  const result = spawnSync(process.execPath, [
+    enginePath,
+    'run',
+    '--channel', 'stable',
+    '--state-file', stateFile,
+    '--release-selection-file', path.join(tmp, 'release-selection.json'),
+    '--update-history-file', historyFile
+  ], { encoding: 'utf8' });
+
+  assert.equal(result.status, 1, result.stderr || result.stdout);
+  const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  assert.equal(state.status, 'update-blocked');
+  const history = JSON.parse(fs.readFileSync(historyFile, 'utf8'));
+  assert.equal(history.history[0].ok, false);
+});
+
+test('update-engine CLI writes a blocked terminal state even when the engine throws', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-update-cli-throw-'));
+  const stateFile = path.join(tmp, 'install-state.json');
+  const historyFile = path.join(tmp, 'update-history.json');
+  const releaseSelectionFile = path.join(tmp, 'release-selection.json');
+  fs.writeFileSync(releaseSelectionFile, JSON.stringify({
+    runtime: { appHostname: 'psa.example.com', dnsMode: 'system', dnsServers: '' }
+  }));
+
+  // An invalid channel makes validateSetupInputs throw; the Manage UI polls
+  // install-state until a terminal status, so the crash must still land on
+  // update-blocked instead of leaving the state mid-flight forever.
+  const result = spawnSync(process.execPath, [
+    enginePath,
+    'run',
+    '--channel', 'bogus',
+    '--state-file', stateFile,
+    '--release-selection-file', releaseSelectionFile,
+    '--update-history-file', historyFile
+  ], { encoding: 'utf8' });
+
+  assert.equal(result.status, 1, result.stderr || result.stdout);
+  const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  assert.equal(state.status, 'update-blocked');
+  assert.match(state.failure.suspectedCause, /Invalid channel/);
 });
 
 test('app update stops before release reconciliation when storage repair fails', async () => {

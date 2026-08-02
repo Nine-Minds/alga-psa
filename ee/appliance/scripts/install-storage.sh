@@ -8,7 +8,8 @@ STORAGE_PATH="/var/mnt/alga-data/local-path-provisioner"
 K3S_CONFIG_DROP_IN="/etc/rancher/k3s/config.yaml.d/20-alga-local-storage.yaml"
 K3S_LOCAL_STORAGE_SKIP_FILE="/var/lib/rancher/k3s/server/manifests/local-storage.yaml.skip"
 SMOKE_NAMESPACE="storage-smoke"
-LOCK_DIR="${ALGA_APPLIANCE_STORAGE_LOCK_DIR:-/var/lib/alga-appliance/storage-reconcile.lock}"
+LOCK_PATH="${ALGA_APPLIANCE_STORAGE_LOCK_PATH:-/var/lib/alga-appliance/storage-reconcile.lock}"
+LOCK_WAIT_ATTEMPTS="${ALGA_APPLIANCE_STORAGE_LOCK_ATTEMPTS:-150}"
 STORAGE_STABILITY_SECONDS="${ALGA_APPLIANCE_STORAGE_STABILITY_SECONDS:-10}"
 DRY_RUN=false
 KUBE_COMMAND=()
@@ -38,22 +39,55 @@ run_cmd() {
   "$@"
 }
 
+# Serialize concurrent reconciles with an atomic symlink lock whose target is
+# the owner's PID. Claiming the lock and recording its owner happen in one
+# atomic step, so a holder that dies without running its cleanup trap — the
+# control-plane container being SIGKILLed mid-reconcile leaves no chance to
+# clean up — is detected as stale by the next caller and reclaimed, instead of
+# blocking every future reconcile until someone hand-deletes the lock.
+lock_reclaimed_if_stale() {
+  local owner
+  owner="$(readlink "$LOCK_PATH" 2>/dev/null || true)"
+  if [ -n "$owner" ] && ! kill -0 "$owner" 2>/dev/null; then
+    # Best-effort reclaim: two callers racing over the same dead owner could
+    # momentarily both hold the lock. Reconciliation is idempotent kubectl
+    # applies, so an overlapping run is safe — a permanently wedged lock is not.
+    rm -f "$LOCK_PATH" 2>/dev/null
+    return
+  fi
+  return 1
+}
+
 acquire_lock() {
   if $DRY_RUN; then
     return 0
   fi
 
   local attempts=0
-  mkdir -p "$(dirname "$LOCK_DIR")"
-  until mkdir "$LOCK_DIR" 2>/dev/null; do
+  mkdir -p "$(dirname "$LOCK_PATH")"
+  while :; do
+    if [ -d "$LOCK_PATH" ]; then
+      # mkdir-style lock directory from an older build. That scheme recorded
+      # no owner, so a surviving directory (always empty by construction) can
+      # only be stale: a live legacy holder and this build never run
+      # concurrently. Reclaim it before the ln attempt — `ln -s` against an
+      # existing directory would "succeed" by creating the link inside it.
+      rmdir "$LOCK_PATH" 2>/dev/null || true
+    fi
+    if ln -s "$$" "$LOCK_PATH" 2>/dev/null; then
+      break
+    fi
+    if lock_reclaimed_if_stale; then
+      continue
+    fi
     attempts=$((attempts + 1))
-    if [ "$attempts" -ge 150 ]; then
+    if [ "$attempts" -ge "$LOCK_WAIT_ATTEMPTS" ]; then
       echo "Timed out waiting for another storage reconciliation to finish." >&2
       exit 1
     fi
     sleep 2
   done
-  trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT INT TERM
+  trap 'rm -f "$LOCK_PATH" 2>/dev/null || true' EXIT INT TERM
 }
 
 configure_kube_command() {

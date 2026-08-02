@@ -343,3 +343,69 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
 
   return result;
 }
+
+function parseCliArgs(argv) {
+  const parsed = { command: argv[0] || '' };
+  for (let i = 1; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === '--channel') {
+      parsed.channel = argv[i + 1];
+      i += 1;
+    } else if (arg === '--state-file') {
+      parsed.stateFile = argv[i + 1];
+      i += 1;
+    } else if (arg === '--release-selection-file') {
+      parsed.releaseSelectionFile = argv[i + 1];
+      i += 1;
+    } else if (arg === '--update-history-file') {
+      parsed.updateHistoryFile = argv[i + 1];
+      i += 1;
+    } else if (arg === '--kubeconfig') {
+      parsed.kubeconfigPath = argv[i + 1];
+      i += 1;
+    }
+  }
+  return parsed;
+}
+
+// CLI entry so server.mjs can run app-channel updates in a detached child
+// (queueUpdateWorkflow), keeping the control plane's event loop — and its
+// /healthz liveness probe — responsive while the engine's spawnSync steps run.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const args = parseCliArgs(process.argv.slice(2));
+  if (args.command === 'run') {
+    const channel = args.channel || 'stable';
+    try {
+      const result = await runAppChannelUpdate({ channel }, args);
+      process.stdout.write(`${JSON.stringify(result)}\n`);
+      if (!result.ok) process.exitCode = 1;
+    } catch (error) {
+      // The Manage UI polls install-state until it reaches update-complete or
+      // update-blocked; an unexpected crash must still land on a terminal
+      // state instead of leaving update-running behind forever.
+      const failure = {
+        ok: false,
+        phase: 'update',
+        step: 'run-app-channel-update',
+        message: 'App-channel update failed before it could complete.',
+        suspectedCause: error instanceof Error ? error.message : String(error),
+        suggestedNextStep: 'Retry the update from the Manage page; inspect control-plane logs if it recurs.',
+        retrySafe: true
+      };
+      writeInstallState({
+        status: 'update-blocked',
+        phase: failure.phase,
+        lastAction: failure.message,
+        failure,
+        updatedAt: nowIso(),
+        update: { requestedChannel: channel, scope: 'application-only' }
+      }, args.stateFile || DEFAULT_STATE_FILE);
+      appendUpdateHistory(
+        { at: nowIso(), channel, ok: false, phase: failure.phase, message: failure.message },
+        args.updateHistoryFile || DEFAULT_UPDATE_HISTORY_FILE
+      );
+      process.stderr.write(`${JSON.stringify(failure)}\n`);
+      process.exitCode = 1;
+    }
+  }
+}

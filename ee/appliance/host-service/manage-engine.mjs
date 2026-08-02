@@ -351,14 +351,20 @@ export function requestControlPlaneUpgrade(deps) {
 
 function mapUpdateStatus(installStateStatus) {
   switch (installStateStatus) {
+    case 'update-queued':
     case 'update-running':
     case 'release-config-running':
+    // The update engine's storage-reconcile step writes its own phase statuses
+    // to the shared install-state file; without these the Manage UI would show
+    // an in-flight update as idle for the entire storage phase.
+    case 'storage-install-running':
       return 'running';
     case 'update-complete':
       return 'complete';
     case 'update-blocked':
     case 'release-config-blocked':
     case 'runtime-values-blocked':
+    case 'storage-install-blocked':
       return 'blocked';
     default:
       return 'idle';

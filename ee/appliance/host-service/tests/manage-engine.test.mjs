@@ -226,6 +226,35 @@ test('collectManageStatus reports upgradeAvailable on digest mismatch', async ()
   assert.equal(status.appUrl.host, '10.0.0.5');
 });
 
+// The detached update child (queueUpdateWorkflow) moves install-state through
+// update-queued and the storage-reconcile phase statuses; each must read as an
+// in-flight or blocked update, or the Manage UI would show a running update as
+// idle for those stretches.
+test('collectManageStatus maps queued and storage-phase statuses onto the update lifecycle', async () => {
+  const cases = [
+    ['update-queued', 'running'],
+    ['storage-install-running', 'running'],
+    ['storage-install-blocked', 'blocked']
+  ];
+  for (const [installStatus, expected] of cases) {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-manage-status-map-'));
+    const installStateFile = path.join(tmp, 'install-state.json');
+    fs.writeFileSync(installStateFile, JSON.stringify({ status: installStatus, lastAction: 'x' }));
+    const releaseSelectionFile = path.join(tmp, 'release-selection.json');
+    fs.writeFileSync(releaseSelectionFile, JSON.stringify({ selectedChannel: 'stable' }));
+
+    const status = await collectManageStatus({
+      kube: fakeKube({ json: () => ({ ok: true, value: {} }) }),
+      releaseSelectionFile,
+      installStateFile,
+      cpUpgradeStatusFile: path.join(tmp, 'cp-upgrade.json'),
+      resolveControlPlaneRef: async () => null
+    });
+
+    assert.equal(status.app.update.status, expected, `install-state ${installStatus}`);
+  }
+});
+
 test('collectManageStatus: no upgrade when digests match', async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-manage-status2-'));
   const releaseSelectionFile = path.join(tmp, 'release-selection.json');

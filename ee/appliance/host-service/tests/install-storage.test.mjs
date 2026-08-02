@@ -188,7 +188,8 @@ exit 0
       FAKE_BUNDLED_REAPPEAR_ON_GET: String(options.bundledReappearOnGet || 0),
       FAKE_SMOKE_JOB_FAIL: options.smokeJobFail ? 'true' : 'false',
       FAKE_STORAGE_CLASS_POLICY: options.storageClassPolicy || 'Retain',
-      ALGA_APPLIANCE_STORAGE_LOCK_DIR: path.join(tmp, 'storage-reconcile.lock'),
+      ALGA_APPLIANCE_STORAGE_LOCK_PATH: path.join(tmp, 'storage-reconcile.lock'),
+      ALGA_APPLIANCE_STORAGE_LOCK_ATTEMPTS: options.lockWaitAttempts || '150',
       ALGA_APPLIANCE_STORAGE_STABILITY_SECONDS: '0'
     }
   };
@@ -257,6 +258,56 @@ test('smoke failures still transition and remove only the smoke PV', () => {
   assert.equal(fs.existsSync(path.join(harness.stateDir, 'current-smoke-pv')), false);
   assert.equal(fs.existsSync(path.join(harness.stateDir, 'pv-leaked.exists')), false);
   assert.doesNotMatch(calls, /delete persistentvolume pv-(?:postgresql|redis|application)/);
+});
+
+// lstat-based: a dangling symlink (the lock's normal shape — its target is a
+// PID, not a path) makes fs.existsSync return false even when it still exists.
+function lockAbsent(lockPath) {
+  try {
+    fs.lstatSync(lockPath);
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+// The control-plane container being restarted mid-reconcile (e.g. by its
+// liveness probe) SIGKILLs the lock holder, so its cleanup trap never runs.
+// A leftover lock must never block future reconciles — that previously left
+// appliances permanently unable to update (alga0002202).
+test('a stale lock whose owner is dead is reclaimed instead of blocking', () => {
+  const harness = createHarness();
+  // PID above every platform's pid_max, so it can never name a live process.
+  fs.symlinkSync('99999999', harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH);
+  const result = runInstaller(harness);
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Storage prerequisites are ready/);
+  assert.equal(lockAbsent(harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH), true);
+});
+
+test('a legacy mkdir-style lock directory left by an older build is reclaimed', () => {
+  const harness = createHarness();
+  fs.mkdirSync(harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH);
+  const result = runInstaller(harness);
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Storage prerequisites are ready/);
+  assert.equal(lockAbsent(harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH), true);
+});
+
+test('a lock held by a live process still blocks until the wait times out', () => {
+  const harness = createHarness({ lockWaitAttempts: '1' });
+  fs.symlinkSync(String(process.pid), harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH);
+  const result = runInstaller(harness);
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Timed out waiting for another storage reconciliation to finish/);
+  // The held lock must be left in place for its owner.
+  assert.equal(
+    fs.readlinkSync(harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH),
+    String(process.pid)
+  );
 });
 
 test('repeated reconciliation preserves application PVs and leaves no smoke resources or side effects', () => {
