@@ -99,7 +99,7 @@
       "@product/chat/ee/*": ["packages/product-chat/ee/*"],
       "@product/ext-proxy/handler": ["packages/product-ext-proxy/oss/handler"],
       "@product/ext-proxy/*": ["packages/product-ext-proxy/*"],
-      "@product/workflows/entry": ["server/src/empty/components/flow/DnDFlow"],
+      "@product/workflows/entry": ["packages/ee/src/workflows/entry"],
       "@product/extensions/entry": ["packages/product-extensions/oss/entry"],
       "@product/extensions/*": ["packages/product-extensions/*"],
       "@product/settings-extensions/entry": ["packages/product-settings-extensions/oss/entry"],

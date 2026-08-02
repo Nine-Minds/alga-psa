@@ -63,8 +63,8 @@ describe('workflows entry selection is deterministic', () => {
     const snapshot = getAliasSnapshot({ EDITION: '', NEXT_PUBLIC_EDITION: '' });
 
     expect(snapshot.isEE).toBe(false);
-    expect(snapshot.turbo).toBe('./src/empty/workflows/entry');
-    expect(snapshot.webpack).toMatch(/server[\\\/]src[\\\/]empty[\\\/]workflows[\\\/]entry\.tsx$/);
+    expect(snapshot.turbo).toBe('../packages/ee/src/workflows/entry');
+    expect(snapshot.webpack).toMatch(/packages[\\\/]ee[\\\/]src[\\\/]workflows[\\\/]entry\.tsx$/);
   });
 
   it('selects EE entry when EDITION=ee', () => {

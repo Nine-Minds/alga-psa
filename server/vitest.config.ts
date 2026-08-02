@@ -140,6 +140,7 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      { find: '@/empty', replacement: path.resolve(__dirname, '../packages/ee/src') },
       { find: '@', replacement: path.resolve(__dirname, './src') },
       // shared/services/email/inboundEmailRules/aiClassifier.ts dynamically imports this
       // EE-only module which lives under packages/ee/src (not ee/server/src). Resolve it

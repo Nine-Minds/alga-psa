@@ -42,10 +42,10 @@ COPY . .
 # present because node_modules/@alga-psa/workflows is a workspace symlink.
 RUN rm -rf /app/ee/server
 
-# Copy CE stubs from server/src/empty to ee/server/src for @ee alias resolution
-# This ensures both TypeScript and webpack can resolve @ee imports during CE builds
+# Stage the canonical CE substitutions at the removed EE source path so relative
+# EE imports still resolve during the container build.
 RUN mkdir -p /app/ee/server/src && \
-    cp -r /app/server/src/empty/. /app/ee/server/src/
+    cp -r /app/packages/ee/src/. /app/ee/server/src/
 
 # Create a dummy file for the relative import that webpack tries to resolve
 RUN mkdir -p /app/ee/server/src/lib/extensions && \

@@ -23,7 +23,7 @@ export default defineConfig({
         '../client-portal/src/models/PortalDomainModel.ts'
       ),
       '@shared': path.resolve(__dirname, '../../shared'),
-      '@ee': path.resolve(__dirname, '../../server/src/empty'),
+      '@ee': path.resolve(__dirname, '../ee/src'),
       '@': path.resolve(__dirname, '../../server/src'),
       'server/src': path.resolve(__dirname, '../../server/src'),
     },

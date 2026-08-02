@@ -12,6 +12,12 @@
     ],
     "baseUrl": ".",
     "paths": {
+      "@/empty": [
+        "../packages/ee/src"
+      ],
+      "@/empty/*": [
+        "../packages/ee/src/*"
+      ],
       "@/*": [
         "src/*"
       ],

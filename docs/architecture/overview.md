@@ -377,16 +377,16 @@ No code has been merged yet – this section serves as an architectural note so 
     // Configuration in next.config.mjs
     config.resolve.alias['@ee'] = process.env.NEXT_PUBLIC_EDITION === 'enterprise'
       ? path.join(__dirname, '../ee/server/src')
-      : path.join(__dirname, 'src/empty')
+      : path.join(__dirname, '../packages/ee/src')
     ```
   
   * **Empty Implementations Pattern:**
-    * Located in `server/src/empty/` directory
+    * Located in the canonical `packages/ee/src/` CE substitution tree
     * Mirrors the EE directory structure
     * Provides CE-appropriate fallbacks for enterprise features
     * Example structure:
       ```
-      server/src/empty/
+      packages/ee/src/
       ├── components/
       │   └── flow/
       │       └── DnDFlow.tsx      # Empty workflow editor component
@@ -425,7 +425,7 @@ No code has been merged yet – this section serves as an architectural note so 
           "paths": {
             "@ee/*": [
               "../ee/server/src/*",
-              "./src/empty/*"
+              "../packages/ee/src/*"
             ]
           }
         }

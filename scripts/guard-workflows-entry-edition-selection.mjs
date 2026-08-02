@@ -81,10 +81,10 @@ await runWithEnv({ EDITION: 'enterprise', NEXT_PUBLIC_EDITION: 'enterprise' }, a
 
 await runWithEnv({ EDITION: 'community', NEXT_PUBLIC_EDITION: 'community' }, async () => {
   const ceConfig = await loadNextConfigFresh();
-  assertAlias(ceConfig, './src/empty/workflows/entry', 'CE');
+  assertAlias(ceConfig, '../packages/ee/src/workflows/entry', 'CE');
   assertWebpackAlias(
     applyWebpackConfig(ceConfig, 'CE'),
-    path.join(serverDir, 'src/empty/workflows/entry.tsx'),
+    path.join(serverDir, '../packages/ee/src/workflows/entry.tsx'),
     'CE'
   );
 });

@@ -145,7 +145,7 @@ describe('EE package relocation audits', () => {
     expect(vitestConfig).toContain('@alga-psa\\/ee-microsoft-teams');
     expect(nextConfig).toContain("'@alga-psa/ee-calendar': '../ee/packages/calendar/src/index.ts'");
     expect(nextConfig).toContain(
-      "'@alga-psa/ee-microsoft-teams': isEE ? '../ee/packages/microsoft-teams/src/index.ts' : './src/empty/index.ts'"
+      "'@alga-psa/ee-microsoft-teams': isEE ? '../ee/packages/microsoft-teams/src/index.ts' : '../packages/ee/src/index.ts'"
     );
     expect(nextConfig).toContain("'@enterprise': isEE ? '../ee/server/src' : '../packages/ee/src'");
     expect(nextConfig).toContain("'@ee': isEE ? '../ee/server/src' : '../packages/ee/src'");
