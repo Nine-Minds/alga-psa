@@ -1,0 +1,74 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration: the transaction-aware primitive inserts a missing tenant_settings row and stores the supplied onboarding patch through the migrated schema",
+    "implemented": false,
+    "featureIds": ["F001", "F002", "F003", "F004"]
+  },
+  {
+    "id": "T002",
+    "description": "DB integration: patching existing onboarding_data preserves unrelated fields, replaces matching top-level fields, handles null stored data, and omits undefined patch properties",
+    "implemented": false,
+    "featureIds": ["F003", "F005", "F006"]
+  },
+  {
+    "id": "T003",
+    "description": "DB integration concurrency: two independent connections apply different onboarding patches concurrently and both fields survive without a lost update",
+    "implemented": false,
+    "featureIds": ["F003", "F005", "F007", "F008"]
+  },
+  {
+    "id": "T004",
+    "description": "DB integration rollback guard: a progress patch made through a transaction is absent after that transaction is deliberately rolled back",
+    "implemented": false,
+    "featureIds": ["F001", "F014"]
+  },
+  {
+    "id": "T005",
+    "description": "DB-backed ticketing regression: with a valid support email and transaction-local lock_timeout at or below 8 seconds, configureTicketing uses the real progress writer, completes without 55P03, and commits settings.supportEmail plus all ticketing progress fields",
+    "implemented": false,
+    "featureIds": ["F012", "F013", "F022", "F023"]
+  },
+  {
+    "id": "T006",
+    "description": "DB-backed ticketing guard: blank or invalid support email does not overwrite an existing supportEmail, while the valid non-email ticketing progress patch still commits",
+    "implemented": false,
+    "featureIds": ["F006", "F012", "F013"]
+  },
+  {
+    "id": "T007",
+    "description": "Onboarding action contract/integration: every transaction-wrapped tenant-details, team-members, billing, and ticketing progress write receives the active trx and no transaction callback invokes the public progress action",
+    "implemented": false,
+    "featureIds": ["F009", "F010", "F011", "F012", "F015", "F016"]
+  },
+  {
+    "id": "T008",
+    "description": "Wizard unit: deferred step-position promises prove saves execute serially and preserve step-change order even when an earlier request resolves slowly",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T009",
+    "description": "Wizard unit: rejecting one queued step-position save logs the error, permits the next queued save, and does not block navigation",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T010",
+    "description": "Wizard unit: Finish does not call validation, configureTicketing, or completeOnboarding until the pending step-position queue settles",
+    "implemented": false,
+    "featureIds": ["F019", "F021"]
+  },
+  {
+    "id": "T011",
+    "description": "Wizard unit failure guard: Finish continues through ticketing and completion after a pending position save rejects, and no late position request runs after completion",
+    "implemented": false,
+    "featureIds": ["F018", "F020", "F021"]
+  },
+  {
+    "id": "T012",
+    "description": "Manual appliance smoke: on a fresh appliance installation, enter a valid support email, finish onboarding, refresh, and verify onboarding remains complete with the support email available in settings and no 55P03 in the application logs",
+    "implemented": false,
+    "featureIds": ["F013", "F022", "F024"]
+  }
+]
