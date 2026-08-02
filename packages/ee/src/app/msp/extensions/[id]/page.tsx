@@ -1,33 +1,19 @@
-import { UpgradePrompt } from '@alga-psa/ui/components/UpgradePrompt';
-import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import React from 'react';
 
 export const metadata = {
   title: 'Extensions (EE only)'
 };
 
-type PageParams = { id: string };
-
-export default async function Page({ params }: { params: PageParams | Promise<PageParams> }) {
-  const { t } = await getServerTranslation(undefined, 'msp/extensions');
-  const resolvedParams = await params;
-
+// Relax props typing to satisfy Next page constraints in build
+export default function Page({ params }: any) {
   return (
     <div className="p-6">
-      <UpgradePrompt
-        featureName={t('page.title', { defaultValue: 'Extensions' })}
-        pitch={t('enterpriseFeature.description', {
-          defaultValue: '{{feature}} requires Enterprise Edition. Upgrade to install and run extensions.',
-          feature: t('page.title', { defaultValue: 'Extensions' }),
-        })}
-        ctaId="upgrade-extension-page-button"
-      >
-        <p>
-          {t('detail.extensionId', {
-            defaultValue: 'Extension ID: {{id}}',
-            id: resolvedParams.id,
-          })}
-        </p>
-      </UpgradePrompt>
+      <h1 className="text-xl font-semibold">Extension Not Available</h1>
+      <p className="mt-2 text-sm text-gray-600">
+        The extensions system is available in the Enterprise Edition and is not
+        included in this Community Edition build.
+      </p>
+      <p className="mt-4 text-xs text-gray-500">Requested ID: {params.id}</p>
     </div>
   );
 }

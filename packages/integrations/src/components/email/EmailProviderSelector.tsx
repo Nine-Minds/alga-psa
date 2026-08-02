@@ -8,6 +8,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
+import { UpgradePrompt } from '@alga-psa/ui/components/UpgradePrompt';
 import { Search, Building2, Mail } from 'lucide-react';
 import { isMicrosoftConsumerEnterpriseEdition } from '../../lib/microsoftConsumerVisibility';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -49,7 +50,7 @@ export function EmailProviderSelector({
       {/* Provider Selection Cards */}
       <div
         id="email-provider-selector"
-        className={`grid grid-cols-1 gap-6 max-w-5xl mx-auto ${isEnterpriseEdition ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}
+        className="grid grid-cols-1 gap-6 max-w-5xl mx-auto md:grid-cols-3"
       >
         
         {/* Google Gmail Card */}
@@ -100,7 +101,7 @@ export function EmailProviderSelector({
           </CardContent>
         </Card>
 
-        {isEnterpriseEdition && (
+        {isEnterpriseEdition ? (
           <Card 
             id="microsoft-provider-selector-card"
             className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-2 hover:border-blue-200 bg-gradient-to-br from-[rgb(var(--color-card))] to-blue-500/10"
@@ -144,6 +145,15 @@ export function EmailProviderSelector({
               </Button>
             </CardContent>
           </Card>
+        ) : (
+          <UpgradePrompt
+            featureName={t('selector.cards.microsoft.title', { defaultValue: 'Microsoft 365' })}
+            pitch={t('selector.cards.microsoft.description', {
+              defaultValue: 'Microsoft 365 / Outlook Integration',
+            })}
+            ctaId="upgrade-microsoft-email-provider-button"
+            className="h-full"
+          />
         )}
 
         {/* IMAP Card */}

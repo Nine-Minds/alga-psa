@@ -49,7 +49,11 @@ describe('UpgradePrompt', () => {
     expect(screen.getByText('Tenant setup remains unchanged.')).toBeTruthy();
 
     const cta = screen.getByRole('link', { name: /Explore Enterprise/ });
-    expect(cta.getAttribute('href')).toBe('/msp/account');
+    expect(cta.getAttribute('href')).toBe(
+      'https://www.nineminds.com/documentation/community-vs-enterprise-edition',
+    );
     expect(cta.getAttribute('id')).toBe('upgrade-teams-button');
+    expect(cta.getAttribute('target')).toBe('_blank');
+    expect(cta.getAttribute('rel')).toBe('noopener noreferrer');
   });
 });

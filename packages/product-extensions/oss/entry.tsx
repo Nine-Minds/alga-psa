@@ -22,9 +22,8 @@ export default async function Page({ params }: { params: PageParams | Promise<Pa
     <div className="p-6">
       <UpgradePrompt
         featureName={t('page.title', { defaultValue: 'Extensions' })}
-        pitch={t('enterpriseFeature.description', {
-          defaultValue: '{{feature}} requires Enterprise Edition. Upgrade to install and run extensions.',
-          feature: t('page.title', { defaultValue: 'Extensions' }),
+        pitch={t('settings.description', {
+          defaultValue: 'Install, configure, and manage extensions to extend Alga PSA functionality.',
         })}
         ctaId="upgrade-extension-runtime-button"
       >

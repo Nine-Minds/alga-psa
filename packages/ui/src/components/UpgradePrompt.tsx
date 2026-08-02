@@ -8,6 +8,9 @@ import { Card } from './Card';
 import { useTranslation } from '../lib/i18n/client';
 import { cn } from '../lib/utils';
 
+export const ENTERPRISE_UPGRADE_URL =
+  'https://www.nineminds.com/documentation/community-vs-enterprise-edition';
+
 export interface UpgradePromptProps {
   /** User-facing name of the unavailable Enterprise feature. */
   featureName: string;
@@ -32,11 +35,12 @@ export function UpgradePrompt({
   pitch,
   ctaId,
   ctaLabel,
-  ctaHref = '/msp/account',
+  ctaHref = ENTERPRISE_UPGRADE_URL,
   children,
   className,
 }: UpgradePromptProps) {
   const { t } = useTranslation('common');
+  const isExternalCta = /^https?:\/\//.test(ctaHref);
 
   return (
     <Card
@@ -58,7 +62,11 @@ export function UpgradePrompt({
         </h2>
         <p className="mt-2 text-sm text-[rgb(var(--color-text-600))]">{pitch}</p>
         <Button id={ctaId} asChild className="mt-5 gap-2">
-          <Link href={ctaHref}>
+          <Link
+            href={ctaHref}
+            target={isExternalCta ? '_blank' : undefined}
+            rel={isExternalCta ? 'noopener noreferrer' : undefined}
+          >
             {ctaLabel ?? t('upgradePrompt.defaultCta', { defaultValue: 'Explore Enterprise' })}
             <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Link>
