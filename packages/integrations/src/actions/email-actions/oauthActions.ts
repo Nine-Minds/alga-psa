@@ -52,9 +52,11 @@ export const initiateEmailOAuth = withAuth(async (
       // Google is always tenant-owned (CE and EE): do not fall back to app-level secrets.
       clientId = (await secretProvider.getTenantSecret(tenant, 'google_client_id')) || null;
     } else {
-      const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(tenant, 'email', {
-        credentialPreference: params.microsoftCredentialSource,
-      });
+      const microsoftProfile = params.microsoftCredentialSource
+        ? await resolveMicrosoftConsumerProfileConfig(tenant, 'email', {
+            credentialPreference: params.microsoftCredentialSource,
+          })
+        : await resolveMicrosoftConsumerProfileConfig(tenant, 'email');
       if (microsoftProfile.status !== 'ready') {
         return {
           success: false,

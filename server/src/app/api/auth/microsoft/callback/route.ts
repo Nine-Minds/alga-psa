@@ -208,9 +208,11 @@ export async function GET(request: NextRequest) {
     let clientSecret: string | null = null;
     const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
     const isHostedFlow = nextauthUrl.startsWith('https://algapsa.com');
-    const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(stateData.tenant, 'email', {
-      credentialPreference: stateData.microsoftCredentialSource,
-    });
+    const microsoftProfile = stateData.microsoftCredentialSource
+      ? await resolveMicrosoftConsumerProfileConfig(stateData.tenant, 'email', {
+          credentialPreference: stateData.microsoftCredentialSource,
+        })
+      : await resolveMicrosoftConsumerProfileConfig(stateData.tenant, 'email');
 
     let credentialSource = stateData.microsoftCredentialSource || 'automatic';
     if (microsoftProfile.status === 'ready') {

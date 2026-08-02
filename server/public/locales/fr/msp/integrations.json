@@ -693,19 +693,6 @@
         "title": "File de correspondances ambiguës"
       },
       "settings": {
-        "advanced": {
-          "title": "Bring your own Microsoft app (advanced)",
-          "description": "Create and manage tenant-owned Entra app registrations for organizations that explicitly require them.",
-          "warning": "A custom Entra app is normally unnecessary on hosted Alga PSA. Continue only when your organization deliberately requires its own application and credentials."
-        },
-        "platform": {
-          "title": "Microsoft email is ready to connect",
-          "description": "Connect Microsoft 365 with the application supplied by Alga PSA. No Entra app registration is required.",
-          "readyDescription": "Alga PSA supplies and manages the Microsoft application. Connect a mailbox without creating an Entra app or entering client credentials.",
-          "connectAction": "Connect Microsoft email",
-          "unavailableTitle": "Platform Microsoft credentials are unavailable",
-          "unavailableDescription": "This deployment requires a tenant-owned Microsoft app. Use the advanced setup below to add one."
-        },
         "actions": {
           "cancel": "Annuler",
           "disconnect": "Déconnecter",
@@ -1531,6 +1518,19 @@
     },
     "microsoft": {
       "settings": {
+        "advanced": {
+          "title": "Bring your own Microsoft app (advanced)",
+          "description": "Create and manage tenant-owned Entra app registrations for organizations that explicitly require them.",
+          "warning": "A custom Entra app is normally unnecessary on hosted Alga PSA. Continue only when your organization deliberately requires its own application and credentials."
+        },
+        "platform": {
+          "title": "Microsoft email is ready to connect",
+          "description": "Connect Microsoft 365 with the application supplied by Alga PSA. No Entra app registration is required.",
+          "readyDescription": "Alga PSA supplies and manages the Microsoft application. Connect a mailbox without creating an Entra app or entering client credentials.",
+          "connectAction": "Connect Microsoft email",
+          "unavailableTitle": "Platform Microsoft credentials are unavailable",
+          "unavailableDescription": "This deployment requires a tenant-owned Microsoft app. Use the advanced setup below to add one."
+        },
         "actions": {
           "entraLink": "Microsoft Entra",
           "newProfile": "Nouveau profil",
