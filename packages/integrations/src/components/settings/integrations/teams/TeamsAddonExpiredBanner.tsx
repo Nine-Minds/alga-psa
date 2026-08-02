@@ -1,13 +1,15 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { ADD_ONS } from '@alga-psa/types';
+import { getAddOnDestination } from '../../../../lib/addOnNavigation';
 
-// Same renew destination as the paywall CTA (Account Management add-on purchase).
-const TEAMS_ADDON_PURCHASE_URL = '/msp/account';
+const TEAMS_ADDON_DESTINATION = getAddOnDestination(ADD_ONS.TEAMS);
 
 export function TeamsAddonExpiredBanner() {
   const { t } = useTranslation('msp/integrations');
@@ -26,10 +28,10 @@ export function TeamsAddonExpiredBanner() {
           })}
         </p>
         <Button id="teams-addon-expired-renew" asChild size="sm">
-          <a href={TEAMS_ADDON_PURCHASE_URL}>
+          <Link href={TEAMS_ADDON_DESTINATION}>
             <ExternalLink className="mr-2 h-4 w-4" />
             {t('integrations.teams.settings.addonExpiredBanner.cta', { defaultValue: 'Renew Teams add-on' })}
-          </a>
+          </Link>
         </Button>
       </AlertDescription>
     </Alert>

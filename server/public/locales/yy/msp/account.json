@@ -172,6 +172,9 @@
     "sending": "55555",
     "requestPremiumTrial": "55555"
   },
+  "addOns": {
+    "title": "55555"
+  },
   "aiAssistant": {
     "statusActive": "55555",
     "statusAvailable": "55555",

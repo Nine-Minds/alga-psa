@@ -172,6 +172,9 @@
     "sending": "Invio in corso...",
     "requestPremiumTrial": "Richiedi Prova Premium"
   },
+  "addOns": {
+    "title": "Componenti aggiuntivi"
+  },
   "aiAssistant": {
     "statusActive": "Attivo",
     "statusAvailable": "Disponibile",

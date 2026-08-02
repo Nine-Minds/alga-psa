@@ -172,6 +172,9 @@
     "sending": "Verzenden...",
     "requestPremiumTrial": "Premium-proefperiode aanvragen"
   },
+  "addOns": {
+    "title": "Add-ons"
+  },
   "aiAssistant": {
     "statusActive": "Actief",
     "statusAvailable": "Beschikbaar",

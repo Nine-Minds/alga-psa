@@ -172,6 +172,9 @@
     "sending": "Wysyłanie...",
     "requestPremiumTrial": "Poproś o Okres Próbny Premium"
   },
+  "addOns": {
+    "title": "Dodatki"
+  },
   "aiAssistant": {
     "statusActive": "Aktywny",
     "statusAvailable": "Dostępny",

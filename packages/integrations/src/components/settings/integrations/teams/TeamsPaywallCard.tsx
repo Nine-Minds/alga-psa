@@ -1,14 +1,16 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { CheckCircle2, ExternalLink } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { ADD_ONS } from '@alga-psa/types';
 import { getTeamsAddonPurchaseAccess } from '../../../../actions';
+import { getAddOnDestination } from '../../../../lib/addOnNavigation';
 
-// Deep link to Account Management, where billing admins purchase add-ons.
-const TEAMS_ADDON_PURCHASE_URL = '/msp/account';
+const TEAMS_ADDON_DESTINATION = getAddOnDestination(ADD_ONS.TEAMS);
 
 const INCLUDED_FEATURES = [
   { key: 'tab', defaultValue: 'Personal tab: open Alga PSA inside Microsoft Teams.' },
@@ -67,10 +69,10 @@ export function TeamsPaywallCard() {
 
         {canPurchase ? (
           <Button id="teams-paywall-purchase" asChild>
-            <a href={TEAMS_ADDON_PURCHASE_URL}>
+            <Link href={TEAMS_ADDON_DESTINATION}>
               <ExternalLink className="mr-2 h-4 w-4" />
               {t('integrations.teams.settings.paywall.cta', { defaultValue: 'Purchase Teams add-on' })}
-            </a>
+            </Link>
           </Button>
         ) : (
           <p id="teams-paywall-non-billing" className="text-sm text-muted-foreground">

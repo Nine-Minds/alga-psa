@@ -172,6 +172,9 @@
     "sending": "Sending...",
     "requestPremiumTrial": "Request Premium Trial"
   },
+  "addOns": {
+    "title": "Add-ons"
+  },
   "aiAssistant": {
     "statusActive": "Active",
     "statusAvailable": "Available",
