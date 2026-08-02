@@ -1,6 +1,6 @@
 # Inbound Email Microsoft/Entra Documentation Accuracy Plan
 
-Date: 2026-08-02  
+Date: 2026-08-02
 Ticket: alga0002218 — Inbound email docs: remove stale “coming soon” entries, close Graph API permission gaps
 
 ## Objective

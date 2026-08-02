@@ -19,8 +19,10 @@ Hosted deployments can use Alga PSA's platform Microsoft app:
 
 * If **Authorize Access** is enabled when you
   [add the inbound provider](#add-the-inbound-provider), the Outlook email
-  credential path is ready. The platform credentials remain server-side and are
-  not shown in the mailbox form.
+  credential path is ready. The mailbox form does not display client credential
+  fields, but the hosted setup flow receives the app configuration in the
+  browser, including its client secret. Restrict provider setup access to
+  trusted administrators.
 * If you bind a tenant-owned Microsoft app to Outlook email, that app takes
   precedence over the hosted platform app. Follow
   [Register a tenant-owned Entra app](#register-a-tenant-owned-entra-app), then

@@ -76,8 +76,11 @@ flags.
 
 * Inbound connectors read source mail. Processing state is stored in Alga PSA;
   the connectors do not mark source messages as read, move them, or send mail.
-* Client secrets, access tokens, refresh tokens, and mailbox credentials stay on
-  the server. Browser forms receive readiness state, not stored secret values.
+* Provider credentials are persisted in Alga PSA's server-side configuration.
+  During hosted Microsoft setup, the provider form receives app configuration
+  that includes the client secret. The OAuth callback also returns newly issued
+  access and refresh tokens to the opener after persisting them. These browser
+  payloads are sensitive and must not be logged or exposed to other clients.
 * Provider webhooks are validated before queueing. Microsoft notifications are
   matched by subscription and `clientState`; Gmail Pub/Sub requests require a
   Google-signed bearer token.
