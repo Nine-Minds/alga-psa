@@ -25,6 +25,8 @@ function getWebpackAliases(edition: Edition) {
     console.log(JSON.stringify({
       ee: alias['@ee'],
       eeServerSrc: alias['ee/server/src'],
+      empty: alias['@/empty'],
+      ssoEntry: alias['@alga-psa/auth/sso/entry'],
       emailProvidersEntry: alias['@alga-psa/integrations/email/providers/entry'],
       emailSettingsEntry: alias['@alga-psa/integrations/email/settings/entry'],
       clientPortalDomainSettingsEntry: alias['@alga-psa/client-portal/domain-settings/entry'],
@@ -58,6 +60,8 @@ function getWebpackAliases(edition: Edition) {
   return JSON.parse(json) as {
     ee: string;
     eeServerSrc: string;
+    empty: string;
+    ssoEntry: string;
     emailProvidersEntry: string;
     emailSettingsEntry: string;
     clientPortalDomainSettingsEntry: string;
@@ -72,8 +76,12 @@ describe('CE/EE build swapping', () => {
     try {
       const alias = getWebpackAliases('ce');
 
-      expect(alias.ee).toBe(path.resolve(process.cwd(), 'server/src/empty'));
-      expect(alias.eeServerSrc).toBe(path.resolve(process.cwd(), 'server/src/empty'));
+      expect(alias.ee).toBe(path.resolve(process.cwd(), 'packages/ee/src'));
+      expect(alias.eeServerSrc).toBe(path.resolve(process.cwd(), 'packages/ee/src'));
+      expect(alias.empty).toBe(path.resolve(process.cwd(), 'packages/ee/src'));
+      expect(alias.ssoEntry).toBe(
+        path.resolve(process.cwd(), 'packages/ee/src/components/auth/SsoProviderButtons.tsx')
+      );
 
       expect(alias.emailProvidersEntry).toBe(
         path.resolve(process.cwd(), 'packages/integrations/src/email/providers/oss/entry.tsx')
@@ -99,6 +107,10 @@ describe('CE/EE build swapping', () => {
 
       expect(alias.ee).toBe(path.resolve(process.cwd(), 'ee/server/src'));
       expect(alias.eeServerSrc).toBe(path.resolve(process.cwd(), 'ee/server/src'));
+      expect(alias.empty).toBe(path.resolve(process.cwd(), 'ee/server/src'));
+      expect(alias.ssoEntry).toBe(
+        path.resolve(process.cwd(), 'ee/server/src/components/auth/SsoProviderButtons.tsx')
+      );
 
       expect(alias.emailProvidersEntry).toBe(
         path.resolve(process.cwd(), 'packages/integrations/src/email/providers/ee/entry.tsx')

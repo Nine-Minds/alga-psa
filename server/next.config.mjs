@@ -36,7 +36,7 @@ const prebuiltDir = (pkg) => usePrebuilt ? `../packages/${pkg}/dist` : `../packa
 const prebuiltDirAbs = (pkg) => path.join(__dirname, usePrebuilt ? `../packages/${pkg}/dist` : `../packages/${pkg}/src`);
 
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
-const emptyShim = './src/empty/shims/empty.ts';
+const emptyShim = '../packages/ee/src/shims/empty.ts';
 
 const appVersion = (() => {
   try {
@@ -80,9 +80,9 @@ class LogModuleResolutionPlugin {
           if (!result) return;
           const req = result.createData?.request || result.request || result.rawRequest || '';
           const res = result.resource || '';
-          const hit = req.startsWith('@ee') || req.includes('ee/server/src') || res.includes('/ee/server/src/') || res.includes('/server/src/empty/');
+          const hit = req.startsWith('@ee') || req.includes('ee/server/src') || res.includes('/ee/server/src/') || res.includes('/packages/ee/src/');
           if (!hit || process.env.LOG_MODULE_RESOLUTION !== '1') return;
-          const mappedTo = res.includes('/ee/server/src/') ? 'EE' : (res.includes('/server/src/empty/') ? 'CE-stub' : 'unknown');
+          const mappedTo = res.includes('/ee/server/src/') ? 'EE' : (res.includes('/packages/ee/src/') ? 'CE-stub' : 'unknown');
           console.log('[resolve:after]', {
             request: req,
             resource: res,
@@ -226,7 +226,7 @@ const nextConfig = {
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? '../ee/server/src/components/auth/SsoProviderButtons.tsx'
-        : '../packages/auth/src/components/SsoProviderButtons.tsx',
+        : '../packages/ee/src/components/auth/SsoProviderButtons.tsx',
       // Notifications package
       '@alga-psa/notifications': '../packages/notifications/src',
       '@alga-psa/notifications/': '../packages/notifications/src/',
@@ -259,8 +259,8 @@ const nextConfig = {
       '@alga-psa/search/': '../packages/search/src/',
       '@alga-psa/ee-calendar': '../ee/packages/calendar/src/index.ts',
       '@alga-psa/ee-calendar/': '../ee/packages/calendar/src/',
-      '@alga-psa/ee-microsoft-teams': isEE ? '../ee/packages/microsoft-teams/src/index.ts' : './src/empty/index.ts',
-      '@alga-psa/ee-microsoft-teams/': isEE ? '../ee/packages/microsoft-teams/src/' : './src/empty/',
+      '@alga-psa/ee-microsoft-teams': isEE ? '../ee/packages/microsoft-teams/src/index.ts' : '../packages/ee/src/index.ts',
+      '@alga-psa/ee-microsoft-teams/': isEE ? '../ee/packages/microsoft-teams/src/' : '../packages/ee/src/',
       '@alga-psa/ee-stubs': isEE ? '../ee/server/src' : '../packages/ee/src',
       '@alga-psa/ee-stubs/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
       '@alga-psa/tags': '../packages/tags/src',
@@ -352,16 +352,14 @@ const nextConfig = {
       '@alga-psa/portal-shared/': '../packages/portal-shared/src/',
       '@alga-psa/portal-shared/actions': '../packages/portal-shared/src/actions/index.ts',
       '@alga-psa/portal-shared/types': '../packages/portal-shared/src/types/index.ts',
-      '@/empty': isEE ? '../ee/server/src' : './src/empty',
-      '@/empty/': isEE ? '../ee/server/src/' : './src/empty/',
-      './src/empty': isEE ? '../ee/server/src' : './src/empty',
-      './src/empty/': isEE ? '../ee/server/src/' : './src/empty/',
+      '@/empty': isEE ? '../ee/server/src' : '../packages/ee/src',
+      '@/empty/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
       '@ee': isEE ? '../ee/server/src' : '../packages/ee/src',
       '@ee/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
       '@enterprise': isEE ? '../ee/server/src' : '../packages/ee/src',
       '@enterprise/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
-      'ee/server/src': isEE ? '../ee/server/src' : './src/empty',
-      'ee/server/src/': isEE ? '../ee/server/src/' : './src/empty/',
+      'ee/server/src': isEE ? '../ee/server/src' : '../packages/ee/src',
+      'ee/server/src/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
       // Native DB drivers not used
       'better-sqlite3': emptyShim,
       'sqlite3': emptyShim,
@@ -375,8 +373,8 @@ const nextConfig = {
       // Optional ffmpeg dependencies
       'ffmpeg-static': emptyShim,
       'ffprobe-static': emptyShim,
-      'ffprobe-static/package.json': './src/empty/shims/ffprobe-package.json',
-      'ffmpeg-static/package.json': './src/empty/shims/ffprobe-package.json',
+      'ffprobe-static/package.json': '../packages/ee/src/shims/ffprobe-package.json',
+      'ffmpeg-static/package.json': '../packages/ee/src/shims/ffprobe-package.json',
       // sharp tries to conditionally require these optional packages; webpack can't statically resolve them
       '@img/sharp-libvips-dev/include': emptyShim,
       '@img/sharp-libvips-dev/cplusplus': emptyShim,
@@ -435,7 +433,7 @@ const nextConfig = {
         : '@alga-psa/client-portal/domain-settings/oss/entry',
       '@alga-psa/workflows/entry': isEE
         ? '../ee/server/src/workflows/entry'
-        : './src/empty/workflows/entry',
+        : '../packages/ee/src/workflows/entry',
       // user-activities workflow-task seam (EE-only source). CE resolves to stubs; EE to
       // the real implementations. Keeps the base user-activities package free of @alga-psa/workflows.
       '@alga-psa/user-activities/server/workflow-tasks': isEE
@@ -573,12 +571,18 @@ const nextConfig = {
 
     config.resolve.alias = {
       ...(config.resolve.alias ?? {}),
+      '@/empty': isEE
+        ? path.join(__dirname, '../ee/server/src')
+        : path.join(__dirname, '../packages/ee/src'),
+      '@/empty/': isEE
+        ? path.join(__dirname, '../ee/server/src/')
+        : path.join(__dirname, '../packages/ee/src/'),
       '@': path.join(__dirname, 'src'),
       'server/src': path.join(__dirname, 'src'), // Add explicit alias for server/src imports
       // sharp tries to conditionally require these optional packages; webpack can't statically resolve them
-      '@img/sharp-libvips-dev/include': path.join(__dirname, 'src/empty/shims/empty.ts'),
-      '@img/sharp-libvips-dev/cplusplus': path.join(__dirname, 'src/empty/shims/empty.ts'),
-      '@img/sharp-wasm32/versions': path.join(__dirname, 'src/empty/shims/empty.ts'),
+      '@img/sharp-libvips-dev/include': path.join(__dirname, '../packages/ee/src/shims/empty.ts'),
+      '@img/sharp-libvips-dev/cplusplus': path.join(__dirname, '../packages/ee/src/shims/empty.ts'),
+      '@img/sharp-wasm32/versions': path.join(__dirname, '../packages/ee/src/shims/empty.ts'),
       '@alga-psa/ui': path.join(__dirname, '../packages/ui/src'),
       // Pre-built packages: src/ for local dev, dist/ for production (USE_PREBUILT=true)
       '@alga-psa/auth': prebuiltDirAbs('auth'),
@@ -632,7 +636,7 @@ const nextConfig = {
       '@alga-psa/ee-calendar': path.join(__dirname, '../ee/packages/calendar/src'),
       '@alga-psa/ee-microsoft-teams': isEE
         ? path.join(__dirname, '../ee/packages/microsoft-teams/src')
-        : path.join(__dirname, 'src/empty'),
+        : path.join(__dirname, '../packages/ee/src'),
       '@alga-psa/users': path.join(__dirname, '../packages/users/src'),
       '@alga-psa/teams': path.join(__dirname, '../packages/teams/src'),
       '@alga-psa/surveys': path.join(__dirname, '../packages/surveys/src'),
@@ -648,7 +652,7 @@ const nextConfig = {
       // This ensures CE builds don't fail when code references ee/server/src directly
       'ee/server/src': isEE
         ? path.join(__dirname, '../ee/server/src')
-        : path.join(__dirname, 'src/empty'),
+        : path.join(__dirname, '../packages/ee/src'),
 
       // Feature swap aliases for Webpack (point directly to ts/tsx files)
       '@product/extensions/entry': (() => {
@@ -679,7 +683,7 @@ const nextConfig = {
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? path.join(__dirname, '../ee/server/src/components/auth/SsoProviderButtons.tsx')
-        : path.join(__dirname, usePrebuilt ? '../packages/auth/dist/components/SsoProviderButtons.js' : '../packages/auth/src/components/SsoProviderButtons.tsx'),
+        : path.join(__dirname, '../packages/ee/src/components/auth/SsoProviderButtons.tsx'),
       '@alga-psa/ee-stubs': isEE
         ? path.join(__dirname, '../ee/server/src')
         : path.join(__dirname, '../packages/ee/src'),
@@ -706,7 +710,7 @@ const nextConfig = {
         : path.join(__dirname, '../packages/client-portal/src/domain-settings/oss/entry.tsx'),
       '@alga-psa/workflows/entry': isEE
         ? path.join(__dirname, '../ee/server/src/workflows/entry.tsx')
-        : path.join(__dirname, 'src/empty/workflows/entry.tsx'),
+        : path.join(__dirname, '../packages/ee/src/workflows/entry.tsx'),
       // user-activities workflow-task seam (EE-only source) — CE stubs / EE impls.
       '@alga-psa/user-activities/server/workflow-tasks': isEE
         ? path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.server.ts')
@@ -741,11 +745,11 @@ const nextConfig = {
       querystring: require.resolve('querystring-es3'),
     };
 
-    // In EE mode, also alias any absolute CE-stub path prefix to EE source root
+    // In EE mode, also alias the absolute CE-stub path prefix to the EE source root.
     if (isEE) {
-      const ceEmptyAbs = path.join(__dirname, 'src', 'empty');
+      const cePackagesEeAbs = path.join(__dirname, '../packages/ee/src');
       const eeSrcAbs = path.join(__dirname, '../ee/server/src');
-      config.resolve.alias[ceEmptyAbs] = eeSrcAbs;
+      config.resolve.alias[cePackagesEeAbs] = eeSrcAbs;
 
       const pkgSettingsEntry = path.join(__dirname, '../packages/product-settings-extensions/entry.ts');
       const pkgSettingsEntryIndex = path.join(__dirname, '../packages/product-settings-extensions/entry.tsx');
@@ -879,7 +883,7 @@ const nextConfig = {
       '@ee': config.resolve.alias['@ee'],
       '@enterprise': config.resolve.alias['@enterprise'],
       'ee/server/src': config.resolve.alias['ee/server/src'],
-      ceEmptyAbs: isEE ? path.join(__dirname, 'src', 'empty') : undefined,
+      cePackagesEeAbs: isEE ? path.join(__dirname, '../packages/ee/src') : undefined,
       eeSrcAbs: isEE ? path.join(__dirname, '../ee/server/src') : undefined,
     });
 
@@ -1025,7 +1029,7 @@ const nextConfig = {
           new webpack.NormalModuleReplacementPlugin(
             // Removed (.*) prefix - was causing catastrophic backtracking on large strings
             /(ee[\\\/]server[\\\/]src[\\\/]|@ee[\\\/])lib[\\\/]storage[\\\/]providers[\\\/]S3StorageProvider(\.[jt]s)?$/,
-            path.join(__dirname, 'src/empty/lib/storage/providers/S3StorageProvider')
+            path.join(__dirname, '../packages/ee/src/lib/storage/providers/S3StorageProvider')
           )
         );
         // The MCP seam has no tsconfig `paths` entry (unlike chat/extensions),
@@ -1042,15 +1046,11 @@ const nextConfig = {
       }
     }
 
-    // In enterprise builds, remap any CE-stub absolute paths to their EE equivalents.
-    // This ensures tsconfig path mapping that points to src/empty is overridden at webpack stage.
+    // In enterprise builds, remap CE-stub absolute paths to their EE equivalents.
     if (isEE) {
       if (!webpack) {
         console.warn('[next.config] Skipping EE empty-stub replacement plugin because webpack is unavailable in the current runtime.');
       } else {
-        const ceEmptyPrefix = path.join(__dirname, 'src', 'empty') + path.sep;
-        const ceEmptyRegex = new RegExp(ceEmptyPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-        // Also handle packages/ee/src CE stubs (used by workspace package dynamic imports)
         const cePackagesEePrefix = path.join(__dirname, '../packages/ee/src') + path.sep;
         const cePackagesEeRegex = new RegExp(cePackagesEePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
         const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
@@ -1142,17 +1142,8 @@ const nextConfig = {
               resource.request = mapped;
               return;
             }
-            // Replace src/empty paths
-            if (ceEmptyRegex.test(req)) {
-              const rel = req.substring(ceEmptyPrefix.length);
-              const mapped = path.join(eeSrcRoot, rel);
-              if (process.env.LOG_MODULE_RESOLUTION === '1') {
-                console.log('[replace:EE:empty]', { from: req, to: mapped });
-              }
-              resource.request = mapped;
-            }
             // Replace packages/ee/src paths (CE stubs from workspace packages)
-            else if (cePackagesEeRegex.test(req)) {
+            if (cePackagesEeRegex.test(req)) {
               const rel = req.substring(cePackagesEePrefix.length);
               const mapped = path.join(eeSrcRoot, rel);
               if (process.env.LOG_MODULE_RESOLUTION === '1') {
@@ -1193,12 +1184,12 @@ const nextConfig = {
                   if (!result) return;
                   const resPath = result.path || '';
                   const req = result.request || '';
-                  const hit = req?.startsWith?.('@ee') || req?.includes?.('ee/server/src') || resPath.includes('/ee/server/src/') || resPath.includes('/server/src/empty/');
+                  const hit = req?.startsWith?.('@ee') || req?.includes?.('ee/server/src') || resPath.includes('/ee/server/src/') || resPath.includes('/packages/ee/src/');
                   if (!hit) return;
                   console.log('[resolver:result]', {
                     request: req,
                     resolvedPath: resPath,
-                    mappedTo: resPath.includes('/ee/server/src/') ? 'EE' : (resPath.includes('/server/src/empty/') ? 'CE-stub' : 'unknown'),
+                    mappedTo: resPath.includes('/ee/server/src/') ? 'EE' : (resPath.includes('/packages/ee/src/') ? 'CE-stub' : 'unknown'),
                   });
                 } catch { }
               });

@@ -30,7 +30,7 @@
       "@enterprise/*": ["../packages/ee/src/*"],
       "@ee": ["../packages/ee/src"],
       "@ee/*": ["../packages/ee/src/*"],
-      "@alga-psa/auth/sso/entry": ["../packages/auth/src/components/SsoProviderButtons.tsx"],
+      "@alga-psa/auth/sso/entry": ["../packages/ee/src/components/auth/SsoProviderButtons.tsx"],
       "@alga-psa/tags": ["../packages/tags/src"],
       "@alga-psa/tags/*": ["../packages/tags/src/*"],
       "@alga-psa/sla": ["../packages/sla/src"],

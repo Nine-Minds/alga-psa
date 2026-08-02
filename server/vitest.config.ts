@@ -140,6 +140,7 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      { find: '@/empty', replacement: path.resolve(__dirname, '../packages/ee/src') },
       { find: '@', replacement: path.resolve(__dirname, './src') },
       // shared/services/email/inboundEmailRules/aiClassifier.ts dynamically imports this
       // EE-only module which lives under packages/ee/src (not ee/server/src). Resolve it
@@ -194,7 +195,7 @@ export default defineConfig({
       { find: /^@alga-psa\/licensing\/actions\/(.*)$/, replacement: path.resolve(__dirname, '../packages/licensing/src/actions/$1') },
       { find: /^@alga-psa\/auth$/, replacement: path.resolve(__dirname, '../packages/auth/src/index.ts') },
       { find: /^@alga-psa\/auth\/actions\/(.*)$/, replacement: path.resolve(__dirname, '../packages/auth/src/actions/$1') },
-      { find: /^@alga-psa\/auth\/sso\/entry$/, replacement: path.resolve(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx') },
+      { find: /^@alga-psa\/auth\/sso\/entry$/, replacement: path.resolve(__dirname, '../packages/ee/src/components/auth/SsoProviderButtons.tsx') },
       { find: /^@alga-psa\/auth\/session$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/session.ts') },
       { find: /^@alga-psa\/auth\/rbac$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/rbac.ts') },
       { find: /^@alga-psa\/auth\/withAuth$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/withAuth.ts') },

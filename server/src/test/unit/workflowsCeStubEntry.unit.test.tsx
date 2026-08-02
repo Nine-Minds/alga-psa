@@ -2,7 +2,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect } from 'vitest';
 
-import { DnDFlow } from 'server/src/empty/workflows/entry';
+import { DnDFlow } from '@enterprise/workflows/entry';
 
 describe('CE workflows stub entry', () => {
   it('renders stub messaging and does not crash', () => {
@@ -11,4 +11,3 @@ describe('CE workflows stub entry', () => {
     expect(html).toContain('Workflow designer requires Enterprise Edition');
   });
 });
-
