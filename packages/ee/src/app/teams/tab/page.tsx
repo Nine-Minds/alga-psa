@@ -1,12 +1,18 @@
-import React from 'react';
+import { UpgradePrompt } from '@alga-psa/ui/components/UpgradePrompt';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
-export default function TeamsTabPage(): React.ReactElement {
+export default async function TeamsTabPage() {
+  const { t } = await getServerTranslation(undefined, 'common');
+
   return (
-    <div className="mx-auto max-w-3xl p-6">
-      <div className="space-y-2 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h1 className="text-lg font-semibold text-gray-900">Teams tab unavailable</h1>
-        <p className="text-sm text-gray-600">Microsoft Teams integration is only available in Enterprise Edition.</p>
-      </div>
+    <div className="m-6">
+      <UpgradePrompt
+        featureName={t('pages.errors.teamsFeatureName', { defaultValue: 'Microsoft Teams integration' })}
+        pitch={t('pages.errors.teamsEnterprisePitch', {
+          defaultValue: 'Bring ticket context and technician workflows into Microsoft Teams.',
+        })}
+        ctaId="upgrade-teams-tab-button"
+      />
     </div>
   );
 }

@@ -79,6 +79,10 @@
     "continue": "Continuer",
     "printSelected": "Imprimer la sélection ({{count}})"
   },
+  "upgradePrompt": {
+    "editionLabel": "Édition Enterprise",
+    "defaultCta": "Découvrir Enterprise"
+  },
   "status": {
     "loading": "Chargement...",
     "saving": "Enregistrement...",
@@ -1131,6 +1135,8 @@
       "missingRunId": "ID d'exécution manquant.",
       "teamLeadAccessRequired": "Accès chef d'équipe requis",
       "teamsTabUnavailable": "Onglet Teams indisponible",
+      "teamsFeatureName": "Intégration Microsoft Teams",
+      "teamsEnterprisePitch": "Intégrez le contexte des tickets et les flux de travail des techniciens dans Microsoft Teams.",
       "teamsSignInUnavailable": "Connexion Teams indisponible",
       "assetNotFound": "Actif introuvable",
       "contactNotFound": "Contact introuvable",

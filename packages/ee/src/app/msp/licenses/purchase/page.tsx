@@ -3,23 +3,27 @@
  * In CE builds, this page shows a placeholder
  */
 
-import React from 'react';
-import { Card } from '@alga-psa/ui/components/Card';
-import { AlertCircle } from 'lucide-react';
+import { UpgradePrompt } from '@alga-psa/ui/components/UpgradePrompt';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
-export default function LicensePurchasePage() {
+export default async function LicensePurchasePage() {
+  const { t } = await getServerTranslation(undefined, 'msp/licensing');
+
   return (
     <div className="container max-w-4xl mx-auto py-8">
-      <Card className="p-8 text-center">
-        <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-        <h1 className="text-2xl font-bold mb-2">License Purchase</h1>
-        <p className="text-muted-foreground mb-4">
-          License purchasing is available in the Enterprise Edition for hosted deployments.
+      <UpgradePrompt
+        featureName={t('purchaseForm.title', { defaultValue: 'License purchase' })}
+        pitch={t('purchaseForm.enterpriseOnlyHosted', {
+          defaultValue: 'Purchase and manage additional user licenses with a hosted Enterprise deployment.',
+        })}
+        ctaId="upgrade-license-purchase-page-button"
+      >
+        <p>
+          {t('purchaseForm.communityEditionUnlimited', {
+            defaultValue: 'Self-hosted Community Edition has unlimited users at no additional cost.',
+          })}
         </p>
-        <p className="text-sm text-muted-foreground">
-          Self-hosted Community Edition has unlimited users with no license restrictions or additional costs.
-        </p>
-      </Card>
+      </UpgradePrompt>
     </div>
   );
 }

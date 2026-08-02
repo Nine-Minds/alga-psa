@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Metadata } from 'next';
+import { UpgradePrompt } from '@alga-psa/ui/components/UpgradePrompt';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 // OSS stub implementation for Extensions feature
@@ -18,24 +19,22 @@ export default async function Page({ params }: { params: PageParams | Promise<Pa
   const resolvedParams = await params;
 
   return (
-    <div className="flex items-center justify-center h-64">
-      <div className="text-center">
-        <h2 className="text-xl font-semibold mb-2">
-          {t('enterpriseFeature.title', { defaultValue: 'Enterprise Feature' })}
-        </h2>
-        <p className="text-gray-600">
-          {t('enterpriseFeature.description', {
-            defaultValue: '{{feature}} require Enterprise Edition. Please upgrade to access this feature.',
-            feature: t('page.title', { defaultValue: 'Extensions' })
-          })}
-        </p>
-        <p className="text-sm text-gray-500 mt-2">
+    <div className="p-6">
+      <UpgradePrompt
+        featureName={t('page.title', { defaultValue: 'Extensions' })}
+        pitch={t('enterpriseFeature.description', {
+          defaultValue: '{{feature}} requires Enterprise Edition. Upgrade to install and run extensions.',
+          feature: t('page.title', { defaultValue: 'Extensions' }),
+        })}
+        ctaId="upgrade-extension-runtime-button"
+      >
+        <p>
           {t('detail.extensionId', {
             defaultValue: 'Extension ID: {{id}}',
-            id: resolvedParams.id
+            id: resolvedParams.id,
           })}
         </p>
-      </div>
+      </UpgradePrompt>
     </div>
   );
 }

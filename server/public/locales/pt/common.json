@@ -79,6 +79,10 @@
     "continue": "Continuar",
     "printSelected": "Imprimir selecionado ({{count}})"
   },
+  "upgradePrompt": {
+    "editionLabel": "Edição Enterprise",
+    "defaultCta": "Conheça o Enterprise"
+  },
   "form": {
     "selectPlaceholder": "Selecione...",
     "clearSelection": "Limpar seleção",
@@ -1131,6 +1135,8 @@
       "missingRunId": "ID de execução ausente.",
       "teamLeadAccessRequired": "Acesso de líder de equipe necessário",
       "teamsTabUnavailable": "Guia Equipes indisponível",
+      "teamsFeatureName": "Integração com o Microsoft Teams",
+      "teamsEnterprisePitch": "Leve o contexto dos tickets e os fluxos de trabalho dos técnicos para o Microsoft Teams.",
       "teamsSignInUnavailable": "Login das equipes indisponível",
       "teamsSetupNotFinished": "A configuração das equipes não foi concluída",
       "teamsSetupNotFinishedHint": "Peça a um administrador do PSA para concluir a configuração do Teams e reabrir a guia pessoal.",

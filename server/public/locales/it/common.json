@@ -79,6 +79,10 @@
     "continue": "Continua",
     "printSelected": "Stampa selezionati ({{count}})"
   },
+  "upgradePrompt": {
+    "editionLabel": "Edizione Enterprise",
+    "defaultCta": "Scopri Enterprise"
+  },
   "status": {
     "loading": "Caricamento...",
     "saving": "Salvataggio...",
@@ -1131,6 +1135,8 @@
       "missingRunId": "ID esecuzione mancante.",
       "teamLeadAccessRequired": "Accesso team lead richiesto",
       "teamsTabUnavailable": "Scheda Teams non disponibile",
+      "teamsFeatureName": "Integrazione Microsoft Teams",
+      "teamsEnterprisePitch": "Porta il contesto dei ticket e i flussi di lavoro dei tecnici in Microsoft Teams.",
       "teamsSignInUnavailable": "Accesso Teams non disponibile",
       "assetNotFound": "Asset non trovato",
       "contactNotFound": "Contatto non trovato",

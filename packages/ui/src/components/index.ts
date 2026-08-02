@@ -125,6 +125,7 @@ export * from './Tooltip';
 export * from './TreeSelect';
 export { default as TreeSelect } from './TreeSelect';
 export * from './UnitOfMeasureInput';
+export * from './UpgradePrompt';
 export * from './UserAvatar';
 export { default as UserAvatar } from './UserAvatar';
 export * from './UserAndTeamPicker';

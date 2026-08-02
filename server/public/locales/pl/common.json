@@ -93,6 +93,10 @@
     "printSelected_few": "Drukuj zaznaczone ({{count}})",
     "printSelected_many": "Drukuj zaznaczone ({{count}})"
   },
+  "upgradePrompt": {
+    "editionLabel": "Wersja Enterprise",
+    "defaultCta": "Poznaj Enterprise"
+  },
   "status": {
     "loading": "Ładowanie...",
     "saving": "Zapisywanie...",
@@ -1161,6 +1165,8 @@
       "missingRunId": "Brak ID uruchomienia.",
       "teamLeadAccessRequired": "Wymagany dostęp lidera zespołu",
       "teamsTabUnavailable": "Karta Teams niedostępna",
+      "teamsFeatureName": "Integracja z Microsoft Teams",
+      "teamsEnterprisePitch": "Przenieś kontekst zgłoszeń i przepływy pracy techników do Microsoft Teams.",
       "teamsSignInUnavailable": "Logowanie Teams niedostępne",
       "assetNotFound": "Nie znaleziono zasobu",
       "contactNotFound": "Nie znaleziono kontaktu",

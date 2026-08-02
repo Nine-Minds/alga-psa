@@ -79,6 +79,10 @@
     "continue": "Continuar",
     "printSelected": "Imprimir seleccionados ({{count}})"
   },
+  "upgradePrompt": {
+    "editionLabel": "Edición Enterprise",
+    "defaultCta": "Explorar Enterprise"
+  },
   "status": {
     "loading": "Cargando...",
     "saving": "Guardando...",
@@ -1131,6 +1135,8 @@
       "missingRunId": "Falta el ID de ejecución.",
       "teamLeadAccessRequired": "Se requiere acceso de líder de equipo",
       "teamsTabUnavailable": "Pestaña de Teams no disponible",
+      "teamsFeatureName": "Integración con Microsoft Teams",
+      "teamsEnterprisePitch": "Lleve el contexto de los tickets y los flujos de trabajo de los técnicos a Microsoft Teams.",
       "teamsSignInUnavailable": "Inicio de sesión de Teams no disponible",
       "assetNotFound": "Activo no encontrado",
       "contactNotFound": "Contacto no encontrado",
