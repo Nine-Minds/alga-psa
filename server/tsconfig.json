@@ -86,7 +86,7 @@
         "../packages/auth/src"
       ],
       "@alga-psa/auth/sso/entry": [
-        "../packages/auth/src/components/SsoProviderButtons.tsx"
+        "../packages/ee/src/components/auth/SsoProviderButtons.tsx"
       ],
       "@alga-psa/auth/*": [
         "../packages/auth/src/*",

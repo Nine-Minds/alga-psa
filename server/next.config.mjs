@@ -226,7 +226,7 @@ const nextConfig = {
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? '../ee/server/src/components/auth/SsoProviderButtons.tsx'
-        : '../packages/auth/src/components/SsoProviderButtons.tsx',
+        : '../packages/ee/src/components/auth/SsoProviderButtons.tsx',
       // Notifications package
       '@alga-psa/notifications': '../packages/notifications/src',
       '@alga-psa/notifications/': '../packages/notifications/src/',
@@ -683,7 +683,7 @@ const nextConfig = {
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? path.join(__dirname, '../ee/server/src/components/auth/SsoProviderButtons.tsx')
-        : path.join(__dirname, usePrebuilt ? '../packages/auth/dist/components/SsoProviderButtons.js' : '../packages/auth/src/components/SsoProviderButtons.tsx'),
+        : path.join(__dirname, '../packages/ee/src/components/auth/SsoProviderButtons.tsx'),
       '@alga-psa/ee-stubs': isEE
         ? path.join(__dirname, '../ee/server/src')
         : path.join(__dirname, '../packages/ee/src'),
