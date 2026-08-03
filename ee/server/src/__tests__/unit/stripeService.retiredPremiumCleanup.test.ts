@@ -61,6 +61,7 @@ describe('StripeService retired Premium schedule cleanup', () => {
         product_code: 'psa',
         premium_trial: 'confirmed',
         retired_premium_schedule_id: 'sub_sched-1',
+        retired_premium_schedule_source: 'confirmed_premium_trial',
       },
     });
 
@@ -104,7 +105,10 @@ describe('StripeService retired Premium schedule cleanup', () => {
       tenant: 'tenant-1',
       stripe_subscription_id: 'dbsub-1',
       stripe_subscription_external_id: 'sub-1',
-      metadata: { retired_premium_schedule_id: 'sub_sched-1' },
+      metadata: {
+        retired_premium_schedule_id: 'sub_sched-1',
+        retired_premium_schedule_source: 'confirmed_premium_trial',
+      },
     });
 
     const service = new StripeService() as any;
@@ -118,6 +122,31 @@ describe('StripeService retired Premium schedule cleanup', () => {
 
     await service.cleanupRetiredPremiumSchedules();
 
+    expect(service.stripe.subscriptionSchedules.release).not.toHaveBeenCalled();
+    expect(service.stripe.subscriptions.update).not.toHaveBeenCalled();
+    expect(localUpdates).toEqual([]);
+  });
+
+  it('does not release a schedule without confirmed Premium-trial provenance', async () => {
+    subscriptionsForCleanup.push({
+      tenant: 'tenant-1',
+      stripe_subscription_id: 'dbsub-1',
+      stripe_subscription_external_id: 'sub-1',
+      metadata: { retired_premium_schedule_id: 'sub_sched-seat-change' },
+    });
+
+    const service = new StripeService() as any;
+    service.stripe = {
+      subscriptionSchedules: {
+        retrieve: vi.fn(),
+        release: vi.fn(),
+      },
+      subscriptions: { update: vi.fn() },
+    };
+
+    await service.cleanupRetiredPremiumSchedules();
+
+    expect(service.stripe.subscriptionSchedules.retrieve).not.toHaveBeenCalled();
     expect(service.stripe.subscriptionSchedules.release).not.toHaveBeenCalled();
     expect(service.stripe.subscriptions.update).not.toHaveBeenCalled();
     expect(localUpdates).toEqual([]);

@@ -17,6 +17,7 @@ describe('eliminate Premium tier migration', () => {
       changed: true,
       metadata: {
         retired_premium_schedule_id: 'sub_sched_legacy_premium',
+        retired_premium_schedule_source: 'confirmed_premium_trial',
         solo_pro_trial: 'true',
       },
     });
@@ -32,5 +33,25 @@ describe('eliminate Premium tier migration', () => {
 
     expect(first.changed).toBe(true);
     expect(second).toEqual({ changed: false, metadata: {} });
+  });
+
+  it.each([
+    { scheduled_quantity: 12 },
+    { scheduled_interval: 'year' },
+  ])('preserves a legitimate billing schedule when Premium trial metadata is not confirmed: %o', (scheduleMetadata) => {
+    expect(
+      migration.normalizePremiumTrialMetadata({
+        premium_trial: 'true',
+        premium_trial_end: '2026-08-31T00:00:00.000Z',
+        schedule_id: 'sub_sched_legitimate_change',
+        ...scheduleMetadata,
+      }),
+    ).toEqual({
+      changed: true,
+      metadata: {
+        schedule_id: 'sub_sched_legitimate_change',
+        ...scheduleMetadata,
+      },
+    });
   });
 });

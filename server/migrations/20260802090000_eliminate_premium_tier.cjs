@@ -2,8 +2,9 @@
  * Normalize the retired Premium tier before application types stop accepting it.
  *
  * Existing Premium tenants keep their access through Pro. Premium-trial state is
- * removed from local subscription metadata, including the schedule pointer used
- * by the retired Pro-to-Premium billing transition.
+ * removed from local subscription metadata. Only a schedule carrying the full
+ * confirmation tuple is marked as the retired Pro-to-Premium transition;
+ * ordinary seat and interval schedules remain intact.
  *
  * @param {unknown} value
  * @returns {{ metadata: Record<string, unknown>, changed: boolean }}
@@ -33,17 +34,21 @@ function normalizePremiumTrialMetadata(value) {
   const changed = premiumTrialKeys.some((key) =>
     Object.prototype.hasOwnProperty.call(normalized, key),
   );
+  const confirmedPremiumTrialSchedule =
+    normalized.premium_trial === 'confirmed' &&
+    typeof normalized.premium_trial_confirmed === 'string' &&
+    normalized.premium_trial_confirmed.length > 0 &&
+    typeof normalized.premium_trial_effective_date === 'string' &&
+    normalized.premium_trial_effective_date.length > 0 &&
+    typeof normalized.schedule_id === 'string' &&
+    normalized.schedule_id.length > 0;
 
   for (const key of premiumTrialKeys) {
     delete normalized[key];
   }
-  if (changed) {
-    if (
-      typeof normalized.schedule_id === 'string' &&
-      normalized.schedule_id.length > 0
-    ) {
-      normalized.retired_premium_schedule_id = normalized.schedule_id;
-    }
+  if (confirmedPremiumTrialSchedule) {
+    normalized.retired_premium_schedule_id = normalized.schedule_id;
+    normalized.retired_premium_schedule_source = 'confirmed_premium_trial';
     delete normalized.schedule_id;
   }
 

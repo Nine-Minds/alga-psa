@@ -275,6 +275,8 @@ function licenseSubscriptions(
 }
 
 const RETIRED_PREMIUM_SCHEDULE_KEY = 'retired_premium_schedule_id';
+const RETIRED_PREMIUM_SCHEDULE_SOURCE_KEY = 'retired_premium_schedule_source';
+const RETIRED_PREMIUM_SCHEDULE_SOURCE = 'confirmed_premium_trial';
 const RETIRED_PREMIUM_METADATA_KEYS = [
   'premium_trial',
   'premium_trial_started',
@@ -294,6 +296,7 @@ function withoutRetiredPremiumMetadata(value: unknown): Record<string, any> {
     delete metadata[key];
   }
   delete metadata[RETIRED_PREMIUM_SCHEDULE_KEY];
+  delete metadata[RETIRED_PREMIUM_SCHEDULE_SOURCE_KEY];
   return metadata;
 }
 
@@ -313,19 +316,29 @@ export class StripeService {
 
   /**
    * Release legacy Premium subscription schedules before their future price
-   * phase can activate. The migration keeps only this temporary schedule
-   * pointer; successful cleanup removes it and the remote trial metadata.
+   * phase can activate. The migration keeps a temporary schedule pointer plus
+   * confirmation provenance; successful cleanup removes both and the remote
+   * trial metadata.
    */
-  private async cleanupRetiredPremiumSchedules(): Promise<void> {
+  private async cleanupRetiredPremiumSchedules(
+    connection?: Knex | Knex.Transaction,
+  ): Promise<void> {
     try {
-      const { getAdminConnection } = await import('@alga-psa/db/admin');
-      const knex = await getAdminConnection();
+      let knex = connection;
+      if (!knex) {
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
+        knex = await getAdminConnection();
+      }
       const subscriptions = await tenantDb(knex, '__retired_premium_schedule_cleanup__')
         .unscoped(
           'stripe_subscriptions',
           'retired Premium schedule cleanup scans legacy subscriptions across tenants',
         )
-        .whereRaw("metadata ? ?", [RETIRED_PREMIUM_SCHEDULE_KEY])
+        .whereRaw('jsonb_exists(metadata, ?)', [RETIRED_PREMIUM_SCHEDULE_KEY])
+        .whereRaw("metadata ->> ? = ?", [
+          RETIRED_PREMIUM_SCHEDULE_SOURCE_KEY,
+          RETIRED_PREMIUM_SCHEDULE_SOURCE,
+        ])
         .select(
           'tenant',
           'stripe_subscription_id',
@@ -335,7 +348,12 @@ export class StripeService {
 
       for (const subscription of subscriptions) {
         const scheduleId = subscription.metadata?.[RETIRED_PREMIUM_SCHEDULE_KEY];
-        if (typeof scheduleId !== 'string' || scheduleId.length === 0) {
+        const scheduleSource = subscription.metadata?.[RETIRED_PREMIUM_SCHEDULE_SOURCE_KEY];
+        if (
+          typeof scheduleId !== 'string' ||
+          scheduleId.length === 0 ||
+          scheduleSource !== RETIRED_PREMIUM_SCHEDULE_SOURCE
+        ) {
           continue;
         }
 
