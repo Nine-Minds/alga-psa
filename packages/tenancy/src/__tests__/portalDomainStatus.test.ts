@@ -64,7 +64,7 @@ describe('getPortalDomainStatusForTenant', () => {
     expect(response.isEditable).toBe(false);
     expect(response.canonicalHost).toBe('tenant-.portal.algapsa.com');
     expect(response.verificationDetails).toEqual({ expected_cname: 'tenant-.portal.algapsa.com' });
-    expect(response.statusMessage).toMatch(/Enterprise/);
+    expect(response.statusMessage).toBe('Custom portal domains are available in Pro.');
   });
 
   it('maps a tenant-scoped record into the status response with ISO timestamps', async () => {
