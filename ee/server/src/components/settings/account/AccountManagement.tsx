@@ -55,6 +55,7 @@ import { useProduct } from 'server/src/context/ProductContext';
 import { ADD_ONS, ADD_ON_LABELS, TIER_LABELS, TIER_FEATURE_MAP, TIER_FEATURES, type AddOnKey } from '@alga-psa/types';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useFormatAddOnDescription } from '@alga-psa/ui/hooks/useAddOnEnumOptions';
+import type { CancellationReasonCategory } from '../../../lib/cancellationFeedbackValidation';
 
 // Keys into msp/account:features — used to look up translated display names
 const FEATURE_TRANSLATION_KEYS: Record<TIER_FEATURES, string> = {
@@ -281,7 +282,10 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
     setShowCancellationFeedback(true);
   };
 
-  const handleConfirmCancellation = async (reasonText: string, reasonCategory?: string) => {
+  const handleConfirmCancellation = async (
+    reasonText: string,
+    reasonCategory: CancellationReasonCategory
+  ) => {
     try {
       // Send feedback email
       const feedbackResult = await sendCancellationFeedbackAction(reasonText, reasonCategory);

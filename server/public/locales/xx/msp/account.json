@@ -31,6 +31,8 @@
     "aiRemoved": "11111",
     "aiCancelFailed": "11111",
     "feedbackReasonRequired": "11111",
+    "feedbackCategoryRequired": "11111",
+    "feedbackMinimumLength": "11111 {{min}} 11111",
     "feedbackMaxLength": "11111 {{max}} 11111",
     "feedbackSubmitted": "11111",
     "feedbackSubmitFailed": "11111"
@@ -348,9 +350,12 @@
     "beforeYouCancelBody": "11111",
     "reasonLabel": "11111",
     "reasonPlaceholder": "11111",
+    "reasonRequired": "11111",
+    "otherReasonHelp": "11111",
     "feedbackLabel": "11111",
     "feedbackPlaceholder": "11111",
     "required": "11111",
+    "minimumCharacters": "11111 {{min}} 11111",
     "charactersRemaining": "11111 {{count}} 11111",
     "reasons": {
       "pricingTooHigh": "11111",

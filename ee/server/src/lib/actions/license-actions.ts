@@ -10,6 +10,11 @@ import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { sendCancellationRequestEmail } from '@alga-psa/email/sendCancellationRequestEmail';
 import {
+  CANCELLATION_FEEDBACK_MAX_LENGTH,
+  CANCELLATION_FEEDBACK_MIN_LENGTH,
+  cancellationFeedbackSchema,
+} from '../cancellationFeedbackValidation';
+import {
   IGetSubscriptionInfoResponse,
   IGetPaymentMethodResponse,
   IGetInvoicesResponse,
@@ -690,6 +695,15 @@ export async function sendCancellationFeedbackAction(
       return permissionDenied('You do not have permission to cancel the subscription');
     }
 
+    const feedbackResult = cancellationFeedbackSchema.safeParse({ reasonText, reasonCategory });
+
+    if (!feedbackResult.success) {
+      return {
+        success: false,
+        error: `Select a cancellation reason and provide between ${CANCELLATION_FEEDBACK_MIN_LENGTH} and ${CANCELLATION_FEEDBACK_MAX_LENGTH} characters of feedback`,
+      };
+    }
+
     const knex = await getConnection(session.user.tenant);
     const db = tenantDb(knex, session.user.tenant);
 
@@ -723,8 +737,8 @@ export async function sendCancellationFeedbackAction(
     await sendCancellationFeedbackEmail({
       tenantName: tenant?.client_name || 'Unknown',
       tenantEmail: tenant?.email || session.user.email,
-      reasonText,
-      reasonCategory,
+      reasonText: feedbackResult.data.reasonText,
+      reasonCategory: feedbackResult.data.reasonCategory,
       licenseCount: subscription.quantity,
       monthlyCost,
       cancelAt: (() => {
