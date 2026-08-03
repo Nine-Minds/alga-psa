@@ -230,6 +230,7 @@ export interface IOpportunityDashboardSnapshot {
     opportunity_count: number;
     mrr_cents: number;
     nrr_cents: number;
+    hardware_cents: number;
   }>;
   queue_counts: {
     actions_due: number;

@@ -61,8 +61,8 @@
       "body": "Eliminare {{number}} in modo permanente? Questa operazione non può essere annullata. Le opportunità con preventivi collegati non possono essere eliminate.",
       "title": "Elimina opportunità"
     },
-  "detail": {
-    "backToList": "Torna alle opportunità",
+    "detail": {
+      "backToList": "Torna alle opportunità",
       "confidence": "La tua fiducia",
       "confidenceNote": "La fiducia è tua; la scena viene dall'evidenza. I due vengono confrontati, mai fusi.",
       "createQuote": "Crea preventivo",
@@ -226,9 +226,11 @@
     "snapshot": {
       "actionsDue": "Azioni dovute",
       "empty": "Nessuna opportunità aperta ancora.",
+      "hardwareIncluded": "incl. {{amount}} di hardware",
       "loading": "Caricamento istantanea dell'opportunità",
       "mrr": "{{amount}} MRR",
       "nrr": "{{amount}} NRR",
+      "oneTime": "{{amount}} una tantum",
       "open": "Opportunità aperte",
       "openCount": "Opportunità aperte",
       "opportunityCount_one": "{{count}} opportunità",
@@ -297,8 +299,8 @@
       "queue": "Coda",
       "suggestions": "Suggerimenti"
     },
-  "timeline": {
-    "created": "Opportunità creata",
+    "timeline": {
+      "created": "Opportunità creata",
       "empty": "Non è stato ancora registrato nulla. Le azioni completate arrivano qui da sole."
     },
     "toast": {

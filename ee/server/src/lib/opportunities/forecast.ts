@@ -31,6 +31,7 @@ export interface ForecastOpportunityRow {
   stage: OpportunityStage;
   mrr_cents: number | string;
   nrr_cents: number | string;
+  hardware_cents?: number | string | null;
   currency_code: string;
 }
 
@@ -45,7 +46,8 @@ export function calculateForecastBand(
 ): IForecastBand {
   const composition: IForecastDealContribution[] = rows.map((row) => {
     const mrr = Number(row.mrr_cents ?? 0);
-    const nrr = Number(row.nrr_cents ?? 0);
+    // One-time value is NRR + hardware everywhere; the forecast band is no exception.
+    const nrr = Number(row.nrr_cents ?? 0) + Number(row.hardware_cents ?? 0);
     const won = row.status === 'won';
     const stage = FORECAST_STAGES.includes(row.stage as ForecastStage)
       ? row.stage as ForecastStage
@@ -231,12 +233,12 @@ export async function getForecastBandData(
   const open = await db.table('opportunities')
     .where({ status: 'open' })
     .whereBetween('expected_close_date', [period.start, period.end])
-    .select('opportunity_id', 'opportunity_number', 'title', 'owner_id', 'status', 'stage', 'mrr_cents', 'nrr_cents', 'currency_code');
+    .select('opportunity_id', 'opportunity_number', 'title', 'owner_id', 'status', 'stage', 'mrr_cents', 'nrr_cents', 'hardware_cents', 'currency_code');
   const won = await db.table('opportunities')
     .where({ status: 'won' })
     .where('won_at', '>=', `${period.start}T00:00:00.000Z`)
     .where('won_at', '<', endExclusive(period))
-    .select('opportunity_id', 'opportunity_number', 'title', 'owner_id', 'status', 'stage', 'mrr_cents', 'nrr_cents', 'currency_code');
+    .select('opportunity_id', 'opportunity_number', 'title', 'owner_id', 'status', 'stage', 'mrr_cents', 'nrr_cents', 'hardware_cents', 'currency_code');
   const histories = await loadSellerHistory(knex, tenant);
   return calculateForecastBand([...open, ...won] as ForecastOpportunityRow[], calibrationsFromHistory(histories));
 }

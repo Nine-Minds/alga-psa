@@ -18,7 +18,7 @@ export async function getSellerRollupsData(
     db.table('opportunities')
       .where({ status: 'open' })
       .whereBetween('expected_close_date', [period.start, period.end])
-      .select('owner_id', 'mrr_cents', 'nrr_cents'),
+      .select('owner_id', 'mrr_cents', 'nrr_cents', 'hardware_cents'),
     db.table('opportunities')
       .whereIn('status', ['won', 'lost'])
       .andWhere((builder) => {
@@ -41,6 +41,7 @@ export async function getSellerRollupsData(
         'won_at',
         'mrr_cents',
         'nrr_cents',
+        'hardware_cents',
       ),
   ]);
   const ownerIds = [...new Set([...open, ...closed].map((row) => String(row.owner_id)))];
@@ -77,7 +78,9 @@ export async function getSellerRollupsData(
     const ownerNewLogos = won.filter((row) => row.opportunity_type === 'new_logo');
     const ownerAttached = ownerNewLogos.filter((row) => attachedOpportunityIds.has(row.opportunity_id));
     const sum = (rows: any[], field: 'mrr_cents' | 'nrr_cents') => rows.reduce(
-      (total, row) => total + Number(row[field] ?? 0),
+      // NRR always carries hardware with it — the same one-time definition the
+      // pipeline table and the dashboard snapshot use.
+      (total, row) => total + Number(row[field] ?? 0) + (field === 'nrr_cents' ? Number(row.hardware_cents ?? 0) : 0),
       0,
     );
     return {

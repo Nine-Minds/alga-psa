@@ -61,8 +61,8 @@
       "body": "{{number}} dauerhaft löschen? Dies kann nicht rückgängig gemacht werden. Opportunities mit verknüpften Angeboten können nicht gelöscht werden.",
       "title": "Gelegenheit löschen"
     },
-  "detail": {
-    "backToList": "Zurück zu Verkaufschancen",
+    "detail": {
+      "backToList": "Zurück zu Verkaufschancen",
       "confidence": "Ihr Vertrauen",
       "confidenceNote": "Vertrauen liegt bei Ihnen; Die Bühne kommt von Beweisen. Die beiden werden verglichen, nie zusammengeführt.",
       "createQuote": "Angebot erstellen",
@@ -226,9 +226,11 @@
     "snapshot": {
       "actionsDue": "Maßnahmen fällig",
       "empty": "Noch keine offenen Stellen.",
+      "hardwareIncluded": "inkl. {{amount}} Hardware",
       "loading": "Gelegenheits-Snapshot wird geladen",
       "mrr": "{{amount}} MRR",
       "nrr": "{{amount}} NRR",
+      "oneTime": "{{amount}} einmalig",
       "open": "Offene Möglichkeiten",
       "openCount": "Offene Möglichkeiten",
       "opportunityCount_one": "{{count}} Gelegenheit",
@@ -297,8 +299,8 @@
       "queue": "Warteschlange",
       "suggestions": "Vorschläge"
     },
-  "timeline": {
-    "created": "Verkaufschance erstellt",
+    "timeline": {
+      "created": "Verkaufschance erstellt",
       "empty": "Noch nichts protokolliert. Abgeschlossene Aktionen landen hier von alleine."
     },
     "toast": {

@@ -226,9 +226,11 @@
     "snapshot": {
       "actionsDue": "11111",
       "empty": "11111",
+      "hardwareIncluded": "11111 {{amount}} 11111",
       "loading": "11111",
       "mrr": "11111 {{amount}} 11111",
       "nrr": "11111 {{amount}} 11111",
+      "oneTime": "11111 {{amount}} 11111",
       "open": "11111",
       "openCount": "11111",
       "opportunityCount_one": "11111 {{count}} 11111",

@@ -61,8 +61,8 @@
       "body": "Supprimer {{number}} définitivement ? Cela ne peut pas être annulé. Les opportunités avec des devis liés ne peuvent pas être supprimées.",
       "title": "Supprimer l'opportunité"
     },
-  "detail": {
-    "backToList": "Retour aux opportunités",
+    "detail": {
+      "backToList": "Retour aux opportunités",
       "confidence": "Votre confiance",
       "confidenceNote": "La confiance est à vous ; la scène vient des preuves. Les deux sont comparés, jamais fusionnés.",
       "createQuote": "Créer un devis",
@@ -226,9 +226,11 @@
     "snapshot": {
       "actionsDue": "Actions dues",
       "empty": "Aucune opportunité ouverte pour le moment.",
+      "hardwareIncluded": "dont {{amount}} de matériel",
       "loading": "Chargement de l'instantané de l'opportunité",
       "mrr": "{{amount}} MRR",
       "nrr": "{{amount}} NRR",
+      "oneTime": "{{amount}} ponctuel",
       "open": "Opportunités ouvertes",
       "openCount": "Opportunités ouvertes",
       "opportunityCount_one": "{{count}} opportunité",
@@ -297,8 +299,8 @@
       "queue": "File d'attente",
       "suggestions": "Suggestions"
     },
-  "timeline": {
-    "created": "Opportunité créée",
+    "timeline": {
+      "created": "Opportunité créée",
       "empty": "Rien d'enregistré pour l'instant. Les actions terminées atterrissent ici d’elles-mêmes."
     },
     "toast": {

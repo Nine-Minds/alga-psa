@@ -6,6 +6,7 @@ import { ArrowRight, BriefcaseBusiness, Clock3, PauseCircle } from 'lucide-react
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { getOpportunityDashboardSnapshot } from '@alga-psa/opportunities/actions';
 import { OPPORTUNITY_STAGE_LABELS } from '@alga-psa/opportunities/lib/opportunityStages';
+import { oneTimeCents } from '@alga-psa/opportunities/lib/pipelineReporting';
 import type { IOpportunityDashboardSnapshot } from '@alga-psa/types';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -140,10 +141,17 @@ export default function OpportunitySnapshotCard() {
                         })}
                       </p>
                       <p>
-                        {t('opportunities.snapshot.nrr', '{{amount}} NRR', {
-                          amount: formatCurrencyFromMinorUnits(row.nrr_cents, undefined, row.currency_code),
+                        {t('opportunities.snapshot.oneTime', '{{amount}} one-time', {
+                          amount: formatCurrencyFromMinorUnits(oneTimeCents(row), undefined, row.currency_code),
                         })}
                       </p>
+                      {row.hardware_cents > 0 ? (
+                        <p className="text-[rgb(var(--color-text-400))]">
+                          {t('opportunities.snapshot.hardwareIncluded', 'incl. {{amount}} hardware', {
+                            amount: formatCurrencyFromMinorUnits(row.hardware_cents, undefined, row.currency_code),
+                          })}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 ))}

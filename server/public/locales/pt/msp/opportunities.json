@@ -61,8 +61,8 @@
       "body": "Excluir {{number}} permanentemente? Isto não pode ser desfeito. As oportunidades com cotações vinculadas não podem ser excluídas.",
       "title": "Excluir oportunidade"
     },
-  "detail": {
-    "backToList": "Voltar para oportunidades",
+    "detail": {
+      "backToList": "Voltar para oportunidades",
       "confidence": "Sua confiança",
       "confidenceNote": "A confiança é sua; o palco vem da evidência. Os dois são comparados, nunca mesclados.",
       "createQuote": "Criar cotação",
@@ -226,9 +226,11 @@
     "snapshot": {
       "actionsDue": "Ações devidas",
       "empty": "Ainda não há oportunidades abertas.",
+      "hardwareIncluded": "incl. {{amount}} de hardware",
       "loading": "Carregando instantâneo da oportunidade",
       "mrr": "{{amount}} MRR",
       "nrr": "{{amount}} NRR",
+      "oneTime": "{{amount}} único",
       "open": "Oportunidades abertas",
       "openCount": "Oportunidades abertas",
       "opportunityCount_one": "{{count}} oportunidade",
@@ -297,8 +299,8 @@
       "queue": "Fila",
       "suggestions": "Sugestões"
     },
-  "timeline": {
-    "created": "Oportunidade criada",
+    "timeline": {
+      "created": "Oportunidade criada",
       "empty": "Nada registrado ainda. As ações concluídas chegam aqui por conta própria."
     },
     "toast": {
