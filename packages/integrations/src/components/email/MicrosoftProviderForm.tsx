@@ -555,6 +555,21 @@ export function MicrosoftProviderForm({
             </Alert>
           )}
 
+          {!providerSetupLoading && providerSetupReady && oauthStatus !== 'success' && (
+            <Alert>
+              <AlertDescription>
+                <div className="space-y-1">
+                  <div className="font-medium">
+                    {t('forms.microsoft.oauth.profileReady', { defaultValue: 'Microsoft app profile is ready.' })}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {t('forms.microsoft.oauth.profileReadyHelp', { defaultValue: 'If tenant administrator consent is still pending, complete it in Providers settings. Then use Authorize Access below for this mailbox.' })}
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="redirectUri">{t('forms.microsoft.oauth.redirectUriLabel', { defaultValue: 'Redirect URI *' })}</Label>
             <Input

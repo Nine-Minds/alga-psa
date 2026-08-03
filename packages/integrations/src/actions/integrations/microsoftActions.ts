@@ -812,6 +812,10 @@ async function createMicrosoftProfileInternal(
   if (!clientSecret) return { success: false, error: 'Microsoft OAuth Client Secret is required' };
   if (!tenantIdProvided) return { success: false, error: 'Microsoft Tenant ID is required' };
 
+  let createdProfileId: string | null = null;
+  let createdSecretRef: string | null = null;
+  let previousDefaultProfileId: string | null = null;
+
   try {
     const { knex } = await createTenantKnex();
     const secretProvider = await getSecretProviderInstance();
@@ -826,6 +830,9 @@ async function createMicrosoftProfileInternal(
     const profileId = randomUUID();
     const clientSecretRef = getMicrosoftProfileSecretRef(profileId);
     const shouldBeDefault = input.setAsDefault === true || !existing.some((row) => row.is_default && !row.is_archived);
+    createdProfileId = profileId;
+    createdSecretRef = clientSecretRef;
+    previousDefaultProfileId = existing.find((row) => row.is_default && !row.is_archived)?.profile_id || null;
     const now = new Date();
 
     const row: MicrosoftProfileRow = {
@@ -872,8 +879,135 @@ async function createMicrosoftProfileInternal(
       profile: await buildMicrosoftProfileSummary(tenant, row, secretProvider),
     };
   } catch (err: any) {
+    if (createdProfileId && createdSecretRef) {
+      try {
+        const { knex } = await createTenantKnex();
+        const secretProvider = await getSecretProviderInstance();
+        await knex.transaction(async (trx: any) => {
+          const transactionDb = tenantDb(trx, tenant);
+          await transactionDb.table('microsoft_profile_consumer_bindings')
+            .where({ profile_id: createdProfileId })
+            .delete();
+          await transactionDb.table('microsoft_profiles')
+            .where({ profile_id: createdProfileId })
+            .delete();
+          if (previousDefaultProfileId) {
+            await transactionDb.table('microsoft_profiles')
+              .where({ profile_id: previousDefaultProfileId })
+              .update({ is_default: true, updated_at: new Date() });
+          }
+        });
+        await secretProvider.setTenantSecret(tenant, createdSecretRef, null);
+
+        const previousDefault = previousDefaultProfileId
+          ? await getMicrosoftProfileRow(knex, tenant, previousDefaultProfileId)
+          : undefined;
+        if (previousDefault) {
+          await mirrorLegacyMicrosoftSecrets(tenant, previousDefault, secretProvider);
+        } else {
+          await Promise.all([
+            secretProvider.setTenantSecret(tenant, MICROSOFT_CLIENT_ID_SECRET, null),
+            secretProvider.setTenantSecret(tenant, MICROSOFT_CLIENT_SECRET_SECRET, null),
+            secretProvider.setTenantSecret(tenant, MICROSOFT_TENANT_ID_SECRET, null),
+          ]);
+        }
+      } catch {
+        // Preserve the original error. A failed cleanup is surfaced by the
+        // incomplete profile state and can be retried or removed by an admin.
+      }
+    }
     return { success: false, error: microsoftActionErrorMessage(err, 'Failed to create Microsoft profile') };
   }
+}
+
+export async function createAndBindMicrosoftEmailProfileInternal(
+  user: any,
+  tenant: string,
+  input: {
+    displayName: string;
+    clientId: string;
+    clientSecret: string;
+    tenantId: string;
+  }
+): Promise<{
+  success: boolean;
+  error?: string;
+  profileId?: string;
+  displayName?: string;
+}> {
+  const created = await createMicrosoftProfileInternal(user, tenant, {
+    ...input,
+    capabilities: ['email'],
+  });
+  if (!created.success || !created.profile) {
+    return { success: false, error: created.error || 'Failed to create Microsoft email profile' };
+  }
+
+  try {
+    const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
+    const now = new Date();
+    const existing = await db.table<MicrosoftConsumerBindingRow>('microsoft_profile_consumer_bindings')
+      .where({ consumer_type: 'email' })
+      .first();
+
+    if (existing) {
+      await db.table('microsoft_profile_consumer_bindings')
+        .where({ consumer_type: 'email' })
+        .update({
+          profile_id: created.profile.profileId,
+          updated_by: user?.user_id || null,
+          updated_at: now,
+        });
+    } else {
+      await db.table('microsoft_profile_consumer_bindings').insert({
+        tenant,
+        consumer_type: 'email',
+        profile_id: created.profile.profileId,
+        created_by: user?.user_id || null,
+        updated_by: user?.user_id || null,
+        created_at: now,
+        updated_at: now,
+      } satisfies MicrosoftConsumerBindingRow);
+    }
+
+    return {
+      success: true,
+      profileId: created.profile.profileId,
+      displayName: created.profile.displayName,
+    };
+  } catch (error) {
+    const { knex } = await createTenantKnex();
+    const secretProvider = await getSecretProviderInstance();
+    await tenantDb(knex, tenant)
+      .table('microsoft_profiles')
+      .where({ profile_id: created.profile.profileId })
+      .delete()
+      .catch(() => {});
+    await secretProvider
+      .setTenantSecret(tenant, created.profile.clientSecretRef, null)
+      .catch(() => {});
+
+    return {
+      success: false,
+      error: microsoftActionErrorMessage(error, 'Failed to bind the new Microsoft profile to Email'),
+    };
+  }
+}
+
+export async function getMicrosoftEmailSetupMetadataInternal(): Promise<{
+  baseUrl: string;
+  mailboxRedirectUri: string;
+  setupRedirectUri: string;
+  returnTo: string;
+}> {
+  const baseUrl = await getDeploymentBaseUrl();
+  return {
+    baseUrl,
+    mailboxRedirectUri: `${baseUrl}/api/auth/microsoft/callback`,
+    setupRedirectUri: `${baseUrl}/api/auth/microsoft/email-setup/callback`,
+    returnTo: `${baseUrl}/msp/settings?category=providers`,
+  };
 }
 
 async function updateMicrosoftProfileInternal(

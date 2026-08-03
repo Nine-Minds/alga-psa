@@ -16,6 +16,9 @@ const updateMicrosoftProfileMock = vi.hoisted(() => vi.fn());
 const archiveMicrosoftProfileMock = vi.hoisted(() => vi.fn());
 const setDefaultMicrosoftProfileMock = vi.hoisted(() => vi.fn());
 const resetMicrosoftProvidersToDisconnectedMock = vi.hoisted(() => vi.fn());
+const getMicrosoftEmailSetupOptionsMock = vi.hoisted(() => vi.fn());
+const configureMicrosoftEmailPlatformApplicationMock = vi.hoisted(() => vi.fn());
+const createMicrosoftEmailApplicationMock = vi.hoisted(() => vi.fn());
 const toastMock = vi.hoisted(() => vi.fn());
 const routerPushMock = vi.hoisted(() => vi.fn());
 
@@ -45,6 +48,12 @@ vi.mock('../../../actions/integrations/microsoftActions', () => ({
   setDefaultMicrosoftProfile: (...args: unknown[]) => setDefaultMicrosoftProfileMock(...args),
   resetMicrosoftProvidersToDisconnected: (...args: unknown[]) =>
     resetMicrosoftProvidersToDisconnectedMock(...args),
+}));
+
+vi.mock('../../../actions/integrations/microsoftEmailSetupActions', () => ({
+  getMicrosoftEmailSetupOptions: (...args: unknown[]) => getMicrosoftEmailSetupOptionsMock(...args),
+  configureMicrosoftEmailPlatformApplication: (...args: unknown[]) => configureMicrosoftEmailPlatformApplicationMock(...args),
+  createMicrosoftEmailApplication: (...args: unknown[]) => createMicrosoftEmailApplicationMock(...args),
 }));
 
 vi.mock('@alga-psa/ui/hooks/use-toast', () => ({
@@ -282,6 +291,15 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     archiveMicrosoftProfileMock.mockReset();
     setDefaultMicrosoftProfileMock.mockReset();
     resetMicrosoftProvidersToDisconnectedMock.mockReset();
+    getMicrosoftEmailSetupOptionsMock.mockReset().mockResolvedValue({
+      success: true,
+      callbackUri: 'https://psa.example.com/api/auth/microsoft/callback',
+      setupCallbackUri: 'https://psa.example.com/api/auth/microsoft/email-setup/callback',
+      platformApplication: { available: false },
+      automatedCreationAvailable: false,
+    });
+    configureMicrosoftEmailPlatformApplicationMock.mockReset();
+    createMicrosoftEmailApplicationMock.mockReset();
     toastMock.mockReset();
     routerPushMock.mockReset();
     getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus());
@@ -408,6 +426,24 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     expect(await screen.findByText('Platform Microsoft credentials are unavailable')).toBeInTheDocument();
     expect(screen.getByText('Which Microsoft app each service uses')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'New app registration' })).toBeInTheDocument();
+  });
+
+  it('shows both guided choices as unavailable while keeping the manual fallback usable', async () => {
+    const user = userEvent.setup();
+    render(<MicrosoftIntegrationSettings />);
+
+    await user.click(await screen.findByRole('button', { name: 'Set up Microsoft Email' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Set up Microsoft Email' });
+    const platformChoice = within(dialog).getByRole('button', { name: /Use the Alga platform app/ });
+    const automatedChoice = within(dialog).getByRole('button', { name: /Create an app in this tenant/ });
+    const manualChoice = within(dialog).getByRole('button', { name: /Enter an existing app manually/ });
+
+    expect(platformChoice).toBeDisabled();
+    expect(automatedChoice).toBeDisabled();
+    expect(manualChoice).toBeEnabled();
+
+    await user.click(manualChoice);
+    expect(await screen.findByRole('dialog', { name: 'Create Microsoft app registration' })).toBeInTheDocument();
   });
 
   it('renders CE copy and bindings only for MSP SSO', async () => {

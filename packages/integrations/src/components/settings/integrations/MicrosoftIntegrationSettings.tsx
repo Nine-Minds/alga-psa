@@ -37,6 +37,7 @@ import {
   isMicrosoftConsumerEnterpriseEdition,
 } from '../../../lib/microsoftConsumerVisibility';
 import { resolveTeamsAvailability } from '../../../lib/teamsAvailabilityCore';
+import { MicrosoftEmailSetupDialog } from './MicrosoftEmailSetupDialog';
 import {
   AlertTriangle,
   Archive,
@@ -49,6 +50,7 @@ import {
   RefreshCw,
   ShieldCheck,
   Star,
+  WandSparkles,
 } from 'lucide-react';
 
 type MicrosoftIntegrationStatus = Awaited<ReturnType<typeof getMicrosoftIntegrationStatus>>;
@@ -386,6 +388,7 @@ export function MicrosoftIntegrationSettings({
   const [formError, setFormError] = React.useState<string | null>(null);
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
   const advancedChoiceInitializedRef = React.useRef(false);
+  const [emailSetupOpen, setEmailSetupOpen] = React.useState(false);
 
   const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
   const profiles = status?.success ? status.profiles ?? [] : [];
@@ -737,6 +740,22 @@ export function MicrosoftIntegrationSettings({
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 {t('integrations.microsoft.settings.actions.refresh', { defaultValue: 'Refresh' })}
+              </Button>
+              {isEnterpriseEdition && (
+                <Button
+                  id="microsoft-settings-email-setup-button"
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEmailSetupOpen(true)}
+                  disabled={loading}
+                >
+                  <WandSparkles className="mr-2 h-4 w-4" />
+                  {t('integrations.microsoft.emailSetup.action', { defaultValue: 'Set up Microsoft Email' })}
+                </Button>
+              )}
+              <Button id="microsoft-settings-add-profile" type="button" onClick={openCreateDialog} disabled={loading}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t('integrations.microsoft.settings.actions.newProfile', { defaultValue: 'New app registration' })}
               </Button>
             </div>
           </div>
@@ -1292,6 +1311,16 @@ export function MicrosoftIntegrationSettings({
 
         </DialogContent>
       </Dialog>
+
+      <MicrosoftEmailSetupDialog
+        isOpen={emailSetupOpen}
+        onClose={() => setEmailSetupOpen(false)}
+        onCompleted={load}
+        onManualSetup={() => {
+          setEmailSetupOpen(false);
+          openCreateDialog();
+        }}
+      />
 
       <ConfirmationDialog
         id="microsoft-provider-disconnect-confirmation"
