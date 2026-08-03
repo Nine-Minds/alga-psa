@@ -27,6 +27,7 @@ import {
 
 interface EmailProviderListProps {
   providers: EmailProvider[];
+  reconnectingProviderIds?: ReadonlySet<string>;
   onEdit: (provider: EmailProvider) => void;
   onDelete: (providerId: string) => void;
   onTestConnection: (provider: EmailProvider) => Promise<void>;
@@ -41,6 +42,7 @@ interface EmailProviderListProps {
 
 export function EmailProviderList({
   providers,
+  reconnectingProviderIds,
   onEdit,
   onDelete,
   onTestConnection,
@@ -202,10 +204,15 @@ export function EmailProviderList({
           <EmailProviderCard
             key={provider.id}
             provider={provider}
+            reconnecting={reconnectingProviderIds?.has(provider.id) ?? false}
             defaultsOptions={defaultsOptions}
             updatingProviderId={updatingProviderId}
-            busy={busyProviderId === provider.id}
-            busyAction={busyProviderId === provider.id ? busyAction : null}
+            busy={busyProviderId === provider.id || reconnectingProviderIds?.has(provider.id)}
+            busyAction={busyProviderId === provider.id
+              ? busyAction
+              : reconnectingProviderIds?.has(provider.id)
+                ? 'resync'
+                : null}
             onEdit={onEdit}
             onDelete={onDelete}
             onTestConnection={handleTestConnectionInternal}

@@ -11,6 +11,8 @@
       "resyncing": "Risincronizzazione {{providerName}} in corso...",
       "resyncError": "Impossibile risincronizzare il provider IMAP",
       "resyncStarted": "La risincronizzazione è iniziata per {{providerName}}.",
+      "resyncRecovered": "{{providerName}} si è riconnesso correttamente.",
+      "resyncPending": "{{providerName}} si sta ancora riconnettendo. Aggiorna per verificarne lo stato più recente.",
       "enterpriseOnly": "La posta elettronica in entrata di Microsoft 365 è disponibile solo in Pro.",
       "loadProvidersError": "Failed to load email providers"
     },
@@ -163,6 +165,7 @@
       "disabled": "Disabilitato",
       "paused": "In pausa",
       "connected": "Collegato",
+      "reconnecting": "Riconnessione",
       "disconnected": "Disconnesso",
       "error": "Errore",
       "configuring": "Configurazione",
@@ -211,6 +214,7 @@
     },
     "values": {
       "active": "Attivo",
+      "reconnecting": "Riconnessione",
       "inactive": "Inattivo",
       "disabled": "Disabilitato",
       "error": "Errore"

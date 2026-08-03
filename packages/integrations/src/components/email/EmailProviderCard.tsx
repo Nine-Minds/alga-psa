@@ -33,6 +33,7 @@ import { INBOUND_DEFAULTS_WARNING, providerNeedsInboundDefaults } from './emailP
 
 interface EmailProviderCardProps {
   provider: EmailProvider;
+  reconnecting?: boolean;
   defaultsOptions: { value: string; label: string }[];
   updatingProviderId: string | null;
   busy?: boolean;
@@ -64,6 +65,7 @@ const getProviderIcon = (providerType: string) => {
 
 export function EmailProviderCard({
   provider,
+  reconnecting = false,
   defaultsOptions,
   updatingProviderId,
   busy = false,
@@ -106,6 +108,10 @@ export function EmailProviderCard({
   };
 
   const getStatusIcon = (status: EmailProvider['status']) => {
+    if (reconnecting) {
+      return <Clock className="h-4 w-4 text-[rgb(var(--badge-warning-text))]" />;
+    }
+
     switch (status) {
       case 'connected':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
@@ -125,6 +131,14 @@ export function EmailProviderCard({
     isActive: boolean,
     isPaused: boolean
   ) => {
+    if (reconnecting) {
+      return (
+        <Badge id={`provider-reconnecting-badge-${provider.id}`} variant="warning" role="status">
+          {t('providerCard.badges.reconnecting', { defaultValue: 'Reconnecting' })}
+        </Badge>
+      );
+    }
+
     if (isPaused) {
       return (
         <Badge id={`provider-paused-badge-${provider.id}`} variant="secondary">
@@ -165,6 +179,7 @@ export function EmailProviderCard({
   };
 
   const expirationStatus = getExpirationStatus(provider);
+  const interactionBusy = busy || reconnecting;
 
   return (
     <Card className={`transition-all ${!provider.isActive ? 'opacity-60' : ''}`}>
@@ -187,47 +202,47 @@ export function EmailProviderCard({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button id={`provider-menu-${provider.id}`} variant="ghost" size="sm" disabled={busy}>
+                <Button id={`provider-menu-${provider.id}`} variant="ghost" size="sm" disabled={interactionBusy}>
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onEdit(provider)} disabled={busy}>
+                <DropdownMenuItem onClick={() => onEdit(provider)} disabled={interactionBusy}>
                   <Settings className="h-4 w-4 mr-2" />
                   {t('providerCard.actions.edit', { defaultValue: 'Edit Configuration' })}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onTestConnection(provider)} disabled={busy}>
+                <DropdownMenuItem onClick={() => onTestConnection(provider)} disabled={interactionBusy}>
                   <TestTube className="h-4 w-4 mr-2" />
                   {busy && busyAction === 'test'
                     ? t('providerCard.actions.testing', { defaultValue: 'Testing…' })
                     : t('providerCard.actions.testConnection', { defaultValue: 'Test Connection' })}
                 </DropdownMenuItem>
                 {provider.providerType === 'google' && (
-                  <DropdownMenuItem onClick={() => onRefreshWatchSubscription(provider)} disabled={busy}>
+                  <DropdownMenuItem onClick={() => onRefreshWatchSubscription(provider)} disabled={interactionBusy}>
                     <Repeat className="h-4 w-4 mr-2" />
                     {t('providerCard.actions.refreshWatch', { defaultValue: 'Refresh Pub/Sub & Watch' })}
                   </DropdownMenuItem>
                 )}
                 {provider.providerType === 'microsoft' && (
                   <>
-                    <DropdownMenuItem onClick={() => onRetryRenewal(provider)} disabled={busy}>
+                    <DropdownMenuItem onClick={() => onRetryRenewal(provider)} disabled={interactionBusy}>
                       <RefreshCw className="h-4 w-4 mr-2" />
                       {t('providerCard.actions.retryRenewal', { defaultValue: 'Retry Renewal' })}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onRunDiagnostics(provider)} disabled={busy}>
+                    <DropdownMenuItem onClick={() => onRunDiagnostics(provider)} disabled={interactionBusy}>
                       <Stethoscope className="h-4 w-4 mr-2" />
                       {t('providerCard.actions.runDiagnostics', { defaultValue: 'Run Microsoft 365 Diagnostics' })}
                     </DropdownMenuItem>
                   </>
                 )}
                 {provider.providerType === 'imap' && provider.imapConfig?.auth_type === 'oauth2' && onReconnectOAuth && (
-                  <DropdownMenuItem onClick={() => onReconnectOAuth(provider)} disabled={busy}>
+                  <DropdownMenuItem onClick={() => onReconnectOAuth(provider)} disabled={interactionBusy}>
                     <RefreshCw className="h-4 w-4 mr-2" />
                     {t('providerCard.actions.reconnectOauth', { defaultValue: 'Reconnect OAuth' })}
                   </DropdownMenuItem>
                 )}
                 {provider.providerType === 'imap' && onResyncProvider && (
-                  <DropdownMenuItem onClick={() => onResyncProvider(provider)} disabled={busy}>
+                  <DropdownMenuItem onClick={() => onResyncProvider(provider)} disabled={interactionBusy}>
                     <Repeat className="h-4 w-4 mr-2" />
                     {busy && busyAction === 'resync'
                       ? t('providerCard.actions.resyncing', { defaultValue: 'Resyncing…' })
@@ -237,7 +252,7 @@ export function EmailProviderCard({
                 <DropdownMenuItem
                   id={`${provider.inboundPausedAt ? 'resume' : 'pause'}-provider-${provider.id}`}
                   onClick={() => onTogglePause(provider)}
-                  disabled={busy}
+                  disabled={interactionBusy}
                 >
                   {provider.inboundPausedAt
                     ? <PlayCircle className="h-4 w-4 mr-2" />
@@ -250,7 +265,7 @@ export function EmailProviderCard({
                 <DropdownMenuItem
                   onClick={() => onDelete(provider.id)}
                   className="text-red-600"
-                  disabled={busy}
+                  disabled={interactionBusy}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   {t('providerCard.actions.delete', { defaultValue: 'Delete Provider' })}
@@ -269,7 +284,9 @@ export function EmailProviderCard({
               <span>{t('providerCard.fields.status', { defaultValue: 'Status' })}</span>
             </div>
             <div className="font-medium">
-              {provider.status === 'connected' && provider.isActive
+              {reconnecting
+                ? t('providerCard.values.reconnecting', { defaultValue: 'Reconnecting' })
+                : provider.status === 'connected' && provider.isActive
                 ? t('providerCard.values.active', { defaultValue: 'Active' })
                 : provider.status === 'error'
                 ? t('providerCard.values.error', { defaultValue: 'Error' })
