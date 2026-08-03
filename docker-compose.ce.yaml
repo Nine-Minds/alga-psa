@@ -9,9 +9,7 @@ services:
     image: ${APP_NAME:-sebastian}_server_ce_local
     build:
       context: .
-      dockerfile: Dockerfile.build
-      args:
-        NEXT_BUILD_MAX_OLD_SPACE_SIZE: ${NEXT_BUILD_MAX_OLD_SPACE_SIZE:-12288}
+      dockerfile: Dockerfile.dev
     environment:
       EDITION: community
       DB_NAME: server
@@ -36,6 +34,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
+      STORAGE_LOCAL_BASE_PATH: ${STORAGE_LOCAL_BASE_PATH:-/data/files}
       EMAIL_ENABLE: ${EMAIL_ENABLE:-false}
       EMAIL_FROM: ${EMAIL_FROM:-noreply@example.com}
       EMAIL_PORT: ${EMAIL_PORT:-587}
@@ -51,6 +50,8 @@ services:
       WORKFLOW_REDIS_CONSUMER_GROUP: "workflow-workers"
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
     volumes:
+      # Persist user-uploaded documents and generated files
+      - files_data:/data/files
       - type: bind
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
@@ -88,9 +89,7 @@ services:
     image: ${APP_NAME:-sebastian}_server_ce_local
     build:
       context: .
-      dockerfile: Dockerfile.build
-      args:
-        NEXT_BUILD_MAX_OLD_SPACE_SIZE: ${NEXT_BUILD_MAX_OLD_SPACE_SIZE:-12288}
+      dockerfile: Dockerfile.dev
     environment:
       EDITION: community
       NODE_OPTIONS: --experimental-vm-modules
@@ -344,6 +343,9 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: postgres
       DB_PORT: ${DB_PORT:-5432}
+    volumes:
+      # Persist Postgres data across restarts
+      - postgres_data:/var/lib/postgresql/data
     secrets:
       - postgres_password
 
@@ -355,3 +357,7 @@ services:
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  postgres_data:
+  files_data:

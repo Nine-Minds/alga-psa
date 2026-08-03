@@ -20,10 +20,13 @@ The base configuration (`docker-compose.base.yaml`) includes:
 ### Community Edition (CE)
 The CE configuration (`docker-compose.ce.yaml`) includes:
 - Standard service configurations
-- CE-specific Dockerfile paths
+- The shared `Dockerfile.dev` development image with Community Edition enabled
 - Default community settings
 - Service environment variables
+- Named volumes for PostgreSQL data and application files
 - Network and dependency configurations
+
+The `postgres_data` and `files_data` volumes retain database records and application files across ordinary `docker compose down` and `up` commands. Running `docker compose down -v` explicitly removes these volumes and their data.
 
 ### Enterprise Edition (EE)
 The EE configuration (`docker-compose.ee.yaml`) includes:
