@@ -42,18 +42,18 @@ describe('resolveSelfHostTier', () => {
     expect(result?.daysRemaining).toBeGreaterThan(0);
   });
 
-  it('returns premium for a valid premium license', () => {
+  it('returns Pro for a valid legacy Premium license', () => {
     const result = resolveSelfHostTier(makeRow({ license_token: PREMIUM_TOKEN }));
-    expect(result?.tier).toBe('premium');
+    expect(result?.tier).toBe('pro');
     expect(result?.state).toBe('licensed');
   });
 
-  // T010: active trial → premium
-  it('returns premium during an active 15-day trial', () => {
+  // T010: active trial → Pro
+  it('returns Pro during an active 15-day trial', () => {
     const trialStart = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000); // 5 days ago
     const result = resolveSelfHostTier(makeRow({ trial_started_at: trialStart }));
     expect(result?.state).toBe('trial');
-    expect(result?.tier).toBe('premium');
+    expect(result?.tier).toBe('pro');
     expect(result?.daysRemaining).toBeGreaterThan(0);
     expect(result?.daysRemaining).toBeLessThanOrEqual(10);
   });

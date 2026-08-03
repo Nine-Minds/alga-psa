@@ -37,7 +37,7 @@ function validResult(aud?: string) {
       iss: 'nineminds-license',
       sub: 'lic_test',
       cust: 'Acme Corp',
-      tier: 'premium',
+      tier: 'pro',
       iat: 0,
       exp: FUTURE_EXP,
       ...(aud ? { aud } : {}),
@@ -52,7 +52,7 @@ describe('resolveSelfHostTier — per-tenant binding', () => {
     verifyLicenseMock.mockReturnValue(validResult('tenant-A'));
     const result = resolveSelfHostTier(makeRow(), 'tenant-A');
     expect(result?.state).toBe('licensed');
-    expect(result?.tier).toBe('premium');
+    expect(result?.tier).toBe('pro');
   });
 
   it('downgrades a tenant-bound license used on a different tenant', () => {
@@ -66,7 +66,7 @@ describe('resolveSelfHostTier — per-tenant binding', () => {
     verifyLicenseMock.mockReturnValue(validResult(undefined));
     const result = resolveSelfHostTier(makeRow(), 'tenant-B');
     expect(result?.state).toBe('licensed');
-    expect(result?.tier).toBe('premium');
+    expect(result?.tier).toBe('pro');
   });
 
   it('does not block a bound license when no tenant is supplied to check against', () => {

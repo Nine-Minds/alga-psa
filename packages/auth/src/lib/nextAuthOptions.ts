@@ -55,7 +55,7 @@ import { resolveMicrosoftConsumerProfileConfig } from "./microsoftConsumerProfil
 
 /**
  * Effective tier override for self-host installs. Returns the tier resolved from
- * the offline `license_state` row (essentials/pro/premium/...) when present, or
+ * the offline `license_state` row (essentials/pro) when present, or
  * undefined in SaaS mode so the session falls back to the Stripe plan. Non-fatal
  * on any error (e.g. an un-migrated `license_state`) — returns undefined.
  */
@@ -159,9 +159,6 @@ interface TenantSubscriptionInfo {
     trial_end?: string | null;
     subscription_status?: string | null;
     solo_pro_trial_end?: string | null;
-    premium_trial_end?: string | null;
-    premium_trial_confirmed?: boolean;
-    premium_trial_effective_date?: string | null;
 }
 
 async function fetchTenantPlan(tenantId: string): Promise<string | undefined> {
@@ -183,9 +180,6 @@ async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubs
     let trialEnd: string | null = null;
     let subscriptionStatus: string | null = null;
     let soloProTrialEnd: string | null = null;
-    let premiumTrialEnd: string | null = null;
-    let premiumTrialConfirmed = false;
-    let premiumTrialEffectiveDate: string | null = null;
     let addOns: string[] = [];
 
     try {
@@ -203,21 +197,12 @@ async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubs
                 trialEnd = new Date(subscription.current_period_end).toISOString();
             }
 
-            // Check for active or confirmed Premium trial (stored in metadata)
             const metadata = subscription.metadata || {};
             const activeSoloProTrialEnd = metadata.solo_pro_trial === 'true' && metadata.solo_pro_trial_end
                 ? new Date(metadata.solo_pro_trial_end)
                 : null;
             if (activeSoloProTrialEnd && activeSoloProTrialEnd.getTime() > Date.now()) {
                 soloProTrialEnd = activeSoloProTrialEnd.toISOString();
-            }
-            if (metadata.premium_trial === 'true' && metadata.premium_trial_end) {
-                premiumTrialEnd = metadata.premium_trial_end;
-            } else if (metadata.premium_trial === 'confirmed') {
-                premiumTrialConfirmed = true;
-                premiumTrialEffectiveDate = metadata.premium_trial_effective_date || null;
-                // Use effective date so the UI shows when Premium billing starts
-                premiumTrialEnd = premiumTrialEffectiveDate;
             }
         }
     } catch {
@@ -248,9 +233,6 @@ async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubs
         trial_end: trialEnd,
         subscription_status: subscriptionStatus,
         solo_pro_trial_end: soloProTrialEnd,
-        premium_trial_end: premiumTrialEnd,
-        premium_trial_confirmed: premiumTrialConfirmed,
-        premium_trial_effective_date: premiumTrialEffectiveDate,
     };
 }
 
@@ -1959,9 +1941,6 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
                         token.solo_pro_trial_end = subInfo.solo_pro_trial_end;
-                        token.premium_trial_end = subInfo.premium_trial_end;
-                        token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
-                        token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
                         token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = Date.now();
                     } catch (error) {
@@ -2080,9 +2059,6 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
                         token.solo_pro_trial_end = subInfo.solo_pro_trial_end;
-                        token.premium_trial_end = subInfo.premium_trial_end;
-                        token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
-                        token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
                         token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = now;
                     } catch (error) {
@@ -2150,9 +2126,6 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 (user as any).trial_end = token.trial_end ?? null;
                 (user as any).subscription_status = token.subscription_status ?? null;
                 (user as any).solo_pro_trial_end = token.solo_pro_trial_end ?? null;
-                (user as any).premium_trial_end = token.premium_trial_end ?? null;
-                (user as any).premium_trial_confirmed = token.premium_trial_confirmed ?? false;
-                (user as any).premium_trial_effective_date = token.premium_trial_effective_date ?? null;
                 (user as any).effectiveTier = token.effectiveTier ?? undefined;
             }
             logger.trace("Session Object:", session);
@@ -2781,9 +2754,6 @@ export const options: NextAuthConfig = {
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
                         token.solo_pro_trial_end = subInfo.solo_pro_trial_end;
-                        token.premium_trial_end = subInfo.premium_trial_end;
-                        token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
-                        token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
                         token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = Date.now();
                     } catch (error) {
@@ -2902,9 +2872,6 @@ export const options: NextAuthConfig = {
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
                         token.solo_pro_trial_end = subInfo.solo_pro_trial_end;
-                        token.premium_trial_end = subInfo.premium_trial_end;
-                        token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
-                        token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
                         token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = now;
                     } catch (error) {
@@ -2971,9 +2938,6 @@ export const options: NextAuthConfig = {
                 (user as any).trial_end = token.trial_end ?? null;
                 (user as any).subscription_status = token.subscription_status ?? null;
                 (user as any).solo_pro_trial_end = token.solo_pro_trial_end ?? null;
-                (user as any).premium_trial_end = token.premium_trial_end ?? null;
-                (user as any).premium_trial_confirmed = token.premium_trial_confirmed ?? false;
-                (user as any).premium_trial_effective_date = token.premium_trial_effective_date ?? null;
                 (user as any).effectiveTier = token.effectiveTier ?? undefined;
             }
             logger.trace("Session Object:", session);

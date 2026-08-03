@@ -57,7 +57,7 @@ beforeEach(() => {
     status: {
       ...baseStatus,
       state: "trial",
-      tier: "premium",
+      tier: "pro",
       daysRemaining: 15,
       expiresAt: "2026-06-30T00:00:00.000Z",
       trialUsed: true,
@@ -141,7 +141,7 @@ describe("LicenseManagementPage", () => {
     mockGetLicenseStatus.mockResolvedValue({
       ...baseStatus,
       state: "licensed",
-      tier: "premium",
+      tier: "pro",
       connected: true,
       lastCheckinAt: "2026-06-15T12:30:00.000Z",
       expiresAt: "2026-07-15T00:00:00.000Z",
@@ -152,7 +152,7 @@ describe("LicenseManagementPage", () => {
     render(<LicenseManagementPage />);
 
     expect(
-      await screen.findByRole("heading", { name: "Premium is active" }),
+      await screen.findByRole("heading", { name: "Pro is active" }),
     ).toBeInTheDocument();
     expect(screen.getByText("License refresh")).toBeInTheDocument();
     expect(screen.getByText("Connected")).toBeInTheDocument();

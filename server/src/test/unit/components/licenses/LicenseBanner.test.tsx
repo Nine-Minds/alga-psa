@@ -54,7 +54,7 @@ const scenarios: Array<{
     status: {
       ...baseStatus,
       state: 'trial',
-      tier: 'premium',
+      tier: 'pro',
       daysRemaining: 12,
       trialUsed: true,
     },
@@ -65,7 +65,7 @@ const scenarios: Array<{
     status: {
       ...baseStatus,
       state: 'trial',
-      tier: 'premium',
+      tier: 'pro',
       daysRemaining: 3,
       trialUsed: true,
     },

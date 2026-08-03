@@ -90,7 +90,7 @@ export async function upsertLicenseState(
  *
  * Resolution order (per spec):
  *   1. Valid unexpired license → license.tier
- *   2. Active 15-day trial     → 'premium'
+ *   2. Active 15-day trial     → 'pro'
  *   3. Everything else         → 'essentials'
  *
  * Returns null when passed null (no row → caller falls through to SaaS logic).
@@ -157,7 +157,7 @@ export function resolveSelfHostTier(
       const daysRemaining = Math.ceil((trialEnd - now) / (24 * 60 * 60 * 1000));
       return {
         state: 'trial',
-        tier: 'premium',
+        tier: 'pro',
         expiresAt: new Date(trialEnd),
         daysRemaining,
       };

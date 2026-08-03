@@ -9,7 +9,7 @@ describe('CE authorization bundle management placeholder', () => {
       'utf8'
     );
 
-    expect(source).toContain('available in Premium');
+    expect(source).toContain('available on Pro');
     expect(source).toContain('configure narrowing bundles for roles, teams, users, and API keys');
     expect(source).toContain('Built-in authorization protections remain active');
   });

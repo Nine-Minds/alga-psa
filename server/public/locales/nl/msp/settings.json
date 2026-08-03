@@ -2147,7 +2147,7 @@
       "entra": {
         "name": "Microsoft Entra",
         "description": "Ontdek beheerde Microsoft-tenants en synchroniseer gebruikers naar contacten",
-        "upgradeDescription": "Ontdek beheerde Microsoft Entra-tenants en synchroniseer gebruikers naar contacten. Upgrade naar Premium om deze functie te ontgrendelen."
+        "upgradeDescription": "Ontdek beheerde Microsoft Entra-tenants en synchroniseer gebruikers naar contacten. Upgrade naar Pro om deze functie te ontgrendelen."
       },
       "stripe": {
         "name": "Stripe",

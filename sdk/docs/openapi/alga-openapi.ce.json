@@ -475,24 +475,6 @@
               "null"
             ],
             "description": "Solo Pro trial expiry timestamp when present."
-          },
-          "premium_trial_end": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Premium trial expiry timestamp when present."
-          },
-          "premium_trial_confirmed": {
-            "type": "boolean",
-            "description": "Whether the user confirmed the Premium trial."
-          },
-          "premium_trial_effective_date": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Premium trial effective date when present."
           }
         },
         "required": [
@@ -123109,66 +123091,6 @@
       }
     },
     "/api/v1/tenant-management/start-deletion": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "tenant-management"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "x-alga-products": [
-          "psa"
-        ],
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/tenant-management/start-premium-trial": {
       "post": {
         "summary": "POST v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",

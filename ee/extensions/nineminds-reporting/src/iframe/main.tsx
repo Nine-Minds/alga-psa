@@ -3201,40 +3201,6 @@ function TenantManagementView() {
     });
   };
 
-  // Handle start Premium trial
-  const handleStartPremiumTrial = (tenantId: string, tenantName: string, currentPlan: string | null) => {
-    if (currentPlan === 'premium') {
-      setStatusMessage({ type: 'error', text: `${tenantName} is already on Premium` });
-      return;
-    }
-
-    setConfirmAction({
-      message: `Start a 30-day Premium trial for "${tenantName}"? This will upgrade them from ${currentPlan || 'Pro'} to Premium with a 30-day trial period. Their card will be charged for Premium when the trial ends.`,
-      onConfirm: async () => {
-        setConfirmAction(null);
-        setActionInProgress(tenantId);
-        try {
-          const result = await callTenantManagementApi<void>('/start-premium-trial', {
-            method: 'POST',
-            body: JSON.stringify({ tenantId }),
-          });
-
-          if (result.success) {
-            setStatusMessage({ type: 'success', text: `Premium trial started for ${tenantName}` });
-            fetchTenants(); // Refresh tenant list
-            fetchAuditLogs();
-          } else {
-            setStatusMessage({ type: 'error', text: `Failed: ${result.error}` });
-          }
-        } catch (err) {
-          setStatusMessage({ type: 'error', text: `Error: ${err}` });
-        } finally {
-          setActionInProgress(null);
-        }
-      },
-    });
-  };
-
   // Handle create tenant
   const handleCreateTenant = () => {
     const { companyName, firstName, lastName, email, licenseCount, productCode } = createForm;
@@ -3624,16 +3590,19 @@ function TenantManagementView() {
     {
       key: 'plan',
       header: 'Plan',
-      render: (row) => (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <Badge tone={row.plan === 'premium' ? 'info' : 'default'}>
-            {row.plan ? row.plan.charAt(0).toUpperCase() + row.plan.slice(1) : '—'}
-          </Badge>
-          <Text tone="muted" style={{ fontSize: '0.75rem' }}>
-            {formatProductCode(row.product_code)}
-          </Text>
-        </div>
-      ),
+      render: (row) => {
+        const displayPlan = row.plan === 'premium' ? 'pro' : row.plan;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <Badge tone="default">
+              {displayPlan ? displayPlan.charAt(0).toUpperCase() + displayPlan.slice(1) : '—'}
+            </Badge>
+            <Text tone="muted" style={{ fontSize: '0.75rem' }}>
+              {formatProductCode(row.product_code)}
+            </Text>
+          </div>
+        );
+      },
     },
     {
       key: 'subscription',
@@ -3712,12 +3681,6 @@ function TenantManagementView() {
             key: 'addons',
             label: 'Manage Add-ons',
             onClick: () => setSelectedTenantForAddOns(row),
-          },
-          {
-            key: 'premium-trial',
-            label: 'Start Premium Trial',
-            onClick: () => handleStartPremiumTrial(row.tenant, row.client_name, row.plan),
-            disabled: row.plan === 'premium' || row.subscription_status === 'trialing',
           },
           {
             key: 'delete',

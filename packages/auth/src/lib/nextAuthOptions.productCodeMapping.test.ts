@@ -143,7 +143,7 @@ describe('nextAuth product_code mapping', () => {
     ]);
   });
 
-  it('maps product_code into jwt and session user while preserving plan/addons/trial fields', async () => {
+  it('maps product_code into jwt and session user while ignoring legacy Premium-trial metadata', async () => {
     const options = await getAuthOptions();
     const jwt = options.callbacks?.jwt;
     const session = options.callbacks?.session;
@@ -168,8 +168,8 @@ describe('nextAuth product_code mapping', () => {
     expect(token.addons).toEqual(['voice']);
     expect(token.trial_end).toBe('2027-01-01T00:00:00.000Z');
     expect(token.solo_pro_trial_end).toBe('2027-02-01T00:00:00.000Z');
-    expect(token.premium_trial_confirmed).toBe(true);
-    expect(token.premium_trial_effective_date).toBe('2027-03-01T00:00:00.000Z');
+    expect(token).not.toHaveProperty('premium_trial_confirmed');
+    expect(token).not.toHaveProperty('premium_trial_effective_date');
 
     const sessionResult = await session!({
       session: { user: {} },

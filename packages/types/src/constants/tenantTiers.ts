@@ -17,7 +17,7 @@
  * no active license or trial is present. Mirrors the Community Edition feature
  * set on an Enterprise build; never sold as a standalone license tier.
  */
-export const TENANT_TIERS = ['essentials', 'solo', 'pro', 'premium'] as const;
+export const TENANT_TIERS = ['essentials', 'solo', 'pro'] as const;
 
 /**
  * Valid tenant tier values.
@@ -31,7 +31,6 @@ export const TIER_LABELS: Record<TenantTier, string> = {
   essentials: 'Essentials',
   solo: 'Solo',
   pro: 'Pro',
-  premium: 'Premium',
 } as const;
 
 /**
@@ -43,7 +42,6 @@ export const TIER_RANK: Record<TenantTier, number> = {
   essentials: -1,
   solo: 0,
   pro: 1,
-  premium: 2,
 } as const;
 
 /**
@@ -65,7 +63,7 @@ export interface ResolvedTier {
 
 /**
  * Resolves a plan value to a tier.
- * - Valid tiers ('solo', 'pro', 'premium') return as-is with isMisconfigured: false
+ * - Valid tiers ('essentials', 'solo', 'pro') return as-is with isMisconfigured: false
  * - NULL/undefined values default to 'pro' with isMisconfigured: false
  * - Invalid string values return 'pro' with isMisconfigured: true
  *

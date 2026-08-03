@@ -8,7 +8,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { toast } from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { CreditCard, User, Rocket, MinusCircle, Info, ChevronDown, ChevronUp, DollarSign, Calendar, CheckCircle, Shield, ArrowRightLeft, Clock, Zap, Star } from 'lucide-react';
+import { CreditCard, User, Rocket, MinusCircle, Info, ChevronDown, ChevronUp, DollarSign, Calendar, CheckCircle, Shield, ArrowRightLeft, Clock, Zap } from 'lucide-react';
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -29,11 +29,7 @@ import {
   downgradeTierAction,
   switchBillingIntervalAction,
   getIntervalSwitchPreviewAction,
-  sendPremiumTrialRequestAction,
-  startSelfServicePremiumTrialAction,
   startSoloProTrialAction,
-  confirmPremiumTrialAction,
-  revertPremiumTrialAction,
   getIapBillingContextAction,
   startIapUpgradeAction,
   cancelIapTransitionAction,
@@ -97,7 +93,6 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
     isMisconfigured,
     isSolo,
     isPro,
-    isPremium,
     hasAddOn,
     refreshTier,
     isTrialing,
@@ -107,12 +102,7 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
     soloProTrialEndDate,
     soloProTrialDaysLeft,
     isPaymentFailed,
-    subscriptionStatus,
-    isPremiumTrial,
-    premiumTrialEndDate,
-    premiumTrialDaysLeft,
-    isPremiumTrialConfirmed,
-    premiumTrialEffectiveDate
+    subscriptionStatus
   } = useTier();
   const upgradeFlowFlag = useFeatureFlag('tier-upgrade-flow');
   const tierUpgradeFlowEnabled = typeof upgradeFlowFlag === 'boolean'
@@ -139,7 +129,7 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
   const [iapContext, setIapContext] = useState<IapBillingContext | null>(null);
   const [showIapAutoRenewModal, setShowIapAutoRenewModal] = useState(false);
   const [iapAutoRenewExpiresAt, setIapAutoRenewExpiresAt] = useState<string | null>(null);
-  const [iapUpgradeTargetTier, setIapUpgradeTargetTier] = useState<'pro' | 'premium'>('pro');
+  const [iapUpgradeTargetTier, setIapUpgradeTargetTier] = useState<'pro'>('pro');
   const [startingIapUpgrade, setStartingIapUpgrade] = useState(false);
   const [iapCheckoutClientSecret, setIapCheckoutClientSecret] = useState<string | null>(null);
   const [iapStripePromise, setIapStripePromise] = useState<Promise<Stripe | null> | null>(null);
@@ -221,7 +211,7 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
             total_licenses: usage.limit,
             active_licenses: usage.used,
             available_licenses: usage.remaining,
-            plan_name: TIER_LABELS[tier] || 'Professional',
+            plan_name: TIER_LABELS[tier] || 'Pro',
             price_per_license: pricing.unitAmount / 100, // Convert cents to dollars
           });
         }
@@ -344,7 +334,7 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
           total_licenses: usage.limit,
           active_licenses: usage.used,
           available_licenses: usage.remaining,
-          plan_name: TIER_LABELS[tier] || 'Professional',
+          plan_name: TIER_LABELS[tier] || 'Pro',
           price_per_license: pricing.unitAmount / 100,
         });
       }
@@ -359,7 +349,7 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
 
   const [upgrading, setUpgrading] = useState(false);
   const [showUpgradeConfirm, setShowUpgradeConfirm] = useState(false);
-  const [upgradeTargetTier, setUpgradeTargetTier] = useState<'pro' | 'premium'>('premium');
+  const [upgradeTargetTier, setUpgradeTargetTier] = useState<'pro'>('pro');
   const [upgradePreview, setUpgradePreview] = useState<{
     currentMonthly?: number;
     newMonthly?: number;
@@ -527,74 +517,8 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
     }
   };
 
-  // Premium trial request state (for trialing Pro users — manual request)
-  const [trialRequestMessage, setTrialRequestMessage] = useState('');
-  const [sendingTrialRequest, setSendingTrialRequest] = useState(false);
-  const [trialRequestSent, setTrialRequestSent] = useState(false);
-
-  // Self-service Premium trial state (for paying Pro users)
-  const [startingSelfServiceTrial, setStartingSelfServiceTrial] = useState(false);
-  const [showTrialConfirm, setShowTrialConfirm] = useState(false);
   const [startingSoloProTrial, setStartingSoloProTrial] = useState(false);
   const [showSoloProTrialConfirm, setShowSoloProTrialConfirm] = useState(false);
-
-  // Premium trial confirmation state (for users already on a Premium trial)
-  const [confirmingPremium, setConfirmingPremium] = useState(false);
-  const [showConfirmPremiumDialog, setShowConfirmPremiumDialog] = useState(false);
-  const [confirmPremiumPreview, setConfirmPremiumPreview] = useState<{
-    newUserPrice?: number;
-    newMonthly?: number;
-    userCount?: number;
-    currency?: string;
-    annualAvailable?: boolean;
-    annualUserPrice?: number;
-    annualTotal?: number;
-  } | null>(null);
-  const [loadingConfirmPreview, setLoadingConfirmPreview] = useState(false);
-  const [revertingTrial, setRevertingTrial] = useState(false);
-
-  const handleSendTrialRequest = async () => {
-    if (!trialRequestMessage.trim()) {
-      toast.error(t('messages.trialRequestMessageRequired'));
-      return;
-    }
-
-    setSendingTrialRequest(true);
-    try {
-      const result = await sendPremiumTrialRequestAction(trialRequestMessage.trim());
-      if (result.success) {
-        toast.success(t('messages.trialRequestSent'));
-        setTrialRequestSent(true);
-        setTrialRequestMessage('');
-      } else {
-        toast.error(result.error || t('messages.trialRequestFailed'));
-      }
-    } catch (error) {
-      console.error('Error sending trial request:', error);
-      toast.error(t('messages.trialRequestFailed'));
-    } finally {
-      setSendingTrialRequest(false);
-    }
-  };
-
-  const handleStartSelfServiceTrial = async () => {
-    setStartingSelfServiceTrial(true);
-    try {
-      const result = await startSelfServicePremiumTrialAction();
-      if (result.success) {
-        toast.success(t('messages.premiumTrialStarted'));
-        setShowTrialConfirm(false);
-        await refreshTier();
-      } else {
-        toast.error(result.error || t('messages.premiumTrialStartFailed'));
-      }
-    } catch (error) {
-      console.error('Error starting Premium trial:', error);
-      toast.error(t('messages.premiumTrialStartFailed'));
-    } finally {
-      setStartingSelfServiceTrial(false);
-    }
-  };
 
   const handleStartSoloProTrial = async () => {
     setStartingSoloProTrial(true);
@@ -616,65 +540,7 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
     }
   };
 
-  const handleConfirmPremiumClick = async () => {
-    setLoadingConfirmPreview(true);
-    try {
-      const preview = await getUpgradePreviewAction('premium');
-      if (!preview.success) {
-        toast.error(preview.error || t('messages.premiumPricingFailed'));
-        return;
-      }
-      setConfirmPremiumPreview(preview);
-      setShowConfirmPremiumDialog(true);
-    } catch (error) {
-      console.error('Error fetching Premium pricing:', error);
-      toast.error(t('messages.premiumPricingFailed'));
-    } finally {
-      setLoadingConfirmPreview(false);
-    }
-  };
-
-  const handleConfirmPremiumTrial = async () => {
-    setConfirmingPremium(true);
-    try {
-      const result = await confirmPremiumTrialAction('month');
-      if (result.success) {
-        const effectiveDateStr = result.effectiveDate
-          ? t('messages.premiumConfirmedEffective', { date: new Date(result.effectiveDate).toLocaleDateString() })
-          : '';
-        toast.success(t('messages.premiumConfirmed', { effective: effectiveDateStr }));
-        setShowConfirmPremiumDialog(false);
-        await refreshTier();
-      } else {
-        toast.error(result.error || t('messages.premiumConfirmFailed'));
-      }
-    } catch (error) {
-      console.error('Error confirming Premium:', error);
-      toast.error(t('messages.premiumConfirmFailed'));
-    } finally {
-      setConfirmingPremium(false);
-    }
-  };
-
-  const handleRevertPremiumTrial = async () => {
-    setRevertingTrial(true);
-    try {
-      const result = await revertPremiumTrialAction();
-      if (result.success) {
-        toast.success(t('messages.premiumTrialReverted'));
-        await refreshTier();
-      } else {
-        toast.error(result.error || t('messages.premiumTrialRevertFailed'));
-      }
-    } catch (error) {
-      console.error('Error reverting Premium trial:', error);
-      toast.error(t('messages.premiumTrialRevertFailed'));
-    } finally {
-      setRevertingTrial(false);
-    }
-  };
-
-  const handleUpgradeClick = async (targetTier: 'pro' | 'premium') => {
+  const handleUpgradeClick = async (targetTier: 'pro') => {
     if (!canManageAccount) {
       toast.error(t('messages.noPermissionSubscription'));
       return;
@@ -713,7 +579,7 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
    * and the user returns and tries again. Second call (after auto-renew off)
    * returns an embedded Stripe Checkout session which we render in a Dialog.
    */
-  const handleStartIapUpgrade = async (targetTier: 'pro' | 'premium') => {
+  const handleStartIapUpgrade = async (targetTier: 'pro') => {
     if (hasPendingIapTransition) {
       toast.error(t('messages.iapUpgradePending'));
       return;
@@ -1037,90 +903,6 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
         </Alert>
       )}
 
-      {/* Premium Trial Status Card */}
-      {isPremiumTrial && premiumTrialEndDate && (
-        <Card className="border-blue-200 dark:border-blue-800">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Clock className="h-5 w-5 text-blue-600" />
-                <CardTitle>{t('premiumTrial.title')}</CardTitle>
-              </div>
-              <Badge variant={premiumTrialDaysLeft <= 3 ? 'error' : 'default'}>
-                {t('common.daysRemaining', {
-                  count: premiumTrialDaysLeft,
-                  unit: premiumTrialDaysLeft === 1 ? t('common.dayOne') : t('common.dayOther'),
-                })}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Progress bar */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>{t('premiumTrial.trialStarted')}</span>
-                <span>{t('premiumTrial.trialEnds', { date: new Date(premiumTrialEndDate).toLocaleDateString() })}</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full transition-all ${
-                    premiumTrialDaysLeft <= 3 ? 'bg-red-500' : 'bg-blue-500'
-                  }`}
-                  style={{ width: `${Math.max(5, 100 - (premiumTrialDaysLeft / 30) * 100)}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Premium trial info + actions */}
-            <div className="rounded-lg border p-3 bg-muted/50 space-y-3">
-              {isPremiumTrialConfirmed ? (
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <p className="text-sm font-medium">{t('premiumTrial.premiumConfirmed')}</p>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {t('premiumTrial.premiumConfirmedBody', {
-                      date: premiumTrialEffectiveDate
-                        ? new Date(premiumTrialEffectiveDate).toLocaleDateString()
-                        : t('premiumTrial.nextBillingDateFallback'),
-                    })}
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <p className="text-sm font-medium">{t('premiumTrial.premiumFeaturesActive')}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {t('premiumTrial.keepPremiumBody', { date: new Date(premiumTrialEndDate).toLocaleDateString() })}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      id="confirm-premium-switch-btn"
-                      size="sm"
-                      onClick={handleConfirmPremiumClick}
-                      disabled={loadingConfirmPreview}
-                    >
-                      {loadingConfirmPreview ? t('common.loadingPricing') : t('premiumTrial.confirmSwitch')}
-                    </Button>
-                    <Button
-                      id="cancel-premium-trial-btn"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleRevertPremiumTrial}
-                      disabled={revertingTrial}
-                    >
-                      {revertingTrial ? t('premiumTrial.reverting') : t('premiumTrial.endTrialReturnPro')}
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {isSoloProTrial && soloProTrialEndDate && (
         <Card className="border-blue-200 dark:border-blue-800">
           <CardHeader>
@@ -1171,7 +953,7 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
       )}
 
       {/* Stripe Trial Status Card (7-day Pro trial etc.) */}
-      {isTrialing && trialEndDate && !isPremiumTrial && (
+      {isTrialing && trialEndDate && (
         <Card className="border-blue-200 dark:border-blue-800">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -1191,8 +973,8 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
             {/* Progress bar */}
             <div className="space-y-2">
               <div className="flex justify-between text-sm text-muted-foreground">
-                <span>{t('premiumTrial.trialStarted')}</span>
-                <span>{t('premiumTrial.trialEnds', { date: new Date(trialEndDate).toLocaleDateString() })}</span>
+                <span>{t('trialStatus.trialStarted')}</span>
+                <span>{t('trialStatus.trialEnds', { date: new Date(trialEndDate).toLocaleDateString() })}</span>
               </div>
               <div className="w-full bg-muted rounded-full h-2">
                 <div
@@ -1246,12 +1028,7 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
                     {t('planTier.tierDescription')}
                   </p>
                 </div>
-                <Badge
-                  variant={
-                    tier === 'premium' ? 'success' : 'default'
-                  }
-                  className="text-lg px-4 py-1"
-                >
+                <Badge variant="default" className="text-lg px-4 py-1">
                   {TIER_LABELS[tier]}
                 </Badge>
               </div>
@@ -1298,7 +1075,7 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
 
               {/* Upgrade options for Solo */}
               {isSolo && tierUpgradeFlowEnabled && !isSoloProTrial && (
-                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div className="mt-4">
                   {/* Pro card */}
                   <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 flex flex-col">
                     <div className="flex items-center gap-2 mb-2">
@@ -1322,26 +1099,6 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
                     </Button>
                   </div>
 
-                  {/* Premium card */}
-                  <div className="rounded-lg border border-amber-300/50 dark:border-amber-700/50 bg-amber-50/50 dark:bg-amber-900/10 p-4 flex flex-col">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Star className="h-5 w-5 text-amber-500" />
-                      <h4 className="font-semibold text-lg">{t('planTier.premiumCardTitle')}</h4>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      {t('planTier.premiumCardDescription')}
-                    </p>
-                    <ul className="space-y-1.5 text-sm mb-4 flex-1">
-                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>{t('planTier.premiumFeatureAllPro')}</span></li>
-                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" /><span>{t('planTier.premiumFeatureEntra')}</span></li>
-                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" /><span>{t('planTier.premiumFeatureCipp')}</span></li>
-                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" /><span>{t('planTier.premiumFeatureTeams')}</span></li>
-                    </ul>
-                    <Button id="upgrade-to-premium-btn" variant="outline" onClick={() => handleUpgradeClick('premium')} disabled={upgrading || loadingPreview} className="w-full">
-                      <Star className="mr-2 h-4 w-4" />
-                      {loadingPreview ? t('common.loading') : t('planTier.upgradeToPremium')}
-                    </Button>
-                  </div>
                 </div>
               )}
 
@@ -1361,75 +1118,7 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
                 </div>
               )}
 
-              {/* Upgrade to Premium (shown for Pro users) */}
-              {isPro && tierUpgradeFlowEnabled && (
-                <div className="mt-4 rounded-lg border border-amber-300/50 dark:border-amber-700/50 bg-amber-50/50 dark:bg-amber-900/10 p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <Star className="h-5 w-5 text-amber-500" />
-                        <h4 className="font-semibold">{t('planTier.upgradeToPremiumTitle')}</h4>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {t('planTier.upgradeToPremiumBody')}
-                      </p>
-                    </div>
-                    <Button id="upgrade-to-premium-btn" onClick={() => handleUpgradeClick('premium')} disabled={upgrading || loadingPreview}>
-                      <Star className="mr-2 h-4 w-4" />
-                      {loadingPreview ? t('common.loading') : t('planTier.upgradeShortLabel')}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Downgrade options */}
-              {isPremium && tierUpgradeFlowEnabled && (
-                <div className="mt-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 space-y-3">
-                  <h4 className="font-semibold">{t('planTier.changePlan')}</h4>
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium">{t('planTier.downgradeToProTitle')}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {t('planTier.downgradeToProBody')}
-                      </p>
-                    </div>
-                    <Button
-                      id="downgrade-to-pro-btn"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleUpgradeClick('pro')}
-                      disabled={upgrading || loadingPreview}
-                    >
-                      {loadingPreview ? t('common.loading') : t('planTier.switchToPro')}
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between gap-4 pt-2 border-t border-amber-200 dark:border-amber-800">
-                    <div>
-                      <p className="text-sm font-medium">{t('planTier.downgradeToSoloTitle')}</p>
-                      {hasExtraUsersForDowngrade ? (
-                        <p className="text-sm text-muted-foreground">
-                          {t('planTier.downgradeToSoloLimitedBody', { count: licenseInfo?.active_licenses ?? 0 })}
-                        </p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          {t('planTier.downgradeToSoloBody')}
-                        </p>
-                      )}
-                    </div>
-                    <Button
-                      id="downgrade-to-solo-btn"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowDowngradeConfirm(true)}
-                      disabled={downgrading || hasExtraUsersForDowngrade}
-                    >
-                      {downgrading ? t('planTier.downgrading') : t('planTier.switchToSolo')}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {!isAlgaDesk && canDowngradeToSolo && !isPremium && (
+              {!isAlgaDesk && canDowngradeToSolo && (
                 <div className="mt-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
                   <div className="flex items-center justify-between gap-4">
                     <div>
@@ -1456,56 +1145,6 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
                 </div>
               )}
 
-              {/* Premium Trial — self-service for paying Pro, manual request for trialing Pro */}
-              {/* Hide if already on a Premium trial (they manage it from the trial card above) */}
-              {!isAlgaDesk && isPro && !isTrialing && !isPremiumTrial && (
-                <div className="mt-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
-                  <h4 className="font-semibold mb-1">{t('planTier.tryPremiumTitle')}</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    {t('planTier.tryPremiumSelfServiceBody')}
-                  </p>
-                  <Button
-                    id="start-premium-trial-btn"
-                    size="sm"
-                    onClick={() => setShowTrialConfirm(true)}
-                  >
-                    {t('planTier.startPremiumTrial')}
-                  </Button>
-                </div>
-              )}
-              {!isAlgaDesk && isPro && isTrialing && !isPremiumTrial && (
-                <div className="mt-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
-                  <h4 className="font-semibold mb-1">{t('planTier.tryPremiumTitle')}</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    {t('planTier.tryPremiumRequestBody')}
-                  </p>
-                  {trialRequestSent ? (
-                    <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
-                      <CheckCircle className="h-4 w-4" />
-                      <span>{t('planTier.requestSent')}</span>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <textarea
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        rows={3}
-                        placeholder={t('planTier.requestPlaceholder')}
-                        value={trialRequestMessage}
-                        onChange={(e) => setTrialRequestMessage(e.target.value)}
-                        disabled={sendingTrialRequest}
-                      />
-                      <Button
-                        id="send-trial-request-btn"
-                        size="sm"
-                        onClick={handleSendTrialRequest}
-                        disabled={sendingTrialRequest}
-                      >
-                        {sendingTrialRequest ? t('planTier.sending') : t('planTier.requestPremiumTrial')}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </CardContent>
         )}
@@ -2290,42 +1929,6 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
       />
 
       <ConfirmationDialog
-        id="start-premium-trial-confirm"
-        isOpen={showTrialConfirm}
-        onClose={() => setShowTrialConfirm(false)}
-        onConfirm={handleStartSelfServiceTrial}
-        title={t('premiumTrialDialog.title')}
-        confirmLabel={startingSelfServiceTrial ? t('premiumTrialDialog.starting') : t('premiumTrialDialog.confirm')}
-        isConfirming={startingSelfServiceTrial}
-        message={
-          <div className="space-y-4">
-            <p><span dangerouslySetInnerHTML={{ __html: t('premiumTrialDialog.intro') }} /></p>
-
-            <div className="rounded-lg border p-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{t('premiumTrialDialog.trialPeriod')}</span>
-                <span>{t('premiumTrialDialog.thirtyDays')}</span>
-              </div>
-              <div className="flex justify-between text-sm pt-2 border-t">
-                <span className="text-muted-foreground">{t('premiumTrialDialog.billingDuringTrial')}</span>
-                <span>{t('premiumTrialDialog.billingDuringTrialValue')}</span>
-              </div>
-              <div className="flex justify-between text-sm pt-2 border-t">
-                <span className="text-muted-foreground">{t('premiumTrialDialog.afterTrialEnds')}</span>
-                <span>{t('premiumTrialDialog.afterTrialEndsValue')}</span>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20 p-3">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                {t('premiumTrialDialog.infoBox')}
-              </p>
-            </div>
-          </div>
-        }
-      />
-
-      <ConfirmationDialog
         id="start-solo-pro-trial-confirm"
         isOpen={showSoloProTrialConfirm}
         onClose={() => setShowSoloProTrialConfirm(false)}
@@ -2358,43 +1961,6 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
               </p>
             </div>
           </div>
-        }
-      />
-
-      {/* Confirm Premium switch dialog — shown during an active Premium trial */}
-      <ConfirmationDialog
-        id="confirm-premium-switch-dialog"
-        isOpen={showConfirmPremiumDialog}
-        onClose={() => setShowConfirmPremiumDialog(false)}
-        onConfirm={handleConfirmPremiumTrial}
-        title={t('confirmPremiumDialog.title')}
-        confirmLabel={confirmingPremium ? t('confirmPremiumDialog.switching') : t('confirmPremiumDialog.confirm')}
-        isConfirming={confirmingPremium}
-        message={
-          confirmPremiumPreview ? (
-            <div className="space-y-4">
-              <p>{t('confirmPremiumDialog.intro')}</p>
-
-              <div className="rounded-lg border p-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t('confirmPremiumDialog.perUserCount', { count: confirmPremiumPreview.userCount })}</span>
-                  <span>{t('confirmPremiumDialog.perUserRate', { amount: (confirmPremiumPreview.newUserPrice || 0).toFixed(2) })}</span>
-                </div>
-                <div className="flex justify-between text-sm font-semibold pt-2 border-t">
-                  <span>{t('confirmPremiumDialog.newMonthlyTotal')}</span>
-                  <span>${(confirmPremiumPreview.newMonthly || 0).toFixed(2)}{t('confirmPremiumDialog.perMonthSuffix')}</span>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20 p-3">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  {t('confirmPremiumDialog.infoBox')}
-                </p>
-              </div>
-            </div>
-          ) : (
-            t('common.loadingPricingDetails')
-          )
         }
       />
 

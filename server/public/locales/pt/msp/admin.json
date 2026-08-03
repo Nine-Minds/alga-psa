@@ -314,12 +314,12 @@
     },
     "upsell": {
       "title": "Pacotes de autorização",
-      "description": "O gerenciamento avançado do pacote de autorização está disponível no nível Premium. Atualize para gerenciar pacotes reutilizáveis ​​de restrição."
+      "description": "O gerenciamento avançado do pacote de autorização está disponível no nível Pro. Atualize para gerenciar pacotes reutilizáveis ​​de restrição."
     },
     "hero": {
-      "badge": "Espaço de trabalho premium",
+      "badge": "Espaço de trabalho Pro",
       "title": "Pacotes de autorização",
-      "subtitle": "Gerencie a restrição de acesso premium com revisões de rascunhos, atribuições de escopo e simulação segura a partir de um centro de controle.",
+      "subtitle": "Gerencie a restrição de acesso Pro com revisões de rascunhos, atribuições de escopo e simulação segura a partir de um centro de controle.",
       "newBundle": "Novo pacote",
       "addStarters": "Adicionar pacotes iniciais",
       "addingStarters": "Adicionando pacotes iniciais..."

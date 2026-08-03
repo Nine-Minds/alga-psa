@@ -46,9 +46,6 @@ declare module 'next-auth' {
       trial_end?: string | null;
       subscription_status?: string | null;
       solo_pro_trial_end?: string | null;
-      premium_trial_end?: string | null;
-      premium_trial_confirmed?: boolean;
-      premium_trial_effective_date?: string | null;
       /** Effective tier resolved for the session; self-host installs override the Stripe plan. */
       effectiveTier?: string;
     };
@@ -72,9 +69,6 @@ declare module 'next-auth' {
     trial_end?: string | null;
     subscription_status?: string | null;
     solo_pro_trial_end?: string | null;
-    premium_trial_end?: string | null;
-    premium_trial_confirmed?: boolean;
-    premium_trial_effective_date?: string | null;
     effectiveTier?: string;
     session_id?: string;
     login_method?: string;

@@ -13,7 +13,6 @@ import {
   entraAllTenantsSyncWorkflow,
   maintenanceJobWorkflow,
   marketingFanoutWorkflow,
-  premiumTrialExpiryWorkflow,
 } from '../workflows';
 import {
   MARKETING_EXPIRE_STALE_TARGETS_JOB,
@@ -401,30 +400,14 @@ export async function setupSchedules() {
       },
     });
 
-    // Premium trial expiry check (runs daily, reverts expired trials to Pro)
-    const premiumTrialScheduleId = 'premium-trial-expiry-schedule';
-    await upsertSchedule(client, premiumTrialScheduleId, {
-      spec: {
-        intervals: [{ every: '24h' }],
-      },
-      action: {
-        type: 'startWorkflow',
-        workflowType: premiumTrialExpiryWorkflow,
-        args: [],
-        taskQueue: 'tenant-workflows',
-        workflowExecutionTimeout: '10m',
-      },
-      policies: {
-        overlap: ScheduleOverlapPolicy.SKIP,
-        catchupWindow: '1m',
-      },
-    });
+    // Remove the retired Premium-trial maintenance schedule from existing namespaces.
+    await deleteScheduleIfExists(client, 'premium-trial-expiry-schedule');
 
     // Appliance connected-license check-in (runs daily). Renews this install's
     // connected license token before its ~31-day exp by calling the
     // alga-license /check-in endpoint, and propagates soft-revocation. No-ops on
     // SaaS/cloud (no license_state row) and on non-connected installs
-    // (essentials/airgap/CE/trial). Mirrors the premium-trial daily maintenance.
+    // (essentials/airgap/CE/trial).
     const applianceCheckInScheduleId = 'appliance-license-check-in-schedule';
     await upsertSchedule(client, applianceCheckInScheduleId, {
       spec: {

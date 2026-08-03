@@ -32,7 +32,7 @@ function tenantRows(knex: Knex, tenant: string) {
   return tenantDb(knex, tenant).unscoped('tenants', 'workflow step quota test fixture creates tenant rows');
 }
 
-async function seedTenant(knex: Knex, tenant: string, plan: 'solo' | 'pro' | 'premium' = 'pro'): Promise<void> {
+async function seedTenant(knex: Knex, tenant: string, plan: 'solo' | 'pro' = 'pro'): Promise<void> {
   const hasCompanyName = await knex.schema.hasColumn('tenants', 'company_name');
   const hasClientName = await knex.schema.hasColumn('tenants', 'client_name');
   const hasEmail = await knex.schema.hasColumn('tenants', 'email');
@@ -186,7 +186,7 @@ describe('workflowStepQuotaService', () => {
 
   it('applies metadata precedence price > product > tier default and supports unlimited', async () => {
     const tenant = uuidv4();
-    await seedTenant(db, tenant, 'premium');
+    await seedTenant(db, tenant, 'pro');
     await seedStripePeriod(db, tenant, {
       status: 'active',
       start: '2026-04-01T00:00:00.000Z',

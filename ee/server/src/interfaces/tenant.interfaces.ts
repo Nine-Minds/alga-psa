@@ -47,7 +47,7 @@ export interface TenantCreationInput {
   billingSource?: BillingSource;
 
   // Plan override — set directly when no Stripe product is available (IAP flow).
-  plan?: 'solo' | 'pro' | 'premium';
+  plan?: 'solo' | 'pro';
   // Optional product entitlement seam, orthogonal to billing tier.
   productCode?: 'psa' | 'algadesk';
 

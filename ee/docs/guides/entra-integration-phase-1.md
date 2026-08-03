@@ -14,7 +14,7 @@ All user-visible Entra surfaces are feature-flag gated.
 ## Prerequisites
 
 - Edition: `NEXT_PUBLIC_EDITION=enterprise`
-- Subscription tier: Pro or Premium
+- Subscription tier: Pro
 - Internal MSP user account (client portal users are denied)
 - RBAC:
   - View endpoints/actions: `system_settings.read`
@@ -30,7 +30,7 @@ Choose one connection type per tenant:
 - Best when you control OAuth app registration and consent flow.
 
 2. `cipp` (CIPP API)
-- Available on Pro and Premium when the `entra-integration-cipp` flag is enabled for the tenant.
+- Available on Pro when the `entra-integration-cipp` flag is enabled for the tenant.
 - Uses the classic CIPP API for managed tenant and user enumeration.
 - Requires the **CIPP-API function app host** (for example `my-cipp-api.azurewebsites.net`) — not
   the CIPP frontend an operator signs into — and a **CIPP API key**, taken from

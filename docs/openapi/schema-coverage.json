@@ -6498,16 +6498,6 @@
     "canonical_schemas": []
   },
   {
-    "route_path": "/api/v1/tenant-management/start-premium-trial",
-    "edition": "CE",
-    "methods": [
-      "POST"
-    ],
-    "controller_file": "",
-    "schema_imports": [],
-    "canonical_schemas": []
-  },
-  {
     "route_path": "/api/v1/tenant-management/tenants",
     "edition": "CE",
     "methods": [
@@ -9105,16 +9095,6 @@
   },
   {
     "route_path": "/api/v1/tenant-management/start-deletion",
-    "edition": "EE",
-    "methods": [
-      "POST"
-    ],
-    "controller_file": "",
-    "schema_imports": [],
-    "canonical_schemas": []
-  },
-  {
-    "route_path": "/api/v1/tenant-management/start-premium-trial",
     "edition": "EE",
     "methods": [
       "POST"

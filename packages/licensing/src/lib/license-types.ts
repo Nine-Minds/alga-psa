@@ -3,8 +3,8 @@
  * Licenses are compact ES256-signed JWTs issued by Nine Minds.
  */
 
-/** Tiers that can be encoded in a license (essentials/solo are never sold). */
-export type LicenseTier = 'pro' | 'premium';
+/** Active paid tier that can be encoded in a newly issued license. */
+export type LicenseTier = 'pro';
 
 /** Parsed claims from a verified license JWT. */
 export interface LicenseClaims {

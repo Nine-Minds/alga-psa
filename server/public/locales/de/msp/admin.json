@@ -314,12 +314,12 @@
     },
     "upsell": {
       "title": "Autorisierungspakete",
-      "description": "Die erweiterte Verwaltung von Autorisierungspaketen ist in der Premium-Stufe verfügbar. Führen Sie ein Upgrade durch, um wiederverwendbare Beschränkungspakete zu verwalten."
+      "description": "Die erweiterte Verwaltung von Autorisierungspaketen ist in der Pro-Stufe verfügbar. Führen Sie ein Upgrade durch, um wiederverwendbare Beschränkungspakete zu verwalten."
     },
     "hero": {
-      "badge": "Premium-Arbeitsbereich",
+      "badge": "Pro-Arbeitsbereich",
       "title": "Autorisierungspakete",
-      "subtitle": "Verwalten Sie die Premium-Zugriffsbeschränkung mit Entwurfsrevisionen, zugewiesenen Geltungsbereichen und sicherer Simulation von einer Kontrollzentrale aus.",
+      "subtitle": "Verwalten Sie die Pro-Zugriffsbeschränkung mit Entwurfsrevisionen, zugewiesenen Geltungsbereichen und sicherer Simulation von einer Kontrollzentrale aus.",
       "newBundle": "Neues Paket",
       "addStarters": "Starter-Pakete hinzufügen",
       "addingStarters": "Starter-Pakete werden hinzugefügt..."

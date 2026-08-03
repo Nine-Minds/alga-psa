@@ -12,7 +12,7 @@ const transportLabels: Record<string, string> = {
 
 const tierLabels: Record<string, string> = {
   pro:     'Pro',
-  premium: 'Premium',
+  premium: 'Pro',
 };
 
 function formatDate(iso: string | null): string {

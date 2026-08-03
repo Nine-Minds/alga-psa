@@ -13,16 +13,11 @@ let tierState = {
   trialDaysLeft: 0,
   tier: 'pro',
   isPaymentFailed: false,
-  isPremiumTrial: false,
-  premiumTrialDaysLeft: 0,
-  isPremiumTrialConfirmed: false,
 };
 
 const translations: Record<string, string> = {
-  'banners.trial.premiumConfirmed': 'Premium confirme - commence au prochain cycle',
   'banners.trial.dayLeft': '1 jour restant',
   'banners.trial.daysLeft': '{{count}} jours restants',
-  'banners.trial.premiumTrial': 'Essai Premium : {{daysLabel}} - confirmer pour conserver',
   'banners.trial.stripeTrial': 'Essai {{tier}} : {{daysLabel}}',
 };
 
@@ -59,34 +54,19 @@ describe('TrialBanner i18n wiring', () => {
       trialDaysLeft: 0,
       tier: 'pro',
       isPaymentFailed: false,
-      isPremiumTrial: false,
-      premiumTrialDaysLeft: 0,
-      isPremiumTrialConfirmed: false,
     };
   });
 
-  it('T033: premium confirmed banner text is translated', () => {
+  it('T034/T036: trial singular day label and wrapper message are translated', () => {
     tierState = {
       ...tierState,
-      isPremiumTrial: true,
-      isPremiumTrialConfirmed: true,
+      isTrialing: true,
+      trialDaysLeft: 1,
     };
 
     render(<TrialBanner />);
 
-    expect(screen.getByText('Premium confirme - commence au prochain cycle')).toBeInTheDocument();
-  });
-
-  it('T034/T036: premium trial singular day label and wrapper message are translated', () => {
-    tierState = {
-      ...tierState,
-      isPremiumTrial: true,
-      premiumTrialDaysLeft: 1,
-    };
-
-    render(<TrialBanner />);
-
-    expect(screen.getByText('Essai Premium : 1 jour restant - confirmer pour conserver')).toBeInTheDocument();
+    expect(screen.getByText('Essai Pro : 1 jour restant')).toBeInTheDocument();
   });
 
   it('T035: stripe trial plural day label preserves count interpolation', () => {
@@ -107,11 +87,11 @@ describe('TrialBanner i18n wiring', () => {
       ...tierState,
       isTrialing: true,
       trialDaysLeft: 2,
-      tier: 'premium',
+      tier: 'solo',
     };
 
     render(<TrialBanner />);
 
-    expect(screen.getByText('Essai Premium : 2 jours restants')).toBeInTheDocument();
+    expect(screen.getByText('Essai Solo : 2 jours restants')).toBeInTheDocument();
   });
 });

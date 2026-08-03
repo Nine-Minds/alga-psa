@@ -12,23 +12,12 @@
     "cancelSubscriptionFailed": "Failed to cancel subscription",
     "pricingPreviewFailed": "Failed to get pricing preview",
     "upgradePricingFailed": "Failed to get upgrade pricing",
-    "premiumPricingFailed": "Failed to get Premium pricing",
     "intervalSwitchAnnual": "Billing will switch to annual at the end of the current period.",
     "intervalSwitchMonthly": "Billing will switch to monthly at the end of the current period.",
     "intervalSwitchFailed": "Failed to switch billing interval",
-    "trialRequestMessageRequired": "Please enter a message describing why you want to try Premium",
-    "trialRequestSent": "Premium trial request sent! We'll get back to you shortly.",
-    "trialRequestFailed": "Failed to send request",
-    "premiumTrialStarted": "Premium trial started! You have 30 days to explore Premium features. Your billing stays the same until you confirm.",
-    "premiumTrialStartFailed": "Failed to start Premium trial",
     "soloProTrialStarted": "Pro trial started! Pro features are unlocked until {{end}} while you stay on Solo billing.",
     "soloProTrialStartFailed": "Failed to start Pro trial",
     "soloProTrialDefaultEnd": "the end of your trial",
-    "premiumConfirmed": "Premium confirmed!{{effective}} You'll stay on Pro pricing until then.",
-    "premiumConfirmedEffective": " Premium billing starts {{date}}.",
-    "premiumConfirmFailed": "Failed to confirm Premium",
-    "premiumTrialReverted": "Premium trial ended. You're back on Pro.",
-    "premiumTrialRevertFailed": "Failed to cancel Premium trial",
     "iapUpgradePending": "An upgrade is already pending. Cancel it first if you want to start a new one.",
     "iapUpgradeAlreadyPending": "You already have an upgrade pending.",
     "iapUpgradeStartFailed": "Failed to start upgrade",
@@ -72,7 +61,7 @@
     "cipp": "CIPP Integration — connect your CIPP instance for multi-tenant Entra management",
     "teamsIntegration": "Microsoft Teams — meetings integration and Teams bot for ticket notifications",
     "scimProvisioning": "SCIM User Provisioning — synchronize user activation from your identity provider",
-    "advancedAuthorizationBundles": "Advanced Authorization Bundles — create and manage premium ABAC narrowing bundles"
+    "advancedAuthorizationBundles": "Advanced Authorization Bundles — create and manage reusable ABAC narrowing bundles"
   },
   "summary": {
     "licensesUsed": "Licenses Used",
@@ -94,19 +83,6 @@
     "body": "Your last payment was unsuccessful. Please update your payment method to avoid service interruption.",
     "updatePaymentMethod": "Update Payment Method"
   },
-  "premiumTrial": {
-    "title": "Premium Trial",
-    "trialStarted": "Trial started",
-    "trialEnds": "Trial ends {{date}}",
-    "premiumConfirmed": "Premium confirmed",
-    "premiumConfirmedBody": "Premium billing is scheduled to start on {{date}}. You'll continue on Pro pricing until then.",
-    "nextBillingDateFallback": "your next billing date",
-    "premiumFeaturesActive": "Premium features are active",
-    "keepPremiumBody": "Your billing has not changed — you're still on Pro pricing. To keep Premium after the trial, you must confirm the switch before {{date}}. If you don't confirm, you'll automatically return to Pro.",
-    "confirmSwitch": "Confirm Switch to Premium",
-    "reverting": "Reverting...",
-    "endTrialReturnPro": "End Trial & Return to Pro"
-  },
   "soloProTrial": {
     "title": "Pro Trial",
     "trialActive": "Trial active",
@@ -117,6 +93,8 @@
   },
   "trialStatus": {
     "title": "Trial Status",
+    "trialStarted": "Trial started",
+    "trialEnds": "Trial ends {{date}}",
     "proTrial": "Pro Trial",
     "cardChargeBody": "Your card will be charged on {{date}}. Cancel anytime before then."
   },
@@ -124,10 +102,10 @@
     "sectionTitle": "Plan & Tier",
     "currentTier": "Current Tier",
     "tierDescription": "Your subscription tier determines which features are available",
-    "soloNotice": "Your Solo plan includes core PSA features, the workflow designer, and mobile access. Upgrade to Pro for Teams integration and team collaboration.",
+    "soloNotice": "Your Solo plan includes core PSA features, the workflow designer, and mobile access. Upgrade to Pro for advanced integrations and team collaboration.",
     "misconfigured": "Your plan is not configured correctly. Please contact support.",
     "featuresIncluded": "Features included in your tier:",
-    "emptyFeaturesSolo": "Core PSA tools, the workflow designer, and mobile access are active on Solo. Upgrade to Pro to unlock Teams integration.",
+    "emptyFeaturesSolo": "Core PSA tools, the workflow designer, and mobile access are active on Solo. Upgrade to Pro to unlock advanced integrations.",
     "emptyFeaturesPro": "Your Pro plan includes all standard features.",
     "proCardTitle": "Pro",
     "proCardDescription": "Everything in Solo, plus team collaboration and powerful integrations.",
@@ -138,23 +116,9 @@
     "proFeatureRmm": "RMM / NinjaOne integration",
     "proFeatureMobile": "Mobile app access",
     "upgradeToPro": "Upgrade to Pro",
-    "premiumCardTitle": "Premium",
-    "premiumCardDescription": "Everything in Pro, plus enterprise integrations for larger teams.",
-    "premiumFeatureAllPro": "All Pro features included",
-    "premiumFeatureEntra": "Microsoft Entra Sync",
-    "premiumFeatureCipp": "CIPP multi-tenant management",
-    "premiumFeatureTeams": "Microsoft Teams integration",
-    "upgradeToPremium": "Upgrade to Premium",
     "tryProFreeTitle": "Try Pro free",
     "tryProFreeBody": "Explore Pro features for 30 days while staying on your current Solo billing. When the trial ends, you'll return to Solo unless you upgrade.",
     "tryProFreeButton": "Try Pro free",
-    "upgradeToPremiumTitle": "Upgrade to Premium",
-    "upgradeToPremiumBody": "Add Microsoft Entra Sync, CIPP multi-tenant management, and Teams integration.",
-    "upgradeShortLabel": "Upgrade",
-    "changePlan": "Change Plan",
-    "downgradeToProTitle": "Downgrade to Pro",
-    "downgradeToProBody": "Keep multi-user, integrations, and extensions. Lose Entra Sync, CIPP, and Teams.",
-    "switchToPro": "Switch to Pro",
     "downgradeToSoloTitle": "Downgrade to Solo",
     "downgradeToSoloLimitedBody": "Solo is limited to 1 user. You currently have {{count}} active users — remove extra users first.",
     "downgradeToSoloBody": "Switch to the flat-rate single-user plan with core PSA features only.",
@@ -162,15 +126,7 @@
     "downgrading": "Downgrading...",
     "downgradeToSoloAltBody": "Switch to the flat-rate single-user plan and keep core PSA features.",
     "downgradeToSoloAltLimitedBody": "Solo is limited to 1 user. You currently have {{count}} active users — remove extra users before downgrading.",
-    "downgrade": "Downgrade",
-    "tryPremiumTitle": "Try Premium Free for 30 Days",
-    "tryPremiumSelfServiceBody": "Start a 30-day Premium trial to explore advanced features. Your billing stays the same during the trial — no charge until you explicitly confirm the switch.",
-    "startPremiumTrial": "Start 30-Day Premium Trial",
-    "tryPremiumRequestBody": "Request a 30-day Premium trial to explore advanced features. Your current Pro subscription continues — no interruption.",
-    "requestSent": "Request sent! We'll review it shortly.",
-    "requestPlaceholder": "Tell us what you'd like to explore with Premium (optional but helps us prioritize)...",
-    "sending": "Sending...",
-    "requestPremiumTrial": "Request Premium Trial"
+    "downgrade": "Downgrade"
   },
   "addOns": {
     "title": "Add-ons"
@@ -178,7 +134,7 @@
   "aiAssistant": {
     "statusActive": "Active",
     "statusAvailable": "Available",
-    "description": "AI Assistant is a separate paid add-on for Solo, Pro, and Premium tenants.",
+    "description": "AI Assistant is a separate paid add-on.",
     "activeTitle": "AI Assistant (active)",
     "activeBody": "AI chat, document assistance, and other AI-powered workflows are currently enabled for this tenant.",
     "cancelling": "Cancelling...",
@@ -370,19 +326,6 @@
     "flatRate": "Flat-rate billing, 1-user limit",
     "footer": "Integrations, managed email, workflow design, and mobile access will no longer be available after the downgrade."
   },
-  "premiumTrialDialog": {
-    "title": "Start 30-Day Premium Trial",
-    "starting": "Starting...",
-    "confirm": "Start Premium Trial",
-    "intro": "You are about to start a <strong>30-day free trial</strong> of the Premium plan.",
-    "trialPeriod": "Trial period",
-    "thirtyDays": "30 days",
-    "billingDuringTrial": "Billing during trial",
-    "billingDuringTrialValue": "No change — stays at Pro pricing",
-    "afterTrialEnds": "After trial ends",
-    "afterTrialEndsValue": "Reverts to Pro unless you confirm",
-    "infoBox": "During the trial you'll have full access to Premium features while continuing to pay your current Pro price. Before the trial ends, you'll see the exact Premium pricing and can choose to confirm the switch. If you don't confirm, you'll automatically go back to Pro — no surprise charges."
-  },
   "soloProTrialDialog": {
     "title": "Start 30-Day Pro Trial",
     "starting": "Starting...",
@@ -395,18 +338,6 @@
     "afterTrialEnds": "After trial ends",
     "afterTrialEndsValue": "Returns to Solo unless you upgrade",
     "infoBox": "Pro-only features unlock immediately. This trial is only available after your initial Solo trial has ended."
-  },
-  "confirmPremiumDialog": {
-    "title": "Confirm Switch to Premium",
-    "switching": "Switching...",
-    "confirm": "Confirm & Switch to Premium",
-    "intro": "You're confirming the switch from Pro to Premium. Here's what you'll be charged going forward:",
-    "baseFee": "Base fee",
-    "perUserCount": "Per user ({{count}} users)",
-    "perUserRate": "${{amount}}/user/mo",
-    "newMonthlyTotal": "New monthly total",
-    "infoBox": "Premium billing will start at the end of your current pay period. You'll continue paying your current Pro price until then.",
-    "perMonthSuffix": "/mo"
   },
   "cancellationModal": {
     "title": "Cancel Subscription",

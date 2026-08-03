@@ -37,24 +37,8 @@ describe('tierFeatures', () => {
       ]);
     });
 
-    it('pro tier includes Entra Sync and CIPP without add-on-only Teams integration', () => {
+    it('pro tier includes every paid feature without add-on-only Teams integration', () => {
       expect(TIER_FEATURE_MAP.pro).toEqual([
-        TIER_FEATURES.INTEGRATIONS,
-        TIER_FEATURES.EXTENSIONS,
-        TIER_FEATURES.SSO,
-        TIER_FEATURES.ADVANCED_ASSETS,
-        TIER_FEATURES.CLIENT_PORTAL_ADMIN,
-        TIER_FEATURES.WORKFLOW_DESIGNER,
-        TIER_FEATURES.MOBILE_ACCESS,
-        TIER_FEATURES.ENTRA_SYNC,
-        TIER_FEATURES.CIPP,
-        TIER_FEATURES.SCIM_PROVISIONING,
-        TIER_FEATURES.CONTRACT_SIMULATOR,
-      ]);
-    });
-
-    it('premium tier includes Entra Sync and CIPP but excludes add-on-only Teams integration', () => {
-      expect(TIER_FEATURE_MAP.premium).toEqual([
         TIER_FEATURES.INTEGRATIONS,
         TIER_FEATURES.EXTENSIONS,
         TIER_FEATURES.SSO,
@@ -95,26 +79,14 @@ describe('tierFeatures', () => {
       expect(tierHasFeature('essentials', TIER_FEATURES.CONTRACT_SIMULATOR)).toBe(false);
       expect(tierHasFeature('solo', TIER_FEATURES.CONTRACT_SIMULATOR)).toBe(false);
       expect(tierHasFeature('pro', TIER_FEATURES.CONTRACT_SIMULATOR)).toBe(true);
-      expect(tierHasFeature('premium', TIER_FEATURES.CONTRACT_SIMULATOR)).toBe(true);
     });
 
-    it('pro can access Entra Sync and CIPP but not premium features', () => {
+    it('pro can access the complete paid feature set', () => {
       expect(tierHasFeature('pro', TIER_FEATURES.ENTRA_SYNC)).toBe(true);
       expect(tierHasFeature('pro', TIER_FEATURES.CIPP)).toBe(true);
       expect(tierHasFeature('pro', TIER_FEATURES.SCIM_PROVISIONING)).toBe(true);
-      expect(tierHasFeature('pro', TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES)).toBe(false);
-      expect(tierHasFeature('pro', TIER_FEATURES.OPPORTUNITY_MANAGEMENT)).toBe(false);
-    });
-
-    it('premium has access to Entra and premium tier features but not add-on-only features', () => {
-      expect(tierHasFeature('premium', TIER_FEATURES.INTEGRATIONS)).toBe(true);
-      expect(tierHasFeature('premium', TIER_FEATURES.WORKFLOW_DESIGNER)).toBe(true);
-      expect(tierHasFeature('premium', TIER_FEATURES.TEAMS_INTEGRATION)).toBe(false);
-      expect(tierHasFeature('premium', TIER_FEATURES.ENTRA_SYNC)).toBe(true);
-      expect(tierHasFeature('premium', TIER_FEATURES.CIPP)).toBe(true);
-      expect(tierHasFeature('premium', TIER_FEATURES.SCIM_PROVISIONING)).toBe(true);
-      expect(tierHasFeature('premium', TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES)).toBe(true);
-      expect(tierHasFeature('premium', TIER_FEATURES.OPPORTUNITY_MANAGEMENT)).toBe(true);
+      expect(tierHasFeature('pro', TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES)).toBe(true);
+      expect(tierHasFeature('pro', TIER_FEATURES.OPPORTUNITY_MANAGEMENT)).toBe(true);
     });
   });
 
@@ -133,12 +105,12 @@ describe('tierFeatures', () => {
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.TEAMS_INTEGRATION]).toBe('pro');
     });
 
-    it('maps Entra Sync and CIPP to Pro while retaining other Premium features', () => {
+    it('maps every paid feature to Pro', () => {
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.ENTRA_SYNC]).toBe('pro');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.CIPP]).toBe('pro');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.SCIM_PROVISIONING]).toBe('pro');
-      expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]).toBe('premium');
-      expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.OPPORTUNITY_MANAGEMENT]).toBe('premium');
+      expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]).toBe('pro');
+      expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.OPPORTUNITY_MANAGEMENT]).toBe('pro');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.CONTRACT_SIMULATOR]).toBe('pro');
     });
   });

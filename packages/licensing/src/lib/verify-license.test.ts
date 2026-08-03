@@ -7,7 +7,7 @@ import { verifyLicense, clearLicenseVerifyCache } from './verify-license';
  *
  * validToken    — pro license, expires ~1 year from generation
  * expiredToken  — pro license, already expired
- * premiumToken  — premium license, valid
+ * premiumToken  — legacy Premium license, valid and normalized to Pro
  * wrongKidToken — signed with v1-test key but kid=v1 (key mismatch)
  * tamperedToken — payload modified after signing (signature mismatch)
  */
@@ -65,12 +65,12 @@ describe('verifyLicense', () => {
     expect(result.reason).toBe('bad_signature');
   });
 
-  // T005 (rotation): premium token with v1-test kid verifies correctly
-  it('verifies a premium token signed with the v1-test kid', () => {
+  // T005 (rotation): legacy Premium token with v1-test kid verifies correctly
+  it('normalizes a legacy Premium token to Pro', () => {
     const result = verifyLicense(FIXTURES.premiumToken);
     expect(result.valid).toBe(true);
     if (!result.valid) return;
-    expect(result.claims.tier).toBe('premium');
+    expect(result.claims.tier).toBe('pro');
   });
 
   // T006: malformed (not a JWT at all)

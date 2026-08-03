@@ -2147,7 +2147,7 @@
       "entra": {
         "name": "Microsoft Entrada",
         "description": "Descubra locatários gerenciados da Microsoft e sincronize usuários com contatos",
-        "upgradeDescription": "Descubra locatários gerenciados do Microsoft Entra e sincronize usuários com contatos. Atualize para Premium para desbloquear esse recurso."
+        "upgradeDescription": "Descubra locatários gerenciados do Microsoft Entra e sincronize usuários com contatos. Atualize para Pro para desbloquear esse recurso."
       },
       "stripe": {
         "name": "Stripe",

@@ -45,7 +45,7 @@ export interface ApplianceLicenseIssuanceInput {
   submissionId: string;
   clientId: string;
   customer: string;
-  tier: 'pro' | 'premium';
+  tier: 'pro';
   seats?: number;
   /** 'connected-monthly' | 'connected-annual' | 'airgap-annual' */
   transport: string;

@@ -75,9 +75,10 @@ export async function redeemInstallCode({ serviceUrl, installCode, applianceId, 
   }
 
   const data = await res.json();
+  const edition = data.edition === 'premium' ? 'pro' : (data.edition || 'essentials');
   return {
     tenantId: data.tenant_id || '',
-    edition: data.edition || 'essentials',
+    edition,
     companyName: data.company_name || '',
     contactEmail: data.contact_email || '',
     licenseToken: data.first_jwt || null,
@@ -91,7 +92,7 @@ export async function redeemInstallCode({ serviceUrl, installCode, applianceId, 
  * Map a redeem result to the appliance-license-seed Secret literals consumed by
  * the bootstrap (appliance-bootstrap.sh). The appliance always runs the EE image:
  *   - essentials  → EE, no token, no auto-trial (INSTALL_EDITION suppresses it)
- *   - pro/premium → EE, licensed via the minted token (+ connected refresh)
+ *   - pro         → EE, licensed via the minted token (+ connected refresh)
  */
 export function licenseSeedFromRedeem(redeem) {
   return {

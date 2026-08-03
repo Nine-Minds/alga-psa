@@ -139,8 +139,6 @@ export async function fetchStripeDetailsFromCheckout(
         const knownUserPriceIds = [
           process.env.STRIPE_PRO_PRICE_ID,
           process.env.STRIPE_PRO_ANNUAL_PRICE_ID,
-          process.env.STRIPE_PREMIUM_USER_PRICE_ID,
-          process.env.STRIPE_PREMIUM_USER_ANNUAL_PRICE_ID,
         ].filter(Boolean);
 
         let userItem = items.find(item => knownUserPriceIds.includes(item.price.id));

@@ -228,7 +228,7 @@ test('applyRuntimeValuesAndReleaseSelection redeems an install code and threads 
       tokenFile: path.join(tmp, 'setup-token'),
       redeemInstallCode: async (args) => {
         redeemArgs = args;
-        return { tenantId: '11111111-2222-3333-4444-555555555555', edition: 'premium', licenseToken: 'jwt.tok', applianceCredential: 'cred', checkInUrl: 'https://lic/check-in', applianceId: args.applianceId };
+        return { tenantId: '11111111-2222-3333-4444-555555555555', edition: 'pro', licenseToken: 'jwt.tok', applianceCredential: 'cred', checkInUrl: 'https://lic/check-in', applianceId: args.applianceId };
       }
     });
 

@@ -104,19 +104,18 @@ describe('Entra tier guard (T103)', () => {
 });
 
 describe('tier-vs-addon separation (T104)', () => {
-  it('T104: premium tier unlocks Entra Sync while Teams stays add-on-only', () => {
-    expect(tierHasFeature('premium', TIER_FEATURES.TEAMS_INTEGRATION)).toBe(false);
-    expect(tierHasFeature('premium', TIER_FEATURES.ENTRA_SYNC)).toBe(true);
+  it('T104: Pro unlocks Entra Sync while Teams stays add-on-only', () => {
+    expect(tierHasFeature('pro', TIER_FEATURES.TEAMS_INTEGRATION)).toBe(false);
+    expect(tierHasFeature('pro', TIER_FEATURES.ENTRA_SYNC)).toBe(true);
 
     for (const tier of Object.keys(TIER_FEATURE_MAP) as Array<keyof typeof TIER_FEATURE_MAP>) {
       expect(TIER_FEATURE_MAP[tier]).not.toContain(TIER_FEATURES.TEAMS_INTEGRATION);
     }
 
     expect(TIER_FEATURE_MAP.pro).toContain(TIER_FEATURES.ENTRA_SYNC);
-    expect(TIER_FEATURE_MAP.premium).toContain(TIER_FEATURES.ENTRA_SYNC);
   });
 
   it('T104: non-add-on features remain tier-unlocked (control)', () => {
-    expect(tierHasFeature('premium', TIER_FEATURES.INTEGRATIONS)).toBe(true);
+    expect(tierHasFeature('pro', TIER_FEATURES.INTEGRATIONS)).toBe(true);
   });
 });

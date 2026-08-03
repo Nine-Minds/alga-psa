@@ -90,20 +90,6 @@ export function registerAuthRoutes(
         .nullable()
         .optional()
         .describe('Solo Pro trial expiry timestamp when present.'),
-      premium_trial_end: zOpenApi
-        .string()
-        .nullable()
-        .optional()
-        .describe('Premium trial expiry timestamp when present.'),
-      premium_trial_confirmed: zOpenApi
-        .boolean()
-        .optional()
-        .describe('Whether the user confirmed the Premium trial.'),
-      premium_trial_effective_date: zOpenApi
-        .string()
-        .nullable()
-        .optional()
-        .describe('Premium trial effective date when present.'),
     }),
   );
 
