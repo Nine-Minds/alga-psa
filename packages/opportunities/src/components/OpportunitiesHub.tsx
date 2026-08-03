@@ -17,7 +17,7 @@ import type {
 import {
   completeNextAction,
   createOpportunity,
-  declareQualified,
+  declareOpportunityStage,
   listOpportunities,
   loseOpportunity,
   updateOpportunity,
@@ -192,10 +192,14 @@ export function OpportunitiesHub({
     }
   };
 
-  const handleDeclareQualified = async (opportunityId: string) => {
+  const handleDeclareStage = async (
+    opportunityId: string,
+    stage: Exclude<OpportunityStage, 'won' | 'lost'>,
+  ) => {
     try {
-      await declareQualified(opportunityId, undefined);
-      toast.success(t('opportunities.toast.qualified', 'Qualified checkpoint recorded'));
+      await declareOpportunityStage(opportunityId, stage);
+      const label = t(`opportunities.stage.${stage}`, stage.charAt(0).toUpperCase() + stage.slice(1));
+      toast.success(t('opportunities.toast.stageSet', 'Stage set to {{stage}}', { stage: label }));
       await refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
@@ -265,7 +269,7 @@ export function OpportunitiesHub({
           items={openItems}
           recentlyClosed={closedItems}
           onOpen={openDeal}
-          onDeclareQualified={handleDeclareQualified}
+          onDeclareStage={handleDeclareStage}
           onMarkLost={setLoseFor}
         />
       ),
