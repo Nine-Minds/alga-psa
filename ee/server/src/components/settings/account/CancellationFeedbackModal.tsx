@@ -90,7 +90,7 @@ export default function CancellationFeedbackModal({
       }
     } catch (error) {
       console.error('Error submitting cancellation feedback:', error);
-      toast.error(t('messages.feedbackSubmitFailed'));
+      toast.error(error instanceof Error ? error.message : t('messages.feedbackSubmitFailed'));
     } finally {
       setLoading(false);
     }

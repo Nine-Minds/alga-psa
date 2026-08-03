@@ -34,7 +34,7 @@ import {
   startIapUpgradeAction,
   cancelIapTransitionAction,
   type IapBillingContext,
-} from 'ee/server/src/lib/actions/license-actions';
+} from '@ee/lib/actions/license-actions';
 import {
   previewProductUpgradeAction,
   startProductUpgradeAction,
@@ -290,15 +290,13 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
       // Send feedback email
       const feedbackResult = await sendCancellationFeedbackAction(reasonText, reasonCategory);
       if (!feedbackResult.success) {
-        toast.error(feedbackResult.error || t('messages.feedbackSendFailed'));
-        return;
+        throw new Error(feedbackResult.error || t('messages.feedbackSendFailed'));
       }
 
       // Actually cancel the subscription
       const cancelResult = await cancelSubscriptionAction();
       if (!cancelResult.success) {
-        toast.error(cancelResult.error || t('messages.cancelSubscriptionFailed'));
-        return;
+        throw new Error(cancelResult.error || t('messages.cancelSubscriptionFailed'));
       }
 
       // Success - the modal will show the toast and then log the user out

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { toast } from 'react-hot-toast';
 import CancellationFeedbackModal from '../../components/settings/account/CancellationFeedbackModal';
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
@@ -66,15 +67,22 @@ describe('CancellationFeedbackModal', () => {
   const onConfirm = vi.fn(async () => undefined);
 
   beforeEach(() => {
-    onConfirm.mockClear();
+    vi.clearAllMocks();
+    onConfirm.mockResolvedValue(undefined);
   });
 
-  function renderModal() {
+  function renderModal(overrides: {
+    onClose?: () => void;
+    onLogout?: () => Promise<void>;
+  } = {}) {
+    const onClose = overrides.onClose ?? vi.fn();
+
     render(
       <CancellationFeedbackModal
         isOpen
-        onClose={vi.fn()}
+        onClose={onClose}
         onConfirm={onConfirm}
+        onLogout={overrides.onLogout}
       />
     );
 
@@ -82,6 +90,7 @@ describe('CancellationFeedbackModal', () => {
       category: screen.getByRole('combobox'),
       feedback: screen.getByRole('textbox'),
       submit: screen.getByRole('button', { name: 'cancellationModal.submitFeedback' }),
+      onClose,
     };
   }
 
@@ -113,5 +122,27 @@ describe('CancellationFeedbackModal', () => {
     fireEvent.change(category, { target: { value: 'Other' } });
 
     expect(screen.getByText('Please share a little more about what led to your decision.')).toBeInTheDocument();
+  });
+
+  it('keeps the modal data open and does not log out when cancellation submission rejects', async () => {
+    const onLogout = vi.fn(async () => undefined);
+    onConfirm.mockRejectedValue(new Error('Cancellation request failed'));
+    const { category, feedback, submit, onClose } = renderModal({ onLogout });
+
+    fireEvent.change(category, { target: { value: 'Other' } });
+    fireEvent.change(feedback, {
+      target: { value: 'The service no longer fits our current workflow.' },
+    });
+
+    await act(async () => {
+      fireEvent.click(submit);
+    });
+
+    expect(toast.error).toHaveBeenCalledWith('Cancellation request failed');
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onLogout).not.toHaveBeenCalled();
+    expect(category).toHaveValue('Other');
+    expect(feedback).toHaveValue('The service no longer fits our current workflow.');
   });
 });
