@@ -1,5 +1,5 @@
 /**
- * Track administrator consent for profiles created by the guided Microsoft
+ * Tracks administrator consent for profiles created by the guided Microsoft
  * Email setup. Existing/manual profiles retain their historical readiness
  * behavior because consent is not marked as required for those rows.
  */
