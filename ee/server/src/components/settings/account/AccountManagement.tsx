@@ -34,7 +34,7 @@ import {
   startIapUpgradeAction,
   cancelIapTransitionAction,
   type IapBillingContext,
-} from 'ee/server/src/lib/actions/license-actions';
+} from '@ee/lib/actions/license-actions';
 import {
   previewProductUpgradeAction,
   startProductUpgradeAction,
@@ -55,6 +55,7 @@ import { useProduct } from 'server/src/context/ProductContext';
 import { ADD_ONS, ADD_ON_LABELS, TIER_LABELS, TIER_FEATURE_MAP, TIER_FEATURES, type AddOnKey } from '@alga-psa/types';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useFormatAddOnDescription } from '@alga-psa/ui/hooks/useAddOnEnumOptions';
+import type { CancellationReasonCategory } from '../../../lib/cancellationFeedbackValidation';
 
 // Keys into msp/account:features — used to look up translated display names
 const FEATURE_TRANSLATION_KEYS: Record<TIER_FEATURES, string> = {
@@ -281,20 +282,21 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
     setShowCancellationFeedback(true);
   };
 
-  const handleConfirmCancellation = async (reasonText: string, reasonCategory?: string) => {
+  const handleConfirmCancellation = async (
+    reasonText: string,
+    reasonCategory: CancellationReasonCategory
+  ) => {
     try {
       // Send feedback email
       const feedbackResult = await sendCancellationFeedbackAction(reasonText, reasonCategory);
       if (!feedbackResult.success) {
-        toast.error(feedbackResult.error || t('messages.feedbackSendFailed'));
-        return;
+        throw new Error(feedbackResult.error || t('messages.feedbackSendFailed'));
       }
 
       // Actually cancel the subscription
       const cancelResult = await cancelSubscriptionAction();
       if (!cancelResult.success) {
-        toast.error(cancelResult.error || t('messages.cancelSubscriptionFailed'));
-        return;
+        throw new Error(cancelResult.error || t('messages.cancelSubscriptionFailed'));
       }
 
       // Success - the modal will show the toast and then log the user out
