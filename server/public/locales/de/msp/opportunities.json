@@ -47,10 +47,12 @@
       "medium": "Mittel"
     },
     "createDialog": {
+      "addValue": "Geschätzten Wert hinzufügen (optional)",
       "client": "Kunde",
       "dealTitle": "Titel",
       "due": "Fällig",
       "expectedClose": "Nahe erwartet",
+      "missing": "Noch erforderlich: {{fields}}",
       "nextAction": "Erste Aktion",
       "nextActionPlaceholder": "z.B. Senden Sie den Bewertungsvorschlag",
       "submit": "Chance schaffen",

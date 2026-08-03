@@ -1,14 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { IClient, OpportunityType } from '@alga-psa/types';
+import { toMinorUnits } from '@alga-psa/core';
+import type { ClientLifecycleStatus, IClient, OpportunityType } from '@alga-psa/types';
+import { SUGGESTED_NEXT_ACTIONS } from '../../lib/suggestedNextActions';
+import { getClientDefaultCurrency } from '../../actions/opportunityDefaults';
 import { ActionSuggestions } from '../ActionSuggestions';
 
 const TYPES: OpportunityType[] = ['new_logo', 'expansion', 'renewal', 'project'];
@@ -20,6 +25,23 @@ const TYPE_DEFAULTS: Record<OpportunityType, string> = {
   project: 'Project',
 };
 
+/** A first action three working days out: soon enough to matter, not tomorrow morning. */
+function defaultDueDate(from = new Date()): Date {
+  const due = new Date(from);
+  let remaining = 3;
+  while (remaining > 0) {
+    due.setDate(due.getDate() + 1);
+    const day = due.getDay();
+    if (day !== 0 && day !== 6) remaining -= 1;
+  }
+  return due;
+}
+
+/** A known client is expansion work; only a prospect is genuinely a new logo. */
+export function defaultTypeForLifecycle(status?: ClientLifecycleStatus | null): OpportunityType {
+  return status && status !== 'prospect' ? 'expansion' : 'new_logo';
+}
+
 export interface CreateOpportunityInput {
   client_id: string;
   title: string;
@@ -27,12 +49,16 @@ export interface CreateOpportunityInput {
   next_action: string;
   next_action_due: string;
   expected_close_date?: string;
+  mrr_cents?: number;
+  nrr_cents?: number;
+  hardware_cents?: number;
 }
 
 /**
- * Deliberately small: client, title, type, and the first next action.
- * Values arrive from quotes; everything else is editable on the deal.
- * The next action is required from birth — no deal exists without one.
+ * Two required fields — client and title — so a deal mentioned at a QBR can be
+ * logged from a parking lot. The first action and its due date are pre-filled
+ * (the discipline invariant still holds) and the dollar estimate lives here
+ * rather than on a second screen.
  */
 export function CreateOpportunityDialog({
   isOpen,
@@ -49,7 +75,7 @@ export function CreateOpportunityDialog({
   clients?: IClient[];
   defaultClientId?: string | null;
   /** When creating from a client's own screen the client is fixed — no picker. */
-  lockedClient?: { client_id: string; client_name: string };
+  lockedClient?: { client_id: string; client_name: string; lifecycle_status?: ClientLifecycleStatus | null };
   /** Prefill for launches from a context that already knows the deal shape (e.g. a whitespace cell). */
   defaults?: { title?: string; type?: OpportunityType };
   /** Host-provided client creation keeps this package independent of the clients UI package. */
@@ -66,13 +92,55 @@ export function CreateOpportunityDialog({
   const [typeFilter, setTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [title, setTitle] = useState(defaults?.title ?? '');
   const [type, setType] = useState<OpportunityType>(defaults?.type ?? 'new_logo');
-  const [nextAction, setNextAction] = useState('');
-  const [due, setDue] = useState<Date | undefined>(undefined);
+  const [typeTouched, setTypeTouched] = useState(defaults?.type != null);
+  /** null means "still the suggested default" so translations can settle in. */
+  const [nextAction, setNextAction] = useState<string | null>(null);
+  const [due, setDue] = useState<Date | undefined>(() => defaultDueDate());
   const [expectedClose, setExpectedClose] = useState<Date | undefined>(undefined);
+  const [valuesOpen, setValuesOpen] = useState(false);
+  const [mrr, setMrr] = useState<number | undefined>(undefined);
+  const [nrr, setNrr] = useState<number | undefined>(undefined);
+  const [hardware, setHardware] = useState<number | undefined>(undefined);
+  const [currencyCode, setCurrencyCode] = useState('USD');
   const [saving, setSaving] = useState(false);
   const [clientCreatorOpen, setClientCreatorOpen] = useState(false);
 
-  const valid = !!clientId && title.trim().length > 0 && nextAction.trim().length > 0 && !!due;
+  const suggested = SUGGESTED_NEXT_ACTIONS.identified[0];
+  const defaultNextAction = t(suggested.key, suggested.fallback);
+  const effectiveNextAction = nextAction ?? defaultNextAction;
+
+  const selectedLifecycle = useMemo<ClientLifecycleStatus | null | undefined>(() => {
+    if (lockedClient) return lockedClient.lifecycle_status;
+    return clients.find((client) => client.client_id === clientId)?.lifecycle_status;
+  }, [clientId, clients, lockedClient]);
+
+  // The system already knows whether they are a client; don't make the user say it again.
+  useEffect(() => {
+    if (typeTouched || !clientId) return;
+    setType(defaultTypeForLifecycle(selectedLifecycle));
+  }, [clientId, selectedLifecycle, typeTouched]);
+
+  useEffect(() => {
+    if (!clientId) return;
+    let active = true;
+    getClientDefaultCurrency(clientId)
+      .then((code) => {
+        if (active) setCurrencyCode(code);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [clientId]);
+
+  const missing: string[] = [];
+  if (!clientId) missing.push(t('opportunities.createDialog.client', 'Client'));
+  if (title.trim().length === 0) missing.push(t('opportunities.createDialog.dealTitle', 'Title'));
+  if (effectiveNextAction.trim().length === 0) missing.push(t('opportunities.createDialog.nextAction', 'First action'));
+  if (!due) missing.push(t('opportunities.createDialog.due', 'Due'));
+  const valid = missing.length === 0;
+
+  const toCents = (value?: number) => (value == null ? 0 : toMinorUnits(value, undefined, currencyCode));
 
   const submit = async () => {
     if (!valid || !clientId || !due) return;
@@ -82,14 +150,21 @@ export function CreateOpportunityDialog({
         client_id: clientId,
         title: title.trim(),
         opportunity_type: type,
-        next_action: nextAction.trim(),
+        next_action: effectiveNextAction.trim(),
         next_action_due: due.toISOString(),
         expected_close_date: expectedClose ? expectedClose.toISOString().slice(0, 10) : undefined,
+        mrr_cents: toCents(mrr),
+        nrr_cents: toCents(nrr),
+        hardware_cents: toCents(hardware),
       });
       setTitle('');
-      setNextAction('');
-      setDue(undefined);
+      setNextAction(null);
+      setDue(defaultDueDate());
       setExpectedClose(undefined);
+      setValuesOpen(false);
+      setMrr(undefined);
+      setNrr(undefined);
+      setHardware(undefined);
       onClose();
     } finally {
       setSaving(false);
@@ -97,13 +172,24 @@ export function CreateOpportunityDialog({
   };
 
   const footer = (
-    <div className="flex justify-end gap-2">
-      <Button id="opportunity-create-cancel" variant="ghost" size="sm" onClick={onClose} disabled={saving}>
-        {t('common.cancel', 'Cancel')}
-      </Button>
-      <Button id="opportunity-create-submit" size="sm" onClick={submit} disabled={!valid || saving}>
-        {t('opportunities.createDialog.submit', 'Create opportunity')}
-      </Button>
+    <div className="flex items-center justify-between gap-3">
+      <p
+        id="opportunity-create-missing"
+        className="text-xs text-[rgb(var(--color-text-500))]"
+        role={valid ? undefined : 'status'}
+      >
+        {valid
+          ? null
+          : t('opportunities.createDialog.missing', 'Still needed: {{fields}}', { fields: missing.join(', ') })}
+      </p>
+      <div className="flex gap-2">
+        <Button id="opportunity-create-cancel" variant="ghost" size="sm" onClick={onClose} disabled={saving}>
+          {t('common.cancel', 'Cancel')}
+        </Button>
+        <Button id="opportunity-create-submit" size="sm" onClick={submit} disabled={!valid || saving}>
+          {t('opportunities.createDialog.submit', 'Create opportunity')}
+        </Button>
+      </div>
     </div>
   );
 
@@ -163,13 +249,16 @@ export function CreateOpportunityDialog({
           id="opportunity-create-type"
           options={TYPES.map((v) => ({ value: v, label: t(`opportunities.type.${v}`, TYPE_DEFAULTS[v]) }))}
           value={type}
-          onValueChange={(v: string) => setType(v as OpportunityType)}
+          onValueChange={(v: string) => {
+            setTypeTouched(true);
+            setType(v as OpportunityType);
+          }}
         />
         <Input
           id="opportunity-create-next-action"
           label={t('opportunities.createDialog.nextAction', 'First action')}
           placeholder={t('opportunities.createDialog.nextActionPlaceholder', 'e.g. Send the assessment proposal')}
-          value={nextAction}
+          value={effectiveNextAction}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNextAction(e.target.value)}
           required
         />
@@ -188,6 +277,47 @@ export function CreateOpportunityDialog({
             onChange={(d?: Date) => setExpectedClose(d)}
             clearable
           />
+        </div>
+        <div className="rounded-md border border-[rgb(var(--color-border-200))] p-3">
+          <Button
+            id="opportunity-create-values-toggle"
+            type="button"
+            variant="ghost"
+            size="xs"
+            onClick={() => setValuesOpen((open) => !open)}
+          >
+            {valuesOpen ? (
+              <ChevronDown className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+            ) : (
+              <ChevronRight className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            {t('opportunities.createDialog.addValue', 'Add estimated value (optional)')}
+          </Button>
+          {valuesOpen ? (
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <CurrencyInput
+                id="opportunity-create-mrr"
+                label={t('opportunities.valuesDialog.mrr', 'Recurring (monthly)')}
+                currencyCode={currencyCode}
+                value={mrr}
+                onChange={setMrr}
+              />
+              <CurrencyInput
+                id="opportunity-create-nrr"
+                label={t('opportunities.valuesDialog.nrr', 'One-time services')}
+                currencyCode={currencyCode}
+                value={nrr}
+                onChange={setNrr}
+              />
+              <CurrencyInput
+                id="opportunity-create-hardware"
+                label={t('opportunities.valuesDialog.hardware', 'Hardware')}
+                currencyCode={currencyCode}
+                value={hardware}
+                onChange={setHardware}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
     </Dialog>

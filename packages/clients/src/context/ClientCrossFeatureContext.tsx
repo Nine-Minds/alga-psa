@@ -34,6 +34,7 @@ export interface ClientAssetsRenderProps {
 export interface ClientOpportunitiesRenderProps {
   clientId: string;
   clientName: string;
+  clientLifecycleStatus?: string | null;
 }
 
 export interface ClientTicketsRenderProps {
