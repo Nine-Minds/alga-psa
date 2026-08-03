@@ -16,6 +16,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useDrawer } from '@alga-psa/ui';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type {
@@ -179,6 +180,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { enabled: contractSimulatorEnabled } = useFeatureFlag('contract-simulator', {
+    defaultValue: false,
+  });
   const contractId = (searchParams?.get('contractId') ?? resolvedContractId ?? null) as string | null;
   const clientContractId = searchParams?.get('clientContractId') ?? resolvedClientContractId ?? null;
   const tenant = useTenant()!;
@@ -190,8 +194,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const validTabs = useMemo(() => new Set(['edit', 'lines', 'pricing', 'documents', 'invoices', 'simulator']), []);
   const initialTab = useMemo(() => {
     const requested = searchParams?.get('contractView');
-    return requested && validTabs.has(requested) ? requested : 'edit';
-  }, [searchParams, validTabs]);
+    if (!requested || !validTabs.has(requested)) {
+      return 'edit';
+    }
+
+    return requested === 'simulator' && !contractSimulatorEnabled ? 'edit' : requested;
+  }, [contractSimulatorEnabled, searchParams, validTabs]);
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -337,16 +345,32 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const editingAssignment = editingAssignmentId ? editAssignments[editingAssignmentId] : null;
   const editingRenewalTicketBoardId = editingAssignment?.renewal_ticket_board_id ?? null;
 
+  const updateContractViewParam = useCallback((tabValue: string) => {
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    if (tabValue === 'edit') {
+      params.delete('contractView');
+    } else {
+      params.set('contractView', tabValue);
+    }
+    router.replace(`/msp/billing?${params.toString()}`, { scroll: false });
+  }, [router, searchParams]);
+
   // Sync tab state FROM URL changes (e.g., browser back/forward)
   // Don't include activeTab in deps - handleTabChange handles state → URL direction
   useEffect(() => {
     const requested = searchParams?.get('contractView');
+    if (requested === 'simulator' && !contractSimulatorEnabled) {
+      setActiveTab('edit');
+      updateContractViewParam('edit');
+      return;
+    }
+
     if (requested && validTabs.has(requested)) {
       setActiveTab(requested);
     } else if (!requested) {
       setActiveTab('edit');
     }
-  }, [searchParams, validTabs]);
+  }, [contractSimulatorEnabled, searchParams, updateContractViewParam, validTabs]);
 
   // Sync documents from server props when they change (e.g., after router.refresh())
   useEffect(() => {
@@ -461,16 +485,6 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       active = false;
     };
   }, [editingAssignmentId, editingRenewalTicketBoardId]);
-
-  const updateContractViewParam = useCallback((tabValue: string) => {
-    const params = new URLSearchParams(searchParams?.toString() ?? '');
-    if (tabValue === 'edit') {
-      params.delete('contractView');
-    } else {
-      params.set('contractView', tabValue);
-    }
-    router.replace(`/msp/billing?${params.toString()}`, { scroll: false });
-  }, [router, searchParams]);
 
   const handleTabChange = useCallback((value: string) => {
     setActiveTab(value);
@@ -1380,9 +1394,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           <TabsTrigger value="invoices">
             {t('contractDetail.tabs.invoices', { defaultValue: 'Invoices' })}
           </TabsTrigger>
-          <TabsTrigger value="simulator">
-            {t('contractDetail.tabs.simulator', { defaultValue: 'Simulate' })}
-          </TabsTrigger>
+          {contractSimulatorEnabled && (
+            <TabsTrigger value="simulator">
+              {t('contractDetail.tabs.simulator', { defaultValue: 'Simulate' })}
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="edit">
@@ -2639,13 +2655,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           </Card>
         </TabsContent>
 
-        <TabsContent value="simulator">
-          <ContractSimulator
-            contractId={contract.contract_id}
-            clientContractId={clientContractId}
-            clientId={primaryAssignment?.client_id ?? contract.owner_client_id ?? null}
-          />
-        </TabsContent>
+        {contractSimulatorEnabled && (
+          <TabsContent value="simulator">
+            <ContractSimulator
+              contractId={contract.contract_id}
+              clientContractId={clientContractId}
+              clientId={primaryAssignment?.client_id ?? contract.owner_client_id ?? null}
+            />
+          </TabsContent>
+        )}
       </Tabs>
 
       <ConfirmationDialog

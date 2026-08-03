@@ -231,6 +231,21 @@ Gates the QuickBooks Online Products & Services import (tenant-scoped for piloti
 - Also gated by EE edition and billing/service RBAC (`billing_settings:read` for preview;
   `billing_settings:update` + `service:create` for execute).
 
+### 15. `contract-simulator`
+Controls discovery of the Contract Simulator while it is being rolled out.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Contract Details → Simulate tab
+
+**Behavior:**
+- When disabled (default): The Simulate tab and its content are not rendered. A direct
+  `contractView=simulator` selection falls back to Overview and removes only that query
+  parameter.
+- When enabled: The Simulate tab is available subject to its existing edition and tier checks.
+- Simulator routes, APIs, server actions, and all other entry points remain unchanged. This
+  flag controls only the Contract Details tab and is not an authorization boundary.
+
 ## Implementation Details
 
 ### User Identification
