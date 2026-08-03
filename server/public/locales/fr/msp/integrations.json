@@ -1581,9 +1581,9 @@
             "reconnect": "Les connexions calendrier Microsoft existantes peuvent nécessiter une nouvelle autorisation après le changement de profil lié."
           },
           "email": {
-            "description": "Choisissez quel profil Microsoft l'e-mail entrant Outlook doit utiliser.",
+            "description": "Choisissez le profil Microsoft pour les e-mails Outlook entrants et sortants.",
             "label": "E-mail",
-            "reconnect": "Les connexions e-mail Outlook existantes peuvent nécessiter une nouvelle autorisation après le changement de profil lié."
+            "reconnect": "Les connexions e-mail Outlook existantes doivent être autorisées à nouveau pour accorder Mail.Send avant de pouvoir envoyer des e-mails sortants."
           },
           "mspSso": {
             "description": "Choisissez quel profil Microsoft sous-tend les domaines de connexion MSP SSO, la connexion Microsoft et la découverte de tenant.",

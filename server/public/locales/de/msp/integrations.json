@@ -1581,9 +1581,9 @@
             "reconnect": "Bestehende Microsoft-Kalenderverbindungen benötigen nach dem Wechsel des gebundenen Profils möglicherweise eine erneute Autorisierung."
           },
           "email": {
-            "description": "Wählen Sie aus, welches Microsoft-Profil für eingehende Outlook-E-Mails verwendet werden soll.",
+            "description": "Wählen Sie das Microsoft-Profil für eingehende und ausgehende Outlook-E-Mails aus.",
             "label": "E-Mail",
-            "reconnect": "Bestehende Outlook-E-Mail-Verbindungen benötigen nach dem Wechsel des gebundenen Profils möglicherweise eine erneute Autorisierung."
+            "reconnect": "Bestehende Outlook-E-Mail-Verbindungen müssen erneut autorisiert werden, um Mail.Send zu gewähren, bevor sie ausgehende E-Mails senden können."
           },
           "mspSso": {
             "description": "Wählen Sie aus, welches Microsoft-Profil die MSP-SSO-Anmeldedomänen, die Microsoft-Anmeldung und die Tenant-Erkennung unterstützt.",

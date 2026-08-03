@@ -1581,9 +1581,9 @@
             "reconnect": "Existing Outlook calendar connections may need re-authorization after changing the Microsoft app."
           },
           "email": {
-            "description": "Choose the Microsoft app for Outlook inbound email.",
+            "description": "Choose the Microsoft app for Outlook inbound and outbound email.",
             "label": "Outlook email",
-            "reconnect": "Existing Outlook email connections may need re-authorization after changing the Microsoft app."
+            "reconnect": "Existing Outlook email connections need re-authorization to grant Mail.Send before they can send outbound email."
           },
           "mspSso": {
             "description": "Choose the Microsoft app for staff sign-in and login-domain discovery.",
