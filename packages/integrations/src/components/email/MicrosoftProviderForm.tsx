@@ -550,15 +550,17 @@ export function MicrosoftProviderForm({
                     {providerSetupMessage ||
                       t('forms.microsoft.oauth.setupHelp', { defaultValue: 'Configure Providers first in Settings → Integrations → Providers, then return here to authorize this mailbox.' })}
                   </div>
-                  <Button
-                    id="configure-microsoft-provider-readiness-link"
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
-                  >
-                    {t('forms.common.actions.openProvidersSettings', { defaultValue: 'Open Providers Settings' })}
-                  </Button>
+                  {!useByoApp && (
+                    <Button
+                      id="configure-microsoft-provider-readiness-link"
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
+                    >
+                      {t('forms.common.actions.openProvidersSettings', { defaultValue: 'Open Providers Settings' })}
+                    </Button>
+                  )}
                 </div>
               </AlertDescription>
             </Alert>
