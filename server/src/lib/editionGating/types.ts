@@ -20,7 +20,7 @@ export interface EditionGateResponseBody {
   upgrade: {
     product: 'Alga PSA Pro';
     cta: 'View Plans';
-    href: '/msp/account';
+    href: 'https://www.nineminds.com/plans';
   };
 }
 
@@ -36,7 +36,7 @@ export function createEditionGateResponseBody(feature: EditionGatedFeature): Edi
     upgrade: {
       product: 'Alga PSA Pro',
       cta: 'View Plans',
-      href: '/msp/account',
+      href: 'https://www.nineminds.com/plans',
     },
   };
 }
@@ -64,6 +64,6 @@ export function isEditionGateResponseBody(value: unknown): value is EditionGateR
     typeof upgrade === 'object' &&
     (upgrade as Record<string, unknown>).product === 'Alga PSA Pro' &&
     (upgrade as Record<string, unknown>).cta === 'View Plans' &&
-    (upgrade as Record<string, unknown>).href === '/msp/account'
+    (upgrade as Record<string, unknown>).href === 'https://www.nineminds.com/plans'
   );
 }

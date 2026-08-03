@@ -19,6 +19,9 @@ export interface SettingsTabMeta {
   requiredFeature?: TIER_FEATURES;
   // Governance tabs that only exist on Enterprise builds.
   eeOnly?: boolean;
+  // The tab body recognizes EE_REQUIRED and renders its own upgrade notice, so it
+  // must remain mounted in Community Edition instead of being redirected away.
+  handlesEditionGateResponse?: boolean;
   // True once the tab has its own /msp/settings/<id> route segment (heavy static tabs
   // pulled out of the monolithic SettingsPage). Drives the ?tab= compat redirect.
   hasOwnRoute?: boolean;
@@ -44,7 +47,14 @@ export const SETTINGS_TABS: readonly SettingsTabMeta[] = [
   { id: 'email', labelKey: 'tabs.email', title: 'Email', hasOwnRoute: true },
   { id: 'integrations', labelKey: 'tabs.integrations', title: 'Integrations', requiredFeature: TIER_FEATURES.INTEGRATIONS, hasOwnRoute: true },
   { id: 'extensions', labelKey: 'tabs.extensions', title: 'Extensions', requiredFeature: TIER_FEATURES.EXTENSIONS },
-  { id: 'mcp-server', labelKey: 'tabs.mcpServer', title: 'MCP Server', eeOnly: true, hasOwnRoute: true },
+  {
+    id: 'mcp-server',
+    labelKey: 'tabs.mcpServer',
+    title: 'MCP Server',
+    eeOnly: true,
+    handlesEditionGateResponse: true,
+    hasOwnRoute: true,
+  },
 ];
 
 // Ids of tabs that now live at /msp/settings/<id>; the landing page redirects legacy
