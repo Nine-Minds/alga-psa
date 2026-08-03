@@ -15,6 +15,14 @@ export {
   resetMicrosoftProvidersToDisconnected
 } from './microsoftActions';
 export {
+  getMicrosoftEmailSetupOptions,
+  getMicrosoftEmailAdminConsentUrl,
+  configureMicrosoftEmailPlatformApplication,
+  createMicrosoftEmailApplication,
+  type MicrosoftEmailSetupOptionsResult,
+  type MicrosoftEmailSetupCompletionResult,
+} from './microsoftEmailSetupActions';
+export {
   listMspSsoLoginDomains,
   saveMspSsoLoginDomains,
 } from './mspSsoDomainActions';

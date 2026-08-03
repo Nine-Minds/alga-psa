@@ -1517,6 +1517,62 @@
       }
     },
     "microsoft": {
+      "emailSetup": {
+        "action": "55555",
+        "actions": {
+          "back": "55555",
+          "cancel": "55555",
+          "copy": "55555",
+          "finish": "55555",
+          "grantConsent": "55555",
+          "savePlatform": "55555",
+          "signIn": "55555",
+          "working": "55555"
+        },
+        "automated": {
+          "description": "55555",
+          "title": "55555"
+        },
+        "callbackUri": "55555",
+        "complete": {
+          "consentDone": "55555",
+          "consentPending": "55555",
+          "profileCreated": "55555"
+        },
+        "consent": {
+          "confirmedDescription": "55555",
+          "confirmedTitle": "55555",
+          "url": "55555",
+          "urlLabel": "55555"
+        },
+        "copied": "55555 {{label}} 55555",
+        "description": "55555",
+        "errors": {
+          "automated": "55555",
+          "generic": "55555",
+          "nameRequired": "55555",
+          "platform": "55555",
+          "popupBlocked": "55555",
+          "popupClosed": "55555",
+          "tenantRequired": "55555"
+        },
+        "fields": {
+          "clientId": "55555",
+          "displayName": "55555",
+          "tenant": "55555",
+          "tenantId": "55555"
+        },
+        "manual": {
+          "description": "55555",
+          "title": "55555"
+        },
+        "platform": {
+          "description": "55555",
+          "title": "55555"
+        },
+        "title": "55555",
+        "unavailable": "55555"
+      },
       "settings": {
         "advanced": {
           "title": "yyyyy",
@@ -1691,7 +1747,8 @@
           "archived": "55555",
           "clientIdMissing": "55555",
           "clientSecretMissing": "55555",
-          "tenantIdMissing": "55555"
+          "tenantIdMissing": "55555",
+          "adminConsentPending": "55555"
         },
         "statusBadges": {
           "archived": "55555",

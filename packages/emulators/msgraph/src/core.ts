@@ -66,6 +66,21 @@ export interface TokenGrantInput {
   code?: string;
   redirect_uri?: string;
   refresh_token?: string;
+  scope?: string;
+}
+
+export interface GraphApplication {
+  id: string;
+  appId: string;
+  displayName: string;
+  signInAudience?: string;
+  web?: { redirectUris?: string[] };
+  requiredResourceAccess?: unknown[];
+}
+
+export interface GraphServicePrincipal {
+  id: string;
+  appId: string;
 }
 
 export interface SeedMessageInput {
@@ -103,13 +118,20 @@ export interface SeedDirectoryUserInput {
  */
 export class MsGraphCore implements EmulatorCore {
   private readonly clients = new Map<string, string>();
-  private readonly codes = new Map<string, { clientId: string; redirectUri: string }>();
+  private readonly codes = new Map<string, {
+    clientId: string;
+    redirectUri: string;
+    nonce?: string;
+    scope?: string;
+  }>();
   private readonly refreshTokens = new Map<string, { clientId: string; revoked: boolean }>();
   private readonly accessTokens = new Map<string, { clientId: string; expiresAt: number }>();
   readonly messages = new Map<string, GraphMessage>();
   readonly subscriptions = new Map<string, GraphSubscription>();
   readonly organizations = new Map<string, GraphOrganization>();
   readonly directoryUsers = new Map<string, GraphDirectoryUser>();
+  readonly applications = new Map<string, GraphApplication>();
+  readonly servicePrincipals = new Map<string, GraphServicePrincipal>();
   readonly faults = new Map<string, OperationFault>();
   accessTokenTtlSeconds = 3600;
   rotateRefreshTokens = true;
@@ -126,6 +148,8 @@ export class MsGraphCore implements EmulatorCore {
     this.subscriptions.clear();
     this.organizations.clear();
     this.directoryUsers.clear();
+    this.applications.clear();
+    this.servicePrincipals.clear();
     this.faults.clear();
     this.accessTokenTtlSeconds = 3600;
     this.rotateRefreshTokens = true;
@@ -147,16 +171,22 @@ export class MsGraphCore implements EmulatorCore {
     this.clients.set(clientId, clientSecret);
   }
 
-  authorize(clientId: string, redirectUri: string): string {
+  authorize(clientId: string, redirectUri: string, input?: { nonce?: string; scope?: string }): string {
     if (!this.clients.has(clientId)) {
       throw new GraphApiError(400, { error: 'invalid_client' });
     }
     const code = this.newId('code');
-    this.codes.set(code, { clientId, redirectUri });
+    this.codes.set(code, { clientId, redirectUri, nonce: input?.nonce, scope: input?.scope });
     return code;
   }
 
-  grantToken(input: TokenGrantInput): { access_token: string; refresh_token: string; expires_in: number; token_type: 'Bearer' } {
+  grantToken(input: TokenGrantInput): {
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+    token_type: 'Bearer';
+    id_token?: string;
+  } {
     if (this.clients.get(String(input.client_id)) !== String(input.client_secret)) {
       throw new GraphApiError(401, { error: 'invalid_client' });
     }
@@ -166,7 +196,10 @@ export class MsGraphCore implements EmulatorCore {
         throw new GraphApiError(400, { error: 'invalid_grant' });
       }
       this.codes.delete(String(input.code));
-      return this.issueTokens(String(input.client_id));
+      return this.issueTokens(String(input.client_id), undefined, {
+        nonce: code.nonce,
+        scope: code.scope || input.scope,
+      });
     }
     if (input.grant_type === 'refresh_token') {
       const refresh = this.refreshTokens.get(String(input.refresh_token));
@@ -178,8 +211,25 @@ export class MsGraphCore implements EmulatorCore {
     throw new GraphApiError(400, { error: 'unsupported_grant_type' });
   }
 
-  private issueTokens(clientId: string, existingRefreshToken?: string) {
-    const accessToken = this.newId('access');
+  private encodeJwt(payload: Record<string, unknown>): string {
+    const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
+    const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+    return `${header}.${body}.emulator`;
+  }
+
+  private issueTokens(
+    clientId: string,
+    existingRefreshToken?: string,
+    claims?: { nonce?: string; scope?: string }
+  ) {
+    const tenantId = '11111111-2222-4333-8444-555555555555';
+    const accessToken = this.encodeJwt({
+      tid: tenantId,
+      iss: `https://login.microsoftonline.com/${tenantId}/v2.0`,
+      scp: claims?.scope || 'Mail.Read Mail.Read.Shared offline_access',
+      aud: '00000003-0000-0000-c000-000000000000',
+      exp: Math.floor((this.nowMs() + this.accessTokenTtlSeconds * 1000) / 1000),
+    });
     const refreshToken =
       existingRefreshToken && !this.rotateRefreshTokens ? existingRefreshToken : this.newId('refresh');
     this.accessTokens.set(accessToken, {
@@ -195,6 +245,9 @@ export class MsGraphCore implements EmulatorCore {
       refresh_token: refreshToken,
       expires_in: this.accessTokenTtlSeconds,
       token_type: 'Bearer' as const,
+      ...(claims?.nonce
+        ? { id_token: this.encodeJwt({ tid: tenantId, nonce: claims.nonce, aud: clientId }) }
+        : {}),
     };
   }
 
@@ -222,6 +275,53 @@ export class MsGraphCore implements EmulatorCore {
       record.revoked = true;
     }
     return Boolean(record);
+  }
+
+  // --- Application registration ---
+
+  createApplication(input: Omit<GraphApplication, 'id' | 'appId'>): GraphApplication {
+    if (!input.displayName?.trim()) {
+      throw new GraphApiError(400, { error: { code: 'Request_BadRequest', message: 'displayName is required' } });
+    }
+    const application: GraphApplication = {
+      ...input,
+      id: this.newId('application'),
+      appId: this.newId('client'),
+      displayName: input.displayName.trim(),
+    };
+    this.applications.set(application.id, application);
+    return application;
+  }
+
+  deleteApplication(id: string): void {
+    if (!this.applications.delete(id)) {
+      throw new GraphApiError(404, { error: { code: 'Request_ResourceNotFound' } });
+    }
+  }
+
+  createServicePrincipal(appId: string): GraphServicePrincipal {
+    if (![...this.applications.values()].some((application) => application.appId === appId)) {
+      throw new GraphApiError(400, { error: { code: 'Request_BadRequest', message: 'Unknown appId' } });
+    }
+    const servicePrincipal = { id: this.newId('service-principal'), appId };
+    this.servicePrincipals.set(servicePrincipal.id, servicePrincipal);
+    return servicePrincipal;
+  }
+
+  deleteServicePrincipal(id: string): void {
+    if (!this.servicePrincipals.delete(id)) {
+      throw new GraphApiError(404, { error: { code: 'Request_ResourceNotFound' } });
+    }
+  }
+
+  addApplicationPassword(applicationId: string): { keyId: string; secretText: string } {
+    if (!this.applications.has(applicationId)) {
+      throw new GraphApiError(404, { error: { code: 'Request_ResourceNotFound' } });
+    }
+    return {
+      keyId: this.newId('password'),
+      secretText: this.newId('secret'),
+    };
   }
 
   // --- Directory ---

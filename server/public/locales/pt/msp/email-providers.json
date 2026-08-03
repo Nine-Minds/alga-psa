@@ -318,6 +318,8 @@
         "setupLabel": "Microsoft Entrada",
         "notConfigured": "As configurações do provedor Microsoft não estão definidas.",
         "setupHelp": "Configure os provedores primeiro em Configurações → Integrações → Provedores e depois retorne aqui para autorizar esta caixa de correio.",
+        "profileReady": "O perfil do aplicativo Microsoft está pronto.",
+        "profileReadyHelp": "Se o consentimento do administrador do locatário ainda estiver pendente, conclua-o nas configurações de Provedores. Depois, use Autorizar acesso para esta caixa de correio.",
         "redirectUriLabel": "Redirecionar URI *",
         "redirectUriPlaceholder": "https://yourapp.com/api/auth/microsoft/callback",
         "authorizationTitle": "Autorização OAuth",

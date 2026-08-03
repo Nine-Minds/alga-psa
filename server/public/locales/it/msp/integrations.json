@@ -1517,6 +1517,62 @@
       }
     },
     "microsoft": {
+      "emailSetup": {
+        "action": "Set up Microsoft Email",
+        "actions": {
+          "back": "Back",
+          "cancel": "Cancel",
+          "copy": "Copy",
+          "finish": "Finish",
+          "grantConsent": "Grant administrator consent",
+          "savePlatform": "Create profile and continue",
+          "signIn": "Sign in to Microsoft",
+          "working": "Working…"
+        },
+        "automated": {
+          "description": "Sign in as a Microsoft administrator. Alga creates the app, service principal, secret, Email profile, and binding.",
+          "title": "Create an app in this tenant"
+        },
+        "callbackUri": "Mailbox callback URI",
+        "complete": {
+          "consentDone": "Administrator consent is confirmed. Return to Inbound Email and authorize the mailbox.",
+          "consentPending": "Next, a Microsoft tenant administrator must grant consent. Mailbox authorization happens afterward in Inbound Email.",
+          "profileCreated": "Microsoft Email profile created and bound"
+        },
+        "consent": {
+          "confirmedDescription": "The Microsoft app is ready for mailbox authorization.",
+          "confirmedTitle": "Administrator consent confirmed",
+          "url": "Administrator consent URL",
+          "urlLabel": "Consent URL"
+        },
+        "copied": "{{label}} copied",
+        "description": "Choose how to configure the Microsoft app used for inbound email. Mailbox authorization remains a separate final step.",
+        "errors": {
+          "automated": "Could not start automated Microsoft app creation.",
+          "generic": "Microsoft Email setup did not complete.",
+          "nameRequired": "Enter a display name for the Microsoft app.",
+          "platform": "Could not configure the platform Microsoft app.",
+          "popupBlocked": "Allow popups for this site, then try again.",
+          "popupClosed": "La finestra Microsoft è stata chiusa prima del completamento della configurazione. Riprova o scegli un’altra opzione di configurazione.",
+          "tenantRequired": "Enter your Microsoft tenant ID or verified domain."
+        },
+        "fields": {
+          "clientId": "Client ID",
+          "displayName": "Profile display name",
+          "tenant": "Microsoft tenant ID or verified domain",
+          "tenantId": "Tenant ID"
+        },
+        "manual": {
+          "description": "Keep using the existing client ID, tenant ID, and client secret form.",
+          "title": "Enter an existing app manually"
+        },
+        "platform": {
+          "description": "Create an Email-bound profile from the server-managed multi-tenant app, then grant tenant administrator consent.",
+          "title": "Use the Alga platform app"
+        },
+        "title": "Set up Microsoft Email",
+        "unavailable": "Unavailable"
+      },
       "settings": {
         "advanced": {
           "title": "Bring your own Microsoft app (advanced)",
@@ -1682,7 +1738,8 @@
           "archived": "I profili archiviati non possono essere utilizzati per nuovi collegamenti Microsoft.",
           "clientIdMissing": "Client ID mancante.",
           "clientSecretMissing": "Il client secret non è stato configurato.",
-          "tenantIdMissing": "Tenant ID mancante."
+          "tenantIdMissing": "Tenant ID mancante.",
+          "adminConsentPending": "Concedi il consenso dell’amministratore del tenant Microsoft per completare la configurazione Email."
         },
         "statusBadges": {
           "archived": "Archiviato",

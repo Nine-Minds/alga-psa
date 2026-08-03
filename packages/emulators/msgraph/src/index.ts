@@ -15,4 +15,4 @@ const msgraphEmulator: EmulatorPackage<MsGraphCore> = {
 export default msgraphEmulator;
 export { msgraphEmulator as emulator };
 export { GraphApiError, MsGraphCore } from './core';
-export type { GraphMessage, GraphSubscription } from './core';
+export type { GraphApplication, GraphMessage, GraphServicePrincipal, GraphSubscription } from './core';

@@ -318,6 +318,8 @@
         "setupLabel": "Microsoft Entra",
         "notConfigured": "Ustawienia dostawcy Microsoft nie są skonfigurowane.",
         "setupHelp": "Najpierw skonfiguruj Dostawców w Ustawieniach → Integracje → Dostawcy, a następnie wróć tutaj, aby autoryzować tę skrzynkę pocztową.",
+        "profileReady": "Profil aplikacji Microsoft jest gotowy.",
+        "profileReadyHelp": "Jeśli zgoda administratora dzierżawy nadal oczekuje, dokończ ją w ustawieniach Dostawców. Następnie użyj opcji Autoryzuj dostęp dla tej skrzynki pocztowej.",
         "redirectUriLabel": "URI przekierowania *",
         "redirectUriPlaceholder": "https://yourapp.com/api/auth/microsoft/callback",
         "authorizationTitle": "Autoryzacja OAuth",

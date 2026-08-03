@@ -132,6 +132,18 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
   });
 
   reg.stateView({
+    name: 'applications',
+    description: 'Entra application registrations created through Graph',
+    get: () => [...core.applications.values()],
+  });
+
+  reg.stateView({
+    name: 'service-principals',
+    description: 'Entra service principals created through Graph',
+    get: () => [...core.servicePrincipals.values()],
+  });
+
+  reg.stateView({
     name: 'faults',
     description: 'Armed operation faults',
     get: () => Object.fromEntries(core.faults),

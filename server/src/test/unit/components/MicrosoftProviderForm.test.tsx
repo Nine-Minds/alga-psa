@@ -235,6 +235,31 @@ describe('MicrosoftProviderForm', () => {
     expect(screen.getByRole('button', { name: /Open Providers Settings/i })).toBeInTheDocument();
   });
 
+  it('shows one Providers Settings action when a tenant-owned app is not ready', async () => {
+    renderWithProviders(
+      <MicrosoftProviderForm
+        {...defaultProps}
+        credentialCapability={{
+          source: 'tenant',
+          ready: false,
+          platformReady: true,
+          tenantProfileSelected: true,
+          clientIdConfigured: true,
+          clientSecretConfigured: true,
+          tenantIdConfigured: true,
+          profileId: 'microsoft-profile-123',
+          message: 'Microsoft admin consent is still pending.',
+        }}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Your Microsoft app is not ready yet.')).toBeInTheDocument();
+    });
+    expect(screen.getAllByRole('button', { name: /Open Providers Settings/i })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /Authorize Access/i })).toBeDisabled();
+  });
+
   it('should call onCancel when cancel button is clicked', async () => {
     const user = userEvent.setup();
     renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);

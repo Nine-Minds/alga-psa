@@ -37,6 +37,7 @@ import {
   isMicrosoftConsumerEnterpriseEdition,
 } from '../../../lib/microsoftConsumerVisibility';
 import { resolveTeamsAvailability } from '../../../lib/teamsAvailabilityCore';
+import { MicrosoftEmailSetupDialog } from './MicrosoftEmailSetupDialog';
 import {
   AlertTriangle,
   Archive,
@@ -49,6 +50,7 @@ import {
   RefreshCw,
   ShieldCheck,
   Star,
+  WandSparkles,
 } from 'lucide-react';
 
 type MicrosoftIntegrationStatus = Awaited<ReturnType<typeof getMicrosoftIntegrationStatus>>;
@@ -99,6 +101,9 @@ function getReadinessMessages(profile: MicrosoftProfile, t: TranslateFn): string
   }
   if (!profile.readiness.tenantIdConfigured) {
     messages.push(t('integrations.microsoft.settings.readiness.tenantIdMissing', { defaultValue: 'Add a tenant ID.' }));
+  }
+  if (profile.emailAdminConsentRequired && !profile.emailAdminConsentGrantedAt) {
+    messages.push(t('integrations.microsoft.settings.readiness.adminConsentPending', { defaultValue: 'Grant Microsoft tenant administrator consent to finish Email setup.' }));
   }
 
   return messages;
@@ -386,6 +391,7 @@ export function MicrosoftIntegrationSettings({
   const [formError, setFormError] = React.useState<string | null>(null);
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
   const advancedChoiceInitializedRef = React.useRef(false);
+  const [emailSetupOpen, setEmailSetupOpen] = React.useState(false);
 
   const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
   const profiles = status?.success ? status.profiles ?? [] : [];
@@ -724,7 +730,7 @@ export function MicrosoftIntegrationSettings({
                   ? emailCredentialCapability?.source === 'platform'
                     ? t('integrations.microsoft.settings.platform.description', { defaultValue: 'Connect Microsoft 365 with the application supplied by Alga PSA. No Entra app registration is required.' })
                     : t('integrations.microsoft.settings.descriptionEe', { defaultValue: "Manage your company's Microsoft app registrations for staff sign-in, Outlook email, calendar sync, and Teams." })
-                  : t('integrations.microsoft.settings.descriptionCe', { defaultValue: "Manage your company's Microsoft app registration for staff sign-in." })}
+                  : t('integrations.microsoft.settings.descriptionCe', { defaultValue: "Manage your company's Microsoft app registrations for staff sign-in and Outlook email." })}
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -737,6 +743,16 @@ export function MicrosoftIntegrationSettings({
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 {t('integrations.microsoft.settings.actions.refresh', { defaultValue: 'Refresh' })}
+              </Button>
+              <Button
+                id="microsoft-settings-email-setup-button"
+                type="button"
+                variant="outline"
+                onClick={() => setEmailSetupOpen(true)}
+                disabled={loading}
+              >
+                <WandSparkles className="mr-2 h-4 w-4" />
+                {t('integrations.microsoft.emailSetup.action', { defaultValue: 'Set up Microsoft Email' })}
               </Button>
             </div>
           </div>
@@ -869,9 +885,12 @@ export function MicrosoftIntegrationSettings({
                 const boundProfile = binding?.profileId ? profileById.get(binding.profileId) : undefined;
                 const activeBoundProfile =
                   boundProfile && !boundProfile.isArchived ? boundProfile : undefined;
-                const capableProfiles = activeProfiles.filter((profile) =>
-                  profileSupportsConsumer(profile, consumer.consumerType)
-                );
+                const capableProfiles = activeProfiles.filter((profile) => {
+                  if (!profileSupportsConsumer(profile, consumer.consumerType)) return false;
+                  return consumer.consumerType !== 'email' ||
+                    !profile.emailAdminConsentRequired ||
+                    Boolean(profile.emailAdminConsentGrantedAt);
+                });
                 const warning = getBindingWarning(
                   consumer.consumerLabel,
                   consumer.consumerType,
@@ -1292,6 +1311,16 @@ export function MicrosoftIntegrationSettings({
 
         </DialogContent>
       </Dialog>
+
+      <MicrosoftEmailSetupDialog
+        isOpen={emailSetupOpen}
+        onClose={() => setEmailSetupOpen(false)}
+        onCompleted={load}
+        onManualSetup={() => {
+          setEmailSetupOpen(false);
+          openCreateDialog();
+        }}
+      />
 
       <ConfirmationDialog
         id="microsoft-provider-disconnect-confirmation"

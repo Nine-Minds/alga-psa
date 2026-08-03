@@ -17,7 +17,7 @@ function authed(res: Response): Authed {
 /**
  * Vendor surface: Microsoft login (OAuth2 v2.0) plus the Graph v1.0 routes
  * Alga's email integration uses. Point MICROSOFT_LOGIN_BASE_URL and
- * MICROSOFT_GRAPH_BASE_URL (minus the /v1.0 suffix) at this emulator.
+ * MICROSOFT_GRAPH_BASE_URL (including the /v1.0 suffix) at this emulator.
  */
 export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   router.use(express.json());
@@ -31,7 +31,10 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     if (!clientId || !redirectUri) {
       throw new GraphApiError(400, { error: 'invalid_client' });
     }
-    const code = core.authorize(clientId, redirectUri);
+    const code = core.authorize(clientId, redirectUri, {
+      nonce: req.query.nonce ? String(req.query.nonce) : undefined,
+      scope: req.query.scope ? String(req.query.scope) : undefined,
+    });
     const callback = new URL(redirectUri);
     callback.searchParams.set('code', code);
     if (req.query.state) {
@@ -47,6 +50,19 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
       return;
     }
     res.json(core.grantToken(req.body ?? {}));
+  });
+
+  router.get('/:tenant/v2.0/adminconsent', (req, res) => {
+    const clientId = String(req.query.client_id ?? '');
+    const redirectUri = String(req.query.redirect_uri ?? '');
+    if (!clientId || !redirectUri) {
+      throw new GraphApiError(400, { error: 'invalid_request' });
+    }
+    const callback = new URL(redirectUri);
+    callback.searchParams.set('admin_consent', 'true');
+    callback.searchParams.set('tenant', '11111111-2222-4333-8444-555555555555');
+    if (req.query.state) callback.searchParams.set('state', String(req.query.state));
+    res.redirect(302, callback.toString());
   });
 
   // --- Graph v1.0 surface ---
@@ -86,6 +102,28 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
       return;
     }
     res.json(mailboxUser);
+  });
+
+  graph.post('/applications', (req, res) => {
+    res.status(201).json(core.createApplication(req.body ?? {}));
+  });
+
+  graph.post('/applications/:applicationId/addPassword', (req, res) => {
+    res.json(core.addApplicationPassword(String(req.params.applicationId)));
+  });
+
+  graph.delete('/applications/:applicationId', (req, res) => {
+    core.deleteApplication(String(req.params.applicationId));
+    res.status(204).end();
+  });
+
+  graph.post('/servicePrincipals', (req, res) => {
+    res.status(201).json(core.createServicePrincipal(String(req.body?.appId ?? '')));
+  });
+
+  graph.delete('/servicePrincipals/:servicePrincipalId', (req, res) => {
+    core.deleteServicePrincipal(String(req.params.servicePrincipalId));
+    res.status(204).end();
   });
 
   const mailboxRoots = ['/me', '/users/:userId'];

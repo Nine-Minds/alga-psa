@@ -3,13 +3,25 @@
 Connect a Microsoft 365 mailbox to turn incoming messages into tickets and,
 optionally, send outbound email from the same mailbox. The connector uses
 delegated Microsoft Graph access on behalf of the user who authorizes it.
+Providers settings can guide administrators through using the Alga platform
+app, creating a tenant-owned app through Microsoft Graph, or entering an
+existing app manually.
 
 > Existing Microsoft connections must be reauthorized before outbound use so
 > the delegated token includes `Mail.Send`. A provider showing **Ready** only
 > confirms that its Microsoft credentials are configured.
 
-> Microsoft 365 inbound email is a Pro feature. It is not
-> offered in Community Edition builds.
+## Prerequisites
+
+* A Microsoft Entra administrator who can grant tenant consent. Automated
+  tenant-owned setup also requires a role allowed to create app registrations,
+  service principals, and credentials, such as Application Administrator or
+  Cloud Application Administrator.
+* A licensed user mailbox or a shared mailbox the authorizing user can read.
+* An Alga PSA user with `system_settings:update` permission.
+* Outbound HTTPS access to `graph.microsoft.com` and
+  `login.microsoftonline.com`. A public inbound URL is optional because Alga PSA
+  falls back to polling when Microsoft cannot validate the webhook endpoint.
 
 ## Choose the hosted or self-hosted path
 
@@ -17,17 +29,11 @@ delegated Microsoft Graph access on behalf of the user who authorizes it.
 
 Hosted deployments can use Alga PSA's platform Microsoft app:
 
-* If **Authorize Access** is enabled when you
-  [add the inbound provider](#add-the-inbound-provider), the Outlook email
-  credential path is ready. The mailbox form does not display client credential
-  fields, but the hosted setup flow receives the app configuration in the
-  browser, including its client secret. Restrict provider setup access to
-  trusted administrators.
-* If you bind a tenant-owned Microsoft app to Outlook email, that app takes
-  precedence over the hosted platform app. Follow
-  [Register a tenant-owned Entra app](#register-a-tenant-owned-entra-app), then
-  reauthorize any mailbox whose refresh token was issued to a different client
-  ID.
+* **Use the Alga platform app** in the guided setup to create a tenant-specific
+  Email profile without entering client credentials.
+* A tenant-owned Microsoft app takes precedence when it is selected for Outlook
+  email. Use the automated or manual tenant-owned setup when the organization
+  explicitly requires its own app registration.
 
 ### Self-hosted or appliance Alga PSA
 
@@ -43,6 +49,30 @@ uses polling over outbound HTTPS instead.
 Operator-level app secrets and environment variables remain compatibility
 fallbacks. Use the Microsoft profile in the UI for normal setup so the app used
 by Outlook email is explicit.
+
+## Set up the Microsoft app and Email profile
+
+Open **Settings → Integrations → Providers**, then select **Set up Microsoft
+Email**. Choose one of:
+
+* **Use the Alga platform app** — enter the Microsoft tenant ID or verified
+  domain. Alga creates a pending Email profile and provides the tenant-scoped
+  administrator-consent step.
+* **Create an app in this tenant** — sign in with a Microsoft administrator. A
+  setup-only PKCE flow creates the application, service principal, and client
+  secret through Microsoft Graph. Alga stores the generated secret directly in
+  its tenant secret provider and discards the short-lived bootstrap token.
+* **Enter an existing app manually** — open the existing profile form and follow
+  the tenant-owned registration steps below.
+
+The automated option is unavailable when the deployment does not have a
+multi-tenant setup application configured. The other choices remain available
+independently.
+
+After either guided option creates a profile, complete **Grant administrator
+consent**. The profile remains unavailable for Outlook email until the callback
+records consent and selects it for the Email service in one transaction. This
+tenant-wide app consent is separate from authorizing the individual mailbox.
 
 ## Required Microsoft permissions
 

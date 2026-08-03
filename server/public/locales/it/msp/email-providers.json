@@ -318,6 +318,8 @@
         "setupLabel": "Microsoft Entra",
         "notConfigured": "Le impostazioni del provider Microsoft non sono configurate.",
         "setupHelp": "Configura prima i provider in Impostazioni → Integrazioni → Provider, quindi torna qui per autorizzare questa casella di posta.",
+        "profileReady": "Il profilo dell’app Microsoft è pronto.",
+        "profileReadyHelp": "Se il consenso dell’amministratore del tenant è ancora in sospeso, completalo nelle impostazioni Provider. Quindi usa Autorizza accesso per questa casella di posta.",
         "redirectUriLabel": "URI di reindirizzamento *",
         "redirectUriPlaceholder": "https://yourapp.com/api/auth/microsoft/callback",
         "authorizationTitle": "Autorizzazione OAuth",

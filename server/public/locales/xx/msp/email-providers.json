@@ -318,6 +318,8 @@
         "setupLabel": "11111",
         "notConfigured": "11111",
         "setupHelp": "11111",
+        "profileReady": "11111",
+        "profileReadyHelp": "11111",
         "redirectUriLabel": "11111",
         "redirectUriPlaceholder": "11111",
         "authorizationTitle": "11111",

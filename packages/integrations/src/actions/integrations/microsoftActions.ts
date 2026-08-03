@@ -63,6 +63,9 @@ interface MicrosoftProfileRow {
   client_id: string;
   tenant_id: string;
   client_secret_ref: string;
+  email_admin_consent_required?: boolean;
+  email_admin_consent_granted_at?: string | Date | null;
+  email_admin_consent_tenant_id?: string | null;
   capabilities: MicrosoftProfileConsumer[] | string | null;
   is_default: boolean;
   is_archived: boolean;
@@ -105,6 +108,8 @@ export interface MicrosoftProfileSummary {
   clientSecretMasked?: string;
   clientSecretConfigured: boolean;
   clientSecretRef: string;
+  emailAdminConsentRequired: boolean;
+  emailAdminConsentGrantedAt?: string | null;
   isDefault: boolean;
   isArchived: boolean;
   capabilities: MicrosoftProfileConsumer[];
@@ -730,6 +735,12 @@ async function buildMicrosoftProfileSummary(
     }),
   ]);
 
+  const emailAdminConsentRequired = Boolean(row.email_admin_consent_required);
+  const emailAdminConsentGranted = Boolean(row.email_admin_consent_granted_at);
+  const effectiveReadiness = emailAdminConsentRequired && !emailAdminConsentGranted
+    ? { ...readiness, ready: false }
+    : readiness;
+
   return {
     profileId: row.profile_id,
     displayName: row.display_name,
@@ -738,11 +749,15 @@ async function buildMicrosoftProfileSummary(
     clientSecretMasked: clientSecret ? maskSecret(clientSecret) : undefined,
     clientSecretConfigured: readiness.clientSecretConfigured,
     clientSecretRef: row.client_secret_ref,
+    emailAdminConsentRequired,
+    emailAdminConsentGrantedAt: row.email_admin_consent_granted_at
+      ? String(row.email_admin_consent_granted_at)
+      : null,
     isDefault: row.is_default,
     isArchived: row.is_archived,
     capabilities: normalizeMicrosoftProfileCapabilities(row.capabilities),
-    readiness,
-    status: row.is_archived ? 'archived' : readiness.ready ? 'ready' : 'incomplete',
+    readiness: effectiveReadiness,
+    status: row.is_archived ? 'archived' : effectiveReadiness.ready ? 'ready' : 'incomplete',
     archivedAt: row.archived_at ? String(row.archived_at) : null,
     consumers: consumerLabels,
   };
@@ -792,6 +807,7 @@ async function createMicrosoftProfileInternal(
     tenantId?: string;
     capabilities?: MicrosoftProfileConsumer[];
     setAsDefault?: boolean;
+    requiresEmailAdminConsent?: boolean;
   }
 ): Promise<{ success: boolean; error?: string; profile?: MicrosoftProfileSummary }> {
   if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
@@ -812,6 +828,10 @@ async function createMicrosoftProfileInternal(
   if (!clientSecret) return { success: false, error: 'Microsoft OAuth Client Secret is required' };
   if (!tenantIdProvided) return { success: false, error: 'Microsoft Tenant ID is required' };
 
+  let createdProfileId: string | null = null;
+  let createdSecretRef: string | null = null;
+  let previousDefaultProfileId: string | null = null;
+
   try {
     const { knex } = await createTenantKnex();
     const secretProvider = await getSecretProviderInstance();
@@ -826,6 +846,9 @@ async function createMicrosoftProfileInternal(
     const profileId = randomUUID();
     const clientSecretRef = getMicrosoftProfileSecretRef(profileId);
     const shouldBeDefault = input.setAsDefault === true || !existing.some((row) => row.is_default && !row.is_archived);
+    createdProfileId = profileId;
+    createdSecretRef = clientSecretRef;
+    previousDefaultProfileId = existing.find((row) => row.is_default && !row.is_archived)?.profile_id || null;
     const now = new Date();
 
     const row: MicrosoftProfileRow = {
@@ -836,6 +859,9 @@ async function createMicrosoftProfileInternal(
       client_id: clientId,
       tenant_id: tenantId,
       client_secret_ref: clientSecretRef,
+      email_admin_consent_required: input.requiresEmailAdminConsent === true,
+      email_admin_consent_granted_at: null,
+      email_admin_consent_tenant_id: null,
       capabilities,
       is_default: shouldBeDefault,
       is_archived: false,
@@ -872,8 +898,173 @@ async function createMicrosoftProfileInternal(
       profile: await buildMicrosoftProfileSummary(tenant, row, secretProvider),
     };
   } catch (err: any) {
+    if (createdProfileId && createdSecretRef) {
+      try {
+        const { knex } = await createTenantKnex();
+        const secretProvider = await getSecretProviderInstance();
+        await knex.transaction(async (trx: any) => {
+          const transactionDb = tenantDb(trx, tenant);
+          await transactionDb.table('microsoft_profile_consumer_bindings')
+            .where({ profile_id: createdProfileId })
+            .delete();
+          await transactionDb.table('microsoft_profiles')
+            .where({ profile_id: createdProfileId })
+            .delete();
+          if (previousDefaultProfileId) {
+            await transactionDb.table('microsoft_profiles')
+              .where({ profile_id: previousDefaultProfileId })
+              .update({ is_default: true, updated_at: new Date() });
+          }
+        });
+        await secretProvider.setTenantSecret(tenant, createdSecretRef, null);
+
+        const previousDefault = previousDefaultProfileId
+          ? await getMicrosoftProfileRow(knex, tenant, previousDefaultProfileId)
+          : undefined;
+        if (previousDefault) {
+          await mirrorLegacyMicrosoftSecrets(tenant, previousDefault, secretProvider);
+        } else {
+          await Promise.all([
+            secretProvider.setTenantSecret(tenant, MICROSOFT_CLIENT_ID_SECRET, null),
+            secretProvider.setTenantSecret(tenant, MICROSOFT_CLIENT_SECRET_SECRET, null),
+            secretProvider.setTenantSecret(tenant, MICROSOFT_TENANT_ID_SECRET, null),
+          ]);
+        }
+      } catch {
+        // Preserve the original error. A failed cleanup is surfaced by the
+        // incomplete profile state and can be retried or removed by an admin.
+      }
+    }
     return { success: false, error: microsoftActionErrorMessage(err, 'Failed to create Microsoft profile') };
   }
+}
+
+export async function createMicrosoftEmailProfilePendingConsentInternal(
+  user: any,
+  tenant: string,
+  input: {
+    displayName: string;
+    clientId: string;
+    clientSecret: string;
+    tenantId: string;
+  }
+): Promise<{
+  success: boolean;
+  error?: string;
+  profileId?: string;
+  displayName?: string;
+}> {
+  const created = await createMicrosoftProfileInternal(user, tenant, {
+    ...input,
+    capabilities: ['email'],
+    requiresEmailAdminConsent: true,
+  });
+  if (!created.success || !created.profile) {
+    return { success: false, error: created.error || 'Failed to create Microsoft email profile' };
+  }
+
+  return {
+    success: true,
+    profileId: created.profile.profileId,
+    displayName: created.profile.displayName,
+  };
+}
+
+export async function confirmMicrosoftEmailAdminConsentInternal(
+  user: any,
+  tenant: string,
+  input: {
+    profileId: string;
+    clientId: string;
+    microsoftTenantId?: string;
+  }
+): Promise<{ success: boolean; error?: string; profileId?: string }> {
+  if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
+  if (!(await canManageMicrosoftSettings(user))) return { success: false, error: 'Forbidden' };
+
+  try {
+    const { knex } = await createTenantKnex();
+    const now = new Date();
+
+    await knex.transaction(async (trx: any) => {
+      const db = tenantDb(trx, tenant);
+      const profile = await db.table<MicrosoftProfileRow>('microsoft_profiles')
+        .where({ profile_id: input.profileId })
+        .first();
+
+      if (!profile || profile.is_archived) {
+        throw new Error('The pending Microsoft Email profile no longer exists');
+      }
+      if (!profileHasCapability(profile, 'email')) {
+        throw new Error('The pending Microsoft profile is not enabled for Email');
+      }
+      if (normalizeMicrosoftClientId(profile.client_id) !== normalizeMicrosoftClientId(input.clientId)) {
+        throw new Error('Microsoft administrator consent was returned for a different application');
+      }
+
+      await db.table('microsoft_profiles')
+        .where({ profile_id: input.profileId })
+        .update({
+          email_admin_consent_required: true,
+          email_admin_consent_granted_at: now,
+          email_admin_consent_tenant_id: input.microsoftTenantId || null,
+          updated_by: user?.user_id || null,
+          updated_at: now,
+        });
+
+      const existing = await db.table<MicrosoftConsumerBindingRow>('microsoft_profile_consumer_bindings')
+        .where({ consumer_type: 'email' })
+        .first();
+      if (existing) {
+        await db.table('microsoft_profile_consumer_bindings')
+          .where({ consumer_type: 'email' })
+          .update({
+            profile_id: input.profileId,
+            updated_by: user?.user_id || null,
+            updated_at: now,
+          });
+      } else {
+        await db.table('microsoft_profile_consumer_bindings').insert({
+          tenant,
+          consumer_type: 'email',
+          profile_id: input.profileId,
+          created_by: user?.user_id || null,
+          updated_by: user?.user_id || null,
+          created_at: now,
+          updated_at: now,
+        } satisfies MicrosoftConsumerBindingRow);
+      }
+    });
+
+    return { success: true, profileId: input.profileId };
+  } catch (error) {
+    const expectedMessage = error instanceof Error && [
+      'The pending Microsoft Email profile no longer exists',
+      'The pending Microsoft profile is not enabled for Email',
+      'Microsoft administrator consent was returned for a different application',
+    ].includes(error.message)
+      ? error.message
+      : 'Failed to record Microsoft administrator consent';
+    return {
+      success: false,
+      error: microsoftActionErrorMessage(error, expectedMessage),
+    };
+  }
+}
+
+export async function getMicrosoftEmailSetupMetadataInternal(): Promise<{
+  baseUrl: string;
+  mailboxRedirectUri: string;
+  setupRedirectUri: string;
+  returnTo: string;
+}> {
+  const baseUrl = await getDeploymentBaseUrl();
+  return {
+    baseUrl,
+    mailboxRedirectUri: `${baseUrl}/api/auth/microsoft/callback`,
+    setupRedirectUri: `${baseUrl}/api/auth/microsoft/email-setup/callback`,
+    returnTo: `${baseUrl}/msp/settings/integrations?category=providers`,
+  };
 }
 
 async function updateMicrosoftProfileInternal(
@@ -1220,6 +1411,16 @@ export const setMicrosoftConsumerBinding = withAuth(async (
       return {
         success: false,
         error: `Microsoft profile is not enabled for ${getMicrosoftConsumerLabel(input.consumerType)}`,
+      };
+    }
+    if (
+      input.consumerType === 'email' &&
+      profile.email_admin_consent_required &&
+      !profile.email_admin_consent_granted_at
+    ) {
+      return {
+        success: false,
+        error: 'Microsoft tenant administrator consent must be recorded before binding this profile to Email',
       };
     }
 

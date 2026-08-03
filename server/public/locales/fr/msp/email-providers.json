@@ -318,6 +318,8 @@
         "setupLabel": "Microsoft Entrée",
         "notConfigured": "Les paramètres du fournisseur Microsoft ne sont pas configurés.",
         "setupHelp": "Configurez d'abord les fournisseurs dans Paramètres → Intégrations → Fournisseurs, puis revenez ici pour autoriser cette boîte aux lettres.",
+        "profileReady": "Le profil de l’application Microsoft est prêt.",
+        "profileReadyHelp": "Si le consentement de l’administrateur du locataire est encore en attente, terminez-le dans les paramètres Fournisseurs. Utilisez ensuite Autoriser l’accès pour cette boîte aux lettres.",
         "redirectUriLabel": "URI de redirection *",
         "redirectUriPlaceholder": "https://yourapp.com/api/auth/microsoft/callback",
         "authorizationTitle": "Autorisation OAuth",

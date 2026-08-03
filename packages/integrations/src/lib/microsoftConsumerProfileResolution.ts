@@ -26,6 +26,8 @@ interface MicrosoftProfileRow {
   client_id: string;
   tenant_id: string;
   client_secret_ref: string;
+  email_admin_consent_required?: boolean;
+  email_admin_consent_granted_at?: string | Date | null;
   capabilities: MicrosoftProfileConsumer[] | string | null;
   is_default: boolean;
   is_archived: boolean;
@@ -529,6 +531,20 @@ export async function resolveMicrosoftConsumerProfileConfig(
       consumerType,
       profileId: profile.profile_id,
       message: `Selected ${getConsumerLabel(consumerType)} Microsoft profile is not enabled for ${getConsumerLabel(consumerType)}`,
+    };
+  }
+
+  if (
+    consumerType === 'email' &&
+    profile.email_admin_consent_required &&
+    !profile.email_admin_consent_granted_at
+  ) {
+    return {
+      status: 'invalid_profile',
+      tenantId,
+      consumerType,
+      profileId: profile.profile_id,
+      message: 'Selected Email Microsoft profile is awaiting tenant administrator consent',
     };
   }
 

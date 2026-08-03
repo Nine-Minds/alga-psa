@@ -318,6 +318,8 @@
         "setupLabel": "55555",
         "notConfigured": "55555",
         "setupHelp": "55555",
+        "profileReady": "55555",
+        "profileReadyHelp": "55555",
         "redirectUriLabel": "55555",
         "redirectUriPlaceholder": "55555",
         "authorizationTitle": "55555",

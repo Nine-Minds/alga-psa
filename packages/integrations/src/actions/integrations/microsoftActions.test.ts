@@ -683,7 +683,7 @@ describe('Microsoft integration actions', () => {
     }
   });
 
-  it('returns CE status metadata with only MSP SSO guidance and masked profile data', async () => {
+  it('returns CE status metadata with MSP SSO and Email guidance plus masked profile data', async () => {
     const originalEdition = process.env.NEXT_PUBLIC_EDITION;
     process.env.NEXT_PUBLIC_EDITION = 'community';
 
@@ -708,11 +708,11 @@ describe('Microsoft integration actions', () => {
       expect(result.config?.clientSecretMasked?.endsWith('alue')).toBe(true);
       expect(result.config?.clientSecretMasked).not.toContain('super-secret-value');
       expect(result.redirectUris?.sso).toBe('https://example.com/api/auth/callback/azure-ad');
-      expect(result.redirectUris?.email).toBeUndefined();
+      expect(result.redirectUris?.email).toBe('https://example.com/api/auth/microsoft/callback');
       expect(result.redirectUris?.calendar).toBeUndefined();
       expect(result.redirectUris?.teamsTab).toBeUndefined();
       expect(result.scopes?.sso).toContain('openid');
-      expect(result.scopes?.email).toBeUndefined();
+      expect(result.scopes?.email).toContain('https://graph.microsoft.com/Mail.Read');
       expect(result.scopes?.calendar).toBeUndefined();
       expect(result.scopes?.teams).toBeUndefined();
       expect(result.profiles?.[0]?.displayName).toBe('Default Microsoft Profile');

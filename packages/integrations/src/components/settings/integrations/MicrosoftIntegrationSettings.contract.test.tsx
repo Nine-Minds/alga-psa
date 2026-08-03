@@ -16,6 +16,9 @@ const updateMicrosoftProfileMock = vi.hoisted(() => vi.fn());
 const archiveMicrosoftProfileMock = vi.hoisted(() => vi.fn());
 const setDefaultMicrosoftProfileMock = vi.hoisted(() => vi.fn());
 const resetMicrosoftProvidersToDisconnectedMock = vi.hoisted(() => vi.fn());
+const getMicrosoftEmailSetupOptionsMock = vi.hoisted(() => vi.fn());
+const configureMicrosoftEmailPlatformApplicationMock = vi.hoisted(() => vi.fn());
+const createMicrosoftEmailApplicationMock = vi.hoisted(() => vi.fn());
 const toastMock = vi.hoisted(() => vi.fn());
 const routerPushMock = vi.hoisted(() => vi.fn());
 
@@ -45,6 +48,12 @@ vi.mock('../../../actions/integrations/microsoftActions', () => ({
   setDefaultMicrosoftProfile: (...args: unknown[]) => setDefaultMicrosoftProfileMock(...args),
   resetMicrosoftProvidersToDisconnected: (...args: unknown[]) =>
     resetMicrosoftProvidersToDisconnectedMock(...args),
+}));
+
+vi.mock('../../../actions/integrations/microsoftEmailSetupActions', () => ({
+  getMicrosoftEmailSetupOptions: (...args: unknown[]) => getMicrosoftEmailSetupOptionsMock(...args),
+  configureMicrosoftEmailPlatformApplication: (...args: unknown[]) => configureMicrosoftEmailPlatformApplicationMock(...args),
+  createMicrosoftEmailApplication: (...args: unknown[]) => createMicrosoftEmailApplicationMock(...args),
 }));
 
 vi.mock('@alga-psa/ui/hooks/use-toast', () => ({
@@ -282,6 +291,15 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     archiveMicrosoftProfileMock.mockReset();
     setDefaultMicrosoftProfileMock.mockReset();
     resetMicrosoftProvidersToDisconnectedMock.mockReset();
+    getMicrosoftEmailSetupOptionsMock.mockReset().mockResolvedValue({
+      success: true,
+      callbackUri: 'https://psa.example.com/api/auth/microsoft/callback',
+      setupCallbackUri: 'https://psa.example.com/api/auth/microsoft/email-setup/callback',
+      platformApplication: { available: false },
+      automatedCreationAvailable: false,
+    });
+    configureMicrosoftEmailPlatformApplicationMock.mockReset();
+    createMicrosoftEmailApplicationMock.mockReset();
     toastMock.mockReset();
     routerPushMock.mockReset();
     getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus());
@@ -410,7 +428,59 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     expect(screen.getByRole('button', { name: 'New app registration' })).toBeInTheDocument();
   });
 
-  it('renders CE copy and bindings only for MSP SSO', async () => {
+  it('shows both guided choices as unavailable while keeping the manual fallback usable', async () => {
+    const user = userEvent.setup();
+    render(<MicrosoftIntegrationSettings />);
+
+    await user.click(await screen.findByRole('button', { name: 'Set up Microsoft Email' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Set up Microsoft Email' });
+    const platformChoice = within(dialog).getByRole('button', { name: /Use the Alga platform app/ });
+    const automatedChoice = within(dialog).getByRole('button', { name: /Create an app in this tenant/ });
+    const manualChoice = within(dialog).getByRole('button', { name: /Enter an existing app manually/ });
+
+    expect(platformChoice).toBeDisabled();
+    expect(automatedChoice).toBeDisabled();
+    expect(manualChoice).toBeEnabled();
+
+    await user.click(manualChoice);
+    expect(await screen.findByRole('dialog', { name: 'Create Microsoft app registration' })).toBeInTheDocument();
+  });
+
+  it('recovers the automated setup controls when the Microsoft popup is closed', async () => {
+    const user = userEvent.setup();
+    const popup = { closed: false, focus: vi.fn(), close: vi.fn() };
+    vi.stubGlobal('open', vi.fn(() => popup));
+    getMicrosoftEmailSetupOptionsMock.mockResolvedValue({
+      success: true,
+      callbackUri: 'https://psa.example.com/api/auth/microsoft/callback',
+      setupCallbackUri: 'https://psa.example.com/api/auth/microsoft/email-setup/callback',
+      platformApplication: { available: false },
+      automatedCreationAvailable: true,
+    });
+    createMicrosoftEmailApplicationMock.mockResolvedValue({
+      success: true,
+      authUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+    });
+
+    render(<MicrosoftIntegrationSettings />);
+    await user.click(await screen.findByRole('button', { name: 'Set up Microsoft Email' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Set up Microsoft Email' });
+    await user.click(within(dialog).getByRole('button', { name: /Create an app in this tenant/ }));
+    await user.click(within(dialog).getByRole('button', { name: 'Sign in to Microsoft' }));
+    expect(within(dialog).getByRole('button', { name: 'Working…' })).toBeDisabled();
+
+    popup.closed = true;
+
+    expect(await within(dialog).findByText(
+      'The Microsoft window was closed before setup finished. Try again or choose another setup option.',
+      {},
+      { timeout: 2_000 }
+    )).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Back' })).toBeEnabled();
+    expect(within(dialog).getByRole('button', { name: 'Sign in to Microsoft' })).toBeEnabled();
+  });
+
+  it('keeps guided Microsoft Email setup and binding reachable in CE', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'community';
     useFeatureFlagMock.mockReturnValue({
       enabled: false,
@@ -422,14 +492,16 @@ describe('MicrosoftIntegrationSettings contracts', () => {
       buildStatus({
         redirectUris: {
           sso: 'https://psa.example.com/api/auth/callback/azure-ad',
+          email: 'https://psa.example.com/api/auth/microsoft/callback',
         },
         scopes: {
           sso: ['openid', 'profile', 'email'],
+          email: ['Mail.Read', 'Mail.Read.Shared', 'offline_access'],
         },
         profiles: [
           {
             ...buildStatus().profiles[0],
-            consumers: ['MSP SSO'],
+            consumers: ['MSP SSO', 'Email'],
           },
         ],
       })
@@ -444,6 +516,13 @@ describe('MicrosoftIntegrationSettings contracts', () => {
           profileDisplayName: 'Primary Profile',
           isArchived: false,
         },
+        {
+          consumerType: 'email',
+          consumerLabel: 'Email',
+          profileId: 'profile-1',
+          profileDisplayName: 'Primary Profile',
+          isArchived: false,
+        },
       ]),
     });
 
@@ -453,15 +532,15 @@ describe('MicrosoftIntegrationSettings contracts', () => {
       expect(document.getElementById('microsoft-profile-profile-1')).not.toBeNull();
     });
     expect(
-      screen.getByText("Manage your company's Microsoft app registration for staff sign-in.")
+      screen.getByText("Manage your company's Microsoft app registrations for staff sign-in and Outlook email.")
     ).toBeInTheDocument();
     expect(screen.getByTestId('microsoft-binding-select-msp_sso')).toBeInTheDocument();
-    expect(screen.queryByText('Inbound email redirect URI')).not.toBeInTheDocument();
+    expect(screen.getByTestId('microsoft-binding-select-email')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Set up Microsoft Email' })).toBeInTheDocument();
     expect(screen.queryByText('Calendar sync redirect URI')).not.toBeInTheDocument();
     expect(screen.queryByText('Teams scopes')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Disconnect Microsoft providers' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Open Teams Setup' })).not.toBeInTheDocument();
-    expect(screen.queryByTestId('microsoft-binding-select-email')).not.toBeInTheDocument();
     expect(screen.queryByTestId('microsoft-binding-select-calendar')).not.toBeInTheDocument();
     expect(screen.queryByTestId('microsoft-binding-select-teams')).not.toBeInTheDocument();
   });

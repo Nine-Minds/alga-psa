@@ -518,7 +518,7 @@ export function MicrosoftProviderForm({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => window.location.assign('/msp/settings?tab=integrations&category=providers')}
+                  onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
                 >
                   {t('forms.common.actions.openProvidersSettings', { defaultValue: 'Open Providers Settings' })}
                 </Button>
@@ -549,6 +549,32 @@ export function MicrosoftProviderForm({
                   <div className="text-sm text-muted-foreground">
                     {providerSetupMessage ||
                       t('forms.microsoft.oauth.setupHelp', { defaultValue: 'Configure Providers first in Settings → Integrations → Providers, then return here to authorize this mailbox.' })}
+                  </div>
+                  {!useByoApp && (
+                    <Button
+                      id="configure-microsoft-provider-readiness-link"
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
+                    >
+                      {t('forms.common.actions.openProvidersSettings', { defaultValue: 'Open Providers Settings' })}
+                    </Button>
+                  )}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {!providerSetupLoading && providerSetupReady && oauthStatus !== 'success' && (
+            <Alert>
+              <AlertDescription>
+                <div className="space-y-1">
+                  <div className="font-medium">
+                    {t('forms.microsoft.oauth.profileReady', { defaultValue: 'Microsoft app profile is ready.' })}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {t('forms.microsoft.oauth.profileReadyHelp', { defaultValue: 'If tenant administrator consent is still pending, complete it in Providers settings. Then use Authorize Access below for this mailbox.' })}
                   </div>
                 </div>
               </AlertDescription>
