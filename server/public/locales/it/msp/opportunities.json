@@ -74,6 +74,8 @@
       "expectedClose": "Chiusura prevista",
       "hardware": "Hardware",
       "linkQuote": "Collegamento esistente",
+      "loadFailed": "Impossibile caricare l'opportunità",
+      "loading": "Caricamento opportunità...",
       "markLost": "Marco ha perso",
       "markWon": "Ha vinto Marco",
       "metadataTitle": "Opportunità",
@@ -133,6 +135,7 @@
     "list": {
       "confidence": "Fiducia",
       "deal": "Affare",
+      "editValues": "Modifica valore",
       "mrr": "Ricorrente",
       "nextAction": "Azione successiva",
       "oneTime": "Una volta",

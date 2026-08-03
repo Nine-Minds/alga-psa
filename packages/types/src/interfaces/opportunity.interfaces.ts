@@ -276,6 +276,8 @@ export interface IOpportunityListItem {
   nrr_cents: number;
   hardware_cents: number;
   currency_code: string;
+  /** True once an accepted quote owns the numbers — inline value edits are refused. */
+  values_locked_by_quote: boolean;
   expected_close_date?: ISO8601String | null;
   next_action?: string | null;
   next_action_due?: ISO8601String | null;

@@ -74,6 +74,8 @@
       "expectedClose": "Oczekiwane blisko",
       "hardware": "Sprzęt",
       "linkQuote": "Link istniejący",
+      "loadFailed": "Nie udało się załadować możliwości",
+      "loading": "Ładowanie możliwości...",
       "markLost": "Marek przegrał",
       "markWon": "Marek wygrał",
       "metadataTitle": "Okazja",
@@ -133,6 +135,7 @@
     "list": {
       "confidence": "Zaufanie",
       "deal": "Umowa",
+      "editValues": "Edytuj wartość",
       "mrr": "Powtarzające się",
       "nextAction": "Następna akcja",
       "oneTime": "Jednorazowy",

@@ -74,6 +74,8 @@
       "expectedClose": "Verwacht dichtbij",
       "hardware": "Hardware",
       "linkQuote": "Bestaande koppeling",
+      "loadFailed": "Kan kans niet laden",
+      "loading": "Kans laden...",
       "markLost": "Mark heeft verloren",
       "markWon": "Mark heeft gewonnen",
       "metadataTitle": "Gelegenheid",
@@ -133,6 +135,7 @@
     "list": {
       "confidence": "Vertrouwen",
       "deal": "Overeenkomst",
+      "editValues": "Waarde bewerken",
       "mrr": "Terugkerend",
       "nextAction": "Volgende actie",
       "oneTime": "Eenmalig",

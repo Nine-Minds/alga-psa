@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { useClientDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import type { IOpportunityDetail, OpportunityConfidence, OpportunityStage } from '@alga-psa/types';
@@ -64,6 +65,7 @@ export function OpportunityDetailView({
   onDraftFollowUp,
 }: OpportunityDetailViewProps) {
   const { t } = useTranslation('msp/opportunities');
+  const clientDrawer = useClientDrawer();
   const fmt = (cents: number) => formatCurrencyFromMinorUnits(cents, undefined, detail.currency_code);
   const open = detail.status === 'open';
   const overdue =
@@ -98,12 +100,23 @@ export function OpportunityDetailView({
           ) : null}
         </div>
         <div className="mt-0.5 text-sm text-[rgb(var(--color-text-500))]">
-          <Link
-            href={`/msp/clients/${detail.client_id}`}
-            className="font-medium text-[rgb(var(--color-primary-600))] hover:underline"
-          >
-            {detail.client_name}
-          </Link>
+          {clientDrawer ? (
+            <button
+              id="opportunity-detail-client"
+              type="button"
+              className="font-medium text-[rgb(var(--color-primary-600))] hover:underline"
+              onClick={() => clientDrawer.openClientDrawer(detail.client_id)}
+            >
+              {detail.client_name}
+            </button>
+          ) : (
+            <Link
+              href={`/msp/clients/${detail.client_id}`}
+              className="font-medium text-[rgb(var(--color-primary-600))] hover:underline"
+            >
+              {detail.client_name}
+            </Link>
+          )}
           {detail.client_lifecycle_status === 'prospect' ? (
             <Badge variant="default-muted" size="sm" className="ml-2">
               {t('opportunities.prospect', 'Prospect')}

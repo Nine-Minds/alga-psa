@@ -74,6 +74,8 @@
       "expectedClose": "Nahe erwartet",
       "hardware": "Hardware",
       "linkQuote": "Link vorhanden",
+      "loadFailed": "Gelegenheit konnte nicht geladen werden",
+      "loading": "Gelegenheit wird geladen...",
       "markLost": "Mark hat verloren",
       "markWon": "Mark hat gewonnen",
       "metadataTitle": "Gelegenheit",
@@ -133,6 +135,7 @@
     "list": {
       "confidence": "Vertrauen",
       "deal": "Deal",
+      "editValues": "Wert bearbeiten",
       "mrr": "Wiederkehrend",
       "nextAction": "Nächste Aktion",
       "oneTime": "Einmalig",

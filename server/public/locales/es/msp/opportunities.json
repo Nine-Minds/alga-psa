@@ -74,6 +74,8 @@
       "expectedClose": "Cierre esperado",
       "hardware": "Ferretería",
       "linkQuote": "Enlace existente",
+      "loadFailed": "No se pudo cargar la oportunidad",
+      "loading": "Cargando oportunidad...",
       "markLost": "marca perdida",
       "markWon": "marcos gano",
       "metadataTitle": "Oportunidad",
@@ -133,6 +135,7 @@
     "list": {
       "confidence": "confianza",
       "deal": "Oferta",
+      "editValues": "Editar valor",
       "mrr": "recurrente",
       "nextAction": "Siguiente acción",
       "oneTime": "una sola vez",
