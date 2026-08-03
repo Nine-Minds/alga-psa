@@ -7,6 +7,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import type { ColumnDefinition, IOpportunityListItem, OpportunityStage } from '@alga-psa/types';
 import { OPPORTUNITY_STAGE_LABELS } from '../../lib/opportunityStages';
+import { oneTimeCents } from '../../lib/pipelineReporting';
 
 const NUM_CELL = 'text-right tabular-nums';
 
@@ -99,7 +100,7 @@ export function PipelineList({
       dataIndex: 'nrr_cents',
       render: (_v, record) => (
         <span className={`block ${NUM_CELL}`}>
-          {formatCurrencyFromMinorUnits(record.nrr_cents + record.hardware_cents, undefined, record.currency_code)}
+          {formatCurrencyFromMinorUnits(oneTimeCents(record), undefined, record.currency_code)}
         </span>
       ),
     },

@@ -61,8 +61,8 @@
       "body": "¿Eliminar {{number}} permanentemente? Esto no se puede deshacer. Las oportunidades con cotizaciones vinculadas no se pueden eliminar.",
       "title": "Eliminar oportunidad"
     },
-  "detail": {
-    "backToList": "Volver a oportunidades",
+    "detail": {
+      "backToList": "Volver a oportunidades",
       "confidence": "tu confianza",
       "confidenceNote": "La confianza es tuya; el escenario proviene de la evidencia. Los dos se comparan, nunca se fusionan.",
       "createQuote": "Crear cotización",
@@ -226,9 +226,11 @@
     "snapshot": {
       "actionsDue": "Acciones debidas",
       "empty": "Aún no hay oportunidades abiertas.",
+      "hardwareIncluded": "incl. {{amount}} de hardware",
       "loading": "Cargando instantánea de oportunidad",
       "mrr": "{{amount}} MRR",
       "nrr": "{{amount}} NRR",
+      "oneTime": "{{amount}} único",
       "open": "Oportunidades abiertas",
       "openCount": "Oportunidades abiertas",
       "opportunityCount_one": "{{count}} oportunidad",
@@ -297,8 +299,8 @@
       "queue": "cola",
       "suggestions": "Sugerencias"
     },
-  "timeline": {
-    "created": "Oportunidad creada",
+    "timeline": {
+      "created": "Oportunidad creada",
       "empty": "Aún no se ha registrado nada. Las acciones completadas aterrizan aquí por sí solas."
     },
     "toast": {

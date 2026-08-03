@@ -61,8 +61,8 @@
       "body": "{{number}} definitief verwijderen? Dit kan niet ongedaan worden gemaakt. Opportunities met gekoppelde offertes kunnen niet worden verwijderd.",
       "title": "Mogelijkheid verwijderen"
     },
-  "detail": {
-    "backToList": "Terug naar verkoopkansen",
+    "detail": {
+      "backToList": "Terug naar verkoopkansen",
       "confidence": "Jouw vertrouwen",
       "confidenceNote": "Vertrouwen is van jou; het podium komt voort uit bewijsmateriaal. De twee worden vergeleken, nooit samengevoegd.",
       "createQuote": "Offerte maken",
@@ -226,9 +226,11 @@
     "snapshot": {
       "actionsDue": "Acties verschuldigd",
       "empty": "Er zijn nog geen openstaande mogelijkheden.",
+      "hardwareIncluded": "incl. {{amount}} hardware",
       "loading": "Momentopname van mogelijkheid laden",
       "mrr": "{{amount}} MRR",
       "nrr": "{{amount}} NRR",
+      "oneTime": "{{amount}} eenmalig",
       "open": "Open kansen",
       "openCount": "Open kansen",
       "opportunityCount_one": "{{count}} mogelijkheid",
@@ -297,8 +299,8 @@
       "queue": "Wachtrij",
       "suggestions": "Suggesties"
     },
-  "timeline": {
-    "created": "Verkoopkans aangemaakt",
+    "timeline": {
+      "created": "Verkoopkans aangemaakt",
       "empty": "Nog niets ingelogd. Voltooide acties komen hier vanzelf terecht."
     },
     "toast": {

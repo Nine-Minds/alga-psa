@@ -3,6 +3,7 @@
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { hasPermission, withAuth } from '@alga-psa/auth';
 import type { IOpportunityDashboardSnapshot } from '@alga-psa/types';
+import { mapPipelineStageRows } from '../lib/pipelineReporting';
 import { assembleWorkQueue } from './workQueueActions';
 
 export const getOpportunityDashboardSnapshot = withAuth(async (
@@ -21,22 +22,17 @@ export const getOpportunityDashboardSnapshot = withAuth(async (
     .groupBy('stage', 'currency_code')
     .select('stage', 'currency_code')
     .count({ opportunity_count: '*' })
-    .sum({ mrr_cents: 'mrr_cents', nrr_cents: 'nrr_cents' });
+    .sum({ mrr_cents: 'mrr_cents', nrr_cents: 'nrr_cents', hardware_cents: 'hardware_cents' });
   const queue = await assembleWorkQueue(
     knex,
     tenant,
     userId,
     String((user as { first_name?: string }).first_name ?? ''),
   );
+  const pipelineByStage = mapPipelineStageRows(pipelineRows as Array<Record<string, unknown>>);
   return {
-    open_count: pipelineRows.reduce((sum, row) => sum + Number(row.opportunity_count), 0),
-    pipeline_by_stage: pipelineRows.map((row) => ({
-      stage: row.stage,
-      currency_code: row.currency_code,
-      opportunity_count: Number(row.opportunity_count),
-      mrr_cents: Number(row.mrr_cents ?? 0),
-      nrr_cents: Number(row.nrr_cents ?? 0),
-    })),
+    open_count: pipelineByStage.reduce((sum, row) => sum + row.opportunity_count, 0),
+    pipeline_by_stage: pipelineByStage,
     queue_counts: {
       actions_due: queue.do_today.length,
       stalled: queue.going_quiet.length,

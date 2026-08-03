@@ -61,8 +61,8 @@
       "body": "Usunąć trwale {{number}}? Tego nie można cofnąć. Nie można usunąć możliwości z połączonymi ofertami.",
       "title": "Usuń możliwość"
     },
-  "detail": {
-    "backToList": "Wróć do szans sprzedaży",
+    "detail": {
+      "backToList": "Wróć do szans sprzedaży",
       "confidence": "Twoja pewność siebie",
       "confidenceNote": "Zaufanie należy do Ciebie; etap pochodzi z dowodów. Obydwa są porównywane, nigdy nie łączone.",
       "createQuote": "Utwórz wycenę",
@@ -228,9 +228,11 @@
     "snapshot": {
       "actionsDue": "Wymagane działania",
       "empty": "Nie ma jeszcze żadnych otwartych możliwości.",
+      "hardwareIncluded": "w tym {{amount}} sprzętu",
       "loading": "Ładowanie migawki możliwości",
       "mrr": "{{amount}} MRR",
       "nrr": "{{amount}} NRR",
+      "oneTime": "{{amount}} jednorazowo",
       "open": "Otwórz możliwości",
       "openCount": "Otwórz możliwości",
       "opportunityCount_one": "{{count}} możliwość",
@@ -303,8 +305,8 @@
       "queue": "Kolejka",
       "suggestions": "Sugestie"
     },
-  "timeline": {
-    "created": "Utworzono szansę sprzedaży",
+    "timeline": {
+      "created": "Utworzono szansę sprzedaży",
       "empty": "Jeszcze nic nie zostało zarejestrowane. Ukończone działania lądują tutaj samodzielnie."
     },
     "toast": {

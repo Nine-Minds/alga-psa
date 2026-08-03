@@ -61,9 +61,9 @@
       "body": "Delete {{number}} permanently? This cannot be undone. Opportunities with linked quotes cannot be deleted.",
       "title": "Delete opportunity"
     },
-  "detail": {
-    "backToList": "Back to opportunities",
-    "confidence": "Your confidence",
+    "detail": {
+      "backToList": "Back to opportunities",
+      "confidence": "Your confidence",
       "confidenceNote": "Confidence is yours; the stage comes from evidence. The two are compared, never merged.",
       "createQuote": "Create quote",
       "draftFollowUp": "Draft the follow-up",
@@ -226,9 +226,11 @@
     "snapshot": {
       "actionsDue": "Actions due",
       "empty": "No open opportunities yet.",
+      "hardwareIncluded": "incl. {{amount}} hardware",
       "loading": "Loading opportunity snapshot",
       "mrr": "{{amount}} MRR",
       "nrr": "{{amount}} NRR",
+      "oneTime": "{{amount}} one-time",
       "open": "Open opportunities",
       "openCount": "Open opportunities",
       "opportunityCount_one": "{{count}} opportunity",
@@ -297,9 +299,9 @@
       "queue": "Queue",
       "suggestions": "Suggestions"
     },
-  "timeline": {
-    "created": "Opportunity created",
-    "empty": "Nothing logged yet. Completed actions land here on their own."
+    "timeline": {
+      "created": "Opportunity created",
+      "empty": "Nothing logged yet. Completed actions land here on their own."
     },
     "toast": {
       "actionCompleted": "Done. Next action scheduled.",
