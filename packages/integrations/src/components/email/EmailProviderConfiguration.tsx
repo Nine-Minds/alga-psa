@@ -47,14 +47,29 @@ import { isMicrosoftConsumerEnterpriseEdition } from '../../lib/microsoftConsume
 import { getMicrosoftConsumerSetupStatus } from '@alga-psa/integrations/actions';
 import type { MicrosoftCredentialCapability } from '../../actions/integrations/providerReadiness';
 
-const IMAP_RESYNC_POLL_INTERVAL_MS = 5_000;
-const IMAP_RESYNC_TIMEOUT_MS = 90_000;
+const IMAP_RESYNC_FAST_POLL_INTERVAL_MS = 5_000;
+const IMAP_RESYNC_FAST_POLL_DURATION_MS = 120_000;
+const IMAP_RESYNC_BACKOFF_POLL_INTERVAL_MS = 15_000;
+const IMAP_RESYNC_MAX_BACKOFF_AFTER_MS = 300_000;
+const IMAP_RESYNC_MAX_POLL_INTERVAL_MS = 30_000;
 
 interface ImapResyncPoll {
-  deadline: number;
   generation: number;
+  startedAt: number;
   timeoutId?: ReturnType<typeof setTimeout>;
 }
+
+const getImapResyncPollInterval = (elapsedMs: number) => {
+  if (elapsedMs < IMAP_RESYNC_FAST_POLL_DURATION_MS) {
+    return IMAP_RESYNC_FAST_POLL_INTERVAL_MS;
+  }
+
+  if (elapsedMs < IMAP_RESYNC_MAX_BACKOFF_AFTER_MS) {
+    return IMAP_RESYNC_BACKOFF_POLL_INTERVAL_MS;
+  }
+
+  return IMAP_RESYNC_MAX_POLL_INTERVAL_MS;
+};
 
 export interface EmailProviderConfigurationProps {
   onProviderAdded?: (provider: EmailProvider) => void;
@@ -350,19 +365,9 @@ function EmailProviderConfigurationContent({
       return;
     }
 
-    if (Date.now() >= currentPoll.deadline) {
-      if (finishResyncPolling(providerId, generation)) {
-        toast(t('configuration.feedback.resyncPending', {
-          defaultValue: '{{providerName}} is still reconnecting. Refresh to check its latest status.',
-          providerName,
-        }), { icon: '⚠️', duration: 6_000 });
-      }
-      return;
-    }
-
     currentPoll.timeoutId = setTimeout(() => {
       void pollForResyncRecovery(providerId, providerName, generation);
-    }, IMAP_RESYNC_POLL_INTERVAL_MS);
+    }, getImapResyncPollInterval(Date.now() - currentPoll.startedAt));
   };
 
   const handleResyncProvider = async (provider: EmailProvider) => {
@@ -394,8 +399,8 @@ function EmailProviderConfigurationContent({
       }
       const generation = ++nextResyncGenerationRef.current;
       resyncPollsRef.current.set(provider.id, {
-        deadline: Date.now() + IMAP_RESYNC_TIMEOUT_MS,
         generation,
+        startedAt: Date.now(),
       });
       void pollForResyncRecovery(provider.id, provider.providerName, generation);
     } catch (err) {

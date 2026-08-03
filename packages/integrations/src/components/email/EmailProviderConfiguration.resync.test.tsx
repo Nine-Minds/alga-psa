@@ -186,15 +186,19 @@ describe('IMAP resync status recovery', () => {
     expect(getEmailProvidersMock).toHaveBeenCalledTimes(2);
 
     view.unmount();
-    await vi.advanceTimersByTimeAsync(90_000);
+    await vi.advanceTimersByTimeAsync(300_000);
 
     expect(getEmailProvidersMock).toHaveBeenCalledTimes(2);
     expect(toastMock).not.toHaveBeenCalled();
   });
 
-  it('ends the transient presentation with an honest warning after 90 seconds', async () => {
-    getEmailProvidersMock.mockResolvedValue({ providers: [disconnectedProvider] });
-    getEmailProvidersMock.mockResolvedValueOnce({ providers: [connectedProvider] });
+  it('keeps presenting Reconnecting beyond 90 seconds and recovers automatically', async () => {
+    const recoversAt = Date.now() + 105_000;
+    getEmailProvidersMock
+      .mockResolvedValueOnce({ providers: [connectedProvider] })
+      .mockImplementation(() => Promise.resolve({
+        providers: [Date.now() >= recoversAt ? connectedProvider : disconnectedProvider],
+      }));
 
     await renderConfiguration();
     await startResync();
@@ -203,11 +207,54 @@ describe('IMAP resync status recovery', () => {
       await vi.advanceTimersByTimeAsync(90_000);
     });
 
-    expect(screen.getByTestId('provider-presentation')).toHaveTextContent('Disconnected');
-    expect(toastMock).toHaveBeenCalledWith(
-      'Support inbox is still reconnecting. Refresh to check its latest status.',
-      { icon: '⚠️', duration: 6_000 }
-    );
+    expect(screen.getByTestId('provider-presentation')).toHaveTextContent('Reconnecting');
+    expect(toastMock).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000);
+    });
+
+    expect(screen.getByTestId('provider-presentation')).toHaveTextContent('Connected');
+    expect(toastMock.success).toHaveBeenCalledWith('Support inbox reconnected successfully.');
+  });
+
+  it('backs off after the expected recovery window while continuing to poll', async () => {
+    getEmailProvidersMock.mockResolvedValue({ providers: [disconnectedProvider] });
+    getEmailProvidersMock.mockResolvedValueOnce({ providers: [connectedProvider] });
+
+    await renderConfiguration();
+    await startResync();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(120_000);
+    });
+    const callsAfterFastPolling = getEmailProvidersMock.mock.calls.length;
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(14_999);
+    });
+    expect(getEmailProvidersMock).toHaveBeenCalledTimes(callsAfterFastPolling);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(getEmailProvidersMock).toHaveBeenCalledTimes(callsAfterFastPolling + 1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(165_000);
+    });
+    const callsAfterBackoffPolling = getEmailProvidersMock.mock.calls.length;
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(29_999);
+    });
+    expect(getEmailProvidersMock).toHaveBeenCalledTimes(callsAfterBackoffPolling);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(getEmailProvidersMock).toHaveBeenCalledTimes(callsAfterBackoffPolling + 1);
+    expect(screen.getByTestId('provider-presentation')).toHaveTextContent('Reconnecting');
   });
 
   it('does not reload or poll after a failed resync request', async () => {
@@ -216,7 +263,7 @@ describe('IMAP resync status recovery', () => {
 
     await renderConfiguration();
     await startResync();
-    await vi.advanceTimersByTimeAsync(90_000);
+    await vi.advanceTimersByTimeAsync(300_000);
 
     expect(getEmailProvidersMock).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('provider-presentation')).toHaveTextContent('Connected');

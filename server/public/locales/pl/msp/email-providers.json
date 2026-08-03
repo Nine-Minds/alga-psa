@@ -12,7 +12,6 @@
       "resyncError": "Nie udało się ponownie zsynchronizować dostawcy IMAP",
       "resyncStarted": "Rozpoczęto ponowną synchronizację dla {{providerName}}.",
       "resyncRecovered": "Ponownie połączono z {{providerName}}.",
-      "resyncPending": "{{providerName}} nadal ponownie nawiązuje połączenie. Odśwież, aby sprawdzić najnowszy stan.",
       "enterpriseOnly": "Przychodząca poczta e-mail usługi Microsoft 365 jest dostępna tylko w Pro.",
       "loadProvidersError": "Failed to load email providers"
     },

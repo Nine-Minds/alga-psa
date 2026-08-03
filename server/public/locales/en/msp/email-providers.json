@@ -12,7 +12,6 @@
       "resyncError": "Failed to resync IMAP provider",
       "resyncStarted": "Resync started for {{providerName}}.",
       "resyncRecovered": "{{providerName}} reconnected successfully.",
-      "resyncPending": "{{providerName}} is still reconnecting. Refresh to check its latest status.",
       "enterpriseOnly": "Microsoft 365 inbound email is only available in Pro.",
       "loadProvidersError": "Failed to load email providers"
     },

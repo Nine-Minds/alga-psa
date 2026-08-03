@@ -12,7 +12,6 @@
       "resyncError": "Die Neusynchronisierung des IMAP-Anbieters ist fehlgeschlagen",
       "resyncStarted": "Neusynchronisierung für {{providerName}} gestartet.",
       "resyncRecovered": "{{providerName}} wurde erfolgreich wieder verbunden.",
-      "resyncPending": "{{providerName}} stellt die Verbindung noch wieder her. Aktualisieren Sie, um den neuesten Status zu prüfen.",
       "enterpriseOnly": "Eingehende E-Mails von Microsoft 365 sind nur in Pro verfügbar.",
       "loadProvidersError": "Failed to load email providers"
     },

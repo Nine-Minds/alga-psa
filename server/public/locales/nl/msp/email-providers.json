@@ -12,7 +12,6 @@
       "resyncError": "Het opnieuw synchroniseren van de IMAP-provider is mislukt",
       "resyncStarted": "Hersynchronisatie gestart voor {{providerName}}.",
       "resyncRecovered": "{{providerName}} is opnieuw verbonden.",
-      "resyncPending": "{{providerName}} maakt nog steeds opnieuw verbinding. Vernieuw om de nieuwste status te bekijken.",
       "enterpriseOnly": "Microsoft 365 inkomende e-mail is alleen beschikbaar in Pro.",
       "loadProvidersError": "Failed to load email providers"
     },

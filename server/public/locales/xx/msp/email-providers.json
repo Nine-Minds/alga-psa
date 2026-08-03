@@ -12,7 +12,6 @@
       "resyncError": "11111",
       "resyncStarted": "11111 {{providerName}} 11111",
       "resyncRecovered": "11111 {{providerName}} 11111",
-      "resyncPending": "11111 {{providerName}} 11111",
       "enterpriseOnly": "11111",
       "loadProvidersError": "11111"
     },
