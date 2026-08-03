@@ -259,6 +259,34 @@ describe("ContractDetail contract simulator feature flag", () => {
     expect(navigationState.replace).not.toHaveBeenCalled();
   });
 
+  it("preserves a simulator deep link until the flag verdict is available", async () => {
+    navigationState.params = new URLSearchParams(
+      "tab=contracts&contractId=contract-1&contractView=simulator&foo=bar",
+    );
+
+    const { rerender } = render(
+      <ContractDetail resolvedContractId="contract-1" />,
+    );
+
+    expect(await screen.findByTestId("tab-content-edit")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("tab", { name: "Simulate" }),
+    ).not.toBeInTheDocument();
+    expect(navigationState.replace).not.toHaveBeenCalled();
+
+    featureFlagState.enabled = true;
+    featureFlagState.loading = false;
+    rerender(<ContractDetail resolvedContractId="contract-1" />);
+
+    expect(
+      await screen.findByRole("tab", { name: "Simulate" }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("contract-simulator-mounted"),
+    ).toBeInTheDocument();
+    expect(navigationState.replace).not.toHaveBeenCalled();
+  });
+
   it("normalizes a disabled simulator deep link to Overview and preserves other query parameters", async () => {
     navigationState.params = new URLSearchParams(
       "tab=contracts&contractId=contract-1&contractView=simulator&foo=bar",

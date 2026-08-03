@@ -180,7 +180,10 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { enabled: contractSimulatorEnabled } = useFeatureFlag('contract-simulator', {
+  const {
+    enabled: contractSimulatorEnabled,
+    loading: contractSimulatorFlagLoading,
+  } = useFeatureFlag('contract-simulator', {
     defaultValue: false,
   });
   const contractId = (searchParams?.get('contractId') ?? resolvedContractId ?? null) as string | null;
@@ -361,7 +364,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     const requested = searchParams?.get('contractView');
     if (requested === 'simulator' && !contractSimulatorEnabled) {
       setActiveTab('edit');
-      updateContractViewParam('edit');
+      if (!contractSimulatorFlagLoading) {
+        updateContractViewParam('edit');
+      }
       return;
     }
 
@@ -370,7 +375,13 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     } else if (!requested) {
       setActiveTab('edit');
     }
-  }, [contractSimulatorEnabled, searchParams, updateContractViewParam, validTabs]);
+  }, [
+    contractSimulatorEnabled,
+    contractSimulatorFlagLoading,
+    searchParams,
+    updateContractViewParam,
+    validTabs,
+  ]);
 
   // Sync documents from server props when they change (e.g., after router.refresh())
   useEffect(() => {
