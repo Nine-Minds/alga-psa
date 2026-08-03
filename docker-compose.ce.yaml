@@ -9,9 +9,7 @@ services:
     image: ${APP_NAME:-sebastian}_server_ce_local
     build:
       context: .
-      dockerfile: Dockerfile.build
-      args:
-        NEXT_BUILD_MAX_OLD_SPACE_SIZE: ${NEXT_BUILD_MAX_OLD_SPACE_SIZE:-12288}
+      dockerfile: Dockerfile.dev
     environment:
       EDITION: community
       DB_NAME: server
@@ -51,6 +49,8 @@ services:
       WORKFLOW_REDIS_CONSUMER_GROUP: "workflow-workers"
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
     volumes:
+      # Persist user-uploaded documents and generated files
+      - files_data:/data/files
       - type: bind
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
@@ -88,9 +88,7 @@ services:
     image: ${APP_NAME:-sebastian}_server_ce_local
     build:
       context: .
-      dockerfile: Dockerfile.build
-      args:
-        NEXT_BUILD_MAX_OLD_SPACE_SIZE: ${NEXT_BUILD_MAX_OLD_SPACE_SIZE:-12288}
+      dockerfile: Dockerfile.dev
     environment:
       EDITION: community
       NODE_OPTIONS: --experimental-vm-modules
@@ -344,6 +342,9 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: postgres
       DB_PORT: ${DB_PORT:-5432}
+    volumes:
+      # Persist Postgres data across restarts
+      - postgres_data:/var/lib/postgresql/data
     secrets:
       - postgres_password
 
@@ -355,3 +356,7 @@ services:
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  postgres_data:
+  files_data:
