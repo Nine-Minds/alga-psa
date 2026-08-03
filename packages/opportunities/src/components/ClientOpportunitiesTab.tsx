@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast';
 import { Button } from '@alga-psa/ui/components/Button';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { IOpportunityListItem } from '@alga-psa/types';
+import type { ClientLifecycleStatus, IOpportunityListItem } from '@alga-psa/types';
 import { createOpportunity, getClientDefaultCurrency, listOpportunities } from '../actions';
 import { PipelineList } from './pipeline/PipelineList';
 import { CreateOpportunityDialog, type CreateOpportunityInput } from './dialogs/CreateOpportunityDialog';
@@ -15,7 +15,15 @@ import { CreateOpportunityDialog, type CreateOpportunityInput } from './dialogs/
  * The Opportunities tab on client detail: this client's deals plus a
  * create shortcut with the client already fixed.
  */
-export function ClientOpportunitiesTab({ clientId, clientName }: { clientId: string; clientName: string }) {
+export function ClientOpportunitiesTab({
+  clientId,
+  clientName,
+  clientLifecycleStatus,
+}: {
+  clientId: string;
+  clientName: string;
+  clientLifecycleStatus?: ClientLifecycleStatus | null;
+}) {
   const { t } = useTranslation('msp/opportunities');
   const router = useRouter();
   const [items, setItems] = useState<IOpportunityListItem[]>([]);
@@ -67,7 +75,7 @@ export function ClientOpportunitiesTab({ clientId, clientName }: { clientId: str
       <CreateOpportunityDialog
         isOpen={createOpen}
         onClose={() => setCreateOpen(false)}
-        lockedClient={{ client_id: clientId, client_name: clientName }}
+        lockedClient={{ client_id: clientId, client_name: clientName, lifecycle_status: clientLifecycleStatus }}
         onSubmit={handleCreate}
       />
     </div>

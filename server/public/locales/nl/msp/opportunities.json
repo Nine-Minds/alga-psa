@@ -47,10 +47,12 @@
       "medium": "Middelmatig"
     },
     "createDialog": {
+      "addValue": "Geschatte waarde toevoegen (optioneel)",
       "client": "Klant",
       "dealTitle": "Titel",
       "due": "Verschuldigd",
       "expectedClose": "Verwacht dichtbij",
+      "missing": "Nog nodig: {{fields}}",
       "nextAction": "Eerste actie",
       "nextActionPlaceholder": "bijv. Verstuur het beoordelingsvoorstel",
       "submit": "Creëer kansen",

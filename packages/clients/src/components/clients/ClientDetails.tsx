@@ -1419,7 +1419,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       label: t('clientDetails.opportunities', { defaultValue: 'Opportunities' }),
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
-          {renderClientOpportunities({ clientId: client.client_id, clientName: client.client_name })}
+          {renderClientOpportunities({ clientId: client.client_id, clientName: client.client_name, clientLifecycleStatus: client.lifecycle_status ?? null })}
         </div>
       ),
     }] : []),

@@ -47,10 +47,12 @@
       "medium": "Średni"
     },
     "createDialog": {
+      "addValue": "Dodaj szacowaną wartość (opcjonalnie)",
       "client": "Klient",
       "dealTitle": "Tytuł",
       "due": "Termin",
       "expectedClose": "Oczekiwane blisko",
+      "missing": "Nadal wymagane: {{fields}}",
       "nextAction": "Pierwsza akcja",
       "nextActionPlaceholder": "np. Wyślij propozycję wyceny",
       "submit": "Stwórz okazję",

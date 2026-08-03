@@ -47,10 +47,12 @@
       "medium": "Medio"
     },
     "createDialog": {
+      "addValue": "Añadir valor estimado (opcional)",
       "client": "Cliente",
       "dealTitle": "Título",
       "due": "debido",
       "expectedClose": "Cierre esperado",
+      "missing": "Aún falta: {{fields}}",
       "nextAction": "Primera acción",
       "nextActionPlaceholder": "por ej. Enviar la propuesta de evaluación",
       "submit": "Crear oportunidad",

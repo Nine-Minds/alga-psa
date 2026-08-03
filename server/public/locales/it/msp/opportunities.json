@@ -47,10 +47,12 @@
       "medium": "Medio"
     },
     "createDialog": {
+      "addValue": "Aggiungi valore stimato (facoltativo)",
       "client": "Cliente",
       "dealTitle": "Titolo",
       "due": "Dovuto",
       "expectedClose": "Chiusura prevista",
+      "missing": "Ancora necessario: {{fields}}",
       "nextAction": "Prima azione",
       "nextActionPlaceholder": "ad es. Inviare la proposta di valutazione",
       "submit": "Crea opportunità",
