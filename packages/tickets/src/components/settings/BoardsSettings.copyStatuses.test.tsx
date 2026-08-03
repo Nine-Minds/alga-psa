@@ -746,6 +746,14 @@ describe('BoardsSettings ticket status copy flow', () => {
       expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
     });
 
+    // The action call is observable before its resolved statuses have committed
+    // to React state. Synchronize on the loaded editor content so the later
+    // name edit cannot race the async status load (which keeps Save disabled).
+    expandSection('statuses');
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Support Open')).toBeInTheDocument();
+    });
+
     fireEvent.change(screen.getByLabelText('ticketing.boards.fields.boardName.label'), {
       target: { value: 'Support Renamed' },
     });

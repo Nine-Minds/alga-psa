@@ -324,12 +324,12 @@
     },
     "upsell": {
       "title": "Autorisatiebundels",
-      "description": "Geavanceerd beheer van autorisatiebundels is beschikbaar in de Premium-laag. Upgrade om herbruikbare beperkingsbundels te beheren."
+      "description": "Geavanceerd beheer van autorisatiebundels is beschikbaar in de Pro-laag. Upgrade om herbruikbare beperkingsbundels te beheren."
     },
     "hero": {
-      "badge": "Premium-werkruimte",
+      "badge": "Pro-werkruimte",
       "title": "Autorisatiebundels",
-      "subtitle": "Beheer premium toegangsbeperkingen met conceptrevisies, scoped toewijzingen en veilige simulatie vanuit één bedieningscentrum.",
+      "subtitle": "Beheer Pro toegangsbeperkingen met conceptrevisies, scoped toewijzingen en veilige simulatie vanuit één bedieningscentrum.",
       "newBundle": "Nieuwe bundel",
       "addStarters": "Starterbundels toevoegen",
       "addingStarters": "Starterbundels toevoegen..."

@@ -2147,7 +2147,7 @@
       "entra": {
         "name": "Microsoft Entra",
         "description": "Scopri i tenant Microsoft gestiti e sincronizza gli utenti ai contatti",
-        "upgradeDescription": "Scopri i tenant Microsoft Entra gestiti e sincronizza gli utenti ai contatti. Passa a Premium per sbloccare questa funzionalità."
+        "upgradeDescription": "Scopri i tenant Microsoft Entra gestiti e sincronizza gli utenti ai contatti. Passa a Pro per sbloccare questa funzionalità."
       },
       "stripe": {
         "name": "Stripe",

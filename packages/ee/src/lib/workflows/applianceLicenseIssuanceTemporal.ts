@@ -14,7 +14,7 @@ export interface ApplianceLicenseIssuanceInput {
   submissionId: string;
   clientId: string;
   customer: string;
-  tier: 'pro' | 'premium';
+  tier: 'pro';
   seats?: number;
   transport: string;
   stripeSubId: string;

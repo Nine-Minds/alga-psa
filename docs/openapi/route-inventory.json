@@ -7003,17 +7003,6 @@
   },
   {
     "edition": "CE",
-    "route_path": "/api/v1/tenant-management/start-premium-trial",
-    "methods": [
-      "POST"
-    ],
-    "route_file": "server/src/app/api/v1/tenant-management/start-premium-trial/route.ts",
-    "controller": "",
-    "controller_import": "",
-    "controller_file": ""
-  },
-  {
-    "edition": "CE",
     "route_path": "/api/v1/tenant-management/tenants",
     "methods": [
       "GET"
@@ -9764,17 +9753,6 @@
       "POST"
     ],
     "route_file": "ee/server/src/app/api/v1/tenant-management/start-deletion/route.ts",
-    "controller": "",
-    "controller_import": "",
-    "controller_file": ""
-  },
-  {
-    "edition": "EE",
-    "route_path": "/api/v1/tenant-management/start-premium-trial",
-    "methods": [
-      "POST"
-    ],
-    "route_file": "ee/server/src/app/api/v1/tenant-management/start-premium-trial/route.ts",
     "controller": "",
     "controller_import": "",
     "controller_file": ""

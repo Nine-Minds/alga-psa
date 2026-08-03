@@ -13,10 +13,10 @@ describe('ITenant interface', () => {
 
     expect(tenant.plan).toBe('pro');
 
-    const premiumTenant: ITenant = { ...tenant, plan: 'premium' };
+    const proTenant: ITenant = { ...tenant, plan: 'pro' };
     const undefinedPlanTenant: ITenant = { ...tenant, plan: undefined };
 
-    expect(premiumTenant.plan).toBe('premium');
+    expect(proTenant.plan).toBe('pro');
     expect(undefinedPlanTenant.plan).toBeUndefined();
   });
 

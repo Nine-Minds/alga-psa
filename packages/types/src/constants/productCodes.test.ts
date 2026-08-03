@@ -34,7 +34,7 @@ describe('productCodes', () => {
   });
 
   it('does not alter existing tier or add-on resolution behavior', () => {
-    expect(resolveTier('premium')).toEqual({ tier: 'premium', isMisconfigured: false });
+    expect(resolveTier('premium')).toEqual({ tier: 'pro', isMisconfigured: true });
     expect(resolveTier('invalid')).toEqual({ tier: 'pro', isMisconfigured: true });
     expect(tenantHasAddOn(['ai_assistant'], 'ai_assistant')).toBe(true);
     expect(tenantHasAddOn([], 'ai_assistant')).toBe(false);

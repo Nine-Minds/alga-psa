@@ -29,7 +29,7 @@ const activities = proxyActivities<{
     clientName?: string;
     licenseCount?: number;
     billingSource?: 'stripe' | 'apple_iap' | 'manual';
-    plan?: 'solo' | 'pro' | 'premium';
+    plan?: 'solo' | 'pro';
     productCode?: 'psa' | 'algadesk';
     appleIap?: {
       originalTransactionId: string;

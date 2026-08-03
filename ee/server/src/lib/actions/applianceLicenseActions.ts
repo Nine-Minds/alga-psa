@@ -8,7 +8,7 @@ import Stripe from 'stripe';
 import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 
-export type ApplianceLicenseTier = 'pro' | 'premium';
+export type ApplianceLicenseTier = 'pro';
 export type ApplianceLicenseTransport = 'connected-monthly' | 'connected-annual' | 'airgap-annual';
 
 export interface PurchaseApplianceLicenseInput {
@@ -45,9 +45,6 @@ function getPriceEnvKey(tier: ApplianceLicenseTier, transport: ApplianceLicenseT
     'pro:connected-monthly':  'STRIPE_APPLIANCE_PRO_CONNECTED_MONTHLY_PRICE_ID',
     'pro:connected-annual':   'STRIPE_APPLIANCE_PRO_CONNECTED_ANNUAL_PRICE_ID',
     'pro:airgap-annual':      'STRIPE_APPLIANCE_PRO_AIRGAP_ANNUAL_PRICE_ID',
-    'premium:connected-monthly': 'STRIPE_APPLIANCE_PREMIUM_CONNECTED_MONTHLY_PRICE_ID',
-    'premium:connected-annual':  'STRIPE_APPLIANCE_PREMIUM_CONNECTED_ANNUAL_PRICE_ID',
-    'premium:airgap-annual':     'STRIPE_APPLIANCE_PREMIUM_AIRGAP_ANNUAL_PRICE_ID',
   };
   return map[`${tier}:${transport}`] ?? '';
 }
@@ -90,7 +87,7 @@ export async function createApplianceLicenseCheckout(
   }
 
   // Validate
-  if (tier !== 'pro' && tier !== 'premium') throw new Error('Invalid tier');
+  if (tier !== 'pro') throw new Error('Invalid tier');
   if (!Number.isInteger(seats) || seats < 1) throw new Error('seats must be a positive integer');
   if (!['connected-monthly', 'connected-annual', 'airgap-annual'].includes(transport)) {
     throw new Error('Invalid transport');

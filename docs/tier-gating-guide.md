@@ -4,7 +4,7 @@ How to add a new feature to the tier gate system.
 
 ## Architecture Overview
 
-The tier system has two tiers: **Pro** and **Premium**. The `tenants.plan` column is the single source of truth. Features are gated at three layers:
+The tier system has three active tiers: **Essentials**, **Solo**, and **Pro**. Pro is the only paid tier above Solo. The `tenants.plan` column is the single source of truth. Features are gated at three layers:
 
 1. **UI** — hide/show with `TierGate` (client) or `ServerTierGate` (server component)
 2. **Navigation** — filter sidebar items
@@ -25,35 +25,27 @@ export enum TIER_FEATURES {
 }
 ```
 
-### 2. Add to TIER_FEATURE_MAP
+### 2. Add to FEATURE_MINIMUM_TIER
 
-Map which tiers get the feature:
-
-```ts
-// packages/types/src/constants/tierFeatures.ts
-export const TIER_FEATURE_MAP: Record<TenantTier, TIER_FEATURES[]> = {
-  pro: [
-    TIER_FEATURES.ENTRA_SYNC,
-    TIER_FEATURES.CIPP,
-  ],
-  premium: [
-    TIER_FEATURES.ENTRA_SYNC,
-    TIER_FEATURES.CIPP,
-    TIER_FEATURES.YOUR_NEW_FEATURE,  // ← add here
-  ],
-};
-```
-
-### 3. Add to FEATURE_MINIMUM_TIER
+Declare the lowest tier that receives the feature. Use Pro for paid features:
 
 ```ts
 // packages/types/src/constants/tierFeatures.ts
 export const FEATURE_MINIMUM_TIER: Record<TIER_FEATURES, TenantTier> = {
   [TIER_FEATURES.ENTRA_SYNC]: 'pro',
   [TIER_FEATURES.CIPP]: 'pro',
-  [TIER_FEATURES.YOUR_NEW_FEATURE]: 'premium',  // ← add here
+  [TIER_FEATURES.YOUR_NEW_FEATURE]: 'pro',  // ← add here
 };
 ```
+
+### 3. Verify the derived TIER_FEATURE_MAP
+
+```ts
+// packages/types/src/constants/tierFeatures.ts
+expect(TIER_FEATURE_MAP.pro).toContain(TIER_FEATURES.YOUR_NEW_FEATURE);
+```
+
+`TIER_FEATURE_MAP` is derived from the minimum-tier map and tier ranks; do not maintain a second hand-written entitlement list.
 
 ### 4. Gate UI components
 
@@ -140,12 +132,12 @@ const FEATURE_DISPLAY_NAMES: Record<TIER_FEATURES, string> = {
 
 ```ts
 // packages/types/src/constants/tierFeatures.test.ts
-it('premium tier has YOUR_NEW_FEATURE', () => {
-  expect(tierHasFeature('premium', TIER_FEATURES.YOUR_NEW_FEATURE)).toBe(true);
+it('pro tier has YOUR_NEW_FEATURE', () => {
+  expect(tierHasFeature('pro', TIER_FEATURES.YOUR_NEW_FEATURE)).toBe(true);
 });
 
-it('pro tier does not have YOUR_NEW_FEATURE', () => {
-  expect(tierHasFeature('pro', TIER_FEATURES.YOUR_NEW_FEATURE)).toBe(false);
+it('solo tier does not have YOUR_NEW_FEATURE', () => {
+  expect(tierHasFeature('solo', TIER_FEATURES.YOUR_NEW_FEATURE)).toBe(false);
 });
 ```
 
@@ -153,8 +145,8 @@ it('pro tier does not have YOUR_NEW_FEATURE', () => {
 
 ```ts
 // your-feature.test.ts
-it('throws TierAccessError for pro tenant', async () => {
-  mockGetSession.mockResolvedValue({ user: { plan: 'pro' } });
+it('throws TierAccessError for solo tenant', async () => {
+  mockGetSession.mockResolvedValue({ user: { plan: 'solo' } });
   await expect(assertTierAccess(TIER_FEATURES.YOUR_NEW_FEATURE))
     .rejects.toThrow(TierAccessError);
 });
@@ -188,9 +180,10 @@ This means CE users get all features regardless of `tenants.plan`.
 
 | Feature | Enum | Minimum tier | Gated Where |
 |---------|------|--------------|-------------|
-| Visual Invoice Designer | `INVOICE_DESIGNER` | Premium | InvoiceTemplateEditor visual tab, BillingPageClient |
 | Entra Sync | `ENTRA_SYNC` | Pro | IntegrationsSettingsPage, SettingsPage, Entra API routes |
 | CIPP | `CIPP` | Pro | EntraIntegrationSettings connection options |
+| Advanced Authorization Bundles | `ADVANCED_AUTHORIZATION_BUNDLES` | Pro | PolicyManagement and authorization bundle actions |
+| Opportunity Management | `OPPORTUNITY_MANAGEMENT` | Pro | Opportunity routes and actions |
 
 ## Dormant Enterprise Add-on Plumbing
 

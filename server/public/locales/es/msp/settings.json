@@ -2147,7 +2147,7 @@
       "entra": {
         "name": "Microsoft Entra",
         "description": "Descubra inquilinos Microsoft administrados y sincronice usuarios a contactos",
-        "upgradeDescription": "Descubra inquilinos Microsoft Entra administrados y sincronice usuarios a contactos. Actualice a Premium para desbloquear esta función."
+        "upgradeDescription": "Descubra inquilinos Microsoft Entra administrados y sincronice usuarios a contactos. Actualice a Pro para desbloquear esta función."
       },
       "stripe": {
         "name": "Stripe",

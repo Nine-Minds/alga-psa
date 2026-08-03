@@ -2147,7 +2147,7 @@
       "entra": {
         "name": "Microsoft Entra",
         "description": "Entdecken Sie verwaltete Microsoft-Mandanten und synchronisieren Sie Benutzer zu Kontakten",
-        "upgradeDescription": "Entdecken Sie verwaltete Microsoft Entra-Mandanten und synchronisieren Sie Benutzer zu Kontakten. Upgraden Sie auf Premium, um diese Funktion freizuschalten."
+        "upgradeDescription": "Entdecken Sie verwaltete Microsoft Entra-Mandanten und synchronisieren Sie Benutzer zu Kontakten. Upgraden Sie auf Pro, um diese Funktion freizuschalten."
       },
       "stripe": {
         "name": "Stripe",

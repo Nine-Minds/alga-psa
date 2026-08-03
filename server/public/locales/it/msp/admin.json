@@ -324,12 +324,12 @@
     },
     "upsell": {
       "title": "Pacchetti di autorizzazione",
-      "description": "La gestione avanzata dei pacchetti di autorizzazione è disponibile nel piano Premium. Esegui l'upgrade per gestire pacchetti di restrizione riutilizzabili."
+      "description": "La gestione avanzata dei pacchetti di autorizzazione è disponibile nel piano Pro. Esegui l'upgrade per gestire pacchetti di restrizione riutilizzabili."
     },
     "hero": {
-      "badge": "Workspace Premium",
+      "badge": "Workspace Pro",
       "title": "Pacchetti di autorizzazione",
-      "subtitle": "Gestisci la restrizione degli accessi Premium con revisioni in bozza, assegnazioni con ambito e simulazione sicura da un unico centro di controllo.",
+      "subtitle": "Gestisci la restrizione degli accessi Pro con revisioni in bozza, assegnazioni con ambito e simulazione sicura da un unico centro di controllo.",
       "newBundle": "Nuovo pacchetto",
       "addStarters": "Aggiungi pacchetti iniziali",
       "addingStarters": "Aggiunta pacchetti iniziali in corso..."

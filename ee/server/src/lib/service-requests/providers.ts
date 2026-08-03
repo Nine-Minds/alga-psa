@@ -512,7 +512,6 @@ const licenseOrderTemplateProvider: ServiceRequestTemplateProvider = {
               required: true,
               options: [
                 { label: 'Pro', value: 'pro' },
-                { label: 'Premium', value: 'premium' },
               ],
             },
             {

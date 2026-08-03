@@ -1148,7 +1148,7 @@ export async function getScheduledLicenseChangesAction(): Promise<{
  * Modifies the Stripe subscription items directly (no redirect to Stripe).
  */
 export async function upgradeTierAction(
-  targetTier: 'pro' | 'premium',
+  targetTier: 'pro',
   interval: 'month' | 'year' = 'month'
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -1314,7 +1314,7 @@ export async function cancelAddOnAction(
  * Used by the UI to show a confirmation dialog before charging.
  */
 export async function getUpgradePreviewAction(
-  targetTier: 'pro' | 'premium',
+  targetTier: 'pro',
   interval: 'month' | 'year' = 'month'
 ): Promise<{
   success: boolean;
@@ -1420,97 +1420,6 @@ export async function getIntervalSwitchPreviewAction(
 }
 
 /**
- * Start a 30-day Premium trial for a tenant.
- * Called by Nine Minds admin via the extension.
- * Requires master tenant session.
- */
-export async function startPremiumTrialAction(
-  targetTenantId: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const session = await getSession();
-    if (!session?.user?.tenant) {
-      return { success: false, error: 'Not authenticated' };
-    }
-
-    // Only the master tenant can start trials for other tenants
-    const stripeService = getStripeService();
-    if (!(await stripeService.isConfigured())) {
-      return { success: false, error: 'Stripe billing is not configured' };
-    }
-
-    const masterTenantId = process.env.STRIPE_MASTER_TENANT_ID || process.env.MASTER_TENANT_ID;
-    if (session.user.tenant !== masterTenantId) {
-      return { success: false, error: 'Only the master tenant can start Premium trials' };
-    }
-
-    return await stripeService.startPremiumTrial(targetTenantId);
-  } catch (error) {
-    logger.error('[startPremiumTrialAction] Error:', error);
-    return {
-      success: false,
-      error: 'Failed to start Premium trial',
-    };
-  }
-}
-
-/**
- * Self-service Premium trial for paying Pro customers.
- * Unlike startPremiumTrialAction (admin-only), this lets the tenant start their own trial.
- * Only allowed for tenants with an active (non-trialing) Pro subscription.
- *
- * The trial keeps Pro prices on Stripe — no billing change during the 30 days.
- * User must explicitly confirm conversion to Premium before trial ends.
- */
-export async function startSelfServicePremiumTrialAction(): Promise<{ success: boolean; error?: string }> {
-  try {
-    const session = await getSession();
-    if (!session?.user?.tenant) {
-      return { success: false, error: 'Not authenticated' };
-    }
-
-    const hasPermission = await checkAccountManagementPermission();
-    if (!hasPermission) {
-      return { success: false, error: 'You do not have permission to manage the subscription' };
-    }
-
-    const stripeService = getStripeService();
-    if (!(await stripeService.isConfigured())) {
-      return { success: false, error: 'Stripe billing is not configured' };
-    }
-
-    // Verify the tenant is on an active (non-trialing) Pro subscription
-    const knex = await getConnection(session.user.tenant);
-    const db = tenantDb(knex, session.user.tenant);
-    const subscription = await db.table<IStripeSubscription>('stripe_subscriptions')
-      .whereIn('status', ['active', 'trialing'])
-      .first();
-
-    if (!subscription) {
-      return { success: false, error: 'No active subscription found' };
-    }
-
-    if (subscription.status === 'trialing') {
-      return { success: false, error: 'Cannot self-start a Premium trial while on a Pro trial. Please contact support.' };
-    }
-
-    // Check if already on a Premium trial
-    const metadata = subscription.metadata || {};
-    if (metadata.premium_trial === 'true') {
-      return { success: false, error: 'A Premium trial is already active' };
-    }
-
-    return await stripeService.startPremiumTrial(session.user.tenant);
-  } catch (error) {
-    logger.error('[startSelfServicePremiumTrialAction] Error:', error);
-    return {
-      success: false,
-      error: 'Failed to start Premium trial',
-    };
-  }
-}
-
-/**
  * Self-service Pro trial for established Solo customers.
  * Solo trial customers are blocked to prevent stacking free trials.
  */
@@ -1537,117 +1446,6 @@ export async function startSoloProTrialAction(): Promise<{ success: boolean; err
     return {
       success: false,
       error: 'Failed to start Pro trial',
-    };
-  }
-}
-
-/**
- * Confirm conversion to Premium after a 30-day trial.
- * The user has seen the pricing and explicitly agrees to switch.
- * This swaps Stripe subscription items from Pro to Premium prices.
- */
-export async function confirmPremiumTrialAction(
-  interval: 'month' | 'year' = 'month'
-): Promise<{ success: boolean; error?: string; effectiveDate?: string }> {
-  try {
-    const session = await getSession();
-    if (!session?.user?.tenant) {
-      return { success: false, error: 'Not authenticated' };
-    }
-
-    const hasPermission = await checkAccountManagementPermission();
-    if (!hasPermission) {
-      return { success: false, error: 'You do not have permission to manage the subscription' };
-    }
-
-    const stripeService = getStripeService();
-    if (!(await stripeService.isConfigured())) {
-      return { success: false, error: 'Stripe billing is not configured' };
-    }
-
-    return await stripeService.confirmPremiumTrial(session.user.tenant, interval);
-  } catch (error) {
-    logger.error('[confirmPremiumTrialAction] Error:', error);
-    return {
-      success: false,
-      error: 'Failed to confirm Premium upgrade',
-    };
-  }
-}
-
-/**
- * Cancel/revert a Premium trial. Flips tenant back to Pro.
- * Since Pro prices were kept on Stripe during trial, no Stripe item changes needed.
- */
-export async function revertPremiumTrialAction(): Promise<{ success: boolean; error?: string }> {
-  try {
-    const session = await getSession();
-    if (!session?.user?.tenant) {
-      return { success: false, error: 'Not authenticated' };
-    }
-
-    const hasPermission = await checkAccountManagementPermission();
-    if (!hasPermission) {
-      return { success: false, error: 'You do not have permission to manage the subscription' };
-    }
-
-    const stripeService = getStripeService();
-    if (!(await stripeService.isConfigured())) {
-      return { success: false, error: 'Stripe billing is not configured' };
-    }
-
-    return await stripeService.revertPremiumTrial(session.user.tenant);
-  } catch (error) {
-    logger.error('[revertPremiumTrialAction] Error:', error);
-    return {
-      success: false,
-      error: 'Failed to cancel Premium trial',
-    };
-  }
-}
-
-/**
- * Send a Premium trial request email to Nine Minds.
- * Called by tenants who want to try Premium.
- */
-export async function sendPremiumTrialRequestAction(
-  message: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const session = await getSession();
-    if (!session?.user?.tenant) {
-      return { success: false, error: 'Not authenticated' };
-    }
-
-    const knex = await getConnection(session.user.tenant);
-    const tenant = await tenantDb(knex, session.user.tenant)
-      .table('tenants')
-      .select('tenant', 'client_name', 'email', 'plan')
-      .first();
-
-    if (!tenant) {
-      return { success: false, error: 'Tenant not found' };
-    }
-
-    // Send email to Nine Minds support
-    const { sendPremiumTrialRequestEmail } = await import('@alga-psa/email');
-    await sendPremiumTrialRequestEmail({
-      tenantId: session.user.tenant,
-      tenantName: tenant.client_name || 'Unknown',
-      tenantEmail: tenant.email || session.user.email,
-      currentPlan: tenant.plan || 'unknown',
-      requestedByName: session.user.name || 'Unknown',
-      requestedByEmail: session.user.email || '',
-      message,
-    });
-
-    logger.info(`[sendPremiumTrialRequestAction] Premium trial request sent for tenant ${session.user.tenant}`);
-    return { success: true };
-  } catch (error) {
-    logger.error('[sendPremiumTrialRequestAction] Error:', error);
-    return {
-      success: false,
-      error: 'Failed to send trial request',
     };
   }
 }
@@ -1743,7 +1541,7 @@ export async function getIapBillingContextAction(): Promise<{
  *   - { error } — failed
  */
 export async function startIapUpgradeAction(
-  targetTier: 'pro' | 'premium',
+  targetTier: 'pro',
   interval: 'month' | 'year' = 'month',
 ): Promise<{
   success: boolean;

@@ -330,18 +330,18 @@ describe('mobile auth (OTT + refresh rotation)', () => {
     expect(ApiKeyService.createApiKey).not.toHaveBeenCalled();
   });
 
-  it('allows Pro and Premium tenants to exchange OTTs', async () => {
+  it('allows Pro tenants to exchange OTTs', async () => {
     const proOtt = await issueMobileOtt({
       tenantId: 'tenant-pro',
       userId: 'user-1',
       sessionId: 'session-1',
       state: 'state-pro',
     });
-    const premiumOtt = await issueMobileOtt({
-      tenantId: 'tenant-premium',
+    const secondProOtt = await issueMobileOtt({
+      tenantId: 'tenant-pro-2',
       userId: 'user-1',
       sessionId: 'session-1',
-      state: 'state-premium',
+      state: 'state-pro-2',
     });
 
     state.sessions.push({
@@ -351,7 +351,7 @@ describe('mobile auth (OTT + refresh rotation)', () => {
       expires_at: new Date(Date.now() + 60_000),
     });
     state.sessions.push({
-      tenant: 'tenant-premium',
+      tenant: 'tenant-pro-2',
       session_id: 'session-1',
       revoked_at: null,
       expires_at: new Date(Date.now() + 60_000),
@@ -362,14 +362,14 @@ describe('mobile auth (OTT + refresh rotation)', () => {
       state: 'state-pro',
       device: { deviceId: 'device-pro' },
     });
-    const premiumResult = await exchangeOttForSession({
-      ott: premiumOtt.ott,
-      state: 'state-premium',
-      device: { deviceId: 'device-premium' },
+    const secondProResult = await exchangeOttForSession({
+      ott: secondProOtt.ott,
+      state: 'state-pro-2',
+      device: { deviceId: 'device-pro-2' },
     });
 
     expect(proResult.accessToken).toMatch(/^access-/);
-    expect(premiumResult.accessToken).toMatch(/^access-/);
+    expect(secondProResult.accessToken).toMatch(/^access-/);
     expect(ApiKeyService.createApiKey).toHaveBeenCalledTimes(2);
   });
 

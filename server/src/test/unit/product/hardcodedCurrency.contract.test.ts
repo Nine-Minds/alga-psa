@@ -28,7 +28,7 @@ import { CURRENCY_OPTIONS } from '@alga-psa/core';
 // lowering the count fails the honesty test, adding one fails the growth test.
 const KNOWN_HARDCODED_CURRENCY: Record<string, { count: number; why: string }> = {
   'ee/server/src/components/settings/account/AccountManagement.tsx': {
-    count: 16,
+    count: 15,
     why: 'deliberate: Nine Minds subscription billing is USD (Stripe)',
   },
   'ee/server/src/components/workflow-designer/ActionSchemaReference.tsx': {

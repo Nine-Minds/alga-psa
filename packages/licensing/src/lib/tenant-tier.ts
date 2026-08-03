@@ -23,7 +23,7 @@ export function hasActiveSoloProTrial(value?: string | null): boolean {
  */
 export async function resolveTenantTier(tenantId: string): Promise<TenantTier> {
   // Self-host mode: a license_state row supersedes tenants.plan (offline
-  // license / trial / 'essentials' floor). Guard against the table not existing
+  // Pro license / trial / 'essentials' floor). Guard against the table not existing
   // yet (rolling deploy hitting an un-migrated DB) — fall through to the SaaS
   // plan/Stripe resolution rather than failing the caller.
   try {

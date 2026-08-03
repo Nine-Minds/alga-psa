@@ -236,10 +236,8 @@
   },
   "banners": {
     "trial": {
-      "premiumConfirmed": "Premium bevestigd — start in de volgende facturatiecyclus",
       "dayLeft": "1 dag resterend",
       "daysLeft": "{{count}} dagen resterend",
-      "premiumTrial": "Premium-proefperiode: {{daysLabel}} — bevestig om te behouden",
       "stripeTrial": "{{tier}}-proefperiode: {{daysLabel}}"
     },
     "paymentFailed": {

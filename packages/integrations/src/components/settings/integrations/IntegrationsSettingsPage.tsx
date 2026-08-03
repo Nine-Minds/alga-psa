@@ -128,7 +128,7 @@ function AddOnRequiredNotice({ featureName, addOn, addOnName, description }: {
 interface IntegrationsSettingsPageProps {
   /** Whether the user can use Entra sync (Enterprise add-on) */
   canUseEntraSync?: boolean;
-  /** Whether the user can use CIPP (premium feature) */
+  /** Whether the user can use CIPP (Pro feature) */
   canUseCipp?: boolean;
   /** Whether the user can use Teams integration (Teams add-on) */
   canUseTeams?: boolean;

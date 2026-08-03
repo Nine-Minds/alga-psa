@@ -324,12 +324,12 @@
     },
     "upsell": {
       "title": "Bundles d'autorisation",
-      "description": "La gestion avancée des bundles d'autorisation est disponible dans le forfait Premium. Effectuez une mise à niveau pour gérer les bundles de restriction réutilisables."
+      "description": "La gestion avancée des bundles d'autorisation est disponible dans le forfait Pro. Effectuez une mise à niveau pour gérer les bundles de restriction réutilisables."
     },
     "hero": {
-      "badge": "Espace Premium",
+      "badge": "Espace Pro",
       "title": "Bundles d'autorisation",
-      "subtitle": "Gérez la restriction d'accès Premium avec des révisions de brouillon, des affectations ciblées et une simulation sûre depuis un centre de contrôle unique.",
+      "subtitle": "Gérez la restriction d'accès Pro avec des révisions de brouillon, des affectations ciblées et une simulation sûre depuis un centre de contrôle unique.",
       "newBundle": "Nouveau bundle",
       "addStarters": "Ajouter des bundles de démarrage",
       "addingStarters": "Ajout des bundles de démarrage..."

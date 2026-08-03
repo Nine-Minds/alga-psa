@@ -10,7 +10,7 @@ import type { TenantTier } from '@alga-psa/types';
 /**
  * Maps Stripe product names to tenant tiers.
  * - Current products: alga-psa-preview → pro
- * - Future products: alga-psa-pro, alga-psa-premium
+ * Legacy Premium products are normalized to Pro during webhook reconciliation.
  */
 export const STRIPE_PRODUCT_TIER_MAP: Record<string, TenantTier> = {
   // Current product (preview/beta customers)
@@ -19,10 +19,12 @@ export const STRIPE_PRODUCT_TIER_MAP: Record<string, TenantTier> = {
   // Early adopters (grandfathered customers migrated from preview pricing)
   'alga-psa-early-adopters': 'pro',
 
-  // Future products (pre-mapped for when they're created in Stripe)
+  // Active products
   'alga-psa-solo': 'solo',
   'alga-psa-pro': 'pro',
-  'alga-psa-premium': 'premium',
+
+  // Compatibility for subscriptions created before Premium was retired.
+  'alga-psa-premium': 'pro',
 
   // AlgaDesk product (per-user pricing only; tier is orthogonal to product_code)
   'alga-desk': 'pro',

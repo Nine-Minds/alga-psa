@@ -279,13 +279,15 @@ async function handleLicenseOrderWebhook(
     const metadata = session.metadata ?? {};
 
     const submissionId = metadata.service_request_submission_id;
-    const tier = metadata.tier as 'pro' | 'premium';
+    // Preserve orders created before Premium was retired without allowing the
+    // legacy value into the active appliance-license model.
+    const tier = metadata.tier === 'premium' ? 'pro' : metadata.tier;
     const seats = metadata.seats ? parseInt(metadata.seats, 10) : undefined;
     const transport = metadata.transport;
     const stripeSubId = (session.subscription as string) || session.id;
     const paymentIntentId = (session.payment_intent as string) || session.id;
 
-    if (!submissionId || !tier || !transport) {
+    if (!submissionId || tier !== 'pro' || !transport) {
       logger.error('[License Order Webhook] Missing required metadata', { eventId: event.id, metadata });
       return { success: false, error: 'missing_metadata' };
     }

@@ -39,14 +39,6 @@ describe('assertTierAccess', () => {
       await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).resolves.toBeUndefined();
     });
 
-    it('allows a Premium tenant to access ENTRA_SYNC', async () => {
-      vi.mocked(getSession).mockResolvedValue({
-        user: { plan: 'premium' },
-      } as any);
-
-      await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).resolves.toBeUndefined();
-    });
-
     it('throws TierAccessError for a Solo tenant accessing ENTRA_SYNC', async () => {
       vi.mocked(getSession).mockResolvedValue({
         user: { plan: 'solo' },

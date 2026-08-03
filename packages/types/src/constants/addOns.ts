@@ -1,8 +1,8 @@
 /**
  * Add-on constants and utilities
  *
- * Add-ons are purchased independently of tier. A pro tenant can buy
- * add-ons to unlock premium-only features without upgrading their plan.
+ * Add-ons are purchased independently of tier. A Pro tenant can buy
+ * add-ons to unlock separately sold features without changing their plan.
  *
  * The `tenant_addons` table stores active add-ons per tenant.
  * Each add-on has an addon_key, activation timestamp, optional expiration,

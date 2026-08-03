@@ -588,10 +588,8 @@
   },
   "banners": {
     "trial": {
-      "premiumConfirmed": "Premium confirmed — starts next billing cycle",
       "dayLeft": "1 day left",
       "daysLeft": "{{count}} days left",
-      "premiumTrial": "Premium Trial: {{daysLabel}} — confirm to keep",
       "stripeTrial": "{{tier}} Trial: {{daysLabel}}"
     },
     "paymentFailed": {

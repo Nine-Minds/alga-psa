@@ -2161,7 +2161,7 @@
       "entra": {
         "name": "Microsoft Entra",
         "description": "Odkrywaj zarządzanych dzierżawców Microsoft i synchronizuj użytkowników do kontaktów",
-        "upgradeDescription": "Odkrywaj zarządzanych dzierżawców Microsoft Entra i synchronizuj użytkowników do kontaktów. Przejdź na Premium, aby odblokować tę funkcję."
+        "upgradeDescription": "Odkrywaj zarządzanych dzierżawców Microsoft Entra i synchronizuj użytkowników do kontaktów. Przejdź na Pro, aby odblokować tę funkcję."
       },
       "stripe": {
         "name": "Stripe",

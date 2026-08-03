@@ -7,10 +7,10 @@ describe('stripeTierMapping', () => {
       expect(STRIPE_PRODUCT_TIER_MAP['alga-psa-preview']).toBe('pro');
     });
 
-    it('T049: maps future products: alga-psa-pro→pro, alga-psa-premium→premium', () => {
+    it('T049: maps Pro and legacy Premium products to Pro', () => {
       expect(STRIPE_PRODUCT_TIER_MAP['alga-psa-solo']).toBe('solo');
       expect(STRIPE_PRODUCT_TIER_MAP['alga-psa-pro']).toBe('pro');
-      expect(STRIPE_PRODUCT_TIER_MAP['alga-psa-premium']).toBe('premium');
+      expect(STRIPE_PRODUCT_TIER_MAP['alga-psa-premium']).toBe('pro');
     });
   });
 

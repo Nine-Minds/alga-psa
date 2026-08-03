@@ -49,13 +49,6 @@ describe('assertAddOnAccess', () => {
     await expect(assertAddOnAccess(ADD_ONS.AI_ASSISTANT)).resolves.toBeUndefined();
   });
 
-  it('passes when a Premium tenant has the AI add-on', async () => {
-    getSession.mockResolvedValue({ user: { tenant: 'tenant-123', plan: 'premium' } });
-    getActiveAddOns.mockResolvedValue([ADD_ONS.AI_ASSISTANT]);
-
-    await expect(assertAddOnAccess(ADD_ONS.AI_ASSISTANT)).resolves.toBeUndefined();
-  });
-
   it('bypasses checks in CE edition', async () => {
     enterpriseState.value = false;
 
@@ -77,7 +70,7 @@ describe('assertAddOnAccess', () => {
   });
 
   it('supports Teams and Enterprise add-on checks', async () => {
-    getSession.mockResolvedValue({ user: { tenant: 'tenant-123', plan: 'premium' } });
+    getSession.mockResolvedValue({ user: { tenant: 'tenant-123', plan: 'pro' } });
     getActiveAddOns.mockResolvedValue([ADD_ONS.TEAMS, ADD_ONS.ENTERPRISE]);
 
     await expect(assertAddOnAccess(ADD_ONS.TEAMS)).resolves.toBeUndefined();

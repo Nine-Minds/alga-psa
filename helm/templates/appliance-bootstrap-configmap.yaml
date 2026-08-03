@@ -329,7 +329,7 @@ data:
       pg_password="$(get_admin_password)"
       edition_choice="${EDITION_CHOICE:-ee}"
       license_token="${LICENSE_TOKEN:-}"
-      # Registry edition from an install-code redeem (essentials|pro|premium);
+      # Registry edition from an install-code redeem (essentials|pro);
       # empty on the manual editionChoice/licenseKey path.
       install_edition="${INSTALL_EDITION:-}"
       # Connected-appliance refresh fields (paid install-code redeem only).
@@ -340,7 +340,7 @@ data:
 
       # trial_started_at: NOW() only for an 'ee' install with no license AND not an
       # explicit essentials registration (essentials should resolve to essentials
-      # tier, not auto-start a premium trial; the operator can start one later).
+      # tier, not auto-start an Enterprise trial; the operator can start one later).
       if [ "${edition_choice}" = "ee" ] && [ -z "${license_token}" ] && [ "${install_edition}" != "essentials" ]; then
         trial_expr="NOW()"
       else

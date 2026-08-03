@@ -32,7 +32,7 @@ test('redeemInstallCode maps a paid response (token + credential + check-in)', a
   assert.equal(fetchImpl.calls[0].url, 'https://lic/register');
   assert.equal(fetchImpl.calls[0].body.claim_code, 'K7QPM2RX'); // trimmed + uppercased
   assert.equal(r.tenantId, 'tenant-uuid');
-  assert.equal(r.edition, 'premium');
+  assert.equal(r.edition, 'pro');
   assert.equal(r.licenseToken, 'jwt.token.here');
   assert.equal(r.applianceCredential, 'cred123');
   assert.equal(r.checkInUrl, 'https://lic/check-in');

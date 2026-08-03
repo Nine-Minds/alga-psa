@@ -159,11 +159,11 @@ function verifyLicenseUncached(token: string): LicenseVerifyResult {
   }
 
   // Validate required claims.
-  const { sub, cust, tier, iat, exp } = payload;
+  const { sub, cust, tier: encodedTier, iat, exp } = payload;
   if (
     typeof sub !== 'string' || !sub ||
     typeof cust !== 'string' || !cust ||
-    (tier !== 'pro' && tier !== 'premium') ||
+    (encodedTier !== 'pro' && encodedTier !== 'premium') ||
     typeof iat !== 'number' ||
     typeof exp !== 'number'
   ) {
@@ -174,7 +174,9 @@ function verifyLicenseUncached(token: string): LicenseVerifyResult {
     iss: EXPECTED_ISSUER,
     sub,
     cust,
-    tier,
+    // Premium licenses issued before the tier consolidation retain their
+    // entitlement, but Premium is never exposed as an active LicenseTier.
+    tier: 'pro',
     iat,
     exp,
     ...(typeof payload.seats === 'number' ? { seats: payload.seats } : {}),

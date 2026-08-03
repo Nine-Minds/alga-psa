@@ -324,12 +324,12 @@
     },
     "upsell": {
       "title": "Authorization bundles",
-      "description": "Advanced Authorization Bundle management is available on the Premium tier. Upgrade to manage reusable narrowing bundles."
+      "description": "Advanced Authorization Bundle management is available on the Pro tier. Upgrade to manage reusable narrowing bundles."
     },
     "hero": {
-      "badge": "Premium workspace",
+      "badge": "Pro workspace",
       "title": "Authorization bundles",
-      "subtitle": "Manage premium access narrowing with draft revisions, scoped assignments, and safe simulation from one control center.",
+      "subtitle": "Manage Pro access narrowing with draft revisions, scoped assignments, and safe simulation from one control center.",
       "newBundle": "New bundle",
       "addStarters": "Add starter bundles",
       "addingStarters": "Adding starter bundles..."

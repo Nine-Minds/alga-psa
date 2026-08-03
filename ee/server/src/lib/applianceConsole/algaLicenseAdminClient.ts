@@ -14,7 +14,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-export type ApplianceEdition = 'essentials' | 'pro' | 'premium';
+export type ApplianceEdition = 'essentials' | 'pro';
 export type ApplianceProduct = 'psa' | 'algadesk';
 export type ApplianceStatus = 'registered' | 'installed' | 'active' | 'suspended' | 'cancelled';
 export type InstallCodeState = 'live' | 'consumed' | 'revoked' | 'expired' | 'none';
@@ -30,7 +30,7 @@ export interface ApplianceListRow {
   installed_at: string | null;
   /** Entitlement (paid only; null for essentials). */
   stripe_sub_id: string | null;
-  tier: 'pro' | 'premium' | null;
+  tier: 'pro' | null;
   seats: number | null;
   entitlement_active: boolean | null;
   /** max(appliances.last_checkin_at) across the tenant's entitlement. */
@@ -62,7 +62,7 @@ export interface ApplianceRecord {
 
 export interface ApplianceEntitlement {
   stripe_sub_id: string;
-  tier: 'pro' | 'premium';
+  tier: 'pro';
   seats: number | null;
   active: boolean;
   license_sub: string | null;
@@ -104,6 +104,18 @@ export interface ListApplianceTenantsParams {
 interface AlgaLicenseConfig {
   serviceUrl: string;
   serviceSecret: string;
+}
+
+function normalizeLegacyTier(value: unknown): 'pro' | null {
+  if (value == null) return null;
+  if (value === 'pro' || value === 'premium') return 'pro';
+  throw new Error(`alga-license returned unsupported appliance tier: ${String(value)}`);
+}
+
+function normalizeLegacyEdition(value: unknown): ApplianceEdition {
+  if (value === 'premium' || value === 'pro') return 'pro';
+  if (value === 'essentials') return 'essentials';
+  throw new Error(`alga-license returned unsupported appliance edition: ${String(value)}`);
 }
 
 /**
@@ -173,11 +185,29 @@ export async function listApplianceTenants(
   if (params.cursor) qs.set('cursor', params.cursor);
 
   const { data } = await get<ApplianceListResult>(`/tenants?${qs.toString()}`);
-  return data ?? { items: [], next_cursor: null };
+  if (!data) return { items: [], next_cursor: null };
+  return {
+    ...data,
+    items: data.items.map((item) => ({
+      ...item,
+      edition: normalizeLegacyEdition(item.edition),
+      tier: normalizeLegacyTier(item.tier),
+    })),
+  };
 }
 
 /** Fetch one appliance tenant's detail; null if the registry has no such tenant. */
 export async function getApplianceTenant(tenantId: string): Promise<ApplianceTenantDetail | null> {
   const { data } = await get<ApplianceTenantDetail>(`/tenants/${encodeURIComponent(tenantId)}`);
-  return data;
+  if (!data) return null;
+  return {
+    ...data,
+    tenant: {
+      ...data.tenant,
+      edition: normalizeLegacyEdition(data.tenant.edition),
+    },
+    entitlement: data.entitlement
+      ? { ...data.entitlement, tier: normalizeLegacyTier(data.entitlement.tier) ?? 'pro' }
+      : null,
+  };
 }

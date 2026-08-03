@@ -15,7 +15,6 @@ const TIER_DEFAULT_LIMITS: Record<TenantTier, number> = {
   essentials: 150,
   solo: 150,
   pro: 750,
-  premium: 10000,
 };
 
 export type WorkflowStepQuotaPeriodSource = 'stripe_subscription' | 'fallback_calendar';

@@ -91,17 +91,13 @@ async function getStripeConfig() {
   // These are non-sensitive config, can come from env vars
   const masterTenantId = process.env.MASTER_BILLING_TENANT_ID;
 
-  // Tier-specific prices. Pro is single per-seat; Premium is base + per-user.
+  // Tier-specific prices. Pro is per-seat; Solo is a flat base price.
   const proPriceId = process.env.STRIPE_PRO_PRICE_ID || null;
   const soloBasePriceId = process.env.STRIPE_SOLO_BASE_PRICE_ID || null;
-  const premiumBasePriceId = process.env.STRIPE_PREMIUM_BASE_PRICE_ID || null;
-  const premiumUserPriceId = process.env.STRIPE_PREMIUM_USER_PRICE_ID || null;
 
   // Annual prices (pay for 10 months, get 12 — ~17% discount)
   const proAnnualPriceId = process.env.STRIPE_PRO_ANNUAL_PRICE_ID || null;
   const soloBaseAnnualPriceId = process.env.STRIPE_SOLO_BASE_ANNUAL_PRICE_ID || null;
-  const premiumBaseAnnualPriceId = process.env.STRIPE_PREMIUM_BASE_ANNUAL_PRICE_ID || null;
-  const premiumUserAnnualPriceId = process.env.STRIPE_PREMIUM_USER_ANNUAL_PRICE_ID || null;
   const aiAddOnPriceId = process.env.STRIPE_AI_ADDON_PRICE_ID || null;
   const aiAddOnAnnualPriceId = process.env.STRIPE_AI_ADDON_ANNUAL_PRICE_ID || null;
   const teamsAddOnPriceId = process.env.STRIPE_TEAMS_ADDON_PRICE_ID || null;
@@ -144,12 +140,8 @@ async function getStripeConfig() {
     masterTenantId,
     proPriceId,
     soloBasePriceId,
-    premiumBasePriceId,
-    premiumUserPriceId,
     proAnnualPriceId,
     soloBaseAnnualPriceId,
-    premiumBaseAnnualPriceId,
-    premiumUserAnnualPriceId,
     aiAddOnPriceId,
     aiAddOnAnnualPriceId,
     teamsAddOnPriceId,
@@ -282,6 +274,32 @@ function licenseSubscriptions(
     .whereRaw("COALESCE(metadata->>'addon_key', '') = ''");
 }
 
+const RETIRED_PREMIUM_SCHEDULE_KEY = 'retired_premium_schedule_id';
+const RETIRED_PREMIUM_SCHEDULE_SOURCE_KEY = 'retired_premium_schedule_source';
+const RETIRED_PREMIUM_SCHEDULE_SOURCE = 'confirmed_premium_trial';
+const RETIRED_PREMIUM_METADATA_KEYS = [
+  'premium_trial',
+  'premium_trial_started',
+  'premium_trial_end',
+  'premium_trial_confirmed',
+  'premium_trial_effective_date',
+  'premium_trial_reverted',
+] as const;
+
+function withoutRetiredPremiumMetadata(value: unknown): Record<string, any> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  const metadata = { ...(value as Record<string, any>) };
+  for (const key of RETIRED_PREMIUM_METADATA_KEYS) {
+    delete metadata[key];
+  }
+  delete metadata[RETIRED_PREMIUM_SCHEDULE_KEY];
+  delete metadata[RETIRED_PREMIUM_SCHEDULE_SOURCE_KEY];
+  return metadata;
+}
+
 export class StripeService {
   private stripe!: Stripe;
   private config!: Awaited<ReturnType<typeof getStripeConfig>>;
@@ -293,6 +311,88 @@ export class StripeService {
       apiVersion: '2024-12-18.acacia' as any,
       typescript: true,
     });
+    await this.cleanupRetiredPremiumSchedules();
+  }
+
+  /**
+   * Release legacy Premium subscription schedules before their future price
+   * phase can activate. The migration keeps a temporary schedule pointer plus
+   * confirmation provenance; successful cleanup removes both and the remote
+   * trial metadata.
+   */
+  private async cleanupRetiredPremiumSchedules(
+    connection?: Knex | Knex.Transaction,
+  ): Promise<void> {
+    try {
+      let knex = connection;
+      if (!knex) {
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
+        knex = await getAdminConnection();
+      }
+      const subscriptions = await tenantDb(knex, '__retired_premium_schedule_cleanup__')
+        .unscoped(
+          'stripe_subscriptions',
+          'retired Premium schedule cleanup scans legacy subscriptions across tenants',
+        )
+        .whereRaw('jsonb_exists(metadata, ?)', [RETIRED_PREMIUM_SCHEDULE_KEY])
+        .whereRaw("metadata ->> ? = ?", [
+          RETIRED_PREMIUM_SCHEDULE_SOURCE_KEY,
+          RETIRED_PREMIUM_SCHEDULE_SOURCE,
+        ])
+        .select(
+          'tenant',
+          'stripe_subscription_id',
+          'stripe_subscription_external_id',
+          'metadata',
+        );
+
+      for (const subscription of subscriptions) {
+        const scheduleId = subscription.metadata?.[RETIRED_PREMIUM_SCHEDULE_KEY];
+        const scheduleSource = subscription.metadata?.[RETIRED_PREMIUM_SCHEDULE_SOURCE_KEY];
+        if (
+          typeof scheduleId !== 'string' ||
+          scheduleId.length === 0 ||
+          scheduleSource !== RETIRED_PREMIUM_SCHEDULE_SOURCE
+        ) {
+          continue;
+        }
+
+        try {
+          const schedule = await this.stripe.subscriptionSchedules.retrieve(scheduleId);
+          if (schedule.status === 'active' || schedule.status === 'not_started') {
+            await this.stripe.subscriptionSchedules.release(scheduleId);
+          }
+
+          if (typeof subscription.stripe_subscription_external_id === 'string') {
+            await this.stripe.subscriptions.update(
+              subscription.stripe_subscription_external_id,
+              {
+                metadata: Object.fromEntries(
+                  RETIRED_PREMIUM_METADATA_KEYS.map((key) => [key, '']),
+                ),
+              },
+            );
+          }
+
+          await tenantDb(knex, subscription.tenant)
+            .table('stripe_subscriptions')
+            .where({ stripe_subscription_id: subscription.stripe_subscription_id })
+            .update({
+              metadata: withoutRetiredPremiumMetadata(subscription.metadata),
+              updated_at: knex.fn.now(),
+            });
+        } catch (error) {
+          logger.error(
+            `[StripeService] Failed to release retired Premium schedule ${scheduleId} for tenant ${subscription.tenant}; cleanup will retry`,
+            error,
+          );
+        }
+      }
+    } catch (error) {
+      // Billing must remain available if the compatibility sweep cannot reach
+      // the database. The retained marker makes the next initialization retry.
+      logger.error('[StripeService] Failed to scan retired Premium schedules', error);
+    }
   }
 
   private async ensureInitialized() {
@@ -1433,7 +1533,16 @@ export class StripeService {
       .first();
 
     // Check if this update matches a scheduled quantity change
-    let updatedMetadata = subscription.metadata || {};
+    let updatedMetadata = withoutRetiredPremiumMetadata(subscription.metadata);
+    const retiredPremiumScheduleId = existingSubscription?.metadata?.[RETIRED_PREMIUM_SCHEDULE_KEY];
+    if (typeof retiredPremiumScheduleId === 'string') {
+      updatedMetadata[RETIRED_PREMIUM_SCHEDULE_KEY] = retiredPremiumScheduleId;
+      const retiredPremiumScheduleSource =
+        existingSubscription?.metadata?.[RETIRED_PREMIUM_SCHEDULE_SOURCE_KEY];
+      if (retiredPremiumScheduleSource === RETIRED_PREMIUM_SCHEDULE_SOURCE) {
+        updatedMetadata[RETIRED_PREMIUM_SCHEDULE_SOURCE_KEY] = retiredPremiumScheduleSource;
+      }
+    }
     if (existingSubscription?.metadata?.scheduled_quantity) {
       const scheduledQuantity = existingSubscription.metadata.scheduled_quantity;
 
@@ -1537,15 +1646,6 @@ export class StripeService {
       logger.warn(`[StripeService] Subscription ${subscription.id} for tenant ${tenantId} is ${subscription.status} — payment failure detected`);
     }
 
-    // Check if this tenant has an expired Premium trial that should be reverted.
-    // Skip if trial was already confirmed (premium_trial === 'confirmed').
-    if (subscription.metadata?.premium_trial === 'true' && subscription.metadata?.premium_trial_end) {
-      const trialEnd = new Date(subscription.metadata.premium_trial_end);
-      if (trialEnd <= new Date()) {
-        logger.info(`[StripeService] Premium trial expired for tenant ${tenantId}, reverting to Pro`);
-        await this.revertPremiumTrial(tenantId);
-      }
-    }
   }
 
   /**
@@ -1751,23 +1851,16 @@ export class StripeService {
       if (tier === 'solo' && this.config.soloBaseAnnualPriceId) {
         return { basePriceId: this.config.soloBaseAnnualPriceId, userPriceId: null };
       }
-      if (tier === 'premium' && this.config.premiumBaseAnnualPriceId && this.config.premiumUserAnnualPriceId) {
-        return { basePriceId: this.config.premiumBaseAnnualPriceId, userPriceId: this.config.premiumUserAnnualPriceId };
-      }
       // Fall through to monthly if annual not configured
     }
     if (tier === 'solo' && this.config.soloBasePriceId) {
       return { basePriceId: this.config.soloBasePriceId, userPriceId: null };
     }
-    if (tier === 'premium' && this.config.premiumBasePriceId && this.config.premiumUserPriceId) {
-      return { basePriceId: this.config.premiumBasePriceId, userPriceId: this.config.premiumUserPriceId };
-    }
     return null;
   }
 
   /**
-   * Per-seat tier prices. Pro intentionally uses this simpler model instead
-   * of the base + per-user shape used by Premium.
+   * Per-seat pricing for the paid Pro tier.
    */
   private getTierPerSeatPriceId(
     tier: TenantTier,
@@ -1936,8 +2029,7 @@ export class StripeService {
   /**
    * Build Stripe line items for a tier-based subscription.
    *
-   * `totalQuantity` is the user-facing total seat count (e.g. 6 for a Premium
-   * tenant that wants six licensed users). The per-user line item only
+   * `totalQuantity` is the user-facing total seat count. The per-user line item only
    * carries the *billable* portion — i.e. the total minus any seats already
    * covered by the platform fee. `includedUsers` defaults to 0 so non-tiered
    * call sites keep their existing behavior.
@@ -1970,7 +2062,6 @@ export class StripeService {
     const ids: string[] = [];
     if (this.config.proPriceId) ids.push(this.config.proPriceId);
     if (this.config.proAnnualPriceId) ids.push(this.config.proAnnualPriceId);
-    if (this.config.premiumUserPriceId) ids.push(this.config.premiumUserPriceId);
     if (this.config.earlyAdoptersUserPriceId) ids.push(this.config.earlyAdoptersUserPriceId);
     if (this.config.earlyAdoptersUserAnnualPriceId) ids.push(this.config.earlyAdoptersUserAnnualPriceId);
     if (this.config.algadeskUserPriceId) ids.push(this.config.algadeskUserPriceId);
@@ -2181,7 +2272,7 @@ export class StripeService {
    * Upgrade a tenant's subscription to a new tier.
    *
    * Replaces subscription items with the target tier's prices, preserving the
-   * current user count. Pro uses one per-seat price; Premium uses base + user.
+   * current user count.
    * Stripe handles proration automatically.
    */
   async upgradeTier(
@@ -2873,328 +2964,6 @@ export class StripeService {
     }
   }
 
-  /**
-   * Start a 30-day Premium trial for an existing tenant.
-   *
-   * Trial approach: keep Pro prices on Stripe (no billing change during trial),
-   * grant Premium features via DB plan field. User must explicitly confirm
-   * conversion to Premium before trial ends, or it reverts to Pro.
-   *
-   * Handles two cases:
-   * 1. Paying Pro customer → keep Pro subscription, set plan=premium in DB
-   * 2. Pro trial customer → end Pro trial first, then start Premium trial
-   */
-  async startPremiumTrial(
-    tenantId: string
-  ): Promise<{ success: boolean; error?: string }> {
-    await this.ensureInitialized();
-    logger.info(`[StripeService] Starting Premium trial for tenant ${tenantId}`);
-
-    const knex = await getConnection(tenantId);
-
-    // Validate tenant is on Pro
-    const tenantRecord = await tenantScopedTable(knex, 'tenants', tenantId).select('plan').first();
-    if (!tenantRecord) {
-      return { success: false, error: 'Tenant not found' };
-    }
-    if (tenantRecord.plan === 'premium') {
-      return { success: false, error: 'Tenant is already on Premium' };
-    }
-
-    const customer = await this.getOrImportCustomer(tenantId);
-    const existingSubscription = await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
-      .where({
-        stripe_customer_id: customer.stripe_customer_id,
-      })
-      .whereIn('status', ['active', 'trialing'])
-      .first();
-
-    if (!existingSubscription) {
-      return { success: false, error: 'No active or trialing subscription found' };
-    }
-
-    try {
-      // If currently trialing Pro, end the trial immediately (charge for Pro)
-      if (existingSubscription.status === 'trialing') {
-        logger.info(`[StripeService] Ending Pro trial for tenant ${tenantId} before Premium trial`);
-        await this.stripe.subscriptions.update(
-          existingSubscription.stripe_subscription_external_id,
-          { trial_end: 'now' }
-        );
-        // Wait a moment for Stripe to process
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
-      // Set Premium trial end to 30 days from now
-      const premiumTrialEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
-      // Update Stripe subscription metadata only (keep Pro prices unchanged)
-      await this.stripe.subscriptions.update(
-        existingSubscription.stripe_subscription_external_id,
-        {
-          metadata: {
-            tenant_id: tenantId,
-            premium_trial: 'true',
-            premium_trial_started: new Date().toISOString(),
-            premium_trial_end: premiumTrialEnd,
-          },
-        }
-      );
-
-      // Update local subscription record with trial metadata
-      const existingMetadata = existingSubscription.metadata || {};
-      await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
-        .where({ stripe_subscription_id: existingSubscription.stripe_subscription_id })
-        .update({
-          metadata: {
-            ...existingMetadata,
-            premium_trial: 'true',
-            premium_trial_started: new Date().toISOString(),
-            premium_trial_end: premiumTrialEnd,
-          },
-          updated_at: knex.fn.now(),
-        });
-
-      // Update tenant plan to premium (unlocks features)
-      await tenantScopedTable(knex, 'tenants', tenantId)
-        .update({
-          plan: 'premium',
-          updated_at: knex.fn.now(),
-        });
-
-      logger.info(`[StripeService] Started 30-day Premium trial for tenant ${tenantId}, ends ${premiumTrialEnd}`);
-      return { success: true };
-    } catch (error: any) {
-      logger.error(`[StripeService] Failed to start Premium trial for tenant ${tenantId}:`, error);
-      return { success: false, error: error.message || 'Failed to start Premium trial' };
-    }
-  }
-
-  /**
-   * Confirm Premium trial — user explicitly agrees to convert to Premium pricing.
-   *
-   * Schedules the Stripe subscription item swap for the end of the current billing
-   * period (via SubscriptionSchedule). The trial continues until the period ends —
-   * Premium features stay active the whole time, and the user isn't charged early.
-   */
-  async confirmPremiumTrial(
-    tenantId: string,
-    interval: 'month' | 'year' = 'month'
-  ): Promise<{ success: boolean; error?: string; effectiveDate?: string }> {
-    await this.ensureInitialized();
-    logger.info(`[StripeService] Confirming Premium trial for tenant ${tenantId}`);
-
-    const knex = await getConnection(tenantId);
-    const premiumPrices = this.getTierPriceIds('premium', interval);
-    if (!premiumPrices) {
-      return { success: false, error: 'Premium pricing not configured' };
-    }
-
-    const customer = await this.getOrImportCustomer(tenantId);
-    const existingSubscription = await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
-      .where({
-        stripe_customer_id: customer.stripe_customer_id,
-      })
-      .whereIn('status', ['active', 'trialing'])
-      .first();
-
-    if (!existingSubscription) {
-      return { success: false, error: 'No active subscription found' };
-    }
-
-    // Verify this is actually a Premium trial
-    const metadata = existingSubscription.metadata || {};
-    if (metadata.premium_trial !== 'true') {
-      return { success: false, error: 'No active Premium trial found' };
-    }
-
-    try {
-      const currentQuantity = existingSubscription.quantity;
-
-      // Create a subscription schedule from the current subscription,
-      // then add a second phase with Premium prices at period end
-      const schedule = await this.stripe.subscriptionSchedules.create({
-        from_subscription: existingSubscription.stripe_subscription_external_id,
-      });
-
-      const currentPhase = schedule.phases[0];
-
-      await this.stripe.subscriptionSchedules.update(schedule.id, {
-        phases: [
-          // Phase 1: keep current Pro prices until period end
-          {
-            start_date: currentPhase.start_date,
-            end_date: currentPhase.end_date,
-            items: currentPhase.items.map(item => ({
-              price: typeof item.price === 'string' ? item.price : item.price.id || (item.price as any),
-              quantity: item.quantity,
-            })),
-          },
-          // Phase 2: switch to Premium prices (Premium has 0 included users).
-          {
-            items: this.buildTierLineItems(
-              premiumPrices,
-              currentQuantity,
-              this.getIncludedUsersForTier('premium'),
-            ),
-          },
-        ],
-        end_behavior: 'release',
-      });
-
-      const effectiveDate = new Date((currentPhase.end_date as number) * 1000).toISOString();
-
-      // Mark trial as confirmed — prevents auto-revert, but keep premium_trial metadata
-      // so the UI knows Premium features should stay active until the schedule kicks in
-      const { premium_trial_end, ...remainingMetadata } = metadata;
-      await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
-        .where({ stripe_subscription_id: existingSubscription.stripe_subscription_id })
-        .update({
-          metadata: {
-            ...remainingMetadata,
-            premium_trial: 'confirmed',
-            premium_trial_confirmed: new Date().toISOString(),
-            premium_trial_effective_date: effectiveDate,
-            schedule_id: schedule.id,
-          },
-          updated_at: knex.fn.now(),
-        });
-
-      // Update Stripe metadata too
-      await this.stripe.subscriptions.update(
-        existingSubscription.stripe_subscription_external_id,
-        {
-          metadata: {
-            tenant_id: tenantId,
-            premium_trial: 'confirmed',
-            premium_trial_confirmed: new Date().toISOString(),
-            premium_trial_end: '',
-          },
-        }
-      );
-
-      logger.info(`[StripeService] Premium trial confirmed for tenant ${tenantId}, Premium billing scheduled for ${effectiveDate}`);
-      return { success: true, effectiveDate };
-    } catch (error: any) {
-      logger.error(`[StripeService] Failed to confirm Premium trial for tenant ${tenantId}:`, error);
-      return { success: false, error: error.message || 'Failed to confirm Premium upgrade' };
-    }
-  }
-
-  /**
-   * Revert a Premium trial — flip tenant back to Pro.
-   * Called when trial expires without confirmation, or when user cancels trial.
-   * Does NOT touch Stripe subscription items (they're already on Pro prices).
-   */
-  async revertPremiumTrial(
-    tenantId: string
-  ): Promise<{ success: boolean; error?: string }> {
-    await this.ensureInitialized();
-    logger.info(`[StripeService] Reverting Premium trial for tenant ${tenantId}`);
-
-    const knex = await getConnection(tenantId);
-
-    const customer = await this.getOrImportCustomer(tenantId);
-    const existingSubscription = await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
-      .where({
-        stripe_customer_id: customer.stripe_customer_id,
-      })
-      .whereIn('status', ['active', 'trialing'])
-      .first();
-
-    if (!existingSubscription) {
-      return { success: false, error: 'No active subscription found' };
-    }
-
-    try {
-      // Clear trial metadata on Stripe
-      await this.stripe.subscriptions.update(
-        existingSubscription.stripe_subscription_external_id,
-        {
-          metadata: {
-            tenant_id: tenantId,
-            premium_trial: '',
-            premium_trial_started: '',
-            premium_trial_end: '',
-            premium_trial_reverted: new Date().toISOString(),
-          },
-        }
-      );
-
-      // Clear trial metadata locally
-      const metadata = existingSubscription.metadata || {};
-      const { premium_trial, premium_trial_started, premium_trial_end, ...remainingMetadata } = metadata;
-      await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
-        .where({ stripe_subscription_id: existingSubscription.stripe_subscription_id })
-        .update({
-          metadata: {
-            ...remainingMetadata,
-            premium_trial_reverted: new Date().toISOString(),
-          },
-          updated_at: knex.fn.now(),
-        });
-
-      // Revert tenant plan to pro
-      await tenantScopedTable(knex, 'tenants', tenantId)
-        .update({
-          plan: 'pro',
-          updated_at: knex.fn.now(),
-        });
-
-      logger.info(`[StripeService] Reverted Premium trial for tenant ${tenantId}, back to Pro`);
-      return { success: true };
-    } catch (error: any) {
-      logger.error(`[StripeService] Failed to revert Premium trial for tenant ${tenantId}:`, error);
-      return { success: false, error: error.message || 'Failed to revert Premium trial' };
-    }
-  }
-
-  /**
-   * Check all tenants with active Premium trials and revert any that have expired.
-   * Should be called periodically (e.g. via cron or webhook).
-   */
-  async checkAndRevertExpiredPremiumTrials(): Promise<{ reverted: string[]; errors: string[] }> {
-    await this.ensureInitialized();
-    logger.info('[StripeService] Checking for expired Premium trials');
-
-    const { getAdminConnection } = await import('@alga-psa/db/admin');
-    const knex = await getAdminConnection();
-    const reverted: string[] = [];
-    const errors: string[] = [];
-
-    try {
-      // Find all subscriptions with an active premium trial that has expired
-      const expiredTrials = await tenantDb(knex, '__stripe_expired_premium_trial_sweep__')
-        .unscoped('stripe_subscriptions', 'Stripe premium trial cleanup scans expired trials across all tenants')
-        .whereIn('status', ['active', 'trialing'])
-        .whereRaw("metadata->>'premium_trial' = 'true'")
-        .whereRaw("(metadata->>'premium_trial_end')::timestamptz < now()")
-        .select('tenant');
-
-      for (const sub of expiredTrials) {
-        try {
-          const result = await this.revertPremiumTrial(sub.tenant);
-          if (result.success) {
-            reverted.push(sub.tenant);
-          } else {
-            errors.push(`${sub.tenant}: ${result.error}`);
-          }
-        } catch (error: any) {
-          errors.push(`${sub.tenant}: ${error.message}`);
-        }
-      }
-    } catch (error: any) {
-      logger.error('[StripeService] Error checking expired Premium trials:', error);
-      errors.push(`Query error: ${error.message}`);
-    }
-
-    if (reverted.length > 0) {
-      logger.info(`[StripeService] Reverted ${reverted.length} expired Premium trials: ${reverted.join(', ')}`);
-    }
-
-    return { reverted, errors };
-  }
-
   async purchaseAddOn(
     tenantId: string,
     addOn: AddOnKey,
@@ -3426,7 +3195,7 @@ export class StripeService {
    */
   async startIapToStripeTransition(
     tenantId: string,
-    targetTier: 'pro' | 'premium',
+    targetTier: 'pro',
     interval: 'month' | 'year' = 'month',
   ): Promise<
     | { type: 'needs_auto_renew_off'; expiresAt: string }

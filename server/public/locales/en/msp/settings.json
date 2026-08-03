@@ -2147,7 +2147,7 @@
       "entra": {
         "name": "Microsoft Entra",
         "description": "Discover managed Microsoft tenants and sync users to contacts",
-        "upgradeDescription": "Discover managed Microsoft Entra tenants and sync users to contacts. Upgrade to Premium to unlock this feature."
+        "upgradeDescription": "Discover managed Microsoft Entra tenants and sync users to contacts. Upgrade to Pro to unlock this feature."
       },
       "stripe": {
         "name": "Stripe",

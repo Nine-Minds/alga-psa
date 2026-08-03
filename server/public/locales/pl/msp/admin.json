@@ -324,12 +324,12 @@
     },
     "upsell": {
       "title": "Pakiety autoryzacji",
-      "description": "Zaawansowane zarządzanie pakietami autoryzacji jest dostępne w warstwie Premium. Zaktualizuj, aby zarządzać ponownie używalnymi pakietami zawężania."
+      "description": "Zaawansowane zarządzanie pakietami autoryzacji jest dostępne w warstwie Pro. Zaktualizuj, aby zarządzać ponownie używalnymi pakietami zawężania."
     },
     "hero": {
-      "badge": "Obszar roboczy Premium",
+      "badge": "Obszar roboczy Pro",
       "title": "Pakiety autoryzacji",
-      "subtitle": "Zarządzaj premium zawężaniem dostępu z wersjami roboczymi, przypisaniami z zakresem i bezpieczną symulacją z jednego centrum sterowania.",
+      "subtitle": "Zarządzaj Pro zawężaniem dostępu z wersjami roboczymi, przypisaniami z zakresem i bezpieczną symulacją z jednego centrum sterowania.",
       "newBundle": "Nowy pakiet",
       "addStarters": "Dodaj pakiety startowe",
       "addingStarters": "Dodawanie pakietów startowych..."

@@ -236,10 +236,8 @@
   },
   "banners": {
     "trial": {
-      "premiumConfirmed": "Premium confirmado – inicia o próximo ciclo de faturamento",
       "dayLeft": "Falta 1 dia",
       "daysLeft": "{{count}} dias restantes",
-      "premiumTrial": "Avaliação Premium: {{daysLabel}} – confirme para manter",
       "stripeTrial": "Teste {{tier}}: {{daysLabel}}"
     },
     "paymentFailed": {

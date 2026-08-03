@@ -1,9 +1,9 @@
 # Schema Coverage Snapshot
 
-- Total routes: 731
+- Total routes: 729
 - Routes with canonical schemas: 376 (51%)
-- Routes missing canonical schemas: 355
-- Routes handled without controllers (likely Next.js handlers): 341
+- Routes missing canonical schemas: 353
+- Routes handled without controllers (likely Next.js handlers): 339
 
 ## Controllers Missing Canonical Schemas
 - `server/src/lib/api/controllers/ApiAccountingExportController.ts` (8 routes)

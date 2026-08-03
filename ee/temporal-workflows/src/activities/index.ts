@@ -21,7 +21,6 @@ export * from "./entra-sync-activities";
 export * from "./tenant-deletion-activities";
 export * from "./tenant-export-activities";
 export * from "./sla-activities";
-export * from "./premium-trial-activities";
 export * from "./appliance-check-in-activities";
 export * from "./appliance-license-redeem-activities";
 export * from "./workflow-runtime-v2-activities";

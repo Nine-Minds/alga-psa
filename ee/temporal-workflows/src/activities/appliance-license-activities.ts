@@ -50,7 +50,7 @@ async function c4Post(path: string, body: unknown): Promise<unknown> {
 export interface SignApplianceLicenseInput {
   stripeSubId: string;
   customer: string;
-  tier: 'pro' | 'premium';
+  tier: 'pro';
   seats?: number;
   transport: 'connected' | 'airgap';
 }
@@ -64,7 +64,7 @@ export interface SignApplianceLicenseResult {
 export interface UpsertLicenseContractInput {
   tenant: string;
   clientId: string;
-  tier: 'pro' | 'premium';
+  tier: 'pro';
   seats?: number;
   transport: string;
   stripeSubId: string;

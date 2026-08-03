@@ -20,7 +20,7 @@ Our APIs are segmented into two editions:
 ### Enterprise Edition (EE)
 - Located in the `ee/server/src/api/` directory
 - Only available in EE deployments
-- Advanced/premium features
+- Advanced features
 - Current EE-only APIs:
   - Tenant Provisioning API (see [tenant_provisioning_api.md](tenant_provisioning_api.md))
   - Hudu Integration Status API (see Section 6)

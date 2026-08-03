@@ -2147,7 +2147,7 @@
       "entra": {
         "name": "Microsoft Entra",
         "description": "Découvrez les locataires Microsoft gérés et synchronisez les utilisateurs vers les contacts",
-        "upgradeDescription": "Découvrez les locataires Microsoft Entra gérés et synchronisez les utilisateurs vers les contacts. Passez à Premium pour débloquer cette fonctionnalité."
+        "upgradeDescription": "Découvrez les locataires Microsoft Entra gérés et synchronisez les utilisateurs vers les contacts. Passez à Pro pour débloquer cette fonctionnalité."
       },
       "stripe": {
         "name": "Stripe",
