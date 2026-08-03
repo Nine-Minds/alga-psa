@@ -44,6 +44,9 @@ export interface MicrosoftGraphSendMailResult {
   clientRequestId?: string;
 }
 
+// Graph caps Outlook message subscriptions at 4,230 minutes; keep a safe 60-hour window.
+const MICROSOFT_MESSAGE_SUBSCRIPTION_EXPIRATION_MS = 60 * 60 * 60 * 1000;
+
 export type MicrosoftGraphSendMailPayload =
   | { kind: 'json'; message: Record<string, unknown> }
   | { kind: 'mime'; content: string };
@@ -543,10 +546,6 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         throw new Error('Webhook notification URL not configured');
       }
 
-      // Microsoft Graph limit for Outlook message subscriptions is 4230 minutes (~70.5 hours)
-      // Use a safe window (e.g., 60 hours) to avoid 400 due to out-of-range expiration
-      const expirationMs = 60 * 60 * 1000 * 60; // 60 hours in ms
-
       const desiredFolder = (this.config.folder_to_monitor || 'Inbox').trim();
       const { resource, resolvedFolder } = await this.buildFolderResourcePath(desiredFolder);
       const mailboxBase = this.getMailboxBasePath();
@@ -555,7 +554,9 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         changeType: 'created',
         notificationUrl: webhookUrl,
         resource,
-        expirationDateTime: new Date(Date.now() + expirationMs).toISOString(),
+        expirationDateTime: new Date(
+          Date.now() + MICROSOFT_MESSAGE_SUBSCRIPTION_EXPIRATION_MS
+        ).toISOString(),
         clientState: this.config.webhook_verification_token || 'email-webhook-verification',
       };
 
@@ -628,7 +629,9 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         throw new Error('No webhook subscription to renew');
       }
 
-      const newExpiry = new Date(Date.now() + (3 * 24 * 60 * 60 * 1000)).toISOString();
+      const newExpiry = new Date(
+        Date.now() + MICROSOFT_MESSAGE_SUBSCRIPTION_EXPIRATION_MS
+      ).toISOString();
       
       await this.httpClient.patch(`/subscriptions/${this.config.webhook_subscription_id}`, {
         expirationDateTime: newExpiry,
