@@ -79,6 +79,10 @@
     "continue": "Doorgaan",
     "printSelected": "Geselecteerde afdrukken ({{count}})"
   },
+  "upgradePrompt": {
+    "editionLabel": "Enterprise-editie",
+    "defaultCta": "Enterprise ontdekken"
+  },
   "status": {
     "loading": "Bezig met laden...",
     "saving": "Bezig met opslaan...",
@@ -1131,6 +1135,8 @@
       "missingRunId": "Uitvoerings-ID ontbreekt.",
       "teamLeadAccessRequired": "Teamleider-toegang vereist",
       "teamsTabUnavailable": "Teams-tabblad niet beschikbaar",
+      "teamsFeatureName": "Microsoft Teams-integratie",
+      "teamsEnterprisePitch": "Breng ticketcontext en workflows voor technici naar Microsoft Teams.",
       "teamsSignInUnavailable": "Teams-aanmelding niet beschikbaar",
       "assetNotFound": "Asset niet gevonden",
       "contactNotFound": "Contact niet gevonden",

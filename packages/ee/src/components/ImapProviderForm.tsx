@@ -7,4 +7,3 @@
 export function ImapProviderForm(): null {
   return null;
 }
-

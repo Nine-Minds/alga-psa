@@ -79,6 +79,10 @@
     "continue": "55555",
     "printSelected": "55555 {{count}} 55555"
   },
+  "upgradePrompt": {
+    "editionLabel": "55555",
+    "defaultCta": "55555"
+  },
   "form": {
     "selectPlaceholder": "55555",
     "clearSelection": "55555",
@@ -1131,6 +1135,8 @@
       "missingRunId": "55555",
       "teamLeadAccessRequired": "55555",
       "teamsTabUnavailable": "55555",
+      "teamsFeatureName": "55555",
+      "teamsEnterprisePitch": "55555",
       "teamsSignInUnavailable": "55555",
       "teamsSetupNotFinished": "55555",
       "teamsSetupNotFinishedHint": "55555",

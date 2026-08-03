@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Card } from '@alga-psa/ui/components/Card';
+import { UpgradePrompt } from '@alga-psa/ui/components/UpgradePrompt';
 import { isTeamsEnterpriseEdition, TEAMS_AVAILABILITY_MESSAGES } from '@alga-psa/integrations/lib/teamsAvailabilityCore';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { ReactNode } from 'react';
@@ -27,6 +28,22 @@ async function renderUnavailableCard(message: string) {
   );
 }
 
+async function renderEditionUpgradePrompt() {
+  const { t } = await getServerTranslation(undefined, 'common');
+
+  return (
+    <div className="m-6">
+      <UpgradePrompt
+        featureName={t('pages.errors.teamsFeatureName', { defaultValue: 'Microsoft Teams integration' })}
+        pitch={t('pages.errors.teamsEnterprisePitch', {
+          defaultValue: 'Bring ticket context and technician workflows into Microsoft Teams.',
+        })}
+        ctaId="upgrade-teams-integration-button"
+      />
+    </div>
+  );
+}
+
 type EeTeamsTabPageModule = {
   default: (props: TeamsTabPageProps) => Promise<ReactNode>;
 };
@@ -35,7 +52,7 @@ let eePagePromise: Promise<EeTeamsTabPageModule | null> | null = null;
 
 export default async function TeamsTabPage({ searchParams }: TeamsTabPageProps) {
   if (!isTeamsEnterpriseEdition()) {
-    return await renderUnavailableCard(TEAMS_AVAILABILITY_MESSAGES.ce_unavailable);
+    return await renderEditionUpgradePrompt();
   }
 
   if (!eePagePromise) {

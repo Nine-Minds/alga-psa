@@ -79,6 +79,10 @@
     "continue": "Weiter",
     "printSelected": "Ausgewählte drucken ({{count}})"
   },
+  "upgradePrompt": {
+    "editionLabel": "Enterprise-Edition",
+    "defaultCta": "Enterprise entdecken"
+  },
   "status": {
     "loading": "Wird geladen...",
     "saving": "Wird gespeichert...",
@@ -1131,6 +1135,8 @@
       "missingRunId": "Ausführungs-ID fehlt.",
       "teamLeadAccessRequired": "Teamleiter-Zugriff erforderlich",
       "teamsTabUnavailable": "Teams-Tab nicht verfügbar",
+      "teamsFeatureName": "Microsoft Teams-Integration",
+      "teamsEnterprisePitch": "Bringen Sie Ticket-Kontext und Techniker-Workflows in Microsoft Teams.",
       "teamsSignInUnavailable": "Teams-Anmeldung nicht verfügbar",
       "assetNotFound": "Asset nicht gefunden",
       "contactNotFound": "Kontakt nicht gefunden",

@@ -43,8 +43,9 @@ describe('TeamsTabPage delegator', () => {
     const result = await TeamsTabPage({ searchParams: Promise.resolve({}) });
     const text = JSON.stringify(result);
 
-    expect(text).toContain('Teams tab unavailable');
-    expect(text).toContain('Microsoft Teams integration is only available in Enterprise Edition.');
+    expect(text).toContain('Microsoft Teams integration');
+    expect(text).toContain('Bring ticket context and technician workflows into Microsoft Teams.');
+    expect(text).toContain('upgrade-teams-integration-button');
   });
 
   it('T117/T424: delegates to the EE Teams tab page when enterprise edition is enabled', async () => {

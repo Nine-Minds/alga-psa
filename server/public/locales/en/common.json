@@ -79,6 +79,10 @@
     "continue": "Continue",
     "printSelected": "Print selected ({{count}})"
   },
+  "upgradePrompt": {
+    "editionLabel": "Enterprise edition",
+    "defaultCta": "Explore Enterprise"
+  },
   "form": {
     "selectPlaceholder": "Select...",
     "clearSelection": "Clear selection",
@@ -1131,6 +1135,8 @@
       "missingRunId": "Missing run id.",
       "teamLeadAccessRequired": "Team lead access required",
       "teamsTabUnavailable": "Teams tab unavailable",
+      "teamsFeatureName": "Microsoft Teams integration",
+      "teamsEnterprisePitch": "Bring ticket context and technician workflows into Microsoft Teams.",
       "teamsSignInUnavailable": "Teams sign-in unavailable",
       "teamsSetupNotFinished": "Teams setup not finished",
       "teamsSetupNotFinishedHint": "Ask a PSA administrator to finish Teams setup and then reopen the personal tab.",
