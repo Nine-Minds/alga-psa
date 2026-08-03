@@ -366,9 +366,15 @@ export class EmailWebhookMaintenanceService {
           newExpiration: config.webhook_expires_at // adapter updates the config object in place
         };
       } catch (error: any) {
-        // check for 404 ResourceNotFound
         if (this.isResourceNotFoundError(error)) {
           logger.warn(`Subscription not found (404) for ${config.id}, attempting to recreate`);
+          return await this.recreateSubscription(adapter, config);
+        }
+
+        if (this.isInvalidSubscriptionExpirationError(error)) {
+          logger.warn(
+            `Subscription renewal rejected (400 ErrorInvalidParameter) for ${config.id}, attempting to recreate`
+          );
           return await this.recreateSubscription(adapter, config);
         }
         
@@ -764,6 +770,12 @@ export class EmailWebhookMaintenanceService {
     if (error?.message?.includes('ResourceNotFound')) return true;
     if (error?.message?.includes('Subscription not found')) return true;
     return false;
+  }
+
+  private isInvalidSubscriptionExpirationError(error: any): boolean {
+    const status = error?.response?.status ?? error?.status;
+    const code = error?.response?.data?.error?.code ?? error?.code;
+    return status === 400 && code === 'ErrorInvalidParameter';
   }
 
   private async updateHealthStatus(providerId: string, tenant: string, status: {

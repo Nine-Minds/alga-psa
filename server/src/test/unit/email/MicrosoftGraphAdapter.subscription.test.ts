@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => {
   const requestUse = vi.fn();
@@ -64,6 +64,30 @@ describe('MicrosoftGraphAdapter subscription hygiene', () => {
     mocks.client.post.mockResolvedValue({
       data: { id: 'new-subscription', expirationDateTime: new Date(Date.now() + 3600000).toISOString() },
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('keeps creation and renewal expirations within the Graph 4230-minute cap', async () => {
+    vi.useFakeTimers();
+    const now = new Date('2026-08-03T12:00:00.000Z');
+    vi.setSystemTime(now);
+    const adapter = new MicrosoftGraphAdapter(config());
+
+    await adapter.registerWebhookSubscription();
+    await adapter.renewWebhookSubscription();
+
+    const createdSubscription = mocks.client.post.mock.calls[0][1];
+    const renewedSubscription = mocks.client.patch.mock.calls[0][1];
+    const creationLifetimeMs = Date.parse(createdSubscription.expirationDateTime) - now.getTime();
+    const renewalLifetimeMs = Date.parse(renewedSubscription.expirationDateTime) - now.getTime();
+    const graphMaximumLifetimeMs = 4_230 * 60 * 1000;
+
+    expect(creationLifetimeMs).toBeLessThanOrEqual(graphMaximumLifetimeMs);
+    expect(renewalLifetimeMs).toBeLessThanOrEqual(graphMaximumLifetimeMs);
+    expect(renewalLifetimeMs).toBe(creationLifetimeMs);
   });
 
   it('best-effort deletes the previous subscription before creating its replacement', async () => {

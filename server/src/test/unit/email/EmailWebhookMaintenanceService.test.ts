@@ -200,6 +200,56 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
     expect(results[0]).toMatchObject({ success: true, action: 'recreated' });
   });
 
+  it('recreates the subscription when Graph rejects renewal with an invalid parameter', async () => {
+    provider.webhook_expires_at = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    mocks.adapter.renewWebhookSubscription.mockRejectedValueOnce({
+      status: 400,
+      code: 'ErrorInvalidParameter',
+      message: 'Expiration exceeds the maximum subscription lifetime',
+    });
+    mocks.adapter.initializeWebhook.mockResolvedValueOnce({ success: true });
+    mocks.adapter.getConfig.mockReturnValueOnce({
+      webhook_expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    });
+
+    const results = await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({
+      tenantId: provider.tenant,
+      lookAheadMinutes: 60,
+    });
+
+    expect(mocks.adapter.initializeWebhook).toHaveBeenCalled();
+    expect(results[0]).toMatchObject({ success: true, action: 'recreated' });
+  });
+
+  it('does not recreate the subscription for an unrelated Graph 400', async () => {
+    provider.webhook_expires_at = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    mocks.adapter.renewWebhookSubscription.mockRejectedValueOnce({
+      status: 400,
+      code: 'BadRequest',
+      message: 'Unrelated bad request',
+    });
+
+    const results = await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({
+      tenantId: provider.tenant,
+      lookAheadMinutes: 60,
+    });
+
+    expect(mocks.adapter.initializeWebhook).not.toHaveBeenCalled();
+    expect(results[0]).toMatchObject({
+      success: false,
+      action: 'failed',
+      error: 'Unrelated bad request',
+    });
+
+    const knex = await mocks.getAdminConnection();
+    const query = knex();
+    expect(query.update).toHaveBeenCalledWith(expect.objectContaining({
+      subscription_status: 'error',
+      last_renewal_result: 'failure',
+      is_healthy: false,
+    }));
+  });
+
   it('does not renew, recreate, or reconcile polling providers before their probe is due', async () => {
     provider.delivery_mode = 'polling';
     provider.next_subscription_probe_at = new Date(Date.now() + 60 * 60 * 1000).toISOString();
