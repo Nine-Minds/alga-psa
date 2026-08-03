@@ -516,7 +516,7 @@
         "valid": "Microsoft-Organisator erfolgreich verifiziert.",
         "validWithName": "Verifizierter Microsoft-Benutzer: {{displayName}}.",
         "reasons": {
-          "eeDisabled": "Die Verifizierung von Teams-Besprechungen ist nur in der Enterprise Edition verfügbar.",
+          "eeDisabled": "Die Verifizierung von Teams-Besprechungen ist nur in Pro verfügbar.",
           "notConfigured": "Die Teams-Integration muss aktiv sein, bevor ein Organisator verifiziert werden kann.",
           "userNotFound": "Microsoft konnte für diesen Organisatorwert keinen Benutzer finden.",
           "policyMissing": "Der Microsoft-Benutzer existiert, aber die Application Access Policy erlaubt die Besprechungserstellung noch nicht.",

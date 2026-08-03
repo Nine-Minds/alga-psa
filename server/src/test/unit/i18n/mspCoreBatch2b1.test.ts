@@ -159,7 +159,7 @@ describe('MSP core locale batch 2b-1', () => {
       'quickCreate.dialogTitles.project': 'Add New Project',
       'quickCreate.dialogTitles.service': 'Add New Service',
       'rightSidebar.title': 'Chat',
-      'rightSidebar.enterpriseOnly': 'The chat feature is only available in the Enterprise Edition.',
+      'rightSidebar.enterpriseOnly': 'The chat feature is only available in Pro.',
     };
 
     for (const [key, value] of Object.entries(expectedEntries)) {

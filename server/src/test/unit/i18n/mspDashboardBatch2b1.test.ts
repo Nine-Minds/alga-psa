@@ -149,7 +149,7 @@ describe('MSP dashboard locale batch 2b-1', () => {
       'onboarding.blockers.import.loadFailed': 'Unable to load import history.',
       'onboarding.blockers.calendar.providerAttention': '{{provider}} requires attention before syncing can resume.',
       'onboarding.blockers.calendar.loadFailed': 'Unable to load calendar integrations.',
-      'onboarding.blockers.email.enterpriseOnly': 'Managed email domains are only available in the Enterprise edition.',
+      'onboarding.blockers.email.enterpriseOnly': 'Managed email domains are only available in Pro.',
       'onboarding.blockers.email.tenantRequired': 'Tenant context is required to load email onboarding status.',
       'onboarding.blockers.email.loadFailed': 'Unable to load managed email domains.',
       'onboarding.blockers.email.verificationFailed': 'Verification for {{domain}} failed.',

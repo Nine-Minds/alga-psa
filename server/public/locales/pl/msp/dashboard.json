@@ -171,7 +171,7 @@
         "loadFailed": "Nie udało się załadować integracji kalendarza."
       },
       "email": {
-        "enterpriseOnly": "Zarządzane domeny e-mail są dostępne tylko w edycji Enterprise.",
+        "enterpriseOnly": "Zarządzane domeny e-mail są dostępne tylko w Pro.",
         "tenantRequired": "Kontekst tenant jest wymagany do załadowania statusu onboardingu e-maila.",
         "loadFailed": "Nie udało się załadować zarządzanych domen e-mail.",
         "verificationFailed": "Weryfikacja domeny {{domain}} nie powiodła się."

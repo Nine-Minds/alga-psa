@@ -2310,8 +2310,8 @@
       "title": "Gesimuleerde factuurperioden"
     },
     "unavailable": {
-      "description": "De contractsimulator is beschikbaar in de Enterprise-editie van Alga PSA.",
-      "title": "Enterprise-functie"
+      "description": "De contractsimulator is beschikbaar in Alga PSA Pro.",
+      "title": "Pro-functie"
     }
   }
 }

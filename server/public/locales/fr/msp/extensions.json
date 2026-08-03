@@ -3,8 +3,8 @@
     "heading": "Extensions"
   },
   "enterpriseFeature": {
-    "title": "Fonctionnalité Enterprise",
-    "description": "L'édition Enterprise est requise pour {{feature}}. Veuillez effectuer une mise à niveau pour accéder à cette fonctionnalité."
+    "title": "Fonctionnalité Pro",
+    "description": "Pro est requis pour {{feature}}. Veuillez effectuer une mise à niveau pour accéder à cette fonctionnalité."
   },
   "settings": {
     "title": "Gestion des extensions",
@@ -14,8 +14,8 @@
       "install": "Installer"
     },
     "enterpriseOnly": {
-      "title": "Fonctionnalité Enterprise",
-      "description": "Les extensions sont disponibles dans l'édition Enterprise d'Alga PSA."
+      "title": "Fonctionnalité Pro",
+      "description": "Les extensions sont disponibles dans Alga PSA Pro."
     },
     "links": {
       "needLogs": "Besoin des journaux d'extension ?",
@@ -98,10 +98,10 @@
       "description": "Gérer les extensions"
     },
     "title": "Extensions",
-    "description": "La gestion des extensions est disponible dans l'édition Enterprise."
+    "description": "La gestion des extensions est disponible avec Pro."
   },
   "detail": {
-    "metadataTitle": "Extensions - Fonctionnalité Enterprise",
+    "metadataTitle": "Extensions - Fonctionnalité Pro",
     "extensionId": "ID de l'extension : {{id}}"
   },
   "runtime": {
@@ -121,7 +121,7 @@
       "description": "Afficher les détails de l'extension"
     },
     "title": "Détails de l'extension",
-    "description": "Les détails de l'extension sont disponibles dans l'édition Enterprise."
+    "description": "Les détails de l'extension sont disponibles avec Pro."
   },
   "settingsPage": {
     "metadata": {
@@ -129,7 +129,7 @@
       "description": "Configurer les paramètres des extensions"
     },
     "title": "Paramètres des extensions",
-    "description": "Les paramètres des extensions sont disponibles dans l'édition Enterprise."
+    "description": "Les paramètres des extensions sont disponibles avec Pro."
   },
   "details": {
     "label": "Détails de l'extension",

@@ -7,7 +7,7 @@ import { DnDFlow } from '@enterprise/workflows/entry';
 describe('CE workflows stub entry', () => {
   it('renders stub messaging and does not crash', () => {
     const html = renderToStaticMarkup(React.createElement(DnDFlow));
-    expect(html).toContain('Enterprise Feature');
-    expect(html).toContain('Workflow designer requires Enterprise Edition');
+    expect(html).toContain('Pro Feature');
+    expect(html).toContain('Workflow designer requires Pro');
   });
 });

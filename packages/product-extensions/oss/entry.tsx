@@ -5,7 +5,7 @@ import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 // OSS stub implementation for Extensions feature
 export const metadata = {
-  title: 'Extensions - Enterprise Feature'
+  title: 'Extensions - Pro Feature'
 };
 
 export async function generateMetadata(): Promise<Metadata> {

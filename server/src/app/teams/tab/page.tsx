@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Card } from '@alga-psa/ui/components/Card';
 import { UpgradePrompt } from '@alga-psa/ui/components/UpgradePrompt';
-import { isTeamsEnterpriseEdition, TEAMS_AVAILABILITY_MESSAGES } from '@alga-psa/integrations/lib/teamsAvailabilityCore';
+import { isTeamsEnterpriseEdition } from '@alga-psa/integrations/lib/teamsAvailabilityCore';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { ReactNode } from 'react';
 
@@ -12,6 +12,8 @@ export const metadata: Metadata = {
 interface TeamsTabPageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
+
+const PUBLIC_TEAMS_UNAVAILABLE_MESSAGE = 'Microsoft Teams integration is only available in Pro.';
 
 async function renderUnavailableCard(message: string) {
   const { t } = await getServerTranslation(undefined, 'common');
@@ -66,7 +68,7 @@ export default async function TeamsTabPage({ searchParams }: TeamsTabPageProps) 
 
   const eePage = await eePagePromise;
   if (!eePage?.default) {
-    return await renderUnavailableCard(TEAMS_AVAILABILITY_MESSAGES.ce_unavailable);
+    return await renderUnavailableCard(PUBLIC_TEAMS_UNAVAILABLE_MESSAGE);
   }
 
   return eePage.default({ searchParams });

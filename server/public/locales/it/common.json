@@ -80,8 +80,8 @@
     "printSelected": "Stampa selezionati ({{count}})"
   },
   "upgradePrompt": {
-    "editionLabel": "Edizione Enterprise",
-    "defaultCta": "Scopri Enterprise"
+    "editionLabel": "Pro",
+    "defaultCta": "Scopri Pro"
   },
   "status": {
     "loading": "Caricamento...",

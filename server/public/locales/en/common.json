@@ -80,8 +80,8 @@
     "printSelected": "Print selected ({{count}})"
   },
   "upgradePrompt": {
-    "editionLabel": "Enterprise edition",
-    "defaultCta": "Explore Enterprise"
+    "editionLabel": "Pro",
+    "defaultCta": "Explore Pro"
   },
   "form": {
     "selectPlaceholder": "Select...",

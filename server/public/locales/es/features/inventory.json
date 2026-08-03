@@ -425,7 +425,7 @@
       "classifyCandidates": "Clasificar candidatos",
       "classifying": "Clasificando…",
       "didNotRun": "La clasificación por IA no se ejecutó{{reason}}.",
-      "requiresEnterprise": "La clasificación por IA requiere Enterprise y el complemento Asistente de IA.",
+      "requiresEnterprise": "La clasificación por IA requiere Pro y el complemento Asistente de IA.",
       "runFailed": "La clasificación por IA falló.",
       "toggleFailed": "No se pudo cambiar la configuración de clasificación por IA.",
       "toggleLabel": "Clasificación por IA — clasifique tickets candidatos con el complemento de IA",

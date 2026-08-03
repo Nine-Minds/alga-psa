@@ -78,7 +78,7 @@ describe("LicenseManagementPage", () => {
       await screen.findByRole("heading", { name: "You’re running Essentials" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Start 15-day Enterprise trial/i }),
+      screen.getByRole("button", { name: /Start 15-day Pro trial/i }),
     ).toBeInTheDocument();
     expect(screen.getByText("Have a license code or key?")).toBeInTheDocument();
 
@@ -109,7 +109,7 @@ describe("LicenseManagementPage", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /Start 15-day Enterprise trial/i,
+        name: /Start 15-day Pro trial/i,
       }),
     );
 
@@ -117,22 +117,22 @@ describe("LicenseManagementPage", () => {
     await waitFor(() => expect(mockUpdateSession).toHaveBeenCalledTimes(1));
     expect(
       screen.queryByRole("heading", {
-        name: "Your Enterprise trial is active",
+        name: "Your Pro trial is active",
       }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByText("15-day Enterprise trial started."),
+      screen.queryByText("15-day Pro trial started."),
     ).not.toBeInTheDocument();
 
     resolveSessionUpdate();
 
     expect(
       await screen.findByRole("heading", {
-        name: "Your Enterprise trial is active",
+        name: "Your Pro trial is active",
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("15-day Enterprise trial started."),
+      screen.getByText("15-day Pro trial started."),
     ).toBeInTheDocument();
     expect(mockRouterRefresh).toHaveBeenCalledTimes(1);
   });
@@ -157,7 +157,7 @@ describe("LicenseManagementPage", () => {
     expect(screen.getByText("License refresh")).toBeInTheDocument();
     expect(screen.getByText("Connected")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /Start 15-day Enterprise trial/i }),
+      screen.queryByRole("button", { name: /Start 15-day Pro trial/i }),
     ).not.toBeInTheDocument();
   });
 });

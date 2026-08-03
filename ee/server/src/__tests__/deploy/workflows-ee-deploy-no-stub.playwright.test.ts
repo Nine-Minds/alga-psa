@@ -7,7 +7,7 @@ const DEPLOY_PASSWORD = process.env.DEPLOY_PASSWORD;
 const DEPLOY_WORKFLOWS_PATH = process.env.DEPLOY_WORKFLOWS_PATH || '/msp/workflows?tab=designer';
 
 const CE_WORKFLOWS_STUB_TEXT =
-  'Workflow designer requires Enterprise Edition. Please upgrade to access this feature.';
+  'Workflow designer requires Pro. Please upgrade to access this feature.';
 
 test.describe('HV dev2 deploy: workflows (EE)', () => {
   test.skip(!DEPLOY_EMAIL || !DEPLOY_PASSWORD, 'DEPLOY_EMAIL and DEPLOY_PASSWORD are required.');

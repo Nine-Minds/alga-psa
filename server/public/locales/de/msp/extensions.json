@@ -3,8 +3,8 @@
     "heading": "Erweiterungen"
   },
   "enterpriseFeature": {
-    "title": "Enterprise-Funktion",
-    "description": "Für {{feature}} ist die Enterprise-Edition erforderlich. Bitte führen Sie ein Upgrade durch, um auf diese Funktion zuzugreifen."
+    "title": "Pro-Funktion",
+    "description": "Für {{feature}} ist Pro erforderlich. Bitte führen Sie ein Upgrade durch, um auf diese Funktion zuzugreifen."
   },
   "settings": {
     "title": "Erweiterungsverwaltung",
@@ -14,8 +14,8 @@
       "install": "Installieren"
     },
     "enterpriseOnly": {
-      "title": "Enterprise-Funktion",
-      "description": "Erweiterungen sind in der Enterprise-Edition von Alga PSA verfügbar."
+      "title": "Pro-Funktion",
+      "description": "Erweiterungen sind in Alga PSA Pro verfügbar."
     },
     "links": {
       "needLogs": "Erweiterungsprotokolle benötigt?",
@@ -98,10 +98,10 @@
       "description": "Erweiterungen verwalten"
     },
     "title": "Erweiterungen",
-    "description": "Die Erweiterungsverwaltung ist in der Enterprise-Edition verfügbar."
+    "description": "Die Erweiterungsverwaltung ist in Pro verfügbar."
   },
   "detail": {
-    "metadataTitle": "Erweiterungen - Enterprise-Funktion",
+    "metadataTitle": "Erweiterungen - Pro-Funktion",
     "extensionId": "Erweiterungs-ID: {{id}}"
   },
   "runtime": {
@@ -121,7 +121,7 @@
       "description": "Erweiterungsdetails anzeigen"
     },
     "title": "Erweiterungsdetails",
-    "description": "Erweiterungsdetails sind in der Enterprise-Edition verfügbar."
+    "description": "Erweiterungsdetails sind in Pro verfügbar."
   },
   "settingsPage": {
     "metadata": {
@@ -129,7 +129,7 @@
       "description": "Erweiterungseinstellungen konfigurieren"
     },
     "title": "Erweiterungseinstellungen",
-    "description": "Erweiterungseinstellungen sind in der Enterprise-Edition verfügbar."
+    "description": "Erweiterungseinstellungen sind in Pro verfügbar."
   },
   "details": {
     "label": "Erweiterungsdetails",

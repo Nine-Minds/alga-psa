@@ -39,9 +39,9 @@ Full details: [`packages/alga-mcp-connector/README.md`](../packages/alga-mcp-con
 
 A networked MCP endpoint (`POST /api/mcp`, Streamable HTTP / JSON-RPC) that authenticates
 **agents** via the tenant's identity provider and enforces governance: distinct agent
-identity, RBAC, and an exportable audit trail. Enterprise-only.
+identity, RBAC, and an exportable audit trail. Pro-only.
 
-The admin UI (**Settings → MCP Server**) is available to all Enterprise tenants. The server endpoints (`POST /api/mcp`, `/.well-known/oauth-protected-resource`, and the `/api/v1/mcp/*` admin APIs) are live for any Enterprise instance regardless of whether agents have been provisioned.
+The admin UI (**Settings → MCP Server**) is available to all Pro tenants. The server endpoints (`POST /api/mcp`, `/.well-known/oauth-protected-resource`, and the `/api/v1/mcp/*` admin APIs) are live for any Pro instance regardless of whether agents have been provisioned.
 
 ### Auth model — OAuth 2.1 resource server (IdP delegation)
 

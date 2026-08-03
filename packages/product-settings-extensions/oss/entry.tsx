@@ -11,11 +11,11 @@ function EnterpriseFeatureStub({ featureKey, defaultFeature }: { featureKey: str
     <div className="flex items-center justify-center h-64">
       <div className="text-center">
         <h2 className="text-xl font-semibold mb-2">
-          {t('enterpriseFeature.title', { defaultValue: 'Enterprise Feature' })}
+          {t('enterpriseFeature.title', { defaultValue: 'Pro Feature' })}
         </h2>
         <p className="text-gray-600">
           {t('enterpriseFeature.description', {
-            defaultValue: '{{feature}} require Enterprise Edition. Please upgrade to access this feature.',
+            defaultValue: '{{feature}} require Pro. Please upgrade to access this feature.',
             feature: t(featureKey, { defaultValue: defaultFeature })
           })}
         </p>

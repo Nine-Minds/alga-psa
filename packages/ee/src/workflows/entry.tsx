@@ -9,11 +9,11 @@ export const DnDFlow = () => {
     <div className="flex items-center justify-center h-64">
       <div className="text-center">
         <h2 className="text-xl font-semibold mb-2">
-          {t('workflowDesigner.enterpriseHeading', { defaultValue: 'Enterprise Feature' })}
+          {t('workflowDesigner.enterpriseHeading', { defaultValue: 'Pro Feature' })}
         </h2>
         <p className="text-gray-600">
           {t('workflowDesigner.unavailable', {
-            defaultValue: 'Workflow designer requires Enterprise Edition. Please upgrade to access this feature.'
+            defaultValue: 'Workflow designer requires Pro. Please upgrade to access this feature.'
           })}
         </p>
       </div>

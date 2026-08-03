@@ -143,7 +143,7 @@
       "title": "Elemento ad hoc",
       "toggleDoneError": "Impossibile aggiornare l'elemento."
     },
-    "enterpriseOnly": "Le attività del workflow sono una funzionalità Enterprise.",
+    "enterpriseOnly": "Le attività del workflow sono una funzionalità Pro.",
     "nextAction": "Azione successiva",
     "overdueSince": "In ritardo dal {{date}}",
     "dueOn": "Scadenza il {{date}}",

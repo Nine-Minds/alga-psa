@@ -460,7 +460,7 @@ export function ActivityDetailViewerDrawer({
               <div className="h-full p-6">
                 <h2 className="text-xl font-semibold mb-4">{t('drawer.workflowTaskTitle', { defaultValue: 'Workflow Task' })}</h2>
                 <div className="bg-gray-50 p-4 rounded-md">
-                  {t('drawer.enterpriseOnly', { defaultValue: 'Workflow tasks are an Enterprise feature.' })}
+                  {t('drawer.enterpriseOnly', { defaultValue: 'Workflow tasks are a Pro feature.' })}
                 </div>
               </div>
             );

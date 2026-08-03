@@ -80,8 +80,8 @@
     "printSelected": "Imprimir selecionado ({{count}})"
   },
   "upgradePrompt": {
-    "editionLabel": "Edição Enterprise",
-    "defaultCta": "Conheça o Enterprise"
+    "editionLabel": "Pro",
+    "defaultCta": "Conheça o Pro"
   },
   "form": {
     "selectPlaceholder": "Selecione...",

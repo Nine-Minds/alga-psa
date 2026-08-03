@@ -5,7 +5,7 @@ const nextDir = process.argv[2] ?? 'server/.next';
 const serverOutputDir = path.join(nextDir, 'server');
 
 const needles = [
-  'Workflow designer requires Enterprise Edition. Please upgrade to access this feature.',
+  'Workflow designer requires Pro. Please upgrade to access this feature.',
 ];
 
 async function walkFiles(dir) {
@@ -56,4 +56,3 @@ async function main() {
 }
 
 await main();
-

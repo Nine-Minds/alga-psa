@@ -16,7 +16,7 @@ The Stripe integration enables:
 
 ## Step-by-Step Setup
 
-> **Note:** This integration is for **Enterprise Edition (Hosted)** only. The migration is located in `ee/server/migrations/`.
+> **Note:** This integration is for **Pro (Hosted)** only. The migration is located in `ee/server/migrations/`.
 
 ### 1. Database Migration
 

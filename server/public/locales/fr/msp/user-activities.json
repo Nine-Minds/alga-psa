@@ -143,7 +143,7 @@
       "title": "Élément ponctuel",
       "toggleDoneError": "Échec de la mise à jour de l'élément."
     },
-    "enterpriseOnly": "Les tâches de workflow sont une fonctionnalité Enterprise.",
+    "enterpriseOnly": "Les tâches de workflow sont une fonctionnalité Pro.",
     "nextAction": "Prochaine action",
     "overdueSince": "En retard depuis le {{date}}",
     "dueOn": "Échéance le {{date}}",

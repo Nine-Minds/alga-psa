@@ -12,7 +12,7 @@ export default async function ExtensionSettingsPage() {
       </h1>
       <p className="text-gray-600 mt-2">
         {t('settingsPage.description', {
-          defaultValue: 'Extension settings are available in Enterprise Edition.'
+          defaultValue: 'Extension settings are available in Pro.'
         })}
       </p>
     </div>

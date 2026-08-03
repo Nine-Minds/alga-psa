@@ -2,7 +2,7 @@
 
 Alga PSA is a professional services automation platform built for Managed Service Providers. It brings client records, service tickets, time tracking, contracts, billing, invoicing, documents, assets, reporting, and automation into one MSP-focused system.
 
-It is designed for teams that want more control over their PSA stack: self-hostable Community Edition code, a modern TypeScript/PostgreSQL architecture, and an Enterprise Edition path for commercially licensed modules and larger deployments.
+It is designed for teams that want more control over their PSA stack: self-hostable Community Edition code, a modern TypeScript/PostgreSQL architecture, and a Pro path for commercially licensed modules and larger deployments.
 
 <a href="https://www.nineminds.com/AlgaPSA-features">
   <img src="https://www.nineminds.com/imported-media/Overview%20Dashboard.png" alt="Alga PSA overview dashboard" width="900">
@@ -23,7 +23,7 @@ Alga PSA is built around the way MSPs operate with clients:
 - **Workflow automation** for turning repeatable ticket, billing, notification, and approval steps into managed processes with Event Catalog triggers and scheduled runs.
 - **Open-source core with self-hosting support** so MSPs and technical teams can keep control over deployment, data, and code review.
 
-Community Edition is the self-hostable AGPL core. Enterprise Edition covers commercially licensed modules and larger deployment needs. See [Editions and licensing](#editions-and-licensing) for details.
+Community Edition is the self-hostable AGPL core. Pro covers commercially licensed modules and larger deployment needs. See [Editions and licensing](#editions-and-licensing) for details.
 
 ## Features at a glance
 
@@ -151,7 +151,7 @@ The Quick start above runs the Community Edition stack with Docker Compose, whic
 
 The appliance ships as a single bootable image. It installs Ubuntu Server 24.04, brings up a self-contained Kubernetes runtime, and deploys AlgaPSA with its database, cache, and background workers. You boot the image, answer a short setup wizard, and sign in. There are no containers to assemble and no manifests to write.
 
-The free **Essentials** edition runs the open-source feature set and is community-supported. Each appliance includes a 15-day trial of the Enterprise feature set that you can start from inside the app, and paid editions add the integration layer, a support contract, and an SLA.
+The free **Essentials** edition runs the open-source feature set and is community-supported. Each appliance includes a 15-day trial of the Pro feature set that you can start from inside the app, and paid editions add the integration layer, a support contract, and an SLA.
 
 ### How it installs
 
@@ -291,7 +291,7 @@ Alga PSA uses multiple licenses:
 - Enterprise Edition (`ee/`): See `ee/LICENSE`
 - All other content: GNU Affero General Public License Version 3 (AGPL-3.0)
 
-See [LICENSE.md](LICENSE.md) for details. If your deployment model requires commercial terms or a license outside the AGPL core, visit [algapsa.com](https://algapsa.com) for Enterprise Edition and hosted deployment information.
+See [LICENSE.md](LICENSE.md) for details. If your deployment model requires commercial terms or a license outside the AGPL core, visit [algapsa.com](https://algapsa.com) for Pro and hosted deployment information.
 
 ## Contributing
 

@@ -625,7 +625,7 @@
   },
   "rightSidebar": {
     "title": "Chat",
-    "enterpriseOnly": "The chat feature is only available in the Enterprise Edition."
+    "enterpriseOnly": "The chat feature is only available in Pro."
   },
   "notifications": {
     "messages": {

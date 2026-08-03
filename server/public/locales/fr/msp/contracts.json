@@ -2310,8 +2310,8 @@
       "title": "Périodes de facturation simulées"
     },
     "unavailable": {
-      "description": "Le simulateur de contrat est disponible dans l'édition Enterprise d'Alga PSA.",
-      "title": "Fonctionnalité Enterprise"
+      "description": "Le simulateur de contrat est disponible dans Alga PSA Pro.",
+      "title": "Fonctionnalité Pro"
     }
   }
 }

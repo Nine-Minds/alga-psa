@@ -11,7 +11,7 @@
       "resyncing": "{{providerName}} wird erneut synchronisiert...",
       "resyncError": "Die Neusynchronisierung des IMAP-Anbieters ist fehlgeschlagen",
       "resyncStarted": "Neusynchronisierung für {{providerName}} gestartet.",
-      "enterpriseOnly": "Eingehende E-Mails von Microsoft 365 sind nur in der Enterprise Edition verfügbar.",
+      "enterpriseOnly": "Eingehende E-Mails von Microsoft 365 sind nur in Pro verfügbar.",
       "loadProvidersError": "Failed to load email providers"
     },
     "editDrawer": {

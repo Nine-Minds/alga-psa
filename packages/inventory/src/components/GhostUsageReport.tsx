@@ -474,7 +474,7 @@ export function GhostUsageReport({
             {aiStatus === null ? (
               <p className="text-sm text-gray-400">{t('ghostUsage.ai.checking', 'Checking AI availability…')}</p>
             ) : !aiStatus.available ? (
-              <p className="text-sm text-gray-500">{t('ghostUsage.ai.requiresEnterprise', 'AI triage requires Enterprise and the AI Assistant add-on.')}</p>
+              <p className="text-sm text-gray-500">{t('ghostUsage.ai.requiresEnterprise', 'AI triage requires Pro and the AI Assistant add-on.')}</p>
             ) : (
               <>
                 <Switch

@@ -207,7 +207,7 @@ describe('IntegrationsSettingsPage Calendar placement', () => {
     render(<IntegrationsSettingsPage />);
 
     expect(screen.getByText('Calendar Integrations')).toBeInTheDocument();
-    expect(screen.getByText('Enterprise-only calendar sync for Google and Outlook keeps dispatch and client appointments aligned.')).toBeInTheDocument();
+    expect(screen.getByText('Pro-only calendar sync for Google and Outlook keeps dispatch and client appointments aligned.')).toBeInTheDocument();
     expect(
       (await screen.findByTestId('calendar-enterprise-settings-shell').catch(() => null)) ??
         screen.getByText('Loading calendar settings...')

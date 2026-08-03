@@ -425,7 +425,7 @@
       "classifyCandidates": "Sklasyfikuj kandydatów",
       "classifying": "Klasyfikowanie…",
       "didNotRun": "Triaż AI nie został uruchomiony{{reason}}.",
-      "requiresEnterprise": "Triaż AI wymaga wersji Enterprise oraz dodatku AI Assistant.",
+      "requiresEnterprise": "Triaż AI wymaga Pro oraz dodatku AI Assistant.",
       "runFailed": "Triaż AI nie powiódł się.",
       "toggleFailed": "Nie udało się zmienić ustawienia triażu AI.",
       "toggleLabel": "Triaż AI — klasyfikuj zgłoszenia kandydatów z dodatkiem AI",

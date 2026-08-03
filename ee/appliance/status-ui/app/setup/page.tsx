@@ -467,7 +467,7 @@ export default function SetupPage() {
                                   style={{ marginTop: "0.2rem" }}
                                 />
                                 <span>
-                                  <strong>Enterprise</strong> — 15-day free
+                                  <strong>Pro</strong> — 15-day free
                                   trial, then reverts to Essentials.
                                   <br />
                                   <small
@@ -502,7 +502,7 @@ export default function SetupPage() {
                                   <small
                                     style={{ color: "var(--muted, #6b7280)" }}
                                   >
-                                    You can start an Enterprise trial later from
+                                    You can start a Pro trial later from
                                     the in-app License page.
                                   </small>
                                 </span>

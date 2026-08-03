@@ -1741,8 +1741,8 @@
       "install": "Installeren"
     },
     "enterpriseOnly": {
-      "title": "Enterprise-functie",
-      "description": "Extensies zijn beschikbaar in de Enterprise-editie van Alga PSA."
+      "title": "Pro-functie",
+      "description": "Extensies zijn beschikbaar in Alga PSA Pro."
     },
     "links": {
       "needLogs": "Extensielogs nodig?",
@@ -2062,7 +2062,7 @@
   "integrations": {
     "betaNotice": "Sommige integraties zijn nog in ontwikkeling. Werk in een sandbox-omgeving bij het evalueren en deel uw feedback om ons te helpen verbeteren.",
     "emptyCategory": "Geen integraties beschikbaar in deze categorie.",
-    "rmmEnterpriseNote": "RMM-integraties zijn beschikbaar in de Enterprise-editie.",
+    "rmmEnterpriseNote": "RMM-integraties zijn beschikbaar in Pro.",
     "categoryHeading": "{{label}}-integraties",
     "loading": {
       "payments": "Betalingsinstellingen laden..."
@@ -2086,7 +2086,7 @@
       },
       "calendar": {
         "label": "Agenda",
-        "description": "Enterprise-exclusieve agendasynchronisatie voor Google en Outlook houdt planning en klantafspraken op één lijn."
+        "description": "Pro-exclusieve agendasynchronisatie voor Google en Outlook houdt planning en klantafspraken op één lijn."
       },
       "providers": {
         "label": "Providers",

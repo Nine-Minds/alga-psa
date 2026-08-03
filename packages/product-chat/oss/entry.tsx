@@ -24,9 +24,9 @@ export const ChatPage = () => {
   return (
     <div className="flex items-center justify-center h-64">
       <div className="text-center">
-        <h2 className="text-xl font-semibold mb-2">Enterprise Feature</h2>
+        <h2 className="text-xl font-semibold mb-2">Pro Feature</h2>
         <p className="text-gray-600">
-          AI Chat features require Enterprise Edition. Please upgrade to access this feature.
+          AI Chat features require Pro. Please upgrade to access this feature.
         </p>
       </div>
     </div>
@@ -39,7 +39,7 @@ export const MessageComponent = () => {
   return (
     <div className="flex items-center justify-center h-32">
       <div className="text-center">
-        <p className="text-gray-600">Message features require Enterprise Edition.</p>
+        <p className="text-gray-600">Message features require Pro.</p>
       </div>
     </div>
   );
@@ -53,4 +53,3 @@ export default {
   ChatComponent,
   MessageComponent,
 };
-

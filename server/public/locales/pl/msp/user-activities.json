@@ -143,7 +143,7 @@
       "title": "Element ad hoc",
       "toggleDoneError": "Nie udało się zaktualizować elementu."
     },
-    "enterpriseOnly": "Zadania przepływu pracy są funkcją wersji Enterprise.",
+    "enterpriseOnly": "Zadania przepływu pracy są funkcją Pro.",
     "nextAction": "Następna akcja",
     "overdueSince": "Zaległe od {{date}}",
     "dueOn": "Termin: {{date}}",

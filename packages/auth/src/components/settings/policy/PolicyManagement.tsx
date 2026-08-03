@@ -10,11 +10,10 @@ export default function PolicyManagement() {
           Policy Management
         </Text>
         <Text>
-          Policy management is an Enterprise Edition feature. Please upgrade to access advanced policy
+          Policy management is a Pro feature. Please upgrade to access advanced policy
           controls.
         </Text>
       </Flex>
     </div>
   );
 }
-

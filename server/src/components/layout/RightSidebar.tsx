@@ -83,7 +83,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
             </h2>
             <p className="text-gray-600 dark:text-[rgb(var(--color-text-500))]">
               {t('rightSidebar.enterpriseOnly', {
-                defaultValue: 'The chat feature is only available in the Enterprise Edition.',
+                defaultValue: 'The chat feature is only available in Pro.',
               })}
             </p>
           </div>

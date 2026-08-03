@@ -85,12 +85,12 @@ function statusPresentation(status: LicenseStatus): {
   switch (status.state) {
     case "trial":
       return {
-        eyebrow: "Enterprise trial",
-        title: "Your Enterprise trial is active",
+        eyebrow: "Pro trial",
+        title: "Your Pro trial is active",
         description:
           status.daysRemaining !== null
-            ? `You have ${status.daysRemaining} day${status.daysRemaining === 1 ? "" : "s"} left to use all Enterprise features.`
-            : "You can use all Enterprise features during the trial period.",
+            ? `You have ${status.daysRemaining} day${status.daysRemaining === 1 ? "" : "s"} left to use all Pro features.`
+            : "You can use all Pro features during the trial period.",
         badge: "Trial active",
         tone: "premium",
       };
@@ -127,7 +127,7 @@ function statusPresentation(status: LicenseStatus): {
         eyebrow: "Essentials",
         title: "You’re running Essentials",
         description:
-          "Your Enterprise trial has ended. Essentials remains active for the core PSA feature set.",
+          "Your Pro trial has ended. Essentials remains active for the core PSA feature set.",
         badge: "Essentials active",
         tone: "warning",
       };
@@ -138,7 +138,7 @@ function statusPresentation(status: LicenseStatus): {
         eyebrow: "Essentials",
         title: "You’re running Essentials",
         description:
-          "Essentials is active on this appliance. Keep using the core feature set, or start a one-time 15-day Enterprise trial.",
+          "Essentials is active on this appliance. Keep using the core feature set, or start a one-time 15-day Pro trial.",
         badge: "Essentials active",
         tone: "neutral",
       };
@@ -270,7 +270,7 @@ export default function LicenseManagementPage() {
       const result = await startTrial();
       if (result.success && result.status) {
         await refresh(result.status);
-        setSuccessMsg("15-day Enterprise trial started.");
+        setSuccessMsg("15-day Pro trial started.");
       } else {
         setError(result.error ?? "Failed to start trial.");
       }
@@ -420,11 +420,11 @@ export default function LicenseManagementPage() {
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">
-                      Try Enterprise for 15 days
+                      Try Pro for 15 days
                     </h2>
                     <p className="mt-1 max-w-2xl text-sm text-[rgb(var(--color-text-600))]">
                       Unlock automation, advanced integrations, and the full
-                      Enterprise feature set. No credit card required; the
+                      Pro feature set. No credit card required; the
                       appliance returns to Essentials when the trial ends.
                     </p>
                   </div>
@@ -436,7 +436,7 @@ export default function LicenseManagementPage() {
                   className="w-full gap-2 md:w-auto"
                 >
                   <Sparkles className="h-4 w-4" aria-hidden="true" />
-                  {isPending ? "Starting…" : "Start 15-day Enterprise trial"}
+                  {isPending ? "Starting…" : "Start 15-day Pro trial"}
                 </Button>
               </div>
             </section>

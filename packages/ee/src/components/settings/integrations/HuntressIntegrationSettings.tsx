@@ -11,7 +11,7 @@ export default function HuntressIntegrationSettings() {
     <div className="rounded-lg border p-6 text-center">
       <h3 className="text-base font-semibold">Huntress Integration</h3>
       <p className="mt-2 text-sm text-muted-foreground">
-        The Huntress security integration is an Enterprise feature.
+        The Huntress security integration is a Pro feature.
       </p>
     </div>
   );

@@ -14,7 +14,7 @@ export default function LicensePurchasePage() {
         <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
         <h1 className="text-2xl font-bold mb-2">License Purchase</h1>
         <p className="text-muted-foreground mb-4">
-          License purchasing is available in the Enterprise Edition for hosted deployments.
+          License purchasing is available in Pro for hosted deployments.
         </p>
         <p className="text-sm text-muted-foreground">
           Self-hosted Community Edition has unlimited users with no license restrictions or additional costs.

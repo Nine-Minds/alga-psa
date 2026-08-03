@@ -425,7 +425,7 @@
       "classifyCandidates": "Classificar candidatos",
       "classifying": "Classificando…",
       "didNotRun": "A triagem por IA não foi executada{{reason}}.",
-      "requiresEnterprise": "A triagem por IA requer o Enterprise e o complemento Assistente de IA.",
+      "requiresEnterprise": "A triagem por IA requer o Pro e o complemento Assistente de IA.",
       "runFailed": "Falha na triagem por IA.",
       "toggleFailed": "Não foi possível alterar a configuração da triagem por IA.",
       "toggleLabel": "Triagem por IA — classificar chamados candidatos com o complemento de IA",

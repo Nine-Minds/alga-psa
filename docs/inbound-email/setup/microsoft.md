@@ -8,7 +8,7 @@ authorizes it.
 > them as read, or send replies. Configure ticket replies and notifications
 > separately under **Settings → Email → Outbound**.
 
-> Microsoft 365 inbound email is an Enterprise Edition feature. It is not
+> Microsoft 365 inbound email is a Pro feature. It is not
 > offered in Community Edition builds.
 
 ## Choose the hosted or self-hosted path

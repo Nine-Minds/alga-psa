@@ -273,7 +273,7 @@
   },
   "rightSidebar": {
     "title": "Czat",
-    "enterpriseOnly": "Funkcja czatu jest dostępna tylko w edycji Enterprise."
+    "enterpriseOnly": "Funkcja czatu jest dostępna tylko w Pro."
   },
   "notifications": {
     "messages": {

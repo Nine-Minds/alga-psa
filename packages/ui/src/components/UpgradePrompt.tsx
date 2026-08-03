@@ -55,7 +55,7 @@ export function UpgradePrompt({
           <LockKeyhole aria-hidden="true" className="h-5 w-5" />
         </div>
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
-          {t('upgradePrompt.editionLabel', { defaultValue: 'Enterprise edition' })}
+          {t('upgradePrompt.editionLabel', { defaultValue: 'Pro' })}
         </p>
         <h2 className="mt-2 text-lg font-bold text-[rgb(var(--color-text-900))]">
           {featureName}
@@ -67,7 +67,7 @@ export function UpgradePrompt({
             target={isExternalCta ? '_blank' : undefined}
             rel={isExternalCta ? 'noopener noreferrer' : undefined}
           >
-            {ctaLabel ?? t('upgradePrompt.defaultCta', { defaultValue: 'Explore Enterprise' })}
+            {ctaLabel ?? t('upgradePrompt.defaultCta', { defaultValue: 'Explore Pro' })}
             <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Link>
         </Button>

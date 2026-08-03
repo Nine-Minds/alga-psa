@@ -2314,8 +2314,8 @@
       "title": "Symulowane okresy faktur"
     },
     "unavailable": {
-      "description": "Symulator umów jest dostępny w wersji Enterprise Alga PSA.",
-      "title": "Funkcja Enterprise"
+      "description": "Symulator umów jest dostępny w Alga PSA Pro.",
+      "title": "Funkcja Pro"
     }
   }
 }

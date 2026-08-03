@@ -171,7 +171,7 @@
         "loadFailed": "De kalenderintegraties konden niet worden geladen."
       },
       "email": {
-        "enterpriseOnly": "Beheerde e-maildomeinen zijn alleen beschikbaar in de Enterprise-editie.",
+        "enterpriseOnly": "Beheerde e-maildomeinen zijn alleen beschikbaar in Pro.",
         "tenantRequired": "Tenantcontext is vereist om de onboardingstatus van e-mail te laden.",
         "loadFailed": "De beheerde e-maildomeinen konden niet worden geladen.",
         "verificationFailed": "Verificatie voor {{domain}} is mislukt."

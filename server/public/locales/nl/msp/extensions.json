@@ -3,8 +3,8 @@
     "heading": "Extensies"
   },
   "enterpriseFeature": {
-    "title": "Enterprise-functie",
-    "description": "Voor {{feature}} is de Enterprise-editie vereist. Upgrade om toegang te krijgen tot deze functie."
+    "title": "Pro-functie",
+    "description": "Voor {{feature}} is Pro vereist. Upgrade om toegang te krijgen tot deze functie."
   },
   "settings": {
     "title": "Extensiebeheer",
@@ -14,8 +14,8 @@
       "install": "Installeren"
     },
     "enterpriseOnly": {
-      "title": "Enterprise-functie",
-      "description": "Extensies zijn beschikbaar in de Enterprise-editie van Alga PSA."
+      "title": "Pro-functie",
+      "description": "Extensies zijn beschikbaar in Alga PSA Pro."
     },
     "links": {
       "needLogs": "Extensielogs nodig?",
@@ -98,10 +98,10 @@
       "description": "Extensies beheren"
     },
     "title": "Extensies",
-    "description": "Extensiebeheer is beschikbaar in de Enterprise-editie."
+    "description": "Extensiebeheer is beschikbaar in Pro."
   },
   "detail": {
-    "metadataTitle": "Extensies - Enterprise-functie",
+    "metadataTitle": "Extensies - Pro-functie",
     "extensionId": "Extensie-ID: {{id}}"
   },
   "runtime": {
@@ -121,7 +121,7 @@
       "description": "Extensiedetails bekijken"
     },
     "title": "Extensiedetails",
-    "description": "Extensiedetails zijn beschikbaar in de Enterprise-editie."
+    "description": "Extensiedetails zijn beschikbaar in Pro."
   },
   "settingsPage": {
     "metadata": {
@@ -129,7 +129,7 @@
       "description": "Extensie-instellingen configureren"
     },
     "title": "Extensie-instellingen",
-    "description": "Extensie-instellingen zijn beschikbaar in de Enterprise-editie."
+    "description": "Extensie-instellingen zijn beschikbaar in Pro."
   },
   "details": {
     "label": "Extensiedetails",

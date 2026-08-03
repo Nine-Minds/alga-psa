@@ -425,7 +425,7 @@
       "classifyCandidates": "Kandidaten klassifizieren",
       "classifying": "Wird klassifiziert…",
       "didNotRun": "Die AI-Triage wurde nicht ausgeführt{{reason}}.",
-      "requiresEnterprise": "Die AI-Triage erfordert Enterprise und das Add-on AI Assistant.",
+      "requiresEnterprise": "Die AI-Triage erfordert Pro und das Add-on AI Assistant.",
       "runFailed": "Die AI-Triage ist fehlgeschlagen.",
       "toggleFailed": "Die AI-Triage-Einstellung konnte nicht geändert werden.",
       "toggleLabel": "AI-Triage — Kandidaten-Tickets mit dem AI-Add-on klassifizieren",

@@ -2310,8 +2310,8 @@
       "title": "Simulierte Rechnungszeiträume"
     },
     "unavailable": {
-      "description": "Der Vertragssimulator ist in der Enterprise-Edition von Alga PSA verfügbar.",
-      "title": "Enterprise-Funktion"
+      "description": "Der Vertragssimulator ist in Alga PSA Pro verfügbar.",
+      "title": "Pro-Funktion"
     }
   }
 }

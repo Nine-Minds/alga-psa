@@ -516,7 +516,7 @@
         "valid": "Pomyślnie zweryfikowano organizatora Microsoft.",
         "validWithName": "Zweryfikowany użytkownik Microsoft: {{displayName}}.",
         "reasons": {
-          "eeDisabled": "Weryfikacja spotkań Teams jest dostępna tylko w wersji Enterprise Edition.",
+          "eeDisabled": "Weryfikacja spotkań Teams jest dostępna tylko w Pro.",
           "notConfigured": "Integracja Teams musi być aktywna, aby można było zweryfikować organizatora.",
           "userNotFound": "Microsoft nie znalazł użytkownika dla tej wartości organizatora.",
           "policyMissing": "Użytkownik Microsoft istnieje, ale Application Access Policy nie zezwala jeszcze na tworzenie spotkań.",

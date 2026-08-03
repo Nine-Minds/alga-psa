@@ -1741,8 +1741,8 @@
       "install": "Installieren"
     },
     "enterpriseOnly": {
-      "title": "Enterprise-Funktion",
-      "description": "Erweiterungen sind in der Enterprise-Edition von Alga PSA verfügbar."
+      "title": "Pro-Funktion",
+      "description": "Erweiterungen sind in Alga PSA Pro verfügbar."
     },
     "links": {
       "needLogs": "Erweiterungsprotokolle benötigt?",
@@ -2062,7 +2062,7 @@
   "integrations": {
     "betaNotice": "Einige Integrationen befinden sich noch in der Entwicklung. Bitte arbeiten Sie in einer Sandbox-Umgebung, wenn Sie diese evaluieren, und teilen Sie Ihr Feedback, um uns bei der Verbesserung zu helfen.",
     "emptyCategory": "Keine Integrationen in dieser Kategorie verfügbar.",
-    "rmmEnterpriseNote": "RMM-Integrationen sind in der Enterprise-Edition verfügbar.",
+    "rmmEnterpriseNote": "RMM-Integrationen sind in Pro verfügbar.",
     "categoryHeading": "{{label}}-Integrationen",
     "loading": {
       "payments": "Zahlungseinstellungen werden geladen..."
@@ -2086,7 +2086,7 @@
       },
       "calendar": {
         "label": "Kalender",
-        "description": "Enterprise-exklusive Kalendersynchronisation für Google und Outlook hält Disposition und Kundentermine synchron."
+        "description": "Pro-exklusive Kalendersynchronisation für Google und Outlook hält Disposition und Kundentermine synchron."
       },
       "providers": {
         "label": "Anbieter",

@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import { Card } from '@alga-psa/ui/components/Card';
-import { isTeamsEnterpriseEdition, TEAMS_AVAILABILITY_MESSAGES } from '@alga-psa/integrations/lib/teamsAvailabilityCore';
+import { isTeamsEnterpriseEdition } from '@alga-psa/integrations/lib/teamsAvailabilityCore';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { ReactNode } from 'react';
 
 export const metadata: Metadata = {
   title: 'Teams Authentication',
 };
+
+const PUBLIC_TEAMS_UNAVAILABLE_MESSAGE = 'Microsoft Teams integration is only available in Pro.';
 
 async function renderUnavailableCard(message: string) {
   const { t } = await getServerTranslation(undefined, 'common');
@@ -28,7 +30,7 @@ let eePagePromise: Promise<EePopupCompleteModule | null> | null = null;
 
 export default async function TeamsTabPopupCompletePage() {
   if (!isTeamsEnterpriseEdition()) {
-    return await renderUnavailableCard(TEAMS_AVAILABILITY_MESSAGES.ce_unavailable);
+    return await renderUnavailableCard(PUBLIC_TEAMS_UNAVAILABLE_MESSAGE);
   }
 
   if (!eePagePromise) {
@@ -42,7 +44,7 @@ export default async function TeamsTabPopupCompletePage() {
 
   const eePage = await eePagePromise;
   if (!eePage?.default) {
-    return await renderUnavailableCard(TEAMS_AVAILABILITY_MESSAGES.ce_unavailable);
+    return await renderUnavailableCard(PUBLIC_TEAMS_UNAVAILABLE_MESSAGE);
   }
 
   return eePage.default();

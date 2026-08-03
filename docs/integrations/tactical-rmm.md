@@ -4,8 +4,8 @@ AlgaPSA connects to [Tactical RMM](https://tacticalrmm.com/), an open-source RMM
 platform, to bring your monitored devices into AlgaPSA as assets and to turn
 Tactical alerts into AlgaPSA records. The core integration reads from Tactical: it
 syncs clients and agents, ingests alerts by webhook and backfill, and pulls cached
-software inventory. It is available in both Community and Enterprise editions.
-Enterprise Edition adds remote actions that run scripts and commands on agents from
+software inventory. It is available in both Community Edition and Pro.
+Pro adds remote actions that run scripts and commands on agents from
 workflows. Each tenant connects a single Tactical instance.
 
 ## Before you connect (on the Tactical server)
@@ -91,9 +91,9 @@ Click **Ingest Software** to pull Tactical's cached software inventory in bulk f
 your mapped agents. AlgaPSA writes it to the software catalog and links it to each
 asset. This reads Tactical's cached data and does not trigger a per-agent refresh.
 
-## Remote actions (Enterprise Edition)
+## Remote actions (Pro)
 
-Enterprise Edition can drive Tactical from workflows. A workflow can list and
+Pro can drive Tactical from workflows. A workflow can list and
 inspect agents, run a script or a shell command on an agent, and reboot an agent,
 all through the same stored credentials. These actions run on the endpoint, so
 scope them carefully.

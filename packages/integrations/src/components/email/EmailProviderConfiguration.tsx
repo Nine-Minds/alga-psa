@@ -308,7 +308,7 @@ function EmailProviderConfigurationContent({
   const openEditDrawer = (provider: EmailProvider) => {
     if (!isEnterpriseEdition && provider.providerType === 'microsoft') {
       setError(t('configuration.feedback.enterpriseOnly', {
-        defaultValue: 'Microsoft 365 inbound email is only available in Enterprise Edition.',
+        defaultValue: 'Microsoft 365 inbound email is only available in Pro.',
       }));
       return;
     }

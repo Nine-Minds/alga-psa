@@ -3,8 +3,8 @@
     "heading": "Extensiones"
   },
   "enterpriseFeature": {
-    "title": "Función empresarial",
-    "description": "La edición Enterprise es necesaria para {{feature}}. Actualice para acceder a esta función."
+    "title": "Función Pro",
+    "description": "Se requiere Pro para {{feature}}. Actualice para acceder a esta función."
   },
   "settings": {
     "title": "Gestión de extensiones",
@@ -14,8 +14,8 @@
       "install": "Instalar"
     },
     "enterpriseOnly": {
-      "title": "Función empresarial",
-      "description": "Las extensiones están disponibles en la edición Enterprise de Alga PSA."
+      "title": "Función Pro",
+      "description": "Las extensiones están disponibles en Alga PSA Pro."
     },
     "links": {
       "needLogs": "¿Necesita registros de extensiones?",
@@ -98,10 +98,10 @@
       "description": "Administrar extensiones"
     },
     "title": "Extensiones",
-    "description": "La gestión de extensiones está disponible en la edición Enterprise."
+    "description": "La gestión de extensiones está disponible en Pro."
   },
   "detail": {
-    "metadataTitle": "Extensiones - Función empresarial",
+    "metadataTitle": "Extensiones - Función Pro",
     "extensionId": "ID de la extensión: {{id}}"
   },
   "runtime": {
@@ -121,7 +121,7 @@
       "description": "Ver detalles de la extensión"
     },
     "title": "Detalles de la extensión",
-    "description": "Los detalles de la extensión están disponibles en la edición Enterprise."
+    "description": "Los detalles de la extensión están disponibles en Pro."
   },
   "settingsPage": {
     "metadata": {
@@ -129,7 +129,7 @@
       "description": "Configurar la extensión"
     },
     "title": "Configuración de extensiones",
-    "description": "La configuración de extensiones está disponible en la edición Enterprise."
+    "description": "La configuración de extensiones está disponible en Pro."
   },
   "details": {
     "label": "Detalles de la extensión",
