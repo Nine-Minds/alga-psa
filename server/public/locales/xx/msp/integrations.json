@@ -1553,6 +1553,7 @@
           "nameRequired": "11111",
           "platform": "11111",
           "popupBlocked": "11111",
+          "popupClosed": "11111",
           "tenantRequired": "11111"
         },
         "fields": {
@@ -1746,7 +1747,8 @@
           "archived": "11111",
           "clientIdMissing": "11111",
           "clientSecretMissing": "11111",
-          "tenantIdMissing": "11111"
+          "tenantIdMissing": "11111",
+          "adminConsentPending": "11111"
         },
         "statusBadges": {
           "archived": "11111",

@@ -318,6 +318,8 @@
         "setupLabel": "Microsoft Entra",
         "notConfigured": "Microsoft-providerinstellingen zijn niet geconfigureerd.",
         "setupHelp": "Configureer eerst Providers in Instellingen → Integraties → Providers en kom dan hier terug om deze mailbox te autoriseren.",
+        "profileReady": "Het Microsoft-app-profiel is gereed.",
+        "profileReadyHelp": "Als toestemming van de tenantbeheerder nog ontbreekt, voltooi die dan in de Providerinstellingen. Gebruik daarna Toegang autoriseren voor deze mailbox.",
         "redirectUriLabel": "Omleidings-URI *",
         "redirectUriPlaceholder": "https://uwapp.com/api/auth/microsoft/callback",
         "authorizationTitle": "OAuth-autorisatie",

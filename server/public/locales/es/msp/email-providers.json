@@ -318,6 +318,8 @@
         "setupLabel": "MicrosoftEntra",
         "notConfigured": "La configuración del proveedor de Microsoft no está configurada.",
         "setupHelp": "Configure Proveedores primero en Configuración → Integraciones → Proveedores, luego regrese aquí para autorizar este buzón.",
+        "profileReady": "El perfil de la aplicación de Microsoft está listo.",
+        "profileReadyHelp": "Si el consentimiento del administrador del inquilino sigue pendiente, complételo en la configuración de Proveedores. Después, use Autorizar acceso para este buzón.",
         "redirectUriLabel": "URI de redireccionamiento *",
         "redirectUriPlaceholder": "https://yourapp.com/api/auth/microsoft/callback",
         "authorizationTitle": "Autorización de OAuth",

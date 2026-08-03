@@ -1553,6 +1553,7 @@
           "nameRequired": "55555",
           "platform": "55555",
           "popupBlocked": "55555",
+          "popupClosed": "55555",
           "tenantRequired": "55555"
         },
         "fields": {
@@ -1746,7 +1747,8 @@
           "archived": "55555",
           "clientIdMissing": "55555",
           "clientSecretMissing": "55555",
-          "tenantIdMissing": "55555"
+          "tenantIdMissing": "55555",
+          "adminConsentPending": "55555"
         },
         "statusBadges": {
           "archived": "55555",

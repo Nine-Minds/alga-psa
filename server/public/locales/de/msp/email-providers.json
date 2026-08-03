@@ -318,6 +318,8 @@
         "setupLabel": "Microsoft Entra",
         "notConfigured": "Die Microsoft-Anbietereinstellungen sind nicht konfiguriert.",
         "setupHelp": "Konfigurieren Sie zunächst Anbieter unter Einstellungen → Integrationen → Anbieter und kehren Sie dann hierher zurück, um dieses Postfach zu autorisieren.",
+        "profileReady": "Das Microsoft-App-Profil ist bereit.",
+        "profileReadyHelp": "Falls die Zustimmung des Mandantenadministrators noch aussteht, schließen Sie sie in den Anbietereinstellungen ab. Verwenden Sie anschließend unten Zugriff autorisieren für dieses Postfach.",
         "redirectUriLabel": "Weiterleitungs-URI *",
         "redirectUriPlaceholder": "https://yourapp.com/api/auth/microsoft/callback",
         "authorizationTitle": "OAuth-Autorisierung",

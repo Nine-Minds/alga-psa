@@ -318,6 +318,8 @@
         "setupLabel": "Microsoft Entra",
         "notConfigured": "Microsoft provider settings are not configured.",
         "setupHelp": "Configure Providers first in Settings → Integrations → Providers, then return here to authorize this mailbox.",
+        "profileReady": "Microsoft app profile is ready.",
+        "profileReadyHelp": "If tenant administrator consent is still pending, complete it in Providers settings. Then use Authorize Access below for this mailbox.",
         "redirectUriLabel": "Redirect URI *",
         "redirectUriPlaceholder": "https://yourapp.com/api/auth/microsoft/callback",
         "authorizationTitle": "OAuth Authorization",

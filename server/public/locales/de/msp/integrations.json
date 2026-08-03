@@ -1553,6 +1553,7 @@
           "nameRequired": "Enter a display name for the Microsoft app.",
           "platform": "Could not configure the platform Microsoft app.",
           "popupBlocked": "Allow popups for this site, then try again.",
+          "popupClosed": "Das Microsoft-Fenster wurde geschlossen, bevor die Einrichtung abgeschlossen war. Versuchen Sie es erneut oder wählen Sie eine andere Einrichtungsoption.",
           "tenantRequired": "Enter your Microsoft tenant ID or verified domain."
         },
         "fields": {
@@ -1737,7 +1738,8 @@
           "archived": "Archivierte Profile können nicht für neue Microsoft-Bindungen verwendet werden.",
           "clientIdMissing": "Client ID fehlt.",
           "clientSecretMissing": "Client Secret wurde nicht konfiguriert.",
-          "tenantIdMissing": "Tenant ID fehlt."
+          "tenantIdMissing": "Tenant ID fehlt.",
+          "adminConsentPending": "Erteilen Sie die Zustimmung des Microsoft-Mandantenadministrators, um die E-Mail-Einrichtung abzuschließen."
         },
         "statusBadges": {
           "archived": "Archiviert",
