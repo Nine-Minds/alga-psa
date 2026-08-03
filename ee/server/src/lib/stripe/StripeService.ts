@@ -1537,6 +1537,11 @@ export class StripeService {
     const retiredPremiumScheduleId = existingSubscription?.metadata?.[RETIRED_PREMIUM_SCHEDULE_KEY];
     if (typeof retiredPremiumScheduleId === 'string') {
       updatedMetadata[RETIRED_PREMIUM_SCHEDULE_KEY] = retiredPremiumScheduleId;
+      const retiredPremiumScheduleSource =
+        existingSubscription?.metadata?.[RETIRED_PREMIUM_SCHEDULE_SOURCE_KEY];
+      if (retiredPremiumScheduleSource === RETIRED_PREMIUM_SCHEDULE_SOURCE) {
+        updatedMetadata[RETIRED_PREMIUM_SCHEDULE_SOURCE_KEY] = retiredPremiumScheduleSource;
+      }
     }
     if (existingSubscription?.metadata?.scheduled_quantity) {
       const scheduledQuantity = existingSubscription.metadata.scheduled_quantity;

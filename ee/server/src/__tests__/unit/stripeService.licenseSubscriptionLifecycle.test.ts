@@ -330,6 +330,27 @@ describe('StripeService license subscription lifecycle', () => {
       const tenantUpdate = state.updates.find((u) => u.table === 'tenants');
       expect(tenantUpdate?.values.licensed_user_count).toBe(1);
     });
+
+    it('preserves confirmed retired Premium schedule provenance during webhook refresh', async () => {
+      const state = createState([
+        trialSubscription({
+          metadata: {
+            retired_premium_schedule_id: 'sub_sched_premium_trial',
+            retired_premium_schedule_source: 'confirmed_premium_trial',
+          },
+        }),
+      ]);
+      const { service, knex } = createService(state);
+      prepareUpdateHandler(service);
+
+      await service.handleSubscriptionUpdated(subscriptionUpdatedEvent(), TENANT, knex);
+
+      const subscriptionUpdate = state.updates.find((u) => u.table === 'stripe_subscriptions');
+      expect(subscriptionUpdate?.values.metadata).toEqual({
+        retired_premium_schedule_id: 'sub_sched_premium_trial',
+        retired_premium_schedule_source: 'confirmed_premium_trial',
+      });
+    });
   });
 
   describe('handleSubscriptionDeleted', () => {
