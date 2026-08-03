@@ -348,15 +348,22 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const editingAssignment = editingAssignmentId ? editAssignments[editingAssignmentId] : null;
   const editingRenewalTicketBoardId = editingAssignment?.renewal_ticket_board_id ?? null;
 
+  // Uses history.replaceState to avoid a Next.js soft navigation: router.replace
+  // would re-render the billing route server-side on every subtab click, which
+  // remounts the detail view and flashes a loading skeleton.
   const updateContractViewParam = useCallback((tabValue: string) => {
-    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
     if (tabValue === 'edit') {
       params.delete('contractView');
     } else {
       params.set('contractView', tabValue);
     }
-    router.replace(`/msp/billing?${params.toString()}`, { scroll: false });
-  }, [router, searchParams]);
+    const queryString = params.toString();
+    window.history.replaceState(null, '', queryString ? `/msp/billing?${queryString}` : '/msp/billing');
+  }, []);
 
   // Sync tab state FROM URL changes (e.g., browser back/forward)
   // Don't include activeTab in deps - handleTabChange handles state → URL direction

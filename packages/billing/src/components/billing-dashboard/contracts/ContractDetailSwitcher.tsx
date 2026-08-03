@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -46,10 +46,25 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [resolvedContractId, setResolvedContractId] = useState<string | null>(contractId);
 
+  // Other query params (contractView, subtab…) change on every subtab switch.
+  // Only the contract identity should re-resolve the contract type, otherwise
+  // ContractDetail unmounts and reloads on each tab click.
+  const lastResolvedRef = useRef<{ contractId: string | null; clientContractId: string | null } | null>(null);
+
   useEffect(() => {
     let isMounted = true;
 
     const resolveContractType = async () => {
+      const lastResolved = lastResolvedRef.current;
+      if (
+        lastResolved &&
+        lastResolved.contractId === contractId &&
+        lastResolved.clientContractId === clientContractId
+      ) {
+        return;
+      }
+      lastResolvedRef.current = { contractId, clientContractId };
+
       if (!contractId && !clientContractId) {
         if (isMounted) {
           setViewMode('error');
@@ -77,10 +92,15 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
           if (clientContract) {
             setResolvedContractId(clientContract.contract_id);
             if (!contractId) {
-              const params = new URLSearchParams(searchParams?.toString() ?? '');
+              const params = new URLSearchParams(
+                typeof window === 'undefined' ? '' : window.location.search
+              );
               params.set('tab', 'client-contracts');
               params.set('clientContractId', clientContractId);
               params.set('contractId', clientContract.contract_id);
+              // The redirect only adds the resolved contractId, so treat it as
+              // already resolved and skip the re-run it would otherwise trigger.
+              lastResolvedRef.current = { contractId: clientContract.contract_id, clientContractId };
               router.replace(`/msp/billing?${params.toString()}`, { scroll: false });
             }
             setViewMode('client');
@@ -129,7 +149,7 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [clientContractId, contractId, router, searchParams, t]);
+  }, [clientContractId, contractId, router]);
 
   if (!contractId && !clientContractId) {
     return (
