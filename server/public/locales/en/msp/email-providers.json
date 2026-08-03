@@ -11,6 +11,7 @@
       "resyncing": "Resyncing {{providerName}}...",
       "resyncError": "Failed to resync IMAP provider",
       "resyncStarted": "Resync started for {{providerName}}.",
+      "resyncRecovered": "{{providerName}} reconnected successfully.",
       "enterpriseOnly": "Microsoft 365 inbound email is only available in Pro.",
       "loadProvidersError": "Failed to load email providers"
     },
@@ -163,6 +164,7 @@
       "disabled": "Disabled",
       "paused": "Paused",
       "connected": "Connected",
+      "reconnecting": "Reconnecting",
       "disconnected": "Disconnected",
       "error": "Error",
       "configuring": "Configuring",
@@ -211,6 +213,7 @@
     },
     "values": {
       "active": "Active",
+      "reconnecting": "Reconnecting",
       "inactive": "Inactive",
       "disabled": "Disabled",
       "error": "Error"

@@ -11,6 +11,7 @@
       "resyncing": "Ponowna synchronizacja {{providerName}}...",
       "resyncError": "Nie udało się ponownie zsynchronizować dostawcy IMAP",
       "resyncStarted": "Rozpoczęto ponowną synchronizację dla {{providerName}}.",
+      "resyncRecovered": "Ponownie połączono z {{providerName}}.",
       "enterpriseOnly": "Przychodząca poczta e-mail usługi Microsoft 365 jest dostępna tylko w Pro.",
       "loadProvidersError": "Failed to load email providers"
     },
@@ -163,6 +164,7 @@
       "disabled": "Wyłączony",
       "paused": "Wstrzymano",
       "connected": "Połączony",
+      "reconnecting": "Ponowne łączenie",
       "disconnected": "Rozłączony",
       "error": "Błąd",
       "configuring": "Konfigurowanie",
@@ -211,6 +213,7 @@
     },
     "values": {
       "active": "Aktywny",
+      "reconnecting": "Ponowne łączenie",
       "inactive": "Nieaktywny",
       "disabled": "Wyłączony",
       "error": "Błąd"

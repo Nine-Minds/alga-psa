@@ -11,6 +11,7 @@
       "resyncing": "11111 {{providerName}} 11111",
       "resyncError": "11111",
       "resyncStarted": "11111 {{providerName}} 11111",
+      "resyncRecovered": "11111 {{providerName}} 11111",
       "enterpriseOnly": "11111",
       "loadProvidersError": "11111"
     },
@@ -163,6 +164,7 @@
       "disabled": "11111",
       "paused": "11111",
       "connected": "11111",
+      "reconnecting": "11111",
       "disconnected": "11111",
       "error": "11111",
       "configuring": "11111",
@@ -211,6 +213,7 @@
     },
     "values": {
       "active": "11111",
+      "reconnecting": "11111",
       "inactive": "11111",
       "disabled": "11111",
       "error": "11111"

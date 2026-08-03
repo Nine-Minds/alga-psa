@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -47,6 +47,30 @@ import { isMicrosoftConsumerEnterpriseEdition } from '../../lib/microsoftConsume
 import { getMicrosoftConsumerSetupStatus } from '@alga-psa/integrations/actions';
 import type { MicrosoftCredentialCapability } from '../../actions/integrations/providerReadiness';
 
+const IMAP_RESYNC_FAST_POLL_INTERVAL_MS = 5_000;
+const IMAP_RESYNC_FAST_POLL_DURATION_MS = 120_000;
+const IMAP_RESYNC_BACKOFF_POLL_INTERVAL_MS = 15_000;
+const IMAP_RESYNC_MAX_BACKOFF_AFTER_MS = 300_000;
+const IMAP_RESYNC_MAX_POLL_INTERVAL_MS = 30_000;
+
+interface ImapResyncPoll {
+  generation: number;
+  startedAt: number;
+  timeoutId?: ReturnType<typeof setTimeout>;
+}
+
+const getImapResyncPollInterval = (elapsedMs: number) => {
+  if (elapsedMs < IMAP_RESYNC_FAST_POLL_DURATION_MS) {
+    return IMAP_RESYNC_FAST_POLL_INTERVAL_MS;
+  }
+
+  if (elapsedMs < IMAP_RESYNC_MAX_BACKOFF_AFTER_MS) {
+    return IMAP_RESYNC_BACKOFF_POLL_INTERVAL_MS;
+  }
+
+  return IMAP_RESYNC_MAX_POLL_INTERVAL_MS;
+};
+
 export interface EmailProviderConfigurationProps {
   onProviderAdded?: (provider: EmailProvider) => void;
   onProviderUpdated?: (provider: EmailProvider) => void;
@@ -70,6 +94,10 @@ function EmailProviderConfigurationContent({
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [diagnosticsProvider, setDiagnosticsProvider] = useState<EmailProvider | null>(null);
   const [microsoftCredentialCapability, setMicrosoftCredentialCapability] = useState<MicrosoftCredentialCapability | null | undefined>(undefined);
+  const [reconnectingProviderIds, setReconnectingProviderIds] = useState<Set<string>>(new Set());
+  const resyncPollsRef = useRef<Map<string, ImapResyncPoll>>(new Map());
+  const nextResyncGenerationRef = useRef(0);
+  const mountedRef = useRef(true);
   const { openDrawer, closeDrawer } = useDrawer();
 
   // Load existing providers on component mount
@@ -91,6 +119,21 @@ function EmailProviderConfigurationContent({
 
     loadMicrosoftCredentialCapability();
   }, [isEnterpriseEdition]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    const resyncPolls = resyncPollsRef.current;
+
+    return () => {
+      mountedRef.current = false;
+      resyncPolls.forEach(({ timeoutId }) => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+      });
+      resyncPolls.clear();
+    };
+  }, []);
 
   // Get tenant on mount
   useEffect(() => {
@@ -264,6 +307,69 @@ function EmailProviderConfigurationContent({
     }
   };
 
+  const finishResyncPolling = (providerId: string, generation: number) => {
+    const poll = resyncPollsRef.current.get(providerId);
+    if (!poll || poll.generation !== generation) {
+      return false;
+    }
+
+    if (poll.timeoutId) {
+      clearTimeout(poll.timeoutId);
+    }
+    resyncPollsRef.current.delete(providerId);
+    setReconnectingProviderIds((current) => {
+      const next = new Set(current);
+      next.delete(providerId);
+      return next;
+    });
+    return true;
+  };
+
+  const pollForResyncRecovery = async (
+    providerId: string,
+    providerName: string,
+    generation: number
+  ): Promise<void> => {
+    const activePoll = resyncPollsRef.current.get(providerId);
+    if (!mountedRef.current || !activePoll || activePoll.generation !== generation) {
+      return;
+    }
+
+    let refreshedProvider: EmailProvider | undefined;
+    try {
+      const data = await getEmailProviders();
+      const currentPoll = resyncPollsRef.current.get(providerId);
+      if (!mountedRef.current || !currentPoll || currentPoll.generation !== generation) {
+        return;
+      }
+
+      const refreshedProviders = data.providers || [];
+      setProviders(refreshedProviders);
+      refreshedProvider = refreshedProviders.find((candidate) => candidate.id === providerId);
+    } catch (err) {
+      console.error('Failed to refresh IMAP provider during resync:', err);
+    }
+
+    const currentPoll = resyncPollsRef.current.get(providerId);
+    if (!mountedRef.current || !currentPoll || currentPoll.generation !== generation) {
+      return;
+    }
+
+    if (refreshedProvider && refreshedProvider.status !== 'disconnected') {
+      if (finishResyncPolling(providerId, generation) && refreshedProvider.status === 'connected') {
+        toast.success(t('configuration.feedback.resyncRecovered', {
+          defaultValue: '{{providerName}} reconnected successfully.',
+          providerName,
+        }));
+      }
+      return;
+    }
+
+    currentPoll.timeoutId = setTimeout(() => {
+      void pollForResyncRecovery(providerId, providerName, generation);
+    }, getImapResyncPollInterval(Date.now() - currentPoll.startedAt));
+  };
+
   const handleResyncProvider = async (provider: EmailProvider) => {
     try {
       setError(null);
@@ -284,7 +390,19 @@ function EmailProviderConfigurationContent({
         defaultValue: 'Resync started for {{providerName}}.',
         providerName: provider.providerName,
       }), { id: toastId });
-      await loadProviders();
+
+      setReconnectingProviderIds((current) => new Set(current).add(provider.id));
+
+      const previousPoll = resyncPollsRef.current.get(provider.id);
+      if (previousPoll?.timeoutId) {
+        clearTimeout(previousPoll.timeoutId);
+      }
+      const generation = ++nextResyncGenerationRef.current;
+      resyncPollsRef.current.set(provider.id, {
+        generation,
+        startedAt: Date.now(),
+      });
+      void pollForResyncRecovery(provider.id, provider.providerName, generation);
     } catch (err) {
       const message = t('configuration.feedback.resyncError', {
         defaultValue: 'Failed to resync IMAP provider',
@@ -432,6 +550,7 @@ function EmailProviderConfigurationContent({
 
         <EmailProviderList
           providers={visibleProviders}
+          reconnectingProviderIds={reconnectingProviderIds}
           onEdit={openEditDrawer}
           onDelete={handleProviderDeleted}
           onTestConnection={handleTestConnection}
