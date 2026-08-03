@@ -109,12 +109,14 @@
       "providerLabel": "Email Provider",
       "options": {
         "smtp": "SMTP (Traditional Email Server)",
-        "resend": "Resend (Modern API Service)"
+        "resend": "Resend (Modern API Service)",
+        "microsoft": "Microsoft 365 (Microsoft Graph)"
       },
       "placeholder": "Select email provider",
       "descriptions": {
         "smtp": "Configure traditional SMTP email server settings",
-        "resend": "Configure Resend API for modern email delivery"
+        "resend": "Configure Resend API for modern email delivery",
+        "microsoft": "Send through the OAuth-connected Microsoft 365 mailbox used for inbound email"
       },
       "status": {
         "provider": "{{provider}} Provider"
@@ -160,6 +162,14 @@
         "label": "From Address",
         "placeholder": "noreply@yourdomain.com",
         "help": "Must be from a verified domain. Use the Domains tab to add custom domains."
+      }
+    },
+    "microsoft": {
+      "mailbox": {
+        "label": "Sending Mailbox",
+        "placeholder": "Select a connected Microsoft 365 mailbox",
+        "none": "Add and authorize a Microsoft 365 provider on the Inbound Email tab first.",
+        "help": "Messages are sent as this mailbox through Microsoft Graph and saved to Sent Items. Reconnect existing mailboxes to grant Mail.Send."
       }
     },
     "domains": {

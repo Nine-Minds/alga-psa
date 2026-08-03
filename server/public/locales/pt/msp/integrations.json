@@ -1581,9 +1581,9 @@
             "reconnect": "As conexões existentes do calendário da Microsoft podem precisar de nova autorização após a alteração do perfil vinculado."
           },
           "email": {
-            "description": "Escolha qual perfil da Microsoft o e-mail de entrada do Outlook deve usar.",
+            "description": "Escolha o perfil da Microsoft para e-mails recebidos e enviados do Outlook.",
             "label": "E-mail",
-            "reconnect": "As conexões de e-mail existentes do Outlook podem precisar de nova autorização após a alteração do perfil vinculado."
+            "reconnect": "As conexões de e-mail existentes do Outlook precisam ser autorizadas novamente para conceder Mail.Send antes de poderem enviar e-mails."
           },
           "mspSso": {
             "description": "Escolha qual perfil da Microsoft oferece suporte a domínios de login SSO do MSP, entrada da Microsoft e descoberta de locatário.",

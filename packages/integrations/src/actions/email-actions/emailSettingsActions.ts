@@ -25,7 +25,15 @@ type EmailSettingsUpdateInput = Partial<TenantEmailSettings> & {
 // sent to the browser. On save it means "unchanged" — restore the real value.
 const SECRET_MASK = '***';
 const SECRET_FIELDS = ['password', 'apiKey'] as const;
-const EDITABLE_PROVIDER_TYPES = ['smtp', 'resend'] as const;
+const EDITABLE_PROVIDER_TYPES = ['smtp', 'resend', 'microsoft'] as const;
+
+export interface MicrosoftOutboundMailboxOption {
+  providerId: string;
+  mailbox: string;
+  providerName: string;
+  senderDisplayName?: string | null;
+  status: 'connected' | 'disconnected' | 'error' | 'configuring';
+}
 
 function withEditableProviderConfigs(settings: TenantEmailSettings): TenantEmailSettings {
   const providerConfigs = [...(settings.providerConfigs ?? [])];
@@ -156,25 +164,66 @@ export const updateEmailSettings = withAuth(async (
 
     // Load current settings so we can merge partial updates safely
     const existingSettings = await TenantEmailService.getTenantEmailSettings(tenant || '', knex);
-    const nextDefaultFromDomain = hasOwnUpdate(updates, 'defaultFromDomain')
+    let nextDefaultFromDomain = hasOwnUpdate(updates, 'defaultFromDomain')
       ? updates.defaultFromDomain?.trim() || undefined
       : existingSettings?.defaultFromDomain;
-    const nextTicketingFromEmail = hasOwnUpdate(updates, 'ticketingFromEmail')
+    let nextTicketingFromEmail = hasOwnUpdate(updates, 'ticketingFromEmail')
       ? updates.ticketingFromEmail?.trim() || null
       : existingSettings?.ticketingFromEmail ?? null;
     const nextTicketingFromName = hasOwnUpdate(updates, 'ticketingFromName')
       ? normalizeOptionalString(updates.ticketingFromName)
       : existingSettings?.ticketingFromName ?? null;
 
-    const mergedProviderConfigs = updates.providerConfigs
+    let mergedProviderConfigs = updates.providerConfigs
       ? mergeProviderSecrets(updates.providerConfigs, existingSettings?.providerConfigs)
       : existingSettings?.providerConfigs ?? [];
-    const normalizedProviderConfigs = updates.emailProvider
-      ? mergedProviderConfigs.map(config => ({
-          ...config,
-          isEnabled: config.providerType === updates.emailProvider,
-        }))
-      : mergedProviderConfigs;
+    const selectedProviderType = updates.emailProvider ?? existingSettings?.emailProvider ?? 'smtp';
+
+    if (selectedProviderType === 'microsoft') {
+      const requested = mergedProviderConfigs.find(config => config.providerType === 'microsoft');
+      const requestedProviderId = requested?.config?.inboundProviderId || requested?.providerId;
+      if (!requestedProviderId || requestedProviderId === 'microsoft-provider') {
+        return actionError('Choose a Microsoft 365 mailbox for outbound email');
+      }
+
+      const microsoftProvider = await tenantDb(knex, tenant).table('email_providers')
+        .where({
+          id: requestedProviderId,
+          provider_type: 'microsoft',
+          is_active: true,
+        })
+        .first('id', 'mailbox', 'provider_name', 'sender_display_name', 'status');
+
+      if (!microsoftProvider) {
+        return actionError('The selected Microsoft 365 mailbox is not active or no longer exists');
+      }
+      if (microsoftProvider.status !== 'connected') {
+        return actionError('Reconnect the selected Microsoft 365 mailbox before using it for outbound email');
+      }
+
+      const microsoftConfig: EmailProviderConfig = {
+        providerId: microsoftProvider.id,
+        providerType: 'microsoft',
+        isEnabled: true,
+        config: {
+          inboundProviderId: microsoftProvider.id,
+          mailbox: microsoftProvider.mailbox,
+          from: microsoftProvider.mailbox,
+          fromName: microsoftProvider.sender_display_name || undefined,
+        },
+      };
+      mergedProviderConfigs = [
+        ...mergedProviderConfigs.filter(config => config.providerType !== 'microsoft'),
+        microsoftConfig,
+      ];
+      nextDefaultFromDomain = extractDomain(microsoftProvider.mailbox) || undefined;
+      nextTicketingFromEmail = microsoftProvider.mailbox;
+    }
+
+    const normalizedProviderConfigs = mergedProviderConfigs.map(config => ({
+      ...config,
+      isEnabled: config.providerType === selectedProviderType,
+    }));
 
     const mergedSettings: TenantEmailSettings = {
       tenantId: tenant || '',
@@ -182,7 +231,7 @@ export const updateEmailSettings = withAuth(async (
       ticketingFromEmail: nextTicketingFromEmail,
       ticketingFromName: nextTicketingFromName,
       customDomains: updates.customDomains ?? existingSettings?.customDomains ?? [],
-      emailProvider: updates.emailProvider ?? existingSettings?.emailProvider ?? 'smtp',
+      emailProvider: selectedProviderType,
       providerConfigs: normalizedProviderConfigs,
       trackingEnabled: updates.trackingEnabled ?? existingSettings?.trackingEnabled ?? false,
       maxDailyEmails: updates.maxDailyEmails ?? existingSettings?.maxDailyEmails,
@@ -246,6 +295,32 @@ export const updateEmailSettings = withAuth(async (
   } catch (error: any) {
     console.error('Error updating email settings:', error);
     return actionError('Failed to update email settings');
+  }
+});
+
+export const getMicrosoftOutboundMailboxes = withAuth(async (
+  _user,
+  { tenant }
+): Promise<{ mailboxes: MicrosoftOutboundMailboxOption[] } | ActionMessageError> => {
+  try {
+    const { knex } = await createTenantKnex();
+    const rows = await tenantDb(knex, tenant).table('email_providers')
+      .where({ provider_type: 'microsoft', is_active: true })
+      .orderBy('provider_name', 'asc')
+      .select('id', 'mailbox', 'provider_name', 'sender_display_name', 'status');
+
+    return {
+      mailboxes: rows.map(row => ({
+        providerId: row.id,
+        mailbox: row.mailbox,
+        providerName: row.provider_name,
+        senderDisplayName: row.sender_display_name,
+        status: row.status,
+      })),
+    };
+  } catch (error) {
+    console.error('Error fetching Microsoft outbound mailboxes:', error);
+    return actionError('Failed to load Microsoft 365 mailboxes');
   }
 });
 

@@ -109,12 +109,14 @@
       "providerLabel": "11111",
       "options": {
         "smtp": "11111",
-        "resend": "11111"
+        "resend": "11111",
+        "microsoft": "11111"
       },
       "placeholder": "11111",
       "descriptions": {
         "smtp": "11111",
-        "resend": "11111"
+        "resend": "11111",
+        "microsoft": "11111"
       },
       "status": {
         "provider": "11111 {{provider}} 11111"
@@ -159,6 +161,14 @@
       "fromAddress": {
         "label": "11111",
         "placeholder": "11111",
+        "help": "11111"
+      }
+    },
+    "microsoft": {
+      "mailbox": {
+        "label": "11111",
+        "placeholder": "11111",
+        "none": "11111",
         "help": "11111"
       }
     },

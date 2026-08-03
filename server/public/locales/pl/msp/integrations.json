@@ -1581,9 +1581,9 @@
             "reconnect": "Istniejące połączenia kalendarza Microsoft mogą wymagać ponownej autoryzacji po zmianie powiązanego profilu."
           },
           "email": {
-            "description": "Wybierz, który profil Microsoft powinien być używany do poczty przychodzącej Outlook.",
+            "description": "Wybierz profil Microsoft dla przychodzącej i wychodzącej poczty Outlook.",
             "label": "E-mail",
-            "reconnect": "Istniejące połączenia e-mail Outlook mogą wymagać ponownej autoryzacji po zmianie powiązanego profilu."
+            "reconnect": "Istniejące połączenia e-mail Outlook muszą zostać ponownie autoryzowane, aby przyznać Mail.Send przed wysyłaniem poczty wychodzącej."
           },
           "mspSso": {
             "description": "Wybierz, który profil Microsoft obsługuje domeny logowania MSP SSO, logowanie Microsoft i wykrywanie tenanta.",

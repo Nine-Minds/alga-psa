@@ -546,7 +546,7 @@ describe('MicrosoftIntegrationSettings contracts', () => {
         expect.objectContaining({
           title: 'Outlook email app choice updated',
           description: expect.stringContaining(
-            'Existing Outlook email connections may need re-authorization after changing the Microsoft app.'
+            'Existing Outlook email connections need re-authorization to grant Mail.Send before they can send outbound email.'
           ),
         })
       );

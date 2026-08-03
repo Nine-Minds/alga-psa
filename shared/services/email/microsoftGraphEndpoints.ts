@@ -1,6 +1,13 @@
 const DEFAULT_GRAPH_BASE_URL = 'https://graph.microsoft.com/v1.0';
 const DEFAULT_LOGIN_BASE_URL = 'https://login.microsoftonline.com';
 
+export const MICROSOFT_EMAIL_OAUTH_SCOPES = [
+  'https://graph.microsoft.com/Mail.Read',
+  'https://graph.microsoft.com/Mail.Read.Shared',
+  'https://graph.microsoft.com/Mail.Send',
+  'offline_access',
+] as const;
+
 function withoutTrailingSlash(value: string): string {
   return value.replace(/\/+$/, '');
 }

@@ -1581,9 +1581,9 @@
             "reconnect": "Bestaande Microsoft-agendaverbindingen kunnen opnieuw autorisatie vereisen na het wijzigen van het gekoppelde profiel."
           },
           "email": {
-            "description": "Kies welk Microsoft-profiel Outlook (inkomende e-mail) moet gebruiken.",
+            "description": "Kies het Microsoft-profiel voor inkomende en uitgaande Outlook-e-mail.",
             "label": "E-mail",
-            "reconnect": "Bestaande Outlook-e-mailverbindingen kunnen opnieuw autorisatie vereisen na het wijzigen van het gekoppelde profiel."
+            "reconnect": "Bestaande Outlook-e-mailverbindingen moeten opnieuw worden geautoriseerd om Mail.Send toe te kennen voordat ze uitgaande e-mail kunnen verzenden."
           },
           "mspSso": {
             "description": "Kies welk Microsoft-profiel MSP SSO-aanmeldingsdomeinen, Microsoft-aanmelding en tenant-detectie ondersteunt.",

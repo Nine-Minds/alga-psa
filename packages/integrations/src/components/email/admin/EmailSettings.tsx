@@ -20,8 +20,10 @@ import type { TenantEmailSettings } from '@alga-psa/types';
 import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
 import {
   getEmailSettings,
+  getMicrosoftOutboundMailboxes,
   updateEmailSettings,
-  testOutboundEmail
+  testOutboundEmail,
+  type MicrosoftOutboundMailboxOption,
 } from '../../../actions/email-actions/emailSettingsActions';
 import {
   getEmailDomains,
@@ -62,7 +64,9 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newDomain, setNewDomain] = useState('');
-  const [selectedProvider, setSelectedProvider] = useState<'smtp' | 'resend'>('smtp');
+  const [selectedProvider, setSelectedProvider] = useState<'smtp' | 'resend' | 'microsoft'>('smtp');
+  const [microsoftMailboxes, setMicrosoftMailboxes] = useState<MicrosoftOutboundMailboxOption[]>([]);
+  const [microsoftMailboxError, setMicrosoftMailboxError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [activeTab, setActiveTab] = useState('inbound');
@@ -72,6 +76,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
 
   useEffect(() => {
     loadEmailSettings();
+    loadMicrosoftMailboxes();
     loadDomains();
   }, []);
 
@@ -94,6 +99,21 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
       setError(t('email.errors.loadEmailSettings', { defaultValue: 'Failed to load email settings' }));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMicrosoftMailboxes = async () => {
+    try {
+      const result = await getMicrosoftOutboundMailboxes();
+      if (isActionMessageError(result)) {
+        setMicrosoftMailboxError(getErrorMessage(result));
+        return;
+      }
+      setMicrosoftMailboxError(null);
+      setMicrosoftMailboxes(result.mailboxes);
+    } catch (err) {
+      console.error('Failed to load Microsoft outbound mailboxes:', err);
+      setMicrosoftMailboxError('Failed to load Microsoft 365 mailboxes');
     }
   };
 
@@ -192,7 +212,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
     }
   };
 
-  const handleProviderChange = (providerType: 'smtp' | 'resend') => {
+  const handleProviderChange = (providerType: 'smtp' | 'resend' | 'microsoft') => {
     if (!settings) return;
 
     setSelectedProvider(providerType);
@@ -214,7 +234,46 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
       updatedSettings.providerConfigs.push(newConfig);
     }
 
+    if (providerType === 'microsoft') {
+      const microsoftConfig = updatedSettings.providerConfigs.find(config => config.providerType === 'microsoft');
+      const selectedMailbox = microsoftMailboxes.find(mailbox =>
+        mailbox.providerId === microsoftConfig?.config?.inboundProviderId
+      ) || microsoftMailboxes.find(mailbox => mailbox.status === 'connected');
+
+      if (microsoftConfig && selectedMailbox) {
+        microsoftConfig.providerId = selectedMailbox.providerId;
+        microsoftConfig.config = {
+          inboundProviderId: selectedMailbox.providerId,
+          mailbox: selectedMailbox.mailbox,
+          from: selectedMailbox.mailbox,
+          fromName: selectedMailbox.senderDisplayName || undefined,
+        };
+      }
+    }
+
     setSettings(updatedSettings);
+  };
+
+  const selectMicrosoftMailbox = (providerId: string) => {
+    if (!settings) return;
+    const mailbox = microsoftMailboxes.find(option => option.providerId === providerId);
+    if (!mailbox) return;
+
+    const providerConfigs = settings.providerConfigs.map(config =>
+      config.providerType === 'microsoft'
+        ? {
+            ...config,
+            providerId: mailbox.providerId,
+            config: {
+              inboundProviderId: mailbox.providerId,
+              mailbox: mailbox.mailbox,
+              from: mailbox.mailbox,
+              fromName: mailbox.senderDisplayName || undefined,
+            },
+          }
+        : config
+    );
+    setSettings({ ...settings, providerConfigs });
   };
 
   const updateProviderConfig = (providerId: string, configUpdates: any) => {
@@ -403,6 +462,46 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
     );
   };
 
+  const renderMicrosoftConfig = () => {
+    const config = getCurrentProviderConfig();
+    if (!config) return null;
+
+    return (
+      <div className="space-y-3">
+        <div>
+          <Label htmlFor="microsoft-outbound-mailbox">
+            {t('email.microsoft.mailbox.label', { defaultValue: 'Sending Mailbox' })}
+          </Label>
+          <CustomSelect
+            id="microsoft-outbound-mailbox"
+            value={config.config.inboundProviderId || ''}
+            onValueChange={selectMicrosoftMailbox}
+            options={microsoftMailboxes.map(mailbox => ({
+              value: mailbox.providerId,
+              label: `${mailbox.providerName} — ${mailbox.mailbox}${mailbox.status === 'connected' ? '' : ` (${mailbox.status})`}`,
+            }))}
+            placeholder={t('email.microsoft.mailbox.placeholder', { defaultValue: 'Select a connected Microsoft 365 mailbox' })}
+          />
+        </div>
+        {microsoftMailboxError ? (
+          <p className="text-sm text-red-600 dark:text-red-400">{microsoftMailboxError}</p>
+        ) : microsoftMailboxes.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {t('email.microsoft.mailbox.none', {
+              defaultValue: 'Add and authorize a Microsoft 365 provider on the Inbound Email tab first.',
+            })}
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            {t('email.microsoft.mailbox.help', {
+              defaultValue: 'Messages are sent as this mailbox through Microsoft Graph and saved to Sent Items. Reconnect existing mailboxes to grant Mail.Send.',
+            })}
+          </p>
+        )}
+      </div>
+    );
+  };
+
   const renderDomainStatus = (domain: DomainStatus) => {
     const getStatusIcon = () => {
       switch (domain.status) {
@@ -492,7 +591,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
         <>
             <div className="text-sm text-muted-foreground mb-4">
               {t('email.descriptions.outbound', {
-                defaultValue: 'Configure SMTP or API settings for sending emails from your application'
+                defaultValue: 'Choose SMTP, Resend, or a connected Microsoft 365 mailbox for outbound email'
               })}
             </div>
 
@@ -513,7 +612,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
                 <CustomSelect
                   id="provider-select"
                   value={selectedProvider}
-                  onValueChange={(value: string) => handleProviderChange(value as 'smtp' | 'resend')}
+                  onValueChange={(value: string) => handleProviderChange(value as 'smtp' | 'resend' | 'microsoft')}
                   options={[
                     {
                       value: 'smtp',
@@ -522,6 +621,10 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
                     {
                       value: 'resend',
                       label: t('email.providerConfig.options.resend', { defaultValue: 'Resend (Modern API Service)' })
+                    },
+                    {
+                      value: 'microsoft',
+                      label: t('email.providerConfig.options.microsoft', { defaultValue: 'Microsoft 365 (Microsoft Graph)' })
                     }
                   ]}
                   placeholder={t('email.providerConfig.placeholder', { defaultValue: 'Select email provider' })}
@@ -531,8 +634,12 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
                     ? t('email.providerConfig.descriptions.smtp', {
                         defaultValue: 'Configure traditional SMTP email server settings'
                       })
-                    : t('email.providerConfig.descriptions.resend', {
+                    : selectedProvider === 'resend'
+                    ? t('email.providerConfig.descriptions.resend', {
                         defaultValue: 'Configure Resend API for modern email delivery'
+                      })
+                    : t('email.providerConfig.descriptions.microsoft', {
+                        defaultValue: 'Send through the OAuth-connected Microsoft 365 mailbox used for inbound email'
                       })
                   }
                 </p>
@@ -556,6 +663,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
               {/* Provider-specific Configuration */}
               {selectedProvider === 'smtp' && renderSMTPConfig()}
               {selectedProvider === 'resend' && renderResendConfig()}
+              {selectedProvider === 'microsoft' && renderMicrosoftConfig()}
 
               {/* General Settings */}
               <div className="border-t pt-6">

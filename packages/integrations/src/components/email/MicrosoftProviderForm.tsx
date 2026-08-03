@@ -367,7 +367,7 @@ export function MicrosoftProviderForm({
         <CardHeader>
           <CardTitle>{t('forms.microsoft.basic.title', { defaultValue: 'Basic Configuration' })}</CardTitle>
           <CardDescription>
-            {t('forms.microsoft.basic.description', { defaultValue: 'Basic settings for your Microsoft 365 email provider' })}
+            {t('forms.microsoft.basic.description', { defaultValue: 'Connect a Microsoft 365 mailbox for inbound tickets and optional outbound sending' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -574,7 +574,7 @@ export function MicrosoftProviderForm({
               <div>
                 <h4 className="font-medium">{t('forms.microsoft.oauth.authorizationTitle', { defaultValue: 'OAuth Authorization' })}</h4>
                 <p className="text-sm text-muted-foreground">
-                  {t('forms.microsoft.oauth.authorizationDescription', { defaultValue: 'Complete OAuth flow to grant access to the mailbox' })}
+                  {t('forms.microsoft.oauth.authorizationDescription', { defaultValue: 'Grant mailbox read access and Mail.Send. Reconnect older mailboxes before selecting them for outbound email.' })}
                 </p>
               </div>
               <Button

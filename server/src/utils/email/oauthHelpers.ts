@@ -3,6 +3,10 @@
  */
 
 import { randomBytes } from 'crypto';
+import {
+  getMicrosoftAuthorizeUrl,
+  MICROSOFT_EMAIL_OAUTH_SCOPES,
+} from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 
 export interface OAuthState {
   tenant: string;
@@ -16,16 +20,16 @@ export interface OAuthState {
 
 /**
  * Generate OAuth authorization URL for Microsoft
- * Using read-only scopes: Mail.Read for personal mailbox, Mail.Read.Shared for shared mailboxes
+ * Requests inbound read access and Mail.Send for the same configured mailbox.
  */
 export function generateMicrosoftAuthUrl(
   clientId: string,
   redirectUri: string,
   state: OAuthState,
-  scopes: string[] = ['https://graph.microsoft.com/Mail.Read', 'https://graph.microsoft.com/Mail.Read.Shared', 'offline_access'],
+  scopes: string[] = [...MICROSOFT_EMAIL_OAUTH_SCOPES],
   tenantAuthority: string = 'common'
 ): string {
-  const baseUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize`;
+  const baseUrl = getMicrosoftAuthorizeUrl(tenantAuthority);
   
   const params = new URLSearchParams({
     client_id: clientId,

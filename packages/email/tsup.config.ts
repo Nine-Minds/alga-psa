@@ -13,4 +13,7 @@ export default defineConfig({
     /^@alga-psa\//,
     /^@shared\//,
   ],
+  noExternal: [
+    /^@alga-psa\/shared(?:\/|$)/,
+  ],
 });

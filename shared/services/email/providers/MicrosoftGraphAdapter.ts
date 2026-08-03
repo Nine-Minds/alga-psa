@@ -11,7 +11,11 @@ import type {
 import { getSecretProviderInstance } from '../../../core/secretProvider';
 import { getAdminConnection } from '../../../db/admin';
 import { tenantDb } from '@alga-psa/db';
-import { getMicrosoftGraphBaseUrl, getMicrosoftTokenUrl } from '../microsoftGraphEndpoints';
+import {
+  getMicrosoftGraphBaseUrl,
+  getMicrosoftTokenUrl,
+  MICROSOFT_EMAIL_OAUTH_SCOPES,
+} from '../microsoftGraphEndpoints';
 
 export type MicrosoftSubscriptionErrorKind = 'validation' | 'authentication' | 'other';
 
@@ -34,6 +38,15 @@ export interface MicrosoftWebhookInitializationResult {
   error?: string;
   errorKind?: MicrosoftSubscriptionErrorKind;
 }
+
+export interface MicrosoftGraphSendMailResult {
+  requestId?: string;
+  clientRequestId?: string;
+}
+
+export type MicrosoftGraphSendMailPayload =
+  | { kind: 'json'; message: Record<string, unknown> }
+  | { kind: 'mime'; content: string };
 
 function classifySubscriptionError(error: any): MicrosoftSubscriptionErrorKind {
   const status = error?.response?.status ?? error?.status;
@@ -269,10 +282,15 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       } else {
         this.log('warn', 'Could not determine authenticated user email from /me endpoint');
       }
-    } catch (error) {
+    } catch (error: any) {
       // Non-fatal error: log but don't throw
       // The adapter will still work, it will just default to /users/{mailbox} path
-      this.log('warn', 'Failed to load authenticated user email', error);
+      const failure = this.classifyGraphFailure(error);
+      this.log('warn', 'Failed to load authenticated user email', {
+        status: failure.status,
+        code: failure.code,
+        requestId: failure.requestId,
+      });
     }
   }
 
@@ -323,7 +341,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         client_secret: clientSecret,
         refresh_token: this.refreshToken,
         grant_type: 'refresh_token',
-        scope: 'https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/Mail.Read.Shared offline_access',
+        scope: MICROSOFT_EMAIL_OAUTH_SCOPES.join(' '),
       });
 
       const response = await axios.post(tokenUrl, params.toString(), {
@@ -346,7 +364,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
       this.log('info', 'Access token refreshed successfully');
     } catch (error) {
-      throw this.handleError(error, 'refreshAccessToken');
+      throw this.toSanitizedGraphError(error, 'refreshAccessToken');
     }
   }
 
@@ -390,7 +408,10 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       await this.loadCredentials();
       // Load authenticated user email for mailbox path auto-detection
       await this.loadAuthenticatedUserEmail();
-      await this.testConnection();
+      const connection = await this.testConnection();
+      if (!connection.success) {
+        throw new Error(connection.error || 'Microsoft Graph connection test failed');
+      }
       this.log('info', 'Connected to Microsoft Graph API successfully');
     } catch (error) {
       throw this.handleError(error, 'connect');
@@ -401,6 +422,46 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   async ensureTokenHealthy(bufferMinutes = 30): Promise<void> {
     if (!this.accessToken) await this.loadCredentials();
     if (this.isTokenExpired(bufferMinutes)) await this.refreshAccessToken();
+  }
+
+  /**
+   * Send an already-mapped Graph message as the configured mailbox. The
+   * adapter owns token refresh/persistence, so outbound email uses the same
+   * OAuth lifecycle as inbound polling and webhook processing.
+   */
+  async sendMail(payload: MicrosoftGraphSendMailPayload): Promise<MicrosoftGraphSendMailResult> {
+    const mailbox = (this.config.mailbox || '').trim();
+    if (!mailbox) {
+      throw new Error('Microsoft sending mailbox is not configured');
+    }
+
+    const endpoint = `/users/${encodeURIComponent(mailbox)}/sendMail`;
+    const send = () => payload.kind === 'mime'
+      ? this.httpClient.post(endpoint, payload.content, {
+          headers: { 'Content-Type': 'text/plain' },
+        })
+      : this.httpClient.post(endpoint, {
+          message: payload.message,
+          saveToSentItems: true,
+        });
+
+    try {
+      const response = await send();
+      return this.extractGraphIds(response.headers);
+    } catch (error: any) {
+      if (error?.response?.status === 401) {
+        // A single bounded retry covers tokens revoked/expired between the
+        // request interceptor's expiry check and Graph receiving the request.
+        await this.refreshAccessToken();
+        try {
+          const response = await send();
+          return this.extractGraphIds(response.headers);
+        } catch (retryError) {
+          throw this.toSanitizedGraphError(retryError, 'sendMail');
+        }
+      }
+      throw this.toSanitizedGraphError(error, 'sendMail');
+    }
   }
 
   /** List messages received since the supplied cursor, oldest first and capped. */
@@ -820,6 +881,23 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       clientRequestId: ids.clientRequestId,
       responseBody: res?.data,
     };
+  }
+
+  private toSanitizedGraphError(error: unknown, context: string): Error {
+    const failure = this.classifyGraphFailure(error);
+    const details = failure.code || failure.requestId
+      ? ` (${[
+          failure.code ? `code: ${failure.code}` : undefined,
+          failure.requestId ? `request-id: ${failure.requestId}` : undefined,
+        ].filter(Boolean).join(', ')})`
+      : '';
+    const wrapped = new Error(`Error in ${context}: ${failure.message}${details}`);
+    Object.assign(wrapped, {
+      status: failure.status,
+      code: failure.code,
+      requestId: failure.requestId,
+    });
+    return wrapped;
   }
 
   private mapRecommendations(args: {

@@ -109,12 +109,14 @@
       "providerLabel": "Proveedor de correo",
       "options": {
         "smtp": "SMTP (servidor de correo tradicional)",
-        "resend": "Resend (servicio API moderno)"
+        "resend": "Resend (servicio API moderno)",
+        "microsoft": "Microsoft 365 (Microsoft Graph)"
       },
       "placeholder": "Seleccione el proveedor de correo",
       "descriptions": {
         "smtp": "Configure los ajustes tradicionales del servidor de correo SMTP",
-        "resend": "Configure la API de Resend para un envío de correo moderno"
+        "resend": "Configure la API de Resend para un envío de correo moderno",
+        "microsoft": "Envíe mediante el buzón de Microsoft 365 conectado por OAuth que se usa para el correo entrante"
       },
       "status": {
         "provider": "Proveedor {{provider}}"
@@ -160,6 +162,14 @@
         "label": "Dirección del remitente",
         "placeholder": "noreply@yourdomain.com",
         "help": "Debe pertenecer a un dominio verificado. Use la pestaña Dominios para agregar dominios personalizados."
+      }
+    },
+    "microsoft": {
+      "mailbox": {
+        "label": "Buzón de envío",
+        "placeholder": "Seleccione un buzón de Microsoft 365 conectado",
+        "none": "Primero agregue y autorice un proveedor de Microsoft 365 en la pestaña Correo entrante.",
+        "help": "Los mensajes se envían como este buzón mediante Microsoft Graph y se guardan en Elementos enviados. Vuelva a conectar los buzones existentes para conceder Mail.Send."
       }
     },
     "domains": {

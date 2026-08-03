@@ -109,12 +109,14 @@
       "providerLabel": "Fournisseur de messagerie",
       "options": {
         "smtp": "SMTP (serveur de messagerie traditionnel)",
-        "resend": "Resend (service API moderne)"
+        "resend": "Resend (service API moderne)",
+        "microsoft": "Microsoft 365 (Microsoft Graph)"
       },
       "placeholder": "Sélectionner un fournisseur de messagerie",
       "descriptions": {
         "smtp": "Configurer les paramètres d'un serveur de messagerie SMTP traditionnel",
-        "resend": "Configurer l'API Resend pour un envoi d'e-mails moderne"
+        "resend": "Configurer l'API Resend pour un envoi d'e-mails moderne",
+        "microsoft": "Envoyer via la boîte aux lettres Microsoft 365 connectée par OAuth utilisée pour les e-mails entrants"
       },
       "status": {
         "provider": "Fournisseur {{provider}}"
@@ -160,6 +162,14 @@
         "label": "Adresse d'expéditeur",
         "placeholder": "noreply@yourdomain.com",
         "help": "Doit provenir d'un domaine vérifié. Utilisez l'onglet Domaines pour ajouter des domaines personnalisés."
+      }
+    },
+    "microsoft": {
+      "mailbox": {
+        "label": "Boîte aux lettres d'envoi",
+        "placeholder": "Sélectionner une boîte aux lettres Microsoft 365 connectée",
+        "none": "Ajoutez et autorisez d'abord un fournisseur Microsoft 365 dans l'onglet E-mail entrant.",
+        "help": "Les messages sont envoyés depuis cette boîte aux lettres via Microsoft Graph et enregistrés dans Éléments envoyés. Reconnectez les boîtes aux lettres existantes pour accorder Mail.Send."
       }
     },
     "domains": {

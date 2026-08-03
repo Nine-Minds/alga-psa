@@ -109,12 +109,14 @@
       "providerLabel": "Provedor de e-mail",
       "options": {
         "smtp": "SMTP (servidor de e-mail tradicional)",
-        "resend": "Reenviar (serviço de API moderno)"
+        "resend": "Reenviar (serviço de API moderno)",
+        "microsoft": "Microsoft 365 (Microsoft Graph)"
       },
       "placeholder": "Selecione o provedor de e-mail",
       "descriptions": {
         "smtp": "Defina as configurações do servidor de e-mail SMTP tradicional",
-        "resend": "Configure a API Resend para entrega de e-mail moderna"
+        "resend": "Configure a API Resend para entrega de e-mail moderna",
+        "microsoft": "Envie pela caixa de correio do Microsoft 365 conectada via OAuth usada para e-mails recebidos"
       },
       "status": {
         "provider": "Provedor {{provider}}"
@@ -160,6 +162,14 @@
         "label": "Do endereço",
         "placeholder": "noreply@seudominio.com",
         "help": "Deve ser de um domínio verificado. Use a guia Domínios para adicionar domínios personalizados."
+      }
+    },
+    "microsoft": {
+      "mailbox": {
+        "label": "Caixa de correio de envio",
+        "placeholder": "Selecione uma caixa de correio do Microsoft 365 conectada",
+        "none": "Primeiro, adicione e autorize um provedor do Microsoft 365 na guia E-mail recebido.",
+        "help": "As mensagens são enviadas como esta caixa de correio pelo Microsoft Graph e salvas em Itens Enviados. Reconecte as caixas de correio existentes para conceder Mail.Send."
       }
     },
     "domains": {
