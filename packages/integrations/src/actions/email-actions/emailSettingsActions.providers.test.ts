@@ -26,7 +26,7 @@ vi.mock('@alga-psa/email', () => ({
 
 vi.mock('@alga-psa/email/providerConfig', () => ({
   createDefaultProviderConfig: (
-    providerType: 'smtp' | 'resend',
+    providerType: 'smtp' | 'resend' | 'microsoft',
     { isEnabled }: { isEnabled: boolean }
   ): EmailProviderConfig => ({
     providerId: `${providerType}-provider`,
@@ -34,7 +34,9 @@ vi.mock('@alga-psa/email/providerConfig', () => ({
     isEnabled,
     config: providerType === 'smtp'
       ? { host: '', port: 587, username: '', password: '', from: '' }
-      : { apiKey: '', from: '' },
+      : providerType === 'resend'
+      ? { apiKey: '', from: '' }
+      : { inboundProviderId: '', mailbox: '', from: '' },
   }),
 }));
 
@@ -81,6 +83,12 @@ describe('email settings provider invariants', () => {
           isEnabled: true,
           config: { apiKey: '', from: '' },
         },
+        {
+          providerId: 'microsoft-provider',
+          providerType: 'microsoft',
+          isEnabled: false,
+          config: { inboundProviderId: '', mailbox: '', from: '' },
+        },
       ],
     });
   });
@@ -111,6 +119,11 @@ describe('email settings provider invariants', () => {
         {
           providerId: 'smtp-provider',
           providerType: 'smtp',
+          isEnabled: false,
+        },
+        {
+          providerId: 'microsoft-provider',
+          providerType: 'microsoft',
           isEnabled: false,
         },
       ],
@@ -182,5 +195,84 @@ describe('email settings provider invariants', () => {
         config: expect.objectContaining({ apiKey: 'stored-api-key' }),
       }),
     ]);
+  });
+
+  it('pins Microsoft outbound settings to a connected tenant mailbox', async () => {
+    const existingSettings = buildSettings('smtp', [
+      {
+        providerId: 'smtp-provider',
+        providerType: 'smtp',
+        isEnabled: true,
+        config: { host: 'smtp.test', port: 587, from: 'old@example.net' },
+      },
+      {
+        providerId: 'microsoft-provider',
+        providerType: 'microsoft',
+        isEnabled: false,
+        config: { inboundProviderId: '', mailbox: '', from: '' },
+      },
+    ]);
+    const updateMock = vi.fn(async (_value: Record<string, unknown>) => 1);
+    const knexMock = vi.fn((table: string) => {
+      const builder: any = {
+        where: vi.fn(() => builder),
+        first: vi.fn(async () => table === 'email_providers'
+          ? {
+              id: 'microsoft-inbound-1',
+              mailbox: 'support@contoso.example',
+              provider_name: 'Contoso Support',
+              sender_display_name: 'Contoso Support',
+              status: 'connected',
+            }
+          : { tenant: 'tenant-123' }),
+        update: updateMock,
+        insert: vi.fn(async () => 1),
+      };
+      return builder;
+    }) as any;
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+    getTenantEmailSettingsMock
+      .mockResolvedValueOnce(existingSettings)
+      .mockResolvedValueOnce({
+        ...existingSettings,
+        emailProvider: 'microsoft',
+        defaultFromDomain: 'contoso.example',
+        ticketingFromEmail: 'support@contoso.example',
+      });
+
+    const { updateEmailSettings } = await import('./emailSettingsActions');
+    const result = await updateEmailSettings({
+      emailProvider: 'microsoft',
+      providerConfigs: existingSettings.providerConfigs.map(config =>
+        config.providerType === 'microsoft'
+          ? {
+              ...config,
+              config: { inboundProviderId: 'microsoft-inbound-1' },
+            }
+          : config
+      ),
+    });
+
+    expect(result).toMatchObject({ emailProvider: 'microsoft' });
+    expect(updateMock).toHaveBeenCalledOnce();
+    const payload = updateMock.mock.calls[0]?.[0];
+    expect(payload).toMatchObject({
+      email_provider: 'microsoft',
+      default_from_domain: 'contoso.example',
+      ticketing_from_email: 'support@contoso.example',
+    });
+    const configs = JSON.parse(String(payload?.provider_configs));
+    expect(configs).toContainEqual({
+      providerId: 'microsoft-inbound-1',
+      providerType: 'microsoft',
+      isEnabled: true,
+      config: {
+        inboundProviderId: 'microsoft-inbound-1',
+        mailbox: 'support@contoso.example',
+        from: 'support@contoso.example',
+        fromName: 'Contoso Support',
+      },
+    });
+    expect(configs.find((config: EmailProviderConfig) => config.providerType === 'smtp')?.isEnabled).toBe(false);
   });
 });

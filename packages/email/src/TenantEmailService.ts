@@ -6,7 +6,8 @@ import {
   EmailAddress,
   IEmailProvider,
   EmailMessage,
-  EmailProviderConfig
+  EmailProviderConfig,
+  EmailProviderError,
 } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
 import {
@@ -430,6 +431,9 @@ export class TenantEmailService extends BaseEmailService {
       // For SMTP this opens a connection and runs verify() (incl. AUTH/TLS).
       await manager.initialize(settings);
     } catch (error) {
+      if (error instanceof EmailProviderError) {
+        return { success: false, error: error.message };
+      }
       return { success: false, error: 'The outbound email provider could not be initialized. Check host, credentials, and security settings.' };
     }
 
@@ -462,6 +466,9 @@ export class TenantEmailService extends BaseEmailService {
       }
       return { success: false, error: result.error || 'The provider rejected the test message.' };
     } catch (error) {
+      if (error instanceof EmailProviderError) {
+        return { success: false, error: error.message };
+      }
       return { success: false, error: 'Failed to send the test email. Check provider settings and try again.' };
     }
   }

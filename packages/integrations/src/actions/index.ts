@@ -78,6 +78,7 @@ export {
 } from './email-actions/emailDomainActions';
 export {
   getEmailSettings,
+  getMicrosoftOutboundMailboxes,
   updateEmailSettings,
   testOutboundEmail
 } from './email-actions/emailSettingsActions';

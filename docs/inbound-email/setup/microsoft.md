@@ -1,12 +1,12 @@
 # Microsoft 365 Provider Setup (Outlook / Exchange Online)
 
-Connect a Microsoft 365 mailbox to turn incoming messages into tickets. The
-connector uses delegated Microsoft Graph access on behalf of the user who
-authorizes it.
+Connect a Microsoft 365 mailbox to turn incoming messages into tickets and,
+optionally, send outbound email from the same mailbox. The connector uses
+delegated Microsoft Graph access on behalf of the user who authorizes it.
 
-> **Inbound only.** This connector reads mail. It does not move messages, mark
-> them as read, or send replies. Configure ticket replies and notifications
-> separately under **Settings → Email → Outbound**.
+> Existing Microsoft connections must be reauthorized before outbound use so
+> the delegated token includes `Mail.Send`. A provider showing **Ready** only
+> confirms that its Microsoft credentials are configured.
 
 > Microsoft 365 inbound email is a Pro feature. It is not
 > offered in Community Edition builds.
@@ -47,18 +47,18 @@ by Outlook email is explicit.
 ## Required Microsoft permissions
 
 Add these permissions as **Microsoft Graph → Delegated permissions**. The
-inbound OAuth flow requests exactly these three scopes:
+Microsoft mailbox OAuth flow requests exactly these four scopes:
 
 | Permission | Why Alga PSA requests it |
 | --- | --- |
 | `Mail.Read` | Reads the signed-in user's mailbox. It also permits message and folder access used for that user's change-notification subscription. |
 | `Mail.Read.Shared` | Reads shared or delegated mailboxes that the signed-in user can already access. It does not grant Exchange mailbox access. |
+| `Mail.Send` | Sends outbound email as the configured mailbox when Microsoft 365 is selected under **Settings → Email → Outbound Email**. It does not grant Exchange **Send As** rights for a shared mailbox. |
 | `offline_access` | Requests a refresh token so polling, reconciliation, and subscription maintenance can continue without another interactive sign-in. |
 
-Do not add **Application permissions** for this connector. `Mail.ReadWrite` and
-`Mail.Send` are not required for inbound ingestion. The broader Email scope list
-shown in some Microsoft provider guidance covers other Microsoft capabilities;
-it is not the inbound mailbox runtime checklist.
+Do not add **Application permissions** for this connector. `Mail.ReadWrite` is
+not required: inbound ingestion remains read-only, and outbound sending uses
+delegated `Mail.Send`.
 
 Microsoft lists these delegated permissions as not requiring admin consent by
 default. Your tenant can still restrict user consent. Grant tenant-wide admin
@@ -97,8 +97,8 @@ Confirm all of the following:
    type.
 3. Under **Authentication**, add the callback from Alga PSA as a **Web** redirect
    URI: `https://<your-host>/api/auth/microsoft/callback`.
-4. Under **API permissions**, add `Mail.Read`, `Mail.Read.Shared`, and
-   `offline_access` as delegated permissions.
+4. Under **API permissions**, add `Mail.Read`, `Mail.Read.Shared`, `Mail.Send`,
+   and `offline_access` as delegated permissions.
 5. If your tenant policy requires administrator approval, select **Grant admin
    consent** for the tenant.
 6. Under **Certificates & secrets**, create a client secret and copy its
@@ -153,7 +153,9 @@ application-level mail permission.
 3. In Exchange Online, grant that user **Read and manage (Full Access)** to the
    shared mailbox. `Mail.Read.Shared` lets Graph use access the user already
    has; it does not assign Full Access.
-4. Before authorizing Alga PSA, verify that the user can open the shared mailbox
+4. To send outbound email from the shared mailbox, also grant that user **Send
+   As** permission. Delegated `Mail.Send` does not assign this Exchange right.
+5. Before authorizing Alga PSA, verify that the user can open the shared mailbox
    in Outlook or Outlook on the web.
 
 Microsoft Graph does not support Outlook change-notification subscriptions on
@@ -202,25 +204,33 @@ At runtime:
 * Polling providers retry webhook registration every 24 hours and when you use
   **Test Connection**.
 
-The connector remains read-only in both modes. Refresh tokens are stored
-server-side and are used to renew access tokens for background work.
+Inbound processing remains read-only in both modes. Refresh tokens are stored
+server-side and are used to renew access tokens for background work and
+outbound delivery.
 
-## Outbound email is configured separately
+## Enable outbound Microsoft Graph email
 
-Connecting a Microsoft mailbox does not enable sending. Ticket replies,
-notifications, and other outbound mail use SMTP or a managed Resend domain.
-Appliance and Essentials installations use SMTP.
+Connecting a Microsoft mailbox makes it available for selection but does not
+change the tenant's outbound provider automatically.
 
-For an appliance, open **Settings → Email → Outbound**, configure SMTP, then set
-**Ticketing From** to the reply address. This is usually the same address as the
-inbound mailbox so customer replies thread correctly.
+1. Open **Settings → Email → Outbound Email**.
+2. Select **Microsoft 365 (Microsoft Graph)**.
+3. Select the connected sending mailbox and save. The sender and ticketing From
+   address are tied to that mailbox; arbitrary From spoofing is not supported.
+4. Use **Test Outbound Email** to verify the connection and optionally send a
+   test message.
+
+Alga PSA sends through `/users/{mailbox}/sendMail` and requests that Microsoft
+save a copy in Sent Items. A Graph 403 generally means `Mail.Send` consent or,
+for a shared mailbox, Exchange **Send As** permission is missing. Reconnect the
+provider after adding or changing delegated permissions.
 
 ## Troubleshooting
 
 | Symptom | Check |
 | --- | --- |
 | **Authorize Access** is disabled | Open **Settings → Integrations → Providers**. Enable a Microsoft app for Outlook email and select it in the Outlook email service row, or confirm the hosted platform setup is ready. |
-| Microsoft shows **Need admin approval** | The tenant's consent policy blocks user consent. Ask an authorized Entra administrator to grant tenant-wide admin consent for the three delegated scopes. |
+| Microsoft shows **Need admin approval** | The tenant's consent policy blocks user consent. Ask an authorized Entra administrator to grant tenant-wide admin consent for the four delegated scopes. |
 | OAuth reports a redirect error | Compare the displayed redirect URI with the Entra **Web** redirect URI character for character. Confirm the app supports accounts in any organizational directory. |
 | OAuth succeeds, but the shared mailbox returns 403 | Confirm Exchange Full Access for the authorizing user, then confirm and re-consent `Mail.Read.Shared`. Graph consent does not grant mailbox membership. |
 | Shared-mailbox authorization reports a subscription access error | Microsoft does not support delegated change notifications for shared folders. Do not add application permissions. Leave the provider enabled and check polling delivery and last-ingested time after the next cycle. |
@@ -228,4 +238,5 @@ inbound mailbox so customer replies thread correctly.
 | New mail does not create tickets | Check delivery mode and last-ingested time. Polling needs outbound access to Microsoft. Webhook mode also needs public inbound access. Use **Test Connection** to check Graph access and retry webhook registration. |
 | Token refresh fails after working previously | The refresh token or consent may have expired or been revoked, or the bound app's client ID/secret changed. Restore the issuing app credentials if appropriate, then reauthorize the mailbox. |
 | Mail from a custom folder is missing | Set **Folder Filters** to `Inbox` and reauthorize. Multiple/custom Microsoft folders are not currently reliable across subscription maintenance and reconciliation. |
-| The provider is Ready, but Alga PSA sends no replies | Ready describes inbound credentials only. Configure SMTP or Resend under **Settings → Email → Outbound**. |
+| The provider is Ready, but Alga PSA sends no replies | Select the mailbox under **Settings → Email → Outbound Email**, reconnect it if it predates `Mail.Send`, and run the outbound test. |
+| The outbound test returns 403 | Reconnect the mailbox to grant `Mail.Send`. For a shared mailbox, also verify that the authorizing user has Exchange **Send As** permission. |

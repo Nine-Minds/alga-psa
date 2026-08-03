@@ -85,7 +85,7 @@ export interface TenantEmailSettings {
   ticketingFromEmail?: string | null;
   ticketingFromName?: string | null;
   customDomains: string[];
-  emailProvider: 'smtp' | 'resend';
+  emailProvider: 'smtp' | 'resend' | 'microsoft';
   providerConfigs: EmailProviderConfig[];
   trackingEnabled: boolean;
   maxDailyEmails?: number;

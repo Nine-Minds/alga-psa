@@ -11,7 +11,10 @@ import { resolveMicrosoftConsumerProfileConfig } from '@alga-psa/integrations/li
 import { getWebhookBaseUrl } from '../../../../../utils/email/webhookHelpers';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import axios from 'axios';
-import { getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import {
+  getMicrosoftTokenUrl,
+  MICROSOFT_EMAIL_OAUTH_SCOPES,
+} from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
 
 export const dynamic = 'force-dynamic';
@@ -275,7 +278,7 @@ export async function GET(request: NextRequest) {
         code: code,
         grant_type: 'authorization_code',
         redirect_uri: redirectUri,
-        scope: 'https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/Mail.Read.Shared offline_access'
+        scope: MICROSOFT_EMAIL_OAUTH_SCOPES.join(' ')
       });
 
       const response = await axios.post(tokenUrl, params.toString(), {

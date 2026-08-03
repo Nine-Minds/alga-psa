@@ -18,8 +18,14 @@ export function createDefaultProviderConfig(
           password: '',
           from: '',
         }
-      : {
+      : providerType === 'resend'
+      ? {
           apiKey: '',
+          from: '',
+        }
+      : {
+          inboundProviderId: '',
+          mailbox: '',
           from: '',
         },
   };

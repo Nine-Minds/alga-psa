@@ -13,6 +13,8 @@ export default defineConfig({
     'events/publisher': 'events/publisher.ts',
     'utils/encryption': 'utils/encryption.ts',
     'utils/retryUtils': 'utils/retryUtils.ts',
+    'services/email/microsoftEmailProviderConfig': 'services/email/microsoftEmailProviderConfig.ts',
+    'services/email/providers/MicrosoftGraphAdapter': 'services/email/providers/MicrosoftGraphAdapter.ts',
     'workflow/index': 'workflow/index.ts',
     'workflow/runtime/index': 'workflow/runtime/index.ts',
     'workflow/persistence/index': 'workflow/persistence/index.ts',

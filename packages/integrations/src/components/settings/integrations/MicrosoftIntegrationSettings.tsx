@@ -171,8 +171,8 @@ function getConsumerDescriptors(showTeamsUi: boolean, t: TranslateFn): Microsoft
         return {
           consumerType,
           consumerLabel: t('integrations.microsoft.settings.consumers.email.label', { defaultValue: 'Outlook email' }),
-          description: t('integrations.microsoft.settings.consumers.email.description', { defaultValue: 'Choose the Microsoft app for Outlook inbound email.' }),
-          reconnectMessage: t('integrations.microsoft.settings.consumers.email.reconnect', { defaultValue: 'Existing Outlook email connections may need re-authorization after changing the Microsoft app.' }),
+          description: t('integrations.microsoft.settings.consumers.email.description', { defaultValue: 'Choose the Microsoft app for Outlook inbound and outbound email.' }),
+          reconnectMessage: t('integrations.microsoft.settings.consumers.email.reconnect', { defaultValue: 'Existing Outlook email connections need re-authorization to grant Mail.Send before they can send outbound email.' }),
         };
       case 'calendar':
         return {

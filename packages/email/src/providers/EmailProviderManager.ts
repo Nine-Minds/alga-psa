@@ -4,6 +4,8 @@
 
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { getConnection, tenantDb } from '@alga-psa/db';
+import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
 import { SystemEmailProviderFactory } from '../system/SystemEmailProviderFactory';
 import {
   IEmailProvider,
@@ -210,6 +212,10 @@ export class EmailProviderManager implements IEmailProviderManager {
   private async resolveProviderConfig(tenantId: string, config: EmailProviderConfig): Promise<Record<string, any>> {
     const originalConfig = typeof config.config === 'object' && config.config !== null ? config.config : {};
 
+    if (config.providerType === 'microsoft') {
+      return this.resolveMicrosoftProviderConfig(tenantId, config);
+    }
+
     if (config.providerType !== 'resend') {
       return originalConfig;
     }
@@ -231,6 +237,68 @@ export class EmailProviderManager implements IEmailProviderManager {
       ...originalConfig,
       apiKey: fallbackApiKey,
     };
+  }
+
+  private async resolveMicrosoftProviderConfig(
+    tenantId: string,
+    config: EmailProviderConfig
+  ): Promise<Record<string, any>> {
+    const requestedProviderId = this.normalizeSecretValue(config.config?.inboundProviderId)
+      || config.providerId;
+    const knex = await getConnection(tenantId);
+    const db = tenantDb(knex, tenantId);
+    const provider = await db.table('email_providers')
+      .where({ id: requestedProviderId, provider_type: 'microsoft' })
+      .first();
+
+    if (!provider) {
+      throw new EmailProviderError(
+        'The selected Microsoft mailbox no longer exists. Choose an active Microsoft 365 mailbox in outbound email settings.',
+        config.providerId,
+        config.providerType,
+        false,
+        'MICROSOFT_PROVIDER_NOT_FOUND'
+      );
+    }
+    if (!provider.is_active || provider.status !== 'connected') {
+      throw new EmailProviderError(
+        'The selected Microsoft mailbox is not connected. Reconnect it before using it for outbound email.',
+        config.providerId,
+        config.providerType,
+        false,
+        'MICROSOFT_PROVIDER_NOT_CONNECTED'
+      );
+    }
+
+    const vendorConfig = await db.table('microsoft_email_provider_config')
+      .where({ email_provider_id: provider.id })
+      .first();
+    if (!vendorConfig) {
+      throw new EmailProviderError(
+        'The selected Microsoft mailbox has no OAuth configuration. Reconnect it before sending email.',
+        config.providerId,
+        config.providerType,
+        false,
+        'MICROSOFT_CONFIG_NOT_FOUND'
+      );
+    }
+
+    const inboundProvider = await buildMicrosoftEmailProviderConfig({
+      id: provider.id,
+      tenant: provider.tenant,
+      name: provider.provider_name || provider.mailbox,
+      provider_type: 'microsoft',
+      mailbox: provider.mailbox,
+      folder_to_monitor: 'Inbox',
+      active: provider.is_active,
+      webhook_notification_url: '',
+      connection_status: provider.status,
+      created_at: provider.created_at,
+      updated_at: provider.updated_at,
+      provider_config: vendorConfig,
+    });
+
+    return { inboundProvider };
   }
 
   private async getResendFallbackApiKey(
@@ -320,6 +388,10 @@ export class EmailProviderManager implements IEmailProviderManager {
       case 'resend':
         const { ResendEmailProvider } = await import('./ResendEmailProvider');
         return new ResendEmailProvider(config.providerId);
+
+      case 'microsoft':
+        const { MicrosoftGraphEmailProvider } = await import('./MicrosoftGraphEmailProvider');
+        return new MicrosoftGraphEmailProvider(config.providerId);
       
       default:
         throw new Error(`Unsupported provider type: ${config.providerType}`);
