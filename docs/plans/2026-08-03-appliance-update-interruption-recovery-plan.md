@@ -132,4 +132,3 @@ No automatic resume, distributed lock or Kubernetes Lease, rollback of already-a
 - Corrupt state: atomic writes.
 - Misleading readiness: never erase transaction interruption using serving readiness.
 - Retry side effects: rely on existing declarative release-selection, storage, and Flux reconciliation, then exercise restart/retry manually.
-
