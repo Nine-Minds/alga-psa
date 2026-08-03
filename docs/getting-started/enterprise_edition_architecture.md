@@ -1,254 +1,109 @@
-# Building Enterprise Edition
+# Edition-aware source architecture
 
-This project uses a monorepo structure to integrate the enterprise edition (EE) code with the community edition (CE) code while maintaining them as a single unit.
+AlgaPSA keeps shared server code and edition-specific implementations in one
+workspace. Shared code imports stable aliases. `server/next.config.mjs` selects
+the Community Edition (CE) or Enterprise Edition (EE) implementation when Next.js
+builds the application.
 
-## Project Structure
+Do not create edition stubs during a Docker build. CE fallbacks are checked-in
+source files so local development, type checking, Turbopack, and Webpack use the
+same implementations.
 
-```
-/
-├── package.json          # Root package.json with all dependencies
-├── docker-compose.yaml   # Base docker-compose configuration
-├── server/              # Community Edition
-│   ├── package.json     # CE package.json (minimal, uses workspace)
-│   ├── tsconfig.json    # Base TypeScript config
-│   └── src/
-│       ├── components/
-│       ├── lib/
-│       └── services/
-└── ee/
-    └── server/          # Enterprise Edition
-        ├── package.json # EE package.json (minimal, uses workspace)
-        ├── tsconfig.json# EE TypeScript config (extends base)
-        └── src/
-            ├── components/
-            ├── lib/
-            └── services/
-```
+## Selecting an edition
 
-## Docker Compose Configuration
+`server/next.config.mjs` enables EE when any of these conditions is true:
 
-The project uses a layered docker-compose configuration to support both CE and EE deployments:
+- `EDITION=ee`
+- `EDITION=enterprise`
+- `NEXT_PUBLIC_EDITION=enterprise`
 
-1. **Base Configuration** (`docker-compose.yaml`):
-   - Contains common service definitions
-   - Defines shared environment variables including EDITION
-   - Sets up base networking
+All other values select CE. Keep `EDITION` and `NEXT_PUBLIC_EDITION` consistent
+because the first is server-facing and the second may be included in browser
+code. The root scripts set both variables:
 
-2. **EE Configuration** (`ee/setup/docker-compose.yaml`):
-   - Extends services from base configuration
-   - Sets EDITION=enterprise
-   - Uses EE-specific Dockerfile and configurations
-
-### Running CE Version
 ```bash
-# From project root
-EDITION=community docker compose -f docker-compose.yaml up
+npm run build          # CE, Turbopack
+npm run build:webpack  # CE, Webpack
+npm run build:ee       # EE, Webpack
 ```
 
-### Running EE Version
-```bash
-# From project root
-EDITION=enterprise docker compose -f docker-compose.yaml -f ee/setup/docker-compose.yaml up
-```
+## Source ownership
 
-## Workspace Setup
+| Path | Responsibility |
+| --- | --- |
+| `server/src` | Shared application and server code. |
+| `packages/ee/src` | Checked-in CE-compatible implementations for the `@ee/*` surface. These files also provide the default TypeScript path targets. |
+| `ee/server/src` | Enterprise server implementations selected in EE builds. |
+| `packages/product-*/oss` and `packages/product-*/ee` | Package-local implementations selected by stable product entry points. |
 
-1. Root `package.json` defines workspaces and contains all dependencies:
-```json
-{
-  "workspaces": [
-    "server",
-    "ee/server"
-  ],
-  "dependencies": {
-    // All project dependencies are defined here
-  }
-}
-```
+`ee/packages/workflows` is a separate workspace package. The CE Docker build
+keeps that workspace because the installed `@alga-psa/workflows` dependency is a
+workspace symlink, even though it removes `ee/server` before compiling the CE
+application.
 
-2. CE and EE `package.json` files are minimal:
-```json
-{
-  "name": "sebastian-ee",
-  "version": "0.1.0",
-  "private": true,
-  "workspaces": {
-    "nohoist": ["*"]
-  }
-}
-```
+## Edition seams
 
-## TypeScript Configuration
+### `@ee/*`
 
-1. Base TypeScript config in `server/tsconfig.json`:
-```json
-{
-  "compilerOptions": {
-  }
-}
-```
+Use `@ee/*` when shared code needs one module shape with a CE-compatible
+implementation and an EE implementation at the same relative path.
 
-2. EE TypeScript config in `ee/server/tsconfig.json` extends the base:
-```json
-{
-  "extends": "../../server/tsconfig.json",
-  "compilerOptions": {
-    "paths": {
-      "@/*": ["../../server/src/*"],
-      "@ee/*": ["./src/*"]
-    },
-    "baseUrl": "."
-  }
-}
-```
+- CE resolves `@ee/*` to `packages/ee/src/*`.
+- EE resolves `@ee/*` to `ee/server/src/*`.
 
-## Path Aliases
+The TypeScript configuration is CE-first and maps this alias to
+`packages/ee/src`. The Next configuration overrides it for EE builds. Webpack
+also rewrites the request before TypeScript path resolution can select a CE file.
+The Next aliases and replacement wiring are authoritative; CE must not rely on a
+generated `ee/server` tree.
 
-Use path aliases instead of relative paths:
-- `@/*` for CE imports
-- `@ee/*` for EE imports
+### `@/empty/*`
 
-Example:
-```typescript
-// Instead of relative paths like:
-import { Something } from "../../../../../server/src/components/Something";
+`@/empty/*` is an established compatibility spelling for a path-mirrored
+edition seam. CE resolves it to `packages/ee/src/*`; EE resolves the same
+relative path to `ee/server/src/*`.
 
-// Use path aliases:
-import { Something } from "server/src/components/Something";
-import { EEFeature } from "ee/components/EEFeature";
-```
+Despite the name, it does not resolve to `server/src/empty`. Use it only for
+established imports that already use this spelling. Prefer `@ee/*` for new
+path-mirrored imports, or a product alias when the feature already has a package
+entry point.
 
-## Feature Flags
+### `@product/*`
 
-Use feature flags to conditionally include EE features:
+Product entry points expose a stable import while keeping both implementations
+inside a product package. For example, `@product/chat/entry` selects
+`packages/product-chat/oss/entry` in CE and `packages/product-chat/ee/entry` in
+EE. Other product seams use the same pattern where their configuration requires
+it.
 
-```typescript
-// server/src/lib/features.ts
-export const isEnterprise = process.env.EDITION === 'enterprise';
+Import the stable entry point from shared code. Do not import an `oss` or `ee`
+directory directly and do not reach into `ee/server` with a relative path.
+`server/next.config.mjs` contains the current product mappings.
 
-export function getFeatureImplementation<T>(ceModule: T, eeModule?: T): T {
-  if (isEnterprise && eeModule) {
-    return eeModule;
-  }
-  return ceModule;
-}
-```
+## Keep Webpack and Turbopack in sync
 
-Usage:
-```typescript
-import { CEFeature } from "features/CEFeature";
-import { EEFeature } from "ee/features/EEFeature";
-import { getFeatureImplementation } from "server/src/lib/features";
+`server/next.config.mjs` configures Turbopack in `turbopack.resolveAlias` and
+Webpack in `config.resolve.alias`, with replacement plugins where an alias alone
+cannot win over TypeScript paths or package exports. A seam may need both an
+exact key and a trailing-slash or subpath form.
 
-const FeatureComponent = getFeatureImplementation(CEFeature, EEFeature);
-```
+When you change an edition seam, update both bundlers. Follow the existing shape
+for that seam instead of copying a long alias inventory into documentation.
 
-## Conditional Dependencies
+## Add an edition-aware feature
 
-Some packages may only be needed when running in enterprise mode. To handle these cases:
+1. Choose a stable import seam. Prefer a product entry point for a packaged
+   feature and `@ee/*` for a path-mirrored implementation surface.
+2. Add and export the CE implementation from `packages/ee/src` or the product
+   package's `oss` entry, as required by the selected seam.
+3. Add the matching EE implementation.
+4. Wire exact and subpath variants in both the Turbopack and Webpack sections of
+   `server/next.config.mjs`. Add replacement wiring when the existing seam uses
+   it.
+5. Keep shared code free of cross-edition relative imports.
+6. Type-check and build both CE and EE. Include the CE Webpack build because it
+   is the path used by `Dockerfile.build`.
 
-1. Install the package conditionally in your code:
-```typescript
-let anthropicClient;
-if (process.env.EDITION === 'enterprise') {
-  // Dynamic import ensures the package is only loaded if EE is active
-  const { default: Anthropic } = await import('anthropic-sdk');
-  anthropicClient = new Anthropic();
-}
-```
-
-2. Add the package to your dependencies in root package.json:
-```json
-{
-  "dependencies": {
-    "anthropic-sdk": "^0.1.0"  // Will only be used when EE is active
-  }
-}
-```
-
-This approach ensures that:
-- The package is available when needed in EE mode
-- The package is not loaded or used in CE mode
-- TypeScript still has access to types for development
-
-## Type Declarations
-
-For TypeScript support of EE imports:
-
-```typescript
-// server/src/types/ee.d.ts
-declare module '@ee/*' {
-  const content: unknown;
-  export default content;
-}
-```
-
-## Build Scripts
-
-The build scripts are defined in the root `package.json`:
-
-```json
-{
-  "scripts": {
-    "dev": "cd server && EDITION=enterprise next dev",
-    "build": "cd server && next build",
-    "build:ee": "cd server && EDITION=enterprise next build"
-  }
-}
-```
-
-## Best Practices
-
-1. **Dependencies**: 
-   - Keep all dependencies in the root `package.json`
-   - Use workspace references in CE and EE packages
-   - Use dynamic imports for EE-only packages
-
-2. **Code Organization**:
-   - Keep shared code in the CE codebase
-   - Use path aliases consistently
-   - Mirror CE directory structure in EE when extending features
-
-3. **Types**:
-   - Define shared interfaces in CE
-   - Extend CE types in EE when needed
-   - Use TypeScript path aliases for clean imports
-
-4. **Feature Flags**:
-   - Use the feature flag system for EE features
-   - Document feature flag usage
-   - Test both CE and EE configurations
-
-5. **Testing**:
-   - Test both editions during development
-   - Use environment variables to control edition in tests
-   - Ensure CE works independently of EE
-
-## Development Workflow
-
-1. Run the development server:
-```bash
-npm run dev  # Runs with EE features enabled
-```
-
-2. Build the project:
-```bash
-npm run build      # CE build
-npm run build:ee   # EE build
-```
-
-3. Run with Docker Compose:
-```bash
-# Community Edition
-EDITION=community docker compose -f docker-compose.yaml up
-
-# Enterprise Edition
-EDITION=enterprise docker compose -f docker-compose.yaml -f ee/setup/docker-compose.yaml up
-```
-
-Remember to:
-- Document new EE features
-- Test both CE and EE builds
-- Keep the dependency tree unified
-- Use TypeScript path aliases consistently
-- Follow the established directory structure
+For container setup and deployment commands, see
+[Docker Compose Structure](docker_compose.md). For local development, see the
+[Development Guide](development_guide.md).

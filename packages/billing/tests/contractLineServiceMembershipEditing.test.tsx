@@ -298,7 +298,7 @@ describe('contract line service membership editing', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Item' }));
     const dialog = await screen.findByRole('dialog');
-    fireEvent.click(within(dialog).getByText('New service'));
+    fireEvent.click(await within(dialog).findByText('New service'));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Add Selected Services' }));
     expect(await screen.findByText('New service')).not.toBeNull();
     expect(actionMocks.applyContractLineServiceMembershipChanges).not.toHaveBeenCalled();
@@ -319,7 +319,7 @@ describe('contract line service membership editing', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Item' }));
     const dialog = await screen.findByRole('dialog');
-    fireEvent.click(within(dialog).getByText('New service'));
+    fireEvent.click(await within(dialog).findByText('New service'));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Add Selected Services' }));
     expect(await screen.findByText('New service')).not.toBeNull();
 
