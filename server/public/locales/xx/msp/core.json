@@ -514,6 +514,10 @@
       "title": "11111",
       "heading": "11111",
       "options": {
+        "opportunity": {
+          "description": "11111",
+          "label": "11111"
+        },
         "ticket": {
           "label": "11111",
           "description": "11111"
@@ -604,6 +608,7 @@
   "quickCreate": {
     "success": {
       "asset": "11111",
+      "opportunity": "11111 {{title}} 11111",
       "ticket": "11111 {{number}} 11111",
       "client": "11111 {{name}} 11111",
       "contact": "11111 {{name}} 11111",
@@ -617,6 +622,7 @@
     },
     "dialogTitles": {
       "contact": "11111",
+      "opportunity": "11111",
       "project": "11111",
       "service": "11111"
     }

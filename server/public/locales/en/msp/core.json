@@ -514,6 +514,10 @@
       "title": "Quick Create",
       "heading": "Create",
       "options": {
+        "opportunity": {
+          "description": "Log a deal before you forget it",
+          "label": "Opportunity"
+        },
         "ticket": {
           "label": "Ticket",
           "description": "Create a new support ticket"
@@ -604,6 +608,7 @@
   "quickCreate": {
     "success": {
       "asset": "Asset created successfully",
+      "opportunity": "Opportunity \"{{title}}\" created successfully",
       "ticket": "Ticket #{{number}} created successfully",
       "client": "Client \"{{name}}\" created successfully",
       "contact": "{{name}} added successfully",
@@ -617,6 +622,7 @@
     },
     "dialogTitles": {
       "contact": "Add New Contact",
+      "opportunity": "New Opportunity",
       "project": "Add New Project",
       "service": "Add New Service"
     }

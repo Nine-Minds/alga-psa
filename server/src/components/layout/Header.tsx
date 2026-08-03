@@ -43,7 +43,7 @@ import { TrialBanner } from './TrialBanner';
 import { PaymentFailedBanner } from './PaymentFailedBanner';
 import { useQuickAsk } from './QuickAskContext';
 import { useCatalogShortcut, useShortcutScope } from '@alga-psa/ui/keyboard-shortcuts';
-import { useActionPolling } from '@alga-psa/ui/hooks';
+import { useActionPolling, useFeatureFlag } from '@alga-psa/ui/hooks';
 
 export const QUICK_CREATE_OPEN_EVENT = 'alga:quick-create:open';
 
@@ -105,6 +105,16 @@ const quickCreateOptions: QuickCreateOption[] = [
     label: 'Project',
     description: 'Start a new project',
     type: 'project'
+  },
+  {
+    id: 'create-opportunity',
+    labelKey: 'header.quickCreate.options.opportunity.label',
+    labelDefault: 'Opportunity',
+    descriptionKey: 'header.quickCreate.options.opportunity.description',
+    descriptionDefault: 'Log a deal before you forget it',
+    label: 'Opportunity',
+    description: 'Log a deal before you forget it',
+    type: 'opportunity'
   },
   {
     id: 'create-asset',
@@ -199,9 +209,14 @@ const QuickCreateMenu: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
   const [activeQuickCreate, setActiveQuickCreate] = useState<QuickCreateType>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const { isAlgaDesk } = useProduct();
-  const visibleOptions = isAlgaDesk
+  const opportunityFlag = useFeatureFlag('opportunities-module', { defaultValue: false });
+  const opportunitiesEnabled = typeof opportunityFlag === 'boolean'
+    ? opportunityFlag
+    : opportunityFlag.enabled;
+  const visibleOptions = (isAlgaDesk
     ? quickCreateOptions.filter((option) => ALGADESK_QUICK_CREATE_TYPES.has(option.type))
-    : quickCreateOptions;
+    : quickCreateOptions
+  ).filter((option) => option.type !== 'opportunity' || opportunitiesEnabled);
   const translatedOptions = visibleOptions.map((option) => ({
     ...option,
     label: t(option.labelKey, { defaultValue: option.labelDefault }),
