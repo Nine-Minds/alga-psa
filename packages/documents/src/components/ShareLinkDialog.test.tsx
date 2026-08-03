@@ -220,12 +220,8 @@ describe('ShareLinkDialog', () => {
       />
     );
 
-    await waitFor(() => {
-      expect(screen.getByTestId('dialog')).toBeInTheDocument();
-    });
-
-    // Look for expiry-related text
-    expect(screen.getByText(/expir/i)).toBeInTheDocument();
+    // Expiry text comes from the asynchronously loaded existing links.
+    expect(await screen.findByText(/expir/i)).toBeInTheDocument();
   });
 
   it('shows max downloads input when enabled', async () => {
@@ -238,12 +234,8 @@ describe('ShareLinkDialog', () => {
       />
     );
 
-    await waitFor(() => {
-      expect(screen.getByTestId('dialog')).toBeInTheDocument();
-    });
-
-    // Look for max downloads text
-    expect(screen.getByText(/download/i)).toBeInTheDocument();
+    // Download limits come from the asynchronously loaded existing links.
+    expect(await screen.findByText(/download/i)).toBeInTheDocument();
   });
 
   it('renders create new link button', async () => {
