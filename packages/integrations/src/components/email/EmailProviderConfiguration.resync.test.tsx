@@ -28,6 +28,13 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: vi.fn().mockResolvedValue({ tenant: 'tenant-1' }),
 }));
 
+vi.mock('@alga-psa/integrations/actions', () => ({
+  getMicrosoftConsumerSetupStatus: vi.fn().mockResolvedValue({
+    success: true,
+    credentialCapability: null,
+  }),
+}));
+
 vi.mock('@alga-psa/integrations/email/providers/entry', () => ({
   GmailProviderForm: () => null,
   ImapProviderForm: () => null,
