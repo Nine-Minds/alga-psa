@@ -109,12 +109,14 @@
       "providerLabel": "Dostawca poczty",
       "options": {
         "smtp": "SMTP (tradycyjny serwer pocztowy)",
-        "resend": "Resend (nowoczesna usługa API)"
+        "resend": "Resend (nowoczesna usługa API)",
+        "microsoft": "Microsoft 365 (Microsoft Graph)"
       },
       "placeholder": "Wybierz dostawcę poczty",
       "descriptions": {
         "smtp": "Skonfiguruj tradycyjne ustawienia serwera pocztowego SMTP",
-        "resend": "Skonfiguruj API Resend do nowoczesnego dostarczania poczty"
+        "resend": "Skonfiguruj API Resend do nowoczesnego dostarczania poczty",
+        "microsoft": "Wysyłaj przez połączoną za pomocą OAuth skrzynkę Microsoft 365 używaną do poczty przychodzącej"
       },
       "status": {
         "provider": "Dostawca {{provider}}"
@@ -160,6 +162,14 @@
         "label": "Adres nadawcy",
         "placeholder": "noreply@yourdomain.com",
         "help": "Musi pochodzić ze zweryfikowanej domeny. Użyj zakładki Domeny, aby dodać domeny niestandardowe."
+      }
+    },
+    "microsoft": {
+      "mailbox": {
+        "label": "Skrzynka nadawcza",
+        "placeholder": "Wybierz połączoną skrzynkę Microsoft 365",
+        "none": "Najpierw dodaj i autoryzuj dostawcę Microsoft 365 na karcie Poczta przychodząca.",
+        "help": "Wiadomości są wysyłane jako ta skrzynka przez Microsoft Graph i zapisywane w Elementach wysłanych. Połącz ponownie istniejące skrzynki, aby przyznać Mail.Send."
       }
     },
     "domains": {

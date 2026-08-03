@@ -109,12 +109,14 @@
       "providerLabel": "Provider email",
       "options": {
         "smtp": "SMTP (server email tradizionale)",
-        "resend": "Resend (servizio API moderno)"
+        "resend": "Resend (servizio API moderno)",
+        "microsoft": "Microsoft 365 (Microsoft Graph)"
       },
       "placeholder": "Seleziona provider email",
       "descriptions": {
         "smtp": "Configura le impostazioni del server email SMTP tradizionale",
-        "resend": "Configura l'API di Resend per la consegna moderna delle email"
+        "resend": "Configura l'API di Resend per la consegna moderna delle email",
+        "microsoft": "Invia tramite la cassetta postale Microsoft 365 connessa via OAuth usata per la posta in arrivo"
       },
       "status": {
         "provider": "Provider {{provider}}"
@@ -160,6 +162,14 @@
         "label": "Indirizzo mittente",
         "placeholder": "noreply@yourdomain.com",
         "help": "Deve provenire da un dominio verificato. Usa la scheda Domini per aggiungere domini personalizzati."
+      }
+    },
+    "microsoft": {
+      "mailbox": {
+        "label": "Cassetta postale di invio",
+        "placeholder": "Seleziona una cassetta postale Microsoft 365 connessa",
+        "none": "Aggiungi e autorizza prima un provider Microsoft 365 nella scheda Email in arrivo.",
+        "help": "I messaggi vengono inviati come questa cassetta postale tramite Microsoft Graph e salvati in Posta inviata. Riconnetti le cassette postali esistenti per concedere Mail.Send."
       }
     },
     "domains": {

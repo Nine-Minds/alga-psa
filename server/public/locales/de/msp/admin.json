@@ -109,12 +109,14 @@
       "providerLabel": "E-Mail-Anbieter",
       "options": {
         "smtp": "SMTP (traditioneller E-Mail-Server)",
-        "resend": "Resend (moderner API-Dienst)"
+        "resend": "Resend (moderner API-Dienst)",
+        "microsoft": "Microsoft 365 (Microsoft Graph)"
       },
       "placeholder": "E-Mail-Anbieter auswählen",
       "descriptions": {
         "smtp": "Konfigurieren Sie die klassischen SMTP-E-Mail-Servereinstellungen",
-        "resend": "Konfigurieren Sie die Resend-API für moderne E-Mail-Zustellung"
+        "resend": "Konfigurieren Sie die Resend-API für moderne E-Mail-Zustellung",
+        "microsoft": "Senden Sie über das per OAuth verbundene Microsoft 365-Postfach für eingehende E-Mails"
       },
       "status": {
         "provider": "{{provider}}-Anbieter"
@@ -160,6 +162,14 @@
         "label": "Absenderadresse",
         "placeholder": "noreply@yourdomain.com",
         "help": "Muss von einer verifizierten Domain stammen. Verwenden Sie den Reiter Domains, um benutzerdefinierte Domains hinzuzufügen."
+      }
+    },
+    "microsoft": {
+      "mailbox": {
+        "label": "Sendepostfach",
+        "placeholder": "Verbundenes Microsoft 365-Postfach auswählen",
+        "none": "Fügen Sie zuerst auf der Registerkarte Eingehende E-Mail einen Microsoft 365-Anbieter hinzu und autorisieren Sie ihn.",
+        "help": "Nachrichten werden als dieses Postfach über Microsoft Graph gesendet und in Gesendete Elemente gespeichert. Verbinden Sie vorhandene Postfächer erneut, um Mail.Send zu gewähren."
       }
     },
     "domains": {

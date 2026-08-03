@@ -109,12 +109,14 @@
       "providerLabel": "E-mailprovider",
       "options": {
         "smtp": "SMTP (traditionele e-mailserver)",
-        "resend": "Resend (moderne API-service)"
+        "resend": "Resend (moderne API-service)",
+        "microsoft": "Microsoft 365 (Microsoft Graph)"
       },
       "placeholder": "Selecteer e-mailprovider",
       "descriptions": {
         "smtp": "Configureer traditionele SMTP-e-mailserverinstellingen",
-        "resend": "Configureer de Resend-API voor moderne e-mailbezorging"
+        "resend": "Configureer de Resend-API voor moderne e-mailbezorging",
+        "microsoft": "Verzend via het met OAuth verbonden Microsoft 365-postvak dat voor inkomende e-mail wordt gebruikt"
       },
       "status": {
         "provider": "{{provider}}-provider"
@@ -160,6 +162,14 @@
         "label": "Afzenderadres",
         "placeholder": "noreply@yourdomain.com",
         "help": "Moet van een geverifieerd domein komen. Gebruik het tabblad Domeinen om aangepaste domeinen toe te voegen."
+      }
+    },
+    "microsoft": {
+      "mailbox": {
+        "label": "Postvak voor verzending",
+        "placeholder": "Selecteer een verbonden Microsoft 365-postvak",
+        "none": "Voeg eerst een Microsoft 365-provider toe en autoriseer deze op het tabblad Inkomende e-mail.",
+        "help": "Berichten worden als dit postvak via Microsoft Graph verzonden en opgeslagen in Verzonden items. Verbind bestaande postvakken opnieuw om Mail.Send toe te kennen."
       }
     },
     "domains": {

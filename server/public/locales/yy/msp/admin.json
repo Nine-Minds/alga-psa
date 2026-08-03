@@ -109,12 +109,14 @@
       "providerLabel": "55555",
       "options": {
         "smtp": "55555",
-        "resend": "55555"
+        "resend": "55555",
+        "microsoft": "55555"
       },
       "placeholder": "55555",
       "descriptions": {
         "smtp": "55555",
-        "resend": "55555"
+        "resend": "55555",
+        "microsoft": "55555"
       },
       "status": {
         "provider": "55555 {{provider}} 55555"
@@ -159,6 +161,14 @@
       "fromAddress": {
         "label": "55555",
         "placeholder": "55555",
+        "help": "55555"
+      }
+    },
+    "microsoft": {
+      "mailbox": {
+        "label": "55555",
+        "placeholder": "55555",
+        "none": "55555",
         "help": "55555"
       }
     },
