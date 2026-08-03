@@ -1774,8 +1774,15 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
             if (providerId && providerId !== 'credentials' && extendedUser?.user_type === 'client') {
                 const accountRecord = account as unknown as Record<string, unknown> | null;
                 const metadata = extractOAuthAccountMetadata(accountRecord);
-                const callbackUrl = metadata.callbackUrl;
+                // Auth.js does not copy the OAuth state onto the account, so the
+                // state-smuggled callback_url is normally absent; computeVanityRedirect
+                // resolves the tenant's portal domain from a same-origin path alone.
+                const callbackUrl = metadata.callbackUrl ?? '/client-portal/dashboard';
                 const canonicalBaseUrl = process.env.NEXTAUTH_URL;
+
+                if (!canonicalBaseUrl) {
+                    console.warn('[signIn] NEXTAUTH_URL unset; cannot compute client portal vanity redirect');
+                }
 
                 if (callbackUrl && canonicalBaseUrl) {
                     try {
@@ -2634,8 +2641,15 @@ export const options: NextAuthConfig = {
             if (providerId && providerId !== 'credentials' && extendedUser?.user_type === 'client') {
                 const accountRecord = account as unknown as Record<string, unknown> | null;
                 const metadata = extractOAuthAccountMetadata(accountRecord);
-                const callbackUrl = metadata.callbackUrl;
+                // Auth.js does not copy the OAuth state onto the account, so the
+                // state-smuggled callback_url is normally absent; computeVanityRedirect
+                // resolves the tenant's portal domain from a same-origin path alone.
+                const callbackUrl = metadata.callbackUrl ?? '/client-portal/dashboard';
                 const canonicalBaseUrl = process.env.NEXTAUTH_URL;
+
+                if (!canonicalBaseUrl) {
+                    console.warn('[signIn] NEXTAUTH_URL unset; cannot compute client portal vanity redirect');
+                }
 
                 if (callbackUrl && canonicalBaseUrl) {
                     try {

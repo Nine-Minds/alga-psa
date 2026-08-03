@@ -14,6 +14,12 @@ describe('NextAuth client portal SSO contract', () => {
     expect(source).toContain('const vanityRedirect = await computeVanityRedirect({');
   });
 
+  it('T006b: OAuth client sign-in computes vanity redirect even when state lacks callback_url', () => {
+    // Auth.js drops the OAuth state from the account object, so the branch must
+    // not depend on a state-smuggled callback_url to reach computeVanityRedirect.
+    expect(source).toContain("const callbackUrl = metadata.callbackUrl ?? '/client-portal/dashboard';");
+  });
+
   it('T006/F021: client portal SSO discovery and resolution cookies are cleared after OAuth completion handling', () => {
     expect(source).toContain('async function clearClientPortalSsoStateCookies(): Promise<void>');
     expect(source).toContain('store.delete(CLIENT_PORTAL_SSO_DISCOVERY_COOKIE);');
