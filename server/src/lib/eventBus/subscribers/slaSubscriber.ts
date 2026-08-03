@@ -36,7 +36,8 @@ import {
 } from '@alga-psa/sla';
 import {
   handleStatusChange,
-  handleResponseStateChange
+  handleResponseStateChange,
+  syncPauseState
 } from '@alga-psa/sla';
 import type { Knex } from 'knex';
 
@@ -115,7 +116,9 @@ async function handleTicketCreatedEvent(event: unknown): Promise<void> {
       }
       const createdTicket = ticket;
 
-      const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const backendActions = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const collected: SlaBackendAction[] = [];
+
         const startResult = await startSlaForTicket(
           trx,
           tenantId,
@@ -127,13 +130,32 @@ async function handleTicketCreatedEvent(event: unknown): Promise<void> {
         );
 
         if (startResult.success && startResult.sla_policy_id) {
+          collected.push(...(startResult.backendActions ?? []));
+
           logger.info('[SlaSubscriber] Started SLA tracking for ticket', {
             tenantId,
             ticketId,
             policyId: startResult.sla_policy_id,
             responseDueAt: startResult.sla_response_due_at?.toISOString(),
-            resolutionDueAt: startResult.sla_resolution_due_at?.toISOString()
+            resolutionDueAt: startResult.sla_resolution_due_at?.toISOString(),
+            createdInClosedStatus: startResult.created_in_closed_status ?? false
           });
+
+          // Apply the creation status' pause configuration (and awaiting-client
+          // pause) right away, so a ticket created straight into a pausing
+          // status never burns SLA time. Tickets created closed already have
+          // their SLA closed out, so there is nothing to pause.
+          if (!startResult.created_in_closed_status) {
+            const pauseResult = await syncPauseState(trx, tenantId, ticketId, userId);
+            collected.push(...(pauseResult.backendActions ?? []));
+
+            if (pauseResult.is_now_paused) {
+              logger.info('[SlaSubscriber] SLA paused at creation', {
+                tenantId,
+                ticketId
+              });
+            }
+          }
         } else if (!startResult.success) {
           logger.error('[SlaSubscriber] Failed to start SLA tracking', {
             tenantId,
@@ -142,10 +164,10 @@ async function handleTicketCreatedEvent(event: unknown): Promise<void> {
           });
         }
         // If no policy assigned, that's normal - just log at debug level
-        return startResult;
+        return collected;
       });
 
-      await dispatchSlaBackendActions(result?.backendActions);
+      await dispatchSlaBackendActions(backendActions);
     });
   } catch (error) {
     logger.error('[SlaSubscriber] Failed to handle TICKET_CREATED event', {
