@@ -52,6 +52,11 @@ export interface StartSlaResult {
   sla_response_due_at: Date | null;
   sla_resolution_due_at: Date | null;
   error?: string;
+  /**
+   * True when the ticket was created directly in a closed status, so the SLA
+   * was closed out at creation time and no timer is running.
+   */
+  created_in_closed_status?: boolean;
   /** Dispatch with dispatchSlaBackendActions() after the transaction commits. */
   backendActions?: SlaBackendAction[];
 }
@@ -76,6 +81,10 @@ export interface RecordSlaEventResult {
  * 2. Gets the target times for the ticket's priority
  * 3. Calculates due dates based on business hours
  * 4. Updates the ticket with SLA tracking fields
+ *
+ * Tickets created directly in a closed status never get a running timer: the
+ * policy and start time are recorded for reporting, the resolution is stamped
+ * at creation time, and no backend timer is started.
  *
  * @param trx - Database transaction
  * @param tenant - Tenant ID
@@ -111,7 +120,18 @@ export async function startSlaForTicket(
       };
     }
 
-    // 2. Get the target for this priority
+    // 2. Read current ticket state (creation status + manually set due date)
+    const currentTicket = await tenantScopedTable(trx, tenant, 'tickets')
+      .where('ticket_id', ticketId)
+      .select('due_date', 'status_id')
+      .first();
+
+    // A ticket created directly in a closed status has nothing left to work on,
+    // so its timer must never run - not even when the creation status is also
+    // configured to pause SLA.
+    const createdInClosedStatus = await isClosedStatus(trx, tenant, currentTicket?.status_id ?? null);
+
+    // 3. Get the target for this priority
     const target = policy.targets.find(t => t.priority_id === priorityId);
 
     if (!target) {
@@ -120,7 +140,8 @@ export async function startSlaForTicket(
         .where('ticket_id', ticketId)
         .update({
           sla_policy_id: policy.sla_policy_id,
-          sla_started_at: createdAt
+          sla_started_at: createdAt,
+          ...(createdInClosedStatus ? { sla_resolution_at: createdAt } : {})
         });
 
       return {
@@ -128,14 +149,15 @@ export async function startSlaForTicket(
         sla_policy_id: policy.sla_policy_id,
         sla_started_at: createdAt,
         sla_response_due_at: null,
-        sla_resolution_due_at: null
+        sla_resolution_due_at: null,
+        created_in_closed_status: createdInClosedStatus
       };
     }
 
-    // 3. Get business hours schedule
+    // 4. Get business hours schedule
     const schedule = await getBusinessHoursSchedule(trx, tenant, policy, target);
 
-    // 4. Calculate due dates
+    // 5. Calculate due dates
     let responseDueAt: Date | null = null;
     let resolutionDueAt: Date | null = null;
 
@@ -147,19 +169,20 @@ export async function startSlaForTicket(
       resolutionDueAt = calculateDeadline(schedule, createdAt, target.resolution_time_minutes);
     }
 
-    // 5. Update ticket with SLA tracking fields
-    // Check if due_date should be auto-filled from SLA resolution target
-    const currentTicket = await tenantScopedTable(trx, tenant, 'tickets')
-      .where('ticket_id', ticketId)
-      .select('due_date')
-      .first();
-
+    // 6. Update ticket with SLA tracking fields
     const slaUpdateData: Record<string, any> = {
       sla_policy_id: policy.sla_policy_id,
       sla_started_at: createdAt,
       sla_response_due_at: responseDueAt,
       sla_resolution_due_at: resolutionDueAt
     };
+
+    // Created closed: stamp the resolution at creation time so the timer job
+    // and the backend never treat this ticket as running.
+    if (createdInClosedStatus) {
+      slaUpdateData.sla_resolution_at = createdAt;
+      slaUpdateData.sla_resolution_met = resolutionDueAt ? true : null;
+    }
 
     // Auto-fill due_date from SLA resolution target if not manually set
     if (!currentTicket?.due_date && resolutionDueAt) {
@@ -170,7 +193,7 @@ export async function startSlaForTicket(
       .where('ticket_id', ticketId)
       .update(slaUpdateData);
 
-    // 6. Log SLA started event
+    // 7. Log SLA started event
     await logSlaEvent(trx, tenant, ticketId, 'sla_started', {
       policy_id: policy.sla_policy_id,
       policy_name: policy.policy_name,
@@ -178,8 +201,28 @@ export async function startSlaForTicket(
       response_target_minutes: target.response_time_minutes,
       resolution_target_minutes: target.resolution_time_minutes,
       response_due_at: responseDueAt?.toISOString(),
-      resolution_due_at: resolutionDueAt?.toISOString()
+      resolution_due_at: resolutionDueAt?.toISOString(),
+      created_in_closed_status: createdInClosedStatus
     });
+
+    if (createdInClosedStatus) {
+      await logSlaEvent(trx, tenant, ticketId, 'resolution_recorded', {
+        resolved_at: createdAt.toISOString(),
+        due_at: resolutionDueAt?.toISOString(),
+        met: resolutionDueAt ? true : null,
+        reason: 'created_in_closed_status'
+      });
+
+      // No backend action: nothing should be timing this ticket.
+      return {
+        success: true,
+        sla_policy_id: policy.sla_policy_id,
+        sla_started_at: createdAt,
+        sla_response_due_at: responseDueAt,
+        sla_resolution_due_at: resolutionDueAt,
+        created_in_closed_status: true
+      };
+    }
 
     // Query configured notification thresholds for this policy
     const thresholdRows = await tenantScopedTable(trx, tenant, 'sla_notification_thresholds')
@@ -197,6 +240,7 @@ export async function startSlaForTicket(
       sla_started_at: createdAt,
       sla_response_due_at: responseDueAt,
       sla_resolution_due_at: resolutionDueAt,
+      created_in_closed_status: false,
       backendActions: [{
         kind: 'start',
         ticketId,
@@ -808,6 +852,24 @@ async function resolveSlaPolicy(
   }
 
   return null;
+}
+
+/**
+ * Check whether a status is a closed status.
+ */
+async function isClosedStatus(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  statusId: string | null
+): Promise<boolean> {
+  if (!statusId) return false;
+
+  const status = await tenantScopedTable(trx, tenant, 'statuses')
+    .where('status_id', statusId)
+    .select('is_closed')
+    .first();
+
+  return status?.is_closed === true;
 }
 
 /**
