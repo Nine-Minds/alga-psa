@@ -28,3 +28,16 @@ After IMAP resync starts, present the intentional disconnect as temporary reconn
 - Prevent stale updates with cancellation plus a generation token; bound request pressure to one multi-second poll per provider.
 - Treat only fresh persisted status as recovery, and timeout as ambiguity rather than failure.
 - Rebase/restack if the nearby middleware card changes the same component; preserve its semantics.
+
+## Mitigation override and natural-recovery smoke
+
+Live GreenMail and worktree-built email-service smoke superseded the original 90-second polling limit. Resync invalidates the active worker's lease; one refresh can stop that worker and the next refresh recreates it. The observed natural recovery took 102.6 seconds, so the UI must keep the provider-scoped Reconnecting presentation after 90 seconds. Poll every 5 seconds through 2 minutes, every 15 seconds through 5 minutes, then cap at every 30 seconds until fresh provider state leaves `disconnected` or the component unmounts/supersedes the poll.
+
+The follow-up smoke must use the production-default 60-second email-service refresh with real GreenMail and no provider-status edit, page reload, worker restart, or other intervention after clicking Resync. Keep the email-provider page mounted and untouched while collecting:
+
+1. A transient screenshot showing Reconnecting with active (not dimmed/inactive) styling.
+2. Email-service timestamps for the resync, lease-lost worker stop, later worker recreation, and persisted `connected` transition.
+3. A database observation confirming `status='connected'` and `is_active=true` after natural recovery.
+4. A final screenshot from the same untouched page showing Connected, plus browser console/network checks.
+
+Record the exact timing and all fidelity compromises in a fresh evidence-directory README so another reviewer can correlate the two screenshots, service log, and database observation without relying on an earlier failed smoke run.

@@ -192,8 +192,8 @@ describe('IMAP resync status recovery', () => {
     expect(toastMock).not.toHaveBeenCalled();
   });
 
-  it('keeps presenting Reconnecting beyond 90 seconds and recovers automatically', async () => {
-    const recoversAt = Date.now() + 105_000;
+  it('keeps presenting Reconnecting beyond 90 seconds and recovers after the observed 102.6-second cycle', async () => {
+    const recoversAt = Date.now() + 102_600;
     getEmailProvidersMock
       .mockResolvedValueOnce({ providers: [connectedProvider] })
       .mockImplementation(() => Promise.resolve({
@@ -211,7 +211,13 @@ describe('IMAP resync status recovery', () => {
     expect(toastMock).not.toHaveBeenCalled();
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(15_000);
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+
+    expect(screen.getByTestId('provider-presentation')).toHaveTextContent('Reconnecting');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000);
     });
 
     expect(screen.getByTestId('provider-presentation')).toHaveTextContent('Connected');
