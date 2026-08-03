@@ -75,15 +75,18 @@ const BillingPage = async ({ searchParams }: BillingPageProps) => {
     ? servicesResponse
     : (servicesResponse.services || []);
 
-  // Fetch documents server-side when viewing the documents tab
+  // The contract detail view switches subtabs client-side (no server navigation),
+  // so the user id has to be available for any contract deep link, not just the
+  // documents tab. Documents themselves are only prefetched for direct documents
+  // links — ContractDetail loads them client-side otherwise.
   let contractDocuments: IDocument[] | null = null;
   let currentUserId: string | null = null;
-  if (contractId && contractView === 'documents') {
+  if (contractId) {
     const [documents, user] = await Promise.all([
-      getDocumentsByContractId(contractId),
+      contractView === 'documents' ? getDocumentsByContractId(contractId) : Promise.resolve(null),
       getCurrentUser()
     ]);
-    contractDocuments = Array.isArray(documents) ? documents : [];
+    contractDocuments = Array.isArray(documents) ? documents : contractView === 'documents' ? [] : null;
     currentUserId = user?.user_id || null;
   }
 
