@@ -64,6 +64,7 @@ export function OpportunityDetailHost({
   autoOpenDraft = false,
   commitments,
   returnTab,
+  isInDrawer = false,
 }: {
   detail: IOpportunityDetail;
   /** Injected by the host app only when the tenant's AI module allows drafting. */
@@ -73,6 +74,8 @@ export function OpportunityDetailHost({
   /** EE commitments ledger section, injected when the management tier allows it. */
   commitments?: ReactNode;
   returnTab?: string;
+  /** Rendered inside the shared drawer: no back-to-list escape hatch. */
+  isInDrawer?: boolean;
 }) {
   const { t } = useTranslation('msp/opportunities');
   const router = useRouter();
@@ -145,16 +148,18 @@ export function OpportunityDetailHost({
 
   return (
     <>
-      <Button
-        id="opportunity-back-to-list"
-        size="sm"
-        variant="ghost"
-        className="mb-3"
-        onClick={() => router.push(`/msp/opportunities?tab=${encodeURIComponent(returnTab ?? 'queue')}`)}
-      >
-        <ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden />
-        {t('opportunities.detail.backToList', 'Back to opportunities')}
-      </Button>
+      {isInDrawer ? null : (
+        <Button
+          id="opportunity-back-to-list"
+          size="sm"
+          variant="ghost"
+          className="mb-3"
+          onClick={() => router.push(`/msp/opportunities?tab=${encodeURIComponent(returnTab ?? 'queue')}`)}
+        >
+          <ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden />
+          {t('opportunities.detail.backToList', 'Back to opportunities')}
+        </Button>
+      )}
       <OpportunityDetailView
         detail={detail}
         timeline={

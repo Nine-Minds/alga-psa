@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { useClientDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IOpportunityListItem } from '@alga-psa/types';
 import { opportunityValueParts } from '../../lib/format';
@@ -23,6 +24,7 @@ export function BoardCard({
   onDragStart?: (e: React.DragEvent, item: IOpportunityListItem) => void;
 }) {
   const { t } = useTranslation('msp/opportunities');
+  const clientDrawer = useClientDrawer();
   const value = opportunityValueParts(item.mrr_cents, item.nrr_cents, item.hardware_cents, item.currency_code);
 
   return (
@@ -48,9 +50,20 @@ export function BoardCard({
         ) : null}
       </div>
       <div className="flex items-center gap-1.5 text-xs text-[rgb(var(--color-text-500))]">
-        <Link href={`/msp/clients/${item.client_id}`} className="text-[rgb(var(--color-primary-600))] hover:underline">
-          {item.client_name}
-        </Link>
+        {clientDrawer ? (
+          <button
+            id={`opportunity-board-client-${item.opportunity_id}`}
+            type="button"
+            className="text-[rgb(var(--color-primary-600))] hover:underline"
+            onClick={() => clientDrawer.openClientDrawer(item.client_id)}
+          >
+            {item.client_name}
+          </button>
+        ) : (
+          <Link href={`/msp/clients/${item.client_id}`} className="text-[rgb(var(--color-primary-600))] hover:underline">
+            {item.client_name}
+          </Link>
+        )}
         {item.client_lifecycle_status === 'prospect' ? (
           <Badge variant="default-muted" size="sm">{t('opportunities.prospect', 'Prospect')}</Badge>
         ) : null}

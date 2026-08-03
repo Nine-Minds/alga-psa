@@ -74,6 +74,8 @@
       "expectedClose": "55555",
       "hardware": "55555",
       "linkQuote": "55555",
+      "loadFailed": "55555",
+      "loading": "55555",
       "markLost": "55555",
       "markWon": "55555",
       "metadataTitle": "55555",
@@ -133,6 +135,7 @@
     "list": {
       "confidence": "55555",
       "deal": "55555",
+      "editValues": "55555",
       "mrr": "55555",
       "nextAction": "55555",
       "oneTime": "55555",

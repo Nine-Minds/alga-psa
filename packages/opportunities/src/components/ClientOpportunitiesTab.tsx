@@ -19,10 +19,13 @@ export function ClientOpportunitiesTab({
   clientId,
   clientName,
   clientLifecycleStatus,
+  onOpen,
 }: {
   clientId: string;
   clientName: string;
   clientLifecycleStatus?: ClientLifecycleStatus | null;
+  /** Host override so the deal opens in a drawer instead of leaving the client screen. */
+  onOpen?: (opportunityId: string) => void | Promise<void>;
 }) {
   const { t } = useTranslation('msp/opportunities');
   const router = useRouter();
@@ -45,12 +48,23 @@ export function ClientOpportunitiesTab({
     void load();
   }, [load]);
 
+  const openDeal = useCallback(
+    (opportunityId: string) => {
+      if (onOpen) {
+        void onOpen(opportunityId);
+        return;
+      }
+      router.push(`/msp/opportunities/${opportunityId}`);
+    },
+    [onOpen, router],
+  );
+
   const handleCreate = async (input: CreateOpportunityInput) => {
     try {
       const currency = await getClientDefaultCurrency(clientId);
       const created = await createOpportunity({ ...input, currency_code: currency });
       toast.success(t('opportunities.toast.created', 'Opportunity created'));
-      router.push(`/msp/opportunities/${(created as { opportunity_id: string }).opportunity_id}`);
+      openDeal((created as { opportunity_id: string }).opportunity_id);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
       throw err;
@@ -70,7 +84,7 @@ export function ClientOpportunitiesTab({
           description={t('opportunities.clientTab.emptyBody', 'Create one, or let a quote start the trail.')}
         />
       ) : (
-        <PipelineList items={items} onOpen={(id) => router.push(`/msp/opportunities/${id}`)} />
+        <PipelineList items={items} onOpen={openDeal} onValuesChanged={load} />
       )}
       <CreateOpportunityDialog
         isOpen={createOpen}

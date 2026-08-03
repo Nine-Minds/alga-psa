@@ -74,6 +74,8 @@
       "expectedClose": "Expected close",
       "hardware": "Hardware",
       "linkQuote": "Link existing",
+      "loadFailed": "Failed to load opportunity",
+      "loading": "Loading opportunity...",
       "markLost": "Mark lost",
       "markWon": "Mark won",
       "metadataTitle": "Opportunity",
@@ -133,6 +135,7 @@
     "list": {
       "confidence": "Confidence",
       "deal": "Deal",
+      "editValues": "Edit value",
       "mrr": "Recurring",
       "nextAction": "Next action",
       "oneTime": "One-time",

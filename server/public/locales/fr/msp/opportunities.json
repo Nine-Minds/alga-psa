@@ -74,6 +74,8 @@
       "expectedClose": "Clôture attendue",
       "hardware": "Matériel",
       "linkQuote": "Lien existant",
+      "loadFailed": "Échec du chargement de l'opportunité",
+      "loading": "Chargement de l'opportunité...",
       "markLost": "Marc a perdu",
       "markWon": "Marc a gagné",
       "metadataTitle": "Opportunité",
@@ -133,6 +135,7 @@
     "list": {
       "confidence": "Confiance",
       "deal": "Accord",
+      "editValues": "Modifier la valeur",
       "mrr": "Récurrent",
       "nextAction": "Action suivante",
       "oneTime": "Une fois",

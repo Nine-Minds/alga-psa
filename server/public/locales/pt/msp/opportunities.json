@@ -74,6 +74,8 @@
       "expectedClose": "Fechamento esperado",
       "hardware": "Hardware",
       "linkQuote": "Link existente",
+      "loadFailed": "Falha ao carregar a oportunidade",
+      "loading": "Carregando oportunidade...",
       "markLost": "Marca perdida",
       "markWon": "Marcos venceu",
       "metadataTitle": "Oportunidade",
@@ -133,6 +135,7 @@
     "list": {
       "confidence": "Confiança",
       "deal": "Acordo",
+      "editValues": "Editar valor",
       "mrr": "Recorrente",
       "nextAction": "Próxima ação",
       "oneTime": "Único",

@@ -257,6 +257,7 @@ export function OpportunitiesHub({
           items={items}
           onOpen={openDeal}
           initialStage={initialPipelineStage}
+          onValuesChanged={() => refresh()}
           pagination={{ currentPage: page, pageSize: PAGE_SIZE, totalItems: total, onPageChange: (p) => void refresh(p) }}
         />
       ),
