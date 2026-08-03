@@ -5,6 +5,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { isEnterpriseEdition } from '@/lib/features';
+import { editionGateResponse } from '@/lib/editionGating/response';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -17,7 +18,7 @@ const NO_STORE = { 'Cache-Control': 'no-store, max-age=0' } as const;
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404, headers: NO_STORE });
+    return editionGateResponse('mcp', { headers: NO_STORE });
   }
   const { resolvePublicBaseUrl } = await import('@product/mcp/entry');
   // External clients (e.g. claude.ai) read this, so it must be the public origin.

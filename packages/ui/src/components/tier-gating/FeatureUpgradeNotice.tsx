@@ -11,6 +11,10 @@ interface FeatureUpgradeNoticeProps {
   requiredTier: TenantTier;
   /** Optional description of the feature */
   description?: string;
+  /** Optional upgrade destination supplied by an API edition gate */
+  upgradeHref?: string;
+  /** Optional upgrade CTA supplied by an API edition gate */
+  upgradeLabel?: string;
 }
 
 /**
@@ -21,6 +25,8 @@ export function FeatureUpgradeNotice({
   featureName,
   requiredTier,
   description,
+  upgradeHref = '/msp/account',
+  upgradeLabel = 'View Plans',
 }: FeatureUpgradeNoticeProps) {
   const tierLabel = TIER_LABELS[requiredTier];
 
@@ -40,10 +46,10 @@ export function FeatureUpgradeNotice({
       </p>
 
       <Link
-        href="/msp/account"
+        href={upgradeHref}
         className="inline-flex items-center justify-center px-6 py-3 bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-lg transition-colors"
       >
-        View Plans
+        {upgradeLabel}
       </Link>
     </div>
   );

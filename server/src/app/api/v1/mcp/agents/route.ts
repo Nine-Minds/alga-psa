@@ -1,6 +1,8 @@
 /**
  * MCP agent provisioning (EE). Implementation loaded via the @product/mcp seam.
  */
+
+import { editionGateResponse } from '@/lib/editionGating/response';
 import { NextRequest, NextResponse } from 'next/server';
 import { isEnterpriseEdition } from '@/lib/features';
 
@@ -8,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  if (!isEnterpriseEdition()) return NextResponse.json({ error: 'Enterprise feature' }, { status: 404 });
+  if (!isEnterpriseEdition()) return editionGateResponse('mcp');
   const { authenticateMcpAdmin, listAgents } = await import('@product/mcp/entry');
   const admin = await authenticateMcpAdmin(req);
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -16,7 +18,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  if (!isEnterpriseEdition()) return NextResponse.json({ error: 'Enterprise feature' }, { status: 404 });
+  if (!isEnterpriseEdition()) return editionGateResponse('mcp');
   const { authenticateMcpAdmin, createAgent } = await import('@product/mcp/entry');
   const admin = await authenticateMcpAdmin(req);
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -52,7 +54,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
 // Toggle an agent's active flag (the reversible soft-disable).
 export async function PATCH(req: NextRequest): Promise<NextResponse> {
-  if (!isEnterpriseEdition()) return NextResponse.json({ error: 'Enterprise feature' }, { status: 404 });
+  if (!isEnterpriseEdition()) return editionGateResponse('mcp');
   const { authenticateMcpAdmin, setAgentActive } = await import('@product/mcp/entry');
   const admin = await authenticateMcpAdmin(req);
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -67,7 +69,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
 
 // Permanently remove an agent (irreversible — tears down roles, audit, backing user).
 export async function DELETE(req: NextRequest): Promise<NextResponse> {
-  if (!isEnterpriseEdition()) return NextResponse.json({ error: 'Enterprise feature' }, { status: 404 });
+  if (!isEnterpriseEdition()) return editionGateResponse('mcp');
   const { authenticateMcpAdmin, deleteAgent } = await import('@product/mcp/entry');
   const admin = await authenticateMcpAdmin(req);
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

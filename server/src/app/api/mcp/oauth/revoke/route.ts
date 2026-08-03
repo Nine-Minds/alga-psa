@@ -4,6 +4,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { isEnterpriseEdition } from '@/lib/features';
+import { editionGateOAuthResponse } from '@/lib/editionGating/response';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -12,7 +13,7 @@ const NO_STORE = { 'Cache-Control': 'no-store, max-age=0' };
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) {
-    return new NextResponse(null, { status: 404, headers: NO_STORE });
+    return editionGateOAuthResponse('mcp', { headers: NO_STORE });
   }
   const { handleRevoke } = await import('@product/mcp/entry');
   let form: URLSearchParams;

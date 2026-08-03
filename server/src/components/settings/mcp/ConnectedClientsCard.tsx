@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { EditionGateError, getEditionGateResponse, isEditionGateError } from '@/lib/editionGating/client';
+import type { EditionGateResponseBody } from '@/lib/editionGating/types';
 
 interface Connection {
   grantId: string;
@@ -19,7 +21,11 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
   });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body?.error || `Something went wrong (${res.status}).`);
+  if (!res.ok) {
+    const editionGate = getEditionGateResponse(res.status, body);
+    if (editionGate) throw new EditionGateError(editionGate);
+    throw new Error(body?.error || `Something went wrong (${res.status}).`);
+  }
   return body as T;
 }
 
@@ -36,7 +42,11 @@ function hostOf(url: string): string {
  * interactive OAuth flow (Alga as MCP Authorization Server). Self-contained:
  * manages its own fetch/revoke so it can be dropped into the MCP settings page.
  */
-export default function ConnectedClientsCard() {
+export default function ConnectedClientsCard({
+  onEditionGate,
+}: {
+  onEditionGate?: (response: EditionGateResponseBody) => void;
+}) {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,10 +59,14 @@ export default function ConnectedClientsCard() {
       .then((r) => setConnections(r.data))
       .catch((e) => {
         console.error('Failed to load MCP connections:', e);
+        if (isEditionGateError(e)) {
+          onEditionGate?.(e.response);
+          return;
+        }
         setError('Failed to load connections.');
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [onEditionGate]);
 
   useEffect(() => {
     reload();
@@ -67,11 +81,15 @@ export default function ConnectedClientsCard() {
       reload();
     } catch (e) {
       console.error('Failed to disconnect MCP client:', e);
+      if (isEditionGateError(e)) {
+        onEditionGate?.(e.response);
+        return;
+      }
       setError('Failed to disconnect.');
     } finally {
       setBusy(false);
     }
-  }, [removeTarget, reload]);
+  }, [onEditionGate, removeTarget, reload]);
 
   return (
     <Card id="mcp-connected-clients-card">

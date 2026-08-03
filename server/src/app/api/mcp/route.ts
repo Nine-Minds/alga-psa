@@ -5,13 +5,14 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { isEnterpriseEdition } from '@/lib/features';
+import { editionGateResponse } from '@/lib/editionGating/response';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest): Promise<Response> {
   if (!isEnterpriseEdition()) {
-    return NextResponse.json({ error: 'The remote MCP server is an Enterprise feature.' }, { status: 404 });
+    return editionGateResponse('mcp');
   }
   const { handleMcpJsonRpc } = await import('@product/mcp/entry');
   return handleMcpJsonRpc(req);

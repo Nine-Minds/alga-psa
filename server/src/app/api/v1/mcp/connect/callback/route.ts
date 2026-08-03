@@ -7,6 +7,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { isEnterpriseEdition } from '@/lib/features';
+import { createEditionGateResponseBody, EDITION_GATE_CODE } from '@/lib/editionGating/types';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -45,10 +46,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     /* ignore — validated below */
   }
 
-  const fail = (error: string) =>
-    htmlResponse(postMessageHtml({ type: 'oauth-callback', provider, success: false, error }), true);
+  const fail = (error: string, errorCode?: string) =>
+    htmlResponse(postMessageHtml({ type: 'oauth-callback', provider, success: false, error, errorCode }), true);
 
-  if (!isEnterpriseEdition()) return fail('The MCP server is an Enterprise feature.');
+  if (!isEnterpriseEdition()) {
+    return fail(createEditionGateResponseBody('mcp').message, EDITION_GATE_CODE);
+  }
   if (oauthError) return fail(sp.get('error_description') || oauthError);
   if (!code || !state) return fail('Missing authorization code or state.');
 
