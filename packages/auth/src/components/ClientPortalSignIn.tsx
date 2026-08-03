@@ -74,6 +74,11 @@ export default function ClientPortalSignIn({ branding, portalDomain }: ClientPor
 
   const handleError = (error: AlertProps | string) => {
     if (typeof error === 'string') {
+      // SsoProviderButtons signals "clear previous error" with an empty string.
+      if (!error.trim()) {
+        setIsAlertOpen(false);
+        return;
+      }
       setAlertInfo({
         type: 'error',
         title: 'Error',
