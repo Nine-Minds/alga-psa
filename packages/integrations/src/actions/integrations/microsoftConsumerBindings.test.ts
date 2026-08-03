@@ -298,7 +298,7 @@ describe('Microsoft consumer binding actions', () => {
     }
   });
 
-  it('returns only the CE-visible MSP SSO binding and materializes only migration-needed rows', async () => {
+  it('returns CE-visible MSP SSO and Email bindings while materializing only migration-needed rows', async () => {
     hoisted.state.mockCtx = { tenant: 'tenant-2' };
     tenantSecrets.set('tenant-2:microsoft_client_id', 'tenant-two-client');
     tenantSecrets.set('tenant-2:microsoft_client_secret', 'tenant-two-secret');
@@ -323,8 +323,17 @@ describe('Microsoft consumer binding actions', () => {
     const result = await listMicrosoftConsumerBindings();
 
     expect(result.success).toBe(true);
-    expect(result.bindings?.map((binding) => binding.consumerType)).toEqual(['msp_sso']);
-    expect(result.bindings?.every((binding) => binding.profileDisplayName === 'Default Microsoft Profile')).toBe(true);
+    expect(result.bindings?.map((binding) => binding.consumerType)).toEqual(['msp_sso', 'email']);
+    expect(result.bindings?.find((binding) => binding.consumerType === 'msp_sso')).toMatchObject({
+      profileDisplayName: 'Default Microsoft Profile',
+    });
+    expect(result.bindings?.find((binding) => binding.consumerType === 'email')).toEqual({
+      consumerType: 'email',
+      consumerLabel: 'Email',
+      profileId: null,
+      profileDisplayName: undefined,
+      isArchived: false,
+    });
     expect(microsoftConsumerBindings.filter((binding) => binding.tenant === 'tenant-1')).toEqual([
       expect.objectContaining({ consumer_type: 'msp_sso' }),
     ]);
@@ -604,7 +613,7 @@ describe('Microsoft consumer binding actions', () => {
     });
   });
 
-  it('rejects EE-only binding writes in CE while keeping MSP SSO available', async () => {
+  it('allows MSP SSO and Email binding writes in CE while rejecting EE-only consumers', async () => {
     const created = await createMicrosoftProfile({
       displayName: 'Primary Profile',
       clientId: 'primary-client-id',
@@ -625,14 +634,17 @@ describe('Microsoft consumer binding actions', () => {
       },
     });
 
-    await expect(
-      setMicrosoftConsumerBinding({
+    expect(
+      await setMicrosoftConsumerBinding({
         consumerType: 'email',
         profileId: created.profile!.profileId,
       })
-    ).resolves.toEqual({
-      success: false,
-      error: 'Microsoft consumer type is unavailable in this edition',
+    ).toMatchObject({
+      success: true,
+      binding: {
+        consumerType: 'email',
+        profileDisplayName: 'Primary Profile',
+      },
     });
 
     await expect(
