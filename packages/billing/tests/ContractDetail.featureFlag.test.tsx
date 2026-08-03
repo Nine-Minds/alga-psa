@@ -184,6 +184,13 @@ vi.mock(
   }),
 );
 
+// ContractDetail normalizes the URL with history.replaceState, so the jsdom
+// location has to stay in sync with the mocked useSearchParams value.
+const setSearchParams = (query: string) => {
+  navigationState.params = new URLSearchParams(query);
+  window.history.replaceState(null, "", `/msp/billing?${query}`);
+};
+
 describe("ContractDetail contract simulator feature flag", () => {
   let ContractDetail: React.ComponentType<{
     resolvedContractId?: string | null;
@@ -197,9 +204,7 @@ describe("ContractDetail contract simulator feature flag", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    navigationState.params = new URLSearchParams(
-      "tab=contracts&contractId=contract-1",
-    );
+    setSearchParams("tab=contracts&contractId=contract-1");
     featureFlagState.enabled = false;
     featureFlagState.loading = true;
     featureFlagState.error = null;
@@ -242,9 +247,7 @@ describe("ContractDetail contract simulator feature flag", () => {
   });
 
   it("renders the Simulate tab when the flag is enabled", async () => {
-    navigationState.params = new URLSearchParams(
-      "tab=contracts&contractId=contract-1&contractView=simulator",
-    );
+    setSearchParams("tab=contracts&contractId=contract-1&contractView=simulator");
     featureFlagState.enabled = true;
     featureFlagState.loading = false;
 
@@ -257,10 +260,11 @@ describe("ContractDetail contract simulator feature flag", () => {
       await screen.findByTestId("contract-simulator-mounted"),
     ).toBeInTheDocument();
     expect(navigationState.replace).not.toHaveBeenCalled();
+    expect(window.location.search).toContain("contractView=simulator");
   });
 
   it("preserves a simulator deep link until the flag verdict is available", async () => {
-    navigationState.params = new URLSearchParams(
+    setSearchParams(
       "tab=contracts&contractId=contract-1&contractView=simulator&foo=bar",
     );
 
@@ -273,6 +277,7 @@ describe("ContractDetail contract simulator feature flag", () => {
       screen.queryByRole("tab", { name: "Simulate" }),
     ).not.toBeInTheDocument();
     expect(navigationState.replace).not.toHaveBeenCalled();
+    expect(window.location.search).toContain("contractView=simulator");
 
     featureFlagState.enabled = true;
     featureFlagState.loading = false;
@@ -288,7 +293,7 @@ describe("ContractDetail contract simulator feature flag", () => {
   });
 
   it("normalizes a disabled simulator deep link to Overview and preserves other query parameters", async () => {
-    navigationState.params = new URLSearchParams(
+    setSearchParams(
       "tab=contracts&contractId=contract-1&contractView=simulator&foo=bar",
     );
     featureFlagState.loading = false;
@@ -299,11 +304,12 @@ describe("ContractDetail contract simulator feature flag", () => {
     expect(
       screen.queryByRole("tab", { name: "Simulate" }),
     ).not.toBeInTheDocument();
+    // The subtab URL is now updated in place, without a route navigation.
     await waitFor(() => {
-      expect(navigationState.replace).toHaveBeenCalledWith(
+      expect(window.location.pathname + window.location.search).toBe(
         "/msp/billing?tab=contracts&contractId=contract-1&foo=bar",
-        { scroll: false },
       );
     });
+    expect(navigationState.replace).not.toHaveBeenCalled();
   });
 });
