@@ -1,8 +1,10 @@
 /**
  * Platform Feature Flags API - CE Stub
  *
- * This stub lazy-loads the EE implementation or returns 501 for CE builds.
+ * This stub lazy-loads the EE implementation or returns an informative 403 for CE builds.
  */
+
+import { editionGateResponse } from '@/lib/editionGating/response';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,16 +39,10 @@ async function loadEeRoute(): Promise<EeRouteModule | null> {
 }
 
 function eeUnavailable(): Response {
-  return new Response(
-    JSON.stringify({
-      success: false,
-      error: 'Feature flag management is only available in Enterprise Edition.',
-    }),
-    {
-      status: 501,
-      headers: { 'content-type': 'application/json' },
-    }
-  );
+  if (isEnterpriseEdition) {
+    throw new Error('The Enterprise route failed to load.');
+  }
+  return editionGateResponse('platform-feature-flags');
 }
 
 export async function GET(request: Request): Promise<Response> {

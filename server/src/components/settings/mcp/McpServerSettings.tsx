@@ -12,10 +12,13 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
 import ConnectedClientsCard from './ConnectedClientsCard';
 import type { ColumnDefinition } from '@alga-psa/types';
 import type { TrustedIdp, Agent, Role, AuditRow, PlatformProvider, ConnectIdentity } from './mcpTypes';
 import { getMcpDemoMode, demoState, demoAuditPage, demoConnectResult } from './mcpDemoData';
+import { EditionGateError, getEditionGateResponse, isEditionGateError } from '@/lib/editionGating/client';
+import type { EditionGateResponseBody } from '@/lib/editionGating/types';
 
 const AUDIT_PAGE_SIZE = 10;
 
@@ -95,6 +98,9 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
+    const editionGate = getEditionGateResponse(res.status, body);
+    if (editionGate) throw new EditionGateError(editionGate);
+
     const friendly =
       res.status === 404 ? "MCP settings aren't available here. The MCP server may be turned off." :
       res.status === 401 ? 'Your session expired. Sign in again.' :
@@ -113,6 +119,7 @@ export default function McpServerSettings() {
   const [auditPage, setAuditPage] = useState(1);
   const [auditTotal, setAuditTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [editionGate, setEditionGate] = useState<EditionGateResponseBody | null>(null);
   const [busy, setBusy] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<Agent | null>(null);
 
@@ -150,6 +157,10 @@ export default function McpServerSettings() {
     }
     Promise.all([reloadIdps(), reloadAgents(), reloadRoles()]).catch((e) => {
       console.error('Failed to load MCP settings:', e);
+      if (isEditionGateError(e)) {
+        setEditionGate(e.response);
+        return;
+      }
       setError('Failed to load MCP settings.');
     });
     api<{ data: { microsoft?: { entraTenantId: string; displayName: string | null } } }>('/api/v1/mcp/idp-suggestions')
@@ -167,6 +178,10 @@ export default function McpServerSettings() {
       await fn();
     } catch (e) {
       console.error('Failed to update MCP settings:', e);
+      if (isEditionGateError(e)) {
+        setEditionGate(e.response);
+        return;
+      }
       setError('Failed to update MCP settings.');
     } finally {
       setBusy(false);
@@ -423,6 +438,18 @@ export default function McpServerSettings() {
       render: (_v, r) => <span className="font-mono text-xs text-[rgb(var(--color-text-600))]">{r.status_code ?? '—'}</span>,
     },
   ];
+
+  if (editionGate) {
+    return (
+      <FeatureUpgradeNotice
+        featureName={editionGate.featureName}
+        requiredTier="pro"
+        description={editionGate.message}
+        upgradeHref={editionGate.upgrade.href}
+        upgradeLabel={editionGate.upgrade.cta}
+      />
+    );
+  }
 
   return (
     <div id="mcp-server-settings" className="space-y-6">
@@ -683,7 +710,7 @@ export default function McpServerSettings() {
       )}
 
       {/* Connected MCP clients (interactive OAuth — Alga as Authorization Server) */}
-      <ConnectedClientsCard />
+      <ConnectedClientsCard onEditionGate={setEditionGate} />
 
       <ConfirmationDialog
         id="mcp-remove-agent-dialog"

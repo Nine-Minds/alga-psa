@@ -1,6 +1,8 @@
 /**
  * MCP agent-action audit export (EE). Implementation loaded via the @product/mcp seam.
  */
+
+import { editionGateResponse } from '@/lib/editionGating/response';
 import { NextRequest, NextResponse } from 'next/server';
 import { isEnterpriseEdition } from '@/lib/features';
 
@@ -8,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  if (!isEnterpriseEdition()) return NextResponse.json({ error: 'Enterprise feature' }, { status: 404 });
+  if (!isEnterpriseEdition()) return editionGateResponse('mcp');
   const { authenticateMcpAdmin, exportAgentAudit } = await import('@product/mcp/entry');
   const admin = await authenticateMcpAdmin(req);
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

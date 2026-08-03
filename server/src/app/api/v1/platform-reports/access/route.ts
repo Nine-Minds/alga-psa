@@ -1,10 +1,11 @@
 /**
  * Platform Reports Access API - CE Stub
  *
- * This stub lazy-loads the EE implementation or returns 501 for CE builds.
+ * This stub lazy-loads the EE implementation or returns an informative 403 for CE builds.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { editionGateResponse } from '@/lib/editionGating/response';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,13 +39,10 @@ async function loadEeRoute(): Promise<EeRouteModule | null> {
 }
 
 function eeUnavailable(): NextResponse {
-  return NextResponse.json(
-    {
-      success: false,
-      error: 'Platform reports access logging is only available in Enterprise Edition.',
-    },
-    { status: 501 }
-  );
+  if (isEnterpriseEdition) {
+    throw new Error('The Enterprise route failed to load.');
+  }
+  return editionGateResponse('platform-reports');
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {

@@ -5,6 +5,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { isEnterpriseEdition } from '@/lib/features';
+import { createEditionGateResponseBody, EDITION_GATE_CODE } from '@/lib/editionGating/types';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -17,12 +18,19 @@ function escapeHtml(s: string): string {
   );
 }
 
-function errorPage(message: string, status: number): NextResponse {
+function errorPage(message: string, status: number, code?: string): NextResponse {
   const html = `<!doctype html><meta charset="utf-8"><title>Authorization error</title>
 <body style="font-family:system-ui;max-width:32rem;margin:4rem auto;padding:0 1rem">
 <h1 style="font-size:1.25rem">Authorization error</h1>
 <p>${escapeHtml(message)}</p></body>`;
-  return new NextResponse(html, { status, headers: { 'content-type': 'text/html; charset=utf-8', ...NO_STORE } });
+  return new NextResponse(html, {
+    status,
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      ...(code ? { 'X-Alga-Error-Code': code } : {}),
+      ...NO_STORE,
+    },
+  });
 }
 
 function consentPage(params: { clientName: string | null; clientId: string; signedRequest: string; tenant: string }): NextResponse {
@@ -42,7 +50,9 @@ function consentPage(params: { clientName: string | null; clientId: string; sign
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  if (!isEnterpriseEdition()) return errorPage('Not found.', 404);
+  if (!isEnterpriseEdition()) {
+    return errorPage(createEditionGateResponseBody('mcp').message, 403, EDITION_GATE_CODE);
+  }
   const { prepareAuthorize, resolvePublicBaseUrl } = await import('@product/mcp/entry');
   const base = await resolvePublicBaseUrl(req);
   const publicUrl = new URL(`${base}${req.nextUrl.pathname}${req.nextUrl.search}`);
@@ -60,7 +70,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  if (!isEnterpriseEdition()) return errorPage('Not found.', 404);
+  if (!isEnterpriseEdition()) {
+    return errorPage(createEditionGateResponseBody('mcp').message, 403, EDITION_GATE_CODE);
+  }
   const { completeAuthorize, resolvePublicBaseUrl } = await import('@product/mcp/entry');
   const base = await resolvePublicBaseUrl(req);
 

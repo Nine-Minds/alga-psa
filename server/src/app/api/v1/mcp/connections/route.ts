@@ -4,6 +4,8 @@
  * the clients (e.g. Claude) they've authorized. User-session authed (not admin).
  * Implementation loaded via the @product/mcp seam.
  */
+
+import { editionGateResponse } from '@/lib/editionGating/response';
 import { NextRequest, NextResponse } from 'next/server';
 import { isEnterpriseEdition } from '@/lib/features';
 import { getCurrentUser } from '@/lib/auth/session';
@@ -12,7 +14,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function GET(): Promise<NextResponse> {
-  if (!isEnterpriseEdition()) return NextResponse.json({ error: 'Enterprise feature' }, { status: 404 });
+  if (!isEnterpriseEdition()) return editionGateResponse('mcp');
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { listConnectedClients } = await import('@product/mcp/entry');
@@ -20,7 +22,7 @@ export async function GET(): Promise<NextResponse> {
 }
 
 export async function DELETE(req: NextRequest): Promise<NextResponse> {
-  if (!isEnterpriseEdition()) return NextResponse.json({ error: 'Enterprise feature' }, { status: 404 });
+  if (!isEnterpriseEdition()) return editionGateResponse('mcp');
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const grantId = req.nextUrl.searchParams.get('grantId') ?? undefined;

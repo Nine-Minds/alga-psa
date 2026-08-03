@@ -3,6 +3,8 @@
  * provider authorize URL and sets the signed, path-scoped state cookie that the
  * callback requires. Implementation loaded via the @product/mcp seam.
  */
+
+import { editionGateResponse } from '@/lib/editionGating/response';
 import { NextRequest, NextResponse } from 'next/server';
 import { isEnterpriseEdition } from '@/lib/features';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -24,7 +26,7 @@ async function resolveBaseUrl(req: NextRequest): Promise<string> {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  if (!isEnterpriseEdition()) return NextResponse.json({ error: 'Enterprise feature' }, { status: 404 });
+  if (!isEnterpriseEdition()) return editionGateResponse('mcp');
   const { authenticateMcpAdmin, buildConnectAuthUrl } = await import('@product/mcp/entry');
   const admin = await authenticateMcpAdmin(req);
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

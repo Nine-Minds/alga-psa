@@ -36,7 +36,10 @@ export function SettingsTab({ tabId, children }: SettingsTabProps): React.JSX.El
   // A tab can be off-limits for the current product (AlgaDesk allowlist) or edition
   // (EE-only governance tabs). The sidebar never links there, but a direct URL hit
   // should land back on the settings home rather than render an unavailable surface.
-  const notAvailable = !meta || (isAlgaDesk && !allowedTabIds.has(tabId)) || (meta.eeOnly && !isEEAvailable);
+  const notAvailable =
+    !meta ||
+    (isAlgaDesk && !allowedTabIds.has(tabId)) ||
+    (meta.eeOnly && !isEEAvailable && !meta.handlesEditionGateResponse);
 
   useEffect(() => {
     if (notAvailable) {

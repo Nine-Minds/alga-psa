@@ -2,6 +2,8 @@
  * Tenant Management API - Tenant add-ons - CE Stub
  */
 
+import { editionGateResponse } from '@/lib/editionGating/response';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -35,16 +37,10 @@ async function loadEeRoute(): Promise<EeRouteModule | null> {
 }
 
 function eeUnavailable(): Response {
-  return new Response(
-    JSON.stringify({
-      success: false,
-      error: 'Tenant management is only available in Enterprise Edition.',
-    }),
-    {
-      status: 501,
-      headers: { 'content-type': 'application/json' },
-    }
-  );
+  if (isEnterpriseEdition) {
+    throw new Error('The Enterprise route failed to load.');
+  }
+  return editionGateResponse('tenant-management');
 }
 
 export async function POST(request: Request, context: RouteContext): Promise<Response> {
