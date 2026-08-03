@@ -256,6 +256,56 @@ describe('SLA Service Integration Tests', () => {
       await tenantTable(db, tenantId, 'clients').where({ tenant: tenantId, client_id: clientId }).update({ sla_policy_id: null });
     });
 
+    it('does not run a timer for a ticket created in a closed status', async () => {
+      const ticketId = uuidv4();
+      const createdAt = new Date();
+
+      await insertTicket(db, {
+        tenant: tenantId,
+        ticketId,
+        ticketNumber: `SLA-${uuidv4().slice(0, 6)}`,
+        title: 'Created Closed Ticket',
+        clientId,
+        contactId,
+        statusId: statusClosedId,
+        priorityId: priorityHighId,
+        boardId,
+      });
+
+      await db.transaction(async (trx) => {
+        const result = await startSlaForTicket(
+          trx,
+          tenantId,
+          ticketId,
+          clientId,
+          boardId,
+          priorityHighId,
+          createdAt
+        );
+
+        expect(result.success).toBe(true);
+        expect(result.sla_policy_id).toBe(slaPolicyId);
+        expect(result.created_in_closed_status).toBe(true);
+        // No backend timer may be started for a ticket that arrives closed.
+        expect(result.backendActions).toBeUndefined();
+      });
+
+      const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      expect(ticket.sla_resolution_at).not.toBeNull();
+      expect(ticket.sla_resolution_met).toBe(true);
+      expect(ticket.sla_paused_at).toBeNull();
+
+      // The timer job only picks up unresolved, unpaused tickets, so this one
+      // can never be flagged as breached.
+      const timerCandidates = await tenantTable(db, tenantId, 'tickets')
+        .where({ tenant: tenantId })
+        .whereNotNull('sla_policy_id')
+        .whereNull('sla_resolution_at')
+        .whereNull('sla_paused_at')
+        .select('ticket_id');
+      expect(timerCandidates.map((t: { ticket_id: string }) => t.ticket_id)).not.toContain(ticketId);
+    });
+
     it('returns no SLA when no matching policy exists', async () => {
       // Create a new client without SLA policy
       const newClientId = await createClient(db, tenantId, 'No SLA Client');

@@ -69,6 +69,7 @@ let resumeSla: typeof import('@alga-psa/sla/services').resumeSla;
 let handleStatusChange: typeof import('@alga-psa/sla/services').handleStatusChange;
 let handleResponseStateChange: typeof import('@alga-psa/sla/services').handleResponseStateChange;
 let shouldSlaBePaused: typeof import('@alga-psa/sla/services').shouldSlaBePaused;
+let syncPauseState: typeof import('@alga-psa/sla/services').syncPauseState;
 let getPauseStats: typeof import('@alga-psa/sla/services').getPauseStats;
 
 const tenantTable = (dbOrTrx: Knex | Knex.Transaction, tenant: string, tableName: string) =>
@@ -108,6 +109,7 @@ describe('SLA Pause Service Integration Tests', () => {
       handleStatusChange,
       handleResponseStateChange,
       shouldSlaBePaused,
+      syncPauseState,
       getPauseStats,
     } = await import('@alga-psa/sla/services'));
 
@@ -400,6 +402,73 @@ describe('SLA Pause Service Integration Tests', () => {
       });
 
       // Verify ticket was updated
+      const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      expect(ticket.sla_paused_at).toBeNull();
+    });
+  });
+
+  // ==========================================================================
+  // Creation-Time Pause Tests
+  // ==========================================================================
+  describe('Creation-Time Pause', () => {
+    it('pauses SLA for a ticket created in a pause-configured status', async () => {
+      const ticketId = uuidv4();
+
+      await insertTicket(db, {
+        tenant: tenantId,
+        ticketId,
+        ticketNumber: `CREATE-PAUSE-${uuidv4().slice(0, 6)}`,
+        title: 'Created In Pending Status',
+        clientId,
+        contactId,
+        statusId: statusPendingId, // Configured to pause SLA
+        priorityId: priorityHighId,
+        boardId,
+      });
+
+      await db.transaction(async (trx) => {
+        // Mirrors the TICKET_CREATED subscriber: start, then sync pause state.
+        const startResult = await startSlaForTicket(trx, tenantId, ticketId, clientId, boardId, priorityHighId);
+        expect(startResult.sla_policy_id).toBe(slaPolicyId);
+        expect(startResult.created_in_closed_status).toBe(false);
+
+        const pauseResult = await syncPauseState(trx, tenantId, ticketId, internalUserId);
+
+        expect(pauseResult.success).toBe(true);
+        expect(pauseResult.is_now_paused).toBe(true);
+        expect(pauseResult.backendActions).toEqual([
+          { kind: 'pause', ticketId, reason: 'status_pause' },
+        ]);
+      });
+
+      const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
+      expect(ticket.sla_paused_at).not.toBeNull();
+    });
+
+    it('leaves SLA running for a ticket created in a normal status', async () => {
+      const ticketId = uuidv4();
+
+      await insertTicket(db, {
+        tenant: tenantId,
+        ticketId,
+        ticketNumber: `CREATE-RUN-${uuidv4().slice(0, 6)}`,
+        title: 'Created In Open Status',
+        clientId,
+        contactId,
+        statusId: statusOpenId,
+        priorityId: priorityHighId,
+        boardId,
+      });
+
+      await db.transaction(async (trx) => {
+        await startSlaForTicket(trx, tenantId, ticketId, clientId, boardId, priorityHighId);
+
+        const pauseResult = await syncPauseState(trx, tenantId, ticketId, internalUserId);
+
+        expect(pauseResult.success).toBe(true);
+        expect(pauseResult.is_now_paused).toBe(false);
+      });
+
       const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
       expect(ticket.sla_paused_at).toBeNull();
     });

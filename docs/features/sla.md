@@ -72,6 +72,12 @@ On resume:
 - Both response and resolution deadlines are shifted forward by the pause duration (only for unfulfilled milestones)
 - The ticket's `due_date` is kept in sync with the resolution deadline
 
+Both triggers are also evaluated at creation time, not only on later changes:
+
+- **Created in a pausing status** — On `TICKET_CREATED`, the subscriber runs `syncPauseState()` in the same transaction as `startSlaForTicket()`, so a ticket that is created directly in a pause-configured status (or already `awaiting_client`) is paused immediately and never burns SLA time before its first status change.
+
+- **Created in a closed status** — `startSlaForTicket()` reads the creation status and, when it is a closed status, records the policy and `sla_started_at` but immediately stamps `sla_resolution_at` at the creation time (with `sla_resolution_met = true` when a resolution target exists) and starts no backend timer. The ticket keeps its SLA data for reporting, while the timer job and the Temporal backend both skip it — so it can never breach. The `sla_started` audit entry carries `created_in_closed_status: true`, followed by a `resolution_recorded` entry with `reason: created_in_closed_status`.
+
 ### Notification System
 
 Notifications are threshold-based and configurable per policy:
