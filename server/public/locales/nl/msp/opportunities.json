@@ -133,6 +133,21 @@
       "won": "Deze periode gewonnen"
     },
     "ladder": "Bewijsladder",
+    "reports": {
+      "closing30": "Sluit binnen 30 dagen",
+      "emptyBody": "Open een deal en de pijplijntotalen verschijnen hier.",
+      "emptyTitle": "Nog niets te rapporteren",
+      "loading": "Pijplijnrapport laden",
+      "newMrrQuarter": "Nieuwe MRR dit kwartaal",
+      "openCount": "{{n}} open",
+      "openForecast": "Open de op verkoper gekalibreerde prognose",
+      "openPipeline": "Open pijplijn",
+      "plusOneTime": "+ {{amount}} eenmalig",
+      "unavailable": "Pijplijntotalen zijn tijdelijk niet beschikbaar.",
+      "weighted": "Gewogen prognose",
+      "weightedNote": "Basispercentages per fase",
+      "wonCount": "{{n}} gewonnen · {{quarter}}"
+    },
     "setStage": "Fase instellen op {{stage}}",
     "linkQuoteDialog": {
       "confirm": "Link citaat",
@@ -309,6 +324,7 @@
       "meeting": "Vergadering",
       "pipeline": "Pijpleiding",
       "queue": "Wachtrij",
+      "reports": "Rapporten",
       "suggestions": "Suggesties"
     },
     "timeline": {

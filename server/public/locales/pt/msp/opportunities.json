@@ -133,6 +133,21 @@
       "won": "Venceu este período"
     },
     "ladder": "Escada de evidências",
+    "reports": {
+      "closing30": "Fecha em 30 dias",
+      "emptyBody": "Abra um negócio e os totais do pipeline aparecerão aqui.",
+      "emptyTitle": "Ainda não há nada a relatar",
+      "loading": "Carregando relatório do pipeline",
+      "newMrrQuarter": "Novo MRR neste trimestre",
+      "openCount": "{{n}} abertas",
+      "openForecast": "Abrir a previsão calibrada por vendedor",
+      "openPipeline": "Pipeline aberto",
+      "plusOneTime": "+ {{amount}} único",
+      "unavailable": "Os totais do pipeline estão temporariamente indisponíveis.",
+      "weighted": "Previsão ponderada",
+      "weightedNote": "Taxas base por estágio",
+      "wonCount": "{{n}} ganhas · {{quarter}}"
+    },
     "setStage": "Definir fase como {{stage}}",
     "linkQuoteDialog": {
       "confirm": "Citação do link",
@@ -309,6 +324,7 @@
       "meeting": "Reunião",
       "pipeline": "Gasoduto",
       "queue": "Fila",
+      "reports": "Relatórios",
       "suggestions": "Sugestões"
     },
     "timeline": {

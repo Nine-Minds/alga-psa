@@ -17,6 +17,7 @@ export { OpportunityDetailView } from './detail/OpportunityDetailView';
 export { PipelineList } from './pipeline/PipelineList';
 export { OpportunitiesHub } from './OpportunitiesHub';
 export { ClientOpportunitiesTab } from './ClientOpportunitiesTab';
+export { OpportunityReportsView } from './reports/OpportunityReportsView';
 export { OpportunityDetailHost } from './detail/OpportunityDetailHost';
 export { CreateOpportunityDialog, type CreateOpportunityInput } from './dialogs/CreateOpportunityDialog';
 export { CompleteActionDialog } from './dialogs/CompleteActionDialog';

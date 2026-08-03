@@ -133,6 +133,21 @@
       "won": "Won this period"
     },
     "ladder": "Evidence ladder",
+    "reports": {
+      "closing30": "Closing in 30 days",
+      "emptyBody": "Open a deal and the pipeline totals show up here.",
+      "emptyTitle": "Nothing to report yet",
+      "loading": "Loading pipeline report",
+      "newMrrQuarter": "New MRR this quarter",
+      "openCount": "{{n}} open",
+      "openForecast": "Open the seller-calibrated forecast",
+      "openPipeline": "Open pipeline",
+      "plusOneTime": "+ {{amount}} one-time",
+      "unavailable": "Pipeline totals are temporarily unavailable.",
+      "weighted": "Weighted forecast",
+      "weightedNote": "Stage base rates",
+      "wonCount": "{{n}} won · {{quarter}}"
+    },
     "setStage": "Set stage to {{stage}}",
     "linkQuoteDialog": {
       "confirm": "Link quote",
@@ -309,6 +324,7 @@
       "meeting": "Meeting",
       "pipeline": "Pipeline",
       "queue": "Queue",
+      "reports": "Reports",
       "suggestions": "Suggestions"
     },
     "timeline": {
