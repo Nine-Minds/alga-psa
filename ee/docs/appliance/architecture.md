@@ -108,6 +108,8 @@ Plain Node ESM (`.mjs`), no build step. The pieces:
 | `server.mjs` | HTTP server on :8080. Routes: `/healthz`, `/setup` (UI), `/api/setup/config`, `/api/setup` (POST), `/api/status`. Serves the static status UI, validates input, and dispatches the setup workflow. |
 | `setup-engine.mjs` | The setup workflow (see §3). Resolves the release from the registry, renders runtime values, writes the initial-tenant Secret + release-selection ConfigMap, and applies the Flux source. |
 | `update-engine.mjs` | Channel **upgrades**: re-resolve the channel, update release selection, `flux reconcile`. |
+| `update-controller.mjs` / `update-ownership.mjs` | App-update admission and interruption recovery. A queued/running update is live only while its recorded PID and start time remain valid. |
+| `update-state.mjs` | Atomic install-state writes and bounded update history. |
 | `status-engine.mjs` | Cluster health: HelmReleases, pods, readiness tiers (platform / core / bootstrap / login). Backs `/api/status`. |
 | `console.mjs` | Console (tty1) setup banner + fallback flow; writes `/etc/issue` and `/etc/motd`. |
 | `host-agent.mjs` | The diagnostics socket daemon (host side of `alga-host-agent.service`). |
@@ -124,6 +126,15 @@ A small Next.js app. `app/setup/page.tsx` is the wizard (channel, app hostname,
 DNS, tenant + admin); `app/page.tsx` is the status view. It's built into static
 `dist/` and served by the control-plane pod (the Dockerfile copies it to
 `ALGA_APPLIANCE_STATUS_UI_DIR`).
+
+App updates run in a detached child so synchronous storage and Flux commands do
+not starve the control plane's health endpoint. Each attempt records an owner
+PID and start time in the durable host-path `install-state.json`. On control-plane
+startup, and again before accepting a new update, a dead, missing, malformed, or
+over-age owner is converted to a retry-safe `update-interrupted` result. Recovery
+never auto-resumes registry or rollout work: the Manage page explains the
+interruption and leaves the retry decision with the operator. A duplicate start
+is rejected only when the recorded owner is verified live.
 
 ### Flux / Helm layer (`ee/appliance/flux/`)
 GitOps definitions, published to the registry as the **config bundle**:

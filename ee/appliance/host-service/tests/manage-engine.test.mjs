@@ -193,7 +193,12 @@ test('collectManageStatus reports upgradeAvailable on digest mismatch', async ()
     runtime: { appHostname: 'http://10.0.0.5:3000', dnsMode: 'system', dnsServers: '' }
   }));
   const installStateFile = path.join(tmp, 'install-state.json');
-  fs.writeFileSync(installStateFile, JSON.stringify({ status: 'update-running', lastAction: 'updating' }));
+  const startedAt = new Date().toISOString();
+  fs.writeFileSync(installStateFile, JSON.stringify({
+    status: 'update-running',
+    lastAction: 'updating',
+    update: { owner: { pid: 42, startedAt } }
+  }));
 
   const kube = fakeKube({
     json: (args) => {
@@ -212,7 +217,8 @@ test('collectManageStatus reports upgradeAvailable on digest mismatch', async ()
     releaseSelectionFile,
     installStateFile,
     cpUpgradeStatusFile: path.join(tmp, 'cp-upgrade.json'),
-    resolveControlPlaneRef: async () => 'ghcr.io/x/cp@sha256:NEW'
+    resolveControlPlaneRef: async () => 'ghcr.io/x/cp@sha256:NEW',
+    updateOwnerIsPidAlive: () => true
   });
 
   assert.equal(status.app.channel, 'stable');
@@ -239,7 +245,13 @@ test('collectManageStatus maps queued and storage-phase statuses onto the update
   for (const [installStatus, expected] of cases) {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-manage-status-map-'));
     const installStateFile = path.join(tmp, 'install-state.json');
-    fs.writeFileSync(installStateFile, JSON.stringify({ status: installStatus, lastAction: 'x' }));
+    fs.writeFileSync(installStateFile, JSON.stringify({
+      status: installStatus,
+      lastAction: 'x',
+      ...(expected === 'running' ? {
+        update: { owner: { pid: 42, startedAt: new Date().toISOString() } }
+      } : {})
+    }));
     const releaseSelectionFile = path.join(tmp, 'release-selection.json');
     fs.writeFileSync(releaseSelectionFile, JSON.stringify({ selectedChannel: 'stable' }));
 
@@ -248,7 +260,8 @@ test('collectManageStatus maps queued and storage-phase statuses onto the update
       releaseSelectionFile,
       installStateFile,
       cpUpgradeStatusFile: path.join(tmp, 'cp-upgrade.json'),
-      resolveControlPlaneRef: async () => null
+      resolveControlPlaneRef: async () => null,
+      updateOwnerIsPidAlive: () => true
     });
 
     assert.equal(status.app.update.status, expected, `install-state ${installStatus}`);
@@ -366,6 +379,71 @@ test('collectManageStatus keeps a blocked app-update when the alga-core HelmRele
     resolveControlPlaneRef: async () => null
   });
   assert.equal(status.app.update.status, 'blocked');
+});
+
+test('collectManageStatus keeps an interrupted update blocked despite a Ready HelmRelease and exposes failure detail', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-manage-interrupted-'));
+  const releaseSelectionFile = path.join(tmp, 'release-selection.json');
+  fs.writeFileSync(releaseSelectionFile, JSON.stringify({ selectedChannel: 'stable' }));
+  const installStateFile = path.join(tmp, 'install-state.json');
+  fs.writeFileSync(installStateFile, JSON.stringify({
+    status: 'update-blocked',
+    lastAction: 'The previous app update was interrupted and reset. You can start it again.',
+    failure: {
+      code: 'update_interrupted',
+      category: 'update-interrupted',
+      suspectedCause: 'interrupted by control-plane restart',
+      suggestedNextStep: 'Start the app update again from the Manage page.',
+      retrySafe: true
+    },
+    update: { requestedChannel: 'stable', scope: 'application-only' }
+  }));
+  const kube = fakeKube({
+    json: (args) => args.includes('helmrelease alga-core')
+      ? { ok: true, value: { status: { conditions: [{ type: 'Ready', status: 'True' }] } } }
+      : { ok: true, value: {} }
+  });
+  const status = await collectManageStatus({
+    kube,
+    releaseSelectionFile,
+    installStateFile,
+    cpUpgradeStatusFile: path.join(tmp, 'cp.json'),
+    resolveControlPlaneRef: async () => null
+  });
+  assert.equal(status.app.update.status, 'blocked');
+  assert.equal(status.app.update.category, 'update-interrupted');
+  assert.equal(status.app.update.suspectedCause, 'interrupted by control-plane restart');
+  assert.equal(status.app.update.suggestedNextStep, 'Start the app update again from the Manage page.');
+  assert.equal(status.app.update.retrySafe, true);
+  assert.equal(status.app.update.requestedChannel, 'stable');
+});
+
+test('collectManageStatus treats a dead in-progress owner as interrupted', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-manage-dead-owner-'));
+  const releaseSelectionFile = path.join(tmp, 'release-selection.json');
+  fs.writeFileSync(releaseSelectionFile, JSON.stringify({ selectedChannel: 'stable' }));
+  const installStateFile = path.join(tmp, 'install-state.json');
+  fs.writeFileSync(installStateFile, JSON.stringify({
+    status: 'update-running',
+    lastAction: 'updating',
+    update: {
+      requestedChannel: 'stable',
+      scope: 'application-only',
+      owner: { pid: 42, startedAt: '2026-08-03T19:00:00.000Z' }
+    }
+  }));
+  const status = await collectManageStatus({
+    kube: fakeKube({ json: () => ({ ok: true, value: {} }) }),
+    releaseSelectionFile,
+    installStateFile,
+    cpUpgradeStatusFile: path.join(tmp, 'cp.json'),
+    resolveControlPlaneRef: async () => null,
+    updateOwnerNowMs: Date.parse('2026-08-03T20:00:00.000Z'),
+    updateOwnerIsPidAlive: () => false
+  });
+  assert.equal(status.app.update.status, 'blocked');
+  assert.equal(status.app.update.category, 'update-interrupted');
+  assert.equal(status.app.update.startedAt, '2026-08-03T19:00:00.000Z');
 });
 
 test('collectManageStatus: app.updateAvailable false (not a crash) when the registry is unreachable', async () => {

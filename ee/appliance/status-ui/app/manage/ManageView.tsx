@@ -16,7 +16,17 @@ type ManageStatus = {
     availableVersion?: string | null;
     pinnedReleaseDigest?: string | null;
     resolvedReleaseDigest?: string | null;
-    update: { status: "idle" | "running" | "complete" | "blocked"; message: string | null };
+    update: {
+      status: "idle" | "running" | "complete" | "blocked";
+      message: string | null;
+      code?: string | null;
+      category?: string | null;
+      suspectedCause?: string | null;
+      suggestedNextStep?: string | null;
+      retrySafe?: boolean | null;
+      startedAt?: string | null;
+      requestedChannel?: string | null;
+    };
   };
   controlPlane: {
     channel: string;
@@ -93,10 +103,10 @@ function UpdatesTab({
       setResult(
         updateStatus === "complete"
           ? "Update complete."
-          : `Update blocked: ${status.app.update.message || "unknown reason"}`,
+          : `Update blocked: ${status.app.update.suspectedCause || status.app.update.message || "No failure detail was reported."}`,
       );
     }
-  }, [busy, status.app.update.status, status.app.update.message]);
+  }, [busy, status.app.update.status, status.app.update.message, status.app.update.suspectedCause]);
 
   // Clean up on unmount.
   useEffect(() => () => stopPoll(), []);
@@ -117,6 +127,14 @@ function UpdatesTab({
       });
       if (response.status === 401) { window.location.reload(); return; }
       const data = await response.json().catch(() => ({}));
+      if (response.status === 409 && data.code === "update_in_progress") {
+        const since = data.startedAt ? ` since ${new Date(data.startedAt).toLocaleString()}` : "";
+        setResult(`An app update is already running${since}.`);
+        stopPoll();
+        try { await onRefresh(); } catch { /* keep polling through a transient refresh failure */ }
+        pollRef.current = setInterval(onRefresh, 3000);
+        return;
+      }
       if (!response.ok) throw new Error(data.error || "Failed to start update.");
       // Poll until the update status reaches a terminal state.
       pollRef.current = setInterval(onRefresh, 3000);
@@ -170,6 +188,12 @@ function UpdatesTab({
               {app.update.message ? (
                 <span className={styles.manageStatusMsg}>{app.update.message}</span>
               ) : null}
+              {app.update.suspectedCause && app.update.suspectedCause !== app.update.message ? (
+                <span className={styles.manageStatusMsg}>Cause: {app.update.suspectedCause}</span>
+              ) : null}
+              {app.update.suggestedNextStep ? (
+                <span className={styles.manageStatusMsg}>Next step: {app.update.suggestedNextStep}</span>
+              ) : null}
             </dd>
           </div>
         ) : null}
@@ -177,6 +201,11 @@ function UpdatesTab({
 
       {error ? <div className={styles.alert}>{error}</div> : null}
       {result ? <p className={styles.manageResult}>{result}</p> : null}
+      {app.update.category === "update-interrupted" ? (
+        <p className={styles.manageResult}>
+          The interrupted attempt was reset and is safe to retry.
+        </p>
+      ) : null}
 
       {!app.updateAvailable && !updateRunning && !updateBlocked ? (
         <p className={styles.muted}>No update is available on the {app.channel} channel.</p>
@@ -188,6 +217,7 @@ function UpdatesTab({
       {app.updateAvailable || updateRunning || updateBlocked ? (
         <div className={styles.toolbar}>
           <button
+            id="manage-run-app-update"
             type="button"
             className={styles.actionButton}
             disabled={busy || updateRunning}
@@ -205,7 +235,7 @@ function UpdatesTab({
               : "Run update"}
           </button>
           {confirm && !busy && !updateRunning ? (
-            <button type="button" onClick={() => setConfirm(false)}>
+            <button id="manage-cancel-app-update" type="button" onClick={() => setConfirm(false)}>
               Cancel
             </button>
           ) : null}
@@ -214,7 +244,8 @@ function UpdatesTab({
 
       {updateRunning ? (
         <p className={styles.helpText}>
-          Update is running. This page will reflect the result when it finishes.
+          Update is running{app.update.startedAt ? ` since ${new Date(app.update.startedAt).toLocaleString()}` : ""}.
+          {" "}This page will reflect the result when it finishes.
         </p>
       ) : null}
     </div>

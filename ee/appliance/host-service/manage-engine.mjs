@@ -7,6 +7,12 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+  DEFAULT_UPDATE_OWNER_MAX_AGE_MS,
+  classifyUpdateOwner,
+  interruptedUpdateState,
+  isPidAlive
+} from './update-ownership.mjs';
 import http from 'node:http';
 import { appUrlFromInput, hostFromAppUrl, setYamlScalar } from './setup-engine.mjs';
 import { licenseSeedFromRedeem } from './install-code.mjs';
@@ -406,6 +412,9 @@ export async function collectManageStatus(deps) {
     resolveReleaseManifest,
     appHelmReleaseNamespace = 'alga-system',
     appHelmReleaseName = 'alga-core',
+    updateOwnerNowMs = Date.now(),
+    updateOwnerIsPidAlive = isPidAlive,
+    updateOwnerMaxAgeMs = DEFAULT_UPDATE_OWNER_MAX_AGE_MS,
     licenseNamespace = 'msp',
     licenseSecretName = 'appliance-license-seed'
   } = deps;
@@ -475,11 +484,25 @@ export async function collectManageStatus(deps) {
   // App-update status, reconciled against live reality. install-state persists the
   // *last* update attempt's outcome, which goes stale: a block that has since
   // converged (or a transient that recovered) must not keep showing as a current
-  // error. If the alga-core HelmRelease is actually Ready, the app is healthy and
-  // there is no error to show — surface no failure rather than a stale one.
-  let appUpdateStatus = mapUpdateStatus(installState.status);
-  let appUpdateMessage = installState.lastAction || null;
-  if (appUpdateStatus === 'blocked' && (await isHelmReleaseReady(kube, appHelmReleaseNamespace, appHelmReleaseName)) === true) {
+  // error. If the alga-core HelmRelease is actually Ready, rollout/convergence
+  // failures are stale and can be hidden. An interrupted transaction is different:
+  // readiness does not prove that the attempted update reached a terminal state.
+  const ownerClassification = classifyUpdateOwner(installState, {
+    nowMs: updateOwnerNowMs,
+    isPidAlive: updateOwnerIsPidAlive,
+    maxAgeMs: updateOwnerMaxAgeMs
+  });
+  const effectiveInstallState = ['dead', 'aged', 'invalid'].includes(ownerClassification.status)
+    ? interruptedUpdateState(installState, ownerClassification, new Date(updateOwnerNowMs).toISOString())
+    : installState;
+  let appUpdateStatus = mapUpdateStatus(effectiveInstallState.status);
+  let appUpdateMessage = effectiveInstallState.lastAction || null;
+  const isInterrupted = effectiveInstallState.failure?.category === 'update-interrupted';
+  if (
+    appUpdateStatus === 'blocked'
+    && !isInterrupted
+    && (await isHelmReleaseReady(kube, appHelmReleaseNamespace, appHelmReleaseName)) === true
+  ) {
     appUpdateStatus = 'idle';
     appUpdateMessage = null;
   }
@@ -492,7 +515,17 @@ export async function collectManageStatus(deps) {
       availableVersion: updateAvailable ? resolvedReleaseVersion : null,
       pinnedReleaseDigest: selection.manifestDigest || null,
       resolvedReleaseDigest,
-      update: { status: appUpdateStatus, message: appUpdateMessage }
+      update: {
+        status: appUpdateStatus,
+        message: appUpdateMessage,
+        code: effectiveInstallState.failure?.code || null,
+        category: effectiveInstallState.failure?.category || null,
+        suspectedCause: effectiveInstallState.failure?.suspectedCause || null,
+        suggestedNextStep: effectiveInstallState.failure?.suggestedNextStep || null,
+        retrySafe: effectiveInstallState.failure?.retrySafe ?? null,
+        startedAt: effectiveInstallState.update?.owner?.startedAt || effectiveInstallState.update?.startedAt || null,
+        requestedChannel: effectiveInstallState.update?.requestedChannel || null
+      }
     },
     controlPlane: {
       channel,

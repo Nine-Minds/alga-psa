@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { runAppChannelUpdate } from '../update-engine.mjs';
+import { applyReleaseSelectionConfiguration, installStorage } from '../setup-engine.mjs';
 
 const enginePath = path.join(import.meta.dirname, '..', 'update-engine.mjs');
 const serverPath = path.join(import.meta.dirname, '..', 'server.mjs');
@@ -78,6 +79,7 @@ test('runAppChannelUpdate applies channel update and persists history without OS
   const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
   assert.equal(state.status, 'update-complete');
   assert.equal(state.update.scope, 'application-only');
+  assert.equal(state.update.owner, undefined);
 
   const releaseSelection = JSON.parse(fs.readFileSync(releaseSelectionFile, 'utf8'));
   assert.equal(releaseSelection.selectedChannel, 'nightly');
@@ -200,7 +202,40 @@ test('server runs app-channel updates in a detached child, never in-process', ()
   assert.doesNotMatch(server, /runAppChannelUpdate/);
   assert.match(server, /function queueUpdateWorkflow/);
   assert.match(server, /update-engine\.mjs/);
-  assert.match(server, /queueUpdateWorkflow\(channel\)/);
+  assert.match(server, /spawnUpdate: queueUpdateWorkflow/);
+});
+
+test('update owner survives storage and release-configuration phases', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-update-owner-phases-'));
+  const stateFile = path.join(tmp, 'install-state.json');
+  const releaseSelectionFile = path.join(tmp, 'release-selection.json');
+  const update = {
+    requestedChannel: 'stable',
+    scope: 'application-only',
+    owner: { pid: 321, startedAt: '2026-08-03T20:00:00.000Z' }
+  };
+
+  const storage = installStorage({ stateFile, storageInstallCommand: 'true', update });
+  assert.equal(storage.ok, true);
+  let state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  assert.equal(state.status, 'update-running');
+  assert.deepEqual(state.update.owner, update.owner);
+
+  const config = applyReleaseSelectionConfiguration({
+    channel: 'stable',
+    appHostname: 'psa.example.com',
+    dnsMode: 'system',
+    dnsServers: ''
+  }, {
+    channel: 'stable',
+    releaseVersion: '1.3.12',
+    repository: 'nine-minds/alga-appliance-release',
+    manifestDigest: 'sha256:abc'
+  }, { stateFile, releaseSelectionFile, update });
+  assert.equal(config.ok, true);
+  state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  assert.equal(state.status, 'update-running');
+  assert.deepEqual(state.update.owner, update.owner);
 });
 
 test('update-engine CLI reports a blocked terminal state when the update fails cleanly', () => {
@@ -251,6 +286,8 @@ test('update-engine CLI writes a blocked terminal state even when the engine thr
   const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
   assert.equal(state.status, 'update-blocked');
   assert.match(state.failure.suspectedCause, /Invalid channel/);
+  assert.equal(state.failure.retrySafe, true);
+  assert.equal(state.update.owner, undefined);
 });
 
 test('app update stops before release reconciliation when storage repair fails', async () => {
@@ -269,6 +306,9 @@ test('app update stops before release reconciliation when storage repair fails',
     const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
     assert.equal(state.status, 'update-blocked');
     assert.equal(state.phase, 'storage');
+    assert.equal(state.failure.suspectedCause, 'Local-path storage reconciliation failed.');
+    assert.equal(state.failure.suggestedNextStep, 'storage unavailable');
+    assert.equal(state.update.owner, undefined);
   } finally {
     process.env.PATH = originalPath;
   }
