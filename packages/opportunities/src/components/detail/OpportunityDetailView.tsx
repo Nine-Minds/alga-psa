@@ -9,6 +9,7 @@ import { useClientDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import type { IOpportunityDetail, OpportunityConfidence, OpportunityStage } from '@alga-psa/types';
+import { oneTimeCents } from '../../lib/pipelineReporting';
 import { EvidenceLadder } from '../EvidenceLadder';
 import { WhySentenceText } from '../WhySentenceText';
 
@@ -143,6 +144,32 @@ export function OpportunityDetailView({
         ) : null}
       </header>
 
+      {detail.status === 'won' ? (
+        <section
+          id="opportunity-detail-what-next"
+          className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--badge-success-bg,240_253_244))] p-4"
+        >
+          <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
+            {t('opportunities.detail.whatNext', 'What happens next')}
+          </h2>
+          <ul className="list-disc space-y-1 pl-5 text-[13px] text-[rgb(var(--color-text-700))]">
+            <li>
+              {detail.converted_contract_id
+                ? t('opportunities.detail.whatNextAgreementDone', 'The accepted quote is now a draft agreement — review and activate it.')
+                : t('opportunities.detail.whatNextConvertQuote', 'Convert the accepted quote to an agreement from the quote screen so billing can start.')}
+            </li>
+            <li>
+              {detail.converted_project_id
+                ? t('opportunities.detail.whatNextProjectDone', 'The onboarding project exists — assign it and set the start date.')
+                : t('opportunities.detail.whatNextStartProject', 'Create the onboarding project so delivery has somewhere to work.')}
+            </li>
+            <li>
+              {t('opportunities.detail.whatNextHandoff', 'Hand the client to service delivery: the owner, contacts and commitments on this page are the brief.')}
+            </li>
+          </ul>
+        </section>
+      ) : null}
+
       {/* Evidence ladder */}
       <section className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
         <div className="mb-3 flex items-center justify-between">
@@ -240,13 +267,21 @@ export function OpportunityDetailView({
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-[rgb(var(--color-text-500))]">{t('opportunities.detail.oneTime', 'One-time')}</dt>
+              <dt className="text-[rgb(var(--color-text-500))]">
+                {t('opportunities.detail.oneTimeServices', 'One-time services')}
+              </dt>
               <dd className="font-medium tabular-nums text-[rgb(var(--color-text-900))]">{fmt(detail.nrr_cents)}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-[rgb(var(--color-text-500))]">{t('opportunities.detail.hardware', 'Hardware')}</dt>
               <dd className="font-medium tabular-nums text-[rgb(var(--color-text-900))]">
                 {fmt(detail.hardware_cents)}
+              </dd>
+            </div>
+            <div className="flex justify-between border-t border-[rgb(var(--color-border-100))] pt-1.5">
+              <dt className="text-[rgb(var(--color-text-500))]">{t('opportunities.detail.oneTime', 'One-time')}</dt>
+              <dd className="font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
+                {fmt(oneTimeCents(detail))}
               </dd>
             </div>
           </dl>

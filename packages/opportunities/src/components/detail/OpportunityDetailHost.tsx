@@ -383,12 +383,19 @@ export function OpportunityDetailHost({
             {detail.client_lifecycle_status === 'prospect'
               ? t(
                   'opportunities.winDialog.bodyProspect',
-                  '{{client}} becomes an active client. Convert the accepted quote to an agreement from the quote screen afterward.',
+                  '{{client}} becomes an active client.',
                   { client: detail.client_name }
                 )
+              : t('opportunities.winDialog.body', 'The deal closes as won.')}
+            {' '}
+            {acceptedLinkedQuotes.length > 0
+              ? t(
+                  'opportunities.winDialog.nextConvert',
+                  'Convert the accepted quote to an agreement below, or from the quote screen afterward.'
+                )
               : t(
-                  'opportunities.winDialog.body',
-                  'The deal closes as won. Convert the accepted quote to an agreement from the quote screen afterward.'
+                  'opportunities.winDialog.nextSendQuote',
+                  'No accepted quote is linked yet. Send the quote and get it approved, then convert it to an agreement — marking this won now is fine.'
                 )}
           </p>
           <div className="space-y-3 rounded-md border border-[rgb(var(--color-border-200))] p-3">

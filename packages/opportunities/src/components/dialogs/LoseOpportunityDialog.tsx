@@ -76,7 +76,7 @@ export function LoseOpportunityDialog({
           options={REASONS.map((r) => ({ value: r, label: t(`opportunities.lossReason.${r}`, REASON_DEFAULTS[r]) }))}
           value={reason}
           onValueChange={(v: string) => setReason(v as OpportunityLossReason)}
-          placeholder={t('opportunities.loseDialog.reasonPlaceholder', 'Why did it die?')}
+          placeholder={t('opportunities.loseDialog.reasonPlaceholder', "Why didn't it move forward?")}
         />
         {reason === 'chose_competitor' ? (
           <Input
