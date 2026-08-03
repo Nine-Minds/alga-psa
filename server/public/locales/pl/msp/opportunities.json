@@ -133,6 +133,21 @@
       "won": "Wygrał ten okres"
     },
     "ladder": "Drabina dowodów",
+    "reports": {
+      "closing30": "Zamknięcie w 30 dni",
+      "emptyBody": "Otwórz transakcję, a sumy lejka pojawią się tutaj.",
+      "emptyTitle": "Nie ma jeszcze nic do raportowania",
+      "loading": "Ładowanie raportu lejka",
+      "newMrrQuarter": "Nowy MRR w tym kwartale",
+      "openCount": "{{n}} otwartych",
+      "openForecast": "Otwórz prognozę skalibrowaną dla sprzedawcy",
+      "openPipeline": "Otwarty lejek",
+      "plusOneTime": "+ {{amount}} jednorazowo",
+      "unavailable": "Sumy lejka są tymczasowo niedostępne.",
+      "weighted": "Prognoza ważona",
+      "weightedNote": "Bazowe wskaźniki etapów",
+      "wonCount": "{{n}} wygranych · {{quarter}}"
+    },
     "setStage": "Ustaw etap na {{stage}}",
     "linkQuoteDialog": {
       "confirm": "Cytat linku",
@@ -315,6 +330,7 @@
       "meeting": "Spotkanie",
       "pipeline": "Rurociąg",
       "queue": "Kolejka",
+      "reports": "Raporty",
       "suggestions": "Sugestie"
     },
     "timeline": {

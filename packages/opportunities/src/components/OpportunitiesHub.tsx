@@ -33,6 +33,7 @@ import { OpportunityBoard } from './board/OpportunityBoard';
 import { CreateOpportunityDialog, type CreateOpportunityInput } from './dialogs/CreateOpportunityDialog';
 import { CompleteActionDialog } from './dialogs/CompleteActionDialog';
 import { LoseOpportunityDialog } from './dialogs/LoseOpportunityDialog';
+import { OpportunityReportsView } from './reports/OpportunityReportsView';
 import { WhitespaceGridView } from './suggestions/WhitespaceGridView';
 import { TmOnePagerDialog } from './suggestions/TmOnePagerDialog';
 
@@ -215,7 +216,7 @@ export function OpportunitiesHub({
 
   useEffect(() => {
     const requestedTab = searchParams.get('tab') ?? 'queue';
-    const validTabs = new Set(['queue', 'pipeline', 'board', 'suggestions', ...eeTabs.map((item) => item.id)]);
+    const validTabs = new Set(['queue', 'pipeline', 'board', 'suggestions', 'reports', ...eeTabs.map((item) => item.id)]);
     setTab(validTabs.has(requestedTab) ? requestedTab : 'queue');
   }, [eeTabs, searchParams]);
 
@@ -325,6 +326,17 @@ export function OpportunitiesHub({
             />
           </div>
         </div>
+      ),
+    },
+    {
+      id: 'reports',
+      label: t('opportunities.tabs.reports', 'Reports'),
+      content: (
+        <OpportunityReportsView
+          onOpenForecast={
+            eeTabs.some((item) => item.id === 'forecast') ? () => handleTabChange('forecast') : undefined
+          }
+        />
       ),
     },
     ...eeTabs,

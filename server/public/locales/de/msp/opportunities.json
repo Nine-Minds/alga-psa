@@ -133,6 +133,21 @@
       "won": "Habe diese Periode gewonnen"
     },
     "ladder": "Beweisleiter",
+    "reports": {
+      "closing30": "Abschluss in 30 Tagen",
+      "emptyBody": "Legen Sie einen Deal an, und die Pipeline-Summen erscheinen hier.",
+      "emptyTitle": "Noch nichts zu berichten",
+      "loading": "Pipeline-Bericht wird geladen",
+      "newMrrQuarter": "Neue MRR in diesem Quartal",
+      "openCount": "{{n}} offen",
+      "openForecast": "Verkäuferkalibrierte Prognose öffnen",
+      "openPipeline": "Offene Pipeline",
+      "plusOneTime": "+ {{amount}} einmalig",
+      "unavailable": "Pipeline-Summen sind vorübergehend nicht verfügbar.",
+      "weighted": "Gewichtete Prognose",
+      "weightedNote": "Basisraten je Phase",
+      "wonCount": "{{n}} gewonnen · {{quarter}}"
+    },
     "setStage": "Phase auf {{stage}} setzen",
     "linkQuoteDialog": {
       "confirm": "Link-Zitat",
@@ -309,6 +324,7 @@
       "meeting": "Treffen",
       "pipeline": "Pipeline",
       "queue": "Warteschlange",
+      "reports": "Berichte",
       "suggestions": "Vorschläge"
     },
     "timeline": {

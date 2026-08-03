@@ -133,6 +133,21 @@
       "won": "11111"
     },
     "ladder": "11111",
+    "reports": {
+      "closing30": "11111",
+      "emptyBody": "11111",
+      "emptyTitle": "11111",
+      "loading": "11111",
+      "newMrrQuarter": "11111",
+      "openCount": "11111 {{n}} 11111",
+      "openForecast": "11111",
+      "openPipeline": "11111",
+      "plusOneTime": "11111 {{amount}} 11111",
+      "unavailable": "11111",
+      "weighted": "11111",
+      "weightedNote": "11111",
+      "wonCount": "11111 {{n}} 11111 {{quarter}} 11111"
+    },
     "setStage": "11111 {{stage}} 11111",
     "linkQuoteDialog": {
       "confirm": "11111",
@@ -309,6 +324,7 @@
       "meeting": "11111",
       "pipeline": "11111",
       "queue": "11111",
+      "reports": "11111",
       "suggestions": "11111"
     },
     "timeline": {

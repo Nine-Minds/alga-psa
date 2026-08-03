@@ -133,6 +133,21 @@
       "won": "Ganó este período"
     },
     "ladder": "Escalera de evidencia",
+    "reports": {
+      "closing30": "Cierra en 30 días",
+      "emptyBody": "Abra un trato y los totales de la cartera aparecerán aquí.",
+      "emptyTitle": "Aún no hay nada que informar",
+      "loading": "Cargando informe de cartera",
+      "newMrrQuarter": "Nuevo MRR este trimestre",
+      "openCount": "{{n}} abiertas",
+      "openForecast": "Abrir la previsión calibrada por vendedor",
+      "openPipeline": "Cartera abierta",
+      "plusOneTime": "+ {{amount}} único",
+      "unavailable": "Los totales de la cartera no están disponibles temporalmente.",
+      "weighted": "Previsión ponderada",
+      "weightedNote": "Tasas base por etapa",
+      "wonCount": "{{n}} ganadas · {{quarter}}"
+    },
     "setStage": "Establecer la etapa en {{stage}}",
     "linkQuoteDialog": {
       "confirm": "cotización de enlace",
@@ -309,6 +324,7 @@
       "meeting": "reunión",
       "pipeline": "Tubería",
       "queue": "cola",
+      "reports": "Informes",
       "suggestions": "Sugerencias"
     },
     "timeline": {
