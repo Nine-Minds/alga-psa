@@ -157,6 +157,10 @@
       "title": "Snel aanmaken",
       "heading": "Aanmaken",
       "options": {
+        "opportunity": {
+          "description": "Leg een deal vast voordat je hem vergeet",
+          "label": "Kans"
+        },
         "ticket": {
           "label": "Ticket",
           "description": "Maak een nieuw supportticket aan"
@@ -252,6 +256,7 @@
   "quickCreate": {
     "success": {
       "asset": "Asset succesvol aangemaakt",
+      "opportunity": "Kans \"{{title}}\" succesvol aangemaakt",
       "ticket": "Ticket #{{number}} succesvol aangemaakt",
       "client": "Klant \"{{name}}\" succesvol aangemaakt",
       "contact": "{{name}} succesvol toegevoegd",
@@ -265,6 +270,7 @@
     },
     "dialogTitles": {
       "contact": "Nieuw contact toevoegen",
+      "opportunity": "Nieuwe kans",
       "project": "Nieuw project toevoegen",
       "service": "Nieuwe dienst toevoegen"
     }
