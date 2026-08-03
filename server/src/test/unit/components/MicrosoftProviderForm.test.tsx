@@ -257,6 +257,7 @@ describe('MicrosoftProviderForm', () => {
       expect(screen.getByText('Your Microsoft app is not ready yet.')).toBeInTheDocument();
     });
     expect(screen.getAllByRole('button', { name: /Open Providers Settings/i })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /Authorize Access/i })).toBeDisabled();
   });
 
   it('should call onCancel when cancel button is clicked', async () => {

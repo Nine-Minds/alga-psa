@@ -9,6 +9,8 @@ const hoisted = vi.hoisted(() => {
     client_id: string;
     tenant_id: string;
     client_secret_ref: string;
+    email_admin_consent_required?: boolean;
+    email_admin_consent_granted_at?: string | Date | null;
     capabilities?: string[] | string | null;
     is_default: boolean;
     is_archived: boolean;
@@ -196,6 +198,49 @@ describe('resolveMicrosoftConsumerProfileConfig', () => {
     expect(result.clientId).not.toBe(process.env.MICROSOFT_CLIENT_ID);
     expect(result.clientSecret).not.toBe(process.env.MICROSOFT_CLIENT_SECRET);
     expect(result.microsoftTenantId).not.toBe(process.env.MICROSOFT_TENANT_ID);
+  });
+
+  it('keeps a bound tenant-owned Email profile unavailable until administrator consent is recorded', async () => {
+    hoisted.state.microsoftProfiles.push({
+      tenant: 'tenant-pending-consent',
+      profile_id: 'profile-pending-consent',
+      display_name: 'Pending Consent Email Profile',
+      display_name_normalized: 'pending consent email profile',
+      client_id: 'pending-consent-client-id',
+      tenant_id: 'pending-consent-tenant-id',
+      client_secret_ref: 'pending-consent-secret-ref',
+      email_admin_consent_required: true,
+      email_admin_consent_granted_at: null,
+      capabilities: ['email'],
+      is_default: false,
+      is_archived: false,
+      archived_at: null,
+      created_by: null,
+      updated_by: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    hoisted.state.microsoftConsumerBindings.push({
+      tenant: 'tenant-pending-consent',
+      consumer_type: 'email',
+      profile_id: 'profile-pending-consent',
+      created_by: null,
+      updated_by: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    hoisted.state.tenantSecrets.set(
+      'tenant-pending-consent:pending-consent-secret-ref',
+      'pending-consent-client-secret'
+    );
+
+    await expect(resolveMicrosoftConsumerProfileConfig('tenant-pending-consent', 'email')).resolves.toEqual({
+      status: 'invalid_profile',
+      tenantId: 'tenant-pending-consent',
+      consumerType: 'email',
+      profileId: 'profile-pending-consent',
+      message: 'Selected Email Microsoft profile is awaiting tenant administrator consent',
+    });
   });
 
   it('T401: falls back to hosted app-level Microsoft email credentials when no Email binding exists', async () => {
