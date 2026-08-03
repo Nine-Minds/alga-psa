@@ -1530,14 +1530,14 @@
           "working": "Working…"
         },
         "automated": {
-          "description": "Sign in as a Microsoft administrator. Alga creates the app, service principal, secret, Email profile, and binding.",
+          "description": "Sign in as a Microsoft administrator. Alga creates the app, service principal, secret, and a pending Email profile. The Email binding is created after administrator consent.",
           "title": "Create an app in this tenant"
         },
         "callbackUri": "Mailbox callback URI",
         "complete": {
           "consentDone": "Administrator consent is confirmed. Return to Inbound Email and authorize the mailbox.",
           "consentPending": "Next, a Microsoft tenant administrator must grant consent. Mailbox authorization happens afterward in Inbound Email.",
-          "profileCreated": "Microsoft Email profile created and bound"
+          "profileCreated": "Microsoft Email profile created"
         },
         "consent": {
           "confirmedDescription": "The Microsoft app is ready for mailbox authorization.",
@@ -1553,6 +1553,7 @@
           "nameRequired": "Enter a display name for the Microsoft app.",
           "platform": "Could not configure the platform Microsoft app.",
           "popupBlocked": "Allow popups for this site, then try again.",
+          "popupClosed": "The Microsoft window was closed before setup finished. Try again or choose another setup option.",
           "tenantRequired": "Enter your Microsoft tenant ID or verified domain."
         },
         "fields": {
@@ -1566,7 +1567,7 @@
           "title": "Enter an existing app manually"
         },
         "platform": {
-          "description": "Create an Email-bound profile from the server-managed multi-tenant app, then grant tenant administrator consent.",
+          "description": "Create a pending Email profile from the server-managed multi-tenant app. It is bound after tenant administrator consent.",
           "title": "Use the Alga platform app"
         },
         "title": "Set up Microsoft Email",
@@ -1649,7 +1650,7 @@
             "label": "Teams"
           }
         },
-        "descriptionCe": "Manage your company's Microsoft app registration for staff sign-in.",
+        "descriptionCe": "Manage your company's Microsoft app registrations for staff sign-in and Outlook email.",
         "descriptionEe": "Manage your company's Microsoft app registrations for staff sign-in, Outlook email, calendar sync, and Teams.",
         "disconnectDialog": {
           "cancel": "Keep providers connected",
@@ -1746,7 +1747,8 @@
           "archived": "Archived apps cannot be selected for Microsoft services.",
           "clientIdMissing": "Add a client ID.",
           "clientSecretMissing": "Add a client secret.",
-          "tenantIdMissing": "Add a tenant ID."
+          "tenantIdMissing": "Add a tenant ID.",
+          "adminConsentPending": "Grant Microsoft tenant administrator consent to finish Email setup."
         },
         "statusBadges": {
           "archived": "Archived",

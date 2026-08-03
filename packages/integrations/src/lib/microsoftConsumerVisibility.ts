@@ -1,6 +1,6 @@
 import type { MicrosoftProfileConsumer } from '../actions/integrations/microsoftShared';
 
-const CE_VISIBLE_MICROSOFT_CONSUMERS: MicrosoftProfileConsumer[] = ['msp_sso'];
+const CE_VISIBLE_MICROSOFT_CONSUMERS: MicrosoftProfileConsumer[] = ['msp_sso', 'email'];
 const EE_VISIBLE_MICROSOFT_CONSUMERS: MicrosoftProfileConsumer[] = ['msp_sso', 'email', 'calendar', 'teams'];
 
 export function isMicrosoftConsumerEnterpriseEdition(): boolean {

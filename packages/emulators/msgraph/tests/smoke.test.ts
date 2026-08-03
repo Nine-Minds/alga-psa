@@ -110,6 +110,76 @@ describe('msgraph emulator', { shuffle: false }, () => {
     refreshToken = refreshedTokens.refresh_token;
   });
 
+  it('supports guided Entra application creation and administrator consent', async () => {
+    const redirectUri = 'http://localhost/email-setup/callback';
+    const authorize = new URL(`${base}/common/oauth2/v2.0/authorize`);
+    authorize.search = new URLSearchParams({
+      client_id: 'premise-app',
+      redirect_uri: redirectUri,
+      state: 'setup-state',
+      nonce: 'setup-nonce',
+      scope: 'https://graph.microsoft.com/Application.ReadWrite.All openid profile email',
+    }).toString();
+    const authorization = await fetch(authorize, { redirect: 'manual' });
+    const code = new URL(authorization.headers.get('location')!).searchParams.get('code')!;
+    const tokenResponse = await fetch(
+      `${base}/common/oauth2/v2.0/token`,
+      form({
+        client_id: 'premise-app',
+        client_secret: 'premise-secret',
+        code,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      })
+    );
+    const tokens = await tokenResponse.json();
+    expect(tokens.access_token.split('.')).toHaveLength(3);
+    expect(tokens.id_token.split('.')).toHaveLength(3);
+
+    const headers = {
+      authorization: `Bearer ${tokens.access_token}`,
+      'content-type': 'application/json',
+    };
+    const applicationResponse = await fetch(`${base}/v1.0/applications`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        displayName: 'Alga Email',
+        signInAudience: 'AzureADMultipleOrgs',
+        web: { redirectUris: ['http://localhost/api/auth/microsoft/callback'] },
+        requiredResourceAccess: [],
+      }),
+    });
+    expect(applicationResponse.status).toBe(201);
+    const application = await applicationResponse.json();
+
+    const servicePrincipalResponse = await fetch(`${base}/v1.0/servicePrincipals`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ appId: application.appId }),
+    });
+    expect(servicePrincipalResponse.status).toBe(201);
+
+    const passwordResponse = await fetch(`${base}/v1.0/applications/${application.id}/addPassword`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ passwordCredential: { displayName: 'Alga email client secret' } }),
+    });
+    expect(passwordResponse.status).toBe(200);
+    expect((await passwordResponse.json()).secretText).toBeTruthy();
+
+    const consent = new URL(`${base}/11111111-2222-4333-8444-555555555555/v2.0/adminconsent`);
+    consent.search = new URLSearchParams({
+      client_id: application.appId,
+      redirect_uri: redirectUri,
+      state: 'consent-state',
+    }).toString();
+    const consentResponse = await fetch(consent, { redirect: 'manual' });
+    const consentCallback = new URL(consentResponse.headers.get('location')!);
+    expect(consentCallback.searchParams.get('admin_consent')).toBe('true');
+    expect(consentCallback.searchParams.get('state')).toBe('consent-state');
+  });
+
   it('lists mail, validates subscriptions, and pushes notifications (smoke parity)', async () => {
     const headers = { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' };
 

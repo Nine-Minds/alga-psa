@@ -37,10 +37,10 @@ describe('microsoftConsumerVisibility', () => {
     }
   });
 
-  it('returns only MSP SSO in community edition', () => {
-    expect(getVisibleMicrosoftConsumerTypes(false)).toEqual(['msp_sso']);
+  it('keeps Microsoft Email available in community edition', () => {
+    expect(getVisibleMicrosoftConsumerTypes(false)).toEqual(['msp_sso', 'email']);
     expect(isVisibleMicrosoftConsumerType('msp_sso', false)).toBe(true);
-    expect(isVisibleMicrosoftConsumerType('email', false)).toBe(false);
+    expect(isVisibleMicrosoftConsumerType('email', false)).toBe(true);
     expect(isVisibleMicrosoftConsumerType('calendar', false)).toBe(false);
     expect(isVisibleMicrosoftConsumerType('teams', false)).toBe(false);
   });

@@ -45,7 +45,18 @@ export function MicrosoftEmailSetupDialog({
   const [displayName, setDisplayName] = React.useState('Alga PSA Microsoft Email');
   const [completion, setCompletion] = React.useState<MicrosoftEmailSetupCompletionResult | null>(null);
   const [adminConsentGranted, setAdminConsentGranted] = React.useState(false);
+  const popupRef = React.useRef<Window | null>(null);
+  const popupPollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const popupCompletedRef = React.useRef(false);
   const adminConsentUrl = completion?.adminConsentUrl;
+
+  const clearPopupMonitor = React.useCallback(() => {
+    if (popupPollRef.current) {
+      clearInterval(popupPollRef.current);
+      popupPollRef.current = null;
+    }
+    popupRef.current = null;
+  }, []);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -68,6 +79,8 @@ export function MicrosoftEmailSetupDialog({
       if (event.origin !== window.location.origin || event.data?.type !== 'microsoft-email-setup-callback') {
         return;
       }
+      popupCompletedRef.current = true;
+      clearPopupMonitor();
       setWorking(false);
       if (!event.data.success) {
         setError(event.data.error || t('integrations.microsoft.emailSetup.errors.generic', { defaultValue: 'Microsoft Email setup did not complete.' }));
@@ -79,6 +92,7 @@ export function MicrosoftEmailSetupDialog({
           title: t('integrations.microsoft.emailSetup.consent.confirmedTitle', { defaultValue: 'Administrator consent confirmed' }),
           description: t('integrations.microsoft.emailSetup.consent.confirmedDescription', { defaultValue: 'The Microsoft app is ready for mailbox authorization.' }),
         });
+        void onCompleted();
         return;
       }
 
@@ -90,7 +104,9 @@ export function MicrosoftEmailSetupDialog({
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [isOpen, onCompleted, t, toast]);
+  }, [clearPopupMonitor, isOpen, onCompleted, t, toast]);
+
+  React.useEffect(() => () => clearPopupMonitor(), [clearPopupMonitor]);
 
   const copyValue = React.useCallback(async (value: string, label: string) => {
     await navigator.clipboard.writeText(value);
@@ -100,14 +116,27 @@ export function MicrosoftEmailSetupDialog({
   }, [t, toast]);
 
   const openPopup = React.useCallback((url: string) => {
+    clearPopupMonitor();
+    popupCompletedRef.current = false;
     const popup = window.open(url, 'microsoft-email-setup', 'width=720,height=760,noopener=false');
     if (!popup) {
       setError(t('integrations.microsoft.emailSetup.errors.popupBlocked', { defaultValue: 'Allow popups for this site, then try again.' }));
-      return false;
+      return null;
     }
+    popupRef.current = popup;
+    popupPollRef.current = setInterval(() => {
+      if (!popup.closed) return;
+      clearPopupMonitor();
+      if (!popupCompletedRef.current) {
+        setWorking(false);
+        setError(t('integrations.microsoft.emailSetup.errors.popupClosed', {
+          defaultValue: 'The Microsoft window was closed before setup finished. Try again or choose another setup option.',
+        }));
+      }
+    }, 500);
     popup.focus();
-    return true;
-  }, [t]);
+    return popup;
+  }, [clearPopupMonitor, t]);
 
   const configurePlatformApplication = React.useCallback(async () => {
     if (!tenantId.trim()) {
@@ -147,7 +176,10 @@ export function MicrosoftEmailSetupDialog({
   }, [displayName, openPopup, t]);
 
   const startAdminConsent = React.useCallback(() => {
-    if (adminConsentUrl) openPopup(adminConsentUrl);
+    if (!adminConsentUrl) return;
+    setWorking(true);
+    setError(null);
+    if (!openPopup(adminConsentUrl)) setWorking(false);
   }, [adminConsentUrl, openPopup]);
 
   const close = React.useCallback(() => {
@@ -164,12 +196,12 @@ export function MicrosoftEmailSetupDialog({
   ) : step === 'complete' ? (
     <div className="flex flex-wrap justify-end gap-2">
       {adminConsentUrl && !adminConsentGranted && (
-        <Button id="microsoft-email-admin-consent-button" type="button" onClick={startAdminConsent}>
+        <Button id="microsoft-email-admin-consent-button" type="button" onClick={startAdminConsent} disabled={working}>
           <ExternalLink className="mr-2 h-4 w-4" />
           {t('integrations.microsoft.emailSetup.actions.grantConsent', { defaultValue: 'Grant administrator consent' })}
         </Button>
       )}
-      <Button id="microsoft-email-setup-finish-button" type="button" variant="outline" onClick={close}>
+      <Button id="microsoft-email-setup-finish-button" type="button" variant="outline" onClick={close} disabled={working}>
         {t('integrations.microsoft.emailSetup.actions.finish', { defaultValue: 'Finish' })}
       </Button>
     </div>

@@ -1,4 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const originalGraphBaseUrl = process.env.MICROSOFT_GRAPH_BASE_URL;
+const originalLoginBaseUrl = process.env.MICROSOFT_LOGIN_BASE_URL;
 
 const hoisted = vi.hoisted(() => ({
   user: { user_id: 'user-1', user_type: 'internal' } as any,
@@ -38,9 +41,9 @@ vi.mock('./microsoftActions', () => ({
     baseUrl: 'https://psa.example.com',
     mailboxRedirectUri: 'https://psa.example.com/api/auth/microsoft/callback',
     setupRedirectUri: 'https://psa.example.com/api/auth/microsoft/email-setup/callback',
-    returnTo: 'https://psa.example.com/msp/settings?category=providers',
+    returnTo: 'https://psa.example.com/msp/settings/integrations?category=providers',
   })),
-  createAndBindMicrosoftEmailProfileInternal: (...args: unknown[]) => hoisted.persistProfile(...args),
+  createMicrosoftEmailProfilePendingConsentInternal: (...args: unknown[]) => hoisted.persistProfile(...args),
 }));
 
 vi.mock('axios', () => ({
@@ -80,6 +83,13 @@ describe('Microsoft email setup actions', () => {
     hoisted.axiosRequest.mockReset();
   });
 
+  afterEach(() => {
+    if (originalGraphBaseUrl === undefined) delete process.env.MICROSOFT_GRAPH_BASE_URL;
+    else process.env.MICROSOFT_GRAPH_BASE_URL = originalGraphBaseUrl;
+    if (originalLoginBaseUrl === undefined) delete process.env.MICROSOFT_LOGIN_BASE_URL;
+    else process.env.MICROSOFT_LOGIN_BASE_URL = originalLoginBaseUrl;
+  });
+
   it('guards setup metadata with system settings update permission', async () => {
     hoisted.permission = false;
     await expect(getMicrosoftEmailSetupOptions()).resolves.toEqual({ success: false, error: 'Forbidden' });
@@ -115,6 +125,8 @@ describe('Microsoft email setup actions', () => {
   });
 
   it('creates Graph objects, persists the generated secret server-side, and sanitizes the result', async () => {
+    process.env.MICROSOFT_GRAPH_BASE_URL = 'http://graph-emulator:4010/v1.0/';
+    process.env.MICROSOFT_LOGIN_BASE_URL = 'http://graph-emulator:4010/';
     const tenantId = '11111111-2222-4333-8444-555555555555';
     hoisted.consumeState.mockResolvedValue({
       verifier: 'pkce-verifier',
@@ -144,7 +156,7 @@ describe('Microsoft email setup actions', () => {
         purpose: 'create_application',
         algaTenant: 'alga-tenant-1',
         userId: 'user-1',
-        returnTo: 'https://psa.example.com/msp/settings?category=providers',
+        returnTo: 'https://psa.example.com/msp/settings/integrations?category=providers',
         nonce: 'state-nonce',
         oauthNonce: 'oauth-nonce',
         displayName: 'Alga Email',
@@ -153,10 +165,13 @@ describe('Microsoft email setup actions', () => {
       },
     });
 
+    expect(hoisted.axiosPost.mock.calls[0][0]).toBe(
+      'http://graph-emulator:4010/common/oauth2/v2.0/token'
+    );
     expect(hoisted.axiosRequest.mock.calls.map(([request]) => request.url)).toEqual([
-      'https://graph.microsoft.com/v1.0/applications',
-      'https://graph.microsoft.com/v1.0/servicePrincipals',
-      'https://graph.microsoft.com/v1.0/applications/application-object-id/addPassword',
+      'http://graph-emulator:4010/v1.0/applications',
+      'http://graph-emulator:4010/v1.0/servicePrincipals',
+      'http://graph-emulator:4010/v1.0/applications/application-object-id/addPassword',
     ]);
     expect(hoisted.persistProfile).toHaveBeenCalledWith(
       hoisted.user,
@@ -195,7 +210,7 @@ describe('Microsoft email setup actions', () => {
       purpose: 'create_application' as const,
       algaTenant: 'alga-tenant-1',
       userId: 'user-1',
-      returnTo: 'https://psa.example.com/msp/settings?category=providers',
+      returnTo: 'https://psa.example.com/msp/settings/integrations?category=providers',
       nonce: 'state-nonce',
       oauthNonce: 'oauth-nonce',
       displayName: 'Alga Email',

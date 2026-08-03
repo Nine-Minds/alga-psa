@@ -38,6 +38,7 @@ export interface MicrosoftEmailSetupStatePayload {
   oauthNonce?: string;
   displayName?: string;
   clientId?: string;
+  profileId?: string;
   issuedAt: number;
   expiresAt: number;
 }
@@ -59,6 +60,7 @@ export function buildMicrosoftEmailAdminConsentUrl(input: {
   clientId: string;
   redirectUri: string;
   state: string;
+  loginBaseUrl?: string;
 }): string {
   const tenant = validateMicrosoftTenantIdentifier(input.tenant);
   const clientId = input.clientId.trim();
@@ -73,7 +75,8 @@ export function buildMicrosoftEmailAdminConsentUrl(input: {
     state: input.state,
   });
 
-  return `https://login.microsoftonline.com/${encodeURIComponent(tenant)}/v2.0/adminconsent?${params.toString()}`;
+  const loginBaseUrl = (input.loginBaseUrl || 'https://login.microsoftonline.com').replace(/\/+$/, '');
+  return `${loginBaseUrl}/${encodeURIComponent(tenant)}/v2.0/adminconsent?${params.toString()}`;
 }
 
 export function buildMicrosoftEmailApplicationManifest(input: {
@@ -116,6 +119,7 @@ export function createMicrosoftEmailSetupState(input: {
   secret: string;
   displayName?: string;
   clientId?: string;
+  profileId?: string;
   includeOauthNonce?: boolean;
   ttlSeconds?: number;
 }): { token: string; payload: MicrosoftEmailSetupStatePayload } {
@@ -133,6 +137,7 @@ export function createMicrosoftEmailSetupState(input: {
     ...(input.includeOauthNonce ? { oauthNonce: randomBytes(24).toString('hex') } : {}),
     ...(input.displayName ? { displayName: input.displayName } : {}),
     ...(input.clientId ? { clientId: input.clientId } : {}),
+    ...(input.profileId ? { profileId: input.profileId } : {}),
     issuedAt,
     expiresAt: issuedAt + (input.ttlSeconds ?? MICROSOFT_EMAIL_SETUP_STATE_TTL_SECONDS),
   };
@@ -177,6 +182,7 @@ export function validateMicrosoftEmailSetupState(input: {
     const now = input.now ?? Math.floor(Date.now() / 1000);
     if (payload.issuedAt > now + 60 || payload.expiresAt <= now) return null;
     if (payload.purpose === 'create_application' && !payload.oauthNonce) return null;
+    if (payload.purpose === 'admin_consent' && (!payload.clientId || !payload.profileId)) return null;
 
     return payload as MicrosoftEmailSetupStatePayload;
   } catch {

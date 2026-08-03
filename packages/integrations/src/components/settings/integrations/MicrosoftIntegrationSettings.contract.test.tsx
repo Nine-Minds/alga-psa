@@ -446,7 +446,41 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     expect(await screen.findByRole('dialog', { name: 'Create Microsoft app registration' })).toBeInTheDocument();
   });
 
-  it('renders CE copy and bindings only for MSP SSO', async () => {
+  it('recovers the automated setup controls when the Microsoft popup is closed', async () => {
+    const user = userEvent.setup();
+    const popup = { closed: false, focus: vi.fn(), close: vi.fn() };
+    vi.stubGlobal('open', vi.fn(() => popup));
+    getMicrosoftEmailSetupOptionsMock.mockResolvedValue({
+      success: true,
+      callbackUri: 'https://psa.example.com/api/auth/microsoft/callback',
+      setupCallbackUri: 'https://psa.example.com/api/auth/microsoft/email-setup/callback',
+      platformApplication: { available: false },
+      automatedCreationAvailable: true,
+    });
+    createMicrosoftEmailApplicationMock.mockResolvedValue({
+      success: true,
+      authUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+    });
+
+    render(<MicrosoftIntegrationSettings />);
+    await user.click(await screen.findByRole('button', { name: 'Set up Microsoft Email' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Set up Microsoft Email' });
+    await user.click(within(dialog).getByRole('button', { name: /Create an app in this tenant/ }));
+    await user.click(within(dialog).getByRole('button', { name: 'Sign in to Microsoft' }));
+    expect(within(dialog).getByRole('button', { name: 'Working…' })).toBeDisabled();
+
+    popup.closed = true;
+
+    expect(await within(dialog).findByText(
+      'The Microsoft window was closed before setup finished. Try again or choose another setup option.',
+      {},
+      { timeout: 2_000 }
+    )).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Back' })).toBeEnabled();
+    expect(within(dialog).getByRole('button', { name: 'Sign in to Microsoft' })).toBeEnabled();
+  });
+
+  it('keeps guided Microsoft Email setup and binding reachable in CE', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'community';
     useFeatureFlagMock.mockReturnValue({
       enabled: false,
@@ -458,14 +492,16 @@ describe('MicrosoftIntegrationSettings contracts', () => {
       buildStatus({
         redirectUris: {
           sso: 'https://psa.example.com/api/auth/callback/azure-ad',
+          email: 'https://psa.example.com/api/auth/microsoft/callback',
         },
         scopes: {
           sso: ['openid', 'profile', 'email'],
+          email: ['Mail.Read', 'Mail.Read.Shared', 'offline_access'],
         },
         profiles: [
           {
             ...buildStatus().profiles[0],
-            consumers: ['MSP SSO'],
+            consumers: ['MSP SSO', 'Email'],
           },
         ],
       })
@@ -480,6 +516,13 @@ describe('MicrosoftIntegrationSettings contracts', () => {
           profileDisplayName: 'Primary Profile',
           isArchived: false,
         },
+        {
+          consumerType: 'email',
+          consumerLabel: 'Email',
+          profileId: 'profile-1',
+          profileDisplayName: 'Primary Profile',
+          isArchived: false,
+        },
       ]),
     });
 
@@ -489,15 +532,15 @@ describe('MicrosoftIntegrationSettings contracts', () => {
       expect(document.getElementById('microsoft-profile-profile-1')).not.toBeNull();
     });
     expect(
-      screen.getByText("Manage your company's Microsoft app registration for staff sign-in.")
+      screen.getByText("Manage your company's Microsoft app registrations for staff sign-in and Outlook email.")
     ).toBeInTheDocument();
     expect(screen.getByTestId('microsoft-binding-select-msp_sso')).toBeInTheDocument();
-    expect(screen.queryByText('Inbound email redirect URI')).not.toBeInTheDocument();
+    expect(screen.getByTestId('microsoft-binding-select-email')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Set up Microsoft Email' })).toBeInTheDocument();
     expect(screen.queryByText('Calendar sync redirect URI')).not.toBeInTheDocument();
     expect(screen.queryByText('Teams scopes')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Disconnect Microsoft providers' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Open Teams Setup' })).not.toBeInTheDocument();
-    expect(screen.queryByTestId('microsoft-binding-select-email')).not.toBeInTheDocument();
     expect(screen.queryByTestId('microsoft-binding-select-calendar')).not.toBeInTheDocument();
     expect(screen.queryByTestId('microsoft-binding-select-teams')).not.toBeInTheDocument();
   });

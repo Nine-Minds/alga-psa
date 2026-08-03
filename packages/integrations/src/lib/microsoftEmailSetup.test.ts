@@ -55,7 +55,7 @@ describe('Microsoft email setup builders', () => {
       purpose: 'create_application',
       algaTenant: 'alga-tenant',
       userId: 'user-1',
-      returnTo: 'https://psa.example.com/msp/settings?category=providers',
+      returnTo: 'https://psa.example.com/msp/settings/integrations?category=providers',
       displayName: 'Alga Email',
       includeOauthNonce: true,
       secret: 'test-signing-secret',

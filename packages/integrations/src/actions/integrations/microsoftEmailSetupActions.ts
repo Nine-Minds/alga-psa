@@ -5,6 +5,12 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
+  getMicrosoftAuthorizeUrl,
+  getMicrosoftGraphBaseUrl,
+  getMicrosoftLoginBaseUrl,
+  getMicrosoftTokenUrl,
+} from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import {
   buildMicrosoftEmailAdminConsentUrl,
   buildMicrosoftEmailApplicationManifest,
   createMicrosoftEmailSetupState,
@@ -19,11 +25,9 @@ import {
   storeMicrosoftEmailSetupState,
 } from '../../utils/microsoftEmailSetupStateStore';
 import {
-  createAndBindMicrosoftEmailProfileInternal,
+  createMicrosoftEmailProfilePendingConsentInternal,
   getMicrosoftEmailSetupMetadataInternal,
 } from './microsoftActions';
-
-const GRAPH_BASE_URL = 'https://graph.microsoft.com/v1.0';
 
 interface PlatformMicrosoftCredentials {
   clientId: string;
@@ -134,7 +138,7 @@ function buildBootstrapAuthorizationUrl(input: {
     code_challenge_method: 'S256',
     prompt: 'select_account',
   });
-  return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params.toString()}`;
+  return `${getMicrosoftAuthorizeUrl('common')}?${params.toString()}`;
 }
 
 function getGraphErrorMessage(error: unknown, operation: string): string {
@@ -158,7 +162,7 @@ async function graphRequest<T>(input: {
 }): Promise<T> {
   const response = await axios.request<T>({
     method: input.method,
-    url: `${GRAPH_BASE_URL}${input.path}`,
+    url: `${getMicrosoftGraphBaseUrl()}${input.path}`,
     headers: {
       Authorization: `Bearer ${input.accessToken}`,
       Accept: 'application/json',
@@ -235,6 +239,7 @@ function createAdminConsentState(input: {
   userId: string;
   returnTo: string;
   clientId: string;
+  profileId: string;
   secret: string;
 }) {
   return createMicrosoftEmailSetupState({
@@ -243,6 +248,7 @@ function createAdminConsentState(input: {
     userId: input.userId,
     returnTo: input.returnTo,
     clientId: input.clientId,
+    profileId: input.profileId,
     secret: input.secret,
   });
 }
@@ -272,7 +278,7 @@ export const getMicrosoftEmailSetupOptions = withAuth(async (
 export const getMicrosoftEmailAdminConsentUrl = withAuth(async (
   user,
   { tenant },
-  tenantHint: string
+  input: { tenantHint: string; profileId: string }
 ): Promise<{ success: boolean; error?: string; url?: string }> => {
   if (!(await canManageMicrosoftSettings(user))) return { success: false, error: 'Forbidden' };
   try {
@@ -283,12 +289,13 @@ export const getMicrosoftEmailAdminConsentUrl = withAuth(async (
     ]);
     if (!credentials) return { success: false, error: 'The Alga platform Microsoft app is not configured.' };
     if (!secret) return { success: false, error: 'OAuth state signing is not configured on this server.' };
-    const microsoftTenant = validateMicrosoftTenantIdentifier(tenantHint);
+    const microsoftTenant = validateMicrosoftTenantIdentifier(input.tenantHint);
     const setupState = createAdminConsentState({
       algaTenant: tenant,
       userId: (user as any).user_id,
       returnTo: metadata.returnTo,
       clientId: credentials.clientId,
+      profileId: input.profileId,
       secret,
     });
     return {
@@ -298,6 +305,7 @@ export const getMicrosoftEmailAdminConsentUrl = withAuth(async (
         clientId: credentials.clientId,
         redirectUri: metadata.setupRedirectUri,
         state: setupState.token,
+        loginBaseUrl: getMicrosoftLoginBaseUrl(),
       }),
     };
   } catch (error) {
@@ -320,7 +328,7 @@ export const configureMicrosoftEmailPlatformApplication = withAuth(async (
     if (!credentials) return { success: false, error: 'The Alga platform Microsoft app is not configured.' };
     if (!secret) return { success: false, error: 'OAuth state signing is not configured on this server.' };
     const microsoftTenant = validateMicrosoftTenantIdentifier(input.tenantId);
-    const profile = await createAndBindMicrosoftEmailProfileInternal(user, tenant, {
+    const profile = await createMicrosoftEmailProfilePendingConsentInternal(user, tenant, {
       displayName: input.displayName?.trim() || 'Alga platform Microsoft Email',
       clientId: credentials.clientId,
       clientSecret: credentials.clientSecret,
@@ -333,6 +341,7 @@ export const configureMicrosoftEmailPlatformApplication = withAuth(async (
       userId: (user as any).user_id,
       returnTo: metadata.returnTo,
       clientId: credentials.clientId,
+      profileId: profile.profileId!,
       secret,
     });
     return {
@@ -346,6 +355,7 @@ export const configureMicrosoftEmailPlatformApplication = withAuth(async (
         clientId: credentials.clientId,
         redirectUri: metadata.setupRedirectUri,
         state: setupState.token,
+        loginBaseUrl: getMicrosoftLoginBaseUrl(),
       }),
     };
   } catch (error) {
@@ -448,7 +458,7 @@ export async function completeMicrosoftEmailApplicationCreation(input: {
     const tokenResponse = await axios.post<{
       access_token?: string;
       id_token?: string;
-    }>('https://login.microsoftonline.com/common/oauth2/v2.0/token', tokenParams.toString(), {
+    }>(getMicrosoftTokenUrl('common'), tokenParams.toString(), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       timeout: 20_000,
     });
@@ -490,21 +500,7 @@ export async function completeMicrosoftEmailApplicationCreation(input: {
     });
     if (!password.secretText) throw new Error('Microsoft did not return the generated client secret');
 
-    const consentState = createAdminConsentState({
-      algaTenant: input.state.algaTenant,
-      userId: input.state.userId,
-      returnTo: input.state.returnTo,
-      clientId: application.appId,
-      secret,
-    });
-    const adminConsentUrl = buildMicrosoftEmailAdminConsentUrl({
-      tenant: tenantId,
-      clientId: application.appId,
-      redirectUri: metadata.setupRedirectUri,
-      state: consentState.token,
-    });
-
-    const profile = await createAndBindMicrosoftEmailProfileInternal(
+    const profile = await createMicrosoftEmailProfilePendingConsentInternal(
       input.user,
       input.state.algaTenant,
       {
@@ -517,6 +513,21 @@ export async function completeMicrosoftEmailApplicationCreation(input: {
     if (!profile.success) {
       throw new Error(profile.error || 'Failed to store the new Microsoft profile');
     }
+    const consentState = createAdminConsentState({
+      algaTenant: input.state.algaTenant,
+      userId: input.state.userId,
+      returnTo: input.state.returnTo,
+      clientId: application.appId,
+      profileId: profile.profileId!,
+      secret,
+    });
+    const adminConsentUrl = buildMicrosoftEmailAdminConsentUrl({
+      tenant: tenantId,
+      clientId: application.appId,
+      redirectUri: metadata.setupRedirectUri,
+      state: consentState.token,
+      loginBaseUrl: getMicrosoftLoginBaseUrl(),
+    });
     return {
       success: true,
       profileId: profile.profileId,

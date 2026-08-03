@@ -4,6 +4,7 @@ import {
   completeMicrosoftEmailApplicationCreation,
   getMicrosoftEmailSetupSigningSecret,
 } from '@alga-psa/integrations/actions/integrations/microsoftEmailSetupActions';
+import { confirmMicrosoftEmailAdminConsentInternal } from '@alga-psa/integrations/actions/integrations/microsoftActions';
 import { validateMicrosoftEmailSetupState } from '@alga-psa/integrations/lib/microsoftEmailSetup';
 import { consumeMicrosoftEmailSetupState } from '@alga-psa/integrations/utils/microsoftEmailSetupStateStore';
 
@@ -58,7 +59,7 @@ function respondToSetupWindow(input: {
 
 function genericFailure(error: string): NextResponse {
   return respondToSetupWindow({
-    returnTo: `${process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}/msp/settings?category=providers`,
+    returnTo: `${process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}/msp/settings/integrations?category=providers`,
     payload: { success: false, error },
   });
 }
@@ -104,11 +105,23 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (state.purpose === 'admin_consent') {
     const granted = request.nextUrl.searchParams.get('admin_consent')?.toLowerCase() === 'true';
     const microsoftTenant = request.nextUrl.searchParams.get('tenant') || undefined;
+    if (!granted) {
+      return respondToSetupWindow({
+        returnTo: state.returnTo,
+        payload: { success: false, error: 'Microsoft did not confirm tenant administrator consent.' },
+      });
+    }
+
+    const persisted = await confirmMicrosoftEmailAdminConsentInternal(user, state.algaTenant, {
+      profileId: state.profileId!,
+      clientId: state.clientId!,
+      microsoftTenantId: microsoftTenant,
+    });
     return respondToSetupWindow({
       returnTo: state.returnTo,
-      payload: granted
-        ? { success: true, stage: 'admin_consent', tenantId: microsoftTenant, clientId: state.clientId }
-        : { success: false, error: 'Microsoft did not confirm tenant administrator consent.' },
+      payload: persisted.success
+        ? { success: true, stage: 'admin_consent', tenantId: microsoftTenant, clientId: state.clientId, profileId: state.profileId }
+        : { success: false, error: persisted.error || 'Failed to record Microsoft administrator consent.' },
     });
   }
 
@@ -124,6 +137,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const result = await completeMicrosoftEmailApplicationCreation({ user, state, code });
   return respondToSetupWindow({
     returnTo: state.returnTo,
-    payload: result,
+    payload: { ...result },
   });
 }
