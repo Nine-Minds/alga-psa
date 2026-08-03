@@ -34,6 +34,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
+      STORAGE_LOCAL_BASE_PATH: ${STORAGE_LOCAL_BASE_PATH:-/data/files}
       EMAIL_ENABLE: ${EMAIL_ENABLE:-false}
       EMAIL_FROM: ${EMAIL_FROM:-noreply@example.com}
       EMAIL_PORT: ${EMAIL_PORT:-587}
