@@ -165,8 +165,10 @@
     },
     "loseDialog": {
       "lostTo": "11111",
+      "missing": "11111 11111 11111 11111",
       "notes": "11111",
-      "notesPlaceholder": "11111",
+      "notesPlaceholder": "11111 11111 11111 11111 11111",
+      "reason": "11111",
       "reasonPlaceholder": "11111",
       "submit": "11111",
       "title": "11111"

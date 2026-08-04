@@ -165,8 +165,10 @@
     },
     "loseDialog": {
       "lostTo": "Lost to",
+      "missing": "Pick a reason to enable Mark lost",
       "notes": "Notes",
-      "notesPlaceholder": "Anything future-you should know",
+      "notesPlaceholder": "What should the team know if this comes back?",
+      "reason": "Reason",
       "reasonPlaceholder": "Why didn't it move forward?",
       "submit": "Mark lost",
       "title": "Mark lost"

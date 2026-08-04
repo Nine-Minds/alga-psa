@@ -165,8 +165,10 @@
     },
     "loseDialog": {
       "lostTo": "Verloren aan",
+      "missing": "Kies een reden om ‘Markeer als verloren’ te activeren",
       "notes": "Opmerkingen",
-      "notesPlaceholder": "Alles wat in de toekomst ligt, moet je weten",
+      "notesPlaceholder": "Wat moet het team weten als dit terugkomt?",
+      "reason": "Reden",
       "reasonPlaceholder": "Waarom ging het niet door?",
       "submit": "Mark heeft verloren",
       "title": "Mark heeft verloren"

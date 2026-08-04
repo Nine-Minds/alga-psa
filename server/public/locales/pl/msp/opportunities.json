@@ -165,8 +165,10 @@
     },
     "loseDialog": {
       "lostTo": "Przegrałem",
+      "missing": "Wybierz powód, aby włączyć „Oznacz jako przegraną”",
       "notes": "Notatki",
-      "notesPlaceholder": "Jakakolwiek przyszłość – powinieneś wiedzieć",
+      "notesPlaceholder": "Co zespół powinien wiedzieć, jeśli temat wróci?",
+      "reason": "Powód",
       "reasonPlaceholder": "Dlaczego nie poszło dalej?",
       "submit": "Marek przegrał",
       "title": "Marek przegrał"

@@ -165,8 +165,10 @@
     },
     "loseDialog": {
       "lostTo": "Perdu pour",
+      "missing": "Choisissez un motif pour activer « Marquer comme perdue »",
       "notes": "Remarques",
-      "notesPlaceholder": "Tout ce qui est futur, tu devrais le savoir",
+      "notesPlaceholder": "Que doit savoir l’équipe si l’affaire revient ?",
+      "reason": "Motif",
       "reasonPlaceholder": "Pourquoi n'a-t-elle pas avancé ?",
       "submit": "Marc a perdu",
       "title": "Marc a perdu"
