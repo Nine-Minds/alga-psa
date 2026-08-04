@@ -3,6 +3,7 @@
 import React from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import type { IQueueFoundTotal } from '@alga-psa/types';
 
 /**
  * The queue header: addresses the user by name and carries the stakes —
@@ -12,21 +13,16 @@ export function QueueGreeting({
   firstName,
   actionCount,
   quietCount,
-  foundMrrCents,
-  foundNrrCents,
-  currencyCode,
+  foundTotals,
 }: {
   firstName: string;
   actionCount: number;
   quietCount: number;
-  foundMrrCents: number;
-  foundNrrCents: number;
-  currencyCode: string;
+  /** One entry per currency — found money is never summed across currencies. */
+  foundTotals: IQueueFoundTotal[];
 }) {
   const { t } = useTranslation('msp/opportunities');
   const needsYou = actionCount + quietCount;
-  const foundMrr = formatCurrencyFromMinorUnits(foundMrrCents, undefined, currencyCode);
-  const foundNrr = formatCurrencyFromMinorUnits(foundNrrCents, undefined, currencyCode);
   const hour = new Date().getHours();
   const greeting = hour < 12
     ? t('opportunities.queue.greetingMorning', 'Good morning, {{name}}.', { name: firstName })
@@ -34,20 +30,26 @@ export function QueueGreeting({
       ? t('opportunities.queue.greetingAfternoon', 'Good afternoon, {{name}}.', { name: firstName })
       : t('opportunities.queue.greetingEvening', 'Good evening, {{name}}.', { name: firstName });
 
-  let stakes: string | null = null;
-  if (foundMrrCents > 0) {
-    stakes = t(
-      'opportunities.queue.stakesMrr',
-      '{{amount}}/mo is sitting in your own data, nothing typed in.',
-      { amount: foundMrr }
-    );
-  } else if (foundNrrCents > 0) {
-    stakes = t(
-      'opportunities.queue.stakesNrr',
-      '{{amount}} of project work is sitting in your own data.',
-      { amount: foundNrr }
-    );
-  }
+  const stakes = foundTotals
+    .map((total) => {
+      if (total.mrr_cents > 0) {
+        return t(
+          'opportunities.queue.stakesMrr',
+          '{{amount}}/mo is sitting in your own data, nothing typed in.',
+          { amount: formatCurrencyFromMinorUnits(total.mrr_cents, undefined, total.currency_code) }
+        );
+      }
+      if (total.nrr_cents > 0) {
+        return t(
+          'opportunities.queue.stakesNrr',
+          '{{amount}} of project work is sitting in your own data.',
+          { amount: formatCurrencyFromMinorUnits(total.nrr_cents, undefined, total.currency_code) }
+        );
+      }
+      return null;
+    })
+    .filter((line): line is string => line != null)
+    .join(' ');
 
   return (
     <header id="opportunities-queue-greeting" className="mb-7">

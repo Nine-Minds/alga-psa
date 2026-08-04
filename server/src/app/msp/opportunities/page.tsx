@@ -51,8 +51,7 @@ export default async function OpportunitiesPage() {
     queue = {
       user_first_name: firstName,
       date: new Date().toISOString(),
-      found_mrr_cents: 0,
-      found_nrr_cents: 0,
+      found_totals: [],
       currency_code: 'USD',
       do_today: [],
       going_quiet: [],

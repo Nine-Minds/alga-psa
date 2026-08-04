@@ -74,9 +74,7 @@ export function WorkQueue({
         firstName={queue.user_first_name}
         actionCount={queue.do_today.length}
         quietCount={queue.going_quiet.length}
-        foundMrrCents={queue.found_mrr_cents}
-        foundNrrCents={queue.found_nrr_cents}
-        currencyCode={queue.currency_code}
+        foundTotals={queue.found_totals}
       />
 
       {actionItems.length > 0 ? (

@@ -401,11 +401,17 @@ export interface IQueueLesson {
   action_href: string;
 }
 
+export interface IQueueFoundTotal {
+  currency_code: string;
+  mrr_cents: number;
+  nrr_cents: number;
+}
+
 export interface IWorkQueue {
   user_first_name: string;
   date: ISO8601String;
-  found_mrr_cents: number;
-  found_nrr_cents: number;
+  /** Found money per currency: dollars and pounds are never added together. */
+  found_totals: IQueueFoundTotal[];
   currency_code: string;
   do_today: IQueueActionItem[];
   going_quiet: IQueueActionItem[];

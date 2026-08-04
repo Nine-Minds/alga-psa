@@ -1,5 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill';
-import type { IQueueActionItem, IWorkQueue } from '@alga-psa/types';
+import type { IQueueActionItem, IQueueFoundTotal, IWorkQueue } from '@alga-psa/types';
 import { composeWhy } from './whyComposer';
 
 export interface QueueOpportunityRow {
@@ -124,4 +124,22 @@ export function bucketQueueActionItems(input: {
     });
 
   return { do_today: doToday, going_quiet: goingQuiet };
+}
+
+/**
+ * Found money, one row per currency. Nothing in the queue may add pounds to
+ * dollars: a headline total under an arbitrary code is a lie about the money.
+ */
+export function sumFoundByCurrency(
+  items: Array<{ currency_code: string; mrr_cents: number; nrr_cents: number }>,
+): IQueueFoundTotal[] {
+  const byCurrency = new Map<string, IQueueFoundTotal>();
+  for (const item of items) {
+    const total = byCurrency.get(item.currency_code)
+      ?? { currency_code: item.currency_code, mrr_cents: 0, nrr_cents: 0 };
+    total.mrr_cents += item.mrr_cents;
+    total.nrr_cents += item.nrr_cents;
+    byCurrency.set(item.currency_code, total);
+  }
+  return [...byCurrency.values()].sort((a, b) => b.mrr_cents - a.mrr_cents || b.nrr_cents - a.nrr_cents);
 }
