@@ -113,7 +113,7 @@ export function OpportunityMeetingMode() {
         <p className="mt-0.5 text-[13px] leading-relaxed text-[rgb(var(--color-text-500))]">
           {t(
             'opportunities.meeting.intro',
-            'For running the weekly pipeline meeting: it deals out every open opportunity one at a time, quietest first, showing what the evidence says next to what the owner claims. Mark each one reviewed and the session is recorded, so you know the whole pipeline was actually walked.'
+            'Runs the weekly pipeline meeting one deal at a time, quietest first, with the evidence shown next to the owner\u2019s own confidence. Mark each deal reviewed and the session is recorded, so you can show the whole pipeline was walked.'
           )}
         </p>
       </div>

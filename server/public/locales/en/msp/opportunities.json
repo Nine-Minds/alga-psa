@@ -13,15 +13,15 @@
       "recentlyClosed": "Recently closed"
     },
     "clientTab": {
-      "emptyBody": "Create one, or let a quote start the trail.",
+      "emptyBody": "Create one to start tracking new work for this client.",
       "emptyTitle": "No opportunities for this client yet"
     },
     "commitments": {
       "add": "Record it",
       "coveredByQuote": "Covered by {{quote}}",
-      "declined": "Declined — not happening",
+      "declined": "Declined, not going ahead",
       "help": "Record every promise you make to the client. Each one becomes a quote line or is declined before the deal closes.",
-      "openCount": "{{count}} unresolved — blocks close-won",
+      "openCount": "{{count}} unresolved, blocking close",
       "placeholder": "e.g. Email migration included in onboarding",
       "resolve": "Resolve…",
       "status": {
@@ -101,10 +101,10 @@
       "value": "Value",
       "valuesFromQuote": "from accepted quote",
       "whatNext": "What happens next",
-      "whatNextAgreementDone": "The accepted quote is now a draft agreement — review and activate it.",
+      "whatNextAgreementDone": "The accepted quote is now a draft agreement. Review and activate it.",
       "whatNextConvertQuote": "Convert the accepted quote to an agreement from the quote screen so billing can start.",
       "whatNextHandoff": "Hand the client to service delivery: the owner, contacts and commitments on this page are the brief.",
-      "whatNextProjectDone": "The onboarding project exists — assign it and set the start date.",
+      "whatNextProjectDone": "The onboarding project has been created. Assign it and set the start date.",
       "whatNextStartProject": "Create the onboarding project so delivery has somewhere to work.",
       "whyNumber": "{{number}} is at ",
       "whyPeriod": "."
@@ -185,7 +185,7 @@
       "done": "Pipeline reviewed. {{count}} deals on the record.",
       "evidenceSays": "Evidence says",
       "gap": "Confidence is {{confidence}} but the evidence stops at {{stage}}. What has the client actually done?",
-      "intro": "For running the weekly pipeline meeting: it deals out every open opportunity one at a time, quietest first, showing what the evidence says next to what the owner claims. Mark each one reviewed and the session is recorded, so you know the whole pipeline was actually walked.",
+      "intro": "Runs the weekly pipeline meeting one deal at a time, quietest first, with the evidence shown next to the owner’s own confidence. Mark each deal reviewed and the session is recorded, so you can show the whole pipeline was walked.",
       "keys": "← back · → reviewed",
       "markReviewed": "Reviewed → next",
       "next": "Next action:",
@@ -236,8 +236,8 @@
       "reviewDraft": "Review the draft",
       "snooze": "Snooze",
       "snoozeNamed": "Snooze {{title}}",
-      "stakesMrr": "{{amount}}/mo is sitting in your own data, nothing typed in.",
-      "stakesNrr": "{{amount}} of project work is sitting in your own data.",
+      "stakesMrr": "{{amount}}/mo of recurring work is already visible in your own data.",
+      "stakesNrr": "{{amount}} of project work is already visible in your own data.",
       "table": {
         "actions": "Actions",
         "client": "Client",
@@ -416,7 +416,7 @@
       "dismiss": "Dismiss",
       "emptyBody": "Generators watch your contracts, billing, and assets, and surface deals here as they find them.",
       "emptyTitle": "No suggestions right now",
-      "intro": "Found in your data. Accept to create the opportunity, or dismiss and it stays gone.",
+      "intro": "Drawn from your own data. Accept to create the opportunity, or dismiss it and it will not come back.",
       "seeNumbers": "See the numbers",
       "snooze": "Snooze"
     },
@@ -505,7 +505,7 @@
       },
       "forClient": " for {{clientName}}.",
       "goingQuiet": {
-        "nudge": " at {{clientName}}. Deals this quiet usually die without a nudge.",
+        "nudge": " at {{clientName}}. Deals left this long rarely close without a follow-up.",
         "paperworkMissing": ". The paperwork never went out.",
         "quietAge_one": "Quiet for {{count}} day",
         "quietAge_other": "Quiet for {{count}} days",
@@ -532,7 +532,7 @@
         "counted_one": "{{count}} client paid more on T&M than an agreement costs",
         "counted_other": "{{count}} clients paid more on T&M than an agreement costs",
         "named": "{{clientNames}} paid more on T&M than an agreement costs",
-        "trailing": " over the trailing 12 months. The one-pager makes it their idea."
+        "trailing": " over the trailing 12 months. The one-pager puts the comparison in front of them."
       },
       "whitespace": {
         "comparable": " from you yet. Every comparable client does.",
@@ -545,7 +545,7 @@
       "confirm": "Mark won",
       "convertQuote": "Convert an accepted quote to a draft agreement (optional)",
       "nextConvert": "Convert the accepted quote to an agreement below, or from the quote screen afterward.",
-      "nextSendQuote": "No accepted quote is linked yet. Send the quote and get it approved, then convert it to an agreement — marking this won now is fine.",
+      "nextSendQuote": "No accepted quote is linked yet. Send the quote and get it approved, then convert it to an agreement. You can still mark this won now.",
       "noConvertQuote": "Do not convert a quote",
       "noProject": "Do not create a project",
       "projectName": "Project name",

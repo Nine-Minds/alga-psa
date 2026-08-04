@@ -78,7 +78,7 @@ export function OpportunityCommitmentsSection({ detail }: { detail: IOpportunity
       value: `quote:${q.quote_id}`,
       label: t('opportunities.commitments.coveredByQuote', 'Covered by {{quote}}', { quote: q.quote_number }),
     })),
-    { value: 'declined', label: t('opportunities.commitments.declined', 'Declined — not happening') },
+    { value: 'declined', label: t('opportunities.commitments.declined', 'Declined, not going ahead') },
   ];
 
   return (
@@ -92,7 +92,7 @@ export function OpportunityCommitmentsSection({ detail }: { detail: IOpportunity
         </h2>
         {unresolved.length > 0 ? (
           <Badge variant="warning" size="sm">
-            {t('opportunities.commitments.openCount', '{{count}} unresolved — blocks close-won', {
+            {t('opportunities.commitments.openCount', '{{count}} unresolved, blocking close', {
               count: unresolved.length,
             })}
           </Badge>

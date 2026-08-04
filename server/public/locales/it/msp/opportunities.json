@@ -13,15 +13,15 @@
       "recentlyClosed": "Chiuso di recente"
     },
     "clientTab": {
-      "emptyBody": "Creane uno o lascia che una citazione inizi il percorso.",
+      "emptyBody": "Creane una per iniziare a seguire il nuovo lavoro per questo cliente.",
       "emptyTitle": "Nessuna opportunità ancora per questo cliente"
     },
     "commitments": {
       "add": "Registratelo",
       "coveredByQuote": "Coperto da {{quote}}",
-      "declined": "Rifiutato: non succederà",
+      "declined": "Rifiutato, non si farà",
       "help": "Registra ogni promessa fatta al cliente. Ognuna diventa una voce del preventivo oppure viene rifiutata prima della chiusura della trattativa.",
-      "openCount": "{{count}} irrisolti: blocchi quasi vinti",
+      "openCount": "{{count}} non risolti, bloccano la chiusura",
       "placeholder": "ad es. Migrazione della posta elettronica inclusa nell'onboarding",
       "resolve": "Risolvi…",
       "status": {
@@ -101,10 +101,10 @@
       "value": "Valore",
       "valuesFromQuote": "dal preventivo accettato",
       "whatNext": "Cosa succede ora",
-      "whatNextAgreementDone": "Il preventivo accettato è ora una bozza di contratto: verificala e attivala.",
+      "whatNextAgreementDone": "Il preventivo accettato è ora un contratto in bozza. Controllalo e attivalo.",
       "whatNextConvertQuote": "Converti il preventivo accettato in un contratto dalla schermata del preventivo, così può iniziare la fatturazione.",
       "whatNextHandoff": "Passa il cliente al team di erogazione: il responsabile, i contatti e gli impegni in questa pagina sono il briefing.",
-      "whatNextProjectDone": "Il progetto di onboarding esiste: assegnalo e imposta la data di inizio.",
+      "whatNextProjectDone": "Il progetto di onboarding è stato creato. Assegnalo e imposta la data di inizio.",
       "whatNextStartProject": "Crea il progetto di onboarding così il team di consegna ha dove lavorare.",
       "whyNumber": "{{number}} è in ",
       "whyPeriod": "."
@@ -185,7 +185,7 @@
       "done": "Pipeline rivista. {{count}} affari registrati.",
       "evidenceSays": "Lo dicono le prove",
       "gap": "La fiducia è {{confidence}} ma le prove si fermano a {{stage}}. Cosa ha effettivamente fatto il cliente?",
-      "intro": "Per condurre la riunione settimanale sulla pipeline: presenta ogni opportunità aperta una alla volta, partendo dalle più silenziose, mostrando ciò che dicono le prove accanto a ciò che sostiene il titolare. Segna ognuna come rivista e la sessione viene registrata, così risulta che l'intera pipeline è stata davvero percorsa.",
+      "intro": "Conduce la riunione settimanale sulla pipeline una trattativa alla volta, partendo dalla più ferma, con le prove accanto alla fiducia del responsabile. Segna ogni trattativa come rivista: la sessione viene registrata, così puoi dimostrare che l’intera pipeline è stata percorsa.",
       "keys": "← indietro · → rivisto",
       "markReviewed": "Recensito → successivo",
       "next": "Azione successiva:",
@@ -236,8 +236,8 @@
       "reviewDraft": "Rivedi la bozza",
       "snooze": "Posticipa",
       "snoozeNamed": "Posticipa {{title}}",
-      "stakesMrr": "{{amount}}/mese è nei tuoi dati, non è stato digitato nulla.",
-      "stakesNrr": "{{amount}} del lavoro del progetto si trova nei tuoi dati.",
+      "stakesMrr": "{{amount}}/mese di lavoro ricorrente è già visibile nei tuoi dati.",
+      "stakesNrr": "{{amount}} di lavoro di progetto è già visibile nei tuoi dati.",
       "table": {
         "actions": "Azioni",
         "client": "Cliente",
@@ -416,7 +416,7 @@
       "dismiss": "Ignora",
       "emptyBody": "I generatori controllano i tuoi contratti, la fatturazione e le risorse e le offerte di superficie qui non appena le trovano.",
       "emptyTitle": "Nessun suggerimento per ora",
-      "intro": "Trovato nei tuoi dati. Accetta per creare l'opportunità, oppure ignorala e l'opportunità non verrà più creata.",
+      "intro": "Ricavate dai tuoi dati. Accetta per creare l’opportunità, oppure scartala e non tornerà.",
       "seeNumbers": "Vedi i numeri",
       "snooze": "Posticipa"
     },
@@ -505,7 +505,7 @@
       },
       "forClient": " per {{clientName}}.",
       "goingQuiet": {
-        "nudge": " presso {{clientName}}. Gli affari così tranquilli di solito muoiono senza una spinta.",
+        "nudge": " presso {{clientName}}. Le trattative lasciate ferme così a lungo raramente si chiudono senza un follow-up.",
         "paperworkMissing": ". I documenti non sono mai usciti.",
         "quietAge_one": "Tranquillo per {{count}} giorni",
         "quietAge_other": "Tranquillo per {{count}} giorni",
@@ -532,7 +532,7 @@
         "counted_one": "{{count}} cliente ha pagato per T&M più dei costi di un contratto",
         "counted_other": "{{count}} clienti hanno pagato per T&M più dei costi di un contratto",
         "named": "{{clientNames}} ha pagato di più per termini e condizioni rispetto ai costi di un contratto",
-        "trailing": " nei successivi 12 mesi. La pagina di una pagina rende la loro idea."
+        "trailing": " negli ultimi 12 mesi. Il documento di una pagina mette il confronto sotto i loro occhi."
       },
       "whitespace": {
         "comparable": " da te ancora. Ogni cliente paragonabile lo fa.",
@@ -545,7 +545,7 @@
       "confirm": "Ha vinto Marco",
       "convertQuote": "Convertire un preventivo accettato in una bozza di accordo (facoltativo)",
       "nextConvert": "Converti il preventivo accettato in un contratto qui sotto, o successivamente dalla schermata del preventivo.",
-      "nextSendQuote": "Nessun preventivo accettato è ancora collegato. Invia il preventivo e fallo approvare, poi convertilo in un contratto: contrassegnarlo come vinto ora va bene.",
+      "nextSendQuote": "Nessun preventivo accettato è ancora collegato. Invia il preventivo, fallo approvare e poi convertilo in contratto. Puoi comunque segnarla come vinta ora.",
       "noConvertQuote": "Non convertire un preventivo",
       "noProject": "Non creare un progetto",
       "projectName": "Nome del progetto",

@@ -13,15 +13,15 @@
       "recentlyClosed": "Récemment fermé"
     },
     "clientTab": {
-      "emptyBody": "Créez-en un ou laissez un devis démarrer le parcours.",
+      "emptyBody": "Créez-en une pour suivre les nouveaux travaux de ce client.",
       "emptyTitle": "Aucune opportunité pour ce client pour l'instant"
     },
     "commitments": {
       "add": "Enregistrez-le",
       "coveredByQuote": "Couvert par {{quote}}",
-      "declined": "Refusé – cela ne se produit pas",
+      "declined": "Refusé, ne sera pas réalisé",
       "help": "Consignez chaque promesse faite au client. Chacune devient une ligne du devis ou est refusée avant la conclusion de l'affaire.",
-      "openCount": "{{count}} non résolu – blocs remportés de près",
+      "openCount": "{{count}} non résolus, bloquent la clôture",
       "placeholder": "par ex. Migration des e-mails incluse dans l'intégration",
       "resolve": "Résoudre…",
       "status": {
@@ -101,10 +101,10 @@
       "value": "Valeur",
       "valuesFromQuote": "à partir du devis accepté",
       "whatNext": "La suite",
-      "whatNextAgreementDone": "Le devis accepté est désormais un projet de contrat — vérifiez-le et activez-le.",
+      "whatNextAgreementDone": "Le devis accepté est maintenant un contrat en brouillon. Vérifiez-le et activez-le.",
       "whatNextConvertQuote": "Convertissez le devis accepté en contrat depuis l'écran du devis afin que la facturation puisse commencer.",
       "whatNextHandoff": "Transmettez le client à la prestation de services : le responsable, les contacts et les engagements de cette page constituent le brief.",
-      "whatNextProjectDone": "Le projet d'intégration existe — attribuez-le et fixez la date de début.",
+      "whatNextProjectDone": "Le projet d’intégration est créé. Attribuez-le et définissez la date de début.",
       "whatNextStartProject": "Créez le projet d'intégration pour que la livraison ait un espace de travail.",
       "whyNumber": "{{number}} est à l’étape ",
       "whyPeriod": "."
@@ -185,7 +185,7 @@
       "done": "Pipeline révisé. {{count}} offres enregistrées.",
       "evidenceSays": "Les preuves disent",
       "gap": "La confiance est {{confidence}} mais la preuve s'arrête à {{stage}}. Qu’a réellement fait le client ?",
-      "intro": "Pour animer la réunion hebdomadaire du pipeline : chaque opportunité ouverte est présentée une par une, les plus silencieuses d'abord, avec ce que disent les preuves à côté de ce qu'affirme le responsable. Marquez chacune comme examinée et la séance est consignée, prouvant que tout le pipeline a bien été parcouru.",
+      "intro": "Anime la réunion hebdomadaire du pipeline affaire par affaire, la plus silencieuse en premier, avec les preuves à côté de la confiance du responsable. Marquez chaque affaire comme revue : la session est enregistrée, ce qui prouve que tout le pipeline a été parcouru.",
       "keys": "← retour · → commenté",
       "markReviewed": "Révisé → suivant",
       "next": "Action suivante :",
@@ -236,8 +236,8 @@
       "reviewDraft": "Examiner le brouillon",
       "snooze": "Répéter",
       "snoozeNamed": "Répéter {{title}}",
-      "stakesMrr": "{{amount}}/mo se trouve dans vos propres données, rien n'est saisi.",
-      "stakesNrr": "{{amount}} du travail du projet se trouve dans vos propres données.",
+      "stakesMrr": "{{amount}}/mois de travail récurrent est déjà visible dans vos propres données.",
+      "stakesNrr": "{{amount}} de travaux de projet est déjà visible dans vos propres données.",
       "table": {
         "actions": "Actions",
         "client": "Client",
@@ -416,7 +416,7 @@
       "dismiss": "Rejeter",
       "emptyBody": "Les générateurs surveillent vos contrats, votre facturation et vos actifs, et font apparaître les offres ici au fur et à mesure qu'ils les trouvent.",
       "emptyTitle": "Aucune suggestion pour le moment",
-      "intro": "Trouvé dans vos données. Acceptez de créer l’opportunité, ou rejetez-la et elle disparaîtra.",
+      "intro": "Issues de vos propres données. Acceptez pour créer l’affaire, ou écartez-la et elle ne reviendra pas.",
       "seeNumbers": "Voir les chiffres",
       "snooze": "Répéter"
     },
@@ -505,7 +505,7 @@
       },
       "forClient": " pour {{clientName}}.",
       "goingQuiet": {
-        "nudge": " à {{clientName}}. Les offres aussi silencieuses meurent généralement sans coup de pouce.",
+        "nudge": " chez {{clientName}}. Les affaires laissées aussi longtemps se concluent rarement sans relance.",
         "paperworkMissing": ". Les papiers n'ont jamais été distribués.",
         "quietAge_one": "Calme pendant {{count}} jour",
         "quietAge_other": "Calme pendant {{count}} jours",
@@ -532,7 +532,7 @@
         "counted_one": "{{count}} client a payé plus pour T&M que ce que coûte un accord",
         "counted_other": "{{count}} clients ont payé plus en T&M que les coûts d'un accord",
         "named": "{{clientNames}} a payé plus pour T&M que ce qu'un accord coûte",
-        "trailing": " au cours des 12 derniers mois. Le one-pager en fait leur idée."
+        "trailing": " sur les 12 derniers mois. La fiche d’une page leur met la comparaison sous les yeux."
       },
       "whitespace": {
         "comparable": " de toi encore. Tous les clients comparables le font.",
@@ -545,7 +545,7 @@
       "confirm": "Marc a gagné",
       "convertQuote": "Convertir un devis accepté en projet d'accord (facultatif)",
       "nextConvert": "Convertissez le devis accepté en contrat ci-dessous, ou depuis l'écran du devis ensuite.",
-      "nextSendQuote": "Aucun devis accepté n'est encore lié. Envoyez le devis et faites-le approuver, puis convertissez-le en contrat — le marquer gagné maintenant ne pose pas de problème.",
+      "nextSendQuote": "Aucun devis accepté n’est encore lié. Envoyez le devis, faites-le approuver, puis convertissez-le en contrat. Vous pouvez tout de même marquer l’affaire gagnée dès maintenant.",
       "noConvertQuote": "Ne pas convertir un devis",
       "noProject": "Ne créez pas de projet",
       "projectName": "Nom du projet",

@@ -13,15 +13,15 @@
       "recentlyClosed": "Onlangs gesloten"
     },
     "clientTab": {
-      "emptyBody": "Maak er een, of laat een offerte het pad beginnen.",
+      "emptyBody": "Maak er een aan om nieuw werk voor deze klant te volgen.",
       "emptyTitle": "Er zijn nog geen mogelijkheden voor deze klant"
     },
     "commitments": {
       "add": "Neem het op",
       "coveredByQuote": "Gedekt door {{quote}}",
-      "declined": "Geweigerd - gebeurt niet",
+      "declined": "Afgewezen, gaat niet door",
       "help": "Leg elke belofte aan de klant vast. Elke belofte wordt een offerteregel of wordt afgewezen voordat de deal sluit.",
-      "openCount": "{{count}} onopgelost — blokken bijna gewonnen",
+      "openCount": "{{count}} onopgelost, blokkeren afsluiting",
       "placeholder": "bijv. E-mailmigratie inbegrepen bij onboarding",
       "resolve": "Oplossen…",
       "status": {
@@ -101,10 +101,10 @@
       "value": "Waarde",
       "valuesFromQuote": "van geaccepteerde offerte",
       "whatNext": "Wat er nu gebeurt",
-      "whatNextAgreementDone": "De geaccepteerde offerte is nu een conceptovereenkomst — controleer en activeer deze.",
+      "whatNextAgreementDone": "De geaccepteerde offerte is nu een conceptovereenkomst. Controleer en activeer deze.",
       "whatNextConvertQuote": "Zet de geaccepteerde offerte om in een overeenkomst via het offertescherm, zodat de facturatie kan starten.",
       "whatNextHandoff": "Draag de klant over aan dienstverlening: de eigenaar, contacten en toezeggingen op deze pagina vormen de briefing.",
-      "whatNextProjectDone": "Het onboardingproject bestaat — wijs het toe en stel de startdatum in.",
+      "whatNextProjectDone": "Het onboardingproject is aangemaakt. Wijs het toe en stel de startdatum in.",
       "whatNextStartProject": "Maak het onboardingproject aan zodat de uitvoering een werkplek heeft.",
       "whyNumber": "{{number}} bevindt zich in ",
       "whyPeriod": "."
@@ -185,7 +185,7 @@
       "done": "Pijpleiding beoordeeld. {{count}} deals geregistreerd.",
       "evidenceSays": "Bewijs zegt",
       "gap": "Het vertrouwen is {{confidence}}, maar het bewijs stopt bij {{stage}}. Wat heeft de cliënt daadwerkelijk gedaan?",
-      "intro": "Voor het wekelijkse pijplijnoverleg: elke openstaande kans komt één voor één langs, de stilste eerst, met wat het bewijs zegt naast wat de eigenaar beweert. Markeer elke kans als beoordeeld en de sessie wordt vastgelegd, zodat vaststaat dat de hele pijplijn is doorlopen.",
+      "intro": "Voert het wekelijkse pijplijnoverleg deal voor deal, de stilste eerst, met het bewijs naast het vertrouwen van de eigenaar. Markeer elke deal als besproken; de sessie wordt vastgelegd, zodat u kunt aantonen dat de hele pijplijn is doorgenomen.",
       "keys": "← terug · → beoordeeld",
       "markReviewed": "Beoordeeld → volgende",
       "next": "Volgende actie:",
@@ -236,8 +236,8 @@
       "reviewDraft": "Bekijk het concept",
       "snooze": "Snoozen",
       "snoozeNamed": "Snoozen {{title}}",
-      "stakesMrr": "{{amount}}/maand staat in je eigen gegevens, er is niets ingetypt.",
-      "stakesNrr": "{{amount}} projectwerk zit in uw eigen gegevens.",
+      "stakesMrr": "{{amount}}/mnd aan terugkerend werk is al zichtbaar in uw eigen gegevens.",
+      "stakesNrr": "{{amount}} aan projectwerk is al zichtbaar in uw eigen gegevens.",
       "table": {
         "actions": "Acties",
         "client": "Klant",
@@ -416,7 +416,7 @@
       "dismiss": "Negeren",
       "emptyBody": "Generatoren houden uw contracten, facturering en activa in de gaten en brengen hier deals naar voren zodra ze deze vinden.",
       "emptyTitle": "Er zijn momenteel geen suggesties",
-      "intro": "Gevonden in uw gegevens. Accepteer om de kans te creëren, of negeer het en het blijft weg.",
+      "intro": "Afgeleid uit uw eigen gegevens. Accepteer om de kans aan te maken, of wijs die af en hij komt niet terug.",
       "seeNumbers": "Zie de cijfers",
       "snooze": "Snoozen"
     },
@@ -505,7 +505,7 @@
       },
       "forClient": " voor {{clientName}}.",
       "goingQuiet": {
-        "nudge": " bij {{clientName}}. Deals die zo stil zijn, sterven meestal zonder een duwtje in de rug.",
+        "nudge": " bij {{clientName}}. Deals die zo lang blijven liggen, worden zelden gesloten zonder opvolging.",
         "paperworkMissing": ". Het papierwerk is nooit uitgegaan.",
         "quietAge_one": "Stil gedurende {{count}} dag",
         "quietAge_other": "Stil gedurende {{count}} dagen",
@@ -532,7 +532,7 @@
         "counted_one": "{{count}} klant betaalde meer aan T&M dan een overeenkomst kost",
         "counted_other": "{{count}} klanten betaalden meer aan T&M dan een overeenkomst kost",
         "named": "{{clientNames}} heeft meer betaald aan T&M dan een overeenkomst kost",
-        "trailing": " gedurende de daaropvolgende twaalf maanden. De one-pager maakt het hun idee."
+        "trailing": " over de afgelopen 12 maanden. De eenpager legt de vergelijking bij hen op tafel."
       },
       "whitespace": {
         "comparable": " nog van jou. Iedere vergelijkbare klant doet dat.",
@@ -545,7 +545,7 @@
       "confirm": "Mark heeft gewonnen",
       "convertQuote": "Een geaccepteerde offerte omzetten naar een conceptovereenkomst (optioneel)",
       "nextConvert": "Zet de geaccepteerde offerte hieronder om in een overeenkomst, of later vanaf het offertescherm.",
-      "nextSendQuote": "Er is nog geen geaccepteerde offerte gekoppeld. Verstuur de offerte, laat deze goedkeuren en zet deze daarna om in een overeenkomst — nu als gewonnen markeren mag.",
+      "nextSendQuote": "Er is nog geen geaccepteerde offerte gekoppeld. Stuur de offerte, laat deze goedkeuren en zet die daarna om naar een overeenkomst. U kunt de deal nu al als gewonnen markeren.",
       "noConvertQuote": "Converteer een offerte niet",
       "noProject": "Maak geen project aan",
       "projectName": "Projectnaam",
