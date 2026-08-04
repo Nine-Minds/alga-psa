@@ -165,8 +165,10 @@
     },
     "loseDialog": {
       "lostTo": "Perdido para",
+      "missing": "Escolha um motivo para ativar «Marcar como perdida»",
       "notes": "Notas",
-      "notesPlaceholder": "Qualquer coisa futura - você deve saber",
+      "notesPlaceholder": "O que a equipa deve saber se isto voltar?",
+      "reason": "Motivo",
       "reasonPlaceholder": "Por que não avançou?",
       "submit": "Marca perdida",
       "title": "Marca perdida"

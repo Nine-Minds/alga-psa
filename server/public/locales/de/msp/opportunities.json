@@ -165,8 +165,10 @@
     },
     "loseDialog": {
       "lostTo": "Verloren gegen",
+      "missing": "Wählen Sie einen Grund, um „Als verloren markieren“ zu aktivieren",
       "notes": "Notizen",
-      "notesPlaceholder": "Alles in der Zukunft – das sollten Sie wissen",
+      "notesPlaceholder": "Was sollte das Team wissen, falls es erneut aufkommt?",
+      "reason": "Grund",
       "reasonPlaceholder": "Warum ging es nicht weiter?",
       "submit": "Mark hat verloren",
       "title": "Mark hat verloren"

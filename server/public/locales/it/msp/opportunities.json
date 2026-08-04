@@ -165,8 +165,10 @@
     },
     "loseDialog": {
       "lostTo": "Perso per",
+      "missing": "Scegli un motivo per abilitare «Segna come persa»",
       "notes": "Note",
-      "notesPlaceholder": "Qualunque cosa futura, dovresti saperlo",
+      "notesPlaceholder": "Che cosa deve sapere il team se la trattativa torna?",
+      "reason": "Motivo",
       "reasonPlaceholder": "Perché non è andata avanti?",
       "submit": "Marco ha perso",
       "title": "Marco ha perso"
