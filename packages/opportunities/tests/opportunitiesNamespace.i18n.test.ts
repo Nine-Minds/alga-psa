@@ -31,3 +31,20 @@ describe('msp/opportunities translation namespace', () => {
     expect(locale('yy')).toHaveProperty('opportunities.pageTitle', '55555');
   });
 });
+
+describe('where the opportunity namespace is loaded', () => {
+  it('reaches the settings tab and User Activities, and leaves the home page alone', () => {
+    expect(getNamespacesForRoute('/msp/settings/opportunities')).toContain('msp/opportunities');
+    expect(getNamespacesForRoute('/msp/user-activities')).toContain('msp/opportunities');
+    // The pipeline snapshot moved off the dashboard, so its copy goes with it.
+    expect(getNamespacesForRoute('/msp/dashboard')).not.toContain('msp/opportunities');
+  });
+
+  it('ships the settings copy in every locale', () => {
+    for (const code of LOCALES) {
+      expect(locale(code)).toHaveProperty('opportunities.settings.tabs.followUp');
+      expect(locale(code)).toHaveProperty('opportunities.settings.stepTemplatesBlank');
+      expect(locale(code)).toHaveProperty('opportunities.reports.printTitle');
+    }
+  });
+});
