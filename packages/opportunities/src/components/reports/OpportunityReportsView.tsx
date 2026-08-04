@@ -309,6 +309,13 @@ function PipelineReportPrintout({ report }: { report: IOpportunityPipelineReport
         ];
         return (
           <section key={row.currency_code}>
+            <header className="app-print-table-header">
+              <h2>
+                {t('opportunities.reports.printCurrencySection', '{{currency}} pipeline', {
+                  currency: row.currency_code,
+                })}
+              </h2>
+            </header>
             <PrintableSummary
               metrics={[
                 {
@@ -334,9 +341,7 @@ function PipelineReportPrintout({ report }: { report: IOpportunityPipelineReport
               ]}
             />
             <PrintableTable
-              title={t('opportunities.reports.printByStage', '{{currency}} pipeline by stage', {
-                currency: row.currency_code,
-              })}
+              title={t('opportunities.reports.byStage', 'By stage')}
               rows={row.by_stage}
               columns={columns}
               getRowKey={(stageRow) => `${row.currency_code}-${stageRow.stage}`}
