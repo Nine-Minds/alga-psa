@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getSession } from '@alga-psa/auth';
 import { getWorkQueue, listOpportunities } from '@alga-psa/opportunities/actions';
+import { DEFAULT_PAGE_SIZE } from '@alga-psa/opportunities/components';
 import { getOpportunityDraftingAvailability } from '@enterprise/lib/opportunities/draftingActions';
 import { getManagementAvailability } from '@enterprise/lib/opportunities/actions';
 import { OpportunityForecastView } from '@/components/opportunities/OpportunityForecastView';
@@ -34,7 +35,7 @@ export default async function OpportunitiesPage() {
   let queue: IWorkQueue | null = null;
   try {
     const [listResult, clientsResult, queueResult] = await Promise.all([
-      listOpportunities({ status: 'all', page: 1, page_size: 50 }),
+      listOpportunities({ status: 'all', page: 1, page_size: DEFAULT_PAGE_SIZE }),
       getAllClients(false),
       getWorkQueue(),
     ]);

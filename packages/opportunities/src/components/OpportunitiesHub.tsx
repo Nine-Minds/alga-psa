@@ -36,7 +36,8 @@ import { OpportunityReportsView } from './reports/OpportunityReportsView';
 import { WhitespaceGridView } from './suggestions/WhitespaceGridView';
 import { TmOnePagerDialog } from './suggestions/TmOnePagerDialog';
 
-const PAGE_SIZE = 50;
+/** Also the server page's initial fetch size, so page one matches the table. */
+export const DEFAULT_PAGE_SIZE = 25;
 
 export function OpportunitiesHub({
   initialItems,
@@ -69,22 +70,24 @@ export function OpportunitiesHub({
   const [queue, setQueue] = useState<IWorkQueue>(initialQueue);
   const [total, setTotal] = useState(initialTotal);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [tab, setTab] = useState(() => searchParams.get('tab') ?? 'queue');
   const [createOpen, setCreateOpen] = useState(false);
   const [completeFor, setCompleteFor] = useState<{ id: string; stage: OpportunityStage } | null>(null);
   const [loseFor, setLoseFor] = useState<string | null>(null);
   const [onePagerFor, setOnePagerFor] = useState<string | null>(null);
 
-  const refresh = useCallback(async (toPage = page) => {
+  const refresh = useCallback(async (toPage = page, toPageSize = pageSize) => {
     const [result, nextQueue] = await Promise.all([
-      listOpportunities({ status: 'all', page: toPage, page_size: PAGE_SIZE }),
+      listOpportunities({ status: 'all', page: toPage, page_size: toPageSize }),
       getWorkQueue(),
     ]);
     setItems(result.data);
     setTotal(result.total);
     setQueue(nextQueue);
     setPage(toPage);
-  }, [page]);
+    setPageSize(toPageSize);
+  }, [page, pageSize]);
 
   const openDeal = useCallback(
     (opportunityId: string) => router.push(`/msp/opportunities/${opportunityId}?fromTab=${tab}`),
@@ -257,7 +260,14 @@ export function OpportunitiesHub({
           onOpen={openDeal}
           initialStage={initialPipelineStage}
           onValuesChanged={() => refresh()}
-          pagination={{ currentPage: page, pageSize: PAGE_SIZE, totalItems: total, onPageChange: (p) => void refresh(p) }}
+          pagination={{
+            currentPage: page,
+            pageSize,
+            totalItems: total,
+            onPageChange: (p) => void refresh(p),
+            // A new page size restarts the list at the top; page 4 of 50 is not page 4 of 10.
+            onPageSizeChange: (size) => void refresh(1, size),
+          }}
         />
       ),
     },
@@ -334,6 +344,13 @@ export function OpportunitiesHub({
           onOpenForecast={
             eeTabs.some((item) => item.id === 'forecast') ? () => handleTabChange('forecast') : undefined
           }
+          onOpenStage={(stage) => {
+            setTab('pipeline');
+            const params = new URLSearchParams(searchParams.toString());
+            params.set('tab', 'pipeline');
+            params.set('stage', stage);
+            router.replace(`/msp/opportunities?${params.toString()}`, { scroll: false });
+          }}
         />
       ),
     },

@@ -33,7 +33,13 @@ export function PipelineList({
   items: IOpportunityListItem[];
   onOpen: (opportunityId: string) => void;
   /** Server-side pagination handled by the host page. */
-  pagination?: { currentPage: number; pageSize: number; totalItems: number; onPageChange: (page: number) => void };
+  pagination?: {
+    currentPage: number;
+    pageSize: number;
+    totalItems: number;
+    onPageChange: (page: number) => void;
+    onPageSizeChange: (size: number) => void;
+  };
   initialStage?: OpportunityStage;
   /** Called after an inline value edit so the host can refresh its rows. */
   onValuesChanged?: () => void | Promise<void>;
@@ -175,6 +181,9 @@ export function PipelineList({
     },
   ];
   const visibleItems = initialStage ? items.filter((item) => item.stage === initialStage) : items;
+  // A stage filter narrows the page the server already sent, so its totals no
+  // longer describe what is on screen: let the table page the filtered rows.
+  const serverPaged = pagination && !initialStage;
 
   return (
     <>
@@ -183,10 +192,11 @@ export function PipelineList({
         data={visibleItems}
         columns={columns}
         onRowClick={(record: IOpportunityListItem) => onOpen(record.opportunity_id)}
-        {...(pagination
+        pageSize={pagination?.pageSize}
+        onItemsPerPageChange={pagination ? pagination.onPageSizeChange : undefined}
+        {...(serverPaged
           ? {
               currentPage: pagination.currentPage,
-              pageSize: pagination.pageSize,
               totalItems: pagination.totalItems,
               onPageChange: pagination.onPageChange,
               manualPagination: true,

@@ -14,7 +14,7 @@ export { BoardCard } from './board/BoardCard';
 export { OpportunityBoard } from './board/OpportunityBoard';
 export { OpportunityDetailView } from './detail/OpportunityDetailView';
 export { PipelineList } from './pipeline/PipelineList';
-export { OpportunitiesHub } from './OpportunitiesHub';
+export { OpportunitiesHub, DEFAULT_PAGE_SIZE } from './OpportunitiesHub';
 export { ClientOpportunitiesTab } from './ClientOpportunitiesTab';
 export { OpportunityReportsView } from './reports/OpportunityReportsView';
 export { OpportunityDetailHost } from './detail/OpportunityDetailHost';
