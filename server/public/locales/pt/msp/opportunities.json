@@ -36,9 +36,12 @@
     "completeDialog": {
       "due": "Devido",
       "nextAction": "Próxima ação",
+      "pickNext": "Passo seguinte",
       "placeholder": "por exemplo Acompanhe a proposta",
+      "reachesStage": "Isto também alcança {{stage}}",
       "submit": "Concluir e agendar o próximo",
-      "title": "Feito. O que acontece a seguir?"
+      "title": "Feito. O que acontece a seguir?",
+      "writeNew": "Escrever um novo…"
     },
     "confidence": {
       "committed": "Comprometido",
@@ -85,8 +88,11 @@
       "oneTime": "Único",
       "oneTimeServices": "Serviços únicos",
       "owner": "Proprietário",
-      "quotes": "Citações",
+      "ownerNote": "Os passos podem ir para pessoas diferentes; o negócio continua a ter um responsável.",
+      "people": "Quem está no caso",
+      "plan": "Plano e cronologia",
       "quoteTitle": "Cotação para {{title}}",
+      "quotes": "Citações",
       "recurring": "Recorrente",
       "setStageHint": "Selecione um ponto de verificação para definir o cenário",
       "timeline": "Linha do tempo",
@@ -341,7 +347,9 @@
       "quoteUnlinked": "Citação desvinculada",
       "saved": "Salvo",
       "snoozed": "Adiado por alguns dias",
+      "stagePlanned": "Plano da fase adicionado",
       "stageSet": "Estágio definido como {{stage}}",
+      "stepDeleted": "Passo removido",
       "suggestionAccepted": "Oportunidade criada a partir da sugestão",
       "suggestionDismissed": "Dispensado. Isso não vai voltar.",
       "suggestionSnoozed": "Adiado por uma semana",
@@ -443,6 +451,29 @@
       "projectStatus": "Estado inicial",
       "projectTemplate": "Crie um projeto de integração (opcional)",
       "title": "Marcos venceu"
+    },
+    "steps": {
+      "add": "Adicionar um passo",
+      "addTitle": "Adicionar um passo",
+      "applyTemplate": "Planear esta fase",
+      "assign": "Atribuir",
+      "assignee": "Quem faz",
+      "due": "Prazo",
+      "duration": "Duração",
+      "editTitle": "Editar passo",
+      "hasTime": "Dar-lhe uma hora (aparece no calendário)",
+      "linkTask": "Associar tarefa",
+      "linkTicket": "Associar ticket",
+      "minutes": "{{count}} min",
+      "noLink": "Sem associação",
+      "planned": "Planeado",
+      "projectTask": "Tarefa de projeto associada",
+      "schedule": "Agendar",
+      "ticket": "Ticket associado",
+      "title": "Passo",
+      "titlePlaceholder": "ex.: Rever as conclusões da avaliação com a Dana",
+      "unassigned": "O responsável pelo negócio",
+      "when": "Quando"
     }
   }
 }

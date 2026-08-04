@@ -36,9 +36,12 @@
     "completeDialog": {
       "due": "Termin",
       "nextAction": "Następna akcja",
+      "pickNext": "Następny krok",
       "placeholder": "np. Kontynuuj propozycję",
+      "reachesStage": "To osiąga również {{stage}}",
       "submit": "Ukończ i zaplanuj następny",
-      "title": "Gotowe. Co stanie się dalej?"
+      "title": "Gotowe. Co stanie się dalej?",
+      "writeNew": "Napisz nowy…"
     },
     "confidence": {
       "committed": "Zaangażowany",
@@ -85,8 +88,11 @@
       "oneTime": "Jednorazowy",
       "oneTimeServices": "Usługi jednorazowe",
       "owner": "Właściciel",
-      "quotes": "Cytaty",
+      "ownerNote": "Kroki mogą trafiać do różnych osób; szansa nadal ma jednego opiekuna.",
+      "people": "Kto się tym zajmuje",
+      "plan": "Plan i historia",
       "quoteTitle": "Wycena dla {{title}}",
+      "quotes": "Cytaty",
       "recurring": "Powtarzające się",
       "setStageHint": "Wybierz punkt kontrolny, aby ustawić scenę",
       "timeline": "Oś czasu",
@@ -347,7 +353,9 @@
       "quoteUnlinked": "Cytat niepowiązany",
       "saved": "Zapisano",
       "snoozed": "Zdrzemnąłem się na kilka dni",
+      "stagePlanned": "Dodano plan etapu",
       "stageSet": "Etap ustawiony na {{stage}}",
+      "stepDeleted": "Krok usunięty",
       "suggestionAccepted": "Możliwość stworzona dzięki sugestii",
       "suggestionDismissed": "Zwolniony. To nie wróci.",
       "suggestionSnoozed": "Zdrzemnąłem się na tydzień",
@@ -471,6 +479,29 @@
       "projectStatus": "Stan początkowy",
       "projectTemplate": "Utwórz projekt onboardingowy (opcjonalnie)",
       "title": "Marek wygrał"
+    },
+    "steps": {
+      "add": "Dodaj krok",
+      "addTitle": "Dodaj krok",
+      "applyTemplate": "Zaplanuj ten etap",
+      "assign": "Przypisz",
+      "assignee": "Kto to zrobi",
+      "due": "Termin",
+      "duration": "Czas trwania",
+      "editTitle": "Edytuj krok",
+      "hasTime": "Nadaj godzinę (pojawi się w kalendarzu)",
+      "linkTask": "Powiąż zadanie",
+      "linkTicket": "Powiąż zgłoszenie",
+      "minutes": "{{count}} min",
+      "noLink": "Bez powiązania",
+      "planned": "Zaplanowane",
+      "projectTask": "Powiązane zadanie projektu",
+      "schedule": "Zaplanuj",
+      "ticket": "Powiązane zgłoszenie",
+      "title": "Krok",
+      "titlePlaceholder": "np. Omówić wyniki audytu z Daną",
+      "unassigned": "Opiekun szansy",
+      "when": "Kiedy"
     }
   }
 }

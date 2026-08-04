@@ -10,8 +10,24 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: dbMocks.tenantDb,
 }));
 
-import { completeOpportunityNextAction } from '../src/lib/completedActionInteraction';
+import { completeOpportunityNextAction } from '../src/lib/opportunitySteps';
 import { OpportunityModel } from '../src/models/opportunityModel';
+import { OpportunityStepModel } from '../src/models/opportunityStepModel';
+
+const currentStepRow = {
+  tenant: 'tenant-1',
+  step_id: 'step-1',
+  opportunity_id: 'opportunity-1',
+  title: 'Call Dana about the assessment',
+  due_at: '2026-07-12T15:00:00.000Z',
+  has_time: false,
+  duration_minutes: 30,
+  assigned_to: 'user-1',
+  status: 'current' as const,
+  sort_order: 0,
+  created_at: '2026-07-01T15:00:00.000Z',
+  updated_at: '2026-07-10T15:00:00.000Z',
+};
 
 const currentOpportunity = {
   tenant: 'tenant-1',
@@ -60,6 +76,20 @@ describe('completeOpportunityNextAction', () => {
 
   it('records the completed action on the opportunity timeline before installing the replacement', async () => {
     vi.spyOn(OpportunityModel, 'getById').mockResolvedValue(currentOpportunity);
+    const steps: any[] = [currentStepRow];
+    vi.spyOn(OpportunityStepModel, 'listForOpportunity').mockImplementation(async () => steps as never);
+    vi.spyOn(OpportunityStepModel, 'nextSortOrder').mockResolvedValue(1);
+    vi.spyOn(OpportunityStepModel, 'update').mockImplementation(async (_trx, _tenant, stepId, patch) => {
+      const index = steps.findIndex((step) => step.step_id === stepId);
+      const merged = { ...(steps[index] ?? currentStepRow), step_id: stepId, ...patch };
+      if (index >= 0) steps[index] = merged;
+      return merged as never;
+    });
+    vi.spyOn(OpportunityStepModel, 'create').mockImplementation(async (_trx, _tenant, input) => {
+      const created = { ...currentStepRow, step_id: 'step-2', ...input } as never;
+      steps.push(created);
+      return created;
+    });
     vi.spyOn(OpportunityModel, 'update').mockImplementation(async (_trx, _tenant, _id, patch) => ({
       ...currentOpportunity,
       ...patch,
@@ -100,6 +130,7 @@ describe('completeOpportunityNextAction', () => {
 
   it('rejects completion when there is no current action to preserve', async () => {
     vi.spyOn(OpportunityModel, 'getById').mockResolvedValue({ ...currentOpportunity, next_action: null });
+    vi.spyOn(OpportunityStepModel, 'listForOpportunity').mockResolvedValue([]);
     const update = vi.spyOn(OpportunityModel, 'update');
 
     await expect(completeOpportunityNextAction(
@@ -108,7 +139,7 @@ describe('completeOpportunityNextAction', () => {
       'opportunity-1',
       { next_action: 'Replacement', next_action_due: '2026-07-14T15:00:00.000Z' },
       'user-1',
-    )).rejects.toThrow('Opportunity has no current next action to complete');
+    )).rejects.toThrow('Opportunity has no current step to complete');
 
     expect(dbMocks.insert).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();

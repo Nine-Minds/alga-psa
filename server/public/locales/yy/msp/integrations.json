@@ -1575,17 +1575,17 @@
       },
       "settings": {
         "advanced": {
-          "title": "yyyyy",
-          "description": "yyyyy",
-          "warning": "yyyyy"
+          "title": "55555",
+          "description": "55555",
+          "warning": "55555"
         },
         "platform": {
-          "title": "yyyyy",
-          "description": "yyyyy",
-          "readyDescription": "yyyyy",
-          "connectAction": "yyyyy",
-          "unavailableTitle": "yyyyy",
-          "unavailableDescription": "yyyyy"
+          "title": "55555",
+          "description": "55555",
+          "readyDescription": "55555",
+          "connectAction": "55555",
+          "unavailableTitle": "55555",
+          "unavailableDescription": "55555"
         },
         "actions": {
           "disconnectProviders": "55555",

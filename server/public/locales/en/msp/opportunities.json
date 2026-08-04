@@ -36,9 +36,12 @@
     "completeDialog": {
       "due": "Due",
       "nextAction": "Next action",
+      "pickNext": "Next step",
       "placeholder": "e.g. Follow up on the proposal",
+      "reachesStage": "This also reaches {{stage}}",
       "submit": "Complete & schedule next",
-      "title": "Done. What happens next?"
+      "title": "Done. What happens next?",
+      "writeNew": "Write a new one…"
     },
     "confidence": {
       "committed": "Committed",
@@ -85,8 +88,11 @@
       "oneTime": "One-time",
       "oneTimeServices": "One-time services",
       "owner": "Owner",
-      "quotes": "Quotes",
+      "ownerNote": "Steps can go to different people; the deal still has one owner.",
+      "people": "Who is on it",
+      "plan": "Plan & timeline",
       "quoteTitle": "Quote for {{title}}",
+      "quotes": "Quotes",
       "recurring": "Recurring",
       "setStageHint": "Select a checkpoint to set the stage",
       "timeline": "Timeline",
@@ -341,7 +347,9 @@
       "quoteUnlinked": "Quote unlinked",
       "saved": "Saved",
       "snoozed": "Snoozed for a few days",
+      "stagePlanned": "Stage plan added",
       "stageSet": "Stage set to {{stage}}",
+      "stepDeleted": "Step removed",
       "suggestionAccepted": "Opportunity created from the suggestion",
       "suggestionDismissed": "Dismissed. It will not come back.",
       "suggestionSnoozed": "Snoozed for one week",
@@ -443,6 +451,29 @@
       "projectStatus": "Initial status",
       "projectTemplate": "Create an onboarding project (optional)",
       "title": "Mark won"
+    },
+    "steps": {
+      "add": "Add a step",
+      "addTitle": "Add a step",
+      "applyTemplate": "Plan this stage",
+      "assign": "Assign",
+      "assignee": "Who does it",
+      "due": "Due",
+      "duration": "Length",
+      "editTitle": "Edit step",
+      "hasTime": "Give it a time (shows on the calendar)",
+      "linkTask": "Link task",
+      "linkTicket": "Link ticket",
+      "minutes": "{{count}} min",
+      "noLink": "Not linked",
+      "planned": "Planned",
+      "projectTask": "Linked project task",
+      "schedule": "Schedule",
+      "ticket": "Linked ticket",
+      "title": "Step",
+      "titlePlaceholder": "e.g. Walk the assessment findings with Dana",
+      "unassigned": "The deal owner",
+      "when": "When"
     }
   }
 }

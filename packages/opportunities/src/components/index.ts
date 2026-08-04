@@ -29,5 +29,13 @@ export { DraftEditorDialog } from './dialogs/DraftEditorDialog';
 export type { OpportunityDraftingCallbacks } from './detail/OpportunityDetailHost';
 export { WhitespaceGridView } from './suggestions/WhitespaceGridView';
 export { TmOnePagerDialog } from './suggestions/TmOnePagerDialog';
-export { OpportunityTimelinePanel } from './detail/OpportunityTimelinePanel';
+export { OpportunityPlanPanel } from './detail/OpportunityPlanPanel';
+export { OpportunityStepTimeline } from './detail/OpportunityStepTimeline';
+export { StepEditorDialog } from './dialogs/StepEditorDialog';
+export {
+  OpportunityValueFields,
+  amountsToCents,
+  centsToAmounts,
+  type OpportunityValueAmounts,
+} from './dialogs/OpportunityValueFields';
 export type { OpportunityDetailViewProps } from './detail/OpportunityDetailView';

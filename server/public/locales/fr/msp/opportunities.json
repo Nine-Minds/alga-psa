@@ -36,9 +36,12 @@
     "completeDialog": {
       "due": "Due",
       "nextAction": "Action suivante",
+      "pickNext": "Étape suivante",
       "placeholder": "par ex. Suivi de la proposition",
+      "reachesStage": "Cela atteint aussi {{stage}}",
       "submit": "Terminer et programmer ensuite",
-      "title": "Terminé. Que se passe-t-il ensuite ?"
+      "title": "Terminé. Que se passe-t-il ensuite ?",
+      "writeNew": "En écrire une nouvelle…"
     },
     "confidence": {
       "committed": "Engagé",
@@ -85,8 +88,11 @@
       "oneTime": "Une fois",
       "oneTimeServices": "Services ponctuels",
       "owner": "Propriétaire",
-      "quotes": "Citations",
+      "ownerNote": "Les étapes peuvent revenir à différentes personnes ; l’affaire garde un seul responsable.",
+      "people": "Qui s’en occupe",
+      "plan": "Plan et historique",
       "quoteTitle": "Citation pour {{title}}",
+      "quotes": "Citations",
       "recurring": "Récurrent",
       "setStageHint": "Sélectionnez un point de contrôle pour préparer le terrain",
       "timeline": "Chronologie",
@@ -341,7 +347,9 @@
       "quoteUnlinked": "Citation non liée",
       "saved": "Enregistré",
       "snoozed": "Répété pendant quelques jours",
+      "stagePlanned": "Plan de phase ajouté",
       "stageSet": "Étape définie sur {{stage}}",
+      "stepDeleted": "Étape supprimée",
       "suggestionAccepted": "Opportunité créée à partir de la suggestion",
       "suggestionDismissed": "Rejeté. Cela ne reviendra pas.",
       "suggestionSnoozed": "Mis en veille pendant une semaine",
@@ -443,6 +451,29 @@
       "projectStatus": "Statut initial",
       "projectTemplate": "Créer un projet d'intégration (facultatif)",
       "title": "Marc a gagné"
+    },
+    "steps": {
+      "add": "Ajouter une étape",
+      "addTitle": "Ajouter une étape",
+      "applyTemplate": "Planifier cette phase",
+      "assign": "Attribuer",
+      "assignee": "Qui s’en charge",
+      "due": "Échéance",
+      "duration": "Durée",
+      "editTitle": "Modifier l’étape",
+      "hasTime": "Lui donner une heure (visible dans l’agenda)",
+      "linkTask": "Lier une tâche",
+      "linkTicket": "Lier un ticket",
+      "minutes": "{{count}} min",
+      "noLink": "Non liée",
+      "planned": "Planifié",
+      "projectTask": "Tâche de projet liée",
+      "schedule": "Planifier",
+      "ticket": "Ticket lié",
+      "title": "Étape",
+      "titlePlaceholder": "p. ex. Passer en revue les conclusions avec Dana",
+      "unassigned": "Le responsable de l’affaire",
+      "when": "Quand"
     }
   }
 }

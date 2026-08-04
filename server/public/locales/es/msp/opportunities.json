@@ -36,9 +36,12 @@
     "completeDialog": {
       "due": "debido",
       "nextAction": "Siguiente acción",
+      "pickNext": "Siguiente paso",
       "placeholder": "por ej. Dar seguimiento a la propuesta.",
+      "reachesStage": "Esto también alcanza {{stage}}",
       "submit": "Completar y programar el siguiente",
-      "title": "Hecho. ¿Qué pasa después?"
+      "title": "Hecho. ¿Qué pasa después?",
+      "writeNew": "Escribir uno nuevo…"
     },
     "confidence": {
       "committed": "Comprometido",
@@ -85,8 +88,11 @@
       "oneTime": "una sola vez",
       "oneTimeServices": "Servicios únicos",
       "owner": "propietario",
-      "quotes": "Cotizaciones",
+      "ownerNote": "Los pasos pueden ir a personas distintas; la oportunidad sigue teniendo un responsable.",
+      "people": "Quién participa",
+      "plan": "Plan y cronología",
       "quoteTitle": "Cotización para {{title}}",
+      "quotes": "Cotizaciones",
       "recurring": "recurrente",
       "setStageHint": "Seleccione un punto de control para preparar el escenario",
       "timeline": "Línea de tiempo",
@@ -341,7 +347,9 @@
       "quoteUnlinked": "Cita desvinculada",
       "saved": "Guardado",
       "snoozed": "Dormitado por unos días",
+      "stagePlanned": "Plan de fase añadido",
       "stageSet": "Etapa establecida en {{stage}}",
+      "stepDeleted": "Paso eliminado",
       "suggestionAccepted": "Oportunidad creada a partir de la sugerencia.",
       "suggestionDismissed": "Despedido. No volverá.",
       "suggestionSnoozed": "Pospuesto durante una semana",
@@ -443,6 +451,29 @@
       "projectStatus": "Estado inicial",
       "projectTemplate": "Crear un proyecto de incorporación (opcional)",
       "title": "marcos gano"
+    },
+    "steps": {
+      "add": "Añadir un paso",
+      "addTitle": "Añadir un paso",
+      "applyTemplate": "Planificar esta fase",
+      "assign": "Asignar",
+      "assignee": "Quién lo hace",
+      "due": "Vence",
+      "duration": "Duración",
+      "editTitle": "Editar paso",
+      "hasTime": "Ponerle hora (aparece en el calendario)",
+      "linkTask": "Vincular tarea",
+      "linkTicket": "Vincular ticket",
+      "minutes": "{{count}} min",
+      "noLink": "Sin vincular",
+      "planned": "Planificado",
+      "projectTask": "Tarea de proyecto vinculada",
+      "schedule": "Programar",
+      "ticket": "Ticket vinculado",
+      "title": "Paso",
+      "titlePlaceholder": "p. ej. Repasar los hallazgos de la evaluación con Dana",
+      "unassigned": "La persona responsable",
+      "when": "Cuándo"
     }
   }
 }
