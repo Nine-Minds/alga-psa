@@ -36,10 +36,17 @@ import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
 import type { EmailProvider } from '@alga-psa/integrations/components';
 import type { TenantEmailSettings } from 'server/src/types/email.types';
 import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
-import { getEmailSettings, updateEmailSettings, getEmailProviders, testOutboundEmail } from '@alga-psa/integrations/actions';
+import {
+  getEmailSettings,
+  updateEmailSettings,
+  getEmailProviders,
+  testOutboundEmail,
+  getMicrosoftOutboundMailboxes,
+  type MicrosoftOutboundMailboxOption,
+} from '@alga-psa/integrations/actions';
 import ManagedDomainList from './ManagedDomainList';
 
-type OutboundProvider = 'resend' | 'smtp';
+type OutboundProvider = 'resend' | 'smtp' | 'microsoft';
 type EmailSettingsUpdateInput = Partial<TenantEmailSettings> & {
   defaultFromDomain?: string | null;
   ticketingFromEmail?: string | null;
@@ -131,6 +138,8 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   const [outboundProvider, setOutboundProvider] = useState<OutboundProvider>(
     canUseManagedEmail ? 'resend' : 'smtp'
   );
+  const [microsoftMailboxes, setMicrosoftMailboxes] = useState<MicrosoftOutboundMailboxOption[]>([]);
+  const [microsoftMailboxError, setMicrosoftMailboxError] = useState<string | null>(null);
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
   const [savingSmtp, setSavingSmtp] = useState(false);
   const [smtpTestRecipient, setSmtpTestRecipient] = useState('');
@@ -189,20 +198,34 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     }
   };
 
+  // Self-hosted tenants have no managed (Resend) option, so an unrecognised
+  // stored provider falls back to SMTP rather than something unselectable.
+  const resolveOutboundProvider = (stored: string | null | undefined): OutboundProvider => {
+    if (stored === 'microsoft') return 'microsoft';
+    if (stored === 'smtp') return 'smtp';
+    return canUseManagedEmail ? 'resend' : 'smtp';
+  };
+
   const loadOutboundState = async () => {
     setLoadingOutbound(true);
     try {
-      const [settingsResult, providerResult] = await Promise.all([
+      const [settingsResult, providerResult, mailboxResult] = await Promise.all([
         getEmailSettings(),
-        getEmailProviders()
+        getEmailProviders(),
+        getMicrosoftOutboundMailboxes()
       ]);
       const settings = resolveEmailSettingsResult(settingsResult, t('managed.messages.loadOutboundSettingsFailed'));
 
+      if (isActionMessageError(mailboxResult)) {
+        setMicrosoftMailboxError(getErrorMessage(mailboxResult));
+      } else {
+        setMicrosoftMailboxError(null);
+        setMicrosoftMailboxes(mailboxResult.mailboxes);
+      }
+
       if (settings) {
         setEmailSettings(settings);
-        setOutboundProvider(
-          !canUseManagedEmail ? 'smtp' : settings.emailProvider === 'smtp' ? 'smtp' : 'resend'
-        );
+        setOutboundProvider(resolveOutboundProvider(settings.emailProvider));
       }
 
       const providers = providerResult?.providers || [];
@@ -400,6 +423,39 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   };
 
 
+  const getMicrosoftConfig = () =>
+    emailSettings?.providerConfigs.find(c => c.providerType === 'microsoft');
+
+  const microsoftConfigFor = (mailbox: MicrosoftOutboundMailboxOption) => ({
+    inboundProviderId: mailbox.providerId,
+    mailbox: mailbox.mailbox,
+    from: mailbox.mailbox,
+    fromName: mailbox.senderDisplayName || undefined,
+  });
+
+  const handleMicrosoftMailboxSelect = async (providerId: string) => {
+    if (!emailSettings) return;
+    const mailbox = microsoftMailboxes.find(option => option.providerId === providerId);
+    if (!mailbox) return;
+
+    const providerConfigs = emailSettings.providerConfigs.map(config =>
+      config.providerType === 'microsoft'
+        ? { ...config, providerId: mailbox.providerId, config: microsoftConfigFor(mailbox) }
+        : config
+    );
+
+    try {
+      const result = await updateEmailSettings({ emailProvider: 'microsoft', providerConfigs });
+      const updated = resolveEmailSettingsResult(result, t('managed.messages.switchProviderFailed'));
+      if (!updated) return;
+      setEmailSettings(updated);
+      toast.success(t('managed.outbound.microsoft.saved', 'Outbound sending mailbox updated.'));
+    } catch (err: any) {
+      console.error('[ManagedEmailSettings] Failed to select Microsoft mailbox', err);
+      toast.error(err.message || t('managed.messages.switchProviderFailed'));
+    }
+  };
+
   const handleProviderSwitch = async (provider: OutboundProvider) => {
     setOutboundProvider(provider);
 
@@ -418,6 +474,24 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     if (!hasProvider) {
       const newConfig = createDefaultProviderConfig(provider, { isEnabled: true });
       updatedSettings.providerConfigs = [...(updatedSettings.providerConfigs || []), newConfig];
+    }
+
+    // updateEmailSettings rejects a Microsoft selection that names no mailbox,
+    // so carry the current choice (or the first connected one) into the switch.
+    if (provider === 'microsoft') {
+      const existing = updatedSettings.providerConfigs?.find(c => c.providerType === 'microsoft');
+      const mailbox = microsoftMailboxes.find(m => m.providerId === existing?.config?.inboundProviderId)
+        || microsoftMailboxes.find(m => m.status === 'connected');
+      if (!mailbox) {
+        toast.error(t('managed.outbound.microsoft.noneConnected', 'Authorize a Microsoft 365 mailbox on the Inbound Email tab first.'));
+        setOutboundProvider(resolveOutboundProvider(emailSettings.emailProvider));
+        return;
+      }
+      updatedSettings.providerConfigs = (updatedSettings.providerConfigs || []).map(config =>
+        config.providerType === 'microsoft'
+          ? { ...config, providerId: mailbox.providerId, config: microsoftConfigFor(mailbox) }
+          : config
+      );
     }
 
     try {
@@ -656,35 +730,30 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {canUseManagedEmail ? (
-              <>
-                <CustomSelect
-                  id="outbound-provider-select"
-                  value={outboundProvider}
-                  disabled={loadingOutbound}
-                  onValueChange={(val: string) => handleProviderSwitch(val as OutboundProvider)}
-                  options={[
-                    { value: 'resend', label: t('managed.outbound.providerOptions.resend') },
-                    { value: 'smtp', label: t('managed.outbound.providerOptions.smtp') }
-                  ]}
-                  placeholder={t('managed.outbound.providerPlaceholder')}
-                />
-                <p className="text-sm text-muted-foreground mt-2">
-                  {outboundProvider === 'resend'
-                    ? t('managed.outbound.resendDescription')
-                    : t('managed.outbound.smtpDescription')}
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-medium">{t('managed.outbound.smtpLabel')}</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {t('managed.outbound.smtpDescription')}
-                </p>
-              </>
-            )}
+            <CustomSelect
+              id="outbound-provider-select"
+              value={outboundProvider}
+              disabled={loadingOutbound}
+              onValueChange={(val: string) => handleProviderSwitch(val as OutboundProvider)}
+              options={[
+                ...(canUseManagedEmail
+                  ? [{ value: 'resend', label: t('managed.outbound.providerOptions.resend') }]
+                  : []),
+                { value: 'smtp', label: t('managed.outbound.providerOptions.smtp') },
+                {
+                  value: 'microsoft',
+                  label: t('managed.outbound.providerOptions.microsoft', 'Microsoft 365 (Microsoft Graph)')
+                }
+              ]}
+              placeholder={t('managed.outbound.providerPlaceholder')}
+            />
+            <p className="text-sm text-muted-foreground mt-2">
+              {outboundProvider === 'resend'
+                ? t('managed.outbound.resendDescription')
+                : outboundProvider === 'microsoft'
+                ? t('managed.outbound.microsoft.description', 'Messages are sent as the selected mailbox through Microsoft Graph and saved to Sent Items.')
+                : t('managed.outbound.smtpDescription')}
+            </p>
           </CardContent>
         </Card>
 
@@ -728,6 +797,49 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
                 onRefresh={handleRefreshDomain}
                 onDelete={(domain) => setPendingDomainRemoval(domain)}
               />
+            </CardContent>
+          </Card>
+        )}
+
+        {outboundProvider === 'microsoft' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                {t('managed.outbound.microsoft.configTitle', 'Microsoft 365 Configuration')}
+              </CardTitle>
+              <CardDescription>
+                {t('managed.outbound.microsoft.configDescription', 'Choose which authorized Microsoft 365 mailbox sends outbound email.')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div>
+                <Label htmlFor="microsoft-outbound-mailbox">
+                  {t('managed.outbound.microsoft.mailboxLabel', 'Sending Mailbox')}
+                </Label>
+                <CustomSelect
+                  id="microsoft-outbound-mailbox"
+                  value={getMicrosoftConfig()?.config?.inboundProviderId || ''}
+                  disabled={loadingOutbound || microsoftMailboxes.length === 0}
+                  onValueChange={handleMicrosoftMailboxSelect}
+                  options={microsoftMailboxes.map(mailbox => ({
+                    value: mailbox.providerId,
+                    label: `${mailbox.providerName} — ${mailbox.mailbox}${mailbox.status === 'connected' ? '' : ` (${mailbox.status})`}`
+                  }))}
+                  placeholder={t('managed.outbound.microsoft.mailboxPlaceholder', 'Select a connected Microsoft 365 mailbox')}
+                />
+              </div>
+              {microsoftMailboxError ? (
+                <p className="text-sm text-red-600 dark:text-red-400">{microsoftMailboxError}</p>
+              ) : microsoftMailboxes.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  {t('managed.outbound.microsoft.none', 'Add and authorize a Microsoft 365 provider on the Inbound Email tab first.')}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {t('managed.outbound.microsoft.help', 'Messages are sent as this mailbox through Microsoft Graph and saved to Sent Items. Reconnect existing mailboxes to grant Mail.Send.')}
+                </p>
+              )}
             </CardContent>
           </Card>
         )}

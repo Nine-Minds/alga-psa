@@ -773,7 +773,8 @@
       "providerPlaceholder": "Selecteer uitgaande provider",
       "providerOptions": {
         "resend": "Nine Minds beheerd",
-        "smtp": "SMTP"
+        "smtp": "SMTP",
+        "microsoft": "Microsoft 365 (Microsoft Graph)"
       },
       "resendDescription": "E-mails worden verzonden via de beheerde infrastructuur van Nine Minds. Voeg hieronder een aangepast domein toe en verifieer dit.",
       "smtpDescription": "E-mails worden verzonden via uw eigen SMTP-server.",
@@ -841,6 +842,18 @@
         "clearButton": "Afzenderadres wissen",
         "savingButton": "Opslaan…",
         "saveButton": "Afzenderadres opslaan"
+      },
+      "microsoft": {
+        "configTitle": "Microsoft 365-configuratie",
+        "configDescription": "Kies welke geautoriseerde Microsoft 365-mailbox uitgaande e-mail verstuurt.",
+        "mailboxLabel": "Verzendmailbox",
+        "mailboxPlaceholder": "Selecteer een verbonden Microsoft 365-mailbox",
+        "help": "Berichten worden via Microsoft Graph als deze mailbox verzonden en opgeslagen in Verzonden items. Verbind bestaande mailboxen opnieuw om Mail.Send te verlenen.",
+        "none": "Voeg eerst een Microsoft 365-provider toe en autoriseer deze op het tabblad Inkomende e-mail.",
+        "noneConnected": "Autoriseer eerst een Microsoft 365-mailbox op het tabblad Inkomende e-mail.",
+        "description": "Berichten worden via Microsoft Graph als de geselecteerde mailbox verzonden en opgeslagen in Verzonden items.",
+        "loadFailed": "Microsoft 365-mailboxen konden niet worden geladen.",
+        "saved": "Verzendmailbox bijgewerkt."
       }
     },
     "inbound": {

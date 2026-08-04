@@ -773,7 +773,8 @@
       "providerPlaceholder": "Selecione o provedor de saída",
       "providerOptions": {
         "resend": "Nove mentes gerenciadas",
-        "smtp": "SMTP"
+        "smtp": "SMTP",
+        "microsoft": "Microsoft 365 (Microsoft Graph)"
       },
       "resendDescription": "Os e-mails são enviados através da infraestrutura gerenciada da Nine Minds. Adicione e verifique um domínio personalizado abaixo.",
       "smtpDescription": "Os e-mails são enviados através do seu próprio servidor SMTP.",
@@ -841,6 +842,18 @@
         "clearButton": "Limpar do endereço",
         "savingButton": "Salvando...",
         "saveButton": "Salvar do endereço"
+      },
+      "microsoft": {
+        "configTitle": "Configuração do Microsoft 365",
+        "configDescription": "Escolha qual caixa de correio autorizada do Microsoft 365 envia e-mails de saída.",
+        "mailboxLabel": "Caixa de correio de envio",
+        "mailboxPlaceholder": "Selecione uma caixa de correio do Microsoft 365 conectada",
+        "help": "As mensagens são enviadas como esta caixa de correio pelo Microsoft Graph e salvas em Itens Enviados. Reconecte caixas existentes para conceder Mail.Send.",
+        "none": "Adicione e autorize primeiro um provedor do Microsoft 365 na aba E-mail de entrada.",
+        "noneConnected": "Autorize primeiro uma caixa de correio do Microsoft 365 na aba E-mail de entrada.",
+        "description": "As mensagens são enviadas como a caixa selecionada pelo Microsoft Graph e salvas em Itens Enviados.",
+        "loadFailed": "Não foi possível carregar as caixas de correio do Microsoft 365.",
+        "saved": "Caixa de correio de envio atualizada."
       }
     },
     "inbound": {

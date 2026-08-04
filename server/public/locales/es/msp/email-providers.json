@@ -773,7 +773,8 @@
       "providerPlaceholder": "Seleccione el proveedor saliente",
       "providerOptions": {
         "resend": "Nine Minds administrado",
-        "smtp": "SMTP"
+        "smtp": "SMTP",
+        "microsoft": "Microsoft 365 (Microsoft Graph)"
       },
       "resendDescription": "Los correos se envían a través de la infraestructura administrada de Nine Minds. Añada y verifique un dominio personalizado a continuación.",
       "smtpDescription": "Los correos se envían a través de su propio servidor SMTP.",
@@ -841,6 +842,18 @@
         "clearButton": "Borrar dirección de remitente",
         "savingButton": "Guardando…",
         "saveButton": "Guardar dirección de remitente"
+      },
+      "microsoft": {
+        "configTitle": "Configuración de Microsoft 365",
+        "configDescription": "Elija qué buzón autorizado de Microsoft 365 envía el correo saliente.",
+        "mailboxLabel": "Buzón de envío",
+        "mailboxPlaceholder": "Seleccione un buzón de Microsoft 365 conectado",
+        "help": "Los mensajes se envían como este buzón a través de Microsoft Graph y se guardan en Elementos enviados. Vuelva a conectar los buzones existentes para conceder Mail.Send.",
+        "none": "Primero agregue y autorice un proveedor de Microsoft 365 en la pestaña Correo entrante.",
+        "noneConnected": "Primero autorice un buzón de Microsoft 365 en la pestaña Correo entrante.",
+        "description": "Los mensajes se envían como el buzón seleccionado a través de Microsoft Graph y se guardan en Elementos enviados.",
+        "loadFailed": "No se pudieron cargar los buzones de Microsoft 365.",
+        "saved": "Buzón de envío actualizado."
       }
     },
     "inbound": {

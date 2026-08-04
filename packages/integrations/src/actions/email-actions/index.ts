@@ -3,6 +3,7 @@ export { getEmailProviders, upsertEmailProvider, createEmailProvider, updateEmai
 export { pauseEmailProvider, resumeEmailProvider } from './inboundPauseActions';
 export { getEmailDomains, addEmailDomain, verifyEmailDomain, deleteEmailDomain } from './emailDomainActions';
 export { getEmailSettings, getMicrosoftOutboundMailboxes, updateEmailSettings, testOutboundEmail } from './emailSettingsActions';
+export type { MicrosoftOutboundMailboxOption } from './emailSettingsActions';
 export { getInboundTicketDefaults, createInboundTicketDefaults, updateInboundTicketDefaults, deleteInboundTicketDefaults } from './inboundTicketDefaultsActions';
 export { getInboundEmailRules, createInboundEmailRule, updateInboundEmailRule, setInboundEmailRuleActive, deleteInboundEmailRule, reorderInboundEmailRules, testInboundEmailRule } from './inboundEmailRulesActions';
 export { getTicketFieldOptions } from './ticketFieldOptionsActions';

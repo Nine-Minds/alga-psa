@@ -773,7 +773,8 @@
       "providerPlaceholder": "Wybierz dostawcę poczty wychodzącej",
       "providerOptions": {
         "resend": "Zarządzany Nine Minds",
-        "smtp": "SMTP"
+        "smtp": "SMTP",
+        "microsoft": "Microsoft 365 (Microsoft Graph)"
       },
       "resendDescription": "Wiadomości są wysyłane przez zarządzaną infrastrukturę Nine Minds. Dodaj i zweryfikuj niestandardową domenę poniżej.",
       "smtpDescription": "Wiadomości są wysyłane przez Twój własny serwer SMTP.",
@@ -841,6 +842,18 @@
         "clearButton": "Wyczyść adres nadawcy",
         "savingButton": "Zapisywanie…",
         "saveButton": "Zapisz adres nadawcy"
+      },
+      "microsoft": {
+        "configTitle": "Konfiguracja Microsoft 365",
+        "configDescription": "Wybierz autoryzowaną skrzynkę Microsoft 365 do wysyłania poczty wychodzącej.",
+        "mailboxLabel": "Skrzynka wysyłkowa",
+        "mailboxPlaceholder": "Wybierz połączoną skrzynkę Microsoft 365",
+        "help": "Wiadomości są wysyłane z tej skrzynki przez Microsoft Graph i zapisywane w Elementach wysłanych. Połącz ponownie istniejące skrzynki, aby przyznać Mail.Send.",
+        "none": "Najpierw dodaj i autoryzuj dostawcę Microsoft 365 na karcie Poczta przychodząca.",
+        "noneConnected": "Najpierw autoryzuj skrzynkę Microsoft 365 na karcie Poczta przychodząca.",
+        "description": "Wiadomości są wysyłane z wybranej skrzynki przez Microsoft Graph i zapisywane w Elementach wysłanych.",
+        "loadFailed": "Nie można załadować skrzynek Microsoft 365.",
+        "saved": "Zaktualizowano skrzynkę wysyłkową."
       }
     },
     "inbound": {

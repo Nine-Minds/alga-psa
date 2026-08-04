@@ -773,7 +773,8 @@
       "providerPlaceholder": "Ausgehenden Anbieter auswählen",
       "providerOptions": {
         "resend": "Nine Minds verwaltet",
-        "smtp": "SMTP"
+        "smtp": "SMTP",
+        "microsoft": "Microsoft 365 (Microsoft Graph)"
       },
       "resendDescription": "E-Mails werden über die verwaltete Infrastruktur von Nine Minds gesendet. Fügen Sie unten eine benutzerdefinierte Domain hinzu und verifizieren Sie sie.",
       "smtpDescription": "E-Mails werden über Ihren eigenen SMTP-Server gesendet.",
@@ -841,6 +842,18 @@
         "clearButton": "Absenderadresse löschen",
         "savingButton": "Speichern…",
         "saveButton": "Absenderadresse speichern"
+      },
+      "microsoft": {
+        "configTitle": "Microsoft 365-Konfiguration",
+        "configDescription": "Wählen Sie das autorisierte Microsoft 365-Postfach für den E-Mail-Versand.",
+        "mailboxLabel": "Sendepostfach",
+        "mailboxPlaceholder": "Verbundenes Microsoft 365-Postfach auswählen",
+        "help": "Nachrichten werden über Microsoft Graph als dieses Postfach gesendet und in „Gesendete Elemente“ gespeichert. Verbinden Sie bestehende Postfächer neu, um Mail.Send zu gewähren.",
+        "none": "Fügen Sie zuerst auf der Registerkarte „Eingehende E-Mail“ einen Microsoft 365-Anbieter hinzu und autorisieren Sie ihn.",
+        "noneConnected": "Autorisieren Sie zuerst ein Microsoft 365-Postfach auf der Registerkarte „Eingehende E-Mail“.",
+        "description": "Nachrichten werden über Microsoft Graph als das ausgewählte Postfach gesendet und in „Gesendete Elemente“ gespeichert.",
+        "loadFailed": "Microsoft 365-Postfächer konnten nicht geladen werden.",
+        "saved": "Sendepostfach aktualisiert."
       }
     },
     "inbound": {
