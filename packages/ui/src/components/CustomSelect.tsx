@@ -223,7 +223,11 @@ const CustomSelect = ({
   return (
     <div className={label ? 'mb-4' : ''} id={containerId} data-automation-type={dataAutomationType} suppressHydrationWarning>
       {label && (
-        <label className="block text-sm font-medium text-foreground mb-1">
+        <label
+          id={`${selectId}-label`}
+          htmlFor={selectId}
+          className="block text-sm font-medium text-foreground mb-1"
+        >
           {label}
         </label>
       )}
@@ -274,7 +278,8 @@ const CustomSelect = ({
             ${className}
             ${customStyles?.trigger || ''}
           `}
-          aria-label={resolvedPlaceholder}
+          aria-label={label ? undefined : resolvedPlaceholder}
+          aria-labelledby={label ? `${selectId}-label` : undefined}
           suppressHydrationWarning
           onPointerDown={(e) => {
             // Prevent click events from bubbling up to parent dialogs
