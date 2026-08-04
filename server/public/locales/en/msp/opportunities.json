@@ -56,9 +56,11 @@
       "dealType": "Deal type",
       "due": "Due",
       "expectedClose": "Expected close",
-      "missing": "Still needed: {{fields}}",
+      "missing": "Fill {{fields}} to enable Create opportunity",
       "nextAction": "First action",
       "nextActionPlaceholder": "e.g. Send the assessment proposal",
+      "readyHint": "Ready to create.",
+      "requiredLegend": "Fields marked * are required.",
       "submit": "Create opportunity",
       "title": "New opportunity",
       "titlePlaceholder": "e.g. Managed services agreement"

@@ -56,9 +56,11 @@
       "dealType": "Tipo di trattativa",
       "due": "Dovuto",
       "expectedClose": "Chiusura prevista",
-      "missing": "Ancora necessario: {{fields}}",
+      "missing": "Compila {{fields}} per attivare Crea opportunità",
       "nextAction": "Prima azione",
       "nextActionPlaceholder": "ad es. Inviare la proposta di valutazione",
+      "readyHint": "Pronto per la creazione.",
+      "requiredLegend": "I campi contrassegnati con * sono obbligatori.",
       "submit": "Crea opportunità",
       "title": "Nuova opportunità",
       "titlePlaceholder": "ad es. Contratto di servizi gestiti"

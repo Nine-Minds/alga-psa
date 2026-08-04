@@ -225,6 +225,7 @@ const CustomSelect = ({
       {label && (
         <label className="block text-sm font-medium text-foreground mb-1">
           {label}
+          {required && <span className="text-destructive ml-0.5" aria-hidden="true">*</span>}
         </label>
       )}
       <RadixSelect.Root
