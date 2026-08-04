@@ -7,8 +7,8 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { generateMicrosoftAuthUrl, generateGoogleAuthUrl, generateNonce, type OAuthState } from '../../utils/email/oauthHelpers';
 import {
   resolveMicrosoftConsumerProfileConfig,
-  type MicrosoftCredentialPreference,
 } from '../../lib/microsoftConsumerProfileResolution';
+import { getMicrosoftEmailSetupMetadataInternal } from '../integrations/microsoftActions';
 
 export const initiateEmailOAuth = withAuth(async (
   user,
@@ -17,7 +17,6 @@ export const initiateEmailOAuth = withAuth(async (
     provider: 'microsoft' | 'google';
     providerId?: string;
     redirectUri?: string;
-    microsoftCredentialSource?: MicrosoftCredentialPreference;
   }
 ): Promise<{ success: true; authUrl: string; state: string } | { success: false; error: string }> => {
 
@@ -47,16 +46,15 @@ export const initiateEmailOAuth = withAuth(async (
 
     let clientId: string | null = null;
     let effectiveRedirectUri = redirectUri || '';
+    let microsoftCredentialSource: 'tenant' | 'platform' | undefined;
 
     if (provider === 'google') {
       // Google is always tenant-owned (CE and EE): do not fall back to app-level secrets.
       clientId = (await secretProvider.getTenantSecret(tenant, 'google_client_id')) || null;
     } else {
-      const microsoftProfile = params.microsoftCredentialSource
-        ? await resolveMicrosoftConsumerProfileConfig(tenant, 'email', {
-            credentialPreference: params.microsoftCredentialSource,
-          })
-        : await resolveMicrosoftConsumerProfileConfig(tenant, 'email');
+      const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(tenant, 'email', {
+        credentialPreference: 'tenant',
+      });
       if (microsoftProfile.status !== 'ready') {
         return {
           success: false,
@@ -65,6 +63,8 @@ export const initiateEmailOAuth = withAuth(async (
       }
 
       clientId = microsoftProfile.clientId || null;
+      microsoftCredentialSource = microsoftProfile.credentialSource === 'app' ? 'platform' : 'tenant';
+      effectiveRedirectUri = (await getMicrosoftEmailSetupMetadataInternal()).mailboxRedirectUri;
     }
 
     if (!effectiveRedirectUri) {
@@ -88,8 +88,8 @@ export const initiateEmailOAuth = withAuth(async (
       redirectUri: effectiveRedirectUri,
       timestamp: Date.now(),
       nonce: generateNonce(),
-      hosted: params.microsoftCredentialSource === 'platform',
-      microsoftCredentialSource: params.microsoftCredentialSource,
+      hosted: microsoftCredentialSource === 'platform',
+      microsoftCredentialSource,
     };
 
     // For multi-tenant Azure AD apps, always use 'common' for the authorization URL

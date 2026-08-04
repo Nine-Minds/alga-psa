@@ -38,6 +38,7 @@ import {
 } from '../../../lib/microsoftConsumerVisibility';
 import { resolveTeamsAvailability } from '../../../lib/teamsAvailabilityCore';
 import { MicrosoftEmailSetupDialog } from './MicrosoftEmailSetupDialog';
+import { getMicrosoftEmailAdminConsentUrl } from '../../../actions/integrations/microsoftEmailSetupActions';
 import {
   AlertTriangle,
   Archive,
@@ -100,10 +101,10 @@ function getReadinessMessages(profile: MicrosoftProfile, t: TranslateFn): string
     messages.push(t('integrations.microsoft.settings.readiness.clientSecretMissing', { defaultValue: 'Add a client secret.' }));
   }
   if (!profile.readiness.tenantIdConfigured) {
-    messages.push(t('integrations.microsoft.settings.readiness.tenantIdMissing', { defaultValue: 'Add a tenant ID.' }));
+    messages.push(t('integrations.microsoft.settings.readiness.tenantIdMissing', { defaultValue: 'Add a Microsoft tenant ID.' }));
   }
   if (profile.emailAdminConsentRequired && !profile.emailAdminConsentGrantedAt) {
-    messages.push(t('integrations.microsoft.settings.readiness.adminConsentPending', { defaultValue: 'Grant Microsoft tenant administrator consent to finish Email setup.' }));
+    messages.push(t('integrations.microsoft.settings.readiness.adminConsentPending', { defaultValue: 'Ask a Microsoft 365 administrator to approve access for Email.' }));
   }
 
   return messages;
@@ -115,6 +116,13 @@ function getProfileStatusBadge(profile: MicrosoftProfile, t: TranslateFn): {
 } {
   if (profile.isArchived) {
     return { label: t('integrations.microsoft.settings.statusBadges.archived', { defaultValue: 'Archived' }), variant: 'secondary' };
+  }
+
+  if (profile.emailAdminConsentRequired && !profile.emailAdminConsentGrantedAt) {
+    return {
+      label: t('integrations.microsoft.settings.statusBadges.waitingForAdminApproval', { defaultValue: 'Waiting for admin approval' }),
+      variant: 'warning',
+    };
   }
 
   if (profile.readiness.ready) {
@@ -355,7 +363,7 @@ function getGuidanceBlocks(
     title: t('integrations.microsoft.settings.guidance.currentProfileTitle', { defaultValue: 'Saved app values' }),
     items: [
       { label: t('integrations.microsoft.settings.guidance.clientId', { defaultValue: 'Client ID' }), value: profile.clientId || notConfigured },
-      { label: t('integrations.microsoft.settings.guidance.tenantId', { defaultValue: 'Tenant ID' }), value: profile.tenantId },
+      { label: t('integrations.microsoft.settings.guidance.tenantId', { defaultValue: 'Microsoft tenant ID' }), value: profile.tenantId },
     ],
   });
 
@@ -397,7 +405,7 @@ export function MicrosoftIntegrationSettings({
   const profiles = status?.success ? status.profiles ?? [] : [];
   const hasProfiles = profiles.length > 0;
   const activeProfiles = profiles.filter((profile) => !profile.isArchived);
-  const emailCredentialCapability = status?.success ? status.emailCredentialCapability : undefined;
+  const emailSetup = status?.success ? status.emailSetup : undefined;
   const profileById = React.useMemo(
     () => new Map(profiles.map((profile) => [profile.profileId, profile])),
     [profiles]
@@ -439,7 +447,7 @@ export function MicrosoftIntegrationSettings({
 
     if (statusResult.success && !advancedChoiceInitializedRef.current) {
       advancedChoiceInitializedRef.current = true;
-      setAdvancedOpen(!isMicrosoftConsumerEnterpriseEdition() || statusResult.emailCredentialCapability?.source !== 'platform');
+      setAdvancedOpen(!isMicrosoftConsumerEnterpriseEdition() || statusResult.emailSetup?.source !== 'platform');
     }
 
     if (!statusResult.success) {
@@ -463,6 +471,41 @@ export function MicrosoftIntegrationSettings({
   React.useEffect(() => {
     void load();
   }, [load]);
+
+  const getPendingEmailApprovalUrl = React.useCallback(async () => {
+    if (!emailSetup?.profileId) {
+      setError(t('integrations.microsoft.emailSetup.errors.pendingProfileMissing', {
+        defaultValue: 'The pending Microsoft app could not be found.',
+      }));
+      return null;
+    }
+
+    const result = await getMicrosoftEmailAdminConsentUrl({ profileId: emailSetup.profileId });
+    if (!result.success || !result.url) {
+      setError(result.error || t('integrations.microsoft.emailSetup.errors.approvalLink', {
+        defaultValue: 'Could not create the Microsoft approval link.',
+      }));
+      return null;
+    }
+    return result.url;
+  }, [emailSetup?.profileId, t]);
+
+  const approvePendingEmailSetup = React.useCallback(async () => {
+    const url = await getPendingEmailApprovalUrl();
+    if (url) window.location.assign(url);
+  }, [getPendingEmailApprovalUrl]);
+
+  const copyPendingEmailApprovalLink = React.useCallback(async () => {
+    const url = await getPendingEmailApprovalUrl();
+    if (!url) return;
+    await navigator.clipboard.writeText(url);
+    toast({
+      title: t('integrations.microsoft.emailSetup.copied', {
+        defaultValue: 'Approval link copied',
+        label: t('integrations.microsoft.emailSetup.consent.approvalLink', { defaultValue: 'Approval link' }),
+      }),
+    });
+  }, [getPendingEmailApprovalUrl, t, toast]);
 
   const closeDialog = React.useCallback(() => {
     setDialogMode(null);
@@ -507,7 +550,7 @@ export function MicrosoftIntegrationSettings({
   const validateForm = React.useCallback(() => {
     if (!formState.displayName.trim()) return t('integrations.microsoft.settings.validation.displayNameRequired', { defaultValue: 'Microsoft app display name is required' });
     if (!formState.clientId.trim()) return t('integrations.microsoft.settings.validation.clientIdRequired', { defaultValue: 'Microsoft OAuth Client ID is required' });
-    if (!formState.tenantId.trim()) return t('integrations.microsoft.settings.validation.tenantIdRequired', { defaultValue: 'Microsoft Tenant ID is required' });
+    if (!formState.tenantId.trim()) return t('integrations.microsoft.settings.validation.tenantIdRequired', { defaultValue: 'Microsoft tenant ID is required' });
     if (dialogMode === 'create' && !formState.clientSecret.trim()) {
       return t('integrations.microsoft.settings.validation.clientSecretRequired', { defaultValue: 'Microsoft OAuth Client Secret is required' });
     }
@@ -731,10 +774,10 @@ export function MicrosoftIntegrationSettings({
             <div className="space-y-2">
               <CardTitle>{t('integrations.microsoft.settings.title', { defaultValue: 'Microsoft' })}</CardTitle>
               <CardDescription>
-                {isEnterpriseEdition
-                  ? emailCredentialCapability?.source === 'platform'
-                    ? t('integrations.microsoft.settings.platform.description', { defaultValue: 'Connect Microsoft 365 with the application supplied by Alga PSA. No Entra app registration is required.' })
-                    : t('integrations.microsoft.settings.descriptionEe', { defaultValue: "Manage your company's Microsoft app registrations for staff sign-in, Outlook email, calendar sync, and Teams." })
+                {emailSetup?.source === 'platform'
+                  ? t('integrations.microsoft.settings.platform.description', { defaultValue: 'Connect Microsoft 365 with the application supplied by Alga PSA. No Entra app registration is required.' })
+                  : isEnterpriseEdition
+                    ? t('integrations.microsoft.settings.descriptionEe', { defaultValue: "Manage your company's Microsoft app registrations for staff sign-in, Outlook email, calendar sync, and Teams." })
                   : t('integrations.microsoft.settings.descriptionCe', { defaultValue: "Manage your company's Microsoft app registrations for staff sign-in and Outlook email." })}
               </CardDescription>
             </div>
@@ -749,16 +792,17 @@ export function MicrosoftIntegrationSettings({
                 <RefreshCw className="mr-2 h-4 w-4" />
                 {t('integrations.microsoft.settings.actions.refresh', { defaultValue: 'Refresh' })}
               </Button>
-              <Button
-                id="microsoft-settings-email-setup-button"
-                type="button"
-                variant="outline"
-                onClick={() => setEmailSetupOpen(true)}
-                disabled={loading}
-              >
-                <WandSparkles className="mr-2 h-4 w-4" />
-                {t('integrations.microsoft.emailSetup.action', { defaultValue: 'Set up Microsoft Email' })}
-              </Button>
+              {emailSetup?.state !== 'ready' && emailSetup?.state !== 'pending_admin_consent' && (
+                <Button
+                  id="microsoft-settings-email-setup-button"
+                  type="button"
+                  onClick={() => setEmailSetupOpen(true)}
+                  disabled={loading}
+                >
+                  <WandSparkles className="mr-2 h-4 w-4" />
+                  {t('integrations.microsoft.emailSetup.action', { defaultValue: 'Set up Microsoft' })}
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -769,15 +813,14 @@ export function MicrosoftIntegrationSettings({
             </Alert>
           )}
 
-          {isEnterpriseEdition && emailCredentialCapability?.source === 'platform' && (
-            <Alert>
-              <ShieldCheck className="h-4 w-4" />
+          {emailSetup?.state === 'ready' && (
+            <Alert variant="success">
               <AlertDescription>
                 <div className="font-medium">
                   {t('integrations.microsoft.settings.platform.title', { defaultValue: 'Microsoft email is ready to connect' })}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {t('integrations.microsoft.settings.platform.readyDescription', { defaultValue: 'Alga PSA supplies and manages the Microsoft application. Connect a mailbox without creating an Entra app or entering client credentials.' })}
+                  {t('integrations.microsoft.settings.platform.readyDescription', { defaultValue: 'The Microsoft app is approved and ready for mailbox sign-in.' })}
                 </div>
                 <Button
                   id="microsoft-platform-connect-email"
@@ -785,21 +828,38 @@ export function MicrosoftIntegrationSettings({
                   className="mt-3"
                   onClick={() => router.push('/msp/settings/integrations?category=communication')}
                 >
-                  {t('integrations.microsoft.settings.platform.connectAction', { defaultValue: 'Connect Microsoft email' })}
+                  {t('integrations.microsoft.settings.platform.connectAction', { defaultValue: 'Connect a mailbox →' })}
                 </Button>
               </AlertDescription>
             </Alert>
           )}
 
-          {isEnterpriseEdition && emailCredentialCapability && emailCredentialCapability.source === 'none' && (
+          {emailSetup?.state === 'pending_admin_consent' && (
             <Alert variant="warning">
-              <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
                 <div className="font-medium">
-                  {t('integrations.microsoft.settings.platform.unavailableTitle', { defaultValue: 'Platform Microsoft credentials are unavailable' })}
+                  {t('integrations.microsoft.emailSetup.complete.waiting', { defaultValue: 'Waiting for admin approval' })}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {t('integrations.microsoft.settings.platform.unavailableDescription', { defaultValue: 'This deployment requires a tenant-owned Microsoft app. Use the advanced setup below to add one.' })}
+                  {t('integrations.microsoft.emailSetup.complete.consentPending', { defaultValue: 'A Microsoft 365 administrator for your organization must approve access before mailboxes can connect.' })}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    id="microsoft-pending-approve-button"
+                    type="button"
+                    onClick={() => void approvePendingEmailSetup()}
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    {t('integrations.microsoft.emailSetup.actions.approve', { defaultValue: 'Approve in Microsoft' })}
+                  </Button>
+                  <Button
+                    id="microsoft-pending-copy-approval-link-button"
+                    type="button"
+                    variant="outline"
+                    onClick={() => void copyPendingEmailApprovalLink()}
+                  >
+                    {t('integrations.microsoft.emailSetup.actions.copyApprovalLink', { defaultValue: 'Copy approval link for your admin' })}
+                  </Button>
                 </div>
               </AlertDescription>
             </Alert>
@@ -816,10 +876,10 @@ export function MicrosoftIntegrationSettings({
               {advancedOpen ? <ChevronDown className="mr-2 h-4 w-4" /> : <ChevronRight className="mr-2 h-4 w-4" />}
               <span>
                 <span className="block font-medium">
-                  {t('integrations.microsoft.settings.advanced.title', { defaultValue: 'Bring your own Microsoft app (advanced)' })}
+                  {t('integrations.microsoft.settings.advanced.title', { defaultValue: 'Manual Microsoft apps (advanced)' })}
                 </span>
                 <span className="block text-xs font-normal text-muted-foreground">
-                  {t('integrations.microsoft.settings.advanced.description', { defaultValue: 'Create and manage tenant-owned Entra app registrations for organizations that explicitly require them.' })}
+                  {t('integrations.microsoft.settings.advanced.description', { defaultValue: 'Create and manage Entra app registrations maintained by your organization.' })}
                 </span>
               </span>
             </Button>
@@ -827,9 +887,8 @@ export function MicrosoftIntegrationSettings({
 
           {(!isEnterpriseEdition || advancedOpen) && (
             <div id="microsoft-advanced-app-settings" className="space-y-6">
-              {isEnterpriseEdition && emailCredentialCapability?.platformReady && (
+              {isEnterpriseEdition && emailSetup?.hosted && emailSetup.platformOffered && (
                 <Alert variant="warning">
-                  <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
                     {t('integrations.microsoft.settings.advanced.warning', { defaultValue: 'A custom Entra app is normally unnecessary on hosted Alga PSA. Continue only when your organization deliberately requires its own application and credentials.' })}
                   </AlertDescription>
@@ -1031,7 +1090,7 @@ export function MicrosoftIntegrationSettings({
                             <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {t('integrations.microsoft.settings.profileCard.tenantIdLabel', { defaultValue: 'Tenant ID:' })} <span className="font-mono text-xs">{profile.tenantId}</span>
+                            {t('integrations.microsoft.settings.profileCard.tenantIdLabel', { defaultValue: 'Microsoft tenant ID:' })} <span className="font-mono text-xs">{profile.tenantId}</span>
                           </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -1248,7 +1307,7 @@ export function MicrosoftIntegrationSettings({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="microsoft-profile-tenant-id">{t('integrations.microsoft.settings.dialog.tenantId', { defaultValue: 'Tenant ID' })}</Label>
+              <Label htmlFor="microsoft-profile-tenant-id">{t('integrations.microsoft.settings.dialog.tenantId', { defaultValue: 'Microsoft tenant ID' })}</Label>
               <Input
                 id="microsoft-profile-tenant-id"
                 value={formState.tenantId}
@@ -1327,10 +1386,6 @@ export function MicrosoftIntegrationSettings({
         isOpen={emailSetupOpen}
         onClose={() => setEmailSetupOpen(false)}
         onCompleted={load}
-        onManualSetup={() => {
-          setEmailSetupOpen(false);
-          openCreateDialog();
-        }}
       />
 
       <ConfirmationDialog

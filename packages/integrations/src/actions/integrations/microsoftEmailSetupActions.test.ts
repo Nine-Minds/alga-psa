@@ -13,6 +13,14 @@ const hoisted = vi.hoisted(() => ({
   persistProfile: vi.fn(),
   axiosPost: vi.fn(),
   axiosRequest: vi.fn(),
+  selfHosted: false,
+  readiness: {
+    state: 'not_configured',
+    source: null,
+    hosted: true,
+    platformOffered: true,
+    automatedCreationAvailable: false,
+  },
 }));
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
@@ -31,6 +39,14 @@ vi.mock('@alga-psa/core/secrets', () => ({
   })),
 }));
 
+vi.mock('@alga-psa/licensing', () => ({
+  isSelfHostLicensing: vi.fn(async () => hoisted.selfHosted),
+}));
+
+vi.mock('./providerReadiness', () => ({
+  getMicrosoftEmailSetupReadiness: vi.fn(async () => hoisted.readiness),
+}));
+
 vi.mock('../../utils/microsoftEmailSetupStateStore', () => ({
   consumeMicrosoftEmailSetupState: (...args: unknown[]) => hoisted.consumeState(...args),
   storeMicrosoftEmailSetupState: (...args: unknown[]) => hoisted.storeState(...args),
@@ -44,6 +60,7 @@ vi.mock('./microsoftActions', () => ({
     returnTo: 'https://psa.example.com/msp/settings/integrations?category=providers',
   })),
   createMicrosoftEmailProfilePendingConsentInternal: (...args: unknown[]) => hoisted.persistProfile(...args),
+  getMicrosoftEmailConsentProfileInternal: vi.fn(),
 }));
 
 vi.mock('axios', () => ({
@@ -59,6 +76,7 @@ import {
   createMicrosoftEmailApplication,
   getMicrosoftEmailSetupOptions,
   configureMicrosoftEmailPlatformApplication,
+  configureMicrosoftEmailManualApplication,
 } from './microsoftEmailSetupActions';
 
 function jwt(payload: Record<string, unknown>): string {
@@ -81,6 +99,7 @@ describe('Microsoft email setup actions', () => {
     });
     hoisted.axiosPost.mockReset();
     hoisted.axiosRequest.mockReset();
+    hoisted.selfHosted = false;
   });
 
   afterEach(() => {
@@ -93,6 +112,42 @@ describe('Microsoft email setup actions', () => {
   it('guards setup metadata with system settings update permission', async () => {
     hoisted.permission = false;
     await expect(getMicrosoftEmailSetupOptions()).resolves.toEqual({ success: false, error: 'Forbidden' });
+  });
+
+  it('rejects the platform application path on self-hosted deployments', async () => {
+    hoisted.selfHosted = true;
+
+    await expect(configureMicrosoftEmailPlatformApplication({
+      tenantId: '11111111-2222-4333-8444-555555555555',
+      displayName: 'Platform Email',
+    })).resolves.toEqual({
+      success: false,
+      error: 'The Alga PSA Microsoft app is available only on hosted deployments.',
+    });
+    expect(hoisted.persistProfile).not.toHaveBeenCalled();
+  });
+
+  it('persists a manual app and derives its administrator-consent callback server-side', async () => {
+    const result = await configureMicrosoftEmailManualApplication({
+      displayName: '  Customer   Email App  ',
+      clientId: 'manual-client-id',
+      clientSecret: 'manual-client-secret',
+      microsoftTenantId: '11111111-2222-4333-8444-555555555555',
+    });
+
+    expect(hoisted.persistProfile).toHaveBeenCalledWith(
+      hoisted.user,
+      'alga-tenant-1',
+      expect.objectContaining({
+        displayName: 'Customer Email App',
+        clientId: 'manual-client-id',
+        clientSecret: 'manual-client-secret',
+      })
+    );
+    expect(result.adminConsentUrl).toContain(encodeURIComponent(
+      'https://psa.example.com/api/auth/microsoft/email-setup/callback'
+    ));
+    expect(JSON.stringify(result)).not.toContain('manual-client-secret');
   });
 
   it('starts automated creation with one-time PKCE state and no verifier in the browser result', async () => {

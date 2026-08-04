@@ -16,13 +16,12 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { AlertTriangle, CheckCircle, ChevronDown, ChevronRight, ExternalLink, ShieldCheck } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './types';
 import {
   createEmailProvider,
   updateEmailProvider,
   upsertEmailProvider,
-  getMicrosoftConsumerSetupStatus,
   initiateEmailOAuth,
 } from '@alga-psa/integrations/actions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -31,14 +30,12 @@ import {
   getErrorMessage,
   isActionMessageError,
 } from '@alga-psa/ui/lib/errorHandling';
-import type { MicrosoftCredentialCapability } from '../../actions/integrations/providerReadiness';
-import type { MicrosoftCredentialPreference } from '../../lib/microsoftConsumerProfileResolution';
+import type { MicrosoftEmailSetupReadiness } from '../../actions/integrations/providerReadiness';
 
 type MicrosoftProviderFormData = {
   providerName: string;
   senderDisplayName?: string;
   mailbox: string;
-  redirectUri: string;
   isActive: boolean;
   autoProcessEmails: boolean;
   folderFilters?: string;
@@ -51,7 +48,7 @@ export interface MicrosoftProviderFormProps {
   provider?: EmailProvider;
   onSuccess: (provider: EmailProvider) => void;
   onCancel: () => void;
-  credentialCapability?: MicrosoftCredentialCapability | null;
+  emailSetup?: MicrosoftEmailSetupReadiness | null;
 }
 
 export function MicrosoftProviderForm({ 
@@ -59,33 +56,19 @@ export function MicrosoftProviderForm({
   provider, 
   onSuccess, 
   onCancel,
-  credentialCapability,
+  emailSetup,
 }: MicrosoftProviderFormProps) {
   const { t } = useTranslation('msp/email-providers');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [resolvedCredentialCapability, setResolvedCredentialCapability] = useState<MicrosoftCredentialCapability | null>(credentialCapability ?? null);
-  const [providerSetupLoading, setProviderSetupLoading] = useState(credentialCapability === undefined);
-  const [useByoApp, setUseByoApp] = useState(false);
-  const credentialChoiceInitializedRef = useRef(false);
   const [oauthStatus, setOauthStatus] = useState<'idle' | 'authorizing' | 'success' | 'error'>('idle');
-  const [oauthMessageReceived, setOauthMessageReceived] = useState(false);
+  const oauthCompletedRef = useRef(false);
+  const oauthCleanupRef = useRef<(() => void) | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [defaultsOptions, setDefaultsOptions] = useState<{ value: string; label: string }[]>([]);
 
   const isEditing = !!provider;
-  const activeCredentialCapability = credentialCapability !== undefined
-    ? credentialCapability
-    : resolvedCredentialCapability;
-  const selectedCredentialSource: MicrosoftCredentialPreference = useByoApp ? 'tenant' : 'platform';
-  const providerSetupReady = selectedCredentialSource === 'tenant'
-    ? activeCredentialCapability?.source === 'tenant' && activeCredentialCapability.ready
-    : Boolean(activeCredentialCapability?.platformReady);
-  const providerSetupMessage = selectedCredentialSource === 'tenant'
-    ? activeCredentialCapability?.message || null
-    : activeCredentialCapability?.platformReady
-      ? null
-      : t('forms.microsoft.hostedOauth.platformNotConfigured', { defaultValue: 'Platform Microsoft credentials are unavailable.' });
+  const providerSetupReady = emailSetup?.state === 'ready';
 
   const microsoftProviderSchema = z.object({
     providerName: z.string().min(1, t('forms.microsoft.validation.providerNameRequired', { defaultValue: 'Configuration name is required' })),
@@ -99,7 +82,6 @@ export function MicrosoftProviderForm({
       })
       .optional(),
     mailbox: z.string().email(t('forms.microsoft.validation.emailRequired', { defaultValue: 'Valid email address is required' })),
-    redirectUri: z.string().url(t('forms.microsoft.validation.redirectRequired', { defaultValue: 'Valid redirect URI is required' })),
     isActive: z.boolean(),
     autoProcessEmails: z.boolean(),
     folderFilters: z.string().optional(),
@@ -108,20 +90,18 @@ export function MicrosoftProviderForm({
   });
 
   const form = useForm<MicrosoftProviderFormData>({
-    resolver: zodResolver(microsoftProviderSchema) as any,
+    resolver: zodResolver(microsoftProviderSchema),
     defaultValues: provider && provider.microsoftConfig ? {
       providerName: provider.providerName,
       senderDisplayName: provider.senderDisplayName || '',
       mailbox: provider.mailbox,
-      redirectUri: provider.microsoftConfig.redirect_uri,
       isActive: provider.isActive,
       autoProcessEmails: provider.microsoftConfig.auto_process_emails ?? true,
       folderFilters: provider.microsoftConfig.folder_filters?.join(', ') || '',
       maxEmailsPerSync: provider.microsoftConfig.max_emails_per_sync ?? 50,
-      inboundTicketDefaultsId: (provider as any).inboundTicketDefaultsId || undefined
+      inboundTicketDefaultsId: provider.inboundTicketDefaultsId || undefined
     } : {
       senderDisplayName: '',
-      redirectUri: `${window.location.origin}/api/auth/microsoft/callback`,
       isActive: true,
       autoProcessEmails: true,
       folderFilters: '',
@@ -143,41 +123,11 @@ export function MicrosoftProviderForm({
     };
     loadDefaults();
     const onUpdate = () => loadDefaults();
-    window.addEventListener('inbound-defaults-updated', onUpdate as any);
-    return () => window.removeEventListener('inbound-defaults-updated', onUpdate as any);
+    window.addEventListener('inbound-defaults-updated', onUpdate);
+    return () => window.removeEventListener('inbound-defaults-updated', onUpdate);
   }, []);
 
-  React.useEffect(() => {
-    if (credentialCapability !== undefined) {
-      setProviderSetupLoading(false);
-      return;
-    }
-
-    const loadProviderSetupStatus = async () => {
-      try {
-        const res = await getMicrosoftConsumerSetupStatus('email');
-        setResolvedCredentialCapability(res.success ? res.credentialCapability || null : null);
-      } catch {
-        setResolvedCredentialCapability(null);
-      } finally {
-        setProviderSetupLoading(false);
-      }
-    };
-    loadProviderSetupStatus();
-  }, [credentialCapability]);
-
-  React.useEffect(() => {
-    if (credentialChoiceInitializedRef.current || providerSetupLoading) return;
-
-    credentialChoiceInitializedRef.current = true;
-    if (provider?.microsoftConfig?.microsoft_profile_id) {
-      setUseByoApp(true);
-    } else if (provider?.microsoftConfig && provider.microsoftConfig.microsoft_profile_id === null) {
-      setUseByoApp(false);
-    } else {
-      setUseByoApp(activeCredentialCapability?.source !== 'platform');
-    }
-  }, [activeCredentialCapability, provider, providerSetupLoading]);
+  React.useEffect(() => () => oauthCleanupRef.current?.(), []);
 
   
 
@@ -202,12 +152,10 @@ export function MicrosoftProviderForm({
         mailbox: data.mailbox,
         isActive: data.isActive,
         inboundTicketDefaultsId: data.inboundTicketDefaultsId,
-        microsoftCredentialSource: selectedCredentialSource,
         microsoftConfig: {
           client_id: '',
           client_secret: '',
           tenant_id: '',
-          redirect_uri: data.redirectUri,
           auto_process_emails: data.autoProcessEmails,
           folder_filters: data.folderFilters ? data.folderFilters.split(',').map(f => f.trim()) : ['Inbox'],
           max_emails_per_sync: data.maxEmailsPerSync
@@ -258,13 +206,11 @@ export function MicrosoftProviderForm({
           senderDisplayName: formData.senderDisplayName?.trim() || null,
           mailbox: formData.mailbox,
           isActive: formData.isActive,
-          inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
-          microsoftCredentialSource: selectedCredentialSource,
+          inboundTicketDefaultsId: formData.inboundTicketDefaultsId || undefined,
           microsoftConfig: {
             client_id: '',
             client_secret: '',
             tenant_id: '',
-            redirect_uri: formData.redirectUri,
             auto_process_emails: formData.autoProcessEmails,
             folder_filters: formData.folderFilters && formData.folderFilters.trim() ? formData.folderFilters.split(',').map(f => f.trim()) : ['INBOX'],
             max_emails_per_sync: formData.maxEmailsPerSync
@@ -281,9 +227,7 @@ export function MicrosoftProviderForm({
       // Get OAuth URL via server action
       const oauthInit = await initiateEmailOAuth({
         provider: 'microsoft',
-        redirectUri: formData.redirectUri,
         providerId: providerId,
-        microsoftCredentialSource: selectedCredentialSource,
       });
       if (!oauthInit.success) {
         throw new Error((oauthInit as { success: false; error: string }).error || t('forms.microsoft.validation.oauthInitiateFailed', { defaultValue: 'Failed to initiate OAuth' }));
@@ -301,11 +245,14 @@ export function MicrosoftProviderForm({
         throw new Error(t('forms.microsoft.validation.popupBlocked', { defaultValue: 'Failed to open OAuth popup. Please allow popups for this site.' }));
       }
 
+      oauthCleanupRef.current?.();
+      oauthCompletedRef.current = false;
+
       // Monitor popup for completion
       const checkClosed = setInterval(() => {
         if (popup.closed) {
-          clearInterval(checkClosed);
-          if (oauthStatus === 'authorizing' && !oauthMessageReceived) {
+          oauthCleanupRef.current?.();
+          if (!oauthCompletedRef.current) {
             setOauthStatus('error');
             setError(t('forms.microsoft.validation.closedEarly', { defaultValue: 'Authorization window closed before completing. Please try again.' }));
           }
@@ -315,10 +262,14 @@ export function MicrosoftProviderForm({
       // Listen for OAuth callback
       const messageHandler = (event: MessageEvent) => {
         // Validate message is from our callback
-        if (event.data.type === 'oauth-callback' && event.data.provider === 'microsoft') {
-          clearInterval(checkClosed);
+        if (
+          event.origin === window.location.origin &&
+          event.data.type === 'oauth-callback' &&
+          event.data.provider === 'microsoft'
+        ) {
+          oauthCompletedRef.current = true;
+          oauthCleanupRef.current?.();
           popup?.close();
-          setOauthMessageReceived(true);
           
           if (event.data.success) {
             setOauthStatus('success');
@@ -327,11 +278,15 @@ export function MicrosoftProviderForm({
             setError(event.data.errorDescription || event.data.error || t('forms.microsoft.validation.authorizationFailed', { defaultValue: 'Authorization failed' }));
           }
           
-          window.removeEventListener('message', messageHandler);
         }
       };
 
       window.addEventListener('message', messageHandler);
+      oauthCleanupRef.current = () => {
+        clearInterval(checkClosed);
+        window.removeEventListener('message', messageHandler);
+        oauthCleanupRef.current = null;
+      };
 
     } catch (err) {
       setOauthStatus('error');
@@ -341,7 +296,7 @@ export function MicrosoftProviderForm({
   };
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
       {/* Error Display (moved to top for visibility) */}
       {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (
         <Alert variant="destructive">
@@ -350,7 +305,6 @@ export function MicrosoftProviderForm({
             <ul className="list-disc list-inside space-y-1">
               {form.formState.errors.providerName && <li>{t('forms.microsoft.requiredFields.providerName', { defaultValue: 'Configuration Name' })}</li>}
               {form.formState.errors.mailbox && <li>{t('forms.microsoft.requiredFields.emailAddress', { defaultValue: 'Email Address' })}</li>}
-              {form.formState.errors.redirectUri && <li>{t('forms.microsoft.requiredFields.redirectUri', { defaultValue: 'Redirect URI' })}</li>}
             </ul>
           </AlertDescription>
         </Alert>
@@ -371,20 +325,20 @@ export function MicrosoftProviderForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="providerName">{t('forms.microsoft.basic.providerNameLabel', { defaultValue: 'Configuration Name *' })}</Label>
               <Input
                 id="providerName"
                 {...form.register('providerName')}
                 placeholder={t('forms.microsoft.basic.providerNamePlaceholder', { defaultValue: 'e.g., Support Mailbox (internal)' })}
-                className={hasAttemptedSubmit && form.formState.errors.providerName ? 'border-red-500' : ''}
+                className={hasAttemptedSubmit && form.formState.errors.providerName ? 'border-destructive' : ''}
               />
               <p className="text-xs text-muted-foreground">
                 {t('forms.microsoft.basic.providerNameHelp', { defaultValue: 'Internal name used to identify this configuration. Not shown in outbound emails.' })}
               </p>
               {form.formState.errors.providerName && (
-                <p className="text-sm text-red-500">{form.formState.errors.providerName.message}</p>
+                <p className="text-sm text-destructive">{form.formState.errors.providerName.message}</p>
               )}
             </div>
 
@@ -395,10 +349,10 @@ export function MicrosoftProviderForm({
                 type="email"
                 {...form.register('mailbox')}
                 placeholder={t('forms.microsoft.basic.emailPlaceholder', { defaultValue: 'support@client.com' })}
-                className={hasAttemptedSubmit && form.formState.errors.mailbox ? 'border-red-500' : ''}
+                className={hasAttemptedSubmit && form.formState.errors.mailbox ? 'border-destructive' : ''}
               />
               {form.formState.errors.mailbox && (
-                <p className="text-sm text-red-500">{form.formState.errors.mailbox.message}</p>
+                <p className="text-sm text-destructive">{form.formState.errors.mailbox.message}</p>
               )}
             </div>
           </div>
@@ -411,7 +365,7 @@ export function MicrosoftProviderForm({
               placeholder={t('forms.microsoft.basic.senderDisplayNamePlaceholder', { defaultValue: 'e.g., Acme Support' })}
             />
             <p className="text-xs text-muted-foreground">
-              {t('forms.microsoft.basic.senderDisplayNameHelp', { defaultValue: 'Display name shown in the From header on outbound ticket emails (replies, closures). Applied only when this mailbox matches the tenant\'s outbound ticketing-from address. Leave blank to fall back to the ticket\'s board name.' })}
+              {t('forms.microsoft.basic.senderDisplayNameHelp', { defaultValue: 'Display name shown in the From header on outbound ticket emails. It applies when this mailbox matches the configured outbound ticketing address. Leave blank to use the ticket board name.' })}
             </p>
           </div>
 
@@ -447,7 +401,7 @@ export function MicrosoftProviderForm({
         <CustomSelect
           id="microsoft-inbound-defaults-select"
           label={t('forms.common.ticketDefaults.label', { defaultValue: 'Inbound Ticket Defaults' })}
-          value={(form.watch('inboundTicketDefaultsId') as any) || ''}
+          value={form.watch('inboundTicketDefaultsId') || ''}
           onValueChange={(v) => form.setValue('inboundTicketDefaultsId', v || undefined)}
           options={defaultsOptions}
           placeholder={t('forms.common.ticketDefaults.placeholder', { defaultValue: 'Select defaults (optional)' })}
@@ -465,156 +419,67 @@ export function MicrosoftProviderForm({
       <Card>
         <CardHeader>
           <CardTitle>{t('forms.microsoft.hostedOauth.sectionTitle', { defaultValue: 'Connect Microsoft 365' })}</CardTitle>
-          <CardDescription>
-            {useByoApp
-              ? t('forms.microsoft.hostedOauth.tenantSectionDescription', { defaultValue: 'Authorize this mailbox with the Microsoft app selected in Providers settings.' })
-              : t('forms.microsoft.hostedOauth.platformSectionDescription', { defaultValue: 'Alga PSA supplies the Microsoft application. Enter the mailbox details, then sign in with Microsoft.' })}
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!useByoApp && (
-            <Alert>
-              <ShieldCheck className="h-4 w-4" />
+          {emailSetup === undefined ? (
+            <Alert variant="info">
               <AlertDescription>
-                <div className="font-medium">
-                  {t('forms.microsoft.hostedOauth.platformManagedTitle', { defaultValue: 'Platform-managed Microsoft app' })}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {t('forms.microsoft.hostedOauth.platformManagedDescription', { defaultValue: 'No Entra app registration, client ID, or client secret is required from you.' })}
-                </div>
+                {t('forms.microsoft.readiness.checking', { defaultValue: 'Checking Microsoft setup…' })}
               </AlertDescription>
             </Alert>
-          )}
-
-          <Button
-            id="microsoft-byo-app-toggle"
-            type="button"
-            variant="ghost"
-            className="h-auto w-full justify-start px-0 text-left"
-            onClick={() => setUseByoApp((current) => !current)}
-          >
-            {useByoApp ? <ChevronDown className="mr-2 h-4 w-4" /> : <ChevronRight className="mr-2 h-4 w-4" />}
-            <span>
-              <span className="block font-medium">
-                {t('forms.microsoft.hostedOauth.byoToggle', { defaultValue: 'Use your own Microsoft app (advanced)' })}
-              </span>
-              <span className="block text-xs font-normal text-muted-foreground">
-                {t('forms.microsoft.hostedOauth.byoToggleDescription', { defaultValue: 'For organizations that deliberately require their own Entra app registration.' })}
-              </span>
-            </span>
-          </Button>
-
-          {useByoApp && (
-            <div className="space-y-3 rounded-lg border p-4">
-              <Alert variant="warning">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  {t('forms.microsoft.hostedOauth.byoWarning', { defaultValue: 'This is normally unnecessary on hosted Alga PSA. Use it only when your organization requires a tenant-owned Entra application.' })}
-                </AlertDescription>
-              </Alert>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  id="configure-microsoft-providers-link"
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
-                >
-                  {t('forms.common.actions.openProvidersSettings', { defaultValue: 'Open Providers Settings' })}
-                </Button>
-                <Button
-                  id="azure-portal-link"
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.open('https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade', '_blank')}
-                >
-                  <ExternalLink className="mr-2 h-3 w-3" />
-                  {t('forms.microsoft.oauth.setupLabel', { defaultValue: 'Microsoft Entra' })}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {!providerSetupLoading && !providerSetupReady && (
+          ) : emailSetup?.state === 'ready' ? (
+            <Alert variant="info">
+              <AlertDescription>
+                {t('forms.microsoft.readiness.ready', { defaultValue: 'Microsoft is set up. Sign in as this mailbox to finish.' })}
+              </AlertDescription>
+            </Alert>
+          ) : emailSetup?.state === 'pending_admin_consent' ? (
             <Alert variant="warning">
-              <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
                 <div className="space-y-2">
-                  <div className="font-medium">
-                    {useByoApp
-                      ? t('forms.microsoft.hostedOauth.tenantNotConfigured', { defaultValue: 'Your Microsoft app is not ready yet.' })
-                      : t('forms.microsoft.hostedOauth.platformNotConfigured', { defaultValue: 'Platform Microsoft credentials are unavailable.' })}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {providerSetupMessage ||
-                      t('forms.microsoft.oauth.setupHelp', { defaultValue: 'Configure Providers first in Settings → Integrations → Providers, then return here to authorize this mailbox.' })}
-                  </div>
-                  {!useByoApp && (
-                    <Button
-                      id="configure-microsoft-provider-readiness-link"
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
-                    >
-                      {t('forms.common.actions.openProvidersSettings', { defaultValue: 'Open Providers Settings' })}
-                    </Button>
-                  )}
+                  <div>{t('forms.microsoft.readiness.pending', { defaultValue: "Waiting for your Microsoft 365 administrator. Setup was started in Providers but hasn't been approved yet." })}</div>
+                  <Button
+                    id="open-microsoft-providers-button"
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0"
+                    onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
+                  >
+                    {t('forms.microsoft.readiness.openProviders', { defaultValue: 'Open Providers' })}
+                  </Button>
                 </div>
               </AlertDescription>
             </Alert>
-          )}
-
-          {!providerSetupLoading && providerSetupReady && oauthStatus !== 'success' && (
-            <Alert>
+          ) : (
+            <Alert variant="warning">
               <AlertDescription>
-                <div className="space-y-1">
-                  <div className="font-medium">
-                    {t('forms.microsoft.oauth.profileReady', { defaultValue: 'Microsoft app profile is ready.' })}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {t('forms.microsoft.oauth.profileReadyHelp', { defaultValue: 'If tenant administrator consent is still pending, complete it in Providers settings. Then use Authorize Access below for this mailbox.' })}
-                  </div>
+                <div className="space-y-2">
+                  <div>{t('forms.microsoft.readiness.notConfigured', { defaultValue: "Microsoft isn't set up yet. Set it up once in Providers, then come back." })}</div>
+                  <Button
+                    id="set-up-microsoft-in-providers-button"
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0"
+                    onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
+                  >
+                    {t('forms.microsoft.readiness.setUpInProviders', { defaultValue: 'Set up in Providers' })}
+                  </Button>
                 </div>
               </AlertDescription>
             </Alert>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="redirectUri">{t('forms.microsoft.oauth.redirectUriLabel', { defaultValue: 'Redirect URI *' })}</Label>
-            <Input
-              id="redirectUri"
-              {...form.register('redirectUri')}
-              placeholder={t('forms.microsoft.oauth.redirectUriPlaceholder', { defaultValue: 'https://yourapp.com/api/auth/microsoft/callback' })}
-              className={hasAttemptedSubmit && form.formState.errors.redirectUri ? 'border-red-500' : ''}
-            />
-            {form.formState.errors.redirectUri && (
-              <p className="text-sm text-red-500">{form.formState.errors.redirectUri.message}</p>
-            )}
-          </div>
-
-          {/* OAuth Authorization */}
-          <div className="bg-muted/50 p-4 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-medium">{t('forms.microsoft.oauth.authorizationTitle', { defaultValue: 'OAuth Authorization' })}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {t('forms.microsoft.oauth.authorizationDescription', { defaultValue: 'Grant mailbox read access and Mail.Send. Reconnect older mailboxes before selecting them for outbound email.' })}
-                </p>
-              </div>
-              <Button
-                id="oauth-authorize-btn"
-                type="button"
-                variant="outline"
-                onClick={handleOAuthAuthorization}
-                disabled={!providerSetupReady || !form.watch('redirectUri') || oauthStatus === 'authorizing'}
-              >
-                {oauthStatus === 'authorizing' && t('forms.common.oauth.authorizing', { defaultValue: 'Authorizing...' })}
-                {oauthStatus === 'success' && <><CheckCircle className="h-4 w-4 mr-2" />{t('forms.common.oauth.authorized', { defaultValue: 'Authorized' })}</>}
-                {(oauthStatus === 'idle' || oauthStatus === 'error') && t('forms.common.oauth.authorizeAccess', { defaultValue: 'Authorize Access' })}
-              </Button>
-            </div>
+          <div className="flex justify-end">
+            <Button
+              id="oauth-authorize-btn"
+              type="button"
+              onClick={handleOAuthAuthorization}
+              disabled={!providerSetupReady || oauthStatus === 'authorizing'}
+            >
+              {oauthStatus === 'authorizing' && t('forms.microsoft.oauth.signingIn', { defaultValue: 'Signing in…' })}
+              {oauthStatus === 'success' && <><CheckCircle className="mr-2 h-4 w-4" />{t('forms.common.oauth.authorized', { defaultValue: 'Connected' })}</>}
+              {(oauthStatus === 'idle' || oauthStatus === 'error') && t('forms.microsoft.oauth.signIn', { defaultValue: 'Sign in with Microsoft' })}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -628,7 +493,7 @@ export function MicrosoftProviderForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="folderFilters">{t('forms.microsoft.advanced.folderFiltersLabel', { defaultValue: 'Folder Filters' })}</Label>
               <Input

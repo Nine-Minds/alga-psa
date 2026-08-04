@@ -42,29 +42,8 @@
       "title": "55555",
       "microsoft": {
         "title": "55555",
-        "checkingCredentials": "55555",
-        "platform": {
-          "title": "55555",
-          "description": "55555"
-        },
-        "byo": {
-          "summary": "55555",
-          "warning": "55555",
-          "description": "55555"
-        },
-        "manualRequired": "55555",
-        "tenant": {
-          "title": "55555",
-          "description": "55555",
-          "incompleteTitle": "55555",
-          "incompleteDescription": "55555"
-        },
-        "steps": {
-          "registerApp": "55555",
-          "permissions": "55555",
-          "redirectUrl": "55555",
-          "credentials": "55555"
-        }
+        "providersPointer": "Microsoft app setup is managed in Providers.",
+        "openProviders": "Open Providers"
       },
       "gmail": {
         "title": "55555",
@@ -271,22 +250,11 @@
     },
     "microsoft": {
       "hostedOauth": {
-        "sectionTitle": "55555",
-        "platformUnavailableDescription": "55555",
-        "tenantSectionDescription": "55555",
-        "platformSectionDescription": "55555",
-        "platformManagedTitle": "55555",
-        "platformManagedDescription": "55555",
-        "byoToggle": "55555",
-        "byoToggleDescription": "55555",
-        "byoWarning": "55555",
-        "tenantNotConfigured": "55555",
-        "platformNotConfigured": "55555"
+        "sectionTitle": "yyyyy"
       },
       "validation": {
         "providerNameRequired": "55555",
         "emailRequired": "55555",
-        "redirectRequired": "55555",
         "authorizeRequiresValid": "55555",
         "oauthInitiateFailed": "55555",
         "popupBlocked": "55555",
@@ -296,8 +264,7 @@
       },
       "requiredFields": {
         "providerName": "55555",
-        "emailAddress": "55555",
-        "redirectUri": "55555"
+        "emailAddress": "55555"
       },
       "basic": {
         "title": "55555",
@@ -310,20 +277,11 @@
         "providerNameHelp": "55555",
         "senderDisplayNameLabel": "55555",
         "senderDisplayNamePlaceholder": "55555",
-        "senderDisplayNameHelp": "55555"
+        "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails. It applies when this mailbox matches the configured outbound ticketing address. Leave blank to use the ticket board name."
       },
       "oauth": {
-        "sectionTitle": "55555",
-        "sectionDescription": "55555",
-        "setupLabel": "55555",
-        "notConfigured": "55555",
-        "setupHelp": "55555",
-        "profileReady": "55555",
-        "profileReadyHelp": "55555",
-        "redirectUriLabel": "55555",
-        "redirectUriPlaceholder": "55555",
-        "authorizationTitle": "55555",
-        "authorizationDescription": "55555"
+        "signingIn": "Signing in…",
+        "signIn": "Sign in with Microsoft"
       },
       "advanced": {
         "title": "55555",
@@ -332,6 +290,14 @@
         "folderFiltersPlaceholder": "55555",
         "folderFiltersHelp": "55555",
         "maxEmailsPerSync": "55555"
+      },
+      "readiness": {
+        "checking": "Checking Microsoft setup…",
+        "ready": "Microsoft is set up. Sign in as this mailbox to finish.",
+        "pending": "Waiting for your Microsoft 365 administrator. Setup was started in Providers but hasn't been approved yet.",
+        "openProviders": "Open Providers",
+        "notConfigured": "Microsoft isn't set up yet. Set it up once in Providers, then come back.",
+        "setUpInProviders": "Set up in Providers"
       }
     },
     "gmail": {

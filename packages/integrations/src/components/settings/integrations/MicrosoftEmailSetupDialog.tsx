@@ -12,27 +12,26 @@ import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   createMicrosoftEmailApplication,
+  configureMicrosoftEmailManualApplication,
   getMicrosoftEmailSetupOptions,
   type MicrosoftEmailSetupCompletionResult,
   type MicrosoftEmailSetupOptionsResult,
   configureMicrosoftEmailPlatformApplication,
 } from '../../../actions/integrations/microsoftEmailSetupActions';
-import { CheckCircle2, Copy, ExternalLink, KeyRound, Settings2, WandSparkles } from 'lucide-react';
+import { Copy, ExternalLink, KeyRound, Settings2, WandSparkles } from 'lucide-react';
 
-type SetupStep = 'choose' | 'platform' | 'automated' | 'complete';
+type SetupStep = 'choose' | 'platform' | 'automated' | 'manual' | 'complete';
 
 interface MicrosoftEmailSetupDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onCompleted: () => void | Promise<void>;
-  onManualSetup: () => void;
 }
 
 export function MicrosoftEmailSetupDialog({
   isOpen,
   onClose,
   onCompleted,
-  onManualSetup,
 }: MicrosoftEmailSetupDialogProps) {
   const { t } = useTranslation('msp/integrations');
   const { toast } = useToast();
@@ -43,6 +42,8 @@ export function MicrosoftEmailSetupDialog({
   const [error, setError] = React.useState<string | null>(null);
   const [tenantId, setTenantId] = React.useState('');
   const [displayName, setDisplayName] = React.useState('Alga PSA Microsoft Email');
+  const [clientId, setClientId] = React.useState('');
+  const [clientSecret, setClientSecret] = React.useState('');
   const [completion, setCompletion] = React.useState<MicrosoftEmailSetupCompletionResult | null>(null);
   const [adminConsentGranted, setAdminConsentGranted] = React.useState(false);
   const popupRef = React.useRef<Window | null>(null);
@@ -63,6 +64,8 @@ export function MicrosoftEmailSetupDialog({
     setStep('choose');
     setError(null);
     setCompletion(null);
+    setClientId('');
+    setClientSecret('');
     setAdminConsentGranted(false);
     setLoading(true);
     void getMicrosoftEmailSetupOptions()
@@ -175,6 +178,36 @@ export function MicrosoftEmailSetupDialog({
     if (!openPopup(result.authUrl)) setWorking(false);
   }, [displayName, openPopup, t]);
 
+  const configureManualApplication = React.useCallback(async () => {
+    if (!displayName.trim() || !clientId.trim() || !clientSecret.trim() || !tenantId.trim()) {
+      setError(t('integrations.microsoft.emailSetup.errors.manualRequired', {
+        defaultValue: 'Enter the display name, client ID, client secret, and Microsoft tenant ID.',
+      }));
+      return;
+    }
+    setWorking(true);
+    setError(null);
+    try {
+      const result = await configureMicrosoftEmailManualApplication({
+        displayName,
+        clientId,
+        clientSecret,
+        microsoftTenantId: tenantId,
+      });
+      if (!result.success) {
+        setError(result.error || t('integrations.microsoft.emailSetup.errors.manual', {
+          defaultValue: 'Could not configure the Microsoft app.',
+        }));
+        return;
+      }
+      setCompletion(result);
+      setStep('complete');
+      await onCompleted();
+    } finally {
+      setWorking(false);
+    }
+  }, [clientId, clientSecret, displayName, onCompleted, t, tenantId]);
+
   const startAdminConsent = React.useCallback(() => {
     if (!adminConsentUrl) return;
     setWorking(true);
@@ -196,9 +229,21 @@ export function MicrosoftEmailSetupDialog({
   ) : step === 'complete' ? (
     <div className="flex flex-wrap justify-end gap-2">
       {adminConsentUrl && !adminConsentGranted && (
+        <Button
+          id="microsoft-email-copy-admin-approval-link-button"
+          type="button"
+          variant="outline"
+          onClick={() => void copyValue(adminConsentUrl, t('integrations.microsoft.emailSetup.consent.approvalLink', { defaultValue: 'Approval link' }))}
+          disabled={working}
+        >
+          <Copy className="mr-2 h-4 w-4" />
+          {t('integrations.microsoft.emailSetup.actions.copyApprovalLink', { defaultValue: 'Copy approval link for your admin' })}
+        </Button>
+      )}
+      {adminConsentUrl && !adminConsentGranted && (
         <Button id="microsoft-email-admin-consent-button" type="button" onClick={startAdminConsent} disabled={working}>
           <ExternalLink className="mr-2 h-4 w-4" />
-          {t('integrations.microsoft.emailSetup.actions.grantConsent', { defaultValue: 'Grant administrator consent' })}
+          {t('integrations.microsoft.emailSetup.actions.approve', { defaultValue: 'Approve in Microsoft' })}
         </Button>
       )}
       <Button id="microsoft-email-setup-finish-button" type="button" variant="outline" onClick={close} disabled={working}>
@@ -211,15 +256,25 @@ export function MicrosoftEmailSetupDialog({
         {t('integrations.microsoft.emailSetup.actions.back', { defaultValue: 'Back' })}
       </Button>
       <Button
-        id={step === 'platform' ? 'microsoft-email-platform-continue-button' : 'microsoft-email-automated-continue-button'}
+        id={step === 'platform'
+          ? 'microsoft-email-platform-continue-button'
+          : step === 'manual'
+            ? 'microsoft-email-manual-continue-button'
+            : 'microsoft-email-automated-continue-button'}
         type="button"
-        onClick={() => void (step === 'platform' ? configurePlatformApplication() : startAutomatedCreation())}
+        onClick={() => void (step === 'platform'
+          ? configurePlatformApplication()
+          : step === 'manual'
+            ? configureManualApplication()
+            : startAutomatedCreation())}
         disabled={working}
       >
         {working
           ? t('integrations.microsoft.emailSetup.actions.working', { defaultValue: 'Working…' })
           : step === 'platform'
             ? t('integrations.microsoft.emailSetup.actions.savePlatform', { defaultValue: 'Create profile and continue' })
+            : step === 'manual'
+              ? t('integrations.microsoft.emailSetup.actions.saveManual', { defaultValue: 'Save app and continue' })
             : t('integrations.microsoft.emailSetup.actions.signIn', { defaultValue: 'Sign in to Microsoft' })}
       </Button>
     </div>
@@ -230,7 +285,7 @@ export function MicrosoftEmailSetupDialog({
       id="microsoft-email-setup-dialog"
       isOpen={isOpen}
       onClose={close}
-      title={t('integrations.microsoft.emailSetup.title', { defaultValue: 'Set up Microsoft Email' })}
+      title={t('integrations.microsoft.emailSetup.title', { defaultValue: 'Set up Microsoft' })}
       className="max-w-2xl"
       footer={footer}
     >
@@ -238,7 +293,7 @@ export function MicrosoftEmailSetupDialog({
         <div className="space-y-5">
           <div>
             <p className="text-sm text-[rgb(var(--color-text-700))]">
-              {t('integrations.microsoft.emailSetup.description', { defaultValue: 'Choose how to configure the Microsoft app used for inbound email. Mailbox authorization remains a separate final step.' })}
+              {t('integrations.microsoft.emailSetup.description', { defaultValue: 'Choose how Alga PSA connects to Microsoft. You will connect mailboxes separately.' })}
             </p>
           </div>
 
@@ -252,43 +307,44 @@ export function MicrosoftEmailSetupDialog({
             <div className="space-y-3"><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /></div>
           ) : step === 'choose' ? (
             <div className="grid gap-3">
-              <button
-                id="microsoft-email-choose-platform-button"
-                type="button"
-                className="rounded-lg border bg-[rgb(var(--color-card))] p-4 text-left transition-colors hover:bg-muted/30 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={!options?.platformApplication?.available}
-                onClick={() => setStep('platform')}
-              >
-                <div className="flex items-start gap-3">
-                  <KeyRound className="mt-0.5 h-5 w-5 text-primary-500" />
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2 font-medium">
-                      {t('integrations.microsoft.emailSetup.platform.title', { defaultValue: 'Use the Alga platform app' })}
-                      {!options?.platformApplication?.available && <Badge variant="secondary">{t('integrations.microsoft.emailSetup.unavailable', { defaultValue: 'Unavailable' })}</Badge>}
+              {options?.emailSetup?.platformOffered && (
+                <button
+                  id="microsoft-email-choose-platform-button"
+                  type="button"
+                  className="rounded-lg border bg-[rgb(var(--color-card))] p-4 text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+                  onClick={() => setStep('platform')}
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-primary-500" />
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2 font-medium">
+                        {t('integrations.microsoft.emailSetup.platform.title', { defaultValue: 'Use the app provided by Alga PSA' })}
+                        <Badge variant="success">{t('integrations.microsoft.emailSetup.recommended', { defaultValue: 'Recommended' })}</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {t('integrations.microsoft.emailSetup.platform.description', { defaultValue: 'Nothing to register in Microsoft Entra. Your Microsoft 365 administrator approves access.' })}
+                      </p>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {t('integrations.microsoft.emailSetup.platform.description', { defaultValue: 'Create an Email-bound profile from the server-managed multi-tenant app, then grant tenant administrator consent.' })}
-                    </p>
                   </div>
-                </div>
-              </button>
+                </button>
+              )}
 
               <button
                 id="microsoft-email-choose-automated-button"
                 type="button"
-                className="rounded-lg border bg-[rgb(var(--color-card))] p-4 text-left transition-colors hover:bg-muted/30 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-lg border bg-[rgb(var(--color-card))] p-4 text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={!options?.automatedCreationAvailable}
                 onClick={() => setStep('automated')}
               >
-                <div className="flex items-start gap-3">
-                  <WandSparkles className="mt-0.5 h-5 w-5 text-primary-500" />
-                  <div className="space-y-1">
+                <div className="flex min-w-0 items-start gap-3">
+                  <WandSparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary-500" />
+                  <div className="min-w-0 space-y-1">
                     <div className="flex flex-wrap items-center gap-2 font-medium">
-                      {t('integrations.microsoft.emailSetup.automated.title', { defaultValue: 'Create an app in this tenant' })}
+                      {t('integrations.microsoft.emailSetup.automated.title', { defaultValue: 'Create an app in your Microsoft organization' })}
                       {!options?.automatedCreationAvailable && <Badge variant="secondary">{t('integrations.microsoft.emailSetup.unavailable', { defaultValue: 'Unavailable' })}</Badge>}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {t('integrations.microsoft.emailSetup.automated.description', { defaultValue: 'Sign in as a Microsoft administrator. Alga creates the app, service principal, secret, Email profile, and binding.' })}
+                      {t('integrations.microsoft.emailSetup.automated.description', { defaultValue: 'Alga PSA registers a dedicated Entra app automatically. Sign in as a Microsoft 365 administrator.' })}
                     </p>
                   </div>
                 </div>
@@ -297,14 +353,17 @@ export function MicrosoftEmailSetupDialog({
               <button
                 id="microsoft-email-choose-manual-button"
                 type="button"
-                className="rounded-lg border bg-[rgb(var(--color-card))] p-4 text-left transition-colors hover:bg-muted/30"
-                onClick={onManualSetup}
+                className="rounded-lg border bg-[rgb(var(--color-card))] p-4 text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+                onClick={() => setStep('manual')}
               >
-                <div className="flex items-start gap-3">
-                  <Settings2 className="mt-0.5 h-5 w-5 text-primary-500" />
-                  <div className="space-y-1">
-                    <div className="font-medium">{t('integrations.microsoft.emailSetup.manual.title', { defaultValue: 'Enter an existing app manually' })}</div>
-                    <p className="text-sm text-muted-foreground">{t('integrations.microsoft.emailSetup.manual.description', { defaultValue: 'Keep using the existing client ID, tenant ID, and client secret form.' })}</p>
+                <div className="flex min-w-0 items-start gap-3">
+                  <Settings2 className="mt-0.5 h-5 w-5 shrink-0 text-primary-500" />
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2 font-medium">
+                      {t('integrations.microsoft.emailSetup.manual.title', { defaultValue: 'Enter an existing app manually' })}
+                      <Badge variant="secondary">{t('integrations.microsoft.emailSetup.advanced', { defaultValue: 'Advanced' })}</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{t('integrations.microsoft.emailSetup.manual.description', { defaultValue: 'Use an existing Entra app maintained by your organization.' })}</p>
                   </div>
                 </div>
               </button>
@@ -313,53 +372,67 @@ export function MicrosoftEmailSetupDialog({
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="microsoft-email-setup-display-name-input">{t('integrations.microsoft.emailSetup.fields.displayName', { defaultValue: 'Profile display name' })}</Label>
-                <Input id="microsoft-email-setup-display-name-input" value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
+                <Input id="microsoft-email-setup-display-name-input" aria-label={t('integrations.microsoft.emailSetup.fields.displayName', { defaultValue: 'Profile display name' })} value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
               </div>
               {step === 'platform' && (
                 <div className="space-y-2">
-                  <Label htmlFor="microsoft-email-setup-tenant-input">{t('integrations.microsoft.emailSetup.fields.tenant', { defaultValue: 'Microsoft tenant ID or verified domain' })}</Label>
-                  <Input id="microsoft-email-setup-tenant-input" value={tenantId} onChange={(event) => setTenantId(event.target.value)} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+                  <Label htmlFor="microsoft-email-setup-tenant-input">{t('integrations.microsoft.emailSetup.fields.microsoftTenant', { defaultValue: 'Microsoft tenant ID or verified domain' })}</Label>
+                  <Input id="microsoft-email-setup-tenant-input" aria-label={t('integrations.microsoft.emailSetup.fields.microsoftTenant', { defaultValue: 'Microsoft tenant ID or verified domain' })} value={tenantId} onChange={(event) => setTenantId(event.target.value)} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
                 </div>
               )}
-              <div className="rounded-lg border bg-muted/10 p-3">
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('integrations.microsoft.emailSetup.callbackUri', { defaultValue: 'Mailbox callback URI' })}</div>
-                <div className="mt-2 break-all font-mono text-xs">{options?.callbackUri}</div>
+            </div>
+          ) : step === 'manual' ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="microsoft-email-manual-display-name-input">{t('integrations.microsoft.emailSetup.fields.displayName', { defaultValue: 'Profile display name' })}</Label>
+                <Input id="microsoft-email-manual-display-name-input" aria-label={t('integrations.microsoft.emailSetup.fields.displayName', { defaultValue: 'Profile display name' })} value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="microsoft-email-manual-client-id-input">{t('integrations.microsoft.emailSetup.fields.clientId', { defaultValue: 'Client ID' })}</Label>
+                <Input id="microsoft-email-manual-client-id-input" aria-label={t('integrations.microsoft.emailSetup.fields.clientId', { defaultValue: 'Client ID' })} value={clientId} onChange={(event) => setClientId(event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="microsoft-email-manual-tenant-id-input">{t('integrations.microsoft.emailSetup.fields.tenantId', { defaultValue: 'Microsoft tenant ID' })}</Label>
+                <Input id="microsoft-email-manual-tenant-id-input" aria-label={t('integrations.microsoft.emailSetup.fields.tenantId', { defaultValue: 'Microsoft tenant ID' })} value={tenantId} onChange={(event) => setTenantId(event.target.value)} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="microsoft-email-manual-client-secret-input">{t('integrations.microsoft.emailSetup.fields.clientSecret', { defaultValue: 'Client secret' })}</Label>
+                <Input id="microsoft-email-manual-client-secret-input" aria-label={t('integrations.microsoft.emailSetup.fields.clientSecret', { defaultValue: 'Client secret' })} type="password" value={clientSecret} onChange={(event) => setClientSecret(event.target.value)} />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="microsoft-email-manual-redirect-uri-input">{t('integrations.microsoft.emailSetup.fields.redirectUri', { defaultValue: 'Redirect URI to add in Entra' })}</Label>
+                  <Button
+                    id="microsoft-email-copy-redirect-uri-button"
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => void copyValue(options?.callbackUri || '', t('integrations.microsoft.emailSetup.fields.redirectUri', { defaultValue: 'Redirect URI' }))}
+                    disabled={!options?.callbackUri}
+                  >
+                    <Copy className="mr-2 h-3.5 w-3.5" />
+                    {t('integrations.microsoft.emailSetup.actions.copy', { defaultValue: 'Copy' })}
+                  </Button>
+                </div>
+                <Input id="microsoft-email-manual-redirect-uri-input" aria-label={t('integrations.microsoft.emailSetup.fields.redirectUri', { defaultValue: 'Redirect URI to add in Entra' })} value={options?.callbackUri || ''} readOnly />
               </div>
             </div>
           ) : (
             <div className="space-y-4">
-              <Alert>
-                <CheckCircle2 className="h-4 w-4" />
+              <Alert variant={adminConsentGranted ? 'success' : 'warning'}>
                 <AlertDescription>
-                  <div className="font-medium">{t('integrations.microsoft.emailSetup.complete.profileCreated', { defaultValue: 'Microsoft Email profile created and bound' })}</div>
+                  <div className="font-medium">
+                    {adminConsentGranted
+                      ? t('integrations.microsoft.emailSetup.complete.ready', { defaultValue: 'Microsoft is ready' })
+                      : t('integrations.microsoft.emailSetup.complete.waiting', { defaultValue: 'Waiting for admin approval' })}
+                  </div>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {adminConsentGranted
-                      ? t('integrations.microsoft.emailSetup.complete.consentDone', { defaultValue: 'Administrator consent is confirmed. Return to Inbound Email and authorize the mailbox.' })
-                      : t('integrations.microsoft.emailSetup.complete.consentPending', { defaultValue: 'Next, a Microsoft tenant administrator must grant consent. Mailbox authorization happens afterward in Inbound Email.' })}
+                      ? t('integrations.microsoft.emailSetup.complete.consentDone', { defaultValue: 'Approved by your Microsoft 365 administrator. You can now connect a mailbox.' })
+                      : t('integrations.microsoft.emailSetup.complete.consentPending', { defaultValue: 'A Microsoft 365 administrator for your organization must approve access before mailboxes can connect.' })}
                   </p>
                 </AlertDescription>
               </Alert>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border bg-muted/10 p-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('integrations.microsoft.emailSetup.fields.clientId', { defaultValue: 'Client ID' })}</div>
-                  <div className="mt-2 break-all font-mono text-xs">{completion?.clientId}</div>
-                </div>
-                <div className="rounded-lg border bg-muted/10 p-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('integrations.microsoft.emailSetup.fields.tenantId', { defaultValue: 'Tenant ID' })}</div>
-                  <div className="mt-2 break-all font-mono text-xs">{completion?.tenantId}</div>
-                </div>
-              </div>
-              {adminConsentUrl && (
-                <div className="rounded-lg border bg-muted/10 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('integrations.microsoft.emailSetup.consent.url', { defaultValue: 'Administrator consent URL' })}</div>
-                    <Button id="microsoft-email-copy-consent-url-button" type="button" variant="ghost" size="sm" onClick={() => void copyValue(adminConsentUrl, t('integrations.microsoft.emailSetup.consent.urlLabel', { defaultValue: 'Consent URL' }))}>
-                      <Copy className="mr-2 h-3.5 w-3.5" />{t('integrations.microsoft.emailSetup.actions.copy', { defaultValue: 'Copy' })}
-                    </Button>
-                  </div>
-                  <div className="mt-2 break-all font-mono text-xs">{adminConsentUrl}</div>
-                </div>
-              )}
             </div>
           )}
         </div>

@@ -192,16 +192,12 @@ describe('EmailProviderConfiguration', () => {
     vi.clearAllMocks();
     getMicrosoftConsumerSetupStatusMock.mockResolvedValue({
       success: true,
-      ready: true,
-      credentialCapability: {
+      emailSetup: {
+        state: 'ready',
         source: 'platform',
-        ready: true,
-        platformReady: true,
-        tenantProfileSelected: false,
-        clientIdConfigured: true,
-        clientSecretConfigured: true,
-        tenantIdConfigured: true,
-        profileId: null,
+        hosted: true,
+        platformOffered: true,
+        automatedCreationAvailable: true,
       },
     });
   });
@@ -234,14 +230,15 @@ describe('EmailProviderConfiguration', () => {
     expect(emailProviderActions.getEmailProviders).toHaveBeenCalled();
   });
 
-  it('shows platform-managed Microsoft setup as the primary hosted path', async () => {
+  it('points Microsoft app setup to Providers without duplicating the setup steps', async () => {
     vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce({ providers: [] } as any);
 
     render(<EmailProviderConfiguration />);
 
-    expect(await screen.findByText('Microsoft sign-in is ready')).toBeInTheDocument();
-    expect(screen.getByText(/no Entra app registration is needed/i)).toBeInTheDocument();
-    expect(screen.getByText('Advanced: use your own Microsoft app')).toBeInTheDocument();
+    expect(await screen.findByText('Microsoft app setup is managed in Providers.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Providers' })).toBeInTheDocument();
+    expect(screen.queryByText(/no Entra app registration is needed/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/use your own Microsoft app/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Register an application in Azure AD')).not.toBeInTheDocument();
   });
 

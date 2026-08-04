@@ -235,11 +235,47 @@ describe('resolveMicrosoftConsumerProfileConfig', () => {
     );
 
     await expect(resolveMicrosoftConsumerProfileConfig('tenant-pending-consent', 'email')).resolves.toEqual({
-      status: 'invalid_profile',
+      status: 'pending_admin_consent',
       tenantId: 'tenant-pending-consent',
       consumerType: 'email',
       profileId: 'profile-pending-consent',
-      message: 'Selected Email Microsoft profile is awaiting tenant administrator consent',
+      clientId: 'pending-consent-client-id',
+      credentialSource: 'binding',
+      message: 'Microsoft 365 administrator approval is still required',
+    });
+  });
+
+  it('surfaces an unbound pending Email profile before the hosted app fallback', async () => {
+    hoisted.state.appSecrets.set('MICROSOFT_CLIENT_ID', 'hosted-client-id');
+    hoisted.state.appSecrets.set('MICROSOFT_CLIENT_SECRET', 'hosted-client-secret');
+    hoisted.state.microsoftProfiles.push({
+      tenant: 'tenant-unbound-pending',
+      profile_id: 'profile-unbound-pending',
+      display_name: 'Pending Platform App',
+      display_name_normalized: 'pending platform app',
+      client_id: 'hosted-client-id',
+      tenant_id: 'microsoft-directory-id',
+      client_secret_ref: 'pending-platform-secret-ref',
+      email_admin_consent_required: true,
+      email_admin_consent_granted_at: null,
+      capabilities: ['email'],
+      is_default: false,
+      is_archived: false,
+      archived_at: null,
+      created_by: null,
+      updated_by: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    await expect(resolveMicrosoftConsumerProfileConfig('tenant-unbound-pending', 'email')).resolves.toEqual({
+      status: 'pending_admin_consent',
+      tenantId: 'tenant-unbound-pending',
+      consumerType: 'email',
+      profileId: 'profile-unbound-pending',
+      clientId: 'hosted-client-id',
+      credentialSource: 'binding',
+      message: 'Microsoft 365 administrator approval is still required',
     });
   });
 

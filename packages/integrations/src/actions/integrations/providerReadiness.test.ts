@@ -7,6 +7,7 @@ const getTenantSecretMock = vi.fn(async (tenant: string, key: string) => {
 });
 const resolveMicrosoftConsumerProfileConfigMock = vi.fn();
 const getMicrosoftPlatformCredentialAvailabilityMock = vi.fn();
+const isSelfHostLicensingMock = vi.fn();
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: async () => ({
@@ -19,9 +20,13 @@ vi.mock('../../lib/microsoftConsumerProfileResolution', () => ({
   getMicrosoftPlatformCredentialAvailability: (...args: unknown[]) => getMicrosoftPlatformCredentialAvailabilityMock(...args),
 }));
 
+vi.mock('@alga-psa/licensing', () => ({
+  isSelfHostLicensing: (...args: unknown[]) => isSelfHostLicensingMock(...args),
+}));
+
 import {
   getGoogleProviderReadiness,
-  getMicrosoftEmailCredentialCapability,
+  getMicrosoftEmailSetupReadiness,
   getMicrosoftProfileReadiness,
   getMicrosoftProviderReadiness,
 } from './providerReadiness';
@@ -32,6 +37,7 @@ describe('provider readiness helpers', () => {
     getTenantSecretMock.mockClear();
     resolveMicrosoftConsumerProfileConfigMock.mockReset();
     getMicrosoftPlatformCredentialAvailabilityMock.mockReset();
+    isSelfHostLicensingMock.mockReset().mockResolvedValue(false);
     getMicrosoftPlatformCredentialAvailabilityMock.mockResolvedValue({
       ready: false,
       clientIdConfigured: false,
@@ -108,8 +114,11 @@ describe('provider readiness helpers', () => {
     });
   });
 
-  it('reports platform credentials as the safe default source without returning secret values', async () => {
-    resolveMicrosoftConsumerProfileConfigMock.mockResolvedValue({
+  it('offers platform setup without treating application secrets as organization approval', async () => {
+    resolveMicrosoftConsumerProfileConfigMock.mockResolvedValueOnce({
+      status: 'not_configured', tenantId: 'tenant-1', consumerType: 'email',
+      message: 'Email Microsoft profile binding is not configured',
+    }).mockResolvedValueOnce({
       status: 'ready', tenantId: 'tenant-1', consumerType: 'email',
       clientId: 'platform-client-id', clientSecret: 'platform-client-secret',
       microsoftTenantId: 'common', credentialSource: 'app',
@@ -118,10 +127,28 @@ describe('provider readiness helpers', () => {
       ready: true, clientIdConfigured: true, clientSecretConfigured: true, tenantIdConfigured: false,
     });
 
-    await expect(getMicrosoftEmailCredentialCapability('tenant-1')).resolves.toEqual({
-      ready: true, source: 'platform', platformReady: true, tenantProfileSelected: false,
-      clientIdConfigured: true, clientSecretConfigured: true, tenantIdConfigured: true,
-      profileId: undefined, message: undefined,
+    await expect(getMicrosoftEmailSetupReadiness('tenant-1')).resolves.toEqual({
+      state: 'not_configured', source: null, hosted: true, platformOffered: true,
+      automatedCreationAvailable: false,
+      profileId: undefined, message: 'Email Microsoft profile binding is not configured',
+    });
+  });
+
+  it('recognizes an approved profile created from the platform app', async () => {
+    resolveMicrosoftConsumerProfileConfigMock.mockResolvedValueOnce({
+      status: 'ready', tenantId: 'tenant-1', consumerType: 'email',
+      profileId: 'profile-platform', clientId: 'platform-client-id',
+      clientSecret: 'profile-secret', microsoftTenantId: 'microsoft-directory-id',
+      credentialSource: 'binding',
+    }).mockResolvedValueOnce({
+      status: 'ready', tenantId: 'tenant-1', consumerType: 'email',
+      clientId: 'platform-client-id', clientSecret: 'platform-client-secret',
+      microsoftTenantId: 'common', credentialSource: 'app',
+    });
+    getMicrosoftPlatformCredentialAvailabilityMock.mockResolvedValue({ ready: true });
+
+    await expect(getMicrosoftEmailSetupReadiness('tenant-1')).resolves.toMatchObject({
+      state: 'ready', source: 'platform', profileId: 'profile-platform', platformOffered: true,
     });
   });
 
@@ -134,8 +161,8 @@ describe('provider readiness helpers', () => {
       ready: true, clientIdConfigured: true, clientSecretConfigured: true, tenantIdConfigured: true,
     });
 
-    await expect(getMicrosoftEmailCredentialCapability('tenant-1')).resolves.toMatchObject({
-      ready: false, source: 'tenant', platformReady: true, tenantProfileSelected: true, profileId: 'profile-1',
+    await expect(getMicrosoftEmailSetupReadiness('tenant-1')).resolves.toMatchObject({
+      state: 'not_configured', source: 'tenant_app', platformOffered: true, profileId: 'profile-1',
     });
   });
 
@@ -148,13 +175,50 @@ describe('provider readiness helpers', () => {
       ready: false, clientIdConfigured: true, clientSecretConfigured: false, tenantIdConfigured: false,
     });
 
-    const capability = await getMicrosoftEmailCredentialCapability('tenant-1');
+    const capability = await getMicrosoftEmailSetupReadiness('tenant-1');
     expect(capability).toEqual({
-      ready: false, source: 'none', platformReady: false, tenantProfileSelected: false,
-      clientIdConfigured: true, clientSecretConfigured: false, tenantIdConfigured: false,
+      state: 'not_configured', source: null, hosted: true, platformOffered: false,
+      automatedCreationAvailable: false,
       profileId: undefined, message: 'Email Microsoft profile binding is not configured',
     });
     expect(capability).not.toHaveProperty('clientId');
     expect(capability).not.toHaveProperty('clientSecret');
+  });
+
+  it('reports pending Microsoft 365 administrator approval explicitly', async () => {
+    resolveMicrosoftConsumerProfileConfigMock.mockResolvedValue({
+      status: 'pending_admin_consent',
+      tenantId: 'tenant-1',
+      consumerType: 'email',
+      profileId: 'profile-pending',
+      credentialSource: 'binding',
+    });
+
+    await expect(getMicrosoftEmailSetupReadiness('tenant-1')).resolves.toMatchObject({
+      state: 'pending_admin_consent',
+      source: 'tenant_app',
+      profileId: 'profile-pending',
+    });
+  });
+
+  it('never offers the Alga PSA app on a self-hosted deployment', async () => {
+    isSelfHostLicensingMock.mockResolvedValue(true);
+    resolveMicrosoftConsumerProfileConfigMock.mockResolvedValue({
+      status: 'not_configured',
+      tenantId: 'tenant-1',
+      consumerType: 'email',
+    });
+    getMicrosoftPlatformCredentialAvailabilityMock.mockResolvedValue({ ready: true });
+
+    await expect(getMicrosoftEmailSetupReadiness('tenant-1')).resolves.toMatchObject({
+      hosted: false,
+      platformOffered: false,
+      state: 'not_configured',
+    });
+    expect(resolveMicrosoftConsumerProfileConfigMock).toHaveBeenCalledWith(
+      'tenant-1',
+      'email',
+      { credentialPreference: 'tenant' },
+    );
   });
 });

@@ -42,29 +42,8 @@
       "title": "Instructions de configuration",
       "microsoft": {
         "title": "Configuration de Microsoft 365",
-        "checkingCredentials": "Checking Microsoft credential availability…",
-        "platform": {
-          "title": "Microsoft sign-in is ready",
-          "description": "Alga PSA supplies the Microsoft application. Add a provider, enter the mailbox details, and connect with Microsoft—no Entra app registration is needed."
-        },
-        "byo": {
-          "summary": "Advanced: use your own Microsoft app",
-          "warning": "This is normally unnecessary on hosted Alga PSA and should be used only when your organization requires its own Entra application.",
-          "description": "Open Settings → Integrations → Providers, expand the Microsoft advanced options, and add your tenant-owned app before returning here."
-        },
-        "manualRequired": "Platform Microsoft credentials are unavailable in this deployment. Configure your own Microsoft app to connect a mailbox.",
-        "tenant": {
-          "title": "Your organization’s Microsoft app is selected",
-          "description": "New Microsoft mailboxes will use the tenant-owned app selected in Providers settings. This choice is preserved even when platform credentials are available.",
-          "incompleteTitle": "Your Microsoft app needs attention",
-          "incompleteDescription": "Finish configuring the Microsoft app selected in Providers settings before connecting a mailbox."
-        },
-        "steps": {
-          "registerApp": "Enregistrer une application dans Azure AD",
-          "permissions": "Configurer les autorisations API pour Mail.Read",
-          "redirectUrl": "Configurez l'URL de redirection lors de l'inscription de votre application",
-          "credentials": "Utilisez l'ID client et le secret client dans le formulaire ci-dessus"
-        }
+        "providersPointer": "Microsoft app setup is managed in Providers.",
+        "openProviders": "Open Providers"
       },
       "gmail": {
         "title": "Configuration de Gmail",
@@ -271,22 +250,11 @@
     },
     "microsoft": {
       "hostedOauth": {
-        "sectionTitle": "Connect Microsoft 365",
-        "platformUnavailableDescription": "Platform Microsoft credentials are unavailable in this deployment. Use your own Microsoft app to continue.",
-        "tenantSectionDescription": "Authorize this mailbox with the Microsoft app selected in Providers settings.",
-        "platformSectionDescription": "Alga PSA supplies the Microsoft application. Enter the mailbox details, then sign in with Microsoft.",
-        "platformManagedTitle": "Platform-managed Microsoft app",
-        "platformManagedDescription": "No Entra app registration, client ID, or client secret is required from you.",
-        "byoToggle": "Use your own Microsoft app (advanced)",
-        "byoToggleDescription": "For organizations that deliberately require their own Entra app registration.",
-        "byoWarning": "This is normally unnecessary on hosted Alga PSA. Use it only when your organization requires a tenant-owned Entra application.",
-        "tenantNotConfigured": "Your Microsoft app is not ready yet.",
-        "platformNotConfigured": "Platform Microsoft credentials are unavailable."
+        "sectionTitle": "Connect Microsoft 365"
       },
       "validation": {
         "providerNameRequired": "Le nom de configuration est obligatoire",
         "emailRequired": "Une adresse e-mail valide est requise",
-        "redirectRequired": "Un URI de redirection valide est requis",
         "authorizeRequiresValid": "Veuillez remplir tous les champs obligatoires avant d'autoriser",
         "oauthInitiateFailed": "Échec du lancement d'OAuth",
         "popupBlocked": "Échec de l'ouverture de la fenêtre contextuelle OAuth. Veuillez autoriser les popups pour ce site.",
@@ -296,8 +264,7 @@
       },
       "requiredFields": {
         "providerName": "Nom de configuration",
-        "emailAddress": "Adresse email",
-        "redirectUri": "URI de redirection"
+        "emailAddress": "Adresse email"
       },
       "basic": {
         "title": "Configuration de base",
@@ -310,20 +277,11 @@
         "providerNameHelp": "Nom interne utilisé pour identifier cette configuration. N'apparaît pas dans les e-mails sortants.",
         "senderDisplayNameLabel": "Nom de l'expéditeur",
         "senderDisplayNamePlaceholder": "ex. : Acme Support",
-        "senderDisplayNameHelp": "Nom affiché dans l'en-tête « De » des e-mails de tickets sortants (réponses, clôtures). Appliqué uniquement lorsque cette boîte correspond à l'adresse d'envoi sortante du locataire. Laissez vide pour utiliser le nom du tableau du ticket."
+        "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails. It applies when this mailbox matches the configured outbound ticketing address. Leave blank to use the ticket board name."
       },
       "oauth": {
-        "sectionTitle": "Configuration Microsoft OAuth",
-        "sectionDescription": "Les informations d'identification de l'application Microsoft sont configurées dans les paramètres des fournisseurs et réutilisées ici.",
-        "setupLabel": "Microsoft Entrée",
-        "notConfigured": "Les paramètres du fournisseur Microsoft ne sont pas configurés.",
-        "setupHelp": "Configurez d'abord les fournisseurs dans Paramètres → Intégrations → Fournisseurs, puis revenez ici pour autoriser cette boîte aux lettres.",
-        "profileReady": "Le profil de l’application Microsoft est prêt.",
-        "profileReadyHelp": "Si le consentement de l’administrateur du locataire est encore en attente, terminez-le dans les paramètres Fournisseurs. Utilisez ensuite Autoriser l’accès pour cette boîte aux lettres.",
-        "redirectUriLabel": "URI de redirection *",
-        "redirectUriPlaceholder": "https://yourapp.com/api/auth/microsoft/callback",
-        "authorizationTitle": "Autorisation OAuth",
-        "authorizationDescription": "Terminer le flux OAuth pour accorder l'accès à la boîte aux lettres"
+        "signingIn": "Signing in…",
+        "signIn": "Sign in with Microsoft"
       },
       "advanced": {
         "title": "Paramètres avancés",
@@ -332,6 +290,14 @@
         "folderFiltersPlaceholder": "Boîte de réception, support, dossier personnalisé",
         "folderFiltersHelp": "Liste des dossiers à surveiller séparés par des virgules (par défaut : Boîte de réception)",
         "maxEmailsPerSync": "Nombre maximum d'e-mails par synchronisation"
+      },
+      "readiness": {
+        "checking": "Checking Microsoft setup…",
+        "ready": "Microsoft is set up. Sign in as this mailbox to finish.",
+        "pending": "Waiting for your Microsoft 365 administrator. Setup was started in Providers but hasn't been approved yet.",
+        "openProviders": "Open Providers",
+        "notConfigured": "Microsoft isn't set up yet. Set it up once in Providers, then come back.",
+        "setUpInProviders": "Set up in Providers"
       }
     },
     "gmail": {
