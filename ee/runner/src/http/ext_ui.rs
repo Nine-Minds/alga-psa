@@ -290,6 +290,11 @@ pub async fn handle_get(
         Ok(s) => s,
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
+    let ct = content_type_for(&file_path);
+    let is_html = ct
+        .to_str()
+        .map(|s| s.starts_with("text/html"))
+        .unwrap_or(false);
     if let Some(inm) = headers
         .get(header::IF_NONE_MATCH)
         .and_then(|v| v.to_str().ok())
@@ -305,6 +310,9 @@ pub async fn handle_get(
                 header::CACHE_CONTROL,
                 HeaderValue::from_static("public, max-age=31536000, immutable"),
             );
+            if is_html {
+                h.insert(header::CONTENT_SECURITY_POLICY, csp_header_value());
+            }
             return (StatusCode::NOT_MODIFIED, h, ()).into_response();
         }
     }
@@ -314,7 +322,6 @@ pub async fn handle_get(
         Ok(b) => b,
         Err(_) => return StatusCode::NOT_FOUND.into_response(),
     };
-    let ct = content_type_for(&file_path);
 
     let mut h = HeaderMap::new();
     h.insert(header::CONTENT_TYPE, ct);
@@ -329,6 +336,13 @@ pub async fn handle_get(
         header::CACHE_CONTROL,
         HeaderValue::from_static("public, max-age=31536000, immutable"),
     );
+    h.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    if is_html {
+        h.insert(header::CONTENT_SECURITY_POLICY, csp_header_value());
+    }
 
     // Structured trace
     let dur_ms = started.elapsed().as_millis() as u64;
@@ -359,6 +373,24 @@ pub async fn warmup(_state: State<AppState>, Json(_req): Json<WarmupReq>) -> imp
         "warmup unsupported without tenant + extension context",
     )
         .into_response()
+}
+
+const DEFAULT_CSP: &str = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'";
+
+/// CSP for extension HTML documents. EXT_UI_CONTENT_SECURITY_POLICY replaces the
+/// whole policy; EXT_UI_FRAME_ANCESTORS appends a frame-ancestors directive
+/// (e.g. the embedding app origin) to the default policy.
+fn csp_header_value() -> HeaderValue {
+    let policy = match std::env::var("EXT_UI_CONTENT_SECURITY_POLICY") {
+        Ok(v) if !v.trim().is_empty() => v.trim().to_string(),
+        _ => match std::env::var("EXT_UI_FRAME_ANCESTORS") {
+            Ok(v) if !v.trim().is_empty() => {
+                format!("{}; frame-ancestors {}", DEFAULT_CSP, v.trim())
+            }
+            _ => DEFAULT_CSP.to_string(),
+        },
+    };
+    HeaderValue::from_str(&policy).unwrap_or_else(|_| HeaderValue::from_static(DEFAULT_CSP))
 }
 
 fn normalize_hash(content_hash: &str) -> anyhow::Result<String> {

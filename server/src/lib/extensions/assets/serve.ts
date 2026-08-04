@@ -32,10 +32,28 @@ export function serveFrom(req: NextRequest, dir: string, reqPath: string): NextR
   const ifNone = req.headers.get('if-none-match');
   if (ifNone && ifNone === etag) return new NextResponse(null, { status: 304 });
   const headers = new Headers();
-  headers.set('content-type', contentTypeFor(path));
+  const contentType = contentTypeFor(path);
+  headers.set('content-type', contentType);
   headers.set('cache-control', 'public, max-age=31536000, immutable');
   headers.set('etag', etag);
+  headers.set('x-content-type-options', 'nosniff');
+  if (contentType.startsWith('text/html')) {
+    headers.set('content-security-policy', extUiCsp());
+  }
   return new NextResponse(buf, { status: 200, headers });
+}
+
+const DEFAULT_EXT_UI_CSP =
+  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'";
+
+// Mirrors the Rust host (ee/runner/src/http/ext_ui.rs): EXT_UI_CONTENT_SECURITY_POLICY
+// replaces the whole policy; EXT_UI_FRAME_ANCESTORS appends a frame-ancestors directive.
+function extUiCsp(): string {
+  const override = process.env.EXT_UI_CONTENT_SECURITY_POLICY?.trim();
+  if (override) return override;
+  const frameAncestors = process.env.EXT_UI_FRAME_ANCESTORS?.trim();
+  if (frameAncestors) return `${DEFAULT_EXT_UI_CSP}; frame-ancestors ${frameAncestors}`;
+  return DEFAULT_EXT_UI_CSP;
 }
 
 function sanitizePath(p: string): string {

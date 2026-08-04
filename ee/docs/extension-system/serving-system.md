@@ -139,6 +139,8 @@ Gateway:
 
 Runner:
 - `RUNNER_PUBLIC_BASE` — public base for serving ext-ui assets
+- `EXT_UI_FRAME_ANCESTORS` — origin(s) allowed to embed extension UIs; appended as a `frame-ancestors` directive to the default ext-ui CSP (set to the main app origin in production)
+- `EXT_UI_CONTENT_SECURITY_POLICY` — full override of the ext-ui CSP (rarely needed)
 - `SIGNING_TRUST_BUNDLE` — trust anchors for signature verification
 - `EXT_EGRESS_ALLOWLIST` — hostnames allowed for `alga.http.fetch`
 - `RUNNER_DEBUG_REDIS_URL`, `RUNNER_DEBUG_REDIS_MAXLEN`, `RUNNER_DEBUG_MAX_EVENT_BYTES` — enable Redis-backed debug streaming
@@ -160,6 +162,7 @@ Caches:
 - Content-addressed artifacts; hash verification on use; signature verification against trust bundle.
 - Quotas/limits: memory caps, timeouts, and concurrency per tenant/extension.
 - UI isolation: sandboxed iframes; origin validation aligned with `RUNNER_PUBLIC_BASE`.
+- Ext-ui HTML documents are served with a `Content-Security-Policy` header (`default-src 'self'`; inline styles and `data:` images allowed; `frame-ancestors` from `EXT_UI_FRAME_ANCESTORS`) plus `X-Content-Type-Options: nosniff` on all assets. Extensions must use the postMessage UI proxy for data access — direct `fetch()` from the iframe is blocked by `connect-src 'self'` by design.
 
 ## Error Handling, Debugging & Retries
 
