@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { generateMicrosoftAuthUrl } from './oauthHelpers';
 
 describe('Microsoft email OAuth scopes', () => {
-  it('requests inbound read scopes, Mail.Send, and offline access', () => {
+  it('requests inbound read scopes, Mail.Send, User.Read, and offline access', () => {
     const url = new URL(generateMicrosoftAuthUrl(
       'client-id',
       'https://app.example/api/auth/microsoft/callback',
@@ -18,6 +18,7 @@ describe('Microsoft email OAuth scopes', () => {
       'https://graph.microsoft.com/Mail.Read',
       'https://graph.microsoft.com/Mail.Read.Shared',
       'https://graph.microsoft.com/Mail.Send',
+      'https://graph.microsoft.com/User.Read',
       'offline_access',
     ]);
     expect(url.searchParams.get('prompt')).toBe('consent');

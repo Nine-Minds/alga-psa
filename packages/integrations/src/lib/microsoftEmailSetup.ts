@@ -6,6 +6,10 @@ export const MICROSOFT_EMAIL_DELEGATED_PERMISSION_IDS = {
   mailRead: '570282fd-fa5c-430d-a7fd-fc8dc98a9dca',
   mailReadShared: '7b9103a5-4610-446b-9670-80643382c1fa',
   offlineAccess: '7427e0e9-2fba-42fe-b0c0-848c9e6a8182',
+  // MicrosoftGraphAdapter reads /me to decide between the /me and
+  // /users/{mailbox} paths. Portal-created registrations get User.Read by
+  // default; apps we create must declare it or that call is denied.
+  userRead: 'e1fe6dd8-ba31-4d61-89e7-88639da4683d',
 } as const;
 
 export const MICROSOFT_EMAIL_SETUP_BOOTSTRAP_SCOPES = [
