@@ -36,9 +36,12 @@
     "completeDialog": {
       "due": "Dovuto",
       "nextAction": "Azione successiva",
+      "pickNext": "Passo successivo",
       "placeholder": "ad es. Dare seguito alla proposta",
+      "reachesStage": "Questo raggiunge anche {{stage}}",
       "submit": "Completa e pianifica il prossimo",
-      "title": "Fatto. Cosa succede dopo?"
+      "title": "Fatto. Cosa succede dopo?",
+      "writeNew": "Scrivine uno nuovo…"
     },
     "confidence": {
       "committed": "Impegnato",
@@ -85,8 +88,11 @@
       "oneTime": "Una volta",
       "oneTimeServices": "Servizi una tantum",
       "owner": "Proprietario",
-      "quotes": "Citazioni",
+      "ownerNote": "I passi possono andare a persone diverse; la trattativa ha comunque un solo responsabile.",
+      "people": "Chi ci lavora",
+      "plan": "Piano e cronologia",
       "quoteTitle": "Citazione per {{title}}",
+      "quotes": "Citazioni",
       "recurring": "Ricorrente",
       "setStageHint": "Seleziona un checkpoint per preparare il terreno",
       "timeline": "Cronologia",
@@ -341,7 +347,9 @@
       "quoteUnlinked": "Citazione scollegata",
       "saved": "Salvato",
       "snoozed": "Posticipato per qualche giorno",
+      "stagePlanned": "Piano di fase aggiunto",
       "stageSet": "Fase impostata su {{stage}}",
+      "stepDeleted": "Passo rimosso",
       "suggestionAccepted": "Opportunità creata dal suggerimento",
       "suggestionDismissed": "Licenziato. Non tornerà.",
       "suggestionSnoozed": "Posticipato per una settimana",
@@ -443,6 +451,29 @@
       "projectStatus": "Stato iniziale",
       "projectTemplate": "Crea un progetto di onboarding (facoltativo)",
       "title": "Ha vinto Marco"
+    },
+    "steps": {
+      "add": "Aggiungi un passo",
+      "addTitle": "Aggiungi un passo",
+      "applyTemplate": "Pianifica questa fase",
+      "assign": "Assegna",
+      "assignee": "Chi lo fa",
+      "due": "Scadenza",
+      "duration": "Durata",
+      "editTitle": "Modifica passo",
+      "hasTime": "Dagli un orario (compare nel calendario)",
+      "linkTask": "Collega attività",
+      "linkTicket": "Collega ticket",
+      "minutes": "{{count}} min",
+      "noLink": "Non collegato",
+      "planned": "Pianificato",
+      "projectTask": "Attività di progetto collegata",
+      "schedule": "Programma",
+      "ticket": "Ticket collegato",
+      "title": "Passo",
+      "titlePlaceholder": "es. Rivedere i risultati della valutazione con Dana",
+      "unassigned": "Il responsabile della trattativa",
+      "when": "Quando"
     }
   }
 }

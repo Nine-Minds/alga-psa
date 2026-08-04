@@ -11,7 +11,7 @@ import { correctEvidence, declareStage, recordEvidence } from '../lib/stageEngin
 import { onQuoteAccepted, onQuoteSent, recomputeAcceptedQuoteValues } from '../lib/quoteLifecycleHooks';
 import { buildOpportunityCreatedPayload, buildOpportunityStatusChangedPayload } from '../lib/opportunityEventBuilders';
 import { publishOpportunityEventAfterCommit } from '../lib/opportunityEvents';
-import { completeOpportunityNextAction } from '../lib/completedActionInteraction';
+import { completeOpportunityNextAction } from '../lib/opportunitySteps';
 import type { OpportunityListResult } from '../models/opportunityModel';
 import { getOpportunityDetail } from '../lib/opportunityDetail';
 import {

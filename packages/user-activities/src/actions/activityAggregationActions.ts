@@ -1569,9 +1569,10 @@ export async function fetchNotificationActivities(
 }
 
 /**
- * Fetch the current owner's open opportunity next actions. This is aggregation-only;
- * the generic activities list can render the base fields and follow `link` without a
- * dedicated opportunity section or detail drawer.
+ * Fetch the open opportunity steps assigned to this user. Steps carry their own
+ * assignee, so work handed to a colleague shows up in their feed rather than
+ * only the deal owner's. Aggregation-only: the generic activities list renders
+ * the base fields and follows `link`.
  */
 export async function fetchOpportunityActivities(
   userId: string,
@@ -1582,22 +1583,23 @@ export async function fetchOpportunityActivities(
     const { knex, tenant } = await createTenantKnex(tenantId);
     if (!tenant) throw new Error('Tenant is required');
     const db = tenantDb(knex, tenant);
-    const query = db.table('opportunities as o');
+    const query = db.table('opportunity_steps as s');
+    db.tenantJoin(query, 'opportunities as o', 's.opportunity_id', 'o.opportunity_id');
     db.tenantJoin(query, 'clients as c', 'o.client_id', 'c.client_id');
     query
-      .where({ 'o.owner_id': userId, 'o.status': 'open' })
-      .whereNotNull('o.next_action')
-      .whereNotNull('o.next_action_due');
+      .where({ 's.assigned_to': userId, 'o.status': 'open' })
+      .whereIn('s.status', ['current', 'planned'])
+      .whereNotNull('s.due_at');
 
     if (filters.clientId) query.where('o.client_id', filters.clientId);
-    if (filters.dueDateStart) query.where('o.next_action_due', '>=', filters.dueDateStart);
-    if (filters.dueDateEnd) query.where('o.next_action_due', '<=', filters.dueDateEnd);
-    if (filters.createdAtStart) query.where('o.created_at', '>=', filters.createdAtStart);
-    if (filters.createdAtEnd) query.where('o.created_at', '<=', filters.createdAtEnd);
+    if (filters.dueDateStart) query.where('s.due_at', '>=', filters.dueDateStart);
+    if (filters.dueDateEnd) query.where('s.due_at', '<=', filters.dueDateEnd);
+    if (filters.createdAtStart) query.where('s.created_at', '>=', filters.createdAtStart);
+    if (filters.createdAtEnd) query.where('s.created_at', '<=', filters.createdAtEnd);
     if (filters.search) {
       const term = `%${filters.search}%`;
       query.where(function opportunitySearch() {
-        this.whereILike('o.next_action', term)
+        this.whereILike('s.title', term)
           .orWhereILike('o.title', term)
           .orWhereILike('o.opportunity_number', term)
           .orWhereILike('c.client_name', term);
@@ -1605,27 +1607,29 @@ export async function fetchOpportunityActivities(
     }
 
     const rows = await query.select(
+      's.step_id',
+      's.title as step_title',
+      's.due_at',
+      's.status as step_status',
+      's.created_at',
+      's.updated_at',
       'o.opportunity_id',
       'o.opportunity_number',
       'o.title as opportunity_title',
-      'o.next_action',
-      'o.next_action_due',
       'o.client_id',
-      'c.client_name',
-      'o.created_at',
-      'o.updated_at'
+      'c.client_name'
     );
     const now = Date.now();
     let activities: Activity[] = rows.map((row: any) => {
-      const dueDate = new Date(row.next_action_due).toISOString();
-      const overdue = new Date(dueDate).getTime() < now;
+      const dueDate = new Date(row.due_at).toISOString();
+      const overdue = row.step_status === 'current' && new Date(dueDate).getTime() < now;
       const link = `/msp/opportunities/${row.opportunity_id}`;
       return {
-        id: row.opportunity_id,
-        title: row.next_action,
+        id: row.step_id,
+        title: row.step_title,
         description: `${row.client_name}: ${row.opportunity_title}`,
         type: ActivityType.SCHEDULE,
-        status: overdue ? 'overdue' : 'open',
+        status: overdue ? 'overdue' : row.step_status === 'current' ? 'open' : 'planned',
         priority: overdue ? ActivityPriority.HIGH : ActivityPriority.MEDIUM,
         dueDate,
         assignedTo: [userId],
@@ -1635,10 +1639,10 @@ export async function fetchOpportunityActivities(
           name: row.opportunity_number,
           url: link,
         }],
-        sourceId: row.opportunity_id,
+        sourceId: row.step_id,
         sourceType: ActivityType.SCHEDULE,
-        workItemId: row.opportunity_id,
-        workItemType: 'opportunity',
+        workItemId: row.step_id,
+        workItemType: 'opportunity_step',
         link,
         actions: [{ id: 'view', label: 'Open Opportunity' }],
         isClosed: false,
@@ -1647,7 +1651,6 @@ export async function fetchOpportunityActivities(
         updatedAt: new Date(row.updated_at).toISOString(),
       };
     });
-
     if (filters.status?.length) {
       activities = activities.filter((activity) => filters.status!.includes(activity.status));
     }

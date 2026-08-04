@@ -125,6 +125,39 @@ export const completeNextActionSchema = z.object({
   next_action_due: z.string().datetime(),
 });
 
+const stepCheckpointSchema = z.enum(['qualified', 'assessment', 'proposed', 'verbal', 'won']);
+
+export const createOpportunityStepSchema = z.object({
+  title: z.string().trim().min(1),
+  due_at: z.string().datetime().optional().nullable(),
+  has_time: z.boolean().optional(),
+  duration_minutes: z.number().int().min(15).max(480).optional(),
+  assigned_to: z.string().uuid().optional().nullable(),
+  checkpoint: stepCheckpointSchema.optional().nullable(),
+  ticket_id: z.string().uuid().optional().nullable(),
+  project_task_id: z.string().uuid().optional().nullable(),
+  status: z.enum(['planned', 'current']).optional(),
+});
+
+export const updateOpportunityStepSchema = z.object({
+  title: z.string().trim().min(1).optional(),
+  due_at: z.string().datetime().optional().nullable(),
+  has_time: z.boolean().optional(),
+  duration_minutes: z.number().int().min(15).max(480).optional(),
+  assigned_to: z.string().uuid().optional().nullable(),
+  checkpoint: stepCheckpointSchema.optional().nullable(),
+  ticket_id: z.string().uuid().optional().nullable(),
+  project_task_id: z.string().uuid().optional().nullable(),
+  status: z.enum(['planned', 'current', 'skipped']).optional(),
+});
+
+export const completeOpportunityStepSchema = z.object({
+  next_step_id: z.string().uuid().optional().nullable(),
+  next_action: z.string().trim().min(1).optional().nullable(),
+  next_action_due: z.string().datetime().optional().nullable(),
+  checkpoint: stepCheckpointSchema.optional().nullable(),
+});
+
 export const correctEvidenceSchema = z.object({
   correction_note: z.string().trim().min(1),
 });

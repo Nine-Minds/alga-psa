@@ -312,6 +312,49 @@ export interface IOpportunityDetail extends IOpportunity {
 }
 
 /* ------------------------------------------------------------------ */
+/* Step plan                                                            */
+/* ------------------------------------------------------------------ */
+
+/** 'current' is the one mirrored onto opportunities.next_action. */
+export type OpportunityStepStatus = 'planned' | 'current' | 'done' | 'skipped';
+
+export interface IOpportunityStep extends TenantEntity {
+  step_id: string;
+  opportunity_id: string;
+  title: string;
+  due_at?: ISO8601String | null;
+  /** True once the step has a time of day, which is what puts it on a calendar. */
+  has_time: boolean;
+  duration_minutes: number;
+  assigned_to?: string | null;
+  assigned_to_name?: string | null;
+  /** Completing this step also attests this checkpoint, when the user says so. */
+  checkpoint?: OpportunityCheckpoint | null;
+  status: OpportunityStepStatus;
+  sort_order: number;
+  ticket_id?: string | null;
+  ticket_number?: string | null;
+  project_task_id?: string | null;
+  project_task_name?: string | null;
+  interaction_id?: string | null;
+  schedule_entry_id?: string | null;
+  completed_at?: ISO8601String | null;
+  completed_by?: string | null;
+  created_by?: string | null;
+  created_at: ISO8601String;
+  updated_at: ISO8601String;
+}
+
+export interface IOpportunityStepTemplate extends TenantEntity {
+  template_id: string;
+  stage: Exclude<OpportunityStage, 'won' | 'lost'>;
+  title: string;
+  sort_order: number;
+  due_offset_days: number;
+  is_active: boolean;
+}
+
+/* ------------------------------------------------------------------ */
 /* Work queue                                                           */
 /* ------------------------------------------------------------------ */
 

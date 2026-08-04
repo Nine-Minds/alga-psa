@@ -1,7 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type { IOpportunity } from '@alga-psa/types';
-import { OpportunityModel } from '../models/opportunityModel';
 
 interface CompletedActionInteractionInput {
   opportunity: Pick<IOpportunity, 'opportunity_id' | 'client_id' | 'contact_id'>;
@@ -41,34 +40,5 @@ export async function recordCompletedActionInteraction(
     status_id: null,
     visibility: 'internal',
     category: 'opportunity_action',
-  });
-}
-
-export async function completeOpportunityNextAction(
-  trx: Knex.Transaction,
-  tenant: string,
-  opportunityId: string,
-  nextAction: { next_action: string; next_action_due: string },
-  actorUserId: string,
-): Promise<IOpportunity> {
-  const current = await OpportunityModel.getById(trx, tenant, opportunityId);
-  if (!current) throw new Error('Opportunity not found');
-  if (current.status !== 'open') throw new Error('Only open opportunities have next actions');
-
-  const completedAction = current.next_action?.trim();
-  if (!completedAction) throw new Error('Opportunity has no current next action to complete');
-
-  const now = new Date().toISOString();
-  await recordCompletedActionInteraction(trx, tenant, {
-    opportunity: current,
-    completedAction,
-    actorUserId,
-    occurredAt: now,
-  });
-
-  return OpportunityModel.update(trx, tenant, opportunityId, {
-    ...nextAction,
-    last_activity_at: now,
-    overdue_notified_at: null,
   });
 }

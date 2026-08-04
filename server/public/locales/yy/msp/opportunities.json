@@ -36,9 +36,12 @@
     "completeDialog": {
       "due": "55555",
       "nextAction": "55555",
+      "pickNext": "55555",
       "placeholder": "55555",
+      "reachesStage": "55555 {{stage}}",
       "submit": "55555",
-      "title": "55555"
+      "title": "55555",
+      "writeNew": "55555"
     },
     "confidence": {
       "committed": "55555",
@@ -85,8 +88,11 @@
       "oneTime": "55555",
       "oneTimeServices": "55555",
       "owner": "55555",
-      "quotes": "55555",
+      "ownerNote": "55555",
+      "people": "55555",
+      "plan": "55555",
       "quoteTitle": "55555 {{title}} 55555",
+      "quotes": "55555",
       "recurring": "55555",
       "setStageHint": "55555",
       "timeline": "55555",
@@ -341,7 +347,9 @@
       "quoteUnlinked": "55555",
       "saved": "55555",
       "snoozed": "55555",
+      "stagePlanned": "55555",
       "stageSet": "55555 {{stage}} 55555",
+      "stepDeleted": "55555",
       "suggestionAccepted": "55555",
       "suggestionDismissed": "55555",
       "suggestionSnoozed": "55555",
@@ -443,6 +451,29 @@
       "projectStatus": "55555",
       "projectTemplate": "55555",
       "title": "55555"
+    },
+    "steps": {
+      "add": "55555",
+      "addTitle": "55555",
+      "applyTemplate": "55555",
+      "assign": "55555",
+      "assignee": "55555",
+      "due": "55555",
+      "duration": "55555",
+      "editTitle": "55555",
+      "hasTime": "55555",
+      "linkTask": "55555",
+      "linkTicket": "55555",
+      "minutes": "55555 {{count}}",
+      "noLink": "55555",
+      "planned": "55555",
+      "projectTask": "55555",
+      "schedule": "55555",
+      "ticket": "55555",
+      "title": "55555",
+      "titlePlaceholder": "55555",
+      "unassigned": "55555",
+      "when": "55555"
     }
   }
 }

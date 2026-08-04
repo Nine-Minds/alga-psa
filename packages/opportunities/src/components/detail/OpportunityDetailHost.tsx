@@ -23,7 +23,6 @@ import type {
 } from '@alga-psa/types';
 import { getProjectStatuses, getTemplates } from '@alga-psa/projects/actions';
 import {
-  completeNextAction,
   declareOpportunityStage,
   deleteOpportunity,
   linkQuoteToOpportunity,
@@ -35,8 +34,12 @@ import {
 } from '../../actions/opportunityActions';
 import type { LinkableOpportunityQuote } from '../../actions/opportunityActions';
 import { OpportunityDetailView } from './OpportunityDetailView';
-import { OpportunityTimelinePanel } from './OpportunityTimelinePanel';
-import { CompleteActionDialog } from '../dialogs/CompleteActionDialog';
+import { OpportunityPlanPanel } from './OpportunityPlanPanel';
+import {
+  assignOpportunityOwner,
+  listOpportunityAssignees,
+  type OpportunityStepAssignee,
+} from '../../actions/opportunityStepActions';
 import { LoseOpportunityDialog } from '../dialogs/LoseOpportunityDialog';
 import { EditValuesDialog } from '../dialogs/EditValuesDialog';
 import { EditOpportunityDialog } from '../dialogs/EditOpportunityDialog';
@@ -79,7 +82,6 @@ export function OpportunityDetailHost({
 }) {
   const { t } = useTranslation('msp/opportunities');
   const router = useRouter();
-  const [completeOpen, setCompleteOpen] = useState(false);
   const [loseOpen, setLoseOpen] = useState(false);
   const [winOpen, setWinOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -100,6 +102,7 @@ export function OpportunityDetailHost({
   const [selectedQuoteId, setSelectedQuoteId] = useState('');
   const [linkingQuote, setLinkingQuote] = useState(false);
   const [draftOpen, setDraftOpen] = useState(Boolean(drafting && autoOpenDraft));
+  const [assignees, setAssignees] = useState<OpportunityStepAssignee[]>([]);
 
   const refresh = () => router.refresh();
 
@@ -110,6 +113,18 @@ export function OpportunityDetailHost({
   useEffect(() => {
     setWinProjectName(detail.title);
   }, [detail.opportunity_id, detail.title]);
+
+  useEffect(() => {
+    let active = true;
+    listOpportunityAssignees()
+      .then((rows) => {
+        if (active) setAssignees(rows);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!winOpen) return;
@@ -163,16 +178,23 @@ export function OpportunityDetailHost({
       <OpportunityDetailView
         detail={detail}
         timeline={
-          <OpportunityTimelinePanel
-            key={`${detail.opportunity_id}:${detail.updated_at}`}
+          <OpportunityPlanPanel
             opportunityId={detail.opportunity_id}
+            stage={detail.stage}
+            isOpen={detail.status === 'open'}
+            assignees={assignees}
+            refreshKey={detail.updated_at}
+            onChanged={refresh}
           />
         }
         commitments={commitments}
+        assignees={assignees}
+        onAssignOwner={(id, userId) =>
+          void run(() => assignOpportunityOwner(id, userId), t('opportunities.toast.saved', 'Saved'))
+        }
         onEditValues={() => setValuesOpen(true)}
         onEditDetails={() => setEditOpen(true)}
         onDraftFollowUp={drafting ? () => setDraftOpen(true) : undefined}
-        onCompleteAction={() => setCompleteOpen(true)}
         onStageSelect={(stage) => {
           if (stage === 'won') {
             setWinOpen(true);
@@ -305,17 +327,6 @@ export function OpportunityDetailHost({
         onSubmit={(values) =>
           run(() => updateOpportunity(detail.opportunity_id, values), t('opportunities.toast.saved', 'Saved'))
         }
-      />
-      <CompleteActionDialog
-        isOpen={completeOpen}
-        onClose={() => setCompleteOpen(false)}
-        onSubmit={(nextAction, dueIso) =>
-          run(
-            () => completeNextAction(detail.opportunity_id, { next_action: nextAction, next_action_due: dueIso }),
-            t('opportunities.toast.actionCompleted', 'Done. Next action scheduled.')
-          )
-        }
-        stage={detail.stage}
       />
       <LoseOpportunityDialog
         isOpen={loseOpen}

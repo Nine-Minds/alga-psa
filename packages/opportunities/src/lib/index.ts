@@ -4,6 +4,8 @@ export * from './quoteLifecycleHooks';
 export * from './opportunityEventBuilders';
 export * from './opportunityEvents';
 export * from './completedActionInteraction';
+export * from './opportunitySteps';
+export * from './opportunityStepPlan';
 export * from './opportunityDetail';
 export * from './whyComposer';
 export * from './disciplineEngine';

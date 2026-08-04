@@ -36,9 +36,12 @@
     "completeDialog": {
       "due": "11111",
       "nextAction": "11111",
+      "pickNext": "11111",
       "placeholder": "11111",
+      "reachesStage": "11111 {{stage}}",
       "submit": "11111",
-      "title": "11111"
+      "title": "11111",
+      "writeNew": "11111"
     },
     "confidence": {
       "committed": "11111",
@@ -85,8 +88,11 @@
       "oneTime": "11111",
       "oneTimeServices": "11111",
       "owner": "11111",
-      "quotes": "11111",
+      "ownerNote": "11111",
+      "people": "11111",
+      "plan": "11111",
       "quoteTitle": "11111 {{title}} 11111",
+      "quotes": "11111",
       "recurring": "11111",
       "setStageHint": "11111",
       "timeline": "11111",
@@ -341,7 +347,9 @@
       "quoteUnlinked": "11111",
       "saved": "11111",
       "snoozed": "11111",
+      "stagePlanned": "11111",
       "stageSet": "11111 {{stage}} 11111",
+      "stepDeleted": "11111",
       "suggestionAccepted": "11111",
       "suggestionDismissed": "11111",
       "suggestionSnoozed": "11111",
@@ -443,6 +451,29 @@
       "projectStatus": "11111",
       "projectTemplate": "11111",
       "title": "11111"
+    },
+    "steps": {
+      "add": "11111",
+      "addTitle": "11111",
+      "applyTemplate": "11111",
+      "assign": "11111",
+      "assignee": "11111",
+      "due": "11111",
+      "duration": "11111",
+      "editTitle": "11111",
+      "hasTime": "11111",
+      "linkTask": "11111",
+      "linkTicket": "11111",
+      "minutes": "11111 {{count}}",
+      "noLink": "11111",
+      "planned": "11111",
+      "projectTask": "11111",
+      "schedule": "11111",
+      "ticket": "11111",
+      "title": "11111",
+      "titlePlaceholder": "11111",
+      "unassigned": "11111",
+      "when": "11111"
     }
   }
 }

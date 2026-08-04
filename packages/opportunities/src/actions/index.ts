@@ -5,3 +5,4 @@ export * from './workQueueActions';
 export * from './suggestionActions';
 export * from './generatorActions';
 export * from './reportActions';
+export * from './opportunityStepActions';
