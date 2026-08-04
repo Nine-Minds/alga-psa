@@ -91,6 +91,12 @@ export function OpportunityStepTimeline({
         ) : null}
       </ol>
 
+      {isOpen && onStageSelect ? (
+        <p id="opportunity-stage-hint" className="text-[11px] text-[rgb(var(--color-text-400))]">
+          {t('opportunities.steps.stageHint', 'Click a stage circle to move the deal there.')}
+        </p>
+      ) : null}
+
       <ol id="opportunity-stage-segments" className="space-y-0">
         {OPEN_OPPORTUNITY_STAGES.map((entry, index) => (
           <StageSegment
@@ -194,56 +200,72 @@ function StageSegment({
   const state = evidence?.state ?? 'pending';
   const idBase = `opportunity-stage-segment-${stage}`;
 
-  const dot = (
+  const setStageLabel = t('opportunities.steps.setStageTooltip', 'Move this deal to {{stage}}', { stage: label });
+  const canSetStage = Boolean(onStageSelect) && !isCurrentStage;
+
+  const dotFace = (
     <span
-      className={`grid h-6 w-6 flex-none place-items-center rounded-full border-2 text-[10px] font-bold ${
+      className={`grid h-7 w-7 place-items-center rounded-full border-2 text-[10px] font-bold transition-colors ${
         state === 'reached'
           ? 'border-[rgb(var(--color-primary-500))] bg-[rgb(var(--color-primary-500))] text-white'
           : state === 'skipped'
             ? 'border-dashed border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-400))]'
-            : 'border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))] text-[rgb(var(--color-text-400))]'
+            : isCurrentStage
+              ? 'border-[rgb(var(--color-primary-500))] bg-[rgb(var(--color-card))] text-[rgb(var(--color-primary-600))]'
+              : 'border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))] text-[rgb(var(--color-text-400))]'
       }`}
       aria-hidden
     >
-      {state === 'reached' ? <Check className="h-3 w-3" /> : state === 'skipped' ? '–' : null}
+      {state === 'reached' ? <Check className="h-3.5 w-3.5" /> : state === 'skipped' ? '–' : null}
     </span>
+  );
+
+  // The circle is the control: clicking a rung moves the deal to that stage.
+  const dot = canSetStage ? (
+    <Button
+      id={`${idBase}-dot`}
+      variant="ghost"
+      size="icon"
+      className="h-7 w-7 flex-none rounded-full p-0 hover:bg-transparent hover:opacity-80"
+      label={setStageLabel}
+      aria-label={setStageLabel}
+      onClick={() => onStageSelect?.(stage)}
+    >
+      {dotFace}
+    </Button>
+  ) : (
+    <span className="flex-none">{dotFace}</span>
   );
 
   const heading = (
     <span className="flex flex-wrap items-center gap-2">
-      <span
-        className={`text-sm ${
-          isCurrentStage
-            ? 'font-semibold text-[rgb(var(--color-text-900))]'
-            : state === 'reached'
-              ? 'font-medium text-[rgb(var(--color-text-700))]'
-              : 'text-[rgb(var(--color-text-500))]'
+      <Badge
+        variant={isCurrentStage ? 'primary' : state === 'reached' ? 'default-muted' : 'outline'}
+        size="md"
+        className={`uppercase tracking-wider ${
+          isCurrentStage || state === 'reached' ? '' : 'border-[rgb(var(--color-border-300))] text-[rgb(var(--color-text-500))]'
         }`}
       >
         {label}
-      </span>
+      </Badge>
       {isCurrentStage ? (
-        <Badge variant="primary" size="sm">{t('opportunities.steps.stageNow', 'You are here')}</Badge>
+        <span className="text-[11px] font-medium text-[rgb(var(--color-primary-600))]">
+          {t('opportunities.steps.stageNow', 'You are here')}
+        </span>
       ) : null}
     </span>
   );
 
-  const setStageButton = onStageSelect && !isCurrentStage ? (
-    <Button
-      id={`${idBase}-set`}
-      size="xs"
-      variant="ghost"
-      className="ml-auto"
-      onClick={() => onStageSelect(stage)}
-    >
-      {t('opportunities.steps.setStageHere', 'Set stage here')}
-    </Button>
-  ) : null;
-
   return (
-    <li id={idBase} className="flex gap-3">
+    <li id={idBase} className="flex gap-2">
       <div className="flex flex-none flex-col items-center">
-        {evidence?.evidence?.detail ? <Tooltip content={evidence.evidence.detail}>{dot}</Tooltip> : dot}
+        {evidence?.evidence?.detail ? (
+          <Tooltip content={evidence.evidence.detail}>{dot}</Tooltip>
+        ) : canSetStage ? (
+          <Tooltip content={setStageLabel}>{dot}</Tooltip>
+        ) : (
+          dot
+        )}
         {!isLast ? (
           <span
             className={`my-1 w-0.5 flex-1 rounded ${
@@ -254,10 +276,7 @@ function StageSegment({
         ) : null}
       </div>
       <div className={`min-w-0 flex-1 ${isLast ? 'pb-1' : 'pb-4'}`}>
-        <div className="flex min-h-6 items-center gap-2">
-          {heading}
-          {setStageButton}
-        </div>
+        <div className="flex min-h-7 items-center gap-2">{heading}</div>
         {steps.length > 0 ? (
           <div className="mt-2 space-y-2">
             {steps.map((step) => (
