@@ -7,7 +7,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import type { AddressInfo } from 'node:net';
 import type { Knex } from 'knex';
 import { resetTenantConnectionPool, tenantDb } from '@alga-psa/db';
-import baseKnexConfig from '@/lib/db/knexfile';
+import { knexConfig as baseKnexConfig } from '@alga-psa/db';
 import { setupE2ETestEnvironment, type E2ETestEnvironment } from '../utils/e2eTestSetup';
 import { createTestTicket } from '../utils/ticketTestData';
 import { assertSuccess } from '../utils/apiTestHelpers';

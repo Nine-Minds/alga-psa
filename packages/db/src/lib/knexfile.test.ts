@@ -70,6 +70,21 @@ describe('knexfile', () => {
     expect(config.connection.password).toBe('server_pw');
   });
 
+  it('getKnexConfig reflects env changes made after module import', async () => {
+    // Regression: integration suites share one fork and repoint DB_NAME_SERVER
+    // in beforeAll, after the module graph is already evaluated. A module-level
+    // config literal froze the import-time value and sent tenant connections to
+    // the previous suite's database.
+    const { getKnexConfig } = await import('./knexfile');
+
+    const before = await getKnexConfig('development');
+    expect(before.connection.database).toBe('server_db');
+
+    process.env.DB_NAME_SERVER = 'per_suite_db';
+    const after = await getKnexConfig('development');
+    expect(after.connection.database).toBe('per_suite_db');
+  });
+
   it('getPostgresConnection uses admin env vars and password', async () => {
     const { getPostgresConnection } = await import('./knexfile');
 

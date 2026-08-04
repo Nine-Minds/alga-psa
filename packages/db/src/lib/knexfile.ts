@@ -68,8 +68,11 @@ interface CustomKnexConfig extends Knex.Config {
   afterRelease?: (conn: any, done: Function) => void;
 }
 
-// Base configuration without passwords
-const baseConfig: Record<string, CustomKnexConfig> = {
+// Base configuration without passwords. Built per call so env changes made
+// after module import (e.g. test bootstraps that point DB_NAME_SERVER at a
+// per-suite database) are honored — a module-level literal froze these at
+// import time, before test beforeAll hooks run.
+const buildBaseConfig = (): Record<string, CustomKnexConfig> => ({
   development: {
     client: 'pg',
     connection: {
@@ -139,16 +142,17 @@ const baseConfig: Record<string, CustomKnexConfig> = {
       });
     }
   }
-};
+});
 
 // Async function to get full config with passwords
 export async function getFullConfig(env: string): Promise<CustomKnexConfig> {
   const password = await getDbPassword();
+  const base = buildBaseConfig()[env];
   return {
-    ...baseConfig[env],
+    ...base,
     connection: {
-      ...baseConfig[env].connection,
-      password: password || baseConfig[env].connection.password
+      ...base.connection,
+      password: password || base.connection.password
     }
   };
 }
@@ -210,8 +214,10 @@ export const getKnexConfigWithTenant = async (tenant: string): Promise<CustomKne
   };
 };
 
-// Export base config for tools that require synchronous config
-export default baseConfig;
+// Export base config for tools that require synchronous config.
+// Import-time snapshot: consumers (admin.ts) only take client/pool/afterCreate
+// from it and resolve connection details from env themselves.
+export default buildBaseConfig();
 
 // Export the CustomKnexConfig type for use elsewhere
 export type { CustomKnexConfig };
