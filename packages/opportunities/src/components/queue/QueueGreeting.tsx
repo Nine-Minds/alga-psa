@@ -31,14 +31,14 @@ export function QueueGreeting({
       if (total.mrr_cents > 0) {
         return t(
           'opportunities.queue.stakesMrr',
-          '{{amount}}/mo is sitting in your own data, nothing typed in.',
+          '{{amount}}/mo of recurring work is already visible in your own data.',
           { amount: formatCurrencyFromMinorUnits(total.mrr_cents, undefined, total.currency_code) }
         );
       }
       if (total.nrr_cents > 0) {
         return t(
           'opportunities.queue.stakesNrr',
-          '{{amount}} of project work is sitting in your own data.',
+          '{{amount}} of project work is already visible in your own data.',
           { amount: formatCurrencyFromMinorUnits(total.nrr_cents, undefined, total.currency_code) }
         );
       }

@@ -407,7 +407,7 @@ export function OpportunityDetailHost({
                 )
               : t(
                   'opportunities.winDialog.nextSendQuote',
-                  'No accepted quote is linked yet. Send the quote and get it approved, then convert it to an agreement — marking this won now is fine.'
+                  'No accepted quote is linked yet. Send the quote and get it approved, then convert it to an agreement. You can still mark this won now.'
                 )}
           </p>
           <div className="space-y-3 rounded-md border border-[rgb(var(--color-border-200))] p-3">

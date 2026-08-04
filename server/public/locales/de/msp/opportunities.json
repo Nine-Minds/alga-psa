@@ -13,15 +13,15 @@
       "recentlyClosed": "Kürzlich geschlossen"
     },
     "clientTab": {
-      "emptyBody": "Erstellen Sie eines oder lassen Sie den Weg mit einem Angebot beginnen.",
+      "emptyBody": "Legen Sie eine an, um neue Arbeit für diesen Kunden zu verfolgen.",
       "emptyTitle": "Für diesen Kunden gibt es noch keine Möglichkeiten"
     },
     "commitments": {
       "add": "Nehmen Sie es auf",
       "coveredByQuote": "Abgedeckt von {{quote}}",
-      "declined": "Abgelehnt – passiert nicht",
+      "declined": "Abgelehnt, wird nicht umgesetzt",
       "help": "Halten Sie jede Zusage an den Kunden fest. Jede wird zu einer Angebotsposition oder wird vor Abschluss abgelehnt.",
-      "openCount": "{{count}} ungelöst – blockiert knapp gewonnen",
+      "openCount": "{{count}} offen, blockiert den Abschluss",
       "placeholder": "z.B. E-Mail-Migration im Onboarding enthalten",
       "resolve": "Lösen Sie…",
       "status": {
@@ -101,10 +101,10 @@
       "value": "Wert",
       "valuesFromQuote": "aus akzeptiertem Angebot",
       "whatNext": "Was als Nächstes passiert",
-      "whatNextAgreementDone": "Das angenommene Angebot ist jetzt ein Vertragsentwurf — prüfen und aktivieren Sie ihn.",
+      "whatNextAgreementDone": "Das angenommene Angebot ist jetzt ein Vertragsentwurf. Prüfen und aktivieren Sie ihn.",
       "whatNextConvertQuote": "Wandeln Sie das angenommene Angebot im Angebotsbildschirm in einen Vertrag um, damit die Abrechnung starten kann.",
       "whatNextHandoff": "Übergeben Sie den Kunden an die Leistungserbringung: Inhaber, Kontakte und Zusagen auf dieser Seite sind das Briefing.",
-      "whatNextProjectDone": "Das Onboarding-Projekt existiert — weisen Sie es zu und legen Sie das Startdatum fest.",
+      "whatNextProjectDone": "Das Onboarding-Projekt wurde angelegt. Weisen Sie es zu und legen Sie das Startdatum fest.",
       "whatNextStartProject": "Erstellen Sie das Onboarding-Projekt, damit die Umsetzung einen Ort zum Arbeiten hat.",
       "whyNumber": "{{number}} befindet sich in ",
       "whyPeriod": "."
@@ -185,7 +185,7 @@
       "done": "Pipeline überprüft. {{count}} Deals in der Akte.",
       "evidenceSays": "Beweise sagen",
       "gap": "Die Konfidenz beträgt {{confidence}}, aber die Evidenz endet bei {{stage}}. Was hat der Kunde tatsächlich getan?",
-      "intro": "Für das wöchentliche Pipeline-Meeting: Jede offene Chance wird einzeln vorgelegt, die stillsten zuerst, und zeigt die Nachweislage neben der Einschätzung des Verantwortlichen. Jede als geprüft markieren — die Sitzung wird protokolliert, sodass belegt ist, dass die gesamte Pipeline durchgegangen wurde.",
+      "intro": "Führt die wöchentliche Pipeline-Besprechung Geschäft für Geschäft, das stillste zuerst, mit den Belegen neben der Einschätzung der zuständigen Person. Markieren Sie jedes Geschäft als besprochen; die Sitzung wird protokolliert, damit belegbar ist, dass die ganze Pipeline durchgegangen wurde.",
       "keys": "← zurück · → überprüft",
       "markReviewed": "Bewertet → weiter",
       "next": "Nächste Aktion:",
@@ -236,8 +236,8 @@
       "reviewDraft": "Überprüfen Sie den Entwurf",
       "snooze": "Schlummern",
       "snoozeNamed": "Schlummern {{title}}",
-      "stakesMrr": "{{amount}}/Monat liegt in Ihren eigenen Daten, nichts wurde eingegeben.",
-      "stakesNrr": "{{amount}} der Projektarbeit steckt in Ihren eigenen Daten.",
+      "stakesMrr": "{{amount}}/Monat an wiederkehrender Arbeit ist bereits in Ihren eigenen Daten sichtbar.",
+      "stakesNrr": "{{amount}} an Projektarbeit ist bereits in Ihren eigenen Daten sichtbar.",
       "table": {
         "actions": "Aktionen",
         "client": "Kunde",
@@ -416,7 +416,7 @@
       "dismiss": "Entlassen",
       "emptyBody": "Generatoren überwachen Ihre Verträge, Abrechnungen und Vermögenswerte und decken hier Geschäfte auf, sobald sie diese finden.",
       "emptyTitle": "Im Moment keine Vorschläge",
-      "intro": "In Ihren Daten gefunden. Akzeptieren Sie, um die Gelegenheit zu schaffen, oder schließen Sie sie ab, und sie bleibt weg.",
+      "intro": "Aus Ihren eigenen Daten abgeleitet. Annehmen legt die Chance an; verworfene Vorschläge kommen nicht zurück.",
       "seeNumbers": "Siehe die Zahlen",
       "snooze": "Schlummern"
     },
@@ -505,7 +505,7 @@
       },
       "forClient": " für {{clientName}}.",
       "goingQuiet": {
-        "nudge": " bei {{clientName}}. Deals, die so ruhig sind, scheitern normalerweise ohne einen Anstoß.",
+        "nudge": " bei {{clientName}}. So lange liegengebliebene Geschäfte kommen ohne Nachfassen selten zum Abschluss.",
         "paperworkMissing": ". Der Papierkram ging nie raus.",
         "quietAge_one": "Ruhe für {{count}} Tag",
         "quietAge_other": "Ruhe seit {{count}} Tagen",
@@ -532,7 +532,7 @@
         "counted_one": "{{count}} Kunde hat mehr für T&M bezahlt, als eine Vereinbarung kostet",
         "counted_other": "{{count}} Kunden zahlten mehr für T&M, als eine Vereinbarung kostet",
         "named": "{{clientNames}} hat mehr für T&M bezahlt, als eine Vereinbarung kostet",
-        "trailing": " in den letzten 12 Monaten. Der One-Pager macht es zu seiner Idee."
+        "trailing": " in den letzten 12 Monaten. Das Einseitenpapier legt ihnen den Vergleich vor."
       },
       "whitespace": {
         "comparable": " noch von dir. Das tut jeder vergleichbare Kunde.",
@@ -545,7 +545,7 @@
       "confirm": "Mark hat gewonnen",
       "convertQuote": "Konvertieren Sie ein angenommenes Angebot in einen Vertragsentwurf (optional)",
       "nextConvert": "Wandeln Sie das angenommene Angebot unten oder anschließend im Angebotsbildschirm in einen Vertrag um.",
-      "nextSendQuote": "Es ist noch kein angenommenes Angebot verknüpft. Senden Sie das Angebot, lassen Sie es genehmigen und wandeln Sie es dann in einen Vertrag um — es jetzt als gewonnen zu markieren, ist in Ordnung.",
+      "nextSendQuote": "Es ist noch kein angenommenes Angebot verknüpft. Senden Sie das Angebot, holen Sie die Freigabe ein und wandeln Sie es dann in einen Vertrag um. Sie können den Abschluss trotzdem schon jetzt eintragen.",
       "noConvertQuote": "Wandeln Sie ein Angebot nicht um",
       "noProject": "Erstellen Sie kein Projekt",
       "projectName": "Projektname",

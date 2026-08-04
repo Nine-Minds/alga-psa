@@ -13,15 +13,15 @@
       "recentlyClosed": "Fechado recentemente"
     },
     "clientTab": {
-      "emptyBody": "Crie um ou deixe uma cotação iniciar a trilha.",
+      "emptyBody": "Crie uma para começar a acompanhar novos trabalhos deste cliente.",
       "emptyTitle": "Ainda não há oportunidades para este cliente"
     },
     "commitments": {
       "add": "Grave",
       "coveredByQuote": "Coberto por {{quote}}",
-      "declined": "Recusado - não acontecendo",
+      "declined": "Recusado, não será feito",
       "help": "Registe cada promessa que faz ao cliente. Cada uma passa a ser uma linha do orçamento ou é recusada antes de o negócio fechar.",
-      "openCount": "{{count}} não resolvidos — blocos quase conquistados",
+      "openCount": "{{count}} em aberto, bloqueiam o fechamento",
       "placeholder": "por exemplo Migração de e-mail incluída na integração",
       "resolve": "Resolver…",
       "status": {
@@ -101,10 +101,10 @@
       "value": "Valor",
       "valuesFromQuote": "da cotação aceita",
       "whatNext": "O que acontece a seguir",
-      "whatNextAgreementDone": "O orçamento aceito agora é um rascunho de contrato — revise-o e ative-o.",
+      "whatNextAgreementDone": "O orçamento aceito agora é um contrato em rascunho. Revise e ative.",
       "whatNextConvertQuote": "Converta o orçamento aceito em um contrato na tela do orçamento para que o faturamento possa começar.",
       "whatNextHandoff": "Entregue o cliente à entrega de serviços: o responsável, os contatos e os compromissos nesta página são o briefing.",
-      "whatNextProjectDone": "O projeto de integração existe — atribua-o e defina a data de início.",
+      "whatNextProjectDone": "O projeto de onboarding foi criado. Atribua-o e defina a data de início.",
       "whatNextStartProject": "Crie o projeto de integração para que a entrega tenha onde trabalhar.",
       "whyNumber": "{{number}} está em ",
       "whyPeriod": "."
@@ -185,7 +185,7 @@
       "done": "Pipeline revisado. {{count}} negócios registrados.",
       "evidenceSays": "As evidências dizem",
       "gap": "A confiança é {{confidence}} mas a evidência para em {{stage}}. O que o cliente realmente fez?",
-      "intro": "Para conduzir a reunião semanal do pipeline: apresenta cada oportunidade aberta uma de cada vez, começando pelas mais silenciosas, mostrando o que diz a evidência ao lado do que afirma o responsável. Marque cada uma como revista e a sessão fica registada, ficando provado que todo o pipeline foi percorrido.",
+      "intro": "Conduz a reunião semanal de pipeline um negócio por vez, começando pelo mais parado, com a evidência ao lado da confiança do responsável. Marque cada negócio como revisado e a sessão fica registrada, para mostrar que todo o pipeline foi percorrido.",
       "keys": "← voltar · → revisado",
       "markReviewed": "Revisado → próximo",
       "next": "Próxima ação:",
@@ -236,8 +236,8 @@
       "reviewDraft": "Revise o rascunho",
       "snooze": "Adiar",
       "snoozeNamed": "Adiar {{title}}",
-      "stakesMrr": "{{amount}}/mo está armazenado em seus próprios dados, nada foi digitado.",
-      "stakesNrr": "{{amount}} do trabalho do projeto está armazenado em seus próprios dados.",
+      "stakesMrr": "{{amount}}/mês de trabalho recorrente já está visível nos seus próprios dados.",
+      "stakesNrr": "{{amount}} de trabalho de projeto já está visível nos seus próprios dados.",
       "table": {
         "actions": "Ações",
         "client": "Cliente",
@@ -416,7 +416,7 @@
       "dismiss": "Dispensar",
       "emptyBody": "Os geradores monitoram seus contratos, faturamento e ativos e revelam negócios aqui à medida que os encontram.",
       "emptyTitle": "Nenhuma sugestão no momento",
-      "intro": "Encontrado em seus dados. Aceite criar a oportunidade ou descarte-a e ela desaparecerá.",
+      "intro": "Extraídas dos seus próprios dados. Aceite para criar a oportunidade, ou descarte e ela não voltará.",
       "seeNumbers": "Veja os números",
       "snooze": "Adiar"
     },
@@ -505,7 +505,7 @@
       },
       "forClient": " para {{clientName}}.",
       "goingQuiet": {
-        "nudge": " em {{clientName}}. Negócios tão silenciosos geralmente morrem sem um empurrãozinho.",
+        "nudge": " na {{clientName}}. Negócios parados por tanto tempo raramente fecham sem um acompanhamento.",
         "paperworkMissing": ". A papelada nunca saiu.",
         "quietAge_one": "Silêncio por {{count}} dia",
         "quietAge_other": "Silêncio por {{count}} dias",
@@ -532,7 +532,7 @@
         "counted_one": "{{count}} cliente pagou mais em T&M do que os custos de um contrato",
         "counted_other": "{{count}} clientes pagaram mais em T&M do que os custos de um contrato",
         "named": "{{clientNames}} pagou mais em T&M do que os custos de um contrato",
-        "trailing": " ao longo dos últimos 12 meses. O one-pager faz disso a ideia deles."
+        "trailing": " nos últimos 12 meses. O resumo de uma página coloca a comparação diante deles."
       },
       "whitespace": {
         "comparable": " de você ainda. Todo cliente comparável faz.",
@@ -545,7 +545,7 @@
       "confirm": "Marcos venceu",
       "convertQuote": "Converter uma cotação aceita em um rascunho de contrato (opcional)",
       "nextConvert": "Converta o orçamento aceito em um contrato abaixo, ou depois na tela do orçamento.",
-      "nextSendQuote": "Nenhum orçamento aceito está vinculado ainda. Envie o orçamento e obtenha a aprovação, depois converta-o em um contrato — marcar como ganho agora está tudo bem.",
+      "nextSendQuote": "Nenhum orçamento aceito está vinculado ainda. Envie o orçamento, obtenha a aprovação e depois converta em contrato. Você ainda pode marcar como ganho agora.",
       "noConvertQuote": "Não converta uma cotação",
       "noProject": "Não crie um projeto",
       "projectName": "Nome do projeto",

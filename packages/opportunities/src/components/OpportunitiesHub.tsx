@@ -301,7 +301,7 @@ export function OpportunitiesHub({
               <p className="mb-3 text-sm text-[rgb(var(--color-text-500))]">
                 {t(
                   'opportunities.suggestions.intro',
-                  'Found in your data. Accept to create the opportunity, or dismiss and it stays gone.'
+                  'Drawn from your own data. Accept to create the opportunity, or dismiss it and it will not come back.'
                 )}
               </p>
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">

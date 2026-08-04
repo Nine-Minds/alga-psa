@@ -13,15 +13,15 @@
       "recentlyClosed": "Niedawno zamknięte"
     },
     "clientTab": {
-      "emptyBody": "Utwórz taki lub pozwól, aby cytat rozpoczął szlak.",
+      "emptyBody": "Utwórz szansę, aby śledzić nowe prace dla tego klienta.",
       "emptyTitle": "Nie ma jeszcze możliwości dla tego klienta"
     },
     "commitments": {
       "add": "Nagraj to",
       "coveredByQuote": "Objęte przez {{quote}}",
-      "declined": "Odmówiono – nie dzieje się",
+      "declined": "Odrzucone, nie zostanie zrealizowane",
       "help": "Zapisz każdą obietnicę złożoną klientowi. Każda staje się pozycją oferty albo zostaje odrzucona przed zamknięciem transakcji.",
-      "openCount": "{{count}} nierozwiązany — bloki wygrane blisko",
+      "openCount": "Nierozstrzygnięte: {{count}}, blokują zamknięcie",
       "placeholder": "np. Migracja poczty e-mail uwzględniona w onboardingu",
       "resolve": "Rozwiąż…",
       "status": {
@@ -101,10 +101,10 @@
       "value": "Wartość",
       "valuesFromQuote": "z zaakceptowanego cytatu",
       "whatNext": "Co dalej",
-      "whatNextAgreementDone": "Zaakceptowana oferta jest teraz projektem umowy — sprawdź ją i aktywuj.",
+      "whatNextAgreementDone": "Zaakceptowana oferta jest teraz projektem umowy. Sprawdź ją i aktywuj.",
       "whatNextConvertQuote": "Przekształć zaakceptowaną ofertę w umowę na ekranie oferty, aby można było rozpocząć fakturowanie.",
       "whatNextHandoff": "Przekaż klienta do realizacji usług: właściciel, kontakty i zobowiązania na tej stronie stanowią brief.",
-      "whatNextProjectDone": "Projekt wdrożeniowy istnieje — przypisz go i ustaw datę rozpoczęcia.",
+      "whatNextProjectDone": "Projekt wdrożenia został utworzony. Przypisz go i ustaw datę rozpoczęcia.",
       "whatNextStartProject": "Utwórz projekt wdrożeniowy, aby zespół realizacji miał gdzie pracować.",
       "whyNumber": "{{number}} jest na etapie ",
       "whyPeriod": "."
@@ -185,7 +185,7 @@
       "done": "Przegląd rurociągu. Liczba zarejestrowanych transakcji: {{count}}.",
       "evidenceSays": "Dowody mówią",
       "gap": "Pewność wynosi {{confidence}}, ale dowody zatrzymują się na {{stage}}. Co właściwie zrobił klient?",
-      "intro": "Do prowadzenia cotygodniowego spotkania o lejku: pokazuje każdą otwartą szansę pojedynczo, zaczynając od najcichszych, zestawiając to, co mówią dowody, z tym, co twierdzi właściciel. Oznacz każdą jako przejrzaną, a sesja zostanie zapisana — masz dowód, że przeszliście przez cały lejek.",
+      "intro": "Prowadzi cotygodniowe spotkanie o lejku transakcja po transakcji, zaczynając od najcichszej, z dowodami obok oceny właściciela. Oznacz każdą transakcję jako przejrzaną, a sesja zostanie zapisana, więc możesz wykazać, że przeszliście cały lejek.",
       "keys": "← powrót · → recenzja",
       "markReviewed": "Recenzja → następny",
       "next": "Następna akcja:",
@@ -238,8 +238,8 @@
       "reviewDraft": "Przejrzyj wersję roboczą",
       "snooze": "Odłóż",
       "snoozeNamed": "Odłóż {{title}}",
-      "stakesMrr": "{{amount}}/mies. znajduje się na Twoich własnych danych, nic nie jest wpisane.",
-      "stakesNrr": "{{amount}} pracy nad projektem znajduje się w Twoich własnych danych.",
+      "stakesMrr": "{{amount}}/mies. pracy cyklicznej jest już widoczne w Twoich danych.",
+      "stakesNrr": "{{amount}} pracy projektowej jest już widoczne w Twoich danych.",
       "table": {
         "actions": "Działania",
         "client": "Klient",
@@ -422,7 +422,7 @@
       "dismiss": "Odrzuć",
       "emptyBody": "Generatory obserwują tutaj Twoje umowy, rozliczenia i aktywa oraz transakcje na powierzchni, gdy je znajdą.",
       "emptyTitle": "W tej chwili nie ma żadnych sugestii",
-      "intro": "Znaleziono w Twoich danych. Zaakceptuj, aby stworzyć szansę, lub odrzuć, a ona zniknie.",
+      "intro": "Wyciągnięte z Twoich danych. Zaakceptuj, aby utworzyć szansę, albo odrzuć, a nie wróci.",
       "seeNumbers": "Zobacz liczby",
       "snooze": "Odłóż"
     },
@@ -523,7 +523,7 @@
       },
       "forClient": " dla {{clientName}}.",
       "goingQuiet": {
-        "nudge": " w firmie {{clientName}}. Dealerzy w tej ciszy zwykle umierają bez szturchnięcia.",
+        "nudge": " w {{clientName}}. Transakcje pozostawione tak długo rzadko się domykają bez kontaktu.",
         "paperworkMissing": ". Papiery nigdy nie wyszły.",
         "quietAge_few": "Cicho przez {{count}} dni",
         "quietAge_many": "Cicho przez {{count}} dni",
@@ -560,7 +560,7 @@
         "counted_one": "Klient {{count}} zapłacił więcej za T&M niż koszty umowy",
         "counted_other": "{{count}} klientów zapłaciło więcej za T&M niż koszty umowy",
         "named": "{{clientNames}} zapłacił więcej za T&M niż koszty umowy",
-        "trailing": " w ciągu ostatnich 12 miesięcy. Jednostronicowy to ich pomysł."
+        "trailing": " w ostatnich 12 miesiącach. Jednostronicowe zestawienie pokazuje im to porównanie."
       },
       "whitespace": {
         "comparable": " jeszcze od ciebie. Każdy porównywalny klient tak robi.",
@@ -573,7 +573,7 @@
       "confirm": "Marek wygrał",
       "convertQuote": "Konwertuj zaakceptowaną wycenę na wersję roboczą umowy (opcjonalnie)",
       "nextConvert": "Przekształć zaakceptowaną ofertę w umowę poniżej lub później na ekranie oferty.",
-      "nextSendQuote": "Nie powiązano jeszcze zaakceptowanej oferty. Wyślij ofertę i uzyskaj jej zatwierdzenie, a następnie przekształć ją w umowę — oznaczenie jako wygrana teraz jest w porządku.",
+      "nextSendQuote": "Nie powiązano jeszcze zaakceptowanej oferty. Wyślij ofertę, uzyskaj zatwierdzenie, a potem zamień ją na umowę. Mimo to możesz już teraz oznaczyć transakcję jako wygraną.",
       "noConvertQuote": "Nie konwertuj cytatu",
       "noProject": "Nie twórz projektu",
       "projectName": "Nazwa projektu",

@@ -371,12 +371,12 @@ export function OpportunityDetailView({
           <ul className="list-disc space-y-1 pl-5 text-[13px] text-[rgb(var(--color-text-700))]">
             <li>
               {detail.converted_contract_id
-                ? t('opportunities.detail.whatNextAgreementDone', 'The accepted quote is now a draft agreement — review and activate it.')
+                ? t('opportunities.detail.whatNextAgreementDone', 'The accepted quote is now a draft agreement. Review and activate it.')
                 : t('opportunities.detail.whatNextConvertQuote', 'Convert the accepted quote to an agreement from the quote screen so billing can start.')}
             </li>
             <li>
               {detail.converted_project_id
-                ? t('opportunities.detail.whatNextProjectDone', 'The onboarding project exists — assign it and set the start date.')
+                ? t('opportunities.detail.whatNextProjectDone', 'The onboarding project has been created. Assign it and set the start date.')
                 : t('opportunities.detail.whatNextStartProject', 'Create the onboarding project so delivery has somewhere to work.')}
             </li>
             <li>

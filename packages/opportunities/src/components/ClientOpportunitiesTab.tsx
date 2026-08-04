@@ -80,7 +80,7 @@ export function ClientOpportunitiesTab({
       {loaded && items.length === 0 ? (
         <EmptyState
           title={t('opportunities.clientTab.emptyTitle', 'No opportunities for this client yet')}
-          description={t('opportunities.clientTab.emptyBody', 'Create one, or let a quote start the trail.')}
+          description={t('opportunities.clientTab.emptyBody', 'Create one to start tracking new work for this client.')}
         />
       ) : (
         <PipelineList items={items} onOpen={openDeal} onValuesChanged={load} />
