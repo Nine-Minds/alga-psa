@@ -42,11 +42,15 @@ exports.up = async function up(knex) {
   let resolvedCount = 0;
   let pausedCount = 0;
 
+  // Citus rejects volatile functions (now()) inside COALESCE/CASE in UPDATEs on
+  // distributed tables, so bind the fallback timestamp as a parameter instead.
+  const backfillTimestamp = new Date().toISOString();
+
   for (const { tenant } of tenants) {
     // 1. Neutralize SLA on tickets sitting in a closed status.
     const closed = await knex.raw(
       `UPDATE tickets t
-          SET sla_resolution_at = COALESCE(t.closed_at, t.updated_at, t.entered_at, now())
+          SET sla_resolution_at = COALESCE(t.closed_at, t.updated_at, t.entered_at, ?::timestamptz)
         WHERE t.tenant = ?
           AND t.sla_policy_id IS NOT NULL
           AND t.sla_resolution_at IS NULL
@@ -57,7 +61,7 @@ exports.up = async function up(knex) {
                AND s.is_closed = true
           )
         RETURNING t.ticket_id`,
-      [tenant]
+      [backfillTimestamp, tenant]
     );
 
     const closedTicketIds = (closed.rows || []).map((row) => row.ticket_id);
@@ -70,7 +74,7 @@ exports.up = async function up(knex) {
     // 2. Pause SLA on tickets sitting in a pause-configured status.
     const paused = await knex.raw(
       `UPDATE tickets t
-          SET sla_paused_at = now()
+          SET sla_paused_at = ?::timestamptz
         WHERE t.tenant = ?
           AND t.sla_policy_id IS NOT NULL
           AND t.sla_resolution_at IS NULL
@@ -82,7 +86,7 @@ exports.up = async function up(knex) {
                AND c.pauses_sla = true
           )
         RETURNING t.ticket_id`,
-      [tenant]
+      [backfillTimestamp, tenant]
     );
 
     const pausedTicketIds = (paused.rows || []).map((row) => row.ticket_id);
