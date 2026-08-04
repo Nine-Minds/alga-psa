@@ -23,21 +23,25 @@ export function ActionSuggestions({
   onSelect: (value: string) => void;
 }) {
   const { t } = useTranslation('msp/opportunities');
-  const stock = SUGGESTED_NEXT_ACTIONS[stage].map((suggestion) => t(suggestion.key, suggestion.fallback));
-  const [suggestions, setSuggestions] = useState<string[]>(stock);
+  const [templateTitles, setTemplateTitles] = useState<string[] | null>(null);
 
   useEffect(() => {
     let active = true;
+    // A stage change must not leave the previous stage's steps on screen.
+    setTemplateTitles(null);
     listOpportunityStepTemplates(stage)
       .then((templates) => {
-        if (!active || templates.length === 0) return;
-        setSuggestions(templates.map((template) => template.title));
+        if (active) setTemplateTitles(templates.map((template) => template.title));
       })
       .catch(() => undefined);
     return () => {
       active = false;
     };
   }, [stage]);
+
+  const suggestions = templateTitles?.length
+    ? templateTitles
+    : SUGGESTED_NEXT_ACTIONS[stage].map((suggestion) => t(suggestion.key, suggestion.fallback));
 
   if (suggestions.length === 0) return null;
 
