@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { CheckCircle2, CircleDollarSign, FileText, Gauge, Users } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { BentoTile } from '@alga-psa/ui/components/bento';
+import { BentoTile, BentoTileAddButton, BentoTileEmptyAction } from '@alga-psa/ui/components/bento';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Label } from '@alga-psa/ui/components/Label';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
@@ -197,24 +197,11 @@ export function OpportunityDetailView({
         icon={<FileText className="h-4 w-4" aria-hidden="true" />}
         action={
           open ? (
-            <div className="flex items-center gap-2">
-              <Button
-                id="opportunity-detail-link-quote"
-                size="xs"
-                variant="ghost"
-                onClick={() => onLinkQuote(detail.opportunity_id)}
-              >
-                {t('opportunities.detail.linkQuote', 'Link existing')}
-              </Button>
-              <Button
-                id="opportunity-detail-create-quote"
-                size="xs"
-                variant="soft"
-                onClick={() => onCreateQuote(detail.opportunity_id)}
-              >
-                {t('opportunities.detail.createQuote', 'Create quote')}
-              </Button>
-            </div>
+            <BentoTileAddButton
+              id="opportunity-detail-create-quote"
+              label={t('opportunities.detail.createQuote', 'Create quote')}
+              onClick={() => onCreateQuote(detail.opportunity_id)}
+            />
           ) : undefined
         }
       >
@@ -257,6 +244,14 @@ export function OpportunityDetailView({
             ))}
           </ul>
         )}
+        {open ? (
+          <BentoTileEmptyAction
+            id="opportunity-detail-link-quote"
+            onClick={() => onLinkQuote(detail.opportunity_id)}
+          >
+            {t('opportunities.detail.linkQuote', 'Link an existing quote')}
+          </BentoTileEmptyAction>
+        ) : null}
       </BentoTile>
 
       {commitments}
