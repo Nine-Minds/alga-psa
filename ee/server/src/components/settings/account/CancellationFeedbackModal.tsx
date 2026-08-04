@@ -67,9 +67,8 @@ export default function CancellationFeedbackModal({
       // Reset form
       setReasonText('');
       setReasonCategory('');
-
     } catch (error) {
-      console.error('Error submitting cancellation feedback:', error);
+      console.error('Error canceling subscription:', error);
       toast.error(error instanceof Error ? error.message : t('messages.cancelSubscriptionFailed'));
     } finally {
       setLoading(false);
@@ -154,7 +153,6 @@ export default function CancellationFeedbackModal({
           rows={4}
           wrapperClassName="mb-0"
         />
-
       </div>
     </Dialog>
   );

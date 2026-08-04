@@ -301,10 +301,15 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
       }
 
       if (reasonCategory || reasonText.trim()) {
-        const feedbackResult = await sendCancellationFeedbackAction(reasonText, reasonCategory);
-        if (!feedbackResult.success) {
-          console.warn('Subscription canceled, but feedback could not be sent:', feedbackResult.error);
-        }
+        void sendCancellationFeedbackAction(reasonText, reasonCategory)
+          .then((feedbackResult) => {
+            if (!feedbackResult.success) {
+              console.warn('Subscription canceled, but feedback could not be sent:', feedbackResult.error);
+            }
+          })
+          .catch((error) => {
+            console.warn('Subscription canceled, but feedback could not be sent:', error);
+          });
       }
     } catch (error) {
       console.error('Error canceling subscription:', error);
@@ -1620,9 +1625,6 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
           <CardTitle className="text-destructive">{t('dangerZone.title')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
-            {t('dangerZone.body')}
-          </p>
           {subscriptionInfo?.cancel_at ? (
             <Alert variant="warning" id="cancellation-scheduled-alert">
               <AlertDescription>
@@ -1632,9 +1634,14 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
               </AlertDescription>
             </Alert>
           ) : (
-            <Button id="cancel-subscription-btn" variant="destructive" onClick={handleCancelSubscription}>
-              {t('dangerZone.cancelSubscription')}
-            </Button>
+            <>
+              <p className="text-sm text-muted-foreground mb-4">
+                {t('dangerZone.body')}
+              </p>
+              <Button id="cancel-subscription-btn" variant="destructive" onClick={handleCancelSubscription}>
+                {t('dangerZone.cancelSubscription')}
+              </Button>
+            </>
           )}
         </CardContent>
       </Card>
