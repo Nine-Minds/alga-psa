@@ -30,12 +30,7 @@
     "aiCheckoutFailed": "Error al iniciar el pago del AI Assistant",
     "aiRemoved": "AI Assistant se eliminará de su suscripción.",
     "aiCancelFailed": "Error al cancelar el AI Assistant",
-    "feedbackReasonRequired": "Proporcione un motivo para la cancelación",
-    "feedbackCategoryRequired": "Seleccione un motivo de cancelación",
-    "feedbackMinimumLength": "Proporcione al menos {{min}} caracteres de comentarios",
-    "feedbackMaxLength": "El comentario debe tener {{max}} caracteres o menos",
-    "feedbackSubmitted": "Gracias por sus comentarios. Hemos recibido su solicitud de cancelación. Se cerrará su sesión en breve.",
-    "feedbackSubmitFailed": "Error al enviar el comentario. Inténtelo de nuevo."
+    "cancellationScheduled": "Suscripción cancelada. Puede seguir usando Alga PSA hasta el final de su período de facturación."
   },
   "common": {
     "loading": "Cargando...",
@@ -204,7 +199,8 @@
   "dangerZone": {
     "title": "Zona de peligro",
     "body": "Cancelar su suscripción desactivará el acceso para todos los usuarios al final del período de facturación actual.",
-    "cancelSubscription": "Cancelar suscripción"
+    "cancelSubscription": "Cancelar suscripción",
+    "scheduledBody": "Su suscripción finalizará el {{date}}. Todos podrán seguir usando Alga PSA hasta entonces."
   },
   "aiCheckoutDialog": {
     "title": "Añadir AI Assistant",
@@ -344,19 +340,14 @@
   "cancellationModal": {
     "title": "Cancelar suscripción",
     "keepSubscription": "Mantener suscripción",
-    "submitting": "Enviando...",
-    "submitFeedback": "Enviar comentario",
-    "beforeYouCancel": "Antes de cancelar",
-    "beforeYouCancelBody": "Nos encantaría escuchar sus comentarios para ayudarnos a mejorar nuestro servicio. Sus aportaciones son valiosas para nosotros.",
-    "reasonLabel": "Motivo de la cancelación",
+    "canceling": "Cancelando...",
+    "beforeYouCancelBody": "Su suscripción finalizará el {{date}}. Todos podrán seguir usando Alga PSA hasta entonces.",
+    "currentBillingPeriod": "el final de su período de facturación actual",
+    "replacesScheduledChange": "Esto sustituye su cambio de licencia programado.",
+    "reasonLabel": "Motivo (opcional)",
     "reasonPlaceholder": "Seleccione un motivo",
-    "reasonRequired": "Seleccione un motivo para continuar.",
-    "otherReasonHelp": "Cuéntenos un poco más sobre lo que le llevó a tomar esta decisión.",
-    "feedbackLabel": "¿Por qué nos deja?",
-    "feedbackPlaceholder": "Nos encantaría escuchar sus comentarios para poder mejorar. Sus aportaciones nos ayudan a servir mejor a nuestros clientes.",
-    "required": "* Obligatorio",
-    "minimumCharacters": "Se requieren al menos {{min}} caracteres",
-    "charactersRemaining": "{{count}} caracteres restantes",
+    "feedbackLabel": "Detalles (opcional)",
+    "feedbackPlaceholder": "Añada cualquier detalle que desee compartir.",
     "reasons": {
       "pricingTooHigh": "Precio demasiado alto",
       "missingFeatures": "Faltan funciones que necesito",

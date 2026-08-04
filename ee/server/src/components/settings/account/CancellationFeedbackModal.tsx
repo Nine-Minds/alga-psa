@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -18,7 +18,8 @@ interface CancellationFeedbackModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (reasonText: string, reasonCategory?: CancellationReasonCategory) => Promise<void>;
-  onLogout?: () => Promise<void>;
+  subscriptionEndDate?: string | null;
+  hasScheduledLicenseChange?: boolean;
 }
 
 const CANCELLATION_REASON_LABEL_KEYS: Record<CancellationReasonCategory, string> = {
@@ -34,7 +35,8 @@ export default function CancellationFeedbackModal({
   isOpen,
   onClose,
   onConfirm,
-  onLogout,
+  subscriptionEndDate,
+  hasScheduledLicenseChange = false,
 }: CancellationFeedbackModalProps) {
   const { t } = useTranslation('msp/account');
   const [reasonText, setReasonText] = useState('');
@@ -44,46 +46,46 @@ export default function CancellationFeedbackModal({
     value,
     label: t(CANCELLATION_REASON_LABEL_KEYS[value]),
   }));
+  const parsedEndDate = subscriptionEndDate ? new Date(subscriptionEndDate) : null;
+  const formattedEndDate = parsedEndDate && !Number.isNaN(parsedEndDate.getTime())
+    ? parsedEndDate.toLocaleDateString()
+    : t('cancellationModal.currentBillingPeriod');
 
   const handleSubmit = async () => {
     const result = cancellationFeedbackSchema.safeParse({ reasonText, reasonCategory });
 
     if (!result.success) {
-      toast.error(t('messages.feedbackSubmitFailed'));
+      toast.error(t('messages.cancelSubscriptionFailed'));
       return;
     }
 
     setLoading(true);
     try {
       await onConfirm(result.data.reasonText, result.data.reasonCategory);
-      toast.success(t('messages.feedbackSubmitted'));
+      toast.success(t('messages.cancellationScheduled'));
       onClose();
       // Reset form
       setReasonText('');
       setReasonCategory('');
 
-      // Wait 2 seconds to let the user see the toast, then log out
-      if (onLogout) {
-        setTimeout(async () => {
-          await onLogout();
-        }, 2000);
-      }
     } catch (error) {
       console.error('Error submitting cancellation feedback:', error);
-      toast.error(error instanceof Error ? error.message : t('messages.feedbackSubmitFailed'));
+      toast.error(error instanceof Error ? error.message : t('messages.cancelSubscriptionFailed'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleClose = () => {
+    if (loading) return;
+
     setReasonText('');
     setReasonCategory('');
     onClose();
   };
 
   const footer = (
-    <div className="flex justify-end space-x-2">
+    <>
       <Button
         id="cancel-feedback-cancel-btn"
         variant="outline"
@@ -93,14 +95,14 @@ export default function CancellationFeedbackModal({
         {t('cancellationModal.keepSubscription')}
       </Button>
       <Button
-        id="cancel-feedback-submit-btn"
-        variant="default"
+        id="confirm-cancellation-btn"
+        variant="destructive"
         onClick={handleSubmit}
         disabled={loading}
       >
-        {loading ? t('cancellationModal.submitting') : t('cancellationModal.submitFeedback')}
+        {loading ? t('cancellationModal.canceling') : t('dangerZone.cancelSubscription')}
       </Button>
-    </div>
+    </>
   );
 
   return (
@@ -108,19 +110,23 @@ export default function CancellationFeedbackModal({
       isOpen={isOpen}
       onClose={handleClose}
       title={t('cancellationModal.title')}
-      className="max-w-[600px]"
+      className="max-w-xl"
       id="cancellation-feedback-modal"
       footer={footer}
+      draggable={false}
+      hideCloseButton={loading}
     >
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Warning */}
         <Alert variant="destructive" id="cancellation-warning-alert">
-          <div>
-            <p className="font-semibold">{t('cancellationModal.beforeYouCancel')}</p>
-            <AlertDescription className="mt-1">
-              {t('cancellationModal.beforeYouCancelBody')}
-            </AlertDescription>
-          </div>
+          <AlertDescription>
+            <DialogDescription>
+              {t('cancellationModal.beforeYouCancelBody', { date: formattedEndDate })}
+            </DialogDescription>
+            {hasScheduledLicenseChange && (
+              <p className="mt-2">{t('cancellationModal.replacesScheduledChange')}</p>
+            )}
+          </AlertDescription>
         </Alert>
 
         {/* Reason Category (Optional) */}
@@ -135,11 +141,6 @@ export default function CancellationFeedbackModal({
             disabled={loading}
             allowClear
           />
-          {reasonCategory === 'Other' && (
-            <p id="reason-category-other-help" className="text-xs text-muted-foreground -mt-3">
-              {t('cancellationModal.otherReasonHelp')}
-            </p>
-          )}
         </div>
 
         {/* Feedback Text (Optional) */}
@@ -150,7 +151,8 @@ export default function CancellationFeedbackModal({
           onChange={(e) => setReasonText(e.target.value)}
           placeholder={t('cancellationModal.feedbackPlaceholder')}
           disabled={loading}
-          className="min-h-[120px]"
+          rows={4}
+          wrapperClassName="mb-0"
         />
 
       </div>

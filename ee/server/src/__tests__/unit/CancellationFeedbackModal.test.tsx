@@ -6,8 +6,26 @@ import { toast } from 'react-hot-toast';
 import CancellationFeedbackModal from '../../components/settings/account/CancellationFeedbackModal';
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ children, footer, isOpen }: { children: React.ReactNode; footer: React.ReactNode; isOpen: boolean }) =>
-    isOpen ? <div>{children}{footer}</div> : null,
+  Dialog: ({
+    children,
+    footer,
+    hideCloseButton,
+    isOpen,
+    onClose,
+  }: {
+    children: React.ReactNode;
+    footer: React.ReactNode;
+    hideCloseButton?: boolean;
+    isOpen: boolean;
+    onClose: () => void;
+  }) => isOpen ? (
+    <div>
+      {children}
+      {footer}
+      {!hideCloseButton && <button aria-label="Close" onClick={onClose}>Close</button>}
+    </div>
+  ) : null,
+  DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
 }));
 
 vi.mock('@alga-psa/ui/components/Button', () => ({
@@ -21,7 +39,7 @@ vi.mock('@alga-psa/ui/components/Alert', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/TextArea', () => ({
-  TextArea: ({ label, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label?: string }) => (
+  TextArea: ({ label, wrapperClassName: _wrapperClassName, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label?: string; wrapperClassName?: string }) => (
     <label>{label}<textarea {...props} /></label>
   ),
 }));
@@ -31,11 +49,13 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
     label,
     options,
     onValueChange,
+    allowClear: _allowClear,
     ...props
   }: {
     label: string;
     options: Array<{ value: string; label: string }>;
     onValueChange: (value: string) => void;
+    allowClear?: boolean;
   } & React.SelectHTMLAttributes<HTMLSelectElement>) => (
     <label>
       {label}
@@ -49,9 +69,9 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (key: string) => {
-      if (key === 'cancellationModal.otherReasonHelp') {
-        return 'Please share a little more about what led to your decision.';
+    t: (key: string, values?: Record<string, string>) => {
+      if (key === 'cancellationModal.beforeYouCancelBody') {
+        return `Access ends ${values?.date}`;
       }
       return key;
     },
@@ -70,7 +90,8 @@ describe('CancellationFeedbackModal', () => {
 
   function renderModal(overrides: {
     onClose?: () => void;
-    onLogout?: () => Promise<void>;
+    subscriptionEndDate?: string;
+    hasScheduledLicenseChange?: boolean;
   } = {}) {
     const onClose = overrides.onClose ?? vi.fn();
 
@@ -79,14 +100,15 @@ describe('CancellationFeedbackModal', () => {
         isOpen
         onClose={onClose}
         onConfirm={onConfirm}
-        onLogout={overrides.onLogout}
+        subscriptionEndDate={overrides.subscriptionEndDate}
+        hasScheduledLicenseChange={overrides.hasScheduledLicenseChange}
       />
     );
 
     return {
       category: screen.getByRole('combobox'),
       feedback: screen.getByRole('textbox'),
-      submit: screen.getByRole('button', { name: 'cancellationModal.submitFeedback' }),
+      submit: screen.getByRole('button', { name: 'dangerZone.cancelSubscription' }),
       onClose,
     };
   }
@@ -120,18 +142,19 @@ describe('CancellationFeedbackModal', () => {
     expect(onConfirm).toHaveBeenCalledWith(reasonText, 'Pricing too high');
   });
 
-  it('shows a gentle request for detail when Other is selected', () => {
-    const { category } = renderModal();
+  it('shows the subscription end date and scheduled-change consequence', () => {
+    renderModal({
+      subscriptionEndDate: '2026-09-01T00:00:00.000Z',
+      hasScheduledLicenseChange: true,
+    });
 
-    fireEvent.change(category, { target: { value: 'Other' } });
-
-    expect(screen.getByText('Please share a little more about what led to your decision.')).toBeInTheDocument();
+    expect(screen.getByText(/Access ends .*2026/)).toBeInTheDocument();
+    expect(screen.getByText('cancellationModal.replacesScheduledChange')).toBeInTheDocument();
   });
 
-  it('keeps the modal data open and does not log out when cancellation submission rejects', async () => {
-    const onLogout = vi.fn(async () => undefined);
+  it('keeps the modal data open when cancellation submission rejects', async () => {
     onConfirm.mockRejectedValue(new Error('Cancellation request failed'));
-    const { category, feedback, submit, onClose } = renderModal({ onLogout });
+    const { category, feedback, submit, onClose } = renderModal();
 
     fireEvent.change(category, { target: { value: 'Other' } });
     fireEvent.change(feedback, {
@@ -145,8 +168,25 @@ describe('CancellationFeedbackModal', () => {
     expect(toast.error).toHaveBeenCalledWith('Cancellation request failed');
     expect(toast.success).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
-    expect(onLogout).not.toHaveBeenCalled();
     expect(category).toHaveValue('Other');
     expect(feedback).toHaveValue('The service no longer fits our current workflow.');
+  });
+
+  it('prevents dismissal while cancellation is in progress', async () => {
+    let resolveCancellation: (() => void) | undefined;
+    onConfirm.mockReturnValue(new Promise<void>((resolve) => {
+      resolveCancellation = resolve;
+    }));
+    const { submit, onClose } = renderModal();
+
+    fireEvent.click(submit);
+
+    expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
+    expect(submit).toBeDisabled();
+    expect(onClose).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveCancellation?.();
+    });
   });
 });

@@ -49,7 +49,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';
 import CancellationFeedbackModal from './CancellationFeedbackModal';
 import AiUsageSection from './AiUsageSection';
-import { signOut, useSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { useTier } from 'server/src/context/TierContext';
 import { useProduct } from 'server/src/context/ProductContext';
 import { ADD_ONS, ADD_ON_LABELS, TIER_LABELS, TIER_FEATURE_MAP, TIER_FEATURES, type AddOnKey } from '@alga-psa/types';
@@ -287,27 +287,29 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
     reasonCategory?: CancellationReasonCategory
   ) => {
     try {
-      // Send feedback email
-      const feedbackResult = await sendCancellationFeedbackAction(reasonText, reasonCategory);
-      if (!feedbackResult.success) {
-        throw new Error(feedbackResult.error || t('messages.feedbackSendFailed'));
-      }
-
-      // Actually cancel the subscription
       const cancelResult = await cancelSubscriptionAction();
       if (!cancelResult.success) {
         throw new Error(cancelResult.error || t('messages.cancelSubscriptionFailed'));
       }
 
-      // Success - the modal will show the toast and then log the user out
+      const cancelAt = cancelResult.data?.cancel_at;
+      if (cancelAt) {
+        setSubscriptionInfo((current) => current
+          ? { ...current, cancel_at: cancelAt }
+          : current
+        );
+      }
+
+      if (reasonCategory || reasonText.trim()) {
+        const feedbackResult = await sendCancellationFeedbackAction(reasonText, reasonCategory);
+        if (!feedbackResult.success) {
+          console.warn('Subscription canceled, but feedback could not be sent:', feedbackResult.error);
+        }
+      }
     } catch (error) {
-      console.error('Error submitting cancellation feedback:', error);
+      console.error('Error canceling subscription:', error);
       throw error; // Re-throw to let modal handle the error
     }
-  };
-
-  const handleLogout = async () => {
-    await signOut({ callbackUrl: '/auth/msp/login' });
   };
 
   const handleReduceLicenses = () => {
@@ -1621,9 +1623,19 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
           <p className="text-sm text-muted-foreground mb-4">
             {t('dangerZone.body')}
           </p>
-          <Button id="cancel-subscription-btn" variant="destructive" onClick={handleCancelSubscription}>
-            {t('dangerZone.cancelSubscription')}
-          </Button>
+          {subscriptionInfo?.cancel_at ? (
+            <Alert variant="warning" id="cancellation-scheduled-alert">
+              <AlertDescription>
+                {t('dangerZone.scheduledBody', {
+                  date: formatDate(subscriptionInfo.cancel_at),
+                })}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Button id="cancel-subscription-btn" variant="destructive" onClick={handleCancelSubscription}>
+              {t('dangerZone.cancelSubscription')}
+            </Button>
+          )}
         </CardContent>
       </Card>
 
@@ -1641,7 +1653,8 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
         isOpen={showCancellationFeedback}
         onClose={() => setShowCancellationFeedback(false)}
         onConfirm={handleConfirmCancellation}
-        onLogout={handleLogout}
+        subscriptionEndDate={subscriptionInfo?.current_period_end}
+        hasScheduledLicenseChange={Boolean(scheduledChanges)}
       />
 
       <Dialog

@@ -8,7 +8,6 @@ const mocks = vi.hoisted(() => ({
   cancelSubscriptionAction: vi.fn(),
   checkAccountManagementPermission: vi.fn(),
   sendCancellationFeedbackAction: vi.fn(),
-  signOut: vi.fn(),
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
 }));
@@ -59,7 +58,6 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('next-auth/react', () => ({
-  signOut: mocks.signOut,
   useSession: () => ({ update: vi.fn() }),
 }));
 
@@ -148,12 +146,13 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
     footer?: React.ReactNode;
     isOpen: boolean;
   }) => isOpen ? <div>{children}{footer}</div> : null,
+  DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
 }));
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
   ConfirmationDialog: () => null,
 }));
 vi.mock('@alga-psa/ui/components/TextArea', () => ({
-  TextArea: ({ label, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label?: string }) => (
+  TextArea: ({ label, wrapperClassName: _wrapperClassName, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label?: string; wrapperClassName?: string }) => (
     <label>{label}<textarea {...props} /></label>
   ),
 }));
@@ -162,11 +161,13 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
     label,
     options,
     onValueChange,
+    allowClear: _allowClear,
     ...props
   }: {
     label: string;
     options: Array<{ value: string; label: string }>;
     onValueChange: (value: string) => void;
+    allowClear?: boolean;
   } & React.SelectHTMLAttributes<HTMLSelectElement>) => (
     <label>
       {label}
@@ -185,7 +186,10 @@ describe('AccountManagement cancellation failures', () => {
     vi.clearAllMocks();
     mocks.checkAccountManagementPermission.mockResolvedValue(true);
     mocks.sendCancellationFeedbackAction.mockResolvedValue({ success: true });
-    mocks.cancelSubscriptionAction.mockResolvedValue({ success: true });
+    mocks.cancelSubscriptionAction.mockResolvedValue({
+      success: true,
+      data: { cancel_at: '2026-09-01T00:00:00.000Z' },
+    });
   });
 
   async function submitCancellation() {
@@ -198,25 +202,23 @@ describe('AccountManagement cancellation failures', () => {
     fireEvent.change(feedback, {
       target: { value: 'The service no longer fits our current workflow.' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'cancellationModal.submitFeedback' }));
+    fireEvent.click(document.getElementById('confirm-cancellation-btn')!);
 
     return { category, feedback };
   }
 
-  it('keeps the modal open when feedback submission is rejected', async () => {
+  it('does not let feedback delivery failure block cancellation', async () => {
     mocks.sendCancellationFeedbackAction.mockResolvedValue({
       success: false,
       error: 'Feedback could not be sent',
     });
 
-    const { category, feedback } = await submitCancellation();
+    await submitCancellation();
 
-    await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('Feedback could not be sent'));
-    expect(mocks.cancelSubscriptionAction).not.toHaveBeenCalled();
-    expect(mocks.toastSuccess).not.toHaveBeenCalled();
-    expect(mocks.signOut).not.toHaveBeenCalled();
-    expect(category).toHaveValue('Other');
-    expect(feedback).toHaveValue('The service no longer fits our current workflow.');
+    await waitFor(() => expect(mocks.toastSuccess).toHaveBeenCalledWith('messages.cancellationScheduled'));
+    expect(mocks.cancelSubscriptionAction).toHaveBeenCalledOnce();
+    expect(mocks.sendCancellationFeedbackAction).toHaveBeenCalledOnce();
+    expect(mocks.toastError).not.toHaveBeenCalled();
   });
 
   it('keeps the modal open when cancellation is rejected', async () => {
@@ -230,10 +232,19 @@ describe('AccountManagement cancellation failures', () => {
     await waitFor(() => {
       expect(mocks.toastError).toHaveBeenCalledWith('Cancellation could not be scheduled');
     });
-    expect(mocks.sendCancellationFeedbackAction).toHaveBeenCalledOnce();
+    expect(mocks.sendCancellationFeedbackAction).not.toHaveBeenCalled();
     expect(mocks.toastSuccess).not.toHaveBeenCalled();
-    expect(mocks.signOut).not.toHaveBeenCalled();
     expect(category).toHaveValue('Other');
     expect(feedback).toHaveValue('The service no longer fits our current workflow.');
+  });
+
+  it('does not send an empty feedback email', async () => {
+    render(<AccountManagement />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'dangerZone.cancelSubscription' }));
+    fireEvent.click(document.getElementById('confirm-cancellation-btn')!);
+
+    await waitFor(() => expect(mocks.cancelSubscriptionAction).toHaveBeenCalledOnce());
+    expect(mocks.sendCancellationFeedbackAction).not.toHaveBeenCalled();
   });
 });
