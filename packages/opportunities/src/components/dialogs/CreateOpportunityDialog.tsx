@@ -6,6 +6,7 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -243,6 +244,7 @@ export function CreateOpportunityDialog({
         />
         <CustomSelect
           id="opportunity-create-type"
+          label={t('opportunities.createDialog.dealType', 'Deal type')}
           options={TYPES.map((v) => ({ value: v, label: t(`opportunities.type.${v}`, TYPE_DEFAULTS[v]) }))}
           value={type}
           onValueChange={(v: string) => {
@@ -259,20 +261,29 @@ export function CreateOpportunityDialog({
           required
         />
         <div className="grid grid-cols-2 gap-3">
-          <DatePicker
-            id="opportunity-create-next-due"
-            label={t('opportunities.createDialog.due', 'Due')}
-            value={due}
-            onChange={(d?: Date) => setDue(d)}
-            required
-          />
-          <DatePicker
-            id="opportunity-create-expected-close"
-            label={t('opportunities.createDialog.expectedClose', 'Expected close')}
-            value={expectedClose}
-            onChange={(d?: Date) => setExpectedClose(d)}
-            clearable
-          />
+          {/* DatePicker's own label is aria-only; the field still needs a visible one. */}
+          <div className="space-y-1">
+            <Label htmlFor="opportunity-create-next-due">{t('opportunities.createDialog.due', 'Due')}</Label>
+            <DatePicker
+              id="opportunity-create-next-due"
+              label={t('opportunities.createDialog.due', 'Due')}
+              value={due}
+              onChange={(d?: Date) => setDue(d)}
+              required
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="opportunity-create-expected-close">
+              {t('opportunities.createDialog.expectedClose', 'Expected close')}
+            </Label>
+            <DatePicker
+              id="opportunity-create-expected-close"
+              label={t('opportunities.createDialog.expectedClose', 'Expected close')}
+              value={expectedClose}
+              onChange={(d?: Date) => setExpectedClose(d)}
+              clearable
+            />
+          </div>
         </div>
         <div className="rounded-md border border-[rgb(var(--color-border-200))] p-3">
           <Button
