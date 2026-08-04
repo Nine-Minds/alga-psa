@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { PrintableDetailHeader } from '@alga-psa/ui/components/PrintableDetailHeader';
@@ -11,11 +12,12 @@ import { PrintableTable, type PrintableTableColumn } from '@alga-psa/ui/componen
 import { BentoEyebrow, BentoStat, BentoTile, BentoTileSkeleton } from '@alga-psa/ui/components/bento';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
-import type { OpportunityStage } from '@alga-psa/types';
+import type { ColumnDefinition, OpportunityStage } from '@alga-psa/types';
 import {
   getOpportunityPipelineReport,
   type IOpportunityPipelineReport,
 } from '../../actions/reportActions';
+import type { IOpportunityPipelineReportStage } from '../../lib/pipelineReporting';
 import { OPPORTUNITY_STAGE_LABELS } from '../../lib/opportunityStages';
 
 /**
@@ -87,6 +89,70 @@ export function OpportunityReportsView({
       />
     );
   }
+
+  const stageColumns = (currencyCode: string): ColumnDefinition<IOpportunityPipelineReportStage>[] => {
+    const money = (cents: number) => formatCurrencyFromMinorUnits(cents, undefined, currencyCode);
+    const perMonth = t('opportunities.perMonthSuffix', '/mo');
+    return [
+      {
+        title: t('opportunities.list.stage', 'Stage'),
+        dataIndex: 'stage',
+        render: (_value: unknown, stageRow: IOpportunityPipelineReportStage) => {
+          const label = OPPORTUNITY_STAGE_LABELS[stageRow.stage];
+          return (
+            <span>
+              {onOpenStage ? (
+                <Button
+                  id={`opportunity-report-stage-${currencyCode}-${stageRow.stage}`}
+                  variant="link"
+                  size="xs"
+                  className="h-auto px-0 py-0 align-baseline text-sm font-medium"
+                  onClick={() => onOpenStage(stageRow.stage)}
+                >
+                  {t(label.key, label.fallback)}
+                </Button>
+              ) : (
+                t(label.key, label.fallback)
+              )}
+              <span className="ml-2 text-[11px] text-[rgb(var(--color-text-400))]">
+                {t('opportunities.reports.rate', '{{pct}}% base rate', { pct: Math.round(stageRow.rate * 100) })}
+              </span>
+            </span>
+          );
+        },
+      },
+      {
+        title: t('opportunities.reports.deals', 'Deals'),
+        dataIndex: 'opportunity_count',
+        render: (_value: unknown, stageRow: IOpportunityPipelineReportStage) => (
+          <span className="tabular-nums">{stageRow.opportunity_count}</span>
+        ),
+      },
+      {
+        title: t('opportunities.list.mrr', 'Recurring'),
+        dataIndex: 'mrr_cents',
+        render: (_value: unknown, stageRow: IOpportunityPipelineReportStage) => (
+          <span className="tabular-nums">{money(stageRow.mrr_cents)}{perMonth}</span>
+        ),
+      },
+      {
+        title: t('opportunities.list.oneTime', 'One-time'),
+        dataIndex: 'one_time_cents',
+        render: (_value: unknown, stageRow: IOpportunityPipelineReportStage) => (
+          <span className="tabular-nums">{money(stageRow.one_time_cents)}</span>
+        ),
+      },
+      {
+        title: t('opportunities.reports.weighted', 'Weighted forecast'),
+        dataIndex: 'weighted_mrr_cents',
+        render: (_value: unknown, stageRow: IOpportunityPipelineReportStage) => (
+          <span className="tabular-nums text-[rgb(var(--color-text-500))]">
+            {money(stageRow.weighted_mrr_cents)}{perMonth}
+          </span>
+        ),
+      },
+    ];
+  };
 
   return (
     <div id="opportunities-reports" className="mx-auto w-full max-w-4xl space-y-6">
@@ -171,63 +237,13 @@ export function OpportunityReportsView({
             </Button>
 
             {isExpanded ? (
-              <div
-                id={`opportunity-report-breakdown-${row.currency_code}`}
-                className="overflow-x-auto rounded-xl border border-[rgb(var(--color-border-200))]"
-              >
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[rgb(var(--color-border-100,241_245_249))] text-left text-[11px] uppercase tracking-wide text-[rgb(var(--color-text-400))]">
-                      <th className="px-3 py-2 font-semibold">{t('opportunities.list.stage', 'Stage')}</th>
-                      <th className="px-3 py-2 text-right font-semibold">{t('opportunities.reports.deals', 'Deals')}</th>
-                      <th className="px-3 py-2 text-right font-semibold">{t('opportunities.list.mrr', 'Recurring')}</th>
-                      <th className="px-3 py-2 text-right font-semibold">{t('opportunities.list.oneTime', 'One-time')}</th>
-                      <th className="px-3 py-2 text-right font-semibold">{t('opportunities.reports.weighted', 'Weighted forecast')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {row.by_stage.map((stageRow) => {
-                      const label = OPPORTUNITY_STAGE_LABELS[stageRow.stage];
-                      return (
-                        <tr
-                          key={stageRow.stage}
-                          className="border-b border-[rgb(var(--color-border-100,241_245_249))] last:border-b-0"
-                        >
-                          <td className="px-3 py-2">
-                            {onOpenStage ? (
-                              <Button
-                                id={`opportunity-report-stage-${row.currency_code}-${stageRow.stage}`}
-                                variant="link"
-                                size="xs"
-                                className="h-auto px-0 py-0 align-baseline text-sm font-medium"
-                                onClick={() => onOpenStage(stageRow.stage)}
-                              >
-                                {t(label.key, label.fallback)}
-                              </Button>
-                            ) : (
-                              t(label.key, label.fallback)
-                            )}
-                            <span className="ml-2 text-[11px] text-[rgb(var(--color-text-400))]">
-                              {t('opportunities.reports.rate', '{{pct}}% base rate', {
-                                pct: Math.round(stageRow.rate * 100),
-                              })}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 text-right tabular-nums">{stageRow.opportunity_count}</td>
-                          <td className="px-3 py-2 text-right tabular-nums">
-                            {fmt(stageRow.mrr_cents)}
-                            {t('opportunities.perMonthSuffix', '/mo')}
-                          </td>
-                          <td className="px-3 py-2 text-right tabular-nums">{fmt(stageRow.one_time_cents)}</td>
-                          <td className="px-3 py-2 text-right tabular-nums text-[rgb(var(--color-text-500))]">
-                            {fmt(stageRow.weighted_mrr_cents)}
-                            {t('opportunities.perMonthSuffix', '/mo')}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div id={`opportunity-report-breakdown-${row.currency_code}`}>
+                <DataTable
+                  id={`opportunity-report-breakdown-table-${row.currency_code}`}
+                  data={row.by_stage}
+                  columns={stageColumns(row.currency_code)}
+                  pagination={false}
+                />
               </div>
             ) : null}
           </section>

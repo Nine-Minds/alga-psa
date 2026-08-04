@@ -36,14 +36,15 @@ export function BoardCard({
       onDragStart={onDragStart ? (e) => onDragStart(e, item) : undefined}
     >
       <div className="mb-1 flex items-start justify-between gap-2">
-        <button
+        <Button
           id={`opportunity-board-open-${item.opportunity_id}`}
-          type="button"
-          className="text-[13px] font-semibold leading-snug text-[rgb(var(--color-text-900))] hover:text-[rgb(var(--color-primary-600))] hover:underline"
+          variant="link"
+          size="xs"
+          className="h-auto justify-start whitespace-normal px-0 py-0 text-left text-[13px] font-semibold leading-snug text-[rgb(var(--color-text-900))] hover:text-[rgb(var(--color-primary-600))]"
           onClick={() => onOpen(item.opportunity_id)}
         >
           {item.title}
-        </button>
+        </Button>
         {item.is_stalled ? (
           <Badge variant="warning" size="sm">
             {t('opportunities.board.daysQuiet', '{{count}}d quiet', { count: item.days_since_activity })}
