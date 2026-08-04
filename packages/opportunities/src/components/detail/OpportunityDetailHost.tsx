@@ -20,6 +20,7 @@ import type {
   IStatus,
   OpportunityConfidence,
   OpportunityLossReason,
+  OpportunityStage,
 } from '@alga-psa/types';
 import { getProjectStatuses, getTemplates } from '@alga-psa/projects/actions';
 import {
@@ -161,6 +162,15 @@ export function OpportunityDetailHost({
     }
   };
 
+  /** Setting the stage from the plan's spine — the same declaration the board makes. */
+  const declareStage = (stage: Exclude<OpportunityStage, 'won' | 'lost'>) => {
+    const label = t(`opportunities.stage.${stage}`, stage.charAt(0).toUpperCase() + stage.slice(1));
+    void run(
+      () => declareOpportunityStage(detail.opportunity_id, stage),
+      t('opportunities.toast.stageSet', 'Stage set to {{stage}}', { stage: label }),
+    );
+  };
+
   return (
     <>
       {isInDrawer ? null : (
@@ -181,9 +191,11 @@ export function OpportunityDetailHost({
           <OpportunityPlanPanel
             opportunityId={detail.opportunity_id}
             stage={detail.stage}
+            ladder={detail.ladder}
             isOpen={detail.status === 'open'}
             assignees={assignees}
             refreshKey={detail.updated_at}
+            onStageSelect={detail.status === 'open' ? declareStage : undefined}
             onChanged={refresh}
           />
         }
@@ -195,17 +207,6 @@ export function OpportunityDetailHost({
         onEditValues={() => setValuesOpen(true)}
         onEditDetails={() => setEditOpen(true)}
         onDraftFollowUp={drafting ? () => setDraftOpen(true) : undefined}
-        onStageSelect={(stage) => {
-          if (stage === 'won') {
-            setWinOpen(true);
-            return;
-          }
-          const label = t(`opportunities.stage.${stage}`, stage.charAt(0).toUpperCase() + stage.slice(1));
-          void run(
-            () => declareOpportunityStage(detail.opportunity_id, stage),
-            t('opportunities.toast.stageSet', 'Stage set to {{stage}}', { stage: label }),
-          );
-        }}
         onConfidenceChange={(id, confidence: OpportunityConfidence) =>
           void run(() => updateOpportunity(id, { confidence }), t('opportunities.toast.saved', 'Saved'))
         }

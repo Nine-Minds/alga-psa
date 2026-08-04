@@ -18,6 +18,7 @@ import {
   syncStepScheduleEntry,
 } from '../lib/opportunitySteps';
 import { templateDueDate } from '../lib/opportunityStepPlan';
+import { OPEN_OPPORTUNITY_STAGES } from '../lib/opportunityStages';
 import { declareStage } from '../lib/stageEngine';
 
 async function requirePermission(user: unknown, action: 'read' | 'update'): Promise<void> {
@@ -104,6 +105,8 @@ export const createOpportunityStep = withAuth(async (
       duration_minutes: data.duration_minutes ?? 30,
       assigned_to: data.assigned_to ?? opportunity.owner_id,
       checkpoint: data.checkpoint ?? null,
+      // An untagged step belongs to the stage the deal is working through.
+      stage: data.stage ?? (opportunity.stage === 'won' || opportunity.stage === 'lost' ? null : opportunity.stage),
       ticket_id: data.ticket_id ?? null,
       project_task_id: data.project_task_id ?? null,
       status: wantsCurrent ? 'current' : 'planned',
@@ -181,34 +184,58 @@ export const reorderOpportunitySteps = withAuth(async (
   });
 });
 
-/** Lays out a whole stage's worth of work in one click. */
+/**
+ * Lays out whole stages' worth of work in one click. Pass several stages to
+ * plan the rest of the pipeline ahead of time; they are applied in pipeline
+ * order so the plan reads the way the deal will actually run. A step whose
+ * title is already open for that stage is left alone, so pressing the button
+ * twice does not double the plan.
+ */
 export const applyOpportunityStepTemplate = withAuth(async (
   user,
   { tenant },
   opportunityId: string,
-  stage: OpportunityStage,
+  stage: OpportunityStage | OpportunityStage[],
 ): Promise<IOpportunityStep[]> => {
   await requirePermission(user, 'update');
+  const requested = Array.isArray(stage) ? stage : [stage];
+  const stages = OPEN_OPPORTUNITY_STAGES.filter((entry) => requested.includes(entry));
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx) => {
     const opportunity = await OpportunityModel.getById(trx, tenant, opportunityId);
     if (!opportunity) throw new Error('Opportunity not found');
-    const templates = await OpportunityStepModel.listTemplates(trx, tenant, stage);
     const existing = await ensureCurrentStep(trx, tenant, opportunity, actorId(user));
     let sortOrder = await OpportunityStepModel.nextSortOrder(trx, tenant, opportunityId);
-    const hasCurrent = existing.some((step) => step.status === 'current');
+    let hasCurrent = existing.some((step) => step.status === 'current');
+    const openTitles = new Set(
+      existing
+        .filter((step) => step.status === 'planned' || step.status === 'current')
+        .map((step) => `${step.stage ?? ''}:${step.title.trim().toLowerCase()}`),
+    );
     const now = new Date();
-    for (const [index, template] of templates.entries()) {
-      await OpportunityStepModel.create(trx, tenant, {
-        opportunity_id: opportunityId,
-        title: template.title,
-        due_at: templateDueDate(now, template.due_offset_days),
-        assigned_to: opportunity.owner_id,
-        status: !hasCurrent && index === 0 ? 'current' : 'planned',
-        sort_order: sortOrder++,
-        created_by: actorId(user),
-      });
+
+    for (const entry of stages) {
+      const templates = await OpportunityStepModel.listTemplates(trx, tenant, entry);
+      for (const template of templates) {
+        const fingerprint = `${entry}:${template.title.trim().toLowerCase()}`;
+        if (openTitles.has(fingerprint)) continue;
+        openTitles.add(fingerprint);
+        // Only the stage the deal is actually on may take over as current work.
+        const becomesCurrent = !hasCurrent && entry === opportunity.stage;
+        await OpportunityStepModel.create(trx, tenant, {
+          opportunity_id: opportunityId,
+          title: template.title,
+          due_at: templateDueDate(now, template.due_offset_days),
+          assigned_to: opportunity.owner_id,
+          stage: entry as IOpportunityStep['stage'],
+          status: becomesCurrent ? 'current' : 'planned',
+          sort_order: sortOrder++,
+          created_by: actorId(user),
+        });
+        if (becomesCurrent) hasCurrent = true;
+      }
     }
+
     await mirrorCurrentStepOntoOpportunity(trx, tenant, opportunityId);
     return OpportunityStepModel.listForOpportunity(trx, tenant, opportunityId);
   });
