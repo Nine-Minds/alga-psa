@@ -56,9 +56,11 @@
       "dealType": "Typ szansy sprzedaży",
       "due": "Termin",
       "expectedClose": "Oczekiwane blisko",
-      "missing": "Nadal wymagane: {{fields}}",
+      "missing": "Uzupełnij {{fields}}, aby włączyć Utwórz szansę",
       "nextAction": "Pierwsza akcja",
       "nextActionPlaceholder": "np. Wyślij propozycję wyceny",
+      "readyHint": "Gotowe do utworzenia.",
+      "requiredLegend": "Pola oznaczone * są wymagane.",
       "submit": "Stwórz okazję",
       "title": "Nowa szansa",
       "titlePlaceholder": "np. Umowa o świadczenie usług zarządzanych"

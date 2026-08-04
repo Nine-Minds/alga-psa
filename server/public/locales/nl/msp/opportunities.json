@@ -56,9 +56,11 @@
       "dealType": "Dealtype",
       "due": "Verschuldigd",
       "expectedClose": "Verwacht dichtbij",
-      "missing": "Nog nodig: {{fields}}",
+      "missing": "Vul {{fields}} in om Kans aanmaken in te schakelen",
       "nextAction": "Eerste actie",
       "nextActionPlaceholder": "bijv. Verstuur het beoordelingsvoorstel",
+      "readyHint": "Klaar om aan te maken.",
+      "requiredLegend": "Velden met een * zijn verplicht.",
       "submit": "Creëer kansen",
       "title": "Nieuwe kans",
       "titlePlaceholder": "bijv. Beheerde dienstenovereenkomst"

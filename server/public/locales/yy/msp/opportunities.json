@@ -59,6 +59,8 @@
       "missing": "55555 {{fields}} 55555",
       "nextAction": "55555",
       "nextActionPlaceholder": "55555",
+      "readyHint": "55555",
+      "requiredLegend": "55555",
       "submit": "55555",
       "title": "55555",
       "titlePlaceholder": "55555"

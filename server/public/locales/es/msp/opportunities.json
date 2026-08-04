@@ -56,9 +56,11 @@
       "dealType": "Tipo de negocio",
       "due": "debido",
       "expectedClose": "Cierre esperado",
-      "missing": "Aún falta: {{fields}}",
+      "missing": "Complete {{fields}} para activar Crear oportunidad",
       "nextAction": "Primera acción",
       "nextActionPlaceholder": "por ej. Enviar la propuesta de evaluación",
+      "readyHint": "Listo para crear.",
+      "requiredLegend": "Los campos marcados con * son obligatorios.",
       "submit": "Crear oportunidad",
       "title": "Nueva oportunidad",
       "titlePlaceholder": "por ej. Acuerdo de servicios gestionados"

@@ -172,12 +172,14 @@ export function CreateOpportunityDialog({
     <div className="flex items-center justify-between gap-3">
       <p
         id="opportunity-create-missing"
-        className="text-xs text-[rgb(var(--color-text-500))]"
+        className={`text-xs ${valid ? 'text-[rgb(var(--color-text-400))]' : 'text-destructive'}`}
         role={valid ? undefined : 'status'}
       >
         {valid
-          ? null
-          : t('opportunities.createDialog.missing', 'Still needed: {{fields}}', { fields: missing.join(', ') })}
+          ? t('opportunities.createDialog.readyHint', 'Ready to create.')
+          : t('opportunities.createDialog.missing', 'Fill {{fields}} to enable Create opportunity', {
+              fields: missing.join(', '),
+            })}
       </p>
       <div className="flex gap-2">
         <Button id="opportunity-create-cancel" variant="ghost" size="sm" onClick={onClose} disabled={saving}>
@@ -199,6 +201,9 @@ export function CreateOpportunityDialog({
       footer={footer}
     >
       <div className="space-y-4 pt-1">
+        <p className="text-xs text-[rgb(var(--color-text-400))]">
+          {t('opportunities.createDialog.requiredLegend', 'Fields marked * are required.')}
+        </p>
         {lockedClient ? (
           <div className="text-sm text-[rgb(var(--color-text-700))]">
             <span className="text-xs font-medium uppercase tracking-wide text-[rgb(var(--color-text-400))]">
@@ -208,6 +213,9 @@ export function CreateOpportunityDialog({
           </div>
         ) : (
           <div className="space-y-2">
+            <Label htmlFor="opportunity-create-client" required>
+              {t('opportunities.createDialog.client', 'Client')}
+            </Label>
             <ClientPicker
               id="opportunity-create-client"
               clients={clients}
@@ -263,7 +271,9 @@ export function CreateOpportunityDialog({
         <div className="grid grid-cols-2 gap-3">
           {/* DatePicker's own label is aria-only; the field still needs a visible one. */}
           <div className="space-y-1">
-            <Label htmlFor="opportunity-create-next-due">{t('opportunities.createDialog.due', 'Due')}</Label>
+            <Label htmlFor="opportunity-create-next-due" required>
+              {t('opportunities.createDialog.due', 'Due')}
+            </Label>
             <DatePicker
               id="opportunity-create-next-due"
               label={t('opportunities.createDialog.due', 'Due')}

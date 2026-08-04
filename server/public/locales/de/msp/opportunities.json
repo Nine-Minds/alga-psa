@@ -56,9 +56,11 @@
       "dealType": "Deal-Typ",
       "due": "Fällig",
       "expectedClose": "Nahe erwartet",
-      "missing": "Noch erforderlich: {{fields}}",
+      "missing": "Füllen Sie {{fields}} aus, um „Chance schaffen“ zu aktivieren",
       "nextAction": "Erste Aktion",
       "nextActionPlaceholder": "z.B. Senden Sie den Bewertungsvorschlag",
+      "readyHint": "Bereit zum Anlegen.",
+      "requiredLegend": "Mit * markierte Felder sind Pflichtfelder.",
       "submit": "Chance schaffen",
       "title": "Neue Chance",
       "titlePlaceholder": "z.B. Managed-Services-Vereinbarung"
