@@ -2,8 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { BentoTile } from '@alga-psa/ui/components/bento';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useClientDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -102,14 +104,15 @@ export function OpportunityDetailView({
         </div>
         <div className="mt-0.5 text-sm text-[rgb(var(--color-text-500))]">
           {clientDrawer ? (
-            <button
+            <Button
               id="opportunity-detail-client"
-              type="button"
-              className="font-medium text-[rgb(var(--color-primary-600))] hover:underline"
+              variant="link"
+              size="xs"
+              className="h-auto px-0 py-0 align-baseline text-sm font-medium"
               onClick={() => clientDrawer.openClientDrawer(detail.client_id)}
             >
               {detail.client_name}
-            </button>
+            </Button>
           ) : (
             <Link
               href={`/msp/clients/${detail.client_id}`}
@@ -145,13 +148,12 @@ export function OpportunityDetailView({
       </header>
 
       {detail.status === 'won' ? (
-        <section
+        <BentoTile
           id="opportunity-detail-what-next"
-          className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--badge-success-bg,240_253_244))] p-4"
+          title={t('opportunities.detail.whatNext', 'What happens next')}
+          icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
+          surfaceClassName="border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20"
         >
-          <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
-            {t('opportunities.detail.whatNext', 'What happens next')}
-          </h2>
           <ul className="list-disc space-y-1 pl-5 text-[13px] text-[rgb(var(--color-text-700))]">
             <li>
               {detail.converted_contract_id
@@ -167,7 +169,7 @@ export function OpportunityDetailView({
               {t('opportunities.detail.whatNextHandoff', 'Hand the client to service delivery: the owner, contacts and commitments on this page are the brief.')}
             </li>
           </ul>
-        </section>
+        </BentoTile>
       ) : null}
 
       {/* Evidence ladder */}
