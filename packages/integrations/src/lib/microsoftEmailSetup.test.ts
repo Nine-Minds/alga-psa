@@ -23,6 +23,7 @@ describe('Microsoft email setup builders', () => {
     expect(url.searchParams.get('client_id')).toBe('client-id');
     expect(url.searchParams.get('redirect_uri')).toBe('https://psa.example.com/api/auth/microsoft/email-setup/callback');
     expect(url.searchParams.get('state')).toBe('signed.state');
+    expect(url.searchParams.get('scope')).toBe('https://graph.microsoft.com/.default');
   });
 
   it('builds a multi-tenant application manifest with only the required read-only delegated permissions', () => {
