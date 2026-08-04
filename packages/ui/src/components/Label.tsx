@@ -31,7 +31,7 @@ function Label({
       {...props}
     >
       {children}
-      {required && <span className="text-destructive ml-0.5" aria-hidden="true">*</span>}
+      {required && <span className="text-[rgb(var(--color-text-500))] ml-0.5" aria-hidden="true">*</span>}
     </LabelPrimitive.Root>
   )
 }
