@@ -10,6 +10,19 @@ export interface CancellationFeedbackData {
   cancelAt: string;
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    switch (character) {
+      case '&': return '&amp;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '"': return '&quot;';
+      case "'": return '&#39;';
+      default: return character;
+    }
+  });
+}
+
 /**
  * Send cancellation feedback email to support team
  */
@@ -18,7 +31,13 @@ export async function sendCancellationFeedbackEmail(
 ): Promise<void> {
   const emailService = await getSystemEmailService();
 
-  const subject = `Subscription Cancellation Feedback - ${data.tenantName}`;
+  const subjectTenantName = data.tenantName.replace(/[\r\n]+/g, ' ');
+  const subject = `Subscription Cancellation Feedback - ${subjectTenantName}`;
+  const tenantName = escapeHtml(data.tenantName);
+  const tenantEmail = escapeHtml(data.tenantEmail);
+  const cancelAt = escapeHtml(data.cancelAt);
+  const reasonCategory = data.reasonCategory ? escapeHtml(data.reasonCategory) : undefined;
+  const reasonText = escapeHtml(data.reasonText).replace(/\n/g, '<br>');
 
   const htmlBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -26,22 +45,22 @@ export async function sendCancellationFeedbackEmail(
 
       <h3>Tenant Information</h3>
       <ul>
-        <li><strong>Tenant:</strong> ${data.tenantName}</li>
-        <li><strong>Email:</strong> ${data.tenantEmail}</li>
+        <li><strong>Tenant:</strong> ${tenantName}</li>
+        <li><strong>Email:</strong> ${tenantEmail}</li>
       </ul>
 
       <h3>Subscription Details</h3>
       <ul>
         <li><strong>License Count:</strong> ${data.licenseCount}</li>
         <li><strong>Monthly Cost:</strong> $${data.monthlyCost.toFixed(2)}</li>
-        <li><strong>Subscription Ends:</strong> ${data.cancelAt}</li>
+        <li><strong>Subscription Ends:</strong> ${cancelAt}</li>
       </ul>
 
       <h3>Cancellation Reason</h3>
-      ${data.reasonCategory ? `<p><strong>Category:</strong> ${data.reasonCategory}</p>` : ''}
+      ${reasonCategory ? `<p><strong>Category:</strong> ${reasonCategory}</p>` : ''}
       <p><strong>Feedback:</strong></p>
       <blockquote style="border-left: 3px solid #ccc; padding-left: 15px; color: #666; margin: 10px 0;">
-        ${data.reasonText.replace(/\n/g, '<br>')}
+        ${reasonText}
       </blockquote>
 
       <p style="margin-top: 30px; color: #999; font-size: 12px;">
