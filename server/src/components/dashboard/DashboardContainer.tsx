@@ -11,7 +11,6 @@ import { HiddenCardsExtrasProvider, type ExtraHiddenItem } from '@alga-psa/onboa
 import { isEnterprise } from '@/lib/features';
 import MobileAppCard from '@/components/dashboard/MobileAppCard';
 import WelcomeBanner from '@/components/dashboard/WelcomeBanner';
-import OpportunitySnapshotCard from '@/components/dashboard/OpportunitySnapshotCard';
 import {
   dismissDashboardMobileAppCardAction,
   restoreDashboardMobileAppCardAction,
@@ -287,10 +286,6 @@ const WelcomeDashboard = ({ onboardingSection, initialMobileAppCardDismissed = f
                   )}
                 </div>
               </div>
-
-              {/* Selling is one job among many here — the pipeline sits below the
-                  platform cards rather than in the middle of everyone's morning. */}
-              <OpportunitySnapshotCard />
 
               {isEnterprise && !mobileDismissed ? (
                 <MobileAppCard onDismiss={handleDismissMobileApp} isDismissing={isMobilePending} selfHost={selfHost} />

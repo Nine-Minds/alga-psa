@@ -159,7 +159,7 @@ export const ROUTE_NAMESPACES = {
   '/client-portal/appointments': ['common', 'client-portal', 'features/appointments'],
   '/client-portal/request-services': ['common', 'client-portal', 'client-portal/service-requests'],
   '/msp': ['common', 'msp/core', 'msp/dashboard', 'msp/keyboard-shortcuts'],
-  '/msp/dashboard': ['common', 'msp/core', 'msp/dashboard', 'msp/opportunities'],
+  '/msp/dashboard': ['common', 'msp/core', 'msp/dashboard'],
   '/msp/surveys': ['common', 'msp/core', 'msp/surveys'],
   '/msp/schedule': ['common', 'msp/core', 'msp/schedule'],
   '/msp/knowledge-base': ['common', 'msp/core', 'features/documents', 'msp/knowledge-base'],
@@ -196,7 +196,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/licenses': ['common', 'msp/core', 'msp/licensing'],
   '/msp/account': ['common', 'msp/core', 'msp/account', 'msp/licensing'],
   '/msp/add-ons': ['common', 'msp/core', 'msp/account', 'msp/licensing'],
-  '/msp/user-activities': ['common', 'msp/core', 'msp/user-activities', 'msp/workflows', 'features/tickets', 'features/projects', 'msp/schedule'],
+  '/msp/user-activities': ['common', 'msp/core', 'msp/user-activities', 'msp/workflows', 'features/tickets', 'features/projects', 'msp/schedule', 'msp/opportunities'],
 } as const;
 
 /**
