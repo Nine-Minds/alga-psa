@@ -465,7 +465,8 @@
       "tags": "55555",
       "tagsSelected": "55555 {{count}} 55555",
       "tasksCompact": "55555",
-      "ticketsCompact": "55555"
+      "ticketsCompact": "55555",
+      "opportunityScope": "55555"
     },
     "activityTypeOptions": {
       "schedule": "55555",
@@ -513,6 +514,11 @@
       "phases": "55555 {{count}} 55555",
       "projects": "55555 {{count}} 55555",
       "statuses": "55555 {{count}} 55555"
+    },
+    "opportunityScopeOptions": {
+      "assigned": "55555",
+      "owned": "55555",
+      "all": "55555"
     }
   },
   "actions": {

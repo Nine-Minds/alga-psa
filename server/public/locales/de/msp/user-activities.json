@@ -465,7 +465,8 @@
       "tags": "Tags",
       "tagsSelected": "{{count}} Tags",
       "tasksCompact": "Aufgaben",
-      "ticketsCompact": "Tickets"
+      "ticketsCompact": "Tickets",
+      "opportunityScope": "Deal-Arbeit"
     },
     "activityTypeOptions": {
       "schedule": "Zeitplan",
@@ -513,6 +514,11 @@
       "phases": "{{count}} Phasen",
       "projects": "{{count}} Projekte",
       "statuses": "{{count}} Status"
+    },
+    "opportunityScopeOptions": {
+      "assigned": "Zugewiesene Deal-Schritte",
+      "owned": "Deal-Schritte eigener Deals",
+      "all": "Zugewiesene oder eigene Deal-Schritte"
     }
   },
   "actions": {

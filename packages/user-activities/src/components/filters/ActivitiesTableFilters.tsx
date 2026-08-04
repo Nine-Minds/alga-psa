@@ -163,6 +163,18 @@ export function ActivitiesTableFilters({
     [filters, onChange]
   );
 
+  const handleOpportunityScopeChange = useCallback(
+    (value: string) => {
+      const next: ActivityFiltersType = {
+        ...filters,
+        opportunityScope: value as ActivityFiltersType['opportunityScope'],
+      };
+      if (value === 'assigned') delete next.opportunityScope;
+      onChange(next);
+    },
+    [filters, onChange]
+  );
+
   const handleDateRangeChange = useCallback(
     (range: { from: string; to: string }) => {
       // Parse the picker's 'YYYY-MM-DD' as a LOCAL day (parseLocalYMD), not via
@@ -729,6 +741,33 @@ export function ActivitiesTableFilters({
           </div>
         )}
 
+        {/* Deal steps carry their own assignee, so "mine" and "my deals" are
+            different questions once work is handed to a colleague. */}
+        <div className="w-[190px]">
+          <Label htmlFor="opportunity-scope-select" className="sr-only">
+            {t('filters.labels.opportunityScope', { defaultValue: 'Deal work' })}
+          </Label>
+          <CustomSelect
+            id="opportunity-scope-select"
+            value={filters.opportunityScope ?? 'assigned'}
+            onValueChange={handleOpportunityScopeChange}
+            options={[
+              {
+                value: 'assigned',
+                label: t('filters.opportunityScopeOptions.assigned', { defaultValue: 'Deal steps assigned' }),
+              },
+              {
+                value: 'owned',
+                label: t('filters.opportunityScopeOptions.owned', { defaultValue: 'Deal steps on owned deals' }),
+              },
+              {
+                value: 'all',
+                label: t('filters.opportunityScopeOptions.all', { defaultValue: 'Deal steps assigned or owned' }),
+              },
+            ]}
+            size="sm"
+          />
+        </div>
 
       </div>
 

@@ -242,8 +242,6 @@ const WelcomeDashboard = ({ onboardingSection, initialMobileAppCardDismissed = f
                 </HiddenCardsExtrasProvider>
               ) : null}
 
-              <OpportunitySnapshotCard />
-
               <div>
                 <h2 className="text-xl font-semibold mb-4" style={{ color: 'rgb(var(--color-text-900))' }}>
                   {t('features.heading', { defaultValue: 'Platform Features' })}
@@ -289,6 +287,10 @@ const WelcomeDashboard = ({ onboardingSection, initialMobileAppCardDismissed = f
                   )}
                 </div>
               </div>
+
+              {/* Selling is one job among many here — the pipeline sits below the
+                  platform cards rather than in the middle of everyone's morning. */}
+              <OpportunitySnapshotCard />
 
               {isEnterprise && !mobileDismissed ? (
                 <MobileAppCard onDismiss={handleDismissMobileApp} isDismissing={isMobilePending} selfHost={selfHost} />

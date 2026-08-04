@@ -465,7 +465,8 @@
       "tags": "Étiquettes",
       "tagsSelected": "{{count}} étiquettes",
       "tasksCompact": "Tâches",
-      "ticketsCompact": "Tickets"
+      "ticketsCompact": "Tickets",
+      "opportunityScope": "Travail sur l'affaire"
     },
     "activityTypeOptions": {
       "schedule": "Calendrier",
@@ -513,6 +514,11 @@
       "phases": "{{count}} phases",
       "projects": "{{count}} projets",
       "statuses": "{{count}} statuts"
+    },
+    "opportunityScopeOptions": {
+      "assigned": "Étapes d'affaire assignées",
+      "owned": "Étapes des affaires dont je suis responsable",
+      "all": "Étapes assignées ou de mes affaires"
     }
   },
   "actions": {
