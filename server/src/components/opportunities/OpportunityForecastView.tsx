@@ -67,7 +67,7 @@ export function OpportunityForecastView() {
       ),
     },
     {
-      title: t('opportunities.forecast.basis', 'Counted because'),
+      title: t('opportunities.forecast.basis', 'Why it is counted'),
       dataIndex: 'weight_source',
       render: (_v, r) =>
         r.weight_source === 'won' ? (
@@ -116,13 +116,13 @@ export function OpportunityForecastView() {
         <p className="text-sm text-[rgb(var(--color-text-600))]">
           {t(
             'opportunities.forecast.intro',
-            'What this quarter is worth if nothing else changes. The floor counts only what is signed or verbally agreed; the ceiling weights every open deal by the evidence behind its stage. The answer lives between the two.'
+            'What this quarter is worth if nothing else changes. The floor counts only deals that are signed or verbally agreed. The ceiling weights every open deal by the evidence behind its stage. Expect the result to land between the two.'
           )}
         </p>
         <p className="mt-1 text-[12px] text-[rgb(var(--color-text-400))]">
           {t(
             'opportunities.forecast.currencyNote',
-            'One section per currency your open deals are priced in — amounts in different currencies are never added together. Two sections means two currencies in the pipeline.'
+            'One section per currency your open deals are priced in. Amounts in different currencies are never added together.'
           )}
         </p>
       </div>
@@ -169,7 +169,7 @@ export function OpportunityForecastView() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-white p-4">
               <div className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
-                {t('opportunities.forecast.floor', 'Floor — signed and verbal')}
+                {t('opportunities.forecast.floor', 'Floor (signed and verbal)')}
               </div>
               <div className="mt-1 text-2xl font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
                 {fmt(currencyBand.floor_mrr_cents, currencyBand.currency_code)}
@@ -185,7 +185,7 @@ export function OpportunityForecastView() {
             </div>
             <div className="rounded-xl border border-[rgb(var(--color-primary-200))] bg-[rgb(var(--color-primary-50))] p-4">
               <div className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-primary-600))]">
-                {t('opportunities.forecast.ceiling', 'Ceiling — evidence-weighted')}
+                {t('opportunities.forecast.ceiling', 'Ceiling (evidence-weighted)')}
               </div>
               <div className="mt-1 text-2xl font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
                 {fmt(currencyBand.ceiling_mrr_cents, currencyBand.currency_code)}
@@ -205,13 +205,13 @@ export function OpportunityForecastView() {
       <p className="text-[12px] text-[rgb(var(--color-text-400))]">
         {t(
           'opportunities.forecast.note',
-          'Weights come from evidence stages, replaced by each seller’s own close rates once they have twenty closed deals of history.'
+          'Weights start from the evidence behind each stage. Once an owner has twenty closed deals on record, their own close rates replace the defaults.'
         )}
       </p>
       {band ? (
         <div>
           <h3 className="mb-2 text-sm font-semibold text-[rgb(var(--color-text-900))]">
-            {t('opportunities.forecast.composition', 'Every deal in the number')}
+            {t('opportunities.forecast.composition', 'Deals counted in this forecast')}
           </h3>
           <DataTable
             id="opportunities-forecast-composition"

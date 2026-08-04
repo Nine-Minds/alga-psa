@@ -1,9 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowRight, ChevronDown, ChevronRight, Printer } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { PrintableDetailHeader } from '@alga-psa/ui/components/PrintableDetailHeader';
+import { PrintableSummary } from '@alga-psa/ui/components/PrintableSummary';
+import { PrintableTable, type PrintableTableColumn } from '@alga-psa/ui/components/PrintableTable';
 import { BentoEyebrow, BentoStat, BentoTile, BentoTileSkeleton } from '@alga-psa/ui/components/bento';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
@@ -90,18 +94,16 @@ export function OpportunityReportsView({
         <p className="max-w-2xl text-[13px] text-[rgb(var(--color-text-500))]">
           {t(
             'opportunities.reports.intro',
-            'Where the pipeline stands as of right now. Open any total to see the stages behind it, and click a stage to go to the deals it counted.'
+            'Open pipeline as it stands today, grouped by the currency each deal is priced in. Open a total to see the stages behind it, then select a stage to review the deals it counted.'
           )}
         </p>
-        <Button
+        <PrintButton
           id="opportunity-report-print"
+          type="button"
           size="xs"
           variant="outline"
-          onClick={() => window.print()}
-        >
-          <Printer className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-          {t('opportunities.reports.print', 'Print')}
-        </Button>
+          label={t('opportunities.reports.print', 'Print')}
+        />
       </div>
 
       {report.by_currency.map((row) => {
@@ -239,10 +241,110 @@ export function OpportunityReportsView({
           className="px-0 print:hidden"
           onClick={onOpenForecast}
         >
-          {t('opportunities.reports.openForecast', 'Open the seller-calibrated forecast')}
+          {t('opportunities.reports.openForecast', 'Open the calibrated forecast')}
           <ArrowRight className="ml-1 h-3.5 w-3.5" aria-hidden="true" />
         </Button>
       ) : null}
+
+      <PipelineReportPrintout report={report} />
+    </div>
+  );
+}
+
+/**
+ * The print copy of the report: one page region the shared print hook targets,
+ * so the printout is the report itself rather than a screenshot of the browser
+ * window. Every currency prints its own totals and stage table.
+ */
+function PipelineReportPrintout({ report }: { report: IOpportunityPipelineReport }) {
+  const { t } = useTranslation('msp/opportunities');
+  const perMonth = t('opportunities.perMonthSuffix', '/mo');
+
+  return (
+    <div className="app-print-root app-print-only" id="opportunities-report-print">
+      <PrintableDetailHeader
+        title={t('opportunities.reports.printTitle', 'Pipeline report')}
+        subtitle={t('opportunities.reports.printSubtitle', 'As of {{date}}', {
+          date: new Date().toLocaleDateString(),
+        })}
+        fields={[
+          {
+            label: t('opportunities.reports.printCurrencies', 'Currencies'),
+            value: report.by_currency.map((row) => row.currency_code).join(', '),
+          },
+          { label: t('opportunities.reports.printQuarter', 'Quarter'), value: report.quarter_label },
+        ]}
+      />
+      {report.by_currency.map((row) => {
+        const fmt = (cents: number) => formatCurrencyFromMinorUnits(cents, undefined, row.currency_code);
+        const columns: PrintableTableColumn<(typeof row)['by_stage'][number]>[] = [
+          {
+            key: 'stage',
+            header: t('opportunities.list.stage', 'Stage'),
+            render: (stageRow) => {
+              const label = OPPORTUNITY_STAGE_LABELS[stageRow.stage];
+              return t(label.key, label.fallback);
+            },
+          },
+          {
+            key: 'count',
+            header: t('opportunities.reports.deals', 'Deals'),
+            render: (stageRow) => String(stageRow.opportunity_count),
+          },
+          {
+            key: 'mrr',
+            header: t('opportunities.list.mrr', 'Recurring'),
+            render: (stageRow) => `${fmt(stageRow.mrr_cents)}${perMonth}`,
+          },
+          {
+            key: 'one_time',
+            header: t('opportunities.list.oneTime', 'One-time'),
+            render: (stageRow) => fmt(stageRow.one_time_cents),
+          },
+          {
+            key: 'weighted',
+            header: t('opportunities.reports.weighted', 'Weighted forecast'),
+            render: (stageRow) => `${fmt(stageRow.weighted_mrr_cents)}${perMonth}`,
+          },
+        ];
+        return (
+          <section key={row.currency_code}>
+            <PrintableSummary
+              metrics={[
+                {
+                  label: t('opportunities.reports.openPipeline', 'Open pipeline'),
+                  value: `${fmt(row.open_mrr_cents)}${perMonth}`,
+                },
+                {
+                  label: t('opportunities.list.oneTime', 'One-time'),
+                  value: fmt(row.open_one_time_cents),
+                },
+                {
+                  label: t('opportunities.reports.weighted', 'Weighted forecast'),
+                  value: `${fmt(row.weighted_mrr_cents)}${perMonth}`,
+                },
+                {
+                  label: t('opportunities.reports.closing30', 'Closing in 30 days'),
+                  value: `${fmt(row.closing_30d_mrr_cents)}${perMonth}`,
+                },
+                {
+                  label: t('opportunities.reports.newMrrQuarter', 'New MRR this quarter'),
+                  value: `${fmt(row.won_quarter_mrr_cents)}${perMonth}`,
+                },
+              ]}
+            />
+            <PrintableTable
+              title={t('opportunities.reports.printByStage', '{{currency}} pipeline by stage', {
+                currency: row.currency_code,
+              })}
+              rows={row.by_stage}
+              columns={columns}
+              getRowKey={(stageRow) => `${row.currency_code}-${stageRow.stage}`}
+              emptyMessage={t('opportunities.reports.emptyTitle', 'Nothing to report yet')}
+            />
+          </section>
+        );
+      })}
     </div>
   );
 }
