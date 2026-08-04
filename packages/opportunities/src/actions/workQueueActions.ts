@@ -13,6 +13,7 @@ import type {
 import { composeWhy, type WhyFacts } from '../lib/whyComposer';
 import {
   bucketQueueActionItems,
+  sumFoundByCurrency,
   plainDate,
   type ProposalFactRow,
   type QueueOpportunityRow,
@@ -262,8 +263,7 @@ export async function assembleWorkQueue(
   return {
     user_first_name: userFirstName,
     date: now.toString(),
-    found_mrr_cents: moneyFound.reduce((sum, item) => sum + item.mrr_cents, 0),
-    found_nrr_cents: moneyFound.reduce((sum, item) => sum + item.nrr_cents, 0),
+    found_totals: sumFoundByCurrency(moneyFound),
     currency_code: String(currencyCode),
     do_today: doToday,
     going_quiet: goingQuiet,
