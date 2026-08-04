@@ -21,3 +21,4 @@ export * from './opportunityStages';
 export * from './suggestedNextActions';
 export * from './clientLifecyclePromotion';
 export * from './pipelineReporting';
+export * from './opportunityListPaging';

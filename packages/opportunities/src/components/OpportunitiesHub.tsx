@@ -25,6 +25,7 @@ import {
 import { getWorkQueue } from '../actions/workQueueActions';
 import { acceptSuggestion, dismissSuggestion, snoozeSuggestion } from '../actions/suggestionActions';
 import { createWhitespaceSuggestion } from '../actions/generatorActions';
+import { DEFAULT_OPPORTUNITY_PAGE_SIZE } from '../lib/opportunityListPaging';
 import { WorkQueue } from './queue/WorkQueue';
 import { MoneyFoundCard } from './queue/MoneyFoundCard';
 import { PipelineList } from './pipeline/PipelineList';
@@ -36,8 +37,6 @@ import { OpportunityReportsView } from './reports/OpportunityReportsView';
 import { WhitespaceGridView } from './suggestions/WhitespaceGridView';
 import { TmOnePagerDialog } from './suggestions/TmOnePagerDialog';
 
-/** Also the server page's initial fetch size, so page one matches the table. */
-export const DEFAULT_PAGE_SIZE = 25;
 
 export function OpportunitiesHub({
   initialItems,
@@ -70,7 +69,7 @@ export function OpportunitiesHub({
   const [queue, setQueue] = useState<IWorkQueue>(initialQueue);
   const [total, setTotal] = useState(initialTotal);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [pageSize, setPageSize] = useState(DEFAULT_OPPORTUNITY_PAGE_SIZE);
   const [tab, setTab] = useState(() => searchParams.get('tab') ?? 'queue');
   const [createOpen, setCreateOpen] = useState(false);
   const [completeFor, setCompleteFor] = useState<{ id: string; stage: OpportunityStage } | null>(null);
