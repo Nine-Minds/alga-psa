@@ -7,6 +7,7 @@ import {
   getTemplateWithDetails,
   getTemplates
 } from '@alga-psa/projects/actions/projectTemplateActions';
+import { updateProject } from '@alga-psa/projects/actions/projectActions';
 
 // Mock authentication and permissions
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
@@ -66,6 +67,10 @@ vi.mock('server/src/lib/eventBus/publishers', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(async () => Promise.resolve()),
   publishWorkflowEvent: vi.fn(async () => Promise.resolve()),
+}));
+
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
 }));
 
 describe('Project Templates Integration Tests', () => {
@@ -531,6 +536,42 @@ describe('Project Templates Integration Tests', () => {
       expect(project).toBeDefined();
       expect(project.project_name).toBe('New Client Project');
       expect(project.client_id).toBe(context.clientId);
+
+      // PostgreSQL returns bigint values as strings. A project loaded after
+      // template creation must be safe to send through the full-object update
+      // path used by ProjectPage.
+      await tenantTable('projects')
+        .where({ project_id: projectId })
+        .update({ budgeted_hours: 120 });
+      const databaseProject = await tenantTable('projects')
+        .where({ project_id: projectId })
+        .first();
+
+      expect(databaseProject.budgeted_hours).toBe('120');
+
+      const updateResult = await updateProject(projectId, {
+        ...databaseProject,
+        start_date: databaseProject.start_date ? new Date(databaseProject.start_date) : null,
+        end_date: databaseProject.end_date ? new Date(databaseProject.end_date) : null,
+      });
+
+      expect(updateResult).not.toHaveProperty('actionError');
+      const projectAfterUpdate = await tenantTable('projects')
+        .where({ project_id: projectId })
+        .first();
+      expect(projectAfterUpdate.budgeted_hours).toBe('120');
+
+      const invalidUpdateResult = await updateProject(projectId, {
+        budgeted_hours: 'not-a-number',
+      } as unknown as Parameters<typeof updateProject>[1]);
+
+      expect(invalidUpdateResult).toEqual({
+        actionError: 'Project validation failed. Please review the project details and try again.',
+      });
+      const projectAfterInvalidUpdate = await tenantTable('projects')
+        .where({ project_id: projectId })
+        .first();
+      expect(projectAfterInvalidUpdate.budgeted_hours).toBe('120');
 
       // 9. Verify phases were created
       const phases = await tenantTable('project_phases')

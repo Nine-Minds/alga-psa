@@ -30,7 +30,6 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
-import { z } from 'zod';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { createProjectSchema, updateProjectSchema, projectPhaseSchema } from '../schemas/project.schemas';
 import { OrderingService } from '../lib/orderingUtils';
@@ -196,26 +195,6 @@ function projectDeleteErrorMessage(error: unknown): string {
 
     return 'Unable to delete project. Please refresh and try again.';
 }
-
-const extendedCreateProjectSchema = createProjectSchema.extend({
-  assigned_to: z.string().nullable().optional(),
-  contact_name_id: z.string().nullable().optional(),
-  budgeted_hours: z.number().nullable().optional()
-}).transform((data) => ({
-  ...data,
-  assigned_to: data.assigned_to || null,
-  contact_name_id: data.contact_name_id || null
-}));
-
-const extendedUpdateProjectSchema = updateProjectSchema.extend({
-  assigned_to: z.string().nullable().optional(),
-  contact_name_id: z.string().nullable().optional(),
-  budgeted_hours: z.number().nullable().optional()
-}).transform((data) => ({
-  ...data,
-  assigned_to: data.assigned_to || null,
-  contact_name_id: data.contact_name_id || null
-}));
 
 type DbConnection = Knex | Knex.Transaction;
 
@@ -1675,7 +1654,7 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
     try {
         // Remove tenant field if present in projectData
         const { tenant: tenantField, ...safeProjectData } = projectData;
-        const validatedData = validateData(updateProjectSchema, safeProjectData);
+        const validatedData = updateProjectSchema.parse(safeProjectData);
 
         const { knex } = await createTenantKnex();
 

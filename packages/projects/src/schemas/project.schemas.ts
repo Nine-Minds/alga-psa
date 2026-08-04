@@ -42,6 +42,15 @@ export const projectStatusMappingSchema = tenantSchema.extend({
   is_visible: z.boolean()
 });
 
+const budgetedHoursSchema = z.preprocess((value) => {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  const trimmedValue = value.trim();
+  return trimmedValue === '' ? value : Number(trimmedValue);
+}, z.number().int().nonnegative().finite().safe().nullable().optional());
+
 export const projectSchema = tenantSchema.extend({
   project_id: z.string(),
   client_id: z.string(),
@@ -59,7 +68,7 @@ export const projectSchema = tenantSchema.extend({
   is_closed: z.boolean().optional(),
   assigned_to: z.string().nullable().optional(),
   contact_name_id: z.string().nullable().optional(),
-  budgeted_hours: z.number().nullable().optional(),
+  budgeted_hours: budgetedHoursSchema,
   client_portal_config: clientPortalConfigSchema.optional()
 });
 
