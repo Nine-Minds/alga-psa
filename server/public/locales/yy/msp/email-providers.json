@@ -42,8 +42,8 @@
       "title": "55555",
       "microsoft": {
         "title": "55555",
-        "providersPointer": "Microsoft app setup is managed in Providers.",
-        "openProviders": "Open Providers"
+        "providersPointer": "55555",
+        "openProviders": "55555"
       },
       "gmail": {
         "title": "55555",
@@ -277,11 +277,11 @@
         "providerNameHelp": "55555",
         "senderDisplayNameLabel": "55555",
         "senderDisplayNamePlaceholder": "55555",
-        "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails. It applies when this mailbox matches the configured outbound ticketing address. Leave blank to use the ticket board name."
+        "senderDisplayNameHelp": "55555"
       },
       "oauth": {
-        "signingIn": "Signing in…",
-        "signIn": "Sign in with Microsoft"
+        "signingIn": "55555",
+        "signIn": "55555"
       },
       "advanced": {
         "title": "55555",
@@ -292,12 +292,12 @@
         "maxEmailsPerSync": "55555"
       },
       "readiness": {
-        "checking": "Checking Microsoft setup…",
-        "ready": "Microsoft is set up. Sign in as this mailbox to finish.",
-        "pending": "Waiting for your Microsoft 365 administrator. Setup was started in Providers but hasn't been approved yet.",
-        "openProviders": "Open Providers",
-        "notConfigured": "Microsoft isn't set up yet. Set it up once in Providers, then come back.",
-        "setUpInProviders": "Set up in Providers"
+        "checking": "55555",
+        "ready": "55555",
+        "pending": "55555",
+        "openProviders": "55555",
+        "notConfigured": "55555",
+        "setUpInProviders": "55555"
       }
     },
     "gmail": {

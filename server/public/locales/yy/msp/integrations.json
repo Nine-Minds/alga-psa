@@ -1518,7 +1518,7 @@
     },
     "microsoft": {
       "emailSetup": {
-        "action": "Set up Microsoft",
+        "action": "55555",
         "actions": {
           "back": "55555",
           "cancel": "55555",
@@ -1527,31 +1527,31 @@
           "savePlatform": "55555",
           "signIn": "55555",
           "working": "55555",
-          "approve": "Approve in Microsoft",
-          "copyApprovalLink": "Copy approval link for your admin",
-          "saveManual": "Save app and continue"
+          "approve": "55555",
+          "copyApprovalLink": "55555",
+          "saveManual": "55555"
         },
         "automated": {
-          "description": "Alga PSA registers a dedicated Entra app automatically. Sign in as a Microsoft 365 administrator.",
-          "title": "Create an app in your Microsoft organization"
+          "description": "55555",
+          "title": "55555"
         },
         "callbackUri": "55555",
         "complete": {
-          "consentDone": "Approved by your Microsoft 365 administrator. You can now connect a mailbox.",
-          "consentPending": "A Microsoft 365 administrator for your organization must approve access before mailboxes can connect.",
+          "consentDone": "55555",
+          "consentPending": "55555",
           "profileCreated": "55555",
-          "ready": "Microsoft is ready",
-          "waiting": "Waiting for admin approval"
+          "ready": "55555",
+          "waiting": "55555"
         },
         "consent": {
           "confirmedDescription": "55555",
           "confirmedTitle": "55555",
           "url": "55555",
           "urlLabel": "55555",
-          "approvalLink": "Approval link"
+          "approvalLink": "55555"
         },
         "copied": "55555 {{label}} 55555",
-        "description": "Choose how Alga PSA connects to Microsoft. You will connect mailboxes separately.",
+        "description": "55555",
         "errors": {
           "automated": "55555",
           "generic": "55555",
@@ -1560,45 +1560,45 @@
           "popupBlocked": "55555",
           "popupClosed": "55555",
           "tenantRequired": "55555",
-          "manual": "Could not configure the Microsoft app.",
-          "manualRequired": "Enter the display name, client ID, client secret, and Microsoft tenant ID.",
-          "pendingProfileMissing": "The pending Microsoft app could not be found.",
-          "approvalLink": "Could not create the Microsoft approval link."
+          "manual": "55555",
+          "manualRequired": "55555",
+          "pendingProfileMissing": "55555",
+          "approvalLink": "55555"
         },
         "fields": {
           "clientId": "55555",
           "displayName": "55555",
-          "tenantId": "Microsoft tenant ID",
-          "clientSecret": "Client secret",
-          "microsoftTenant": "Microsoft tenant ID or verified domain",
-          "redirectUri": "Redirect URI to add in Entra"
+          "tenantId": "55555",
+          "clientSecret": "55555",
+          "microsoftTenant": "55555",
+          "redirectUri": "55555"
         },
         "manual": {
-          "description": "Use an existing Entra app maintained by your organization.",
+          "description": "55555",
           "title": "55555"
         },
         "platform": {
-          "description": "Nothing to register in Microsoft Entra. Your Microsoft 365 administrator approves access.",
-          "title": "Use the app provided by Alga PSA"
+          "description": "55555",
+          "title": "55555"
         },
-        "title": "Set up Microsoft",
+        "title": "55555",
         "unavailable": "55555",
-        "recommended": "Recommended",
-        "advanced": "Advanced"
+        "recommended": "55555",
+        "advanced": "55555"
       },
       "settings": {
         "advanced": {
-          "title": "Manual Microsoft apps (advanced)",
-          "description": "Create and manage Entra app registrations maintained by your organization.",
+          "title": "55555",
+          "description": "55555",
           "warning": "yyyyy"
         },
         "platform": {
           "title": "yyyyy",
           "description": "yyyyy",
-          "readyDescription": "The Microsoft app is approved and ready for mailbox sign-in.",
-          "connectAction": "Connect a mailbox →",
+          "readyDescription": "55555",
+          "connectAction": "55555",
           "unavailableTitle": "yyyyy",
-          "unavailableDescription": "This deployment requires an app maintained by your organization. Use the advanced setup below to add one."
+          "unavailableDescription": "55555"
         },
         "actions": {
           "disconnectProviders": "55555",
@@ -1688,7 +1688,7 @@
           "setDefault": "55555",
           "setDefaultHelp": "55555",
           "storedSecretHint": "55555 {{secret}} 55555",
-          "tenantId": "Microsoft tenant ID",
+          "tenantId": "55555",
           "capabilities": "55555",
           "capabilitiesHelp": "55555"
         },
@@ -1725,7 +1725,7 @@
           "teamsScopes": "55555",
           "teamsTabRedirect": "55555",
           "teamsTitle": "55555",
-          "tenantId": "Microsoft tenant ID",
+          "tenantId": "55555",
           "unavailable": "55555"
         },
         "profileCard": {
@@ -1742,7 +1742,7 @@
           "setDefault": "55555",
           "storedSecret": "55555",
           "teamsAppIdUri": "55555",
-          "tenantIdLabel": "Microsoft tenant ID:",
+          "tenantIdLabel": "55555",
           "updating": "55555",
           "enabledCapabilities": "55555",
           "noEnabledCapabilities": "55555"
@@ -1759,14 +1759,14 @@
           "archived": "55555",
           "clientIdMissing": "55555",
           "clientSecretMissing": "55555",
-          "tenantIdMissing": "Add a Microsoft tenant ID.",
-          "adminConsentPending": "Ask a Microsoft 365 administrator to approve access for Email."
+          "tenantIdMissing": "55555",
+          "adminConsentPending": "55555"
         },
         "statusBadges": {
           "archived": "55555",
           "needsAttention": "55555",
           "ready": "55555",
-          "waitingForAdminApproval": "Waiting for admin approval"
+          "waitingForAdminApproval": "55555"
         },
         "title": "55555",
         "toasts": {
@@ -1793,7 +1793,7 @@
           "clientIdRequired": "55555",
           "clientSecretRequired": "55555",
           "displayNameRequired": "55555",
-          "tenantIdRequired": "Microsoft tenant ID is required"
+          "tenantIdRequired": "55555"
         }
       }
     },

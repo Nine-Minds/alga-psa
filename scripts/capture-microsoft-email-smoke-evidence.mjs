@@ -15,9 +15,30 @@
  *   node scripts/capture-microsoft-email-smoke-evidence.mjs after <same options>
  *   node scripts/capture-microsoft-email-smoke-evidence.mjs correlate \
  *     --evidence-dir=<dir> --dom-file=<full-dom.html> \
- *     --screenshot-file=<cleanup.png> --render-method=<description>
+ *     --screenshot-file=<cleanup.png> \
+ *     --capture-provenance-file=<browser-capture.json>
  *   node scripts/capture-microsoft-email-smoke-evidence.mjs manifest \
  *     --evidence-dir=<dir>
+ *
+ * The browser capture provenance file must contain the same `provenance`
+ * object embedded in the DOM as JSON in
+ * `<script id="alga-smoke-capture-provenance" type="application/json">`.
+ * It must also bind the exact exported DOM and PNG by filename and SHA-256:
+ * {
+ *   "provenance": {
+ *     "workflowRunId": "<uuid>",
+ *     "captureNonce": "<uuid>",
+ *     "capturedAt": "<ISO timestamp>",
+ *     "browser": { "userAgent": "...", "url": "...", "platform": "..." }
+ *   },
+ *   "artifacts": {
+ *     "dom": { "file": "final.html", "sha256": "..." },
+ *     "screenshot": { "file": "final.png", "sha256": "..." }
+ *   },
+ *   "renderMethod": "...",
+ *   "crossHostFidelityNote": "...",
+ *   "externalGraphLimitation": "No external Microsoft Graph or Entra OAuth call is performed by this evidence helper."
+ * }
  */
 
 import { spawnSync } from 'node:child_process';
@@ -26,12 +47,37 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import process from 'node:process';
+import { isDeepStrictEqual } from 'node:util';
 import { parse as parseDotenv } from 'dotenv';
 import pg from 'pg';
 
 const { Client } = pg;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SHA256_PATTERN = /^[0-9a-f]{64}$/i;
 const COMMANDS = new Set(['before', 'after', 'correlate', 'manifest']);
+const EXTERNAL_GRAPH_LIMITATION = 'No external Microsoft Graph or Entra OAuth call is performed by this evidence helper.';
+const CROSS_HOST_CONTEXT = 'The card browser is Mac-hosted while the worktree server runs on Linux through a localhost-to-Tailscale relay.';
+const PHASE_FILES = {
+  before: [
+    '01-before-git-status.txt',
+    '01-before-secret-inventory.json',
+    '01-before-runtime-build.json',
+    '01-before-port-route-health.json',
+    '01-before-database.json',
+  ],
+  after: [
+    '90-after-git-status.txt',
+    '90-after-secret-inventory.json',
+    '90-after-runtime-build.json',
+    '90-after-port-route-health.json',
+    '90-after-database.json',
+    '91-restoration-comparison.json',
+  ],
+};
+const PHASE_MARKERS = {
+  before: '02-before-assertions-passed.json',
+  after: '92-after-assertions-passed.json',
+};
 const [command, ...rawArguments] = process.argv.slice(2);
 
 function fail(message) {
@@ -89,12 +135,31 @@ function sha256File(filePath) {
   return createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
 
+function deterministicFixtureProfileId(tenantId) {
+  const bytes = createHash('sha256')
+    .update(`alga0002215:${tenantId}:ready-false-profile`)
+    .digest()
+    .subarray(0, 16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = bytes.toString('hex');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 function writeNew(filePath, contents) {
   fs.writeFileSync(filePath, contents, { encoding: 'utf8', flag: 'wx' });
 }
 
 function writeJsonNew(filePath, value) {
   writeNew(filePath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function readJson(filePath, label = path.basename(filePath)) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (error) {
+    fail(`Could not read ${label}: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 function transcript(result) {
@@ -127,6 +192,29 @@ function assertInsideEvidenceDirectory(evidenceDirectory, filePath, label) {
     fail(`${label} is not a regular file: ${resolved}`);
   }
   return resolved;
+}
+
+function assertNonEmptyString(value, label) {
+  if (typeof value !== 'string' || value.trim() === '') {
+    fail(`${label} must be a non-empty string`);
+  }
+  return value;
+}
+
+function fileIdentity(filePath) {
+  return {
+    file: path.basename(filePath),
+    bytes: fs.statSync(filePath).size,
+    sha256: sha256File(filePath),
+  };
+}
+
+function exactComparison(baseline, after) {
+  return {
+    exactMatch: isDeepStrictEqual(baseline, after),
+    baseline,
+    after,
+  };
 }
 
 function repositoryRoot() {
@@ -228,12 +316,18 @@ async function databaseSnapshot(environment, tenantId) {
              inet_server_port() AS server_port,
              version() AS postgres_version
     `);
+    const profileResult = await client.query(
+      `SELECT row_to_json(profile) AS profile
+         FROM microsoft_profiles AS profile
+        WHERE tenant = $1
+        ORDER BY profile_id`,
+      [tenantId]
+    );
     const bindingResult = await client.query(
       `SELECT row_to_json(binding) AS binding
          FROM microsoft_profile_consumer_bindings AS binding
         WHERE tenant = $1
-          AND consumer_type = 'email'
-        ORDER BY profile_id`,
+        ORDER BY consumer_type, profile_id`,
       [tenantId]
     );
     return {
@@ -244,26 +338,77 @@ async function databaseSnapshot(environment, tenantId) {
         database: connection.database,
       },
       identity: identityResult.rows[0],
-      emailConsumerBindings: bindingResult.rows.map((row) => row.binding),
+      microsoftProfiles: profileResult.rows.map((row) => row.profile),
+      microsoftConsumerBindings: bindingResult.rows.map((row) => row.binding),
     };
   } finally {
     await client.end();
   }
 }
 
-function secretAbsence(repoRoot, tenantId, profileId) {
-  const secretReference = `microsoft_profile_${profileId}_client_secret`;
-  const tenantSecretDirectory = path.join(repoRoot, 'secrets', 'tenants', tenantId);
-  const target = path.join(tenantSecretDirectory, secretReference);
-  const microsoftProfileFiles = fs.existsSync(tenantSecretDirectory)
-    ? fs.readdirSync(tenantSecretDirectory)
-      .filter((name) => name.startsWith('microsoft_profile_'))
-      .sort()
-    : [];
+function resolveFilesystemSecretBase(repoRoot, environment) {
+  const writeProvider = environment.SECRET_WRITE_PROVIDER || 'filesystem';
+  if (writeProvider !== 'filesystem') {
+    fail(
+      `This local evidence helper requires SECRET_WRITE_PROVIDER=filesystem to inventory every mutated tenant secret; received ${writeProvider}`
+    );
+  }
+
+  const configured = environment.SECRET_FS_BASE_PATH?.trim();
+  if (configured) {
+    return path.isAbsolute(configured) ? configured : path.resolve(repoRoot, configured);
+  }
+  if (fs.existsSync('/run/secrets')) {
+    return '/run/secrets';
+  }
+  for (const candidate of [path.join(repoRoot, 'secrets'), path.resolve(repoRoot, '../secrets')]) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return path.resolve(repoRoot, '../secrets');
+}
+
+function secretInventory(repoRoot, environment, tenantId) {
+  const basePath = resolveFilesystemSecretBase(repoRoot, environment);
+  const tenantSecretDirectory = path.join(basePath, 'tenants', tenantId);
+  const files = [];
+
+  function visit(directory) {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const entryPath = path.join(directory, entry.name);
+      if (entry.isSymbolicLink()) {
+        fail(`Refusing to inventory symbolic link in tenant secrets: ${entryPath}`);
+      }
+      if (entry.isDirectory()) {
+        visit(entryPath);
+      } else if (entry.isFile()) {
+        const stat = fs.statSync(entryPath);
+        files.push({
+          name: path.relative(tenantSecretDirectory, entryPath),
+          bytes: stat.size,
+          mode: stat.mode & 0o777,
+          sha256: sha256File(entryPath),
+        });
+      } else {
+        fail(`Unsupported tenant secret entry: ${entryPath}`);
+      }
+    }
+  }
+
+  if (fs.existsSync(tenantSecretDirectory)) {
+    if (!fs.statSync(tenantSecretDirectory).isDirectory()) {
+      fail(`Tenant secret path is not a directory: ${tenantSecretDirectory}`);
+    }
+    visit(tenantSecretDirectory);
+  }
+  files.sort((left, right) => left.name.localeCompare(right.name));
   return {
-    target: path.relative(repoRoot, target),
-    targetExists: fs.existsSync(target),
-    microsoftProfileFiles,
+    provider: 'filesystem',
+    basePath,
+    tenantDirectory: tenantSecretDirectory,
+    directoryExists: fs.existsSync(tenantSecretDirectory),
+    files,
   };
 }
 
@@ -284,6 +429,50 @@ function provenance(repoRoot, port) {
   };
 }
 
+function writePhaseMarker(evidenceDirectory, phase, workflowRunId) {
+  const files = PHASE_FILES[phase].map((name) => {
+    const filePath = path.join(evidenceDirectory, name);
+    if (!fs.existsSync(filePath)) {
+      fail(`Cannot mark ${phase} successful because ${name} is missing`);
+    }
+    return fileIdentity(filePath);
+  });
+  writeJsonNew(path.join(evidenceDirectory, PHASE_MARKERS[phase]), {
+    workflowRunId,
+    phase,
+    assertionsPassed: true,
+    recordedAt: new Date().toISOString(),
+    externalGraphLimitation: EXTERNAL_GRAPH_LIMITATION,
+    files,
+  });
+}
+
+function verifyPhaseMarker(evidenceDirectory, phase, workflowRunId) {
+  const markerPath = path.join(evidenceDirectory, PHASE_MARKERS[phase]);
+  if (!fs.existsSync(markerPath)) {
+    fail(`The ${phase} assertions-passed marker is missing`);
+  }
+  const marker = readJson(markerPath, `${phase} assertions-passed marker`);
+  if (marker.workflowRunId !== workflowRunId
+    || marker.phase !== phase
+    || marker.assertionsPassed !== true
+    || marker.externalGraphLimitation !== EXTERNAL_GRAPH_LIMITATION) {
+    fail(`The ${phase} assertions-passed marker is invalid`);
+  }
+  if (!Array.isArray(marker.files)
+    || marker.files.length !== PHASE_FILES[phase].length
+    || !isDeepStrictEqual(marker.files.map((file) => file.file), PHASE_FILES[phase])) {
+    fail(`The ${phase} assertions-passed marker has an incomplete file inventory`);
+  }
+  for (const expected of marker.files) {
+    const filePath = path.join(evidenceDirectory, expected.file);
+    if (!fs.existsSync(filePath) || !isDeepStrictEqual(fileIdentity(filePath), expected)) {
+      fail(`The ${phase} artifact changed after its assertions passed: ${expected.file}`);
+    }
+  }
+  return marker;
+}
+
 async function capturePhase(phase, args) {
   const evidenceDirectory = resolveEvidenceDirectory(requireArgument(args, 'evidence-dir'));
   const workflowRunId = requireArgument(args, 'workflow-run-id');
@@ -291,6 +480,10 @@ async function capturePhase(phase, args) {
   const profileId = requireArgument(args, 'profile-id');
   if (!UUID_PATTERN.test(workflowRunId) || !UUID_PATTERN.test(tenantId) || !UUID_PATTERN.test(profileId)) {
     fail('workflow-run-id, tenant-id, and profile-id must be UUIDs');
+  }
+  const expectedProfileId = deterministicFixtureProfileId(tenantId);
+  if (profileId !== expectedProfileId) {
+    fail(`profile-id must identify this tenant's smoke fixture: ${expectedProfileId}`);
   }
 
   const repoRoot = repositoryRoot();
@@ -310,28 +503,75 @@ async function capturePhase(phase, args) {
       appUrl,
       tenantId,
       profileId,
-      externalGraphLimitation: 'No external Microsoft Graph or Entra OAuth call is performed by this evidence helper.',
-      crossHostFidelity: 'The card browser is Mac-hosted while the worktree server runs on Linux through a localhost-to-Tailscale relay. If native background-pane clicks or screenshots time out, record the React-handler fallback and live-DOM rendering method in the final correlation artifact.',
+      externalGraphLimitation: EXTERNAL_GRAPH_LIMITATION,
+      crossHostContext: CROSS_HOST_CONTEXT,
     });
   } else {
     const metadataPath = path.join(evidenceDirectory, '00-workflow-run.json');
-    const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    const metadata = readJson(metadataPath, 'workflow metadata');
     if (metadata.workflowRunId !== workflowRunId
       || metadata.tenantId !== tenantId
-      || metadata.profileId !== profileId) {
+      || metadata.profileId !== profileId
+      || metadata.externalGraphLimitation !== EXTERNAL_GRAPH_LIMITATION
+      || metadata.crossHostContext !== CROSS_HOST_CONTEXT) {
       fail('The after arguments do not match the before metadata');
     }
+    verifyPhaseMarker(evidenceDirectory, 'before', workflowRunId);
   }
 
   const prefix = phase === 'before' ? '01-before' : '90-after';
   const gitStatus = run('git', ['status', '--short'], repoRoot);
-  const secrets = secretAbsence(repoRoot, tenantId, profileId);
+  const secrets = secretInventory(repoRoot, environment, tenantId);
   const runtime = provenance(repoRoot, port);
   const routes = await routeHealth(appUrl);
   const database = await databaseSnapshot(environment, tenantId);
+  let restoration;
+  if (phase === 'after') {
+    const baselineDatabase = readJson(
+      path.join(evidenceDirectory, '01-before-database.json'),
+      'before database snapshot'
+    );
+    const baselineSecrets = readJson(
+      path.join(evidenceDirectory, '01-before-secret-inventory.json'),
+      'before secret inventory'
+    );
+    restoration = {
+      microsoftProfiles: exactComparison(
+        baselineDatabase.microsoftProfiles,
+        database.microsoftProfiles
+      ),
+      microsoftConsumerBindings: exactComparison(
+        baselineDatabase.microsoftConsumerBindings,
+        database.microsoftConsumerBindings
+      ),
+      tenantSecrets: exactComparison(baselineSecrets, secrets),
+    };
+    restoration.exactMatch = Object.values(restoration)
+      .every((comparison) => comparison === true || comparison.exactMatch === true);
+    if (!restoration.exactMatch) {
+      const failures = Object.entries(restoration)
+        .filter(([, comparison]) => comparison !== false && comparison.exactMatch === false)
+        .map(([name]) => name);
+      fail(`Cleanup did not restore the complete baseline inventories: ${failures.join(', ')}`);
+    }
+  }
+
+  if (gitStatus.exitCode !== 0) {
+    fail('git status failed');
+  }
+  const fixtureSecretName = `microsoft_profile_${profileId}_client_secret`;
+  if (database.microsoftProfiles.some((profile) => profile.profile_id === profileId)) {
+    fail(`The smoke fixture profile exists during the ${phase} capture`);
+  }
+  if (secrets.files.some((file) => file.name === fixtureSecretName)) {
+    fail(`The smoke fixture secret exists during the ${phase} capture`);
+  }
+  if (runtime.listeningProcesses.length === 0 || routes.some((route) => !route.status)) {
+    fail('The application listener or route health check failed');
+  }
 
   writeNew(path.join(evidenceDirectory, `${prefix}-git-status.txt`), transcript(gitStatus));
-  writeJsonNew(path.join(evidenceDirectory, `${prefix}-secret-absence.json`), secrets);
+  writeJsonNew(path.join(evidenceDirectory, `${prefix}-secret-inventory.json`), secrets);
   writeJsonNew(path.join(evidenceDirectory, `${prefix}-runtime-build.json`), runtime);
   writeJsonNew(path.join(evidenceDirectory, `${prefix}-port-route-health.json`), {
     appUrl,
@@ -339,34 +579,58 @@ async function capturePhase(phase, args) {
     routes,
   });
   writeJsonNew(path.join(evidenceDirectory, `${prefix}-database.json`), database);
-
   if (phase === 'after') {
-    const baseline = JSON.parse(
-      fs.readFileSync(path.join(evidenceDirectory, '01-before-database.json'), 'utf8')
-    );
-    const restoration = {
-      exactMatch: JSON.stringify(baseline.emailConsumerBindings)
-        === JSON.stringify(database.emailConsumerBindings),
-      baseline: baseline.emailConsumerBindings,
-      after: database.emailConsumerBindings,
-    };
-    writeJsonNew(path.join(evidenceDirectory, '91-database-restoration-comparison.json'), restoration);
-    if (!restoration.exactMatch) {
-      fail('The final Microsoft Email binding does not exactly match the recorded baseline');
-    }
+    writeJsonNew(path.join(evidenceDirectory, '91-restoration-comparison.json'), restoration);
   }
-
-  if (gitStatus.exitCode !== 0) {
-    fail('git status failed');
-  }
-  if (secrets.targetExists) {
-    fail(`Target smoke secret exists during the ${phase} capture`);
-  }
-  if (runtime.listeningProcesses.length === 0 || routes.some((route) => !route.status)) {
-    fail('The application listener or route health check failed');
-  }
+  writePhaseMarker(evidenceDirectory, phase, workflowRunId);
 
   console.log(JSON.stringify({ phase, workflowRunId, evidenceDirectory }, null, 2));
+}
+
+function validateCaptureProvenance(value, metadata) {
+  if (!value || typeof value !== 'object') {
+    fail('Capture provenance must be a JSON object');
+  }
+  if (value.workflowRunId !== metadata.workflowRunId) {
+    fail('Capture provenance workflowRunId does not match the evidence run');
+  }
+  if (!UUID_PATTERN.test(value.captureNonce || '')) {
+    fail('Capture provenance captureNonce must be a UUID');
+  }
+  const capturedAt = new Date(value.capturedAt);
+  if (typeof value.capturedAt !== 'string' || Number.isNaN(capturedAt.valueOf())) {
+    fail('Capture provenance capturedAt must be an ISO timestamp');
+  }
+  if (capturedAt.toISOString() !== value.capturedAt) {
+    fail('Capture provenance capturedAt must use canonical ISO format');
+  }
+  if (!value.browser || typeof value.browser !== 'object') {
+    fail('Capture provenance must include browser details');
+  }
+  assertNonEmptyString(value.browser.userAgent, 'Browser userAgent');
+  assertNonEmptyString(value.browser.url, 'Browser URL');
+  assertNonEmptyString(value.browser.platform, 'Browser platform');
+  let browserUrl;
+  try {
+    browserUrl = new URL(value.browser.url);
+  } catch {
+    fail('Browser provenance URL must be valid');
+  }
+  if (browserUrl.origin !== new URL(metadata.appUrl).origin) {
+    fail('Browser provenance URL does not belong to the recorded application origin');
+  }
+  return value;
+}
+
+function captureArtifactMatches(actualPath, declared, label) {
+  if (!declared || typeof declared !== 'object') {
+    fail(`Capture provenance is missing the ${label} artifact identity`);
+  }
+  if (declared.file !== path.basename(actualPath)
+    || !SHA256_PATTERN.test(declared.sha256 || '')
+    || declared.sha256 !== sha256File(actualPath)) {
+    fail(`Capture provenance does not bind the exact ${label} artifact`);
+  }
 }
 
 function correlate(args) {
@@ -381,12 +645,56 @@ function correlate(args) {
     requireArgument(args, 'screenshot-file'),
     'Screenshot file'
   );
-  const metadata = JSON.parse(
-    fs.readFileSync(path.join(evidenceDirectory, '00-workflow-run.json'), 'utf8')
+  const captureProvenanceFile = assertInsideEvidenceDirectory(
+    evidenceDirectory,
+    requireArgument(args, 'capture-provenance-file'),
+    'Capture provenance file'
   );
+  const metadata = readJson(
+    path.join(evidenceDirectory, '00-workflow-run.json'),
+    'workflow metadata'
+  );
+  if (metadata.externalGraphLimitation !== EXTERNAL_GRAPH_LIMITATION
+    || metadata.crossHostContext !== CROSS_HOST_CONTEXT) {
+    fail('Workflow metadata is missing the required limitations');
+  }
+  verifyPhaseMarker(evidenceDirectory, 'before', metadata.workflowRunId);
+  verifyPhaseMarker(evidenceDirectory, 'after', metadata.workflowRunId);
+
+  const captureRecord = readJson(captureProvenanceFile, 'browser capture provenance');
+  const captureProvenance = validateCaptureProvenance(captureRecord.provenance, metadata);
+  if (!captureRecord.artifacts || typeof captureRecord.artifacts !== 'object') {
+    fail('Capture provenance must include artifact identities');
+  }
+  captureArtifactMatches(domFile, captureRecord.artifacts.dom, 'DOM');
+  captureArtifactMatches(screenshotFile, captureRecord.artifacts.screenshot, 'screenshot');
+  const renderMethod = assertNonEmptyString(captureRecord.renderMethod, 'Render method');
+  const crossHostFidelityNote = assertNonEmptyString(
+    captureRecord.crossHostFidelityNote,
+    'Cross-host fidelity note'
+  );
+  if (captureRecord.externalGraphLimitation !== EXTERNAL_GRAPH_LIMITATION) {
+    fail('Capture provenance must preserve the no-external-Graph limitation');
+  }
+
   const domContents = fs.readFileSync(domFile, 'utf8');
   if (!/<html[\s>]/i.test(domContents) || !/<\/html>/i.test(domContents)) {
     fail('The DOM artifact must contain a complete HTML document');
+  }
+  const embeddedMatch = /<script\b[^>]*\bid=["']alga-smoke-capture-provenance["'][^>]*>([\s\S]*?)<\/script>/i
+    .exec(domContents);
+  if (!embeddedMatch) {
+    fail('The DOM artifact is missing its embedded capture provenance');
+  }
+  let embeddedProvenance;
+  try {
+    embeddedProvenance = JSON.parse(embeddedMatch[1]);
+  } catch (error) {
+    fail(`The DOM capture provenance is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  validateCaptureProvenance(embeddedProvenance, metadata);
+  if (!isDeepStrictEqual(embeddedProvenance, captureProvenance)) {
+    fail('The DOM and PNG capture record do not share the same nonce, timestamp, and browser provenance');
   }
   const pngSignature = fs.readFileSync(screenshotFile).subarray(0, 8).toString('hex');
   if (pngSignature !== '89504e470d0a1a0a') {
@@ -394,32 +702,76 @@ function correlate(args) {
   }
   writeJsonNew(path.join(evidenceDirectory, '95-final-dom-screenshot-correlation.json'), {
     workflowRunId: metadata.workflowRunId,
-    capturedAt: new Date().toISOString(),
-    dom: {
-      file: path.basename(domFile),
-      bytes: fs.statSync(domFile).size,
-      sha256: sha256File(domFile),
-    },
-    screenshot: {
-      file: path.basename(screenshotFile),
-      bytes: fs.statSync(screenshotFile).size,
-      sha256: sha256File(screenshotFile),
-    },
-    renderMethod: requireArgument(args, 'render-method'),
-    fidelityNote: args['fidelity-note'] || null,
+    correlatedAt: new Date().toISOString(),
+    sameCaptureProven: true,
+    provenance: captureProvenance,
+    dom: fileIdentity(domFile),
+    screenshot: fileIdentity(screenshotFile),
+    captureProvenanceFile: fileIdentity(captureProvenanceFile),
+    renderMethod,
+    crossHostContext: CROSS_HOST_CONTEXT,
+    crossHostFidelityNote,
+    externalGraphLimitation: EXTERNAL_GRAPH_LIMITATION,
   });
 }
 
 function createManifest(args) {
   const evidenceDirectory = resolveEvidenceDirectory(requireArgument(args, 'evidence-dir'));
-  const metadata = JSON.parse(
-    fs.readFileSync(path.join(evidenceDirectory, '00-workflow-run.json'), 'utf8')
+  const metadata = readJson(
+    path.join(evidenceDirectory, '00-workflow-run.json'),
+    'workflow metadata'
   );
-  if (!fs.existsSync(path.join(evidenceDirectory, '95-final-dom-screenshot-correlation.json'))) {
+  if (metadata.externalGraphLimitation !== EXTERNAL_GRAPH_LIMITATION
+    || metadata.crossHostContext !== CROSS_HOST_CONTEXT) {
+    fail('Workflow metadata is missing the required limitations');
+  }
+  verifyPhaseMarker(evidenceDirectory, 'before', metadata.workflowRunId);
+  verifyPhaseMarker(evidenceDirectory, 'after', metadata.workflowRunId);
+
+  const correlationPath = path.join(
+    evidenceDirectory,
+    '95-final-dom-screenshot-correlation.json'
+  );
+  if (!fs.existsSync(correlationPath)) {
     fail('Run correlate before creating the manifest');
   }
-  if (!fs.existsSync(path.join(evidenceDirectory, '91-database-restoration-comparison.json'))) {
+  const restorationPath = path.join(evidenceDirectory, '91-restoration-comparison.json');
+  if (!fs.existsSync(restorationPath)) {
     fail('Run the after capture before creating the manifest');
+  }
+  const restoration = readJson(restorationPath, 'restoration comparison');
+  const restorationSections = [
+    restoration.microsoftProfiles,
+    restoration.microsoftConsumerBindings,
+    restoration.tenantSecrets,
+  ];
+  if (restoration.exactMatch !== true
+    || restorationSections.some((comparison) => comparison?.exactMatch !== true)) {
+    fail('The complete profile, binding, and secret inventories were not restored exactly');
+  }
+  const correlation = readJson(correlationPath, 'final DOM/PNG correlation');
+  if (correlation.workflowRunId !== metadata.workflowRunId
+    || correlation.sameCaptureProven !== true
+    || correlation.externalGraphLimitation !== EXTERNAL_GRAPH_LIMITATION
+    || correlation.crossHostContext !== CROSS_HOST_CONTEXT) {
+    fail('The final DOM/PNG correlation is incomplete');
+  }
+  assertNonEmptyString(correlation.crossHostFidelityNote, 'Cross-host fidelity note');
+  assertNonEmptyString(correlation.renderMethod, 'Render method');
+  validateCaptureProvenance(correlation.provenance, metadata);
+  for (const artifact of [correlation.dom, correlation.screenshot, correlation.captureProvenanceFile]) {
+    const artifactPath = path.join(evidenceDirectory, artifact?.file || '');
+    if (!artifact?.file
+      || !fs.existsSync(artifactPath)
+      || !isDeepStrictEqual(fileIdentity(artifactPath), artifact)) {
+      fail(`A correlated capture artifact changed before sealing: ${artifact?.file || 'unknown'}`);
+    }
+  }
+
+  for (const outputName of ['98-sha256-manifest.json', 'SHA256SUMS']) {
+    if (fs.existsSync(path.join(evidenceDirectory, outputName))) {
+      fail(`Refusing to overwrite existing sealed artifact: ${outputName}`);
+    }
   }
 
   const excluded = new Set(['98-sha256-manifest.json', 'SHA256SUMS']);
@@ -436,6 +788,12 @@ function createManifest(args) {
   writeJsonNew(path.join(evidenceDirectory, '98-sha256-manifest.json'), {
     workflowRunId: metadata.workflowRunId,
     generatedAt: new Date().toISOString(),
+    assertionsPassed: true,
+    restorationExact: true,
+    sameCaptureProven: true,
+    externalGraphLimitation: EXTERNAL_GRAPH_LIMITATION,
+    crossHostContext: CROSS_HOST_CONTEXT,
+    crossHostFidelityNote: correlation.crossHostFidelityNote,
     files,
   });
 
