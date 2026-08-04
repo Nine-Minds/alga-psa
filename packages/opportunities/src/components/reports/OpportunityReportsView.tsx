@@ -100,30 +100,32 @@ export function OpportunityReportsView({
         render: (_value: unknown, stageRow: IOpportunityPipelineReportStage) => {
           const label = OPPORTUNITY_STAGE_LABELS[stageRow.stage];
           return (
-            <span>
+            <div className="min-w-0">
               {onOpenStage ? (
                 <Button
                   id={`opportunity-report-stage-${currencyCode}-${stageRow.stage}`}
                   variant="link"
                   size="xs"
-                  className="h-auto px-0 py-0 align-baseline text-sm font-medium"
+                  className="h-auto justify-start px-0 py-0 text-sm font-medium"
                   onClick={() => onOpenStage(stageRow.stage)}
                 >
                   {t(label.key, label.fallback)}
                 </Button>
               ) : (
-                t(label.key, label.fallback)
+                <span className="text-sm font-medium">{t(label.key, label.fallback)}</span>
               )}
-              <span className="ml-2 text-[11px] text-[rgb(var(--color-text-400))]">
+              <div className="text-[11px] text-[rgb(var(--color-text-400))]">
                 {t('opportunities.reports.rate', '{{pct}}% base rate', { pct: Math.round(stageRow.rate * 100) })}
-              </span>
-            </span>
+              </div>
+            </div>
           );
         },
       },
       {
         title: t('opportunities.reports.deals', 'Deals'),
         dataIndex: 'opportunity_count',
+        headerClassName: 'text-right',
+        cellClassName: 'text-right',
         render: (_value: unknown, stageRow: IOpportunityPipelineReportStage) => (
           <span className="tabular-nums">{stageRow.opportunity_count}</span>
         ),
@@ -131,6 +133,8 @@ export function OpportunityReportsView({
       {
         title: t('opportunities.list.mrr', 'Recurring'),
         dataIndex: 'mrr_cents',
+        headerClassName: 'text-right',
+        cellClassName: 'text-right',
         render: (_value: unknown, stageRow: IOpportunityPipelineReportStage) => (
           <span className="tabular-nums">{money(stageRow.mrr_cents)}{perMonth}</span>
         ),
@@ -138,6 +142,8 @@ export function OpportunityReportsView({
       {
         title: t('opportunities.list.oneTime', 'One-time'),
         dataIndex: 'one_time_cents',
+        headerClassName: 'text-right',
+        cellClassName: 'text-right',
         render: (_value: unknown, stageRow: IOpportunityPipelineReportStage) => (
           <span className="tabular-nums">{money(stageRow.one_time_cents)}</span>
         ),
@@ -145,6 +151,8 @@ export function OpportunityReportsView({
       {
         title: t('opportunities.reports.weighted', 'Weighted forecast'),
         dataIndex: 'weighted_mrr_cents',
+        headerClassName: 'text-right',
+        cellClassName: 'text-right',
         render: (_value: unknown, stageRow: IOpportunityPipelineReportStage) => (
           <span className="tabular-nums text-[rgb(var(--color-text-500))]">
             {money(stageRow.weighted_mrr_cents)}{perMonth}
