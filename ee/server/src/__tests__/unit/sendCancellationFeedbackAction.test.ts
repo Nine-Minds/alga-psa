@@ -79,18 +79,26 @@ describe('sendCancellationFeedbackAction', () => {
     mocks.sendCancellationFeedbackEmail.mockResolvedValue(undefined);
   });
 
-  it.each([
-    ['Not a category', 'This feedback has enough detail to otherwise be valid.'],
-    ['Other', 'Too short'],
-  ])('rejects invalid feedback before lookup or email dispatch', async (reasonCategory, reasonText) => {
+  it('rejects an unknown category before lookup or email dispatch', async () => {
+    const reasonCategory = 'Not a category';
+    const reasonText = 'Optional feedback';
     const result = await sendCancellationFeedbackAction(reasonText, reasonCategory);
 
     expect(result).toEqual({
       success: false,
-      error: 'Select a cancellation reason and provide between 20 and 500 characters of feedback',
+      error: 'Invalid cancellation feedback',
     });
     expect(mocks.getConnection).not.toHaveBeenCalled();
     expect(mocks.sendCancellationFeedbackEmail).not.toHaveBeenCalled();
+  });
+
+  it('accepts blank feedback without a category', async () => {
+    const result = await sendCancellationFeedbackAction('', undefined);
+
+    expect(result).toEqual({ success: true });
+    expect(mocks.sendCancellationFeedbackEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ reasonText: '', reasonCategory: undefined })
+    );
   });
 
   it('sends trimmed, validated feedback to the mailer', async () => {

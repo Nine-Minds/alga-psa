@@ -284,7 +284,7 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
 
   const handleConfirmCancellation = async (
     reasonText: string,
-    reasonCategory: CancellationReasonCategory
+    reasonCategory?: CancellationReasonCategory
   ) => {
     try {
       // Send feedback email

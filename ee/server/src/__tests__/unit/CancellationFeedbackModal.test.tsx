@@ -49,12 +49,9 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (key: string, values?: Record<string, number>) => {
+    t: (key: string) => {
       if (key === 'cancellationModal.otherReasonHelp') {
         return 'Please share a little more about what led to your decision.';
-      }
-      if (key === 'cancellationModal.minimumCharacters') {
-        return `At least ${values?.min} characters required`;
       }
       return key;
     },
@@ -94,26 +91,33 @@ describe('CancellationFeedbackModal', () => {
     };
   }
 
-  it('keeps submit disabled without a category and for blank, punctuation, or short feedback', () => {
+  it('allows cancellation without providing feedback', async () => {
     const { category, feedback, submit } = renderModal();
-
-    fireEvent.change(feedback, { target: { value: 'This feedback has enough detail.' } });
-    expect(submit).toBeDisabled();
-
-    fireEvent.change(category, { target: { value: 'Other' } });
-    for (const reasonText of ['', '.', 'Too little detail']) {
-      fireEvent.change(feedback, { target: { value: reasonText } });
-      expect(submit).toBeDisabled();
-    }
-  });
-
-  it('enables submit for a known category and 20 trimmed characters', () => {
-    const { category, feedback, submit } = renderModal();
-
-    fireEvent.change(category, { target: { value: 'Pricing too high' } });
-    fireEvent.change(feedback, { target: { value: '  12345678901234567890  ' } });
 
     expect(submit).toBeEnabled();
+    expect(category).not.toBeRequired();
+    expect(feedback).not.toBeRequired();
+    expect(feedback).not.toHaveAttribute('maxlength');
+
+    await act(async () => {
+      fireEvent.click(submit);
+    });
+
+    expect(onConfirm).toHaveBeenCalledWith('', undefined);
+  });
+
+  it('submits trimmed feedback without imposing a maximum length', async () => {
+    const { category, feedback, submit } = renderModal();
+    const reasonText = 'x'.repeat(5_000);
+
+    fireEvent.change(category, { target: { value: 'Pricing too high' } });
+    fireEvent.change(feedback, { target: { value: `  ${reasonText}  ` } });
+
+    await act(async () => {
+      fireEvent.click(submit);
+    });
+
+    expect(onConfirm).toHaveBeenCalledWith(reasonText, 'Pricing too high');
   });
 
   it('shows a gentle request for detail when Other is selected', () => {

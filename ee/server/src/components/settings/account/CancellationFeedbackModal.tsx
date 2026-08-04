@@ -9,8 +9,6 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { toast } from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
-  CANCELLATION_FEEDBACK_MAX_LENGTH,
-  CANCELLATION_FEEDBACK_MIN_LENGTH,
   CANCELLATION_REASON_CATEGORIES,
   cancellationFeedbackSchema,
   type CancellationReasonCategory,
@@ -19,7 +17,7 @@ import {
 interface CancellationFeedbackModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (reasonText: string, reasonCategory: CancellationReasonCategory) => Promise<void>;
+  onConfirm: (reasonText: string, reasonCategory?: CancellationReasonCategory) => Promise<void>;
   onLogout?: () => Promise<void>;
 }
 
@@ -47,29 +45,11 @@ export default function CancellationFeedbackModal({
     label: t(CANCELLATION_REASON_LABEL_KEYS[value]),
   }));
 
-  const trimmedReasonLength = reasonText.trim().length;
-  const remainingChars = CANCELLATION_FEEDBACK_MAX_LENGTH - reasonText.length;
-  const feedbackResult = cancellationFeedbackSchema.safeParse({ reasonText, reasonCategory });
-  const hasValidCategory = CANCELLATION_REASON_CATEGORIES.some(
-    (category) => category === reasonCategory
-  );
-  const hasMinimumFeedback = trimmedReasonLength >= CANCELLATION_FEEDBACK_MIN_LENGTH;
-
   const handleSubmit = async () => {
     const result = cancellationFeedbackSchema.safeParse({ reasonText, reasonCategory });
 
-    if (!hasValidCategory) {
-      toast.error(t('messages.feedbackCategoryRequired'));
-      return;
-    }
-
-    if (!hasMinimumFeedback) {
-      toast.error(t('messages.feedbackMinimumLength', { min: CANCELLATION_FEEDBACK_MIN_LENGTH }));
-      return;
-    }
-
     if (!result.success) {
-      toast.error(t('messages.feedbackMaxLength', { max: CANCELLATION_FEEDBACK_MAX_LENGTH }));
+      toast.error(t('messages.feedbackSubmitFailed'));
       return;
     }
 
@@ -116,7 +96,7 @@ export default function CancellationFeedbackModal({
         id="cancel-feedback-submit-btn"
         variant="default"
         onClick={handleSubmit}
-        disabled={loading || !feedbackResult.success}
+        disabled={loading}
       >
         {loading ? t('cancellationModal.submitting') : t('cancellationModal.submitFeedback')}
       </Button>
@@ -143,18 +123,8 @@ export default function CancellationFeedbackModal({
           </div>
         </Alert>
 
-        {/* Reason Category (Required) */}
-        <div
-          role="group"
-          aria-describedby={
-            !hasValidCategory
-              ? 'reason-category-error'
-              : reasonCategory === 'Other'
-                ? 'reason-category-other-help'
-                : undefined
-          }
-          aria-invalid={!hasValidCategory}
-        >
+        {/* Reason Category (Optional) */}
+        <div>
           <CustomSelect
             id="reason-category"
             label={t('cancellationModal.reasonLabel')}
@@ -163,13 +133,8 @@ export default function CancellationFeedbackModal({
             onValueChange={setReasonCategory}
             placeholder={t('cancellationModal.reasonPlaceholder')}
             disabled={loading}
-            required
+            allowClear
           />
-          {!hasValidCategory && (
-            <p id="reason-category-error" className="text-xs text-destructive -mt-3" role="alert">
-              {t('cancellationModal.reasonRequired')}
-            </p>
-          )}
           {reasonCategory === 'Other' && (
             <p id="reason-category-other-help" className="text-xs text-muted-foreground -mt-3">
               {t('cancellationModal.otherReasonHelp')}
@@ -177,35 +142,16 @@ export default function CancellationFeedbackModal({
           )}
         </div>
 
-        {/* Feedback Text (Required) */}
-        <div>
-          <TextArea
-            id="feedback-text"
-            label={t('cancellationModal.feedbackLabel')}
-            value={reasonText}
-            onChange={(e) => setReasonText(e.target.value)}
-            placeholder={t('cancellationModal.feedbackPlaceholder')}
-            disabled={loading}
-            maxLength={CANCELLATION_FEEDBACK_MAX_LENGTH}
-            required
-            className="min-h-[120px]"
-            aria-describedby="feedback-text-requirements feedback-text-remaining"
-            aria-invalid={!hasMinimumFeedback}
-          />
-          <div className="flex justify-between text-xs text-muted-foreground -mt-3 px-0.5">
-            <span id="feedback-text-requirements" className={!hasMinimumFeedback ? 'text-destructive' : ''}>
-              {t('cancellationModal.minimumCharacters', {
-                min: CANCELLATION_FEEDBACK_MIN_LENGTH,
-              })}
-            </span>
-            <span
-              id="feedback-text-remaining"
-              className={remainingChars < 50 ? 'text-destructive font-semibold' : ''}
-            >
-              {t('cancellationModal.charactersRemaining', { count: remainingChars })}
-            </span>
-          </div>
-        </div>
+        {/* Feedback Text (Optional) */}
+        <TextArea
+          id="feedback-text"
+          label={t('cancellationModal.feedbackLabel')}
+          value={reasonText}
+          onChange={(e) => setReasonText(e.target.value)}
+          placeholder={t('cancellationModal.feedbackPlaceholder')}
+          disabled={loading}
+          className="min-h-[120px]"
+        />
 
       </div>
     </Dialog>
