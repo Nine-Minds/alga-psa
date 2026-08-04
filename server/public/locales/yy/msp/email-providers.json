@@ -773,7 +773,8 @@
       "providerPlaceholder": "55555",
       "providerOptions": {
         "resend": "55555",
-        "smtp": "55555"
+        "smtp": "55555",
+        "microsoft": "55555"
       },
       "resendDescription": "55555",
       "smtpDescription": "55555",
@@ -841,6 +842,18 @@
         "clearButton": "55555",
         "savingButton": "55555",
         "saveButton": "55555"
+      },
+      "microsoft": {
+        "configTitle": "55555",
+        "configDescription": "55555",
+        "mailboxLabel": "55555",
+        "mailboxPlaceholder": "55555",
+        "help": "55555",
+        "none": "55555",
+        "noneConnected": "55555",
+        "description": "55555",
+        "loadFailed": "55555",
+        "saved": "55555"
       }
     },
     "inbound": {

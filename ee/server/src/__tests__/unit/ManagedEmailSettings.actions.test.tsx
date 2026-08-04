@@ -15,6 +15,7 @@ const {
   updateEmailSettingsMock,
   getEmailProvidersMock,
   testOutboundEmailMock,
+  getMicrosoftOutboundMailboxesMock,
   toastSuccessMock,
   toastErrorMock,
   tierContextState,
@@ -27,6 +28,7 @@ const {
   updateEmailSettingsMock: vi.fn(),
   getEmailProvidersMock: vi.fn(),
   testOutboundEmailMock: vi.fn(),
+  getMicrosoftOutboundMailboxesMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
   tierContextState: { isHosted: true },
@@ -44,6 +46,7 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   updateEmailSettings: updateEmailSettingsMock,
   getEmailProviders: getEmailProvidersMock,
   testOutboundEmail: testOutboundEmailMock,
+  getMicrosoftOutboundMailboxes: getMicrosoftOutboundMailboxesMock,
 }));
 
 vi.mock('@alga-psa/email/providerConfig', () => ({
@@ -244,6 +247,8 @@ describe('ManagedEmailSettings removal actions', () => {
     updateEmailSettingsMock.mockReset();
     getEmailProvidersMock.mockReset();
     testOutboundEmailMock.mockReset();
+    getMicrosoftOutboundMailboxesMock.mockReset();
+    getMicrosoftOutboundMailboxesMock.mockResolvedValue({ mailboxes: [] });
     toastSuccessMock.mockReset();
     toastErrorMock.mockReset();
     tierContextState.isHosted = true;
@@ -333,6 +338,8 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
     updateEmailSettingsMock.mockReset();
     getEmailProvidersMock.mockReset();
     testOutboundEmailMock.mockReset();
+    getMicrosoftOutboundMailboxesMock.mockReset();
+    getMicrosoftOutboundMailboxesMock.mockResolvedValue({ mailboxes: [] });
     toastSuccessMock.mockReset();
     toastErrorMock.mockReset();
     tierContextState.isHosted = true;
@@ -427,7 +434,7 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
     });
   });
 
-  it('shows only SMTP on self-host without loading managed domains', async () => {
+  it('offers SMTP and Microsoft but not managed email on self-host', async () => {
     tierContextState.isHosted = false;
     getManagedEmailDomainsMock.mockRejectedValue(new Error('managed domains should not load'));
     getEmailSettingsMock.mockResolvedValue(baseSettings);
@@ -441,10 +448,81 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
       expect(getEmailSettingsMock).toHaveBeenCalled();
     });
     expect(getManagedEmailDomainsMock).not.toHaveBeenCalled();
-    expect(document.getElementById('outbound-provider-select')).toBeNull();
+
+    // Self-host can send via its own SMTP relay or an authorized Microsoft 365
+    // mailbox, but never via the hosted (Resend) managed sender.
+    const providerSelect = document.getElementById('outbound-provider-select') as HTMLSelectElement | null;
+    expect(providerSelect).not.toBeNull();
+    const offered = Array.from(providerSelect!.options).map(option => option.value);
+    expect(offered).toContain('smtp');
+    expect(offered).toContain('microsoft');
+    expect(offered).not.toContain('resend');
+
     expect(
       screen.queryByText(/Managed email domains are not available on your current plan/i)
     ).not.toBeInTheDocument();
+  });
+
+  it('switching to Microsoft saves the connected mailbox as the outbound sender', async () => {
+    tierContextState.isHosted = false;
+    getEmailSettingsMock.mockResolvedValue(baseSettings);
+    getEmailProvidersMock.mockResolvedValue({ providers: [] });
+    getMicrosoftOutboundMailboxesMock.mockResolvedValue({
+      mailboxes: [{
+        providerId: 'ms-provider-1',
+        providerName: 'Support Mailbox',
+        mailbox: 'support@acme.com',
+        senderDisplayName: 'Acme Support',
+        status: 'connected',
+      }],
+    });
+    updateEmailSettingsMock.mockResolvedValue({
+      ...baseSettings,
+      emailProvider: 'microsoft',
+      providerConfigs: [],
+    });
+
+    render(<ManagedEmailSettings />);
+
+    await waitFor(() => {
+      expect(document.getElementById('outbound-provider-select')).not.toBeNull();
+    });
+    fireEvent.change(document.getElementById('outbound-provider-select')!, {
+      target: { value: 'microsoft' },
+    });
+
+    await waitFor(() => {
+      expect(updateEmailSettingsMock).toHaveBeenCalled();
+    });
+
+    // The save must name the mailbox; updateEmailSettings rejects a Microsoft
+    // selection whose config carries no inboundProviderId.
+    const saved = updateEmailSettingsMock.mock.calls.at(-1)![0];
+    expect(saved.emailProvider).toBe('microsoft');
+    const msConfig = saved.providerConfigs.find((c: any) => c.providerType === 'microsoft');
+    expect(msConfig.config.inboundProviderId).toBe('ms-provider-1');
+    expect(msConfig.config.from).toBe('support@acme.com');
+  });
+
+  it('refuses to switch to Microsoft when no mailbox is authorized', async () => {
+    tierContextState.isHosted = false;
+    getEmailSettingsMock.mockResolvedValue(baseSettings);
+    getEmailProvidersMock.mockResolvedValue({ providers: [] });
+    getMicrosoftOutboundMailboxesMock.mockResolvedValue({ mailboxes: [] });
+
+    render(<ManagedEmailSettings />);
+
+    await waitFor(() => {
+      expect(document.getElementById('outbound-provider-select')).not.toBeNull();
+    });
+    fireEvent.change(document.getElementById('outbound-provider-select')!, {
+      target: { value: 'microsoft' },
+    });
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalled();
+    });
+    expect(updateEmailSettingsMock).not.toHaveBeenCalled();
   });
 
   it('accepts SMTP host input on self-host when provider configs are empty', async () => {

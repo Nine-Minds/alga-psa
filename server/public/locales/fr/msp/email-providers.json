@@ -773,7 +773,8 @@
       "providerPlaceholder": "Sélectionnez un fournisseur sortant",
       "providerOptions": {
         "resend": "Nine Minds géré",
-        "smtp": "SMTP"
+        "smtp": "SMTP",
+        "microsoft": "Microsoft 365 (Microsoft Graph)"
       },
       "resendDescription": "Les e-mails sont envoyés via l'infrastructure gérée de Nine Minds. Ajoutez et vérifiez un domaine personnalisé ci-dessous.",
       "smtpDescription": "Les e-mails sont envoyés via votre propre serveur SMTP.",
@@ -841,6 +842,18 @@
         "clearButton": "Effacer l'adresse d'expéditeur",
         "savingButton": "Enregistrement…",
         "saveButton": "Enregistrer l'adresse d'expéditeur"
+      },
+      "microsoft": {
+        "configTitle": "Configuration Microsoft 365",
+        "configDescription": "Choisissez la boîte aux lettres Microsoft 365 autorisée qui envoie les e-mails sortants.",
+        "mailboxLabel": "Boîte aux lettres d'envoi",
+        "mailboxPlaceholder": "Sélectionnez une boîte aux lettres Microsoft 365 connectée",
+        "help": "Les messages sont envoyés depuis cette boîte aux lettres via Microsoft Graph et enregistrés dans Éléments envoyés. Reconnectez les boîtes existantes pour accorder Mail.Send.",
+        "none": "Ajoutez et autorisez d'abord un fournisseur Microsoft 365 dans l'onglet E-mail entrant.",
+        "noneConnected": "Autorisez d'abord une boîte aux lettres Microsoft 365 dans l'onglet E-mail entrant.",
+        "description": "Les messages sont envoyés depuis la boîte sélectionnée via Microsoft Graph et enregistrés dans Éléments envoyés.",
+        "loadFailed": "Impossible de charger les boîtes aux lettres Microsoft 365.",
+        "saved": "Boîte aux lettres d'envoi mise à jour."
       }
     },
     "inbound": {

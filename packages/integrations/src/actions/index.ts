@@ -82,6 +82,7 @@ export {
   updateEmailSettings,
   testOutboundEmail
 } from './email-actions/emailSettingsActions';
+export type { MicrosoftOutboundMailboxOption } from './email-actions/emailSettingsActions';
 export {
   getInboundTicketDefaults,
   createInboundTicketDefaults,

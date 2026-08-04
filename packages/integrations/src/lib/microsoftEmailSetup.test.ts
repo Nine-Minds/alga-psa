@@ -45,6 +45,7 @@ describe('Microsoft email setup builders', () => {
         { id: MICROSOFT_EMAIL_DELEGATED_PERMISSION_IDS.mailRead, type: 'Scope' },
         { id: MICROSOFT_EMAIL_DELEGATED_PERMISSION_IDS.mailReadShared, type: 'Scope' },
         { id: MICROSOFT_EMAIL_DELEGATED_PERMISSION_IDS.offlineAccess, type: 'Scope' },
+        { id: MICROSOFT_EMAIL_DELEGATED_PERMISSION_IDS.userRead, type: 'Scope' },
       ],
     }]);
     expect(JSON.stringify(manifest)).not.toContain('Mail.Send');

@@ -773,7 +773,8 @@
       "providerPlaceholder": "Seleziona il provider in uscita",
       "providerOptions": {
         "resend": "Nine Minds gestito",
-        "smtp": "SMTP"
+        "smtp": "SMTP",
+        "microsoft": "Microsoft 365 (Microsoft Graph)"
       },
       "resendDescription": "Le email vengono inviate tramite l'infrastruttura gestita di Nine Minds. Aggiungi e verifica un dominio personalizzato di seguito.",
       "smtpDescription": "Le email vengono inviate tramite il tuo server SMTP.",
@@ -841,6 +842,18 @@
         "clearButton": "Cancella indirizzo mittente",
         "savingButton": "Salvataggio…",
         "saveButton": "Salva indirizzo mittente"
+      },
+      "microsoft": {
+        "configTitle": "Configurazione Microsoft 365",
+        "configDescription": "Scegli quale casella di posta Microsoft 365 autorizzata invia la posta in uscita.",
+        "mailboxLabel": "Casella di invio",
+        "mailboxPlaceholder": "Seleziona una casella Microsoft 365 collegata",
+        "help": "I messaggi vengono inviati da questa casella tramite Microsoft Graph e salvati in Posta inviata. Ricollega le caselle esistenti per concedere Mail.Send.",
+        "none": "Aggiungi e autorizza prima un provider Microsoft 365 nella scheda Posta in arrivo.",
+        "noneConnected": "Autorizza prima una casella Microsoft 365 nella scheda Posta in arrivo.",
+        "description": "I messaggi vengono inviati dalla casella selezionata tramite Microsoft Graph e salvati in Posta inviata.",
+        "loadFailed": "Impossibile caricare le caselle Microsoft 365.",
+        "saved": "Casella di invio aggiornata."
       }
     },
     "inbound": {

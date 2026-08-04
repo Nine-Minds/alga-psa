@@ -773,7 +773,8 @@
       "providerPlaceholder": "Select outbound provider",
       "providerOptions": {
         "resend": "Nine Minds Managed",
-        "smtp": "SMTP"
+        "smtp": "SMTP",
+        "microsoft": "Microsoft 365 (Microsoft Graph)"
       },
       "resendDescription": "Emails are sent through Nine Minds managed infrastructure. Add and verify a custom domain below.",
       "smtpDescription": "Emails are sent through your own SMTP server.",
@@ -841,6 +842,18 @@
         "clearButton": "Clear From Address",
         "savingButton": "Saving...",
         "saveButton": "Save From Address"
+      },
+      "microsoft": {
+        "configTitle": "Microsoft 365 Configuration",
+        "configDescription": "Choose which authorized Microsoft 365 mailbox sends outbound email.",
+        "mailboxLabel": "Sending Mailbox",
+        "mailboxPlaceholder": "Select a connected Microsoft 365 mailbox",
+        "help": "Messages are sent as this mailbox through Microsoft Graph and saved to Sent Items. Reconnect existing mailboxes to grant Mail.Send.",
+        "none": "Add and authorize a Microsoft 365 provider on the Inbound Email tab first.",
+        "noneConnected": "Authorize a Microsoft 365 mailbox on the Inbound Email tab first.",
+        "description": "Messages are sent as the selected mailbox through Microsoft Graph and saved to Sent Items.",
+        "loadFailed": "Could not load Microsoft 365 mailboxes.",
+        "saved": "Outbound sending mailbox updated."
       }
     },
     "inbound": {
