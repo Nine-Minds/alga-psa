@@ -84,9 +84,17 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 {{- end }}
 
-{{/* Render GOOGLE_OAUTH_* env vars from gmail_integration config */}}
+{{/* Render GOOGLE_OAUTH_* env vars for sign-in SSO. Prefers the dedicated
+     google_sso block; falls back to gmail_integration credentials so releases
+     without google_sso keep their historical behavior. */}}
 {{- define "sebastian.googleOAuthEnv" -}}
-{{- if and .Values.gmail_integration.enabled .Values.gmail_integration.client_id .Values.gmail_integration.client_secret }}
+{{- $sso := .Values.google_sso | default dict }}
+{{- if and $sso.client_id $sso.client_secret }}
+- name: GOOGLE_OAUTH_CLIENT_ID
+  value: "{{ $sso.client_id }}"
+- name: GOOGLE_OAUTH_CLIENT_SECRET
+  value: "{{ $sso.client_secret }}"
+{{- else if and .Values.gmail_integration.enabled .Values.gmail_integration.client_id .Values.gmail_integration.client_secret }}
 - name: GOOGLE_OAUTH_CLIENT_ID
   value: "{{ .Values.gmail_integration.client_id }}"
 - name: GOOGLE_OAUTH_CLIENT_SECRET
