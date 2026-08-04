@@ -53,6 +53,7 @@
       "addValue": "Aggiungi valore stimato (facoltativo)",
       "client": "Cliente",
       "dealTitle": "Titolo",
+      "dealType": "Tipo di trattativa",
       "due": "Dovuto",
       "expectedClose": "Chiusura prevista",
       "missing": "Ancora necessario: {{fields}}",

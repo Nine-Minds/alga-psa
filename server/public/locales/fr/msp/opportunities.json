@@ -53,6 +53,7 @@
       "addValue": "Ajouter une valeur estimée (facultatif)",
       "client": "Client",
       "dealTitle": "Titre",
+      "dealType": "Type d'affaire",
       "due": "Due",
       "expectedClose": "Clôture attendue",
       "missing": "Encore requis : {{fields}}",

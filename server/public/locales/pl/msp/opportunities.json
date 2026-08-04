@@ -53,6 +53,7 @@
       "addValue": "Dodaj szacowaną wartość (opcjonalnie)",
       "client": "Klient",
       "dealTitle": "Tytuł",
+      "dealType": "Typ szansy sprzedaży",
       "due": "Termin",
       "expectedClose": "Oczekiwane blisko",
       "missing": "Nadal wymagane: {{fields}}",

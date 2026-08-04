@@ -53,6 +53,7 @@
       "addValue": "Geschatte waarde toevoegen (optioneel)",
       "client": "Klant",
       "dealTitle": "Titel",
+      "dealType": "Dealtype",
       "due": "Verschuldigd",
       "expectedClose": "Verwacht dichtbij",
       "missing": "Nog nodig: {{fields}}",

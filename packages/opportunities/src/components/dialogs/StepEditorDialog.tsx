@@ -137,13 +137,16 @@ export function StepEditorDialog({
         </div>
         {hasTime ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <DateTimePicker
-              id="opportunity-step-due-at"
-              label={t('opportunities.steps.when', 'When')}
-              value={due}
-              onChange={(date?: Date) => setDue(date)}
-              clearable
-            />
+            <div className="space-y-1">
+              <Label htmlFor="opportunity-step-due-at">{t('opportunities.steps.when', 'When')}</Label>
+              <DateTimePicker
+                id="opportunity-step-due-at"
+                label={t('opportunities.steps.when', 'When')}
+                value={due}
+                onChange={(date?: Date) => setDue(date)}
+                clearable
+              />
+            </div>
             <CustomSelect
               id="opportunity-step-duration"
               label={t('opportunities.steps.duration', 'Length')}
@@ -156,13 +159,16 @@ export function StepEditorDialog({
             />
           </div>
         ) : (
-          <DatePicker
-            id="opportunity-step-due"
-            label={t('opportunities.steps.due', 'Due')}
-            value={due}
-            onChange={(date?: Date) => setDue(date)}
-            clearable
-          />
+          <div className="space-y-1">
+            <Label htmlFor="opportunity-step-due">{t('opportunities.steps.due', 'Due')}</Label>
+            <DatePicker
+              id="opportunity-step-due"
+              label={t('opportunities.steps.due', 'Due')}
+              value={due}
+              onChange={(date?: Date) => setDue(date)}
+              clearable
+            />
+          </div>
         )}
         <CustomSelect
           id="opportunity-step-assignee"

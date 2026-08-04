@@ -53,6 +53,7 @@
       "addValue": "Geschätzten Wert hinzufügen (optional)",
       "client": "Kunde",
       "dealTitle": "Titel",
+      "dealType": "Deal-Typ",
       "due": "Fällig",
       "expectedClose": "Nahe erwartet",
       "missing": "Noch erforderlich: {{fields}}",
