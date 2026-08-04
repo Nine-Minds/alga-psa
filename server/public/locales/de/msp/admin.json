@@ -197,6 +197,36 @@
       "recipientPlaceholder": "sie@beispiel.com",
       "run": "Verbindung testen",
       "testing": "Wird getestet..."
+    },
+    "senderIdentities": {
+      "ticket": {
+        "title": "Ticket email identity",
+        "description": "Replies to ticket emails must return to this address so they can be matched and added to the ticket. Use a connected, monitored inbox.",
+        "connectedInboxLabel": "Connected inbox",
+        "connectedInboxHelp": "A connected inbox keeps client replies in the ticket conversation.",
+        "customAddressOption": "Use another address",
+        "addressLabel": "From address",
+        "addressPlaceholder": "support@example.com",
+        "addressHelp": "This address controls reply routing for ticket email only.",
+        "nameLabel": "Sender display name",
+        "namePlaceholder": "Support",
+        "nameHelp": "Leave blank to use the connected mailbox name or ticket board name.",
+        "notConnectedWarning": "This address is not a connected inbox, so ticket replies may not be ingested.",
+        "microsoftMismatch": "Ticket email address must match the selected Microsoft 365 mailbox ({{mailbox}})."
+      },
+      "notification": {
+        "title": "All other email identity",
+        "description": "Brand portal invitations, password resets, invoices, project updates, and general notifications independently from ticket routing.",
+        "addressLabel": "From address",
+        "addressPlaceholder": "notifications@example.com",
+        "addressHelp": "SMTP and Resend use this address. Microsoft 365 uses the selected sending mailbox.",
+        "nameLabel": "Sender display name",
+        "namePlaceholder": "Your company name",
+        "nameHelp": "Leave blank to use {{company}} automatically.",
+        "companyFallback": "your tenant company"
+      },
+      "warningTitle": "Check reply routing",
+      "errorTitle": "Fix the ticket identity"
     }
   },
   "microsoft365": {

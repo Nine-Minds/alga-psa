@@ -20,6 +20,7 @@ import { tenantDb, getConnection } from '@alga-psa/db';
 import { SupportedLocale, LOCALE_CONFIG, isSupportedLocale } from '../lib/localeConfig';
 import { resolveEmailLocale } from '../emailLocaleResolver';
 import Handlebars from 'handlebars';
+import { applyFromNameOverride } from '../senderIdentity';
 
 const SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT = '__system_email_template_lookup__';
 
@@ -72,11 +73,9 @@ export class SystemEmailService extends BaseEmailService {
     return SystemEmailProviderFactory.createProvider();
   }
 
-  protected getFromAddress(params?: BaseEmailParams): string {
-    if (params?.from) {
-      return typeof params.from === 'string' ? params.from : params.from.email;
-    }
-    return this.fromAddress || process.env.EMAIL_FROM || 'noreply@localhost';
+  protected getFromAddress(params?: BaseEmailParams) {
+    const address = params?.from || this.fromAddress || process.env.EMAIL_FROM || 'noreply@localhost';
+    return applyFromNameOverride(address, params?.fromName);
   }
 
   /**

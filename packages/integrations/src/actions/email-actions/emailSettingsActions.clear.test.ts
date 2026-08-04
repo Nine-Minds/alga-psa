@@ -19,6 +19,11 @@ vi.mock('@alga-psa/email', () => ({
   TenantEmailService: {
     getTenantEmailSettings: getTenantEmailSettingsMock,
   },
+  resolveTenantCompanyName: vi.fn(async () => 'Example MSP'),
+  resolveDefaultFromAddress: vi.fn(() => ({
+    email: 'notifications@acme.com',
+    name: 'Example MSP',
+  })),
 }));
 
 vi.mock('@alga-psa/email/providerConfig', () => ({

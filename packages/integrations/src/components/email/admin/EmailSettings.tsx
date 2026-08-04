@@ -16,15 +16,18 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { Mail, Globe, Settings, CheckCircle, XCircle, Clock, Eye, EyeOff, Send, Inbox } from 'lucide-react';
-import type { TenantEmailSettings } from '@alga-psa/types';
 import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
 import {
   getEmailSettings,
   getMicrosoftOutboundMailboxes,
   updateEmailSettings,
   testOutboundEmail,
+  type EmailSettingsView,
   type MicrosoftOutboundMailboxOption,
 } from '../../../actions/email-actions/emailSettingsActions';
+import { getEmailProviders } from '../../../actions/email-actions/emailProviderActions';
+import type { EmailProvider } from '../types';
+import { EmailSenderIdentityCards } from './EmailSenderIdentityCards';
 import {
   getEmailDomains,
   addEmailDomain,
@@ -58,7 +61,8 @@ interface DomainStatus {
 export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   const { t } = useTranslation('msp/admin');
   const tenantId = useTenant();
-  const [settings, setSettings] = useState<TenantEmailSettings | null>(null);
+  const [settings, setSettings] = useState<EmailSettingsView | null>(null);
+  const [inboundProviders, setInboundProviders] = useState<EmailProvider[]>([]);
   const [domains, setDomains] = useState<DomainStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -77,6 +81,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   useEffect(() => {
     loadEmailSettings();
     loadMicrosoftMailboxes();
+    loadInboundProviders();
     loadDomains();
   }, []);
 
@@ -99,6 +104,15 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
       setError(t('email.errors.loadEmailSettings', { defaultValue: 'Failed to load email settings' }));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadInboundProviders = async () => {
+    try {
+      const result = await getEmailProviders();
+      setInboundProviders(result.providers || []);
+    } catch (err) {
+      console.error('Failed to load inbound email providers:', err);
     }
   };
 
@@ -241,12 +255,15 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
       ) || microsoftMailboxes.find(mailbox => mailbox.status === 'connected');
 
       if (microsoftConfig && selectedMailbox) {
+        const existingFromName = microsoftConfig.config.fromName;
         microsoftConfig.providerId = selectedMailbox.providerId;
         microsoftConfig.config = {
           inboundProviderId: selectedMailbox.providerId,
           mailbox: selectedMailbox.mailbox,
           from: selectedMailbox.mailbox,
-          fromName: selectedMailbox.senderDisplayName || undefined,
+          fromName: existingFromName === undefined
+            ? selectedMailbox.senderDisplayName || undefined
+            : existingFromName,
         };
       }
     }
@@ -259,6 +276,10 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
     const mailbox = microsoftMailboxes.find(option => option.providerId === providerId);
     if (!mailbox) return;
 
+    const existingMicrosoftConfig = settings.providerConfigs.find(
+      config => config.providerType === 'microsoft'
+    );
+
     const providerConfigs = settings.providerConfigs.map(config =>
       config.providerType === 'microsoft'
         ? {
@@ -268,7 +289,9 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
               inboundProviderId: mailbox.providerId,
               mailbox: mailbox.mailbox,
               from: mailbox.mailbox,
-              fromName: mailbox.senderDisplayName || undefined,
+              fromName: existingMicrosoftConfig?.config.fromName === undefined
+                ? mailbox.senderDisplayName || undefined
+                : existingMicrosoftConfig.config.fromName,
             },
           }
         : config
@@ -357,16 +380,6 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
           })}
         </p>
 
-        <div>
-          <Label htmlFor="smtp-from">{t('email.smtp.fromAddress.label', { defaultValue: 'From Address' })}</Label>
-          <Input
-            id="smtp-from"
-            value={config.config.from || ''}
-            placeholder={t('email.smtp.fromAddress.placeholder', { defaultValue: 'noreply@example.com' })}
-            onChange={(e) => updateProviderConfig(config.providerId, { from: e.target.value })}
-          />
-        </div>
-
         <div className="border-t pt-4 space-y-4">
           <h4 className="text-sm font-medium">
             {t('email.smtp.security.title', { defaultValue: 'Connection Security' })}
@@ -444,20 +457,6 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
           </p>
         </div>
 
-        <div>
-          <Label htmlFor="resend-from">{t('email.resend.fromAddress.label', { defaultValue: 'From Address' })}</Label>
-          <Input
-            id="resend-from"
-            value={config.config.from || ''}
-            placeholder={t('email.resend.fromAddress.placeholder', { defaultValue: 'noreply@yourdomain.com' })}
-            onChange={(e) => updateProviderConfig(config.providerId, { from: e.target.value })}
-          />
-          <p className="text-sm text-muted-foreground mt-1">
-            {t('email.resend.fromAddress.help', {
-              defaultValue: 'Must be from a verified domain. Use the Domains tab to add custom domains.'
-            })}
-          </p>
-        </div>
       </div>
     );
   };
@@ -573,6 +572,23 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
       </div>
     );
   }
+
+  if (!settings) {
+    return (
+      <div className="text-red-600 dark:text-red-400">
+        {t('email.errors.loadEmailSettings', { defaultValue: 'Failed to load email settings' })}
+      </div>
+    );
+  }
+
+  const selectedMicrosoftMailbox = selectedProvider === 'microsoft'
+    ? getCurrentProviderConfig()?.config.from?.trim() || ''
+    : '';
+  const ticketIdentityError = selectedMicrosoftMailbox
+    && settings?.ticketingFromEmail
+    && settings.ticketingFromEmail.toLowerCase() !== selectedMicrosoftMailbox.toLowerCase()
+      ? t('email.senderIdentities.ticket.microsoftMismatch', { mailbox: selectedMicrosoftMailbox })
+      : null;
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -709,6 +725,60 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
             </CardContent>
           </Card>
 
+            <EmailSenderIdentityCards
+              copy={{
+                ticketTitle: t('email.senderIdentities.ticket.title'),
+                ticketDescription: t('email.senderIdentities.ticket.description'),
+                connectedInboxLabel: t('email.senderIdentities.ticket.connectedInboxLabel'),
+                connectedInboxHelp: t('email.senderIdentities.ticket.connectedInboxHelp'),
+                customAddressOption: t('email.senderIdentities.ticket.customAddressOption'),
+                ticketAddressLabel: t('email.senderIdentities.ticket.addressLabel'),
+                ticketAddressPlaceholder: t('email.senderIdentities.ticket.addressPlaceholder'),
+                ticketAddressHelp: t('email.senderIdentities.ticket.addressHelp'),
+                ticketNameLabel: t('email.senderIdentities.ticket.nameLabel'),
+                ticketNamePlaceholder: t('email.senderIdentities.ticket.namePlaceholder'),
+                ticketNameHelp: t('email.senderIdentities.ticket.nameHelp'),
+                warningTitle: t('email.senderIdentities.warningTitle'),
+                errorTitle: t('email.senderIdentities.errorTitle'),
+                notificationTitle: t('email.senderIdentities.notification.title'),
+                notificationDescription: t('email.senderIdentities.notification.description'),
+                notificationAddressLabel: t('email.senderIdentities.notification.addressLabel'),
+                notificationAddressPlaceholder: t('email.senderIdentities.notification.addressPlaceholder'),
+                notificationAddressHelp: t('email.senderIdentities.notification.addressHelp'),
+                notificationNameLabel: t('email.senderIdentities.notification.nameLabel'),
+                notificationNamePlaceholder: t('email.senderIdentities.notification.namePlaceholder'),
+                notificationNameHelp: t('email.senderIdentities.notification.nameHelp', {
+                  company: settings.tenantCompanyName || t('email.senderIdentities.notification.companyFallback'),
+                }),
+              }}
+              ticketAddress={settings.ticketingFromEmail || ''}
+              ticketName={settings.ticketingFromName || ''}
+              connectedInboxes={inboundProviders.map(provider => provider.mailbox).filter(Boolean)}
+              ticketWarning={
+                settings.ticketingFromEmail
+                && inboundProviders.length > 0
+                && !inboundProviders.some(provider =>
+                  provider.mailbox.toLowerCase() === settings.ticketingFromEmail?.toLowerCase()
+                )
+                  ? t('email.senderIdentities.ticket.notConnectedWarning')
+                  : null
+              }
+              ticketError={ticketIdentityError}
+              notificationAddress={getCurrentProviderConfig()?.config.from || settings.effectiveNotificationFrom.email}
+              notificationName={getCurrentProviderConfig()?.config.fromName || ''}
+              notificationAddressReadOnly={selectedProvider === 'microsoft'}
+              onTicketAddressChange={(value) => setSettings({ ...settings, ticketingFromEmail: value || null })}
+              onTicketNameChange={(value) => setSettings({ ...settings, ticketingFromName: value || null })}
+              onNotificationAddressChange={(value) => {
+                const config = getCurrentProviderConfig();
+                if (config) updateProviderConfig(config.providerId, { from: value });
+              }}
+              onNotificationNameChange={(value) => {
+                const config = getCurrentProviderConfig();
+                if (config) updateProviderConfig(config.providerId, { fromName: value });
+              }}
+            />
+
 
 
             {/* Connection Test */}
@@ -762,7 +832,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
 
             {/* Save Button */}
             <div className="flex justify-end">
-              <Button id="save-email-settings" onClick={saveSettings} disabled={saving}>
+              <Button id="save-email-settings" onClick={saveSettings} disabled={saving || !!ticketIdentityError}>
                 {saving
                   ? t('common.actions.saving', { defaultValue: 'Saving...' })
                   : t('common.actions.save', { defaultValue: 'Save Settings' })}

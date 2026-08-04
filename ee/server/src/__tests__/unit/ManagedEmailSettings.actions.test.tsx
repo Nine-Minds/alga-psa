@@ -76,6 +76,44 @@ vi.mock('react-hot-toast', () => ({
 
 vi.mock('@alga-psa/integrations/components', () => ({
   EmailProviderConfiguration: () => <div id="email-provider-configuration-stub" />,
+  EmailSenderIdentityCards: ({
+    copy,
+    ticketAddress,
+    ticketName,
+    notificationAddress,
+    notificationName,
+    onTicketAddressChange,
+    onTicketNameChange,
+    onNotificationAddressChange,
+    onNotificationNameChange,
+    actions,
+  }: any) => (
+    <div>
+      <h2>{copy.ticketTitle}</h2>
+      <input
+        id="ticket-from-address"
+        value={ticketAddress}
+        onChange={(event) => onTicketAddressChange(event.target.value)}
+      />
+      <input
+        id="ticket-from-name"
+        value={ticketName}
+        onChange={(event) => onTicketNameChange(event.target.value)}
+      />
+      <h2>{copy.notificationTitle}</h2>
+      <input
+        id="notification-from-address"
+        value={notificationAddress}
+        onChange={(event) => onNotificationAddressChange(event.target.value)}
+      />
+      <input
+        id="notification-from-name"
+        value={notificationName}
+        onChange={(event) => onNotificationNameChange(event.target.value)}
+      />
+      {actions}
+    </div>
+  ),
 }));
 
 vi.mock('@alga-psa/ui/components/Card', () => ({
@@ -210,6 +248,11 @@ const baseSettings = {
   trackingEnabled: false,
   createdAt: new Date('2026-03-01T00:00:00.000Z'),
   updatedAt: new Date('2026-03-01T00:00:00.000Z'),
+  tenantCompanyName: 'Acme MSP',
+  effectiveNotificationFrom: {
+    email: 'notifications@acme.com',
+    name: 'Acme MSP',
+  },
 };
 
 const smtpSettings = {
@@ -274,7 +317,7 @@ describe('ManagedEmailSettings removal actions', () => {
 
     render(<ManagedEmailSettings />);
 
-    const clearButton = await screen.findByRole('button', { name: /clear from address/i });
+    const clearButton = await screen.findByRole('button', { name: /clear ticket identity/i });
     fireEvent.click(clearButton);
     const confirmButton = document.getElementById('managed-email-clear-ticketing-from-confirm');
     expect(confirmButton).not.toBeNull();
@@ -434,6 +477,53 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
     });
   });
 
+  it('saves notification branding without changing the ticket identity fields', async () => {
+    render(<ManagedEmailSettings />);
+
+    await waitFor(() => expect(document.getElementById('notification-from-name')).not.toBeNull());
+    fireEvent.change(document.getElementById('notification-from-name')!, {
+      target: { value: 'Acme Billing' },
+    });
+    fireEvent.click(document.getElementById('save-sender-identities')!);
+
+    await waitFor(() => {
+      expect(updateEmailSettingsMock).toHaveBeenCalledWith(expect.objectContaining({
+        ticketingFromEmail: 'support@acme.com',
+        providerConfigs: [expect.objectContaining({
+          providerType: 'smtp',
+          config: expect.objectContaining({ fromName: 'Acme Billing' }),
+        })],
+      }));
+    });
+  });
+
+  it('saves ticket identity edits without replacing notification branding', async () => {
+    getEmailSettingsMock.mockResolvedValue({
+      ...smtpSettings,
+      providerConfigs: [{
+        ...smtpSettings.providerConfigs[0],
+        config: { ...smtpSettings.providerConfigs[0].config, fromName: 'Acme Billing' },
+      }],
+    });
+
+    render(<ManagedEmailSettings />);
+
+    await waitFor(() => expect(document.getElementById('ticket-from-name')).not.toBeNull());
+    fireEvent.change(document.getElementById('ticket-from-name')!, {
+      target: { value: 'Acme Support' },
+    });
+    fireEvent.click(document.getElementById('save-sender-identities')!);
+
+    await waitFor(() => {
+      expect(updateEmailSettingsMock).toHaveBeenCalledWith(expect.objectContaining({
+        ticketingFromName: 'Acme Support',
+        providerConfigs: [expect.objectContaining({
+          config: expect.objectContaining({ fromName: 'Acme Billing' }),
+        })],
+      }));
+    });
+  });
+
   it('offers SMTP and Microsoft but not managed email on self-host', async () => {
     tierContextState.isHosted = false;
     getManagedEmailDomainsMock.mockRejectedValue(new Error('managed domains should not load'));
@@ -547,7 +637,7 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
     fireEvent.change(await screen.findByLabelText(/smtp host/i), {
       target: { value: 'relay.appliance.lan' },
     });
-    fireEvent.change(document.getElementById('smtp-from') as HTMLInputElement, {
+    fireEvent.change(document.getElementById('notification-from-address') as HTMLInputElement, {
       target: { value: 'support@acme.test' },
     });
     fireEvent.click(screen.getByRole('button', { name: /save smtp settings/i }));

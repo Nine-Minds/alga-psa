@@ -94,6 +94,20 @@ describe('ResendEmailProvider payload construction', () => {
     expect(client.post.mock.calls[0][1].from).toBe('noreply@alga.test');
   });
 
+  it.each(['Example MSP', 'Example MSP Portal'])(
+    'serializes the %s display name in the From field',
+    async (name) => {
+      const { provider, client } = await initializedProvider();
+
+      await provider.sendEmail(baseMessage({
+        from: { email: 'notifications@example.test', name },
+      }));
+
+      expect(client.post.mock.calls[0][1].from)
+        .toBe(`${name} <notifications@example.test>`);
+    }
+  );
+
   it('maps cc, bcc and replyTo into Resend fields', async () => {
     const { provider, client } = await initializedProvider();
 

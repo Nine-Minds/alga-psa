@@ -85,6 +85,20 @@ describe('SMTPEmailProvider mail options construction', () => {
     });
   });
 
+  it.each(['Example MSP', 'Example MSP Portal'])(
+    'serializes the %s display name in the From header',
+    async (name) => {
+      const { provider, transporter } = await initializedProvider();
+
+      await provider.sendEmail(baseMessage({
+        from: { email: 'notifications@example.test', name },
+      }), 'tenant-1');
+
+      expect(transporter.sendMail.mock.calls[0][0].from)
+        .toBe(`"${name}" <notifications@example.test>`);
+    }
+  );
+
   it('includes cc, bcc, replyTo, headers and converted attachments when present', async () => {
     const { provider, transporter } = await initializedProvider();
     const content = Buffer.from('attachment-bytes');

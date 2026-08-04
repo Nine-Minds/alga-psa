@@ -34,4 +34,10 @@ describe('portal invitation send flow tenant-scoped query contract', () => {
     expect(section).not.toMatch(/trx\('clients'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toContain("'tenant_companies.tenant': tenant");
   });
+
+  it('passes the tenant company Portal display name to the invitation email helper', () => {
+    const section = sectionBetween('export const sendPortalInvitation', 'export async function verifyPortalToken');
+
+    expect(section).toContain('fromName: `${tenantDefaultClient.client_name} Portal`');
+  });
 });

@@ -61,6 +61,8 @@ export interface EmailTemplateContent {
 
 export interface BaseEmailParams {
   to: string | string[] | EmailAddress | EmailAddress[];
+  from?: string | EmailAddress;
+  fromName?: string;
   cc?: string[] | EmailAddress[];
   bcc?: string[] | EmailAddress[];
   attachments?: any[];
@@ -78,6 +80,8 @@ export interface BaseEmailParams {
   entityId?: string;
   contactId?: string;
   notificationSubtypeId?: number;
+  /** Internal, call-scoped tenant-company fallback resolved by TenantEmailService. */
+  resolvedTenantCompanyName?: string | null;
   replyContext?: {
     ticketId?: string;
     projectId?: string;

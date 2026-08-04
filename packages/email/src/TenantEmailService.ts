@@ -19,6 +19,11 @@ import { SystemEmailProviderFactory } from './system/SystemEmailProviderFactory'
 import { isEnterprise } from './features';
 import { DelayedEmailQueue } from './DelayedEmailQueue';
 import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
+import {
+  applyFromNameOverride,
+  resolveDefaultFromAddress,
+  resolveTenantCompanyName,
+} from './senderIdentity';
 
 export interface SendEmailParams {
   tenantId: string;
@@ -44,108 +49,6 @@ export interface EmailSettingsValidation {
   valid: boolean;
   error?: string;
   settings?: TenantEmailSettings;
-}
-
-// Pure from-address helpers shared by the instance sender path and any caller
-// that needs the tenant's resolved default sender identity without re-deriving
-// this logic (e.g. the ticketing subscriber layering a configured display name
-// on top of the default address).
-function parseEmailAddress(value?: string | EmailAddress | null): EmailAddress | null {
-  if (!value) {
-    return null;
-  }
-
-  if (typeof value === 'object') {
-    if (!value.email) {
-      return null;
-    }
-    return { email: value.email, name: value.name };
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  const match = trimmed.match(/^(?:"?([^"]*)"?\s*)?<([^>]+)>$/);
-  if (match) {
-    const name = match[1]?.trim();
-    return {
-      email: match[2].trim(),
-      name: name || undefined
-    };
-  }
-
-  return { email: trimmed };
-}
-
-function extractEmailParts(email?: string | null): { localPart: string; domain?: string } | null {
-  if (!email) {
-    return null;
-  }
-
-  const [localPart, domain] = email.split('@');
-  if (!domain) {
-    return { localPart: localPart || email };
-  }
-
-  return { localPart, domain };
-}
-
-function sanitizeLocalPart(localPart?: string | null): string {
-  if (!localPart) {
-    return 'notifications';
-  }
-
-  const normalized = localPart
-    .toLowerCase()
-    .replace(/[^a-z0-9._+-]/g, '');
-
-  return normalized || 'notifications';
-}
-
-function sanitizeDomain(domain?: string | null): string | null {
-  if (!domain) {
-    return null;
-  }
-
-  const normalized = domain.trim().replace(/^@/, '').toLowerCase();
-  return normalized || null;
-}
-
-function extractDomainFromAddress(address?: string): string | null {
-  if (!address) {
-    return null;
-  }
-
-  const parsed = parseEmailAddress(address);
-  if (!parsed?.email) {
-    return null;
-  }
-
-  const parts = extractEmailParts(parsed.email);
-  return parts?.domain || null;
-}
-
-function getProviderConfiguredAddress(settings?: TenantEmailSettings | null): EmailAddress | null {
-  const configs = settings?.providerConfigs || [];
-  const enabledConfig = configs.find(config => config.isEnabled && config.config);
-
-  if (!enabledConfig) {
-    return null;
-  }
-
-  const configFrom = enabledConfig.config.from;
-  const configFromName = enabledConfig.config.fromName || enabledConfig.config.from_name;
-  if (typeof configFrom === 'string' && configFrom.trim().length > 0) {
-    const parsed = parseEmailAddress(configFrom.trim()) || { email: configFrom.trim() };
-    if (!parsed.name && typeof configFromName === 'string' && configFromName.trim().length > 0) {
-      parsed.name = configFromName.trim();
-    }
-    return parsed;
-  }
-
-  return null;
 }
 
 export class TenantEmailService extends BaseEmailService {
@@ -187,7 +90,11 @@ export class TenantEmailService extends BaseEmailService {
     // job/event gates. System emails (win-back, reactivation) go through
     // SystemEmailService and are unaffected. isTenantSuspended fails open.
     const suspensionKnex = await getConnection(this.tenantId);
-    if (await isTenantSuspended(suspensionKnex, this.tenantId)) {
+    const [tenantSuspended, resolvedTenantCompanyName] = await Promise.all([
+      isTenantSuspended(suspensionKnex, this.tenantId),
+      resolveTenantCompanyName(suspensionKnex, this.tenantId),
+    ]);
+    if (tenantSuspended) {
       logger.info(`[${this.getServiceName()}] Dropping email for suspended tenant`, {
         tenantId: this.tenantId,
         to: params.to,
@@ -259,7 +166,7 @@ export class TenantEmailService extends BaseEmailService {
       };
     }
 
-    return super.sendEmail(params);
+    return super.sendEmail({ ...params, resolvedTenantCompanyName });
   }
 
   /**
@@ -370,15 +277,10 @@ export class TenantEmailService extends BaseEmailService {
   }
 
   protected getFromAddress(params?: BaseEmailParams): EmailAddress | string {
-    if (params?.from) {
-      return params.from as EmailAddress | string;
-    }
-
-    const resolved = this.buildTenantFromAddress();
-    if (resolved.name) {
-      return `${resolved.name} <${resolved.email}>`;
-    }
-    return resolved.email;
+    const resolved = params?.from
+      ? params.from as EmailAddress | string
+      : this.buildTenantFromAddress(params?.resolvedTenantCompanyName);
+    return applyFromNameOverride(resolved, params?.fromName);
   }
   /**
    * Get tenant email settings from database
@@ -447,12 +349,11 @@ export class TenantEmailService extends BaseEmailService {
       return { success: true, message: `${providerLabel} connection verified.` };
     }
 
-    const fromEmail =
-      (typeof enabled.config?.from === 'string' && enabled.config.from.trim()) ||
-      (settings.defaultFromDomain ? `noreply@${settings.defaultFromDomain}` : 'noreply@localhost');
+    const tenantCompanyName = await resolveTenantCompanyName(knex, tenantId);
+    const from = resolveDefaultFromAddress(settings, tenantCompanyName);
 
     const message: EmailMessage = {
-      from: { email: fromEmail, name: 'Alga PSA' },
+      from,
       to: [{ email: toAddress }],
       subject: 'Alga PSA outbound email test',
       text: 'This is a test message confirming your outbound email configuration works.',
@@ -493,6 +394,7 @@ export class TenantEmailService extends BaseEmailService {
       templateProcessor: params.templateProcessor,
       templateData: params.templateData,
       from: params.from,
+      fromName: params.fromName,
       tenantId,
       locale: params.locale
     };
@@ -626,8 +528,8 @@ export class TenantEmailService extends BaseEmailService {
     return [];
   }
 
-  private buildTenantFromAddress(): EmailAddress {
-    return TenantEmailService.getDefaultFromAddress(this.tenantSettings);
+  private buildTenantFromAddress(tenantCompanyName?: string | null): EmailAddress {
+    return TenantEmailService.getDefaultFromAddress(this.tenantSettings, tenantCompanyName);
   }
 
   /**
@@ -638,25 +540,10 @@ export class TenantEmailService extends BaseEmailService {
    * subscriber layering a tenant display name onto the default address — reuse
    * this logic instead of re-deriving it.
    */
-  static getDefaultFromAddress(settings?: TenantEmailSettings | null): EmailAddress {
-    const providerAddress = getProviderConfiguredAddress(settings);
-    const envAddress = parseEmailAddress(process.env.EMAIL_FROM);
-    const fallbackName = providerAddress?.name || envAddress?.name || process.env.EMAIL_FROM_NAME || 'Alga PSA Notifications';
-    const fallbackEmail = providerAddress?.email || envAddress?.email || 'notifications@example.com';
-
-    const baseEmail = providerAddress?.email || envAddress?.email || fallbackEmail;
-    const emailParts = extractEmailParts(baseEmail);
-    const localPart = sanitizeLocalPart(emailParts?.localPart);
-
-    const configuredDomain = sanitizeDomain(settings?.defaultFromDomain);
-    const fallbackDomain = sanitizeDomain(emailParts?.domain) || sanitizeDomain(extractDomainFromAddress(fallbackEmail));
-    const targetDomain = configuredDomain || fallbackDomain;
-
-    const email = targetDomain ? `${localPart}@${targetDomain}` : baseEmail;
-
-    return {
-      email,
-      name: fallbackName
-    };
+  static getDefaultFromAddress(
+    settings?: TenantEmailSettings | null,
+    tenantCompanyName?: string | null
+  ): EmailAddress {
+    return resolveDefaultFromAddress(settings, tenantCompanyName);
   }
 }

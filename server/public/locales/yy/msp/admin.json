@@ -197,6 +197,36 @@
       "recipientPlaceholder": "55555",
       "run": "55555",
       "testing": "55555"
+    },
+    "senderIdentities": {
+      "ticket": {
+        "title": "55555",
+        "description": "55555",
+        "connectedInboxLabel": "55555",
+        "connectedInboxHelp": "55555",
+        "customAddressOption": "55555",
+        "addressLabel": "55555",
+        "addressPlaceholder": "55555",
+        "addressHelp": "55555",
+        "nameLabel": "55555",
+        "namePlaceholder": "55555",
+        "nameHelp": "55555",
+        "notConnectedWarning": "55555",
+        "microsoftMismatch": "Ticket email address must match the selected Microsoft 365 mailbox ({{mailbox}})."
+      },
+      "notification": {
+        "title": "55555",
+        "description": "55555",
+        "addressLabel": "55555",
+        "addressPlaceholder": "55555",
+        "addressHelp": "55555",
+        "nameLabel": "55555",
+        "namePlaceholder": "55555",
+        "nameHelp": "55555 {{company}} 55555",
+        "companyFallback": "55555"
+      },
+      "warningTitle": "55555",
+      "errorTitle": "55555"
     }
   },
   "microsoft365": {
