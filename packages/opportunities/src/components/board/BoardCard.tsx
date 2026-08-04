@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { Button } from '@alga-psa/ui/components/Button';
 import { useClientDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IOpportunityListItem } from '@alga-psa/types';
@@ -51,14 +52,15 @@ export function BoardCard({
       </div>
       <div className="flex items-center gap-1.5 text-xs text-[rgb(var(--color-text-500))]">
         {clientDrawer ? (
-          <button
+          <Button
             id={`opportunity-board-client-${item.opportunity_id}`}
-            type="button"
-            className="text-[rgb(var(--color-primary-600))] hover:underline"
+            variant="link"
+            size="xs"
+            className="h-auto px-0 py-0 text-xs font-normal"
             onClick={() => clientDrawer.openClientDrawer(item.client_id)}
           >
             {item.client_name}
-          </button>
+          </Button>
         ) : (
           <Link href={`/msp/clients/${item.client_id}`} className="text-[rgb(var(--color-primary-600))] hover:underline">
             {item.client_name}

@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ArrowRight } from 'lucide-react';
+import { Button } from '@alga-psa/ui/components/Button';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
+import { BentoEyebrow, BentoStat, BentoTile, BentoTileSkeleton } from '@alga-psa/ui/components/bento';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import {
@@ -47,7 +50,7 @@ export function OpportunityReportsView({ onOpenForecast }: { onOpenForecast?: ()
         aria-label={t('opportunities.reports.loading', 'Loading pipeline report')}
       >
         {[0, 1, 2, 3].map((item) => (
-          <div key={item} className="h-20 animate-pulse rounded-md bg-[rgb(var(--color-border-100))]" />
+          <BentoTileSkeleton key={item} id={`opportunity-report-skeleton-${item}`} />
         ))}
       </div>
     );
@@ -72,9 +75,7 @@ export function OpportunityReportsView({ onOpenForecast }: { onOpenForecast?: ()
         return (
           <section key={row.currency_code} className="space-y-3">
             {report.by_currency.length > 1 ? (
-              <h3 className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
-                {row.currency_code}
-              </h3>
+              <BentoEyebrow id={`opportunity-report-currency-${row.currency_code}`}>{row.currency_code}</BentoEyebrow>
             ) : null}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Tile
@@ -121,14 +122,10 @@ export function OpportunityReportsView({ onOpenForecast }: { onOpenForecast?: ()
         );
       })}
       {onOpenForecast ? (
-        <button
-          id="opportunity-report-open-forecast"
-          type="button"
-          className="text-sm font-medium text-[rgb(var(--color-primary-600))] hover:underline"
-          onClick={onOpenForecast}
-        >
+        <Button id="opportunity-report-open-forecast" variant="link" size="sm" className="px-0" onClick={onOpenForecast}>
           {t('opportunities.reports.openForecast', 'Open the seller-calibrated forecast')}
-        </button>
+          <ArrowRight className="ml-1 h-3.5 w-3.5" aria-hidden="true" />
+        </Button>
       ) : null}
     </div>
   );
@@ -148,11 +145,9 @@ function Tile({
   note: string;
 }) {
   return (
-    <div id={id} className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
-      <p className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">{label}</p>
-      <p className="mt-1.5 text-xl font-semibold tabular-nums text-[rgb(var(--color-text-900))]">{primary}</p>
-      <p className="text-[13px] tabular-nums text-[rgb(var(--color-text-600))]">{secondary}</p>
+    <BentoTile id={id} title={label}>
+      <BentoStat id={`${id}-stat`} value={<span className="tabular-nums">{primary}</span>} label={secondary} />
       <p className="mt-1 text-[11px] text-[rgb(var(--color-text-400))]">{note}</p>
-    </div>
+    </BentoTile>
   );
 }

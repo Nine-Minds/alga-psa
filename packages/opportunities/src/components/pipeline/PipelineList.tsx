@@ -5,6 +5,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { Button } from '@alga-psa/ui/components/Button';
 import { useClientDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
@@ -49,10 +50,11 @@ export function PipelineList({
     const locked = record.status !== 'open' || record.values_locked_by_quote;
     if (locked) return <span className={`block ${NUM_CELL}`}>{content}</span>;
     return (
-      <button
+      <Button
         id={`opportunity-pipeline-value-${record.opportunity_id}`}
-        type="button"
-        className={`block w-full rounded px-1 hover:bg-[rgb(var(--color-border-100))] ${NUM_CELL}`}
+        variant="ghost"
+        size="xs"
+        className={`h-auto w-full justify-end px-1 py-0.5 font-normal ${NUM_CELL}`}
         title={t('opportunities.list.editValues', 'Edit value')}
         onClick={(event) => {
           event.stopPropagation();
@@ -60,7 +62,7 @@ export function PipelineList({
         }}
       >
         {content}
-      </button>
+      </Button>
     );
   };
 
@@ -73,17 +75,18 @@ export function PipelineList({
           <div className="font-medium text-[rgb(var(--color-text-900))]">{record.title}</div>
           <div className="flex items-center gap-1.5 text-xs text-[rgb(var(--color-text-500))]">
             {clientDrawer ? (
-              <button
+              <Button
                 id={`opportunity-pipeline-client-${record.opportunity_id}`}
-                type="button"
-                className="text-[rgb(var(--color-primary-600))] hover:underline"
+                variant="link"
+                size="xs"
+                className="h-auto px-0 py-0 text-xs font-normal"
                 onClick={(event) => {
                   event.stopPropagation();
                   clientDrawer.openClientDrawer(record.client_id);
                 }}
               >
                 {record.client_name}
-              </button>
+              </Button>
             ) : (
               <Link
                 href={`/msp/clients/${record.client_id}`}
