@@ -6,15 +6,14 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { toMinorUnits } from '@alga-psa/core';
 import type { ClientLifecycleStatus, IClient, OpportunityType } from '@alga-psa/types';
 import { SUGGESTED_NEXT_ACTIONS } from '../../lib/suggestedNextActions';
 import { getClientDefaultCurrency } from '../../actions/opportunityDefaults';
 import { ActionSuggestions } from '../ActionSuggestions';
+import { OpportunityValueFields, amountsToCents, type OpportunityValueAmounts } from './OpportunityValueFields';
 
 const TYPES: OpportunityType[] = ['new_logo', 'expansion', 'renewal', 'project'];
 
@@ -49,6 +48,8 @@ export interface CreateOpportunityInput {
   next_action: string;
   next_action_due: string;
   expected_close_date?: string;
+  /** Chosen in the dialog: the client default is only the starting point. */
+  currency_code: string;
   mrr_cents?: number;
   nrr_cents?: number;
   hardware_cents?: number;
@@ -98,10 +99,9 @@ export function CreateOpportunityDialog({
   const [due, setDue] = useState<Date | undefined>(() => defaultDueDate());
   const [expectedClose, setExpectedClose] = useState<Date | undefined>(undefined);
   const [valuesOpen, setValuesOpen] = useState(false);
-  const [mrr, setMrr] = useState<number | undefined>(undefined);
-  const [nrr, setNrr] = useState<number | undefined>(undefined);
-  const [hardware, setHardware] = useState<number | undefined>(undefined);
+  const [amounts, setAmounts] = useState<OpportunityValueAmounts>({});
   const [currencyCode, setCurrencyCode] = useState('USD');
+  const [currencyTouched, setCurrencyTouched] = useState(false);
   const [saving, setSaving] = useState(false);
   const [clientCreatorOpen, setClientCreatorOpen] = useState(false);
 
@@ -120,18 +120,19 @@ export function CreateOpportunityDialog({
     setType(defaultTypeForLifecycle(selectedLifecycle));
   }, [clientId, selectedLifecycle, typeTouched]);
 
+  // The client default seeds the picker; once the user picks, it is theirs.
   useEffect(() => {
-    if (!clientId) return;
+    if (!clientId || currencyTouched) return;
     let active = true;
     getClientDefaultCurrency(clientId)
       .then((code) => {
-        if (active) setCurrencyCode(code);
+        if (active && !currencyTouched) setCurrencyCode(code);
       })
       .catch(() => undefined);
     return () => {
       active = false;
     };
-  }, [clientId]);
+  }, [clientId, currencyTouched]);
 
   const missing: string[] = [];
   if (!clientId) missing.push(t('opportunities.createDialog.client', 'Client'));
@@ -139,8 +140,6 @@ export function CreateOpportunityDialog({
   if (effectiveNextAction.trim().length === 0) missing.push(t('opportunities.createDialog.nextAction', 'First action'));
   if (!due) missing.push(t('opportunities.createDialog.due', 'Due'));
   const valid = missing.length === 0;
-
-  const toCents = (value?: number) => (value == null ? 0 : toMinorUnits(value, undefined, currencyCode));
 
   const submit = async () => {
     if (!valid || !clientId || !due) return;
@@ -153,18 +152,15 @@ export function CreateOpportunityDialog({
         next_action: effectiveNextAction.trim(),
         next_action_due: due.toISOString(),
         expected_close_date: expectedClose ? expectedClose.toISOString().slice(0, 10) : undefined,
-        mrr_cents: toCents(mrr),
-        nrr_cents: toCents(nrr),
-        hardware_cents: toCents(hardware),
+        currency_code: currencyCode,
+        ...amountsToCents(amounts, currencyCode),
       });
       setTitle('');
       setNextAction(null);
       setDue(defaultDueDate());
       setExpectedClose(undefined);
       setValuesOpen(false);
-      setMrr(undefined);
-      setNrr(undefined);
-      setHardware(undefined);
+      setAmounts({});
       onClose();
     } finally {
       setSaving(false);
@@ -292,29 +288,20 @@ export function CreateOpportunityDialog({
               <ChevronRight className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
             )}
             {t('opportunities.createDialog.addValue', 'Add estimated value (optional)')}
+            <span className="ml-1.5 text-[rgb(var(--color-text-400))]">{currencyCode}</span>
           </Button>
           {valuesOpen ? (
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <CurrencyInput
-                id="opportunity-create-mrr"
-                label={t('opportunities.valuesDialog.mrr', 'Recurring (monthly)')}
+            <div className="mt-3">
+              <OpportunityValueFields
+                idPrefix="opportunity-create"
                 currencyCode={currencyCode}
-                value={mrr}
-                onChange={setMrr}
-              />
-              <CurrencyInput
-                id="opportunity-create-nrr"
-                label={t('opportunities.valuesDialog.nrr', 'One-time services')}
-                currencyCode={currencyCode}
-                value={nrr}
-                onChange={setNrr}
-              />
-              <CurrencyInput
-                id="opportunity-create-hardware"
-                label={t('opportunities.valuesDialog.hardware', 'Hardware')}
-                currencyCode={currencyCode}
-                value={hardware}
-                onChange={setHardware}
+                onCurrencyChange={(code) => {
+                  setCurrencyTouched(true);
+                  setCurrencyCode(code);
+                }}
+                amounts={amounts}
+                onAmountsChange={setAmounts}
+                columns={3}
               />
             </div>
           ) : null}

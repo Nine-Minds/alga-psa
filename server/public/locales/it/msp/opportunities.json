@@ -357,6 +357,8 @@
       "renewal": "Rinnovo"
     },
     "valuesDialog": {
+      "currency": "Valuta",
+      "currencyFixed": "Valuta: {{code}}",
       "hardware": "Hardware",
       "mrr": "Ricorrente (mensile)",
       "note": "Queste sono le tue stime. Una citazione accettata li sostituisce con i numeri reali.",

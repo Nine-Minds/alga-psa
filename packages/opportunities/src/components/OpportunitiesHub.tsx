@@ -25,7 +25,6 @@ import {
 import { getWorkQueue } from '../actions/workQueueActions';
 import { acceptSuggestion, dismissSuggestion, snoozeSuggestion } from '../actions/suggestionActions';
 import { createWhitespaceSuggestion } from '../actions/generatorActions';
-import { getClientDefaultCurrency } from '../actions/opportunityDefaults';
 import { WorkQueue } from './queue/WorkQueue';
 import { MoneyFoundCard } from './queue/MoneyFoundCard';
 import { PipelineList } from './pipeline/PipelineList';
@@ -94,8 +93,7 @@ export function OpportunitiesHub({
 
   const handleCreate = async (input: CreateOpportunityInput) => {
     try {
-      const currency = await getClientDefaultCurrency(input.client_id);
-      const created = await createOpportunity({ ...input, currency_code: currency });
+      const created = await createOpportunity(input);
       toast.success(t('opportunities.toast.created', 'Opportunity created'));
       openDeal((created as any).opportunity_id);
     } catch (err) {

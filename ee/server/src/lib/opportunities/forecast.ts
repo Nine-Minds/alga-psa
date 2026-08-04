@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type {
   IForecastBand,
+  IForecastCurrencyBand,
   IForecastDealContribution,
   ISellerCalibration,
   OpportunityPeriod,
@@ -83,19 +84,28 @@ export function calculateForecastBand(
     };
   });
 
-  return composition.reduce<IForecastBand>((band, deal) => ({
-    floor_mrr_cents: band.floor_mrr_cents + deal.floor_mrr_cents,
-    floor_nrr_cents: band.floor_nrr_cents + deal.floor_nrr_cents,
-    ceiling_mrr_cents: band.ceiling_mrr_cents + deal.ceiling_mrr_cents,
-    ceiling_nrr_cents: band.ceiling_nrr_cents + deal.ceiling_nrr_cents,
-    composition: [...band.composition, deal],
-  }), {
-    floor_mrr_cents: 0,
-    floor_nrr_cents: 0,
-    ceiling_mrr_cents: 0,
-    ceiling_nrr_cents: 0,
-    composition: [],
-  });
+  // One band per currency. A pound and a dollar are different things; adding
+  // them would produce a forecast that is wrong in both currencies.
+  const byCurrency = new Map<string, IForecastCurrencyBand>();
+  for (const deal of composition) {
+    const band = byCurrency.get(deal.currency_code) ?? {
+      currency_code: deal.currency_code,
+      floor_mrr_cents: 0,
+      floor_nrr_cents: 0,
+      ceiling_mrr_cents: 0,
+      ceiling_nrr_cents: 0,
+    };
+    band.floor_mrr_cents += deal.floor_mrr_cents;
+    band.floor_nrr_cents += deal.floor_nrr_cents;
+    band.ceiling_mrr_cents += deal.ceiling_mrr_cents;
+    band.ceiling_nrr_cents += deal.ceiling_nrr_cents;
+    byCurrency.set(deal.currency_code, band);
+  }
+
+  return {
+    by_currency: [...byCurrency.values()].sort((a, b) => b.ceiling_mrr_cents - a.ceiling_mrr_cents),
+    composition,
+  };
 }
 
 function endExclusive(period: OpportunityPeriod): string {
