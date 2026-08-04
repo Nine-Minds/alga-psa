@@ -119,7 +119,9 @@ export function PipelineList({
           ) : record.status === 'lost' ? (
             <Badge variant="error" size="sm">{t('opportunities.status.lost', 'Lost')}</Badge>
           ) : (
-            <span className="text-sm">{stageLabel(record.stage)}</span>
+            <Badge variant="default-muted" size="sm" className="uppercase tracking-wider">
+              {stageLabel(record.stage)}
+            </Badge>
           )}
           {record.is_stalled ? (
             <Badge variant="warning" size="sm">

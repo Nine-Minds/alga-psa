@@ -400,8 +400,17 @@ function Tile({
       title={label}
       action={
         onOpen ? (
-          <Button id={`${id}-open`} size="xs" variant="ghost" className="print:hidden" onClick={onOpen}>
-            {t('opportunities.reports.view', 'View')}
+          // Icon-only: a text button here squeezes the tile's own title to an ellipsis.
+          <Button
+            id={`${id}-open`}
+            size="xs"
+            variant="ghost"
+            className="px-1 print:hidden"
+            aria-label={t('opportunities.reports.view', 'View')}
+            title={t('opportunities.reports.view', 'View')}
+            onClick={onOpen}
+          >
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Button>
         ) : undefined
       }
