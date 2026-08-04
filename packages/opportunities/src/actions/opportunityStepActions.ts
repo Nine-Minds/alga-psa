@@ -265,9 +265,19 @@ export const completeOpportunityStep = withAuth(async (
   });
 });
 
+/**
+ * Carries the fields UserPicker reads (name parts, type, tenant, avatar key)
+ * alongside the display name the plain lists use.
+ */
 export interface OpportunityStepAssignee {
   user_id: string;
   name: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  user_type: string;
+  is_inactive: boolean;
+  tenant: string;
 }
 
 /** Internal users a step (or the deal) can be handed to. */
@@ -284,6 +294,12 @@ export const listOpportunityAssignees = withAuth(async (
   return (rows as Array<Record<string, unknown>>).map((row) => ({
     user_id: String(row.user_id),
     name: [row.first_name, row.last_name].filter(Boolean).join(' ') || String(row.email ?? row.user_id),
+    first_name: String(row.first_name ?? ''),
+    last_name: String(row.last_name ?? ''),
+    email: String(row.email ?? ''),
+    user_type: 'internal',
+    is_inactive: false,
+    tenant,
   }));
 });
 

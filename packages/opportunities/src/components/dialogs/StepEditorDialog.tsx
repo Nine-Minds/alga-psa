@@ -9,8 +9,10 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { IOpportunityStep } from '@alga-psa/types';
+import type { IOpportunityStep, IUser } from '@alga-psa/types';
 import type { OpportunityLinkableWorkItem, OpportunityStepAssignee } from '../../actions/opportunityStepActions';
 
 export interface StepEditorValue {
@@ -170,16 +172,22 @@ export function StepEditorDialog({
             />
           </div>
         )}
-        <CustomSelect
-          id="opportunity-step-assignee"
-          label={t('opportunities.steps.assignee', 'Who does it')}
-          options={[
-            { value: '', label: t('opportunities.steps.unassigned', 'The deal owner') },
-            ...assignees.map((assignee) => ({ value: assignee.user_id, label: assignee.name })),
-          ]}
-          value={assignedTo}
-          onValueChange={setAssignedTo}
-        />
+        <div className="space-y-1">
+          <Label htmlFor="opportunity-step-assignee">
+            {t('opportunities.steps.assignee', 'Assigned to')}
+          </Label>
+          <UserPicker
+            data-automation-id="opportunity-step-assignee"
+            value={assignedTo}
+            onValueChange={setAssignedTo}
+            users={assignees as unknown as IUser[]}
+            getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+            labelStyle="none"
+            buttonWidth="full"
+            placeholder={t('opportunities.steps.unassigned', 'The deal owner')}
+            unassignedLabel={t('opportunities.steps.unassigned', 'The deal owner')}
+          />
+        </div>
         <CustomSelect
           id="opportunity-step-ticket"
           label={t('opportunities.steps.ticket', 'Linked ticket')}

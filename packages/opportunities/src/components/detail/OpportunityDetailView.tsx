@@ -7,10 +7,13 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { BentoTile } from '@alga-psa/ui/components/bento';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Label } from '@alga-psa/ui/components/Label';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { useClientDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
-import type { IOpportunityDetail, OpportunityConfidence } from '@alga-psa/types';
+import type { IOpportunityDetail, IUser, OpportunityConfidence } from '@alga-psa/types';
 import { oneTimeCents } from '../../lib/pipelineReporting';
 import type { OpportunityStepAssignee } from '../../actions/opportunityStepActions';
 import { WhySentenceText } from '../WhySentenceText';
@@ -147,7 +150,7 @@ export function OpportunityDetailView({
         <p className="mt-2 text-[11px] leading-relaxed text-[rgb(var(--color-text-400))]">
           {t(
             'opportunities.detail.confidenceNote',
-            'Confidence is yours; the stage comes from evidence. The two are compared, never merged.'
+            'Confidence is the owner\u2019s call. The stage comes from evidence. The two are shown side by side, never merged.'
           )}
         </p>
       </BentoTile>
@@ -158,25 +161,30 @@ export function OpportunityDetailView({
     <div className="min-w-0 space-y-4">
       <BentoTile
         id="opportunity-detail-people-tile"
-        title={t('opportunities.detail.people', 'Who is on it')}
+        title={t('opportunities.detail.people', 'People')}
         icon={<Users className="h-4 w-4" aria-hidden="true" />}
       >
         {onAssignOwner && assignees.length > 0 ? (
-          <CustomSelect
-            id="opportunity-detail-owner"
-            label={t('opportunities.detail.owner', 'Owner')}
-            options={assignees.map((assignee) => ({ value: assignee.user_id, label: assignee.name }))}
-            value={detail.owner_id}
-            onValueChange={(value: string) => onAssignOwner(detail.opportunity_id, value)}
-            disabled={!open}
-          />
+          <div className="space-y-1">
+            <Label htmlFor="opportunity-detail-owner">{t('opportunities.detail.owner', 'Owner')}</Label>
+            <UserPicker
+              data-automation-id="opportunity-detail-owner"
+              value={detail.owner_id}
+              onValueChange={(value: string) => onAssignOwner(detail.opportunity_id, value)}
+              users={assignees as unknown as IUser[]}
+              getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+              labelStyle="none"
+              buttonWidth="full"
+              disabled={!open}
+            />
+          </div>
         ) : (
           <p className="text-sm text-[rgb(var(--color-text-700))]">
             {t('opportunities.detail.owner', 'Owner')}: {detail.owner_name}
           </p>
         )}
         <p className="mt-2 text-[11px] leading-relaxed text-[rgb(var(--color-text-400))]">
-          {t('opportunities.detail.ownerNote', 'Steps can go to different people; the deal still has one owner.')}
+          {t('opportunities.detail.ownerNote', 'Individual steps can be assigned to other people. The deal keeps one owner.')}
         </p>
         {detail.contact_name ? (
           <p className="mt-2 text-[13px] text-[rgb(var(--color-text-600))]">{detail.contact_name}</p>
