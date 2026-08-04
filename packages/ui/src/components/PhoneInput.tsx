@@ -321,7 +321,7 @@ export const PhoneInput = ({
           className="block text-sm font-medium text-gray-700 mb-1"
         >
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span className="text-[rgb(var(--color-text-500))] ml-1" aria-hidden="true">*</span>}
         </Label>
       )}
       <div className="relative">
