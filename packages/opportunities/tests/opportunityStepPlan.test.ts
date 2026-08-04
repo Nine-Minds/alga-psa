@@ -130,6 +130,14 @@ describe('step plan wiring', () => {
     expect(source('../src/components/detail/OpportunityDetailView.tsx')).not.toContain('EvidenceLadder');
   });
 
+  it('sets the stage from the rung itself, not a button beside it', () => {
+    const timeline = source('../src/components/detail/OpportunityStepTimeline.tsx');
+    expect(timeline).toContain('-dot`}');
+    expect(timeline).toContain("t('opportunities.steps.setStageTooltip'");
+    expect(timeline).toContain("t('opportunities.steps.stageHint'");
+    expect(timeline).not.toContain('setStageHere');
+  });
+
   it('names how many steps the suggestion buttons would add', () => {
     const timeline = source('../src/components/detail/OpportunityStepTimeline.tsx');
     expect(timeline).toContain("t('opportunities.steps.applyTemplate'");
