@@ -217,6 +217,13 @@ const installLocalStorageMock = () => {
   });
 };
 
+const waitForTemplateHydration = async () => {
+  await waitFor(() => {
+    const state = useInvoiceDesignerStore.getState();
+    expect(state.nodesById[state.rootId]?.props.metadata?.__astImported).toBe(true);
+  });
+};
+
 const transformedWorkspaceState = {
   sourceBindingId: 'collection.items',
   outputBindingId: 'transformed.items',
@@ -456,7 +463,7 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
   it('persists authored transform workspace state into the save payload', async () => {
     render(<InvoiceTemplateEditor templateId="tpl-1" />);
     await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
-    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+    await waitForTemplateHydration();
 
     act(() => {
       useInvoiceDesignerStore.getState().setTransforms(transformedWorkspaceState);
@@ -480,7 +487,7 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
   it('renders the authored transforms block in the read-only code tab', async () => {
     render(<InvoiceTemplateEditor templateId="tpl-1" />);
     await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
-    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+    await waitForTemplateHydration();
 
     act(() => {
       useInvoiceDesignerStore.getState().setTransforms(transformedWorkspaceState);
@@ -519,7 +526,7 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
   it('preserves authored transforms after save and reopen without edits', async () => {
     const firstRender = render(<InvoiceTemplateEditor templateId="tpl-1" />);
     await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
-    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+    await waitForTemplateHydration();
 
     act(() => {
       useInvoiceDesignerStore.getState().setTransforms(transformedWorkspaceState);
@@ -572,7 +579,7 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
 
     const firstRender = render(<InvoiceTemplateEditor templateId="tpl-1" />);
     await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
-    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+    await waitForTemplateHydration();
 
     act(() => {
       useInvoiceDesignerStore.getState().setTransforms(reorderedTransforms);
@@ -647,7 +654,7 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
   it('shows the generated transforms block in the read-only code tab when transforms are authored', async () => {
     render(<InvoiceTemplateEditor templateId="tpl-1" />);
     await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
-    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+    await waitForTemplateHydration();
 
     act(() => {
       useInvoiceDesignerStore.getState().setTransforms({
@@ -884,7 +891,7 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
   it('keeps generated source synchronized with GUI model while switching Visual and Code', async () => {
     render(<InvoiceTemplateEditor templateId="tpl-1" />);
     await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
-    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+    await waitForTemplateHydration();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Code' }));
     act(() => {
