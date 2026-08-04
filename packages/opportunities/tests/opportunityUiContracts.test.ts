@@ -22,7 +22,8 @@ describe('opportunity UI improvement wiring', () => {
     const row = source('../src/components/queue/QueueActionRow.tsx');
 
     expect(row).toContain('id={`${idBase}-complete-control`}');
-    expect(row).toContain("type=\"button\"");
+    // The design-system Button, not a raw <button>.
+    expect(row).not.toContain('<button');
     expect(row).toContain("aria-label={t('opportunities.queue.completeActionFor'");
     expect(row).toContain('onClick={() => onComplete(item.opportunity_id, item.stage)}');
   });

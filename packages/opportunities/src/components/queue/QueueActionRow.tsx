@@ -43,17 +43,18 @@ export function QueueActionRow({ item, onComplete, onOpen, onSnooze, onMarkLost,
       id={idBase}
       className="flex h-full gap-3.5 rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 transition-all hover:-translate-y-0.5 hover:border-[rgb(var(--color-primary-300))] hover:shadow-sm"
     >
-      <button
+      <Button
         id={`${idBase}-complete-control`}
-        type="button"
+        variant="ghost"
+        size="xs"
         aria-label={t('opportunities.queue.completeActionFor', 'Complete action for {{title}}', { title: item.title })}
         onClick={() => onComplete(item.opportunity_id, item.stage)}
-        className={`mt-0.5 h-5 w-5 flex-none rounded-full border-2 ${
+        className={`group mt-0.5 h-5 w-5 flex-none rounded-full border-2 p-0 ${
           overdue ? 'border-[rgb(var(--color-accent-400))]' : 'border-[rgb(var(--color-border-400))]'
-        } group grid place-items-center transition-colors hover:border-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-50))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-400))]`}
+        } hover:border-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-50))]`}
       >
         <Check className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden />
-      </button>
+      </Button>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
           <span className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
