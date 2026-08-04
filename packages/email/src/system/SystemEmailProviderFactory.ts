@@ -1,4 +1,5 @@
 import logger from '@alga-psa/core/logger';
+import { createHash } from 'node:crypto';
 import { IEmailProvider, EmailProviderConfig } from '@alga-psa/types';
 import { SMTPEmailProvider } from '../providers/SMTPEmailProvider';
 import { ResendEmailProvider } from '../providers/ResendEmailProvider';
@@ -13,6 +14,32 @@ export interface SystemEmailProviderConfig {
  * Uses environment variables to determine which provider to create
  */
 export class SystemEmailProviderFactory {
+  /**
+   * Hash every environment value that shapes the process-wide provider. This
+   * lets long-lived services notice credential/address rotation without
+   * retaining another plaintext copy of the credentials.
+   */
+  static getConfigFingerprint(): string {
+    const config = {
+      emailEnable: process.env.EMAIL_ENABLE,
+      providerType: process.env.EMAIL_PROVIDER_TYPE,
+      resendApiKey: process.env.RESEND_API_KEY,
+      resendBaseUrl: process.env.RESEND_BASE_URL,
+      emailHost: process.env.EMAIL_HOST,
+      emailPort: process.env.EMAIL_PORT,
+      emailUsername: process.env.EMAIL_USERNAME,
+      emailUser: process.env.EMAIL_USER,
+      emailPassword: process.env.EMAIL_PASSWORD,
+      emailPass: process.env.EMAIL_PASS,
+      emailFrom: process.env.EMAIL_FROM,
+      smtpFrom: process.env.SMTP_FROM,
+      rejectUnauthorized: process.env.EMAIL_REJECT_UNAUTHORIZED,
+      requireTls: process.env.EMAIL_REQUIRE_TLS,
+    };
+
+    return createHash('sha256').update(JSON.stringify(config)).digest('hex');
+  }
+
   /**
    * Create an email provider based on environment configuration
    */

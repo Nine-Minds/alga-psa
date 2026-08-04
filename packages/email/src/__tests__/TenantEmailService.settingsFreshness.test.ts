@@ -26,6 +26,10 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(async () => undefined),
 }));
 
+vi.mock('../features', () => ({
+  isEnterprise: false,
+}));
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} })),
   getConnection: vi.fn(async () => ({})),
@@ -93,7 +97,10 @@ vi.mock('../providers/EmailProviderManager', () => ({
 
 import { TenantEmailService } from '../TenantEmailService';
 
-function buildSettingsRow(config: { password: string; from: string; fromName: string }) {
+function buildSettingsRow(
+  config: { password: string; from: string; fromName: string },
+  updatedAt = new Date('2026-08-04T12:00:00.000Z')
+) {
   return {
     tenant: 'tenant-settings-freshness',
     default_from_domain: 'example.test',
@@ -113,7 +120,7 @@ function buildSettingsRow(config: { password: string; from: string; fromName: st
     }],
     tracking_enabled: false,
     created_at: new Date('2026-08-04T12:00:00.000Z'),
-    updated_at: new Date('2026-08-04T12:00:00.000Z'),
+    updated_at: updatedAt,
   };
 }
 
@@ -171,6 +178,36 @@ describe('TenantEmailService settings freshness', () => {
         from: { email: 'new-notifications@example.test', name: 'New Notifications' },
       },
     ]);
+  });
+
+  it('refreshes configuration preflights after another process creates settings', async () => {
+    runtime.settingsRow = null;
+    const service = TenantEmailService.getInstance('tenant-settings-freshness');
+
+    await expect(service.isConfigured()).resolves.toBe(false);
+    runtime.settingsRow = buildSettingsRow({
+      password: 'created-password',
+      from: 'created-notifications@example.test',
+      fromName: 'Created Notifications',
+    }, new Date('2026-08-04T12:05:00.000Z'));
+
+    await expect(service.isConfigured()).resolves.toBe(true);
+    expect(runtime.initializedSettings).toHaveLength(1);
+    expect(runtime.initializedSettings[0].providerConfigs[0].config.password).toBe('created-password');
+  });
+
+  it('treats a settings save as a cross-process provider refresh signal', async () => {
+    const service = TenantEmailService.getInstance('tenant-settings-freshness');
+
+    await expect(service.isConfigured()).resolves.toBe(true);
+    runtime.settingsRow = buildSettingsRow({
+      password: 'old-password',
+      from: 'old-notifications@example.test',
+      fromName: 'Old Notifications',
+    }, new Date('2026-08-04T12:10:00.000Z'));
+    await expect(service.isConfigured()).resolves.toBe(true);
+
+    expect(runtime.initializedSettings).toHaveLength(2);
   });
 
   it('keeps an in-flight send paired with the provider settings it resolved', async () => {

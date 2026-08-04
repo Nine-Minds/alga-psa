@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { createHash } from 'node:crypto';
 import { tenantDb, getConnection, isTenantSuspended } from '@alga-psa/db';
 import { EmailProviderManager } from './providers/EmailProviderManager';
 import { 
@@ -330,6 +331,19 @@ export class TenantEmailService extends BaseEmailService {
         ?? this.buildTenantFromAddress(params?.resolvedTenantCompanyName);
     return applyFromNameOverride(resolved, params?.fromName);
   }
+
+  public override async isConfigured(): Promise<boolean> {
+    const knex = await getConnection(this.tenantId);
+    const providerSnapshot = await this.refreshProviderState(knex);
+    return providerSnapshot.emailProvider !== null;
+  }
+
+  public override async getInitializationError(): Promise<string | null> {
+    const knex = await getConnection(this.tenantId);
+    const providerSnapshot = await this.refreshProviderState(knex);
+    return providerSnapshot.providerInitError;
+  }
+
   /**
    * Get tenant email settings from database
    * This is the centralized method that should be used across the application
@@ -633,13 +647,22 @@ export class TenantEmailService extends BaseEmailService {
   }
 
   private static getProviderSettingsFingerprint(settings: TenantEmailSettings | null): string {
-    if (!settings) return 'no-settings';
+    const providerState = {
+      defaultFromDomain: settings?.defaultFromDomain ?? null,
+      emailProvider: settings?.emailProvider ?? null,
+      providerConfigs: settings?.providerConfigs ?? [],
+      // Every settings action advances updatedAt. Including it makes a save an
+      // explicit cross-process refresh signal even if the submitted provider
+      // values happen to be identical to the prior values.
+      updatedAt: settings?.updatedAt ?? null,
+      // Enterprise tenant mail can fall back directly to the system provider,
+      // so its environment-backed credentials are part of this snapshot too.
+      systemProvider: isEnterprise
+        ? SystemEmailProviderFactory.getConfigFingerprint()
+        : null,
+    };
 
-    return JSON.stringify({
-      defaultFromDomain: settings.defaultFromDomain ?? null,
-      emailProvider: settings.emailProvider,
-      providerConfigs: settings.providerConfigs,
-    });
+    return createHash('sha256').update(JSON.stringify(providerState)).digest('hex');
   }
 
   private static async loadTenantEmailSettings(
