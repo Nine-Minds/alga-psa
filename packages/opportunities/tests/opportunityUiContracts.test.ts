@@ -55,6 +55,40 @@ describe('opportunity UI improvement wiring', () => {
     expect(settings).toContain('saveOpportunityStepTemplates(stage, plan[stage])');
   });
 
+  it('refuses to report a save for step rows the server would drop', () => {
+    const settings = source('../../../server/src/app/msp/settings/opportunities/OpportunityStepTemplatesSettings.tsx');
+    expect(settings).toContain('if (blankRowCount > 0)');
+    expect(settings).toContain('opportunities.settings.stepTemplatesBlank');
+    // What the screen shows after a save is what the server kept.
+    expect(settings).toContain('setPlan(toPlan(saved))');
+  });
+
+  it('organizes opportunity settings into tabs like ticketing and projects', () => {
+    const settings = source('../../../server/src/app/msp/settings/opportunities/OpportunitiesSettingsBody.tsx');
+    expect(settings).toContain("import CustomTabs, { type TabContent } from '@alga-psa/ui/components/CustomTabs'");
+    for (const id of ['follow-up', 'stages-and-steps', 'suggestions', 'opportunity-numbering']) {
+      expect(settings).toContain(`id: '${id}'`);
+    }
+    expect(settings).toContain("params.set('section', tabId)");
+  });
+
+  it('prints the report itself rather than the browser window', () => {
+    const reports = source('../src/components/reports/OpportunityReportsView.tsx');
+    expect(reports).not.toContain('window.print()');
+    expect(reports).toContain('<PrintButton');
+    expect(reports).toContain('app-print-root app-print-only');
+    expect(reports).toContain('<PrintableTable');
+  });
+
+  it('picks people with the shared UserPicker so avatars render', () => {
+    const detailView = source('../src/components/detail/OpportunityDetailView.tsx');
+    const stepEditor = source('../src/components/dialogs/StepEditorDialog.tsx');
+    for (const file of [detailView, stepEditor]) {
+      expect(file).toContain("import UserPicker from '@alga-psa/ui/components/UserPicker'");
+      expect(file).toContain('getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}');
+    }
+  });
+
   it('opens prospect quick-add from ClientPicker and auto-selects the new client', () => {
     const createDialog = source('../src/components/dialogs/CreateOpportunityDialog.tsx');
     const host = source('../../../server/src/components/opportunities/OpportunitiesHubHost.tsx');
