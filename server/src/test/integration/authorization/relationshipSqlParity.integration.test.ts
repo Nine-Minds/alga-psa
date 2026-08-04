@@ -1,7 +1,7 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
+import { afterAll, beforeAll, expect, it } from 'vitest';
 import knexFactory, { type Knex } from 'knex';
+import { describeWithDb } from '../../../../test-utils/requireDb';
+import { getSecret } from '../../../lib/utils/getSecret';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -22,24 +22,12 @@ import {
 // facets stay in lock-step against real Postgres semantics (OR/AND grouping,
 // EXISTS, IN, NULL handling).
 //
-// Uses session-local TEMP tables on the local dev DB — never touches real data.
+// Uses session-local TEMP tables only — never touches real data — so it can
+// run against the always-present `postgres` maintenance DB with the standard
+// env-driven admin connection. describeWithDb keeps the local no-DB skip but
+// hard-fails under REQUIRE_DB=1 so CI can never skip this silently.
 
-function readPassword(): string {
-  const candidates = [
-    path.resolve(process.cwd(), '../secrets/postgres_password'),
-    path.resolve(process.cwd(), 'secrets/postgres_password'),
-    '/run/secrets/postgres_password',
-  ];
-  for (const file of candidates) {
-    try {
-      const value = fs.readFileSync(file, 'utf8').trim();
-      if (value) return value;
-    } catch {
-      /* try next */
-    }
-  }
-  return 'postpass123';
-}
+const describeDb = await describeWithDb();
 
 const TENANT = '11111111-1111-4111-8111-111111111111';
 const U1 = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1';
@@ -141,33 +129,6 @@ const SCENARIOS: Scenario[] = [
   },
 ];
 
-let db: Knex | undefined;
-try {
-  db = knexFactory({
-    client: 'pg',
-    connection: {
-      host: process.env.RELSQL_DB_HOST || 'localhost',
-      port: Number(process.env.RELSQL_DB_PORT || 5432),
-      user: 'postgres',
-      password: readPassword(),
-      database: process.env.RELSQL_DB_NAME || 'server',
-    },
-    // TEMP tables are connection-local; pin to a single connection so every
-    // query in the suite sees them.
-    pool: { min: 1, max: 1 },
-  });
-  await db.raw('select 1');
-} catch {
-  if (db) await db.destroy().catch(() => undefined);
-  db = undefined;
-}
-
-const parityIt = db ? it : it.skip;
-if (!db) {
-  // eslint-disable-next-line no-console
-  console.warn('[relationshipSqlParity] no local Postgres on :5432 — parity tests skipped');
-}
-
 function toRecord(row: TicketRow): AuthorizationRecord {
   const assignees = new Set<string>();
   if (row.assigned_to) assignees.add(row.assigned_to);
@@ -245,9 +206,23 @@ async function sqlAllowedIds(connection: Knex, scenario: Scenario): Promise<Set<
   return new Set(rows.map((r: { ticket_id: string }) => r.ticket_id));
 }
 
-describe('relationship SQL ↔ JS kernel parity', () => {
+describeDb('relationship SQL ↔ JS kernel parity', () => {
+  let db: Knex;
+
   beforeAll(async () => {
-    if (!db) return;
+    db = knexFactory({
+      client: 'pg',
+      connection: {
+        host: process.env.DB_HOST || 'localhost',
+        port: Number(process.env.DB_PORT || 5432),
+        user: process.env.DB_USER_ADMIN || 'postgres',
+        password: await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'postpass123'),
+        database: 'postgres',
+      },
+      // TEMP tables are connection-local; pin to a single connection so every
+      // query in the suite sees them.
+      pool: { min: 1, max: 1 },
+    });
     await db.raw('CREATE TEMP TABLE relsql_tickets (tenant uuid, ticket_id text, entered_by uuid, assigned_to uuid, client_id uuid, board_id uuid, assigned_team_id uuid) ON COMMIT PRESERVE ROWS');
     await db.raw('CREATE TEMP TABLE relsql_ticket_resources (tenant uuid, ticket_id text, additional_user_id uuid) ON COMMIT PRESERVE ROWS');
     await db('relsql_tickets').insert(TICKETS.map((t) => ({ ...t, tenant: TENANT })));
@@ -268,11 +243,11 @@ describe('relationship SQL ↔ JS kernel parity', () => {
   }, 60000);
 
   afterAll(async () => {
-    if (db) await db.destroy();
+    await db?.destroy();
   });
 
-  parityIt('every scenario selects identical rows in SQL and the JS kernel', async () => {
-    const connection = db as Knex;
+  it('every scenario selects identical rows in SQL and the JS kernel', async () => {
+    const connection = db;
     const mismatches: string[] = [];
     for (const scenario of SCENARIOS) {
       const jsIds = await jsKernelAllowedIds(scenario);
@@ -287,19 +262,19 @@ describe('relationship SQL ↔ JS kernel parity', () => {
     expect(mismatches, `parity mismatches:\n${mismatches.join('\n')}`).toHaveLength(0);
   });
 
-  parityIt('discriminates (own selects only u1-entered tickets, not everything/nothing)', async () => {
-    const ids = await sqlAllowedIds(db as Knex, { name: 'own', subject: internalSubject, bundleRules: [rule({ id: 'r', templateKey: 'own' })] });
+  it('discriminates (own selects only u1-entered tickets, not everything/nothing)', async () => {
+    const ids = await sqlAllowedIds(db, { name: 'own', subject: internalSubject, bundleRules: [rule({ id: 'r', templateKey: 'own' })] });
     expect(ids).not.toBeNull();
     expect([...(ids as Set<string>)].sort()).toEqual(['ticket-1', 'ticket-7']);
   });
 
-  parityIt('co-assignee path: includes a pure co-assignee, excludes a cross-tenant one', async () => {
+  it('co-assignee path: includes a pure co-assignee, excludes a cross-tenant one', async () => {
     const scenario: Scenario = {
       name: 'assigned',
       subject: internalSubject,
       bundleRules: [rule({ id: 'r', templateKey: 'assigned' })],
     };
-    const sqlIds = await sqlAllowedIds(db as Knex, scenario);
+    const sqlIds = await sqlAllowedIds(db, scenario);
     expect(sqlIds).not.toBeNull();
     const set = sqlIds as Set<string>;
     // ticket-2 / ticket-7: U1 is the primary assignee. ticket-6: U1 only via a
