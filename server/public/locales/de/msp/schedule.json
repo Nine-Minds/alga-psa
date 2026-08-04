@@ -37,7 +37,8 @@
         "nonBillableCategory": "Nicht abrechenbare Kategorie",
         "adHoc": "Ad-hoc-Eintrag",
         "interaction": "Interaktion",
-        "appointmentRequest": "Terminanfrage"
+        "appointmentRequest": "Terminanfrage",
+        "opportunityStep": "Deal-Schritt"
       },
       "showInactiveUsers": "Inaktive Benutzer anzeigen"
     },

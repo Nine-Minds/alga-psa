@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Trash, ExternalLink, MoreVertical } from 'lucide-react';
 import { IScheduleEntry, DeletionValidationResult } from '@alga-psa/types';
 import { getEventColors } from './utils';
+import { ENTRY_OWNED_WORK_ITEM_TYPES } from '../../lib/entryOwnedWorkItems';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Button } from '@alga-psa/ui/components/Button';
 import {
@@ -170,7 +171,7 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
         onMouseEnter={() => !isResizing && onMouseEnter()}
         onMouseLeave={() => !isResizing && onMouseLeave()}
         onClick={(e) => {
-          if (event.work_item_type !== 'ad_hoc' &&
+          if (!ENTRY_OWNED_WORK_ITEM_TYPES.has(event.work_item_type) &&
               !isDragging &&
               !isResizing &&
               !isRecentlyResized &&
