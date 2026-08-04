@@ -227,9 +227,6 @@
       "daysQuiet": "11111 {{count}} 11111",
       "doToday": "11111",
       "goingQuiet": "11111",
-      "greetingAfternoon": "11111 {{name}} 11111",
-      "greetingEvening": "11111 {{name}} 11111",
-      "greetingMorning": "11111 {{name}} 11111",
       "lesson": {
         "reviewPipeline": "11111",
         "viewAssessmentDeals": "11111"

@@ -227,9 +227,6 @@
       "daysQuiet": "{{count}} dias tranquilos",
       "doToday": "Faça hoje",
       "goingQuiet": "Ficando quieto",
-      "greetingAfternoon": "Boa tarde, {{name}}.",
-      "greetingEvening": "Boa noite, {{name}}.",
-      "greetingMorning": "Bom dia, {{name}}.",
       "lesson": {
         "reviewPipeline": "Revise o pipeline",
         "viewAssessmentDeals": "Ver ofertas de avaliação"

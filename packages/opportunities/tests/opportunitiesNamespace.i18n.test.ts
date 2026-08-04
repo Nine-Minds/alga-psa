@@ -20,7 +20,7 @@ describe('msp/opportunities translation namespace', () => {
 
   it('ships the namespace in every supported and pseudo locale', () => {
     for (const code of LOCALES) {
-      expect(locale(code)).toHaveProperty('opportunities.queue.greetingMorning');
+      expect(locale(code)).toHaveProperty('opportunities.queue.needsYou_other');
       expect(locale(code)).toHaveProperty('opportunities.suggestedActions.scheduleDiscovery');
       expect(locale(code)).toHaveProperty('opportunities.why.actionDue.pastDue_other');
     }
