@@ -1586,8 +1586,16 @@ export async function fetchOpportunityActivities(
     const query = db.table('opportunity_steps as s');
     db.tenantJoin(query, 'opportunities as o', 's.opportunity_id', 'o.opportunity_id');
     db.tenantJoin(query, 'clients as c', 'o.client_id', 'c.client_id');
+    const scope = filters.opportunityScope ?? 'assigned';
     query
-      .where({ 's.assigned_to': userId, 'o.status': 'open' })
+      .where('o.status', 'open')
+      .where(function opportunityScopeClause() {
+        // 'owned' answers "what is happening on my deals" even after a step is
+        // handed to a colleague; 'assigned' stays the default personal queue.
+        if (scope === 'owned') this.where('o.owner_id', userId);
+        else if (scope === 'all') this.where('s.assigned_to', userId).orWhere('o.owner_id', userId);
+        else this.where('s.assigned_to', userId);
+      })
       .whereIn('s.status', ['current', 'planned'])
       .whereNotNull('s.due_at');
 
@@ -1610,6 +1618,7 @@ export async function fetchOpportunityActivities(
       's.step_id',
       's.title as step_title',
       's.due_at',
+      's.assigned_to',
       's.status as step_status',
       's.created_at',
       's.updated_at',
@@ -1632,7 +1641,7 @@ export async function fetchOpportunityActivities(
         status: overdue ? 'overdue' : row.step_status === 'current' ? 'open' : 'planned',
         priority: overdue ? ActivityPriority.HIGH : ActivityPriority.MEDIUM,
         dueDate,
-        assignedTo: [userId],
+        assignedTo: [row.assigned_to ?? userId],
         relatedEntities: [{
           id: row.opportunity_id,
           type: 'opportunity',

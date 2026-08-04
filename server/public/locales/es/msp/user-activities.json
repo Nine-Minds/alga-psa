@@ -465,7 +465,8 @@
       "tags": "Etiquetas",
       "tagsSelected": "{{count}} etiquetas",
       "tasksCompact": "Tareas",
-      "ticketsCompact": "Tickets"
+      "ticketsCompact": "Tickets",
+      "opportunityScope": "Trabajo del negocio"
     },
     "activityTypeOptions": {
       "schedule": "Calendario",
@@ -513,6 +514,11 @@
       "phases": "{{count}} fases",
       "projects": "{{count}} proyectos",
       "statuses": "{{count}} estados"
+    },
+    "opportunityScopeOptions": {
+      "assigned": "Pasos del negocio asignados",
+      "owned": "Pasos de negocios propios",
+      "all": "Pasos asignados o de negocios propios"
     }
   },
   "actions": {

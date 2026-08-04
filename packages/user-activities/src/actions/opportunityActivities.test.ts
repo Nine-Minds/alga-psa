@@ -56,10 +56,8 @@ describe('opportunity activity aggregation', () => {
 
     const result = await fetchOpportunityActivities('owner-1', 'tenant-1', {});
 
-    expect(query.where).toHaveBeenCalledWith({
-      's.assigned_to': 'owner-1',
-      'o.status': 'open',
-    });
+    expect(query.where).toHaveBeenCalledWith('o.status', 'open');
+    expect(query.where).toHaveBeenCalledWith('s.assigned_to', 'owner-1');
     expect(result).toEqual([expect.objectContaining({
       id: 'step-1',
       type: ActivityType.SCHEDULE,
@@ -69,5 +67,31 @@ describe('opportunity activity aggregation', () => {
       priority: ActivityPriority.HIGH,
       link: '/msp/opportunities/opportunity-1',
     })]);
+  });
+
+  it('scopes to owned deals when the feed asks for them, keeping the step assignee', async () => {
+    const query = queryReturning([{
+      step_id: 'step-2',
+      step_title: 'Walk the findings',
+      step_status: 'planned',
+      due_at: '2999-01-01T12:00:00.000Z',
+      assigned_to: 'colleague-9',
+      opportunity_id: 'opportunity-2',
+      opportunity_number: 'OPP-0002',
+      opportunity_title: 'Server refresh',
+      client_id: 'client-1',
+      client_name: 'Acme',
+      created_at: '1999-12-01T12:00:00.000Z',
+      updated_at: '1999-12-02T12:00:00.000Z',
+    }]);
+    const facade = { table: vi.fn(() => query), tenantJoin: vi.fn() };
+    mocks.createTenantKnex.mockResolvedValue({ knex: {}, tenant: 'tenant-1' });
+    mocks.tenantDb.mockReturnValue(facade);
+
+    const result = await fetchOpportunityActivities('owner-1', 'tenant-1', { opportunityScope: 'owned' });
+
+    expect(query.where).toHaveBeenCalledWith('o.owner_id', 'owner-1');
+    expect(query.where).not.toHaveBeenCalledWith('s.assigned_to', 'owner-1');
+    expect(result[0].assignedTo).toEqual(['colleague-9']);
   });
 });
