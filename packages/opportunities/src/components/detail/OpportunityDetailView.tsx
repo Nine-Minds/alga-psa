@@ -257,20 +257,33 @@ export function OpportunityDetailView({
       {commitments}
 
       {open ? (
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Button
             id="opportunity-detail-delete"
             size="sm"
             variant="ghost"
+            className="whitespace-nowrap"
             onClick={() => onDelete(detail.opportunity_id)}
           >
             {t('common.delete', 'Delete')}
           </Button>
-          <div className="flex items-center gap-2">
-            <Button id="opportunity-detail-lose" size="sm" variant="ghost" onClick={() => onLose(detail.opportunity_id)}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              id="opportunity-detail-lose"
+              size="sm"
+              variant="ghost"
+              className="whitespace-nowrap"
+              onClick={() => onLose(detail.opportunity_id)}
+            >
               {t('opportunities.detail.markLost', 'Mark lost')}
             </Button>
-            <Button id="opportunity-detail-win" size="sm" variant="soft" onClick={() => onWin(detail.opportunity_id)}>
+            <Button
+              id="opportunity-detail-win"
+              size="sm"
+              variant="soft"
+              className="whitespace-nowrap"
+              onClick={() => onWin(detail.opportunity_id)}
+            >
               {t('opportunities.detail.markWon', 'Mark won')}
             </Button>
           </div>
