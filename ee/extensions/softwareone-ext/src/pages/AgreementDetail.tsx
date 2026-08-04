@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router';
 import * as Tabs from '@radix-ui/react-tabs';
 import { Agreement } from '../types';
 import { dummyAgreements, dummyOrdersByAgreement, dummySubscriptionsByAgreement } from '../data/dummyAgreements';

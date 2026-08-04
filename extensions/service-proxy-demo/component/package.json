@@ -20,6 +20,7 @@
     "typescript": "^5.4.0"
   },
   "overrides": {
-    "esbuild": ">=0.28.1"
+    "esbuild": ">=0.28.1",
+    "brace-expansion@2": ">=2.1.4 <3"
   }
 }

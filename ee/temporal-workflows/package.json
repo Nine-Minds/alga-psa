@@ -46,7 +46,7 @@
     "@temporalio/client": "~1.14.1",
     "@temporalio/worker": "~1.14.1",
     "@temporalio/workflow": "~1.14.1",
-    "axios": "^1.16.0",
+    "axios": "^1.18.0",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "dotenv": "^16.4.5",
@@ -79,7 +79,7 @@
     "openai": "^4.104.0",
     "posthog-node": "^4.18.0",
     "rrule": "^2.8.1",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.3",
     "zod-to-json-schema": "^3.25.1"
   },
   "devDependencies": {
@@ -99,20 +99,23 @@
   "overrides": {
     "protobufjs": "^7.5.8",
     "@protobufjs/utf8": ">=1.1.1",
-    "fast-uri": ">=3.1.2",
+    "fast-uri": ">=3.1.5 <4",
     "fast-xml-parser": ">=5.7.0",
     "fast-xml-builder": ">=1.1.7",
     "basic-ftp": ">=5.3.1",
     "picomatch": ">=2.3.2",
-    "postcss": ">=8.5.10",
-    "ws": ">=8.20.1",
-    "dompurify": ">=3.4.11",
+    "postcss": ">=8.5.23",
+    "ws": ">=8.21.0",
+    "dompurify": ">=3.4.12",
     "follow-redirects": ">=1.16.0",
-    "ip-address": ">=10.1.1",
+    "ip-address": ">=10.3.1",
     "vite": ">=6.4.2",
     "lodash": ">=4.18.1",
     "path-to-regexp@0.1": "0.1.13",
-    "brace-expansion": ">=1.1.13",
-    "uuid": "^11.1.1"
+    "brace-expansion": ">=5.0.9",
+    "uuid": "^11.1.1",
+    "body-parser": ">=1.20.6 <2",
+    "sharp": "^0.35.3",
+    "axios": "^1.18.0"
   }
 }

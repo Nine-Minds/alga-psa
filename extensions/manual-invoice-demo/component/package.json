@@ -17,5 +17,8 @@
     "@bytecodealliance/componentize-js": "^0.19.3",
     "esbuild": "^0.25.12",
     "rimraf": "^5.0.0"
+  },
+  "overrides": {
+    "brace-expansion@2": ">=2.1.4 <3"
   }
 }

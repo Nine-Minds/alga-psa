@@ -33,7 +33,7 @@
     "@alga-psa/validation": "*",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.428.0",
-    "next-auth": "^5.0.0-beta.30",
+    "next-auth": "^5.0.0-beta.32",
     "react-hot-toast": "^2.4.1"
   },
   "devDependencies": {

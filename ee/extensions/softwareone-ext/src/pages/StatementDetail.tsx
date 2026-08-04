@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router';
 import * as Tabs from '@radix-ui/react-tabs';
 import { dummyStatements, dummyCharges } from '../data/dummyStatements';
 import { Button, Card, Stack, Text, DataTable } from '@alga/ui-kit';

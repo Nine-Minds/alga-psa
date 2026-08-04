@@ -38,7 +38,13 @@ moka = { version = "0.12", features = ["future"] }
 tokio-util = "0.7"
 
 # Optional S3 presign support (feature-gated)
-aws-sdk-s3 = { version = "1", features = ["rustls", "behavior-version-latest"] }
+# NOTE: default-features are off deliberately. aws-sdk-s3's default set includes "rustls",
+# which maps to aws-smithy-runtime/tls-rustls -> aws-smithy-http-client/legacy-rustls-ring,
+# dragging in the hyper-0.14/rustls-0.21 legacy connector and with it rustls-webpki 0.101.7
+# (last release on that line, permanently unpatched: GHSA-82j2-j2ch-gfr8 + 2 name-constraint
+# advisories). "default-https-client" is the modern path (rustls-aws-lc -> rustls 0.23).
+# The remaining entries reproduce aws-sdk-s3's defaults minus "rustls".
+aws-sdk-s3 = { version = "1", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio", "behavior-version-latest"] }
 aws-credential-types = "1"
 
 [dev-dependencies]
