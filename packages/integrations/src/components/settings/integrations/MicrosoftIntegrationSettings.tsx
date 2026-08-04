@@ -420,6 +420,11 @@ export function MicrosoftIntegrationSettings({
     [showTeamsUi, t]
   );
 
+  const capabilityListFormatter = React.useMemo(
+    () => new Intl.ListFormat(undefined, { style: 'long', type: 'conjunction' }),
+    []
+  );
+
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -1002,6 +1007,9 @@ export function MicrosoftIntegrationSettings({
                 const statusBadge = getProfileStatusBadge(profile, t);
                 const readinessMessages = getReadinessMessages(profile, t);
                 const visibleConsumers = getVisibleProfileConsumers(profile, showTeamsUi, consumerDescriptors);
+                const enabledCapabilityLabels = capabilityDescriptors
+                  .filter((capability) => profileSupportsConsumer(profile, capability.consumerType))
+                  .map((capability) => capability.consumerLabel);
 
                 return (
                   <div
@@ -1129,11 +1137,14 @@ export function MicrosoftIntegrationSettings({
                         <Alert>
                           <CheckCircle2 className="h-4 w-4" />
                           <AlertDescription>
-                            {isEnterpriseEdition
-                              ? showTeamsUi
-                                ? t('integrations.microsoft.settings.profileCard.readyEeTeams', { defaultValue: 'This app is ready for staff sign-in, Outlook email, calendar sync, and Teams.' })
-                                : t('integrations.microsoft.settings.profileCard.readyEe', { defaultValue: 'This app is ready for staff sign-in, Outlook email, and calendar sync.' })
-                              : t('integrations.microsoft.settings.profileCard.readyCe', { defaultValue: 'This app is ready for staff sign-in.' })}
+                            {enabledCapabilityLabels.length > 0
+                              ? t('integrations.microsoft.settings.profileCard.ready', {
+                                  defaultValue: 'This app is ready for {{capabilities}}.',
+                                  capabilities: capabilityListFormatter.format(enabledCapabilityLabels),
+                                })
+                              : t('integrations.microsoft.settings.profileCard.readyNoCapabilities', {
+                                  defaultValue: 'This app is ready, but no services are turned on for it yet.',
+                                })}
                           </AlertDescription>
                         </Alert>
                       )}

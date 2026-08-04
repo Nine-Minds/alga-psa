@@ -15,6 +15,10 @@ export const MICROSOFT_EMAIL_SETUP_BOOTSTRAP_SCOPES = [
   'email',
 ] as const;
 
+// The v2.0 /adminconsent endpoint rejects requests without a scope
+// (AADSTS900144); .default consents to the permissions on the app registration.
+export const MICROSOFT_EMAIL_ADMIN_CONSENT_SCOPE = 'https://graph.microsoft.com/.default';
+
 export const MICROSOFT_EMAIL_SETUP_STATE_TTL_SECONDS = 10 * 60;
 
 export interface MicrosoftEmailApplicationManifest {
@@ -72,6 +76,7 @@ export function buildMicrosoftEmailAdminConsentUrl(input: {
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
+    scope: MICROSOFT_EMAIL_ADMIN_CONSENT_SCOPE,
     state: input.state,
   });
 
