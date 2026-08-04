@@ -53,6 +53,35 @@ export const listOpportunityStepTemplates = withAuth(async (
   return OpportunityStepModel.listTemplates(knex, tenant, stage);
 });
 
+/**
+ * Settings-side template editing. Tenants that never touch these keep the
+ * stock lists; the moment they save one, theirs is what gets applied.
+ */
+export const saveOpportunityStepTemplates = withAuth(async (
+  user,
+  { tenant },
+  stage: OpportunityStage,
+  titles: Array<{ title: string; due_offset_days: number }>,
+): Promise<IOpportunityStepTemplate[]> => {
+  await requirePermission(user, 'update');
+  const { knex } = await createTenantKnex();
+  return withTransaction(knex, async (trx) => {
+    await tenantDb(trx, tenant).table('opportunity_step_templates').where({ stage }).delete();
+    for (const [index, entry] of titles.entries()) {
+      const title = entry.title.trim();
+      if (!title) continue;
+      await tenantDb(trx, tenant).table('opportunity_step_templates').insert({
+        tenant,
+        stage,
+        title,
+        sort_order: index,
+        due_offset_days: Math.max(0, Math.round(entry.due_offset_days)),
+      });
+    }
+    return OpportunityStepModel.listTemplates(trx, tenant, stage);
+  });
+});
+
 export const createOpportunityStep = withAuth(async (
   user,
   { tenant },
@@ -101,7 +130,12 @@ export const updateOpportunityStep = withAuth(async (
     if (!existing) throw new Error('Step not found');
     const opportunity = await OpportunityModel.getById(trx, tenant, existing.opportunity_id);
     if (!opportunity) throw new Error('Opportunity not found');
-    const updated = await OpportunityStepModel.update(trx, tenant, stepId, data as Partial<IOpportunityStep>);
+    const updated = await OpportunityStepModel.update(trx, tenant, stepId, {
+      ...data,
+      // "The deal owner" is a real answer, not an absence: a step always has
+      // someone to put it on a calendar for.
+      ...(data.assigned_to === null ? { assigned_to: opportunity.owner_id } : {}),
+    } as Partial<IOpportunityStep>);
     const synced = await syncStepScheduleEntry(trx, tenant, updated, opportunity);
     await mirrorCurrentStepOntoOpportunity(trx, tenant, existing.opportunity_id);
     return synced;

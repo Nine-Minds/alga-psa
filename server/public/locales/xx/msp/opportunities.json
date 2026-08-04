@@ -474,6 +474,13 @@
       "titlePlaceholder": "11111",
       "unassigned": "11111",
       "when": "11111"
+    },
+    "settings": {
+      "stepTemplateOffset": "11111",
+      "stepTemplates": "11111",
+      "stepTemplatesHelp": "11111",
+      "stepTemplatesSaved": "11111",
+      "stepTemplatesStage": "11111"
     }
   }
 }

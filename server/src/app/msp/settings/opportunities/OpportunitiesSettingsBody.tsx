@@ -11,6 +11,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toMinorUnits, currencyFractionDigits } from '@alga-psa/core';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import NumberingSettings from '@alga-psa/reference-data/components/settings/NumberingSettings';
+import OpportunityStepTemplatesSettings from './OpportunityStepTemplatesSettings';
 import {
   readOpportunitySettings,
   runGeneratorNow,
@@ -323,6 +324,19 @@ export default function OpportunitiesSettingsBody() {
           </div>
         </section>
       ) : null}
+
+      <section className="border-t border-[rgb(var(--color-border-200))] pt-6">
+        <h2 className="mb-1 text-base font-semibold text-[rgb(var(--color-text-900))]">
+          {t('opportunities.settings.stepTemplates', 'Stage step plans')}
+        </h2>
+        <p className="mb-4 text-sm text-[rgb(var(--color-text-500))]">
+          {t(
+            'opportunities.settings.stepTemplatesHelp',
+            'The steps a seller gets when they plan a stage on a deal. Leave them alone to keep the stock plan.'
+          )}
+        </p>
+        <OpportunityStepTemplatesSettings />
+      </section>
 
       <section className="border-t border-[rgb(var(--color-border-200))] pt-6">
         <h2 className="mb-1 text-base font-semibold text-[rgb(var(--color-text-900))]">

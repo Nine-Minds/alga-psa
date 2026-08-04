@@ -474,6 +474,13 @@
       "titlePlaceholder": "bijv. De bevindingen met Dana doornemen",
       "unassigned": "De eigenaar van de deal",
       "when": "Wanneer"
+    },
+    "settings": {
+      "stepTemplateOffset": "Dagen later",
+      "stepTemplates": "Stappenplannen per fase",
+      "stepTemplatesHelp": "De stappen die een verkoper krijgt bij het plannen van een fase. Laat ze staan om het standaardplan te houden.",
+      "stepTemplatesSaved": "Stappenplan opgeslagen",
+      "stepTemplatesStage": "Fase"
     }
   }
 }

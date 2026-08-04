@@ -474,6 +474,13 @@
       "titlePlaceholder": "e.g. Walk the assessment findings with Dana",
       "unassigned": "The deal owner",
       "when": "When"
+    },
+    "settings": {
+      "stepTemplateOffset": "Days out",
+      "stepTemplates": "Stage step plans",
+      "stepTemplatesHelp": "The steps a seller gets when they plan a stage on a deal. Leave them alone to keep the stock plan.",
+      "stepTemplatesSaved": "Step plan saved",
+      "stepTemplatesStage": "Stage"
     }
   }
 }
