@@ -44,7 +44,7 @@ describe('opportunity UI improvement wiring', () => {
     expect(suggestions).toContain('listOpportunityStepTemplates(stage)');
     expect(suggestions).toContain('SUGGESTED_NEXT_ACTIONS[stage]');
     // An empty tenant list must not blank out the stock suggestions.
-    expect(suggestions).toContain('templates.length === 0');
+    expect(suggestions).toContain('templateTitles?.length');
   });
 
   it('lays the whole sales process out on one settings screen', () => {
