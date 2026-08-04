@@ -30,12 +30,7 @@
     "aiCheckoutFailed": "AI Assistant-afrekening kon niet worden gestart",
     "aiRemoved": "AI Assistant wordt verwijderd uit uw abonnement.",
     "aiCancelFailed": "AI Assistant kon niet worden geannuleerd",
-    "feedbackReasonRequired": "Geef een reden op voor de annulering",
-    "feedbackCategoryRequired": "Selecteer een reden voor annulering",
-    "feedbackMinimumLength": "Geef ten minste {{min}} tekens feedback",
-    "feedbackMaxLength": "Feedback moet {{max}} tekens of minder zijn",
-    "feedbackSubmitted": "Bedankt voor uw feedback. We hebben uw annuleringsverzoek ontvangen. U wordt binnenkort afgemeld.",
-    "feedbackSubmitFailed": "Feedback kon niet worden verzonden. Probeer het opnieuw."
+    "cancellationScheduled": "Abonnement geannuleerd. U kunt Alga PSA blijven gebruiken tot het einde van uw factureringsperiode."
   },
   "common": {
     "loading": "Laden...",
@@ -204,7 +199,8 @@
   "dangerZone": {
     "title": "Gevarenzone",
     "body": "Als u uw abonnement annuleert, wordt de toegang voor alle gebruikers aan het einde van de huidige factureringsperiode uitgeschakeld.",
-    "cancelSubscription": "Abonnement annuleren"
+    "cancelSubscription": "Abonnement annuleren",
+    "scheduledBody": "Uw abonnement eindigt op {{date}}. Tot die tijd kan iedereen Alga PSA blijven gebruiken."
   },
   "aiCheckoutDialog": {
     "title": "AI Assistant toevoegen",
@@ -344,19 +340,14 @@
   "cancellationModal": {
     "title": "Abonnement annuleren",
     "keepSubscription": "Abonnement behouden",
-    "submitting": "Verzenden...",
-    "submitFeedback": "Feedback verzenden",
-    "beforeYouCancel": "Voordat u annuleert",
-    "beforeYouCancelBody": "We horen graag uw feedback om onze service te verbeteren. Uw input is waardevol voor ons.",
-    "reasonLabel": "Reden voor annulering",
+    "canceling": "Annuleren...",
+    "beforeYouCancelBody": "Uw abonnement eindigt op {{date}}. Tot die tijd kan iedereen Alga PSA blijven gebruiken.",
+    "currentBillingPeriod": "het einde van uw huidige factureringsperiode",
+    "replacesScheduledChange": "Dit vervangt uw geplande licentiewijziging.",
+    "reasonLabel": "Reden (optioneel)",
     "reasonPlaceholder": "Selecteer een reden",
-    "reasonRequired": "Selecteer een reden om door te gaan.",
-    "otherReasonHelp": "Vertel ons iets meer over wat tot uw beslissing heeft geleid.",
-    "feedbackLabel": "Waarom verlaat u ons?",
-    "feedbackPlaceholder": "We horen graag uw feedback zodat we kunnen verbeteren. Uw input helpt ons onze klanten beter van dienst te zijn.",
-    "required": "* Verplicht",
-    "minimumCharacters": "Minimaal {{min}} tekens vereist",
-    "charactersRemaining": "{{count}} tekens resterend",
+    "feedbackLabel": "Details (optioneel)",
+    "feedbackPlaceholder": "Voeg details toe die u wilt delen.",
     "reasons": {
       "pricingTooHigh": "Prijzen te hoog",
       "missingFeatures": "Ontbrekende functies die ik nodig heb",

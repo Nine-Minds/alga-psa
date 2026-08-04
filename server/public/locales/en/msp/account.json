@@ -30,12 +30,7 @@
     "aiCheckoutFailed": "Failed to start AI Assistant checkout",
     "aiRemoved": "AI Assistant will be removed from your subscription.",
     "aiCancelFailed": "Failed to cancel AI Assistant",
-    "feedbackReasonRequired": "Please provide a reason for cancellation",
-    "feedbackCategoryRequired": "Please select a cancellation reason",
-    "feedbackMinimumLength": "Please provide at least {{min}} characters of feedback",
-    "feedbackMaxLength": "Feedback must be {{max}} characters or less",
-    "feedbackSubmitted": "Thank you for your feedback. We have received your cancellation request. You will be logged out shortly.",
-    "feedbackSubmitFailed": "Failed to submit feedback. Please try again."
+    "cancellationScheduled": "Subscription canceled. You can keep using Alga PSA until the end of your billing period."
   },
   "common": {
     "loading": "Loading...",
@@ -204,7 +199,8 @@
   "dangerZone": {
     "title": "Danger Zone",
     "body": "Canceling your subscription will disable access for all users at the end of the current billing period.",
-    "cancelSubscription": "Cancel Subscription"
+    "cancelSubscription": "Cancel Subscription",
+    "scheduledBody": "Your subscription is scheduled to end on {{date}}. Everyone can keep using Alga PSA until then."
   },
   "aiCheckoutDialog": {
     "title": "Add AI Assistant",
@@ -342,27 +338,22 @@
     "infoBox": "Pro-only features unlock immediately. This trial is only available after your initial Solo trial has ended."
   },
   "cancellationModal": {
-    "title": "Cancel Subscription",
-    "keepSubscription": "Keep Subscription",
-    "submitting": "Submitting...",
-    "submitFeedback": "Submit Feedback",
-    "beforeYouCancel": "Before you cancel",
-    "beforeYouCancelBody": "We'd love to hear your feedback to help us improve our service. Your input is valuable to us.",
-    "reasonLabel": "Reason for Cancellation",
+    "title": "Cancel subscription?",
+    "keepSubscription": "Keep subscription",
+    "canceling": "Canceling...",
+    "beforeYouCancelBody": "Your subscription will end on {{date}}. Everyone can keep using Alga PSA until then.",
+    "currentBillingPeriod": "the end of your current billing period",
+    "replacesScheduledChange": "This replaces your scheduled license change.",
+    "reasonLabel": "Reason (optional)",
     "reasonPlaceholder": "Select a reason",
-    "reasonRequired": "Select a reason to continue.",
-    "otherReasonHelp": "Please share a little more about what led to your decision.",
-    "feedbackLabel": "Why are you leaving us?",
-    "feedbackPlaceholder": "We'd love to hear your feedback so we can improve. Your input helps us serve our customers better.",
-    "required": "* Required",
-    "minimumCharacters": "At least {{min}} characters required",
-    "charactersRemaining": "{{count}} characters remaining",
+    "feedbackLabel": "Details (optional)",
+    "feedbackPlaceholder": "Add any details you'd like to share.",
     "reasons": {
-      "pricingTooHigh": "Pricing too high",
-      "missingFeatures": "Missing features I need",
-      "poorSupport": "Poor customer support",
-      "switchingCompetitor": "Switching to competitor",
-      "noLongerNeed": "No longer need the service",
+      "pricingTooHigh": "Too expensive",
+      "missingFeatures": "Missing features",
+      "poorSupport": "Support problems",
+      "switchingCompetitor": "Moving to another product",
+      "noLongerNeed": "No longer needed",
       "other": "Other"
     }
   },

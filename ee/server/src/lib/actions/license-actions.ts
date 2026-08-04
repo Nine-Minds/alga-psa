@@ -9,11 +9,7 @@ import { getConnection } from '@/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { sendCancellationRequestEmail } from '@alga-psa/email/sendCancellationRequestEmail';
-import {
-  CANCELLATION_FEEDBACK_MAX_LENGTH,
-  CANCELLATION_FEEDBACK_MIN_LENGTH,
-  cancellationFeedbackSchema,
-} from '../cancellationFeedbackValidation';
+import { cancellationFeedbackSchema } from '../cancellationFeedbackValidation';
 import {
   IGetSubscriptionInfoResponse,
   IGetPaymentMethodResponse,
@@ -700,7 +696,7 @@ export async function sendCancellationFeedbackAction(
     if (!feedbackResult.success) {
       return {
         success: false,
-        error: `Select a cancellation reason and provide between ${CANCELLATION_FEEDBACK_MIN_LENGTH} and ${CANCELLATION_FEEDBACK_MAX_LENGTH} characters of feedback`,
+        error: 'Invalid cancellation feedback',
       };
     }
 

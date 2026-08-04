@@ -134,7 +134,10 @@ export function TextArea({
   return (
     <div className={cn('mb-4 px-0.5', wrapperClassName)}>
       {label && (
-        <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+        <label
+          htmlFor={finalAutomationProps.id}
+          className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1"
+        >
           {label}
         </label>
       )}

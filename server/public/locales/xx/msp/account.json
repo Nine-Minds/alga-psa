@@ -30,12 +30,7 @@
     "aiCheckoutFailed": "11111",
     "aiRemoved": "11111",
     "aiCancelFailed": "11111",
-    "feedbackReasonRequired": "11111",
-    "feedbackCategoryRequired": "11111",
-    "feedbackMinimumLength": "11111 {{min}} 11111",
-    "feedbackMaxLength": "11111 {{max}} 11111",
-    "feedbackSubmitted": "11111",
-    "feedbackSubmitFailed": "11111"
+    "cancellationScheduled": "11111"
   },
   "common": {
     "loading": "11111",
@@ -204,7 +199,8 @@
   "dangerZone": {
     "title": "11111",
     "body": "11111",
-    "cancelSubscription": "11111"
+    "cancelSubscription": "11111",
+    "scheduledBody": "11111 {{date}} 11111"
   },
   "aiCheckoutDialog": {
     "title": "11111",
@@ -344,19 +340,14 @@
   "cancellationModal": {
     "title": "11111",
     "keepSubscription": "11111",
-    "submitting": "11111",
-    "submitFeedback": "11111",
-    "beforeYouCancel": "11111",
-    "beforeYouCancelBody": "11111",
+    "canceling": "11111",
+    "beforeYouCancelBody": "11111 {{date}} 11111",
+    "currentBillingPeriod": "11111",
+    "replacesScheduledChange": "11111",
     "reasonLabel": "11111",
     "reasonPlaceholder": "11111",
-    "reasonRequired": "11111",
-    "otherReasonHelp": "11111",
     "feedbackLabel": "11111",
     "feedbackPlaceholder": "11111",
-    "required": "11111",
-    "minimumCharacters": "11111 {{min}} 11111",
-    "charactersRemaining": "11111 {{count}} 11111",
     "reasons": {
       "pricingTooHigh": "11111",
       "missingFeatures": "11111",

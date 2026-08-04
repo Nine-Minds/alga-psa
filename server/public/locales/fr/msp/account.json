@@ -30,12 +30,7 @@
     "aiCheckoutFailed": "Échec du démarrage du paiement pour l'AI Assistant",
     "aiRemoved": "L'AI Assistant sera supprimé de votre abonnement.",
     "aiCancelFailed": "Échec de l'annulation de l'AI Assistant",
-    "feedbackReasonRequired": "Veuillez fournir une raison pour l'annulation",
-    "feedbackCategoryRequired": "Veuillez sélectionner un motif d'annulation",
-    "feedbackMinimumLength": "Veuillez fournir au moins {{min}} caractères de commentaire",
-    "feedbackMaxLength": "Le commentaire doit contenir {{max}} caractères ou moins",
-    "feedbackSubmitted": "Merci pour votre commentaire. Nous avons reçu votre demande d'annulation. Vous allez être déconnecté sous peu.",
-    "feedbackSubmitFailed": "Échec de l'envoi du commentaire. Veuillez réessayer."
+    "cancellationScheduled": "Abonnement annulé. Vous pouvez continuer à utiliser Alga PSA jusqu'à la fin de votre période de facturation."
   },
   "common": {
     "loading": "Chargement...",
@@ -204,7 +199,8 @@
   "dangerZone": {
     "title": "Zone de danger",
     "body": "L'annulation de votre abonnement désactivera l'accès pour tous les utilisateurs à la fin de la période de facturation actuelle.",
-    "cancelSubscription": "Annuler l'abonnement"
+    "cancelSubscription": "Annuler l'abonnement",
+    "scheduledBody": "Votre abonnement prendra fin le {{date}}. Tout le monde pourra continuer à utiliser Alga PSA jusque-là."
   },
   "aiCheckoutDialog": {
     "title": "Ajouter AI Assistant",
@@ -344,19 +340,14 @@
   "cancellationModal": {
     "title": "Annuler l'abonnement",
     "keepSubscription": "Conserver l'abonnement",
-    "submitting": "Envoi en cours...",
-    "submitFeedback": "Envoyer les commentaires",
-    "beforeYouCancel": "Avant d'annuler",
-    "beforeYouCancelBody": "Nous aimerions recevoir vos commentaires pour nous aider à améliorer notre service. Votre avis nous est précieux.",
-    "reasonLabel": "Raison de l'annulation",
+    "canceling": "Annulation...",
+    "beforeYouCancelBody": "Votre abonnement prendra fin le {{date}}. Tout le monde pourra continuer à utiliser Alga PSA jusque-là.",
+    "currentBillingPeriod": "la fin de votre période de facturation actuelle",
+    "replacesScheduledChange": "Cela remplace votre modification de licence programmée.",
+    "reasonLabel": "Motif (facultatif)",
     "reasonPlaceholder": "Sélectionnez une raison",
-    "reasonRequired": "Sélectionnez une raison pour continuer.",
-    "otherReasonHelp": "Veuillez nous en dire un peu plus sur ce qui a motivé votre décision.",
-    "feedbackLabel": "Pourquoi nous quittez-vous ?",
-    "feedbackPlaceholder": "Nous aimerions recevoir vos commentaires pour nous améliorer. Votre avis nous aide à mieux servir nos clients.",
-    "required": "* Requis",
-    "minimumCharacters": "Au moins {{min}} caractères requis",
-    "charactersRemaining": "{{count}} caractères restants",
+    "feedbackLabel": "Détails (facultatif)",
+    "feedbackPlaceholder": "Ajoutez les détails que vous souhaitez partager.",
     "reasons": {
       "pricingTooHigh": "Tarification trop élevée",
       "missingFeatures": "Fonctionnalités manquantes dont j'ai besoin",

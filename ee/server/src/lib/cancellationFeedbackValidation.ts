@@ -9,16 +9,12 @@ export const CANCELLATION_REASON_CATEGORIES = [
   'Other',
 ] as const;
 
-export const CANCELLATION_FEEDBACK_MIN_LENGTH = 20;
-export const CANCELLATION_FEEDBACK_MAX_LENGTH = 500;
-
 export const cancellationFeedbackSchema = z.object({
-  reasonCategory: z.enum(CANCELLATION_REASON_CATEGORIES),
-  reasonText: z
-    .string()
-    .trim()
-    .min(CANCELLATION_FEEDBACK_MIN_LENGTH)
-    .max(CANCELLATION_FEEDBACK_MAX_LENGTH),
+  reasonCategory: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.enum(CANCELLATION_REASON_CATEGORIES).optional()
+  ),
+  reasonText: z.string().trim(),
 });
 
 export type CancellationReasonCategory = (typeof CANCELLATION_REASON_CATEGORIES)[number];
