@@ -65,7 +65,8 @@ export function StepEditorDialog({
     if (!isOpen) return;
     setTitle(step?.title ?? '');
     setDue(step?.due_at ? new Date(step.due_at) : undefined);
-    setHasTime(step?.has_time ?? focus === 'schedule');
+    // Arriving via "Schedule" means the user wants a time, not the current answer.
+    setHasTime(focus === 'schedule' ? true : (step?.has_time ?? false));
     setDuration(step?.duration_minutes ?? 30);
     setAssignedTo(step?.assigned_to ?? '');
     setTicketId(step?.ticket_id ?? '');

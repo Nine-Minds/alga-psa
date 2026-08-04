@@ -502,6 +502,13 @@
       "titlePlaceholder": "np. Omówić wyniki audytu z Daną",
       "unassigned": "Opiekun szansy",
       "when": "Kiedy"
+    },
+    "settings": {
+      "stepTemplateOffset": "Dni później",
+      "stepTemplates": "Plany kroków dla etapów",
+      "stepTemplatesHelp": "Kroki, które handlowiec otrzymuje przy planowaniu etapu. Zostaw bez zmian, aby zachować plan domyślny.",
+      "stepTemplatesSaved": "Zapisano plan kroków",
+      "stepTemplatesStage": "Etap"
     }
   }
 }

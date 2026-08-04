@@ -474,6 +474,13 @@
       "titlePlaceholder": "es. Rivedere i risultati della valutazione con Dana",
       "unassigned": "Il responsabile della trattativa",
       "when": "Quando"
+    },
+    "settings": {
+      "stepTemplateOffset": "Giorni dopo",
+      "stepTemplates": "Piani di passi per fase",
+      "stepTemplatesHelp": "I passi che un venditore riceve quando pianifica una fase. Lasciali invariati per mantenere il piano standard.",
+      "stepTemplatesSaved": "Piano dei passi salvato",
+      "stepTemplatesStage": "Fase"
     }
   }
 }

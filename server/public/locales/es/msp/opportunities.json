@@ -474,6 +474,13 @@
       "titlePlaceholder": "p. ej. Repasar los hallazgos de la evaluación con Dana",
       "unassigned": "La persona responsable",
       "when": "Cuándo"
+    },
+    "settings": {
+      "stepTemplateOffset": "Días después",
+      "stepTemplates": "Planes de pasos por fase",
+      "stepTemplatesHelp": "Los pasos que recibe un comercial al planificar una fase. Déjalos como están para conservar el plan estándar.",
+      "stepTemplatesSaved": "Plan de pasos guardado",
+      "stepTemplatesStage": "Fase"
     }
   }
 }

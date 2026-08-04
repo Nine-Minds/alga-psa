@@ -474,6 +474,13 @@
       "titlePlaceholder": "p. ex. Passer en revue les conclusions avec Dana",
       "unassigned": "Le responsable de l’affaire",
       "when": "Quand"
+    },
+    "settings": {
+      "stepTemplateOffset": "Jours après",
+      "stepTemplates": "Plans d’étapes par phase",
+      "stepTemplatesHelp": "Les étapes proposées lorsqu’un commercial planifie une phase. Laissez-les telles quelles pour conserver le plan standard.",
+      "stepTemplatesSaved": "Plan d’étapes enregistré",
+      "stepTemplatesStage": "Phase"
     }
   }
 }

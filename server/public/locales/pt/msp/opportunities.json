@@ -474,6 +474,13 @@
       "titlePlaceholder": "ex.: Rever as conclusões da avaliação com a Dana",
       "unassigned": "O responsável pelo negócio",
       "when": "Quando"
+    },
+    "settings": {
+      "stepTemplateOffset": "Dias depois",
+      "stepTemplates": "Planos de passos por fase",
+      "stepTemplatesHelp": "Os passos que um comercial recebe ao planear uma fase. Deixe-os como estão para manter o plano padrão.",
+      "stepTemplatesSaved": "Plano de passos guardado",
+      "stepTemplatesStage": "Fase"
     }
   }
 }

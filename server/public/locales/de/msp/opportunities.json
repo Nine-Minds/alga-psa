@@ -474,6 +474,13 @@
       "titlePlaceholder": "z. B. Ergebnisse der Analyse mit Dana durchgehen",
       "unassigned": "Die verantwortliche Person",
       "when": "Wann"
+    },
+    "settings": {
+      "stepTemplateOffset": "Tage später",
+      "stepTemplates": "Schrittpläne je Phase",
+      "stepTemplatesHelp": "Die Schritte, die ein Vertriebler erhält, wenn er eine Phase plant. Unverändert lassen, um den Standardplan zu behalten.",
+      "stepTemplatesSaved": "Schrittplan gespeichert",
+      "stepTemplatesStage": "Phase"
     }
   }
 }
