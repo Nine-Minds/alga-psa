@@ -39,6 +39,21 @@ describe('opportunity UI improvement wiring', () => {
     expect(completeDialog).toContain('id="opportunity-complete-next-action"');
   });
 
+  it('suggests the tenant\'s own sales process, falling back to the stock list', () => {
+    const suggestions = source('../src/components/ActionSuggestions.tsx');
+    expect(suggestions).toContain('listOpportunityStepTemplates(stage)');
+    expect(suggestions).toContain('SUGGESTED_NEXT_ACTIONS[stage]');
+    // An empty tenant list must not blank out the stock suggestions.
+    expect(suggestions).toContain('templates.length === 0');
+  });
+
+  it('lays the whole sales process out on one settings screen', () => {
+    const settings = source('../../../server/src/app/msp/settings/opportunities/OpportunityStepTemplatesSettings.tsx');
+    expect(settings).toContain("const STAGES: PlannableStage[] = ['identified', 'qualified', 'assessment', 'proposed', 'verbal']");
+    expect(settings).toContain('opportunity-step-templates-${stage}');
+    expect(settings).toContain('saveOpportunityStepTemplates(stage, plan[stage])');
+  });
+
   it('opens prospect quick-add from ClientPicker and auto-selects the new client', () => {
     const createDialog = source('../src/components/dialogs/CreateOpportunityDialog.tsx');
     const host = source('../../../server/src/components/opportunities/OpportunitiesHubHost.tsx');

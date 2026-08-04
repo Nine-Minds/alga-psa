@@ -202,13 +202,13 @@ export function OpportunityDetailHost({
         commitments={commitments}
         assignees={assignees}
         onAssignOwner={(id, userId) =>
-          void run(() => assignOpportunityOwner(id, userId), t('opportunities.toast.saved', 'Saved'))
+          void run(() => assignOpportunityOwner(id, userId), t('opportunities.toast.ownerAssigned', 'Owner updated'))
         }
         onEditValues={() => setValuesOpen(true)}
         onEditDetails={() => setEditOpen(true)}
         onDraftFollowUp={drafting ? () => setDraftOpen(true) : undefined}
         onConfidenceChange={(id, confidence: OpportunityConfidence) =>
-          void run(() => updateOpportunity(id, { confidence }), t('opportunities.toast.saved', 'Saved'))
+          void run(() => updateOpportunity(id, { confidence }), t('opportunities.toast.confidenceSaved', 'Confidence updated'))
         }
         onWin={() => setWinOpen(true)}
         onLose={() => setLoseOpen(true)}
@@ -317,7 +317,7 @@ export function OpportunityDetailHost({
           expected_close_date: detail.expected_close_date?.slice(0, 10) ?? null,
         }}
         onSubmit={(input) =>
-          run(() => updateOpportunity(detail.opportunity_id, input), t('opportunities.toast.saved', 'Saved'))
+          run(() => updateOpportunity(detail.opportunity_id, input), t('opportunities.toast.detailsSaved', 'Opportunity updated'))
         }
       />
       <EditValuesDialog
@@ -326,7 +326,7 @@ export function OpportunityDetailHost({
         currencyCode={detail.currency_code}
         initial={{ mrr_cents: detail.mrr_cents, nrr_cents: detail.nrr_cents, hardware_cents: detail.hardware_cents }}
         onSubmit={(values) =>
-          run(() => updateOpportunity(detail.opportunity_id, values), t('opportunities.toast.saved', 'Saved'))
+          run(() => updateOpportunity(detail.opportunity_id, values), t('opportunities.toast.valuesSaved', 'Value updated'))
         }
       />
       <LoseOpportunityDialog
