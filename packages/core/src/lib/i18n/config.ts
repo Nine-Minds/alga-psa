@@ -172,7 +172,8 @@ export const ROUTE_NAMESPACES = {
   '/msp/quote-document-templates': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
   '/msp/inventory': ['common', 'msp/core', 'features/inventory'],
   '/msp/clients': ['common', 'msp/core', 'msp/clients'],
-  '/msp/opportunities': ['common', 'msp/core', 'msp/opportunities'],
+  // msp/dashboard carries the shared "Good morning" greeting used by the queue.
+  '/msp/opportunities': ['common', 'msp/core', 'msp/opportunities', 'msp/dashboard'],
   '/msp/contacts': ['common', 'msp/core', 'msp/contacts'],
   '/msp/assets': ['common', 'msp/core', 'msp/assets'],
   '/msp/onboarding': ['common', 'msp/core', 'msp/onboarding'],

@@ -227,9 +227,6 @@
       "daysQuiet": "{{count}} dni spokoju",
       "doToday": "Zrób dzisiaj",
       "goingQuiet": "Idzie cicho",
-      "greetingAfternoon": "Dzień dobry, {{name}}.",
-      "greetingEvening": "Dobry wieczór, {{name}}.",
-      "greetingMorning": "Dzień dobry, {{name}}.",
       "lesson": {
         "reviewPipeline": "Przejrzyj rurociąg",
         "viewAssessmentDeals": "Zobacz oferty oceny"

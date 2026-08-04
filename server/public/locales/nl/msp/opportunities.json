@@ -227,9 +227,6 @@
       "daysQuiet": "{{count}} dagen rustig",
       "doToday": "Vandaag doen",
       "goingQuiet": "Het wordt stil",
-      "greetingAfternoon": "Goedemiddag, {{name}}.",
-      "greetingEvening": "Goedenavond, {{name}}.",
-      "greetingMorning": "Goedemorgen, {{name}}.",
       "lesson": {
         "reviewPipeline": "Controleer de pijplijn",
         "viewAssessmentDeals": "Bekijk assessmentdeals"

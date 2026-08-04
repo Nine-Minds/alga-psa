@@ -227,9 +227,6 @@
       "daysQuiet": "55555 {{count}} 55555",
       "doToday": "55555",
       "goingQuiet": "55555",
-      "greetingAfternoon": "55555 {{name}} 55555",
-      "greetingEvening": "55555 {{name}} 55555",
-      "greetingMorning": "55555 {{name}} 55555",
       "lesson": {
         "reviewPipeline": "55555",
         "viewAssessmentDeals": "55555"

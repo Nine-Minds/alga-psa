@@ -227,9 +227,6 @@
       "daysQuiet": "{{count}} giorni tranquilli",
       "doToday": "Fallo oggi",
       "goingQuiet": "Vado in silenzio",
-      "greetingAfternoon": "Buon pomeriggio, {{name}}.",
-      "greetingEvening": "Buonasera, {{name}}.",
-      "greetingMorning": "Buongiorno, {{name}}.",
       "lesson": {
         "reviewPipeline": "Rivedere la pipeline",
         "viewAssessmentDeals": "Visualizza le offerte di valutazione"
