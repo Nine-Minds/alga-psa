@@ -114,7 +114,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // sessions and opportunities; the other detail tables depend on
   // opportunities. The opportunity_suggestions/opportunities back-reference
   // is cleared by breakCircularDependencies() before this order runs.
+  // opportunity_steps holds the per-deal plan and references opportunities and
+  // users, so it goes first; opportunity_step_templates is per-tenant stage
+  // config that outlives any single deal, so it is cleared in the same block.
   'opportunity_meeting_reviews', 'opportunity_commitments',
+  'opportunity_steps', 'opportunity_step_templates',
   'opportunity_evidence', 'opportunity_qbr_triggers', 'opportunity_suggestions',
   'opportunity_meeting_sessions', 'opportunity_settings', 'opportunities',
 
