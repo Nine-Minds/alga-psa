@@ -126,6 +126,7 @@ export const completeNextActionSchema = z.object({
 });
 
 const stepCheckpointSchema = z.enum(['qualified', 'assessment', 'proposed', 'verbal', 'won']);
+const stepStageSchema = z.enum(['identified', 'qualified', 'assessment', 'proposed', 'verbal']);
 
 export const createOpportunityStepSchema = z.object({
   title: z.string().trim().min(1),
@@ -134,6 +135,7 @@ export const createOpportunityStepSchema = z.object({
   duration_minutes: z.number().int().min(15).max(480).optional(),
   assigned_to: z.string().uuid().optional().nullable(),
   checkpoint: stepCheckpointSchema.optional().nullable(),
+  stage: stepStageSchema.optional().nullable(),
   ticket_id: z.string().uuid().optional().nullable(),
   project_task_id: z.string().uuid().optional().nullable(),
   status: z.enum(['planned', 'current']).optional(),
@@ -146,6 +148,7 @@ export const updateOpportunityStepSchema = z.object({
   duration_minutes: z.number().int().min(15).max(480).optional(),
   assigned_to: z.string().uuid().optional().nullable(),
   checkpoint: stepCheckpointSchema.optional().nullable(),
+  stage: stepStageSchema.optional().nullable(),
   ticket_id: z.string().uuid().optional().nullable(),
   project_task_id: z.string().uuid().optional().nullable(),
   status: z.enum(['planned', 'current', 'skipped']).optional(),

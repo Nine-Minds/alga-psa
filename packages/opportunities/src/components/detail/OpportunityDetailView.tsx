@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { BadgeCheck, CheckCircle2, CircleDollarSign, FileText, Gauge, Users } from 'lucide-react';
+import { CheckCircle2, CircleDollarSign, FileText, Gauge, Users } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { BentoTile } from '@alga-psa/ui/components/bento';
@@ -10,10 +10,9 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useClientDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
-import type { IOpportunityDetail, OpportunityConfidence, OpportunityStage } from '@alga-psa/types';
+import type { IOpportunityDetail, OpportunityConfidence } from '@alga-psa/types';
 import { oneTimeCents } from '../../lib/pipelineReporting';
 import type { OpportunityStepAssignee } from '../../actions/opportunityStepActions';
-import { EvidenceLadder } from '../EvidenceLadder';
 import { WhySentenceText } from '../WhySentenceText';
 
 const OPPORTUNITY_TYPE_DEFAULTS = {
@@ -32,7 +31,6 @@ export interface OpportunityDetailViewProps {
   /** Internal users the deal can be handed to. */
   assignees?: OpportunityStepAssignee[];
   onAssignOwner?: (opportunityId: string, userId: string) => void;
-  onStageSelect: (stage: Exclude<OpportunityStage, 'lost'>) => void;
   onConfidenceChange: (opportunityId: string, confidence: OpportunityConfidence) => void;
   onWin: (opportunityId: string) => void;
   onLose: (opportunityId: string) => void;
@@ -57,7 +55,6 @@ export function OpportunityDetailView({
   commitments,
   assignees = [],
   onAssignOwner,
-  onStageSelect,
   onConfidenceChange,
   onWin,
   onLose,
@@ -82,19 +79,6 @@ export function OpportunityDetailView({
 
   const leftRail = (
     <div className="min-w-0 space-y-4">
-      <BentoTile
-        id="opportunity-detail-evidence-tile"
-        title={t('opportunities.detail.evidence', 'Evidence')}
-        icon={<BadgeCheck className="h-4 w-4" aria-hidden="true" />}
-      >
-        {open ? (
-          <p className="mb-2 text-[11px] text-[rgb(var(--color-text-400))]">
-            {t('opportunities.detail.setStageHint', 'Select a checkpoint to set the stage')}
-          </p>
-        ) : null}
-        <EvidenceLadder steps={detail.ladder} onStageSelect={open ? onStageSelect : undefined} />
-      </BentoTile>
-
       <BentoTile
         id="opportunity-detail-value-tile"
         title={t('opportunities.detail.value', 'Value')}
@@ -400,7 +384,7 @@ export function OpportunityDetailView({
         <div className="order-1 min-w-0 lg:order-2 lg:col-span-8 xl:col-span-6">
           <BentoTile
             id="opportunity-detail-plan-tile"
-            title={t('opportunities.detail.plan', 'Plan & timeline')}
+            title={t('opportunities.detail.plan', 'Evidence, plan & timeline')}
             icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
           >
             {timeline}

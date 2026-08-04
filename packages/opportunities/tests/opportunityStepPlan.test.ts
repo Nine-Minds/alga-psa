@@ -7,7 +7,9 @@ import {
   mirrorOfCurrentStep,
   nextPlannedStep,
   scheduleWindow,
+  stepStageOf,
   templateDueDate,
+  unplannedRemainingStages,
 } from '../src/lib/opportunityStepPlan';
 
 function step(overrides: Partial<IOpportunityStep> = {}): IOpportunityStep {
@@ -99,5 +101,39 @@ describe('step plan wiring', () => {
     expect(view).toContain('xl:col-span-6');
     expect(view).toContain('opportunity-detail-plan-tile');
     expect(view).toContain('opportunity-detail-owner');
+  });
+
+  it('files an untagged step under the stage the deal is working through', () => {
+    expect(stepStageOf(step(), 'assessment')).toBe('assessment');
+    expect(stepStageOf(step({ stage: 'verbal' }), 'assessment')).toBe('verbal');
+    expect(stepStageOf(step(), null)).toBeNull();
+  });
+
+  it('offers only the stages ahead that have suggestions and no steps yet', () => {
+    const steps = [step({ step_id: 'a', stage: 'assessment' })];
+    const counts = { identified: 2, qualified: 2, assessment: 2, proposed: 2, verbal: 0 } as const;
+
+    // Assessment already has a step, verbal has nothing to suggest.
+    expect(unplannedRemainingStages(steps, 'assessment', counts)).toEqual(['proposed']);
+    // Stages already behind the deal are never offered.
+    expect(unplannedRemainingStages([], 'proposed', counts)).toEqual(['proposed']);
+    // A closed deal has no pipeline left to plan.
+    expect(unplannedRemainingStages([], null, counts)).toEqual([]);
+  });
+
+  it('draws the evidence ladder down the middle of the plan', () => {
+    const timeline = source('../src/components/detail/OpportunityStepTimeline.tsx');
+    expect(timeline).toContain('id="opportunity-stage-segments"');
+    expect(timeline).toContain('opportunity-stage-segment-');
+    expect(timeline).toContain("t('opportunities.steps.stageNow'");
+    // The horizontal ladder tile is gone from the side rail.
+    expect(source('../src/components/detail/OpportunityDetailView.tsx')).not.toContain('EvidenceLadder');
+  });
+
+  it('names how many steps the suggestion buttons would add', () => {
+    const timeline = source('../src/components/detail/OpportunityStepTimeline.tsx');
+    expect(timeline).toContain("t('opportunities.steps.applyTemplate'");
+    expect(timeline).toContain('count: templateCount');
+    expect(timeline).toContain('id="opportunity-step-plan-remaining"');
   });
 });

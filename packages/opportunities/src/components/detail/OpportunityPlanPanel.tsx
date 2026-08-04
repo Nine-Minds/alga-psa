@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { IOpportunityStep, OpportunityStage } from '@alga-psa/types';
+import type { IOpportunityEvidenceLadderStep, IOpportunityStep, OpportunityStage } from '@alga-psa/types';
 import {
   applyOpportunityStepTemplate,
   completeOpportunityStep,
@@ -13,6 +13,7 @@ import {
   listLinkableProjectTasksForOpportunity,
   listLinkableTicketsForOpportunity,
   listOpportunitySteps,
+  listOpportunityStepTemplates,
   updateOpportunityStep,
   type OpportunityLinkableWorkItem,
   type OpportunityStepAssignee,
@@ -20,7 +21,7 @@ import {
 import { listOpportunityTimeline, type IOpportunityTimelineEntry } from '../../actions/opportunityTimeline';
 import { CompleteActionDialog } from '../dialogs/CompleteActionDialog';
 import { StepEditorDialog, type StepEditorValue } from '../dialogs/StepEditorDialog';
-import { OpportunityStepTimeline, type StepEditFocus } from './OpportunityStepTimeline';
+import { OpportunityStepTimeline, type PlannableStage, type StepEditFocus } from './OpportunityStepTimeline';
 
 /**
  * The centre of the deal screen: the timeline plus the plan behind it. Owns
@@ -29,26 +30,33 @@ import { OpportunityStepTimeline, type StepEditFocus } from './OpportunityStepTi
 export function OpportunityPlanPanel({
   opportunityId,
   stage,
+  ladder,
   isOpen,
   assignees,
   refreshKey,
+  onStageSelect,
   onChanged,
 }: {
   opportunityId: string;
   stage: OpportunityStage;
+  /** Evidence states, so the plan's spine can show what has been proven. */
+  ladder: IOpportunityEvidenceLadderStep[];
   isOpen: boolean;
   assignees: OpportunityStepAssignee[];
   /** Bumped by the host after any deal change so the plan refetches. */
   refreshKey?: string | number;
+  onStageSelect?: (stage: PlannableStage) => void;
   onChanged: () => void;
 }) {
   const { t } = useTranslation('msp/opportunities');
   const [steps, setSteps] = useState<IOpportunityStep[] | null>(null);
   const [entries, setEntries] = useState<IOpportunityTimelineEntry[]>([]);
+  const [templateCounts, setTemplateCounts] = useState<Partial<Record<PlannableStage, number>>>({});
   const [tickets, setTickets] = useState<OpportunityLinkableWorkItem[]>([]);
   const [tasks, setTasks] = useState<OpportunityLinkableWorkItem[]>([]);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorStep, setEditorStep] = useState<IOpportunityStep | null>(null);
+  const [editorStage, setEditorStage] = useState<PlannableStage | null>(null);
   const [editorFocus, setEditorFocus] = useState<StepEditFocus>('title');
   const [completing, setCompleting] = useState<IOpportunityStep | null>(null);
 
@@ -76,10 +84,16 @@ export function OpportunityPlanPanel({
     Promise.all([
       listLinkableTicketsForOpportunity(opportunityId).catch(() => []),
       listLinkableProjectTasksForOpportunity(opportunityId).catch(() => []),
-    ]).then(([ticketRows, taskRows]) => {
+      listOpportunityStepTemplates().catch(() => []),
+    ]).then(([ticketRows, taskRows, templates]) => {
       if (!active) return;
       setTickets(ticketRows);
       setTasks(taskRows);
+      setTemplateCounts(templates.reduce<Partial<Record<PlannableStage, number>>>((counts, template) => {
+        const key = template.stage as PlannableStage;
+        counts[key] = (counts[key] ?? 0) + 1;
+        return counts;
+      }, {}));
     });
     return () => {
       active = false;
@@ -111,9 +125,18 @@ export function OpportunityPlanPanel({
     await run(
       () => (editorStep
         ? updateOpportunityStep(editorStep.step_id, payload)
-        : createOpportunityStep(opportunityId, payload)),
-      t('opportunities.toast.saved', 'Saved'),
+        : createOpportunityStep(opportunityId, { ...payload, stage: editorStage })),
+      editorStep
+        ? t('opportunities.toast.stepSaved', 'Step saved')
+        : t('opportunities.toast.stepAdded', 'Step added to the plan'),
     );
+  };
+
+  const openEditor = (step: IOpportunityStep | null, focus: StepEditFocus, forStage: PlannableStage | null) => {
+    setEditorStep(step);
+    setEditorStage(forStage);
+    setEditorFocus(focus);
+    setEditorOpen(true);
   };
 
   if (steps === null) return <Skeleton className="h-32 w-full" />;
@@ -125,24 +148,22 @@ export function OpportunityPlanPanel({
       <OpportunityStepTimeline
         entries={entries}
         steps={steps}
+        ladder={ladder}
+        stage={stage}
         isOpen={isOpen}
-        onAddStep={() => {
-          setEditorStep(null);
-          setEditorFocus('title');
-          setEditorOpen(true);
-        }}
-        onApplyTemplate={() =>
+        templateCounts={templateCounts}
+        onStageSelect={onStageSelect}
+        onAddStep={(forStage) => openEditor(null, 'title', forStage)}
+        onApplyTemplate={(stages) =>
           void run(
-            () => applyOpportunityStepTemplate(opportunityId, stage),
-            t('opportunities.toast.stagePlanned', 'Stage plan added'),
+            () => applyOpportunityStepTemplate(opportunityId, stages),
+            stages.length > 1
+              ? t('opportunities.toast.stagesPlanned', 'Steps added for {{count}} stages', { count: stages.length })
+              : t('opportunities.toast.stagePlanned', 'Stage plan added'),
           )
         }
         onCompleteStep={(step) => setCompleting(step)}
-        onEditStep={(step, focus) => {
-          setEditorStep(step);
-          setEditorFocus(focus);
-          setEditorOpen(true);
-        }}
+        onEditStep={(step, focus) => openEditor(step, focus, (step.stage as PlannableStage | null) ?? null)}
         onDeleteStep={(step) =>
           void run(
             () => deleteOpportunityStep(step.step_id),

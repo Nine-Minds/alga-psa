@@ -330,6 +330,8 @@ export interface IOpportunityStep extends TenantEntity {
   assigned_to_name?: string | null;
   /** Completing this step also attests this checkpoint, when the user says so. */
   checkpoint?: OpportunityCheckpoint | null;
+  /** Which stage of the sales process this step belongs to; drives the timeline segments. */
+  stage?: Exclude<OpportunityStage, 'won' | 'lost'> | null;
   status: OpportunityStepStatus;
   sort_order: number;
   ticket_id?: string | null;

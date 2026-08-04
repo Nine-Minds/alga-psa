@@ -1,5 +1,4 @@
 export { WhySentenceText } from './WhySentenceText';
-export { EvidenceLadder } from './EvidenceLadder';
 export { ActionSuggestions } from './ActionSuggestions';
 export { WorkQueue } from './queue/WorkQueue';
 export type { WorkQueueProps } from './queue/WorkQueue';
