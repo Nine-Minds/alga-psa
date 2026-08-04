@@ -1,9 +1,8 @@
 #!/usr/bin/env node
-import fs from 'node:fs';
-import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { applyFluxSource, applyReleaseSelectionConfiguration, applyRuntimeValuesAndReleaseSelection, installStorage, resolveChannelMetadata, validateSetupInputs } from './setup-engine.mjs';
 import { persistMaintenanceMetadata } from './metadata-engine.mjs';
+import { appendUpdateHistory, readJsonFile, writeSecureJsonFileAtomic } from './update-state.mjs';
 
 const DEFAULT_STATE_FILE = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
 // release-selection.json lives in /var/lib/alga-appliance — the writable hostPath
@@ -23,37 +22,38 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function writeSecureJsonFile(targetFile, value) {
-  const dir = path.dirname(targetFile);
-  fs.mkdirSync(dir, { recursive: true, mode: 0o750 });
-  fs.writeFileSync(targetFile, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
-  fs.chmodSync(dir, 0o750);
-  fs.chmodSync(targetFile, 0o600);
-}
-
-function readJsonFile(file) {
-  if (!fs.existsSync(file)) {
-    return null;
-  }
-  try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
-  } catch {
-    return null;
-  }
-}
-
 function writeInstallState(state, stateFile) {
-  writeSecureJsonFile(stateFile, state);
+  writeSecureJsonFileAtomic(stateFile, state);
 }
 
-function appendUpdateHistory(entry, historyFile) {
-  const existing = readJsonFile(historyFile);
-  const history = Array.isArray(existing?.history) ? existing.history : [];
-  const payload = {
-    updatedAt: nowIso(),
-    history: [entry, ...history].slice(0, 50)
+function updateIntent(channel, owner, startedAt = owner?.startedAt) {
+  return {
+    requestedChannel: channel,
+    scope: 'application-only',
+    ...(startedAt ? { startedAt } : {}),
+    ...(owner ? { owner } : {})
   };
-  writeSecureJsonFile(historyFile, payload);
+}
+
+function finishUpdateFailure(failure, context) {
+  const at = nowIso();
+  writeInstallState({
+    status: 'update-blocked',
+    phase: failure.phase,
+    lastAction: failure.message,
+    failure,
+    updatedAt: at,
+    update: updateIntent(context.channel, null, context.owner?.startedAt || context.startedAt)
+  }, context.stateFile);
+  appendUpdateHistory({
+    at,
+    channel: context.channel,
+    ok: false,
+    category: failure.category,
+    phase: failure.phase,
+    message: failure.message
+  }, context.updateHistoryFile);
+  return failure;
 }
 
 // Read the alga-core HelmRelease Ready condition so a non-zero `flux reconcile`
@@ -153,6 +153,10 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
   const releaseSelectionFile = options.releaseSelectionFile || DEFAULT_RELEASE_SELECTION_FILE;
   const updateHistoryFile = options.updateHistoryFile || DEFAULT_UPDATE_HISTORY_FILE;
+  const owner = options.owner || {
+    pid: process.pid,
+    startedAt: options.startedAt || nowIso()
+  };
 
   const previousSelection = readJsonFile(releaseSelectionFile);
   // An app-channel update rebuilds runtime values from the release's baked template
@@ -173,16 +177,7 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
       suggestedNextStep: 'Re-run setup so the app hostname is persisted, then retry the update.',
       retrySafe: false
     };
-    writeInstallState({
-      status: 'update-blocked',
-      phase: failure.phase,
-      lastAction: failure.message,
-      failure,
-      updatedAt: nowIso(),
-      update: { requestedChannel: channel, scope: 'application-only' }
-    }, stateFile);
-    appendUpdateHistory({ at: nowIso(), channel, ok: false, phase: failure.phase, message: failure.message }, updateHistoryFile);
-    return failure;
+    return finishUpdateFailure(failure, { stateFile, updateHistoryFile, channel, owner });
   }
   const selection = previousSelection || {};
   const validated = validateSetupInputs({
@@ -198,108 +193,80 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
     phase: 'registry-release-source',
     lastAction: `Starting app-channel update to ${validated.channel}`,
     updatedAt: nowIso(),
-    update: {
-      requestedChannel: validated.channel,
-      scope: 'application-only'
-    }
+    update: updateIntent(validated.channel, owner)
   }, stateFile);
+
+  const workflowOptions = {
+    ...options,
+    stateFile,
+    update: updateIntent(validated.channel, owner)
+  };
 
   // Channel updates are also the delivery path for appliance control-plane
   // fixes. Reconcile the storage prerequisite first so an appliance affected by
   // the historical duplicate local-path controllers can recover before Helm is
   // asked to converge PostgreSQL, Redis, and the application deployment.
-  const storageResult = installStorage({ ...options, stateFile });
+  const storageResult = installStorage(workflowOptions);
   if (!storageResult.ok) {
-    writeInstallState({
-      status: 'update-blocked',
-      phase: storageResult.phase,
-      lastAction: storageResult.message,
-      failure: storageResult,
-      updatedAt: nowIso(),
-      update: { requestedChannel: validated.channel, scope: 'application-only' }
-    }, stateFile);
-    appendUpdateHistory({
-      at: nowIso(),
+    return finishUpdateFailure(storageResult, {
+      stateFile,
+      updateHistoryFile,
       channel: validated.channel,
-      ok: false,
-      phase: storageResult.phase,
-      message: storageResult.message
-    }, updateHistoryFile);
-    return storageResult;
+      owner
+    });
   }
 
-  const releaseSelection = await resolveChannelMetadata(validated, options);
+  const releaseSelection = await resolveChannelMetadata(validated, workflowOptions);
   if (!releaseSelection.ok) {
-    appendUpdateHistory({
-      at: nowIso(),
+    return finishUpdateFailure(releaseSelection, {
+      stateFile,
+      updateHistoryFile,
       channel: validated.channel,
-      ok: false,
-      phase: releaseSelection.phase,
-      message: releaseSelection.message
-    }, updateHistoryFile);
-    return releaseSelection;
+      owner
+    });
   }
 
-  const runtimeValuesResult = await applyRuntimeValuesAndReleaseSelection(validated, releaseSelection, options);
+  const runtimeValuesResult = await applyRuntimeValuesAndReleaseSelection(validated, releaseSelection, workflowOptions);
   if (!runtimeValuesResult.ok) {
-    appendUpdateHistory({
-      at: nowIso(),
+    return finishUpdateFailure(runtimeValuesResult, {
+      stateFile,
+      updateHistoryFile,
       channel: validated.channel,
-      ok: false,
-      phase: runtimeValuesResult.phase,
-      message: runtimeValuesResult.message
-    }, updateHistoryFile);
-    return runtimeValuesResult;
+      owner
+    });
   }
 
-  const fluxSourceResult = applyFluxSource(validated, releaseSelection, options);
+  const fluxSourceResult = applyFluxSource(validated, releaseSelection, workflowOptions);
   if (!fluxSourceResult.ok) {
-    appendUpdateHistory({
-      at: nowIso(),
+    return finishUpdateFailure(fluxSourceResult, {
+      stateFile,
+      updateHistoryFile,
       channel: validated.channel,
-      ok: false,
-      phase: fluxSourceResult.phase,
-      message: fluxSourceResult.message
-    }, updateHistoryFile);
-    return fluxSourceResult;
+      owner
+    });
   }
 
   const configResult = applyReleaseSelectionConfiguration(validated, releaseSelection, {
-    ...options,
+    ...workflowOptions,
     releaseSelectionFile
   });
   if (!configResult.ok) {
-    appendUpdateHistory({
-      at: nowIso(),
+    return finishUpdateFailure(configResult, {
+      stateFile,
+      updateHistoryFile,
       channel: validated.channel,
-      ok: false,
-      phase: configResult.phase,
-      message: configResult.message
-    }, updateHistoryFile);
-    return configResult;
+      owner
+    });
   }
 
   const reconcileResult = reconcileFluxAndHelm(options);
   if (!reconcileResult.ok) {
-    writeInstallState({
-      status: 'update-blocked',
-      phase: reconcileResult.phase,
-      lastAction: reconcileResult.message,
-      failure: reconcileResult,
-      updatedAt: nowIso(),
-      update: {
-        requestedChannel: validated.channel,
-        scope: 'application-only'
-      }
-    }, stateFile);
-    appendUpdateHistory({
-      at: nowIso(),
+    return finishUpdateFailure(reconcileResult, {
+      stateFile,
+      updateHistoryFile,
       channel: validated.channel,
-      ok: false,
-      phase: reconcileResult.phase,
-      message: reconcileResult.message
-    }, updateHistoryFile);
-    return reconcileResult;
+      owner
+    });
   }
 
   const result = {
@@ -319,9 +286,8 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
     lastAction: result.message,
     updatedAt: nowIso(),
     update: {
-      requestedChannel: validated.channel,
-      selectedReleaseVersion: releaseSelection.releaseVersion,
-      scope: 'application-only'
+      ...updateIntent(validated.channel, null, owner.startedAt),
+      selectedReleaseVersion: releaseSelection.releaseVersion
     }
   }, stateFile);
 
@@ -360,6 +326,9 @@ function parseCliArgs(argv) {
     } else if (arg === '--update-history-file') {
       parsed.updateHistoryFile = argv[i + 1];
       i += 1;
+    } else if (arg === '--started-at') {
+      parsed.startedAt = argv[i + 1];
+      i += 1;
     } else if (arg === '--kubeconfig') {
       parsed.kubeconfigPath = argv[i + 1];
       i += 1;
@@ -375,6 +344,34 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const args = parseCliArgs(process.argv.slice(2));
   if (args.command === 'run') {
     const channel = args.channel || 'stable';
+    args.owner = {
+      pid: process.pid,
+      startedAt: args.startedAt || nowIso()
+    };
+    const writeInterruptedState = (signal) => {
+      const failure = {
+        ok: false,
+        code: 'update_interrupted',
+        category: 'update-interrupted',
+        phase: 'update',
+        step: 'handle-update-signal',
+        message: `App-channel update was interrupted by ${signal}.`,
+        suspectedCause: `The update child received ${signal}.`,
+        suggestedNextStep: 'Retry the update from the Manage page; inspect control-plane logs if it recurs.',
+        retrySafe: true
+      };
+      finishUpdateFailure(failure, {
+        stateFile: args.stateFile || DEFAULT_STATE_FILE,
+        updateHistoryFile: args.updateHistoryFile || DEFAULT_UPDATE_HISTORY_FILE,
+        channel,
+        owner: args.owner
+      });
+      process.exit(1);
+    };
+    const onSigterm = () => writeInterruptedState('SIGTERM');
+    const onSigint = () => writeInterruptedState('SIGINT');
+    process.once('SIGTERM', onSigterm);
+    process.once('SIGINT', onSigint);
     try {
       const result = await runAppChannelUpdate({ channel }, args);
       process.stdout.write(`${JSON.stringify(result)}\n`);
@@ -392,20 +389,17 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         suggestedNextStep: 'Retry the update from the Manage page; inspect control-plane logs if it recurs.',
         retrySafe: true
       };
-      writeInstallState({
-        status: 'update-blocked',
-        phase: failure.phase,
-        lastAction: failure.message,
-        failure,
-        updatedAt: nowIso(),
-        update: { requestedChannel: channel, scope: 'application-only' }
-      }, args.stateFile || DEFAULT_STATE_FILE);
-      appendUpdateHistory(
-        { at: nowIso(), channel, ok: false, phase: failure.phase, message: failure.message },
-        args.updateHistoryFile || DEFAULT_UPDATE_HISTORY_FILE
-      );
+      finishUpdateFailure(failure, {
+        stateFile: args.stateFile || DEFAULT_STATE_FILE,
+        updateHistoryFile: args.updateHistoryFile || DEFAULT_UPDATE_HISTORY_FILE,
+        channel,
+        owner: args.owner
+      });
       process.stderr.write(`${JSON.stringify(failure)}\n`);
       process.exitCode = 1;
+    } finally {
+      process.off('SIGTERM', onSigterm);
+      process.off('SIGINT', onSigint);
     }
   }
 }

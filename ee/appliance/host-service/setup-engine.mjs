@@ -8,6 +8,7 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { persistMaintenanceMetadata } from './metadata-engine.mjs';
 import { redeemInstallCode, deriveApplianceId, licenseSeedFromRedeem } from './install-code.mjs';
+import { writeSecureJsonFileAtomic } from './update-state.mjs';
 
 // Path defaults honor the ALGA_APPLIANCE_* environment the control plane runs
 // with, falling back to the bare-host locations. This keeps the setup workflow
@@ -55,11 +56,29 @@ function readSystemResolvers(resolvConfPath = DEFAULT_RESOLV_CONF) {
 }
 
 function writeInstallState(state, stateFile = DEFAULT_STATE_FILE) {
-  const stateDir = path.dirname(stateFile);
-  fs.mkdirSync(stateDir, { recursive: true, mode: 0o750 });
-  fs.writeFileSync(stateFile, `${JSON.stringify(state, null, 2)}\n`, { mode: 0o600 });
-  fs.chmodSync(stateDir, 0o750);
-  fs.chmodSync(stateFile, 0o600);
+  writeSecureJsonFileAtomic(stateFile, state);
+}
+
+function writeWorkflowInstallState(state, stateFile, options) {
+  if (!options.update) {
+    writeInstallState(state, stateFile);
+    return;
+  }
+
+  const isBlocked = state.status.endsWith('-blocked');
+  const keepSpecificRunningStatus = [
+    'storage-install-running',
+    'release-config-running'
+  ].includes(state.status);
+  const status = !isBlocked && !keepSpecificRunningStatus
+    ? 'update-running'
+    : state.status;
+  const { owner: _owner, ...terminalUpdate } = options.update;
+  writeInstallState({
+    ...state,
+    status,
+    update: isBlocked ? terminalUpdate : options.update
+  }, stateFile);
 }
 
 function writeSecureJsonFile(targetFile, value) {
@@ -773,12 +792,12 @@ export function installStorage(options = {}) {
   const installCommand = options.storageInstallCommand
     || `${shellQuote(installerPath)} --kubeconfig ${shellQuote(kubeconfigPath)}`;
 
-  writeInstallState({
+  writeWorkflowInstallState({
     status: 'storage-install-running',
     phase: 'storage',
     lastAction: 'Reconciling the appliance local-path storage provider',
     updatedAt: nowIso()
-  }, stateFile);
+  }, stateFile, options);
 
   const result = spawnSync('sh', ['-c', installCommand], {
     env: process.env,
@@ -793,7 +812,7 @@ export function installStorage(options = {}) {
       'Local-path storage reconciliation failed.',
       detail
     );
-    writeInstallState({
+    writeWorkflowInstallState({
       status: 'storage-install-blocked',
       phase: 'storage',
       lastAction: failure.message,
@@ -803,7 +822,7 @@ export function installStorage(options = {}) {
         stderr: result.stderr || ''
       },
       updatedAt: nowIso()
-    }, stateFile);
+    }, stateFile, options);
     return failure;
   }
 
@@ -812,12 +831,12 @@ export function installStorage(options = {}) {
     phase: 'storage',
     message: 'Local-path storage reconciliation and PVC smoke test completed successfully.'
   };
-  writeInstallState({
+  writeWorkflowInstallState({
     status: 'storage-install-complete',
     phase: 'storage',
     lastAction: success.message,
     updatedAt: nowIso()
-  }, stateFile);
+  }, stateFile, options);
   return success;
 }
 
@@ -912,12 +931,12 @@ export async function resolveChannelMetadata(inputs, options = {}) {
   // version/digest pin via inputs.releaseRef). No git, no branch.
   const reference = (inputs.releaseRef || inputs.channel || 'stable').trim();
 
-  writeInstallState({
+  writeWorkflowInstallState({
     status: 'release-resolve-running',
     phase: 'registry-release-source',
     lastAction: `Resolving ${inputs.channel} release manifest from ${registryHost}`,
     updatedAt: nowIso()
-  }, stateFile);
+  }, stateFile, options);
 
   let resolved;
   try {
@@ -935,13 +954,13 @@ export async function resolveChannelMetadata(inputs, options = {}) {
       `Unable to resolve release manifest for "${reference}" from ${registryHost}.`,
       error instanceof Error ? error.message : String(error)
     );
-    writeInstallState({
+    writeWorkflowInstallState({
       status: 'release-resolve-blocked',
       phase: 'registry-release-source',
       lastAction: failure.message,
       failure,
       updatedAt: nowIso()
-    }, stateFile);
+    }, stateFile, options);
     return failure;
   }
 
@@ -959,7 +978,7 @@ export async function resolveChannelMetadata(inputs, options = {}) {
     manifest
   };
 
-  writeInstallState({
+  writeWorkflowInstallState({
     status: 'release-resolve-complete',
     phase: 'registry-release-source',
     lastAction: success.message,
@@ -971,7 +990,7 @@ export async function resolveChannelMetadata(inputs, options = {}) {
       manifestDigest: resolved.manifestDigest
     },
     updatedAt: nowIso()
-  }, stateFile);
+  }, stateFile, options);
 
   return success;
 }
@@ -985,12 +1004,12 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     : releaseSelection.manifest;
   const tempDir = options.runtimeValuesDir || fs.mkdtempSync(path.join(os.tmpdir(), 'alga-runtime-values-'));
   const valuesDir = path.join(tempDir, 'values');
-  writeInstallState({
+  writeWorkflowInstallState({
     status: 'runtime-values-running',
     phase: 'registry-release-source',
     lastAction: 'Creating Kubernetes runtime values and release selection',
     updatedAt: nowIso()
-  }, stateFile);
+  }, stateFile, options);
 
   if (!manifest) {
     const failure = preflightFailure(
@@ -999,7 +1018,7 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
       'Release selection did not include a resolved manifest.',
       'resolveChannelMetadata must run (and succeed) before applyRuntimeValuesAndReleaseSelection.'
     );
-    writeInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+    writeWorkflowInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile, options);
     return failure;
   }
 
@@ -1058,7 +1077,7 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
       'Unable to render runtime values for the selected release.',
       error instanceof Error ? error.message : String(error)
     );
-    writeInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+    writeWorkflowInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile, options);
     return failure;
   }
 
@@ -1095,7 +1114,7 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
         failure.correctable = true;
         failure.retrySafe = false;
       }
-      writeInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+      writeWorkflowInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile, options);
       return failure;
     }
   }
@@ -1113,7 +1132,7 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
         'Unable to render initial tenant Secret for appliance bootstrap.',
         error instanceof Error ? error.message : String(error)
       );
-      writeInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+      writeWorkflowInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile, options);
       return failure;
     }
   }
@@ -1151,7 +1170,7 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
         'Failed to apply Kubernetes runtime values or release selection.',
         (result.stderr || result.stdout || `exit ${result.status}`).trim()
       );
-      writeInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+      writeWorkflowInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile, options);
       return failure;
     }
   }
@@ -1164,13 +1183,13 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     profile
   };
 
-  writeInstallState({
+  writeWorkflowInstallState({
     status: 'runtime-values-complete',
     phase: 'registry-release-source',
     lastAction: success.message,
     runtimeValues: { profile, releaseVersion },
     updatedAt: nowIso()
-  }, stateFile);
+  }, stateFile, options);
 
   return success;
 }
@@ -1193,7 +1212,7 @@ export function applyFluxSource(inputs, releaseSelection, options = {}) {
       'Release selection did not include a resolved manifest.',
       'resolveChannelMetadata must run (and succeed) before applyFluxSource.'
     );
-    writeInstallState({ status: 'flux-source-blocked', phase: 'flux', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+    writeWorkflowInstallState({ status: 'flux-source-blocked', phase: 'flux', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile, options);
     return failure;
   }
 
@@ -1206,12 +1225,12 @@ export function applyFluxSource(inputs, releaseSelection, options = {}) {
   // an OCI artifact pinned to its digest -- no GitRepository, no branch.
   const manifest = `apiVersion: source.toolkit.fluxcd.io/v1\nkind: OCIRepository\nmetadata:\n  name: ${sourceName}\n  namespace: ${sourceNamespace}\nspec:\n  interval: 1m0s\n  url: ${ociUrl}\n  ref:\n    digest: ${configDigest}\n---\napiVersion: kustomize.toolkit.fluxcd.io/v1\nkind: Kustomization\nmetadata:\n  name: ${sourceName}\n  namespace: ${sourceNamespace}\nspec:\n  interval: 5m0s\n  path: ${fluxPath}\n  prune: true\n  sourceRef:\n    kind: OCIRepository\n    name: ${sourceName}\n`;
 
-  writeInstallState({
+  writeWorkflowInstallState({
     status: 'flux-source-running',
     phase: 'flux',
     lastAction: 'Applying Flux OCIRepository/Kustomization source configuration',
     updatedAt: nowIso()
-  }, stateFile);
+  }, stateFile, options);
 
   const result = spawnSync('sh', ['-c', applyCommand], {
     env: process.env,
@@ -1230,13 +1249,13 @@ export function applyFluxSource(inputs, releaseSelection, options = {}) {
       message
     );
 
-    writeInstallState({
+    writeWorkflowInstallState({
       status: 'flux-source-blocked',
       phase: 'flux',
       lastAction: failure.message,
       failure,
       updatedAt: nowIso()
-    }, stateFile);
+    }, stateFile, options);
 
     return failure;
   }
@@ -1255,13 +1274,13 @@ export function applyFluxSource(inputs, releaseSelection, options = {}) {
     }
   };
 
-  writeInstallState({
+  writeWorkflowInstallState({
     status: 'flux-source-complete',
     phase: 'flux',
     lastAction: success.message,
     fluxSource: success.source,
     updatedAt: nowIso()
-  }, stateFile);
+  }, stateFile, options);
 
   return success;
 }
@@ -1270,12 +1289,12 @@ export function applyReleaseSelectionConfiguration(inputs, releaseSelection, opt
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
   const releaseSelectionFile = options.releaseSelectionFile || DEFAULT_RELEASE_SELECTION_FILE;
 
-  writeInstallState({
+  writeWorkflowInstallState({
     status: 'release-config-running',
     phase: 'registry-release-source',
     lastAction: 'Persisting runtime values and selected release configuration',
     updatedAt: nowIso()
-  }, stateFile);
+  }, stateFile, options);
 
   const payload = {
     updatedAt: nowIso(),
@@ -1300,13 +1319,13 @@ export function applyReleaseSelectionConfiguration(inputs, releaseSelection, opt
       'Unable to persist release selection configuration.',
       error instanceof Error ? error.message : String(error)
     );
-    writeInstallState({
+    writeWorkflowInstallState({
       status: 'release-config-blocked',
       phase: 'registry-release-source',
       lastAction: failure.message,
       failure,
       updatedAt: nowIso()
-    }, stateFile);
+    }, stateFile, options);
     return failure;
   }
 
@@ -1317,7 +1336,7 @@ export function applyReleaseSelectionConfiguration(inputs, releaseSelection, opt
     releaseSelectionFile
   };
 
-  writeInstallState({
+  writeWorkflowInstallState({
     status: 'release-config-complete',
     phase: 'registry-release-source',
     lastAction: success.message,
@@ -1327,7 +1346,7 @@ export function applyReleaseSelectionConfiguration(inputs, releaseSelection, opt
       selectedReleaseVersion: payload.selectedReleaseVersion
     },
     updatedAt: nowIso()
-  }, stateFile);
+  }, stateFile, options);
 
   return success;
 }

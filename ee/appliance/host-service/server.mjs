@@ -15,6 +15,8 @@ import { PodExecManager } from './pod-exec-manager.mjs';
 import { PortForwardManager } from './port-forward-manager.mjs';
 import { ensurePodAccessRbac } from './pod-access-rbac.mjs';
 import { accessError, PodAccessError, requestHasSameOrigin } from './pod-access-common.mjs';
+import { createUpdateCoordinator } from './update-controller.mjs';
+import { DEFAULT_UPDATE_OWNER_MAX_AGE_MS } from './update-ownership.mjs';
 import {
   collectManageStatus,
   applyLicense,
@@ -47,6 +49,7 @@ const releaseSelectionFile = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE |
 const kubeconfigPath = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
 const staticUiDir = process.env.ALGA_APPLIANCE_STATUS_UI_DIR || '/opt/alga-appliance/status-ui/dist';
 const cpUpgradeStatusFile = process.env.ALGA_APPLIANCE_CP_UPGRADE_STATUS_FILE || '/var/lib/alga-appliance/control-plane-upgrade.json';
+const updateHistoryFile = process.env.ALGA_APPLIANCE_UPDATE_HISTORY_FILE || '/var/lib/alga-appliance/update-history.json';
 const hostAgentSocket = process.env.ALGA_APPLIANCE_HOST_AGENT_SOCKET || '/run/alga-appliance/host-agent.sock';
 const STATUS_CACHE_TTL_MS = Number(process.env.ALGA_APPLIANCE_STATUS_CACHE_TTL_MS || 10_000);
 const KUBECTL_REQUEST_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_REQUEST_TIMEOUT_MS || 20_000);
@@ -55,6 +58,12 @@ const KUBECTL_API_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_API_TIM
 const KUBECTL_LOG_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_LOG_TIMEOUT_MS || 60_000);
 const NETWORK_PROBE_TTL_MS = Number(process.env.ALGA_APPLIANCE_NETWORK_PROBE_TTL_MS || 20_000);
 const NETWORK_PROBE_FAILURE_DEBOUNCE = Number(process.env.ALGA_APPLIANCE_NETWORK_PROBE_DEBOUNCE || 2);
+const UPDATE_OWNER_MAX_AGE_MS = Number(
+  process.env.ALGA_APPLIANCE_UPDATE_OWNER_MAX_AGE_MS || DEFAULT_UPDATE_OWNER_MAX_AGE_MS
+);
+if (!Number.isFinite(UPDATE_OWNER_MAX_AGE_MS) || UPDATE_OWNER_MAX_AGE_MS <= 0) {
+  throw new Error('ALGA_APPLIANCE_UPDATE_OWNER_MAX_AGE_MS must be a positive number.');
+}
 const kubectlQueue = createKubectlQueue({ name: 'host-service-kubectl' });
 const podAccessAdapter = createNativeKubernetesAdapter({ kubeconfigPath });
 const podExecManager = new PodExecManager({ adapter: podAccessAdapter });
@@ -177,7 +186,11 @@ const retryStateFile = path.join(path.dirname(stateFile), 'auto-retry-state.json
 let reconcileRunning = false;
 
 function installStateBlocked(state) {
-  return Boolean(state?.failure) && state.failure.retrySafe !== false && String(state.status || '').includes('blocked');
+  const isAppUpdate = state?.update?.scope === 'application-only';
+  return !isAppUpdate
+    && Boolean(state?.failure)
+    && state.failure.retrySafe !== false
+    && String(state.status || '').includes('blocked');
 }
 
 function installStateRunning(state) {
@@ -557,17 +570,19 @@ function queueSetupWorkflow() {
 // enough for the pod's liveness probe to kill the control plane mid-update
 // (alga0002202). The child writes install-state as it goes, so the Manage UI's
 // /api/manage/status polling keeps working while the update runs.
-function queueUpdateWorkflow(channel) {
+function queueUpdateWorkflow(channel, startedAt) {
   if (process.env.ALGA_APPLIANCE_DISABLE_UPDATE_QUEUE === '1') {
-    return;
+    throw new Error('App update queue is disabled.');
   }
 
   const child = spawn(process.execPath, [
     new URL('./update-engine.mjs', import.meta.url).pathname,
     'run',
     '--channel', channel,
+    '--started-at', startedAt,
     '--state-file', stateFile,
     '--release-selection-file', releaseSelectionFile,
+    '--update-history-file', updateHistoryFile,
     '--kubeconfig', kubeconfigPath
   ], {
     detached: true,
@@ -575,7 +590,16 @@ function queueUpdateWorkflow(channel) {
     env: process.env
   });
   child.unref();
+  return child.pid;
 }
+
+const updateCoordinator = createUpdateCoordinator({
+  stateFile,
+  historyFile: updateHistoryFile,
+  maxAgeMs: UPDATE_OWNER_MAX_AGE_MS,
+  spawnUpdate: queueUpdateWorkflow
+});
+updateCoordinator.reconcile();
 
 function shellQuote(value) {
   return `'${String(value).replaceAll("'", "'\\''")}'`;
@@ -1316,19 +1340,16 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // Record the queued update before spawning so the Manage UI's very next
-    // status poll already reflects it, then hand off to the detached child.
-    fs.mkdirSync(path.dirname(stateFile), { recursive: true, mode: 0o750 });
-    fs.writeFileSync(stateFile, `${JSON.stringify({
-      status: 'update-queued',
-      phase: 'registry-release-source',
-      lastAction: `Update to ${channel} queued; background workflow is starting`,
-      updatedAt: new Date().toISOString(),
-      update: { requestedChannel: channel, scope: 'application-only' }
-    }, null, 2)}\n`, { mode: 0o600 });
-    queueUpdateWorkflow(channel);
-    res.writeHead(202, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, started: true }));
+    try {
+      const result = updateCoordinator.start(channel);
+      jsonResponse(res, result.status, result.body);
+    } catch (error) {
+      jsonResponse(res, 500, {
+        error: error instanceof Error ? error.message : 'Failed to start app update.',
+        code: 'update_start_failed',
+        retryable: true
+      });
+    }
     return;
   }
 
