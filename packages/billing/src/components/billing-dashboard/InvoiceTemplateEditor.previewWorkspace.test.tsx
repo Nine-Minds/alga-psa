@@ -220,7 +220,8 @@ const installLocalStorageMock = () => {
 const waitForTemplateHydration = async () => {
   await waitFor(() => {
     const state = useInvoiceDesignerStore.getState();
-    expect(state.nodesById[state.rootId]?.props.metadata?.__astImported).toBe(true);
+    const metadata = state.nodesById[state.rootId]?.props.metadata as Record<string, unknown> | undefined;
+    expect(metadata?.__astImported).toBe(true);
   });
 };
 
