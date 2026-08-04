@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
-import baseKnexConfig from '@/lib/db/knexfile';
+import { knexConfig as baseKnexConfig } from '@alga-psa/db';
 
 export const STORAGE_NAMESPACE = 'settings';
 

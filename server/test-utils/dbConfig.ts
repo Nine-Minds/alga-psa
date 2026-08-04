@@ -71,11 +71,18 @@ export async function createTestDbConnection(
 
   await recreateDatabase(databaseName, dbHost, dbPort, adminUser, adminPassword, appUser, appPassword);
 
-  process.env.DB_HOST = dbHost;
-  process.env.DB_PORT = String(dbPort);
-  process.env.DB_NAME_SERVER = databaseName;
-  process.env.DB_USER_SERVER = appUser;
-  process.env.DB_USER_ADMIN = adminUser;
+  // Point the app's connection layers (tenant/admin pools read DB_* env at
+  // call time) at the suite database — but only for the standard one. Scratch
+  // databases (custom databaseName) are used via the returned handle only;
+  // the suite runs singleFork, so mutating global env for them would leak the
+  // scratch name into later files and send their queries to the wrong DB.
+  if (databaseName === TEST_DB_NAME) {
+    process.env.DB_HOST = dbHost;
+    process.env.DB_PORT = String(dbPort);
+    process.env.DB_NAME_SERVER = databaseName;
+    process.env.DB_USER_SERVER = appUser;
+    process.env.DB_USER_ADMIN = adminUser;
+  }
 
   const adminKnex = knex({
     client: 'pg',
