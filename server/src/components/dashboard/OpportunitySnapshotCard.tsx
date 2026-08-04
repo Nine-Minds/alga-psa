@@ -44,6 +44,8 @@ export default function OpportunitySnapshotCard() {
 
   if (loadingFlag || !enabled) return null;
 
+  const currencies = new Set((snapshot?.pipeline_by_stage ?? []).map((row) => row.currency_code));
+
   return (
     <section
       id="opportunity-dashboard-snapshot"
@@ -123,6 +125,12 @@ export default function OpportunitySnapshotCard() {
                           OPPORTUNITY_STAGE_LABELS[row.stage].key,
                           OPPORTUNITY_STAGE_LABELS[row.stage].fallback,
                         )}
+                        {/* A stage can appear once per currency; say which one. */}
+                        {currencies.size > 1 ? (
+                          <span className="ml-1.5 text-[11px] font-normal text-[rgb(var(--color-text-400))]">
+                            {row.currency_code}
+                          </span>
+                        ) : null}
                       </p>
                       <p className="text-xs text-[rgb(var(--color-text-500))]">
                         {t(
