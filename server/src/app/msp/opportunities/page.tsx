@@ -70,7 +70,7 @@ export default async function OpportunitiesPage() {
   const eeTabs = managementAvailable
     ? [
         { id: 'meeting', label: t('opportunities.tabs.meeting', 'Meeting'), content: <OpportunityMeetingMode /> },
-        { id: 'forecast', label: t('opportunities.tabs.forecast', 'Forecast'), content: <OpportunityForecastView currencyCode={queue.currency_code} /> },
+        { id: 'forecast', label: t('opportunities.tabs.forecast', 'Forecast'), content: <OpportunityForecastView /> },
       ]
     : [];
 

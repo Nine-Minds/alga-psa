@@ -357,6 +357,8 @@
       "renewal": "Renouvellement"
     },
     "valuesDialog": {
+      "currency": "Devise",
+      "currencyFixed": "Devise : {{code}}",
       "hardware": "Matériel",
       "mrr": "Récurrent (mensuel)",
       "note": "Ce sont vos estimations. Un devis accepté les remplace par les chiffres réels.",

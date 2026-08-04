@@ -357,6 +357,8 @@
       "renewal": "Renewal"
     },
     "valuesDialog": {
+      "currency": "Currency",
+      "currencyFixed": "Currency: {{code}}",
       "hardware": "Hardware",
       "mrr": "Recurring (monthly)",
       "note": "These are your estimates. An accepted quote replaces them with the real numbers.",

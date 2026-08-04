@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import type { IClient } from '@alga-psa/types';
 import { CreateOpportunityDialog, type CreateOpportunityInput } from '@alga-psa/opportunities/components';
-import { createOpportunity, getClientDefaultCurrency } from '@alga-psa/opportunities/actions';
+import { createOpportunity } from '@alga-psa/opportunities/actions';
 import { getAllClients } from '@alga-psa/clients/actions/queryActions';
 import { QuickAddClient } from '@alga-psa/clients/components';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -39,8 +39,7 @@ export default function CreateOpportunityRouteClient({ closeMode }: CreateOpport
   }, [t]);
 
   const handleSubmit = async (input: CreateOpportunityInput) => {
-    const currency = await getClientDefaultCurrency(input.client_id);
-    const created = await createOpportunity({ ...input, currency_code: currency });
+    const created = await createOpportunity(input);
     toast.success(
       t('quickCreate.success.opportunity', {
         defaultValue: 'Opportunity "{{title}}" created successfully',

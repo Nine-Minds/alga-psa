@@ -357,6 +357,8 @@
       "renewal": "Verlenging"
     },
     "valuesDialog": {
+      "currency": "Valuta",
+      "currencyFixed": "Valuta: {{code}}",
       "hardware": "Hardware",
       "mrr": "Terugkerend (maandelijks)",
       "note": "Dit zijn jouw schattingen. Een geaccepteerde offerte vervangt ze door de echte cijfers.",

@@ -415,11 +415,17 @@ export interface IForecastDealContribution {
   ceiling_nrr_cents: number;
 }
 
-export interface IForecastBand {
+export interface IForecastCurrencyBand {
+  currency_code: string;
   floor_mrr_cents: number;
   floor_nrr_cents: number;
   ceiling_mrr_cents: number;
   ceiling_nrr_cents: number;
+}
+
+/** One band per currency: cents of different currencies are never added together. */
+export interface IForecastBand {
+  by_currency: IForecastCurrencyBand[];
   composition: IForecastDealContribution[];
 }
 
@@ -515,11 +521,13 @@ export interface IOpportunityQbrYieldRow {
   opportunities_won: number;
 }
 
+/** One row per owner and currency — cents of different currencies never mix. */
 export interface ISellerOpportunityRollup {
   owner_id: string;
   owner_name: string;
   office_id: null;
   office_name: null;
+  currency_code: string;
   open_mrr_cents: number;
   open_nrr_cents: number;
   won_count: number;

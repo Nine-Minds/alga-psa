@@ -34,9 +34,15 @@ describe('create dialog quick capture', () => {
     expect(dialog).toContain('useState<Date | undefined>(() => defaultDueDate())');
   });
 
-  it('offers the dollar estimate in the same form', () => {
-    expect(dialog).toContain('id="opportunity-create-mrr"');
-    expect(dialog).toContain('id="opportunity-create-nrr"');
-    expect(dialog).toContain('id="opportunity-create-hardware"');
+  it('offers the dollar estimate in the same form, through the shared value fields', () => {
+    expect(dialog).toContain('<OpportunityValueFields');
+    expect(dialog).toContain('idPrefix="opportunity-create"');
+    expect(dialog).toContain('amountsToCents(amounts, currencyCode)');
+  });
+
+  it('lets the user see and choose the currency instead of inheriting it silently', () => {
+    expect(dialog).toContain('onCurrencyChange={(code) => {');
+    expect(dialog).toContain('setCurrencyTouched(true);');
+    expect(dialog).toContain('currency_code: currencyCode,');
   });
 });

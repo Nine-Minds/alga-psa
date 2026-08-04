@@ -357,6 +357,8 @@
       "renewal": "55555"
     },
     "valuesDialog": {
+      "currency": "55555",
+      "currencyFixed": "55555 {{code}}",
       "hardware": "55555",
       "mrr": "55555",
       "note": "55555",

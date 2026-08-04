@@ -357,6 +357,8 @@
       "renewal": "Renovação"
     },
     "valuesDialog": {
+      "currency": "Moeda",
+      "currencyFixed": "Moeda: {{code}}",
       "hardware": "Hardware",
       "mrr": "Recorrente (mensalmente)",
       "note": "Estas são suas estimativas. Uma cotação aceita os substitui pelos números reais.",

@@ -357,6 +357,8 @@
       "renewal": "Renovación"
     },
     "valuesDialog": {
+      "currency": "Moneda",
+      "currencyFixed": "Moneda: {{code}}",
       "hardware": "Ferretería",
       "mrr": "Recurrente (mensual)",
       "note": "Estas son tus estimaciones. Una cotización aceptada los reemplaza por los números reales.",

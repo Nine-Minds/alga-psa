@@ -357,6 +357,8 @@
       "renewal": "Erneuerung"
     },
     "valuesDialog": {
+      "currency": "Währung",
+      "currencyFixed": "Währung: {{code}}",
       "hardware": "Hardware",
       "mrr": "Wiederkehrend (monatlich)",
       "note": "Dies sind Ihre Schätzungen. Ein akzeptiertes Zitat ersetzt sie durch die reellen Zahlen.",

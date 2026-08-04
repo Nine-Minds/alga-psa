@@ -363,6 +363,8 @@
       "renewal": "Odnowienie"
     },
     "valuesDialog": {
+      "currency": "Waluta",
+      "currencyFixed": "Waluta: {{code}}",
       "hardware": "Sprzęt",
       "mrr": "Cykliczne (co miesiąc)",
       "note": "To są Twoje szacunki. Przyjęty cytat zastępuje je liczbami rzeczywistymi.",

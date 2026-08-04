@@ -23,7 +23,7 @@ function quarterPeriod(): { start: string; end: string } {
  * the ceiling is evidence-weighted — calibrated per seller once their
  * history has earned it.
  */
-export function OpportunityForecastView({ currencyCode }: { currencyCode: string }) {
+export function OpportunityForecastView() {
   const { t } = useTranslation('msp/opportunities');
   const [band, setBand] = useState<IForecastBand | null>(null);
 
@@ -41,7 +41,7 @@ export function OpportunityForecastView({ currencyCode }: { currencyCode: string
 
   if (!band) return <Skeleton className="h-56 w-full" />;
 
-  const fmt = (cents: number) => formatCurrencyFromMinorUnits(cents, undefined, currencyCode);
+  const fmt = (cents: number, currency: string) => formatCurrencyFromMinorUnits(cents, undefined, currency);
 
   const columns: ColumnDefinition<IForecastDealContribution>[] = [
     {
@@ -79,7 +79,7 @@ export function OpportunityForecastView({ currencyCode }: { currencyCode: string
       dataIndex: 'floor_mrr_cents',
       render: (_v, r) => (
         <span className="block text-right tabular-nums">
-          {fmt(r.floor_mrr_cents)}{t('opportunities.perMonthSuffix', '/mo')}
+          {fmt(r.floor_mrr_cents, r.currency_code)}{t('opportunities.perMonthSuffix', '/mo')}
         </span>
       ),
     },
@@ -87,36 +87,49 @@ export function OpportunityForecastView({ currencyCode }: { currencyCode: string
 
   return (
     <div id="opportunities-forecast" className="mx-auto w-full max-w-3xl space-y-5">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-white p-4">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
-            {t('opportunities.forecast.floor', 'Floor — signed and verbal')}
-          </div>
-          <div className="mt-1 text-2xl font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
-            {fmt(band.floor_mrr_cents)}
-            <span className="text-sm font-medium text-[rgb(var(--color-text-400))]">
-              {t('opportunities.perMonthSuffix', '/mo')}
-            </span>
-          </div>
-          <div className="text-sm tabular-nums text-[rgb(var(--color-text-500))]">
-            {t('opportunities.forecast.plusOneTime', '+ {{amount}} one-time', { amount: fmt(band.floor_nrr_cents) })}
+      {band.by_currency.map((currencyBand) => (
+        <div key={currencyBand.currency_code} className="space-y-2">
+          {band.by_currency.length > 1 ? (
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
+              {currencyBand.currency_code}
+            </div>
+          ) : null}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-white p-4">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
+                {t('opportunities.forecast.floor', 'Floor — signed and verbal')}
+              </div>
+              <div className="mt-1 text-2xl font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
+                {fmt(currencyBand.floor_mrr_cents, currencyBand.currency_code)}
+                <span className="text-sm font-medium text-[rgb(var(--color-text-400))]">
+                  {t('opportunities.perMonthSuffix', '/mo')}
+                </span>
+              </div>
+              <div className="text-sm tabular-nums text-[rgb(var(--color-text-500))]">
+                {t('opportunities.forecast.plusOneTime', '+ {{amount}} one-time', {
+                  amount: fmt(currencyBand.floor_nrr_cents, currencyBand.currency_code),
+                })}
+              </div>
+            </div>
+            <div className="rounded-xl border border-[rgb(var(--color-primary-200))] bg-[rgb(var(--color-primary-50))] p-4">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-primary-600))]">
+                {t('opportunities.forecast.ceiling', 'Ceiling — evidence-weighted')}
+              </div>
+              <div className="mt-1 text-2xl font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
+                {fmt(currencyBand.ceiling_mrr_cents, currencyBand.currency_code)}
+                <span className="text-sm font-medium text-[rgb(var(--color-text-400))]">
+                  {t('opportunities.perMonthSuffix', '/mo')}
+                </span>
+              </div>
+              <div className="text-sm tabular-nums text-[rgb(var(--color-text-500))]">
+                {t('opportunities.forecast.plusOneTime', '+ {{amount}} one-time', {
+                  amount: fmt(currencyBand.ceiling_nrr_cents, currencyBand.currency_code),
+                })}
+              </div>
+            </div>
           </div>
         </div>
-        <div className="rounded-xl border border-[rgb(var(--color-primary-200))] bg-[rgb(var(--color-primary-50))] p-4">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-primary-600))]">
-            {t('opportunities.forecast.ceiling', 'Ceiling — evidence-weighted')}
-          </div>
-          <div className="mt-1 text-2xl font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
-            {fmt(band.ceiling_mrr_cents)}
-            <span className="text-sm font-medium text-[rgb(var(--color-text-400))]">
-              {t('opportunities.perMonthSuffix', '/mo')}
-            </span>
-          </div>
-          <div className="text-sm tabular-nums text-[rgb(var(--color-text-500))]">
-            {t('opportunities.forecast.plusOneTime', '+ {{amount}} one-time', { amount: fmt(band.ceiling_nrr_cents) })}
-          </div>
-        </div>
-      </div>
+      ))}
       <p className="text-[12px] text-[rgb(var(--color-text-400))]">
         {t(
           'opportunities.forecast.note',

@@ -7,7 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ClientLifecycleStatus, IOpportunityListItem } from '@alga-psa/types';
-import { createOpportunity, getClientDefaultCurrency, listOpportunities } from '../actions';
+import { createOpportunity, listOpportunities } from '../actions';
 import { PipelineList } from './pipeline/PipelineList';
 import { CreateOpportunityDialog, type CreateOpportunityInput } from './dialogs/CreateOpportunityDialog';
 
@@ -61,8 +61,7 @@ export function ClientOpportunitiesTab({
 
   const handleCreate = async (input: CreateOpportunityInput) => {
     try {
-      const currency = await getClientDefaultCurrency(clientId);
-      const created = await createOpportunity({ ...input, currency_code: currency });
+      const created = await createOpportunity(input);
       toast.success(t('opportunities.toast.created', 'Opportunity created'));
       openDeal((created as { opportunity_id: string }).opportunity_id);
     } catch (err) {

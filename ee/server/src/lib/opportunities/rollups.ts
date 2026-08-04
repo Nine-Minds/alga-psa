@@ -18,7 +18,7 @@ export async function getSellerRollupsData(
     db.table('opportunities')
       .where({ status: 'open' })
       .whereBetween('expected_close_date', [period.start, period.end])
-      .select('owner_id', 'mrr_cents', 'nrr_cents', 'hardware_cents'),
+      .select('owner_id', 'currency_code', 'mrr_cents', 'nrr_cents', 'hardware_cents'),
     db.table('opportunities')
       .whereIn('status', ['won', 'lost'])
       .andWhere((builder) => {
@@ -39,6 +39,7 @@ export async function getSellerRollupsData(
         'opportunity_type',
         'client_id',
         'won_at',
+        'currency_code',
         'mrr_cents',
         'nrr_cents',
         'hardware_cents',
@@ -71,32 +72,43 @@ export async function getSellerRollupsData(
     )) ? [deal.opportunity_id] : [];
   }));
 
-  return ownerIds.map((ownerId) => {
+  const sum = (rows: any[], field: 'mrr_cents' | 'nrr_cents') => rows.reduce(
+    // NRR always carries hardware with it — the same one-time definition the
+    // pipeline table and the dashboard snapshot use.
+    (total, row) => total + Number(row[field] ?? 0) + (field === 'nrr_cents' ? Number(row.hardware_cents ?? 0) : 0),
+    0,
+  );
+
+  // A seller working two currencies gets one row per currency: summing them
+  // would invent money that does not exist in either.
+  return ownerIds.flatMap((ownerId) => {
     const ownerOpen = open.filter((row) => String(row.owner_id) === ownerId);
-    const won = closed.filter((row) => String(row.owner_id) === ownerId && row.status === 'won');
-    const lost = closed.filter((row) => String(row.owner_id) === ownerId && row.status === 'lost');
-    const ownerNewLogos = won.filter((row) => row.opportunity_type === 'new_logo');
-    const ownerAttached = ownerNewLogos.filter((row) => attachedOpportunityIds.has(row.opportunity_id));
-    const sum = (rows: any[], field: 'mrr_cents' | 'nrr_cents') => rows.reduce(
-      // NRR always carries hardware with it — the same one-time definition the
-      // pipeline table and the dashboard snapshot use.
-      (total, row) => total + Number(row[field] ?? 0) + (field === 'nrr_cents' ? Number(row.hardware_cents ?? 0) : 0),
-      0,
-    );
-    return {
-      owner_id: ownerId,
-      owner_name: names.get(ownerId) ?? ownerId,
-      office_id: null,
-      office_name: null,
-      open_mrr_cents: sum(ownerOpen, 'mrr_cents'),
-      open_nrr_cents: sum(ownerOpen, 'nrr_cents'),
-      won_count: won.length,
-      won_mrr_cents: sum(won, 'mrr_cents'),
-      won_nrr_cents: sum(won, 'nrr_cents'),
-      lost_count: lost.length,
-      lost_mrr_cents: sum(lost, 'mrr_cents'),
-      lost_nrr_cents: sum(lost, 'nrr_cents'),
-      attach_rate: ownerNewLogos.length ? ownerAttached.length / ownerNewLogos.length : 0,
-    };
+    const ownerClosed = closed.filter((row) => String(row.owner_id) === ownerId);
+    const currencies = [...new Set([...ownerOpen, ...ownerClosed].map((row) => String(row.currency_code)))];
+    return currencies.map((currency) => {
+      const inCurrency = <T extends { currency_code?: unknown }>(rows: T[]) =>
+        rows.filter((row) => String(row.currency_code) === currency);
+      const currencyOpen = inCurrency(ownerOpen);
+      const won = inCurrency(ownerClosed).filter((row) => row.status === 'won');
+      const lost = inCurrency(ownerClosed).filter((row) => row.status === 'lost');
+      const ownerNewLogos = won.filter((row) => row.opportunity_type === 'new_logo');
+      const ownerAttached = ownerNewLogos.filter((row) => attachedOpportunityIds.has(row.opportunity_id));
+      return {
+        owner_id: ownerId,
+        owner_name: names.get(ownerId) ?? ownerId,
+        office_id: null,
+        office_name: null,
+        currency_code: currency,
+        open_mrr_cents: sum(currencyOpen, 'mrr_cents'),
+        open_nrr_cents: sum(currencyOpen, 'nrr_cents'),
+        won_count: won.length,
+        won_mrr_cents: sum(won, 'mrr_cents'),
+        won_nrr_cents: sum(won, 'nrr_cents'),
+        lost_count: lost.length,
+        lost_mrr_cents: sum(lost, 'mrr_cents'),
+        lost_nrr_cents: sum(lost, 'nrr_cents'),
+        attach_rate: ownerNewLogos.length ? ownerAttached.length / ownerNewLogos.length : 0,
+      };
+    });
   });
 }
