@@ -51,11 +51,20 @@ export interface EmailSettingsValidation {
   settings?: TenantEmailSettings;
 }
 
+interface TenantProviderSnapshot {
+  emailProvider: IEmailProvider | null;
+  providerInitError: string | null;
+  fromAddress: EmailAddress;
+}
+
 export class TenantEmailService extends BaseEmailService {
   private static instances: Map<string, TenantEmailService> = new Map();
   private tenantId: string;
   private providerManager: EmailProviderManager | null = null;
   private tenantSettings: TenantEmailSettings | null = null;
+  private tenantSettingsLoaded = false;
+  private providerSettingsFingerprint: string | null = null;
+  private providerStateQueue: Promise<void> = Promise.resolve();
 
   private constructor(tenantId: string) {
     super();
@@ -70,6 +79,24 @@ export class TenantEmailService extends BaseEmailService {
       TenantEmailService.instances.set(tenantId, new TenantEmailService(tenantId));
     }
     return TenantEmailService.instances.get(tenantId)!;
+  }
+
+  /**
+   * Clear one tenant's process-local provider state after an email settings
+   * save. The instance itself is reset before it is evicted so callers holding
+   * an older reference cannot continue using the prior credentials.
+   */
+  public static async invalidateTenantSettings(tenantId: string): Promise<void> {
+    const instance = TenantEmailService.instances.get(tenantId);
+    if (!instance) return;
+
+    await instance.withProviderStateLock(async () => {
+      instance.resetProviderState();
+    });
+
+    if (TenantEmailService.instances.get(tenantId) === instance) {
+      TenantEmailService.instances.delete(tenantId);
+    }
   }
 
   protected getServiceName(): string {
@@ -166,7 +193,21 @@ export class TenantEmailService extends BaseEmailService {
       };
     }
 
-    return super.sendEmail({ ...params, resolvedTenantCompanyName });
+    // Settings actions invalidate this cache in-process for an immediate
+    // refresh. The database check on every actual send also covers saves made
+    // by another server process and direct settings updates outside that action.
+    const providerSnapshot = await this.refreshProviderState(
+      suspensionKnex,
+      resolvedTenantCompanyName
+    );
+
+    return super.sendEmail({
+      ...params,
+      resolvedTenantCompanyName,
+      resolvedTenantFromAddress: providerSnapshot.fromAddress,
+      resolvedEmailProvider: providerSnapshot.emailProvider,
+      resolvedProviderInitError: providerSnapshot.providerInitError,
+    });
   }
 
   /**
@@ -208,10 +249,16 @@ export class TenantEmailService extends BaseEmailService {
 
   protected async getEmailProvider(): Promise<IEmailProvider | null> {
     if (!this.providerManager) {
-      let settings: TenantEmailSettings | null = null;
+      let settings: TenantEmailSettings | null = this.tenantSettingsLoaded
+        ? this.tenantSettings
+        : null;
       try {
-        const knex = await getConnection(this.tenantId);
-        settings = await TenantEmailService.getTenantEmailSettings(this.tenantId, knex);
+        if (!this.tenantSettingsLoaded) {
+          const knex = await getConnection(this.tenantId);
+          settings = await TenantEmailService.getTenantEmailSettings(this.tenantId, knex);
+          this.tenantSettings = settings;
+          this.tenantSettingsLoaded = true;
+        }
 
         if (settings) {
           this.providerManager = new EmailProviderManager();
@@ -279,7 +326,8 @@ export class TenantEmailService extends BaseEmailService {
   protected getFromAddress(params?: BaseEmailParams): EmailAddress | string {
     const resolved = params?.from
       ? params.from as EmailAddress | string
-      : this.buildTenantFromAddress(params?.resolvedTenantCompanyName);
+      : params?.resolvedTenantFromAddress
+        ?? this.buildTenantFromAddress(params?.resolvedTenantCompanyName);
     return applyFromNameOverride(resolved, params?.fromName);
   }
   /**
@@ -291,15 +339,7 @@ export class TenantEmailService extends BaseEmailService {
     knex: Knex | Knex.Transaction
   ): Promise<TenantEmailSettings | null> {
     try {
-      const settings = await tenantDb(knex, tenantId).table('tenant_email_settings')
-        .first();
-      
-      if (!settings) {
-        logger.warn(`[TenantEmailService] No email settings found for tenant ${tenantId}`);
-        return null;
-      }
-      
-      return TenantEmailService.normalizeSettingsRecord(tenantId, settings);
+      return await TenantEmailService.loadTenantEmailSettings(tenantId, knex);
     } catch (error) {
       logger.error(`[TenantEmailService] Error fetching tenant email settings:`, error);
       return null;
@@ -382,7 +422,6 @@ export class TenantEmailService extends BaseEmailService {
   static async sendEmail(params: SendEmailParams): Promise<EmailSendResult> {
     const { tenantId } = params;
     const service = TenantEmailService.getInstance(tenantId);
-    await service.initialize();
     
     // Convert params to BaseEmailParams format
     const baseParams: BaseEmailParams = {
@@ -530,6 +569,92 @@ export class TenantEmailService extends BaseEmailService {
 
   private buildTenantFromAddress(tenantCompanyName?: string | null): EmailAddress {
     return TenantEmailService.getDefaultFromAddress(this.tenantSettings, tenantCompanyName);
+  }
+
+  private async withProviderStateLock<T>(operation: () => Promise<T>): Promise<T> {
+    const previous = this.providerStateQueue;
+    let release!: () => void;
+    this.providerStateQueue = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      release();
+    }
+  }
+
+  private async refreshProviderState(
+    knex: Knex | Knex.Transaction,
+    tenantCompanyName?: string | null
+  ): Promise<TenantProviderSnapshot> {
+    return this.withProviderStateLock(async () => {
+      // Unlike the public compatibility helper, this strict read does not turn
+      // a transient database error into "no settings" and accidentally replace
+      // a working tenant provider with the system fallback.
+      const settings = await TenantEmailService.loadTenantEmailSettings(this.tenantId, knex);
+      const fingerprint = TenantEmailService.getProviderSettingsFingerprint(settings);
+
+      if (this.initialized && fingerprint === this.providerSettingsFingerprint) {
+        // Retain the freshly-normalized object even when its provider-relevant
+        // values are unchanged so From resolution never depends on old state.
+        this.tenantSettings = settings;
+        this.tenantSettingsLoaded = true;
+        return {
+          emailProvider: this.emailProvider,
+          providerInitError: this.providerInitError,
+          fromAddress: this.buildTenantFromAddress(tenantCompanyName),
+        };
+      }
+
+      this.resetProviderState();
+      this.tenantSettings = settings;
+      this.tenantSettingsLoaded = true;
+      await this.initialize();
+      this.providerSettingsFingerprint = fingerprint;
+      return {
+        emailProvider: this.emailProvider,
+        providerInitError: this.providerInitError,
+        fromAddress: this.buildTenantFromAddress(tenantCompanyName),
+      };
+    });
+  }
+
+  private resetProviderState(): void {
+    this.initialized = false;
+    this.emailProvider = null;
+    this.providerInitError = null;
+    this.providerManager = null;
+    this.tenantSettings = null;
+    this.tenantSettingsLoaded = false;
+    this.providerSettingsFingerprint = null;
+  }
+
+  private static getProviderSettingsFingerprint(settings: TenantEmailSettings | null): string {
+    if (!settings) return 'no-settings';
+
+    return JSON.stringify({
+      defaultFromDomain: settings.defaultFromDomain ?? null,
+      emailProvider: settings.emailProvider,
+      providerConfigs: settings.providerConfigs,
+    });
+  }
+
+  private static async loadTenantEmailSettings(
+    tenantId: string,
+    knex: Knex | Knex.Transaction
+  ): Promise<TenantEmailSettings | null> {
+    const settings = await tenantDb(knex, tenantId).table('tenant_email_settings')
+      .first();
+
+    if (!settings) {
+      logger.warn(`[TenantEmailService] No email settings found for tenant ${tenantId}`);
+      return null;
+    }
+
+    return TenantEmailService.normalizeSettingsRecord(tenantId, settings);
   }
 
   /**

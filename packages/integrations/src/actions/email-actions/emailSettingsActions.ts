@@ -316,6 +316,11 @@ export const updateEmailSettings = withAuth(async (
         });
     }
 
+    // Refresh any process-local singleton immediately. TenantEmailService also
+    // checks persisted settings before every send, covering other processes and
+    // direct database updates without broad/global cache invalidation.
+    await TenantEmailService.invalidateTenantSettings(tenant || '');
+
     // Re-fetch and return updated settings
     const updatedSettings = await getEmailSettings();
     if (isActionMessageError(updatedSettings)) {

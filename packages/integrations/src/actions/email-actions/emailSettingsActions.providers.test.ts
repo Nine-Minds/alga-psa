@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EmailProviderConfig, TenantEmailSettings } from '@alga-psa/types';
 
-const { createTenantKnexMock, getTenantEmailSettingsMock } = vi.hoisted(() => ({
+const { createTenantKnexMock, getTenantEmailSettingsMock, invalidateTenantSettingsMock } = vi.hoisted(() => ({
   createTenantKnexMock: vi.fn(),
   getTenantEmailSettingsMock: vi.fn(),
+  invalidateTenantSettingsMock: vi.fn(),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -21,6 +22,7 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/email', () => ({
   TenantEmailService: {
     getTenantEmailSettings: getTenantEmailSettingsMock,
+    invalidateTenantSettings: invalidateTenantSettingsMock,
   },
   resolveTenantCompanyName: vi.fn(async () => 'Example MSP'),
   resolveDefaultFromAddress: vi.fn((settings: TenantEmailSettings, companyName: string) => ({
@@ -64,6 +66,8 @@ describe('email settings provider invariants', () => {
   beforeEach(() => {
     createTenantKnexMock.mockReset();
     getTenantEmailSettingsMock.mockReset();
+    invalidateTenantSettingsMock.mockReset();
+    invalidateTenantSettingsMock.mockResolvedValue(undefined);
     createTenantKnexMock.mockResolvedValue({ knex: vi.fn() });
   });
 
@@ -190,6 +194,7 @@ describe('email settings provider invariants', () => {
     });
 
     expect(updateMock).toHaveBeenCalledOnce();
+    expect(invalidateTenantSettingsMock).toHaveBeenCalledWith('tenant-123');
     const persistedPayload = updateMock.mock.calls[0]?.[0];
     expect(persistedPayload).toBeDefined();
     const persisted = JSON.parse(persistedPayload?.provider_configs as string);
