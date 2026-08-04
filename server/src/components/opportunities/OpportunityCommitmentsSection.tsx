@@ -101,7 +101,7 @@ export function OpportunityCommitmentsSection({ detail }: { detail: IOpportunity
       <p className="mb-3 text-[12px] text-[rgb(var(--color-text-400))]">
         {t(
           'opportunities.commitments.help',
-          'Write down every promise as it leaves your mouth. Each one resolves to a quote line or gets declined before the deal closes.'
+          'Record every promise you make to the client. Each one becomes a quote line or is declined before the deal closes.'
         )}
       </p>
 

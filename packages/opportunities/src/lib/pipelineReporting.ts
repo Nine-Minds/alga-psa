@@ -64,11 +64,23 @@ export interface ClosedReportRow {
   one_time_cents: number;
 }
 
+/** The open pipeline broken out by stage, so a total can be opened up. */
+export interface IOpportunityPipelineReportStage {
+  stage: Exclude<OpportunityStage, 'won' | 'lost'>;
+  opportunity_count: number;
+  mrr_cents: number;
+  one_time_cents: number;
+  weighted_mrr_cents: number;
+  /** The base close rate applied, shown so the weighting is not a black box. */
+  rate: number;
+}
+
 export interface IOpportunityPipelineReportCurrency {
   currency_code: string;
   open_count: number;
   open_mrr_cents: number;
   open_one_time_cents: number;
+  by_stage: IOpportunityPipelineReportStage[];
   /** Base-rate weighted pipeline — the "if history repeats" number. */
   weighted_mrr_cents: number;
   weighted_one_time_cents: number;
@@ -100,6 +112,7 @@ export function summarizePipelineReport(
       open_count: 0,
       open_mrr_cents: 0,
       open_one_time_cents: 0,
+      by_stage: [],
       weighted_mrr_cents: 0,
       weighted_one_time_cents: 0,
       closing_30d_count: 0,
@@ -121,6 +134,22 @@ export function summarizePipelineReport(
     target.open_one_time_cents += row.one_time_cents;
     target.weighted_mrr_cents += Math.round(row.mrr_cents * rate);
     target.weighted_one_time_cents += Math.round(row.one_time_cents * rate);
+    if (row.stage !== 'won' && row.stage !== 'lost') {
+      const stageRow = target.by_stage.find((entry) => entry.stage === row.stage);
+      const into = stageRow ?? {
+        stage: row.stage,
+        opportunity_count: 0,
+        mrr_cents: 0,
+        one_time_cents: 0,
+        weighted_mrr_cents: 0,
+        rate,
+      };
+      into.opportunity_count += row.opportunity_count;
+      into.mrr_cents += row.mrr_cents;
+      into.one_time_cents += row.one_time_cents;
+      into.weighted_mrr_cents += Math.round(row.mrr_cents * rate);
+      if (!stageRow) target.by_stage.push(into);
+    }
     if (row.expected_close_date) {
       const close = new Date(row.expected_close_date);
       if (!Number.isNaN(close.getTime()) && close >= now && close <= horizon) {
@@ -138,6 +167,12 @@ export function summarizePipelineReport(
     target.won_quarter_one_time_cents += row.one_time_cents;
   }
 
+  const stageOrder: Array<Exclude<OpportunityStage, 'won' | 'lost'>> = [
+    'identified', 'qualified', 'assessment', 'proposed', 'verbal',
+  ];
+  for (const entry of byCurrency.values()) {
+    entry.by_stage.sort((a, b) => stageOrder.indexOf(a.stage) - stageOrder.indexOf(b.stage));
+  }
   return [...byCurrency.values()].sort((a, b) => b.open_mrr_cents - a.open_mrr_cents);
 }
 

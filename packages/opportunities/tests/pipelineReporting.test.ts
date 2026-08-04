@@ -123,6 +123,47 @@ describe('pipeline report summary', () => {
   });
 });
 
+describe('pipeline report stage breakdown', () => {
+  it('breaks the open pipeline out per stage, in pipeline order, per currency', () => {
+    const now = new Date('2026-08-03T12:00:00.000Z');
+    const [usd] = summarizePipelineReport(
+      [
+        { stage: 'verbal', currency_code: 'USD', opportunity_count: 1, mrr_cents: 100000, one_time_cents: 5000 },
+        { stage: 'qualified', currency_code: 'USD', opportunity_count: 1, mrr_cents: 20000, one_time_cents: 1000 },
+        { stage: 'qualified', currency_code: 'USD', opportunity_count: 1, mrr_cents: 30000, one_time_cents: 0 },
+      ],
+      [],
+      now,
+    );
+
+    expect(usd.by_stage.map((row) => row.stage)).toEqual(['qualified', 'verbal']);
+    const qualified = usd.by_stage[0];
+    expect(qualified.opportunity_count).toBe(2);
+    expect(qualified.mrr_cents).toBe(50000);
+    expect(qualified.one_time_cents).toBe(1000);
+    // 15% base rate on 50,000 recurring cents.
+    expect(qualified.rate).toBeCloseTo(0.15);
+    expect(qualified.weighted_mrr_cents).toBe(7500);
+    // The breakdown must reconcile with the headline total it opens up.
+    expect(usd.by_stage.reduce((sum, row) => sum + row.mrr_cents, 0)).toBe(usd.open_mrr_cents);
+  });
+
+  it('never mixes currencies in a stage breakdown', () => {
+    const rows = summarizePipelineReport(
+      [
+        { stage: 'proposed', currency_code: 'USD', opportunity_count: 1, mrr_cents: 100000, one_time_cents: 0 },
+        { stage: 'proposed', currency_code: 'GBP', opportunity_count: 1, mrr_cents: 90000, one_time_cents: 0 },
+      ],
+      [],
+      new Date('2026-08-03T12:00:00.000Z'),
+    );
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.by_stage.reduce((sum, entry) => sum + entry.mrr_cents, 0)).toBe(row.open_mrr_cents);
+    }
+  });
+});
+
 describe('current quarter range', () => {
   it('brackets the calendar quarter containing the date', () => {
     expect(currentQuarterRange(new Date('2026-08-03T12:00:00.000Z'))).toEqual({
