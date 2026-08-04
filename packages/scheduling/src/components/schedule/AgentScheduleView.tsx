@@ -28,6 +28,7 @@ const workItemColors: Record<WorkItemType, string> = {
   ad_hoc: 'rgb(var(--color-border-200))',
   interaction: 'rgb(var(--color-event-interaction))',
   appointment_request: 'rgb(var(--color-event-appointment))',
+  opportunity_step: 'rgb(var(--color-event-opportunity))',
 };
 
 interface AgentScheduleViewProps {

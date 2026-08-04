@@ -28,6 +28,7 @@ const workItemColors: Record<WorkItemType, string> = {
   ad_hoc: 'rgb(var(--color-border-200))',
   interaction: 'rgb(var(--color-event-interaction))',
   appointment_request: 'rgb(var(--color-event-appointment))',
+  opportunity_step: 'rgb(var(--color-event-opportunity))',
 };
 
 const workItemHoverColors: Record<WorkItemType, string> = {
@@ -37,6 +38,7 @@ const workItemHoverColors: Record<WorkItemType, string> = {
   ad_hoc: 'rgb(var(--color-border-300))',
   interaction: 'rgb(var(--color-event-interaction-hover))',
   appointment_request: 'rgb(var(--color-event-appointment-hover))',
+  opportunity_step: 'rgb(var(--color-event-opportunity-hover))',
 };
 
 const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({

@@ -15,6 +15,7 @@ import { IScheduleEntry, IRecurrencePattern, IEditScope, DeletionValidationResul
 import { AddWorkItemDialog } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/AddWorkItemDialog';
 import { IWorkItem, IExtendedWorkItem } from '@alga-psa/types';
 import { getWorkItemById } from '@alga-psa/scheduling/actions';
+import { ENTRY_OWNED_WORK_ITEM_TYPES } from '../../lib/entryOwnedWorkItems';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
@@ -255,7 +256,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             } else {
               setAvailableWorkItems([]);
             }
-          } else if (entryData.work_item_id && entryData.work_item_type && entryData.work_item_type !== 'ad_hoc') {
+          } else if (entryData.work_item_id && entryData.work_item_type && !ENTRY_OWNED_WORK_ITEM_TYPES.has(entryData.work_item_type)) {
             const items = await getWorkItemById(entryData.work_item_id, entryData.work_item_type);
             if (isReturnedActionError(items)) {
               toast.error(getErrorMessage(items));
@@ -304,7 +305,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         }
 
         // Fetch work item information if editing an existing entry
-        if (event.work_item_id && event.work_item_type !== 'ad_hoc') {
+        if (event.work_item_id && !ENTRY_OWNED_WORK_ITEM_TYPES.has(event.work_item_type)) {
           getWorkItemById(event.work_item_id, event.work_item_type).then((workItem) => {
             if (isReturnedActionError(workItem)) {
               toast.error(getErrorMessage(workItem));

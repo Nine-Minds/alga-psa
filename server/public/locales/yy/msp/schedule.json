@@ -37,7 +37,8 @@
         "nonBillableCategory": "55555",
         "adHoc": "55555",
         "interaction": "55555",
-        "appointmentRequest": "55555"
+        "appointmentRequest": "55555",
+        "opportunityStep": "55555"
       },
       "showInactiveUsers": "55555"
     },

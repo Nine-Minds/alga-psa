@@ -37,7 +37,8 @@
         "nonBillableCategory": "Kategoria niepodlegająca rozliczeniu",
         "adHoc": "Wpis ad hoc",
         "interaction": "Interakcja",
-        "appointmentRequest": "Zapytanie o spotkanie"
+        "appointmentRequest": "Zapytanie o spotkanie",
+        "opportunityStep": "Krok szansy sprzedaży"
       },
       "showInactiveUsers": "Pokaż nieaktywnych użytkowników"
     },

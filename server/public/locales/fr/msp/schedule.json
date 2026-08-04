@@ -37,7 +37,8 @@
         "nonBillableCategory": "Catégorie non facturable",
         "adHoc": "Entrée ponctuelle",
         "interaction": "Interaction",
-        "appointmentRequest": "Demande de rendez-vous"
+        "appointmentRequest": "Demande de rendez-vous",
+        "opportunityStep": "Étape de l'affaire"
       },
       "showInactiveUsers": "Afficher les utilisateurs inactifs"
     },

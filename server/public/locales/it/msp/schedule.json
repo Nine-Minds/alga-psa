@@ -37,7 +37,8 @@
         "nonBillableCategory": "Categoria non fatturabile",
         "adHoc": "Inserimento ad hoc",
         "interaction": "Interazione",
-        "appointmentRequest": "Richiesta di appuntamento"
+        "appointmentRequest": "Richiesta di appuntamento",
+        "opportunityStep": "Passo della trattativa"
       },
       "showInactiveUsers": "Mostra utenti inattivi"
     },

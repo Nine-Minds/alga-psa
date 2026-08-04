@@ -37,7 +37,8 @@
         "nonBillableCategory": "Niet-factureerbare categorie",
         "adHoc": "Ad-hoc-inzending",
         "interaction": "Interactie",
-        "appointmentRequest": "Afspraakverzoek"
+        "appointmentRequest": "Afspraakverzoek",
+        "opportunityStep": "Dealstap"
       },
       "showInactiveUsers": "Toon inactieve gebruikers"
     },

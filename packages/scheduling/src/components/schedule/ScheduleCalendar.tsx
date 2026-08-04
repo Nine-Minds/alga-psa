@@ -193,6 +193,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     ad_hoc: 'rgb(var(--color-border-200))',
     interaction: 'rgb(var(--color-event-interaction))',
     appointment_request: 'rgb(var(--color-event-appointment))',
+    opportunity_step: 'rgb(var(--color-event-opportunity))',
   };
 
   const workItemHoverColors: Record<WorkItemType, string> = {
@@ -202,6 +203,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     ad_hoc: 'rgb(var(--color-border-300))',
     interaction: 'rgb(var(--color-event-interaction-hover))',
     appointment_request: 'rgb(var(--color-event-appointment-hover))',
+    opportunity_step: 'rgb(var(--color-event-opportunity-hover))',
   };
 
   const getViewLabel = useCallback((calendarView: View) => {
@@ -239,6 +241,8 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
         return t('calendar.legend.types.interaction', { defaultValue: 'Interaction' });
       case 'appointment_request':
         return t('calendar.legend.types.appointmentRequest', { defaultValue: 'Appointment Request' });
+      case 'opportunity_step':
+        return t('calendar.legend.types.opportunityStep', { defaultValue: 'Deal step' });
       default:
         return type;
     }
