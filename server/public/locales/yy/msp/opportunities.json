@@ -21,7 +21,7 @@
       "coveredByQuote": "55555 {{quote}} 55555",
       "declined": "55555",
       "help": "55555",
-      "openCount": "55555",
+      "openCount": "55555 {{count}} 55555",
       "placeholder": "55555",
       "resolve": "55555",
       "status": {
@@ -236,8 +236,8 @@
       "reviewDraft": "55555",
       "snooze": "55555",
       "snoozeNamed": "55555 {{title}} 55555",
-      "stakesMrr": "55555",
-      "stakesNrr": "55555",
+      "stakesMrr": "55555 {{amount}} 55555",
+      "stakesNrr": "55555 {{amount}} 55555",
       "table": {
         "actions": "55555",
         "client": "55555",
@@ -263,7 +263,7 @@
       "plusOneTime": "55555 {{amount}} 55555",
       "print": "55555",
       "printCurrencies": "55555",
-      "printCurrencySection": "55555",
+      "printCurrencySection": "55555 {{currency}} 55555",
       "printQuarter": "55555",
       "printSubtitle": "55555 {{date}} 55555",
       "printTitle": "55555",
@@ -505,7 +505,7 @@
       },
       "forClient": "55555 {{clientName}} 55555",
       "goingQuiet": {
-        "nudge": "55555",
+        "nudge": "55555 {{clientName}} 55555",
         "paperworkMissing": "55555",
         "quietAge_one": "55555 {{count}} 55555",
         "quietAge_other": "55555 {{count}} 55555",
