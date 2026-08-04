@@ -294,9 +294,11 @@ export default function PrivacyPolicy() {
           </p>
 
           <h4 className="text-base font-bold text-gray-800">What Google Data We Access</h4>
-          <p>When you choose to connect your Google account to our Services, we may request access to:</p>
+          <p>Each Google integration is optional and must be configured by an administrator. By default, our Services request no access to Google data; we request only the permissions needed for the specific integrations an administrator enables:</p>
           <ul className="list-disc list-inside ml-4 space-y-1">
-            <li><strong>Gmail (if applicable):</strong> To read email messages and metadata for creating service tickets in response to inbound emails</li>
+            <li><strong>Gmail (only if inbound email is configured):</strong> To read email messages and metadata for creating service tickets in response to inbound emails</li>
+            <li><strong>Google Calendar (only if calendar sync is configured):</strong> To read and update calendar events so that scheduled work in our Services and technician calendars stay consistent</li>
+            <li><strong>Basic account information (only if Google sign-in is enabled):</strong> Your name, email address, and profile picture, to authenticate you and link your Google identity to your account in our Services</li>
           </ul>
           <p>
             You will be shown exactly which permissions we are requesting before you grant access, and you can choose to deny any or all of these permissions.
@@ -308,6 +310,8 @@ export default function PrivacyPolicy() {
           </p>
           <ul className="list-disc list-inside ml-4 space-y-1">
             <li>Gmail data is used only to provide inbound ticketing for the Alga PSA service desk</li>
+            <li>Google Calendar data is used only to provide two-way calendar sync between Alga PSA schedules and technician calendars</li>
+            <li>Basic account information is used only to sign you in and associate your Google identity with your Alga PSA account</li>
           </ul>
 
           <h4 className="text-base font-bold text-gray-800">Limited Use Requirements</h4>
