@@ -335,13 +335,15 @@
     },
     "toast": {
       "actionCompleted": "55555",
+      "confidenceSaved": "55555",
       "created": "55555",
       "deleted": "55555",
+      "detailsSaved": "55555",
       "lost": "55555",
+      "ownerAssigned": "55555",
       "qualified": "55555",
       "quoteLinked": "55555",
       "quoteUnlinked": "55555",
-      "saved": "55555",
       "snoozed": "55555",
       "stagePlanned": "55555",
       "stageSet": "55555 {{stage}} 55555",
@@ -352,6 +354,7 @@
       "suggestionAccepted": "55555",
       "suggestionDismissed": "55555",
       "suggestionSnoozed": "55555",
+      "valuesSaved": "55555",
       "whitespaceSuggestionCreated": "55555",
       "whitespaceSuggestionDismissed": "55555",
       "whitespaceSuggestionKnown": "55555",
@@ -481,9 +484,9 @@
     "settings": {
       "stepTemplateOffset": "55555",
       "stepTemplates": "55555",
+      "stepTemplatesEmpty": "55555",
       "stepTemplatesHelp": "55555",
-      "stepTemplatesSaved": "55555",
-      "stepTemplatesStage": "55555"
+      "stepTemplatesSaved": "55555"
     }
   }
 }

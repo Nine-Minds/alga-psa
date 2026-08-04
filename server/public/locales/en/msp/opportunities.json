@@ -335,13 +335,15 @@
     },
     "toast": {
       "actionCompleted": "Done. Next action scheduled.",
+      "confidenceSaved": "Confidence updated",
       "created": "Opportunity created",
       "deleted": "Opportunity deleted",
+      "detailsSaved": "Opportunity updated",
       "lost": "Marked lost",
+      "ownerAssigned": "Owner updated",
       "qualified": "Qualified checkpoint recorded",
       "quoteLinked": "Quote linked",
       "quoteUnlinked": "Quote unlinked",
-      "saved": "Saved",
       "snoozed": "Snoozed for a few days",
       "stagePlanned": "Stage plan added",
       "stageSet": "Stage set to {{stage}}",
@@ -352,6 +354,7 @@
       "suggestionAccepted": "Opportunity created from the suggestion",
       "suggestionDismissed": "Dismissed. It will not come back.",
       "suggestionSnoozed": "Snoozed for one week",
+      "valuesSaved": "Value updated",
       "whitespaceSuggestionCreated": "Suggestion ready for review",
       "whitespaceSuggestionDismissed": "This suggestion was previously dismissed",
       "whitespaceSuggestionKnown": "This suggestion is already known",
@@ -480,10 +483,10 @@
     },
     "settings": {
       "stepTemplateOffset": "Days out",
-      "stepTemplates": "Stage step plans",
-      "stepTemplatesHelp": "The steps a seller gets when they plan a stage on a deal. Leave them alone to keep the stock plan.",
-      "stepTemplatesSaved": "Step plan saved",
-      "stepTemplatesStage": "Stage"
+      "stepTemplates": "Your sales process",
+      "stepTemplatesEmpty": "No steps suggested for this stage yet.",
+      "stepTemplatesHelp": "Write your firm's sales process down once: these steps are what every deal suggests at each stage, so a new hire is handed the playbook. Leave them alone to keep the stock plan.",
+      "stepTemplatesSaved": "Sales process saved"
     }
   }
 }

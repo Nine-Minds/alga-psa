@@ -335,13 +335,15 @@
     },
     "toast": {
       "actionCompleted": "Fatto. Prossima azione programmata.",
+      "confidenceSaved": "Fiducia aggiornata",
       "created": "Opportunità creata",
       "deleted": "Opportunità eliminata",
+      "detailsSaved": "Opportunità aggiornata",
       "lost": "Contrassegnato come perso",
+      "ownerAssigned": "Titolare aggiornato",
       "qualified": "Checkpoint qualificato registrato",
       "quoteLinked": "Citazione collegata",
       "quoteUnlinked": "Citazione scollegata",
-      "saved": "Salvato",
       "snoozed": "Posticipato per qualche giorno",
       "stagePlanned": "Piano di fase aggiunto",
       "stageSet": "Fase impostata su {{stage}}",
@@ -352,6 +354,7 @@
       "suggestionAccepted": "Opportunità creata dal suggerimento",
       "suggestionDismissed": "Licenziato. Non tornerà.",
       "suggestionSnoozed": "Posticipato per una settimana",
+      "valuesSaved": "Valore aggiornato",
       "whitespaceSuggestionCreated": "Suggerimento pronto per la revisione",
       "whitespaceSuggestionDismissed": "Questo suggerimento era stato precedentemente respinto",
       "whitespaceSuggestionKnown": "Questo suggerimento è già noto",
@@ -480,10 +483,10 @@
     },
     "settings": {
       "stepTemplateOffset": "Giorni dopo",
-      "stepTemplates": "Piani di passi per fase",
-      "stepTemplatesHelp": "I passi che un venditore riceve quando pianifica una fase. Lasciali invariati per mantenere il piano standard.",
-      "stepTemplatesSaved": "Piano dei passi salvato",
-      "stepTemplatesStage": "Fase"
+      "stepTemplates": "Il tuo processo di vendita",
+      "stepTemplatesEmpty": "Nessun passaggio suggerito per questa fase.",
+      "stepTemplatesHelp": "Metti per iscritto una volta sola il processo di vendita della tua azienda: questi passaggi sono quelli che ogni trattativa suggerisce in ciascuna fase, così un nuovo assunto riceve il manuale. Lasciali invariati per mantenere il piano predefinito.",
+      "stepTemplatesSaved": "Processo di vendita salvato"
     }
   }
 }

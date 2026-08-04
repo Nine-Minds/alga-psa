@@ -207,7 +207,7 @@ export function PipelineList({
           onSubmit={async (values) => {
             try {
               await updateOpportunity(editing.opportunity_id, values);
-              toast.success(t('opportunities.toast.saved', 'Saved'));
+              toast.success(t('opportunities.toast.valuesSaved', 'Value updated'));
               await onValuesChanged?.();
             } catch (err) {
               toast.error(err instanceof Error ? err.message : String(err));

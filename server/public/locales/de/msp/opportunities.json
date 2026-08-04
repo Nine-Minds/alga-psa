@@ -335,13 +335,15 @@
     },
     "toast": {
       "actionCompleted": "Fertig. Nächste Aktion geplant.",
+      "confidenceSaved": "Einschätzung aktualisiert",
       "created": "Gelegenheit geschaffen",
       "deleted": "Gelegenheit gelöscht",
+      "detailsSaved": "Chance aktualisiert",
       "lost": "Als verschollen markiert",
+      "ownerAssigned": "Verantwortlicher aktualisiert",
       "qualified": "Qualifizierter Kontrollpunkt aufgezeichnet",
       "quoteLinked": "Zitat verlinkt",
       "quoteUnlinked": "Zitat nicht verlinkt",
-      "saved": "Gespeichert",
       "snoozed": "Ein paar Tage lang geschlafen",
       "stagePlanned": "Phasenplan hinzugefügt",
       "stageSet": "Phase auf {{stage}} gesetzt",
@@ -352,6 +354,7 @@
       "suggestionAccepted": "Aus dem Vorschlag entstandene Gelegenheit",
       "suggestionDismissed": "Entlassen. Es wird nicht zurückkommen.",
       "suggestionSnoozed": "Eine Woche lang geschlafen",
+      "valuesSaved": "Wert aktualisiert",
       "whitespaceSuggestionCreated": "Vorschlag zur Überprüfung bereit",
       "whitespaceSuggestionDismissed": "Dieser Vorschlag wurde zuvor abgelehnt",
       "whitespaceSuggestionKnown": "Dieser Vorschlag ist bereits bekannt",
@@ -480,10 +483,10 @@
     },
     "settings": {
       "stepTemplateOffset": "Tage später",
-      "stepTemplates": "Schrittpläne je Phase",
-      "stepTemplatesHelp": "Die Schritte, die ein Vertriebler erhält, wenn er eine Phase plant. Unverändert lassen, um den Standardplan zu behalten.",
-      "stepTemplatesSaved": "Schrittplan gespeichert",
-      "stepTemplatesStage": "Phase"
+      "stepTemplates": "Ihr Vertriebsprozess",
+      "stepTemplatesEmpty": "Für diese Phase sind noch keine Schritte vorgeschlagen.",
+      "stepTemplatesHelp": "Halten Sie den Vertriebsprozess Ihres Unternehmens einmal fest: Diese Schritte schlägt jede Chance in der jeweiligen Phase vor, sodass neue Mitarbeitende das Playbook in die Hand bekommen. Unverändert lassen, um den Standardplan zu behalten.",
+      "stepTemplatesSaved": "Vertriebsprozess gespeichert"
     }
   }
 }

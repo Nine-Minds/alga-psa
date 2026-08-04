@@ -335,13 +335,15 @@
     },
     "toast": {
       "actionCompleted": "Hecho. Próxima acción programada.",
+      "confidenceSaved": "Confianza actualizada",
       "created": "Oportunidad creada",
       "deleted": "Oportunidad eliminada",
+      "detailsSaved": "Oportunidad actualizada",
       "lost": "marcado perdido",
+      "ownerAssigned": "Responsable actualizado",
       "qualified": "Punto de control calificado registrado",
       "quoteLinked": "Cotización vinculada",
       "quoteUnlinked": "Cita desvinculada",
-      "saved": "Guardado",
       "snoozed": "Dormitado por unos días",
       "stagePlanned": "Plan de fase añadido",
       "stageSet": "Etapa establecida en {{stage}}",
@@ -352,6 +354,7 @@
       "suggestionAccepted": "Oportunidad creada a partir de la sugerencia.",
       "suggestionDismissed": "Despedido. No volverá.",
       "suggestionSnoozed": "Pospuesto durante una semana",
+      "valuesSaved": "Valor actualizado",
       "whitespaceSuggestionCreated": "Sugerencia lista para revisión",
       "whitespaceSuggestionDismissed": "Esta sugerencia fue previamente descartada.",
       "whitespaceSuggestionKnown": "Esta sugerencia ya es conocida.",
@@ -480,10 +483,10 @@
     },
     "settings": {
       "stepTemplateOffset": "Días después",
-      "stepTemplates": "Planes de pasos por fase",
-      "stepTemplatesHelp": "Los pasos que recibe un comercial al planificar una fase. Déjalos como están para conservar el plan estándar.",
-      "stepTemplatesSaved": "Plan de pasos guardado",
-      "stepTemplatesStage": "Fase"
+      "stepTemplates": "Su proceso de ventas",
+      "stepTemplatesEmpty": "Todavía no hay pasos sugeridos para esta fase.",
+      "stepTemplatesHelp": "Escriba el proceso de ventas de su empresa una sola vez: estos pasos son los que cada oportunidad sugiere en cada fase, de modo que un nuevo empleado recibe el manual. Déjelos como están para mantener el plan estándar.",
+      "stepTemplatesSaved": "Proceso de ventas guardado"
     }
   }
 }

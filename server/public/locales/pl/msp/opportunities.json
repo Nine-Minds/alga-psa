@@ -341,13 +341,15 @@
     },
     "toast": {
       "actionCompleted": "Gotowe. Zaplanowano następną akcję.",
+      "confidenceSaved": "Zaktualizowano pewność",
       "created": "Stworzono szansę",
       "deleted": "Możliwość usunięta",
+      "detailsSaved": "Zaktualizowano szansę",
       "lost": "Oznaczone jako utracone",
+      "ownerAssigned": "Zaktualizowano właściciela",
       "qualified": "Zarejestrowano kwalifikowany punkt kontrolny",
       "quoteLinked": "Cytat powiązany",
       "quoteUnlinked": "Cytat niepowiązany",
-      "saved": "Zapisano",
       "snoozed": "Zdrzemnąłem się na kilka dni",
       "stagePlanned": "Dodano plan etapu",
       "stageSet": "Etap ustawiony na {{stage}}",
@@ -358,6 +360,7 @@
       "suggestionAccepted": "Możliwość stworzona dzięki sugestii",
       "suggestionDismissed": "Zwolniony. To nie wróci.",
       "suggestionSnoozed": "Zdrzemnąłem się na tydzień",
+      "valuesSaved": "Zaktualizowano wartość",
       "whitespaceSuggestionCreated": "Sugestia gotowa do sprawdzenia",
       "whitespaceSuggestionDismissed": "Sugestia ta została wcześniej odrzucona",
       "whitespaceSuggestionKnown": "Ta propozycja jest już znana",
@@ -508,10 +511,10 @@
     },
     "settings": {
       "stepTemplateOffset": "Dni później",
-      "stepTemplates": "Plany kroków dla etapów",
-      "stepTemplatesHelp": "Kroki, które handlowiec otrzymuje przy planowaniu etapu. Zostaw bez zmian, aby zachować plan domyślny.",
-      "stepTemplatesSaved": "Zapisano plan kroków",
-      "stepTemplatesStage": "Etap"
+      "stepTemplates": "Twój proces sprzedaży",
+      "stepTemplatesEmpty": "Brak sugerowanych kroków dla tego etapu.",
+      "stepTemplatesHelp": "Zapisz proces sprzedaży swojej firmy raz: te kroki podpowiada każda szansa na każdym etapie, więc nowy pracownik dostaje gotowy podręcznik. Pozostaw je bez zmian, aby zachować plan standardowy.",
+      "stepTemplatesSaved": "Zapisano proces sprzedaży"
     }
   }
 }

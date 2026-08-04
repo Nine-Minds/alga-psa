@@ -335,13 +335,15 @@
     },
     "toast": {
       "actionCompleted": "Klaar. Volgende actie gepland.",
+      "confidenceSaved": "Vertrouwen bijgewerkt",
       "created": "Kans gecreëerd",
       "deleted": "Mogelijkheid verwijderd",
+      "detailsSaved": "Kans bijgewerkt",
       "lost": "Gemarkeerd als verloren",
+      "ownerAssigned": "Eigenaar bijgewerkt",
       "qualified": "Gekwalificeerd controlepunt geregistreerd",
       "quoteLinked": "Citaat gekoppeld",
       "quoteUnlinked": "Citaat ontkoppeld",
-      "saved": "Opgeslagen",
       "snoozed": "Een paar dagen gesnoozed",
       "stagePlanned": "Faseplan toegevoegd",
       "stageSet": "Fase ingesteld op {{stage}}",
@@ -352,6 +354,7 @@
       "suggestionAccepted": "Mogelijkheid gecreëerd op basis van de suggestie",
       "suggestionDismissed": "Ontslagen. Het zal niet terugkomen.",
       "suggestionSnoozed": "Eén week gesnoozed",
+      "valuesSaved": "Waarde bijgewerkt",
       "whitespaceSuggestionCreated": "Suggestie klaar voor beoordeling",
       "whitespaceSuggestionDismissed": "Dit voorstel werd eerder verworpen",
       "whitespaceSuggestionKnown": "Deze suggestie is al bekend",
@@ -480,10 +483,10 @@
     },
     "settings": {
       "stepTemplateOffset": "Dagen later",
-      "stepTemplates": "Stappenplannen per fase",
-      "stepTemplatesHelp": "De stappen die een verkoper krijgt bij het plannen van een fase. Laat ze staan om het standaardplan te houden.",
-      "stepTemplatesSaved": "Stappenplan opgeslagen",
-      "stepTemplatesStage": "Fase"
+      "stepTemplates": "Uw verkoopproces",
+      "stepTemplatesEmpty": "Nog geen stappen voorgesteld voor deze fase.",
+      "stepTemplatesHelp": "Leg het verkoopproces van uw bedrijf één keer vast: deze stappen stelt elke kans in elke fase voor, zodat een nieuwe medewerker het draaiboek in handen krijgt. Laat ze ongemoeid om het standaardplan te behouden.",
+      "stepTemplatesSaved": "Verkoopproces opgeslagen"
     }
   }
 }

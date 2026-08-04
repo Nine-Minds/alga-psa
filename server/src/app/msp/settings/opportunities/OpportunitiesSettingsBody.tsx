@@ -327,12 +327,12 @@ export default function OpportunitiesSettingsBody() {
 
       <section className="border-t border-[rgb(var(--color-border-200))] pt-6">
         <h2 className="mb-1 text-base font-semibold text-[rgb(var(--color-text-900))]">
-          {t('opportunities.settings.stepTemplates', 'Stage step plans')}
+          {t('opportunities.settings.stepTemplates', 'Your sales process')}
         </h2>
         <p className="mb-4 text-sm text-[rgb(var(--color-text-500))]">
           {t(
             'opportunities.settings.stepTemplatesHelp',
-            'The steps a seller gets when they plan a stage on a deal. Leave them alone to keep the stock plan.'
+            'Write your firm\'s sales process down once: these steps are what every deal suggests at each stage, so a new hire is handed the playbook. Leave them alone to keep the stock plan.'
           )}
         </p>
         <OpportunityStepTemplatesSettings />

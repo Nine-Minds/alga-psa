@@ -335,13 +335,15 @@
     },
     "toast": {
       "actionCompleted": "Terminé. Prochaine action programmée.",
+      "confidenceSaved": "Confiance mise à jour",
       "created": "Opportunité créée",
       "deleted": "Opportunité supprimée",
+      "detailsSaved": "Opportunité mise à jour",
       "lost": "Marqué perdu",
+      "ownerAssigned": "Responsable mis à jour",
       "qualified": "Point de contrôle qualifié enregistré",
       "quoteLinked": "Citation liée",
       "quoteUnlinked": "Citation non liée",
-      "saved": "Enregistré",
       "snoozed": "Répété pendant quelques jours",
       "stagePlanned": "Plan de phase ajouté",
       "stageSet": "Étape définie sur {{stage}}",
@@ -352,6 +354,7 @@
       "suggestionAccepted": "Opportunité créée à partir de la suggestion",
       "suggestionDismissed": "Rejeté. Cela ne reviendra pas.",
       "suggestionSnoozed": "Mis en veille pendant une semaine",
+      "valuesSaved": "Valeur mise à jour",
       "whitespaceSuggestionCreated": "Suggestion prête à être examinée",
       "whitespaceSuggestionDismissed": "Cette suggestion a été précédemment rejetée",
       "whitespaceSuggestionKnown": "Cette suggestion est déjà connue",
@@ -480,10 +483,10 @@
     },
     "settings": {
       "stepTemplateOffset": "Jours après",
-      "stepTemplates": "Plans d’étapes par phase",
-      "stepTemplatesHelp": "Les étapes proposées lorsqu’un commercial planifie une phase. Laissez-les telles quelles pour conserver le plan standard.",
-      "stepTemplatesSaved": "Plan d’étapes enregistré",
-      "stepTemplatesStage": "Phase"
+      "stepTemplates": "Votre processus de vente",
+      "stepTemplatesEmpty": "Aucune étape suggérée pour cette phase pour l'instant.",
+      "stepTemplatesHelp": "Consignez une fois pour toutes le processus de vente de votre entreprise : ces étapes sont celles que chaque affaire propose à chaque phase, si bien qu'une nouvelle recrue reçoit le manuel. Laissez-les tels quels pour conserver le plan standard.",
+      "stepTemplatesSaved": "Processus de vente enregistré"
     }
   }
 }
