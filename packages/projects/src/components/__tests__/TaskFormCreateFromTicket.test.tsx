@@ -9,8 +9,18 @@ import TaskForm from '../TaskForm';
 
 // The server-suite setup stubs this hook with empty automationIdProps, which
 // strips DOM ids — these tests locate the create-from-ticket button by id.
-// No-op under this package's own config.
-vi.unmock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister');
+// Override with an id-echoing stub (same pattern as
+// QuickAddClient.ui-reflection.test.tsx) rather than vi.unmock: restoring the
+// real module is unreliable under the server suite's shared singleFork module
+// cache, while a local factory always applies to this file.
+vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({
+  useAutomationIdAndRegister: (params?: { id?: string }) => ({
+    automationIdProps: params?.id
+      ? { id: params.id, 'data-automation-id': params.id }
+      : {},
+    updateMetadata: vi.fn(),
+  }),
+}));
 import type { IProjectPhase, ProjectStatus } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
 import { TicketIntegrationProvider, type TicketIntegrationContextType } from '../../context/TicketIntegrationContext';
