@@ -245,6 +245,19 @@ const transformedWorkspaceState = {
 };
 
 describe('InvoiceTemplateEditor preview workspace integration', () => {
+  // The editor hydrates the designer store from the fetched template in a
+  // passive effect that runs after getInvoiceTemplate resolves; that hydration
+  // replaces the whole workspace (including transforms). Waiting only for the
+  // fetch mock to have been *called* leaves a race where a test mutates the
+  // store and late hydration then clobbers it. Wait until the fetched template
+  // name is rendered (same commit whose effects perform hydration) and flush
+  // effects so store mutations made afterwards stick.
+  const waitForTemplateHydration = async (name = 'Template A') => {
+    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByDisplayValue(name)).toBeTruthy());
+    await act(async () => {});
+  };
+
   beforeEach(() => {
     installLocalStorageMock();
     searchParamsState = new URLSearchParams();
@@ -456,7 +469,7 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
   it('persists authored transform workspace state into the save payload', async () => {
     render(<InvoiceTemplateEditor templateId="tpl-1" />);
     await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
-    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+    await waitForTemplateHydration();
 
     act(() => {
       useInvoiceDesignerStore.getState().setTransforms(transformedWorkspaceState);
@@ -480,7 +493,7 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
   it('renders the authored transforms block in the read-only code tab', async () => {
     render(<InvoiceTemplateEditor templateId="tpl-1" />);
     await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
-    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+    await waitForTemplateHydration();
 
     act(() => {
       useInvoiceDesignerStore.getState().setTransforms(transformedWorkspaceState);
@@ -519,7 +532,7 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
   it('preserves authored transforms after save and reopen without edits', async () => {
     const firstRender = render(<InvoiceTemplateEditor templateId="tpl-1" />);
     await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
-    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+    await waitForTemplateHydration();
 
     act(() => {
       useInvoiceDesignerStore.getState().setTransforms(transformedWorkspaceState);
@@ -572,7 +585,7 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
 
     const firstRender = render(<InvoiceTemplateEditor templateId="tpl-1" />);
     await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
-    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+    await waitForTemplateHydration();
 
     act(() => {
       useInvoiceDesignerStore.getState().setTransforms(reorderedTransforms);
@@ -647,7 +660,7 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
   it('shows the generated transforms block in the read-only code tab when transforms are authored', async () => {
     render(<InvoiceTemplateEditor templateId="tpl-1" />);
     await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
-    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+    await waitForTemplateHydration();
 
     act(() => {
       useInvoiceDesignerStore.getState().setTransforms({
@@ -884,7 +897,7 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
   it('keeps generated source synchronized with GUI model while switching Visual and Code', async () => {
     render(<InvoiceTemplateEditor templateId="tpl-1" />);
     await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
-    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+    await waitForTemplateHydration();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Code' }));
     act(() => {
