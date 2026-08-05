@@ -1,84 +1,47 @@
 'use client';
 
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { ArrowRight, BriefcaseBusiness, Clock3, PauseCircle } from 'lucide-react';
+import { BriefcaseBusiness, Clock3, PauseCircle } from 'lucide-react';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
-import { getOpportunityDashboardSnapshot } from '@alga-psa/opportunities/actions';
-import { OPPORTUNITY_STAGE_LABELS } from '@alga-psa/opportunities/lib/opportunityStages';
-import { oneTimeCents } from '@alga-psa/opportunities/lib/pipelineReporting';
 import type { IOpportunityDashboardSnapshot } from '@alga-psa/types';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { OPPORTUNITY_STAGE_LABELS } from '../../lib/opportunityStages';
+import { oneTimeCents } from '../../lib/pipelineReporting';
 
-export default function OpportunitySnapshotCard() {
+/**
+ * General pipeline overview at the top of the Queue: totals and pipeline by
+ * stage. The queue below it is the to-do list; this is the situation report.
+ */
+export function QueueSnapshot({
+  snapshot,
+  loadFailed,
+}: {
+  snapshot: IOpportunityDashboardSnapshot | null;
+  loadFailed: boolean;
+}) {
   const { t } = useTranslation('msp/opportunities');
-  const opportunityFlag = useFeatureFlag('opportunities-module', { defaultValue: false });
-  const enabled = typeof opportunityFlag === 'boolean'
-    ? opportunityFlag
-    : opportunityFlag.enabled;
-  const loadingFlag = typeof opportunityFlag === 'boolean'
-    ? false
-    : opportunityFlag.loading;
-  const [snapshot, setSnapshot] = useState<IOpportunityDashboardSnapshot | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
-
-  useEffect(() => {
-    if (!enabled) return;
-
-    let active = true;
-    setLoadFailed(false);
-    getOpportunityDashboardSnapshot()
-      .then((result) => {
-        if (active) setSnapshot(result);
-      })
-      .catch((error) => {
-        console.error('Failed to load opportunity dashboard snapshot:', error);
-        if (active) setLoadFailed(true);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [enabled]);
-
-  if (loadingFlag || !enabled) return null;
-
   const currencies = new Set((snapshot?.pipeline_by_stage ?? []).map((row) => row.currency_code));
 
   return (
     <section
-      id="opportunity-dashboard-snapshot"
-      aria-labelledby="opportunity-dashboard-snapshot-title"
-      className="rounded-lg border border-[rgb(var(--color-border-200))] bg-white p-5"
+      id="opportunities-queue-snapshot"
+      aria-labelledby="opportunities-queue-snapshot-title"
+      className="mb-6 rounded-lg border border-[rgb(var(--color-border-200))] bg-white p-5"
     >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <BriefcaseBusiness className="h-5 w-5 text-[rgb(var(--color-primary-500))]" aria-hidden="true" />
-            <h2
-              id="opportunity-dashboard-snapshot-title"
-              className="text-lg font-semibold text-[rgb(var(--color-text-900))]"
-            >
-              {t('opportunities.snapshot.title', 'Opportunity snapshot')}
-            </h2>
-          </div>
-          <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
-            {t(
-              'opportunities.snapshot.subtitle',
-              'Open pipeline and follow-up work that needs attention.',
-            )}
-          </p>
-        </div>
-        <Link
-          id="open-opportunities-from-dashboard"
-          href="/msp/opportunities"
-          className="inline-flex items-center gap-1 text-sm font-medium text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))]"
+      <div className="flex items-center gap-2">
+        <BriefcaseBusiness className="h-5 w-5 text-[rgb(var(--color-primary-500))]" aria-hidden="true" />
+        <h2
+          id="opportunities-queue-snapshot-title"
+          className="text-lg font-semibold text-[rgb(var(--color-text-900))]"
         >
-          {t('opportunities.snapshot.open', 'Open opportunities')}
-          <ArrowRight className="h-4 w-4" aria-hidden="true" />
-        </Link>
+          {t('opportunities.snapshot.title', 'Opportunity snapshot')}
+        </h2>
       </div>
+      <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
+        {t(
+          'opportunities.snapshot.subtitle',
+          'Open pipeline and follow-up work that needs attention.',
+        )}
+      </p>
 
       {loadFailed ? (
         <p className="mt-4 rounded-md bg-[rgb(var(--color-warning-50))] px-3 py-2 text-sm text-[rgb(var(--color-text-700))]">

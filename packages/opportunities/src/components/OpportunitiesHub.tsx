@@ -9,6 +9,7 @@ import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type {
   IClient,
+  IOpportunityDashboardSnapshot,
   IOpportunityListItem,
   IWorkQueue,
   OpportunityLossReason,
@@ -22,6 +23,7 @@ import {
   loseOpportunity,
 } from '../actions/opportunityActions';
 import { getWorkQueue } from '../actions/workQueueActions';
+import { getOpportunityDashboardSnapshot } from '../actions/reportActions';
 import { updateOpportunityNextAction } from '../actions/opportunityStepActions';
 import { acceptSuggestion, dismissSuggestion, snoozeSuggestion } from '../actions/suggestionActions';
 import { createWhitespaceSuggestion } from '../actions/generatorActions';
@@ -67,6 +69,8 @@ export function OpportunitiesHub({
   const searchParams = useSearchParams();
   const [items, setItems] = useState<IOpportunityListItem[]>(initialItems);
   const [queue, setQueue] = useState<IWorkQueue>(initialQueue);
+  const [snapshot, setSnapshot] = useState<IOpportunityDashboardSnapshot | null>(null);
+  const [snapshotFailed, setSnapshotFailed] = useState(false);
   const [total, setTotal] = useState(initialTotal);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_OPPORTUNITY_PAGE_SIZE);
@@ -81,7 +85,26 @@ export function OpportunitiesHub({
     ['identified', 'qualified', 'assessment', 'proposed', 'verbal', 'won', 'lost'] as const
   ).find((stage) => stage === requestedStage);
 
+  // The snapshot is decoration, not the queue: a failure degrades to a notice
+  // instead of failing the whole refresh.
+  const loadSnapshot = useCallback(() => {
+    getOpportunityDashboardSnapshot()
+      .then((next) => {
+        setSnapshot(next);
+        setSnapshotFailed(false);
+      })
+      .catch((error) => {
+        console.error('Failed to load opportunity snapshot:', error);
+        setSnapshotFailed(true);
+      });
+  }, []);
+
+  useEffect(() => {
+    loadSnapshot();
+  }, [loadSnapshot]);
+
   const refresh = useCallback(async (toPage = page, toPageSize = pageSize) => {
+    loadSnapshot();
     const [result, nextQueue] = await Promise.all([
       // A stage drill-through filters server-side, so the totals and paging
       // describe the filtered set rather than one loaded page.
@@ -98,7 +121,7 @@ export function OpportunitiesHub({
     setQueue(nextQueue);
     setPage(toPage);
     setPageSize(toPageSize);
-  }, [page, pageSize, initialPipelineStage]);
+  }, [page, pageSize, initialPipelineStage, loadSnapshot]);
 
   // The server rendered the unfiltered first page. When a stage filter arrives
   // (Reports drill-through or a deep link) or clears, re-query from page 1.
@@ -255,6 +278,8 @@ export function OpportunitiesHub({
       content: (
         <WorkQueue
           queue={queue}
+          snapshot={snapshot}
+          snapshotFailed={snapshotFailed}
           onCompleteAction={(id, stage) => setCompleteFor({ id, stage })}
           onOpenOpportunity={openDeal}
           onSnooze={handleSnooze}
