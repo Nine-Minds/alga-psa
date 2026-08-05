@@ -10,6 +10,9 @@ export function registerItilSlaConfiguration(fn: (trx: Knex.Transaction, tenant:
   _configureItilSlaForBoardFn = fn;
 }
 
+// Name of the SLA policy auto-created by configureItilSlaForBoard (@alga-psa/sla).
+const ITIL_SLA_POLICY_NAME = 'ITIL Standard';
+
 /**
  * Service to manage copying ITIL standards to tenant-specific tables
  */
@@ -222,10 +225,12 @@ export class ItilStandardsService {
 
   /**
    * Remove ITIL standards from tenant if no boards use them
-   * This is called when switching from ITIL to custom
+   * This is called when switching from ITIL to custom, and when the last ITIL
+   * board is deleted — in that case the board row still exists (the delete runs
+   * after this cleanup), so it is passed in `excludeBoardIds` and ignored.
    * Returns information about what was cleaned up
    */
-  static async cleanupUnusedItilStandards(trx: Knex.Transaction, tenant: string): Promise<{
+  static async cleanupUnusedItilStandards(trx: Knex.Transaction, tenant: string, excludeBoardIds: string[] = []): Promise<{
     prioritiesDeleted: number;
     categoriesDeleted: number;
     prioritiesSkippedReason?: string;
@@ -249,10 +254,13 @@ export class ItilStandardsService {
     console.log(`[ItilStandardsService.cleanup] Found ${itilPrioritiesCount} ITIL priorities for tenant ${tenant}`);
 
     // Check if any boards still use ITIL priorities
-    const itilPriorityBoards = await db.table('boards')
+    const itilPriorityBoardsQuery = db.table('boards')
       .where('priority_type', 'itil')
-      .count('* as count')
-      .first();
+      .count('* as count');
+    if (excludeBoardIds.length > 0) {
+      itilPriorityBoardsQuery.whereNotIn('board_id', excludeBoardIds);
+    }
+    const itilPriorityBoards = await itilPriorityBoardsQuery.first();
 
     const itilPriorityBoardCount = Number(itilPriorityBoards?.count || 0);
     console.log(`[ItilStandardsService.cleanup] Boards with priority_type='itil': ${itilPriorityBoardCount}`);
@@ -260,25 +268,31 @@ export class ItilStandardsService {
     if (itilPriorityBoardCount === 0) {
       // No boards use ITIL priorities - delete unused ones individually
       // Get ITIL priorities that ARE used by tickets
-      const itilPriorityIds = db.table('priorities')
-        .select('priority_id')
-        .where('is_from_itil_standard', true);
-      const usedPriorityIds = await db.table('tickets')
-        .whereIn('priority_id', itilPriorityIds)
-        .distinct('priority_id')
+      const itilPriorityIds: string[] = await db.table('priorities')
+        .where('is_from_itil_standard', true)
         .pluck('priority_id');
+      const usedPriorityIds: string[] = itilPriorityIds.length > 0
+        ? await db.table('tickets')
+          .whereIn('priority_id', itilPriorityIds)
+          .distinct('priority_id')
+          .pluck('priority_id')
+        : [];
 
       console.log(`[ItilStandardsService.cleanup] ITIL priorities in use by tickets: ${usedPriorityIds.length} (${usedPriorityIds.join(', ')})`);
 
-      // Delete ITIL priorities that are NOT in use
-      const deleteQuery = db.table('priorities')
-        .where('is_from_itil_standard', true);
+      // Delete ITIL priorities that are NOT in use, after releasing the rows
+      // that reference them (SLA targets and board defaults have hard FKs).
+      const usedPriorityIdSet = new Set(usedPriorityIds);
+      const deletablePriorityIds = itilPriorityIds.filter(id => !usedPriorityIdSet.has(id));
 
-      if (usedPriorityIds.length > 0) {
-        deleteQuery.whereNotIn('priority_id', usedPriorityIds);
+      let deleted = 0;
+      if (deletablePriorityIds.length > 0) {
+        await this.releaseItilPriorityReferences(trx, tenant, deletablePriorityIds);
+
+        deleted = await db.table('priorities')
+          .whereIn('priority_id', deletablePriorityIds)
+          .del();
       }
-
-      const deleted = await deleteQuery.del();
       result.prioritiesDeleted = deleted;
 
       if (usedPriorityIds.length > 0) {
@@ -301,10 +315,13 @@ export class ItilStandardsService {
     console.log(`[ItilStandardsService.cleanup] Found ${itilCategoriesCount} ITIL categories for tenant ${tenant}`);
 
     // Check if any boards still use ITIL categories
-    const itilCategoryBoards = await db.table('boards')
+    const itilCategoryBoardsQuery = db.table('boards')
       .where('category_type', 'itil')
-      .count('* as count')
-      .first();
+      .count('* as count');
+    if (excludeBoardIds.length > 0) {
+      itilCategoryBoardsQuery.whereNotIn('board_id', excludeBoardIds);
+    }
+    const itilCategoryBoards = await itilCategoryBoardsQuery.first();
 
     const itilCategoryBoardCount = Number(itilCategoryBoards?.count || 0);
     console.log(`[ItilStandardsService.cleanup] Boards with category_type='itil': ${itilCategoryBoardCount}`);
@@ -362,18 +379,22 @@ export class ItilStandardsService {
         deletedCount += await childDeleteQuery.del();
       }
 
-      // Then delete unused parents
-      if (parentIds.length > 0) {
-        const parentDeleteQuery = db.table('categories')
-          .where('is_from_itil_standard', true)
-          .whereNull('parent_category')
-          .whereIn('category_id', parentIds);
+      // Then delete unused parents, skipping any parent a surviving child still
+      // points at (categories_tenant_parent_category_foreign)
+      const parentDeleteCandidates = parentIds.filter(id => !usedIds.has(id));
+      if (parentDeleteCandidates.length > 0) {
+        const stillReferencedParentIds: string[] = await db.table('categories')
+          .whereIn('parent_category', parentDeleteCandidates)
+          .distinct('parent_category')
+          .pluck('parent_category');
+        const stillReferencedParentIdSet = new Set(stillReferencedParentIds);
+        const deletableParentIds = parentDeleteCandidates.filter(id => !stillReferencedParentIdSet.has(id));
 
-        if (usedCategoryIdArray.length > 0) {
-          parentDeleteQuery.whereNotIn('category_id', usedCategoryIdArray);
+        if (deletableParentIds.length > 0) {
+          deletedCount += await db.table('categories')
+            .whereIn('category_id', deletableParentIds)
+            .del();
         }
-
-        deletedCount += await parentDeleteQuery.del();
       }
 
       result.categoriesDeleted = deletedCount;
@@ -389,5 +410,69 @@ export class ItilStandardsService {
     }
 
     return result;
+  }
+
+  /**
+   * Drop the rows that point at ITIL priorities about to be deleted.
+   * Without this the DELETE trips sla_policy_targets / boards FKs and rolls the
+   * whole cleanup (and the board deletion around it) back.
+   */
+  private static async releaseItilPriorityReferences(
+    trx: Knex.Transaction,
+    tenant: string,
+    priorityIds: string[]
+  ): Promise<void> {
+    const db = tenantDb(trx, tenant);
+
+    const affectedPolicyIds: string[] = await db.table('sla_policy_targets')
+      .whereIn('priority_id', priorityIds)
+      .distinct('sla_policy_id')
+      .pluck('sla_policy_id');
+
+    const targetsDeleted = await db.table('sla_policy_targets')
+      .whereIn('priority_id', priorityIds)
+      .del();
+    console.log(`[ItilStandardsService.cleanup] Deleted ${targetsDeleted} SLA targets for retiring ITIL priorities`);
+
+    // The auto-created "ITIL Standard" policy is meaningless once it has no
+    // targets left; retire it so the tenant isn't left with an empty policy.
+    for (const policyId of affectedPolicyIds) {
+      const policy = await db.table('sla_policies')
+        .where({ sla_policy_id: policyId, policy_name: ITIL_SLA_POLICY_NAME })
+        .first();
+      if (!policy) continue;
+
+      const remainingTargets = await db.table('sla_policy_targets')
+        .where({ sla_policy_id: policyId })
+        .count('* as count')
+        .first();
+      if (Number(remainingTargets?.count || 0) > 0) continue;
+
+      await db.table('boards')
+        .where({ sla_policy_id: policyId })
+        .update({ sla_policy_id: null });
+
+      const clientRefs = await db.table('clients')
+        .where({ sla_policy_id: policyId })
+        .count('* as count')
+        .first();
+      if (Number(clientRefs?.count || 0) > 0) {
+        console.log(`[ItilStandardsService.cleanup] Kept empty ITIL Standard SLA policy ${policyId}: still assigned to client(s)`);
+        continue;
+      }
+
+      await db.table('sla_notification_thresholds').where({ sla_policy_id: policyId }).del();
+      await db.table('sla_policies').where({ sla_policy_id: policyId }).del();
+      console.log(`[ItilStandardsService.cleanup] Removed empty ITIL Standard SLA policy ${policyId}`);
+    }
+
+    await db.table('boards')
+      .whereIn('default_priority_id', priorityIds)
+      .update({ default_priority_id: null });
+
+    // No FK here, but a dangling id silently breaks email-created tickets.
+    await db.table('inbound_ticket_defaults')
+      .whereIn('priority_id', priorityIds)
+      .update({ priority_id: null });
   }
 }
