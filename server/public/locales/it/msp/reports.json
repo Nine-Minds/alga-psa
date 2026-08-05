@@ -35,7 +35,7 @@
     },
     "description": "Report operativi predefiniti per lo spazio di lavoro corrente. Ulteriori opzioni di personalizzazione saranno aggiunte a questo catalogo in seguito.",
     "categories": {
-      "helpdesk": "Help desk",
+      "helpdesk": "Assistenza tecnica",
       "operations": "Operazioni",
       "billing": "Fatturazione"
     },

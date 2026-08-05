@@ -136,7 +136,7 @@
       "composition": "In dieser Prognose gezählte Geschäfte",
       "currency": "Währung",
       "currencyNote": "Ein Abschnitt je Währung, in der Ihre offenen Geschäfte kalkuliert sind. Beträge in verschiedenen Währungen werden nie addiert.",
-      "deal": "Deal",
+      "deal": "Geschäft",
       "empty": "In {{q}} landet noch keine Chance.",
       "floor": "Untergrenze (unterschrieben und mündlich)",
       "floorCol": "Boden",
@@ -156,7 +156,7 @@
     },
     "list": {
       "confidence": "Vertrauen",
-      "deal": "Deal",
+      "deal": "Geschäft",
       "editValues": "Wert bearbeiten",
       "mrr": "Wiederkehrend",
       "nextAction": "Nächste Aktion",
@@ -181,7 +181,7 @@
       "not_a_fit": "Passt nicht",
       "other": "Andere",
       "price": "Preis",
-      "timing": "Timing"
+      "timing": "Zeitpunkt"
     },
     "meeting": {
       "daysAgo": "Vor {{count}} Tagen",
@@ -352,7 +352,7 @@
       "lost": "Verloren",
       "proposed": "Vorgeschlagen",
       "qualified": "Qualifiziert",
-      "verbal": "Verbal",
+      "verbal": "Mündlich",
       "won": "Gewonnen"
     },
     "status": {

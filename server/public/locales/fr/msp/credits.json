@@ -51,7 +51,7 @@
     "transfer": "Transférer"
   },
   "settings": {
-    "loadErrorPrefix": "Error loading credit expiration settings:",
+    "loadErrorPrefix": "Erreur lors du chargement des paramètres d'expiration des crédits :",
     "captionEnabled": "Expiration du crédit : {{days}} jours",
     "captionDisabled": "Expiration du crédit : désactivée",
     "captionReminders": "rappels {{reminders}} jours avant",
@@ -96,7 +96,7 @@
   },
   "expirationDialog": {
     "title": "Modifier la date d'expiration",
-    "creditAmount": "Original",
+    "creditAmount": "Montant initial",
     "remainingAmount": "Restant",
     "created": "Créé le :",
     "currentExpiration": "Expiration actuelle ",
@@ -125,7 +125,7 @@
     "error": "Une erreur s'est produite lors de l'expiration du crédit",
     "expiring": "Expiration...",
     "confirm": "Faire expirer le crédit",
-    "creditAmount": "Original",
+    "creditAmount": "Montant initial",
     "remainingAmount": "Restant",
     "warning": "Le client perd le restant de {{amount}}. Action irréversible."
   },

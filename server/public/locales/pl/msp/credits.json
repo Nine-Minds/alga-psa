@@ -53,7 +53,7 @@
     "transfer": "Przenieś"
   },
   "settings": {
-    "loadErrorPrefix": "Error loading credit expiration settings:",
+    "loadErrorPrefix": "Błąd podczas wczytywania ustawień wygaśnięcia kredytu:",
     "captionEnabled": "Wygaśnięcie kredytu: {{days}} dni",
     "captionDisabled": "Wygaśnięcie kredytu: wyłączone",
     "captionReminders": "przypomnienia {{reminders}} dni wcześniej",

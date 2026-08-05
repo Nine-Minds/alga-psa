@@ -35,7 +35,7 @@
       "addClient": "Aggiungi cliente",
       "clientContact": "Contatto cliente",
       "billing": "Fatturazione",
-      "ticketing": "Ticketing",
+      "ticketing": "Gestione ticket",
       "algadeskWorkspace": "Area di lavoro"
     },
     "errors": {
@@ -96,7 +96,7 @@
     "fields": {
       "clientName": {
         "label": "Nome cliente",
-        "placeholder": "Example Corp"
+        "placeholder": "Azienda esempio"
       },
       "clientEmail": {
         "label": "Email cliente",
@@ -266,7 +266,7 @@
     "fields": {
       "contactName": {
         "label": "Nome contatto",
-        "placeholder": "John Smith"
+        "placeholder": "Mario Rossi"
       },
       "contactEmail": {
         "label": "Email contatto",
@@ -293,7 +293,7 @@
       "fields": {
         "companyName": {
           "label": "Nome azienda",
-          "placeholder": "Acme IT Solutions"
+          "placeholder": "Soluzioni IT Acme"
         }
       },
       "note": "Puoi usare questo wizard per riconfigurare le impostazioni del tuo workspace in qualsiasi momento."
@@ -312,11 +312,11 @@
       },
       "lastName": {
         "label": "Cognome",
-        "placeholder": "Doe"
+        "placeholder": "Rossi"
       },
       "companyName": {
         "label": "Nome dell'azienda",
-        "placeholder": "Acme IT Solutions"
+        "placeholder": "Soluzioni IT Acme"
       },
       "email": {
         "label": "Indirizzo email",

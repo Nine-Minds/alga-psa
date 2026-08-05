@@ -13,7 +13,7 @@
       "resyncStarted": "La risincronizzazione è iniziata per {{providerName}}.",
       "resyncRecovered": "{{providerName}} si è riconnesso correttamente.",
       "enterpriseOnly": "La posta elettronica in entrata di Microsoft 365 è disponibile solo in Pro.",
-      "loadProvidersError": "Failed to load email providers"
+      "loadProvidersError": "Impossibile caricare i provider di posta elettronica"
     },
     "editDrawer": {
       "title": "Modifica provider di posta elettronica",
@@ -42,22 +42,22 @@
       "title": "Istruzioni per l'installazione",
       "microsoft": {
         "title": "Installazione di Microsoft 365",
-        "checkingCredentials": "Checking Microsoft credential availability…",
+        "checkingCredentials": "Verifica della disponibilità delle credenziali Microsoft…",
         "platform": {
-          "title": "Microsoft sign-in is ready",
-          "description": "Alga PSA supplies the Microsoft application. Add a provider, enter the mailbox details, and connect with Microsoft—no Entra app registration is needed."
+          "title": "L'accesso Microsoft è pronto",
+          "description": "Alga PSA fornisce l'applicazione Microsoft. Aggiungi un provider, inserisci i dati della casella di posta e connettiti a Microsoft: non occorre registrare un'app Entra."
         },
         "byo": {
-          "summary": "Advanced: use your own Microsoft app",
-          "warning": "This is normally unnecessary on hosted Alga PSA and should be used only when your organization requires its own Entra application.",
-          "description": "Open Settings → Integrations → Providers, expand the Microsoft advanced options, and add your tenant-owned app before returning here."
+          "summary": "Avanzate: usa la tua app Microsoft",
+          "warning": "Normalmente questa opzione non è necessaria su Alga PSA ospitato e va usata solo se la tua organizzazione richiede una propria applicazione Entra.",
+          "description": "Apri Impostazioni → Integrazioni → Provider, espandi le opzioni avanzate di Microsoft e aggiungi l'app di proprietà del tenant prima di tornare qui."
         },
-        "manualRequired": "Platform Microsoft credentials are unavailable in this deployment. Configure your own Microsoft app to connect a mailbox.",
+        "manualRequired": "Le credenziali Microsoft della piattaforma non sono disponibili in questa distribuzione. Configura la tua app Microsoft per connettere una casella di posta.",
         "tenant": {
-          "title": "Your organization’s Microsoft app is selected",
-          "description": "New Microsoft mailboxes will use the tenant-owned app selected in Providers settings. This choice is preserved even when platform credentials are available.",
-          "incompleteTitle": "Your Microsoft app needs attention",
-          "incompleteDescription": "Finish configuring the Microsoft app selected in Providers settings before connecting a mailbox."
+          "title": "È selezionata l'app Microsoft della tua organizzazione",
+          "description": "Le nuove caselle di posta Microsoft useranno l'app di proprietà del tenant selezionata nelle impostazioni dei provider. La scelta viene mantenuta anche quando sono disponibili le credenziali della piattaforma.",
+          "incompleteTitle": "La tua app Microsoft richiede attenzione",
+          "incompleteDescription": "Completa la configurazione dell'app Microsoft selezionata nelle impostazioni dei provider prima di connettere una casella di posta."
         },
         "steps": {
           "registerApp": "Registra un'applicazione in Azure AD",
@@ -271,17 +271,17 @@
     },
     "microsoft": {
       "hostedOauth": {
-        "sectionTitle": "Connect Microsoft 365",
-        "platformUnavailableDescription": "Platform Microsoft credentials are unavailable in this deployment. Use your own Microsoft app to continue.",
-        "tenantSectionDescription": "Authorize this mailbox with the Microsoft app selected in Providers settings.",
-        "platformSectionDescription": "Alga PSA supplies the Microsoft application. Enter the mailbox details, then sign in with Microsoft.",
-        "platformManagedTitle": "Platform-managed Microsoft app",
-        "platformManagedDescription": "No Entra app registration, client ID, or client secret is required from you.",
-        "byoToggle": "Use your own Microsoft app (advanced)",
-        "byoToggleDescription": "For organizations that deliberately require their own Entra app registration.",
-        "byoWarning": "This is normally unnecessary on hosted Alga PSA. Use it only when your organization requires a tenant-owned Entra application.",
-        "tenantNotConfigured": "Your Microsoft app is not ready yet.",
-        "platformNotConfigured": "Platform Microsoft credentials are unavailable."
+        "sectionTitle": "Connetti Microsoft 365",
+        "platformUnavailableDescription": "Le credenziali Microsoft della piattaforma non sono disponibili in questa distribuzione. Per continuare, usa la tua app Microsoft.",
+        "tenantSectionDescription": "Autorizza questa casella di posta con l'app Microsoft selezionata nelle impostazioni dei provider.",
+        "platformSectionDescription": "Alga PSA fornisce l'applicazione Microsoft. Inserisci i dati della casella di posta, quindi accedi con Microsoft.",
+        "platformManagedTitle": "App Microsoft gestita dalla piattaforma",
+        "platformManagedDescription": "Non devi fornire alcuna registrazione di app Entra, ID client o segreto client.",
+        "byoToggle": "Usa la tua app Microsoft (avanzate)",
+        "byoToggleDescription": "Per le organizzazioni che richiedono espressamente una propria registrazione di app Entra.",
+        "byoWarning": "Normalmente questa opzione non è necessaria su Alga PSA ospitato. Usala solo se la tua organizzazione richiede un'applicazione Entra di proprietà del tenant.",
+        "tenantNotConfigured": "La tua app Microsoft non è ancora pronta.",
+        "platformNotConfigured": "Le credenziali Microsoft della piattaforma non sono disponibili."
       },
       "validation": {
         "providerNameRequired": "Il nome della configurazione è obbligatorio",
@@ -345,7 +345,7 @@
         "closedEarly": "La finestra di autorizzazione è stata chiusa prima del completamento.",
         "authorizationFailed": "Autorizzazione fallita",
         "popupFailed": "Il popup OAuth non è riuscito",
-        "configureFailed": "Failed to configure Gmail provider"
+        "configureFailed": "Impossibile configurare il provider Gmail"
       },
       "messages": {
         "setupIncomplete": "Fornitore salvato ma configurazione incompleta: {{error}}",
@@ -958,7 +958,7 @@
       "mismatchHelp": "Il record DNS esiste, ma il valore non corrisponde a quello atteso da Resend.",
       "matchedHelp": "Il valore rilevato corrisponde a quello atteso.",
       "unknownHelp": "Non abbiamo ancora verificato il DNS. Riverifica il DNS per eseguire la verifica.",
-      "hostLabel": "Host",
+      "hostLabel": "Nome host",
       "fqdnLabel": "Nome completo",
       "valueLabel": "Valore",
       "copyHostAriaLabel": "Copia host",

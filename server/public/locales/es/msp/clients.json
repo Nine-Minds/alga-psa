@@ -495,7 +495,7 @@
     "createAndAddAnother": "Crear + Agregar otro",
     "createAndView": "Crear + Ver cliente",
     "additionalDetails": "Detalles adicionales",
-    "createFailed": "Failed to create client. Please try again."
+    "createFailed": "No se pudo crear el cliente. Inténtelo de nuevo."
   },
   "clientCreatedDialog": {
     "title": "Cliente creado",
@@ -614,7 +614,7 @@
     "removeAssignmentTitle": "Eliminar asignación de línea de contrato",
     "removeAssignmentMessage": "¿Está seguro de que desea eliminar esta asignación de línea de contrato del cliente? La línea del contrato en sí no se eliminará.",
     "contracts": "Contratos",
-    "taxRatesLoadError": "Failed to load tax rate configuration."
+    "taxRatesLoadError": "No se pudo cargar la configuración de tasas impositivas."
   },
   "clientBillingSchedule": {
     "title": "Calendario de facturación",
@@ -763,7 +763,7 @@
     "startDateRequired": "Se requiere fecha de inicio",
     "updateAssignment": "Actualizar asignación",
     "useTenantRenewalDefaults": "Usar los valores predeterminados de renovación de inquilinos",
-    "saveError": "Failed to save contract. Please try again."
+    "saveError": "No se pudo guardar el contrato. Inténtelo de nuevo."
   },
   "clientContractLineDashboard": {
     "title": "Métricas de uso (últimos 30 días)",
@@ -1085,9 +1085,9 @@
     "error": "Error",
     "updateExistingTitle": "Actualizar clientes existentes",
     "updateExistingMessage": "{{count}} clientes ya existen. ¿Quieres actualizarlos con los nuevos datos?",
-    "invalidRowsBlocked": "Fix {{count}} invalid rows or enable \"Skip invalid records\" before importing.",
-    "noValidRows": "There are no valid client rows to import.",
-    "serverFailures": "{{failed}} of {{total}} clients failed to import. Review the row issues below."
+    "invalidRowsBlocked": "Corrija {{count}} filas no válidas o habilite «Omitir registros no válidos» antes de importar.",
+    "noValidRows": "No hay filas de clientes válidas para importar.",
+    "serverFailures": "No se pudieron importar {{failed}} de {{total}} clientes. Revise a continuación los problemas de las filas."
   },
   "clientsList": {
     "name": "Nombre",
@@ -1245,7 +1245,7 @@
     "loadError": "No se pudieron cargar las notas",
     "unknownError": "Error desconocido",
     "loadErrorTitle": "No se pudieron cargar las notas",
-    "loadErrorDescription": "Could not load notes. Please try again."
+    "loadErrorDescription": "No se pudieron cargar las notas. Inténtelo de nuevo."
   },
   "actions": {
     "cancel": "Cancelar",
@@ -1410,8 +1410,8 @@
         "startRequired": "Se requiere la hora de inicio para crear una reunión de Teams",
         "unavailable": "La creación de reuniones de Teams no está disponible para este inquilino."
       },
-      "loadFailed": "Interaction options could not be loaded. Please try again.",
-      "saveFailed": "The interaction could not be saved. Please try again."
+      "loadFailed": "No se pudieron cargar las opciones de interacción. Inténtelo de nuevo.",
+      "saveFailed": "No se pudo guardar la interacción. Inténtelo de nuevo."
     },
     "feed": {
       "addInteraction": "Agregar interacción",
@@ -1425,8 +1425,8 @@
       "startDate": "Fecha de inicio",
       "title": "Interacciones",
       "typePlaceholder": "Tipo de interacción",
-      "loadFailed": "Interactions could not be loaded. Please try again.",
-      "typesLoadFailed": "Interaction types could not be loaded. Please try again."
+      "loadFailed": "No se pudieron cargar las interacciones. Inténtelo de nuevo.",
+      "typesLoadFailed": "No se pudieron cargar los tipos de interacción. Inténtelo de nuevo."
     },
     "overall": {
       "allContacts": "Todos los contactos",
@@ -1444,7 +1444,7 @@
       "startTimePlaceholder": "Filtrar desde esta hora de inicio",
       "statusPlaceholder": "Estado",
       "title": "Interacciones recientes",
-      "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
+      "statusesLoadFailed": "No se pudieron cargar los estados de interacción. Inténtelo de nuevo."
     }
   },
   "clientDrawer": {

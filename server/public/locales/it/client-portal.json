@@ -16,7 +16,7 @@
     "documents": "Documenti",
     "knowledgeBase": "Base di conoscenza",
     "requestServices": "Richieste di servizio",
-    "home": "Home",
+    "home": "Pagina iniziale",
     "myTickets": "I miei ticket",
     "newRequest": "Nuova richiesta",
     "schedule": "Pianificazione",
@@ -669,7 +669,7 @@
     "types": {
       "workstation": "Postazioni di lavoro",
       "server": "Server",
-      "mobile": "Mobile",
+      "mobile": "Dispositivo mobile",
       "printer": "Stampanti",
       "network": "Rete",
       "unknown": "Altro"

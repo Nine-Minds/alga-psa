@@ -12,7 +12,7 @@
     "unmatchedPriorities_few": "{{count}} priorytety",
     "unmatchedPriorities_many": "{{count}} priorytetów",
     "unmatchedPriorities_other": "{{count}} priorytetów",
-    "unmatchedStatuses_one": "{{count}} status",
+    "unmatchedStatuses_one": "{{count}} niepasujący status",
     "unmatchedStatuses_few": "{{count}} statusy",
     "unmatchedStatuses_many": "{{count}} statusów",
     "unmatchedStatuses_other": "{{count}} statusów",
@@ -32,7 +32,7 @@
     "unmatchedClients_few": "{{count}} klientów",
     "unmatchedClients_many": "{{count}} klientów",
     "unmatchedClients_other": "{{count}} klientów",
-    "unmatchedAgents_one": "{{count}} agent",
+    "unmatchedAgents_one": "{{count}} niepasujący agent",
     "unmatchedAgents_few": "{{count}} agentów",
     "unmatchedAgents_many": "{{count}} agentów",
     "unmatchedAgents_other": "{{count}} agentów",
@@ -338,7 +338,7 @@
     "pastedImageDeleteFailed_many": "Komentarz usunięto, ale nie udało się usunąć {{count}} wklejonych obrazów.",
     "closeFailed": "Nie udało się zamknąć zgłoszenia",
     "scheduleVisitFailed": "Nie udało się otworzyć harmonogramu",
-    "loadCommentsFailed": "Failed to load comments",
+    "loadCommentsFailed": "Nie udało się wczytać komentarzy",
     "updateTicketFailed": "Nie udało się zaktualizować zgłoszenia"
   },
   "conversation": {
@@ -1266,8 +1266,8 @@
     "serialUnit": "Numer seryjny / MAC (produkt seryjny)",
     "selectUnit": "Wybierz jednostkę do dostarczenia...",
     "onHandByLocation": "Stan według lokalizacji",
-    "catalogUnitCost": "Catalog unit cost",
-    "costNotConfigured": "Not configured"
+    "catalogUnitCost": "Katalogowy koszt jednostkowy",
+    "costNotConfigured": "Nie skonfigurowano"
   },
   "watchList": {
     "title": "Lista obserwujących",
@@ -1794,8 +1794,8 @@
         "close_rules_bypassed": "pominięto reguły zamykania",
         "auto_close_warning_sent": "wysłano ostrzeżenie o automatycznym zamknięciu"
       },
-      "closeStatus": "Close status",
-      "noStatusChange": "Do not change status"
+      "closeStatus": "Status zamknięcia",
+      "noStatusChange": "Nie zmieniaj statusu"
     }
   },
   "notifications": {

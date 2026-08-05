@@ -293,14 +293,14 @@
       "client": "Client",
       "invoiceNumber": "Numéro de facture",
       "invoiceNumberOptional": "Numéro de facture (facultatif)",
-      "sourceSalesOrder": "Source sales order (optional)"
+      "sourceSalesOrder": "Commande client source (facultatif)"
     },
     "placeholders": {
       "selectClient": "Sélectionnez un client",
       "invoiceNumberOptional": "Laisser vide pour générer automatiquement",
-      "sourceSalesOrder": "Select a fulfilled or manually billable sales order",
-      "searchSalesOrders": "Search sales orders...",
-      "noInvoiceableSalesOrders": "No invoiceable sales orders found."
+      "sourceSalesOrder": "Sélectionnez une commande client livrée ou facturable manuellement",
+      "searchSalesOrders": "Rechercher des commandes clients…",
+      "noInvoiceableSalesOrders": "Aucune commande client facturable trouvée."
     },
     "automatedItems": {
       "title": "Éléments de campagne automatisés",
@@ -319,7 +319,7 @@
       "saveChanges": "Enregistrer les modifications",
       "processing": "Traitement...",
       "generateSalesOrderInvoice": "Générer la facture de la commande client",
-      "clearSalesOrderSource": "Clear sales order source"
+      "clearSalesOrderSource": "Effacer la commande client source"
     },
     "labels": {
       "total": "Total"
@@ -1029,7 +1029,7 @@
       "generate": "Générer",
       "drafts": "Brouillons",
       "finalized": "Finalisée",
-      "projectBilling": "Project Billing"
+      "projectBilling": "Facturation des projets"
     }
   },
   "invoiceSyncBadge": {
@@ -1667,63 +1667,63 @@
     }
   },
   "projectBilling": {
-    "subtitle": "Ready milestones and deposits awaiting approval across all projects.",
+    "subtitle": "Jalons et acomptes prêts, en attente d'approbation pour tous les projets.",
     "bulkActions": "Actions ({{count}})",
-    "loading": "Loading project billing queue...",
-    "empty": "Nothing is waiting for review. Ready milestones and deposits will appear here.",
+    "loading": "Chargement de la file de facturation des projets…",
+    "empty": "Aucun élément n'est en attente de vérification. Les jalons et acomptes prêts apparaîtront ici.",
     "columns": {
-      "project": "Project",
+      "project": "Projet",
       "client": "Client",
       "description": "Description",
-      "amount": "Amount",
-      "trigger": "Trigger",
-      "daysWaiting": "Days waiting",
+      "amount": "Montant",
+      "trigger": "Déclencheur",
+      "daysWaiting": "Jours d'attente",
       "actions": "Actions"
     },
     "trigger": {
-      "phase": "Phase {{phase}} completed {{date}}",
-      "date": "Date reached",
-      "manual": "Manual"
+      "phase": "Phase {{phase}} terminée le {{date}}",
+      "date": "Date atteinte",
+      "manual": "Manuel"
     },
     "actions": {
-      "approve": "Approve",
+      "approve": "Approuver",
       "approveInvoiceNow": "Approuver et facturer maintenant",
-      "hold": "Hold",
-      "cancel": "Cancel",
-      "approveSelected": "Approve selected",
-      "holdSelected": "Hold selected"
+      "hold": "Mettre en attente",
+      "cancel": "Annuler",
+      "approveSelected": "Approuver la sélection",
+      "holdSelected": "Mettre la sélection en attente"
     },
     "toasts": {
-      "approved": "Entry approved.",
-      "approvedWithWarning": "Entry approved. {{warning}}",
-      "invoiced": "Entry approved and invoiced.",
-      "bulkApproved": "{{count}} entries approved.",
-      "bulkApproveFailed": "{{count}} entries could not be approved (e.g. {{reason}}).",
-      "held": "Entry placed on hold.",
-      "bulkHeld": "{{count}} entries placed on hold.",
-      "bulkHoldFailed": "{{count}} entries could not be held (e.g. {{reason}}).",
-      "canceled": "Entry canceled."
+      "approved": "Entrée approuvée.",
+      "approvedWithWarning": "Entrée approuvée. {{warning}}",
+      "invoiced": "Entrée approuvée et facturée.",
+      "bulkApproved": "{{count}} entrée(s) approuvée(s).",
+      "bulkApproveFailed": "{{count}} entrée(s) n'ont pas pu être approuvée(s) (p. ex. {{reason}}).",
+      "held": "Entrée mise en attente.",
+      "bulkHeld": "{{count}} entrée(s) mise(s) en attente.",
+      "bulkHoldFailed": "{{count}} entrée(s) n'ont pas pu être mise(s) en attente (p. ex. {{reason}}).",
+      "canceled": "Entrée annulée."
     },
     "errors": {
-      "loadFailed": "Failed to load the project billing review queue. Please try again.",
-      "approveFailed": "Failed to approve the entry.",
+      "loadFailed": "Échec du chargement de la file de vérification de la facturation des projets. Réessayez.",
+      "approveFailed": "Échec de l'approbation de l'entrée.",
       "invoiceFailed": "Impossible d'approuver et de facturer l'entrée.",
-      "holdFailed": "Failed to place the entry on hold.",
-      "cancelFailed": "Failed to cancel the entry."
+      "holdFailed": "Échec de la mise en attente de l'entrée.",
+      "cancelFailed": "Échec de l'annulation de l'entrée."
     },
     "holdDialog": {
-      "title": "Hold entry",
-      "titlePlural": "Hold {{count}} entries",
-      "description": "Holding returns the entry to pending until it is made ready again. A reason is required.",
-      "reasonPlaceholder": "Reason for holding...",
-      "cancel": "Cancel",
-      "confirm": "Hold"
+      "title": "Mettre l'entrée en attente",
+      "titlePlural": "Mettre {{count}} entrées en attente",
+      "description": "La mise en attente replace l'entrée au statut En attente jusqu'à ce qu'elle soit de nouveau prête. Un motif est requis.",
+      "reasonPlaceholder": "Motif de la mise en attente…",
+      "cancel": "Annuler",
+      "confirm": "Mettre en attente"
     },
     "cancelDialog": {
-      "title": "Cancel entry",
-      "message": "Canceling this schedule entry removes it from billing. This cannot be undone.",
-      "confirm": "Cancel entry",
-      "dismiss": "Keep entry"
+      "title": "Annuler l'entrée",
+      "message": "L'annulation de cette entrée de calendrier la retire de la facturation. Cette action est irréversible.",
+      "confirm": "Annuler l'entrée",
+      "dismiss": "Conserver l'entrée"
     }
   }
 }

@@ -7,7 +7,7 @@
         "description": "Połącz swój osobisty kalendarz Google lub Microsoft, aby synchronizować przypisane Ci wpisy harmonogramu. Wydarzenia, które tworzysz w Aldze, pojawią się w Twoim kalendarzu zewnętrznym, gdy zostaną Ci przypisane."
       },
       "buttons": {
-        "googleCalendar": "Google Calendar",
+        "googleCalendar": "Kalendarz Google",
         "outlookCalendar": "Kalendarz Outlook",
         "addGoogleCalendar": "Dodaj Google Calendar",
         "addOutlookCalendar": "Dodaj kalendarz Outlook"
@@ -47,8 +47,8 @@
         "lastSync": "Ostatnia synchronizacja:"
       },
       "providerType": {
-        "google": "Google Calendar",
-        "microsoft": "Microsoft Outlook Calendar"
+        "google": "Kalendarz Google",
+        "microsoft": "Kalendarz programu Microsoft Outlook"
       },
       "syncDirection": {
         "bidirectional": "Dwukierunkowa",
@@ -200,7 +200,7 @@
           "notConfigured": "Integracja Google nie jest skonfigurowana dla tego tenanta. Skonfiguruj najpierw Google, a następnie spróbuj ponownie."
         },
         "defaults": {
-          "providerName": "Google Calendar",
+          "providerName": "Kalendarz Google",
           "calendarId": "primary"
         }
       },
@@ -238,7 +238,7 @@
           "profile_credentials_missing": "Profilowi Microsoft powiązanemu z kalendarzem brakuje wymaganych poświadczeń. Zaktualizuj profil w Dostawcach i wróć tutaj."
         },
         "defaults": {
-          "providerName": "Outlook Calendar",
+          "providerName": "Kalendarz programu Outlook",
           "calendarId": "calendar"
         }
       }

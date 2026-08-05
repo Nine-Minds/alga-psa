@@ -4,7 +4,7 @@
     "description": "Reichen Sie eine strukturierte Anfrage ein und wir erstellen automatisch ein Ticket dafür.",
     "myRequests": "Meine Anfragen",
     "empty": "Derzeit sind keine anfragbaren Services verfügbar.",
-    "fallbackCategory": "Service",
+    "fallbackCategory": "Dienst",
     "noDescription": "Keine Beschreibung angegeben",
     "newRequestHeading": "Neue Anfrage einreichen"
   },

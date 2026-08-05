@@ -42,22 +42,22 @@
       "title": "Installatie-instructies",
       "microsoft": {
         "title": "Microsoft 365-installatie",
-        "checkingCredentials": "Checking Microsoft credential availability…",
+        "checkingCredentials": "Beschikbaarheid van Microsoft-referenties controleren…",
         "platform": {
-          "title": "Microsoft sign-in is ready",
-          "description": "Alga PSA supplies the Microsoft application. Add a provider, enter the mailbox details, and connect with Microsoft—no Entra app registration is needed."
+          "title": "Aanmelden bij Microsoft is gereed",
+          "description": "Alga PSA levert de Microsoft-toepassing. Voeg een aanbieder toe, voer de postvakgegevens in en maak verbinding met Microsoft. Registratie van een Entra-app is niet nodig."
         },
         "byo": {
-          "summary": "Advanced: use your own Microsoft app",
-          "warning": "This is normally unnecessary on hosted Alga PSA and should be used only when your organization requires its own Entra application.",
-          "description": "Open Settings → Integrations → Providers, expand the Microsoft advanced options, and add your tenant-owned app before returning here."
+          "summary": "Geavanceerd: gebruik uw eigen Microsoft-app",
+          "warning": "Dit is normaal gesproken niet nodig op gehoste Alga PSA en mag alleen worden gebruikt wanneer uw organisatie een eigen Entra-toepassing vereist.",
+          "description": "Open Instellingen → Integraties → Aanbieders, vouw de geavanceerde Microsoft-opties uit en voeg uw tenant-eigen app toe voordat u hier terugkeert."
         },
-        "manualRequired": "Platform Microsoft credentials are unavailable in this deployment. Configure your own Microsoft app to connect a mailbox.",
+        "manualRequired": "Microsoft-platformreferenties zijn niet beschikbaar in deze implementatie. Configureer uw eigen Microsoft-app om een postvak te verbinden.",
         "tenant": {
-          "title": "Your organization’s Microsoft app is selected",
-          "description": "New Microsoft mailboxes will use the tenant-owned app selected in Providers settings. This choice is preserved even when platform credentials are available.",
-          "incompleteTitle": "Your Microsoft app needs attention",
-          "incompleteDescription": "Finish configuring the Microsoft app selected in Providers settings before connecting a mailbox."
+          "title": "De Microsoft-app van uw organisatie is geselecteerd",
+          "description": "Nieuwe Microsoft-postvakken gebruiken de tenant-eigen app die in de aanbiedersinstellingen is geselecteerd. Deze keuze blijft behouden, ook wanneer platformreferenties beschikbaar zijn.",
+          "incompleteTitle": "Uw Microsoft-app vereist aandacht",
+          "incompleteDescription": "Voltooi de configuratie van de Microsoft-app die in de aanbiedersinstellingen is geselecteerd voordat u een postvak verbindt."
         },
         "steps": {
           "registerApp": "Registreer een toepassing in Azure AD",
@@ -271,17 +271,17 @@
     },
     "microsoft": {
       "hostedOauth": {
-        "sectionTitle": "Connect Microsoft 365",
-        "platformUnavailableDescription": "Platform Microsoft credentials are unavailable in this deployment. Use your own Microsoft app to continue.",
-        "tenantSectionDescription": "Authorize this mailbox with the Microsoft app selected in Providers settings.",
-        "platformSectionDescription": "Alga PSA supplies the Microsoft application. Enter the mailbox details, then sign in with Microsoft.",
-        "platformManagedTitle": "Platform-managed Microsoft app",
-        "platformManagedDescription": "No Entra app registration, client ID, or client secret is required from you.",
-        "byoToggle": "Use your own Microsoft app (advanced)",
-        "byoToggleDescription": "For organizations that deliberately require their own Entra app registration.",
-        "byoWarning": "This is normally unnecessary on hosted Alga PSA. Use it only when your organization requires a tenant-owned Entra application.",
-        "tenantNotConfigured": "Your Microsoft app is not ready yet.",
-        "platformNotConfigured": "Platform Microsoft credentials are unavailable."
+        "sectionTitle": "Microsoft 365 verbinden",
+        "platformUnavailableDescription": "Microsoft-platformreferenties zijn niet beschikbaar in deze implementatie. Gebruik uw eigen Microsoft-app om door te gaan.",
+        "tenantSectionDescription": "Autoriseer dit postvak met de Microsoft-app die in de aanbiedersinstellingen is geselecteerd.",
+        "platformSectionDescription": "Alga PSA levert de Microsoft-toepassing. Voer de postvakgegevens in en meld u vervolgens aan bij Microsoft.",
+        "platformManagedTitle": "Door het platform beheerde Microsoft-app",
+        "platformManagedDescription": "U hoeft geen Entra-appregistratie, client-id of clientgeheim op te geven.",
+        "byoToggle": "Uw eigen Microsoft-app gebruiken (geavanceerd)",
+        "byoToggleDescription": "Voor organisaties die bewust een eigen Entra-appregistratie vereisen.",
+        "byoWarning": "Dit is normaal gesproken niet nodig op gehoste Alga PSA. Gebruik dit alleen wanneer uw organisatie een tenant-eigen Entra-toepassing vereist.",
+        "tenantNotConfigured": "Uw Microsoft-app is nog niet gereed.",
+        "platformNotConfigured": "Microsoft-platformreferenties zijn niet beschikbaar."
       },
       "validation": {
         "providerNameRequired": "Configuratienaam is verplicht",
@@ -345,7 +345,7 @@
         "closedEarly": "Het autorisatievenster werd gesloten voordat het werd voltooid.",
         "authorizationFailed": "Autorisatie mislukt",
         "popupFailed": "OAuth-pop-up mislukt",
-        "configureFailed": "Failed to configure Gmail provider"
+        "configureFailed": "Configuratie van Gmail-aanbieder mislukt"
       },
       "messages": {
         "setupIncomplete": "Provider opgeslagen maar installatie onvolledig: {{error}}",
@@ -836,7 +836,7 @@
         "customSmtpHelp": "Gebruik een domein dat uw SMTP-server mag gebruiken als afzender. Een niet-overeenkomend domein kan bezorgingsfouten of spamfiltering veroorzaken.",
         "customManagedHelp": "Moet overeenkomen met {{domain}}. Als dit geen van uw inkomende inboxen is, werkt de verwerking van inkomende tickets mogelijk niet.",
         "nameLabel": "Weergavenaam afzender",
-        "namePlaceholder": "Support",
+        "namePlaceholder": "Ondersteuning",
         "nameHelp": "Wordt weergegeven als afzendernaam in ticketmeldingen. Laat leeg om de geconfigureerde naam van de mailbox of de bordnaam te gebruiken.",
         "warningTitle": "Let op",
         "errorTitle": "Corrigeer het afzenderadres",

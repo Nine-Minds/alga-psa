@@ -87,12 +87,12 @@
         "unchecked": "Niezaznaczone"
       },
       "types": {
-        "short-text": "short-text",
-        "long-text": "long-text",
-        "select": "select",
-        "checkbox": "checkbox",
-        "date": "date",
-        "file-upload": "file-upload"
+      "short-text": "krótki tekst",
+      "long-text": "długi tekst",
+      "select": "lista wyboru",
+      "checkbox": "pole wyboru",
+      "date": "data",
+      "file-upload": "przesyłanie pliku"
       }
     },
     "execution": {
@@ -208,7 +208,7 @@
     "user-minus": "Zakończenie zatrudnienia",
     "shield-check": "Bezpieczeństwo",
     "key-round": "Dostęp",
-    "laptop": "Laptop",
+    "laptop": "Komputer przenośny",
     "monitor": "Stacja robocza",
     "printer": "Drukarka",
     "hard-drive": "Pamięć masowa",

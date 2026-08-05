@@ -1007,7 +1007,7 @@
     "errors": {
       "loadTitle": "Les notes n'ont pas pu être chargées",
       "unknown": "Erreur inconnue",
-      "loadDescription": "Could not load notes. Please try again."
+      "loadDescription": "Impossible de charger les notes. Réessayez."
     },
     "lastUpdated": "Dernière mise à jour : {{value}}"
   },

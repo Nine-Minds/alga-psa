@@ -20,7 +20,7 @@
       "endDate": "Data zakończenia",
       "actions": "Działania",
       "notAvailable": "Nie dotyczy",
-      "region": "Region",
+      "region": "Region podatkowy",
       "taxPercentage": "Procent podatku",
       "composite": "Kompozyt"
     },

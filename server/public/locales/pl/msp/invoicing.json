@@ -311,14 +311,14 @@
       "client": "Klient",
       "invoiceNumber": "Numer faktury",
       "invoiceNumberOptional": "Numer faktury (opcjonalnie)",
-      "sourceSalesOrder": "Source sales order (optional)"
+      "sourceSalesOrder": "Źródłowe zamówienie sprzedaży (opcjonalnie)"
     },
     "placeholders": {
       "selectClient": "Wybierz klienta",
       "invoiceNumberOptional": "Pozostaw puste, aby wygenerować automatycznie",
-      "sourceSalesOrder": "Select a fulfilled or manually billable sales order",
-      "searchSalesOrders": "Search sales orders...",
-      "noInvoiceableSalesOrders": "No invoiceable sales orders found."
+      "sourceSalesOrder": "Wybierz zrealizowane lub ręcznie rozliczane zamówienie sprzedaży",
+      "searchSalesOrders": "Szukaj zamówień sprzedaży...",
+      "noInvoiceableSalesOrders": "Nie znaleziono zamówień sprzedaży do zafakturowania."
     },
     "automatedItems": {
       "title": "Automatyczne elementy zamówienia",
@@ -337,7 +337,7 @@
       "saveChanges": "Zapisz zmiany",
       "processing": "Przetwarzanie...",
       "generateSalesOrderInvoice": "Utwórz fakturę z zamówienia sprzedaży",
-      "clearSalesOrderSource": "Clear sales order source"
+      "clearSalesOrderSource": "Wyczyść źródłowe zamówienie sprzedaży"
     },
     "labels": {
       "total": "Razem"
@@ -695,7 +695,7 @@
     "title": "Podgląd faktury",
     "templatePlaceholder": "Wybierz szablon faktury...",
     "labels": {
-      "standard": "(Standard)"
+      "standard": "(Standardowa)"
     },
     "actions": {
       "finalizeInvoice": "Sfinalizuj fakturę",
@@ -800,7 +800,7 @@
       "thisTemplate": "ten szablon",
       "copySuffix": "(Kopia)",
       "copyOfName": "Kopia {{name}}",
-      "standardSuffix": "(Standard)"
+      "standardSuffix": "(Standardowy)"
     },
     "errors": {
       "cloneFailed": "Nie udało się sklonować szablonu.",
@@ -1083,7 +1083,7 @@
       "generate": "Spowodować",
       "drafts": "Wersje robocze",
       "finalized": "Sfinalizowana",
-      "projectBilling": "Project Billing"
+      "projectBilling": "Rozliczenia projektów"
     }
   },
   "invoiceSyncBadge": {
@@ -1096,7 +1096,7 @@
       "voided": "Unieważniona"
     },
     "tooltip": {
-      "qboNumberPrefix": "QBO #",
+      "qboNumberPrefix": "Nr QBO",
       "lastSynced": "Ostatnia synchronizacja:",
       "viewInQuickBooks": "Wyświetl w QuickBooks"
     }
@@ -1362,7 +1362,7 @@
         "description": "Element obrazu w linii."
       },
       "logo": {
-        "label": "Logo",
+        "label": "Logotyp",
         "description": "Zasób brandingowy najemcy."
       },
       "qr": {
@@ -1721,63 +1721,63 @@
     }
   },
   "projectBilling": {
-    "subtitle": "Ready milestones and deposits awaiting approval across all projects.",
-    "bulkActions": "Actions ({{count}})",
-    "loading": "Loading project billing queue...",
-    "empty": "Nothing is waiting for review. Ready milestones and deposits will appear here.",
+    "subtitle": "Gotowe kamienie milowe i zaliczki oczekujące na zatwierdzenie we wszystkich projektach.",
+    "bulkActions": "Działania ({{count}})",
+    "loading": "Wczytywanie kolejki rozliczeń projektów...",
+    "empty": "Nic nie oczekuje na sprawdzenie. Gotowe kamienie milowe i zaliczki pojawią się tutaj.",
     "columns": {
-      "project": "Project",
-      "client": "Client",
-      "description": "Description",
-      "amount": "Amount",
-      "trigger": "Trigger",
-      "daysWaiting": "Days waiting",
-      "actions": "Actions"
+      "project": "Projekt",
+      "client": "Klient",
+      "description": "Opis",
+      "amount": "Kwota",
+      "trigger": "Wyzwalacz",
+      "daysWaiting": "Dni oczekiwania",
+      "actions": "Działania"
     },
     "trigger": {
-      "phase": "Phase {{phase}} completed {{date}}",
-      "date": "Date reached",
-      "manual": "Manual"
+      "phase": "Faza {{phase}} ukończona {{date}}",
+      "date": "Osiągnięto datę",
+      "manual": "Ręcznie"
     },
     "actions": {
-      "approve": "Approve",
+      "approve": "Zatwierdź",
       "approveInvoiceNow": "Zatwierdź i wystaw fakturę",
-      "hold": "Hold",
-      "cancel": "Cancel",
-      "approveSelected": "Approve selected",
-      "holdSelected": "Hold selected"
+      "hold": "Wstrzymaj",
+      "cancel": "Anuluj",
+      "approveSelected": "Zatwierdź wybrane",
+      "holdSelected": "Wstrzymaj wybrane"
     },
     "toasts": {
-      "approved": "Entry approved.",
-      "approvedWithWarning": "Entry approved. {{warning}}",
-      "invoiced": "Entry approved and invoiced.",
-      "bulkApproved": "{{count}} entries approved.",
-      "bulkApproveFailed": "{{count}} entries could not be approved (e.g. {{reason}}).",
-      "held": "Entry placed on hold.",
-      "bulkHeld": "{{count}} entries placed on hold.",
-      "bulkHoldFailed": "{{count}} entries could not be held (e.g. {{reason}}).",
-      "canceled": "Entry canceled."
+      "approved": "Zatwierdzono wpis.",
+      "approvedWithWarning": "Zatwierdzono wpis. {{warning}}",
+      "invoiced": "Zatwierdzono i zafakturowano wpis.",
+      "bulkApproved": "Zatwierdzono wpisy: {{count}}.",
+      "bulkApproveFailed": "Nie udało się zatwierdzić wpisów: {{count}} (np. {{reason}}).",
+      "held": "Wstrzymano wpis.",
+      "bulkHeld": "Wstrzymano wpisy: {{count}}.",
+      "bulkHoldFailed": "Nie udało się wstrzymać wpisów: {{count}} (np. {{reason}}).",
+      "canceled": "Anulowano wpis."
     },
     "errors": {
-      "loadFailed": "Failed to load the project billing review queue. Please try again.",
-      "approveFailed": "Failed to approve the entry.",
+      "loadFailed": "Nie udało się wczytać kolejki przeglądu rozliczeń projektów. Spróbuj ponownie.",
+      "approveFailed": "Nie udało się zatwierdzić wpisu.",
       "invoiceFailed": "Nie udało się zatwierdzić wpisu ani wystawić za niego faktury.",
-      "holdFailed": "Failed to place the entry on hold.",
-      "cancelFailed": "Failed to cancel the entry."
+      "holdFailed": "Nie udało się wstrzymać wpisu.",
+      "cancelFailed": "Nie udało się anulować wpisu."
     },
     "holdDialog": {
-      "title": "Hold entry",
-      "titlePlural": "Hold {{count}} entries",
-      "description": "Holding returns the entry to pending until it is made ready again. A reason is required.",
-      "reasonPlaceholder": "Reason for holding...",
-      "cancel": "Cancel",
-      "confirm": "Hold"
+      "title": "Wstrzymaj wpis",
+      "titlePlural": "Wstrzymaj wpisy: {{count}}",
+      "description": "Wstrzymanie przywraca wpis do stanu oczekującego, dopóki nie zostanie ponownie oznaczony jako gotowy. Powód jest wymagany.",
+      "reasonPlaceholder": "Powód wstrzymania...",
+      "cancel": "Anuluj",
+      "confirm": "Wstrzymaj"
     },
     "cancelDialog": {
-      "title": "Cancel entry",
-      "message": "Canceling this schedule entry removes it from billing. This cannot be undone.",
-      "confirm": "Cancel entry",
-      "dismiss": "Keep entry"
+      "title": "Anuluj wpis",
+      "message": "Anulowanie tego wpisu harmonogramu usuwa go z rozliczeń. Tej operacji nie można cofnąć.",
+      "confirm": "Anuluj wpis",
+      "dismiss": "Zachowaj wpis"
     }
   }
 }

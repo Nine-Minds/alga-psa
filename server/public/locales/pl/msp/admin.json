@@ -110,7 +110,7 @@
       "options": {
         "smtp": "SMTP (tradycyjny serwer pocztowy)",
         "resend": "Resend (nowoczesna usługa API)",
-        "microsoft": "Microsoft 365 (Microsoft Graph)"
+        "microsoft": "Microsoft 365 (interfejs Microsoft Graph)"
       },
       "placeholder": "Wybierz dostawcę poczty",
       "descriptions": {
@@ -544,7 +544,7 @@
       "create": "Utwórz pakiet",
       "creating": "Tworzenie...",
       "nameLabel": "Nazwa",
-      "namePlaceholder": "Finance Reviewer West",
+      "namePlaceholder": "Kontroler finansowy — Zachód",
       "descriptionLabel": "Opis",
       "descriptionPlaceholder": "Ponownie używalny pakiet zawężania dla określonego zespołu, grupy klientów lub workflow."
     },

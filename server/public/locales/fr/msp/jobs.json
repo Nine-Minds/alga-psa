@@ -37,7 +37,7 @@
     "externalId": "ID : {{id}}...",
     "print": {
       "title": "Jobs récents",
-      "subtitle": "{{count}} jobs",
+      "subtitle": "{{count}} tâche(s) en arrière-plan",
       "noJobs": "Aucun job à imprimer",
       "columns": {
         "jobName": "Nom du job",

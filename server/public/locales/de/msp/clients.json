@@ -306,7 +306,7 @@
       "notes": "Notizen",
       "people": "Personen",
       "record": "Kundendatensatz",
-      "service": "Service",
+      "service": "Dienst",
       "timeline": "Alles der Reihe nach"
     },
     "csatEmpty": "Noch keine Umfrageantworten.",
@@ -391,7 +391,7 @@
       "money": "Finanzen",
       "more": "Mehr",
       "records": "Datensätze",
-      "service": "Service"
+      "service": "Dienst"
     },
     "record": {
       "accountManager": "Kundenbetreuer",
@@ -427,7 +427,7 @@
       "filterInteractions": "Interaktionen",
       "filterInventory": "Bestand",
       "filterMoney": "Finanzen",
-      "filterService": "Service",
+      "filterService": "Dienst",
       "hoursAgo": "vor {{count}} Std.",
       "interaction": "Interaktion",
       "invoiceCreated": "Rechnung entworfen",
@@ -495,7 +495,7 @@
     "createAndAddAnother": "Erstellen + Weiteren hinzufügen",
     "createAndView": "Erstellen + Kunde anzeigen",
     "additionalDetails": "Zusätzliche Details",
-    "createFailed": "Failed to create client. Please try again."
+    "createFailed": "Der Kunde konnte nicht erstellt werden. Versuchen Sie es erneut."
   },
   "clientCreatedDialog": {
     "title": "Kunde erstellt",
@@ -614,7 +614,7 @@
     "removeAssignmentTitle": "Vertragspositionszuordnung entfernen",
     "removeAssignmentMessage": "Sind Sie sicher, dass Sie diese Vertragszeilenzuweisung vom Kunden entfernen möchten? Die Vertragszeile selbst wird nicht gelöscht.",
     "contracts": "Verträge",
-    "taxRatesLoadError": "Failed to load tax rate configuration."
+    "taxRatesLoadError": "Die Steuersatzkonfiguration konnte nicht geladen werden."
   },
   "clientBillingSchedule": {
     "title": "Abrechnungsplan",
@@ -763,7 +763,7 @@
     "startDateRequired": "Startdatum ist erforderlich",
     "updateAssignment": "Zuweisung aktualisieren",
     "useTenantRenewalDefaults": "Standardeinstellungen für Mandantenverlängerung verwenden",
-    "saveError": "Failed to save contract. Please try again."
+    "saveError": "Der Vertrag konnte nicht gespeichert werden. Versuchen Sie es erneut."
   },
   "clientContractLineDashboard": {
     "title": "Nutzungsmetriken (letzte 30 Tage)",
@@ -793,7 +793,7 @@
   "clientContractLineGuide": {
     "title": "Leitfaden zur Begriffsklärung von Vertragszeilen",
     "overviewTitle": "Überblick",
-    "bestPracticesTitle": "Best Practices",
+    "bestPracticesTitle": "Bewährte Verfahren",
     "troubleshootingTitle": "Fehlerbehebung",
     "commonScenariosTitle": "Häufige Szenarien",
     "bestPractices": {
@@ -859,7 +859,7 @@
       "title": "Häufige Begriffsklärungsszenarien"
     },
     "tabs": {
-      "bestPractices": "Best Practices",
+      "bestPractices": "Bewährte Verfahren",
       "overview": "Überblick",
       "scenarios": "Häufige Szenarien",
       "troubleshooting": "Fehlerbehebung"
@@ -1085,9 +1085,9 @@
     "error": "Fehler",
     "updateExistingTitle": "Bestehende Clients aktualisieren",
     "updateExistingMessage": "{{count}} Clients sind bereits vorhanden. Möchten Sie sie mit den neuen Daten aktualisieren?",
-    "invalidRowsBlocked": "Fix {{count}} invalid rows or enable \"Skip invalid records\" before importing.",
-    "noValidRows": "There are no valid client rows to import.",
-    "serverFailures": "{{failed}} of {{total}} clients failed to import. Review the row issues below."
+    "invalidRowsBlocked": "Korrigieren Sie {{count}} ungültige Zeilen oder aktivieren Sie „Ungültige Datensätze überspringen“, bevor Sie importieren.",
+    "noValidRows": "Es sind keine gültigen Kundenzeilen zum Importieren vorhanden.",
+    "serverFailures": "{{failed}} von {{total}} Kunden konnten nicht importiert werden. Prüfen Sie die nachstehenden Zeilenprobleme."
   },
   "clientsList": {
     "name": "Name",
@@ -1245,7 +1245,7 @@
     "loadError": "Notizen konnten nicht geladen werden",
     "unknownError": "Unbekannter Fehler",
     "loadErrorTitle": "Notizen konnten nicht geladen werden",
-    "loadErrorDescription": "Could not load notes. Please try again."
+    "loadErrorDescription": "Notizen konnten nicht geladen werden. Versuchen Sie es erneut."
   },
   "actions": {
     "cancel": "Abbrechen",
@@ -1410,8 +1410,8 @@
         "startRequired": "Zum Erstellen einer Teams-Besprechung ist eine Startzeit erforderlich",
         "unavailable": "Die Erstellung von Teams-Besprechungen ist für diesen Mandanten nicht verfügbar."
       },
-      "loadFailed": "Interaction options could not be loaded. Please try again.",
-      "saveFailed": "The interaction could not be saved. Please try again."
+      "loadFailed": "Die Interaktionsoptionen konnten nicht geladen werden. Versuchen Sie es erneut.",
+      "saveFailed": "Die Interaktion konnte nicht gespeichert werden. Versuchen Sie es erneut."
     },
     "feed": {
       "addInteraction": "Interaktion hinzufügen",
@@ -1425,8 +1425,8 @@
       "startDate": "Startdatum",
       "title": "Interaktionen",
       "typePlaceholder": "Interaktionstyp",
-      "loadFailed": "Interactions could not be loaded. Please try again.",
-      "typesLoadFailed": "Interaction types could not be loaded. Please try again."
+      "loadFailed": "Interaktionen konnten nicht geladen werden. Versuchen Sie es erneut.",
+      "typesLoadFailed": "Interaktionstypen konnten nicht geladen werden. Versuchen Sie es erneut."
     },
     "overall": {
       "allContacts": "Alle Kontakte",
@@ -1444,7 +1444,7 @@
       "startTimePlaceholder": "Ab dieser Startzeit filtern",
       "statusPlaceholder": "Status",
       "title": "Letzte Interaktionen",
-      "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
+      "statusesLoadFailed": "Interaktionsstatus konnten nicht geladen werden. Versuchen Sie es erneut."
     }
   },
   "clientDrawer": {

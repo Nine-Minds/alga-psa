@@ -37,7 +37,7 @@
     "settings": "Instellingen",
     "profile": "Profiel",
     "logout": "Afmelden",
-    "help": "Help"
+    "help": "Hulp"
   },
   "actions": {
     "save": "Opslaan",
@@ -203,7 +203,7 @@
         },
         "systemDefault": {
           "source": "Systeemstandaard (Engels)",
-          "appliesTo": "Fallback",
+          "appliesTo": "Terugval",
           "whereSet": "Systeemgedefinieerd"
         }
       }
@@ -1172,7 +1172,7 @@
     "teamsTab": {
       "signedInAs": "Aangemeld als {{name}}",
       "openInFullPsa": "Openen in volledige PSA",
-      "iframeTitle": "{{destination}} in Alga PSA",
+      "iframeTitle": "{{destination}} in Alga PSA openen",
       "fullPsaHint": "Gebruik 'Openen in volledige PSA' voor meer context dan een Teams-kaart kan tonen.",
       "fallback": {
         "label": "Gevraagd record niet beschikbaar:",
@@ -1205,7 +1205,7 @@
           "summary": "U opent tijdregistratie {{entryId}} vanuit Teams."
         },
         "contact": {
-          "title": "Contact {{contactId}}",
+          "title": "Contact {{contactId}} openen",
           "summary": "U opent contact {{contactId}} vanuit Teams.",
           "summaryWithClient": "U opent contact {{contactId}} voor klant {{clientId}} vanuit Teams."
         }

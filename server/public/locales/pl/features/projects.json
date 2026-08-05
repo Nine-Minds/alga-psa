@@ -189,7 +189,7 @@
     "searchTasksPlaceholder": "Wyszukaj zadania...",
     "caseSensitive": "Wielkość liter ma znaczenie",
     "wholeWord": "Całe słowo",
-    "wholeWordShort": "Word",
+    "wholeWordShort": "Wyraz",
     "clearSearch": "Wyczyść wyszukiwanie",
     "taskList": "Lista zadań",
     "kanbanBoard": "Tablica Kanbana",
@@ -437,7 +437,7 @@
     "linkExisting": "Połącz istniejący dokument",
     "newButton": "Nowy",
     "uploadButton": "Wyślij",
-    "linkButton": "Link",
+    "linkButton": "Połącz",
     "remove": "Usuń",
     "unsavedTitle": "Niezapisane zmiany",
     "unsavedMessage": "Na pewno anulować? Niezapisane zmiany zostaną utracone.",
@@ -550,15 +550,15 @@
     "billed": "Rozliczono",
     "pending": "Oczekujące",
     "unbilledTotal": "Nierozliczone ({{currency}}):",
-    "priceCurrency": "Price currency", "salePrice": "Sale price", "catalogUnitCost": "Catalog unit cost", "costNotConfigured": "Not configured",
+    "priceCurrency": "Waluta ceny", "salePrice": "Cena sprzedaży", "catalogUnitCost": "Katalogowy koszt jednostkowy", "costNotConfigured": "Nie skonfigurowano",
     "invoiceDestination": "Faktura", "invoiceNextProject": "Następna faktura za projekt", "invoiceSeparate": "Oddzielna faktura za produkty",
-    "invoiceProjectCompletion": "When project is completed", "invoiceOnHold": "On hold", "currencySeparateHelp": "Produkty w innej walucie są ujmowane na oddzielnej fakturze za produkty.",
-    "invoiceColumn": "Faktura", "editProduct": "Edit product", "removeProduct": "Remove product", "salePriceOverrideHelp": "This price applies only to this project product row.",
-    "updateFailed": "Failed to update product", "updatedSuccess": "Product updated", "createProductInvoices": "Utwórz faktury za produkty",
+    "invoiceProjectCompletion": "Po ukończeniu projektu", "invoiceOnHold": "Wstrzymane", "currencySeparateHelp": "Produkty w innej walucie są ujmowane na oddzielnej fakturze za produkty.",
+    "invoiceColumn": "Faktura", "editProduct": "Edytuj produkt", "removeProduct": "Usuń produkt", "salePriceOverrideHelp": "Ta cena ma zastosowanie tylko do tego wiersza produktu w projekcie.",
+    "updateFailed": "Nie udało się zaktualizować produktu", "updatedSuccess": "Zaktualizowano produkt", "createProductInvoices": "Utwórz faktury za produkty",
     "invoiceReviewTitle": "Przejrzyj faktury za produkty", "invoiceReviewHelp": "Kwalifikujące się produkty są wstępnie zaznaczone. Dla każdej waluty zostanie utworzona jedna wersja robocza faktury.",
     "invoiceReviewFailed": "Nie udało się wczytać przeglądu faktur", "invoiceCreateFailed": "Nie udało się utworzyć faktur za produkty", "invoiceCreatedSuccess": "Utworzono wersje robocze faktur za produkty: {{count}}",
-    "createDrafts": "Create drafts", "draftPreview": "{{currency}} draft ({{count}} products)", "invoiceLinksHelp": "Utworzono wersje robocze faktur. Otwórz każdą grupę walutową, aby ją sprawdzić.",
-    "currencyDraftLink": "Wersja robocza faktury w walucie {{currency}}", "productCount": "{{count}} products", "productsMovedToHoldOnClose": "{{count}} linked product(s) moved to On hold because their billing event was canceled."
+    "createDrafts": "Utwórz szkice", "draftPreview": "Szkic w walucie {{currency}} ({{count}} produktów)", "invoiceLinksHelp": "Utworzono wersje robocze faktur. Otwórz każdą grupę walutową, aby ją sprawdzić.",
+    "currencyDraftLink": "Wersja robocza faktury w walucie {{currency}}", "productCount": "{{count}} produktów", "productsMovedToHoldOnClose": "Przeniesiono {{count}} powiązanych produktów do stanu Wstrzymane, ponieważ ich zdarzenie rozliczeniowe zostało anulowane."
   },
   "export": {
     "title": "Eksportuj zadania projektu",
@@ -774,7 +774,7 @@
       "taskPlaceholder": "Wybierz zadanie",
       "linkedSuccess": "Pomyślnie powiązano zgłoszenie z zadaniem",
       "linking": "Łączenie…",
-      "confirm": "Link",
+      "confirm": "Połącz",
       "linkTicketError": "Nie udało się powiązać zgłoszenia"
     },
     "prefillFromTicket": {
@@ -1665,10 +1665,10 @@
       "holdReasonRequired": "Powód wstrzymania jest wymagany",
       "heldReason": "Wstrzymane: {{reason}}",
       "releaseHold": "Zwolnij wstrzymanie",
-      "holdReleased": "Wstrzymanie zwolnione", "productsMovedToHold": "{{count}} linked product(s) moved to On hold", "setProjectTotal": "Set project total to {{amount}}",
-      "recalculateTitle": "Recalculate project total", "currentProjectTotal": "Current project total", "currentScheduleSum": "Current schedule sum",
-      "resultingProjectTotal": "Resulting project total", "recalculateWarning": "Editable percentage entries will become fixed-dollar entries so the displayed amounts do not move.",
-      "confirmSetProjectTotal": "Set project total", "totalRecalculated": "Project total updated from the schedule"
+      "holdReleased": "Wstrzymanie zwolnione", "productsMovedToHold": "Przeniesiono {{count}} powiązanych produktów do stanu Wstrzymane", "setProjectTotal": "Ustaw sumę projektu na {{amount}}",
+      "recalculateTitle": "Przelicz sumę projektu", "currentProjectTotal": "Bieżąca suma projektu", "currentScheduleSum": "Bieżąca suma harmonogramu",
+      "resultingProjectTotal": "Wynikowa suma projektu", "recalculateWarning": "Edytowalne wpisy procentowe zostaną przekształcone we wpisy o stałych kwotach, aby wyświetlane kwoty się nie zmieniały.",
+      "confirmSetProjectTotal": "Ustaw sumę projektu", "totalRecalculated": "Zaktualizowano sumę projektu na podstawie harmonogramu"
     },
     "entry": {
       "addTitle": "Dodaj kamień milowy lub zaliczkę",

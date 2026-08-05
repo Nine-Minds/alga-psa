@@ -296,8 +296,8 @@
     "timeEntryDeleted": "Entrada de tiempo eliminada",
     "closeFailed": "No se pudo cerrar el ticket",
     "scheduleVisitFailed": "No se pudo abrir el planificador",
-    "loadCommentsFailed": "Failed to load comments",
-    "updateTicketFailed": "Failed to update ticket"
+    "loadCommentsFailed": "No se pudieron cargar los comentarios",
+    "updateTicketFailed": "No se pudo actualizar el ticket"
   },
   "conversation": {
     "comments": "Comentarios",
@@ -1140,8 +1140,8 @@
     "serialUnit": "Serie / MAC (producto serializado)",
     "selectUnit": "Seleccione una unidad para entregar...",
     "onHandByLocation": "Disponible por ubicación",
-    "catalogUnitCost": "Catalog unit cost",
-    "costNotConfigured": "Not configured"
+    "catalogUnitCost": "Costo unitario de catálogo",
+    "costNotConfigured": "No configurado"
   },
   "watchList": {
     "title": "Lista de seguimiento",
@@ -1652,8 +1652,8 @@
         "close_rules_bypassed": "reglas de cierre omitidas",
         "auto_close_warning_sent": "aviso de cierre automático enviado"
       },
-      "closeStatus": "Close status",
-      "noStatusChange": "Do not change status"
+      "closeStatus": "Estado de cierre",
+      "noStatusChange": "No cambiar el estado"
     }
   },
   "notifications": {

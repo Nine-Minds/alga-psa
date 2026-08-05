@@ -215,7 +215,7 @@
     "grace": "De credits zijn op. AI blijft werken binnen een kleine respijtbuffer van {{grace}} credits voordat het volledig stopt — waardeer op om onderbreking te voorkomen.",
     "low": "Het creditsaldo raakt op. Waardeer op in de store om onderbrekingen te voorkomen.",
     "total": "Totaal saldo",
-    "creditsUnit": "credits",
+    "creditsUnit": "kredieten",
     "included": "Inbegrepen (maandelijks)",
     "resetsMonthly": "wordt elke cyclus gereset",
     "topup": "Opwaardering (blijft behouden)",

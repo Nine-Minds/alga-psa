@@ -41,7 +41,7 @@
       "noJobs": "Keine Jobs zum Drucken",
       "columns": {
         "jobName": "Jobname",
-        "runner": "Runner",
+        "runner": "Ausgeführt von",
         "status": "Status",
         "duration": "Dauer",
         "started": "Gestartet",

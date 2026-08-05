@@ -58,7 +58,7 @@
     },
     "units": {
       "hoursShort": "g",
-      "minutesShort": "m",
+      "minutesShort": "min",
       "hoursAbbrev": "h",
       "dayOne": "dzień",
       "dayOther": "dni",
@@ -462,7 +462,7 @@
     "saveChangesFailed": "Nie udało się zapisać zmian",
     "changesSaved": "Zmiany zapisane pomyślnie",
     "workItemDeleted": "Element pracy usunięty pomyślnie",
-    "submitFailed": "Failed to submit time sheet"
+    "submitFailed": "Nie udało się przesłać arkusza czasu pracy"
   },
   "bundleNotice": {
     "withNumber": "To zgłoszenie jest częścią pakietu {{number}}. Czas pakietu jest zwykle rejestrowany na zgłoszeniu głównym.",

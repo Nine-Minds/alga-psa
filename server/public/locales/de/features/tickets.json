@@ -296,8 +296,8 @@
     "timeEntryDeleted": "Zeiteintrag gelöscht",
     "closeFailed": "Ticket konnte nicht geschlossen werden",
     "scheduleVisitFailed": "Der Terminplaner konnte nicht geöffnet werden",
-    "loadCommentsFailed": "Failed to load comments",
-    "updateTicketFailed": "Failed to update ticket"
+    "loadCommentsFailed": "Kommentare konnten nicht geladen werden",
+    "updateTicketFailed": "Das Ticket konnte nicht aktualisiert werden"
   },
   "conversation": {
     "comments": "Kommentare",
@@ -920,7 +920,7 @@
     "approvedAt": "Genehmigt am",
     "declineReason": "Ablehnungsgrund",
     "appointmentFallback": "Termin",
-    "lead": "Lead",
+    "lead": "Leitung",
     "unknown": "Unbekannt",
     "primaryAgent": "Hauptagent",
     "unknownAgent": "Unbekannter Agent",
@@ -941,7 +941,7 @@
     "contactEmail": "Kontakt-E-Mail",
     "clientEmail": "Kunden-E-Mail",
     "assignedTeam": "Zugewiesenes Team",
-    "teamLead": "Lead",
+    "teamLead": "Teamleitung",
     "team": "Team",
     "noTeamAssigned": "Kein Team zugewiesen",
     "additionalAgents": "Zusätzliche Agents",
@@ -1140,8 +1140,8 @@
     "serialUnit": "Seriennummer / MAC (serialisiertes Produkt)",
     "selectUnit": "Einheit zum Liefern auswählen...",
     "onHandByLocation": "Bestand nach Standort",
-    "catalogUnitCost": "Catalog unit cost",
-    "costNotConfigured": "Not configured"
+    "catalogUnitCost": "Katalogstückkosten",
+    "costNotConfigured": "Nicht konfiguriert"
   },
   "watchList": {
     "title": "Beobachtungsliste",
@@ -1515,7 +1515,7 @@
       "viaSource": "über {{source}}",
       "noContactOnTicket": "Kein Kontakt für dieses Ticket",
       "whatAreYouWorkingOn": "Woran arbeiten Sie?",
-      "agentFallback": "Agent",
+      "agentFallback": "Techniker",
       "removeAgent": "{{name}} entfernen",
       "noAdditionalAgents": "Keine zusätzlichen Agents",
       "billing": "Abrechnung",
@@ -1612,7 +1612,7 @@
         "status": "status",
         "priority": "priorität",
         "assigned_to": "bearbeiter",
-        "assigned_team": "team",
+        "assigned_team": "Team",
         "board": "board",
         "category": "kategorie",
         "subcategory": "unterkategorie",
@@ -1652,8 +1652,8 @@
         "close_rules_bypassed": "schließregeln umgangen",
         "auto_close_warning_sent": "automatische schließwarnung gesendet"
       },
-      "closeStatus": "Close status",
-      "noStatusChange": "Do not change status"
+      "closeStatus": "Abschlussstatus",
+      "noStatusChange": "Status nicht ändern"
     }
   },
   "notifications": {

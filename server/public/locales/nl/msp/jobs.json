@@ -41,7 +41,7 @@
       "noJobs": "Geen achtergrondtaken om af te drukken",
       "columns": {
         "jobName": "Jobnaam",
-        "runner": "Runner",
+        "runner": "Uitvoerder",
         "status": "Status",
         "duration": "Duur",
         "started": "Gestart",

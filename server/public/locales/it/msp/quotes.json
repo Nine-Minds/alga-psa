@@ -232,7 +232,7 @@
       "save": "Impossibile salvare il preventivo",
       "saveFailed": "Salvataggio del preventivo non riuscito",
       "workflowAction": "Impossibile {{action}}",
-      "removeItem": "Failed to remove quote item"
+      "removeItem": "Impossibile rimuovere la voce dal preventivo"
     },
     "loading": "Caricamento modulo preventivo...",
     "notices": {
@@ -559,7 +559,7 @@
     },
     "removeAriaLabel": "Rimuovi {{email}}",
     "errors": {
-      "contactsLoadFailed": "Could not load client contacts."
+      "contactsLoadFailed": "Impossibile caricare i contatti del cliente."
     }
   },
   "quoteConversion": {

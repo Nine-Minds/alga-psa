@@ -3,7 +3,7 @@
     "title": "Workflow"
   },
   "nav": {
-    "designer": "Designer",
+    "designer": "Editor",
     "runs": "Esecuzioni",
     "control": "Controllo workflow",
     "tasks": "Attività"
@@ -146,7 +146,7 @@
     "header": {
       "runIdLabel": "ID esecuzione",
       "workflowIdLabel": "ID workflow:",
-      "triggerLabel": "Trigger:"
+      "triggerLabel": "Trigger del workflow:"
     },
     "actions": {
       "cancel": "Annulla",
@@ -226,8 +226,8 @@
       "noSnapshot": "Nessuno snapshot disponibile.",
       "tabs": {
         "payload": "Payload",
-        "vars": "Vars",
-        "meta": "Meta",
+        "vars": "Variabili",
+        "meta": "Metadati",
         "error": "Errore",
         "raw": "Grezzo"
       }
@@ -239,9 +239,9 @@
       "attemptLine": "Tentativo {{count}}",
       "durationLine": "Durata: {{duration}}",
       "sizeLine": "Dimensione input: {{inputSize}}{{inputSuffix}} · Dimensione output: {{outputSize}}{{outputSuffix}}",
-      "truncatedSuffix": " (truncated)",
-      "inputLabel": "Input",
-      "outputLabel": "Output"
+      "truncatedSuffix": " (troncato)",
+      "inputLabel": "Ingresso",
+      "outputLabel": "Uscita"
     },
     "logs": {
       "title": "Log di esecuzione",
@@ -251,7 +251,7 @@
       "levelLabel": "Livello",
       "empty": "Nessuna voce di log trovata.",
       "columns": {
-        "timestamp": "Timestamp",
+        "timestamp": "Data e ora",
         "level": "Livello",
         "message": "Messaggio",
         "step": "Passaggio",
@@ -266,7 +266,7 @@
       "empty": "Nessuna voce di audit.",
       "systemUser": "sistema",
       "columns": {
-        "timestamp": "Timestamp",
+        "timestamp": "Data e ora",
         "operation": "Operazione",
         "user": "Utente",
         "details": "Dettagli"
@@ -283,7 +283,7 @@
       "replayTitle": "Ripeti esecuzione del workflow",
       "replayMessage": "Ripeta questa esecuzione con un nuovo payload.",
       "replayReasonPlaceholder": "Fornisca un motivo per la ripetizione",
-      "payloadLabel": "Payload (JSON)",
+      "payloadLabel": "Payload (formato JSON)",
       "replayConfirm": "Ripeti esecuzione"
     },
     "toasts": {
@@ -310,7 +310,7 @@
   },
   "runDialog": {
     "title": "Esegui workflow",
-    "description": "Provide a synthetic payload to preview (and run) a workflow.",
+    "description": "Fornisci un payload sintetico per visualizzare in anteprima ed eseguire un workflow.",
     "descriptionEvent": "Evento: {{name}}.",
     "draftWarning": "La versione in bozza è diversa da quella pubblicata (v{{version}}).",
     "concurrencyLimit": "Limite di concorrenza: {{count}} esecuzione/i alla volta.",
@@ -375,7 +375,7 @@
     },
     "payload": {
       "largePayloadWarning": "Il payload supera 256KB; le esecuzioni potrebbero essere più lente.",
-      "payloadJsonLabel": "Payload (JSON)",
+      "payloadJsonLabel": "Payload (formato JSON)",
       "payloadLabel": "payload",
       "payloadSize": "Dimensione payload: {{size}} KB"
     },
@@ -430,7 +430,7 @@
       "eventMissingSchemaRef": "L’evento selezionato non ha un riferimento allo schema del payload; impossibile eseguire con la mappatura del trigger.",
       "loadLatestRunFailed": "Impossibile caricare l’ultima esecuzione",
       "mapEntryExists": "Quella chiave esiste già.",
-      "noPriorPayload": "No prior run payload found.",
+      "noPriorPayload": "Non è stato trovato alcun payload di un'esecuzione precedente.",
       "payloadCopied": "Payload copiato negli appunti.",
       "presetSaved": "Preimpostazione salvata.",
       "providePresetName": "Fornisca un nome per la preimpostazione.",
@@ -478,7 +478,7 @@
       "columns": {
         "event": "Evento",
         "correlation": "Correlazione",
-        "schema": "Schema",
+        "schema": "Schema dati",
         "status": "Stato",
         "matchedRun": "Esecuzione corrispondente",
         "payload": "Payload",
@@ -504,7 +504,7 @@
       "waitLabel": "Attesa",
       "waitIdLine": "ID attesa: {{waitId}}",
       "waitStatusLine": "Stato: {{status}}",
-      "waitTimeoutLine": "Timeout: {{value}}",
+      "waitTimeoutLine": "Tempo limite: {{value}}",
       "waitResolvedLine": "Risolto: {{value}}",
       "waitStepLine": "Passaggio: {{value}}",
       "matchedRunLabel": "Esecuzione corrispondente",
@@ -563,7 +563,7 @@
     },
     "table": {
       "columns": {
-        "timestamp": "Timestamp",
+        "timestamp": "Data e ora",
         "operation": "Operazione",
         "user": "Utente",
         "details": "Dettagli"
@@ -684,7 +684,7 @@
       "addFilter": "Aggiungi filtro",
       "noFiltersConfigured": "Nessun filtro configurato.",
       "loadingEventSchema": "Caricamento campi dello schema evento...",
-      "timeoutMs": "Timeout (ms)",
+      "timeoutMs": "Tempo limite (ms)",
       "assignOnResume": "Assegna alla ripresa",
       "fieldLabel": "Campo",
       "fieldPathLabel": "Percorso campo",
@@ -759,7 +759,7 @@
         "description": "Filtri opzionali sul payload dell’evento (semantica AND)"
       },
       "timeoutMs": {
-        "label": "Timeout (ms)",
+        "label": "Tempo limite (ms)",
         "description": "Tempo massimo di attesa in millisecondi"
       },
       "mode": {
@@ -937,7 +937,7 @@
       "returnsSummary": "Ritorna: {{list}}{{suffix}}",
       "categories": {
         "Control": "Controllo",
-        "Core": "Core",
+        "Core": "Principali",
         "Transform": "Trasforma",
         "AI": "AI",
         "Apps": "App",
@@ -984,7 +984,7 @@
             "description": "Richiama un altro workflow"
           },
           "return": {
-            "label": "Return",
+            "label": "Restituisci",
             "description": "Interrompe l'esecuzione"
           }
         }
@@ -1227,7 +1227,7 @@
     "examplePrefix": "Esempio:"
   },
   "actionInputSection": {
-    "heading": "Action inputs"
+    "heading": "Ingressi dell'azione"
   },
   "actionInputFixedPicker": {
     "loadingOptions": "Caricamento opzioni...",
@@ -1322,7 +1322,7 @@
     "pagination": {
       "previous": "Precedente",
       "next": "Successivo",
-      "pageLabel": "Page {{current}} of {{total}}"
+      "pageLabel": "Pagina {{current}} di {{total}}"
     },
     "errors": {
       "loadFailed": "Impossibile caricare le attività. Riprovare.",
@@ -1438,7 +1438,7 @@
     "descriptionLabel": "Descrizione",
     "objectItemFields": "Campi dell’elemento oggetto",
     "nestedFields": "Campi annidati",
-    "jsonSchemaLabel": "JSON Schema",
+    "jsonSchemaLabel": "Schema JSON",
     "advancedHelperText": "La modalità avanzata supporta schemi con radice oggetto oltre a oggetti annidati, array, descrizioni, vincoli e additionalProperties.",
     "validationHeading": "Validazione dello schema",
     "advancedFallback": "Questo schema salvato utilizza funzionalità avanzate di JSON Schema, pertanto viene mostrato in modalità avanzata.",
@@ -1452,7 +1452,7 @@
     "headingDescription": "Crei uno o più output markdown con chiavi di riferimento stabili per i passaggi successivi.",
     "addOutput": "Aggiungi output",
     "untitled": "Output senza titolo",
-    "outputFallback": "output {{index}}",
+    "outputFallback": "uscita {{index}}",
     "moveUpAria": "Sposta {{label}} in alto",
     "moveDownAria": "Sposta {{label}} in basso",
     "deleteAria": "Elimina {{label}}",
@@ -1627,11 +1627,11 @@
     "nullableSuffix": "| null",
     "constraints": {
       "values": "Valori: {{list}}{{suffix}}",
-      "min": "Min: {{value}}",
-      "max": "Max: {{value}}",
+      "min": "Minimo: {{value}}",
+      "max": "Massimo: {{value}}",
       "minLength": "Lunghezza min: {{value}}",
       "maxLength": "Lunghezza max: {{value}}",
-      "pattern": "Pattern: {{value}}",
+      "pattern": "Espressione: {{value}}",
       "format": "Formato: {{value}}",
       "examples": "Esempi: {{list}}",
       "default": "Predefinito: {{value}}"
@@ -1646,9 +1646,9 @@
       "message": "Selezioni un’azione {{group}} prima di configurare gli input o pubblicare questo workflow."
     },
     "tileKind": {
-      "core-object": "Core",
+      "core-object": "Principale",
       "transform": "Trasforma",
-      "app": "App",
+      "app": "Applicazione",
       "ai": "AI"
     },
     "disconnected": {
@@ -1694,7 +1694,7 @@
       "allMapped": "Tutti i campi obbligatori sono mappati"
     },
     "insert": {
-      "title": "Drop a step here to insert"
+      "title": "Rilascia qui un passaggio per inserirlo"
     },
     "actions": {
       "deleteStep": "Elimina passaggio"
@@ -1775,7 +1775,7 @@
       "panels": {
         "configuration": "Configurazione passaggio",
         "inputResolved": "Input (risolto)",
-        "output": "Output",
+        "output": "Uscita",
         "envelopeSnapshot": "Snapshot envelope"
       }
     },
@@ -1821,7 +1821,7 @@
       "fields": {
         "reason": "Motivo",
         "reasonPlaceholder": "es. Annullamento per correggere gli input",
-        "payloadJson": "Payload (JSON)"
+        "payloadJson": "Payload (formato JSON)"
       },
       "actions": {
         "close": "Chiudi",
@@ -1923,7 +1923,7 @@
       "nonBusiness": "Giorni non lavorativi"
     },
     "table": {
-      "workflowVersion": "Workflow v{{version}}",
+      "workflowVersion": "Workflow versione {{version}}",
       "columns": {
         "schedule": "Pianificazione",
         "workflow": "Workflow",
@@ -2012,7 +2012,7 @@
         "holidaysNote": "I giorni festivi sono sempre considerati giorni non lavorativi."
       },
       "businessHours": {
-        "defaultSuffix": " (Default)",
+        "defaultSuffix": " (Predefinito)",
         "noneConfigured": "Nessuna pianificazione oraria lavorativa è ancora configurata.",
         "usingTenantDefault": "Utilizza la pianificazione oraria lavorativa predefinita del tenant.",
         "noTenantDefault": "Nessuna pianificazione oraria lavorativa predefinita è ancora configurata per il tenant."
@@ -2075,7 +2075,7 @@
     "recurrence": {
       "andWord": "e",
       "frequency": {
-        "daily": "Daily",
+        "daily": "Giornaliera",
         "weekly": "Settimanale",
         "monthly": "Mensile"
       },
@@ -2149,7 +2149,7 @@
     },
     "workflowLogLevel": {
       "DEBUG": "Debug",
-      "INFO": "Info",
+      "INFO": "Informazioni",
       "WARN": "Avviso",
       "ERROR": "Errore"
     },
@@ -2159,7 +2159,7 @@
       "integer": "Intero",
       "boolean": "Booleano",
       "object": "Oggetto",
-      "array": "Array"
+      "array": "Elenco (array)"
     },
     "workflowInputSourceMode": {
       "reference": "Riferimento",
@@ -2349,7 +2349,7 @@
         "statusOptions": {
           "all": "Tutti gli stati",
           "active": "Attivo",
-          "beta": "Beta",
+          "beta": "Versione beta",
           "draft": "Bozza",
           "deprecated": "Deprecato"
         },
@@ -2400,7 +2400,7 @@
         "tenant": "Tenant",
         "noSchema": "Nessuno schema",
         "unknownSchema": "Schema sconosciuto",
-        "schema": "Schema"
+        "schema": "Schema dati"
       },
       "details": {
         "title": "Dettagli evento",
@@ -2409,7 +2409,7 @@
         "metrics": "Metriche",
         "attach": "Allega",
         "schema": {
-          "heading": "Schema",
+          "heading": "Schema dati",
           "viewFull": "Visualizza schema completo",
           "managedNotice": "Lo schema è gestito dal registro degli schemi.",
           "missingNotice": "Nessun schemaRef impostato; l'evento potrebbe non essere utilizzabile come trigger del workflow.",
@@ -2432,7 +2432,7 @@
         }
       },
       "schemaModal": {
-        "title": "Schema",
+        "title": "Schema dati",
         "close": "Chiudi",
         "headerTitle": "Schema del payload",
         "loading": "Caricamento…",
@@ -2479,7 +2479,7 @@
           "correlationKeyPlaceholder": "Utilizzata per risolvere le attese degli eventi",
           "schemaRef": "Riferimento allo schema del payload dell'evento (avanzato)",
           "schemaRefPlaceholderEmpty": "Nessun schemaRef per questo evento",
-          "payloadJson": "Payload (JSON)",
+          "payloadJson": "Payload (formato JSON)",
           "payload": "Payload"
         },
         "modes": {
@@ -2519,7 +2519,7 @@
           "remove": "Rimuovi",
           "addItem": "Aggiungi elemento",
           "rootLabel": "Payload",
-          "payloadJsonLabel": "Payload (JSON)",
+          "payloadJsonLabel": "Payload (formato JSON)",
           "true": "Vero",
           "false": "Falso"
         }

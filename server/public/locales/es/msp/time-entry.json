@@ -458,7 +458,7 @@
     "saveChangesFailed": "Error al guardar los cambios",
     "changesSaved": "Cambios guardados correctamente",
     "workItemDeleted": "Elemento de trabajo eliminado correctamente",
-    "submitFailed": "Failed to submit time sheet"
+    "submitFailed": "No se pudo enviar la hoja de horas"
   },
   "bundleNotice": {
     "withNumber": "Este ticket está agrupado bajo {{number}}. El tiempo del grupo se suele registrar en el ticket maestro.",

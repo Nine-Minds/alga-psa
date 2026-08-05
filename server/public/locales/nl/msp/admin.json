@@ -240,7 +240,7 @@
       "body": "De diagnostiek maakt een tijdelijk Microsoft Graph-abonnement en verwijdert dit daarna. Als verwijderen mislukt, moet u het abonnement mogelijk handmatig verwijderen in Microsoft 365."
     },
     "labels": {
-      "provider": "Provider:",
+      "provider": "Aanbieder:",
       "mailbox": "Postvak:",
       "overall": "Algemeen:",
       "resource": "Resource: {{resource}}",
@@ -405,7 +405,7 @@
         "custom": "Aangepast"
       },
       "badges": {
-        "starter": "Starter"
+        "starter": "Starterspakket"
       },
       "descriptions": {
         "systemStarter": "Systeem-starterbundel.",
@@ -544,7 +544,7 @@
       "create": "Bundel aanmaken",
       "creating": "Aanmaken...",
       "nameLabel": "Naam",
-      "namePlaceholder": "Finance Reviewer West",
+      "namePlaceholder": "Financieel beoordelaar West",
       "descriptionLabel": "Beschrijving",
       "descriptionPlaceholder": "Herbruikbare beperkingsbundel voor een specifiek team, klantgroep of workflow."
     },
@@ -621,12 +621,12 @@
       "noSubject": "Geen onderwerp",
       "sentAt": "Verzonden op",
       "status": "Status",
-      "provider": "Provider",
-      "messageId": "Message ID",
+      "provider": "Aanbieder",
+      "messageId": "Bericht-ID",
       "to": "Aan",
       "from": "Van",
       "error": "Fout",
-      "metadata": "Metadata"
+      "metadata": "Metagegevens"
     }
   }
 }

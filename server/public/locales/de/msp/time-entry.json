@@ -458,7 +458,7 @@
     "saveChangesFailed": "Änderungen konnten nicht gespeichert werden",
     "changesSaved": "Änderungen erfolgreich gespeichert",
     "workItemDeleted": "Arbeitsposten erfolgreich gelöscht",
-    "submitFailed": "Failed to submit time sheet"
+    "submitFailed": "Der Stundenzettel konnte nicht eingereicht werden"
   },
   "bundleNotice": {
     "withNumber": "Dieses Ticket ist unter {{number}} gebündelt. Die Zeit für Bündel wird üblicherweise auf dem Master-Ticket erfasst.",

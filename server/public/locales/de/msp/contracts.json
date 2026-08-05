@@ -1567,7 +1567,7 @@
         "overageRate": "Überschreitungssatz:",
         "rollover": "Übertrag:",
         "roundUp": "Aufrunden:",
-        "serviceFallback": "Service {{index}}",
+        "serviceFallback": "Dienst {{index}}",
         "services": "Dienste:"
       },
       "title": "Zusammenfassung der Stunden-Services",

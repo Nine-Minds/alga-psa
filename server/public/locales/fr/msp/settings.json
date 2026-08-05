@@ -19,8 +19,8 @@
     "notifications": "Notifications",
     "timeEntry": "Saisie du temps",
     "billing": "Facturation",
-    "secrets": "Secrets",
-    "importExport": "Import/Export",
+    "secrets": "Secrets d'accès",
+    "importExport": "Importation/Exportation",
     "email": "E-mail",
     "integrations": "Intégrations",
     "extensions": "Extensions",
@@ -1529,7 +1529,7 @@
     "title": "Gestion des secrets",
     "description": "Gérez les secrets chiffrés utilisés dans les flux de travail. Les secrets peuvent être référencés dans les actions de flux de travail en utilisant la syntaxe $secret.",
     "list": {
-      "title": "Secrets",
+      "title": "Secrets d'accès",
       "description": "Gérez les secrets utilisés dans les flux de travail. Les secrets sont chiffrés et peuvent être référencés en utilisant { $secret: \"SECRET_NAME\" }",
       "search": "Rechercher des secrets...",
       "createSecret": "Créer un secret",
@@ -1861,21 +1861,21 @@
       "description": "Chargement des outils d'attribution SSO en masse..."
     },
     "status": {
-      "title": "Sign-in providers",
-      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
-      "available": "Available",
-      "notConfigured": "Not configured"
+      "title": "Fournisseurs de connexion",
+      "caption": "Ces fournisseurs sont gérés par la plateforme : aucun ID client ni aucune configuration DNS n'est requis. Activez l'association automatique ou affectez des utilisateurs ci-dessous.",
+      "available": "Disponible",
+      "notConfigured": "Non configuré"
     },
     "autoLink": {
       "body": "Lorsque cette option est activée, les utilisateurs MSP nouvellement ajoutés peuvent se connecter avec Google ou Microsoft en utilisant leur adresse e-mail professionnelle. Ils n'auront pas à lier manuellement leur compte.",
-      "clientBody": "When enabled, matching client portal users are automatically linked to their SSO identities on login.",
-      "clientTitle": "Auto-link client portal users",
-      "clientToggleLabel": "Toggle client auto-linking",
+      "clientBody": "Lorsque cette option est activée, les utilisateurs correspondants du portail client sont automatiquement associés à leur identité SSO lors de la connexion.",
+      "clientTitle": "Associer automatiquement les utilisateurs du portail client",
+      "clientToggleLabel": "Activer ou désactiver l'association automatique des clients",
       "description": "Activez cette option pour provisionner immédiatement chaque nouveau compte du personnel avec votre fournisseur SSO d'entreprise, afin qu'ils n'aient jamais besoin d'une connexion par mot de passe.",
       "disabledInfo": "Activez cette option pour permettre au personnel nouveau et existant d'éviter le flux « Connecter SSO » lorsque leur e-mail correspond déjà à un fournisseur configuré. Nous enregistrerons toujours chaque liaison automatique.",
-      "internalBody": "When enabled, matching MSP/internal users are automatically linked to their SSO identities on login.",
-      "internalTitle": "Auto-link internal users",
-      "internalToggleLabel": "Toggle internal auto-linking",
+      "internalBody": "Lorsque cette option est activée, les utilisateurs MSP ou internes correspondants sont automatiquement associés à leur identité SSO lors de la connexion.",
+      "internalTitle": "Associer automatiquement les utilisateurs internes",
+      "internalToggleLabel": "Activer ou désactiver l'association automatique des utilisateurs internes",
       "title": "Configurer automatiquement le SSO pour les nouveaux utilisateurs internes",
       "toggleLabel": "Activer la correspondance SSO automatique"
     },
@@ -1921,7 +1921,7 @@
         "bulkLabel": "Actions SSO en masse {{location}}"
       },
       "table": {
-        "email": "Email",
+        "email": "E-mail",
         "id": "ID",
         "name": "Nom",
         "status": "Statut",
@@ -1968,19 +1968,19 @@
       }
     },
     "clientPortalProvisioning": {
-      "deactivateBody": "When enabled, users managed by Entra provisioning are deactivated when access-group entitlement is removed.",
-      "deactivateLabel": "Toggle deactivation on entitlement removal",
-      "deactivateTitle": "Deactivate Entra-managed users on entitlement removal",
-      "defaultRoleBody": "Used for newly provisioned client portal users in built-in mode when a client mapping does not override the role.",
-      "defaultRoleLabel": "MSP workspace default client portal role",
-      "defaultRoleTitle": "MSP workspace default client portal role",
-      "modeBody": "Choose whether client portal access from Entra sync is disabled, handled by built-in provisioning, or delegated to workflows.",
-      "modeBuiltIn": "Built-in",
-      "modeDisabled": "Disabled",
-      "modeLabel": "Client portal Entra provisioning mode",
-      "modeTitle": "Client portal Entra provisioning mode",
-      "modeWorkflowManaged": "Workflow-managed",
-      "workflowManagedInfo": "Workflow-managed mode publishes Entra access events only. The selected workflow is responsible for client portal user provisioning, role assignment, invitations, and lifecycle changes."
+      "deactivateBody": "Lorsque cette option est activée, les utilisateurs gérés par le provisionnement Entra sont désactivés lorsque leur droit lié au groupe d'accès est retiré.",
+      "deactivateLabel": "Activer ou désactiver la désactivation lors du retrait d'un droit",
+      "deactivateTitle": "Désactiver les utilisateurs gérés par Entra lors du retrait d'un droit",
+      "defaultRoleBody": "Utilisé pour les nouveaux utilisateurs provisionnés du portail client en mode intégré lorsqu'un mappage client ne remplace pas le rôle.",
+      "defaultRoleLabel": "Rôle par défaut du portail client dans l'espace de travail MSP",
+      "defaultRoleTitle": "Rôle par défaut du portail client dans l'espace de travail MSP",
+      "modeBody": "Choisissez si l'accès au portail client issu de la synchronisation Entra est désactivé, géré par le provisionnement intégré ou délégué aux workflows.",
+      "modeBuiltIn": "Intégré",
+      "modeDisabled": "Désactivé",
+      "modeLabel": "Mode de provisionnement Entra du portail client",
+      "modeTitle": "Mode de provisionnement Entra du portail client",
+      "modeWorkflowManaged": "Géré par workflow",
+      "workflowManagedInfo": "Le mode géré par workflow publie uniquement les événements d'accès Entra. Le workflow sélectionné est responsable du provisionnement des utilisateurs du portail client, de l'affectation des rôles, des invitations et des changements de cycle de vie."
     }
   },
   "profile": {

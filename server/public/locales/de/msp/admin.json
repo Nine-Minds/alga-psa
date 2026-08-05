@@ -405,7 +405,7 @@
         "custom": "Benutzerdefiniert"
       },
       "badges": {
-        "starter": "Starter"
+        "starter": "Startvorlage"
       },
       "descriptions": {
         "systemStarter": "System-Starter-Paket.",
@@ -544,7 +544,7 @@
       "create": "Paket erstellen",
       "creating": "Wird erstellt...",
       "nameLabel": "Name",
-      "namePlaceholder": "Finance Reviewer West",
+      "namePlaceholder": "Finanzprüfung West",
       "descriptionLabel": "Beschreibung",
       "descriptionPlaceholder": "Wiederverwendbares Beschränkungspaket für ein bestimmtes Team, eine Kundengruppe oder einen Workflow."
     },

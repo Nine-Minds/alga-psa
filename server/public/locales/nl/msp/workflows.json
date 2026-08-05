@@ -113,10 +113,10 @@
     "print": {
       "title": "Workflow-runs",
       "selectedTitle": "Geselecteerde workflow-runs",
-      "subtitle": "{{count}} runs",
+      "subtitle": "{{count}} uitvoeringen",
       "noRuns": "Geen workflow-runs om af te drukken",
       "columns": {
-        "run": "Run",
+        "run": "Uitvoering",
         "workflow": "Workflow",
         "version": "Versie",
         "status": "Status",
@@ -239,7 +239,7 @@
       "attemptLine": "Poging {{count}}",
       "durationLine": "Duur: {{duration}}",
       "sizeLine": "Invoergrootte: {{inputSize}}{{inputSuffix}} · Uitvoergrootte: {{outputSize}}{{outputSuffix}}",
-      "truncatedSuffix": " (truncated)",
+      "truncatedSuffix": " (afgekapt)",
       "inputLabel": "Invoer",
       "outputLabel": "Uitvoer"
     },
@@ -310,7 +310,7 @@
   },
   "runDialog": {
     "title": "Workflow uitvoeren",
-    "description": "Provide a synthetic payload to preview (and run) a workflow.",
+    "description": "Geef een synthetische payload op om een workflow te bekijken en uit te voeren.",
     "descriptionEvent": "Gebeurtenis: {{name}}.",
     "draftWarning": "Conceptversie wijkt af van gepubliceerde versie (v{{version}}).",
     "concurrencyLimit": "Gelijktijdigheidslimiet: {{count}} uitvoering(en) tegelijk.",
@@ -430,7 +430,7 @@
       "eventMissingSchemaRef": "Geselecteerde gebeurtenis heeft geen payload-schemaverwijzing; uitvoering met triggerkoppeling is niet mogelijk.",
       "loadLatestRunFailed": "Kan laatste uitvoering niet laden",
       "mapEntryExists": "Die sleutel bestaat al.",
-      "noPriorPayload": "No prior run payload found.",
+      "noPriorPayload": "Geen payload van een eerdere uitvoering gevonden.",
       "payloadCopied": "Payload naar klembord gekopieerd.",
       "presetSaved": "Voorinstelling opgeslagen.",
       "providePresetName": "Geef een naam voor de voorinstelling op.",
@@ -1227,7 +1227,7 @@
     "examplePrefix": "Voorbeeld:"
   },
   "actionInputSection": {
-    "heading": "Action inputs"
+    "heading": "Actie-invoer"
   },
   "actionInputFixedPicker": {
     "loadingOptions": "Opties laden…",
@@ -1322,7 +1322,7 @@
     "pagination": {
       "previous": "Vorige",
       "next": "Volgende",
-      "pageLabel": "Page {{current}} of {{total}}"
+      "pageLabel": "Pagina {{current}} van {{total}}"
     },
     "errors": {
       "loadFailed": "Kan taken niet laden. Probeer het opnieuw.",
@@ -1694,7 +1694,7 @@
       "allMapped": "Alle verplichte velden gekoppeld"
     },
     "insert": {
-      "title": "Drop a step here to insert"
+      "title": "Zet hier een stap neer om deze in te voegen"
     },
     "actions": {
       "deleteStep": "Stap verwijderen"
@@ -2012,7 +2012,7 @@
         "holidaysNote": "Feestdagen worden altijd als niet-werkdagen behandeld."
       },
       "businessHours": {
-        "defaultSuffix": " (Default)",
+        "defaultSuffix": " (Standaard)",
         "noneConfigured": "Er zijn nog geen werktijdenschema’s geconfigureerd.",
         "usingTenantDefault": "Gebruikt het standaard werktijdenschema van de tenant.",
         "noTenantDefault": "Er is nog geen standaard werktijdenschema voor de tenant geconfigureerd."
@@ -2075,7 +2075,7 @@
     "recurrence": {
       "andWord": "en",
       "frequency": {
-        "daily": "Daily",
+        "daily": "Dagelijks",
         "weekly": "Wekelijks",
         "monthly": "Maandelijks"
       },

@@ -2266,7 +2266,7 @@
       "overageRate": "Stawka za przekroczenie",
       "overtime": "nadgodziny",
       "placeholders": {
-        "minimum": "minimum",
+        "minimum": "wartość minimalna",
         "minimumMinutes": "minimalne minuty",
         "overtimeRate": "nadgodziny $/godz.",
         "roundMinutes": "zaokrąglenie w minutach",

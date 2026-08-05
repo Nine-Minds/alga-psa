@@ -296,8 +296,8 @@
     "timeEntryDeleted": "Voce di tempo eliminata",
     "closeFailed": "Impossibile chiudere il ticket",
     "scheduleVisitFailed": "Impossibile aprire il pianificatore",
-    "loadCommentsFailed": "Failed to load comments",
-    "updateTicketFailed": "Failed to update ticket"
+    "loadCommentsFailed": "Impossibile caricare i commenti",
+    "updateTicketFailed": "Impossibile aggiornare il ticket"
   },
   "conversation": {
     "comments": "Commenti",
@@ -1140,8 +1140,8 @@
     "serialUnit": "Seriale / MAC (prodotto serializzato)",
     "selectUnit": "Seleziona un'unità da consegnare...",
     "onHandByLocation": "Disponibili per ubicazione",
-    "catalogUnitCost": "Catalog unit cost",
-    "costNotConfigured": "Not configured"
+    "catalogUnitCost": "Costo unitario di catalogo",
+    "costNotConfigured": "Non configurato"
   },
   "watchList": {
     "title": "Elenco osservati",
@@ -1439,7 +1439,7 @@
     "templateAlreadyApplied": "Questo modello è già stato applicato a questo ticket.",
     "templateApplied": "Modello di checklist applicato.",
     "templatesLoading": "Caricamento modelli...",
-    "title": "Checklist",
+    "title": "Lista di controllo",
     "toggleFailed": "Impossibile aggiornare l'elemento della checklist",
     "updateFailed": "Impossibile aggiornare l'elemento della checklist"
   },
@@ -1652,8 +1652,8 @@
         "close_rules_bypassed": "regole di chiusura ignorate",
         "auto_close_warning_sent": "avviso di chiusura automatica inviato"
       },
-      "closeStatus": "Close status",
-      "noStatusChange": "Do not change status"
+      "closeStatus": "Stato di chiusura",
+      "noStatusChange": "Non modificare lo stato"
     }
   },
   "notifications": {

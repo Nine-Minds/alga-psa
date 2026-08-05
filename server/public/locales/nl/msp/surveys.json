@@ -436,7 +436,7 @@
       "ticket": "Ticket",
       "client": "Klant",
       "contact": "Contactpersoon",
-      "agent": "Agent",
+      "agent": "Medewerker",
       "technician": "Technicus",
       "submitted": "Ingediend",
       "comment": "Opmerking"

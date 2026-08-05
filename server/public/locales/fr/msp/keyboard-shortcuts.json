@@ -90,7 +90,7 @@
     }
   },
   "groups": {
-    "global": "Global",
+    "global": "Général",
     "ai": "IA",
     "page": "Page",
     "selection": "Sélection",
@@ -100,7 +100,7 @@
     "panel": "Panneau",
     "record": "Enregistrement",
     "editor": "Éditeur",
-    "scroll": "Scroll"
+    "scroll": "Défilement"
   },
   "actions": {
     "global": {
@@ -173,28 +173,28 @@
         "description": "Ouvrir le tableau de bord."
       },
       "goProjects": {
-        "label": "Go to projects",
-        "description": "Navigate to the projects page."
+        "label": "Aller aux projets",
+        "description": "Accéder à la page des projets."
       },
       "goBilling": {
-        "label": "Go to billing",
-        "description": "Navigate to billing."
+        "label": "Aller à la facturation",
+        "description": "Accéder à la facturation."
       },
       "goSettings": {
-        "label": "Go to settings",
-        "description": "Navigate to settings."
+        "label": "Aller aux paramètres",
+        "description": "Accéder aux paramètres."
       },
       "goSearch": {
-        "label": "Go to global search",
-        "description": "Focus the global search field."
+        "label": "Aller à la recherche globale",
+        "description": "Placer le curseur dans le champ de recherche globale."
       },
       "goHelp": {
-        "label": "Go to keyboard help",
-        "description": "Open the keyboard shortcuts reference."
+        "label": "Aller à l'aide des raccourcis clavier",
+        "description": "Ouvrir la référence des raccourcis clavier."
       },
       "backToParent": {
-        "label": "Back to parent list",
-        "description": "Activate the page back navigation button when one is available."
+        "label": "Revenir à la liste parente",
+        "description": "Activer le bouton de retour de la page lorsqu'il est disponible."
       }
     },
     "assets": {
@@ -287,82 +287,82 @@
     },
     "scroll": {
       "halfDown": {
-        "label": "Scroll half page down",
-        "description": "Scroll down by half a page."
+        "label": "Faire défiler d'une demi-page vers le bas",
+        "description": "Faire défiler d'une demi-page vers le bas."
       },
       "halfUp": {
-        "label": "Scroll half page up",
-        "description": "Scroll up by half a page."
+        "label": "Faire défiler d'une demi-page vers le haut",
+        "description": "Faire défiler d'une demi-page vers le haut."
       },
       "fullDown": {
-        "label": "Scroll full page down",
-        "description": "Scroll down by one full page."
+        "label": "Faire défiler d'une page vers le bas",
+        "description": "Faire défiler d'une page entière vers le bas."
       },
       "fullUp": {
-        "label": "Scroll full page up",
-        "description": "Scroll up by one full page."
+        "label": "Faire défiler d'une page vers le haut",
+        "description": "Faire défiler d'une page entière vers le haut."
       },
       "top": {
-        "label": "Scroll to top",
-        "description": "Scroll to the top of the current page or panel."
+        "label": "Faire défiler jusqu'en haut",
+        "description": "Faire défiler jusqu'en haut de la page ou du panneau actuel."
       },
       "bottom": {
-        "label": "Scroll to bottom",
-        "description": "Scroll to the bottom of the current page or panel."
+        "label": "Faire défiler jusqu'en bas",
+        "description": "Faire défiler jusqu'en bas de la page ou du panneau actuel."
       }
     },
     "focus": {
       "primarySearch": {
-        "label": "Focus page search",
-        "description": "Focus the primary search field on the current page."
+        "label": "Cibler la recherche de la page",
+        "description": "Placer le curseur dans le champ de recherche principal de la page actuelle."
       }
     },
     "table": {
       "nextRow": {
-        "label": "Next table row",
-        "description": "Move the active row marker to the next selectable table row."
+        "label": "Ligne suivante du tableau",
+        "description": "Déplacer le repère de ligne active vers la ligne sélectionnable suivante du tableau."
       },
       "previousRow": {
-        "label": "Previous table row",
-        "description": "Move the active row marker to the previous selectable table row."
+        "label": "Ligne précédente du tableau",
+        "description": "Déplacer le repère de ligne active vers la ligne sélectionnable précédente du tableau."
       },
       "toggleRow": {
-        "label": "Toggle table row",
-        "description": "Select or deselect the active table row."
+        "label": "Basculer la ligne du tableau",
+        "description": "Sélectionner ou désélectionner la ligne active du tableau."
       },
       "visualRange": {
-        "label": "Visual row range",
-        "description": "Start or stop selecting a contiguous table row range."
+        "label": "Plage visuelle de lignes",
+        "description": "Démarrer ou arrêter la sélection d'une plage contiguë de lignes du tableau."
       },
       "openRow": {
-        "label": "Open table row",
-        "description": "Open the active table row."
+        "label": "Ouvrir la ligne du tableau",
+        "description": "Ouvrir la ligne active du tableau."
       }
     },
     "repeat": {
       "lastAction": {
-        "label": "Repeat last action",
-        "description": "Repeat the last Vim-style navigation action."
+        "label": "Répéter la dernière action",
+        "description": "Répéter la dernière action de navigation de style Vim."
       }
     },
     "macro": {
       "record": {
-        "label": "Record macro",
-        "description": "Start or stop recording a Vim-style navigation macro."
+        "label": "Enregistrer une macro",
+        "description": "Démarrer ou arrêter l'enregistrement d'une macro de navigation de style Vim."
       },
       "play": {
-        "label": "Play macro",
-        "description": "Play a recorded Vim-style navigation macro."
+        "label": "Exécuter une macro",
+        "description": "Exécuter une macro de navigation de style Vim enregistrée."
       }
     },
     "linkhints": {
       "show": {
-        "label": "Show link hints",
-        "description": "Show keyboard hints for visible links and controls."
+        "label": "Afficher les indices de liens",
+        "description": "Afficher les indices clavier des liens et commandes visibles."
       },
       "showNewTab": {
-        "label": "Show link hints in new tab",
-        "description": "Show keyboard hints and open links in a new tab when possible."
+        "label": "Afficher les indices de liens dans un nouvel onglet",
+        "description": "Afficher les indices clavier et ouvrir les liens dans un nouvel onglet lorsque cela est possible."
       }
     }
   },

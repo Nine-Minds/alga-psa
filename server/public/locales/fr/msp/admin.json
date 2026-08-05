@@ -389,7 +389,7 @@
       "searchPlaceholder": "Rechercher des bundles par nom ou description",
       "showArchived": "Afficher les archivés",
       "columns": {
-        "bundle": "Bundle",
+        "bundle": "Ensemble",
         "status": "Statut",
         "type": "Type",
         "assignments": "Affectations",
@@ -622,7 +622,7 @@
       "sentAt": "Envoyé le",
       "status": "Statut",
       "provider": "Fournisseur",
-      "messageId": "Message ID",
+      "messageId": "ID du message",
       "to": "À",
       "from": "De",
       "error": "Erreur",

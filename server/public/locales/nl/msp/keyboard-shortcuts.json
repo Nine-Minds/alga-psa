@@ -77,7 +77,7 @@
       "nav": "Navigatie",
       "action": "Actie",
       "record": "Record",
-      "help": "Help"
+      "help": "Hulp"
     },
     "placeholderFulltext": "Zoek records, opmerkingen, documenten…",
     "seeAll": "Alle resultaten weergeven",
@@ -100,7 +100,7 @@
     "panel": "Paneel",
     "record": "Record",
     "editor": "Editor",
-    "scroll": "Scroll"
+    "scroll": "Scrollen"
   },
   "actions": {
     "global": {
@@ -169,32 +169,32 @@
         "description": "Navigeer naar de klantenpagina."
       },
       "goDashboard": {
-        "label": "Go to dashboard",
-        "description": "Navigate to the dashboard."
+        "label": "Naar dashboard",
+        "description": "Ga naar het dashboard."
       },
       "goProjects": {
-        "label": "Go to projects",
-        "description": "Navigate to the projects page."
+        "label": "Naar projecten",
+        "description": "Ga naar de projectpagina."
       },
       "goBilling": {
-        "label": "Go to billing",
-        "description": "Navigate to billing."
+        "label": "Naar facturatie",
+        "description": "Ga naar Facturatie."
       },
       "goSettings": {
-        "label": "Go to settings",
-        "description": "Navigate to settings."
+        "label": "Naar instellingen",
+        "description": "Ga naar Instellingen."
       },
       "goSearch": {
-        "label": "Go to global search",
-        "description": "Focus the global search field."
+        "label": "Naar algemeen zoeken",
+        "description": "Plaats de focus in het veld voor algemeen zoeken."
       },
       "goHelp": {
-        "label": "Go to keyboard help",
-        "description": "Open the keyboard shortcuts reference."
+        "label": "Naar sneltoetshulp",
+        "description": "Open het sneltoetsoverzicht."
       },
       "backToParent": {
-        "label": "Back to parent list",
-        "description": "Activate the page back navigation button when one is available."
+        "label": "Terug naar bovenliggende lijst",
+        "description": "Activeer de terugknop van de pagina wanneer deze beschikbaar is."
       }
     },
     "assets": {
@@ -287,82 +287,82 @@
     },
     "scroll": {
       "halfDown": {
-        "label": "Scroll half page down",
-        "description": "Scroll down by half a page."
+        "label": "Een halve pagina omlaag scrollen",
+        "description": "Scroll een halve pagina omlaag."
       },
       "halfUp": {
-        "label": "Scroll half page up",
-        "description": "Scroll up by half a page."
+        "label": "Een halve pagina omhoog scrollen",
+        "description": "Scroll een halve pagina omhoog."
       },
       "fullDown": {
-        "label": "Scroll full page down",
-        "description": "Scroll down by one full page."
+        "label": "Een hele pagina omlaag scrollen",
+        "description": "Scroll een hele pagina omlaag."
       },
       "fullUp": {
-        "label": "Scroll full page up",
-        "description": "Scroll up by one full page."
+        "label": "Een hele pagina omhoog scrollen",
+        "description": "Scroll een hele pagina omhoog."
       },
       "top": {
-        "label": "Scroll to top",
-        "description": "Scroll to the top of the current page or panel."
+        "label": "Naar boven scrollen",
+        "description": "Scroll naar de bovenkant van de huidige pagina of het huidige paneel."
       },
       "bottom": {
-        "label": "Scroll to bottom",
-        "description": "Scroll to the bottom of the current page or panel."
+        "label": "Naar beneden scrollen",
+        "description": "Scroll naar de onderkant van de huidige pagina of het huidige paneel."
       }
     },
     "focus": {
       "primarySearch": {
-        "label": "Focus page search",
-        "description": "Focus the primary search field on the current page."
+        "label": "Focus op zoeken op pagina",
+        "description": "Plaats de focus in het primaire zoekveld op de huidige pagina."
       }
     },
     "table": {
       "nextRow": {
-        "label": "Next table row",
-        "description": "Move the active row marker to the next selectable table row."
+        "label": "Volgende tabelrij",
+        "description": "Verplaats de actieve rijmarkering naar de volgende selecteerbare tabelrij."
       },
       "previousRow": {
-        "label": "Previous table row",
-        "description": "Move the active row marker to the previous selectable table row."
+        "label": "Vorige tabelrij",
+        "description": "Verplaats de actieve rijmarkering naar de vorige selecteerbare tabelrij."
       },
       "toggleRow": {
-        "label": "Toggle table row",
-        "description": "Select or deselect the active table row."
+        "label": "Tabelrij selecteren of deselecteren",
+        "description": "Selecteer of deselecteer de actieve tabelrij."
       },
       "visualRange": {
-        "label": "Visual row range",
-        "description": "Start or stop selecting a contiguous table row range."
+        "label": "Visueel rijbereik",
+        "description": "Start of stop het selecteren van een aaneengesloten bereik tabelrijen."
       },
       "openRow": {
-        "label": "Open table row",
-        "description": "Open the active table row."
+        "label": "Tabelrij openen",
+        "description": "Open de actieve tabelrij."
       }
     },
     "repeat": {
       "lastAction": {
-        "label": "Repeat last action",
-        "description": "Repeat the last Vim-style navigation action."
+        "label": "Laatste actie herhalen",
+        "description": "Herhaal de laatste navigatieactie in Vim-stijl."
       }
     },
     "macro": {
       "record": {
-        "label": "Record macro",
-        "description": "Start or stop recording a Vim-style navigation macro."
+        "label": "Macro opnemen",
+        "description": "Start of stop het opnemen van een navigatiemacro in Vim-stijl."
       },
       "play": {
-        "label": "Play macro",
-        "description": "Play a recorded Vim-style navigation macro."
+        "label": "Macro afspelen",
+        "description": "Speel een opgenomen navigatiemacro in Vim-stijl af."
       }
     },
     "linkhints": {
       "show": {
-        "label": "Show link hints",
-        "description": "Show keyboard hints for visible links and controls."
+        "label": "Koppelingstips weergeven",
+        "description": "Geef toetsenbordtips weer voor zichtbare koppelingen en bedieningselementen."
       },
       "showNewTab": {
-        "label": "Show link hints in new tab",
-        "description": "Show keyboard hints and open links in a new tab when possible."
+        "label": "Koppelingstips op nieuw tabblad weergeven",
+        "description": "Geef toetsenbordtips weer en open koppelingen waar mogelijk op een nieuw tabblad."
       }
     }
   },

@@ -13,7 +13,7 @@
     "users": "Benutzer",
     "teams": "Teams",
     "language": "Sprache",
-    "ticketing": "Ticketing",
+    "ticketing": "Ticketverwaltung",
     "projects": "Projekte",
     "interactions": "Interaktionen",
     "notifications": "Benachrichtigungen",
@@ -1156,7 +1156,7 @@
       "createTicket": "Ticket erstellen",
       "viewProjects": "Projekte anzeigen",
       "activeDevices": "Aktive Geräte",
-      "basicSupport": "Basic Support",
+      "basicSupport": "Basis-Support",
       "dashboardTitle": "Dashboard",
       "greeting": "Guten Morgen, Alex 👋",
       "navAppointments": "Termine",
@@ -1861,21 +1861,21 @@
       "description": "SSO-Massenzuweisungs-Werkzeuge werden geladen..."
     },
     "status": {
-      "title": "Sign-in providers",
-      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
-      "available": "Available",
-      "notConfigured": "Not configured"
+      "title": "Anmeldeanbieter",
+      "caption": "Diese Anbieter werden von der Plattform verwaltet — Client-IDs oder eine DNS-Einrichtung sind nicht erforderlich. Aktivieren Sie die automatische Verknüpfung oder weisen Sie unten Benutzer zu.",
+      "available": "Verfügbar",
+      "notConfigured": "Nicht konfiguriert"
     },
     "autoLink": {
       "body": "Wenn aktiviert, können neu hinzugefügte MSP-Benutzer sich mit Google oder Microsoft über ihre geschäftliche E-Mail-Adresse anmelden. Sie müssen ihr Konto nicht manuell verknüpfen.",
-      "clientBody": "When enabled, matching client portal users are automatically linked to their SSO identities on login.",
-      "clientTitle": "Auto-link client portal users",
-      "clientToggleLabel": "Toggle client auto-linking",
+      "clientBody": "Wenn diese Option aktiviert ist, werden passende Kundenportalbenutzer bei der Anmeldung automatisch mit ihren SSO-Identitäten verknüpft.",
+      "clientTitle": "Kundenportalbenutzer automatisch verknüpfen",
+      "clientToggleLabel": "Automatische Verknüpfung von Kundenportalbenutzern umschalten",
       "description": "Aktivieren Sie diese Option, um jedem neuen Mitarbeiterkonto sofort Ihren Unternehmens-SSO-Anbieter zuzuweisen, sodass eine passwortbasierte Anmeldung nicht erforderlich ist.",
       "disabledInfo": "Aktivieren Sie diese Option, damit neue und bestehende Mitarbeiter den „SSO verbinden“-Vorgang überspringen können, wenn ihre E-Mail-Adresse bereits mit einem konfigurierten Anbieter übereinstimmt. Wir protokollieren weiterhin jede automatische Verknüpfung.",
-      "internalBody": "When enabled, matching MSP/internal users are automatically linked to their SSO identities on login.",
-      "internalTitle": "Auto-link internal users",
-      "internalToggleLabel": "Toggle internal auto-linking",
+      "internalBody": "Wenn diese Option aktiviert ist, werden passende MSP- bzw. interne Benutzer bei der Anmeldung automatisch mit ihren SSO-Identitäten verknüpft.",
+      "internalTitle": "Interne Benutzer automatisch verknüpfen",
+      "internalToggleLabel": "Automatische Verknüpfung interner Benutzer umschalten",
       "title": "SSO für neue interne Benutzer automatisch einrichten",
       "toggleLabel": "Automatischen SSO-Abgleich umschalten"
     },
@@ -1968,19 +1968,19 @@
       }
     },
     "clientPortalProvisioning": {
-      "deactivateBody": "When enabled, users managed by Entra provisioning are deactivated when access-group entitlement is removed.",
-      "deactivateLabel": "Toggle deactivation on entitlement removal",
-      "deactivateTitle": "Deactivate Entra-managed users on entitlement removal",
-      "defaultRoleBody": "Used for newly provisioned client portal users in built-in mode when a client mapping does not override the role.",
-      "defaultRoleLabel": "MSP workspace default client portal role",
-      "defaultRoleTitle": "MSP workspace default client portal role",
-      "modeBody": "Choose whether client portal access from Entra sync is disabled, handled by built-in provisioning, or delegated to workflows.",
-      "modeBuiltIn": "Built-in",
-      "modeDisabled": "Disabled",
-      "modeLabel": "Client portal Entra provisioning mode",
-      "modeTitle": "Client portal Entra provisioning mode",
-      "modeWorkflowManaged": "Workflow-managed",
-      "workflowManagedInfo": "Workflow-managed mode publishes Entra access events only. The selected workflow is responsible for client portal user provisioning, role assignment, invitations, and lifecycle changes."
+      "deactivateBody": "Wenn diese Option aktiviert ist, werden durch die Entra-Bereitstellung verwaltete Benutzer deaktiviert, sobald ihre Zugriffsgruppenberechtigung entfernt wird.",
+      "deactivateLabel": "Deaktivierung beim Entfernen der Berechtigung umschalten",
+      "deactivateTitle": "Von Entra verwaltete Benutzer beim Entfernen der Berechtigung deaktivieren",
+      "defaultRoleBody": "Wird im integrierten Modus für neu bereitgestellte Kundenportalbenutzer verwendet, wenn die Kundenzuordnung die Rolle nicht überschreibt.",
+      "defaultRoleLabel": "Standardrolle des Kundenportals im MSP-Arbeitsbereich",
+      "defaultRoleTitle": "Standardrolle des Kundenportals im MSP-Arbeitsbereich",
+      "modeBody": "Wählen Sie, ob der Kundenportalzugriff aus der Entra-Synchronisierung deaktiviert, durch die integrierte Bereitstellung verarbeitet oder an Workflows delegiert wird.",
+      "modeBuiltIn": "Integriert",
+      "modeDisabled": "Deaktiviert",
+      "modeLabel": "Entra-Bereitstellungsmodus für das Kundenportal",
+      "modeTitle": "Entra-Bereitstellungsmodus für das Kundenportal",
+      "modeWorkflowManaged": "Workflow-gesteuert",
+      "workflowManagedInfo": "Im Workflow-gesteuerten Modus werden nur Entra-Zugriffsereignisse veröffentlicht. Der ausgewählte Workflow ist für die Bereitstellung von Kundenportalbenutzern, Rollenzuweisungen, Einladungen und Lebenszyklusänderungen verantwortlich."
     }
   },
   "profile": {

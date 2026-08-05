@@ -203,7 +203,7 @@
         },
         "systemDefault": {
           "source": "Systemstandard (Englisch)",
-          "appliesTo": "Fallback",
+          "appliesTo": "Ausweichwert",
           "whereSet": "Systemdefiniert"
         }
       }

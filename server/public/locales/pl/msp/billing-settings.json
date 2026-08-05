@@ -1204,7 +1204,7 @@
         "secretKeyLabel": "Klucz tajny",
         "secretKeyPlaceholder": "sk_live_... lub sk_test_...",
         "secretKeyHelpPrefix": "Znajdziesz go w",
-        "secretKeyHelpLink": "Stripe Dashboard → API Keys",
+        "secretKeyHelpLink": "Pulpit Stripe → Klucze API",
         "publishableKeyLabel": "Klucz publikowalny",
         "publishableKeyPlaceholder": "pk_live_... lub pk_test_...",
         "connecting": "Łączenie...",

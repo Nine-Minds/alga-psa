@@ -35,7 +35,7 @@
       "title": "Engagements"
     },
     "completeDialog": {
-      "due": "Due",
+      "due": "Échéance",
       "nextAction": "Action suivante",
       "pickNext": "Étape suivante",
       "placeholder": "par ex. Suivi de la proposition",
@@ -55,7 +55,7 @@
       "client": "Client",
       "dealTitle": "Titre",
       "dealType": "Type d'affaire",
-      "due": "Due",
+      "due": "Échéance",
       "expectedClose": "Clôture attendue",
       "missing": "Renseignez {{fields}} pour activer Créer une opportunité",
       "nextAction": "Première action",
@@ -245,7 +245,7 @@
       "table": {
         "actions": "Actions",
         "client": "Client",
-        "due": "Due",
+        "due": "Échéance",
         "nextAction": "Action suivante",
         "value": "Valeur"
       },
@@ -352,7 +352,7 @@
       "lost": "Perdu",
       "proposed": "Proposé",
       "qualified": "Qualifié",
-      "verbal": "Verbal",
+      "verbal": "Accord verbal",
       "won": "Gagné"
     },
     "status": {
@@ -430,7 +430,7 @@
       "board": "Conseil",
       "forecast": "Prévisions",
       "meeting": "Réunion",
-      "pipeline": "Pipeline",
+      "pipeline": "Pipeline commercial",
       "queue": "File d'attente",
       "reports": "Rapports",
       "suggestions": "Suggestions"

@@ -728,7 +728,7 @@
           "connectingSuffix": " (Conectando...)",
           "details": "Detalles de conexión",
           "directCredentialSourceLabel": "Origen de credenciales:",
-          "directTenantDefault": "common (multi-tenant)",
+          "directTenantDefault": "common (varios inquilinos)",
           "directTenantLabel": "Inquilino de Microsoft",
           "notAvailable": "No disponible",
           "notConfigured": "No configurado",
@@ -1034,7 +1034,7 @@
         "details": {
           "noResults": "No se registraron resultados de inquilino.",
           "stats": "creados {{created}}, vinculados {{linked}}, actualizados {{updated}}, ambiguos {{ambiguous}}, inactivados {{inactivated}}",
-          "summarySkipped": "Skipped provisioning outcomes: {{count}}",
+          "summarySkipped": "Resultados de aprovisionamiento omitidos: {{count}}",
           "tenantHeader": "Inquilino {{tenant}} · {{status}}",
           "unknownTenant": "desconocido"
         },
@@ -1068,11 +1068,11 @@
         "columns": {
           "actions": "Acciones",
           "confidence": "Confianza",
-          "defaultRole": "Default Role",
+          "defaultRole": "Rol predeterminado",
           "entraTenant": "Inquilino de Entra",
-          "portalAccessGroup": "Portal Access Group",
+          "portalAccessGroup": "Grupo de acceso al portal",
           "primaryDomain": "Dominio principal",
-          "provisioningModeOverride": "Provisioning Mode Override",
+          "provisioningModeOverride": "Reemplazo del modo de aprovisionamiento",
           "selectClient": "Seleccionar cliente",
           "status": "Estado",
           "suggestedClient": "Cliente sugerido"
@@ -1100,14 +1100,14 @@
           "unknownClient": "Cliente desconocido"
         },
         "portal": {
-          "broadGroupWarning": "Warning: every enabled user in this Entra group will be eligible for client portal access.",
-          "defaultRolePlaceholder": "Inherit workspace role",
-          "groupLoading": "Loading groups…",
-          "modeBuiltIn": "Built-in",
-          "modeDisabled": "Disabled",
-          "modeInherit": "Inherit MSP workspace default",
-          "modeWorkflowManaged": "Workflow-managed",
-          "noGroupSelected": "No group selected"
+          "broadGroupWarning": "Advertencia: todos los usuarios habilitados de este grupo de Entra podrán obtener acceso al portal del cliente.",
+          "defaultRolePlaceholder": "Heredar el rol del espacio de trabajo",
+          "groupLoading": "Cargando grupos…",
+          "modeBuiltIn": "Integrado",
+          "modeDisabled": "Deshabilitado",
+          "modeInherit": "Heredar el valor predeterminado del espacio de trabajo MSP",
+          "modeWorkflowManaged": "Administrado por flujo de trabajo",
+          "noGroupSelected": "No se seleccionó ningún grupo"
         },
         "reasons": {
           "exactDomain": "Dominio exacto",
@@ -1132,7 +1132,7 @@
           "resetting": "Restableciendo…",
           "save": "Guardar",
           "saving": "Guardando…",
-          "disconnectProviders": "Disconnect Google providers"
+          "disconnectProviders": "Desconectar proveedores de Google"
         },
         "afterSaveNotice": "Después de guardar, vaya a las integraciones de correo entrante y calendario y vuelva a autorizar los proveedores. Los proveedores de Google existentes no se migran.",
         "consoleLink": "Google Cloud Console",
@@ -1149,8 +1149,8 @@
         },
         "loading": "Cargando…",
         "oauth": {
-          "calendarClientId": "Calendar OAuth Client ID",
-          "calendarClientSecret": "Calendar OAuth Client Secret",
+          "calendarClientId": "ID de cliente de OAuth para Calendar",
+          "calendarClientSecret": "Secreto de cliente de OAuth para Calendar",
           "enterSecret": "Introducir client secret",
           "gmailClientId": "Gmail OAuth Client ID",
           "gmailClientSecret": "Gmail OAuth Client Secret",
@@ -1158,17 +1158,17 @@
           "shareApp": "Usar la misma aplicación OAuth para Gmail y Calendar",
           "shareAppHelp": "Recomendado. Aún puede autorizar cuentas de Google distintas por integración.",
           "storedSecret": "Secret almacenado: {{secret}}",
-          "locationHelp": "Google Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs."
+          "locationHelp": "Google Cloud: API y servicios > Credenciales > ID de cliente de OAuth 2.0."
         },
         "redirectUrisLabel": "URIs de redirección (copie en el cliente OAuth de Google)",
-        "scopes": "Scopes",
-        "scopesCalendar": "Calendar: {{scopes}}",
+        "scopes": "Permisos",
+        "scopesCalendar": "Calendario: {{scopes}}",
         "scopesGmail": "Gmail: {{scopes}}",
         "serviceAccount": {
           "alreadyStored": "Ya hay una clave de cuenta de servicio almacenada (no se muestra).",
           "description": "Pegue el JSON de la clave de la cuenta de servicio propia del inquilino utilizada para aprovisionar Pub/Sub.",
           "title": "Cuenta de servicio de Pub/Sub (requerido para Gmail)",
-          "locationHelp": "Google Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON."
+          "locationHelp": "Google Cloud: IAM y administración > Cuentas de servicio > Claves > Agregar clave > JSON."
         },
         "setupGuide": "Guía de configuración",
         "title": "Google",
@@ -1182,14 +1182,14 @@
           "unknownError": "Error desconocido"
         },
         "disconnectDialog": {
-          "cancel": "Keep providers connected",
-          "message": "Existing Gmail and Google Calendar provider connections will be marked disconnected and must be re-authorized. Stored Google credentials stay in place.",
-          "title": "Disconnect Google providers?"
+          "cancel": "Mantener conectados los proveedores",
+          "message": "Las conexiones existentes de los proveedores de Gmail y Google Calendar se marcarán como desconectadas y deberán volver a autorizarse. Las credenciales de Google almacenadas se conservarán.",
+          "title": "¿Desconectar los proveedores de Google?"
         },
         "oauthValues": {
-          "title": "Google OAuth app values"
+          "title": "Valores de la aplicación de Google OAuth"
         },
-        "redirectUrisHelp": "Staff sign-in uses the OAuth client saved below. Add the listed Gmail and Calendar callback URLs in Google Cloud."
+        "redirectUrisHelp": "El inicio de sesión del personal usa el cliente OAuth guardado a continuación. Agregue las URL de devolución de llamada indicadas de Gmail y Calendar en Google Cloud."
       }
     },
     "hudu": {
@@ -1518,74 +1518,74 @@
     },
     "microsoft": {
       "emailSetup": {
-        "action": "Set up Microsoft Email",
+        "action": "Configurar el correo electrónico de Microsoft",
         "actions": {
-          "back": "Back",
-          "cancel": "Cancel",
-          "copy": "Copy",
-          "finish": "Finish",
-          "grantConsent": "Grant administrator consent",
-          "savePlatform": "Create profile and continue",
-          "signIn": "Sign in to Microsoft",
-          "working": "Working…"
+          "back": "Atrás",
+          "cancel": "Cancelar",
+          "copy": "Copiar",
+          "finish": "Finalizar",
+          "grantConsent": "Conceder consentimiento de administrador",
+          "savePlatform": "Crear perfil y continuar",
+          "signIn": "Iniciar sesión en Microsoft",
+          "working": "Procesando…"
         },
         "automated": {
           "description": "Sign in as a Microsoft administrator. Alga creates the app, service principal, secret, Email profile, and binding.",
-          "title": "Create an app in this tenant"
+          "title": "Crear una aplicación en este inquilino"
         },
-        "callbackUri": "Mailbox callback URI",
+        "callbackUri": "URI de devolución de llamada del buzón",
         "complete": {
-          "consentDone": "Administrator consent is confirmed. Return to Inbound Email and authorize the mailbox.",
-          "consentPending": "Next, a Microsoft tenant administrator must grant consent. Mailbox authorization happens afterward in Inbound Email.",
+          "consentDone": "Se confirmó el consentimiento de administrador. Vuelva a Correo entrante y autorice el buzón.",
+          "consentPending": "A continuación, un administrador del inquilino de Microsoft debe conceder su consentimiento. Después se autoriza el buzón en Correo entrante.",
           "profileCreated": "Microsoft Email profile created and bound"
         },
         "consent": {
-          "confirmedDescription": "The Microsoft app is ready for mailbox authorization.",
-          "confirmedTitle": "Administrator consent confirmed",
-          "url": "Administrator consent URL",
-          "urlLabel": "Consent URL"
+          "confirmedDescription": "La aplicación de Microsoft está lista para autorizar el buzón.",
+          "confirmedTitle": "Consentimiento de administrador confirmado",
+          "url": "URL de consentimiento de administrador",
+          "urlLabel": "URL de consentimiento"
         },
-        "copied": "{{label}} copied",
-        "description": "Choose how to configure the Microsoft app used for inbound email. Mailbox authorization remains a separate final step.",
+        "copied": "Se copió {{label}}",
+        "description": "Elija cómo configurar la aplicación de Microsoft usada para el correo entrante. La autorización del buzón sigue siendo un último paso independiente.",
         "errors": {
-          "automated": "Could not start automated Microsoft app creation.",
-          "generic": "Microsoft Email setup did not complete.",
-          "nameRequired": "Enter a display name for the Microsoft app.",
-          "platform": "Could not configure the platform Microsoft app.",
-          "popupBlocked": "Allow popups for this site, then try again.",
+          "automated": "No se pudo iniciar la creación automatizada de la aplicación de Microsoft.",
+          "generic": "No se completó la configuración del correo electrónico de Microsoft.",
+          "nameRequired": "Ingrese un nombre para mostrar de la aplicación de Microsoft.",
+          "platform": "No se pudo configurar la aplicación de Microsoft de la plataforma.",
+          "popupBlocked": "Permita las ventanas emergentes en este sitio e inténtelo de nuevo.",
           "popupClosed": "La ventana de Microsoft se cerró antes de finalizar la configuración. Inténtelo de nuevo o elija otra opción de configuración.",
-          "tenantRequired": "Enter your Microsoft tenant ID or verified domain."
+          "tenantRequired": "Ingrese su Tenant ID de Microsoft o dominio verificado."
         },
         "fields": {
-          "clientId": "Client ID",
-          "displayName": "Profile display name",
-          "tenant": "Microsoft tenant ID or verified domain",
+          "clientId": "ID de cliente",
+          "displayName": "Nombre para mostrar del perfil",
+          "tenant": "Tenant ID de Microsoft o dominio verificado",
           "tenantId": "Tenant ID"
         },
         "manual": {
-          "description": "Keep using the existing client ID, tenant ID, and client secret form.",
-          "title": "Enter an existing app manually"
+          "description": "Siga usando el formulario existente de ID de cliente, Tenant ID y secreto de cliente.",
+          "title": "Ingresar manualmente una aplicación existente"
         },
         "platform": {
           "description": "Create an Email-bound profile from the server-managed multi-tenant app, then grant tenant administrator consent.",
-          "title": "Use the Alga platform app"
+          "title": "Usar la aplicación de la plataforma Alga"
         },
-        "title": "Set up Microsoft Email",
-        "unavailable": "Unavailable"
+        "title": "Configurar el correo electrónico de Microsoft",
+        "unavailable": "No disponible"
       },
       "settings": {
         "advanced": {
-          "title": "Bring your own Microsoft app (advanced)",
-          "description": "Create and manage tenant-owned Entra app registrations for organizations that explicitly require them.",
-          "warning": "A custom Entra app is normally unnecessary on hosted Alga PSA. Continue only when your organization deliberately requires its own application and credentials."
+          "title": "Usar su propia aplicación de Microsoft (avanzado)",
+          "description": "Cree y administre registros de aplicaciones de Entra propiedad del inquilino para las organizaciones que los requieran expresamente.",
+          "warning": "En Alga PSA alojado normalmente no se necesita una aplicación personalizada de Entra. Continúe solo si su organización requiere deliberadamente una aplicación y credenciales propias."
         },
         "platform": {
-          "title": "Microsoft email is ready to connect",
-          "description": "Connect Microsoft 365 with the application supplied by Alga PSA. No Entra app registration is required.",
-          "readyDescription": "Alga PSA supplies and manages the Microsoft application. Connect a mailbox without creating an Entra app or entering client credentials.",
-          "connectAction": "Connect Microsoft email",
-          "unavailableTitle": "Platform Microsoft credentials are unavailable",
-          "unavailableDescription": "This deployment requires a tenant-owned Microsoft app. Use the advanced setup below to add one."
+          "title": "El correo electrónico de Microsoft está listo para conectarse",
+          "description": "Conecte Microsoft 365 con la aplicación proporcionada por Alga PSA. No es necesario registrar una aplicación de Entra.",
+          "readyDescription": "Alga PSA proporciona y administra la aplicación de Microsoft. Conecte un buzón sin crear una aplicación de Entra ni ingresar credenciales de cliente.",
+          "connectAction": "Conectar el correo electrónico de Microsoft",
+          "unavailableTitle": "Las credenciales de Microsoft de la plataforma no están disponibles",
+          "unavailableDescription": "Esta implementación requiere una aplicación de Microsoft propiedad del inquilino. Use la configuración avanzada que aparece a continuación para agregar una."
         },
         "actions": {
           "entraLink": "Microsoft Entra",
@@ -1594,7 +1594,7 @@
           "refresh": "Actualizar",
           "resetProviders": "Restablecer proveedores de Microsoft",
           "resetting": "Restableciendo…",
-          "disconnectProviders": "Disconnect Microsoft providers"
+          "disconnectProviders": "Desconectar proveedores de Microsoft"
         },
         "archiveDialog": {
           "archiving": "Archivando…",
@@ -1614,16 +1614,16 @@
           "noCapablePlaceholder": "No enabled profile"
         },
         "bindings": {
-          "summaryBound": "Current: {{profile}}.",
+          "summaryBound": "Actual: {{profile}}.",
           "summaryNone": "Actualmente no hay ningún perfil de Microsoft enlazado a {{consumer}}.",
           "summaryUnavailable": "La aplicación seleccionada no está disponible.",
-          "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
+          "warningArchived": "{{profile}} está archivado. Elija una aplicación de Microsoft activa.",
           "warningNoBinding": "Aún no se ha configurado ningún enlace de {{consumer}}.",
           "warningNotReady": "{{consumer}} está enlazado a {{profile}}, pero ese perfil aún necesita configuración.",
           "warningProfileMissing": "La aplicación de Microsoft seleccionada ya no está disponible. Seleccione otra aplicación.",
-          "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
-          "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
-          "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."
+          "warningMissingCapability": "{{profile}} está seleccionado, pero todavía no puede gestionar {{consumer}}. Edite la aplicación y active {{consumer}}, o elija otra aplicación.",
+          "warningNoApps": "Cree una aplicación de Microsoft, active {{consumer}} y luego elíjala aquí.",
+          "warningNoCapable": "Ninguna aplicación puede gestionar {{consumer}} todavía. Edite una aplicación de Microsoft, active {{consumer}} y luego elíjala aquí."
         },
         "consumerBindings": {
           "descriptionCe": "Enlace un perfil de Microsoft a MSP SSO para el inicio de sesión y el uso del dominio de inicio de sesión.",
@@ -1654,8 +1654,8 @@
         "descriptionEe": "Gestione perfiles de Microsoft propios del inquilino para MSP SSO, correo de Outlook, sincronización de calendario y Microsoft Teams.",
         "dialog": {
           "cancel": "Cancelar",
-          "clientId": "Client ID",
-          "clientSecret": "Client secret",
+          "clientId": "ID de cliente",
+          "clientSecret": "Secreto de cliente",
           "clientSecretPlaceholder": "Introducir client secret",
           "clientSecretPlaceholderEdit": "Déjelo en blanco para mantener el secreto actual",
           "createProfile": "Crear perfil",
@@ -1690,18 +1690,18 @@
           "updateBinding": "No se pudo actualizar el enlace de Microsoft"
         },
         "guidance": {
-          "applicationIdUri": "Application ID URI",
+          "applicationIdUri": "URI de ID de aplicación",
           "calendarRedirect": "URI de redirección para sincronización de calendario",
           "calendarTitle": "Guía de calendario",
-          "clientId": "Client ID",
+          "clientId": "ID de cliente",
           "currentProfileTitle": "Valores del perfil actual",
           "emailRedirect": "URI de redirección para correo entrante",
           "emailTitle": "Guía de correo",
           "mspSsoTitle": "Guía de MSP SSO",
           "notConfigured": "No configurado",
-          "redirectUri": "Redirect URI",
+          "redirectUri": "URI de redirección",
           "requiresBaseUrl": "Requiere URL base y Client ID",
-          "scopes": "Scopes",
+          "scopes": "Permisos",
           "teamsBotRedirect": "URI de redirección del bot personal",
           "teamsMessageRedirect": "URI de redirección de message extension",
           "teamsScopes": "Scopes de Teams",
@@ -1713,7 +1713,7 @@
         "profileCard": {
           "activeBindings": "Enlaces activos",
           "archive": "Archivar",
-          "clientId": "Client ID",
+          "clientId": "ID de cliente",
           "defaultBadge": "Predeterminado",
           "edit": "Editar",
           "guidanceSummary": "Guía de registro de aplicación de Microsoft",
@@ -1773,9 +1773,9 @@
           "tenantIdRequired": "El Microsoft Tenant ID es obligatorio"
         },
         "disconnectDialog": {
-          "cancel": "Keep providers connected",
+          "cancel": "Mantener conectados los proveedores",
           "message": "Existing Outlook email and calendar provider connections will be marked disconnected and must be re-authorized. Microsoft profiles and service bindings stay in place.",
-          "title": "Disconnect Microsoft providers?"
+          "title": "¿Desconectar los proveedores de Microsoft?"
         },
         "profileLibrary": {
           "description": "Named Microsoft app registrations that services can bind to.",
@@ -1813,16 +1813,16 @@
           "oauthFailed": "Falló la llamada de retorno OAuth de QuickBooks. Intente conectarse de nuevo. Si el problema persiste, revise su redirect URI y scopes.",
           "tokenExchangeFailed": "Intuit no devolvió los tokens esperados. Intente conectarse de nuevo."
         },
-        "clientIdLabel": "QuickBooks Client ID",
+        "clientIdLabel": "ID de cliente de QuickBooks",
         "clientIdPlaceholder": "Pegue el client ID de su aplicación Intuit",
-        "clientSecretLabel": "QuickBooks Client Secret",
+        "clientSecretLabel": "Secreto de cliente de QuickBooks",
         "clientSecretPlaceholder": "Pegue el client secret de su aplicación Intuit",
         "connectSuccess": "QuickBooks conectado correctamente. La empresa conectada es ahora el contexto predeterminado de QuickBooks en vivo.",
         "connection": {
           "defaultCompany": "Empresa conectada",
           "description": "Inicie OAuth solo después de configurar las credenciales de la aplicación QuickBooks. Desconectarse elimina los tokens de acceso de QuickBooks almacenados pero mantiene las credenciales de la aplicación propias del inquilino.",
           "notConnected": "Aún no hay ninguna empresa de QuickBooks conectada. Guarde las credenciales y haga clic en Conectar QuickBooks.",
-          "realmId": "Realm ID: {{id}}",
+          "realmId": "ID de empresa: {{id}}",
           "title": "Conexión en vivo con QuickBooks",
           "unknown": "desconocido"
         },
@@ -1834,7 +1834,7 @@
         "disconnectSuccess": "Se eliminó la conexión de QuickBooks almacenada. Se conservaron las credenciales de la aplicación QuickBooks propias del inquilino.",
         "environment": "Entorno de Intuit",
         "environmentProduction": "Producción",
-        "environmentSandbox": "Sandbox",
+        "environmentSandbox": "Entorno de pruebas",
         "errors": {
           "disconnect": "No se pudo desconectar QuickBooks.",
           "load": "No se pudo cargar la configuración de QuickBooks.",
@@ -1853,7 +1853,7 @@
         "noClientId": "Aún no hay ningún client ID almacenado para este inquilino.",
         "noClientSecret": "Aún no hay ningún client secret almacenado para este inquilino.",
         "quickbooksCsv": "QuickBooks CSV",
-        "redirectUri": "Redirect URI",
+        "redirectUri": "URI de redirección",
         "requiredScopes": "Scopes requeridos",
         "storedClientId": "Client ID almacenado: {{value}}",
         "storedClientSecret": "Client secret almacenado: {{value}}",
@@ -1880,8 +1880,8 @@
         "refreshTokenExpiry": "El token de QuickBooks caduca el {{date}}",
         "refreshTokenExpired": "El token de QuickBooks ha caducado: vuelva a conectarse para reanudar la sincronización.",
         "autoSyncLabel": "Sincronización automática activada",
-        "autoProvisionCustomersLabel": "Create QuickBooks customers automatically",
-        "autoProvisionCustomersHint": "Off: exports for unmapped customers pause with an exception until you link them in the customer mapping screen.",
+        "autoProvisionCustomersLabel": "Crear clientes de QuickBooks automáticamente",
+        "autoProvisionCustomersHint": "Desactivado: las exportaciones de clientes sin asignar se pausan con una excepción hasta que los vincule en la pantalla de asignación de clientes.",
         "syncNowButton": "Sincronizar ahora",
         "syncNowRunning": "Sincronizando…",
         "syncNowSuccess": "Sincronización completada correctamente.",
@@ -1899,101 +1899,101 @@
         "noDefault": "Sin valor predeterminado",
         "saving": "Guardando…",
         "undepositedFunds": "Fondos sin depositar (predeterminado)",
-        "catalogLoadError": "Failed to load QuickBooks sync configuration options."
+        "catalogLoadError": "No se pudieron cargar las opciones de configuración de sincronización de QuickBooks."
       }
     },
     "rmm": {
       "ninjaOne": {
         "loading": "Cargando configuración de la integración NinjaOne...",
         "card": {
-          "title": "NinjaOne RMM Integration",
-          "description": "Connect your NinjaOne account to synchronize devices, receive alerts, and enable remote access capabilities.",
-          "skeletonDescription": "Loading NinjaOne integration..."
+          "title": "Integración de NinjaOne RMM",
+          "description": "Conecte su cuenta de NinjaOne para sincronizar dispositivos, recibir alertas y habilitar las funciones de acceso remoto.",
+          "skeletonDescription": "Cargando la integración de NinjaOne..."
         },
         "status": {
-          "checking": "Checking NinjaOne connection...",
+          "checking": "Comprobando la conexión de NinjaOne...",
           "notConnected": {
-            "title": "Not connected to NinjaOne",
-            "description": "Connect your NinjaOne account to sync devices, receive alerts, and enable remote access."
+            "title": "Sin conexión a NinjaOne",
+            "description": "Conecte su cuenta de NinjaOne para sincronizar dispositivos, recibir alertas y habilitar el acceso remoto."
           },
-          "connected": "Connected to NinjaOne",
-          "connectedWithErrors": "NinjaOne connected with sync errors",
+          "connected": "Conectado a NinjaOne",
+          "connectedWithErrors": "NinjaOne conectado con errores de sincronización",
           "reconnectRequired": "Se requiere volver a conectar NinjaOne",
           "reconnectRequiredDescription": "La autorización de NinjaOne ya no se puede actualizar (token caducado o revocado). Vuelve a conectar para restaurar la sincronización de dispositivos, las alertas y el acceso remoto.",
-          "instanceLabel": "Instance:",
-          "organizations": "{{count}} organizations",
-          "devices": "{{count}} devices",
-          "activeAlerts": "{{count}} active alerts",
+          "instanceLabel": "Instancia:",
+          "organizations": "{{count}} organizaciones",
+          "devices": "{{count}} dispositivos",
+          "activeAlerts": "{{count}} alertas activas",
           "lastSynced": "Última sincronización: {{time}}"
         },
         "setup": {
-          "title": "Setup Instructions",
+          "title": "Instrucciones de configuración",
           "steps": {
-            "login": "Log into your NinjaOne dashboard",
-            "navigate": "Navigate to Administration → Apps → API",
-            "addClient": "Click \"+ Add client app\" to create a new API application",
-            "platform": "Set Application Platform to \"Web (PHP, Java, .Net Core, etc.)\"",
-            "name": "Enter a Name (e.g., \"Alga PSA\")",
-            "redirectUri": "Add the redirect URI:",
-            "scopes": "Under \"Scopes\", check \"Monitoring\" and \"Management\"",
-            "grantTypes": "Under \"Allowed grant types\", check \"Authorization code\", \"Client credentials\", and \"Refresh token\"",
-            "addAndCopy": "Click \"Add\" and copy the Client ID and Client Secret below"
+            "login": "Inicie sesión en su panel de NinjaOne",
+            "navigate": "Vaya a Administration → Apps → API",
+            "addClient": "Haga clic en «+ Add client app» para crear una nueva aplicación de API",
+            "platform": "Establezca Application Platform en «Web (PHP, Java, .Net Core, etc.)»",
+            "name": "Ingrese un Name (por ejemplo, «Alga PSA»)",
+            "redirectUri": "Agregue el URI de redirección:",
+            "scopes": "En «Scopes», marque «Monitoring» y «Management»",
+            "grantTypes": "En «Allowed grant types», marque «Authorization code», «Client credentials» y «Refresh token»",
+            "addAndCopy": "Haga clic en «Add» y copie el ID de cliente y el secreto de cliente que aparecen a continuación"
           },
-          "docsPrefix": "For detailed setup instructions, see",
-          "docsSection": "Section 10.15",
-          "docsSuffix": "in the documentation.",
-          "openApiSettings": "Open NinjaOne API Settings"
+          "docsPrefix": "Para obtener instrucciones detalladas de configuración, consulte",
+          "docsSection": "Sección 10.15",
+          "docsSuffix": "en la documentación.",
+          "openApiSettings": "Abrir la configuración de API de NinjaOne"
         },
         "credentials": {
-          "title": "API Credentials",
-          "saved": "Credentials saved",
-          "clientIdLabel": "Client ID",
-          "clientIdPlaceholder": "Enter your NinjaOne Client ID",
-          "clientSecretLabel": "Client Secret",
-          "clientSecretPlaceholder": "Enter your NinjaOne Client Secret",
-          "clientSecretUpdatePlaceholder": "Enter new secret to update",
-          "secretMaskedLabel": "Secret",
-          "saving": "Saving...",
-          "save": "Save Credentials"
+          "title": "Credenciales de API",
+          "saved": "Credenciales guardadas",
+          "clientIdLabel": "ID de cliente",
+          "clientIdPlaceholder": "Ingrese su ID de cliente de NinjaOne",
+          "clientSecretLabel": "Secreto de cliente",
+          "clientSecretPlaceholder": "Ingrese su secreto de cliente de NinjaOne",
+          "clientSecretUpdatePlaceholder": "Ingrese un nuevo secreto para actualizarlo",
+          "secretMaskedLabel": "Secreto",
+          "saving": "Guardando...",
+          "save": "Guardar credenciales"
         },
         "region": {
-          "hint": "Select your NinjaOne region, then click ‘Connect to NinjaOne’ to authorize access.",
-          "label": "Region:"
+          "hint": "Seleccione su región de NinjaOne y luego haga clic en «Conectar con NinjaOne» para autorizar el acceso.",
+          "label": "Región:"
         },
         "actions": {
-          "refreshing": "Refreshing...",
-          "refreshStatus": "Refresh Status",
-          "syncing": "Syncing...",
-          "syncOrganizations": "Sync Organizations",
-          "syncingDevices": "Syncing Devices...",
-          "syncDevices": "Sync Devices",
-          "disconnecting": "Disconnecting...",
-          "disconnect": "Disconnect",
-          "connect": "Connect to NinjaOne"
+          "refreshing": "Actualizando...",
+          "refreshStatus": "Actualizar estado",
+          "syncing": "Sincronizando...",
+          "syncOrganizations": "Sincronizar organizaciones",
+          "syncingDevices": "Sincronizando dispositivos...",
+          "syncDevices": "Sincronizar dispositivos",
+          "disconnecting": "Desconectando...",
+          "disconnect": "Desconectar",
+          "connect": "Conectar con NinjaOne"
         },
         "disconnectModal": {
-          "title": "Disconnect NinjaOne",
-          "description": "Are you sure you want to disconnect NinjaOne? This will stop device synchronization and alert notifications, and remove your stored API credentials. Organization mappings will be preserved.",
-          "cancel": "Cancel",
-          "confirm": "Disconnect"
+          "title": "Desconectar NinjaOne",
+          "description": "¿Está seguro de que desea desconectar NinjaOne? Esto detendrá la sincronización de dispositivos y las notificaciones de alertas, y eliminará las credenciales de API almacenadas. Se conservarán las asignaciones de organizaciones.",
+          "cancel": "Cancelar",
+          "confirm": "Desconectar"
         },
         "toasts": {
-          "connectSuccess": "Successfully connected to NinjaOne.",
-          "connectFailed": "NinjaOne connection failed.",
-          "connectFailedWithDetail": "NinjaOne connection failed: {{detail}}",
-          "disconnectSuccess": "NinjaOne connection successfully disconnected.",
-          "credentialsSaved": "NinjaOne API credentials saved successfully.",
-          "orgSyncSuccess": "Organization sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}",
-          "deviceSyncSuccess": "Device sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}"
+          "connectSuccess": "Conexión con NinjaOne establecida correctamente.",
+          "connectFailed": "No se pudo establecer la conexión con NinjaOne.",
+          "connectFailedWithDetail": "No se pudo establecer la conexión con NinjaOne: {{detail}}",
+          "disconnectSuccess": "La conexión con NinjaOne se desconectó correctamente.",
+          "credentialsSaved": "Las credenciales de API de NinjaOne se guardaron correctamente.",
+          "orgSyncSuccess": "Sincronización de organizaciones completada. Procesadas: {{processed}}; creadas: {{created}}; actualizadas: {{updated}}",
+          "deviceSyncSuccess": "Sincronización de dispositivos completada. Procesados: {{processed}}; creados: {{created}}; actualizados: {{updated}}"
         },
         "errors": {
-          "loadStatus": "Failed to load NinjaOne connection status.",
-          "saveCredentials": "Failed to save credentials.",
-          "connect": "Failed to initiate NinjaOne connection.",
-          "disconnect": "Failed to disconnect NinjaOne.",
-          "disconnectUnexpected": "An unexpected error occurred while disconnecting.",
-          "orgSyncFailed": "Organization sync failed.",
-          "deviceSyncFailed": "Device sync failed."
+          "loadStatus": "No se pudo cargar el estado de la conexión de NinjaOne.",
+          "saveCredentials": "No se pudieron guardar las credenciales.",
+          "connect": "No se pudo iniciar la conexión con NinjaOne.",
+          "disconnect": "No se pudo desconectar NinjaOne.",
+          "disconnectUnexpected": "Se produjo un error inesperado al desconectar.",
+          "orgSyncFailed": "No se pudo sincronizar la organización.",
+          "deviceSyncFailed": "No se pudo sincronizar el dispositivo."
         },
         "compliance": {
           "actions": {
@@ -2428,8 +2428,8 @@
         "descriptionCe": "Registre dominios consultivos para el descubrimiento de SSO de inicio de sesión de MSP. La verificación de propiedad no se aplica en Community Edition, y los dominios no gestionados recurren a los proveedores de aplicación de Nine Minds.",
         "descriptionEe": "Gestione el ciclo de vida de las reclamaciones de dominio para el descubrimiento de proveedores de SSO de inicio de sesión de MSP. Los dominios no reclamados o no elegibles recurren a los proveedores de aplicación de Nine Minds.",
         "moved": {
-          "title": "MSP SSO Login Domains",
-          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
+          "title": "Dominios de inicio de sesión SSO del MSP",
+          "body": "La configuración de inicio de sesión único, incluidas las declaraciones de dominio de inicio de sesión, se trasladó a Seguridad → Inicio de sesión único.",
           "cta": "Open Single Sign-On settings"
         },
         "dnsHost": "Host:",
@@ -2516,7 +2516,7 @@
           },
           "messageExtension": {
             "description": "Habilitar búsquedas y acciones PSA basadas en mensajes.",
-            "label": "Message extension"
+            "label": "Extensión de mensajes"
           },
           "personalBot": {
             "description": "Habilitar comandos de bot en ámbito personal para técnicos.",
@@ -2556,11 +2556,11 @@
           "saveSettings": "No se pudo guardar la configuración de Teams"
         },
         "guidance": {
-          "applicationIdUri": "Application ID URI",
-          "messageExtension": "Message extension",
+          "applicationIdUri": "URI de ID de aplicación",
+          "messageExtension": "Extensión de mensajes",
           "personalBot": "Bot personal",
           "personalTab": "Pestaña personal",
-          "redirectUris": "Redirect URIs",
+          "redirectUris": "URI de redirección",
           "requiredScopes": "Scopes requeridos",
           "teamsAppIdUri": "App ID URI de Teams",
           "unavailable": "No disponible"
@@ -2601,10 +2601,10 @@
           }
         },
         "package": {
-          "appId": "App ID",
-          "appIds": "App IDs",
-          "botId": "Bot ID",
-          "deepLinks": "Deep links",
+          "appId": "ID de aplicación",
+          "appIds": "ID de aplicaciones",
+          "botId": "ID del bot",
+          "deepLinks": "Vínculos profundos",
           "description": "Genere el manifiesto de la aplicación y los enlaces de instalación para el perfil de Microsoft seleccionado.",
           "downloadManifest": "Descargar manifiesto JSON",
           "downloadZip": "Descargar paquete de la app (.zip)",
@@ -3112,9 +3112,9 @@
           "noConnections": "Xero no devolvió ninguna organización para este inicio de sesión. Verifique su aplicación de Xero y el acceso a la organización y vuelva a intentarlo.",
           "oauthFailed": "Falló la llamada de retorno OAuth de Xero. Intente conectarse de nuevo. Si el problema persiste, revise su redirect URI y scopes."
         },
-        "clientIdLabel": "Xero Client ID",
+        "clientIdLabel": "ID de cliente de Xero",
         "clientIdPlaceholder": "Pegue su Xero Client ID propio del inquilino",
-        "clientSecretLabel": "Xero Client Secret",
+        "clientSecretLabel": "Secreto de cliente de Xero",
         "clientSecretPlaceholder": "Pegue su Xero Client Secret propio del inquilino",
         "connectSuccess": "Xero conectado correctamente. La primera organización conectada es ahora el contexto predeterminado de Xero en vivo.",
         "connection": {
@@ -3148,7 +3148,7 @@
         },
         "noClientId": "Aún no hay ningún client ID almacenado para este inquilino.",
         "noClientSecret": "Aún no hay ningún client secret almacenado para este inquilino.",
-        "redirectUri": "Redirect URI",
+        "redirectUri": "URI de redirección",
         "requiredScopes": "Scopes requeridos",
         "storedClientId": "Client ID almacenado: {{value}}",
         "storedClientSecret": "Client secret almacenado: {{value}}",
@@ -3159,74 +3159,74 @@
       }
     },
     "stripe": {
-      "title": "Stripe Payments",
+      "title": "Pagos con Stripe",
       "description": "Acepte pagos de sus facturas con tarjeta de crédito",
       "connected": {
-        "title": "Stripe Connected",
-        "publishableKey": "Publishable key: {{key}}..."
+        "title": "Stripe conectado",
+        "publishableKey": "Clave publicable: {{key}}..."
       },
       "empty": {
         "description": "Conecte su cuenta de Stripe para aceptar pagos en línea correspondientes a facturas"
       },
       "actions": {
-        "testConnection": "Test Connection",
-        "disconnect": "Disconnect",
-        "connect": "Connect Stripe",
-        "connecting": "Connecting...",
-        "cancel": "Cancel"
+        "testConnection": "Probar conexión",
+        "disconnect": "Desconectar",
+        "connect": "Conectar Stripe",
+        "connecting": "Conectando...",
+        "cancel": "Cancelar"
       },
       "form": {
-        "secretKeyLabel": "Secret Key",
+        "secretKeyLabel": "Clave secreta",
         "secretKeyPlaceholder": "sk_live_... or sk_test_...",
-        "publishableKeyLabel": "Publishable Key",
+        "publishableKeyLabel": "Clave publicable",
         "publishableKeyPlaceholder": "pk_live_... or pk_test_...",
-        "findKeyPrefix": "Find this in your",
+        "findKeyPrefix": "Encuéntrela en",
         "dashboardLink": "Stripe Dashboard → API Keys"
       },
       "webhook": {
-        "heading": "Webhook Configuration",
-        "configuredAutomatically": "Webhooks configured automatically",
-        "receiveNotifications": "Alga PSA will receive payment notifications for:",
-        "failedTitle": "Webhook configuration failed",
-        "failedBody": "Automatic webhook configuration failed. Click retry to attempt configuration again.",
-        "configuring": "Configuring...",
-        "retry": "Retry Configuration"
+        "heading": "Configuración de webhooks",
+        "configuredAutomatically": "Webhooks configurados automáticamente",
+        "receiveNotifications": "Alga PSA recibirá notificaciones de pago de:",
+        "failedTitle": "No se pudo configurar el webhook",
+        "failedBody": "No se pudo configurar automáticamente el webhook. Haga clic en Reintentar para volver a intentarlo.",
+        "configuring": "Configurando...",
+        "retry": "Reintentar configuración"
       },
       "disconnectDialog": {
-        "title": "Disconnect Stripe",
-        "message": "Are you sure you want to disconnect Stripe? Payment links will no longer work.",
-        "confirm": "Disconnect",
-        "cancel": "Cancel"
+        "title": "Desconectar Stripe",
+        "message": "¿Está seguro de que desea desconectar Stripe? Los vínculos de pago dejarán de funcionar.",
+        "confirm": "Desconectar",
+        "cancel": "Cancelar"
       },
       "toasts": {
-        "connectedWithWebhook": "Stripe connected and webhooks configured automatically!",
-        "connectedWebhookFailed": "Stripe connected! Note: Webhook auto-configuration failed - you may need to configure webhooks manually in Stripe Dashboard.",
-        "disconnected": "Stripe disconnected",
-        "connectionSuccess": "Connection successful!",
-        "webhookConfigured": "Webhook configured successfully!"
+        "connectedWithWebhook": "¡Stripe conectado y webhooks configurados automáticamente!",
+        "connectedWebhookFailed": "¡Stripe conectado! Nota: no se pudo configurar automáticamente el webhook; quizá deba configurar los webhooks manualmente en Stripe Dashboard.",
+        "disconnected": "Stripe desconectado",
+        "connectionSuccess": "¡Conexión establecida correctamente!",
+        "webhookConfigured": "¡Webhook configurado correctamente!"
       },
       "errors": {
-        "loadConfig": "Failed to load Stripe configuration",
-        "connect": "Failed to connect Stripe",
-        "disconnect": "Failed to disconnect Stripe",
-        "testConnection": "Connection test failed",
-        "configureWebhook": "Failed to configure webhook",
-        "bothKeysRequired": "Please enter both secret key and publishable key",
-        "secretKeyFormat": "Secret key should start with sk_",
-        "publishableKeyFormat": "Publishable key should start with pk_"
+        "loadConfig": "No se pudo cargar la configuración de Stripe",
+        "connect": "No se pudo conectar Stripe",
+        "disconnect": "No se pudo desconectar Stripe",
+        "testConnection": "Falló la prueba de conexión",
+        "configureWebhook": "No se pudo configurar el webhook",
+        "bothKeysRequired": "Ingrese la clave secreta y la clave publicable",
+        "secretKeyFormat": "La clave secreta debe comenzar con sk_",
+        "publishableKeyFormat": "La clave publicable debe comenzar con pk_"
       }
     },
     "providersWorkbench": {
       "badges": {
-        "loading": "Loading",
-        "needsAttention": "Needs attention",
-        "needsSetup": "Needs setup",
-        "notConfigured": "Not configured",
-        "ready": "Ready"
+        "loading": "Cargando",
+        "needsAttention": "Requiere atención",
+        "needsSetup": "Requiere configuración",
+        "notConfigured": "No configurado",
+        "ready": "Listo"
       },
       "descriptionCe": "Set up the provider path your tenant uses. Configure both only when email or SSO workflows require both ecosystems.",
       "descriptionEe": "Set up the provider path your tenant uses. Configure both only when email, calendar, SSO, or Teams workflows require both ecosystems.",
-      "eyebrow": "Provider setup",
+      "eyebrow": "Configuración del proveedor",
       "google": {
         "description": "Gmail inbound email and Google Calendar.",
         "label": "Google"

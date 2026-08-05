@@ -87,12 +87,12 @@
         "unchecked": "Deaktiviert"
       },
       "types": {
-        "short-text": "short-text",
-        "long-text": "long-text",
-        "select": "select",
-        "checkbox": "checkbox",
-        "date": "date",
-        "file-upload": "file-upload"
+        "short-text": "Kurztext",
+        "long-text": "Langtext",
+        "select": "Auswahlliste",
+        "checkbox": "Kontrollkästchen",
+        "date": "Datum",
+        "file-upload": "Datei-Upload"
       }
     },
     "execution": {

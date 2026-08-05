@@ -58,7 +58,7 @@
     "cipp": "CIPP-integratie — verbind uw CIPP-instantie voor multi-tenant Entra-beheer",
     "teamsIntegration": "Microsoft Teams — vergaderintegratie en Teams-bot voor ticketmeldingen",
     "advancedAuthorizationBundles": "Geavanceerde autorisatiebundels — maak en beheer herbruikbare ABAC-inperkingsbundels",
-    "scimProvisioning": "SCIM User Provisioning — synchronize user activation from your identity provider"
+    "scimProvisioning": "SCIM-gebruikersinrichting — synchroniseer gebruikersactivering vanuit uw identiteitsprovider"
   },
   "summary": {
     "licensesUsed": "Gebruikte licenties",
@@ -385,7 +385,7 @@
     },
     "balance": {
       "total": "Totaal saldo",
-      "creditsUnit": "credits",
+      "creditsUnit": "kredieten",
       "included": "Inbegrepen (maandelijks)",
       "resetsMonthly": "wordt elke cyclus gereset",
       "topup": "Opwaardering (blijft behouden)",
@@ -399,7 +399,7 @@
       "title": "Opwaardeercredits kopen",
       "description": "Eenmalige creditpakketten die nooit verlopen.",
       "noPacks": "Er zijn nog geen opwaardeerpakketten geconfigureerd.",
-      "packWithCredits": "{{label}} ({{credits}} credits)"
+      "packWithCredits": "{{label}} ({{credits}} kredieten)"
     },
     "autoTopup": {
       "title": "Automatisch opwaarderen",
@@ -421,7 +421,7 @@
       "feature": "Functie",
       "model": "Model",
       "tokens": "Tokens",
-      "credits": "Credits",
+      "credits": "Kredieten",
       "empty": "Nog geen gebruik geregistreerd.",
       "loading": "Laden…",
       "loadMore": "Meer laden"

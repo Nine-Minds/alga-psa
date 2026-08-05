@@ -737,8 +737,8 @@
       "initiateFailed": "Impossibile avviare l'accesso remoto"
     },
     "indicator": {
-      "online": "Online",
-      "offline": "Offline",
+      "online": "Connesso",
+      "offline": "Disconnesso",
       "available": "Accesso remoto disponibile",
       "deviceOffline": "Dispositivo offline"
     }
@@ -1007,7 +1007,7 @@
     "errors": {
       "loadTitle": "Impossibile caricare le note",
       "unknown": "Errore sconosciuto",
-      "loadDescription": "Could not load notes. Please try again."
+      "loadDescription": "Impossibile caricare le note. Riprova."
     },
     "lastUpdated": "Ultimo aggiornamento: {{value}}"
   },
@@ -1473,8 +1473,8 @@
       "neverSeen": "mai visto"
     },
     "agentStatus": {
-      "online": "online",
-      "offline": "offline",
+      "online": "connesso",
+      "offline": "disconnesso",
       "overdue": "in ritardo",
       "unknown": "sconosciuto"
     },

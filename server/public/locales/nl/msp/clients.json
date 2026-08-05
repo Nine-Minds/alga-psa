@@ -39,7 +39,7 @@
     "yes": "Ja"
   },
   "clientLifecycle": {
-    "prospect": "Prospect",
+    "prospect": "Potentiële klant",
     "active": "Actieve klant",
     "former": "Voormalige klant",
     "all": "Alle levenscyclusfasen"
@@ -141,7 +141,7 @@
       "projects": "projecten",
       "invoice": "factuur",
       "invoices": "facturen",
-      "document": "document",
+      "document": "bestand",
       "documents": "documenten",
       "interaction": "interactie",
       "interactions": "interacties",
@@ -405,7 +405,7 @@
       "newTicket": "Nieuw ticket",
       "none": "Geen open tickets.",
       "oldest": "oudste open",
-      "open": "open tickets",
+      "open": "openstaande tickets",
       "overdue": "achterstallig",
       "overdueTag": "achterstallig",
       "unassigned": "Niet toegewezen"
@@ -495,7 +495,7 @@
     "createAndAddAnother": "Aanmaken + Nog een toevoegen",
     "createAndView": "Aanmaken + Klant bekijken",
     "additionalDetails": "Aanvullende gegevens",
-    "createFailed": "Failed to create client. Please try again."
+    "createFailed": "Klant maken mislukt. Probeer het opnieuw."
   },
   "clientCreatedDialog": {
     "title": "Klant gemaakt",
@@ -614,7 +614,7 @@
     "removeAssignmentTitle": "Contractregeltoewijzing verwijderen",
     "removeAssignmentMessage": "Weet u zeker dat u deze contractregeltoewijzing van de klant wilt verwijderen? De contractregel zelf wordt niet verwijderd.",
     "contracts": "Contracten",
-    "taxRatesLoadError": "Failed to load tax rate configuration."
+    "taxRatesLoadError": "Configuratie van belastingtarieven laden mislukt."
   },
   "clientBillingSchedule": {
     "title": "Factureringsschema",
@@ -763,7 +763,7 @@
     "startDateRequired": "Startdatum is vereist",
     "updateAssignment": "Opdracht bijwerken",
     "useTenantRenewalDefaults": "Gebruik de standaardwaarden voor huurderverlenging",
-    "saveError": "Failed to save contract. Please try again."
+    "saveError": "Contract opslaan mislukt. Probeer het opnieuw."
   },
   "clientContractLineDashboard": {
     "title": "Gebruiksstatistieken (afgelopen 30 dagen)",
@@ -1085,9 +1085,9 @@
     "error": "Fout",
     "updateExistingTitle": "Update bestaande klanten",
     "updateExistingMessage": "{{count}}-clients bestaan ​​al. Wilt u ze updaten met de nieuwe gegevens?",
-    "invalidRowsBlocked": "Fix {{count}} invalid rows or enable \"Skip invalid records\" before importing.",
-    "noValidRows": "There are no valid client rows to import.",
-    "serverFailures": "{{failed}} of {{total}} clients failed to import. Review the row issues below."
+    "invalidRowsBlocked": "Corrigeer {{count}} ongeldige rijen of schakel 'Ongeldige records overslaan' in voordat u importeert.",
+    "noValidRows": "Er zijn geen geldige klantrijen om te importeren.",
+    "serverFailures": "Importeren van {{failed}} van {{total}} klanten is mislukt. Controleer de onderstaande problemen per rij."
   },
   "clientsList": {
     "name": "Naam",
@@ -1245,7 +1245,7 @@
     "loadError": "Notities kunnen niet worden geladen",
     "unknownError": "Onbekende fout",
     "loadErrorTitle": "Notities kunnen niet worden geladen",
-    "loadErrorDescription": "Could not load notes. Please try again."
+    "loadErrorDescription": "Kan notities niet laden. Probeer het opnieuw."
   },
   "actions": {
     "cancel": "Annuleren",
@@ -1410,8 +1410,8 @@
         "startRequired": "Starttijd is vereist om een Teams-vergadering aan te maken",
         "unavailable": "Het aanmaken van Teams-vergaderingen is niet beschikbaar voor deze tenant."
       },
-      "loadFailed": "Interaction options could not be loaded. Please try again.",
-      "saveFailed": "The interaction could not be saved. Please try again."
+      "loadFailed": "Interactieopties konden niet worden geladen. Probeer het opnieuw.",
+      "saveFailed": "De interactie kon niet worden opgeslagen. Probeer het opnieuw."
     },
     "feed": {
       "addInteraction": "Interactie toevoegen",
@@ -1425,8 +1425,8 @@
       "startDate": "Startdatum",
       "title": "Interacties",
       "typePlaceholder": "Interactietype",
-      "loadFailed": "Interactions could not be loaded. Please try again.",
-      "typesLoadFailed": "Interaction types could not be loaded. Please try again."
+      "loadFailed": "Interacties konden niet worden geladen. Probeer het opnieuw.",
+      "typesLoadFailed": "Interactietypen konden niet worden geladen. Probeer het opnieuw."
     },
     "overall": {
       "allContacts": "Alle contacten",
@@ -1444,7 +1444,7 @@
       "startTimePlaceholder": "Filteren vanaf deze starttijd",
       "statusPlaceholder": "Status",
       "title": "Recente interacties",
-      "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
+      "statusesLoadFailed": "Interactiestatussen konden niet worden geladen. Probeer het opnieuw."
     }
   },
   "clientDrawer": {
@@ -1464,7 +1464,7 @@
         "status": "Status",
         "type": "Type",
         "warrantyEnd": "Einde garantie",
-        "agent": "Agent",
+        "agent": "Medewerker",
         "patching": "Patches",
         "coverage": "Dekking"
       },

@@ -58,7 +58,7 @@
     "cipp": "CIPP-Integration – verbinden Sie Ihre CIPP-Instanz für die Multi-Tenant-Entra-Verwaltung",
     "teamsIntegration": "Microsoft Teams – Meeting-Integration und Teams-Bot für Ticket-Benachrichtigungen",
     "advancedAuthorizationBundles": "Erweiterte Autorisierungs-Bundles – erstellen und verwalten Sie wiederverwendbare ABAC-Einschränkungs-Bundles",
-    "scimProvisioning": "SCIM User Provisioning — synchronize user activation from your identity provider"
+    "scimProvisioning": "SCIM-Benutzerbereitstellung — synchronisiert die Benutzeraktivierung mit Ihrem Identitätsanbieter"
   },
   "summary": {
     "licensesUsed": "Verwendete Lizenzen",
@@ -126,7 +126,7 @@
     "downgrade": "Herabstufen"
   },
   "addOns": {
-    "title": "Add-ons"
+    "title": "Zusatzmodule"
   },
   "aiAssistant": {
     "statusActive": "Aktiv",
@@ -420,8 +420,8 @@
       "date": "Datum",
       "feature": "Funktion",
       "model": "Modell",
-      "tokens": "Tokens",
-      "credits": "Credits",
+      "tokens": "Token",
+      "credits": "KI-Guthaben",
       "empty": "Noch keine Nutzung erfasst.",
       "loading": "Wird geladen…",
       "loadMore": "Mehr laden"

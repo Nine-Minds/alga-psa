@@ -16,7 +16,7 @@
     "importTickets_other": "{{count}} tickets importeren",
     "unmatchedClients_one": "{{count}} klant",
     "unmatchedClients_other": "{{count}} klanten",
-    "unmatchedAgents_one": "{{count}} agent",
+    "unmatchedAgents_one": "{{count}} medewerker",
     "unmatchedAgents_other": "{{count}} agenten",
     "unmatchedTeams_one": "{{count}} team",
     "unmatchedTeams_other": "{{count}} teams",
@@ -296,8 +296,8 @@
     "timeEntryDeleted": "Tijdregistratie verwijderd",
     "closeFailed": "Ticket sluiten is mislukt",
     "scheduleVisitFailed": "Kan de planner niet openen",
-    "loadCommentsFailed": "Failed to load comments",
-    "updateTicketFailed": "Failed to update ticket"
+    "loadCommentsFailed": "Opmerkingen laden mislukt",
+    "updateTicketFailed": "Ticket bijwerken mislukt"
   },
   "conversation": {
     "comments": "Reacties",
@@ -617,7 +617,7 @@
       "assign": "Toewijzen",
       "status": "Status",
       "priority": "Prioriteit",
-      "tags": "Tags",
+      "tags": "Labels",
       "dueDate": "Vervaldatum",
       "statusDisabledMultiBoard": "Geselecteerde tickets staan op verschillende borden",
       "statusResolvingBoards": "Borden van geselecteerde tickets controleren…",
@@ -1140,8 +1140,8 @@
     "serialUnit": "Serienummer / MAC (geserialiseerd product)",
     "selectUnit": "Selecteer een eenheid om te leveren...",
     "onHandByLocation": "Voorraad per locatie",
-    "catalogUnitCost": "Catalog unit cost",
-    "costNotConfigured": "Not configured"
+    "catalogUnitCost": "Cataloguskostprijs per eenheid",
+    "costNotConfigured": "Niet geconfigureerd"
   },
   "watchList": {
     "title": "Volglijst",
@@ -1439,7 +1439,7 @@
     "templateAlreadyApplied": "Dit sjabloon is al toegepast op dit ticket.",
     "templateApplied": "Checklistsjabloon toegepast.",
     "templatesLoading": "Sjablonen laden...",
-    "title": "Checklist",
+    "title": "Controlelijst",
     "toggleFailed": "Kan checklistitem niet bijwerken",
     "updateFailed": "Kan checklistitem niet bijwerken"
   },
@@ -1603,7 +1603,7 @@
       "threadReply": "Thread · {{count}} reactie",
       "threadReplies": "Thread · {{count}} reacties",
       "logged": "geregistreerd",
-      "monitoringActor": "Monitoring",
+      "monitoringActor": "Bewaking",
       "occurrence": "(gebeurtenis {{count}})",
       "loadError": "Kan de tijdlijn niet laden",
       "fieldCleared": "{{field}} gewist",
@@ -1652,8 +1652,8 @@
         "close_rules_bypassed": "afsluitregels omzeild",
         "auto_close_warning_sent": "waarschuwing voor automatisch afsluiten verzonden"
       },
-      "closeStatus": "Close status",
-      "noStatusChange": "Do not change status"
+      "closeStatus": "Sluitstatus",
+      "noStatusChange": "Status niet wijzigen"
     }
   },
   "notifications": {

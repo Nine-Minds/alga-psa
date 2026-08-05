@@ -187,7 +187,7 @@
     "searchTasksPlaceholder": "Rechercher des tâches...",
     "caseSensitive": "Sensible à la casse",
     "wholeWord": "Mot entier",
-    "wholeWordShort": "Word",
+    "wholeWordShort": "Mot",
     "clearSearch": "Effacer la recherche",
     "taskList": "Liste des tâches",
     "kanbanBoard": "Tableau Kanban",
@@ -538,15 +538,15 @@
     "billed": "Facturé",
     "pending": "En attente",
     "unbilledTotal": "Non facturé ({{currency}}) : ",
-    "priceCurrency": "Price currency", "salePrice": "Sale price", "catalogUnitCost": "Catalog unit cost", "costNotConfigured": "Not configured",
+    "priceCurrency": "Devise du prix", "salePrice": "Prix de vente", "catalogUnitCost": "Coût unitaire du catalogue", "costNotConfigured": "Non configuré",
     "invoiceDestination": "Facture", "invoiceNextProject": "Prochaine facture du projet", "invoiceSeparate": "Facture de produits distincte",
-    "invoiceProjectCompletion": "When project is completed", "invoiceOnHold": "On hold", "currencySeparateHelp": "Les produits dans une autre devise font l’objet d’une facture de produits distincte.",
-    "invoiceColumn": "Facture", "editProduct": "Edit product", "removeProduct": "Remove product", "salePriceOverrideHelp": "This price applies only to this project product row.",
-    "updateFailed": "Failed to update product", "updatedSuccess": "Product updated", "createProductInvoices": "Create product invoices",
-    "invoiceReviewTitle": "Review product invoices", "invoiceReviewHelp": "Les produits admissibles sont présélectionnés. Une facture provisoire sera créée pour chaque devise.",
-    "invoiceReviewFailed": "Impossible de charger la vérification de la facture", "invoiceCreateFailed": "Failed to create product invoices", "invoiceCreatedSuccess": "Nombre de factures provisoires de produits créées : {{count}}",
-    "createDrafts": "Create drafts", "draftPreview": "{{currency}} draft ({{count}} products)", "invoiceLinksHelp": "Draft invoices were created. Open each currency group to review it.",
-    "currencyDraftLink": "Facture provisoire en {{currency}}", "productCount": "{{count}} products", "productsMovedToHoldOnClose": "{{count}} linked product(s) moved to On hold because their billing event was canceled."
+    "invoiceProjectCompletion": "À l'achèvement du projet", "invoiceOnHold": "En attente", "currencySeparateHelp": "Les produits dans une autre devise font l’objet d’une facture de produits distincte.",
+    "invoiceColumn": "Facture", "editProduct": "Modifier le produit", "removeProduct": "Retirer le produit", "salePriceOverrideHelp": "Ce prix s'applique uniquement à cette ligne de produit du projet.",
+    "updateFailed": "Échec de la mise à jour du produit", "updatedSuccess": "Produit mis à jour", "createProductInvoices": "Créer les factures de produits",
+    "invoiceReviewTitle": "Vérifier les factures de produits", "invoiceReviewHelp": "Les produits admissibles sont présélectionnés. Une facture provisoire sera créée pour chaque devise.",
+    "invoiceReviewFailed": "Impossible de charger la vérification de la facture", "invoiceCreateFailed": "Échec de la création des factures de produits", "invoiceCreatedSuccess": "Nombre de factures provisoires de produits créées : {{count}}",
+    "createDrafts": "Créer les brouillons", "draftPreview": "Brouillon en {{currency}} ({{count}} produit(s))", "invoiceLinksHelp": "Les factures provisoires ont été créées. Ouvrez chaque groupe de devises pour les vérifier.",
+    "currencyDraftLink": "Facture provisoire en {{currency}}", "productCount": "{{count}} produit(s)", "productsMovedToHoldOnClose": "{{count}} produit(s) associé(s) placé(s) en attente, car leur événement de facturation a été annulé."
   },
   "export": {
     "title": "Exporter les tâches du projet",
@@ -1639,10 +1639,10 @@
       "holdReasonRequired": "Un motif de suspension est requis",
       "heldReason": "Suspendu : {{reason}}",
       "releaseHold": "Lever la suspension",
-      "holdReleased": "Suspension levée", "productsMovedToHold": "{{count}} linked product(s) moved to On hold", "setProjectTotal": "Set project total to {{amount}}",
-      "recalculateTitle": "Recalculate project total", "currentProjectTotal": "Current project total", "currentScheduleSum": "Current schedule sum",
-      "resultingProjectTotal": "Resulting project total", "recalculateWarning": "Editable percentage entries will become fixed-dollar entries so the displayed amounts do not move.",
-      "confirmSetProjectTotal": "Set project total", "totalRecalculated": "Project total updated from the schedule"
+      "holdReleased": "Suspension levée", "productsMovedToHold": "{{count}} produit(s) associé(s) placé(s) en attente", "setProjectTotal": "Définir le total du projet sur {{amount}}",
+      "recalculateTitle": "Recalculer le total du projet", "currentProjectTotal": "Total actuel du projet", "currentScheduleSum": "Somme actuelle du calendrier",
+      "resultingProjectTotal": "Total du projet obtenu", "recalculateWarning": "Les entrées en pourcentage modifiables deviendront des montants fixes afin que les montants affichés ne changent pas.",
+      "confirmSetProjectTotal": "Définir le total du projet", "totalRecalculated": "Total du projet mis à jour à partir du calendrier"
     },
     "entry": {
       "addTitle": "Ajouter un jalon ou un acompte",

@@ -293,14 +293,14 @@
       "client": "Cliente",
       "invoiceNumber": "Numero della fattura",
       "invoiceNumberOptional": "Numero fattura (facoltativo)",
-      "sourceSalesOrder": "Source sales order (optional)"
+      "sourceSalesOrder": "Ordine di vendita di origine (opzionale)"
     },
     "placeholders": {
       "selectClient": "Seleziona un cliente",
       "invoiceNumberOptional": "Lascia vuoto per generare automaticamente",
-      "sourceSalesOrder": "Select a fulfilled or manually billable sales order",
-      "searchSalesOrders": "Search sales orders...",
-      "noInvoiceableSalesOrders": "No invoiceable sales orders found."
+      "sourceSalesOrder": "Seleziona un ordine di vendita evaso o fatturabile manualmente",
+      "searchSalesOrders": "Cerca ordini di vendita…",
+      "noInvoiceableSalesOrders": "Nessun ordine di vendita fatturabile trovato."
     },
     "automatedItems": {
       "title": "Elementi pubblicitari automatizzati",
@@ -318,8 +318,8 @@
       "generate": "Genera fattura",
       "saveChanges": "Salva modifiche",
       "processing": "Elaborazione...",
-      "generateSalesOrderInvoice": "Generate Sales Order Invoice",
-      "clearSalesOrderSource": "Clear sales order source"
+      "generateSalesOrderInvoice": "Genera fattura dell'ordine di vendita",
+      "clearSalesOrderSource": "Cancella ordine di vendita di origine"
     },
     "labels": {
       "total": "Totale"
@@ -351,9 +351,9 @@
       "INVOICE_NUMBER_CONFLICT": "Questo numero di fattura è già in uso.",
       "PERMISSION_DENIED": "Non disponi dell'autorizzazione per creare o aggiornare questa fattura.",
       "UNEXPECTED": "Si è verificato un errore durante la generazione della fattura. Indica il riferimento {{ref}} quando contatti l'assistenza.",
-      "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
-      "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
-      "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+      "salesOrderGenerateFailed": "Impossibile generare la fattura dell'ordine di vendita.",
+      "salesOrderNothingToInvoice": "Non resta nulla da fatturare per questo ordine di vendita.",
+      "salesOrderNotInvoiceable": "Questo ordine di vendita non è più disponibile per la fatturazione."
     },
     "warnings": {
       "noBillingEmail": "Questo cliente non ha un indirizzo e-mail di fatturazione. Imposta un indirizzo e-mail nella sede di fatturazione prima di generare la fattura."
@@ -363,7 +363,7 @@
       "retry": "Riprova"
     },
     "salesOrderContext": {
-      "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
+      "summary": "{{quantity}} articoli pronti per la fatturazione da {{lineCount}} righe. Questa bozza verrà collegata all'ordine di vendita."
     }
   },
   "draftsTab": {
@@ -1029,7 +1029,7 @@
       "generate": "Generare",
       "drafts": "Bozze",
       "finalized": "Finalizzata",
-      "projectBilling": "Project Billing"
+      "projectBilling": "Fatturazione progetti"
     }
   },
   "invoiceSyncBadge": {
@@ -1134,7 +1134,7 @@
       "snap": "Aggancia",
       "guides": "Guide",
       "rulers": "Righelli",
-      "zoom": "Zoom",
+      "zoom": "Ingrandimento",
       "metrics": {
         "drags": "Trascinamenti: {{count}}",
         "success": "Riusciti: {{count}}",
@@ -1178,7 +1178,7 @@
       "categories": {
         "structure": "Struttura",
         "content": "Contenuto",
-        "media": "Media",
+        "media": "Contenuti multimediali",
         "dynamic": "Dinamico"
       }
     },
@@ -1188,7 +1188,7 @@
       "flexItem": "Elemento flex",
       "displayFormat": "Formato di visualizzazione",
       "attachments": "Allegati",
-      "media": "Media",
+      "media": "Contenuti multimediali",
       "title": "Ispettore",
       "layerName": "Nome livello",
       "typeLabel": "Tipo",
@@ -1385,7 +1385,7 @@
     "schema": {
       "panels": {
         "layout": {
-          "title": "Layout",
+          "title": "Impaginazione",
           "fields": {
             "gap": {
               "label": "Spazio"
@@ -1667,63 +1667,63 @@
     }
   },
   "projectBilling": {
-    "subtitle": "Ready milestones and deposits awaiting approval across all projects.",
-    "bulkActions": "Actions ({{count}})",
-    "loading": "Loading project billing queue...",
-    "empty": "Nothing is waiting for review. Ready milestones and deposits will appear here.",
+    "subtitle": "Traguardi pronti e acconti in attesa di approvazione per tutti i progetti.",
+    "bulkActions": "Azioni ({{count}})",
+    "loading": "Caricamento della coda di fatturazione progetti…",
+    "empty": "Non c'è nulla da esaminare. I traguardi pronti e gli acconti compariranno qui.",
     "columns": {
-      "project": "Project",
-      "client": "Client",
-      "description": "Description",
-      "amount": "Amount",
+      "project": "Progetto",
+      "client": "Cliente",
+      "description": "Descrizione",
+      "amount": "Importo",
       "trigger": "Trigger",
-      "daysWaiting": "Days waiting",
-      "actions": "Actions"
+      "daysWaiting": "Giorni di attesa",
+      "actions": "Azioni"
     },
     "trigger": {
-      "phase": "Phase {{phase}} completed {{date}}",
-      "date": "Date reached",
-      "manual": "Manual"
+      "phase": "Fase {{phase}} completata il {{date}}",
+      "date": "Data raggiunta",
+      "manual": "Manuale"
     },
     "actions": {
-      "approve": "Approve",
-      "approveInvoiceNow": "Approve & invoice now",
-      "hold": "Hold",
-      "cancel": "Cancel",
-      "approveSelected": "Approve selected",
-      "holdSelected": "Hold selected"
+      "approve": "Approva",
+      "approveInvoiceNow": "Approva e fattura ora",
+      "hold": "Sospendi",
+      "cancel": "Annulla",
+      "approveSelected": "Approva selezionati",
+      "holdSelected": "Sospendi selezionati"
     },
     "toasts": {
-      "approved": "Entry approved.",
-      "approvedWithWarning": "Entry approved. {{warning}}",
-      "invoiced": "Entry approved and invoiced.",
-      "bulkApproved": "{{count}} entries approved.",
-      "bulkApproveFailed": "{{count}} entries could not be approved (e.g. {{reason}}).",
-      "held": "Entry placed on hold.",
-      "bulkHeld": "{{count}} entries placed on hold.",
-      "bulkHoldFailed": "{{count}} entries could not be held (e.g. {{reason}}).",
-      "canceled": "Entry canceled."
+      "approved": "Elemento approvato.",
+      "approvedWithWarning": "Elemento approvato. {{warning}}",
+      "invoiced": "Elemento approvato e fatturato.",
+      "bulkApproved": "{{count}} elementi approvati.",
+      "bulkApproveFailed": "Impossibile approvare {{count}} elementi (ad es. {{reason}}).",
+      "held": "Elemento sospeso.",
+      "bulkHeld": "{{count}} elementi sospesi.",
+      "bulkHoldFailed": "Impossibile sospendere {{count}} elementi (ad es. {{reason}}).",
+      "canceled": "Elemento annullato."
     },
     "errors": {
-      "loadFailed": "Failed to load the project billing review queue. Please try again.",
-      "approveFailed": "Failed to approve the entry.",
-      "invoiceFailed": "Failed to approve and invoice the entry.",
-      "holdFailed": "Failed to place the entry on hold.",
-      "cancelFailed": "Failed to cancel the entry."
+      "loadFailed": "Impossibile caricare la coda di revisione della fatturazione progetti. Riprova.",
+      "approveFailed": "Impossibile approvare l'elemento.",
+      "invoiceFailed": "Impossibile approvare e fatturare l'elemento.",
+      "holdFailed": "Impossibile sospendere l'elemento.",
+      "cancelFailed": "Impossibile annullare l'elemento."
     },
     "holdDialog": {
-      "title": "Hold entry",
-      "titlePlural": "Hold {{count}} entries",
-      "description": "Holding returns the entry to pending until it is made ready again. A reason is required.",
-      "reasonPlaceholder": "Reason for holding...",
-      "cancel": "Cancel",
-      "confirm": "Hold"
+      "title": "Sospendi elemento",
+      "titlePlural": "Sospendi {{count}} elementi",
+      "description": "La sospensione riporta l'elemento allo stato in attesa finché non viene nuovamente contrassegnato come pronto. È obbligatorio indicare un motivo.",
+      "reasonPlaceholder": "Motivo della sospensione…",
+      "cancel": "Annulla",
+      "confirm": "Sospendi"
     },
     "cancelDialog": {
-      "title": "Cancel entry",
-      "message": "Canceling this schedule entry removes it from billing. This cannot be undone.",
-      "confirm": "Cancel entry",
-      "dismiss": "Keep entry"
+      "title": "Annulla elemento",
+      "message": "L'annullamento di questo elemento della pianificazione lo rimuove dalla fatturazione. L'operazione non può essere annullata.",
+      "confirm": "Annulla elemento",
+      "dismiss": "Mantieni elemento"
     }
   }
 }

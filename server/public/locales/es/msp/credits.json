@@ -51,7 +51,7 @@
     "transfer": "Transferir"
   },
   "settings": {
-    "loadErrorPrefix": "Error loading credit expiration settings:",
+    "loadErrorPrefix": "Error al cargar la configuración de vencimiento de créditos:",
     "captionEnabled": "Vencimiento del crédito: {{days}} días",
     "captionDisabled": "Vencimiento del crédito: desactivado",
     "captionReminders": "recordatorios {{reminders}} días antes",

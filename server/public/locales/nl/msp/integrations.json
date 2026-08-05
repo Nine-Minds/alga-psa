@@ -12,7 +12,7 @@
           "selectExternal": "Selecteer {{field}}."
         },
         "manualEntryHelp": "Voer de identifier exact in zoals deze verschijnt in uw boekhoudsysteem.",
-        "metadataLabel": "Metadata (JSON)",
+        "metadataLabel": "Metagegevens (JSON)",
         "metadataPlaceholder": "Optionele metadata als JSON",
         "realmIdLabel": "Realm-ID",
         "saveMapping": "Toewijzing opslaan",
@@ -51,7 +51,7 @@
         },
         "highlights": {
           "delivery": "Levering",
-          "export": "Export",
+          "export": "Exporteren",
           "format": "Formaat",
           "sync": "Synchronisatie"
         },
@@ -202,7 +202,7 @@
         },
         "qbo": {
           "bullets": {
-            "exportLabel": "Export",
+            "exportLabel": "Exporteren",
             "exportText": "Genereer CSV-bestanden die compatibel zijn met de factuurimportfunctie van QuickBooks",
             "taxImportLabel": "Belastingimport",
             "taxImportText": "Bij gebruik van externe belastingberekening belastingbedragen importeren uit QuickBooks-belastingrapporten"
@@ -500,7 +500,7 @@
           "next": "Volgende",
           "onlyFailures": "Alleen fouten",
           "page": "Pagina {{page}} van {{pages}}",
-          "previewBadge": "preview",
+          "previewBadge": "voorbeeld",
           "previous": "Vorige",
           "triggers": {
             "all": "Alle runs",
@@ -728,7 +728,7 @@
           "connectingSuffix": " (Verbinden...)",
           "details": "Verbindingsgegevens",
           "directCredentialSourceLabel": "Bron van inloggegevens:",
-          "directTenantDefault": "common (multi-tenant)",
+          "directTenantDefault": "algemeen (multi-tenant)",
           "directTenantLabel": "Microsoft-tenant",
           "notAvailable": "Niet beschikbaar",
           "notConfigured": "Niet geconfigureerd",
@@ -1034,7 +1034,7 @@
         "details": {
           "noResults": "Geen tenantresultaten geregistreerd.",
           "stats": "aangemaakt {{created}}, gekoppeld {{linked}}, bijgewerkt {{updated}}, dubbelzinnig {{ambiguous}}, gedeactiveerd {{inactivated}}",
-          "summarySkipped": "Skipped provisioning outcomes: {{count}}",
+          "summarySkipped": "Overgeslagen inrichtingsresultaten: {{count}}",
           "tenantHeader": "Tenant {{tenant}} · {{status}}",
           "unknownTenant": "onbekend"
         },
@@ -1068,11 +1068,11 @@
         "columns": {
           "actions": "Acties",
           "confidence": "Vertrouwen",
-          "defaultRole": "Default Role",
+          "defaultRole": "Standaardrol",
           "entraTenant": "Entra-tenant",
-          "portalAccessGroup": "Portal Access Group",
+          "portalAccessGroup": "Toegangsgroep klantenportaal",
           "primaryDomain": "Primair domein",
-          "provisioningModeOverride": "Provisioning Mode Override",
+          "provisioningModeOverride": "Overschrijving van inrichtingsmodus",
           "selectClient": "Selecteer klant",
           "status": "Status",
           "suggestedClient": "Voorgestelde klant"
@@ -1100,14 +1100,14 @@
           "unknownClient": "Onbekende klant"
         },
         "portal": {
-          "broadGroupWarning": "Warning: every enabled user in this Entra group will be eligible for client portal access.",
-          "defaultRolePlaceholder": "Inherit workspace role",
-          "groupLoading": "Loading groups…",
-          "modeBuiltIn": "Built-in",
-          "modeDisabled": "Disabled",
-          "modeInherit": "Inherit MSP workspace default",
-          "modeWorkflowManaged": "Workflow-managed",
-          "noGroupSelected": "No group selected"
+          "broadGroupWarning": "Waarschuwing: elke ingeschakelde gebruiker in deze Entra-groep komt in aanmerking voor toegang tot het klantenportaal.",
+          "defaultRolePlaceholder": "Rol van werkruimte overnemen",
+          "groupLoading": "Groepen laden…",
+          "modeBuiltIn": "Ingebouwd",
+          "modeDisabled": "Uitgeschakeld",
+          "modeInherit": "Standaardwaarde van MSP-werkruimte overnemen",
+          "modeWorkflowManaged": "Door workflow beheerd",
+          "noGroupSelected": "Geen groep geselecteerd"
         },
         "reasons": {
           "exactDomain": "Exact domein",
@@ -1132,7 +1132,7 @@
           "resetting": "Resetten…",
           "save": "Opslaan",
           "saving": "Opslaan…",
-          "disconnectProviders": "Disconnect Google providers"
+          "disconnectProviders": "Verbinding met Google-aanbieders verbreken"
         },
         "afterSaveNotice": "Ga na het opslaan naar de integraties voor inkomende e-mail en agenda en autoriseer de providers opnieuw. Bestaande Google-providers worden niet gemigreerd.",
         "consoleLink": "Google Cloud Console",
@@ -1149,8 +1149,8 @@
         },
         "loading": "Laden…",
         "oauth": {
-          "calendarClientId": "Calendar OAuth Client ID",
-          "calendarClientSecret": "Calendar OAuth Client Secret",
+          "calendarClientId": "OAuth-client-id voor agenda",
+          "calendarClientSecret": "OAuth-clientgeheim voor agenda",
           "enterSecret": "Client secret invoeren",
           "gmailClientId": "Gmail OAuth Client ID",
           "gmailClientSecret": "Gmail OAuth Client Secret",
@@ -1158,17 +1158,17 @@
           "shareApp": "Dezelfde OAuth-app gebruiken voor Gmail en Calendar",
           "shareAppHelp": "Aanbevolen. U kunt nog steeds afzonderlijke Google-accounts per integratie autoriseren.",
           "storedSecret": "Opgeslagen secret: {{secret}}",
-          "locationHelp": "Google Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs."
+          "locationHelp": "Google Cloud: API's en services > Referenties > OAuth 2.0-client-id's."
         },
         "redirectUrisLabel": "Redirect-URI's (kopiëren naar de Google OAuth-client)",
         "scopes": "Scopes",
-        "scopesCalendar": "Calendar: {{scopes}}",
+        "scopesCalendar": "Agenda: {{scopes}}",
         "scopesGmail": "Gmail: {{scopes}}",
         "serviceAccount": {
           "alreadyStored": "Er is al een service-accountsleutel opgeslagen (niet weergegeven).",
           "description": "Plak de JSON-sleutel van het tenant-eigen service account dat wordt gebruikt om Pub/Sub te provisioneren.",
           "title": "Pub/Sub-service-account (vereist voor Gmail)",
-          "locationHelp": "Google Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON."
+          "locationHelp": "Google Cloud: IAM en beheer > Serviceaccounts > Sleutels > Sleutel toevoegen > JSON."
         },
         "setupGuide": "Installatiehandleiding",
         "title": "Google",
@@ -1182,14 +1182,14 @@
           "unknownError": "Onbekende fout"
         },
         "disconnectDialog": {
-          "cancel": "Keep providers connected",
-          "message": "Existing Gmail and Google Calendar provider connections will be marked disconnected and must be re-authorized. Stored Google credentials stay in place.",
-          "title": "Disconnect Google providers?"
+          "cancel": "Aanbieders verbonden houden",
+          "message": "Bestaande verbindingen met Gmail- en Google Calendar-aanbieders worden gemarkeerd als verbroken en moeten opnieuw worden geautoriseerd. Opgeslagen Google-referenties blijven behouden.",
+          "title": "Verbinding met Google-aanbieders verbreken?"
         },
         "oauthValues": {
-          "title": "Google OAuth app values"
+          "title": "Waarden van Google OAuth-app"
         },
-        "redirectUrisHelp": "Staff sign-in uses the OAuth client saved below. Add the listed Gmail and Calendar callback URLs in Google Cloud."
+        "redirectUrisHelp": "Voor aanmelding van medewerkers wordt de hieronder opgeslagen OAuth-client gebruikt. Voeg de vermelde callback-URL's voor Gmail en Agenda toe in Google Cloud."
       }
     },
     "hudu": {
@@ -1520,72 +1520,72 @@
       "emailSetup": {
         "action": "Microsoft-e-mail instellen",
         "actions": {
-          "back": "Back",
-          "cancel": "Cancel",
-          "copy": "Copy",
-          "finish": "Finish",
-          "grantConsent": "Grant administrator consent",
-          "savePlatform": "Create profile and continue",
-          "signIn": "Sign in to Microsoft",
-          "working": "Working…"
+          "back": "Terug",
+          "cancel": "Annuleren",
+          "copy": "Kopiëren",
+          "finish": "Voltooien",
+          "grantConsent": "Beheerderstoestemming verlenen",
+          "savePlatform": "Profiel maken en doorgaan",
+          "signIn": "Aanmelden bij Microsoft",
+          "working": "Bezig…"
         },
         "automated": {
           "description": "Meld u aan als Microsoft-beheerder. Alga maakt de app, serviceprincipal, het geheim en een voorlopig e-mailprofiel aan. De e-mailkoppeling wordt gemaakt nadat de beheerder toestemming heeft verleend.",
-          "title": "Create an app in this tenant"
+          "title": "Een app in deze tenant maken"
         },
-        "callbackUri": "Mailbox callback URI",
+        "callbackUri": "Callback-URI van postvak",
         "complete": {
           "consentDone": "De beheerderstoestemming is bevestigd. Ga terug naar Inkomende e-mail en autoriseer de mailbox.",
           "consentPending": "Vervolgens moet een Microsoft-tenantbeheerder toestemming verlenen. Daarna wordt de mailbox geautoriseerd via Inkomende e-mail.",
           "profileCreated": "Microsoft-e-mailprofiel aangemaakt en gekoppeld"
         },
         "consent": {
-          "confirmedDescription": "The Microsoft app is ready for mailbox authorization.",
-          "confirmedTitle": "Administrator consent confirmed",
-          "url": "Administrator consent URL",
-          "urlLabel": "Consent URL"
+          "confirmedDescription": "De Microsoft-app is gereed voor postvakautorisatie.",
+          "confirmedTitle": "Beheerderstoestemming bevestigd",
+          "url": "URL voor beheerderstoestemming",
+          "urlLabel": "Toestemmings-URL"
         },
-        "copied": "{{label}} copied",
+        "copied": "{{label}} gekopieerd",
         "description": "Kies hoe u de Microsoft-app voor inkomende e-mail wilt configureren. Het autoriseren van de mailbox blijft een afzonderlijke laatste stap.",
         "errors": {
-          "automated": "Could not start automated Microsoft app creation.",
+          "automated": "Kan het automatisch maken van de Microsoft-app niet starten.",
           "generic": "De configuratie van Microsoft-e-mail is niet voltooid.",
-          "nameRequired": "Enter a display name for the Microsoft app.",
-          "platform": "Could not configure the platform Microsoft app.",
-          "popupBlocked": "Allow popups for this site, then try again.",
+          "nameRequired": "Voer een weergavenaam voor de Microsoft-app in.",
+          "platform": "Kan de Microsoft-platformapp niet configureren.",
+          "popupBlocked": "Sta pop-ups voor deze site toe en probeer het opnieuw.",
           "popupClosed": "Het Microsoft-venster is gesloten voordat de configuratie was voltooid. Probeer het opnieuw of kies een andere configuratieoptie.",
-          "tenantRequired": "Enter your Microsoft tenant ID or verified domain."
+          "tenantRequired": "Voer uw Microsoft-tenant-id of geverifieerd domein in."
         },
         "fields": {
           "clientId": "Client ID",
-          "displayName": "Profile display name",
-          "tenant": "Microsoft tenant ID or verified domain",
+          "displayName": "Weergavenaam profiel",
+          "tenant": "Microsoft-tenant-id of geverifieerd domein",
           "tenantId": "Tenant ID"
         },
         "manual": {
-          "description": "Keep using the existing client ID, tenant ID, and client secret form.",
-          "title": "Enter an existing app manually"
+          "description": "Blijf het bestaande formulier voor client-id, tenant-id en clientgeheim gebruiken.",
+          "title": "Een bestaande app handmatig invoeren"
         },
         "platform": {
           "description": "Maak een voorlopig e-mailprofiel aan vanuit de door de server beheerde multitenant-app. Het wordt gekoppeld nadat de tenantbeheerder toestemming heeft verleend.",
-          "title": "Use the Alga platform app"
+          "title": "De Alga-platformapp gebruiken"
         },
         "title": "Microsoft-e-mail instellen",
-        "unavailable": "Unavailable"
+        "unavailable": "Niet beschikbaar"
       },
       "settings": {
         "advanced": {
-          "title": "Bring your own Microsoft app (advanced)",
-          "description": "Create and manage tenant-owned Entra app registrations for organizations that explicitly require them.",
-          "warning": "A custom Entra app is normally unnecessary on hosted Alga PSA. Continue only when your organization deliberately requires its own application and credentials."
+          "title": "Uw eigen Microsoft-app gebruiken (geavanceerd)",
+          "description": "Maak en beheer tenant-eigen Entra-appregistraties voor organisaties die deze uitdrukkelijk vereisen.",
+          "warning": "Een aangepaste Entra-app is normaal gesproken niet nodig op gehoste Alga PSA. Ga alleen verder wanneer uw organisatie bewust een eigen toepassing en referenties vereist."
         },
         "platform": {
           "title": "Microsoft-e-mail kan worden gekoppeld",
-          "description": "Connect Microsoft 365 with the application supplied by Alga PSA. No Entra app registration is required.",
-          "readyDescription": "Alga PSA supplies and manages the Microsoft application. Connect a mailbox without creating an Entra app or entering client credentials.",
+          "description": "Verbind Microsoft 365 met de toepassing die Alga PSA levert. Er is geen Entra-appregistratie nodig.",
+          "readyDescription": "Alga PSA levert en beheert de Microsoft-toepassing. Verbind een postvak zonder een Entra-app te maken of clientreferenties in te voeren.",
           "connectAction": "Microsoft-e-mail koppelen",
-          "unavailableTitle": "Platform Microsoft credentials are unavailable",
-          "unavailableDescription": "This deployment requires a tenant-owned Microsoft app. Use the advanced setup below to add one."
+          "unavailableTitle": "Microsoft-platformreferenties zijn niet beschikbaar",
+          "unavailableDescription": "Deze implementatie vereist een tenant-eigen Microsoft-app. Gebruik de geavanceerde configuratie hieronder om er een toe te voegen."
         },
         "actions": {
           "entraLink": "Microsoft Entra",
@@ -1594,7 +1594,7 @@
           "refresh": "Vernieuwen",
           "resetProviders": "Microsoft-providers resetten",
           "resetting": "Resetten…",
-          "disconnectProviders": "Disconnect Microsoft providers"
+          "disconnectProviders": "Verbinding met Microsoft-aanbieders verbreken"
         },
         "archiveDialog": {
           "archiving": "Archiveren…",
@@ -1614,16 +1614,16 @@
           "noCapablePlaceholder": "No enabled profile"
         },
         "bindings": {
-          "summaryBound": "Current: {{profile}}.",
+          "summaryBound": "Huidig: {{profile}}.",
           "summaryNone": "Momenteel is er geen Microsoft-profiel gekoppeld aan {{consumer}}.",
           "summaryUnavailable": "De geselecteerde app is niet beschikbaar.",
-          "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
+          "warningArchived": "{{profile}} is gearchiveerd. Kies een actieve Microsoft-app.",
           "warningNoBinding": "Er is nog geen {{consumer}}-binding geconfigureerd.",
           "warningNotReady": "{{consumer}} is gekoppeld aan {{profile}}, maar dat profiel moet nog worden geconfigureerd.",
           "warningProfileMissing": "De geselecteerde Microsoft-app is niet meer beschikbaar. Kies een andere app.",
-          "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
-          "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
-          "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."
+          "warningMissingCapability": "{{profile}} is geselecteerd, maar kan {{consumer}} nog niet verwerken. Bewerk de app en schakel {{consumer}} in, of kies een andere app.",
+          "warningNoApps": "Maak een Microsoft-app, schakel {{consumer}} in en kies deze vervolgens hier.",
+          "warningNoCapable": "Nog geen app kan {{consumer}} verwerken. Bewerk een Microsoft-app, schakel {{consumer}} in en kies deze vervolgens hier."
         },
         "consumerBindings": {
           "descriptionCe": "Koppel één Microsoft-profiel aan MSP SSO voor aanmelding en gebruik van aanmeldingsdomein.",
@@ -1655,7 +1655,7 @@
         "dialog": {
           "cancel": "Annuleren",
           "clientId": "Client ID",
-          "clientSecret": "Client secret",
+          "clientSecret": "Clientgeheim",
           "clientSecretPlaceholder": "Client secret invoeren",
           "clientSecretPlaceholderEdit": "Laat leeg om het huidige secret te behouden",
           "createProfile": "Profiel aanmaken",
@@ -1690,7 +1690,7 @@
           "updateBinding": "Microsoft-binding bijwerken mislukt"
         },
         "guidance": {
-          "applicationIdUri": "Application ID URI",
+          "applicationIdUri": "Toepassings-id-URI",
           "calendarRedirect": "Redirect-URI agendasynchronisatie",
           "calendarTitle": "Agendahandleiding",
           "clientId": "Client ID",
@@ -1773,9 +1773,9 @@
           "tenantIdRequired": "Microsoft Tenant ID is verplicht"
         },
         "disconnectDialog": {
-          "cancel": "Keep providers connected",
+          "cancel": "Aanbieders verbonden houden",
           "message": "Bestaande verbindingen met Outlook-e-mail- en agendaproviders worden als niet-verbonden gemarkeerd en moeten opnieuw worden geautoriseerd. Microsoft-profielen en servicekoppelingen blijven behouden.",
-          "title": "Disconnect Microsoft providers?"
+          "title": "Verbinding met Microsoft-aanbieders verbreken?"
         },
         "profileLibrary": {
           "description": "Named Microsoft app registrations that services can bind to.",
@@ -1815,7 +1815,7 @@
         },
         "clientIdLabel": "QuickBooks Client ID",
         "clientIdPlaceholder": "Plak uw Intuit app-client ID",
-        "clientSecretLabel": "QuickBooks Client Secret",
+        "clientSecretLabel": "QuickBooks-clientgeheim",
         "clientSecretPlaceholder": "Plak uw Intuit app-client secret",
         "connectSuccess": "QuickBooks succesvol verbonden. Het verbonden bedrijf is nu de standaard live QuickBooks-context.",
         "connection": {
@@ -1880,8 +1880,8 @@
         "refreshTokenExpiry": "QuickBooks-token verloopt op {{date}}",
         "refreshTokenExpired": "QuickBooks-token verlopen — maak opnieuw verbinding om de synchronisatie te hervatten.",
         "autoSyncLabel": "Automatische synchronisatie ingeschakeld",
-        "autoProvisionCustomersLabel": "Create QuickBooks customers automatically",
-        "autoProvisionCustomersHint": "Off: exports for unmapped customers pause with an exception until you link them in the customer mapping screen.",
+        "autoProvisionCustomersLabel": "QuickBooks-klanten automatisch maken",
+        "autoProvisionCustomersHint": "Uit: exports voor niet-gekoppelde klanten worden met een uitzondering onderbroken totdat u ze in het scherm voor klanttoewijzing koppelt.",
         "syncNowButton": "Nu synchroniseren",
         "syncNowRunning": "Synchroniseren…",
         "syncNowSuccess": "Synchronisatie voltooid.",
@@ -1899,7 +1899,7 @@
         "noDefault": "Geen standaard",
         "saving": "Opslaan…",
         "undepositedFunds": "Niet-gestorte middelen (standaard)",
-        "catalogLoadError": "Failed to load QuickBooks sync configuration options."
+        "catalogLoadError": "Configuratieopties voor QuickBooks-synchronisatie laden mislukt."
       }
     },
     "rmm": {
@@ -1949,10 +1949,10 @@
           "saved": "Inloggegevens opgeslagen",
           "clientIdLabel": "Client ID",
           "clientIdPlaceholder": "Voer uw NinjaOne Client ID in",
-          "clientSecretLabel": "Client Secret",
+          "clientSecretLabel": "Clientgeheim",
           "clientSecretPlaceholder": "Voer uw NinjaOne Client Secret in",
           "clientSecretUpdatePlaceholder": "Voer nieuw secret in om bij te werken",
-          "secretMaskedLabel": "Secret",
+          "secretMaskedLabel": "Geheim",
           "saving": "Opslaan...",
           "save": "Inloggegevens opslaan"
         },
@@ -2116,7 +2116,7 @@
           "webhooksDescription": "Configureer een Tactical-webhook voor waarschuwingsacties met de gedeelde secret-header hieronder."
         },
         "status": {
-          "authPrefix": "Auth:",
+          "authPrefix": "Verificatie:",
           "connected": "Verbonden",
           "disconnected": "Niet verbonden",
           "instanceUrlNotSet": "Instance-URL niet ingesteld"
@@ -2428,8 +2428,8 @@
         "descriptionCe": "Registreer adviesdomeinen voor de detectie van MSP-aanmeldings-SSO. Eigendomsverificatie wordt niet afgedwongen in Community Edition, en onbeheerde domeinen vallen terug op providers op applicatieniveau van Nine Minds.",
         "descriptionEe": "Beheer de levenscyclus van domeinclaims voor de detectie van MSP-aanmeldings-SSO-providers. Niet-geclaimde of niet-geschikte domeinen vallen terug op providers op applicatieniveau van Nine Minds.",
         "moved": {
-          "title": "MSP SSO Login Domains",
-          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
+          "title": "MSP SSO-aanmeldingsdomeinen",
+          "body": "Instellingen voor single sign-on, waaronder claims voor aanmeldingsdomeinen, zijn verplaatst naar Beveiliging → Single sign-on.",
           "cta": "Open Single Sign-On settings"
         },
         "dnsHost": "Host:",
@@ -2516,7 +2516,7 @@
           },
           "messageExtension": {
             "description": "Schakel opzoek- en berichtgestuurde PSA-acties in.",
-            "label": "Message extension"
+            "label": "Berichtextensie"
           },
           "personalBot": {
             "description": "Schakel bot-opdrachten in persoonlijk bereik in voor technici.",
@@ -2556,8 +2556,8 @@
           "saveSettings": "Teams-instellingen opslaan mislukt"
         },
         "guidance": {
-          "applicationIdUri": "Application ID URI",
-          "messageExtension": "Message extension",
+          "applicationIdUri": "Toepassings-id-URI",
+          "messageExtension": "Berichtextensie",
           "personalBot": "Persoonlijke bot",
           "personalTab": "Persoonlijk tabblad",
           "redirectUris": "Redirect-URI's",
@@ -2604,7 +2604,7 @@
           "appId": "App ID",
           "appIds": "App-ID's",
           "botId": "Bot-ID",
-          "deepLinks": "Deep links",
+          "deepLinks": "Diepe koppelingen",
           "description": "Genereer het app-manifest en de installatielinks voor het geselecteerde Microsoft-profiel.",
           "downloadManifest": "Manifest-JSON downloaden",
           "downloadZip": "App-pakket downloaden (.zip)",
@@ -3031,7 +3031,7 @@
           },
           "overview": {
             "description": "Exporteer facturen naar CSV voor handmatige import in Xero en importeer belastinggegevens uit Xero-rapporten.",
-            "exportLabel": "Export",
+            "exportLabel": "Exporteren",
             "exportText": "Genereer CSV-bestanden die compatibel zijn met de factuurimportfunctie van Xero",
             "intro": "Deze integratie biedt een alternatief voor op OAuth gebaseerde Xero-connectiviteit:",
             "note": "Let op: configureer de toewijzingen hieronder voor het exporteren. CSV-exports en belastingimports worden beheerd vanuit Facturatie → Boekhoudexports.",
@@ -3046,7 +3046,7 @@
             "description": "Voltooi deze stappen in Xero voordat u CSV-import/export gebruikt.",
             "externalInvoiceId": "Externe Factuur-ID",
             "externalInvoiceIdHelp": "Opties worden automatisch aangemaakt bij het importeren",
-            "sourceSystem": "Source System",
+            "sourceSystem": "Bronsysteem",
             "sourceSystemHelp": "Voeg een optie toe met de naam",
             "step1Description": "Ga in Xero naar Settings → Tracking Categories en maak deze twee categorieën aan:",
             "step1Title": "Stap 1: Tracking-categorieën aanmaken",
@@ -3159,11 +3159,11 @@
       }
     },
     "stripe": {
-      "title": "Stripe Payments",
+      "title": "Stripe-betalingen",
       "description": "Accepteer creditcardbetalingen voor uw facturen",
       "connected": {
         "title": "Stripe verbonden",
-        "publishableKey": "Publishable key: {{key}}..."
+        "publishableKey": "Publiceerbare sleutel: {{key}}..."
       },
       "empty": {
         "description": "Verbind uw Stripe-account om online betalingen voor facturen te accepteren"
@@ -3181,7 +3181,7 @@
         "publishableKeyLabel": "Publishable key",
         "publishableKeyPlaceholder": "pk_live_... of pk_test_...",
         "findKeyPrefix": "Vind dit in uw",
-        "dashboardLink": "Stripe Dashboard → API Keys"
+        "dashboardLink": "Stripe-dashboard → API-sleutels"
       },
       "webhook": {
         "heading": "Webhook-configuratie",
@@ -3218,15 +3218,15 @@
     },
     "providersWorkbench": {
       "badges": {
-        "loading": "Loading",
-        "needsAttention": "Needs attention",
-        "needsSetup": "Needs setup",
-        "notConfigured": "Not configured",
-        "ready": "Ready"
+        "loading": "Laden",
+        "needsAttention": "Vereist aandacht",
+        "needsSetup": "Moet worden ingesteld",
+        "notConfigured": "Niet geconfigureerd",
+        "ready": "Gereed"
       },
       "descriptionCe": "Configureer het providertraject dat uw tenant gebruikt. Configureer beide trajecten alleen als e-mail- of SSO-workflows beide ecosystemen vereisen.",
       "descriptionEe": "Configureer het providertraject dat uw tenant gebruikt. Configureer beide trajecten alleen als workflows voor e-mail, agenda, SSO of Teams beide ecosystemen vereisen.",
-      "eyebrow": "Provider setup",
+      "eyebrow": "Aanbieder configureren",
       "google": {
         "description": "Inkomende Gmail-e-mail en Google Agenda.",
         "label": "Google"

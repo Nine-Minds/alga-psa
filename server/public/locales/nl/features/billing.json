@@ -286,7 +286,7 @@
     "lineItems": {
       "title": "Regels",
       "subtitleEmpty": "Nog geen items.",
-      "subtitleCount": "{{count}} items · {{mix}}",
+      "subtitleCount": "{{count}} artikelen · {{mix}}",
       "mixBoth": "terugkerend en eenmalig",
       "mixRecurring": "terugkerend",
       "mixOneTime": "eenmalig",

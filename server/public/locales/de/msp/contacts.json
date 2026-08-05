@@ -451,7 +451,7 @@
         "noBaseUrl": "Die Basis-URL ist nicht für Portaleinladungen konfiguriert.",
         "invitationNotFound": "Einladung nicht gefunden oder bereits verwendet."
       },
-      "userNotFound": "Client user not found"
+      "userNotFound": "Kundenportalbenutzer nicht gefunden"
     }
   },
   "quickAddContact": {
@@ -702,7 +702,7 @@
     "toast": {
       "saved": "Kontakt aktualisiert",
       "saveFailed": "Kontakt konnte nicht aktualisiert werden",
-      "saveFailedDescription": "The contact could not be updated. Please try again."
+      "saveFailedDescription": "Der Kontakt konnte nicht aktualisiert werden. Versuchen Sie es erneut."
     }
   }
 }

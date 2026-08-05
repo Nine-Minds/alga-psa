@@ -246,7 +246,7 @@
       "empty": "Geen recente beweging.",
       "fullLedger": "Volledig grootboek",
       "generic": "{{type}} {{qty}} × {{name}}",
-      "itemFallback": "item",
+      "itemFallback": "artikel",
       "received": "Ontvangen",
       "rma": "RMA",
       "serialSuffix": " (SN {{sn}})",
@@ -352,7 +352,7 @@
       "subtitle": "{{count}} geplande overgang(en)",
       "eyebrow": "Deze week",
       "scope": "{{qty}}× {{name}} — {{staged}} klaargezet · {{backordered}} in backorder",
-      "itemFallback": "item",
+      "itemFallback": "artikel",
       "scopeFallback": "{{staged}} klaargezet · {{backordered}} in backorder",
       "feeder": "Aangevoerd door {{po}} {{vendor}}, ETA {{eta}} — {{slack}}d speling.",
       "vendorFallback": "leverancier",
@@ -469,7 +469,7 @@
     "noCandidates": "Geen ghost-kandidaten — niets lijkt te zijn opgeslokt.",
     "runFailed": "Kon het ghost-usage-rapport niet uitvoeren.",
     "subtitle": "Gesloten hardware-tickets zonder geregistreerde onderdelen — werk dat de werkplaats mogelijk heeft opgeslokt.",
-    "title": "Ghost Usage",
+    "title": "Ghost-verbruik",
     "updateFailed": "Kon dit ticket niet bijwerken.",
     "verdict": {
       "hardwareMissing": "Hardware ontbreekt",
@@ -549,7 +549,7 @@
       "component": "Component",
       "componentPlaceholder": "Selecteer een product…",
       "sku": "SKU",
-      "unit": "Unit"
+      "unit": "Eenheid"
     },
     "loadComponentsFailed": "Componenten laden mislukt",
     "loadKitsFailed": "Kits laden mislukt",
@@ -560,191 +560,191 @@
     "removeTitle": "Component verwijderen",
     "title": "Kits",
     "actions": {
-      "addComponent": "Add component",
-      "createKit": "Create kit",
-      "createSalesOrder": "Create sales order",
-      "productSettings": "Open product settings",
-      "updateQuantity": "Update quantity",
-      "viewSalesOrders": "View sales orders"
+      "addComponent": "Component toevoegen",
+      "createKit": "Kit maken",
+      "createSalesOrder": "Verkooporder maken",
+      "productSettings": "Productinstellingen openen",
+      "updateQuantity": "Aantal bijwerken",
+      "viewSalesOrders": "Verkooporders bekijken"
     },
     "bom": {
-      "componentCount": "{{count}} components",
-      "componentCountShort": "Components",
-      "emptyBody": "Componentless kits cannot be used on sales orders because there is nothing to allocate or fulfill.",
-      "emptyTitle": "Add at least one BOM component",
-      "qtyPerKit": "Qty per kit",
-      "title": "Bill of materials"
+      "componentCount": "{{count}} componenten",
+      "componentCountShort": "Componenten",
+      "emptyBody": "Kits zonder componenten kunnen niet in verkooporders worden gebruikt, omdat er niets kan worden gereserveerd of uitgeleverd.",
+      "emptyTitle": "Voeg ten minste één stuklijstcomponent toe",
+      "qtyPerKit": "Aantal per kit",
+      "title": "Stuklijst"
     },
     "create": {
-      "created": "Kit created.",
+      "created": "Kit gemaakt.",
       "fields": {
-        "name": "Kit name",
-        "productType": "Product type"
+        "name": "Kitnaam",
+        "productType": "Producttype"
       },
-      "noServiceTypes": "Create a product type in Billing before creating a kit.",
-      "title": "Create kit",
+      "noServiceTypes": "Maak in Facturatie een producttype voordat u een kit maakt.",
+      "title": "Kit maken",
       "validation": {
-        "costInvalid": "Kit cost must be a valid amount.",
-        "nameRequired": "Kit name is required.",
-        "priceRequired": "Kit price must be greater than 0.",
-        "typeRequired": "Product type is required."
+        "costInvalid": "De kitkosten moeten een geldig bedrag zijn.",
+        "nameRequired": "Kitnaam is verplicht.",
+        "priceRequired": "De kitprijs moet hoger zijn dan 0.",
+        "typeRequired": "Producttype is verplicht."
       }
     },
     "detail": {
-      "loadFailedTitle": "Could not load this kit",
-      "notFound": "This kit could not be found.",
-      "pickKit": "Select a kit to manage its bill of materials."
+      "loadFailedTitle": "Kan deze kit niet laden",
+      "notFound": "Deze kit is niet gevonden.",
+      "pickKit": "Selecteer een kit om de stuklijst te beheren."
     },
     "empty": {
-      "body": "Create a sellable kit, then add its bill of materials.",
-      "noResults": "No kits match those filters.",
-      "title": "No inventory kits yet"
+      "body": "Maak een verkoopbare kit en voeg vervolgens de stuklijst toe.",
+      "noResults": "Geen kits komen overeen met deze filters.",
+      "title": "Nog geen voorraadkits"
     },
     "filters": {
-      "all": "All"
+      "all": "Alle"
     },
     "list": {
-      "label": "Kit list"
+      "label": "Kitlijst"
     },
     "pricing": {
-      "addComponentsToCalculate": "Add components to calculate a price.",
-      "calculatedBasis": "Component selling prices × quantity",
-      "calculatedPrice": "Calculated kit price",
-      "componentCost": "Component cost",
-      "createSumHint": "Price will be calculated after components are added.",
-      "currency": "Currency",
-      "each": "each",
-      "extCost": "Ext. cost",
-      "extended": "extended",
-      "fixed": "Fixed price",
-      "fixedAmount": "Fixed kit price",
-      "grossMargin": "Gross margin",
-      "grossProfit": "Gross profit",
-      "kitCostOptional": "Kit cost (optional)",
-      "kitPrice": "Kit price",
-      "kitPriceWithCurrency": "Kit price ({{currency}})",
-      "margin": "Margin",
-      "marginUnavailable": "Add component costs in the kit currency to calculate margin.",
-      "mode": "Pricing mode",
-      "salesOrderPrice": "Sales-order kit price",
-      "save": "Save pricing",
-      "saved": "Pricing saved.",
-      "sellingPrice": "Selling price",
-      "sum": "Sum of component prices",
-      "title": "Pricing and margin",
-      "unitCost": "Unit cost",
-      "unsaved": "Save pricing before creating a sales order.",
+      "addComponentsToCalculate": "Voeg componenten toe om een prijs te berekenen.",
+      "calculatedBasis": "Verkoopprijzen componenten × aantal",
+      "calculatedPrice": "Berekende kitprijs",
+      "componentCost": "Componentkosten",
+      "createSumHint": "De prijs wordt berekend nadat componenten zijn toegevoegd.",
+      "currency": "Valuta",
+      "each": "per stuk",
+      "extCost": "Totale kosten",
+      "extended": "totaal",
+      "fixed": "Vaste prijs",
+      "fixedAmount": "Vaste kitprijs",
+      "grossMargin": "Brutomarge",
+      "grossProfit": "Brutowinst",
+      "kitCostOptional": "Kitkosten (optioneel)",
+      "kitPrice": "Kitprijs",
+      "kitPriceWithCurrency": "Kitprijs ({{currency}})",
+      "margin": "Marge",
+      "marginUnavailable": "Voeg componentkosten in de kitvaluta toe om de marge te berekenen.",
+      "mode": "Prijsmodus",
+      "salesOrderPrice": "Kitprijs voor verkooporder",
+      "save": "Prijsstelling opslaan",
+      "saved": "Prijsstelling opgeslagen.",
+      "sellingPrice": "Verkoopprijs",
+      "sum": "Som van componentprijzen",
+      "title": "Prijsstelling en marge",
+      "unitCost": "Kostprijs per eenheid",
+      "unsaved": "Sla de prijsstelling op voordat u een verkooporder maakt.",
       "validation": {
-        "fixedRequired": "Fixed kit price must be greater than 0.",
-        "priceRequired": "Kit price must be greater than 0."
+        "fixedRequired": "De vaste kitprijs moet hoger zijn dan 0.",
+        "priceRequired": "De kitprijs moet hoger zijn dan 0."
       }
     },
     "salesOrder": {
-      "componentLines": "Component lines",
-      "componentLinesValue": "Explode as child lines",
-      "parentLine": "Parent kit line",
-      "parentLineValue": "Priced at {{price}}",
-      "preview": "Sales-order preview",
-      "previewQuantity": "Kit quantity",
-      "previewQuantityInvalid": "Enter a positive whole number.",
-      "stockEffect": "Stock effect",
-      "stockEffectValue": "Components allocate and fulfill stock",
-      "title": "Sales-order behavior"
+      "componentLines": "Componentregels",
+      "componentLinesValue": "Opsplitsen in onderliggende regels",
+      "parentLine": "Bovenliggende kitregel",
+      "parentLineValue": "Geprijsd op {{price}}",
+      "preview": "Voorbeeld van verkooporder",
+      "previewQuantity": "Aantal kits",
+      "previewQuantityInvalid": "Voer een positief geheel getal in.",
+      "stockEffect": "Voorraadeffect",
+      "stockEffectValue": "Componenten reserveren voorraad en worden uit voorraad geleverd",
+      "title": "Gedrag van verkooporder"
     },
-    "searchPlaceholder": "Search kits or SKUs",
+    "searchPlaceholder": "Kits of SKU's zoeken",
     "status": {
-      "incomplete": "Incomplete",
-      "lowStock": "Low stock",
-      "noBom": "No BOM",
-      "ready": "Ready"
+      "incomplete": "Onvolledig",
+      "lowStock": "Lage voorraad",
+      "noBom": "Geen stuklijst",
+      "ready": "Gereed"
     },
     "stock": {
-      "available": "Available",
-      "canBuildLabel": "Can build",
-      "noStockLimit": "No stock limit",
-      "noStockLimitShort": "n/a",
-      "nonStocked": "Non-stocked",
-      "serialized": "Serialized",
-      "shortComponents": "Short components",
-      "shortWarning": "At least one stocked component cannot cover one complete kit from available stock.",
-      "stocked": "Stocked",
-      "stockedComponents": "Stocked components",
-      "title": "Stock readiness"
+      "available": "Beschikbaar",
+      "canBuildLabel": "Kan samenstellen",
+      "noStockLimit": "Geen voorraadlimiet",
+      "noStockLimitShort": "n.v.t.",
+      "nonStocked": "Niet op voorraad gehouden",
+      "serialized": "Met serienummer",
+      "shortComponents": "Ontbrekende componenten",
+      "shortWarning": "Ten minste één voorraadhoudend component heeft onvoldoende beschikbare voorraad voor één volledige kit.",
+      "stocked": "Op voorraad gehouden",
+      "stockedComponents": "Voorraadhoudende componenten",
+      "title": "Voorraadgereedheid"
     },
     "summary": {
-      "attention": "{{count}} need attention",
-      "ready": "{{count}} ready",
+      "attention": "{{count}} vereisen aandacht",
+      "ready": "{{count}} gereed",
       "total": "{{count}} kits"
     },
     "usage": {
-      "usedOnSalesOrders": "Used on sales orders"
+      "usedOnSalesOrders": "Gebruikt in verkooporders"
     },
-    "componentUpdated": "Component quantity updated."
+    "componentUpdated": "Aantal componenten bijgewerkt."
   },
   "loaners": {
     "title": "Leeneenheden",
     "loanOut": "Uitlenen",
     "return": "Retourneren",
-    "extend": "Extend",
-    "history": "History",
+    "extend": "Verlengen",
+    "history": "Geschiedenis",
     "loadFailed": "Leeneenheden laden mislukt",
     "loadLocationsFailed": "Kon voorraadlocaties niet laden",
     "loanDialogTitle": "Eenheid uitlenen",
-    "loaningOut": "Loaning out…",
-    "loanedOut": "{{serial}} loaned out.",
+    "loaningOut": "Uitlenen…",
+    "loanedOut": "{{serial}} uitgeleend.",
     "loanFailed": "Uitlenen mislukt",
-    "theUnit": "The unit",
-    "chooseUnit": "Choose a unit.",
-    "chooseClient": "Choose a client.",
+    "theUnit": "De eenheid",
+    "chooseUnit": "Kies een eenheid.",
+    "chooseClient": "Kies een klant.",
     "returnDialogTitle": "Leeneenheid retourneren",
-    "returning": "Returning…",
-    "returningTo": "Returning {{serial}} to stock.",
-    "returned": "{{serial}} returned to stock.",
+    "returning": "Retourneren…",
+    "returningTo": "{{serial}} wordt naar de voorraad geretourneerd.",
+    "returned": "{{serial}} naar de voorraad geretourneerd.",
     "returnFailed": "Retourneren mislukt",
     "returnLocationRequired": "Retourlocatie is verplicht",
-    "extendDialogTitle": "Extend loan",
-    "currentlyDue": "Currently due: {{due}}",
-    "updateDueDate": "Update due date",
-    "updatingDueDate": "Updating…",
-    "dueDateUpdated": "Due date updated for {{serial}}.",
-    "extendFailed": "Couldn't update the due date.",
-    "historyNotFound": "No history recorded for this unit yet.",
-    "historyLoadFailed": "Couldn't load this unit's history. Try again.",
-    "noDueDate": "No due date",
-    "daysOut": "{{n}}d out",
-    "daysOverdue": "{{n}}d overdue",
-    "dueToday": "Due today",
-    "dueInDays": "Due in {{n}}d",
-    "searchPlaceholder": "Search serial, MAC, client, or product",
+    "extendDialogTitle": "Leenperiode verlengen",
+    "currentlyDue": "Momenteel verschuldigd: {{due}}",
+    "updateDueDate": "Vervaldatum bijwerken",
+    "updatingDueDate": "Bijwerken…",
+    "dueDateUpdated": "Vervaldatum bijgewerkt voor {{serial}}.",
+    "extendFailed": "Kan de vervaldatum niet bijwerken.",
+    "historyNotFound": "Voor deze eenheid is nog geen geschiedenis vastgelegd.",
+    "historyLoadFailed": "Kan de geschiedenis van deze eenheid niet laden. Probeer het opnieuw.",
+    "noDueDate": "Geen vervaldatum",
+    "daysOut": "{{n}} d uitgeleend",
+    "daysOverdue": "{{n}} d achterstallig",
+    "dueToday": "Vandaag verschuldigd",
+    "dueInDays": "Verschuldigd over {{n}} d",
+    "searchPlaceholder": "Serienummer, MAC, klant of product zoeken",
     "columns": {
-      "serial": "Serial",
+      "serial": "Serienummer",
       "product": "Product",
       "client": "Klant",
-      "loaned": "Loaned",
+      "loaned": "Uitgeleend",
       "due": "Vervaldatum"
     },
     "summary": {
-      "out": "{{n}} out",
-      "overdueSuffix": " · {{n}} overdue"
+      "out": "{{n}} uitgeleend",
+      "overdueSuffix": " · {{n}} achterstallig"
     },
     "filter": {
-      "label": "Show",
-      "all": "All loaners",
-      "overdue": "Overdue only"
+      "label": "Weergeven",
+      "all": "Alle leeneenheden",
+      "overdue": "Alleen achterstallig"
     },
     "empty": {
-      "noMatchTitle": "No loaners match",
-      "noMatchDescription": "Clear the search and filter to see everything on loan.",
-      "clearFilters": "Clear filters",
-      "noLoansTitle": "Nothing out on loan",
-      "noLoansDescription": "Units you loan to clients appear here until they come back."
+      "noMatchTitle": "Geen overeenkomende leeneenheden",
+      "noMatchDescription": "Wis de zoekopdracht en het filter om alle uitgeleende eenheden te zien.",
+      "clearFilters": "Filters wissen",
+      "noLoansTitle": "Niets uitgeleend",
+      "noLoansDescription": "Eenheden die u aan klanten uitleent, staan hier totdat ze terugkomen."
     },
     "fields": {
-      "unit": "Unit",
-      "unitPlaceholder": "Search by serial or MAC…",
-      "unitSearchPlaceholder": "e.g. SSD990-0007",
+      "unit": "Eenheid",
+      "unitPlaceholder": "Zoeken op serienummer of MAC…",
+      "unitSearchPlaceholder": "bijv. SSD990-0007",
       "noInStockUnits": "Geen eenheden op voorraad gevonden",
-      "client": "Client",
+      "client": "Klant",
       "dueDate": "Vervaldatum",
       "returnLocation": "Retourneren naar locatie",
       "locationPlaceholder": "Selecteer een locatie…"
@@ -932,7 +932,7 @@
     "fields": {
       "currency": "Valuta",
       "expectedDate": "Verwachte datum",
-      "items": "Items",
+      "items": "Artikelen",
       "location": "Locatie",
       "selectLocation": "Selecteer een locatie…",
       "selectProduct": "Selecteer een product…",
@@ -987,7 +987,7 @@
       "returnedUnit": "Geretourneerde eenheid",
       "type": "Type",
       "vendor": "Leverancier",
-      "creditAtStake": "Credit at stake",
+      "creditAtStake": "Krediet op het spel",
       "rmaNumber": "RMA #"
     },
     "deadUnitsOwed": "Openstaande defecte eenheden",
@@ -1035,9 +1035,9 @@
       "charged": "In rekening gebracht",
       "closed": "Gesloten"
     },
-    "ageAtVendor": "{{days}}d at vendor",
+    "ageAtVendor": "{{days}} d bij leverancier",
     "filters": {
-      "statusActive": "Showing {{status}} RMA cases."
+      "statusActive": "RMA-zaken met status {{status}} worden weergegeven."
     }
   },
   "salesOrders": {
@@ -1058,19 +1058,19 @@
       "manageLayouts": "Lay-outs beheren",
       "reopenToDraft": "Heropenen als concept",
       "reopening": "Heropenen…",
-      "cancelSalesOrder": "Cancel sales order",
-      "moreActions": "More actions",
-      "orderPdfs": "Order PDFs"
+      "cancelSalesOrder": "Verkooporder annuleren",
+      "moreActions": "Meer acties",
+      "orderPdfs": "Order-pdf's"
     },
     "addSalesOrder": "Verkooporder toevoegen",
     "allocationMode": {
       "hard": "Hard",
       "soft": "Zacht"
     },
-    "allocationModeHelp": "Soft reserves stock but leaves it visible to other orders; Hard holds it exclusively.",
+    "allocationModeHelp": "Zacht reserveert voorraad maar houdt deze zichtbaar voor andere orders; Hard houdt deze exclusief vast.",
     "availabilityOk": "OK",
     "backorderBadge": "Backorder {{shortfall}}",
-    "billingAllocation": "Billing & allocation",
+    "billingAllocation": "Facturatie en reservering",
     "billsOnFulfillment": "Factureert bij uitvoering",
     "cancelDialog": {
       "confirm": "Verkooporder annuleren",
@@ -1086,9 +1086,9 @@
       "currency": "Valuta",
       "invoiceMode": "Factuurmodus",
       "soNumber": "SO-nummer",
-      "amount": "Amount",
-      "fulfillment": "Fulfillment",
-      "invoiceable": "Invoiceable"
+      "amount": "Bedrag",
+      "fulfillment": "Afhandeling",
+      "invoiceable": "Factureerbaar"
     },
     "confirmFailed": "Bevestigen mislukt",
     "confirmShipmentError": "Kon de verzending niet bevestigen.",
@@ -1102,7 +1102,7 @@
       "vendorPlaceholder": "Selecteer een leverancier…"
     },
     "created": "Verkooporder aangemaakt",
-    "currencyFromClient": "Set from client",
+    "currencyFromClient": "Overnemen van klant",
     "currencyRequired": "Valutacode is verplicht",
     "detailTitle": "Verkooporder {{number}}",
     "detailTitleFallback": "Verkooporder",
@@ -1143,26 +1143,26 @@
     },
     "fields": {
       "allocationMode": "Toewijzingsmodus",
-      "clientPoNumber": "Client PO number",
+      "clientPoNumber": "PO-nummer klant",
       "currencyCode": "Valutacode",
-      "expectedShipDate": "Expected ship date",
-      "fulfillment": "Fulfillment",
+      "expectedShipDate": "Verwachte verzenddatum",
+      "fulfillment": "Afhandeling",
       "invoiceMode": "Factuurmodus",
-      "items": "Items",
+      "items": "Artikelen",
       "lines": "Regels",
-      "noService": "No service found.",
-      "notes": "Notes",
+      "noService": "Geen service gevonden.",
+      "notes": "Notities",
       "qty": "Aantal",
-      "searchService": "Search services…",
-      "selectService": "Select a service…",
+      "searchService": "Services zoeken…",
+      "selectService": "Selecteer een service…",
       "service": "Service",
       "serviceId": "Service-ID",
       "unitPrice": "Stukprijs",
-      "unitPriceIn": "Unit price ({{currency}})"
+      "unitPriceIn": "Eenheidsprijs ({{currency}})"
     },
     "filters": {
-      "kitUsageActive": "Showing sales orders using {{kit}}.",
-      "invoiceableActive": "Showing sales orders with fulfilled, uninvoiced items."
+      "kitUsageActive": "Verkooporders met {{kit}} worden weergegeven.",
+      "invoiceableActive": "Verkooporders met afgehandelde, niet-gefactureerde artikelen worden weergegeven."
     },
     "fromQuote": "Uit offerte",
     "fulfillDialog": {
@@ -1182,8 +1182,8 @@
     },
     "fulfilledUnits": "{{count}} eenhe(i)d(en) uitgevoerd.",
     "fulfillment": {
-      "dropShip": "Drop-ship",
-      "fromStock": "From stock"
+      "dropShip": "Dropship",
+      "fromStock": "Uit voorraad"
     },
     "fulfillmentFailed": "Uitvoering mislukt.",
     "invoiceColumns": {
@@ -1197,14 +1197,14 @@
       "onFulfillment": "Bij uitvoering"
     },
     "kitPrice": {
-      "calculated": "Calculated from components",
-      "configured": "Configured kit price",
-      "currencyMismatch": "Kit price is configured in {{kitCurrency}}. Enter a {{orderCurrency}} price for this sales order.",
-      "currencyOverride": "Order-specific {{currency}} price",
-      "overridden": "Overridden from {{price}} for this sales order",
-      "reset": "Reset to kit price"
+      "calculated": "Berekend op basis van componenten",
+      "configured": "Geconfigureerde kitprijs",
+      "currencyMismatch": "De kitprijs is geconfigureerd in {{kitCurrency}}. Voer voor deze verkooporder een prijs in {{orderCurrency}} in.",
+      "currencyOverride": "Verkooporderspecifieke prijs in {{currency}}",
+      "overridden": "Voor deze verkooporder overschreven vanaf {{price}}",
+      "reset": "Terugzetten naar kitprijs"
     },
-    "invoiceModeHelp": "On fulfillment bills as items ship; Manual leaves invoicing to you.",
+    "invoiceModeHelp": "Bij afhandeling wordt gefactureerd zodra artikelen worden verzonden; bij Handmatig factureert u zelf.",
     "invoicedItems": "{{count}} item(s) gefactureerd.",
     "invoices": "Facturen",
     "invoicingFailed": "Facturatie mislukt: {{error}}. Gebruik \"Factuur genereren\" om het opnieuw te proberen.",
@@ -1225,10 +1225,10 @@
     "nothingBackordered": "Er staat niets in backorder.",
     "nothingToInvoice": "Er is niets meer te factureren.",
     "onlyRemaining": "Nog maar {{remaining}} resterend op deze regel.",
-    "pickServiceForLine": "Pick a service for this line.",
+    "pickServiceForLine": "Kies een service voor deze regel.",
     "pickVendor": "Kies de leverancier die deze regel gaat verzenden.",
     "productDefaultLocation": "Standaardlocatie product",
-    "qtyPositive": "Must be > 0.",
+    "qtyPositive": "Moet > 0 zijn.",
     "qtyPositiveInteger": "Aantal moet een positief geheel getal zijn.",
     "reopenError": "Kon de verkooporder niet heropenen.",
     "reopened": "Verkooporder heropend — het is weer een concept.",
@@ -1246,11 +1246,11 @@
     "title": "Verkooporders",
     "total": "Total",
     "unassignedBackorder": "{{count}} backorderregel(s) hebben geen voorkeursleverancier — maak die inkooporders handmatig aan.",
-    "unnamedService": "Unnamed",
-    "notFound": "Sales order not found.",
+    "unnamedService": "Naamloos",
+    "notFound": "Verkooporder niet gevonden.",
     "badges": {
-      "dropShip": "Drop-ship",
-      "readyToInvoice": "Ready"
+      "dropShip": "Dropship",
+      "readyToInvoice": "Gereed"
     }
   },
   "stock": {
@@ -1400,37 +1400,37 @@
     },
     "viewAsset": "Asset bekijken",
     "restock": {
-      "action": "Restock",
-      "headerAction": "Restock a return",
-      "dialogTitle": "Restock a returned unit",
-      "mode": "What are you restocking?",
-      "modeUnit": "A specific returned unit",
-      "modeQuantity": "A quantity of a product",
-      "unit": "Unit",
-      "unitPlaceholder": "Search a delivered or returned unit…",
-      "noUnits": "No delivered or returned units match",
-      "location": "Restock to location",
-      "locationPlaceholder": "Select a location…",
-      "useCurrentLocation": "Use unit's current location",
+      "action": "Opnieuw op voorraad nemen",
+      "headerAction": "Retour opnieuw op voorraad nemen",
+      "dialogTitle": "Geretourneerde eenheid opnieuw op voorraad nemen",
+      "mode": "Wat neemt u opnieuw op voorraad?",
+      "modeUnit": "Een specifieke geretourneerde eenheid",
+      "modeQuantity": "Een aantal van een product",
+      "unit": "Eenheid",
+      "unitPlaceholder": "Een geleverde of geretourneerde eenheid zoeken…",
+      "noUnits": "Geen overeenkomende geleverde of geretourneerde eenheden",
+      "location": "Opnieuw op voorraad nemen op locatie",
+      "locationPlaceholder": "Selecteer een locatie…",
+      "useCurrentLocation": "Huidige locatie van eenheid gebruiken",
       "product": "Product",
-      "productPlaceholder": "Select a product…",
-      "quantity": "Quantity",
-      "fee": "Restocking fee",
-      "feeClient": "Bill restocking fee to",
-      "feeInvalid": "Restocking fee must be a non-negative amount.",
-      "chooseUnit": "Choose a unit to restock.",
-      "chooseProduct": "Choose a product to restock.",
-      "chooseLocation": "Choose a location to restock into.",
-      "quantityInvalid": "Enter a quantity greater than zero.",
-      "chooseClient": "Choose the client to bill the restocking fee to.",
-      "theProduct": "the product",
-      "doneWithInvoice": "Unit restocked. Draft invoice {{number}} created for the {{amount}} restocking fee.",
-      "doneFeeFailed": "Unit restocked, but the restocking fee wasn't billed: {{reason}} Create it manually.",
-      "doneQuantity": "{{qty}} × {{product}} restocked.",
-      "done": "Unit restocked.",
-      "failed": "Couldn't restock the return.",
-      "restocking": "Restocking…",
-      "submit": "Restock"
+      "productPlaceholder": "Selecteer een product…",
+      "quantity": "Aantal",
+      "fee": "Kosten voor opnieuw op voorraad nemen",
+      "feeClient": "Kosten voor opnieuw op voorraad nemen factureren aan",
+      "feeInvalid": "De kosten voor opnieuw op voorraad nemen mogen niet negatief zijn.",
+      "chooseUnit": "Kies een eenheid om opnieuw op voorraad te nemen.",
+      "chooseProduct": "Kies een product om opnieuw op voorraad te nemen.",
+      "chooseLocation": "Kies een locatie voor de nieuwe voorraad.",
+      "quantityInvalid": "Voer een aantal groter dan nul in.",
+      "chooseClient": "Kies de klant aan wie de kosten voor opnieuw op voorraad nemen worden gefactureerd.",
+      "theProduct": "het product",
+      "doneWithInvoice": "Eenheid opnieuw op voorraad genomen. Conceptfactuur {{number}} gemaakt voor de kosten van {{amount}}.",
+      "doneFeeFailed": "Eenheid opnieuw op voorraad genomen, maar de kosten zijn niet gefactureerd: {{reason}} Maak de factuur handmatig.",
+      "doneQuantity": "{{qty}} × {{product}} opnieuw op voorraad genomen.",
+      "done": "Eenheid opnieuw op voorraad genomen.",
+      "failed": "Kan de retour niet opnieuw op voorraad nemen.",
+      "restocking": "Opnieuw op voorraad nemen…",
+      "submit": "Opnieuw op voorraad nemen"
     }
   },
   "transfers": {

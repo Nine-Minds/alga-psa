@@ -559,7 +559,7 @@
     },
     "removeAriaLabel": "Usuń {{email}}",
     "errors": {
-      "contactsLoadFailed": "Could not load client contacts."
+      "contactsLoadFailed": "Nie udało się wczytać kontaktów klienta."
     }
   },
   "quoteConversion": {

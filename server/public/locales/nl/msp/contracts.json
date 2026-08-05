@@ -1001,7 +1001,7 @@
       },
       "title": "Aankomende verlengingen",
       "type": {
-        "evergreen": "Evergreen",
+        "evergreen": "Doorlopend",
         "fixedTerm": "Bepaalde tijd"
       },
       "window": {

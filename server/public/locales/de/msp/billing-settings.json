@@ -1026,7 +1026,7 @@
       "dateRange": "Datumsbereich",
       "startDate": "Startdatum",
       "endDate": "Enddatum",
-      "sequence": "Seq"
+      "sequence": "Reihenfolge"
     },
     "billingMethod": {
       "fixed": "Behoben",

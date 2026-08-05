@@ -887,7 +887,7 @@
         "kitPricingFixed": "Vaste prijs"
       },
       "barcode": {
-        "label": "Barcode (UPC/EAN)"
+        "label": "Streepjescode (UPC/EAN)"
       }
     },
     "options": {

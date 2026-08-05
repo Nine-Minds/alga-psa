@@ -51,7 +51,7 @@
     "transfer": "Overboeken"
   },
   "settings": {
-    "loadErrorPrefix": "Error loading credit expiration settings:",
+    "loadErrorPrefix": "Fout bij het laden van instellingen voor kredietverval:",
     "captionEnabled": "Kredietverval: {{days}} dagen",
     "captionDisabled": "Kredietverval: uit",
     "captionReminders": "herinneringen {{reminders}} dagen vooraf",

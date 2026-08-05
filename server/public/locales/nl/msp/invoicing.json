@@ -293,14 +293,14 @@
       "client": "Klant",
       "invoiceNumber": "Factuurnummer",
       "invoiceNumberOptional": "Factuurnummer (optioneel)",
-      "sourceSalesOrder": "Source sales order (optional)"
+      "sourceSalesOrder": "Bronverkooporder (optioneel)"
     },
     "placeholders": {
       "selectClient": "Selecteer een klant",
       "invoiceNumberOptional": "Laat dit leeg om automatisch te genereren",
-      "sourceSalesOrder": "Select a fulfilled or manually billable sales order",
-      "searchSalesOrders": "Search sales orders...",
-      "noInvoiceableSalesOrders": "No invoiceable sales orders found."
+      "sourceSalesOrder": "Selecteer een afgehandelde of handmatig factureerbare verkooporder",
+      "searchSalesOrders": "Verkooporders zoeken...",
+      "noInvoiceableSalesOrders": "Geen factureerbare verkooporders gevonden."
     },
     "automatedItems": {
       "title": "Geautomatiseerde regelitems",
@@ -318,8 +318,8 @@
       "generate": "Factuur genereren",
       "saveChanges": "Wijzigingen opslaan",
       "processing": "Verwerken...",
-      "generateSalesOrderInvoice": "Generate Sales Order Invoice",
-      "clearSalesOrderSource": "Clear sales order source"
+      "generateSalesOrderInvoice": "Verkooporderfactuur genereren",
+      "clearSalesOrderSource": "Bronverkooporder wissen"
     },
     "labels": {
       "total": "Totaal"
@@ -351,9 +351,9 @@
       "INVOICE_NUMBER_CONFLICT": "Dit factuurnummer is al in gebruik.",
       "PERMISSION_DENIED": "U bent niet gemachtigd om deze factuur te maken of bij te werken.",
       "UNEXPECTED": "Er is iets misgegaan bij het genereren van de factuur. Vermeld referentie {{ref}} wanneer u contact opneemt met ondersteuning.",
-      "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
-      "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
-      "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+      "salesOrderGenerateFailed": "Kan de verkooporderfactuur niet genereren.",
+      "salesOrderNothingToInvoice": "Er resteert niets om voor deze verkooporder te factureren.",
+      "salesOrderNotInvoiceable": "Deze verkooporder is niet meer beschikbaar voor facturering."
     },
     "warnings": {
       "noBillingEmail": "Deze klant heeft geen facturatie-e-mailadres. Stel een e-mailadres in op de facturatielocatie voordat u de factuur genereert."
@@ -363,7 +363,7 @@
       "retry": "Opnieuw proberen"
     },
     "salesOrderContext": {
-      "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
+      "summary": "{{quantity}} artikelen uit {{lineCount}} regels gereed voor facturering. Dit concept wordt aan de verkooporder gekoppeld."
     }
   },
   "draftsTab": {
@@ -1029,7 +1029,7 @@
       "generate": "Genereer",
       "drafts": "Concepten",
       "finalized": "Afgerond",
-      "projectBilling": "Project Billing"
+      "projectBilling": "Projectfacturatie"
     }
   },
   "invoiceSyncBadge": {
@@ -1667,63 +1667,63 @@
     }
   },
   "projectBilling": {
-    "subtitle": "Ready milestones and deposits awaiting approval across all projects.",
-    "bulkActions": "Actions ({{count}})",
-    "loading": "Loading project billing queue...",
-    "empty": "Nothing is waiting for review. Ready milestones and deposits will appear here.",
+    "subtitle": "Gereedstaande mijlpalen en aanbetalingen uit alle projecten die op goedkeuring wachten.",
+    "bulkActions": "Acties ({{count}})",
+    "loading": "Wachtrij voor projectfacturatie laden...",
+    "empty": "Er wacht niets op controle. Gereedstaande mijlpalen en aanbetalingen verschijnen hier.",
     "columns": {
       "project": "Project",
-      "client": "Client",
-      "description": "Description",
-      "amount": "Amount",
+      "client": "Klant",
+      "description": "Beschrijving",
+      "amount": "Bedrag",
       "trigger": "Trigger",
-      "daysWaiting": "Days waiting",
-      "actions": "Actions"
+      "daysWaiting": "Dagen gewacht",
+      "actions": "Acties"
     },
     "trigger": {
-      "phase": "Phase {{phase}} completed {{date}}",
-      "date": "Date reached",
-      "manual": "Manual"
+      "phase": "Fase {{phase}} voltooid op {{date}}",
+      "date": "Datum bereikt",
+      "manual": "Handmatig"
     },
     "actions": {
-      "approve": "Approve",
-      "approveInvoiceNow": "Approve & invoice now",
-      "hold": "Hold",
-      "cancel": "Cancel",
-      "approveSelected": "Approve selected",
-      "holdSelected": "Hold selected"
+      "approve": "Goedkeuren",
+      "approveInvoiceNow": "Nu goedkeuren en factureren",
+      "hold": "Aanhouden",
+      "cancel": "Annuleren",
+      "approveSelected": "Selectie goedkeuren",
+      "holdSelected": "Selectie aanhouden"
     },
     "toasts": {
-      "approved": "Entry approved.",
-      "approvedWithWarning": "Entry approved. {{warning}}",
-      "invoiced": "Entry approved and invoiced.",
-      "bulkApproved": "{{count}} entries approved.",
-      "bulkApproveFailed": "{{count}} entries could not be approved (e.g. {{reason}}).",
-      "held": "Entry placed on hold.",
-      "bulkHeld": "{{count}} entries placed on hold.",
-      "bulkHoldFailed": "{{count}} entries could not be held (e.g. {{reason}}).",
-      "canceled": "Entry canceled."
+      "approved": "Post goedgekeurd.",
+      "approvedWithWarning": "Post goedgekeurd. {{warning}}",
+      "invoiced": "Post goedgekeurd en gefactureerd.",
+      "bulkApproved": "{{count}} posten goedgekeurd.",
+      "bulkApproveFailed": "{{count}} posten konden niet worden goedgekeurd (bijv. {{reason}}).",
+      "held": "Post aangehouden.",
+      "bulkHeld": "{{count}} posten aangehouden.",
+      "bulkHoldFailed": "{{count}} posten konden niet worden aangehouden (bijv. {{reason}}).",
+      "canceled": "Post geannuleerd."
     },
     "errors": {
-      "loadFailed": "Failed to load the project billing review queue. Please try again.",
-      "approveFailed": "Failed to approve the entry.",
-      "invoiceFailed": "Failed to approve and invoice the entry.",
-      "holdFailed": "Failed to place the entry on hold.",
-      "cancelFailed": "Failed to cancel the entry."
+      "loadFailed": "Wachtrij voor controle van projectfacturatie laden mislukt. Probeer het opnieuw.",
+      "approveFailed": "Post goedkeuren mislukt.",
+      "invoiceFailed": "Post goedkeuren en factureren mislukt.",
+      "holdFailed": "Post aanhouden mislukt.",
+      "cancelFailed": "Post annuleren mislukt."
     },
     "holdDialog": {
-      "title": "Hold entry",
-      "titlePlural": "Hold {{count}} entries",
-      "description": "Holding returns the entry to pending until it is made ready again. A reason is required.",
-      "reasonPlaceholder": "Reason for holding...",
-      "cancel": "Cancel",
-      "confirm": "Hold"
+      "title": "Post aanhouden",
+      "titlePlural": "{{count}} posten aanhouden",
+      "description": "Door de post aan te houden, krijgt deze de status In afwachting totdat deze opnieuw gereed wordt gemaakt. Een reden is verplicht.",
+      "reasonPlaceholder": "Reden voor aanhouden...",
+      "cancel": "Annuleren",
+      "confirm": "Aanhouden"
     },
     "cancelDialog": {
-      "title": "Cancel entry",
-      "message": "Canceling this schedule entry removes it from billing. This cannot be undone.",
-      "confirm": "Cancel entry",
-      "dismiss": "Keep entry"
+      "title": "Post annuleren",
+      "message": "Door dit planningsitem te annuleren, wordt het uit de facturatie verwijderd. Dit kan niet ongedaan worden gemaakt.",
+      "confirm": "Post annuleren",
+      "dismiss": "Post behouden"
     }
   }
 }

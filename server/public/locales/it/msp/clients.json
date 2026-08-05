@@ -39,7 +39,7 @@
     "yes": "Sì"
   },
   "clientLifecycle": {
-    "prospect": "Prospect",
+    "prospect": "Potenziale cliente",
     "active": "Cliente attivo",
     "former": "Ex cliente",
     "all": "Tutte le fasi del ciclo di vita"
@@ -394,7 +394,7 @@
       "service": "Servizio"
     },
     "record": {
-      "accountManager": "Account manager",
+      "accountManager": "Responsabile account",
       "additionalInfo": "Informazioni aggiuntive",
       "clientSince": "Cliente dal",
       "defaultContact": "Contatto predefinito",
@@ -495,7 +495,7 @@
     "createAndAddAnother": "Crea + Aggiungi un altro",
     "createAndView": "Crea + Visualizza cliente",
     "additionalDetails": "Dettagli aggiuntivi",
-    "createFailed": "Failed to create client. Please try again."
+    "createFailed": "Impossibile creare il cliente. Riprova."
   },
   "clientCreatedDialog": {
     "title": "Cliente creato",
@@ -614,7 +614,7 @@
     "removeAssignmentTitle": "Rimuovere l'assegnazione della riga di contratto",
     "removeAssignmentMessage": "Rimuovere questa assegnazione della riga di contratto dal cliente? La riga di contratto stessa non verrà eliminata.",
     "contracts": "Contratti",
-    "taxRatesLoadError": "Failed to load tax rate configuration."
+    "taxRatesLoadError": "Impossibile caricare la configurazione delle aliquote fiscali."
   },
   "clientBillingSchedule": {
     "title": "Programma di fatturazione",
@@ -763,7 +763,7 @@
     "startDateRequired": "La data di inizio è obbligatoria",
     "updateAssignment": "Aggiorna assegnazione",
     "useTenantRenewalDefaults": "Utilizza le impostazioni predefinite per il rinnovo del tenant",
-    "saveError": "Failed to save contract. Please try again."
+    "saveError": "Impossibile salvare il contratto. Riprova."
   },
   "clientContractLineDashboard": {
     "title": "Metriche di utilizzo (ultimi 30 giorni)",
@@ -1085,9 +1085,9 @@
     "error": "Errore",
     "updateExistingTitle": "Aggiorna i clienti esistenti",
     "updateExistingMessage": "I client {{count}} esistono già. Vuoi aggiornarli con i nuovi dati?",
-    "invalidRowsBlocked": "Fix {{count}} invalid rows or enable \"Skip invalid records\" before importing.",
-    "noValidRows": "There are no valid client rows to import.",
-    "serverFailures": "{{failed}} of {{total}} clients failed to import. Review the row issues below."
+    "invalidRowsBlocked": "Correggi {{count}} righe non valide oppure abilita \"Ignora record non validi\" prima dell'importazione.",
+    "noValidRows": "Non ci sono righe cliente valide da importare.",
+    "serverFailures": "Importazione non riuscita per {{failed}} clienti su {{total}}. Esamina i problemi delle righe riportati di seguito."
   },
   "clientsList": {
     "name": "Nome",
@@ -1245,7 +1245,7 @@
     "loadError": "Impossibile caricare le note",
     "unknownError": "Errore sconosciuto",
     "loadErrorTitle": "Impossibile caricare le note",
-    "loadErrorDescription": "Could not load notes. Please try again."
+    "loadErrorDescription": "Impossibile caricare le note. Riprova."
   },
   "actions": {
     "cancel": "Annulla",
@@ -1410,8 +1410,8 @@
         "startRequired": "L'ora di inizio è obbligatoria per creare una riunione Teams",
         "unavailable": "La creazione di riunioni Teams non è disponibile per questo tenant."
       },
-      "loadFailed": "Interaction options could not be loaded. Please try again.",
-      "saveFailed": "The interaction could not be saved. Please try again."
+      "loadFailed": "Impossibile caricare le opzioni di interazione. Riprova.",
+      "saveFailed": "Impossibile salvare l'interazione. Riprova."
     },
     "feed": {
       "addInteraction": "Aggiungi interazione",
@@ -1425,8 +1425,8 @@
       "startDate": "Data di inizio",
       "title": "Interazioni",
       "typePlaceholder": "Tipo di interazione",
-      "loadFailed": "Interactions could not be loaded. Please try again.",
-      "typesLoadFailed": "Interaction types could not be loaded. Please try again."
+      "loadFailed": "Impossibile caricare le interazioni. Riprova.",
+      "typesLoadFailed": "Impossibile caricare i tipi di interazione. Riprova."
     },
     "overall": {
       "allContacts": "Tutti i contatti",
@@ -1444,7 +1444,7 @@
       "startTimePlaceholder": "Filtra a partire da questa ora di inizio",
       "statusPlaceholder": "Stato",
       "title": "Interazioni recenti",
-      "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
+      "statusesLoadFailed": "Impossibile caricare gli stati delle interazioni. Riprova."
     }
   },
   "clientDrawer": {

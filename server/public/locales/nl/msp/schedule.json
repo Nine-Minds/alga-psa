@@ -660,7 +660,7 @@
       "all": "Alle evenementen"
     },
     "errors": {
-      "loadWorkItem": "Failed to load work item."
+      "loadWorkItem": "Werkitem laden mislukt."
     }
   },
   "actions": {

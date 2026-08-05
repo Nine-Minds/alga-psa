@@ -119,7 +119,7 @@
       "type": "Type",
       "details": "Details",
       "status": "Status",
-      "agent": "Agent",
+      "agent": "Medewerker",
       "client": "Klant",
       "location": "Locatie",
       "actions": "Acties",
@@ -175,7 +175,7 @@
       "status": "Status: {{value}}",
       "type": "Type: {{value}}",
       "client": "Klant: {{value}}",
-      "agent": "Agent: {{value}}"
+      "agent": "Medewerker: {{value}}"
     },
     "statuses": {
       "active": "Actief",
@@ -209,7 +209,7 @@
       "emptyValue": "-",
       "columns": {
         "name": "Naam",
-        "tag": "Tag",
+        "tag": "Label",
         "type": "Type",
         "status": "Status",
         "client": "Klant",
@@ -1007,7 +1007,7 @@
     "errors": {
       "loadTitle": "Notities kunnen niet worden geladen",
       "unknown": "Onbekende fout",
-      "loadDescription": "Could not load notes. Please try again."
+      "loadDescription": "Kan notities niet laden. Probeer het opnieuw."
     },
     "lastUpdated": "Laatst bijgewerkt: {{value}}"
   },
@@ -1044,7 +1044,7 @@
       "agentStatus": "Agentstatus",
       "currentUser": "Huidige gebruiker",
       "lastCheckIn": "(Laatste check-in: {{value}})",
-      "uptime": "Uptime",
+      "uptime": "Bedrijfstijd",
       "lastSync": "Laatste RMM-synchronisatie",
       "network": "Netwerk",
       "networkValue": "LAN-IP: {{lan}} | WAN IP: {{wan}}",
@@ -1365,7 +1365,7 @@
   "assetBento": {
     "health": "Toestand",
     "security": "Beveiliging",
-    "openTickets": "Open tickets",
+    "openTickets": "Openstaande tickets",
     "warranty": "Garantie",
     "identity": "Identiteit",
     "tag": "Label",
@@ -1394,7 +1394,7 @@
     "pendingPatches": "Openstaande patches",
     "failedPatches": "Mislukte patches",
     "lastScan": "Laatste scan",
-    "agentVersion": "Agent",
+    "agentVersion": "Medewerker",
     "noRelated": "Niet gekoppeld aan een ander asset.",
     "manage": "Beheren",
     "reportedFacts": "Gerapporteerde gegevens",

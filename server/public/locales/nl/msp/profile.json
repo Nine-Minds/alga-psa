@@ -7,7 +7,7 @@
       "apiKeys": "API-sleutels",
       "notifications": "Meldingen",
       "calendar": "Agenda",
-      "keyboardShortcuts": "Keyboard Shortcuts"
+      "keyboardShortcuts": "Sneltoetsen"
     },
     "basicInfo": {
       "title": "Basisinformatie"
@@ -92,7 +92,7 @@
       "policies": "Beleidsregels",
       "apiKeys": "API-sleutels",
       "webhooks": "Webhooks",
-      "userProvisioning": "User provisioning"
+      "userProvisioning": "Gebruikersinrichting"
     },
     "loading": {
       "roles": "Rolconfiguratie laden...",
@@ -103,13 +103,13 @@
       "webhooks": "Webhookconfiguratie laden...",
       "sso": "SSO-beheertools laden...",
       "sessions": "Actieve sessies laden...",
-      "userProvisioning": "Loading SCIM provisioning..."
+      "userProvisioning": "SCIM-inrichting laden..."
     },
     "sso": {
       "advanced": {
-        "title": "Advanced: custom identity provider routing",
-        "description": "Route MSP login SSO to your own identity provider using verified login domains. Only needed on custom or on-premise installations.",
-        "inertNotice": "No tenant identity provider credentials are configured, so domain claims currently have no effect. Users sign in with the hosted Google / Microsoft providers. Tenant credentials are provisioned on custom and on-premise installations."
+        "title": "Geavanceerd: aangepaste routering van identiteitsaanbieders",
+        "description": "Routeer SSO voor MSP-aanmeldingen via geverifieerde aanmeldingsdomeinen naar uw eigen identiteitsaanbieder. Alleen nodig bij aangepaste of lokale installaties.",
+        "inertNotice": "Er zijn geen referenties voor een tenantidentiteitsaanbieder geconfigureerd, waardoor domeinclaims momenteel geen effect hebben. Gebruikers melden zich aan via de gehoste Google-/Microsoft-aanbieders. Tenantreferenties worden ingericht bij aangepaste en lokale installaties."
       }
     },
     "userRoles": {
@@ -559,7 +559,7 @@
       "rateLimit": {
         "columnTitle": "Snelheidslimiet",
         "loading": "Laden…",
-        "summary": "{{maxTokens}} burst / {{refillPerMin}} per min",
+        "summary": "{{maxTokens}} piek / {{refillPerMin}} per min",
         "source": "Bron: {{label}}",
         "sourceLabels": {
           "key": "Overschrijving",
@@ -586,7 +586,7 @@
         "descriptionPlaceholder": "bijv. Ontwikkelings-API-sleutel",
         "expiration": "Vervaldatum (optioneel)",
         "submit": "Nieuwe API-sleutel genereren",
-        "createFailed": "Failed to create API key"
+        "createFailed": "API-sleutel maken mislukt"
       },
       "list": {
         "title": "Uw API-sleutels",
@@ -613,7 +613,7 @@
           "inactive": "Inactief"
         },
         "deactivate": "Deactiveren",
-        "deactivateFailed": "Failed to deactivate API key"
+        "deactivateFailed": "API-sleutel deactiveren mislukt"
       },
       "newKeyDialog": {
         "title": "API-sleutel gegenereerd",
@@ -626,76 +626,76 @@
       }
     },
     "scim": {
-      "title": "User provisioning",
-      "description": "Let Microsoft Entra deactivate and reactivate existing internal users. Alga remains authoritative for profiles, roles, teams, and licenses.",
-      "loading": "Loading user provisioning",
+      "title": "Gebruikersinrichting",
+      "description": "Laat Microsoft Entra bestaande interne gebruikers deactiveren en opnieuw activeren. Alga blijft leidend voor profielen, rollen, teams en licenties.",
+      "loading": "Gebruikersinrichting laden",
       "status": {
-        "enabled": "Accepting requests",
-        "disabled": "Provisioning paused"
+        "enabled": "Aanvragen worden geaccepteerd",
+        "disabled": "Inrichting gepauzeerd"
       },
       "errors": {
-        "load": "Unable to load SCIM provisioning.",
-        "update": "Unable to update SCIM provisioning."
+        "load": "Kan SCIM-inrichting niet laden.",
+        "update": "Kan SCIM-inrichting niet bijwerken."
       },
       "upgrade": {
-        "title": "Directory lifecycle provisioning",
-        "description": "SCIM user provisioning is available on Pro and higher plans."
+        "title": "Inrichting van directorylevenscyclus",
+        "description": "SCIM-gebruikersinrichting is beschikbaar bij Pro en hogere abonnementen."
       },
       "setup": {
-        "title": "Connect Microsoft Entra",
-        "description": "Generate a tenant-specific endpoint and one-time bearer token. No Alga users are created by SCIM.",
-        "create": "Generate connection"
+        "title": "Microsoft Entra verbinden",
+        "description": "Genereer een tenantspecifiek eindpunt en een eenmalig bearer-token. SCIM maakt geen Alga-gebruikers.",
+        "create": "Verbinding genereren"
       },
       "connection": {
-        "title": "Entra connection",
-        "description": "Use these values in the Provisioning section of your Entra enterprise application.",
-        "url": "Tenant URL",
-        "copyUrl": "Copy tenant URL",
-        "oneTimeToken": "Copy this token now",
-        "oneTimeWarning": "For security, Alga cannot show this value again.",
-        "rotate": "Rotate token",
-        "revokePrevious": "End token overlap",
-        "enabled": "Accept provisioning requests",
-        "disableWarning": "Pausing preserves every link and current user state."
+        "title": "Entra-verbinding",
+        "description": "Gebruik deze waarden in het onderdeel Inrichting van uw Entra-bedrijfstoepassing.",
+        "url": "Tenant-URL",
+        "copyUrl": "Tenant-URL kopiëren",
+        "oneTimeToken": "Kopieer dit token nu",
+        "oneTimeWarning": "Om veiligheidsredenen kan Alga deze waarde niet opnieuw weergeven.",
+        "rotate": "Token roteren",
+        "revokePrevious": "Tokenoverlap beëindigen",
+        "enabled": "Inrichtingsaanvragen accepteren",
+        "disableWarning": "Bij pauzeren blijven alle koppelingen en de huidige gebruikersstatus behouden."
       },
       "health": {
-        "title": "Connection health",
-        "lastRequest": "Last authenticated request",
-        "lastSuccess": "Last success",
-        "tokenAge": "Current token created",
-        "lastError": "Last error"
+        "title": "Verbindingsstatus",
+        "lastRequest": "Laatste geverifieerde aanvraag",
+        "lastSuccess": "Laatste succes",
+        "tokenAge": "Huidig token gemaakt",
+        "lastError": "Laatste fout"
       },
       "mapping": {
-        "title": "Entra attribute mapping",
-        "description": "Keep Entra defaults for userName, externalId, active, names, title, and emails. Only active controls Alga access.",
-        "match": "Initial match",
+        "title": "Toewijzing van Entra-kenmerken",
+        "description": "Behoud de Entra-standaardwaarden voor userName, externalId, active, names, title en emails. Alleen active bepaalt de toegang tot Alga.",
+        "match": "Eerste overeenkomst",
         "matchValue": "Alleen exact primair e-mailadres",
-        "scope": "Provisioning scope",
-        "scopeValue": "Assigned users and groups",
-        "unsupported": "Not supported",
-        "unsupportedValue": "Groups, passwords, roles, teams"
+        "scope": "Inrichtingsbereik",
+        "scopeValue": "Toegewezen gebruikers en groepen",
+        "unsupported": "Niet ondersteund",
+        "unsupportedValue": "Groepen, wachtwoorden, rollen, teams"
       },
       "links": {
-        "title": "Managed users",
-        "user": "Alga user",
-        "directory": "Directory identity",
-        "state": "State",
-        "action": "Action",
+        "title": "Beheerde gebruikers",
+        "user": "Alga-gebruiker",
+        "directory": "Directory-identiteit",
+        "state": "Status",
+        "action": "Actie",
         "drift": "Afwijkend e-mailadres",
-        "active": "Upstream active",
-        "inactive": "Upstream inactive",
-        "accessOn": "Access enabled",
-        "accessOff": "Access disabled",
-        "unlink": "Unlink",
-        "empty": "No directory identities have linked yet."
+        "active": "Actief in bronsysteem",
+        "inactive": "Inactief in bronsysteem",
+        "accessOn": "Toegang ingeschakeld",
+        "accessOff": "Toegang uitgeschakeld",
+        "unlink": "Ontkoppelen",
+        "empty": "Er zijn nog geen directory-identiteiten gekoppeld."
       },
       "unresolved": {
-        "title": "Needs review",
-        "description": "These identities were rejected without changing an Alga user."
+        "title": "Moet worden gecontroleerd",
+        "description": "Deze identiteiten zijn geweigerd zonder een Alga-gebruiker te wijzigen."
       },
       "state": {
-        "active": "Active upstream",
-        "inactive": "Inactive upstream"
+        "active": "Actief in bronsysteem",
+        "inactive": "Inactief in bronsysteem"
       }
     }
   },

@@ -495,7 +495,7 @@
     "createAndAddAnother": "Créer + Ajouter un autre",
     "createAndView": "Créer + Voir le client",
     "additionalDetails": "Informations supplémentaires",
-    "createFailed": "Failed to create client. Please try again."
+    "createFailed": "Échec de la création du client. Réessayez."
   },
   "clientCreatedDialog": {
     "title": "Client créé",
@@ -551,8 +551,8 @@
     "invoiceTemplateHelp": "Sélectionnez un modèle ou utilisez la valeur par défaut",
     "paymentTerms": {
       "dueOnReceipt": "Exigible à réception",
-      "net15": "Net 15",
-      "net30": "Net 30"
+      "net15": "Net à 15 jours",
+      "net30": "Net à 30 jours"
     },
     "preferredPaymentMethod": "Mode de paiement préféré",
     "defaultCurrency": "Devise par défaut",
@@ -614,7 +614,7 @@
     "removeAssignmentTitle": "Supprimer l'affectation de ligne de contrat",
     "removeAssignmentMessage": "Êtes-vous sûr de vouloir supprimer cette attribution de ligne de contrat du client ? La ligne de contrat elle-même ne sera pas supprimée.",
     "contracts": "Contrats",
-    "taxRatesLoadError": "Failed to load tax rate configuration."
+    "taxRatesLoadError": "Échec du chargement de la configuration des taux de taxe."
   },
   "clientBillingSchedule": {
     "title": "Calendrier de facturation",
@@ -763,7 +763,7 @@
     "startDateRequired": "La date de début est requise",
     "updateAssignment": "Mettre à jour l'affectation",
     "useTenantRenewalDefaults": "Utiliser les paramètres par défaut de renouvellement du locataire",
-    "saveError": "Failed to save contract. Please try again."
+    "saveError": "Échec de l'enregistrement du contrat. Réessayez."
   },
   "clientContractLineDashboard": {
     "title": "Métriques d'utilisation (30 derniers jours)",
@@ -1085,9 +1085,9 @@
     "error": "Erreur",
     "updateExistingTitle": "Mettre à jour les clients existants",
     "updateExistingMessage": "Les clients {{count}} existent déjà. Voulez-vous les mettre à jour avec les nouvelles données ?",
-    "invalidRowsBlocked": "Fix {{count}} invalid rows or enable \"Skip invalid records\" before importing.",
-    "noValidRows": "There are no valid client rows to import.",
-    "serverFailures": "{{failed}} of {{total}} clients failed to import. Review the row issues below."
+    "invalidRowsBlocked": "Corrigez {{count}} ligne(s) non valide(s) ou activez « Ignorer les enregistrements non valides » avant l'importation.",
+    "noValidRows": "Aucune ligne de client valide à importer.",
+    "serverFailures": "Échec de l'importation de {{failed}} client(s) sur {{total}}. Examinez les problèmes de ligne ci-dessous."
   },
   "clientsList": {
     "name": "Nom",
@@ -1127,7 +1127,7 @@
   "contractLines": {
     "title": "Lignes de contrat",
     "addNewPlan": "Ajouter un nouveau forfait",
-    "plan": "Plan",
+    "plan": "Forfait",
     "category": "Catégorie",
     "startDate": "Date de début",
     "endDate": "Date de fin",
@@ -1245,7 +1245,7 @@
     "loadError": "Les notes n'ont pas pu être chargées",
     "unknownError": "Erreur inconnue",
     "loadErrorTitle": "Les notes n'ont pas pu être chargées",
-    "loadErrorDescription": "Could not load notes. Please try again."
+    "loadErrorDescription": "Impossible de charger les notes. Réessayez."
   },
   "actions": {
     "cancel": "Annuler",
@@ -1410,8 +1410,8 @@
         "startRequired": "L'heure de début est requise pour créer une réunion Teams",
         "unavailable": "La création de réunions Teams n'est pas disponible pour ce locataire."
       },
-      "loadFailed": "Interaction options could not be loaded. Please try again.",
-      "saveFailed": "The interaction could not be saved. Please try again."
+      "loadFailed": "Impossible de charger les options d'interaction. Réessayez.",
+      "saveFailed": "Impossible d'enregistrer l'interaction. Réessayez."
     },
     "feed": {
       "addInteraction": "Ajouter une interaction",
@@ -1425,8 +1425,8 @@
       "startDate": "Date de début",
       "title": "Interactions",
       "typePlaceholder": "Type d'interaction",
-      "loadFailed": "Interactions could not be loaded. Please try again.",
-      "typesLoadFailed": "Interaction types could not be loaded. Please try again."
+      "loadFailed": "Impossible de charger les interactions. Réessayez.",
+      "typesLoadFailed": "Impossible de charger les types d'interaction. Réessayez."
     },
     "overall": {
       "allContacts": "Tous les contacts",
@@ -1444,7 +1444,7 @@
       "startTimePlaceholder": "Filtrer à partir de cette heure de début",
       "statusPlaceholder": "Statut",
       "title": "Interactions récentes",
-      "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
+      "statusesLoadFailed": "Impossible de charger les statuts d'interaction. Réessayez."
     }
   },
   "clientDrawer": {

@@ -389,7 +389,7 @@
         "heading": "Gebruikerstypespecifieke tarieven",
         "options": {
           "administrator": "Beheerder",
-          "consultant": "Consultant",
+          "consultant": "Adviseur",
           "engineer": "Ingenieur",
           "projectManager": "Projectmanager",
           "technician": "Technicus"

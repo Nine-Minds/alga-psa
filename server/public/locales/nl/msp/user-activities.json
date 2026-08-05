@@ -462,8 +462,8 @@
       "client": "Klant",
       "dueDateShort": "Vervalt",
       "createdShort": "Aangemaakt",
-      "tags": "Tags",
-      "tagsSelected": "{{count}} tags",
+      "tags": "Labels",
+      "tagsSelected": "{{count}} labels",
       "tasksCompact": "Taken",
       "ticketsCompact": "Tickets",
       "opportunityScope": "Dealwerk"

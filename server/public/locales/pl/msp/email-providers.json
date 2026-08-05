@@ -13,7 +13,7 @@
       "resyncStarted": "Rozpoczęto ponowną synchronizację dla {{providerName}}.",
       "resyncRecovered": "Ponownie połączono z {{providerName}}.",
       "enterpriseOnly": "Przychodząca poczta e-mail usługi Microsoft 365 jest dostępna tylko w Pro.",
-      "loadProvidersError": "Failed to load email providers"
+      "loadProvidersError": "Nie udało się wczytać dostawców poczty e-mail"
     },
     "editDrawer": {
       "title": "Edytuj dostawcę poczty e-mail",
@@ -42,22 +42,22 @@
       "title": "Instrukcje konfiguracji",
       "microsoft": {
         "title": "Konfiguracja Microsoft 365",
-        "checkingCredentials": "Checking Microsoft credential availability…",
+        "checkingCredentials": "Sprawdzanie dostępności poświadczeń Microsoft…",
         "platform": {
-          "title": "Microsoft sign-in is ready",
-          "description": "Alga PSA supplies the Microsoft application. Add a provider, enter the mailbox details, and connect with Microsoft—no Entra app registration is needed."
+          "title": "Logowanie Microsoft jest gotowe",
+          "description": "Alga PSA dostarcza aplikację Microsoft. Dodaj dostawcę, wprowadź dane skrzynki pocztowej i połącz się z Microsoft — rejestracja aplikacji Entra nie jest potrzebna."
         },
         "byo": {
-          "summary": "Advanced: use your own Microsoft app",
-          "warning": "This is normally unnecessary on hosted Alga PSA and should be used only when your organization requires its own Entra application.",
-          "description": "Open Settings → Integrations → Providers, expand the Microsoft advanced options, and add your tenant-owned app before returning here."
+          "summary": "Zaawansowane: użyj własnej aplikacji Microsoft",
+          "warning": "Zwykle nie jest to potrzebne w hostowanej Alga PSA. Użyj tej opcji tylko wtedy, gdy organizacja wymaga własnej aplikacji Entra.",
+          "description": "Otwórz Ustawienia → Integracje → Dostawcy, rozwiń zaawansowane opcje Microsoft i dodaj aplikację należącą do organizacji, zanim tu wrócisz."
         },
-        "manualRequired": "Platform Microsoft credentials are unavailable in this deployment. Configure your own Microsoft app to connect a mailbox.",
+        "manualRequired": "Poświadczenia Microsoft platformy są niedostępne w tym wdrożeniu. Skonfiguruj własną aplikację Microsoft, aby połączyć skrzynkę pocztową.",
         "tenant": {
-          "title": "Your organization’s Microsoft app is selected",
-          "description": "New Microsoft mailboxes will use the tenant-owned app selected in Providers settings. This choice is preserved even when platform credentials are available.",
-          "incompleteTitle": "Your Microsoft app needs attention",
-          "incompleteDescription": "Finish configuring the Microsoft app selected in Providers settings before connecting a mailbox."
+          "title": "Wybrano aplikację Microsoft organizacji",
+          "description": "Nowe skrzynki pocztowe Microsoft będą używać aplikacji należącej do organizacji i wybranej w ustawieniach dostawców. Ten wybór zostanie zachowany nawet wtedy, gdy dostępne są poświadczenia platformy.",
+          "incompleteTitle": "Aplikacja Microsoft wymaga uwagi",
+          "incompleteDescription": "Przed połączeniem skrzynki pocztowej dokończ konfigurację aplikacji Microsoft wybranej w ustawieniach dostawców."
         },
         "steps": {
           "registerApp": "Zarejestruj aplikację w usłudze Azure AD",
@@ -271,17 +271,17 @@
     },
     "microsoft": {
       "hostedOauth": {
-        "sectionTitle": "Connect Microsoft 365",
-        "platformUnavailableDescription": "Platform Microsoft credentials are unavailable in this deployment. Use your own Microsoft app to continue.",
-        "tenantSectionDescription": "Authorize this mailbox with the Microsoft app selected in Providers settings.",
-        "platformSectionDescription": "Alga PSA supplies the Microsoft application. Enter the mailbox details, then sign in with Microsoft.",
-        "platformManagedTitle": "Platform-managed Microsoft app",
-        "platformManagedDescription": "No Entra app registration, client ID, or client secret is required from you.",
-        "byoToggle": "Use your own Microsoft app (advanced)",
-        "byoToggleDescription": "For organizations that deliberately require their own Entra app registration.",
-        "byoWarning": "This is normally unnecessary on hosted Alga PSA. Use it only when your organization requires a tenant-owned Entra application.",
-        "tenantNotConfigured": "Your Microsoft app is not ready yet.",
-        "platformNotConfigured": "Platform Microsoft credentials are unavailable."
+        "sectionTitle": "Połącz z Microsoft 365",
+        "platformUnavailableDescription": "Poświadczenia Microsoft platformy są niedostępne w tym wdrożeniu. Aby kontynuować, użyj własnej aplikacji Microsoft.",
+        "tenantSectionDescription": "Autoryzuj tę skrzynkę pocztową za pomocą aplikacji Microsoft wybranej w ustawieniach dostawców.",
+        "platformSectionDescription": "Alga PSA dostarcza aplikację Microsoft. Wprowadź dane skrzynki pocztowej, a następnie zaloguj się przez Microsoft.",
+        "platformManagedTitle": "Aplikacja Microsoft zarządzana przez platformę",
+        "platformManagedDescription": "Nie musisz rejestrować aplikacji Entra ani podawać identyfikatora klienta czy klucza tajnego klienta.",
+        "byoToggle": "Użyj własnej aplikacji Microsoft (zaawansowane)",
+        "byoToggleDescription": "Dla organizacji, które świadomie wymagają rejestracji własnej aplikacji Entra.",
+        "byoWarning": "Zwykle nie jest to potrzebne w hostowanej Alga PSA. Użyj tej opcji tylko wtedy, gdy organizacja wymaga należącej do niej aplikacji Entra.",
+        "tenantNotConfigured": "Aplikacja Microsoft nie jest jeszcze gotowa.",
+        "platformNotConfigured": "Poświadczenia Microsoft platformy są niedostępne."
       },
       "validation": {
         "providerNameRequired": "Nazwa konfiguracji jest wymagana",
@@ -315,7 +315,7 @@
       "oauth": {
         "sectionTitle": "Konfiguracja Microsoft OAuth",
         "sectionDescription": "Poświadczenia aplikacji Microsoft są konfigurowane w ustawieniach dostawców i ponownie wykorzystywane w tym miejscu.",
-        "setupLabel": "Microsoft Entra",
+        "setupLabel": "Konfiguracja Microsoft Entra",
         "notConfigured": "Ustawienia dostawcy Microsoft nie są skonfigurowane.",
         "setupHelp": "Najpierw skonfiguruj Dostawców w Ustawieniach → Integracje → Dostawcy, a następnie wróć tutaj, aby autoryzować tę skrzynkę pocztową.",
         "profileReady": "Profil aplikacji Microsoft jest gotowy.",
@@ -345,7 +345,7 @@
         "closedEarly": "Okno autoryzacji zostało zamknięte przed zakończeniem.",
         "authorizationFailed": "Autoryzacja nie powiodła się",
         "popupFailed": "Wyskakujące okienko OAuth nie powiodło się",
-        "configureFailed": "Failed to configure Gmail provider"
+        "configureFailed": "Nie udało się skonfigurować dostawcy Gmail"
       },
       "messages": {
         "setupIncomplete": "Dostawca zapisany, ale konfiguracja niekompletna: {{error}}",
@@ -475,8 +475,8 @@
       "passwordLabel": "Hasło / hasło do aplikacji",
       "authorizeUrl": "Autoryzuj adres URL",
       "tokenUrl": "Adres URL tokena",
-      "oauthClientId": "OAuth Client ID",
-      "oauthClientSecret": "OAuth Client Secret",
+      "oauthClientId": "Identyfikator klienta OAuth",
+      "oauthClientSecret": "Klucz tajny klienta OAuth",
       "oauthScopes": "Zakresy OAuth",
       "oauthScopesPlaceholder": "zakresy rozdzielone spacjami",
       "folderFilters": "Filtry folderów",
@@ -775,7 +775,7 @@
       "providerOptions": {
         "resend": "Zarządzany Nine Minds",
         "smtp": "SMTP",
-        "microsoft": "Microsoft 365 (Microsoft Graph)"
+        "microsoft": "Microsoft 365 (interfejs Microsoft Graph)"
       },
       "resendDescription": "Wiadomości są wysyłane przez zarządzaną infrastrukturę Nine Minds. Dodaj i zweryfikuj niestandardową domenę poniżej.",
       "smtpDescription": "Wiadomości są wysyłane przez Twój własny serwer SMTP.",
@@ -958,7 +958,7 @@
       "mismatchHelp": "Rekord DNS istnieje, ale wartość nie pasuje do tego, czego oczekuje Resend.",
       "matchedHelp": "Wykryta wartość pasuje do oczekiwanej.",
       "unknownHelp": "Nie sprawdziliśmy jeszcze DNS. Sprawdź DNS ponownie, aby uruchomić weryfikację.",
-      "hostLabel": "Host",
+      "hostLabel": "Nazwa hosta",
       "fqdnLabel": "Pełna nazwa",
       "valueLabel": "Wartość",
       "copyHostAriaLabel": "Kopiuj host",
@@ -1080,7 +1080,7 @@
       "skip": "Pomiń e-mail (bez zgłoszenia)"
     },
     "tester": {
-      "alias": "alias",
+      "alias": "alias adresu",
       "aliasAdd": "Dodaj alias",
       "aliasAdded": "Dodano alias. Uruchom test ponownie, aby zobaczyć dopasowanie.",
       "aliasAdding": "Dodawanie…",

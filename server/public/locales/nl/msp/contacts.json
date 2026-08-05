@@ -451,7 +451,7 @@
         "noBaseUrl": "Basis-URL is niet geconfigureerd voor portaluitnodigingen.",
         "invitationNotFound": "Uitnodiging niet gevonden of al gebruikt."
       },
-      "userNotFound": "Client user not found"
+      "userNotFound": "Klantgebruiker niet gevonden"
     }
   },
   "quickAddContact": {
@@ -702,7 +702,7 @@
     "toast": {
       "saved": "Contact bijgewerkt",
       "saveFailed": "Contact kon niet worden bijgewerkt",
-      "saveFailedDescription": "The contact could not be updated. Please try again."
+      "saveFailedDescription": "Het contact kon niet worden bijgewerkt. Probeer het opnieuw."
     }
   }
 }

@@ -1,6 +1,6 @@
 {
   "sidebar": {
-    "title": "Chat",
+    "title": "Messagerie",
     "subtitleHistory": "Sessions IA récentes de l'utilisateur actuel",
     "subtitleDefault": "Discutez avec l'IA et gérez les sessions enregistrées",
     "showHistory": "Afficher l'historique des chats",
@@ -77,7 +77,7 @@
     "viewFullValue": "Voir la valeur complète",
     "parameters": "Paramètres",
     "plan": "Plan",
-    "playbooks": "Playbooks",
+    "playbooks": "Guides opérationnels",
     "validation": {
       "dialogTitle": "Message requis",
       "ok": "OK",

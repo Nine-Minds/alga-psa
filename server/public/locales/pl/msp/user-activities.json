@@ -500,7 +500,7 @@
     "summary": {
       "boards_one": "{{count}} tablica",
       "boards_other": "{{count}} tablice",
-      "statuses_one": "{{count}} status",
+      "statuses_one": "Liczba statusów: {{count}}",
       "statuses_other": "{{count}} statusy",
       "projects_one": "{{count}} projekt",
       "projects_other": "{{count}} projekty",

@@ -239,7 +239,7 @@
       "attemptLine": "Próba {{count}}",
       "durationLine": "Czas trwania: {{duration}}",
       "sizeLine": "Rozmiar wejścia: {{inputSize}}{{inputSuffix}} · Rozmiar wyjścia: {{outputSize}}{{outputSuffix}}",
-      "truncatedSuffix": " (truncated)",
+      "truncatedSuffix": " (skrócono)",
       "inputLabel": "Wejście",
       "outputLabel": "Wynik"
     },
@@ -430,7 +430,7 @@
       "eventMissingSchemaRef": "Wybrane zdarzenie nie ma referencji schematu ładunku; nie można uruchomić z mapowaniem wyzwalacza.",
       "loadLatestRunFailed": "Nie udało się wczytać najnowszego uruchomienia",
       "mapEntryExists": "Ten klucz już istnieje.",
-      "noPriorPayload": "No prior run payload found.",
+      "noPriorPayload": "Nie znaleziono danych wejściowych wcześniejszego uruchomienia.",
       "payloadCopied": "Ładunek skopiowany do schowka.",
       "presetSaved": "Szablon zapisany.",
       "providePresetName": "Proszę podać nazwę szablonu.",
@@ -1218,7 +1218,7 @@
     "required": "Wymagane",
     "requiredTitle": "Wymagane",
     "requiredMissingTitle": "Brakuje wartości w polu wymaganym",
-    "format": "Format: {{value}}",
+    "format": "Format danych: {{value}}",
     "eachItem": "Każdy element: {{value}}",
     "length": "Długość: {{min}} - {{max}}",
     "range": "Zakres: {{min}} - {{max}}",
@@ -1227,7 +1227,7 @@
     "examplePrefix": "Przykład:"
   },
   "actionInputSection": {
-    "heading": "Action inputs"
+    "heading": "Dane wejściowe działania"
   },
   "actionInputFixedPicker": {
     "loadingOptions": "Wczytywanie opcji...",
@@ -1322,7 +1322,7 @@
     "pagination": {
       "previous": "Poprzednia",
       "next": "Następna",
-      "pageLabel": "Page {{current}} of {{total}}"
+      "pageLabel": "Strona {{current}} z {{total}}"
     },
     "errors": {
       "loadFailed": "Nie udało się wczytać zadań. Proszę spróbować ponownie.",
@@ -1634,7 +1634,7 @@
       "minLength": "Min. długość: {{value}}",
       "maxLength": "Maks. długość: {{value}}",
       "pattern": "Wzorzec: {{value}}",
-      "format": "Format: {{value}}",
+      "format": "Format danych: {{value}}",
       "examples": "Przykłady: {{list}}",
       "default": "Domyślnie: {{value}}"
     }
@@ -1696,7 +1696,7 @@
       "allMapped": "Wszystkie wymagane pola są zmapowane"
     },
     "insert": {
-      "title": "Drop a step here to insert"
+      "title": "Upuść tutaj krok, aby go wstawić"
     },
     "actions": {
       "deleteStep": "Usuń krok"
@@ -2014,7 +2014,7 @@
         "holidaysNote": "Święta są zawsze traktowane jako dni nierobocze."
       },
       "businessHours": {
-        "defaultSuffix": " (Default)",
+        "defaultSuffix": " (Domyślne)",
         "noneConfigured": "Nie skonfigurowano jeszcze żadnych harmonogramów godzin roboczych.",
         "usingTenantDefault": "Używa domyślnego harmonogramu godzin roboczych dzierżawcy.",
         "noTenantDefault": "Nie skonfigurowano jeszcze domyślnego harmonogramu godzin roboczych dzierżawcy."
@@ -2077,7 +2077,7 @@
     "recurrence": {
       "andWord": "i",
       "frequency": {
-        "daily": "Daily",
+        "daily": "Codziennie",
         "weekly": "Co tydzień",
         "monthly": "Co miesiąc"
       },
@@ -2351,7 +2351,7 @@
         "statusOptions": {
           "all": "Wszystkie statusy",
           "active": "Aktywny",
-          "beta": "Beta",
+          "beta": "Wersja beta",
           "draft": "Wersja robocza",
           "deprecated": "Wycofany"
         },
@@ -2359,7 +2359,7 @@
         "sourceOptions": {
           "all": "Wszystkie źródła",
           "system": "System",
-          "tenant": "Tenant"
+          "tenant": "Organizacja"
         },
         "sort": "Sortowanie",
         "sortOptions": {
@@ -2399,7 +2399,7 @@
       },
       "badges": {
         "system": "System",
-        "tenant": "Tenant",
+        "tenant": "Organizacja",
         "noSchema": "Brak schematu",
         "unknownSchema": "Nieznany schemat",
         "schema": "Schemat"

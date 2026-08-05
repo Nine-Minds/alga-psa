@@ -169,7 +169,7 @@
       "entries": "Entrees",
       "ticket": "Ticket",
       "entered": "Saisi",
-      "age": "Age",
+      "age": "Âge",
       "workedHours": "Heures travaillées",
       "capacityHours": "Heures de capacité",
       "utilization": "Utilisation",
@@ -391,7 +391,7 @@
       "table": {
         "contract": "Contrat",
         "clients": "Clients",
-        "plans": "Plans",
+        "plans": "Forfaits",
         "revenue": "Chiffre d'affaires"
       }
     }

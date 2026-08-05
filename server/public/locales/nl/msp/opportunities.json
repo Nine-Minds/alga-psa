@@ -235,7 +235,7 @@
       "needsYou_other": "{{count}} dingen hebben u vandaag nodig.",
       "nothingDue": "Er hoeft vandaag niets te gebeuren.",
       "openDeal": "Open overeenkomst",
-      "openDealNamed": "Open {{title}}",
+      "openDealNamed": "{{title}} openen",
       "reviewDraft": "Bekijk het concept",
       "snooze": "Snoozen",
       "snoozeNamed": "Snoozen {{title}}",

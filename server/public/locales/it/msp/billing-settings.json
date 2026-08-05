@@ -1026,7 +1026,7 @@
       "dateRange": "Intervallo di date",
       "startDate": "Data di inizio",
       "endDate": "Data di fine",
-      "sequence": "Seq"
+      "sequence": "Sequenza"
     },
     "billingMethod": {
       "fixed": "Fisso",

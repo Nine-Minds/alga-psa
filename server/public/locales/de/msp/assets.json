@@ -527,7 +527,7 @@
       "router": "Router",
       "firewall": "Firewall",
       "access_point": "Zugangspunkt",
-      "load_balancer": "Load Balancer"
+      "load_balancer": "Loadbalancer"
     },
     "relationshipTypes": {
       "affected": "Betroffen",
@@ -626,7 +626,7 @@
       "router": "Router",
       "firewall": "Firewall",
       "access_point": "Zugangspunkt",
-      "load_balancer": "Load Balancer"
+      "load_balancer": "Loadbalancer"
     },
     "storageTypes": {
       "ssd": "SSD",
@@ -954,7 +954,7 @@
       "router": "Router",
       "firewall": "Firewall",
       "accessPoint": "Zugangspunkt",
-      "loadBalancer": "Load Balancer"
+      "loadBalancer": "Loadbalancer"
     },
     "mobileOsTypes": {
       "ios": "iOS",
@@ -1007,7 +1007,7 @@
     "errors": {
       "loadTitle": "Notizen konnten nicht geladen werden",
       "unknown": "Unbekannter Fehler",
-      "loadDescription": "Could not load notes. Please try again."
+      "loadDescription": "Notizen konnten nicht geladen werden. Versuchen Sie es erneut."
     },
     "lastUpdated": "Letzte Aktualisierung: {{value}}"
   },
@@ -1064,7 +1064,7 @@
     "description": "Sicherheits- und Patchstatus-Panel für Schwachstellen- und Update-Statusanzeigen",
     "fields": {
       "osVersion": "Betriebssystem-Version",
-      "antivirus": "Antivirus",
+      "antivirus": "Virenschutz",
       "patchStatus": "Patch-Status",
       "firewall": "Firewall"
     },
@@ -1420,7 +1420,7 @@
     "moreEvents": "{{shown}} von {{total}} Ereignissen werden angezeigt.",
     "lanes": {
       "all": "Alle",
-      "service": "Service",
+      "service": "Dienst",
       "changes": "Änderungen",
       "maintenance": "Wartung",
       "system": "System"

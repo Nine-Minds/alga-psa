@@ -87,12 +87,12 @@
         "unchecked": "Deselezionato"
       },
       "types": {
-        "short-text": "short-text",
-        "long-text": "long-text",
-        "select": "select",
-        "checkbox": "checkbox",
-        "date": "date",
-        "file-upload": "file-upload"
+        "short-text": "testo breve",
+        "long-text": "testo lungo",
+        "select": "selezione",
+        "checkbox": "casella di controllo",
+        "date": "data",
+        "file-upload": "caricamento file"
       }
     },
     "execution": {
@@ -127,7 +127,7 @@
       "workflow": {
         "title": "Configurazione del workflow",
         "workflowId": "ID workflow",
-        "workflowIdPlaceholder": "workflow-id",
+        "workflowIdPlaceholder": "ID workflow",
         "inputMapping": "Mappatura degli input del workflow (oggetto JSON)",
         "inputMappingExample": "Esempio: {\"requestedBy\":\"payload.request_title\",\"ticketReference\":\"ticketId\"}",
         "save": "Salva impostazioni del workflow"
@@ -205,10 +205,10 @@
   "icons": {
     "file-text": "Richiesta generica",
     "user-plus": "Nuovo utente",
-    "user-minus": "Offboarding",
+    "user-minus": "Disattivazione utente",
     "shield-check": "Sicurezza",
     "key-round": "Accesso",
-    "laptop": "Laptop",
+    "laptop": "Portatile",
     "monitor": "Postazione di lavoro",
     "printer": "Stampante",
     "hard-drive": "Archiviazione",

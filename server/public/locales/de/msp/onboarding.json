@@ -35,7 +35,7 @@
       "addClient": "Kunden anlegen",
       "clientContact": "Kundenkontakt",
       "billing": "Abrechnung",
-      "ticketing": "Ticketing",
+      "ticketing": "Ticketverwaltung",
       "algadeskWorkspace": "Arbeitsbereich"
     },
     "errors": {
@@ -204,7 +204,7 @@
     "fields": {
       "serviceName": {
         "label": "Dienstname *",
-        "placeholder": "Managed IT Services"
+        "placeholder": "Verwaltete IT-Dienste"
       },
       "serviceDescription": {
         "label": "Dienstbeschreibung",

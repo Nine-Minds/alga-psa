@@ -247,7 +247,7 @@
         },
         "systemDefault": {
           "source": "Impostazione predefinita del sistema (inglese)",
-          "appliesTo": "Fallback",
+          "appliesTo": "Ripiego",
           "whereSet": "Definito dal sistema"
         }
       }
@@ -1172,7 +1172,7 @@
     "teamsTab": {
       "signedInAs": "Connesso come {{name}}",
       "openInFullPsa": "Apri in PSA completo",
-      "iframeTitle": "{{destination}} in Alga PSA",
+      "iframeTitle": "Pagina {{destination}} in Alga PSA",
       "fullPsaHint": "Usa «Apri in PSA completo» per più contesto di quanto possa mostrare una scheda Teams.",
       "fallback": {
         "label": "Record richiesto non disponibile:",

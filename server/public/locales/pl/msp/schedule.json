@@ -322,7 +322,7 @@
         "description": "Możesz skonfigurować ustawienia dostępności dla członków swojego zespołu(ów). Poniższa tabela „Skonfigurowani użytkownicy” przedstawia wszystkich użytkowników z ustawieniami dostępności w całym systemie."
       },
       "roleAdmin": {
-        "label": "Administrator:",
+        "label": "Administrator systemu:",
         "description": "Możesz skonfigurować ustawienia dostępności dla dowolnego użytkownika w systemie. Poniższa tabela „Skonfigurowani użytkownicy” przedstawia wszystkich użytkowników z ustawieniami dostępności."
       },
       "userSelect": {
@@ -660,7 +660,7 @@
       "all": "Wszystkie wydarzenia"
     },
     "errors": {
-      "loadWorkItem": "Failed to load work item."
+      "loadWorkItem": "Nie udało się wczytać elementu pracy."
     }
   },
   "actions": {
