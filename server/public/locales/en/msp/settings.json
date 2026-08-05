@@ -809,6 +809,7 @@
         "header": "Priority Management:",
         "description": "Create custom priorities for your organization or import from standard templates.",
         "itilNote": "ITIL standard priorities cannot be edited or deleted.",
+        "itilRemovableNote": "ITIL standard priorities cannot be edited, but can be deleted now that no board uses ITIL priorities.",
         "nonItilNote": "All priorities can be edited or deleted to fit your workflow."
       },
       "table": {

@@ -809,6 +809,7 @@
         "header": "Gestão de prioridades:",
         "description": "Crie prioridades personalizadas para sua organização ou importe de modelos padrão.",
         "itilNote": "As prioridades padrão ITIL não podem ser editadas ou excluídas.",
+        "itilRemovableNote": "As prioridades padrão ITIL não podem ser editadas, mas podem ser excluídas agora que nenhum quadro usa prioridades ITIL.",
         "nonItilNote": "Todas as prioridades podem ser editadas ou excluídas para se adequarem ao seu fluxo de trabalho."
       },
       "table": {

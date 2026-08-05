@@ -813,6 +813,7 @@
         "header": "Zarządzanie priorytetami:",
         "description": "Utwórz niestandardowe priorytety dla swojej organizacji lub zaimportuj ze standardowych szablonów.",
         "itilNote": "Standardowych priorytetów ITIL nie można edytować ani usuwać.",
+        "itilRemovableNote": "Standardowych priorytetów ITIL nie można edytować, ale można je usunąć, gdy żadna tablica nie używa priorytetów ITIL.",
         "nonItilNote": "Wszystkie priorytety można edytować lub usuwać, aby dopasować je do przepływu pracy."
       },
       "table": {

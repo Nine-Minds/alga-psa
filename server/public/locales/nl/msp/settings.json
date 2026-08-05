@@ -809,6 +809,7 @@
         "header": "Prioriteitsbeheer:",
         "description": "Maak aangepaste prioriteiten voor uw organisatie of importeer vanuit standaardsjablonen.",
         "itilNote": "ITIL-standaardprioriteiten kunnen niet worden bewerkt of verwijderd.",
+        "itilRemovableNote": "ITIL-standaardprioriteiten kunnen niet worden bewerkt, maar ze kunnen worden verwijderd nu geen enkel bord ITIL-prioriteiten gebruikt.",
         "nonItilNote": "Alle prioriteiten kunnen worden bewerkt of verwijderd om aan uw werkstroom te voldoen."
       },
       "table": {

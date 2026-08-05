@@ -809,6 +809,7 @@
         "header": "Prioritätsverwaltung:",
         "description": "Erstellen Sie benutzerdefinierte Prioritäten für Ihre Organisation oder importieren Sie aus Standardvorlagen.",
         "itilNote": "ITIL-Standardprioritäten können nicht bearbeitet oder gelöscht werden.",
+        "itilRemovableNote": "ITIL-Standardprioritäten können nicht bearbeitet werden, aber sie können gelöscht werden, sobald kein Board mehr ITIL-Prioritäten verwendet.",
         "nonItilNote": "Alle Prioritäten können bearbeitet oder gelöscht werden, um Ihrem Workflow zu entsprechen."
       },
       "table": {

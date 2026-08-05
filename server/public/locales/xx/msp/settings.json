@@ -809,6 +809,7 @@
         "header": "11111",
         "description": "11111",
         "itilNote": "11111",
+        "itilRemovableNote": "11111",
         "nonItilNote": "11111"
       },
       "table": {

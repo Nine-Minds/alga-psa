@@ -627,7 +627,54 @@ export const deleteBoard = withAuth(async (
       }
     }
 
-    if (!force && !isLastItilBoard && allCategoryIds.length === 0) {
+    // 8b. Retire unused ITIL data while the board row is still present (the
+    // cleanup counts ITIL boards, so the one being deleted is excluded). Doing
+    // this before the DELETE keeps the FK teardown and the delete in one order
+    // that both CE and prod accept.
+    let itilCleanupMessage = '';
+    if (isLastItilBoard && cleanupItil) {
+      const cleanupResult = await ItilStandardsService.cleanupUnusedItilStandards(trx, tenant, [boardId]);
+
+      // Build informative message about what was cleaned up
+      const cleanedParts: string[] = [];
+      const skippedParts: string[] = [];
+
+      if (cleanupResult.categoriesDeleted > 0) {
+        cleanedParts.push(`${cleanupResult.categoriesDeleted} ITIL categor${cleanupResult.categoriesDeleted === 1 ? 'y' : 'ies'}`);
+      }
+      if (cleanupResult.prioritiesDeleted > 0) {
+        cleanedParts.push(`${cleanupResult.prioritiesDeleted} ITIL priorit${cleanupResult.prioritiesDeleted === 1 ? 'y' : 'ies'}`);
+      }
+      if (cleanupResult.categoriesSkippedReason) {
+        skippedParts.push(`categories (${cleanupResult.categoriesSkippedReason})`);
+      }
+      if (cleanupResult.prioritiesSkippedReason) {
+        skippedParts.push(`priorities (${cleanupResult.prioritiesSkippedReason})`);
+      }
+
+      if (cleanedParts.length > 0) {
+        itilCleanupMessage = ` Cleaned up: ${cleanedParts.join(', ')}.`;
+      }
+      if (skippedParts.length > 0) {
+        itilCleanupMessage += ` Could not clean up: ${skippedParts.join(', ')}.`;
+      }
+    }
+
+    // 8c. ITIL categories are shared across ITIL boards, so any that survived
+    // cleanup must stop pointing at the board we are about to delete.
+    const fallbackItilBoard = await tenantScopedTable('boards')
+      .whereNot('board_id', boardId)
+      .where('category_type', 'itil')
+      .orderBy('board_name', 'asc')
+      .first('board_id');
+
+    const repointedItilCategories = await tenantScopedTable('categories')
+      .where({ board_id: boardId, is_from_itil_standard: true })
+      .update({ board_id: fallbackItilBoard?.board_id ?? null });
+
+    // The lightweight path below validates in its own transaction and therefore
+    // cannot see the re-point above, so boards that needed one take the main path.
+    if (!force && !isLastItilBoard && allCategoryIds.length === 0 && repointedItilCategories === 0) {
       const result = await deleteEntityWithValidation('board', boardId, db, tenant, async (boardTrx, tenantId) => {
         // Clean up board statuses (can't be deleted manually due to
         // "at least one default status" enforcement, safe because
@@ -694,36 +741,6 @@ export const deleteBoard = withAuth(async (
         timestamp: new Date().toISOString(),
       },
     });
-
-    // 12. If last ITIL board and cleanup confirmed, remove unused ITIL data
-    let itilCleanupMessage = '';
-    if (isLastItilBoard && cleanupItil) {
-      const cleanupResult = await ItilStandardsService.cleanupUnusedItilStandards(trx, tenant);
-
-      // Build informative message about what was cleaned up
-      const cleanedParts: string[] = [];
-      const skippedParts: string[] = [];
-
-      if (cleanupResult.categoriesDeleted > 0) {
-        cleanedParts.push(`${cleanupResult.categoriesDeleted} ITIL categor${cleanupResult.categoriesDeleted === 1 ? 'y' : 'ies'}`);
-      }
-      if (cleanupResult.prioritiesDeleted > 0) {
-        cleanedParts.push(`${cleanupResult.prioritiesDeleted} ITIL priorit${cleanupResult.prioritiesDeleted === 1 ? 'y' : 'ies'}`);
-      }
-      if (cleanupResult.categoriesSkippedReason) {
-        skippedParts.push(`categories (${cleanupResult.categoriesSkippedReason})`);
-      }
-      if (cleanupResult.prioritiesSkippedReason) {
-        skippedParts.push(`priorities (${cleanupResult.prioritiesSkippedReason})`);
-      }
-
-      if (cleanedParts.length > 0) {
-        itilCleanupMessage = ` Cleaned up: ${cleanedParts.join(', ')}.`;
-      }
-      if (skippedParts.length > 0) {
-        itilCleanupMessage += ` Could not clean up: ${skippedParts.join(', ')}.`;
-      }
-    }
 
     return {
       success: true,

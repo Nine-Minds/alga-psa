@@ -809,6 +809,7 @@
         "header": "Gestione delle priorità:",
         "description": "Crea priorità personalizzate per la tua organizzazione o importa da modelli standard.",
         "itilNote": "Le priorità standard ITIL non possono essere modificate o eliminate.",
+        "itilRemovableNote": "Le priorità standard ITIL non possono essere modificate, ma possono essere eliminate ora che nessuna bacheca usa le priorità ITIL.",
         "nonItilNote": "Tutte le priorità possono essere modificate o eliminate per adattarsi al tuo flusso di lavoro."
       },
       "table": {
