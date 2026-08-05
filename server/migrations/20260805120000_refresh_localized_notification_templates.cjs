@@ -1,61 +1,52 @@
 /**
  * Refresh localized notification templates from source-of-truth files.
  *
- * The 2026-08 localization sweep fixed the non-English variants of these
+ * The 2026-08 localization sweep touched the non-English variants of these
  * templates: raw-HTML placeholders that had drifted to the escaping form
  * ({{ticket.description}} -> {{{ticket.description}}}), the missing
  * {{commentPreview}} in the internal ticket-comment message, register and
  * terminology corrections (nl je->u and e-mail spelling, it board->bacheca and
- * milestone->traguardo, fr assignation->attribution, es usted), and Handlebars
- * block structure realigned with the English variants. Re-upserting delivers
- * the corrected content to existing installations.
+ * milestone->traguardo, fr assignation->attribution, es usted), Handlebars
+ * block structure realigned with the English variants, and the product name
+ * respelled AlgaPSA (one word) — which reaches every template through the
+ * shared email layout's "Powered by" footer.
+ *
+ * Sources are DISCOVERED by walking the template directories rather than
+ * listed by hand: the brand fix touched all of them, and an explicit list
+ * silently omitted 27 of 49 email templates when it was maintained manually.
+ * Re-upserting delivers the corrected content to existing installations.
  */
+
+const fs = require('fs');
+const path = require('path');
 
 const { upsertEmailTemplate } = require('./utils/templates/_shared/upsertEmailTemplates.cjs');
 const { upsertInternalTemplates } = require('./utils/templates/_shared/upsertInternalTemplates.cjs');
 
-const EMAIL_TEMPLATE_SOURCES = [
-  './utils/templates/email/appointments/appointmentRequestApproved.cjs',
-  './utils/templates/email/auth/emailVerification.cjs',
-  './utils/templates/email/auth/portalInvitation.cjs',
-  './utils/templates/email/auth/tenantRecovery.cjs',
-  './utils/templates/email/invoices/invoiceGenerated.cjs',
-  './utils/templates/email/invoices/paymentOverdue.cjs',
-  './utils/templates/email/invoices/paymentReceived.cjs',
-  './utils/templates/email/opportunities/opportunityWeeklyDigest.cjs',
-  './utils/templates/email/projects/milestoneCompleted.cjs',
-  './utils/templates/email/projects/projectMilestoneReady.cjs',
-  './utils/templates/email/projects/projectTaskAssignedAdditional.cjs',
-  './utils/templates/email/projects/projectTaskAssignedPrimary.cjs',
-  './utils/templates/email/rmm/rmmAlertTriggered.cjs',
-  './utils/templates/email/surveys/surveyTicketClosed.cjs',
-  './utils/templates/email/tickets/ticketAgentAssignedClient.cjs',
-  './utils/templates/email/tickets/ticketAssigned.cjs',
-  './utils/templates/email/tickets/ticketClosed.cjs',
-  './utils/templates/email/tickets/ticketCommentAdded.cjs',
-  './utils/templates/email/tickets/ticketCreated.cjs',
-  './utils/templates/email/tickets/ticketCreatedClient.cjs',
-  './utils/templates/email/tickets/ticketTeamAssigned.cjs',
-  './utils/templates/email/tickets/ticketUpdated.cjs',
-];
+const EMAIL_ROOT = path.join(__dirname, 'utils', 'templates', 'email');
+const INTERNAL_ROOT = path.join(__dirname, 'utils', 'templates', 'internal');
 
-const INTERNAL_TEMPLATE_SOURCES = [
-  './utils/templates/internal/projects.cjs',
-  './utils/templates/internal/system.cjs',
-  './utils/templates/internal/tickets.cjs',
-];
+function walkCjs(dir) {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) return walkCjs(full);
+    return entry.isFile() && entry.name.endsWith('.cjs') ? [full] : [];
+  }).sort();
+}
 
 exports.up = async function up(knex) {
-  for (const source of EMAIL_TEMPLATE_SOURCES) {
-    const { getTemplate } = require(source);
+  for (const file of walkCjs(EMAIL_ROOT)) {
+    const mod = require(file);
+    if (typeof mod.getTemplate !== 'function') continue;
     // skipMissingSubtype: appliance tenants may lack optional feature subtypes;
     // a content refresh must never abort their migration chain.
-    await upsertEmailTemplate(knex, getTemplate(), { skipMissingSubtype: true });
+    await upsertEmailTemplate(knex, mod.getTemplate(), { skipMissingSubtype: true });
   }
 
-  for (const source of INTERNAL_TEMPLATE_SOURCES) {
-    const { TEMPLATES } = require(source);
-    await upsertInternalTemplates(knex, TEMPLATES, { skipMissingSubtype: true });
+  for (const file of walkCjs(INTERNAL_ROOT)) {
+    const mod = require(file);
+    if (!Array.isArray(mod.TEMPLATES)) continue;   // e.g. categoriesAndSubtypes.cjs
+    await upsertInternalTemplates(knex, mod.TEMPLATES, { skipMissingSubtype: true });
   }
 };
 
