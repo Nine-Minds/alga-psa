@@ -19,6 +19,7 @@ import {
   type OpportunityStepAssignee,
 } from '../../actions/opportunityStepActions';
 import { listOpportunityTimeline, type IOpportunityTimelineEntry } from '../../actions/opportunityTimeline';
+import { successorPlannedSteps } from '../../lib/successorSteps';
 import { CompleteActionDialog } from '../dialogs/CompleteActionDialog';
 import { StepEditorDialog, type StepEditorValue } from '../dialogs/StepEditorDialog';
 import { OpportunityStepTimeline, type PlannableStage, type StepEditFocus } from './OpportunityStepTimeline';
@@ -60,18 +61,21 @@ export function OpportunityPlanPanel({
   const [editorFocus, setEditorFocus] = useState<StepEditFocus>('title');
   const [completing, setCompleting] = useState<IOpportunityStep | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (isActive: () => boolean = () => true) => {
     const [stepRows, timelineRows] = await Promise.all([
       listOpportunitySteps(opportunityId),
       listOpportunityTimeline(opportunityId).catch(() => [] as IOpportunityTimelineEntry[]),
     ]);
+    // A fetch that lands after unmount (or after the panel moved to another
+    // opportunity) must not write into the newer panel's state.
+    if (!isActive()) return;
     setSteps(stepRows);
     setEntries(timelineRows);
   }, [opportunityId]);
 
   useEffect(() => {
     let active = true;
-    load().catch(() => {
+    load(() => active).catch(() => {
       if (active) setSteps([]);
     });
     return () => {
@@ -112,6 +116,15 @@ export function OpportunityPlanPanel({
     }
   };
 
+  /**
+   * Fire-and-forget variant for callers with no dialog to keep open: the
+   * failure has already been toasted by `run`, so nothing is left to reject
+   * into the void as an unhandled rejection.
+   */
+  const runQuietly = (fn: () => Promise<unknown>, message: string) => {
+    run(fn, message).catch(() => {});
+  };
+
   const saveStep = async (value: StepEditorValue) => {
     const payload = {
       title: value.title,
@@ -141,8 +154,6 @@ export function OpportunityPlanPanel({
 
   if (steps === null) return <Skeleton className="h-32 w-full" />;
 
-  const plannedSteps = steps.filter((step) => step.status === 'planned');
-
   return (
     <>
       <OpportunityStepTimeline
@@ -155,7 +166,7 @@ export function OpportunityPlanPanel({
         onStageSelect={onStageSelect}
         onAddStep={(forStage) => openEditor(null, 'title', forStage)}
         onApplyTemplate={(stages) =>
-          void run(
+          runQuietly(
             () => applyOpportunityStepTemplate(opportunityId, stages),
             stages.length > 1
               ? t('opportunities.toast.stagesPlanned', 'Steps added for {{count}} stages', { count: stages.length })
@@ -165,7 +176,7 @@ export function OpportunityPlanPanel({
         onCompleteStep={(step) => setCompleting(step)}
         onEditStep={(step, focus) => openEditor(step, focus, (step.stage as PlannableStage | null) ?? null)}
         onDeleteStep={(step) =>
-          void run(
+          runQuietly(
             () => deleteOpportunityStep(step.step_id),
             t('opportunities.toast.stepDeleted', 'Step removed'),
           )
@@ -185,7 +196,8 @@ export function OpportunityPlanPanel({
         isOpen={completing != null}
         onClose={() => setCompleting(null)}
         stage={stage}
-        plannedSteps={plannedSteps}
+        // A planned step being completed must not be offered as its own successor.
+        plannedSteps={successorPlannedSteps(steps, completing?.step_id)}
         onSubmitPlan={(input) =>
           run(
             () => completeOpportunityStep(opportunityId, completing?.step_id ?? null, input),

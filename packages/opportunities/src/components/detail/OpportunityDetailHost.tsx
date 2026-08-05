@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -26,6 +26,7 @@ import { getProjectStatuses, getTemplates } from '@alga-psa/projects/actions';
 import {
   declareOpportunityStage,
   deleteOpportunity,
+  getOpportunity,
   linkQuoteToOpportunity,
   listLinkableQuotesForOpportunity,
   loseOpportunity,
@@ -64,7 +65,7 @@ export interface OpportunityDraftingCallbacks {
 
 /** Client host for the detail screen: wires the view to server actions. */
 export function OpportunityDetailHost({
-  detail,
+  detail: initialDetail,
   drafting,
   autoOpenDraft = false,
   commitments,
@@ -84,6 +85,10 @@ export function OpportunityDetailHost({
 }) {
   const { t } = useTranslation('msp/opportunities');
   const router = useRouter();
+  // The host owns the detail it renders. On the full page the server component
+  // re-fetches on router.refresh() and the prop effect below re-syncs; in the
+  // drawer no server component re-renders, so the host re-fetches for itself.
+  const [detail, setDetail] = useState<IOpportunityDetail>(initialDetail);
   const [loseOpen, setLoseOpen] = useState(false);
   const [winOpen, setWinOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -106,7 +111,24 @@ export function OpportunityDetailHost({
   const [draftOpen, setDraftOpen] = useState(Boolean(drafting && autoOpenDraft));
   const [assignees, setAssignees] = useState<OpportunityStepAssignee[]>([]);
 
-  const refresh = () => router.refresh();
+  const refresh = useCallback(() => {
+    if (isInDrawer) {
+      // The drawer rendered a client-only element: nothing above this host can
+      // re-fetch, so a mutation must re-run getOpportunity here or the spine,
+      // values, and status go stale.
+      getOpportunity(initialDetail.opportunity_id)
+        .then(setDetail)
+        .catch(() => router.refresh());
+      return;
+    }
+    router.refresh();
+  }, [isInDrawer, initialDetail.opportunity_id, router]);
+
+  // A server re-render (full page after router.refresh()) supersedes whatever
+  // this host fetched for itself.
+  useEffect(() => {
+    setDetail(initialDetail);
+  }, [initialDetail]);
 
   // Accepted linked quotes can be converted to a draft agreement as part of
   // marking the deal won (winOpportunity → prepareOpportunityWinConversions).
@@ -163,10 +185,19 @@ export function OpportunityDetailHost({
     }
   };
 
+  /**
+   * Fire-and-forget variant for controls with no dialog to keep open: `run`
+   * has already toasted the failure, so swallow the rethrow rather than leave
+   * an unhandled rejection behind.
+   */
+  const runQuietly = (fn: () => Promise<unknown>, successMessage: string) => {
+    run(fn, successMessage).catch(() => {});
+  };
+
   /** Setting the stage from the plan's spine — the same declaration the board makes. */
   const declareStage = (stage: Exclude<OpportunityStage, 'won' | 'lost'>) => {
     const label = t(`opportunities.stage.${stage}`, stage.charAt(0).toUpperCase() + stage.slice(1));
-    void run(
+    runQuietly(
       () => declareOpportunityStage(detail.opportunity_id, stage),
       t('opportunities.toast.stageSet', 'Stage set to {{stage}}', { stage: label }),
     );
@@ -203,13 +234,13 @@ export function OpportunityDetailHost({
         commitments={commitments}
         assignees={assignees}
         onAssignOwner={(id, userId) =>
-          void run(() => assignOpportunityOwner(id, userId), t('opportunities.toast.ownerAssigned', 'Owner updated'))
+          runQuietly(() => assignOpportunityOwner(id, userId), t('opportunities.toast.ownerAssigned', 'Owner updated'))
         }
         onEditValues={() => setValuesOpen(true)}
         onEditDetails={() => setEditOpen(true)}
         onDraftFollowUp={drafting ? () => setDraftOpen(true) : undefined}
         onConfidenceChange={(id, confidence: OpportunityConfidence) =>
-          void run(() => updateOpportunity(id, { confidence }), t('opportunities.toast.confidenceSaved', 'Confidence updated'))
+          runQuietly(() => updateOpportunity(id, { confidence }), t('opportunities.toast.confidenceSaved', 'Confidence updated'))
         }
         onWin={() => setWinOpen(true)}
         onLose={() => setLoseOpen(true)}
@@ -238,7 +269,7 @@ export function OpportunityDetailHost({
           }
         }}
         onOpenQuote={(quoteId) => router.push(`/msp/billing?tab=quotes&quoteId=${quoteId}&mode=edit`)}
-        onUnlinkQuote={(quoteId) => void run(
+        onUnlinkQuote={(quoteId) => runQuietly(
           () => unlinkQuoteFromOpportunity(detail.opportunity_id, quoteId),
           t('opportunities.toast.quoteUnlinked', 'Quote unlinked'),
         )}
@@ -521,6 +552,8 @@ export function OpportunityDetailHost({
                     t('opportunities.toast.won', 'Won'),
                   );
                   setWinOpen(false);
+                } catch {
+                  // Already toasted by run; the dialog stays open for a retry.
                 } finally {
                   setWinning(false);
                 }

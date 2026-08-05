@@ -20,6 +20,22 @@ describe('pipeline inline value edit', () => {
   });
 });
 
+describe('reports → pipeline stage drill-through', () => {
+  it('filters the list server-side rather than trimming one loaded page', () => {
+    const hub = source('../src/components/OpportunitiesHub.tsx');
+    expect(hub).toContain('...(initialPipelineStage ? { stage: initialPipelineStage } : {})');
+    // A newly arrived (or cleared) stage filter restarts the query at page 1.
+    expect(hub).toContain('if (loadedStageRef.current === initialPipelineStage) return;');
+  });
+
+  it('keeps server pagination active and shows the filter state', () => {
+    const list = source('../src/components/pipeline/PipelineList.tsx');
+    expect(list).not.toContain('items.filter((item) => item.stage === initialStage)');
+    expect(list).toContain('manualPagination: true');
+    expect(list).toContain('id="opportunities-pipeline-stage-filter"');
+  });
+});
+
 describe('staying put when following a client link', () => {
   it('opens the client drawer from the pipeline table when a provider is present', () => {
     const list = source('../src/components/pipeline/PipelineList.tsx');

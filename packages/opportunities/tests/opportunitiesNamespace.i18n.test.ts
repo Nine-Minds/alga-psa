@@ -42,7 +42,7 @@ describe('where the opportunity namespace is loaded', () => {
 
   it('ships the settings copy in every locale', () => {
     for (const code of LOCALES) {
-      expect(locale(code)).toHaveProperty('opportunities.settings.tabs.followUp');
+      expect(locale(code)).toHaveProperty('opportunities.settings.tabs.stagesAndSteps');
       expect(locale(code)).toHaveProperty('opportunities.settings.stepTemplatesBlank');
       expect(locale(code)).toHaveProperty('opportunities.reports.printTitle');
     }

@@ -122,6 +122,12 @@ export function OpportunityBoard({
               onOpen={onOpen}
               draggable={item.status === 'open'}
               onDragStart={(_e, dragged) => setDragging(dragged)}
+              // dragend fires on the source for drops, Escape, and drops
+              // outside any column alike — always clear the drag affordances.
+              onDragEnd={() => {
+                setDragging(null);
+                setDropTarget(null);
+              }}
             />
           )),
           columnItems

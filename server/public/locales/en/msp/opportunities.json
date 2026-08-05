@@ -316,7 +316,6 @@
       "stepTemplatesStageHelp": "Steps offered when an opportunity plans this stage.",
       "tabs": {
         "drafting": "Email Drafting",
-        "followUp": "Follow-up",
         "numbering": "Opportunity Numbering",
         "stagesAndSteps": "Stages and Steps",
         "suggestions": "Suggestions"

@@ -17,7 +17,7 @@ export function useOpportunityDetailsDrawer(): (opportunityId: string) => Promis
 
   return useCallback(async (opportunityId: string) => {
     openDrawer(
-      <div className="p-4 text-sm text-gray-600">
+      <div className="p-4 text-sm text-[rgb(var(--color-text-600))]">
         {t('opportunities.detail.loading', { defaultValue: 'Loading opportunity...' })}
       </div>
     );
@@ -25,6 +25,9 @@ export function useOpportunityDetailsDrawer(): (opportunityId: string) => Promis
       const detail = await getOpportunity(opportunityId);
       replaceDrawer(
         <div className="p-4">
+          {/* isInDrawer makes the host own the detail state: mutations inside
+              the drawer re-run getOpportunity themselves, so this initial
+              fetch is a starting point rather than a frozen snapshot. */}
           <OpportunityDetailHost detail={detail} isInDrawer />
         </div>
       );
@@ -32,7 +35,7 @@ export function useOpportunityDetailsDrawer(): (opportunityId: string) => Promis
       const message = error instanceof Error
         ? error.message
         : t('opportunities.detail.loadFailed', { defaultValue: 'Failed to load opportunity' });
-      replaceDrawer(<div className="p-4 text-sm text-red-600">{message}</div>);
+      replaceDrawer(<div className="p-4 text-sm text-[rgb(var(--color-destructive))]">{message}</div>);
     }
   }, [openDrawer, replaceDrawer, t]);
 }

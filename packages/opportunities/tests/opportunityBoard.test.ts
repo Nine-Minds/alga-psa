@@ -22,6 +22,15 @@ describe('board drag parity', () => {
     expect(board).toContain("blocked ? 'cursor-not-allowed opacity-60' : ''");
   });
 
+  it('clears the drag state when a drag is cancelled or dropped outside a column', () => {
+    // dragend fires on the source card for drops, Escape, and misses alike.
+    expect(board).toContain('onDragEnd={() => {');
+    expect(board).toContain('setDragging(null);');
+    expect(board).toContain('setDropTarget(null);');
+    const card = source('../src/components/board/BoardCard.tsx');
+    expect(card).toContain('onDragEnd={onDragEnd ? (e) => onDragEnd(e, item) : undefined}');
+  });
+
   it('renders a money subtotal per column', () => {
     expect(board).toContain('id={`opportunity-board-subtotal-${column}`}');
     expect(board).toContain('current.oneTime += oneTimeCents(item)');

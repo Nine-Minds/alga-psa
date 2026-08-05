@@ -1,8 +1,11 @@
 {
   "greeting": {
     "morning": "Bom dia",
+    "morningWithName": "Bom dia, {{name}}",
     "afternoon": "Boa tarde",
-    "evening": "Boa noite"
+    "afternoonWithName": "Boa tarde, {{name}}",
+    "evening": "Boa noite",
+    "eveningWithName": "Boa noite, {{name}}"
   },
   "welcome": {
     "title": "Bem-vindo ao seu centro de comando MSP",

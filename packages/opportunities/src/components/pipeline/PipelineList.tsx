@@ -40,6 +40,7 @@ export function PipelineList({
     onPageChange: (page: number) => void;
     onPageSizeChange: (size: number) => void;
   };
+  /** Stage filter the host already applied to its server query; shown as a banner. */
   initialStage?: OpportunityStage;
   /** Called after an inline value edit so the host can refresh its rows. */
   onValuesChanged?: () => void | Promise<void>;
@@ -182,21 +183,29 @@ export function PipelineList({
       dataIndex: 'owner_name',
     },
   ];
-  const visibleItems = initialStage ? items.filter((item) => item.stage === initialStage) : items;
-  // A stage filter narrows the page the server already sent, so its totals no
-  // longer describe what is on screen: let the table page the filtered rows.
-  const serverPaged = pagination && !initialStage;
-
   return (
     <>
+      {initialStage ? (
+        // The stage filter is applied server-side by the host's query; this
+        // banner keeps the narrowed state visible on screen.
+        <div
+          id="opportunities-pipeline-stage-filter"
+          className="mb-2 flex items-center gap-2 text-sm text-[rgb(var(--color-text-500))]"
+        >
+          <span>{t('opportunities.list.stage', 'Stage')}:</span>
+          <Badge variant="default-muted" size="sm" className="uppercase tracking-wider">
+            {stageLabel(initialStage)}
+          </Badge>
+        </div>
+      ) : null}
       <DataTable
         id="opportunities-pipeline-table"
-        data={visibleItems}
+        data={items}
         columns={columns}
         onRowClick={(record: IOpportunityListItem) => onOpen(record.opportunity_id)}
         pageSize={pagination?.pageSize}
         onItemsPerPageChange={pagination ? pagination.onPageSizeChange : undefined}
-        {...(serverPaged
+        {...(pagination
           ? {
               currentPage: pagination.currentPage,
               totalItems: pagination.totalItems,

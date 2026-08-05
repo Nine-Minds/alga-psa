@@ -9,7 +9,7 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   listOpportunityStepTemplates,
-  saveOpportunityStepTemplates,
+  saveAllOpportunityStepTemplates,
 } from '@alga-psa/opportunities/actions';
 import { OPPORTUNITY_STAGE_LABELS } from '@alga-psa/opportunities/lib/opportunityStages';
 import type { IOpportunityStepTemplate, OpportunityStage } from '@alga-psa/types';
@@ -74,10 +74,11 @@ export default function OpportunityStepTemplatesSettings() {
     }
     setSaving(true);
     try {
-      const saved: IOpportunityStepTemplate[] = [];
-      for (const stage of STAGES) {
-        saved.push(...(await saveOpportunityStepTemplates(stage, plan[stage])));
-      }
+      // One transaction for every stage: a failure commits nothing, so the
+      // screen never disagrees with the server about half the plan.
+      const saved: IOpportunityStepTemplate[] = await saveAllOpportunityStepTemplates(
+        STAGES.map((stage) => ({ stage, titles: plan[stage] })),
+      );
       // Show what the server kept, so a silent drop can never look like a save.
       setPlan(toPlan(saved));
       setShowBlankErrors(false);
