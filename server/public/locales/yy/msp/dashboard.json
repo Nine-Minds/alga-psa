@@ -1,8 +1,11 @@
 {
   "greeting": {
     "morning": "55555",
+    "morningWithName": "55555 {{name}} 55555",
     "afternoon": "55555",
-    "evening": "55555"
+    "afternoonWithName": "55555 {{name}} 55555",
+    "evening": "55555",
+    "eveningWithName": "55555 {{name}} 55555"
   },
   "welcome": {
     "title": "55555",

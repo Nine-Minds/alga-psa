@@ -71,7 +71,20 @@ const GENERATORS: Array<{
 
 type GeneratorSummary = Awaited<ReturnType<typeof runGeneratorNow>>;
 
-const DEFAULT_SECTION = 'follow-up';
+const DEFAULT_SECTION = 'stages-and-steps';
+
+/**
+ * Old deep links keep working: the standalone Follow-up tab merged into
+ * Stages and Steps, so its section name now lands on the merged tab.
+ */
+const SECTION_ALIASES: Record<string, string> = {
+  'follow-up': 'stages-and-steps',
+};
+
+const resolveSection = (section: string | null | undefined): string => {
+  const requested = section?.toLowerCase() || DEFAULT_SECTION;
+  return SECTION_ALIASES[requested] ?? requested;
+};
 
 function SectionHeading({ title, description }: { title: string; description: string }) {
   return (
@@ -98,10 +111,10 @@ export default function OpportunitiesSettingsBody() {
   const [savingVoice, setSavingVoice] = useState(false);
   const [runningGenerator, setRunningGenerator] = useState<OpportunityGeneratorKey | null>(null);
   const [generatorSummaries, setGeneratorSummaries] = useState<Partial<Record<OpportunityGeneratorKey, GeneratorSummary>>>({});
-  const [activeTab, setActiveTab] = useState<string>(() => sectionParam?.toLowerCase() || DEFAULT_SECTION);
+  const [activeTab, setActiveTab] = useState<string>(() => resolveSection(sectionParam));
 
   useEffect(() => {
-    const target = sectionParam?.toLowerCase() || DEFAULT_SECTION;
+    const target = resolveSection(sectionParam);
     setActiveTab((current) => (current === target ? current : target));
   }, [sectionParam]);
 
@@ -189,52 +202,6 @@ export default function OpportunitiesSettingsBody() {
 
   const tabs: TabContent[] = [
     {
-      id: 'follow-up',
-      label: t('opportunities.settings.tabs.followUp', 'Follow-up'),
-      content: (
-        <div className="max-w-2xl space-y-5">
-          <SectionHeading
-            title={t('opportunities.settings.discipline', 'Follow-up reminders')}
-            description={t(
-              'opportunities.settings.disciplineHelp',
-              'How long an opportunity can go without contact before the owner is reminded, and what happens if it stays quiet.'
-            )}
-          />
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Input
-              id="opportunities-settings-nudge-days"
-              type="number"
-              label={t('opportunities.settings.nudgeDays', 'Remind the owner after (days)')}
-              value={String(settings.nudge_days)}
-              onChange={numberField(settings.nudge_days, (n) => patch({ nudge_days: n }))}
-            />
-            <Input
-              id="opportunities-settings-interrupt-days"
-              type="number"
-              label={t('opportunities.settings.interruptDays', 'Escalate after (days)')}
-              value={String(settings.interrupt_days)}
-              onChange={numberField(settings.interrupt_days, (n) => patch({ interrupt_days: n }))}
-            />
-            <div>
-              <label className="mb-1 block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                {t('opportunities.settings.escalation', 'Escalation method')}
-              </label>
-              <CustomSelect
-                id="opportunities-settings-escalation"
-                options={[
-                  { value: 'solo', label: t('opportunities.settings.escalationSolo', "Book time on the owner's calendar") },
-                  { value: 'team', label: t('opportunities.settings.escalationTeam', 'Notify the owner, then their manager') },
-                ]}
-                value={settings.escalation_mode}
-                onValueChange={(v: string) => patch({ escalation_mode: v as OpportunityEscalationMode })}
-              />
-            </div>
-          </div>
-          {saveRow}
-        </div>
-      ),
-    },
-    {
       id: 'stages-and-steps',
       label: t('opportunities.settings.tabs.stagesAndSteps', 'Stages and Steps'),
       content: (
@@ -247,6 +214,46 @@ export default function OpportunitiesSettingsBody() {
             )}
           />
           <OpportunityStepTemplatesSettings />
+          <div className="border-t border-[rgb(var(--color-border-200))] pt-5">
+            <SectionHeading
+              title={t('opportunities.settings.discipline', 'Follow-up reminders')}
+              description={t(
+                'opportunities.settings.disciplineHelp',
+                'How long an opportunity can go without contact before the owner is reminded, and what happens if it stays quiet.'
+              )}
+            />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Input
+                id="opportunities-settings-nudge-days"
+                type="number"
+                label={t('opportunities.settings.nudgeDays', 'Remind the owner after (days)')}
+                value={String(settings.nudge_days)}
+                onChange={numberField(settings.nudge_days, (n) => patch({ nudge_days: n }))}
+              />
+              <Input
+                id="opportunities-settings-interrupt-days"
+                type="number"
+                label={t('opportunities.settings.interruptDays', 'Escalate after (days)')}
+                value={String(settings.interrupt_days)}
+                onChange={numberField(settings.interrupt_days, (n) => patch({ interrupt_days: n }))}
+              />
+              <div>
+                <label className="mb-1 block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                  {t('opportunities.settings.escalation', 'Escalation method')}
+                </label>
+                <CustomSelect
+                  id="opportunities-settings-escalation"
+                  options={[
+                    { value: 'solo', label: t('opportunities.settings.escalationSolo', "Book time on the owner's calendar") },
+                    { value: 'team', label: t('opportunities.settings.escalationTeam', 'Notify the owner, then their manager') },
+                  ]}
+                  value={settings.escalation_mode}
+                  onValueChange={(v: string) => patch({ escalation_mode: v as OpportunityEscalationMode })}
+                />
+              </div>
+            </div>
+            <div className="mt-4">{saveRow}</div>
+          </div>
         </div>
       ),
     },
@@ -287,7 +294,7 @@ export default function OpportunitiesSettingsBody() {
               onChange={numberField(settings.asset_age_years, (n) => patch({ asset_age_years: n }))}
             />
           </div>
-          <div className="divide-y divide-[rgb(var(--color-border-100))] rounded-xl border border-[rgb(var(--color-border-200))] bg-white px-4">
+          <div className="divide-y divide-[rgb(var(--color-border-100))] rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-4">
             {GENERATORS.map((generator) => {
               const summary = generatorSummaries[generator.key];
               const running = runningGenerator === generator.key;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
@@ -76,9 +76,21 @@ export function OpportunitiesHub({
   const [loseFor, setLoseFor] = useState<string | null>(null);
   const [onePagerFor, setOnePagerFor] = useState<string | null>(null);
 
+  const requestedStage = searchParams.get('stage');
+  const initialPipelineStage = (
+    ['identified', 'qualified', 'assessment', 'proposed', 'verbal', 'won', 'lost'] as const
+  ).find((stage) => stage === requestedStage);
+
   const refresh = useCallback(async (toPage = page, toPageSize = pageSize) => {
     const [result, nextQueue] = await Promise.all([
-      listOpportunities({ status: 'all', page: toPage, page_size: toPageSize }),
+      // A stage drill-through filters server-side, so the totals and paging
+      // describe the filtered set rather than one loaded page.
+      listOpportunities({
+        status: 'all',
+        ...(initialPipelineStage ? { stage: initialPipelineStage } : {}),
+        page: toPage,
+        page_size: toPageSize,
+      }),
       getWorkQueue(),
     ]);
     setItems(result.data);
@@ -86,7 +98,18 @@ export function OpportunitiesHub({
     setQueue(nextQueue);
     setPage(toPage);
     setPageSize(toPageSize);
-  }, [page, pageSize]);
+  }, [page, pageSize, initialPipelineStage]);
+
+  // The server rendered the unfiltered first page. When a stage filter arrives
+  // (Reports drill-through or a deep link) or clears, re-query from page 1.
+  const loadedStageRef = useRef<OpportunityStage | undefined>(undefined);
+  useEffect(() => {
+    if (loadedStageRef.current === initialPipelineStage) return;
+    loadedStageRef.current = initialPipelineStage;
+    refresh(1).catch((err) => {
+      toast.error(err instanceof Error ? err.message : String(err));
+    });
+  }, [initialPipelineStage, refresh]);
 
   const openDeal = useCallback(
     (opportunityId: string) => router.push(`/msp/opportunities/${opportunityId}?fromTab=${tab}`),
@@ -210,10 +233,6 @@ export function OpportunitiesHub({
 
   const openItems = useMemo(() => items.filter((i) => i.status === 'open'), [items]);
   const closedItems = useMemo(() => items.filter((i) => i.status !== 'open'), [items]);
-  const requestedStage = searchParams.get('stage');
-  const initialPipelineStage = (
-    ['identified', 'qualified', 'assessment', 'proposed', 'verbal', 'won', 'lost'] as const
-  ).find((stage) => stage === requestedStage);
 
   useEffect(() => {
     const requestedTab = searchParams.get('tab') ?? 'queue';

@@ -10,19 +10,23 @@ import type { IOpportunityListItem } from '@alga-psa/types';
 import { opportunityValueParts } from '../../lib/format';
 
 /**
- * A deal on the board. Cards move between columns only through evidence —
- * the card itself is presentational; the board owns the (restricted) drag rules.
+ * A deal on the board. The card itself is presentational; the board owns the
+ * drag rules — an open deal can be dragged to any other open stage column
+ * (a declared checkpoint) or to the closed rail (mark lost with a reason).
  */
 export function BoardCard({
   item,
   onOpen,
   draggable,
   onDragStart,
+  onDragEnd,
 }: {
   item: IOpportunityListItem;
   onOpen: (opportunityId: string) => void;
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent, item: IOpportunityListItem) => void;
+  /** Fires on every drag conclusion — drop, Escape, or release outside a column. */
+  onDragEnd?: (e: React.DragEvent, item: IOpportunityListItem) => void;
 }) {
   const { t } = useTranslation('msp/opportunities');
   const clientDrawer = useClientDrawer();
@@ -34,6 +38,7 @@ export function BoardCard({
       className="mb-2 w-full rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-3 text-left shadow-sm transition-colors hover:border-[rgb(var(--color-primary-300))]"
       draggable={draggable}
       onDragStart={onDragStart ? (e) => onDragStart(e, item) : undefined}
+      onDragEnd={onDragEnd ? (e) => onDragEnd(e, item) : undefined}
     >
       <div className="mb-1 flex items-start justify-between gap-2">
         <Button

@@ -27,18 +27,24 @@ export interface WelcomeBannerProps {
  * greets the user — home, and the opportunities queue — so the wording and the
  * time-of-day boundaries can never drift apart.
  */
+const GREETING_DEFAULTS = {
+  morning: 'Good morning',
+  afternoon: 'Good afternoon',
+  evening: 'Good evening',
+} as const;
+
 export function WelcomeBanner({ title, description, firstName, variant = 'plain', id }: WelcomeBannerProps) {
   const { t } = useTranslation('msp/dashboard');
   const greetingKey = timeOfDayGreetingKey();
-  const greetingPart = t(`greeting.${greetingKey}`, {
-    defaultValue:
-      greetingKey === 'morning'
-        ? 'Good morning'
-        : greetingKey === 'afternoon'
-          ? 'Good afternoon'
-          : 'Good evening',
-  });
-  const greetingLine = firstName ? `${greetingPart}, ${firstName}` : greetingPart;
+  // The personalized line is a whole translated string with a {{name}}
+  // placeholder, so locales decide where (and how) the name sits — never a
+  // hardcoded "greeting, name" concatenation.
+  const greetingLine = firstName
+    ? t(`greeting.${greetingKey}WithName`, {
+        defaultValue: `${GREETING_DEFAULTS[greetingKey]}, {{name}}`,
+        name: firstName,
+      })
+    : t(`greeting.${greetingKey}`, { defaultValue: GREETING_DEFAULTS[greetingKey] });
 
   if (variant === 'gradient') {
     return (

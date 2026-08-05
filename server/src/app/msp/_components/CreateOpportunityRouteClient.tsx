@@ -39,14 +39,21 @@ export default function CreateOpportunityRouteClient({ closeMode }: CreateOpport
   }, [t]);
 
   const handleSubmit = async (input: CreateOpportunityInput) => {
-    const created = await createOpportunity(input);
-    toast.success(
-      t('quickCreate.success.opportunity', {
-        defaultValue: 'Opportunity "{{title}}" created successfully',
-        title: input.title,
-      }),
-    );
-    router.replace(`/msp/opportunities/${(created as { opportunity_id: string }).opportunity_id}`);
+    try {
+      const created = await createOpportunity(input);
+      toast.success(
+        t('quickCreate.success.opportunity', {
+          defaultValue: 'Opportunity "{{title}}" created successfully',
+          title: input.title,
+        }),
+      );
+      router.replace(`/msp/opportunities/${(created as { opportunity_id: string }).opportunity_id}`);
+    } catch (err) {
+      // Surface the failure and rethrow so the dialog stays open for a retry,
+      // matching OpportunitiesHub.handleCreate.
+      toast.error(err instanceof Error ? err.message : String(err));
+      throw err;
+    }
   };
 
   if (isLoadingClients) {

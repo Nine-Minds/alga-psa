@@ -57,6 +57,24 @@ export const listOpportunityStepTemplates = withAuth(async (
   return OpportunityStepModel.listTemplates(knex, tenant, stage);
 });
 
+/** Replace one stage's template rows inside the caller's transaction. */
+async function replaceStageTemplates(
+  trx: Parameters<typeof tenantDb>[0],
+  tenant: string,
+  data: { stage: OpportunityStage; titles: Array<{ title: string; due_offset_days: number }> },
+): Promise<void> {
+  await tenantDb(trx, tenant).table('opportunity_step_templates').where({ stage: data.stage }).delete();
+  for (const [index, entry] of data.titles.entries()) {
+    await tenantDb(trx, tenant).table('opportunity_step_templates').insert({
+      tenant,
+      stage: data.stage,
+      title: entry.title,
+      sort_order: index,
+      due_offset_days: entry.due_offset_days,
+    });
+  }
+}
+
 /**
  * Settings-side template editing. Tenants that never touch these keep the
  * stock lists; the moment they save one, theirs is what gets applied.
@@ -71,17 +89,34 @@ export const saveOpportunityStepTemplates = withAuth(async (
   const data = saveOpportunityStepTemplatesSchema.parse({ stage, titles });
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx) => {
-    await tenantDb(trx, tenant).table('opportunity_step_templates').where({ stage: data.stage }).delete();
-    for (const [index, entry] of data.titles.entries()) {
-      await tenantDb(trx, tenant).table('opportunity_step_templates').insert({
-        tenant,
-        stage: data.stage,
-        title: entry.title,
-        sort_order: index,
-        due_offset_days: entry.due_offset_days,
-      });
-    }
+    await replaceStageTemplates(trx, tenant, data);
     return OpportunityStepModel.listTemplates(trx, tenant, data.stage);
+  });
+});
+
+/**
+ * The whole settings screen in one transaction: every stage's rows are
+ * validated first and written together, so a failure part-way leaves nothing
+ * committed and the screen never shows a half-saved plan.
+ */
+export const saveAllOpportunityStepTemplates = withAuth(async (
+  user,
+  { tenant },
+  plans: Array<{ stage: OpportunityStage; titles: Array<{ title: string; due_offset_days: number }> }>,
+): Promise<IOpportunityStepTemplate[]> => {
+  await requirePermission(user, 'update');
+  const parsed = plans.map((plan) => saveOpportunityStepTemplatesSchema.parse(plan));
+  const seen = new Set<string>();
+  for (const plan of parsed) {
+    if (seen.has(plan.stage)) throw new Error(`Duplicate stage in template save: ${plan.stage}`);
+    seen.add(plan.stage);
+  }
+  const { knex } = await createTenantKnex();
+  return withTransaction(knex, async (trx) => {
+    for (const data of parsed) {
+      await replaceStageTemplates(trx, tenant, data);
+    }
+    return OpportunityStepModel.listTemplates(trx, tenant);
   });
 });
 

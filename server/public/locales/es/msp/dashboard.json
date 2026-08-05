@@ -184,8 +184,11 @@
   },
   "greeting": {
     "morning": "Buenos días",
+    "morningWithName": "Buenos días, {{name}}",
     "afternoon": "Buenas tardes",
-    "evening": "Buenas noches"
+    "afternoonWithName": "Buenas tardes, {{name}}",
+    "evening": "Buenas noches",
+    "eveningWithName": "Buenas noches, {{name}}"
   },
   "mspDashboard": "Panel MSP",
   "mobileApp": {

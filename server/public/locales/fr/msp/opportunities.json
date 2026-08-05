@@ -316,7 +316,6 @@
       "stepTemplatesStageHelp": "Étapes proposées lors de la planification de cette phase.",
       "tabs": {
         "drafting": "Rédaction des e-mails",
-        "followUp": "Relance",
         "numbering": "Numérotation des affaires",
         "stagesAndSteps": "Phases et étapes",
         "suggestions": "Suggestions"

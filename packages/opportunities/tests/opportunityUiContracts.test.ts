@@ -52,7 +52,10 @@ describe('opportunity UI improvement wiring', () => {
     const settings = source('../../../server/src/app/msp/settings/opportunities/OpportunityStepTemplatesSettings.tsx');
     expect(settings).toContain("const STAGES: PlannableStage[] = ['identified', 'qualified', 'assessment', 'proposed', 'verbal']");
     expect(settings).toContain('opportunity-step-templates-${stage}');
-    expect(settings).toContain('saveOpportunityStepTemplates(stage, plan[stage])');
+    // Every stage saves in one transaction, so a mid-save failure commits nothing.
+    expect(settings).toContain('saveAllOpportunityStepTemplates(');
+    expect(settings).toContain('STAGES.map((stage) => ({ stage, titles: plan[stage] }))');
+    expect(settings).not.toContain('for (const stage of STAGES)');
   });
 
   it('refuses to report a save for step rows the server would drop', () => {
@@ -66,10 +69,22 @@ describe('opportunity UI improvement wiring', () => {
   it('organizes opportunity settings into tabs like ticketing and projects', () => {
     const settings = source('../../../server/src/app/msp/settings/opportunities/OpportunitiesSettingsBody.tsx');
     expect(settings).toContain("import CustomTabs, { type TabContent } from '@alga-psa/ui/components/CustomTabs'");
-    for (const id of ['follow-up', 'stages-and-steps', 'suggestions', 'opportunity-numbering']) {
+    for (const id of ['stages-and-steps', 'suggestions', 'opportunity-numbering']) {
       expect(settings).toContain(`id: '${id}'`);
     }
     expect(settings).toContain("params.set('section', tabId)");
+  });
+
+  it('folds the follow-up settings into Stages and Steps and keeps old links alive', () => {
+    const settings = source('../../../server/src/app/msp/settings/opportunities/OpportunitiesSettingsBody.tsx');
+    // No standalone tab any more; the fields live inside the merged tab.
+    expect(settings).not.toContain("id: 'follow-up'");
+    expect(settings).toContain("const DEFAULT_SECTION = 'stages-and-steps'");
+    expect(settings).toContain('opportunities-settings-nudge-days');
+    expect(settings).toContain('opportunities-settings-interrupt-days');
+    expect(settings).toContain('opportunities-settings-escalation');
+    // ?section=follow-up must still land somewhere sensible.
+    expect(settings).toContain("'follow-up': 'stages-and-steps'");
   });
 
   it('prints the report itself rather than the browser window', () => {

@@ -1,8 +1,11 @@
 {
   "greeting": {
     "morning": "Good morning",
+    "morningWithName": "Good morning, {{name}}",
     "afternoon": "Good afternoon",
-    "evening": "Good evening"
+    "afternoonWithName": "Good afternoon, {{name}}",
+    "evening": "Good evening",
+    "eveningWithName": "Good evening, {{name}}"
   },
   "welcome": {
     "title": "Welcome to Your MSP Command Center",
