@@ -554,7 +554,7 @@ jobs:
           {
             "name": "alga-e2e-tests",
             "version": "1.0.0",
-            "description": "E2E tests for Alga PSA",
+            "description": "E2E tests for AlgaPSA",
             "main": "index.js",
             "scripts": {
               "test": "playwright test"

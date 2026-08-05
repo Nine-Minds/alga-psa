@@ -61,7 +61,7 @@ By comparison, Tickets and Clients now have much richer workflow action coverage
 
 - MSP admin building workflow automations.
 - Account manager or dispatcher whose CRM follow-up tasks are triggered by tickets, projects, or quote state.
-- Internal Alga PSA engineer extending Workflow Runtime V2 business operations.
+- Internal AlgaPSA engineer extending Workflow Runtime V2 business operations.
 
 ### Primary flows
 

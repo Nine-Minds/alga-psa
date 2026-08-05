@@ -30,7 +30,7 @@ Keep both documents in sync: update the top-level plan as we complete milestones
 ## Non-Goals
 
 - Porting the entire wasmCloud lattice (NATS control plane, host policy engine, etc.).
-- Supporting arbitrary preview2 modules beyond the interfaces required for Alga PSA extensions.
+- Supporting arbitrary preview2 modules beyond the interfaces required for AlgaPSA extensions.
 
 ## Approach
 
@@ -131,7 +131,7 @@ Tests and docs should mention these vars so developers wire them before exercisi
 
 ## Success Criteria
 
-- Extensions built with the Alga PSA toolchain execute successfully via `/v1/execute`.
+- Extensions built with the AlgaPSA toolchain execute successfully via `/v1/execute`.
 - Container test verifies end-to-end dynamic execution.
 - Runtime enforces configured limits and surfaces actionable logs/metrics.
 

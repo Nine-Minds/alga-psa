@@ -152,5 +152,5 @@ Exit criterion: all discrepancy types detected and fixed correctly in tests and 
 - Changes to credit issuance/application/expiration logic beyond defects Phase 1 uncovers.
 - Notifications/alerting on new discrepancies (candidate follow-up).
 - Credit draw-down policy controls (per-client/per-contract auto-apply rules, service-type restrictions,
-  application priority) — tracked as a 1.5.0 task in the "Alga PSA Releases" project
+  application priority) — tracked as a 1.5.0 task in the "AlgaPSA Releases" project
   ("Credit draw-down policy controls", task 8a4a73dc-5fd6-4b8e-beb7-805bb1601d63).

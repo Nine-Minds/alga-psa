@@ -1,4 +1,4 @@
-# Billing Feature Improvement for Alga PSA
+# Billing Feature Improvement for AlgaPSA
 
 **📋 STATUS: COMPLETED (94% Implementation)**
 
@@ -91,7 +91,7 @@ Step 5: Review & Create
 
 **Reuse:**
 - WizardProgress, WizardNavigation
-- Alga PSA UI components
+- AlgaPSA UI components
 - State management pattern from OnboardingWizard
 
 ---
@@ -272,6 +272,6 @@ For frontend development, use mock data that matches existing interfaces:
 ## Notes
 - Frontend first, backend later
 - Use existing actions where possible, mock where needed
-- Match Alga PSA design patterns and component library
+- Match AlgaPSA design patterns and component library
 - Reuse wizard pattern from onboarding
 - No schema changes until backend phase

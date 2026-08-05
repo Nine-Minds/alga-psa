@@ -1,6 +1,6 @@
 # Xero CSV Integration Guide
 
-This guide explains how to use the Xero CSV integration to export invoices from Alga PSA to Xero and import tax calculations back into Alga.
+This guide explains how to use the Xero CSV integration to export invoices from AlgaPSA to Xero and import tax calculations back into Alga.
 
 ## Overview
 

@@ -1,4 +1,4 @@
-# Scratchpad — Alga PSA n8n Ticket Node CRUD
+# Scratchpad — AlgaPSA n8n Ticket Node CRUD
 
 - Plan slug: `n8n-ticket-node-crud`
 - Created: `2026-02-16`
@@ -9,7 +9,7 @@ Working notes for the n8n ticket-node plan. This captures scope decisions made i
 
 ## Decisions
 
-- (2026-02-16) Use a single node approach: one `Alga PSA` node with multiple resources.
+- (2026-02-16) Use a single node approach: one `AlgaPSA` node with multiple resources.
 - (2026-02-16) V1 Ticket read scope includes both `Get by ID` and `List/Search`.
 - (2026-02-16) V1 update scope includes general update plus dedicated status and assignment operations.
 - (2026-02-16) V1 create/update UX uses dynamic dropdowns for required reference IDs.
@@ -18,7 +18,7 @@ Working notes for the n8n ticket-node plan. This captures scope decisions made i
 - (2026-02-16) Expose helper operations (`List Clients`, `List Boards`, `List Statuses`, `List Priorities`) in addition to internal lookup use.
 - (2026-02-16) Distribution target is npm availability for Alga users; n8n community-portal submission is not required for v1.
 - (2026-03-08) Extend the existing `Ticket` resource instead of adding a separate `Comment` resource; new scope is `List Comments` and `Add Comment`.
-- (2026-03-08) Do not expose `time_spent` in the n8n node because current Alga PSA ticket comments do not persist it or translate it into time entries.
+- (2026-03-08) Do not expose `time_spent` in the n8n node because current AlgaPSA ticket comments do not persist it or translate it into time entries.
 
 ## Discoveries / Constraints
 
@@ -50,7 +50,7 @@ Working notes for the n8n ticket-node plan. This captures scope decisions made i
 ## Commands / Runbooks
 
 - (2026-02-16) Scaffold plan artifacts:
-  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/scaffold_plan.py "Alga PSA n8n Ticket Node CRUD" --slug n8n-ticket-node-crud`
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/scaffold_plan.py "AlgaPSA n8n Ticket Node CRUD" --slug n8n-ticket-node-crud`
 - (2026-02-16) Validate plan format:
   - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-02-16-n8n-ticket-node-crud`
 - (2026-02-16) Confirm ticket API routes quickly:

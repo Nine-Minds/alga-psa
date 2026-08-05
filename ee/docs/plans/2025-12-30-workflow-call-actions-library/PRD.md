@@ -9,7 +9,7 @@
   - `ee/docs/plans/2025-12-28-workflow-payload-contract-inference/PRD.md`
 
 ## Summary
-Workflows become materially useful only when steps can *do business work* in Alga PSA: create/modify tickets, communicate with clients, schedule technicians, and write back operational records. This plan defines a first “business operations” library of workflow **call actions** (for the `action.call` step type) with consistent inputs/outputs, validation, permissions, and observability.
+Workflows become materially useful only when steps can *do business work* in AlgaPSA: create/modify tickets, communicate with clients, schedule technicians, and write back operational records. This plan defines a first “business operations” library of workflow **call actions** (for the `action.call` step type) with consistent inputs/outputs, validation, permissions, and observability.
 
 ## Problem
 The workflow system currently has limited “writeback” capability to core PSA objects. Builders can select triggers and arrange steps, but they cannot reliably execute common operational outcomes (ticketing, client communication, scheduling, time, and notes) without custom code or manual follow-up. This prevents adoption for real-world MSP automation.
@@ -197,7 +197,7 @@ Below is the initial library (18 actions). Each action is specified at a high le
 - What is the authoritative permission taxonomy for tickets/clients/contacts/projects/time actions (names + scopes)?
 - Which ticket field model should v1 standardize on (status enum, priority enum, categories, custom fields)?
 - Email: do we send via “system email” only, or also per-tenant outbound domains? How do we select provider?
-- Scheduling: what is the canonical schedule object in Alga PSA (shift vs appointment vs calendar event), and how do we handle conflicts?
+- Scheduling: what is the canonical schedule object in AlgaPSA (shift vs appointment vs calendar event), and how do we handle conflicts?
 - Idempotency: which actions must support idempotency from day one (create ticket, send email, create schedule)?
 
 ## Acceptance Criteria (Definition of Done)

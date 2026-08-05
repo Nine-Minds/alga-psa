@@ -46,7 +46,7 @@ spec:
               else
                 temporal operator namespace create \
                   --retention "${DEFAULT_NAMESPACE_RETENTION}" \
-                  --description "Default namespace for Alga PSA appliance workflows." \
+                  --description "Default namespace for AlgaPSA appliance workflows." \
                   "${DEFAULT_NAMESPACE}" \
                   --address "${TEMPORAL_ADDRESS}"
               fi

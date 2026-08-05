@@ -1,20 +1,20 @@
-# Alga PSA: Open-Source MSP Professional Services Automation
+# AlgaPSA: Open-Source MSP Professional Services Automation
 
-Alga PSA is a professional services automation platform built for Managed Service Providers. It brings client records, service tickets, time tracking, contracts, billing, invoicing, documents, assets, reporting, and automation into one MSP-focused system.
+AlgaPSA is a professional services automation platform built for Managed Service Providers. It brings client records, service tickets, time tracking, contracts, billing, invoicing, documents, assets, reporting, and automation into one MSP-focused system.
 
 It is designed for teams that want more control over their PSA stack: self-hostable Community Edition code, a modern TypeScript/PostgreSQL architecture, and an Enterprise Edition path for commercially licensed modules and larger deployments.
 
 <a href="https://www.nineminds.com/AlgaPSA-features">
-  <img src="https://www.nineminds.com/imported-media/Overview%20Dashboard.png" alt="Alga PSA overview dashboard" width="900">
+  <img src="https://www.nineminds.com/imported-media/Overview%20Dashboard.png" alt="AlgaPSA overview dashboard" width="900">
 </a>
 
-[See the Alga PSA feature tour](https://www.nineminds.com/AlgaPSA-features)
+[See the AlgaPSA feature tour](https://www.nineminds.com/AlgaPSA-features)
 
-## Why MSPs look at Alga PSA
+## Why MSPs look at AlgaPSA
 
 MSP operations break down when tickets, contracts, time, and invoices live in separate tools. Teams lose billable time, service managers chase updates, and owners have a harder time seeing whether client work is profitable.
 
-Alga PSA is built around the way MSPs operate with clients:
+AlgaPSA is built around the way MSPs operate with clients:
 
 - **Tickets tied to clients, contacts, assets, and service history** so the team has context before work starts.
 - **Time and approvals connected to billing** so billable work can move toward invoices with less duplicate entry.
@@ -64,7 +64,7 @@ Feature availability varies by edition, deployment configuration, and enabled fe
 
 ## Product screenshots
 
-These images link directly to screenshots from the [Alga PSA feature tour](https://www.nineminds.com/AlgaPSA-features), [Workflow Automation docs](https://www.nineminds.com/documentation/152-choosing-workflow-triggers), and [Invoice Designer docs](https://www.nineminds.com/documentation/1419-building-an-invoice-layout).
+These images link directly to screenshots from the [AlgaPSA feature tour](https://www.nineminds.com/AlgaPSA-features), [Workflow Automation docs](https://www.nineminds.com/documentation/152-choosing-workflow-triggers), and [Invoice Designer docs](https://www.nineminds.com/documentation/1419-building-an-invoice-layout).
 
 <table>
   <thead>
@@ -75,32 +75,32 @@ These images link directly to screenshots from the [Alga PSA feature tour](https
   </thead>
   <tbody>
     <tr>
-      <td width="50%"><img src="https://www.nineminds.com/imported-media/Ticketing-1.gif" alt="Alga PSA ticketing screen" width="420"></td>
-      <td width="50%"><img src="https://www.nineminds.com/imported-media/Billing%20Cycles.png" alt="Alga PSA billing dashboard" width="420"></td>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/Ticketing-1.gif" alt="AlgaPSA ticketing screen" width="420"></td>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/Billing%20Cycles.png" alt="AlgaPSA billing dashboard" width="420"></td>
     </tr>
     <tr>
       <td width="50%">Ticketing views for client requests, assignment, attachments, and follow-up.</td>
       <td width="50%">Contracts, billing, and invoice-related workflows in one billing area.</td>
     </tr>
     <tr>
-      <td width="50%"><img src="https://www.nineminds.com/imported-media/Screenshot%202026-04-30%20at%2011.33.51%E2%80%AFAM.png" alt="Alga PSA multilingual client portal" width="420"></td>
-      <td width="50%"><img src="https://www.nineminds.com/imported-media/Screenshot%202026-05-01%20at%201.35.35%20PM.png" alt="Alga PSA time approval screen" width="420"></td>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/Screenshot%202026-04-30%20at%2011.33.51%E2%80%AFAM.png" alt="AlgaPSA multilingual client portal" width="420"></td>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/Screenshot%202026-05-01%20at%201.35.35%20PM.png" alt="AlgaPSA time approval screen" width="420"></td>
     </tr>
     <tr>
       <td width="50%">Multilingual client portal views for client-facing requests and updates.</td>
       <td width="50%">Time entry views for recording and reviewing work before billing.</td>
     </tr>
     <tr>
-      <td width="50%"><img src="https://www.nineminds.com/imported-media/Schedule%20view.png" alt="Alga PSA schedule view" width="420"></td>
-      <td width="50%"><img src="https://www.nineminds.com/docs-images/invoice-designer-workspace.png" alt="Alga PSA invoice and quote designer workspace" width="420"></td>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/Schedule%20view.png" alt="AlgaPSA schedule view" width="420"></td>
+      <td width="50%"><img src="https://www.nineminds.com/docs-images/invoice-designer-workspace.png" alt="AlgaPSA invoice and quote designer workspace" width="420"></td>
     </tr>
     <tr>
       <td width="50%">Schedule views for dispatch and calendar-based work planning.</td>
       <td width="50%">Drag-and-drop invoice and quote layout designer for branded PDFs.</td>
     </tr>
     <tr>
-      <td width="50%"><img src="https://www.nineminds.com/docs-images/workflow-designer-ticket-triage.png" alt="Alga PSA visual workflow designer" width="420"></td>
-      <td width="50%"><img src="https://www.nineminds.com/imported-media/Assets%20Asset%20workspace%20overview.png" alt="Alga PSA asset workspace overview" width="420"></td>
+      <td width="50%"><img src="https://www.nineminds.com/docs-images/workflow-designer-ticket-triage.png" alt="AlgaPSA visual workflow designer" width="420"></td>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/Assets%20Asset%20workspace%20overview.png" alt="AlgaPSA asset workspace overview" width="420"></td>
     </tr>
     <tr>
       <td width="50%">Visual workflow designer for ticket triage, notifications, approvals, and other repeatable processes.</td>
@@ -149,7 +149,7 @@ For Windows-specific setup, see the [Windows Setup Guide](../docs/getting-starte
 
 The following details are for teams evaluating the technical stack. For deployment requirements, see [Quick start](#quick-start).
 
-Alga PSA is a TypeScript monorepo with a Next.js application, shared domain packages, worker services, and Docker-based deployment paths.
+AlgaPSA is a TypeScript monorepo with a Next.js application, shared domain packages, worker services, and Docker-based deployment paths.
 
 | Area | Implementation |
 | --- | --- |
@@ -257,7 +257,7 @@ For development workflow details, package build behavior, and test conventions, 
 
 ## Editions and licensing
 
-Alga PSA uses multiple licenses:
+AlgaPSA uses multiple licenses:
 
 - Documentation (`docs/`): Creative Commons Attribution 4.0 International License (CC BY 4.0)
 - Enterprise Edition (`ee/`): See `ee/LICENSE`

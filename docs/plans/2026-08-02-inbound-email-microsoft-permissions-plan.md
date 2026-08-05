@@ -45,7 +45,7 @@ Extend `docs/inbound-email/setup/microsoft.md` with a focused shared-mailbox sub
 
 - Require the provider’s mailbox address to be the shared mailbox and the interactive OAuth user to be a real licensed/user identity with Exchange access to it.
 - State that `Mail.Read.Shared` authorizes Graph to act within the user’s existing delegated mailbox access; it does not assign Full Access or otherwise grant Exchange rights.
-- Give a verification sequence before blaming Alga PSA: confirm the user can open the shared mailbox in Outlook/OWA, confirm `Mail.Read.Shared` is present/consented, then reauthorize/test the provider.
+- Give a verification sequence before blaming AlgaPSA: confirm the user can open the shared mailbox in Outlook/OWA, confirm `Mail.Read.Shared` is present/consented, then reauthorize/test the provider.
 - Call out the common failure mode where OAuth succeeds for the user’s own mailbox but Graph returns 403 for the configured shared mailbox.
 
 ### 4. Clarify webhook subscriptions and fallback behavior

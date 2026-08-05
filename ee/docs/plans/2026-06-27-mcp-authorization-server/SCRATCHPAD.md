@@ -23,7 +23,7 @@ Live testing of claude.ai after #2803 merged still hit the DCR error. Diagnosis:
 Tracing why claude.ai's connector UI couldn't connect to the remote MCP server
 (`https://algapsa.com/api/mcp`) surfaced a structural gap. Two upstream bugs were
 fixed first (see "Already shipped"); the connector then failed at the OAuth step
-with: *"Automatic client registration isn't supported by Alga PSA. Edit the
+with: *"Automatic client registration isn't supported by AlgaPSA. Edit the
 connector and add an OAuth Client ID."* That error is **expected** given the
 current design and is the motivation for this plan.
 

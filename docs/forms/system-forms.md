@@ -140,7 +140,7 @@ The retrieval process:
 
 ## QBO Invoice Sync Forms
 
-> **Note:** This section is retained for historical reference. Alga PSA no longer uses the legacy QBO workflow-based invoice sync described here for current QuickBooks functionality. The supported QuickBooks path is **QuickBooks CSV** via the shared accounting export pipeline.
+> **Note:** This section is retained for historical reference. AlgaPSA no longer uses the legacy QBO workflow-based invoice sync described here for current QuickBooks functionality. The supported QuickBooks path is **QuickBooks CSV** via the shared accounting export pipeline.
 
 The QBO Invoice Sync Workflow forms are registered as System Forms through a dedicated migration script (`20250509175818_add_qbo_invoice_sync_forms.cjs`). This migration:
 

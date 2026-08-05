@@ -7,7 +7,7 @@
 
 ## Summary
 
-A marketing module for Alga PSA, built internal-first: Nine Minds dogfoods it for its own
+A marketing module for AlgaPSA, built internal-first: Nine Minds dogfoods it for its own
 marketing motion (LinkedIn war stories, YouTube/AlgaBob, open-source → Pro conversion), then
 it ships as a tenant-facing module so MSPs early in operational maturity can run a disciplined
 marketing motion instead of inventing one through trial and error.
@@ -29,7 +29,7 @@ couples to a platform API.
    known traction constraint. The motion runs on social (LinkedIn, YouTube) with no scheduling,
    no capture-to-pipeline plumbing, and no attribution from content to opportunity.
 2. The target customer — MSPs early in operational maturity — has the same problem. The focus
-   anchor promises they "operate like a seasoned shop from day one"; today Alga PSA gives them
+   anchor promises they "operate like a seasoned shop from day one"; today AlgaPSA gives them
    nothing for marketing, so they invent it through trial and error.
 3. Under the axioms (building cost → 0), a thin, reversible marketing module is cheap to build;
    the defensible asset is not the code but the MSP-specific motion it encodes. Platform API
@@ -38,7 +38,7 @@ couples to a platform API.
 
 ## Goals
 
-- G1: Nine Minds can run its entire weekly marketing motion inside Alga PSA: plan content,
+- G1: Nine Minds can run its entire weekly marketing motion inside AlgaPSA: plan content,
   schedule social posts, capture inbound interest, review it as opportunity suggestions, and
   nurture contacts via email drips.
 - G2: Every marketing touchpoint (post published, email sent/opened/clicked, form submitted)

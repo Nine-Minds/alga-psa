@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-The Alga PSA mobile app is missing three capabilities that exist in the web app:
+The AlgaPSA mobile app is missing three capabilities that exist in the web app:
 
 1. **Documents** — No way to view, download, or attach files to tickets from mobile. Technicians in the field need to photograph issues and attach documentation.
 2. **Products/Materials** — No way to add inventory items (products) to tickets. Technicians need to record parts used during on-site work.

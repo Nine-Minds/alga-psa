@@ -23,7 +23,7 @@ Additionally, the UI kit uses `--alga-*` CSS variables while the main app uses `
 
 ## Target Users
 
-- Extension developers building on Alga PSA
+- Extension developers building on AlgaPSA
 - Internal developers testing UI kit components
 - QA engineers validating component behavior
 
@@ -203,7 +203,7 @@ const themeMapping = {
 
 ## Acceptance Criteria
 
-1. Extension installs and loads in Alga PSA
+1. Extension installs and loads in AlgaPSA
 2. All 22 UI kit components are demonstrated
 3. Each component shows all variants and sizes
 4. Interactive controls allow state changes

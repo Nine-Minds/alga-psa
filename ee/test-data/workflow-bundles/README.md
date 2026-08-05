@@ -1,6 +1,6 @@
 # Workflow Bundles (Importable Samples)
 
-This folder contains version-controlled **workflow bundle** JSON files that can be imported into an Alga PSA instance to quickly seed workflows for manual testing.
+This folder contains version-controlled **workflow bundle** JSON files that can be imported into an AlgaPSA instance to quickly seed workflows for manual testing.
 
 ## Import (CLI)
 

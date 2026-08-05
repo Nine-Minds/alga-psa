@@ -36,7 +36,7 @@ Bundle includes:
 
 ## Updates And The Upgrade Path
 
-The appliance does **not** update the Alga PSA application by itself. It checks
+The appliance does **not** update the AlgaPSA application by itself. It checks
 the selected release channel (`stable` or `nightly`), surfaces "Update
 available" in the UI, and waits for an operator to apply the update. Moving
 between versions — including minor jumps such as 1.1.x -> 1.2.x — is this same
@@ -46,7 +46,7 @@ stage or download manually.
 
 What updates how:
 
-- **Alga PSA application** (the version in Manage → Updates): operator-initiated.
+- **AlgaPSA application** (the version in Manage → Updates): operator-initiated.
   When the channel points at a newer release, the status Overview shows an
   "Update available" banner and the Manage button gains an indicator dot; the
   Manage → Updates tab shows the available version and a "Run update" button.
@@ -64,7 +64,7 @@ Application update flow (what "Run update" does):
 3. request Flux/Helm reconcile
 4. store update history
 
-This flow is application-only in v1: it moves all Alga PSA services to the
+This flow is application-only in v1: it moves all AlgaPSA services to the
 release pinned by the channel without touching the OS or k3s.
 
 ## OS/K3s Maintenance In v1

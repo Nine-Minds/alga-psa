@@ -1,8 +1,8 @@
-# Alga PSA Server
+# AlgaPSA Server
 
 ## Overview
 
-Alga PSA (Professional Services Automation) is a comprehensive business management platform designed for Managed Service Providers (MSPs) and professional services organizations. This server application provides REST APIs and core business logic for managing clients, projects, tickets, billing, and more.
+AlgaPSA (Professional Services Automation) is a comprehensive business management platform designed for Managed Service Providers (MSPs) and professional services organizations. This server application provides REST APIs and core business logic for managing clients, projects, tickets, billing, and more.
 
 ## Prerequisites
 

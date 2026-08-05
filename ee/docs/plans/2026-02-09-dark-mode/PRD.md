@@ -6,11 +6,11 @@
 
 ## Summary
 
-Add dark mode support to the main Alga PSA application, including both the MSP portal and the client portal. The ui-kit-showcase extension already has a working dark mode implementation using CSS variables and a theme bridge. The main app's infrastructure is ~80% ready — complete light/dark CSS variable sets exist in `globals.css`, a `ThemeContext` exists (but is hardlocked to light), and Tailwind is configured with CSS variable-based colors. We will use `next-themes` for SSR-safe theme switching and persist the preference to the `user_preferences` database table (with localStorage as an immediate cache). The remaining work is wiring the theme infrastructure, adding a toggle UI, aligning token systems, migrating ~600 component files, and extending dark mode to the client portal.
+Add dark mode support to the main AlgaPSA application, including both the MSP portal and the client portal. The ui-kit-showcase extension already has a working dark mode implementation using CSS variables and a theme bridge. The main app's infrastructure is ~80% ready — complete light/dark CSS variable sets exist in `globals.css`, a `ThemeContext` exists (but is hardlocked to light), and Tailwind is configured with CSS variable-based colors. We will use `next-themes` for SSR-safe theme switching and persist the preference to the `user_preferences` database table (with localStorage as an immediate cache). The remaining work is wiring the theme infrastructure, adding a toggle UI, aligning token systems, migrating ~600 component files, and extending dark mode to the client portal.
 
 ## Problem
 
-The Alga PSA application only supports light mode. Users working in low-light environments or who prefer dark interfaces have no option. The ui-kit-showcase extension has demonstrated a working dark mode, but the main application ignores the dark theme entirely — the `ThemeContext` is hardcoded to always set `light` regardless of user preference.
+The AlgaPSA application only supports light mode. Users working in low-light environments or who prefer dark interfaces have no option. The ui-kit-showcase extension has demonstrated a working dark mode, but the main application ignores the dark theme entirely — the `ThemeContext` is hardcoded to always set `light` regardless of user preference.
 
 ## Goals
 

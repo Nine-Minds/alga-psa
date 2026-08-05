@@ -1,12 +1,12 @@
 /**
- * Update portal-invitation email templates to use Alga PSA branding in footer
+ * Update portal-invitation email templates to use AlgaPSA branding in footer
  *
  * Changes footer from "© {{currentYear}} {{clientName}}. All rights reserved."
- * to "Powered by Alga PSA" to match ticket notification emails.
+ * to "Powered by AlgaPSA" to match ticket notification emails.
  */
 
 exports.up = async function(knex) {
-  console.log('Updating portal-invitation template footers to use Alga PSA branding...');
+  console.log('Updating portal-invitation template footers to use AlgaPSA branding...');
 
   // Get all portal-invitation templates
   const templates = await knex('system_email_templates')
@@ -23,7 +23,7 @@ exports.up = async function(knex) {
     // Match patterns like: <p>© {{currentYear}} {{clientName}}. [All rights reserved in any language]</p>
     html_content = html_content.replace(
       /<p>©\s*\{\{currentYear\}\}\s*\{\{clientName\}\}[^<]*<\/p>/g,
-      '<p>Powered by Alga PSA</p>'
+      '<p>Powered by AlgaPSA</p>'
     );
 
     // Update text content - replace the copyright line
@@ -31,7 +31,7 @@ exports.up = async function(knex) {
     // The copyright lines in text are typically at the end
     text_content = text_content.replace(
       /©\s*\{\{currentYear\}\}\s*\{\{clientName\}\}[^\n]*/g,
-      'Powered by Alga PSA'
+      'Powered by AlgaPSA'
     );
 
     await knex('system_email_templates')
@@ -44,7 +44,7 @@ exports.up = async function(knex) {
     console.log(`  ✓ Updated ${template.language_code} portal-invitation template`);
   }
 
-  console.log('✓ All portal-invitation templates updated with Alga PSA branding');
+  console.log('✓ All portal-invitation templates updated with AlgaPSA branding');
 };
 
 exports.down = async function(knex) {
@@ -72,13 +72,13 @@ exports.down = async function(knex) {
 
     // Revert HTML content
     html_content = html_content.replace(
-      /<p>Powered by Alga PSA<\/p>/g,
+      /<p>Powered by AlgaPSA<\/p>/g,
       `<p>${copyrightPhrase}</p>`
     );
 
     // Revert text content
     text_content = text_content.replace(
-      /Powered by Alga PSA/g,
+      /Powered by AlgaPSA/g,
       copyrightPhrase
     );
 

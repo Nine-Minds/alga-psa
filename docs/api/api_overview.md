@@ -3,9 +3,9 @@
 > 👉 **New to our APIs?** Check out our [Getting Started Guide](api_getting_started_guide.md) for a quick introduction to using our APIs.
 
 ## 1. Introduction
-This document outlines the design and architecture of the Alga PSA APIs. Our APIs are implemented using Next.js for the backend and take a REST-ish approach, leveraging Next.js API routes along with our existing actions system.
+This document outlines the design and architecture of the AlgaPSA APIs. Our APIs are implemented using Next.js for the backend and take a REST-ish approach, leveraging Next.js API routes along with our existing actions system.
 
-> 📝 **Note:** The Alga PSA hosted environment is available at `algapsa.com`. If you are running an on-premise installation, replace this with your configured domain.
+> 📝 **Note:** The AlgaPSA hosted environment is available at `algapsa.com`. If you are running an on-premise installation, replace this with your configured domain.
 
 ## 2. API Editions
 
@@ -169,7 +169,7 @@ Assets and tickets can be linked to each other (the same association surfaced in
 
 #### Ticket Agents and Team Assignment
 
-Beyond the primary assignee set via `PUT /tickets/{id}/assignment`, a ticket can have additional agents and a team. These sub-resources were previously only accessible as server actions (through the Alga PSA UI) and are now available via REST.
+Beyond the primary assignee set via `PUT /tickets/{id}/assignment`, a ticket can have additional agents and a team. These sub-resources were previously only accessible as server actions (through the AlgaPSA UI) and are now available via REST.
 
 | Method | Path | Purpose |
 |--------|------|---------|
@@ -185,7 +185,7 @@ Beyond the primary assignee set via `PUT /tickets/{id}/assignment`, a ticket can
 
 ### Enterprise Edition APIs
 - **Tenant Provisioning API:** Enables partner-driven tenant management. See [tenant_provisioning_api.md](tenant_provisioning_api.md) for details.
-- **Hudu Integration Status:** `GET /api/integrations/hudu` returns connection health for the tenant's Hudu integration: `status`, `baseUrl`, `connectedAt`, `lastSyncedAt`, and `passwordAccess` (whether the Hudu API key can reach the password endpoints). Connection setup, company mapping, and asset layout mapping are configured through the Alga PSA UI at **Settings → Integrations → Hudu**, not via REST. Requires the `system_settings` read permission; available on EE deployments with the Hudu feature enabled. See [hudu.md](../integrations/hudu.md) for the full admin guide.
+- **Hudu Integration Status:** `GET /api/integrations/hudu` returns connection health for the tenant's Hudu integration: `status`, `baseUrl`, `connectedAt`, `lastSyncedAt`, and `passwordAccess` (whether the Hudu API key can reach the password endpoints). Connection setup, company mapping, and asset layout mapping are configured through the AlgaPSA UI at **Settings → Integrations → Hudu**, not via REST. Requires the `system_settings` read permission; available on EE deployments with the Hudu feature enabled. See [hudu.md](../integrations/hudu.md) for the full admin guide.
 - **Appliance Console API (EE only):** Manages on-premise appliance installations for Enterprise Edition deployments. Three endpoints are available under `/api/v1/appliance-installs/`:
 
   | Method | Path | Purpose |

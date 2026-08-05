@@ -6,7 +6,7 @@
 
 ## Problem Statement
 
-The Alga PSA monorepo has accumulated cross-package violations (vertical packages importing from other vertical packages), circular dependency cycles (30 baselined), and stale re-export shims. This degrades build reliability, makes refactoring harder, and increases cognitive overhead.
+The AlgaPSA monorepo has accumulated cross-package violations (vertical packages importing from other vertical packages), circular dependency cycles (30 baselined), and stale re-export shims. This degrades build reliability, makes refactoring harder, and increases cognitive overhead.
 
 ## Goals
 

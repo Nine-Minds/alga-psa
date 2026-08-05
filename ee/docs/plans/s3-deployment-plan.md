@@ -4,7 +4,7 @@
 
 We have a storage provider abstraction that is used to abstract away how we handle file storage for the document system, etc. It has a factory that is used to properly instantiate the correct class, specified via configuration, etc.
 
-Alga PSA base folder: alga-psa.worktrees/s3-fileprovider-deployment
+AlgaPSA base folder: alga-psa.worktrees/s3-fileprovider-deployment
 NM Kube Config base folder: nm-kube-config/
 
 s3: server/src/empty/lib/storage/providers/S3StorageProvider.ts

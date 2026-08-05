@@ -6,7 +6,7 @@
 
 ## Summary
 
-Remove the legacy AssemblyScript/code-editor workflow system and make Alga PSA workflow-v2-only. This includes deleting workflow v1 UI, actions, bootstrap/runtime wiring, seeded/template artifacts, and the legacy database schema. Existing v1 workflows will not be migrated. Templates remain a future product concept, but the current template library is removed because it only supports workflow v1.
+Remove the legacy AssemblyScript/code-editor workflow system and make AlgaPSA workflow-v2-only. This includes deleting workflow v1 UI, actions, bootstrap/runtime wiring, seeded/template artifacts, and the legacy database schema. Existing v1 workflows will not be migrated. Templates remain a future product concept, but the current template library is removed because it only supports workflow v1.
 
 ## Problem
 

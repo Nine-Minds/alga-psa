@@ -2,7 +2,7 @@
 
 This sample demonstrates a full extension (Server Component + Iframe UI) that uses the Service Proxy pattern.
 
-1. **Server Component**: Retrieves an API key from the Runner secrets store and calls the Alga PSA Tickets API via the Runner's HTTP capability.
+1. **Server Component**: Retrieves an API key from the Runner secrets store and calls the AlgaPSA Tickets API via the Runner's HTTP capability.
 2. **Iframe UI**: Exposes the ticket data through the UI proxy capability without ever leaking the API key to the browser.
 
 ## How it works

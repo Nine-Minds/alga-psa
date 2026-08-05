@@ -6,7 +6,7 @@
 
 ## Summary
 
-Add a Level.io RMM integration to Alga PSA, modeled on the existing NinjaOne/Tanium EE
+Add a Level.io RMM integration to AlgaPSA, modeled on the existing NinjaOne/Tanium EE
 integrations, with Temporal-first sync execution. v1 scope: connection management, Level
 group → Alga client mapping, device/asset sync with cached live data, pending-patch counts
 from Level's updates endpoint, alerts backfill, and an inbound alert webhook. No new

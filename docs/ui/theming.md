@@ -1,6 +1,6 @@
 # Theming & Dark Mode
 
-Alga PSA supports light/dark themes via `next-themes` with class-based switching. The `<html>` element gets `.dark` or `.light`, activating CSS variable sets in `globals.css`. All colors flow through CSS custom properties referenced by Tailwind semantic tokens.
+AlgaPSA supports light/dark themes via `next-themes` with class-based switching. The `<html>` element gets `.dark` or `.light`, activating CSS variable sets in `globals.css`. All colors flow through CSS custom properties referenced by Tailwind semantic tokens.
 
 ## Coding Standards
 

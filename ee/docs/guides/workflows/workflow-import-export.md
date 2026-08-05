@@ -1,6 +1,6 @@
 # Workflow Import/Export (Workflow Bundle v1)
 
-This guide documents Alga PSA Workflow Runtime V2’s file-based import/export format for workflows: the **workflow bundle**.
+This guide documents AlgaPSA Workflow Runtime V2’s file-based import/export format for workflows: the **workflow bundle**.
 
 ## Bundle file
 - Filename: `workflow-bundle.json` (convention)

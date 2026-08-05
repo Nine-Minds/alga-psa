@@ -6,15 +6,15 @@
 
 ## Summary
 
-Build a Talos appliance deployment path for Alga PSA that uses Flux-managed GitOps to reconcile the on-prem runtime stack. The stack must bring up the Alga server, Postgres, PgBouncer, Redis, Hocuspocus, email-service, workflow-worker, Temporal, and temporal-worker using repository-local Helm assets where possible. Initial startup must run database bootstrap and one-time seeds. Later restarts must reuse existing volumes and must not perform a fresh setup.
+Build a Talos appliance deployment path for AlgaPSA that uses Flux-managed GitOps to reconcile the on-prem runtime stack. The stack must bring up the Alga server, Postgres, PgBouncer, Redis, Hocuspocus, email-service, workflow-worker, Temporal, and temporal-worker using repository-local Helm assets where possible. Initial startup must run database bootstrap and one-time seeds. Later restarts must reuse existing volumes and must not perform a fresh setup.
 
 ## Problem
 
-The current repository has the core pieces needed to run Alga PSA on Kubernetes, but the appliance-oriented Talos delivery path is incomplete on this branch. The root chart does not yet express the full on-prem stack the appliance needs, PgBouncer only has Docker assets, and the current Helm bootstrap behavior is split across migration and seed hooks that do not cleanly model first-run versus restart behavior for a GitOps-managed appliance.
+The current repository has the core pieces needed to run AlgaPSA on Kubernetes, but the appliance-oriented Talos delivery path is incomplete on this branch. The root chart does not yet express the full on-prem stack the appliance needs, PgBouncer only has Docker assets, and the current Helm bootstrap behavior is split across migration and seed hooks that do not cleanly model first-run versus restart behavior for a GitOps-managed appliance.
 
 ## Goals
 
-1. Deploy Alga PSA on the Talos appliance through Flux-managed GitOps rather than direct first-boot Helm commands.
+1. Deploy AlgaPSA on the Talos appliance through Flux-managed GitOps rather than direct first-boot Helm commands.
 2. Bring up the equivalent of the cloud build runtime set: server, Postgres, PgBouncer, email-service, workflow-worker, Temporal, and temporal-worker.
 3. Reuse the existing root `helm/` chart for core Alga deployment and reuse existing EE worker charts.
 4. Ensure initial startup performs idempotent database bootstrap and one-time seeding.

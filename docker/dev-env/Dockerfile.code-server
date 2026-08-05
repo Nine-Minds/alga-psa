@@ -1,4 +1,4 @@
-# Alga PSA Development Environment - Code Server
+# AlgaPSA Development Environment - Code Server
 # Based on the official code-server image with Node.js LTS and development tools
 
 FROM codercom/code-server:latest

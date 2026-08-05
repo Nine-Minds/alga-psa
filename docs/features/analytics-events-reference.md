@@ -1,6 +1,6 @@
 # Analytics Events Reference
 
-This document provides a comprehensive reference of all analytics events tracked in Alga PSA.
+This document provides a comprehensive reference of all analytics events tracked in AlgaPSA.
 
 ## Event Categories
 

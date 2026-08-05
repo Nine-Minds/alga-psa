@@ -10,7 +10,7 @@ The integration authenticates on two separate planes. Understanding this split p
 
 ```
 Plane 1: Microsoft Graph (per tenant)
-  Alga PSA --client_credentials--> login.microsoftonline.com/<profile tenant_id>
+  AlgaPSA --client_credentials--> login.microsoftonline.com/<profile tenant_id>
            --app token-----------> graph.microsoft.com
   Credentials: the tenant's Microsoft profile
   (client ID, directory/tenant ID, client secret; selected in Teams settings)
@@ -18,24 +18,24 @@ Plane 1: Microsoft Graph (per tenant)
 
 Plane 2: Bot Framework (global, per deployment)
   Teams ----activity + JWT-------> <base-url>/api/teams/bot/messages
-  Alga PSA --client_credentials--> login.microsoftonline.com/<TEAMS_BOT_APP_TENANT_ID>
+  AlgaPSA --client_credentials--> login.microsoftonline.com/<TEAMS_BOT_APP_TENANT_ID>
            --bot token-----------> Bot Framework serviceUrl (replies, proactive messages)
   Credentials: TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID, TEAMS_BOT_APP_PASSWORD
-  (environment variables on the Alga PSA server)
+  (environment variables on the AlgaPSA server)
   Used for: bot commands, message extension, quick actions, bot DM notifications
 ```
 
-Every inbound Teams request (bot messages, message-extension queries, quick actions) carries a Bot Framework JWT. Alga PSA verifies the token against `TEAMS_BOT_APP_ID` as the audience and rejects the request otherwise. When the `TEAMS_BOT_APP_*` variables are unset, Alga PSA rejects all inbound Teams traffic with `403`. There is no unauthenticated fallback.
+Every inbound Teams request (bot messages, message-extension queries, quick actions) carries a Bot Framework JWT. AlgaPSA verifies the token against `TEAMS_BOT_APP_ID` as the audience and rejects the request otherwise. When the `TEAMS_BOT_APP_*` variables are unset, AlgaPSA rejects all inbound Teams traffic with `403`. There is no unauthenticated fallback.
 
 The generated Teams app manifest registers the bot under the tenant's Microsoft profile client ID. Teams addresses all activities to that manifest bot ID. This is why the manifest bot ID and `TEAMS_BOT_APP_ID` must be the same app registration; see [step 3](#3-register-the-azure-bot-and-set-bot-credentials).
 
 ## Prerequisites
 
-- Alga PSA Pro with the Microsoft Teams add-on enabled for the tenant.
-- An Alga PSA deployment reachable over public HTTPS. `NEXT_PUBLIC_BASE_URL` (or `NEXTAUTH_URL`) must be set to that URL; the Teams app package and webhook URLs are derived from it.
+- AlgaPSA Pro with the Microsoft Teams add-on enabled for the tenant.
+- An AlgaPSA deployment reachable over public HTTPS. `NEXT_PUBLIC_BASE_URL` (or `NEXTAUTH_URL`) must be set to that URL; the Teams app package and webhook URLs are derived from it.
 - Admin access to the Microsoft Entra admin center and the Azure portal.
 - Permission to upload custom apps in the Teams admin center (or a Teams custom-app policy that allows sideloading).
-- An Alga PSA user with `system_settings` update permission for the configuration steps.
+- An AlgaPSA user with `system_settings` update permission for the configuration steps.
 - For meetings: the prerequisites in [Microsoft Teams Meetings Setup](teams-meetings-setup.md).
 
 ## 1. Create the Entra app registration
@@ -51,12 +51,12 @@ In the Microsoft Entra admin center:
 3. Under `Expose an API`, set the Application ID URI to:
    - `api://<base-url-host>/teams/<client-id>`
 
-   For example, with base URL `https://psa.acme.com` and client ID `11111111-2222-3333-4444-555555555555`, the value is `api://psa.acme.com/teams/11111111-2222-3333-4444-555555555555`. This value must match the `webApplicationInfo.resource` in the generated manifest; Alga PSA computes it from the deployment base URL and the profile client ID.
+   For example, with base URL `https://psa.acme.com` and client ID `11111111-2222-3333-4444-555555555555`, the value is `api://psa.acme.com/teams/11111111-2222-3333-4444-555555555555`. This value must match the `webApplicationInfo.resource` in the generated manifest; AlgaPSA computes it from the deployment base URL and the profile client ID.
 4. Under `Certificates & secrets`, create a client secret and record it.
 
 `Settings -> Integrations -> Microsoft` shows the exact redirect URIs and the Teams application ID URI for each profile under `Microsoft app registration guidance`, so you can copy them instead of assembling them by hand.
 
-The first redirect URI serves Microsoft sign-in for the MSP portal; the three `api/teams/auth/callback/*` URIs are where the Teams tab, bot, and message-extension sign-in popups land. Users must sign in with Microsoft at least once so Alga PSA can map their Microsoft account to their PSA user; notifications and bot commands depend on that mapping.
+The first redirect URI serves Microsoft sign-in for the MSP portal; the three `api/teams/auth/callback/*` URIs are where the Teams tab, bot, and message-extension sign-in popups land. Users must sign in with Microsoft at least once so AlgaPSA can map their Microsoft account to their PSA user; notifications and bot commands depend on that mapping.
 
 ## 2. Grant Graph application permissions
 
@@ -87,11 +87,11 @@ App-only calendar and meeting access must also be scoped and allowed on the Micr
 
 > **This is the most common way a Teams bot setup fails.** Three values must all refer to the **same** app registration:
 >
-> 1. The **manifest bot ID** in the generated Teams app package. Alga PSA sets it to the selected Microsoft profile's client ID.
+> 1. The **manifest bot ID** in the generated Teams app package. AlgaPSA sets it to the selected Microsoft profile's client ID.
 > 2. The **Microsoft App ID** of the Azure Bot resource.
-> 3. The **`TEAMS_BOT_APP_ID`** environment variable on the Alga PSA server.
+> 3. The **`TEAMS_BOT_APP_ID`** environment variable on the AlgaPSA server.
 >
-> Teams addresses activities to the manifest bot ID and presents tokens issued for it. Alga PSA only accepts inbound tokens whose audience equals `TEAMS_BOT_APP_ID`, and signs outbound replies as `TEAMS_BOT_APP_ID`. If the values differ, every inbound request is rejected with `401` and the bot never replies. The `bot_id_consistency` diagnostics step ([step 7](#7-verify)) detects this mismatch.
+> Teams addresses activities to the manifest bot ID and presents tokens issued for it. AlgaPSA only accepts inbound tokens whose audience equals `TEAMS_BOT_APP_ID`, and signs outbound replies as `TEAMS_BOT_APP_ID`. If the values differ, every inbound request is rejected with `401` and the bot never replies. The `bot_id_consistency` diagnostics step ([step 7](#7-verify)) detects this mismatch.
 
 The two supported ways to satisfy this:
 
@@ -112,7 +112,7 @@ The message extension and quick actions authenticate through this same bot regis
 
 ### Set the environment variables
 
-Set these in the Alga PSA server environment and restart:
+Set these in the AlgaPSA server environment and restart:
 
 ```bash
 TEAMS_BOT_APP_ID=<app registration client ID>
@@ -120,9 +120,9 @@ TEAMS_BOT_APP_TENANT_ID=<directory (tenant) ID that owns the app registration>
 TEAMS_BOT_APP_PASSWORD=<a client secret of that app registration>
 ```
 
-All three are required. With any of them missing, Alga PSA fails closed: inbound Teams requests get `403`, and outbound bot sends are skipped with reason `teams_bot_credentials_not_configured`.
+All three are required. With any of them missing, AlgaPSA fails closed: inbound Teams requests get `403`, and outbound bot sends are skipped with reason `teams_bot_credentials_not_configured`.
 
-## 4. Configure and activate Teams in Alga PSA
+## 4. Configure and activate Teams in AlgaPSA
 
 In the MSP app, go to `Settings -> Integrations -> Microsoft`:
 
@@ -151,7 +151,7 @@ Regenerate and re-upload the package whenever the deployment base URL or the sel
 
 ## 6. Configure the recordings webhook
 
-Recording and transcript capture relies on Microsoft Graph change notifications delivered to a public webhook. Alga PSA resolves the webhook URL from the first of these that is set:
+Recording and transcript capture relies on Microsoft Graph change notifications delivered to a public webhook. AlgaPSA resolves the webhook URL from the first of these that is set:
 
 1. `TEAMS_RECORDINGS_WEBHOOK_URL`
 2. `TEAMS_WEBHOOK_BASE_URL`
@@ -159,9 +159,9 @@ Recording and transcript capture relies on Microsoft Graph change notifications 
 4. `NEXT_PUBLIC_BASE_URL`
 5. `NEXTAUTH_URL`
 
-If the value is a base URL, Alga PSA appends `/api/teams/webhooks/recordings`. The resulting URL must be HTTPS and publicly reachable; Microsoft Graph validates it when the subscription is created and refuses non-HTTPS endpoints. If your server sits behind a proxy or non-public hostname, set `TEAMS_RECORDINGS_WEBHOOK_URL` explicitly.
+If the value is a base URL, AlgaPSA appends `/api/teams/webhooks/recordings`. The resulting URL must be HTTPS and publicly reachable; Microsoft Graph validates it when the subscription is created and refuses non-HTTPS endpoints. If your server sits behind a proxy or non-public hostname, set `TEAMS_RECORDINGS_WEBHOOK_URL` explicitly.
 
-Alga PSA subscribes to `communications/onlineMeetings/getAllRecordings` and `communications/onlineMeetings/getAllTranscripts`. Subscriptions live for 60 hours; the `renew-teams-meeting-artifact-subscriptions` job renews them, and meeting creation also ensures they exist. You do not create them by hand; verify them in the next step.
+AlgaPSA subscribes to `communications/onlineMeetings/getAllRecordings` and `communications/onlineMeetings/getAllTranscripts`. Subscriptions live for 60 hours; the `renew-teams-meeting-artifact-subscriptions` job renews them, and meeting creation also ensures they exist. You do not create them by hand; verify them in the next step.
 
 ## 7. Verify
 
@@ -189,8 +189,8 @@ Fix any `fail` results before moving on; each step includes a recommendation.
 
 ### Send a test message
 
-1. In Teams, open the Alga PSA app and send the bot any message. This stores the conversation reference the test needs.
-2. Back in Teams settings, click `Send test message`. A hero card titled `Alga PSA Teams test message` should arrive as a bot DM within seconds.
+1. In Teams, open the AlgaPSA app and send the bot any message. This stores the conversation reference the test needs.
+2. Back in Teams settings, click `Send test message`. A hero card titled `AlgaPSA Teams test message` should arrive as a bot DM within seconds.
 
 The result records a delivery row you can inspect in the delivery log in the Teams settings area, alongside the audit log.
 
@@ -198,11 +198,11 @@ The result records a delivery row you can inspect in the delivery log in the Tea
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Bot never replies to anything; server logs show `403` with `bot_connector_not_configured` | `TEAMS_BOT_APP_*` variables are unset. Alga PSA rejects all inbound Teams traffic when bot credentials are missing | Set all three variables ([step 3](#3-register-the-azure-bot-and-set-bot-credentials)) and restart. Confirm with the `bot_connector` diagnostics step |
+| Bot never replies to anything; server logs show `403` with `bot_connector_not_configured` | `TEAMS_BOT_APP_*` variables are unset. AlgaPSA rejects all inbound Teams traffic when bot credentials are missing | Set all three variables ([step 3](#3-register-the-azure-bot-and-set-bot-credentials)) and restart. Confirm with the `bot_connector` diagnostics step |
 | Bot never replies; server logs show `401` rejections on `/api/teams/bot/messages` | The manifest bot ID (selected profile client ID) differs from `TEAMS_BOT_APP_ID`, so inbound token audiences fail verification. Or the Azure Bot's Microsoft App ID is a third, different app | Run diagnostics; `bot_id_consistency` names both IDs. Make the profile client ID, Azure Bot Microsoft App ID, and `TEAMS_BOT_APP_ID` the same app registration, then regenerate and re-upload the package if the manifest side changed |
 | Bot receives commands but replies fail; logs show `Failed to acquire Bot Framework token` | Wrong `TEAMS_BOT_APP_PASSWORD` or `TEAMS_BOT_APP_TENANT_ID`, or the client secret expired | Issue a new client secret on the bot app registration and update the environment |
-| Test message skipped with `missing_conversation_reference` | The admin has never messaged the bot, so there is no conversation to post into | Open the Alga PSA bot in Teams, send it any message, retry |
-| Test message skipped with `missing_user_linkage`; deliveries show `user_not_mapped` | The recipient has not signed in to Alga PSA with Microsoft, so no account mapping exists | Have the user sign in with Microsoft (MSP portal SSO or the Teams tab sign-in) |
+| Test message skipped with `missing_conversation_reference` | The admin has never messaged the bot, so there is no conversation to post into | Open the AlgaPSA bot in Teams, send it any message, retry |
+| Test message skipped with `missing_user_linkage`; deliveries show `user_not_mapped` | The recipient has not signed in to AlgaPSA with Microsoft, so no account mapping exists | Have the user sign in with Microsoft (MSP portal SSO or the Teams tab sign-in) |
 | Approval succeeds but the appointment has no Teams join link | Graph meeting creation failed or was skipped; the approval itself does not fail. Common causes: missing organizer UPN, missing `Calendars.ReadWrite` consent, missing access policies | Check `Settings -> Integrations -> Microsoft Teams` for the organizer, re-check [step 2](#2-grant-graph-application-permissions) and the [meetings runbook](teams-meetings-setup.md); server logs carry `[TeamsMeetings]` entries with the Graph error. Use the retry action on the approved request to generate the meeting again |
 | Recordings or transcripts never appear | Subscriptions were never created or expired, or Microsoft Graph cannot reach the webhook | Run diagnostics: `artifact_subscriptions` and `webhook_reachability`. Set `TEAMS_RECORDINGS_WEBHOOK_URL` to a public HTTPS URL ([step 6](#6-configure-the-recordings-webhook)) and confirm the renewal job runs |
 | A recording is listed but the download/play button returns `404` or `403` | Graph can enumerate the recording but not stream its content: the organizer's mailbox is not covered by the Teams/Exchange application access policy, or `OnlineMeetingRecording.Read.All` lacks admin consent. (Downloads use the Graph `/recordings/{id}/content` endpoint, not the AMS `recordingContentUrl`, so a policy gap surfaces here.) | Re-check [step 2](#2-grant-graph-application-permissions) consent and the [Teams Application Access Policy](teams-meetings-setup.md#3-create-a-teams-application-access-policy) scoping the organizer mailbox. Server logs carry the Graph status |

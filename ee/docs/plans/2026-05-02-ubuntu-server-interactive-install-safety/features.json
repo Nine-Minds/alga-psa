@@ -11,7 +11,7 @@
   },
   {
     "id": "F002",
-    "description": "Label the ISO / install artifact so it is identifiable as an Alga PSA appliance image.",
+    "description": "Label the ISO / install artifact so it is identifiable as an AlgaPSA appliance image.",
     "implemented": true,
     "prdRefs": [
       "Summary",

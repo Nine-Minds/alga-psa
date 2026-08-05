@@ -1,6 +1,6 @@
 # QuickBooks Integration (Admin Guide)
 
-Alga PSA currently supports **QuickBooks CSV** exports for manual import into QuickBooks. **QuickBooks Online (OAuth)** is displayed as **Coming soon** in the UI.
+AlgaPSA currently supports **QuickBooks CSV** exports for manual import into QuickBooks. **QuickBooks Online (OAuth)** is displayed as **Coming soon** in the UI.
 
 ## QuickBooks CSV (Available Now)
 ### Where to configure

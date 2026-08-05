@@ -1,6 +1,6 @@
 # Workflow Worker Helm Chart
 
-This Helm chart deploys the Workflow Worker component for the Alga PSA application. The worker processes workflow events from Redis Streams and exposes a health endpoint for Kubernetes probes.
+This Helm chart deploys the Workflow Worker component for the AlgaPSA application. The worker processes workflow events from Redis Streams and exposes a health endpoint for Kubernetes probes.
 
 ## Default Namespace
 

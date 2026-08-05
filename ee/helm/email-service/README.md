@@ -1,4 +1,4 @@
 # IMAP Service Helm Chart
 
-Deploys the Alga PSA IMAP inbound email listener service.
+Deploys the AlgaPSA IMAP inbound email listener service.
 

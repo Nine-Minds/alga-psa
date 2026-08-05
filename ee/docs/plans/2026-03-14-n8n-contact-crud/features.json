@@ -1,7 +1,7 @@
 [
   {
     "id": "F001",
-    "description": "Add `contact` to the Alga PSA node resource selector.",
+    "description": "Add `contact` to the AlgaPSA node resource selector.",
     "implemented": true,
     "prdRefs": ["Functional Requirements", "UX / UI Notes"]
   },

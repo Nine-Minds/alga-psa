@@ -84,7 +84,7 @@ Separately, the observability loop added `teams_conversation_references` (writte
 
 - New Card in `TeamsIntegrationSettings.tsx` below the existing config/package cards: title "Diagnostics & Test Message".
 - "Run diagnostics" button → step list, each row: status badge (pass=green / warn=amber / fail=red / skip=grey) + title + detail; recommendations rendered as a bullet list below.
-- "Send test message" button → success or friendly skip/error message; the `missing_conversation_reference` skip maps to "Open the Alga PSA bot in Teams and send it any message first, then retry."
+- "Send test message" button → success or friendly skip/error message; the `missing_conversation_reference` skip maps to "Open the AlgaPSA bot in Teams and send it any message first, then retry."
 - Both buttons disabled when addon missing or integration not active (reuse existing `canPersist`-style gating).
 - All strings i18n'd with `defaultValue` fallbacks, mirroring existing `integrations.teams.settings.*` keys.
 

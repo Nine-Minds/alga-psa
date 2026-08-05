@@ -6,7 +6,7 @@
 
 ## Summary
 
-Add workflow actions for Alga PSA's time module so MSPs can automate core time-entry operations, time-sheet approval flows, and billing-readiness checks from Workflow Designer. The implementation should replace the current direct-write `time.create_entry` behavior with workflow-safe domain helpers that preserve the same business rules and side effects used by the product's time-entry UI/API paths.
+Add workflow actions for AlgaPSA's time module so MSPs can automate core time-entry operations, time-sheet approval flows, and billing-readiness checks from Workflow Designer. The implementation should replace the current direct-write `time.create_entry` behavior with workflow-safe domain helpers that preserve the same business rules and side effects used by the product's time-entry UI/API paths.
 
 The first implementation scope is option B: core time entry actions, core time sheet actions, and readiness helpers. Timer/session automation, broad custom picker work, and non-core reporting are out of scope for the initial plan unless they are required to make the core actions usable.
 

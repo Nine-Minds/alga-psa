@@ -7,7 +7,7 @@ Deliver a comprehensive payment integration system that enables MSP customers to
 Primary outcomes:
 - **Abstract Payment Provider Interface**: Extensible architecture supporting Stripe initially with provisions for PayPal, Square, and other providers.
 - **Stripe Invoice Payment Links**: Generate secure payment links included in invoice emails, allowing customers to pay invoices online.
-- **Payment Recording & Synchronization**: Automatically record Stripe payments in Alga PSA transactions, update invoice statuses, and maintain correlation between Stripe and PSA records.
+- **Payment Recording & Synchronization**: Automatically record Stripe payments in AlgaPSA transactions, update invoice statuses, and maintain correlation between Stripe and PSA records.
 - **Configuration UI**: Tenant-facing settings to connect Stripe accounts, configure payment options, and manage payment method preferences.
 - **Accounting Integration**: Ensure payments flow correctly to Xero and QuickBooks integrations via the existing accounting export architecture.
 
@@ -519,7 +519,7 @@ const webhookEndpoint = await stripe.webhookEndpoints.create({
     'payment_intent.succeeded',
     'payment_intent.payment_failed',
   ],
-  description: `Alga PSA payment webhook for tenant ${tenantId}`,
+  description: `AlgaPSA payment webhook for tenant ${tenantId}`,
   metadata: { tenant_id: tenantId, created_by: 'alga-psa' },
 });
 

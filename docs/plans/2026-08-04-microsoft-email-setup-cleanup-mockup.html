@@ -225,11 +225,11 @@
       <div class="crumb">Settings → Integrations → <b>Providers</b></div>
       <div class="card" id="providers-card">
         <h2>Microsoft</h2>
-        <div class="sub">Connect Alga PSA to Microsoft once. Staff sign-in, email, and calendar all reuse this connection.</div>
+        <div class="sub">Connect AlgaPSA to Microsoft once. Staff sign-in, email, and calendar all reuse this connection.</div>
         <div id="providers-body"></div>
       </div>
       <div class="note"><span class="n">1</span><span>App-level configuration lives <b>only</b> here. The mailbox flow (right) never asks about apps, client IDs, or redirect URIs again.</span></div>
-      <div class="note" id="note-gating"><span class="n">2</span><span>On <b>appliance / on-prem</b>, the "app provided by Alga PSA" option is <b>not rendered at all</b> (gated by <code>useTier().isHosted</code>) — today it renders and then fails with "platform credentials unavailable".</span></div>
+      <div class="note" id="note-gating"><span class="n">2</span><span>On <b>appliance / on-prem</b>, the "app provided by AlgaPSA" option is <b>not rendered at all</b> (gated by <code>useTier().isHosted</code>) — today it renders and then fails with "platform credentials unavailable".</span></div>
     </div>
 
     <!-- ============ SPOT 2: COMMUNICATION ============ -->
@@ -266,7 +266,7 @@
     <h2>What changed vs. today</h2>
     <ul>
       <li><b>One home for app config.</b> Providers owns the Entra app (platform / auto-created / manual). The mailbox dialog only collects mailbox facts and launches sign-in — it links to Providers when the app isn't ready, instead of re-explaining app options.</li>
-      <li><b>Recommended option first, and only when real.</b> Hosted: "App provided by Alga PSA" is first and preselected. Appliance: that option doesn't exist — no disabled card with an "Unavailable" badge.</li>
+      <li><b>Recommended option first, and only when real.</b> Hosted: "App provided by AlgaPSA" is first and preselected. Appliance: that option doesn't exist — no disabled card with an "Unavailable" badge.</li>
       <li><b>Deployment-aware, not edition-aware.</b> Gating uses hosted vs self-hosted (<code>useTier().isHosted</code>), not <code>EDITION === 'enterprise'</code>.</li>
       <li><b>Terminology.</b> "Tenant" unqualified is banned from UI copy. Microsoft's concept is "your Microsoft organization" (or "Microsoft tenant ID" for the literal field); Alga's internal tenant concept never surfaces.</li>
       <li><b>Redirect URI removed from UI.</b> Computed from the deployment's base URL; shown read-only in Providers → advanced only where a BYO app needs it copied into Entra.</li>
@@ -280,7 +280,7 @@
     <div class="mhead">
       <div>
         <h2 id="wz-title">Set up Microsoft</h2>
-        <div class="sub" id="wz-sub">Choose how Alga PSA should connect to Microsoft.</div>
+        <div class="sub" id="wz-sub">Choose how AlgaPSA should connect to Microsoft.</div>
       </div>
       <button class="x" onclick="closeWizard()">✕</button>
     </div>
@@ -353,7 +353,7 @@
   function sourceLabel() {
     if (state.appSource === 'auto')   return 'App in your Microsoft organization';
     if (state.appSource === 'manual') return 'Your Entra app registration';
-    if (state.deploy === 'hosted')    return 'Microsoft app provided by Alga PSA';
+    if (state.deploy === 'hosted')    return 'Microsoft app provided by AlgaPSA';
     return 'App in your Microsoft organization';
   }
 
@@ -411,12 +411,12 @@
     const title = $('wz-title'), sub = $('wz-sub');
     if (state.wizardStep === 'choose') {
       title.textContent = 'Set up Microsoft';
-      sub.textContent = 'Choose how Alga PSA should connect to Microsoft.';
+      sub.textContent = 'Choose how AlgaPSA should connect to Microsoft.';
       const platformOpt = state.deploy === 'hosted' ? `
         <button class="opt rec" onclick="chooseSource('platform')">
           <span class="radio"></span>
           <span>
-            <span class="ot">Use the app provided by Alga PSA <span class="badge green">Recommended</span></span>
+            <span class="ot">Use the app provided by AlgaPSA <span class="badge green">Recommended</span></span>
             <span class="od">Nothing to register in Microsoft Entra — no client ID or secret. Your Microsoft 365 administrator just approves access.</span>
           </span>
         </button>` : '';
@@ -426,7 +426,7 @@
           <span class="radio"></span>
           <span>
             <span class="ot">Create an app in your Microsoft organization</span>
-            <span class="od">Alga PSA registers a dedicated Entra app for you automatically. Requires signing in as a Microsoft administrator.</span>
+            <span class="od">AlgaPSA registers a dedicated Entra app for you automatically. Requires signing in as a Microsoft administrator.</span>
           </span>
         </button>
         <button class="opt" onclick="chooseSource('manual')">
@@ -440,7 +440,7 @@
         <div class="note" style="margin-top:14px"><span class="n">2</span><span>Appliance view: the platform option is absent — not shown-but-disabled. Automated creation is the recommended default here.</span></div>` : ''}`;
     } else if (state.wizardStep === 'auto-details') {
       title.textContent = 'Create an app in your Microsoft organization';
-      sub.textContent = 'Alga PSA will register the app for you.';
+      sub.textContent = 'AlgaPSA will register the app for you.';
       body.innerHTML = `
         <div class="field">
           <label>Microsoft tenant ID or verified domain</label>

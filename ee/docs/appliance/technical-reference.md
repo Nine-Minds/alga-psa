@@ -14,7 +14,7 @@ The supported v1 appliance has four main layers:
    - provide the Kubernetes runtime and persistent volumes
 3. Flux and Helm
    - reconcile the declared application release
-4. Alga PSA workloads
+4. AlgaPSA workloads
    - `alga-core` and related services
 
 The setup/status UI sits on top of these layers and hides raw command surfaces for normal use.

@@ -1,8 +1,8 @@
-# ITIL Integration Plan for Alga PSA
+# ITIL Integration Plan for AlgaPSA
 
 ## Overview
 
-This document outlines the comprehensive plan for integrating ITIL (Information Technology Infrastructure Library) v4 best practices into the Alga PSA (Professional Services Automation) platform. The integration focuses on three core ITIL processes: Incident Management, Problem Management, and Change Management.
+This document outlines the comprehensive plan for integrating ITIL (Information Technology Infrastructure Library) v4 best practices into the AlgaPSA (Professional Services Automation) platform. The integration focuses on three core ITIL processes: Incident Management, Problem Management, and Change Management.
 
 ## Integration Approach
 
@@ -463,7 +463,7 @@ Change Request → Risk Assessment → CAB Approval → Scheduling → Implement
 
 ## Conclusion
 
-The ITIL integration into Alga PSA provides a comprehensive IT Service Management solution that:
+The ITIL integration into AlgaPSA provides a comprehensive IT Service Management solution that:
 
 - **Maintains Compatibility**: Preserves existing PSA functionality while adding ITIL capabilities
 - **Ensures Compliance**: Implements industry-standard ITIL v4 processes

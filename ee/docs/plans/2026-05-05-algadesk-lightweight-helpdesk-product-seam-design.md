@@ -5,7 +5,7 @@
 
 ## Summary
 
-Create AlgaDesk as a focused help-desk wedge product within the existing Alga PSA application. AlgaDesk runs from the same codebase, Next.js app, database schema, and background-worker model as PSA, but presents a distinct product surface based on product entitlement. The seam is a product/licensing boundary, not a physical process boundary.
+Create AlgaDesk as a focused help-desk wedge product within the existing AlgaPSA application. AlgaDesk runs from the same codebase, Next.js app, database schema, and background-worker model as PSA, but presents a distinct product surface based on product entitlement. The seam is a product/licensing boundary, not a physical process boundary.
 
 AlgaDesk includes ticketing, clients/contacts, client portal ticketing, ticket attachments, knowledge base, users/teams settings, and email-to-ticket. It excludes billing, contracts, quotes, projects, time entry, scheduling/dispatch, assets/RMM, workflows, service request forms, surveys, extensions, AI chat, reporting, and full document management.
 

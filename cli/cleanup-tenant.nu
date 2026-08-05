@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
 
-# Tenant Cleanup Tool for Alga PSA
+# Tenant Cleanup Tool for AlgaPSA
 # 
 # Usage:
 #   ./cleanup-tenant.nu list                          # List all tenants
@@ -722,7 +722,7 @@ def "main cleanup" [
 
 # Show help
 def main [] {
-    print "Tenant Cleanup Tool for Alga PSA\n"
+    print "Tenant Cleanup Tool for AlgaPSA\n"
     print "Commands:"
     print "  list                      List all tenants"
     print "  inspect <tenant-id>       Inspect tenant data"

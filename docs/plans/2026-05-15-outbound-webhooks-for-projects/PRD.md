@@ -8,7 +8,7 @@
 
 ## 1. Problem statement & user value
 
-Alga PSA delivers outbound webhooks for tickets but not for projects, even
+AlgaPSA delivers outbound webhooks for tickets but not for projects, even
 though internal `PROJECT_*` / `PROJECT_TASK_*` events already fire on the event
 bus. MSP integrators cannot react programmatically to project lifecycle changes
 (creation, status, assignment, closure) or project-task changes. The outbound

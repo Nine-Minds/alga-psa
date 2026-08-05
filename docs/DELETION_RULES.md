@@ -1,6 +1,6 @@
-# Alga PSA Deletion Rules
+# AlgaPSA Deletion Rules
 
-This document explains how client and contact deletion works in Alga PSA.
+This document explains how client and contact deletion works in AlgaPSA.
 
 ## Client Deletion Rules
 
@@ -92,4 +92,4 @@ These deletion rules ensure:
 
 ---
 
-*This document describes the actual deletion behavior implemented in Alga PSA.*
+*This document describes the actual deletion behavior implemented in AlgaPSA.*

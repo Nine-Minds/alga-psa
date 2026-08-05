@@ -1,6 +1,6 @@
 # Mobile Release Process (Signing, Versioning, Release Notes)
 
-Scope: Ticketing MVP + SSO (`ee/mobile/` Expo app) for hosted Alga PSA environments.
+Scope: Ticketing MVP + SSO (`ee/mobile/` Expo app) for hosted AlgaPSA environments.
 
 Last updated: 2026-02-03
 

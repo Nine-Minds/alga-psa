@@ -75,7 +75,7 @@ const translations = {
       actionText: 'Please review this request and take appropriate action. The requester is waiting for confirmation.',
       reviewButton: 'Review & Approve'
     },
-    footer: 'Powered by Alga PSA'
+    footer: 'Powered by AlgaPSA'
   },
   de: {
     requestReceived: {
@@ -140,7 +140,7 @@ const translations = {
       actionText: 'Bitte prüfen Sie diese Anfrage und handeln Sie entsprechend. Der Anfragende wartet auf eine Bestätigung.',
       reviewButton: 'Prüfen & Genehmigen'
     },
-    footer: 'Powered by Alga PSA'
+    footer: 'Powered by AlgaPSA'
   },
   es: {
     requestReceived: {
@@ -205,7 +205,7 @@ const translations = {
       actionText: 'Por favor revise esta solicitud y tome las medidas apropiadas. El solicitante está esperando confirmación.',
       reviewButton: 'Revisar y aprobar'
     },
-    footer: 'Powered by Alga PSA'
+    footer: 'Powered by AlgaPSA'
   },
   fr: {
     requestReceived: {
@@ -270,7 +270,7 @@ const translations = {
       actionText: 'Veuillez examiner cette demande et prendre les mesures appropriées. Le demandeur attend une confirmation.',
       reviewButton: 'Examiner et approuver'
     },
-    footer: 'Powered by Alga PSA'
+    footer: 'Powered by AlgaPSA'
   },
   it: {
     requestReceived: {
@@ -335,7 +335,7 @@ const translations = {
       actionText: 'Per favore esamina questa richiesta e agisci di conseguenza. Il richiedente è in attesa di conferma.',
       reviewButton: 'Esamina e approva'
     },
-    footer: 'Powered by Alga PSA'
+    footer: 'Powered by AlgaPSA'
   },
   nl: {
     requestReceived: {
@@ -400,7 +400,7 @@ const translations = {
       actionText: 'Bekijk dit verzoek en neem passende actie. De aanvrager wacht op bevestiging.',
       reviewButton: 'Beoordelen en goedkeuren'
     },
-    footer: 'Powered by Alga PSA'
+    footer: 'Powered by AlgaPSA'
   }
 };
 
@@ -451,7 +451,7 @@ function generateRequestReceivedHtml(t) {
           </td>
         </tr>
         <tr>
-          <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA</td>
+          <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by AlgaPSA</td>
         </tr>
       </table>
     </td>
@@ -538,7 +538,7 @@ function generateRequestApprovedHtml(t) {
           </td>
         </tr>
         <tr>
-          <td style="padding:18px 32px;background:#f0fdf4;color:#047857;font-size:12px;text-align:center;">Powered by Alga PSA</td>
+          <td style="padding:18px 32px;background:#f0fdf4;color:#047857;font-size:12px;text-align:center;">Powered by AlgaPSA</td>
         </tr>
       </table>
     </td>
@@ -614,7 +614,7 @@ function generateRequestDeclinedHtml(t) {
           </td>
         </tr>
         <tr>
-          <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA</td>
+          <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by AlgaPSA</td>
         </tr>
       </table>
     </td>
@@ -715,7 +715,7 @@ function generateNewRequestHtml(t) {
           </td>
         </tr>
         <tr>
-          <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA</td>
+          <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by AlgaPSA</td>
         </tr>
       </table>
     </td>

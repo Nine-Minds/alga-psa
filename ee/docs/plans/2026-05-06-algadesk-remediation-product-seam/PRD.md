@@ -9,13 +9,13 @@
 
 ## Summary
 
-Remediate the current AlgaDesk product seam implementation so it satisfies the original product intent: AlgaDesk must be a coherent help-desk wedge product inside the existing Alga PSA app, with a real product entitlement boundary, a purpose-built AlgaDesk shell, server-side route/API enforcement, accurate metadata filtering, and confidence-building tests that compile and run.
+Remediate the current AlgaDesk product seam implementation so it satisfies the original product intent: AlgaDesk must be a coherent help-desk wedge product inside the existing AlgaPSA app, with a real product entitlement boundary, a purpose-built AlgaDesk shell, server-side route/API enforcement, accurate metadata filtering, and confidence-building tests that compile and run.
 
 The remediation job is not a second attempt to expand scope. It is a stabilization and correctness pass over work already implemented in the parent plan. The top priority is to fix blockers identified in review: typecheck failures, missing session product propagation, client-side-only route boundaries, API bypasses in overridden controllers, incomplete registry coverage, metadata leakage, overclaimed checklist status, and non-runnable or low-confidence tests.
 
 ## Original Product Intent to Preserve
 
-AlgaDesk is an orthogonal product entitlement, not a new `solo | pro | premium` tier. It runs from the same codebase, Next.js app, database schema, and background-worker model as Alga PSA. The seam is product/licensing and composition, not a separate physical process.
+AlgaDesk is an orthogonal product entitlement, not a new `solo | pro | premium` tier. It runs from the same codebase, Next.js app, database schema, and background-worker model as AlgaPSA. The seam is product/licensing and composition, not a separate physical process.
 
 AlgaDesk includes:
 

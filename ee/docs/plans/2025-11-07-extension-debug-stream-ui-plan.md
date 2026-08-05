@@ -2,7 +2,7 @@
 
 ## Overview
 
-Introduce a first-class "Extension Debug Console" in Alga PSA EE that enables extension authors and internal engineers to observe live stdout/stderr and structured logs for their extensions, scoped to specific extension installs and request flows.
+Introduce a first-class "Extension Debug Console" in AlgaPSA EE that enables extension authors and internal engineers to observe live stdout/stderr and structured logs for their extensions, scoped to specific extension installs and request flows.
 
 The console will:
 

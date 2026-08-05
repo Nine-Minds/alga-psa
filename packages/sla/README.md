@@ -1,6 +1,6 @@
 # @alga-psa/sla
 
-SLA (Service Level Agreement) management module for Alga PSA. Provides policy definitions, business hours scheduling, SLA timer lifecycle, pause/resume mechanics, threshold-based notifications, escalation management, and compliance reporting.
+SLA (Service Level Agreement) management module for AlgaPSA. Provides policy definitions, business hours scheduling, SLA timer lifecycle, pause/resume mechanics, threshold-based notifications, escalation management, and compliance reporting.
 
 ## Overview
 

@@ -171,7 +171,7 @@ File: `server/migrations/20260505140000_add_tenant_product_code.cjs`
 
 This adds `product_code text DEFAULT 'psa'` to the `tenants` table with CHECK `('psa', 'algadesk')`. This is definitively:
 
-> **A product-edition/entitlement flag**: `'psa'` = Alga PSA, `'algadesk'` = AlgaDesk (service desk edition).
+> **A product-edition/entitlement flag**: `'psa'` = AlgaPSA, `'algadesk'` = AlgaDesk (service desk edition).
 
 It has nothing to do with product SKU inventory. It controls which Alga product the tenant is licensed for.
 

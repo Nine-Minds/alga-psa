@@ -6,7 +6,7 @@
 
 ## Summary
 
-Make Microsoft Teams online meetings first-class **interaction** records in Alga PSA, let MSP users
+Make Microsoft Teams online meetings first-class **interaction** records in AlgaPSA, let MSP users
 **schedule** meetings themselves (not just as a side effect of a client appointment request), and
 **capture the recording and transcript** after a meeting ends — surfaced on the contact/client
 interactions timeline (and appointment views). Meetings are created as **calendar-backed events** so

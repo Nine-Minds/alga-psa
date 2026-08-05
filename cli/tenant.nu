@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
 
-# Tenant management commands for Alga PSA
+# Tenant management commands for AlgaPSA
 
 # Create a new tenant
 export def create-tenant [

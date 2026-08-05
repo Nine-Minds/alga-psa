@@ -36,7 +36,7 @@ Extensions often need predictable periodic execution (sync jobs, cache refresh, 
 
 ## Users and Primary Flows
 
-**Primary persona:** Extension developer building an Alga PSA extension
+**Primary persona:** Extension developer building an AlgaPSA extension
 
 ### Flow: Set up schedules on extension install
 

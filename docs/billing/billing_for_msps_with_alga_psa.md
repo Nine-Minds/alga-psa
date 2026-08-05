@@ -1,14 +1,14 @@
-# Billing for MSPs with Alga PSA
+# Billing for MSPs with AlgaPSA
 
 ## Draft
 
-This guide explains how billing works in Alga PSA from an MSP operator's point of view. It is intended to help billing admins, service managers, and owners understand how client billing schedules, contracts, contract lines, recurring fees, time, usage, and invoice generation fit together.
+This guide explains how billing works in AlgaPSA from an MSP operator's point of view. It is intended to help billing admins, service managers, and owners understand how client billing schedules, contracts, contract lines, recurring fees, time, usage, and invoice generation fit together.
 
 This is a practical guide, not a technical reference.
 
 ## The Core Mental Model
 
-Alga PSA separates three ideas that MSPs often mix together:
+AlgaPSA separates three ideas that MSPs often mix together:
 
 1. **What you sell**
    - Services and products in your catalog.
@@ -25,7 +25,7 @@ That separation matters because the same service can be sold to different client
 - as a bucket or included amount with overages
 - as a passthrough product or license
 
-In Alga PSA, the service catalog tells the system what the service is. Contracts tell the system how that client's work should be billed.
+In AlgaPSA, the service catalog tells the system what the service is. Contracts tell the system how that client's work should be billed.
 
 ## Key Objects
 
@@ -166,7 +166,7 @@ These will appear as separate invoiceable rows.
 
 ## How Automatic Invoicing Thinks
 
-On the Automatic Invoicing screen, Alga PSA looks for due billing work and groups it by:
+On the Automatic Invoicing screen, AlgaPSA looks for due billing work and groups it by:
 
 - client
 - invoice window
@@ -204,7 +204,7 @@ The system is designed to combine only when it is safe.
 
 Contracts do more than drive recurring fees. They also shape how time and usage are billed.
 
-For hourly and usage-based work, the contract tells Alga PSA things like:
+For hourly and usage-based work, the contract tells AlgaPSA things like:
 
 - whether a service should bill hourly, by usage, or be included
 - what rate to use

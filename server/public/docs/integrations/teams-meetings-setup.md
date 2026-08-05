@@ -28,7 +28,7 @@ New-ApplicationAccessPolicy `
   -AppId $appId `
   -PolicyScopeGroupId "Alga-Teams-Meeting-Organizers@acme.com" `
   -AccessRight RestrictAccess `
-  -Description "Restrict Alga PSA calendar access to Teams meeting organizer mailboxes"
+  -Description "Restrict AlgaPSA calendar access to Teams meeting organizer mailboxes"
 
 Test-ApplicationAccessPolicy `
   -Identity $organizerUpn `
@@ -49,7 +49,7 @@ $organizerObjectId = (Get-CsOnlineUser -Identity $organizerUpn).ExternalDirector
 New-CsApplicationAccessPolicy `
   -Identity "Alga-Appointment-Meetings" `
   -AppIds $appId `
-  -Description "Allow Alga PSA to create appointment meetings"
+  -Description "Allow AlgaPSA to create appointment meetings"
 
 Grant-CsApplicationAccessPolicy `
   -PolicyName "Alga-Appointment-Meetings" `

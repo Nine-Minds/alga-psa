@@ -5,7 +5,7 @@
 - Status: Draft
 
 ## Summary
-Build a terminal-first appliance operator UI under `ee/appliance` so operators can bootstrap, upgrade, reset, and inspect a Talos-based Alga PSA appliance without remembering `talosctl`, `kubectl`, config paths, or appliance script arguments.
+Build a terminal-first appliance operator UI under `ee/appliance` so operators can bootstrap, upgrade, reset, and inspect a Talos-based AlgaPSA appliance without remembering `talosctl`, `kubectl`, config paths, or appliance script arguments.
 
 The first version should wrap the existing appliance scripts and cluster objects rather than replacing them. The TUI should become the preferred operator entrypoint for appliance lifecycle actions while preserving the current script-based automation under the hood.
 

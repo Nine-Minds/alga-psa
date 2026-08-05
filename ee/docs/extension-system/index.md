@@ -1,4 +1,4 @@
-# Alga PSA Extension System Documentation (Enterprise)
+# AlgaPSA Extension System Documentation (Enterprise)
 
 ## Overview
 

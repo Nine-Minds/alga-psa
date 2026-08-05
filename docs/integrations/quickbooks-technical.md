@@ -1,6 +1,6 @@
 # QuickBooks Integrations – Technical Overview
 
-This document describes the current QuickBooks integration architecture in Alga PSA.
+This document describes the current QuickBooks integration architecture in AlgaPSA.
 
 ## Current State (UI)
 - **QuickBooks CSV (`quickbooks_csv`)**: enabled and selectable in **Settings → Integrations → Accounting**.

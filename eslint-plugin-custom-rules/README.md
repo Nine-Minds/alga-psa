@@ -1,6 +1,6 @@
 # Custom ESLint Rules
 
-This directory contains custom ESLint rules specific to the Alga PSA project.
+This directory contains custom ESLint rules specific to the AlgaPSA project.
 
 ## Available Rules
 

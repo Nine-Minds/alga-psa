@@ -2,7 +2,7 @@
 
 ## Purpose & Overview
 
-Complete the Alga PSA tax system by exposing existing backend capabilities through UI and implementing an external tax passthrough system that allows accounting packages (Xero, QuickBooks) to handle tax calculations with results imported back into Alga PSA.
+Complete the AlgaPSA tax system by exposing existing backend capabilities through UI and implementing an external tax passthrough system that allows accounting packages (Xero, QuickBooks) to handle tax calculations with results imported back into AlgaPSA.
 
 Primary outcomes:
 - **UI Completion:** Expose composite tax components, progressive tax brackets, tax holidays, and client tax exemption features that exist in the backend but lack UI.
@@ -40,7 +40,7 @@ Primary outcomes:
 
 ```
 ┌─────────────────┐         ┌──────────────────┐
-│   Alga PSA      │ ──────► │  Xero/QuickBooks │
+│   AlgaPSA      │ ──────► │  Xero/QuickBooks │
 │ (Tax Calculated)│         │ (Receives Tax)   │
 └─────────────────┘         └──────────────────┘
        │                            │
@@ -589,7 +589,7 @@ Primary outcomes:
 
 **Tasks:**
 - [ ] **B.2.1** Create tenant-level tax source settings UI
-  - Radio buttons: "Internal (Alga PSA)", "External (Accounting Package)"
+  - Radio buttons: "Internal (AlgaPSA)", "External (Accounting Package)"
   - When External selected:
     - Dropdown: "Select Accounting System" (QuickBooks Online, Xero, etc.)
     - Warning: "Tax will be calculated by {system} and imported back"

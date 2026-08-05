@@ -59,7 +59,7 @@ Tenant admin must do once in Azure:
 1. Grant the Microsoft profile's app registration the **application permission** `OnlineMeetings.ReadWrite.All` (admin consent required).
 2. Create an **Application Access Policy** and assign the designated organizer user to it:
    ```
-   New-CsApplicationAccessPolicy -Identity Alga-Meetings -AppIds "<clientId>" -Description "Alga PSA appointment meetings"
+   New-CsApplicationAccessPolicy -Identity Alga-Meetings -AppIds "<clientId>" -Description "AlgaPSA appointment meetings"
    Grant-CsApplicationAccessPolicy -PolicyName Alga-Meetings -Identity "scheduling@acme.com"
    ```
 3. Wait ~5-10 min for policy propagation.

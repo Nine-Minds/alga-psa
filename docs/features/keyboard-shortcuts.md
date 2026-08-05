@@ -1,6 +1,6 @@
 # Keyboard Shortcuts
 
-Alga PSA ships a system-wide keyboard shortcut engine active on all MSP pages
+AlgaPSA ships a system-wide keyboard shortcut engine active on all MSP pages
 (`/msp`). Shortcuts are grouped by scope: **global** shortcuts fire anywhere;
 **page** shortcuts fire on the current page; **panel/dialog** shortcuts fire
 when a drawer or dialog is open and take priority over page shortcuts.

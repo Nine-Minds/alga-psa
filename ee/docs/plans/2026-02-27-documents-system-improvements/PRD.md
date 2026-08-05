@@ -6,7 +6,7 @@
 
 ## Summary
 
-A 5-phase overhaul of the Alga PSA documents system to add entity-scoped folders, admin-configurable folder templates, client portal visibility controls, shareable document URLs, and a knowledge base foundation. The system is designed so that each phase builds on the previous ones, with the entire document infrastructure serving as the foundation for a full MSP knowledge base.
+A 5-phase overhaul of the AlgaPSA documents system to add entity-scoped folders, admin-configurable folder templates, client portal visibility controls, shareable document URLs, and a knowledge base foundation. The system is designed so that each phase builds on the previous ones, with the entire document infrastructure serving as the foundation for a full MSP knowledge base.
 
 ## Problem
 

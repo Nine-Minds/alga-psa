@@ -1,6 +1,6 @@
 # Startup Performance Budget (V1)
 
-This document defines a simple startup performance budget for the Alga PSA mobile app and how to measure it consistently.
+This document defines a simple startup performance budget for the AlgaPSA mobile app and how to measure it consistently.
 
 ## Budget (targets)
 

@@ -96,7 +96,7 @@ exports.up = async function(knex) {
           </td>
         </tr>
         <tr>
-          <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA</td>
+          <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by AlgaPSA</td>
         </tr>
       </table>
     </td>

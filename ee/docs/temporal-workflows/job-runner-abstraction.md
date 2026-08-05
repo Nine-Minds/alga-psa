@@ -1,6 +1,6 @@
 # Job Runner Abstraction Layer
 
-This guide documents the unified job runner abstraction that allows Alga PSA to use either PG Boss (Community Edition) or Temporal (Enterprise Edition) for background job processing, while maintaining a consistent job monitoring experience through the shared `jobs` and `job_details` database tables.
+This guide documents the unified job runner abstraction that allows AlgaPSA to use either PG Boss (Community Edition) or Temporal (Enterprise Edition) for background job processing, while maintaining a consistent job monitoring experience through the shared `jobs` and `job_details` database tables.
 
 ## Overview
 

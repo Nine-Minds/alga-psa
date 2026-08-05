@@ -1,7 +1,7 @@
 /**
  * @alga-psa/<%= name %>
  *
- * <%= type === 'horizontal' ? 'Shared infrastructure module' : 'Feature module' %> for Alga PSA
+ * <%= type === 'horizontal' ? 'Shared infrastructure module' : 'Feature module' %> for AlgaPSA
  */
 
 // Re-export public API

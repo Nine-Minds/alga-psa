@@ -2,7 +2,7 @@
 
 ## Completed: Multi-Language Email Support
 
-All email notifications in Alga PSA now support multiple languages with automatic language detection based on user preferences.
+All email notifications in AlgaPSA now support multiple languages with automatic language detection based on user preferences.
 
 ---
 

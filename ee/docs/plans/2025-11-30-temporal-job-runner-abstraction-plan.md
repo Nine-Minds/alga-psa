@@ -21,7 +21,7 @@ This plan outlines the implementation of an abstraction layer for background job
 ## 2. Problem Statement
 
 ### Current State
-The Alga PSA application currently uses PG Boss exclusively for background job processing:
+The AlgaPSA application currently uses PG Boss exclusively for background job processing:
 - Jobs are initialized during Next.js startup via `instrumentation.ts` → `initializeApp.ts`
 - Job handlers are registered in `server/src/lib/jobs/index.ts`
 - Job records are stored in the `jobs` and `job_details` tables

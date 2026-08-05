@@ -6,7 +6,7 @@
 
 ## Summary
 
-Add real-time collaborative editing to Alga PSA so multiple users can edit the same document simultaneously, seeing each other's cursors and changes live. Rolled out in two phases: first as an isolated test page behind a feature flag, then integrated into the main documents system.
+Add real-time collaborative editing to AlgaPSA so multiple users can edit the same document simultaneously, seeing each other's cursors and changes live. Rolled out in two phases: first as an isolated test page behind a feature flag, then integrated into the main documents system.
 
 ## Problem
 

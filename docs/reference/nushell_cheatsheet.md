@@ -1,6 +1,6 @@
 # Nushell Development Cheatsheet
 
-This document covers common gotchas and syntax differences when developing in Nushell, particularly for developers coming from bash or other traditional shells. These lessons learned come from building the Alga PSA CLI tool.
+This document covers common gotchas and syntax differences when developing in Nushell, particularly for developers coming from bash or other traditional shells. These lessons learned come from building the AlgaPSA CLI tool.
 
 ## Table of Contents
 
@@ -411,7 +411,7 @@ match $action {
 4. **Command testing**: Test commands with `| complete` to see full output structure
 5. **Scope issues**: If variables aren't accessible in closures, copy them to local variables first
 
-## Alga PSA CLI Commands
+## AlgaPSA CLI Commands
 
 ### Common Commands
 ```nu
@@ -450,4 +450,4 @@ build-code-server --use-latest --push
 ./build-code-server.sh [TAG]
 ```
 
-This cheatsheet covers the main gotchas encountered while developing the Alga PSA CLI. When in doubt, check the [official Nushell documentation](https://www.nushell.sh/book/) for more detailed explanations.
+This cheatsheet covers the main gotchas encountered while developing the AlgaPSA CLI. When in doubt, check the [official Nushell documentation](https://www.nushell.sh/book/) for more detailed explanations.

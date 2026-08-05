@@ -1,6 +1,6 @@
 # Guide: Creating AssemblyScript Invoice Templates
 
-This document explains how to create custom invoice templates using AssemblyScript for the Alga PSA system.
+This document explains how to create custom invoice templates using AssemblyScript for the AlgaPSA system.
 
 ## 1. Overview
 

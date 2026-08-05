@@ -1,7 +1,7 @@
 # PRD — Timesheet Self-Approval Defaults
 
 ## Problem
-Alga PSA serves small MSP owners and operators who often enter and approve their own time. Current timesheet approval paths block self-approval unconditionally, even when no premium ABAC policy has been configured. This makes the default product behavior too restrictive.
+AlgaPSA serves small MSP owners and operators who often enter and approve their own time. Current timesheet approval paths block self-approval unconditionally, even when no premium ABAC policy has been configured. This makes the default product behavior too restrictive.
 
 ## Goal
 Allow any user with the standard `timesheet:approve` permission to approve their own submitted time by default. Preserve the existing premium ABAC `not_self_approver` constraint so tenants that explicitly configure separation-of-duties policies can still block self-approval.

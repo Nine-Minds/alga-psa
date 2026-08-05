@@ -5,7 +5,7 @@
 
 ## Summary
 
-Alga PSA currently ships two workflow systems:
+AlgaPSA currently ships two workflow systems:
 
 - workflow v1: AssemblyScript/code-editor driven, bootstrapped from `shared/workflow/core` and `shared/workflow/init`
 - workflow v2: data-driven workflow designer/runtime under `shared/workflow/runtime` and `packages/workflows/src/actions/workflow-runtime-v2-actions.ts`

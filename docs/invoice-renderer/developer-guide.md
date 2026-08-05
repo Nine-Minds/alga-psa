@@ -1,6 +1,6 @@
 # AssemblyScript Invoice Template Developer Guide
 
-This guide provides information for developers creating custom invoice templates using AssemblyScript, compiled to WebAssembly (Wasm), for the Alga PSA invoice rendering system.
+This guide provides information for developers creating custom invoice templates using AssemblyScript, compiled to WebAssembly (Wasm), for the AlgaPSA invoice rendering system.
 
 **Table of Contents:**
 

@@ -6,10 +6,10 @@
 **Edition:** Enterprise Only
 
 ## 1. Problem Statement
-Alga PSA currently sends all outbound application mail from the platform’s shared Resend domain, even for hosted Enterprise tenants. Customers need to send transactional messages from their own domains without managing provider credentials or separate infrastructure. We must support tenant-managed sending domains while keeping the provider abstraction generic and future‑proof.
+AlgaPSA currently sends all outbound application mail from the platform’s shared Resend domain, even for hosted Enterprise tenants. Customers need to send transactional messages from their own domains without managing provider credentials or separate infrastructure. We must support tenant-managed sending domains while keeping the provider abstraction generic and future‑proof.
 
 ## 2. Overall Work Statement
-Deliver an enterprise-only managed email domain orchestration system that lets hosted Alga PSA tenants verify and activate their own sending domains through guided DNS setup, Temporal-managed workflows, and provider-agnostic automation, ultimately enabling outbound mail to originate from tenant-branded domains without exposing provider-specific details.
+Deliver an enterprise-only managed email domain orchestration system that lets hosted AlgaPSA tenants verify and activate their own sending domains through guided DNS setup, Temporal-managed workflows, and provider-agnostic automation, ultimately enabling outbound mail to originate from tenant-branded domains without exposing provider-specific details.
 
 ## 3. Phased To-Do List
 ### Phase 1 – Foundations (Services & Workflows)

@@ -30,7 +30,7 @@ We want a least-privilege, capability-gated way for extensions to create invoice
 - Updating or deleting invoices.
 - Adding/editing invoice templates or PDFs.
 - Creating service catalog items / services on the fly.
-- A new UI flow in core Alga PSA (extensions can build their own UI and call their handler).
+- A new UI flow in core AlgaPSA (extensions can build their own UI and call their handler).
 
 ## Users and Primary Flows
 

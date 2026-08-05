@@ -2,7 +2,7 @@
 
 Last updated: 2026-02-03
 
-This document describes how to enable and configure the server-side “web login → mobile handoff” flow for the Alga PSA mobile app.
+This document describes how to enable and configure the server-side “web login → mobile handoff” flow for the AlgaPSA mobile app.
 
 ## Overview
 

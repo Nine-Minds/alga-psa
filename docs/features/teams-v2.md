@@ -1,6 +1,6 @@
 # Teams V2
 
-The Teams V2 feature adds comprehensive team management capabilities to Alga PSA: team member roles, team avatars, team assignment to tickets/tasks/templates, board-level default teams, organizational hierarchy with reports-to chains, and an org chart visualization. All UI is gated behind the **`teams-v2`** PostHog feature flag.
+The Teams V2 feature adds comprehensive team management capabilities to AlgaPSA: team member roles, team avatars, team assignment to tickets/tasks/templates, board-level default teams, organizational hierarchy with reports-to chains, and an org chart visualization. All UI is gated behind the **`teams-v2`** PostHog feature flag.
 
 ## Core Features
 

@@ -54,11 +54,11 @@
 - (2026-03-08) EE build fix: add stable-specifier aliases for `@alga-psa/product-extension-actions`, `@alga-psa/product-extension-initialization`, `@alga-psa/product-auth-ee`, `@alga-psa/storage/StorageService`, and `@alga-psa/workflows/entry`.
 - (2026-03-08) EE build fix: add `ee/server/src/empty/workflows/entry.tsx` so the package-level workflow loader fallback resolves inside the EE app during production builds.
 - (2026-03-08) Build validation: both Next.js apps completed production builds with `NODE_OPTIONS='--max-old-space-size=8192'`; the default heap on this machine aborted before completion.
-- (2026-03-08) F001: Root layout: change generateMetadata() title from static string to template object with `template: '%s | Alga PSA'` and `default: 'Alga PSA'`
-- (2026-03-08) F002: MSP layout: add metadata export with `template: '%s | Alga PSA'` and `default: 'Dashboard | Alga PSA'`
+- (2026-03-08) F001: Root layout: change generateMetadata() title from static string to template object with `template: '%s | AlgaPSA'` and `default: 'AlgaPSA'`
+- (2026-03-08) F002: MSP layout: add metadata export with `template: '%s | AlgaPSA'` and `default: 'Dashboard | AlgaPSA'`
 - (2026-03-08) F003: Client Portal layout: add metadata export with `template: '%s | Client Portal'` and `default: 'Dashboard | Client Portal'`
-- (2026-03-08) F004: Auth layout: add metadata export with `template: '%s | Alga PSA'` and `default: 'Sign In | Alga PSA'`
-- (2026-03-08) F005: Static layout: add metadata export with `default: 'Alga PSA'`
+- (2026-03-08) F004: Auth layout: add metadata export with `template: '%s | AlgaPSA'` and `default: 'Sign In | AlgaPSA'`
+- (2026-03-08) F005: Static layout: add metadata export with `default: 'AlgaPSA'`
 - (2026-03-08) F006: MSP page title: /msp/dashboard — title: 'Dashboard'
 - (2026-03-08) F007: MSP page title: /msp/account — title: 'Account'
 - (2026-03-08) F008: MSP page title: /msp/account-manager — title: 'Account Manager'
@@ -161,19 +161,19 @@
 - (2026-03-08) F105: Public page title: /surveys/respond/[token] — verify existing generateMetadata() is compatible with root template
 - (2026-03-08) F106: MSP page title: /msp/documents — title: 'Documents'
 - (2026-03-08) F107: Public page title: /test-routing — title: 'Test Routing'
-- (2026-03-08) F108: EE root layout: add metadata title template `'%s | Alga PSA'` and default `'Alga PSA'`
-- (2026-03-08) F109: EE MSP layout: add metadata template `'%s | Alga PSA'` and default `'Dashboard | Alga PSA'`
+- (2026-03-08) F108: EE root layout: add metadata title template `'%s | AlgaPSA'` and default `'AlgaPSA'`
+- (2026-03-08) F109: EE MSP layout: add metadata template `'%s | AlgaPSA'` and default `'Dashboard | AlgaPSA'`
 - (2026-03-08) F110: EE Client Portal layout: add metadata template `'%s | Client Portal'` and default `'Dashboard | Client Portal'`
 - (2026-03-08) F111: EE MSP page title: /msp/chat — title: 'Chat'
 - (2026-03-08) F112: EE MSP page title: /msp/licenses/purchase — title: 'Purchase Licenses'
 - (2026-03-08) F113: EE MSP page title: /msp/licenses/purchase/success — title: 'Purchase Success'
 - (2026-03-08) F114: EE MSP page title: /msp/settings — title: 'Settings'
 - (2026-03-08) F115: EE Client Portal page title: /client-portal/extensions/[id] — title: 'Extension' (generateMetadata)
-- (2026-03-08) T001: Verify root layout generateMetadata() returns title object with template '%s | Alga PSA' and default 'Alga PSA'
-- (2026-03-08) T002: Verify MSP layout exports metadata with template '%s | Alga PSA' and default 'Dashboard | Alga PSA'
+- (2026-03-08) T001: Verify root layout generateMetadata() returns title object with template '%s | AlgaPSA' and default 'AlgaPSA'
+- (2026-03-08) T002: Verify MSP layout exports metadata with template '%s | AlgaPSA' and default 'Dashboard | AlgaPSA'
 - (2026-03-08) T003: Verify Client Portal layout exports metadata with template '%s | Client Portal' and default 'Dashboard | Client Portal'
-- (2026-03-08) T004: Verify Auth layout exports metadata with template '%s | Alga PSA' and default 'Sign In | Alga PSA'
-- (2026-03-08) T005: Verify Static layout exports metadata with default 'Alga PSA'
+- (2026-03-08) T004: Verify Auth layout exports metadata with template '%s | AlgaPSA' and default 'Sign In | AlgaPSA'
+- (2026-03-08) T005: Verify Static layout exports metadata with default 'AlgaPSA'
 - (2026-03-08) T006: Batch verify: all static MSP pages (F006-F075) export 'export const metadata' with correct title strings
 - (2026-03-08) T007: Batch verify: all dynamic MSP pages (F011, F013, F015, F016, F018, F021, F023, F033, F044, F048, F051, F052, F057, F058, F065) export generateMetadata with correct title
 - (2026-03-08) T008: Batch verify: all static Client Portal pages (F076-F079, F081, F085, F087) export 'export const metadata' with correct title strings

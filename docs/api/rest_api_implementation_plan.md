@@ -1,4 +1,4 @@
-# Alga PSA REST API Implementation Plan
+# AlgaPSA REST API Implementation Plan
 
 ## 🎉 Project Status: 100% Complete! 
 
@@ -13,7 +13,7 @@
 
 ## Project Overview
 
-This document outlines the comprehensive implementation plan for creating REST APIs for all Alga PSA application functionality currently available through server actions. The goal is to expose our complete business logic through well-designed, secure, and discoverable REST endpoints that support both internal operations and external integrations.
+This document outlines the comprehensive implementation plan for creating REST APIs for all AlgaPSA application functionality currently available through server actions. The goal is to expose our complete business logic through well-designed, secure, and discoverable REST endpoints that support both internal operations and external integrations.
 
 ### Project Objectives
 

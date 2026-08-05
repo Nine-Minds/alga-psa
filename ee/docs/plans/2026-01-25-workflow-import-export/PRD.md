@@ -5,7 +5,7 @@
 **Status:** Draft (needs answers to Open Questions)
 
 ## 1) Problem Statement
-Alga PSA’s Workflow Runtime V2 stores workflows as JSON “workflow definitions” in the database (`workflow_definitions` + `workflow_definition_versions`). We need a **stable, file-based import/export format** so that:
+AlgaPSA’s Workflow Runtime V2 stores workflows as JSON “workflow definitions” in the database (`workflow_definitions` + `workflow_definition_versions`). We need a **stable, file-based import/export format** so that:
 
 1. We can **preload workflows into the system for testing** (fixtures that can be version-controlled).
 2. Over time, users can **share workflows across instances** (cross-tenant sharing, customer-to-customer).

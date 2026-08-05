@@ -80,7 +80,7 @@ exports.up = async function up(knex) {
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Keeping teams aligned</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by AlgaPSA • Keeping teams aligned</td>
             </tr>
           </table>
         </td>
@@ -197,7 +197,7 @@ exports.down = async function down(knex) {
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Keeping teams aligned</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by AlgaPSA • Keeping teams aligned</td>
             </tr>
           </table>
         </td>

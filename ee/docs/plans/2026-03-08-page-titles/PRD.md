@@ -6,7 +6,7 @@
 
 ## Summary
 
-Add meaningful browser tab titles to every page in Alga PSA so users can distinguish tabs at a glance. Uses Next.js's built-in metadata template system — no client-side code or libraries required.
+Add meaningful browser tab titles to every page in AlgaPSA so users can distinguish tabs at a glance. Uses Next.js's built-in metadata template system — no client-side code or libraries required.
 
 ## Problem
 
@@ -15,10 +15,10 @@ Every browser tab shows "MSP Application" regardless of which page is open. When
 ## Goals
 
 - Every page in the app shows a descriptive, unique browser tab title
-- MSP pages show: `"Page Name | Alga PSA"`
+- MSP pages show: `"Page Name | AlgaPSA"`
 - Client Portal pages show: `"Page Name | Client Portal"`
-- Auth pages show: `"Page Name | Alga PSA"`
-- Static/public pages show: `"Page Name | Alga PSA"`
+- Auth pages show: `"Page Name | AlgaPSA"`
+- Static/public pages show: `"Page Name | AlgaPSA"`
 - Dynamic routes (e.g., `/msp/tickets/[id]`) show contextual titles (e.g., "Ticket Details")
 
 ## Non-goals
@@ -35,24 +35,24 @@ Every browser tab shows "MSP Application" regardless of which page is open. When
 ## UX / UI Notes
 
 Title format: `"Page Name | Suffix"` where suffix is:
-- `Alga PSA` for MSP, auth, and static pages
+- `AlgaPSA` for MSP, auth, and static pages
 - `Client Portal` for client portal pages
 
 Examples:
-- `Tickets | Alga PSA`
+- `Tickets | AlgaPSA`
 - `Dashboard | Client Portal`
-- `Sign In | Alga PSA`
-- `Ticket Details | Alga PSA` (dynamic route)
+- `Sign In | AlgaPSA`
+- `Ticket Details | AlgaPSA` (dynamic route)
 
 ## Requirements
 
 ### Functional Requirements
 
 1. Root layout uses `title.template` and `title.default` in its `generateMetadata()` return
-2. MSP layout exports metadata with template `'%s | Alga PSA'` and default `'Dashboard | Alga PSA'`
+2. MSP layout exports metadata with template `'%s | AlgaPSA'` and default `'Dashboard | AlgaPSA'`
 3. Client Portal layout exports metadata with template `'%s | Client Portal'` and default `'Dashboard | Client Portal'`
-4. Auth layout exports metadata with template `'%s | Alga PSA'` and default `'Sign In | Alga PSA'`
-5. Static layout exports metadata with default `'Alga PSA'`
+4. Auth layout exports metadata with template `'%s | AlgaPSA'` and default `'Sign In | AlgaPSA'`
+5. Static layout exports metadata with default `'AlgaPSA'`
 6. Every MSP page exports `metadata` or `generateMetadata` with a descriptive title
 7. Every Client Portal page exports `metadata` or `generateMetadata` with a descriptive title
 8. Every Auth page exports `metadata` with a descriptive title
@@ -88,9 +88,9 @@ No security implications. Page titles do not expose sensitive data (no entity na
 ## Acceptance Criteria (Definition of Done)
 
 - [ ] Opening any page in the app shows a descriptive title in the browser tab (not "MSP Application")
-- [ ] MSP pages follow `"X | Alga PSA"` format
+- [ ] MSP pages follow `"X | AlgaPSA"` format
 - [ ] Client Portal pages follow `"X | Client Portal"` format
-- [ ] Auth pages follow `"X | Alga PSA"` format
+- [ ] Auth pages follow `"X | AlgaPSA"` format
 - [ ] Existing metadata exports still work correctly
 - [ ] No TypeScript errors introduced
 - [ ] No client-side code used for titles

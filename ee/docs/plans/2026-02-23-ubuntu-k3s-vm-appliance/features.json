@@ -73,7 +73,7 @@
   },
   {
     "id": "F013",
-    "description": "Deploy Alga PSA using root helm/ chart via GitOps-managed desired state reference.",
+    "description": "Deploy AlgaPSA using root helm/ chart via GitOps-managed desired state reference.",
     "implemented": false,
     "prdRefs": ["FR-3 Application Deployment"]
   },

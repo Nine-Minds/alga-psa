@@ -1,4 +1,4 @@
-# PRD — Alga PSA Mobile App (React Native) - Ticketing MVP + SSO
+# PRD — AlgaPSA Mobile App (React Native) - Ticketing MVP + SSO
 
 - Slug: `alga-psa-mobile-app`
 - Date: `2026-02-03`
@@ -6,15 +6,15 @@
 
 ## Summary
 
-Design and deliver a first-party Alga PSA mobile application for iOS and Android (React Native) focused on “always-connected” ticket triage and ticket updates for technicians and service desk staff.
+Design and deliver a first-party AlgaPSA mobile application for iOS and Android (React Native) focused on “always-connected” ticket triage and ticket updates for technicians and service desk staff.
 
 This plan includes both:
 - A new React Native app (mobile UX, auth, API client, ticketing screens).
-- Required Alga PSA server updates to enable secure native SSO (Microsoft + Google) and token-based API access appropriate for mobile clients.
+- Required AlgaPSA server updates to enable secure native SSO (Microsoft + Google) and token-based API access appropriate for mobile clients.
 
 ## Problem
 
-Alga PSA’s web app supports ticket management, but many ticket workflows occur away from a desk (field techs, on-call, managers). Mobile users need quick access to their ticket queue, the ability to read a ticket, and to post updates (comments, status changes) immediately.
+AlgaPSA’s web app supports ticket management, but many ticket workflows occur away from a desk (field techs, on-call, managers). Mobile users need quick access to their ticket queue, the ability to read a ticket, and to post updates (comments, status changes) immediately.
 
 Today’s authentication flow is optimized for browsers (web login + SSO). A native app requires:
 - Native-friendly SSO (system browser, redirect/deep link, PKCE).
@@ -23,7 +23,7 @@ Today’s authentication flow is optimized for browsers (web login + SSO). A nat
 ## Goals
 
 ### Product goals
-- Enable users to sign in to Alga PSA on mobile using the same identity options as the web login (Microsoft + Google SSO where configured).
+- Enable users to sign in to AlgaPSA on mobile using the same identity options as the web login (Microsoft + Google SSO where configured).
 - Provide fast, reliable access to ticket lists with filtering and sorting that match common web use cases.
 - Enable core ticket actions: view ticket details, add comments/notes, and change status.
 - Include a small set of “business critical” updates that reduce back-and-forth and enable closing tickets from the field.
@@ -94,7 +94,7 @@ For the first release covered by this plan:
   - Add attachments to a comment (optional, can be Phase 2 if complexity is high).
 - Comments must support internal vs public visibility.
 
-#### Alga PSA server
+#### AlgaPSA server
 - Support native/mobile SSO flows using the same Microsoft/Google provider configurations as web.
 - Provide mobile-friendly token issuance (short-lived access token + refresh token) for REST API usage.
 - Provide token revocation/logout and rotation protections suitable for mobile clients.

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Alga PSA uses PostHog for feature flag management, allowing tenant-based feature control. Features can be enabled/disabled for specific tenants while showing an "Under Construction" placeholder for restricted users.
+AlgaPSA uses PostHog for feature flag management, allowing tenant-based feature control. Features can be enabled/disabled for specific tenants while showing an "Under Construction" placeholder for restricted users.
 
 ## Current Feature Flags
 

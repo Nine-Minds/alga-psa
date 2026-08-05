@@ -1,4 +1,4 @@
-# Alga PSA Appliance Docs
+# AlgaPSA Appliance Docs
 
 This section is the supported Ubuntu appliance documentation set.
 

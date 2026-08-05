@@ -7,7 +7,7 @@
 
 ## 1. Summary
 
-Alga PSA's AI features become a paid add-on billed with prepaid credits. A tenant
+AlgaPSA's AI features become a paid add-on billed with prepaid credits. A tenant
 subscribes to a monthly Stripe subscription that includes a monthly allotment of
 **abstract credits**; LLM calls burn credits at per-model rates. Tenants can buy
 one-time top-up packs and enable auto-top-up. When credits run out, a small grace

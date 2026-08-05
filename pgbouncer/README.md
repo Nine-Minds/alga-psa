@@ -1,6 +1,6 @@
 # PgBouncer Configuration
 
-This directory contains the PgBouncer connection pooler configuration for the Alga PSA application.
+This directory contains the PgBouncer connection pooler configuration for the AlgaPSA application.
 
 ## Components
 

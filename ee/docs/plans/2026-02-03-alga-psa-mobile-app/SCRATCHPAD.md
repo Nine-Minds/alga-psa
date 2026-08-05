@@ -1,4 +1,4 @@
-# Scratchpad — Alga PSA Mobile App (2026-02-03)
+# Scratchpad — AlgaPSA Mobile App (2026-02-03)
 
 Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 

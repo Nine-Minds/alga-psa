@@ -6,11 +6,11 @@
 
 ## Summary
 
-Add a quoting system to Alga PSA that allows MSPs to create, send, and manage pricing proposals for clients. Quotes integrate with the existing billing infrastructure (service catalog, tax, discounts, templates, PDF generation, email, client portal) and can be converted into contracts and/or invoices upon acceptance.
+Add a quoting system to AlgaPSA that allows MSPs to create, send, and manage pricing proposals for clients. Quotes integrate with the existing billing infrastructure (service catalog, tax, discounts, templates, PDF generation, email, client portal) and can be converted into contracts and/or invoices upon acceptance.
 
 ## Problem
 
-Alga PSA has no way to create pre-sale pricing proposals. MSPs currently must:
+AlgaPSA has no way to create pre-sale pricing proposals. MSPs currently must:
 - Create quotes outside the system (spreadsheets, Word docs, other tools)
 - Manually re-enter accepted quote data as contracts and invoices
 - Lose visibility into quote status, history, and conversion metrics

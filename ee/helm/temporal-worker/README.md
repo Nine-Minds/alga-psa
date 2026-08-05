@@ -1,10 +1,10 @@
 # Temporal Worker Helm Chart
 
-This Helm chart deploys the Temporal Worker component for the Alga PSA application.
+This Helm chart deploys the Temporal Worker component for the AlgaPSA application.
 
 ## Overview
 
-The Temporal Worker is responsible for executing workflows and activities in the Alga PSA system. It connects to a Temporal server and processes tasks from specified task queues.
+The Temporal Worker is responsible for executing workflows and activities in the AlgaPSA system. It connects to a Temporal server and processes tasks from specified task queues.
 
 ## Prerequisites
 
@@ -26,7 +26,7 @@ helm install temporal-worker ee/helm/temporal-worker/
 
 ### As a Subchart
 
-The temporal worker is included as an optional dependency in the main Alga PSA helm chart. To enable it:
+The temporal worker is included as an optional dependency in the main AlgaPSA helm chart. To enable it:
 
 ```bash
 helm install alga-psa helm/ --set temporal-worker.enabled=true
@@ -234,4 +234,4 @@ helm lint ee/helm/temporal-worker/
 
 ## Support
 
-For issues and questions, please refer to the main Alga PSA documentation or create an issue in the project repository.
+For issues and questions, please refer to the main AlgaPSA documentation or create an issue in the project repository.

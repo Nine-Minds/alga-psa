@@ -6,7 +6,7 @@
 
 ## Summary
 
-Add Tanium as a new RMM integration in Alga PSA without creating a third bespoke provider stack.
+Add Tanium as a new RMM integration in AlgaPSA without creating a third bespoke provider stack.
 
 The work should introduce a provider-neutral RMM adapter and shared ingestion path, then implement Tanium against that contract. Tanium v1 should prioritize inventory and scope mapping using Tanium Gateway as the preferred API surface, with module REST APIs used only for documented gaps. Event push and remote response are explicitly secondary capabilities.
 

@@ -1,6 +1,6 @@
-# Contributing to Alga PSA
+# Contributing to AlgaPSA
 
-Thank you for your interest in contributing to Alga PSA! We appreciate contributions of all kinds, whether it's fixing bugs, improving documentation, suggesting new features, or helping other users.
+Thank you for your interest in contributing to AlgaPSA! We appreciate contributions of all kinds, whether it's fixing bugs, improving documentation, suggesting new features, or helping other users.
 
 ## Ways to Contribute
 
@@ -32,7 +32,7 @@ Thank you for your interest in contributing to Alga PSA! We appreciate contribut
 
 ## NX Modules (Monorepo)
 
-Alga PSA uses NX + npm workspaces. Shared infrastructure lives in **horizontal** packages (e.g. `@alga-psa/core`, `@alga-psa/db`, `@alga-psa/types`), while business domains live in **vertical** packages (e.g. `@alga-psa/clients`, `@alga-psa/billing`).
+AlgaPSA uses NX + npm workspaces. Shared infrastructure lives in **horizontal** packages (e.g. `@alga-psa/core`, `@alga-psa/db`, `@alga-psa/types`), while business domains live in **vertical** packages (e.g. `@alga-psa/clients`, `@alga-psa/billing`).
 
 ### Create a New Module
 
@@ -91,4 +91,4 @@ If you have questions about contributing, feel free to open a discussion on GitH
 
 ---
 
-Thank you for helping make Alga PSA better!
+Thank you for helping make AlgaPSA better!

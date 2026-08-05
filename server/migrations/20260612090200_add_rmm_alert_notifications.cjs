@@ -58,7 +58,7 @@ exports.up = async function(knex) {
         <p><strong>Message:</strong> {{message}}</p>
         <p><strong>Ticket:</strong> {{ticketNumber}}</p>
       </div>
-      <p><a href="{{url}}">View in Alga PSA</a></p>
+      <p><a href="{{url}}">View in AlgaPSA</a></p>
     `,
       text_content: `RMM Alert ({{severity}}) on {{deviceName}}: {{message}}\nTicket: {{ticketNumber}}\n{{url}}`,
     });

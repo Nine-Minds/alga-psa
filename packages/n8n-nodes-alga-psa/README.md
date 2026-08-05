@@ -1,13 +1,13 @@
 # n8n-nodes-alga-psa
 
-Alga PSA community node package for self-hosted n8n instances.
+AlgaPSA community node package for self-hosted n8n instances.
 
 ## What This Package Provides
 
 This package adds one node to n8n:
 
-- Node name: `Alga PSA`
-- Credential: `Alga PSA API`
+- Node name: `AlgaPSA`
+- Credential: `AlgaPSA API`
 - Resources:
   - Ticket
   - Contact
@@ -20,7 +20,7 @@ This package adds one node to n8n:
 ## Requirements
 
 - Self-hosted n8n (community nodes are not available on n8n Cloud when unverified)
-- Alga PSA API access with an API key
+- AlgaPSA API access with an API key
 
 ## Installation
 
@@ -45,10 +45,10 @@ For manual/custom installation paths, follow n8n's manual community-node install
 
 ## Credential Setup
 
-Create credential type `Alga PSA API` with:
+Create credential type `AlgaPSA API` with:
 
 - `Base URL` example: `https://algapsa.com`
-- `API Key` your Alga PSA key (sent as `x-api-key` header)
+- `API Key` your AlgaPSA key (sent as `x-api-key` header)
 - Field names in node credentials: `baseUrl`, `apiKey`
 
 ## Operation Matrix
@@ -142,7 +142,7 @@ Ticket comment support stays under the `Ticket` resource:
 
 - `List Comments` requires `ticketId` and supports optional `limit`, `offset`, and `order`.
 - `Add Comment` requires `ticketId` and `comment_text`, with optional `is_internal`.
-- `time_spent` is intentionally not exposed because the current Alga PSA ticket comment implementation does not persist or use it.
+- `time_spent` is intentionally not exposed because the current AlgaPSA ticket comment implementation does not persist or use it.
 
 ## Lookup Fields and Manual Fallback
 
@@ -153,7 +153,7 @@ For ticket `client_id`, `board_id`, `status_id`, and `priority_id`, plus contact
 
 ## Board-Scoped Ticket Statuses
 
-Ticket statuses in Alga PSA are owned by a board. This changes how ticket status lookups work:
+Ticket statuses in AlgaPSA are owned by a board. This changes how ticket status lookups work:
 
 - `Ticket -> Create`: the `Status ID` dropdown is filtered by the selected `Board ID`. Pick the board first.
 - `Ticket -> Update`: when changing `status_id` inside the update fields, also include `board_id` (destination board) so the status dropdown can list valid options. A status is only valid for the ticket's current or updated board.

@@ -184,7 +184,7 @@ Phase 5 focuses on replacing the current localStorage implementation with the pr
 ## 5.3 Billing Integration
 
 ### 5.3.1 Create Invoice Line Item Generator
-**Description**: Build service to convert SoftwareOne statements into Alga PSA invoice line items.
+**Description**: Build service to convert SoftwareOne statements into AlgaPSA invoice line items.
 
 **Files to create**:
 - `/extensions/softwareone-ext/src/services/billingService.ts`
@@ -206,7 +206,7 @@ Phase 5 focuses on replacing the current localStorage implementation with the pr
 ---
 
 ### 5.3.2 Implement Service Catalog Mapping
-**Description**: Create UI and logic for mapping SoftwareOne products to Alga PSA services.
+**Description**: Create UI and logic for mapping SoftwareOne products to AlgaPSA services.
 
 **Files to create/modify**:
 - `/extensions/softwareone-ext/src/pages/ServiceMapping.tsx` (create)
@@ -249,7 +249,7 @@ Phase 5 focuses on replacing the current localStorage implementation with the pr
 ---
 
 ### 5.3.4 Implement Invoice Import API
-**Description**: Create server action to import statement data into Alga PSA invoices.
+**Description**: Create server action to import statement data into AlgaPSA invoices.
 
 **Files to create/modify**:
 - `/server/src/lib/actions/extension-actions.ts` (modify)

@@ -281,7 +281,7 @@ The list is ordered by dependency; a later item assumes all previous items are c
   - `tools/ai-automation/web/src/lib/llm/factory.ts` - Replace OpenAI API keys
   - `ee/server/src/services/chatStreamService.ts` - Replace Anthropic API key
   - `ee/temporal-workflows/src/services/email-service.ts` - Replace Resend API key
-  - `server/src/lib/api/services/SdkGeneratorService.ts` - Replace Alga PSA API key
+  - `server/src/lib/api/services/SdkGeneratorService.ts` - Replace AlgaPSA API key
 - [ ] **Migrate infrastructure credentials:**
   - `server/src/config/storage.ts` - Replace AWS S3 credentials
   - `server/src/utils/email/emailService.tsx` - Replace SMTP credentials

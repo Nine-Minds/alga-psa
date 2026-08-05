@@ -6,7 +6,7 @@ Draft created 2026-04-24.
 
 ## Problem Statement
 
-The generated Alga PSA OpenAPI specs still contain hundreds of route-inventory placeholder operations. Placeholder operations have generic summaries/descriptions, empty request/response schemas, incomplete auth information, and no source-grounded notes about tenant scoping, ID provenance, current implementation gaps, or status-code behavior.
+The generated AlgaPSA OpenAPI specs still contain hundreds of route-inventory placeholder operations. Placeholder operations have generic summaries/descriptions, empty request/response schemas, incomplete auth information, and no source-grounded notes about tenant scoping, ID provenance, current implementation gaps, or status-code behavior.
 
 This limits SDK generation, API discoverability, integration accuracy, AI/tool-call grounding, and QA confidence. The ongoing work has already replaced placeholders for the first 80 operations. The remaining work needs a durable, testable plan so future batches can continue consistently.
 

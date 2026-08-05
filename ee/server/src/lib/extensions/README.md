@@ -1,4 +1,4 @@
-# Alga PSA Extension System (ext-v2)
+# AlgaPSA Extension System (ext-v2)
 
 This directory contains the v2 extension system. Legacy descriptor-era UI (tabs/pages/navigation rendered in host) and host-side renderers have been removed. Extension UI is served exclusively by the Runner in an iframe.
 
