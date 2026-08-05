@@ -4,8 +4,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, LayoutGrid, List } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { IWorkQueue } from '@alga-psa/types';
+import type { IOpportunityDashboardSnapshot, IWorkQueue } from '@alga-psa/types';
 import { QueueGreeting } from './QueueGreeting';
+import { QueueSnapshot } from './QueueSnapshot';
 import { QueueSection } from './QueueSection';
 import { QueueActionRow } from './QueueActionRow';
 import { MoneyFoundCard } from './MoneyFoundCard';
@@ -25,6 +26,9 @@ export interface WorkQueueProps {
   /** When drafting is available, overdue rows lead with the draft instead of the checkbox. */
   onReviewDraft?: (opportunityId: string) => void;
   preferenceKey: string;
+  /** General overview above the queue; omit entirely to skip it, null while loading. */
+  snapshot?: IOpportunityDashboardSnapshot | null;
+  snapshotFailed?: boolean;
 }
 
 /**
@@ -44,6 +48,8 @@ export function WorkQueue({
   onViewSuggestionEvidence,
   onReviewDraft,
   preferenceKey,
+  snapshot,
+  snapshotFailed,
 }: WorkQueueProps) {
   const { t } = useTranslation('msp/opportunities');
   const [view, setView] = useState<'cards' | 'table'>('cards');
@@ -74,10 +80,12 @@ export function WorkQueue({
         firstName={queue.user_first_name}
         actionCount={queue.do_today.length}
         quietCount={queue.going_quiet.length}
-        foundMrrCents={queue.found_mrr_cents}
-        foundNrrCents={queue.found_nrr_cents}
-        currencyCode={queue.currency_code}
+        foundTotals={queue.found_totals}
       />
+
+      {snapshot !== undefined ? (
+        <QueueSnapshot snapshot={snapshot} loadFailed={snapshotFailed ?? false} />
+      ) : null}
 
       {actionItems.length > 0 ? (
         <div className="mb-4 flex justify-end" role="group" aria-label={t('opportunities.queue.viewLabel', 'Queue view')}>

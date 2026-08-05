@@ -45,6 +45,7 @@ import { Trash, ChevronLeft, ChevronRight, CalendarDays as CalendarDaysIcon, Lay
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Label } from '@alga-psa/ui/components/Label';
+import { isSourceOwnedWorkItemType } from '../../lib/entryOwnedWorkItems';
 
 const localizer = momentLocalizer(moment);
 
@@ -193,6 +194,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     ad_hoc: 'rgb(var(--color-border-200))',
     interaction: 'rgb(var(--color-event-interaction))',
     appointment_request: 'rgb(var(--color-event-appointment))',
+    opportunity_step: 'rgb(var(--color-event-opportunity))',
   };
 
   const workItemHoverColors: Record<WorkItemType, string> = {
@@ -202,6 +204,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     ad_hoc: 'rgb(var(--color-border-300))',
     interaction: 'rgb(var(--color-event-interaction-hover))',
     appointment_request: 'rgb(var(--color-event-appointment-hover))',
+    opportunity_step: 'rgb(var(--color-event-opportunity-hover))',
   };
 
   const getViewLabel = useCallback((calendarView: View) => {
@@ -239,6 +242,8 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
         return t('calendar.legend.types.interaction', { defaultValue: 'Interaction' });
       case 'appointment_request':
         return t('calendar.legend.types.appointmentRequest', { defaultValue: 'Appointment Request' });
+      case 'opportunity_step':
+        return t('calendar.legend.types.opportunityStep', { defaultValue: 'Deal step' });
       default:
         return type;
     }
@@ -630,6 +635,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   };
 
   const handleEventResize = async ({ event, start, end }: any) => {
+    if (isSourceOwnedWorkItemType(event?.work_item_type)) return;
     const originalStart = new Date(event.scheduled_start);
     const originalEnd = new Date(event.scheduled_end);
 
@@ -658,6 +664,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   };
 
   const handleEventDrop = async ({ event, start, end, isAllDay }: any) => {
+    if (isSourceOwnedWorkItemType(event?.work_item_type)) return;
     // Get original event details - these are the source of truth
     const originalStart = new Date(event.scheduled_start);
     const originalEnd = new Date(event.scheduled_end);
@@ -1313,13 +1320,17 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
                   onSelectEvent={handleSelectEvent}
                   resizableAccessor={(event: object) => {
                     const scheduleEvent = event as IScheduleEntry;
-                    return focusedTechnicianId !== null &&
+                    // Source-owned entries (deal steps) mirror another record;
+                    // resizing here would diverge from it until the next sync.
+                    return !isSourceOwnedWorkItemType(scheduleEvent?.work_item_type) &&
+                          focusedTechnicianId !== null &&
                           scheduleEvent?.assigned_user_ids &&
                           scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
                   }}
                   draggableAccessor={(event: object) => {
                     const scheduleEvent = event as IScheduleEntry;
-                    return focusedTechnicianId !== null &&
+                    return !isSourceOwnedWorkItemType(scheduleEvent?.work_item_type) &&
+                          focusedTechnicianId !== null &&
                           scheduleEvent?.assigned_user_ids &&
                           scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
                   }}

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getSession } from '@alga-psa/auth';
 import { getWorkQueue, listOpportunities } from '@alga-psa/opportunities/actions';
+import { DEFAULT_OPPORTUNITY_PAGE_SIZE } from '@alga-psa/opportunities/lib/opportunityListPaging';
 import { getOpportunityDraftingAvailability } from '@enterprise/lib/opportunities/draftingActions';
 import { getManagementAvailability } from '@enterprise/lib/opportunities/actions';
 import { OpportunityForecastView } from '@/components/opportunities/OpportunityForecastView';
@@ -34,7 +35,7 @@ export default async function OpportunitiesPage() {
   let queue: IWorkQueue | null = null;
   try {
     const [listResult, clientsResult, queueResult] = await Promise.all([
-      listOpportunities({ status: 'all', page: 1, page_size: 50 }),
+      listOpportunities({ status: 'all', page: 1, page_size: DEFAULT_OPPORTUNITY_PAGE_SIZE }),
       getAllClients(false),
       getWorkQueue(),
     ]);
@@ -51,9 +52,7 @@ export default async function OpportunitiesPage() {
     queue = {
       user_first_name: firstName,
       date: new Date().toISOString(),
-      found_mrr_cents: 0,
-      found_nrr_cents: 0,
-      currency_code: 'USD',
+      found_totals: [],
       do_today: [],
       going_quiet: [],
       money_found: [],
@@ -70,7 +69,7 @@ export default async function OpportunitiesPage() {
   const eeTabs = managementAvailable
     ? [
         { id: 'meeting', label: t('opportunities.tabs.meeting', 'Meeting'), content: <OpportunityMeetingMode /> },
-        { id: 'forecast', label: t('opportunities.tabs.forecast', 'Forecast'), content: <OpportunityForecastView currencyCode={queue.currency_code} /> },
+        { id: 'forecast', label: t('opportunities.tabs.forecast', 'Forecast'), content: <OpportunityForecastView /> },
       ]
     : [];
 

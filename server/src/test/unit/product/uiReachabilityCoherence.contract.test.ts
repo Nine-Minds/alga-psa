@@ -26,6 +26,7 @@ const PRODUCTS: ProductCode[] = ['algadesk', 'psa'];
 const INTENTIONALLY_UNLINKED: Record<string, string> = {
   '/msp/account': 'reached via the header avatar menu → Account, not the sidebar',
   '/msp/add-ons': 'reached via add-on notices and paywall CTAs, not the sidebar',
+  '/msp/create-opportunity': 'reached via the Quick Create button in the header, not the sidebar',
   '/msp/create-ticket': 'reached via the Quick Create button in the header, not the sidebar',
   '/msp/integrations': 'legacy path kept routable; the user-facing entry is /msp/settings/integrations',
   '/msp/test': 'internal test-only pages, deliberately unlinked from all navigation',

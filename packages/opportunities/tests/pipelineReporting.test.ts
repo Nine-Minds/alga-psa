@@ -1,0 +1,232 @@
+import { describe, expect, it } from 'vitest';
+import {
+  currentQuarterRange,
+  mapPipelineStageRows,
+  oneTimeCents,
+  summarizePipelineReport,
+} from '../src/lib/pipelineReporting';
+
+describe('one-time value definition', () => {
+  it('always folds hardware into the one-time number', () => {
+    expect(oneTimeCents({ nrr_cents: 60000, hardware_cents: 40000 })).toBe(100000);
+  });
+
+  it('tolerates the bigint strings knex hands back and null hardware', () => {
+    expect(oneTimeCents({ nrr_cents: '60000', hardware_cents: null })).toBe(60000);
+  });
+});
+
+describe('dashboard snapshot stage rows', () => {
+  it('carries hardware through so the snapshot matches the pipeline table', () => {
+    const rows = mapPipelineStageRows([
+      {
+        stage: 'qualified',
+        currency_code: 'USD',
+        opportunity_count: '1',
+        mrr_cents: '100000',
+        nrr_cents: '60000',
+        hardware_cents: '40000',
+      },
+    ]);
+    expect(rows).toEqual([{
+      stage: 'qualified',
+      currency_code: 'USD',
+      opportunity_count: 1,
+      mrr_cents: 100000,
+      nrr_cents: 60000,
+      hardware_cents: 40000,
+    }]);
+    // The exact regression: $600 NRR + $400 hardware must read as $1,000 one-time.
+    expect(oneTimeCents(rows[0])).toBe(100000);
+  });
+
+  it('puts stages in pipeline order no matter how the database groups them', () => {
+    const rows = mapPipelineStageRows([
+      { stage: 'verbal', currency_code: 'USD' },
+      { stage: 'identified', currency_code: 'USD' },
+      { stage: 'proposed', currency_code: 'GBP' },
+      { stage: 'proposed', currency_code: 'EUR' },
+    ]);
+    expect(rows.map((row) => [row.stage, row.currency_code])).toEqual([
+      ['identified', 'USD'],
+      ['proposed', 'EUR'],
+      ['proposed', 'GBP'],
+      ['verbal', 'USD'],
+    ]);
+  });
+
+  it('defaults missing sums to zero rather than NaN', () => {
+    expect(mapPipelineStageRows([{ stage: 'identified', currency_code: 'USD' }])[0]).toEqual({
+      stage: 'identified',
+      currency_code: 'USD',
+      opportunity_count: 0,
+      mrr_cents: 0,
+      nrr_cents: 0,
+      hardware_cents: 0,
+    });
+  });
+});
+
+describe('pipeline report summary', () => {
+  const now = new Date('2026-08-03T00:00:00.000Z');
+
+  it('totals open pipeline, weights it by stage base rate, and counts the next 30 days', () => {
+    const [usd] = summarizePipelineReport(
+      [
+        {
+          stage: 'qualified',
+          currency_code: 'USD',
+          opportunity_count: 2,
+          mrr_cents: 100000,
+          one_time_cents: 100000,
+          expected_close_date: '2026-08-20',
+        },
+        {
+          stage: 'verbal',
+          currency_code: 'USD',
+          opportunity_count: 1,
+          mrr_cents: 50000,
+          one_time_cents: 0,
+          expected_close_date: '2026-12-01',
+        },
+      ],
+      [{ currency_code: 'USD', mrr_cents: 25000, one_time_cents: 5000 }],
+      now,
+    );
+
+    expect(usd.open_count).toBe(3);
+    expect(usd.open_mrr_cents).toBe(150000);
+    expect(usd.open_one_time_cents).toBe(100000);
+    // 100000 * 0.15 + 50000 * 0.8
+    expect(usd.weighted_mrr_cents).toBe(55000);
+    expect(usd.weighted_one_time_cents).toBe(15000);
+    expect(usd.closing_30d_count).toBe(2);
+    expect(usd.closing_30d_mrr_cents).toBe(100000);
+    expect(usd.won_quarter_count).toBe(1);
+    expect(usd.won_quarter_mrr_cents).toBe(25000);
+    expect(usd.won_quarter_one_time_cents).toBe(5000);
+  });
+
+  it('never mixes currencies into one total', () => {
+    const result = summarizePipelineReport(
+      [
+        { stage: 'proposed', currency_code: 'USD', opportunity_count: 1, mrr_cents: 100000, one_time_cents: 0 },
+        { stage: 'proposed', currency_code: 'EUR', opportunity_count: 1, mrr_cents: 10000, one_time_cents: 0 },
+      ],
+      [],
+      now,
+    );
+    expect(result.map((row) => row.currency_code)).toEqual(['USD', 'EUR']);
+    expect(result[0].open_mrr_cents).toBe(100000);
+    expect(result[1].open_mrr_cents).toBe(10000);
+  });
+
+  it('excludes deals whose expected close has already passed', () => {
+    const [usd] = summarizePipelineReport(
+      [{
+        stage: 'proposed',
+        currency_code: 'USD',
+        opportunity_count: 1,
+        mrr_cents: 100000,
+        one_time_cents: 0,
+        expected_close_date: '2026-07-01',
+      }],
+      [],
+      now,
+    );
+    expect(usd.closing_30d_count).toBe(0);
+  });
+
+  it('counts a deal expected to close today, however late in the day it is', () => {
+    const openRow = (expected_close_date: string) => ({
+      stage: 'proposed' as const,
+      currency_code: 'USD',
+      opportunity_count: 1,
+      mrr_cents: 100000,
+      one_time_cents: 0,
+      expected_close_date,
+    });
+    const lateInTheDay = new Date('2026-08-03T18:30:00.000Z');
+
+    const [today] = summarizePipelineReport([openRow('2026-08-03')], [], lateInTheDay);
+    expect(today.closing_30d_count).toBe(1);
+
+    // The 30th day out is the last one in; the 31st is out.
+    const [day30] = summarizePipelineReport([openRow('2026-09-02')], [], lateInTheDay);
+    expect(day30.closing_30d_count).toBe(1);
+    const [day31] = summarizePipelineReport([openRow('2026-09-03')], [], lateInTheDay);
+    expect(day31.closing_30d_count).toBe(0);
+  });
+
+  it('sums pre-aggregated won rows by their carried counts', () => {
+    const [usd] = summarizePipelineReport(
+      [],
+      [{ currency_code: 'USD', opportunity_count: 3, mrr_cents: 75000, one_time_cents: 15000 }],
+      now,
+    );
+    expect(usd.won_quarter_count).toBe(3);
+    expect(usd.won_quarter_mrr_cents).toBe(75000);
+  });
+});
+
+describe('pipeline report stage breakdown', () => {
+  it('breaks the open pipeline out per stage, in pipeline order, per currency', () => {
+    const now = new Date('2026-08-03T12:00:00.000Z');
+    const [usd] = summarizePipelineReport(
+      [
+        { stage: 'verbal', currency_code: 'USD', opportunity_count: 1, mrr_cents: 100000, one_time_cents: 5000 },
+        { stage: 'qualified', currency_code: 'USD', opportunity_count: 1, mrr_cents: 20000, one_time_cents: 1000 },
+        { stage: 'qualified', currency_code: 'USD', opportunity_count: 1, mrr_cents: 30000, one_time_cents: 0 },
+      ],
+      [],
+      now,
+    );
+
+    expect(usd.by_stage.map((row) => row.stage)).toEqual(['qualified', 'verbal']);
+    const qualified = usd.by_stage[0];
+    expect(qualified.opportunity_count).toBe(2);
+    expect(qualified.mrr_cents).toBe(50000);
+    expect(qualified.one_time_cents).toBe(1000);
+    // 15% base rate on 50,000 recurring cents.
+    expect(qualified.rate).toBeCloseTo(0.15);
+    expect(qualified.weighted_mrr_cents).toBe(7500);
+    // The breakdown must reconcile with the headline total it opens up.
+    expect(usd.by_stage.reduce((sum, row) => sum + row.mrr_cents, 0)).toBe(usd.open_mrr_cents);
+  });
+
+  it('never mixes currencies in a stage breakdown', () => {
+    const rows = summarizePipelineReport(
+      [
+        { stage: 'proposed', currency_code: 'USD', opportunity_count: 1, mrr_cents: 100000, one_time_cents: 0 },
+        { stage: 'proposed', currency_code: 'GBP', opportunity_count: 1, mrr_cents: 90000, one_time_cents: 0 },
+      ],
+      [],
+      new Date('2026-08-03T12:00:00.000Z'),
+    );
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.by_stage.reduce((sum, entry) => sum + entry.mrr_cents, 0)).toBe(row.open_mrr_cents);
+    }
+  });
+});
+
+describe('current quarter range', () => {
+  it('brackets the calendar quarter containing the date', () => {
+    expect(currentQuarterRange(new Date('2026-08-03T12:00:00.000Z'))).toEqual({
+      start: '2026-07-01T00:00:00.000Z',
+      endExclusive: '2026-10-01T00:00:00.000Z',
+      label: 'Q3 2026',
+    });
+  });
+
+  it('brackets the quarter the tenant timezone is standing in, at its local midnights', () => {
+    // 23:00 UTC on 30 June is already 1 July in Berlin: Q3, starting at Berlin midnight.
+    expect(currentQuarterRange(new Date('2026-06-30T23:00:00.000Z'), 'Europe/Berlin')).toEqual({
+      start: '2026-06-30T22:00:00.000Z',
+      endExclusive: '2026-09-30T22:00:00.000Z',
+      label: 'Q3 2026',
+    });
+    // ...while UTC itself is still in Q2.
+    expect(currentQuarterRange(new Date('2026-06-30T23:00:00.000Z')).label).toBe('Q2 2026');
+  });
+});

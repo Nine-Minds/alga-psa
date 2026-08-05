@@ -8,6 +8,74 @@ function endExclusive(end: string): string {
   return date.toISOString();
 }
 
+export interface RollupOpenRow {
+  owner_id: string;
+  currency_code: string;
+  mrr_cents: number | string | null;
+  nrr_cents: number | string | null;
+  hardware_cents: number | string | null;
+}
+
+export interface RollupClosedRow extends RollupOpenRow {
+  opportunity_id: string;
+  status: 'won' | 'lost';
+  opportunity_type: string;
+}
+
+export function buildSellerRollups(
+  open: RollupOpenRow[],
+  closed: RollupClosedRow[],
+  names: Map<string, string>,
+  attachedOpportunityIds: Set<string>,
+): ISellerOpportunityRollup[] {
+  const ownerIds = [...new Set([...open, ...closed].map((row) => String(row.owner_id)))];
+
+  const sum = (rows: RollupOpenRow[], field: 'mrr_cents' | 'one_time_cents') => rows.reduce(
+    // One-time value is NRR + hardware — the same definition the pipeline
+    // table and the dashboard snapshot use.
+    (total, row) => total + (field === 'mrr_cents'
+      ? Number(row.mrr_cents ?? 0)
+      : Number(row.nrr_cents ?? 0) + Number(row.hardware_cents ?? 0)),
+    0,
+  );
+
+  // A seller working two currencies gets one row per currency: summing them
+  // would invent money that does not exist in either.
+  return ownerIds.flatMap((ownerId) => {
+    const ownerOpen = open.filter((row) => String(row.owner_id) === ownerId);
+    const ownerClosed = closed.filter((row) => String(row.owner_id) === ownerId);
+    // Attach rate is about the seller's deals, not their prices: one cohort
+    // across every currency, repeated on each currency row.
+    const ownerNewLogos = ownerClosed.filter((row) => row.status === 'won' && row.opportunity_type === 'new_logo');
+    const ownerAttached = ownerNewLogos.filter((row) => attachedOpportunityIds.has(row.opportunity_id));
+    const attachRate = ownerNewLogos.length ? ownerAttached.length / ownerNewLogos.length : 0;
+    const currencies = [...new Set([...ownerOpen, ...ownerClosed].map((row) => String(row.currency_code)))];
+    return currencies.map((currency) => {
+      const inCurrency = <T extends { currency_code?: unknown }>(rows: T[]) =>
+        rows.filter((row) => String(row.currency_code) === currency);
+      const currencyOpen = inCurrency(ownerOpen);
+      const won = inCurrency(ownerClosed).filter((row) => row.status === 'won');
+      const lost = inCurrency(ownerClosed).filter((row) => row.status === 'lost');
+      return {
+        owner_id: ownerId,
+        owner_name: names.get(ownerId) ?? ownerId,
+        office_id: null,
+        office_name: null,
+        currency_code: currency,
+        open_mrr_cents: sum(currencyOpen, 'mrr_cents'),
+        open_one_time_cents: sum(currencyOpen, 'one_time_cents'),
+        won_count: won.length,
+        won_mrr_cents: sum(won, 'mrr_cents'),
+        won_one_time_cents: sum(won, 'one_time_cents'),
+        lost_count: lost.length,
+        lost_mrr_cents: sum(lost, 'mrr_cents'),
+        lost_one_time_cents: sum(lost, 'one_time_cents'),
+        attach_rate: attachRate,
+      };
+    });
+  });
+}
+
 export async function getSellerRollupsData(
   knex: Knex,
   tenant: string,
@@ -18,7 +86,7 @@ export async function getSellerRollupsData(
     db.table('opportunities')
       .where({ status: 'open' })
       .whereBetween('expected_close_date', [period.start, period.end])
-      .select('owner_id', 'mrr_cents', 'nrr_cents'),
+      .select('owner_id', 'currency_code', 'mrr_cents', 'nrr_cents', 'hardware_cents'),
     db.table('opportunities')
       .whereIn('status', ['won', 'lost'])
       .andWhere((builder) => {
@@ -39,8 +107,10 @@ export async function getSellerRollupsData(
         'opportunity_type',
         'client_id',
         'won_at',
+        'currency_code',
         'mrr_cents',
         'nrr_cents',
+        'hardware_cents',
       ),
   ]);
   const ownerIds = [...new Set([...open, ...closed].map((row) => String(row.owner_id)))];
@@ -59,7 +129,7 @@ export async function getSellerRollupsData(
         .whereIn('client_id', [...new Set(wonNewLogos.map((row) => row.client_id))])
         .select('client_id', 'start_date')
     : [];
-  const attachedOpportunityIds = new Set(wonNewLogos.flatMap((deal) => {
+  const attachedOpportunityIds = new Set<string>(wonNewLogos.flatMap((deal) => {
     const wonAt = new Date(deal.won_at);
     const through = new Date(wonAt);
     through.setUTCDate(through.getUTCDate() + 60);
@@ -70,30 +140,5 @@ export async function getSellerRollupsData(
     )) ? [deal.opportunity_id] : [];
   }));
 
-  return ownerIds.map((ownerId) => {
-    const ownerOpen = open.filter((row) => String(row.owner_id) === ownerId);
-    const won = closed.filter((row) => String(row.owner_id) === ownerId && row.status === 'won');
-    const lost = closed.filter((row) => String(row.owner_id) === ownerId && row.status === 'lost');
-    const ownerNewLogos = won.filter((row) => row.opportunity_type === 'new_logo');
-    const ownerAttached = ownerNewLogos.filter((row) => attachedOpportunityIds.has(row.opportunity_id));
-    const sum = (rows: any[], field: 'mrr_cents' | 'nrr_cents') => rows.reduce(
-      (total, row) => total + Number(row[field] ?? 0),
-      0,
-    );
-    return {
-      owner_id: ownerId,
-      owner_name: names.get(ownerId) ?? ownerId,
-      office_id: null,
-      office_name: null,
-      open_mrr_cents: sum(ownerOpen, 'mrr_cents'),
-      open_nrr_cents: sum(ownerOpen, 'nrr_cents'),
-      won_count: won.length,
-      won_mrr_cents: sum(won, 'mrr_cents'),
-      won_nrr_cents: sum(won, 'nrr_cents'),
-      lost_count: lost.length,
-      lost_mrr_cents: sum(lost, 'mrr_cents'),
-      lost_nrr_cents: sum(lost, 'nrr_cents'),
-      attach_rate: ownerNewLogos.length ? ownerAttached.length / ownerNewLogos.length : 0,
-    };
-  });
+  return buildSellerRollups(open, closed, names, attachedOpportunityIds);
 }

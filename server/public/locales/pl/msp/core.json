@@ -157,6 +157,10 @@
       "title": "Szybkie tworzenie",
       "heading": "Utwórz",
       "options": {
+        "opportunity": {
+          "description": "Zapisz transakcję, zanim o niej zapomnisz",
+          "label": "Możliwość"
+        },
         "ticket": {
           "label": "Zgłoszenie",
           "description": "Utwórz nowe zgłoszenie wsparcia"
@@ -252,6 +256,7 @@
   "quickCreate": {
     "success": {
       "asset": "Zasób utworzony pomyślnie",
+      "opportunity": "Możliwość \"{{title}}\" została utworzona",
       "ticket": "Zgłoszenie nr {{number}} utworzone pomyślnie",
       "client": "Klient \"{{name}}\" utworzony pomyślnie",
       "contact": "{{name}} dodano pomyślnie",
@@ -265,6 +270,7 @@
     },
     "dialogTitles": {
       "contact": "Dodaj nowy kontakt",
+      "opportunity": "Nowa możliwość",
       "project": "Dodaj nowy projekt",
       "service": "Dodaj nową usługę"
     }

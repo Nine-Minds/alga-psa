@@ -30,6 +30,11 @@ vi.mock('next-auth/react', () => ({
   signOut: (...args: unknown[]) => signOut(...args),
 }));
 
+vi.mock('@alga-psa/ui/hooks', async () => ({
+  ...(await vi.importActual<Record<string, unknown>>('@alga-psa/ui/hooks')),
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+}));
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   detectClientLocale: () => 'en',
   useTranslation: () => ({

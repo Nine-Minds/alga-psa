@@ -60,6 +60,7 @@ function normalizeListItem(row: Record<string, unknown>): IOpportunityListItem {
     nrr_cents: Number(row.nrr_cents ?? 0),
     hardware_cents: Number(row.hardware_cents ?? 0),
     currency_code: String(row.currency_code),
+    values_locked_by_quote: Boolean(row.values_locked_by_quote),
     expected_close_date: normalizeOptionalIso(row.expected_close_date),
     next_action: row.next_action as IOpportunityListItem['next_action'],
     next_action_due: normalizeOptionalIso(row.next_action_due),
@@ -80,7 +81,23 @@ export const OpportunityModel = {
     const [row] = await tenantDb(conn, tenant).table('opportunities')
       .insert({ tenant, ...input })
       .returning('*');
-    return normalize(row);
+    const created = normalize(row);
+    // Every creation path (UI, API, suggestion acceptance, QBR) must leave the
+    // deal with a current step: next_action is a mirror of one, never a
+    // free-floating string.
+    if (created.next_action) {
+      await tenantDb(conn, tenant).table('opportunity_steps').insert({
+        tenant,
+        opportunity_id: created.opportunity_id,
+        title: created.next_action,
+        due_at: created.next_action_due ?? null,
+        status: 'current',
+        sort_order: 0,
+        assigned_to: created.owner_id,
+        created_by: created.created_by,
+      });
+    }
+    return created;
   },
 
   async update(
@@ -157,6 +174,7 @@ export const OpportunityModel = {
         'o.nrr_cents',
         'o.hardware_cents',
         'o.currency_code',
+        'o.values_locked_by_quote',
         'o.expected_close_date',
         'o.next_action',
         'o.next_action_due',

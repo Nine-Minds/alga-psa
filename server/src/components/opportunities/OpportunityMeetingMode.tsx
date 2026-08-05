@@ -106,6 +106,17 @@ export function OpportunityMeetingMode() {
 
   return (
     <div id="opportunities-meeting" className="mx-auto w-full max-w-2xl">
+      <div id="opportunities-meeting-intro" className="mb-4">
+        <h2 className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
+          {t('opportunities.meeting.title', 'Pipeline review')}
+        </h2>
+        <p className="mt-0.5 text-[13px] leading-relaxed text-[rgb(var(--color-text-500))]">
+          {t(
+            'opportunities.meeting.intro',
+            'Runs the weekly pipeline meeting one deal at a time, quietest first, with the evidence shown next to the owner\u2019s own confidence. Mark each deal reviewed and the session is recorded, so you can show the whole pipeline was walked.'
+          )}
+        </p>
+      </div>
       <div className="mb-3 flex items-center justify-between text-[13px] text-[rgb(var(--color-text-500))]">
         <span>
           {t('opportunities.meeting.progress', 'Deal {{n}} of {{total}}', { n: cursor + 1, total: deals.length })}

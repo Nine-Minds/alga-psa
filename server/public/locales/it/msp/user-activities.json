@@ -465,7 +465,8 @@
       "tags": "Tag",
       "tagsSelected": "{{count}} tag",
       "tasksCompact": "Attività",
-      "ticketsCompact": "Ticket"
+      "ticketsCompact": "Ticket",
+      "opportunityScope": "Lavoro sulla trattativa"
     },
     "activityTypeOptions": {
       "schedule": "Pianificazione",
@@ -513,6 +514,11 @@
       "phases": "{{count}} fasi",
       "projects": "{{count}} progetti",
       "statuses": "{{count}} stati"
+    },
+    "opportunityScopeOptions": {
+      "assigned": "Passi assegnati",
+      "owned": "Passi delle trattative di cui sono responsabile",
+      "all": "Passi assegnati o delle mie trattative"
     }
   },
   "actions": {

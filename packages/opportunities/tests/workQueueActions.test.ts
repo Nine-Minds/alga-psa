@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Temporal } from '@js-temporal/polyfill';
-import { bucketQueueActionItems } from '../src/lib/workQueueBuckets';
+import { bucketQueueActionItems, sumFoundByCurrency } from '../src/lib/workQueueBuckets';
 
 function opportunity(overrides: Record<string, unknown>) {
   return {
@@ -60,5 +60,24 @@ describe('work queue action bucketing', () => {
     expect(result.do_today.map((item) => item.is_screen_primary)).toEqual([true, false]);
     expect(result.going_quiet.map((item) => item.opportunity_id)).toEqual(['quiet-future']);
     expect(result.going_quiet[0].is_screen_primary).toBe(false);
+  });
+});
+
+describe('found money totals', () => {
+  it('keeps each currency in its own bucket instead of summing them', () => {
+    const totals = sumFoundByCurrency([
+      { currency_code: 'USD', mrr_cents: 10000, nrr_cents: 2500 },
+      { currency_code: 'GBP', mrr_cents: 40000, nrr_cents: 0 },
+      { currency_code: 'USD', mrr_cents: 5000, nrr_cents: 1000 },
+    ]);
+
+    expect(totals).toEqual([
+      { currency_code: 'GBP', mrr_cents: 40000, nrr_cents: 0 },
+      { currency_code: 'USD', mrr_cents: 15000, nrr_cents: 3500 },
+    ]);
+  });
+
+  it('returns nothing when there is no found money', () => {
+    expect(sumFoundByCurrency([])).toEqual([]);
   });
 });

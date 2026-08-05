@@ -316,7 +316,14 @@
       "failedTaskPhase": "55555",
       "failedTaskProjectMetadata": "55555",
       "failedAdHoc": "55555",
-      "unsupportedType": "55555"
+      "unsupportedType": "55555",
+      "failedOpportunityStep": "55555"
+    },
+    "opportunityStep": {
+      "opportunity": "55555",
+      "client": "55555",
+      "assignedTo": "55555",
+      "openOpportunity": "55555"
     }
   },
   "timeSheetClient": {

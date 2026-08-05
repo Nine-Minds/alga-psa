@@ -49,18 +49,19 @@ describe('enterprise opportunity management behavior', () => {
 
     const band = calculateForecastBand(rows, calibration);
 
-    expect(band).toMatchObject({
+    expect(band.by_currency).toEqual([{
+      currency_code: 'USD',
       floor_mrr_cents: 1500,
-      floor_nrr_cents: 3000,
+      floor_one_time_cents: 3000,
       ceiling_mrr_cents: 1650,
-      ceiling_nrr_cents: 3300,
-    });
+      ceiling_one_time_cents: 3300,
+    }]);
     expect(band.composition.find((row) => row.opportunity_id === 'qualified')).toMatchObject({
       weight: 0.15,
       weight_source: 'base',
       ceiling_mrr_cents: 150,
     });
-    expect(band.ceiling_mrr_cents).toBeGreaterThanOrEqual(band.floor_mrr_cents);
+    expect(band.by_currency[0].ceiling_mrr_cents).toBeGreaterThanOrEqual(band.by_currency[0].floor_mrr_cents);
   });
 
   it('uses seller calibration for observed cohorts and base rates for sparse cohorts', () => {
@@ -75,7 +76,7 @@ describe('enterprise opportunity management behavior', () => {
 
     expect(band.composition[0]).toMatchObject({ weight: 0.6, weight_source: 'seller_calibration' });
     expect(band.composition[1]).toMatchObject({ weight: 0.35, weight_source: 'base' });
-    expect(band.ceiling_mrr_cents).toBe(950);
+    expect(band.by_currency[0].ceiling_mrr_cents).toBe(950);
   });
 
   it('blocks close-won with open commitments and permits it after resolution', async () => {

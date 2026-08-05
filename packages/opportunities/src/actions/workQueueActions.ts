@@ -13,6 +13,7 @@ import type {
 import { composeWhy, type WhyFacts } from '../lib/whyComposer';
 import {
   bucketQueueActionItems,
+  sumFoundByCurrency,
   plainDate,
   type ProposalFactRow,
   type QueueOpportunityRow,
@@ -229,14 +230,6 @@ export async function assembleWorkQueue(
     };
   });
 
-  const billingSettings = await db.table('default_billing_settings')
-    .select('default_currency_code')
-    .first();
-  const currencyCode = billingSettings?.default_currency_code
-    ?? opportunities[0]?.currency_code
-    ?? suggestions[0]?.currency_code
-    ?? 'USD';
-
   const lessonFacts = await getOpportunityLessonFacts(
     knex,
     tenant,
@@ -262,9 +255,7 @@ export async function assembleWorkQueue(
   return {
     user_first_name: userFirstName,
     date: now.toString(),
-    found_mrr_cents: moneyFound.reduce((sum, item) => sum + item.mrr_cents, 0),
-    found_nrr_cents: moneyFound.reduce((sum, item) => sum + item.nrr_cents, 0),
-    currency_code: String(currencyCode),
+    found_totals: sumFoundByCurrency(moneyFound),
     do_today: doToday,
     going_quiet: goingQuiet,
     money_found: moneyFound,

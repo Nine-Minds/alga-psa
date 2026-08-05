@@ -316,7 +316,14 @@
       "failedTaskPhase": "No se pudo cargar la fase de tarea",
       "failedTaskProjectMetadata": "No se pudieron cargar los metadatos del proyecto de tarea",
       "failedAdHoc": "No se pudieron cargar los datos de la entrada ad hoc",
-      "unsupportedType": "Tipo de elemento de trabajo no compatible"
+      "unsupportedType": "Tipo de elemento de trabajo no compatible",
+      "failedOpportunityStep": "No se pudieron cargar los datos del paso de la oportunidad"
+    },
+    "opportunityStep": {
+      "opportunity": "Oportunidad",
+      "client": "Cliente",
+      "assignedTo": "Asignado a",
+      "openOpportunity": "Abrir oportunidad"
     }
   },
   "timeSheetClient": {

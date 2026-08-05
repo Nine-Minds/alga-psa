@@ -485,6 +485,8 @@ html.dark {
     --color-event-interaction-hover: 40 140 82;
     --color-event-appointment: 160 50 80;     /* muted rose */
     --color-event-appointment-hover: 180 60 90;
+    --color-event-opportunity: 40 90 140;     /* muted blue */
+    --color-event-opportunity-hover: 48 108 168;
 
     /* TABLE ROW COLORS */
     --color-table-row-alt: 30 33 52;              /* dark slate with purple-blue tint */
@@ -590,6 +592,8 @@ html.light {
     --color-event-interaction-hover: 187 247 208;
     --color-event-appointment: 254 205 211;   /* rose-200 */
     --color-event-appointment-hover: 253 164 175;
+    --color-event-opportunity: 191 219 254;   /* blue-200 */
+    --color-event-opportunity-hover: 147 197 253;
 
     /* TABLE ROW COLORS */
     --color-table-row-alt: 248 250 252;           /* slate-50, matches current */

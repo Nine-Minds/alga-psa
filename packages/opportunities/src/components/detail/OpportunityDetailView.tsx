@@ -2,13 +2,20 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { CheckCircle2, CircleDollarSign, FileText, Gauge, Users } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { BentoTile, BentoTileAddButton, BentoTileEmptyAction } from '@alga-psa/ui/components/bento';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Label } from '@alga-psa/ui/components/Label';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { useClientDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
-import type { IOpportunityDetail, OpportunityConfidence, OpportunityStage } from '@alga-psa/types';
-import { EvidenceLadder } from '../EvidenceLadder';
+import type { IOpportunityDetail, IUser, OpportunityConfidence } from '@alga-psa/types';
+import { oneTimeCents } from '../../lib/pipelineReporting';
+import type { OpportunityStepAssignee } from '../../actions/opportunityStepActions';
 import { WhySentenceText } from '../WhySentenceText';
 
 const OPPORTUNITY_TYPE_DEFAULTS = {
@@ -20,12 +27,13 @@ const OPPORTUNITY_TYPE_DEFAULTS = {
 
 export interface OpportunityDetailViewProps {
   detail: IOpportunityDetail;
-  /** Timeline feed (interactions) rendered by the host, so the module reuses the standard interactions UI. */
+  /** The plan: timeline of what happened plus the greyed-out steps ahead. */
   timeline?: React.ReactNode;
   /** EE commitments ledger, injected by the host app when the management tier allows it. */
   commitments?: React.ReactNode;
-  onCompleteAction: (opportunityId: string) => void;
-  onStageSelect: (stage: Exclude<OpportunityStage, 'lost'>) => void;
+  /** Internal users the deal can be handed to. */
+  assignees?: OpportunityStepAssignee[];
+  onAssignOwner?: (opportunityId: string, userId: string) => void;
   onConfidenceChange: (opportunityId: string, confidence: OpportunityConfidence) => void;
   onWin: (opportunityId: string) => void;
   onLose: (opportunityId: string) => void;
@@ -41,16 +49,15 @@ export interface OpportunityDetailViewProps {
 }
 
 /**
- * The deal working surface. The next action is the screen's one primary
- * button; win/lose are deliberately quiet until the evidence carries the deal
- * to Verbal. Values are read-only once a quote locks them.
+ * The deal working surface, laid out like a ticket: the plan runs down the
+ * centre, and the tiles that describe the deal sit either side of it.
  */
 export function OpportunityDetailView({
   detail,
   timeline,
   commitments,
-  onCompleteAction,
-  onStageSelect,
+  assignees = [],
+  onAssignOwner,
   onConfidenceChange,
   onWin,
   onLose,
@@ -64,20 +71,230 @@ export function OpportunityDetailView({
   onDraftFollowUp,
 }: OpportunityDetailViewProps) {
   const { t } = useTranslation('msp/opportunities');
+  const clientDrawer = useClientDrawer();
   const fmt = (cents: number) => formatCurrencyFromMinorUnits(cents, undefined, detail.currency_code);
   const open = detail.status === 'open';
-  const overdue =
-    open && detail.next_action_due != null && new Date(detail.next_action_due).getTime() < Date.now();
 
   const confidenceOptions = (['low', 'medium', 'high', 'committed'] as OpportunityConfidence[]).map((c) => ({
     value: c,
     label: t(`opportunities.confidence.${c}`, c.charAt(0).toUpperCase() + c.slice(1)),
   }));
 
+  const leftRail = (
+    <div className="min-w-0 space-y-4">
+      <BentoTile
+        id="opportunity-detail-value-tile"
+        title={t('opportunities.detail.value', 'Value')}
+        icon={<CircleDollarSign className="h-4 w-4" aria-hidden="true" />}
+        action={
+          open && !detail.values_locked_by_quote && onEditValues ? (
+            <Button
+              id="opportunity-detail-edit-values"
+              size="xs"
+              variant="ghost"
+              onClick={() => onEditValues(detail.opportunity_id)}
+            >
+              {t('common.edit', 'Edit')}
+            </Button>
+          ) : detail.values_locked_by_quote ? (
+            <span className="text-[11px] text-[rgb(var(--color-text-400))]">
+              {t('opportunities.detail.valuesFromQuote', 'from accepted quote')}
+            </span>
+          ) : undefined
+        }
+      >
+        <p className="mb-1.5 text-[11px] uppercase tracking-wide text-[rgb(var(--color-text-400))]">
+          {detail.currency_code}
+        </p>
+        <dl className="space-y-1.5 text-sm">
+          <div className="flex justify-between">
+            <dt className="text-[rgb(var(--color-text-500))]">{t('opportunities.detail.recurring', 'Recurring')}</dt>
+            <dd className="font-medium tabular-nums text-[rgb(var(--color-text-900))]">
+              {fmt(detail.mrr_cents)}
+              {t('opportunities.perMonthSuffix', '/mo')}
+            </dd>
+          </div>
+          <div className="flex justify-between">
+            <dt className="text-[rgb(var(--color-text-500))]">
+              {t('opportunities.detail.oneTimeServices', 'One-time services')}
+            </dt>
+            <dd className="font-medium tabular-nums text-[rgb(var(--color-text-900))]">{fmt(detail.nrr_cents)}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt className="text-[rgb(var(--color-text-500))]">{t('opportunities.detail.hardware', 'Hardware')}</dt>
+            <dd className="font-medium tabular-nums text-[rgb(var(--color-text-900))]">
+              {fmt(detail.hardware_cents)}
+            </dd>
+          </div>
+          <div className="flex justify-between border-t border-[rgb(var(--color-border-100))] pt-1.5">
+            <dt className="text-[rgb(var(--color-text-500))]">{t('opportunities.detail.oneTime', 'One-time')}</dt>
+            <dd className="font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
+              {fmt(oneTimeCents(detail))}
+            </dd>
+          </div>
+        </dl>
+      </BentoTile>
+
+      <BentoTile
+        id="opportunity-detail-confidence-tile"
+        title={t('opportunities.detail.confidence', 'Your confidence')}
+        icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
+      >
+        <CustomSelect
+          id="opportunity-detail-confidence"
+          options={confidenceOptions}
+          value={detail.confidence}
+          onValueChange={(v: string) => onConfidenceChange(detail.opportunity_id, v as OpportunityConfidence)}
+          disabled={!open}
+        />
+        <p className="mt-2 text-[11px] leading-relaxed text-[rgb(var(--color-text-400))]">
+          {t(
+            'opportunities.detail.confidenceNote',
+            'Confidence is the owner\u2019s call. The stage comes from evidence. The two are shown side by side, never merged.'
+          )}
+        </p>
+      </BentoTile>
+    </div>
+  );
+
+  const rightRail = (
+    <div className="min-w-0 space-y-4">
+      <BentoTile
+        id="opportunity-detail-people-tile"
+        title={t('opportunities.detail.people', 'People')}
+        icon={<Users className="h-4 w-4" aria-hidden="true" />}
+      >
+        {onAssignOwner && assignees.length > 0 ? (
+          <div className="space-y-1">
+            <Label htmlFor="opportunity-detail-owner">{t('opportunities.detail.owner', 'Owner')}</Label>
+            <UserPicker
+              data-automation-id="opportunity-detail-owner"
+              value={detail.owner_id}
+              onValueChange={(value: string) => onAssignOwner(detail.opportunity_id, value)}
+              users={assignees as unknown as IUser[]}
+              getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+              labelStyle="none"
+              buttonWidth="full"
+              disabled={!open}
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-[rgb(var(--color-text-700))]">
+            {t('opportunities.detail.owner', 'Owner')}: {detail.owner_name}
+          </p>
+        )}
+        <p className="mt-2 text-[11px] leading-relaxed text-[rgb(var(--color-text-400))]">
+          {t('opportunities.detail.ownerNote', 'Individual steps can be assigned to other people. The deal keeps one owner.')}
+        </p>
+        {detail.contact_name ? (
+          <p className="mt-2 text-[13px] text-[rgb(var(--color-text-600))]">{detail.contact_name}</p>
+        ) : null}
+      </BentoTile>
+
+      <BentoTile
+        id="opportunity-detail-quotes-tile"
+        title={t('opportunities.detail.quotes', 'Quotes')}
+        icon={<FileText className="h-4 w-4" aria-hidden="true" />}
+        action={
+          open ? (
+            <BentoTileAddButton
+              id="opportunity-detail-create-quote"
+              label={t('opportunities.detail.createQuote', 'Create quote')}
+              onClick={() => onCreateQuote(detail.opportunity_id)}
+            />
+          ) : undefined
+        }
+      >
+        {detail.linked_quotes.length === 0 ? (
+          <p className="text-[13px] text-[rgb(var(--color-text-400))]">
+            {t('opportunities.detail.noQuotes', 'No quote yet. A sent quote moves this deal to Proposed on its own.')}
+          </p>
+        ) : (
+          <ul className="divide-y divide-[rgb(var(--color-border-100,241_245_249))]">
+            {detail.linked_quotes.map((q) => (
+              <li key={q.quote_id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                <Button
+                  id={`opportunity-detail-quote-${q.quote_id}`}
+                  variant="link"
+                  size="xs"
+                  className="h-auto px-0 py-0 align-baseline text-sm font-medium"
+                  onClick={() => onOpenQuote(q.quote_id)}
+                >
+                  {q.quote_number}
+                </Button>
+                <span className="flex items-center gap-3">
+                  <Badge variant={q.status === 'accepted' ? 'success' : 'default-muted'} size="sm">
+                    {q.status}
+                  </Badge>
+                  <span className="tabular-nums text-[rgb(var(--color-text-700))]">
+                    {formatCurrencyFromMinorUnits(q.total_amount, undefined, q.currency_code)}
+                  </span>
+                  {open ? (
+                    <Button
+                      id={`opportunity-detail-unlink-quote-${q.quote_id}`}
+                      size="xs"
+                      variant="ghost"
+                      onClick={() => onUnlinkQuote(q.quote_id)}
+                    >
+                      {t('opportunities.detail.unlinkQuote', 'Unlink')}
+                    </Button>
+                  ) : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {open ? (
+          <BentoTileEmptyAction
+            id="opportunity-detail-link-quote"
+            onClick={() => onLinkQuote(detail.opportunity_id)}
+          >
+            {t('opportunities.detail.linkQuote', 'Link an existing quote')}
+          </BentoTileEmptyAction>
+        ) : null}
+      </BentoTile>
+
+      {commitments}
+
+      {open ? (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Button
+            id="opportunity-detail-delete"
+            size="sm"
+            variant="ghost"
+            className="whitespace-nowrap"
+            onClick={() => onDelete(detail.opportunity_id)}
+          >
+            {t('common.delete', 'Delete')}
+          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              id="opportunity-detail-lose"
+              size="sm"
+              variant="ghost"
+              className="whitespace-nowrap"
+              onClick={() => onLose(detail.opportunity_id)}
+            >
+              {t('opportunities.detail.markLost', 'Mark lost')}
+            </Button>
+            <Button
+              id="opportunity-detail-win"
+              size="sm"
+              variant="soft"
+              className="whitespace-nowrap"
+              onClick={() => onWin(detail.opportunity_id)}
+            >
+              {t('opportunities.detail.markWon', 'Mark won')}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+
   return (
-    <div id={`opportunity-detail-${detail.opportunity_id}`} className="mx-auto w-full max-w-3xl space-y-5">
-      {/* Header */}
-      <header>
+    <div id={`opportunity-detail-${detail.opportunity_id}`} className="min-w-0">
+      <header className="mb-4">
         <div className="flex flex-wrap items-center gap-2.5">
           <h1 className="text-xl font-semibold text-[rgb(var(--color-text-900))]">{detail.title}</h1>
           {detail.status === 'won' ? (
@@ -96,14 +313,36 @@ export function OpportunityDetailView({
               {t('common.edit', 'Edit')}
             </Button>
           ) : null}
+          {open && onDraftFollowUp ? (
+            <Button
+              id="opportunity-detail-draft"
+              size="xs"
+              variant="soft"
+              onClick={() => onDraftFollowUp(detail.opportunity_id)}
+            >
+              {t('opportunities.detail.draftFollowUp', 'Draft the follow-up')}
+            </Button>
+          ) : null}
         </div>
         <div className="mt-0.5 text-sm text-[rgb(var(--color-text-500))]">
-          <Link
-            href={`/msp/clients/${detail.client_id}`}
-            className="font-medium text-[rgb(var(--color-primary-600))] hover:underline"
-          >
-            {detail.client_name}
-          </Link>
+          {clientDrawer ? (
+            <Button
+              id="opportunity-detail-client"
+              variant="link"
+              size="xs"
+              className="h-auto px-0 py-0 align-baseline text-sm font-medium"
+              onClick={() => clientDrawer.openClientDrawer(detail.client_id)}
+            >
+              {detail.client_name}
+            </Button>
+          ) : (
+            <Link
+              href={`/msp/clients/${detail.client_id}`}
+              className="font-medium text-[rgb(var(--color-primary-600))] hover:underline"
+            >
+              {detail.client_name}
+            </Link>
+          )}
           {detail.client_lifecycle_status === 'prospect' ? (
             <Badge variant="default-muted" size="sm" className="ml-2">
               {t('opportunities.prospect', 'Prospect')}
@@ -130,234 +369,45 @@ export function OpportunityDetailView({
         ) : null}
       </header>
 
-      {/* Evidence ladder */}
-      <section className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
-            {t('opportunities.detail.evidence', 'Evidence')}
-          </h2>
-          {open ? (
-            <span className="text-[11px] text-[rgb(var(--color-text-400))]">
-              {t('opportunities.detail.setStageHint', 'Select a checkpoint to set the stage')}
-            </span>
-          ) : null}
-        </div>
-        <EvidenceLadder steps={detail.ladder} onStageSelect={open ? onStageSelect : undefined} />
-      </section>
-
-      {/* Next action — the screen's one primary */}
-      {open ? (
-        <section
-          className={`rounded-xl border p-4 ${
-            overdue
-              ? 'border-[rgb(var(--color-accent-200,254_202_202))] bg-[rgb(var(--color-accent-50,254_242_242))]'
-              : 'border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]'
-          }`}
+      {detail.status === 'won' ? (
+        <BentoTile
+          id="opportunity-detail-what-next"
+          title={t('opportunities.detail.whatNext', 'What happens next')}
+          icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
+          surfaceClassName="border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20"
         >
-          <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
-            {overdue
-              ? t('opportunities.detail.nextActionOverdue', 'Next action · overdue')
-              : t('opportunities.detail.nextAction', 'Next action')}
-          </h2>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="flex-1 text-sm font-semibold text-[rgb(var(--color-text-900))]">
-              {detail.next_action}
-            </span>
-            {detail.next_action_due ? (
-              <span
-                className={`text-xs font-medium ${
-                  overdue ? 'text-[rgb(var(--badge-error-text))]' : 'text-[rgb(var(--color-text-500))]'
-                }`}
-              >
-                {t('opportunities.detail.due', 'due {{date}}', {
-                  date: new Date(detail.next_action_due).toLocaleDateString(),
-                })}
-              </span>
-            ) : null}
-            {onDraftFollowUp ? (
-              <Button
-                id="opportunity-detail-draft"
-                size="sm"
-                variant="soft"
-                onClick={() => onDraftFollowUp(detail.opportunity_id)}
-              >
-                {t('opportunities.detail.draftFollowUp', 'Draft the follow-up')}
-              </Button>
-            ) : null}
-            <Button
-              id="opportunity-detail-complete-action"
-              size="sm"
-              variant="default"
-              onClick={() => onCompleteAction(detail.opportunity_id)}
-            >
-              {t('opportunities.queue.completeAction', 'Done → set next')}
-            </Button>
-          </div>
-        </section>
-      ) : null}
-
-      {/* Values + confidence */}
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
-              {t('opportunities.detail.value', 'Value')}
-            </h2>
-            {open && !detail.values_locked_by_quote && onEditValues ? (
-              <Button
-                id="opportunity-detail-edit-values"
-                size="xs"
-                variant="ghost"
-                onClick={() => onEditValues(detail.opportunity_id)}
-              >
-                {t('common.edit', 'Edit')}
-              </Button>
-            ) : detail.values_locked_by_quote ? (
-              <span className="text-[11px] text-[rgb(var(--color-text-400))]">
-                {t('opportunities.detail.valuesFromQuote', 'from accepted quote')}
-              </span>
-            ) : null}
-          </div>
-          <dl className="space-y-1.5 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-[rgb(var(--color-text-500))]">{t('opportunities.detail.recurring', 'Recurring')}</dt>
-              <dd className="font-medium tabular-nums text-[rgb(var(--color-text-900))]">
-                {fmt(detail.mrr_cents)}
-                {t('opportunities.perMonthSuffix', '/mo')}
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-[rgb(var(--color-text-500))]">{t('opportunities.detail.oneTime', 'One-time')}</dt>
-              <dd className="font-medium tabular-nums text-[rgb(var(--color-text-900))]">{fmt(detail.nrr_cents)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-[rgb(var(--color-text-500))]">{t('opportunities.detail.hardware', 'Hardware')}</dt>
-              <dd className="font-medium tabular-nums text-[rgb(var(--color-text-900))]">
-                {fmt(detail.hardware_cents)}
-              </dd>
-            </div>
-          </dl>
-        </div>
-        <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
-          <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
-            {t('opportunities.detail.confidence', 'Your confidence')}
-          </h2>
-          <CustomSelect
-            id="opportunity-detail-confidence"
-            options={confidenceOptions}
-            value={detail.confidence}
-            onValueChange={(v: string) => onConfidenceChange(detail.opportunity_id, v as OpportunityConfidence)}
-            disabled={!open}
-          />
-          <p className="mt-2 text-[11px] leading-relaxed text-[rgb(var(--color-text-400))]">
-            {t(
-              'opportunities.detail.confidenceNote',
-              'Confidence is yours; the stage comes from evidence. The two are compared, never merged.'
-            )}
-          </p>
-        </div>
-      </section>
-
-      {/* Linked quotes */}
-      <section className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
-            {t('opportunities.detail.quotes', 'Quotes')}
-          </h2>
-          {open ? (
-            <div className="flex items-center gap-2">
-              <Button
-                id="opportunity-detail-link-quote"
-                size="xs"
-                variant="ghost"
-                onClick={() => onLinkQuote(detail.opportunity_id)}
-              >
-                {t('opportunities.detail.linkQuote', 'Link existing')}
-              </Button>
-              <Button
-                id="opportunity-detail-create-quote"
-                size="xs"
-                variant="soft"
-                onClick={() => onCreateQuote(detail.opportunity_id)}
-              >
-                {t('opportunities.detail.createQuote', 'Create quote')}
-              </Button>
-            </div>
-          ) : null}
-        </div>
-        {detail.linked_quotes.length === 0 ? (
-          <p className="text-[13px] text-[rgb(var(--color-text-400))]">
-            {t('opportunities.detail.noQuotes', 'No quote yet. A sent quote moves this deal to Proposed on its own.')}
-          </p>
-        ) : (
-          <ul className="divide-y divide-[rgb(var(--color-border-100,241_245_249))]">
-            {detail.linked_quotes.map((q) => (
-              <li key={q.quote_id} className="flex items-center justify-between py-2 text-sm">
-                <button
-                  type="button"
-                  id={`opportunity-detail-quote-${q.quote_id}`}
-                  className="font-medium text-[rgb(var(--color-primary-600))] hover:underline"
-                  onClick={() => onOpenQuote(q.quote_id)}
-                >
-                  {q.quote_number}
-                </button>
-                <span className="flex items-center gap-3">
-                  <Badge variant={q.status === 'accepted' ? 'success' : 'default-muted'} size="sm">
-                    {q.status}
-                  </Badge>
-                  <span className="tabular-nums text-[rgb(var(--color-text-700))]">
-                    {formatCurrencyFromMinorUnits(q.total_amount, undefined, q.currency_code)}
-                  </span>
-                  {open ? (
-                    <Button
-                      id={`opportunity-detail-unlink-quote-${q.quote_id}`}
-                      size="xs"
-                      variant="ghost"
-                      onClick={() => onUnlinkQuote(q.quote_id)}
-                    >
-                      {t('opportunities.detail.unlinkQuote', 'Unlink')}
-                    </Button>
-                  ) : null}
-                </span>
-              </li>
-            ))}
+          <ul className="list-disc space-y-1 pl-5 text-[13px] text-[rgb(var(--color-text-700))]">
+            <li>
+              {detail.converted_contract_id
+                ? t('opportunities.detail.whatNextAgreementDone', 'The accepted quote is now a draft agreement. Review and activate it.')
+                : t('opportunities.detail.whatNextConvertQuote', 'Convert the accepted quote to an agreement from the quote screen so billing can start.')}
+            </li>
+            <li>
+              {detail.converted_project_id
+                ? t('opportunities.detail.whatNextProjectDone', 'The onboarding project has been created. Assign it and set the start date.')
+                : t('opportunities.detail.whatNextStartProject', 'Create the onboarding project so delivery has somewhere to work.')}
+            </li>
+            <li>
+              {t('opportunities.detail.whatNextHandoff', 'Hand the client to service delivery: the owner, contacts and commitments on this page are the brief.')}
+            </li>
           </ul>
-        )}
-      </section>
+        </BentoTile>
+      ) : null}
 
-      {commitments}
-
-      {/* Close the deal — quiet until evidence carries it */}
-      {open ? (
-        <section className="flex items-center justify-between gap-2">
-          <Button
-            id="opportunity-detail-delete"
-            size="sm"
-            variant="ghost"
-            onClick={() => onDelete(detail.opportunity_id)}
+      {/* Mobile: the plan first, then the tiles. ≥1280px: the full 3/6/3 bento. */}
+      <div className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
+        <div className="order-2 lg:order-1 lg:col-span-4 xl:col-span-3">{leftRail}</div>
+        <div className="order-1 min-w-0 lg:order-2 lg:col-span-8 xl:col-span-6">
+          <BentoTile
+            id="opportunity-detail-plan-tile"
+            title={t('opportunities.detail.plan', 'Evidence, plan & timeline')}
+            icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
           >
-            {t('common.delete', 'Delete')}
-          </Button>
-          <div className="flex items-center gap-2">
-            <Button id="opportunity-detail-lose" size="sm" variant="ghost" onClick={() => onLose(detail.opportunity_id)}>
-              {t('opportunities.detail.markLost', 'Mark lost')}
-            </Button>
-            <Button id="opportunity-detail-win" size="sm" variant="soft" onClick={() => onWin(detail.opportunity_id)}>
-              {t('opportunities.detail.markWon', 'Mark won')}
-            </Button>
-          </div>
-        </section>
-      ) : null}
-
-      {/* Timeline */}
-      {timeline ? (
-        <section className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
-          <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
-            {t('opportunities.detail.timeline', 'Timeline')}
-          </h2>
-          {timeline}
-        </section>
-      ) : null}
+            {timeline}
+          </BentoTile>
+        </div>
+        <div className="order-3 lg:col-span-12 xl:col-span-3">{rightRail}</div>
+      </div>
     </div>
   );
 }

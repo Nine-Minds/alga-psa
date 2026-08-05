@@ -316,7 +316,14 @@
       "failedTaskPhase": "Falha ao carregar a fase da tarefa",
       "failedTaskProjectMetadata": "Falha ao carregar metadados do projeto de tarefa",
       "failedAdHoc": "Falha ao carregar dados de entrada ad hoc",
-      "unsupportedType": "Tipo de item de trabalho sem suporte"
+      "unsupportedType": "Tipo de item de trabalho sem suporte",
+      "failedOpportunityStep": "Não foi possível carregar os dados da etapa da oportunidade"
+    },
+    "opportunityStep": {
+      "opportunity": "Oportunidade",
+      "client": "Cliente",
+      "assignedTo": "Atribuído a",
+      "openOpportunity": "Abrir oportunidade"
     }
   },
   "timeSheetClient": {

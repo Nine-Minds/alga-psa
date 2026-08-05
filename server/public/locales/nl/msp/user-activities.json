@@ -465,7 +465,8 @@
       "tags": "Tags",
       "tagsSelected": "{{count}} tags",
       "tasksCompact": "Taken",
-      "ticketsCompact": "Tickets"
+      "ticketsCompact": "Tickets",
+      "opportunityScope": "Dealwerk"
     },
     "activityTypeOptions": {
       "schedule": "Schema",
@@ -513,6 +514,11 @@
       "phases": "{{count}} fasen",
       "projects": "{{count}} projecten",
       "statuses": "{{count}} statussen"
+    },
+    "opportunityScopeOptions": {
+      "assigned": "Toegewezen dealstappen",
+      "owned": "Dealstappen van eigen deals",
+      "all": "Toegewezen of eigen dealstappen"
     }
   },
   "actions": {

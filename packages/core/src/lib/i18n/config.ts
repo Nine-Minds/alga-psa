@@ -159,7 +159,7 @@ export const ROUTE_NAMESPACES = {
   '/client-portal/appointments': ['common', 'client-portal', 'features/appointments'],
   '/client-portal/request-services': ['common', 'client-portal', 'client-portal/service-requests'],
   '/msp': ['common', 'msp/core', 'msp/dashboard', 'msp/keyboard-shortcuts'],
-  '/msp/dashboard': ['common', 'msp/core', 'msp/dashboard', 'msp/opportunities'],
+  '/msp/dashboard': ['common', 'msp/core', 'msp/dashboard'],
   '/msp/surveys': ['common', 'msp/core', 'msp/surveys'],
   '/msp/schedule': ['common', 'msp/core', 'msp/schedule'],
   '/msp/knowledge-base': ['common', 'msp/core', 'features/documents', 'msp/knowledge-base'],
@@ -172,7 +172,8 @@ export const ROUTE_NAMESPACES = {
   '/msp/quote-document-templates': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
   '/msp/inventory': ['common', 'msp/core', 'features/inventory'],
   '/msp/clients': ['common', 'msp/core', 'msp/clients'],
-  '/msp/opportunities': ['common', 'msp/core', 'msp/opportunities'],
+  // msp/dashboard carries the shared "Good morning" greeting used by the queue.
+  '/msp/opportunities': ['common', 'msp/core', 'msp/opportunities', 'msp/dashboard'],
   '/msp/contacts': ['common', 'msp/core', 'msp/contacts'],
   '/msp/assets': ['common', 'msp/core', 'msp/assets'],
   '/msp/onboarding': ['common', 'msp/core', 'msp/onboarding'],
@@ -186,6 +187,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/time-management': ['common', 'msp/core', 'msp/time-entry'],
   '/msp/service-requests': ['common', 'msp/core', 'features/tickets', 'msp/service-requests'],
   '/msp/settings/extensions': ['common', 'msp/core', 'msp/settings', 'msp/extensions'],
+  '/msp/settings/opportunities': ['common', 'msp/core', 'msp/settings', 'msp/opportunities'],
   '/msp/settings': ['common', 'msp/core', 'msp/settings', 'msp/keyboard-shortcuts', 'msp/admin', 'msp/email-providers', 'features/projects', 'features/tickets', 'msp/billing-settings', 'msp/service-catalog', 'features/billing', 'msp/calendar', 'msp/integrations'],
   '/msp/profile': ['common', 'msp/core', 'msp/settings', 'msp/profile', 'msp/calendar'],
   '/msp/security-settings': ['common', 'msp/core', 'msp/settings', 'msp/profile'],
@@ -194,7 +196,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/licenses': ['common', 'msp/core', 'msp/licensing'],
   '/msp/account': ['common', 'msp/core', 'msp/account', 'msp/licensing'],
   '/msp/add-ons': ['common', 'msp/core', 'msp/account', 'msp/licensing'],
-  '/msp/user-activities': ['common', 'msp/core', 'msp/user-activities', 'msp/workflows', 'features/tickets', 'features/projects', 'msp/schedule'],
+  '/msp/user-activities': ['common', 'msp/core', 'msp/user-activities', 'msp/workflows', 'features/tickets', 'features/projects', 'msp/schedule', 'msp/opportunities'],
 } as const;
 
 /**

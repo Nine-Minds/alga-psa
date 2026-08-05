@@ -39,6 +39,11 @@ interface ActivityDetailViewerDrawerProps {
   activityId: string;
   /** Schedule entries carry a work_item_type; 'ad_hoc' items use a dedicated panel. */
   workItemType?: string;
+  /**
+   * For 'opportunity_step' activities the activityId is the step_id, so the
+   * deal it belongs to travels separately (from the activity's relatedEntities).
+   */
+  relatedOpportunityId?: string;
   onClose: () => void;
   onActionComplete?: () => void;
 }
@@ -183,6 +188,7 @@ export function ActivityDetailViewerDrawer({
   activityType,
   activityId,
   workItemType,
+  relatedOpportunityId,
   onClose,
   onActionComplete
 }: ActivityDetailViewerDrawerProps) {
@@ -284,10 +290,25 @@ export function ActivityDetailViewerDrawer({
             break;
           }
 
-          // Opportunity next-action activities reuse the SCHEDULE type (there is
-          // no dedicated OPPORTUNITY type) but are NOT schedule entries — their
-          // activityId is the opportunity_id. Looking them up as a schedule entry
-          // always fails ("Schedule entry not found"), so render the deal summary.
+          // Opportunity step activities reuse the SCHEDULE type (there is no
+          // dedicated OPPORTUNITY type) but are NOT schedule entries — their
+          // activityId is the step_id. Looking them up as a schedule entry
+          // always fails ("Schedule entry not found"), so render the deal
+          // summary for the step's opportunity, which travels alongside the
+          // step id (relatedOpportunityId, from the activity's relatedEntities).
+          if (workItemType === 'opportunity_step') {
+            if (!relatedOpportunityId) {
+              throw new Error(t('drawer.opportunityNotFound', { defaultValue: 'Opportunity not found.' }));
+            }
+            setContent(
+              <OpportunityActivityPanel opportunityId={relatedOpportunityId} onClose={onClose} />
+            );
+            break;
+          }
+
+          // Compatibility: older opportunity next-action activities carried the
+          // opportunity_id directly as the activityId. Nothing in this app emits
+          // this shape anymore, but cached feeds / other emitters may.
           if (workItemType === 'opportunity') {
             setContent(
               <OpportunityActivityPanel opportunityId={activityId} onClose={onClose} />
@@ -803,7 +824,7 @@ export function ActivityDetailViewerDrawer({
     } finally {
       setIsLoading(false);
     }
-  }, [activityType, activityId, workItemType, onActionComplete, onClose, tenant, ctx, invalidateCache, t]);
+  }, [activityType, activityId, workItemType, relatedOpportunityId, onActionComplete, onClose, tenant, ctx, invalidateCache, t]);
 
   // Use effect to call loadContent when component mounts or dependencies change
   useEffect(() => {

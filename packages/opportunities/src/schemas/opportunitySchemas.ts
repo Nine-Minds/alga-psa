@@ -90,8 +90,12 @@ export const createOpportunitySchema = z.object({
 });
 
 // Status and stage are intentionally absent: dedicated win/lose and evidence
-// flows own those transitions.
-export const updateOpportunitySchema = createOpportunitySchema.partial();
+// flows own those transitions. The next-action columns are absent too: they
+// mirror the current step, and the step flows are their single writer.
+export const updateOpportunitySchema = createOpportunitySchema.partial().omit({
+  next_action: true,
+  next_action_due: true,
+});
 
 export const winOpportunitySchema = z.object({
   convert_quote_id: z.string().uuid().optional(),
@@ -123,6 +127,76 @@ export const recordDeclaredEvidenceSchema = z.object({
 export const completeNextActionSchema = z.object({
   next_action: z.string().trim().min(1),
   next_action_due: z.string().datetime(),
+});
+
+const stepCheckpointSchema = z.enum(['qualified', 'assessment', 'proposed', 'verbal', 'won']);
+const stepStageSchema = z.enum(['identified', 'qualified', 'assessment', 'proposed', 'verbal']);
+const stepTitleSchema = z.string().trim().min(1).max(300);
+
+export const createOpportunityStepSchema = z.object({
+  title: stepTitleSchema,
+  due_at: z.string().datetime().optional().nullable(),
+  has_time: z.boolean().optional(),
+  duration_minutes: z.number().int().min(15).max(480).optional(),
+  assigned_to: z.string().uuid().optional().nullable(),
+  checkpoint: stepCheckpointSchema.optional().nullable(),
+  stage: stepStageSchema.optional().nullable(),
+  ticket_id: z.string().uuid().optional().nullable(),
+  project_task_id: z.string().uuid().optional().nullable(),
+  status: z.enum(['planned', 'current']).optional(),
+});
+
+export const updateOpportunityStepSchema = z.object({
+  title: stepTitleSchema.optional(),
+  due_at: z.string().datetime().optional().nullable(),
+  has_time: z.boolean().optional(),
+  duration_minutes: z.number().int().min(15).max(480).optional(),
+  assigned_to: z.string().uuid().optional().nullable(),
+  checkpoint: stepCheckpointSchema.optional().nullable(),
+  stage: stepStageSchema.optional().nullable(),
+  ticket_id: z.string().uuid().optional().nullable(),
+  project_task_id: z.string().uuid().optional().nullable(),
+  status: z.enum(['planned', 'current', 'skipped']).optional(),
+});
+
+export const completeOpportunityStepSchema = z.object({
+  next_step_id: z.string().uuid().optional().nullable(),
+  next_action: stepTitleSchema.optional().nullable(),
+  next_action_due: z.string().datetime().optional().nullable(),
+  checkpoint: stepCheckpointSchema.optional().nullable(),
+}).superRefine((value, ctx) => {
+  // Winning is never a side effect of finishing a step: the win flow owns it.
+  if (value.checkpoint === 'won') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['checkpoint'],
+      message: 'Winning goes through the dedicated win flow, not step completion',
+    });
+  }
+});
+
+// Settings-side template editing and the drag-reorder both take raw arrays,
+// so they get the same bounded validation as every other action input.
+export const saveOpportunityStepTemplatesSchema = z.object({
+  stage: stepStageSchema,
+  titles: z.array(z.object({
+    title: stepTitleSchema,
+    due_offset_days: z.number().int().min(0).max(365),
+  })).max(50),
+});
+
+export const reorderOpportunityStepsSchema = z.object({
+  opportunity_id: z.string().uuid(),
+  ordered_step_ids: z.array(z.string().uuid()).min(1).max(200),
+});
+
+// The legacy "edit the next action" affordances write through the current
+// step, so the mirror columns keep a single writer.
+export const updateOpportunityNextActionSchema = z.object({
+  next_action: stepTitleSchema.optional(),
+  next_action_due: z.string().datetime().optional().nullable(),
+}).refine((value) => value.next_action !== undefined || value.next_action_due !== undefined, {
+  message: 'Provide a next action or a due date to update',
 });
 
 export const correctEvidenceSchema = z.object({

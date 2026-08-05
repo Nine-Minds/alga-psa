@@ -65,11 +65,18 @@ export function ActivityDrawerProvider({ children }: { children: ReactNode }) {
     }
 
     setSelectedActivity(activity);
+    // Opportunity-step activities carry their deal in relatedEntities (the
+    // activity id is the step_id, not the opportunity). Hand the drawer the
+    // opportunity id so it can render the deal summary panel.
+    const relatedOpportunityId = activity.relatedEntities?.find(
+      (entity) => entity.type === 'opportunity'
+    )?.id;
     openDrawer(
       <ActivityDetailViewerDrawer
         activityType={activity.type}
         activityId={activity.id}
         workItemType={(activity as any).workItemType}
+        relatedOpportunityId={relatedOpportunityId}
         onClose={handleClose}
         onActionComplete={handleActionComplete}
       />

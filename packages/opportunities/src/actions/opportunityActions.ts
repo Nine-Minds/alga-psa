@@ -11,7 +11,7 @@ import { correctEvidence, declareStage, recordEvidence } from '../lib/stageEngin
 import { onQuoteAccepted, onQuoteSent, recomputeAcceptedQuoteValues } from '../lib/quoteLifecycleHooks';
 import { buildOpportunityCreatedPayload, buildOpportunityStatusChangedPayload } from '../lib/opportunityEventBuilders';
 import { publishOpportunityEventAfterCommit } from '../lib/opportunityEvents';
-import { completeOpportunityNextAction } from '../lib/completedActionInteraction';
+import { completeOpportunityNextAction, removeOpportunityStepScheduleEntries } from '../lib/opportunitySteps';
 import type { OpportunityListResult } from '../models/opportunityModel';
 import { getOpportunityDetail } from '../lib/opportunityDetail';
 import {
@@ -88,10 +88,9 @@ export const updateOpportunity = withAuth(async (user, { tenant }, opportunityId
     if (current.values_locked_by_quote && (allowed.mrr_cents !== undefined || allowed.nrr_cents !== undefined || allowed.hardware_cents !== undefined || allowed.currency_code !== undefined)) {
       throw new Error('Opportunity values are locked by an accepted quote');
     }
-    return OpportunityModel.update(trx, tenant, opportunityId, {
-      ...allowed,
-      ...(allowed.next_action_due !== undefined ? { overdue_notified_at: null } : {}),
-    } as Partial<IOpportunity>);
+    // next_action / next_action_due are absent by schema: those columns mirror
+    // the current step, and updateOpportunityNextAction is the way to move it.
+    return OpportunityModel.update(trx, tenant, opportunityId, allowed as Partial<IOpportunity>);
   });
 });
 
@@ -148,10 +147,12 @@ export const correctOpportunityEvidence = withAuth(async (user, { tenant }, evid
   return withTransaction(knex, (trx) => correctEvidence(trx, tenant, evidenceId, correctionNote, actorId(user)));
 });
 
-async function closeOpportunity(trx: Knex.Transaction, tenant: string, opportunityId: string, status: 'won' | 'lost', patch: Partial<IOpportunity>): Promise<IOpportunity> {
+async function closeOpportunity(trx: Knex.Transaction, tenant: string, opportunityId: string, status: 'won' | 'lost', patch: Partial<IOpportunity>, actorUserId: string): Promise<IOpportunity> {
   const current = await tenantDb(trx, tenant).table('opportunities').where({ opportunity_id: opportunityId }).forUpdate().first<IOpportunity>();
   if (!current) throw new Error('Opportunity not found');
   if (current.status !== 'open') throw new Error('Only open opportunities can be closed');
+  // The steps stay as plan history, but a closed deal holds no calendar time.
+  await removeOpportunityStepScheduleEntries(trx, tenant, opportunityId, actorUserId);
   const changedAt = new Date().toISOString();
   const updated = await OpportunityModel.update(trx, tenant, opportunityId, { ...patch, status, stage: status, next_action: null, next_action_due: null });
   if (current.stage !== status) {
@@ -190,7 +191,7 @@ export const winOpportunity = withAuth(async (
     const updated = await closeOpportunity(trx, tenant, opportunityId, 'won', {
       won_at: now,
       ...conversions,
-    });
+    }, actorId(user));
     if (conversions.converted_project_id) {
       const projectId = conversions.converted_project_id;
       registerAfterCommit(trx, () => publishEvent({
@@ -221,7 +222,7 @@ export const loseOpportunity = withAuth(async (user, { tenant }, opportunityId: 
   await requirePermission(user, 'update');
   const data = loseOpportunitySchema.parse(input);
   const { knex } = await createTenantKnex();
-  return withTransaction(knex, (trx) => closeOpportunity(trx, tenant, opportunityId, 'lost', { ...data, lost_at: new Date().toISOString() }));
+  return withTransaction(knex, (trx) => closeOpportunity(trx, tenant, opportunityId, 'lost', { ...data, lost_at: new Date().toISOString() }, actorId(user)));
 });
 
 export const listOpportunities = withAuth(async (
@@ -242,6 +243,11 @@ export const deleteOpportunity = withAuth(async (user, { tenant }, opportunityId
     const db = tenantDb(trx, tenant);
     const linkedQuote = await db.table('quotes').where({ opportunity_id: opportunityId }).first();
     if (linkedQuote) throw new Error('Unlink quotes before deleting an opportunity');
+
+    // The steps cascade with the opportunity, but their calendar entries live
+    // in the scheduling domain and must be swept (with their delete events)
+    // before the rows pointing at them disappear.
+    await removeOpportunityStepScheduleEntries(trx, tenant, opportunityId, actorId(user));
 
     // Keep client-history and suggestion provenance records while removing
     // their link to the opportunity that is about to be deleted.

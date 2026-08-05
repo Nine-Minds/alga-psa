@@ -157,6 +157,10 @@
       "title": "Creación rápida",
       "heading": "Crear",
       "options": {
+        "opportunity": {
+          "description": "Registre un trato antes de olvidarlo",
+          "label": "Oportunidad"
+        },
         "ticket": {
           "label": "Ticket",
           "description": "Crear un nuevo ticket de soporte"
@@ -252,6 +256,7 @@
   "quickCreate": {
     "success": {
       "asset": "Activo creado correctamente",
+      "opportunity": "Oportunidad \"{{title}}\" creada correctamente",
       "ticket": "Ticket n.º {{number}} creado correctamente",
       "client": "Cliente \"{{name}}\" creado correctamente",
       "contact": "{{name}} agregado correctamente",
@@ -265,6 +270,7 @@
     },
     "dialogTitles": {
       "contact": "Agregar contacto",
+      "opportunity": "Nueva oportunidad",
       "project": "Agregar proyecto",
       "service": "Agregar servicio"
     }

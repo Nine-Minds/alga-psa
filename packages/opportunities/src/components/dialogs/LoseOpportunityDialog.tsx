@@ -73,10 +73,12 @@ export function LoseOpportunityDialog({
       <div className="space-y-4 pt-1">
         <CustomSelect
           id="opportunity-lose-reason"
+          label={t('opportunities.loseDialog.reason', 'Reason')}
+          required
           options={REASONS.map((r) => ({ value: r, label: t(`opportunities.lossReason.${r}`, REASON_DEFAULTS[r]) }))}
           value={reason}
           onValueChange={(v: string) => setReason(v as OpportunityLossReason)}
-          placeholder={t('opportunities.loseDialog.reasonPlaceholder', 'Why did it die?')}
+          placeholder={t('opportunities.loseDialog.reasonPlaceholder', "Why didn't it move forward?")}
         />
         {reason === 'chose_competitor' ? (
           <Input
@@ -91,9 +93,14 @@ export function LoseOpportunityDialog({
           label={t('opportunities.loseDialog.notes', 'Notes')}
           value={notes}
           onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
-          placeholder={t('opportunities.loseDialog.notesPlaceholder', 'Anything future-you should know')}
+          placeholder={t('opportunities.loseDialog.notesPlaceholder', 'What should the team know if this comes back?')}
         />
-        <div className="flex justify-end gap-2 pt-1">
+        <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+          {reason ? null : (
+            <p id="opportunity-lose-missing" className="mr-auto text-xs text-[rgb(var(--color-text-600))]" role="status">
+              {t('opportunities.loseDialog.missing', 'Pick a reason to enable Mark lost')}
+            </p>
+          )}
           <Button id="opportunity-lose-cancel" variant="ghost" size="sm" onClick={onClose} disabled={saving}>
             {t('common.cancel', 'Cancel')}
           </Button>

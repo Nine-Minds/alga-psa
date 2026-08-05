@@ -60,7 +60,10 @@
       "description": "Descrição",
       "declineReason": "Motivo da recusa",
       "approvedBy": "Aprovado por:",
-      "approvedAt": "Aprovado em:"
+      "approvedAt": "Aprovado em:",
+      "opportunity": "Oportunidade",
+      "assignedTo": "Atribuído a",
+      "dueDate": "Devido"
     },
     "messages": {
       "notAvailable": "N / D",
@@ -73,7 +76,8 @@
       "failedToLoadProjectTaskData": "Falha ao carregar os dados da tarefa do projeto",
       "failedToLoadAdHocEntryData": "Falha ao carregar dados de entrada ad hoc",
       "failedToLoadInteractionData": "Falha ao carregar dados de interação",
-      "failedToLoadAppointmentRequestData": "Falha ao carregar os dados da solicitação de agendamento"
+      "failedToLoadAppointmentRequestData": "Falha ao carregar os dados da solicitação de agendamento",
+      "failedToLoadOpportunityStepData": "Não foi possível carregar os dados da etapa da oportunidade"
     },
     "errors": {
       "loadUsers": "Falha ao carregar usuários. Por favor, tente atualizar a página.",
@@ -82,6 +86,9 @@
     },
     "units": {
       "minutes": "minutos"
+    },
+    "actions": {
+      "openOpportunity": "Abrir oportunidade"
     }
   },
   "dashboard": {

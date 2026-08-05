@@ -58,6 +58,7 @@ const supportedWorkItemTypes = new Set<WorkItemType>([
   'ad_hoc',
   'interaction',
   'appointment_request',
+  'opportunity_step',
 ]);
 
 function workItemActionErrorFrom(error: unknown): WorkItemActionError | null {
@@ -1015,6 +1016,36 @@ export const getWorkItemById = withAuth(async (
       tenantScopedDb.tenantJoin(appointmentRequestQuery, 'clients as c', 'ar.client_id', 'c.client_id', { type: 'left' });
       tenantScopedDb.tenantJoin(appointmentRequestQuery, 'contacts as ct', 'ar.contact_id', 'ct.contact_name_id', { type: 'left' });
       workItem = await appointmentRequestQuery.first();
+    } else if (workItemType === 'opportunity_step') {
+      // A deal step lives on the opportunity's plan; the "work item" points
+      // back at the deal rather than a schedulable record of its own.
+      const opportunityStepQuery = tenantScopedDb.table('opportunity_steps as os')
+        .where({
+          'os.step_id': workItemId,
+        })
+        .select(
+          'os.step_id as work_item_id',
+          'os.title as name',
+          'o.title as description',
+          db.raw("'opportunity_step' as type"),
+          db.raw('NULL::text as ticket_number'),
+          'os.title',
+          db.raw('NULL::text as project_name'),
+          db.raw('NULL::text as phase_name'),
+          db.raw('NULL::text as task_name'),
+          'o.client_id',
+          'c.client_name',
+          'os.status as status_name',
+          db.raw("u_assignee.first_name || ' ' || u_assignee.last_name as assigned_to_name"),
+          db.raw('os.due_at::timestamp with time zone as due_date'),
+          'o.opportunity_id',
+          db.raw('ARRAY[os.assigned_to] as assigned_user_ids'),
+          db.raw('ARRAY[]::uuid[] as additional_user_ids')
+        );
+      tenantScopedDb.tenantJoin(opportunityStepQuery, 'opportunities as o', 'os.opportunity_id', 'o.opportunity_id');
+      tenantScopedDb.tenantJoin(opportunityStepQuery, 'clients as c', 'o.client_id', 'c.client_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(opportunityStepQuery, 'users as u_assignee', 'os.assigned_to', 'u_assignee.user_id', { type: 'left' });
+      workItem = await opportunityStepQuery.first();
     }
 
     if (workItem) {
@@ -1048,6 +1079,14 @@ export const getWorkItemById = withAuth(async (
       // Add interaction type for interactions
       if (workItem.type === 'interaction' && workItem.interaction_type) {
         result.interaction_type = workItem.interaction_type;
+      }
+
+      // A deal step's detail view is the opportunity it belongs to.
+      if (workItem.type === 'opportunity_step' && workItem.opportunity_id) {
+        result.entity_type = 'opportunity';
+        result.entity_id = workItem.opportunity_id;
+        result.url = `/msp/opportunities/${workItem.opportunity_id}`;
+        result.due_date = workItem.due_date;
       }
 
       return result;

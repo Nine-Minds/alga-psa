@@ -76,9 +76,7 @@ describe('OpportunityService mobile REST additions', () => {
     const queue = {
       user_first_name: 'Ada',
       date: '2026-07-16T14:00:00.000Z',
-      found_mrr_cents: 0,
-      found_nrr_cents: 0,
-      currency_code: 'USD',
+      found_totals: [],
       do_today: [{ opportunity_id: 'opportunity-1', why: { segments: [{ text: 'Call today.' }] } }],
       going_quiet: [],
       money_found: [],

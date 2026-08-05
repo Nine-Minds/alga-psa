@@ -60,7 +60,10 @@
       "description": "Description",
       "declineReason": "Decline Reason",
       "approvedBy": "Approved by:",
-      "approvedAt": "Approved at:"
+      "approvedAt": "Approved at:",
+      "opportunity": "Opportunity",
+      "assignedTo": "Assigned to",
+      "dueDate": "Due"
     },
     "messages": {
       "notAvailable": "N/A",
@@ -73,7 +76,8 @@
       "failedToLoadProjectTaskData": "Failed to load project task data",
       "failedToLoadAdHocEntryData": "Failed to load ad-hoc entry data",
       "failedToLoadInteractionData": "Failed to load interaction data",
-      "failedToLoadAppointmentRequestData": "Failed to load appointment request data"
+      "failedToLoadAppointmentRequestData": "Failed to load appointment request data",
+      "failedToLoadOpportunityStepData": "Failed to load deal step data"
     },
     "errors": {
       "loadUsers": "Failed to load users. Please try refreshing the page.",
@@ -82,6 +86,9 @@
     },
     "units": {
       "minutes": "minutes"
+    },
+    "actions": {
+      "openOpportunity": "Open opportunity"
     }
   },
   "dashboard": {

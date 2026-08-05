@@ -465,7 +465,8 @@
       "tags": "Tags",
       "tagsSelected": "{{count}} tags",
       "tasksCompact": "Tasks",
-      "ticketsCompact": "Tickets"
+      "ticketsCompact": "Tickets",
+      "opportunityScope": "Deal work"
     },
     "activityTypeOptions": {
       "schedule": "Schedule",
@@ -513,6 +514,11 @@
       "phases": "{{count}} phases",
       "projects": "{{count}} projects",
       "statuses": "{{count}} statuses"
+    },
+    "opportunityScopeOptions": {
+      "assigned": "Deal steps assigned",
+      "owned": "Deal steps on owned deals",
+      "all": "Deal steps assigned or owned"
     }
   },
   "actions": {

@@ -119,6 +119,7 @@ describe('OpportunityModel.list', () => {
         nrr_cents: 5000,
         hardware_cents: 1000,
         currency_code: 'USD',
+        values_locked_by_quote: false,
         expected_close_date: '2026-08-31',
         next_action: 'Review assessment',
         next_action_due: '2026-07-15T14:00:00.000Z',

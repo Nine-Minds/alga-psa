@@ -6,8 +6,8 @@ import { toast } from 'react-hot-toast';
 import { Button } from '@alga-psa/ui/components/Button';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { IOpportunityListItem } from '@alga-psa/types';
-import { createOpportunity, getClientDefaultCurrency, listOpportunities } from '../actions';
+import type { ClientLifecycleStatus, IOpportunityListItem } from '@alga-psa/types';
+import { createOpportunity, listOpportunities } from '../actions';
 import { PipelineList } from './pipeline/PipelineList';
 import { CreateOpportunityDialog, type CreateOpportunityInput } from './dialogs/CreateOpportunityDialog';
 
@@ -15,7 +15,18 @@ import { CreateOpportunityDialog, type CreateOpportunityInput } from './dialogs/
  * The Opportunities tab on client detail: this client's deals plus a
  * create shortcut with the client already fixed.
  */
-export function ClientOpportunitiesTab({ clientId, clientName }: { clientId: string; clientName: string }) {
+export function ClientOpportunitiesTab({
+  clientId,
+  clientName,
+  clientLifecycleStatus,
+  onOpen,
+}: {
+  clientId: string;
+  clientName: string;
+  clientLifecycleStatus?: ClientLifecycleStatus | null;
+  /** Host override so the deal opens in a drawer instead of leaving the client screen. */
+  onOpen?: (opportunityId: string) => void | Promise<void>;
+}) {
   const { t } = useTranslation('msp/opportunities');
   const router = useRouter();
   const [items, setItems] = useState<IOpportunityListItem[]>([]);
@@ -37,12 +48,22 @@ export function ClientOpportunitiesTab({ clientId, clientName }: { clientId: str
     void load();
   }, [load]);
 
+  const openDeal = useCallback(
+    (opportunityId: string) => {
+      if (onOpen) {
+        void onOpen(opportunityId);
+        return;
+      }
+      router.push(`/msp/opportunities/${opportunityId}`);
+    },
+    [onOpen, router],
+  );
+
   const handleCreate = async (input: CreateOpportunityInput) => {
     try {
-      const currency = await getClientDefaultCurrency(clientId);
-      const created = await createOpportunity({ ...input, currency_code: currency });
+      const created = await createOpportunity(input);
       toast.success(t('opportunities.toast.created', 'Opportunity created'));
-      router.push(`/msp/opportunities/${(created as { opportunity_id: string }).opportunity_id}`);
+      openDeal((created as { opportunity_id: string }).opportunity_id);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
       throw err;
@@ -59,15 +80,15 @@ export function ClientOpportunitiesTab({ clientId, clientName }: { clientId: str
       {loaded && items.length === 0 ? (
         <EmptyState
           title={t('opportunities.clientTab.emptyTitle', 'No opportunities for this client yet')}
-          description={t('opportunities.clientTab.emptyBody', 'Create one, or let a quote start the trail.')}
+          description={t('opportunities.clientTab.emptyBody', 'Create one to start tracking new work for this client.')}
         />
       ) : (
-        <PipelineList items={items} onOpen={(id) => router.push(`/msp/opportunities/${id}`)} />
+        <PipelineList items={items} onOpen={openDeal} onValuesChanged={load} />
       )}
       <CreateOpportunityDialog
         isOpen={createOpen}
         onClose={() => setCreateOpen(false)}
-        lockedClient={{ client_id: clientId, client_name: clientName }}
+        lockedClient={{ client_id: clientId, client_name: clientName, lifecycle_status: clientLifecycleStatus }}
         onSubmit={handleCreate}
       />
     </div>

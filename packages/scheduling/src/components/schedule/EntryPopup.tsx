@@ -15,6 +15,7 @@ import { IScheduleEntry, IRecurrencePattern, IEditScope, DeletionValidationResul
 import { AddWorkItemDialog } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/AddWorkItemDialog';
 import { IWorkItem, IExtendedWorkItem } from '@alga-psa/types';
 import { getWorkItemById } from '@alga-psa/scheduling/actions';
+import { ENTRY_OWNED_WORK_ITEM_TYPES, isSourceOwnedWorkItemType } from '../../lib/entryOwnedWorkItems';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
@@ -255,7 +256,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             } else {
               setAvailableWorkItems([]);
             }
-          } else if (entryData.work_item_id && entryData.work_item_type && entryData.work_item_type !== 'ad_hoc') {
+          } else if (entryData.work_item_id && entryData.work_item_type && !ENTRY_OWNED_WORK_ITEM_TYPES.has(entryData.work_item_type)) {
             const items = await getWorkItemById(entryData.work_item_id, entryData.work_item_type);
             if (isReturnedActionError(items)) {
               toast.error(getErrorMessage(items));
@@ -304,7 +305,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         }
 
         // Fetch work item information if editing an existing entry
-        if (event.work_item_id && event.work_item_type !== 'ad_hoc') {
+        if (event.work_item_id && !ENTRY_OWNED_WORK_ITEM_TYPES.has(event.work_item_type)) {
           getWorkItemById(event.work_item_id, event.work_item_type).then((workItem) => {
             if (isReturnedActionError(workItem)) {
               toast.error(getErrorMessage(workItem));
@@ -1147,12 +1148,24 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         {(!isAppointmentRequest || (appointmentRequestData && appointmentRequestData.status === 'approved')) && (
         <div className="min-w-0">
           <div className="relative">
-            {viewOnly ? (
+            {viewOnly || isSourceOwnedWorkItemType(entryData.work_item_type) ? (
               <div className="flex justify-between items-center p-2">
                 {selectedWorkItem ? (
                   <div>
                     <div className="font-medium">{selectedWorkItem.name}</div>
                     <div className="text-sm text-gray-500 capitalize">{selectedWorkItem.type.replace('_', ' ')}</div>
+                  </div>
+                ) : isSourceOwnedWorkItemType(entryData.work_item_type) ? (
+                  // A deal step's entry is written from the opportunity's plan;
+                  // the work item is not swappable here, so a read-only label
+                  // stands in for the picker.
+                  <div>
+                    <div className="font-medium">{entryData.title}</div>
+                    <div className="text-sm text-gray-500">
+                      {t('calendar.legend.types.opportunityStep', {
+                        defaultValue: 'Deal step',
+                      })}
+                    </div>
                   </div>
                 ) : (
                   <span className="font-bold text-[rgb(var(--color-text-900))]">

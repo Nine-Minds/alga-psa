@@ -60,7 +60,10 @@
       "description": "11111",
       "declineReason": "11111",
       "approvedBy": "11111",
-      "approvedAt": "11111"
+      "approvedAt": "11111",
+      "opportunity": "11111",
+      "assignedTo": "11111",
+      "dueDate": "11111"
     },
     "messages": {
       "notAvailable": "11111",
@@ -73,7 +76,8 @@
       "failedToLoadProjectTaskData": "11111",
       "failedToLoadAdHocEntryData": "11111",
       "failedToLoadInteractionData": "11111",
-      "failedToLoadAppointmentRequestData": "11111"
+      "failedToLoadAppointmentRequestData": "11111",
+      "failedToLoadOpportunityStepData": "11111"
     },
     "errors": {
       "loadUsers": "11111",
@@ -82,6 +86,9 @@
     },
     "units": {
       "minutes": "11111"
+    },
+    "actions": {
+      "openOpportunity": "11111"
     }
   },
   "dashboard": {

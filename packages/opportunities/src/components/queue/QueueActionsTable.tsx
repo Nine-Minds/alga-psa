@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Check, Clock3, ExternalLink } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -20,6 +21,7 @@ export function QueueActionsTable({
   onSnooze: (opportunityId: string) => void;
 }) {
   const { t } = useTranslation('msp/opportunities');
+  const [pageSize, setPageSize] = useState(25);
   const columns: ColumnDefinition<IQueueActionItem>[] = [
     {
       title: t('opportunities.queue.table.nextAction', 'Next action'),
@@ -118,6 +120,8 @@ export function QueueActionsTable({
       data={items}
       columns={columns}
       onRowClick={(item: IQueueActionItem) => onOpen(item.opportunity_id)}
+      pageSize={pageSize}
+      onItemsPerPageChange={setPageSize}
     />
   );
 }

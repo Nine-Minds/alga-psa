@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -20,12 +20,13 @@ import type {
   IStatus,
   OpportunityConfidence,
   OpportunityLossReason,
+  OpportunityStage,
 } from '@alga-psa/types';
 import { getProjectStatuses, getTemplates } from '@alga-psa/projects/actions';
 import {
-  completeNextAction,
   declareOpportunityStage,
   deleteOpportunity,
+  getOpportunity,
   linkQuoteToOpportunity,
   listLinkableQuotesForOpportunity,
   loseOpportunity,
@@ -35,8 +36,13 @@ import {
 } from '../../actions/opportunityActions';
 import type { LinkableOpportunityQuote } from '../../actions/opportunityActions';
 import { OpportunityDetailView } from './OpportunityDetailView';
-import { OpportunityTimelinePanel } from './OpportunityTimelinePanel';
-import { CompleteActionDialog } from '../dialogs/CompleteActionDialog';
+import { OpportunityPlanPanel } from './OpportunityPlanPanel';
+import {
+  assignOpportunityOwner,
+  listOpportunityAssignees,
+  updateOpportunityNextAction,
+  type OpportunityStepAssignee,
+} from '../../actions/opportunityStepActions';
 import { LoseOpportunityDialog } from '../dialogs/LoseOpportunityDialog';
 import { EditValuesDialog } from '../dialogs/EditValuesDialog';
 import { EditOpportunityDialog } from '../dialogs/EditOpportunityDialog';
@@ -59,11 +65,12 @@ export interface OpportunityDraftingCallbacks {
 
 /** Client host for the detail screen: wires the view to server actions. */
 export function OpportunityDetailHost({
-  detail,
+  detail: initialDetail,
   drafting,
   autoOpenDraft = false,
   commitments,
   returnTab,
+  isInDrawer = false,
 }: {
   detail: IOpportunityDetail;
   /** Injected by the host app only when the tenant's AI module allows drafting. */
@@ -73,10 +80,15 @@ export function OpportunityDetailHost({
   /** EE commitments ledger section, injected when the management tier allows it. */
   commitments?: ReactNode;
   returnTab?: string;
+  /** Rendered inside the shared drawer: no back-to-list escape hatch. */
+  isInDrawer?: boolean;
 }) {
   const { t } = useTranslation('msp/opportunities');
   const router = useRouter();
-  const [completeOpen, setCompleteOpen] = useState(false);
+  // The host owns the detail it renders. On the full page the server component
+  // re-fetches on router.refresh() and the prop effect below re-syncs; in the
+  // drawer no server component re-renders, so the host re-fetches for itself.
+  const [detail, setDetail] = useState<IOpportunityDetail>(initialDetail);
   const [loseOpen, setLoseOpen] = useState(false);
   const [winOpen, setWinOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -97,8 +109,26 @@ export function OpportunityDetailHost({
   const [selectedQuoteId, setSelectedQuoteId] = useState('');
   const [linkingQuote, setLinkingQuote] = useState(false);
   const [draftOpen, setDraftOpen] = useState(Boolean(drafting && autoOpenDraft));
+  const [assignees, setAssignees] = useState<OpportunityStepAssignee[]>([]);
 
-  const refresh = () => router.refresh();
+  const refresh = useCallback(() => {
+    if (isInDrawer) {
+      // The drawer rendered a client-only element: nothing above this host can
+      // re-fetch, so a mutation must re-run getOpportunity here or the spine,
+      // values, and status go stale.
+      getOpportunity(initialDetail.opportunity_id)
+        .then(setDetail)
+        .catch(() => router.refresh());
+      return;
+    }
+    router.refresh();
+  }, [isInDrawer, initialDetail.opportunity_id, router]);
+
+  // A server re-render (full page after router.refresh()) supersedes whatever
+  // this host fetched for itself.
+  useEffect(() => {
+    setDetail(initialDetail);
+  }, [initialDetail]);
 
   // Accepted linked quotes can be converted to a draft agreement as part of
   // marking the deal won (winOpportunity → prepareOpportunityWinConversions).
@@ -107,6 +137,18 @@ export function OpportunityDetailHost({
   useEffect(() => {
     setWinProjectName(detail.title);
   }, [detail.opportunity_id, detail.title]);
+
+  useEffect(() => {
+    let active = true;
+    listOpportunityAssignees()
+      .then((rows) => {
+        if (active) setAssignees(rows);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!winOpen) return;
@@ -143,44 +185,62 @@ export function OpportunityDetailHost({
     }
   };
 
+  /**
+   * Fire-and-forget variant for controls with no dialog to keep open: `run`
+   * has already toasted the failure, so swallow the rethrow rather than leave
+   * an unhandled rejection behind.
+   */
+  const runQuietly = (fn: () => Promise<unknown>, successMessage: string) => {
+    run(fn, successMessage).catch(() => {});
+  };
+
+  /** Setting the stage from the plan's spine — the same declaration the board makes. */
+  const declareStage = (stage: Exclude<OpportunityStage, 'won' | 'lost'>) => {
+    const label = t(`opportunities.stage.${stage}`, stage.charAt(0).toUpperCase() + stage.slice(1));
+    runQuietly(
+      () => declareOpportunityStage(detail.opportunity_id, stage),
+      t('opportunities.toast.stageSet', 'Stage set to {{stage}}', { stage: label }),
+    );
+  };
+
   return (
     <>
-      <Button
-        id="opportunity-back-to-list"
-        size="sm"
-        variant="ghost"
-        className="mb-3"
-        onClick={() => router.push(`/msp/opportunities?tab=${encodeURIComponent(returnTab ?? 'queue')}`)}
-      >
-        <ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden />
-        {t('opportunities.detail.backToList', 'Back to opportunities')}
-      </Button>
+      {isInDrawer ? null : (
+        <Button
+          id="opportunity-back-to-list"
+          size="sm"
+          variant="ghost"
+          className="mb-3"
+          onClick={() => router.push(`/msp/opportunities?tab=${encodeURIComponent(returnTab ?? 'queue')}`)}
+        >
+          <ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden />
+          {t('opportunities.detail.backToList', 'Back to opportunities')}
+        </Button>
+      )}
       <OpportunityDetailView
         detail={detail}
         timeline={
-          <OpportunityTimelinePanel
-            key={`${detail.opportunity_id}:${detail.updated_at}`}
+          <OpportunityPlanPanel
             opportunityId={detail.opportunity_id}
+            stage={detail.stage}
+            ladder={detail.ladder}
+            isOpen={detail.status === 'open'}
+            assignees={assignees}
+            refreshKey={detail.updated_at}
+            onStageSelect={detail.status === 'open' ? declareStage : undefined}
+            onChanged={refresh}
           />
         }
         commitments={commitments}
+        assignees={assignees}
+        onAssignOwner={(id, userId) =>
+          runQuietly(() => assignOpportunityOwner(id, userId), t('opportunities.toast.ownerAssigned', 'Owner updated'))
+        }
         onEditValues={() => setValuesOpen(true)}
         onEditDetails={() => setEditOpen(true)}
         onDraftFollowUp={drafting ? () => setDraftOpen(true) : undefined}
-        onCompleteAction={() => setCompleteOpen(true)}
-        onStageSelect={(stage) => {
-          if (stage === 'won') {
-            setWinOpen(true);
-            return;
-          }
-          const label = t(`opportunities.stage.${stage}`, stage.charAt(0).toUpperCase() + stage.slice(1));
-          void run(
-            () => declareOpportunityStage(detail.opportunity_id, stage),
-            t('opportunities.toast.stageSet', 'Stage set to {{stage}}', { stage: label }),
-          );
-        }}
         onConfidenceChange={(id, confidence: OpportunityConfidence) =>
-          void run(() => updateOpportunity(id, { confidence }), t('opportunities.toast.saved', 'Saved'))
+          runQuietly(() => updateOpportunity(id, { confidence }), t('opportunities.toast.confidenceSaved', 'Confidence updated'))
         }
         onWin={() => setWinOpen(true)}
         onLose={() => setLoseOpen(true)}
@@ -209,7 +269,7 @@ export function OpportunityDetailHost({
           }
         }}
         onOpenQuote={(quoteId) => router.push(`/msp/billing?tab=quotes&quoteId=${quoteId}&mode=edit`)}
-        onUnlinkQuote={(quoteId) => void run(
+        onUnlinkQuote={(quoteId) => runQuietly(
           () => unlinkQuoteFromOpportunity(detail.opportunity_id, quoteId),
           t('opportunities.toast.quoteUnlinked', 'Quote unlinked'),
         )}
@@ -288,8 +348,12 @@ export function OpportunityDetailHost({
           next_action_due: detail.next_action_due ?? new Date().toISOString(),
           expected_close_date: detail.expected_close_date?.slice(0, 10) ?? null,
         }}
-        onSubmit={(input) =>
-          run(() => updateOpportunity(detail.opportunity_id, input), t('opportunities.toast.saved', 'Saved'))
+        onSubmit={({ next_action, next_action_due, ...rest }) =>
+          run(async () => {
+            // The next-action fields ride the current step; the rest are plain columns.
+            await updateOpportunity(detail.opportunity_id, rest);
+            await updateOpportunityNextAction(detail.opportunity_id, { next_action, next_action_due });
+          }, t('opportunities.toast.detailsSaved', 'Opportunity updated'))
         }
       />
       <EditValuesDialog
@@ -298,19 +362,8 @@ export function OpportunityDetailHost({
         currencyCode={detail.currency_code}
         initial={{ mrr_cents: detail.mrr_cents, nrr_cents: detail.nrr_cents, hardware_cents: detail.hardware_cents }}
         onSubmit={(values) =>
-          run(() => updateOpportunity(detail.opportunity_id, values), t('opportunities.toast.saved', 'Saved'))
+          run(() => updateOpportunity(detail.opportunity_id, values), t('opportunities.toast.valuesSaved', 'Value updated'))
         }
-      />
-      <CompleteActionDialog
-        isOpen={completeOpen}
-        onClose={() => setCompleteOpen(false)}
-        onSubmit={(nextAction, dueIso) =>
-          run(
-            () => completeNextAction(detail.opportunity_id, { next_action: nextAction, next_action_due: dueIso }),
-            t('opportunities.toast.actionCompleted', 'Done. Next action scheduled.')
-          )
-        }
-        stage={detail.stage}
       />
       <LoseOpportunityDialog
         isOpen={loseOpen}
@@ -378,12 +431,19 @@ export function OpportunityDetailHost({
             {detail.client_lifecycle_status === 'prospect'
               ? t(
                   'opportunities.winDialog.bodyProspect',
-                  '{{client}} becomes an active client. Convert the accepted quote to an agreement from the quote screen afterward.',
+                  '{{client}} becomes an active client.',
                   { client: detail.client_name }
                 )
+              : t('opportunities.winDialog.body', 'The deal closes as won.')}
+            {' '}
+            {acceptedLinkedQuotes.length > 0
+              ? t(
+                  'opportunities.winDialog.nextConvert',
+                  'Convert the accepted quote to an agreement below, or from the quote screen afterward.'
+                )
               : t(
-                  'opportunities.winDialog.body',
-                  'The deal closes as won. Convert the accepted quote to an agreement from the quote screen afterward.'
+                  'opportunities.winDialog.nextSendQuote',
+                  'No accepted quote is linked yet. Send the quote and get it approved, then convert it to an agreement. You can still mark this won now.'
                 )}
           </p>
           <div className="space-y-3 rounded-md border border-[rgb(var(--color-border-200))] p-3">
@@ -492,6 +552,8 @@ export function OpportunityDetailHost({
                     t('opportunities.toast.won', 'Won'),
                   );
                   setWinOpen(false);
+                } catch {
+                  // Already toasted by run; the dialog stays open for a retry.
                 } finally {
                   setWinning(false);
                 }

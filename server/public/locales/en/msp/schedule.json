@@ -37,7 +37,8 @@
         "nonBillableCategory": "Non-billable category",
         "adHoc": "Ad-Hoc Entry",
         "interaction": "Interaction",
-        "appointmentRequest": "Appointment Request"
+        "appointmentRequest": "Appointment Request",
+        "opportunityStep": "Deal step"
       },
       "showInactiveUsers": "Show Inactive Users"
     },

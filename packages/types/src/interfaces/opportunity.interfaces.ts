@@ -230,6 +230,7 @@ export interface IOpportunityDashboardSnapshot {
     opportunity_count: number;
     mrr_cents: number;
     nrr_cents: number;
+    hardware_cents: number;
   }>;
   queue_counts: {
     actions_due: number;
@@ -275,6 +276,8 @@ export interface IOpportunityListItem {
   nrr_cents: number;
   hardware_cents: number;
   currency_code: string;
+  /** True once an accepted quote owns the numbers — inline value edits are refused. */
+  values_locked_by_quote: boolean;
   expected_close_date?: ISO8601String | null;
   next_action?: string | null;
   next_action_due?: ISO8601String | null;
@@ -306,6 +309,51 @@ export interface IOpportunityDetail extends IOpportunity {
     accepted_at?: ISO8601String | null;
   }>;
   why: WhySentence;
+}
+
+/* ------------------------------------------------------------------ */
+/* Step plan                                                            */
+/* ------------------------------------------------------------------ */
+
+/** 'current' is the one mirrored onto opportunities.next_action. */
+export type OpportunityStepStatus = 'planned' | 'current' | 'done' | 'skipped';
+
+export interface IOpportunityStep extends TenantEntity {
+  step_id: string;
+  opportunity_id: string;
+  title: string;
+  due_at?: ISO8601String | null;
+  /** True once the step has a time of day, which is what puts it on a calendar. */
+  has_time: boolean;
+  duration_minutes: number;
+  assigned_to?: string | null;
+  assigned_to_name?: string | null;
+  /** Completing this step also attests this checkpoint, when the user says so. */
+  checkpoint?: OpportunityCheckpoint | null;
+  /** Which stage of the sales process this step belongs to; drives the timeline segments. */
+  stage?: Exclude<OpportunityStage, 'won' | 'lost'> | null;
+  status: OpportunityStepStatus;
+  sort_order: number;
+  ticket_id?: string | null;
+  ticket_number?: string | null;
+  project_task_id?: string | null;
+  project_task_name?: string | null;
+  interaction_id?: string | null;
+  schedule_entry_id?: string | null;
+  completed_at?: ISO8601String | null;
+  completed_by?: string | null;
+  created_by?: string | null;
+  created_at: ISO8601String;
+  updated_at: ISO8601String;
+}
+
+export interface IOpportunityStepTemplate extends TenantEntity {
+  template_id: string;
+  stage: Exclude<OpportunityStage, 'won' | 'lost'>;
+  title: string;
+  sort_order: number;
+  due_offset_days: number;
+  is_active: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -355,12 +403,17 @@ export interface IQueueLesson {
   action_href: string;
 }
 
+export interface IQueueFoundTotal {
+  currency_code: string;
+  mrr_cents: number;
+  nrr_cents: number;
+}
+
 export interface IWorkQueue {
   user_first_name: string;
   date: ISO8601String;
-  found_mrr_cents: number;
-  found_nrr_cents: number;
-  currency_code: string;
+  /** Found money per currency: dollars and pounds are never added together. */
+  found_totals: IQueueFoundTotal[];
   do_today: IQueueActionItem[];
   going_quiet: IQueueActionItem[];
   money_found: IQueueSuggestionItem[];
@@ -407,16 +460,24 @@ export interface IForecastDealContribution {
   weight: number;
   weight_source: 'base' | 'seller_calibration' | 'won';
   floor_mrr_cents: number;
-  floor_nrr_cents: number;
+  /** One-time value is NRR + hardware, same as every other surface. */
+  floor_one_time_cents: number;
   ceiling_mrr_cents: number;
-  ceiling_nrr_cents: number;
+  ceiling_one_time_cents: number;
 }
 
-export interface IForecastBand {
+export interface IForecastCurrencyBand {
+  currency_code: string;
   floor_mrr_cents: number;
-  floor_nrr_cents: number;
+  /** One-time value is NRR + hardware, same as every other surface. */
+  floor_one_time_cents: number;
   ceiling_mrr_cents: number;
-  ceiling_nrr_cents: number;
+  ceiling_one_time_cents: number;
+}
+
+/** One band per currency: cents of different currencies are never added together. */
+export interface IForecastBand {
+  by_currency: IForecastCurrencyBand[];
   composition: IForecastDealContribution[];
 }
 
@@ -512,18 +573,22 @@ export interface IOpportunityQbrYieldRow {
   opportunities_won: number;
 }
 
+/** One row per owner and currency — cents of different currencies never mix. */
 export interface ISellerOpportunityRollup {
   owner_id: string;
   owner_name: string;
   office_id: null;
   office_name: null;
+  currency_code: string;
   open_mrr_cents: number;
-  open_nrr_cents: number;
+  /** One-time value is NRR + hardware, same as every other surface. */
+  open_one_time_cents: number;
   won_count: number;
   won_mrr_cents: number;
-  won_nrr_cents: number;
+  won_one_time_cents: number;
   lost_count: number;
   lost_mrr_cents: number;
-  lost_nrr_cents: number;
+  lost_one_time_cents: number;
+  /** Owner-level, across every currency the owner sells in — repeated on each currency row. */
   attach_rate: number;
 }

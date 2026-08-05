@@ -60,7 +60,10 @@
       "description": "Description",
       "declineReason": "Motif du refus",
       "approvedBy": "Approuvé par :",
-      "approvedAt": "Approuvé le :"
+      "approvedAt": "Approuvé le :",
+      "opportunity": "Opportunité",
+      "assignedTo": "Affecté à",
+      "dueDate": "Due"
     },
     "messages": {
       "notAvailable": "N/D",
@@ -73,7 +76,8 @@
       "failedToLoadProjectTaskData": "Échec du chargement des données de la tâche de projet",
       "failedToLoadAdHocEntryData": "Échec du chargement des données de l'entrée ad hoc",
       "failedToLoadInteractionData": "Échec du chargement des données de l'interaction",
-      "failedToLoadAppointmentRequestData": "Échec du chargement des données de la demande de rendez-vous"
+      "failedToLoadAppointmentRequestData": "Échec du chargement des données de la demande de rendez-vous",
+      "failedToLoadOpportunityStepData": "Impossible de charger les données de l'étape de l'opportunité"
     },
     "errors": {
       "loadUsers": "Impossible de charger les utilisateurs. Veuillez essayer de rafraîchir la page.",
@@ -82,6 +86,9 @@
     },
     "units": {
       "minutes": "minutes"
+    },
+    "actions": {
+      "openOpportunity": "Ouvrir l'opportunité"
     }
   },
   "dashboard": {

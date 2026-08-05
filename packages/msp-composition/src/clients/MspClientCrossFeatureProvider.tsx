@@ -4,9 +4,11 @@ import React, { useMemo, useCallback, type ReactNode } from 'react';
 import { ClientCrossFeatureProvider } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, ClientOpportunitiesRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ScheduleTeamsMeetingFromClientInput } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { ClientOpportunitiesTab } from '@alga-psa/opportunities/components';
+import type { ClientLifecycleStatus } from '@alga-psa/types';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { useTicketDetailsDrawer } from './useTicketDetailsDrawer';
+import { useOpportunityDetailsDrawer } from './useOpportunityDetailsDrawer';
 import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
 import { getSlaPolicies } from '@alga-psa/sla/actions/slaActions';
 import { ContractWizard } from '@alga-psa/billing/components/billing-dashboard/contracts/ContractWizard';
@@ -20,6 +22,7 @@ import MspContactTickets from './MspContactTickets';
 
 export function MspClientCrossFeatureProvider({ children }: { children: ReactNode }) {
   const openTicketDetails = useTicketDetailsDrawer();
+  const openOpportunityDetails = useOpportunityDetailsDrawer();
 
   const renderQuickAddTicket = useCallback(
     (props: QuickAddTicketRenderProps) => (
@@ -52,9 +55,14 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
 
   const renderClientOpportunities = useCallback(
     (props: ClientOpportunitiesRenderProps) => (
-      <ClientOpportunitiesTab clientId={props.clientId} clientName={props.clientName} />
+      <ClientOpportunitiesTab
+        clientId={props.clientId}
+        clientName={props.clientName}
+        clientLifecycleStatus={props.clientLifecycleStatus as ClientLifecycleStatus | null | undefined}
+        onOpen={openOpportunityDetails}
+      />
     ),
-    []
+    [openOpportunityDetails]
   );
 
   const renderClientTickets = useCallback(

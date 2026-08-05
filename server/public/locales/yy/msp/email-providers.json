@@ -42,22 +42,22 @@
       "title": "55555",
       "microsoft": {
         "title": "55555",
-        "checkingCredentials": "yyyyy",
+        "checkingCredentials": "55555",
         "platform": {
-          "title": "yyyyy",
-          "description": "yyyyy"
+          "title": "55555",
+          "description": "55555"
         },
         "byo": {
-          "summary": "yyyyy",
-          "warning": "yyyyy",
-          "description": "yyyyy"
+          "summary": "55555",
+          "warning": "55555",
+          "description": "55555"
         },
-        "manualRequired": "yyyyy",
+        "manualRequired": "55555",
         "tenant": {
-          "title": "yyyyy",
-          "description": "yyyyy",
-          "incompleteTitle": "yyyyy",
-          "incompleteDescription": "yyyyy"
+          "title": "55555",
+          "description": "55555",
+          "incompleteTitle": "55555",
+          "incompleteDescription": "55555"
         },
         "steps": {
           "registerApp": "55555",
@@ -271,17 +271,17 @@
     },
     "microsoft": {
       "hostedOauth": {
-        "sectionTitle": "yyyyy",
-        "platformUnavailableDescription": "yyyyy",
-        "tenantSectionDescription": "yyyyy",
-        "platformSectionDescription": "yyyyy",
-        "platformManagedTitle": "yyyyy",
-        "platformManagedDescription": "yyyyy",
-        "byoToggle": "yyyyy",
-        "byoToggleDescription": "yyyyy",
-        "byoWarning": "yyyyy",
-        "tenantNotConfigured": "yyyyy",
-        "platformNotConfigured": "yyyyy"
+        "sectionTitle": "55555",
+        "platformUnavailableDescription": "55555",
+        "tenantSectionDescription": "55555",
+        "platformSectionDescription": "55555",
+        "platformManagedTitle": "55555",
+        "platformManagedDescription": "55555",
+        "byoToggle": "55555",
+        "byoToggleDescription": "55555",
+        "byoWarning": "55555",
+        "tenantNotConfigured": "55555",
+        "platformNotConfigured": "55555"
       },
       "validation": {
         "providerNameRequired": "55555",

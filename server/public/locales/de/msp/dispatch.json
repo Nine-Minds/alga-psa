@@ -60,7 +60,10 @@
       "description": "Beschreibung",
       "declineReason": "Ablehnungsgrund",
       "approvedBy": "Genehmigt von:",
-      "approvedAt": "Genehmigt am:"
+      "approvedAt": "Genehmigt am:",
+      "opportunity": "Gelegenheit",
+      "assignedTo": "Zugewiesen an",
+      "dueDate": "Fällig"
     },
     "messages": {
       "notAvailable": "N/V",
@@ -73,7 +76,8 @@
       "failedToLoadProjectTaskData": "Projekttaskdaten konnten nicht geladen werden",
       "failedToLoadAdHocEntryData": "Daten des Ad-hoc-Eintrags konnten nicht geladen werden",
       "failedToLoadInteractionData": "Interaktionsdaten konnten nicht geladen werden",
-      "failedToLoadAppointmentRequestData": "Daten der Terminanfrage konnten nicht geladen werden"
+      "failedToLoadAppointmentRequestData": "Daten der Terminanfrage konnten nicht geladen werden",
+      "failedToLoadOpportunityStepData": "Schrittdaten der Gelegenheit konnten nicht geladen werden"
     },
     "errors": {
       "loadUsers": "Benutzer konnten nicht geladen werden. Bitte versuchen Sie, die Seite zu aktualisieren.",
@@ -82,6 +86,9 @@
     },
     "units": {
       "minutes": "Minuten"
+    },
+    "actions": {
+      "openOpportunity": "Gelegenheit öffnen"
     }
   },
   "dashboard": {

@@ -5,17 +5,31 @@ import { toast } from 'react-hot-toast';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import type { ColumnDefinition, IForecastBand, IForecastDealContribution } from '@alga-psa/types';
 import { getForecastBand } from '@enterprise/lib/opportunities/actions';
 
-function quarterPeriod(): { start: string; end: string } {
+type PeriodKey = 'current' | 'next';
+
+/** The local calendar date as YYYY-MM-DD. toISOString would shift the day for anyone east of UTC. */
+function toDateString(date: Date): string {
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** Quarter boundaries, `offset` quarters from the one we are standing in. */
+function quarterPeriod(offset = 0): { start: string; end: string; label: string } {
   const now = new Date();
-  const q = Math.floor(now.getMonth() / 3);
+  const q = Math.floor(now.getMonth() / 3) + offset;
   const start = new Date(now.getFullYear(), q * 3, 1);
   const end = new Date(now.getFullYear(), q * 3 + 3, 0);
-  return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
+  return {
+    start: toDateString(start),
+    end: toDateString(end),
+    label: `Q${Math.floor(start.getMonth() / 3) + 1} ${start.getFullYear()}`,
+  };
 }
 
 /**
@@ -23,25 +37,29 @@ function quarterPeriod(): { start: string; end: string } {
  * the ceiling is evidence-weighted — calibrated per seller once their
  * history has earned it.
  */
-export function OpportunityForecastView({ currencyCode }: { currencyCode: string }) {
+export function OpportunityForecastView() {
   const { t } = useTranslation('msp/opportunities');
   const [band, setBand] = useState<IForecastBand | null>(null);
+  const [period, setPeriod] = useState<PeriodKey>('current');
+  const [currency, setCurrency] = useState('all');
+  const [pageSize, setPageSize] = useState(25);
+  const quarter = quarterPeriod(period === 'next' ? 1 : 0);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (key: PeriodKey) => {
+    setBand(null);
     try {
-      setBand(await getForecastBand(quarterPeriod()));
+      const { start, end } = quarterPeriod(key === 'next' ? 1 : 0);
+      setBand(await getForecastBand({ start, end }));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
     }
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void load(period);
+  }, [load, period]);
 
-  if (!band) return <Skeleton className="h-56 w-full" />;
-
-  const fmt = (cents: number) => formatCurrencyFromMinorUnits(cents, undefined, currencyCode);
+  const fmt = (cents: number, currencyCode: string) => formatCurrencyFromMinorUnits(cents, undefined, currencyCode);
 
   const columns: ColumnDefinition<IForecastDealContribution>[] = [
     {
@@ -55,7 +73,7 @@ export function OpportunityForecastView({ currencyCode }: { currencyCode: string
       ),
     },
     {
-      title: t('opportunities.forecast.basis', 'Counted because'),
+      title: t('opportunities.forecast.basis', 'Why it is counted'),
       dataIndex: 'weight_source',
       render: (_v, r) =>
         r.weight_source === 'won' ? (
@@ -75,55 +93,141 @@ export function OpportunityForecastView({ currencyCode }: { currencyCode: string
         ),
     },
     {
+      title: t('opportunities.forecast.currency', 'Currency'),
+      dataIndex: 'currency_code',
+      render: (_v, r) => <span className="font-mono text-xs">{r.currency_code}</span>,
+    },
+    {
       title: <span className="text-right">{t('opportunities.forecast.floorCol', 'Floor')}</span>,
       dataIndex: 'floor_mrr_cents',
       render: (_v, r) => (
         <span className="block text-right tabular-nums">
-          {fmt(r.floor_mrr_cents)}{t('opportunities.perMonthSuffix', '/mo')}
+          {fmt(r.floor_mrr_cents, r.currency_code)}{t('opportunities.perMonthSuffix', '/mo')}
         </span>
       ),
     },
   ];
 
+  const currencyCodes = band?.by_currency.map((entry) => entry.currency_code) ?? [];
+  const visibleBands = (band?.by_currency ?? []).filter(
+    (entry) => currency === 'all' || entry.currency_code === currency,
+  );
+  const visibleComposition = (band?.composition ?? []).filter(
+    (entry) => currency === 'all' || entry.currency_code === currency,
+  );
+
   return (
     <div id="opportunities-forecast" className="mx-auto w-full max-w-3xl space-y-5">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-white p-4">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
-            {t('opportunities.forecast.floor', 'Floor — signed and verbal')}
-          </div>
-          <div className="mt-1 text-2xl font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
-            {fmt(band.floor_mrr_cents)}
-            <span className="text-sm font-medium text-[rgb(var(--color-text-400))]">
-              {t('opportunities.perMonthSuffix', '/mo')}
-            </span>
-          </div>
-          <div className="text-sm tabular-nums text-[rgb(var(--color-text-500))]">
-            {t('opportunities.forecast.plusOneTime', '+ {{amount}} one-time', { amount: fmt(band.floor_nrr_cents) })}
-          </div>
-        </div>
-        <div className="rounded-xl border border-[rgb(var(--color-primary-200))] bg-[rgb(var(--color-primary-50))] p-4">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-primary-600))]">
-            {t('opportunities.forecast.ceiling', 'Ceiling — evidence-weighted')}
-          </div>
-          <div className="mt-1 text-2xl font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
-            {fmt(band.ceiling_mrr_cents)}
-            <span className="text-sm font-medium text-[rgb(var(--color-text-400))]">
-              {t('opportunities.perMonthSuffix', '/mo')}
-            </span>
-          </div>
-          <div className="text-sm tabular-nums text-[rgb(var(--color-text-500))]">
-            {t('opportunities.forecast.plusOneTime', '+ {{amount}} one-time', { amount: fmt(band.ceiling_nrr_cents) })}
-          </div>
-        </div>
+      <div>
+        <p className="text-sm text-[rgb(var(--color-text-600))]">
+          {t(
+            'opportunities.forecast.intro',
+            'What this quarter is worth if nothing else changes. The floor counts only deals that are signed or verbally agreed. The ceiling weights every open deal by the evidence behind its stage. Expect the result to land between the two.'
+          )}
+        </p>
+        <p className="mt-1 text-[12px] text-[rgb(var(--color-text-400))]">
+          {t(
+            'opportunities.forecast.currencyNote',
+            'One section per currency your open deals are priced in. Amounts in different currencies are never added together.'
+          )}
+        </p>
       </div>
+
+      <div className="flex flex-wrap items-end gap-3">
+        <CustomSelect
+          id="opportunities-forecast-period"
+          label={t('opportunities.forecast.period', 'Period')}
+          className="w-52"
+          options={[
+            { value: 'current', label: t('opportunities.forecast.thisQuarter', 'This quarter ({{q}})', { q: quarterPeriod(0).label }) },
+            { value: 'next', label: t('opportunities.forecast.nextQuarter', 'Next quarter ({{q}})', { q: quarterPeriod(1).label }) },
+          ]}
+          value={period}
+          onValueChange={(value: string) => setPeriod(value as PeriodKey)}
+        />
+        <CustomSelect
+          id="opportunities-forecast-currency"
+          label={t('opportunities.forecast.currency', 'Currency')}
+          className="w-44"
+          options={[
+            { value: 'all', label: t('opportunities.forecast.allCurrencies', 'All currencies') },
+            ...currencyCodes.map((code) => ({ value: code, label: code })),
+          ]}
+          value={currency}
+          onValueChange={setCurrency}
+          disabled={currencyCodes.length === 0}
+        />
+      </div>
+
+      {!band ? <Skeleton className="h-56 w-full" /> : null}
+
+      {band && visibleBands.length === 0 ? (
+        <p className="text-sm text-[rgb(var(--color-text-500))]">
+          {t('opportunities.forecast.empty', 'No deals land in {{q}} yet.', { q: quarter.label })}
+        </p>
+      ) : null}
+
+      {visibleBands.map((currencyBand) => (
+        <div key={currencyBand.currency_code} className="space-y-2">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
+            {currencyBand.currency_code}
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-white p-4">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
+                {t('opportunities.forecast.floor', 'Floor (signed and verbal)')}
+              </div>
+              <div className="mt-1 text-2xl font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
+                {fmt(currencyBand.floor_mrr_cents, currencyBand.currency_code)}
+                <span className="text-sm font-medium text-[rgb(var(--color-text-400))]">
+                  {t('opportunities.perMonthSuffix', '/mo')}
+                </span>
+              </div>
+              <div className="text-sm tabular-nums text-[rgb(var(--color-text-500))]">
+                {t('opportunities.forecast.plusOneTime', '+ {{amount}} one-time', {
+                  amount: fmt(currencyBand.floor_one_time_cents, currencyBand.currency_code),
+                })}
+              </div>
+            </div>
+            <div className="rounded-xl border border-[rgb(var(--color-primary-200))] bg-[rgb(var(--color-primary-50))] p-4">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-primary-600))]">
+                {t('opportunities.forecast.ceiling', 'Ceiling (evidence-weighted)')}
+              </div>
+              <div className="mt-1 text-2xl font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
+                {fmt(currencyBand.ceiling_mrr_cents, currencyBand.currency_code)}
+                <span className="text-sm font-medium text-[rgb(var(--color-text-400))]">
+                  {t('opportunities.perMonthSuffix', '/mo')}
+                </span>
+              </div>
+              <div className="text-sm tabular-nums text-[rgb(var(--color-text-500))]">
+                {t('opportunities.forecast.plusOneTime', '+ {{amount}} one-time', {
+                  amount: fmt(currencyBand.ceiling_one_time_cents, currencyBand.currency_code),
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
       <p className="text-[12px] text-[rgb(var(--color-text-400))]">
         {t(
           'opportunities.forecast.note',
-          'This quarter. Weights come from evidence stages, replaced by each seller’s own close rates once they have twenty closed deals of history.'
+          'Weights start from the evidence behind each stage. Once an owner has twenty closed deals on record, their own close rates replace the defaults.'
         )}
       </p>
-      <DataTable id="opportunities-forecast-composition" data={band.composition} columns={columns} />
+      {band ? (
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-[rgb(var(--color-text-900))]">
+            {t('opportunities.forecast.composition', 'Deals counted in this forecast')}
+          </h3>
+          <DataTable
+            id="opportunities-forecast-composition"
+            data={visibleComposition}
+            columns={columns}
+            pageSize={pageSize}
+            onItemsPerPageChange={setPageSize}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

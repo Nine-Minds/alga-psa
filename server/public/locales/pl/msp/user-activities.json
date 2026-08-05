@@ -465,7 +465,8 @@
       "tags": "Tagi",
       "tagsSelected": "{{count}} tagów",
       "tasksCompact": "Zadania",
-      "ticketsCompact": "Zgłoszenia"
+      "ticketsCompact": "Zgłoszenia",
+      "opportunityScope": "Praca nad szansą"
     },
     "activityTypeOptions": {
       "schedule": "Harmonogram",
@@ -523,6 +524,11 @@
       "projects_many": "{{count}} projektów",
       "statuses_few": "{{count}} statusy",
       "statuses_many": "{{count}} statusów"
+    },
+    "opportunityScopeOptions": {
+      "assigned": "Przypisane kroki szansy",
+      "owned": "Kroki własnych szans",
+      "all": "Przypisane lub własne kroki szansy"
     }
   },
   "actions": {

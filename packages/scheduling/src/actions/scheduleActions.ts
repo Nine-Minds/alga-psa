@@ -859,6 +859,20 @@ export const deleteScheduleEntry = withAuth(async (
       if (!success) {
         throw new Error('Schedule entry not found');
       }
+
+      // A deal step points at its calendar entry; deleting the entry here
+      // must clear that pointer (and the step's timed flag) or the step's
+      // next edit would resurrect the entry. Tenant-scoped knex keeps the
+      // dependency direction clean — scheduling never imports opportunities.
+      if (existingEntry.work_item_type === 'opportunity_step') {
+        await (tenantDb(trx, tenantId) as any).table('opportunity_steps')
+          .where({ schedule_entry_id: masterEntryId })
+          .update({
+            schedule_entry_id: null,
+            has_time: false,
+            updated_at: new Date().toISOString(),
+          });
+      }
     });
 
     if (!result.deleted) {

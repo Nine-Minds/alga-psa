@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
@@ -9,6 +9,7 @@ import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type {
   IClient,
+  IOpportunityDashboardSnapshot,
   IOpportunityListItem,
   IWorkQueue,
   OpportunityLossReason,
@@ -17,15 +18,16 @@ import type {
 import {
   completeNextAction,
   createOpportunity,
-  declareQualified,
+  declareOpportunityStage,
   listOpportunities,
   loseOpportunity,
-  updateOpportunity,
 } from '../actions/opportunityActions';
 import { getWorkQueue } from '../actions/workQueueActions';
+import { getOpportunityDashboardSnapshot } from '../actions/reportActions';
+import { updateOpportunityNextAction } from '../actions/opportunityStepActions';
 import { acceptSuggestion, dismissSuggestion, snoozeSuggestion } from '../actions/suggestionActions';
 import { createWhitespaceSuggestion } from '../actions/generatorActions';
-import { getClientDefaultCurrency } from '../actions/opportunityDefaults';
+import { DEFAULT_OPPORTUNITY_PAGE_SIZE } from '../lib/opportunityListPaging';
 import { WorkQueue } from './queue/WorkQueue';
 import { MoneyFoundCard } from './queue/MoneyFoundCard';
 import { PipelineList } from './pipeline/PipelineList';
@@ -33,10 +35,10 @@ import { OpportunityBoard } from './board/OpportunityBoard';
 import { CreateOpportunityDialog, type CreateOpportunityInput } from './dialogs/CreateOpportunityDialog';
 import { CompleteActionDialog } from './dialogs/CompleteActionDialog';
 import { LoseOpportunityDialog } from './dialogs/LoseOpportunityDialog';
+import { OpportunityReportsView } from './reports/OpportunityReportsView';
 import { WhitespaceGridView } from './suggestions/WhitespaceGridView';
 import { TmOnePagerDialog } from './suggestions/TmOnePagerDialog';
 
-const PAGE_SIZE = 50;
 
 export function OpportunitiesHub({
   initialItems,
@@ -67,24 +69,70 @@ export function OpportunitiesHub({
   const searchParams = useSearchParams();
   const [items, setItems] = useState<IOpportunityListItem[]>(initialItems);
   const [queue, setQueue] = useState<IWorkQueue>(initialQueue);
+  const [snapshot, setSnapshot] = useState<IOpportunityDashboardSnapshot | null>(null);
+  const [snapshotFailed, setSnapshotFailed] = useState(false);
   const [total, setTotal] = useState(initialTotal);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_OPPORTUNITY_PAGE_SIZE);
   const [tab, setTab] = useState(() => searchParams.get('tab') ?? 'queue');
   const [createOpen, setCreateOpen] = useState(false);
   const [completeFor, setCompleteFor] = useState<{ id: string; stage: OpportunityStage } | null>(null);
   const [loseFor, setLoseFor] = useState<string | null>(null);
   const [onePagerFor, setOnePagerFor] = useState<string | null>(null);
 
-  const refresh = useCallback(async (toPage = page) => {
+  const requestedStage = searchParams.get('stage');
+  const initialPipelineStage = (
+    ['identified', 'qualified', 'assessment', 'proposed', 'verbal', 'won', 'lost'] as const
+  ).find((stage) => stage === requestedStage);
+
+  // The snapshot is decoration, not the queue: a failure degrades to a notice
+  // instead of failing the whole refresh.
+  const loadSnapshot = useCallback(() => {
+    getOpportunityDashboardSnapshot()
+      .then((next) => {
+        setSnapshot(next);
+        setSnapshotFailed(false);
+      })
+      .catch((error) => {
+        console.error('Failed to load opportunity snapshot:', error);
+        setSnapshotFailed(true);
+      });
+  }, []);
+
+  useEffect(() => {
+    loadSnapshot();
+  }, [loadSnapshot]);
+
+  const refresh = useCallback(async (toPage = page, toPageSize = pageSize) => {
+    loadSnapshot();
     const [result, nextQueue] = await Promise.all([
-      listOpportunities({ status: 'all', page: toPage, page_size: PAGE_SIZE }),
+      // A stage drill-through filters server-side, so the totals and paging
+      // describe the filtered set rather than one loaded page.
+      listOpportunities({
+        status: 'all',
+        ...(initialPipelineStage ? { stage: initialPipelineStage } : {}),
+        page: toPage,
+        page_size: toPageSize,
+      }),
       getWorkQueue(),
     ]);
     setItems(result.data);
     setTotal(result.total);
     setQueue(nextQueue);
     setPage(toPage);
-  }, [page]);
+    setPageSize(toPageSize);
+  }, [page, pageSize, initialPipelineStage, loadSnapshot]);
+
+  // The server rendered the unfiltered first page. When a stage filter arrives
+  // (Reports drill-through or a deep link) or clears, re-query from page 1.
+  const loadedStageRef = useRef<OpportunityStage | undefined>(undefined);
+  useEffect(() => {
+    if (loadedStageRef.current === initialPipelineStage) return;
+    loadedStageRef.current = initialPipelineStage;
+    refresh(1).catch((err) => {
+      toast.error(err instanceof Error ? err.message : String(err));
+    });
+  }, [initialPipelineStage, refresh]);
 
   const openDeal = useCallback(
     (opportunityId: string) => router.push(`/msp/opportunities/${opportunityId}?fromTab=${tab}`),
@@ -93,8 +141,7 @@ export function OpportunitiesHub({
 
   const handleCreate = async (input: CreateOpportunityInput) => {
     try {
-      const currency = await getClientDefaultCurrency(input.client_id);
-      const created = await createOpportunity({ ...input, currency_code: currency });
+      const created = await createOpportunity(input);
       toast.success(t('opportunities.toast.created', 'Opportunity created'));
       openDeal((created as any).opportunity_id);
     } catch (err) {
@@ -132,7 +179,8 @@ export function OpportunitiesHub({
     const base = item?.next_action_due ? new Date(item.next_action_due) : new Date();
     const snoozed = new Date(Math.max(base.getTime(), Date.now()) + 3 * 86400000);
     try {
-      await updateOpportunity(opportunityId, { next_action_due: snoozed.toISOString() });
+      // Snoozing moves the current step's due date; the mirror follows it.
+      await updateOpportunityNextAction(opportunityId, { next_action_due: snoozed.toISOString() });
       toast.success(t('opportunities.toast.snoozed', 'Snoozed for a few days'));
       await refresh();
     } catch (err) {
@@ -192,10 +240,14 @@ export function OpportunitiesHub({
     }
   };
 
-  const handleDeclareQualified = async (opportunityId: string) => {
+  const handleDeclareStage = async (
+    opportunityId: string,
+    stage: Exclude<OpportunityStage, 'won' | 'lost'>,
+  ) => {
     try {
-      await declareQualified(opportunityId, undefined);
-      toast.success(t('opportunities.toast.qualified', 'Qualified checkpoint recorded'));
+      await declareOpportunityStage(opportunityId, stage);
+      const label = t(`opportunities.stage.${stage}`, stage.charAt(0).toUpperCase() + stage.slice(1));
+      toast.success(t('opportunities.toast.stageSet', 'Stage set to {{stage}}', { stage: label }));
       await refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
@@ -204,14 +256,10 @@ export function OpportunitiesHub({
 
   const openItems = useMemo(() => items.filter((i) => i.status === 'open'), [items]);
   const closedItems = useMemo(() => items.filter((i) => i.status !== 'open'), [items]);
-  const requestedStage = searchParams.get('stage');
-  const initialPipelineStage = (
-    ['identified', 'qualified', 'assessment', 'proposed', 'verbal', 'won', 'lost'] as const
-  ).find((stage) => stage === requestedStage);
 
   useEffect(() => {
     const requestedTab = searchParams.get('tab') ?? 'queue';
-    const validTabs = new Set(['queue', 'pipeline', 'board', 'suggestions', ...eeTabs.map((item) => item.id)]);
+    const validTabs = new Set(['queue', 'pipeline', 'board', 'suggestions', 'reports', ...eeTabs.map((item) => item.id)]);
     setTab(validTabs.has(requestedTab) ? requestedTab : 'queue');
   }, [eeTabs, searchParams]);
 
@@ -230,6 +278,8 @@ export function OpportunitiesHub({
       content: (
         <WorkQueue
           queue={queue}
+          snapshot={snapshot}
+          snapshotFailed={snapshotFailed}
           onCompleteAction={(id, stage) => setCompleteFor({ id, stage })}
           onOpenOpportunity={openDeal}
           onSnooze={handleSnooze}
@@ -253,7 +303,15 @@ export function OpportunitiesHub({
           items={items}
           onOpen={openDeal}
           initialStage={initialPipelineStage}
-          pagination={{ currentPage: page, pageSize: PAGE_SIZE, totalItems: total, onPageChange: (p) => void refresh(p) }}
+          onValuesChanged={() => refresh()}
+          pagination={{
+            currentPage: page,
+            pageSize,
+            totalItems: total,
+            onPageChange: (p) => void refresh(p),
+            // A new page size restarts the list at the top; page 4 of 50 is not page 4 of 10.
+            onPageSizeChange: (size) => void refresh(1, size),
+          }}
         />
       ),
     },
@@ -265,7 +323,7 @@ export function OpportunitiesHub({
           items={openItems}
           recentlyClosed={closedItems}
           onOpen={openDeal}
-          onDeclareQualified={handleDeclareQualified}
+          onDeclareStage={handleDeclareStage}
           onMarkLost={setLoseFor}
         />
       ),
@@ -288,7 +346,7 @@ export function OpportunitiesHub({
               <p className="mb-3 text-sm text-[rgb(var(--color-text-500))]">
                 {t(
                   'opportunities.suggestions.intro',
-                  'Found in your data. Accept to create the opportunity, or dismiss and it stays gone.'
+                  'Drawn from your own data. Accept to create the opportunity, or dismiss it and it will not come back.'
                 )}
               </p>
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
@@ -320,6 +378,24 @@ export function OpportunitiesHub({
             />
           </div>
         </div>
+      ),
+    },
+    {
+      id: 'reports',
+      label: t('opportunities.tabs.reports', 'Reports'),
+      content: (
+        <OpportunityReportsView
+          onOpenForecast={
+            eeTabs.some((item) => item.id === 'forecast') ? () => handleTabChange('forecast') : undefined
+          }
+          onOpenStage={(stage) => {
+            setTab('pipeline');
+            const params = new URLSearchParams(searchParams.toString());
+            params.set('tab', 'pipeline');
+            params.set('stage', stage);
+            router.replace(`/msp/opportunities?${params.toString()}`, { scroll: false });
+          }}
+        />
       ),
     },
     ...eeTabs,

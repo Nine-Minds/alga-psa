@@ -316,7 +316,14 @@
       "failedTaskPhase": "Nie udało się załadować fazy zadania",
       "failedTaskProjectMetadata": "Nie udało się załadować metadanych projektu zadania",
       "failedAdHoc": "Nie udało się wczytać danych wpisu ad hoc",
-      "unsupportedType": "Nieobsługiwany typ zadania"
+      "unsupportedType": "Nieobsługiwany typ zadania",
+      "failedOpportunityStep": "Nie udało się załadować danych kroku okazji"
+    },
+    "opportunityStep": {
+      "opportunity": "Okazja",
+      "client": "Klient",
+      "assignedTo": "Przypisano do",
+      "openOpportunity": "Otwórz okazję"
     }
   },
   "timeSheetClient": {

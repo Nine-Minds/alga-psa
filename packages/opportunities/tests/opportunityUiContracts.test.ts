@@ -22,7 +22,8 @@ describe('opportunity UI improvement wiring', () => {
     const row = source('../src/components/queue/QueueActionRow.tsx');
 
     expect(row).toContain('id={`${idBase}-complete-control`}');
-    expect(row).toContain("type=\"button\"");
+    // The design-system Button, not a raw <button>.
+    expect(row).not.toContain('<button');
     expect(row).toContain("aria-label={t('opportunities.queue.completeActionFor'");
     expect(row).toContain('onClick={() => onComplete(item.opportunity_id, item.stage)}');
   });
@@ -37,6 +38,70 @@ describe('opportunity UI improvement wiring', () => {
     expect(completeDialog).toContain('<ActionSuggestions');
     expect(completeDialog).toContain('stage={stage}');
     expect(completeDialog).toContain('id="opportunity-complete-next-action"');
+  });
+
+  it('suggests the tenant\'s own sales process, falling back to the stock list', () => {
+    const suggestions = source('../src/components/ActionSuggestions.tsx');
+    expect(suggestions).toContain('listOpportunityStepTemplates(stage)');
+    expect(suggestions).toContain('SUGGESTED_NEXT_ACTIONS[stage]');
+    // An empty tenant list must not blank out the stock suggestions.
+    expect(suggestions).toContain('templateTitles?.length');
+  });
+
+  it('lays the whole sales process out on one settings screen', () => {
+    const settings = source('../../../server/src/app/msp/settings/opportunities/OpportunityStepTemplatesSettings.tsx');
+    expect(settings).toContain("const STAGES: PlannableStage[] = ['identified', 'qualified', 'assessment', 'proposed', 'verbal']");
+    expect(settings).toContain('opportunity-step-templates-${stage}');
+    // Every stage saves in one transaction, so a mid-save failure commits nothing.
+    expect(settings).toContain('saveAllOpportunityStepTemplates(');
+    expect(settings).toContain('STAGES.map((stage) => ({ stage, titles: plan[stage] }))');
+    expect(settings).not.toContain('for (const stage of STAGES)');
+  });
+
+  it('refuses to report a save for step rows the server would drop', () => {
+    const settings = source('../../../server/src/app/msp/settings/opportunities/OpportunityStepTemplatesSettings.tsx');
+    expect(settings).toContain('if (blankRowCount > 0)');
+    expect(settings).toContain('opportunities.settings.stepTemplatesBlank');
+    // What the screen shows after a save is what the server kept.
+    expect(settings).toContain('setPlan(toPlan(saved))');
+  });
+
+  it('organizes opportunity settings into tabs like ticketing and projects', () => {
+    const settings = source('../../../server/src/app/msp/settings/opportunities/OpportunitiesSettingsBody.tsx');
+    expect(settings).toContain("import CustomTabs, { type TabContent } from '@alga-psa/ui/components/CustomTabs'");
+    for (const id of ['stages-and-steps', 'suggestions', 'opportunity-numbering']) {
+      expect(settings).toContain(`id: '${id}'`);
+    }
+    expect(settings).toContain("params.set('section', tabId)");
+  });
+
+  it('folds the follow-up settings into Stages and Steps and keeps old links alive', () => {
+    const settings = source('../../../server/src/app/msp/settings/opportunities/OpportunitiesSettingsBody.tsx');
+    // No standalone tab any more; the fields live inside the merged tab.
+    expect(settings).not.toContain("id: 'follow-up'");
+    expect(settings).toContain("const DEFAULT_SECTION = 'stages-and-steps'");
+    expect(settings).toContain('opportunities-settings-nudge-days');
+    expect(settings).toContain('opportunities-settings-interrupt-days');
+    expect(settings).toContain('opportunities-settings-escalation');
+    // ?section=follow-up must still land somewhere sensible.
+    expect(settings).toContain("'follow-up': 'stages-and-steps'");
+  });
+
+  it('prints the report itself rather than the browser window', () => {
+    const reports = source('../src/components/reports/OpportunityReportsView.tsx');
+    expect(reports).not.toContain('window.print()');
+    expect(reports).toContain('<PrintButton');
+    expect(reports).toContain('app-print-root app-print-only');
+    expect(reports).toContain('<PrintableTable');
+  });
+
+  it('picks people with the shared UserPicker so avatars render', () => {
+    const detailView = source('../src/components/detail/OpportunityDetailView.tsx');
+    const stepEditor = source('../src/components/dialogs/StepEditorDialog.tsx');
+    for (const file of [detailView, stepEditor]) {
+      expect(file).toContain("import UserPicker from '@alga-psa/ui/components/UserPicker'");
+      expect(file).toContain('getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}');
+    }
   });
 
   it('opens prospect quick-add from ClientPicker and auto-selects the new client', () => {

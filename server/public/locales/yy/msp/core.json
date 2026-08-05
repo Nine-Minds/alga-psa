@@ -514,6 +514,10 @@
       "title": "55555",
       "heading": "55555",
       "options": {
+        "opportunity": {
+          "description": "55555",
+          "label": "55555"
+        },
         "ticket": {
           "label": "55555",
           "description": "55555"
@@ -604,6 +608,7 @@
   "quickCreate": {
     "success": {
       "asset": "55555",
+      "opportunity": "55555 {{title}} 55555",
       "ticket": "55555 {{number}} 55555",
       "client": "55555 {{name}} 55555",
       "contact": "55555 {{name}} 55555",
@@ -617,6 +622,7 @@
     },
     "dialogTitles": {
       "contact": "55555",
+      "opportunity": "55555",
       "project": "55555",
       "service": "55555"
     }

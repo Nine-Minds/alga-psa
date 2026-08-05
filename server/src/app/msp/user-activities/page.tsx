@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default async function UserActivitiesPage() {
   const user = await getCurrentUser();
-  
+
   if (!user) {
     redirect('/auth/msp/signin');
   }

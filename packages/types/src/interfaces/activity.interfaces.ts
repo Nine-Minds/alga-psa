@@ -227,6 +227,11 @@ export interface ActivityFilters {
   workItemType?: string;
   executionId?: string;
   includeHidden?: boolean;
+  /**
+   * Opportunity-specific: whose deal work to show — steps handed to the user
+   * ('assigned', the default), work on deals they own ('owned'), or both.
+   */
+  opportunityScope?: 'assigned' | 'owned' | 'all';
   /** Ticket-specific: filter by board_id(s) */
   ticketBoardIds?: string[];
   /** Ticket-specific: exclude these board_id(s) */

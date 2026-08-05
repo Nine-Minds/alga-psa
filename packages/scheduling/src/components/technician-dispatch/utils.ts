@@ -61,6 +61,11 @@ export const getEventColors = (
       hover = 'hover:bg-rose-300 dark:hover:bg-rose-900/50';
       text = 'text-[rgb(var(--color-text-900))]';
       break;
+    case 'opportunity_step':
+      bg = 'bg-[rgb(var(--color-event-opportunity))]';
+      hover = 'hover:bg-[rgb(var(--color-event-opportunity-hover))]';
+      text = 'text-[rgb(var(--color-text-900))]';
+      break;
   }
 
   return { bg, hover, text };
