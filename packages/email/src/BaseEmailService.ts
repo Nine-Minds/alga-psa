@@ -61,6 +61,8 @@ export interface EmailTemplateContent {
 
 export interface BaseEmailParams {
   to: string | string[] | EmailAddress | EmailAddress[];
+  from?: string | EmailAddress;
+  fromName?: string;
   cc?: string[] | EmailAddress[];
   bcc?: string[] | EmailAddress[];
   attachments?: any[];
@@ -78,6 +80,12 @@ export interface BaseEmailParams {
   entityId?: string;
   contactId?: string;
   notificationSubtypeId?: number;
+  /** Internal, call-scoped tenant-company fallback resolved by TenantEmailService. */
+  resolvedTenantCompanyName?: string | null;
+  /** Internal provider snapshot used by TenantEmailService during cache refreshes. */
+  resolvedEmailProvider?: IEmailProvider | null;
+  /** Internal initialization error paired with resolvedEmailProvider. */
+  resolvedProviderInitError?: string | null;
   replyContext?: {
     ticketId?: string;
     projectId?: string;
@@ -460,16 +468,27 @@ export abstract class BaseEmailService {
    * Send an email with optional template processing
    */
   public async sendEmail(params: BaseEmailParams): Promise<EmailSendResult> {
-    if (!this.initialized) {
+    const hasResolvedProvider = Object.prototype.hasOwnProperty.call(params, 'resolvedEmailProvider');
+    if (!hasResolvedProvider && !this.initialized) {
       await this.initialize();
     }
 
-    if (!this.emailProvider) {
-      if (this.providerInitError) {
-        logger.warn(`[${this.getServiceName()}] Email provider failed to initialize: ${this.providerInitError}`);
+    // A tenant settings refresh may replace the singleton's cached provider
+    // while an earlier send is still rendering its template. Keep this send on
+    // the provider snapshot paired with the settings it resolved.
+    const emailProvider = hasResolvedProvider
+      ? params.resolvedEmailProvider ?? null
+      : this.emailProvider;
+    const providerInitError = hasResolvedProvider
+      ? params.resolvedProviderInitError ?? null
+      : this.providerInitError;
+
+    if (!emailProvider) {
+      if (providerInitError) {
+        logger.warn(`[${this.getServiceName()}] Email provider failed to initialize: ${providerInitError}`);
         return {
           success: false,
-          error: `Email provider not ready: ${this.providerInitError}`
+          error: `Email provider not ready: ${providerInitError}`
         };
       }
       logger.warn(`[${this.getServiceName()}] Service disabled or not configured`);
@@ -592,7 +611,7 @@ export abstract class BaseEmailService {
             ...(ccEmails?.length ? { cc: ccEmails } : {}),
             subject,
             queuedAt: new Date().toISOString(),
-            provider: this.emailProvider.providerType,
+            provider: emailProvider.providerType,
           },
           ctx: workflowCtx,
           idempotencyKey: `outbound_email:${workflowMessageId}:queued`,
@@ -601,12 +620,12 @@ export abstract class BaseEmailService {
         logger.warn(`[${this.getServiceName()}] Failed to publish OUTBOUND_EMAIL_QUEUED workflow event`, {
           error: publishError,
           tenantId,
-          providerType: this.emailProvider.providerType,
+          providerType: emailProvider.providerType,
         });
       }
 
       // Send via provider
-      const result = await this.emailProvider.sendEmail(emailMessage, params.tenantId || 'system');
+      const result = await emailProvider.sendEmail(emailMessage, params.tenantId || 'system');
 
       // Best-effort: persist provider-level send result for auditing/debugging.
       // Awaited: inbound reply matching reads email_sending_logs immediately after
@@ -648,7 +667,7 @@ export abstract class BaseEmailService {
               ...(maybeThreadId ? { threadId: maybeThreadId } : {}),
               ...(maybeTicketId ? { ticketId: maybeTicketId } : {}),
               sentAt: result.sentAt?.toISOString?.() || new Date().toISOString(),
-              provider: result.providerType || this.emailProvider.providerType,
+              provider: result.providerType || emailProvider.providerType,
             },
             ctx: workflowCtx,
             idempotencyKey: `outbound_email:${workflowMessageId}:sent`,
@@ -661,7 +680,7 @@ export abstract class BaseEmailService {
               ...(maybeThreadId ? { threadId: maybeThreadId } : {}),
               ...(maybeTicketId ? { ticketId: maybeTicketId } : {}),
               failedAt: new Date().toISOString(),
-              provider: result.providerType || this.emailProvider.providerType,
+              provider: result.providerType || emailProvider.providerType,
               errorMessage: result.error || 'Email send failed',
               ...(result.metadata?.errorCode ? { errorCode: String(result.metadata.errorCode) } : {}),
               ...(typeof result.metadata?.retryable === 'boolean' ? { retryable: result.metadata.retryable } : {}),
@@ -674,8 +693,8 @@ export abstract class BaseEmailService {
         logger.warn(`[${this.getServiceName()}] Failed to publish outbound email workflow event`, {
           error: publishError,
           tenantId,
-          providerType: this.emailProvider.providerType,
-          providerId: this.emailProvider.providerId,
+          providerType: emailProvider.providerType,
+          providerId: emailProvider.providerId,
         });
       }
 
@@ -694,8 +713,8 @@ export abstract class BaseEmailService {
       // Best-effort: log provider failure if we made it to message construction.
       if (emailMessage) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        const providerId = this.emailProvider?.providerId ?? 'unknown';
-        const providerType = this.emailProvider?.providerType ?? 'unknown';
+        const providerId = emailProvider.providerId;
+        const providerType = emailProvider.providerType;
 
         // Awaited: inbound reply matching reads email_sending_logs immediately after
         // a send returns — fire-and-forget raced it.
@@ -732,7 +751,7 @@ export abstract class BaseEmailService {
             ...(isUuid(params.replyContext?.threadId) ? { threadId: params.replyContext?.threadId } : {}),
             ...(isUuid(params.replyContext?.ticketId) ? { ticketId: params.replyContext?.ticketId } : {}),
             failedAt: new Date().toISOString(),
-            provider: this.emailProvider?.providerType || 'unknown',
+            provider: emailProvider.providerType,
             errorMessage: error instanceof Error ? error.message : 'Unknown error',
             ...(typeof (error as any)?.code === 'string' ? { errorCode: (error as any).code } : {}),
           },
@@ -755,8 +774,8 @@ export abstract class BaseEmailService {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
-        providerId: this.emailProvider?.providerId,
-        providerType: this.emailProvider?.providerType
+        providerId: emailProvider.providerId,
+        providerType: emailProvider.providerType
       };
     }
   }

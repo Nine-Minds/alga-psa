@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createTenantKnexMock = vi.fn();
 const getTenantEmailSettingsMock = vi.fn();
+const invalidateTenantSettingsMock = vi.fn();
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
@@ -18,7 +19,13 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/email', () => ({
   TenantEmailService: {
     getTenantEmailSettings: getTenantEmailSettingsMock,
+    invalidateTenantSettings: invalidateTenantSettingsMock,
   },
+  resolveTenantCompanyName: vi.fn(async () => 'Example MSP'),
+  resolveDefaultFromAddress: vi.fn(() => ({
+    email: 'notifications@acme.com',
+    name: 'Example MSP',
+  })),
 }));
 
 vi.mock('@alga-psa/email/providerConfig', () => ({
@@ -39,6 +46,8 @@ describe('updateEmailSettings clear behavior', () => {
   beforeEach(() => {
     createTenantKnexMock.mockReset();
     getTenantEmailSettingsMock.mockReset();
+    invalidateTenantSettingsMock.mockReset();
+    invalidateTenantSettingsMock.mockResolvedValue(undefined);
   });
 
   it('persists null when clearing the ticketing From address', async () => {

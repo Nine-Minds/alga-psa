@@ -20,8 +20,15 @@ import { tenantDb, getConnection } from '@alga-psa/db';
 import { SupportedLocale, LOCALE_CONFIG, isSupportedLocale } from '../lib/localeConfig';
 import { resolveEmailLocale } from '../emailLocaleResolver';
 import Handlebars from 'handlebars';
+import { applyFromNameOverride } from '../senderIdentity';
 
 const SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT = '__system_email_template_lookup__';
+
+interface SystemProviderSnapshot {
+  emailProvider: IEmailProvider | null;
+  providerInitError: string | null;
+  fromAddress: string;
+}
 
 // Extend BaseEmailParams for system-specific parameters
 export interface SystemEmailParams extends BaseEmailParams {
@@ -48,6 +55,8 @@ export interface SystemEmailParams extends BaseEmailParams {
 export class SystemEmailService extends BaseEmailService {
   private static instance: SystemEmailService;
   private fromAddress: string | null = null;
+  private providerConfigFingerprint: string | null = null;
+  private providerStateQueue: Promise<void> = Promise.resolve();
 
   private constructor() {
     super();
@@ -72,11 +81,17 @@ export class SystemEmailService extends BaseEmailService {
     return SystemEmailProviderFactory.createProvider();
   }
 
-  protected getFromAddress(params?: BaseEmailParams): string {
-    if (params?.from) {
-      return typeof params.from === 'string' ? params.from : params.from.email;
-    }
-    return this.fromAddress || process.env.EMAIL_FROM || 'noreply@localhost';
+  public override async initialize(): Promise<void> {
+    await this.refreshProviderState();
+  }
+
+  protected getFromAddress(params?: BaseEmailParams) {
+    const address = params?.from
+      || params?.resolvedSystemFromAddress
+      || this.fromAddress
+      || process.env.EMAIL_FROM
+      || 'noreply@localhost';
+    return applyFromNameOverride(address, params?.fromName);
   }
 
   /**
@@ -249,7 +264,65 @@ export class SystemEmailService extends BaseEmailService {
    */
   public async sendEmail(params: SystemEmailParams): Promise<EmailSendResult> {
     // SystemEmailService can accept subject/html/text directly
-    return super.sendEmail(params);
+    const providerSnapshot = await this.refreshProviderState();
+    return super.sendEmail({
+      ...params,
+      resolvedSystemFromAddress: providerSnapshot.fromAddress,
+      resolvedEmailProvider: providerSnapshot.emailProvider,
+      resolvedProviderInitError: providerSnapshot.providerInitError,
+    });
+  }
+
+  public override async isConfigured(): Promise<boolean> {
+    const providerSnapshot = await this.refreshProviderState();
+    return providerSnapshot.emailProvider !== null;
+  }
+
+  public override async getInitializationError(): Promise<string | null> {
+    const providerSnapshot = await this.refreshProviderState();
+    return providerSnapshot.providerInitError;
+  }
+
+  private async withProviderStateLock<T>(operation: () => Promise<T>): Promise<T> {
+    const previous = this.providerStateQueue;
+    let release!: () => void;
+    this.providerStateQueue = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      release();
+    }
+  }
+
+  private async refreshProviderState(): Promise<SystemProviderSnapshot> {
+    return this.withProviderStateLock(async () => {
+      const fingerprint = SystemEmailProviderFactory.getConfigFingerprint();
+      if (this.initialized && fingerprint === this.providerConfigFingerprint) {
+        return {
+          emailProvider: this.emailProvider,
+          providerInitError: this.providerInitError,
+          fromAddress: this.fromAddress || process.env.EMAIL_FROM || 'noreply@localhost',
+        };
+      }
+
+      this.initialized = false;
+      this.emailProvider = null;
+      this.providerInitError = null;
+      this.fromAddress = null;
+      this.providerConfigFingerprint = null;
+      await super.initialize();
+      this.providerConfigFingerprint = fingerprint;
+
+      return {
+        emailProvider: this.emailProvider,
+        providerInitError: this.providerInitError,
+        fromAddress: this.fromAddress || process.env.EMAIL_FROM || 'noreply@localhost',
+      };
+    });
   }
 
   /**

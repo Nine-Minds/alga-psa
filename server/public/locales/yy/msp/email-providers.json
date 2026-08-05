@@ -760,7 +760,8 @@
       "domainRemovalScheduled": "55555",
       "domainRemovalScheduledWithClear": "55555",
       "removeDomainFailed": "55555",
-      "testOutboundFailed": "55555"
+      "testOutboundFailed": "55555",
+      "senderIdentitiesUpdated": "55555"
     },
     "tabs": {
       "inboundEmail": "55555",
@@ -854,6 +855,39 @@
         "description": "55555",
         "loadFailed": "55555",
         "saved": "55555"
+      },
+      "senderIdentities": {
+        "ticket": {
+          "title": "55555",
+          "description": "55555",
+          "connectedInboxLabel": "55555",
+          "connectedInboxHelp": "55555",
+          "customAddressOption": "55555",
+          "addressLabel": "55555",
+          "addressPlaceholder": "55555",
+          "addressHelp": "55555",
+          "microsoftAddressHelp": "55555 {{mailbox}} 55555",
+          "nameLabel": "55555",
+          "namePlaceholder": "55555",
+          "nameHelp": "55555"
+        },
+        "notification": {
+          "title": "55555",
+          "description": "55555",
+          "addressLabel": "55555",
+          "addressPlaceholder": "55555",
+          "smtpAddressHelp": "55555",
+          "lockedAddressHelp": "55555",
+          "nameLabel": "55555",
+          "namePlaceholder": "55555",
+          "nameHelp": "55555 {{company}} 55555",
+          "companyFallback": "55555"
+        },
+        "warningTitle": "55555",
+        "errorTitle": "55555",
+        "clearButton": "55555",
+        "savingButton": "55555",
+        "saveButton": "55555"
       }
     },
     "inbound": {
@@ -882,7 +916,8 @@
       "mustMatchDomain": "55555 {{domain}} 55555",
       "customAddressThreadWarning": "55555",
       "smtpDomainMismatchWarning": "55555 {{domain}} 55555",
-      "notConnectedWarning": "55555"
+      "notConnectedWarning": "55555",
+      "microsoftMustMatchMailbox": "55555 {{mailbox}} 55555"
     },
     "domainList": {
       "loading": "55555",

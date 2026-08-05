@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EmailProviderConfig, TenantEmailSettings } from '@alga-psa/types';
 
-const { createTenantKnexMock, getTenantEmailSettingsMock } = vi.hoisted(() => ({
+const { createTenantKnexMock, getTenantEmailSettingsMock, invalidateTenantSettingsMock } = vi.hoisted(() => ({
   createTenantKnexMock: vi.fn(),
   getTenantEmailSettingsMock: vi.fn(),
+  invalidateTenantSettingsMock: vi.fn(),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -21,7 +22,13 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/email', () => ({
   TenantEmailService: {
     getTenantEmailSettings: getTenantEmailSettingsMock,
+    invalidateTenantSettings: invalidateTenantSettingsMock,
   },
+  resolveTenantCompanyName: vi.fn(async () => 'Example MSP'),
+  resolveDefaultFromAddress: vi.fn((settings: TenantEmailSettings, companyName: string) => ({
+    email: settings.providerConfigs.find(config => config.isEnabled)?.config.from || 'notifications@example.test',
+    name: companyName,
+  })),
 }));
 
 vi.mock('@alga-psa/email/providerConfig', () => ({
@@ -59,6 +66,8 @@ describe('email settings provider invariants', () => {
   beforeEach(() => {
     createTenantKnexMock.mockReset();
     getTenantEmailSettingsMock.mockReset();
+    invalidateTenantSettingsMock.mockReset();
+    invalidateTenantSettingsMock.mockResolvedValue(undefined);
     createTenantKnexMock.mockResolvedValue({ knex: vi.fn() });
   });
 
@@ -70,6 +79,11 @@ describe('email settings provider invariants', () => {
 
     expect(result).toMatchObject({
       emailProvider: 'resend',
+      tenantCompanyName: 'Example MSP',
+      effectiveNotificationFrom: {
+        email: 'notifications@example.test',
+        name: 'Example MSP',
+      },
       providerConfigs: [
         {
           providerId: 'smtp-provider',
@@ -180,6 +194,7 @@ describe('email settings provider invariants', () => {
     });
 
     expect(updateMock).toHaveBeenCalledOnce();
+    expect(invalidateTenantSettingsMock).toHaveBeenCalledWith('tenant-123');
     const persistedPayload = updateMock.mock.calls[0]?.[0];
     expect(persistedPayload).toBeDefined();
     const persisted = JSON.parse(persistedPayload?.provider_configs as string);
@@ -197,8 +212,9 @@ describe('email settings provider invariants', () => {
     ]);
   });
 
-  it('pins Microsoft outbound settings to a connected tenant mailbox', async () => {
-    const existingSettings = buildSettings('smtp', [
+  it('pins Microsoft outbound settings to a connected tenant mailbox without changing ticket identity', async () => {
+    const existingSettings = {
+      ...buildSettings('smtp', [
       {
         providerId: 'smtp-provider',
         providerType: 'smtp',
@@ -209,9 +225,12 @@ describe('email settings provider invariants', () => {
         providerId: 'microsoft-provider',
         providerType: 'microsoft',
         isEnabled: false,
-        config: { inboundProviderId: '', mailbox: '', from: '' },
+        config: { inboundProviderId: '', mailbox: '', from: '', fromName: 'Billing Team' },
       },
-    ]);
+      ]),
+      ticketingFromEmail: 'support@contoso.example',
+      ticketingFromName: 'Support Team',
+    };
     const updateMock = vi.fn(async (_value: Record<string, unknown>) => 1);
     const knexMock = vi.fn((table: string) => {
       const builder: any = {
@@ -238,6 +257,7 @@ describe('email settings provider invariants', () => {
         emailProvider: 'microsoft',
         defaultFromDomain: 'contoso.example',
         ticketingFromEmail: 'support@contoso.example',
+        ticketingFromName: 'Support Team',
       });
 
     const { updateEmailSettings } = await import('./emailSettingsActions');
@@ -247,7 +267,7 @@ describe('email settings provider invariants', () => {
         config.providerType === 'microsoft'
           ? {
               ...config,
-              config: { inboundProviderId: 'microsoft-inbound-1' },
+              config: { inboundProviderId: 'microsoft-inbound-1', fromName: ' Billing Team ' },
             }
           : config
       ),
@@ -260,6 +280,7 @@ describe('email settings provider invariants', () => {
       email_provider: 'microsoft',
       default_from_domain: 'contoso.example',
       ticketing_from_email: 'support@contoso.example',
+      ticketing_from_name: 'Support Team',
     });
     const configs = JSON.parse(String(payload?.provider_configs));
     expect(configs).toContainEqual({
@@ -270,9 +291,52 @@ describe('email settings provider invariants', () => {
         inboundProviderId: 'microsoft-inbound-1',
         mailbox: 'support@contoso.example',
         from: 'support@contoso.example',
-        fromName: 'Contoso Support',
+        fromName: 'Billing Team',
       },
     });
     expect(configs.find((config: EmailProviderConfig) => config.providerType === 'smtp')?.isEnabled).toBe(false);
+  });
+
+  it('rejects a Microsoft mailbox that conflicts with the saved ticket identity', async () => {
+    const existingSettings = {
+      ...buildSettings('smtp', [{
+        providerId: 'microsoft-provider',
+        providerType: 'microsoft' as const,
+        isEnabled: false,
+        config: { inboundProviderId: '', mailbox: '', from: '' },
+      }]),
+      ticketingFromEmail: 'tickets@other.example',
+    };
+    const updateMock = vi.fn();
+    const knexMock = vi.fn((table: string) => {
+      const builder: any = {
+        where: vi.fn(() => builder),
+        first: vi.fn(async () => table === 'email_providers'
+          ? {
+              id: 'microsoft-inbound-1',
+              mailbox: 'support@contoso.example',
+              status: 'connected',
+            }
+          : { tenant: 'tenant-123' }),
+        update: updateMock,
+      };
+      return builder;
+    }) as any;
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+    getTenantEmailSettingsMock.mockResolvedValue(existingSettings);
+
+    const { updateEmailSettings } = await import('./emailSettingsActions');
+    const result = await updateEmailSettings({
+      emailProvider: 'microsoft',
+      providerConfigs: existingSettings.providerConfigs.map(config => ({
+        ...config,
+        config: { inboundProviderId: 'microsoft-inbound-1', fromName: '' },
+      })),
+    });
+
+    expect(result).toMatchObject({
+      actionError: expect.stringContaining('Update the Ticket emails address'),
+    });
+    expect(updateMock).not.toHaveBeenCalled();
   });
 });

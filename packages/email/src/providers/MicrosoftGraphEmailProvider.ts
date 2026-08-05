@@ -206,7 +206,8 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
 
   private async buildSendPayload(message: EmailMessage): Promise<MicrosoftGraphSendMailPayload> {
     const headers = Object.keys(message.headers || {});
-    const requiresMime = headers.some(name => !name.toLowerCase().startsWith('x-'));
+    const requiresMime = Boolean(message.from?.name?.trim())
+      || headers.some(name => !name.toLowerCase().startsWith('x-'));
 
     if (!requiresMime) {
       return { kind: 'json', message: this.buildGraphMessage(message) };

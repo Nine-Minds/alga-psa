@@ -60,6 +60,13 @@ export { SystemEmailProviderFactory } from './system/SystemEmailProviderFactory'
 // Tenant email provider manager
 export { EmailProviderManager } from './providers/EmailProviderManager';
 
+export {
+  applyFromNameOverride,
+  parseEmailAddress,
+  resolveDefaultFromAddress,
+  resolveTenantCompanyName,
+} from './senderIdentity';
+
 // Shared settings defaults
 export {
   createDefaultProviderConfig,

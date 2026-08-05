@@ -32,7 +32,7 @@ export async function sendPortalInvitationEmail({
   tenant,
   supportEmail,
   supportPhone,
-  fromName: _fromName,
+  fromName,
   recipientUserId,
   clientId
 }: SendPortalInvitationEmailParams): Promise<boolean> {
@@ -93,6 +93,7 @@ export async function sendPortalInvitationEmail({
         templateProcessor,
         templateData,
         locale: recipientLocale,
+        fromName,
         replyTo: supportEmail // MSP support email as reply-to
       };
 

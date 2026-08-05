@@ -7,6 +7,7 @@ export { AccountingMappingManager } from './accounting-mappings';
 export type { AccountingMappingContext, AccountingMappingModule, AccountingMappingLoadResult } from './accounting-mappings/types';
 export {
   EmailProviderConfiguration,
+  EmailSenderIdentityCards,
   INBOUND_DEFAULTS_WARNING,
   providerNeedsInboundDefaults,
   InboundTicketDefaultsManager,
@@ -21,6 +22,7 @@ export {
   ImapProviderForm,
   MicrosoftProviderForm
 } from './email';
+export type { EmailSenderIdentityCopy } from './email';
 export type { EmailProvider, MicrosoftEmailProviderConfig, GoogleEmailProviderConfig, ImapEmailProviderConfig } from './email/types';
 export type { BaseGmailProviderFormData, CEGmailProviderFormData } from './email/providers/gmail/schemas';
 export * from './settings';

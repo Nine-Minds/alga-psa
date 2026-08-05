@@ -6,8 +6,12 @@
 
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import type { EmailProviderConfig, TenantEmailSettings } from '@alga-psa/types';
-import { TenantEmailService } from '@alga-psa/email';
+import type { EmailAddress, EmailProviderConfig, TenantEmailSettings } from '@alga-psa/types';
+import {
+  resolveDefaultFromAddress,
+  resolveTenantCompanyName,
+  TenantEmailService,
+} from '@alga-psa/email';
 import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
 import {
   actionError,
@@ -33,6 +37,11 @@ export interface MicrosoftOutboundMailboxOption {
   providerName: string;
   senderDisplayName?: string | null;
   status: 'connected' | 'disconnected' | 'error' | 'configuring';
+}
+
+export interface EmailSettingsView extends TenantEmailSettings {
+  tenantCompanyName: string | null;
+  effectiveNotificationFrom: EmailAddress;
 }
 
 function withEditableProviderConfigs(settings: TenantEmailSettings): TenantEmailSettings {
@@ -93,10 +102,23 @@ function normalizeOptionalString(value?: string | null): string | null {
   return normalized || null;
 }
 
+async function toEmailSettingsView(
+  settings: TenantEmailSettings,
+  knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
+  tenant: string
+): Promise<EmailSettingsView> {
+  const tenantCompanyName = await resolveTenantCompanyName(knex, tenant);
+  return {
+    ...withEditableProviderConfigs(settings),
+    tenantCompanyName,
+    effectiveNotificationFrom: resolveDefaultFromAddress(settings, tenantCompanyName),
+  };
+}
+
 export const getEmailSettings = withAuth(async (
   _user,
   { tenant }
-): Promise<TenantEmailSettings | null | ActionMessageError> => {
+): Promise<EmailSettingsView | null | ActionMessageError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -129,7 +151,7 @@ export const getEmailSettings = withAuth(async (
         updatedAt: new Date()
       };
       
-      return withEditableProviderConfigs(defaultSettings);
+      return toEmailSettingsView(defaultSettings, knex, tenant || '');
     }
 
     // Don't expose sensitive data like passwords and API keys in full
@@ -145,7 +167,7 @@ export const getEmailSettings = withAuth(async (
       }))
     };
 
-    return withEditableProviderConfigs(sanitizedSettings);
+    return toEmailSettingsView(sanitizedSettings, knex, tenant || '');
   } catch (error: any) {
     console.error('Error fetching email settings:', error);
     return actionError('Failed to fetch email settings');
@@ -156,7 +178,7 @@ export const updateEmailSettings = withAuth(async (
   _user,
   { tenant },
   updates: EmailSettingsUpdateInput
-): Promise<TenantEmailSettings | ActionMessageError> => {
+): Promise<EmailSettingsView | ActionMessageError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -201,6 +223,19 @@ export const updateEmailSettings = withAuth(async (
         return actionError('Reconnect the selected Microsoft 365 mailbox before using it for outbound email');
       }
 
+      if (
+        nextTicketingFromEmail
+        && nextTicketingFromEmail.toLowerCase() !== microsoftProvider.mailbox.toLowerCase()
+      ) {
+        return actionError(
+          `Ticket email identity must use the selected Microsoft 365 mailbox (${microsoftProvider.mailbox}). Update the Ticket emails address before saving.`
+        );
+      }
+
+      const notificationFromName = normalizeOptionalString(
+        requested?.config?.fromName ?? requested?.config?.from_name
+      );
+
       const microsoftConfig: EmailProviderConfig = {
         providerId: microsoftProvider.id,
         providerType: 'microsoft',
@@ -209,7 +244,7 @@ export const updateEmailSettings = withAuth(async (
           inboundProviderId: microsoftProvider.id,
           mailbox: microsoftProvider.mailbox,
           from: microsoftProvider.mailbox,
-          fromName: microsoftProvider.sender_display_name || undefined,
+          fromName: notificationFromName || undefined,
         },
       };
       mergedProviderConfigs = [
@@ -217,7 +252,6 @@ export const updateEmailSettings = withAuth(async (
         microsoftConfig,
       ];
       nextDefaultFromDomain = extractDomain(microsoftProvider.mailbox) || undefined;
-      nextTicketingFromEmail = microsoftProvider.mailbox;
     }
 
     const normalizedProviderConfigs = mergedProviderConfigs.map(config => ({
@@ -281,6 +315,11 @@ export const updateEmailSettings = withAuth(async (
           created_at: now
         });
     }
+
+    // Refresh any process-local singleton immediately. TenantEmailService also
+    // checks persisted settings before every send, covering other processes and
+    // direct database updates without broad/global cache invalidation.
+    await TenantEmailService.invalidateTenantSettings(tenant || '');
 
     // Re-fetch and return updated settings
     const updatedSettings = await getEmailSettings();

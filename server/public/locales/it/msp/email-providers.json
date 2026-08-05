@@ -760,7 +760,8 @@
       "domainRemovalScheduled": "Rimozione del dominio pianificata",
       "domainRemovalScheduledWithClear": "Rimozione del dominio pianificata e indirizzo mittente per ticketing cancellato",
       "removeDomainFailed": "Impossibile rimuovere il dominio",
-      "testOutboundFailed": "Test dell'e-mail in uscita non riuscito"
+      "testOutboundFailed": "Test dell'e-mail in uscita non riuscito",
+      "senderIdentitiesUpdated": "Sender identities updated."
     },
     "tabs": {
       "inboundEmail": "Email in entrata",
@@ -854,6 +855,39 @@
         "description": "I messaggi vengono inviati dalla casella selezionata tramite Microsoft Graph e salvati in Posta inviata.",
         "loadFailed": "Impossibile caricare le caselle Microsoft 365.",
         "saved": "Casella di invio aggiornata."
+      },
+      "senderIdentities": {
+        "ticket": {
+          "title": "Ticket email identity",
+          "description": "Replies to ticket emails must return to this address so they can be matched and added to the ticket. Use a connected, monitored inbox.",
+          "connectedInboxLabel": "Connected inbox",
+          "connectedInboxHelp": "A connected inbox keeps client replies in the ticket conversation.",
+          "customAddressOption": "Use another address",
+          "addressLabel": "From address",
+          "addressPlaceholder": "support@example.com",
+          "addressHelp": "This address controls reply routing for ticket email only.",
+          "microsoftAddressHelp": "Microsoft 365 requires ticket email to use the selected sending mailbox ({{mailbox}}).",
+          "nameLabel": "Sender display name",
+          "namePlaceholder": "Support",
+          "nameHelp": "Leave blank to use the connected mailbox name or ticket board name."
+        },
+        "notification": {
+          "title": "All other email identity",
+          "description": "Brand portal invitations, password resets, invoices, project updates, and general notifications independently from ticket routing.",
+          "addressLabel": "From address",
+          "addressPlaceholder": "notifications@example.com",
+          "smtpAddressHelp": "This is the branding address used for non-ticket email through your SMTP server.",
+          "lockedAddressHelp": "This address is determined by the active managed domain or selected Microsoft 365 mailbox.",
+          "nameLabel": "Sender display name",
+          "namePlaceholder": "Your company name",
+          "nameHelp": "Leave blank to use {{company}} automatically.",
+          "companyFallback": "your tenant company"
+        },
+        "warningTitle": "Check reply routing",
+        "errorTitle": "Fix the ticket identity",
+        "clearButton": "Clear ticket identity",
+        "savingButton": "Saving...",
+        "saveButton": "Save sender identities"
       }
     },
     "inbound": {
@@ -882,7 +916,8 @@
       "mustMatchDomain": "L'indirizzo mittente deve utilizzare @{{domain}}",
       "customAddressThreadWarning": "L'uso di un indirizzo personalizzato può impedire il corretto raggruppamento delle risposte in entrata.",
       "smtpDomainMismatchWarning": "Questo dominio non corrisponde al dominio mittente del tuo SMTP ({{domain}}). Le email potrebbero non essere consegnate o essere contrassegnate come spam se il tuo server SMTP non è autorizzato a inviare da questo dominio.",
-      "notConnectedWarning": "L'elaborazione dei ticket in entrata potrebbe non funzionare con questo indirizzo perché non è una delle tue caselle di posta collegate."
+      "notConnectedWarning": "L'elaborazione dei ticket in entrata potrebbe non funzionare con questo indirizzo perché non è una delle tue caselle di posta collegate.",
+      "microsoftMustMatchMailbox": "Ticket email address must match the selected Microsoft 365 mailbox ({{mailbox}})."
     },
     "domainList": {
       "loading": "Caricamento domini…",

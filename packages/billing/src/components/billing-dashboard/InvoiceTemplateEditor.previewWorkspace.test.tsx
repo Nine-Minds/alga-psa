@@ -217,6 +217,14 @@ const installLocalStorageMock = () => {
   });
 };
 
+const waitForTemplateHydration = async () => {
+  await waitFor(() => {
+    const state = useInvoiceDesignerStore.getState();
+    const metadata = state.nodesById[state.rootId]?.props.metadata as Record<string, unknown> | undefined;
+    expect(metadata?.__astImported).toBe(true);
+  });
+};
+
 const transformedWorkspaceState = {
   sourceBindingId: 'collection.items',
   outputBindingId: 'transformed.items',

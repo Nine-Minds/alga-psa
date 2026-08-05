@@ -82,7 +82,10 @@ describe('MicrosoftGraphEmailProvider', () => {
     const provider = new MicrosoftGraphEmailProvider('microsoft-provider-1');
     await provider.initialize(providerConfig());
 
-    const result = await provider.sendEmail(message({ headers: undefined }), 'tenant-1');
+    const result = await provider.sendEmail(message({
+      from: { email: 'ignored@example.net' },
+      headers: undefined,
+    }), 'tenant-1');
 
     expect(sendMailMock).toHaveBeenCalledWith({
       kind: 'json',
@@ -111,6 +114,25 @@ describe('MicrosoftGraphEmailProvider', () => {
     });
     expect(result.messageId).toBeUndefined();
   });
+
+  it.each(['Example MSP', 'Example MSP Portal'])(
+    'uses MIME to carry the %s display name with the selected mailbox',
+    async (fromName) => {
+      const provider = new MicrosoftGraphEmailProvider('microsoft-provider-1');
+      await provider.initialize(providerConfig());
+
+      await provider.sendEmail(message({
+        from: { email: 'ignored@example.net', name: fromName },
+        headers: undefined,
+        attachments: undefined,
+      }), 'tenant-1');
+
+      const payload = sendMailMock.mock.calls[0]?.[0];
+      expect(payload.kind).toBe('mime');
+      const mime = Buffer.from(payload.content, 'base64').toString('utf8');
+      expect(mime).toContain(`From: ${fromName} <support+desk@example.com>`);
+    }
+  );
 
   it('uses MIME to retain ticket threading headers that Graph JSON cannot set', async () => {
     const provider = new MicrosoftGraphEmailProvider('microsoft-provider-1');

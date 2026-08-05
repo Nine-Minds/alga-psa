@@ -18,10 +18,16 @@ function buildSettings(overrides: Partial<TenantEmailSettings> = {}): TenantEmai
   };
 }
 
-function resolveFromAddress(settings: TenantEmailSettings) {
+function resolveFromAddress(settings: TenantEmailSettings, tenantCompanyName?: string | null) {
   const service = TenantEmailService.getInstance(settings.tenantId);
   (service as any).tenantSettings = settings;
-  return (service as any).buildTenantFromAddress();
+  return (service as any).buildTenantFromAddress(tenantCompanyName);
+}
+
+function resolveMessageFrom(settings: TenantEmailSettings, params: Record<string, unknown>) {
+  const service = TenantEmailService.getInstance(settings.tenantId);
+  (service as any).tenantSettings = settings;
+  return (service as any).getFromAddress(params);
 }
 
 describe('TenantEmailService from address resolution', () => {
@@ -87,5 +93,75 @@ describe('TenantEmailService from address resolution', () => {
       email: 'notifications@acme.com',
       name: 'Alga PSA Notifications',
     });
+  });
+
+  it('uses the provider display name before the tenant company name', () => {
+    const from = resolveFromAddress(buildSettings({
+      providerConfigs: [{
+        providerId: 'smtp-provider',
+        providerType: 'smtp',
+        isEnabled: true,
+        config: { from: 'notifications@example.net', fromName: 'Configured Sender' },
+      }],
+    }), 'Acme Services');
+
+    expect(from).toEqual({ email: 'notifications@acme.com', name: 'Configured Sender' });
+  });
+
+  it.each(['smtp', 'resend'] as const)(
+    'uses the tenant company for a blank %s provider display name',
+    (providerType) => {
+      const from = resolveFromAddress(buildSettings({
+        emailProvider: providerType,
+        providerConfigs: [{
+          providerId: `${providerType}-provider`,
+          providerType,
+          isEnabled: true,
+          config: { from: 'notifications@example.net', fromName: '  ' },
+        }],
+      }), 'Acme Services');
+
+      expect(from).toEqual({ email: 'notifications@acme.com', name: 'Acme Services' });
+    }
+  );
+
+  it('uses the tenant company before environment branding', () => {
+    process.env.EMAIL_FROM = 'Environment Sender <env@example.net>';
+    process.env.EMAIL_FROM_NAME = 'Environment Name';
+
+    const from = resolveFromAddress(buildSettings(), 'Acme Services');
+
+    expect(from).toEqual({ email: 'env@acme.com', name: 'Acme Services' });
+  });
+
+  it('applies a per-message display name without changing the resolved address', () => {
+    const settings = buildSettings({
+      providerConfigs: [{
+        providerId: 'smtp-provider',
+        providerType: 'smtp',
+        isEnabled: true,
+        config: { from: 'notifications@example.net' },
+      }],
+    });
+
+    const from = resolveMessageFrom(settings, {
+      fromName: 'Acme Services Portal',
+      resolvedTenantCompanyName: 'Acme Services',
+    });
+
+    expect(from).toEqual({ email: 'notifications@acme.com', name: 'Acme Services Portal' });
+  });
+
+  it('preserves an explicit ticket identity unless a name override is supplied', () => {
+    const settings = buildSettings();
+
+    expect(resolveMessageFrom(settings, {
+      from: { email: 'support@acme.com', name: 'Acme Support' },
+    })).toEqual({ email: 'support@acme.com', name: 'Acme Support' });
+
+    expect(resolveMessageFrom(settings, {
+      from: { email: 'support@acme.com', name: 'Acme Support' },
+      fromName: 'Escalations',
+    })).toEqual({ email: 'support@acme.com', name: 'Escalations' });
   });
 });

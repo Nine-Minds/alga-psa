@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { createHash } from 'node:crypto';
 import { tenantDb, getConnection, isTenantSuspended } from '@alga-psa/db';
 import { EmailProviderManager } from './providers/EmailProviderManager';
 import { 
@@ -19,6 +20,11 @@ import { SystemEmailProviderFactory } from './system/SystemEmailProviderFactory'
 import { isEnterprise } from './features';
 import { DelayedEmailQueue } from './DelayedEmailQueue';
 import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
+import {
+  applyFromNameOverride,
+  resolveDefaultFromAddress,
+  resolveTenantCompanyName,
+} from './senderIdentity';
 
 export interface SendEmailParams {
   tenantId: string;
@@ -46,106 +52,10 @@ export interface EmailSettingsValidation {
   settings?: TenantEmailSettings;
 }
 
-// Pure from-address helpers shared by the instance sender path and any caller
-// that needs the tenant's resolved default sender identity without re-deriving
-// this logic (e.g. the ticketing subscriber layering a configured display name
-// on top of the default address).
-function parseEmailAddress(value?: string | EmailAddress | null): EmailAddress | null {
-  if (!value) {
-    return null;
-  }
-
-  if (typeof value === 'object') {
-    if (!value.email) {
-      return null;
-    }
-    return { email: value.email, name: value.name };
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  const match = trimmed.match(/^(?:"?([^"]*)"?\s*)?<([^>]+)>$/);
-  if (match) {
-    const name = match[1]?.trim();
-    return {
-      email: match[2].trim(),
-      name: name || undefined
-    };
-  }
-
-  return { email: trimmed };
-}
-
-function extractEmailParts(email?: string | null): { localPart: string; domain?: string } | null {
-  if (!email) {
-    return null;
-  }
-
-  const [localPart, domain] = email.split('@');
-  if (!domain) {
-    return { localPart: localPart || email };
-  }
-
-  return { localPart, domain };
-}
-
-function sanitizeLocalPart(localPart?: string | null): string {
-  if (!localPart) {
-    return 'notifications';
-  }
-
-  const normalized = localPart
-    .toLowerCase()
-    .replace(/[^a-z0-9._+-]/g, '');
-
-  return normalized || 'notifications';
-}
-
-function sanitizeDomain(domain?: string | null): string | null {
-  if (!domain) {
-    return null;
-  }
-
-  const normalized = domain.trim().replace(/^@/, '').toLowerCase();
-  return normalized || null;
-}
-
-function extractDomainFromAddress(address?: string): string | null {
-  if (!address) {
-    return null;
-  }
-
-  const parsed = parseEmailAddress(address);
-  if (!parsed?.email) {
-    return null;
-  }
-
-  const parts = extractEmailParts(parsed.email);
-  return parts?.domain || null;
-}
-
-function getProviderConfiguredAddress(settings?: TenantEmailSettings | null): EmailAddress | null {
-  const configs = settings?.providerConfigs || [];
-  const enabledConfig = configs.find(config => config.isEnabled && config.config);
-
-  if (!enabledConfig) {
-    return null;
-  }
-
-  const configFrom = enabledConfig.config.from;
-  const configFromName = enabledConfig.config.fromName || enabledConfig.config.from_name;
-  if (typeof configFrom === 'string' && configFrom.trim().length > 0) {
-    const parsed = parseEmailAddress(configFrom.trim()) || { email: configFrom.trim() };
-    if (!parsed.name && typeof configFromName === 'string' && configFromName.trim().length > 0) {
-      parsed.name = configFromName.trim();
-    }
-    return parsed;
-  }
-
-  return null;
+interface TenantProviderSnapshot {
+  emailProvider: IEmailProvider | null;
+  providerInitError: string | null;
+  fromAddress: EmailAddress;
 }
 
 export class TenantEmailService extends BaseEmailService {
@@ -153,6 +63,9 @@ export class TenantEmailService extends BaseEmailService {
   private tenantId: string;
   private providerManager: EmailProviderManager | null = null;
   private tenantSettings: TenantEmailSettings | null = null;
+  private tenantSettingsLoaded = false;
+  private providerSettingsFingerprint: string | null = null;
+  private providerStateQueue: Promise<void> = Promise.resolve();
 
   private constructor(tenantId: string) {
     super();
@@ -167,6 +80,24 @@ export class TenantEmailService extends BaseEmailService {
       TenantEmailService.instances.set(tenantId, new TenantEmailService(tenantId));
     }
     return TenantEmailService.instances.get(tenantId)!;
+  }
+
+  /**
+   * Clear one tenant's process-local provider state after an email settings
+   * save. The instance itself is reset before it is evicted so callers holding
+   * an older reference cannot continue using the prior credentials.
+   */
+  public static async invalidateTenantSettings(tenantId: string): Promise<void> {
+    const instance = TenantEmailService.instances.get(tenantId);
+    if (!instance) return;
+
+    await instance.withProviderStateLock(async () => {
+      instance.resetProviderState();
+    });
+
+    if (TenantEmailService.instances.get(tenantId) === instance) {
+      TenantEmailService.instances.delete(tenantId);
+    }
   }
 
   protected getServiceName(): string {
@@ -187,7 +118,11 @@ export class TenantEmailService extends BaseEmailService {
     // job/event gates. System emails (win-back, reactivation) go through
     // SystemEmailService and are unaffected. isTenantSuspended fails open.
     const suspensionKnex = await getConnection(this.tenantId);
-    if (await isTenantSuspended(suspensionKnex, this.tenantId)) {
+    const [tenantSuspended, resolvedTenantCompanyName] = await Promise.all([
+      isTenantSuspended(suspensionKnex, this.tenantId),
+      resolveTenantCompanyName(suspensionKnex, this.tenantId),
+    ]);
+    if (tenantSuspended) {
       logger.info(`[${this.getServiceName()}] Dropping email for suspended tenant`, {
         tenantId: this.tenantId,
         to: params.to,
@@ -259,7 +194,21 @@ export class TenantEmailService extends BaseEmailService {
       };
     }
 
-    return super.sendEmail(params);
+    // Settings actions invalidate this cache in-process for an immediate
+    // refresh. The database check on every actual send also covers saves made
+    // by another server process and direct settings updates outside that action.
+    const providerSnapshot = await this.refreshProviderState(
+      suspensionKnex,
+      resolvedTenantCompanyName
+    );
+
+    return super.sendEmail({
+      ...params,
+      resolvedTenantCompanyName,
+      resolvedTenantFromAddress: providerSnapshot.fromAddress,
+      resolvedEmailProvider: providerSnapshot.emailProvider,
+      resolvedProviderInitError: providerSnapshot.providerInitError,
+    });
   }
 
   /**
@@ -301,10 +250,16 @@ export class TenantEmailService extends BaseEmailService {
 
   protected async getEmailProvider(): Promise<IEmailProvider | null> {
     if (!this.providerManager) {
-      let settings: TenantEmailSettings | null = null;
+      let settings: TenantEmailSettings | null = this.tenantSettingsLoaded
+        ? this.tenantSettings
+        : null;
       try {
-        const knex = await getConnection(this.tenantId);
-        settings = await TenantEmailService.getTenantEmailSettings(this.tenantId, knex);
+        if (!this.tenantSettingsLoaded) {
+          const knex = await getConnection(this.tenantId);
+          settings = await TenantEmailService.getTenantEmailSettings(this.tenantId, knex);
+          this.tenantSettings = settings;
+          this.tenantSettingsLoaded = true;
+        }
 
         if (settings) {
           this.providerManager = new EmailProviderManager();
@@ -370,16 +325,25 @@ export class TenantEmailService extends BaseEmailService {
   }
 
   protected getFromAddress(params?: BaseEmailParams): EmailAddress | string {
-    if (params?.from) {
-      return params.from as EmailAddress | string;
-    }
-
-    const resolved = this.buildTenantFromAddress();
-    if (resolved.name) {
-      return `${resolved.name} <${resolved.email}>`;
-    }
-    return resolved.email;
+    const resolved = params?.from
+      ? params.from as EmailAddress | string
+      : params?.resolvedTenantFromAddress
+        ?? this.buildTenantFromAddress(params?.resolvedTenantCompanyName);
+    return applyFromNameOverride(resolved, params?.fromName);
   }
+
+  public override async isConfigured(): Promise<boolean> {
+    const knex = await getConnection(this.tenantId);
+    const providerSnapshot = await this.refreshProviderState(knex);
+    return providerSnapshot.emailProvider !== null;
+  }
+
+  public override async getInitializationError(): Promise<string | null> {
+    const knex = await getConnection(this.tenantId);
+    const providerSnapshot = await this.refreshProviderState(knex);
+    return providerSnapshot.providerInitError;
+  }
+
   /**
    * Get tenant email settings from database
    * This is the centralized method that should be used across the application
@@ -389,15 +353,7 @@ export class TenantEmailService extends BaseEmailService {
     knex: Knex | Knex.Transaction
   ): Promise<TenantEmailSettings | null> {
     try {
-      const settings = await tenantDb(knex, tenantId).table('tenant_email_settings')
-        .first();
-      
-      if (!settings) {
-        logger.warn(`[TenantEmailService] No email settings found for tenant ${tenantId}`);
-        return null;
-      }
-      
-      return TenantEmailService.normalizeSettingsRecord(tenantId, settings);
+      return await TenantEmailService.loadTenantEmailSettings(tenantId, knex);
     } catch (error) {
       logger.error(`[TenantEmailService] Error fetching tenant email settings:`, error);
       return null;
@@ -447,12 +403,11 @@ export class TenantEmailService extends BaseEmailService {
       return { success: true, message: `${providerLabel} connection verified.` };
     }
 
-    const fromEmail =
-      (typeof enabled.config?.from === 'string' && enabled.config.from.trim()) ||
-      (settings.defaultFromDomain ? `noreply@${settings.defaultFromDomain}` : 'noreply@localhost');
+    const tenantCompanyName = await resolveTenantCompanyName(knex, tenantId);
+    const from = resolveDefaultFromAddress(settings, tenantCompanyName);
 
     const message: EmailMessage = {
-      from: { email: fromEmail, name: 'Alga PSA' },
+      from,
       to: [{ email: toAddress }],
       subject: 'Alga PSA outbound email test',
       text: 'This is a test message confirming your outbound email configuration works.',
@@ -481,7 +436,6 @@ export class TenantEmailService extends BaseEmailService {
   static async sendEmail(params: SendEmailParams): Promise<EmailSendResult> {
     const { tenantId } = params;
     const service = TenantEmailService.getInstance(tenantId);
-    await service.initialize();
     
     // Convert params to BaseEmailParams format
     const baseParams: BaseEmailParams = {
@@ -493,6 +447,7 @@ export class TenantEmailService extends BaseEmailService {
       templateProcessor: params.templateProcessor,
       templateData: params.templateData,
       from: params.from,
+      fromName: params.fromName,
       tenantId,
       locale: params.locale
     };
@@ -626,8 +581,103 @@ export class TenantEmailService extends BaseEmailService {
     return [];
   }
 
-  private buildTenantFromAddress(): EmailAddress {
-    return TenantEmailService.getDefaultFromAddress(this.tenantSettings);
+  private buildTenantFromAddress(tenantCompanyName?: string | null): EmailAddress {
+    return TenantEmailService.getDefaultFromAddress(this.tenantSettings, tenantCompanyName);
+  }
+
+  private async withProviderStateLock<T>(operation: () => Promise<T>): Promise<T> {
+    const previous = this.providerStateQueue;
+    let release!: () => void;
+    this.providerStateQueue = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      release();
+    }
+  }
+
+  private async refreshProviderState(
+    knex: Knex | Knex.Transaction,
+    tenantCompanyName?: string | null
+  ): Promise<TenantProviderSnapshot> {
+    return this.withProviderStateLock(async () => {
+      // Unlike the public compatibility helper, this strict read does not turn
+      // a transient database error into "no settings" and accidentally replace
+      // a working tenant provider with the system fallback.
+      const settings = await TenantEmailService.loadTenantEmailSettings(this.tenantId, knex);
+      const fingerprint = TenantEmailService.getProviderSettingsFingerprint(settings);
+
+      if (this.initialized && fingerprint === this.providerSettingsFingerprint) {
+        // Retain the freshly-normalized object even when its provider-relevant
+        // values are unchanged so From resolution never depends on old state.
+        this.tenantSettings = settings;
+        this.tenantSettingsLoaded = true;
+        return {
+          emailProvider: this.emailProvider,
+          providerInitError: this.providerInitError,
+          fromAddress: this.buildTenantFromAddress(tenantCompanyName),
+        };
+      }
+
+      this.resetProviderState();
+      this.tenantSettings = settings;
+      this.tenantSettingsLoaded = true;
+      await this.initialize();
+      this.providerSettingsFingerprint = fingerprint;
+      return {
+        emailProvider: this.emailProvider,
+        providerInitError: this.providerInitError,
+        fromAddress: this.buildTenantFromAddress(tenantCompanyName),
+      };
+    });
+  }
+
+  private resetProviderState(): void {
+    this.initialized = false;
+    this.emailProvider = null;
+    this.providerInitError = null;
+    this.providerManager = null;
+    this.tenantSettings = null;
+    this.tenantSettingsLoaded = false;
+    this.providerSettingsFingerprint = null;
+  }
+
+  private static getProviderSettingsFingerprint(settings: TenantEmailSettings | null): string {
+    const providerState = {
+      defaultFromDomain: settings?.defaultFromDomain ?? null,
+      emailProvider: settings?.emailProvider ?? null,
+      providerConfigs: settings?.providerConfigs ?? [],
+      // Every settings action advances updatedAt. Including it makes a save an
+      // explicit cross-process refresh signal even if the submitted provider
+      // values happen to be identical to the prior values.
+      updatedAt: settings?.updatedAt ?? null,
+      // Enterprise tenant mail can fall back directly to the system provider,
+      // so its environment-backed credentials are part of this snapshot too.
+      systemProvider: isEnterprise
+        ? SystemEmailProviderFactory.getConfigFingerprint()
+        : null,
+    };
+
+    return createHash('sha256').update(JSON.stringify(providerState)).digest('hex');
+  }
+
+  private static async loadTenantEmailSettings(
+    tenantId: string,
+    knex: Knex | Knex.Transaction
+  ): Promise<TenantEmailSettings | null> {
+    const settings = await tenantDb(knex, tenantId).table('tenant_email_settings')
+      .first();
+
+    if (!settings) {
+      logger.warn(`[TenantEmailService] No email settings found for tenant ${tenantId}`);
+      return null;
+    }
+
+    return TenantEmailService.normalizeSettingsRecord(tenantId, settings);
   }
 
   /**
@@ -638,25 +688,10 @@ export class TenantEmailService extends BaseEmailService {
    * subscriber layering a tenant display name onto the default address — reuse
    * this logic instead of re-deriving it.
    */
-  static getDefaultFromAddress(settings?: TenantEmailSettings | null): EmailAddress {
-    const providerAddress = getProviderConfiguredAddress(settings);
-    const envAddress = parseEmailAddress(process.env.EMAIL_FROM);
-    const fallbackName = providerAddress?.name || envAddress?.name || process.env.EMAIL_FROM_NAME || 'Alga PSA Notifications';
-    const fallbackEmail = providerAddress?.email || envAddress?.email || 'notifications@example.com';
-
-    const baseEmail = providerAddress?.email || envAddress?.email || fallbackEmail;
-    const emailParts = extractEmailParts(baseEmail);
-    const localPart = sanitizeLocalPart(emailParts?.localPart);
-
-    const configuredDomain = sanitizeDomain(settings?.defaultFromDomain);
-    const fallbackDomain = sanitizeDomain(emailParts?.domain) || sanitizeDomain(extractDomainFromAddress(fallbackEmail));
-    const targetDomain = configuredDomain || fallbackDomain;
-
-    const email = targetDomain ? `${localPart}@${targetDomain}` : baseEmail;
-
-    return {
-      email,
-      name: fallbackName
-    };
+  static getDefaultFromAddress(
+    settings?: TenantEmailSettings | null,
+    tenantCompanyName?: string | null
+  ): EmailAddress {
+    return resolveDefaultFromAddress(settings, tenantCompanyName);
   }
 }
