@@ -809,6 +809,7 @@
         "header": "Gestion des priorités :",
         "description": "Créez des priorités personnalisées pour votre organisation ou importez depuis des modèles standard.",
         "itilNote": "Les priorités standard ITIL ne peuvent pas être modifiées ou supprimées.",
+        "itilRemovableNote": "Les priorités standard ITIL ne peuvent pas être modifiées, mais elles peuvent être supprimées dès qu’aucun tableau n’utilise les priorités ITIL.",
         "nonItilNote": "Toutes les priorités peuvent être modifiées ou supprimées selon votre flux de travail."
       },
       "table": {

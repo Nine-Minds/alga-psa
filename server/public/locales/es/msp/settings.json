@@ -809,6 +809,7 @@
         "header": "Gestión de prioridades:",
         "description": "Cree prioridades personalizadas para su organización o importe desde plantillas estándar.",
         "itilNote": "Las prioridades estándar ITIL no se pueden editar ni eliminar.",
+        "itilRemovableNote": "Las prioridades estándar ITIL no se pueden editar, pero se pueden eliminar ahora que ningún tablero usa prioridades ITIL.",
         "nonItilNote": "Todas las prioridades se pueden editar o eliminar para adaptarse a su flujo de trabajo."
       },
       "table": {
