@@ -67,7 +67,8 @@ describe('microsoft consumer runtime resolution contracts', () => {
     expect(sharedResolverSource).toContain('resolveMicrosoftBindingCandidateProfile(db, tenant, secretProvider, consumerType)');
     expect(sharedResolverSource).not.toContain("from '../actions/integrations/microsoftActions'");
 
-    expect(emailOauthActionSource).toContain('resolveMicrosoftConsumerProfileConfig(tenant, \'email\')');
+    expect(emailOauthActionSource).toContain("resolveMicrosoftConsumerProfileConfig(tenant, 'email', {");
+    expect(emailOauthActionSource).toContain("credentialPreference: 'tenant'");
     expect(emailOauthActionSource).not.toContain("getTenantSecret(tenant, 'microsoft_client_id')");
     expect(emailOauthActionSource).not.toContain('process.env.MICROSOFT_CLIENT_ID');
     expect(emailProviderActionSource).toContain('preserveIssuingApp');
