@@ -290,7 +290,7 @@
         "authorizeRequiresValid": "Por favor complete todos los campos requeridos antes de autorizar",
         "oauthInitiateFailed": "No se pudo iniciar OAuth",
         "popupBlocked": "No se pudo abrir la ventana emergente de OAuth. Permita ventanas emergentes para este sitio.",
-        "closedEarly": "La ventana de autorización se cerró antes de completar. Por favor inténtalo de nuevo.",
+        "closedEarly": "La ventana de autorización se cerró antes de completar. Por favor inténtelo de nuevo.",
         "authorizationFailed": "Autorización fallida",
         "senderDisplayNameInvalid": "El nombre para mostrar no puede contener comillas, corchetes angulares ni saltos de línea"
       },
@@ -310,7 +310,7 @@
         "providerNameHelp": "Nombre interno utilizado para identificar esta configuración. No se muestra en los correos salientes.",
         "senderDisplayNameLabel": "Nombre del remitente",
         "senderDisplayNamePlaceholder": "p. ej., Soporte Acme",
-        "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjalo en blanco para usar el nombre del tablero del ticket."
+        "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjelo en blanco para usar el nombre del tablero del ticket."
       },
       "oauth": {
         "sectionTitle": "Configuración de Microsoft OAuth",
@@ -367,7 +367,7 @@
         "providerNameHelp": "Nombre interno utilizado para identificar esta configuración. No se muestra en los correos salientes.",
         "senderDisplayNameLabel": "Nombre del remitente",
         "senderDisplayNamePlaceholder": "p. ej., Soporte Acme",
-        "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjalo en blanco para usar el nombre del tablero del ticket."
+        "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjelo en blanco para usar el nombre del tablero del ticket."
       },
       "oauth": {
         "sectionTitle": "OAuth de Google",
@@ -381,7 +381,7 @@
         "requiredDescriptionUpdate": "Debe completar la autorización OAuth anterior antes de actualizar el proveedor para habilitar las notificaciones de Gmail.",
         "stepTitle": "Paso 1: Autorización OAuth",
         "stepDescription": "Complete el flujo de OAuth para otorgar acceso a Gmail",
-        "buttonSuccessSaving": "¡Autorizado exitosamente! Guardando tu configuración..."
+        "buttonSuccessSaving": "¡Autorizado exitosamente! Guardando su configuración..."
       },
       "advanced": {
         "title": "Configuración avanzada",
@@ -417,7 +417,7 @@
         "providerNameHelp": "Nombre interno utilizado para identificar esta configuración. No se muestra en los correos salientes.",
         "senderDisplayName": "Nombre del remitente",
         "senderDisplayNamePlaceholder": "p. ej., Soporte Acme",
-        "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjalo en blanco para usar el nombre del tablero del ticket."
+        "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjelo en blanco para usar el nombre del tablero del ticket."
       },
       "auth": {
         "title": "Autenticación",
@@ -569,7 +569,7 @@
       "providerNameHelp": "Nombre interno utilizado para identificar esta configuración. No se muestra en los correos salientes.",
       "senderDisplayName": "Nombre del remitente",
       "senderDisplayNamePlaceholder": "p. ej., Soporte Acme",
-      "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjalo en blanco para usar el nombre del tablero del ticket."
+      "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjelo en blanco para usar el nombre del tablero del ticket."
     },
     "authOptions": {
       "password": "Contraseña",
@@ -634,7 +634,7 @@
       "providerNameHelp": "Nombre interno utilizado para identificar esta configuración. No se muestra en los correos salientes.",
       "senderDisplayNameLabel": "Nombre del remitente",
       "senderDisplayNamePlaceholder": "p. ej., Soporte Acme",
-      "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjalo en blanco para usar el nombre del tablero del ticket."
+      "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjelo en blanco para usar el nombre del tablero del ticket."
     },
     "oauth": {
       "connectionTitle": "Conexión con Microsoft 365",
@@ -691,7 +691,7 @@
       "description": "Conecte su cuenta de Gmail para habilitar el procesamiento de correo electrónico",
       "connectionTitle": "Conexión con Gmail",
       "descriptionIdle": "Autorizar el acceso a su cuenta de Gmail",
-      "descriptionSuccess": "¡Conectado correctamente! Guardando tu configuración...",
+      "descriptionSuccess": "¡Conectado correctamente! Guardando su configuración...",
       "buttonIdle": "Conectar Gmail",
       "buttonAuthorizing": "Conectando...",
       "buttonSuccess": "Conectado"
@@ -811,7 +811,7 @@
         "saveButton": "Guardar configuración SMTP",
         "test": {
           "title": "Probar correo saliente",
-          "description": "Guarda la configuración actual y luego verifica la conexión con el proveedor. Introduzca una dirección para enviar también un mensaje de prueba.",
+          "description": "Guarde la configuración actual y luego verifique la conexión con el proveedor. Introduzca una dirección para enviar también un mensaje de prueba.",
           "recipientLabel": "Enviar prueba a (opcional)",
           "recipientPlaceholder": "tu@ejemplo.com",
           "testingButton": "Probando...",

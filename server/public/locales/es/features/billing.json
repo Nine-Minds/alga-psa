@@ -10,7 +10,7 @@
   "nextInvoice": "Próxima factura",
   "viewContractLineDetails": "Ver detalles de la línea de contrato",
   "viewAllInvoices": "Ver todas las facturas",
-  "failedToLoad": "No se pudieron cargar las facturas. Inténtalo de nuevo.",
+  "failedToLoad": "No se pudieron cargar las facturas. Inténtelo de nuevo.",
   "externalCreditNotice": "Su cuenta tiene un saldo a favor registrado en nuestro equipo de facturación. Es posible que las facturas recientes aparezcan como abiertas hasta que se aplique ese crédito.",
   "invoices": {
     "locations": {
@@ -45,9 +45,9 @@
     "draft": "Borrador",
     "finalized": "Finalizada",
     "sendEmail": "Enviar por correo",
-    "sendEmailFailed": "No se pudo enviar la factura por correo. Inténtalo de nuevo.",
-    "loadFailed": "No se pudieron cargar los detalles de la factura. Inténtalo de nuevo.",
-    "downloadFailed": "No se pudo descargar el PDF. Inténtalo de nuevo.",
+    "sendEmailFailed": "No se pudo enviar la factura por correo. Inténtelo de nuevo.",
+    "loadFailed": "No se pudieron cargar los detalles de la factura. Inténtelo de nuevo.",
+    "downloadFailed": "No se pudo descargar el PDF. Inténtelo de nuevo.",
     "download": "Descargar PDF",
     "view": "Ver detalles",
     "pay": "Pagar ahora",
@@ -122,13 +122,13 @@
     "usage": "Uso",
     "overage": "Exceso",
     "noContractLineTitle": "No hay planes de horas disponibles",
-    "noContractLineDescription": "No existen planes de horas activos para tu cuenta."
+    "noContractLineDescription": "No existen planes de horas activos para su cuenta."
   },
   "messages": {
     "noInvoices": "No se encontraron facturas",
     "loadingInvoices": "Cargando facturas...",
     "paymentSuccessful": "Pago procesado correctamente",
-    "paymentFailed": "El pago falló. Inténtalo de nuevo."
+    "paymentFailed": "El pago falló. Inténtelo de nuevo."
   },
   "quotes": {
     "pendingQuotes": "Cotizaciones pendientes",

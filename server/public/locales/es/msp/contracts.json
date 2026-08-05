@@ -204,7 +204,7 @@
       },
       "leave": {
         "confirm": "Salir de la página",
-        "description": "Tienes cambios sin guardar. ¿Dejar esta página sin guardar?",
+        "description": "Tiene cambios sin guardar. ¿Dejar esta página sin guardar?",
         "title": "Cambios no guardados"
       },
       "unsaved": {
@@ -1136,7 +1136,7 @@
       "poRequiredCount": "{{count}} asignaciones requieren OC",
       "noPoRequirements": "No hay requisitos de OC registrados.",
       "noClientContracts": "Ningún contrato de cliente está utilizando esta plantilla actualmente.",
-      "reviewBelow": "Revisa la lista completa de asignaciones en la sección de detalles a continuación."
+      "reviewBelow": "Revise la lista completa de asignaciones en la sección de detalles a continuación."
     },
     "assignmentDetails": {
       "title": "Detalles de la asignación",

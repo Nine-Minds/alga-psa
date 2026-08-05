@@ -341,7 +341,7 @@
           "workflowHelp": "Wybierz workflow do uruchomienia z znormalizowaną kopertą webhooka.",
           "workflow": "Workflow",
           "workflowPlaceholder": "Wybierz workflow",
-          "workflowEmpty": "Brak widocznych workflow w tym najemcy. Opublikuj lub odkryj workflow, aby użyć handlera workflow.",
+          "workflowEmpty": "Brak widocznych workflow w tej organizacji. Opublikuj lub odkryj workflow, aby użyć handlera workflow.",
           "envelopeTitle": "Koperta wejściowa workflow",
           "fieldTypes": {
             "string": "tekst",

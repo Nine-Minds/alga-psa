@@ -26,7 +26,7 @@
     "loading": "Cargando...",
     "errors": {
       "loadPermissions": "No se pudieron cargar los permisos de usuario",
-      "forbidden": "No tienes permiso para ver este programa."
+      "forbidden": "No tiene permiso para ver este programa."
     }
   },
   "calendar": {
@@ -47,7 +47,7 @@
       "overlay": "Cargando..."
     },
     "errors": {
-      "validateDeletion": "No se pudo validar la eliminación. Por favor inténtalo de nuevo.",
+      "validateDeletion": "No se pudo validar la eliminación. Por favor inténtelo de nuevo.",
       "loadPermissions": "No se pudieron cargar los permisos.",
       "loadCurrentUser": "No se pudo cargar el usuario actual.",
       "unknown": "Se produjo un error desconocido",
@@ -110,7 +110,7 @@
       },
       "optionsDialog": {
         "title": "Opciones de impresión",
-        "description": "Elige qué columnas incluir al imprimir el calendario."
+        "description": "Elija qué columnas incluir al imprimir el calendario."
       }
     }
   },
@@ -280,7 +280,7 @@
       },
       "teamSelect": {
         "label": "Seleccionar equipo",
-        "placeholder": "Selecciona un equipo"
+        "placeholder": "Seleccione un equipo"
       }
     },
     "feedback": {
@@ -477,15 +477,15 @@
     "teamsMeetings": {
       "prerequisites": {
         "title": "Requisitos previos de Azure",
-        "description": "Antes de activarlo, concede a la aplicación el permiso OnlineMeetings.ReadWrite.All y crea una Application Access Policy para la cuenta organizadora.",
+        "description": "Antes de activarlo, conceda a la aplicación el permiso OnlineMeetings.ReadWrite.All y cree una Application Access Policy para la cuenta organizadora.",
         "steps": {
           "toggle": "Mostrar pasos de configuración de Azure",
           "step1": {
             "title": "1. Otorgar permiso de aplicación de Graph",
-            "item1": "Abre el centro de administración de Entra → Registros de aplicaciones.",
-            "item2": "Selecciona la aplicación utilizada por la integración de Teams de este inquilino.",
+            "item1": "Abra el centro de administración de Entra → Registros de aplicaciones.",
+            "item2": "Seleccione la aplicación utilizada por la integración de Teams de este inquilino.",
             "item3": "Permisos de API → Agregar → Microsoft Graph → Permisos de aplicación.",
-            "item4": "Añade OnlineMeetings.ReadWrite.All y concede el consentimiento de administrador."
+            "item4": "Añada OnlineMeetings.ReadWrite.All y conceda el consentimiento de administrador."
           },
           "step2": {
             "title": "2. Crear una Application Access Policy",
@@ -497,7 +497,7 @@
       "organizer": {
         "title": "Organizador de la reunión",
         "label": "ID de objeto de usuario de Microsoft del organizador de reunión predeterminado",
-        "help": "Las citas aprobadas crean reuniones de Teams como este usuario de Microsoft. Usa el ID de objeto de Entra; los UPN pueden devolver 404 desde Microsoft Graph onlineMeetings.",
+        "help": "Las citas aprobadas crean reuniones de Teams como este usuario de Microsoft. Use el ID de objeto de Entra; los UPN pueden devolver 404 desde Microsoft Graph onlineMeetings.",
         "placeholder": "00000000-0000-0000-0000-000000000000"
       },
       "actions": {
@@ -644,15 +644,15 @@
       }
     },
     "delete": {
-      "validationFailed": "No se pudo validar la eliminación. Por favor inténtalo de nuevo.",
+      "validationFailed": "No se pudo validar la eliminación. Por favor inténtelo de nuevo.",
       "entityFallback": "esta entrada de horario",
       "scopeDialog": {
         "title": "Eliminar entrada de programación",
         "message": "Seleccione qué eventos eliminar:",
         "confirm": "Continuar"
       },
-      "confirm": "¿Seguro que quieres eliminar esta entrada del calendario? Esta acción no se puede deshacer.",
-      "confirmWithTeamsWarning": "¿Seguro que quieres eliminar esta entrada del calendario? Esta acción no se puede deshacer. También se eliminará la reunión de Microsoft Teams."
+      "confirm": "¿Seguro que quiere eliminar esta entrada del calendario? Esta acción no se puede deshacer.",
+      "confirmWithTeamsWarning": "¿Seguro que quiere eliminar esta entrada del calendario? Esta acción no se puede deshacer. También se eliminará la reunión de Microsoft Teams."
     },
     "scopeOptions": {
       "single": "Sólo este evento",

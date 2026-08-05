@@ -720,7 +720,7 @@
     "searchPlaceholder": "Cerca software...",
     "appsCount": "{{count}} app",
     "unknownName": "Sconosciuto",
-    "noMatch": "Nessun software corrisponde alla sua ricerca",
+    "noMatch": "Nessun software corrisponde alla tua ricerca",
     "version": "v{{version}}",
     "by": "di {{publisher}}",
     "showingOfApplications": "Visualizzazione di {{shown}} su {{total}} applicazioni",
@@ -744,7 +744,7 @@
     }
   },
   "assetListErrors": {
-    "genericError": "Si è verificato un errore. La preghiamo di riprovare più tardi.",
+    "genericError": "Si è verificato un errore. Riprova più tardi.",
     "assetNotFound": "Asset non trovato"
   },
   "assetEdit": {

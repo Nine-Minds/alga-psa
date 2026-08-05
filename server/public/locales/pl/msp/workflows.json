@@ -70,7 +70,7 @@
       "runId": "ID uruchomienia",
       "workflow": "Workflow",
       "version": "Wersja",
-      "tenant": "Dzierżawca",
+      "tenant": "Organizacja",
       "triggerPayload": "Ładunek wyzwalacza",
       "status": "Status",
       "started": "Rozpoczęto",
@@ -346,9 +346,9 @@
       "loadingEvents": "Wczytywanie zdarzeń...",
       "selectEventType": "Wybierz typ zdarzenia",
       "systemBadge": "System",
-      "tenantBadge": "Dzierżawca",
+      "tenantBadge": "Organizacja",
       "systemEvent": "Zdarzenie systemowe",
-      "tenantEvent": "Zdarzenie dzierżawcy",
+      "tenantEvent": "Zdarzenie organizacji",
       "uncategorized": "Bez kategorii"
     },
     "fields": {
@@ -1749,7 +1749,7 @@
         "runId": "Identyfikator uruchomienia",
         "started": "Rozpoczęto",
         "duration": "Czas trwania",
-        "tenant": "Dzierżawca",
+        "tenant": "Organizacja",
         "trigger": "Wyzwalacz",
         "eventType": "Typ zdarzenia",
         "scheduleState": "Stan harmonogramu",
@@ -2005,19 +2005,19 @@
         "unavailableSchemaRef": "Wybrany workflow używa niedostępnej referencji schematu ładunku: {{schemaRef}}."
       },
       "calendarSource": {
-        "tenantDefault": "Domyślne godziny robocze dzierżawcy",
-        "tenantDefaultMissing": "Domyślne godziny robocze dzierżawcy (nieskonfigurowane)",
-        "tenantDefaultHint": "Proszę najpierw ustawić domyślny harmonogram godzin roboczych dzierżawcy lub wybrać konkretny harmonogram.",
+        "tenantDefault": "Domyślne godziny robocze organizacji",
+        "tenantDefaultMissing": "Domyślne godziny robocze organizacji (nieskonfigurowane)",
+        "tenantDefaultHint": "Najpierw ustaw domyślny harmonogram godzin roboczych organizacji lub wybierz konkretny harmonogram.",
         "specific": "Konkretny harmonogram godzin roboczych",
         "specificHint": "Proszę najpierw utworzyć harmonogram godzin roboczych.",
-        "tenantDefaultMissingDescription": "Nie skonfigurowano jeszcze domyślnego harmonogramu godzin roboczych dzierżawcy. Proszę wybrać konkretny harmonogram godzin roboczych lub najpierw ustawić wartość domyślną dzierżawcy.",
+        "tenantDefaultMissingDescription": "Nie skonfigurowano jeszcze domyślnego harmonogramu godzin roboczych organizacji. Wybierz konkretny harmonogram godzin roboczych lub najpierw ustaw domyślny harmonogram godzin roboczych organizacji.",
         "holidaysNote": "Święta są zawsze traktowane jako dni nierobocze."
       },
       "businessHours": {
         "defaultSuffix": " (Domyślne)",
         "noneConfigured": "Nie skonfigurowano jeszcze żadnych harmonogramów godzin roboczych.",
-        "usingTenantDefault": "Używa domyślnego harmonogramu godzin roboczych dzierżawcy.",
-        "noTenantDefault": "Nie skonfigurowano jeszcze domyślnego harmonogramu godzin roboczych dzierżawcy."
+        "usingTenantDefault": "Używa domyślnego harmonogramu godzin roboczych organizacji.",
+        "noTenantDefault": "Nie skonfigurowano jeszcze domyślnego harmonogramu godzin roboczych organizacji."
       },
       "recurring": {
         "title": "Harmonogram cykliczny",

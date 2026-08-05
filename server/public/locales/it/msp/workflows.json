@@ -96,13 +96,13 @@
     },
     "toasts": {
       "loadRunsFailed": "Impossibile caricare le esecuzioni del workflow",
-      "selectWorkflowForLatestRun": "Selezioni un workflow per vederne l’ultima esecuzione.",
+      "selectWorkflowForLatestRun": "Seleziona un workflow per vederne l’ultima esecuzione.",
       "noRunsFoundForWorkflow": "Nessuna esecuzione trovata per quel workflow.",
       "loadLatestRunFailed": "Impossibile caricare l’ultima esecuzione",
-      "selectWorkflowToRun": "Selezioni un workflow da eseguire.",
+      "selectWorkflowToRun": "Seleziona un workflow da eseguire.",
       "exportReady": "Esportazione esecuzione pronta",
       "exportFailed": "Impossibile esportare le esecuzioni",
-      "selectRunsForBulkAction": "Selezioni le esecuzioni per eseguire questa azione.",
+      "selectRunsForBulkAction": "Seleziona le esecuzioni per eseguire questa azione.",
       "bulkReasonTooShort": "Il motivo deve contenere almeno 3 caratteri.",
       "noEligibleRuns": "Nessuna delle esecuzioni selezionate è idonea per quell’azione.",
       "bulkCancelFailedCount": "Impossibile annullare {{count}} esecuzione/i.",
@@ -339,12 +339,12 @@
     },
     "eventCatalog": {
       "title": "Catalogo eventi",
-      "description": "Scelga un tipo di evento per inizializzare gli schemi del payload.",
+      "description": "Scegli un tipo di evento per inizializzare gli schemi del payload.",
       "searchLabel": "Cerca eventi",
       "searchPlaceholder": "Cerca per nome, tipo o categoria",
       "eventTypeLabel": "Tipo di evento",
       "loadingEvents": "Caricamento eventi...",
-      "selectEventType": "Selezioni il tipo di evento",
+      "selectEventType": "Seleziona il tipo di evento",
       "systemBadge": "Sistema",
       "tenantBadge": "Tenant",
       "systemEvent": "Evento di sistema",
@@ -364,8 +364,8 @@
       "booleanTrue": "Vero",
       "booleanFalse": "Falso",
       "mapEntriesTitle": "Voci della mappa",
-      "mapEntriesPrompt": "Inserisca chiave/percorso del campo",
-      "mapEntriesDescription": "Per gli oggetti in stile mappa, aggiunga chiavi e imposti ogni valore.",
+      "mapEntriesPrompt": "Inserisci chiave/percorso del campo",
+      "mapEntriesDescription": "Per gli oggetti in stile mappa, aggiungi chiavi e imposta ogni valore.",
       "mapEntriesEmpty": "Nessuna voce della mappa aggiunta.",
       "noSchema": "Nessuno schema disponibile per generare un modulo."
     },
@@ -390,7 +390,7 @@
       "eventSchema": "Schema evento",
       "schemaRef": "Riferimento schema",
       "schemaRefLabel": "Riferimento schema",
-      "selectSchema": "Selezioni uno schema…",
+      "selectSchema": "Seleziona uno schema…",
       "noSchemasFound": "Nessuno schema trovato",
       "unknownSchemaRef": "Riferimento schema sconosciuto.",
       "useEventSchema": "Usa lo schema dell’evento",
@@ -407,7 +407,7 @@
       "matchIdentity": "I riferimenti dello schema corrispondono; verrà utilizzata la mappatura identità (nessuna mappatura richiesta).",
       "diffWillApply": "I riferimenti dello schema sono diversi ({{eventSchemaRef}} → {{payloadSchemaRef}}); la mappatura del trigger verrà applicata.",
       "diffRequiredMissing": "I riferimenti dello schema sono diversi ({{eventSchemaRef}} → {{payloadSchemaRef}}); la mappatura del trigger è obbligatoria ma non configurata.",
-      "triggerEventDiffers": "Lo schema dell’evento trigger è diverso dallo schema del payload del workflow. Passi a «Schema evento» se desidera inserire un payload dell’evento trigger.",
+      "triggerEventDiffers": "Lo schema dell’evento trigger è diverso dallo schema del payload del workflow. Passa a «Schema evento» se vuoi inserire un payload dell’evento trigger.",
       "eventUnavailable": "Schema evento non disponibile; verrà utilizzato lo schema del workflow.",
       "mapping": {
         "identityOptional": "Mappatura identità (nessuna mappatura richiesta)",
@@ -440,7 +440,7 @@
     "validation": {
       "invalidJson": "JSON non valido",
       "summaryTitle": "Il payload necessita ancora dei campi evento obbligatori prima che questa esecuzione possa iniziare",
-      "summaryDescription": "Compili i campi mancanti qui sotto, passi al generatore di moduli o utilizzi un pulsante di payload di esempio.",
+      "summaryDescription": "Compila i campi mancanti qui sotto, passa al generatore di moduli o usa un pulsante di payload di esempio.",
       "moreErrors": "+{{count}} altri…"
     },
     "sampleEmailBody": "Corpo email di esempio"
@@ -570,7 +570,7 @@
       }
     },
     "states": {
-      "selectWorkflow": "Selezioni un workflow per vedere la cronologia di audit.",
+      "selectWorkflow": "Seleziona un workflow per vedere la cronologia di audit.",
       "empty": "Nessuna voce di audit.",
       "loading": "Caricamento voci di audit..."
     },
@@ -586,11 +586,11 @@
   "designer": {
     "page": {
       "controlPanelTitle": "Pannello di controllo dei workflow",
-      "controlPanelDescription": "Gestisca pianificazioni, esecuzioni, eventi e il catalogo degli eventi.",
+      "controlPanelDescription": "Gestisci pianificazioni, esecuzioni, eventi e il catalogo degli eventi.",
       "designerTitle": "Designer dei workflow",
-      "designerDescription": "Crei e mantenga le automazioni dei workflow.",
+      "designerDescription": "Crea e mantieni le automazioni dei workflow.",
       "editorTitle": "Editor dei workflow",
-      "editorDescription": "Scelga un workflow da modificare o crei un nuovo workflow."
+      "editorDescription": "Scegli un workflow da modificare o creane uno nuovo."
     },
     "controlPanel": {
       "tabs": {
@@ -1152,7 +1152,7 @@
       "created": "Workflow creato",
       "saved": "Workflow salvato",
       "saveFailed": "Impossibile salvare il workflow",
-      "saveBeforePublish": "Salvi il workflow prima di pubblicarlo",
+      "saveBeforePublish": "Salva il workflow prima di pubblicarlo",
       "published": "Workflow pubblicato",
       "publishFailed": "Impossibile pubblicare il workflow",
       "publishValidationErrors": "Pubblicazione non riuscita – correggere gli errori di validazione",
@@ -1248,21 +1248,21 @@
     },
     "dependencyHints": {
       "contact": {
-        "client_id": "Scelga prima un cliente fisso per caricare le opzioni di contatto."
+        "client_id": "Scegli prima un cliente fisso per caricare le opzioni di contatto."
       },
       "client-location": {
-        "client_id": "Scelga prima un cliente fisso per caricare le opzioni di sede."
+        "client_id": "Scegli prima un cliente fisso per caricare le opzioni di sede."
       },
       "ticket-category": {
         "board_id": "Scegli prima una bacheca fissa per caricare le opzioni di categoria."
       },
       "ticket-status": {
         "board_id": "Scegli prima una bacheca fissa per caricare le opzioni di stato.",
-        "ticket_id": "Scelga prima un ticket fisso per caricare le opzioni di stato."
+        "ticket_id": "Scegli prima un ticket fisso per caricare le opzioni di stato."
       },
       "ticket-subcategory": {
         "board_id": "Scegli prima una bacheca fissa per caricare le opzioni di sottocategoria.",
-        "category_id": "Scelga prima una categoria fissa per caricare le opzioni di sottocategoria."
+        "category_id": "Scegli prima una categoria fissa per caricare le opzioni di sottocategoria."
       }
     }
   },
@@ -1343,7 +1343,7 @@
     "notAvailable": "N/D",
     "notFound": "Attività non trovata",
     "retry": "Riprova",
-    "youPronoun": "Lei",
+    "youPronoun": "Tu",
     "noForm": "Nessun modulo disponibile per questa attività.",
     "contextData": "Dati di contesto",
     "responseData": "Dati di risposta",
@@ -1425,7 +1425,7 @@
   },
   "aiSchemaSection": {
     "heading": "Formato risposta AI",
-    "headingDescription": "Scelga cosa deve includere la risposta AI per i passaggi successivi.",
+    "headingDescription": "Scegli cosa deve includere la risposta AI per i passaggi successivi.",
     "modeSimple": "Semplice",
     "modeAdvanced": "Avanzato",
     "addField": "Aggiungi campo",
@@ -1449,7 +1449,7 @@
   },
   "composeText": {
     "heading": "Componi output testuali",
-    "headingDescription": "Crei uno o più output markdown con chiavi di riferimento stabili per i passaggi successivi.",
+    "headingDescription": "Crea uno o più output markdown con chiavi di riferimento stabili per i passaggi successivi.",
     "addOutput": "Aggiungi output",
     "untitled": "Output senza titolo",
     "outputFallback": "uscita {{index}}",
@@ -1459,15 +1459,15 @@
     "outputLabel": "Etichetta output",
     "stableKeyLabel": "Chiave stabile",
     "keyHintSafe": "Chiave sicura per i passaggi successivi",
-    "keyHintInvalid": "Utilizzi solo lettere minuscole, numeri e underscore.",
+    "keyHintInvalid": "Usa solo lettere minuscole, numeri e underscore.",
     "regenerate": "Rigenera",
     "validationHeading": "Validazione",
     "downstreamPathLabel": "Percorso di riferimento per i passaggi successivi",
-    "pathFallback": "Salvi l’output per vedere un percorso di riferimento.",
+    "pathFallback": "Salva l’output per vedere un percorso di riferimento.",
     "copied": "Copiato",
     "copyPath": "Copia percorso",
     "contentHeading": "Componi contenuto",
-    "contentDescription": "Utilizzi una formattazione compatibile con markdown e chip di riferimento del workflow in linea.",
+    "contentDescription": "Usa una formattazione compatibile con markdown e chip di riferimento del workflow in linea.",
     "insertReference": "Inserisci riferimento",
     "insertReferenceHeading": "Inserisci riferimento al workflow",
     "errors": {
@@ -1476,9 +1476,9 @@
   },
   "referenceSelector": {
     "placeholders": {
-      "scope": "Selezioni l’ambito sorgente...",
-      "step": "Selezioni un passaggio...",
-      "field": "Selezioni un campo..."
+      "scope": "Seleziona l’ambito sorgente...",
+      "step": "Seleziona un passaggio...",
+      "field": "Seleziona un campo..."
     }
   },
   "pipeline": {
@@ -1487,14 +1487,14 @@
     "start": "Inizio",
     "insertStepHere": "Inserisci passaggio qui",
     "emptyDisabled": "Nessun passaggio.",
-    "emptySelectPrompt": "Selezioni un passaggio dal pannello per iniziare."
+    "emptySelectPrompt": "Seleziona un passaggio dal pannello per iniziare."
   },
   "expressionEditor": {
     "ariaLabel": "Editor di espressioni",
     "autocompleteAria": "Suggerimenti di completamento automatico delle espressioni",
-    "textAreaPlaceholder": "Inserisca un’espressione JSONata...",
+    "textAreaPlaceholder": "Inserisci un’espressione JSONata...",
     "field": {
-      "placeholder": "Inserisca un’espressione...",
+      "placeholder": "Inserisci un’espressione...",
       "insertFieldPlaceholder": "Inserisci campo"
     }
   },
@@ -1508,7 +1508,7 @@
       "errorContext": "Contesto di errore"
     },
     "vars": {
-      "emptyPrefix": "Nessuna variabile. Utilizzi",
+      "emptyPrefix": "Nessuna variabile. Usa",
       "saveOutput": "Salva output",
       "emptyConjunction": "o un",
       "assignStep": "Assegna",
@@ -1551,7 +1551,7 @@
     "fuzzySuffix": "(approssimato)",
     "removeMapping": "Rimuovi mappatura (Canc/Backspace)",
     "invalidJson": "JSON non valido",
-    "stringPlaceholder": "Inserisca un valore...",
+    "stringPlaceholder": "Inserisci un valore...",
     "aria": {
       "listbox": "Campi di input dell’azione",
       "fieldList": "Elenco dei campi di input dell’azione"
@@ -1570,8 +1570,8 @@
       "setNull": "Imposta null"
     },
     "primitiveList": {
-      "placeholder": "Inserisca un valore per riga o separati da virgola",
-      "helperText": "Utilizzi come separatore ritorno a capo, virgola o punto e virgola."
+      "placeholder": "Inserisci un valore per riga o separati da virgola",
+      "helperText": "Usa come separatore un ritorno a capo, una virgola o un punto e virgola."
     },
     "structuredGroup": {
       "collapseAria": "Comprimi {{title}}",
@@ -1585,7 +1585,7 @@
     },
     "fixedValueDialog": {
       "title": "Modifica {{fieldName}}",
-      "description": "Utilizzi l’editor più grande per contenuti a valore fisso più lunghi.",
+      "description": "Usa l’editor più grande per contenuti a valore fisso più lunghi.",
       "openEditor": "Apri editor",
       "apply": "Applica",
       "cancel": "Annulla"
@@ -1604,7 +1604,7 @@
     }
   },
   "schemaReference": {
-    "selectAction": "Selezioni un’azione per vederne lo schema di input/output",
+    "selectAction": "Seleziona un’azione per vederne lo schema di input/output",
     "viewDetails": "Visualizza dettagli dello schema",
     "hideDetails": "Nascondi dettagli dello schema",
     "inputSchemaTitle": "Schema di input",
@@ -1640,10 +1640,10 @@
   "groupedAction": {
     "groupHeading": "Gruppo",
     "actionLabel": "Azione",
-    "actionPlaceholder": "Selezioni un’azione {{group}}",
+    "actionPlaceholder": "Seleziona un’azione {{group}}",
     "required": {
       "title": "Azione richiesta",
-      "message": "Selezioni un’azione {{group}} prima di configurare gli input o pubblicare questo workflow."
+      "message": "Seleziona un’azione {{group}} prima di configurare gli input o pubblicare questo workflow."
     },
     "tileKind": {
       "core-object": "Principale",
@@ -1681,12 +1681,12 @@
     "errors": {
       "buildFailed": "Impossibile costruire il grafo del workflow.",
       "renderErrorTitle": "Errore di rendering del grafo",
-      "switchToList": "Passi alla vista elenco per continuare la modifica."
+      "switchToList": "Passa alla vista elenco per continuare la modifica."
     },
     "empty": {
-      "readonly": "Selezioni un passaggio dal pannello per iniziare.",
+      "readonly": "Seleziona un passaggio dal pannello per iniziare.",
       "dropFirst": "Rilasci per aggiungere come primo passaggio",
-      "dragPrompt": "Trascini un passaggio dal pannello o ne selezioni uno per iniziare."
+      "dragPrompt": "Trascina un passaggio dal pannello o selezionane uno per iniziare."
     },
     "mapping": {
       "unmappedTitle": "{{count}} campi obbligatori non mappati",
@@ -1768,7 +1768,7 @@
     },
     "stepDetails": {
       "title": "Dettagli passaggio",
-      "empty": "Selezioni un passaggio nella pipeline per esaminare input, output e snapshot.",
+      "empty": "Seleziona un passaggio nella pipeline per esaminare input, output e snapshot.",
       "fields": {
         "step": "Passaggio"
       },
@@ -1886,7 +1886,7 @@
     "heading": {
       "reflectionLabel": "Pianificazioni di workflow",
       "title": "Pianificazioni",
-      "description": "Gestisca le pianificazioni di workflow riutilizzabili e i loro payload salvati."
+      "description": "Gestisci le pianificazioni di workflow riutilizzabili e i relativi payload salvati."
     },
     "actions": {
       "new": "Nuova pianificazione",
@@ -1943,7 +1943,7 @@
       "noEligibleUpcomingRun": "Nessuna esecuzione futura idonea",
       "unknownWorkflow": "Workflow sconosciuto",
       "empty": "Nessuna pianificazione trovata",
-      "emptyDescription": "Crei una pianificazione singola o ricorrente per eseguire un workflow pubblicato con dati di input salvati."
+      "emptyDescription": "Crea una pianificazione singola o ricorrente per eseguire un workflow pubblicato con dati di input salvati."
     },
     "errors": {
       "loadFailed": "Impossibile caricare le pianificazioni.",
@@ -1953,7 +1953,7 @@
     "timezone": {
       "browseAll": "Sfoglia tutti i fusi orari...",
       "custom": "Personalizzato...",
-      "browseHelp": "Scelga dall’elenco completo dei fusi orari IANA supportati.",
+      "browseHelp": "Scegli dall’elenco completo dei fusi orari IANA supportati.",
       "customLabel": "Fuso orario personalizzato",
       "customPlaceholder": "Etc/GMT+5"
     },
@@ -1962,13 +1962,13 @@
         "edit": "Modifica pianificazione",
         "create": "Crea pianificazione"
       },
-      "description": "Configuri tempistica e dati statici del payload per una pianificazione di workflow.",
+      "description": "Configura tempistica e dati statici del payload per una pianificazione di workflow.",
       "states": {
         "loading": "Caricamento dettagli pianificazione…"
       },
       "fields": {
         "workflow": "Workflow",
-        "workflowPlaceholder": "Scelga un workflow",
+        "workflowPlaceholder": "Scegli un workflow",
         "name": "Nome della pianificazione",
         "namePlaceholder": "Sincronizzazione AP di fine mese",
         "triggerType": "Tipo di trigger",
@@ -1981,7 +1981,7 @@
         "nonBusinessDaysOnly": "Solo giorni non lavorativi",
         "calendarSource": "Origine calendario",
         "businessHoursSchedule": "Pianificazione oraria lavorativa",
-        "businessHoursSchedulePlaceholder": "Scelga una pianificazione oraria lavorativa",
+        "businessHoursSchedulePlaceholder": "Scegli una pianificazione oraria lavorativa",
         "frequency": "Frequenza",
         "time": "Tempo",
         "dayOfMonth": "Giorno del mese",
@@ -1996,7 +1996,7 @@
         }
       },
       "eligibility": {
-        "chooseWorkflow": "Scelga un workflow prima di salvare.",
+        "chooseWorkflow": "Scegli un workflow prima di salvare.",
         "unpublished": "Le pianificazioni possono essere create solo per workflow pubblicati.",
         "pinnedOnly": "Le pianificazioni sono supportate solo per workflow con schema del payload bloccato.",
         "noPinnedSchema": "Il workflow selezionato non espone uno schema del payload bloccato.",
@@ -2005,10 +2005,10 @@
       "calendarSource": {
         "tenantDefault": "Orario lavorativo predefinito del tenant",
         "tenantDefaultMissing": "Orario lavorativo predefinito del tenant (non configurato)",
-        "tenantDefaultHint": "Imposti prima una pianificazione oraria lavorativa predefinita del tenant o scelga una pianificazione specifica.",
+        "tenantDefaultHint": "Imposta prima una pianificazione oraria lavorativa predefinita del tenant o scegli una pianificazione specifica.",
         "specific": "Pianificazione oraria lavorativa specifica",
-        "specificHint": "Crei prima una pianificazione oraria lavorativa.",
-        "tenantDefaultMissingDescription": "Nessuna pianificazione oraria lavorativa predefinita è ancora configurata per il tenant. Scelga una pianificazione oraria lavorativa specifica o imposti prima un valore predefinito.",
+        "specificHint": "Crea prima una pianificazione oraria lavorativa.",
+        "tenantDefaultMissingDescription": "Nessuna pianificazione oraria lavorativa predefinita è ancora configurata per il tenant. Scegli una pianificazione oraria lavorativa specifica o imposta prima un valore predefinito.",
         "holidaysNote": "I giorni festivi sono sempre considerati giorni non lavorativi."
       },
       "businessHours": {
@@ -2019,11 +2019,11 @@
       },
       "recurring": {
         "title": "Pianificazione ricorrente",
-        "description": "Scelga un modello di ricorrenza comune. Il cron avanzato è disponibile per pianificazioni personalizzate.",
+        "description": "Scegli un modello di ricorrenza comune. Il cron avanzato è disponibile per pianificazioni personalizzate.",
         "builderMode": "Generatore di pianificazioni",
         "advancedMode": "Cron avanzato",
         "dailyHelper": "Viene eseguito ogni giorno all’ora selezionata.",
-        "weeklyHelper": "Scelga uno o più giorni feriali di seguito.",
+        "weeklyHelper": "Scegli uno o più giorni feriali di seguito.",
         "customCronWarning": "Questa pianificazione utilizza un’espressione cron personalizzata. Continui a modificarla qui o torni al generatore per sostituirla con un modello comune.",
         "cronPreview": "Cron: {{cron}}"
       },
@@ -2080,9 +2080,9 @@
         "monthly": "Mensile"
       },
       "validation": {
-        "validTime": "Scelga un orario valido.",
-        "weekdayRequired": "Scelga almeno un giorno feriale.",
-        "dayOfMonthRange": "Scelga un giorno del mese compreso tra 1 e 31."
+        "validTime": "Scegli un orario valido.",
+        "weekdayRequired": "Scegli almeno un giorno feriale.",
+        "dayOfMonthRange": "Scegli un giorno del mese compreso tra 1 e 31."
       },
       "summary": {
         "daily": "Viene eseguito ogni giorno alle {{timeLabel}} {{timezoneLabel}}",
@@ -2252,7 +2252,7 @@
       "actions": {
         "eventCatalog": "Catalogo eventi",
         "newWorkflow": "Nuovo workflow",
-        "createFirst": "Crei il suo primo workflow",
+        "createFirst": "Crea il tuo primo workflow",
         "retry": "Riprova",
         "resetFilters": "Reimposta"
       },
@@ -2327,7 +2327,7 @@
         "errorFallback": "Impossibile recuperare i workflow",
         "validationFailed": "Convalida dell'eliminazione non riuscita. Riprovi.",
         "emptyTitle": "Ancora nessun workflow",
-        "emptyDescription": "Crei il suo primo workflow per automatizzare attività, rispondere a eventi e ottimizzare i processi.",
+        "emptyDescription": "Crea il tuo primo workflow per automatizzare attività, rispondere a eventi e ottimizzare i processi.",
         "noResultsTitle": "Nessun workflow trovato",
         "noResultsDescription": "Provi a modificare la ricerca o i filtri per trovare ciò che cerca."
       },
@@ -2338,7 +2338,7 @@
     "eventsCatalog": {
       "header": {
         "title": "Catalogo eventi del workflow",
-        "subtitle": "Esplori, gestisca e progetti i workflow per gli eventi e i trigger di sistema.",
+        "subtitle": "Esplora, gestisci e progetta i workflow per gli eventi e i trigger di sistema.",
         "defineCustomEvent": "Definisci evento personalizzato",
         "managePermissionTitle": "Richiede l'autorizzazione workflow:manage"
       },
@@ -2415,7 +2415,7 @@
           "missingNotice": "Nessun schemaRef impostato; l'evento potrebbe non essere utilizzabile come trigger del workflow.",
           "topLevelFields": "Campi di primo livello",
           "required": "obbligatorio",
-          "moreFieldsHint": "Vengono mostrati i primi 12 campi. Usi \"Visualizza schema completo\" per vederne altri."
+          "moreFieldsHint": "Vengono mostrati i primi 12 campi. Usa \"Visualizza schema completo\" per vederne altri."
         },
         "attached": {
           "heading": "Workflow allegati",
@@ -2541,14 +2541,14 @@
           "descriptionPlaceholder": "Descrizione facoltativa",
           "useSchemaRef": "Usa riferimento allo schema",
           "useInline": "Schema inline (avanzato)",
-          "selectSchemaRef": "Selezioni il riferimento allo schema del payload",
-          "selectPlaceholder": "Selezioni…",
+          "selectSchemaRef": "Seleziona il riferimento allo schema del payload",
+          "selectPlaceholder": "Seleziona…",
           "payloadSchemaJson": "Schema del payload (JSON)"
         },
         "footer": "Gli eventi personalizzati sono limitati al tenant e possono essere usati come trigger del workflow.",
         "validation": {
           "typeAndNameRequired": "Il tipo di evento e il nome sono obbligatori.",
-          "schemaRefRequired": "Selezioni un riferimento allo schema del payload (o usi uno schema inline).",
+          "schemaRefRequired": "Seleziona un riferimento allo schema del payload (o usa uno schema inline).",
           "invalidJson": "Lo schema del payload deve essere un JSON valido."
         },
         "toasts": {
@@ -2585,13 +2585,13 @@
         "loadOptions": "Impossibile caricare le opzioni"
       },
       "dependencyHints": {
-        "contactClient": "Scelga prima un cliente fisso per caricare le opzioni di contatto.",
-        "locationClient": "Scelga prima un cliente fisso per caricare le opzioni di posizione.",
+        "contactClient": "Scegli prima un cliente fisso per caricare le opzioni di contatto.",
+        "locationClient": "Scegli prima un cliente fisso per caricare le opzioni di posizione.",
         "categoryBoard": "Scegli prima una bacheca fissa per caricare le opzioni di categoria.",
         "statusBoard": "Scegli prima una bacheca fissa per caricare le opzioni di stato.",
-        "statusTicket": "Scelga prima un ticket fisso per caricare le opzioni di stato.",
+        "statusTicket": "Scegli prima un ticket fisso per caricare le opzioni di stato.",
         "subcategoryBoard": "Scegli prima una bacheca fissa per caricare le opzioni di sottocategoria.",
-        "subcategoryCategory": "Scelga prima una categoria fissa per caricare le opzioni di sottocategoria."
+        "subcategoryCategory": "Scegli prima una categoria fissa per caricare le opzioni di sottocategoria."
       }
     }
   },

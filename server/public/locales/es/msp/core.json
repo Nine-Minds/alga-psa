@@ -167,7 +167,7 @@
         },
         "client": {
           "label": "Cliente",
-          "description": "Agregar un nuevo cliente a tu sistema"
+          "description": "Agregar un nuevo cliente a su sistema"
         },
         "contact": {
           "label": "Contacto",
@@ -179,7 +179,7 @@
         },
         "asset": {
           "label": "Activo",
-          "description": "Agregar un nuevo dispositivo a tu espacio de trabajo"
+          "description": "Agregar un nuevo dispositivo a su espacio de trabajo"
         },
         "service": {
           "label": "Servicio",
@@ -187,14 +187,14 @@
         },
         "product": {
           "label": "Producto",
-          "description": "Agregar un nuevo producto a tu catálogo"
+          "description": "Agregar un nuevo producto a su catálogo"
         }
       }
     },
     "jobs": {
       "ariaLabel": "Ver actividad de trabajos en segundo plano",
       "title": "Trabajos en segundo plano",
-      "description": "Haz seguimiento de importaciones, ejecuciones de automatización y trabajo programado.",
+      "description": "Haga seguimiento de importaciones, ejecuciones de automatización y trabajo programado.",
       "active": "Trabajos activos",
       "queued": "Trabajos en cola",
       "failedLast24h": "Fallidos últimas 24 h",
@@ -245,7 +245,7 @@
       "stripeTrial": "Prueba de {{tier}}: {{daysLabel}}"
     },
     "paymentFailed": {
-      "message": "Pago fallido — actualiza el método de pago",
+      "message": "Pago fallido — actualice el método de pago",
       "portalError": "No se pudo abrir el portal de facturación"
     },
     "platformNotification": {
@@ -379,8 +379,8 @@
     }
   },
   "onboardingRedirect": {
-    "title": "Te llevamos a la configuración",
-    "description": "Tu espacio de trabajo necesita una configuración rápida antes de que puedas usar el panel.",
+    "title": "Redirigiendo a la configuración",
+    "description": "Su espacio de trabajo necesita una configuración rápida antes de que pueda usar el panel.",
     "action": "Continuar a la configuración"
   },
   "marketing": {
@@ -402,7 +402,7 @@
       "needsPublishing": "Pendientes de publicar",
       "needsPublishingCount": "{{total}} en espera · {{overdue}} atrasadas",
       "needsPublishingCountSimple": "{{total}} en espera",
-      "needsPublishingHint": "Copia el texto, publícalo en la plataforma y luego márcalo como publicado.",
+      "needsPublishingHint": "Copie el texto, publíquelo en la plataforma y luego márquelo como publicado.",
       "thisWeek": "Esta semana",
       "stats": {
         "published": "Publicadas",
@@ -415,7 +415,7 @@
       "publishedRecently": "Publicadas recientemente",
       "noUpcoming": "Nada programado en este rango.",
       "emptyTitle": "Aún no hay nada en el calendario",
-      "emptyBody": "Crea una publicación desde la página Publicaciones y aparecerá aquí en su día programado.",
+      "emptyBody": "Cree una publicación desde la página Publicaciones y aparecerá aquí en su día programado.",
       "toast": {
         "skipped": "Omitida"
       },
@@ -431,7 +431,7 @@
       "skip": "Omitir",
       "reschedule": "Reprogramar",
       "emptyTitle": "Aún no hay publicaciones",
-      "emptyBody": "Crea una publicación desde tu biblioteca de contenido y aparecerá en esta cola.",
+      "emptyBody": "Cree una publicación desde su biblioteca de contenido y aparecerá en esta cola.",
       "status": {
         "scheduled": "programada",
         "awaiting-manual-publish": "pendiente de publicar",
@@ -460,7 +460,7 @@
         "content": "Contenido",
         "contentPlaceholder": "Seleccionar contenido…",
         "channels": "Canales",
-        "noChannels": "No hay canales activos — añade uno primero en la página Canales.",
+        "noChannels": "No hay canales activos — añada uno primero en la página Canales.",
         "campaign": "Campaña (opcional)",
         "noCampaign": "Sin campaña",
         "scheduledAt": "Programar para (opcional)",
@@ -488,7 +488,7 @@
       "title": "Contenido",
       "new": "Nuevo contenido",
       "emptyTitle": "Aún no hay contenido",
-      "emptyBody": "Escribe las publicaciones que quieres publicar y luego prográmalas desde la página Publicaciones.",
+      "emptyBody": "Escriba las publicaciones que quiere publicar y luego prográmelas desde la página Publicaciones.",
       "columns": {
         "title": "Título",
         "campaign": "Campaña",
@@ -579,7 +579,7 @@
       "headerSummary": "{{steps}} pasos · {{active}} inscripciones activas",
       "headerOpenRate": "{{rate}}% de apertura",
       "journey": "Recorrido",
-      "noSteps": "Aún no hay pasos — edita la secuencia para añadirlos.",
+      "noSteps": "Aún no hay pasos — edite la secuencia para añadirlos.",
       "enroll": "Inscribir contactos",
       "performance": {
         "title": "Rendimiento",
@@ -731,7 +731,7 @@
       "disabledTitle": "Marketing no está habilitado",
       "disabledDescription": "El módulo de marketing no está habilitado para esta cuenta.",
       "permissionTitle": "Sin acceso a Marketing",
-      "permissionDescription": "No tienes permiso para ver marketing. Pide a un administrador el permiso de lectura de marketing.",
+      "permissionDescription": "No tiene permiso para ver marketing. Pida a un administrador el permiso de lectura de marketing.",
       "backToDashboard": "Ir al panel"
     }
   }

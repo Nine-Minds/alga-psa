@@ -63,7 +63,7 @@
             "description": "Exportieren Sie Rechnungen als CSV für den manuellen Import in QuickBooks und importieren Sie Steuerdaten aus Berichten."
           },
           "xero": {
-            "description": "Verbinden Sie Ihre Organisation mit tenant-eigenen OAuth-Anmeldedaten für Live-Buchhaltungsexporte und Zuordnungen."
+            "description": "Verbinden Sie Ihre Organisation mit mandanteneigenen OAuth-Anmeldedaten für Live-Buchhaltungsexporte und Zuordnungen."
           },
           "xeroCsv": {
             "description": "Exportieren Sie Rechnungen als CSV für den manuellen Import in Xero und importieren Sie Steuerdaten aus Xero-Berichten."
@@ -710,7 +710,7 @@
           "runInitialSyncRunning": "Initiale Synchronisation wird gestartet…",
           "saveFieldSync": "Feldsynchronisationssteuerung speichern",
           "savingFieldSync": "Wird gespeichert…",
-          "syncAll": "Alle Tenants jetzt synchronisieren",
+          "syncAll": "Alle Mandanten jetzt synchronisieren",
           "syncAllStarting": "Wird gestartet…"
         },
         "badges": {
@@ -746,12 +746,12 @@
           },
           "connectionsBelow": "Verbindungsoptionen werden unten angezeigt.",
           "discover": {
-            "guidance": "Führen Sie Discovery aus, um verwaltete Entra-Tenants vor der Zuordnung zu laden.",
+            "guidance": "Führen Sie Discovery aus, um verwaltete Entra-Mandanten vor der Zuordnung zu laden.",
             "title": "Schritt 2: Erkennen"
           },
           "label": "Aktueller Schritt",
           "map": {
-            "guidance": "Bestätigen oder passen Sie Tenant-Zuordnungen an, um die initiale Synchronisation freizuschalten.",
+            "guidance": "Bestätigen oder passen Sie Mandantenzuordnungen an, um die initiale Synchronisation freizuschalten.",
             "title": "Schritt 3: Zuordnen"
           },
           "sync": {
@@ -759,9 +759,9 @@
             "title": "Schritt 4: Initiale Synchronisation"
           }
         },
-        "description": "Konfigurieren Sie partnerseitigen Entra-Zugriff, erkennen Sie verwaltete Tenants, ordnen Sie sie Kunden zu und führen Sie Sync-Workflows aus.",
+        "description": "Konfigurieren Sie partnerseitigen Entra-Zugriff, erkennen Sie verwaltete Mandanten, ordnen Sie sie Kunden zu und führen Sie Sync-Workflows aus.",
         "disabled": {
-          "description": "Die Entra-Integrations-UI ist für diesen Tenant derzeit deaktiviert.",
+          "description": "Die Entra-Integrations-UI ist für diesen Mandanten derzeit deaktiviert.",
           "title": "Microsoft-Entra-Integration"
         },
         "disconnectConfirm": {
@@ -771,9 +771,9 @@
           "title": "Microsoft Entra trennen?"
         },
         "discovery": {
-          "completed": "Discovery abgeschlossen. {{count}} Tenants erkannt.",
-          "completedOne": "Discovery abgeschlossen. {{count}} Tenant erkannt.",
-          "failed": "Tenant-Discovery konnte nicht ausgeführt werden."
+          "completed": "Discovery abgeschlossen. {{count}} Mandanten erkannt.",
+          "completedOne": "Discovery abgeschlossen. {{count}} Mandant erkannt.",
+          "failed": "Mandantenerkennung konnte nicht ausgeführt werden."
         },
         "errors": {
           "loadStatus": "Entra-Verbindungsstatus konnte nicht geladen werden.",
@@ -843,13 +843,13 @@
           "title": "Modus für laufende Operationen"
         },
         "mapping": {
-          "description": "Überprüfen Sie vorgeschlagene Übereinstimmungen, wählen Sie für jeden Tenant den richtigen Kunden aus und bestätigen Sie die Zuordnungen vor der initialen Synchronisation.",
+          "description": "Überprüfen Sie vorgeschlagene Übereinstimmungen, wählen Sie für jeden Mandanten den richtigen Kunden aus und bestätigen Sie die Zuordnungen vor der initialen Synchronisation.",
           "needsReviewLabel": "Benötigt Prüfung:",
           "savedLabel": "Gespeichert:",
           "selectedLabel": "Ausgewählt:",
           "skippedLabel": "Übersprungen:",
           "stepLabel": "Schritt 3",
-          "title": "Tenants Kunden zuordnen"
+          "title": "Mandanten Kunden zuordnen"
         },
         "onboarding": {
           "description": "Schließen Sie jeden Onboarding-Schritt der Reihe nach ab: verbinden, erkennen, zuordnen und dann die erste Synchronisation ausführen.",
@@ -862,13 +862,13 @@
         "overview": {
           "connectionTypeLabel": "Verbindungstyp:",
           "label": "Übersicht",
-          "mappedTenantsLabel": "Zugeordnete Tenants:"
+          "mappedTenantsLabel": "Zugeordnete Mandanten:"
         },
         "skipped": {
-          "empty": "Derzeit sind keine Tenants als übersprungen markiert.",
+          "empty": "Derzeit sind keine Mandanten als übersprungen markiert.",
           "noPrimaryDomain": "Keine primäre Domain",
           "remap": "Neu zuordnen",
-          "title": "Übersprungene Tenants"
+          "title": "Übersprungene Mandanten"
         },
         "status": {
           "connectionHealth": "Verbindungsgesundheit",
@@ -901,16 +901,16 @@
         },
         "wizard": {
           "connect": {
-            "description": "Autorisieren Sie die Direct Microsoft Partner Auth, um diesen Entra-Tenant zu verknüpfen.",
+            "description": "Autorisieren Sie die Direct Microsoft Partner Auth, um diesen Entra-Mandanten zu verknüpfen.",
             "title": "Verbinden"
           },
           "discover": {
-            "description": "Verwaltete Entra-Tenants für diesen MSP-Tenant laden und persistieren.",
-            "title": "Tenants erkennen"
+            "description": "Verwaltete Entra-Mandanten für diesen MSP-Mandanten laden und persistieren.",
+            "title": "Mandanten erkennen"
           },
           "map": {
             "description": "Auto-Match-Vorschläge prüfen und Zuordnungen bestätigen.",
-            "title": "Tenants Kunden zuordnen"
+            "title": "Mandanten Kunden zuordnen"
           },
           "sync": {
             "description": "Starten Sie den ersten Synchronisationslauf für bestätigte Zuordnungen.",
@@ -1032,7 +1032,7 @@
           "viewDetails": "Details anzeigen"
         },
         "details": {
-          "noResults": "Keine Tenant-Ergebnisse aufgezeichnet.",
+          "noResults": "Keine Mandantenergebnisse aufgezeichnet.",
           "stats": "erstellt {{created}}, verknüpft {{linked}}, aktualisiert {{updated}}, mehrdeutig {{ambiguous}}, deaktiviert {{inactivated}}",
           "summarySkipped": "Übersprungene Bereitstellungsergebnisse: {{count}}",
           "tenantHeader": "Mandant {{tenant}} · {{status}}",
@@ -1048,7 +1048,7 @@
         "run": {
           "header": "{{runType}} · {{status}}",
           "inProgress": "In Bearbeitung",
-          "tenants": "Tenants: {{processed}}/{{total}} · Erfolgreich: {{success}} · Fehlgeschlagen: {{failed}}",
+          "tenants": "Mandanten: {{processed}}/{{total}} · Erfolgreich: {{success}} · Fehlgeschlagen: {{failed}}",
           "timing": "Gestartet {{started}} · Abgeschlossen {{completed}}"
         },
         "title": "Letzte Sync-Läufe"
@@ -1069,7 +1069,7 @@
           "actions": "Aktionen",
           "confidence": "Konfidenz",
           "defaultRole": "Standardrolle",
-          "entraTenant": "Entra-Tenant",
+          "entraTenant": "Entra-Mandant",
           "portalAccessGroup": "Portalzugriffsgruppe",
           "primaryDomain": "Primäre Domain",
           "provisioningModeOverride": "Abweichender Bereitstellungsmodus",
@@ -1077,13 +1077,13 @@
           "status": "Status",
           "suggestedClient": "Vorgeschlagener Kunde"
         },
-        "empty": "Keine erkannten Tenants für die Zuordnungsvorschau verfügbar.",
+        "empty": "Keine erkannten Mandanten für die Zuordnungsvorschau verfügbar.",
         "errors": {
           "confirmFailed": "Ausgewählte Zuordnungen konnten nicht bestätigt werden.",
-          "importFailed": "Tenant konnte nicht als Kunde importiert werden.",
-          "loadFailed": "Tenant-Zuordnungsvorschau konnte nicht geladen werden.",
+          "importFailed": "Der Mandant konnte nicht als Kunde importiert werden.",
+          "loadFailed": "Die Mandantenzuordnungsvorschau konnte nicht geladen werden.",
           "selectAtLeastOne": "Wählen Sie mindestens einen Kunden aus, um eine Zuordnung zu bestätigen.",
-          "skipFailed": "Diese Tenant-Zuordnung konnte nicht übersprungen werden."
+          "skipFailed": "Diese Mandantenzuordnung konnte nicht übersprungen werden."
         },
         "feedback": {
           "confirmed": "{{count}} Zuordnungen bestätigt.",
@@ -1121,7 +1121,7 @@
           "skipped": "Übersprungen",
           "unmatched": "Nicht zugeordnet"
         },
-        "title": "Tenant-Zuordnungsvorschau"
+        "title": "Mandantenzuordnungsvorschau"
       }
     },
     "google": {
@@ -1177,7 +1177,7 @@
           "resetFailedTitle": "Zurücksetzen fehlgeschlagen",
           "resetTitle": "Google-Provider zurückgesetzt",
           "saveFailedTitle": "Google-Einstellungen konnten nicht gespeichert werden",
-          "savedDescription": "Die tenant-Google-Konfiguration wurde erfolgreich aktualisiert.",
+          "savedDescription": "Die Google-Konfiguration des Mandanten wurde erfolgreich aktualisiert.",
           "savedTitle": "Google-Einstellungen gespeichert",
           "unknownError": "Unbekannter Fehler"
         },
@@ -1567,7 +1567,7 @@
           "title": "Vorhandene App manuell eingeben"
         },
         "platform": {
-          "description": "Create an Email-bound profile from the server-managed multi-tenant app, then grant tenant administrator consent.",
+          "description": "Erstellen Sie aus der serververwalteten mandantenfähigen App ein ausstehendes E-Mail-Profil. Es wird nach der Zustimmung des Mandantenadministrators verknüpft.",
           "title": "Alga-Plattform-App verwenden"
         },
         "title": "Microsoft-E-Mail einrichten",
@@ -1820,7 +1820,7 @@
         "connectSuccess": "QuickBooks erfolgreich verbunden. Das verbundene Unternehmen ist nun der Standard-Live-QuickBooks-Kontext.",
         "connection": {
           "defaultCompany": "Verbundenes Unternehmen",
-          "description": "Starten Sie OAuth erst, nachdem die QuickBooks-App-Anmeldedaten konfiguriert sind. Beim Trennen werden gespeicherte QuickBooks-Zugriffstoken entfernt, die tenant-eigenen App-Anmeldedaten bleiben jedoch erhalten.",
+          "description": "Starten Sie OAuth erst, nachdem die QuickBooks-App-Anmeldedaten konfiguriert sind. Beim Trennen werden gespeicherte QuickBooks-Zugriffstoken entfernt, die mandanteneigenen App-Anmeldedaten bleiben jedoch erhalten.",
           "notConnected": "Es ist noch kein QuickBooks-Unternehmen verbunden. Speichern Sie die Anmeldedaten und klicken Sie anschließend auf „QuickBooks verbinden“.",
           "realmId": "Realm ID: {{id}}",
           "title": "Live-QuickBooks-Verbindung",
@@ -1831,7 +1831,7 @@
         "csvAvailablePrefix": "Wenn Sie einen manuellen Workflow bevorzugen, verwenden Sie weiterhin",
         "csvAvailableTitle": "QuickBooks CSV bleibt verfügbar",
         "description": "Konfigurieren Sie QuickBooks-OAuth-Anmeldedaten, verbinden Sie Ihr QuickBooks-Unternehmen und halten Sie Live-QuickBooks parallel zum manuellen QuickBooks-CSV-Workflow verfügbar.",
-        "disconnectSuccess": "Die gespeicherte QuickBooks-Verbindung wurde entfernt. Tenant-eigene QuickBooks-App-Anmeldedaten wurden beibehalten.",
+        "disconnectSuccess": "Die gespeicherte QuickBooks-Verbindung wurde entfernt. Mandanteneigene QuickBooks-App-Anmeldedaten wurden beibehalten.",
         "environment": "Intuit-Umgebung",
         "environmentProduction": "Produktion",
         "environmentSandbox": "Sandbox",
@@ -1850,15 +1850,15 @@
           "placeholderDescription": "Verbinden Sie ein QuickBooks-Unternehmen, bevor Sie Live-QuickBooks-Artikel- und Steuer-Zuordnungen konfigurieren.",
           "title": "Live-QuickBooks-Zuordnung & -Konfiguration"
         },
-        "noClientId": "Für diesen Tenant ist noch keine Client ID gespeichert.",
-        "noClientSecret": "Für diesen Tenant ist noch kein Client Secret gespeichert.",
+        "noClientId": "Für diesen Mandanten ist noch keine Client ID gespeichert.",
+        "noClientSecret": "Für diesen Mandanten ist noch kein Client Secret gespeichert.",
         "quickbooksCsv": "QuickBooks CSV",
         "redirectUri": "Redirect URI",
         "requiredScopes": "Erforderliche Scopes",
         "storedClientId": "Gespeicherte Client ID: {{value}}",
         "storedClientSecret": "Gespeichertes Client Secret: {{value}}",
-        "tenantOauthDescription": "Fügen Sie die für diesen Tenant registrierten Intuit-App-Anmeldedaten ein, oder lassen Sie das Feld leer, um die QuickBooks-App auf Anwendungsebene zu verwenden, sofern eine konfiguriert ist. Secret-Werte werden nach dem Speichern nicht mehr an den Browser zurückgegeben.",
-        "tenantOauthTitle": "Tenant-eigene OAuth-App",
+        "tenantOauthDescription": "Fügen Sie die für diesen Mandanten registrierten Intuit-App-Anmeldedaten ein, oder lassen Sie das Feld leer, um die QuickBooks-App auf Anwendungsebene zu verwenden, sofern eine konfiguriert ist. Secret-Werte werden nach dem Speichern nicht mehr an den Browser zurückgegeben.",
+        "tenantOauthTitle": "Mandanteneigene OAuth-App",
         "title": "QuickBooks Online"
       },
       "sync": {
@@ -2191,7 +2191,7 @@
         },
         "connection": {
           "connectedAt": "Verbunden am: {{time}}",
-          "description": "Konfigurieren Sie Tanium-Gateway-Anmeldedaten und verifizieren Sie tenant-bezogenen Zugriff.",
+          "description": "Konfigurieren Sie Tanium-Gateway-Anmeldedaten und verifizieren Sie mandantenbezogenen Zugriff.",
           "never": "Nie",
           "syncLabel": "Synchronisierung: {{status}}",
           "syncLabelWithError": "Synchronisierung: {{status}} ({{error}})",
@@ -2447,7 +2447,7 @@
           "saveDomains": "MSP-SSO-Anmeldedomänen konnten nicht gespeichert werden.",
           "verifyClaim": "Domänenanspruch konnte nicht verifiziert werden."
         },
-        "fallbackInfo": "Domänen ohne zulässigen Tenant-Anspruch nutzen die Nine-Minds-SSO-Provider-Konfiguration auf App-Ebene.",
+        "fallbackInfo": "Domänen ohne zulässigen Mandantenanspruch nutzen die Nine-Minds-SSO-Provider-Konfiguration auf App-Ebene.",
         "loading": "Wird geladen…",
         "removeDomainAria": "Domäne {{number}} entfernen",
         "requestClaim": "Anspruch anfordern",
@@ -2463,12 +2463,12 @@
           "refreshedTitle": "Challenge aktualisiert",
           "requestClaimFailedTitle": "Domänenanspruch konnte nicht angefordert werden",
           "revokeFailedTitle": "Anspruch konnte nicht widerrufen werden",
-          "revokedDescription": "Die Tenant-Übernahme für diese Domäne ist deaktiviert.",
+          "revokedDescription": "Die Mandantenübernahme für diese Domäne ist deaktiviert.",
           "revokedTitle": "Domänenanspruch widerrufen",
           "saveDomainsFailedTitle": "MSP-SSO-Anmeldedomänen konnten nicht gespeichert werden",
           "savedDescription": "Die Einstellungen für die domänenbasierte SSO-Erkennung wurden aktualisiert.",
           "savedTitle": "MSP-SSO-Anmeldedomänen gespeichert",
-          "verifiedDescription": "Die Domänenübernahme ist jetzt für tenant-bezogenes Provider-Routing zulässig.",
+          "verifiedDescription": "Die Domänenübernahme ist jetzt für mandantenbezogenes Provider-Routing zulässig.",
           "verifiedTitle": "Domänenanspruch verifiziert",
           "verifyFailedTitle": "Domänenverifizierung fehlgeschlagen"
         }
@@ -2529,7 +2529,7 @@
         },
         "checklist": {
           "installState": {
-            "active": "Teams ist für diesen Tenant aktiv.",
+            "active": "Teams ist für diesen Mandanten aktiv.",
             "error": "Die Teams-Einrichtung weist einen Fehler auf, der behoben werden muss.",
             "label": "Teams-Installationsstatus",
             "notConfigured": "Speichern Sie einen Entwurf oder aktivieren Sie Teams, sobald die Einrichtung bereit ist.",
@@ -2548,7 +2548,7 @@
           },
           "ready": "Bereit"
         },
-        "description": "Binden Sie Teams an ein Microsoft-Profil, aktivieren Sie Funktionen und generieren Sie das Tenant-Paket.",
+        "description": "Binden Sie Teams an ein Microsoft-Profil, aktivieren Sie Funktionen und generieren Sie das Mandantenpaket.",
         "errors": {
           "downloadPackage": "Teams-App-Paket konnte nicht heruntergeladen werden",
           "generatePackage": "Teams-App-Paket konnte nicht generiert werden",
@@ -3104,7 +3104,7 @@
         },
         "callback": {
           "accessDenied": "Der Xero-Zugriff wurde abgelehnt, bevor die Verbindung abgeschlossen werden konnte.",
-          "configMissing": "Xero OAuth konnte nicht gestartet werden, da die Tenant-Client-ID und das Client Secret nicht vollständig konfiguriert waren.",
+          "configMissing": "Xero OAuth konnte nicht gestartet werden, da die Client-ID und das Client Secret des Mandanten nicht vollständig konfiguriert waren.",
           "connectionsUnmapped": "Xero hat Organisationen zurückgegeben, aber keine enthielt die zum Speichern einer Verbindung erforderlichen Kennungen.",
           "generic": "Xero hat einen OAuth-Fehler zurückgegeben: {{code}}",
           "invalidState": "Der Xero-OAuth-Status war ungültig oder abgelaufen. Starten Sie den Verbindungs-Flow erneut.",
@@ -3113,14 +3113,14 @@
           "oauthFailed": "Der Xero-OAuth-Callback ist fehlgeschlagen. Versuchen Sie, die Verbindung erneut herzustellen. Bei weiterhin bestehendem Problem überprüfen Sie Ihre Redirect-URI und Scopes."
         },
         "clientIdLabel": "Xero Client ID",
-        "clientIdPlaceholder": "Fügen Sie Ihre tenant-eigene Xero Client ID ein",
+        "clientIdPlaceholder": "Fügen Sie Ihre mandanteneigene Xero Client ID ein",
         "clientSecretLabel": "Xero Client Secret",
-        "clientSecretPlaceholder": "Fügen Sie Ihr tenant-eigenes Xero Client Secret ein",
+        "clientSecretPlaceholder": "Fügen Sie Ihr mandanteneigenes Xero Client Secret ein",
         "connectSuccess": "Xero erfolgreich verbunden. Die erste verbundene Organisation ist nun der Standard-Live-Xero-Kontext.",
         "connection": {
           "connectionId": "Verbindungs-ID: {{id}}",
           "defaultOrganisation": "Standardorganisation",
-          "description": "Starten Sie OAuth erst, nachdem die tenant-eigene Xero-App konfiguriert ist. Beim Trennen werden gespeicherte Xero-Zugriffstoken entfernt, die tenant-eigenen App-Anmeldedaten bleiben jedoch erhalten.",
+          "description": "Starten Sie OAuth erst, nachdem die mandanteneigene Xero-App konfiguriert ist. Beim Trennen werden gespeicherte Xero-Zugriffstoken entfernt, die mandanteneigenen App-Anmeldedaten bleiben jedoch erhalten.",
           "notConnected": "Es ist noch keine Live-Xero-Organisation verbunden. Speichern Sie die Anmeldedaten und klicken Sie anschließend auf „Xero verbinden“.",
           "title": "Live-Xero-Verbindung",
           "unknown": "unbekannt"
@@ -3129,14 +3129,14 @@
         "csvAvailableMiddle": "in diesem Buchhaltungsbereich und verwalten Sie Exporte über",
         "csvAvailablePrefix": "Wenn Sie einen manuellen Workflow bevorzugen, verwenden Sie weiterhin",
         "csvAvailableTitle": "Xero CSV bleibt verfügbar",
-        "description": "Konfigurieren Sie tenant-eigene Xero-OAuth-Anmeldedaten, verbinden Sie Ihre Standardorganisation und halten Sie Live-Xero parallel zum manuellen Xero-CSV-Workflow verfügbar.",
-        "disconnectSuccess": "Die gespeicherte Xero-Verbindung wurde entfernt. Tenant-eigene Xero-App-Anmeldedaten wurden beibehalten.",
+        "description": "Konfigurieren Sie mandanteneigene Xero-OAuth-Anmeldedaten, verbinden Sie Ihre Standardorganisation und halten Sie Live-Xero parallel zum manuellen Xero-CSV-Workflow verfügbar.",
+        "disconnectSuccess": "Die gespeicherte Xero-Verbindung wurde entfernt. Mandanteneigene Xero-App-Anmeldedaten wurden beibehalten.",
         "errors": {
           "disconnect": "Xero konnte nicht getrennt werden.",
           "load": "Xero-Einstellungen konnten nicht geladen werden.",
           "saveCredentials": "Xero-Anmeldedaten konnten nicht gespeichert werden."
         },
-        "howItWorksDescription": "Speichern Sie hier eine tenant-eigene Xero Client ID und ein Client Secret, schließen Sie den Xero-OAuth-Flow ab, und Alga PSA verwendet die erste verbundene Xero-Organisation als Standard-Live-Kontext.",
+        "howItWorksDescription": "Speichern Sie hier eine mandanteneigene Xero Client ID und ein Client Secret, schließen Sie den Xero-OAuth-Flow ab, und Alga PSA verwendet die erste verbundene Xero-Organisation als Standard-Live-Kontext.",
         "howItWorksTitle": "So funktioniert Live-Xero in dieser Version",
         "loading": "Xero-Einstellungen werden geladen…",
         "mapping": {
@@ -3146,14 +3146,14 @@
           "placeholderDescription": "Verbinden Sie eine Live-Xero-Organisation, bevor Sie Live-Xero-Artikel- und Steuer-Zuordnungen konfigurieren.",
           "title": "Live-Xero-Zuordnung & -Konfiguration"
         },
-        "noClientId": "Für diesen Tenant ist noch keine Client ID gespeichert.",
-        "noClientSecret": "Für diesen Tenant ist noch kein Client Secret gespeichert.",
+        "noClientId": "Für diesen Mandanten ist noch keine Client ID gespeichert.",
+        "noClientSecret": "Für diesen Mandanten ist noch kein Client Secret gespeichert.",
         "redirectUri": "Redirect URI",
         "requiredScopes": "Erforderliche Scopes",
         "storedClientId": "Gespeicherte Client ID: {{value}}",
         "storedClientSecret": "Gespeichertes Client Secret: {{value}}",
-        "tenantOauthDescription": "Fügen Sie die für diesen Tenant registrierten Xero-App-Anmeldedaten ein. Secret-Werte werden nach dem Speichern nicht mehr an den Browser zurückgegeben.",
-        "tenantOauthTitle": "Tenant-eigene OAuth-App",
+        "tenantOauthDescription": "Fügen Sie die für diesen Mandanten registrierten Xero-App-Anmeldedaten ein. Secret-Werte werden nach dem Speichern nicht mehr an den Browser zurückgegeben.",
+        "tenantOauthTitle": "Mandanteneigene OAuth-App",
         "title": "Xero",
         "xeroCsv": "Xero CSV"
       }

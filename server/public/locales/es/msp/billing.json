@@ -317,7 +317,7 @@
   },
   "presetServices": {
     "warnings": {
-      "unsavedChanges": "Tienes cambios sin guardar. Haga clic en \"Guardar cambios\" para aplicarlos."
+      "unsavedChanges": "Tiene cambios sin guardar. Haga clic en \"Guardar cambios\" para aplicarlos."
     },
     "table": {
       "serviceName": "Nombre del servicio",
@@ -352,7 +352,7 @@
     },
     "navigationDialog": {
       "title": "Cambios no guardados",
-      "message": "Tienes cambios sin guardar. ¿Estás seguro de que quieres abandonar esta página? Todos los cambios se perderán.",
+      "message": "Tiene cambios sin guardar. ¿Está seguro de que quiere abandonar esta página? Todos los cambios se perderán.",
       "confirmLabel": "Salir de la página",
       "cancelLabel": "Permanecer en la página"
     },
@@ -492,7 +492,7 @@
       "saving": "Guardando..."
     },
     "errors": {
-      "saveFailed": "No se pudo actualizar la cantidad. Por favor inténtalo de nuevo."
+      "saveFailed": "No se pudo actualizar la cantidad. Por favor inténtelo de nuevo."
     }
   },
   "templateRendererCore": {

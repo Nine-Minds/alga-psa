@@ -1394,7 +1394,7 @@
     "projectTitle": "Dodaj status z biblioteki",
     "selectLabel": "Wybierz z biblioteki statusów",
     "placeholder": "Wybierz status",
-    "helpText": "Wybierz status z biblioteki statusów swojego najemcy, aby dodać go do tego projektu.",
+    "helpText": "Wybierz status z biblioteki statusów swojej organizacji, aby dodać go do tego projektu.",
     "noStatusesTitle": "Brak dostępnych statusów",
     "noStatusesDescription": "Utwórz statusy w Ustawienia → Projekty → Statusy.",
     "adding": "Dodawanie...",

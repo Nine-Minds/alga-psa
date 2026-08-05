@@ -247,8 +247,8 @@
     },
     "comments": {
       "changesRequestedHint": "(Se han solicitado cambios; revise los comentarios)",
-      "responsePlaceholder": "Añade tu respuesta a los cambios solicitados...",
-      "placeholder": "Añade un comentario...",
+      "responsePlaceholder": "Añada su respuesta a los cambios solicitados...",
+      "placeholder": "Añada un comentario...",
       "respondToChanges": "Responder a los cambios"
     },
     "changeSuggestionPlaceholder": "Dígale al empleado exactamente qué corregir en esta entrada."
@@ -270,7 +270,7 @@
     }
   },
   "comments": {
-    "placeholder": "Añade un comentario...",
+    "placeholder": "Añada un comentario...",
     "responsePlaceholder": "Responder a los cambios solicitados...",
     "respondToChanges": "Responder a los cambios"
   },
@@ -307,7 +307,7 @@
   "workItemDrawer": {
     "errors": {
       "genericTitle": "Error al cargar el contenido",
-      "genericDescription": "Inténtalo de nuevo",
+      "genericDescription": "Inténtelo de nuevo",
       "failedInteraction": "No se pudieron cargar los detalles de la interacción",
       "interactionNotFound": "Interacción no encontrada",
       "noUserSession": "No se encontró una sesión de usuario",

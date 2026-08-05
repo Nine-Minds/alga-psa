@@ -810,7 +810,7 @@
         "description": "Créez des priorités personnalisées pour votre organisation ou importez depuis des modèles standard.",
         "itilNote": "Les priorités standard ITIL ne peuvent pas être modifiées ou supprimées.",
         "itilRemovableNote": "Les priorités standard ITIL ne peuvent pas être modifiées, mais elles peuvent être supprimées dès qu’aucun tableau n’utilise les priorités ITIL.",
-        "nonItilNote": "Toutes les priorités peuvent être modifiées ou supprimées selon votre flux de travail."
+        "nonItilNote": "Toutes les priorités peuvent être modifiées ou supprimées selon votre workflow."
       },
       "table": {
         "name": "Nom",
@@ -1527,10 +1527,10 @@
   },
   "secrets": {
     "title": "Gestion des secrets",
-    "description": "Gérez les secrets chiffrés utilisés dans les flux de travail. Les secrets peuvent être référencés dans les actions de flux de travail en utilisant la syntaxe $secret.",
+    "description": "Gérez les secrets chiffrés utilisés dans les workflows. Les secrets peuvent être référencés dans les actions de workflow en utilisant la syntaxe $secret.",
     "list": {
       "title": "Secrets d'accès",
-      "description": "Gérez les secrets utilisés dans les flux de travail. Les secrets sont chiffrés et peuvent être référencés en utilisant { $secret: \"SECRET_NAME\" }",
+      "description": "Gérez les secrets utilisés dans les workflows. Les secrets sont chiffrés et peuvent être référencés en utilisant { $secret: \"SECRET_NAME\" }",
       "search": "Rechercher des secrets...",
       "createSecret": "Créer un secret",
       "table": {
@@ -1570,8 +1570,8 @@
       },
       "delete": {
         "confirmation": "Êtes-vous sûr de vouloir supprimer le secret {{name}} ?",
-        "usedByWorkflows": "Ce secret est utilisé par {{count}} flux de travail",
-        "usedByWarning": "Sa suppression entraînera l'échec de ces flux de travail lorsqu'ils tenteront d'accéder à ce secret.",
+        "usedByWorkflows": "Ce secret est utilisé par {{count}} workflow(s)",
+        "usedByWarning": "Sa suppression entraînera l'échec de ces workflows lorsqu'ils tenteront d'accéder à ce secret.",
         "cannotUndo": "Cette action est irréversible.",
         "typeToConfirm": "Saisissez {{name}} pour confirmer :",
         "placeholder": "Saisir le nom du secret"

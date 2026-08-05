@@ -1225,7 +1225,7 @@
           "quote-totals": "Sumy oferty",
           "invoice": "Faktura",
           "customer": "Klient",
-          "tenant": "Najemca"
+          "tenant": "Organizacja"
         }
       },
       "noFieldsMatch": "Brak pasujących pól.",
@@ -1363,7 +1363,7 @@
       },
       "logo": {
         "label": "Logotyp",
-        "description": "Zasób brandingowy najemcy."
+        "description": "Zasób identyfikacji wizualnej organizacji."
       },
       "qr": {
         "label": "Kod QR",
@@ -1697,19 +1697,19 @@
         "description": "Adres kontaktu."
       },
       "tenant_name": {
-        "label": "Nazwa dzierżawcy",
+        "label": "Nazwa organizacji",
         "description": "Nazwa Twojej firmy."
       },
       "tenant_address": {
-        "label": "Adres dzierżawcy",
+        "label": "Adres organizacji",
         "description": "Adres Twojej firmy."
       },
       "tenantClient_name": {
-        "label": "Nazwa dzierżawcy",
+        "label": "Nazwa organizacji",
         "description": "Nazwa Twojej firmy."
       },
       "tenantClient_address": {
-        "label": "Adres dzierżawcy",
+        "label": "Adres organizacji",
         "description": "Adres Twojej firmy."
       }
     },

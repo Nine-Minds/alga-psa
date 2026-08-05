@@ -310,7 +310,7 @@
         "providerNameHelp": "Wewnętrzna nazwa służąca do identyfikacji tej konfiguracji. Nie jest pokazywana w wiadomościach wychodzących.",
         "senderDisplayNameLabel": "Wyświetlana nazwa nadawcy",
         "senderDisplayNamePlaceholder": "np. Acme Support",
-        "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń najemcy. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
+        "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń organizacji. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
       },
       "oauth": {
         "sectionTitle": "Konfiguracja Microsoft OAuth",
@@ -319,7 +319,7 @@
         "notConfigured": "Ustawienia dostawcy Microsoft nie są skonfigurowane.",
         "setupHelp": "Najpierw skonfiguruj Dostawców w Ustawieniach → Integracje → Dostawcy, a następnie wróć tutaj, aby autoryzować tę skrzynkę pocztową.",
         "profileReady": "Profil aplikacji Microsoft jest gotowy.",
-        "profileReadyHelp": "Jeśli zgoda administratora dzierżawy nadal oczekuje, dokończ ją w ustawieniach Dostawców. Następnie użyj opcji Autoryzuj dostęp dla tej skrzynki pocztowej.",
+        "profileReadyHelp": "Jeśli zgoda administratora organizacji nadal oczekuje, dokończ ją w ustawieniach Dostawców. Następnie użyj opcji Autoryzuj dostęp dla tej skrzynki pocztowej.",
         "redirectUriLabel": "URI przekierowania *",
         "redirectUriPlaceholder": "https://yourapp.com/api/auth/microsoft/callback",
         "authorizationTitle": "Autoryzacja OAuth",
@@ -339,7 +339,7 @@
         "providerNameRequired": "Nazwa konfiguracji jest wymagana",
         "gmailAddressRequired": "Wymagany jest prawidłowy adres Gmail",
         "authorizeRequiresValid": "Przed autoryzacją wypełnij wszystkie wymagane pola",
-        "googleNotConfigured": "Integracja Google nie jest skonfigurowana dla tego dzierżawcy. Najpierw skonfiguruj Google, a następnie spróbuj ponownie.",
+        "googleNotConfigured": "Integracja Google nie jest skonfigurowana dla tej organizacji. Najpierw skonfiguruj Google, a następnie spróbuj ponownie.",
         "oauthInitiateFailed": "Nie udało się zainicjować protokołu OAuth",
         "popupBlocked": "Nie udało się otworzyć wyskakującego okienka OAuth. Zezwól na wyświetlanie wyskakujących okienek w tej witrynie.",
         "closedEarly": "Okno autoryzacji zostało zamknięte przed zakończeniem.",
@@ -367,14 +367,14 @@
         "providerNameHelp": "Wewnętrzna nazwa służąca do identyfikacji tej konfiguracji. Nie jest pokazywana w wiadomościach wychodzących.",
         "senderDisplayNameLabel": "Wyświetlana nazwa nadawcy",
         "senderDisplayNamePlaceholder": "np. Acme Support",
-        "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń najemcy. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
+        "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń organizacji. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
       },
       "oauth": {
         "sectionTitle": "OAuth Google",
-        "sectionDescription": "Korzysta z aplikacji Google należącej do dzierżawcy, skonfigurowanej w Ustawieniach → Integracje → Dostawcy.",
+        "sectionDescription": "Korzysta z aplikacji Google należącej do organizacji, skonfigurowanej w Ustawieniach → Integracje → Dostawcy.",
         "setupLabel": "Konsola chmurowa Google",
-        "notConfigured": "Integracja Google nie jest skonfigurowana dla tego dzierżawcy.",
-        "setupHelp": "Najpierw skonfiguruj należącą do dzierżawcy usługę Google OAuth + Pub/Sub: Ustawienia → Integracje → Dostawcy.",
+        "notConfigured": "Integracja Google nie jest skonfigurowana dla tej organizacji.",
+        "setupHelp": "Najpierw skonfiguruj usługę Google OAuth + Pub/Sub należącą do organizacji: Ustawienia → Integracje → Dostawcy.",
         "openSettings": "Otwórz Ustawienia Google",
         "requiredTitle": "Wymagana autoryzacja OAuth",
         "stepTitle": "Krok 1: Autoryzacja OAuth",
@@ -417,7 +417,7 @@
         "providerNameHelp": "Wewnętrzna nazwa służąca do identyfikacji tej konfiguracji. Nie jest pokazywana w wiadomościach wychodzących.",
         "senderDisplayName": "Wyświetlana nazwa nadawcy",
         "senderDisplayNamePlaceholder": "np. Acme Support",
-        "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń najemcy. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
+        "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń organizacji. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
       },
       "auth": {
         "title": "Uwierzytelnianie",
@@ -489,7 +489,7 @@
       "providerNameHelp": "Wewnętrzna nazwa służąca do identyfikacji tej konfiguracji. Nie jest pokazywana w wiadomościach wychodzących.",
       "senderDisplayName": "Wyświetlana nazwa nadawcy",
       "senderDisplayNamePlaceholder": "np. Acme Support",
-      "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń najemcy. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
+      "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń organizacji. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
     },
     "authOptions": {
       "password": "Hasło",
@@ -554,7 +554,7 @@
       "providerNameHelp": "Wewnętrzna nazwa służąca do identyfikacji tej konfiguracji. Nie jest pokazywana w wiadomościach wychodzących.",
       "senderDisplayNameLabel": "Wyświetlana nazwa nadawcy",
       "senderDisplayNamePlaceholder": "np. Acme Support",
-      "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń najemcy. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
+      "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń organizacji. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
     },
     "oauth": {
       "connectionTitle": "Połączenie Microsoft 365",

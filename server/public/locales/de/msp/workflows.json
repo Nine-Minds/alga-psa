@@ -2545,7 +2545,7 @@
           "selectPlaceholder": "Auswählen…",
           "payloadSchemaJson": "Payload-Schema (JSON)"
         },
-        "footer": "Benutzerdefinierte Ereignisse gelten je Tenant und können als Workflow-Auslöser verwendet werden.",
+        "footer": "Benutzerdefinierte Ereignisse gelten für jeden Mandanten und können als Workflow-Auslöser verwendet werden.",
         "validation": {
           "typeAndNameRequired": "Ereignistyp und Name sind erforderlich.",
           "schemaRefRequired": "Wählen Sie eine Payload-Schema-Referenz aus (oder verwenden Sie ein Inline-Schema).",

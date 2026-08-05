@@ -23,7 +23,7 @@
     },
     "moneyPlaceholder": "0.00",
     "notAvailable": "N / A",
-    "tryAgain": "Por favor inténtalo de nuevo.",
+    "tryAgain": "Por favor inténtelo de nuevo.",
     "validation": {
       "prefix": "Por favor corrija lo siguiente:"
     }
@@ -32,7 +32,7 @@
     "fixed": {
       "basics": {
         "billingFrequencyLabel": "Frecuencia de facturación *",
-        "billingFrequencyPlaceholder": "Selecciona la frecuencia de facturación",
+        "billingFrequencyPlaceholder": "Seleccione la frecuencia de facturación",
         "billingTiming": {
           "options": {
             "advance": "Anticipo - factura al inicio del periodo",
@@ -67,7 +67,7 @@
       "cardTitle": "Editar línea de contrato: {{name}} (fijo)",
       "errors": {
         "contractLineNotFoundOrInvalidType": "Línea de contrato no encontrada o tipo no válido.",
-        "failedToLoadContractLineConfiguration": "No se pudo cargar la configuración de la línea de contrato. Por favor inténtalo de nuevo.",
+        "failedToLoadContractLineConfiguration": "No se pudo cargar la configuración de la línea de contrato. Por favor inténtelo de nuevo.",
         "failedToSaveContractLine": "No se pudo guardar la línea del contrato",
         "invalidContractLineTypeOrNotFound": "Tipo de línea de contrato no válido o línea de contrato no encontrada."
       },
@@ -104,7 +104,7 @@
       },
       "basics": {
         "billingFrequencyLabel": "Frecuencia de facturación *",
-        "billingFrequencyPlaceholder": "Selecciona la frecuencia de facturación",
+        "billingFrequencyPlaceholder": "Seleccione la frecuencia de facturación",
         "cardTitle": "Editar línea de contrato: {{name}} (por hora)",
         "description": "Asigne un nombre a la línea del contrato y elija cómo se debe facturar de forma predeterminada.",
         "heading": "Conceptos básicos de la línea de contrato",
@@ -118,7 +118,7 @@
       "errors": {
         "cannotSaveValidationErrors": "No se puede guardar, existen errores de validación en toda la línea del contrato.",
         "contractLineNotFoundOrInvalidType": "Línea de contrato no encontrada o tipo no válido.",
-        "failedToLoadPlanConfiguration": "No se pudo cargar la configuración del plan. Por favor inténtalo de nuevo.",
+        "failedToLoadPlanConfiguration": "No se pudo cargar la configuración del plan. Por favor inténtelo de nuevo.",
         "failedToSaveContractLine": "No se pudo guardar la línea del contrato",
         "failedToSavePlanWideConfiguration": "No se pudo guardar la configuración de todo el plan: {{message}}",
         "failedToSaveServiceConfiguration": "No se pudo guardar la configuración del servicio: {{message}}",
@@ -162,7 +162,7 @@
       },
       "basics": {
         "billingFrequencyLabel": "Frecuencia de facturación *",
-        "billingFrequencyPlaceholder": "Selecciona la frecuencia de facturación",
+        "billingFrequencyPlaceholder": "Seleccione la frecuencia de facturación",
         "cardTitle": "Editar línea de contrato: {{name}} (Uso)",
         "description": "Asigne un nombre a la línea del contrato y elija cómo se debe facturar de forma predeterminada.",
         "heading": "Conceptos básicos de la línea de contrato",
@@ -174,7 +174,7 @@
         }
       },
       "errors": {
-        "failedToLoadPlanServicesOrConfigurations": "No se pudieron cargar los servicios o configuraciones del plan. Por favor inténtalo de nuevo.",
+        "failedToLoadPlanServicesOrConfigurations": "No se pudieron cargar los servicios o configuraciones del plan. Por favor inténtelo de nuevo.",
         "failedToSaveContractLine": "No se pudo guardar la línea del contrato",
         "failedToSaveOneOrMoreServiceConfigurations": "No se pudieron guardar una o más configuraciones de servicio. Por favor verifique los detalles e inténtelo nuevamente.",
         "invalidPlanTypeOrNotFound": "Tipo de plan no válido o plan no encontrado.",
@@ -220,7 +220,7 @@
     },
     "basics": {
       "billingFrequencyLabel": "Frecuencia de facturación *",
-      "billingFrequencyPlaceholder": "Selecciona la frecuencia de facturación",
+      "billingFrequencyPlaceholder": "Seleccione la frecuencia de facturación",
       "billingTiming": {
         "options": {
           "advance": "Anticipo - factura al inicio del periodo",
@@ -267,7 +267,7 @@
       "addItem": "Agregar artículo",
       "adjustForPartialPeriodsHelp": "Cuando está habilitada, la tarifa recurrente aumenta a la parte cubierta de un período de servicio cuando el contrato comienza o finaliza dentro de ese período.",
       "adjustForPartialPeriodsLabel": "Ajuste por períodos parciales",
-      "alertBody": "La tarifa base de la línea de contrato es el monto facturado. También puedes adjuntar productos aquí; las cantidades de productos se facturan como unidades, mientras que las cantidades de servicios con tarifa fija se utilizan únicamente para la asignación de impuestos.",
+      "alertBody": "La tarifa base de la línea de contrato es el monto facturado. También puede adjuntar productos aquí; las cantidades de productos se facturan como unidades, mientras que las cantidades de servicios con tarifa fija se utilizan únicamente para la asignación de impuestos.",
       "alertTitle": "Servicios de tarifa fija:",
       "baseRateHelp": "Tarifa recurrente sugerida para todos los servicios fijos. Se puede anular al agregar este ajuste preestablecido a un contrato.",
       "baseRateLabel": "Tarifa base recurrente (opcional)",
@@ -478,7 +478,7 @@
       "failedToFetchContractLineServices": "No se pudieron recuperar los servicios de línea de contrato",
       "failedToRemoveContractLineService": "No se pudo eliminar el servicio de línea de contrato",
       "failedToUpdateContractLineService": "No se pudo actualizar el servicio de línea de contrato",
-      "failedToValidateDeletion": "No se pudo validar la eliminación. Por favor inténtalo de nuevo.",
+      "failedToValidateDeletion": "No se pudo validar la eliminación. Por favor inténtelo de nuevo.",
       "unknownErrorFetchingServiceTypes": "Se produjo un error desconocido al obtener tipos de servicios"
     },
     "heading": "Líneas de contrato",
@@ -533,7 +533,7 @@
     "fixed": {
       "basics": {
         "billingFrequencyLabel": "Frecuencia de facturación *",
-        "billingFrequencyPlaceholder": "Selecciona la frecuencia de facturación",
+        "billingFrequencyPlaceholder": "Seleccione la frecuencia de facturación",
         "description": "Asigne un nombre a la línea de contrato preestablecida y elija cómo se debe facturar de forma predeterminada.",
         "heading": "Conceptos básicos de la línea de contrato preestablecida",
         "nameLabel": "Nombre preestablecido de línea de contrato *",
@@ -542,7 +542,7 @@
       "cardTitle": "Editar valor preestablecido de línea de contrato: {{name}} (fijo)",
       "errors": {
         "contractLineNotFoundOrInvalidType": "Línea de contrato no encontrada o tipo no válido.",
-        "failedToLoadContractLinePresetConfiguration": "No se pudo cargar la configuración preestablecida de la línea de contrato. Por favor inténtalo de nuevo.",
+        "failedToLoadContractLinePresetConfiguration": "No se pudo cargar la configuración preestablecida de la línea de contrato. Por favor inténtelo de nuevo.",
         "failedToSaveContractLinePreset": "No se pudo guardar la línea de contrato preestablecida",
         "invalidContractLinePresetTypeOrNotFound": "Tipo de preajuste de línea de contrato no válido o no se encontró un preajuste de línea de contrato."
       },
@@ -584,7 +584,7 @@
     "hourly": {
       "basics": {
         "billingFrequencyLabel": "Frecuencia de facturación *",
-        "billingFrequencyPlaceholder": "Selecciona la frecuencia de facturación",
+        "billingFrequencyPlaceholder": "Seleccione la frecuencia de facturación",
         "cardTitle": "Editar valor preestablecido de línea de contrato: {{name}} (por hora)",
         "description": "Asigne un nombre a la línea de contrato preestablecida y elija cómo se debe facturar de forma predeterminada.",
         "heading": "Conceptos básicos de la línea de contrato preestablecida",
@@ -603,7 +603,7 @@
       "errors": {
         "cannotSaveValidationErrors": "No se puede guardar, existen errores de validación de toda la línea de contrato preestablecida.",
         "contractLineNotFoundOrInvalidType": "Línea de contrato no encontrada o tipo no válido.",
-        "failedToLoadPlanConfiguration": "No se pudo cargar la configuración del plan. Por favor inténtalo de nuevo.",
+        "failedToLoadPlanConfiguration": "No se pudo cargar la configuración del plan. Por favor inténtelo de nuevo.",
         "failedToSaveContractLinePreset": "No se pudo guardar la línea de contrato preestablecida",
         "failedToSavePlanWideConfiguration": "No se pudo guardar la configuración de todo el plan: {{message}}",
         "failedToSaveServiceConfiguration": "No se pudo guardar la configuración del servicio: {{message}}",
@@ -624,7 +624,7 @@
       },
       "basics": {
         "billingFrequencyLabel": "Frecuencia de facturación *",
-        "billingFrequencyPlaceholder": "Selecciona la frecuencia de facturación",
+        "billingFrequencyPlaceholder": "Seleccione la frecuencia de facturación",
         "cardTitle": "Editar valor preestablecido de línea de contrato: {{name}} (Uso)",
         "description": "Asigne un nombre a la línea de contrato preestablecida y elija cómo se debe facturar de forma predeterminada.",
         "heading": "Conceptos básicos de la línea de contrato preestablecida",
@@ -636,7 +636,7 @@
         }
       },
       "errors": {
-        "failedToLoadPlanServicesOrConfigurations": "No se pudieron cargar los servicios o configuraciones del plan. Por favor inténtalo de nuevo.",
+        "failedToLoadPlanServicesOrConfigurations": "No se pudieron cargar los servicios o configuraciones del plan. Por favor inténtelo de nuevo.",
         "failedToSaveContractLinePreset": "No se pudo guardar la línea de contrato preestablecida",
         "failedToSaveOneOrMoreServiceConfigurations": "No se pudieron guardar una o más configuraciones de servicio. Por favor verifique los detalles e inténtelo nuevamente.",
         "invalidPlanTypeOrNotFound": "Tipo de plan no válido o plan no encontrado.",
@@ -751,10 +751,10 @@
       },
       "unknownService": "Servicio desconocido",
       "unsavedChanges": {
-        "banner": "Tienes cambios sin guardar. Haga clic en \"Guardar cambios\" para aplicarlos.",
+        "banner": "Tiene cambios sin guardar. Haga clic en \"Guardar cambios\" para aplicarlos.",
         "cancelLabel": "Permanecer en la página",
         "confirmLabel": "Salir de la página",
-        "dialogMessage": "Tienes cambios sin guardar. ¿Estás seguro de que quieres abandonar esta página? Todos los cambios se perderán.",
+        "dialogMessage": "Tiene cambios sin guardar. ¿Está seguro de que quiere abandonar esta página? Todos los cambios se perderán.",
         "dialogTitle": "Cambios no guardados"
       }
     },
@@ -786,10 +786,10 @@
       "unitPlaceholder": "por ejemplo, GB, usuario, dispositivo",
       "unknownService": "Servicio desconocido",
       "unsavedChanges": {
-        "banner": "Tienes cambios sin guardar. Haga clic en \"Guardar cambios\" para aplicarlos.",
+        "banner": "Tiene cambios sin guardar. Haga clic en \"Guardar cambios\" para aplicarlos.",
         "cancelLabel": "Permanecer en la página",
         "confirmLabel": "Salir de la página",
-        "dialogMessage": "Tienes cambios sin guardar. ¿Estás seguro de que quieres abandonar esta página? Todos los cambios se perderán.",
+        "dialogMessage": "Tiene cambios sin guardar. ¿Está seguro de que quiere abandonar esta página? Todos los cambios se perderán.",
         "dialogTitle": "Cambios no guardados"
       }
     }

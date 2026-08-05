@@ -72,7 +72,7 @@
     },
     "detail": {
       "backToList": "Volver a oportunidades",
-      "confidence": "tu confianza",
+      "confidence": "su confianza",
       "confidenceNote": "La confianza la decide el responsable. La etapa surge de las pruebas. Ambas se muestran una al lado de la otra, nunca combinadas.",
       "createQuote": "Crear cotización",
       "draftFollowUp": "Redactar el seguimiento",
@@ -82,7 +82,7 @@
       "linkQuote": "Vincular un presupuesto existente",
       "loadFailed": "No se pudo cargar la oportunidad",
       "loading": "Cargando oportunidad...",
-      "markLost": "marca perdida",
+      "markLost": "Marque como perdida",
       "markWon": "marcos gano",
       "metadataTitle": "Oportunidad",
       "nextAction": "Siguiente acción",
@@ -112,12 +112,12 @@
     },
     "draft": {
       "body": "cuerpo",
-      "copied": "Copiado. Pégalo en tu correo electrónico.",
+      "copied": "Copiado. Péguelo en su correo electrónico.",
       "copy": "Copiar",
       "instructions": "Dígale al agente qué cambiar",
       "instructionsPlaceholder": "p.ej. Más corto, más cálido, más formal.",
       "loadingRecipient": "Comprobando el contacto vinculado...",
-      "noRecipient": "Vincula un contacto con una dirección de correo electrónico principal antes de enviarlo.",
+      "noRecipient": "Vincule un contacto con una dirección de correo electrónico principal antes de enviarlo.",
       "recipient": "Se envía a {{recipient}} a través del proveedor de correo electrónico de su inquilino.",
       "regenerate": "Reescribir",
       "send": "Enviar seguimiento",
@@ -171,8 +171,8 @@
       "notesPlaceholder": "¿Qué debería saber el equipo si esto vuelve?",
       "reason": "Motivo",
       "reasonPlaceholder": "¿Por qué no avanzó?",
-      "submit": "marca perdida",
-      "title": "marca perdida"
+      "submit": "Marque como perdida",
+      "title": "Marque como perdida"
     },
     "lossReason": {
       "chose_competitor": "Elige un competidor",
@@ -216,7 +216,7 @@
     "queue": {
       "actions": "Acciones",
       "allClear": "Todo claro. Cada acuerdo abierto tiene un siguiente paso programado.",
-      "bottom": "Eso es todo. Nada más te necesita hoy.",
+      "bottom": "Eso es todo. Nada más requiere su atención hoy.",
       "cardsView": "Tarjetas",
       "completeAction": "Listo → establecer siguiente",
       "completeActionFor": "Completar acción para {{title}}",
@@ -228,11 +228,11 @@
         "reviewPipeline": "Revisar el oleoducto",
         "viewAssessmentDeals": "Ver ofertas de evaluación"
       },
-      "markLost": "marca perdida",
+      "markLost": "Marque como perdida",
       "moneyFound": "dinero encontrado",
       "moneyFoundSource": "de facturación, contratos y activos",
-      "needsYou_one": "{{count}} cosa te necesita hoy.",
-      "needsYou_other": "{{count}} cosas te necesitan hoy.",
+      "needsYou_one": "{{count}} cosa requiere su atención hoy.",
+      "needsYou_other": "{{count}} cosas requieren su atención hoy.",
       "nothingDue": "Hoy no vence nada.",
       "openDeal": "trato abierto",
       "openDealNamed": "Abrir {{title}}",
@@ -477,12 +477,12 @@
       "currencyFixed": "Moneda: {{code}}",
       "hardware": "Ferretería",
       "mrr": "Recurrente (mensual)",
-      "note": "Estas son tus estimaciones. Una cotización aceptada los reemplaza por los números reales.",
+      "note": "Estas son sus estimaciones. Una cotización aceptada los reemplaza por los números reales.",
       "nrr": "Servicios únicos",
       "title": "Valor estimado"
     },
     "whitespace": {
-      "adoption": "El {{pct}}% de los clientes de tu acuerdo compran esto",
+      "adoption": "El {{pct}}% de los clientes de su acuerdo compran esto",
       "client": "Cliente",
       "empty": "La cuadrícula se completa una vez que los clientes tienen acuerdos activos.",
       "sell": "Iniciar {{category}} para {{client}}",
@@ -494,8 +494,8 @@
         "deadlinePast_one": " y {{count}} día después de su fecha límite.",
         "deadlinePast_other": " y {{count}} días después de su fecha límite.",
         "dueToday": "Vencimiento hoy",
-        "inboundChase_one": " Han escrito una vez desde tu última respuesta.",
-        "inboundChase_other": " Han escrito {{count}} veces desde tu última respuesta.",
+        "inboundChase_one": " Han escrito una vez desde su última respuesta.",
+        "inboundChase_other": " Han escrito {{count}} veces desde su última respuesta.",
         "pastDue_one": "{{count}} día de atraso",
         "pastDue_other": "{{count}} días de atraso",
         "proposalAgeShort_one": "{{count}} día.",
@@ -541,7 +541,7 @@
         "trailing": " en los últimos 12 meses. El resumen de una página les pone la comparación delante."
       },
       "whitespace": {
-        "comparable": " de ti todavía. Todos los clientes comparables lo hacen.",
+        "comparable": " de usted todavía. Todos los clientes comparables lo hacen.",
         "missing": "{{clientName}} no compra {{serviceName}}"
       }
     },

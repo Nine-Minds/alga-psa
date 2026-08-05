@@ -243,7 +243,7 @@
         "description": "Apri il record successivo."
       },
       "addTime": {
-        "label": "Aggiungi voce di tempo",
+        "label": "Aggiungi inserimento ore",
         "description": "Apri il pannello di immissione tempo per il record corrente."
       }
     },

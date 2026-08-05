@@ -150,9 +150,9 @@
           "roleRemoved": "Rol eliminado correctamente"
         },
         "error": {
-          "assignFailed": "No se pudo asignar el rol. Inténtalo de nuevo.",
-          "removeFailed": "No se pudo eliminar el rol. Inténtalo de nuevo.",
-          "permissionDenied": "No tienes permiso para cambiar los roles de usuario."
+          "assignFailed": "No se pudo asignar el rol. Inténtelo de nuevo.",
+          "removeFailed": "No se pudo eliminar el rol. Inténtelo de nuevo.",
+          "permissionDenied": "No tiene permiso para cambiar los roles de usuario."
         }
       }
     },
@@ -219,7 +219,7 @@
       "inbound": {
         "title": "Webhooks entrantes",
         "description": "Acepta solicitudes autenticadas de sistemas externos y despáchalas a acciones directas o flujos de trabajo.",
-        "placeholder": "Configura endpoints de webhooks entrantes que verifican solicitudes, deduplican entregas y despachan a acciones o flujos.",
+        "placeholder": "Configure endpoints de webhooks entrantes que verifican solicitudes, deduplican entregas y despachan a acciones o flujos.",
         "newWebhook": "Nuevo webhook",
         "list": {
           "title": "Webhooks entrantes configurados",
@@ -246,9 +246,9 @@
           "loadFailed": "Error al cargar los webhooks entrantes.",
           "nameRequired": "El nombre es obligatorio.",
           "slugRequired": "El slug es obligatorio.",
-          "actionRequired": "Selecciona una acción antes de guardar.",
-          "workflowRequired": "Selecciona un flujo antes de guardar.",
-          "missingRequiredFields": "Asigna un valor para los campos obligatorios: {{fields}}"
+          "actionRequired": "Seleccione una acción antes de guardar.",
+          "workflowRequired": "Seleccione un flujo antes de guardar.",
+          "missingRequiredFields": "Asigne un valor para los campos obligatorios: {{fields}}"
         },
         "dialog": {
           "createTitle": "Crear webhook entrante",
@@ -260,7 +260,7 @@
         },
         "identity": {
           "title": "Identidad",
-          "help": "Nombra el webhook y elige el slug seguro para URL usado en su endpoint receptor.",
+          "help": "Nombre el webhook y elija el slug seguro para URL usado en su endpoint receptor.",
           "name": "Nombre",
           "namePlaceholder": "Alertas críticas de RMM",
           "slug": "Slug",
@@ -270,7 +270,7 @@
         },
         "auth": {
           "title": "Autenticación",
-          "help": "Elige cómo las solicitudes entrantes demuestran que están autorizadas a usar este endpoint.",
+          "help": "Elija cómo las solicitudes entrantes demuestran que están autorizadas a usar este endpoint.",
           "method": "Método de autenticación",
           "types": {
             "hmacSha256": "HMAC-SHA256",
@@ -281,25 +281,25 @@
           "signatureHeader": "Cabecera de firma",
           "signatureHeaderPlaceholder": "X-Alga-Signature",
           "bearerToken": "Token Bearer",
-          "bearerTokenPlaceholder": "Pega el token o deja vacío para generar uno",
-          "secretUnchangedPlaceholder": "Deja vacío para mantener el secreto actual",
+          "bearerTokenPlaceholder": "Pegue el token o deje vacío para generar uno",
+          "secretUnchangedPlaceholder": "Deje vacío para mantener el secreto actual",
           "ipCidrs": "IPs / CIDRs permitidos",
           "ipCidrsPlaceholder": "203.0.113.10\n198.51.100.0/24",
           "queryParam": "Parámetro de consulta",
           "queryParamPlaceholder": "token",
           "pathToken": "Token de ruta",
-          "pathTokenPlaceholder": "Pega el token o deja vacío para generar uno"
+          "pathTokenPlaceholder": "Pegue el token o deje vacío para generar uno"
         },
         "secret": {
           "label": "Secreto del webhook",
-          "warning": "Este valor se muestra solo ahora. Guárdalo en el sistema de origen antes de cerrar este diálogo.",
+          "warning": "Este valor se muestra solo ahora. Guárdelo en el sistema de origen antes de cerrar este diálogo.",
           "copy": "Copiar",
           "download": "Descargar como .txt",
           "close": "Cerrar"
         },
         "idempotency": {
           "title": "Idempotencia",
-          "help": "Usa una clave estable para detectar entregas duplicadas dentro de la ventana configurada.",
+          "help": "Use una clave estable para detectar entregas duplicadas dentro de la ventana configurada.",
           "source": "Origen de la clave",
           "types": {
             "header": "Cabecera HTTP",
@@ -320,25 +320,25 @@
         },
         "handler": {
           "title": "Manejador",
-          "help": "Elige qué debe hacer Alga después de que la solicitud sea verificada y deduplicada.",
+          "help": "Elija qué debe hacer Alga después de que la solicitud sea verificada y deduplicada.",
           "type": "Tipo de manejador",
           "types": {
             "directAction": "Acción directa",
             "workflow": "Flujo de trabajo"
           },
           "directActionTitle": "Acción directa",
-          "directActionHelp": "Selecciona una acción entrante y mapea los campos del payload a sus campos de destino.",
+          "directActionHelp": "Seleccione una acción entrante y mapee los campos del payload a sus campos de destino.",
           "action": "Acción",
-          "actionPlaceholder": "Selecciona una acción",
-          "actionEmpty": "No hay acciones entrantes registradas. Asegúrate de que el servidor haya inicializado el registro de acciones antes de guardar.",
+          "actionPlaceholder": "Seleccione una acción",
+          "actionEmpty": "No hay acciones entrantes registradas. Asegúrese de que el servidor haya inicializado el registro de acciones antes de guardar.",
           "targetFields": "Campos de destino",
           "required": "Requerido",
           "optional": "Opcional",
-          "mappingPlaceholder": "Escribe una expresión JSONata, p. ej. payload.field",
+          "mappingPlaceholder": "Escriba una expresión JSONata, p. ej. payload.field",
           "workflowTitle": "Flujo de trabajo",
-          "workflowHelp": "Selecciona un flujo para iniciar con el envelope normalizado del webhook.",
+          "workflowHelp": "Seleccione un flujo para iniciar con el envelope normalizado del webhook.",
           "workflow": "Flujo de trabajo",
-          "workflowPlaceholder": "Selecciona un flujo",
+          "workflowPlaceholder": "Seleccione un flujo",
           "workflowEmpty": "No hay flujos visibles en este inquilino. Publica o muestra un flujo para usar el manejador de flujos.",
           "envelopeTitle": "Envelope de entrada del flujo",
           "fieldTypes": {
@@ -354,7 +354,7 @@
         "sample": {
           "title": "Payload de ejemplo",
           "help": "Captura la próxima solicitud verificada para la autocompletado de mapeo.",
-          "createFirst": "Guarda el webhook antes de capturar una solicitud de ejemplo.",
+          "createFirst": "Guarde el webhook antes de capturar una solicitud de ejemplo.",
           "captureButton": "Capturar solicitud de ejemplo",
           "captureActive": "Ventana de captura activa hasta {{expiresAt}}.",
           "sampleAvailable": "Payload de ejemplo capturado.",
@@ -363,8 +363,8 @@
         },
         "sampleTree": {
           "title": "Rutas de ejemplo",
-          "help": "Haz clic en una ruta para insertarla en {{field}}.",
-          "focusHelp": "Enfoca un campo de mapeo, luego haz clic en una ruta para insertarla.",
+          "help": "Haga clic en una ruta para insertarla en {{field}}.",
+          "focusHelp": "Enfoque un campo de mapeo, luego haga clic en una ruta para insertarla.",
           "empty": "Captura un payload de ejemplo para explorar campos."
         },
         "mapping": {

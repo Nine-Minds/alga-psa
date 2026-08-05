@@ -165,7 +165,7 @@
         }
       },
       "workflow": {
-        "title": "Flux de travail de calcul des taxes externes",
+        "title": "Workflow de calcul des taxes externes",
         "step1": "La facture est créée sans montants de taxes",
         "step2": "La facture est exportée vers votre système comptable connecté (QuickBooks, Xero, etc.)",
         "step3": "La taxe est calculée par le système comptable en fonction de ses règles fiscales",

@@ -165,14 +165,14 @@
         "all": "Tutte le bacheche"
       },
       "help": {
-        "conditions": "Lasci un campo vuoto per farlo corrispondere a qualsiasi valore."
+        "conditions": "Lascia un campo vuoto per farlo corrispondere a qualsiasi valore."
       },
       "actions": {
         "create": "Crea trigger",
         "save": "Salva modifiche",
         "delete": "Elimina trigger"
       },
-      "noTemplates": "Crei un modello di sondaggio prima di aggiungere trigger.",
+      "noTemplates": "Crea un modello di sondaggio prima di aggiungere trigger.",
       "prioritiesMixed": "Le bacheche selezionate usano tipi di priorità diversi. Vengono mostrate tutte le priorità.",
       "errors": {
         "reference": "Impossibile caricare le opzioni del trigger. Riprovi."
@@ -183,8 +183,8 @@
     "pageTitle": "Sondaggio di soddisfazione del cliente",
     "invalidTitle": "Sondaggio non disponibile",
     "invalidMessage": "Questo link di feedback non è più valido oppure è già stato usato.",
-    "ratingPrompt": "Com'è stata la sua esperienza?",
-    "ratingAssistive": "Selezioni un punteggio da 1 a {{scale}}",
+    "ratingPrompt": "Com'è stata la tua esperienza?",
+    "ratingAssistive": "Seleziona un punteggio da 1 a {{scale}}",
     "commentLabel": "Commenti aggiuntivi (facoltativo)",
     "submitButton": "Invia feedback",
     "submitting": "Invio del feedback...",
@@ -192,9 +192,9 @@
     "submittedMessage": "{{thankYouText}}",
     "ratingSubmitted": "Feedback inviato",
     "retryButton": "Riprova",
-    "selectRatingError": "Selezioni una valutazione prima dell'invio.",
+    "selectRatingError": "Seleziona una valutazione prima dell'invio.",
     "errorMessage": "Non è stato possibile registrare il feedback. Riprovi.",
-    "supportMessage": "Se ha domande, contatti il suo tecnico."
+    "supportMessage": "Se hai domande, contatta il tuo tecnico."
   },
   "rating": {
     "buttonAriaWithLabel": "{{rating}} - {{label}}",
@@ -382,7 +382,7 @@
       "overviewDescription": "Confronti nel tempo la soddisfazione media e i tassi di risposta. Una segmentazione aggiuntiva arriverà nelle iterazioni successive."
     },
     "chart": {
-      "empty": "Selezioni i filtri sopra per esplorare analisi avanzate. (In arrivo)",
+      "empty": "Seleziona i filtri sopra per esplorare analisi avanzate. (In arrivo)",
       "tooltip": {
         "averageRating": "Valutazione media",
         "responseRate": "Tasso di risposta"

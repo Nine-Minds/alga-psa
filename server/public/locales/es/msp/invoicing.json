@@ -168,7 +168,7 @@
       "poOverage": {
         "title": "Excedentes del límite de órdenes de compra",
         "description": "El total de la factura seleccionada ha finalizado en {{amount}}.",
-        "batchDescription": "Una o más facturas excederían el monto autorizado de una Orden de Compra. ¿Qué es lo que quieres hacer?",
+        "batchDescription": "Una o más facturas excederían el monto autorizado de una orden de compra. ¿Qué desea hacer?",
         "batchItem": "{{clientName}}: terminado por {{amount}}",
         "poNumber": "OC {{number}}",
         "allowOverages": "Permitir excedentes (generar todas las facturas)",
@@ -222,8 +222,8 @@
       "titleFinalize": "Se produjeron errores al finalizar las facturas:",
       "titleDelete": "Se produjeron errores al eliminar las facturas:",
       "titleReverse": "Se produjeron errores al revertir las facturas:",
-      "loadReady": "No se pudieron cargar los períodos de facturación. Por favor inténtalo de nuevo.",
-      "loadHistory": "No se pudo cargar el historial de facturas recurrentes. Por favor inténtalo de nuevo."
+      "loadReady": "No se pudieron cargar los períodos de facturación. Por favor inténtelo de nuevo.",
+      "loadHistory": "No se pudo cargar el historial de facturas recurrentes. Por favor inténtelo de nuevo."
     },
     "loading": {
       "billingData": "Cargando datos de facturación"
@@ -398,11 +398,11 @@
     },
     "loading": "Cargando borradores de facturas...",
     "errors": {
-      "loadFailed": "No se pudieron cargar los borradores de facturas. Por favor inténtalo de nuevo.",
-      "finalizeFailed": "No se pudo finalizar la factura. Por favor inténtalo de nuevo.",
-      "bulkFinalizeFailed": "No se pudieron finalizar las facturas seleccionadas. Por favor inténtalo de nuevo.",
-      "pdfFailed": "No se pudo generar el PDF. Por favor inténtalo de nuevo.",
-      "reverseFailed": "No se pudieron revertir los borradores de facturas. Por favor inténtalo de nuevo.",
+      "loadFailed": "No se pudieron cargar los borradores de facturas. Por favor inténtelo de nuevo.",
+      "finalizeFailed": "No se pudo finalizar la factura. Por favor inténtelo de nuevo.",
+      "bulkFinalizeFailed": "No se pudieron finalizar las facturas seleccionadas. Por favor inténtelo de nuevo.",
+      "pdfFailed": "No se pudo generar el PDF. Por favor inténtelo de nuevo.",
+      "reverseFailed": "No se pudieron revertir los borradores de facturas. Por favor inténtelo de nuevo.",
       "bulkFinalizePendingTax_one": "Se omitió {{count}} factura porque está pendiente de la importación del impuesto externo. Importe el impuesto desde su sistema contable, o cámbiela a impuesto interno, y luego finalícela individualmente.",
       "bulkFinalizePendingTax_other": "Se omitieron {{count}} facturas porque están pendientes de la importación del impuesto externo. Importe el impuesto desde su sistema contable, o cámbielas a impuesto interno, y luego finalícelas individualmente.",
       "bulkFinalizeSkipped_one": "No se pudo finalizar {{count}} factura y se omitió.",
@@ -455,11 +455,11 @@
     },
     "loading": "Cargando facturas...",
     "errors": {
-      "loadFailed": "No se pudieron cargar las facturas. Inténtalo de nuevo.",
-      "pdfFailed": "No se pudo generar el PDF. Por favor inténtalo de nuevo.",
-      "bulkPdfFailed": "No se pudieron generar archivos PDF. Por favor inténtalo de nuevo.",
-      "unfinalizeFailed": "No se pudo anular la finalización de la factura. Por favor inténtalo de nuevo.",
-      "bulkUnfinalizeFailed": "No se pudieron anular la finalización de las facturas. Por favor inténtalo de nuevo.",
+      "loadFailed": "No se pudieron cargar las facturas. Inténtelo de nuevo.",
+      "pdfFailed": "No se pudo generar el PDF. Por favor inténtelo de nuevo.",
+      "bulkPdfFailed": "No se pudieron generar archivos PDF. Por favor inténtelo de nuevo.",
+      "unfinalizeFailed": "No se pudo anular la finalización de la factura. Por favor inténtelo de nuevo.",
+      "bulkUnfinalizeFailed": "No se pudieron anular la finalización de las facturas. Por favor inténtelo de nuevo.",
       "bulkUnfinalizeInvoiceFailed": "No se pudo reabrir {{invoiceNumber}}: {{reason}}"
     }
   },
@@ -467,7 +467,7 @@
     "title": "Períodos de servicio recurrentes",
     "description": "Revise las ventanas de cobertura de facturas recurrentes para una línea de contrato de cliente, solucione problemas por los cuales el trabajo vence o no e inspeccione el historial facturado vinculado a las filas de detalles de la factura.",
     "fields": {
-      "scheduleSelect": "Elige un horario",
+      "scheduleSelect": "Elija un horario",
       "scheduleSelectPlaceholder": "Seleccione un programa recurrente reciente",
       "scheduleKey": "Clave de programación",
       "scheduleKeyPlaceholder": "Pegue una clave de programación (opcional si se selecciona arriba)",
@@ -690,7 +690,7 @@
       "notFound": "Factura no encontrada.",
       "noTemplates": "No hay plantillas de factura disponibles.",
       "loadFailed": "No se pudo cargar la vista previa: {{message}}",
-      "actionFailed": "No se pudo realizar {{action}}. Por favor inténtalo de nuevo.",
+      "actionFailed": "No se pudo realizar {{action}}. Por favor inténtelo de nuevo.",
       "actionLabels": {
         "finalizeInvoice": "finalizar factura",
         "downloadPdf": "descargar PDF",
@@ -777,7 +777,7 @@
       "cloneEditFailed": "No se pudo crear una copia editable.",
       "setDefaultFailed": "No se pudo establecer la plantilla como predeterminada.",
       "fetchFailed": "No se pudieron recuperar las plantillas.",
-      "deleteValidationFailed": "No se pudo validar la eliminación. Por favor inténtalo de nuevo.",
+      "deleteValidationFailed": "No se pudo validar la eliminación. Por favor inténtelo de nuevo.",
       "deleteUnexpected": "Se produjo un error inesperado al eliminar la plantilla."
     }
   },
@@ -924,12 +924,12 @@
     "fields": {
       "due": "Vencimiento",
       "additionalMessage": "Mensaje adicional",
-      "additionalMessagePlaceholder": "Añade una nota personal para incluirla en el correo electrónico..."
+      "additionalMessagePlaceholder": "Añada una nota personal para incluirla en el correo electrónico..."
     },
     "preview": "Los correos electrónicos se enviarán desde {{fromEmail}} en nombre de {{companyName}}. Cada factura se adjuntará en formato PDF.",
     "values": {
       "defaultFromEmail": "noreply@ejemplo.com",
-      "defaultCompanyName": "Tu Empresa"
+      "defaultCompanyName": "Su empresa"
     },
     "actions": {
       "cancel": "Cancelar",
@@ -997,7 +997,7 @@
     },
     "errors": {
       "allFieldsRequired": "Por favor complete todos los campos",
-      "validAmount": "Por favor ingresa una cantidad válida",
+      "validAmount": "Por favor ingrese una cantidad válida",
       "creditMemosUnsupported": "Las notas de crédito aún no son compatibles",
       "generateFailed": "Error al generar factura"
     },

@@ -147,7 +147,7 @@
         "cardTitle": "Servicetarieven en instellingen",
         "emptyState": "Er zijn momenteel geen services gekoppeld aan deze contractregel.",
         "fallbackServiceName": "Service-ID: {{id}}",
-        "manageCardTitle": "Beheer contractlijnservices",
+        "manageCardTitle": "Beheer contractregelservices",
         "nonHourlyServiceMessage": "Deze service (factureringsmethode: {{method}}) kan voor dit plan niet worden geconfigureerd met specifieke uurtarieven."
       },
       "validation": {
@@ -186,7 +186,7 @@
         "emptyStateWithHelper": "Er zijn momenteel geen services gekoppeld aan deze contractregel. Voeg hieronder services toe om hun prijzen te configureren.",
         "fallbackServiceName": "Service-ID: {{id}}",
         "loadingConfiguration": "Configuratie laden...",
-        "manageCardTitle": "Beheer contractlijnservices",
+        "manageCardTitle": "Beheer contractregelservices",
         "pricingCardTitle": "Serviceprijzen",
         "summary": {
           "defaultUnit": "Eenheid",
@@ -469,19 +469,19 @@
       "isCustom": "Is op maat"
     },
     "deleteDialog": {
-      "defaultEntityName": "deze contractlijn"
+      "defaultEntityName": "deze contractregel"
     },
     "errors": {
-      "failedToAddContractLineService": "Kan contractlijnservice niet toevoegen",
+      "failedToAddContractLineService": "Kan contractregelservice niet toevoegen",
       "failedToDeleteContractLine": "Kan de contractregel niet verwijderen",
       "failedToFetchContractLines": "Kan contractregels niet ophalen",
-      "failedToFetchContractLineServices": "Kan contractlijnservices niet ophalen",
-      "failedToRemoveContractLineService": "Kan de contractlijnservice niet verwijderen",
+      "failedToFetchContractLineServices": "Kan contractregelservices niet ophalen",
+      "failedToRemoveContractLineService": "Kan de contractregelservice niet verwijderen",
       "failedToUpdateContractLineService": "Kan de contractregelservice niet updaten",
       "failedToValidateDeletion": "Kan de verwijdering niet valideren. Probeer het opnieuw.",
       "unknownErrorFetchingServiceTypes": "Er is een onbekende fout opgetreden bij het ophalen van servicetypen"
     },
-    "heading": "Contractlijnen",
+    "heading": "Contractregels",
     "planServices": {
       "actions": {
         "addService": "Dienst toevoegen"
@@ -796,7 +796,7 @@
   },
   "typeSelector": {
     "descriptions": {
-      "fixed": "Een contractlijn met een vaste prijs en consistente facturering, ongeacht het gebruik. Ideaal voor voorspelbare diensten.",
+      "fixed": "Een contractregel met een vaste prijs en consistente facturering, ongeacht het gebruik. Ideaal voor voorspelbare diensten.",
       "hourly": "Tijdgebaseerde facturering met configureerbare tarieven. Het beste voor variabele werklasten, gefactureerd op basis van bestede tijd.",
       "usage": "Op gebruik gebaseerde facturering met gelaagde prijsopties. Perfect voor diensten gemeten aan de hand van verbruik."
     },

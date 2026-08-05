@@ -789,7 +789,7 @@
     "renewalSettings": "Ustawienia odnowienia",
     "renewalSettingsHelp": "Ustaw sposób obsługi tego przypisania na czas określony przy odnawianiu.",
     "renewalSettingsSubtext": "Ustawienia odnowienia pojawiają się w przypadku przypisań na czas określony z datą końcową.",
-    "tenantDefaults": "Użyj domyślnych ustawień odnowienia dzierżawy",
+    "tenantDefaults": "Użyj domyślnych ustawień odnowienia organizacji",
     "tenantDefaultsHelp": "Tryb odnowienia i okres powiadomienia będą zgodne z domyślnymi ustawieniami rozliczeń organizacji.",
     "autoRenew": "Automatyczne odnawianie",
     "manualRenewal": "Ręczne odnowienie",
@@ -812,7 +812,7 @@
     "startDate": "Data rozpoczęcia",
     "startDateRequired": "Data rozpoczęcia jest wymagana",
     "updateAssignment": "Zaktualizuj zadanie",
-    "useTenantRenewalDefaults": "Użyj domyślnych ustawień odnowienia dzierżawy",
+    "useTenantRenewalDefaults": "Użyj domyślnych ustawień odnowienia organizacji",
     "saveError": "Nie udało się zapisać umowy. Spróbuj ponownie."
   },
   "clientContractLineDashboard": {

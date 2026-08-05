@@ -161,7 +161,7 @@
       "service": "Dienst",
       "quantity": "Hoeveelheid",
       "usageDate": "Gebruiksdatum",
-      "contractLine": "Contractlijn",
+      "contractLine": "Contractregel",
       "actions": "Acties",
       "defaultContractLine": "Standaardcontractregel",
       "contractLineLabel": "Contractregel: {{id}}..."
@@ -179,7 +179,7 @@
         "quantity": "Hoeveelheid",
         "usageDate": "Gebruiksdatum",
         "comments": "Opmerkingen (optioneel)",
-        "contractLine": "Contractlijn"
+        "contractLine": "Contractregel"
       },
       "servicePlaceholder": "Selecteer dienst"
     },

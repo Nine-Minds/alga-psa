@@ -246,14 +246,14 @@
         "selectAppropriateRole": "Seleccione un rol apropiado para este tipo de usuario",
         "contactMissingEmail": "El contacto \"{{name}}\" no tiene dirección de correo electrónico. Actualice el correo electrónico del contacto antes de enviar una invitación.",
         "licenseLimit": "No se puede activar el usuario: se alcanzó el límite de licencias. Desactive otro usuario o actualice su licencia.",
-        "permissionDeniedInvite": "No tienes permiso para invitar usuarios.",
-        "permissionDeniedCreate": "No tienes permiso para crear usuarios.",
+        "permissionDeniedInvite": "No tiene permiso para invitar usuarios.",
+        "permissionDeniedCreate": "No tiene permiso para crear usuarios.",
         "emailNotConfigured": "El servicio de correo electrónico está deshabilitado o no está configurado.",
         "contactNotFound": "Contacto no encontrado.",
-        "contactMissingEmailGeneric": "El contacto no tiene dirección de correo electrónico. Agrega una dirección de correo al contacto antes de enviar una invitación.",
-        "contactInvalidEmail": "El contacto tiene una dirección de correo electrónico no válida. Actualiza el contacto con una dirección válida antes de enviar una invitación.",
+        "contactMissingEmailGeneric": "El contacto no tiene dirección de correo electrónico. Agregue una dirección de correo al contacto antes de enviar una invitación.",
+        "contactInvalidEmail": "El contacto tiene una dirección de correo electrónico no válida. Actualice el contacto con una dirección válida antes de enviar una invitación.",
         "invalidEmail": "Por favor ingrese una dirección de correo electrónico válida",
-        "noDefaultClient": "No hay un cliente predeterminado configurado para este tenant. Configura un cliente predeterminado en Configuración General.",
+        "noDefaultClient": "No hay un cliente predeterminado configurado para este tenant. Configure un cliente predeterminado en Configuración General.",
         "noDefaultLocation": "El cliente predeterminado debe tener una ubicación predeterminada configurada para enviar invitaciones al portal.",
         "noLocationEmail": "La ubicación del cliente predeterminado debe tener un correo electrónico de contacto configurado.",
         "noBaseUrl": "La URL base no está configurada para las invitaciones al portal.",
@@ -358,7 +358,7 @@
         "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico",
         "reportsToSelf": "Un usuario no puede reportarse a sí mismo",
         "reportsToCycle": "Esto crearía una cadena de reporte circular",
-        "permissionDenied": "No tienes permiso para cambiar los roles de usuario.",
+        "permissionDenied": "No tiene permiso para cambiar los roles de usuario.",
         "invalidCapacity": "La capacidad semanal debe ser un número positivo.",
         "invalidWorkSchedule": "El horario laboral debe ser un intervalo válido que termine después de comenzar."
       }
@@ -422,7 +422,7 @@
         "createFailed": "Error al crear el equipo: {{error}}",
         "deleteFailed": "Error al eliminar el equipo",
         "updateName": "No se pudo actualizar el nombre del equipo",
-        "saveChanges": "No se pudieron guardar los cambios. Inténtalo de nuevo."
+        "saveChanges": "No se pudieron guardar los cambios. Inténtelo de nuevo."
       }
     }
   },
@@ -724,11 +724,11 @@
           "nameRequired": "El nombre del tablero es obligatorio",
           "saveFailed": "Error al guardar el tablero",
           "lastDefault": "No se puede eliminar el último tablero predeterminado",
-          "statusRequired": "Agrega al menos un estado de ticket antes de guardar el tablero.",
+          "statusRequired": "Agregue al menos un estado de ticket antes de guardar el tablero.",
           "duplicateStatusName": "Los nombres de estado de ticket deben ser únicos dentro de un tablero.",
-          "invalidOpenDefault": "Selecciona exactamente un estado de ticket abierto predeterminado antes de guardar el tablero.",
+          "invalidOpenDefault": "Seleccione exactamente un estado de ticket abierto predeterminado antes de guardar el tablero.",
           "nameAlreadyExists": "Ya existe un tablero con este nombre.",
-          "selectBoardToCopy": "Selecciona un tablero existente desde el cual copiar los estados de ticket.",
+          "selectBoardToCopy": "Seleccione un tablero existente desde el cual copiar los estados de ticket.",
           "fetchStatusesFailed": "No se pudieron cargar los estados de ticket del tablero.",
           "deleteFailed": "No se pudo eliminar el tablero",
           "importFailed": "No se pudieron importar los tableros",
@@ -750,7 +750,7 @@
         "requiredFieldsLabel": "Campos obligatorios al cerrar",
         "requiredFieldsHelp": "Estos campos del ticket deben completarse antes de que el ticket pueda cerrarse.",
         "autoCloseLabel": "Reglas de cierre automático",
-        "autoCloseHelp": "Cierra automáticamente los tickets que permanecen en un estado sin actividad. Se puede enviar un correo de aviso al contacto antes del cierre.",
+        "autoCloseHelp": "Cierre automáticamente los tickets que permanecen en un estado sin actividad. Se puede enviar un correo de aviso al contacto antes del cierre.",
         "addAutoCloseRule": "Agregar regla",
         "triggerStatusLabel": "Cuando el ticket está en estado",
         "triggerStatusPlaceholder": "Seleccionar estado",
@@ -792,7 +792,7 @@
         "saveChanges": "Guardar cambios",
         "unsaved": "Sin guardar",
         "unsavedShort": "Cambios sin guardar",
-        "unsavedBanner": "Tienes cambios sin guardar. Haz clic en «Guardar cambios» para aplicarlos.",
+        "unsavedBanner": "Tiene cambios sin guardar. Haga clic en «Guardar cambios» para aplicarlos.",
         "allSaved": "Todos los cambios guardados",
         "reopenBadge": "reabrir",
         "required": "Obligatorio"
@@ -1349,7 +1349,7 @@
     "settingsForm": {
       "enable": {
         "label": "Activar notificaciones",
-        "description": "Activa o desactiva todas las notificaciones para este inquilino"
+        "description": "Active o desactive todas las notificaciones para este inquilino"
       },
       "loading": "Cargando configuración de notificaciones...",
       "loadError": "Error al cargar la configuración",
@@ -1722,7 +1722,7 @@
       "error": {
         "loadImportData": "No se pudieron cargar los datos de importación",
         "createPreview": "No se pudo crear la vista previa",
-        "selectPreviewFirst": "Selecciona una vista previa para aprobar antes de importar.",
+        "selectPreviewFirst": "Seleccione una vista previa para aprobar antes de importar.",
         "startImportJob": "No se pudo iniciar el trabajo de importación",
         "loadJobDetails": "No se pudieron cargar los detalles del trabajo",
         "refreshHistory": "No se pudo actualizar el historial de importación"

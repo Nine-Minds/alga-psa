@@ -120,8 +120,8 @@
       "handoffNetworkIssue": "Se detectó un problema de red al finalizar el inicio de sesión. Inténtelo de nuevo."
     },
     "checkEmail": {
-      "resendSuccess": "¡Correo enviado! Revisa tu bandeja de entrada.",
-      "resendFailed": "No se pudo reenviar el correo. Inténtalo de nuevo.",
+      "resendSuccess": "¡Correo enviado! Revise su bandeja de entrada.",
+      "resendFailed": "No se pudo reenviar el correo. Inténtelo de nuevo.",
       "whatsNext": "¿Qué sigue?",
       "didntReceive": "¿No recibió el correo?"
     }
@@ -132,7 +132,7 @@
       "connectionFailed": "No se pudo conectar al servidor",
       "passwordRequired": "Se requiere contraseña",
       "invalidPassword": "Contraseña no válida",
-      "downloadFailedRetry": "La descarga falló. Inténtalo de nuevo.",
+      "downloadFailedRetry": "La descarga falló. Inténtelo de nuevo.",
       "downloadFailed": "La descarga falló",
       "linkNotAvailable": "Enlace no disponible",
       "linkExpired": "Este enlace compartido ha caducado.",
@@ -161,7 +161,7 @@
       "clientPortalOnly": "Acceso denegado: las acciones del portal del cliente están restringidas a usuarios cliente",
       "insufficientPermissions": "Permisos insuficientes",
       "userIdNotFound": "ID de usuario no encontrada en la sesión",
-      "tenantNotFound": "Inquilino no encontrado en la sesión. Cierra sesión y vuelve a entrar.",
+      "tenantNotFound": "Inquilino no encontrado en la sesión. Cierre sesión y vuelva a entrar.",
       "userNotFound": "Usuario no encontrado",
       "contactNotFound": "Usuario no asociado a un contacto",
       "clientNotFound": "El contacto no está asociado a una empresa"
@@ -203,8 +203,8 @@
     "currentLanguage": "Idioma actual",
     "preference": {
       "label": "Preferencia de idioma",
-      "helper": "Selecciona tu idioma preferido para la interfaz y las notificaciones por correo electrónico",
-      "placeholder": "Selecciona un idioma",
+      "helper": "Seleccione su idioma preferido para la interfaz y las notificaciones por correo electrónico",
+      "placeholder": "Seleccione un idioma",
       "cleared": "Preferencia de idioma eliminada. Usando el idioma predeterminado...",
       "updating": "Actualizando preferencia de idioma...",
       "notSet": "Sin definir",
@@ -299,13 +299,13 @@
         "postalCode": "Código postal",
         "postalCodeHelper": "Código postal o ZIP",
         "country": "País",
-        "countryHelper": "Selecciona un país (obligatorio)",
+        "countryHelper": "Seleccione un país (obligatorio)",
         "phone": "Teléfono",
         "phoneHelper": "Número telefónico de esta ubicación",
         "email": "Correo electrónico",
         "emailHelper": "Correo electrónico de esta ubicación",
         "taxRegion": "Región fiscal",
-        "taxRegionHelper": "Selecciona la región fiscal aplicable",
+        "taxRegionHelper": "Seleccione la región fiscal aplicable",
         "notes": "Notas",
         "notesHelper": "Notas adicionales sobre esta ubicación",
         "defaultLocation": "Ubicación predeterminada",
@@ -316,16 +316,16 @@
         "shippingAddressHelper": "Usar esta ubicación como dirección de envío",
         "placeholder": {
           "locationName": "p. ej., Oficina principal, Almacén",
-          "addressLine1": "Ingresa la dirección *",
-          "city": "Ingresa la ciudad *",
-          "country": "Selecciona un país *",
+          "addressLine1": "Ingrese la dirección *",
+          "city": "Ingrese la ciudad *",
+          "country": "Seleccione un país *",
           "loadingCountries": "Cargando países...",
-          "taxRegionOption": "Selecciona una región fiscal...",
-          "taxRegion": "Selecciona una región fiscal..."
+          "taxRegionOption": "Seleccione una región fiscal...",
+          "taxRegion": "Seleccione una región fiscal..."
         }
       },
       "validation": {
-        "title": "Completa los campos obligatorios:"
+        "title": "Complete los campos obligatorios:"
       },
       "errors": {
         "loadTaxRegions": "No se pudieron cargar las regiones fiscales",
@@ -349,7 +349,7 @@
       },
       "empty": {
         "title": "Aún no hay ubicaciones",
-        "description": "Haz clic en \"Agregar ubicación\" para comenzar"
+        "description": "Haga clic en \"Agregar ubicación\" para comenzar"
       }
     }
   },
@@ -409,12 +409,12 @@
     "removeVideoMessage": "¿Seguro que deseas desvincular el video \"{{name}}\" de este elemento?\\n\\nEsto solo elimina el vínculo: el archivo seguirá en la biblioteca de documentos y se puede adjuntar a otros elementos.",
     "downloadFile": "Descargar archivo",
     "videoUnsupported": "Formato de video ({{mimeType}}) no compatible para la reproducción en el navegador",
-    "videoTagUnsupported": "Tu navegador no admite la etiqueta de video.",
+    "videoTagUnsupported": "Su navegador no admite la etiqueta de video.",
     "unnamed": "Sin título",
-    "videoDownloadInfo": "El video se descargará y podrá reproducirse con el reproductor predeterminado de tu sistema.",
+    "videoDownloadInfo": "El video se descargará y podrá reproducirse con el reproductor predeterminado de su sistema.",
     "previewUnavailableNoId": "Vista previa no disponible (sin identificador)",
     "previewLoadFailed": "No se pudo cargar la vista previa",
-    "videoCodecWarning": "Es posible que Chrome no admita este códec de video. Intenta descargarlo o usa Safari/Edge.",
+    "videoCodecWarning": "Es posible que Chrome no admita este códec de video. Intente descargarlo o use Safari/Edge.",
     "messages": {
       "fetchFailed": "No se pudieron obtener los documentos.",
       "folderCreated": "La carpeta \"{{name}}\" se creó correctamente",
@@ -457,20 +457,20 @@
       "perPage": "{{count}} por página"
     },
     "folderSelector": {
-      "defaultTitle": "Selecciona la carpeta de destino",
-      "defaultDescription": "Elige dónde guardar este documento",
-      "singleDescription": "¿Dónde te gustaría guardar \"{{fileName}}\"?",
-      "multipleDescription": "¿Dónde te gustaría guardar estos {{count}} archivos?",
-      "newDocumentTitle": "Selecciona la carpeta para el nuevo documento",
-      "newDocumentDescription": "Elige dónde guardar este nuevo documento",
+      "defaultTitle": "Seleccione la carpeta de destino",
+      "defaultDescription": "Elija dónde guardar este documento",
+      "singleDescription": "¿Dónde le gustaría guardar \"{{fileName}}\"?",
+      "multipleDescription": "¿Dónde le gustaría guardar estos {{count}} archivos?",
+      "newDocumentTitle": "Seleccione la carpeta para el nuevo documento",
+      "newDocumentDescription": "Elija dónde guardar este nuevo documento",
       "moveTitle": "Mover documento",
-      "moveDescriptionWithName": "Selecciona la carpeta de destino para \"{{name}}\"",
-      "moveDescription": "Selecciona la carpeta de destino",
+      "moveDescriptionWithName": "Seleccione la carpeta de destino para \"{{name}}\"",
+      "moveDescription": "Seleccione la carpeta de destino",
       "bulkMoveTitle": "Mover documentos seleccionados",
-      "bulkMoveDescription_one": "Selecciona la carpeta de destino para {{count}} documento",
-      "bulkMoveDescription_other": "Selecciona la carpeta de destino para {{count}} documentos",
+      "bulkMoveDescription_one": "Seleccione la carpeta de destino para {{count}} documento",
+      "bulkMoveDescription_other": "Seleccione la carpeta de destino para {{count}} documentos",
       "errors": {
-        "nameRequired": "Ingresa un nombre de carpeta",
+        "nameRequired": "Ingrese un nombre de carpeta",
         "invalidCharacters": "El nombre de la carpeta no puede contener \"/\"",
         "createFailed": "No se pudo crear la carpeta"
       },
@@ -479,7 +479,7 @@
       "newFolderButton": "Nueva carpeta",
       "parentLabel": "Carpeta principal: {{folder}}",
       "rootLabel": "/ (Raíz)",
-      "namePlaceholder": "Ingresa el nombre de la carpeta",
+      "namePlaceholder": "Ingrese el nombre de la carpeta",
       "loading": "Cargando carpetas...",
       "rootOption": "Raíz (sin carpeta)",
       "empty": "No hay carpetas disponibles. Los documentos se guardarán en la raíz.",
@@ -495,8 +495,8 @@
       "uploadedByPlaceholder": "Todos los usuarios",
       "updatedStartLabel": "Fecha de actualización (inicio)",
       "updatedEndLabel": "Fecha de actualización (fin)",
-      "startDatePlaceholder": "Selecciona la fecha inicial",
-      "endDatePlaceholder": "Selecciona la fecha final",
+      "startDatePlaceholder": "Seleccione la fecha inicial",
+      "endDatePlaceholder": "Seleccione la fecha final",
       "sortByLabel": "Ordenar por",
       "clear": "Borrar filtros",
       "showAllDocuments": "Mostrar todos los documentos",
@@ -562,11 +562,11 @@
         "save": "No se pudo guardar la selección de documentos"
       },
       "configErrorTitle": "Error de configuración",
-      "configErrorMessage": "Falta la configuración necesaria. Ponte en contacto con soporte."
+      "configErrorMessage": "Falta la configuración necesaria. Póngase en contacto con soporte."
     },
     "uploadSection": {
       "reflectionLabel": "Carga de documentos",
-      "dragDrop": "Arrastra y suelta tus archivos aquí o",
+      "dragDrop": "Arrastre y suelte sus archivos aquí o",
       "browse": "Buscar archivos",
       "uploading": "Subiendo...",
       "uploadingProgress": "Subiendo {{current}} de {{total}}",
@@ -575,7 +575,7 @@
       "fileError": "No se pudo subir el archivo",
       "associatedEntityTypeLabel": "Asociar con",
       "noAssociation": "Sin asociación",
-      "selectAssociatedEntityError": "Selecciona una entidad asociada antes de subir."
+      "selectAssociatedEntityError": "Seleccione una entidad asociada antes de subir."
     },
     "folders": {
       "root": "Raíz",
@@ -594,7 +594,7 @@
     "folderManager": {
       "title": "Crear nueva carpeta",
       "nameLabel": "Nombre de la carpeta",
-      "namePlaceholder": "Ingresa el nombre de la carpeta",
+      "namePlaceholder": "Ingrese el nombre de la carpeta",
       "willCreateIn": "Se creará en: {{folder}}"
     },
     "notifications": {
@@ -660,17 +660,17 @@
     "settings": {
       "tabLabel": "Encuestas",
       "title": "Encuestas de satisfacción del cliente",
-      "subtitle": "Configura modelos, desencadenadores y envíos para recopilar comentarios tras el cierre de los tickets.",
+      "subtitle": "Configure modelos, desencadenadores y envíos para recopilar comentarios tras el cierre de los tickets.",
       "tabs": {
         "templates": "Modelos",
         "triggers": "Desencadenadores"
       },
       "templateList": {
         "title": "Modelos de encuesta",
-        "description": "Gestiona los mensajes y las escalas que se envían a tus clientes.",
+        "description": "Gestione los mensajes y las escalas que se envían a sus clientes.",
         "createButton": "Nuevo modelo",
         "emptyTitle": "Todavía no hay modelos de encuesta",
-        "emptyDescription": "Crea tu primer modelo para definir el texto y la escala de la encuesta.",
+        "emptyDescription": "Cree su primer modelo para definir el texto y la escala de la encuesta.",
         "table": {
           "name": "Modelo",
           "rating": "Escala",
@@ -714,7 +714,7 @@
           "ratingLabels": "Ejemplo:\n1 = Muy insatisfecho\n2 = Insatisfecho\n3 = Neutral\n4 = Satisfecho\n5 = Muy satisfecho"
         },
         "help": {
-          "ratingLabels": "Indica una etiqueta por puntuación usando «valor = etiqueta» en líneas separadas."
+          "ratingLabels": "Indique una etiqueta por puntuación usando «valor = etiqueta» en líneas separadas."
         },
         "ratingTypes": {
           "stars": "Estrellas",
@@ -729,10 +729,10 @@
       },
       "triggerList": {
         "title": "Desencadenadores de encuesta",
-        "description": "Envía invitaciones automáticamente cuando los tickets o proyectos finalicen.",
+        "description": "Envíe invitaciones automáticamente cuando los tickets o proyectos finalicen.",
         "createButton": "Nuevo desencadenador",
         "emptyTitle": "No hay desencadenadores configurados",
-        "emptyDescription": "Crea un desencadenador para enviar encuestas al cerrar tickets o proyectos.",
+        "emptyDescription": "Cree un desencadenador para enviar encuestas al cerrar tickets o proyectos.",
         "table": {
           "template": "Modelo",
           "type": "Desencadenador",
@@ -781,7 +781,7 @@
           "priorities": "Agregar prioridad"
         },
         "help": {
-          "conditions": "Deja un campo vacío para aceptar cualquier valor."
+          "conditions": "Deje un campo vacío para aceptar cualquier valor."
         },
         "actions": {
           "create": "Crear desencadenador",
@@ -793,9 +793,9 @@
           "project_completed": "Proyecto finalizado"
         },
         "errors": {
-          "reference": "No se pudieron cargar las opciones del desencadenador. Vuelve a intentarlo."
+          "reference": "No se pudieron cargar las opciones del desencadenador. Vuelva a intentarlo."
         },
-        "noTemplates": "Crea una plantilla de encuesta antes de agregar desencadenadores.",
+        "noTemplates": "Cree una plantilla de encuesta antes de agregar desencadenadores.",
         "prioritiesMixed": "Los tableros seleccionados usan diferentes tipos de prioridad. Se muestran todas las prioridades."
       },
       "preview": {
@@ -815,18 +815,18 @@
       "pageTitle": "Encuesta de satisfacción del cliente",
       "invalidTitle": "Encuesta no disponible",
       "invalidMessage": "Este enlace de comentarios ya no es válido o ya se ha utilizado.",
-      "ratingPrompt": "¿Cómo fue tu experiencia?",
-      "ratingAssistive": "Selecciona una puntuación del 1 al {{scale}}",
+      "ratingPrompt": "¿Cómo fue su experiencia?",
+      "ratingAssistive": "Seleccione una puntuación del 1 al {{scale}}",
       "commentLabel": "Comentarios adicionales (opcional)",
       "submitButton": "Enviar comentarios",
       "submitting": "Enviando comentarios…",
-      "submittedTitle": "¡Gracias por tu respuesta!",
+      "submittedTitle": "¡Gracias por su respuesta!",
       "submittedMessage": "{{thankYouText}}",
       "retryButton": "Intentar de nuevo",
       "ratingSubmitted": "Comentarios enviados",
-      "errorMessage": "No pudimos registrar tus comentarios. Inténtalo de nuevo.",
-      "selectRatingError": "Selecciona una puntuación antes de enviar.",
-      "supportMessage": "Si tienes preguntas, ponte en contacto con tu técnico."
+      "errorMessage": "No pudimos registrar sus comentarios. Inténtelo de nuevo.",
+      "selectRatingError": "Seleccione una puntuación antes de enviar.",
+      "supportMessage": "Si tiene preguntas, póngase en contacto con su técnico."
     }
   },
   "availability": {
@@ -959,7 +959,7 @@
     "labels": {
       "unknownDevice": "Dispositivo desconocido",
       "currentSession": "Sesión actual",
-      "yourSession": "Tu sesión",
+      "yourSession": "Su sesión",
       "lastActive": "Última actividad"
     },
     "loginMethods": {
@@ -981,18 +981,18 @@
       "logoutFromOther_other": "Cerrar sesión de {{count}} otros dispositivos"
     },
     "confirmations": {
-      "logoutCurrent": "Esto cerrará tu sesión actual. ¿Estás seguro?",
-      "logoutAllOther": "Esto cerrará tu sesión de todos los demás dispositivos. ¿Estás seguro?"
+      "logoutCurrent": "Esto cerrará su sesión actual. ¿Está seguro?",
+      "logoutAllOther": "Esto cerrará su sesión de todos los demás dispositivos. ¿Está seguro?"
     },
     "prompts": {
-      "enter2FA": "Por favor ingresa tu código 2FA:"
+      "enter2FA": "Por favor ingrese su código 2FA:"
     },
     "messages": {
       "loggingOut": "Cerrando sesión...",
       "sessionRevoked": "Sesión revocada exitosamente"
     },
     "warnings": {
-      "oauthLogout": "Esto te desconectará solo de Alga PSA. Permanecerás conectado a {{provider}}."
+      "oauthLogout": "Esto cerrará únicamente su sesión de Alga PSA. Su sesión en {{provider}} permanecerá abierta."
     },
     "errors": {
       "fetchFailed": "Error al obtener las sesiones",
@@ -1006,7 +1006,7 @@
       "title": "Todas las sesiones de usuarios",
       "description": "{{sessionCount}} sesiones activas de {{userCount}} usuarios",
       "searchPlaceholder": "Buscar por nombre de usuario, correo electrónico, dispositivo o dirección IP...",
-      "noResults": "No se encontraron sesiones que coincidan con tu búsqueda"
+      "noResults": "No se encontraron sesiones que coincidan con su búsqueda"
     }
   },
   "projects": {
@@ -1014,13 +1014,13 @@
       "comments": {
         "title": "Comentarios",
         "internal_only": "Solo Interno",
-        "placeholder": "Agregar un comentario... Usa @ para mencionar compañeros",
+        "placeholder": "Agregar un comentario... Use @ para mencionar compañeros",
         "add_comment": "Agregar Comentario",
         "no_comments": "Aún no hay comentarios. ¡Sé el primero en comentar!",
         "edited": "Editado",
-        "error_creating": "No se pudo crear el comentario. Inténtalo de nuevo.",
-        "error_updating": "No se pudo actualizar el comentario. Inténtalo de nuevo.",
-        "error_deleting": "No se pudo eliminar el comentario. Inténtalo de nuevo.",
+        "error_creating": "No se pudo crear el comentario. Inténtelo de nuevo.",
+        "error_updating": "No se pudo actualizar el comentario. Inténtelo de nuevo.",
+        "error_deleting": "No se pudo eliminar el comentario. Inténtelo de nuevo.",
         "confirm_delete": "¿Seguro que deseas eliminar este comentario?"
       }
     }
@@ -1075,7 +1075,7 @@
   },
   "enums": {
     "addOnDescription": {
-      "ai_assistant": "Desbloquea el chat con IA, la asistencia de documentos, la ayuda en la barra lateral y las herramientas de IA de flujo de trabajo para tu equipo."
+      "ai_assistant": "Desbloquee el chat con IA, la asistencia de documentos, la ayuda en la barra lateral y las herramientas de IA de flujo de trabajo para su equipo."
     }
   },
   "form": {
@@ -1106,7 +1106,7 @@
     "clearAll": "Borrar todo"
   },
   "timezonePicker": {
-    "selectPlaceholder": "Selecciona zona horaria...",
+    "selectPlaceholder": "Seleccione zona horaria...",
     "searchPlaceholder": "Buscar zonas horarias o abreviaturas (p. ej. EST)...",
     "noResults": "No se encontraron zonas horarias",
     "matchingGroup": "Coincidencias con «{{query}}»",

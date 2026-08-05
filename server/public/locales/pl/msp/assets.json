@@ -348,7 +348,7 @@
       "status": "Status",
       "created": "Utworzono",
       "updated": "Zaktualizowano",
-      "tenant": "Dzierżawca"
+      "tenant": "Organizacja"
     },
     "typeDetails": {
       "workstation": "Szczegóły stacji roboczej",

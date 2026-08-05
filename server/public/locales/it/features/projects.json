@@ -342,7 +342,7 @@
     "saveFailed": "Impossibile salvare l'attività",
     "deleteFailed": "Impossibile eliminare l'attività",
     "moveFailed": "Impossibile spostare l'attività",
-    "prepareTimeEntryFailed": "Impossibile preparare la voce di tempo. Riprova.",
+    "prepareTimeEntryFailed": "Impossibile preparare l'inserimento ore. Riprova.",
     "addAgentFailed": "Impossibile aggiungere l'agente",
     "removeAgentFailed": "Impossibile rimuovere l'agente",
     "duplicateFailed": "Impossibile duplicare l'attività.",

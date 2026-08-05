@@ -8,7 +8,7 @@
   },
   "settings": {
     "title": "Gestione estensioni",
-    "description": "Installi, configuri e gestisca le estensioni per ampliare le funzionalità di Alga PSA.",
+    "description": "Installa, configura e gestisci le estensioni per ampliare le funzionalità di Alga PSA.",
     "tabs": {
       "manage": "Gestisci",
       "install": "Installa"

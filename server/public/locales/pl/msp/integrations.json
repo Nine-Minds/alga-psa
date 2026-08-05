@@ -370,7 +370,7 @@
           "baseUrlPlaceholder": "https://cipp.yourdomain.com"
         },
         "test": {
-          "passed": "CIPP odpowiedział. Widoczne dzierżawy: {{count}}.",
+          "passed": "CIPP odpowiedział. Liczba widocznych organizacji: {{count}}.",
           "required": "Przetestuj połączenie przed zapisaniem."
         },
         "title": "Połącz CIPP"
@@ -421,7 +421,7 @@
         "clients": {
           "columns": {
             "lastSync": "Ostatnia synchronizacja",
-            "tenant": "Dzierżawa Microsoft",
+            "tenant": "Organizacja Microsoft",
             "users": "Użytkownicy"
           },
           "empty": "Żaden klient nie pasuje do tego wyszukiwania.",
@@ -442,11 +442,11 @@
             "syncing": "Synchronizacja"
           },
           "emptyTitle": "Nie dopasowano jeszcze żadnych klientów",
-          "emptyDescription": "Dopasuj dzierżawę Microsoft do klienta na karcie Połączenie. Dopasowani klienci pojawią się tutaj.",
+          "emptyDescription": "Dopasuj organizację Microsoft do klienta na karcie Połączenie. Dopasowani klienci pojawią się tutaj.",
           "emptyAction": "Otwórz kartę Połączenie",
           "clearFilters": "Wyczyść filtry",
           "unlinkConfirm": {
-            "body": "{{client}} przestaje się synchronizować, teraz i zgodnie z harmonogramem. Kontakty pozostają bez zmian i zachowują powiązanie z Microsoft. Dzierżawa wraca do tabeli dopasowań na karcie Połączenie.",
+            "body": "{{client}} przestaje się synchronizować, teraz i zgodnie z harmonogramem. Kontakty pozostają bez zmian i zachowują powiązanie z Microsoft. Organizacja wraca do tabeli dopasowań na karcie Połączenie.",
             "title": "Zatrzymać synchronizację klienta {{client}}?"
           },
           "unlinked": "{{client}} nie jest już synchronizowany.",
@@ -462,7 +462,7 @@
         "connection": {
           "changeAction": "Zmień połączenie",
           "exportRecord": "Eksportuj rekord połączenia",
-          "mappingDescription": "Sprawdź lub zmień, do którego klienta należy każda dzierżawa Microsoft.",
+          "mappingDescription": "Sprawdź lub zmień, do którego klienta należy każda organizacja Microsoft.",
           "mappingTitle": "Przypisanie dzierżaw",
           "methodLabel": "Metoda",
           "permissionsTitle": "Obowiązujące uprawnienia",
@@ -615,7 +615,7 @@
           "syncingRemaining": "Uruchamianie…"
         },
         "clientLabel": "Klient pilotażowy",
-        "empty": "Najpierw potwierdź przypisanie dzierżawy do klienta; nie ma jeszcze czego pilotować.",
+        "empty": "Najpierw potwierdź przypisanie organizacji do klienta; nie ma jeszcze czego pilotować.",
         "errors": {
           "loadMappings": "Nie udało się wczytać przypisanych klientów.",
           "preflightFailed": "Nie udało się ukończyć podglądu.",
@@ -729,7 +729,7 @@
           "details": "Szczegóły połączenia",
           "directCredentialSourceLabel": "Źródło poświadczeń:",
           "directTenantDefault": "wspólna (wielu organizacji)",
-          "directTenantLabel": "Dzierżawca Microsoft",
+          "directTenantLabel": "Organizacja Microsoft",
           "notAvailable": "Niedostępne",
           "notConfigured": "Nie skonfigurowano",
           "optionsTitle": "Opcje połączenia",
@@ -889,7 +889,7 @@
         "title": "Integracja Microsoft Entra",
         "unmapConfirm": {
           "body": "Spowoduje to usunięcie zapisanej decyzji mapowania dla {{tenant}}, dzięki czemu pojawi się ona ponownie w tabeli mapowań. Już zsynchronizowane kontakty nie zostaną zmienione.",
-          "title": "Zmapować tę dzierżawę ponownie?"
+          "title": "Ponownie przypisać tę organizację?"
         },
         "validation": {
           "label": "Walidacja i wykrywanie",
@@ -922,7 +922,7 @@
         "backToCurrentStep": "Wróć do {{step}}",
         "chooser": {
           "cipp": {
-            "description": "Alga odczytuje dzierżawy przez instancję CIPP, którą już prowadzisz.",
+            "description": "Alga odczytuje organizacje przez instancję CIPP, którą już prowadzisz.",
             "label": "CIPP (CyberDrain Improved Partner Portal)",
             "prerequisites": {
               "apiHost": "Hosta aplikacji funkcyjnej CIPP-API, nie frontendu CIPP.",
@@ -939,7 +939,7 @@
             "description": "Alga komunikuje się z Microsoft Graph przez Twoją relację partnerską.",
             "label": "Bezpośredni partner Microsoft",
             "prerequisites": {
-              "appRegistration": "Dane OAuth Microsoft skonfigurowane dla tej dzierżawy.",
+              "appRegistration": "Dane OAuth Microsoft skonfigurowane dla tej organizacji.",
               "globalAdmin": "Administratora globalnego, który zatwierdzi uprawnienia.",
               "partnerRelationship": "Relacja partnerska (GDAP) z zarządzanymi dzierżawami."
             }
@@ -973,7 +973,7 @@
             "ambiguous": "Dwa kontakty mają ten sam e-mail? Sprawa czeka na Twoją decyzję — nigdy nie zgadujemy.",
             "creation": "Tożsamość bez dopasowania staje się nowym kontaktem u tego klienta.",
             "deletion": "Nic nigdy nie jest usuwane.",
-            "matching": "Kontakty są dopasowywane po adresie e-mail w obrębie klienta, do którego przypiszesz dzierżawę.",
+            "matching": "Kontakty są dopasowywane po adresie e-mail w obrębie klienta, do którego przypiszesz organizację.",
             "overwrite": "Istniejące nazwiska, e-maile, telefony i stanowiska nie są nadpisywane, chyba że to włączysz."
           },
           "contactsTitle": "Co dzieje się z Twoimi kontaktami",
@@ -984,8 +984,8 @@
           "recordGeneratedAt": "Przygotowano {{time}}",
           "recordHeading": "Integracja Microsoft Entra — rejestr zmian",
           "scopes": {
-            "directory": "Odczytuje dane katalogu w Twojej dzierżawie. Używane tylko przez tryb testowy własnej dzierżawy.",
-            "managedTenants": "Wymienia dzierżawy klientów objęte Twoją relacją partnerską oraz ich użytkowników. Tak wykrywani są klienci i kontakty.",
+            "directory": "Odczytuje dane katalogu w Twojej organizacji. Używane tylko przez tryb testowy własnej organizacji.",
+            "managedTenants": "Wyświetla organizacje klientów objęte Twoją relacją partnerską oraz ich użytkowników. Tak wykrywani są klienci i kontakty.",
             "offlineAccess": "Utrzymuje połączenie po zamknięciu przeglądarki, aby zaplanowane synchronizacje mogły działać.",
             "unknown": "Żądane przez połączenie.",
             "userRead": "Potwierdza, kto się loguje. Odczytuje tylko Twój profil."
@@ -1002,14 +1002,14 @@
             "title": "Połącz Microsoft Entra"
           },
           "discover": {
-            "description": "Zapytaj Microsoft, które dzierżawy klientów obejmuje Twoja relacja partnerska.",
-            "short": "Znajdź dzierżawy",
-            "title": "Wykryj zarządzane dzierżawy"
+            "description": "Zapytaj Microsoft, które organizacje klientów obejmuje Twoja relacja partnerska.",
+            "short": "Znajdź organizacje",
+            "title": "Wykryj zarządzane organizacje"
           },
           "map": {
-            "description": "Zdecyduj, do którego klienta Alga należy każda dzierżawa Microsoft. Nic nie jest synchronizowane do czasu potwierdzenia.",
+            "description": "Zdecyduj, do którego klienta Alga należy każda organizacja Microsoft. Nic nie jest synchronizowane do czasu potwierdzenia.",
             "short": "Dopasuj do klientów",
-            "title": "Przypisz dzierżawy do klientów"
+            "title": "Przypisz organizacje do klientów"
           },
           "sync": {
             "description": "Pobierz kontakty dla przypisanych klientów.",
@@ -1021,7 +1021,7 @@
       },
       "summary": {
         "backToIntegrations": "Wróć do integracji",
-        "description": "Wykryj zarządzane dzierżawy, przypisz je do klientów i utrzymuj kontakty w zgodzie.",
+        "description": "Wykryj zarządzane organizacje, przypisz je do klientów i utrzymuj kontakty w zgodzie.",
         "open": "Otwórz",
         "title": "Microsoft Entra"
       },
@@ -1090,7 +1090,7 @@
           "confirmedOne": "Potwierdzono {{count}} mapowanie."
         },
         "importConfirm": {
-          "body": "Z dzierżawy Entra {{tenant}} zostanie utworzony nowy klient, a dzierżawa zostanie do niego zmapowana.",
+          "body": "Na podstawie organizacji Entra {{tenant}} zostanie utworzony nowy klient, a organizacja zostanie do niego przypisana.",
           "similarWarning": "Ci istniejący klienci mają podobne nazwy — zmapuj do jednego z nich, jeśli to ta sama organizacja:",
           "title": "Zaimportować jako nowego klienta?"
         },
@@ -1506,7 +1506,7 @@
           "syncAll": "Synchronizuj wszystko",
           "autoSyncLabel": "Codzienna automatyczna synchronizacja",
           "autoSyncHint": "Automatycznie importuje nowe zasoby i odświeża istniejące raz dziennie dla każdego powiązanego klienta.",
-          "neverRun": "Brak uruchomienia dla całego najemcy.",
+          "neverRun": "Brak dotychczasowego uruchomienia obejmującego całą organizację.",
           "lastRun": "Ostatnie uruchomienie {{at}}: {{created}} utworzono · {{updated}} zaktualizowano · {{skipped}} pominięto · {{failed}} nieudanych",
           "status": {
             "syncing": "W toku…",
@@ -1738,7 +1738,7 @@
           "clientIdMissing": "Brak Client ID.",
           "clientSecretMissing": "Client secret nie został skonfigurowany.",
           "tenantIdMissing": "Brak Tenant ID.",
-          "adminConsentPending": "Udziel zgody administratora dzierżawy Microsoft, aby zakończyć konfigurację poczty e-mail."
+          "adminConsentPending": "Udziel zgody administratora organizacji Microsoft, aby zakończyć konfigurację poczty e-mail."
         },
         "statusBadges": {
           "archived": "Zarchiwizowany",
@@ -2669,7 +2669,7 @@
           "test": {
             "sent": "Wiadomość testowa Teams wysłana.",
             "failed": "Wiadomość testowa Teams nie powiodła się.",
-            "addonInactive": "Dodatek Teams nie jest aktywny dla tego dzierżawcy.",
+            "addonInactive": "Dodatek Teams nie jest aktywny dla tej organizacji.",
             "integrationInactive": "Aktywuj integrację Teams przed wysłaniem wiadomości testowej.",
             "capabilityDisabled": "Włącz funkcję bota osobistego przed wysłaniem wiadomości testowej.",
             "botNotConfigured": "Skonfiguruj poświadczenia bota Teams przed wysłaniem wiadomości testowej.",
@@ -2690,7 +2690,7 @@
             "recentDeliveryHealth": "Ostatni stan dostarczania Teams"
           },
           "recommendation": {
-            "addon": "Włącz dodatek Microsoft Teams dla tego dzierżawcy.",
+            "addon": "Włącz dodatek Microsoft Teams dla tej organizacji.",
             "activate": "Aktywuj integrację Teams w ustawieniach.",
             "capabilities": "Włącz bota osobistego i powiadomienia o aktywności dla Teams.",
             "profile": "Wybierz gotowy profil Microsoft dla Teams.",
@@ -2721,7 +2721,7 @@
           },
           "downloadRecordings": {
             "label": "Pobieraj nagrania do magazynu wewnętrznego",
-            "description": "Gdy włączone, obiekty blob nagrań są kopiowane do magazynu dzierżawcy oprócz uwierzytelnionego serwera proxy Graph."
+            "description": "Gdy włączone, obiekty blob nagrań są kopiowane do magazynu organizacji oprócz uwierzytelnionego serwera proxy Graph."
           },
           "exposeRecordingsInPortal": {
             "label": "Pokaż nagrania i transkrypcje w portalu klienta",
@@ -2734,7 +2734,7 @@
         },
         "wizard": {
           "title": "Konfiguracja Teams z przewodnikiem",
-          "description": "Wykonaj każdy krok, aby usługa Microsoft Teams działała dla tej dzierżawy.",
+          "description": "Wykonaj każdy krok, aby usługa Microsoft Teams działała dla tej organizacji.",
           "status": {
             "complete": "Ukończono",
             "current": "Bieżący",
@@ -2792,7 +2792,7 @@
         },
         "deliveryLog": {
           "title": "Dziennik dostarczania Teams",
-          "description": "Każda próba dostarczenia powiadomienia Teams zarejestrowana dla tej dzierżawy.",
+          "description": "Każda próba dostarczenia powiadomienia Teams zarejestrowana dla tej organizacji.",
           "error": "Nie udało się załadować dziennika dostarczania Teams",
           "forbidden": "Nie masz uprawnień do wyświetlania dziennika dostarczania Teams.",
           "empty": "Nie zarejestrowano jeszcze żadnych dostaw Teams.",
@@ -2882,10 +2882,10 @@
             },
             "addon_inactive": {
               "cause": "Dodatek Teams wygasł lub jest nieobecny, więc wysyłki są pomijane, natomiast konfiguracja jest zachowywana.",
-              "remedy": "Odnów dodatek Teams dla tej dzierżawy."
+              "remedy": "Odnów dodatek Teams dla tej organizacji."
             },
             "integration_inactive": {
-              "cause": "Integracja Teams nie jest aktywna dla tej dzierżawy.",
+              "cause": "Integracja Teams nie jest aktywna dla tej organizacji.",
               "remedy": "Aktywuj integrację Teams w ustawieniach."
             },
             "package_misconfigured": {
@@ -2916,7 +2916,7 @@
         },
         "paywall": {
           "title": "Dodatek Microsoft Teams",
-          "description": "Integracja Microsoft Teams wymaga dodatku Teams dla tej dzierżawy.",
+          "description": "Integracja Microsoft Teams wymaga dodatku Teams dla tej organizacji.",
           "includedTitle": "Co jest w zestawie",
           "feature": {
             "tab": "Karta osobista: otwórz Alga PSA w programie Microsoft Teams.",
@@ -2927,7 +2927,7 @@
             "notifications": "Powiadomienia w kanale aktywności i wiadomości bezpośrednich bota dotyczące przypisań, odpowiedzi, zatwierdzeń i ryzyka SLA."
           },
           "cta": "Kup dodatek Teams",
-          "nonBilling": "Skontaktuj się z administratorem rozliczeń, aby kupić dodatek Teams dla tej dzierżawy."
+          "nonBilling": "Skontaktuj się z administratorem rozliczeń, aby kupić dodatek Teams dla tej organizacji."
         },
         "addonExpiredBanner": {
           "title": "Dodatek Microsoft Teams wygasł",

@@ -22,7 +22,7 @@
       "reverseApproval": "Revoca approvazione",
       "reopen": "Riapri",
       "reopenForEdits": "Riaprire per modifiche",
-      "submitTimeSheet": "Invia foglio presenze",
+      "submitTimeSheet": "Invia foglio ore",
       "showDetails": "Mostra dettagli",
       "hideDetails": "Nascondi dettagli",
       "copyToAnotherDay": "Copia in un altro giorno",
@@ -196,8 +196,8 @@
     "currentSelection": "Elemento di lavoro corrente"
   },
   "timeSheetHeader": {
-    "title": "Foglio presenze",
-    "titleFor": "Foglio presenze per {{name}}",
+    "title": "Foglio ore",
+    "titleFor": "Foglio ore per {{name}}",
     "editedBy": "Modificato da {{name}}",
     "aria": {
       "previousWeek": "La settimana precedente",
@@ -214,12 +214,12 @@
     }
   },
   "approval": {
-    "titleFor": "Approvazione del foglio presenze per {{name}}",
+    "titleFor": "Approvazione del foglio ore per {{name}}",
     "sections": {
       "summary": "Riepilogo",
       "breakdownByWorkItemType": "Ripartizione per tipo di elemento di lavoro",
       "dailyBreakdown": "Ripartizione giornaliera",
-      "detailedEntries": "Voci di tempo dettagliate",
+      "detailedEntries": "Inserimenti ore dettagliati",
       "comments": "Commenti",
       "timeEntryDetails": "Dettagli sull'immissione dell'ora"
     },
@@ -255,7 +255,7 @@
   },
   "approvalActions": {
     "dialogs": {
-      "rejectTitle": "Rifiuta foglio presenze",
+      "rejectTitle": "Rifiuta foglio ore",
       "requestChangesTitle": "Richiedi modifiche"
     },
     "labels": {
@@ -282,10 +282,10 @@
   "managerDashboard": {
     "access": {
       "title": "È richiesto l'accesso al responsabile del team",
-      "description": "Per approvare i fogli presenze per i membri del tuo team, devi essere un responsabile del team.",
+      "description": "Per approvare i fogli ore dei membri del tuo team, devi essere un responsabile del team.",
       "goToTeamSettings": "Vai alle impostazioni del team"
     },
-    "title": "Approvazioni del foglio presenze",
+    "title": "Approvazioni del foglio ore",
     "actions": {
       "hideApproved": "Nascondi approvati",
       "showApproved": "Mostra approvati",
@@ -329,18 +329,18 @@
   "timeSheetClient": {
     "errors": {
       "delegationDisabled": "L'immissione dell'orario delegato è disabilitata",
-      "failedReopen": "Impossibile riaprire il foglio presenze"
+      "failedReopen": "Impossibile riaprire il foglio ore"
     },
     "reopen": {
-      "success": "Foglio presenze riaperto per modifiche",
+      "success": "Foglio ore riaperto per modifiche",
       "reason": "Riaperto per modifiche",
       "title": "Riaprire per modifiche?",
-      "message": "Ciò riporterà il foglio presenze in Modifiche richieste in modo che le voci di tempo possano essere modificate."
+      "message": "Ciò riporterà il foglio ore in Modifiche richieste in modo che gli inserimenti ore possano essere modificati."
     }
   },
   "timeSheetTable": {
     "empty": {
-      "title": "Nessun elemento di lavoro nel foglio presenze",
+      "title": "Nessun elemento di lavoro nel foglio ore",
       "description": "Aggiungi un nuovo elemento di lavoro per iniziare a registrare il tempo per questa settimana.",
       "getStarted": "Inizia"
     }
@@ -424,14 +424,14 @@
     },
     "entryName": "Inserimento orario ticket",
     "messages": {
-      "cannotFindTimeSheet": "Impossibile creare l'inserimento dell'orario: impossibile trovare o creare il foglio presenze",
+      "cannotFindTimeSheet": "Impossibile creare l'inserimento dell'orario: impossibile trovare o creare il foglio ore",
       "mergeFirst": "Unisci gli intervalli prima di creare una voce temporale",
       "sameTicketOnly": "È possibile creare voci orari solo da intervalli dello stesso ticket",
       "mergeSameTicketOnly": "È possibile unire solo gli intervalli dello stesso ticket",
       "mergeSuccess": "Gli intervalli sono stati uniti correttamente",
       "failedMerge": "Impossibile unire gli intervalli",
       "noActivePeriod": "Nessun periodo di tempo attivo trovato",
-      "failedFetchTimeSheet": "Impossibile creare o recuperare il foglio presenze",
+      "failedFetchTimeSheet": "Impossibile creare o recuperare il foglio ore",
       "failedPrepareTimeEntry": "Impossibile preparare l'immissione dell'ora",
       "savedSuccess": "Inserimento dell'ora salvato correttamente",
       "failedSave": "Impossibile salvare l'immissione del tempo"
@@ -447,13 +447,13 @@
     "viewEntryDetails": "Visualizza i dettagli della voce"
   },
   "messages": {
-    "serviceRequired": "Seleziona un servizio prima di salvare le voci di tempo",
+    "serviceRequired": "Seleziona un servizio prima di salvare gli inserimenti ore",
     "invalidService": "Servizio selezionato non valido",
     "taxRegionRequired": "Seleziona una regione fiscale per i servizi imponibili",
-    "invalidTimeEntry": "Controlla i valori della voce di tempo",
-    "savingEntry": "Salvataggio voce di tempo...",
-    "entrySaved": "Voce di tempo salvata",
-    "entrySavedSuccess": "Voce di tempo salvata con successo",
+    "invalidTimeEntry": "Controlla i valori dell'inserimento ore",
+    "savingEntry": "Salvataggio dell'inserimento ore...",
+    "entrySaved": "Inserimento ore salvato",
+    "entrySavedSuccess": "Inserimento ore salvato con successo",
     "taskUpdated": "Attività aggiornata con successo",
     "saveChangesFailed": "Impossibile salvare le modifiche",
     "changesSaved": "Modifiche salvate con successo",

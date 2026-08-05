@@ -85,7 +85,7 @@
       },
       "pendingApprovals": {
         "title": "Approvazioni in sospeso",
-        "subtitle": "Voci di tempo"
+        "subtitle": "Inserimenti ore"
       }
     },
     "states": {

@@ -121,7 +121,7 @@
         "effects": {
           "deleteDraft": "Elimina la bozza della fattura ricorrente generata",
           "reissueCredits": "Riemettere eventuali crediti applicati a tale fattura",
-          "unmarkRecords": "Deselezionare le voci di tempo e i record di utilizzo collegati come fatturati",
+          "unmarkRecords": "Deselezionare gli inserimenti ore e i record di utilizzo collegati come fatturati",
           "retireBridge": "Ritirare il record del ponte di cadenza del client collegato e riaprire i periodi di servizio ricorrenti collegati",
           "reopenPeriods": "Riapri i periodi di servizio ricorrenti collegati senza richiedere i metadati del bridge del ciclo client"
         }
@@ -410,8 +410,8 @@
     },
     "reverseDialog": {
       "title_other": "Storno bozze di fatture",
-      "message_one": "Lo storno di questa bozza di fattura la eliminerà e rilascerà eventuali voci di tempo o record di utilizzo collegati. Questa azione non può essere annullata.",
-      "message_other": "Lo storno delle bozze di fattura {{count}} le eliminerà e rilascerà eventuali voci di tempo o record di utilizzo collegati. Questa azione non può essere annullata.",
+      "message_one": "Lo storno di questa bozza di fattura la eliminerà e rilascerà eventuali inserimenti ore o record di utilizzo collegati. Questa azione non può essere annullata.",
+      "message_other": "Lo storno delle bozze di fattura {{count}} le eliminerà e rilascerà eventuali inserimenti ore o record di utilizzo collegati. Questa azione non può essere annullata.",
       "confirm": "Bozza inversa",
       "cancel": "Annulla",
       "title_one": "Progetto di fattura inversa"

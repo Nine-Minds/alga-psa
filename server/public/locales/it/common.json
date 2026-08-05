@@ -1201,8 +1201,8 @@
           "summary": "Stai aprendo l'approvazione {{approvalId}} da Teams."
         },
         "timeEntry": {
-          "title": "Voce di tempo {{entryId}}",
-          "summary": "Stai aprendo la voce di tempo {{entryId}} da Teams."
+          "title": "Inserimento ore {{entryId}}",
+          "summary": "Stai aprendo l'inserimento ore {{entryId}} da Teams."
         },
         "contact": {
           "title": "Contatto {{contactId}}",

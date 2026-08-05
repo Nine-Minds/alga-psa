@@ -483,7 +483,7 @@
           "step1": {
             "title": "1. Udziel uprawnień aplikacji Graph",
             "item1": "Otwórz centrum administracyjne Entra → Rejestracje aplikacji.",
-            "item2": "Wybierz aplikację używaną przez integrację Teams tej dzierżawy.",
+            "item2": "Wybierz aplikację używaną przez integrację Teams tej organizacji.",
             "item3": "Uprawnienia API → Dodaj → Microsoft Graph → Uprawnienia aplikacji.",
             "item4": "Dodaj OnlineMeetings.ReadWrite.All i udziel zgody administratora."
           },

@@ -1277,7 +1277,7 @@
     },
     "warning": {
       "title": "In questo intervallo sono presenti ore lavorate",
-      "description": "La modifica di questa tariffa cambierà la redditività storica delle voci di tempo nel suo periodo di validità.",
+      "description": "La modifica di questa tariffa cambierà la redditività storica degli inserimenti ore nel suo periodo di validità.",
       "body": "Continua solo se si tratta di una correzione intenzionale."
     },
     "toast": {

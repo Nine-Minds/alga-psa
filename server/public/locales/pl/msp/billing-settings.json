@@ -976,10 +976,10 @@
       },
       "taxSourceOverride": {
         "label": "Zastąpienie źródła podatku",
-        "tooltip": "Zastąp domyślne źródło podatku dzierżawy dla tego klienta. Opcja „Wewnętrzna” wykorzystuje obliczenia podatku Algi. Opcja „Zewnętrzna” deleguje obliczenia podatku do systemu księgowego podczas eksportowania faktur.",
+        "tooltip": "Zastąp domyślne źródło podatku organizacji dla tego klienta. Opcja „Wewnętrzna” wykorzystuje obliczenia podatku Algi. Opcja „Zewnętrzna” deleguje obliczenia podatku do systemu księgowego podczas eksportowania faktur.",
         "placeholder": "Wybierz źródło podatku...",
         "options": {
-          "default": "Użyj ustawień domyślnych dzierżawy",
+          "default": "Użyj ustawień domyślnych organizacji",
           "internal": "Alga PSA oblicza podatek",
           "external": "Pakiet księgowy oblicza podatek"
         },

@@ -578,7 +578,7 @@
   },
   "billingConfiguration": {
     "general": "Algemeen",
-    "contractLines": "Contractlijnen",
+    "contractLines": "Contractregels",
     "contractLineOverlaps": "Contractregel overlapt",
     "taxRates": "Belastingtarieven",
     "save": "Factureringsconfiguratie opslaan",
@@ -708,7 +708,7 @@
     "assignContract": "Contract toewijzen",
     "contracts": "Contracten",
     "contractName": "Contractnaam",
-    "contractLines": "Contractlijnen",
+    "contractLines": "Contractregels",
     "description": "Beschrijving",
     "startDate": "Startdatum",
     "endDate": "Einddatum",
@@ -1111,7 +1111,7 @@
   "contractLinePickerDialog": {
     "addPlan": "Plan toevoegen",
     "updatePlan": "Plan bijwerken",
-    "contractLine": "Contractlijn",
+    "contractLine": "Contractregel",
     "serviceCategory": "Servicecategorie",
     "allCategories": "Alle categorieën",
     "allCategoriesHelp": "Als u 'Alle categorieën' selecteert, betekent dit dat dit plan van toepassing is, ongeacht de servicecategorie.",
@@ -1125,7 +1125,7 @@
     "title": "Selecteer een contractregel"
   },
   "contractLines": {
-    "title": "Contractlijnen",
+    "title": "Contractregels",
     "addNewPlan": "Nieuw abonnement toevoegen",
     "plan": "Plan",
     "category": "Categorie",

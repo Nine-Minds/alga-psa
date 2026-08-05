@@ -67,7 +67,7 @@
     "title": "Gestión de créditos",
     "noCreditsFound": "No se encontraron créditos",
     "noMatchingCredits": "Ningún crédito coincide con estos filtros",
-    "loadFailed": "No se pudieron cargar los créditos. Inténtalo de nuevo."
+    "loadFailed": "No se pudieron cargar los créditos. Inténtelo de nuevo."
   },
   "application": {
     "title": "Aplicar crédito",
@@ -80,7 +80,7 @@
     "creditOrderNote": "Los créditos se aplican por fecha de vencimiento (primero los más antiguos)",
     "noCreditsAvailable": "No hay créditos disponibles para este cliente",
     "failedToLoadCredits": "No se pudieron cargar los créditos disponibles",
-    "selectCreditError": "Selecciona un crédito e introduce un importe válido",
+    "selectCreditError": "Seleccione un crédito e introduzca un importe válido",
     "failedToApply": "No se pudo aplicar el crédito"
   },
   "expiration": {
@@ -127,11 +127,11 @@
     "confirm": "Vencer crédito",
     "creditAmount": "Original",
     "remainingAmount": "Restante",
-    "warning": "El cliente pierde el restante de {{amount}}. No puedes deshacer esto."
+    "warning": "El cliente pierde los {{amount}} restantes. No puede deshacer esta acción."
   },
   "transferDialog": {
     "title": "Transferir crédito",
-    "description": "Transfiere crédito de este cliente a otro.",
+    "description": "Transfiera crédito de este cliente a otro.",
     "fields": {
       "targetClient": "Al cliente",
       "amount": "Importe",
@@ -148,8 +148,8 @@
       "after": "Restante tras la transferencia"
     },
     "errors": {
-      "selectClient": "Selecciona un cliente para la transferencia",
-      "validAmount": "Introduce un importe mayor que cero",
+      "selectClient": "Seleccione un cliente para la transferencia",
+      "validAmount": "Introduzca un importe mayor que cero",
       "exceedsRemaining": "La transferencia no puede superar el restante de {{amount}}"
     },
     "success": "Crédito transferido",
@@ -181,7 +181,7 @@
       "expirationDate": "Seleccione la fecha de vencimiento"
     },
     "hints": {
-      "expirationDate": "Déjalo en blanco para usar el vencimiento predeterminado."
+      "expirationDate": "Déjelo en blanco para usar el vencimiento predeterminado."
     },
     "submitting": "Añadiendo...",
     "success": "Crédito añadido correctamente",

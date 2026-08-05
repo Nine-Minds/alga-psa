@@ -1505,7 +1505,7 @@
           "syncing2": "Sincronizando…",
           "syncAll": "Sincronizar todo",
           "autoSyncLabel": "Sincronización automática diaria",
-          "autoSyncHint": "Importa automáticamente activos nuevos y actualiza los existentes una vez al día para cada cliente asignado.",
+          "autoSyncHint": "Importe automáticamente activos nuevos y actualice los existentes una vez al día para cada cliente asignado.",
           "neverRun": "Aún no hay ninguna ejecución para todo el inquilino.",
           "lastRun": "Última ejecución {{at}}: {{created}} creados · {{updated}} actualizados · {{skipped}} omitidos · {{failed}} con error",
           "status": {
@@ -1919,7 +1919,7 @@
           "connected": "Conectado a NinjaOne",
           "connectedWithErrors": "NinjaOne conectado con errores de sincronización",
           "reconnectRequired": "Se requiere volver a conectar NinjaOne",
-          "reconnectRequiredDescription": "La autorización de NinjaOne ya no se puede actualizar (token caducado o revocado). Vuelve a conectar para restaurar la sincronización de dispositivos, las alertas y el acceso remoto.",
+          "reconnectRequiredDescription": "La autorización de NinjaOne ya no se puede actualizar (token caducado o revocado). Vuelva a conectar para restaurar la sincronización de dispositivos, las alertas y el acceso remoto.",
           "instanceLabel": "Instancia:",
           "organizations": "{{count}} organizaciones",
           "devices": "{{count}} dispositivos",
@@ -2347,11 +2347,11 @@
           "unmapped": "Sin asignar → triaje"
         },
         "title": "Asignación de organizaciones",
-        "description": "Asigna organizaciones de Huntress a clientes. Las incidencias de organizaciones sin asignar van al cliente de reserva y al tablero de triaje.",
+        "description": "Asigne organizaciones de Huntress a clientes. Las incidencias de organizaciones sin asignar van al cliente de reserva y al tablero de triaje.",
         "unmappedSuffix": "({{count}} sin asignar)",
         "syncButton": "Sincronizar organizaciones",
         "loading": "Cargando…",
-        "empty": "Aún no hay organizaciones: haz clic en «Sincronizar organizaciones».",
+        "empty": "Aún no hay organizaciones: haga clic en «Sincronizar organizaciones».",
         "errors": {
           "load": "No se pudieron cargar las asignaciones de organizaciones",
           "sync": "Error de sincronización",
@@ -2376,7 +2376,7 @@
           "unmapped": "Sin asignar"
         },
         "title": "Asignaciones de organizaciones",
-        "description": "Asigna organizaciones de NinjaOne a empresas de Alga para habilitar la sincronización de dispositivos.",
+        "description": "Asigne organizaciones de NinjaOne a empresas de Alga para habilitar la sincronización de dispositivos.",
         "loading": "Cargando asignaciones de organizaciones...",
         "syncing": "Sincronizando...",
         "refreshButton": "Actualizar organizaciones",
@@ -2386,9 +2386,9 @@
         },
         "empty": {
           "title": "Aún no se han sincronizado organizaciones.",
-          "hint": "Haz clic en «Actualizar organizaciones» para obtener organizaciones de NinjaOne."
+          "hint": "Haga clic en «Actualizar organizaciones» para obtener organizaciones de NinjaOne."
         },
-        "unmappedNote": "Los dispositivos de organizaciones sin asignar no se sincronizarán. Asigna cada organización a una empresa de Alga para habilitar la sincronización de dispositivos.",
+        "unmappedNote": "Los dispositivos de organizaciones sin asignar no se sincronizarán. Asigne cada organización a una empresa de Alga para habilitar la sincronización de dispositivos.",
         "success": {
           "synced": "Se sincronizaron {{processed}} organizaciones ({{created}} nuevas, {{updated}} actualizadas)",
           "mappingUpdated": "Asignación actualizada correctamente",

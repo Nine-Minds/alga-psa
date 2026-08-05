@@ -437,7 +437,7 @@
         "email": "Invia invito via email",
         "password": "Imposto io stesso una password",
         "emailHelp": "Riceveranno un'email con un link per impostare la propria password. Nessuna password da condividere.",
-        "passwordHelp": "Imposti ora una password temporanea e la condividi direttamente con loro."
+        "passwordHelp": "Imposta ora una password temporanea e condividila direttamente con loro."
       },
       "password": {
         "label": "Password temporanea",

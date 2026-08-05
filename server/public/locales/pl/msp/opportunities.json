@@ -118,7 +118,7 @@
       "instructionsPlaceholder": "np. krótsze, cieplejsze i bardziej formalne",
       "loadingRecipient": "Sprawdzanie połączonego kontaktu...",
       "noRecipient": "Przed wysłaniem połącz kontakt z głównym adresem e-mail.",
-      "recipient": "Wysyła do {{recipient}} za pośrednictwem dostawcy poczty e-mail dzierżawcy.",
+      "recipient": "Wysyła do {{recipient}} za pośrednictwem dostawcy poczty e-mail swojej organizacji.",
       "regenerate": "Przepisz",
       "send": "Wyślij dalsze informacje",
       "sent": "Wysłano kolejną wiadomość i zalogowano się do transakcji.",

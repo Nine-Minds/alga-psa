@@ -526,7 +526,7 @@
     "bundleCrossClientWarning": "Ce bundle s'étend sur plusieurs clients. Il vous sera demandé de confirmer avant le regroupement.",
     "bundleMasterLabel": "Sélectionner le ticket principal",
     "bundleMasterPlaceholder": "Sélectionnez le ticket principal...",
-    "bundleSyncUpdates": "Synchroniser les mises à jour du maître vers les enfants (réponses publiques + modifications du flux de travail)",
+    "bundleSyncUpdates": "Synchroniser les mises à jour du maître vers les enfants (réponses publiques + modifications du workflow)",
     "bundleSyncUpdatesHelp": "Les tickets enfants conservent leur statut actuel lorsqu'ils sont regroupés. Les champs de workflow sont verrouillés sur les enfants par défaut. Les notes internes restent sur le ticket principal.",
     "bundleSelectAtLeastTwo": "Sélectionnez au moins deux tickets à regrouper.",
     "bundleSelectMaster": "Sélectionnez un ticket principal.",

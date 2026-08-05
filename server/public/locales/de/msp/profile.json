@@ -339,7 +339,7 @@
           "workflowHelp": "Wählen Sie einen Workflow, der mit dem normalisierten Webhook-Envelope gestartet wird.",
           "workflow": "Workflow",
           "workflowPlaceholder": "Workflow auswählen",
-          "workflowEmpty": "In diesem Tenant sind keine Workflows sichtbar. Veröffentlichen oder zeigen Sie einen Workflow an, um den Workflow-Handler zu verwenden.",
+          "workflowEmpty": "In diesem Mandanten sind keine Workflows sichtbar. Veröffentlichen oder zeigen Sie einen Workflow an, um den Workflow-Handler zu verwenden.",
           "envelopeTitle": "Workflow-Eingabe-Envelope",
           "fieldTypes": {
             "string": "Zeichenfolge",

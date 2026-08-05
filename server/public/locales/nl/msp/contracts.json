@@ -257,7 +257,7 @@
     "tabs": {
       "documents": "Documenten",
       "invoices": "Facturen",
-      "lines": "Contractlijnen",
+      "lines": "Contractregels",
       "overview": "Overzicht",
       "pricing": "Prijsschema's",
       "simulator": "Simuleren"
@@ -2199,7 +2199,7 @@
       "bucketIncluded": "Inclusief {{hours}} uur; het tarief hierboven is het meerverbruikstarief",
       "cadence": {
         "client": "Factureringsschema van de klant gebruiken",
-        "contract": "Schema van de contractlijn gebruiken"
+        "contract": "Schema van de contractregel gebruiken"
       },
       "catalogRate": "Catalogustarief",
       "collapseDetailsFor": "Details van {{line}} samenvouwen",
@@ -2226,7 +2226,7 @@
         "discountValue": "Kortingswaarde",
         "includedHours": "Inbegrepen uren",
         "includedUnits": "Inbegrepen eenheden",
-        "lineName": "Naam van de contractlijn",
+        "lineName": "Naam van de contractregel",
         "lineType": "Lijntype",
         "minimumBillableMinutes": "Minimaal factureerbare minuten",
         "minimumUsage": "Minimaal verbruik",
