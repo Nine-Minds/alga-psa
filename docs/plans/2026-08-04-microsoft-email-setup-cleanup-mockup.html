@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Microsoft 365 email setup — proposed redesign</title>
+<style>
+  :root {
+    --bg: #f6f8fa;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --blue: #2563eb;
+    --blue-bg: #eff6ff;
+    --blue-border: #bfdbfe;
+    --amber-bg: #fffbeb;
+    --amber-border: #fde68a;
+    --amber-text: #92400e;
+    --green-bg: #ecfdf5;
+    --green-border: #a7f3d0;
+    --green-text: #047857;
+    --note: #7c3aed;
+    --note-bg: #f5f3ff;
+    --note-border: #ddd6fe;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 24px;
+  }
+  h1 { font-size: 18px; font-weight: 650; }
+  h2 { font-size: 15px; font-weight: 600; }
+  h3 { font-size: 14px; font-weight: 600; }
+  .page { max-width: 1240px; margin: 0 auto; }
+
+  /* ---------- demo control bar ---------- */
+  .demo-bar {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    align-items: center;
+    margin: 14px 0 22px;
+  }
+  .demo-bar .demo-tag {
+    font-size: 11px; font-weight: 700; letter-spacing: .08em;
+    color: #fbbf24; text-transform: uppercase;
+  }
+  .demo-group { display: flex; align-items: center; gap: 8px; }
+  .demo-group > span { font-size: 12px; color: #94a3b8; }
+  .seg { display: inline-flex; border: 1px solid #334155; border-radius: 7px; overflow: hidden; }
+  .seg button {
+    background: transparent; color: #cbd5e1; border: none;
+    padding: 5px 12px; font-size: 12.5px; cursor: pointer; font-family: inherit;
+  }
+  .seg button + button { border-left: 1px solid #334155; }
+  .seg button.on { background: #2563eb; color: #fff; }
+  .demo-check { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #cbd5e1; cursor: pointer; }
+  .demo-check input { accent-color: #2563eb; }
+
+  /* ---------- layout ---------- */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 980px) { .cols { grid-template-columns: 1fr; } }
+  .crumb { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .crumb b { color: var(--text); font-weight: 600; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .card + .card { margin-top: 14px; }
+  .card .sub { color: var(--muted); font-size: 13px; margin-top: 3px; }
+
+  /* ---------- shared bits ---------- */
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: inherit; font-size: 13.5px; font-weight: 500;
+    border-radius: 7px; padding: 7px 14px; cursor: pointer;
+    border: 1px solid var(--border); background: #fff; color: var(--text);
+  }
+  .btn:hover { background: #f8fafc; }
+  .btn.primary { background: #0f172a; border-color: #0f172a; color: #fff; }
+  .btn.primary:hover { background: #1e293b; }
+  .btn.link { border: none; background: none; color: var(--blue); padding: 0; font-weight: 500; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .field { margin-top: 14px; }
+  .field label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 5px; }
+  .field input {
+    width: 100%; font-family: inherit; font-size: 13.5px;
+    border: 1px solid var(--border); border-radius: 7px; padding: 8px 10px;
+    color: var(--text); background: #fff;
+  }
+  .field input:focus { outline: 2px solid var(--blue-border); border-color: var(--blue); }
+  .field .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11.5px; font-weight: 600; border-radius: 999px; padding: 2px 10px;
+  }
+  .badge.green { background: var(--green-bg); color: var(--green-text); border: 1px solid var(--green-border); }
+  .badge.amber { background: var(--amber-bg); color: var(--amber-text); border: 1px solid var(--amber-border); }
+  .badge.gray  { background: #f1f5f9; color: var(--muted); border: 1px solid var(--border); }
+  .alert {
+    display: flex; gap: 10px; border-radius: 8px; padding: 11px 13px;
+    font-size: 13px; margin-top: 14px; align-items: flex-start;
+  }
+  .alert .ic { flex: 0 0 auto; margin-top: 1px; }
+  .alert.info  { background: var(--blue-bg);  border: 1px solid var(--blue-border); }
+  .alert.warn  { background: var(--amber-bg); border: 1px solid var(--amber-border); color: var(--amber-text); }
+  .alert.good  { background: var(--green-bg); border: 1px solid var(--green-border); color: var(--green-text); }
+  .alert b { font-weight: 600; }
+  .alert .body { flex: 1; }
+  .alert .body .desc { color: inherit; opacity: .85; font-weight: 400; }
+
+  /* design notes */
+  .note {
+    display: flex; gap: 8px; align-items: flex-start;
+    background: var(--note-bg); border: 1px dashed var(--note-border);
+    color: #5b21b6; border-radius: 8px; font-size: 12.5px;
+    padding: 8px 11px; margin-top: 10px;
+  }
+  .note .n {
+    flex: 0 0 auto; width: 17px; height: 17px; border-radius: 50%;
+    background: var(--note); color: #fff; font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-top: 1px;
+  }
+  body.hide-notes .note { display: none; }
+
+  /* provider row */
+  .prow {
+    display: flex; align-items: center; gap: 12px;
+    border: 1px solid var(--border); border-radius: 9px; padding: 13px 15px; margin-top: 14px;
+  }
+  .prow .logo {
+    width: 34px; height: 34px; border-radius: 7px; background: #f1f5f9;
+    display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  }
+  .prow .meta { flex: 1; min-width: 0; }
+  .prow .meta .t { font-weight: 600; font-size: 13.5px; display: flex; gap: 8px; align-items: center; }
+  .prow .meta .d { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+  .chips { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .chip { font-size: 11px; background: #f1f5f9; border: 1px solid var(--border); border-radius: 5px; padding: 1px 7px; color: #475569; }
+
+  /* ---------- wizard modal ---------- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(15,23,42,.45);
+    display: none; align-items: flex-start; justify-content: center; padding: 60px 16px; z-index: 30;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: 12px; width: 100%; max-width: 520px;
+    padding: 22px; box-shadow: 0 20px 50px rgba(15,23,42,.25);
+  }
+  .modal .mhead { display: flex; justify-content: space-between; align-items: flex-start; }
+  .modal .x { border: none; background: none; font-size: 18px; color: var(--muted); cursor: pointer; line-height: 1; }
+  .opt {
+    display: flex; gap: 12px; border: 1px solid var(--border); border-radius: 9px;
+    padding: 13px 15px; margin-top: 11px; cursor: pointer; text-align: left; width: 100%;
+    background: #fff; font-family: inherit; align-items: flex-start;
+  }
+  .opt:hover { border-color: var(--blue); background: var(--blue-bg); }
+  .opt .radio {
+    flex: 0 0 auto; width: 16px; height: 16px; border: 1.5px solid #94a3b8; border-radius: 50%; margin-top: 2px;
+  }
+  .opt .ot { font-weight: 600; font-size: 13.5px; display: flex; align-items: center; gap: 8px; }
+  .opt .od { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .opt.rec { border-color: var(--blue-border); background: var(--blue-bg); }
+  .opt.rec:hover { border-color: var(--blue); }
+  .mfoot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+  .kv { display: grid; grid-template-columns: 130px 1fr; gap: 6px 12px; font-size: 13px; margin-top: 12px; }
+  .kv .k { color: var(--muted); }
+  .kv .v { font-family: ui-monospace, monospace; font-size: 12.5px; word-break: break-all; }
+
+  .divider { border-top: 1px solid var(--border); margin: 18px 0 4px; }
+  .flash { animation: flash 1.2s ease-out; }
+  @keyframes flash { 0% { box-shadow: 0 0 0 3px #93c5fd; } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+  /* summary strip */
+  .summary { margin-top: 26px; }
+  .summary ul { margin: 8px 0 0 18px; color: #334155; font-size: 13px; }
+  .summary li { margin-top: 4px; }
+  .summary li b { font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Microsoft 365 email setup — proposed redesign</h1>
+  <div style="color:var(--muted); font-size:13px; margin-top:3px">
+    One app-level home (Providers), one thin mailbox flow (Communication). Use the controls to simulate states.
+  </div>
+
+  <div class="demo-bar">
+    <span class="demo-tag">Demo controls</span>
+    <div class="demo-group">
+      <span>Deployment</span>
+      <div class="seg" id="seg-deploy">
+        <button data-v="hosted" class="on">Hosted</button>
+        <button data-v="appliance">Appliance / on-prem</button>
+      </div>
+    </div>
+    <div class="demo-group">
+      <span>Microsoft app</span>
+      <div class="seg" id="seg-app">
+        <button data-v="none" class="on">Not set up</button>
+        <button data-v="pending">Consent pending</button>
+        <button data-v="ready">Ready</button>
+      </div>
+    </div>
+    <label class="demo-check"><input type="checkbox" id="notes-toggle" checked> Show design notes</label>
+  </div>
+
+  <div class="cols">
+
+    <!-- ============ SPOT 1: PROVIDERS ============ -->
+    <div id="col-providers">
+      <div class="crumb">Settings → Integrations → <b>Providers</b></div>
+      <div class="card" id="providers-card">
+        <h2>Microsoft</h2>
+        <div class="sub">Connect Alga PSA to Microsoft once. Staff sign-in, email, and calendar all reuse this connection.</div>
+        <div id="providers-body"></div>
+      </div>
+      <div class="note"><span class="n">1</span><span>App-level configuration lives <b>only</b> here. The mailbox flow (right) never asks about apps, client IDs, or redirect URIs again.</span></div>
+      <div class="note" id="note-gating"><span class="n">2</span><span>On <b>appliance / on-prem</b>, the "app provided by Alga PSA" option is <b>not rendered at all</b> (gated by <code>useTier().isHosted</code>) — today it renders and then fails with "platform credentials unavailable".</span></div>
+    </div>
+
+    <!-- ============ SPOT 2: COMMUNICATION ============ -->
+    <div id="col-mailbox">
+      <div class="crumb">Settings → Integrations → <b>Communication</b> → Add mailbox</div>
+      <div class="card" id="mailbox-card">
+        <h2>Connect a Microsoft 365 mailbox</h2>
+        <div class="sub">Inbound email from this mailbox becomes tickets. Replies can be sent from it too.</div>
+
+        <div class="field">
+          <label for="mb-addr">Mailbox address</label>
+          <input id="mb-addr" placeholder="support@yourcompany.com" value="support@yourcompany.com">
+        </div>
+        <div class="field">
+          <label for="mb-name">Sender display name</label>
+          <input id="mb-name" placeholder="Your Company Support" value="Your Company Support">
+          <div class="hint">Shown on outgoing replies sent from this mailbox.</div>
+        </div>
+
+        <div id="mailbox-status"></div>
+
+        <div class="divider"></div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:12px">
+          <button class="btn">Cancel</button>
+          <button class="btn primary" id="authorize-btn" disabled>Sign in with Microsoft</button>
+        </div>
+      </div>
+      <div class="note"><span class="n">3</span><span><b>Removed from this dialog:</b> the platform-managed vs "use your own app" choice, the "Microsoft app profile is ready" plumbing notice, and the raw <b>Redirect URI field</b> (derived server-side; never user input).</span></div>
+      <div class="note"><span class="n">4</span><span>The word "tenant" alone never appears. It's always "<b>Microsoft 365 administrator</b>", "<b>your Microsoft organization</b>", or the fully-qualified "<b>Microsoft tenant ID</b>" in advanced fields.</span></div>
+    </div>
+  </div>
+
+  <div class="card summary">
+    <h2>What changed vs. today</h2>
+    <ul>
+      <li><b>One home for app config.</b> Providers owns the Entra app (platform / auto-created / manual). The mailbox dialog only collects mailbox facts and launches sign-in — it links to Providers when the app isn't ready, instead of re-explaining app options.</li>
+      <li><b>Recommended option first, and only when real.</b> Hosted: "App provided by Alga PSA" is first and preselected. Appliance: that option doesn't exist — no disabled card with an "Unavailable" badge.</li>
+      <li><b>Deployment-aware, not edition-aware.</b> Gating uses hosted vs self-hosted (<code>useTier().isHosted</code>), not <code>EDITION === 'enterprise'</code>.</li>
+      <li><b>Terminology.</b> "Tenant" unqualified is banned from UI copy. Microsoft's concept is "your Microsoft organization" (or "Microsoft tenant ID" for the literal field); Alga's internal tenant concept never surfaces.</li>
+      <li><b>Redirect URI removed from UI.</b> Computed from the deployment's base URL; shown read-only in Providers → advanced only where a BYO app needs it copied into Entra.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============ WIZARD MODAL ============ -->
+<div class="overlay" id="wizard">
+  <div class="modal">
+    <div class="mhead">
+      <div>
+        <h2 id="wz-title">Set up Microsoft</h2>
+        <div class="sub" id="wz-sub">Choose how Alga PSA should connect to Microsoft.</div>
+      </div>
+      <button class="x" onclick="closeWizard()">✕</button>
+    </div>
+    <div id="wz-body"></div>
+  </div>
+</div>
+
+<script>
+  const state = {
+    deploy: 'hosted',          // hosted | appliance
+    app: 'none',               // none | pending | ready
+    appSource: null,           // platform | auto | manual
+    mailboxConnected: false,
+    wizardStep: null,          // choose | auto-details | manual-details | consent
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => s.replace(/</g, '&lt;');
+
+  /* ---------- icons ---------- */
+  const icShield = '<svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+  const icCheck  = '<svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>';
+  const icWarn   = '<svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+  const msLogo   = '<svg width="18" height="18" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>';
+
+  /* ---------- providers panel ---------- */
+  function renderProviders() {
+    const el = $('providers-body');
+    if (state.app === 'none') {
+      el.innerHTML = `
+        <div class="alert info">${icShield}
+          <div class="body"><b>Not set up yet.</b>
+            <div class="desc">One-time setup. After this, mailboxes connect with a single sign-in.</div>
+          </div>
+        </div>
+        <div style="margin-top:14px">
+          <button class="btn primary" onclick="openWizard()">Set up Microsoft</button>
+        </div>`;
+    } else if (state.app === 'pending') {
+      el.innerHTML = `
+        <div class="prow">
+          <div class="logo">${msLogo}</div>
+          <div class="meta">
+            <div class="t">${sourceLabel()} <span class="badge amber">Waiting for admin approval</span></div>
+            <div class="d">A <b>Microsoft 365 administrator</b> for your organization must approve access before mailboxes can connect.</div>
+            <div class="chips"><span class="chip">Email</span></div>
+          </div>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:10px">
+          <button class="btn primary" onclick="grantConsent()">Approve in Microsoft</button>
+          <button class="btn" onclick="fakeCopy(this)">Copy approval link for your admin</button>
+        </div>`;
+    } else {
+      el.innerHTML = `
+        <div class="prow">
+          <div class="logo">${msLogo}</div>
+          <div class="meta">
+            <div class="t">${sourceLabel()} <span class="badge green">${icCheck} Connected</span></div>
+            <div class="d">Approved by your Microsoft 365 administrator.</div>
+            <div class="chips"><span class="chip">Email</span><span class="chip">Staff sign-in</span></div>
+          </div>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:10px; align-items:center">
+          <button class="btn" onclick="jumpToMailbox()">Connect a mailbox →</button>
+          <button class="btn link" onclick="alert('(demo) advanced: view app details, rotate secret, replace app')">Advanced</button>
+        </div>`;
+    }
+  }
+
+  function sourceLabel() {
+    if (state.appSource === 'auto')   return 'App in your Microsoft organization';
+    if (state.appSource === 'manual') return 'Your Entra app registration';
+    if (state.deploy === 'hosted')    return 'Microsoft app provided by Alga PSA';
+    return 'App in your Microsoft organization';
+  }
+
+  /* ---------- mailbox panel ---------- */
+  function renderMailbox() {
+    const el = $('mailbox-status');
+    const btn = $('authorize-btn');
+    if (state.mailboxConnected) {
+      el.innerHTML = `
+        <div class="alert good">${icCheck}
+          <div class="body"><b>Mailbox connected.</b>
+            <div class="desc">support@yourcompany.com is receiving email and creating tickets.</div>
+          </div>
+        </div>`;
+      btn.disabled = true;
+      btn.textContent = 'Connected';
+      return;
+    }
+    btn.textContent = 'Sign in with Microsoft';
+    if (state.app === 'ready') {
+      el.innerHTML = `
+        <div class="alert info" style="align-items:center">${icShield}
+          <div class="body"><b>Microsoft is set up.</b>
+            <div class="desc">Sign in as this mailbox (or a user with access to it) to finish.</div>
+          </div>
+        </div>`;
+      btn.disabled = false;
+    } else if (state.app === 'pending') {
+      el.innerHTML = `
+        <div class="alert warn">${icWarn}
+          <div class="body"><b>Waiting for your Microsoft 365 administrator.</b>
+            <div class="desc">Setup was started in Providers but hasn't been approved yet.
+            <button class="btn link" onclick="jumpToProviders()">Open Providers</button></div>
+          </div>
+        </div>`;
+      btn.disabled = true;
+    } else {
+      el.innerHTML = `
+        <div class="alert warn">${icWarn}
+          <div class="body"><b>Microsoft isn't set up yet.</b>
+            <div class="desc">Set it up once in Providers, then come back to connect this mailbox.
+            <button class="btn link" onclick="jumpToProviders()">Set up in Providers</button></div>
+          </div>
+        </div>`;
+      btn.disabled = true;
+    }
+  }
+
+  /* ---------- wizard ---------- */
+  function openWizard() { state.wizardStep = 'choose'; renderWizard(); $('wizard').classList.add('open'); }
+  function closeWizard() { $('wizard').classList.remove('open'); state.wizardStep = null; }
+
+  function renderWizard() {
+    const body = $('wz-body');
+    const title = $('wz-title'), sub = $('wz-sub');
+    if (state.wizardStep === 'choose') {
+      title.textContent = 'Set up Microsoft';
+      sub.textContent = 'Choose how Alga PSA should connect to Microsoft.';
+      const platformOpt = state.deploy === 'hosted' ? `
+        <button class="opt rec" onclick="chooseSource('platform')">
+          <span class="radio"></span>
+          <span>
+            <span class="ot">Use the app provided by Alga PSA <span class="badge green">Recommended</span></span>
+            <span class="od">Nothing to register in Microsoft Entra — no client ID or secret. Your Microsoft 365 administrator just approves access.</span>
+          </span>
+        </button>` : '';
+      body.innerHTML = `
+        ${platformOpt}
+        <button class="opt" onclick="chooseSource('auto')">
+          <span class="radio"></span>
+          <span>
+            <span class="ot">Create an app in your Microsoft organization</span>
+            <span class="od">Alga PSA registers a dedicated Entra app for you automatically. Requires signing in as a Microsoft administrator.</span>
+          </span>
+        </button>
+        <button class="opt" onclick="chooseSource('manual')">
+          <span class="radio"></span>
+          <span>
+            <span class="ot">Enter an existing app manually <span class="badge gray">Advanced</span></span>
+            <span class="od">For organizations that already maintain their own Entra app registration.</span>
+          </span>
+        </button>
+        ${state.deploy === 'appliance' ? `
+        <div class="note" style="margin-top:14px"><span class="n">2</span><span>Appliance view: the platform option is absent — not shown-but-disabled. Automated creation is the recommended default here.</span></div>` : ''}`;
+    } else if (state.wizardStep === 'auto-details') {
+      title.textContent = 'Create an app in your Microsoft organization';
+      sub.textContent = 'Alga PSA will register the app for you.';
+      body.innerHTML = `
+        <div class="field">
+          <label>Microsoft tenant ID or verified domain</label>
+          <input placeholder="contoso.com or 00000000-0000-…" value="yourcompany.com">
+          <div class="hint">From the Microsoft Entra admin center → Overview. A verified domain works too.</div>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="state.wizardStep='choose';renderWizard()">Back</button>
+          <button class="btn primary" onclick="finishCreate('auto')">Create app</button>
+        </div>`;
+    } else if (state.wizardStep === 'manual-details') {
+      title.textContent = 'Enter your app registration';
+      sub.textContent = 'From your existing Microsoft Entra app.';
+      body.innerHTML = `
+        <div class="field"><label>Application (client) ID</label><input placeholder="00000000-0000-0000-0000-000000000000"></div>
+        <div class="field"><label>Client secret</label><input type="password" placeholder="••••••••••••"></div>
+        <div class="field"><label>Microsoft tenant ID</label><input placeholder="00000000-0000-0000-0000-000000000000"></div>
+        <div class="field">
+          <label>Redirect URI to add in Entra</label>
+          <input readonly value="https://algapsa.com/api/auth/microsoft/callback" style="background:#f8fafc;color:#64748b">
+          <div class="hint">Copy this into your app registration. It's the only place a redirect URI appears in the product.</div>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="state.wizardStep='choose';renderWizard()">Back</button>
+          <button class="btn primary" onclick="finishCreate('manual')">Save app</button>
+        </div>`;
+    } else if (state.wizardStep === 'consent') {
+      title.textContent = 'One more step: administrator approval';
+      sub.textContent = '';
+      body.innerHTML = `
+        <div class="alert info">${icShield}
+          <div class="body"><b>A Microsoft 365 administrator must approve access.</b>
+            <div class="desc">This is Microsoft's admin-consent step. If that's you, approve now; otherwise send the link to your admin.</div>
+          </div>
+        </div>
+        <div class="kv">
+          <span class="k">App</span><span class="v" style="font-family:inherit">${sourceLabel()}</span>
+          <span class="k">Access requested</span><span class="v" style="font-family:inherit">Read &amp; send mail, sign in mailbox users</span>
+        </div>
+        <div class="mfoot">
+          <button class="btn" onclick="fakeCopy(this)">Copy approval link</button>
+          <button class="btn primary" onclick="grantConsent(); closeWizard()">Approve in Microsoft</button>
+        </div>`;
+    }
+  }
+
+  function chooseSource(src) {
+    state.appSource = src;
+    if (src === 'platform') { state.app = 'pending'; state.wizardStep = 'consent'; }
+    else if (src === 'auto') { state.wizardStep = 'auto-details'; }
+    else { state.wizardStep = 'manual-details'; }
+    renderWizard(); renderAll();
+  }
+  function finishCreate(src) {
+    state.appSource = src; state.app = 'pending'; state.wizardStep = 'consent';
+    renderWizard(); renderAll();
+  }
+  function grantConsent() {
+    state.app = 'ready';
+    syncSeg('seg-app', 'ready');
+    renderAll();
+  }
+
+  /* ---------- interactions ---------- */
+  function jumpToProviders() {
+    $('providers-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    $('providers-card').classList.remove('flash'); void $('providers-card').offsetWidth;
+    $('providers-card').classList.add('flash');
+  }
+  function jumpToMailbox() {
+    $('mailbox-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    $('mailbox-card').classList.remove('flash'); void $('mailbox-card').offsetWidth;
+    $('mailbox-card').classList.add('flash');
+  }
+  function fakeCopy(btn) {
+    const old = btn.textContent; btn.textContent = 'Copied ✓';
+    setTimeout(() => btn.textContent = old, 1200);
+  }
+
+  $('authorize-btn').addEventListener('click', () => {
+    const btn = $('authorize-btn');
+    btn.disabled = true; btn.textContent = 'Waiting for Microsoft…';
+    setTimeout(() => { state.mailboxConnected = true; renderAll(); }, 900);
+  });
+
+  /* ---------- demo controls ---------- */
+  function syncSeg(segId, value) {
+    document.querySelectorAll('#' + segId + ' button').forEach(b =>
+      b.classList.toggle('on', b.dataset.v === value));
+  }
+  $('seg-deploy').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    state.deploy = b.dataset.v; syncSeg('seg-deploy', state.deploy);
+    if (state.deploy === 'appliance' && state.appSource === 'platform') state.appSource = 'auto';
+    if (state.wizardStep) renderWizard();
+    renderAll();
+  });
+  $('seg-app').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    state.app = b.dataset.v; syncSeg('seg-app', state.app);
+    if (state.app !== 'ready') state.mailboxConnected = false;
+    if (state.app === 'none') state.appSource = null;
+    renderAll();
+  });
+  $('notes-toggle').addEventListener('change', (e) => {
+    document.body.classList.toggle('hide-notes', !e.target.checked);
+  });
+
+  function renderAll() { renderProviders(); renderMailbox(); }
+  renderAll();
+</script>
+</body>
+</html>

@@ -31,7 +31,7 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
 vi.mock('@alga-psa/integrations/actions', () => ({
   getMicrosoftConsumerSetupStatus: vi.fn().mockResolvedValue({
     success: true,
-    credentialCapability: null,
+    emailSetup: null,
   }),
 }));
 

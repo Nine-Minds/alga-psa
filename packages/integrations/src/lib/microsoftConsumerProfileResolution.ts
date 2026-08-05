@@ -58,7 +58,7 @@ export interface MicrosoftBindingCandidateProfile {
   is_archived: boolean;
 }
 
-type ResolverStatus = 'ready' | 'not_configured' | 'invalid_profile';
+type ResolverStatus = 'ready' | 'not_configured' | 'pending_admin_consent' | 'invalid_profile';
 export type MicrosoftCredentialSource = 'binding' | 'app';
 export type MicrosoftCredentialPreference = 'tenant' | 'platform';
 
@@ -256,6 +256,25 @@ async function getMicrosoftConsumerBindingRow(
     .first() as MicrosoftConsumerBindingRow | undefined;
 
   return row || undefined;
+}
+
+async function getPendingMicrosoftEmailProfile(
+  db: any,
+  tenant: string
+): Promise<MicrosoftProfileRow | undefined> {
+  const profiles = await getTenantMicrosoftProfiles(db, tenant);
+
+  return profiles
+    .filter((profile) => (
+      profile.email_admin_consent_required &&
+      !profile.email_admin_consent_granted_at &&
+      !profile.is_archived &&
+      profileHasCapability(profile, 'email')
+    ))
+    .sort((left, right) => {
+      if (left.is_default !== right.is_default) return left.is_default ? -1 : 1;
+      return new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime();
+    })[0];
 }
 
 async function getMicrosoftProfileRow(
@@ -491,6 +510,21 @@ export async function resolveMicrosoftConsumerProfileConfig(
   const binding = await ensureMicrosoftConsumerBindingMigration(db, tenantId, consumerType, secretProvider);
 
   if (!binding) {
+    if (consumerType === 'email') {
+      const pendingProfile = await getPendingMicrosoftEmailProfile(db, tenantId);
+      if (pendingProfile) {
+        return {
+          status: 'pending_admin_consent',
+          tenantId,
+          consumerType,
+          profileId: pendingProfile.profile_id,
+          clientId: pendingProfile.client_id,
+          credentialSource: 'binding',
+          message: 'Microsoft 365 administrator approval is still required',
+        };
+      }
+    }
+
     if (consumerType === 'email' && options?.credentialPreference !== 'tenant') {
       const hostedEmailConfig = await resolveHostedMicrosoftEmailConfig(tenantId, secretProvider);
       if (hostedEmailConfig) {
@@ -540,11 +574,13 @@ export async function resolveMicrosoftConsumerProfileConfig(
     !profile.email_admin_consent_granted_at
   ) {
     return {
-      status: 'invalid_profile',
+      status: 'pending_admin_consent',
       tenantId,
       consumerType,
       profileId: profile.profile_id,
-      message: 'Selected Email Microsoft profile is awaiting tenant administrator consent',
+      clientId: profile.client_id,
+      credentialSource: 'binding',
+      message: 'Microsoft 365 administrator approval is still required',
     };
   }
 

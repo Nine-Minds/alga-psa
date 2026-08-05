@@ -1524,10 +1524,12 @@
           "cancel": "11111",
           "copy": "11111",
           "finish": "11111",
-          "grantConsent": "11111",
           "savePlatform": "11111",
           "signIn": "11111",
-          "working": "11111"
+          "working": "11111",
+          "approve": "11111",
+          "copyApprovalLink": "11111",
+          "saveManual": "11111"
         },
         "automated": {
           "description": "11111",
@@ -1537,13 +1539,16 @@
         "complete": {
           "consentDone": "11111",
           "consentPending": "11111",
-          "profileCreated": "11111"
+          "profileCreated": "11111",
+          "ready": "11111",
+          "waiting": "11111"
         },
         "consent": {
           "confirmedDescription": "11111",
           "confirmedTitle": "11111",
           "url": "11111",
-          "urlLabel": "11111"
+          "urlLabel": "11111",
+          "approvalLink": "11111"
         },
         "copied": "11111 {{label}} 11111",
         "description": "11111",
@@ -1554,13 +1559,19 @@
           "platform": "11111",
           "popupBlocked": "11111",
           "popupClosed": "11111",
-          "tenantRequired": "11111"
+          "tenantRequired": "11111",
+          "manual": "11111",
+          "manualRequired": "11111",
+          "pendingProfileMissing": "11111",
+          "approvalLink": "11111"
         },
         "fields": {
           "clientId": "11111",
           "displayName": "11111",
-          "tenant": "11111",
-          "tenantId": "11111"
+          "tenantId": "11111",
+          "clientSecret": "11111",
+          "microsoftTenant": "11111",
+          "redirectUri": "11111"
         },
         "manual": {
           "description": "11111",
@@ -1571,7 +1582,9 @@
           "title": "11111"
         },
         "title": "11111",
-        "unavailable": "11111"
+        "unavailable": "11111",
+        "recommended": "11111",
+        "advanced": "11111"
       },
       "settings": {
         "advanced": {
@@ -1752,7 +1765,8 @@
         "statusBadges": {
           "archived": "11111",
           "needsAttention": "11111",
-          "ready": "11111"
+          "ready": "11111",
+          "waitingForAdminApproval": "11111"
         },
         "title": "11111",
         "toasts": {

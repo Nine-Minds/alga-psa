@@ -19,6 +19,8 @@ const resetMicrosoftProvidersToDisconnectedMock = vi.hoisted(() => vi.fn());
 const getMicrosoftEmailSetupOptionsMock = vi.hoisted(() => vi.fn());
 const configureMicrosoftEmailPlatformApplicationMock = vi.hoisted(() => vi.fn());
 const createMicrosoftEmailApplicationMock = vi.hoisted(() => vi.fn());
+const configureMicrosoftEmailManualApplicationMock = vi.hoisted(() => vi.fn());
+const getMicrosoftEmailAdminConsentUrlMock = vi.hoisted(() => vi.fn());
 const toastMock = vi.hoisted(() => vi.fn());
 const routerPushMock = vi.hoisted(() => vi.fn());
 
@@ -54,6 +56,8 @@ vi.mock('../../../actions/integrations/microsoftEmailSetupActions', () => ({
   getMicrosoftEmailSetupOptions: (...args: unknown[]) => getMicrosoftEmailSetupOptionsMock(...args),
   configureMicrosoftEmailPlatformApplication: (...args: unknown[]) => configureMicrosoftEmailPlatformApplicationMock(...args),
   createMicrosoftEmailApplication: (...args: unknown[]) => createMicrosoftEmailApplicationMock(...args),
+  configureMicrosoftEmailManualApplication: (...args: unknown[]) => configureMicrosoftEmailManualApplicationMock(...args),
+  getMicrosoftEmailAdminConsentUrl: (...args: unknown[]) => getMicrosoftEmailAdminConsentUrlMock(...args),
 }));
 
 vi.mock('@alga-psa/ui/hooks/use-toast', () => ({
@@ -152,14 +156,12 @@ function buildStatus(overrides: Record<string, unknown> = {}) {
       tenantId: 'tenant-guid-1',
       ready: true,
     },
-    emailCredentialCapability: {
-      source: 'tenant',
-      ready: true,
-      platformReady: true,
-      tenantProfileSelected: true,
-      clientIdConfigured: true,
-      clientSecretConfigured: true,
-      tenantIdConfigured: true,
+    emailSetup: {
+      state: 'ready',
+      source: 'tenant_app',
+      hosted: true,
+      platformOffered: true,
+      automatedCreationAvailable: true,
       profileId: 'profile-1',
     },
     profiles: [
@@ -295,11 +297,20 @@ describe('MicrosoftIntegrationSettings contracts', () => {
       success: true,
       callbackUri: 'https://psa.example.com/api/auth/microsoft/callback',
       setupCallbackUri: 'https://psa.example.com/api/auth/microsoft/email-setup/callback',
+      emailSetup: {
+        state: 'not_configured',
+        source: null,
+        hosted: true,
+        platformOffered: false,
+        automatedCreationAvailable: false,
+      },
       platformApplication: { available: false },
       automatedCreationAvailable: false,
     });
     configureMicrosoftEmailPlatformApplicationMock.mockReset();
     createMicrosoftEmailApplicationMock.mockReset();
+    configureMicrosoftEmailManualApplicationMock.mockReset();
+    getMicrosoftEmailAdminConsentUrlMock.mockReset();
     toastMock.mockReset();
     routerPushMock.mockReset();
     getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus());
@@ -360,15 +371,12 @@ describe('MicrosoftIntegrationSettings contracts', () => {
   it('keeps tenant app management collapsed when hosted platform credentials are ready', async () => {
     const user = userEvent.setup();
     getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus({
-      emailCredentialCapability: {
+      emailSetup: {
+        state: 'ready',
         source: 'platform',
-        ready: true,
-        platformReady: true,
-        tenantProfileSelected: false,
-        clientIdConfigured: true,
-        clientSecretConfigured: true,
-        tenantIdConfigured: true,
-        profileId: null,
+        hosted: true,
+        platformOffered: true,
+        automatedCreationAvailable: true,
       },
     }));
 
@@ -378,7 +386,7 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     expect(screen.queryByText('Which Microsoft app each service uses')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'New app registration' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /Bring your own Microsoft app/i }));
+    await user.click(screen.getByRole('button', { name: /Manual Microsoft apps/i }));
 
     expect(screen.getByText(/custom Entra app is normally unnecessary/i)).toBeInTheDocument();
     expect(screen.getByText('Which Microsoft app each service uses')).toBeInTheDocument();
@@ -388,62 +396,115 @@ describe('MicrosoftIntegrationSettings contracts', () => {
   it('opens inbound email provider configuration from the hosted Microsoft CTA', async () => {
     const user = userEvent.setup();
     getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus({
-      emailCredentialCapability: {
+      emailSetup: {
+        state: 'ready',
         source: 'platform',
-        ready: true,
-        platformReady: true,
-        tenantProfileSelected: false,
-        clientIdConfigured: true,
-        clientSecretConfigured: true,
-        tenantIdConfigured: true,
-        profileId: null,
+        hosted: true,
+        platformOffered: true,
+        automatedCreationAvailable: true,
       },
     }));
 
     render(<MicrosoftIntegrationSettings />);
 
-    await user.click(await screen.findByRole('button', { name: 'Connect Microsoft email' }));
+    await user.click(await screen.findByRole('button', { name: 'Connect a mailbox →' }));
 
     expect(routerPushMock).toHaveBeenCalledWith('/msp/settings/integrations?category=communication');
   });
 
-  it('opens manual app management when platform credentials are unavailable', async () => {
+  it('does not offer the platform app when the server reports a self-hosted deployment', async () => {
+    const user = userEvent.setup();
     getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus({
-      emailCredentialCapability: {
-        source: 'none',
-        ready: false,
-        platformReady: false,
-        tenantProfileSelected: false,
-        clientIdConfigured: false,
-        clientSecretConfigured: false,
-        tenantIdConfigured: false,
-        profileId: null,
+      emailSetup: {
+        state: 'not_configured',
+        source: null,
+        hosted: false,
+        platformOffered: false,
+        automatedCreationAvailable: false,
       },
     }));
 
     render(<MicrosoftIntegrationSettings />);
 
-    expect(await screen.findByText('Platform Microsoft credentials are unavailable')).toBeInTheDocument();
-    expect(screen.getByText('Which Microsoft app each service uses')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'New app registration' })).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Set up Microsoft' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Set up Microsoft' });
+    expect(within(dialog).queryByRole('button', { name: /Use the app provided by Alga PSA/ })).not.toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /Enter an existing app manually/ })).toBeEnabled();
   });
 
-  it('shows both guided choices as unavailable while keeping the manual fallback usable', async () => {
+  it('lists the hosted platform app first and marks it Recommended', async () => {
     const user = userEvent.setup();
+    const emailSetup = {
+      state: 'not_configured',
+      source: null,
+      hosted: true,
+      platformOffered: true,
+      automatedCreationAvailable: true,
+    };
+    getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus({ emailSetup }));
+    getMicrosoftEmailSetupOptionsMock.mockResolvedValue({
+      success: true,
+      callbackUri: 'https://psa.example.com/api/auth/microsoft/callback',
+      setupCallbackUri: 'https://psa.example.com/api/auth/microsoft/email-setup/callback',
+      emailSetup,
+      platformApplication: { available: true },
+      automatedCreationAvailable: true,
+    });
+
+    render(<MicrosoftIntegrationSettings />);
+    await user.click(await screen.findByRole('button', { name: 'Set up Microsoft' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Set up Microsoft' });
+    const platformChoice = within(dialog).getByRole('button', { name: /Use the app provided by Alga PSA/ });
+    const automatedChoice = within(dialog).getByRole('button', { name: /Create an app in your Microsoft organization/ });
+
+    expect(within(platformChoice).getByText('Recommended')).toBeInTheDocument();
+    expect(platformChoice.compareDocumentPosition(automatedChoice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('shows approval actions instead of setup while Microsoft consent is pending', async () => {
+    getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus({
+      emailSetup: {
+        state: 'pending_admin_consent',
+        source: 'tenant_app',
+        hosted: true,
+        platformOffered: true,
+        automatedCreationAvailable: true,
+        profileId: 'profile-pending',
+      },
+    }));
+
     render(<MicrosoftIntegrationSettings />);
 
-    await user.click(await screen.findByRole('button', { name: 'Set up Microsoft Email' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Set up Microsoft Email' });
-    const platformChoice = within(dialog).getByRole('button', { name: /Use the Alga platform app/ });
-    const automatedChoice = within(dialog).getByRole('button', { name: /Create an app in this tenant/ });
+    expect(await screen.findByText('Waiting for admin approval')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Approve in Microsoft' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy approval link for your admin' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Set up Microsoft' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the manual fallback usable when automated setup is unavailable', async () => {
+    const user = userEvent.setup();
+    getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus({
+      emailSetup: {
+        state: 'not_configured',
+        source: null,
+        hosted: true,
+        platformOffered: false,
+        automatedCreationAvailable: false,
+      },
+    }));
+    render(<MicrosoftIntegrationSettings />);
+
+    await user.click(await screen.findByRole('button', { name: 'Set up Microsoft' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Set up Microsoft' });
+    const automatedChoice = within(dialog).getByRole('button', { name: /Create an app in your Microsoft organization/ });
     const manualChoice = within(dialog).getByRole('button', { name: /Enter an existing app manually/ });
 
-    expect(platformChoice).toBeDisabled();
+    expect(within(dialog).queryByRole('button', { name: /Use the app provided by Alga PSA/ })).not.toBeInTheDocument();
     expect(automatedChoice).toBeDisabled();
     expect(manualChoice).toBeEnabled();
 
     await user.click(manualChoice);
-    expect(await screen.findByRole('dialog', { name: 'Create Microsoft app registration' })).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Redirect URI to add in Entra')).toHaveAttribute('readonly');
   });
 
   it('recovers the automated setup controls when the Microsoft popup is closed', async () => {
@@ -454,6 +515,13 @@ describe('MicrosoftIntegrationSettings contracts', () => {
       success: true,
       callbackUri: 'https://psa.example.com/api/auth/microsoft/callback',
       setupCallbackUri: 'https://psa.example.com/api/auth/microsoft/email-setup/callback',
+      emailSetup: {
+        state: 'not_configured',
+        source: null,
+        hosted: false,
+        platformOffered: false,
+        automatedCreationAvailable: true,
+      },
       platformApplication: { available: false },
       automatedCreationAvailable: true,
     });
@@ -461,11 +529,20 @@ describe('MicrosoftIntegrationSettings contracts', () => {
       success: true,
       authUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
     });
+    getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus({
+      emailSetup: {
+        state: 'not_configured',
+        source: null,
+        hosted: false,
+        platformOffered: false,
+        automatedCreationAvailable: true,
+      },
+    }));
 
     render(<MicrosoftIntegrationSettings />);
-    await user.click(await screen.findByRole('button', { name: 'Set up Microsoft Email' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Set up Microsoft Email' });
-    await user.click(within(dialog).getByRole('button', { name: /Create an app in this tenant/ }));
+    await user.click(await screen.findByRole('button', { name: 'Set up Microsoft' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Set up Microsoft' });
+    await user.click(within(dialog).getByRole('button', { name: /Create an app in your Microsoft organization/ }));
     await user.click(within(dialog).getByRole('button', { name: 'Sign in to Microsoft' }));
     expect(within(dialog).getByRole('button', { name: 'Working…' })).toBeDisabled();
 
@@ -497,6 +574,13 @@ describe('MicrosoftIntegrationSettings contracts', () => {
         scopes: {
           sso: ['openid', 'profile', 'email'],
           email: ['Mail.Read', 'Mail.Read.Shared', 'offline_access'],
+        },
+        emailSetup: {
+          state: 'not_configured',
+          source: null,
+          hosted: false,
+          platformOffered: false,
+          automatedCreationAvailable: false,
         },
         profiles: [
           {
@@ -536,7 +620,7 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     ).toBeInTheDocument();
     expect(screen.getByTestId('microsoft-binding-select-msp_sso')).toBeInTheDocument();
     expect(screen.getByTestId('microsoft-binding-select-email')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Set up Microsoft Email' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Set up Microsoft' })).toBeInTheDocument();
     expect(screen.queryByText('Calendar sync redirect URI')).not.toBeInTheDocument();
     expect(screen.queryByText('Teams scopes')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Disconnect Microsoft providers' })).not.toBeInTheDocument();

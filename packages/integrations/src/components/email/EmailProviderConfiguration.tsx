@@ -6,10 +6,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { AlertTriangle, Plus, ShieldCheck } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   getErrorMessage,
@@ -45,7 +45,7 @@ import {
 } from './types';
 import { isMicrosoftConsumerEnterpriseEdition } from '../../lib/microsoftConsumerVisibility';
 import { getMicrosoftConsumerSetupStatus } from '@alga-psa/integrations/actions';
-import type { MicrosoftCredentialCapability } from '../../actions/integrations/providerReadiness';
+import type { MicrosoftEmailSetupReadiness } from '../../actions/integrations/providerReadiness';
 
 const IMAP_RESYNC_FAST_POLL_INTERVAL_MS = 5_000;
 const IMAP_RESYNC_FAST_POLL_DURATION_MS = 120_000;
@@ -93,7 +93,7 @@ function EmailProviderConfigurationContent({
   const [activeSection, setActiveSection] = useState<'providers' | 'defaults' | 'rules'>('providers');
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [diagnosticsProvider, setDiagnosticsProvider] = useState<EmailProvider | null>(null);
-  const [microsoftCredentialCapability, setMicrosoftCredentialCapability] = useState<MicrosoftCredentialCapability | null | undefined>(undefined);
+  const [microsoftEmailSetup, setMicrosoftEmailSetup] = useState<MicrosoftEmailSetupReadiness | null | undefined>(undefined);
   const [reconnectingProviderIds, setReconnectingProviderIds] = useState<Set<string>>(new Set());
   const resyncPollsRef = useRef<Map<string, ImapResyncPoll>>(new Map());
   const nextResyncGenerationRef = useRef(0);
@@ -108,16 +108,16 @@ function EmailProviderConfigurationContent({
   useEffect(() => {
     if (!isEnterpriseEdition) return;
 
-    const loadMicrosoftCredentialCapability = async () => {
+    const loadMicrosoftEmailSetup = async () => {
       try {
         const result = await getMicrosoftConsumerSetupStatus('email');
-        setMicrosoftCredentialCapability(result.success ? result.credentialCapability || null : null);
+        setMicrosoftEmailSetup(result.success ? result.emailSetup || null : null);
       } catch {
-        setMicrosoftCredentialCapability(null);
+        setMicrosoftEmailSetup(null);
       }
     };
 
-    loadMicrosoftCredentialCapability();
+    loadMicrosoftEmailSetup();
   }, [isEnterpriseEdition]);
 
   useEffect(() => {
@@ -449,7 +449,7 @@ function EmailProviderConfigurationContent({
               provider={provider}
               onSuccess={(p) => { handleProviderUpdated(p); closeDrawer(); }}
               onCancel={handleEditCancel}
-              credentialCapability={microsoftCredentialCapability}
+              emailSetup={microsoftEmailSetup}
             />
           )}
           {provider.providerType === 'google' && (
@@ -573,67 +573,22 @@ function EmailProviderConfigurationContent({
           </CardHeader>
           <CardContent className="space-y-4">
             {isEnterpriseEdition && (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <h4 className="font-medium mb-2">{t('configuration.setup.microsoft.title', {
                   defaultValue: 'Microsoft 365 Setup',
                 })}</h4>
-                {microsoftCredentialCapability === undefined ? (
-                  <p className="text-sm text-muted-foreground">
-                    {t('configuration.setup.microsoft.checkingCredentials', { defaultValue: 'Checking Microsoft credential availability…' })}
-                  </p>
-                ) : microsoftCredentialCapability?.source === 'platform' ? (
-                  <>
-                    <Alert>
-                      <ShieldCheck className="h-4 w-4" />
-                      <AlertDescription>
-                        <div className="font-medium">{t('configuration.setup.microsoft.platform.title', { defaultValue: 'Microsoft sign-in is ready' })}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {t('configuration.setup.microsoft.platform.description', { defaultValue: 'Alga PSA supplies the Microsoft application. Add a provider, enter the mailbox details, and connect with Microsoft—no Entra app registration is needed.' })}
-                        </div>
-                      </AlertDescription>
-                    </Alert>
-                    <details className="rounded-md border px-3 py-2 text-sm">
-                      <summary id="microsoft-byo-setup-summary" className="cursor-pointer font-medium">
-                        {t('configuration.setup.microsoft.byo.summary', { defaultValue: 'Advanced: use your own Microsoft app' })}
-                      </summary>
-                      <div className="mt-2 space-y-2 text-muted-foreground">
-                        <p className="text-[rgb(var(--badge-warning-text))]">
-                          {t('configuration.setup.microsoft.byo.warning', { defaultValue: 'This is normally unnecessary on hosted Alga PSA and should be used only when your organization requires its own Entra application.' })}
-                        </p>
-                        <p>{t('configuration.setup.microsoft.byo.description', { defaultValue: 'Open Settings → Integrations → Providers, expand the Microsoft advanced options, and add your tenant-owned app before returning here.' })}</p>
-                      </div>
-                    </details>
-                  </>
-                ) : microsoftCredentialCapability?.source === 'tenant' ? (
-                  <Alert variant={microsoftCredentialCapability.ready ? 'default' : 'warning'}>
-                    {microsoftCredentialCapability.ready ? <ShieldCheck className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-                    <AlertDescription>
-                      <div className="font-medium">
-                        {microsoftCredentialCapability.ready
-                          ? t('configuration.setup.microsoft.tenant.title', { defaultValue: 'Your organization’s Microsoft app is selected' })
-                          : t('configuration.setup.microsoft.tenant.incompleteTitle', { defaultValue: 'Your Microsoft app needs attention' })}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {microsoftCredentialCapability.ready
-                          ? t('configuration.setup.microsoft.tenant.description', { defaultValue: 'New Microsoft mailboxes will use the tenant-owned app selected in Providers settings. This choice is preserved even when platform credentials are available.' })
-                          : microsoftCredentialCapability.message || t('configuration.setup.microsoft.tenant.incompleteDescription', { defaultValue: 'Finish configuring the Microsoft app selected in Providers settings before connecting a mailbox.' })}
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <Alert variant="warning">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>
-                      <p>{t('configuration.setup.microsoft.manualRequired', { defaultValue: 'Platform Microsoft credentials are unavailable in this deployment. Configure your own Microsoft app to connect a mailbox.' })}</p>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        1. {t('configuration.setup.microsoft.steps.registerApp', { defaultValue: 'Register an application in Azure AD' })}<br/>
-                        2. {t('configuration.setup.microsoft.steps.permissions', { defaultValue: 'Configure API permissions for Mail.Read' })}<br/>
-                        3. {t('configuration.setup.microsoft.steps.redirectUrl', { defaultValue: 'Set up the redirect URL in your app registration' })}<br/>
-                        4. {t('configuration.setup.microsoft.steps.credentials', { defaultValue: 'Use the Client ID and Client Secret in the form above' })}
-                      </p>
-                    </AlertDescription>
-                  </Alert>
-                )}
+                <p className="text-sm text-muted-foreground">
+                  {t('configuration.setup.microsoft.providersPointer', { defaultValue: 'Microsoft app setup is managed in Providers.' })}
+                </p>
+                <Button
+                  id="open-microsoft-providers-settings-button"
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0"
+                  onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
+                >
+                  {t('configuration.setup.microsoft.openProviders', { defaultValue: 'Open Providers' })}
+                </Button>
               </div>
             )}
             <div>
@@ -739,7 +694,7 @@ function EmailProviderConfigurationContent({
               onClose={() => setWizardOpen(false)}
               onComplete={async (provider) => { onProviderAdded?.(provider); setWizardOpen(false); await loadProviders(); }}
               tenant={tenant}
-              microsoftCredentialCapability={microsoftCredentialCapability}
+              microsoftEmailSetup={microsoftEmailSetup}
             />
             <Microsoft365DiagnosticsDialog
               isOpen={diagnosticsOpen}
