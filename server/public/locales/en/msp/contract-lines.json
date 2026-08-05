@@ -58,6 +58,9 @@
         },
         "description": "Name the contract line and choose how it should bill by default.",
         "heading": "Contract Line Basics",
+        "invoiceLineDescriptionHelp": "Used verbatim as the invoice line text for this fixed fee. Leave empty to use the contract line name.",
+        "invoiceLineDescriptionLabel": "Invoice Line Description",
+        "invoiceLineDescriptionPlaceholder": "e.g. Monthly phone system maintenance per 2019 agreement",
         "nameLabel": "Contract Line Name *",
         "namePlaceholder": "e.g. Managed Support - Gold"
       },

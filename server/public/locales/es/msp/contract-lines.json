@@ -58,6 +58,9 @@
         },
         "description": "Asigne un nombre a la línea del contrato y elija cómo se debe facturar de forma predeterminada.",
         "heading": "Conceptos básicos de la línea de contrato",
+        "invoiceLineDescriptionHelp": "Se usa literalmente como texto de la línea de factura para esta tarifa fija. Déjelo vacío para usar el nombre de la línea de contrato.",
+        "invoiceLineDescriptionLabel": "Descripción de la línea de factura",
+        "invoiceLineDescriptionPlaceholder": "p.ej. Mantenimiento mensual del sistema telefónico según el acuerdo de 2019",
         "nameLabel": "Nombre de la línea de contrato *",
         "namePlaceholder": "p.ej. Soporte gestionado - Oro"
       },

@@ -58,6 +58,9 @@
         },
         "description": "Benennen Sie die Vertragsposition und wählen Sie aus, wie sie standardmäßig abgerechnet werden soll.",
         "heading": "Grundlagen der Vertragslinie",
+        "invoiceLineDescriptionHelp": "Wird wörtlich als Text der Rechnungszeile für diese feste Gebühr verwendet. Leer lassen, um den Namen der Vertragszeile zu verwenden.",
+        "invoiceLineDescriptionLabel": "Beschreibung der Rechnungszeile",
+        "invoiceLineDescriptionPlaceholder": "z.B. Monatliche Wartung der Telefonanlage gemäß Vertrag von 2019",
         "nameLabel": "Name der Vertragszeile *",
         "namePlaceholder": "z.B. Verwalteter Support – Gold"
       },

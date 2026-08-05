@@ -58,6 +58,9 @@
         },
         "description": "Dê um nome à linha de contrato e escolha como ela deverá ser cobrada por padrão.",
         "heading": "Noções básicas da linha de contrato",
+        "invoiceLineDescriptionHelp": "Usado literalmente como texto da linha da fatura para esta taxa fixa. Deixe em branco para usar o nome da linha de contrato.",
+        "invoiceLineDescriptionLabel": "Descrição da linha da fatura",
+        "invoiceLineDescriptionPlaceholder": "por exemplo Manutenção mensal do sistema telefônico conforme o contrato de 2019",
         "nameLabel": "Nome da linha de contrato *",
         "namePlaceholder": "por exemplo Suporte Gerenciado - Ouro"
       },

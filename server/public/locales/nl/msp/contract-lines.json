@@ -58,6 +58,9 @@
         },
         "description": "Geef de contractregel een naam en kies hoe deze standaard moet worden gefactureerd.",
         "heading": "Basisprincipes van contractregels",
+        "invoiceLineDescriptionHelp": "Wordt letterlijk gebruikt als tekst van de factuurregel voor deze vaste vergoeding. Laat leeg om de naam van de contractregel te gebruiken.",
+        "invoiceLineDescriptionLabel": "Omschrijving factuurregel",
+        "invoiceLineDescriptionPlaceholder": "bijv. Maandelijks onderhoud van de telefooncentrale volgens de overeenkomst van 2019",
         "nameLabel": "Naam contractregel *",
         "namePlaceholder": "bijv. Beheerde ondersteuning - Goud"
       },

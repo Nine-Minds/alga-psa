@@ -58,6 +58,9 @@
         },
         "description": "Nommez la ligne de contrat et choisissez le mode de facturation par défaut.",
         "heading": "Notions de base sur les lignes de contrat",
+        "invoiceLineDescriptionHelp": "Utilisé tel quel comme texte de la ligne de facture pour ces frais fixes. Laissez vide pour utiliser le nom de la ligne de contrat.",
+        "invoiceLineDescriptionLabel": "Description de la ligne de facture",
+        "invoiceLineDescriptionPlaceholder": "par ex. Maintenance mensuelle du système téléphonique selon le contrat de 2019",
         "nameLabel": "Nom de la ligne de contrat *",
         "namePlaceholder": "par ex. Support géré - Or"
       },
