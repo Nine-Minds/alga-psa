@@ -20,6 +20,9 @@ spec:
               value: /etc/alga/trust/trust.pem
             - name: RUNTIME_LIMITS
               value: '{"memory_mb":512,"timeout_ms":5000,"fuel":null}'
+            # Origin(s) allowed to embed extension UIs (frame-ancestors); set to the main app origin.
+            - name: EXT_UI_FRAME_ANCESTORS
+              value: https://app.example.com
           ports:
             - containerPort: 8080
 

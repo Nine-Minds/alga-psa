@@ -95,24 +95,44 @@ fn make_bundle_tarzst() -> (Vec<u8>, String) {
 }
 
 async fn start_bundle_http_server(bytes: Vec<u8>) -> (Url, JoinHandle<()>) {
-    // Serve at /sha256/:hex/bundle.tar.zst (hex extracted from request path but we ignore and always return same bytes)
-    let app = Router::new().route(
-        "/sha256/:hex/bundle.tar.zst",
-        get({
-            let blob = Bytes::from(bytes);
-            move || {
-                let b = blob.clone();
-                async move {
-                    let mut h = axum::http::HeaderMap::new();
-                    h.insert(
-                        header::CONTENT_TYPE,
-                        HeaderValue::from_static("application/octet-stream"),
-                    );
-                    (StatusCode::OK, h, b).into_response()
+    // Serve the same bytes at both the legacy /sha256/... path and the
+    // tenant-scoped object key the handler actually requests.
+    let blob = Bytes::from(bytes);
+    let app = Router::new()
+        .route(
+            "/sha256/:hex/bundle.tar.zst",
+            get({
+                let blob = blob.clone();
+                move || {
+                    let b = blob.clone();
+                    async move {
+                        let mut h = axum::http::HeaderMap::new();
+                        h.insert(
+                            header::CONTENT_TYPE,
+                            HeaderValue::from_static("application/octet-stream"),
+                        );
+                        (StatusCode::OK, h, b).into_response()
+                    }
                 }
-            }
-        }),
-    );
+            }),
+        )
+        .route(
+            "/tenants/:tenant/extensions/:ext/sha256/:hex/bundle.tar.zst",
+            get({
+                let blob = blob.clone();
+                move || {
+                    let b = blob.clone();
+                    async move {
+                        let mut h = axum::http::HeaderMap::new();
+                        h.insert(
+                            header::CONTENT_TYPE,
+                            HeaderValue::from_static("application/octet-stream"),
+                        );
+                        (StatusCode::OK, h, b).into_response()
+                    }
+                }
+            }),
+        );
 
     let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -183,8 +203,10 @@ async fn cold_fetch_then_304() {
             .unwrap(),
         ))
         .unwrap();
+    // Warmup is intentionally unsupported without tenant + extension context;
+    // the cold GET below triggers ensure_bundle_cached instead.
     let warm_resp = request::<Json<serde_json::Value>>(&app, warm).await;
-    assert_eq!(warm_resp.status(), StatusCode::OK);
+    assert_eq!(warm_resp.status(), StatusCode::BAD_REQUEST);
 
     // GET index.html
     let get1 = Request::builder()
@@ -230,6 +252,140 @@ async fn cold_fetch_then_304() {
         .unwrap();
     let resp2 = app.clone().oneshot(get2).await.unwrap();
     assert_eq!(resp2.status(), StatusCode::NOT_MODIFIED);
+}
+
+#[tokio::test]
+#[serial]
+async fn csp_and_nosniff_headers() {
+    let (buf, hex) = make_bundle_tarzst();
+    let (base, _handle) = start_bundle_http_server(buf).await;
+
+    let tmpdir = tempfile::tempdir().unwrap();
+    let cache_root = tmpdir.path().to_path_buf();
+    let state = make_test_state(cache_root, base, false, Arc::new(AllowingRegistry));
+    let app = router_for_state(state);
+
+    std::env::remove_var("EXT_UI_CONTENT_SECURITY_POLICY");
+    std::env::remove_var("EXT_UI_FRAME_ANCESTORS");
+
+    // HTML document carries the CSP header
+    let get_html = Request::builder()
+        .method(Method::GET)
+        .uri(format!("/ext-ui/demo-ext/sha256:{}/index.html", hex))
+        .header("x-tenant-id", "tenant-a")
+        .body(Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(get_html).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let csp = resp
+        .headers()
+        .get(header::CONTENT_SECURITY_POLICY)
+        .expect("html should carry CSP")
+        .to_str()
+        .unwrap()
+        .to_string();
+    assert!(csp.contains("default-src 'self'"));
+    assert!(csp.contains("script-src 'self'"));
+    assert!(!csp.contains("frame-ancestors"));
+    assert_eq!(
+        resp.headers().get(header::X_CONTENT_TYPE_OPTIONS).unwrap(),
+        "nosniff"
+    );
+    let etag = resp
+        .headers()
+        .get(header::ETAG)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+
+    // 304 revalidation of the document carries the CSP too
+    let get_304 = Request::builder()
+        .method(Method::GET)
+        .uri(format!("/ext-ui/demo-ext/sha256:{}/index.html", hex))
+        .header("x-tenant-id", "tenant-a")
+        .header(header::IF_NONE_MATCH, etag)
+        .body(Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(get_304).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_MODIFIED);
+    assert!(resp
+        .headers()
+        .get(header::CONTENT_SECURITY_POLICY)
+        .is_some());
+
+    // SPA fallback serves index.html, so it must carry the CSP as well
+    let get_spa = Request::builder()
+        .method(Method::GET)
+        .uri(format!("/ext-ui/demo-ext/sha256:{}/some/client/route", hex))
+        .header("x-tenant-id", "tenant-a")
+        .body(Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(get_spa).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert!(resp
+        .headers()
+        .get(header::CONTENT_SECURITY_POLICY)
+        .is_some());
+
+    // Non-HTML assets get nosniff but no CSP
+    let get_js = Request::builder()
+        .method(Method::GET)
+        .uri(format!("/ext-ui/demo-ext/sha256:{}/assets/app.js", hex))
+        .header("x-tenant-id", "tenant-a")
+        .body(Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(get_js).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert!(resp
+        .headers()
+        .get(header::CONTENT_SECURITY_POLICY)
+        .is_none());
+    assert_eq!(
+        resp.headers().get(header::X_CONTENT_TYPE_OPTIONS).unwrap(),
+        "nosniff"
+    );
+
+    // frame-ancestors appended from env
+    std::env::set_var("EXT_UI_FRAME_ANCESTORS", "https://app.example.com");
+    let get_html2 = Request::builder()
+        .method(Method::GET)
+        .uri(format!("/ext-ui/demo-ext/sha256:{}/index.html", hex))
+        .header("x-tenant-id", "tenant-a")
+        .body(Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(get_html2).await.unwrap();
+    let csp = resp
+        .headers()
+        .get(header::CONTENT_SECURITY_POLICY)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    assert!(csp.ends_with("frame-ancestors https://app.example.com"));
+    std::env::remove_var("EXT_UI_FRAME_ANCESTORS");
+
+    // Full override replaces the policy
+    std::env::set_var(
+        "EXT_UI_CONTENT_SECURITY_POLICY",
+        "default-src 'self'; connect-src 'self' https:",
+    );
+    let get_html3 = Request::builder()
+        .method(Method::GET)
+        .uri(format!("/ext-ui/demo-ext/sha256:{}/index.html", hex))
+        .header("x-tenant-id", "tenant-a")
+        .body(Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(get_html3).await.unwrap();
+    let csp = resp
+        .headers()
+        .get(header::CONTENT_SECURITY_POLICY)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    assert_eq!(csp, "default-src 'self'; connect-src 'self' https:");
+    std::env::remove_var("EXT_UI_CONTENT_SECURITY_POLICY");
 }
 
 #[tokio::test]
@@ -340,9 +496,9 @@ async fn oversize_asset_returns_413() {
         ))
         .unwrap();
     let warm_resp = app.clone().oneshot(warm).await.unwrap();
-    assert_eq!(warm_resp.status(), StatusCode::OK);
+    assert_eq!(warm_resp.status(), StatusCode::BAD_REQUEST);
 
-    // Request the oversize asset
+    // Request the oversize asset (cold GET performs ensure_bundle_cached)
     let get = Request::builder()
         .method(Method::GET)
         .uri(format!("/ext-ui/demo-ext/sha256:{}/assets/big.png", hex))
