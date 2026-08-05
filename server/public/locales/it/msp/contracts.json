@@ -72,7 +72,7 @@
     },
     "source": {
       "contract": "Contrarre",
-      "tenantDefault": "Inadempienza dell'inquilino"
+      "tenantDefault": "Valore predefinito del tenant"
     }
   },
   "billing": {

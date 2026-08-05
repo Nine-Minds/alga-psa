@@ -314,7 +314,7 @@
       "heading": "Services basés sur l'utilisation",
       "ratePerUnitLabel": "Tarif par unité",
       "rateSummary": "{{rate}}/{{unit}}",
-      "recommendBucketLabel": "Recommander un seau de consommation",
+      "recommendBucketLabel": "Recommander un forfait d'heures pour la consommation",
       "searchServicesPlaceholder": "Services de recherche...",
       "serviceLabel": "Service {{index}}",
       "servicesHeading": "Services basés sur l'utilisation",
@@ -341,7 +341,7 @@
       "labels": {
         "allowRollover": "Autoriser le retournement du {{units}} inutilisé",
         "overageRatePerUnit": "Taux de dépassement par {{unit}}",
-        "totalInBucket": "Total {{units}} dans le godet"
+        "totalInBucket": "Total de {{units}} dans le forfait d'heures"
       },
       "placeholders": {
         "overageRate": "Saisir le taux de dépassement",
@@ -350,7 +350,7 @@
       "tooltips": {
         "allowRollover": "Si cette case est cochée, les {{units}} inutilisés d’une période peuvent être utilisés dans la suivante.",
         "overageRatePerUnit": "Le tarif facturé pour chaque {{unit}} utilisé au-delà du montant inclus. (par exemple, $)",
-        "totalInBucket": "Nombre total de {{units}} inclus dans ce compartiment par période de facturation."
+        "totalInBucket": "Nombre total de {{units}} compris dans le forfait d'heures pour chaque période de facturation."
       },
       "units": {
         "defaultPlural": "Unités",
@@ -776,7 +776,7 @@
       },
       "loadingServices": "Chargement des services...",
       "ratePerUnitLabel": "Tarif par unité :",
-      "recommendBucketLabel": "Recommander un seau de consommation",
+      "recommendBucketLabel": "Recommander un forfait d'heures pour la consommation",
       "serviceMetadata": "Type de service : {{type}} | Méthode : {{method}}",
       "serviceToAddMetadata": "Type de service : {{type}} | Méthode : {{method}} | Taux par défaut : {{rate}} | Unité : {{unit}}",
       "toast": {

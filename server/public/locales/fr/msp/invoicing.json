@@ -318,7 +318,7 @@
       "generate": "Générer une facture",
       "saveChanges": "Enregistrer les modifications",
       "processing": "Traitement...",
-      "generateSalesOrderInvoice": "Generate Sales Order Invoice",
+      "generateSalesOrderInvoice": "Générer la facture de la commande client",
       "clearSalesOrderSource": "Clear sales order source"
     },
     "labels": {
@@ -351,9 +351,9 @@
       "INVOICE_NUMBER_CONFLICT": "Ce numéro de facture est déjà utilisé.",
       "PERMISSION_DENIED": "Vous n'êtes pas autorisé à créer ou à mettre à jour cette facture.",
       "UNEXPECTED": "Une erreur s'est produite lors de la génération de la facture. Indiquez la référence {{ref}} lorsque vous contactez le support.",
-      "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
-      "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
-      "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+      "salesOrderGenerateFailed": "Impossible de générer la facture de la commande client.",
+      "salesOrderNothingToInvoice": "Il ne reste plus rien à facturer pour cette commande client.",
+      "salesOrderNotInvoiceable": "Cette commande client ne peut plus être facturée."
     },
     "warnings": {
       "noBillingEmail": "Ce client n'a pas d'adresse e-mail de facturation. Ajoutez une adresse e-mail à son emplacement de facturation avant de générer la facture."
@@ -363,7 +363,7 @@
       "retry": "Réessayer"
     },
     "salesOrderContext": {
-      "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
+      "summary": "Quantité prête à être facturée : {{quantity}} article(s) sur {{lineCount}} ligne(s). La facture provisoire sera liée à la commande client."
     }
   },
   "draftsTab": {
@@ -1687,7 +1687,7 @@
     },
     "actions": {
       "approve": "Approve",
-      "approveInvoiceNow": "Approve & invoice now",
+      "approveInvoiceNow": "Approuver et facturer maintenant",
       "hold": "Hold",
       "cancel": "Cancel",
       "approveSelected": "Approve selected",
@@ -1707,7 +1707,7 @@
     "errors": {
       "loadFailed": "Failed to load the project billing review queue. Please try again.",
       "approveFailed": "Failed to approve the entry.",
-      "invoiceFailed": "Failed to approve and invoice the entry.",
+      "invoiceFailed": "Impossible d'approuver et de facturer l'entrée.",
       "holdFailed": "Failed to place the entry on hold.",
       "cancelFailed": "Failed to cancel the entry."
     },

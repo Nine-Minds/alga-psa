@@ -99,7 +99,7 @@
   },
   "messages": {
     "welcome": "Willkommen",
-    "confirmDelete": "Möchtest du dieses Element wirklich löschen?",
+    "confirmDelete": "Möchten Sie dieses Element wirklich löschen?",
     "saveSuccess": "Änderungen erfolgreich gespeichert",
     "saveError": "Änderungen konnten nicht gespeichert werden",
     "loadError": "Daten konnten nicht geladen werden",
@@ -159,7 +159,7 @@
     "currentLanguage": "Aktuelle Sprache",
     "preference": {
       "label": "Sprachpräferenz",
-      "helper": "Wähle deine bevorzugte Sprache für die Oberfläche und E-Mail-Benachrichtigungen",
+      "helper": "Wählen Sie Ihre bevorzugte Sprache für die Benutzeroberfläche und E-Mail-Benachrichtigungen aus. Diese Einstellung überschreibt für Sie die Standardvorgaben der Organisation und des Kundenportals.",
       "placeholder": "Sprache auswählen",
       "cleared": "Sprachpräferenz entfernt. Standardsprache wird verwendet...",
       "updating": "Sprachpräferenz wird aktualisiert...",
@@ -301,7 +301,7 @@
         "addTitle": "Neuen Standort hinzufügen",
         "editTitle": "Standort bearbeiten",
         "deleteTitle": "Standort löschen",
-        "deleteMessage": "Möchtest du den Standort \"{{name}}\" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+        "deleteMessage": "Möchten Sie den Standort \"{{name}}\" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
       },
       "empty": {
         "title": "Noch keine Standorte hinzugefügt",
@@ -356,18 +356,18 @@
     "newDocument": "Neues Dokument",
     "uploadFile": "Datei hochladen",
     "deleteTitle": "Dokument dauerhaft löschen",
-    "deleteMessage": "Möchtest du \"{{name}}\" wirklich dauerhaft aus dem System löschen?\\n\\nDadurch wird die Datei vollständig entfernt und ist nirgendwo mehr verfügbar. Dieser Vorgang kann nicht rückgängig gemacht werden.",
+    "deleteMessage": "Möchten Sie \"{{name}}\" wirklich dauerhaft aus dem System löschen?\\n\\nDadurch wird die Datei vollständig entfernt und ist nirgendwo mehr verfügbar. Dieser Vorgang kann nicht rückgängig gemacht werden.",
     "deleteVideoTitle": "Video dauerhaft löschen",
-    "deleteVideoMessage": "Möchtest du das Video \"{{name}}\" wirklich dauerhaft aus dem System löschen?\\n\\nDadurch wird die Datei vollständig entfernt und ist nirgendwo mehr verfügbar. Dieser Vorgang kann nicht rückgängig gemacht werden.",
+    "deleteVideoMessage": "Möchten Sie das Video \"{{name}}\" wirklich dauerhaft aus dem System löschen?\\n\\nDadurch wird die Datei vollständig entfernt und ist nirgendwo mehr verfügbar. Dieser Vorgang kann nicht rückgängig gemacht werden.",
     "removeTitle": "Dokument trennen",
-    "removeMessage": "Möchtest du \"{{name}}\" wirklich von diesem Element trennen?\\n\\nDadurch wird nur die Verknüpfung entfernt — das Dokument bleibt in der Dokumentbibliothek und kann an andere Elemente angehängt werden.",
+    "removeMessage": "Möchten Sie \"{{name}}\" wirklich von diesem Element trennen?\\n\\nDadurch wird nur die Verknüpfung entfernt — das Dokument bleibt in der Dokumentbibliothek und kann an andere Elemente angehängt werden.",
     "removeVideoTitle": "Video trennen",
-    "removeVideoMessage": "Möchtest du das Video \"{{name}}\" wirklich von diesem Element trennen?\\n\\nDadurch wird nur die Verknüpfung entfernt — die Datei bleibt in der Dokumentbibliothek und kann an andere Elemente angehängt werden.",
+    "removeVideoMessage": "Möchten Sie das Video \"{{name}}\" wirklich von diesem Element trennen?\\n\\nDadurch wird nur die Verknüpfung entfernt — die Datei bleibt in der Dokumentbibliothek und kann an andere Elemente angehängt werden.",
     "downloadFile": "Datei herunterladen",
     "videoUnsupported": "Videoformat ({{mimeType}}) wird für die Wiedergabe im Browser nicht unterstützt",
-    "videoTagUnsupported": "Dein Browser unterstützt das Video-Tag nicht.",
+    "videoTagUnsupported": "Ihr Browser unterstützt das Video-Tag nicht.",
     "unnamed": "Ohne Titel",
-    "videoDownloadInfo": "Das Video wird heruntergeladen und kann mit dem Standard-Videoplayer deines Systems abgespielt werden.",
+    "videoDownloadInfo": "Das Video wird heruntergeladen und kann mit dem Standard-Videoplayer Ihres Systems abgespielt werden.",
     "previewUnavailableNoId": "Keine Vorschau verfügbar (keine Kennung)",
     "previewLoadFailed": "Vorschau konnte nicht geladen werden",
     "videoCodecWarning": "Chrome unterstützt diesen Videocodec möglicherweise nicht. Lade die Datei herunter oder verwende Safari/Edge.",
@@ -406,19 +406,19 @@
       "clearSelection": "Auswahl aufheben"
     },
     "prompts": {
-      "confirmBulkDelete_one": "Möchtest du wirklich {{count}} Dokument löschen?",
-      "confirmBulkDelete_other": "Möchtest du wirklich {{count}} Dokumente löschen?"
+      "confirmBulkDelete_one": "Möchten Sie wirklich {{count}} Dokument löschen?",
+      "confirmBulkDelete_other": "Möchten Sie wirklich {{count}} Dokumente löschen?"
     },
     "pagination": {
       "perPage": "{{count}} pro Seite"
     },
     "folderSelector": {
       "defaultTitle": "Zielordner auswählen",
-      "defaultDescription": "Wähle aus, wo dieses Dokument gespeichert werden soll",
-      "singleDescription": "Wo möchtest du \"{{fileName}}\" speichern?",
-      "multipleDescription": "Wo möchtest du diese {{count}} Dateien speichern?",
+      "defaultDescription": "Wählen Sie aus, wo dieses Dokument gespeichert werden soll",
+      "singleDescription": "Wo möchten Sie \"{{fileName}}\" speichern?",
+      "multipleDescription": "Wo möchten Sie diese {{count}} Dateien speichern?",
       "newDocumentTitle": "Ordner für neues Dokument auswählen",
-      "newDocumentDescription": "Wähle aus, wo dieses neue Dokument gespeichert werden soll",
+      "newDocumentDescription": "Wählen Sie aus, wo dieses neue Dokument gespeichert werden soll",
       "moveTitle": "Dokument verschieben",
       "moveDescriptionWithName": "Zielordner für \"{{name}}\" auswählen",
       "moveDescription": "Zielordner auswählen",
@@ -518,11 +518,11 @@
         "save": "Dokumentauswahl konnte nicht gespeichert werden"
       },
       "configErrorTitle": "Konfigurationsfehler",
-      "configErrorMessage": "Erforderliche Konfiguration fehlt. Bitte wende dich an den Support."
+      "configErrorMessage": "Erforderliche Konfiguration fehlt. Bitte wenden Sie sich an den Support."
     },
     "uploadSection": {
       "reflectionLabel": "Dokument-Upload",
-      "dragDrop": "Ziehe deine Dateien hierher oder",
+      "dragDrop": "Ziehen Sie Ihre Dateien hierher oder",
       "browse": "Dateien durchsuchen",
       "uploading": "Wird hochgeladen...",
       "uploadingProgress": "{{current}} von {{total}} werden hochgeladen",
@@ -536,7 +536,7 @@
     "folders": {
       "root": "Stammordner",
       "loadFailed": "Ordnerbaum konnte nicht geladen werden",
-      "deleteConfirm": "Möchtest du den Ordner \"{{name}}\" wirklich löschen? Dies funktioniert nur, wenn der Ordner leer ist.",
+      "deleteConfirm": "Möchten Sie den Ordner \"{{name}}\" wirklich löschen? Dies funktioniert nur, wenn der Ordner leer ist.",
       "deleteSuccess": "Ordner \"{{name}}\" wurde erfolgreich gelöscht",
       "deleteFailed": "Ordner konnte nicht gelöscht werden",
       "deleteAction": "Ordner löschen",
@@ -619,7 +619,7 @@
       "handoffNetworkIssue": "Netzwerkproblem beim Abschließen Ihrer Anmeldung. Bitte erneut versuchen."
     },
     "checkEmail": {
-      "resendSuccess": "E-Mail gesendet! Bitte überprüfe deinen Posteingang.",
+      "resendSuccess": "E-Mail gesendet! Bitte überprüfen Sie Ihren Posteingang.",
       "resendFailed": "E-Mail konnte nicht erneut gesendet werden. Bitte versuche es erneut.",
       "whatsNext": "Was kommt als Nächstes?",
       "didntReceive": "E-Mail nicht erhalten?"

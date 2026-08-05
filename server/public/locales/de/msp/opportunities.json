@@ -95,7 +95,7 @@
       "people": "Personen",
       "plan": "Nachweise, Plan & Verlauf",
       "quoteTitle": "Angebot für {{title}}",
-      "quotes": "Zitate",
+      "quotes": "Angebote",
       "recurring": "Wiederkehrend",
       "timeline": "Zeitleiste",
       "unlinkQuote": "Verknüpfung aufheben",
@@ -150,7 +150,7 @@
       "won": "Habe diese Periode gewonnen"
     },
     "linkQuoteDialog": {
-      "confirm": "Link-Zitat",
+      "confirm": "Angebot verknüpfen",
       "empty": "Für diesen Kunden sind keine nicht verknüpften Angebote verfügbar.",
       "title": "Verknüpfen Sie ein vorhandenes Angebot"
     },
@@ -216,7 +216,7 @@
     "queue": {
       "actions": "Aktionen",
       "allClear": "Alles klar. Für jedes offene Geschäft ist ein nächster Schritt geplant.",
-      "bottom": "Das ist alles. Nichts anderes braucht dich heute.",
+      "bottom": "Damit ist alles erledigt. Heute ist keine weitere Aktion von Ihnen erforderlich.",
       "cardsView": "Karten",
       "completeAction": "Fertig → Weiter einstellen",
       "completeActionFor": "Aktion für {{title}} abschließen",
@@ -231,8 +231,8 @@
       "markLost": "Mark hat verloren",
       "moneyFound": "Geld gefunden",
       "moneyFoundSource": "aus Abrechnungen, Verträgen und Vermögenswerten",
-      "needsYou_one": "{{count}} Ding braucht dich heute.",
-      "needsYou_other": "{{count}} Dinge brauchen dich heute.",
+      "needsYou_one": "Heute wartet {{count}} Aufgabe auf Sie.",
+      "needsYou_other": "Heute warten {{count}} Aufgaben auf Sie.",
       "nothingDue": "Heute ist nichts fällig.",
       "openDeal": "Offener Deal",
       "openDealNamed": "Öffnen Sie {{title}}",
@@ -420,14 +420,14 @@
     "suggestions": {
       "accept": "Chance schaffen",
       "dismiss": "Entlassen",
-      "emptyBody": "Generatoren überwachen Ihre Verträge, Abrechnungen und Vermögenswerte und decken hier Geschäfte auf, sobald sie diese finden.",
+      "emptyBody": "Generatoren überwachen Ihre Verträge, Abrechnungen und Assets und zeigen hier gefundene Verkaufschancen an.",
       "emptyTitle": "Im Moment keine Vorschläge",
       "intro": "Aus Ihren eigenen Daten abgeleitet. Annehmen legt die Chance an; verworfene Vorschläge kommen nicht zurück.",
       "seeNumbers": "Siehe die Zahlen",
       "snooze": "Schlummern"
     },
     "tabs": {
-      "board": "Vorstand",
+      "board": "Board",
       "forecast": "Prognose",
       "meeting": "Treffen",
       "pipeline": "Pipeline",
@@ -448,8 +448,8 @@
       "lost": "Als verschollen markiert",
       "ownerAssigned": "Verantwortlicher aktualisiert",
       "qualified": "Qualifizierter Kontrollpunkt aufgezeichnet",
-      "quoteLinked": "Zitat verlinkt",
-      "quoteUnlinked": "Zitat nicht verlinkt",
+      "quoteLinked": "Angebot verknüpft",
+      "quoteUnlinked": "Angebotsverknüpfung aufgehoben",
       "snoozed": "Ein paar Tage lang geschlafen",
       "stagePlanned": "Phasenplan hinzugefügt",
       "stageSet": "Phase auf {{stage}} gesetzt",
@@ -477,7 +477,7 @@
       "currencyFixed": "Währung: {{code}}",
       "hardware": "Hardware",
       "mrr": "Wiederkehrend (monatlich)",
-      "note": "Dies sind Ihre Schätzungen. Ein akzeptiertes Zitat ersetzt sie durch die reellen Zahlen.",
+      "note": "Dies sind Ihre Schätzwerte. Ein angenommenes Angebot ersetzt sie durch die tatsächlichen Werte.",
       "nrr": "Einmalige Leistungen",
       "title": "Geschätzter Wert"
     },
@@ -506,7 +506,7 @@
       },
       "assetAging": {
         "age_one": "{{count}} Asset älter als {{oldestYears}} Jahre",
-        "age_other": "{{count}} Vermögenswerte, die älter als {{oldestYears}} Jahre sind",
+        "age_other": "{{count}} Assets, die älter als {{oldestYears}} Jahre sind",
         "quoteRefresh": " bei {{clientName}}. Zitieren Sie die Aktualisierung, bevor sie zu einem Ausfallticket wird."
       },
       "forClient": " für {{clientName}}.",
@@ -541,7 +541,7 @@
         "trailing": " in den letzten 12 Monaten. Das Einseitenpapier legt ihnen den Vergleich vor."
       },
       "whitespace": {
-        "comparable": " noch von dir. Das tut jeder vergleichbare Kunde.",
+        "comparable": " bisher noch nicht von Ihnen. Bei jedem vergleichbaren Kunden ist das anders.",
         "missing": "{{clientName}} kauft {{serviceName}} nicht"
       }
     },

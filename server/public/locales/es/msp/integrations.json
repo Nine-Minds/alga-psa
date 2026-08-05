@@ -314,7 +314,7 @@
           "xeroCsvDescription": "El CSV exportado incluye Número de factura, Nombre del contacto, Importe de línea, Importe fiscal y categorías de seguimiento.",
           "xeroHelp": {
             "note": "Nota: Solo se emparejarán las facturas originalmente exportadas desde Alga PSA (con el seguimiento Source System = AlgaPSA).",
-            "s1": "En Xero, vaya a Sales > Invoices",
+            "s1": "En Xero, vaya a Ventas > Facturas",
             "s2": "Seleccione la pestaña de factura desde la que desea exportar (p. ej., Paid, Awaiting Payment)",
             "s3": "(Opcional) Haga clic en Search para filtrar por fecha de inicio, fecha de fin o tipo de fecha",
             "s4": "Haga clic en Export",
@@ -333,8 +333,8 @@
             "csvRequirement": "El informe debe incluir columnas para Número de factura, Nombre del contacto, Importe de línea e Importe fiscal. Las facturas se emparejan usando el campo Reference o las categorías de seguimiento establecidas durante la exportación.",
             "steps": {
               "s1": "En Xero, vaya a Reports > All Reports",
-              "s2": "Seleccione Sales (Invoices and Revenue)",
-              "s3": "Ejecute el informe Invoice Details",
+              "s2": "Seleccione Ventas (Facturas e ingresos)",
+              "s3": "Ejecute el informe Detalles de facturas",
               "s4": "Establezca el rango de fechas para que coincida con sus facturas exportadas",
               "s5": "Haga clic en Export y elija CSV",
               "s6": "Suba el archivo exportado aquí"
@@ -559,22 +559,22 @@
         },
         "schedule": {
           "cadence": {
-            "10080": "cada semana",
-            "1440": "cada día",
-            "240": "cada 4 horas",
             "60": "cada hora",
-            "720": "cada 12 horas"
+            "240": "cada 4 horas",
+            "720": "cada 12 horas",
+            "1440": "cada día",
+            "10080": "cada semana"
           },
           "changeAction": "Cambiar programación",
           "description": "Cuando está activada, Alga sincroniza cada cliente asignado con esta cadencia. Al desactivarla se detienen las ejecuciones programadas; puede seguir sincronizando manualmente.",
           "enablePrompt": "El piloto funcionó. Active la sincronización automática para mantener los contactos al día sin ejecutarla a mano.",
           "intervalLabel": "Ejecutar cada",
           "intervals": {
-            "10080": "Semana",
-            "1440": "Día",
-            "240": "4 horas",
             "60": "Hora",
-            "720": "12 horas"
+            "240": "4 horas",
+            "720": "12 horas",
+            "1440": "Día",
+            "10080": "Semana"
           },
           "pause": "Pausar",
           "pauseHint": "En pausa. Guarde para aplicar.",
@@ -1616,11 +1616,11 @@
         "bindings": {
           "summaryBound": "Current: {{profile}}.",
           "summaryNone": "Actualmente no hay ningún perfil de Microsoft enlazado a {{consumer}}.",
-          "summaryUnavailable": "{{consumer}} está enlazado a un perfil no disponible.",
+          "summaryUnavailable": "La aplicación seleccionada no está disponible.",
           "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
           "warningNoBinding": "Aún no se ha configurado ningún enlace de {{consumer}}.",
           "warningNotReady": "{{consumer}} está enlazado a {{profile}}, pero ese perfil aún necesita configuración.",
-          "warningProfileMissing": "{{consumer}} está enlazado a un perfil que ya no está disponible. Vuelva a enlazarlo a un perfil activo.",
+          "warningProfileMissing": "La aplicación de Microsoft seleccionada ya no está disponible. Seleccione otra aplicación.",
           "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
           "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
           "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."
@@ -3063,13 +3063,13 @@
               "s1": "Vaya a Facturación → Exportaciones contables",
               "s2": "Seleccione facturas y elija «Xero CSV» como adaptador",
               "s3": "Descargue el archivo CSV generado",
-              "s4": "En Xero: Business → Invoices → Import",
+              "s4": "En Xero: Negocios → Facturas → Importar",
               "s5": "Suba el CSV e impórtelo como facturas en borrador",
               "s6": "Xero calculará el impuesto según su configuración fiscal"
             },
             "exportInvoices": "Exportar facturas",
             "import": {
-              "s1": "En Xero: Reports → All Reports → Invoice Details",
+              "s1": "En Xero: Informes → Todos los informes → Detalles de facturas",
               "s2": "Establezca el rango de fechas y exporte como CSV",
               "s3": "En Alga: Facturación → Exportaciones contables → Importar impuestos",
               "s4": "Suba el CSV del informe de Xero",
@@ -3160,13 +3160,13 @@
     },
     "stripe": {
       "title": "Stripe Payments",
-      "description": "Accept credit card payments for your invoices",
+      "description": "Acepte pagos de sus facturas con tarjeta de crédito",
       "connected": {
         "title": "Stripe Connected",
         "publishableKey": "Publishable key: {{key}}..."
       },
       "empty": {
-        "description": "Connect your Stripe account to accept online payments for invoices"
+        "description": "Conecte su cuenta de Stripe para aceptar pagos en línea correspondientes a facturas"
       },
       "actions": {
         "testConnection": "Test Connection",

@@ -1728,7 +1728,7 @@
         "refreshHistory": "Échec de l'actualisation de l'historique d'importation"
       }
     },
-    "selectJobHint": "Sélectionnez un travail d'importation pour inspecter ses résultats."
+    "selectJobHint": "Sélectionnez une tâche en arrière-plan d'importation pour examiner ses résultats."
   },
   "email": {
     "title": "Configuration des courriels",

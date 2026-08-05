@@ -121,8 +121,8 @@
     "total": "Łączne godziny",
     "usage": "Wykorzystanie",
     "overage": "Nadwyżka",
-    "noContractLineTitle": "Brak linii umów typu bucket",
-    "noContractLineDescription": "Nie ma aktywnych linii umów typu bucket dla Twojego konta."
+    "noContractLineTitle": "Brak dostępnych linii umowy z pakietem godzin",
+    "noContractLineDescription": "Brak aktywnych linii umowy z pakietem godzin dla tego konta."
   },
   "messages": {
     "noInvoices": "Brak faktur",

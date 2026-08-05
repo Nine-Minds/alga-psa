@@ -38,7 +38,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "welcome": "Willkommen zurück! Hier ist eine Übersicht über dein Konto.",
+    "welcome": "Willkommen zurück! Hier ist eine Übersicht über Ihr Konto.",
     "loading": "Dashboard wird geladen...",
     "error": "Beim Laden des Dashboards ist ein Fehler aufgetreten. Bitte versuche es später erneut.",
     "metrics": {
@@ -82,7 +82,7 @@
     },
     "viewAll": "Alle {{item}} anzeigen →",
     "welcomeBack": "Willkommen zurück",
-    "heroSubtitle": "Hier ist eine Übersicht deiner IT-Aktivitäten. Unser Team unterstützt dich.",
+    "heroSubtitle": "Hier erhalten Sie einen Überblick über Ihre IT-Supportaktivitäten. Unser Team unterstützt Sie dabei, produktiv zu bleiben.",
     "greeting": {
       "morning": "Guten Morgen",
       "afternoon": "Guten Tag",
@@ -103,9 +103,9 @@
     },
     "activity": {
       "title": "Aktuelle Aktivität",
-      "subtitle": "Neueste Updates aus deinem Konto",
+      "subtitle": "Neueste Updates aus Ihrem Konto",
       "empty": "Noch keine Aktivität",
-      "emptyHint": "Wenn Tickets aktualisiert werden oder Rechnungen eintreffen, siehst du sie hier.",
+      "emptyHint": "Wenn Tickets aktualisiert werden oder Rechnungen eintreffen, sehen Sie sie hier.",
       "viewTickets": "Alle Tickets anzeigen",
       "titles": {
         "ticket": "Neues Ticket: {{name}}",
@@ -133,10 +133,10 @@
           "cancelled": "Termin abgesagt: {{name}}"
         }
       },
-      "algadeskEmptyHint": "Wenn Tickets aktualisiert werden, siehst du sie hier."
+      "algadeskEmptyHint": "Wenn Tickets aktualisiert werden, sehen Sie sie hier."
     },
     "devices": {
-      "title": "Deine Geräte",
+      "title": "Ihre Geräte",
       "viewAll": "Alle anzeigen",
       "countLabel": "{{count}} verwaltet",
       "emptyShort": "Noch keine Geräte",
@@ -175,26 +175,26 @@
     "resetPassword": "Passwort zurücksetzen",
     "backToSignIn": "Zurück zur Anmeldung",
     "sendResetLink": "Reset-Link senden",
-    "resetLinkSent": "Der Link zum Zurücksetzen wurde an deine E-Mail gesendet",
+    "resetLinkSent": "Der Link zum Zurücksetzen wurde an Ihre E-Mail-Adresse gesendet",
     "invalidCredentials": "Ungültige E-Mail oder ungültiges Passwort",
     "loginError": "Bei der Anmeldung ist ein Fehler aufgetreten",
-    "sessionExpired": "Deine Sitzung ist abgelaufen. Bitte erneut anmelden.",
-    "welcomeTitle": "Willkommen in deinem Kundenportal",
-    "welcomeSubtitle": "Verwalte deine Support-Tickets und bleibe in Verbindung",
-    "signInDescription": "Bitte gib deine Zugangsdaten ein, um auf dein Konto zuzugreifen.",
+    "sessionExpired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+    "welcomeTitle": "Willkommen in Ihrem Kundenportal",
+    "welcomeSubtitle": "Verwalten Sie Ihre Support-Tickets und bleiben Sie in Verbindung",
+    "signInDescription": "Bitte geben Sie Ihre Zugangsdaten ein, um auf Ihr Konto zuzugreifen.",
     "clientLogin": "Kundenanmeldung",
     "mspStaffLogin": "MSP-Mitarbeitende? Hier anmelden →",
     "accessDeniedTitle": "Zugriff verweigert",
-    "accessDeniedMessage": "Du hast keine Berechtigung, auf das Kundenportal zuzugreifen.",
+    "accessDeniedMessage": "Sie haben keine Berechtigung, auf das Kundenportal zuzugreifen.",
     "registrationSuccessTitle": "Registrierung erfolgreich",
-    "registrationSuccessMessage": "Dein Konto wurde erstellt. Bitte melde dich an.",
+    "registrationSuccessMessage": "Ihr Konto wurde erstellt. Bitte melden Sie sich an.",
     "portalSetup": {
       "title": "Portalzugang einrichten",
-      "subtitle": "Schließe die Einrichtung deines Kundenportalkontos ab",
+      "subtitle": "Schließen Sie die Einrichtung Ihres Kundenportalkontos ab",
       "loading": "Wird geladen...",
       "invalidInvitation": "Ungültige Einladung",
-      "invalidInvitationDescription": "Es gab ein Problem mit deiner Portaleinladung",
-      "invalidTokenMessage": "Der Einladungstoken ist ungültig oder abgelaufen. Bitte kontaktiere deinen Dienstleister, um eine neue Einladung zu erhalten.",
+      "invalidInvitationDescription": "Es gab ein Problem mit Ihrer Portaleinladung",
+      "invalidTokenMessage": "Der Einladungstoken ist ungültig oder abgelaufen. Bitte wenden Sie sich an Ihren Dienstleister, um eine neue Einladung zu erhalten.",
       "noTokenProvided": "Kein Einladungstoken angegeben",
       "invalidOrExpiredToken": "Ungültiges oder abgelaufenes Einladungstoken",
       "verificationFailed": "Überprüfung des Einladungstokens fehlgeschlagen",
@@ -204,9 +204,9 @@
       "email": "E-Mail:",
       "client": "Kunde:",
       "password": "Passwort",
-      "passwordPlaceholder": "Gib dein Passwort ein",
+      "passwordPlaceholder": "Geben Sie Ihr Passwort ein",
       "confirmPassword": "Passwort bestätigen",
-      "confirmPasswordPlaceholder": "Bestätige dein Passwort",
+      "confirmPasswordPlaceholder": "Bestätigen Sie Ihr Passwort",
       "passwordRequirements": "Passwortanforderungen",
       "requirements": {
         "minLength": "Mindestens 8 Zeichen",
@@ -218,11 +218,11 @@
       },
       "createAccount": "Portal-Konto erstellen",
       "creatingAccount": "Konto wird erstellt...",
-      "alreadyHaveAccount": "Du hast bereits ein Konto?",
+      "alreadyHaveAccount": "Haben Sie bereits ein Konto?",
       "signInToPortal": "Im Portal anmelden",
       "requirementsNotMet": "Bitte stelle sicher, dass alle Passwortanforderungen erfüllt sind",
-      "accountReady": "Konto bereit. Bitte melde dich an.",
-      "accountCreatedSuccess": "Konto erfolgreich erstellt. Bitte melde dich an.",
+      "accountReady": "Konto bereit. Bitte melden Sie sich an.",
+      "accountCreatedSuccess": "Konto erfolgreich erstellt. Bitte melden Sie sich an.",
       "welcome": "Willkommen im Kundenportal!",
       "createFailed": "Konto konnte nicht erstellt werden",
       "errors": {
@@ -232,13 +232,13 @@
         "invalidOrExpiredToken": "Dieser Einladungslink ist ungültig oder abgelaufen.",
         "tenantContextRequired": "Organisationskontext fehlt. Bitte öffne den Einladungslink erneut.",
         "resetPasswordFailed": "Das Passwort für das bestehende Konto konnte nicht zurückgesetzt werden. Bitte versuche es erneut.",
-        "createUserFailed": "Dein Benutzerkonto konnte nicht erstellt werden. Bitte versuche es erneut.",
+        "createUserFailed": "Ihr Benutzerkonto konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
         "setupFailed": "Die Portaleinrichtung konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
-        "verificationFailed": "Dein Einladungstoken konnte nicht überprüft werden. Bitte versuche es erneut.",
+        "verificationFailed": "Ihr Einladungstoken konnte nicht überprüft werden. Bitte versuchen Sie es erneut.",
         "invitationFailed": "Die Einladung konnte nicht gesendet werden. Bitte versuche es erneut.",
-        "permissionDeniedInvite": "Du hast keine Berechtigung, Portal-Einladungen zu versenden.",
-        "permissionDeniedCreate": "Du hast keine Berechtigung, Portal-Benutzerkonten zu erstellen.",
-        "emailNotConfigured": "Der E-Mail-Dienst ist nicht konfiguriert. Bitte wende dich an deinen Administrator.",
+        "permissionDeniedInvite": "Sie haben keine Berechtigung, Portal-Einladungen zu versenden.",
+        "permissionDeniedCreate": "Sie haben keine Berechtigung, Portal-Benutzerkonten zu erstellen.",
+        "emailNotConfigured": "Der E-Mail-Dienst ist nicht konfiguriert. Bitte wenden Sie sich an Ihren Administrator.",
         "contactNotFound": "Kontakt nicht gefunden.",
         "contactMissingEmail": "Der Kontakt hat keine E-Mail-Adresse.",
         "contactInvalidEmail": "Der Kontakt hat eine ungültige E-Mail-Adresse.",
@@ -255,7 +255,7 @@
     "features": {
       "submitTickets": {
         "title": "Support-Tickets einreichen",
-        "description": "Erstelle und verwalte deine Support-Anfragen"
+        "description": "Erstellen und verwalten Sie Ihre Support-Anfragen"
       },
       "trackStatus": {
         "title": "Ticketstatus verfolgen",
@@ -263,11 +263,11 @@
       },
       "ticketHistory": {
         "title": "Ticketverlauf",
-        "description": "Greife auf deinen vollständigen Support-Verlauf zu"
+        "description": "Greifen Sie auf Ihren vollständigen Support-Verlauf zu"
       },
       "documentation": {
         "title": "Dokumentationszugriff",
-        "description": "Sieh dir geteilte Dokumente und Ressourcen an"
+        "description": "Sehen Sie sich geteilte Dokumente und Ressourcen an"
       }
     },
     "forgotPassword": "Passwort vergessen?",
@@ -281,21 +281,21 @@
         "registrationFailed": "Die Registrierung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut."
       }
     },
-    "captchaRequired": "Bitte schließe die untenstehende Verifizierung ab und melde dich anschließend erneut an.",
-    "tooManyAttempts": "Zu viele fehlgeschlagene Anmeldeversuche. Bitte warte einige Minuten, bevor du es erneut versuchst."
+    "captchaRequired": "Bitte schließen Sie die untenstehende Verifizierung ab und melden Sie sich anschließend erneut an.",
+    "tooManyAttempts": "Zu viele fehlgeschlagene Anmeldeversuche. Bitte warten Sie einige Minuten, bevor Sie es erneut versuchen."
   },
   "account": {
     "title": "Konto",
     "licenseManagement": {
       "title": "Konto",
       "subtitle": "Die Lizenzverwaltung ist im MSP-Portal verfügbar",
-      "howToPurchaseTitle": "So kaufst du zusätzliche Lizenzen:",
-      "step1": "Melde dich im MSP-Portal an (wenn du Administratorzugriff hast)",
+      "howToPurchaseTitle": "So kaufen Sie zusätzliche Lizenzen:",
+      "step1": "Melden Sie sich im MSP-Portal an (wenn Sie Administratorzugriff haben)",
       "step2": "Navigiere zu Einstellungen → Kontoverwaltung",
       "step3": "Klicke auf \"Lizenzen hinzufügen\", um weitere Lizenzen zu kaufen",
       "step4": "Schließe den Checkout-Prozess ab",
-      "needHelpTitle": "Brauchst du Hilfe?",
-      "needHelpDescription": "Nur Benutzer mit Berechtigungen für die Kontoverwaltung können Lizenzen kaufen. Wenn du keinen Zugriff hast, wende dich bitte an deine AlgaPSA-Administratorin oder deinen Administrator.",
+      "needHelpTitle": "Benötigen Sie Hilfe?",
+      "needHelpDescription": "Nur Benutzer mit Berechtigungen für die Kontoverwaltung können Lizenzen kaufen. Wenn Sie keinen Zugriff haben, wenden Sie sich bitte an Ihre AlgaPSA-Administration.",
       "backToDashboard": "Zurück zum Dashboard",
       "goToMSPPortal": "Zum MSP-Portal",
       "signingOut": "Abmelden..."
@@ -464,7 +464,7 @@
       "userNotFound": "Benutzer nicht gefunden",
       "loadError": "Profil konnte nicht geladen werden",
       "loading": "Profil wird geladen...",
-      "avatarDescription": "Dieses Avatar wird dem MSP-Team angezeigt, wenn es deine Kontaktinformationen ansieht.",
+      "avatarDescription": "Dieser Avatar wird dem MSP-Team angezeigt, wenn es Ihre Kontaktinformationen ansieht.",
       "emailAlreadyExists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits",
       "reportsToSelf": "Ein Benutzer kann sich nicht selbst als Vorgesetzten zuweisen",
       "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen"
@@ -479,17 +479,17 @@
       "deleteProfilePicture": "Profilbild löschen",
       "delete": "Löschen",
       "deleting": "Wird gelöscht...",
-      "deleteLogoConfirm": "Möchtest du das Logo wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
-      "deleteAvatarConfirm": "Möchtest du das Profilbild wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "deleteLogoConfirm": "Möchten Sie das Logo wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "deleteAvatarConfirm": "Möchten Sie das Profilbild wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
       "edit": "Bearbeiten",
-      "invalidType": "Bitte wähle eine Bilddatei aus.",
+      "invalidType": "Bitte wählen Sie eine Bilddatei aus.",
       "sizeLimit": "Das Bild darf maximal 2 MB groß sein.",
       "maxSize": "Max. 2 MB (PNG, JPG, GIF)",
       "uploadSuccess": "Erfolgreich hochgeladen.",
       "uploadError": "Hochladen fehlgeschlagen. Bitte versuche es erneut.",
       "deleteSuccess": "Erfolgreich gelöscht.",
       "deleteError": "Löschen fehlgeschlagen.",
-      "deleteConfirm": "Möchtest du dies wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "deleteConfirm": "Möchten Sie dies wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
       "linking": "Verknüpfen...",
       "linkDocument": "Dokument verknüpfen"
     },
@@ -505,7 +505,7 @@
     "title": "Unternehmenseinstellungen",
     "details": "Unternehmensdetails",
     "billing": "Abrechnungsinformationen",
-    "description": "Verwalte die Einstellungen und Konfigurationen deines Unternehmens.",
+    "description": "Verwalten Sie die Einstellungen und Konfigurationen Ihres Unternehmens.",
     "tabs": {
       "account": "Konto",
       "clientDetails": "Unternehmensdetails",
@@ -615,7 +615,7 @@
       "userAdded": "Benutzer erfolgreich hinzugefügt",
       "userRemoved": "Benutzer erfolgreich entfernt",
       "inviteSent": "Einladung erfolgreich gesendet",
-      "noPermission": "Du hast keine Berechtigung, auf die Unternehmenseinstellungen zuzugreifen",
+      "noPermission": "Sie haben keine Berechtigung, auf die Unternehmenseinstellungen zuzugreifen",
       "clientNotFound": "Unternehmen nicht gefunden",
       "detailsLoadError": "Unternehmensdetails konnten nicht geladen werden",
       "updateError": "Unternehmensdetails konnten nicht aktualisiert werden"
@@ -635,7 +635,7 @@
     },
     "preferences": {
       "title": "Benachrichtigungseinstellungen",
-      "description": "Verwalte, welche internen Benachrichtigungen du erhältst",
+      "description": "Verwalten Sie, welche internen Benachrichtigungen Sie erhalten",
       "loading": "Einstellungen werden geladen...",
       "loadError": "Einstellungen konnten nicht geladen werden",
       "saveError": "Einstellung konnte nicht gespeichert werden",

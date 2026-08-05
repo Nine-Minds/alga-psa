@@ -139,7 +139,7 @@
     }
   },
   "usage": {
-    "bucketHoursOverview": "Panoramica delle ore di bucket",
+    "bucketHoursOverview": "Panoramica dei pacchetti ore",
     "usageRecords": "Registrazioni di utilizzo",
     "actions": {
       "addUsage": "Aggiungi utilizzo",
@@ -168,7 +168,7 @@
     },
     "states": {
       "loadingRecords": "Caricamento dei record di utilizzo",
-      "noActiveBucketPlans": "Nessun piano bucket attivo trovato."
+      "noActiveBucketPlans": "Nessun piano con pacchetto ore attivo trovato."
     },
     "dialog": {
       "addTitle": "Aggiungi record di utilizzo",
@@ -186,7 +186,7 @@
     "contractLineGuidance": {
       "multipleLines": "Questo servizio appare in più righe di contratto. Seleziona la linea di contratto in base alla quale fatturare.",
       "tooltipNoClient": "Informazioni sul cliente non disponibili. L'utilizzo verrà indirizzato al contratto predefinito gestito dal sistema.",
-      "tooltipMultiple": "Questo servizio appare in più righe di contratto. Selezionare la riga di contratto da utilizzare. Quando solo una di esse è una riga del contratto bucket, viene selezionata per impostazione predefinita.",
+      "tooltipMultiple": "Questo servizio appare in più linee contrattuali. Seleziona la linea contrattuale da utilizzare. Quando solo una è associata a un pacchetto ore, viene selezionata per impostazione predefinita.",
       "tooltipSingle": "Questo utilizzo verrà fatturato nella riga di contratto \"{{name}}\".",
       "tooltipNone": "Nessuna riga di contratto idonea trovata per questo servizio.",
       "placeholderNoClient": "Utilizzo del contratto predefinito gestito dal sistema",

@@ -2199,7 +2199,7 @@
       "client": "Cliente",
       "project": "Proyecto",
       "appointment": "Cita",
-      "quote": "Presupuesto"
+      "quote": "Cotización"
     },
     "workflowLinkRelation": {
       "related": "Relacionado",

@@ -358,7 +358,7 @@
         "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres",
         "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
         "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
-        "permissionDenied": "Je hebt geen toestemming om gebruikersrollen te wijzigen.",
+        "permissionDenied": "U heeft geen toestemming om gebruikersrollen te wijzigen.",
         "invalidCapacity": "Wekelijkse capaciteit moet een positief getal zijn.",
         "invalidWorkSchedule": "Werktijden moeten geldige tijdvakken zijn die eindigen na de starttijd."
       }
@@ -724,11 +724,11 @@
           "nameRequired": "Bordnaam is verplicht",
           "saveFailed": "Kan bord niet opslaan",
           "lastDefault": "Kan het laatste standaardbord niet verwijderen",
-          "statusRequired": "Voeg ten minste één ticketstatus toe voordat je het bord opslaat.",
+          "statusRequired": "Voeg ten minste één ticketstatus toe voordat u het bord opslaat.",
           "duplicateStatusName": "Namen van ticketstatussen moeten uniek zijn binnen een bord.",
-          "invalidOpenDefault": "Selecteer precies één open standaard ticketstatus voordat je het bord opslaat.",
+          "invalidOpenDefault": "Selecteer precies één open standaard ticketstatus voordat u het bord opslaat.",
           "nameAlreadyExists": "Er bestaat al een bord met deze naam.",
-          "selectBoardToCopy": "Selecteer een bestaand bord waarvan je de ticketstatussen wilt kopiëren.",
+          "selectBoardToCopy": "Selecteer een bestaand bord waarvan u de ticketstatussen wilt kopiëren.",
           "fetchStatusesFailed": "Ticketstatussen van het bord konden niet worden geladen.",
           "deleteFailed": "Bord kon niet worden verwijderd",
           "importFailed": "Borden konden niet worden geïmporteerd",
@@ -792,7 +792,7 @@
         "saveChanges": "Wijzigingen opslaan",
         "unsaved": "Niet opgeslagen",
         "unsavedShort": "Niet-opgeslagen wijzigingen",
-        "unsavedBanner": "Je hebt niet-opgeslagen wijzigingen. Klik op \"Wijzigingen opslaan\" om ze toe te passen.",
+        "unsavedBanner": "U heeft niet-opgeslagen wijzigingen. Klik op \"Wijzigingen opslaan\" om ze toe te passen.",
         "allSaved": "Alle wijzigingen opgeslagen",
         "reopenBadge": "heropenen",
         "required": "Vereist"
@@ -1722,7 +1722,7 @@
       "error": {
         "loadImportData": "Kan importgegevens niet laden",
         "createPreview": "Kan voorbeeld niet maken",
-        "selectPreviewFirst": "Selecteer een voorbeeld om goed te keuren voordat je importeert.",
+        "selectPreviewFirst": "Selecteer een voorbeeld om goed te keuren voordat u importeert.",
         "startImportJob": "Kan importopdracht niet starten",
         "loadJobDetails": "Kan opdrachtdetails niet laden",
         "refreshHistory": "Kan importgeschiedenis niet vernieuwen"
@@ -1921,7 +1921,7 @@
         "bulkLabel": "SSO-bulkacties {{location}}"
       },
       "table": {
-        "email": "Email",
+        "email": "E-mail",
         "id": "ID",
         "name": "Naam",
         "status": "Status",

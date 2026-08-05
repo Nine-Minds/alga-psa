@@ -169,8 +169,8 @@
         "description": "Navegar a la página de clientes."
       },
       "goDashboard": {
-        "label": "Go to dashboard",
-        "description": "Navigate to the dashboard."
+        "label": "Ir al panel",
+        "description": "Vaya al panel."
       },
       "goProjects": {
         "label": "Go to projects",

@@ -72,7 +72,7 @@
     },
     "detail": {
       "backToList": "Terug naar verkoopkansen",
-      "confidence": "Jouw vertrouwen",
+      "confidence": "Uw vertrouwen",
       "confidenceNote": "Het vertrouwen bepaalt de eigenaar. De fase volgt uit bewijs. Beide staan naast elkaar en worden nooit samengevoegd.",
       "createQuote": "Offerte maken",
       "draftFollowUp": "Stel het vervolg op",
@@ -87,7 +87,7 @@
       "metadataTitle": "Gelegenheid",
       "nextAction": "Volgende actie",
       "nextActionOverdue": "Volgende actie · te laat",
-      "noQuotes": "Nog geen citaat. Een verzonden offerte verplaatst deze deal op zichzelf naar Voorgesteld.",
+      "noQuotes": "Nog geen offerte. Door een offerte te verzenden gaat deze deal automatisch naar Voorgesteld.",
       "oneTime": "Eenmalig",
       "oneTimeServices": "Eenmalige diensten",
       "owner": "Eigenaar",
@@ -95,7 +95,7 @@
       "people": "Personen",
       "plan": "Bewijs, plan en tijdlijn",
       "quoteTitle": "Offerte voor {{title}}",
-      "quotes": "Citaten",
+      "quotes": "Offertes",
       "recurring": "Terugkerend",
       "timeline": "Tijdlijn",
       "unlinkQuote": "Ontkoppelen",
@@ -118,7 +118,7 @@
       "instructionsPlaceholder": "bijv. korter, warmer, formeler",
       "loadingRecipient": "Het gekoppelde contact controleren...",
       "noRecipient": "Koppel een contact aan een primair e-mailadres voordat u verzendt.",
-      "recipient": "Verzendt naar {{recipient}} via de e-mailprovider van uw huurder.",
+      "recipient": "Verzendt naar {{recipient}} via de e-mailprovider van uw tenant.",
       "regenerate": "Herschrijf",
       "send": "Vervolg sturen",
       "sent": "Follow-up verzonden en ingelogd op de deal.",
@@ -150,7 +150,7 @@
       "won": "Deze periode gewonnen"
     },
     "linkQuoteDialog": {
-      "confirm": "Link citaat",
+      "confirm": "Offerte koppelen",
       "empty": "Voor deze klant zijn geen ontkoppelde offertes beschikbaar.",
       "title": "Koppel een bestaande offerte"
     },
@@ -187,7 +187,7 @@
       "daysAgo": "{{count}} dagen geleden",
       "done": "Pijpleiding beoordeeld. {{count}} deals geregistreerd.",
       "evidenceSays": "Bewijs zegt",
-      "gap": "Het vertrouwen is {{confidence}}, maar het bewijs stopt bij {{stage}}. Wat heeft de cliënt daadwerkelijk gedaan?",
+      "gap": "Het vertrouwen is {{confidence}}, maar het bewijs stopt bij {{stage}}. Wat heeft de klant daadwerkelijk gedaan?",
       "intro": "Voert het wekelijkse pijplijnoverleg deal voor deal, de stilste eerst, met het bewijs naast het vertrouwen van de eigenaar. Markeer elke deal als besproken; de sessie wordt vastgelegd, zodat u kunt aantonen dat de hele pijplijn is doorgenomen.",
       "keys": "← terug · → beoordeeld",
       "markReviewed": "Beoordeeld → volgende",
@@ -216,7 +216,7 @@
     "queue": {
       "actions": "Acties",
       "allClear": "Allemaal duidelijk. Voor elke open deal is een volgende stap gepland.",
-      "bottom": "Dat is alles. Niets anders heeft jou vandaag nodig.",
+      "bottom": "Dat is alles. Niets anders heeft u vandaag nodig.",
       "cardsView": "Kaarten",
       "completeAction": "Klaar → volgende instellen",
       "completeActionFor": "Voltooi actie voor {{title}}",
@@ -230,9 +230,9 @@
       },
       "markLost": "Mark heeft verloren",
       "moneyFound": "Geld gevonden",
-      "moneyFoundSource": "van facturering, contracten en activa",
-      "needsYou_one": "{{count}} ding heeft je vandaag nodig.",
-      "needsYou_other": "{{count}} dingen hebben je vandaag nodig.",
+      "moneyFoundSource": "van facturering, contracten en assets",
+      "needsYou_one": "{{count}} ding heeft u vandaag nodig.",
+      "needsYou_other": "{{count}} dingen hebben u vandaag nodig.",
       "nothingDue": "Er hoeft vandaag niets te gebeuren.",
       "openDeal": "Open overeenkomst",
       "openDealNamed": "Open {{title}}",
@@ -403,8 +403,8 @@
       "sendContract": "Contract versturen"
     },
     "suggestionHow": {
-      "assetAging_one": "Voer een vernieuwing uit voor {{count}} verouderde activa.",
-      "assetAging_other": "Voer een vernieuwing uit voor {{count}} verouderde activa.",
+      "assetAging_one": "Plan een vernieuwing voor {{count}} verouderde asset.",
+      "assetAging_other": "Plan een vernieuwing voor {{count}} verouderde assets.",
       "inboundLead": "Follow-up terwijl de interesse warm is.",
       "renewal": "Start het verlengingsgesprek van {{clientName}} vóór de deadline.",
       "tmConversion": "Vergelijk lopende T&M-uitgaven met een terugkerende overeenkomst.",
@@ -420,7 +420,7 @@
     "suggestions": {
       "accept": "Creëer kansen",
       "dismiss": "Negeren",
-      "emptyBody": "Generatoren houden uw contracten, facturering en activa in de gaten en brengen hier deals naar voren zodra ze deze vinden.",
+      "emptyBody": "Generatoren houden uw contracten, facturering en assets in de gaten en brengen hier deals naar voren zodra ze deze vinden.",
       "emptyTitle": "Er zijn momenteel geen suggesties",
       "intro": "Afgeleid uit uw eigen gegevens. Accepteer om de kans aan te maken, of wijs die af en hij komt niet terug.",
       "seeNumbers": "Zie de cijfers",
@@ -448,8 +448,8 @@
       "lost": "Gemarkeerd als verloren",
       "ownerAssigned": "Eigenaar bijgewerkt",
       "qualified": "Gekwalificeerd controlepunt geregistreerd",
-      "quoteLinked": "Citaat gekoppeld",
-      "quoteUnlinked": "Citaat ontkoppeld",
+      "quoteLinked": "Offerte gekoppeld",
+      "quoteUnlinked": "Offerte ontkoppeld",
       "snoozed": "Een paar dagen gesnoozed",
       "stagePlanned": "Faseplan toegevoegd",
       "stageSet": "Fase ingesteld op {{stage}}",
@@ -477,7 +477,7 @@
       "currencyFixed": "Valuta: {{code}}",
       "hardware": "Hardware",
       "mrr": "Terugkerend (maandelijks)",
-      "note": "Dit zijn jouw schattingen. Een geaccepteerde offerte vervangt ze door de echte cijfers.",
+      "note": "Dit zijn uw schattingen. Een geaccepteerde offerte vervangt ze door de echte cijfers.",
       "nrr": "Eenmalige diensten",
       "title": "Geschatte waarde"
     },
@@ -486,16 +486,16 @@
       "client": "Klant",
       "empty": "Het raster wordt ingevuld zodra klanten een actieve overeenkomst hebben.",
       "sell": "Begin {{category}} voor {{client}}",
-      "subtitle": "Wat elke overeenkomstklant koopt. Een lege cel is een gesprek dat je nog niet hebt gevoerd.",
+      "subtitle": "Wat elke contractklant afneemt. Een lege cel staat voor een gesprek dat u nog niet heeft gevoerd.",
       "title": "Het hele boek"
     },
     "why": {
       "actionDue": {
-        "deadlinePast_one": " en {{count}} dag voorbij je eigen deadline.",
-        "deadlinePast_other": " en {{count}} dagen na je eigen deadline.",
+        "deadlinePast_one": " en {{count}} dag voorbij uw eigen deadline.",
+        "deadlinePast_other": " en {{count}} dagen na uw eigen deadline.",
         "dueToday": "Vandaag verschuldigd",
-        "inboundChase_one": " Sinds je laatste antwoord hebben ze één keer geschreven.",
-        "inboundChase_other": " Ze hebben {{count}} keer geschreven sinds je laatste antwoord.",
+        "inboundChase_one": " Sinds uw laatste antwoord hebben ze één keer geschreven.",
+        "inboundChase_other": " Ze hebben {{count}} keer geschreven sinds uw laatste antwoord.",
         "pastDue_one": "{{count}} dag over tijd",
         "pastDue_other": "{{count}} dagen over tijd",
         "proposalAgeShort_one": "{{count}} dag.",
@@ -523,8 +523,8 @@
         "source": " via {{formName}}. Inkomende interesse koelt snel af."
       },
       "lesson": {
-        "assessmentGap_one": " U heeft er al {{count}} maand geen voorgesteld. Betaalde aanslagen zijn je sterkste openingszet.",
-        "assessmentGap_other": " U heeft al {{count}} maanden geen voorstel ingediend. Betaalde aanslagen zijn je sterkste openingszet.",
+        "assessmentGap_one": " U heeft er al {{count}} maand geen voorgesteld. Betaalde assessments zijn uw sterkste openingszet.",
+        "assessmentGap_other": " U heeft er al {{count}} maanden geen voorgesteld. Betaalde assessments zijn uw sterkste openingszet.",
         "assessmentRate": "U sluit {{wonPerFive}} van elke 5 assessments die u voorstelt.",
         "quoteVelocity": "Offertes die u binnen een week verzendt, sluiten {{ratio}}x zo vaak aan",
         "quoteVelocityCompared": " als degenen die wachten."
@@ -541,7 +541,7 @@
         "trailing": " over de afgelopen 12 maanden. De eenpager legt de vergelijking bij hen op tafel."
       },
       "whitespace": {
-        "comparable": " nog van jou. Iedere vergelijkbare klant doet dat.",
+        "comparable": " nog van u. Iedere vergelijkbare klant doet dat.",
         "missing": "{{clientName}} koopt {{serviceName}} niet"
       }
     },

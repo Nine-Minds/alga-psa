@@ -155,14 +155,14 @@
         "enabled": "Trigger abilitato"
       },
       "placeholders": {
-        "boardIds": "Seleziona board",
+        "boardIds": "Seleziona bacheca",
         "statusIds": "Aggiungi stato",
         "priorities": "Aggiungi priorità"
       },
       "boardFilters": {
-        "active": "Board attive",
-        "inactive": "Board inattive",
-        "all": "Tutte le board"
+        "active": "Bacheche attive",
+        "inactive": "Bacheche inattive",
+        "all": "Tutte le bacheche"
       },
       "help": {
         "conditions": "Lasci un campo vuoto per farlo corrispondere a qualsiasi valore."
@@ -173,7 +173,7 @@
         "delete": "Elimina trigger"
       },
       "noTemplates": "Crei un modello di sondaggio prima di aggiungere trigger.",
-      "prioritiesMixed": "Le board selezionate usano tipi di priorità diversi. Vengono mostrate tutte le priorità.",
+      "prioritiesMixed": "Le bacheche selezionate usano tipi di priorità diversi. Vengono mostrate tutte le priorità.",
       "errors": {
         "reference": "Impossibile caricare le opzioni del trigger. Riprovi."
       }

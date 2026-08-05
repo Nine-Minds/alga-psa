@@ -38,7 +38,7 @@
   },
   "general": {
     "title": "Configuración general",
-    "description": "Administre el nombre de su organización y elija qué registro de cliente representa a su propia empresa. Los datos de ese cliente aparecen en facturas, presupuestos y comunicaciones con los clientes.",
+    "description": "Administre el nombre de su organización y elija qué registro de cliente representa a su propia empresa. Los datos de ese cliente aparecen en facturas, cotizaciones y comunicaciones dirigidas a los clientes.",
     "fields": {
       "organizationName": {
         "label": "Nombre de la organización"
@@ -54,7 +54,7 @@
     },
     "clients": {
       "title": "Su empresa",
-      "help": "El cliente marcado como su empresa es su propia organización. Su nombre, dirección y logotipo aparecen en facturas, presupuestos y comunicaciones con los clientes.",
+      "help": "El cliente marcado como su empresa es su propia organización. Su nombre, dirección y logotipo aparecen en facturas, cotizaciones y comunicaciones dirigidas a los clientes.",
       "currentDefault": "Actualmente su empresa es {{name}}.",
       "yourCompanyBadge": "Su empresa",
       "table": {
@@ -66,8 +66,8 @@
       "addClient": "Agregar cliente",
       "confirmDialog": {
         "title": "¿Cambiar su empresa?",
-        "message": "Esto cambiará su empresa de {{current}} a {{next}}. {{next}} representará a su propia organización en facturas, presupuestos y en los correos e invitaciones dirigidos a los clientes.",
-        "messageInitial": "Esto establecerá {{next}} como su empresa. {{next}} representará a su propia organización en facturas, presupuestos y en los correos e invitaciones dirigidos a los clientes.",
+        "message": "Esto cambiará su empresa de {{current}} a {{next}}. {{next}} representará a su propia organización en facturas, cotizaciones y en los correos e invitaciones dirigidos a los clientes.",
+        "messageInitial": "Esto establecerá {{next}} como su empresa. {{next}} representará a su propia organización en facturas, cotizaciones y en los correos e invitaciones dirigidos a los clientes.",
         "confirm": "Cambiar empresa",
         "cancel": "Cancelar"
       }

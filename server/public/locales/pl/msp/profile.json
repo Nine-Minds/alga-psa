@@ -220,8 +220,8 @@
       },
       "inbound": {
         "title": "Webhooki przychodzące",
-        "description": "Akceptuj uwierzytelnione żądania z systemów zewnętrznych i kieruj je do akcji bezpośrednich lub przepływów pracy.",
-        "placeholder": "Konfiguruj endpointy webhooków przychodzących, które weryfikują żądania, deduplikują dostawy i kierują je do akcji lub przepływów.",
+        "description": "Akceptuj uwierzytelnione żądania z systemów zewnętrznych i kieruj je do akcji bezpośrednich lub workflow.",
+        "placeholder": "Konfiguruj endpointy webhooków przychodzących, które weryfikują żądania, deduplikują dostawy i kierują je do akcji lub workflow.",
         "newWebhook": "Nowy webhook",
         "list": {
           "title": "Skonfigurowane webhooki przychodzące",
@@ -238,7 +238,7 @@
         },
         "handlers": {
           "directAction": "Akcja bezpośrednia",
-          "workflow": "Przepływ pracy"
+          "workflow": "Workflow"
         },
         "status": {
           "active": "Aktywny",
@@ -249,7 +249,7 @@
           "nameRequired": "Nazwa jest wymagana.",
           "slugRequired": "Slug jest wymagany.",
           "actionRequired": "Wybierz akcję przed zapisaniem.",
-          "workflowRequired": "Wybierz przepływ pracy przed zapisaniem.",
+          "workflowRequired": "Wybierz workflow przed zapisaniem.",
           "missingRequiredFields": "Przypisz wartość dla wymaganych pól: {{fields}}"
         },
         "dialog": {
@@ -326,7 +326,7 @@
           "type": "Typ obsługi",
           "types": {
             "directAction": "Akcja bezpośrednia",
-            "workflow": "Przepływ pracy"
+            "workflow": "Workflow"
           },
           "directActionTitle": "Akcja bezpośrednia",
           "directActionHelp": "Wybierz akcję przychodzącą i zmapuj pola payloadu na jej pola docelowe.",
@@ -337,12 +337,12 @@
           "required": "Wymagane",
           "optional": "Opcjonalne",
           "mappingPlaceholder": "Wpisz wyrażenie JSONata, np. payload.field",
-          "workflowTitle": "Przepływ pracy",
-          "workflowHelp": "Wybierz przepływ pracy do uruchomienia z znormalizowaną kopertą webhooka.",
-          "workflow": "Przepływ pracy",
-          "workflowPlaceholder": "Wybierz przepływ pracy",
-          "workflowEmpty": "Brak widocznych przepływów pracy w tym najemcy. Opublikuj lub odkryj przepływ pracy, aby użyć handlera przepływu.",
-          "envelopeTitle": "Koperta wejściowa przepływu pracy",
+          "workflowTitle": "Workflow",
+          "workflowHelp": "Wybierz workflow do uruchomienia z znormalizowaną kopertą webhooka.",
+          "workflow": "Workflow",
+          "workflowPlaceholder": "Wybierz workflow",
+          "workflowEmpty": "Brak widocznych workflow w tym najemcy. Opublikuj lub odkryj workflow, aby użyć handlera workflow.",
+          "envelopeTitle": "Koperta wejściowa workflow",
           "fieldTypes": {
             "string": "tekst",
             "int": "liczba całkowita",

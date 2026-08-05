@@ -338,7 +338,7 @@
       "clientPortfolio": "records voor de klantportfolio van de principal",
       "selectedClients": "records in geselecteerde klantscopes",
       "sameTeam": "records die eigendom zijn van hetzelfde team",
-      "selectedBoards": "records in geselecteerde boards"
+      "selectedBoards": "records op geselecteerde borden"
     },
     "constraintSummaries": {
       "notSelfApprover": "blokkeert zelfgoedkeuring",
@@ -483,7 +483,7 @@
         "clientTitle": "Geselecteerde klantscopes",
         "boardTitle": "Geselecteerde boardscopes",
         "selectClient": "Selecteer klant",
-        "selectBoard": "Selecteer board",
+        "selectBoard": "Selecteer bord",
         "addClientScope": "Klantscope toevoegen",
         "addBoardScope": "Boardscope toevoegen",
         "noClientScopes": "Nog geen klantscopes toegevoegd.",
@@ -527,7 +527,7 @@
       "useSynthetic": "Synthetisch recordscenario gebruiken",
       "syntheticOwnerPlaceholder": "Eigenaar gebruikers-ID (optioneel)",
       "syntheticClientPlaceholder": "Klant-ID (optioneel)",
-      "syntheticBoardPlaceholder": "Board-ID (optioneel)",
+      "syntheticBoardPlaceholder": "Bord-ID (optioneel)",
       "clientVisible": "Zichtbaar voor klant",
       "run": "Simulatie uitvoeren",
       "running": "Simulatie uitvoeren...",
@@ -563,7 +563,7 @@
       "publishDraft": "Kan bundelconcept niet publiceren.",
       "selectTemplate": "Selecteer een sjabloon voordat u een regel opslaat.",
       "selectClientRequired": "Voeg ten minste één geselecteerde klant toe voordat u deze regel opslaat.",
-      "selectBoardRequired": "Voeg ten minste één geselecteerd board toe voordat u deze regel opslaat.",
+      "selectBoardRequired": "Voeg ten minste één geselecteerd bord toe voordat u deze regel opslaat.",
       "redactedFieldRequired": "Voer ten minste één geredigeerd veld in voordat u deze regel opslaat.",
       "saveRule": "Kan conceptregel niet opslaan.",
       "removeRule": "Kan regel niet verwijderen.",
@@ -576,7 +576,7 @@
       "simulator": {
         "unsupportedAction": "De simulator ondersteunt momenteel alleen Lezen- en Goedkeuren-controles. Kies een van deze acties en probeer het opnieuw.",
         "unsupportedResource": "Dit recordtype is nog niet beschikbaar in de simulator. Kies een ondersteund recordtype en probeer het opnieuw.",
-        "clientTicketNotSupported": "Ticketcontroles voor cliënt-gebruikers zijn nog niet beschikbaar in de simulator omdat de zichtbaarheid van ticket-boards niet is inbegrepen. Probeer een interne gebruiker, of verifieer de ticket-toegang voor cliënten in de app."
+        "clientTicketNotSupported": "Ticketcontroles voor klantgebruikers zijn nog niet beschikbaar in de simulator, omdat de zichtbaarheid van ticketborden ontbreekt. Probeer een interne gebruiker of controleer de tickettoegang voor klanten in de app."
       }
     }
   },

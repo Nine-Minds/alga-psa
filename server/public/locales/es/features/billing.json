@@ -4,7 +4,7 @@
   "tabs": {
     "overview": "Resumen",
     "invoices": "Facturas",
-    "quotes": "Presupuestos"
+    "quotes": "Cotizaciones"
   },
   "currentContractLine": "Línea de contrato actual",
   "nextInvoice": "Próxima factura",
@@ -131,12 +131,12 @@
     "paymentFailed": "El pago falló. Inténtalo de nuevo."
   },
   "quotes": {
-    "pendingQuotes": "Presupuestos pendientes",
-    "awaitingResponse": "{{count}} presupuesto(s) esperando su respuesta",
-    "noPending": "No hay presupuestos pendientes",
-    "viewAll": "Ver todos los presupuestos",
+    "pendingQuotes": "Cotizaciones pendientes",
+    "awaitingResponse": "{{count}} cotización(es) en espera de su respuesta",
+    "noPending": "No hay cotizaciones pendientes",
+    "viewAll": "Ver todas las cotizaciones",
     "locations": {
-      "primaryLocationHeading": "Ubicación del presupuesto",
+      "primaryLocationHeading": "Ubicación de la cotización",
       "changeButton": "Cambiar",
       "cancelChange": "Cancelar",
       "notSet": "Ninguna ubicación seleccionada",
@@ -144,7 +144,7 @@
       "pickerPlaceholder": "Seleccione una ubicación",
       "addLocationButton": "+ Agregar ubicación",
       "removeGroup": "Quitar ubicación",
-      "needMoreLocations": "Este cliente solo tiene una ubicación activa. Agregue una segunda ubicación en la configuración del cliente para habilitar el presupuesto multisitio.",
+      "needMoreLocations": "Este cliente solo tiene una ubicación activa. Agregue una segunda ubicación en la configuración del cliente para habilitar la creación de cotizaciones para varias ubicaciones.",
       "emptyGroup": "Aún no hay elementos para esta ubicación.",
       "subtotal": "Subtotal de ubicación",
       "unassigned": "Elementos sin ubicación"

@@ -1235,7 +1235,7 @@
     "ticketSelect": "Seleziona ticket",
     "ticketTypeAbove": "Digiti sopra per cercare ticket",
     "placeholders": {
-      "board": "Seleziona board",
+      "board": "Seleziona bacheca",
       "client": "Seleziona cliente",
       "contact": "Seleziona contatto",
       "user": "Seleziona utente",
@@ -1254,14 +1254,14 @@
         "client_id": "Scelga prima un cliente fisso per caricare le opzioni di sede."
       },
       "ticket-category": {
-        "board_id": "Scelga prima una board fissa per caricare le opzioni di categoria."
+        "board_id": "Scegli prima una bacheca fissa per caricare le opzioni di categoria."
       },
       "ticket-status": {
-        "board_id": "Scelga prima una board fissa per caricare le opzioni di stato.",
+        "board_id": "Scegli prima una bacheca fissa per caricare le opzioni di stato.",
         "ticket_id": "Scelga prima un ticket fisso per caricare le opzioni di stato."
       },
       "ticket-subcategory": {
-        "board_id": "Scelga prima una board fissa per caricare le opzioni di sottocategoria.",
+        "board_id": "Scegli prima una bacheca fissa per caricare le opzioni di sottocategoria.",
         "category_id": "Scelga prima una categoria fissa per caricare le opzioni di sottocategoria."
       }
     }
@@ -2573,7 +2573,7 @@
         "ticketSearchPlaceholder": "Cerca ticket per numero o titolo",
         "ticketSelect": "Seleziona ticket",
         "ticketTypeAbove": "Digiti sopra per cercare i ticket",
-        "selectBoard": "Seleziona board",
+        "selectBoard": "Seleziona bacheca",
         "selectClient": "Seleziona cliente",
         "selectContact": "Seleziona contatto",
         "selectUser": "Seleziona utente",
@@ -2587,10 +2587,10 @@
       "dependencyHints": {
         "contactClient": "Scelga prima un cliente fisso per caricare le opzioni di contatto.",
         "locationClient": "Scelga prima un cliente fisso per caricare le opzioni di posizione.",
-        "categoryBoard": "Scelga prima una board fissa per caricare le opzioni di categoria.",
-        "statusBoard": "Scelga prima una board fissa per caricare le opzioni di stato.",
+        "categoryBoard": "Scegli prima una bacheca fissa per caricare le opzioni di categoria.",
+        "statusBoard": "Scegli prima una bacheca fissa per caricare le opzioni di stato.",
         "statusTicket": "Scelga prima un ticket fisso per caricare le opzioni di stato.",
-        "subcategoryBoard": "Scelga prima una board fissa per caricare le opzioni di sottocategoria.",
+        "subcategoryBoard": "Scegli prima una bacheca fissa per caricare le opzioni di sottocategoria.",
         "subcategoryCategory": "Scelga prima una categoria fissa per caricare le opzioni di sottocategoria."
       }
     }
@@ -2637,7 +2637,7 @@
       "ticketCreator": {
         "ticketTitle": "Titolo del ticket:",
         "ticketDescription": "Descrizione del ticket:",
-        "selectBoard": "Seleziona o inserisci una board",
+        "selectBoard": "Seleziona o inserisci una bacheca",
         "selectPriority": "Seleziona o inserisci una priorità"
       }
     }

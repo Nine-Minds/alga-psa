@@ -546,7 +546,7 @@
       "nameLabel": "Nazwa",
       "namePlaceholder": "Finance Reviewer West",
       "descriptionLabel": "Opis",
-      "descriptionPlaceholder": "Ponownie używalny pakiet zawężania dla określonego zespołu, grupy klientów lub przepływu pracy."
+      "descriptionPlaceholder": "Ponownie używalny pakiet zawężania dla określonego zespołu, grupy klientów lub workflow."
     },
     "clone": {
       "copySuffix": "{{name}} Kopia"

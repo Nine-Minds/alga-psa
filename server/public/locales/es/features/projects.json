@@ -539,14 +539,14 @@
     "pending": "Pendiente",
     "unbilledTotal": "No facturado ({{currency}}): ",
     "priceCurrency": "Price currency", "salePrice": "Sale price", "catalogUnitCost": "Catalog unit cost", "costNotConfigured": "Not configured",
-    "invoiceDestination": "Invoice", "invoiceNextProject": "Next project invoice", "invoiceSeparate": "Separate product invoice",
-    "invoiceProjectCompletion": "When project is completed", "invoiceOnHold": "On hold", "currencySeparateHelp": "Products in a different currency use a separate product invoice.",
-    "invoiceColumn": "Invoice", "editProduct": "Edit product", "removeProduct": "Remove product", "salePriceOverrideHelp": "This price applies only to this project product row.",
-    "updateFailed": "Failed to update product", "updatedSuccess": "Product updated", "createProductInvoices": "Create product invoices",
-    "invoiceReviewTitle": "Review product invoices", "invoiceReviewHelp": "Eligible products are preselected. One draft invoice will be created per currency.",
-    "invoiceReviewFailed": "Failed to load invoice review", "invoiceCreateFailed": "Failed to create product invoices", "invoiceCreatedSuccess": "{{count}} draft product invoice(s) created",
-    "createDrafts": "Create drafts", "draftPreview": "{{currency}} draft ({{count}} products)", "invoiceLinksHelp": "Draft invoices were created. Open each currency group to review it.",
-    "currencyDraftLink": "{{currency}} draft invoice", "productCount": "{{count}} products", "productsMovedToHoldOnClose": "{{count}} linked product(s) moved to On hold because their billing event was canceled."
+    "invoiceDestination": "Factura", "invoiceNextProject": "Próxima factura del proyecto", "invoiceSeparate": "Factura de productos separada",
+    "invoiceProjectCompletion": "When project is completed", "invoiceOnHold": "On hold", "currencySeparateHelp": "Los productos en una moneda distinta se incluyen en una factura de productos separada.",
+    "invoiceColumn": "Factura", "editProduct": "Edit product", "removeProduct": "Remove product", "salePriceOverrideHelp": "This price applies only to this project product row.",
+    "updateFailed": "Failed to update product", "updatedSuccess": "Product updated", "createProductInvoices": "Crear facturas de productos",
+    "invoiceReviewTitle": "Revisar facturas de productos", "invoiceReviewHelp": "Los productos aptos están preseleccionados. Se creará un borrador de factura para cada moneda.",
+    "invoiceReviewFailed": "No se pudo cargar la revisión de facturas", "invoiceCreateFailed": "No se pudieron crear las facturas de productos", "invoiceCreatedSuccess": "Cantidad de borradores de factura de productos creados: {{count}}",
+    "createDrafts": "Create drafts", "draftPreview": "{{currency}} draft ({{count}} products)", "invoiceLinksHelp": "Se crearon borradores de factura. Abra cada grupo de monedas para revisarlo.",
+    "currencyDraftLink": "Borrador de factura ({{currency}})", "productCount": "{{count}} products", "productsMovedToHoldOnClose": "{{count}} linked product(s) moved to On hold because their billing event was canceled."
   },
   "export": {
     "title": "Exportar tareas del proyecto",

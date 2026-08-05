@@ -149,7 +149,7 @@
       "resetFilters": "Opnieuw instellen"
     },
     "filters": {
-      "client": "Cliënt",
+      "client": "Klant",
       "service": "Dienst",
       "clientPlaceholder": "Filter op klant",
       "servicePlaceholder": "Filter op dienst",
@@ -157,7 +157,7 @@
       "allServices": "Alle diensten"
     },
     "table": {
-      "client": "Cliënt",
+      "client": "Klant",
       "service": "Dienst",
       "quantity": "Hoeveelheid",
       "usageDate": "Gebruiksdatum",
@@ -174,7 +174,7 @@
       "addTitle": "Gebruiksrecord toevoegen",
       "editTitle": "Gebruiksrecord bewerken",
       "fields": {
-        "client": "Cliënt",
+        "client": "Klant",
         "service": "Dienst",
         "quantity": "Hoeveelheid",
         "usageDate": "Gebruiksdatum",
@@ -352,7 +352,7 @@
     },
     "navigationDialog": {
       "title": "Niet-opgeslagen wijzigingen",
-      "message": "U heeft niet-opgeslagen wijzigingen. Weet je zeker dat je deze pagina wilt verlaten? Alle wijzigingen gaan verloren.",
+      "message": "U heeft niet-opgeslagen wijzigingen. Weet u zeker dat u deze pagina wilt verlaten? Alle wijzigingen gaan verloren.",
       "confirmLabel": "Verlaat pagina",
       "cancelLabel": "Blijf op pagina"
     },

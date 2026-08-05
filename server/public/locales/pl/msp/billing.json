@@ -139,7 +139,7 @@
     }
   },
   "usage": {
-    "bucketHoursOverview": "Przegląd godzin bucket",
+    "bucketHoursOverview": "Przegląd pakietu godzin",
     "usageRecords": "Zapisy użytkowania",
     "actions": {
       "addUsage": "Dodaj użycie",

@@ -333,7 +333,7 @@
       "helpText": "Lassen Sie das Feld leer, wenn kein Ablaufdatum vorliegt oder der Standardablaufzeitraum verwendet werden soll"
     },
     "errors": {
-      "selectClient": "Bitte wähle einen Kunden aus",
+      "selectClient": "Bitte wählen Sie einen Kunden aus",
       "invoiceNumberUnique": "Diese Rechnungsnummer wird bereits verwendet.",
       "noTaxRateConfigured": "Für die Region ist kein Steuersatz konfiguriert.",
       "serviceNotFound": "Ausgewählter Dienst nicht gefunden.",
@@ -349,7 +349,7 @@
       "NO_TAX_RATE": "Für {{region}} wurde am {{date}} kein aktiver Steuersatz gefunden.",
       "DISCOUNT_TARGET_NOT_FOUND": "Der Dienst {{serviceId}} für diesen Rabatt wurde nicht gefunden.",
       "INVOICE_NUMBER_CONFLICT": "Diese Rechnungsnummer wird bereits verwendet.",
-      "PERMISSION_DENIED": "Du hast keine Berechtigung, diese Rechnung zu erstellen oder zu aktualisieren.",
+      "PERMISSION_DENIED": "Sie haben keine Berechtigung, diese Rechnung zu erstellen oder zu aktualisieren.",
       "UNEXPECTED": "Beim Generieren der Rechnung ist ein Fehler aufgetreten. Gib bei der Kontaktaufnahme mit dem Support die Referenz {{ref}} an.",
       "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
       "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",

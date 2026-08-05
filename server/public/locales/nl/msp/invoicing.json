@@ -168,7 +168,7 @@
       "poOverage": {
         "title": "Overschrijdingen van inkooporderlimieten",
         "description": "Het geselecteerde factuurtotaal is voorbij door {{amount}}.",
-        "batchDescription": "Eén of meer facturen zouden het geautoriseerde bedrag van een Inkooporder overschrijden. Wat wil je doen?",
+        "batchDescription": "Eén of meer facturen zouden het geautoriseerde bedrag van een Inkooporder overschrijden. Wat wilt u doen?",
         "batchItem": "{{clientName}}: voorbij door {{amount}}",
         "poNumber": "Inkooporder {{number}}",
         "allowOverages": "Overschrijdingen toestaan ​​(genereer alle facturen)",
@@ -194,7 +194,7 @@
       },
       "badges": {
         "contractAnniversary": "Contractverjaardag",
-        "clientSchedule": "Cliënt schema",
+        "clientSchedule": "Klantplanning",
         "unknownCadenceSource": "Onbekende cadansbron ({{source}})",
         "multiContractInvoice": "Factuur voor meerdere contracten",
         "servicePeriodBacked": "Met serviceperiode-ondersteuning"
@@ -215,7 +215,7 @@
       "fixAllResult": "{{schedules}} planning(en) opnieuw opgebouwd voor {{clients}} klant(en).",
       "fixAllNoop": "Alle factureringsplanningen zijn al bijgewerkt. Alles wat hieronder nog staat, moet afzonderlijk worden gecontroleerd.",
       "fixAllError": "Kan serviceperioden niet opnieuw opbouwen. Probeer het opnieuw.",
-      "fixAllDenied": "Je hebt geen toestemming om serviceperioden opnieuw op te bouwen."
+      "fixAllDenied": "U heeft geen toestemming om serviceperioden opnieuw op te bouwen."
     },
     "errors": {
       "title": "Er zijn fouten opgetreden bij het finaliseren van facturen:",
@@ -505,7 +505,7 @@
     "values": {
       "notLinked": "Niet gekoppeld",
       "contractAnniversary": "Contractverjaardag",
-      "clientSchedule": "Cliënt schema",
+      "clientSchedule": "Klantplanning",
       "advance": "Vooraf",
       "arrears": "Achteraf",
       "unknownClient": "Onbekende klant",

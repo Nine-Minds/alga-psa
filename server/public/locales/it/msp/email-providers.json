@@ -310,7 +310,7 @@
         "providerNameHelp": "Nome interno usato per identificare questa configurazione. Non viene mostrato nelle email in uscita.",
         "senderDisplayNameLabel": "Nome visualizzato del mittente",
         "senderDisplayNamePlaceholder": "es. Acme Support",
-        "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della board del ticket."
+        "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della bacheca del ticket."
       },
       "oauth": {
         "sectionTitle": "Configurazione Microsoft OAuth",
@@ -367,7 +367,7 @@
         "providerNameHelp": "Nome interno usato per identificare questa configurazione. Non viene mostrato nelle email in uscita.",
         "senderDisplayNameLabel": "Nome visualizzato del mittente",
         "senderDisplayNamePlaceholder": "es. Acme Support",
-        "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della board del ticket."
+        "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della bacheca del ticket."
       },
       "oauth": {
         "sectionTitle": "Google OAuth",
@@ -417,7 +417,7 @@
         "providerNameHelp": "Nome interno usato per identificare questa configurazione. Non viene mostrato nelle email in uscita.",
         "senderDisplayName": "Nome visualizzato del mittente",
         "senderDisplayNamePlaceholder": "es. Acme Support",
-        "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della board del ticket."
+        "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della bacheca del ticket."
       },
       "auth": {
         "title": "Autenticazione",
@@ -569,7 +569,7 @@
       "providerNameHelp": "Nome interno usato per identificare questa configurazione. Non viene mostrato nelle email in uscita.",
       "senderDisplayName": "Nome visualizzato del mittente",
       "senderDisplayNamePlaceholder": "es. Acme Support",
-      "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della board del ticket."
+      "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della bacheca del ticket."
     },
     "authOptions": {
       "password": "Password",
@@ -634,7 +634,7 @@
       "providerNameHelp": "Nome interno usato per identificare questa configurazione. Non viene mostrato nelle email in uscita.",
       "senderDisplayNameLabel": "Nome visualizzato del mittente",
       "senderDisplayNamePlaceholder": "es. Acme Support",
-      "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della board del ticket."
+      "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della bacheca del ticket."
     },
     "oauth": {
       "connectionTitle": "Connessione Microsoft 365",

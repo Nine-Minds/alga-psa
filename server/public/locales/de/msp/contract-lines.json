@@ -291,7 +291,7 @@
       "minimumBillableTimeHelp": "z. B. 15 Minuten – jeder Zeitaufwand, der darunter liegt, wird aufgerundet",
       "minimumBillableTimeLabel": "Mindestabrechenbare Zeit (Minuten)",
       "minutesPlaceholder": "15",
-      "recommendBucketLabel": "Empfehlen Sie einen Eimer voller Stunden",
+      "recommendBucketLabel": "Stundenkontingent empfehlen",
       "roundUpToNearestHelp": "z. B. 15 Minuten – Zeiteinträge werden auf das nächste Intervall aufgerundet",
       "roundUpToNearestLabel": "Auf den nächsten Wert aufrunden (Minuten)",
       "selectServicePlaceholder": "Wählen Sie einen Dienst aus",
@@ -314,7 +314,7 @@
       "heading": "Nutzungsbasierte Dienste",
       "ratePerUnitLabel": "Preis pro Einheit",
       "rateSummary": "{{rate}}/{{unit}}",
-      "recommendBucketLabel": "Empfehlen Sie einen Eimer Verzehr",
+      "recommendBucketLabel": "Verbrauchskontingent empfehlen",
       "searchServicesPlaceholder": "Suchdienste...",
       "serviceLabel": "Dienst {{index}}",
       "servicesHeading": "Nutzungsbasierte Dienste",
@@ -341,7 +341,7 @@
       "labels": {
         "allowRollover": "Ermöglichen Sie den Rollover von ungenutztem {{units}}",
         "overageRatePerUnit": "Überschreitungsrate pro {{unit}}",
-        "totalInBucket": "Insgesamt {{units}} im Bucket"
+        "totalInBucket": "Insgesamt {{units}} im Stundenkontingent"
       },
       "placeholders": {
         "overageRate": "Geben Sie den Überschreitungssatz ein",
@@ -350,7 +350,7 @@
       "tooltips": {
         "allowRollover": "Wenn diese Option aktiviert ist, können ungenutzte {{units}} aus einer Periode in der nächsten verwendet werden.",
         "overageRatePerUnit": "Der Satz wird für jeden {{unit}} berechnet, der über den enthaltenen Betrag hinaus verwendet wird. (z. B. $)",
-        "totalInBucket": "Die Gesamtzahl der in diesem Bucket enthaltenen {{units}} pro Abrechnungszeitraum."
+        "totalInBucket": "Die Gesamtzahl der pro Abrechnungszeitraum in diesem Stundenkontingent enthaltenen {{units}}."
       },
       "units": {
         "defaultPlural": "Einheiten",
@@ -743,7 +743,7 @@
       },
       "hourlyRateLabel": "Stundensatz:",
       "loadingServices": "Dienste werden geladen...",
-      "recommendBucketLabel": "Empfehlen Sie einen Eimer voller Stunden",
+      "recommendBucketLabel": "Stundenkontingent empfehlen",
       "serviceMetadata": "Diensttyp: {{type}} | Methode: {{method}}",
       "serviceToAddMetadata": "Diensttyp: {{type}} | Methode: {{method}} | Standardrate: {{rate}}",
       "toast": {
@@ -776,7 +776,7 @@
       },
       "loadingServices": "Dienste werden geladen...",
       "ratePerUnitLabel": "Preis pro Einheit:",
-      "recommendBucketLabel": "Empfehlen Sie einen Eimer Verzehr",
+      "recommendBucketLabel": "Verbrauchskontingent empfehlen",
       "serviceMetadata": "Diensttyp: {{type}} | Methode: {{method}}",
       "serviceToAddMetadata": "Diensttyp: {{type}} | Methode: {{method}} | Standardrate: {{rate}} | Einheit: {{unit}}",
       "toast": {

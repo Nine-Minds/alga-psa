@@ -170,7 +170,7 @@
       "noWorkItems": "Nessun elemento di lavoro trovato"
     },
     "paymentWarningTitle": "Avviso di pagamento richiesto",
-    "paymentWarning": "È richiesto il pagamento per una milestone di fatturazione del progetto contrassegnata e non è stato ancora confermato. Conferma il pagamento prima di proseguire il lavoro."
+    "paymentWarning": "È richiesto il pagamento per un traguardo di fatturazione del progetto contrassegnato e non è stato ancora confermato. Conferma il pagamento prima di proseguire il lavoro."
   },
   "workItemList": {
     "meta": {

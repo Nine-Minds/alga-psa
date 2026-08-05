@@ -1424,7 +1424,7 @@
       "quantityInvalid": "Enter a quantity greater than zero.",
       "chooseClient": "Choose the client to bill the restocking fee to.",
       "theProduct": "the product",
-      "doneWithInvoice": "Unit restocked. Draft invoice {{number}} created for the {{amount}} restocking fee.",
+      "doneWithInvoice": "Jednostkę ponownie przyjęto na stan. Utworzono wersję roboczą faktury {{number}} za opłatę w wysokości {{amount}}.",
       "doneFeeFailed": "Unit restocked, but the restocking fee wasn't billed: {{reason}} Create it manually.",
       "doneQuantity": "{{qty}} × {{product}} restocked.",
       "done": "Unit restocked.",

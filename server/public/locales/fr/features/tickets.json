@@ -1652,8 +1652,8 @@
         "close_rules_bypassed": "règles de clôture contournées",
         "auto_close_warning_sent": "avertissement de clôture automatique envoyé"
       },
-      "closeStatus": "Close status",
-      "noStatusChange": "Do not change status"
+      "closeStatus": "Statut de fermeture",
+      "noStatusChange": "Ne pas modifier le statut"
     }
   },
   "notifications": {

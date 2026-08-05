@@ -83,7 +83,7 @@
     "titlePlaceholder": "Titolo del ticket",
     "descriptionPlaceholder": "Descrivi il tuo problema...",
     "priorityPlaceholder": "Seleziona priorità",
-    "noBoardsAvailable": "Nessun board dei ticket disponibile per il tuo account. Contatta l'amministratore.",
+    "noBoardsAvailable": "Nessuna bacheca dei ticket è disponibile per il tuo account. Contatta l'amministratore.",
     "submit": "Crea ticket",
     "submitting": "Creazione in corso...",
     "errors": {
@@ -391,7 +391,7 @@
     "uploadFile": "Carica file"
   },
   "dashboard": {
-    "title": "Cruscotto ticket",
+    "title": "Dashboard dei ticket",
     "addTicket": "Aggiungi ticket",
     "shareTooltip": "Stampa, importa ed esporta",
     "exportCsv": "Esporta CSV",
@@ -1408,8 +1408,8 @@
     "placeholder": "Filtra per bacheca",
     "title": "Selettore bacheca",
     "searchPlaceholder": "Cerca bacheche...",
-    "excludingCount": "escluse {{count}} board",
-    "selectedCount": "{{count}} board",
+    "excludingCount": "escluse {{count}} bacheche",
+    "selectedCount": "{{count}} bacheche",
     "statusActive": "Attive",
     "statusAll": "Tutte",
     "statusInactive": "Inattive"

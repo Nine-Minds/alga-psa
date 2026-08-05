@@ -724,11 +724,11 @@
           "nameRequired": "Board-Name ist erforderlich",
           "saveFailed": "Board konnte nicht gespeichert werden",
           "lastDefault": "Das letzte Standard-Board kann nicht entfernt werden",
-          "statusRequired": "Füge mindestens einen Ticketstatus hinzu, bevor du das Board speicherst.",
+          "statusRequired": "Fügen Sie mindestens einen Ticketstatus hinzu, bevor Sie das Board speichern.",
           "duplicateStatusName": "Ticketstatusnamen müssen innerhalb eines Boards eindeutig sein.",
-          "invalidOpenDefault": "Wähle genau einen offenen Standard-Ticketstatus aus, bevor du das Board speicherst.",
+          "invalidOpenDefault": "Wählen Sie genau einen offenen Standard-Ticketstatus aus, bevor Sie das Board speichern.",
           "nameAlreadyExists": "Ein Board mit diesem Namen existiert bereits.",
-          "selectBoardToCopy": "Wähle ein vorhandenes Board aus, von dem die Ticketstatus kopiert werden sollen.",
+          "selectBoardToCopy": "Wählen Sie ein vorhandenes Board aus, von dem die Ticketstatus kopiert werden sollen.",
           "fetchStatusesFailed": "Ticketstatus des Boards konnten nicht geladen werden.",
           "deleteFailed": "Board konnte nicht gelöscht werden",
           "importFailed": "Boards konnten nicht importiert werden",
@@ -1722,7 +1722,7 @@
       "error": {
         "loadImportData": "Importdaten konnten nicht geladen werden",
         "createPreview": "Vorschau konnte nicht erstellt werden",
-        "selectPreviewFirst": "Wähle vor dem Import eine Vorschau zur Genehmigung aus.",
+        "selectPreviewFirst": "Wählen Sie vor dem Import eine Vorschau zur Genehmigung aus.",
         "startImportJob": "Importauftrag konnte nicht gestartet werden",
         "loadJobDetails": "Auftragsdetails konnten nicht geladen werden",
         "refreshHistory": "Importverlauf konnte nicht aktualisiert werden"

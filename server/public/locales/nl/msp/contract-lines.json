@@ -314,7 +314,7 @@
       "heading": "Op gebruik gebaseerde services",
       "ratePerUnitLabel": "Tarief per eenheid",
       "rateSummary": "{{rate}}/{{unit}}",
-      "recommendBucketLabel": "Aanbevolen emmer consumptie",
+      "recommendBucketLabel": "Verbruiksbundel aanbevelen",
       "searchServicesPlaceholder": "Zoekservices...",
       "serviceLabel": "Onderhoud {{index}}",
       "servicesHeading": "Op gebruik gebaseerde services",
@@ -341,7 +341,7 @@
       "labels": {
         "allowRollover": "Laat ongebruikte {{units}} omrollen",
         "overageRatePerUnit": "Overschrijdingspercentage per {{unit}}",
-        "totalInBucket": "Totaal {{units}} in emmer"
+        "totalInBucket": "Totaal aantal {{units}} in de urenbundel"
       },
       "placeholders": {
         "overageRate": "Voer het overschrijdingstarief in",
@@ -350,7 +350,7 @@
       "tooltips": {
         "allowRollover": "Indien aangevinkt, kan de ongebruikte {{units}} uit de ene periode in de volgende worden gebruikt.",
         "overageRatePerUnit": "Het tarief dat in rekening wordt gebracht voor elke gebruikte {{unit}} boven het inbegrepen bedrag. (bijvoorbeeld $)",
-        "totalInBucket": "Het totale aantal {{units}} in deze bucket per factureringsperiode."
+        "totalInBucket": "Het totale aantal {{units}} in deze urenbundel per factureringsperiode."
       },
       "units": {
         "defaultPlural": "Eenheden",
@@ -754,7 +754,7 @@
         "banner": "U heeft niet-opgeslagen wijzigingen. Klik op \"Wijzigingen opslaan\" om ze toe te passen.",
         "cancelLabel": "Blijf op pagina",
         "confirmLabel": "Verlaat pagina",
-        "dialogMessage": "U heeft niet-opgeslagen wijzigingen. Weet je zeker dat je deze pagina wilt verlaten? Alle wijzigingen gaan verloren.",
+        "dialogMessage": "U heeft niet-opgeslagen wijzigingen. Weet u zeker dat u deze pagina wilt verlaten? Alle wijzigingen gaan verloren.",
         "dialogTitle": "Niet-opgeslagen wijzigingen"
       }
     },
@@ -776,7 +776,7 @@
       },
       "loadingServices": "Diensten laden...",
       "ratePerUnitLabel": "Tarief per eenheid:",
-      "recommendBucketLabel": "Aanbevolen emmer consumptie",
+      "recommendBucketLabel": "Verbruiksbundel aanbevelen",
       "serviceMetadata": "Servicetype: {{type}} | Methode: {{method}}",
       "serviceToAddMetadata": "Servicetype: {{type}} | Methode: {{method}} | Standaardtarief: {{rate}} | Eenheid: {{unit}}",
       "toast": {
@@ -789,7 +789,7 @@
         "banner": "U heeft niet-opgeslagen wijzigingen. Klik op \"Wijzigingen opslaan\" om ze toe te passen.",
         "cancelLabel": "Blijf op pagina",
         "confirmLabel": "Verlaat pagina",
-        "dialogMessage": "U heeft niet-opgeslagen wijzigingen. Weet je zeker dat je deze pagina wilt verlaten? Alle wijzigingen gaan verloren.",
+        "dialogMessage": "U heeft niet-opgeslagen wijzigingen. Weet u zeker dat u deze pagina wilt verlaten? Alle wijzigingen gaan verloren.",
         "dialogTitle": "Niet-opgeslagen wijzigingen"
       }
     }

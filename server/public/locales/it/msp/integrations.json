@@ -559,22 +559,22 @@
         },
         "schedule": {
           "cadence": {
-            "10080": "ogni settimana",
-            "1440": "ogni giorno",
-            "240": "ogni 4 ore",
             "60": "ogni ora",
-            "720": "ogni 12 ore"
+            "240": "ogni 4 ore",
+            "720": "ogni 12 ore",
+            "1440": "ogni giorno",
+            "10080": "ogni settimana"
           },
           "changeAction": "Modifica pianificazione",
           "description": "Se attiva, Alga sincronizza ogni client associato con questa cadenza. Disattivandola si fermano le esecuzioni pianificate; puoi comunque sincronizzare manualmente.",
           "enablePrompt": "Il pilota è riuscito. Attiva la sincronizzazione automatica per mantenere allineati i contatti senza eseguirla a mano.",
           "intervalLabel": "Esegui ogni",
           "intervals": {
-            "10080": "Settimana",
-            "1440": "Giorno",
-            "240": "4 ore",
             "60": "Ora",
-            "720": "12 ore"
+            "240": "4 ore",
+            "720": "12 ore",
+            "1440": "Giorno",
+            "10080": "Settimana"
           },
           "pause": "Sospendi",
           "pauseHint": "Sospesa. Salva per applicare.",
@@ -1495,7 +1495,7 @@
         },
         "sync": {
           "title": "Sincronizzazione e automazione",
-          "description": "Importa le risorse di tutti i clienti associati in una sola volta e mantienile aggiornate automaticamente. Associare un'azienda o un layout configura solo l'integrazione: le risorse compaiono solo dopo un'importazione.",
+          "description": "Importa contemporaneamente gli asset di tutti i clienti associati e mantienili aggiornati automaticamente. Associare un’azienda o un layout configura solo l’integrazione: gli asset compaiono solo dopo un’importazione.",
           "summary": "{{created}} create · {{updated}} aggiornate · {{skipped}} ignorate · {{failed}} non riuscite",
           "toastErrorTitle": "Errore di sincronizzazione Hudu",
           "importDoneTitle": "Importazione Hudu completata",
@@ -1505,7 +1505,7 @@
           "syncing2": "Sincronizzazione…",
           "syncAll": "Sincronizza tutto",
           "autoSyncLabel": "Sincronizzazione automatica giornaliera",
-          "autoSyncHint": "Importa automaticamente le nuove risorse e aggiorna quelle esistenti una volta al giorno per ogni cliente associato.",
+          "autoSyncHint": "Importa automaticamente i nuovi asset e aggiorna quelli esistenti una volta al giorno per ogni cliente associato.",
           "neverRun": "Nessuna esecuzione a livello di tenant per ora.",
           "lastRun": "Ultima esecuzione {{at}}: {{created}} create · {{updated}} aggiornate · {{skipped}} ignorate · {{failed}} non riuscite",
           "status": {
@@ -1616,11 +1616,11 @@
         "bindings": {
           "summaryBound": "Current: {{profile}}.",
           "summaryNone": "Nessun profilo Microsoft è attualmente collegato a {{consumer}}.",
-          "summaryUnavailable": "{{consumer}} è collegato a un profilo non disponibile.",
+          "summaryUnavailable": "L'app selezionata non è disponibile.",
           "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
           "warningNoBinding": "Nessun collegamento {{consumer}} è ancora configurato.",
           "warningNotReady": "{{consumer}} è collegato a {{profile}}, ma quel profilo richiede ancora configurazione.",
-          "warningProfileMissing": "{{consumer}} è collegato a un profilo non più disponibile. Ricollegalo a un profilo attivo.",
+          "warningProfileMissing": "L'app Microsoft selezionata non è più disponibile. Scegli un'altra app.",
           "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
           "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
           "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."

@@ -39,24 +39,24 @@
     }
   },
   "assetAlertsSection": {
-    "title": "Sezione Avvisi sulle risorse",
+    "title": "Sezione degli avvisi sugli asset",
     "description": "Wrapper della sezione di avviso aziendale per avvisi RMM specifici per asset e azioni correttive"
   },
   "assetCommandPalette": {
     "title": "Tavolozza dei comandi",
-    "description": "Tavolozza dei comandi per la ricerca di risorse e l'avvio di azioni sulle risorse",
+    "description": "Tavolozza dei comandi per la ricerca di asset e l'avvio di azioni sugli asset",
     "register": {
-      "label": "Tavolozza dei comandi delle risorse",
-      "title": "Tavolozza dei comandi delle risorse"
+      "label": "Tavolozza dei comandi degli asset",
+      "title": "Tavolozza dei comandi degli asset"
     },
     "actions": {
       "createAsset": {
-        "label": "Crea risorsa",
-        "description": "Apri l'aggiunta rapida per registrare una nuova risorsa"
+        "label": "Crea asset",
+        "description": "Apri l'aggiunta rapida per registrare un nuovo asset"
       },
       "refreshData": {
         "label": "Aggiorna i dati",
-        "description": "Recupera le risorse dal server"
+        "description": "Recupera gli asset dal server"
       },
       "reset": {
         "label": "Reimposta",
@@ -67,11 +67,11 @@
     "empty": "Nessuna corrispondenza ancora. Prova una parola chiave diversa.",
     "groups": {
       "quickActions": "Azioni rapide",
-      "assets": "Risorse",
+      "assets": "Asset",
       "hints": "Suggerimenti"
     },
     "hint": {
-      "body": "Continua a digitare per eseguire la ricerca nell'elenco completo delle risorse. I ticket e la ricerca del cliente arriveranno in un secondo momento.",
+      "body": "Continua a digitare per eseguire la ricerca nell'elenco completo degli asset. I ticket e la ricerca del cliente arriveranno in un secondo momento.",
       "badge": "Prossimamente"
     },
     "values": {
@@ -79,17 +79,17 @@
     }
   },
   "assetDashboard": {
-    "title": "Dashboard delle risorse",
-    "description": "Wrapper del dashboard delle risorse di primo livello che rappresenta l'esperienza delle risorse del cliente"
+    "title": "Dashboard degli asset",
+    "description": "Wrapper di primo livello della dashboard degli asset che presenta l’esperienza degli asset del cliente"
   },
   "assetDashboardClient": {
-    "title": "Client del dashboard delle risorse",
-    "description": "Pagina principale dell'elenco delle risorse con filtri, visualizzazioni tabella e griglia, azioni collettive e flussi dei cassetti",
+    "title": "Client della dashboard degli asset",
+    "description": "Pagina principale dell'elenco degli asset con filtri, visualizzazioni tabella e griglia, azioni collettive e flussi dei cassetti",
     "reflection": {
-      "label": "Dashboard delle risorse"
+      "label": "Dashboard degli asset"
     },
     "errors": {
-      "loadDrawerFailed": "Impossibile caricare i dettagli della risorsa in questo momento. Per favore riprova."
+      "loadDrawerFailed": "Impossibile caricare i dettagli dell'asset in questo momento. Per favore riprova."
     },
     "details": {
       "noIp": "Nessun IP",
@@ -99,17 +99,17 @@
       "unassigned": "Non assegnato"
     },
     "selection": {
-      "selectAllVisibleAssets": "Seleziona tutte le risorse visibili",
-      "selectAsset": "Seleziona risorsa {{name}}",
-      "selectedAssets_one": "{{count}} risorsa selezionata",
-      "selectedAssets_other": "{{count}} risorse selezionate",
+      "selectAllVisibleAssets": "Seleziona tutti gli asset visibili",
+      "selectAsset": "Seleziona l'asset {{name}}",
+      "selectedAssets_one": "{{count}} asset selezionato",
+      "selectedAssets_other": "{{count}} asset selezionati",
       "clearSelection": "Cancella selezione",
       "bulkActionsComingSoon": "Azioni collettive in arrivo"
     },
     "actions": {
-      "openActionsForAsset": "Azioni aperte per la risorsa {{name}}",
+      "openActionsForAsset": "Apri le azioni per l'asset {{name}}",
       "viewDetails": "Visualizza i dettagli",
-      "editAsset": "Modifica risorsa",
+      "editAsset": "Modifica asset",
       "createTicket": "Crea ticket",
       "refreshData": "Aggiorna i dati"
     },
@@ -128,7 +128,7 @@
     },
     "metrics": {
       "totalAssets": {
-        "title": "Risorse totali",
+        "title": "Asset totali",
         "helper": "Su tutti i clienti"
       },
       "filteredView": {
@@ -192,8 +192,8 @@
     "columns": {
       "select": "selezionare",
       "name": "nome",
-      "asset_tag": "etichetta di risorsa",
-      "asset_type": "tipo di risorsa",
+      "asset_tag": "tag asset",
+      "asset_type": "tipo di asset",
       "details": "dettagli",
       "status": "stato",
       "agent_status": "stato di agente",
@@ -237,43 +237,43 @@
         "updateStatus": "Aggiornamento stato"
       },
       "deleteDialog": {
-        "description": "Elimina {{count}} risorsa/e selezionata/e. Le risorse con dipendenze potrebbero essere ignorate.",
-        "title": "Elimina risorse selezionate"
+        "description": "Elimina {{count}} asset selezionati. Gli asset con dipendenze potrebbero essere ignorati.",
+        "title": "Elimina asset selezionati"
       },
       "errors": {
-        "deleteFailed": "Impossibile eliminare le risorse selezionate.",
-        "updateLocationFailed": "Impossibile aggiornare le posizioni delle risorse selezionate.",
-        "updateStatusFailed": "Impossibile aggiornare le risorse selezionate."
+        "deleteFailed": "Impossibile eliminare gli asset selezionati.",
+        "updateLocationFailed": "Impossibile aggiornare le posizioni degli asset selezionati.",
+        "updateStatusFailed": "Impossibile aggiornare gli asset selezionati."
       },
       "locationDialog": {
         "clearLocation": "Rimuovi posizione",
         "customLocation": "Posizione personalizzata",
         "customPlaceholder": "Inserisci una posizione o un'area personalizzata",
-        "description": "Aggiorna {{count}} risorsa/e selezionata/e.",
+        "description": "Aggiorna {{count}} asset selezionati.",
         "loadingLocations": "Caricamento posizioni...",
-        "savedDisabled": "Le posizioni salvate del cliente sono disponibili solo quando tutte le risorse selezionate sono visibili e appartengono a un unico cliente.",
+        "savedDisabled": "Le posizioni salvate del cliente sono disponibili solo quando tutti gli asset selezionati sono visibili e appartengono a un unico cliente.",
         "savedLocation": "Posizione salvata del cliente",
         "selectLocation": "Seleziona posizione",
-        "title": "Imposta posizione delle risorse"
+        "title": "Imposta posizione degli asset"
       },
-      "partialFailure": "{{action}} completato per {{succeeded}} risorsa/e; {{failed}} non riuscite.",
+      "partialFailure": "{{action}} completato per {{succeeded}} asset; operazione non riuscita per {{failed}}.",
       "statusDialog": {
-        "description": "Aggiorna {{count}} risorsa/e selezionata/e.",
-        "title": "Imposta stato delle risorse"
+        "description": "Aggiorna {{count}} asset selezionati.",
+        "title": "Imposta stato degli asset"
       },
-      "success": "{{action}} completato per {{count}} risorsa/e."
+      "success": "{{action}} completato per {{count}} asset."
     }
   },
   "assetDashboardGrid": {
-    "title": "Griglia del dashboard delle risorse",
-    "description": "Layout a griglia composita per schede dettagli risorse, pannelli RMM e relativi widget di stato"
+    "title": "Griglia della dashboard degli asset",
+    "description": "Layout a griglia composita per schede dei dettagli degli asset, pannelli RMM e relativi widget di stato"
   },
   "assetDetailDrawer": {
-    "title": "Cassetto dei dettagli delle risorse",
-    "description": "Visualizzazione rapida delle risorse basata su cassetto con azioni, dati di riepilogo e navigazione nel record completo",
-    "label": "Cassetto dei dettagli delle risorse",
+    "title": "Cassetto dei dettagli degli asset",
+    "description": "Visualizzazione rapida di un asset in un cassetto, con azioni, dati di riepilogo e navigazione al record completo",
+    "label": "Cassetto dei dettagli degli asset",
     "header": {
-      "title": "Dettagli della risorsa",
+      "title": "Dettagli dell'asset",
       "subtitle": "Rimani nel contesto mentre rivedi il ciclo di vita e la configurazione"
     },
     "tabs": {
@@ -293,15 +293,15 @@
       "maintenance": "Manutenzione"
     },
     "empty": {
-      "selectAsset": "Seleziona una risorsa per visualizzare i dettagli",
+      "selectAsset": "Seleziona un asset per visualizzare i dettagli",
       "nothingToDisplay": "Niente da visualizzare"
     },
     "actions": {
-      "openAssetRecord": "Apri il record delle risorse",
+      "openAssetRecord": "Apri il record dell'asset",
       "delete": "Elimina"
     },
     "overview": {
-      "assetTag": "Etichetta risorsa {{tag}} • {{type}}",
+      "assetTag": "Tag asset {{tag}} • {{type}}",
       "client": "Cliente: {{name}}",
       "activeSchedules": "Pianificazioni attive",
       "upcomingMaintenance": "Prossima manutenzione",
@@ -311,11 +311,11 @@
       "lastMaintenance": "Ultima manutenzione",
       "noHistory": "Nessuna storia",
       "maintenanceDataPending": "I dati di manutenzione verranno visualizzati una volta configurati i programmi.",
-      "assetSummary": "Riepilogo delle risorse",
+      "assetSummary": "Riepilogo degli asset",
       "recentLifecycleEvents": "Eventi recenti del ciclo di vita"
     },
     "maintenance": {
-      "noSchedules": "Nessun programma di manutenzione ancora trovato per questa risorsa.",
+      "noSchedules": "Nessun programma di manutenzione ancora trovato per questo asset.",
       "totalSchedules": "Orari totali",
       "active": "Attivo",
       "complianceRate": "Tasso di conformità",
@@ -325,7 +325,7 @@
       "noLogs": "I registri di manutenzione verranno visualizzati qui dopo la prima voce di servizio."
     },
     "tickets": {
-      "empty": "Nessun ticket ancora collegato a questa risorsa. Utilizza l'azione rapida per crearne uno.",
+      "empty": "Nessun ticket ancora collegato a questo asset. Utilizza l'azione rapida per crearne uno.",
       "linked": "Collegato {{date}}",
       "client": "Cliente: {{name}}",
       "assignee": "Assegnatario: {{name}}",
@@ -342,11 +342,11 @@
     "info": {
       "client": "Cliente",
       "unassigned": "Non assegnato",
-      "assetTag": "Etichetta di risorsa",
+      "assetTag": "Tag asset",
       "status": "Stato",
       "created": "Creato",
       "updated": "Aggiornato",
-      "tenant": "Inquilino"
+      "tenant": "Tenant"
     },
     "typeDetails": {
       "workstation": "Dettagli della postazione di lavoro",
@@ -396,42 +396,42 @@
     }
   },
   "assetDetailHeader": {
-    "title": "Intestazione dettagli risorsa",
-    "description": "Intestazione cromata per l'esperienza dei dettagli delle risorse, inclusi identità, badge e azioni di aggiornamento",
-    "backToAssets": "Torna alle risorse",
-    "assetTag": "Etichetta risorsa: {{tag}}",
+    "title": "Intestazione dei dettagli dell'asset",
+    "description": "Intestazione per i dettagli degli asset, comprensiva di identità, badge e azioni di aggiornamento",
+    "backToAssets": "Torna agli asset",
+    "assetTag": "Tag asset: {{tag}}",
     "actions": {
       "createTicket": "Crea ticket",
       "menu": "Azioni",
       "refreshing": "Aggiornamento in corso...",
       "refreshData": "Aggiorna dati",
       "rebootDevice": "Riavvia il dispositivo",
-      "editAsset": "Modifica risorsa",
-      "deleteAsset": "Elimina risorsa"
+      "editAsset": "Modifica asset",
+      "deleteAsset": "Elimina asset"
     },
     "values": {
       "unknownClient": "Cliente sconosciuto"
     }
   },
   "assetDetailTabs": {
-    "title": "Schede dei dettagli delle risorse",
-    "description": "Navigazione nei dettagli delle risorse a schede per panoramica, manutenzione, documenti, cronologia e record correlati",
+    "title": "Schede dei dettagli dell'asset",
+    "description": "Navigazione a schede nei dettagli dell'asset per panoramica, manutenzione, documenti, cronologia e record correlati",
     "tabs": {
       "serviceHistory": "Cronologia del servizio",
       "software": "Software",
       "maintenance": "Manutenzione",
-      "relatedAssets": "Risorse correlate",
+      "relatedAssets": "Asset correlati",
       "documentsPasswords": "Documenti e password",
       "timeline": "Cronologia"
     }
   },
   "assetDetailView": {
-    "title": "Visualizzazione dettagliata delle risorse",
-    "description": "Composizione dei dettagli delle risorse con caricamento, errori, metriche, pannelli a griglia e schede dei dettagli",
-    "loading": "Caricamento dettagli risorsa...",
+    "title": "Visualizzazione dei dettagli dell'asset",
+    "description": "Composizione dei dettagli dell'asset con caricamento, errori, metriche, pannelli a griglia e schede",
+    "loading": "Caricamento dei dettagli dell'asset...",
     "errors": {
       "title": "Errore",
-      "notFound": "Risorsa non trovata o non disponi dell'autorizzazione per visualizzarla."
+      "notFound": "Asset non trovato o non disponi dell'autorizzazione per visualizzarlo."
     },
     "fields": {
       "assetTag": "Etichetta dell'asset",
@@ -443,9 +443,9 @@
     }
   },
   "assetDetails": {
-    "title": "Dettagli risorsa",
+    "title": "Dettagli asset",
     "description": "Pagina di dettaglio completo degli asset con schede riepilogative, associazioni, documenti e azioni operative",
-    "assetTag": "Etichetta risorsa: {{tag}}",
+    "assetTag": "Tag asset: {{tag}}",
     "loading": {
       "details": "Caricamento dettagli..."
     },
@@ -487,7 +487,7 @@
       "server": "Dettagli del server",
       "mobileDevice": "Dettagli del dispositivo mobile",
       "printer": "Dettagli della stampante",
-      "relatedAssets": "Risorse correlate"
+      "relatedAssets": "Asset correlati"
     },
     "maintenance": {
       "activeSchedules": "Pianificazioni attive",
@@ -496,7 +496,7 @@
     },
     "tabs": {
       "details": "Dettagli",
-      "relatedAssets": "Risorse correlate",
+      "relatedAssets": "Asset correlati",
       "documents": "Documenti"
     },
     "relationships": {
@@ -508,7 +508,7 @@
       "unassigned": "Non assegnato",
       "never": "Mai",
       "noAdditionalDetails": "Nessun ulteriore dettaglio disponibile",
-      "noRelatedAssets": "Nessuna risorsa correlata trovata"
+      "noRelatedAssets": "Nessun asset correlato trovato"
     },
     "values": {
       "virtual": "Virtuale",
@@ -536,21 +536,21 @@
   },
   "assetDocuments": {
     "title": "Documenti patrimoniali",
-    "description": "Elenco dei documenti delle risorse e superficie degli allegati per i file associati a una risorsa"
+    "description": "Elenco dei documenti e area degli allegati per i file associati a un asset"
   },
   "assetForm": {
-    "title": "Modulo risorsa",
-    "description": "Modulo di creazione e modifica delle risorse primarie con campi di identità, ciclo di vita, contratto e metadati",
-    "heading": "Modifica risorsa",
+    "title": "Modulo asset",
+    "description": "Modulo principale per creare e modificare asset, con campi per identità, ciclo di vita, contratto e metadati",
+    "heading": "Modifica asset",
     "loading": {
-      "assetDetails": "Caricamento dettagli risorsa..."
+      "assetDetails": "Caricamento dei dettagli dell'asset..."
     },
     "errors": {
-      "assetNotFound": "Risorsa non trovata",
-      "loadFailed": "Impossibile caricare i dettagli della risorsa",
+      "assetNotFound": "Asset non trovato",
+      "loadFailed": "Impossibile caricare i dettagli dell'asset",
       "clientsLoadFailed": "Impossibile caricare i client",
       "locationsLoadFailed": "Impossibile caricare posizioni per questo client",
-      "updateFailed": "Impossibile aggiornare la risorsa",
+      "updateFailed": "Impossibile aggiornare l'asset",
       "validation": "Correggi i campi evidenziati prima di salvare."
     },
     "actions": {
@@ -564,7 +564,7 @@
     "sections": {
       "basicInformation": "Informazioni di base",
       "clientAndLocation": "Cliente e posizione",
-      "assetBasics": "Nozioni di base sulle risorse"
+      "assetBasics": "Informazioni di base sull'asset"
     },
     "fields": {
       "customLocationOption": "Posizione personalizzata",
@@ -599,7 +599,7 @@
       "client": "Cliente",
       "primaryLocation": "Posizione primaria",
       "name": "Nome",
-      "assetTag": "Etichetta risorsa",
+      "assetTag": "Tag asset",
       "serialNumber": "Numero di serie",
       "status": "Stato",
       "purchaseDate": "Data di acquisto",
@@ -654,11 +654,11 @@
   "assetFormClient": {
     "title": "Cliente del modulo asset",
     "description": "Wrapper dinamico solo client per il modulo asset e modifica dell'esperienza di struttura",
-    "loadingTitle": "Modifica risorsa"
+    "loadingTitle": "Modifica asset"
   },
   "assetMetricsBanner": {
-    "title": "Banner delle metriche delle risorse",
-    "description": "Schede metriche e rollup per ticket, manutenzione, tempi di attività e indicatori di stato delle risorse",
+    "title": "Banner delle metriche degli asset",
+    "description": "Schede metriche e rollup per ticket, manutenzione, tempi di attività e indicatori di stato degli asset",
     "labels": {
       "healthStatus": "Stato di salute",
       "openTickets": "Ticket aperti",
@@ -687,8 +687,8 @@
     }
   },
   "assetPatchStatusSection": {
-    "title": "Sezione Stato patch risorse",
-    "description": "Patch aziendale e wrapper dello stato antivirus mostrati nell'esperienza dei dettagli della risorsa",
+    "title": "Sezione dello stato delle patch dell'asset",
+    "description": "Wrapper dello stato delle patch aziendali e dell’antivirus mostrato nei dettagli dell'asset",
     "heading": "Stato Patch",
     "compliance": {
       "unknown": "Sconosciuto",
@@ -714,7 +714,7 @@
     }
   },
   "assetSoftwareInventory": {
-    "title": "Inventario del software delle risorse",
+    "title": "Inventario software degli asset",
     "description": "Wrapper di inventario software aziendale per il software installato e i dati sulla versione",
     "heading": "Inventario Software",
     "searchPlaceholder": "Cerca software...",
@@ -745,66 +745,66 @@
   },
   "assetListErrors": {
     "genericError": "Si è verificato un errore. La preghiamo di riprovare più tardi.",
-    "assetNotFound": "Risorsa non trovata"
+    "assetNotFound": "Asset non trovato"
   },
   "assetEdit": {
-    "pageTitle": "Modifica risorsa"
+    "pageTitle": "Modifica asset"
   },
   "associatedAssets": {
     "title": "Beni",
     "description": "Gestione delle relazioni tra asset padre e figlio con azioni sugli asset collegati",
     "loading": {
-      "assets": "Caricamento risorse..."
+      "assets": "Caricamento degli asset..."
     },
     "actions": {
-      "addAsset": "Aggiungi risorsa",
+      "addAsset": "Aggiungi asset",
       "showLess": "Mostra meno",
-      "moreAssets_one": "{{count}} altra risorsa",
-      "moreAssets_other": "{{count}} altre risorse"
+      "moreAssets_one": "{{count}} altro asset",
+      "moreAssets_other": "{{count}} altri asset"
     },
     "errors": {
-      "loadAvailableAssets": "Impossibile caricare le risorse disponibili",
-      "loadDrawerFailed": "Impossibile caricare i dettagli della risorsa in questo momento. Per favore riprova.",
-      "loadAssociatedAssets": "Impossibile caricare le risorse associate",
-      "selectAtLeastOneAsset": "Seleziona almeno una risorsa",
-      "associateFailed": "Impossibile associare le risorse: potrebbero essere già associate",
-      "associationFailed": "Impossibile associare le risorse",
-      "removeFailed": "Impossibile rimuovere l'associazione della risorsa"
+      "loadAvailableAssets": "Impossibile caricare gli asset disponibili",
+      "loadDrawerFailed": "Impossibile caricare i dettagli dell'asset in questo momento. Per favore riprova.",
+      "loadAssociatedAssets": "Impossibile caricare gli asset associati",
+      "selectAtLeastOneAsset": "Seleziona almeno un asset",
+      "associateFailed": "Impossibile associare gli asset: potrebbero essere già associati",
+      "associationFailed": "Impossibile associare gli asset",
+      "removeFailed": "Impossibile rimuovere l'associazione dell'asset"
     },
     "success": {
-      "associated_one": "{{count}} risorsa associata correttamente",
-      "associated_other": "{{count}} risorse associate correttamente",
-      "associatedPartial_one": "{{count}} risorsa associata correttamente, {{failed}} non riuscita (forse già associata)",
-      "associatedPartial_other": "{{count}} risorse associate correttamente, {{failed}} non riuscite (forse già associate)",
-      "removed": "Associazione della risorsa rimossa"
+      "associated_one": "{{count}} asset associato correttamente",
+      "associated_other": "{{count}} asset associati correttamente",
+      "associatedPartial_one": "{{count}} asset associato correttamente; operazione non riuscita per {{failed}} (potrebbe essere già associato)",
+      "associatedPartial_other": "{{count}} asset associati correttamente; operazione non riuscita per {{failed}} (potrebbero essere già associati)",
+      "removed": "Associazione dell'asset rimossa"
     },
     "empty": {
-      "noneAssociated": "Nessuna risorsa associata a questo ticket.",
-      "unknownAsset": "Risorsa sconosciuta"
+      "noneAssociated": "Nessun asset associato a questo ticket.",
+      "unknownAsset": "Asset sconosciuto"
     },
     "dialog": {
-      "title": "Aggiungi risorsa",
-      "loadingAssets": "Caricamento risorse...",
+      "title": "Aggiungi asset",
+      "loadingAssets": "Caricamento degli asset...",
       "selectedAssetsLabel": "Selezionato:",
       "search": {
-        "label": "Cerca risorse",
+        "label": "Cerca asset",
         "placeholder": "Cerca per nome, tag o seriale..."
       },
       "empty": {
-        "search": "Nessuna risorsa trovata corrispondente alla tua ricerca",
-        "available": "Nessuna risorsa disponibile per questo cliente"
+        "search": "Nessun asset corrispondente alla tua ricerca",
+        "available": "Nessun asset disponibile per questo cliente"
       },
       "relationship": {
         "placeholder": "Tipo..."
       },
       "actions": {
-        "addAssets_one": "Aggiungi risorsa",
-        "addAssets_other": "Aggiungi risorse"
+        "addAssets_one": "Aggiungi asset",
+        "addAssets_other": "Aggiungi asset"
       }
     },
     "table": {
       "name": "Nome",
-      "assetTag": "Etichetta risorsa",
+      "assetTag": "Tag asset",
       "type": "Tipo",
       "status": "Stato"
     },
@@ -826,11 +826,11 @@
     }
   },
   "createTicketFromAssetButton": {
-    "title": "Crea ticket da risorsa",
-    "description": "Flusso di creazione del ticket avviato da una risorsa con selezione di scheda, stato e categoria",
+    "title": "Crea ticket dall'asset",
+    "description": "Flusso di creazione del ticket avviato da un asset con selezione di bacheca, stato e categoria",
     "register": {
-      "label": "Crea ticket da risorsa",
-      "title": "Crea ticket da risorsa"
+      "label": "Crea ticket dall'asset",
+      "title": "Crea ticket dall'asset"
     },
     "defaultTitle": "Problema con {{name}}",
     "actions": {
@@ -868,34 +868,34 @@
     }
   },
   "deleteAssetButton": {
-    "title": "Pulsante Elimina risorsa",
+    "title": "Pulsante Elimina asset",
     "description": "Elimina il flusso di conferma per la rimozione di un record di asset",
     "actions": {
       "removing": "Rimozione…"
     },
-    "entityNameFallback": "questa risorsa",
+    "entityNameFallback": "questo asset",
     "errors": {
       "validationFailed": "Impossibile convalidare l'eliminazione. Per favore riprova.",
-      "deleteFailed": "Impossibile eliminare la risorsa. Per favore riprova."
+      "deleteFailed": "Impossibile eliminare l'asset. Per favore riprova."
     }
   },
   "quickAddAsset": {
-    "title": "Aggiunta rapida risorsa",
-    "description": "Crea rapidamente un flusso di risorse con campi essenziali per aggiungere un nuovo record di risorse",
+    "title": "Aggiunta rapida di asset",
+    "description": "Flusso di creazione rapida con i campi essenziali per aggiungere un nuovo record asset",
     "actions": {
-      "addAsset": "Aggiungi risorsa",
+      "addAsset": "Aggiungi asset",
       "creating": "Creazione...",
-      "createAsset": "Crea risorsa"
+      "createAsset": "Crea asset"
     },
     "errors": {
       "fetchClientsFailed": "Impossibile recuperare i client",
-      "createFailed": "Impossibile creare la risorsa"
+      "createFailed": "Impossibile creare l'asset"
     },
     "validation": {
       "client": "Cliente",
-      "assetName": "Nome della risorsa",
-      "assetTag": "Etichetta risorsa",
-      "assetType": "Tipo di risorsa",
+      "assetName": "Nome dell'asset",
+      "assetTag": "Tag asset",
+      "assetType": "Tipo di asset",
       "requiredFields": "Si prega di compilare i campi richiesti:"
     },
     "fields": {
@@ -905,8 +905,8 @@
       "managementIp": "IP di gestione",
       "model": "Modello",
       "clientRequired": "Cliente *",
-      "assetNameRequired": "Nome della risorsa *",
-      "assetTagRequired": "Etichetta risorsa *",
+      "assetNameRequired": "Nome dell'asset *",
+      "assetTagRequired": "Tag asset *",
       "typeRequired": "Tipo *",
       "status": "Stato",
       "serialNumber": "Numero di serie",
@@ -923,8 +923,8 @@
       "selectOsType": "Seleziona il tipo di sistema operativo",
       "mobileModel": "ad esempio, iPhone 14 Pro, Galaxy S23",
       "printerModel": "ad esempio, HP LaserJet Pro M404n",
-      "assetName": "Inserisci il nome della risorsa",
-      "assetTag": "Inserisci il tag risorsa",
+      "assetName": "Inserisci il nome dell'asset",
+      "assetTag": "Inserisci il tag asset",
       "selectType": "Seleziona il tipo",
       "selectStatus": "Seleziona lo stato",
       "serialNumber": "Inserisci il numero di serie",
@@ -963,7 +963,7 @@
   },
   "remoteAccessButton": {
     "title": "Pulsante di accesso remoto",
-    "description": "Avvio di accesso remoto per risorse con integrazioni di connessione supportate"
+    "description": "Avvio di accesso remoto per asset con integrazioni di connessione supportate"
   },
   "rmmStatusIndicator": {
     "title": "Indicatore di stato dell'RMM",
@@ -981,8 +981,8 @@
     }
   },
   "assetInfoPanel": {
-    "title": "Informazioni sulle risorse e ciclo di vita",
-    "description": "Pannello di informazioni generali sulle risorse per l'identificazione, il proprietario e i dettagli del ciclo di vita",
+    "title": "Informazioni e ciclo di vita dell'asset",
+    "description": "Pannello con informazioni generali sull'asset per identificazione, proprietario e dettagli del ciclo di vita",
     "actions": {
       "copy": "Copia",
       "copied": "Copiato"
@@ -1003,7 +1003,7 @@
   },
   "assetNotesPanel": {
     "title": "Note e informazioni rapide",
-    "description": "Pannello delle note in formato rich-text per note specifiche sulle risorse e un rapido contesto operativo",
+    "description": "Pannello di note in formato rich-text per annotazioni specifiche dell'asset e un rapido contesto operativo",
     "errors": {
       "loadTitle": "Impossibile caricare le note",
       "unknown": "Errore sconosciuto",
@@ -1088,7 +1088,7 @@
   },
   "copyableField": {
     "title": "Campo copiabile",
-    "description": "Campo condiviso di copia negli appunti utilizzato nei moduli delle risorse e nei pannelli dei dettagli",
+    "description": "Campo condiviso di copia negli appunti utilizzato nei moduli degli asset e nei pannelli dei dettagli",
     "actions": {
       "copy": "Copia",
       "copied": "Copiato"
@@ -1096,7 +1096,7 @@
   },
   "statusBadge": {
     "title": "Badge di stato",
-    "description": "Renderer di badge condiviso per il ciclo di vita delle risorse e gli stati di monitoraggio",
+    "description": "Renderer di badge condiviso per il ciclo di vita degli asset e gli stati di monitoraggio",
     "statuses": {
       "online": "In linea",
       "offline": "Non in linea",
@@ -1114,7 +1114,7 @@
   },
   "utilizationBar": {
     "title": "Barra di utilizzo",
-    "description": "Componente della barra di avanzamento condiviso per l'utilizzo e le metriche delle risorse basate sulla percentuale"
+    "description": "Componente condiviso della barra di avanzamento per l’utilizzo e le metriche percentuali degli asset"
   },
   "createMaintenanceScheduleDialog": {
     "title": "Crea programma di manutenzione",
@@ -1164,7 +1164,7 @@
   },
   "documentsPasswordsTab": {
     "title": "Documenti e password",
-    "description": "Scheda combinata per documenti relativi alle risorse, credenziali e relativi record protetti",
+    "description": "Scheda combinata per documenti relativi agli asset, credenziali e relativi record protetti",
     "passwords": {
       "title": "Password e segreti",
       "comingSoon": "Presto disponibile la gestione sicura delle password."
@@ -1237,38 +1237,38 @@
     }
   },
   "relatedAssetsTab": {
-    "title": "Risorse correlate ({{count}})",
-    "description": "Scheda per sfogliare e gestire le relazioni tra le risorse correlate",
-    "loading": "Caricamento risorse correlate...",
+    "title": "Asset correlati ({{count}})",
+    "description": "Scheda per sfogliare e gestire le relazioni tra gli asset correlati",
+    "loading": "Caricamento asset correlati...",
     "actions": {
-      "linkAsset": "Collegamento risorsa",
+      "linkAsset": "Collega asset",
       "unlink": "Scollega",
-      "linkEmptyState": "Collegare una risorsa"
+      "linkEmptyState": "Collega un asset"
     },
     "success": {
-      "linked": "Risorsa collegata",
-      "unlinked": "Risorsa scollegata"
+      "linked": "Asset collegato",
+      "unlinked": "Asset scollegato"
     },
     "errors": {
-      "selectAsset": "Seleziona una risorsa da collegare",
-      "linkFailed": "Impossibile collegare la risorsa",
-      "unlinkFailed": "Impossibile scollegare la risorsa"
+      "selectAsset": "Seleziona un asset da collegare",
+      "linkFailed": "Impossibile collegare l'asset",
+      "unlinkFailed": "Impossibile scollegare l'asset"
     },
     "table": {
-      "assetName": "Nome della risorsa",
+      "assetName": "Nome dell'asset",
       "relationship": "Relazione",
       "linkedDate": "Data collegata",
       "actions": "Azioni"
     },
     "empty": {
-      "linked": "Nessuna risorsa correlata collegata."
+      "linked": "Nessun asset correlato collegato."
     },
     "dialog": {
-      "title": "Collegamento risorsa",
-      "loadingAssets": "Caricamento risorse...",
-      "empty": "Nessuna risorsa disponibile trovata.",
+      "title": "Collega asset",
+      "loadingAssets": "Caricamento asset...",
+      "empty": "Nessun asset disponibile trovato.",
       "search": {
-        "label": "Cerca risorse",
+        "label": "Cerca asset",
         "placeholder": "Cerca per nome, tag, seriale..."
       },
       "relationshipType": {
@@ -1276,13 +1276,13 @@
         "placeholder": "imparentato"
       },
       "table": {
-        "asset": "Risorsa",
+        "asset": "Asset",
         "select": "Selezionare"
       },
       "actions": {
         "selected": "Selezionato",
         "linking": "Collegamento...",
-        "confirm": "Collega risorsa"
+        "confirm": "Collega asset"
       }
     },
     "relationshipTypes": {
@@ -1292,7 +1292,7 @@
   },
   "serviceHistoryTab": {
     "title": "Cronologia del servizio",
-    "description": "Scheda Cronologia servizi che riepiloga la manutenzione e l'attività dei ticket per la risorsa",
+    "description": "Scheda Cronologia servizi che riepiloga la manutenzione e l'attività dei ticket per l'asset",
     "actions": {
       "createTicket": "Crea ticket"
     },
@@ -1303,7 +1303,7 @@
       "priority": "Priorità",
       "dateLinked": "Data collegata"
     },
-    "empty": "Nessun ticket collegato a questa risorsa.",
+    "empty": "Nessun ticket collegato a questo asset.",
     "clientFallback": "Cliente sconosciuto"
   },
   "softwareInventoryTab": {
@@ -1353,7 +1353,7 @@
     "openTicketFailed": "Impossibile aprire il ticket"
   },
   "assetTypeBreakdown": {
-    "title": "Risorse per tipo"
+    "title": "Asset per tipo"
   },
   "customTypeDetailsPanel": {
     "title": "Dettagli di {{name}}",

@@ -674,7 +674,7 @@
       "reverseDraft": "Bozza inversa",
       "sendEmail": "Invia e-mail",
       "unfinalize": "Definalizza",
-      "viewSourceQuote": "Visualizza citazione della fonte",
+      "viewSourceQuote": "Visualizza preventivo di origine",
       "applyCredit": "Applica credito",
       "driftAccept": "Accetta la versione QuickBooks",
       "driftReexport": "Riesporta in QuickBooks",
@@ -1309,7 +1309,7 @@
       },
       "logo": {
         "label": "Logo",
-        "description": "Risorsa di branding tenant."
+        "description": "Asset di branding del tenant."
       },
       "qr": {
         "label": "Codice QR",

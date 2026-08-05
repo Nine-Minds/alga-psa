@@ -314,7 +314,7 @@
           "xeroCsvDescription": "Wyeksportowany plik CSV zawiera Numer faktury, Nazwę kontaktu, Kwotę wiersza, Kwotę podatku i kategorie śledzenia.",
           "xeroHelp": {
             "note": "Uwaga: Dopasowane zostaną tylko faktury pierwotnie wyeksportowane z Alga PSA (z śledzeniem Source System = AlgaPSA).",
-            "s1": "W Xero przejdź do Sales > Invoices",
+            "s1": "W Xero wybierz Sales > Faktury",
             "s2": "Wybierz zakładkę faktury, z której chcesz eksportować (np. Paid, Awaiting Payment)",
             "s3": "(Opcjonalnie) Kliknij Search, aby filtrować według daty początkowej, końcowej lub typu daty",
             "s4": "Kliknij Export",
@@ -327,14 +327,14 @@
           }
         },
         "xero": {
-          "description": "Importuj kwoty podatku z pliku CSV raportu Xero Invoice Details.",
-          "dropZone": "Przeciągnij i upuść plik CSV raportu Xero Invoice Details tutaj lub kliknij, aby przeglądać",
+          "description": "Importuj kwoty podatku z pliku CSV raportu szczegółów faktury z Xero.",
+          "dropZone": "Przeciągnij tutaj plik CSV raportu szczegółów faktury z Xero i upuść go albo kliknij, aby wybrać plik",
           "help": {
             "csvRequirement": "Raport powinien zawierać kolumny Numer faktury, Nazwa kontaktu, Kwota wiersza i Kwota podatku. Faktury są dopasowywane przy użyciu pola Reference lub kategorii śledzenia ustawionych podczas eksportu.",
             "steps": {
               "s1": "W Xero przejdź do Reports > All Reports",
-              "s2": "Wybierz Sales (Invoices and Revenue)",
-              "s3": "Uruchom raport Invoice Details",
+              "s2": "Wybierz Sales (Faktury i przychody)",
+              "s3": "Uruchom raport szczegółów faktury",
               "s4": "Ustaw zakres dat tak, aby pasował do Twoich wyeksportowanych faktur",
               "s5": "Kliknij Export i wybierz CSV",
               "s6": "Prześlij wyeksportowany plik tutaj"
@@ -559,22 +559,22 @@
         },
         "schedule": {
           "cadence": {
-            "10080": "co tydzień",
-            "1440": "codziennie",
-            "240": "co 4 godziny",
             "60": "co godzinę",
-            "720": "co 12 godzin"
+            "240": "co 4 godziny",
+            "720": "co 12 godzin",
+            "1440": "codziennie",
+            "10080": "co tydzień"
           },
           "changeAction": "Zmień harmonogram",
           "description": "Gdy włączona, Alga synchronizuje każdego przypisanego klienta w tym rytmie. Wyłączenie zatrzymuje przebiegi zaplanowane; ręczna synchronizacja pozostaje dostępna.",
           "enablePrompt": "Pilotaż się powiódł. Włącz automatyczną synchronizację, aby kontakty pozostawały aktualne bez ręcznych uruchomień.",
           "intervalLabel": "Uruchamiaj co",
           "intervals": {
-            "10080": "Tydzień",
-            "1440": "Dobę",
-            "240": "4 godziny",
             "60": "Godzinę",
-            "720": "12 godzin"
+            "240": "4 godziny",
+            "720": "12 godzin",
+            "1440": "Dobę",
+            "10080": "Tydzień"
           },
           "pause": "Wstrzymaj",
           "pauseHint": "Wstrzymano. Zapisz, aby zastosować.",
@@ -1106,7 +1106,7 @@
           "modeBuiltIn": "Built-in",
           "modeDisabled": "Disabled",
           "modeInherit": "Inherit MSP workspace default",
-          "modeWorkflowManaged": "Workflow-managed",
+          "modeWorkflowManaged": "Zarządzany przez workflow",
           "noGroupSelected": "No group selected"
         },
         "reasons": {
@@ -1616,11 +1616,11 @@
         "bindings": {
           "summaryBound": "Current: {{profile}}.",
           "summaryNone": "Żaden profil Microsoft nie jest obecnie powiązany z {{consumer}}.",
-          "summaryUnavailable": "{{consumer}} jest powiązany z niedostępnym profilem.",
+          "summaryUnavailable": "Wybrana aplikacja jest niedostępna.",
           "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
           "warningNoBinding": "Nie skonfigurowano jeszcze żadnego powiązania dla {{consumer}}.",
           "warningNotReady": "{{consumer}} jest powiązany z {{profile}}, ale ten profil nadal wymaga konfiguracji.",
-          "warningProfileMissing": "{{consumer}} jest powiązany z profilem, który nie jest już dostępny. Powiąż go ponownie z aktywnym profilem.",
+          "warningProfileMissing": "Wybrana aplikacja Microsoft nie jest już dostępna. Wybierz inną aplikację.",
           "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
           "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
           "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."
@@ -2429,8 +2429,8 @@
         "descriptionEe": "Zarządzaj cyklem życia zgłoszeń domen dla wykrywania dostawców SSO logowania MSP. Niezgłoszone lub niekwalifikujące się domeny korzystają z dostawców Nine Minds na poziomie aplikacji.",
         "moved": {
           "title": "MSP SSO Login Domains",
-          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
-          "cta": "Open Single Sign-On settings"
+          "body": "Ustawienia pojedynczego logowania, w tym deklaracje domen logowania, przeniesiono do sekcji Bezpieczeństwo → Pojedyncze logowanie.",
+          "cta": "Otwórz ustawienia pojedynczego logowania"
         },
         "dnsHost": "Host:",
         "dnsInstructions": "Dodaj rekord DNS TXT, a następnie kliknij Zweryfikuj:",
@@ -3036,7 +3036,7 @@
             "intro": "Ta integracja zapewnia alternatywę dla łączności Xero opartej na OAuth:",
             "note": "Uwaga: Skonfiguruj mapowania poniżej przed eksportem. Eksporty CSV i import podatków są zarządzane z poziomu Rozliczenia → Eksporty księgowe.",
             "taxImportLabel": "Import podatków",
-            "taxImportText": "Przy zewnętrznym obliczaniu podatku importuj kwoty podatku z raportu Xero Invoice Details",
+            "taxImportText": "Przy zewnętrznym obliczaniu podatku importuj kwoty podatku z raportu szczegółów faktury z Xero",
             "title": "Integracja CSV Xero"
           },
           "savedMessage": "Ustawienia zapisane pomyślnie",
@@ -3063,13 +3063,13 @@
               "s1": "Przejdź do Rozliczenia → Eksporty księgowe",
               "s2": "Wybierz faktury i wybierz „Xero CSV” jako adapter",
               "s3": "Pobierz wygenerowany plik CSV",
-              "s4": "W Xero: Business → Invoices → Import",
+              "s4": "W Xero: Business → Faktury → Import",
               "s5": "Prześlij CSV i zaimportuj jako faktury robocze",
               "s6": "Xero obliczy podatek na podstawie Twoich ustawień podatkowych"
             },
             "exportInvoices": "Eksportuj faktury",
             "import": {
-              "s1": "W Xero: Reports → All Reports → Invoice Details",
+              "s1": "W Xero otwórz Reports → All Reports → raport szczegółów faktury",
               "s2": "Ustaw zakres dat i wyeksportuj jako CSV",
               "s3": "W Alga: Rozliczenia → Eksporty księgowe → Importuj podatki",
               "s4": "Prześlij CSV raportu Xero",
@@ -3160,13 +3160,13 @@
     },
     "stripe": {
       "title": "Stripe Payments",
-      "description": "Accept credit card payments for your invoices",
+      "description": "Przyjmuj płatności kartą kredytową za faktury",
       "connected": {
         "title": "Stripe Connected",
         "publishableKey": "Publishable key: {{key}}..."
       },
       "empty": {
-        "description": "Connect your Stripe account to accept online payments for invoices"
+        "description": "Połącz konto Stripe, aby przyjmować płatności online za faktury"
       },
       "actions": {
         "testConnection": "Test Connection",

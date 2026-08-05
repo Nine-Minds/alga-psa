@@ -13,7 +13,7 @@
       "resyncStarted": "Hersynchronisatie gestart voor {{providerName}}.",
       "resyncRecovered": "{{providerName}} is opnieuw verbonden.",
       "enterpriseOnly": "Microsoft 365 inkomende e-mail is alleen beschikbaar in Pro.",
-      "loadProvidersError": "Failed to load email providers"
+      "loadProvidersError": "Kan e-mailproviders niet laden"
     },
     "editDrawer": {
       "title": "E-mailprovider bewerken",
@@ -139,8 +139,8 @@
       "cancel": "Annuleren"
     },
     "help": {
-      "enterprise": "Kies de provider waar uw organisatie al gebruik van maakt. Als je Google Workspace gebruikt, kies dan Gmail; als u Microsoft 365 gebruikt, kiest u Microsoft 365. U kunt dit later wijzigen door uw e-mailprovider te verwijderen en opnieuw te configureren.",
-      "standard": "Kies de provider waar uw organisatie al gebruik van maakt. Als je Google Workspace gebruikt, kies dan Gmail; kies anders IMAP. U kunt dit later wijzigen door uw e-mailprovider te verwijderen en opnieuw te configureren."
+      "enterprise": "Kies de provider die uw organisatie al gebruikt. Gebruikt u Google Workspace, kies dan Gmail; gebruikt u Microsoft 365, kies dan Microsoft 365. U kunt dit later wijzigen door uw e-mailprovider te verwijderen en opnieuw te configureren.",
+      "standard": "Kies de provider die uw organisatie al gebruikt. Gebruikt u Google Workspace, kies dan Gmail; kies anders IMAP. U kunt dit later wijzigen door uw e-mailprovider te verwijderen en opnieuw te configureren."
     }
   },
   "wizard": {
@@ -371,10 +371,10 @@
       },
       "oauth": {
         "sectionTitle": "Google OAuth",
-        "sectionDescription": "Maakt gebruik van de Google-app die eigendom is van de huurder, geconfigureerd in Instellingen → Integraties → Providers.",
+        "sectionDescription": "Gebruikt de door de tenant beheerde Google-app die is geconfigureerd in Instellingen → Integraties → Providers.",
         "setupLabel": "Google Cloudconsole",
         "notConfigured": "Google-integratie is niet geconfigureerd voor deze tenant.",
-        "setupHelp": "Configureer eerst Google OAuth + Pub/Sub, eigendom van de huurder: Instellingen → Integraties → Providers.",
+        "setupHelp": "Configureer eerst de door de tenant beheerde Google OAuth en Pub/Sub: Instellingen → Integraties → Providers.",
         "openSettings": "Open Google-instellingen",
         "requiredTitle": "OAuth-autorisatie vereist",
         "stepTitle": "Stap 1: OAuth-autorisatie",
@@ -484,7 +484,7 @@
       "status": {
         "label": "Status *",
         "placeholder": "Selecteer status",
-        "selectBoardFirst": "Selecteer eerst een board",
+        "selectBoardFirst": "Selecteer eerst een bord",
         "loading": "Statussen laden..."
       },
       "priority": {
@@ -1017,7 +1017,7 @@
       "conditions": "Voorwaarden (alle moeten overeenkomen)",
       "create": "Regel aanmaken",
       "createTitle": "Inkomende regel aanmaken",
-      "description": "Bepaal wanneer de regel van toepassing is en wat er met de e-mail gebeurt. Gebruik de tester hieronder om dit met een voorbeeld te controleren voordat je opslaat.",
+      "description": "Bepaal wanneer de regel van toepassing is en wat er met de e-mail gebeurt. Gebruik de tester hieronder om dit met een voorbeeld te controleren voordat u opslaat.",
       "destination": "Bestemming (standaardwaarden voor tickets)",
       "destinationPlaceholder": "Selecteer een set standaardwaarden",
       "editTitle": "Inkomende regel bewerken",

@@ -72,12 +72,12 @@
     },
     "source": {
       "contract": "Contract",
-      "tenantDefault": "Standaard van huurder"
+      "tenantDefault": "Tenantstandaard"
     }
   },
   "billing": {
     "cadenceOwner": {
-      "client": "Cliënt schema",
+      "client": "Klantplanning",
       "contract": "Contractverjaardag"
     },
     "frequency": {
@@ -232,7 +232,7 @@
       "title": "Contractfacturen"
     },
     "labels": {
-      "client": "Cliënt",
+      "client": "Klant",
       "contractName": "Contractnaam",
       "description": "Beschrijving",
       "noClientAssigned": "Geen klant toegewezen",
@@ -2075,8 +2075,8 @@
     "materializedPeriods": {
       "heading": "Illustratieve toekomstige gematerialiseerde perioden",
       "summary": {
-        "contract": "Als je deze terugkerende regel opslaat, zouden toekomstige perioden worden gematerialiseerd in een verjaardagsgebaseerde voorvertoning verankerd op de 8e vóór de factuurgeneratie.",
-        "client": "Als je deze terugkerende regel opslaat, zouden toekomstige perioden worden gematerialiseerd in de voorvertoning van het facturatieschema van de klant vóór de factuurgeneratie."
+        "contract": "Als u deze terugkerende regel opslaat, worden toekomstige perioden vóór het genereren van de factuur weergegeven in een jubileumvoorbeeld met de 8e als peildatum.",
+        "client": "Als u deze terugkerende regel opslaat, worden toekomstige perioden vóór het genereren van de factuur weergegeven in het voorbeeld van de klantplanning."
       }
     }
   },

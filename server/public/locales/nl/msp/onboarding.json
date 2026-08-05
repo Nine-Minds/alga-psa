@@ -30,7 +30,7 @@
     "title": "Onboardingwizard",
     "description": "Wizard-shell voor MSP-tenantconfiguratie met dialoog-/volledig-pagina weergave, voortgang, validatie en afronding",
     "steps": {
-      "clientInfo": "Je bedrijf",
+      "clientInfo": "Uw bedrijf",
       "teamMembers": "Teamleden",
       "addClient": "Klant toevoegen",
       "clientContact": "Klantcontact",
@@ -62,10 +62,10 @@
       "completing": "Afronden..."
     },
     "shell": {
-      "title": "Stel je systeem in",
-      "description": "Laten we je werkruimte configureren en klaarzetten voor gebruik.",
+      "title": "Stel uw systeem in",
+      "description": "Laten we uw werkruimte configureren en klaarzetten voor gebruik.",
       "algadeskTitle": "AlgaDesk instellen",
-      "algadeskDescription": "Configureer je helpdeskomgeving, klanten en standaardinstellingen voor tickets."
+      "algadeskDescription": "Configureer uw helpdeskomgeving, klanten en standaardinstellingen voor tickets."
     }
   },
   "addClientStep": {
@@ -86,12 +86,12 @@
       }
     },
     "header": {
-      "title": "Voeg je eerste klant toe",
-      "description": "Laten we je eerste klant toevoegen om te starten. Je kunt deze stap overslaan en klanten later toevoegen."
+      "title": "Voeg uw eerste klant toe",
+      "description": "Laten we uw eerste klant toevoegen om te starten. U kunt deze stap overslaan en klanten later toevoegen."
     },
     "created": {
       "title": "Klant succesvol aangemaakt!",
-      "description": "{{clientName}} is toegevoegd aan je klantenlijst."
+      "description": "{{clientName}} is toegevoegd aan uw klantenlijst."
     },
     "fields": {
       "clientName": {
@@ -116,8 +116,8 @@
       "optionalLabel": "Optioneel:"
     },
     "note": {
-      "defaultTaxSettings": "De klant wordt aangemaakt met standaard niet-belastbare (0%) belastinginstellingen. Je kunt belastingtarieven later configureren in de klantinstellingen.",
-      "optional": "Je kunt deze stap overslaan en klanten altijd toevoegen of wijzigen via je dashboard."
+      "defaultTaxSettings": "De klant wordt aangemaakt met standaard niet-belastbare (0%) belastinginstellingen. U kunt belastingtarieven later configureren in de klantinstellingen.",
+      "optional": "U kunt deze stap overslaan en klanten altijd toevoegen of wijzigen via uw dashboard."
     }
   },
   "billingSetupStep": {
@@ -141,7 +141,7 @@
         "confirmAdd": "Servicetype toevoegen"
       },
       "noteLabel": "Opmerking:",
-      "description": "Servicetypes zijn taxonomielabels voor ordenen en filteren. De facturatiemodus wordt voor elke dienst afzonderlijk geconfigureerd. Je kunt types later altijd hernoemen, toevoegen of verwijderen via Instellingen.",
+      "description": "Servicetypes zijn taxonomielabels voor ordenen en filteren. De facturatiemodus wordt voor elke dienst afzonderlijk geconfigureerd. U kunt types later altijd hernoemen, toevoegen of verwijderen via Instellingen.",
       "addForm": {
         "title": "Nieuw servicetype toevoegen",
         "fields": {
@@ -165,12 +165,12 @@
       },
       "import": {
         "title": "Voorgestelde servicetypes",
-        "description": "Deze zijn standaard voor de meeste MSP's. Vink alles uit wat je niet wilt en bevestig vervolgens om de rest toe te voegen. Je kunt ze later hernoemen of verwijderen.",
+        "description": "Deze zijn standaard voor de meeste MSP's. Vink alles uit wat u niet wilt en bevestig vervolgens om de rest toe te voegen. U kunt ze later hernoemen of verwijderen.",
         "success": {
           "titleOne": "Servicetype succesvol geïmporteerd!",
           "titleOther": "Servicetypen succesvol geïmporteerd!",
-          "description_one": "{{count}} type toegevoegd aan je catalogus.",
-          "description_other": "{{count}} typen toegevoegd aan je catalogus.",
+          "description_one": "{{count}} type toegevoegd aan uw catalogus.",
+          "description_other": "{{count}} typen toegevoegd aan uw catalogus.",
           "skipped": "{{count}} overgeslagen."
         },
         "actions": {
@@ -193,13 +193,13 @@
     },
     "header": {
       "title": "Facturatie instellen",
-      "description": "Stel je standaardvaluta in en maak je eerste dienst aan.",
+      "description": "Stel uw standaardvaluta in en maak uw eerste dienst aan.",
       "serviceTitle": "Maak uw eerste service",
       "serviceDescription": "Voeg een service toe en kies hoe deze moet worden gefactureerd. Het servicetype identificeert de servicecategorie, terwijl de facturatiemodus het prijsgedrag bepaalt."
     },
     "created": {
       "title": "Service succesvol aangemaakt!",
-      "description": "{{serviceName}} is toegevoegd aan je servicecatalogus."
+      "description": "{{serviceName}} is toegevoegd aan uw servicecatalogus."
     },
     "fields": {
       "serviceName": {
@@ -215,7 +215,7 @@
         "required": "(Verplicht)",
         "emptyPlaceholder": "Servicetypen aanmaken of importeren",
         "placeholder": "Selecteer een servicetype",
-        "emptyHelp": "Bevestig hieronder een voorgesteld servicetype of voeg je eigen type toe. Je kunt dit later wijzigen."
+        "emptyHelp": "Bevestig hieronder een voorgesteld servicetype of voeg uw eigen type toe. U kunt dit later wijzigen."
       },
       "billingMode": {
         "label": "Factureringsmodus"
@@ -237,7 +237,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Actie vereist:",
-      "actionRequiredDescription": "Bevestig hierboven een voorgesteld servicetype, of voeg je eigen type toe, voordat je een service aanmaakt."
+      "actionRequiredDescription": "Bevestig hierboven een voorgesteld servicetype, of voeg uw eigen type toe, voordat u een service aanmaakt."
     }
   },
   "clientContactStep": {
@@ -281,7 +281,7 @@
       "optionalLabel": "Optioneel:"
     },
     "footer": {
-      "optional": "Je kunt deze stap overslaan en contacten altijd toevoegen of wijzigen vanuit het profiel van de klant."
+      "optional": "U kunt deze stap overslaan en contacten altijd toevoegen of wijzigen vanuit het profiel van de klant."
     }
   },
   "clientInfoStep": {
@@ -289,21 +289,21 @@
     "description": "Wizardstap voor het verzamelen van de identiteit van de MSP-operator, bedrijfsinformatie en de eerste klantbasisgegevens",
     "revisit": {
       "title": "Bedrijfsinformatie",
-      "description": "Controleer of werk je bedrijfsgegevens bij.",
+      "description": "Controleer of werk uw bedrijfsgegevens bij.",
       "fields": {
         "companyName": {
           "label": "Bedrijfsnaam",
           "placeholder": "Acme IT Solutions"
         }
       },
-      "note": "Je kunt deze wizard op elk moment gebruiken om de instellingen van je werkruimte opnieuw te configureren."
+      "note": "U kunt deze wizard op elk moment gebruiken om de instellingen van uw werkruimte opnieuw te configureren."
     },
     "common": {
       "noteLabel": "Opmerking:"
     },
     "header": {
-      "title": "Je bedrijf en beheerdersaccount",
-      "description": "We beginnen met de bedrijfsgegevens van je eigen MSP en je beheerderslogin, niet met een klant die je ondersteunt."
+      "title": "Uw bedrijf en beheerdersaccount",
+      "description": "We beginnen met de bedrijfsgegevens van uw eigen MSP en uw beheerderslogin, niet met een klant die u ondersteunt."
     },
     "fields": {
       "firstName": {
@@ -321,7 +321,7 @@
       "email": {
         "label": "E-mailadres",
         "placeholder": "jan@acmeit.com",
-        "help": "Dit wordt gebruikt om in te loggen op je account."
+        "help": "Dit wordt gebruikt om in te loggen op uw account."
       },
       "language": {
         "label": "Taal",
@@ -332,10 +332,10 @@
     "password": {
       "resetRequired": {
         "title": "Wachtwoord opnieuw instellen vereist",
-        "description": "Je moet een nieuw wachtwoord instellen om door te gaan met het installatieproces. Deze stap kan niet worden overgeslagen."
+        "description": "U moet een nieuw wachtwoord instellen om door te gaan met het installatieproces. Deze stap kan niet worden overgeslagen."
       },
-      "title": "Stel je wachtwoord in",
-      "description": "Stel een nieuw wachtwoord in ter vervanging van je tijdelijke wachtwoord.",
+      "title": "Stel uw wachtwoord in",
+      "description": "Stel een nieuw wachtwoord in ter vervanging van uw tijdelijke wachtwoord.",
       "fields": {
         "newPassword": {
           "label": "Nieuw wachtwoord",
@@ -343,7 +343,7 @@
         },
         "confirmPassword": {
           "label": "Wachtwoord bevestigen",
-          "placeholder": "Voer je wachtwoord opnieuw in",
+          "placeholder": "Voer uw wachtwoord opnieuw in",
           "match": "Wachtwoorden komen overeen",
           "mismatch": "Wachtwoorden komen niet overeen"
         }
@@ -371,10 +371,10 @@
     "title": "Teamleden-stap",
     "description": "Wizardstap voor het uitnodigen van eerste teamleden en het toewijzen van onboardingrollen",
     "license": {
-      "limitReached": "Licentielimiet bereikt ({{current}}/{{limit}}). Neem contact op met support om je licentielimiet te verhogen.",
+      "limitReached": "Licentielimiet bereikt ({{current}}/{{limit}}). Neem contact op met support om uw licentielimiet te verhogen.",
       "remaining": {
-        "one": "Je kunt nog 1 teamlid toevoegen.",
-        "other": "Je kunt nog {{count}} teamleden toevoegen."
+        "one": "U kunt nog 1 teamlid toevoegen.",
+        "other": "U kunt nog {{count}} teamleden toevoegen."
       },
       "summary": {
         "noLimit": "Gebruikers: {{count}} (geen limiet)",
@@ -393,7 +393,7 @@
     },
     "header": {
       "title": "Teamleden uitnodigen",
-      "description": "Voeg je teamleden toe om ze op weg te helpen. Je kunt deze stap overslaan en ze later toevoegen."
+      "description": "Voeg uw teamleden toe om ze op weg te helpen. U kunt deze stap overslaan en ze later toevoegen."
     },
     "created": {
       "titleOne": "1 teamlid succesvol aangemaakt!",
@@ -437,7 +437,7 @@
         "email": "E-mailuitnodiging versturen",
         "password": "Ik stel zelf een wachtwoord in",
         "emailHelp": "Ze ontvangen een e-mail met een link om hun eigen wachtwoord in te stellen. Geen wachtwoorden om door te geven.",
-        "passwordHelp": "Je stelt nu een tijdelijk wachtwoord in en geeft het rechtstreeks aan hen door."
+        "passwordHelp": "U stelt nu een tijdelijk wachtwoord in en geeft dit rechtstreeks aan hen door."
       },
       "password": {
         "label": "Tijdelijk wachtwoord",
@@ -457,15 +457,15 @@
     },
     "unsaved": {
       "title": "Onopgeslagen teamlid",
-      "description": "Sla het huidige teamlid op voordat je een nieuw toevoegt."
+      "description": "Sla het huidige teamlid op voordat u een nieuw toevoegt."
     },
     "limitReached": {
       "title": "Gebruikerslimiet bereikt",
-      "description": "Je hebt het maximale aantal gebruikers voor je huidige abonnement bereikt. Neem contact op met support om je limiet te verhogen."
+      "description": "U heeft het maximale aantal gebruikers voor uw huidige abonnement bereikt. Neem contact op met support om uw limiet te verhogen."
     },
     "optional": {
       "label": "Optioneel:",
-      "description": "Je kunt deze stap overslaan en teamleden altijd uitnodigen of beheren via Instellingen > Gebruikers."
+      "description": "U kunt deze stap overslaan en teamleden altijd uitnodigen of beheren via Instellingen > Gebruikers."
     }
   },
   "ticketingConfigStep": {
@@ -569,7 +569,7 @@
       },
       "title": "Categorieën",
       "requiresBoard": "(bord vereist)",
-      "description": "Categorieën helpen tickets te organiseren per soort probleem of verzoek. Je kunt bovenliggende categorieën maken met subcategorieën voor betere organisatie. Voorbeelden zijn Technische ondersteuning (met subcategorieën zoals Hardware, Software, Netwerk) of Serviceverzoeken.",
+      "description": "Categorieën helpen tickets te organiseren per soort probleem of verzoek. U kunt bovenliggende categorieën maken met subcategorieën voor betere organisatie. Voorbeelden zijn Technische ondersteuning (met subcategorieën zoals Hardware, Software, Netwerk) of Serviceverzoeken.",
       "actions": {
         "import": "Importeren uit standaard",
         "add": "Nieuwe categorie toevoegen",
@@ -622,10 +622,10 @@
         "delete": "Status verwijderen mislukt.",
         "defaultRequired": "Er moet minstens één status als standaard zijn ingesteld",
         "closedCannotBeDefault": "Gesloten statussen kunnen niet als standaard worden ingesteld",
-        "selectBoardForDefault": "Selecteer of maak een bord aan voordat je statusstandaarden wijzigt.",
+        "selectBoardForDefault": "Selecteer of maak een bord aan voordat u statusstandaarden wijzigt.",
         "defaultUpdate": "Standaardstatus instellen mislukt",
         "duplicate": "Status bestaat al",
-        "selectBoardForAdd": "Selecteer of maak een bord aan voordat je statussen toevoegt.",
+        "selectBoardForAdd": "Selecteer of maak een bord aan voordat u statussen toevoegt.",
         "create": "Status aanmaken mislukt. Probeer het opnieuw."
       },
       "title": "Statussen",
@@ -637,7 +637,7 @@
           "placeholder": "Selecteer bord"
         }
       },
-      "noBoardWarning": "Maak of importeer een bord voordat je statussen configureert. Elk bord heeft zijn eigen open standaardstatus nodig.",
+      "noBoardWarning": "Maak of importeer een bord voordat u statussen configureert. Elk bord heeft zijn eigen open standaardstatus nodig.",
       "actions": {
         "import": "Importeren uit standaard",
         "add": "Nieuwe status toevoegen",
@@ -693,7 +693,7 @@
         "removeTitle": "Status verwijderen"
       },
       "empty": {
-        "forBoard": "{{boardName}} heeft nog geen statussen. Voeg minstens één open standaardstatus toe of importeer deze voordat je onboarding afrondt.",
+        "forBoard": "{{boardName}} heeft nog geen statussen. Voeg minstens één open standaardstatus toe of importeer deze voordat u onboarding afrondt.",
         "noBoardSelected": "Selecteer een bord om de statussen te configureren."
       }
     },
@@ -770,7 +770,7 @@
     },
     "header": {
       "title": "Ticketconfiguratie instellen",
-      "description": "Stel je supportsysteem voor tickets in. Importeer standaardconfiguraties of maak je eigen configuratie aan."
+      "description": "Stel uw supportsysteem voor tickets in. Importeer standaardconfiguraties of maak uw eigen configuratie aan."
     },
     "loading": {
       "description": "Bestaande configuratie laden..."
@@ -881,11 +881,11 @@
     "supportEmail": {
       "label": "Support-e-mail",
       "placeholder": "support@jouwitbedrijf.nl",
-      "help": "Opgeslagen als je supportcontactadres — zichtbaar voor klanten in het portaal en gebruikt in afspraak-e-mails. Om inkomende e-mail automatisch in tickets om te zetten, koppel je later een mailbox via Instellingen > E-mail."
+      "help": "Opgeslagen als uw supportadres — zichtbaar voor klanten in het portaal en gebruikt in afspraak-e-mails. Koppel later via Instellingen > E-mail een mailbox om inkomende e-mail automatisch in tickets om te zetten."
     },
     "finalRequirement": {
       "label": "Verplicht:",
-      "description": "Configureer minstens één bord en één prioriteit om de installatie af te ronden. Importeer standaardconfiguraties om je ticketsysteem snel in te richten."
+      "description": "Configureer minstens één bord en één prioriteit om de installatie af te ronden. Importeer standaardconfiguraties om uw ticketsysteem snel in te richten."
     }
   },
   "teamSetup": {

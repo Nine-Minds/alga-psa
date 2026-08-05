@@ -254,8 +254,8 @@
       "none": "żaden"
     },
     "bucketOverlay": {
-      "recommendHours": "Polecam kubeł godzin",
-      "recommendUsage": "Polecam kubeł konsumpcji"
+      "recommendHours": "Zalecaj pakiet godzin",
+      "recommendUsage": "Zalecaj pakiet godzin rozliczany według zużycia"
     }
   },
   "hourlyConfig": {

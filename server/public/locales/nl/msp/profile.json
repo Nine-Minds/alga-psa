@@ -152,7 +152,7 @@
         "error": {
           "assignFailed": "Toewijzen van rol mislukt. Probeer het opnieuw.",
           "removeFailed": "Verwijderen van rol mislukt. Probeer het opnieuw.",
-          "permissionDenied": "Je hebt geen toestemming om gebruikersrollen te wijzigen."
+          "permissionDenied": "U heeft geen toestemming om gebruikersrollen te wijzigen."
         }
       }
     },
@@ -669,7 +669,7 @@
         "title": "Entra attribute mapping",
         "description": "Keep Entra defaults for userName, externalId, active, names, title, and emails. Only active controls Alga access.",
         "match": "Initial match",
-        "matchValue": "Exact primary email only",
+        "matchValue": "Alleen exact primair e-mailadres",
         "scope": "Provisioning scope",
         "scopeValue": "Assigned users and groups",
         "unsupported": "Not supported",
@@ -681,7 +681,7 @@
         "directory": "Directory identity",
         "state": "State",
         "action": "Action",
-        "drift": "Email drift",
+        "drift": "Afwijkend e-mailadres",
         "active": "Upstream active",
         "inactive": "Upstream inactive",
         "accessOn": "Access enabled",

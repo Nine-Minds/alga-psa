@@ -314,7 +314,7 @@
       "heading": "Servizi basati sull'utilizzo",
       "ratePerUnitLabel": "Tariffa per unità",
       "rateSummary": "{{rate}}/{{unit}}",
-      "recommendBucketLabel": "Consiglia il secchio di consumo",
+      "recommendBucketLabel": "Consiglia il pacchetto ore da consumare",
       "searchServicesPlaceholder": "Cerca servizi...",
       "serviceLabel": "Servizio {{index}}",
       "servicesHeading": "Servizi basati sull'utilizzo",
@@ -341,7 +341,7 @@
       "labels": {
         "allowRollover": "Consentire il rollover di {{units}} non utilizzato",
         "overageRatePerUnit": "Tasso di eccedenza per {{unit}}",
-        "totalInBucket": "{{units}} totale nel secchio"
+        "totalInBucket": "{{units}} totali nel pacchetto ore"
       },
       "placeholders": {
         "overageRate": "Inserisci la tariffa eccedente",
@@ -350,7 +350,7 @@
       "tooltips": {
         "allowRollover": "Se selezionato, {{units}} non utilizzato da un periodo può essere utilizzato in quello successivo.",
         "overageRatePerUnit": "La tariffa applicata per ogni {{unit}} utilizzato oltre l'importo incluso. (ad esempio, $)",
-        "totalInBucket": "Il numero totale di {{units}} inclusi in questo bucket per periodo di fatturazione."
+        "totalInBucket": "Il numero totale di {{units}} inclusi nel pacchetto ore per periodo di fatturazione."
       },
       "units": {
         "defaultPlural": "Unità",
@@ -776,7 +776,7 @@
       },
       "loadingServices": "Caricamento servizi...",
       "ratePerUnitLabel": "Tariffa per unità:",
-      "recommendBucketLabel": "Consiglia il secchio di consumo",
+      "recommendBucketLabel": "Consiglia il pacchetto ore da consumare",
       "serviceMetadata": "Tipo di servizio: {{type}} | Metodo: {{method}}",
       "serviceToAddMetadata": "Tipo di servizio: {{type}} | Metodo: {{method}} | Tasso predefinito: {{rate}} | Unità: {{unit}}",
       "toast": {

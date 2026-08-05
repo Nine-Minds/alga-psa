@@ -255,7 +255,7 @@
     },
     "bucketOverlay": {
       "recommendHours": "Recommander une tranche d'heures",
-      "recommendUsage": "Recommander un seau de consommation"
+      "recommendUsage": "Recommander un forfait d'heures pour la consommation"
     }
   },
   "hourlyConfig": {
@@ -423,7 +423,7 @@
       "overageRate": {
         "label": "Taux de dépassement",
         "placeholder": "Saisir le taux de dépassement",
-        "help": "Le taux horaire facturé pour les heures utilisées au-delà de la limite du bucket",
+        "help": "Le taux horaire facturé pour les heures consommées au-delà de la limite du forfait d'heures",
         "errorNegative": "Le taux de dépassement ne peut pas être négatif"
       },
       "allowRollover": "Autoriser le report des heures inutilisées à la période suivante"

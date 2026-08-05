@@ -167,7 +167,7 @@
         },
         "client": {
           "label": "Klant",
-          "description": "Voeg een nieuwe klant toe aan je systeem"
+          "description": "Voeg een nieuwe klant toe aan uw systeem"
         },
         "contact": {
           "label": "Contact",
@@ -179,7 +179,7 @@
         },
         "asset": {
           "label": "Asset",
-          "description": "Voeg een nieuw apparaat toe aan je werkruimte"
+          "description": "Voeg een nieuw apparaat toe aan uw werkruimte"
         },
         "service": {
           "label": "Dienst",
@@ -187,7 +187,7 @@
         },
         "product": {
           "label": "Product",
-          "description": "Voeg een nieuw product toe aan je catalogus"
+          "description": "Voeg een nieuw product toe aan uw catalogus"
         }
       }
     },
@@ -226,13 +226,13 @@
     "aiInterrupt": {
       "navigate": {
         "title": "Pagina verlaten en AI-antwoord annuleren?",
-        "message": "Er is nog een AI-antwoord of toolactie bezig. Als je deze pagina nu verlaat, wordt die geannuleerd.",
+        "message": "Er is nog een AI-antwoord of toolactie bezig. Als u deze pagina nu verlaat, wordt die geannuleerd.",
         "confirm": "Pagina verlaten",
         "cancel": "Op pagina blijven"
       },
       "closeChat": {
         "title": "Chat sluiten en AI-antwoord annuleren?",
-        "message": "Er is nog een AI-antwoord of toolactie bezig. Als je de chat nu sluit, wordt die geannuleerd.",
+        "message": "Er is nog een AI-antwoord of toolactie bezig. Als u de chat nu sluit, wordt die geannuleerd.",
         "confirm": "Chat sluiten",
         "cancel": "Chat open houden"
       }
@@ -379,8 +379,8 @@
     }
   },
   "onboardingRedirect": {
-    "title": "We brengen je naar de configuratie",
-    "description": "Je werkruimte heeft een korte configuratie nodig voordat je het dashboard kunt gebruiken.",
+    "title": "We brengen u naar de configuratie",
+    "description": "Uw werkruimte heeft een korte configuratie nodig voordat u het dashboard kunt gebruiken.",
     "action": "Doorgaan naar configuratie"
   },
   "marketing": {
@@ -431,7 +431,7 @@
       "skip": "Overslaan",
       "reschedule": "Herplannen",
       "emptyTitle": "Nog geen berichten",
-      "emptyBody": "Maak een bericht aan vanuit je contentbibliotheek en het verschijnt in deze wachtrij.",
+      "emptyBody": "Maak een bericht aan vanuit uw contentbibliotheek en het verschijnt in deze wachtrij.",
       "status": {
         "scheduled": "gepland",
         "awaiting-manual-publish": "wacht op publicatie",
@@ -488,7 +488,7 @@
       "title": "Content",
       "new": "Nieuwe content",
       "emptyTitle": "Nog geen content",
-      "emptyBody": "Schrijf de berichten die je wilt publiceren en plan ze daarna in via de pagina Berichten.",
+      "emptyBody": "Schrijf de berichten die u wilt publiceren en plan ze daarna in via de pagina Berichten.",
       "columns": {
         "title": "Titel",
         "campaign": "Campagne",
@@ -523,7 +523,7 @@
       "new": "Nieuwe campagne",
       "view": "Bekijken",
       "emptyTitle": "Nog geen campagnes",
-      "emptyBody": "Campagnes groeperen berichten, content, formulieren en sequenties, zodat je de funnel op één plek ziet.",
+      "emptyBody": "Campagnes groeperen berichten, content, formulieren en sequenties, zodat u de funnel op één plek ziet.",
       "status": {
         "draft": "concept",
         "active": "actief",
@@ -690,7 +690,7 @@
       "title": "Kanalen",
       "new": "Nieuw kanaal",
       "emptyTitle": "Nog geen kanalen",
-      "emptyBody": "Kanalen zijn de plekken waar je publiceert — een LinkedIn-profiel, een YouTube-kanaal, een blog.",
+      "emptyBody": "Kanalen zijn de plekken waar u publiceert — een LinkedIn-profiel, een YouTube-kanaal, een blog.",
       "columns": {
         "name": "Naam",
         "platform": "Platform",
@@ -731,7 +731,7 @@
       "disabledTitle": "Marketing is niet ingeschakeld",
       "disabledDescription": "De marketingmodule is niet ingeschakeld voor dit account.",
       "permissionTitle": "Geen toegang tot Marketing",
-      "permissionDescription": "Je hebt geen rechten om marketing te bekijken. Vraag een beheerder om het leesrecht voor marketing.",
+      "permissionDescription": "U heeft geen rechten om marketing te bekijken. Vraag een beheerder om het leesrecht voor marketing.",
       "backToDashboard": "Ga naar dashboard"
     }
   }

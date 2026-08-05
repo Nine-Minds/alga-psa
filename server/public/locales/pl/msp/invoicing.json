@@ -336,7 +336,7 @@
       "generate": "Wygeneruj fakturę",
       "saveChanges": "Zapisz zmiany",
       "processing": "Przetwarzanie...",
-      "generateSalesOrderInvoice": "Generate Sales Order Invoice",
+      "generateSalesOrderInvoice": "Utwórz fakturę z zamówienia sprzedaży",
       "clearSalesOrderSource": "Clear sales order source"
     },
     "labels": {
@@ -369,9 +369,9 @@
       "INVOICE_NUMBER_CONFLICT": "Ten numer faktury jest już używany.",
       "PERMISSION_DENIED": "Nie masz uprawnień do tworzenia ani aktualizowania tej faktury.",
       "UNEXPECTED": "Wystąpił błąd podczas generowania faktury. Kontaktując się z pomocą techniczną, podaj numer referencyjny {{ref}}.",
-      "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
-      "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
-      "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+      "salesOrderGenerateFailed": "Nie udało się utworzyć faktury z zamówienia sprzedaży.",
+      "salesOrderNothingToInvoice": "To zamówienie sprzedaży nie zawiera już niczego do zafakturowania.",
+      "salesOrderNotInvoiceable": "Nie można już wystawić faktury dla tego zamówienia sprzedaży."
     },
     "warnings": {
       "noBillingEmail": "Ten klient nie ma adresu e-mail do rozliczeń. Ustaw adres e-mail w lokalizacji rozliczeniowej przed wygenerowaniem faktury."
@@ -381,7 +381,7 @@
       "retry": "Spróbuj ponownie"
     },
     "salesOrderContext": {
-      "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
+      "summary": "Z {{lineCount}} pozycji zamówienia można zafakturować {{quantity}} elementów. Ta wersja robocza zostanie powiązana z zamówieniem sprzedaży."
     }
   },
   "draftsTab": {
@@ -704,7 +704,7 @@
       "reverseDraft": "Odwrotny projekt",
       "sendEmail": "Wyślij e-mail",
       "unfinalize": "Cofnij finalizację",
-      "viewSourceQuote": "Wyświetl cytat źródłowy",
+      "viewSourceQuote": "Wyświetl ofertę źródłową",
       "applyCredit": "Zastosuj kredyt",
       "driftAccept": "Zaakceptuj wersję z QuickBooks",
       "driftReexport": "Eksportuj ponownie do QuickBooks",
@@ -1741,7 +1741,7 @@
     },
     "actions": {
       "approve": "Approve",
-      "approveInvoiceNow": "Approve & invoice now",
+      "approveInvoiceNow": "Zatwierdź i wystaw fakturę",
       "hold": "Hold",
       "cancel": "Cancel",
       "approveSelected": "Approve selected",
@@ -1761,7 +1761,7 @@
     "errors": {
       "loadFailed": "Failed to load the project billing review queue. Please try again.",
       "approveFailed": "Failed to approve the entry.",
-      "invoiceFailed": "Failed to approve and invoice the entry.",
+      "invoiceFailed": "Nie udało się zatwierdzić wpisu ani wystawić za niego faktury.",
       "holdFailed": "Failed to place the entry on hold.",
       "cancelFailed": "Failed to cancel the entry."
     },

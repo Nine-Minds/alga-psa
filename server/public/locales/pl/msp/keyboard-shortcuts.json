@@ -169,8 +169,8 @@
         "description": "Przejdź do strony klientów."
       },
       "goDashboard": {
-        "label": "Go to dashboard",
-        "description": "Navigate to the dashboard."
+        "label": "Przejdź do pulpitu",
+        "description": "Przejdź do pulpitu."
       },
       "goProjects": {
         "label": "Go to projects",

@@ -559,22 +559,22 @@
         },
         "schedule": {
           "cadence": {
-            "10080": "wöchentlich",
-            "1440": "täglich",
-            "240": "alle 4 Stunden",
             "60": "stündlich",
-            "720": "alle 12 Stunden"
+            "240": "alle 4 Stunden",
+            "720": "alle 12 Stunden",
+            "1440": "täglich",
+            "10080": "wöchentlich"
           },
           "changeAction": "Zeitplan ändern",
           "description": "Wenn aktiviert, synchronisiert Alga jeden zugeordneten Client in dieser Taktung. Beim Ausschalten entfallen geplante Läufe; manuell können Sie weiterhin synchronisieren.",
           "enablePrompt": "Der Pilot war erfolgreich. Aktivieren Sie die automatische Synchronisierung, damit Kontakte ohne manuelle Läufe aktuell bleiben.",
           "intervalLabel": "Ausführen alle",
           "intervals": {
-            "10080": "Woche",
-            "1440": "Tag",
-            "240": "4 Stunden",
             "60": "Stunde",
-            "720": "12 Stunden"
+            "240": "4 Stunden",
+            "720": "12 Stunden",
+            "1440": "Tag",
+            "10080": "Woche"
           },
           "pause": "Pausieren",
           "pauseHint": "Pausiert. Zum Anwenden speichern.",
@@ -1616,11 +1616,11 @@
         "bindings": {
           "summaryBound": "Current: {{profile}}.",
           "summaryNone": "Derzeit ist kein Microsoft-Profil an {{consumer}} gebunden.",
-          "summaryUnavailable": "{{consumer}} ist an ein nicht verfügbares Profil gebunden.",
+          "summaryUnavailable": "Die ausgewählte App ist nicht verfügbar.",
           "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
           "warningNoBinding": "Für {{consumer}} ist noch keine Bindung konfiguriert.",
           "warningNotReady": "{{consumer}} ist an {{profile}} gebunden, aber dieses Profil benötigt noch eine Konfiguration.",
-          "warningProfileMissing": "{{consumer}} ist an ein Profil gebunden, das nicht mehr verfügbar ist. Binden Sie es an ein aktives Profil neu.",
+          "warningProfileMissing": "Die ausgewählte Microsoft-App ist nicht mehr verfügbar. Wählen Sie eine andere App.",
           "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
           "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
           "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."

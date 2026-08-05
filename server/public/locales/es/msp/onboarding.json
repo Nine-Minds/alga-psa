@@ -226,7 +226,7 @@
       },
       "defaultCurrency": {
         "label": "Moneda predeterminada *",
-        "description": "Esta moneda se utilizará como predeterminada en toda la facturación: servicios, contratos, presupuestos y facturas. Puede sobrescribirla por cliente más tarde."
+        "description": "Esta moneda se utilizará de forma predeterminada en toda la facturación: servicios, contratos, cotizaciones y facturas. Puede cambiarla por cliente más adelante."
       }
     },
     "billingMethods": {

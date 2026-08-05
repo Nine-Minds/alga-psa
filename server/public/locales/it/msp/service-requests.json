@@ -104,7 +104,7 @@
       "ticketRouting": {
         "title": "Configurazione dell'instradamento dei ticket",
         "board": "Bacheca",
-        "boardPlaceholder": "Seleziona Board",
+        "boardPlaceholder": "Seleziona bacheca",
         "status": "Stato",
         "statusPlaceholder": "Seleziona stato",
         "assignedUser": "Utente assegnato",

@@ -124,7 +124,7 @@
     "multiDeleteFailedSummary_other": "{{count}} klanten konden niet worden verwijderd",
     "inactiveAlternative": "U kunt deze klant in plaats daarvan als inactief markeren. Inactieve klanten zijn voor de meeste weergaven verborgen, maar behouden al hun gegevens en kunnen later als actief worden gemarkeerd.",
     "table": {
-      "client": "Cliënt"
+      "client": "Klant"
     },
     "entities": {
       "client_one": "klant",
@@ -145,8 +145,8 @@
       "documents": "documenten",
       "interaction": "interactie",
       "interactions": "interacties",
-      "asset": "bezit",
-      "assets": "activa",
+      "asset": "asset",
+      "assets": "assets",
       "serviceUsageRecord": "servicegebruiksrecord",
       "serviceUsageRecords": "servicegebruiksrecords",
       "bucketUsageRecord": "record voor emmergebruik",
@@ -193,7 +193,7 @@
     "addTicket": "Ticket toevoegen",
     "details": "Details",
     "contacts": "Contacten",
-    "assets": "Activa",
+    "assets": "Assets",
     "documents": "Documenten",
     "billing": "Facturering",
     "interactions": "Interacties",
@@ -207,12 +207,12 @@
     "accountManager": "Accountmanager",
     "clientName": "Klantnaam",
     "clientType": "Klanttype",
-    "industry": "Industrie",
+    "industry": "Branche",
     "companySize": "Bedrijfsgrootte",
     "annualRevenue": "Jaarlijkse omzet",
     "lastContactDate": "Laatste contactdatum",
     "paymentTerms": "Betalingsvoorwaarden",
-    "parentClient": "Ouder Cliënt",
+    "parentClient": "Bovenliggende klant",
     "defaultContact": "Standaardcontactpersoon",
     "providerDefault": "Standaard van de provider",
     "inboundEmailDomains": "Inkomende e-maildomeinen",
@@ -312,7 +312,7 @@
     "csatEmpty": "Nog geen enquêtereacties.",
     "discardCancel": "Verder bewerken",
     "discardConfirm": "Wijzigingen verwerpen",
-    "discardMessage": "Je hebt niet-opgeslagen wijzigingen in het klantrecord. Sluiten en verwerpen?",
+    "discardMessage": "U heeft niet-opgeslagen wijzigingen in het klantrecord. Sluiten en verwerpen?",
     "discardTitle": "Niet-opgeslagen wijzigingen",
     "documents": {
       "more": "+{{count}} meer",
@@ -460,7 +460,7 @@
     "websiteUrl": "Website-URL",
     "accountManager": "Accountmanager",
     "selectAccountManager": "Selecteer Accountmanager",
-    "industry": "Industrie",
+    "industry": "Branche",
     "notes": "Opmerkingen",
     "notesPlaceholder": "Voeg eventuele eerste opmerkingen toe (optioneel)",
     "address": "Adres",
@@ -502,7 +502,7 @@
     "viewClient": "Klant bekijken",
     "addAnother": "Voeg nog een toe",
     "createdMessage": "\"{{name}}\" is succesvol aangemaakt.",
-    "unknownClient": "Cliënt"
+    "unknownClient": "Klant"
   },
   "clientLocations": {
     "title": "Klantlocatiemanager",
@@ -696,7 +696,7 @@
     "confirmSave": "Bevestigen en opslaan",
     "reviewChanges": "Wijzigingen bekijken",
     "impact": {
-      "title": "Controleer voordat je toepast",
+      "title": "Controleer voordat u toepast",
       "periods": "{{count}} aankomende factureringsperiode(n) over {{lines}} contractregel(s) worden opnieuw opgebouwd volgens het nieuwe schema.",
       "from": "Opnieuw opgebouwd vanaf {{date}}.",
       "billedPreserved": "Reeds gefactureerde kosten blijven behouden en veranderen niet.",
@@ -842,8 +842,8 @@
       "description": "Deze voorbeelden illustreren hoe het ondubbelzinnig maken van contractregels werkt in algemene scenario's voor deze klant.",
       "scenario1Description": "Wanneer een dienst voor deze klant zowel in een bucketcontractregel als in een standaardcontractregel verschijnt:",
       "scenario1Item1": "De bucketcontractregel wordt standaard geselecteerd",
-      "scenario1Item2": "Tijdsinvoer en gebruik verbruiken het in de bucket inbegrepen tegoed en gaan vervolgens op dezelfde bucketcontractregel verder als overschrijding tegen het ingestelde overschrijdingstarief",
-      "scenario1Item3": "De facturatie schakelt niet automatisch over naar de standaardcontractregel wanneer de bucket op is",
+      "scenario1Item2": "Tijdregistraties en gebruik worden afgeboekt van het inbegrepen tegoed van de urenbundel. Daarna worden overschrijdingen tegen het ingestelde tarief op dezelfde urenbundelcontractregel gefactureerd",
+      "scenario1Item3": "De facturatie schakelt niet automatisch over naar de standaardcontractregel wanneer de urenbundel op is",
       "scenario1Item4": "Gebruikers kunnen deze standaard handmatig overschrijven door tijdens de tijdinvoer een andere contractregel te selecteren",
       "scenario1Title": "Scenario 1: Bucketplan + Standaardplan",
       "scenario2Description": "Wanneer een dienst voorkomt in meerdere standaardcontractregels voor deze klant:",
@@ -852,10 +852,10 @@
       "scenario2Item3": "Overweeg om deze contractregels te consolideren om verwarring te voorkomen",
       "scenario2Title": "Scenario 2: Meerdere standaardplannen",
       "scenario3Description": "Wanneer een dienst in meerdere bucketcontractregels voor deze klant voorkomt:",
-      "scenario3Item1": "Tijdens de tijdinvoer wordt gebruikers gevraagd te selecteren op welke bucket ze willen factureren",
-      "scenario3Item2": "Als er expliciet geen bucket is geselecteerd, stopt de facturering met een dubbelzinnigheidsfout die een keuze van de gebruiker vereist",
-      "scenario3Item3": "Teams kunnen interne richtlijnen definiëren voor het kiezen tussen overlappende buckets",
-      "scenario3Title": "Scenario 3: Plannen voor meerdere buckets",
+      "scenario3Item1": "Bij het registreren van tijd wordt gebruikers gevraagd op welke urenbundel de tijd moet worden gefactureerd",
+      "scenario3Item2": "Als niet expliciet een urenbundel is geselecteerd, stopt de facturering met een foutmelding die de gebruiker verplicht een keuze te maken",
+      "scenario3Item3": "Teams kunnen interne richtlijnen definiëren voor het kiezen tussen overlappende urenbundels",
+      "scenario3Title": "Scenario 3: meerdere urenbundelplannen",
       "title": "Veel voorkomende ondubbelzinnigheidsscenario's"
     },
     "tabs": {
@@ -945,7 +945,7 @@
     "saveError": "Kan de taalvoorkeur van de client niet bijwerken",
     "cardDescription": "Stel de standaardtaal in voor alle contacten in {{clientName}}.",
     "saveSuccess": "Standaardtaal voor {{clientName}}-contacten bijgewerkt naar {{language}}",
-    "thisClient": "cliënt"
+    "thisClient": "klant"
   },
   "clientQuickView": {
     "notFound": "Klant niet gevonden",
@@ -1056,7 +1056,7 @@
     "clientFields": "Klantvelden:",
     "locationFields": "Locatievelden:",
     "requiredHelp": "* Vereiste velden moeten in kaart worden gebracht voordat het importeren kan doorgaan",
-    "recordsPrefix": "Je importeert",
+    "recordsPrefix": "U importeert",
     "recordsSuffix": "records. De verwerking kan even duren.",
     "validReady": "Geldig - Klaar om te importeren",
     "invalidHasErrors": "Ongeldig - bevat fouten",

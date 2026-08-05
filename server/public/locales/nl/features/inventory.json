@@ -439,7 +439,7 @@
     "columns": {
       "aiVerdict": "AI-oordeel",
       "assignedTo": "Toegewezen aan",
-      "board": "Board",
+      "board": "Bord",
       "category": "Categorie",
       "client": "Klant",
       "closed": "Gesloten",
@@ -453,9 +453,9 @@
       "reopened": "Heropend."
     },
     "filters": {
-      "allBoards": "Alle boards",
+      "allBoards": "Alle borden",
       "allCategories": "Alle categorieën",
-      "board": "Board",
+      "board": "Bord",
       "category": "Categorie"
     },
     "funnel": {

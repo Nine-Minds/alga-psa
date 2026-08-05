@@ -2206,10 +2206,10 @@
   },
   "settings": {
     "assetTypes": {
-      "tab": "Risorse",
-      "title": "Tipi di risorsa",
-      "description": "Gestisci i tipi di risorsa disponibili nel modulo risorse. I tipi personalizzati hanno uno schema di campi che determina i loro moduli di creazione/modifica.",
-      "loading": "Caricamento dei tipi di risorsa...",
+      "tab": "Asset",
+      "title": "Tipi di asset",
+      "description": "Gestisci i tipi di asset disponibili nel modulo asset. I tipi personalizzati hanno uno schema di campi che determina i loro moduli di creazione/modifica.",
+      "loading": "Caricamento dei tipi di asset...",
       "table": {
         "name": "Nome",
         "builtin": "Integrato",
@@ -2220,7 +2220,7 @@
         "openMenu": "Apri menu"
       },
       "actions": {
-        "addType": "Aggiungi tipo di risorsa",
+        "addType": "Aggiungi tipo di asset",
         "edit": "Modifica",
         "delete": "Elimina",
         "cancel": "Annulla",
@@ -2229,8 +2229,8 @@
         "confirmDelete": "Elimina"
       },
       "dialog": {
-        "createTitle": "Aggiungi tipo di risorsa",
-        "editTitle": "Modifica tipo di risorsa",
+        "createTitle": "Aggiungi tipo di asset",
+        "editTitle": "Modifica tipo di asset",
         "nameLabel": "Nome",
         "namePlaceholder": "es. Firewall",
         "displayOrderLabel": "Ordine di visualizzazione",
@@ -2238,26 +2238,26 @@
         "builtinSchemaHint": "I tipi integrati usano moduli fissi gestiti da AlgaPSA, quindi il loro schema di campi non può essere modificato. Puoi comunque rinominare il tipo o cambiarne l'icona."
       },
       "deleteDialog": {
-        "title": "Elimina tipo di risorsa",
-        "message": "Questa operazione rimuove definitivamente \"{{name}}\" dal registro dei tipi di risorsa."
+        "title": "Elimina tipo di asset",
+        "message": "Questa operazione rimuove definitivamente \"{{name}}\" dal registro dei tipi di asset."
       },
       "messages": {
-        "created": "Tipo di risorsa creato",
-        "updated": "Tipo di risorsa aggiornato",
-        "deleted": "Tipo di risorsa eliminato"
+        "created": "Tipo di asset creato",
+        "updated": "Tipo di asset aggiornato",
+        "deleted": "Tipo di asset eliminato"
       },
       "errors": {
-        "fetchFailed": "Impossibile caricare i tipi di risorsa.",
-        "saveFailed": "Impossibile salvare il tipo di risorsa.",
-        "deleteFailed": "Impossibile eliminare il tipo di risorsa.",
-        "invalidName": "Inserisci un nome per questo tipo di risorsa.",
+        "fetchFailed": "Impossibile caricare i tipi di asset.",
+        "saveFailed": "Impossibile salvare il tipo di asset.",
+        "deleteFailed": "Impossibile eliminare il tipo di asset.",
+        "invalidName": "Inserisci un nome per questo tipo di asset.",
         "invalidSchema": "Lo schema di campi non è valido. Correggi i campi evidenziati e riprova.",
         "reservedSlug": "L'identificatore \"{{slug}}\" è riservato a un tipo integrato. Scegli un altro nome.",
-        "slugConflict": "Esiste già un tipo di risorsa con l'identificatore \"{{slug}}\".",
-        "notFound": "Questo tipo di risorsa non esiste più.",
+        "slugConflict": "Esiste già un tipo di asset con l'identificatore \"{{slug}}\".",
+        "notFound": "Questo tipo di asset non esiste più.",
         "builtinImmutable": "I tipi integrati consentono solo la modifica di nome e icona.",
         "builtinUndeletable": "I tipi integrati non possono essere eliminati.",
-        "inUse": "Questo tipo è ancora utilizzato da {{assetCount}} risorsa/e. Riassegna quelle risorse prima di eliminarlo.",
+        "inUse": "Questo tipo è ancora utilizzato da {{assetCount}} asset. Riassegna quegli asset prima di eliminarlo.",
         "unknown": "Qualcosa è andato storto."
       },
       "editor": {

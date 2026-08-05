@@ -339,7 +339,7 @@
     "closeFailed": "Nie udało się zamknąć zgłoszenia",
     "scheduleVisitFailed": "Nie udało się otworzyć harmonogramu",
     "loadCommentsFailed": "Failed to load comments",
-    "updateTicketFailed": "Failed to update ticket"
+    "updateTicketFailed": "Nie udało się zaktualizować zgłoszenia"
   },
   "conversation": {
     "comments": "Komentarze",
@@ -588,8 +588,8 @@
     "bundleCrossClientWarning": "To połączenie obejmuje wielu klientów. Zostaniesz poproszony o potwierdzenie przed połączeniem.",
     "bundleMasterLabel": "Wybierz zgłoszenie nadrzędne",
     "bundleMasterPlaceholder": "Wybierz zgłoszenie nadrzędne...",
-    "bundleSyncUpdates": "Synchronizuj aktualizacje z nadrzędnego do podrzędnych (publiczne odpowiedzi + zmiany przepływu pracy)",
-    "bundleSyncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Pola przepływu pracy są domyślnie zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
+    "bundleSyncUpdates": "Synchronizuj aktualizacje z nadrzędnego do podrzędnych (publiczne odpowiedzi + zmiany workflow)",
+    "bundleSyncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Pola workflow są domyślnie zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
     "bundleSelectAtLeastTwo": "Wybierz co najmniej dwa zgłoszenia do połączenia.",
     "bundleSelectMaster": "Wybierz zgłoszenie nadrzędne.",
     "bundleSuccess": "Zgłoszenia połączone",
@@ -661,9 +661,9 @@
       "crossClientWarning": "To połączenie obejmuje wielu klientów. Zostaniesz poproszony o potwierdzenie przed połączeniem.",
       "masterTicket": "Wybierz zgłoszenie nadrzędne",
       "selectMasterTicket": "Wybierz zgłoszenie nadrzędne...",
-      "syncUpdates": "Synchronizuj aktualizacje z nadrzędnego do podrzędnych (publiczne odpowiedzi + zmiany przepływu pracy)",
-      "syncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Pola przepływu pracy są domyślnie zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
-      "childrenDescription": "Podrzędne zachowują swój obecny status; pola przepływu pracy są zablokowane na zgłoszeniach podrzędnych. Odpowiedzi przychodzące na podrzędne są wyświetlane poniżej jako tylko do odczytu.",
+      "syncUpdates": "Synchronizuj aktualizacje z nadrzędnego do podrzędnych (publiczne odpowiedzi + zmiany workflow)",
+      "syncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Pola workflow są domyślnie zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
+      "childrenDescription": "Podrzędne zachowują swój obecny status; pola workflow są zablokowane na zgłoszeniach podrzędnych. Odpowiedzi przychodzące na podrzędne są wyświetlane poniżej jako tylko do odczytu.",
       "checkingMasters": "Sprawdzanie istniejących połączeń...",
       "existingMasterSuffix": "(istniejące zgłoszenie nadrzędne)",
       "existingMasterLocked": "Jedno z wybranych zgłoszeń jest już zgłoszeniem nadrzędnym. Zostanie użyte jako nadrzędne; pozostałe zostaną dodane jako podrzędne.",

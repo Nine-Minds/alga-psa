@@ -104,7 +104,7 @@
       "ticketRouting": {
         "title": "Configuratie ticketrouting",
         "board": "Bord",
-        "boardPlaceholder": "Board selecteren",
+        "boardPlaceholder": "Selecteer een bord",
         "status": "Status",
         "statusPlaceholder": "Status selecteren",
         "assignedUser": "Toegewezen gebruiker",

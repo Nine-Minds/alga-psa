@@ -796,7 +796,7 @@
           "reference": "Impossibile caricare le opzioni del trigger. Riprova."
         },
         "noTemplates": "Crea un modello di sondaggio prima di aggiungere i trigger.",
-        "prioritiesMixed": "Le board selezionate utilizzano tipi di priorità diversi. Vengono mostrate tutte le priorità."
+        "prioritiesMixed": "Le bacheche selezionate utilizzano tipi di priorità diversi. Vengono mostrate tutte le priorità."
       },
       "preview": {
         "heading": "Anteprima pagina di risposta",

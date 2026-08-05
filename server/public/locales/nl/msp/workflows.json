@@ -2573,7 +2573,7 @@
         "ticketSearchPlaceholder": "Tickets zoeken op nummer of titel",
         "ticketSelect": "Ticket selecteren",
         "ticketTypeAbove": "Typ hierboven om tickets te zoeken",
-        "selectBoard": "Board selecteren",
+        "selectBoard": "Selecteer een bord",
         "selectClient": "Klant selecteren",
         "selectContact": "Contactpersoon selecteren",
         "selectUser": "Gebruiker selecteren",
@@ -2587,10 +2587,10 @@
       "dependencyHints": {
         "contactClient": "Kies eerst een vaste klant om contactopties te laden.",
         "locationClient": "Kies eerst een vaste klant om locatieopties te laden.",
-        "categoryBoard": "Kies eerst een vast board om categorieopties te laden.",
-        "statusBoard": "Kies eerst een vast board om statusopties te laden.",
+        "categoryBoard": "Kies eerst een vast bord om categorieopties te laden.",
+        "statusBoard": "Kies eerst een vast bord om statusopties te laden.",
         "statusTicket": "Kies eerst een vast ticket om statusopties te laden.",
-        "subcategoryBoard": "Kies eerst een vast board om subcategorieopties te laden.",
+        "subcategoryBoard": "Kies eerst een vast bord om subcategorieopties te laden.",
         "subcategoryCategory": "Kies eerst een vaste categorie om subcategorieopties te laden."
       }
     }

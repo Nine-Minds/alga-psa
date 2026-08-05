@@ -82,17 +82,17 @@
     "clearSelection": "Auswahl aufheben"
   },
   "prompts": {
-    "confirmBulkDelete_one": "Möchtest du wirklich {{count}} Dokument löschen?",
-    "confirmBulkDelete_other": "Möchtest du wirklich {{count}} Dokumente löschen?"
+    "confirmBulkDelete_one": "Möchten Sie wirklich {{count}} Dokument löschen?",
+    "confirmBulkDelete_other": "Möchten Sie wirklich {{count}} Dokumente löschen?"
   },
   "pagination": {
     "perPage": "{{count}} pro Seite"
   },
   "folderSelector": {
     "defaultTitle": "Zielordner auswählen",
-    "defaultDescription": "Wähle aus, wo dieses Dokument gespeichert werden soll",
+    "defaultDescription": "Wählen Sie aus, wo dieses Dokument gespeichert werden soll",
     "newDocumentTitle": "Ordner für neues Dokument auswählen",
-    "newDocumentDescription": "Wähle aus, wo dieses neue Dokument gespeichert werden soll",
+    "newDocumentDescription": "Wählen Sie aus, wo dieses neue Dokument gespeichert werden soll",
     "moveTitle": "Dokument verschieben",
     "moveDescriptionWithName": "Zielordner für \"{{name}}\" auswählen",
     "moveDescription": "Zielordner auswählen",
@@ -180,11 +180,11 @@
       "save": "Dokumentauswahl konnte nicht gespeichert werden"
     },
     "configErrorTitle": "Konfigurationsfehler",
-    "configErrorMessage": "Erforderliche Konfiguration fehlt. Bitte wende dich an den Support."
+    "configErrorMessage": "Erforderliche Konfiguration fehlt. Bitte wenden Sie sich an den Support."
   },
   "uploadSection": {
     "reflectionLabel": "Dokument-Upload",
-    "dragDrop": "Ziehe deine Datei hierher oder",
+    "dragDrop": "Ziehen Sie Ihre Datei hierher oder",
     "browse": "Dateien durchsuchen",
     "uploading": "Wird hochgeladen...",
     "error": "Dokument konnte nicht hochgeladen werden",
@@ -193,7 +193,7 @@
   "folders": {
     "root": "Stammordner",
     "loadFailed": "Ordnerbaum konnte nicht geladen werden",
-    "deleteConfirm": "Möchtest du den Ordner \"{{name}}\" wirklich löschen? Dies funktioniert nur, wenn der Ordner leer ist.",
+    "deleteConfirm": "Möchten Sie den Ordner \"{{name}}\" wirklich löschen? Dies funktioniert nur, wenn der Ordner leer ist.",
     "deleteSuccess": "Ordner \"{{name}}\" wurde erfolgreich gelöscht",
     "deleteFailed": "Ordner konnte nicht gelöscht werden",
     "deleteAction": "Ordner löschen",
@@ -266,7 +266,7 @@
   "documents": {
     "messages": {
       "error": {
-        "noPermission": "Du hast keine Berechtigung, Dokumente anzuzeigen",
+        "noPermission": "Sie haben keine Berechtigung, Dokumente anzuzeigen",
         "invalidData": "Ungültige Dokumentdaten erhalten",
         "fetchFailed": "Dokumente konnten nicht abgerufen werden"
       }

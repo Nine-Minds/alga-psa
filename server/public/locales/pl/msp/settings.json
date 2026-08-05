@@ -814,7 +814,7 @@
         "description": "Utwórz niestandardowe priorytety dla swojej organizacji lub zaimportuj ze standardowych szablonów.",
         "itilNote": "Standardowych priorytetów ITIL nie można edytować ani usuwać.",
         "itilRemovableNote": "Standardowych priorytetów ITIL nie można edytować, ale można je usunąć, gdy żadna tablica nie używa priorytetów ITIL.",
-        "nonItilNote": "Wszystkie priorytety można edytować lub usuwać, aby dopasować je do przepływu pracy."
+        "nonItilNote": "Wszystkie priorytety można edytować lub usuwać, aby dopasować je do workflow."
       },
       "table": {
         "name": "Nazwa",
@@ -1533,10 +1533,10 @@
   },
   "secrets": {
     "title": "Zarządzanie sekretami",
-    "description": "Zarządzanie zaszyfrowanymi sekretami do użycia w przepływach pracy. Sekrety mogą być odwoływane w akcjach przepływów pracy za pomocą składni $secret.",
+    "description": "Zarządzanie zaszyfrowanymi sekretami do użycia w workflow. Sekrety mogą być odwoływane w akcjach workflow za pomocą składni $secret.",
     "list": {
       "title": "Sekrety",
-      "description": "Zarządzanie sekretami do użycia w przepływach pracy. Sekrety są szyfrowane i mogą być odwoływane za pomocą { $secret: \"SECRET_NAME\" }",
+      "description": "Zarządzanie sekretami do użycia w workflow. Sekrety są szyfrowane i mogą być odwoływane za pomocą { $secret: \"SECRET_NAME\" }",
       "search": "Szukaj sekretów...",
       "createSecret": "Utwórz sekret",
       "table": {
@@ -1576,8 +1576,8 @@
       },
       "delete": {
         "confirmation": "Czy na pewno chcą Państwo usunąć sekret {{name}}?",
-        "usedByWorkflows": "Ten sekret jest używany przez {{count}} przepływ(ów) pracy",
-        "usedByWarning": "Usunięcie go spowoduje, że te przepływy pracy nie będą działać, gdy spróbują uzyskać dostęp do tego sekretu.",
+        "usedByWorkflows": "Ten sekret jest używany przez {{count}} workflow",
+        "usedByWarning": "Usunięcie go spowoduje, że te workflow nie będą działać, gdy spróbują uzyskać dostęp do tego sekretu.",
         "cannotUndo": "Tej operacji nie można cofnąć.",
         "typeToConfirm": "Wpisz {{name}}, aby potwierdzić:",
         "placeholder": "Wprowadź nazwę sekretu"
@@ -1865,7 +1865,7 @@
   },
   "ssoBulk": {
     "loading": {
-      "title": "Single Sign-On",
+      "title": "Pojedyncze logowanie",
       "description": "Ładowanie narzędzi do masowego przypisywania SSO..."
     },
     "status": {
@@ -1888,7 +1888,7 @@
       "toggleLabel": "Przełącz automatyczne dopasowywanie SSO"
     },
     "bulk": {
-      "title": "Masowe przypisanie Single Sign-On",
+      "title": "Masowe przypisywanie pojedynczego logowania",
       "description": "Wybierz wewnętrznych użytkowników z listy poniżej i powiąż ich ze skonfigurowanym dostawcą Google lub Microsoft. Skorzystaj z podglądu, aby dwukrotnie sprawdzić wpływ przed wykonaniem.",
       "noProviders": "Nie skonfigurowano jeszcze żadnych dostawców SSO. Dodaj poświadczenia OAuth, aby kontynuować masowe przypisywanie."
     },
@@ -1988,13 +1988,13 @@
       "defaultRoleBody": "Used for newly provisioned client portal users in built-in mode when a client mapping does not override the role.",
       "defaultRoleLabel": "MSP workspace default client portal role",
       "defaultRoleTitle": "MSP workspace default client portal role",
-      "modeBody": "Choose whether client portal access from Entra sync is disabled, handled by built-in provisioning, or delegated to workflows.",
+      "modeBody": "Wybierz, czy dostęp do portalu klienta z synchronizacji Entra ma być wyłączony, obsługiwany przez wbudowane tworzenie kont, czy przekazany workflow.",
       "modeBuiltIn": "Built-in",
       "modeDisabled": "Disabled",
       "modeLabel": "Client portal Entra provisioning mode",
       "modeTitle": "Client portal Entra provisioning mode",
-      "modeWorkflowManaged": "Workflow-managed",
-      "workflowManagedInfo": "Workflow-managed mode publishes Entra access events only. The selected workflow is responsible for client portal user provisioning, role assignment, invitations, and lifecycle changes."
+      "modeWorkflowManaged": "Zarządzany przez workflow",
+      "workflowManagedInfo": "Tryb zarządzany przez workflow publikuje tylko zdarzenia dostępu z Entra. Wybrany workflow odpowiada za tworzenie użytkowników portalu klienta, przypisywanie ról, zaproszenia i zmiany w cyklu życia."
     }
   },
   "profile": {
@@ -2097,7 +2097,7 @@
       },
       "communication": {
         "label": "Komunikacja",
-        "description": "Połącz powierzchnie skrzynki odbiorczej i współpracy do przetwarzania zgłoszeń, przepływów pracy operatorów i dostępu do Microsoft Teams."
+        "description": "Połącz powierzchnie skrzynki odbiorczej i współpracy do przetwarzania zgłoszeń, workflow operatorów i dostępu do Microsoft Teams."
       },
       "calendar": {
         "label": "Kalendarz",

@@ -1,9 +1,9 @@
 {
   "welcome": {
-    "title": "Welkom in je MSP-commandocentrum",
+    "title": "Welkom in uw MSP-commandocentrum",
     "description": "Volg de onboardingvoortgang, configureer kritieke diensten en houd de ervaring voor elke klant consistent.",
     "titleCommunity": "Welkom terug",
-    "descriptionCommunity": "Ga vanaf je dashboard direct naar tickets, planning, projecten en rapportage."
+    "descriptionCommunity": "Ga vanaf uw dashboard direct naar tickets, planning, projecten en rapportage."
   },
   "algadesk": {
     "welcome": {
@@ -67,8 +67,8 @@
   },
   "onboarding": {
     "completeTitle": "Onboarding voltooid",
-    "incompleteTitle": "Voltooi je configuratie",
-    "completeDescription": "Je bent klaar om de volledige MSP-dashboardervaring te gebruiken.",
+    "incompleteTitle": "Voltooi uw configuratie",
+    "completeDescription": "U bent klaar om de volledige MSP-dashboardervaring te gebruiken.",
     "incompleteDescription": "Werk elke stap af om de volledige MSP-dashboardervaring vrij te schakelen.",
     "stepLabel": "STAP {{index}}",
     "badges": {
@@ -80,12 +80,12 @@
     "progress": {
       "label": "VOORTGANG",
       "steps": "{{completed}} van {{total}} stappen",
-      "messageStart": "Je bent net begonnen!",
+      "messageStart": "U bent net begonnen!",
       "messageComplete": "Alles klaar - goed gedaan!",
-      "messageInProgress": "Ga door - je bent goed bezig!"
+      "messageInProgress": "Ga door - u bent goed bezig!"
     },
     "substeps": {
-      "dataImport": "Voltooi je eerste import OF maak 5 contacten aan",
+      "dataImport": "Voltooi uw eerste import OF maak 5 contacten aan",
       "identity": {
         "addProvider": "SSO-provider toevoegen",
         "linkTeamMember": "Het eerste teamlid koppelen"
@@ -93,9 +93,9 @@
       "portal": {
         "customDomain": "Aangepast portaaldomein",
         "branding": "Kleuren- en logo-aanpassingen voor het portaal",
-        "inviteFirstContact": "Nodig je eerste contact uit voor het portaal"
+        "inviteFirstContact": "Nodig uw eerste contact uit voor het portaal"
       },
-      "createContacts": "Maak je eerste 5 contacten aan",
+      "createContacts": "Maak uw eerste 5 contacten aan",
       "calendar": {
         "addProvider": "Een kalenderprovider toevoegen",
         "connectAuthorize": "De provider verbinden en autoriseren"
@@ -114,14 +114,14 @@
     },
     "hidden": {
       "title": "Verborgen setupkaarten ({{count}})",
-      "subtitle": "Herstel een kaart als je die later nodig hebt.",
+      "subtitle": "Herstel een kaart als u deze later nodig heeft.",
       "titleCombined": "Verborgen kaarten ({{count}})"
     },
     "checklist": {
       "title": "Onboardingchecklist",
       "progress": "{{completed}} van {{total}} taken voltooid",
       "completeTitle": "Configuratie voltooid",
-      "completeDescription": "Nodig klanten uit om je portal met eigen merk te ervaren.",
+      "completeDescription": "Nodig klanten uit om uw merkportaal te ervaren.",
       "inviteCta": "Klanten uitnodigen",
       "viewButton": "Onboardingchecklist bekijken"
     },
@@ -133,12 +133,12 @@
       },
       "portal": {
         "title": "Klantenportaal instellen",
-        "description": "Configureer je portal zodat klanten op jouw domein kunnen inloggen met jouw branding.",
+        "description": "Configureer uw portaal zodat klanten zich op uw domein kunnen aanmelden met uw huisstijl.",
         "cta": "Portalinstellingen openen"
       },
       "dataImport": {
         "title": "Kerngegevens importeren",
-        "description": "Voeg contacten toe zodat je voor klanten kunt werken en workflows in beweging houdt.",
+        "description": "Voeg contacten toe, zodat u klanten kunt bedienen en workflows actief blijven.",
         "cta": "Contacten aanmaken"
       },
       "calendar": {
@@ -156,7 +156,7 @@
       "identity": {
         "linkedAccountsUnavailable": "Gekoppelde teamleden kunnen op dit moment niet worden gecontroleerd.",
         "noLinkedUsers": "Er zijn nog geen gebruikers gekoppeld aan een identiteitsprovider. Vraag een MSP-beheerder om Google of Microsoft te koppelen.",
-        "addProviderCredentials": "Voeg Google Workspace- of Microsoft 365-gegevens toe om SSO voor je team in te schakelen.",
+        "addProviderCredentials": "Voeg Google Workspace- of Microsoft 365-gegevens toe om SSO voor uw team in te schakelen.",
         "configurationUnavailable": "De configuratie van de SSO-provider is niet beschikbaar in deze omgeving.",
         "loadFailed": "De status van de SSO-configuratie kon niet worden geladen."
       },
@@ -193,7 +193,7 @@
   "mspDashboard": "MSP-dashboard",
   "mobileApp": {
     "title": "Download de AlgaPSA mobiele app",
-    "description": "Scan een QR-code met je telefoon om de AlgaPSA mobiele app te downloaden.",
+    "description": "Scan met uw telefoon een QR-code om de mobiele AlgaPSA-app te downloaden.",
     "selfHostDescription": "1. Scan een store-QR-code om de app te installeren. 2. Tik in de app op \"Change server\" → \"Scan QR code\" en scan de code \"Deze server verbinden\".",
     "appStore": "App Store (iOS)",
     "playStore": "Google Play (Android)",
@@ -211,7 +211,7 @@
     "restoreError": "Kaart kon niet worden hersteld.",
     "hidden": {
       "title": "Verborgen mobiele-app-kaart",
-      "subtitle": "Herstel hem als je hem later nodig hebt."
+      "subtitle": "Herstel deze kaart als u deze later nodig heeft."
     }
   }
 }

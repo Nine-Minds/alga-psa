@@ -65,8 +65,8 @@
     },
     "lastPhoneTypeUsage": {
       "title": "Laatste gebruik van telefoonsoort",
-      "message_one": "De volgende aangepaste telefoonsoort wordt niet langer door een contact gebruikt: {{labels}}. Wil je de soortdefinitie verwijderen of behouden voor toekomstig gebruik?",
-      "message_other": "De volgende aangepaste telefoonsoorten worden niet langer door een contact gebruikt: {{labels}}. Wil je de soortdefinities verwijderen of behouden voor toekomstig gebruik?",
+      "message_one": "Het volgende aangepaste telefoontype wordt niet langer door een contact gebruikt: {{labels}}. Wilt u de typedefinitie verwijderen of bewaren voor toekomstig gebruik?",
+      "message_other": "De volgende aangepaste telefoontypen worden niet langer door een contact gebruikt: {{labels}}. Wilt u de typedefinities verwijderen of bewaren voor toekomstig gebruik?",
       "deleteType": "Soort verwijderen",
       "keepType": "Soort behouden"
     },
@@ -162,7 +162,7 @@
       "title": "Fout"
     },
     "errors": {
-      "permissionDenied": "Toegang geweigerd. Neem contact op met je beheerder als je extra toegang nodig hebt.",
+      "permissionDenied": "Toegang geweigerd. Neem contact op met uw beheerder als u extra toegang nodig heeft.",
       "markInactiveFailed": "Er is een fout opgetreden bij het markeren van het contact als inactief. Probeer het opnieuw.",
       "reactivateFailed": "Er is een fout opgetreden bij het opnieuw activeren van het contact. Probeer het opnieuw."
     }
@@ -242,7 +242,7 @@
       "csvColumnHeader": "CSV-kolom selecteren",
       "notMapped": "Niet gekoppeld",
       "requiredFieldsNote": "* Verplichte velden moeten worden gekoppeld voordat de import kan doorgaan",
-      "largeImportWarning": "Je importeert {{count}} records. Het verwerken kan even duren.",
+      "largeImportWarning": "U importeert {{count}} records. Het verwerken kan even duren.",
       "processing": "Bezig met verwerken...",
       "preview": "Voorbeeld"
     },
@@ -263,7 +263,7 @@
     },
     "confirmUpdate": {
       "title": "Bestaande contacten bijwerken",
-      "message": "{{count}} contacten bestaan al. Wil je ze bijwerken met de nieuwe gegevens?"
+      "message": "{{count}} contacten bestaan al. Wilt u ze bijwerken met de nieuwe gegevens?"
     }
   },
   "contactEmailAddressesEditor": {
@@ -349,7 +349,7 @@
     },
     "lastTypeUsage": {
       "title": "Laatste gebruik van telefoontype",
-      "message": "Dit is het laatste gebruik van het aangepaste telefoontype \"{{label}}\". Wil je de type-definitie verwijderen of behouden voor toekomstig gebruik?",
+      "message": "Dit is het laatste gebruik van het aangepaste telefoontype \"{{label}}\". Wilt u de typedefinitie verwijderen of bewaren voor toekomstig gebruik?",
       "removeAndDelete": "Verwijderen en type verwijderen",
       "removeAndKeep": "Verwijderen en type behouden"
     }
@@ -360,7 +360,7 @@
     "title": "Portaaltoegang",
     "description": "Beheer van toegang tot het klantportaal voor een contact, inclusief uitnodigingen en rolupdates",
     "loadingDescription": "Portaalinformatie laden...",
-    "information": "Uitnodigingsmails worden verzonden via het e-mailsysteem van je organisatie. Antwoorden gaan naar het standaard e-mailadres van de klantlocatie.",
+    "information": "Uitnodigingsmails worden verzonden via het e-mailsysteem van uw organisatie. Antwoorden gaan naar het standaard e-mailadres van de klantlocatie.",
     "activeAccess": "Portaaltoegang actief",
     "noAccess": {
       "title": "Geen portaaltoegang",
@@ -417,24 +417,24 @@
       "permissionDeniedTitle": "Toegang geweigerd",
       "loadError": "Portaalinformatie kon niet worden geladen",
       "refreshHistoryError": "Uitnodigingsgeschiedenis kon niet worden vernieuwd",
-      "sendInvitePermissionDenied": "Je hebt geen toestemming om uitnodigingen te verzenden",
+      "sendInvitePermissionDenied": "U heeft geen toestemming om uitnodigingen te verzenden",
       "sendInviteSuccess": "Portaaluitnodiging succesvol verzonden!",
       "sendInviteFailed": "Uitnodiging verzenden mislukt",
       "revokeInviteSuccess": "Uitnodiging succesvol ingetrokken",
       "revokeInviteFailed": "Uitnodiging intrekken mislukt",
       "resendInviteSuccess": "Portaaluitnodiging succesvol opnieuw verzonden!",
       "resendInviteFailed": "Opnieuw verzenden van uitnodiging mislukt",
-      "updatePortalSettingsPermissionDenied": "Je hebt geen toestemming om klantinstellingen bij te werken",
+      "updatePortalSettingsPermissionDenied": "U heeft geen toestemming om klantinstellingen bij te werken",
       "portalAdminEnabled": "Contactpersoon gemarkeerd als beheerder van het klantportaal",
       "portalAdminDisabled": "Contactpersoon niet langer gemarkeerd als beheerder van het klantportaal",
       "updatePortalAdminFailed": "Status kon niet worden bijgewerkt",
       "updateAdminFailed": "Beheerdersvlag kon niet worden bijgewerkt",
-      "updateRolesPermissionDenied": "Je hebt geen toestemming om gebruikersrollen bij te werken",
+      "updateRolesPermissionDenied": "U heeft geen toestemming om gebruikersrollen bij te werken",
       "roleAdded": "Rol succesvol toegevoegd",
       "addRoleFailed": "Rol toevoegen mislukt",
       "roleRemoved": "Rol succesvol verwijderd",
       "removeRoleFailed": "Rol verwijderen mislukt",
-      "updateStatusPermissionDenied": "Je hebt geen toestemming om gebruikersstatus bij te werken",
+      "updateStatusPermissionDenied": "U heeft geen toestemming om gebruikersstatus bij te werken",
       "userActivated": "Gebruiker succesvol geactiveerd",
       "userDeactivated": "Gebruiker succesvol gedeactiveerd",
       "updateUserStatusFailed": "Gebruikersstatus kon niet worden bijgewerkt",

@@ -36,9 +36,9 @@
     },
     "externalId": "ID: {{id}}…",
     "print": {
-      "title": "Recente jobs",
-      "subtitle": "{{count}} jobs",
-      "noJobs": "Geen jobs om af te drukken",
+      "title": "Recente achtergrondtaken",
+      "subtitle": "{{count}} achtergrondtaken",
+      "noJobs": "Geen achtergrondtaken om af te drukken",
       "columns": {
         "jobName": "Jobnaam",
         "runner": "Runner",
@@ -55,9 +55,9 @@
   },
   "metrics": {
     "labels": {
-      "totalJobs": "Totaal aantal banen",
-      "totalJobsPgBoss": "Totaal aantal banen (PG Boss)",
-      "totalJobsTemporal": "Totaal aantal banen (tijdelijk)",
+      "totalJobs": "Totaal aantal achtergrondtaken",
+      "totalJobsPgBoss": "Totaal aantal achtergrondtaken (PG Boss)",
+      "totalJobsTemporal": "Totaal aantal achtergrondtaken (Temporal)",
       "completed": "Voltooid",
       "failed": "Mislukt",
       "pending": "In behandeling",
@@ -90,7 +90,7 @@
     "title": "Taakdetails",
     "jobId": "ID: {{id}}",
     "sections": {
-      "progress": "Vooruitgang van de baan",
+      "progress": "Voortgang achtergrondtaak",
       "metrics": "Baanstatistieken",
       "history": "Taakgeschiedenis"
     }

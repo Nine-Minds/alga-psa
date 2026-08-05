@@ -254,8 +254,8 @@
       "none": "keine"
     },
     "bucketOverlay": {
-      "recommendHours": "Empfehlen Sie einen Eimer voller Stunden",
-      "recommendUsage": "Empfehlen Sie einen Eimer Verzehr"
+      "recommendHours": "Stundenkontingent empfehlen",
+      "recommendUsage": "Verbrauchskontingent empfehlen"
     }
   },
   "hourlyConfig": {
@@ -410,20 +410,20 @@
       "totalMinutes": {
         "label": "Gesamtminuten",
         "placeholder": "Geben Sie die Gesamtstundenzahl ein",
-        "help": "Die Gesamtzahl der in dieser Bucket-Vertragszeile enthaltenen Minuten",
+        "help": "Die Gesamtzahl der in dieser Stundenkontingent-Vertragslinie enthaltenen Minuten",
         "errorPositive": "Die Gesamtminuten müssen größer als Null sein"
       },
       "billingPeriod": {
         "label": "Abrechnungszeitraum",
         "placeholder": "Wählen Sie den Abrechnungszeitraum aus",
-        "help": "Der Zeitraum, über den die Bucket-Stunden verteilt werden",
+        "help": "Der Zeitraum, über den die Stunden des Stundenkontingents verteilt werden",
         "mismatchPrefix": "Nichtübereinstimmung:",
         "mismatch": "Der Abrechnungszeitraum des Stundenkontingents ({{billingPeriod}}) sollte mit der Abrechnungshäufigkeit der Vertragsposition ({{contractLineBillingFrequency}}) übereinstimmen."
       },
       "overageRate": {
         "label": "Überschreitungsrate",
         "placeholder": "Geben Sie den Überschreitungssatz ein",
-        "help": "Der Stundensatz, der für Stunden berechnet wird, die über das Bucket-Limit hinaus genutzt werden",
+        "help": "Der Stundensatz für Stunden, die über das Stundenkontingent hinaus genutzt werden",
         "errorNegative": "Die Überschreitungsrate darf nicht negativ sein"
       },
       "allowRollover": "Lassen Sie ungenutzte Stunden auf die nächste Periode übertragen"

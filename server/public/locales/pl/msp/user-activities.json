@@ -52,7 +52,7 @@
       "projectTask": "Zadanie projektu",
       "ticket": "Zgłoszenie",
       "timeEntry": "Wpis czasu",
-      "workflowTask": "Zadanie przepływu pracy",
+      "workflowTask": "Zadanie workflow",
       "notification": "Powiadomienie",
       "unknown": "Nieznany",
       "activity": "Aktywność"
@@ -97,7 +97,7 @@
     "unknownWorkItem": "Nieznany element pracy",
     "timeEntryDetailsTitle": "Szczegóły wpisu czasu",
     "errorLoadingTimeEntry": "Błąd podczas ładowania wpisu czasu",
-    "workflowTaskTitle": "Zadanie przepływu pracy",
+    "workflowTaskTitle": "Zadanie workflow",
     "noAdditionalDetails": "Brak dodatkowych szczegółów.",
     "failedToLoadDocument": "Nie udało się załadować zawartości dokumentu",
     "notificationNotFound": "Powiadomienie nie zostało znalezione",
@@ -143,7 +143,7 @@
       "title": "Element ad hoc",
       "toggleDoneError": "Nie udało się zaktualizować elementu."
     },
-    "enterpriseOnly": "Zadania przepływu pracy są funkcją Pro.",
+    "enterpriseOnly": "Zadania workflow są funkcją Pro.",
     "nextAction": "Następna akcja",
     "overdueSince": "Zaległe od {{date}}",
     "dueOn": "Termin: {{date}}",
@@ -280,8 +280,8 @@
       }
     },
     "workflowTasks": {
-      "title": "Zadania przepływu pracy",
-      "drawerTitle": "Zadania przepływu pracy",
+      "title": "Zadania workflow",
+      "drawerTitle": "Zadania workflow",
       "actions": {
         "refresh": "Odśwież",
         "filter": "Filtruj",
@@ -289,24 +289,24 @@
         "viewAll": "Wyświetl wszystko"
       },
       "ariaLabels": {
-        "refresh": "Odśwież zadania przepływu pracy",
-        "filter": "Filtruj zadania przepływu pracy"
+        "refresh": "Odśwież zadania workflow",
+        "filter": "Filtruj zadania workflow"
       },
       "states": {
-        "loading": "Ładowanie aktywności zadań przepływu pracy...",
-        "empty": "Nie znaleziono aktywności zadań przepływu pracy"
+        "loading": "Ładowanie aktywności zadań workflow...",
+        "empty": "Nie znaleziono aktywności zadań workflow"
       },
       "errors": {
-        "loadFailed": "Nie udało się załadować aktywności zadań przepływu pracy. Proszę spróbować ponownie później."
+        "loadFailed": "Nie udało się załadować aktywności zadań workflow. Proszę spróbować ponownie później."
       },
       "filterDialog": {
-        "title": "Filtruj zadania przepływu pracy",
-        "description": "Proszę wybrać kryteria filtrowania aktywności zadań przepływu pracy.",
+        "title": "Filtruj zadania workflow",
+        "description": "Proszę wybrać kryteria filtrowania aktywności zadań workflow.",
         "fields": {
           "search": "Szukaj",
           "searchPlaceholder": "Szukaj tytułu, opisu",
-          "workflowExecution": "Wykonanie przepływu pracy",
-          "workflowExecutionPlaceholder": "Wybierz wykonanie przepływu pracy...",
+          "workflowExecution": "Wykonanie workflow",
+          "workflowExecutionPlaceholder": "Wybierz wykonanie workflow...",
           "allExecutions": "Wszystkie wykonania",
           "priority": "Priorytet",
           "priorityPlaceholder": "Wybierz priorytet...",
@@ -340,11 +340,11 @@
         "ascending": "Rosnąco",
         "descending": "Malejąco",
         "states": {
-          "loading": "Ładowanie zadań przepływu pracy...",
-          "empty": "Nie znaleziono zadań przepływu pracy"
+          "loading": "Ładowanie zadań workflow...",
+          "empty": "Nie znaleziono zadań workflow"
         },
         "errors": {
-          "loadFailed": "Nie udało się załadować zadań przepływu pracy. Proszę spróbować ponownie później."
+          "loadFailed": "Nie udało się załadować zadań workflow. Proszę spróbować ponownie później."
         }
       }
     },
@@ -377,7 +377,7 @@
           "allTypes": "Wszystkie typy",
           "ticket": "Zgłoszenie",
           "projectTask": "Zadanie projektu",
-          "workflowTask": "Zadanie przepływu pracy",
+          "workflowTask": "Zadanie workflow",
           "showClosedEntries": "Pokaż zamknięte wpisy",
           "showRecurringOnly": "Pokaż tylko cykliczne"
         },
@@ -472,7 +472,7 @@
       "schedule": "Harmonogram",
       "projectTask": "Zadania projektu",
       "ticket": "Zgłoszenia",
-      "workflowTask": "Zadania przepływu pracy"
+      "workflowTask": "Zadania workflow"
     },
     "placeholders": {
       "allBoards": "Wszystkie tablice",

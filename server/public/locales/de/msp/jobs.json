@@ -92,7 +92,7 @@
     "sections": {
       "progress": "Arbeitsfortschritt",
       "metrics": "Jobkennzahlen",
-      "history": "Berufsverlauf"
+      "history": "Jobverlauf"
     }
   },
   "stepHistory": {

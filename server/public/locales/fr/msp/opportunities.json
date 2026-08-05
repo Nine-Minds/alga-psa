@@ -30,7 +30,7 @@
         "declined": "refusé",
         "open": "ouvert",
         "project_task": "tâche de projet",
-        "quote_line": "ligne de citation"
+        "quote_line": "ligne de devis"
       },
       "title": "Engagements"
     },
@@ -94,8 +94,8 @@
       "ownerNote": "Chaque étape peut être confiée à une autre personne. L’affaire conserve un seul responsable.",
       "people": "Personnes",
       "plan": "Preuves, plan et chronologie",
-      "quoteTitle": "Citation pour {{title}}",
-      "quotes": "Citations",
+      "quoteTitle": "Devis pour {{title}}",
+      "quotes": "Devis",
       "recurring": "Récurrent",
       "timeline": "Chronologie",
       "unlinkQuote": "Dissocier",
@@ -150,7 +150,7 @@
       "won": "A gagné cette période"
     },
     "linkQuoteDialog": {
-      "confirm": "Citation de lien",
+      "confirm": "Lier le devis",
       "empty": "Aucun devis non lié n'est disponible pour ce client.",
       "title": "Lier un devis existant"
     },
@@ -448,8 +448,8 @@
       "lost": "Marqué perdu",
       "ownerAssigned": "Responsable mis à jour",
       "qualified": "Point de contrôle qualifié enregistré",
-      "quoteLinked": "Citation liée",
-      "quoteUnlinked": "Citation non liée",
+      "quoteLinked": "Devis lié",
+      "quoteUnlinked": "Devis dissocié",
       "snoozed": "Répété pendant quelques jours",
       "stagePlanned": "Plan de phase ajouté",
       "stageSet": "Étape définie sur {{stage}}",
@@ -541,7 +541,7 @@
         "trailing": " sur les 12 derniers mois. La fiche d’une page leur met la comparaison sous les yeux."
       },
       "whitespace": {
-        "comparable": " de toi encore. Tous les clients comparables le font.",
+        "comparable": " chez vous pour le moment. Tous les clients comparables le font.",
         "missing": "{{clientName}} n'achète pas {{serviceName}}"
       }
     },

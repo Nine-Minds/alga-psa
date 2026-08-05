@@ -559,22 +559,22 @@
         },
         "schedule": {
           "cadence": {
-            "10080": "elke week",
-            "1440": "elke dag",
-            "240": "elke 4 uur",
             "60": "elk uur",
-            "720": "elke 12 uur"
+            "240": "elke 4 uur",
+            "720": "elke 12 uur",
+            "1440": "elke dag",
+            "10080": "elke week"
           },
           "changeAction": "Schema wijzigen",
           "description": "Wanneer aan, synchroniseert Alga elke gekoppelde klant met dit ritme. Uitzetten stopt geplande runs; handmatig synchroniseren blijft mogelijk.",
           "enablePrompt": "De pilot is geslaagd. Zet automatische synchronisatie aan om contacten bij te houden zonder handmatige runs.",
           "intervalLabel": "Uitvoeren elke",
           "intervals": {
-            "10080": "Week",
-            "1440": "Dag",
-            "240": "4 uur",
             "60": "Uur",
-            "720": "12 uur"
+            "240": "4 uur",
+            "720": "12 uur",
+            "1440": "Dag",
+            "10080": "Week"
           },
           "pause": "Pauzeren",
           "pauseHint": "Gepauzeerd. Sla op om toe te passen.",
@@ -1495,7 +1495,7 @@
         },
         "sync": {
           "title": "Synchronisatie en automatisering",
-          "description": "Importeer activa voor alle gekoppelde klanten in één keer en houd ze automatisch up-to-date. Het koppelen van een bedrijf of lay-out configureert alleen de integratie — activa verschijnen pas na een import.",
+          "description": "Importeer assets voor alle gekoppelde klanten in één keer en houd ze automatisch up-to-date. Het koppelen van een bedrijf of lay-out configureert alleen de integratie — assets verschijnen pas na een import.",
           "summary": "{{created}} aangemaakt · {{updated}} bijgewerkt · {{skipped}} overgeslagen · {{failed}} mislukt",
           "toastErrorTitle": "Hudu-synchronisatiefout",
           "importDoneTitle": "Hudu-import voltooid",
@@ -1505,7 +1505,7 @@
           "syncing2": "Bezig met synchroniseren…",
           "syncAll": "Alles synchroniseren",
           "autoSyncLabel": "Dagelijkse automatische synchronisatie",
-          "autoSyncHint": "Importeert automatisch nieuwe activa en vernieuwt bestaande één keer per dag voor elke gekoppelde klant.",
+          "autoSyncHint": "Importeert automatisch nieuwe assets en vernieuwt bestaande één keer per dag voor elke gekoppelde klant.",
           "neverRun": "Nog geen tenant-brede uitvoering.",
           "lastRun": "Laatste uitvoering {{at}}: {{created}} aangemaakt · {{updated}} bijgewerkt · {{skipped}} overgeslagen · {{failed}} mislukt",
           "status": {
@@ -1518,7 +1518,7 @@
     },
     "microsoft": {
       "emailSetup": {
-        "action": "Set up Microsoft Email",
+        "action": "Microsoft-e-mail instellen",
         "actions": {
           "back": "Back",
           "cancel": "Cancel",
@@ -1530,14 +1530,14 @@
           "working": "Working…"
         },
         "automated": {
-          "description": "Sign in as a Microsoft administrator. Alga creates the app, service principal, secret, Email profile, and binding.",
+          "description": "Meld u aan als Microsoft-beheerder. Alga maakt de app, serviceprincipal, het geheim en een voorlopig e-mailprofiel aan. De e-mailkoppeling wordt gemaakt nadat de beheerder toestemming heeft verleend.",
           "title": "Create an app in this tenant"
         },
         "callbackUri": "Mailbox callback URI",
         "complete": {
-          "consentDone": "Administrator consent is confirmed. Return to Inbound Email and authorize the mailbox.",
-          "consentPending": "Next, a Microsoft tenant administrator must grant consent. Mailbox authorization happens afterward in Inbound Email.",
-          "profileCreated": "Microsoft Email profile created and bound"
+          "consentDone": "De beheerderstoestemming is bevestigd. Ga terug naar Inkomende e-mail en autoriseer de mailbox.",
+          "consentPending": "Vervolgens moet een Microsoft-tenantbeheerder toestemming verlenen. Daarna wordt de mailbox geautoriseerd via Inkomende e-mail.",
+          "profileCreated": "Microsoft-e-mailprofiel aangemaakt en gekoppeld"
         },
         "consent": {
           "confirmedDescription": "The Microsoft app is ready for mailbox authorization.",
@@ -1546,10 +1546,10 @@
           "urlLabel": "Consent URL"
         },
         "copied": "{{label}} copied",
-        "description": "Choose how to configure the Microsoft app used for inbound email. Mailbox authorization remains a separate final step.",
+        "description": "Kies hoe u de Microsoft-app voor inkomende e-mail wilt configureren. Het autoriseren van de mailbox blijft een afzonderlijke laatste stap.",
         "errors": {
           "automated": "Could not start automated Microsoft app creation.",
-          "generic": "Microsoft Email setup did not complete.",
+          "generic": "De configuratie van Microsoft-e-mail is niet voltooid.",
           "nameRequired": "Enter a display name for the Microsoft app.",
           "platform": "Could not configure the platform Microsoft app.",
           "popupBlocked": "Allow popups for this site, then try again.",
@@ -1567,10 +1567,10 @@
           "title": "Enter an existing app manually"
         },
         "platform": {
-          "description": "Create an Email-bound profile from the server-managed multi-tenant app, then grant tenant administrator consent.",
+          "description": "Maak een voorlopig e-mailprofiel aan vanuit de door de server beheerde multitenant-app. Het wordt gekoppeld nadat de tenantbeheerder toestemming heeft verleend.",
           "title": "Use the Alga platform app"
         },
-        "title": "Set up Microsoft Email",
+        "title": "Microsoft-e-mail instellen",
         "unavailable": "Unavailable"
       },
       "settings": {
@@ -1580,10 +1580,10 @@
           "warning": "A custom Entra app is normally unnecessary on hosted Alga PSA. Continue only when your organization deliberately requires its own application and credentials."
         },
         "platform": {
-          "title": "Microsoft email is ready to connect",
+          "title": "Microsoft-e-mail kan worden gekoppeld",
           "description": "Connect Microsoft 365 with the application supplied by Alga PSA. No Entra app registration is required.",
           "readyDescription": "Alga PSA supplies and manages the Microsoft application. Connect a mailbox without creating an Entra app or entering client credentials.",
-          "connectAction": "Connect Microsoft email",
+          "connectAction": "Microsoft-e-mail koppelen",
           "unavailableTitle": "Platform Microsoft credentials are unavailable",
           "unavailableDescription": "This deployment requires a tenant-owned Microsoft app. Use the advanced setup below to add one."
         },
@@ -1616,11 +1616,11 @@
         "bindings": {
           "summaryBound": "Current: {{profile}}.",
           "summaryNone": "Momenteel is er geen Microsoft-profiel gekoppeld aan {{consumer}}.",
-          "summaryUnavailable": "{{consumer}} is gekoppeld aan een niet-beschikbaar profiel.",
+          "summaryUnavailable": "De geselecteerde app is niet beschikbaar.",
           "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
           "warningNoBinding": "Er is nog geen {{consumer}}-binding geconfigureerd.",
           "warningNotReady": "{{consumer}} is gekoppeld aan {{profile}}, maar dat profiel moet nog worden geconfigureerd.",
-          "warningProfileMissing": "{{consumer}} is gekoppeld aan een profiel dat niet meer beschikbaar is. Koppel opnieuw aan een actief profiel.",
+          "warningProfileMissing": "De geselecteerde Microsoft-app is niet meer beschikbaar. Kies een andere app.",
           "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
           "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
           "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."
@@ -1774,7 +1774,7 @@
         },
         "disconnectDialog": {
           "cancel": "Keep providers connected",
-          "message": "Existing Outlook email and calendar provider connections will be marked disconnected and must be re-authorized. Microsoft profiles and service bindings stay in place.",
+          "message": "Bestaande verbindingen met Outlook-e-mail- en agendaproviders worden als niet-verbonden gemarkeerd en moeten opnieuw worden geautoriseerd. Microsoft-profielen en servicekoppelingen blijven behouden.",
           "title": "Disconnect Microsoft providers?"
         },
         "profileLibrary": {
@@ -2284,7 +2284,7 @@
         "fields": {
           "apiKey": "API-sleutel ({{state}})",
           "apiKeyPlaceholderExisting": "Voer een nieuwe sleutel in om de opgeslagen sleutel te vervangen",
-          "apiKeyPlaceholderNew": "Plak je Level-API-sleutel",
+          "apiKeyPlaceholderNew": "Plak uw Level-API-sleutel",
           "apiKeyStateRequired": "vereist",
           "apiKeyStateSaved": "opgeslagen"
         },
@@ -2645,7 +2645,7 @@
         "title": "Microsoft Teams",
         "diagnostics": {
           "title": "Diagnostiek en testbericht",
-          "description": "Controleer de Teams-configuratie en stuur een proactief testbericht naar je Teams-botgesprek.",
+          "description": "Controleer de Teams-configuratie en stuur een proactief testbericht naar uw Teams-botgesprek.",
           "run": "Diagnostiek uitvoeren",
           "running": "Bezig met uitvoeren...",
           "sendTest": "Testbericht verzenden",
@@ -2670,10 +2670,10 @@
             "sent": "Teams-testbericht verzonden.",
             "failed": "Teams-testbericht mislukt.",
             "addonInactive": "De Teams-add-on is niet actief voor deze tenant.",
-            "integrationInactive": "Activeer de Teams-integratie voordat je een testbericht verzendt.",
-            "capabilityDisabled": "Schakel de persoonlijke bot-functie in voordat je een testbericht verzendt.",
-            "botNotConfigured": "Configureer de Teams-botreferenties voordat je een testbericht verzendt.",
-            "missingUserLinkage": "Koppel je Microsoft-account voordat je een Teams-testbericht verzendt.",
+            "integrationInactive": "Activeer de Teams-integratie voordat u een testbericht verzendt.",
+            "capabilityDisabled": "Schakel de persoonlijke bot-functie in voordat u een testbericht verzendt.",
+            "botNotConfigured": "Configureer de Teams-botreferenties voordat u een testbericht verzendt.",
+            "missingUserLinkage": "Koppel uw Microsoft-account voordat u een Teams-testbericht verzendt.",
             "missingConversationReference": "Open de Alga PSA-bot in Teams en stuur er eerst een willekeurig bericht naartoe, en probeer het daarna opnieuw.",
             "skipped": "Het Teams-testbericht is overgeslagen."
           },
@@ -2695,15 +2695,15 @@
             "capabilities": "Schakel de persoonlijke bot en activiteitsmeldingen voor Teams in.",
             "profile": "Selecteer een gereed Microsoft-profiel voor Teams.",
             "activeProfile": "Selecteer een actief Microsoft-profiel voor Teams.",
-            "profileCredentials": "Voltooi de Microsoft-profielreferenties voordat je Teams activeert.",
+            "profileCredentials": "Voltooi de Microsoft-profielreferenties voordat u Teams activeert.",
             "meetingOrganizer": "Configureer de standaard Teams-vergaderingsorganisator in de Teams-instellingen.",
             "meetingOrganizerObjectId": "Sla de standaard Teams-vergaderingsorganisator opnieuw op zodat Alga PSA de Microsoft Entra-object-ID kan omzetten.",
-            "package": "Genereer het Teams-app-pakket voordat je de end-to-end-validatie uitvoert.",
+            "package": "Genereer het Teams-app-pakket voordat u de end-to-end-validatie uitvoert.",
             "baseUrl": "Genereer het Teams-pakket opnieuw met een bereikbare basis-URL.",
             "botEnv": "Configureer TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID en TEAMS_BOT_APP_PASSWORD.",
-            "userLinkage": "Koppel je Microsoft-account in je profielinstellingen.",
+            "userLinkage": "Koppel uw Microsoft-account in uw profielinstellingen.",
             "conversationReference": "Open de Alga PSA-bot in Teams en stuur er eerst een willekeurig bericht naartoe, en probeer het daarna opnieuw.",
-            "deliveryFailure": "Bekijk de meest recente Teams-leveringsfout en probeer het opnieuw nadat je de oorzaak hebt verholpen."
+            "deliveryFailure": "Bekijk de meest recente Teams-leveringsfout en probeer het opnieuw nadat u de oorzaak heeft verholpen."
           }
         },
         "meetings": {
@@ -3224,16 +3224,16 @@
         "notConfigured": "Not configured",
         "ready": "Ready"
       },
-      "descriptionCe": "Set up the provider path your tenant uses. Configure both only when email or SSO workflows require both ecosystems.",
-      "descriptionEe": "Set up the provider path your tenant uses. Configure both only when email, calendar, SSO, or Teams workflows require both ecosystems.",
+      "descriptionCe": "Configureer het providertraject dat uw tenant gebruikt. Configureer beide trajecten alleen als e-mail- of SSO-workflows beide ecosystemen vereisen.",
+      "descriptionEe": "Configureer het providertraject dat uw tenant gebruikt. Configureer beide trajecten alleen als workflows voor e-mail, agenda, SSO of Teams beide ecosystemen vereisen.",
       "eyebrow": "Provider setup",
       "google": {
-        "description": "Gmail inbound email and Google Calendar.",
+        "description": "Inkomende Gmail-e-mail en Google Agenda.",
         "label": "Google"
       },
       "microsoft": {
         "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
-        "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
+        "descriptionEe": "MSP-SSO, Outlook-e-mail, agendasynchronisatie en Teams.",
         "label": "Microsoft"
       },
       "selectorLabel": "Provider credential paths",

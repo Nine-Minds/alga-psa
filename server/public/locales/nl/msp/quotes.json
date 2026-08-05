@@ -35,7 +35,7 @@
     "columns": {
       "actions": "Acties",
       "amount": "Hoeveelheid",
-      "client": "Cliënt",
+      "client": "Klant",
       "created": "Gemaakt",
       "currency": "Munteenheid",
       "date": "Datum",
@@ -51,7 +51,7 @@
       "validUntil": "Geldig tot"
     },
     "labels": {
-      "client": "Cliënt",
+      "client": "Klant",
       "contact": "Contactpersoon",
       "currency": "Munteenheid",
       "description": "Beschrijving / reikwijdte",
@@ -87,7 +87,7 @@
     },
     "filters": {
       "allClients": "Alle klanten",
-      "client": "Cliënt"
+      "client": "Klant"
     },
     "empty": {
       "byCategory": "Geen offertes in deze categorie.",

@@ -2,7 +2,7 @@
   "tabs": {
     "general": "Ogólny",
     "numbering": "Numeracja",
-    "quoting": "Cytowanie",
+    "quoting": "Oferty",
     "tax": "Podatek",
     "payments": "Płatności",
     "costRates": "Stawki kosztów"
@@ -132,7 +132,7 @@
   },
   "quoting": {
     "quoteNumbering": {
-      "title": "Numeracja cytatów",
+      "title": "Numeracja ofert",
       "description": "Dostosuj sposób generowania i wyświetlania numerów ofert."
     },
     "salesOrderNumbering": {

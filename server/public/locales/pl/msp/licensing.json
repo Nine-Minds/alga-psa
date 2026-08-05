@@ -168,10 +168,10 @@
   },
   "workflowDesigner": {
     "enterpriseHeading": "Funkcja Pro",
-    "unavailable": "Projektant przepływów pracy wymaga Pro. Proszę dokonać aktualizacji, aby uzyskać dostęp do tej funkcji."
+    "unavailable": "Projektant workflow wymaga Pro. Proszę dokonać aktualizacji, aby uzyskać dostęp do tej funkcji."
   },
   "runStudio": {
-    "unavailable": "Workflow Run Studio nie jest dostępne w tej edycji. (runId: {{runId}})"
+    "unavailable": "Studio uruchomień workflow nie jest dostępne w tej edycji. (runId: {{runId}})"
   },
   "aiConsent": {
     "title": "Udostępnianie danych AI",

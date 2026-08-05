@@ -327,14 +327,14 @@
           }
         },
         "xero": {
-          "description": "Importer les montants de taxe depuis un fichier CSV du rapport Xero Invoice Details.",
-          "dropZone": "Glissez-déposez un CSV de rapport Xero Invoice Details ici, ou cliquez pour parcourir",
+          "description": "Importer les montants de taxe depuis le fichier CSV d'un rapport « Détails des factures » de Xero.",
+          "dropZone": "Glissez-déposez ici le fichier CSV d'un rapport « Détails des factures » de Xero, ou cliquez pour le sélectionner",
           "help": {
             "csvRequirement": "Le rapport doit inclure les colonnes Numéro de facture, Nom du contact, Montant de ligne et Montant de taxe. Les factures sont rapprochées via le champ Reference ou les catégories de suivi définies à l'export.",
             "steps": {
               "s1": "Dans Xero, allez dans Reports > All Reports",
               "s2": "Sélectionnez Sales (Invoices and Revenue)",
-              "s3": "Exécutez le rapport Invoice Details",
+              "s3": "Exécutez le rapport « Détails des factures »",
               "s4": "Définissez la plage de dates correspondant à vos factures exportées",
               "s5": "Cliquez sur Export et choisissez CSV",
               "s6": "Téléversez le fichier exporté ici"
@@ -559,22 +559,22 @@
         },
         "schedule": {
           "cadence": {
-            "10080": "chaque semaine",
-            "1440": "chaque jour",
-            "240": "toutes les 4 heures",
             "60": "toutes les heures",
-            "720": "toutes les 12 heures"
+            "240": "toutes les 4 heures",
+            "720": "toutes les 12 heures",
+            "1440": "chaque jour",
+            "10080": "chaque semaine"
           },
           "changeAction": "Modifier la planification",
           "description": "Lorsqu'elle est activée, Alga synchronise chaque client associé à cette cadence. La désactiver arrête les exécutions planifiées ; vous pouvez toujours synchroniser manuellement.",
           "enablePrompt": "Le pilote a réussi. Activez la synchronisation automatique pour garder les contacts à jour sans intervention.",
           "intervalLabel": "Exécuter toutes les",
           "intervals": {
-            "10080": "Semaine",
-            "1440": "Jour",
-            "240": "4 heures",
             "60": "Heure",
-            "720": "12 heures"
+            "240": "4 heures",
+            "720": "12 heures",
+            "1440": "Jour",
+            "10080": "Semaine"
           },
           "pause": "Mettre en pause",
           "pauseHint": "En pause. Enregistrez pour appliquer.",
@@ -1616,11 +1616,11 @@
         "bindings": {
           "summaryBound": "Current: {{profile}}.",
           "summaryNone": "Aucun profil Microsoft n'est actuellement lié à {{consumer}}.",
-          "summaryUnavailable": "{{consumer}} est lié à un profil indisponible.",
+          "summaryUnavailable": "L'application sélectionnée est indisponible.",
           "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
           "warningNoBinding": "Aucune liaison {{consumer}} n'est encore configurée.",
           "warningNotReady": "{{consumer}} est lié à {{profile}}, mais ce profil nécessite encore une configuration.",
-          "warningProfileMissing": "{{consumer}} est lié à un profil qui n'est plus disponible. Relisez-le à un profil actif.",
+          "warningProfileMissing": "L'application Microsoft sélectionnée n'est plus disponible. Choisissez une autre application.",
           "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
           "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
           "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."
@@ -2214,9 +2214,9 @@
           "apiTokenPlaceholderNew": "Collez le jeton API Tanium",
           "apiTokenStateRequired": "(requis)",
           "apiTokenStateSaved": "(enregistré)",
-          "assetApiUrl": "URL Asset API (facultatif)",
+          "assetApiUrl": "URL de l'API des actifs (facultatif)",
           "assetApiUrlPlaceholder": "https://example.cloud.tanium.com/plugin/products/asset",
-          "assetFallbackLabel": "Activer la solution de repli Asset API pour la couverture des points de terminaison expirés",
+          "assetFallbackLabel": "Activer l'API des actifs comme solution de repli pour couvrir les points de terminaison arrivés à expiration",
           "gatewayUrl": "URL Gateway",
           "gatewayUrlPlaceholder": "https://example.cloud.tanium.com"
         },
@@ -2429,8 +2429,8 @@
         "descriptionEe": "Gérez le cycle de vie des revendications de domaine pour la découverte des fournisseurs SSO de connexion MSP. Les domaines non revendiqués ou non éligibles basculent vers les fournisseurs au niveau application de Nine Minds.",
         "moved": {
           "title": "MSP SSO Login Domains",
-          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
-          "cta": "Open Single Sign-On settings"
+          "body": "Les paramètres d'authentification unique, y compris les revendications de domaine de connexion, ont été déplacés vers Sécurité → Authentification unique.",
+          "cta": "Ouvrir les paramètres d'authentification unique"
         },
         "dnsHost": "Hôte :",
         "dnsInstructions": "Ajoutez l'enregistrement DNS TXT, puis cliquez sur Vérifier :",
@@ -3036,7 +3036,7 @@
             "intro": "Cette intégration offre une alternative à la connectivité Xero basée sur OAuth :",
             "note": "Remarque : configurez les mappages ci-dessous avant d'exporter. Les exports CSV et les imports de taxes sont gérés depuis Facturation → Exports comptables.",
             "taxImportLabel": "Import de taxes",
-            "taxImportText": "En cas d'utilisation d'un calcul fiscal externe, importer les montants de taxe depuis le rapport Xero Invoice Details",
+            "taxImportText": "En cas de calcul fiscal externe, importer les montants de taxe depuis le rapport « Détails des factures » de Xero",
             "title": "Intégration CSV Xero"
           },
           "savedMessage": "Paramètres enregistrés avec succès",
@@ -3069,7 +3069,7 @@
             },
             "exportInvoices": "Exporter les factures",
             "import": {
-              "s1": "Dans Xero : Reports → All Reports → Invoice Details",
+              "s1": "Dans Xero : Rapports → Tous les rapports → Détails des factures",
               "s2": "Définissez la plage de dates et exportez au format CSV",
               "s3": "Dans Alga : Facturation → Exports comptables → Importer les taxes",
               "s4": "Téléversez le CSV du rapport Xero",
