@@ -14,11 +14,14 @@
  * 02-pending-consent-mailbox, 03-restored-not-configured-mailbox, each as
  * .json + .png) and additionally writes `96-verification-index.json` — the
  * machine-readable map from every required smoke claim to its exact evidence
- * files, sealed identities, and assertions — plus `97-verify-evidence.mjs`, a
- * sealed copy of scripts/verify-microsoft-email-smoke-evidence.mjs. After
- * sealing, the manifest stage runs that verifier against its own output and
- * fails unless every claim passes, so a sealed bundle is by construction
- * independently verifiable with:
+ * files, sealed identities, and assertions — plus `00-REVIEW.md`, the human
+ * review entrypoint rendered deterministically from that sealed evidence
+ * (the verifier re-renders it and fails on any byte difference), and
+ * `97-verify-evidence.mjs`, a sealed copy of
+ * scripts/verify-microsoft-email-smoke-evidence.mjs. After sealing, the
+ * manifest stage runs that verifier against its own output and fails unless
+ * every claim passes, so a sealed bundle is by construction independently
+ * verifiable with:
  *
  *   node <evidence-dir>/97-verify-evidence.mjs <evidence-dir>
  *
@@ -78,9 +81,11 @@ import {
   EXPECTED_TEMPORARY_SESSION_COUNT,
   INDEX_FILE,
   REQUIRED_CLAIMS,
+  REVIEW_FILE,
   SESSION_CLEANUP_FILE,
   VERIFIER_COPY_FILE,
   VERIFIER_SOURCE_PATH,
+  buildReviewDocument,
   buildVerificationIndex,
   createContext as createVerificationContext,
   evaluateClaim,
@@ -1036,7 +1041,7 @@ function createManifest(args) {
     }
   }
 
-  for (const outputName of [INDEX_FILE, VERIFIER_COPY_FILE, '98-sha256-manifest.json', 'SHA256SUMS']) {
+  for (const outputName of [REVIEW_FILE, INDEX_FILE, VERIFIER_COPY_FILE, '98-sha256-manifest.json', 'SHA256SUMS']) {
     if (fs.existsSync(path.join(evidenceDirectory, outputName))) {
       fail(`Refusing to overwrite existing sealed artifact: ${outputName}`);
     }
@@ -1070,6 +1075,12 @@ function createManifest(args) {
     buildVerificationIndex(evidenceDirectory, {
       verifierCopySha256: sha256File(path.join(evidenceDirectory, VERIFIER_COPY_FILE)),
     })
+  );
+  // The human review entrypoint is rendered from the sealed evidence just
+  // written, so the sealed verifier can re-render it and reject any edit.
+  writeNew(
+    path.join(evidenceDirectory, REVIEW_FILE),
+    buildReviewDocument(sealContext)
   );
 
   const excluded = new Set(['98-sha256-manifest.json', 'SHA256SUMS']);
@@ -1127,6 +1138,7 @@ function createManifest(args) {
     verification: {
       passed: true,
       claims: verdict.results.length,
+      reviewEntrypoint: path.join(evidenceDirectory, REVIEW_FILE),
       command: `node ${path.join(evidenceDirectory, VERIFIER_COPY_FILE)} ${evidenceDirectory}`,
       bundleDigest: verdict.bundleDigest,
     },

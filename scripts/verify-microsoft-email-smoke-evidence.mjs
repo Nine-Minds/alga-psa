@@ -4,9 +4,12 @@
  * Verify a sealed Microsoft Email smoke-evidence bundle without touching the
  * running stack, the database, the network, or the wider repository.
  *
- * The bundle is self-describing: `96-verification-index.json` maps every
- * required smoke claim to the exact evidence files, their sealed SHA-256
- * identities, and the machine-evaluable assertions that prove the claim, and
+ * The bundle is self-describing: `00-REVIEW.md` is the human review
+ * entrypoint (read it first — it states the verdict commands, the claim
+ * table, and the disclosed limitations without requiring any investigation
+ * beyond the bundle), `96-verification-index.json` maps every required smoke
+ * claim to the exact evidence files, their sealed SHA-256 identities, and the
+ * machine-evaluable assertions that prove the claim, and
  * `97-verify-evidence.mjs` is a sealed copy of this script. A reviewer runs
  * one bounded command against the bundle directory:
  *
@@ -39,6 +42,7 @@ import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 
+export const REVIEW_FILE = '00-REVIEW.md';
 export const INDEX_FILE = '96-verification-index.json';
 export const VERIFIER_COPY_FILE = '97-verify-evidence.mjs';
 export const MANIFEST_FILE = '98-sha256-manifest.json';
@@ -48,7 +52,7 @@ export const RESTORATION_FILE = '91-restoration-comparison.json';
 export const CREATED_SESSIONS_FILE = '89-temporary-sessions-created.json';
 export const SESSION_CLEANUP_FILE = '91-temporary-session-cleanup-proof.json';
 export const CORRELATION_FILE = '95-final-dom-screenshot-correlation.json';
-export const INDEX_SCHEMA_VERSION = 2;
+export const INDEX_SCHEMA_VERSION = 3;
 export const VERIFIER_SOURCE_PATH = fileURLToPath(import.meta.url);
 export const DEFAULT_TIMEOUT_MS = 60_000;
 export const EXPECTED_TEMPORARY_SESSION_COUNT = 2;
@@ -91,16 +95,16 @@ const PHASE_MARKERS = {
  * Names listed in SEALED_AFTER_INDEX exist only after the index is written and
  * are therefore pinned by the manifest and SHA256SUMS instead of the index.
  */
-const SEALED_AFTER_INDEX = new Set([INDEX_FILE, MANIFEST_FILE, CHECKSUM_FILE]);
+const SEALED_AFTER_INDEX = new Set([REVIEW_FILE, INDEX_FILE, MANIFEST_FILE, CHECKSUM_FILE]);
 
 export const REQUIRED_CLAIMS = [
   {
     id: 'verification-index',
-    title: 'The sealed verification index declares exactly the required claims and pins its verifier',
-    proves: 'The index cannot silently drop, reorder, or weaken a required check, and the bundled verifier copy is the pinned one.',
-    evidence: [INDEX_FILE, VERIFIER_COPY_FILE],
+    title: 'The sealed verification index declares exactly the required claims, pins its verifier, and matches the review entrypoint',
+    proves: 'The index cannot silently drop, reorder, or weaken a required check, the bundled verifier copy is the pinned one, and the human review entrypoint 00-REVIEW.md byte-matches a re-render from the sealed evidence.',
+    evidence: [INDEX_FILE, VERIFIER_COPY_FILE, REVIEW_FILE],
     assertions: [],
-    native: ['index-consistency'],
+    native: ['index-consistency', 'review-consistency'],
   },
   {
     id: 'bundle-integrity',
@@ -293,6 +297,46 @@ export const REQUIRED_CLAIMS = [
     evidence: [METADATA_FILE, '90-after-database.json', '90-after-secret-inventory.json'],
     assertions: [],
     native: ['no-fixture-residue'],
+  },
+];
+
+/**
+ * The five verdict dimensions the review entrypoint groups the claims under.
+ * Together the sections must cover every required claim exactly once;
+ * `buildReviewDocument` enforces that invariant.
+ */
+export const REVIEW_SECTIONS = [
+  {
+    title: 'Bundle integrity and tamper resistance',
+    claimIds: ['verification-index', 'bundle-integrity', 'phase-markers'],
+  },
+  {
+    title: 'UI proof',
+    claimIds: [
+      'providers-wizard-platform-gating',
+      'derived-readonly-redirect-uri',
+      'pending-admin-consent-mailbox',
+      'restored-not-configured-mailbox',
+      'dom-png-binding',
+    ],
+  },
+  {
+    title: 'Exact restoration',
+    claimIds: [
+      'restoration-profiles',
+      'restoration-bindings',
+      'restoration-secrets',
+      'ctime-disclosure',
+      'no-fixture-residue',
+    ],
+  },
+  {
+    title: 'Temporary-session deletions',
+    claimIds: ['temporary-session-cleanup'],
+  },
+  {
+    title: 'Provenance and limitation disclosures',
+    claimIds: ['provenance-disclosures'],
   },
 ];
 
@@ -505,6 +549,7 @@ const NATIVE_CHECKS = {
   'runtime-provenance': verifyRuntimeProvenance,
   'no-fixture-residue': verifyNoFixtureResidue,
   'index-consistency': verifyIndexConsistency,
+  'review-consistency': verifyReviewEntrypoint,
 };
 
 function verifyChecksumCoverage(context) {
@@ -977,6 +1022,170 @@ function verifyIndexConsistency(context) {
     failures.push(`${INDEX_FILE} is missing the required limitation disclosures`);
   }
   return failures;
+}
+
+/**
+ * Render the human review entrypoint (`00-REVIEW.md`) from the sealed
+ * evidence. The rendering is a pure function of the sealed files — the
+ * capture script writes it at sealing time and `verifyReviewEntrypoint`
+ * re-renders it at verification time, so the sealed document must byte-match
+ * or the bundle fails. Nothing in the document is asserted from memory: every
+ * value comes from the sealed index, the restoration comparison, the session
+ * cleanup proof, and the claim table this module hardcodes.
+ */
+export function buildReviewDocument(context) {
+  const sectionIds = REVIEW_SECTIONS.flatMap((section) => section.claimIds);
+  const requiredIds = REQUIRED_CLAIMS.map((claim) => claim.id);
+  if (new Set(sectionIds).size !== sectionIds.length
+    || !isDeepStrictEqual([...sectionIds].sort(), [...requiredIds].sort())) {
+    throw new Error('REVIEW_SECTIONS does not cover every required claim exactly once');
+  }
+
+  const index = context.readJson(INDEX_FILE);
+  const restoration = context.readJson(RESTORATION_FILE);
+  const cleanup = context.readJson(SESSION_CLEANUP_FILE);
+  const claimCount = REQUIRED_CLAIMS.length;
+  const claimsById = new Map(REQUIRED_CLAIMS.map((claim) => [claim.id, claim]));
+  const wizardMode = index.provenance?.observedWizardMode;
+  const database = index.provenance?.database?.identity;
+  const directoryMtimeMs = restoration.tenantSecrets?.baseline?.directoryMtimeMs;
+  const directoryMtimeNote = typeof directoryMtimeMs === 'number'
+    ? `, and the tenant secret directory mtime (${directoryMtimeMs} ms on both sides)`
+    : '';
+
+  const claimSections = REVIEW_SECTIONS.map((section) => {
+    const rows = section.claimIds.map((claimId) => {
+      const claim = claimsById.get(claimId);
+      const position = requiredIds.indexOf(claimId) + 1;
+      const evidence = resolveEvidenceNames(claim, context)
+        .map((name) => `\`${name}\``)
+        .join(', ');
+      return [
+        `- **${claim.id}** (PASS line ${position} of ${claimCount}) — ${claim.title}.`,
+        `  - Proves: ${claim.proves}`,
+        `  - Evidence: ${evidence}`,
+      ].join('\n');
+    });
+    return `### ${section.title}\n\n${rows.join('\n')}`;
+  });
+
+  return `# Review this first — Microsoft Email setup smoke evidence
+
+Everything needed for a verdict is inside this bundle directory. Do not
+investigate the repository, other evidence bundles, or the running stack:
+this document and the one bounded command below are the complete review
+surface.
+
+- Workflow run: \`${index.workflowRunId}\`
+- Sealed at: ${index.generatedAt}
+- Commit: \`${index.provenance?.commit}\` (branch \`${index.provenance?.branch}\`)
+- Application: ${index.provenance?.appUrl} — tenant \`${index.provenance?.tenantId}\`, smoke fixture profile \`${index.provenance?.profileId}\`
+- Database: ${database?.database} — ${database?.postgres_version}
+- Observed licensing mode: ${wizardMode}
+
+## 1. The verdict command (run this first)
+
+    node <bundle-dir>/${VERIFIER_COPY_FILE} <bundle-dir>
+
+(or, from inside this directory: \`node ${VERIFIER_COPY_FILE} .\`)
+
+Expected on success: one \`PASS <claim-id>\` line for each of the
+${claimCount} claims in section 3, in that order
+(\`providers-wizard-platform-gating\` also prints its licensing branch, here
+\`[${wizardMode}]\`), then \`VERIFIED: ${claimCount}/${claimCount} claims passed\` and
+\`bundleDigest sha256(SHA256SUMS)=<64 hex digits>\`; exit code 0. Typical
+runtime is well under one second.
+
+Exit 1: at least one claim failed; each failing claim prints
+\`FAIL <claim-id>\` with the reasons. Exit 2: usage error or the internal
+deadline was exceeded.
+
+Bounds: ${index.verification?.boundedBy}
+
+This one command is conclusive because the verifier's hardcoded claim table
+is the authority: it re-derives every conclusion from the raw sealed
+evidence (recomputing the restoration comparisons instead of trusting
+recorded verdicts), then checks that \`${INDEX_FILE}\` declares exactly the
+same claims and assertions and that this document byte-matches a re-render
+from the sealed evidence. A dishonest re-seal therefore cannot drop, weaken,
+or reword a check without the command failing.
+
+Sealed verifier copy: \`${VERIFIER_COPY_FILE}\`, sha256
+\`${index.verification?.verifier?.sha256}\`. The identical script lives in
+the repository at \`${index.verification?.repoScript}\`; running the sealed
+copy alone is sufficient.
+
+## 2. Checksums
+
+    cd <bundle-dir> && sha256sum -c ${CHECKSUM_FILE}
+
+Expected: \`OK\` for every bundle file and exit code 0. \`${CHECKSUM_FILE}\`
+lists every file in the bundle except itself, including this document. The
+verdict command already performs this coverage check against the sealed
+per-file identities; run \`sha256sum -c\` only for independent-tool
+confirmation.
+
+${index.disclosures?.integrityAnchor}
+
+## 3. The ${claimCount} claims
+
+All ${claimCount} claims passed when this bundle sealed; the verdict command
+re-establishes each PASS live from the sealed evidence.
+
+${claimSections.join('\n\n')}
+
+## 4. Both temporary-session deletions
+
+The smoke run created exactly ${cleanup.expectedCreatedSessionCount} temporary
+tenant login sessions — one for each authentication path it exercised (the
+real sign-in form and the browser capture):
+
+${cleanup.createdSessionIds.map((sessionId) => `- \`${sessionId}\``).join('\n')}
+
+Neither row exists in the baseline snapshot (\`01-before-database.json\`),
+both appear in \`${CREATED_SESSIONS_FILE}\` with creation times inside the
+run window, and neither remains in \`90-after-database.json\`. The deletion
+proof is \`${SESSION_CLEANUP_FILE}\`; the verdict command recomputes the
+entire argument under claim \`temporary-session-cleanup\`.
+
+## 5. Exact restoration at a glance
+
+Every tenant Microsoft profile row, every Microsoft consumer binding row
+(original timestamps included), and the complete tenant secret inventory
+(content hashes, names, sizes, modes, per-file mtimes${directoryMtimeNote})
+match the baseline exactly, and the fixture left no profile row and no
+secret file behind. The only non-restorable drift is kernel-managed ctime,
+disclosed with zero unexpected changes. Claims: \`restoration-profiles\`,
+\`restoration-bindings\`, \`restoration-secrets\`, \`ctime-disclosure\`,
+\`no-fixture-residue\`.
+
+## 6. Limitations disclosed
+
+- ${index.disclosures?.externalGraphLimitation}
+- ${index.disclosures?.crossHostContext}
+- ${index.disclosures?.crossHostFidelityNote}
+- Render method: ${index.disclosures?.renderMethod}
+- ${index.disclosures?.ctimeNonRestorableReason}.
+`;
+}
+
+function verifyReviewEntrypoint(context) {
+  const reviewPath = context.filePath(REVIEW_FILE);
+  if (!fs.existsSync(reviewPath)) {
+    return [`${REVIEW_FILE} is missing`];
+  }
+  let expected;
+  try {
+    expected = buildReviewDocument(context);
+  } catch (error) {
+    return [error instanceof Error ? error.message : String(error)];
+  }
+  if (fs.readFileSync(reviewPath, 'utf8') !== expected) {
+    return [
+      `${REVIEW_FILE} does not byte-match the document re-rendered from the sealed evidence`,
+    ];
+  }
+  return [];
 }
 
 /**

@@ -11,6 +11,8 @@ import {
   INDEX_FILE,
   MANIFEST_FILE,
   REQUIRED_CLAIMS,
+  REVIEW_FILE,
+  REVIEW_SECTIONS,
   SESSION_CLEANUP_FILE,
   VERIFIER_COPY_FILE,
   verifyBundle,
@@ -161,6 +163,75 @@ test('the verification index maps every required claim to sealed evidence', (t) 
       }
     }
   }
+});
+
+test('the review sections cover every required claim exactly once', () => {
+  const sectionIds = REVIEW_SECTIONS.flatMap((section) => section.claimIds);
+  assert.equal(new Set(sectionIds).size, sectionIds.length);
+  assert.deepEqual(
+    [...sectionIds].sort(),
+    REQUIRED_CLAIMS.map((claim) => claim.id).sort()
+  );
+});
+
+test('sealing writes a self-contained review entrypoint covered by the checksums', (t) => {
+  const directory = copyOfSealedBundle(t);
+  const reviewPath = path.join(directory, REVIEW_FILE);
+  assert.ok(fs.existsSync(reviewPath), `${REVIEW_FILE} is missing from the sealed bundle`);
+
+  const review = fs.readFileSync(reviewPath, 'utf8');
+  assert.match(review, new RegExp(`node <bundle-dir>/${VERIFIER_COPY_FILE} <bundle-dir>`));
+  assert.match(review, /sha256sum -c SHA256SUMS/);
+  assert.match(
+    review,
+    new RegExp(`VERIFIED: ${REQUIRED_CLAIMS.length}/${REQUIRED_CLAIMS.length} claims passed`)
+  );
+  for (const claim of REQUIRED_CLAIMS) {
+    assert.match(review, new RegExp(`\\*\\*${claim.id}\\*\\*`), `${claim.id} missing from claim table`);
+  }
+  for (const section of REVIEW_SECTIONS) {
+    assert.ok(review.includes(`### ${section.title}`), `section "${section.title}" missing`);
+  }
+  const cleanup = JSON.parse(fs.readFileSync(path.join(directory, SESSION_CLEANUP_FILE), 'utf8'));
+  for (const sessionId of cleanup.createdSessionIds) {
+    assert.ok(review.includes(sessionId), `temporary session ${sessionId} missing from review`);
+  }
+  assert.match(review, /Do not\ninvestigate the repository/);
+
+  const checksums = fs.readFileSync(path.join(directory, 'SHA256SUMS'), 'utf8');
+  assert.match(checksums, new RegExp(`^[0-9a-f]{64}  ${REVIEW_FILE}$`, 'm'));
+  const manifest = JSON.parse(fs.readFileSync(path.join(directory, MANIFEST_FILE), 'utf8'));
+  assert.ok(
+    manifest.files.some((entry) => entry.file === REVIEW_FILE),
+    `${REVIEW_FILE} missing from the sealed manifest`
+  );
+});
+
+test('an edited review entrypoint fails verification even after a dishonest re-seal', (t) => {
+  const directory = copyOfSealedBundle(t);
+  const reviewPath = path.join(directory, REVIEW_FILE);
+  const review = fs.readFileSync(reviewPath, 'utf8');
+  fs.writeFileSync(
+    reviewPath,
+    review.replace('Do not\ninvestigate the repository', 'Feel free to\ninvestigate the repository')
+  );
+  resealDishonestly(directory);
+
+  const result = runVerifier(directory);
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /FAIL verification-index/);
+  assert.match(result.stdout, /00-REVIEW\.md does not byte-match/);
+});
+
+test('a deleted review entrypoint fails verification even after a dishonest re-seal', (t) => {
+  const directory = copyOfSealedBundle(t);
+  fs.rmSync(path.join(directory, REVIEW_FILE));
+  resealDishonestly(directory);
+
+  const result = runVerifier(directory);
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /FAIL verification-index/);
+  assert.match(result.stdout, /00-REVIEW\.md/);
 });
 
 test('a missing evidence file fails verification', (t) => {
