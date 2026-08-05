@@ -293,14 +293,14 @@
       "client": "Cliente",
       "invoiceNumber": "Número da fatura",
       "invoiceNumberOptional": "Número da fatura (opcional)",
-      "sourceSalesOrder": "Source sales order (optional)"
+      "sourceSalesOrder": "Pedido de venda de origem (opcional)"
     },
     "placeholders": {
       "selectClient": "Selecione um cliente",
       "invoiceNumberOptional": "Deixe em branco para gerar automaticamente",
-      "sourceSalesOrder": "Select a fulfilled or manually billable sales order",
-      "searchSalesOrders": "Search sales orders...",
-      "noInvoiceableSalesOrders": "No invoiceable sales orders found."
+      "sourceSalesOrder": "Selecione um pedido de venda atendido ou faturável manualmente",
+      "searchSalesOrders": "Pesquisar pedidos de venda...",
+      "noInvoiceableSalesOrders": "Nenhum pedido de venda faturável encontrado."
     },
     "automatedItems": {
       "title": "Itens de linha automatizados",
@@ -318,8 +318,8 @@
       "generate": "Gerar fatura",
       "saveChanges": "Salvar alterações",
       "processing": "Processamento...",
-      "generateSalesOrderInvoice": "Generate Sales Order Invoice",
-      "clearSalesOrderSource": "Clear sales order source"
+      "generateSalesOrderInvoice": "Gerar fatura do pedido de venda",
+      "clearSalesOrderSource": "Limpar pedido de venda de origem"
     },
     "labels": {
       "total": "Total"
@@ -351,9 +351,9 @@
       "INVOICE_NUMBER_CONFLICT": "Este número de fatura já está em uso.",
       "PERMISSION_DENIED": "Não tem permissão para criar ou atualizar esta fatura.",
       "UNEXPECTED": "Ocorreu um erro ao gerar a fatura. Indique a referência {{ref}} ao contactar o suporte.",
-      "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
-      "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
-      "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+      "salesOrderGenerateFailed": "Não foi possível gerar a fatura do pedido de venda.",
+      "salesOrderNothingToInvoice": "Não há mais nada para faturar neste pedido de venda.",
+      "salesOrderNotInvoiceable": "Esse pedido de venda não está mais disponível para faturamento."
     },
     "warnings": {
       "noBillingEmail": "Este cliente não tem um e-mail de faturação. Defina um endereço de e-mail na localização de faturação antes de gerar a fatura."
@@ -363,7 +363,7 @@
       "retry": "Tente novamente"
     },
     "salesOrderContext": {
-      "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
+      "summary": "{{quantity}} item(ns) de {{lineCount}} linha(s) pronto(s) para faturar. Este rascunho será vinculado ao pedido de venda."
     }
   },
   "draftsTab": {
@@ -1029,7 +1029,7 @@
       "generate": "Gerar",
       "drafts": "Rascunhos",
       "finalized": "Finalizado",
-      "projectBilling": "Project Billing"
+      "projectBilling": "Faturamento de projetos"
     }
   },
   "invoiceSyncBadge": {
@@ -1667,63 +1667,63 @@
     }
   },
   "projectBilling": {
-    "subtitle": "Ready milestones and deposits awaiting approval across all projects.",
-    "bulkActions": "Actions ({{count}})",
-    "loading": "Loading project billing queue...",
-    "empty": "Nothing is waiting for review. Ready milestones and deposits will appear here.",
+    "subtitle": "Metas prontas e depósitos aguardando aprovação em todos os projetos.",
+    "bulkActions": "Ações ({{count}})",
+    "loading": "Carregando fila de faturamento de projetos...",
+    "empty": "Nada está aguardando revisão. Metas prontas e depósitos aparecerão aqui.",
     "columns": {
-      "project": "Project",
-      "client": "Client",
-      "description": "Description",
-      "amount": "Amount",
-      "trigger": "Trigger",
-      "daysWaiting": "Days waiting",
-      "actions": "Actions"
+      "project": "Projeto",
+      "client": "Cliente",
+      "description": "Descrição",
+      "amount": "Valor",
+      "trigger": "Gatilho",
+      "daysWaiting": "Dias de espera",
+      "actions": "Ações"
     },
     "trigger": {
-      "phase": "Phase {{phase}} completed {{date}}",
-      "date": "Date reached",
+      "phase": "Fase {{phase}} concluída em {{date}}",
+      "date": "Data atingida",
       "manual": "Manual"
     },
     "actions": {
-      "approve": "Approve",
-      "approveInvoiceNow": "Approve & invoice now",
-      "hold": "Hold",
-      "cancel": "Cancel",
-      "approveSelected": "Approve selected",
-      "holdSelected": "Hold selected"
+      "approve": "Aprovar",
+      "approveInvoiceNow": "Aprovar e faturar agora",
+      "hold": "Colocar em espera",
+      "cancel": "Cancelar",
+      "approveSelected": "Aprovar selecionados",
+      "holdSelected": "Colocar selecionados em espera"
     },
     "toasts": {
-      "approved": "Entry approved.",
-      "approvedWithWarning": "Entry approved. {{warning}}",
-      "invoiced": "Entry approved and invoiced.",
-      "bulkApproved": "{{count}} entries approved.",
-      "bulkApproveFailed": "{{count}} entries could not be approved (e.g. {{reason}}).",
-      "held": "Entry placed on hold.",
-      "bulkHeld": "{{count}} entries placed on hold.",
-      "bulkHoldFailed": "{{count}} entries could not be held (e.g. {{reason}}).",
-      "canceled": "Entry canceled."
+      "approved": "Lançamento aprovado.",
+      "approvedWithWarning": "Lançamento aprovado. {{warning}}",
+      "invoiced": "Lançamento aprovado e faturado.",
+      "bulkApproved": "{{count}} lançamentos aprovados.",
+      "bulkApproveFailed": "Não foi possível aprovar {{count}} lançamentos (por exemplo: {{reason}}).",
+      "held": "Lançamento colocado em espera.",
+      "bulkHeld": "{{count}} lançamentos colocados em espera.",
+      "bulkHoldFailed": "Não foi possível colocar {{count}} lançamentos em espera (por exemplo: {{reason}}).",
+      "canceled": "Lançamento cancelado."
     },
     "errors": {
-      "loadFailed": "Failed to load the project billing review queue. Please try again.",
-      "approveFailed": "Failed to approve the entry.",
-      "invoiceFailed": "Failed to approve and invoice the entry.",
-      "holdFailed": "Failed to place the entry on hold.",
-      "cancelFailed": "Failed to cancel the entry."
+      "loadFailed": "Falha ao carregar a fila de revisão do faturamento de projetos. Tente novamente.",
+      "approveFailed": "Falha ao aprovar o lançamento.",
+      "invoiceFailed": "Falha ao aprovar e faturar o lançamento.",
+      "holdFailed": "Falha ao colocar o lançamento em espera.",
+      "cancelFailed": "Falha ao cancelar o lançamento."
     },
     "holdDialog": {
-      "title": "Hold entry",
-      "titlePlural": "Hold {{count}} entries",
-      "description": "Holding returns the entry to pending until it is made ready again. A reason is required.",
-      "reasonPlaceholder": "Reason for holding...",
-      "cancel": "Cancel",
-      "confirm": "Hold"
+      "title": "Colocar lançamento em espera",
+      "titlePlural": "Colocar {{count}} lançamentos em espera",
+      "description": "Colocar em espera devolve o lançamento ao estado pendente até que ele esteja pronto novamente. É necessário informar um motivo.",
+      "reasonPlaceholder": "Motivo da espera...",
+      "cancel": "Cancelar",
+      "confirm": "Colocar em espera"
     },
     "cancelDialog": {
-      "title": "Cancel entry",
-      "message": "Canceling this schedule entry removes it from billing. This cannot be undone.",
-      "confirm": "Cancel entry",
-      "dismiss": "Keep entry"
+      "title": "Cancelar lançamento",
+      "message": "Cancelar este lançamento agendado o remove do faturamento. Esta ação não pode ser desfeita.",
+      "confirm": "Cancelar lançamento",
+      "dismiss": "Manter lançamento"
     }
   }
 }

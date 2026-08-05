@@ -58,7 +58,7 @@
     "cipp": "Integração CIPP — conecte sua instância CIPP para gerenciamento Entra multilocatário",
     "teamsIntegration": "Microsoft Teams — integração de reuniões e bot do Teams para notificações de tickets",
     "advancedAuthorizationBundles": "Pacotes de autorização avançados — crie e gerencie pacotes de restrição ABAC reutilizáveis",
-    "scimProvisioning": "SCIM User Provisioning — synchronize user activation from your identity provider"
+    "scimProvisioning": "Provisionamento de usuários via SCIM — sincronize a ativação de usuários pelo seu provedor de identidade"
   },
   "summary": {
     "licensesUsed": "Licenças usadas",

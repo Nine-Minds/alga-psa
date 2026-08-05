@@ -312,8 +312,8 @@
     "csatEmpty": "Ainda não há respostas de inquéritos.",
     "discardCancel": "Continuar a editar",
     "discardConfirm": "Descartar alterações",
-    "discardMessage": "Tem alterações não guardadas na ficha do cliente. Fechar e descartá-las?",
-    "discardTitle": "Alterações não guardadas",
+    "discardMessage": "Há alterações não salvas no registro do cliente. Deseja fechar e descartá-las?",
+    "discardTitle": "Alterações não salvas",
     "documents": {
       "more": "+{{count}} mais",
       "none": "Ainda não há documentos."
@@ -337,8 +337,8 @@
       "wipAging_other": "{{count}} itens por faturar — o mais antigo {{days}} d{{materials}}"
     },
     "installBase": {
-      "assets": "ativos geridos",
-      "assetsLink": "Ativos geridos",
+      "assets": "ativos gerenciados",
+      "assetsLink": "Ativos gerenciados",
       "none": "Ainda não há equipamento entregue.",
       "rmas": "RMA abertas",
       "sold": "unidades vendidas",
@@ -358,7 +358,7 @@
     },
     "money": {
       "activeContracts": "Contratos ativos",
-      "agingNote": "{{total}} em dívida · pagamentos registados deduzidos",
+      "agingNote": "{{total}} em aberto · pagamentos registrados descontados",
       "billingSetup": "Configuração de faturação",
       "current": "corrente",
       "draft": "rascunho",
@@ -377,10 +377,10 @@
     },
     "openView": "Abrir",
     "people": {
-      "addContact": "Adicionar contacto",
+      "addContact": "Adicionar contato",
       "more": "+{{count}} mais",
-      "noContactInfo": "sem dados de contacto registados",
-      "none": "Ainda não há contactos.",
+      "noContactInfo": "sem informações de contato registradas",
+      "none": "Nenhum contato adicionado ainda.",
       "primary": "Principal"
     },
     "pulseError": "Não foi possível carregar o resumo do cliente.",
@@ -397,7 +397,7 @@
       "accountManager": "Gestor de conta",
       "additionalInfo": "Informação adicional",
       "clientSince": "Cliente desde",
-      "defaultContact": "Contacto predefinido",
+      "defaultContact": "Contato padrão",
       "edit": "Editar",
       "unset": "não definido"
     },
@@ -421,7 +421,7 @@
     },
     "timeline": {
       "daysAgo": "há {{count}} d",
-      "empty": "Ainda não há nada registado para este cliente.",
+      "empty": "Ainda não há nenhum registro para este cliente.",
       "error": "Não foi possível carregar a cronologia.",
       "filterAll": "Tudo",
       "filterInteractions": "Interações",
@@ -495,7 +495,7 @@
     "createAndAddAnother": "Criar + Adicionar Outro",
     "createAndView": "Criar + Visualizar Cliente",
     "additionalDetails": "Detalhes Adicionais",
-    "createFailed": "Failed to create client. Please try again."
+    "createFailed": "Não foi possível criar o cliente. Tente novamente."
   },
   "clientCreatedDialog": {
     "title": "Cliente criado",
@@ -614,7 +614,7 @@
     "removeAssignmentTitle": "Remover atribuição de linha de contrato",
     "removeAssignmentMessage": "Tem certeza de que deseja remover esta atribuição de item de contrato do cliente? A linha de contrato em si não será excluída.",
     "contracts": "Contratos",
-    "taxRatesLoadError": "Failed to load tax rate configuration."
+    "taxRatesLoadError": "Falha ao carregar a configuração das alíquotas de imposto."
   },
   "clientBillingSchedule": {
     "title": "Cronograma de cobrança",
@@ -763,7 +763,7 @@
     "startDateRequired": "A data de início é obrigatória",
     "updateAssignment": "Atualizar tarefa",
     "useTenantRenewalDefaults": "Use padrões de renovação de locatário",
-    "saveError": "Failed to save contract. Please try again."
+    "saveError": "Não foi possível salvar o contrato. Tente novamente."
   },
   "clientContractLineDashboard": {
     "title": "Métricas de uso (últimos 30 dias)",
@@ -1085,9 +1085,9 @@
     "error": "Erro",
     "updateExistingTitle": "Atualizar clientes existentes",
     "updateExistingMessage": "Os clientes {{count}} já existem. Deseja atualizá-los com os novos dados?",
-    "invalidRowsBlocked": "Fix {{count}} invalid rows or enable \"Skip invalid records\" before importing.",
-    "noValidRows": "There are no valid client rows to import.",
-    "serverFailures": "{{failed}} of {{total}} clients failed to import. Review the row issues below."
+    "invalidRowsBlocked": "Corrija {{count}} linhas inválidas ou ative \"Ignorar registros inválidos\" antes de importar.",
+    "noValidRows": "Não há linhas de clientes válidas para importar.",
+    "serverFailures": "Falha ao importar {{failed}} de {{total}} clientes. Revise abaixo os problemas de cada linha."
   },
   "clientsList": {
     "name": "Nome",
@@ -1245,7 +1245,7 @@
     "loadError": "As notas não foram carregadas",
     "unknownError": "Erro desconhecido",
     "loadErrorTitle": "As notas não foram carregadas",
-    "loadErrorDescription": "Could not load notes. Please try again."
+    "loadErrorDescription": "Não foi possível carregar as observações. Tente novamente."
   },
   "actions": {
     "cancel": "Cancelar",
@@ -1410,8 +1410,8 @@
         "startRequired": "A hora de início é necessária para criar uma reunião do Teams",
         "unavailable": "A criação de reuniões do Teams não está disponível para este locatário."
       },
-      "loadFailed": "Interaction options could not be loaded. Please try again.",
-      "saveFailed": "The interaction could not be saved. Please try again."
+      "loadFailed": "Não foi possível carregar as opções de interação. Tente novamente.",
+      "saveFailed": "Não foi possível salvar a interação. Tente novamente."
     },
     "feed": {
       "addInteraction": "Adicionar interação",
@@ -1425,8 +1425,8 @@
       "startDate": "Data de início",
       "title": "Interações",
       "typePlaceholder": "Tipo de interação",
-      "loadFailed": "Interactions could not be loaded. Please try again.",
-      "typesLoadFailed": "Interaction types could not be loaded. Please try again."
+      "loadFailed": "Não foi possível carregar as interações. Tente novamente.",
+      "typesLoadFailed": "Não foi possível carregar os tipos de interação. Tente novamente."
     },
     "overall": {
       "allContacts": "Todos os contatos",
@@ -1444,7 +1444,7 @@
       "startTimePlaceholder": "Filtrar a partir deste horário de início",
       "statusPlaceholder": "Status",
       "title": "Interações recentes",
-      "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
+      "statusesLoadFailed": "Não foi possível carregar os status de interação. Tente novamente."
     }
   },
   "clientDrawer": {

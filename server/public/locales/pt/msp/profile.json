@@ -92,7 +92,7 @@
       "policies": "Políticas",
       "apiKeys": "Chaves de API",
       "webhooks": "Webhooks",
-      "userProvisioning": "User provisioning"
+      "userProvisioning": "Provisionamento de usuários"
     },
     "loading": {
       "roles": "Carregando configuração de função...",
@@ -103,13 +103,13 @@
       "webhooks": "Carregando configuração do webhook...",
       "sso": "Carregando ferramentas de gerenciamento de SSO...",
       "sessions": "Carregando sessões ativas...",
-      "userProvisioning": "Loading SCIM provisioning..."
+      "userProvisioning": "Carregando provisionamento via SCIM..."
     },
     "sso": {
       "advanced": {
-        "title": "Advanced: custom identity provider routing",
-        "description": "Route MSP login SSO to your own identity provider using verified login domains. Only needed on custom or on-premise installations.",
-        "inertNotice": "No tenant identity provider credentials are configured, so domain claims currently have no effect. Users sign in with the hosted Google / Microsoft providers. Tenant credentials are provisioned on custom and on-premise installations."
+        "title": "Avançado: roteamento de provedor de identidade personalizado",
+        "description": "Direcione o login único do MSP ao seu próprio provedor de identidade usando domínios de login verificados. Necessário apenas em instalações personalizadas ou locais.",
+        "inertNotice": "Nenhuma credencial de provedor de identidade do tenant está configurada, então as declarações de domínio não têm efeito no momento. Os usuários entram com os provedores hospedados do Google ou da Microsoft. As credenciais do tenant são provisionadas em instalações personalizadas e locais."
       }
     },
     "userRoles": {
@@ -586,7 +586,7 @@
         "descriptionPlaceholder": "por exemplo, chave de API de desenvolvimento",
         "expiration": "Data de expiração (opcional)",
         "submit": "Gerar nova chave de API",
-        "createFailed": "Failed to create API key"
+        "createFailed": "Falha ao criar a chave de API"
       },
       "list": {
         "title": "Suas chaves de API",
@@ -613,7 +613,7 @@
           "inactive": "Inativo"
         },
         "deactivate": "Desativar",
-        "deactivateFailed": "Failed to deactivate API key"
+        "deactivateFailed": "Falha ao desativar a chave de API"
       },
       "newKeyDialog": {
         "title": "Chave de API gerada",
@@ -626,76 +626,76 @@
       }
     },
     "scim": {
-      "title": "User provisioning",
-      "description": "Let Microsoft Entra deactivate and reactivate existing internal users. Alga remains authoritative for profiles, roles, teams, and licenses.",
-      "loading": "Loading user provisioning",
+      "title": "Provisionamento de usuários",
+      "description": "Permita que o Microsoft Entra desative e reative usuários internos existentes. O Alga continua sendo a fonte oficial para perfis, funções, equipes e licenças.",
+      "loading": "Carregando provisionamento de usuários",
       "status": {
-        "enabled": "Accepting requests",
-        "disabled": "Provisioning paused"
+        "enabled": "Aceitando solicitações",
+        "disabled": "Provisionamento pausado"
       },
       "errors": {
-        "load": "Unable to load SCIM provisioning.",
-        "update": "Unable to update SCIM provisioning."
+        "load": "Não foi possível carregar o provisionamento via SCIM.",
+        "update": "Não foi possível atualizar o provisionamento via SCIM."
       },
       "upgrade": {
-        "title": "Directory lifecycle provisioning",
-        "description": "SCIM user provisioning is available on Pro and higher plans."
+        "title": "Provisionamento do ciclo de vida no diretório",
+        "description": "O provisionamento de usuários via SCIM está disponível nos planos Pro e superiores."
       },
       "setup": {
-        "title": "Connect Microsoft Entra",
-        "description": "Generate a tenant-specific endpoint and one-time bearer token. No Alga users are created by SCIM.",
-        "create": "Generate connection"
+        "title": "Conectar o Microsoft Entra",
+        "description": "Gere um endpoint específico do tenant e um token Bearer de uso único. O SCIM não cria usuários no Alga.",
+        "create": "Gerar conexão"
       },
       "connection": {
-        "title": "Entra connection",
-        "description": "Use these values in the Provisioning section of your Entra enterprise application.",
-        "url": "Tenant URL",
-        "copyUrl": "Copy tenant URL",
-        "oneTimeToken": "Copy this token now",
-        "oneTimeWarning": "For security, Alga cannot show this value again.",
-        "rotate": "Rotate token",
-        "revokePrevious": "End token overlap",
-        "enabled": "Accept provisioning requests",
-        "disableWarning": "Pausing preserves every link and current user state."
+        "title": "Conexão com o Entra",
+        "description": "Use estes valores na seção Provisionamento do seu aplicativo empresarial no Entra.",
+        "url": "URL do tenant",
+        "copyUrl": "Copiar URL do tenant",
+        "oneTimeToken": "Copie este token agora",
+        "oneTimeWarning": "Por segurança, o Alga não poderá exibir este valor novamente.",
+        "rotate": "Trocar token",
+        "revokePrevious": "Encerrar sobreposição de tokens",
+        "enabled": "Aceitar solicitações de provisionamento",
+        "disableWarning": "A pausa preserva todos os vínculos e o estado atual dos usuários."
       },
       "health": {
-        "title": "Connection health",
-        "lastRequest": "Last authenticated request",
-        "lastSuccess": "Last success",
-        "tokenAge": "Current token created",
-        "lastError": "Last error"
+        "title": "Integridade da conexão",
+        "lastRequest": "Última solicitação autenticada",
+        "lastSuccess": "Último sucesso",
+        "tokenAge": "Token atual criado em",
+        "lastError": "Último erro"
       },
       "mapping": {
-        "title": "Entra attribute mapping",
-        "description": "Keep Entra defaults for userName, externalId, active, names, title, and emails. Only active controls Alga access.",
-        "match": "Initial match",
-        "matchValue": "Exact primary email only",
-        "scope": "Provisioning scope",
-        "scopeValue": "Assigned users and groups",
-        "unsupported": "Not supported",
-        "unsupportedValue": "Groups, passwords, roles, teams"
+        "title": "Mapeamento de atributos do Entra",
+        "description": "Mantenha os padrões do Entra para userName, externalId, active, names, title e emails. Somente active controla o acesso ao Alga.",
+        "match": "Correspondência inicial",
+        "matchValue": "Somente email principal exato",
+        "scope": "Escopo do provisionamento",
+        "scopeValue": "Usuários e grupos atribuídos",
+        "unsupported": "Não compatível",
+        "unsupportedValue": "Grupos, senhas, funções e equipes"
       },
       "links": {
-        "title": "Managed users",
-        "user": "Alga user",
-        "directory": "Directory identity",
-        "state": "State",
-        "action": "Action",
-        "drift": "Email drift",
-        "active": "Upstream active",
-        "inactive": "Upstream inactive",
-        "accessOn": "Access enabled",
-        "accessOff": "Access disabled",
-        "unlink": "Unlink",
-        "empty": "No directory identities have linked yet."
+        "title": "Usuários gerenciados",
+        "user": "Usuário do Alga",
+        "directory": "Identidade do diretório",
+        "state": "Estado",
+        "action": "Ação",
+        "drift": "Divergência de email",
+        "active": "Ativo na origem",
+        "inactive": "Inativo na origem",
+        "accessOn": "Acesso ativado",
+        "accessOff": "Acesso desativado",
+        "unlink": "Desvincular",
+        "empty": "Nenhuma identidade do diretório foi vinculada ainda."
       },
       "unresolved": {
-        "title": "Needs review",
-        "description": "These identities were rejected without changing an Alga user."
+        "title": "Requer revisão",
+        "description": "Estas identidades foram rejeitadas sem alterar nenhum usuário do Alga."
       },
       "state": {
-        "active": "Active upstream",
-        "inactive": "Inactive upstream"
+        "active": "Ativo na origem",
+        "inactive": "Inativo na origem"
       }
     }
   },

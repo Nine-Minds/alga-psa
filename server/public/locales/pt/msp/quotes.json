@@ -232,7 +232,7 @@
       "save": "Falha ao salvar cotação",
       "saveFailed": "Falha ao salvar cotação",
       "workflowAction": "Falha ao {{action}}",
-      "removeItem": "Failed to remove quote item"
+      "removeItem": "Falha ao remover o item da cotação"
     },
     "loading": "Carregando formulário de cotação...",
     "notices": {
@@ -559,7 +559,7 @@
     },
     "removeAriaLabel": "Remover {{email}}",
     "errors": {
-      "contactsLoadFailed": "Could not load client contacts."
+      "contactsLoadFailed": "Não foi possível carregar os contatos do cliente."
     }
   },
   "quoteConversion": {

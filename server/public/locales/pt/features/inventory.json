@@ -215,7 +215,7 @@
         "jobs": "{{count}} serviços",
         "today": "hoje",
         "units": "{{count}} unidades",
-        "ltThirty": "<30d",
+        "ltThirty": "< 30 dias",
         "available": "disponível"
       }
     },
@@ -404,7 +404,7 @@
       "onHand": "Unidades em estoque",
       "serialized": "{{count}} serializadas",
       "deadStock": "Estoque parado",
-      "deadStockDetail": "{{location}} · 90d",
+      "deadStockDetail": "{{location}} · 90 dias",
       "locationFallback": "Localização",
       "thisWeek": "Esta semana",
       "weekActivity": "{{received}} recebidos · {{deployed}} implantados · {{transfers}} transferências · {{rmas}} RMAs",
@@ -549,7 +549,7 @@
       "component": "Componente",
       "componentPlaceholder": "Selecione um produto…",
       "sku": "SKU",
-      "unit": "Unit"
+      "unit": "Unidade"
     },
     "loadComponentsFailed": "Falha ao carregar componentes",
     "loadKitsFailed": "Falha ao carregar kits",
@@ -560,191 +560,191 @@
     "removeTitle": "Remover componente",
     "title": "Kits",
     "actions": {
-      "addComponent": "Add component",
-      "createKit": "Create kit",
-      "createSalesOrder": "Create sales order",
-      "productSettings": "Open product settings",
-      "updateQuantity": "Update quantity",
-      "viewSalesOrders": "View sales orders"
+      "addComponent": "Adicionar componente",
+      "createKit": "Criar kit",
+      "createSalesOrder": "Criar pedido de venda",
+      "productSettings": "Abrir configurações do produto",
+      "updateQuantity": "Atualizar quantidade",
+      "viewSalesOrders": "Ver pedidos de venda"
     },
     "bom": {
-      "componentCount": "{{count}} components",
-      "componentCountShort": "Components",
-      "emptyBody": "Componentless kits cannot be used on sales orders because there is nothing to allocate or fulfill.",
-      "emptyTitle": "Add at least one BOM component",
-      "qtyPerKit": "Qty per kit",
-      "title": "Bill of materials"
+      "componentCount": "{{count}} componentes",
+      "componentCountShort": "Componentes",
+      "emptyBody": "Kits sem componentes não podem ser usados em pedidos de venda, pois não há nada para alocar ou atender.",
+      "emptyTitle": "Adicione pelo menos um componente à lista de materiais",
+      "qtyPerKit": "Qtd. por kit",
+      "title": "Lista de materiais"
     },
     "create": {
-      "created": "Kit created.",
+      "created": "Kit criado.",
       "fields": {
-        "name": "Kit name",
-        "productType": "Product type"
+        "name": "Nome do kit",
+        "productType": "Tipo de produto"
       },
-      "noServiceTypes": "Create a product type in Billing before creating a kit.",
-      "title": "Create kit",
+      "noServiceTypes": "Crie um tipo de produto em Faturamento antes de criar um kit.",
+      "title": "Criar kit",
       "validation": {
-        "costInvalid": "Kit cost must be a valid amount.",
-        "nameRequired": "Kit name is required.",
-        "priceRequired": "Kit price must be greater than 0.",
-        "typeRequired": "Product type is required."
+        "costInvalid": "O custo do kit deve ser um valor válido.",
+        "nameRequired": "O nome do kit é obrigatório.",
+        "priceRequired": "O preço do kit deve ser maior que 0.",
+        "typeRequired": "O tipo de produto é obrigatório."
       }
     },
     "detail": {
-      "loadFailedTitle": "Could not load this kit",
-      "notFound": "This kit could not be found.",
-      "pickKit": "Select a kit to manage its bill of materials."
+      "loadFailedTitle": "Não foi possível carregar este kit",
+      "notFound": "Este kit não foi encontrado.",
+      "pickKit": "Selecione um kit para gerenciar sua lista de materiais."
     },
     "empty": {
-      "body": "Create a sellable kit, then add its bill of materials.",
-      "noResults": "No kits match those filters.",
-      "title": "No inventory kits yet"
+      "body": "Crie um kit vendável e adicione sua lista de materiais.",
+      "noResults": "Nenhum kit corresponde a esses filtros.",
+      "title": "Ainda não há kits no inventário"
     },
     "filters": {
-      "all": "All"
+      "all": "Todos"
     },
     "list": {
-      "label": "Kit list"
+      "label": "Lista de kits"
     },
     "pricing": {
-      "addComponentsToCalculate": "Add components to calculate a price.",
-      "calculatedBasis": "Component selling prices × quantity",
-      "calculatedPrice": "Calculated kit price",
-      "componentCost": "Component cost",
-      "createSumHint": "Price will be calculated after components are added.",
-      "currency": "Currency",
-      "each": "each",
-      "extCost": "Ext. cost",
-      "extended": "extended",
-      "fixed": "Fixed price",
-      "fixedAmount": "Fixed kit price",
-      "grossMargin": "Gross margin",
-      "grossProfit": "Gross profit",
-      "kitCostOptional": "Kit cost (optional)",
-      "kitPrice": "Kit price",
-      "kitPriceWithCurrency": "Kit price ({{currency}})",
-      "margin": "Margin",
-      "marginUnavailable": "Add component costs in the kit currency to calculate margin.",
-      "mode": "Pricing mode",
-      "salesOrderPrice": "Sales-order kit price",
-      "save": "Save pricing",
-      "saved": "Pricing saved.",
-      "sellingPrice": "Selling price",
-      "sum": "Sum of component prices",
-      "title": "Pricing and margin",
-      "unitCost": "Unit cost",
-      "unsaved": "Save pricing before creating a sales order.",
+      "addComponentsToCalculate": "Adicione componentes para calcular um preço.",
+      "calculatedBasis": "Preços de venda dos componentes × quantidade",
+      "calculatedPrice": "Preço calculado do kit",
+      "componentCost": "Custo do componente",
+      "createSumHint": "O preço será calculado após a adição dos componentes.",
+      "currency": "Moeda",
+      "each": "por unidade",
+      "extCost": "Custo total",
+      "extended": "total",
+      "fixed": "Preço fixo",
+      "fixedAmount": "Preço fixo do kit",
+      "grossMargin": "Margem bruta",
+      "grossProfit": "Lucro bruto",
+      "kitCostOptional": "Custo do kit (opcional)",
+      "kitPrice": "Preço do kit",
+      "kitPriceWithCurrency": "Preço do kit ({{currency}})",
+      "margin": "Margem",
+      "marginUnavailable": "Adicione os custos dos componentes na moeda do kit para calcular a margem.",
+      "mode": "Modo de precificação",
+      "salesOrderPrice": "Preço do kit no pedido de venda",
+      "save": "Salvar precificação",
+      "saved": "Precificação salva.",
+      "sellingPrice": "Preço de venda",
+      "sum": "Soma dos preços dos componentes",
+      "title": "Precificação e margem",
+      "unitCost": "Custo unitário",
+      "unsaved": "Salve a precificação antes de criar um pedido de venda.",
       "validation": {
-        "fixedRequired": "Fixed kit price must be greater than 0.",
-        "priceRequired": "Kit price must be greater than 0."
+        "fixedRequired": "O preço fixo do kit deve ser maior que 0.",
+        "priceRequired": "O preço do kit deve ser maior que 0."
       }
     },
     "salesOrder": {
-      "componentLines": "Component lines",
-      "componentLinesValue": "Explode as child lines",
-      "parentLine": "Parent kit line",
-      "parentLineValue": "Priced at {{price}}",
-      "preview": "Sales-order preview",
-      "previewQuantity": "Kit quantity",
-      "previewQuantityInvalid": "Enter a positive whole number.",
-      "stockEffect": "Stock effect",
-      "stockEffectValue": "Components allocate and fulfill stock",
-      "title": "Sales-order behavior"
+      "componentLines": "Linhas de componentes",
+      "componentLinesValue": "Expandir como linhas filhas",
+      "parentLine": "Linha principal do kit",
+      "parentLineValue": "Precificado em {{price}}",
+      "preview": "Prévia do pedido de venda",
+      "previewQuantity": "Quantidade do kit",
+      "previewQuantityInvalid": "Insira um número inteiro positivo.",
+      "stockEffect": "Efeito no estoque",
+      "stockEffectValue": "Os componentes são alocados e atendidos no estoque",
+      "title": "Comportamento no pedido de venda"
     },
-    "searchPlaceholder": "Search kits or SKUs",
+    "searchPlaceholder": "Buscar kits ou SKUs",
     "status": {
-      "incomplete": "Incomplete",
-      "lowStock": "Low stock",
-      "noBom": "No BOM",
-      "ready": "Ready"
+      "incomplete": "Incompleto",
+      "lowStock": "Estoque baixo",
+      "noBom": "Sem lista de materiais",
+      "ready": "Pronto"
     },
     "stock": {
-      "available": "Available",
-      "canBuildLabel": "Can build",
-      "noStockLimit": "No stock limit",
-      "noStockLimitShort": "n/a",
-      "nonStocked": "Non-stocked",
-      "serialized": "Serialized",
-      "shortComponents": "Short components",
-      "shortWarning": "At least one stocked component cannot cover one complete kit from available stock.",
-      "stocked": "Stocked",
-      "stockedComponents": "Stocked components",
-      "title": "Stock readiness"
+      "available": "Disponível",
+      "canBuildLabel": "Pode montar",
+      "noStockLimit": "Sem limite de estoque",
+      "noStockLimitShort": "sem limite",
+      "nonStocked": "Não estocado",
+      "serialized": "Serializado",
+      "shortComponents": "Componentes insuficientes",
+      "shortWarning": "Pelo menos um componente estocado não tem disponibilidade suficiente para montar um kit completo.",
+      "stocked": "Estocado",
+      "stockedComponents": "Componentes estocados",
+      "title": "Prontidão do estoque"
     },
     "summary": {
-      "attention": "{{count}} need attention",
-      "ready": "{{count}} ready",
+      "attention": "{{count}} precisam de atenção",
+      "ready": "{{count}} prontos",
       "total": "{{count}} kits"
     },
     "usage": {
-      "usedOnSalesOrders": "Used on sales orders"
+      "usedOnSalesOrders": "Usado em pedidos de venda"
     },
-    "componentUpdated": "Component quantity updated."
+    "componentUpdated": "Quantidade do componente atualizada."
   },
   "loaners": {
     "title": "Unidades de Empréstimo",
     "loanOut": "Emprestar",
     "return": "Devolver",
-    "extend": "Extend",
-    "history": "History",
+    "extend": "Prorrogar",
+    "history": "Histórico",
     "loadFailed": "Falha ao carregar unidades de empréstimo",
     "loadLocationsFailed": "Não foi possível carregar as localizações de estoque",
     "loanDialogTitle": "Emprestar unidade",
-    "loaningOut": "Loaning out…",
-    "loanedOut": "{{serial}} loaned out.",
+    "loaningOut": "Emprestando…",
+    "loanedOut": "{{serial}} emprestada.",
     "loanFailed": "Falha no empréstimo",
-    "theUnit": "The unit",
-    "chooseUnit": "Choose a unit.",
-    "chooseClient": "Choose a client.",
+    "theUnit": "A unidade",
+    "chooseUnit": "Escolha uma unidade.",
+    "chooseClient": "Escolha um cliente.",
     "returnDialogTitle": "Devolver unidade de empréstimo",
-    "returning": "Returning…",
-    "returningTo": "Returning {{serial}} to stock.",
-    "returned": "{{serial}} returned to stock.",
+    "returning": "Devolvendo…",
+    "returningTo": "Devolvendo {{serial}} ao estoque.",
+    "returned": "{{serial}} devolvida ao estoque.",
     "returnFailed": "Falha na devolução",
     "returnLocationRequired": "A localização de devolução é obrigatória",
-    "extendDialogTitle": "Extend loan",
-    "currentlyDue": "Currently due: {{due}}",
-    "updateDueDate": "Update due date",
-    "updatingDueDate": "Updating…",
-    "dueDateUpdated": "Due date updated for {{serial}}.",
-    "extendFailed": "Couldn't update the due date.",
-    "historyNotFound": "No history recorded for this unit yet.",
-    "historyLoadFailed": "Couldn't load this unit's history. Try again.",
-    "noDueDate": "No due date",
-    "daysOut": "{{n}}d out",
-    "daysOverdue": "{{n}}d overdue",
-    "dueToday": "Due today",
-    "dueInDays": "Due in {{n}}d",
-    "searchPlaceholder": "Search serial, MAC, client, or product",
+    "extendDialogTitle": "Prorrogar empréstimo",
+    "currentlyDue": "Vencimento atual: {{due}}",
+    "updateDueDate": "Atualizar data de vencimento",
+    "updatingDueDate": "Atualizando…",
+    "dueDateUpdated": "Data de vencimento atualizada para {{serial}}.",
+    "extendFailed": "Não foi possível atualizar a data de vencimento.",
+    "historyNotFound": "Ainda não há histórico registrado para esta unidade.",
+    "historyLoadFailed": "Não foi possível carregar o histórico desta unidade. Tente novamente.",
+    "noDueDate": "Sem data de vencimento",
+    "daysOut": "Emprestada há {{n}} dias",
+    "daysOverdue": "{{n}} dias em atraso",
+    "dueToday": "Vence hoje",
+    "dueInDays": "Vence em {{n}} dias",
+    "searchPlaceholder": "Buscar série, MAC, cliente ou produto",
     "columns": {
-      "serial": "Serial",
-      "product": "Product",
+      "serial": "Série",
+      "product": "Produto",
       "client": "Cliente",
-      "loaned": "Loaned",
+      "loaned": "Emprestada",
       "due": "Vencimento"
     },
     "summary": {
-      "out": "{{n}} out",
-      "overdueSuffix": " · {{n}} overdue"
+      "out": "{{n}} emprestadas",
+      "overdueSuffix": " · {{n}} em atraso"
     },
     "filter": {
-      "label": "Show",
-      "all": "All loaners",
-      "overdue": "Overdue only"
+      "label": "Exibir",
+      "all": "Todas as unidades emprestadas",
+      "overdue": "Somente atrasadas"
     },
     "empty": {
-      "noMatchTitle": "No loaners match",
-      "noMatchDescription": "Clear the search and filter to see everything on loan.",
-      "clearFilters": "Clear filters",
-      "noLoansTitle": "Nothing out on loan",
-      "noLoansDescription": "Units you loan to clients appear here until they come back."
+      "noMatchTitle": "Nenhuma unidade emprestada corresponde aos filtros",
+      "noMatchDescription": "Limpe a busca e o filtro para ver todas as unidades emprestadas.",
+      "clearFilters": "Limpar filtros",
+      "noLoansTitle": "Nenhuma unidade emprestada",
+      "noLoansDescription": "As unidades emprestadas a clientes aparecem aqui até serem devolvidas."
     },
     "fields": {
-      "unit": "Unit",
-      "unitPlaceholder": "Search by serial or MAC…",
-      "unitSearchPlaceholder": "e.g. SSD990-0007",
+      "unit": "Unidade",
+      "unitPlaceholder": "Buscar por série ou MAC…",
+      "unitSearchPlaceholder": "Ex.: SSD990-0007",
       "noInStockUnits": "Nenhuma unidade em estoque encontrada",
-      "client": "Client",
+      "client": "Cliente",
       "dueDate": "Data de vencimento",
       "returnLocation": "Devolver para a localização",
       "locationPlaceholder": "Selecione uma localização…"
@@ -987,8 +987,8 @@
       "returnedUnit": "Unidade devolvida",
       "type": "Tipo",
       "vendor": "Fornecedor",
-      "creditAtStake": "Credit at stake",
-      "rmaNumber": "RMA #"
+      "creditAtStake": "Crédito em risco",
+      "rmaNumber": "Nº do RMA"
     },
     "deadUnitsOwed": "Unidades defeituosas devidas",
     "fields": {
@@ -1035,9 +1035,9 @@
       "charged": "Cobrado",
       "closed": "Fechado"
     },
-    "ageAtVendor": "{{days}}d at vendor",
+    "ageAtVendor": "{{days}} dias com o fornecedor",
     "filters": {
-      "statusActive": "Showing {{status}} RMA cases."
+      "statusActive": "Exibindo casos de RMA com status {{status}}."
     }
   },
   "salesOrders": {
@@ -1058,19 +1058,19 @@
       "manageLayouts": "Gerenciar layouts",
       "reopenToDraft": "Reabrir como rascunho",
       "reopening": "Reabrindo…",
-      "cancelSalesOrder": "Cancel sales order",
-      "moreActions": "More actions",
-      "orderPdfs": "Order PDFs"
+      "cancelSalesOrder": "Cancelar pedido de venda",
+      "moreActions": "Mais ações",
+      "orderPdfs": "PDFs do pedido"
     },
     "addSalesOrder": "Adicionar Pedido de Venda",
     "allocationMode": {
       "hard": "Rígida",
       "soft": "Flexível"
     },
-    "allocationModeHelp": "Soft reserves stock but leaves it visible to other orders; Hard holds it exclusively.",
+    "allocationModeHelp": "A alocação flexível reserva o estoque, mas o mantém visível para outros pedidos; a rígida o retém com exclusividade.",
     "availabilityOk": "OK",
     "backorderBadge": "Pendência {{shortfall}}",
-    "billingAllocation": "Billing & allocation",
+    "billingAllocation": "Faturamento e alocação",
     "billsOnFulfillment": "Fatura no atendimento",
     "cancelDialog": {
       "confirm": "Cancelar pedido de venda",
@@ -1086,9 +1086,9 @@
       "currency": "Moeda",
       "invoiceMode": "Modo de Faturamento",
       "soNumber": "Número do SO",
-      "amount": "Amount",
-      "fulfillment": "Fulfillment",
-      "invoiceable": "Invoiceable"
+      "amount": "Valor",
+      "fulfillment": "Atendimento",
+      "invoiceable": "Faturável"
     },
     "confirmFailed": "Falha na confirmação",
     "confirmShipmentError": "Não foi possível confirmar o envio.",
@@ -1102,7 +1102,7 @@
       "vendorPlaceholder": "Selecione um fornecedor…"
     },
     "created": "Pedido de venda criado",
-    "currencyFromClient": "Set from client",
+    "currencyFromClient": "Definida a partir do cliente",
     "currencyRequired": "O código da moeda é obrigatório",
     "detailTitle": "Pedido de Venda {{number}}",
     "detailTitleFallback": "Pedido de Venda",
@@ -1143,26 +1143,26 @@
     },
     "fields": {
       "allocationMode": "Modo de alocação",
-      "clientPoNumber": "Client PO number",
+      "clientPoNumber": "Número do PO do cliente",
       "currencyCode": "Código da moeda",
-      "expectedShipDate": "Expected ship date",
-      "fulfillment": "Fulfillment",
+      "expectedShipDate": "Data prevista de envio",
+      "fulfillment": "Atendimento",
       "invoiceMode": "Modo de faturamento",
-      "items": "Items",
+      "items": "Itens",
       "lines": "Linhas",
-      "noService": "No service found.",
-      "notes": "Notes",
+      "noService": "Nenhum serviço encontrado.",
+      "notes": "Observações",
       "qty": "Qtd",
-      "searchService": "Search services…",
-      "selectService": "Select a service…",
-      "service": "Service",
+      "searchService": "Buscar serviços…",
+      "selectService": "Selecione um serviço…",
+      "service": "Serviço",
       "serviceId": "ID do serviço",
       "unitPrice": "Preço Unitário",
-      "unitPriceIn": "Unit price ({{currency}})"
+      "unitPriceIn": "Preço unitário ({{currency}})"
     },
     "filters": {
-      "kitUsageActive": "Showing sales orders using {{kit}}.",
-      "invoiceableActive": "Showing sales orders with fulfilled, uninvoiced items."
+      "kitUsageActive": "Exibindo pedidos de venda que usam {{kit}}.",
+      "invoiceableActive": "Exibindo pedidos de venda com itens atendidos e não faturados."
     },
     "fromQuote": "A partir de cotação",
     "fulfillDialog": {
@@ -1182,8 +1182,8 @@
     },
     "fulfilledUnits": "Atendidas {{count}} unidade(s).",
     "fulfillment": {
-      "dropShip": "Drop-ship",
-      "fromStock": "From stock"
+      "dropShip": "Entrega direta",
+      "fromStock": "Do estoque"
     },
     "fulfillmentFailed": "Falha no atendimento.",
     "invoiceColumns": {
@@ -1197,14 +1197,14 @@
       "onFulfillment": "No atendimento"
     },
     "kitPrice": {
-      "calculated": "Calculated from components",
-      "configured": "Configured kit price",
-      "currencyMismatch": "Kit price is configured in {{kitCurrency}}. Enter a {{orderCurrency}} price for this sales order.",
-      "currencyOverride": "Order-specific {{currency}} price",
-      "overridden": "Overridden from {{price}} for this sales order",
-      "reset": "Reset to kit price"
+      "calculated": "Calculado a partir dos componentes",
+      "configured": "Preço configurado do kit",
+      "currencyMismatch": "O preço do kit está configurado em {{kitCurrency}}. Insira um preço em {{orderCurrency}} para este pedido de venda.",
+      "currencyOverride": "Preço em {{currency}} específico do pedido",
+      "overridden": "Alterado de {{price}} para este pedido de venda",
+      "reset": "Redefinir para o preço do kit"
     },
-    "invoiceModeHelp": "On fulfillment bills as items ship; Manual leaves invoicing to you.",
+    "invoiceModeHelp": "No atendimento, os itens são faturados conforme enviados; no modo Manual, o faturamento fica a seu cargo.",
     "invoicedItems": "Faturados {{count}} item(ns).",
     "invoices": "Faturas",
     "invoicingFailed": "Falha no faturamento: {{error}}. Use \"Gerar fatura\" para tentar novamente.",
@@ -1225,10 +1225,10 @@
     "nothingBackordered": "Nada em pendência.",
     "nothingToInvoice": "Nada mais a faturar.",
     "onlyRemaining": "Apenas {{remaining}} restantes nesta linha.",
-    "pickServiceForLine": "Pick a service for this line.",
+    "pickServiceForLine": "Escolha um serviço para esta linha.",
     "pickVendor": "Escolha o fornecedor que enviará esta linha.",
     "productDefaultLocation": "Localização padrão do produto",
-    "qtyPositive": "Must be > 0.",
+    "qtyPositive": "Deve ser maior que 0.",
     "qtyPositiveInteger": "A quantidade deve ser um número inteiro positivo.",
     "reopenError": "Não foi possível reabrir o pedido de venda.",
     "reopened": "Pedido de venda reaberto — voltou a ser um rascunho.",
@@ -1246,11 +1246,11 @@
     "title": "Pedidos de Venda",
     "total": "Total",
     "unassignedBackorder": "{{count}} linha(s) em pendência não têm fornecedor preferencial — crie esses POs manualmente.",
-    "unnamedService": "Unnamed",
-    "notFound": "Sales order not found.",
+    "unnamedService": "Sem nome",
+    "notFound": "Pedido de venda não encontrado.",
     "badges": {
-      "dropShip": "Drop-ship",
-      "readyToInvoice": "Ready"
+      "dropShip": "Entrega direta",
+      "readyToInvoice": "Pronto"
     }
   },
   "stock": {
@@ -1400,37 +1400,37 @@
     },
     "viewAsset": "Ver ativo",
     "restock": {
-      "action": "Restock",
-      "headerAction": "Restock a return",
-      "dialogTitle": "Restock a returned unit",
-      "mode": "What are you restocking?",
-      "modeUnit": "A specific returned unit",
-      "modeQuantity": "A quantity of a product",
-      "unit": "Unit",
-      "unitPlaceholder": "Search a delivered or returned unit…",
-      "noUnits": "No delivered or returned units match",
-      "location": "Restock to location",
-      "locationPlaceholder": "Select a location…",
-      "useCurrentLocation": "Use unit's current location",
-      "product": "Product",
-      "productPlaceholder": "Select a product…",
-      "quantity": "Quantity",
-      "fee": "Restocking fee",
-      "feeClient": "Bill restocking fee to",
-      "feeInvalid": "Restocking fee must be a non-negative amount.",
-      "chooseUnit": "Choose a unit to restock.",
-      "chooseProduct": "Choose a product to restock.",
-      "chooseLocation": "Choose a location to restock into.",
-      "quantityInvalid": "Enter a quantity greater than zero.",
-      "chooseClient": "Choose the client to bill the restocking fee to.",
-      "theProduct": "the product",
-      "doneWithInvoice": "Unit restocked. Draft invoice {{number}} created for the {{amount}} restocking fee.",
-      "doneFeeFailed": "Unit restocked, but the restocking fee wasn't billed: {{reason}} Create it manually.",
-      "doneQuantity": "{{qty}} × {{product}} restocked.",
-      "done": "Unit restocked.",
-      "failed": "Couldn't restock the return.",
-      "restocking": "Restocking…",
-      "submit": "Restock"
+      "action": "Repor no estoque",
+      "headerAction": "Repor uma devolução no estoque",
+      "dialogTitle": "Repor uma unidade devolvida no estoque",
+      "mode": "O que você está repondo no estoque?",
+      "modeUnit": "Uma unidade devolvida específica",
+      "modeQuantity": "Uma quantidade de um produto",
+      "unit": "Unidade",
+      "unitPlaceholder": "Buscar uma unidade entregue ou devolvida…",
+      "noUnits": "Nenhuma unidade entregue ou devolvida corresponde à busca",
+      "location": "Local de reposição",
+      "locationPlaceholder": "Selecione uma localização…",
+      "useCurrentLocation": "Usar a localização atual da unidade",
+      "product": "Produto",
+      "productPlaceholder": "Selecione um produto…",
+      "quantity": "Quantidade",
+      "fee": "Taxa de reposição no estoque",
+      "feeClient": "Faturar a taxa de reposição para",
+      "feeInvalid": "A taxa de reposição deve ser um valor não negativo.",
+      "chooseUnit": "Escolha uma unidade para repor no estoque.",
+      "chooseProduct": "Escolha um produto para repor no estoque.",
+      "chooseLocation": "Escolha uma localização para a reposição.",
+      "quantityInvalid": "Insira uma quantidade maior que zero.",
+      "chooseClient": "Escolha o cliente para o qual a taxa de reposição será faturada.",
+      "theProduct": "o produto",
+      "doneWithInvoice": "Unidade reposta no estoque. A fatura em rascunho {{number}} foi criada para a taxa de reposição de {{amount}}.",
+      "doneFeeFailed": "Unidade reposta no estoque, mas a taxa de reposição não foi faturada: {{reason}} Crie-a manualmente.",
+      "doneQuantity": "{{qty}} × {{product}} repostos no estoque.",
+      "done": "Unidade reposta no estoque.",
+      "failed": "Não foi possível repor a devolução no estoque.",
+      "restocking": "Repondo no estoque…",
+      "submit": "Repor no estoque"
     }
   },
   "transfers": {
@@ -1521,7 +1521,7 @@
       "qty": "Qtd",
       "unitCost": "Custo unitário",
       "vendor": "Fornecedor",
-      "vsPo": "vs PO"
+      "vsPo": "comparação com PO"
     },
     "createBill": "Criar fatura",
     "createError": "Não foi possível criar a fatura.",
