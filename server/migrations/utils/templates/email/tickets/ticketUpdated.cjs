@@ -151,7 +151,7 @@ const COPY = {
     updatedBy: 'Aggiornato da',
     assignedTo: 'Assegnato a',
     requester: 'Richiedente',
-    board: 'Board',
+    board: 'Bacheca',
     category: 'Categoria',
     location: 'Sede',
     changesLabel: 'Modifiche effettuate',

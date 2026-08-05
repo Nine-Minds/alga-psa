@@ -52,7 +52,7 @@ const TEMPLATES = [
       fr: { title: 'Vous avez été mentionné dans un document', message: '{{authorName}} vous a mentionné dans le document "{{documentName}}"' },
       es: { title: 'Te mencionaron en un documento', message: '{{authorName}} te mencionó en el documento "{{documentName}}"' },
       de: { title: 'Sie wurden in einem Dokument erwähnt', message: '{{authorName}} hat Sie im Dokument "{{documentName}}" erwähnt' },
-      nl: { title: 'Je bent vermeld in een document', message: '{{authorName}} heeft je vermeld in document "{{documentName}}"' },
+      nl: { title: 'U bent vermeld in een document', message: '{{authorName}} heeft u vermeld in document "{{documentName}}"' },
       it: { title: 'Sei stato menzionato in un documento', message: '{{authorName}} ti ha menzionato nel documento "{{documentName}}"' },
       pl: { title: 'Wspomniano o Tobie w dokumencie', message: '{{authorName}} wspomniał(a) o Tobie w dokumencie "{{documentName}}"' },
       pt: { title: 'Você foi mencionado em um documento', message: '{{authorName}} mencionou você no documento "{{documentName}}"' },

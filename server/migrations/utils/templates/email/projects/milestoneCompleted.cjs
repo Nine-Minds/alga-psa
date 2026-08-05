@@ -19,7 +19,7 @@ const SUBJECTS = {
   es: 'Hito completado: {{milestone.name}}',
   de: 'Meilenstein erreicht: {{milestone.name}}',
   nl: 'Mijlpaal voltooid: {{milestone.name}}',
-  it: 'Milestone completata: {{milestone.name}}',
+  it: 'Traguardo completato: {{milestone.name}}',
   pl: 'Kamie\u0144 milowy osi\u0105gni\u0119ty: {{milestone.name}}',
 };
 
@@ -91,16 +91,16 @@ const COPY = {
     textView: 'Project bekijken op',
   },
   it: {
-    headerLabel: 'Milestone completata',
-    intro: '\u00c8 stata completata una milestone nel progetto {{project.name}}:',
-    milestone: 'Milestone',
+    headerLabel: 'Traguardo completato',
+    intro: '\u00c8 stato completato un traguardo nel progetto {{project.name}}:',
+    milestone: 'Traguardo',
     completionDate: 'Data di completamento',
-    completedBy: 'Completata da',
+    completedBy: 'Completato da',
     projectProgress: 'Avanzamento del progetto',
     viewButton: 'Visualizza progetto',
     footer: 'Powered by Alga PSA &middot; Manteniamo i team allineati',
-    textHeader: 'Milestone completata',
-    textIntro: '\u00c8 stata completata una milestone nel progetto {{project.name}}:',
+    textHeader: 'Traguardo completato',
+    textIntro: '\u00c8 stato completato un traguardo nel progetto {{project.name}}:',
     textView: 'Visualizza progetto su',
   },
   pl: {

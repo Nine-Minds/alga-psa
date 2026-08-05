@@ -125,7 +125,7 @@ const COPY = {
     priority: 'Priorit\u00e0',
     status: 'Stato',
     assignedTo: 'Assegnato a',
-    board: 'Board',
+    board: 'Bacheca',
     category: 'Categoria',
     requester: 'Richiedente',
     viewButton: 'Apri ticket',

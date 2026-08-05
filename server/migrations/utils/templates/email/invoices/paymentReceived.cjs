@@ -101,7 +101,7 @@ const COPY = {
   },
   pl: {
     headerLabel: 'P\u0142atno\u015b\u0107 Otrzymana',
-    intro: 'Otrzymali\u015bmy p\u0142atno\u015b\u0107 za faktur\u0119. Dzi\u0119kujemy!',
+    intro: 'Otrzymali\u015bmy p\u0142atno\u015b\u0107 za faktur\u0119 nr {{invoice.number}}. Dzi\u0119kujemy!',
     invoiceNumberLabel: 'Numer faktury',
     amountPaidLabel: 'Kwota',
     paymentDateLabel: 'Data p\u0142atno\u015bci',
@@ -109,7 +109,7 @@ const COPY = {
     viewButton: 'Zobacz faktur\u0119',
     footer: 'Powered by Alga PSA',
     textHeader: 'P\u0142atno\u015b\u0107 otrzymana',
-    textIntro: 'Otrzymali\u015bmy p\u0142atno\u015b\u0107 za faktur\u0119:',
+    textIntro: 'Otrzymali\u015bmy p\u0142atno\u015b\u0107 za faktur\u0119 nr {{invoice.number}}:',
   },
 };
 SUBJECTS.pt = 'Pagamento recebido: fatura #{{invoice.number}}';

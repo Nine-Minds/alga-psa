@@ -359,7 +359,7 @@ function buildStyledHtml(c) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Email Verification</title>
+  <title>${c.headerTitle}</title>
   <style>${EMAIL_VERIFICATION_CSS}
   </style>
 </head>

@@ -59,7 +59,7 @@ const COPY = {
   nl: {
     subject: 'RMM-melding ({{severity}}): {{deviceName}}',
     heading: 'RMM-melding',
-    intro: 'Een melding van {{provider}} komt overeen met een regel die jou waarschuwt.',
+    intro: 'Een melding van {{provider}} komt overeen met een regel die u waarschuwt.',
     severity: 'Ernst',
     device: 'Apparaat',
     message: 'Bericht',

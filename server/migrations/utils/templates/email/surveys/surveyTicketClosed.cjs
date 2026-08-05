@@ -86,6 +86,7 @@ const COPY = {
     buttonHelp: 'Wybierz ocen\u0119 poni\u017cej, aby da\u0107 nam zna\u0107, jak nam posz\u0142o:',
     fallback: 'Je\u015bli przyciski si\u0119 nie za\u0142aduj\u0105, otw\u00f3rz ten bezpieczny link do ankiety:',
     thankYou: '{{thank_you_text}}',
+    ticketLabel: 'Zg\u0142oszenie',
   },
 };
 SUBJECTS.pt = 'Queremos sua opinião sobre o ticket {{ticket_number}}';
@@ -138,7 +139,7 @@ function buildBodyHtml(lang, c, subject) {
               <p style="margin:0 0 20px 0;font-size:14px;color:#475569;white-space:pre-line;">{{rating_links_text}}</p>
               <p style="margin:0;font-size:16px;line-height:1.6;">${c.thankYou}</p>
               <p style="margin:20px 0 0 0;font-size:12px;color:#94a3b8;">
-                {{tenant_name}} \u00b7 Ticket #{{ticket_number}} \u00b7 {{ticket_closed_at}}
+                {{tenant_name}} \u00b7 ${c.ticketLabel || 'Ticket'} #{{ticket_number}} \u00b7 {{ticket_closed_at}}
               </p>
             </td>
           </tr>
@@ -165,7 +166,7 @@ ${c.fallback}
 
 ${c.thankYou}
 
-{{tenant_name}} \u00b7 Ticket #{{ticket_number}} \u00b7 {{ticket_closed_at}}`;
+{{tenant_name}} \u00b7 ${c.ticketLabel || 'Ticket'} #{{ticket_number}} \u00b7 {{ticket_closed_at}}`;
 }
 
 function getTemplate() {

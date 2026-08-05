@@ -237,7 +237,7 @@ const COPY = {
     technicianPhone: 'Telefon:',
     calendarButton: 'Dodaj do kalendarza',
     cancellationTitle: 'Polityka anulowania',
-    rescheduleMsg: 'Je\u015bli potrzebujesz prze\u0142o\u017cy\u0107 lub anulowa\u0107 wizyt\u0119, skontaktuj si\u0119 z nami pod adresem {{contactEmail}}{{#if contactPhone}} lub zadzwo\u0144 pod {{contactPhone}}{{/if}}.',
+    rescheduleMsg: 'Je\u015bli potrzebujesz prze\u0142o\u017cy\u0107 lub anulowa\u0107 wizyt\u0119, skontaktuj si\u0119 z nami co najmniej {{minimumNoticeHours}} godzin wcze\u015bniej pod adresem {{contactEmail}}{{#if contactPhone}} lub zadzwo\u0144 pod {{contactPhone}}{{/if}}.',
     reminderMsg: 'Wy\u015blemy Ci przypomnienie przed wizyt\u0105. Do zobaczenia!',
     footer: 'Powered by Alga PSA',
     textHeader: 'Wizyta potwierdzona',

@@ -108,7 +108,7 @@ const COPY = {
     clientLabel: 'Klient',
     viewButton: 'Zobacz faktur\u0119',
     footer: 'Powered by Alga PSA',
-    textHeader: 'Nowa faktura',
+    textHeader: 'Nowa faktura {{invoice.number}}',
     textIntro: 'Nowa faktura zosta\u0142a wystawiona:',
   },
 };

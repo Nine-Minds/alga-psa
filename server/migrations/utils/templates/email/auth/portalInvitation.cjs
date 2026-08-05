@@ -301,6 +301,7 @@ const COPY = {
     warningTitle: '\u23f0 Tijdgebonden uitnodiging',
     warningText: 'Deze uitnodigingslink verloopt over <strong>{{expirationTime}}</strong>. Voltooi uw accountconfiguratie v\u00f3\u00f3r die tijd om ononderbroken toegang te garanderen.',
     contactTitle: 'Hulp nodig?',
+    emailLabel: 'E-mail',
     phoneLabel: 'Telefoon',
     contactHelp: 'Ons supportteam staat klaar om u op weg te helpen.',
     footerSent: 'Deze e-mail is verzonden naar {{contactName}} als onderdeel van uw portaaltoegang.',
@@ -331,7 +332,7 @@ const COPY = {
     footerCopyright: '\u00a9 {{currentYear}} {{tenantName}}. Tutti i diritti riservati.',
   },
   pl: {
-    subject: 'Zaproszenie do portalu klienta{{#if tenantName}} - {{tenantName}}{{/if}}',
+    subject: 'Zaproszenie do portalu klienta - {{tenantName}}',
     title: 'Zaproszenie do portalu',
     headerTitle: 'Witamy w portalu klienta',
     headerSubtitle: 'Tw\u00f3j dost\u0119p do zarz\u0105dzania us\u0142ugami jest gotowy',
@@ -433,7 +434,7 @@ ${c.tagline ? `
 
     <div class="contact-info">
       <h4>${c.contactTitle}</h4>
-      <p><strong>Email:</strong> {{supportEmail}}</p>
+      <p><strong>${c.emailLabel || 'Email'}:</strong> {{supportEmail}}</p>
       <p><strong>${c.phoneLabel}:</strong> {{supportPhone}}</p>
       <p style="margin-top: 12px; font-size: 13px; color: #64748b;">${c.contactHelp}</p>
     </div>
@@ -465,7 +466,7 @@ ${c.warningTitle}
 ${c.warningText.replace(/<[^>]+>/g, '')}
 
 ${c.contactTitle}
-Email: {{supportEmail}}
+${c.emailLabel || 'Email'}: {{supportEmail}}
 ${c.phoneLabel}: {{supportPhone}}
 ${c.contactHelp}
 

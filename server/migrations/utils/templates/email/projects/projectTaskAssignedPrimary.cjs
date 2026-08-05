@@ -51,7 +51,7 @@ const COPY = {
     textView: 'View task at',
   },
   fr: {
-    headerLabel: 'Assignation de t\u00e2che',
+    headerLabel: 'Attribution de t\u00e2che',
     intro: 'Bonjour{{#if recipientName}} {{recipientName}}{{/if}}, vous avez \u00e9t\u00e9 assign\u00e9 comme ressource principale pour une t\u00e2che de projet.',
     assignedBadge: 'Responsable principal',
     badgeBg: BADGE_BG,
@@ -65,7 +65,7 @@ const COPY = {
     viewButton: 'Voir la t\u00e2che',
     buttonColor: BRAND_PRIMARY,
     footer: 'Powered by Alga PSA',
-    textHeader: 'Assignation de t\u00e2che',
+    textHeader: 'Attribution de t\u00e2che',
     textIntro: 'Vous avez \u00e9t\u00e9 assign\u00e9 comme responsable principal pour cette t\u00e2che :',
     textView: 'Voir la t\u00e2che sur',
   },

@@ -51,7 +51,7 @@ const COPY = {
     textView: 'View task at',
   },
   fr: {
-    headerLabel: 'Assignation de t\u00e2che',
+    headerLabel: 'Attribution de t\u00e2che',
     intro: 'Bonjour{{#if recipientName}} {{recipientName}}{{/if}}, vous avez \u00e9t\u00e9 ajout\u00e9 comme ressource suppl\u00e9mentaire pour une t\u00e2che de projet.',
     assignedBadge: 'Ressource suppl\u00e9mentaire',
     badgeBg: 'rgba(138,77,234,0.12)',
@@ -65,7 +65,7 @@ const COPY = {
     viewButton: 'Voir la t\u00e2che',
     buttonColor: '#8A4DEA',
     footer: 'Powered by Alga PSA',
-    textHeader: 'Assignation de t\u00e2che',
+    textHeader: 'Attribution de t\u00e2che',
     textIntro: 'Vous avez \u00e9t\u00e9 ajout\u00e9 comme ressource suppl\u00e9mentaire pour cette t\u00e2che :',
     textView: 'Voir la t\u00e2che sur',
   },

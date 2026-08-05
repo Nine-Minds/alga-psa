@@ -101,7 +101,7 @@ const COPY = {
   },
   pl: {
     headerLabel: 'P\u0142atno\u015b\u0107 po Terminie',
-    intro: 'P\u0142atno\u015b\u0107 za poni\u017csz\u0105 faktur\u0119 jest po terminie. Prosimy o uregulowanie nale\u017cno\u015bci.',
+    intro: 'P\u0142atno\u015b\u0107 za faktur\u0119 nr {{invoice.number}} jest po terminie. Prosimy o uregulowanie nale\u017cno\u015bci.',
     invoiceNumberLabel: 'Numer faktury',
     amountDueLabel: 'Kwota do zap\u0142aty',
     dueDateLabel: 'Termin p\u0142atno\u015bci',
@@ -109,7 +109,7 @@ const COPY = {
     viewButton: 'Zobacz faktur\u0119',
     footer: 'Powered by Alga PSA',
     textHeader: 'P\u0142atno\u015b\u0107 po terminie',
-    textIntro: 'P\u0142atno\u015b\u0107 za faktur\u0119 jest po terminie:',
+    textIntro: 'P\u0142atno\u015b\u0107 za faktur\u0119 nr {{invoice.number}} jest po terminie:',
   },
 };
 SUBJECTS.pt = 'Pagamento vencido: fatura #{{invoice.number}}';
