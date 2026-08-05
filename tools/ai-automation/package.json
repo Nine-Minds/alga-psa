@@ -23,5 +23,10 @@
     "@types/node": "^22.10.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
+  },
+  "overrides": {
+    "body-parser": ">=1.20.6 <2",
+    "ip-address": ">=10.3.1",
+    "socket.io-parser": ">=4.2.7"
   }
 }

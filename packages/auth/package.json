@@ -107,11 +107,11 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "@auth/core": "^0.41.0",
+    "@auth/core": "^0.41.3",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "knex": "^3.1.0",
-    "next-auth": "^5.0.0-beta.30",
+    "next-auth": "^5.0.0-beta.32",
     "ua-parser-js": "^1.0.37"
   },
   "devDependencies": {

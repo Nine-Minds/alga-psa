@@ -11,8 +11,17 @@ import { setTicketWatchListOnAttributes, type TicketWatchListEntry } from '@shar
 
 // The server-suite setup stubs this hook with empty automationIdProps, which
 // strips data-automation-id off controls — these tests locate the quick-add
-// buttons by that attribute. No-op under this package's own config.
-vi.unmock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister');
+// buttons by that attribute. Override with an id-echoing stub (same pattern
+// as QuickAddClient.ui-reflection.test.tsx) rather than vi.unmock, which is
+// unreliable under the server suite's shared singleFork module cache.
+vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({
+  useAutomationIdAndRegister: (params?: { id?: string }) => ({
+    automationIdProps: params?.id
+      ? { id: params.id, 'data-automation-id': params.id }
+      : {},
+    updateMetadata: vi.fn(),
+  }),
+}));
 
 vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: () => ({ enabled: false, loading: false, error: null }),

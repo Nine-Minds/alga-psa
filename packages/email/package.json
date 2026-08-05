@@ -29,7 +29,7 @@
     "@alga-psa/event-bus": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/types": "*",
-    "axios": "^1.16.0",
+    "axios": "^1.18.0",
     "nodemailer": "^9.0.3"
   },
   "devDependencies": {

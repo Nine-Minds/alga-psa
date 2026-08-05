@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Agreement } from '../types';
 import { dummyAgreements } from '../data/dummyAgreements';
 import { Button, Card, Stack, Text, Badge, DataTable } from '@alga/ui-kit';

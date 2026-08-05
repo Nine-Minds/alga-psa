@@ -9,8 +9,17 @@ const getEmployeeUtilizationReport = vi.fn();
 
 // The server-suite setup stubs this hook with empty automationIdProps, which
 // strips DOM ids off UI Buttons — this test locates cards by #reports-view-*,
-// so restore the real hook. No-op under this package's own config.
-vi.unmock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister');
+// so echo ids back with a local stub (same pattern as
+// QuickAddClient.ui-reflection.test.tsx) rather than vi.unmock, which is
+// unreliable under the server suite's shared singleFork module cache.
+vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({
+  useAutomationIdAndRegister: (params?: { id?: string }) => ({
+    automationIdProps: params?.id
+      ? { id: params.id, 'data-automation-id': params.id }
+      : {},
+    updateMetadata: vi.fn(),
+  }),
+}));
 
 vi.mock('next/link', () => ({
   default: ({ children, ...rest }: any) => <a {...rest}>{children}</a>,
