@@ -151,7 +151,9 @@
       "declined": "Function declined",
       "pending": "Function queued",
       "error": "Function error"
-    }
+    },
+    "executedCalls": "Executed calls",
+    "bundleMore": "+{{remaining}} more"
   },
   "mention": {
     "noResultsFound": "No results found"

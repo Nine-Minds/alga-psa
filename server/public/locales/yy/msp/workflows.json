@@ -443,7 +443,11 @@
       "summaryDescription": "55555",
       "moreErrors": "55555 {{count}} 55555"
     },
-    "sampleEmailBody": "55555"
+    "sampleEmailBody": "55555",
+    "sections": {
+      "schemaAndEvents": "55555",
+      "payloadTools": "55555"
+    }
   },
   "eventList": {
     "common": {
@@ -1374,7 +1378,9 @@
     "field": {
       "placeholder": "55555",
       "insertFieldPlaceholder": "55555"
-    }
+    },
+    "clear": "55555",
+    "clearAriaLabel": "55555"
   },
   "sourceDataTree": {
     "searchPlaceholder": "55555",

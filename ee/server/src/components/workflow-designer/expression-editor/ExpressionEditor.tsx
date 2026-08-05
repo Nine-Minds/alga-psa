@@ -570,11 +570,11 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
             <button
               type="button"
               id={idPrefix ? `${idPrefix}-expr-clear` : undefined}
-              aria-label="Clear expression"
+              aria-label={t('expressionEditor.clearAriaLabel', { defaultValue: 'Clear expression' })}
               onClick={() => { handleChange(''); plainTextAreaRef.current?.focus(); }}
               className="absolute right-1 top-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-gray-500 hover:bg-[rgb(var(--color-border-100))] hover:text-gray-800"
             >
-              Clear
+              {t('expressionEditor.clear', { defaultValue: 'Clear' })}
             </button>
           ) : null}
         </div>

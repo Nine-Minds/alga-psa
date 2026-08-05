@@ -1600,10 +1600,10 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
             </div>
             {discounts.length > 0 && (
               <div className="mt-2 grid grid-cols-[1.4fr_0.8fr_0.8fr_1fr_auto] gap-1 text-[9px] text-[rgb(var(--color-text-400))]">
-                <span>Name</span>
-                <span>Type</span>
-                <span>Value</span>
-                <span>Applies to</span>
+                <span>{t("contractSimulator.scenario.columns.name", { defaultValue: "Name" })}</span>
+                <span>{t("contractSimulator.scenario.columns.type", { defaultValue: "Type" })}</span>
+                <span>{t("contractSimulator.scenario.columns.value", { defaultValue: "Value" })}</span>
+                <span>{t("contractSimulator.scenario.columns.appliesTo", { defaultValue: "Applies to" })}</span>
                 <span className="w-3" />
               </div>
             )}
@@ -1787,10 +1787,10 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
             </div>
             {adjustments.length > 0 && (
               <div className="mt-2 grid grid-cols-[1.4fr_0.8fr_0.8fr_auto_auto] gap-1 text-[9px] text-[rgb(var(--color-text-400))]">
-                <span>Description</span>
-                <span>Amount ($)</span>
-                <span>Billing period</span>
-                <span>Timing</span>
+                <span>{t("contractSimulator.scenario.columns.description", { defaultValue: "Description" })}</span>
+                <span>{t("contractSimulator.scenario.columns.amount", { defaultValue: "Amount ($)" })}</span>
+                <span>{t("contractSimulator.scenario.columns.billingPeriod", { defaultValue: "Billing period" })}</span>
+                <span>{t("contractSimulator.scenario.columns.timing", { defaultValue: "Timing" })}</span>
                 <span className="w-3" />
               </div>
             )}

@@ -2379,7 +2379,57 @@
           "load": "Failed to load organization mappings",
           "sync": "Sync failed",
           "updateMapping": "Failed to update mapping",
-          "updateContact": "Failed to update default contact"
+          "updateContact": "Failed to update default contact",
+          "loadStatus": "Failed to load Huntress integration status",
+          "connect": "Connection failed",
+          "saveSettings": "Failed to save settings",
+          "poll": "Poll failed"
+        },
+        "loadingIntegration": "Loading Huntress integration…",
+        "connect": {
+          "title": "Connect Huntress",
+          "description": "Generate API credentials at <your-account>.huntress.io → API Credentials, then paste them here. SOC-reviewed incident reports will become tickets automatically.",
+          "apiKeyPlaceholder": "API Key",
+          "apiSecretPlaceholder": "API Secret Key",
+          "submit": "Connect",
+          "connecting": "Connecting…"
+        },
+        "connection": {
+          "title": "Connected to {{account}}",
+          "summary": "{{organizations}} organizations ({{unmapped}} unmapped) · {{openIncidents}} open incidents · last poll: {{lastPoll}}",
+          "neverPolled": "never",
+          "lastPollFailed": "Last poll failed: {{error}}",
+          "routingIncompleteWarning": "Incident polling is paused until the routing configuration below is complete (board, fallback client/board, and all three severity priorities).",
+          "pollNow": "Poll now",
+          "disconnect": "Disconnect",
+          "disconnectConfirm": "Disconnect Huntress? Existing tickets and mappings are kept."
+        },
+        "routing": {
+          "title": "Ticket Routing",
+          "description": "Where incident tickets land. Unmapped Huntress organizations always create tickets on the fallback client and triage board — nothing is dropped.",
+          "securityBoard": "Security board",
+          "selectBoard": "Select board",
+          "category": "Category (optional)",
+          "noCategory": "None",
+          "fallbackClient": "Fallback client",
+          "fallbackBoard": "Fallback (triage) board",
+          "criticalSeverity": "Critical severity →",
+          "highSeverity": "High severity →",
+          "lowSeverity": "Low severity →",
+          "selectPriority": "Priority",
+          "pollInterval": "Poll interval (minutes)",
+          "autoClose": "Close tickets when Huntress closes the incident",
+          "closedStatus": "Closed status",
+          "selectStatus": "Select status",
+          "save": "Save routing configuration",
+          "saving": "Saving…"
+        },
+        "messages": {
+          "connected": "Connected to Huntress account \"{{account}}\". Complete the routing configuration below to start ticket creation.",
+          "routingSaved": "Routing configuration saved — incident polling is active.",
+          "routingIncomplete": "Saved, but routing is still incomplete; polling stays paused until every field below is set.",
+          "pollFinished": "Poll finished: {{count}} incident(s) processed.",
+          "disconnected": "Huntress disconnected."
         }
       },
       "ninjaone": {

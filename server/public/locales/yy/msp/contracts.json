@@ -2296,7 +2296,17 @@
         "hourly": "55555",
         "usage": "55555"
       },
-      "title": "55555"
+      "title": "55555",
+      "columns": {
+        "name": "55555",
+        "type": "55555",
+        "value": "55555",
+        "appliesTo": "55555",
+        "description": "55555",
+        "amount": "55555",
+        "billingPeriod": "55555",
+        "timing": "55555"
+      }
     },
     "timeline": {
       "deltaDown": "55555 {{amount}} 55555",

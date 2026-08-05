@@ -443,7 +443,11 @@
       "summaryDescription": "11111",
       "moreErrors": "11111 {{count}} 11111"
     },
-    "sampleEmailBody": "11111"
+    "sampleEmailBody": "11111",
+    "sections": {
+      "schemaAndEvents": "11111",
+      "payloadTools": "11111"
+    }
   },
   "eventList": {
     "common": {
@@ -1374,7 +1378,9 @@
     "field": {
       "placeholder": "11111",
       "insertFieldPlaceholder": "11111"
-    }
+    },
+    "clear": "11111",
+    "clearAriaLabel": "11111"
   },
   "sourceDataTree": {
     "searchPlaceholder": "11111",

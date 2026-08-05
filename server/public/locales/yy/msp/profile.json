@@ -696,6 +696,10 @@
         "copySuccess": "55555",
         "copyFailed": "55555",
         "downloadFailed": "55555"
+      },
+      "admin": {
+        "title": "55555",
+        "searchPlaceholder": "55555"
       }
     }
   },

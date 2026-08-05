@@ -19,16 +19,11 @@ import type { TrustedIdp, Agent, Role, AuditRow, PlatformProvider, ConnectIdenti
 import { getMcpDemoMode, demoState, demoAuditPage, demoConnectResult } from './mcpDemoData';
 import { EditionGateError, getEditionGateResponse, isEditionGateError } from '@/lib/editionGating/client';
 import type { EditionGateResponseBody } from '@/lib/editionGating/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const AUDIT_PAGE_SIZE = 10;
 
 const PROVIDER_NAME: Record<'microsoft' | 'google', string> = { microsoft: 'Microsoft', google: 'Google' };
-
-function providerLabel(kind?: TrustedIdp['kind']): string {
-  if (kind === 'microsoft') return 'Microsoft Entra';
-  if (kind === 'google') return 'Google';
-  return 'Custom';
-}
 
 function hostOf(url: string): string {
   try {
@@ -42,37 +37,6 @@ function hostOf(url: string): string {
 function providerDirectory(p: TrustedIdp): string {
   if (p.kind === 'microsoft') return p.entra_tenant_id || hostOf(p.issuer);
   return hostOf(p.issuer);
-}
-
-/** The provider an agent signs in through, resolved from the trusted-provider list or a platform issuer. */
-function agentProvider(a: Agent, idps: TrustedIdp[]): string {
-  const idp = idps.find((p) => p.issuer === a.idp_issuer);
-  if (idp) return providerLabel(idp.kind);
-  const iss = a.idp_issuer ?? '';
-  if (/login\.microsoftonline\.com/.test(iss)) return 'Microsoft';
-  if (iss === 'https://accounts.google.com') return 'Google';
-  return iss ? hostOf(iss) : '—';
-}
-
-/**
- * What to enter as the Agent ID depends on the chosen provider and the claim it
- * identifies agents by — the value must match whatever lands in that claim of the
- * agent's token (see resolveAgentByIdp in ee/.../mcp/idpToken.ts).
- */
-function agentIdHelp(idp?: TrustedIdp): { placeholder: string; helper: string } {
-  if (!idp) {
-    return { placeholder: "the agent's identifier", helper: 'Pick a provider to see what to enter.' };
-  }
-  const claim = (idp.subject_claim || '').toLowerCase();
-  if (idp.kind === 'microsoft') {
-    return claim === 'oid' || claim === 'sub'
-      ? { placeholder: 'e.g. 00000000-0000-0000-0000-000000000000', helper: "The agent's user object ID (oid) from Entra." }
-      : { placeholder: 'e.g. 00000000-0000-0000-0000-000000000000', helper: "The app's Application (client) ID from Entra." };
-  }
-  if (idp.kind === 'google') {
-    return { placeholder: 'e.g. 113029283849283742983', helper: "The service account's ID (the sub value in its token)." };
-  }
-  return { placeholder: 'value of your subject claim', helper: `The value of the "${idp.subject_claim || 'sub'}" claim in the agent's token.` };
 }
 
 /** A card header that carries its place in the setup sequence. */
@@ -111,6 +75,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export default function McpServerSettings() {
+  const { t } = useTranslation('msp/settings');
   const [idps, setIdps] = useState<TrustedIdp[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -141,6 +106,61 @@ export default function McpServerSettings() {
   // Dev-only: preview populated UI states without the EE backend (?mcpDemo=...).
   const demoMode = getMcpDemoMode();
 
+  const providerLabel = (kind?: TrustedIdp['kind']): string => {
+    if (kind === 'microsoft') return t('mcpServer.providers.kinds.microsoft', { defaultValue: 'Microsoft Entra' });
+    if (kind === 'google') return t('mcpServer.providers.kinds.google', { defaultValue: 'Google' });
+    return t('mcpServer.providers.kinds.custom', { defaultValue: 'Custom' });
+  };
+
+  /** The provider an agent signs in through, resolved from the trusted-provider list or a platform issuer. */
+  const agentProvider = (a: Agent): string => {
+    const idp = idps.find((p) => p.issuer === a.idp_issuer);
+    if (idp) return providerLabel(idp.kind);
+    const iss = a.idp_issuer ?? '';
+    if (/login\.microsoftonline\.com/.test(iss)) return 'Microsoft';
+    if (iss === 'https://accounts.google.com') return 'Google';
+    return iss ? hostOf(iss) : '—';
+  };
+
+  /**
+   * What to enter as the Agent ID depends on the chosen provider and the claim it
+   * identifies agents by — the value must match whatever lands in that claim of the
+   * agent's token (see resolveAgentByIdp in ee/.../mcp/idpToken.ts).
+   */
+  const agentIdHelp = (idp?: TrustedIdp): { placeholder: string; helper: string } => {
+    if (!idp) {
+      return {
+        placeholder: t('mcpServer.agentId.unknown.placeholder', { defaultValue: "the agent's identifier" }),
+        helper: t('mcpServer.agentId.unknown.helper', { defaultValue: 'Pick a provider to see what to enter.' }),
+      };
+    }
+    const claim = (idp.subject_claim || '').toLowerCase();
+    if (idp.kind === 'microsoft') {
+      return claim === 'oid' || claim === 'sub'
+        ? {
+            placeholder: 'e.g. 00000000-0000-0000-0000-000000000000',
+            helper: t('mcpServer.agentId.microsoft.userHelper', { defaultValue: "The agent's user object ID (oid) from Entra." }),
+          }
+        : {
+            placeholder: 'e.g. 00000000-0000-0000-0000-000000000000',
+            helper: t('mcpServer.agentId.microsoft.appHelper', { defaultValue: "The app's Application (client) ID from Entra." }),
+          };
+    }
+    if (idp.kind === 'google') {
+      return {
+        placeholder: 'e.g. 113029283849283742983',
+        helper: t('mcpServer.agentId.google.helper', { defaultValue: "The service account's ID (the sub value in its token)." }),
+      };
+    }
+    return {
+      placeholder: t('mcpServer.agentId.custom.placeholder', { defaultValue: 'value of your subject claim' }),
+      helper: t('mcpServer.agentId.custom.helper', {
+        defaultValue: 'The value of the "{{claim}}" claim in the agent\'s token.',
+        claim: idp.subject_claim || 'sub',
+      }),
+    };
+  };
+
   const reloadIdps = useCallback(() => api<{ data: TrustedIdp[] }>('/api/v1/mcp/idp-providers').then((r) => setIdps(r.data)), []);
   const reloadAgents = useCallback(() => api<{ data: Agent[] }>('/api/v1/mcp/agents').then((r) => setAgents(r.data)), []);
   const reloadRoles = useCallback(() => api<{ data: Role[] }>('/api/v1/mcp/roles').then((r) => setRoles(r.data)), []);
@@ -161,7 +181,7 @@ export default function McpServerSettings() {
         setEditionGate(e.response);
         return;
       }
-      setError('Failed to load MCP settings.');
+      setError(t('mcpServer.errors.load', { defaultValue: 'Failed to load MCP settings.' }));
     });
     api<{ data: { microsoft?: { entraTenantId: string; displayName: string | null } } }>('/api/v1/mcp/idp-suggestions')
       .then((r) => setSuggestion(r.data))
@@ -169,7 +189,7 @@ export default function McpServerSettings() {
     api<{ data: PlatformProvider[] }>('/api/v1/mcp/platform-providers')
       .then((r) => setPlatformProviders(r.data))
       .catch(() => {});
-  }, [demoMode, reloadIdps, reloadAgents, reloadRoles]);
+  }, [demoMode, reloadIdps, reloadAgents, reloadRoles, t]);
 
   const run = async (fn: () => Promise<unknown>) => {
     setError(null);
@@ -182,7 +202,7 @@ export default function McpServerSettings() {
         setEditionGate(e.response);
         return;
       }
-      setError('Failed to update MCP settings.');
+      setError(t('mcpServer.errors.update', { defaultValue: 'Failed to update MCP settings.' }));
     } finally {
       setBusy(false);
     }
@@ -319,26 +339,31 @@ export default function McpServerSettings() {
       setRemoveTarget(null);
     });
 
+  const statusLabel = (active: boolean) =>
+    active
+      ? t('mcpServer.status.active', { defaultValue: 'Active' })
+      : t('mcpServer.status.inactive', { defaultValue: 'Inactive' });
+
   const idpColumns: ColumnDefinition<TrustedIdp>[] = [
     {
-      title: 'Provider',
+      title: t('mcpServer.providers.table.provider', { defaultValue: 'Provider' }),
       dataIndex: 'kind',
       width: '28%',
       render: (_v, p) => <span className="font-medium text-[rgb(var(--color-text-900))]">{providerLabel(p.kind)}</span>,
     },
     {
-      title: 'Directory',
+      title: t('mcpServer.providers.table.directory', { defaultValue: 'Directory' }),
       dataIndex: 'issuer',
       render: (_v, p) => (
         <span className="font-mono text-xs text-[rgb(var(--color-text-700))]">{providerDirectory(p)}</span>
       ),
     },
     {
-      title: 'Status',
+      title: t('mcpServer.providers.table.status', { defaultValue: 'Status' }),
       dataIndex: 'active',
       width: '120px',
       sortable: false,
-      render: (_v, p) => <Badge variant={p.active ? 'success' : 'default-muted'}>{p.active ? 'Active' : 'Inactive'}</Badge>,
+      render: (_v, p) => <Badge variant={p.active ? 'success' : 'default-muted'}>{statusLabel(p.active)}</Badge>,
     },
   ];
 
@@ -352,30 +377,30 @@ export default function McpServerSettings() {
 
   const agentColumns: ColumnDefinition<Agent>[] = [
     {
-      title: 'Name',
+      title: t('mcpServer.agents.table.name', { defaultValue: 'Name' }),
       dataIndex: 'name',
       width: '20%',
       render: (_v, a) => <span className="font-medium text-[rgb(var(--color-text-900))]">{a.name}</span>,
     },
     {
-      title: 'Provider',
+      title: t('mcpServer.agents.table.provider', { defaultValue: 'Provider' }),
       dataIndex: 'idp_issuer',
       width: '15%',
-      render: (_v, a) => <span className="text-[rgb(var(--color-text-700))]">{agentProvider(a, idps)}</span>,
+      render: (_v, a) => <span className="text-[rgb(var(--color-text-700))]">{agentProvider(a)}</span>,
     },
     {
-      title: 'Agent ID',
+      title: t('mcpServer.agents.table.agentId', { defaultValue: 'Agent ID' }),
       dataIndex: 'idp_subject',
       render: (_v, a) => (
         <span className="font-mono text-xs text-[rgb(var(--color-text-700))]">{a.idp_subject ?? '—'}</span>
       ),
     },
     {
-      title: 'Status',
+      title: t('mcpServer.agents.table.status', { defaultValue: 'Status' }),
       dataIndex: 'active',
       width: '96px',
       sortable: false,
-      render: (_v, a) => <Badge variant={a.active ? 'success' : 'default-muted'}>{a.active ? 'Active' : 'Inactive'}</Badge>,
+      render: (_v, a) => <Badge variant={a.active ? 'success' : 'default-muted'}>{statusLabel(a.active)}</Badge>,
     },
     {
       title: '',
@@ -387,18 +412,26 @@ export default function McpServerSettings() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button id={`mcp-agent-actions-${a.agent_id}`} variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
-                <span className="sr-only">Open agent actions</span>
+                <span className="sr-only">{t('mcpServer.agents.actions.openMenu', { defaultValue: 'Open agent actions' })}</span>
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem id={`mcp-audit-${a.agent_id}`} onClick={() => loadAudit(a)}>View activity</DropdownMenuItem>
+              <DropdownMenuItem id={`mcp-audit-${a.agent_id}`} onClick={() => loadAudit(a)}>
+                {t('mcpServer.agents.actions.viewActivity', { defaultValue: 'View activity' })}
+              </DropdownMenuItem>
               {a.active ? (
-                <DropdownMenuItem id={`mcp-deactivate-${a.agent_id}`} disabled={busy} onClick={() => setAgentActive(a, false)}>Deactivate</DropdownMenuItem>
+                <DropdownMenuItem id={`mcp-deactivate-${a.agent_id}`} disabled={busy} onClick={() => setAgentActive(a, false)}>
+                  {t('mcpServer.agents.actions.deactivate', { defaultValue: 'Deactivate' })}
+                </DropdownMenuItem>
               ) : (
-                <DropdownMenuItem id={`mcp-reactivate-${a.agent_id}`} disabled={busy} onClick={() => setAgentActive(a, true)}>Reactivate</DropdownMenuItem>
+                <DropdownMenuItem id={`mcp-reactivate-${a.agent_id}`} disabled={busy} onClick={() => setAgentActive(a, true)}>
+                  {t('mcpServer.agents.actions.reactivate', { defaultValue: 'Reactivate' })}
+                </DropdownMenuItem>
               )}
-              <DropdownMenuItem id={`mcp-remove-${a.agent_id}`} className="text-destructive focus:text-destructive" disabled={busy} onClick={() => setRemoveTarget(a)}>Remove…</DropdownMenuItem>
+              <DropdownMenuItem id={`mcp-remove-${a.agent_id}`} className="text-destructive focus:text-destructive" disabled={busy} onClick={() => setRemoveTarget(a)}>
+                {t('mcpServer.agents.actions.remove', { defaultValue: 'Remove…' })}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -408,30 +441,34 @@ export default function McpServerSettings() {
 
   const auditColumns: ColumnDefinition<AuditRow>[] = [
     {
-      title: 'When',
+      title: t('mcpServer.audit.table.when', { defaultValue: 'When' }),
       dataIndex: 'created_at',
       width: '26%',
       render: (_v, r) => <span className="text-[rgb(var(--color-text-700))]">{new Date(r.created_at).toLocaleString()}</span>,
     },
     {
-      title: 'Action',
+      title: t('mcpServer.audit.table.action', { defaultValue: 'Action' }),
       dataIndex: 'tool',
       render: (_v, r) => <span className="font-mono text-xs text-[rgb(var(--color-text-700))]">{r.tool}</span>,
     },
     {
-      title: 'Result',
+      title: t('mcpServer.audit.table.result', { defaultValue: 'Result' }),
       dataIndex: 'decision',
       width: '130px',
       sortable: false,
       render: (_v, r) =>
         r.decision ? (
-          <Badge variant={r.decision === 'allow' ? 'success' : 'error'}>{r.decision === 'allow' ? 'Allowed' : 'Blocked'}</Badge>
+          <Badge variant={r.decision === 'allow' ? 'success' : 'error'}>
+            {r.decision === 'allow'
+              ? t('mcpServer.audit.decision.allowed', { defaultValue: 'Allowed' })
+              : t('mcpServer.audit.decision.blocked', { defaultValue: 'Blocked' })}
+          </Badge>
         ) : (
           <span className="text-[rgb(var(--color-text-500))]">—</span>
         ),
     },
     {
-      title: 'Status',
+      title: t('mcpServer.audit.table.status', { defaultValue: 'Status' }),
       dataIndex: 'status_code',
       width: '90px',
       sortable: false,
@@ -454,9 +491,13 @@ export default function McpServerSettings() {
   return (
     <div id="mcp-server-settings" className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-[rgb(var(--color-text-900))]">MCP Server</h2>
+        <h2 className="text-xl font-semibold text-[rgb(var(--color-text-900))]">
+          {t('mcpServer.title', { defaultValue: 'MCP Server' })}
+        </h2>
         <p className="text-sm text-[rgb(var(--color-text-600))]">
-          Let AI agents sign in to AlgaPSA and act with the roles you give them.
+          {t('mcpServer.description', {
+            defaultValue: 'Let AI agents sign in to AlgaPSA and act with the roles you give them.',
+          })}
         </p>
       </div>
 
@@ -468,12 +509,20 @@ export default function McpServerSettings() {
 
       {/* Step 1 — Trusted providers */}
       <Card>
-        <StepHeading step={1} title="Identity providers" description="Agents sign in through these providers. Add the ones your agents use." />
+        <StepHeading
+          step={1}
+          title={t('mcpServer.providers.title', { defaultValue: 'Identity providers' })}
+          description={t('mcpServer.providers.description', {
+            defaultValue: 'Agents sign in through these providers. Add the ones your agents use.',
+          })}
+        />
         <CardContent className="space-y-4">
           {idps.length > 0 ? (
             <DataTable data={idps} columns={idpColumns} pagination={false} />
           ) : availablePlatform.length === 0 ? (
-            <p className="text-sm text-[rgb(var(--color-text-500))]">No providers yet.</p>
+            <p className="text-sm text-[rgb(var(--color-text-500))]">
+              {t('mcpServer.providers.empty', { defaultValue: 'No providers yet.' })}
+            </p>
           ) : null}
 
           {availablePlatform.length > 0 && (
@@ -485,23 +534,34 @@ export default function McpServerSettings() {
                   className="flex items-center justify-between gap-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm"
                 >
                   <span className="font-medium text-[rgb(var(--color-text-900))]">{p.label}</span>
-                  <Badge variant="success">Ready to use</Badge>
+                  <Badge variant="success">{t('mcpServer.providers.readyToUse', { defaultValue: 'Ready to use' })}</Badge>
                 </div>
               ))}
               <p className="text-xs text-[rgb(var(--color-text-500))]">
-                Managed by AlgaPSA — no setup needed. Connect an agent to one in step 2.
+                {t('mcpServer.providers.platformManaged', {
+                  defaultValue: 'Managed by AlgaPSA — no setup needed. Connect an agent to one in step 2.',
+                })}
               </p>
             </div>
           )}
           {suggestion.microsoft && !idps.some((p) => p.kind === 'microsoft') && (
             <div id="mcp-ms-suggestion" className="flex items-center justify-between gap-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm text-[rgb(var(--color-text-600))]">
-              <span>You're already connected to Microsoft{suggestion.microsoft.displayName ? ` (${suggestion.microsoft.displayName})` : ''}. Use this directory for agents?</span>
+              <span>
+                {suggestion.microsoft.displayName
+                  ? t('mcpServer.providers.suggestion.withName', {
+                      defaultValue: "You're already connected to Microsoft ({{name}}). Use this directory for agents?",
+                      name: suggestion.microsoft.displayName,
+                    })
+                  : t('mcpServer.providers.suggestion.withoutName', {
+                      defaultValue: "You're already connected to Microsoft. Use this directory for agents?",
+                    })}
+              </span>
               <Button
                 id="mcp-use-ms-connection"
                 size="sm"
                 onClick={() => setIdpForm({ ...idpForm, kind: 'microsoft', entraTenantId: suggestion.microsoft!.entraTenantId })}
               >
-                Use this directory
+                {t('mcpServer.providers.suggestion.useDirectory', { defaultValue: 'Use this directory' })}
               </Button>
             </div>
           )}
@@ -514,30 +574,30 @@ export default function McpServerSettings() {
               className="inline-flex items-center gap-1 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))]"
             >
               <ChevronDown className={`h-4 w-4 transition-transform ${showAddProvider ? '' : '-rotate-90'}`} />
-              Add another provider
+              {t('mcpServer.providers.addAnother', { defaultValue: 'Add another provider' })}
             </button>
           )}
           {showProviderForm && (
             <>
           <div className="space-y-3">
             <div className="md:w-1/2">
-              <Label htmlFor="idp-kind">Provider</Label>
+              <Label htmlFor="idp-kind">{t('mcpServer.providers.fields.provider', { defaultValue: 'Provider' })}</Label>
               <CustomSelect
                 id="idp-kind"
                 className="w-full"
                 value={idpForm.kind}
                 onValueChange={(v) => setIdpForm({ ...idpForm, kind: v })}
                 options={[
-                  { value: 'microsoft', label: 'Microsoft Entra' },
-                  { value: 'google', label: 'Google' },
-                  { value: 'custom', label: 'Custom' },
+                  { value: 'microsoft', label: providerLabel('microsoft') },
+                  { value: 'google', label: providerLabel('google') },
+                  { value: 'custom', label: providerLabel('custom') },
                 ]}
               />
             </div>
 
             {idpForm.kind === 'microsoft' && (
               <div className="space-y-3">
-                <div className="md:w-1/2"><Label htmlFor="idp-entra-tid">Entra tenant ID</Label><Input id="idp-entra-tid" value={idpForm.entraTenantId} onChange={(e) => setIdpForm({ ...idpForm, entraTenantId: e.target.value })} placeholder="e.g. 00000000-0000-0000-0000-000000000000" /></div>
+                <div className="md:w-1/2"><Label htmlFor="idp-entra-tid">{t('mcpServer.providers.fields.entraTenantId', { defaultValue: 'Entra tenant ID' })}</Label><Input id="idp-entra-tid" value={idpForm.entraTenantId} onChange={(e) => setIdpForm({ ...idpForm, entraTenantId: e.target.value })} placeholder="e.g. 00000000-0000-0000-0000-000000000000" /></div>
                 <button
                   type="button"
                   id="mcp-idp-advanced-toggle"
@@ -546,27 +606,27 @@ export default function McpServerSettings() {
                   className="inline-flex items-center gap-1 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))]"
                 >
                   <ChevronDown className={`h-4 w-4 transition-transform ${showAdvanced ? '' : '-rotate-90'}`} />
-                  Advanced options
+                  {t('mcpServer.providers.advancedOptions', { defaultValue: 'Advanced options' })}
                 </button>
                 {showAdvanced && (
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <div><Label htmlFor="idp-audience">Audience (optional)</Label><Input id="idp-audience" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="e.g. api://your-app-id" /></div>
-                    <div><Label htmlFor="idp-claim-ms">Identify agents by</Label><Input id="idp-claim-ms" value={idpForm.subjectClaim} onChange={(e) => setIdpForm({ ...idpForm, subjectClaim: e.target.value })} placeholder="azp (default)" /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">Leave blank unless your provider tells you otherwise.</p></div>
+                    <div><Label htmlFor="idp-audience">{t('mcpServer.providers.fields.audienceOptional', { defaultValue: 'Audience (optional)' })}</Label><Input id="idp-audience" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="e.g. api://your-app-id" /></div>
+                    <div><Label htmlFor="idp-claim-ms">{t('mcpServer.providers.fields.subjectClaim', { defaultValue: 'Identify agents by' })}</Label><Input id="idp-claim-ms" value={idpForm.subjectClaim} onChange={(e) => setIdpForm({ ...idpForm, subjectClaim: e.target.value })} placeholder="azp (default)" /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{t('mcpServer.providers.fields.subjectClaimHelp', { defaultValue: 'Leave blank unless your provider tells you otherwise.' })}</p></div>
                   </div>
                 )}
               </div>
             )}
 
             {idpForm.kind === 'google' && (
-              <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm text-[rgb(var(--color-text-600))]">Google needs no setup. Agents sign in with their Google service-account ID.</div>
+              <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm text-[rgb(var(--color-text-600))]">{t('mcpServer.providers.googleNoSetup', { defaultValue: 'Google needs no setup. Agents sign in with their Google service-account ID.' })}</div>
             )}
 
             {idpForm.kind === 'custom' && (
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div><Label htmlFor="idp-issuer">Issuer</Label><Input id="idp-issuer" value={idpForm.issuer} onChange={(e) => setIdpForm({ ...idpForm, issuer: e.target.value })} placeholder="https://login.example.com/tenant" /></div>
-                <div><Label htmlFor="idp-jwks">Signing keys URL</Label><Input id="idp-jwks" value={idpForm.jwksUri} onChange={(e) => setIdpForm({ ...idpForm, jwksUri: e.target.value })} placeholder="https://login.example.com/.../jwks" /></div>
-                <div><Label htmlFor="idp-audience-c">Audience</Label><Input id="idp-audience-c" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="https://your-alga/api/mcp" /></div>
-                <div><Label htmlFor="idp-claim-c">Identify agents by</Label><Input id="idp-claim-c" value={idpForm.subjectClaim} onChange={(e) => setIdpForm({ ...idpForm, subjectClaim: e.target.value })} placeholder="sub | azp | client_id" /></div>
+                <div><Label htmlFor="idp-issuer">{t('mcpServer.providers.fields.issuer', { defaultValue: 'Issuer' })}</Label><Input id="idp-issuer" value={idpForm.issuer} onChange={(e) => setIdpForm({ ...idpForm, issuer: e.target.value })} placeholder="https://login.example.com/tenant" /></div>
+                <div><Label htmlFor="idp-jwks">{t('mcpServer.providers.fields.jwksUri', { defaultValue: 'Signing keys URL' })}</Label><Input id="idp-jwks" value={idpForm.jwksUri} onChange={(e) => setIdpForm({ ...idpForm, jwksUri: e.target.value })} placeholder="https://login.example.com/.../jwks" /></div>
+                <div><Label htmlFor="idp-audience-c">{t('mcpServer.providers.fields.audience', { defaultValue: 'Audience' })}</Label><Input id="idp-audience-c" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="https://your-alga/api/mcp" /></div>
+                <div><Label htmlFor="idp-claim-c">{t('mcpServer.providers.fields.subjectClaim', { defaultValue: 'Identify agents by' })}</Label><Input id="idp-claim-c" value={idpForm.subjectClaim} onChange={(e) => setIdpForm({ ...idpForm, subjectClaim: e.target.value })} placeholder="sub | azp | client_id" /></div>
               </div>
             )}
           </div>
@@ -576,13 +636,17 @@ export default function McpServerSettings() {
               onClick={addIdp}
               disabled={busy || (idpForm.kind === 'microsoft' && !idpForm.entraTenantId) || (idpForm.kind === 'custom' && (!idpForm.issuer || !idpForm.jwksUri))}
             >
-              Add provider
+              {t('mcpServer.providers.actions.add', { defaultValue: 'Add provider' })}
             </Button>
             {idpForm.kind === 'microsoft' && !idpForm.entraTenantId && (
-              <span className="text-xs text-[rgb(var(--color-text-500))]">Enter your Entra tenant ID to continue.</span>
+              <span className="text-xs text-[rgb(var(--color-text-500))]">
+                {t('mcpServer.providers.hints.entraTenantIdRequired', { defaultValue: 'Enter your Entra tenant ID to continue.' })}
+              </span>
             )}
             {idpForm.kind === 'custom' && (!idpForm.issuer || !idpForm.jwksUri) && (
-              <span className="text-xs text-[rgb(var(--color-text-500))]">Enter the issuer and signing keys URL to continue.</span>
+              <span className="text-xs text-[rgb(var(--color-text-500))]">
+                {t('mcpServer.providers.hints.issuerAndJwksRequired', { defaultValue: 'Enter the issuer and signing keys URL to continue.' })}
+              </span>
             )}
           </div>
             </>
@@ -592,31 +656,51 @@ export default function McpServerSettings() {
 
       {/* Agents */}
       <Card>
-        <StepHeading step={2} title="Agents" description="Each agent signs in as itself and gets the roles you assign." />
+        <StepHeading
+          step={2}
+          title={t('mcpServer.agents.title', { defaultValue: 'Agents' })}
+          description={t('mcpServer.agents.description', {
+            defaultValue: 'Each agent signs in as itself and gets the roles you assign.',
+          })}
+        />
         <CardContent className="space-y-4">
           {!canAddAgents ? (
-            <p className="text-sm text-[rgb(var(--color-text-500))]">Add a provider in step 1 first. Then add agents that sign in through it.</p>
+            <p className="text-sm text-[rgb(var(--color-text-500))]">
+              {t('mcpServer.agents.needsProvider', {
+                defaultValue: 'Add a provider in step 1 first. Then add agents that sign in through it.',
+              })}
+            </p>
           ) : (
             <>
           {agents.length === 0 ? (
-            <p className="text-sm text-[rgb(var(--color-text-500))]">No agents yet.</p>
+            <p className="text-sm text-[rgb(var(--color-text-500))]">
+              {t('mcpServer.agents.empty', { defaultValue: 'No agents yet.' })}
+            </p>
           ) : (
             <DataTable data={agents} columns={agentColumns} pagination={false} />
           )}
           <div className="md:w-1/2">
-            <Label htmlFor="agent-name">Name</Label>
-            <Input id="agent-name" value={agentForm.name} onChange={(e) => setAgentForm({ ...agentForm, name: e.target.value })} placeholder="Support triage bot" />
+            <Label htmlFor="agent-name">{t('mcpServer.agents.fields.name', { defaultValue: 'Name' })}</Label>
+            <Input
+              id="agent-name"
+              value={agentForm.name}
+              onChange={(e) => setAgentForm({ ...agentForm, name: e.target.value })}
+              placeholder={t('mcpServer.agents.fields.namePlaceholder', { defaultValue: 'Support triage bot' })}
+            />
           </div>
 
           <div className="space-y-2">
-            <Label>Identity</Label>
+            <Label>{t('mcpServer.agents.fields.identity', { defaultValue: 'Identity' })}</Label>
             {connected ? (
               <div id="mcp-connected-identity" className="flex items-center justify-between gap-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm">
                 <span className="text-[rgb(var(--color-text-700))]">
-                  Connected as <span className="font-medium text-[rgb(var(--color-text-900))]">{connected.label}</span>{' '}
+                  {t('mcpServer.agents.connectedAs', { defaultValue: 'Connected as' })}{' '}
+                  <span className="font-medium text-[rgb(var(--color-text-900))]">{connected.label}</span>{' '}
                   <span className="text-[rgb(var(--color-text-500))]">({PROVIDER_NAME[connected.provider]})</span>
                 </span>
-                <Button id="mcp-connect-reset" variant="ghost" size="sm" onClick={resetConnected}>Change</Button>
+                <Button id="mcp-connect-reset" variant="ghost" size="sm" onClick={resetConnected}>
+                  {t('mcpServer.agents.actions.change', { defaultValue: 'Change' })}
+                </Button>
               </div>
             ) : (
               <>
@@ -624,7 +708,7 @@ export default function McpServerSettings() {
                   <div className="flex flex-wrap items-center gap-2">
                     {availablePlatform.map((p) => (
                       <Button key={p.provider} id={`mcp-connect-${p.provider}`} variant="outline" disabled={busy} onClick={() => connect(p.provider)}>
-                        Connect with {p.label}
+                        {t('mcpServer.agents.actions.connectWith', { defaultValue: 'Connect with {{provider}}', provider: p.label })}
                       </Button>
                     ))}
                     {idps.length > 0 && (
@@ -635,7 +719,9 @@ export default function McpServerSettings() {
                         aria-expanded={manualIdentity}
                         className="text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))]"
                       >
-                        {manualIdentity ? 'Hide manual entry' : 'Enter identity manually'}
+                        {manualIdentity
+                          ? t('mcpServer.agents.manualEntry.hide', { defaultValue: 'Hide manual entry' })
+                          : t('mcpServer.agents.manualEntry.show', { defaultValue: 'Enter identity manually' })}
                       </button>
                     )}
                   </div>
@@ -643,18 +729,18 @@ export default function McpServerSettings() {
                 {showManualIdentity && (
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <div>
-                      <Label htmlFor="agent-issuer">Provider</Label>
+                      <Label htmlFor="agent-issuer">{t('mcpServer.agents.fields.provider', { defaultValue: 'Provider' })}</Label>
                       <CustomSelect
                         id="agent-issuer"
                         className="w-full"
                         value={agentForm.idpIssuer || null}
                         onValueChange={(v) => setAgentForm({ ...agentForm, idpIssuer: v })}
-                        placeholder="Choose a provider"
+                        placeholder={t('mcpServer.agents.fields.providerPlaceholder', { defaultValue: 'Choose a provider' })}
                         options={idps.map((p) => ({ value: p.issuer, label: `${providerLabel(p.kind)} · ${providerDirectory(p)}` }))}
                       />
                     </div>
                     <div>
-                      <Label htmlFor="agent-subject">Agent ID</Label>
+                      <Label htmlFor="agent-subject">{t('mcpServer.agents.fields.agentId', { defaultValue: 'Agent ID' })}</Label>
                       <Input id="agent-subject" value={agentForm.idpSubject} onChange={(e) => setAgentForm({ ...agentForm, idpSubject: e.target.value })} placeholder={agentIdGuide.placeholder} />
                       <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{agentIdGuide.helper}</p>
                     </div>
@@ -664,7 +750,7 @@ export default function McpServerSettings() {
             )}
           </div>
           <div>
-            <Label>Roles</Label>
+            <Label>{t('mcpServer.agents.fields.roles', { defaultValue: 'Roles' })}</Label>
             <div className="mt-1 flex flex-wrap gap-x-6 gap-y-2">
               {roles.map((r) => (
                 <Checkbox
@@ -678,12 +764,22 @@ export default function McpServerSettings() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button id="mcp-create-agent" onClick={createAgent} disabled={busy || !agentForm.name || !agentForm.idpIssuer || !agentForm.idpSubject}>Add agent</Button>
+            <Button id="mcp-create-agent" onClick={createAgent} disabled={busy || !agentForm.name || !agentForm.idpIssuer || !agentForm.idpSubject}>
+              {t('mcpServer.agents.actions.add', { defaultValue: 'Add agent' })}
+            </Button>
             {!agentForm.name ? (
-              <span className="text-xs text-[rgb(var(--color-text-500))]">Name the agent to continue.</span>
+              <span className="text-xs text-[rgb(var(--color-text-500))]">
+                {t('mcpServer.agents.hints.nameRequired', { defaultValue: 'Name the agent to continue.' })}
+              </span>
             ) : !agentForm.idpIssuer || !agentForm.idpSubject ? (
               <span className="text-xs text-[rgb(var(--color-text-500))]">
-                {availablePlatform.length > 0 ? 'Connect a provider — or enter an identity — to continue.' : 'Choose a provider and Agent ID to continue.'}
+                {availablePlatform.length > 0
+                  ? t('mcpServer.agents.hints.connectOrEnterIdentity', {
+                      defaultValue: 'Connect a provider — or enter an identity — to continue.',
+                    })
+                  : t('mcpServer.agents.hints.chooseProviderAndAgentId', {
+                      defaultValue: 'Choose a provider and Agent ID to continue.',
+                    })}
               </span>
             ) : null}
           </div>
@@ -695,7 +791,16 @@ export default function McpServerSettings() {
       {/* Audit */}
       {audit.length > 0 && (
         <Card>
-          <CardHeader><CardTitle>{auditAgent ? `Activity — ${auditAgent.name}` : 'Activity'}</CardTitle><CardDescription>What it did, and whether each action was allowed.</CardDescription></CardHeader>
+          <CardHeader>
+            <CardTitle>
+              {auditAgent
+                ? t('mcpServer.audit.titleForAgent', { defaultValue: 'Activity — {{name}}', name: auditAgent.name })
+                : t('mcpServer.audit.title', { defaultValue: 'Activity' })}
+            </CardTitle>
+            <CardDescription>
+              {t('mcpServer.audit.description', { defaultValue: 'What it did, and whether each action was allowed.' })}
+            </CardDescription>
+          </CardHeader>
           <CardContent>
             <DataTable
               data={audit}
@@ -717,14 +822,18 @@ export default function McpServerSettings() {
         isOpen={!!removeTarget}
         onClose={() => setRemoveTarget(null)}
         onConfirm={() => (removeTarget ? removeAgent(removeTarget) : undefined)}
-        title="Remove agent"
+        title={t('mcpServer.agents.removeDialog.title', { defaultValue: 'Remove agent' })}
         message={
           removeTarget
-            ? `Remove "${removeTarget.name}"? This permanently deletes the agent, its role grants, and its activity log. It can't be undone.`
+            ? t('mcpServer.agents.removeDialog.message', {
+                defaultValue:
+                  'Remove "{{name}}"? This permanently deletes the agent, its role grants, and its activity log. It can\'t be undone.',
+                name: removeTarget.name,
+              })
             : ''
         }
-        confirmLabel="Remove"
-        cancelLabel="Cancel"
+        confirmLabel={t('mcpServer.agents.removeDialog.confirm', { defaultValue: 'Remove' })}
+        cancelLabel={t('mcpServer.agents.removeDialog.cancel', { defaultValue: 'Cancel' })}
         isConfirming={busy}
       />
     </div>

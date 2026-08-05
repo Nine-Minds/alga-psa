@@ -25,7 +25,12 @@
     "trialAvailable": "55555",
     "trialExpired": "55555",
     "licenseExpiresIn_one": "55555 {{count}} 55555",
-    "licenseExpiresIn_other": "55555 {{count}} 55555"
+    "licenseExpiresIn_other": "55555 {{count}} 55555",
+    "licenseExpired": "55555",
+    "licenseWrongTenant": "55555",
+    "manageLicense": "55555",
+    "ariaLabel": "55555",
+    "dismiss": "55555"
   },
   "nav": {
     "dashboard": "55555",

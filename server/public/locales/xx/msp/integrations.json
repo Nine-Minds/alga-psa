@@ -2379,7 +2379,57 @@
           "load": "11111",
           "sync": "11111",
           "updateMapping": "11111",
-          "updateContact": "11111"
+          "updateContact": "11111",
+          "loadStatus": "11111",
+          "connect": "11111",
+          "saveSettings": "11111",
+          "poll": "11111"
+        },
+        "loadingIntegration": "11111",
+        "connect": {
+          "title": "11111",
+          "description": "11111",
+          "apiKeyPlaceholder": "11111",
+          "apiSecretPlaceholder": "11111",
+          "submit": "11111",
+          "connecting": "11111"
+        },
+        "connection": {
+          "title": "11111 {{account}} 11111",
+          "summary": "11111 {{organizations}} 11111 {{unmapped}} 11111 {{openIncidents}} 11111 {{lastPoll}} 11111",
+          "neverPolled": "11111",
+          "lastPollFailed": "11111 {{error}} 11111",
+          "routingIncompleteWarning": "11111",
+          "pollNow": "11111",
+          "disconnect": "11111",
+          "disconnectConfirm": "11111"
+        },
+        "routing": {
+          "title": "11111",
+          "description": "11111",
+          "securityBoard": "11111",
+          "selectBoard": "11111",
+          "category": "11111",
+          "noCategory": "11111",
+          "fallbackClient": "11111",
+          "fallbackBoard": "11111",
+          "criticalSeverity": "11111",
+          "highSeverity": "11111",
+          "lowSeverity": "11111",
+          "selectPriority": "11111",
+          "pollInterval": "11111",
+          "autoClose": "11111",
+          "closedStatus": "11111",
+          "selectStatus": "11111",
+          "save": "11111",
+          "saving": "11111"
+        },
+        "messages": {
+          "connected": "11111 {{account}} 11111",
+          "routingSaved": "11111",
+          "routingIncomplete": "11111",
+          "pollFinished": "11111 {{count}} 11111",
+          "disconnected": "11111"
         }
       },
       "ninjaone": {

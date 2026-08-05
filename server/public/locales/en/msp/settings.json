@@ -2295,5 +2295,156 @@
         }
       }
     }
+  },
+  "mcpServer": {
+    "title": "MCP Server",
+    "description": "Let AI agents sign in to AlgaPSA and act with the roles you give them.",
+    "errors": {
+      "load": "Failed to load MCP settings.",
+      "update": "Failed to update MCP settings."
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "providers": {
+      "title": "Identity providers",
+      "description": "Agents sign in through these providers. Add the ones your agents use.",
+      "empty": "No providers yet.",
+      "readyToUse": "Ready to use",
+      "platformManaged": "Managed by AlgaPSA — no setup needed. Connect an agent to one in step 2.",
+      "addAnother": "Add another provider",
+      "advancedOptions": "Advanced options",
+      "googleNoSetup": "Google needs no setup. Agents sign in with their Google service-account ID.",
+      "kinds": {
+        "microsoft": "Microsoft Entra",
+        "google": "Google",
+        "custom": "Custom"
+      },
+      "suggestion": {
+        "withName": "You're already connected to Microsoft ({{name}}). Use this directory for agents?",
+        "withoutName": "You're already connected to Microsoft. Use this directory for agents?",
+        "useDirectory": "Use this directory"
+      },
+      "fields": {
+        "provider": "Provider",
+        "entraTenantId": "Entra tenant ID",
+        "audienceOptional": "Audience (optional)",
+        "audience": "Audience",
+        "subjectClaim": "Identify agents by",
+        "subjectClaimHelp": "Leave blank unless your provider tells you otherwise.",
+        "issuer": "Issuer",
+        "jwksUri": "Signing keys URL"
+      },
+      "actions": {
+        "add": "Add provider"
+      },
+      "hints": {
+        "entraTenantIdRequired": "Enter your Entra tenant ID to continue.",
+        "issuerAndJwksRequired": "Enter the issuer and signing keys URL to continue."
+      },
+      "table": {
+        "provider": "Provider",
+        "directory": "Directory",
+        "status": "Status"
+      }
+    },
+    "agents": {
+      "title": "Agents",
+      "description": "Each agent signs in as itself and gets the roles you assign.",
+      "empty": "No agents yet.",
+      "needsProvider": "Add a provider in step 1 first. Then add agents that sign in through it.",
+      "connectedAs": "Connected as",
+      "fields": {
+        "name": "Name",
+        "namePlaceholder": "Support triage bot",
+        "identity": "Identity",
+        "provider": "Provider",
+        "providerPlaceholder": "Choose a provider",
+        "agentId": "Agent ID",
+        "roles": "Roles"
+      },
+      "manualEntry": {
+        "show": "Enter identity manually",
+        "hide": "Hide manual entry"
+      },
+      "actions": {
+        "add": "Add agent",
+        "change": "Change",
+        "connectWith": "Connect with {{provider}}",
+        "openMenu": "Open agent actions",
+        "viewActivity": "View activity",
+        "deactivate": "Deactivate",
+        "reactivate": "Reactivate",
+        "remove": "Remove…"
+      },
+      "hints": {
+        "nameRequired": "Name the agent to continue.",
+        "connectOrEnterIdentity": "Connect a provider — or enter an identity — to continue.",
+        "chooseProviderAndAgentId": "Choose a provider and Agent ID to continue."
+      },
+      "table": {
+        "name": "Name",
+        "provider": "Provider",
+        "agentId": "Agent ID",
+        "status": "Status"
+      },
+      "removeDialog": {
+        "title": "Remove agent",
+        "message": "Remove \"{{name}}\"? This permanently deletes the agent, its role grants, and its activity log. It can't be undone.",
+        "confirm": "Remove",
+        "cancel": "Cancel"
+      }
+    },
+    "agentId": {
+      "unknown": {
+        "placeholder": "the agent's identifier",
+        "helper": "Pick a provider to see what to enter."
+      },
+      "microsoft": {
+        "userHelper": "The agent's user object ID (oid) from Entra.",
+        "appHelper": "The app's Application (client) ID from Entra."
+      },
+      "google": {
+        "helper": "The service account's ID (the sub value in its token)."
+      },
+      "custom": {
+        "placeholder": "value of your subject claim",
+        "helper": "The value of the \"{{claim}}\" claim in the agent's token."
+      }
+    },
+    "audit": {
+      "title": "Activity",
+      "titleForAgent": "Activity — {{name}}",
+      "description": "What it did, and whether each action was allowed.",
+      "table": {
+        "when": "When",
+        "action": "Action",
+        "result": "Result",
+        "status": "Status"
+      },
+      "decision": {
+        "allowed": "Allowed",
+        "blocked": "Blocked"
+      }
+    },
+    "connectedClients": {
+      "title": "Connected MCP clients",
+      "description": "Apps you've authorized to access AlgaPSA as you over MCP (e.g. Claude). Disconnect any you no longer use.",
+      "loading": "Loading…",
+      "empty": "No connected clients.",
+      "meta": "{{host}} · connected {{date}}",
+      "disconnect": "Disconnect",
+      "errors": {
+        "load": "Failed to load connections.",
+        "disconnect": "Failed to disconnect."
+      },
+      "dialog": {
+        "title": "Disconnect client",
+        "message": "Disconnect \"{{name}}\"? It will lose access immediately and need to be re-authorized to reconnect.",
+        "confirm": "Disconnect",
+        "cancel": "Cancel"
+      }
+    }
   }
 }

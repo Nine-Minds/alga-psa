@@ -25,7 +25,12 @@
     "trialAvailable": "Running Essentials features. Start a free 15-day Pro trial to unlock all features.",
     "trialExpired": "Pro trial has expired. The install is now running Essentials features.",
     "licenseExpiresIn_one": "License expires in {{count}} day. Renew to avoid service interruption.",
-    "licenseExpiresIn_other": "License expires in {{count}} days. Renew to avoid service interruption."
+    "licenseExpiresIn_other": "License expires in {{count}} days. Renew to avoid service interruption.",
+    "licenseExpired": "License has expired. The install is now running Essentials features.",
+    "licenseWrongTenant": "This license was issued for a different appliance and is not valid here. The install is running Essentials features.",
+    "manageLicense": "Manage License",
+    "ariaLabel": "License status",
+    "dismiss": "Dismiss"
   },
   "nav": {
     "dashboard": "Dashboard",

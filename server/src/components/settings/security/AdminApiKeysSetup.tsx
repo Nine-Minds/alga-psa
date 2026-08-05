@@ -484,7 +484,7 @@ export default function AdminApiKeysSetup() {
   return (
     <div className="space-y-6">
       <Card className="p-6">
-        <h2 className="text-2xl font-semibold mb-4">API Keys Administration</h2>
+        <h2 className="text-2xl font-semibold mb-4">{t('security.apiKeys.admin.title')}</h2>
         {error && (
           <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-md">
             {error}
@@ -494,7 +494,7 @@ export default function AdminApiKeysSetup() {
           <AdminSearchInput
             value={searchInput}
             onChange={handleSearchInputChange}
-            placeholder="Search by user or description"
+            placeholder={t('security.apiKeys.admin.searchPlaceholder')}
           />
           <div className="w-48 shrink-0">
             <CustomSelect
@@ -520,7 +520,7 @@ export default function AdminApiKeysSetup() {
                 setCurrentPage(1);
               }}
               clearable
-              placeholder="Last used after"
+              placeholder={t('security.apiKeys.list.filters.lastUsedAfter')}
             />
           </div>
           <div className="w-48 shrink-0">
@@ -532,7 +532,7 @@ export default function AdminApiKeysSetup() {
                 setCurrentPage(1);
               }}
               clearable
-              placeholder="Expires before"
+              placeholder={t('security.apiKeys.list.filters.expiresBefore')}
             />
           </div>
           <Button

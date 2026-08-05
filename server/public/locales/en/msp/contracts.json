@@ -2296,7 +2296,17 @@
         "hourly": "Hourly",
         "usage": "Usage"
       },
-      "title": "Contract changes"
+      "title": "Contract changes",
+      "columns": {
+        "name": "Name",
+        "type": "Type",
+        "value": "Value",
+        "appliesTo": "Applies to",
+        "description": "Description",
+        "amount": "Amount ($)",
+        "billingPeriod": "Billing period",
+        "timing": "Timing"
+      }
     },
     "timeline": {
       "deltaDown": "−{{amount}} from current contract",

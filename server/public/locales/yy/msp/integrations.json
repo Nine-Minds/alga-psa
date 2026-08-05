@@ -2379,7 +2379,57 @@
           "load": "55555",
           "sync": "55555",
           "updateMapping": "55555",
-          "updateContact": "55555"
+          "updateContact": "55555",
+          "loadStatus": "55555",
+          "connect": "55555",
+          "saveSettings": "55555",
+          "poll": "55555"
+        },
+        "loadingIntegration": "55555",
+        "connect": {
+          "title": "55555",
+          "description": "55555",
+          "apiKeyPlaceholder": "55555",
+          "apiSecretPlaceholder": "55555",
+          "submit": "55555",
+          "connecting": "55555"
+        },
+        "connection": {
+          "title": "55555 {{account}} 55555",
+          "summary": "55555 {{organizations}} 55555 {{unmapped}} 55555 {{openIncidents}} 55555 {{lastPoll}} 55555",
+          "neverPolled": "55555",
+          "lastPollFailed": "55555 {{error}} 55555",
+          "routingIncompleteWarning": "55555",
+          "pollNow": "55555",
+          "disconnect": "55555",
+          "disconnectConfirm": "55555"
+        },
+        "routing": {
+          "title": "55555",
+          "description": "55555",
+          "securityBoard": "55555",
+          "selectBoard": "55555",
+          "category": "55555",
+          "noCategory": "55555",
+          "fallbackClient": "55555",
+          "fallbackBoard": "55555",
+          "criticalSeverity": "55555",
+          "highSeverity": "55555",
+          "lowSeverity": "55555",
+          "selectPriority": "55555",
+          "pollInterval": "55555",
+          "autoClose": "55555",
+          "closedStatus": "55555",
+          "selectStatus": "55555",
+          "save": "55555",
+          "saving": "55555"
+        },
+        "messages": {
+          "connected": "55555 {{account}} 55555",
+          "routingSaved": "55555",
+          "routingIncomplete": "55555",
+          "pollFinished": "55555 {{count}} 55555",
+          "disconnected": "55555"
         }
       },
       "ninjaone": {

@@ -216,7 +216,7 @@ export const Message: React.FC<MessageProps> = ({
               <span className="function-card__endpoint">{functionCallMeta.endpoint}</span>
             </div>
             {bundleItems.length > 0 ? (
-              <div className="function-card__bundle-strip" aria-label="Executed calls">
+              <div className="function-card__bundle-strip" aria-label={t('message.executedCalls')}>
                 {bundleItems.slice(0, 6).map((item, index) => (
                   <span key={`${item.method}-${item.endpoint}-${index}`} className="function-card__bundle-chip">
                     <span>{item.method}</span>
@@ -224,7 +224,9 @@ export const Message: React.FC<MessageProps> = ({
                   </span>
                 ))}
                 {bundleItems.length > 6 ? (
-                  <span className="function-card__bundle-more">+{bundleItems.length - 6} more</span>
+                  <span className="function-card__bundle-more">
+                    {t('message.bundleMore', { remaining: bundleItems.length - 6 })}
+                  </span>
                 ) : null}
               </div>
             ) : null}
