@@ -51,7 +51,12 @@ import { pathToFileURL } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { parse as parseDotenv } from 'dotenv';
 import pg from 'pg';
-import { truncatedMtimeMs } from './microsoft-email-smoke-timestamps.mjs';
+import {
+  CTIME_NON_RESTORABLE_REASON,
+  ctimeDisclosure,
+  restorableInventory,
+  truncatedMtimeMs,
+} from './microsoft-email-smoke-timestamps.mjs';
 
 const { Client } = pg;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -393,6 +398,9 @@ function secretInventory(repoRoot, environment, tenantId) {
           // Pre-existing secret files are never mutated by the fixture, so
           // their timestamps are compared at full stat fidelity.
           mtimeMs: stat.mtimeMs,
+          // ctime is kernel-managed and not restorable from userspace; the
+          // fixture never touches pre-existing files, so it must not move.
+          ctimeMs: stat.ctimeMs,
           sha256: sha256File(entryPath),
         });
       } else {
@@ -409,6 +417,11 @@ function secretInventory(repoRoot, environment, tenantId) {
   }
   files.sort((left, right) => left.name.localeCompare(right.name));
   const directoryExists = fs.existsSync(tenantSecretDirectory);
+  // The parent directory's ctime is recorded because, when the tenant secret
+  // directory does not pre-exist, the fixture creates then removes the tenant
+  // directory and it is the parent whose ctime must be disclosed as changed.
+  const parentSecretDirectory = path.dirname(tenantSecretDirectory);
+  const parentDirectoryExists = fs.existsSync(parentSecretDirectory);
   return {
     provider: 'filesystem',
     basePath,
@@ -419,6 +432,14 @@ function secretInventory(repoRoot, environment, tenantId) {
     // the millisecond but not the nanosecond; compare at whole milliseconds.
     directoryMtimeMs: directoryExists
       ? truncatedMtimeMs(fs.statSync(tenantSecretDirectory))
+      : null,
+    // ctime cannot be restored from userspace at any precision; it is captured
+    // so the after capture can disclose the unavoidable delta, not compare it.
+    directoryCtimeMs: directoryExists
+      ? fs.statSync(tenantSecretDirectory).ctimeMs
+      : null,
+    parentDirectoryCtimeMs: parentDirectoryExists
+      ? fs.statSync(parentSecretDirectory).ctimeMs
       : null,
     files,
   };
@@ -547,6 +568,7 @@ async function capturePhase(phase, args) {
       path.join(evidenceDirectory, '01-before-secret-inventory.json'),
       'before secret inventory'
     );
+    const disclosure = ctimeDisclosure(baselineSecrets, secrets);
     restoration = {
       microsoftProfiles: exactComparison(
         baselineDatabase.microsoftProfiles,
@@ -556,15 +578,34 @@ async function capturePhase(phase, args) {
         baselineDatabase.microsoftConsumerBindings,
         database.microsoftConsumerBindings
       ),
-      tenantSecrets: exactComparison(baselineSecrets, secrets),
+      // The tenant secret inventory is compared on its restorable fields only:
+      // content hashes, names, sizes, modes, per-file mtime, and the directory
+      // mtime. ctime is kernel-managed and cannot be restored from userspace,
+      // so it is compared and disclosed separately below.
+      tenantSecrets: exactComparison(
+        restorableInventory(baselineSecrets),
+        restorableInventory(secrets)
+      ),
+      ctimeDisclosure: disclosure,
     };
-    restoration.exactMatch = Object.values(restoration)
-      .every((comparison) => comparison === true || comparison.exactMatch === true);
+    restoration.exactMatch = [
+      restoration.microsoftProfiles,
+      restoration.microsoftConsumerBindings,
+      restoration.tenantSecrets,
+    ].every((comparison) => comparison.exactMatch === true)
+      && disclosure.unexpectedChanges.length === 0;
     if (!restoration.exactMatch) {
-      const failures = Object.entries(restoration)
-        .filter(([, comparison]) => comparison !== false && comparison.exactMatch === false)
-        .map(([name]) => name);
-      fail(`Cleanup did not restore the complete baseline inventories: ${failures.join(', ')}`);
+      const failures = [
+        'microsoftProfiles',
+        'microsoftConsumerBindings',
+        'tenantSecrets',
+      ].filter((name) => restoration[name].exactMatch !== true);
+      if (disclosure.unexpectedChanges.length > 0) {
+        failures.push(
+          `unexpected ctime changes on untouched paths: ${disclosure.unexpectedChanges.join(', ')}`
+        );
+      }
+      fail(`Cleanup did not restore the complete restorable baseline inventories: ${failures.join(', ')}`);
     }
   }
 
@@ -759,7 +800,12 @@ function createManifest(args) {
   ];
   if (restoration.exactMatch !== true
     || restorationSections.some((comparison) => comparison?.exactMatch !== true)) {
-    fail('The complete profile, binding, and secret inventories were not restored exactly');
+    fail('The restorable profile, binding, and secret inventories were not restored exactly');
+  }
+  if (restoration.ctimeDisclosure?.reason !== CTIME_NON_RESTORABLE_REASON
+    || !Array.isArray(restoration.ctimeDisclosure.unexpectedChanges)
+    || restoration.ctimeDisclosure.unexpectedChanges.length !== 0) {
+    fail('The ctime disclosure is missing, mislabeled, or reports unexpected ctime changes');
   }
   const correlation = readJson(correlationPath, 'final DOM/PNG correlation');
   if (correlation.workflowRunId !== metadata.workflowRunId
@@ -802,6 +848,9 @@ function createManifest(args) {
     generatedAt: new Date().toISOString(),
     assertionsPassed: true,
     restorationExact: true,
+    ctimeDisclosed: true,
+    ctimeNonRestorableReason: CTIME_NON_RESTORABLE_REASON,
+    ctimeUnexpectedChanges: restoration.ctimeDisclosure.unexpectedChanges,
     sameCaptureProven: true,
     externalGraphLimitation: EXTERNAL_GRAPH_LIMITATION,
     crossHostContext: CROSS_HOST_CONTEXT,
