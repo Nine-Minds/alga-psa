@@ -1565,7 +1565,7 @@
           "pendingProfileMissing": "Impossibile trovare l'app Microsoft in sospeso.",
           "approvalLink": "Impossibile creare il link di approvazione Microsoft.",
           "consentDenied": "L'accesso a Microsoft o il consenso dell'amministratore è stato negato. Scegli un'altra opzione di configurazione o riprova.",
-          "consentNotGranted": "Microsoft non ha confermato il consenso dell'amministratore del tenant.",
+          "consentNotGranted": "Microsoft non ha confermato il consenso dell'amministratore.",
           "consentPersistFailed": "Impossibile registrare il consenso dell'amministratore Microsoft.",
           "invalidState": "Questa richiesta di configurazione Microsoft non è valida o è scaduta. Ricomincia dalle impostazioni dei provider.",
           "microsoftError": "Microsoft non ha potuto completare la richiesta di configurazione. Riprova o usa la configurazione manuale.",

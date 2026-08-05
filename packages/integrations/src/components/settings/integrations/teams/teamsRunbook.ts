@@ -20,7 +20,7 @@ export const TEAMS_RUNBOOK_ANCHORS: Record<TeamsRunbookSection, string> = {
   entraApp: '#1-create-the-entra-app-registration',
   graphPermissions: '#2-grant-graph-application-permissions',
   botRegistration: '#3-register-the-azure-bot-and-set-bot-credentials',
-  activate: '#4-configure-and-activate-teams-in-alga-psa',
+  activate: '#4-configure-and-activate-teams-in-algapsa',
   package: '#5-generate-and-upload-the-teams-app-package',
   webhook: '#6-configure-the-recordings-webhook',
   verify: '#7-verify',

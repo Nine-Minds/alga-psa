@@ -1565,7 +1565,7 @@
           "pendingProfileMissing": "L'application Microsoft en attente est introuvable.",
           "approvalLink": "Impossible de créer le lien d'approbation Microsoft.",
           "consentDenied": "La connexion à Microsoft ou le consentement administrateur a été refusé. Choisissez une autre option de configuration ou réessayez.",
-          "consentNotGranted": "Microsoft n’a pas confirmé le consentement de l’administrateur du locataire.",
+          "consentNotGranted": "Microsoft n’a pas confirmé le consentement de l’administrateur.",
           "consentPersistFailed": "Impossible d’enregistrer le consentement de l’administrateur Microsoft.",
           "invalidState": "Cette demande de configuration Microsoft est invalide ou a expiré. Recommencez depuis les paramètres des fournisseurs.",
           "microsoftError": "Microsoft n’a pas pu mener à bien la demande de configuration. Réessayez ou utilisez la configuration manuelle.",

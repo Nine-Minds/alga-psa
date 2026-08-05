@@ -1565,7 +1565,7 @@
           "pendingProfileMissing": "The pending Microsoft app could not be found.",
           "approvalLink": "Could not create the Microsoft approval link.",
           "consentDenied": "Microsoft sign-in or administrator consent was denied. Choose another setup option or try again.",
-          "consentNotGranted": "Microsoft did not confirm tenant administrator consent.",
+          "consentNotGranted": "Microsoft did not confirm administrator consent.",
           "consentPersistFailed": "Failed to record Microsoft administrator consent.",
           "invalidState": "This Microsoft setup request is invalid or expired. Start again from Providers settings.",
           "microsoftError": "Microsoft could not complete the setup request. Try again or use manual setup.",

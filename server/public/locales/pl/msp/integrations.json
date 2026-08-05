@@ -1565,7 +1565,7 @@
           "pendingProfileMissing": "Nie znaleziono oczekującej aplikacji Microsoft.",
           "approvalLink": "Nie udało się utworzyć linku zatwierdzenia Microsoft.",
           "consentDenied": "Odmówiono logowania w Microsoft lub zgody administratora. Wybierz inną opcję konfiguracji albo spróbuj ponownie.",
-          "consentNotGranted": "Microsoft nie potwierdził zgody administratora organizacji.",
+          "consentNotGranted": "Microsoft nie potwierdził zgody administratora.",
           "consentPersistFailed": "Nie udało się zapisać zgody administratora Microsoft.",
           "invalidState": "To żądanie konfiguracji Microsoft jest nieprawidłowe lub wygasło. Rozpocznij ponownie w ustawieniach dostawców.",
           "microsoftError": "Microsoft nie mógł ukończyć żądania konfiguracji. Spróbuj ponownie lub użyj konfiguracji ręcznej.",

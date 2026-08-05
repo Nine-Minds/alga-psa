@@ -20,7 +20,7 @@ const SETUP_FAILURES = {
   session_mismatch: 'Your AlgaPSA session does not match the administrator who started this setup. Sign in and try again.',
   consent_denied: 'Microsoft sign-in or administrator consent was denied. Choose another setup option or try again.',
   microsoft_error: 'Microsoft could not complete the setup request. Try again or use manual setup.',
-  consent_not_granted: 'Microsoft did not confirm tenant administrator consent.',
+  consent_not_granted: 'Microsoft did not confirm administrator consent.',
   consent_persist_failed: 'Failed to record Microsoft administrator consent.',
   missing_code: 'Microsoft did not return an authorization code. Start setup again.',
 } as const;

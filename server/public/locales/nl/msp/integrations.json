@@ -1565,7 +1565,7 @@
           "pendingProfileMissing": "De Microsoft-app in behandeling is niet gevonden.",
           "approvalLink": "De Microsoft-goedkeuringslink kon niet worden gemaakt.",
           "consentDenied": "Microsoft-aanmelding of beheerderstoestemming is geweigerd. Kies een andere configuratieoptie of probeer het opnieuw.",
-          "consentNotGranted": "Microsoft heeft de toestemming van de tenantbeheerder niet bevestigd.",
+          "consentNotGranted": "Microsoft heeft de toestemming van de beheerder niet bevestigd.",
           "consentPersistFailed": "Kan de Microsoft-beheerderstoestemming niet vastleggen.",
           "invalidState": "Dit Microsoft-configuratieverzoek is ongeldig of verlopen. Start opnieuw vanuit de providerinstellingen.",
           "microsoftError": "Microsoft kon het configuratieverzoek niet voltooien. Probeer het opnieuw of gebruik de handmatige configuratie.",

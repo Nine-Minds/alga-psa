@@ -1565,7 +1565,7 @@
           "pendingProfileMissing": "Die ausstehende Microsoft-App wurde nicht gefunden.",
           "approvalLink": "Der Microsoft-Genehmigungslink konnte nicht erstellt werden.",
           "consentDenied": "Die Microsoft-Anmeldung oder Administratoreinwilligung wurde abgelehnt. Wählen Sie eine andere Einrichtungsoption oder versuchen Sie es erneut.",
-          "consentNotGranted": "Microsoft hat die Einwilligung des Mandantenadministrators nicht bestätigt.",
+          "consentNotGranted": "Microsoft hat die Einwilligung des Administrators nicht bestätigt.",
           "consentPersistFailed": "Die Microsoft-Administratoreinwilligung konnte nicht gespeichert werden.",
           "invalidState": "Diese Microsoft-Einrichtungsanfrage ist ungültig oder abgelaufen. Starten Sie den Vorgang in den Anbietereinstellungen erneut.",
           "microsoftError": "Microsoft konnte die Einrichtungsanfrage nicht abschließen. Versuchen Sie es erneut oder verwenden Sie die manuelle Einrichtung.",

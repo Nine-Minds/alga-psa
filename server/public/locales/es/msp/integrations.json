@@ -1565,7 +1565,7 @@
           "pendingProfileMissing": "No se encontró la aplicación de Microsoft pendiente.",
           "approvalLink": "No se pudo crear el enlace de aprobación de Microsoft.",
           "consentDenied": "Se denegó el inicio de sesión en Microsoft o el consentimiento de administrador. Elija otra opción de configuración o inténtelo de nuevo.",
-          "consentNotGranted": "Microsoft no confirmó el consentimiento del administrador del inquilino.",
+          "consentNotGranted": "Microsoft no confirmó el consentimiento del administrador.",
           "consentPersistFailed": "No se pudo registrar el consentimiento del administrador de Microsoft.",
           "invalidState": "Esta solicitud de configuración de Microsoft no es válida o venció. Inicie de nuevo desde la configuración de Proveedores.",
           "microsoftError": "Microsoft no pudo completar la solicitud de configuración. Inténtelo de nuevo o use la configuración manual.",

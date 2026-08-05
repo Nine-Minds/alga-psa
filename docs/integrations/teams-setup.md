@@ -134,7 +134,7 @@ Then go to `Settings -> Integrations -> Microsoft Teams`:
 3. Enable the capabilities you want: personal tab, personal bot, group chat bot, message extension, activity notifications. Diagnostics expects at least `personal_bot` and `activity_notifications`.
 4. Choose the notification categories (assignments, customer replies, approval requests, escalations, SLA risk) and, per category, the delivery channel: activity feed, bot DM, or both.
 5. Decide whether `Send calendar invites to participants` stays on. When on, meeting attendees receive real Outlook/Teams calendar invites from the organizer account; when off, meetings are created without attendees and participants only get the join link.
-6. For meetings, set the default meeting organizer UPN as described in the [meetings runbook](teams-meetings-setup.md#4-save-the-organizer-in-alga-psa).
+6. For meetings, set the default meeting organizer UPN as described in the [meetings runbook](teams-meetings-setup.md#4-save-the-organizer-in-algapsa).
 7. Save, then activate the integration.
 
 ## 5. Generate and upload the Teams app package
