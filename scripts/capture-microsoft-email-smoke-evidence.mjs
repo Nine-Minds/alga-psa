@@ -8,6 +8,19 @@
  * final full-DOM export to its rendered screenshot with `correlate` and seal
  * the directory with `manifest`.
  *
+ * Sealing requires the four structured UI captures the smoke run produces
+ * (01-self-hosted-providers-wizard, 01b-manual-setup-derived-redirect,
+ * 02-pending-consent-mailbox, 03-restored-not-configured-mailbox, each as
+ * .json + .png) and additionally writes `96-verification-index.json` — the
+ * machine-readable map from every required smoke claim to its exact evidence
+ * files, sealed identities, and assertions — plus `97-verify-evidence.mjs`, a
+ * sealed copy of scripts/verify-microsoft-email-smoke-evidence.mjs. After
+ * sealing, the manifest stage runs that verifier against its own output and
+ * fails unless every claim passes, so a sealed bundle is by construction
+ * independently verifiable with:
+ *
+ *   node <evidence-dir>/97-verify-evidence.mjs <evidence-dir>
+ *
  * Usage:
  *   node scripts/capture-microsoft-email-smoke-evidence.mjs before \
  *     --evidence-dir=/tmp/alga-smoke-evidence/<run> \
@@ -57,6 +70,16 @@ import {
   restorableInventory,
   truncatedMtimeMs,
 } from './microsoft-email-smoke-timestamps.mjs';
+import {
+  INDEX_FILE,
+  REQUIRED_CLAIMS,
+  VERIFIER_COPY_FILE,
+  VERIFIER_SOURCE_PATH,
+  buildVerificationIndex,
+  createContext as createVerificationContext,
+  evaluateClaim,
+  verifyBundle,
+} from './verify-microsoft-email-smoke-evidence.mjs';
 
 const { Client } = pg;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -826,11 +849,41 @@ function createManifest(args) {
     }
   }
 
-  for (const outputName of ['98-sha256-manifest.json', 'SHA256SUMS']) {
+  for (const outputName of [INDEX_FILE, VERIFIER_COPY_FILE, '98-sha256-manifest.json', 'SHA256SUMS']) {
     if (fs.existsSync(path.join(evidenceDirectory, outputName))) {
       fail(`Refusing to overwrite existing sealed artifact: ${outputName}`);
     }
   }
+
+  // Every UI-state claim must hold before the bundle can seal: the wizard
+  // licensing gate, the derived read-only Redirect URI, and both mailbox
+  // readiness states. The remaining claims are enforced by the existing gates
+  // above and re-verified as a whole after sealing.
+  const uiClaimIds = new Set([
+    'providers-wizard-platform-gating',
+    'derived-readonly-redirect-uri',
+    'pending-admin-consent-mailbox',
+    'restored-not-configured-mailbox',
+  ]);
+  const sealContext = createVerificationContext(evidenceDirectory);
+  for (const claim of REQUIRED_CLAIMS.filter((entry) => uiClaimIds.has(entry.id))) {
+    const result = evaluateClaim(claim, sealContext);
+    if (!result.passed) {
+      fail(`Cannot seal: UI claim ${claim.id} failed: ${result.failures.join('; ')}`);
+    }
+  }
+
+  fs.copyFileSync(
+    VERIFIER_SOURCE_PATH,
+    path.join(evidenceDirectory, VERIFIER_COPY_FILE),
+    fs.constants.COPYFILE_EXCL
+  );
+  writeJsonNew(
+    path.join(evidenceDirectory, INDEX_FILE),
+    buildVerificationIndex(evidenceDirectory, {
+      verifierCopySha256: sha256File(path.join(evidenceDirectory, VERIFIER_COPY_FILE)),
+    })
+  );
 
   const excluded = new Set(['98-sha256-manifest.json', 'SHA256SUMS']);
   const files = fs.readdirSync(evidenceDirectory)
@@ -867,10 +920,27 @@ function createManifest(args) {
     path.join(evidenceDirectory, 'SHA256SUMS'),
     `${checksumFiles.map((filePath) => `${sha256File(filePath)}  ${path.basename(filePath)}`).join('\n')}\n`
   );
+
+  // A sealed bundle must verify on its own: run the bundled verifier's claim
+  // table against the directory that was just sealed and refuse to report
+  // success otherwise.
+  const verdict = verifyBundle(evidenceDirectory);
+  if (!verdict.passed) {
+    const failed = verdict.results
+      .filter((result) => !result.passed)
+      .map((result) => `${result.id}: ${result.failures.join('; ')}`);
+    fail(`The sealed bundle failed its own verification: ${failed.join(' | ') || verdict.setupError}`);
+  }
   console.log(JSON.stringify({
     workflowRunId: metadata.workflowRunId,
     evidenceDirectory,
     files: checksumFiles.length,
+    verification: {
+      passed: true,
+      claims: verdict.results.length,
+      command: `node ${path.join(evidenceDirectory, VERIFIER_COPY_FILE)} ${evidenceDirectory}`,
+      bundleDigest: verdict.bundleDigest,
+    },
   }, null, 2));
 }
 
