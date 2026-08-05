@@ -335,6 +335,7 @@
   },
   "account": {
     "title": "Account",
+    "notAvailable": "N/A",
     "licenseManagement": {
       "title": "Account",
       "subtitle": "License management is available in the MSP Portal",
@@ -435,6 +436,40 @@
         "expYear": "Please enter a valid year (2024-2099)",
         "cvv": "Please enter a valid CVV"
       }
+    }
+  },
+  "licenses": {
+    "pageTitle": "Appliance Licenses",
+    "pageDescription": "Your Alga appliance Pro license entitlements. Key documents are also available in the Documents section.",
+    "loading": "Loading licenses…",
+    "empty": {
+      "message": "No appliance licenses found.",
+      "purchaseLink": "Purchase a license",
+      "suffix": "to get started."
+    },
+    "downloadKey": "Download key",
+    "validFrom": "Valid from",
+    "expires": "Expires",
+    "expiringSoon": "Expiring soon",
+    "renewal": "Renewal",
+    "renewalModes": {
+      "auto": "Auto-renews",
+      "manual": "Manual renewal"
+    },
+    "tiers": {
+      "pro": "Pro",
+      "premium": "Pro"
+    },
+    "transports": {
+      "connectedMonthly": "Connected (monthly)",
+      "connectedAnnual": "Connected (annual)",
+      "airgapAnnual": "Air-gapped (annual)"
+    },
+    "statuses": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "expired": "Expired",
+      "terminated": "Terminated"
     }
   },
   "profile": {

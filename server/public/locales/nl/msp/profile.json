@@ -623,6 +623,17 @@
         "copySuccess": "API-sleutel naar klembord gekopieerd!",
         "copyFailed": "API-sleutel kopiëren naar klembord mislukt",
         "downloadFailed": "API-sleutel downloaden mislukt"
+      },
+      "admin": {
+        "title": "Beheer van API-sleutels",
+        "searchPlaceholder": "Zoeken op gebruiker of beschrijving",
+        "columns": {
+          "user": "Gebruiker"
+        },
+        "errors": {
+          "loadFailed": "Kan API-sleutels niet laden. Controleer of u beheerdersrechten hebt.",
+          "deactivateFailed": "Kan API-sleutel niet deactiveren. Controleer of u beheerdersrechten hebt."
+        }
       }
     },
     "scim": {

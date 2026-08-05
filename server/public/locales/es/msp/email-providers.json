@@ -761,7 +761,7 @@
       "domainRemovalScheduledWithClear": "Eliminación de dominio programada y dirección de remitente de tickets eliminada",
       "removeDomainFailed": "Error al eliminar el dominio",
       "testOutboundFailed": "Error al probar el correo saliente",
-      "senderIdentitiesUpdated": "Sender identities updated."
+      "senderIdentitiesUpdated": "Identidades de remitente actualizadas."
     },
     "tabs": {
       "inboundEmail": "Correo entrante",
@@ -858,36 +858,36 @@
       },
       "senderIdentities": {
         "ticket": {
-          "title": "Ticket email identity",
-          "description": "Replies to ticket emails must return to this address so they can be matched and added to the ticket. Use a connected, monitored inbox.",
-          "connectedInboxLabel": "Connected inbox",
-          "connectedInboxHelp": "A connected inbox keeps client replies in the ticket conversation.",
-          "customAddressOption": "Use another address",
-          "addressLabel": "From address",
+          "title": "Identidad de correo electrónico de tickets",
+          "description": "Las respuestas a los correos electrónicos de tickets deben volver a esta dirección para que se puedan asociar y agregar al ticket. Use una bandeja conectada y supervisada.",
+          "connectedInboxLabel": "Bandeja conectada",
+          "connectedInboxHelp": "Una bandeja conectada mantiene las respuestas del cliente en la conversación del ticket.",
+          "customAddressOption": "Usar otra dirección",
+          "addressLabel": "Dirección del remitente",
           "addressPlaceholder": "support@example.com",
-          "addressHelp": "This address controls reply routing for ticket email only.",
-          "microsoftAddressHelp": "Microsoft 365 requires ticket email to use the selected sending mailbox ({{mailbox}}).",
-          "nameLabel": "Sender display name",
-          "namePlaceholder": "Support",
-          "nameHelp": "Leave blank to use the connected mailbox name or ticket board name."
+          "addressHelp": "Esta dirección controla el enrutamiento de respuestas solo para los correos electrónicos de tickets.",
+          "microsoftAddressHelp": "Microsoft 365 requiere que el correo electrónico de tickets use el buzón de envío seleccionado ({{mailbox}}).",
+          "nameLabel": "Nombre visible del remitente",
+          "namePlaceholder": "Soporte",
+          "nameHelp": "Déjelo en blanco para usar el nombre del buzón conectado o del tablero de tickets."
         },
         "notification": {
-          "title": "All other email identity",
-          "description": "Brand portal invitations, password resets, invoices, project updates, and general notifications independently from ticket routing.",
-          "addressLabel": "From address",
+          "title": "Identidad para todos los demás correos electrónicos",
+          "description": "Personalice las invitaciones al portal, los restablecimientos de contraseña, las facturas, las actualizaciones de proyectos y las notificaciones generales de forma independiente del enrutamiento de tickets.",
+          "addressLabel": "Dirección del remitente",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "This is the branding address used for non-ticket email through your SMTP server.",
-          "lockedAddressHelp": "This address is determined by the active managed domain or selected Microsoft 365 mailbox.",
-          "nameLabel": "Sender display name",
-          "namePlaceholder": "Your company name",
-          "nameHelp": "Leave blank to use {{company}} automatically.",
-          "companyFallback": "your tenant company"
+          "smtpAddressHelp": "Esta es la dirección de marca que se usa para los correos electrónicos que no son de tickets a través de su servidor SMTP.",
+          "lockedAddressHelp": "Esta dirección está determinada por el dominio administrado activo o el buzón de Microsoft 365 seleccionado.",
+          "nameLabel": "Nombre visible del remitente",
+          "namePlaceholder": "Nombre de su empresa",
+          "nameHelp": "Déjelo en blanco para usar {{company}} automáticamente.",
+          "companyFallback": "la empresa de su inquilino"
         },
-        "warningTitle": "Check reply routing",
-        "errorTitle": "Fix the ticket identity",
-        "clearButton": "Clear ticket identity",
-        "savingButton": "Saving...",
-        "saveButton": "Save sender identities"
+        "warningTitle": "Revise el enrutamiento de respuestas",
+        "errorTitle": "Corrija la identidad de tickets",
+        "clearButton": "Borrar identidad de tickets",
+        "savingButton": "Guardando...",
+        "saveButton": "Guardar identidades de remitente"
       }
     },
     "inbound": {
@@ -917,7 +917,7 @@
       "customAddressThreadWarning": "El uso de una dirección personalizada puede impedir que las respuestas entrantes se agrupen correctamente.",
       "smtpDomainMismatchWarning": "Este dominio no coincide con el dominio de remitente de su SMTP ({{domain}}). Los correos pueden no entregarse o marcarse como spam si su servidor SMTP no está autorizado a enviar desde este dominio.",
       "notConnectedWarning": "El procesamiento de tickets entrantes puede no funcionar con esta dirección porque no es una de sus bandejas conectadas.",
-      "microsoftMustMatchMailbox": "Ticket email address must match the selected Microsoft 365 mailbox ({{mailbox}})."
+      "microsoftMustMatchMailbox": "La dirección de correo electrónico de tickets debe coincidir con el buzón de Microsoft 365 seleccionado ({{mailbox}})."
     },
     "domainList": {
       "loading": "Cargando dominios…",

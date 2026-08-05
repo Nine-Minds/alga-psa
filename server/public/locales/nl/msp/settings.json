@@ -2295,5 +2295,156 @@
         }
       }
     }
+  },
+  "mcpServer": {
+    "title": "MCP-server",
+    "description": "Laat AI-agenten zich aanmelden bij AlgaPSA en handelen met de rollen die u hun toekent.",
+    "errors": {
+      "load": "Kan MCP-instellingen niet laden.",
+      "update": "Kan MCP-instellingen niet bijwerken."
+    },
+    "status": {
+      "active": "Actief",
+      "inactive": "Inactief"
+    },
+    "providers": {
+      "title": "Identiteitsproviders",
+      "description": "Agenten melden zich via deze providers aan. Voeg de providers toe die uw agenten gebruiken.",
+      "empty": "Nog geen providers.",
+      "readyToUse": "Klaar voor gebruik",
+      "platformManaged": "Beheerd door AlgaPSA — geen configuratie nodig. Verbind in stap 2 een agent met een van deze providers.",
+      "addAnother": "Nog een provider toevoegen",
+      "advancedOptions": "Geavanceerde opties",
+      "googleNoSetup": "Google vereist geen configuratie. Agenten melden zich aan met de ID van hun Google-serviceaccount.",
+      "kinds": {
+        "microsoft": "Microsoft Entra",
+        "google": "Google",
+        "custom": "Aangepast"
+      },
+      "suggestion": {
+        "withName": "U bent al verbonden met Microsoft ({{name}}). Wilt u deze directory voor agenten gebruiken?",
+        "withoutName": "U bent al verbonden met Microsoft. Wilt u deze directory voor agenten gebruiken?",
+        "useDirectory": "Deze directory gebruiken"
+      },
+      "fields": {
+        "provider": "Aanbieder",
+        "entraTenantId": "Entra-tenant-ID",
+        "audienceOptional": "Doelgroep (optioneel)",
+        "audience": "Doelgroep",
+        "subjectClaim": "Agenten identificeren via",
+        "subjectClaimHelp": "Laat leeg, tenzij uw provider anders aangeeft.",
+        "issuer": "Uitgever",
+        "jwksUri": "URL van ondertekeningssleutels"
+      },
+      "actions": {
+        "add": "Provider toevoegen"
+      },
+      "hints": {
+        "entraTenantIdRequired": "Voer uw Entra-tenant-ID in om door te gaan.",
+        "issuerAndJwksRequired": "Voer de uitgever en de URL van de ondertekeningssleutels in om door te gaan."
+      },
+      "table": {
+        "provider": "Aanbieder",
+        "directory": "Directory",
+        "status": "Status"
+      }
+    },
+    "agents": {
+      "title": "Agenten",
+      "description": "Elke agent meldt zich met een eigen identiteit aan en krijgt de rollen die u toewijst.",
+      "empty": "Nog geen agenten.",
+      "needsProvider": "Voeg eerst in stap 1 een provider toe. Voeg daarna agenten toe die zich via deze provider aanmelden.",
+      "connectedAs": "Verbonden als",
+      "fields": {
+        "name": "Naam",
+        "namePlaceholder": "Bot voor supporttriage",
+        "identity": "Identiteit",
+        "provider": "Aanbieder",
+        "providerPlaceholder": "Kies een provider",
+        "agentId": "Agent-ID",
+        "roles": "Rollen"
+      },
+      "manualEntry": {
+        "show": "Identiteit handmatig invoeren",
+        "hide": "Handmatige invoer verbergen"
+      },
+      "actions": {
+        "add": "Agent toevoegen",
+        "change": "Wijzigen",
+        "connectWith": "Verbinden met {{provider}}",
+        "openMenu": "Agentacties openen",
+        "viewActivity": "Activiteit bekijken",
+        "deactivate": "Deactiveren",
+        "reactivate": "Opnieuw activeren",
+        "remove": "Verwijderen…"
+      },
+      "hints": {
+        "nameRequired": "Geef de agent een naam om door te gaan.",
+        "connectOrEnterIdentity": "Verbind een provider of voer een identiteit in om door te gaan.",
+        "chooseProviderAndAgentId": "Kies een provider en een agent-ID om door te gaan."
+      },
+      "table": {
+        "name": "Naam",
+        "provider": "Aanbieder",
+        "agentId": "Agent-ID",
+        "status": "Status"
+      },
+      "removeDialog": {
+        "title": "Agent verwijderen",
+        "message": "Wilt u \"{{name}}\" verwijderen? Hiermee worden de agent, diens roltoekenningen en diens activiteitenlogboek permanent verwijderd. Dit kan niet ongedaan worden gemaakt.",
+        "confirm": "Verwijderen",
+        "cancel": "Annuleren"
+      }
+    },
+    "agentId": {
+      "unknown": {
+        "placeholder": "de identificatie van de agent",
+        "helper": "Kies een provider om te zien wat u moet invoeren."
+      },
+      "microsoft": {
+        "userHelper": "De gebruikersobject-ID (oid) van de agent uit Entra.",
+        "appHelper": "De toepassings-ID (client-ID) van de app uit Entra."
+      },
+      "google": {
+        "helper": "De ID van het serviceaccount (de sub-waarde in het token)."
+      },
+      "custom": {
+        "placeholder": "waarde van uw subjectclaim",
+        "helper": "De waarde van de claim \"{{claim}}\" in het token van de agent."
+      }
+    },
+    "audit": {
+      "title": "Activiteit",
+      "titleForAgent": "Activiteit — {{name}}",
+      "description": "Wat de agent heeft gedaan en of elke actie was toegestaan.",
+      "table": {
+        "when": "Wanneer",
+        "action": "Actie",
+        "result": "Resultaat",
+        "status": "Status"
+      },
+      "decision": {
+        "allowed": "Toegestaan",
+        "blocked": "Geblokkeerd"
+      }
+    },
+    "connectedClients": {
+      "title": "Verbonden MCP-clients",
+      "description": "Apps die u hebt gemachtigd om namens u via MCP toegang tot AlgaPSA te krijgen (bijv. Claude). Verbreek de verbinding met apps die u niet meer gebruikt.",
+      "loading": "Laden…",
+      "empty": "Geen verbonden clients.",
+      "meta": "{{host}} · verbonden op {{date}}",
+      "disconnect": "Verbinding verbreken",
+      "errors": {
+        "load": "Kan verbindingen niet laden.",
+        "disconnect": "Kan de verbinding niet verbreken."
+      },
+      "dialog": {
+        "title": "Verbinding met client verbreken",
+        "message": "Wilt u de verbinding met \"{{name}}\" verbreken? De client verliest onmiddellijk de toegang en moet opnieuw worden geautoriseerd om weer verbinding te maken.",
+        "confirm": "Verbinding verbreken",
+        "cancel": "Annuleren"
+      }
+    }
   }
 }

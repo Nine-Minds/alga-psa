@@ -443,7 +443,11 @@
       "summaryDescription": "Füllen Sie die fehlenden Felder unten aus, wechseln Sie zum Formular-Assistenten oder verwenden Sie eine Beispiel-Nutzdaten-Schaltfläche.",
       "moreErrors": "+{{count}} weitere…"
     },
-    "sampleEmailBody": "Beispiel-E-Mail-Inhalt"
+    "sampleEmailBody": "Beispiel-E-Mail-Inhalt",
+    "sections": {
+      "schemaAndEvents": "Schema und Ereignisse",
+      "payloadTools": "Nutzdatenwerkzeuge"
+    }
   },
   "eventList": {
     "common": {
@@ -1496,7 +1500,9 @@
     "field": {
       "placeholder": "Ausdruck eingeben...",
       "insertFieldPlaceholder": "Feld einfügen"
-    }
+    },
+    "clear": "Löschen",
+    "clearAriaLabel": "Ausdruck löschen"
   },
   "sourceDataTree": {
     "searchPlaceholder": "Felder suchen...",
@@ -1648,7 +1654,7 @@
     "tileKind": {
       "core-object": "Kern",
       "transform": "Transformieren",
-    "app": "Anwendung",
+      "app": "Anwendung",
       "ai": "KI"
     },
     "disconnected": {

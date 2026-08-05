@@ -1549,11 +1549,18 @@
         "description": "Wählen Sie aus, wie die Microsoft-App für eingehende E-Mails konfiguriert werden soll. Die Postfachautorisierung bleibt ein separater letzter Schritt.",
         "errors": {
           "automated": "Die automatische Erstellung der Microsoft-App konnte nicht gestartet werden.",
+          "consentDenied": "Die Microsoft-Anmeldung oder Administratoreinwilligung wurde abgelehnt. Wählen Sie eine andere Einrichtungsoption oder versuchen Sie es erneut.",
+          "consentNotGranted": "Microsoft hat die Einwilligung des Mandantenadministrators nicht bestätigt.",
+          "consentPersistFailed": "Die Microsoft-Administratoreinwilligung konnte nicht gespeichert werden.",
           "generic": "Die Einrichtung von Microsoft-E-Mail wurde nicht abgeschlossen.",
+          "invalidState": "Diese Microsoft-Einrichtungsanfrage ist ungültig oder abgelaufen. Starten Sie den Vorgang in den Anbietereinstellungen erneut.",
+          "microsoftError": "Microsoft konnte die Einrichtungsanfrage nicht abschließen. Versuchen Sie es erneut oder verwenden Sie die manuelle Einrichtung.",
+          "missingCode": "Microsoft hat keinen Autorisierungscode zurückgegeben. Starten Sie die Einrichtung erneut.",
           "nameRequired": "Geben Sie einen Anzeigenamen für die Microsoft-App ein.",
           "platform": "Die Microsoft-App der Plattform konnte nicht konfiguriert werden.",
           "popupBlocked": "Erlauben Sie Pop-ups für diese Website und versuchen Sie es erneut.",
           "popupClosed": "Das Microsoft-Fenster wurde geschlossen, bevor die Einrichtung abgeschlossen war. Versuchen Sie es erneut oder wählen Sie eine andere Einrichtungsoption.",
+          "sessionMismatch": "Ihre Sitzung in Alga PSA stimmt nicht mit dem Administrator überein, der diese Einrichtung gestartet hat. Melden Sie sich an und versuchen Sie es erneut.",
           "tenantRequired": "Geben Sie Ihre Microsoft-Mandanten-ID oder eine verifizierte Domäne ein."
         },
         "fields": {
@@ -2356,7 +2363,57 @@
           "load": "Organisationszuordnungen konnten nicht geladen werden",
           "sync": "Synchronisierung fehlgeschlagen",
           "updateMapping": "Zuordnung konnte nicht aktualisiert werden",
-          "updateContact": "Standardkontakt konnte nicht aktualisiert werden"
+          "updateContact": "Standardkontakt konnte nicht aktualisiert werden",
+          "loadStatus": "Status der Huntress-Integration konnte nicht geladen werden",
+          "connect": "Verbindung fehlgeschlagen",
+          "saveSettings": "Einstellungen konnten nicht gespeichert werden",
+          "poll": "Abfrage fehlgeschlagen"
+        },
+        "loadingIntegration": "Huntress-Integration wird geladen…",
+        "connect": {
+          "title": "Huntress verbinden",
+          "description": "Generieren Sie unter <your-account>.huntress.io → API Credentials API-Anmeldedaten und fügen Sie sie hier ein. Vom SOC geprüfte Vorfallberichte werden automatisch zu Tickets.",
+          "apiKeyPlaceholder": "API-Schlüssel",
+          "apiSecretPlaceholder": "Geheimer API-Schlüssel",
+          "submit": "Verbinden",
+          "connecting": "Verbindung wird hergestellt…"
+        },
+        "connection": {
+          "title": "Mit {{account}} verbunden",
+          "summary": "{{organizations}} Organisationen ({{unmapped}} nicht zugeordnet) · {{openIncidents}} offene Vorfälle · letzte Abfrage: {{lastPoll}}",
+          "neverPolled": "nie",
+          "lastPollFailed": "Letzte Abfrage fehlgeschlagen: {{error}}",
+          "routingIncompleteWarning": "Die Vorfallabfrage ist pausiert, bis die Routing-Konfiguration unten vollständig ist (Board, Fallback-Kunde/-Board und Prioritäten für alle drei Schweregrade).",
+          "pollNow": "Jetzt abfragen",
+          "disconnect": "Trennen",
+          "disconnectConfirm": "Huntress trennen? Bestehende Tickets und Zuordnungen bleiben erhalten."
+        },
+        "routing": {
+          "title": "Ticket-Routing",
+          "description": "Hier legen Sie fest, wo Vorfall-Tickets eingehen. Für nicht zugeordnete Huntress-Organisationen werden Tickets immer beim Fallback-Kunden und auf dem Triage-Board erstellt — nichts geht verloren.",
+          "securityBoard": "Security-Board",
+          "selectBoard": "Board auswählen",
+          "category": "Kategorie (optional)",
+          "noCategory": "Keine",
+          "fallbackClient": "Fallback-Kunde",
+          "fallbackBoard": "Fallback-Board (Triage)",
+          "criticalSeverity": "Schweregrad „Kritisch“ →",
+          "highSeverity": "Schweregrad „Hoch“ →",
+          "lowSeverity": "Schweregrad „Niedrig“ →",
+          "selectPriority": "Priorität",
+          "pollInterval": "Abfrageintervall (Minuten)",
+          "autoClose": "Tickets schließen, wenn Huntress den Vorfall schließt",
+          "closedStatus": "Status für geschlossene Tickets",
+          "selectStatus": "Status auswählen",
+          "save": "Routing-Konfiguration speichern",
+          "saving": "Wird gespeichert…"
+        },
+        "messages": {
+          "connected": "Mit dem Huntress-Konto \"{{account}}\" verbunden. Vervollständigen Sie die Routing-Konfiguration unten, um mit der Ticketerstellung zu beginnen.",
+          "routingSaved": "Routing-Konfiguration gespeichert — Vorfallabfrage ist aktiv.",
+          "routingIncomplete": "Gespeichert, aber das Routing ist noch unvollständig; die Abfrage bleibt pausiert, bis alle Felder unten festgelegt sind.",
+          "pollFinished": "Abfrage abgeschlossen. Verarbeitete Vorfälle: {{count}}.",
+          "disconnected": "Huntress wurde getrennt."
         }
       },
       "ninjaone": {

@@ -16,7 +16,7 @@ const SUBTYPE_NAME = 'Project Assigned';
 const SUBJECTS = {
   en: 'You have been assigned to project: {{project.name}}',
   fr: 'Vous avez \u00e9t\u00e9 assign\u00e9 au projet : {{project.name}}',
-  es: 'Te han asignado al proyecto: {{project.name}}',
+  es: 'Se le ha asignado al proyecto: {{project.name}}',
   de: 'Sie wurden dem Projekt zugewiesen: {{project.name}}',
   nl: 'U bent toegewezen aan het project: {{project.name}}',
   it: 'Ti \u00e8 stato assegnato il progetto: {{project.name}}',
@@ -53,7 +53,7 @@ const COPY = {
   },
   es: {
     headerLabel: 'Proyecto asignado',
-    intro: 'Te han asignado a un proyecto:',
+    intro: 'Se le ha asignado a un proyecto:',
     projectName: 'Nombre del proyecto',
     description: 'Descripci\u00f3n',
     startDate: 'Fecha de inicio',
@@ -61,7 +61,7 @@ const COPY = {
     viewButton: 'Ver proyecto',
     footer: 'Powered by Alga PSA &middot; Manteniendo a los equipos alineados',
     textHeader: 'Proyecto asignado',
-    textIntro: 'Te han asignado a un proyecto:',
+    textIntro: 'Se le ha asignado a un proyecto:',
     textView: 'Ver proyecto en',
   },
   de: {

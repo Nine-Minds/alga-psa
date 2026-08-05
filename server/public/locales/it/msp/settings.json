@@ -2295,5 +2295,156 @@
         }
       }
     }
+  },
+  "mcpServer": {
+    "title": "Server MCP",
+    "description": "Consenti agli agenti AI di accedere ad AlgaPSA e operare con i ruoli che assegni loro.",
+    "errors": {
+      "load": "Impossibile caricare le impostazioni MCP.",
+      "update": "Impossibile aggiornare le impostazioni MCP."
+    },
+    "status": {
+      "active": "Attivo",
+      "inactive": "Inattivo"
+    },
+    "providers": {
+      "title": "Provider di identità",
+      "description": "Gli agenti accedono tramite questi provider. Aggiungi quelli usati dai tuoi agenti.",
+      "empty": "Nessun provider configurato.",
+      "readyToUse": "Pronto all’uso",
+      "platformManaged": "Gestito da AlgaPSA: non è necessaria alcuna configurazione. Connetti un agente a uno di questi nel passaggio 2.",
+      "addAnother": "Aggiungi un altro provider",
+      "advancedOptions": "Opzioni avanzate",
+      "googleNoSetup": "Google non richiede configurazione. Gli agenti accedono con l’ID del proprio account di servizio Google.",
+      "kinds": {
+        "microsoft": "Microsoft Entra",
+        "google": "Google",
+        "custom": "Personalizzato"
+      },
+      "suggestion": {
+        "withName": "Sei già connesso a Microsoft ({{name}}). Vuoi usare questa directory per gli agenti?",
+        "withoutName": "Sei già connesso a Microsoft. Vuoi usare questa directory per gli agenti?",
+        "useDirectory": "Usa questa directory"
+      },
+      "fields": {
+        "provider": "Provider di identità",
+        "entraTenantId": "ID tenant Entra",
+        "audienceOptional": "Destinatario (facoltativo)",
+        "audience": "Destinatario",
+        "subjectClaim": "Identifica gli agenti tramite",
+        "subjectClaimHelp": "Lascia vuoto a meno che il provider non indichi diversamente.",
+        "issuer": "Emittente",
+        "jwksUri": "URL delle chiavi di firma"
+      },
+      "actions": {
+        "add": "Aggiungi provider"
+      },
+      "hints": {
+        "entraTenantIdRequired": "Inserisci l’ID tenant Entra per continuare.",
+        "issuerAndJwksRequired": "Inserisci l’emittente e l’URL delle chiavi di firma per continuare."
+      },
+      "table": {
+        "provider": "Provider di identità",
+        "directory": "Directory tenant",
+        "status": "Stato"
+      }
+    },
+    "agents": {
+      "title": "Agenti",
+      "description": "Ogni agente accede con la propria identità e ottiene i ruoli che gli assegni.",
+      "empty": "Nessun agente configurato.",
+      "needsProvider": "Aggiungi prima un provider nel passaggio 1. Quindi aggiungi gli agenti che accederanno tramite tale provider.",
+      "connectedAs": "Connesso come",
+      "fields": {
+        "name": "Nome",
+        "namePlaceholder": "Bot di triage dell’assistenza",
+        "identity": "Identità",
+        "provider": "Provider di identità",
+        "providerPlaceholder": "Scegli un provider",
+        "agentId": "ID agente",
+        "roles": "Ruoli"
+      },
+      "manualEntry": {
+        "show": "Inserisci l’identità manualmente",
+        "hide": "Nascondi inserimento manuale"
+      },
+      "actions": {
+        "add": "Aggiungi agente",
+        "change": "Modifica",
+        "connectWith": "Connetti con {{provider}}",
+        "openMenu": "Apri azioni agente",
+        "viewActivity": "Visualizza attività",
+        "deactivate": "Disattiva",
+        "reactivate": "Riattiva",
+        "remove": "Rimuovi…"
+      },
+      "hints": {
+        "nameRequired": "Assegna un nome all’agente per continuare.",
+        "connectOrEnterIdentity": "Connetti un provider oppure inserisci un’identità per continuare.",
+        "chooseProviderAndAgentId": "Scegli un provider e inserisci l’ID agente per continuare."
+      },
+      "table": {
+        "name": "Nome",
+        "provider": "Provider di identità",
+        "agentId": "ID agente",
+        "status": "Stato"
+      },
+      "removeDialog": {
+        "title": "Rimuovi agente",
+        "message": "Vuoi rimuovere \"{{name}}\"? Questa operazione elimina definitivamente l’agente, le relative assegnazioni di ruolo e il registro attività. Non può essere annullata.",
+        "confirm": "Rimuovi",
+        "cancel": "Annulla"
+      }
+    },
+    "agentId": {
+      "unknown": {
+        "placeholder": "l’identificatore dell’agente",
+        "helper": "Scegli un provider per vedere cosa inserire."
+      },
+      "microsoft": {
+        "userHelper": "L’ID oggetto utente (oid) dell’agente in Entra.",
+        "appHelper": "L’ID applicazione (client) dell’app in Entra."
+      },
+      "google": {
+        "helper": "L’ID dell’account di servizio (il valore sub nel relativo token)."
+      },
+      "custom": {
+        "placeholder": "valore del claim subject",
+        "helper": "Il valore del claim \"{{claim}}\" nel token dell’agente."
+      }
+    },
+    "audit": {
+      "title": "Attività",
+      "titleForAgent": "Attività — {{name}}",
+      "description": "Le operazioni eseguite e l’esito dell’autorizzazione per ciascuna.",
+      "table": {
+        "when": "Data e ora",
+        "action": "Azione",
+        "result": "Risultato",
+        "status": "Stato"
+      },
+      "decision": {
+        "allowed": "Consentita",
+        "blocked": "Bloccata"
+      }
+    },
+    "connectedClients": {
+      "title": "Client MCP connessi",
+      "description": "App che hai autorizzato ad accedere ad AlgaPSA per tuo conto tramite MCP (ad es. Claude). Disconnetti quelle che non usi più.",
+      "loading": "Caricamento…",
+      "empty": "Nessun client connesso.",
+      "meta": "{{host}} · connesso il {{date}}",
+      "disconnect": "Disconnetti",
+      "errors": {
+        "load": "Impossibile caricare le connessioni.",
+        "disconnect": "Impossibile disconnettere il client."
+      },
+      "dialog": {
+        "title": "Disconnetti client",
+        "message": "Vuoi disconnettere \"{{name}}\"? Perderà immediatamente l’accesso e dovrà essere autorizzato di nuovo per riconnettersi.",
+        "confirm": "Disconnetti",
+        "cancel": "Annulla"
+      }
+    }
   }
 }

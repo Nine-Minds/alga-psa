@@ -161,29 +161,29 @@ Ceci est un message automatis\u00e9. Veuillez ne pas r\u00e9pondre \u00e0 cet e-
               Recibimos una solicitud para acceder al portal del cliente usando esta direcci\u00f3n de correo electr\u00f3nico.
             </p>
             <p style="color: #111827; font-size: 16px; margin-bottom: 15px;">
-              Si tienes una cuenta con nosotros, deber\u00edas haber recibido un correo separado con tus enlaces de inicio de sesi\u00f3n.
+              Si tiene una cuenta con nosotros, deber\u00eda haber recibido un correo electr\u00f3nico por separado con sus enlaces de inicio de sesi\u00f3n.
             </p>
             <p style="color: #111827; font-size: 16px; margin-bottom: 10px;">
-              Si no recibiste un correo de inicio de sesi\u00f3n, puede significar:
+              Si no recibi\u00f3 un correo electr\u00f3nico de inicio de sesi\u00f3n, puede significar:
             </p>
             <ul style="color: #111827; font-size: 16px; margin-bottom: 20px; padding-left: 20px;">
               <li>Esta direcci\u00f3n de correo electr\u00f3nico no est\u00e1 asociada con ninguna cuenta del portal del cliente</li>
-              <li>Tu cuenta puede estar inactiva</li>
-              <li>El correo puede haber sido filtrado a tu carpeta de spam</li>
+              <li>Su cuenta puede estar inactiva</li>
+              <li>El correo electr\u00f3nico puede haber sido filtrado a su carpeta de spam</li>
             </ul>
 
             <div style="background-color: #f8f5ff; border-left: 4px solid #8A4DEA; padding: 15px; margin: 25px 0;">
               <p style="color: #1e40af; font-size: 14px; margin: 0;">
-                <strong>\u00bfNecesitas ayuda?</strong>
+                <strong>\u00bfNecesita ayuda?</strong>
               </p>
               <p style="color: #1e40af; font-size: 14px; margin: 5px 0 0 0;">
-                Si crees que deber\u00edas tener acceso a un portal del cliente, por favor contacta al equipo de soporte de tu proveedor de servicios para obtener ayuda.
+                Si cree que deber\u00eda tener acceso a un portal del cliente, p\u00f3ngase en contacto con el equipo de soporte de su proveedor de servicios para obtener ayuda.
               </p>
             </div>
 
             <div style="background-color: #f3f4f6; border-radius: 6px; padding: 20px; margin: 25px 0;">
               <p style="color: #4b5563; font-size: 14px; margin: 0;">
-                <strong>Nota de seguridad:</strong> Si no solicitaste acceso, puedes ignorar este correo de forma segura.
+                <strong>Nota de seguridad:</strong> Si no solicit\u00f3 acceso, puede ignorar este correo electr\u00f3nico de forma segura.
               </p>
             </div>
           </div>
@@ -193,7 +193,7 @@ Ceci est un message automatis\u00e9. Veuillez ne pas r\u00e9pondre \u00e0 cet e-
               \u00a9 {{currentYear}} {{platformName}}. Todos los derechos reservados.
             </p>
             <p style="color: #9ca3af; font-size: 11px; margin: 5px 0;">
-              Este es un mensaje autom\u00e1tico. Por favor no respondas a este correo.
+              Este es un mensaje autom\u00e1tico. No responda a este correo electr\u00f3nico.
             </p>
           </div>
         </div>
@@ -204,21 +204,21 @@ Hola,
 
 Recibimos una solicitud para acceder al portal del cliente usando esta direcci\u00f3n de correo electr\u00f3nico.
 
-Si tienes una cuenta con nosotros, deber\u00edas haber recibido un correo separado con tus enlaces de inicio de sesi\u00f3n.
+Si tiene una cuenta con nosotros, deber\u00eda haber recibido un correo electr\u00f3nico por separado con sus enlaces de inicio de sesi\u00f3n.
 
-Si no recibiste un correo de inicio de sesi\u00f3n, puede significar:
+Si no recibi\u00f3 un correo electr\u00f3nico de inicio de sesi\u00f3n, puede significar:
 - Esta direcci\u00f3n de correo electr\u00f3nico no est\u00e1 asociada con ninguna cuenta del portal del cliente
-- Tu cuenta puede estar inactiva
-- El correo puede haber sido filtrado a tu carpeta de spam
+- Su cuenta puede estar inactiva
+- El correo electr\u00f3nico puede haber sido filtrado a su carpeta de spam
 
-\u00bfNecesitas ayuda?
-Si crees que deber\u00edas tener acceso a un portal del cliente, por favor contacta al equipo de soporte de tu proveedor de servicios para obtener ayuda.
+\u00bfNecesita ayuda?
+Si cree que deber\u00eda tener acceso a un portal del cliente, p\u00f3ngase en contacto con el equipo de soporte de su proveedor de servicios para obtener ayuda.
 
-Nota de seguridad: Si no solicitaste acceso, puedes ignorar este correo de forma segura.
+Nota de seguridad: Si no solicit\u00f3 acceso, puede ignorar este correo electr\u00f3nico de forma segura.
 
 ---
 \u00a9 {{currentYear}} {{platformName}}. Todos los derechos reservados.
-Este es un mensaje autom\u00e1tico. Por favor no respondas a este correo.`,
+Este es un mensaje autom\u00e1tico. No responda a este correo electr\u00f3nico.`,
   },
   de: {
     subject: '{{platformName}} - Zugriffsanfrage',

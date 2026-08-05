@@ -2295,5 +2295,156 @@
         }
       }
     }
+  },
+  "mcpServer": {
+    "title": "Servidor MCP",
+    "description": "Permita que los agentes de IA inicien sesión en AlgaPSA y actúen con los roles que usted les asigne.",
+    "errors": {
+      "load": "No se pudo cargar la configuración de MCP.",
+      "update": "No se pudo actualizar la configuración de MCP."
+    },
+    "status": {
+      "active": "Activo",
+      "inactive": "Inactivo"
+    },
+    "providers": {
+      "title": "Proveedores de identidad",
+      "description": "Los agentes inician sesión a través de estos proveedores. Agregue los que usen sus agentes.",
+      "empty": "Aún no hay proveedores.",
+      "readyToUse": "Listo para usar",
+      "platformManaged": "Administrado por AlgaPSA; no requiere configuración. Conecte un agente a uno de estos proveedores en el paso 2.",
+      "addAnother": "Agregar otro proveedor",
+      "advancedOptions": "Opciones avanzadas",
+      "googleNoSetup": "Google no requiere configuración. Los agentes inician sesión con el ID de su cuenta de servicio de Google.",
+      "kinds": {
+        "microsoft": "Microsoft Entra",
+        "google": "Google",
+        "custom": "Personalizado"
+      },
+      "suggestion": {
+        "withName": "Ya está conectado a Microsoft ({{name}}). ¿Desea usar este directorio para los agentes?",
+        "withoutName": "Ya está conectado a Microsoft. ¿Desea usar este directorio para los agentes?",
+        "useDirectory": "Usar este directorio"
+      },
+      "fields": {
+        "provider": "Proveedor",
+        "entraTenantId": "ID de inquilino de Entra",
+        "audienceOptional": "Audiencia (opcional)",
+        "audience": "Audiencia",
+        "subjectClaim": "Identificar agentes por",
+        "subjectClaimHelp": "Déjelo en blanco a menos que su proveedor indique lo contrario.",
+        "issuer": "Emisor",
+        "jwksUri": "URL de claves de firma"
+      },
+      "actions": {
+        "add": "Agregar proveedor"
+      },
+      "hints": {
+        "entraTenantIdRequired": "Introduzca el ID de inquilino de Entra para continuar.",
+        "issuerAndJwksRequired": "Introduzca el emisor y la URL de claves de firma para continuar."
+      },
+      "table": {
+        "provider": "Proveedor",
+        "directory": "Directorio",
+        "status": "Estado"
+      }
+    },
+    "agents": {
+      "title": "Agentes",
+      "description": "Cada agente inicia sesión con su propia identidad y obtiene los roles que usted le asigne.",
+      "empty": "Aún no hay agentes.",
+      "needsProvider": "Primero agregue un proveedor en el paso 1. Después, agregue los agentes que inicien sesión a través de él.",
+      "connectedAs": "Conectado como",
+      "fields": {
+        "name": "Nombre",
+        "namePlaceholder": "Bot de triaje de soporte",
+        "identity": "Identidad",
+        "provider": "Proveedor",
+        "providerPlaceholder": "Elija un proveedor",
+        "agentId": "ID del agente",
+        "roles": "Roles"
+      },
+      "manualEntry": {
+        "show": "Introducir identidad manualmente",
+        "hide": "Ocultar entrada manual"
+      },
+      "actions": {
+        "add": "Agregar agente",
+        "change": "Cambiar",
+        "connectWith": "Conectar con {{provider}}",
+        "openMenu": "Abrir acciones del agente",
+        "viewActivity": "Ver actividad",
+        "deactivate": "Desactivar",
+        "reactivate": "Reactivar",
+        "remove": "Eliminar…"
+      },
+      "hints": {
+        "nameRequired": "Asigne un nombre al agente para continuar.",
+        "connectOrEnterIdentity": "Conecte un proveedor o introduzca una identidad para continuar.",
+        "chooseProviderAndAgentId": "Elija un proveedor y un ID de agente para continuar."
+      },
+      "table": {
+        "name": "Nombre",
+        "provider": "Proveedor",
+        "agentId": "ID del agente",
+        "status": "Estado"
+      },
+      "removeDialog": {
+        "title": "Eliminar agente",
+        "message": "¿Eliminar \"{{name}}\"? Esto eliminará permanentemente el agente, sus asignaciones de roles y su registro de actividad. Esta acción no se puede deshacer.",
+        "confirm": "Eliminar",
+        "cancel": "Cancelar"
+      }
+    },
+    "agentId": {
+      "unknown": {
+        "placeholder": "el identificador del agente",
+        "helper": "Elija un proveedor para saber qué debe introducir."
+      },
+      "microsoft": {
+        "userHelper": "El ID de objeto de usuario (oid) del agente en Entra.",
+        "appHelper": "El ID de aplicación (cliente) de la aplicación en Entra."
+      },
+      "google": {
+        "helper": "El ID de la cuenta de servicio (el valor sub de su token)."
+      },
+      "custom": {
+        "placeholder": "valor de su declaración de sujeto",
+        "helper": "El valor de la declaración \"{{claim}}\" en el token del agente."
+      }
+    },
+    "audit": {
+      "title": "Actividad",
+      "titleForAgent": "Actividad — {{name}}",
+      "description": "Qué hizo y si se permitió cada acción.",
+      "table": {
+        "when": "Cuándo",
+        "action": "Acción",
+        "result": "Resultado",
+        "status": "Estado"
+      },
+      "decision": {
+        "allowed": "Permitida",
+        "blocked": "Bloqueada"
+      }
+    },
+    "connectedClients": {
+      "title": "Clientes MCP conectados",
+      "description": "Aplicaciones a las que ha autorizado a acceder a AlgaPSA en su nombre mediante MCP (por ejemplo, Claude). Desconecte las que ya no use.",
+      "loading": "Cargando…",
+      "empty": "No hay clientes conectados.",
+      "meta": "{{host}} · conectado el {{date}}",
+      "disconnect": "Desconectar",
+      "errors": {
+        "load": "No se pudieron cargar las conexiones.",
+        "disconnect": "No se pudo desconectar."
+      },
+      "dialog": {
+        "title": "Desconectar cliente",
+        "message": "¿Desconectar \"{{name}}\"? Perderá el acceso de inmediato y deberá volver a autorizarse para reconectarse.",
+        "confirm": "Desconectar",
+        "cancel": "Cancelar"
+      }
+    }
   }
 }

@@ -225,5 +225,129 @@
       "body": "Doładowania, automatyczne doładowanie i zmiany subskrypcji obsługiwane są w sklepie Nine Minds.",
       "openStore": "Otwórz sklep"
     }
+  },
+  "managementPage": {
+    "metaTitle": "Licencja",
+    "eyebrow": "Licencjonowanie urządzenia",
+    "title": "Licencja",
+    "subtitle": "Zarządzaj poziomem funkcji tego urządzenia hostowanego samodzielnie.",
+    "notSelfHost": {
+      "title": "Licencja",
+      "description": "Zarządzanie licencjami jest dostępne tylko w instalacjach hostowanych samodzielnie."
+    },
+    "tiers": {
+      "unknown": "Nieznany poziom",
+      "essentials": "Pakiet Essentials",
+      "solo": "Solo",
+      "pro": "Pro"
+    },
+    "status": {
+      "trial": {
+        "eyebrow": "Okres próbny Pro",
+        "title": "Okres próbny Pro jest aktywny",
+        "description_one": "Pozostał {{count}} dzień na korzystanie ze wszystkich funkcji Pro.",
+        "description_few": "Pozostały {{count}} dni na korzystanie ze wszystkich funkcji Pro.",
+        "description_many": "Pozostało {{count}} dni na korzystanie ze wszystkich funkcji Pro.",
+        "description_other": "Pozostało {{count}} dnia na korzystanie ze wszystkich funkcji Pro.",
+        "descriptionNoDays": "W okresie próbnym możesz korzystać ze wszystkich funkcji Pro.",
+        "badge": "Okres próbny aktywny"
+      },
+      "licensed": {
+        "eyebrow": "Płatna licencja",
+        "title": "{{tier}} jest aktywny",
+        "description": "Płatna licencja jest aktywna na tym urządzeniu.",
+        "descriptionWithExpiry": "Licencja jest aktywna do {{date}}.",
+        "badge": "Licencja aktywna"
+      },
+      "licenseExpired": {
+        "eyebrow": "Licencja wymaga uwagi",
+        "title": "Licencja wygasła",
+        "description": "Urządzenie korzysta z funkcji Essentials do czasu aktywowania nowego klucza licencyjnego lub kodu aktywacyjnego.",
+        "badge": "Wygasła"
+      },
+      "licenseWrongTenant": {
+        "eyebrow": "Licencja wymaga uwagi",
+        "title": "Ta licencja nie jest tutaj ważna",
+        "description": "Zapisana licencja została wydana dla innej organizacji korzystającej z urządzenia. Aktywuj właściwą licencję, aby odblokować płatne funkcje.",
+        "badge": "Nieprawidłowa instalacja"
+      },
+      "trialExpired": {
+        "eyebrow": "Pakiet Essentials",
+        "title": "Korzystasz z Essentials",
+        "description": "Okres próbny Pro dobiegł końca. Essentials pozostaje aktywny dla podstawowego zestawu funkcji PSA.",
+        "badge": "Essentials aktywny"
+      },
+      "essentials": {
+        "eyebrow": "Pakiet Essentials",
+        "title": "Korzystasz z Essentials",
+        "description": "Essentials jest aktywny na tym urządzeniu. Nadal korzystaj z podstawowego zestawu funkcji albo uruchom jednorazowy 15-dniowy okres próbny Pro.",
+        "badge": "Essentials aktywny"
+      }
+    },
+    "trialCta": {
+      "title": "Wypróbuj Pro przez 15 dni",
+      "description": "Odblokuj automatyzację, zaawansowane integracje i pełny zestaw funkcji Pro. Karta kredytowa nie jest wymagana; po zakończeniu okresu próbnego urządzenie powróci do Essentials."
+    },
+    "details": {
+      "currentTier": "Bieżący poziom",
+      "expires": "Wygasa",
+      "daysRemaining_one": "Pozostał {{count}} dzień",
+      "daysRemaining_few": "Pozostały {{count}} dni",
+      "daysRemaining_many": "Pozostało {{count}} dni",
+      "daysRemaining_other": "Pozostało {{count}} dnia",
+      "licensedTo": "Licencja dla",
+      "refreshLabel": "Odświeżanie licencji",
+      "connected": "Połączono",
+      "lastCheckIn": "Ostatnie sprawdzenie: {{timestamp}}",
+      "refreshHelp": "Natychmiast stosuje zmiany stanowisk lub planu wprowadzone w portalu."
+    },
+    "portal": {
+      "manageTitle": "Stanowiska, rozliczenia i kody aktywacyjne",
+      "manageDescription": "Dodaj lub usuń stanowiska, zaktualizuj rozliczenia albo ponownie wydaj kod aktywacyjny w portalu licencyjnym. Zaloguj się przy użyciu zarejestrowanego adresu e-mail — hasło nie jest wymagane.",
+      "buyTitle": "Chcesz kupić AlgaPSA Pro?",
+      "buyDescription": "Kup w portalu licencyjnym: zaloguj się przy użyciu zarejestrowanego adresu e-mail, wybierz liczbę stanowisk, a otrzymasz jednorazowy kod aktywacyjny do wprowadzenia poniżej. Urządzenie zostanie uaktualnione w miejscu."
+    },
+    "advanced": {
+      "summary": "Masz kod lub klucz licencyjny?",
+      "introPrefix": "Wprowadź kod aktywacyjny lub klucz offline otrzymany z",
+      "introLink": "portalu licencyjnego",
+      "introSuffix": "albo od pomocy technicznej Nine Minds.",
+      "claimCode": {
+        "title": "Aktywuj kodem aktywacyjnym",
+        "description": "Użyj 8-znakowego kodu z portalu licencyjnego lub wiadomości e-mail dotyczącej płatnej licencji. Włączy to także automatyczne odświeżanie licencji."
+      },
+      "licenseKey": {
+        "title": "Wklej klucz licencyjny",
+        "description": "Użyj tej opcji dla kluczy offline pobranych z portalu licencyjnego do instalacji odizolowanych od sieci lub wydanych przez pomoc techniczną."
+      },
+      "installationId": {
+        "title": "Identyfikator instalacji",
+        "description": "Pomoc techniczna może poprosić o ten identyfikator podczas wydawania ręcznego klucza licencyjnego."
+      }
+    },
+    "actions": {
+      "startTrial": "Uruchom 15-dniowy okres próbny Pro",
+      "startingTrial": "Uruchamianie…",
+      "refreshNow": "Odśwież licencję teraz",
+      "refreshing": "Odświeżanie…",
+      "manageInPortal": "Zarządzaj licencją w portalu",
+      "buyInPortal": "Kup Pro w portalu",
+      "applyClaimCode": "Zastosuj kod aktywacyjny",
+      "activateLicenseKey": "Aktywuj klucz licencyjny",
+      "activating": "Aktywowanie…"
+    },
+    "success": {
+      "licenseKeyActivated": "Klucz licencyjny został aktywowany. Płatne funkcje są teraz dostępne na tym urządzeniu.",
+      "claimCodeActivated": "Kod aktywacyjny został aktywowany. Automatyczne odświeżanie licencji jest teraz skonfigurowane.",
+      "trialStarted": "Uruchomiono 15-dniowy okres próbny Pro.",
+      "licenseRefreshed": "Licencja została odświeżona. Zmiany stanowisk lub planu wprowadzone w portalu są teraz aktywne."
+    },
+    "errors": {
+      "loadStatus": "Nie udało się wczytać stanu licencji.",
+      "activateLicenseKey": "Nie udało się aktywować klucza licencyjnego.",
+      "activateClaimCode": "Nie udało się aktywować kodu aktywacyjnego.",
+      "startTrial": "Nie udało się uruchomić okresu próbnego.",
+      "refreshLicense": "Nie udało się odświeżyć licencji."
+    }
   }
 }

@@ -623,6 +623,17 @@
         "copySuccess": "API-Schlüssel in die Zwischenablage kopiert!",
         "copyFailed": "Kopieren des API-Schlüssels in die Zwischenablage fehlgeschlagen",
         "downloadFailed": "Herunterladen des API-Schlüssels fehlgeschlagen"
+      },
+      "admin": {
+        "title": "API-Schlüsselverwaltung",
+        "searchPlaceholder": "Nach Benutzer oder Beschreibung suchen",
+        "columns": {
+          "user": "Benutzer"
+        },
+        "errors": {
+          "loadFailed": "API-Schlüssel konnten nicht geladen werden. Stellen Sie sicher, dass Sie über Administratorrechte verfügen.",
+          "deactivateFailed": "Der API-Schlüssel konnte nicht deaktiviert werden. Stellen Sie sicher, dass Sie über Administratorrechte verfügen."
+        }
       }
     },
     "scim": {

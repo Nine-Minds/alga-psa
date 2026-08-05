@@ -212,7 +212,7 @@
         "namePlaceholder": "55555",
         "nameHelp": "55555",
         "notConnectedWarning": "55555",
-        "microsoftMismatch": "Ticket email address must match the selected Microsoft 365 mailbox ({{mailbox}})."
+        "microsoftMismatch": "55555 {{mailbox}} 55555"
       },
       "notification": {
         "title": "55555",

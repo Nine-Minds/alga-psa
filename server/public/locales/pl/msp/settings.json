@@ -2309,5 +2309,156 @@
         }
       }
     }
+  },
+  "mcpServer": {
+    "title": "Serwer MCP",
+    "description": "Pozwól agentom AI logować się do AlgaPSA i działać z nadanymi im rolami.",
+    "errors": {
+      "load": "Nie udało się załadować ustawień MCP.",
+      "update": "Nie udało się zaktualizować ustawień MCP."
+    },
+    "status": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny"
+    },
+    "providers": {
+      "title": "Dostawcy tożsamości",
+      "description": "Agenci logują się za pośrednictwem tych dostawców. Dodaj dostawców używanych przez agentów.",
+      "empty": "Brak dostawców.",
+      "readyToUse": "Gotowy do użycia",
+      "platformManaged": "Zarządzany przez AlgaPSA — nie wymaga konfiguracji. Połącz z nim agenta w kroku 2.",
+      "addAnother": "Dodaj kolejnego dostawcę",
+      "advancedOptions": "Opcje zaawansowane",
+      "googleNoSetup": "Google nie wymaga konfiguracji. Agenci logują się za pomocą identyfikatora konta usługi Google.",
+      "kinds": {
+        "microsoft": "Microsoft Entra",
+        "google": "Google",
+        "custom": "Niestandardowy"
+      },
+      "suggestion": {
+        "withName": "Masz już połączenie z Microsoft ({{name}}). Czy chcesz użyć tego katalogu dla agentów?",
+        "withoutName": "Masz już połączenie z Microsoft. Czy chcesz użyć tego katalogu dla agentów?",
+        "useDirectory": "Użyj tego katalogu"
+      },
+      "fields": {
+        "provider": "Dostawca",
+        "entraTenantId": "Identyfikator organizacji Entra",
+        "audienceOptional": "Odbiorca (opcjonalnie)",
+        "audience": "Odbiorca",
+        "subjectClaim": "Identyfikuj agentów według",
+        "subjectClaimHelp": "Pozostaw puste, chyba że dostawca zaleca inaczej.",
+        "issuer": "Wystawca",
+        "jwksUri": "Adres URL kluczy podpisujących"
+      },
+      "actions": {
+        "add": "Dodaj dostawcę"
+      },
+      "hints": {
+        "entraTenantIdRequired": "Wprowadź identyfikator organizacji Entra, aby kontynuować.",
+        "issuerAndJwksRequired": "Wprowadź wystawcę i adres URL kluczy podpisujących, aby kontynuować."
+      },
+      "table": {
+        "provider": "Dostawca",
+        "directory": "Katalog",
+        "status": "Status"
+      }
+    },
+    "agents": {
+      "title": "Agenci",
+      "description": "Każdy agent loguje się we własnym imieniu i otrzymuje przypisane mu role.",
+      "empty": "Brak agentów.",
+      "needsProvider": "Najpierw dodaj dostawcę w kroku 1. Następnie dodaj agentów, którzy będą się za jego pośrednictwem logować.",
+      "connectedAs": "Połączono jako",
+      "fields": {
+        "name": "Nazwa",
+        "namePlaceholder": "Bot do wstępnej kwalifikacji zgłoszeń",
+        "identity": "Tożsamość",
+        "provider": "Dostawca",
+        "providerPlaceholder": "Wybierz dostawcę",
+        "agentId": "Identyfikator agenta",
+        "roles": "Role"
+      },
+      "manualEntry": {
+        "show": "Wprowadź tożsamość ręcznie",
+        "hide": "Ukryj ręczne wprowadzanie"
+      },
+      "actions": {
+        "add": "Dodaj agenta",
+        "change": "Zmień",
+        "connectWith": "Połącz przez {{provider}}",
+        "openMenu": "Otwórz działania agenta",
+        "viewActivity": "Wyświetl aktywność",
+        "deactivate": "Dezaktywuj",
+        "reactivate": "Aktywuj ponownie",
+        "remove": "Usuń…"
+      },
+      "hints": {
+        "nameRequired": "Nadaj agentowi nazwę, aby kontynuować.",
+        "connectOrEnterIdentity": "Połącz dostawcę lub wprowadź tożsamość, aby kontynuować.",
+        "chooseProviderAndAgentId": "Wybierz dostawcę i identyfikator agenta, aby kontynuować."
+      },
+      "table": {
+        "name": "Nazwa",
+        "provider": "Dostawca",
+        "agentId": "Identyfikator agenta",
+        "status": "Status"
+      },
+      "removeDialog": {
+        "title": "Usuń agenta",
+        "message": "Czy chcesz usunąć agenta „{{name}}”? Spowoduje to trwałe usunięcie agenta, przyznanych mu ról i dziennika aktywności. Tej operacji nie można cofnąć.",
+        "confirm": "Usuń",
+        "cancel": "Anuluj"
+      }
+    },
+    "agentId": {
+      "unknown": {
+        "placeholder": "identyfikator agenta",
+        "helper": "Wybierz dostawcę, aby zobaczyć, co należy wprowadzić."
+      },
+      "microsoft": {
+        "userHelper": "Identyfikator obiektu użytkownika agenta (oid) z Entra.",
+        "appHelper": "Identyfikator aplikacji (klienta) agenta w Entra."
+      },
+      "google": {
+        "helper": "Identyfikator konta usługi (wartość sub w tokenie)."
+      },
+      "custom": {
+        "placeholder": "wartość atrybutu podmiotu",
+        "helper": "Wartość atrybutu „{{claim}}” w tokenie agenta."
+      }
+    },
+    "audit": {
+      "title": "Aktywność",
+      "titleForAgent": "Aktywność — {{name}}",
+      "description": "Działania agenta i informacja, czy każde z nich było dozwolone.",
+      "table": {
+        "when": "Kiedy",
+        "action": "Działanie",
+        "result": "Wynik",
+        "status": "Status"
+      },
+      "decision": {
+        "allowed": "Dozwolone",
+        "blocked": "Zablokowane"
+      }
+    },
+    "connectedClients": {
+      "title": "Połączone klienty MCP",
+      "description": "Aplikacje, którym udzielono dostępu do AlgaPSA w Twoim imieniu przez MCP (np. Claude). Odłącz aplikacje, których już nie używasz.",
+      "loading": "Ładowanie…",
+      "empty": "Brak połączonych klientów.",
+      "meta": "{{host}} · połączono {{date}}",
+      "disconnect": "Odłącz",
+      "errors": {
+        "load": "Nie udało się załadować połączeń.",
+        "disconnect": "Nie udało się rozłączyć."
+      },
+      "dialog": {
+        "title": "Odłącz klienta",
+        "message": "Czy chcesz odłączyć klienta „{{name}}”? Natychmiast utraci dostęp i przed ponownym połączeniem będzie wymagać ponownej autoryzacji.",
+        "confirm": "Odłącz",
+        "cancel": "Anuluj"
+      }
+    }
   }
 }

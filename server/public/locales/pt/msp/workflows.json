@@ -443,7 +443,11 @@
       "summaryDescription": "Preencha os campos ausentes abaixo, mude para o Form Builder ou use um botão de amostra de carga útil.",
       "moreErrors": "+{{count}} mais…"
     },
-    "sampleEmailBody": "Exemplo de corpo de e-mail"
+    "sampleEmailBody": "Exemplo de corpo de e-mail",
+    "sections": {
+      "schemaAndEvents": "Esquema e eventos",
+      "payloadTools": "Ferramentas de carga útil"
+    }
   },
   "eventList": {
     "common": {
@@ -1374,7 +1378,9 @@
     "field": {
       "placeholder": "Digite a expressão...",
       "insertFieldPlaceholder": "Inserir campo"
-    }
+    },
+    "clear": "Limpar",
+    "clearAriaLabel": "Limpar expressão"
   },
   "sourceDataTree": {
     "searchPlaceholder": "Campos de pesquisa...",

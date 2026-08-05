@@ -25,7 +25,12 @@
     "trialAvailable": "Essentials-functies zijn actief. Start een gratis Pro-proefperiode van 15 dagen om alle functies te ontgrendelen.",
     "trialExpired": "De Pro-proefperiode is verlopen. De installatie gebruikt nu Essentials-functies.",
     "licenseExpiresIn_one": "De licentie verloopt over {{count}} dag. Verleng om serviceonderbreking te voorkomen.",
-    "licenseExpiresIn_other": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen."
+    "licenseExpiresIn_other": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen.",
+    "licenseExpired": "De licentie is verlopen. De installatie gebruikt nu Essentials-functies.",
+    "licenseWrongTenant": "Deze licentie is voor een andere appliance uitgegeven en is hier niet geldig. De installatie gebruikt Essentials-functies.",
+    "manageLicense": "Licentie beheren",
+    "ariaLabel": "Licentiestatus",
+    "dismiss": "Sluiten"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -1210,6 +1215,32 @@
           "summaryWithClient": "U opent contact {{contactId}} voor klant {{clientId}} vanuit Teams."
         }
       }
+    },
+    "unsubscribe": {
+      "pageTitle": "Afmelden",
+      "confirmTitle": "Wilt u zich afmelden voor deze e-mails?",
+      "confirmDescription": "U ontvangt geen marketing-e-mails meer op dit adres.",
+      "confirmAction": "Afmelden",
+      "doneTitle": "U bent afgemeld",
+      "doneDescription": "U ontvangt deze e-mails niet meer.",
+      "unavailableTitle": "Link niet beschikbaar",
+      "unavailableDescription": "Deze link is niet meer geldig."
+    },
+    "mcpAuthorize": {
+      "errorTitle": "Autorisatiefout",
+      "documentTitle": "{{client}} autoriseren",
+      "consentTitle": "Toegang autoriseren",
+      "consentRequest": "<strong>{{client}}</strong> vraagt toegang tot AlgaPSA <em>namens u</em>.",
+      "consentScope": "De app kan de MCP-tools met uw eigen machtigingen in deze werkruimte gebruiken. U kunt de verbinding op elk gewenst moment verbreken via Instellingen → MCP.",
+      "approve": "Goedkeuren",
+      "deny": "Weigeren"
+    },
+    "microsoftEmailSetup": {
+      "title": "Microsoft-e-mail instellen",
+      "finishing": "De configuratie van Microsoft-e-mail wordt voltooid…",
+      "finished": "De configuratie is voltooid. U kunt dit venster sluiten.",
+      "notFinished": "De configuratie is niet voltooid. Ga terug naar AlgaPSA om de fout te bekijken.",
+      "returnLink": "Terug naar AlgaPSA"
     }
   },
   "feedback": {

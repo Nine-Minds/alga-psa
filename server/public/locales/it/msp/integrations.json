@@ -1549,11 +1549,18 @@
         "description": "Scegli come configurare l'app Microsoft usata per le email in entrata. L'autorizzazione della casella di posta resta un ultimo passaggio separato.",
         "errors": {
           "automated": "Impossibile avviare la creazione automatica dell'app Microsoft.",
+          "consentDenied": "L'accesso a Microsoft o il consenso dell'amministratore è stato negato. Scegli un'altra opzione di configurazione o riprova.",
+          "consentNotGranted": "Microsoft non ha confermato il consenso dell'amministratore del tenant.",
+          "consentPersistFailed": "Impossibile registrare il consenso dell'amministratore Microsoft.",
           "generic": "La configurazione dell'email Microsoft non è stata completata.",
+          "invalidState": "Questa richiesta di configurazione Microsoft non è valida o è scaduta. Ricomincia dalle impostazioni dei provider.",
+          "microsoftError": "Microsoft non ha potuto completare la richiesta di configurazione. Riprova o usa la configurazione manuale.",
+          "missingCode": "Microsoft non ha restituito un codice di autorizzazione. Riavvia la configurazione.",
           "nameRequired": "Inserisci un nome visualizzato per l'app Microsoft.",
           "platform": "Impossibile configurare l'app Microsoft della piattaforma.",
           "popupBlocked": "Consenti i popup per questo sito, quindi riprova.",
           "popupClosed": "La finestra Microsoft è stata chiusa prima del completamento della configurazione. Riprova o scegli un’altra opzione di configurazione.",
+          "sessionMismatch": "La tua sessione Alga PSA non corrisponde all'amministratore che ha avviato questa configurazione. Accedi e riprova.",
           "tenantRequired": "Inserisci l'ID tenant Microsoft o un dominio verificato."
         },
         "fields": {
@@ -2356,7 +2363,57 @@
           "load": "Impossibile caricare le mappature delle organizzazioni",
           "sync": "Sincronizzazione non riuscita",
           "updateMapping": "Impossibile aggiornare la mappatura",
-          "updateContact": "Impossibile aggiornare il contatto predefinito"
+          "updateContact": "Impossibile aggiornare il contatto predefinito",
+          "loadStatus": "Impossibile caricare lo stato dell’integrazione Huntress",
+          "connect": "Connessione non riuscita",
+          "saveSettings": "Impossibile salvare le impostazioni",
+          "poll": "Polling non riuscito"
+        },
+        "loadingIntegration": "Caricamento dell’integrazione Huntress…",
+        "connect": {
+          "title": "Connetti Huntress",
+          "description": "Genera le credenziali API in <your-account>.huntress.io → API Credentials, quindi incollale qui. I report sugli incidenti esaminati dal SOC diventeranno automaticamente ticket.",
+          "apiKeyPlaceholder": "Chiave API",
+          "apiSecretPlaceholder": "Chiave API segreta",
+          "submit": "Connetti",
+          "connecting": "Connessione…"
+        },
+        "connection": {
+          "title": "Connesso a {{account}}",
+          "summary": "{{organizations}} organizzazioni ({{unmapped}} non mappate) · {{openIncidents}} incidenti aperti · ultimo polling: {{lastPoll}}",
+          "neverPolled": "mai",
+          "lastPollFailed": "Ultimo polling non riuscito: {{error}}",
+          "routingIncompleteWarning": "Il polling degli incidenti è sospeso finché la configurazione di instradamento seguente non è completa (bacheca di sicurezza, cliente e bacheca di riserva e tutte e tre le priorità di gravità).",
+          "pollNow": "Esegui polling ora",
+          "disconnect": "Disconnetti",
+          "disconnectConfirm": "Vuoi disconnettere Huntress? I ticket e le mappature esistenti verranno mantenuti."
+        },
+        "routing": {
+          "title": "Instradamento dei ticket",
+          "description": "Definisci dove vengono inseriti i ticket degli incidenti. Le organizzazioni Huntress non mappate creano sempre ticket per il cliente di riserva e nella bacheca di triage: nessun incidente viene ignorato.",
+          "securityBoard": "Bacheca di sicurezza",
+          "selectBoard": "Seleziona bacheca",
+          "category": "Categoria (facoltativa)",
+          "noCategory": "Nessuna",
+          "fallbackClient": "Cliente di riserva",
+          "fallbackBoard": "Bacheca di riserva (triage)",
+          "criticalSeverity": "Gravità critica →",
+          "highSeverity": "Gravità alta →",
+          "lowSeverity": "Gravità bassa →",
+          "selectPriority": "Priorità",
+          "pollInterval": "Intervallo di polling (minuti)",
+          "autoClose": "Chiudi i ticket quando Huntress chiude l’incidente",
+          "closedStatus": "Stato di chiusura",
+          "selectStatus": "Seleziona stato",
+          "save": "Salva configurazione di instradamento",
+          "saving": "Salvataggio…"
+        },
+        "messages": {
+          "connected": "Connessione all’account Huntress \"{{account}}\" riuscita. Completa la configurazione di instradamento seguente per iniziare a creare ticket.",
+          "routingSaved": "Configurazione di instradamento salvata: il polling degli incidenti è attivo.",
+          "routingIncomplete": "Configurazione salvata, ma l’instradamento è ancora incompleto; il polling rimarrà sospeso finché non imposti tutti i campi seguenti.",
+          "pollFinished": "Polling completato: {{count}} incidenti elaborati.",
+          "disconnected": "Huntress disconnesso."
         }
       },
       "ninjaone": {

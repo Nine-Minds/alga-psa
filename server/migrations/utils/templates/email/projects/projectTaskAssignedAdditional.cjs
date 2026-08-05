@@ -22,7 +22,7 @@ const SUBTYPE_NAME = 'Project Task Assigned';
 const SUBJECTS = {
   en: 'You have been added as additional resource to task: {{task.name}}',
   fr: 'Vous avez \u00e9t\u00e9 ajout\u00e9 comme ressource suppl\u00e9mentaire \u00e0 la t\u00e2che : {{task.name}}',
-  es: 'Se te ha a\u00f1adido como recurso adicional a la tarea: {{task.name}}',
+  es: 'Se le ha agregado como recurso adicional a la tarea: {{task.name}}',
   de: 'Sie wurden der Aufgabe als zus\u00e4tzliche Ressource hinzugef\u00fcgt: {{task.name}}',
   nl: 'U bent toegevoegd als extra resource aan de taak: {{task.name}}',
   it: 'Sei stato aggiunto come risorsa aggiuntiva alla task: {{task.name}}',
@@ -71,7 +71,7 @@ const COPY = {
   },
   es: {
     headerLabel: 'Asignaci\u00f3n de tarea',
-    intro: 'Hola{{#if recipientName}} {{recipientName}}{{/if}}, se te ha a\u00f1adido como recurso adicional para una tarea del proyecto.',
+    intro: 'Hola{{#if recipientName}} {{recipientName}}{{/if}}, se le ha agregado como recurso adicional para una tarea del proyecto.',
     assignedBadge: 'Recurso adicional',
     badgeBg: 'rgba(138,77,234,0.12)',
     badgeColor: '#5b38b0',
@@ -85,7 +85,7 @@ const COPY = {
     buttonColor: '#8A4DEA',
     footer: 'Powered by Alga PSA',
     textHeader: 'Asignaci\u00f3n de tarea',
-    textIntro: 'Se te ha a\u00f1adido como recurso adicional a esta tarea:',
+    textIntro: 'Se le ha agregado como recurso adicional a esta tarea:',
     textView: 'Ver tarea en',
   },
   de: {

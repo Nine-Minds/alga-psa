@@ -286,6 +286,7 @@
   },
   "account": {
     "title": "Account",
+    "notAvailable": "N/D",
     "licenseManagement": {
       "title": "Account",
       "subtitle": "La gestione delle licenze è disponibile nel Portale MSP",
@@ -386,6 +387,40 @@
         "expYear": "Inserisci un anno valido (2024-2099)",
         "cvv": "Inserisci un CVV valido"
       }
+    }
+  },
+  "licenses": {
+    "pageTitle": "Licenze appliance",
+    "pageDescription": "Le tue licenze Pro per le appliance Alga. I documenti principali sono disponibili anche nella sezione Documenti.",
+    "loading": "Caricamento licenze…",
+    "empty": {
+      "message": "Nessuna licenza appliance trovata.",
+      "purchaseLink": "Acquista una licenza",
+      "suffix": "per iniziare."
+    },
+    "downloadKey": "Scarica chiave",
+    "validFrom": "Valida dal",
+    "expires": "Scade il",
+    "expiringSoon": "In scadenza",
+    "renewal": "Rinnovo",
+    "renewalModes": {
+      "auto": "Si rinnova automaticamente",
+      "manual": "Rinnovo manuale"
+    },
+    "tiers": {
+      "pro": "Pro",
+      "premium": "Pro"
+    },
+    "transports": {
+      "connectedMonthly": "Connessa (mensile)",
+      "connectedAnnual": "Connessa (annuale)",
+      "airgapAnnual": "Isolata dalla rete (annuale)"
+    },
+    "statuses": {
+      "active": "Attiva",
+      "inactive": "Inattiva",
+      "expired": "Scaduta",
+      "terminated": "Cessata"
     }
   },
   "profile": {

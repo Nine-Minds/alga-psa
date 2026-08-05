@@ -22,7 +22,7 @@ const SUBTYPE_NAME = 'Project Task Assigned';
 const SUBJECTS = {
   en: 'You have been assigned to task: {{task.name}}',
   fr: 'Vous avez \u00e9t\u00e9 assign\u00e9 \u00e0 la t\u00e2che : {{task.name}}',
-  es: 'Te han asignado a la tarea: {{task.name}}',
+  es: 'Se le ha asignado a la tarea: {{task.name}}',
   de: 'Sie wurden der Aufgabe zugewiesen: {{task.name}}',
   nl: 'U bent toegewezen aan de taak: {{task.name}}',
   it: 'Ti \u00e8 stata assegnata la task: {{task.name}}',
@@ -71,7 +71,7 @@ const COPY = {
   },
   es: {
     headerLabel: 'Asignaci\u00f3n de tarea',
-    intro: 'Hola{{#if recipientName}} {{recipientName}}{{/if}}, te han asignado como recurso principal para una tarea del proyecto.',
+    intro: 'Hola{{#if recipientName}} {{recipientName}}{{/if}}, se le ha asignado como recurso principal para una tarea del proyecto.',
     assignedBadge: 'Responsable principal',
     badgeBg: BADGE_BG,
     badgeColor: BRAND_DARK,
@@ -85,7 +85,7 @@ const COPY = {
     buttonColor: BRAND_PRIMARY,
     footer: 'Powered by Alga PSA',
     textHeader: 'Asignaci\u00f3n de tarea',
-    textIntro: 'Te han asignado como responsable principal de esta tarea:',
+    textIntro: 'Se le ha asignado como responsable principal de esta tarea:',
     textView: 'Ver tarea en',
   },
   de: {

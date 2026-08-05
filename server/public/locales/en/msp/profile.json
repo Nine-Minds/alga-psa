@@ -699,7 +699,14 @@
       },
       "admin": {
         "title": "API Keys Administration",
-        "searchPlaceholder": "Search by user or description"
+        "searchPlaceholder": "Search by user or description",
+        "columns": {
+          "user": "User"
+        },
+        "errors": {
+          "loadFailed": "Failed to load API keys. Please ensure you have admin privileges.",
+          "deactivateFailed": "Failed to deactivate API key. Please ensure you have admin privileges."
+        }
       }
     }
   },

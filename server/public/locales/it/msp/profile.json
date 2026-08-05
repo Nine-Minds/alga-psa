@@ -623,6 +623,17 @@
         "copySuccess": "Chiave API copiata negli appunti!",
         "copyFailed": "Impossibile copiare la chiave API negli appunti",
         "downloadFailed": "Impossibile scaricare la chiave API"
+      },
+      "admin": {
+        "title": "Amministrazione delle chiavi API",
+        "searchPlaceholder": "Cerca per utente o descrizione",
+        "columns": {
+          "user": "Utente"
+        },
+        "errors": {
+          "loadFailed": "Impossibile caricare le chiavi API. Verifica di disporre dei privilegi di amministratore.",
+          "deactivateFailed": "Impossibile disattivare la chiave API. Verifica di disporre dei privilegi di amministratore."
+        }
       }
     },
     "scim": {

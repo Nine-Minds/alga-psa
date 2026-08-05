@@ -1549,11 +1549,18 @@
         "description": "Kies hoe u de Microsoft-app voor inkomende e-mail wilt configureren. Het autoriseren van de mailbox blijft een afzonderlijke laatste stap.",
         "errors": {
           "automated": "Kan het automatisch maken van de Microsoft-app niet starten.",
+          "consentDenied": "Microsoft-aanmelding of beheerderstoestemming is geweigerd. Kies een andere configuratieoptie of probeer het opnieuw.",
+          "consentNotGranted": "Microsoft heeft de toestemming van de tenantbeheerder niet bevestigd.",
+          "consentPersistFailed": "Kan de Microsoft-beheerderstoestemming niet vastleggen.",
           "generic": "De configuratie van Microsoft-e-mail is niet voltooid.",
+          "invalidState": "Dit Microsoft-configuratieverzoek is ongeldig of verlopen. Start opnieuw vanuit de providerinstellingen.",
+          "microsoftError": "Microsoft kon het configuratieverzoek niet voltooien. Probeer het opnieuw of gebruik de handmatige configuratie.",
+          "missingCode": "Microsoft heeft geen autorisatiecode geretourneerd. Start de configuratie opnieuw.",
           "nameRequired": "Voer een weergavenaam voor de Microsoft-app in.",
           "platform": "Kan de Microsoft-platformapp niet configureren.",
           "popupBlocked": "Sta pop-ups voor deze site toe en probeer het opnieuw.",
           "popupClosed": "Het Microsoft-venster is gesloten voordat de configuratie was voltooid. Probeer het opnieuw of kies een andere configuratieoptie.",
+          "sessionMismatch": "Uw Alga PSA-sessie komt niet overeen met de beheerder die deze configuratie heeft gestart. Meld u aan en probeer het opnieuw.",
           "tenantRequired": "Voer uw Microsoft-tenant-id of geverifieerd domein in."
         },
         "fields": {
@@ -2347,7 +2354,7 @@
           "unmapped": "Niet gekoppeld → triage"
         },
         "title": "Organisatiekoppeling",
-        "description": "Koppel Huntress-organisaties aan klanten. Incidenten van niet-gekoppelde organisaties gaan naar de fallbackklant en het triageboard.",
+        "description": "Koppel Huntress-organisaties aan klanten. Incidenten van niet-gekoppelde organisaties gaan naar de fallbackklant en het triagebord.",
         "unmappedSuffix": "({{count}} niet gekoppeld)",
         "syncButton": "Organisaties synchroniseren",
         "loading": "Laden…",
@@ -2356,7 +2363,57 @@
           "load": "Kan organisatiekoppelingen niet laden",
           "sync": "Synchronisatie mislukt",
           "updateMapping": "Kan koppeling niet bijwerken",
-          "updateContact": "Kan standaardcontact niet bijwerken"
+          "updateContact": "Kan standaardcontact niet bijwerken",
+          "loadStatus": "Kan de status van de Huntress-integratie niet laden",
+          "connect": "Verbinding mislukt",
+          "saveSettings": "Kan instellingen niet opslaan",
+          "poll": "Poll mislukt"
+        },
+        "loadingIntegration": "Huntress-integratie laden…",
+        "connect": {
+          "title": "Huntress verbinden",
+          "description": "Genereer API-referenties via <your-account>.huntress.io → API Credentials en plak ze hier. Door het SOC beoordeelde incidentrapporten worden automatisch tickets.",
+          "apiKeyPlaceholder": "API-sleutel",
+          "apiSecretPlaceholder": "Geheime API-sleutel",
+          "submit": "Verbinden",
+          "connecting": "Verbinden…"
+        },
+        "connection": {
+          "title": "Verbonden met {{account}}",
+          "summary": "{{organizations}} organisaties ({{unmapped}} niet gekoppeld) · {{openIncidents}} open incidenten · laatste poll: {{lastPoll}}",
+          "neverPolled": "nooit",
+          "lastPollFailed": "Laatste poll mislukt: {{error}}",
+          "routingIncompleteWarning": "Het pollen van incidenten is gepauzeerd totdat de onderstaande routeringsconfiguratie volledig is (bord, fallbackklant/-bord en alle drie prioriteiten voor ernstniveaus).",
+          "pollNow": "Nu pollen",
+          "disconnect": "Verbinding verbreken",
+          "disconnectConfirm": "Verbinding met Huntress verbreken? Bestaande tickets en koppelingen blijven behouden."
+        },
+        "routing": {
+          "title": "Ticketroutering",
+          "description": "Hier komen incidenttickets terecht. Voor niet-gekoppelde Huntress-organisaties worden altijd tickets aangemaakt voor de fallbackklant en op het triagebord — niets wordt overgeslagen.",
+          "securityBoard": "Beveiligingsbord",
+          "selectBoard": "Bord selecteren",
+          "category": "Categorie (optioneel)",
+          "noCategory": "Geen",
+          "fallbackClient": "Fallbackklant",
+          "fallbackBoard": "Fallbackbord (triage)",
+          "criticalSeverity": "Kritiek →",
+          "highSeverity": "Hoog →",
+          "lowSeverity": "Laag →",
+          "selectPriority": "Prioriteit",
+          "pollInterval": "Pollinterval (minuten)",
+          "autoClose": "Tickets sluiten wanneer Huntress het incident sluit",
+          "closedStatus": "Status Gesloten",
+          "selectStatus": "Status selecteren",
+          "save": "Routeringsconfiguratie opslaan",
+          "saving": "Opslaan…"
+        },
+        "messages": {
+          "connected": "Verbonden met Huntress-account \"{{account}}\". Voltooi de onderstaande routeringsconfiguratie om tickets te laten aanmaken.",
+          "routingSaved": "Routeringsconfiguratie opgeslagen — incidenten worden nu gepolld.",
+          "routingIncomplete": "Opgeslagen, maar de routering is nog niet volledig. Het pollen blijft gepauzeerd totdat elk veld hieronder is ingesteld.",
+          "pollFinished": "Poll voltooid: {{count}} incident(en) verwerkt.",
+          "disconnected": "Verbinding met Huntress verbroken."
         }
       },
       "ninjaone": {

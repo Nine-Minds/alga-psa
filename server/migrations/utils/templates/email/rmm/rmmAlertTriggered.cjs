@@ -37,7 +37,7 @@ const COPY = {
   es: {
     subject: 'Alerta de RMM ({{severity}}): {{deviceName}}',
     heading: 'Alerta de RMM',
-    intro: 'Una alerta de {{provider}} coincide con una regla que te notifica.',
+    intro: 'Una alerta de {{provider}} coincide con una regla que le env\u00eda una notificaci\u00f3n.',
     severity: 'Severidad',
     device: 'Dispositivo',
     message: 'Mensaje',

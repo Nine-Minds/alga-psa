@@ -761,7 +761,7 @@
       "domainRemovalScheduledWithClear": "Domeinverwijdering gepland en afzenderadres voor ticketing gewist",
       "removeDomainFailed": "Kan domein niet verwijderen",
       "testOutboundFailed": "Testen van uitgaande e-mail mislukt",
-      "senderIdentitiesUpdated": "Sender identities updated."
+      "senderIdentitiesUpdated": "Afzenderidentiteiten bijgewerkt."
     },
     "tabs": {
       "inboundEmail": "Inkomende e-mail",
@@ -858,36 +858,36 @@
       },
       "senderIdentities": {
         "ticket": {
-          "title": "Ticket email identity",
-          "description": "Replies to ticket emails must return to this address so they can be matched and added to the ticket. Use a connected, monitored inbox.",
-          "connectedInboxLabel": "Connected inbox",
-          "connectedInboxHelp": "A connected inbox keeps client replies in the ticket conversation.",
-          "customAddressOption": "Use another address",
-          "addressLabel": "From address",
+          "title": "E-mailidentiteit voor tickets",
+          "description": "Antwoorden op ticket-e-mails moeten naar dit adres terugkomen, zodat ze aan het ticket kunnen worden gekoppeld en toegevoegd. Gebruik een verbonden postvak dat wordt bewaakt.",
+          "connectedInboxLabel": "Verbonden postvak",
+          "connectedInboxHelp": "Een verbonden postvak houdt antwoorden van klanten bij de ticketconversatie.",
+          "customAddressOption": "Een ander adres gebruiken",
+          "addressLabel": "Afzenderadres",
           "addressPlaceholder": "support@example.com",
-          "addressHelp": "This address controls reply routing for ticket email only.",
-          "microsoftAddressHelp": "Microsoft 365 requires ticket email to use the selected sending mailbox ({{mailbox}}).",
-          "nameLabel": "Sender display name",
-          "namePlaceholder": "Support",
-          "nameHelp": "Leave blank to use the connected mailbox name or ticket board name."
+          "addressHelp": "Dit adres bepaalt alleen de antwoordroutering voor ticket-e-mail.",
+          "microsoftAddressHelp": "Voor Microsoft 365 moet ticket-e-mail het geselecteerde verzendpostvak ({{mailbox}}) gebruiken.",
+          "nameLabel": "Weergavenaam van afzender",
+          "namePlaceholder": "Ondersteuning",
+          "nameHelp": "Laat leeg om de naam van het verbonden postvak of het ticketbord te gebruiken."
         },
         "notification": {
-          "title": "All other email identity",
-          "description": "Brand portal invitations, password resets, invoices, project updates, and general notifications independently from ticket routing.",
-          "addressLabel": "From address",
+          "title": "E-mailidentiteit voor alle overige berichten",
+          "description": "Geef portaaluitnodigingen, wachtwoordresets, facturen, projectupdates en algemene meldingen onafhankelijk van de ticketroutering een eigen huisstijl.",
+          "addressLabel": "Afzenderadres",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "This is the branding address used for non-ticket email through your SMTP server.",
-          "lockedAddressHelp": "This address is determined by the active managed domain or selected Microsoft 365 mailbox.",
-          "nameLabel": "Sender display name",
-          "namePlaceholder": "Your company name",
-          "nameHelp": "Leave blank to use {{company}} automatically.",
-          "companyFallback": "your tenant company"
+          "smtpAddressHelp": "Dit is het huisstijladres dat via uw SMTP-server wordt gebruikt voor e-mail die niet aan tickets is gerelateerd.",
+          "lockedAddressHelp": "Dit adres wordt bepaald door het actieve beheerde domein of het geselecteerde Microsoft 365-postvak.",
+          "nameLabel": "Weergavenaam van afzender",
+          "namePlaceholder": "Uw bedrijfsnaam",
+          "nameHelp": "Laat leeg om automatisch {{company}} te gebruiken.",
+          "companyFallback": "uw tenantbedrijf"
         },
-        "warningTitle": "Check reply routing",
-        "errorTitle": "Fix the ticket identity",
-        "clearButton": "Clear ticket identity",
-        "savingButton": "Saving...",
-        "saveButton": "Save sender identities"
+        "warningTitle": "Antwoordroutering controleren",
+        "errorTitle": "Ticketidentiteit corrigeren",
+        "clearButton": "Ticketidentiteit wissen",
+        "savingButton": "Opslaan...",
+        "saveButton": "Afzenderidentiteiten opslaan"
       }
     },
     "inbound": {
@@ -917,7 +917,7 @@
       "customAddressThreadWarning": "Het gebruik van een aangepast adres kan voorkomen dat inkomende antwoorden correct worden gegroepeerd.",
       "smtpDomainMismatchWarning": "Dit domein komt niet overeen met uw SMTP-afzenderdomein ({{domain}}). E-mails kunnen niet worden bezorgd of als spam worden gemarkeerd als uw SMTP-server niet is geautoriseerd om vanaf dit domein te verzenden.",
       "notConnectedWarning": "Verwerking van inkomende tickets werkt mogelijk niet met dit adres omdat het geen van uw verbonden inboxen is.",
-      "microsoftMustMatchMailbox": "Ticket email address must match the selected Microsoft 365 mailbox ({{mailbox}})."
+      "microsoftMustMatchMailbox": "Het e-mailadres voor tickets moet overeenkomen met het geselecteerde Microsoft 365-postvak ({{mailbox}})."
     },
     "domainList": {
       "loading": "Domeinen laden…",

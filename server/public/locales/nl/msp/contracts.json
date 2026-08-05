@@ -2296,7 +2296,17 @@
         "hourly": "Per uur",
         "usage": "Verbruik"
       },
-      "usageRate": "Verbruikstarief"
+      "usageRate": "Verbruikstarief",
+      "columns": {
+        "name": "Naam",
+        "type": "Type",
+        "value": "Waarde",
+        "appliesTo": "Van toepassing op",
+        "description": "Beschrijving",
+        "amount": "Bedrag ($)",
+        "billingPeriod": "Factureringsperiode",
+        "timing": "Moment"
+      }
     },
     "timeline": {
       "deltaDown": "−{{amount}} ten opzichte van het huidige contract",

@@ -7,39 +7,85 @@ import {
 import { confirmMicrosoftEmailAdminConsentInternal } from '@alga-psa/integrations/actions/integrations/microsoftActions';
 import { validateMicrosoftEmailSetupState } from '@alga-psa/integrations/lib/microsoftEmailSetup';
 import { consumeMicrosoftEmailSetupState } from '@alga-psa/integrations/utils/microsoftEmailSetupStateStore';
+import { getServerLocale, getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 export const dynamic = 'force-dynamic';
 
-function respondToSetupWindow(input: {
+// Stable failure codes for the setup popup's postMessage payload. The opener
+// maps each code to a translated string; the English text here rides along as
+// `error` so logs and any older opener still read sensibly, but it is never
+// what the user sees.
+const SETUP_FAILURES = {
+  invalid_state: 'This Microsoft setup request is invalid or expired. Start again from Providers settings.',
+  session_mismatch: 'Your Alga PSA session does not match the administrator who started this setup. Sign in and try again.',
+  consent_denied: 'Microsoft sign-in or administrator consent was denied. Choose another setup option or try again.',
+  microsoft_error: 'Microsoft could not complete the setup request. Try again or use manual setup.',
+  consent_not_granted: 'Microsoft did not confirm tenant administrator consent.',
+  consent_persist_failed: 'Failed to record Microsoft administrator consent.',
+  missing_code: 'Microsoft did not return an authorization code. Start setup again.',
+} as const;
+
+type MicrosoftEmailSetupErrorCode = keyof typeof SETUP_FAILURES;
+
+function failure(code: MicrosoftEmailSetupErrorCode, detail?: string) {
+  return { success: false, errorCode: code, error: detail || SETUP_FAILURES[code] };
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string),
+  );
+}
+
+async function respondToSetupWindow(input: {
   returnTo: string;
   payload: Record<string, unknown>;
-}): NextResponse {
-  const encodedPayload = Buffer.from(JSON.stringify({
+}): Promise<NextResponse> {
+  // The admin who started the setup is signed in, so the standard hierarchical
+  // resolver (user preference → org default → Accept-Language) applies.
+  const locale = await getServerLocale();
+  const { t } = await getServerTranslation(locale, 'common');
+
+  // Percent-encoded before base64 for the same reason as the copy below: the
+  // payload can carry a Microsoft error message with accented characters, and
+  // `atob` yields latin-1, so raw UTF-8 bytes would arrive mojibake'd.
+  const encodedPayload = Buffer.from(encodeURIComponent(JSON.stringify({
     type: 'microsoft-email-setup-callback',
     ...input.payload,
-  })).toString('base64');
+  }))).toString('base64');
   const returnUrl = new URL(input.returnTo);
   const encodedReturnUrl = Buffer.from(returnUrl.toString()).toString('base64');
+  // Script-side copy travels as base64 JSON like the payload above, so a
+  // translation containing a quote or an angle bracket can never break out of
+  // the inline script. Percent-encoded before base64 because `atob` yields a
+  // latin-1 string — raw UTF-8 bytes would surface as mojibake for every
+  // accented locale.
+  const encodedText = Buffer.from(encodeURIComponent(JSON.stringify({
+    finished: t('pages.microsoftEmailSetup.finished'),
+    notFinished: t('pages.microsoftEmailSetup.notFinished'),
+    returnLink: t('pages.microsoftEmailSetup.returnLink'),
+  }))).toString('base64');
   const targetOrigin = returnUrl.origin;
   const html = `<!doctype html>
-<html>
-  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Microsoft Email Setup</title></head>
+<html lang="${locale}">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escapeHtml(t('pages.microsoftEmailSetup.title'))}</title></head>
   <body>
-    <p id="status">Finishing Microsoft Email setup…</p>
+    <p id="status">${escapeHtml(t('pages.microsoftEmailSetup.finishing'))}</p>
     <script>
       (function () {
-        var payload = JSON.parse(atob('${encodedPayload}'));
+        var payload = JSON.parse(decodeURIComponent(atob('${encodedPayload}')));
+        var text = JSON.parse(decodeURIComponent(atob('${encodedText}')));
         var target = window.opener || window.parent;
         if (target && target !== window) target.postMessage(payload, '${targetOrigin}');
         try { window.close(); } catch (_) {}
         setTimeout(function () {
           if (!window.closed) {
             document.getElementById('status').textContent = payload.success
-              ? 'Setup finished. You can close this window.'
-              : 'Setup did not finish. Return to Alga PSA to review the error.';
+              ? text.finished
+              : text.notFinished;
             var link = document.createElement('a');
             link.href = atob('${encodedReturnUrl}');
-            link.textContent = 'Return to Alga PSA';
+            link.textContent = text.returnLink;
             document.body.appendChild(link);
           }
         }, 150);
@@ -57,10 +103,10 @@ function respondToSetupWindow(input: {
   });
 }
 
-function genericFailure(error: string): NextResponse {
+function genericFailure(code: MicrosoftEmailSetupErrorCode): Promise<NextResponse> {
   return respondToSetupWindow({
     returnTo: `${process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}/msp/settings/integrations?category=providers`,
-    payload: { success: false, error },
+    payload: failure(code),
   });
 }
 
@@ -69,7 +115,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const signingSecret = await getMicrosoftEmailSetupSigningSecret();
   const state = validateMicrosoftEmailSetupState({ token: stateToken, secret: signingSecret });
   if (!state) {
-    return genericFailure('This Microsoft setup request is invalid or expired. Start again from Providers settings.');
+    return genericFailure('invalid_state');
   }
 
   const user = await getCurrentUser();
@@ -79,10 +125,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
     return respondToSetupWindow({
       returnTo: state.returnTo,
-      payload: {
-        success: false,
-        error: 'Your Alga PSA session does not match the administrator who started this setup. Sign in and try again.',
-      },
+      payload: failure('session_mismatch'),
     });
   }
 
@@ -93,12 +136,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
     return respondToSetupWindow({
       returnTo: state.returnTo,
-      payload: {
-        success: false,
-        error: microsoftError === 'access_denied'
-          ? 'Microsoft sign-in or administrator consent was denied. Choose another setup option or try again.'
-          : 'Microsoft could not complete the setup request. Try again or use manual setup.',
-      },
+      payload: failure(microsoftError === 'access_denied' ? 'consent_denied' : 'microsoft_error'),
     });
   }
 
@@ -108,7 +146,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (!granted) {
       return respondToSetupWindow({
         returnTo: state.returnTo,
-        payload: { success: false, error: 'Microsoft did not confirm tenant administrator consent.' },
+        payload: failure('consent_not_granted'),
       });
     }
 
@@ -121,7 +159,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       returnTo: state.returnTo,
       payload: persisted.success
         ? { success: true, stage: 'admin_consent', tenantId: microsoftTenant, clientId: state.clientId, profileId: state.profileId }
-        : { success: false, error: persisted.error || 'Failed to record Microsoft administrator consent.' },
+        : failure('consent_persist_failed', persisted.error),
     });
   }
 
@@ -130,7 +168,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     await consumeMicrosoftEmailSetupState(state.nonce).catch(() => null);
     return respondToSetupWindow({
       returnTo: state.returnTo,
-      payload: { success: false, error: 'Microsoft did not return an authorization code. Start setup again.' },
+      payload: failure('missing_code'),
     });
   }
 

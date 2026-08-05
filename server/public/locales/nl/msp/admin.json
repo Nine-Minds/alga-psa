@@ -200,33 +200,33 @@
     },
     "senderIdentities": {
       "ticket": {
-        "title": "Ticket email identity",
-        "description": "Replies to ticket emails must return to this address so they can be matched and added to the ticket. Use a connected, monitored inbox.",
-        "connectedInboxLabel": "Connected inbox",
-        "connectedInboxHelp": "A connected inbox keeps client replies in the ticket conversation.",
-        "customAddressOption": "Use another address",
-        "addressLabel": "From address",
+        "title": "E-mailidentiteit voor tickets",
+        "description": "Antwoorden op ticket-e-mails moeten naar dit adres terugkomen, zodat ze aan het ticket kunnen worden gekoppeld en toegevoegd. Gebruik een verbonden postvak dat wordt bewaakt.",
+        "connectedInboxLabel": "Verbonden postvak",
+        "connectedInboxHelp": "Een verbonden postvak houdt antwoorden van klanten bij de ticketconversatie.",
+        "customAddressOption": "Een ander adres gebruiken",
+        "addressLabel": "Afzenderadres",
         "addressPlaceholder": "support@example.com",
-        "addressHelp": "This address controls reply routing for ticket email only.",
-        "nameLabel": "Sender display name",
-        "namePlaceholder": "Support",
-        "nameHelp": "Leave blank to use the connected mailbox name or ticket board name.",
-        "notConnectedWarning": "This address is not a connected inbox, so ticket replies may not be ingested.",
-        "microsoftMismatch": "Ticket email address must match the selected Microsoft 365 mailbox ({{mailbox}})."
+        "addressHelp": "Dit adres bepaalt alleen de antwoordroutering voor ticket-e-mail.",
+        "nameLabel": "Weergavenaam van afzender",
+        "namePlaceholder": "Ondersteuning",
+        "nameHelp": "Laat leeg om de naam van het verbonden postvak of het ticketbord te gebruiken.",
+        "notConnectedWarning": "Dit adres is geen verbonden postvak. Daardoor worden antwoorden op tickets mogelijk niet verwerkt.",
+        "microsoftMismatch": "Het e-mailadres voor tickets moet overeenkomen met het geselecteerde Microsoft 365-postvak ({{mailbox}})."
       },
       "notification": {
-        "title": "All other email identity",
-        "description": "Brand portal invitations, password resets, invoices, project updates, and general notifications independently from ticket routing.",
-        "addressLabel": "From address",
+        "title": "E-mailidentiteit voor alle overige berichten",
+        "description": "Geef portaaluitnodigingen, wachtwoordresets, facturen, projectupdates en algemene meldingen onafhankelijk van de ticketroutering een eigen huisstijl.",
+        "addressLabel": "Afzenderadres",
         "addressPlaceholder": "notifications@example.com",
-        "addressHelp": "SMTP and Resend use this address. Microsoft 365 uses the selected sending mailbox.",
-        "nameLabel": "Sender display name",
-        "namePlaceholder": "Your company name",
-        "nameHelp": "Leave blank to use {{company}} automatically.",
-        "companyFallback": "your tenant company"
+        "addressHelp": "SMTP en Resend gebruiken dit adres. Microsoft 365 gebruikt het geselecteerde verzendpostvak.",
+        "nameLabel": "Weergavenaam van afzender",
+        "namePlaceholder": "Uw bedrijfsnaam",
+        "nameHelp": "Laat leeg om automatisch {{company}} te gebruiken.",
+        "companyFallback": "uw tenantbedrijf"
       },
-      "warningTitle": "Check reply routing",
-      "errorTitle": "Fix the ticket identity"
+      "warningTitle": "Antwoordroutering controleren",
+      "errorTitle": "Ticketidentiteit corrigeren"
     }
   },
   "microsoft365": {

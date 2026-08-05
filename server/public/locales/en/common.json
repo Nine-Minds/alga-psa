@@ -1215,6 +1215,32 @@
           "summaryWithClient": "You're opening contact {{contactId}} for client {{clientId}} from Teams."
         }
       }
+    },
+    "unsubscribe": {
+      "pageTitle": "Unsubscribe",
+      "confirmTitle": "Unsubscribe from these emails?",
+      "confirmDescription": "You will no longer receive marketing emails at this address.",
+      "confirmAction": "Unsubscribe",
+      "doneTitle": "You've been unsubscribed",
+      "doneDescription": "You will no longer receive these emails.",
+      "unavailableTitle": "Link unavailable",
+      "unavailableDescription": "This link is no longer valid."
+    },
+    "mcpAuthorize": {
+      "errorTitle": "Authorization error",
+      "documentTitle": "Authorize {{client}}",
+      "consentTitle": "Authorize access",
+      "consentRequest": "<strong>{{client}}</strong> is requesting access to AlgaPSA <em>as you</em>.",
+      "consentScope": "It will be able to use the MCP tools with your own permissions in this workspace. You can disconnect it anytime from Settings → MCP.",
+      "approve": "Approve",
+      "deny": "Deny"
+    },
+    "microsoftEmailSetup": {
+      "title": "Microsoft Email Setup",
+      "finishing": "Finishing Microsoft Email setup…",
+      "finished": "Setup finished. You can close this window.",
+      "notFinished": "Setup did not finish. Return to AlgaPSA to review the error.",
+      "returnLink": "Return to AlgaPSA"
     }
   },
   "feedback": {

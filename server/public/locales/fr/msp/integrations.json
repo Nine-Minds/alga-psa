@@ -1549,11 +1549,18 @@
         "description": "Choisissez comment configurer l'application Microsoft utilisée pour les e-mails entrants. L'autorisation de la boîte aux lettres reste une étape finale distincte.",
         "errors": {
           "automated": "Impossible de démarrer la création automatisée de l'application Microsoft.",
+          "consentDenied": "La connexion à Microsoft ou le consentement administrateur a été refusé. Choisissez une autre option de configuration ou réessayez.",
+          "consentNotGranted": "Microsoft n’a pas confirmé le consentement de l’administrateur du locataire.",
+          "consentPersistFailed": "Impossible d’enregistrer le consentement de l’administrateur Microsoft.",
           "generic": "La configuration de l'e-mail Microsoft n'a pas abouti.",
+          "invalidState": "Cette demande de configuration Microsoft est invalide ou a expiré. Recommencez depuis les paramètres des fournisseurs.",
+          "microsoftError": "Microsoft n’a pas pu mener à bien la demande de configuration. Réessayez ou utilisez la configuration manuelle.",
+          "missingCode": "Microsoft n’a renvoyé aucun code d’autorisation. Recommencez la configuration.",
           "nameRequired": "Saisissez un nom d'affichage pour l'application Microsoft.",
           "platform": "Impossible de configurer l'application Microsoft de la plateforme.",
           "popupBlocked": "Autorisez les fenêtres contextuelles pour ce site, puis réessayez.",
           "popupClosed": "La fenêtre Microsoft a été fermée avant la fin de la configuration. Réessayez ou choisissez une autre option de configuration.",
+          "sessionMismatch": "Votre session Alga PSA ne correspond pas à l’administrateur qui a démarré cette configuration. Connectez-vous et réessayez.",
           "tenantRequired": "Saisissez votre Tenant ID Microsoft ou votre domaine vérifié."
         },
         "fields": {
@@ -2356,7 +2363,57 @@
           "load": "Échec du chargement des mappages d'organisations",
           "sync": "Échec de la synchronisation",
           "updateMapping": "Échec de la mise à jour du mappage",
-          "updateContact": "Échec de la mise à jour du contact par défaut"
+          "updateContact": "Échec de la mise à jour du contact par défaut",
+          "loadStatus": "Échec du chargement du statut de l'intégration Huntress",
+          "connect": "Échec de la connexion",
+          "saveSettings": "Échec de l'enregistrement des paramètres",
+          "poll": "Échec de la synchronisation"
+        },
+        "loadingIntegration": "Chargement de l'intégration Huntress…",
+        "connect": {
+          "title": "Connecter Huntress",
+          "description": "Générez des identifiants API sur <your-account>.huntress.io → API Credentials, puis collez-les ici. Les rapports d'incident examinés par le SOC deviendront automatiquement des tickets.",
+          "apiKeyPlaceholder": "Clé API",
+          "apiSecretPlaceholder": "Clé secrète API",
+          "submit": "Connecter",
+          "connecting": "Connexion…"
+        },
+        "connection": {
+          "title": "Connecté au compte {{account}}",
+          "summary": "{{organizations}} organisations ({{unmapped}} non associées) · {{openIncidents}} incidents ouverts · dernière synchronisation : {{lastPoll}}",
+          "neverPolled": "jamais",
+          "lastPollFailed": "Échec de la dernière synchronisation : {{error}}",
+          "routingIncompleteWarning": "La synchronisation des incidents est en pause jusqu'à ce que la configuration du routage ci-dessous soit terminée (tableau, client et tableau de repli, ainsi que les trois priorités de gravité).",
+          "pollNow": "Synchroniser maintenant",
+          "disconnect": "Déconnecter",
+          "disconnectConfirm": "Déconnecter Huntress ? Les tickets et mappages existants seront conservés."
+        },
+        "routing": {
+          "title": "Routage des tickets",
+          "description": "Déterminez où arrivent les tickets d'incident. Les organisations Huntress non associées créent toujours des tickets pour le client de repli dans le tableau de triage : aucun incident n'est ignoré.",
+          "securityBoard": "Tableau de sécurité",
+          "selectBoard": "Sélectionner un tableau",
+          "category": "Catégorie (facultatif)",
+          "noCategory": "Aucune",
+          "fallbackClient": "Client de repli",
+          "fallbackBoard": "Tableau de repli (triage)",
+          "criticalSeverity": "Gravité critique →",
+          "highSeverity": "Gravité élevée →",
+          "lowSeverity": "Gravité faible →",
+          "selectPriority": "Sélectionner une priorité",
+          "pollInterval": "Intervalle de synchronisation (minutes)",
+          "autoClose": "Fermer les tickets lorsque Huntress ferme l'incident",
+          "closedStatus": "Statut de fermeture",
+          "selectStatus": "Sélectionner un statut",
+          "save": "Enregistrer la configuration du routage",
+          "saving": "Enregistrement…"
+        },
+        "messages": {
+          "connected": "Connexion au compte Huntress « {{account}} » établie. Terminez la configuration du routage ci-dessous pour lancer la création des tickets.",
+          "routingSaved": "Configuration du routage enregistrée — la synchronisation des incidents est active.",
+          "routingIncomplete": "Configuration enregistrée, mais le routage reste incomplet ; la synchronisation demeure en pause jusqu'à ce que tous les champs ci-dessous soient renseignés.",
+          "pollFinished": "Synchronisation terminée : {{count}} incident(s) traité(s).",
+          "disconnected": "Connexion à Huntress interrompue."
         }
       },
       "ninjaone": {

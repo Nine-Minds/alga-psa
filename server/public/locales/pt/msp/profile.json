@@ -623,6 +623,17 @@
         "copySuccess": "Chave de API copiada para a área de transferência!",
         "copyFailed": "Falha ao copiar a chave de API para a área de transferência",
         "downloadFailed": "Falha ao baixar a chave de API"
+      },
+      "admin": {
+        "title": "Administração de chaves de API",
+        "searchPlaceholder": "Pesquisar por usuário ou descrição",
+        "columns": {
+          "user": "Usuário"
+        },
+        "errors": {
+          "loadFailed": "Falha ao carregar as chaves de API. Verifique se você tem privilégios de administrador.",
+          "deactivateFailed": "Falha ao desativar a chave de API. Verifique se você tem privilégios de administrador."
+        }
       }
     },
     "scim": {

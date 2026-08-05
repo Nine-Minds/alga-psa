@@ -2296,7 +2296,17 @@
         "hourly": "Orario",
         "usage": "Utilizzo"
       },
-      "usageRate": "Tariffa di utilizzo"
+      "usageRate": "Tariffa di utilizzo",
+      "columns": {
+        "name": "Nome",
+        "type": "Tipo",
+        "value": "Valore",
+        "appliesTo": "Si applica a",
+        "description": "Descrizione",
+        "amount": "Importo ($)",
+        "billingPeriod": "Periodo di fatturazione",
+        "timing": "Tempistica"
+      }
     },
     "timeline": {
       "deltaDown": "−{{amount}} rispetto al contratto corrente",

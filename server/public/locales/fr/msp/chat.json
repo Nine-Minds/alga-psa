@@ -151,7 +151,9 @@
       "declined": "Fonction refusée",
       "pending": "Fonction en file d'attente",
       "error": "Erreur de fonction"
-    }
+    },
+    "executedCalls": "Appels exécutés",
+    "bundleMore": "+{{remaining}} de plus"
   },
   "mention": {
     "noResultsFound": "Aucun résultat trouvé"

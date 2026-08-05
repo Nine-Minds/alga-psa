@@ -559,22 +559,22 @@
         },
         "schedule": {
           "cadence": {
-            "10080": "every week",
-            "1440": "every day",
-            "240": "every 4 hours",
             "60": "every hour",
-            "720": "every 12 hours"
+            "240": "every 4 hours",
+            "720": "every 12 hours",
+            "1440": "every day",
+            "10080": "every week"
           },
           "changeAction": "Change schedule",
           "description": "When on, Alga syncs every mapped client on this cadence. Turning it off stops scheduled runs; you can still sync by hand.",
           "enablePrompt": "The pilot succeeded. Turn on automatic sync to keep contacts in step without running it by hand.",
           "intervalLabel": "Run every",
           "intervals": {
-            "10080": "Week",
-            "1440": "Day",
-            "240": "4 hours",
             "60": "Hour",
-            "720": "12 hours"
+            "240": "4 hours",
+            "720": "12 hours",
+            "1440": "Day",
+            "10080": "Week"
           },
           "pause": "Pause",
           "pauseHint": "Paused. Save to apply.",
@@ -1549,11 +1549,18 @@
         "description": "Choose how to configure the Microsoft app used for inbound email. Mailbox authorization remains a separate final step.",
         "errors": {
           "automated": "Could not start automated Microsoft app creation.",
+          "consentDenied": "Microsoft sign-in or administrator consent was denied. Choose another setup option or try again.",
+          "consentNotGranted": "Microsoft did not confirm tenant administrator consent.",
+          "consentPersistFailed": "Failed to record Microsoft administrator consent.",
           "generic": "Microsoft Email setup did not complete.",
+          "invalidState": "This Microsoft setup request is invalid or expired. Start again from Providers settings.",
+          "microsoftError": "Microsoft could not complete the setup request. Try again or use manual setup.",
+          "missingCode": "Microsoft did not return an authorization code. Start setup again.",
           "nameRequired": "Enter a display name for the Microsoft app.",
           "platform": "Could not configure the platform Microsoft app.",
           "popupBlocked": "Allow popups for this site, then try again.",
           "popupClosed": "The Microsoft window was closed before setup finished. Try again or choose another setup option.",
+          "sessionMismatch": "Your Alga PSA session does not match the administrator who started this setup. Sign in and try again.",
           "tenantRequired": "Enter your Microsoft tenant ID or verified domain."
         },
         "fields": {

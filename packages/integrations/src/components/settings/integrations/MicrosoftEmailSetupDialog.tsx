@@ -21,6 +21,40 @@ import { CheckCircle2, Copy, ExternalLink, KeyRound, Settings2, WandSparkles } f
 
 type SetupStep = 'choose' | 'platform' | 'automated' | 'complete';
 
+// The setup callback route reports failures as stable codes (never prose), so
+// the popup's English payload never reaches the user. Keys live in
+// msp/email-providers alongside the rest of the Microsoft mailbox setup copy.
+const CALLBACK_ERROR_TEXT: Record<string, { key: string; defaultValue: string }> = {
+  invalid_state: {
+    key: 'integrations.microsoft.emailSetup.errors.invalidState',
+    defaultValue: 'This Microsoft setup request is invalid or expired. Start again from Providers settings.',
+  },
+  session_mismatch: {
+    key: 'integrations.microsoft.emailSetup.errors.sessionMismatch',
+    defaultValue: 'Your Alga PSA session does not match the administrator who started this setup. Sign in and try again.',
+  },
+  consent_denied: {
+    key: 'integrations.microsoft.emailSetup.errors.consentDenied',
+    defaultValue: 'Microsoft sign-in or administrator consent was denied. Choose another setup option or try again.',
+  },
+  microsoft_error: {
+    key: 'integrations.microsoft.emailSetup.errors.microsoftError',
+    defaultValue: 'Microsoft could not complete the setup request. Try again or use manual setup.',
+  },
+  consent_not_granted: {
+    key: 'integrations.microsoft.emailSetup.errors.consentNotGranted',
+    defaultValue: 'Microsoft did not confirm tenant administrator consent.',
+  },
+  consent_persist_failed: {
+    key: 'integrations.microsoft.emailSetup.errors.consentPersistFailed',
+    defaultValue: 'Failed to record Microsoft administrator consent.',
+  },
+  missing_code: {
+    key: 'integrations.microsoft.emailSetup.errors.missingCode',
+    defaultValue: 'Microsoft did not return an authorization code. Start setup again.',
+  },
+};
+
 interface MicrosoftEmailSetupDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -83,7 +117,13 @@ export function MicrosoftEmailSetupDialog({
       clearPopupMonitor();
       setWorking(false);
       if (!event.data.success) {
-        setError(event.data.error || t('integrations.microsoft.emailSetup.errors.generic', { defaultValue: 'Microsoft Email setup did not complete.' }));
+        const mapped = CALLBACK_ERROR_TEXT[event.data.errorCode as string];
+        setError(
+          mapped
+            ? t(mapped.key, { defaultValue: mapped.defaultValue })
+            // Provisioning failures still arrive as a server-composed message.
+            : event.data.error || t('integrations.microsoft.emailSetup.errors.generic', { defaultValue: 'Microsoft Email setup did not complete.' }),
+        );
         return;
       }
       if (event.data.stage === 'admin_consent') {

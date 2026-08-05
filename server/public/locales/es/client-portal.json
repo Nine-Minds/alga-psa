@@ -286,6 +286,7 @@
   },
   "account": {
     "title": "Cuenta",
+    "notAvailable": "N/D",
     "licenseManagement": {
       "title": "Cuenta",
       "subtitle": "La gestión de licencias está disponible en el Portal MSP",
@@ -386,6 +387,40 @@
         "expYear": "Introduzca un año válido (2024-2099)",
         "cvv": "Introduzca un CVV válido"
       }
+    }
+  },
+  "licenses": {
+    "pageTitle": "Licencias de dispositivos",
+    "pageDescription": "Sus derechos de licencia Pro para dispositivos Alga. Los documentos importantes también están disponibles en la sección Documentos.",
+    "loading": "Cargando licencias…",
+    "empty": {
+      "message": "No se encontraron licencias de dispositivos.",
+      "purchaseLink": "Compre una licencia",
+      "suffix": "para comenzar."
+    },
+    "downloadKey": "Descargar clave",
+    "validFrom": "Válida desde",
+    "expires": "Vence",
+    "expiringSoon": "Próxima a vencer",
+    "renewal": "Renovación",
+    "renewalModes": {
+      "auto": "Se renueva automáticamente",
+      "manual": "Renovación manual"
+    },
+    "tiers": {
+      "pro": "Pro",
+      "premium": "Pro"
+    },
+    "transports": {
+      "connectedMonthly": "Conectado (mensual)",
+      "connectedAnnual": "Conectado (anual)",
+      "airgapAnnual": "Aislado de la red (anual)"
+    },
+    "statuses": {
+      "active": "Activa",
+      "inactive": "Inactiva",
+      "expired": "Vencida",
+      "terminated": "Terminada"
     }
   },
   "profile": {

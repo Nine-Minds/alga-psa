@@ -2294,6 +2294,16 @@
         "arrears": "Rozliczaj z dołu"
       },
       "title": "Zmiany w kontrakcie",
+      "columns": {
+        "name": "Nazwa",
+        "type": "Typ",
+        "value": "Wartość",
+        "appliesTo": "Dotyczy",
+        "description": "Opis",
+        "amount": "Kwota ($)",
+        "billingPeriod": "Okres rozliczeniowy",
+        "timing": "Moment rozliczenia"
+      },
       "types": {
         "bucket": "Pakiet godzin",
         "fixed": "Stała",

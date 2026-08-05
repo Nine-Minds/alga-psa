@@ -200,33 +200,33 @@
     },
     "senderIdentities": {
       "ticket": {
-        "title": "Ticket email identity",
-        "description": "Replies to ticket emails must return to this address so they can be matched and added to the ticket. Use a connected, monitored inbox.",
-        "connectedInboxLabel": "Connected inbox",
-        "connectedInboxHelp": "A connected inbox keeps client replies in the ticket conversation.",
-        "customAddressOption": "Use another address",
-        "addressLabel": "From address",
+        "title": "Identità email dei ticket",
+        "description": "Le risposte alle email dei ticket devono tornare a questo indirizzo affinché possano essere associate e aggiunte al ticket. Usa una casella di posta connessa e monitorata.",
+        "connectedInboxLabel": "Casella di posta connessa",
+        "connectedInboxHelp": "Una casella di posta connessa mantiene le risposte dei clienti nella conversazione del ticket.",
+        "customAddressOption": "Usa un altro indirizzo",
+        "addressLabel": "Indirizzo mittente",
         "addressPlaceholder": "support@example.com",
-        "addressHelp": "This address controls reply routing for ticket email only.",
-        "nameLabel": "Sender display name",
-        "namePlaceholder": "Support",
-        "nameHelp": "Leave blank to use the connected mailbox name or ticket board name.",
-        "notConnectedWarning": "This address is not a connected inbox, so ticket replies may not be ingested.",
-        "microsoftMismatch": "Ticket email address must match the selected Microsoft 365 mailbox ({{mailbox}})."
+        "addressHelp": "Questo indirizzo controlla l’instradamento delle risposte solo per le email dei ticket.",
+        "nameLabel": "Nome visualizzato del mittente",
+        "namePlaceholder": "Assistenza",
+        "nameHelp": "Lascia vuoto per usare il nome della casella di posta connessa o della bacheca dei ticket.",
+        "notConnectedWarning": "Questo indirizzo non è una casella di posta connessa, pertanto le risposte ai ticket potrebbero non essere acquisite.",
+        "microsoftMismatch": "L’indirizzo email dei ticket deve corrispondere alla casella di posta Microsoft 365 selezionata ({{mailbox}})."
       },
       "notification": {
-        "title": "All other email identity",
-        "description": "Brand portal invitations, password resets, invoices, project updates, and general notifications independently from ticket routing.",
-        "addressLabel": "From address",
+        "title": "Identità per tutte le altre email",
+        "description": "Inviti al portale personalizzato, reimpostazioni della password, fatture, aggiornamenti dei progetti e notifiche generali, indipendentemente dall’instradamento dei ticket.",
+        "addressLabel": "Indirizzo mittente",
         "addressPlaceholder": "notifications@example.com",
-        "addressHelp": "SMTP and Resend use this address. Microsoft 365 uses the selected sending mailbox.",
-        "nameLabel": "Sender display name",
-        "namePlaceholder": "Your company name",
-        "nameHelp": "Leave blank to use {{company}} automatically.",
-        "companyFallback": "your tenant company"
+        "addressHelp": "SMTP e Resend usano questo indirizzo. Microsoft 365 usa la casella di posta mittente selezionata.",
+        "nameLabel": "Nome visualizzato del mittente",
+        "namePlaceholder": "Nome della tua azienda",
+        "nameHelp": "Lascia vuoto per usare automaticamente {{company}}.",
+        "companyFallback": "l’azienda del tuo tenant"
       },
-      "warningTitle": "Check reply routing",
-      "errorTitle": "Fix the ticket identity"
+      "warningTitle": "Controlla l’instradamento delle risposte",
+      "errorTitle": "Correggi l’identità dei ticket"
     }
   },
   "microsoft365": {

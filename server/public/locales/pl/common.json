@@ -37,7 +37,12 @@
     "licenseExpiresIn_one": "Licencja wygasa za {{count}} dzień. Odnów, aby uniknąć przerwy w działaniu usługi.",
     "licenseExpiresIn_few": "Licencja wygasa za {{count}} dni. Odnów, aby uniknąć przerwy w działaniu usługi.",
     "licenseExpiresIn_many": "Licencja wygasa za {{count}} dni. Odnów, aby uniknąć przerwy w działaniu usługi.",
-    "licenseExpiresIn_other": "Licencja wygasa za {{count}} dni. Odnów, aby uniknąć przerwy w działaniu usługi."
+    "licenseExpiresIn_other": "Licencja wygasa za {{count}} dni. Odnów, aby uniknąć przerwy w działaniu usługi.",
+    "licenseExpired": "Licencja wygasła. Instalacja korzysta teraz z funkcji Essentials.",
+    "licenseWrongTenant": "Ta licencja została wydana dla innego urządzenia i nie jest tutaj ważna. Instalacja korzysta z funkcji Essentials.",
+    "manageLicense": "Zarządzaj licencją",
+    "ariaLabel": "Status licencji",
+    "dismiss": "Zamknij"
   },
   "nav": {
     "dashboard": "Panel",
@@ -1240,6 +1245,32 @@
           "summaryWithClient": "Otwierasz kontakt {{contactId}} dla klienta {{clientId}} z Teams."
         }
       }
+    },
+    "unsubscribe": {
+      "pageTitle": "Zrezygnuj z subskrypcji",
+      "confirmTitle": "Czy chcesz zrezygnować z subskrypcji tych wiadomości e-mail?",
+      "confirmDescription": "Nie będziesz już otrzymywać marketingowych wiadomości e-mail na ten adres.",
+      "confirmAction": "Zrezygnuj z subskrypcji",
+      "doneTitle": "Subskrypcja została anulowana",
+      "doneDescription": "Nie będziesz już otrzymywać tych wiadomości e-mail.",
+      "unavailableTitle": "Link niedostępny",
+      "unavailableDescription": "Ten link nie jest już ważny."
+    },
+    "mcpAuthorize": {
+      "errorTitle": "Błąd autoryzacji",
+      "documentTitle": "Autoryzuj {{client}}",
+      "consentTitle": "Autoryzuj dostęp",
+      "consentRequest": "<strong>{{client}}</strong> prosi o dostęp do AlgaPSA <em>w twoim imieniu</em>.",
+      "consentScope": "Aplikacja będzie mogła korzystać z narzędzi MCP przy użyciu twoich uprawnień w tym obszarze roboczym. Możesz ją odłączyć w dowolnym momencie w sekcji Ustawienia → MCP.",
+      "approve": "Zatwierdź",
+      "deny": "Odrzuć"
+    },
+    "microsoftEmailSetup": {
+      "title": "Skonfiguruj pocztę Microsoft",
+      "finishing": "Kończenie konfiguracji poczty Microsoft…",
+      "finished": "Konfiguracja zakończona. Możesz zamknąć to okno.",
+      "notFinished": "Nie udało się zakończyć konfiguracji. Wróć do AlgaPSA, aby sprawdzić błąd.",
+      "returnLink": "Wróć do AlgaPSA"
     }
   },
   "feedback": {

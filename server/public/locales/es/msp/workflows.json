@@ -309,6 +309,10 @@
     }
   },
   "runDialog": {
+    "sections": {
+      "schemaAndEvents": "Esquema y eventos",
+      "payloadTools": "Herramientas de carga útil"
+    },
     "title": "Ejecutar flujo de trabajo",
     "description": "Proporcione una carga útil sintética para obtener una vista previa de un flujo de trabajo y ejecutarlo.",
     "descriptionEvent": "Evento: {{name}}.",
@@ -1496,7 +1500,9 @@
     "field": {
       "placeholder": "Introducir expresión...",
       "insertFieldPlaceholder": "Insertar campo"
-    }
+    },
+    "clear": "Borrar",
+    "clearAriaLabel": "Borrar expresión"
   },
   "sourceDataTree": {
     "searchPlaceholder": "Buscar campos...",

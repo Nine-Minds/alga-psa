@@ -1549,11 +1549,18 @@
         "description": "Wybierz sposób konfiguracji aplikacji Microsoft używanej do obsługi poczty przychodzącej. Autoryzacja skrzynki pocztowej pozostaje oddzielnym krokiem końcowym.",
         "errors": {
           "automated": "Nie udało się rozpocząć automatycznego tworzenia aplikacji Microsoft.",
+          "consentDenied": "Odmówiono logowania w Microsoft lub zgody administratora. Wybierz inną opcję konfiguracji albo spróbuj ponownie.",
+          "consentNotGranted": "Microsoft nie potwierdził zgody administratora organizacji.",
+          "consentPersistFailed": "Nie udało się zapisać zgody administratora Microsoft.",
           "generic": "Konfiguracja poczty Microsoft nie została ukończona.",
+          "invalidState": "To żądanie konfiguracji Microsoft jest nieprawidłowe lub wygasło. Rozpocznij ponownie w ustawieniach dostawców.",
+          "microsoftError": "Microsoft nie mógł ukończyć żądania konfiguracji. Spróbuj ponownie lub użyj konfiguracji ręcznej.",
+          "missingCode": "Microsoft nie zwrócił kodu autoryzacyjnego. Rozpocznij konfigurację ponownie.",
           "nameRequired": "Wprowadź nazwę wyświetlaną aplikacji Microsoft.",
           "platform": "Nie udało się skonfigurować aplikacji Microsoft platformy.",
           "popupBlocked": "Zezwól na wyskakujące okna dla tej witryny, a następnie spróbuj ponownie.",
           "popupClosed": "Okno Microsoft zostało zamknięte przed ukończeniem konfiguracji. Spróbuj ponownie lub wybierz inną opcję konfiguracji.",
+          "sessionMismatch": "Twoja sesja Alga PSA nie odpowiada administratorowi, który rozpoczął tę konfigurację. Zaloguj się i spróbuj ponownie.",
           "tenantRequired": "Wprowadź identyfikator organizacji Microsoft lub zweryfikowaną domenę."
         },
         "fields": {
@@ -2356,7 +2363,57 @@
           "load": "Nie udało się załadować mapowań organizacji",
           "sync": "Synchronizacja nie powiodła się",
           "updateMapping": "Nie udało się zaktualizować mapowania",
-          "updateContact": "Nie udało się zaktualizować kontaktu domyślnego"
+          "updateContact": "Nie udało się zaktualizować kontaktu domyślnego",
+          "loadStatus": "Nie udało się załadować statusu integracji Huntress",
+          "connect": "Połączenie nie powiodło się",
+          "saveSettings": "Nie udało się zapisać ustawień",
+          "poll": "Odpytywanie nie powiodło się"
+        },
+        "loadingIntegration": "Ładowanie integracji Huntress…",
+        "connect": {
+          "title": "Połącz z Huntress",
+          "description": "Wygeneruj dane uwierzytelniające API na stronie <your-account>.huntress.io → API Credentials, a następnie wklej je tutaj. Raporty o incydentach sprawdzone przez SOC będą automatycznie tworzyć zgłoszenia.",
+          "apiKeyPlaceholder": "Klucz API",
+          "apiSecretPlaceholder": "Tajny klucz API",
+          "submit": "Połącz",
+          "connecting": "Łączenie…"
+        },
+        "connection": {
+          "title": "Połączono z kontem {{account}}",
+          "summary": "Organizacje: {{organizations}} (bez przypisania: {{unmapped}}) · otwarte incydenty: {{openIncidents}} · ostatnie odpytywanie: {{lastPoll}}",
+          "neverPolled": "nigdy",
+          "lastPollFailed": "Ostatnie odpytywanie nie powiodło się: {{error}}",
+          "routingIncompleteWarning": "Odpytywanie o incydenty jest wstrzymane do czasu uzupełnienia poniższej konfiguracji routingu (tablica zabezpieczeń, zapasowy klient, zapasowa tablica oraz priorytety wszystkich trzech poziomów ważności).",
+          "pollNow": "Odpytaj teraz",
+          "disconnect": "Odłącz",
+          "disconnectConfirm": "Czy chcesz odłączyć Huntress? Istniejące zgłoszenia i mapowania zostaną zachowane."
+        },
+        "routing": {
+          "title": "Routing zgłoszeń",
+          "description": "Wskaż miejsce docelowe zgłoszeń dotyczących incydentów. Dla nieprzypisanych organizacji Huntress zgłoszenia są zawsze tworzone dla zapasowego klienta na tablicy triage — żadne nie zostanie pominięte.",
+          "securityBoard": "Tablica zabezpieczeń",
+          "selectBoard": "Wybierz tablicę",
+          "category": "Kategoria (opcjonalnie)",
+          "noCategory": "Brak",
+          "fallbackClient": "Zapasowy klient",
+          "fallbackBoard": "Zapasowa tablica (triage)",
+          "criticalSeverity": "Poziom krytyczny →",
+          "highSeverity": "Poziom wysoki →",
+          "lowSeverity": "Poziom niski →",
+          "selectPriority": "Priorytet",
+          "pollInterval": "Interwał odpytywania (minuty)",
+          "autoClose": "Zamykaj zgłoszenia po zamknięciu incydentu w Huntress",
+          "closedStatus": "Status zamknięcia",
+          "selectStatus": "Wybierz status",
+          "save": "Zapisz konfigurację routingu",
+          "saving": "Zapisywanie…"
+        },
+        "messages": {
+          "connected": "Połączono z kontem Huntress „{{account}}”. Uzupełnij poniższą konfigurację routingu, aby rozpocząć tworzenie zgłoszeń.",
+          "routingSaved": "Zapisano konfigurację routingu — odpytywanie o incydenty jest aktywne.",
+          "routingIncomplete": "Zapisano, ale routing nadal jest niekompletny. Odpytywanie pozostanie wstrzymane do czasu uzupełnienia wszystkich poniższych pól.",
+          "pollFinished": "Odpytywanie zakończone. Liczba przetworzonych incydentów: {{count}}.",
+          "disconnected": "Odłączono Huntress."
         }
       },
       "ninjaone": {

@@ -1549,11 +1549,18 @@
         "description": "Elija cómo configurar la aplicación de Microsoft usada para el correo entrante. La autorización del buzón sigue siendo un último paso independiente.",
         "errors": {
           "automated": "No se pudo iniciar la creación automatizada de la aplicación de Microsoft.",
+          "consentDenied": "Se denegó el inicio de sesión en Microsoft o el consentimiento de administrador. Elija otra opción de configuración o inténtelo de nuevo.",
+          "consentNotGranted": "Microsoft no confirmó el consentimiento del administrador del inquilino.",
+          "consentPersistFailed": "No se pudo registrar el consentimiento del administrador de Microsoft.",
           "generic": "No se completó la configuración del correo electrónico de Microsoft.",
+          "invalidState": "Esta solicitud de configuración de Microsoft no es válida o venció. Inicie de nuevo desde la configuración de Proveedores.",
+          "microsoftError": "Microsoft no pudo completar la solicitud de configuración. Inténtelo de nuevo o use la configuración manual.",
+          "missingCode": "Microsoft no devolvió un código de autorización. Inicie de nuevo la configuración.",
           "nameRequired": "Ingrese un nombre para mostrar de la aplicación de Microsoft.",
           "platform": "No se pudo configurar la aplicación de Microsoft de la plataforma.",
           "popupBlocked": "Permita las ventanas emergentes en este sitio e inténtelo de nuevo.",
           "popupClosed": "La ventana de Microsoft se cerró antes de finalizar la configuración. Inténtelo de nuevo o elija otra opción de configuración.",
+          "sessionMismatch": "Su sesión de Alga PSA no coincide con el administrador que inició esta configuración. Inicie sesión e inténtelo de nuevo.",
           "tenantRequired": "Ingrese su Tenant ID de Microsoft o dominio verificado."
         },
         "fields": {
@@ -2356,7 +2363,57 @@
           "load": "No se pudieron cargar las asignaciones de organizaciones",
           "sync": "Error de sincronización",
           "updateMapping": "No se pudo actualizar la asignación",
-          "updateContact": "No se pudo actualizar el contacto predeterminado"
+          "updateContact": "No se pudo actualizar el contacto predeterminado",
+          "loadStatus": "No se pudo cargar el estado de la integración de Huntress",
+          "connect": "Error de conexión",
+          "saveSettings": "No se pudo guardar la configuración",
+          "poll": "Error de sondeo"
+        },
+        "loadingIntegration": "Cargando integración de Huntress…",
+        "connect": {
+          "title": "Conectar Huntress",
+          "description": "Genere credenciales de API en <su-cuenta>.huntress.io → Credenciales de API y péguelas aquí. Los informes de incidentes revisados por el SOC se convertirán en tickets automáticamente.",
+          "apiKeyPlaceholder": "Clave API",
+          "apiSecretPlaceholder": "Clave secreta de API",
+          "submit": "Conectar",
+          "connecting": "Conectando…"
+        },
+        "connection": {
+          "title": "Conectado a {{account}}",
+          "summary": "{{organizations}} organizaciones ({{unmapped}} sin asignar) · {{openIncidents}} incidentes abiertos · último sondeo: {{lastPoll}}",
+          "neverPolled": "nunca",
+          "lastPollFailed": "Error en el último sondeo: {{error}}",
+          "routingIncompleteWarning": "El sondeo de incidentes está en pausa hasta que se complete la configuración de enrutamiento siguiente (tablero, cliente/tablero de reserva y las tres prioridades de gravedad).",
+          "pollNow": "Sondear ahora",
+          "disconnect": "Desconectar",
+          "disconnectConfirm": "¿Desconectar Huntress? Se conservarán los tickets y las asignaciones existentes."
+        },
+        "routing": {
+          "title": "Enrutamiento de tickets",
+          "description": "Indica dónde se reciben los tickets de incidentes. Las organizaciones de Huntress sin asignar siempre crean tickets para el cliente de reserva y el tablero de triaje; no se descarta nada.",
+          "securityBoard": "Tablero de seguridad",
+          "selectBoard": "Seleccionar tablero",
+          "category": "Categoría (opcional)",
+          "noCategory": "Ninguna",
+          "fallbackClient": "Cliente de reserva",
+          "fallbackBoard": "Tablero de reserva (triaje)",
+          "criticalSeverity": "Gravedad crítica →",
+          "highSeverity": "Gravedad alta →",
+          "lowSeverity": "Gravedad baja →",
+          "selectPriority": "Prioridad",
+          "pollInterval": "Intervalo de sondeo (minutos)",
+          "autoClose": "Cerrar los tickets cuando Huntress cierre el incidente",
+          "closedStatus": "Estado de cierre",
+          "selectStatus": "Seleccionar estado",
+          "save": "Guardar configuración de enrutamiento",
+          "saving": "Guardando…"
+        },
+        "messages": {
+          "connected": "Cuenta de Huntress \"{{account}}\" conectada. Complete la configuración de enrutamiento siguiente para iniciar la creación de tickets.",
+          "routingSaved": "Configuración de enrutamiento guardada: el sondeo de incidentes está activo.",
+          "routingIncomplete": "La configuración se guardó, pero el enrutamiento sigue incompleto; el sondeo permanecerá en pausa hasta que se completen todos los campos siguientes.",
+          "pollFinished": "Sondeo finalizado. Incidentes procesados: {{count}}.",
+          "disconnected": "Huntress se desconectó."
         }
       },
       "ninjaone": {

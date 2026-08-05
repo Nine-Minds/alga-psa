@@ -1549,11 +1549,18 @@
         "description": "11111",
         "errors": {
           "automated": "11111",
+          "consentDenied": "11111",
+          "consentNotGranted": "11111",
+          "consentPersistFailed": "11111",
           "generic": "11111",
+          "invalidState": "11111",
+          "microsoftError": "11111",
+          "missingCode": "11111",
           "nameRequired": "11111",
           "platform": "11111",
           "popupBlocked": "11111",
           "popupClosed": "11111",
+          "sessionMismatch": "11111",
           "tenantRequired": "11111"
         },
         "fields": {

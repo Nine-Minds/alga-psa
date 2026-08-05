@@ -1549,11 +1549,18 @@
         "description": "55555",
         "errors": {
           "automated": "55555",
+          "consentDenied": "55555",
+          "consentNotGranted": "55555",
+          "consentPersistFailed": "55555",
           "generic": "55555",
+          "invalidState": "55555",
+          "microsoftError": "55555",
+          "missingCode": "55555",
           "nameRequired": "55555",
           "platform": "55555",
           "popupBlocked": "55555",
           "popupClosed": "55555",
+          "sessionMismatch": "55555",
           "tenantRequired": "55555"
         },
         "fields": {

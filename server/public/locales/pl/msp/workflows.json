@@ -443,7 +443,11 @@
       "summaryDescription": "Proszę wypełnić brakujące pola poniżej, przełączyć na kreator formularzy lub użyć przycisku przykładowego ładunku.",
       "moreErrors": "+{{count}} więcej…"
     },
-    "sampleEmailBody": "Przykładowa treść e-maila"
+    "sampleEmailBody": "Przykładowa treść e-maila",
+    "sections": {
+      "schemaAndEvents": "Schemat i zdarzenia",
+      "payloadTools": "Narzędzia ładunku"
+    }
   },
   "eventList": {
     "common": {
@@ -1498,7 +1502,9 @@
     "field": {
       "placeholder": "Wprowadź wyrażenie...",
       "insertFieldPlaceholder": "Wstaw pole"
-    }
+    },
+    "clear": "Wyczyść",
+    "clearAriaLabel": "Wyczyść wyrażenie"
   },
   "sourceDataTree": {
     "searchPlaceholder": "Szukaj pól...",

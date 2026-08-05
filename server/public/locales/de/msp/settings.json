@@ -2295,5 +2295,156 @@
         }
       }
     }
+  },
+  "mcpServer": {
+    "title": "MCP-Server",
+    "description": "Ermöglichen Sie KI-Agenten, sich bei AlgaPSA anzumelden und mit den von Ihnen zugewiesenen Rollen zu agieren.",
+    "errors": {
+      "load": "MCP-Einstellungen konnten nicht geladen werden.",
+      "update": "MCP-Einstellungen konnten nicht aktualisiert werden."
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "providers": {
+      "title": "Identitätsanbieter",
+      "description": "Agenten melden sich über diese Anbieter an. Fügen Sie die Anbieter hinzu, die Ihre Agenten verwenden.",
+      "empty": "Noch keine Anbieter.",
+      "readyToUse": "Einsatzbereit",
+      "platformManaged": "Von AlgaPSA verwaltet — keine Einrichtung erforderlich. Verbinden Sie in Schritt 2 einen Agenten mit einem Anbieter.",
+      "addAnother": "Weiteren Anbieter hinzufügen",
+      "advancedOptions": "Erweiterte Optionen",
+      "googleNoSetup": "Google erfordert keine Einrichtung. Agenten melden sich mit der ID ihres Google-Dienstkontos an.",
+      "kinds": {
+        "microsoft": "Microsoft Entra",
+        "google": "Google",
+        "custom": "Benutzerdefiniert"
+      },
+      "suggestion": {
+        "withName": "Sie sind bereits mit Microsoft ({{name}}) verbunden. Dieses Verzeichnis für Agenten verwenden?",
+        "withoutName": "Sie sind bereits mit Microsoft verbunden. Dieses Verzeichnis für Agenten verwenden?",
+        "useDirectory": "Dieses Verzeichnis verwenden"
+      },
+      "fields": {
+        "provider": "Anbieter",
+        "entraTenantId": "Entra-Tenant-ID",
+        "audienceOptional": "Zielgruppe (optional)",
+        "audience": "Zielgruppe",
+        "subjectClaim": "Agenten identifizieren anhand von",
+        "subjectClaimHelp": "Leer lassen, sofern Ihr Anbieter nichts anderes vorgibt.",
+        "issuer": "Aussteller",
+        "jwksUri": "URL für Signaturschlüssel"
+      },
+      "actions": {
+        "add": "Anbieter hinzufügen"
+      },
+      "hints": {
+        "entraTenantIdRequired": "Geben Sie Ihre Entra-Tenant-ID ein, um fortzufahren.",
+        "issuerAndJwksRequired": "Geben Sie den Aussteller und die URL für Signaturschlüssel ein, um fortzufahren."
+      },
+      "table": {
+        "provider": "Anbieter",
+        "directory": "Verzeichnis",
+        "status": "Status"
+      }
+    },
+    "agents": {
+      "title": "Agenten",
+      "description": "Jeder Agent meldet sich mit seiner eigenen Identität an und erhält die von Ihnen zugewiesenen Rollen.",
+      "empty": "Noch keine Agenten.",
+      "needsProvider": "Fügen Sie zuerst in Schritt 1 einen Anbieter hinzu. Fügen Sie dann Agenten hinzu, die sich über diesen Anbieter anmelden.",
+      "connectedAs": "Verbunden als",
+      "fields": {
+        "name": "Name",
+        "namePlaceholder": "Support-Triage-Bot",
+        "identity": "Identität",
+        "provider": "Anbieter",
+        "providerPlaceholder": "Anbieter auswählen",
+        "agentId": "Agenten-ID",
+        "roles": "Rollen"
+      },
+      "manualEntry": {
+        "show": "Identität manuell eingeben",
+        "hide": "Manuelle Eingabe ausblenden"
+      },
+      "actions": {
+        "add": "Agenten hinzufügen",
+        "change": "Ändern",
+        "connectWith": "Mit {{provider}} verbinden",
+        "openMenu": "Agentenaktionen öffnen",
+        "viewActivity": "Aktivität anzeigen",
+        "deactivate": "Deaktivieren",
+        "reactivate": "Reaktivieren",
+        "remove": "Entfernen…"
+      },
+      "hints": {
+        "nameRequired": "Benennen Sie den Agenten, um fortzufahren.",
+        "connectOrEnterIdentity": "Verbinden Sie einen Anbieter oder geben Sie eine Identität ein, um fortzufahren.",
+        "chooseProviderAndAgentId": "Wählen Sie einen Anbieter und eine Agenten-ID aus, um fortzufahren."
+      },
+      "table": {
+        "name": "Name",
+        "provider": "Anbieter",
+        "agentId": "Agenten-ID",
+        "status": "Status"
+      },
+      "removeDialog": {
+        "title": "Agenten entfernen",
+        "message": "\"{{name}}\" entfernen? Dadurch werden der Agent, seine Rollenzuweisungen und sein Aktivitätsprotokoll dauerhaft gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "confirm": "Entfernen",
+        "cancel": "Abbrechen"
+      }
+    },
+    "agentId": {
+      "unknown": {
+        "placeholder": "Kennung des Agenten",
+        "helper": "Wählen Sie einen Anbieter aus, um zu sehen, was Sie eingeben müssen."
+      },
+      "microsoft": {
+        "userHelper": "Die Benutzerobjekt-ID (oid) des Agenten aus Entra.",
+        "appHelper": "Die Anwendungs-ID (Client-ID) der App aus Entra."
+      },
+      "google": {
+        "helper": "Die ID des Dienstkontos (der sub-Wert in dessen Token)."
+      },
+      "custom": {
+        "placeholder": "Wert Ihres Subjekt-Claims",
+        "helper": "Der Wert des Claims \"{{claim}}\" im Token des Agenten."
+      }
+    },
+    "audit": {
+      "title": "Aktivität",
+      "titleForAgent": "Aktivität — {{name}}",
+      "description": "Was der Agent getan hat und ob die jeweilige Aktion zulässig war.",
+      "table": {
+        "when": "Zeitpunkt",
+        "action": "Aktion",
+        "result": "Ergebnis",
+        "status": "Status"
+      },
+      "decision": {
+        "allowed": "Zugelassen",
+        "blocked": "Blockiert"
+      }
+    },
+    "connectedClients": {
+      "title": "Verbundene MCP-Clients",
+      "description": "Apps, die Sie für den Zugriff auf AlgaPSA in Ihrem Namen über MCP autorisiert haben (z. B. Claude). Trennen Sie alle Apps, die Sie nicht mehr verwenden.",
+      "loading": "Wird geladen…",
+      "empty": "Keine verbundenen Clients.",
+      "meta": "{{host}} · verbunden am {{date}}",
+      "disconnect": "Trennen",
+      "errors": {
+        "load": "Verbindungen konnten nicht geladen werden.",
+        "disconnect": "Verbindung konnte nicht getrennt werden."
+      },
+      "dialog": {
+        "title": "Client trennen",
+        "message": "\"{{name}}\" trennen? Der Client verliert sofort den Zugriff und muss erneut autorisiert werden, um die Verbindung wiederherzustellen.",
+        "confirm": "Trennen",
+        "cancel": "Abbrechen"
+      }
+    }
   }
 }

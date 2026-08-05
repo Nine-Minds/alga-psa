@@ -151,7 +151,9 @@
       "declined": "Functie geweigerd",
       "pending": "Functie in wachtrij",
       "error": "Functiefout"
-    }
+    },
+    "executedCalls": "Uitgevoerde aanroepen",
+    "bundleMore": "+ nog {{remaining}}"
   },
   "mention": {
     "noResultsFound": "Geen resultaten gevonden"

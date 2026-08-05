@@ -200,33 +200,33 @@
     },
     "senderIdentities": {
       "ticket": {
-        "title": "Ticket email identity",
-        "description": "Replies to ticket emails must return to this address so they can be matched and added to the ticket. Use a connected, monitored inbox.",
-        "connectedInboxLabel": "Connected inbox",
-        "connectedInboxHelp": "A connected inbox keeps client replies in the ticket conversation.",
-        "customAddressOption": "Use another address",
-        "addressLabel": "From address",
+        "title": "Tożsamość nadawcy zgłoszeń",
+        "description": "Odpowiedzi na wiadomości e-mail dotyczące zgłoszeń muszą wracać na ten adres, aby można je było dopasować i dodać do zgłoszenia. Użyj podłączonej, monitorowanej skrzynki odbiorczej.",
+        "connectedInboxLabel": "Podłączona skrzynka odbiorcza",
+        "connectedInboxHelp": "Podłączona skrzynka odbiorcza zachowuje odpowiedzi klientów w konwersacji dotyczącej zgłoszenia.",
+        "customAddressOption": "Użyj innego adresu",
+        "addressLabel": "Adres nadawcy",
         "addressPlaceholder": "support@example.com",
-        "addressHelp": "This address controls reply routing for ticket email only.",
-        "nameLabel": "Sender display name",
-        "namePlaceholder": "Support",
-        "nameHelp": "Leave blank to use the connected mailbox name or ticket board name.",
-        "notConnectedWarning": "This address is not a connected inbox, so ticket replies may not be ingested.",
-        "microsoftMismatch": "Ticket email address must match the selected Microsoft 365 mailbox ({{mailbox}})."
+        "addressHelp": "Ten adres steruje routingiem odpowiedzi tylko dla wiadomości e-mail dotyczących zgłoszeń.",
+        "nameLabel": "Wyświetlana nazwa nadawcy",
+        "namePlaceholder": "Pomoc techniczna",
+        "nameHelp": "Pozostaw puste, aby użyć nazwy podłączonej skrzynki pocztowej lub tablicy zgłoszeń.",
+        "notConnectedWarning": "Ten adres nie należy do podłączonej skrzynki odbiorczej, dlatego odpowiedzi dotyczące zgłoszeń mogą nie zostać przetworzone.",
+        "microsoftMismatch": "Adres e-mail dla zgłoszeń musi być zgodny z wybraną skrzynką pocztową Microsoft 365 ({{mailbox}})."
       },
       "notification": {
-        "title": "All other email identity",
-        "description": "Brand portal invitations, password resets, invoices, project updates, and general notifications independently from ticket routing.",
-        "addressLabel": "From address",
+        "title": "Tożsamość nadawcy pozostałej poczty",
+        "description": "Oddziel identyfikację nadawcy zaproszeń do portalu, wiadomości o resetowaniu haseł, faktur, aktualizacji projektów i ogólnych powiadomień od routingu zgłoszeń.",
+        "addressLabel": "Adres nadawcy",
         "addressPlaceholder": "notifications@example.com",
-        "addressHelp": "SMTP and Resend use this address. Microsoft 365 uses the selected sending mailbox.",
-        "nameLabel": "Sender display name",
-        "namePlaceholder": "Your company name",
-        "nameHelp": "Leave blank to use {{company}} automatically.",
-        "companyFallback": "your tenant company"
+        "addressHelp": "SMTP i Resend używają tego adresu. Microsoft 365 korzysta z wybranej skrzynki nadawczej.",
+        "nameLabel": "Wyświetlana nazwa nadawcy",
+        "namePlaceholder": "Nazwa Twojej firmy",
+        "nameHelp": "Pozostaw puste. Automatyczna nazwa: {{company}}.",
+        "companyFallback": "Twoja organizacja"
       },
-      "warningTitle": "Check reply routing",
-      "errorTitle": "Fix the ticket identity"
+      "warningTitle": "Sprawdź routing odpowiedzi",
+      "errorTitle": "Popraw tożsamość nadawcy zgłoszeń"
     }
   },
   "microsoft365": {

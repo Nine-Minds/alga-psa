@@ -77,7 +77,7 @@ const COPY = {
   },
   es: {
     headerLabel: 'Ticket Asignado',
-    intro: 'Se te ha asignado un ticket para <strong>{{ticket.clientName}}</strong>. Revisa los detalles a continuación y toma acción.',
+    intro: 'Se le ha asignado un ticket para <strong>{{ticket.clientName}}</strong>. Revise los detalles a continuación y tome las medidas necesarias.',
     badgePrefix: 'Ticket #',
     priority: 'Prioridad',
     status: 'Estado',
@@ -91,7 +91,7 @@ const COPY = {
     descriptionVar: '{{{ticket.description}}}',
     viewButton: 'Ver Ticket',
     footer: 'Powered by Alga PSA &middot; Manteniendo a los equipos alineados',
-    textHeader: 'Ticket Asignado a Ti',
+    textHeader: 'Ticket asignado a usted',
     textAssignedBy: 'Asignado por',
     textAssigned: 'Asignado a',
     textRequester: 'Solicitante',

@@ -44,14 +44,14 @@ export default function ClientAccount() {
   }, [money]);
 
   const formatDate = useCallback((date: any) => {
-    if (!date) return 'N/A';
+    if (!date) return tProfile('account.notAvailable', 'N/A');
     try {
       const d = new Date(typeof date === 'string' ? date : date.toString());
       return d.toLocaleDateString();
     } catch {
-      return 'N/A';
+      return tProfile('account.notAvailable', 'N/A');
     }
-  }, []);
+  }, [tProfile]);
 
   useEffect(() => {
     let mounted = true;

@@ -1549,11 +1549,18 @@
         "description": "Escolha como configurar o aplicativo da Microsoft usado para emails de entrada. A autorização da caixa de correio continua sendo uma etapa final separada.",
         "errors": {
           "automated": "Não foi possível iniciar a criação automática do aplicativo da Microsoft.",
+          "consentDenied": "O login na Microsoft ou o consentimento do administrador foi negado. Escolha outra opção de configuração ou tente novamente.",
+          "consentNotGranted": "A Microsoft não confirmou o consentimento do administrador do tenant.",
+          "consentPersistFailed": "Não foi possível registrar o consentimento do administrador da Microsoft.",
           "generic": "A configuração do email da Microsoft não foi concluída.",
+          "invalidState": "Esta solicitação de configuração da Microsoft é inválida ou expirou. Inicie novamente nas configurações de Provedores.",
+          "microsoftError": "A Microsoft não conseguiu concluir a solicitação de configuração. Tente novamente ou use a configuração manual.",
+          "missingCode": "A Microsoft não retornou um código de autorização. Inicie a configuração novamente.",
           "nameRequired": "Informe um nome de exibição para o aplicativo da Microsoft.",
           "platform": "Não foi possível configurar o aplicativo da Microsoft da plataforma.",
           "popupBlocked": "Permita pop-ups neste site e tente novamente.",
           "popupClosed": "A janela da Microsoft foi fechada antes da conclusão da configuração. Tente novamente ou escolha outra opção de configuração.",
+          "sessionMismatch": "Sua sessão do Alga PSA não corresponde ao administrador que iniciou esta configuração. Faça login e tente novamente.",
           "tenantRequired": "Informe o ID do tenant da Microsoft ou um domínio verificado."
         },
         "fields": {
@@ -2334,7 +2341,7 @@
       },
       "huntress": {
         "columns": {
-          "organization": "Organização Caçadora",
+          "organization": "Organização da Huntress",
           "client": "Cliente Alga",
           "defaultContact": "Contato padrão",
           "createTickets": "Criar tickets",
@@ -2356,7 +2363,57 @@
           "load": "Falha ao carregar mapeamentos da organização",
           "sync": "Falha na sincronização",
           "updateMapping": "Falha ao atualizar o mapeamento",
-          "updateContact": "Falha ao atualizar o contato padrão"
+          "updateContact": "Falha ao atualizar o contato padrão",
+          "loadStatus": "Falha ao carregar o status da integração com a Huntress",
+          "connect": "Falha na conexão",
+          "saveSettings": "Falha ao salvar as configurações",
+          "poll": "Falha na consulta"
+        },
+        "loadingIntegration": "Carregando a integração com a Huntress…",
+        "connect": {
+          "title": "Conectar à Huntress",
+          "description": "Gere credenciais de API em <your-account>.huntress.io → Credenciais de API e cole-as aqui. Os relatórios de incidentes analisados pelo SOC se transformarão em tickets automaticamente.",
+          "apiKeyPlaceholder": "Chave de API",
+          "apiSecretPlaceholder": "Chave secreta da API",
+          "submit": "Conectar",
+          "connecting": "Conectando…"
+        },
+        "connection": {
+          "title": "Conectado à conta {{account}}",
+          "summary": "{{organizations}} organizações ({{unmapped}} não mapeadas) · {{openIncidents}} incidentes em aberto · última consulta: {{lastPoll}}",
+          "neverPolled": "nunca",
+          "lastPollFailed": "Falha na última consulta: {{error}}",
+          "routingIncompleteWarning": "A consulta de incidentes está pausada até que a configuração de roteamento abaixo esteja completa (quadro, cliente/quadro alternativo e as prioridades dos três níveis de gravidade).",
+          "pollNow": "Consultar agora",
+          "disconnect": "Desconectar",
+          "disconnectConfirm": "Desconectar a Huntress? Os tickets e mapeamentos existentes serão mantidos."
+        },
+        "routing": {
+          "title": "Roteamento de tickets",
+          "description": "Define para onde vão os tickets de incidentes. As organizações da Huntress não mapeadas sempre criam tickets no cliente alternativo e no quadro de triagem — nada é descartado.",
+          "securityBoard": "Quadro de segurança",
+          "selectBoard": "Selecionar quadro",
+          "category": "Categoria (opcional)",
+          "noCategory": "Nenhuma",
+          "fallbackClient": "Cliente alternativo",
+          "fallbackBoard": "Quadro alternativo (triagem)",
+          "criticalSeverity": "Gravidade crítica →",
+          "highSeverity": "Gravidade alta →",
+          "lowSeverity": "Gravidade baixa →",
+          "selectPriority": "Prioridade",
+          "pollInterval": "Intervalo de consulta (minutos)",
+          "autoClose": "Fechar os tickets quando a Huntress encerrar o incidente",
+          "closedStatus": "Status de encerramento",
+          "selectStatus": "Selecionar status",
+          "save": "Salvar configuração de roteamento",
+          "saving": "Salvando…"
+        },
+        "messages": {
+          "connected": "Conectado à conta da Huntress \"{{account}}\". Conclua a configuração de roteamento abaixo para iniciar a criação de tickets.",
+          "routingSaved": "Configuração de roteamento salva — a consulta de incidentes está ativa.",
+          "routingIncomplete": "Configuração salva, mas o roteamento ainda está incompleto; a consulta permanecerá pausada até que todos os campos abaixo sejam preenchidos.",
+          "pollFinished": "Consulta concluída: {{count}} incidente(s) processado(s).",
+          "disconnected": "Huntress desconectada."
         }
       },
       "ninjaone": {

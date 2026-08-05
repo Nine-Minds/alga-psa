@@ -623,6 +623,17 @@
         "copySuccess": "¡Clave API copiada al portapapeles!",
         "copyFailed": "Error al copiar la clave API al portapapeles",
         "downloadFailed": "Error al descargar la clave API"
+      },
+      "admin": {
+        "title": "Administración de claves API",
+        "searchPlaceholder": "Buscar por usuario o descripción",
+        "columns": {
+          "user": "Usuario"
+        },
+        "errors": {
+          "loadFailed": "No se pudieron cargar las claves API. Asegúrese de tener privilegios de administrador.",
+          "deactivateFailed": "No se pudo desactivar la clave API. Asegúrese de tener privilegios de administrador."
+        }
       }
     },
     "scim": {

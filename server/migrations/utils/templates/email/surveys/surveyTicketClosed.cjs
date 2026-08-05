@@ -15,7 +15,7 @@ const SURVEY_CATEGORY_NAME = 'Surveys';
 const SUBJECTS = {
   en: "We'd love your feedback on ticket {{ticket_number}}",
   fr: 'Votre avis sur le ticket {{ticket_number}} nous int\u00e9resse',
-  es: 'Queremos conocer tu opini\u00f3n sobre el ticket {{ticket_number}}',
+  es: 'Queremos conocer su opini\u00f3n sobre el ticket {{ticket_number}}',
   de: 'Wir freuen uns \u00fcber Ihr Feedback zu Ticket {{ticket_number}}',
   nl: 'We horen graag uw feedback over ticket {{ticket_number}}',
   it: 'Ci farebbe piacere il tuo feedback sul ticket {{ticket_number}}',
@@ -47,8 +47,8 @@ const COPY = {
     summary: 'Ticket #{{ticket_number}} \u00b7 {{ticket_subject}}',
     technicianLine: 'T\u00e9cnico: {{technician_name}}',
     ratingIntro: '{{prompt_text}}',
-    buttonHelp: 'Elige una calificaci\u00f3n para contarnos c\u00f3mo fue tu experiencia:',
-    fallback: 'Si los botones no funcionan, abre este enlace seguro de la encuesta:',
+    buttonHelp: 'Elija una calificaci\u00f3n para contarnos c\u00f3mo fue su experiencia:',
+    fallback: 'Si los botones no funcionan, abra este enlace seguro de la encuesta:',
     thankYou: '{{thank_you_text}}',
   },
   de: {

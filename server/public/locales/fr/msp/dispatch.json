@@ -63,7 +63,7 @@
       "approvedAt": "Approuvé le :",
       "opportunity": "Opportunité",
       "assignedTo": "Affecté à",
-      "dueDate": "Due"
+      "dueDate": "Échéance"
     },
     "messages": {
       "notAvailable": "N/D",

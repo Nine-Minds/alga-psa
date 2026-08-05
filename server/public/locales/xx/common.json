@@ -1215,6 +1215,32 @@
           "summaryWithClient": "11111 {{contactId}} 11111 {{clientId}} 11111"
         }
       }
+    },
+    "unsubscribe": {
+      "pageTitle": "11111",
+      "confirmTitle": "11111",
+      "confirmDescription": "11111",
+      "confirmAction": "11111",
+      "doneTitle": "11111",
+      "doneDescription": "11111",
+      "unavailableTitle": "11111",
+      "unavailableDescription": "11111"
+    },
+    "mcpAuthorize": {
+      "errorTitle": "11111",
+      "documentTitle": "11111 {{client}} 11111",
+      "consentTitle": "11111",
+      "consentRequest": "11111 {{client}} 11111",
+      "consentScope": "11111",
+      "approve": "11111",
+      "deny": "11111"
+    },
+    "microsoftEmailSetup": {
+      "title": "11111",
+      "finishing": "11111",
+      "finished": "11111",
+      "notFinished": "11111",
+      "returnLink": "11111"
     }
   },
   "feedback": {

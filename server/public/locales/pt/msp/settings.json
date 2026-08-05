@@ -2295,5 +2295,156 @@
         }
       }
     }
+  },
+  "mcpServer": {
+    "title": "Servidor MCP",
+    "description": "Permita que agentes de IA façam login no AlgaPSA e atuem com as funções que você atribuir a eles.",
+    "errors": {
+      "load": "Falha ao carregar as configurações do MCP.",
+      "update": "Falha ao atualizar as configurações do MCP."
+    },
+    "status": {
+      "active": "Ativo",
+      "inactive": "Inativo"
+    },
+    "providers": {
+      "title": "Provedores de identidade",
+      "description": "Os agentes fazem login por meio destes provedores. Adicione os provedores usados por seus agentes.",
+      "empty": "Ainda não há provedores.",
+      "readyToUse": "Pronto para usar",
+      "platformManaged": "Gerenciado pelo AlgaPSA — nenhuma configuração é necessária. Conecte um agente a um deles na etapa 2.",
+      "addAnother": "Adicionar outro provedor",
+      "advancedOptions": "Opções avançadas",
+      "googleNoSetup": "O Google não exige configuração. Os agentes fazem login com o ID da conta de serviço do Google.",
+      "kinds": {
+        "microsoft": "Microsoft Entra",
+        "google": "Google",
+        "custom": "Personalizado"
+      },
+      "suggestion": {
+        "withName": "Você já está conectado à Microsoft ({{name}}). Deseja usar este diretório para os agentes?",
+        "withoutName": "Você já está conectado à Microsoft. Deseja usar este diretório para os agentes?",
+        "useDirectory": "Usar este diretório"
+      },
+      "fields": {
+        "provider": "Provedor",
+        "entraTenantId": "ID do tenant do Entra",
+        "audienceOptional": "Público-alvo (opcional)",
+        "audience": "Público-alvo",
+        "subjectClaim": "Identificar agentes por",
+        "subjectClaimHelp": "Deixe em branco, a menos que seu provedor indique o contrário.",
+        "issuer": "Emissor",
+        "jwksUri": "URL das chaves de assinatura"
+      },
+      "actions": {
+        "add": "Adicionar provedor"
+      },
+      "hints": {
+        "entraTenantIdRequired": "Informe o ID do tenant do Entra para continuar.",
+        "issuerAndJwksRequired": "Informe o emissor e a URL das chaves de assinatura para continuar."
+      },
+      "table": {
+        "provider": "Provedor",
+        "directory": "Diretório",
+        "status": "Status"
+      }
+    },
+    "agents": {
+      "title": "Agentes",
+      "description": "Cada agente faz login com sua própria identidade e recebe as funções que você atribuir.",
+      "empty": "Ainda não há agentes.",
+      "needsProvider": "Primeiro, adicione um provedor na etapa 1. Depois, adicione os agentes que fazem login por meio dele.",
+      "connectedAs": "Conectado como",
+      "fields": {
+        "name": "Nome",
+        "namePlaceholder": "Bot de triagem do suporte",
+        "identity": "Identidade",
+        "provider": "Provedor",
+        "providerPlaceholder": "Escolha um provedor",
+        "agentId": "ID do agente",
+        "roles": "Funções"
+      },
+      "manualEntry": {
+        "show": "Inserir identidade manualmente",
+        "hide": "Ocultar entrada manual"
+      },
+      "actions": {
+        "add": "Adicionar agente",
+        "change": "Alterar",
+        "connectWith": "Conectar com {{provider}}",
+        "openMenu": "Abrir ações do agente",
+        "viewActivity": "Ver atividade",
+        "deactivate": "Desativar",
+        "reactivate": "Reativar",
+        "remove": "Remover…"
+      },
+      "hints": {
+        "nameRequired": "Dê um nome ao agente para continuar.",
+        "connectOrEnterIdentity": "Conecte um provedor — ou insira uma identidade — para continuar.",
+        "chooseProviderAndAgentId": "Escolha um provedor e um ID de agente para continuar."
+      },
+      "table": {
+        "name": "Nome",
+        "provider": "Provedor",
+        "agentId": "ID do agente",
+        "status": "Status"
+      },
+      "removeDialog": {
+        "title": "Remover agente",
+        "message": "Remover \"{{name}}\"? Isso excluirá permanentemente o agente, suas atribuições de funções e seu registro de atividades. Esta ação não pode ser desfeita.",
+        "confirm": "Remover",
+        "cancel": "Cancelar"
+      }
+    },
+    "agentId": {
+      "unknown": {
+        "placeholder": "o identificador do agente",
+        "helper": "Escolha um provedor para ver o que deve ser informado."
+      },
+      "microsoft": {
+        "userHelper": "O ID do objeto de usuário do agente (oid) no Entra.",
+        "appHelper": "O ID do aplicativo (cliente) do agente no Entra."
+      },
+      "google": {
+        "helper": "O ID da conta de serviço (o valor sub no token)."
+      },
+      "custom": {
+        "placeholder": "valor da sua declaração de assunto",
+        "helper": "O valor da declaração \"{{claim}}\" no token do agente."
+      }
+    },
+    "audit": {
+      "title": "Atividade",
+      "titleForAgent": "Atividade — {{name}}",
+      "description": "O que o agente fez e se cada ação foi permitida.",
+      "table": {
+        "when": "Quando",
+        "action": "Ação",
+        "result": "Resultado",
+        "status": "Status"
+      },
+      "decision": {
+        "allowed": "Permitido",
+        "blocked": "Bloqueado"
+      }
+    },
+    "connectedClients": {
+      "title": "Clientes MCP conectados",
+      "description": "Aplicativos que você autorizou a acessar o AlgaPSA em seu nome por meio do MCP (por exemplo, Claude). Desconecte os que você não usa mais.",
+      "loading": "Carregando…",
+      "empty": "Não há clientes conectados.",
+      "meta": "{{host}} · conectado em {{date}}",
+      "disconnect": "Desconectar",
+      "errors": {
+        "load": "Falha ao carregar as conexões.",
+        "disconnect": "Falha ao desconectar."
+      },
+      "dialog": {
+        "title": "Desconectar cliente",
+        "message": "Desconectar \"{{name}}\"? O cliente perderá o acesso imediatamente e precisará ser autorizado novamente para se reconectar.",
+        "confirm": "Desconectar",
+        "cancel": "Cancelar"
+      }
+    }
   }
 }

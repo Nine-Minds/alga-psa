@@ -151,7 +151,9 @@
       "declined": "Funkcja odrzucona",
       "pending": "Funkcja w kolejce",
       "error": "Błąd funkcji"
-    }
+    },
+    "executedCalls": "Wykonane wywołania",
+    "bundleMore": "+{{remaining}} więcej"
   },
   "mention": {
     "noResultsFound": "Nie znaleziono wyników"

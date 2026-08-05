@@ -25,7 +25,12 @@
     "trialAvailable": "Essentials-Funktionen sind aktiv. Starten Sie eine kostenlose 15-tägige Pro-Testphase, um alle Funktionen freizuschalten.",
     "trialExpired": "Die Pro-Testphase ist abgelaufen. Die Installation verwendet jetzt Essentials-Funktionen.",
     "licenseExpiresIn_one": "Die Lizenz läuft in {{count}} Tag ab. Verlängern Sie, um Serviceunterbrechungen zu vermeiden.",
-    "licenseExpiresIn_other": "Die Lizenz läuft in {{count}} Tagen ab. Verlängern Sie, um Serviceunterbrechungen zu vermeiden."
+    "licenseExpiresIn_other": "Die Lizenz läuft in {{count}} Tagen ab. Verlängern Sie, um Serviceunterbrechungen zu vermeiden.",
+    "licenseExpired": "Die Lizenz ist abgelaufen. Die Installation verwendet jetzt Essentials-Funktionen.",
+    "licenseWrongTenant": "Diese Lizenz wurde für eine andere Appliance ausgestellt und ist hier nicht gültig. Die Installation verwendet Essentials-Funktionen.",
+    "manageLicense": "Lizenz verwalten",
+    "ariaLabel": "Lizenzstatus",
+    "dismiss": "Schließen"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -1210,6 +1215,32 @@
           "summaryWithClient": "Sie öffnen Kontakt {{contactId}} für Kunde {{clientId}} aus Teams."
         }
       }
+    },
+    "unsubscribe": {
+      "pageTitle": "Abbestellen",
+      "confirmTitle": "Möchten Sie diese E-Mails abbestellen?",
+      "confirmDescription": "Sie erhalten künftig keine Marketing-E-Mails mehr an diese Adresse.",
+      "confirmAction": "Abbestellen",
+      "doneTitle": "Sie haben diese E-Mails abbestellt",
+      "doneDescription": "Sie erhalten diese E-Mails nicht mehr.",
+      "unavailableTitle": "Link nicht verfügbar",
+      "unavailableDescription": "Dieser Link ist nicht mehr gültig."
+    },
+    "mcpAuthorize": {
+      "errorTitle": "Autorisierungsfehler",
+      "documentTitle": "{{client}} autorisieren",
+      "consentTitle": "Zugriff autorisieren",
+      "consentRequest": "<strong>{{client}}</strong> fordert Zugriff auf AlgaPSA <em>in Ihrem Namen</em> an.",
+      "consentScope": "Die Anwendung kann die MCP-Tools mit Ihren eigenen Berechtigungen in diesem Arbeitsbereich verwenden. Sie können die Verbindung jederzeit unter Einstellungen → MCP trennen.",
+      "approve": "Genehmigen",
+      "deny": "Ablehnen"
+    },
+    "microsoftEmailSetup": {
+      "title": "Microsoft-E-Mail einrichten",
+      "finishing": "Einrichtung von Microsoft-E-Mail wird abgeschlossen…",
+      "finished": "Einrichtung abgeschlossen. Sie können dieses Fenster schließen.",
+      "notFinished": "Die Einrichtung konnte nicht abgeschlossen werden. Kehren Sie zu AlgaPSA zurück, um den Fehler zu überprüfen.",
+      "returnLink": "Zu AlgaPSA zurückkehren"
     }
   },
   "feedback": {

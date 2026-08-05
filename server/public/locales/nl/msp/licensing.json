@@ -225,5 +225,125 @@
       "body": "Opwaarderingen, automatisch opwaarderen en abonnementswijzigingen worden in de Nine Minds-store beheerd.",
       "openStore": "Store openen"
     }
+  },
+  "managementPage": {
+    "metaTitle": "Licentie",
+    "eyebrow": "Appliance-licenties",
+    "title": "Licentie",
+    "subtitle": "Beheer het functieniveau van deze zelfgehoste appliance.",
+    "notSelfHost": {
+      "title": "Licentie",
+      "description": "Licentiebeheer is alleen beschikbaar voor zelfgehoste installaties."
+    },
+    "tiers": {
+      "unknown": "Onbekend niveau",
+      "essentials": "Essentials-niveau",
+      "solo": "Solo",
+      "pro": "Pro"
+    },
+    "status": {
+      "trial": {
+        "eyebrow": "Pro-proefperiode",
+        "title": "Uw Pro-proefperiode is actief",
+        "description_one": "U hebt nog {{count}} dag om alle Pro-functies te gebruiken.",
+        "description_other": "U hebt nog {{count}} dagen om alle Pro-functies te gebruiken.",
+        "descriptionNoDays": "U kunt tijdens de proefperiode alle Pro-functies gebruiken.",
+        "badge": "Proefperiode actief"
+      },
+      "licensed": {
+        "eyebrow": "Betaalde licentie",
+        "title": "{{tier}} is actief",
+        "description": "Uw betaalde licentie is actief op deze appliance.",
+        "descriptionWithExpiry": "Uw licentie is actief tot en met {{date}}.",
+        "badge": "Gelicentieerd"
+      },
+      "licenseExpired": {
+        "eyebrow": "Licentie vereist aandacht",
+        "title": "Uw licentie is verlopen",
+        "description": "De appliance gebruikt Essentials-functies totdat u een nieuwe licentiesleutel of activeringscode activeert.",
+        "badge": "Verlopen"
+      },
+      "licenseWrongTenant": {
+        "eyebrow": "Licentie vereist aandacht",
+        "title": "Deze licentie is hier niet geldig",
+        "description": "De opgeslagen licentie is uitgegeven voor een andere appliance-tenant. Activeer de juiste licentie om betaalde functies te ontgrendelen.",
+        "badge": "Onjuiste installatie"
+      },
+      "trialExpired": {
+        "eyebrow": "Essentials-niveau",
+        "title": "U gebruikt Essentials",
+        "description": "Uw Pro-proefperiode is afgelopen. Essentials blijft actief voor de belangrijkste PSA-functies.",
+        "badge": "Essentials actief"
+      },
+      "essentials": {
+        "eyebrow": "Essentials-niveau",
+        "title": "U gebruikt Essentials",
+        "description": "Essentials is actief op deze appliance. Blijf de belangrijkste functies gebruiken of start een eenmalige Pro-proefperiode van 15 dagen.",
+        "badge": "Essentials actief"
+      }
+    },
+    "trialCta": {
+      "title": "Pro 15 dagen uitproberen",
+      "description": "Ontgrendel automatisering, geavanceerde integraties en alle Pro-functies. Er is geen creditcard vereist; na de proefperiode schakelt de appliance terug naar Essentials."
+    },
+    "details": {
+      "currentTier": "Huidig niveau",
+      "expires": "Verloopt",
+      "daysRemaining_one": "Nog {{count}} dag",
+      "daysRemaining_other": "Nog {{count}} dagen",
+      "licensedTo": "Gelicentieerd aan",
+      "refreshLabel": "Licentievernieuwing",
+      "connected": "Verbonden",
+      "lastCheckIn": "Laatste controle: {{timestamp}}",
+      "refreshHelp": "Past wijzigingen in gebruikersplaatsen of het abonnement uit het portaal onmiddellijk toe."
+    },
+    "portal": {
+      "manageTitle": "Gebruikersplaatsen, facturatie en activeringscodes",
+      "manageDescription": "Voeg gebruikersplaatsen toe of verwijder ze, werk de facturatie bij of geef opnieuw een activeringscode uit in het licentieportaal. Meld u aan met uw geregistreerde e-mailadres — er is geen wachtwoord nodig.",
+      "buyTitle": "Klaar om AlgaPSA Pro te kopen?",
+      "buyDescription": "Koop via het licentieportaal: meld u aan met uw geregistreerde e-mailadres, kies het aantal gebruikersplaatsen en u ontvangt een eenmalige activeringscode die u hieronder kunt invoeren. Uw appliance wordt ter plaatse bijgewerkt."
+    },
+    "advanced": {
+      "summary": "Hebt u een licentiecode of -sleutel?",
+      "introPrefix": "Voer de activeringscode of offlinesleutel in die u hebt ontvangen via het",
+      "introLink": "licentieportaal",
+      "introSuffix": "of van Nine Minds-support.",
+      "claimCode": {
+        "title": "Activeren met een activeringscode",
+        "description": "Gebruik de code van 8 tekens uit het licentieportaal of een e-mail over een betaalde licentie. Hiermee wordt ook automatische licentievernieuwing ingeschakeld."
+      },
+      "licenseKey": {
+        "title": "Een licentiesleutel plakken",
+        "description": "Gebruik deze optie voor offlinesleutels die voor netwerkgescheiden installaties uit het licentieportaal zijn gedownload of door ondersteuning zijn uitgegeven."
+      },
+      "installationId": {
+        "title": "Installatie-ID",
+        "description": "Ondersteuning kan om deze ID vragen bij het uitgeven van een handmatige licentiesleutel."
+      }
+    },
+    "actions": {
+      "startTrial": "Pro-proefperiode van 15 dagen starten",
+      "startingTrial": "Starten…",
+      "refreshNow": "Licentie nu vernieuwen",
+      "refreshing": "Vernieuwen…",
+      "manageInPortal": "Licentie beheren in portaal",
+      "buyInPortal": "Pro kopen in het portaal",
+      "applyClaimCode": "Activeringscode toepassen",
+      "activateLicenseKey": "Licentiesleutel activeren",
+      "activating": "Activeren…"
+    },
+    "success": {
+      "licenseKeyActivated": "Licentiesleutel geactiveerd. Betaalde functies zijn nu beschikbaar op deze appliance.",
+      "claimCodeActivated": "Activeringscode geactiveerd. Automatische licentievernieuwing is nu geconfigureerd.",
+      "trialStarted": "Pro-proefperiode van 15 dagen gestart.",
+      "licenseRefreshed": "Licentie vernieuwd. Wijzigingen in gebruikersplaatsen of het abonnement uit het portaal zijn nu actief."
+    },
+    "errors": {
+      "loadStatus": "Kan de licentiestatus niet laden.",
+      "activateLicenseKey": "Kan de licentiesleutel niet activeren.",
+      "activateClaimCode": "Kan de activeringscode niet activeren.",
+      "startTrial": "Kan de proefperiode niet starten.",
+      "refreshLicense": "Kan de licentie niet vernieuwen."
+    }
   }
 }

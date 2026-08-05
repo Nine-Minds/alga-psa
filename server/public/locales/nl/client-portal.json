@@ -286,6 +286,7 @@
   },
   "account": {
     "title": "Account",
+    "notAvailable": "N.v.t.",
     "licenseManagement": {
       "title": "Account",
       "subtitle": "Licentiebeheer is beschikbaar in het MSP-portaal",
@@ -386,6 +387,40 @@
         "expYear": "Voer een geldig jaar in (2024-2099)",
         "cvv": "Voer een geldige CVV in"
       }
+    }
+  },
+  "licenses": {
+    "pageTitle": "Appliance-licenties",
+    "pageDescription": "Uw Pro-licentierechten voor Alga-appliances. Belangrijke documenten zijn ook beschikbaar in de sectie Documenten.",
+    "loading": "Licenties worden geladen…",
+    "empty": {
+      "message": "Geen appliance-licenties gevonden.",
+      "purchaseLink": "Koop een licentie",
+      "suffix": "om aan de slag te gaan."
+    },
+    "downloadKey": "Sleutel downloaden",
+    "validFrom": "Geldig vanaf",
+    "expires": "Verloopt",
+    "expiringSoon": "Verloopt binnenkort",
+    "renewal": "Verlenging",
+    "renewalModes": {
+      "auto": "Wordt automatisch verlengd",
+      "manual": "Handmatige verlenging"
+    },
+    "tiers": {
+      "pro": "Pro",
+      "premium": "Pro"
+    },
+    "transports": {
+      "connectedMonthly": "Verbonden (maandelijks)",
+      "connectedAnnual": "Verbonden (jaarlijks)",
+      "airgapAnnual": "Netwerkgescheiden (jaarlijks)"
+    },
+    "statuses": {
+      "active": "Actief",
+      "inactive": "Inactief",
+      "expired": "Verlopen",
+      "terminated": "Beëindigd"
     }
   },
   "profile": {

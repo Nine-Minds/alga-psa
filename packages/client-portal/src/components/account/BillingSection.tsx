@@ -404,7 +404,7 @@ export default function BillingSection() {
             <div className="flex items-center">
               <Checkbox
                 id="setDefault"
-                label="Set as default payment method"
+                label={tAccountBilling('fields.setAsDefault', 'Set as default payment method')}
                 checked={paymentForm.setDefault}
                 onChange={(e) => setPaymentForm(prev => ({
                   ...prev,

@@ -2295,5 +2295,156 @@
         }
       }
     }
+  },
+  "mcpServer": {
+    "title": "Serveur MCP",
+    "description": "Permettez aux agents d'IA de se connecter à AlgaPSA et d'agir avec les rôles que vous leur attribuez.",
+    "errors": {
+      "load": "Échec du chargement des paramètres MCP.",
+      "update": "Échec de la mise à jour des paramètres MCP."
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif"
+    },
+    "providers": {
+      "title": "Fournisseurs d'identité",
+      "description": "Les agents se connectent par l'intermédiaire de ces fournisseurs. Ajoutez ceux qu'ils utilisent.",
+      "empty": "Aucun fournisseur pour le moment.",
+      "readyToUse": "Prêt à l'emploi",
+      "platformManaged": "Géré par AlgaPSA — aucune configuration requise. Connectez un agent à un fournisseur à l'étape 2.",
+      "addAnother": "Ajouter un autre fournisseur",
+      "advancedOptions": "Options avancées",
+      "googleNoSetup": "Google ne nécessite aucune configuration. Les agents se connectent avec l'ID de leur compte de service Google.",
+      "kinds": {
+        "microsoft": "Microsoft Entra",
+        "google": "Google",
+        "custom": "Personnalisé"
+      },
+      "suggestion": {
+        "withName": "Vous êtes déjà connecté à Microsoft ({{name}}). Utiliser cet annuaire pour les agents ?",
+        "withoutName": "Vous êtes déjà connecté à Microsoft. Utiliser cet annuaire pour les agents ?",
+        "useDirectory": "Utiliser cet annuaire"
+      },
+      "fields": {
+        "provider": "Fournisseur",
+        "entraTenantId": "ID du locataire Entra",
+        "audienceOptional": "Audience du jeton (facultatif)",
+        "audience": "Audience du jeton",
+        "subjectClaim": "Identifier les agents par",
+        "subjectClaimHelp": "Laissez ce champ vide, sauf indication contraire de votre fournisseur.",
+        "issuer": "Émetteur",
+        "jwksUri": "URL des clés de signature"
+      },
+      "actions": {
+        "add": "Ajouter un fournisseur"
+      },
+      "hints": {
+        "entraTenantIdRequired": "Saisissez l'ID de votre locataire Entra pour continuer.",
+        "issuerAndJwksRequired": "Saisissez l'émetteur et l'URL des clés de signature pour continuer."
+      },
+      "table": {
+        "provider": "Fournisseur",
+        "directory": "Annuaire",
+        "status": "Statut"
+      }
+    },
+    "agents": {
+      "title": "Agents d'IA",
+      "description": "Chaque agent se connecte avec sa propre identité et reçoit les rôles que vous lui attribuez.",
+      "empty": "Aucun agent pour le moment.",
+      "needsProvider": "Ajoutez d'abord un fournisseur à l'étape 1. Ajoutez ensuite les agents qui se connectent par son intermédiaire.",
+      "connectedAs": "Connecté en tant que",
+      "fields": {
+        "name": "Nom",
+        "namePlaceholder": "Bot de triage du support",
+        "identity": "Identité",
+        "provider": "Fournisseur",
+        "providerPlaceholder": "Choisir un fournisseur",
+        "agentId": "ID de l'agent",
+        "roles": "Rôles"
+      },
+      "manualEntry": {
+        "show": "Saisir l'identité manuellement",
+        "hide": "Masquer la saisie manuelle"
+      },
+      "actions": {
+        "add": "Ajouter un agent",
+        "change": "Modifier",
+        "connectWith": "Se connecter avec {{provider}}",
+        "openMenu": "Ouvrir les actions de l'agent",
+        "viewActivity": "Afficher l'activité",
+        "deactivate": "Désactiver",
+        "reactivate": "Réactiver",
+        "remove": "Supprimer…"
+      },
+      "hints": {
+        "nameRequired": "Nommez l'agent pour continuer.",
+        "connectOrEnterIdentity": "Connectez un fournisseur — ou saisissez une identité — pour continuer.",
+        "chooseProviderAndAgentId": "Choisissez un fournisseur et un ID d'agent pour continuer."
+      },
+      "table": {
+        "name": "Nom",
+        "provider": "Fournisseur",
+        "agentId": "ID de l'agent",
+        "status": "Statut"
+      },
+      "removeDialog": {
+        "title": "Supprimer l'agent",
+        "message": "Supprimer « {{name}} » ? Cette action supprimera définitivement l'agent, les rôles qui lui sont accordés et son journal d'activité. Elle est irréversible.",
+        "confirm": "Supprimer",
+        "cancel": "Annuler"
+      }
+    },
+    "agentId": {
+      "unknown": {
+        "placeholder": "l'identifiant de l'agent",
+        "helper": "Choisissez un fournisseur pour savoir quelle valeur saisir."
+      },
+      "microsoft": {
+        "userHelper": "L'ID d'objet utilisateur (oid) de l'agent dans Entra.",
+        "appHelper": "L'ID d'application (client) attribué à l'application dans Entra."
+      },
+      "google": {
+        "helper": "L'ID du compte de service (la valeur sub de son jeton)."
+      },
+      "custom": {
+        "placeholder": "valeur de votre revendication de sujet",
+        "helper": "La valeur de la revendication « {{claim}} » dans le jeton de l'agent."
+      }
+    },
+    "audit": {
+      "title": "Activité",
+      "titleForAgent": "Activité — {{name}}",
+      "description": "Ce que l'agent a fait et si chaque action a été autorisée.",
+      "table": {
+        "when": "Date",
+        "action": "Action",
+        "result": "Résultat",
+        "status": "Statut"
+      },
+      "decision": {
+        "allowed": "Autorisé",
+        "blocked": "Bloqué"
+      }
+    },
+    "connectedClients": {
+      "title": "Clients MCP connectés",
+      "description": "Applications que vous avez autorisées à accéder à AlgaPSA en votre nom via MCP (par ex. Claude). Déconnectez celles que vous n'utilisez plus.",
+      "loading": "Chargement…",
+      "empty": "Aucun client connecté.",
+      "meta": "{{host}} · connecté le {{date}}",
+      "disconnect": "Déconnecter",
+      "errors": {
+        "load": "Échec du chargement des connexions.",
+        "disconnect": "Échec de la déconnexion."
+      },
+      "dialog": {
+        "title": "Déconnecter le client",
+        "message": "Déconnecter « {{name}} » ? Il perdra immédiatement l'accès et devra être autorisé de nouveau pour se reconnecter.",
+        "confirm": "Déconnecter",
+        "cancel": "Annuler"
+      }
+    }
   }
 }

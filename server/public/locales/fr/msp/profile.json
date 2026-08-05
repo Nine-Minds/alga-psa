@@ -623,6 +623,17 @@
         "copySuccess": "Clé API copiée dans le presse-papiers !",
         "copyFailed": "Échec de la copie de la clé API dans le presse-papiers",
         "downloadFailed": "Échec du téléchargement de la clé API"
+      },
+      "admin": {
+        "title": "Administration des clés API",
+        "searchPlaceholder": "Rechercher par utilisateur ou description",
+        "columns": {
+          "user": "Utilisateur"
+        },
+        "errors": {
+          "loadFailed": "Échec du chargement des clés API. Vérifiez que vous disposez de privilèges d'administration.",
+          "deactivateFailed": "Échec de la désactivation de la clé API. Vérifiez que vous disposez de privilèges d'administration."
+        }
       }
     },
     "scim": {

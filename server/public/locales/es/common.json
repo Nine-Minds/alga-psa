@@ -25,7 +25,12 @@
     "trialAvailable": "Las funciones Essentials están activas. Inicie una prueba Pro gratuita de 15 días para desbloquear todas las funciones.",
     "trialExpired": "La prueba Pro ha vencido. La instalación ahora usa las funciones Essentials.",
     "licenseExpiresIn_one": "La licencia vence en {{count}} día. Renueve para evitar interrupciones del servicio.",
-    "licenseExpiresIn_other": "La licencia vence en {{count}} días. Renueve para evitar interrupciones del servicio."
+    "licenseExpiresIn_other": "La licencia vence en {{count}} días. Renueve para evitar interrupciones del servicio.",
+    "licenseExpired": "La licencia ha vencido. La instalación ahora usa las funciones Essentials.",
+    "licenseWrongTenant": "Esta licencia se emitió para un dispositivo diferente y no es válida aquí. La instalación usa las funciones Essentials.",
+    "manageLicense": "Administrar licencia",
+    "ariaLabel": "Estado de la licencia",
+    "dismiss": "Descartar"
   },
   "nav": {
     "dashboard": "Panel",
@@ -1210,6 +1215,32 @@
           "summaryWithClient": "Está abriendo el contacto {{contactId}} para el cliente {{clientId}} desde Teams."
         }
       }
+    },
+    "unsubscribe": {
+      "pageTitle": "Cancelar suscripción",
+      "confirmTitle": "¿Cancelar la suscripción a estos correos electrónicos?",
+      "confirmDescription": "Ya no recibirá correos electrónicos de marketing en esta dirección.",
+      "confirmAction": "Cancelar suscripción",
+      "doneTitle": "Su suscripción se ha cancelado",
+      "doneDescription": "Ya no recibirá estos correos electrónicos.",
+      "unavailableTitle": "Enlace no disponible",
+      "unavailableDescription": "Este enlace ya no es válido."
+    },
+    "mcpAuthorize": {
+      "errorTitle": "Error de autorización",
+      "documentTitle": "Autorizar a {{client}}",
+      "consentTitle": "Autorizar acceso",
+      "consentRequest": "<strong>{{client}}</strong> solicita acceso a AlgaPSA <em>en su nombre</em>.",
+      "consentScope": "La aplicación podrá usar las herramientas de MCP con los mismos permisos que usted tiene en este espacio de trabajo. Puede desconectarla en cualquier momento desde Configuración → MCP.",
+      "approve": "Aprobar",
+      "deny": "Denegar"
+    },
+    "microsoftEmailSetup": {
+      "title": "Configurar el correo electrónico de Microsoft",
+      "finishing": "Finalizando la configuración del correo electrónico de Microsoft…",
+      "finished": "La configuración ha finalizado. Puede cerrar esta ventana.",
+      "notFinished": "La configuración no se completó. Vuelva a AlgaPSA para revisar el error.",
+      "returnLink": "Volver a AlgaPSA"
     }
   },
   "feedback": {

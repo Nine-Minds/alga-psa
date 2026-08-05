@@ -625,6 +625,17 @@
         "copySuccess": "Klucz API skopiowany do schowka!",
         "copyFailed": "Nie udało się skopiować klucza API do schowka",
         "downloadFailed": "Nie udało się pobrać klucza API"
+      },
+      "admin": {
+        "title": "Administracja kluczami API",
+        "searchPlaceholder": "Szukaj według użytkownika lub opisu",
+        "columns": {
+          "user": "Użytkownik"
+        },
+        "errors": {
+          "loadFailed": "Nie udało się załadować kluczy API. Sprawdź, czy masz uprawnienia administratora.",
+          "deactivateFailed": "Nie udało się dezaktywować klucza API. Sprawdź, czy masz uprawnienia administratora."
+        }
       }
     },
     "scim": {

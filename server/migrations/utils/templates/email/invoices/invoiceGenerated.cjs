@@ -53,7 +53,7 @@ const COPY = {
   },
   es: {
     headerLabel: 'Nueva Factura',
-    intro: 'Se ha generado una nueva factura para tu revisi\u00f3n.',
+    intro: 'Se ha generado una nueva factura para su revisi\u00f3n.',
     invoiceNumberLabel: 'N\u00famero de factura',
     amountLabel: 'Monto',
     dueDateLabel: 'Fecha de vencimiento',
@@ -61,7 +61,7 @@ const COPY = {
     viewButton: 'Ver la factura',
     footer: 'Powered by Alga PSA &middot; Manteniendo a los equipos alineados',
     textHeader: 'Factura {{invoice.number}}',
-    textIntro: 'Se ha generado una nueva factura para tu revisi\u00f3n:',
+    textIntro: 'Se ha generado una nueva factura para su revisi\u00f3n:',
   },
   de: {
     headerLabel: 'Neue Rechnung',

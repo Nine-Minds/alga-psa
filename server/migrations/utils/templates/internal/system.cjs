@@ -36,7 +36,7 @@ const TEMPLATES = [
     translations: {
       en: { title: 'You were mentioned in a comment', message: '{{commentAuthor}} mentioned you in ticket #{{ticketNumber}}: {{commentPreview}}' },
       fr: { title: 'Vous avez été mentionné dans un commentaire', message: '{{commentAuthor}} vous a mentionné dans le ticket #{{ticketNumber}}: {{commentPreview}}' },
-      es: { title: 'Te mencionaron en un comentario', message: '{{commentAuthor}} te mencionó en el ticket #{{ticketNumber}}: {{commentPreview}}' },
+      es: { title: 'Lo mencionaron en un comentario', message: '{{commentAuthor}} lo mencionó en el ticket #{{ticketNumber}}: {{commentPreview}}' },
       de: { title: 'Sie wurden in einem Kommentar erwähnt', message: '{{commentAuthor}} hat Sie im Ticket #{{ticketNumber}} erwähnt: {{commentPreview}}' },
       nl: { title: 'U bent genoemd in een opmerking', message: '{{commentAuthor}} heeft u genoemd in ticket #{{ticketNumber}}: {{commentPreview}}' },
       it: { title: 'Sei stato menzionato in un commento', message: '{{commentAuthor}} ti ha menzionato nel ticket #{{ticketNumber}}: {{commentPreview}}' },
@@ -50,7 +50,7 @@ const TEMPLATES = [
     translations: {
       en: { title: 'You were mentioned in a document', message: '{{authorName}} mentioned you in document "{{documentName}}"' },
       fr: { title: 'Vous avez été mentionné dans un document', message: '{{authorName}} vous a mentionné dans le document "{{documentName}}"' },
-      es: { title: 'Te mencionaron en un documento', message: '{{authorName}} te mencionó en el documento "{{documentName}}"' },
+      es: { title: 'Lo mencionaron en un documento', message: '{{authorName}} lo mencionó en el documento "{{documentName}}"' },
       de: { title: 'Sie wurden in einem Dokument erwähnt', message: '{{authorName}} hat Sie im Dokument "{{documentName}}" erwähnt' },
       nl: { title: 'U bent vermeld in een document', message: '{{authorName}} heeft u vermeld in document "{{documentName}}"' },
       it: { title: 'Sei stato menzionato in un documento', message: '{{authorName}} ti ha menzionato nel documento "{{documentName}}"' },

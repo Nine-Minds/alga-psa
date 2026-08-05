@@ -443,7 +443,11 @@
       "summaryDescription": "Compila i campi mancanti qui sotto, passa al generatore di moduli o usa un pulsante di payload di esempio.",
       "moreErrors": "+{{count}} altri…"
     },
-    "sampleEmailBody": "Corpo email di esempio"
+    "sampleEmailBody": "Corpo email di esempio",
+    "sections": {
+      "schemaAndEvents": "Schema ed eventi",
+      "payloadTools": "Strumenti per il payload"
+    }
   },
   "eventList": {
     "common": {
@@ -1496,7 +1500,9 @@
     "field": {
       "placeholder": "Inserisci un’espressione...",
       "insertFieldPlaceholder": "Inserisci campo"
-    }
+    },
+    "clear": "Cancella",
+    "clearAriaLabel": "Cancella espressione"
   },
   "sourceDataTree": {
     "searchPlaceholder": "Cerca campi...",

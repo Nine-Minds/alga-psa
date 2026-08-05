@@ -2290,6 +2290,16 @@
         "arrears": "Nachträglich abrechnen"
       },
       "title": "Vertragsänderungen",
+      "columns": {
+        "name": "Name",
+        "type": "Typ",
+        "value": "Wert",
+        "appliesTo": "Gilt für",
+        "description": "Beschreibung",
+        "amount": "Betrag ($)",
+        "billingPeriod": "Abrechnungszeitraum",
+        "timing": "Zeitpunkt"
+      },
       "types": {
         "bucket": "Kontingent-Overlay",
         "fixed": "Fest",
