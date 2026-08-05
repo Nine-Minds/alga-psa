@@ -15,7 +15,6 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   createEmailProvider: vi.fn(),
   updateEmailProvider: vi.fn(),
   upsertEmailProvider: vi.fn(),
-  getMicrosoftConsumerSetupStatus: vi.fn().mockResolvedValue({ success: true, ready: true, message: null }),
   initiateEmailOAuth: vi.fn().mockResolvedValue({ success: false, error: 'not used in unit tests' }),
   getInboundTicketDefaults: vi.fn().mockResolvedValue({ defaults: [] }),
 }));
@@ -30,15 +29,12 @@ describe('MicrosoftProviderForm', () => {
     tenant: 'test-tenant-123',
     onSuccess: mockOnSuccess,
     onCancel: mockOnCancel,
-    credentialCapability: {
+    emailSetup: {
+      state: 'ready' as const,
       source: 'platform' as const,
-      ready: true,
-      platformReady: true,
-      tenantProfileSelected: false,
-      clientIdConfigured: true,
-      clientSecretConfigured: true,
-      tenantIdConfigured: true,
-      profileId: null,
+      hosted: true,
+      platformOffered: true,
+      automatedCreationAvailable: true,
     },
   };
 
@@ -64,9 +60,9 @@ describe('MicrosoftProviderForm', () => {
 
     expect(screen.getByPlaceholderText('e.g., Support Mailbox (internal)')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('support@client.com')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('https://yourapp.com/api/auth/microsoft/callback')).toBeInTheDocument();
+    expect(screen.queryByText('Redirect URI')).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText('Inbox, Support, Custom Folder')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /authorize access/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sign in with microsoft/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add provider/i })).toBeInTheDocument();
   });
 
@@ -180,12 +176,10 @@ describe('MicrosoftProviderForm', () => {
         mailbox: 'test@microsoft.com',
         isActive: true,
         inboundTicketDefaultsId: undefined,
-        microsoftCredentialSource: 'platform',
         microsoftConfig: {
           client_id: '',
           client_secret: '',
           tenant_id: '',
-          redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback',
           auto_process_emails: true,
           folder_filters: ['Inbox'],
           max_emails_per_sync: 50,
@@ -217,47 +211,51 @@ describe('MicrosoftProviderForm', () => {
     });
   });
 
-  it('defaults hosted setup to the platform-managed Microsoft app', () => {
+  it('shows the ready state and enables Microsoft sign-in', () => {
     renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
-    expect(screen.getByText('Platform-managed Microsoft app')).toBeInTheDocument();
-    expect(screen.getByText(/No Entra app registration/i)).toBeInTheDocument();
-    expect(screen.queryByText(/normally unnecessary on hosted/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Microsoft is set up. Sign in as this mailbox to finish.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sign in with microsoft/i })).toBeEnabled();
+    expect(screen.queryByText(/platform-managed/i)).not.toBeInTheDocument();
   });
 
-  it('reveals tenant-owned app setup only after the advanced toggle is selected', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
-
-    await user.click(screen.getByRole('button', { name: /Use your own Microsoft app/i }));
-
-    expect(screen.getByText(/normally unnecessary on hosted Alga PSA/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Open Providers Settings/i })).toBeInTheDocument();
-  });
-
-  it('shows one Providers Settings action when a tenant-owned app is not ready', async () => {
+  it('shows one Providers action while administrator approval is pending', () => {
     renderWithProviders(
       <MicrosoftProviderForm
         {...defaultProps}
-        credentialCapability={{
-          source: 'tenant',
-          ready: false,
-          platformReady: true,
-          tenantProfileSelected: true,
-          clientIdConfigured: true,
-          clientSecretConfigured: true,
-          tenantIdConfigured: true,
+        emailSetup={{
+          state: 'pending_admin_consent',
+          source: 'tenant_app',
+          hosted: true,
+          platformOffered: true,
+          automatedCreationAvailable: true,
           profileId: 'microsoft-profile-123',
-          message: 'Microsoft admin consent is still pending.',
         }}
       />
     );
 
-    await waitFor(() => {
-      expect(screen.getByText('Your Microsoft app is not ready yet.')).toBeInTheDocument();
-    });
-    expect(screen.getAllByRole('button', { name: /Open Providers Settings/i })).toHaveLength(1);
-    expect(screen.getByRole('button', { name: /Authorize Access/i })).toBeDisabled();
+    expect(screen.getByText(/Waiting for your Microsoft 365 administrator/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Open Providers/i })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /Sign in with Microsoft/i })).toBeDisabled();
+  });
+
+  it('points an unconfigured mailbox to Providers', () => {
+    renderWithProviders(
+      <MicrosoftProviderForm
+        {...defaultProps}
+        emailSetup={{
+          state: 'not_configured',
+          source: null,
+          hosted: true,
+          platformOffered: true,
+          automatedCreationAvailable: true,
+        }}
+      />
+    );
+
+    expect(screen.getByText(/Microsoft isn't set up yet/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Set up in Providers/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Sign in with Microsoft/i })).toBeDisabled();
   });
 
   it('should call onCancel when cancel button is clicked', async () => {

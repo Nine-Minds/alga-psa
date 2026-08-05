@@ -10,6 +10,13 @@ function read(relativePathFromComponents: string): string {
   return fs.readFileSync(path.resolve(testDir, relativePathFromComponents), 'utf8');
 }
 
+function collectStrings(value: unknown): string[] {
+  if (typeof value === 'string') return [value];
+  if (Array.isArray(value)) return value.flatMap(collectStrings);
+  if (value && typeof value === 'object') return Object.values(value).flatMap(collectStrings);
+  return [];
+}
+
 describe('Microsoft providers-first form contracts', () => {
   const emailFormSource = read('./email/MicrosoftProviderForm.tsx');
   const eeEmailFormSource = fs.readFileSync(
@@ -35,10 +42,11 @@ describe('Microsoft providers-first form contracts', () => {
     expect(emailFormSource).toContain("client_id: ''");
     expect(emailFormSource).toContain("client_secret: ''");
   });
-  it('T019: Microsoft email form keeps tenant-owned app setup behind an advanced CTA', () => {
-    expect(emailFormSource).toContain('Use your own Microsoft app (advanced)');
-    expect(emailFormSource).toContain('This is normally unnecessary on hosted Alga PSA.');
-    expect(emailFormSource).toContain('configure-microsoft-providers-link');
+  it('T019: Microsoft email form delegates app setup to Providers', () => {
+    expect(emailFormSource).not.toContain('Use your own Microsoft app');
+    expect(emailFormSource).not.toContain('Redirect URI');
+    expect(emailFormSource).toContain('Set up in Providers');
+    expect(emailFormSource).toContain('Open Providers');
     expect(emailFormSource).toContain('/msp/settings/integrations?category=providers');
   });
 
@@ -46,9 +54,10 @@ describe('Microsoft providers-first form contracts', () => {
     expect(eeEmailFormSource).toContain(
       "@alga-psa/integrations/components/email/MicrosoftProviderForm"
     );
-    expect(emailFormSource).toContain("getMicrosoftConsumerSetupStatus('email')");
+    expect(emailFormSource).toContain('emailSetup?: MicrosoftEmailSetupReadiness | null');
     expect(emailFormSource).toContain('providerSetupReady');
-    expect(emailFormSource).toContain('Microsoft app profile is ready.');
+    expect(emailFormSource).toContain('Microsoft is set up. Sign in as this mailbox to finish.');
+    expect(emailFormSource).toContain('Sign in with Microsoft');
     expect(emailFormSource).toContain('/msp/settings/integrations?category=providers');
   });
 
@@ -85,7 +94,9 @@ describe('Microsoft providers-first form contracts', () => {
 
   it('T022: Microsoft email persistence derives credentials from tenant providers secrets instead of form fields', () => {
     expect(emailActionsSource).toContain("resolveMicrosoftConsumerProfileConfig(tenant, 'email', {");
-    expect(emailActionsSource).toContain('credentialPreference');
+    expect(emailActionsSource).toContain("credentialPreference: 'tenant'");
+    expect(emailActionsSource).not.toContain('microsoftCredentialSource');
+    expect(emailActionsSource).toContain('getMicrosoftEmailSetupMetadataInternal()).mailboxRedirectUri');
     expect(emailActionsSource).toContain(
       "const effectiveClientId = microsoftProfile.clientId || '';"
     );
@@ -94,5 +105,18 @@ describe('Microsoft providers-first form contracts', () => {
     );
     expect(emailActionsSource).toContain('microsoft_profile_id: pinnedProfileId');
     expect(emailActionsSource).toContain('client_secret_ref: pinnedClientSecretRef');
+  });
+
+  it('keeps bare tenant terminology out of Microsoft email setup copy', () => {
+    const emailProviderLocale = JSON.parse(read('../../../../server/public/locales/en/msp/email-providers.json'));
+    const integrationsLocale = JSON.parse(read('../../../../server/public/locales/en/msp/integrations.json'));
+    const microsoftCopy = [
+      ...collectStrings(emailProviderLocale.configuration.setup.microsoft),
+      ...collectStrings(emailProviderLocale.forms.microsoft),
+      ...collectStrings(integrationsLocale.integrations.microsoft.emailSetup),
+      ...collectStrings(integrationsLocale.integrations.microsoft.settings),
+    ];
+
+    expect(microsoftCopy.filter((copy) => /(?<!Microsoft )\btenant\b/i.test(copy))).toEqual([]);
   });
 });

@@ -1518,81 +1518,94 @@
     },
     "microsoft": {
       "emailSetup": {
-        "action": "Microsoft-e-mail instellen",
+        "action": "Set up Microsoft",
         "actions": {
           "back": "Terug",
           "cancel": "Annuleren",
           "copy": "Kopiëren",
           "finish": "Voltooien",
-          "grantConsent": "Beheerderstoestemming verlenen",
           "savePlatform": "Profiel maken en doorgaan",
           "signIn": "Aanmelden bij Microsoft",
-          "working": "Bezig…"
+          "working": "Bezig…",
+          "approve": "Approve in Microsoft",
+          "copyApprovalLink": "Copy approval link for your admin",
+          "saveManual": "Save app and continue"
         },
         "automated": {
-          "description": "Meld u aan als Microsoft-beheerder. Alga maakt de app, serviceprincipal, het geheim en een voorlopig e-mailprofiel aan. De e-mailkoppeling wordt gemaakt nadat de beheerder toestemming heeft verleend.",
-          "title": "Een app in deze tenant maken"
+          "description": "Alga PSA registers a dedicated Entra app automatically. Sign in as a Microsoft 365 administrator.",
+          "title": "Create an app in your Microsoft organization"
         },
         "callbackUri": "Callback-URI van postvak",
         "complete": {
-          "consentDone": "De beheerderstoestemming is bevestigd. Ga terug naar Inkomende e-mail en autoriseer de mailbox.",
-          "consentPending": "Vervolgens moet een Microsoft-tenantbeheerder toestemming verlenen. Daarna wordt de mailbox geautoriseerd via Inkomende e-mail.",
-          "profileCreated": "Microsoft-e-mailprofiel aangemaakt en gekoppeld"
+          "consentDone": "Approved by your Microsoft 365 administrator. You can now connect a mailbox.",
+          "consentPending": "A Microsoft 365 administrator for your organization must approve access before mailboxes can connect.",
+          "profileCreated": "Microsoft-e-mailprofiel aangemaakt en gekoppeld",
+          "ready": "Microsoft is ready",
+          "waiting": "Waiting for admin approval"
         },
         "consent": {
           "confirmedDescription": "De Microsoft-app is gereed voor postvakautorisatie.",
           "confirmedTitle": "Beheerderstoestemming bevestigd",
           "url": "URL voor beheerderstoestemming",
-          "urlLabel": "Toestemmings-URL"
+          "urlLabel": "Toestemmings-URL",
+          "approvalLink": "Approval link"
         },
         "copied": "{{label}} gekopieerd",
-        "description": "Kies hoe u de Microsoft-app voor inkomende e-mail wilt configureren. Het autoriseren van de mailbox blijft een afzonderlijke laatste stap.",
+        "description": "Choose how Alga PSA connects to Microsoft. You will connect mailboxes separately.",
         "errors": {
           "automated": "Kan het automatisch maken van de Microsoft-app niet starten.",
-          "consentDenied": "Microsoft-aanmelding of beheerderstoestemming is geweigerd. Kies een andere configuratieoptie of probeer het opnieuw.",
-          "consentNotGranted": "Microsoft heeft de toestemming van de tenantbeheerder niet bevestigd.",
-          "consentPersistFailed": "Kan de Microsoft-beheerderstoestemming niet vastleggen.",
           "generic": "De configuratie van Microsoft-e-mail is niet voltooid.",
-          "invalidState": "Dit Microsoft-configuratieverzoek is ongeldig of verlopen. Start opnieuw vanuit de providerinstellingen.",
-          "microsoftError": "Microsoft kon het configuratieverzoek niet voltooien. Probeer het opnieuw of gebruik de handmatige configuratie.",
-          "missingCode": "Microsoft heeft geen autorisatiecode geretourneerd. Start de configuratie opnieuw.",
           "nameRequired": "Voer een weergavenaam voor de Microsoft-app in.",
           "platform": "Kan de Microsoft-platformapp niet configureren.",
           "popupBlocked": "Sta pop-ups voor deze site toe en probeer het opnieuw.",
           "popupClosed": "Het Microsoft-venster is gesloten voordat de configuratie was voltooid. Probeer het opnieuw of kies een andere configuratieoptie.",
-          "sessionMismatch": "Uw Alga PSA-sessie komt niet overeen met de beheerder die deze configuratie heeft gestart. Meld u aan en probeer het opnieuw.",
-          "tenantRequired": "Voer uw Microsoft-tenant-id of geverifieerd domein in."
+          "tenantRequired": "Voer uw Microsoft-tenant-id of geverifieerd domein in.",
+          "manual": "Could not configure the Microsoft app.",
+          "manualRequired": "Enter the display name, client ID, client secret, and Microsoft tenant ID.",
+          "pendingProfileMissing": "The pending Microsoft app could not be found.",
+          "approvalLink": "Could not create the Microsoft approval link.",
+          "consentDenied": "Microsoft-aanmelding of beheerderstoestemming is geweigerd. Kies een andere configuratieoptie of probeer het opnieuw.",
+          "consentNotGranted": "Microsoft heeft de toestemming van de tenantbeheerder niet bevestigd.",
+          "consentPersistFailed": "Kan de Microsoft-beheerderstoestemming niet vastleggen.",
+          "invalidState": "Dit Microsoft-configuratieverzoek is ongeldig of verlopen. Start opnieuw vanuit de providerinstellingen.",
+          "microsoftError": "Microsoft kon het configuratieverzoek niet voltooien. Probeer het opnieuw of gebruik de handmatige configuratie.",
+          "missingCode": "Microsoft heeft geen autorisatiecode geretourneerd. Start de configuratie opnieuw.",
+          "sessionMismatch": "Uw Alga PSA-sessie komt niet overeen met de beheerder die deze configuratie heeft gestart. Meld u aan en probeer het opnieuw."
         },
         "fields": {
           "clientId": "Client ID",
           "displayName": "Weergavenaam profiel",
-          "tenant": "Microsoft-tenant-id of geverifieerd domein",
-          "tenantId": "Tenant ID"
+          "tenantId": "Microsoft tenant ID",
+          "clientSecret": "Client secret",
+          "microsoftTenant": "Microsoft tenant ID or verified domain",
+          "redirectUri": "Redirect URI to add in Entra"
         },
         "manual": {
-          "description": "Blijf het bestaande formulier voor client-id, tenant-id en clientgeheim gebruiken.",
+          "description": "Use an existing Entra app maintained by your organization.",
           "title": "Een bestaande app handmatig invoeren"
         },
         "platform": {
-          "description": "Maak een voorlopig e-mailprofiel aan vanuit de door de server beheerde multitenant-app. Het wordt gekoppeld nadat de tenantbeheerder toestemming heeft verleend.",
-          "title": "De Alga-platformapp gebruiken"
+          "description": "Nothing to register in Microsoft Entra. Your Microsoft 365 administrator approves access.",
+          "title": "Use the app provided by Alga PSA"
         },
-        "title": "Microsoft-e-mail instellen",
-        "unavailable": "Niet beschikbaar"
+        "title": "Set up Microsoft",
+        "unavailable": "Niet beschikbaar",
+        "recommended": "Recommended",
+        "advanced": "Advanced"
       },
       "settings": {
         "advanced": {
-          "title": "Uw eigen Microsoft-app gebruiken (geavanceerd)",
-          "description": "Maak en beheer tenant-eigen Entra-appregistraties voor organisaties die deze uitdrukkelijk vereisen.",
+          "title": "Manual Microsoft apps (advanced)",
+          "description": "Create and manage Entra app registrations maintained by your organization.",
           "warning": "Een aangepaste Entra-app is normaal gesproken niet nodig op gehoste Alga PSA. Ga alleen verder wanneer uw organisatie bewust een eigen toepassing en referenties vereist."
         },
         "platform": {
           "title": "Microsoft-e-mail kan worden gekoppeld",
           "description": "Verbind Microsoft 365 met de toepassing die Alga PSA levert. Er is geen Entra-appregistratie nodig.",
-          "readyDescription": "Alga PSA levert en beheert de Microsoft-toepassing. Verbind een postvak zonder een Entra-app te maken of clientreferenties in te voeren.",
-          "connectAction": "Microsoft-e-mail koppelen",
+          "readyDescription": "The Microsoft app is approved and ready for mailbox sign-in.",
+          "connectAction": "Connect a mailbox →",
           "unavailableTitle": "Microsoft-platformreferenties zijn niet beschikbaar",
-          "unavailableDescription": "Deze implementatie vereist een tenant-eigen Microsoft-app. Gebruik de geavanceerde configuratie hieronder om er een toe te voegen."
+          "unavailableDescription": "This deployment requires an app maintained by your organization. Use the advanced setup below to add one."
         },
         "actions": {
           "entraLink": "Microsoft Entra",
@@ -1677,7 +1690,7 @@
           "setDefault": "Dit profiel instellen als standaard Microsoft-profiel",
           "setDefaultHelp": "Standaardprofielen blijven beschikbaar voor profielbeheer-workflows en migratieveilige metadata, niet voor consumer-routing.",
           "storedSecretHint": "Opgeslagen secret: {{secret}}. Laat dit veld leeg om het ongewijzigd te houden.",
-          "tenantId": "Tenant ID",
+          "tenantId": "Microsoft tenant ID",
           "capabilities": "Enabled capabilities",
           "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
@@ -1714,7 +1727,7 @@
           "teamsScopes": "Teams-scopes",
           "teamsTabRedirect": "Redirect-URI persoonlijk tabblad",
           "teamsTitle": "Teams-handleiding",
-          "tenantId": "Tenant ID",
+          "tenantId": "Microsoft tenant ID",
           "unavailable": "Niet beschikbaar"
         },
         "profileCard": {
@@ -1731,7 +1744,7 @@
           "setDefault": "Instellen als standaard",
           "storedSecret": "Opgeslagen secret",
           "teamsAppIdUri": "Teams Application ID URI",
-          "tenantIdLabel": "Tenant ID:",
+          "tenantIdLabel": "Microsoft tenant ID:",
           "updating": "Bijwerken…",
           "enabledCapabilities": "Enabled capabilities",
           "noEnabledCapabilities": "No enabled capabilities"
@@ -1744,13 +1757,14 @@
           "archived": "Gearchiveerde profielen kunnen niet worden gebruikt voor nieuwe Microsoft-bindingen.",
           "clientIdMissing": "Client ID ontbreekt.",
           "clientSecretMissing": "Client secret is niet geconfigureerd.",
-          "tenantIdMissing": "Tenant ID ontbreekt.",
-          "adminConsentPending": "Verleen toestemming van de Microsoft-tenantbeheerder om de e-mailconfiguratie te voltooien."
+          "tenantIdMissing": "Add a Microsoft tenant ID.",
+          "adminConsentPending": "Ask a Microsoft 365 administrator to approve access for Email."
         },
         "statusBadges": {
           "archived": "Gearchiveerd",
           "needsAttention": "Vereist aandacht",
-          "ready": "Gereed"
+          "ready": "Gereed",
+          "waitingForAdminApproval": "Waiting for admin approval"
         },
         "title": "Microsoft",
         "toasts": {
@@ -1777,7 +1791,7 @@
           "clientIdRequired": "Microsoft OAuth Client ID is verplicht",
           "clientSecretRequired": "Microsoft OAuth Client Secret is verplicht",
           "displayNameRequired": "Weergavenaam van Microsoft-profiel is verplicht",
-          "tenantIdRequired": "Microsoft Tenant ID is verplicht"
+          "tenantIdRequired": "Microsoft tenant ID is required"
         },
         "disconnectDialog": {
           "cancel": "Aanbieders verbonden houden",

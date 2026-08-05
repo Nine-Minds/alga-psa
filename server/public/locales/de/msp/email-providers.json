@@ -42,29 +42,8 @@
       "title": "Einrichtungsanweisungen",
       "microsoft": {
         "title": "Microsoft 365-Setup",
-        "checkingCredentials": "Verfügbarkeit der Microsoft-Anmeldedaten wird geprüft…",
-        "platform": {
-          "title": "Microsoft-Anmeldung ist bereit",
-          "description": "Alga PSA stellt die Microsoft-Anwendung bereit. Fügen Sie einen Anbieter hinzu, geben Sie die Postfachdetails ein und stellen Sie die Verbindung mit Microsoft her — eine Entra-App-Registrierung ist nicht erforderlich."
-        },
-        "byo": {
-          "summary": "Erweitert: eigene Microsoft-App verwenden",
-          "warning": "Dies ist bei gehostetem Alga PSA normalerweise nicht erforderlich und sollte nur verwendet werden, wenn Ihre Organisation eine eigene Entra-Anwendung benötigt.",
-          "description": "Öffnen Sie Einstellungen → Integrationen → Anbieter, erweitern Sie die erweiterten Microsoft-Optionen und fügen Sie Ihre mandanteneigene App hinzu, bevor Sie hierher zurückkehren."
-        },
-        "manualRequired": "Die Microsoft-Anmeldedaten der Plattform sind in dieser Bereitstellung nicht verfügbar. Konfigurieren Sie Ihre eigene Microsoft-App, um ein Postfach zu verbinden.",
-        "tenant": {
-          "title": "Die Microsoft-App Ihrer Organisation ist ausgewählt",
-          "description": "Neue Microsoft-Postfächer verwenden die unter „Anbietereinstellungen“ ausgewählte mandanteneigene App. Diese Auswahl bleibt auch dann erhalten, wenn Plattformanmeldedaten verfügbar sind.",
-          "incompleteTitle": "Ihre Microsoft-App erfordert Aufmerksamkeit",
-          "incompleteDescription": "Schließen Sie die Konfiguration der unter „Anbietereinstellungen“ ausgewählten Microsoft-App ab, bevor Sie ein Postfach verbinden."
-        },
-        "steps": {
-          "registerApp": "Registrieren Sie eine Anwendung in Azure AD",
-          "permissions": "Konfigurieren Sie API-Berechtigungen für Mail.Read",
-          "redirectUrl": "Richten Sie die Weiterleitungs-URL in Ihrer App-Registrierung ein",
-          "credentials": "Verwenden Sie die Client-ID und das Client-Geheimnis im obigen Formular"
-        }
+        "providersPointer": "Microsoft app setup is managed in Providers.",
+        "openProviders": "Open Providers"
       },
       "gmail": {
         "title": "Gmail-Setup",
@@ -271,22 +250,11 @@
     },
     "microsoft": {
       "hostedOauth": {
-        "sectionTitle": "Microsoft 365 verbinden",
-        "platformUnavailableDescription": "Die Microsoft-Anmeldedaten der Plattform sind in dieser Bereitstellung nicht verfügbar. Verwenden Sie Ihre eigene Microsoft-App, um fortzufahren.",
-        "tenantSectionDescription": "Autorisieren Sie dieses Postfach mit der unter „Anbietereinstellungen“ ausgewählten Microsoft-App.",
-        "platformSectionDescription": "Alga PSA stellt die Microsoft-Anwendung bereit. Geben Sie die Postfachdetails ein und melden Sie sich anschließend bei Microsoft an.",
-        "platformManagedTitle": "Von der Plattform verwaltete Microsoft-App",
-        "platformManagedDescription": "Sie müssen keine Entra-App registrieren und weder Client-ID noch Clientschlüssel angeben.",
-        "byoToggle": "Eigene Microsoft-App verwenden (erweitert)",
-        "byoToggleDescription": "Für Organisationen, die ausdrücklich eine eigene Entra-App-Registrierung benötigen.",
-        "byoWarning": "Dies ist bei gehostetem Alga PSA normalerweise nicht erforderlich. Verwenden Sie diese Option nur, wenn Ihre Organisation eine mandanteneigene Entra-Anwendung benötigt.",
-        "tenantNotConfigured": "Ihre Microsoft-App ist noch nicht bereit.",
-        "platformNotConfigured": "Die Microsoft-Anmeldedaten der Plattform sind nicht verfügbar."
+        "sectionTitle": "Microsoft 365 verbinden"
       },
       "validation": {
         "providerNameRequired": "Konfigurationsname ist erforderlich",
         "emailRequired": "Eine gültige E-Mail-Adresse ist erforderlich",
-        "redirectRequired": "Ein gültiger Weiterleitungs-URI ist erforderlich",
         "authorizeRequiresValid": "Bitte füllen Sie vor der Autorisierung alle erforderlichen Felder aus",
         "oauthInitiateFailed": "OAuth konnte nicht gestartet werden",
         "popupBlocked": "Das OAuth-Popup konnte nicht geöffnet werden. Bitte erlauben Sie Popups für diese Website.",
@@ -296,8 +264,7 @@
       },
       "requiredFields": {
         "providerName": "Konfigurationsname",
-        "emailAddress": "E-Mail-Adresse",
-        "redirectUri": "Umleitungs-URI"
+        "emailAddress": "E-Mail-Adresse"
       },
       "basic": {
         "title": "Grundkonfiguration",
@@ -310,20 +277,11 @@
         "providerNameHelp": "Interner Name zur Identifikation dieser Konfiguration. Wird in ausgehenden E-Mails nicht angezeigt.",
         "senderDisplayNameLabel": "Anzeigename des Absenders",
         "senderDisplayNamePlaceholder": "z. B. Acme Support",
-        "senderDisplayNameHelp": "Anzeigename, der im Absenderfeld ausgehender Ticket-E-Mails (Antworten, Abschlüsse) erscheint. Wird nur angewendet, wenn dieses Postfach der ausgehenden Ticketing-Adresse des Mandanten entspricht. Leer lassen, um den Boardnamen des Tickets zu verwenden."
+        "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails. It applies when this mailbox matches the configured outbound ticketing address. Leave blank to use the ticket board name."
       },
       "oauth": {
-        "sectionTitle": "Microsoft OAuth-Konfiguration",
-        "sectionDescription": "Anmeldeinformationen für Microsoft-Apps werden in den Anbietereinstellungen konfiguriert und hier wiederverwendet.",
-        "setupLabel": "Microsoft Entra",
-        "notConfigured": "Die Microsoft-Anbietereinstellungen sind nicht konfiguriert.",
-        "setupHelp": "Konfigurieren Sie zunächst Anbieter unter Einstellungen → Integrationen → Anbieter und kehren Sie dann hierher zurück, um dieses Postfach zu autorisieren.",
-        "profileReady": "Das Microsoft-App-Profil ist bereit.",
-        "profileReadyHelp": "Falls die Zustimmung des Mandantenadministrators noch aussteht, schließen Sie sie in den Anbietereinstellungen ab. Verwenden Sie anschließend unten Zugriff autorisieren für dieses Postfach.",
-        "redirectUriLabel": "Weiterleitungs-URI *",
-        "redirectUriPlaceholder": "https://yourapp.com/api/auth/microsoft/callback",
-        "authorizationTitle": "OAuth-Autorisierung",
-        "authorizationDescription": "Schließen Sie den OAuth-Ablauf ab, um Zugriff auf das Postfach zu gewähren"
+        "signingIn": "Signing in…",
+        "signIn": "Sign in with Microsoft"
       },
       "advanced": {
         "title": "Erweiterte Einstellungen",
@@ -332,6 +290,14 @@
         "folderFiltersPlaceholder": "Posteingang, Support, Benutzerdefinierter Ordner",
         "folderFiltersHelp": "Durch Kommas getrennte Liste der zu überwachenden Ordner (Standard: Posteingang)",
         "maxEmailsPerSync": "Maximale E-Mails pro Synchronisierung"
+      },
+      "readiness": {
+        "checking": "Checking Microsoft setup…",
+        "ready": "Microsoft is set up. Sign in as this mailbox to finish.",
+        "pending": "Waiting for your Microsoft 365 administrator. Setup was started in Providers but hasn't been approved yet.",
+        "openProviders": "Open Providers",
+        "notConfigured": "Microsoft isn't set up yet. Set it up once in Providers, then come back.",
+        "setUpInProviders": "Set up in Providers"
       }
     },
     "gmail": {

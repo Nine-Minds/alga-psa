@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   resolveMicrosoftConsumerProfileConfig: vi.fn(),
   getAppSecret: vi.fn(),
   getTenantSecret: vi.fn(),
+  getMicrosoftEmailSetupMetadataInternal: vi.fn(),
 }));
 
 vi.mock("@alga-psa/auth", () => ({
@@ -35,6 +36,10 @@ vi.mock("../../lib/microsoftConsumerProfileResolution", () => ({
     mocks.resolveMicrosoftConsumerProfileConfig(...args),
 }));
 
+vi.mock("../integrations/microsoftActions", () => ({
+  getMicrosoftEmailSetupMetadataInternal: mocks.getMicrosoftEmailSetupMetadataInternal,
+}));
+
 import { initiateEmailOAuth } from "./oauthActions";
 
 const originalBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
@@ -45,6 +50,9 @@ describe("initiateEmailOAuth Microsoft credential source", () => {
     mocks.hasPermission.mockResolvedValue(true);
     mocks.getAppSecret.mockResolvedValue(null);
     mocks.getTenantSecret.mockResolvedValue(null);
+    mocks.getMicrosoftEmailSetupMetadataInternal.mockResolvedValue({
+      mailboxRedirectUri: 'https://psa.example.com/api/auth/microsoft/callback',
+    });
     process.env.NEXT_PUBLIC_BASE_URL = "https://psa.example.com";
   });
 
@@ -69,19 +77,17 @@ describe("initiateEmailOAuth Microsoft credential source", () => {
 
     const result = await initiateEmailOAuth({
       provider: "microsoft",
-      microsoftCredentialSource: "platform",
+      redirectUri: "https://attacker.example/callback",
     });
 
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.authUrl).toContain("client_id=platform-client-id");
-    expect(mocks.resolveMicrosoftConsumerProfileConfig).toHaveBeenCalledWith(
-      "tenant-1",
-      "email",
-      {
-        credentialPreference: "platform",
-      },
-    );
+    expect(mocks.resolveMicrosoftConsumerProfileConfig).toHaveBeenCalledWith("tenant-1", "email", {
+      credentialPreference: "tenant",
+    });
+    expect(result.authUrl).toContain(encodeURIComponent('https://psa.example.com/api/auth/microsoft/callback'));
+    expect(result.authUrl).not.toContain('attacker.example');
     expect(
       JSON.parse(Buffer.from(result.state, "base64").toString("utf8")),
     ).toMatchObject({
@@ -105,18 +111,13 @@ describe("initiateEmailOAuth Microsoft credential source", () => {
 
     const result = await initiateEmailOAuth({
       provider: "microsoft",
-      microsoftCredentialSource: "tenant",
     });
 
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.authUrl).toContain("client_id=tenant-client-id");
-    expect(mocks.resolveMicrosoftConsumerProfileConfig).toHaveBeenCalledWith(
-      "tenant-1",
-      "email",
-      {
-        credentialPreference: "tenant",
-      },
-    );
+    expect(mocks.resolveMicrosoftConsumerProfileConfig).toHaveBeenCalledWith("tenant-1", "email", {
+      credentialPreference: "tenant",
+    });
   });
 });

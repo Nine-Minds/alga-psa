@@ -1518,81 +1518,94 @@
     },
     "microsoft": {
       "emailSetup": {
-        "action": "Microsoft-E-Mail einrichten",
+        "action": "Set up Microsoft",
         "actions": {
           "back": "Zurück",
           "cancel": "Abbrechen",
           "copy": "Kopieren",
           "finish": "Fertigstellen",
-          "grantConsent": "Administratoreinwilligung erteilen",
           "savePlatform": "Profil erstellen und fortfahren",
           "signIn": "Bei Microsoft anmelden",
-          "working": "Wird verarbeitet…"
+          "working": "Wird verarbeitet…",
+          "approve": "Approve in Microsoft",
+          "copyApprovalLink": "Copy approval link for your admin",
+          "saveManual": "Save app and continue"
         },
         "automated": {
-          "description": "Sign in as a Microsoft administrator. Alga creates the app, service principal, secret, Email profile, and binding.",
-          "title": "App in diesem Mandanten erstellen"
+          "description": "Alga PSA registers a dedicated Entra app automatically. Sign in as a Microsoft 365 administrator.",
+          "title": "Create an app in your Microsoft organization"
         },
         "callbackUri": "Postfach-Callback-URI",
         "complete": {
-          "consentDone": "Die Administratoreinwilligung wurde bestätigt. Kehren Sie zu „Eingehende E-Mail“ zurück und autorisieren Sie das Postfach.",
-          "consentPending": "Als Nächstes muss ein Administrator des Microsoft-Mandanten seine Einwilligung erteilen. Die Postfachautorisierung erfolgt anschließend unter „Eingehende E-Mail“.",
-          "profileCreated": "Microsoft Email profile created and bound"
+          "consentDone": "Approved by your Microsoft 365 administrator. You can now connect a mailbox.",
+          "consentPending": "A Microsoft 365 administrator for your organization must approve access before mailboxes can connect.",
+          "profileCreated": "Microsoft Email profile created and bound",
+          "ready": "Microsoft is ready",
+          "waiting": "Waiting for admin approval"
         },
         "consent": {
           "confirmedDescription": "Die Microsoft-App ist für die Postfachautorisierung bereit.",
           "confirmedTitle": "Administratoreinwilligung bestätigt",
           "url": "URL für die Administratoreinwilligung",
-          "urlLabel": "Einwilligungs-URL"
+          "urlLabel": "Einwilligungs-URL",
+          "approvalLink": "Approval link"
         },
         "copied": "{{label}} kopiert",
-        "description": "Wählen Sie aus, wie die Microsoft-App für eingehende E-Mails konfiguriert werden soll. Die Postfachautorisierung bleibt ein separater letzter Schritt.",
+        "description": "Choose how Alga PSA connects to Microsoft. You will connect mailboxes separately.",
         "errors": {
           "automated": "Die automatische Erstellung der Microsoft-App konnte nicht gestartet werden.",
-          "consentDenied": "Die Microsoft-Anmeldung oder Administratoreinwilligung wurde abgelehnt. Wählen Sie eine andere Einrichtungsoption oder versuchen Sie es erneut.",
-          "consentNotGranted": "Microsoft hat die Einwilligung des Mandantenadministrators nicht bestätigt.",
-          "consentPersistFailed": "Die Microsoft-Administratoreinwilligung konnte nicht gespeichert werden.",
           "generic": "Die Einrichtung von Microsoft-E-Mail wurde nicht abgeschlossen.",
-          "invalidState": "Diese Microsoft-Einrichtungsanfrage ist ungültig oder abgelaufen. Starten Sie den Vorgang in den Anbietereinstellungen erneut.",
-          "microsoftError": "Microsoft konnte die Einrichtungsanfrage nicht abschließen. Versuchen Sie es erneut oder verwenden Sie die manuelle Einrichtung.",
-          "missingCode": "Microsoft hat keinen Autorisierungscode zurückgegeben. Starten Sie die Einrichtung erneut.",
           "nameRequired": "Geben Sie einen Anzeigenamen für die Microsoft-App ein.",
           "platform": "Die Microsoft-App der Plattform konnte nicht konfiguriert werden.",
           "popupBlocked": "Erlauben Sie Pop-ups für diese Website und versuchen Sie es erneut.",
           "popupClosed": "Das Microsoft-Fenster wurde geschlossen, bevor die Einrichtung abgeschlossen war. Versuchen Sie es erneut oder wählen Sie eine andere Einrichtungsoption.",
-          "sessionMismatch": "Ihre Sitzung in Alga PSA stimmt nicht mit dem Administrator überein, der diese Einrichtung gestartet hat. Melden Sie sich an und versuchen Sie es erneut.",
-          "tenantRequired": "Geben Sie Ihre Microsoft-Mandanten-ID oder eine verifizierte Domäne ein."
+          "tenantRequired": "Geben Sie Ihre Microsoft-Mandanten-ID oder eine verifizierte Domäne ein.",
+          "manual": "Could not configure the Microsoft app.",
+          "manualRequired": "Enter the display name, client ID, client secret, and Microsoft tenant ID.",
+          "pendingProfileMissing": "The pending Microsoft app could not be found.",
+          "approvalLink": "Could not create the Microsoft approval link.",
+          "consentDenied": "Die Microsoft-Anmeldung oder Administratoreinwilligung wurde abgelehnt. Wählen Sie eine andere Einrichtungsoption oder versuchen Sie es erneut.",
+          "consentNotGranted": "Microsoft hat die Einwilligung des Mandantenadministrators nicht bestätigt.",
+          "consentPersistFailed": "Die Microsoft-Administratoreinwilligung konnte nicht gespeichert werden.",
+          "invalidState": "Diese Microsoft-Einrichtungsanfrage ist ungültig oder abgelaufen. Starten Sie den Vorgang in den Anbietereinstellungen erneut.",
+          "microsoftError": "Microsoft konnte die Einrichtungsanfrage nicht abschließen. Versuchen Sie es erneut oder verwenden Sie die manuelle Einrichtung.",
+          "missingCode": "Microsoft hat keinen Autorisierungscode zurückgegeben. Starten Sie die Einrichtung erneut.",
+          "sessionMismatch": "Ihre Sitzung in Alga PSA stimmt nicht mit dem Administrator überein, der diese Einrichtung gestartet hat. Melden Sie sich an und versuchen Sie es erneut."
         },
         "fields": {
           "clientId": "Client ID",
           "displayName": "Profilanzeigename",
-          "tenant": "Microsoft-Mandanten-ID oder verifizierte Domäne",
-          "tenantId": "Tenant ID"
+          "tenantId": "Microsoft tenant ID",
+          "clientSecret": "Client secret",
+          "microsoftTenant": "Microsoft tenant ID or verified domain",
+          "redirectUri": "Redirect URI to add in Entra"
         },
         "manual": {
-          "description": "Verwenden Sie weiterhin das vorhandene Formular für Client-ID, Mandanten-ID und Clientschlüssel.",
+          "description": "Use an existing Entra app maintained by your organization.",
           "title": "Vorhandene App manuell eingeben"
         },
         "platform": {
-          "description": "Erstellen Sie aus der serververwalteten mandantenfähigen App ein ausstehendes E-Mail-Profil. Es wird nach der Zustimmung des Mandantenadministrators verknüpft.",
-          "title": "Alga-Plattform-App verwenden"
+          "description": "Nothing to register in Microsoft Entra. Your Microsoft 365 administrator approves access.",
+          "title": "Use the app provided by Alga PSA"
         },
-        "title": "Microsoft-E-Mail einrichten",
-        "unavailable": "Nicht verfügbar"
+        "title": "Set up Microsoft",
+        "unavailable": "Nicht verfügbar",
+        "recommended": "Recommended",
+        "advanced": "Advanced"
       },
       "settings": {
         "advanced": {
-          "title": "Eigene Microsoft-App verwenden (erweitert)",
-          "description": "Erstellen und verwalten Sie mandanteneigene Entra-App-Registrierungen für Organisationen, die diese ausdrücklich benötigen.",
+          "title": "Manual Microsoft apps (advanced)",
+          "description": "Create and manage Entra app registrations maintained by your organization.",
           "warning": "Eine benutzerdefinierte Entra-App ist bei gehostetem Alga PSA normalerweise nicht erforderlich. Fahren Sie nur fort, wenn Ihre Organisation ausdrücklich eine eigene Anwendung und eigene Anmeldedaten benötigt."
         },
         "platform": {
           "title": "Microsoft-E-Mail kann verbunden werden",
           "description": "Verbinden Sie Microsoft 365 mit der von Alga PSA bereitgestellten Anwendung. Eine Entra-App-Registrierung ist nicht erforderlich.",
-          "readyDescription": "Alga PSA stellt die Microsoft-Anwendung bereit und verwaltet sie. Verbinden Sie ein Postfach, ohne eine Entra-App zu erstellen oder Client-Anmeldedaten einzugeben.",
-          "connectAction": "Microsoft-E-Mail verbinden",
+          "readyDescription": "The Microsoft app is approved and ready for mailbox sign-in.",
+          "connectAction": "Connect a mailbox →",
           "unavailableTitle": "Microsoft-Plattformanmeldedaten sind nicht verfügbar",
-          "unavailableDescription": "Diese Bereitstellung erfordert eine mandanteneigene Microsoft-App. Verwenden Sie die erweiterte Einrichtung unten, um eine hinzuzufügen."
+          "unavailableDescription": "This deployment requires an app maintained by your organization. Use the advanced setup below to add one."
         },
         "actions": {
           "entraLink": "Microsoft Entra",
@@ -1677,7 +1690,7 @@
           "setDefault": "Dieses Profil als Standard-Microsoft-Profil festlegen",
           "setDefaultHelp": "Standardprofile stehen für Profilverwaltungs-Workflows und migrations­sichere Metadaten zur Verfügung, jedoch nicht für das Consumer-Routing.",
           "storedSecretHint": "Gespeichertes Secret: {{secret}}. Lassen Sie dieses Feld leer, um es unverändert zu lassen.",
-          "tenantId": "Tenant ID",
+          "tenantId": "Microsoft tenant ID",
           "capabilities": "Enabled capabilities",
           "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
@@ -1714,7 +1727,7 @@
           "teamsScopes": "Teams-Scopes",
           "teamsTabRedirect": "Redirect-URI für persönlichen Tab",
           "teamsTitle": "Teams-Anleitung",
-          "tenantId": "Tenant ID",
+          "tenantId": "Microsoft tenant ID",
           "unavailable": "Nicht verfügbar"
         },
         "profileCard": {
@@ -1731,7 +1744,7 @@
           "setDefault": "Als Standard festlegen",
           "storedSecret": "Gespeichertes Secret",
           "teamsAppIdUri": "Teams Application ID URI",
-          "tenantIdLabel": "Tenant ID:",
+          "tenantIdLabel": "Microsoft tenant ID:",
           "updating": "Wird aktualisiert…",
           "enabledCapabilities": "Enabled capabilities",
           "noEnabledCapabilities": "No enabled capabilities"
@@ -1744,13 +1757,14 @@
           "archived": "Archivierte Profile können nicht für neue Microsoft-Bindungen verwendet werden.",
           "clientIdMissing": "Client ID fehlt.",
           "clientSecretMissing": "Client Secret wurde nicht konfiguriert.",
-          "tenantIdMissing": "Tenant ID fehlt.",
-          "adminConsentPending": "Erteilen Sie die Zustimmung des Microsoft-Mandantenadministrators, um die E-Mail-Einrichtung abzuschließen."
+          "tenantIdMissing": "Add a Microsoft tenant ID.",
+          "adminConsentPending": "Ask a Microsoft 365 administrator to approve access for Email."
         },
         "statusBadges": {
           "archived": "Archiviert",
           "needsAttention": "Erfordert Aufmerksamkeit",
-          "ready": "Bereit"
+          "ready": "Bereit",
+          "waitingForAdminApproval": "Waiting for admin approval"
         },
         "title": "Microsoft",
         "toasts": {
@@ -1777,7 +1791,7 @@
           "clientIdRequired": "Microsoft OAuth Client ID ist erforderlich",
           "clientSecretRequired": "Microsoft OAuth Client Secret ist erforderlich",
           "displayNameRequired": "Anzeigename des Microsoft-Profils ist erforderlich",
-          "tenantIdRequired": "Microsoft Tenant ID ist erforderlich"
+          "tenantIdRequired": "Microsoft tenant ID is required"
         },
         "disconnectDialog": {
           "cancel": "Anbieter verbunden lassen",

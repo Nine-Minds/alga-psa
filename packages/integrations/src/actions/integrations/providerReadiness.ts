@@ -1,6 +1,7 @@
 'use server';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { isSelfHostLicensing } from '@alga-psa/licensing';
 import {
   getMicrosoftPlatformCredentialAvailability,
   resolveMicrosoftConsumerProfileConfig,
@@ -19,16 +20,15 @@ export interface ProviderReadinessResult {
   active?: boolean;
 }
 
-export type MicrosoftCredentialCapabilitySource = 'tenant' | 'platform' | 'none';
+export type MicrosoftEmailSetupState = 'not_configured' | 'pending_admin_consent' | 'ready';
+export type MicrosoftEmailSetupSource = 'platform' | 'tenant_app' | null;
 
-export interface MicrosoftCredentialCapability {
-  ready: boolean;
-  source: MicrosoftCredentialCapabilitySource;
-  platformReady: boolean;
-  tenantProfileSelected: boolean;
-  clientIdConfigured: boolean;
-  clientSecretConfigured: boolean;
-  tenantIdConfigured: boolean;
+export interface MicrosoftEmailSetupReadiness {
+  state: MicrosoftEmailSetupState;
+  source: MicrosoftEmailSetupSource;
+  hosted: boolean;
+  platformOffered: boolean;
+  automatedCreationAvailable: boolean;
   profileId?: string | null;
   message?: string;
 }
@@ -57,32 +57,42 @@ export async function getMicrosoftProviderReadiness(tenant: string): Promise<Pro
   };
 }
 
-export async function getMicrosoftEmailCredentialCapability(
+export async function getMicrosoftEmailSetupReadiness(
   tenant: string
-): Promise<MicrosoftCredentialCapability> {
-  const [resolution, platform] = await Promise.all([
-    resolveMicrosoftConsumerProfileConfig(tenant, 'email'),
+): Promise<MicrosoftEmailSetupReadiness> {
+  const hosted = !(await isSelfHostLicensing());
+  const [resolution, platform, platformResolution] = await Promise.all([
+    resolveMicrosoftConsumerProfileConfig(
+      tenant,
+      'email',
+      { credentialPreference: 'tenant' }
+    ),
     getMicrosoftPlatformCredentialAvailability(),
+    hosted
+      ? resolveMicrosoftConsumerProfileConfig(tenant, 'email', { credentialPreference: 'platform' })
+      : Promise.resolve(null),
   ]);
 
-  const source: MicrosoftCredentialCapabilitySource = resolution.credentialSource === 'binding'
-    || (resolution.profileId && resolution.status !== 'ready')
-    ? 'tenant'
-    : resolution.credentialSource === 'app'
-      ? 'platform'
-      : 'none';
-  const ready = resolution.status === 'ready';
+  const source: MicrosoftEmailSetupSource = resolution.credentialSource === 'binding'
+    || Boolean(resolution.profileId)
+    ? platformResolution?.status === 'ready'
+      && Boolean(resolution.clientId)
+      && resolution.clientId === platformResolution.clientId
+        ? 'platform'
+        : 'tenant_app'
+    : null;
+  const state: MicrosoftEmailSetupState = resolution.status === 'pending_admin_consent'
+    ? 'pending_admin_consent'
+    : resolution.status === 'ready' && source
+      ? 'ready'
+      : 'not_configured';
 
   return {
-    ready,
+    state,
     source,
-    platformReady: platform.ready,
-    tenantProfileSelected: source === 'tenant',
-    clientIdConfigured: ready ? Boolean(resolution.clientId) : source === 'none' && platform.clientIdConfigured,
-    clientSecretConfigured: ready ? Boolean(resolution.clientSecret) : source === 'none' && platform.clientSecretConfigured,
-    tenantIdConfigured: ready
-      ? Boolean(resolution.microsoftTenantId)
-      : source === 'none' && platform.tenantIdConfigured,
+    hosted,
+    platformOffered: hosted && platform.ready,
+    automatedCreationAvailable: false,
     profileId: resolution.profileId,
     message: resolution.message,
   };

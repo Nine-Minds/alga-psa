@@ -27,10 +27,14 @@ import type { Microsoft365DiagnosticsReport } from '@alga-psa/shared/interfaces/
 import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
 import {
   resolveMicrosoftConsumerProfileConfig,
-  type MicrosoftCredentialPreference,
 } from '../../lib/microsoftConsumerProfileResolution';
+import { getMicrosoftEmailSetupMetadataInternal } from '../integrations/microsoftActions';
 
 type EmailProviderActionError = ActionMessageError;
+type MicrosoftEmailProviderConfigInput = Omit<
+  MicrosoftEmailProviderConfig,
+  'email_provider_id' | 'tenant' | 'created_at' | 'updated_at' | 'redirect_uri'
+>;
 type EmailProviderSetupActionResult = EmailProviderSetupResult | EmailProviderActionError;
 type EmailProviderOperationErrorCode =
   | 'not_found'
@@ -316,14 +320,13 @@ async function persistMicrosoftConfig(
   trx: any,
   tenant: string,
   providerId: string,
-  config?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>,
-  credentialPreference?: MicrosoftCredentialPreference
+  config?: MicrosoftEmailProviderConfigInput
 ): Promise<MicrosoftEmailProviderConfig | undefined> {
   if (!config) return undefined;
   if (!tenant) throwExpectedEmailProviderError('Tenant context is required to save Microsoft email configuration');
 
   const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(tenant, 'email', {
-    credentialPreference,
+    credentialPreference: 'tenant',
   });
   if (microsoftProfile.status !== 'ready') {
     throwExpectedEmailProviderError(
@@ -334,16 +337,12 @@ async function persistMicrosoftConfig(
   const effectiveClientId = microsoftProfile.clientId || '';
   const effectiveClientSecret = microsoftProfile.clientSecret || '';
   const effectiveTenantId = microsoftProfile.microsoftTenantId || 'common';
-  const effectiveRedirectUri = config.redirect_uri;
+  const effectiveRedirectUri = (await getMicrosoftEmailSetupMetadataInternal()).mailboxRedirectUri;
   
   // Ensure required fields are not undefined
   if (!effectiveTenantId) {
     throwExpectedEmailProviderError('Tenant ID is required for Microsoft configuration');
   }
-  if (!effectiveRedirectUri) {
-    throwExpectedEmailProviderError('Redirect URI is required for Microsoft configuration');
-  }
-  
   const now = new Date();
   const existingConfig = await tenantDb(trx, tenant)
     .table('microsoft_email_provider_config')
@@ -807,8 +806,7 @@ export const upsertEmailProvider = withAuth(async (
   mailbox: string;
   isActive: boolean;
   inboundTicketDefaultsId?: string;
-  microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
-  microsoftCredentialSource?: MicrosoftCredentialPreference;
+  microsoftConfig?: MicrosoftEmailProviderConfigInput;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
 },
@@ -830,8 +828,7 @@ export const upsertEmailProvider = withAuth(async (
           trx,
           tenant,
           base.id,
-          data.microsoftConfig,
-          data.microsoftCredentialSource
+          data.microsoftConfig
         );
       } else if (data.providerType === 'google') {
         base.googleConfig = await persistGoogleConfig(trx, tenant, base.id, data.googleConfig);
@@ -928,8 +925,7 @@ export const createEmailProvider = withAuth(async (
   mailbox: string;
   isActive: boolean;
   inboundTicketDefaultsId?: string;
-  microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
-  microsoftCredentialSource?: MicrosoftCredentialPreference;
+  microsoftConfig?: MicrosoftEmailProviderConfigInput;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
 },
@@ -951,8 +947,7 @@ export const updateEmailProvider = withAuth(async (
     mailbox: string;
     isActive: boolean;
     inboundTicketDefaultsId?: string;
-    microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
-    microsoftCredentialSource?: MicrosoftCredentialPreference;
+    microsoftConfig?: MicrosoftEmailProviderConfigInput;
     googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
     imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   },
@@ -974,8 +969,7 @@ export const updateEmailProvider = withAuth(async (
           trx,
           tenant,
           base.id,
-          data.microsoftConfig,
-          data.microsoftCredentialSource
+          data.microsoftConfig
         );
       } else if (data.providerType === 'google') {
         base.googleConfig = await persistGoogleConfig(trx, tenant, base.id, data.googleConfig);

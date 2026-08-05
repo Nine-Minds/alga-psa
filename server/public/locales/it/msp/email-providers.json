@@ -42,29 +42,8 @@
       "title": "Istruzioni per l'installazione",
       "microsoft": {
         "title": "Installazione di Microsoft 365",
-        "checkingCredentials": "Verifica della disponibilità delle credenziali Microsoft…",
-        "platform": {
-          "title": "L'accesso Microsoft è pronto",
-          "description": "Alga PSA fornisce l'applicazione Microsoft. Aggiungi un provider, inserisci i dati della casella di posta e connettiti a Microsoft: non occorre registrare un'app Entra."
-        },
-        "byo": {
-          "summary": "Avanzate: usa la tua app Microsoft",
-          "warning": "Normalmente questa opzione non è necessaria su Alga PSA ospitato e va usata solo se la tua organizzazione richiede una propria applicazione Entra.",
-          "description": "Apri Impostazioni → Integrazioni → Provider, espandi le opzioni avanzate di Microsoft e aggiungi l'app di proprietà del tenant prima di tornare qui."
-        },
-        "manualRequired": "Le credenziali Microsoft della piattaforma non sono disponibili in questa distribuzione. Configura la tua app Microsoft per connettere una casella di posta.",
-        "tenant": {
-          "title": "È selezionata l'app Microsoft della tua organizzazione",
-          "description": "Le nuove caselle di posta Microsoft useranno l'app di proprietà del tenant selezionata nelle impostazioni dei provider. La scelta viene mantenuta anche quando sono disponibili le credenziali della piattaforma.",
-          "incompleteTitle": "La tua app Microsoft richiede attenzione",
-          "incompleteDescription": "Completa la configurazione dell'app Microsoft selezionata nelle impostazioni dei provider prima di connettere una casella di posta."
-        },
-        "steps": {
-          "registerApp": "Registra un'applicazione in Azure AD",
-          "permissions": "Configura le autorizzazioni API per Mail.Read",
-          "redirectUrl": "Imposta l'URL di reindirizzamento nella registrazione dell'app",
-          "credentials": "Utilizza l'ID cliente e il segreto cliente nel modulo sopra"
-        }
+        "providersPointer": "Microsoft app setup is managed in Providers.",
+        "openProviders": "Open Providers"
       },
       "gmail": {
         "title": "Configurazione di Gmail",
@@ -271,22 +250,11 @@
     },
     "microsoft": {
       "hostedOauth": {
-        "sectionTitle": "Connetti Microsoft 365",
-        "platformUnavailableDescription": "Le credenziali Microsoft della piattaforma non sono disponibili in questa distribuzione. Per continuare, usa la tua app Microsoft.",
-        "tenantSectionDescription": "Autorizza questa casella di posta con l'app Microsoft selezionata nelle impostazioni dei provider.",
-        "platformSectionDescription": "Alga PSA fornisce l'applicazione Microsoft. Inserisci i dati della casella di posta, quindi accedi con Microsoft.",
-        "platformManagedTitle": "App Microsoft gestita dalla piattaforma",
-        "platformManagedDescription": "Non devi fornire alcuna registrazione di app Entra, ID client o segreto client.",
-        "byoToggle": "Usa la tua app Microsoft (avanzate)",
-        "byoToggleDescription": "Per le organizzazioni che richiedono espressamente una propria registrazione di app Entra.",
-        "byoWarning": "Normalmente questa opzione non è necessaria su Alga PSA ospitato. Usala solo se la tua organizzazione richiede un'applicazione Entra di proprietà del tenant.",
-        "tenantNotConfigured": "La tua app Microsoft non è ancora pronta.",
-        "platformNotConfigured": "Le credenziali Microsoft della piattaforma non sono disponibili."
+        "sectionTitle": "Connetti Microsoft 365"
       },
       "validation": {
         "providerNameRequired": "Il nome della configurazione è obbligatorio",
         "emailRequired": "È richiesto un indirizzo email valido",
-        "redirectRequired": "È richiesto un URI di reindirizzamento valido",
         "authorizeRequiresValid": "Si prega di compilare tutti i campi obbligatori prima di autorizzare",
         "oauthInitiateFailed": "Impossibile avviare OAuth",
         "popupBlocked": "Impossibile aprire il popup OAuth. Si prega di consentire i popup per questo sito.",
@@ -296,8 +264,7 @@
       },
       "requiredFields": {
         "providerName": "Nome configurazione",
-        "emailAddress": "Indirizzo e-mail",
-        "redirectUri": "URI di reindirizzamento"
+        "emailAddress": "Indirizzo e-mail"
       },
       "basic": {
         "title": "Configurazione di base",
@@ -310,20 +277,11 @@
         "providerNameHelp": "Nome interno usato per identificare questa configurazione. Non viene mostrato nelle email in uscita.",
         "senderDisplayNameLabel": "Nome visualizzato del mittente",
         "senderDisplayNamePlaceholder": "es. Acme Support",
-        "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della bacheca del ticket."
+        "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails. It applies when this mailbox matches the configured outbound ticketing address. Leave blank to use the ticket board name."
       },
       "oauth": {
-        "sectionTitle": "Configurazione Microsoft OAuth",
-        "sectionDescription": "Le credenziali dell'app Microsoft vengono configurate nelle impostazioni dei provider e riutilizzate qui.",
-        "setupLabel": "Microsoft Entra",
-        "notConfigured": "Le impostazioni del provider Microsoft non sono configurate.",
-        "setupHelp": "Configura prima i provider in Impostazioni → Integrazioni → Provider, quindi torna qui per autorizzare questa casella di posta.",
-        "profileReady": "Il profilo dell’app Microsoft è pronto.",
-        "profileReadyHelp": "Se il consenso dell’amministratore del tenant è ancora in sospeso, completalo nelle impostazioni Provider. Quindi usa Autorizza accesso per questa casella di posta.",
-        "redirectUriLabel": "URI di reindirizzamento *",
-        "redirectUriPlaceholder": "https://yourapp.com/api/auth/microsoft/callback",
-        "authorizationTitle": "Autorizzazione OAuth",
-        "authorizationDescription": "Completa il flusso OAuth per concedere l'accesso alla casella di posta"
+        "signingIn": "Signing in…",
+        "signIn": "Sign in with Microsoft"
       },
       "advanced": {
         "title": "Impostazioni avanzate",
@@ -332,6 +290,14 @@
         "folderFiltersPlaceholder": "Posta in arrivo, Supporto, Cartella personalizzata",
         "folderFiltersHelp": "Elenco separato da virgole di cartelle da monitorare (impostazione predefinita: Posta in arrivo)",
         "maxEmailsPerSync": "Numero massimo di email per sincronizzazione"
+      },
+      "readiness": {
+        "checking": "Checking Microsoft setup…",
+        "ready": "Microsoft is set up. Sign in as this mailbox to finish.",
+        "pending": "Waiting for your Microsoft 365 administrator. Setup was started in Providers but hasn't been approved yet.",
+        "openProviders": "Open Providers",
+        "notConfigured": "Microsoft isn't set up yet. Set it up once in Providers, then come back.",
+        "setUpInProviders": "Set up in Providers"
       }
     },
     "gmail": {

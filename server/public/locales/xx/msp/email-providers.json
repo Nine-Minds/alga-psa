@@ -42,29 +42,8 @@
       "title": "11111",
       "microsoft": {
         "title": "11111",
-        "checkingCredentials": "11111",
-        "platform": {
-          "title": "11111",
-          "description": "11111"
-        },
-        "byo": {
-          "summary": "11111",
-          "warning": "11111",
-          "description": "11111"
-        },
-        "manualRequired": "11111",
-        "tenant": {
-          "title": "11111",
-          "description": "11111",
-          "incompleteTitle": "11111",
-          "incompleteDescription": "11111"
-        },
-        "steps": {
-          "registerApp": "11111",
-          "permissions": "11111",
-          "redirectUrl": "11111",
-          "credentials": "11111"
-        }
+        "providersPointer": "11111",
+        "openProviders": "11111"
       },
       "gmail": {
         "title": "11111",
@@ -271,22 +250,11 @@
     },
     "microsoft": {
       "hostedOauth": {
-        "sectionTitle": "11111",
-        "platformUnavailableDescription": "11111",
-        "tenantSectionDescription": "11111",
-        "platformSectionDescription": "11111",
-        "platformManagedTitle": "11111",
-        "platformManagedDescription": "11111",
-        "byoToggle": "11111",
-        "byoToggleDescription": "11111",
-        "byoWarning": "11111",
-        "tenantNotConfigured": "11111",
-        "platformNotConfigured": "11111"
+        "sectionTitle": "11111"
       },
       "validation": {
         "providerNameRequired": "11111",
         "emailRequired": "11111",
-        "redirectRequired": "11111",
         "authorizeRequiresValid": "11111",
         "oauthInitiateFailed": "11111",
         "popupBlocked": "11111",
@@ -296,8 +264,7 @@
       },
       "requiredFields": {
         "providerName": "11111",
-        "emailAddress": "11111",
-        "redirectUri": "11111"
+        "emailAddress": "11111"
       },
       "basic": {
         "title": "11111",
@@ -313,17 +280,16 @@
         "senderDisplayNameHelp": "11111"
       },
       "oauth": {
-        "sectionTitle": "11111",
-        "sectionDescription": "11111",
-        "setupLabel": "11111",
+        "signingIn": "11111",
+        "signIn": "11111"
+      },
+      "readiness": {
+        "checking": "11111",
+        "ready": "11111",
+        "pending": "11111",
+        "openProviders": "11111",
         "notConfigured": "11111",
-        "setupHelp": "11111",
-        "profileReady": "11111",
-        "profileReadyHelp": "11111",
-        "redirectUriLabel": "11111",
-        "redirectUriPlaceholder": "11111",
-        "authorizationTitle": "11111",
-        "authorizationDescription": "11111"
+        "setUpInProviders": "11111"
       },
       "advanced": {
         "title": "11111",

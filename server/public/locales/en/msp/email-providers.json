@@ -42,29 +42,8 @@
       "title": "Setup Instructions",
       "microsoft": {
         "title": "Microsoft 365 Setup",
-        "checkingCredentials": "Checking Microsoft credential availability…",
-        "platform": {
-          "title": "Microsoft sign-in is ready",
-          "description": "Alga PSA supplies the Microsoft application. Add a provider, enter the mailbox details, and connect with Microsoft—no Entra app registration is needed."
-        },
-        "byo": {
-          "summary": "Advanced: use your own Microsoft app",
-          "warning": "This is normally unnecessary on hosted Alga PSA and should be used only when your organization requires its own Entra application.",
-          "description": "Open Settings → Integrations → Providers, expand the Microsoft advanced options, and add your tenant-owned app before returning here."
-        },
-        "manualRequired": "Platform Microsoft credentials are unavailable in this deployment. Configure your own Microsoft app to connect a mailbox.",
-        "tenant": {
-          "title": "Your organization’s Microsoft app is selected",
-          "description": "New Microsoft mailboxes will use the tenant-owned app selected in Providers settings. This choice is preserved even when platform credentials are available.",
-          "incompleteTitle": "Your Microsoft app needs attention",
-          "incompleteDescription": "Finish configuring the Microsoft app selected in Providers settings before connecting a mailbox."
-        },
-        "steps": {
-          "registerApp": "Register an application in Azure AD",
-          "permissions": "Configure API permissions for Mail.Read",
-          "redirectUrl": "Set up the redirect URL in your app registration",
-          "credentials": "Use the Client ID and Client Secret in the form above"
-        }
+        "providersPointer": "Microsoft app setup is managed in Providers.",
+        "openProviders": "Open Providers"
       },
       "gmail": {
         "title": "Gmail Setup",
@@ -271,22 +250,11 @@
     },
     "microsoft": {
       "hostedOauth": {
-        "sectionTitle": "Connect Microsoft 365",
-        "platformUnavailableDescription": "Platform Microsoft credentials are unavailable in this deployment. Use your own Microsoft app to continue.",
-        "tenantSectionDescription": "Authorize this mailbox with the Microsoft app selected in Providers settings.",
-        "platformSectionDescription": "Alga PSA supplies the Microsoft application. Enter the mailbox details, then sign in with Microsoft.",
-        "platformManagedTitle": "Platform-managed Microsoft app",
-        "platformManagedDescription": "No Entra app registration, client ID, or client secret is required from you.",
-        "byoToggle": "Use your own Microsoft app (advanced)",
-        "byoToggleDescription": "For organizations that deliberately require their own Entra app registration.",
-        "byoWarning": "This is normally unnecessary on hosted Alga PSA. Use it only when your organization requires a tenant-owned Entra application.",
-        "tenantNotConfigured": "Your Microsoft app is not ready yet.",
-        "platformNotConfigured": "Platform Microsoft credentials are unavailable."
+        "sectionTitle": "Connect Microsoft 365"
       },
       "validation": {
         "providerNameRequired": "Configuration name is required",
         "emailRequired": "Valid email address is required",
-        "redirectRequired": "Valid redirect URI is required",
         "authorizeRequiresValid": "Please fill in all required fields before authorizing",
         "oauthInitiateFailed": "Failed to initiate OAuth",
         "popupBlocked": "Failed to open OAuth popup. Please allow popups for this site.",
@@ -296,8 +264,7 @@
       },
       "requiredFields": {
         "providerName": "Configuration Name",
-        "emailAddress": "Email Address",
-        "redirectUri": "Redirect URI"
+        "emailAddress": "Email Address"
       },
       "basic": {
         "title": "Basic Configuration",
@@ -310,20 +277,19 @@
         "providerNameHelp": "Internal name used to identify this configuration. Not shown in outbound emails.",
         "senderDisplayNameLabel": "Sender Display Name",
         "senderDisplayNamePlaceholder": "e.g., Acme Support",
-        "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails (replies, closures). Applied only when this mailbox matches the tenant's outbound ticketing-from address. Leave blank to fall back to the ticket's board name."
+        "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails. It applies when this mailbox matches the configured outbound ticketing address. Leave blank to use the ticket board name."
       },
       "oauth": {
-        "sectionTitle": "Microsoft OAuth Configuration",
-        "sectionDescription": "Microsoft app credentials are configured in Providers settings and reused here.",
-        "setupLabel": "Microsoft Entra",
-        "notConfigured": "Microsoft provider settings are not configured.",
-        "setupHelp": "Configure Providers first in Settings → Integrations → Providers, then return here to authorize this mailbox.",
-        "profileReady": "Microsoft app profile is ready.",
-        "profileReadyHelp": "If tenant administrator consent is still pending, complete it in Providers settings. Then use Authorize Access below for this mailbox.",
-        "redirectUriLabel": "Redirect URI *",
-        "redirectUriPlaceholder": "https://yourapp.com/api/auth/microsoft/callback",
-        "authorizationTitle": "OAuth Authorization",
-        "authorizationDescription": "Complete OAuth flow to grant access to the mailbox"
+        "signingIn": "Signing in…",
+        "signIn": "Sign in with Microsoft"
+      },
+      "readiness": {
+        "checking": "Checking Microsoft setup…",
+        "ready": "Microsoft is set up. Sign in as this mailbox to finish.",
+        "pending": "Waiting for your Microsoft 365 administrator. Setup was started in Providers but hasn't been approved yet.",
+        "openProviders": "Open Providers",
+        "notConfigured": "Microsoft isn't set up yet. Set it up once in Providers, then come back.",
+        "setUpInProviders": "Set up in Providers"
       },
       "advanced": {
         "title": "Advanced Settings",
