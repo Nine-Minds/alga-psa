@@ -448,10 +448,6 @@ export class ItilStandardsService {
         .first();
       if (Number(remainingTargets?.count || 0) > 0) continue;
 
-      await db.table('boards')
-        .where({ sla_policy_id: policyId })
-        .update({ sla_policy_id: null });
-
       const clientRefs = await db.table('clients')
         .where({ sla_policy_id: policyId })
         .count('* as count')
@@ -460,6 +456,16 @@ export class ItilStandardsService {
         console.log(`[ItilStandardsService.cleanup] Kept empty ITIL Standard SLA policy ${policyId}: still assigned to client(s)`);
         continue;
       }
+
+      await db.table('boards')
+        .where({ sla_policy_id: policyId })
+        .update({ sla_policy_id: null });
+
+      // Tickets keep the policy stamped on them at SLA start even after moving
+      // off the board or changing priority (tickets_sla_policy_fkey).
+      await db.table('tickets')
+        .where({ sla_policy_id: policyId })
+        .update({ sla_policy_id: null });
 
       await db.table('sla_notification_thresholds').where({ sla_policy_id: policyId }).del();
       await db.table('sla_policies').where({ sla_policy_id: policyId }).del();

@@ -284,6 +284,67 @@ describe('ITIL board deletion cleanup', () => {
     expect(remainingCategories.every((category) => category.board_id === null)).toBe(true);
   }, HOOK_TIMEOUT);
 
+  it('releases tickets still stamped with the retiring ITIL SLA policy', async () => {
+    const defaultBoardId = uuidv4();
+    const itilBoardId = uuidv4();
+    const { tenantId, userId } = await createTenantFixture([
+      { boardId: defaultBoardId, name: 'General', isDefault: true },
+      { boardId: itilBoardId, name: 'ITIL Service Desk', categoryType: 'custom', priorityType: 'itil' },
+    ]);
+
+    const itilPriorityIds = await createItilPriorities(tenantId, userId, [1, 2]);
+    const policyId = await createItilSlaPolicy(tenantId, itilPriorityIds);
+
+    // The full off-ramp: tickets were moved off the ITIL board and given custom
+    // priorities, but keep the sla_policy_id stamped on them at SLA start.
+    const customPriorityId = uuidv4();
+    await tenantTable(tenantId, 'priorities').insert({
+      tenant: tenantId,
+      priority_id: customPriorityId,
+      priority_name: 'Normal',
+      color: '#2563EB',
+      order_number: 10,
+      item_type: 'ticket',
+      is_from_itil_standard: false,
+      created_by: userId,
+    });
+
+    const clientId = uuidv4();
+    await tenantTable(tenantId, 'clients').insert({
+      tenant: tenantId,
+      client_id: clientId,
+      client_name: 'Acme',
+    });
+    const ticketId = uuidv4();
+    await tenantTable(tenantId, 'tickets').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      ticket_number: `T-${tenantId.slice(0, 8)}`,
+      title: 'Ticket carried off the ITIL board',
+      client_id: clientId,
+      board_id: defaultBoardId,
+      priority_id: customPriorityId,
+      sla_policy_id: policyId,
+      entered_by: userId,
+      entered_at: db.fn.now(),
+    });
+
+    const result = await deleteBoard(itilBoardId, true, true);
+
+    expect(result.success).toBe(true);
+
+    const remainingPolicies = await tenantTable(tenantId, 'sla_policies').select('*');
+    expect(remainingPolicies).toHaveLength(0);
+
+    const remainingPriorities = await tenantTable(tenantId, 'priorities').pluck('priority_id');
+    expect(remainingPriorities).toEqual([customPriorityId]);
+
+    const ticket = await tenantTable(tenantId, 'tickets')
+      .where({ ticket_id: ticketId })
+      .first('sla_policy_id');
+    expect(ticket.sla_policy_id).toBeNull();
+  }, HOOK_TIMEOUT);
+
   it('keeps an ITIL priority that tickets still use, along with its SLA target', async () => {
     const defaultBoardId = uuidv4();
     const itilBoardId = uuidv4();
