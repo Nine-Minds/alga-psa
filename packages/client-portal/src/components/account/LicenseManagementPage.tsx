@@ -15,6 +15,7 @@ export default function LicenseManagementPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const { t } = useTranslation('client-portal');
+  const { t: tCommon } = useTranslation('common');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -34,7 +35,7 @@ export default function LicenseManagementPage() {
     return (
       <div className="container max-w-2xl mx-auto py-8 px-4">
         <Card className="p-8">
-          <div className="text-center">Loading...</div>
+          <div className="text-center">{tCommon('common.loading', 'Loading...')}</div>
         </Card>
       </div>
     );

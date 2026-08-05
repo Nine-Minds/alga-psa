@@ -232,7 +232,7 @@
       "save": "Échec de l'enregistrement du devis",
       "saveFailed": "Échec de l'enregistrement du devis",
       "workflowAction": "Échec de {{action}}",
-      "removeItem": "Failed to remove quote item"
+      "removeItem": "Impossible de supprimer l'élément du devis"
     },
     "loading": "Chargement du formulaire de devis...",
     "notices": {
@@ -559,7 +559,7 @@
     },
     "removeAriaLabel": "Supprimer {{email}}",
     "errors": {
-      "contactsLoadFailed": "Could not load client contacts."
+      "contactsLoadFailed": "Impossible de charger les contacts du client."
     }
   },
   "quoteConversion": {

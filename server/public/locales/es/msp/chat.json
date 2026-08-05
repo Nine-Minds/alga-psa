@@ -2,7 +2,7 @@
   "sidebar": {
     "title": "Chat",
     "subtitleHistory": "Sesiones de IA recientes del usuario actual",
-    "subtitleDefault": "Chatea con IA y administra las sesiones guardadas",
+    "subtitleDefault": "Chatee con IA y administre las sesiones guardadas",
     "showHistory": "Mostrar historial de chat",
     "hideHistory": "Ocultar historial de chat",
     "showHistoryTooltip": "Mostrar historial",
@@ -10,7 +10,7 @@
     "startNewChat": "Iniciar nuevo chat",
     "hideSidebar": "Ocultar barra lateral del chat",
     "hideSidebarTooltip": "Ocultar chat",
-    "introMessage": "Chatea con IA: ¡pregunta lo que sea!",
+    "introMessage": "Chatee con IA: ¡pregunta lo que sea!",
     "loadingChatConversation": "Cargando conversación del chat",
     "history": {
       "searchResults": "Resultados de búsqueda",
@@ -18,7 +18,7 @@
       "loading": "Cargando…",
       "searchAriaLabel": "Buscar en el historial de chats",
       "searchPlaceholder": "Buscar chats guardados",
-      "typeAtLeastNChars": "Escribe al menos {{count}} caracteres para buscar chats guardados.",
+      "typeAtLeastNChars": "Escriba al menos {{count}} caracteres para buscar chats guardados.",
       "emptyInitial": "Los chats guardados aparecerán aquí después de que envíes un mensaje.",
       "emptySearch": "No se encontraron chats coincidentes.",
       "untitled": "Chat sin título",
@@ -39,13 +39,13 @@
     },
     "newChatConfirm": {
       "title": "¿Iniciar un nuevo chat?",
-      "message": "Tu chat actual se eliminará de la barra lateral. Los mensajes guardados permanecen en el historial de chats.",
+      "message": "Su chat actual se eliminará de la barra lateral. Los mensajes guardados permanecen en el historial de chats.",
       "confirmLabel": "Iniciar nuevo chat",
       "cancelLabel": "Mantener chat actual"
     },
     "deleteConfirm": {
       "title": "¿Eliminar este chat?",
-      "messageWithTitle": "¿Eliminar \"{{title}}\" de tu historial de IA? Esto no se puede deshacer.",
+      "messageWithTitle": "¿Eliminar \"{{title}}\" de su historial de IA? Esto no se puede deshacer.",
       "fallbackTitle": "este chat",
       "confirmLabel": "Eliminar chat",
       "cancelLabel": "Cancelar"
@@ -53,13 +53,13 @@
     "rename": {
       "dialogTitle": "Cambiar nombre del chat",
       "inputLabel": "Título del chat",
-      "inputPlaceholder": "Ingresa el título del chat",
+      "inputPlaceholder": "Ingrese el título del chat",
       "cancel": "Cancelar",
       "save": "Guardar"
     }
   },
   "chat": {
-    "greeting": "¡Soy Alga! Tu asistente de IA favorito. Hazme una pregunta.",
+    "greeting": "¡Soy Alga! Su asistente de IA favorito. Hágame una pregunta.",
     "avatarAlt": "Alga",
     "defaultFunctionName": "Llamada a función",
     "resultTruncated": "El resultado era demasiado grande y se truncó.",
@@ -68,7 +68,7 @@
     "inputAriaLabel": "Mensaje a Alga",
     "thinking": "Pensando...",
     "hintMultiline": "Modo multilínea: Enter agrega una nueva línea. Ctrl+Enter o ⌘+Enter envía.",
-    "hintSingleLine": "Presiona Enter para enviar. Shift+Enter cambia al modo multilínea.",
+    "hintSingleLine": "Presione Enter para enviar. Shift+Enter cambia al modo multilínea.",
     "editingNotice": "Editando el mensaje seleccionado. Al enviar se reemplazará ese mensaje y se regenerará el hilo desde ahí.",
     "cancelEdit": "Cancelar edición",
     "stop": "DETENER",
@@ -77,11 +77,11 @@
     "viewFullValue": "Ver valor completo",
     "parameters": "Parámetros",
     "plan": "Plan",
-    "playbooks": "Playbooks",
+    "playbooks": "Manuales",
     "validation": {
       "dialogTitle": "Mensaje requerido",
       "ok": "Aceptar",
-      "enterMessage": "Ingresa un mensaje antes de enviar."
+      "enterMessage": "Ingrese un mensaje antes de enviar."
     },
     "errors": {
       "userNotIdentified": "No se puede enviar el mensaje: usuario no identificado.",
@@ -104,7 +104,7 @@
       "executingRequest": "Ejecutando solicitud…",
       "continuingWithoutCall": "Continuando sin llamar a la función…",
       "autoApprovalEnabled": "Aprobación automática habilitada para solicitudes {{method}}.",
-      "reviewAndApprove": "Revisa y aprueba cuando estés listo.",
+      "reviewAndApprove": "Revise y apruebe cuando esté listo.",
       "completedNoDetails": "La acción se completó sin detalles adicionales.",
       "emDash": "—"
     },
@@ -113,7 +113,7 @@
       "endpoint": "cadena de búsqueda/herramientas",
       "title": "¿Continuar recopilando resultados?",
       "description": "Alga alcanzó el límite de pasos de herramientas mientras recopilaba información.",
-      "status": "Las búsquedas y llamadas de solo lectura anteriores se completaron. Continúa desde el mismo punto para recopilar más información o terminar la respuesta.",
+      "status": "Las búsquedas y llamadas de solo lectura anteriores se completaron. Continúe desde el mismo punto para recopilar más información o terminar la respuesta.",
       "continue": "Continuar",
       "continueAriaLabel": "Continuar la respuesta de IA desde el límite de herramientas",
       "defaultPrompt": "Continuar"
@@ -126,16 +126,16 @@
     "openInSidebar": "Abrir en la barra lateral",
     "close": "Cerrar",
     "ask": "Preguntar",
-    "inputPlaceholder": "Haz una pregunta rápida…",
+    "inputPlaceholder": "Haga una pregunta rápida…",
     "inputAriaLabel": "Entrada de Consulta rápida",
-    "followUpNotice": "Haz preguntas de seguimiento abajo. Este chat se guardará como un chat de la barra lateral.",
+    "followUpNotice": "Haga preguntas de seguimiento abajo. Este chat se guardará como un chat de la barra lateral.",
     "startingSession": "Iniciando sesión…",
     "session": "Sesión: {{chatId}}",
     "hint": "Esc para cerrar • Enter para preguntar • Shift+Enter para nueva línea • {{modifier}}+↑ para reabrir"
   },
   "message": {
     "authorAlga": "Alga",
-    "authorYou": "Tú",
+    "authorYou": "Usted",
     "authorSystem": "Sistema",
     "avatarAlt": "Avatar de Alga",
     "draftingResponse": "Redactando respuesta…",
@@ -151,7 +151,9 @@
       "declined": "Función rechazada",
       "pending": "Función en cola",
       "error": "Error de función"
-    }
+    },
+    "executedCalls": "Llamadas ejecutadas",
+    "bundleMore": "+{{remaining}} más"
   },
   "mention": {
     "noResultsFound": "No se encontraron resultados"

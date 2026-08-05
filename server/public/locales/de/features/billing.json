@@ -122,7 +122,7 @@
     "usage": "Nutzung",
     "overage": "Überschreitung",
     "noContractLineTitle": "Keine Stundenpläne verfügbar",
-    "noContractLineDescription": "Für dein Konto sind keine aktiven Stundenpläne vorhanden."
+    "noContractLineDescription": "Für Ihr Konto sind keine aktiven Stundenkontingent-Vertragslinien vorhanden."
   },
   "messages": {
     "noInvoices": "Keine Rechnungen gefunden",

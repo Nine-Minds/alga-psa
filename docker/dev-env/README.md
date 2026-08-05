@@ -1,10 +1,10 @@
-# Alga PSA Development Environment - Code Server
+# AlgaPSA Development Environment - Code Server
 
-This directory contains the Docker configuration for the Alga PSA code-server development environment.
+This directory contains the Docker configuration for the AlgaPSA code-server development environment.
 
 ## Overview
 
-The code-server image provides a full-featured VS Code environment running in the browser, pre-configured for Alga PSA development.
+The code-server image provides a full-featured VS Code environment running in the browser, pre-configured for AlgaPSA development.
 
 ## Key Features
 

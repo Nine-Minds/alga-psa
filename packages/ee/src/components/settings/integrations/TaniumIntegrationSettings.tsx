@@ -7,7 +7,7 @@ const TaniumIntegrationSettings: React.FC = () => {
     <div className="py-8 text-center text-muted-foreground">
       <p className="text-lg font-medium">Pro Feature</p>
       <p className="mt-2 text-sm">
-        Tanium RMM integration is available in Alga PSA Pro.
+        Tanium RMM integration is available in AlgaPSA Pro.
       </p>
     </div>
   );

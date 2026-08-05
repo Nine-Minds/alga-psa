@@ -1,6 +1,6 @@
 # Local Development Guide: Running Extensions with Docker Runner
 
-This guide explains how to set up and run Alga PSA extensions locally using the Docker-based Runner for iterative development and debugging.
+This guide explains how to set up and run AlgaPSA extensions locally using the Docker-based Runner for iterative development and debugging.
 
 ## Overview
 
@@ -15,7 +15,7 @@ The local development workflow allows you to:
 
 - Docker and Docker Compose
 - Node.js 18+
-- An Alga PSA extension project or template (see [development_guide.md](development_guide.md))
+- An AlgaPSA extension project or template (see [development_guide.md](development_guide.md))
 - The main app server running locally (for the gateway)
 - (Optional) The Alga CLI for streamlined builds: `npm install -g @alga-psa/cli`
 

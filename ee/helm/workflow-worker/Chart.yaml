@@ -1,12 +1,12 @@
 apiVersion: v2
 name: workflow-worker
-description: Helm chart for the Alga PSA Workflow Worker component
+description: Helm chart for the AlgaPSA Workflow Worker component
 type: application
 version: 0.1.0
 appVersion: "1.0"
 home: https://github.com/Nine-Minds/alga-psa
 maintainers:
-  - name: Alga PSA Team
+  - name: AlgaPSA Team
     email: support@algapsa.com
 keywords:
   - workflow

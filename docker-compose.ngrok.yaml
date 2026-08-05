@@ -1,5 +1,5 @@
 # Modular ngrok tunnel for webhook testing
-# Works with any Alga PSA worktree without modification
+# Works with any AlgaPSA worktree without modification
 #
 # Usage: Add this file to your compose chain:
 #   docker compose -f docker-compose.yaml -f docker-compose.base.yaml -f docker-compose.ee.yaml -f docker-compose.ngrok.yaml up -d

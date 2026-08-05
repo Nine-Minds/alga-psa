@@ -1,5 +1,5 @@
 {
-  "name": "Alga PSA - Search then Update Status",
+  "name": "AlgaPSA - Search then Update Status",
   "nodes": [
     {
       "parameters": {
@@ -26,7 +26,7 @@
       "credentials": {
         "algaPsaApi": {
           "id": "1",
-          "name": "Alga PSA API"
+          "name": "AlgaPSA API"
         }
       }
     },
@@ -51,7 +51,7 @@
       "credentials": {
         "algaPsaApi": {
           "id": "1",
-          "name": "Alga PSA API"
+          "name": "AlgaPSA API"
         }
       }
     }

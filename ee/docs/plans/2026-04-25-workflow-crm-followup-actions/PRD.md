@@ -73,7 +73,7 @@ These gaps matter because MSP automations often span support, account management
 - MSP admin building cross-functional workflows.
 - Account manager automating CRM follow-ups and QBR/upsell workflows.
 - Sales/finance operator automating quote pipeline steps.
-- Internal Alga PSA engineer maintaining Workflow Runtime V2 business operations.
+- Internal AlgaPSA engineer maintaining Workflow Runtime V2 business operations.
 
 ### Primary flows
 

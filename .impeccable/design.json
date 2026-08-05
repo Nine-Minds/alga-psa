@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "generatedAt": "2026-05-16T00:00:00.000Z",
-  "title": "Design System: Alga PSA",
+  "title": "Design System: AlgaPSA",
   "extensions": {
     "colorMeta": {
       "operator-purple": {
@@ -171,7 +171,7 @@
   ],
   "narrative": {
     "northStar": "The Modern Workbench",
-    "overview": "Alga PSA should feel like a modern operations workbench: quiet enough for long service days, dense enough for real MSP throughput, and exact enough that users trust every status, total, and action. The visual system uses familiar product UI patterns, crisp semantic tokens, and compact spacing to keep the task in front of the user.\n\nThe system is product-first. It borrows Notion's directness and Twenty.com's clean business-object clarity, then adapts both for ticket queues, billing approvals, project status, automation, assets, and client-facing transparency. The /msp area can be denser and more operator-focused. The /client area should translate the same model into calmer service visibility.\n\nThis system rejects dated enterprise MSP software, especially the heavy clutter associated with ConnectWise. It also rejects generic AI-generated SaaS UI: purposeless cards, decorative gradients, vague empty states, and elements placed without thought are forbidden.",
+    "overview": "AlgaPSA should feel like a modern operations workbench: quiet enough for long service days, dense enough for real MSP throughput, and exact enough that users trust every status, total, and action. The visual system uses familiar product UI patterns, crisp semantic tokens, and compact spacing to keep the task in front of the user.\n\nThe system is product-first. It borrows Notion's directness and Twenty.com's clean business-object clarity, then adapts both for ticket queues, billing approvals, project status, automation, assets, and client-facing transparency. The /msp area can be denser and more operator-focused. The /client area should translate the same model into calmer service visibility.\n\nThis system rejects dated enterprise MSP software, especially the heavy clutter associated with ConnectWise. It also rejects generic AI-generated SaaS UI: purposeless cards, decorative gradients, vague empty states, and elements placed without thought are forbidden.",
     "keyCharacteristics": [
       "Quiet, dense, and exact.",
       "Restrained product color with Operator Purple used for action and selection.",
@@ -225,7 +225,7 @@
       "Do use skeleton states for content loading and reserve spinners for short, isolated actions."
     ],
     "donts": [
-      "Don't make Alga PSA feel like dated enterprise MSP software, especially the heavy clutter associated with ConnectWise.",
+      "Don't make AlgaPSA feel like dated enterprise MSP software, especially the heavy clutter associated with ConnectWise.",
       "Don't make screens feel AI-generated with decorative gradients, purposeless cards, vague empty states, or elements placed without thought.",
       "Don't place elements without a task, state, or orientation purpose. Purpose before presence is mandatory.",
       "Don't use side-stripe accent borders on cards, list items, callouts, or alerts. Use a full border, tint, icon, or clearer copy instead.",

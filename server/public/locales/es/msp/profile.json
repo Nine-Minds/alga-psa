@@ -7,7 +7,7 @@
       "apiKeys": "Claves API",
       "notifications": "Notificaciones",
       "calendar": "Calendario",
-      "keyboardShortcuts": "Keyboard Shortcuts"
+      "keyboardShortcuts": "Atajos de teclado"
     },
     "basicInfo": {
       "title": "Información básica"
@@ -92,7 +92,7 @@
       "policies": "Políticas",
       "apiKeys": "Claves API",
       "webhooks": "Webhooks",
-      "userProvisioning": "User provisioning"
+      "userProvisioning": "Aprovisionamiento de usuarios"
     },
     "loading": {
       "roles": "Cargando configuración de roles...",
@@ -103,13 +103,13 @@
       "webhooks": "Cargando configuración de webhooks...",
       "sso": "Cargando herramientas de gestión de SSO...",
       "sessions": "Cargando sesiones activas...",
-      "userProvisioning": "Loading SCIM provisioning..."
+      "userProvisioning": "Cargando el aprovisionamiento mediante SCIM..."
     },
     "sso": {
       "advanced": {
-        "title": "Advanced: custom identity provider routing",
-        "description": "Route MSP login SSO to your own identity provider using verified login domains. Only needed on custom or on-premise installations.",
-        "inertNotice": "No tenant identity provider credentials are configured, so domain claims currently have no effect. Users sign in with the hosted Google / Microsoft providers. Tenant credentials are provisioned on custom and on-premise installations."
+        "title": "Avanzado: enrutamiento con proveedor de identidad personalizado",
+        "description": "Dirija el inicio de sesión SSO del MSP a su propio proveedor de identidad mediante dominios de inicio de sesión verificados. Solo se necesita en instalaciones personalizadas o locales.",
+        "inertNotice": "No hay credenciales de proveedor de identidad del inquilino configuradas, por lo que las declaraciones de dominio actualmente no tienen efecto. Los usuarios inician sesión con los proveedores alojados de Google o Microsoft. Las credenciales del inquilino se aprovisionan en instalaciones personalizadas y locales."
       }
     },
     "userRoles": {
@@ -150,9 +150,9 @@
           "roleRemoved": "Rol eliminado correctamente"
         },
         "error": {
-          "assignFailed": "No se pudo asignar el rol. Inténtalo de nuevo.",
-          "removeFailed": "No se pudo eliminar el rol. Inténtalo de nuevo.",
-          "permissionDenied": "No tienes permiso para cambiar los roles de usuario."
+          "assignFailed": "No se pudo asignar el rol. Inténtelo de nuevo.",
+          "removeFailed": "No se pudo eliminar el rol. Inténtelo de nuevo.",
+          "permissionDenied": "No tiene permiso para cambiar los roles de usuario."
         }
       }
     },
@@ -219,7 +219,7 @@
       "inbound": {
         "title": "Webhooks entrantes",
         "description": "Acepta solicitudes autenticadas de sistemas externos y despáchalas a acciones directas o flujos de trabajo.",
-        "placeholder": "Configura endpoints de webhooks entrantes que verifican solicitudes, deduplican entregas y despachan a acciones o flujos.",
+        "placeholder": "Configure endpoints de webhooks entrantes que verifican solicitudes, deduplican entregas y despachan a acciones o flujos.",
         "newWebhook": "Nuevo webhook",
         "list": {
           "title": "Webhooks entrantes configurados",
@@ -246,9 +246,9 @@
           "loadFailed": "Error al cargar los webhooks entrantes.",
           "nameRequired": "El nombre es obligatorio.",
           "slugRequired": "El slug es obligatorio.",
-          "actionRequired": "Selecciona una acción antes de guardar.",
-          "workflowRequired": "Selecciona un flujo antes de guardar.",
-          "missingRequiredFields": "Asigna un valor para los campos obligatorios: {{fields}}"
+          "actionRequired": "Seleccione una acción antes de guardar.",
+          "workflowRequired": "Seleccione un flujo antes de guardar.",
+          "missingRequiredFields": "Asigne un valor para los campos obligatorios: {{fields}}"
         },
         "dialog": {
           "createTitle": "Crear webhook entrante",
@@ -260,7 +260,7 @@
         },
         "identity": {
           "title": "Identidad",
-          "help": "Nombra el webhook y elige el slug seguro para URL usado en su endpoint receptor.",
+          "help": "Nombre el webhook y elija el slug seguro para URL usado en su endpoint receptor.",
           "name": "Nombre",
           "namePlaceholder": "Alertas críticas de RMM",
           "slug": "Slug",
@@ -270,7 +270,7 @@
         },
         "auth": {
           "title": "Autenticación",
-          "help": "Elige cómo las solicitudes entrantes demuestran que están autorizadas a usar este endpoint.",
+          "help": "Elija cómo las solicitudes entrantes demuestran que están autorizadas a usar este endpoint.",
           "method": "Método de autenticación",
           "types": {
             "hmacSha256": "HMAC-SHA256",
@@ -281,25 +281,25 @@
           "signatureHeader": "Cabecera de firma",
           "signatureHeaderPlaceholder": "X-Alga-Signature",
           "bearerToken": "Token Bearer",
-          "bearerTokenPlaceholder": "Pega el token o deja vacío para generar uno",
-          "secretUnchangedPlaceholder": "Deja vacío para mantener el secreto actual",
+          "bearerTokenPlaceholder": "Pegue el token o deje vacío para generar uno",
+          "secretUnchangedPlaceholder": "Deje vacío para mantener el secreto actual",
           "ipCidrs": "IPs / CIDRs permitidos",
           "ipCidrsPlaceholder": "203.0.113.10\n198.51.100.0/24",
           "queryParam": "Parámetro de consulta",
           "queryParamPlaceholder": "token",
           "pathToken": "Token de ruta",
-          "pathTokenPlaceholder": "Pega el token o deja vacío para generar uno"
+          "pathTokenPlaceholder": "Pegue el token o deje vacío para generar uno"
         },
         "secret": {
           "label": "Secreto del webhook",
-          "warning": "Este valor se muestra solo ahora. Guárdalo en el sistema de origen antes de cerrar este diálogo.",
+          "warning": "Este valor se muestra solo ahora. Guárdelo en el sistema de origen antes de cerrar este diálogo.",
           "copy": "Copiar",
           "download": "Descargar como .txt",
           "close": "Cerrar"
         },
         "idempotency": {
           "title": "Idempotencia",
-          "help": "Usa una clave estable para detectar entregas duplicadas dentro de la ventana configurada.",
+          "help": "Use una clave estable para detectar entregas duplicadas dentro de la ventana configurada.",
           "source": "Origen de la clave",
           "types": {
             "header": "Cabecera HTTP",
@@ -320,25 +320,25 @@
         },
         "handler": {
           "title": "Manejador",
-          "help": "Elige qué debe hacer Alga después de que la solicitud sea verificada y deduplicada.",
+          "help": "Elija qué debe hacer Alga después de que la solicitud sea verificada y deduplicada.",
           "type": "Tipo de manejador",
           "types": {
             "directAction": "Acción directa",
             "workflow": "Flujo de trabajo"
           },
           "directActionTitle": "Acción directa",
-          "directActionHelp": "Selecciona una acción entrante y mapea los campos del payload a sus campos de destino.",
+          "directActionHelp": "Seleccione una acción entrante y mapee los campos del payload a sus campos de destino.",
           "action": "Acción",
-          "actionPlaceholder": "Selecciona una acción",
-          "actionEmpty": "No hay acciones entrantes registradas. Asegúrate de que el servidor haya inicializado el registro de acciones antes de guardar.",
+          "actionPlaceholder": "Seleccione una acción",
+          "actionEmpty": "No hay acciones entrantes registradas. Asegúrese de que el servidor haya inicializado el registro de acciones antes de guardar.",
           "targetFields": "Campos de destino",
           "required": "Requerido",
           "optional": "Opcional",
-          "mappingPlaceholder": "Escribe una expresión JSONata, p. ej. payload.field",
+          "mappingPlaceholder": "Escriba una expresión JSONata, p. ej. payload.field",
           "workflowTitle": "Flujo de trabajo",
-          "workflowHelp": "Selecciona un flujo para iniciar con el envelope normalizado del webhook.",
+          "workflowHelp": "Seleccione un flujo para iniciar con el envelope normalizado del webhook.",
           "workflow": "Flujo de trabajo",
-          "workflowPlaceholder": "Selecciona un flujo",
+          "workflowPlaceholder": "Seleccione un flujo",
           "workflowEmpty": "No hay flujos visibles en este inquilino. Publica o muestra un flujo para usar el manejador de flujos.",
           "envelopeTitle": "Envelope de entrada del flujo",
           "fieldTypes": {
@@ -354,7 +354,7 @@
         "sample": {
           "title": "Payload de ejemplo",
           "help": "Captura la próxima solicitud verificada para la autocompletado de mapeo.",
-          "createFirst": "Guarda el webhook antes de capturar una solicitud de ejemplo.",
+          "createFirst": "Guarde el webhook antes de capturar una solicitud de ejemplo.",
           "captureButton": "Capturar solicitud de ejemplo",
           "captureActive": "Ventana de captura activa hasta {{expiresAt}}.",
           "sampleAvailable": "Payload de ejemplo capturado.",
@@ -363,8 +363,8 @@
         },
         "sampleTree": {
           "title": "Rutas de ejemplo",
-          "help": "Haz clic en una ruta para insertarla en {{field}}.",
-          "focusHelp": "Enfoca un campo de mapeo, luego haz clic en una ruta para insertarla.",
+          "help": "Haga clic en una ruta para insertarla en {{field}}.",
+          "focusHelp": "Enfoque un campo de mapeo, luego haga clic en una ruta para insertarla.",
           "empty": "Captura un payload de ejemplo para explorar campos."
         },
         "mapping": {
@@ -586,7 +586,7 @@
         "descriptionPlaceholder": "p. ej., Clave API de desarrollo",
         "expiration": "Fecha de expiración (opcional)",
         "submit": "Generar nueva clave API",
-        "createFailed": "Failed to create API key"
+        "createFailed": "No se pudo crear la clave de API"
       },
       "list": {
         "title": "Sus claves API",
@@ -613,7 +613,7 @@
           "inactive": "Inactiva"
         },
         "deactivate": "Desactivar",
-        "deactivateFailed": "Failed to deactivate API key"
+        "deactivateFailed": "No se pudo desactivar la clave de API"
       },
       "newKeyDialog": {
         "title": "Clave API generada",
@@ -623,79 +623,90 @@
         "copySuccess": "¡Clave API copiada al portapapeles!",
         "copyFailed": "Error al copiar la clave API al portapapeles",
         "downloadFailed": "Error al descargar la clave API"
+      },
+      "admin": {
+        "title": "Administración de claves API",
+        "searchPlaceholder": "Buscar por usuario o descripción",
+        "columns": {
+          "user": "Usuario"
+        },
+        "errors": {
+          "loadFailed": "No se pudieron cargar las claves API. Asegúrese de tener privilegios de administrador.",
+          "deactivateFailed": "No se pudo desactivar la clave API. Asegúrese de tener privilegios de administrador."
+        }
       }
     },
     "scim": {
-      "title": "User provisioning",
-      "description": "Let Microsoft Entra deactivate and reactivate existing internal users. Alga remains authoritative for profiles, roles, teams, and licenses.",
-      "loading": "Loading user provisioning",
+      "title": "Aprovisionamiento de usuarios",
+      "description": "Permita que Microsoft Entra desactive y reactive usuarios internos existentes. Alga sigue siendo la autoridad para los perfiles, roles, equipos y licencias.",
+      "loading": "Cargando el aprovisionamiento de usuarios",
       "status": {
-        "enabled": "Accepting requests",
-        "disabled": "Provisioning paused"
+        "enabled": "Aceptando solicitudes",
+        "disabled": "Aprovisionamiento en pausa"
       },
       "errors": {
-        "load": "Unable to load SCIM provisioning.",
-        "update": "Unable to update SCIM provisioning."
+        "load": "No se pudo cargar el aprovisionamiento mediante SCIM.",
+        "update": "No se pudo actualizar el aprovisionamiento mediante SCIM."
       },
       "upgrade": {
-        "title": "Directory lifecycle provisioning",
-        "description": "SCIM user provisioning is available on Pro and higher plans."
+        "title": "Aprovisionamiento del ciclo de vida del directorio",
+        "description": "El aprovisionamiento de usuarios mediante SCIM está disponible en los planes Pro y superiores."
       },
       "setup": {
-        "title": "Connect Microsoft Entra",
-        "description": "Generate a tenant-specific endpoint and one-time bearer token. No Alga users are created by SCIM.",
-        "create": "Generate connection"
+        "title": "Conectar Microsoft Entra",
+        "description": "Genere un endpoint específico del inquilino y un token de portador de un solo uso. SCIM no crea usuarios de Alga.",
+        "create": "Generar conexión"
       },
       "connection": {
-        "title": "Entra connection",
-        "description": "Use these values in the Provisioning section of your Entra enterprise application.",
-        "url": "Tenant URL",
-        "copyUrl": "Copy tenant URL",
-        "oneTimeToken": "Copy this token now",
-        "oneTimeWarning": "For security, Alga cannot show this value again.",
-        "rotate": "Rotate token",
-        "revokePrevious": "End token overlap",
-        "enabled": "Accept provisioning requests",
-        "disableWarning": "Pausing preserves every link and current user state."
+        "title": "Conexión de Entra",
+        "description": "Use estos valores en la sección Aprovisionamiento de su aplicación empresarial de Entra.",
+        "url": "URL del inquilino",
+        "copyUrl": "Copiar URL del inquilino",
+        "oneTimeToken": "Copie este token ahora",
+        "oneTimeWarning": "Por seguridad, Alga no puede volver a mostrar este valor.",
+        "rotate": "Rotar token",
+        "revokePrevious": "Finalizar la superposición de tokens",
+        "enabled": "Aceptar solicitudes de aprovisionamiento",
+        "disableWarning": "La pausa conserva todos los vínculos y el estado actual de los usuarios."
       },
       "health": {
-        "title": "Connection health",
-        "lastRequest": "Last authenticated request",
-        "lastSuccess": "Last success",
-        "tokenAge": "Current token created",
-        "lastError": "Last error"
+        "title": "Estado de la conexión",
+        "lastRequest": "Última solicitud autenticada",
+        "lastSuccess": "Última operación correcta",
+        "tokenAge": "Token actual creado",
+        "lastError": "Último error"
       },
       "mapping": {
-        "title": "Entra attribute mapping",
-        "description": "Keep Entra defaults for userName, externalId, active, names, title, and emails. Only active controls Alga access.",
-        "match": "Initial match",
-        "matchValue": "Exact primary email only",
-        "scope": "Provisioning scope",
-        "scopeValue": "Assigned users and groups",
-        "unsupported": "Not supported",
-        "unsupportedValue": "Groups, passwords, roles, teams"
+        "title": "Asignación de atributos de Entra",
+        "description": "Conserve los valores predeterminados de Entra para userName, externalId, active, names, title y emails. Solo active controla el acceso a Alga.",
+        "match": "Coincidencia inicial",
+        "matchValue": "Solo correo electrónico principal exacto",
+        "scope": "Alcance del aprovisionamiento",
+        "scopeValue": "Usuarios y grupos asignados",
+        "unsupported": "No compatible",
+        "unsupportedValue": "Grupos, contraseñas, roles y equipos"
       },
       "links": {
-        "title": "Managed users",
-        "user": "Alga user",
-        "directory": "Directory identity",
-        "state": "State",
-        "action": "Action",
-        "drift": "Email drift",
-        "active": "Upstream active",
-        "inactive": "Upstream inactive",
-        "accessOn": "Access enabled",
-        "accessOff": "Access disabled",
-        "unlink": "Unlink",
-        "empty": "No directory identities have linked yet."
+        "title": "Usuarios administrados",
+        "user": "Usuario de Alga",
+        "directory": "Identidad del directorio",
+        "state": "Estado",
+        "action": "Acción",
+        "drift": "Divergencia de correo electrónico",
+        "active": "Activo en origen",
+        "inactive": "Inactivo en origen",
+        "accessOn": "Acceso habilitado",
+        "accessOff": "Acceso deshabilitado",
+        "unlink": "Desvincular",
+        "empty": "Aún no se vinculó ninguna identidad del directorio."
       },
       "unresolved": {
-        "title": "Needs review",
-        "description": "These identities were rejected without changing an Alga user."
+        "title": "Requiere revisión",
+        "description": "Estas identidades se rechazaron sin modificar ningún usuario de Alga."
       },
       "state": {
-        "active": "Active upstream",
-        "inactive": "Inactive upstream"
+        "active": "Activo en origen",
+        "inactive": "Inactivo en origen"
       }
     }
   },

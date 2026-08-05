@@ -125,7 +125,7 @@ export function TaxSourceSettings({ isReadOnly = false }: TaxSourceSettingsProps
         <CardTitle className="flex items-center gap-2">
           {t('tax.source.title', { defaultValue: 'Tax Calculation Source' })}
           <Tooltip content={t('tax.source.tooltip', {
-            defaultValue: 'Choose whether taxes are calculated by Alga PSA or delegated to your external accounting system'
+            defaultValue: 'Choose whether taxes are calculated by AlgaPSA or delegated to your external accounting system'
           })}>
             <Info className="h-4 w-4 text-muted-foreground cursor-help" />
           </Tooltip>
@@ -152,9 +152,9 @@ export function TaxSourceSettings({ isReadOnly = false }: TaxSourceSettingsProps
             options={[
               {
                 value: 'internal',
-                label: t('tax.source.options.internal.label', { defaultValue: 'Internal (Alga PSA)' }),
+                label: t('tax.source.options.internal.label', { defaultValue: 'Internal (AlgaPSA)' }),
                 description: t('tax.source.options.internal.description', {
-                  defaultValue: 'Taxes are calculated automatically based on tax rates configured in Alga PSA.'
+                  defaultValue: 'Taxes are calculated automatically based on tax rates configured in AlgaPSA.'
                 }),
                 icon: <Calculator className="h-4 w-4" />,
               },
@@ -186,7 +186,7 @@ export function TaxSourceSettings({ isReadOnly = false }: TaxSourceSettingsProps
                 <li>{t('tax.source.workflow.step3', {
                   defaultValue: 'Tax is calculated by the accounting system based on its tax rules'
                 })}</li>
-                <li>{t('tax.source.workflow.step4', { defaultValue: 'Tax amounts are imported back to Alga PSA' })}</li>
+                <li>{t('tax.source.workflow.step4', { defaultValue: 'Tax amounts are imported back to AlgaPSA' })}</li>
                 <li>{t('tax.source.workflow.step5', {
                   defaultValue: 'Invoice totals are updated with the imported tax'
                 })}</li>

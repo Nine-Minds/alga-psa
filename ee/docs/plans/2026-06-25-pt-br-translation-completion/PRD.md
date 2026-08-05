@@ -9,7 +9,7 @@
 
 ## 1. Problem Statement & User Value
 
-Alga PSA ships eight production languages. Seven of them (en, fr, es, de, nl, it, pl)
+AlgaPSA ships eight production languages. Seven of them (en, fr, es, de, nl, it, pl)
 are ~95% translated in the UI string catalog and fully populated in the email and
 internal-notification template systems. **Portuguese (`pt`) is the outlier:**
 

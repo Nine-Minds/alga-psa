@@ -18,16 +18,16 @@ existing app manually.
   service principals, and credentials, such as Application Administrator or
   Cloud Application Administrator.
 * A licensed user mailbox or a shared mailbox the authorizing user can read.
-* An Alga PSA user with `system_settings:update` permission.
+* An AlgaPSA user with `system_settings:update` permission.
 * Outbound HTTPS access to `graph.microsoft.com` and
-  `login.microsoftonline.com`. A public inbound URL is optional because Alga PSA
+  `login.microsoftonline.com`. A public inbound URL is optional because AlgaPSA
   falls back to polling when Microsoft cannot validate the webhook endpoint.
 
 ## Choose the hosted or self-hosted path
 
-### Hosted Alga PSA
+### Hosted AlgaPSA
 
-Hosted deployments can use Alga PSA's platform Microsoft app:
+Hosted deployments can use AlgaPSA's platform Microsoft app:
 
 * **Use the Alga platform app** in the guided setup to create a tenant-specific
   Email profile without entering client credentials.
@@ -35,7 +35,7 @@ Hosted deployments can use Alga PSA's platform Microsoft app:
   email. Use the automated or manual tenant-owned setup when the organization
   explicitly requires its own app registration.
 
-### Self-hosted or appliance Alga PSA
+### Self-hosted or appliance AlgaPSA
 
 Create and bind your own Entra app. Register your deployment's exact callback
 URL and allow outbound HTTPS to `login.microsoftonline.com` and
@@ -43,7 +43,7 @@ URL and allow outbound HTTPS to `login.microsoftonline.com` and
 
 A public HTTPS notification URL is optional. Expose
 `https://<your-host>/api/email/webhooks/microsoft` only if you want webhook
-delivery for a user mailbox. If Microsoft cannot validate that URL, Alga PSA
+delivery for a user mailbox. If Microsoft cannot validate that URL, AlgaPSA
 uses polling over outbound HTTPS instead.
 
 Operator-level app secrets and environment variables remain compatibility
@@ -79,7 +79,7 @@ tenant-wide app consent is separate from authorizing the individual mailbox.
 Add these permissions as **Microsoft Graph → Delegated permissions**. The
 Microsoft mailbox OAuth flow requests exactly these four scopes:
 
-| Permission | Why Alga PSA requests it |
+| Permission | Why AlgaPSA requests it |
 | --- | --- |
 | `Mail.Read` | Reads the signed-in user's mailbox. It also permits message and folder access used for that user's change-notification subscription. |
 | `Mail.Read.Shared` | Reads shared or delegated mailboxes that the signed-in user can already access. It does not grant Exchange mailbox access. |
@@ -106,7 +106,7 @@ and [delegated consent policy](https://learn.microsoft.com/graph/permissions-ove
 Confirm all of the following:
 
 * The app's supported account type is **Accounts in any organizational
-  directory**. Alga PSA starts authorization through the Microsoft `common`
+  directory**. AlgaPSA starts authorization through the Microsoft `common`
   authority.
 * The **Web** redirect URI in Entra exactly matches the value displayed by Alga
   PSA: `https://<your-host>/api/auth/microsoft/callback`. Scheme, host, path, and
@@ -125,7 +125,7 @@ Confirm all of the following:
    **App registrations** and create an app.
 2. Select **Accounts in any organizational directory** as the supported account
    type.
-3. Under **Authentication**, add the callback from Alga PSA as a **Web** redirect
+3. Under **Authentication**, add the callback from AlgaPSA as a **Web** redirect
    URI: `https://<your-host>/api/auth/microsoft/callback`.
 4. Under **API permissions**, add `Mail.Read`, `Mail.Read.Shared`, `Mail.Send`,
    and `offline_access` as delegated permissions.
@@ -146,7 +146,7 @@ Confirm all of the following:
 5. Under **Which Microsoft app each service uses**, select that app for
    **Outlook email**. A default app is not a substitute for this service binding.
 
-Alga PSA stores the client secret server-side. The inbound provider form does
+AlgaPSA stores the client secret server-side. The inbound provider form does
 not ask for the client ID or secret. See
 [`provider-setup-order.md`](../../integrations/provider-setup-order.md) when the
 same app also supports sign-in, calendar, or Teams.
@@ -168,7 +168,7 @@ same app also supports sign-in, calendar, or Teams.
 4. Select **Authorize Access**. Sign in as the user whose delegated access Alga
    PSA should use, then approve the consent prompt.
 
-The popup closes after Alga PSA stores the access and refresh tokens. A user
+The popup closes after AlgaPSA stores the access and refresh tokens. A user
 mailbox normally attempts webhook setup. Polling is also a connected and
 supported delivery mode.
 
@@ -177,7 +177,7 @@ supported delivery mode.
 Use delegated access. Do not sign in as the shared mailbox and do not add an
 application-level mail permission.
 
-1. Set **Email Address** on the Alga PSA provider to the shared mailbox address.
+1. Set **Email Address** on the AlgaPSA provider to the shared mailbox address.
 2. Sign in during **Authorize Access** with a normal licensed Microsoft 365 user
    account.
 3. In Exchange Online, grant that user **Read and manage (Full Access)** to the
@@ -185,12 +185,12 @@ application-level mail permission.
    has; it does not assign Full Access.
 4. To send outbound email from the shared mailbox, also grant that user **Send
    As** permission. Delegated `Mail.Send` does not assign this Exchange right.
-5. Before authorizing Alga PSA, verify that the user can open the shared mailbox
+5. Before authorizing AlgaPSA, verify that the user can open the shared mailbox
    in Outlook or Outlook on the web.
 
 Microsoft Graph does not support Outlook change-notification subscriptions on
 shared or delegated folders with `Mail.Read.Shared`. A shared-mailbox provider
-therefore relies on Alga PSA's polling delivery. Setup still attempts a webhook
+therefore relies on AlgaPSA's polling delivery. Setup still attempts a webhook
 subscription first, so Microsoft can return a subscription access error during
 authorization. Do not add application permissions to work around that error;
 they are not used by this delegated connector. Leave the provider enabled and
@@ -211,7 +211,7 @@ and [Exchange Full Access](https://learn.microsoft.com/exchange/recipients-in-ex
 
 ## Webhooks, subscriptions, and polling
 
-For a user mailbox, Alga PSA attempts to create a `changeType: created`
+For a user mailbox, AlgaPSA attempts to create a `changeType: created`
 subscription for the watched folder at
 `https://<your-host>/api/email/webhooks/microsoft`. The subscription uses the
 same delegated `Mail.Read` access as message retrieval. There is no separate
@@ -228,7 +228,7 @@ At runtime:
 * Maintenance runs every 15 minutes, looks 24 hours ahead, and renews or
   recreates subscriptions before they expire.
 * Webhook providers also reconcile Inbox every 15 minutes as a safety net. After
-  three reconciliation runs import mail without a webhook delivery, Alga PSA
+  three reconciliation runs import mail without a webhook delivery, AlgaPSA
   switches the provider to polling.
 * Polling runs every 3 minutes by default and needs only outbound HTTPS.
 * Polling providers retry webhook registration every 24 hours and when you use
@@ -250,7 +250,7 @@ change the tenant's outbound provider automatically.
 4. Use **Test Outbound Email** to verify the connection and optionally send a
    test message.
 
-Alga PSA sends through `/users/{mailbox}/sendMail` and requests that Microsoft
+AlgaPSA sends through `/users/{mailbox}/sendMail` and requests that Microsoft
 save a copy in Sent Items. A Graph 403 generally means `Mail.Send` consent or,
 for a shared mailbox, Exchange **Send As** permission is missing. Reconnect the
 provider after adding or changing delegated permissions.
@@ -268,5 +268,5 @@ provider after adding or changing delegated permissions.
 | New mail does not create tickets | Check delivery mode and last-ingested time. Polling needs outbound access to Microsoft. Webhook mode also needs public inbound access. Use **Test Connection** to check Graph access and retry webhook registration. |
 | Token refresh fails after working previously | The refresh token or consent may have expired or been revoked, or the bound app's client ID/secret changed. Restore the issuing app credentials if appropriate, then reauthorize the mailbox. |
 | Mail from a custom folder is missing | Set **Folder Filters** to `Inbox` and reauthorize. Multiple/custom Microsoft folders are not currently reliable across subscription maintenance and reconciliation. |
-| The provider is Ready, but Alga PSA sends no replies | Select the mailbox under **Settings → Email → Outbound Email**, reconnect it if it predates `Mail.Send`, and run the outbound test. |
+| The provider is Ready, but AlgaPSA sends no replies | Select the mailbox under **Settings → Email → Outbound Email**, reconnect it if it predates `Mail.Send`, and run the outbound test. |
 | The outbound test returns 403 | Reconnect the mailbox to grant `Mail.Send`. For a shared mailbox, also verify that the authorizing user has Exchange **Send As** permission. |

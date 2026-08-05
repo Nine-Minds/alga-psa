@@ -17,7 +17,7 @@ different concerns:
 
 The settings screen must show these identities side by side and explain the
 routing difference. A blank everything-else display name means “use the tenant's
-company name,” not “use Alga PSA.” A portal invitation's explicit
+company name,” not “use AlgaPSA.” A portal invitation's explicit
 `<Tenant Company> Portal` name must override that ordinary notification default.
 
 ## Confirmed repository behavior
@@ -26,13 +26,13 @@ company name,” not “use Alga PSA.” A portal invitation's explicit
   - `getProviderConfiguredAddress()` already reads the enabled provider's
     `config.from` and `config.fromName`/`config.from_name`.
   - `getDefaultFromAddress()` currently falls back from provider name to
-    `EMAIL_FROM`, `EMAIL_FROM_NAME`, and finally `Alga PSA Notifications`; it has
+    `EMAIL_FROM`, `EMAIL_FROM_NAME`, and finally `AlgaPSA Notifications`; it has
     no tenant-company lookup.
   - `getFromAddress()` honors `params.from`, but does not independently apply the
     already-declared `fromName` parameter.
   - static `sendEmail()` omits `fromName` when it builds `BaseEmailParams`.
   - `testConnection()` builds its test message with the hard-coded name
-    `Alga PSA`, bypassing the tenant default.
+    `AlgaPSA`, bypassing the tenant default.
 - `packages/email/src/sendPortalInvitationEmail.ts` accepts `fromName`, renames
   it to `_fromName`, and never puts it into either the tenant-provider attempt or
   the system-provider fallback.
@@ -77,7 +77,7 @@ company name,” not “use Alga PSA.” A portal invitation's explicit
 | Mail class | From address | Display-name precedence | Reply/routing meaning |
 | --- | --- | --- | --- |
 | Ticket mail | `ticketingFromEmail` when configured; otherwise the active outbound address | `ticketingFromName` → matching inbound provider `sender_display_name` → ticket board name → `Support` | Prefer a monitored inbound inbox so replies re-enter the correct ticket flow. |
-| Everything else | Active provider `config.from`, or the existing environment/domain-derived default | per-message `fromName` override → provider `config.fromName`/name embedded in `config.from` → tenant company → environment name → `Alga PSA Notifications` | Branding only; it must not change ticket reply routing. |
+| Everything else | Active provider `config.from`, or the existing environment/domain-derived default | per-message `fromName` override → provider `config.fromName`/name embedded in `config.from` → tenant company → environment name → `AlgaPSA Notifications` | Branding only; it must not change ticket reply routing. |
 | Portal invitation | Same address as ordinary outbound mail | explicit `${tenant company} Portal`, including on system-provider fallback | Reply-To remains the configured MSP support address. |
 
 For Microsoft 365, Exchange constrains the wire From address to the selected
@@ -161,7 +161,7 @@ Changes:
 6. Forward `fromName` in the deprecated static `TenantEmailService.sendEmail()`
    path as well; verification and other legacy callers must not silently lose it.
 7. Change `TenantEmailService.testConnection()` to use the same effective
-   identity instead of `{ name: 'Alga PSA' }`.
+   identity instead of `{ name: 'AlgaPSA' }`.
 
 ### 2. Make explicit display-name overrides survive tenant and system sending
 
@@ -418,7 +418,7 @@ post-change behavior; no live screen was driven during this design-only task.
    as an explicit provider `fromName`.
 3. Send a test email from the existing **Test Outbound Email** control.
 4. Inspect the raw captured message. From must be `Example MSP <configured
-   address>`, never `Alga PSA` or `Alga PSA Notifications`.
+   address>`, never `AlgaPSA` or `AlgaPSA Notifications`.
 
 ### Flow 3 — prevent portal-invite branding loss
 

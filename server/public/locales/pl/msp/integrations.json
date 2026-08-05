@@ -52,7 +52,7 @@
         "highlights": {
           "delivery": "Dostarczanie",
           "export": "Eksport",
-          "format": "Format",
+          "format": "Format danych",
           "sync": "Synchronizacja"
         },
         "options": {
@@ -115,8 +115,8 @@
           "dialog": {
             "cancel": "Anuluj",
             "confirm": "Zresetuj blokadę",
-            "confirmBatch": "To pozwoli Alga PSA ponownie eksportować faktury z partii {{batchId}}. Jeśli niektóre z tych faktur nadal istnieją w QuickBooks, import CSV może utworzyć duplikaty.",
-            "confirmInvoice": "To pozwoli Alga PSA ponownie eksportować fakturę {{invoiceNumber}}. Jeśli ta faktura nadal istnieje w QuickBooks, import CSV może utworzyć duplikaty.",
+            "confirmBatch": "To pozwoli AlgaPSA ponownie eksportować faktury z partii {{batchId}}. Jeśli niektóre z tych faktur nadal istnieją w QuickBooks, import CSV może utworzyć duplikaty.",
+            "confirmInvoice": "To pozwoli AlgaPSA ponownie eksportować fakturę {{invoiceNumber}}. Jeśli ta faktura nadal istnieje w QuickBooks, import CSV może utworzyć duplikaty.",
             "resetting": "Resetowanie…",
             "title": "Zresetować blokadę eksportu?",
             "warning": "Kontynuuj tylko, jeśli masz pewność, że faktura nie została zaimportowana lub została przez Ciebie usunięta/anulowana w QuickBooks."
@@ -313,8 +313,8 @@
           "title": "Importuj podatki z CSV",
           "xeroCsvDescription": "Wyeksportowany plik CSV zawiera Numer faktury, Nazwę kontaktu, Kwotę wiersza, Kwotę podatku i kategorie śledzenia.",
           "xeroHelp": {
-            "note": "Uwaga: Dopasowane zostaną tylko faktury pierwotnie wyeksportowane z Alga PSA (z śledzeniem Source System = AlgaPSA).",
-            "s1": "W Xero przejdź do Sales > Invoices",
+            "note": "Uwaga: Dopasowane zostaną tylko faktury pierwotnie wyeksportowane z AlgaPSA (z śledzeniem Source System = AlgaPSA).",
+            "s1": "W Xero wybierz Sales > Faktury",
             "s2": "Wybierz zakładkę faktury, z której chcesz eksportować (np. Paid, Awaiting Payment)",
             "s3": "(Opcjonalnie) Kliknij Search, aby filtrować według daty początkowej, końcowej lub typu daty",
             "s4": "Kliknij Export",
@@ -327,14 +327,14 @@
           }
         },
         "xero": {
-          "description": "Importuj kwoty podatku z pliku CSV raportu Xero Invoice Details.",
-          "dropZone": "Przeciągnij i upuść plik CSV raportu Xero Invoice Details tutaj lub kliknij, aby przeglądać",
+          "description": "Importuj kwoty podatku z pliku CSV raportu szczegółów faktury z Xero.",
+          "dropZone": "Przeciągnij tutaj plik CSV raportu szczegółów faktury z Xero i upuść go albo kliknij, aby wybrać plik",
           "help": {
             "csvRequirement": "Raport powinien zawierać kolumny Numer faktury, Nazwa kontaktu, Kwota wiersza i Kwota podatku. Faktury są dopasowywane przy użyciu pola Reference lub kategorii śledzenia ustawionych podczas eksportu.",
             "steps": {
               "s1": "W Xero przejdź do Reports > All Reports",
-              "s2": "Wybierz Sales (Invoices and Revenue)",
-              "s3": "Uruchom raport Invoice Details",
+              "s2": "Wybierz Sales (Faktury i przychody)",
+              "s3": "Uruchom raport szczegółów faktury",
               "s4": "Ustaw zakres dat tak, aby pasował do Twoich wyeksportowanych faktur",
               "s5": "Kliknij Export i wybierz CSV",
               "s6": "Prześlij wyeksportowany plik tutaj"
@@ -370,7 +370,7 @@
           "baseUrlPlaceholder": "https://cipp.yourdomain.com"
         },
         "test": {
-          "passed": "CIPP odpowiedział. Widoczne dzierżawy: {{count}}.",
+          "passed": "CIPP odpowiedział. Liczba widocznych organizacji: {{count}}.",
           "required": "Przetestuj połączenie przed zapisaniem."
         },
         "title": "Połącz CIPP"
@@ -421,7 +421,7 @@
         "clients": {
           "columns": {
             "lastSync": "Ostatnia synchronizacja",
-            "tenant": "Dzierżawa Microsoft",
+            "tenant": "Organizacja Microsoft",
             "users": "Użytkownicy"
           },
           "empty": "Żaden klient nie pasuje do tego wyszukiwania.",
@@ -442,11 +442,11 @@
             "syncing": "Synchronizacja"
           },
           "emptyTitle": "Nie dopasowano jeszcze żadnych klientów",
-          "emptyDescription": "Dopasuj dzierżawę Microsoft do klienta na karcie Połączenie. Dopasowani klienci pojawią się tutaj.",
+          "emptyDescription": "Dopasuj organizację Microsoft do klienta na karcie Połączenie. Dopasowani klienci pojawią się tutaj.",
           "emptyAction": "Otwórz kartę Połączenie",
           "clearFilters": "Wyczyść filtry",
           "unlinkConfirm": {
-            "body": "{{client}} przestaje się synchronizować, teraz i zgodnie z harmonogramem. Kontakty pozostają bez zmian i zachowują powiązanie z Microsoft. Dzierżawa wraca do tabeli dopasowań na karcie Połączenie.",
+            "body": "{{client}} przestaje się synchronizować, teraz i zgodnie z harmonogramem. Kontakty pozostają bez zmian i zachowują powiązanie z Microsoft. Organizacja wraca do tabeli dopasowań na karcie Połączenie.",
             "title": "Zatrzymać synchronizację klienta {{client}}?"
           },
           "unlinked": "{{client}} nie jest już synchronizowany.",
@@ -462,7 +462,7 @@
         "connection": {
           "changeAction": "Zmień połączenie",
           "exportRecord": "Eksportuj rekord połączenia",
-          "mappingDescription": "Sprawdź lub zmień, do którego klienta należy każda dzierżawa Microsoft.",
+          "mappingDescription": "Sprawdź lub zmień, do którego klienta należy każda organizacja Microsoft.",
           "mappingTitle": "Przypisanie dzierżaw",
           "methodLabel": "Metoda",
           "permissionsTitle": "Obowiązujące uprawnienia",
@@ -615,7 +615,7 @@
           "syncingRemaining": "Uruchamianie…"
         },
         "clientLabel": "Klient pilotażowy",
-        "empty": "Najpierw potwierdź przypisanie dzierżawy do klienta; nie ma jeszcze czego pilotować.",
+        "empty": "Najpierw potwierdź przypisanie organizacji do klienta; nie ma jeszcze czego pilotować.",
         "errors": {
           "loadMappings": "Nie udało się wczytać przypisanych klientów.",
           "preflightFailed": "Nie udało się ukończyć podglądu.",
@@ -728,8 +728,8 @@
           "connectingSuffix": " (Łączenie...)",
           "details": "Szczegóły połączenia",
           "directCredentialSourceLabel": "Źródło poświadczeń:",
-          "directTenantDefault": "common (multi-tenant)",
-          "directTenantLabel": "Dzierżawca Microsoft",
+          "directTenantDefault": "wspólna (wielu organizacji)",
+          "directTenantLabel": "Organizacja Microsoft",
           "notAvailable": "Niedostępne",
           "notConfigured": "Nie skonfigurowano",
           "optionsTitle": "Opcje połączenia",
@@ -889,7 +889,7 @@
         "title": "Integracja Microsoft Entra",
         "unmapConfirm": {
           "body": "Spowoduje to usunięcie zapisanej decyzji mapowania dla {{tenant}}, dzięki czemu pojawi się ona ponownie w tabeli mapowań. Już zsynchronizowane kontakty nie zostaną zmienione.",
-          "title": "Zmapować tę dzierżawę ponownie?"
+          "title": "Ponownie przypisać tę organizację?"
         },
         "validation": {
           "label": "Walidacja i wykrywanie",
@@ -922,7 +922,7 @@
         "backToCurrentStep": "Wróć do {{step}}",
         "chooser": {
           "cipp": {
-            "description": "Alga odczytuje dzierżawy przez instancję CIPP, którą już prowadzisz.",
+            "description": "Alga odczytuje organizacje przez instancję CIPP, którą już prowadzisz.",
             "label": "CIPP (CyberDrain Improved Partner Portal)",
             "prerequisites": {
               "apiHost": "Hosta aplikacji funkcyjnej CIPP-API, nie frontendu CIPP.",
@@ -939,7 +939,7 @@
             "description": "Alga komunikuje się z Microsoft Graph przez Twoją relację partnerską.",
             "label": "Bezpośredni partner Microsoft",
             "prerequisites": {
-              "appRegistration": "Dane OAuth Microsoft skonfigurowane dla tej dzierżawy.",
+              "appRegistration": "Dane OAuth Microsoft skonfigurowane dla tej organizacji.",
               "globalAdmin": "Administratora globalnego, który zatwierdzi uprawnienia.",
               "partnerRelationship": "Relacja partnerska (GDAP) z zarządzanymi dzierżawami."
             }
@@ -973,7 +973,7 @@
             "ambiguous": "Dwa kontakty mają ten sam e-mail? Sprawa czeka na Twoją decyzję — nigdy nie zgadujemy.",
             "creation": "Tożsamość bez dopasowania staje się nowym kontaktem u tego klienta.",
             "deletion": "Nic nigdy nie jest usuwane.",
-            "matching": "Kontakty są dopasowywane po adresie e-mail w obrębie klienta, do którego przypiszesz dzierżawę.",
+            "matching": "Kontakty są dopasowywane po adresie e-mail w obrębie klienta, do którego przypiszesz organizację.",
             "overwrite": "Istniejące nazwiska, e-maile, telefony i stanowiska nie są nadpisywane, chyba że to włączysz."
           },
           "contactsTitle": "Co dzieje się z Twoimi kontaktami",
@@ -984,8 +984,8 @@
           "recordGeneratedAt": "Przygotowano {{time}}",
           "recordHeading": "Integracja Microsoft Entra — rejestr zmian",
           "scopes": {
-            "directory": "Odczytuje dane katalogu w Twojej dzierżawie. Używane tylko przez tryb testowy własnej dzierżawy.",
-            "managedTenants": "Wymienia dzierżawy klientów objęte Twoją relacją partnerską oraz ich użytkowników. Tak wykrywani są klienci i kontakty.",
+            "directory": "Odczytuje dane katalogu w Twojej organizacji. Używane tylko przez tryb testowy własnej organizacji.",
+            "managedTenants": "Wyświetla organizacje klientów objęte Twoją relacją partnerską oraz ich użytkowników. Tak wykrywani są klienci i kontakty.",
             "offlineAccess": "Utrzymuje połączenie po zamknięciu przeglądarki, aby zaplanowane synchronizacje mogły działać.",
             "unknown": "Żądane przez połączenie.",
             "userRead": "Potwierdza, kto się loguje. Odczytuje tylko Twój profil."
@@ -1002,14 +1002,14 @@
             "title": "Połącz Microsoft Entra"
           },
           "discover": {
-            "description": "Zapytaj Microsoft, które dzierżawy klientów obejmuje Twoja relacja partnerska.",
-            "short": "Znajdź dzierżawy",
-            "title": "Wykryj zarządzane dzierżawy"
+            "description": "Zapytaj Microsoft, które organizacje klientów obejmuje Twoja relacja partnerska.",
+            "short": "Znajdź organizacje",
+            "title": "Wykryj zarządzane organizacje"
           },
           "map": {
-            "description": "Zdecyduj, do którego klienta Alga należy każda dzierżawa Microsoft. Nic nie jest synchronizowane do czasu potwierdzenia.",
+            "description": "Zdecyduj, do którego klienta Alga należy każda organizacja Microsoft. Nic nie jest synchronizowane do czasu potwierdzenia.",
             "short": "Dopasuj do klientów",
-            "title": "Przypisz dzierżawy do klientów"
+            "title": "Przypisz organizacje do klientów"
           },
           "sync": {
             "description": "Pobierz kontakty dla przypisanych klientów.",
@@ -1021,7 +1021,7 @@
       },
       "summary": {
         "backToIntegrations": "Wróć do integracji",
-        "description": "Wykryj zarządzane dzierżawy, przypisz je do klientów i utrzymuj kontakty w zgodzie.",
+        "description": "Wykryj zarządzane organizacje, przypisz je do klientów i utrzymuj kontakty w zgodzie.",
         "open": "Otwórz",
         "title": "Microsoft Entra"
       },
@@ -1034,8 +1034,8 @@
         "details": {
           "noResults": "Nie zarejestrowano wyników tenantów.",
           "stats": "utworzone {{created}}, powiązane {{linked}}, zaktualizowane {{updated}}, niejednoznaczne {{ambiguous}}, dezaktywowane {{inactivated}}",
-          "summarySkipped": "Skipped provisioning outcomes: {{count}}",
-          "tenantHeader": "Tenant {{tenant}} · {{status}}",
+          "summarySkipped": "Pominięte wyniki inicjowania obsługi: {{count}}",
+          "tenantHeader": "Organizacja {{tenant}} · {{status}}",
           "unknownTenant": "nieznany"
         },
         "empty": "Nie znaleziono jeszcze uruchomień synchronizacji.",
@@ -1068,11 +1068,11 @@
         "columns": {
           "actions": "Akcje",
           "confidence": "Pewność",
-          "defaultRole": "Default Role",
+          "defaultRole": "Rola domyślna",
           "entraTenant": "Tenant Entra",
-          "portalAccessGroup": "Portal Access Group",
+          "portalAccessGroup": "Grupa dostępu do portalu",
           "primaryDomain": "Domena podstawowa",
-          "provisioningModeOverride": "Provisioning Mode Override",
+          "provisioningModeOverride": "Zastąpienie trybu inicjowania obsługi",
           "selectClient": "Wybierz klienta",
           "status": "Status",
           "suggestedClient": "Sugerowany klient"
@@ -1090,7 +1090,7 @@
           "confirmedOne": "Potwierdzono {{count}} mapowanie."
         },
         "importConfirm": {
-          "body": "Z dzierżawy Entra {{tenant}} zostanie utworzony nowy klient, a dzierżawa zostanie do niego zmapowana.",
+          "body": "Na podstawie organizacji Entra {{tenant}} zostanie utworzony nowy klient, a organizacja zostanie do niego przypisana.",
           "similarWarning": "Ci istniejący klienci mają podobne nazwy — zmapuj do jednego z nich, jeśli to ta sama organizacja:",
           "title": "Zaimportować jako nowego klienta?"
         },
@@ -1100,14 +1100,14 @@
           "unknownClient": "Nieznany klient"
         },
         "portal": {
-          "broadGroupWarning": "Warning: every enabled user in this Entra group will be eligible for client portal access.",
-          "defaultRolePlaceholder": "Inherit workspace role",
-          "groupLoading": "Loading groups…",
-          "modeBuiltIn": "Built-in",
-          "modeDisabled": "Disabled",
-          "modeInherit": "Inherit MSP workspace default",
-          "modeWorkflowManaged": "Workflow-managed",
-          "noGroupSelected": "No group selected"
+          "broadGroupWarning": "Ostrzeżenie: każdy włączony użytkownik w tej grupie Entra będzie kwalifikować się do dostępu do portalu klienta.",
+          "defaultRolePlaceholder": "Dziedzicz rolę obszaru roboczego",
+          "groupLoading": "Wczytywanie grup…",
+          "modeBuiltIn": "Wbudowany",
+          "modeDisabled": "Wyłączony",
+          "modeInherit": "Dziedzicz ustawienie domyślne obszaru roboczego MSP",
+          "modeWorkflowManaged": "Zarządzany przez workflow",
+          "noGroupSelected": "Nie wybrano grupy"
         },
         "reasons": {
           "exactDomain": "Dokładna domena",
@@ -1132,10 +1132,10 @@
           "resetting": "Resetowanie…",
           "save": "Zapisz",
           "saving": "Zapisywanie…",
-          "disconnectProviders": "Disconnect Google providers"
+          "disconnectProviders": "Odłącz dostawców Google"
         },
         "afterSaveNotice": "Po zapisaniu przejdź do integracji poczty przychodzącej i kalendarza oraz ponownie autoryzuj dostawców. Istniejący dostawcy Google nie są migrowani.",
-        "consoleLink": "Google Cloud Console",
+        "consoleLink": "Konsola Google Cloud",
         "description": "Skonfiguruj poświadczenia Google Cloud należące do tenanta dla poczty przychodzącej Gmail i Google Calendar.",
         "errors": {
           "loadFailed": "Nie można załadować ustawień Google",
@@ -1149,8 +1149,8 @@
         },
         "loading": "Ładowanie…",
         "oauth": {
-          "calendarClientId": "Calendar OAuth Client ID",
-          "calendarClientSecret": "Calendar OAuth Client Secret",
+          "calendarClientId": "Identyfikator klienta OAuth Kalendarza",
+          "calendarClientSecret": "Klucz tajny klienta OAuth Kalendarza",
           "enterSecret": "Wprowadź client secret",
           "gmailClientId": "Gmail OAuth Client ID",
           "gmailClientSecret": "Gmail OAuth Client Secret",
@@ -1158,17 +1158,17 @@
           "shareApp": "Użyj tej samej aplikacji OAuth dla Gmail i Calendar",
           "shareAppHelp": "Zalecane. Nadal można autoryzować oddzielne konta Google dla poszczególnych integracji.",
           "storedSecret": "Zapisany secret: {{secret}}",
-          "locationHelp": "Google Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs."
+          "locationHelp": "Google Cloud: Interfejsy API i usługi > Dane logowania > Identyfikatory klienta OAuth 2.0."
         },
         "redirectUrisLabel": "Redirect URI (skopiuj do klienta OAuth Google)",
         "scopes": "Zakresy",
-        "scopesCalendar": "Calendar: {{scopes}}",
+        "scopesCalendar": "Kalendarz: {{scopes}}",
         "scopesGmail": "Gmail: {{scopes}}",
         "serviceAccount": {
           "alreadyStored": "Klucz konta usługi jest już zapisany (nie jest wyświetlany).",
           "description": "Wklej klucz JSON konta usługi należącego do tenanta używanego do provisioningu Pub/Sub.",
           "title": "Konto usługi Pub/Sub (wymagane dla Gmail)",
-          "locationHelp": "Google Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON."
+          "locationHelp": "Google Cloud: IAM i administracja > Konta usługi > Klucze > Dodaj klucz > JSON."
         },
         "setupGuide": "Przewodnik konfiguracji",
         "title": "Google",
@@ -1182,14 +1182,14 @@
           "unknownError": "Nieznany błąd"
         },
         "disconnectDialog": {
-          "cancel": "Keep providers connected",
-          "message": "Existing Gmail and Google Calendar provider connections will be marked disconnected and must be re-authorized. Stored Google credentials stay in place.",
-          "title": "Disconnect Google providers?"
+          "cancel": "Pozostaw dostawców połączonych",
+          "message": "Istniejące połączenia dostawców Gmail i Kalendarza Google zostaną oznaczone jako odłączone i będą wymagać ponownej autoryzacji. Zapisane poświadczenia Google pozostaną bez zmian.",
+          "title": "Odłączyć dostawców Google?"
         },
         "oauthValues": {
-          "title": "Google OAuth app values"
+          "title": "Wartości aplikacji Google OAuth"
         },
-        "redirectUrisHelp": "Staff sign-in uses the OAuth client saved below. Add the listed Gmail and Calendar callback URLs in Google Cloud."
+        "redirectUrisHelp": "Logowanie pracowników używa klienta OAuth zapisanego poniżej. Dodaj wymienione adresy URL wywołania zwrotnego Gmail i Kalendarza w Google Cloud."
       }
     },
     "hudu": {
@@ -1206,7 +1206,7 @@
         "articlesTitle": "Artykuły",
         "articlesEmpty": "Brak artykułów Hudu dla tej firmy.",
         "serial": "Numer seryjny",
-        "folder": "Folder"
+        "folder": "Katalog"
       },
       "passwordsTab": {
         "source": "Źródło: Hudu",
@@ -1506,7 +1506,7 @@
           "syncAll": "Synchronizuj wszystko",
           "autoSyncLabel": "Codzienna automatyczna synchronizacja",
           "autoSyncHint": "Automatycznie importuje nowe zasoby i odświeża istniejące raz dziennie dla każdego powiązanego klienta.",
-          "neverRun": "Brak uruchomienia dla całego najemcy.",
+          "neverRun": "Brak dotychczasowego uruchomienia obejmującego całą organizację.",
           "lastRun": "Ostatnie uruchomienie {{at}}: {{created}} utworzono · {{updated}} zaktualizowano · {{skipped}} pominięto · {{failed}} nieudanych",
           "status": {
             "syncing": "W toku…",
@@ -1518,87 +1518,94 @@
     },
     "microsoft": {
       "emailSetup": {
-        "action": "Set up Microsoft",
+        "action": "Skonfiguruj Microsoft",
         "actions": {
-          "back": "Back",
-          "cancel": "Cancel",
-          "copy": "Copy",
-          "finish": "Finish",
-          "savePlatform": "Create profile and continue",
-          "signIn": "Sign in to Microsoft",
-          "working": "Working…",
-          "approve": "Approve in Microsoft",
-          "copyApprovalLink": "Copy approval link for your admin",
-          "saveManual": "Save app and continue"
+          "back": "Wstecz",
+          "cancel": "Anuluj",
+          "copy": "Kopiuj",
+          "finish": "Zakończ",
+          "savePlatform": "Utwórz profil i kontynuuj",
+          "signIn": "Zaloguj się do Microsoft",
+          "working": "Przetwarzanie…",
+          "approve": "Zatwierdź w Microsoft",
+          "copyApprovalLink": "Skopiuj link zatwierdzenia dla administratora",
+          "saveManual": "Zapisz aplikację i kontynuuj"
         },
         "automated": {
-          "description": "Alga PSA registers a dedicated Entra app automatically. Sign in as a Microsoft 365 administrator.",
-          "title": "Create an app in your Microsoft organization"
+          "description": "AlgaPSA automatycznie rejestruje dedykowaną aplikację Entra. Zaloguj się jako administrator Microsoft 365.",
+          "title": "Utwórz aplikację w swojej organizacji Microsoft"
         },
-        "callbackUri": "Mailbox callback URI",
+        "callbackUri": "Identyfikator URI wywołania zwrotnego skrzynki pocztowej",
         "complete": {
-          "consentDone": "Approved by your Microsoft 365 administrator. You can now connect a mailbox.",
-          "consentPending": "A Microsoft 365 administrator for your organization must approve access before mailboxes can connect.",
+          "consentDone": "Administrator Microsoft 365 zatwierdził dostęp. Możesz teraz połączyć skrzynkę pocztową.",
+          "consentPending": "Administrator Microsoft 365 w Twojej organizacji musi zatwierdzić dostęp, zanim będzie można połączyć skrzynki pocztowe.",
           "profileCreated": "Microsoft Email profile created and bound",
-          "ready": "Microsoft is ready",
-          "waiting": "Waiting for admin approval"
+          "ready": "Microsoft jest gotowy",
+          "waiting": "Oczekiwanie na zatwierdzenie przez administratora"
         },
         "consent": {
-          "confirmedDescription": "The Microsoft app is ready for mailbox authorization.",
-          "confirmedTitle": "Administrator consent confirmed",
-          "url": "Administrator consent URL",
-          "urlLabel": "Consent URL",
-          "approvalLink": "Approval link"
+          "confirmedDescription": "Aplikacja Microsoft jest gotowa do autoryzacji skrzynki pocztowej.",
+          "confirmedTitle": "Potwierdzono zgodę administratora",
+          "url": "Adres URL zgody administratora",
+          "urlLabel": "Adres URL zgody",
+          "approvalLink": "Link zatwierdzenia"
         },
-        "copied": "{{label}} copied",
-        "description": "Choose how Alga PSA connects to Microsoft. You will connect mailboxes separately.",
+        "copied": "Skopiowano: {{label}}",
+        "description": "Wybierz sposób połączenia AlgaPSA z Microsoft. Skrzynki pocztowe połączysz osobno.",
         "errors": {
-          "automated": "Could not start automated Microsoft app creation.",
-          "generic": "Microsoft Email setup did not complete.",
-          "nameRequired": "Enter a display name for the Microsoft app.",
-          "platform": "Could not configure the platform Microsoft app.",
-          "popupBlocked": "Allow popups for this site, then try again.",
+          "automated": "Nie udało się rozpocząć automatycznego tworzenia aplikacji Microsoft.",
+          "generic": "Konfiguracja poczty Microsoft nie została ukończona.",
+          "nameRequired": "Wprowadź nazwę wyświetlaną aplikacji Microsoft.",
+          "platform": "Nie udało się skonfigurować aplikacji Microsoft platformy.",
+          "popupBlocked": "Zezwól na wyskakujące okna dla tej witryny, a następnie spróbuj ponownie.",
           "popupClosed": "Okno Microsoft zostało zamknięte przed ukończeniem konfiguracji. Spróbuj ponownie lub wybierz inną opcję konfiguracji.",
-          "tenantRequired": "Enter your Microsoft tenant ID or verified domain.",
-          "manual": "Could not configure the Microsoft app.",
-          "manualRequired": "Enter the display name, client ID, client secret, and Microsoft tenant ID.",
-          "pendingProfileMissing": "The pending Microsoft app could not be found.",
-          "approvalLink": "Could not create the Microsoft approval link."
+          "tenantRequired": "Wprowadź identyfikator organizacji Microsoft lub zweryfikowaną domenę.",
+          "manual": "Nie udało się skonfigurować aplikacji Microsoft.",
+          "manualRequired": "Wprowadź nazwę wyświetlaną, identyfikator klienta, klucz tajny klienta i identyfikator organizacji Microsoft.",
+          "pendingProfileMissing": "Nie znaleziono oczekującej aplikacji Microsoft.",
+          "approvalLink": "Nie udało się utworzyć linku zatwierdzenia Microsoft.",
+          "consentDenied": "Odmówiono logowania w Microsoft lub zgody administratora. Wybierz inną opcję konfiguracji albo spróbuj ponownie.",
+          "consentNotGranted": "Microsoft nie potwierdził zgody administratora.",
+          "consentPersistFailed": "Nie udało się zapisać zgody administratora Microsoft.",
+          "invalidState": "To żądanie konfiguracji Microsoft jest nieprawidłowe lub wygasło. Rozpocznij ponownie w ustawieniach dostawców.",
+          "microsoftError": "Microsoft nie mógł ukończyć żądania konfiguracji. Spróbuj ponownie lub użyj konfiguracji ręcznej.",
+          "missingCode": "Microsoft nie zwrócił kodu autoryzacyjnego. Rozpocznij konfigurację ponownie.",
+          "sessionMismatch": "Twoja sesja AlgaPSA nie odpowiada administratorowi, który rozpoczął tę konfigurację. Zaloguj się i spróbuj ponownie."
         },
         "fields": {
-          "clientId": "Client ID",
-          "displayName": "Profile display name",
-          "tenantId": "Microsoft tenant ID",
-          "clientSecret": "Client secret",
-          "microsoftTenant": "Microsoft tenant ID or verified domain",
-          "redirectUri": "Redirect URI to add in Entra"
+          "clientId": "Identyfikator klienta",
+          "displayName": "Nazwa wyświetlana profilu",
+          "tenantId": "Identyfikator organizacji Microsoft",
+          "clientSecret": "Klucz tajny klienta",
+          "microsoftTenant": "Identyfikator organizacji Microsoft lub zweryfikowana domena",
+          "redirectUri": "Identyfikator URI przekierowania do dodania w Entra"
         },
         "manual": {
-          "description": "Use an existing Entra app maintained by your organization.",
-          "title": "Enter an existing app manually"
+          "description": "Użyj istniejącej aplikacji Entra zarządzanej przez swoją organizację.",
+          "title": "Wprowadź istniejącą aplikację ręcznie"
         },
         "platform": {
-          "description": "Nothing to register in Microsoft Entra. Your Microsoft 365 administrator approves access.",
-          "title": "Use the app provided by Alga PSA"
+          "description": "Nie musisz niczego rejestrować w Microsoft Entra. Administrator Microsoft 365 zatwierdza dostęp.",
+          "title": "Użyj aplikacji dostarczonej przez AlgaPSA"
         },
-        "title": "Set up Microsoft",
-        "unavailable": "Unavailable",
-        "recommended": "Recommended",
-        "advanced": "Advanced"
+        "title": "Skonfiguruj Microsoft",
+        "unavailable": "Niedostępne",
+        "recommended": "Zalecane",
+        "advanced": "Zaawansowane"
       },
       "settings": {
         "advanced": {
-          "title": "Manual Microsoft apps (advanced)",
-          "description": "Create and manage Entra app registrations maintained by your organization.",
-          "warning": "A custom Entra app is normally unnecessary on hosted Alga PSA. Continue only when your organization deliberately requires its own application and credentials."
+          "title": "Ręczne aplikacje Microsoft (zaawansowane)",
+          "description": "Twórz rejestracje aplikacji Entra zarządzanych przez swoją organizację i zarządzaj nimi.",
+          "warning": "Niestandardowa aplikacja Entra zwykle nie jest potrzebna w hostowanej AlgaPSA. Kontynuuj tylko wtedy, gdy organizacja świadomie wymaga własnej aplikacji i poświadczeń."
         },
         "platform": {
-          "title": "Microsoft email is ready to connect",
-          "description": "Connect Microsoft 365 with the application supplied by Alga PSA. No Entra app registration is required.",
-          "readyDescription": "The Microsoft app is approved and ready for mailbox sign-in.",
-          "connectAction": "Connect a mailbox →",
-          "unavailableTitle": "Platform Microsoft credentials are unavailable",
-          "unavailableDescription": "This deployment requires an app maintained by your organization. Use the advanced setup below to add one."
+          "title": "Poczta Microsoft jest gotowa do połączenia",
+          "description": "Połącz Microsoft 365 za pomocą aplikacji dostarczonej przez AlgaPSA. Rejestracja aplikacji Entra nie jest wymagana.",
+          "readyDescription": "Aplikacja Microsoft jest zatwierdzona i gotowa do logowania do skrzynki pocztowej.",
+          "connectAction": "Połącz skrzynkę pocztową →",
+          "unavailableTitle": "Poświadczenia Microsoft platformy są niedostępne",
+          "unavailableDescription": "To wdrożenie wymaga aplikacji zarządzanej przez Twoją organizację. Dodaj ją za pomocą poniższej konfiguracji zaawansowanej."
         },
         "actions": {
           "entraLink": "Microsoft Entra",
@@ -1607,7 +1614,7 @@
           "refresh": "Odśwież",
           "resetProviders": "Zresetuj dostawców Microsoft",
           "resetting": "Resetowanie…",
-          "disconnectProviders": "Disconnect Microsoft providers"
+          "disconnectProviders": "Odłącz dostawców Microsoft"
         },
         "archiveDialog": {
           "archiving": "Archiwizowanie…",
@@ -1627,16 +1634,16 @@
           "noCapablePlaceholder": "No enabled profile"
         },
         "bindings": {
-          "summaryBound": "Current: {{profile}}.",
+          "summaryBound": "Bieżący profil: {{profile}}.",
           "summaryNone": "Żaden profil Microsoft nie jest obecnie powiązany z {{consumer}}.",
-          "summaryUnavailable": "{{consumer}} jest powiązany z niedostępnym profilem.",
-          "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
+          "summaryUnavailable": "Wybrana aplikacja jest niedostępna.",
+          "warningArchived": "Profil {{profile}} jest zarchiwizowany. Wybierz aktywną aplikację Microsoft.",
           "warningNoBinding": "Nie skonfigurowano jeszcze żadnego powiązania dla {{consumer}}.",
           "warningNotReady": "{{consumer}} jest powiązany z {{profile}}, ale ten profil nadal wymaga konfiguracji.",
-          "warningProfileMissing": "{{consumer}} jest powiązany z profilem, który nie jest już dostępny. Powiąż go ponownie z aktywnym profilem.",
-          "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
-          "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
-          "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."
+          "warningProfileMissing": "Wybrana aplikacja Microsoft nie jest już dostępna. Wybierz inną aplikację.",
+          "warningMissingCapability": "Wybrano profil {{profile}}, ale nie może on jeszcze obsługiwać {{consumer}}. Edytuj aplikację i włącz {{consumer}} albo wybierz inną aplikację.",
+          "warningNoApps": "Utwórz aplikację Microsoft, włącz {{consumer}}, a następnie wybierz ją tutaj.",
+          "warningNoCapable": "Żadna aplikacja nie może jeszcze obsługiwać {{consumer}}. Edytuj aplikację Microsoft i włącz {{consumer}}, a następnie wybierz ją tutaj."
         },
         "consumerBindings": {
           "descriptionCe": "Powiąż jeden profil Microsoft z MSP SSO na potrzeby logowania i używania domeny logowania.",
@@ -1667,8 +1674,8 @@
         "descriptionEe": "Zarządzaj profilami Microsoft należącymi do tenanta dla MSP SSO, poczty Outlook, synchronizacji kalendarza i Microsoft Teams.",
         "dialog": {
           "cancel": "Anuluj",
-          "clientId": "Client ID",
-          "clientSecret": "Client secret",
+          "clientId": "Identyfikator klienta",
+          "clientSecret": "Klucz tajny klienta",
           "clientSecretPlaceholder": "Wprowadź client secret",
           "clientSecretPlaceholderEdit": "Pozostaw puste, aby zachować bieżący secret",
           "createProfile": "Utwórz profil",
@@ -1683,7 +1690,7 @@
           "setDefault": "Ustaw ten profil jako domyślny profil Microsoft",
           "setDefaultHelp": "Domyślne profile pozostają dostępne dla procesów zarządzania profilem i metadanych bezpiecznych dla migracji, a nie dla routingu konsumentów.",
           "storedSecretHint": "Zapisany secret: {{secret}}. Pozostaw to pole puste, aby zachować je bez zmian.",
-          "tenantId": "Microsoft tenant ID",
+          "tenantId": "Identyfikator organizacji Microsoft",
           "capabilities": "Enabled capabilities",
           "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
@@ -1703,16 +1710,16 @@
           "updateBinding": "Nie można zaktualizować powiązania Microsoft"
         },
         "guidance": {
-          "applicationIdUri": "Application ID URI",
+          "applicationIdUri": "Identyfikator URI aplikacji",
           "calendarRedirect": "Redirect URI synchronizacji kalendarza",
           "calendarTitle": "Wskazówki dotyczące kalendarza",
-          "clientId": "Client ID",
+          "clientId": "Identyfikator klienta",
           "currentProfileTitle": "Bieżące wartości profilu",
           "emailRedirect": "Redirect URI poczty przychodzącej",
           "emailTitle": "Wskazówki dotyczące poczty",
           "mspSsoTitle": "Wskazówki dotyczące MSP SSO",
           "notConfigured": "Nie skonfigurowano",
-          "redirectUri": "Redirect URI",
+          "redirectUri": "Identyfikator URI przekierowania",
           "requiresBaseUrl": "Wymaga bazowego URL i Client ID",
           "scopes": "Zakresy",
           "teamsBotRedirect": "Redirect URI bota osobistego",
@@ -1720,13 +1727,13 @@
           "teamsScopes": "Zakresy Teams",
           "teamsTabRedirect": "Redirect URI osobistego tabu",
           "teamsTitle": "Wskazówki dotyczące Teams",
-          "tenantId": "Microsoft tenant ID",
+          "tenantId": "Identyfikator organizacji Microsoft",
           "unavailable": "Niedostępne"
         },
         "profileCard": {
           "activeBindings": "Aktywne powiązania",
           "archive": "Archiwizuj",
-          "clientId": "Client ID",
+          "clientId": "Identyfikator klienta",
           "defaultBadge": "Domyślny",
           "edit": "Edytuj",
           "guidanceSummary": "Wskazówki dotyczące rejestracji aplikacji Microsoft",
@@ -1737,7 +1744,7 @@
           "setDefault": "Ustaw jako domyślny",
           "storedSecret": "Zapisany secret",
           "teamsAppIdUri": "Teams Application ID URI",
-          "tenantIdLabel": "Microsoft tenant ID:",
+          "tenantIdLabel": "Identyfikator organizacji Microsoft:",
           "updating": "Aktualizowanie…",
           "enabledCapabilities": "Enabled capabilities",
           "noEnabledCapabilities": "No enabled capabilities"
@@ -1750,14 +1757,14 @@
           "archived": "Zarchiwizowane profile nie mogą być używane do nowych powiązań Microsoft.",
           "clientIdMissing": "Brak Client ID.",
           "clientSecretMissing": "Client secret nie został skonfigurowany.",
-          "tenantIdMissing": "Add a Microsoft tenant ID.",
-          "adminConsentPending": "Ask a Microsoft 365 administrator to approve access for Email."
+          "tenantIdMissing": "Dodaj identyfikator organizacji Microsoft.",
+          "adminConsentPending": "Poproś administratora Microsoft 365 o zatwierdzenie dostępu do poczty e-mail."
         },
         "statusBadges": {
           "archived": "Zarchiwizowany",
           "needsAttention": "Wymaga uwagi",
           "ready": "Gotowy",
-          "waitingForAdminApproval": "Waiting for admin approval"
+          "waitingForAdminApproval": "Oczekiwanie na zatwierdzenie przez administratora"
         },
         "title": "Microsoft",
         "toasts": {
@@ -1784,12 +1791,12 @@
           "clientIdRequired": "Microsoft OAuth Client ID jest wymagany",
           "clientSecretRequired": "Microsoft OAuth Client Secret jest wymagany",
           "displayNameRequired": "Nazwa wyświetlana profilu Microsoft jest wymagana",
-          "tenantIdRequired": "Microsoft tenant ID is required"
+          "tenantIdRequired": "Identyfikator organizacji Microsoft jest wymagany"
         },
         "disconnectDialog": {
-          "cancel": "Keep providers connected",
+          "cancel": "Pozostaw dostawców połączonych",
           "message": "Existing Outlook email and calendar provider connections will be marked disconnected and must be re-authorized. Microsoft profiles and service bindings stay in place.",
-          "title": "Disconnect Microsoft providers?"
+          "title": "Odłączyć dostawców Microsoft?"
         },
         "profileLibrary": {
           "description": "Named Microsoft app registrations that services can bind to.",
@@ -1827,16 +1834,16 @@
           "oauthFailed": "Wywołanie zwrotne OAuth QuickBooks nie powiodło się. Spróbuj ponownie się połączyć. Jeśli problem nadal występuje, sprawdź swój redirect URI i zakresy.",
           "tokenExchangeFailed": "Intuit nie zwróciło oczekiwanych tokenów. Spróbuj ponownie się połączyć."
         },
-        "clientIdLabel": "QuickBooks Client ID",
+        "clientIdLabel": "Identyfikator klienta QuickBooks",
         "clientIdPlaceholder": "Wklej Client ID swojej aplikacji Intuit",
-        "clientSecretLabel": "QuickBooks Client Secret",
+        "clientSecretLabel": "Klucz tajny klienta QuickBooks",
         "clientSecretPlaceholder": "Wklej Client Secret swojej aplikacji Intuit",
         "connectSuccess": "QuickBooks połączone pomyślnie. Połączona firma jest teraz domyślnym kontekstem QuickBooks na żywo.",
         "connection": {
           "defaultCompany": "Połączona firma",
           "description": "Uruchom OAuth dopiero po skonfigurowaniu poświadczeń aplikacji QuickBooks. Rozłączenie usuwa zapisane tokeny dostępu QuickBooks, ale zachowuje poświadczenia aplikacji należącej do tenanta.",
           "notConnected": "Nie połączono jeszcze żadnej firmy QuickBooks. Zapisz poświadczenia, a następnie kliknij Połącz QuickBooks.",
-          "realmId": "Realm ID: {{id}}",
+          "realmId": "Identyfikator obszaru: {{id}}",
           "title": "Połączenie QuickBooks na żywo",
           "unknown": "nieznany"
         },
@@ -1848,13 +1855,13 @@
         "disconnectSuccess": "Zapisane połączenie QuickBooks zostało usunięte. Poświadczenia aplikacji QuickBooks należące do tenanta zostały zachowane.",
         "environment": "Środowisko Intuit",
         "environmentProduction": "Produkcja",
-        "environmentSandbox": "Sandbox",
+        "environmentSandbox": "Środowisko testowe",
         "errors": {
           "disconnect": "Nie udało się rozłączyć QuickBooks.",
           "load": "Nie udało się załadować ustawień QuickBooks.",
           "saveCredentials": "Nie udało się zapisać poświadczeń QuickBooks."
         },
-        "howItWorksDescription": "Zapisz tutaj poświadczenia aplikacji QuickBooks, ukończ przepływ OAuth Intuit, a Alga PSA użyje połączonej firmy QuickBooks jako domyślnego kontekstu na żywo dla eksportów i mapowań.",
+        "howItWorksDescription": "Zapisz tutaj poświadczenia aplikacji QuickBooks, ukończ przepływ OAuth Intuit, a AlgaPSA użyje połączonej firmy QuickBooks jako domyślnego kontekstu na żywo dla eksportów i mapowań.",
         "howItWorksTitle": "Jak działa QuickBooks na żywo w tej wersji",
         "loading": "Ładowanie ustawień QuickBooks…",
         "mapping": {
@@ -1866,8 +1873,8 @@
         },
         "noClientId": "Dla tego tenanta nie zapisano jeszcze żadnego Client ID.",
         "noClientSecret": "Dla tego tenanta nie zapisano jeszcze żadnego Client Secret.",
-        "quickbooksCsv": "QuickBooks CSV",
-        "redirectUri": "Redirect URI",
+        "quickbooksCsv": "Plik CSV QuickBooks",
+        "redirectUri": "Identyfikator URI przekierowania",
         "requiredScopes": "Wymagane zakresy",
         "storedClientId": "Zapisany Client ID: {{value}}",
         "storedClientSecret": "Zapisany Client Secret: {{value}}",
@@ -1894,8 +1901,8 @@
         "refreshTokenExpiry": "Token QuickBooks wygasa {{date}}",
         "refreshTokenExpired": "Token QuickBooks wygasł — połącz ponownie, aby wznowić synchronizację.",
         "autoSyncLabel": "Automatyczna synchronizacja włączona",
-        "autoProvisionCustomersLabel": "Create QuickBooks customers automatically",
-        "autoProvisionCustomersHint": "Off: exports for unmapped customers pause with an exception until you link them in the customer mapping screen.",
+        "autoProvisionCustomersLabel": "Automatycznie twórz klientów QuickBooks",
+        "autoProvisionCustomersHint": "Wyłączone: eksport niezamapowanych klientów jest wstrzymywany z wyjątkiem, dopóki nie powiążesz ich na ekranie mapowania klientów.",
         "syncNowButton": "Synchronizuj teraz",
         "syncNowRunning": "Synchronizowanie…",
         "syncNowSuccess": "Synchronizacja zakończona pomyślnie.",
@@ -1913,101 +1920,101 @@
         "noDefault": "Brak domyślnego",
         "saving": "Zapisywanie…",
         "undepositedFunds": "Środki niezdeponowane (domyślnie)",
-        "catalogLoadError": "Failed to load QuickBooks sync configuration options."
+        "catalogLoadError": "Nie udało się wczytać opcji konfiguracji synchronizacji QuickBooks."
       }
     },
     "rmm": {
       "ninjaOne": {
         "loading": "Ładowanie ustawień integracji NinjaOne...",
         "card": {
-          "title": "NinjaOne RMM Integration",
-          "description": "Connect your NinjaOne account to synchronize devices, receive alerts, and enable remote access capabilities.",
-          "skeletonDescription": "Loading NinjaOne integration..."
+          "title": "Integracja NinjaOne RMM",
+          "description": "Połącz konto NinjaOne, aby synchronizować urządzenia, odbierać alerty i włączyć funkcje dostępu zdalnego.",
+          "skeletonDescription": "Wczytywanie integracji NinjaOne..."
         },
         "status": {
-          "checking": "Checking NinjaOne connection...",
+          "checking": "Sprawdzanie połączenia z NinjaOne...",
           "notConnected": {
-            "title": "Not connected to NinjaOne",
-            "description": "Connect your NinjaOne account to sync devices, receive alerts, and enable remote access."
+            "title": "Brak połączenia z NinjaOne",
+            "description": "Połącz konto NinjaOne, aby synchronizować urządzenia, odbierać alerty i włączyć dostęp zdalny."
           },
-          "connected": "Connected to NinjaOne",
-          "connectedWithErrors": "NinjaOne connected with sync errors",
+          "connected": "Połączono z NinjaOne",
+          "connectedWithErrors": "Połączono z NinjaOne, ale wystąpiły błędy synchronizacji",
           "reconnectRequired": "Wymagane ponowne połączenie z NinjaOne",
           "reconnectRequiredDescription": "Autoryzacji NinjaOne nie można już odświeżyć (token wygasł lub został unieważniony). Połącz ponownie, aby przywrócić synchronizację urządzeń, alerty i dostęp zdalny.",
-          "instanceLabel": "Instance:",
-          "organizations": "{{count}} organizations",
-          "devices": "{{count}} devices",
-          "activeAlerts": "{{count}} active alerts",
+          "instanceLabel": "Instancja:",
+          "organizations": "Organizacje: {{count}}",
+          "devices": "Urządzenia: {{count}}",
+          "activeAlerts": "Aktywne alerty: {{count}}",
           "lastSynced": "Ostatnia synchronizacja: {{time}}"
         },
         "setup": {
-          "title": "Setup Instructions",
+          "title": "Instrukcje konfiguracji",
           "steps": {
-            "login": "Log into your NinjaOne dashboard",
-            "navigate": "Navigate to Administration → Apps → API",
-            "addClient": "Click \"+ Add client app\" to create a new API application",
-            "platform": "Set Application Platform to \"Web (PHP, Java, .Net Core, etc.)\"",
-            "name": "Enter a Name (e.g., \"Alga PSA\")",
-            "redirectUri": "Add the redirect URI:",
-            "scopes": "Under \"Scopes\", check \"Monitoring\" and \"Management\"",
-            "grantTypes": "Under \"Allowed grant types\", check \"Authorization code\", \"Client credentials\", and \"Refresh token\"",
-            "addAndCopy": "Click \"Add\" and copy the Client ID and Client Secret below"
+            "login": "Zaloguj się do pulpitu NinjaOne",
+            "navigate": "Przejdź do Administracja → Aplikacje → API",
+            "addClient": "Kliknij „+ Dodaj aplikację kliencką”, aby utworzyć nową aplikację API",
+            "platform": "Ustaw Platformę aplikacji na „Web (PHP, Java, .Net Core itp.)”",
+            "name": "Wprowadź Nazwę (np. „AlgaPSA”)",
+            "redirectUri": "Dodaj identyfikator URI przekierowania:",
+            "scopes": "W sekcji „Zakresy” zaznacz „Monitorowanie” i „Zarządzanie”",
+            "grantTypes": "W sekcji „Dozwolone typy udzielania dostępu” zaznacz „Kod autoryzacyjny”, „Poświadczenia klienta” i „Token odświeżania”",
+            "addAndCopy": "Kliknij „Dodaj” i skopiuj poniżej identyfikator klienta oraz klucz tajny klienta"
           },
-          "docsPrefix": "For detailed setup instructions, see",
-          "docsSection": "Section 10.15",
-          "docsSuffix": "in the documentation.",
-          "openApiSettings": "Open NinjaOne API Settings"
+          "docsPrefix": "Szczegółowe instrukcje konfiguracji znajdziesz w",
+          "docsSection": "sekcji 10.15",
+          "docsSuffix": "dokumentacji.",
+          "openApiSettings": "Otwórz ustawienia API NinjaOne"
         },
         "credentials": {
-          "title": "API Credentials",
-          "saved": "Credentials saved",
-          "clientIdLabel": "Client ID",
-          "clientIdPlaceholder": "Enter your NinjaOne Client ID",
-          "clientSecretLabel": "Client Secret",
-          "clientSecretPlaceholder": "Enter your NinjaOne Client Secret",
-          "clientSecretUpdatePlaceholder": "Enter new secret to update",
-          "secretMaskedLabel": "Secret",
-          "saving": "Saving...",
-          "save": "Save Credentials"
+          "title": "Poświadczenia API",
+          "saved": "Zapisano poświadczenia",
+          "clientIdLabel": "Identyfikator klienta",
+          "clientIdPlaceholder": "Wprowadź identyfikator klienta NinjaOne",
+          "clientSecretLabel": "Klucz tajny klienta",
+          "clientSecretPlaceholder": "Wprowadź klucz tajny klienta NinjaOne",
+          "clientSecretUpdatePlaceholder": "Wprowadź nowy klucz tajny, aby go zaktualizować",
+          "secretMaskedLabel": "Klucz tajny",
+          "saving": "Zapisywanie...",
+          "save": "Zapisz poświadczenia"
         },
         "region": {
-          "hint": "Select your NinjaOne region, then click ‘Connect to NinjaOne’ to authorize access.",
-          "label": "Region:"
+          "hint": "Wybierz region NinjaOne, a następnie kliknij „Połącz z NinjaOne”, aby autoryzować dostęp.",
+          "label": "Region NinjaOne:"
         },
         "actions": {
-          "refreshing": "Refreshing...",
-          "refreshStatus": "Refresh Status",
-          "syncing": "Syncing...",
-          "syncOrganizations": "Sync Organizations",
-          "syncingDevices": "Syncing Devices...",
-          "syncDevices": "Sync Devices",
-          "disconnecting": "Disconnecting...",
-          "disconnect": "Disconnect",
-          "connect": "Connect to NinjaOne"
+          "refreshing": "Odświeżanie...",
+          "refreshStatus": "Odśwież status",
+          "syncing": "Synchronizowanie...",
+          "syncOrganizations": "Synchronizuj organizacje",
+          "syncingDevices": "Synchronizowanie urządzeń...",
+          "syncDevices": "Synchronizuj urządzenia",
+          "disconnecting": "Odłączanie...",
+          "disconnect": "Odłącz",
+          "connect": "Połącz z NinjaOne"
         },
         "disconnectModal": {
-          "title": "Disconnect NinjaOne",
-          "description": "Are you sure you want to disconnect NinjaOne? This will stop device synchronization and alert notifications, and remove your stored API credentials. Organization mappings will be preserved.",
-          "cancel": "Cancel",
-          "confirm": "Disconnect"
+          "title": "Odłącz NinjaOne",
+          "description": "Czy na pewno chcesz odłączyć NinjaOne? Spowoduje to zatrzymanie synchronizacji urządzeń i powiadomień o alertach oraz usunięcie zapisanych poświadczeń API. Mapowania organizacji zostaną zachowane.",
+          "cancel": "Anuluj",
+          "confirm": "Odłącz"
         },
         "toasts": {
-          "connectSuccess": "Successfully connected to NinjaOne.",
-          "connectFailed": "NinjaOne connection failed.",
-          "connectFailedWithDetail": "NinjaOne connection failed: {{detail}}",
-          "disconnectSuccess": "NinjaOne connection successfully disconnected.",
-          "credentialsSaved": "NinjaOne API credentials saved successfully.",
-          "orgSyncSuccess": "Organization sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}",
-          "deviceSyncSuccess": "Device sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}"
+          "connectSuccess": "Pomyślnie połączono z NinjaOne.",
+          "connectFailed": "Połączenie z NinjaOne nie powiodło się.",
+          "connectFailedWithDetail": "Połączenie z NinjaOne nie powiodło się: {{detail}}",
+          "disconnectSuccess": "Pomyślnie odłączono połączenie z NinjaOne.",
+          "credentialsSaved": "Pomyślnie zapisano poświadczenia API NinjaOne.",
+          "orgSyncSuccess": "Zakończono synchronizację organizacji. Przetworzono: {{processed}}, utworzono: {{created}}, zaktualizowano: {{updated}}",
+          "deviceSyncSuccess": "Zakończono synchronizację urządzeń. Przetworzono: {{processed}}, utworzono: {{created}}, zaktualizowano: {{updated}}"
         },
         "errors": {
-          "loadStatus": "Failed to load NinjaOne connection status.",
-          "saveCredentials": "Failed to save credentials.",
-          "connect": "Failed to initiate NinjaOne connection.",
-          "disconnect": "Failed to disconnect NinjaOne.",
-          "disconnectUnexpected": "An unexpected error occurred while disconnecting.",
-          "orgSyncFailed": "Organization sync failed.",
-          "deviceSyncFailed": "Device sync failed."
+          "loadStatus": "Nie udało się wczytać statusu połączenia z NinjaOne.",
+          "saveCredentials": "Nie udało się zapisać poświadczeń.",
+          "connect": "Nie udało się zainicjować połączenia z NinjaOne.",
+          "disconnect": "Nie udało się odłączyć NinjaOne.",
+          "disconnectUnexpected": "Podczas odłączania wystąpił nieoczekiwany błąd.",
+          "orgSyncFailed": "Synchronizacja organizacji nie powiodła się.",
+          "deviceSyncFailed": "Synchronizacja urządzeń nie powiodła się."
         },
         "compliance": {
           "actions": {
@@ -2370,7 +2377,57 @@
           "load": "Nie udało się załadować mapowań organizacji",
           "sync": "Synchronizacja nie powiodła się",
           "updateMapping": "Nie udało się zaktualizować mapowania",
-          "updateContact": "Nie udało się zaktualizować kontaktu domyślnego"
+          "updateContact": "Nie udało się zaktualizować kontaktu domyślnego",
+          "loadStatus": "Nie udało się załadować statusu integracji Huntress",
+          "connect": "Połączenie nie powiodło się",
+          "saveSettings": "Nie udało się zapisać ustawień",
+          "poll": "Odpytywanie nie powiodło się"
+        },
+        "loadingIntegration": "Ładowanie integracji Huntress…",
+        "connect": {
+          "title": "Połącz z Huntress",
+          "description": "Wygeneruj dane uwierzytelniające API na stronie <your-account>.huntress.io → API Credentials, a następnie wklej je tutaj. Raporty o incydentach sprawdzone przez SOC będą automatycznie tworzyć zgłoszenia.",
+          "apiKeyPlaceholder": "Klucz API",
+          "apiSecretPlaceholder": "Tajny klucz API",
+          "submit": "Połącz",
+          "connecting": "Łączenie…"
+        },
+        "connection": {
+          "title": "Połączono z kontem {{account}}",
+          "summary": "Organizacje: {{organizations}} (bez przypisania: {{unmapped}}) · otwarte incydenty: {{openIncidents}} · ostatnie odpytywanie: {{lastPoll}}",
+          "neverPolled": "nigdy",
+          "lastPollFailed": "Ostatnie odpytywanie nie powiodło się: {{error}}",
+          "routingIncompleteWarning": "Odpytywanie o incydenty jest wstrzymane do czasu uzupełnienia poniższej konfiguracji routingu (tablica zabezpieczeń, zapasowy klient, zapasowa tablica oraz priorytety wszystkich trzech poziomów ważności).",
+          "pollNow": "Odpytaj teraz",
+          "disconnect": "Odłącz",
+          "disconnectConfirm": "Czy chcesz odłączyć Huntress? Istniejące zgłoszenia i mapowania zostaną zachowane."
+        },
+        "routing": {
+          "title": "Routing zgłoszeń",
+          "description": "Wskaż miejsce docelowe zgłoszeń dotyczących incydentów. Dla nieprzypisanych organizacji Huntress zgłoszenia są zawsze tworzone dla zapasowego klienta na tablicy triage — żadne nie zostanie pominięte.",
+          "securityBoard": "Tablica zabezpieczeń",
+          "selectBoard": "Wybierz tablicę",
+          "category": "Kategoria (opcjonalnie)",
+          "noCategory": "Brak",
+          "fallbackClient": "Zapasowy klient",
+          "fallbackBoard": "Zapasowa tablica (triage)",
+          "criticalSeverity": "Poziom krytyczny →",
+          "highSeverity": "Poziom wysoki →",
+          "lowSeverity": "Poziom niski →",
+          "selectPriority": "Priorytet",
+          "pollInterval": "Interwał odpytywania (minuty)",
+          "autoClose": "Zamykaj zgłoszenia po zamknięciu incydentu w Huntress",
+          "closedStatus": "Status zamknięcia",
+          "selectStatus": "Wybierz status",
+          "save": "Zapisz konfigurację routingu",
+          "saving": "Zapisywanie…"
+        },
+        "messages": {
+          "connected": "Połączono z kontem Huntress „{{account}}”. Uzupełnij poniższą konfigurację routingu, aby rozpocząć tworzenie zgłoszeń.",
+          "routingSaved": "Zapisano konfigurację routingu — odpytywanie o incydenty jest aktywne.",
+          "routingIncomplete": "Zapisano, ale routing nadal jest niekompletny. Odpytywanie pozostanie wstrzymane do czasu uzupełnienia wszystkich poniższych pól.",
+          "pollFinished": "Odpytywanie zakończone. Liczba przetworzonych incydentów: {{count}}.",
+          "disconnected": "Odłączono Huntress."
         }
       },
       "ninjaone": {
@@ -2442,11 +2499,11 @@
         "descriptionCe": "Zarejestruj domeny doradcze dla wykrywania SSO logowania MSP. Weryfikacja własności nie jest wymuszana w edycji Community, a niezarządzane domeny korzystają z dostawców Nine Minds na poziomie aplikacji.",
         "descriptionEe": "Zarządzaj cyklem życia zgłoszeń domen dla wykrywania dostawców SSO logowania MSP. Niezgłoszone lub niekwalifikujące się domeny korzystają z dostawców Nine Minds na poziomie aplikacji.",
         "moved": {
-          "title": "MSP SSO Login Domains",
-          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
-          "cta": "Open Single Sign-On settings"
+          "title": "Domeny logowania MSP SSO",
+          "body": "Ustawienia pojedynczego logowania, w tym deklaracje domen logowania, przeniesiono do sekcji Bezpieczeństwo → Pojedyncze logowanie.",
+          "cta": "Otwórz ustawienia pojedynczego logowania"
         },
-        "dnsHost": "Host:",
+        "dnsHost": "Nazwa hosta:",
         "dnsInstructions": "Dodaj rekord DNS TXT, a następnie kliknij Zweryfikuj:",
         "dnsValue": "Wartość:",
         "emptyClaims": "Nie skonfigurowano jeszcze żadnych zgłoszeń domen.",
@@ -2530,7 +2587,7 @@
           },
           "messageExtension": {
             "description": "Włącz wyszukiwanie i akcje PSA oparte na wiadomościach.",
-            "label": "Message extension"
+            "label": "Rozszerzenie wiadomości"
           },
           "personalBot": {
             "description": "Włącz polecenia bota w zakresie osobistym dla techników.",
@@ -2570,8 +2627,8 @@
           "saveSettings": "Nie udało się zapisać ustawień Teams"
         },
         "guidance": {
-          "applicationIdUri": "Application ID URI",
-          "messageExtension": "Message extension",
+          "applicationIdUri": "Identyfikator URI aplikacji",
+          "messageExtension": "Rozszerzenie wiadomości",
           "personalBot": "Bot osobisty",
           "personalTab": "Osobisty tab",
           "redirectUris": "Redirect URI",
@@ -2615,9 +2672,9 @@
           }
         },
         "package": {
-          "appId": "App ID",
-          "appIds": "App IDs",
-          "botId": "Bot ID",
+          "appId": "Identyfikator aplikacji",
+          "appIds": "Identyfikatory aplikacji",
+          "botId": "Identyfikator bota",
           "deepLinks": "Deep linki",
           "description": "Wygeneruj manifest aplikacji i linki instalacyjne dla wybranego profilu Microsoft.",
           "downloadManifest": "Pobierz manifest JSON",
@@ -2683,12 +2740,12 @@
           "test": {
             "sent": "Wiadomość testowa Teams wysłana.",
             "failed": "Wiadomość testowa Teams nie powiodła się.",
-            "addonInactive": "Dodatek Teams nie jest aktywny dla tego dzierżawcy.",
+            "addonInactive": "Dodatek Teams nie jest aktywny dla tej organizacji.",
             "integrationInactive": "Aktywuj integrację Teams przed wysłaniem wiadomości testowej.",
             "capabilityDisabled": "Włącz funkcję bota osobistego przed wysłaniem wiadomości testowej.",
             "botNotConfigured": "Skonfiguruj poświadczenia bota Teams przed wysłaniem wiadomości testowej.",
             "missingUserLinkage": "Połącz swoje konto Microsoft przed wysłaniem wiadomości testowej Teams.",
-            "missingConversationReference": "Otwórz bota Alga PSA w Teams i wyślij mu najpierw dowolną wiadomość, a następnie spróbuj ponownie.",
+            "missingConversationReference": "Otwórz bota AlgaPSA w Teams i wyślij mu najpierw dowolną wiadomość, a następnie spróbuj ponownie.",
             "skipped": "Wiadomość testowa Teams została pominięta."
           },
           "steps": {
@@ -2704,19 +2761,19 @@
             "recentDeliveryHealth": "Ostatni stan dostarczania Teams"
           },
           "recommendation": {
-            "addon": "Włącz dodatek Microsoft Teams dla tego dzierżawcy.",
+            "addon": "Włącz dodatek Microsoft Teams dla tej organizacji.",
             "activate": "Aktywuj integrację Teams w ustawieniach.",
             "capabilities": "Włącz bota osobistego i powiadomienia o aktywności dla Teams.",
             "profile": "Wybierz gotowy profil Microsoft dla Teams.",
             "activeProfile": "Wybierz aktywny profil Microsoft dla Teams.",
             "profileCredentials": "Uzupełnij poświadczenia profilu Microsoft przed aktywacją Teams.",
             "meetingOrganizer": "Skonfiguruj domyślnego organizatora spotkań Teams w ustawieniach Teams.",
-            "meetingOrganizerObjectId": "Zapisz ponownie domyślnego organizatora spotkań Teams, aby Alga PSA mogła rozpoznać jego identyfikator obiektu Microsoft Entra.",
+            "meetingOrganizerObjectId": "Zapisz ponownie domyślnego organizatora spotkań Teams, aby AlgaPSA mogła rozpoznać jego identyfikator obiektu Microsoft Entra.",
             "package": "Wygeneruj pakiet aplikacji Teams przed uruchomieniem walidacji kompleksowej.",
             "baseUrl": "Wygeneruj ponownie pakiet Teams z osiągalnym adresem URL bazowym.",
             "botEnv": "Skonfiguruj TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID i TEAMS_BOT_APP_PASSWORD.",
             "userLinkage": "Połącz swoje konto Microsoft w ustawieniach profilu.",
-            "conversationReference": "Otwórz bota Alga PSA w Teams i wyślij mu najpierw dowolną wiadomość, a następnie spróbuj ponownie.",
+            "conversationReference": "Otwórz bota AlgaPSA w Teams i wyślij mu najpierw dowolną wiadomość, a następnie spróbuj ponownie.",
             "deliveryFailure": "Przejrzyj najnowszy błąd dostarczania Teams i spróbuj ponownie po usunięciu przyczyny."
           }
         },
@@ -2735,7 +2792,7 @@
           },
           "downloadRecordings": {
             "label": "Pobieraj nagrania do magazynu wewnętrznego",
-            "description": "Gdy włączone, obiekty blob nagrań są kopiowane do magazynu dzierżawcy oprócz uwierzytelnionego serwera proxy Graph."
+            "description": "Gdy włączone, obiekty blob nagrań są kopiowane do magazynu organizacji oprócz uwierzytelnionego serwera proxy Graph."
           },
           "exposeRecordingsInPortal": {
             "label": "Pokaż nagrania i transkrypcje w portalu klienta",
@@ -2748,7 +2805,7 @@
         },
         "wizard": {
           "title": "Konfiguracja Teams z przewodnikiem",
-          "description": "Wykonaj każdy krok, aby usługa Microsoft Teams działała dla tej dzierżawy.",
+          "description": "Wykonaj każdy krok, aby usługa Microsoft Teams działała dla tej organizacji.",
           "status": {
             "complete": "Ukończono",
             "current": "Bieżący",
@@ -2806,7 +2863,7 @@
         },
         "deliveryLog": {
           "title": "Dziennik dostarczania Teams",
-          "description": "Każda próba dostarczenia powiadomienia Teams zarejestrowana dla tej dzierżawy.",
+          "description": "Każda próba dostarczenia powiadomienia Teams zarejestrowana dla tej organizacji.",
           "error": "Nie udało się załadować dziennika dostarczania Teams",
           "forbidden": "Nie masz uprawnień do wyświetlania dziennika dostarczania Teams.",
           "empty": "Nie zarejestrowano jeszcze żadnych dostaw Teams.",
@@ -2857,7 +2914,7 @@
             "actionPlaceholder": "np. assign_ticket"
           },
           "surface": {
-            "bot": "Bot",
+            "bot": "Bot Teams",
             "message_extension": "Rozszerzenie komunikatów",
             "quick_action": "Szybka akcja",
             "tab": "Karta"
@@ -2891,15 +2948,15 @@
               "remedy": "Udziel zgody administratora na wymagane uprawnienia Graph (na przykład TeamsActivity.Send) w rejestracji aplikacji Azure."
             },
             "user_not_mapped": {
-              "cause": "Odbiorca nie zalogował się do Alga PSA za pomocą konta Microsoft, więc nie istnieje żadne mapowanie konta.",
+              "cause": "Odbiorca nie zalogował się do AlgaPSA za pomocą konta Microsoft, więc nie istnieje żadne mapowanie konta.",
               "remedy": "Poproś użytkownika o zalogowanie się za pomocą konta Microsoft (SSO portalu MSP lub karta Teams), aby jego konto zostało zmapowane."
             },
             "addon_inactive": {
               "cause": "Dodatek Teams wygasł lub jest nieobecny, więc wysyłki są pomijane, natomiast konfiguracja jest zachowywana.",
-              "remedy": "Odnów dodatek Teams dla tej dzierżawy."
+              "remedy": "Odnów dodatek Teams dla tej organizacji."
             },
             "integration_inactive": {
-              "cause": "Integracja Teams nie jest aktywna dla tej dzierżawy.",
+              "cause": "Integracja Teams nie jest aktywna dla tej organizacji.",
               "remedy": "Aktywuj integrację Teams w ustawieniach."
             },
             "package_misconfigured": {
@@ -2908,15 +2965,15 @@
             },
             "graph_not_found": {
               "cause": "Aplikacja Teams nie jest zainstalowana dla odbiorcy, więc Microsoft Graph nie może go wskazać (404).",
-              "remedy": "Zainstaluj aplikację Alga PSA dla tego użytkownika lub zezwól na nią w całej organizacji."
+              "remedy": "Zainstaluj aplikację AlgaPSA dla tego użytkownika lub zezwól na nią w całej organizacji."
             },
             "graph_throttled": {
               "cause": "Microsoft Graph ograniczył żądanie (429).",
-              "remedy": "Przejściowe; Alga PSA ponawia próbę z opóźnieniem. Zbadaj tylko, jeśli problem się utrzymuje."
+              "remedy": "Przejściowe; AlgaPSA ponawia próbę z opóźnieniem. Zbadaj tylko, jeśli problem się utrzymuje."
             },
             "graph_server_error": {
               "cause": "Microsoft Graph zwrócił błąd serwera (5xx).",
-              "remedy": "Przejściowa awaria Graph; Alga PSA ponawia próbę. Poczekaj i sprawdź stan usługi Microsoft, jeśli problem się utrzymuje."
+              "remedy": "Przejściowa awaria Graph; AlgaPSA ponawia próbę. Poczekaj i sprawdź stan usługi Microsoft, jeśli problem się utrzymuje."
             },
             "transient": {
               "cause": "Tymczasowy błąd (sieć lub przekroczenie limitu czasu) przerwał dostarczanie.",
@@ -2930,10 +2987,10 @@
         },
         "paywall": {
           "title": "Dodatek Microsoft Teams",
-          "description": "Integracja Microsoft Teams wymaga dodatku Teams dla tej dzierżawy.",
+          "description": "Integracja Microsoft Teams wymaga dodatku Teams dla tej organizacji.",
           "includedTitle": "Co jest w zestawie",
           "feature": {
-            "tab": "Karta osobista: otwórz Alga PSA w programie Microsoft Teams.",
+            "tab": "Karta osobista: otwórz AlgaPSA w programie Microsoft Teams.",
             "bot": "Osobisty bot i bot czatu grupowego do obsługi zgłoszeń, zatwierdzeń, czasu i notatek.",
             "messageExtension": "Rozszerzenie komunikatów i szybkie akcje umożliwiające działanie na rekordach PSA z poziomu dowolnej wiadomości.",
             "meetings": "Spotkania Teams przy zatwierdzeniach terminów z prawdziwymi zaproszeniami z kalendarza Outlook/Teams.",
@@ -2941,7 +2998,7 @@
             "notifications": "Powiadomienia w kanale aktywności i wiadomości bezpośrednich bota dotyczące przypisań, odpowiedzi, zatwierdzeń i ryzyka SLA."
           },
           "cta": "Kup dodatek Teams",
-          "nonBilling": "Skontaktuj się z administratorem rozliczeń, aby kupić dodatek Teams dla tej dzierżawy."
+          "nonBilling": "Skontaktuj się z administratorem rozliczeń, aby kupić dodatek Teams dla tej organizacji."
         },
         "addonExpiredBanner": {
           "title": "Dodatek Microsoft Teams wygasł",
@@ -3050,7 +3107,7 @@
             "intro": "Ta integracja zapewnia alternatywę dla łączności Xero opartej na OAuth:",
             "note": "Uwaga: Skonfiguruj mapowania poniżej przed eksportem. Eksporty CSV i import podatków są zarządzane z poziomu Rozliczenia → Eksporty księgowe.",
             "taxImportLabel": "Import podatków",
-            "taxImportText": "Przy zewnętrznym obliczaniu podatku importuj kwoty podatku z raportu Xero Invoice Details",
+            "taxImportText": "Przy zewnętrznym obliczaniu podatku importuj kwoty podatku z raportu szczegółów faktury z Xero",
             "title": "Integracja CSV Xero"
           },
           "savedMessage": "Ustawienia zapisane pomyślnie",
@@ -3077,13 +3134,13 @@
               "s1": "Przejdź do Rozliczenia → Eksporty księgowe",
               "s2": "Wybierz faktury i wybierz „Xero CSV” jako adapter",
               "s3": "Pobierz wygenerowany plik CSV",
-              "s4": "W Xero: Business → Invoices → Import",
+              "s4": "W Xero: Business → Faktury → Import",
               "s5": "Prześlij CSV i zaimportuj jako faktury robocze",
               "s6": "Xero obliczy podatek na podstawie Twoich ustawień podatkowych"
             },
             "exportInvoices": "Eksportuj faktury",
             "import": {
-              "s1": "W Xero: Reports → All Reports → Invoice Details",
+              "s1": "W Xero otwórz Reports → All Reports → raport szczegółów faktury",
               "s2": "Ustaw zakres dat i wyeksportuj jako CSV",
               "s3": "W Alga: Rozliczenia → Eksporty księgowe → Importuj podatki",
               "s4": "Prześlij CSV raportu Xero",
@@ -3126,9 +3183,9 @@
           "noConnections": "Xero nie zwróciło żadnych organizacji dla tego logowania. Sprawdź swoją aplikację Xero i dostęp do organizacji, a następnie spróbuj ponownie.",
           "oauthFailed": "Wywołanie zwrotne OAuth Xero nie powiodło się. Spróbuj ponownie się połączyć. Jeśli problem nadal występuje, sprawdź swój redirect URI i zakresy."
         },
-        "clientIdLabel": "Xero Client ID",
+        "clientIdLabel": "Identyfikator klienta Xero",
         "clientIdPlaceholder": "Wklej swój Xero Client ID należący do tenanta",
-        "clientSecretLabel": "Xero Client Secret",
+        "clientSecretLabel": "Klucz tajny klienta Xero",
         "clientSecretPlaceholder": "Wklej swój Xero Client Secret należący do tenanta",
         "connectSuccess": "Xero połączone pomyślnie. Pierwsza połączona organizacja jest teraz domyślnym kontekstem Xero na żywo.",
         "connection": {
@@ -3150,7 +3207,7 @@
           "load": "Nie udało się załadować ustawień Xero.",
           "saveCredentials": "Nie udało się zapisać poświadczeń Xero."
         },
-        "howItWorksDescription": "Zapisz tutaj Xero Client ID i Client Secret należące do tenanta, ukończ przepływ OAuth Xero, a Alga PSA użyje pierwszej połączonej organizacji Xero jako domyślnego kontekstu na żywo.",
+        "howItWorksDescription": "Zapisz tutaj Xero Client ID i Client Secret należące do tenanta, ukończ przepływ OAuth Xero, a AlgaPSA użyje pierwszej połączonej organizacji Xero jako domyślnego kontekstu na żywo.",
         "howItWorksTitle": "Jak działa Xero na żywo w tej wersji",
         "loading": "Ładowanie ustawień Xero…",
         "mapping": {
@@ -3162,85 +3219,85 @@
         },
         "noClientId": "Dla tego tenanta nie zapisano jeszcze żadnego Client ID.",
         "noClientSecret": "Dla tego tenanta nie zapisano jeszcze żadnego Client Secret.",
-        "redirectUri": "Redirect URI",
+        "redirectUri": "Identyfikator URI przekierowania",
         "requiredScopes": "Wymagane zakresy",
         "storedClientId": "Zapisany Client ID: {{value}}",
         "storedClientSecret": "Zapisany Client Secret: {{value}}",
         "tenantOauthDescription": "Wklej poświadczenia aplikacji Xero zarejestrowane dla tego tenanta. Wartości secret nigdy nie są zwracane do przeglądarki po zapisaniu.",
         "tenantOauthTitle": "Aplikacja OAuth należąca do tenanta",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Plik CSV Xero"
       }
     },
     "stripe": {
-      "title": "Stripe Payments",
-      "description": "Accept credit card payments for your invoices",
+      "title": "Płatności Stripe",
+      "description": "Przyjmuj płatności kartą kredytową za faktury",
       "connected": {
-        "title": "Stripe Connected",
-        "publishableKey": "Publishable key: {{key}}..."
+        "title": "Połączono ze Stripe",
+        "publishableKey": "Klucz publiczny: {{key}}..."
       },
       "empty": {
-        "description": "Connect your Stripe account to accept online payments for invoices"
+        "description": "Połącz konto Stripe, aby przyjmować płatności online za faktury"
       },
       "actions": {
-        "testConnection": "Test Connection",
-        "disconnect": "Disconnect",
-        "connect": "Connect Stripe",
-        "connecting": "Connecting...",
-        "cancel": "Cancel"
+        "testConnection": "Testuj połączenie",
+        "disconnect": "Odłącz",
+        "connect": "Połącz ze Stripe",
+        "connecting": "Łączenie...",
+        "cancel": "Anuluj"
       },
       "form": {
-        "secretKeyLabel": "Secret Key",
+        "secretKeyLabel": "Klucz tajny",
         "secretKeyPlaceholder": "sk_live_... or sk_test_...",
-        "publishableKeyLabel": "Publishable Key",
+        "publishableKeyLabel": "Klucz publiczny",
         "publishableKeyPlaceholder": "pk_live_... or pk_test_...",
-        "findKeyPrefix": "Find this in your",
-        "dashboardLink": "Stripe Dashboard → API Keys"
+        "findKeyPrefix": "Znajdziesz go w",
+        "dashboardLink": "Pulpit Stripe → Klucze API"
       },
       "webhook": {
-        "heading": "Webhook Configuration",
-        "configuredAutomatically": "Webhooks configured automatically",
-        "receiveNotifications": "Alga PSA will receive payment notifications for:",
-        "failedTitle": "Webhook configuration failed",
-        "failedBody": "Automatic webhook configuration failed. Click retry to attempt configuration again.",
-        "configuring": "Configuring...",
-        "retry": "Retry Configuration"
+        "heading": "Konfiguracja webhooków",
+        "configuredAutomatically": "Webhooki skonfigurowano automatycznie",
+        "receiveNotifications": "AlgaPSA będzie otrzymywać powiadomienia o płatnościach za:",
+        "failedTitle": "Konfiguracja webhooka nie powiodła się",
+        "failedBody": "Automatyczna konfiguracja webhooka nie powiodła się. Kliknij opcję ponowienia, aby spróbować ponownie.",
+        "configuring": "Konfigurowanie...",
+        "retry": "Ponów konfigurację"
       },
       "disconnectDialog": {
-        "title": "Disconnect Stripe",
-        "message": "Are you sure you want to disconnect Stripe? Payment links will no longer work.",
-        "confirm": "Disconnect",
-        "cancel": "Cancel"
+        "title": "Odłącz Stripe",
+        "message": "Czy na pewno chcesz odłączyć Stripe? Odnośniki do płatności przestaną działać.",
+        "confirm": "Odłącz",
+        "cancel": "Anuluj"
       },
       "toasts": {
-        "connectedWithWebhook": "Stripe connected and webhooks configured automatically!",
-        "connectedWebhookFailed": "Stripe connected! Note: Webhook auto-configuration failed - you may need to configure webhooks manually in Stripe Dashboard.",
-        "disconnected": "Stripe disconnected",
-        "connectionSuccess": "Connection successful!",
-        "webhookConfigured": "Webhook configured successfully!"
+        "connectedWithWebhook": "Połączono ze Stripe i automatycznie skonfigurowano webhooki!",
+        "connectedWebhookFailed": "Połączono ze Stripe! Uwaga: automatyczna konfiguracja webhooka nie powiodła się — może być konieczne ręczne skonfigurowanie webhooków w pulpicie Stripe.",
+        "disconnected": "Odłączono Stripe",
+        "connectionSuccess": "Połączenie powiodło się!",
+        "webhookConfigured": "Pomyślnie skonfigurowano webhook!"
       },
       "errors": {
-        "loadConfig": "Failed to load Stripe configuration",
-        "connect": "Failed to connect Stripe",
-        "disconnect": "Failed to disconnect Stripe",
-        "testConnection": "Connection test failed",
-        "configureWebhook": "Failed to configure webhook",
-        "bothKeysRequired": "Please enter both secret key and publishable key",
-        "secretKeyFormat": "Secret key should start with sk_",
-        "publishableKeyFormat": "Publishable key should start with pk_"
+        "loadConfig": "Nie udało się wczytać konfiguracji Stripe",
+        "connect": "Nie udało się połączyć ze Stripe",
+        "disconnect": "Nie udało się odłączyć Stripe",
+        "testConnection": "Test połączenia nie powiódł się",
+        "configureWebhook": "Nie udało się skonfigurować webhooka",
+        "bothKeysRequired": "Wprowadź zarówno klucz tajny, jak i klucz publiczny",
+        "secretKeyFormat": "Klucz tajny powinien zaczynać się od sk_",
+        "publishableKeyFormat": "Klucz publiczny powinien zaczynać się od pk_"
       }
     },
     "providersWorkbench": {
       "badges": {
-        "loading": "Loading",
-        "needsAttention": "Needs attention",
-        "needsSetup": "Needs setup",
-        "notConfigured": "Not configured",
-        "ready": "Ready"
+        "loading": "Wczytywanie",
+        "needsAttention": "Wymaga uwagi",
+        "needsSetup": "Wymaga konfiguracji",
+        "notConfigured": "Nieskonfigurowany",
+        "ready": "Gotowy"
       },
       "descriptionCe": "Set up the provider path your tenant uses. Configure both only when email or SSO workflows require both ecosystems.",
       "descriptionEe": "Set up the provider path your tenant uses. Configure both only when email, calendar, SSO, or Teams workflows require both ecosystems.",
-      "eyebrow": "Provider setup",
+      "eyebrow": "Konfiguracja dostawcy",
       "google": {
         "description": "Gmail inbound email and Google Calendar.",
         "label": "Google"

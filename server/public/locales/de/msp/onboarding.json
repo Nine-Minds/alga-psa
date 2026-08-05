@@ -35,7 +35,7 @@
       "addClient": "Kunden anlegen",
       "clientContact": "Kundenkontakt",
       "billing": "Abrechnung",
-      "ticketing": "Ticketing",
+      "ticketing": "Ticketverwaltung",
       "algadeskWorkspace": "Arbeitsbereich"
     },
     "errors": {
@@ -204,7 +204,7 @@
     "fields": {
       "serviceName": {
         "label": "Dienstname *",
-        "placeholder": "Managed IT Services"
+        "placeholder": "Verwaltete IT-Dienste"
       },
       "serviceDescription": {
         "label": "Dienstbeschreibung",
@@ -237,7 +237,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Aktion erforderlich:",
-      "actionRequiredDescription": "Bestätige oben einen vorgeschlagenen Diensttyp oder füge einen eigenen hinzu, bevor du einen Dienst anlegst."
+      "actionRequiredDescription": "Bestätigen Sie oben einen vorgeschlagenen Diensttyp oder fügen Sie einen eigenen hinzu, bevor Sie einen Dienst anlegen."
     }
   },
   "clientContactStep": {
@@ -881,7 +881,7 @@
     "supportEmail": {
       "label": "Support-E-Mail",
       "placeholder": "support@ihrunternehmen.de",
-      "help": "Wird als deine Support-Kontaktadresse gespeichert – Kunden sehen sie im Portal und sie wird in Termin-E-Mails verwendet. Um eingehende E-Mails automatisch in Tickets umzuwandeln, verbinde später ein Postfach unter Einstellungen > E-Mail."
+      "help": "Wird als Ihre Support-Kontaktadresse gespeichert – Kunden sehen sie im Portal und sie wird in Termin-E-Mails verwendet. Um eingehende E-Mails automatisch in Tickets umzuwandeln, verbinden Sie später unter Einstellungen > E-Mail ein Postfach."
     },
     "finalRequirement": {
       "label": "Erforderlich:",

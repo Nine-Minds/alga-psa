@@ -428,7 +428,7 @@ describe('MicrosoftIntegrationSettings contracts', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Set up Microsoft' }));
     const dialog = await screen.findByRole('dialog', { name: 'Set up Microsoft' });
-    expect(within(dialog).queryByRole('button', { name: /Use the app provided by Alga PSA/ })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /Use the app provided by AlgaPSA/ })).not.toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: /Enter an existing app manually/ })).toBeEnabled();
   });
 
@@ -454,7 +454,7 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     render(<MicrosoftIntegrationSettings />);
     await user.click(await screen.findByRole('button', { name: 'Set up Microsoft' }));
     const dialog = await screen.findByRole('dialog', { name: 'Set up Microsoft' });
-    const platformChoice = within(dialog).getByRole('button', { name: /Use the app provided by Alga PSA/ });
+    const platformChoice = within(dialog).getByRole('button', { name: /Use the app provided by AlgaPSA/ });
     const automatedChoice = within(dialog).getByRole('button', { name: /Create an app in your Microsoft organization/ });
 
     expect(within(platformChoice).getByText('Recommended')).toBeInTheDocument();
@@ -499,7 +499,7 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     const automatedChoice = within(dialog).getByRole('button', { name: /Create an app in your Microsoft organization/ });
     const manualChoice = within(dialog).getByRole('button', { name: /Enter an existing app manually/ });
 
-    expect(within(dialog).queryByRole('button', { name: /Use the app provided by Alga PSA/ })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /Use the app provided by AlgaPSA/ })).not.toBeInTheDocument();
     expect(automatedChoice).toBeDisabled();
     expect(manualChoice).toBeEnabled();
 

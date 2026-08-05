@@ -139,7 +139,7 @@
     }
   },
   "usage": {
-    "bucketHoursOverview": "Übersicht über die Bucket-Stunden",
+    "bucketHoursOverview": "Übersicht über Stundenkontingente",
     "usageRecords": "Nutzungsaufzeichnungen",
     "actions": {
       "addUsage": "Nutzung hinzufügen",
@@ -168,7 +168,7 @@
     },
     "states": {
       "loadingRecords": "Nutzungsdatensätze werden geladen",
-      "noActiveBucketPlans": "Keine aktiven Bucket-Pläne gefunden."
+      "noActiveBucketPlans": "Keine aktiven Stundenkontingentpläne gefunden."
     },
     "dialog": {
       "addTitle": "Nutzungsdatensatz hinzufügen",
@@ -186,7 +186,7 @@
     "contractLineGuidance": {
       "multipleLines": "Dieser Service erscheint in mehreren Vertragszeilen. Bitte wählen Sie die Vertragsposition aus, die abgerechnet werden soll.",
       "tooltipNoClient": "Kundeninformationen nicht verfügbar. Die Nutzung wird an den vom System verwalteten Standardvertrag weitergeleitet.",
-      "tooltipMultiple": "Dieser Service erscheint in mehreren Vertragszeilen. Bitte wählen Sie aus, welche Vertragszeile Sie verwenden möchten. Wenn nur eine davon eine Bucket-Vertragszeile ist, wird sie standardmäßig ausgewählt.",
+      "tooltipMultiple": "Dieser Dienst ist in mehreren Vertragslinien enthalten. Bitte wählen Sie die zu verwendende Vertragslinie aus. Wenn nur eine davon eine Stundenkontingent-Vertragslinie ist, wird sie standardmäßig ausgewählt.",
       "tooltipSingle": "Diese Nutzung wird über die Vertragszeile „{{name}}“ abgerechnet.",
       "tooltipNone": "Für diesen Service wurden keine geeigneten Vertragszeilen gefunden.",
       "placeholderNoClient": "Verwendung eines vom System verwalteten Standardvertrags",

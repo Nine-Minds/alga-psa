@@ -50,7 +50,7 @@
     "submittedAt": "Inviata: {{date}}",
     "executionStatus": "Stato di esecuzione: {{status}}",
     "ticketLabel": "Ticket:",
-    "workflowLabel": "Workflow: {{id}}",
+    "workflowLabel": "ID workflow: {{id}}",
     "submittedAnswersTitle": "Risposte inviate",
     "noResponse": "Nessuna risposta",
     "attachmentsTitle": "Allegati",

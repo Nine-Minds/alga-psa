@@ -38,11 +38,11 @@ See [`workflow.md`](workflow.md) for the detailed ticket decision flow.
 ## Microsoft 365 path
 
 1. An administrator authorizes delegated `Mail.Read`, `Mail.Read.Shared`, and
-   `offline_access`. Alga PSA stores the OAuth tokens server-side with the
+   `offline_access`. AlgaPSA stores the OAuth tokens server-side with the
    provider configuration. The Email-bound Microsoft profile supplies the app
    credentials used for token refresh. Hosted deployments can use the platform
    app when no tenant Email binding exists.
-2. For a user mailbox, Alga PSA attempts to create a Microsoft Graph
+2. For a user mailbox, AlgaPSA attempts to create a Microsoft Graph
    change-notification subscription for the watched folder. Graph validates the
    public HTTPS notification URL during creation.
 3. A notification is accepted only when its subscription maps to an active
@@ -74,9 +74,9 @@ flags.
 
 ## Trust boundaries
 
-* Inbound connectors read source mail. Processing state is stored in Alga PSA;
+* Inbound connectors read source mail. Processing state is stored in AlgaPSA;
   the connectors do not mark source messages as read, move them, or send mail.
-* Provider credentials are persisted in Alga PSA's server-side configuration.
+* Provider credentials are persisted in AlgaPSA's server-side configuration.
   During hosted Microsoft setup, the provider form receives app configuration
   that includes the client secret. The OAuth callback also returns newly issued
   access and refresh tokens to the opener after persisting them. These browser

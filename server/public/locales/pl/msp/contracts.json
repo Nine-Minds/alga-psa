@@ -72,7 +72,7 @@
     },
     "source": {
       "contract": "Umowa",
-      "tenantDefault": "Domyślność najemcy"
+      "tenantDefault": "Ustawienie domyślne organizacji"
     }
   },
   "billing": {
@@ -238,7 +238,7 @@
       "noClientAssigned": "Nie przypisano żadnego klienta",
       "noDescription": "Brak opisu",
       "systemManagedDefault": "Domyślne zarządzane przez system",
-      "useTenantDefaults": "Użyj ustawień domyślnych dzierżawy"
+      "useTenantDefaults": "Użyj ustawień domyślnych organizacji"
     },
     "quickActions": {
       "deleteContract": "Usuń umowę",
@@ -2266,7 +2266,7 @@
       "overageRate": "Stawka za przekroczenie",
       "overtime": "nadgodziny",
       "placeholders": {
-        "minimum": "minimum",
+        "minimum": "wartość minimalna",
         "minimumMinutes": "minimalne minuty",
         "overtimeRate": "nadgodziny $/godz.",
         "roundMinutes": "zaokrąglenie w minutach",
@@ -2294,6 +2294,16 @@
         "arrears": "Rozliczaj z dołu"
       },
       "title": "Zmiany w kontrakcie",
+      "columns": {
+        "name": "Nazwa",
+        "type": "Typ",
+        "value": "Wartość",
+        "appliesTo": "Dotyczy",
+        "description": "Opis",
+        "amount": "Kwota ($)",
+        "billingPeriod": "Okres rozliczeniowy",
+        "timing": "Moment rozliczenia"
+      },
       "types": {
         "bucket": "Pakiet godzin",
         "fixed": "Stała",
@@ -2314,7 +2324,7 @@
       "title": "Symulowane okresy faktur"
     },
     "unavailable": {
-      "description": "Symulator umów jest dostępny w Alga PSA Pro.",
+      "description": "Symulator umów jest dostępny w AlgaPSA Pro.",
       "title": "Funkcja Pro"
     }
   }

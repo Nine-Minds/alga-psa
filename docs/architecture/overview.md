@@ -1,6 +1,6 @@
-## Architectural Overview of the Open-Source Alga PSA
+## Architectural Overview of the Open-Source AlgaPSA
 
-> 📝 **Note:** The Alga PSA hosted environment is available at `algapsa.com`. If you are running an on-premise installation, replace this with your configured domain.
+> 📝 **Note:** The AlgaPSA hosted environment is available at `algapsa.com`. If you are running an on-premise installation, replace this with your configured domain.
 
 This document provides a high-level architectural overview of the open-source MSP PSA (Professional Services Automation) application. It covers the system's key components, their interactions, and the underlying technologies used, along with relevant file paths.
 

@@ -255,7 +255,7 @@
     },
     "bucketOverlay": {
       "recommendHours": "Consiglia un sacco di ore",
-      "recommendUsage": "Consiglia il secchio di consumo"
+      "recommendUsage": "Consiglia il pacchetto ore da consumare"
     }
   },
   "hourlyConfig": {
@@ -423,7 +423,7 @@
       "overageRate": {
         "label": "Tasso di eccedenza",
         "placeholder": "Inserisci la tariffa eccedente",
-        "help": "La tariffa oraria addebitata per le ore utilizzate oltre il limite del bucket",
+        "help": "La tariffa oraria addebitata per le ore utilizzate oltre il limite del pacchetto ore",
         "errorNegative": "Il tasso di eccedenza non può essere negativo"
       },
       "allowRollover": "Consentire il trasferimento delle ore non utilizzate al periodo successivo"

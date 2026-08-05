@@ -48,7 +48,7 @@ export const TEAMS_DELIVERY_ERROR_REMEDIES: Record<TeamsDeliveryErrorCode, Teams
   ),
   user_not_mapped: entry(
     'user_not_mapped',
-    'The recipient has not signed in to Alga PSA with Microsoft, so no account mapping exists.',
+    'The recipient has not signed in to AlgaPSA with Microsoft, so no account mapping exists.',
     'Have the user sign in with Microsoft (MSP portal SSO or the Teams tab) so their account is mapped.',
   ),
   addon_inactive: entry(
@@ -69,17 +69,17 @@ export const TEAMS_DELIVERY_ERROR_REMEDIES: Record<TeamsDeliveryErrorCode, Teams
   graph_not_found: entry(
     'graph_not_found',
     'The Teams app is not installed for the recipient, so Microsoft Graph cannot target them (404).',
-    'Install or org-allow the Alga PSA app for that user.',
+    'Install or org-allow the AlgaPSA app for that user.',
   ),
   graph_throttled: entry(
     'graph_throttled',
     'Microsoft Graph throttled the request (429).',
-    'Transient; Alga PSA retries with backoff. Investigate only if it persists.',
+    'Transient; AlgaPSA retries with backoff. Investigate only if it persists.',
   ),
   graph_server_error: entry(
     'graph_server_error',
     'Microsoft Graph returned a server error (5xx).',
-    'Transient Graph outage; Alga PSA retries. Wait and check Microsoft service health if it persists.',
+    'Transient Graph outage; AlgaPSA retries. Wait and check Microsoft service health if it persists.',
   ),
   transient: entry(
     'transient',

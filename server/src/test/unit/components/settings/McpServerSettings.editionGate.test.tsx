@@ -23,7 +23,7 @@ describe('McpServerSettings edition gate', () => {
     render(<McpServerSettings />);
 
     expect(await screen.findByRole('heading', { name: 'MCP server requires Pro' })).toBeInTheDocument();
-    expect(screen.getByText('MCP server is available with Alga PSA Pro.')).toBeInTheDocument();
+    expect(screen.getByText('MCP server is available with AlgaPSA Pro.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View Plans' })).toHaveAttribute(
       'href',
       'https://www.nineminds.com/plans',

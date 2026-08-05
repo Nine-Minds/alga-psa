@@ -335,6 +335,7 @@
   },
   "account": {
     "title": "55555",
+    "notAvailable": "55555",
     "licenseManagement": {
       "title": "55555",
       "subtitle": "55555",
@@ -435,6 +436,40 @@
         "expYear": "55555",
         "cvv": "55555"
       }
+    }
+  },
+  "licenses": {
+    "pageTitle": "55555",
+    "pageDescription": "55555",
+    "loading": "55555",
+    "empty": {
+      "message": "55555",
+      "purchaseLink": "55555",
+      "suffix": "55555"
+    },
+    "downloadKey": "55555",
+    "validFrom": "55555",
+    "expires": "55555",
+    "expiringSoon": "55555",
+    "renewal": "55555",
+    "renewalModes": {
+      "auto": "55555",
+      "manual": "55555"
+    },
+    "tiers": {
+      "pro": "55555",
+      "premium": "55555"
+    },
+    "transports": {
+      "connectedMonthly": "55555",
+      "connectedAnnual": "55555",
+      "airgapAnnual": "55555"
+    },
+    "statuses": {
+      "active": "55555",
+      "inactive": "55555",
+      "expired": "55555",
+      "terminated": "55555"
     }
   },
   "profile": {

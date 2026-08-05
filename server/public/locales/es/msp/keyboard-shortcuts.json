@@ -100,7 +100,7 @@
     "panel": "Panel",
     "record": "Registro",
     "editor": "Editor",
-    "scroll": "Scroll"
+    "scroll": "Desplazamiento"
   },
   "actions": {
     "global": {
@@ -169,32 +169,32 @@
         "description": "Navegar a la página de clientes."
       },
       "goDashboard": {
-        "label": "Go to dashboard",
-        "description": "Navigate to the dashboard."
+        "label": "Ir al panel",
+        "description": "Vaya al panel."
       },
       "goProjects": {
-        "label": "Go to projects",
-        "description": "Navigate to the projects page."
+        "label": "Ir a proyectos",
+        "description": "Ir a la página de proyectos."
       },
       "goBilling": {
-        "label": "Go to billing",
-        "description": "Navigate to billing."
+        "label": "Ir a facturación",
+        "description": "Ir a facturación."
       },
       "goSettings": {
-        "label": "Go to settings",
-        "description": "Navigate to settings."
+        "label": "Ir a configuración",
+        "description": "Ir a configuración."
       },
       "goSearch": {
-        "label": "Go to global search",
-        "description": "Focus the global search field."
+        "label": "Ir a la búsqueda global",
+        "description": "Enfocar el campo de búsqueda global."
       },
       "goHelp": {
-        "label": "Go to keyboard help",
-        "description": "Open the keyboard shortcuts reference."
+        "label": "Ir a la ayuda del teclado",
+        "description": "Abrir la referencia de atajos de teclado."
       },
       "backToParent": {
-        "label": "Back to parent list",
-        "description": "Activate the page back navigation button when one is available."
+        "label": "Volver a la lista principal",
+        "description": "Activar el botón de navegación Atrás de la página cuando esté disponible."
       }
     },
     "assets": {
@@ -287,82 +287,82 @@
     },
     "scroll": {
       "halfDown": {
-        "label": "Scroll half page down",
-        "description": "Scroll down by half a page."
+        "label": "Desplazarse media página hacia abajo",
+        "description": "Desplazarse media página hacia abajo."
       },
       "halfUp": {
-        "label": "Scroll half page up",
-        "description": "Scroll up by half a page."
+        "label": "Desplazarse media página hacia arriba",
+        "description": "Desplazarse media página hacia arriba."
       },
       "fullDown": {
-        "label": "Scroll full page down",
-        "description": "Scroll down by one full page."
+        "label": "Desplazarse una página hacia abajo",
+        "description": "Desplazarse una página completa hacia abajo."
       },
       "fullUp": {
-        "label": "Scroll full page up",
-        "description": "Scroll up by one full page."
+        "label": "Desplazarse una página hacia arriba",
+        "description": "Desplazarse una página completa hacia arriba."
       },
       "top": {
-        "label": "Scroll to top",
-        "description": "Scroll to the top of the current page or panel."
+        "label": "Desplazarse al inicio",
+        "description": "Desplazarse al inicio de la página o panel actual."
       },
       "bottom": {
-        "label": "Scroll to bottom",
-        "description": "Scroll to the bottom of the current page or panel."
+        "label": "Desplazarse al final",
+        "description": "Desplazarse al final de la página o panel actual."
       }
     },
     "focus": {
       "primarySearch": {
-        "label": "Focus page search",
-        "description": "Focus the primary search field on the current page."
+        "label": "Enfocar la búsqueda de la página",
+        "description": "Enfocar el campo de búsqueda principal de la página actual."
       }
     },
     "table": {
       "nextRow": {
-        "label": "Next table row",
-        "description": "Move the active row marker to the next selectable table row."
+        "label": "Siguiente fila de la tabla",
+        "description": "Mover el marcador de fila activa a la siguiente fila seleccionable de la tabla."
       },
       "previousRow": {
-        "label": "Previous table row",
-        "description": "Move the active row marker to the previous selectable table row."
+        "label": "Fila anterior de la tabla",
+        "description": "Mover el marcador de fila activa a la fila seleccionable anterior de la tabla."
       },
       "toggleRow": {
-        "label": "Toggle table row",
-        "description": "Select or deselect the active table row."
+        "label": "Alternar fila de la tabla",
+        "description": "Seleccionar o deseleccionar la fila activa de la tabla."
       },
       "visualRange": {
-        "label": "Visual row range",
-        "description": "Start or stop selecting a contiguous table row range."
+        "label": "Rango visual de filas",
+        "description": "Iniciar o detener la selección de un rango contiguo de filas de la tabla."
       },
       "openRow": {
-        "label": "Open table row",
-        "description": "Open the active table row."
+        "label": "Abrir fila de la tabla",
+        "description": "Abrir la fila activa de la tabla."
       }
     },
     "repeat": {
       "lastAction": {
-        "label": "Repeat last action",
-        "description": "Repeat the last Vim-style navigation action."
+        "label": "Repetir la última acción",
+        "description": "Repetir la última acción de navegación al estilo Vim."
       }
     },
     "macro": {
       "record": {
-        "label": "Record macro",
-        "description": "Start or stop recording a Vim-style navigation macro."
+        "label": "Grabar macro",
+        "description": "Iniciar o detener la grabación de una macro de navegación al estilo Vim."
       },
       "play": {
-        "label": "Play macro",
-        "description": "Play a recorded Vim-style navigation macro."
+        "label": "Reproducir macro",
+        "description": "Reproducir una macro de navegación grabada al estilo Vim."
       }
     },
     "linkhints": {
       "show": {
-        "label": "Show link hints",
-        "description": "Show keyboard hints for visible links and controls."
+        "label": "Mostrar sugerencias de vínculos",
+        "description": "Mostrar sugerencias de teclado para los vínculos y controles visibles."
       },
       "showNewTab": {
-        "label": "Show link hints in new tab",
-        "description": "Show keyboard hints and open links in a new tab when possible."
+        "label": "Mostrar sugerencias de vínculos en una pestaña nueva",
+        "description": "Mostrar sugerencias de teclado y abrir los vínculos en una pestaña nueva cuando sea posible."
       }
     }
   },

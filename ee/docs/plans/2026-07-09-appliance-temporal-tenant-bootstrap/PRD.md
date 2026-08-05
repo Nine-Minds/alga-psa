@@ -6,7 +6,7 @@
 
 ## Summary
 
-Make first-boot tenant provisioning on an Alga PSA appliance run through the
+Make first-boot tenant provisioning on an AlgaPSA appliance run through the
 appliance's local Temporal service, and make the release pipeline publish the
 app image, Temporal worker, charts, and Flux config as one compatible unit.
 

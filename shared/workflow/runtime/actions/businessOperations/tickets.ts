@@ -558,7 +558,7 @@ export function registerTicketActions(): void {
     ui: {
       label: 'Create Ticket',
       category: 'Business Operations',
-      description: 'Create a ticket in Alga PSA'
+      description: 'Create a ticket in AlgaPSA'
     },
     examples: {
       minimal: {

@@ -489,7 +489,7 @@
         "fallbackEntity": "ce tableau"
       },
       "title": "Tableaux",
-      "description": "Les tableaux aident à organiser les tickets par département, équipe ou type de flux de travail. Lorsque les clients créent des tickets via le portail client, ils seront automatiquement affectés au tableau marqué comme défaut.",
+      "description": "Les tableaux aident à organiser les tickets par département, équipe ou type de workflow. Lorsque les clients créent des tickets via le portail client, ils seront automatiquement affectés au tableau marqué comme défaut.",
       "tip": "Cliquez sur l'étoile dans la colonne Par défaut pour modifier le tableau par défaut.",
       "actions": {
         "import": "Importer depuis le standard",

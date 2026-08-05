@@ -67,11 +67,11 @@ export default function LicenseBanner() {
       }
       break;
     case 'license_expired':
-      message = 'License has expired. The install is now running Essentials features.';
+      message = t('licenseBanner.licenseExpired', { defaultValue: 'License has expired. The install is now running Essentials features.' });
       urgency = 'error';
       break;
     case 'license_wrong_tenant':
-      message = 'This license was issued for a different appliance and is not valid here. The install is running Essentials features.';
+      message = t('licenseBanner.licenseWrongTenant', { defaultValue: 'This license was issued for a different appliance and is not valid here. The install is running Essentials features.' });
       urgency = 'error';
       break;
     case 'ce':
@@ -98,7 +98,7 @@ export default function LicenseBanner() {
         fontSize: '0.875rem',
       }}
       role="banner"
-      aria-label="License status"
+      aria-label={t('licenseBanner.ariaLabel', { defaultValue: 'License status' })}
     >
       <span>{message}</span>
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexShrink: 0, marginLeft: '1rem' }}>
@@ -106,11 +106,11 @@ export default function LicenseBanner() {
           onClick={() => router.push('/msp/licenses')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', color: 'inherit', fontSize: 'inherit' }}
         >
-          Manage License
+          {t('licenseBanner.manageLicense', { defaultValue: 'Manage License' })}
         </button>
         <button
           onClick={() => setDismissed(true)}
-          aria-label="Dismiss"
+          aria-label={t('licenseBanner.dismiss', { defaultValue: 'Dismiss' })}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: '1rem', lineHeight: 1 }}
         >
           ×

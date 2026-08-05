@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Alga PSA',
+  title: 'AlgaPSA',
 };
 
 export default function StaticLayout({

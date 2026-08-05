@@ -1,14 +1,14 @@
 {
   "welcome": {
-    "title": "Bienvenido a tu centro de mando MSP",
-    "description": "Sigue el progreso de la incorporación, configura servicios críticos y mantén consistente la experiencia de cada cliente.",
+    "title": "Bienvenido a su centro de mando MSP",
+    "description": "Siga el progreso de la incorporación, configure servicios críticos y mantenga consistente la experiencia de cada cliente.",
     "titleCommunity": "Bienvenido de nuevo",
-    "descriptionCommunity": "Accede rápidamente a tickets, programación, proyectos e informes desde tu panel."
+    "descriptionCommunity": "Acceda rápidamente a tickets, programación, proyectos e informes desde su panel."
   },
   "algadesk": {
     "welcome": {
       "title": "Bienvenido a AlgaDesk",
-      "description": "Controla la carga de tickets, supervisa el estado de los canales de correo y no pierdas ninguna conversación."
+      "description": "Controle la carga de tickets, supervise el estado de los canales de correo y no pierda ninguna conversación."
     },
     "metrics": {
       "openTickets": "Tickets abiertos",
@@ -41,11 +41,11 @@
     },
     "monitoring": {
       "title": "Monitoreo del sistema",
-      "description": "Observa señales críticas en los clientes y activa automatización cuando sea necesario."
+      "description": "Observe señales críticas en los clientes y active automatización cuando sea necesario."
     },
     "security": {
       "title": "Gestión de seguridad",
-      "description": "Gestiona políticas, aprobaciones y respuestas de auditoría en un solo lugar."
+      "description": "Gestione políticas, aprobaciones y respuestas de auditoría en un solo lugar."
     },
     "projects": {
       "title": "Gestión de proyectos",
@@ -53,7 +53,7 @@
     },
     "reports": {
       "title": "Informes y analítica",
-      "description": "Crea resúmenes sobre utilización, cumplimiento de SLA y rentabilidad."
+      "description": "Cree resúmenes sobre utilización, cumplimiento de SLA y rentabilidad."
     },
     "schedule": {
       "title": "Gestión de programación",
@@ -61,14 +61,14 @@
     }
   },
   "knowledgeBase": {
-    "title": "¿Necesitas profundizar más?",
+    "title": "¿Necesita profundizar más?",
     "description": "Explora runbooks de implementación y mejores prácticas en la base de conocimientos.",
     "cta": "Ver recursos"
   },
   "onboarding": {
     "completeTitle": "Incorporación completada",
-    "incompleteTitle": "Completa tu configuración",
-    "completeDescription": "Ya puedes usar la experiencia completa del panel MSP.",
+    "incompleteTitle": "Complete su configuración",
+    "completeDescription": "Ya puede usar la experiencia completa del panel MSP.",
     "incompleteDescription": "Completa cada paso para desbloquear la experiencia completa del panel MSP.",
     "stepLabel": "PASO {{index}}",
     "badges": {
@@ -82,10 +82,10 @@
       "steps": "{{completed}} de {{total}} pasos",
       "messageStart": "¡Apenas estás comenzando!",
       "messageComplete": "¡Todo listo, gran trabajo!",
-      "messageInProgress": "Sigue así, ¡vas muy bien!"
+      "messageInProgress": "Siga así, ¡va muy bien!"
     },
     "substeps": {
-      "dataImport": "Completa tu primera importación O crea 5 contactos",
+      "dataImport": "Complete su primera importación O cree 5 contactos",
       "identity": {
         "addProvider": "Agregar un proveedor de SSO",
         "linkTeamMember": "Vincular al primer miembro del equipo"
@@ -93,9 +93,9 @@
       "portal": {
         "customDomain": "Dominio personalizado del portal",
         "branding": "Personalizaciones de color y logotipo del portal",
-        "inviteFirstContact": "Invita a tu primer contacto al portal"
+        "inviteFirstContact": "Invite a su primer contacto al portal"
       },
-      "createContacts": "Crea tus primeros 5 contactos",
+      "createContacts": "Cree sus primeros 5 contactos",
       "calendar": {
         "addProvider": "Agregar un proveedor de calendario",
         "connectAuthorize": "Conectar y autorizar al proveedor"
@@ -114,49 +114,49 @@
     },
     "hidden": {
       "title": "Tarjetas de configuración ocultas ({{count}})",
-      "subtitle": "Restaura cualquier tarjeta si la necesitas más adelante.",
+      "subtitle": "Restaure cualquier tarjeta si la necesita más adelante.",
       "titleCombined": "Tarjetas ocultas ({{count}})"
     },
     "checklist": {
       "title": "Checklist de incorporación",
       "progress": "{{completed}} de {{total}} tareas completas",
       "completeTitle": "Configuración completa",
-      "completeDescription": "Invita a los clientes a conocer tu portal con marca.",
+      "completeDescription": "Invite a los clientes a conocer su portal con marca.",
       "inviteCta": "Invitar clientes",
       "viewButton": "Ver checklist de incorporación"
     },
     "steps": {
       "identity": {
         "title": "Protege identidad y SSO",
-        "description": "Conecta Google Workspace o Microsoft 365 para que los administradores inicien sesión con identidades administradas.",
+        "description": "Conecte Google Workspace o Microsoft 365 para que los administradores inicien sesión con identidades administradas.",
         "cta": "Conectar SSO"
       },
       "portal": {
         "title": "Configurar portal de clientes",
-        "description": "Configura tu portal para que los clientes puedan iniciar sesión en tu dominio con tu imagen de marca.",
+        "description": "Configure su portal para que los clientes puedan iniciar sesión en su dominio con su imagen de marca.",
         "cta": "Abrir configuración del portal"
       },
       "dataImport": {
         "title": "Importar datos principales",
-        "description": "Agrega contactos para empezar a trabajar para los clientes y mantener los flujos en movimiento.",
+        "description": "Agregue contactos para empezar a trabajar para los clientes y mantener los flujos en movimiento.",
         "cta": "Crear contactos"
       },
       "calendar": {
         "title": "Sincronización del calendario",
-        "description": "Conecta calendarios de Google u Outlook para mantener alineados el despacho y las citas con clientes.",
+        "description": "Conecte calendarios de Google u Outlook para mantener alineados el despacho y las citas con clientes.",
         "cta": "Configurar calendario"
       },
       "email": {
         "title": "Configurar correo",
-        "description": "Configura el correo entrante de tickets y verifica un dominio de envío saliente para lograr una entrega confiable.",
+        "description": "Configure el correo entrante de tickets y verifique un dominio de envío saliente para lograr una entrega confiable.",
         "cta": "Configurar correo"
       }
     },
     "blockers": {
       "identity": {
         "linkedAccountsUnavailable": "No se pueden verificar los miembros del equipo vinculados en este momento.",
-        "noLinkedUsers": "Todavía no hay usuarios vinculados a un proveedor de identidad. Pide a un administrador de MSP que conecte Google o Microsoft.",
-        "addProviderCredentials": "Agrega credenciales de Google Workspace o Microsoft 365 para habilitar el SSO para tu equipo.",
+        "noLinkedUsers": "Todavía no hay usuarios vinculados a un proveedor de identidad. Pida a un administrador de MSP que conecte Google o Microsoft.",
+        "addProviderCredentials": "Agregue credenciales de Google Workspace o Microsoft 365 para habilitar el SSO para su equipo.",
         "configurationUnavailable": "La configuración del proveedor de SSO no está disponible en este entorno.",
         "loadFailed": "No se pudo cargar el estado de la configuración de SSO."
       },
@@ -192,9 +192,9 @@
   },
   "mspDashboard": "Panel MSP",
   "mobileApp": {
-    "title": "Descarga la aplicación móvil de AlgaPSA",
-    "description": "Escanea un código QR con tu teléfono para descargar la aplicación móvil de AlgaPSA.",
-    "selfHostDescription": "1. Escanea un código QR de la tienda para instalar la aplicación. 2. En la aplicación, toca \"Change server\" → \"Scan QR code\" y escanea el código \"Conectar este servidor\".",
+    "title": "Descargue la aplicación móvil de AlgaPSA",
+    "description": "Escanee un código QR con su teléfono para descargar la aplicación móvil de AlgaPSA.",
+    "selfHostDescription": "1. Escanee un código QR de la tienda para instalar la aplicación. 2. En la aplicación, toque \"Change server\" → \"Scan QR code\" y escanee el código \"Conectar este servidor\".",
     "appStore": "App Store (iOS)",
     "playStore": "Google Play (Android)",
     "appStoreQrAlt": "Código QR que enlaza con la aplicación de AlgaPSA en la App Store de Apple",
@@ -211,7 +211,7 @@
     "restoreError": "No se pudo restaurar la tarjeta.",
     "hidden": {
       "title": "Tarjeta de la aplicación móvil oculta",
-      "subtitle": "Restáurala si la necesitas más adelante."
+      "subtitle": "Restáurela si la necesita más adelante."
     }
   }
 }

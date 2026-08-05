@@ -1,12 +1,12 @@
 apiVersion: v2
 name: temporal-worker
-description: A Helm chart for the Alga PSA Temporal Worker component
+description: A Helm chart for the AlgaPSA Temporal Worker component
 type: application
 version: 0.1.0
 appVersion: "1.0"
 home: https://github.com/Nine-Minds/alga-psa
 maintainers:
-  - name: Alga PSA Team
+  - name: AlgaPSA Team
     email: support@algapsa.com
 keywords:
   - temporal

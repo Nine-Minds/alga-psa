@@ -1,7 +1,7 @@
-# Skill: Extension System Troubleshooting (Alga PSA)
+# Skill: Extension System Troubleshooting (AlgaPSA)
 
 ## Summary
-Guided playbook for diagnosing and fixing Alga PSA extension UI delivery when the iframe shows a spinner or `{"error":"not_installed"}`. Captures the fixes from the most recent runner/host changes so future incidents can be resolved quickly.
+Guided playbook for diagnosing and fixing AlgaPSA extension UI delivery when the iframe shows a spinner or `{"error":"not_installed"}`. Captures the fixes from the most recent runner/host changes so future incidents can be resolved quickly.
 
 ## Tags
 `extensions` `runner` `docker` `minio` `ui`

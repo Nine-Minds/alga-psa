@@ -1,7 +1,7 @@
 {
   "name": "@product/extension-actions",
   "version": "0.1.0",
-  "description": "Extension actions for Alga PSA - EE/OSS conditional exports",
+  "description": "Extension actions for AlgaPSA - EE/OSS conditional exports",
   "main": "index.js",
   "type": "module",
   "exports": {

@@ -1,4 +1,4 @@
-# Alga PSA Extension Manifest v2
+# AlgaPSA Extension Manifest v2
 
 Manifest v2 is the canonical specification for the Enterprise Extension System. It defines out-of-process execution, signed content-addressed bundles, component-model runtime metadata, and iframe-only UI served by the Runner.
 

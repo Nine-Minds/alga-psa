@@ -241,24 +241,24 @@ const COPY = {
   es: {
     subject: 'Invitaci\u00f3n al portal del cliente - {{tenantName}}',
     title: 'Invitaci\u00f3n al portal',
-    headerTitle: 'Bienvenido a tu portal de cliente',
-    headerSubtitle: 'Has sido invitado a acceder a tu cuenta',
+    headerTitle: 'Le damos la bienvenida al portal del cliente',
+    headerSubtitle: 'Ha recibido una invitaci\u00f3n para acceder a su cuenta',
     greeting: 'Hola {{contactName}},',
-    intro: '\u00a1Buenas noticias! Has sido invitado a acceder al portal de cliente de <strong>{{clientName}}</strong>. Este portal seguro te da acceso instant\u00e1neo a:',
-    infoBoxTitle: '\ud83c\udfaf A qu\u00e9 puedes acceder',
-    feature1: '\u2713 Ver y dar seguimiento a tus tickets de soporte',
+    intro: '\u00a1Buenas noticias! Se le ha invitado a acceder al portal del cliente de <strong>{{clientName}}</strong>. Este portal seguro le da acceso instant\u00e1neo a:',
+    infoBoxTitle: '\ud83c\udfaf A qu\u00e9 puede acceder',
+    feature1: '\u2713 Ver y dar seguimiento a sus tickets de soporte',
     feature2: '\u2713 Revisar actualizaciones de proyectos y documentaci\u00f3n',
-    feature3: '\u2713 Comunicarte directamente con tu equipo de soporte',
-    tagline: 'Disfruta de una gesti\u00f3n de servicios fluida con nuestro portal intuitivo. Todo lo que necesitas para estar informado y conectado, en un solo lugar seguro.',
-    buttonLabel: 'Configurar tu acceso al portal',
-    copyLinkHint: 'O copia y pega este enlace en tu navegador:',
+    feature3: '\u2713 Comunicarse directamente con su equipo de soporte',
+    tagline: 'Disfrute de una gesti\u00f3n de servicios fluida con nuestro portal intuitivo. Todo lo que necesita para mantenerse al tanto y en contacto, en un solo lugar seguro.',
+    buttonLabel: 'Configurar su acceso al portal',
+    copyLinkHint: 'O copie y pegue este enlace en su navegador:',
     warningTitle: '\u23f0 Invitaci\u00f3n con tiempo limitado',
-    warningText: 'Este enlace de invitaci\u00f3n expirar\u00e1 en <strong>{{expirationTime}}</strong>. Completa la configuraci\u00f3n de tu cuenta antes de esa fecha para garantizar un acceso ininterrumpido.',
-    contactTitle: '\u00bfNecesitas ayuda?',
+    warningText: 'Este enlace de invitaci\u00f3n expirar\u00e1 en <strong>{{expirationTime}}</strong>. Complete la configuraci\u00f3n de su cuenta antes de esa fecha para garantizar un acceso ininterrumpido.',
+    contactTitle: '\u00bfNecesita ayuda?',
     phoneLabel: 'Tel\u00e9fono',
-    contactHelp: 'Nuestro equipo de soporte est\u00e1 listo para ayudarte a comenzar.',
-    footerSent: 'Este correo fue enviado a {{contactName}} como parte de la configuraci\u00f3n de tu acceso al portal.',
-    footerUnexpected: 'Si no esperabas esta invitaci\u00f3n, cont\u00e1ctanos en {{supportEmail}}.',
+    contactHelp: 'Nuestro equipo de soporte est\u00e1 listo para ayudarle a comenzar.',
+    footerSent: 'Este correo electr\u00f3nico fue enviado a {{contactName}} como parte de la configuraci\u00f3n de su acceso al portal.',
+    footerUnexpected: 'Si no esperaba esta invitaci\u00f3n, p\u00f3ngase en contacto con nosotros en {{supportEmail}}.',
     footerCopyright: '\u00a9 {{currentYear}} {{tenantName}}. Todos los derechos reservados.',
   },
   de: {
@@ -301,6 +301,7 @@ const COPY = {
     warningTitle: '\u23f0 Tijdgebonden uitnodiging',
     warningText: 'Deze uitnodigingslink verloopt over <strong>{{expirationTime}}</strong>. Voltooi uw accountconfiguratie v\u00f3\u00f3r die tijd om ononderbroken toegang te garanderen.',
     contactTitle: 'Hulp nodig?',
+    emailLabel: 'E-mail',
     phoneLabel: 'Telefoon',
     contactHelp: 'Ons supportteam staat klaar om u op weg te helpen.',
     footerSent: 'Deze e-mail is verzonden naar {{contactName}} als onderdeel van uw portaaltoegang.',
@@ -331,7 +332,7 @@ const COPY = {
     footerCopyright: '\u00a9 {{currentYear}} {{tenantName}}. Tutti i diritti riservati.',
   },
   pl: {
-    subject: 'Zaproszenie do portalu klienta{{#if tenantName}} - {{tenantName}}{{/if}}',
+    subject: 'Zaproszenie do portalu klienta - {{tenantName}}',
     title: 'Zaproszenie do portalu',
     headerTitle: 'Witamy w portalu klienta',
     headerSubtitle: 'Tw\u00f3j dost\u0119p do zarz\u0105dzania us\u0142ugami jest gotowy',
@@ -433,7 +434,7 @@ ${c.tagline ? `
 
     <div class="contact-info">
       <h4>${c.contactTitle}</h4>
-      <p><strong>Email:</strong> {{supportEmail}}</p>
+      <p><strong>${c.emailLabel || 'Email'}:</strong> {{supportEmail}}</p>
       <p><strong>${c.phoneLabel}:</strong> {{supportPhone}}</p>
       <p style="margin-top: 12px; font-size: 13px; color: #64748b;">${c.contactHelp}</p>
     </div>
@@ -465,7 +466,7 @@ ${c.warningTitle}
 ${c.warningText.replace(/<[^>]+>/g, '')}
 
 ${c.contactTitle}
-Email: {{supportEmail}}
+${c.emailLabel || 'Email'}: {{supportEmail}}
 ${c.phoneLabel}: {{supportPhone}}
 ${c.contactHelp}
 

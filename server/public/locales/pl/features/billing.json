@@ -121,8 +121,8 @@
     "total": "Łączne godziny",
     "usage": "Wykorzystanie",
     "overage": "Nadwyżka",
-    "noContractLineTitle": "Brak linii umów typu bucket",
-    "noContractLineDescription": "Nie ma aktywnych linii umów typu bucket dla Twojego konta."
+    "noContractLineTitle": "Brak dostępnych linii umowy z pakietem godzin",
+    "noContractLineDescription": "Brak aktywnych linii umowy z pakietem godzin dla tego konta."
   },
   "messages": {
     "noInvoices": "Brak faktur",
@@ -307,7 +307,7 @@
       "opportunityPlaceholder": "ID szansy (opcjonalnie)",
       "pdfLayout": "Układ PDF",
       "pdfLayoutPlaceholder": "Użyj domyślnego układu",
-      "pdfLayoutHelp": "Wybierz układ, który zobaczy klient. Pozostaw domyślny, aby użyć domyślnego dzierżawy."
+      "pdfLayoutHelp": "Wybierz układ, który zobaczy klient. Pozostaw ustawienie domyślne, aby użyć domyślnego układu organizacji."
     },
     "footer": {
       "savedAgo": "Zmiany zapisane · {{ago}}",
@@ -324,10 +324,10 @@
       "approvalLabel": "Zatwierdzenie",
       "approvalMessage": "Oferty wymagają zatwierdzenia przez kierownika sprzedaży przed wysłaniem.",
       "documentLayoutLabel": "Układ dokumentu",
-      "defaultLayout": "Domyślny dzierżawcy",
+      "defaultLayout": "Domyślny dla organizacji",
       "standardLayout": "Standardowy",
       "customLayout": "Niestandardowy",
-      "tenantDefault": "Domyślny dzierżawcy",
+      "tenantDefault": "Domyślny dla organizacji",
       "changeLayout": "Zmień"
     }
   },

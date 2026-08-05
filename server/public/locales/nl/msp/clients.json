@@ -39,7 +39,7 @@
     "yes": "Ja"
   },
   "clientLifecycle": {
-    "prospect": "Prospect",
+    "prospect": "Potentiële klant",
     "active": "Actieve klant",
     "former": "Voormalige klant",
     "all": "Alle levenscyclusfasen"
@@ -124,7 +124,7 @@
     "multiDeleteFailedSummary_other": "{{count}} klanten konden niet worden verwijderd",
     "inactiveAlternative": "U kunt deze klant in plaats daarvan als inactief markeren. Inactieve klanten zijn voor de meeste weergaven verborgen, maar behouden al hun gegevens en kunnen later als actief worden gemarkeerd.",
     "table": {
-      "client": "Cliënt"
+      "client": "Klant"
     },
     "entities": {
       "client_one": "klant",
@@ -141,12 +141,12 @@
       "projects": "projecten",
       "invoice": "factuur",
       "invoices": "facturen",
-      "document": "document",
+      "document": "bestand",
       "documents": "documenten",
       "interaction": "interactie",
       "interactions": "interacties",
-      "asset": "bezit",
-      "assets": "activa",
+      "asset": "asset",
+      "assets": "assets",
       "serviceUsageRecord": "servicegebruiksrecord",
       "serviceUsageRecords": "servicegebruiksrecords",
       "bucketUsageRecord": "record voor emmergebruik",
@@ -193,7 +193,7 @@
     "addTicket": "Ticket toevoegen",
     "details": "Details",
     "contacts": "Contacten",
-    "assets": "Activa",
+    "assets": "Assets",
     "documents": "Documenten",
     "billing": "Facturering",
     "interactions": "Interacties",
@@ -207,12 +207,12 @@
     "accountManager": "Accountmanager",
     "clientName": "Klantnaam",
     "clientType": "Klanttype",
-    "industry": "Industrie",
+    "industry": "Branche",
     "companySize": "Bedrijfsgrootte",
     "annualRevenue": "Jaarlijkse omzet",
     "lastContactDate": "Laatste contactdatum",
     "paymentTerms": "Betalingsvoorwaarden",
-    "parentClient": "Ouder Cliënt",
+    "parentClient": "Bovenliggende klant",
     "defaultContact": "Standaardcontactpersoon",
     "providerDefault": "Standaard van de provider",
     "inboundEmailDomains": "Inkomende e-maildomeinen",
@@ -312,7 +312,7 @@
     "csatEmpty": "Nog geen enquêtereacties.",
     "discardCancel": "Verder bewerken",
     "discardConfirm": "Wijzigingen verwerpen",
-    "discardMessage": "Je hebt niet-opgeslagen wijzigingen in het klantrecord. Sluiten en verwerpen?",
+    "discardMessage": "U heeft niet-opgeslagen wijzigingen in het klantrecord. Sluiten en verwerpen?",
     "discardTitle": "Niet-opgeslagen wijzigingen",
     "documents": {
       "more": "+{{count}} meer",
@@ -405,7 +405,7 @@
       "newTicket": "Nieuw ticket",
       "none": "Geen open tickets.",
       "oldest": "oudste open",
-      "open": "open tickets",
+      "open": "openstaande tickets",
       "overdue": "achterstallig",
       "overdueTag": "achterstallig",
       "unassigned": "Niet toegewezen"
@@ -460,7 +460,7 @@
     "websiteUrl": "Website-URL",
     "accountManager": "Accountmanager",
     "selectAccountManager": "Selecteer Accountmanager",
-    "industry": "Industrie",
+    "industry": "Branche",
     "notes": "Opmerkingen",
     "notesPlaceholder": "Voeg eventuele eerste opmerkingen toe (optioneel)",
     "address": "Adres",
@@ -495,14 +495,14 @@
     "createAndAddAnother": "Aanmaken + Nog een toevoegen",
     "createAndView": "Aanmaken + Klant bekijken",
     "additionalDetails": "Aanvullende gegevens",
-    "createFailed": "Failed to create client. Please try again."
+    "createFailed": "Klant maken mislukt. Probeer het opnieuw."
   },
   "clientCreatedDialog": {
     "title": "Klant gemaakt",
     "viewClient": "Klant bekijken",
     "addAnother": "Voeg nog een toe",
     "createdMessage": "\"{{name}}\" is succesvol aangemaakt.",
-    "unknownClient": "Cliënt"
+    "unknownClient": "Klant"
   },
   "clientLocations": {
     "title": "Klantlocatiemanager",
@@ -578,7 +578,7 @@
   },
   "billingConfiguration": {
     "general": "Algemeen",
-    "contractLines": "Contractlijnen",
+    "contractLines": "Contractregels",
     "contractLineOverlaps": "Contractregel overlapt",
     "taxRates": "Belastingtarieven",
     "save": "Factureringsconfiguratie opslaan",
@@ -614,7 +614,7 @@
     "removeAssignmentTitle": "Contractregeltoewijzing verwijderen",
     "removeAssignmentMessage": "Weet u zeker dat u deze contractregeltoewijzing van de klant wilt verwijderen? De contractregel zelf wordt niet verwijderd.",
     "contracts": "Contracten",
-    "taxRatesLoadError": "Failed to load tax rate configuration."
+    "taxRatesLoadError": "Configuratie van belastingtarieven laden mislukt."
   },
   "clientBillingSchedule": {
     "title": "Factureringsschema",
@@ -696,7 +696,7 @@
     "confirmSave": "Bevestigen en opslaan",
     "reviewChanges": "Wijzigingen bekijken",
     "impact": {
-      "title": "Controleer voordat je toepast",
+      "title": "Controleer voordat u toepast",
       "periods": "{{count}} aankomende factureringsperiode(n) over {{lines}} contractregel(s) worden opnieuw opgebouwd volgens het nieuwe schema.",
       "from": "Opnieuw opgebouwd vanaf {{date}}.",
       "billedPreserved": "Reeds gefactureerde kosten blijven behouden en veranderen niet.",
@@ -708,7 +708,7 @@
     "assignContract": "Contract toewijzen",
     "contracts": "Contracten",
     "contractName": "Contractnaam",
-    "contractLines": "Contractlijnen",
+    "contractLines": "Contractregels",
     "description": "Beschrijving",
     "startDate": "Startdatum",
     "endDate": "Einddatum",
@@ -763,7 +763,7 @@
     "startDateRequired": "Startdatum is vereist",
     "updateAssignment": "Opdracht bijwerken",
     "useTenantRenewalDefaults": "Gebruik de standaardwaarden voor huurderverlenging",
-    "saveError": "Failed to save contract. Please try again."
+    "saveError": "Contract opslaan mislukt. Probeer het opnieuw."
   },
   "clientContractLineDashboard": {
     "title": "Gebruiksstatistieken (afgelopen 30 dagen)",
@@ -842,8 +842,8 @@
       "description": "Deze voorbeelden illustreren hoe het ondubbelzinnig maken van contractregels werkt in algemene scenario's voor deze klant.",
       "scenario1Description": "Wanneer een dienst voor deze klant zowel in een bucketcontractregel als in een standaardcontractregel verschijnt:",
       "scenario1Item1": "De bucketcontractregel wordt standaard geselecteerd",
-      "scenario1Item2": "Tijdsinvoer en gebruik verbruiken het in de bucket inbegrepen tegoed en gaan vervolgens op dezelfde bucketcontractregel verder als overschrijding tegen het ingestelde overschrijdingstarief",
-      "scenario1Item3": "De facturatie schakelt niet automatisch over naar de standaardcontractregel wanneer de bucket op is",
+      "scenario1Item2": "Tijdregistraties en gebruik worden afgeboekt van het inbegrepen tegoed van de urenbundel. Daarna worden overschrijdingen tegen het ingestelde tarief op dezelfde urenbundelcontractregel gefactureerd",
+      "scenario1Item3": "De facturatie schakelt niet automatisch over naar de standaardcontractregel wanneer de urenbundel op is",
       "scenario1Item4": "Gebruikers kunnen deze standaard handmatig overschrijven door tijdens de tijdinvoer een andere contractregel te selecteren",
       "scenario1Title": "Scenario 1: Bucketplan + Standaardplan",
       "scenario2Description": "Wanneer een dienst voorkomt in meerdere standaardcontractregels voor deze klant:",
@@ -852,10 +852,10 @@
       "scenario2Item3": "Overweeg om deze contractregels te consolideren om verwarring te voorkomen",
       "scenario2Title": "Scenario 2: Meerdere standaardplannen",
       "scenario3Description": "Wanneer een dienst in meerdere bucketcontractregels voor deze klant voorkomt:",
-      "scenario3Item1": "Tijdens de tijdinvoer wordt gebruikers gevraagd te selecteren op welke bucket ze willen factureren",
-      "scenario3Item2": "Als er expliciet geen bucket is geselecteerd, stopt de facturering met een dubbelzinnigheidsfout die een keuze van de gebruiker vereist",
-      "scenario3Item3": "Teams kunnen interne richtlijnen definiëren voor het kiezen tussen overlappende buckets",
-      "scenario3Title": "Scenario 3: Plannen voor meerdere buckets",
+      "scenario3Item1": "Bij het registreren van tijd wordt gebruikers gevraagd op welke urenbundel de tijd moet worden gefactureerd",
+      "scenario3Item2": "Als niet expliciet een urenbundel is geselecteerd, stopt de facturering met een foutmelding die de gebruiker verplicht een keuze te maken",
+      "scenario3Item3": "Teams kunnen interne richtlijnen definiëren voor het kiezen tussen overlappende urenbundels",
+      "scenario3Title": "Scenario 3: meerdere urenbundelplannen",
       "title": "Veel voorkomende ondubbelzinnigheidsscenario's"
     },
     "tabs": {
@@ -945,7 +945,7 @@
     "saveError": "Kan de taalvoorkeur van de client niet bijwerken",
     "cardDescription": "Stel de standaardtaal in voor alle contacten in {{clientName}}.",
     "saveSuccess": "Standaardtaal voor {{clientName}}-contacten bijgewerkt naar {{language}}",
-    "thisClient": "cliënt"
+    "thisClient": "klant"
   },
   "clientQuickView": {
     "notFound": "Klant niet gevonden",
@@ -1056,7 +1056,7 @@
     "clientFields": "Klantvelden:",
     "locationFields": "Locatievelden:",
     "requiredHelp": "* Vereiste velden moeten in kaart worden gebracht voordat het importeren kan doorgaan",
-    "recordsPrefix": "Je importeert",
+    "recordsPrefix": "U importeert",
     "recordsSuffix": "records. De verwerking kan even duren.",
     "validReady": "Geldig - Klaar om te importeren",
     "invalidHasErrors": "Ongeldig - bevat fouten",
@@ -1085,9 +1085,9 @@
     "error": "Fout",
     "updateExistingTitle": "Update bestaande klanten",
     "updateExistingMessage": "{{count}}-clients bestaan ​​al. Wilt u ze updaten met de nieuwe gegevens?",
-    "invalidRowsBlocked": "Fix {{count}} invalid rows or enable \"Skip invalid records\" before importing.",
-    "noValidRows": "There are no valid client rows to import.",
-    "serverFailures": "{{failed}} of {{total}} clients failed to import. Review the row issues below."
+    "invalidRowsBlocked": "Corrigeer {{count}} ongeldige rijen of schakel 'Ongeldige records overslaan' in voordat u importeert.",
+    "noValidRows": "Er zijn geen geldige klantrijen om te importeren.",
+    "serverFailures": "Importeren van {{failed}} van {{total}} klanten is mislukt. Controleer de onderstaande problemen per rij."
   },
   "clientsList": {
     "name": "Naam",
@@ -1111,7 +1111,7 @@
   "contractLinePickerDialog": {
     "addPlan": "Plan toevoegen",
     "updatePlan": "Plan bijwerken",
-    "contractLine": "Contractlijn",
+    "contractLine": "Contractregel",
     "serviceCategory": "Servicecategorie",
     "allCategories": "Alle categorieën",
     "allCategoriesHelp": "Als u 'Alle categorieën' selecteert, betekent dit dat dit plan van toepassing is, ongeacht de servicecategorie.",
@@ -1125,7 +1125,7 @@
     "title": "Selecteer een contractregel"
   },
   "contractLines": {
-    "title": "Contractlijnen",
+    "title": "Contractregels",
     "addNewPlan": "Nieuw abonnement toevoegen",
     "plan": "Plan",
     "category": "Categorie",
@@ -1245,7 +1245,7 @@
     "loadError": "Notities kunnen niet worden geladen",
     "unknownError": "Onbekende fout",
     "loadErrorTitle": "Notities kunnen niet worden geladen",
-    "loadErrorDescription": "Could not load notes. Please try again."
+    "loadErrorDescription": "Kan notities niet laden. Probeer het opnieuw."
   },
   "actions": {
     "cancel": "Annuleren",
@@ -1410,8 +1410,8 @@
         "startRequired": "Starttijd is vereist om een Teams-vergadering aan te maken",
         "unavailable": "Het aanmaken van Teams-vergaderingen is niet beschikbaar voor deze tenant."
       },
-      "loadFailed": "Interaction options could not be loaded. Please try again.",
-      "saveFailed": "The interaction could not be saved. Please try again."
+      "loadFailed": "Interactieopties konden niet worden geladen. Probeer het opnieuw.",
+      "saveFailed": "De interactie kon niet worden opgeslagen. Probeer het opnieuw."
     },
     "feed": {
       "addInteraction": "Interactie toevoegen",
@@ -1425,8 +1425,8 @@
       "startDate": "Startdatum",
       "title": "Interacties",
       "typePlaceholder": "Interactietype",
-      "loadFailed": "Interactions could not be loaded. Please try again.",
-      "typesLoadFailed": "Interaction types could not be loaded. Please try again."
+      "loadFailed": "Interacties konden niet worden geladen. Probeer het opnieuw.",
+      "typesLoadFailed": "Interactietypen konden niet worden geladen. Probeer het opnieuw."
     },
     "overall": {
       "allContacts": "Alle contacten",
@@ -1444,7 +1444,7 @@
       "startTimePlaceholder": "Filteren vanaf deze starttijd",
       "statusPlaceholder": "Status",
       "title": "Recente interacties",
-      "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
+      "statusesLoadFailed": "Interactiestatussen konden niet worden geladen. Probeer het opnieuw."
     }
   },
   "clientDrawer": {
@@ -1464,7 +1464,7 @@
         "status": "Status",
         "type": "Type",
         "warrantyEnd": "Einde garantie",
-        "agent": "Agent",
+        "agent": "Medewerker",
         "patching": "Patches",
         "coverage": "Dekking"
       },

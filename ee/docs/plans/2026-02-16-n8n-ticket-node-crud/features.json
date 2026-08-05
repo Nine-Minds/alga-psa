@@ -38,7 +38,7 @@
   },
   {
     "id": "F005",
-    "description": "Implement single `Alga PSA` node shell with resource selector for Ticket, Client, Board, Status, and Priority.",
+    "description": "Implement single `AlgaPSA` node shell with resource selector for Ticket, Client, Board, Status, and Priority.",
     "implemented": true,
     "prdRefs": [
       "Summary",
@@ -282,7 +282,7 @@
   },
   {
     "id": "F033",
-    "description": "Keep ticket comment operations under the existing `Ticket` resource and omit `time_spent` from the n8n node because the current Alga PSA implementation does not persist or consume it.",
+    "description": "Keep ticket comment operations under the existing `Ticket` resource and omit `time_spent` from the n8n node because the current AlgaPSA implementation does not persist or consume it.",
     "implemented": true,
     "prdRefs": [
       "UX / UI Notes",

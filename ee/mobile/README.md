@@ -1,6 +1,6 @@
-# Alga PSA Mobile (Expo / React Native)
+# AlgaPSA Mobile (Expo / React Native)
 
-This is the first-party Alga PSA mobile app scaffold (iOS + Android) built with Expo (managed workflow).
+This is the first-party AlgaPSA mobile app scaffold (iOS + Android) built with Expo (managed workflow).
 
 ## Prereqs
 

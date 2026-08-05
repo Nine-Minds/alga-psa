@@ -52,7 +52,7 @@
     "countSummary": "{{count}} artículo(s)",
     "itemLabel": "artículos",
     "empty": "No se encontraron artículos",
-    "createFirst": "Crea tu primer artículo",
+    "createFirst": "Cree su primer artículo",
     "table": {
       "title": "Título",
       "type": "Tipo",
@@ -230,7 +230,7 @@
     "dialogs": {
       "publish": {
         "title": "Publicar artículo",
-        "message": "¿Estás seguro de que quieres publicar este artículo?",
+        "message": "¿Está seguro de que quiere publicar este artículo?",
         "messageWithAudience": "Esto publicará el artículo y lo hará visible para {{audience}} usuarios. ¿Está seguro?"
       },
       "archive": {

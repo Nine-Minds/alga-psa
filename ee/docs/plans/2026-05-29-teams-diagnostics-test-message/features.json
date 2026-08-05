@@ -96,7 +96,7 @@
   },
   {
     "id": "F011",
-    "description": "Test message builds a synthetic test activity (card + text 'Alga PSA Teams test message') and calls sendBotActivity({ serviceUrl, conversationId, activity }) from the stored conversation reference.",
+    "description": "Test message builds a synthetic test activity (card + text 'AlgaPSA Teams test message') and calls sendBotActivity({ serviceUrl, conversationId, activity }) from the stored conversation reference.",
     "implemented": true,
     "commitGroup": "test-message",
     "prdRefs": [

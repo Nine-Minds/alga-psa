@@ -117,7 +117,7 @@ npm run build -w @alga-psa/microsoft-teams   # verify the workspace/script name
 
 - F005: Added `sendTeamsTestMessageImpl()` and `sendTeamsTestMessage = withAuth(...)` in `ee/packages/microsoft-teams/src/lib/actions/integrations/teamsDiagnosticsActions.ts`; it uses the same `system_settings:update` gate as `saveTeamsIntegrationSettingsImpl`.
 - F006-F010: Implemented precondition skips for inactive add-on, inactive integration, disabled `personal_bot`, missing bot env credentials, missing Microsoft user linkage, and missing personal conversation reference. Each skip records a `teams_notification_deliveries` row before returning.
-- F011: Healthy path builds a proactive bot test activity with text/card title `Alga PSA Teams test message` and sends it through `sendBotActivity()` using the stored `serviceUrl` and `conversationId`.
+- F011: Healthy path builds a proactive bot test activity with text/card title `AlgaPSA Teams test message` and sends it through `sendBotActivity()` using the stored `serviceUrl` and `conversationId`.
 - F012: Extended `writeTeamsDeliveryRow()` to allow `destinationType='bot_test'`, nullable `internalNotificationId`, and an `idempotencyNonce`; test-message rows use `category='test'`, `destination_type='bot_test'`, and a per-click nonce so repeated tests insert distinct rows.
 - T007-T018: Added `server/src/test/unit/lib/teams/actions/teamsDiagnosticsActions.test.ts` covering permission denial, every skip reason, happy-path proactive send payload, sent/failed delivery rows, distinct idempotency keys, and tenant-scoped reads/writes.
 - Verification: `cd server && npx vitest run src/test/unit/internal-notifications/teamsDeliveryRecorder.test.ts src/test/unit/lib/teams/actions/teamsDiagnosticsActions.test.ts` passed 16 tests.

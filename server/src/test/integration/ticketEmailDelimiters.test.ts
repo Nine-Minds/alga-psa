@@ -136,7 +136,7 @@ let currentPortalDomain: PortalDomainRecord | null = null;
 const sendEmailMock = vi.hoisted(() => vi.fn(async () => ({ success: true })));
 const getTenantEmailSettingsMock = vi.hoisted(() => vi.fn(async () => null as any));
 const getDefaultFromAddressMock = vi.hoisted(() =>
-  vi.fn(() => ({ email: 'notifications@example.com', name: 'Alga PSA Notifications' })),
+  vi.fn(() => ({ email: 'notifications@example.com', name: 'AlgaPSA Notifications' })),
 );
 const eventHandlers = vi.hoisted(() => new Map<string, (event: any) => Promise<void> | void>());
 const publishMock = vi.hoisted(() =>
@@ -1024,7 +1024,7 @@ beforeEach(() => {
   getDefaultFromAddressMock.mockReset();
   getDefaultFromAddressMock.mockImplementation(() => ({
     email: 'notifications@example.com',
-    name: 'Alga PSA Notifications',
+    name: 'AlgaPSA Notifications',
   }));
   subscribeMock.mockClear();
   unsubscribeMock.mockClear();
@@ -1345,7 +1345,7 @@ describe('ticket email subscriber from-address (display-name decoupling)', () =>
     } as any);
     getDefaultFromAddressMock.mockReturnValue({
       email: 'notifications@acme.com',
-      name: 'Alga PSA Notifications',
+      name: 'AlgaPSA Notifications',
     });
 
     setTicket({

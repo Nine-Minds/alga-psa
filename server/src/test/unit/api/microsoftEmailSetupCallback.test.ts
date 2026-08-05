@@ -33,6 +33,17 @@ vi.mock('@alga-psa/integrations/utils/microsoftEmailSetupStateStore', () => ({
 
 import { GET } from '../../../app/api/auth/microsoft/email-setup/callback/route';
 
+/**
+ * The route base64s a percent-encoded JSON payload (so accented Microsoft error
+ * text survives the popup's latin-1 `atob`), and the first `atob(...)` literal
+ * in the page is always the postMessage payload.
+ */
+function readPayload(html: string): string {
+  return decodeURIComponent(
+    Buffer.from(html.match(/atob\('([^']+)'\)/)?.[1] || '', 'base64').toString(),
+  );
+}
+
 const createState = {
   purpose: 'create_application' as const,
   algaTenant: 'alga-tenant-1',
@@ -88,9 +99,11 @@ describe('Microsoft email setup callback', () => {
     expect(hoisted.consumeState).toHaveBeenCalledWith('state-nonce');
     expect(hoisted.complete).not.toHaveBeenCalled();
     expect(html).toContain('Microsoft Email Setup');
-    expect(Buffer.from(html.match(/atob\('([^']+)'\)/)?.[1] || '', 'base64').toString()).toContain(
-      'Microsoft sign-in or administrator consent was denied'
-    );
+    expect(JSON.parse(readPayload(html))).toMatchObject({
+      success: false,
+      errorCode: 'consent_denied',
+      error: expect.stringContaining('Microsoft sign-in or administrator consent was denied'),
+    });
   });
 
   it('rejects a state/session tenant mismatch and consumes creation state', async () => {
@@ -102,9 +115,11 @@ describe('Microsoft email setup callback', () => {
 
     expect(hoisted.consumeState).toHaveBeenCalledWith('state-nonce');
     expect(hoisted.complete).not.toHaveBeenCalled();
-    expect(Buffer.from(html.match(/atob\('([^']+)'\)/)?.[1] || '', 'base64').toString()).toContain(
-      'session does not match'
-    );
+    expect(JSON.parse(readPayload(html))).toMatchObject({
+      success: false,
+      errorCode: 'session_mismatch',
+      error: expect.stringContaining('session does not match'),
+    });
   });
 
   it('delegates a valid code to provisioning without exposing setup tokens', async () => {
@@ -118,7 +133,7 @@ describe('Microsoft email setup callback', () => {
       state: createState,
       code: 'authorization-code',
     });
-    expect(Buffer.from(html.match(/atob\('([^']+)'\)/)?.[1] || '', 'base64').toString()).toContain('profile-1');
+    expect(readPayload(html)).toContain('profile-1');
     expect(html).not.toContain('access_token');
     expect(html).not.toContain('one-time-verifier');
   });
@@ -146,8 +161,7 @@ describe('Microsoft email setup callback', () => {
         microsoftTenantId: 'microsoft-tenant',
       }
     );
-    expect(Buffer.from(html.match(/atob\('([^']+)'\)/)?.[1] || '', 'base64').toString())
-      .toContain('admin_consent');
+    expect(readPayload(html)).toContain('admin_consent');
   });
 
   it('does not advance setup when consent persistence fails', async () => {
@@ -165,9 +179,55 @@ describe('Microsoft email setup callback', () => {
     ));
     const html = await response.text();
 
-    expect(Buffer.from(html.match(/atob\('([^']+)'\)/)?.[1] || '', 'base64').toString())
-      .toContain('Database unavailable');
-    expect(Buffer.from(html.match(/atob\('([^']+)'\)/)?.[1] || '', 'base64').toString())
-      .not.toContain('admin_consent');
+    expect(JSON.parse(readPayload(html))).toMatchObject({
+      success: false,
+      errorCode: 'consent_persist_failed',
+      error: 'Database unavailable',
+    });
+    expect(readPayload(html)).not.toContain('"stage"');
+    expect(readPayload(html)).not.toContain('admin_consent');
+  });
+
+  it('reports failures as stable codes rather than user-facing prose', async () => {
+    hoisted.validateState.mockReturnValue(null);
+    const invalid = await GET(new NextRequest(
+      'https://psa.example.com/api/auth/microsoft/email-setup/callback?state=invalid'
+    ));
+    expect(JSON.parse(readPayload(await invalid.text()))).toMatchObject({
+      success: false,
+      errorCode: 'invalid_state',
+    });
+
+    hoisted.validateState.mockReturnValue(createState);
+    const noCode = await GET(new NextRequest(
+      'https://psa.example.com/api/auth/microsoft/email-setup/callback?state=signed-state'
+    ));
+    expect(JSON.parse(readPayload(await noCode.text()))).toMatchObject({
+      success: false,
+      errorCode: 'missing_code',
+    });
+
+    const unknownMicrosoftError = await GET(new NextRequest(
+      'https://psa.example.com/api/auth/microsoft/email-setup/callback?error=server_error&state=signed-state'
+    ));
+    expect(JSON.parse(readPayload(await unknownMicrosoftError.text()))).toMatchObject({
+      success: false,
+      errorCode: 'microsoft_error',
+    });
+
+    hoisted.validateState.mockReturnValue({
+      ...createState,
+      purpose: 'admin_consent',
+      clientId: 'email-client-id',
+      profileId: 'profile-1',
+      oauthNonce: undefined,
+    });
+    const declined = await GET(new NextRequest(
+      'https://psa.example.com/api/auth/microsoft/email-setup/callback?admin_consent=false&state=signed-state'
+    ));
+    expect(JSON.parse(readPayload(await declined.text()))).toMatchObject({
+      success: false,
+      errorCode: 'consent_not_granted',
+    });
   });
 });

@@ -1,7 +1,7 @@
 /**
  * @alga-psa/validation
  *
- * Validation utilities and Zod schemas for Alga PSA.
+ * Validation utilities and Zod schemas for AlgaPSA.
  * Provides centralized validation logic for use across all modules.
  */
 

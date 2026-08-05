@@ -169,7 +169,7 @@ async function sendTeamsBotWelcomeCard(params: {
       return;
     }
 
-    const title = 'You are signed in to Alga PSA';
+    const title = 'You are signed in to AlgaPSA';
     const text = `${params.userName ? `${params.userName}, your` : 'Your'} Microsoft account is now linked. Try “my tickets” to see your queue, or “help” for everything the bot can do.`;
     const welcomeActivity = {
       type: 'message' as const,

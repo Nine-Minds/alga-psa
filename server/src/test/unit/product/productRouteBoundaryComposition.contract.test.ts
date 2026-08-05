@@ -11,7 +11,7 @@ describe('product route boundary composition', () => {
     );
 
     expect(source).toContain("behavior: Extract<ProductRouteBehavior, 'upgrade_boundary' | 'not_found'>");
-    expect(source).toContain('Available in Alga PSA');
+    expect(source).toContain('Available in AlgaPSA');
     expect(source).toContain('Page not available');
     expect(source).toContain("msp: '/msp/dashboard'");
     expect(source).toContain("'client-portal': '/client-portal/dashboard'");

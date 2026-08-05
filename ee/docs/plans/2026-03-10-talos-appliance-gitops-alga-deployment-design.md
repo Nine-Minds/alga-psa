@@ -5,7 +5,7 @@
 
 ## Summary
 
-Deploy Alga PSA on the Talos appliance through Flux-managed GitOps instead of direct first-boot Helm commands. The appliance should reconcile a single-node on-prem stack that includes the Alga server, Postgres, PgBouncer, Redis, Hocuspocus, email-service, workflow-worker, Temporal, and temporal-worker. Initial startup must bootstrap the database and run seeds once. Later restarts or Flux reconciliations must reuse existing PVC-backed state and must not reseed the database.
+Deploy AlgaPSA on the Talos appliance through Flux-managed GitOps instead of direct first-boot Helm commands. The appliance should reconcile a single-node on-prem stack that includes the Alga server, Postgres, PgBouncer, Redis, Hocuspocus, email-service, workflow-worker, Temporal, and temporal-worker. Initial startup must bootstrap the database and run seeds once. Later restarts or Flux reconciliations must reuse existing PVC-backed state and must not reseed the database.
 
 ## Architecture
 
@@ -15,7 +15,7 @@ Namespaces:
 
 - `flux-system`: Flux controllers and bootstrap objects.
 - `alga-system`: appliance coordination objects when needed.
-- `msp`: Alga PSA runtime workloads, keeping compatibility with the existing Helm defaults.
+- `msp`: AlgaPSA runtime workloads, keeping compatibility with the existing Helm defaults.
 
 Release boundaries:
 

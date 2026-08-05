@@ -34,7 +34,7 @@ Workflow actions are currently registered globally and grouped mostly by action 
 
 ### Target users
 
-- MSP workflow builders who configure automation in Alga PSA.
+- MSP workflow builders who configure automation in AlgaPSA.
 - MSP admins who have connected NinjaOne and want workflow automation around RMM devices and alerts.
 
 ### Primary flow: discover NinjaOne actions

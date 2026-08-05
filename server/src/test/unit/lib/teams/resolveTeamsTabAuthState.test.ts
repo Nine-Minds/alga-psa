@@ -71,7 +71,7 @@ describe('resolveTeamsTabAuthState', () => {
 
     await expect(resolveTeamsTabAuthState()).resolves.toEqual({
       status: 'unauthenticated',
-      message: 'Sign in with your MSP account to open Alga PSA in Teams.',
+      message: 'Sign in with your MSP account to open AlgaPSA in Teams.',
     });
 
     getSessionWithRevocationCheckMock.mockResolvedValue({
@@ -219,7 +219,7 @@ describe('resolveTeamsTabAuthState', () => {
     const unauthenticated = await resolveTeamsTabAuthState();
     expect(unauthenticated).toEqual({
       status: 'unauthenticated',
-      message: 'Sign in with your MSP account to open Alga PSA in Teams.',
+      message: 'Sign in with your MSP account to open AlgaPSA in Teams.',
     });
 
     getSessionWithRevocationCheckMock.mockResolvedValueOnce({

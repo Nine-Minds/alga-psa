@@ -72,12 +72,12 @@
     },
     "source": {
       "contract": "Contract",
-      "tenantDefault": "Standaard van huurder"
+      "tenantDefault": "Tenantstandaard"
     }
   },
   "billing": {
     "cadenceOwner": {
-      "client": "Cliënt schema",
+      "client": "Klantplanning",
       "contract": "Contractverjaardag"
     },
     "frequency": {
@@ -232,7 +232,7 @@
       "title": "Contractfacturen"
     },
     "labels": {
-      "client": "Cliënt",
+      "client": "Klant",
       "contractName": "Contractnaam",
       "description": "Beschrijving",
       "noClientAssigned": "Geen klant toegewezen",
@@ -257,7 +257,7 @@
     "tabs": {
       "documents": "Documenten",
       "invoices": "Facturen",
-      "lines": "Contractlijnen",
+      "lines": "Contractregels",
       "overview": "Overzicht",
       "pricing": "Prijsschema's",
       "simulator": "Simuleren"
@@ -1001,7 +1001,7 @@
       },
       "title": "Aankomende verlengingen",
       "type": {
-        "evergreen": "Evergreen",
+        "evergreen": "Doorlopend",
         "fixedTerm": "Bepaalde tijd"
       },
       "window": {
@@ -2075,8 +2075,8 @@
     "materializedPeriods": {
       "heading": "Illustratieve toekomstige gematerialiseerde perioden",
       "summary": {
-        "contract": "Als je deze terugkerende regel opslaat, zouden toekomstige perioden worden gematerialiseerd in een verjaardagsgebaseerde voorvertoning verankerd op de 8e vóór de factuurgeneratie.",
-        "client": "Als je deze terugkerende regel opslaat, zouden toekomstige perioden worden gematerialiseerd in de voorvertoning van het facturatieschema van de klant vóór de factuurgeneratie."
+        "contract": "Als u deze terugkerende regel opslaat, worden toekomstige perioden vóór het genereren van de factuur weergegeven in een jubileumvoorbeeld met de 8e als peildatum.",
+        "client": "Als u deze terugkerende regel opslaat, worden toekomstige perioden vóór het genereren van de factuur weergegeven in het voorbeeld van de klantplanning."
       }
     }
   },
@@ -2199,7 +2199,7 @@
       "bucketIncluded": "Inclusief {{hours}} uur; het tarief hierboven is het meerverbruikstarief",
       "cadence": {
         "client": "Factureringsschema van de klant gebruiken",
-        "contract": "Schema van de contractlijn gebruiken"
+        "contract": "Schema van de contractregel gebruiken"
       },
       "catalogRate": "Catalogustarief",
       "collapseDetailsFor": "Details van {{line}} samenvouwen",
@@ -2226,7 +2226,7 @@
         "discountValue": "Kortingswaarde",
         "includedHours": "Inbegrepen uren",
         "includedUnits": "Inbegrepen eenheden",
-        "lineName": "Naam van de contractlijn",
+        "lineName": "Naam van de contractregel",
         "lineType": "Lijntype",
         "minimumBillableMinutes": "Minimaal factureerbare minuten",
         "minimumUsage": "Minimaal verbruik",
@@ -2296,7 +2296,17 @@
         "hourly": "Per uur",
         "usage": "Verbruik"
       },
-      "usageRate": "Verbruikstarief"
+      "usageRate": "Verbruikstarief",
+      "columns": {
+        "name": "Naam",
+        "type": "Type",
+        "value": "Waarde",
+        "appliesTo": "Van toepassing op",
+        "description": "Beschrijving",
+        "amount": "Bedrag ($)",
+        "billingPeriod": "Factureringsperiode",
+        "timing": "Moment"
+      }
     },
     "timeline": {
       "deltaDown": "−{{amount}} ten opzichte van het huidige contract",
@@ -2310,7 +2320,7 @@
       "title": "Gesimuleerde factuurperioden"
     },
     "unavailable": {
-      "description": "De contractsimulator is beschikbaar in Alga PSA Pro.",
+      "description": "De contractsimulator is beschikbaar in AlgaPSA Pro.",
       "title": "Pro-functie"
     }
   }

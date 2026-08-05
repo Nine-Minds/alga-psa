@@ -6,11 +6,11 @@
 
 ## Summary
 
-Standardize deletion handling across all Alga PSA feature packages. Replace the current inconsistent mix of silent failures, generic error messages, and missing alternative actions with a unified system that validates dependencies, shows clear blocking reasons, offers alternatives (inactive/archive), and runs validation + deletion atomically in a single transaction.
+Standardize deletion handling across all AlgaPSA feature packages. Replace the current inconsistent mix of silent failures, generic error messages, and missing alternative actions with a unified system that validates dependencies, shows clear blocking reasons, offers alternatives (inactive/archive), and runs validation + deletion atomically in a single transaction.
 
 ## Problem
 
-Deleting items in Alga PSA is currently inconsistent and confusing:
+Deleting items in AlgaPSA is currently inconsistent and confusing:
 
 - **~40% of delete operations** fail silently with no indication of why
 - **~60%** show only generic "Failed to delete" messages with no context

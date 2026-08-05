@@ -8,14 +8,14 @@
   },
   "settings": {
     "title": "Extension Management",
-    "description": "Install, configure, and manage extensions to extend Alga PSA functionality.",
+    "description": "Install, configure, and manage extensions to extend AlgaPSA functionality.",
     "tabs": {
       "manage": "Manage",
       "install": "Install"
     },
     "enterpriseOnly": {
       "title": "Pro feature",
-      "description": "Extensions are available in Alga PSA Pro."
+      "description": "Extensions are available in AlgaPSA Pro."
     },
     "links": {
       "needLogs": "Need extension logs?",
@@ -210,7 +210,7 @@
     "loading": "Loading extensions...",
     "error": "Error",
     "emptyTitle": "No extensions installed",
-    "emptyDescription": "Install extensions to add new features and functionality to Alga PSA.",
+    "emptyDescription": "Install extensions to add new features and functionality to AlgaPSA.",
     "colExtension": "Extension",
     "colVersion": "Version",
     "colAuthor": "Author",
@@ -241,7 +241,7 @@
     "error": "Error",
     "loadFailed": "Failed to load extensions",
     "emptyTitle": "No extensions installed",
-    "emptyDescription": "Install extensions to add new features and functionality to Alga PSA.",
+    "emptyDescription": "Install extensions to add new features and functionality to AlgaPSA.",
     "colExtension": "Extension",
     "colVersion": "Version",
     "colAuthor": "Author",

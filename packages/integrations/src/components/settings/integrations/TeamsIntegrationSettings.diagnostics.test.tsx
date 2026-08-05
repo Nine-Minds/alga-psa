@@ -76,7 +76,7 @@ function diagnosticsReport(overrides: Record<string, unknown> = {}) {
   return {
     createdAt: '2026-05-29T12:00:00.000Z',
     overallStatus: 'warn',
-    recommendations: ['Open the Alga PSA bot in Teams and send it any message first, then retry.'],
+    recommendations: ['Open the AlgaPSA bot in Teams and send it any message first, then retry.'],
     steps: [
       {
         id: 'addon_entitlement',
@@ -89,7 +89,7 @@ function diagnosticsReport(overrides: Record<string, unknown> = {}) {
         id: 'conversation_reference',
         title: 'Admin Teams conversation reference',
         status: 'warn',
-        detail: 'Open the Alga PSA bot in Teams and send it any message first, then retry.',
+        detail: 'Open the AlgaPSA bot in Teams and send it any message first, then retry.',
         durationMs: 1,
       },
       {
@@ -159,7 +159,7 @@ describe('TeamsIntegrationSettings diagnostics panel', () => {
 
     await user.click(screen.getByRole('button', { name: /Run diagnostics/i }));
     expect(await screen.findByText('Recommendations')).toBeInTheDocument();
-    expect(screen.getAllByText('Open the Alga PSA bot in Teams and send it any message first, then retry.').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Open the AlgaPSA bot in Teams and send it any message first, then retry.').length).toBeGreaterThan(0);
 
     cleanup();
     runTeamsDiagnosticsMock.mockResolvedValueOnce(diagnosticsReport({ recommendations: [] }));
@@ -183,14 +183,14 @@ describe('TeamsIntegrationSettings diagnostics panel', () => {
     sendTeamsTestMessageMock.mockResolvedValueOnce({
       status: 'skipped',
       reason: 'missing_conversation_reference',
-      detail: 'Open the Alga PSA bot in Teams and send it any message first, then retry.',
+      detail: 'Open the AlgaPSA bot in Teams and send it any message first, then retry.',
       deliveryId: 'delivery-1',
     });
     await renderSettings();
 
     await user.click(screen.getByRole('button', { name: /Send test message/i }));
 
-    expect(await screen.findByText('Open the Alga PSA bot in Teams and send it any message first, then retry.')).toBeInTheDocument();
+    expect(await screen.findByText('Open the AlgaPSA bot in Teams and send it any message first, then retry.')).toBeInTheDocument();
   });
 
   it('disables diagnostics and test message buttons when the integration is inactive or unavailable', async () => {

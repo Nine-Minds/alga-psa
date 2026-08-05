@@ -16,7 +16,7 @@ This project introduces a unified abstraction layer for sending outbound emails 
 
 ### Existing Email Infrastructure
 
-The Alga PSA application has a comprehensive email system with the following components:
+The AlgaPSA application has a comprehensive email system with the following components:
 
 #### 1. Email Services (Multiple Implementations)
 - **Primary Service**: `server/src/services/emailService.ts` - Singleton pattern with SMTP via nodemailer

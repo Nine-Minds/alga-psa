@@ -38,7 +38,7 @@ export async function sendCancellationRequestEmail(
     day: 'numeric',
   });
 
-  const subject = `Your Alga PSA cancellation request has been received`;
+  const subject = `Your AlgaPSA cancellation request has been received`;
 
   const htmlBody = `
   <!DOCTYPE html>
@@ -82,7 +82,7 @@ export async function sendCancellationRequestEmail(
                     <td bgcolor="#ffffff" style="background-color: #ffffff; padding: 40px 32px;">
                       <h2 style="color: ${COLORS.textPrimary}; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 22px; font-weight: 600; margin-bottom: 16px;">Hello ${data.recipientName},</h2>
 
-                      <p style="color: ${COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 16px; margin-bottom: 24px;">We've received your cancellation request for your <b style="color: ${COLORS.textPrimary};">${data.tenantName}</b> account on Alga PSA. Your account will remain active until the end of your current billing period.</p>
+                      <p style="color: ${COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 16px; margin-bottom: 24px;">We've received your cancellation request for your <b style="color: ${COLORS.textPrimary};">${data.tenantName}</b> account on AlgaPSA. Your account will remain active until the end of your current billing period.</p>
 
                       <!-- What happens next -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin: 24px 0;">
@@ -146,9 +146,9 @@ export async function sendCancellationRequestEmail(
                         </tr>
                       </table>
 
-                      <p style="color: ${COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 15px; margin-bottom: 8px;">Thank you for being an Alga PSA customer. We truly appreciate your business and hope to work with you again in the future.</p>
+                      <p style="color: ${COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 15px; margin-bottom: 8px;">Thank you for being an AlgaPSA customer. We truly appreciate your business and hope to work with you again in the future.</p>
 
-                      <p style="color: ${COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 15px; margin-top: 20px;">Best regards,<br><b style="color: ${COLORS.textPrimary};">The Alga PSA Team</b></p>
+                      <p style="color: ${COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 15px; margin-top: 20px;">Best regards,<br><b style="color: ${COLORS.textPrimary};">The AlgaPSA Team</b></p>
                     </td>
                   </tr>
 
@@ -177,7 +177,7 @@ Cancellation Request Received
 
 Hello ${data.recipientName},
 
-We've received your cancellation request for your "${data.tenantName}" account on Alga PSA. Your account will remain active until the end of your current billing period.
+We've received your cancellation request for your "${data.tenantName}" account on AlgaPSA. Your account will remain active until the end of your current billing period.
 
 WHAT HAPPENS NEXT:
 
@@ -190,10 +190,10 @@ If you've changed your mind, you can reactivate your subscription from your acco
 
 Contact Support: ${supportUrl}
 
-Thank you for being an Alga PSA customer. We truly appreciate your business and hope to work with you again in the future.
+Thank you for being an AlgaPSA customer. We truly appreciate your business and hope to work with you again in the future.
 
 Best regards,
-The Alga PSA Team
+The AlgaPSA Team
 
 ---
 This email was sent because you requested to cancel your account.

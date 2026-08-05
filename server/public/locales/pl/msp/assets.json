@@ -177,7 +177,7 @@
       "status": "Status: {{value}}",
       "type": "Typ: {{value}}",
       "client": "Klient: {{value}}",
-      "agent": "Agent: {{value}}"
+      "agent": "Agent monitorujący: {{value}}"
     },
     "statuses": {
       "active": "Aktywny",
@@ -348,7 +348,7 @@
       "status": "Status",
       "created": "Utworzono",
       "updated": "Zaktualizowano",
-      "tenant": "Dzierżawca"
+      "tenant": "Organizacja"
     },
     "typeDetails": {
       "workstation": "Szczegóły stacji roboczej",
@@ -532,7 +532,7 @@
     },
     "deviceTypes": {
       "switch": "Przełącznik",
-      "router": "Router",
+      "router": "Ruter",
       "firewall": "Zapora sieciowa",
       "access_point": "Punkt dostępu",
       "load_balancer": "Moduł równoważenia obciążenia"
@@ -631,7 +631,7 @@
     },
     "networkDeviceTypes": {
       "switch": "Przełącznik",
-      "router": "Router",
+      "router": "Ruter",
       "firewall": "Zapora sieciowa",
       "access_point": "Punkt dostępu",
       "load_balancer": "Moduł równoważenia obciążenia"
@@ -1023,7 +1023,7 @@
     "errors": {
       "loadTitle": "Nie udało się wczytać notatek",
       "unknown": "Nieznany błąd",
-      "loadDescription": "Could not load notes. Please try again."
+      "loadDescription": "Nie udało się wczytać uwag. Spróbuj ponownie."
     },
     "lastUpdated": "Ostatnia aktualizacja: {{value}}"
   },

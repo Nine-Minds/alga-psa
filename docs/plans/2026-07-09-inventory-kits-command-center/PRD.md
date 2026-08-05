@@ -135,7 +135,7 @@ Primary flow:
 - Preserve tenant-scoped database access patterns.
 - Keep the existing single-level BOM model.
 - Avoid raw hex and gray utility palettes in new UI code.
-- Keep screen density consistent with Alga PSA product surfaces.
+- Keep screen density consistent with AlgaPSA product surfaces.
 
 ## Data / API / Integrations
 

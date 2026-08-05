@@ -2,7 +2,7 @@
   "tabs": {
     "general": "Ogólny",
     "numbering": "Numeracja",
-    "quoting": "Cytowanie",
+    "quoting": "Oferty",
     "tax": "Podatek",
     "payments": "Płatności",
     "costRates": "Stawki kosztów"
@@ -132,7 +132,7 @@
   },
   "quoting": {
     "quoteNumbering": {
-      "title": "Numeracja cytatów",
+      "title": "Numeracja ofert",
       "description": "Dostosuj sposób generowania i wyświetlania numerów ofert."
     },
     "salesOrderNumbering": {
@@ -147,7 +147,7 @@
     },
     "source": {
       "title": "Źródło obliczenia podatku",
-      "tooltip": "Wybierz, czy podatki są obliczane przez Alga PSA, czy przekazywane do Twojego zewnętrznego systemu księgowego",
+      "tooltip": "Wybierz, czy podatki są obliczane przez AlgaPSA, czy przekazywane do Twojego zewnętrznego systemu księgowego",
       "description": "Skonfiguruj sposób obliczania kwot podatku dla faktur.",
       "fields": {
         "defaultMethod": {
@@ -156,8 +156,8 @@
       },
       "options": {
         "internal": {
-          "label": "Wewnętrzny (Alga PSA)",
-          "description": "Podatki są obliczane automatycznie na podstawie stawek podatkowych skonfigurowanych w Alga PSA."
+          "label": "Wewnętrzny (AlgaPSA)",
+          "description": "Podatki są obliczane automatycznie na podstawie stawek podatkowych skonfigurowanych w AlgaPSA."
         },
         "external": {
           "label": "Zewnętrzny (pakiet księgowy)",
@@ -169,7 +169,7 @@
         "step1": "Faktura jest wystawiana bez kwot podatku",
         "step2": "Faktura jest eksportowana do podłączonego systemu księgowego (QuickBooks, Xero itp.)",
         "step3": "Podatek obliczany jest przez system księgowy w oparciu o obowiązujące w nim przepisy podatkowe",
-        "step4": "Kwoty podatku są importowane z powrotem do Alga PSA",
+        "step4": "Kwoty podatku są importowane z powrotem do AlgaPSA",
         "step5": "Sumy faktur są aktualizowane o importowany podatek",
         "note": "Stosowany system księgowy jest ustalany automatycznie na podstawie tego, do którego systemu eksportujesz fakturę.",
         "warning": "Ważne: faktury dla klientów korzystających z podatku zewnętrznego nie mogą zostać sfinalizowane, dopóki ich podatek nie zostanie zaimportowany z powrotem z systemu księgowego. Wymaga to połączonej integracji księgowej (QuickBooks lub Xero) oraz wcześniejszego wyeksportowania faktury do niej. Bez tego faktury te pozostaną zablokowane w stanie Wersja robocza — przełącz pojedynczą fakturę z powrotem na podatek wewnętrzny, aby sfinalizować ją w Alga."
@@ -976,11 +976,11 @@
       },
       "taxSourceOverride": {
         "label": "Zastąpienie źródła podatku",
-        "tooltip": "Zastąp domyślne źródło podatku dzierżawy dla tego klienta. Opcja „Wewnętrzna” wykorzystuje obliczenia podatku Algi. Opcja „Zewnętrzna” deleguje obliczenia podatku do systemu księgowego podczas eksportowania faktur.",
+        "tooltip": "Zastąp domyślne źródło podatku organizacji dla tego klienta. Opcja „Wewnętrzna” wykorzystuje obliczenia podatku Algi. Opcja „Zewnętrzna” deleguje obliczenia podatku do systemu księgowego podczas eksportowania faktur.",
         "placeholder": "Wybierz źródło podatku...",
         "options": {
-          "default": "Użyj ustawień domyślnych dzierżawy",
-          "internal": "Alga PSA oblicza podatek",
+          "default": "Użyj ustawień domyślnych organizacji",
+          "internal": "AlgaPSA oblicza podatek",
           "external": "Pakiet księgowy oblicza podatek"
         },
         "effective": {
@@ -1194,7 +1194,7 @@
       "webhook": {
         "label": "Konfiguracja webhooka",
         "configuredTitle": "Webhooki skonfigurowane automatycznie",
-        "configuredDescription": "Alga PSA będzie odbierać powiadomienia o płatnościach dla:",
+        "configuredDescription": "AlgaPSA będzie odbierać powiadomienia o płatnościach dla:",
         "failedTitle": "Konfiguracja webhooka nie powiodła się",
         "failedDescription": "Automatyczna konfiguracja webhooka nie powiodła się. Kliknij ponów, aby spróbować skonfigurować ponownie.",
         "configuring": "Konfigurowanie...",
@@ -1204,7 +1204,7 @@
         "secretKeyLabel": "Klucz tajny",
         "secretKeyPlaceholder": "sk_live_... lub sk_test_...",
         "secretKeyHelpPrefix": "Znajdziesz go w",
-        "secretKeyHelpLink": "Stripe Dashboard → API Keys",
+        "secretKeyHelpLink": "Pulpit Stripe → Klucze API",
         "publishableKeyLabel": "Klucz publikowalny",
         "publishableKeyPlaceholder": "pk_live_... lub pk_test_...",
         "connecting": "Łączenie...",

@@ -8,14 +8,14 @@
   },
   "settings": {
     "title": "Extensiebeheer",
-    "description": "Installeer, configureer en beheer extensies om de functionaliteit van Alga PSA uit te breiden.",
+    "description": "Installeer, configureer en beheer extensies om de functionaliteit van AlgaPSA uit te breiden.",
     "tabs": {
       "manage": "Beheren",
       "install": "Installeren"
     },
     "enterpriseOnly": {
       "title": "Pro-functie",
-      "description": "Extensies zijn beschikbaar in Alga PSA Pro."
+      "description": "Extensies zijn beschikbaar in AlgaPSA Pro."
     },
     "links": {
       "needLogs": "Extensielogs nodig?",
@@ -171,8 +171,8 @@
     "noComponents": "Deze extensie definieert geen componenten.",
     "colType": "Type",
     "colId": "ID",
-    "colEntryPoint": "Entry Point",
-    "colMountPoint": "Mount Point",
+    "colEntryPoint": "Ingangspunt",
+    "colMountPoint": "Koppelpunt",
     "infoTitle": "Extensie-informatie",
     "infoInstalled": "Deze extensie is geïnstalleerd op {{installedDate}} en voor het laatst bijgewerkt op {{updatedDate}}.",
     "infoRefreshHint": "Het in- of uitschakelen van de extensie kan een paginavernieuwing vereisen om de wijzigingen door te voeren.",
@@ -210,7 +210,7 @@
     "loading": "Extensies laden...",
     "error": "Fout",
     "emptyTitle": "Geen extensies geïnstalleerd",
-    "emptyDescription": "Installeer extensies om nieuwe functies en functionaliteit toe te voegen aan Alga PSA.",
+    "emptyDescription": "Installeer extensies om nieuwe functies en functionaliteit toe te voegen aan AlgaPSA.",
     "colExtension": "Extensie",
     "colVersion": "Versie",
     "colAuthor": "Auteur",
@@ -241,7 +241,7 @@
     "error": "Fout",
     "loadFailed": "Kan extensies niet laden",
     "emptyTitle": "Geen extensies geïnstalleerd",
-    "emptyDescription": "Installeer extensies om nieuwe functies en functionaliteit toe te voegen aan Alga PSA.",
+    "emptyDescription": "Installeer extensies om nieuwe functies en functionaliteit toe te voegen aan AlgaPSA.",
     "colExtension": "Extensie",
     "colVersion": "Versie",
     "colAuthor": "Auteur",
@@ -273,7 +273,7 @@
     "advancedOptions": "Geavanceerde opties",
     "customManifestLabel": "Aangepast manifest (optionele override)",
     "customManifestPlaceholder": "Laat leeg om het manifest uit de bundel te gebruiken, of plak hier een aangepast manifest.json",
-    "manifestJsonLabel": "Manifest JSON",
+    "manifestJsonLabel": "Manifest-JSON",
     "manifestJsonPlaceholder": "Plak hier de inhoud van manifest.json",
     "browse": "Bladeren",
     "manifestExtractFailed": "Kan manifest niet uit bundel extraheren. Geef het handmatig op.",

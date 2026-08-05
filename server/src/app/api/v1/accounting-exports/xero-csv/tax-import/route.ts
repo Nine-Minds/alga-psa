@@ -4,7 +4,7 @@
  * POST /api/v1/accounting-exports/xero-csv/tax-import?preview=true - Preview import without applying
  *
  * This endpoint handles CSV file uploads from Xero's Invoice Details Report
- * and imports tax amounts back into Alga PSA invoices.
+ * and imports tax amounts back into AlgaPSA invoices.
  */
 
 import { NextRequest, NextResponse } from 'next/server';

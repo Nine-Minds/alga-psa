@@ -225,5 +225,125 @@
       "body": "Aufladungen, automatisches Aufladen und Abonnementänderungen werden im Nine-Minds-Store verwaltet.",
       "openStore": "Store öffnen"
     }
+  },
+  "managementPage": {
+    "metaTitle": "Lizenz",
+    "eyebrow": "Appliance-Lizenzierung",
+    "title": "Lizenz",
+    "subtitle": "Verwalten Sie die Funktionsstufe für diese selbst gehostete Appliance.",
+    "notSelfHost": {
+      "title": "Lizenz",
+      "description": "Die Lizenzverwaltung ist nur für selbst gehostete Installationen verfügbar."
+    },
+    "tiers": {
+      "unknown": "Unbekannte Stufe",
+      "essentials": "Essentials-Tarif",
+      "solo": "Solo",
+      "pro": "Pro"
+    },
+    "status": {
+      "trial": {
+        "eyebrow": "Pro-Testversion",
+        "title": "Ihre Pro-Testversion ist aktiv",
+        "description_one": "Ihnen bleibt noch {{count}} Tag, um alle Pro-Funktionen zu nutzen.",
+        "description_other": "Ihnen bleiben noch {{count}} Tage, um alle Pro-Funktionen zu nutzen.",
+        "descriptionNoDays": "Während des Testzeitraums können Sie alle Pro-Funktionen nutzen.",
+        "badge": "Testversion aktiv"
+      },
+      "licensed": {
+        "eyebrow": "Kostenpflichtige Lizenz",
+        "title": "{{tier}} ist aktiv",
+        "description": "Ihre kostenpflichtige Lizenz ist auf dieser Appliance aktiv.",
+        "descriptionWithExpiry": "Ihre Lizenz ist bis zum {{date}} aktiv.",
+        "badge": "Lizenziert"
+      },
+      "licenseExpired": {
+        "eyebrow": "Lizenz erfordert Ihre Aufmerksamkeit",
+        "title": "Ihre Lizenz ist abgelaufen",
+        "description": "Die Appliance verwendet Essentials-Funktionen, bis Sie einen neuen Lizenzschlüssel oder Aktivierungscode aktivieren.",
+        "badge": "Abgelaufen"
+      },
+      "licenseWrongTenant": {
+        "eyebrow": "Lizenz erfordert Ihre Aufmerksamkeit",
+        "title": "Diese Lizenz ist hier nicht gültig",
+        "description": "Die gespeicherte Lizenz wurde für einen anderen Appliance-Mandanten ausgestellt. Aktivieren Sie die richtige Lizenz, um kostenpflichtige Funktionen freizuschalten.",
+        "badge": "Falsche Installation"
+      },
+      "trialExpired": {
+        "eyebrow": "Essentials-Tarif",
+        "title": "Sie verwenden Essentials",
+        "description": "Ihre Pro-Testversion ist abgelaufen. Essentials bleibt für den zentralen PSA-Funktionsumfang aktiv.",
+        "badge": "Essentials aktiv"
+      },
+      "essentials": {
+        "eyebrow": "Essentials-Tarif",
+        "title": "Sie verwenden Essentials",
+        "description": "Essentials ist auf dieser Appliance aktiv. Nutzen Sie weiterhin den zentralen Funktionsumfang oder starten Sie einmalig eine 15-tägige Pro-Testversion.",
+        "badge": "Essentials aktiv"
+      }
+    },
+    "trialCta": {
+      "title": "Pro 15 Tage lang testen",
+      "description": "Schalten Sie Automatisierung, erweiterte Integrationen und den gesamten Pro-Funktionsumfang frei. Es ist keine Kreditkarte erforderlich; nach Ablauf der Testversion kehrt die Appliance zu Essentials zurück."
+    },
+    "details": {
+      "currentTier": "Aktuelle Stufe",
+      "expires": "Läuft ab",
+      "daysRemaining_one": "Noch {{count}} Tag",
+      "daysRemaining_other": "Noch {{count}} Tage",
+      "licensedTo": "Lizenziert für",
+      "refreshLabel": "Lizenzaktualisierung",
+      "connected": "Verbunden",
+      "lastCheckIn": "Letzte Prüfung: {{timestamp}}",
+      "refreshHelp": "Wendet im Portal vorgenommene Änderungen an Benutzerplätzen oder am Tarif sofort an."
+    },
+    "portal": {
+      "manageTitle": "Benutzerplätze, Abrechnung und Aktivierungscodes",
+      "manageDescription": "Fügen Sie im Lizenzportal Benutzerplätze hinzu oder entfernen Sie sie, aktualisieren Sie die Abrechnung oder stellen Sie einen Aktivierungscode erneut aus. Melden Sie sich mit Ihrer registrierten E-Mail-Adresse an — ein Passwort ist nicht erforderlich.",
+      "buyTitle": "Möchten Sie AlgaPSA Pro kaufen?",
+      "buyDescription": "Kaufen Sie im Lizenzportal — melden Sie sich mit Ihrer registrierten E-Mail-Adresse an, wählen Sie die Anzahl der Benutzerplätze und Sie erhalten einen einmaligen Aktivierungscode, den Sie unten eingeben können. Ihre Appliance wird direkt aktualisiert."
+    },
+    "advanced": {
+      "summary": "Haben Sie einen Lizenzcode oder -schlüssel?",
+      "introPrefix": "Geben Sie den Aktivierungscode oder Offline-Lizenzschlüssel ein, den Sie vom",
+      "introLink": "Lizenzportal",
+      "introSuffix": "oder vom Nine-Minds-Support erhalten haben.",
+      "claimCode": {
+        "title": "Mit Aktivierungscode aktivieren",
+        "description": "Verwenden Sie den 8-stelligen Code aus dem Lizenzportal oder einer E-Mail zu einer kostenpflichtigen Lizenz. Dadurch wird auch die automatische Lizenzaktualisierung aktiviert."
+      },
+      "licenseKey": {
+        "title": "Lizenzschlüssel einfügen",
+        "description": "Verwenden Sie diese Option für Offline-Schlüssel, die Sie für netzwerkisolierte Installationen aus dem Lizenzportal heruntergeladen oder vom Support erhalten haben."
+      },
+      "installationId": {
+        "title": "Installations-ID",
+        "description": "Der Support fragt möglicherweise nach dieser ID, wenn er einen manuellen Lizenzschlüssel ausstellt."
+      }
+    },
+    "actions": {
+      "startTrial": "15-tägige Pro-Testversion starten",
+      "startingTrial": "Wird gestartet…",
+      "refreshNow": "Lizenz jetzt aktualisieren",
+      "refreshing": "Wird aktualisiert…",
+      "manageInPortal": "Lizenz im Portal verwalten",
+      "buyInPortal": "Pro im Portal kaufen",
+      "applyClaimCode": "Aktivierungscode anwenden",
+      "activateLicenseKey": "Lizenzschlüssel aktivieren",
+      "activating": "Wird aktiviert…"
+    },
+    "success": {
+      "licenseKeyActivated": "Lizenzschlüssel aktiviert. Kostenpflichtige Funktionen sind jetzt auf dieser Appliance verfügbar.",
+      "claimCodeActivated": "Aktivierungscode aktiviert. Die automatische Lizenzaktualisierung ist jetzt konfiguriert.",
+      "trialStarted": "15-tägige Pro-Testversion gestartet.",
+      "licenseRefreshed": "Lizenz aktualisiert. Änderungen an Benutzerplätzen oder am Tarif aus dem Portal sind jetzt aktiv."
+    },
+    "errors": {
+      "loadStatus": "Der Lizenzstatus konnte nicht geladen werden.",
+      "activateLicenseKey": "Der Lizenzschlüssel konnte nicht aktiviert werden.",
+      "activateClaimCode": "Der Aktivierungscode konnte nicht aktiviert werden.",
+      "startTrial": "Die Testversion konnte nicht gestartet werden.",
+      "refreshLicense": "Die Lizenz konnte nicht aktualisiert werden."
+    }
   }
 }

@@ -87,12 +87,12 @@
         "unchecked": "Décoché"
       },
       "types": {
-        "short-text": "short-text",
-        "long-text": "long-text",
-        "select": "select",
-        "checkbox": "checkbox",
-        "date": "date",
-        "file-upload": "file-upload"
+        "short-text": "texte court",
+        "long-text": "texte long",
+        "select": "liste de sélection",
+        "checkbox": "case à cocher",
+        "date": "sélecteur de date",
+        "file-upload": "téléversement de fichier"
       }
     },
     "execution": {

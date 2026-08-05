@@ -14,7 +14,7 @@ export default function LicensePurchaseForm() {
     <UpgradePrompt
       featureName={t('purchaseForm.title', { defaultValue: 'License purchase' })}
       pitch={t('purchaseForm.enterpriseOnlyHosted', {
-        defaultValue: 'Purchase and manage additional user licenses with a hosted Alga PSA Pro deployment.',
+        defaultValue: 'Purchase and manage additional user licenses with a hosted AlgaPSA Pro deployment.',
       })}
       ctaId="upgrade-license-purchase-button"
     >

@@ -18,7 +18,7 @@ export interface EditionGateResponseBody {
   featureName: string;
   message: string;
   upgrade: {
-    product: 'Alga PSA Pro';
+    product: 'AlgaPSA Pro';
     cta: 'View Plans';
     href: 'https://www.nineminds.com/plans';
   };
@@ -28,13 +28,13 @@ export function createEditionGateResponseBody(feature: EditionGatedFeature): Edi
   const featureName = EDITION_GATED_FEATURES[feature].name;
 
   return {
-    error: 'This endpoint requires Alga PSA Pro.',
+    error: 'This endpoint requires AlgaPSA Pro.',
     code: EDITION_GATE_CODE,
     feature,
     featureName,
-    message: `${featureName} is available with Alga PSA Pro.`,
+    message: `${featureName} is available with AlgaPSA Pro.`,
     upgrade: {
-      product: 'Alga PSA Pro',
+      product: 'AlgaPSA Pro',
       cta: 'View Plans',
       href: 'https://www.nineminds.com/plans',
     },
@@ -62,7 +62,7 @@ export function isEditionGateResponseBody(value: unknown): value is EditionGateR
     typeof body.message === 'string' &&
     !!upgrade &&
     typeof upgrade === 'object' &&
-    (upgrade as Record<string, unknown>).product === 'Alga PSA Pro' &&
+    (upgrade as Record<string, unknown>).product === 'AlgaPSA Pro' &&
     (upgrade as Record<string, unknown>).cta === 'View Plans' &&
     (upgrade as Record<string, unknown>).href === 'https://www.nineminds.com/plans'
   );

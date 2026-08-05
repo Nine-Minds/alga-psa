@@ -139,7 +139,7 @@
     }
   },
   "usage": {
-    "bucketHoursOverview": "Resumen de horas de bucket",
+    "bucketHoursOverview": "Resumen de las bolsas de horas",
     "usageRecords": "Registros de uso",
     "actions": {
       "addUsage": "Agregar uso",
@@ -186,7 +186,7 @@
     "contractLineGuidance": {
       "multipleLines": "Este servicio aparece en múltiples líneas de contrato. Seleccione contra qué línea de contrato facturar.",
       "tooltipNoClient": "Información del cliente no disponible. El uso se dirigirá al contrato predeterminado administrado por el sistema.",
-      "tooltipMultiple": "Este servicio aparece en múltiples líneas de contrato. Seleccione qué línea de contrato utilizar. Cuando solo una de ellas es una línea de contrato de bucket, se selecciona de forma predeterminada.",
+      "tooltipMultiple": "Este servicio aparece en varias líneas de contrato. Seleccione la línea de contrato que desea utilizar. Si solo una de ellas es una línea de contrato de bolsa de horas, se selecciona de forma predeterminada.",
       "tooltipSingle": "Este uso se facturará bajo la línea de contrato \"{{name}}\".",
       "tooltipNone": "No se encontraron líneas de contrato elegibles para este servicio.",
       "placeholderNoClient": "Uso del contrato predeterminado administrado por el sistema",
@@ -317,7 +317,7 @@
   },
   "presetServices": {
     "warnings": {
-      "unsavedChanges": "Tienes cambios sin guardar. Haga clic en \"Guardar cambios\" para aplicarlos."
+      "unsavedChanges": "Tiene cambios sin guardar. Haga clic en \"Guardar cambios\" para aplicarlos."
     },
     "table": {
       "serviceName": "Nombre del servicio",
@@ -352,7 +352,7 @@
     },
     "navigationDialog": {
       "title": "Cambios no guardados",
-      "message": "Tienes cambios sin guardar. ¿Estás seguro de que quieres abandonar esta página? Todos los cambios se perderán.",
+      "message": "Tiene cambios sin guardar. ¿Está seguro de que quiere abandonar esta página? Todos los cambios se perderán.",
       "confirmLabel": "Salir de la página",
       "cancelLabel": "Permanecer en la página"
     },
@@ -492,7 +492,7 @@
       "saving": "Guardando..."
     },
     "errors": {
-      "saveFailed": "No se pudo actualizar la cantidad. Por favor inténtalo de nuevo."
+      "saveFailed": "No se pudo actualizar la cantidad. Por favor inténtelo de nuevo."
     }
   },
   "templateRendererCore": {

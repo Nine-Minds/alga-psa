@@ -225,5 +225,125 @@
       "body": "55555",
       "openStore": "55555"
     }
+  },
+  "managementPage": {
+    "metaTitle": "55555",
+    "eyebrow": "55555",
+    "title": "55555",
+    "subtitle": "55555",
+    "notSelfHost": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "tiers": {
+      "unknown": "55555",
+      "essentials": "55555",
+      "solo": "55555",
+      "pro": "55555"
+    },
+    "status": {
+      "trial": {
+        "eyebrow": "55555",
+        "title": "55555",
+        "description_one": "55555 {{count}} 55555",
+        "description_other": "55555 {{count}} 55555",
+        "descriptionNoDays": "55555",
+        "badge": "55555"
+      },
+      "licensed": {
+        "eyebrow": "55555",
+        "title": "55555 {{tier}} 55555",
+        "description": "55555",
+        "descriptionWithExpiry": "55555 {{date}} 55555",
+        "badge": "55555"
+      },
+      "licenseExpired": {
+        "eyebrow": "55555",
+        "title": "55555",
+        "description": "55555",
+        "badge": "55555"
+      },
+      "licenseWrongTenant": {
+        "eyebrow": "55555",
+        "title": "55555",
+        "description": "55555",
+        "badge": "55555"
+      },
+      "trialExpired": {
+        "eyebrow": "55555",
+        "title": "55555",
+        "description": "55555",
+        "badge": "55555"
+      },
+      "essentials": {
+        "eyebrow": "55555",
+        "title": "55555",
+        "description": "55555",
+        "badge": "55555"
+      }
+    },
+    "trialCta": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "details": {
+      "currentTier": "55555",
+      "expires": "55555",
+      "daysRemaining_one": "55555 {{count}} 55555",
+      "daysRemaining_other": "55555 {{count}} 55555",
+      "licensedTo": "55555",
+      "refreshLabel": "55555",
+      "connected": "55555",
+      "lastCheckIn": "55555 {{timestamp}} 55555",
+      "refreshHelp": "55555"
+    },
+    "portal": {
+      "manageTitle": "55555",
+      "manageDescription": "55555",
+      "buyTitle": "55555",
+      "buyDescription": "55555"
+    },
+    "advanced": {
+      "summary": "55555",
+      "introPrefix": "55555",
+      "introLink": "55555",
+      "introSuffix": "55555",
+      "claimCode": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "licenseKey": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "installationId": {
+        "title": "55555",
+        "description": "55555"
+      }
+    },
+    "actions": {
+      "startTrial": "55555",
+      "startingTrial": "55555",
+      "refreshNow": "55555",
+      "refreshing": "55555",
+      "manageInPortal": "55555",
+      "buyInPortal": "55555",
+      "applyClaimCode": "55555",
+      "activateLicenseKey": "55555",
+      "activating": "55555"
+    },
+    "success": {
+      "licenseKeyActivated": "55555",
+      "claimCodeActivated": "55555",
+      "trialStarted": "55555",
+      "licenseRefreshed": "55555"
+    },
+    "errors": {
+      "loadStatus": "55555",
+      "activateLicenseKey": "55555",
+      "activateClaimCode": "55555",
+      "startTrial": "55555",
+      "refreshLicense": "55555"
+    }
   }
 }

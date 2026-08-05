@@ -455,7 +455,7 @@
         "noBaseUrl": "Podstawowy adres URL nie jest skonfigurowany dla zaproszeń do portalu.",
         "invitationNotFound": "Nie znaleziono zaproszenia lub zostało już wykorzystane."
       },
-      "userNotFound": "Client user not found"
+      "userNotFound": "Nie znaleziono użytkownika klienta"
     }
   },
   "quickAddContact": {
@@ -706,7 +706,7 @@
     "toast": {
       "saved": "Kontakt zaktualizowany",
       "saveFailed": "Nie mozna zaktualizowac kontaktu",
-      "saveFailedDescription": "The contact could not be updated. Please try again."
+      "saveFailedDescription": "Nie udało się zaktualizować kontaktu. Spróbuj ponownie."
     }
   }
 }

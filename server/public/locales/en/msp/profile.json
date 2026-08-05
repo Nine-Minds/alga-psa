@@ -696,6 +696,17 @@
         "copySuccess": "API key copied to clipboard!",
         "copyFailed": "Failed to copy API key to clipboard",
         "downloadFailed": "Failed to download API key"
+      },
+      "admin": {
+        "title": "API Keys Administration",
+        "searchPlaceholder": "Search by user or description",
+        "columns": {
+          "user": "User"
+        },
+        "errors": {
+          "loadFailed": "Failed to load API keys. Please ensure you have admin privileges.",
+          "deactivateFailed": "Failed to deactivate API key. Please ensure you have admin privileges."
+        }
       }
     }
   },

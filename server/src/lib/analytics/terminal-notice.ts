@@ -32,7 +32,7 @@ export function showUsageStatsNotice(): void {
 ╔════════════════════════════════════════════════════════════════╗
 ║                    Usage Statistics Notice                     ║
 ║                                                                ║
-║  Alga PSA collects anonymous usage statistics to help         ║
+║  AlgaPSA collects anonymous usage statistics to help         ║
 ║  improve the product. No personal or customer data is sent.   ║
 ║                                                                ║
 ║  This helps us understand:                                     ║

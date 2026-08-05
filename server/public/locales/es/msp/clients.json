@@ -81,13 +81,13 @@
     "bulkInactivePrompt": "Marque estos clientes como inactivos. Estarán ocultos de la mayoría de las vistas, pero conservarán todos sus datos.",
     "singleDeletePrompt": "Este cliente tiene los siguientes registros asociados:",
     "deactivateContactsPrompt": "¿Le gustaría desactivar también los {{count}} contactos asociados?",
-    "bulkDeleteError": "Se produjo un error al eliminar clientes. Por favor inténtalo de nuevo.",
-    "singleDeleteError": "Se produjo un error al eliminar el cliente. Por favor inténtalo de nuevo.",
+    "bulkDeleteError": "Se produjo un error al eliminar clientes. Por favor inténtelo de nuevo.",
+    "singleDeleteError": "Se produjo un error al eliminar el cliente. Por favor inténtelo de nuevo.",
     "deleteSingleSuccess": "{{name}} se ha eliminado correctamente.",
     "markInactiveFailed": "No se pudo marcar el cliente como inactivo",
-    "bulkInactiveError": "Se produjo un error al marcar clientes como inactivos. Por favor inténtalo de nuevo.",
-    "singleInactiveError": "Se produjo un error al marcar al cliente como inactivo. Por favor inténtalo de nuevo.",
-    "bulkReactivateError": "Se produjo un error al reactivar clientes. Por favor inténtalo de nuevo.",
+    "bulkInactiveError": "Se produjo un error al marcar clientes como inactivos. Por favor inténtelo de nuevo.",
+    "singleInactiveError": "Se produjo un error al marcar al cliente como inactivo. Por favor inténtelo de nuevo.",
+    "bulkReactivateError": "Se produjo un error al reactivar clientes. Por favor inténtelo de nuevo.",
     "exportError": "No se pudieron exportar clientes a CSV",
     "unknownClient": "Cliente desconocido",
     "unknownError": "Error desconocido",
@@ -122,7 +122,7 @@
     "multiDeleteSuccessSummary_other": "{{count}} clientes eliminados correctamente.",
     "multiDeleteFailedSummary_one": "No se pudo eliminar {{count}} cliente",
     "multiDeleteFailedSummary_other": "No se pudieron eliminar {{count}} clientes",
-    "inactiveAlternative": "En su lugar, puedes marcar este cliente como inactivo. Los clientes inactivos están ocultos de la mayoría de las vistas, pero conservan todos sus datos y pueden marcarse como activos más adelante.",
+    "inactiveAlternative": "En su lugar, puede marcar este cliente como inactivo. Los clientes inactivos están ocultos de la mayoría de las vistas, pero conservan todos sus datos y pueden marcarse como activos más adelante.",
     "table": {
       "client": "Cliente"
     },
@@ -149,8 +149,8 @@
       "assets": "activos",
       "serviceUsageRecord": "registro de uso del servicio",
       "serviceUsageRecords": "registros de uso del servicio",
-      "bucketUsageRecord": "registro de uso de bucket",
-      "bucketUsageRecords": "registros de uso de bucket"
+      "bucketUsageRecord": "registro de uso de la bolsa de horas",
+      "bucketUsageRecords": "registros de uso de bolsas de horas"
     },
     "deleteSelectedPrompt_one": "¿Está seguro de que desea eliminar {{count}} cliente seleccionado? Esta acción no se puede deshacer.",
     "deleteSelectedPrompt_other": "¿Está seguro de que desea eliminar {{count}} clientes seleccionados? Esta acción no se puede deshacer.",
@@ -175,7 +175,7 @@
       },
       "optionsDialog": {
         "title": "Opciones de impresión",
-        "description": "Elige qué columnas incluir al imprimir los clientes."
+        "description": "Elija qué columnas incluir al imprimir los clientes."
       }
     },
     "shareTooltip": "Imprimir, importar y exportar",
@@ -227,17 +227,17 @@
     "loadingTaxSettings": "Cargando configuración de impuestos...",
     "loadingTicketFilters": "Cargando filtros de tickets...",
     "saveSuccess": "Los datos del cliente se guardaron correctamente.",
-    "saveError": "No se pudieron guardar los detalles del cliente. Por favor inténtalo de nuevo.",
+    "saveError": "No se pudieron guardar los detalles del cliente. Por favor inténtelo de nuevo.",
     "deleteSuccess": "El cliente ha sido eliminado exitosamente.",
     "inactiveSuccess": "El cliente ha sido marcado como inactivo exitosamente.",
     "reactivateSuccess": "El cliente ha sido reactivado exitosamente.",
     "refreshError": "No se pudieron recuperar los datos más recientes del cliente.",
-    "deleteValidationError": "No se pudo validar la eliminación. Por favor inténtalo de nuevo.",
-    "deactivateError": "Se produjo un error al desactivar el cliente. Por favor inténtalo de nuevo.",
-    "markInactiveError": "Se produjo un error al marcar al cliente como inactivo. Por favor inténtalo de nuevo.",
-    "reactivateError": "Se produjo un error al reactivar el cliente. Por favor inténtalo de nuevo.",
+    "deleteValidationError": "No se pudo validar la eliminación. Por favor inténtelo de nuevo.",
+    "deactivateError": "Se produjo un error al desactivar el cliente. Por favor inténtelo de nuevo.",
+    "markInactiveError": "Se produjo un error al marcar al cliente como inactivo. Por favor inténtelo de nuevo.",
+    "reactivateError": "Se produjo un error al reactivar el cliente. Por favor inténtelo de nuevo.",
     "entraSyncError": "No se pudo iniciar la sincronización de Entra.",
-    "deleteError": "No se pudo eliminar el cliente. Por favor inténtalo de nuevo.",
+    "deleteError": "No se pudo eliminar el cliente. Por favor inténtelo de nuevo.",
     "deactivateWithContactsSuccess_one": "El cliente y {{count}} contacto se han desactivado correctamente.",
     "deactivateWithContactsSuccess_other": "El cliente y {{count}} contactos se han desactivado correctamente.",
     "reactivateWithContactsSuccess_one": "El cliente y {{count}} contacto se han reactivado correctamente.",
@@ -258,7 +258,7 @@
     "syncEntraNow": "Sincronizar Entra ahora",
     "deactivateClient": "Desactivar Cliente",
     "reactivateClient": "Reactivar Cliente",
-    "deactivatePrompt": "Este cliente tiene {{count}} contactos activos. ¿Quieres desactivarlos también?",
+    "deactivatePrompt": "Este cliente tiene {{count}} contactos activos. ¿Quiere desactivarlos también?",
     "reactivatePrompt": "Este cliente tiene {{count}} contactos inactivos. ¿Le gustaría reactivarlos también?",
     "deactivatePortalWarning": "Los usuarios desactivados no podrán iniciar sesión en el portal del cliente.",
     "activeContacts": "Contactos activos:",
@@ -283,7 +283,7 @@
       "status": "Estado"
     },
     "deactivateClientDescription": "Desactiva el registro sin eliminar sus datos.",
-    "deactivateClientOnlyDescription": "Desactiva el cliente, pero deja activos sus contactos.",
+    "deactivateClientOnlyDescription": "Desactive el cliente, pero deje activos sus contactos.",
     "nameAliasAddFailed": "Error al agregar el alias",
     "nameAliasAdded": "Alias agregado",
     "nameAliasRemoveFailed": "Error al eliminar el alias",
@@ -436,7 +436,7 @@
       "loadMore": "Cargar más",
       "loading": "Cargando…",
       "materialAdded": "Material utilizado",
-      "quoteActivity": "Actividad de presupuesto",
+      "quoteActivity": "Actividad de cotizaciones",
       "rmaClosed": "RMA cerrada",
       "rmaOpened": "RMA abierta",
       "soCreated": "Pedido de venta creado",
@@ -495,7 +495,7 @@
     "createAndAddAnother": "Crear + Agregar otro",
     "createAndView": "Crear + Ver cliente",
     "additionalDetails": "Detalles adicionales",
-    "createFailed": "Failed to create client. Please try again."
+    "createFailed": "No se pudo crear el cliente. Inténtelo de nuevo."
   },
   "clientCreatedDialog": {
     "title": "Cliente creado",
@@ -588,20 +588,20 @@
     "serviceTypeRequired": "Por favor seleccione un tipo de servicio",
     "contractLineAddSuccess": "Línea de contrato agregada exitosamente",
     "contractLineSaveSuccess": "Línea de contrato guardada exitosamente",
-    "contractLineSaveError": "No se pudieron guardar los cambios. Por favor inténtalo de nuevo.",
+    "contractLineSaveError": "No se pudieron guardar los cambios. Por favor inténtelo de nuevo.",
     "contractLineUpdateSuccess": "Línea de contrato actualizada correctamente",
     "contractLineRemoveSuccess": "Línea de contrato eliminada con éxito",
-    "contractLineAddError": "No se pudo agregar la línea de contrato. Por favor inténtalo de nuevo.",
-    "contractLineUpdateError": "No se pudo actualizar la línea del contrato. Por favor inténtalo de nuevo.",
-    "contractLineRemoveError": "No se pudo eliminar la línea del contrato. Por favor inténtalo de nuevo.",
+    "contractLineAddError": "No se pudo agregar la línea de contrato. Por favor inténtelo de nuevo.",
+    "contractLineUpdateError": "No se pudo actualizar la línea del contrato. Por favor inténtelo de nuevo.",
+    "contractLineRemoveError": "No se pudo eliminar la línea del contrato. Por favor inténtelo de nuevo.",
     "serviceAddSuccess": "Servicio agregado exitosamente",
     "serviceUpdateSuccess": "Servicio actualizado exitosamente",
     "serviceDeleteSuccess": "Servicio eliminado exitosamente",
     "serviceCategoryUpdateSuccess": "Categoría de servicio actualizada con éxito",
-    "serviceAddError": "No se pudo agregar el servicio. Por favor inténtalo de nuevo.",
-    "serviceUpdateError": "No se pudo actualizar el servicio. Por favor inténtalo de nuevo.",
-    "serviceCategoryUpdateError": "No se pudo actualizar la categoría de servicio. Por favor inténtalo de nuevo.",
-    "serviceDeleteError": "No se pudo eliminar el servicio. Por favor inténtalo de nuevo.",
+    "serviceAddError": "No se pudo agregar el servicio. Por favor inténtelo de nuevo.",
+    "serviceUpdateError": "No se pudo actualizar el servicio. Por favor inténtelo de nuevo.",
+    "serviceCategoryUpdateError": "No se pudo actualizar la categoría de servicio. Por favor inténtelo de nuevo.",
+    "serviceDeleteError": "No se pudo eliminar el servicio. Por favor inténtelo de nuevo.",
     "defaultTaxAssignedSuccess": "Tasa impositiva predeterminada asignada correctamente",
     "defaultTaxChangedSuccess": "La tasa impositiva predeterminada se cambió correctamente",
     "defaultTaxAssignError": "No se pudo asignar la tasa impositiva predeterminada",
@@ -614,7 +614,7 @@
     "removeAssignmentTitle": "Eliminar asignación de línea de contrato",
     "removeAssignmentMessage": "¿Está seguro de que desea eliminar esta asignación de línea de contrato del cliente? La línea del contrato en sí no se eliminará.",
     "contracts": "Contratos",
-    "taxRatesLoadError": "Failed to load tax rate configuration."
+    "taxRatesLoadError": "No se pudo cargar la configuración de tasas impositivas."
   },
   "clientBillingSchedule": {
     "title": "Calendario de facturación",
@@ -631,7 +631,7 @@
     "cycleType": "Tipo de ciclo",
     "selectBillingCycle": "Seleccione ciclo de facturación...",
     "dayOfMonth": "Día del mes (1–28)",
-    "selectDay": "Selecciona el día...",
+    "selectDay": "Seleccione el día...",
     "weekday": "Día laborable",
     "selectWeekday": "Seleccione el día de la semana...",
     "firstCycleStartDate": "Fecha de inicio del primer ciclo (UTC)",
@@ -763,14 +763,14 @@
     "startDateRequired": "Se requiere fecha de inicio",
     "updateAssignment": "Actualizar asignación",
     "useTenantRenewalDefaults": "Usar los valores predeterminados de renovación de inquilinos",
-    "saveError": "Failed to save contract. Please try again."
+    "saveError": "No se pudo guardar el contrato. Inténtelo de nuevo."
   },
   "clientContractLineDashboard": {
     "title": "Métricas de uso (últimos 30 días)",
     "usageChart": "Gráfico de uso",
     "hoursByService": "Horas por Servicio (Últimos 30 Días)",
     "recentInvoices": "Facturas recientes",
-    "bucketUsage": "Uso de bucket",
+    "bucketUsage": "Uso de la bolsa de horas",
     "invoiceNumber": "Factura #",
     "invoiceDate": "Fecha de factura",
     "dueDate": "Fecha de vencimiento",
@@ -782,7 +782,7 @@
     "unit": "Unidad",
     "hoursUsed": "horas utilizadas",
     "hoursUsedSummary": "{{used}} / {{total}} horas utilizadas",
-    "noActiveBucketPlans": "No se encontraron planes de bucket activos.",
+    "noActiveBucketPlans": "No se encontró ningún plan de bolsa de horas activo.",
     "noHours": "No se registraron horas en el período seleccionado.",
     "noInvoices": "No se encontraron facturas recientes.",
     "noUsage": "No se encontraron datos de uso en el período seleccionado.",
@@ -798,7 +798,7 @@
     "commonScenariosTitle": "Escenarios comunes",
     "bestPractices": {
       "clearNamingDescription": "Nombre las líneas del contrato de manera que indique claramente su propósito y alcance para este cliente.",
-      "clearNamingItem1": "Incluya el tipo de línea de contrato en el nombre (por ejemplo, \"Bucket de soporte mensual\", \"Plan basado en proyectos\")",
+      "clearNamingItem1": "Incluya el tipo de línea de contrato en el nombre (por ejemplo, \"Bolsa de horas de soporte mensual\", \"Plan basado en proyectos\")",
       "clearNamingItem2": "Considere incluir fechas o números de versión para líneas de contrato que cambian con el tiempo.",
       "clearNamingItem3": "Utilice patrones de nombres consistentes en todas las líneas de contrato para este cliente",
       "clearNamingTitle": "2. Utilice convenciones de nomenclatura de planes claras",
@@ -821,8 +821,8 @@
       "benefitsTitle": "Beneficios de una desambiguación adecuada",
       "benefitTracking": "Entrada de tiempo simplificada y seguimiento de uso",
       "benefitTransparency": "Transparencia mejorada para el cliente",
-      "bucketPriorityDescription": "Las líneas de contrato de bucket tienen prioridad al eliminar la ambigüedad de los servicios para este cliente.",
-      "bucketPriorityLabel": "Prioridad del bucket:",
+      "bucketPriorityDescription": "Las líneas de contrato de bolsa de horas tienen prioridad al desambiguar los servicios de este cliente.",
+      "bucketPriorityLabel": "Prioridad de la bolsa de horas:",
       "description": "Cuando un cliente tiene varias líneas de contrato que incluyen el mismo servicio, el sistema necesita determinar qué línea de contrato usar para entradas de tiempo y registros de uso. Esta guía explica cómo gestionar esta situación para este cliente específico.",
       "explicitAssignmentDescription": "Cuando un servicio aparece en varias líneas de contrato, los usuarios deben elegir el contexto de asignación previsto en lugar de depender de un respaldo implícito.",
       "explicitAssignmentLabel": "Asignación explícita requerida:",
@@ -840,20 +840,20 @@
     },
     "scenarios": {
       "description": "Estos ejemplos ilustran cómo funciona la desambiguación de líneas de contrato en escenarios comunes para este cliente.",
-      "scenario1Description": "Cuando un servicio aparece tanto en una línea de contrato de bucket como en una línea de contrato estándar para este cliente:",
-      "scenario1Item1": "La línea de contrato del bucket se selecciona de forma predeterminada",
-      "scenario1Item2": "Las entradas de tiempo y el uso consumen la cantidad incluida del bucket y, a continuación, continúan en la misma línea de contrato del bucket como sobreuso a la tarifa de sobreuso configurada",
-      "scenario1Item3": "La facturación no cambia automáticamente a la línea de contrato estándar cuando el bucket se agota",
+      "scenario1Description": "Cuando un servicio aparece tanto en una línea de contrato de bolsa de horas como en una línea de contrato estándar para este cliente:",
+      "scenario1Item1": "La línea de contrato de bolsa de horas se selecciona de forma predeterminada",
+      "scenario1Item2": "Las entradas de tiempo y el uso consumen la cantidad incluida en la bolsa de horas; después, el consumo excedente continúa en la misma línea de contrato de bolsa de horas con la tarifa de excedente configurada",
+      "scenario1Item3": "La facturación no cambia automáticamente a la línea de contrato estándar cuando se agota la bolsa de horas",
       "scenario1Item4": "Los usuarios pueden anular manualmente este valor predeterminado seleccionando una línea de contrato diferente durante el ingreso de tiempo",
-      "scenario1Title": "Escenario 1: Plan de bucket + Plan estándar",
+      "scenario1Title": "Escenario 1: Plan de bolsa de horas + plan estándar",
       "scenario2Description": "Cuando un servicio aparece en varias líneas de contrato estándar para este cliente:",
       "scenario2Item1": "Se pedirá a los usuarios que seleccionen qué línea de contrato facturar durante el ingreso de tiempo.",
       "scenario2Item2": "Si no se selecciona explícitamente ninguna línea de contrato, la facturación debería detenerse con un error de ambigüedad que requiere la elección del usuario.",
       "scenario2Item3": "Considere consolidar estas líneas de contrato para evitar confusión.",
       "scenario2Title": "Escenario 2: múltiples planes estándar",
-      "scenario3Description": "Cuando un servicio aparece en varias líneas de contrato de bucket para este cliente:",
-      "scenario3Item1": "Se pedirá a los usuarios que seleccionen en qué bucket facturar durante la entrada de tiempo.",
-      "scenario3Item2": "Si no se selecciona explícitamente ningún bucket, la facturación debería detenerse con un error de ambigüedad que requiere la elección del usuario.",
+      "scenario3Description": "Cuando un servicio aparece en varias líneas de contrato de bolsa de horas para este cliente:",
+      "scenario3Item1": "Al ingresar una entrada de tiempo, se solicitará a los usuarios que seleccionen la bolsa de horas a la que se aplicará la facturación.",
+      "scenario3Item2": "Si no se selecciona explícitamente una bolsa de horas, la facturación deberá detenerse con un error de ambigüedad que requiera que el usuario elija una.",
       "scenario3Item3": "Los equipos pueden definir guías internas para elegir entre buckets superpuestos",
       "scenario3Title": "Escenario 3: Planes de múltiples buckets",
       "title": "Escenarios comunes de desambiguación"
@@ -1081,13 +1081,13 @@
     "importCompleteMessage": "Clientes {{count}} importados correctamente",
     "importCompleteWithErrors": "Importación completada con errores",
     "importResultSummary": "{{created}} creados, {{updated}} actualizados, {{skipped}} omitidos, {{failed}} fallidos",
-    "skippedExistingMessage": "Se omitieron {{count}} clientes porque ya existen. Activa \"Actualizar clientes existentes\" para sobrescribirlos.",
+    "skippedExistingMessage": "Se omitieron {{count}} clientes porque ya existen. Active \"Actualizar clientes existentes\" para sobrescribirlos.",
     "error": "Error",
     "updateExistingTitle": "Actualizar clientes existentes",
-    "updateExistingMessage": "{{count}} clientes ya existen. ¿Quieres actualizarlos con los nuevos datos?",
-    "invalidRowsBlocked": "Fix {{count}} invalid rows or enable \"Skip invalid records\" before importing.",
-    "noValidRows": "There are no valid client rows to import.",
-    "serverFailures": "{{failed}} of {{total}} clients failed to import. Review the row issues below."
+    "updateExistingMessage": "{{count}} clientes ya existen. ¿Quiere actualizarlos con los nuevos datos?",
+    "invalidRowsBlocked": "Corrija {{count}} filas no válidas o habilite «Omitir registros no válidos» antes de importar.",
+    "noValidRows": "No hay filas de clientes válidas para importar.",
+    "serverFailures": "No se pudieron importar {{failed}} de {{total}} clientes. Revise a continuación los problemas de las filas."
   },
   "clientsList": {
     "name": "Nombre",
@@ -1245,7 +1245,7 @@
     "loadError": "No se pudieron cargar las notas",
     "unknownError": "Error desconocido",
     "loadErrorTitle": "No se pudieron cargar las notas",
-    "loadErrorDescription": "Could not load notes. Please try again."
+    "loadErrorDescription": "No se pudieron cargar las notas. Inténtelo de nuevo."
   },
   "actions": {
     "cancel": "Cancelar",
@@ -1318,7 +1318,7 @@
         "phoneHelper": "Número de teléfono de esta ubicación",
         "placeholder": {
           "addressLine1": "Introduzca la dirección *",
-          "city": "Introduce ciudad *",
+          "city": "Introduzca ciudad *",
           "country": "Seleccione País *",
           "loadingCountries": "Cargando países...",
           "locationName": "por ejemplo, oficina principal, almacén",
@@ -1410,8 +1410,8 @@
         "startRequired": "Se requiere la hora de inicio para crear una reunión de Teams",
         "unavailable": "La creación de reuniones de Teams no está disponible para este inquilino."
       },
-      "loadFailed": "Interaction options could not be loaded. Please try again.",
-      "saveFailed": "The interaction could not be saved. Please try again."
+      "loadFailed": "No se pudieron cargar las opciones de interacción. Inténtelo de nuevo.",
+      "saveFailed": "No se pudo guardar la interacción. Inténtelo de nuevo."
     },
     "feed": {
       "addInteraction": "Agregar interacción",
@@ -1425,8 +1425,8 @@
       "startDate": "Fecha de inicio",
       "title": "Interacciones",
       "typePlaceholder": "Tipo de interacción",
-      "loadFailed": "Interactions could not be loaded. Please try again.",
-      "typesLoadFailed": "Interaction types could not be loaded. Please try again."
+      "loadFailed": "No se pudieron cargar las interacciones. Inténtelo de nuevo.",
+      "typesLoadFailed": "No se pudieron cargar los tipos de interacción. Inténtelo de nuevo."
     },
     "overall": {
       "allContacts": "Todos los contactos",
@@ -1444,7 +1444,7 @@
       "startTimePlaceholder": "Filtrar desde esta hora de inicio",
       "statusPlaceholder": "Estado",
       "title": "Interacciones recientes",
-      "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
+      "statusesLoadFailed": "No se pudieron cargar los estados de interacción. Inténtelo de nuevo."
     }
   },
   "clientDrawer": {

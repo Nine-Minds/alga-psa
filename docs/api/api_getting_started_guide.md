@@ -1,12 +1,12 @@
 # API Getting Started Guide
 
-This guide will help you get started with using the Alga PSA APIs. It's designed for API consumers who want to integrate with our system.
+This guide will help you get started with using the AlgaPSA APIs. It's designed for API consumers who want to integrate with our system.
 
 ## Note: This document describes pre-release APIs. Many features are not yet available, and APIs are subject to change.
 
 ## 1. Introduction
 
-The Alga PSA APIs provide programmatic access to our Professional Services Automation platform. You can use these APIs to:
+The AlgaPSA APIs provide programmatic access to our Professional Services Automation platform. You can use these APIs to:
 - Manage tenants and their configurations
 - Access and update business data
 - Automate workflows
@@ -14,18 +14,18 @@ The Alga PSA APIs provide programmatic access to our Professional Services Autom
 
 Our APIs follow REST principles and use JSON for request/response payloads. All API access is over HTTPS, and all data is sent and received as JSON.
 
-> 📝 **Note:** The Alga PSA hosted environment is available at `algapsa.com`. If you are running an on-premise installation, replace this with your configured domain.
+> 📝 **Note:** The AlgaPSA hosted environment is available at `algapsa.com`. If you are running an on-premise installation, replace this with your configured domain.
 
 ## 2. Obtaining API Access
 
 ### Prerequisites
-- An active Alga PSA account
+- An active AlgaPSA account
 - Appropriate permissions to generate API keys
 
 ### Generating an API Key
 API keys can be generated through our web interface:
 
-1. Log in to your Alga PSA account
+1. Log in to your AlgaPSA account
 2. Click on your profile in the top-right corner
 3. Navigate to your User Profile settings
 4. Scroll down to the "API Keys" section

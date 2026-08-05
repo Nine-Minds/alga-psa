@@ -2,14 +2,14 @@
 
 ## Overview
 
-This plan details the implementation of a comprehensive NinjaOne RMM integration for Alga PSA, enabling MSPs to synchronize device assets, receive real-time alerts, create tickets from RMM events, and initiate remote access sessions directly from the PSA interface.
+This plan details the implementation of a comprehensive NinjaOne RMM integration for AlgaPSA, enabling MSPs to synchronize device assets, receive real-time alerts, create tickets from RMM events, and initiate remote access sessions directly from the PSA interface.
 
 ### Core Features
-- **Device Synchronization**: Bidirectional sync of devices/assets between NinjaOne and Alga PSA
+- **Device Synchronization**: Bidirectional sync of devices/assets between NinjaOne and AlgaPSA
 - **Webhook Callbacks**: Real-time notifications when changes occur in NinjaOne
 - **Asset-to-Ticket Linking**: Attach assets to tickets to track which device a ticket is for
 - **Alert-to-Ticket Automation**: Receive alerts and automatically create tickets based on configurable rules
-- **Remote Access**: Launch remote sessions to devices through NinjaOne from within Alga PSA
+- **Remote Access**: Launch remote sessions to devices through NinjaOne from within AlgaPSA
 - **Patch Compliance Tracking**: Monitor and display patch status for managed devices
 - **Software Inventory**: Sync and display installed software from RMM-managed devices
 
@@ -936,7 +936,7 @@ The `rmm_integrations` table and `integration_type` field support this extensibi
 - Push ticket status updates to NinjaOne
 
 ### Advanced Features
-- Script execution from Alga PSA
+- Script execution from AlgaPSA
 - Patch deployment initiation
 - Software deployment
 - Device group management

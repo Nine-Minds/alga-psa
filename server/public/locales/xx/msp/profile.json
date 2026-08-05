@@ -696,6 +696,17 @@
         "copySuccess": "11111",
         "copyFailed": "11111",
         "downloadFailed": "11111"
+      },
+      "admin": {
+        "title": "11111",
+        "searchPlaceholder": "11111",
+        "columns": {
+          "user": "11111"
+        },
+        "errors": {
+          "loadFailed": "11111",
+          "deactivateFailed": "11111"
+        }
       }
     }
   },

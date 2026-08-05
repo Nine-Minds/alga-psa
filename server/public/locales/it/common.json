@@ -25,7 +25,12 @@
     "trialAvailable": "Le funzionalità Essentials sono attive. Avvia una prova Pro gratuita di 15 giorni per sbloccare tutte le funzionalità.",
     "trialExpired": "La prova Pro è scaduta. L'installazione ora utilizza le funzionalità Essentials.",
     "licenseExpiresIn_one": "La licenza scade tra {{count}} giorno. Rinnova per evitare interruzioni del servizio.",
-    "licenseExpiresIn_other": "La licenza scade tra {{count}} giorni. Rinnova per evitare interruzioni del servizio."
+    "licenseExpiresIn_other": "La licenza scade tra {{count}} giorni. Rinnova per evitare interruzioni del servizio.",
+    "licenseExpired": "La licenza è scaduta. L’installazione ora utilizza le funzionalità Essentials.",
+    "licenseWrongTenant": "Questa licenza è stata emessa per un’appliance diversa e non è valida qui. L’installazione utilizza le funzionalità Essentials.",
+    "manageLicense": "Gestisci licenza",
+    "ariaLabel": "Stato della licenza",
+    "dismiss": "Chiudi"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -247,7 +252,7 @@
         },
         "systemDefault": {
           "source": "Impostazione predefinita del sistema (inglese)",
-          "appliesTo": "Fallback",
+          "appliesTo": "Ripiego",
           "whereSet": "Definito dal sistema"
         }
       }
@@ -796,7 +801,7 @@
           "reference": "Impossibile caricare le opzioni del trigger. Riprova."
         },
         "noTemplates": "Crea un modello di sondaggio prima di aggiungere i trigger.",
-        "prioritiesMixed": "Le board selezionate utilizzano tipi di priorità diversi. Vengono mostrate tutte le priorità."
+        "prioritiesMixed": "Le bacheche selezionate utilizzano tipi di priorità diversi. Vengono mostrate tutte le priorità."
       },
       "preview": {
         "heading": "Anteprima pagina di risposta",
@@ -992,7 +997,7 @@
       "sessionRevoked": "Sessione revocata con successo"
     },
     "warnings": {
-      "oauthLogout": "Questo ti disconnetterà solo da Alga PSA. Rimarrai connesso a {{provider}}."
+      "oauthLogout": "Questo ti disconnetterà solo da AlgaPSA. Rimarrai connesso a {{provider}}."
     },
     "errors": {
       "fetchFailed": "Impossibile recuperare le sessioni",
@@ -1172,7 +1177,7 @@
     "teamsTab": {
       "signedInAs": "Connesso come {{name}}",
       "openInFullPsa": "Apri in PSA completo",
-      "iframeTitle": "{{destination}} in Alga PSA",
+      "iframeTitle": "Pagina {{destination}} in AlgaPSA",
       "fullPsaHint": "Usa «Apri in PSA completo» per più contesto di quanto possa mostrare una scheda Teams.",
       "fallback": {
         "label": "Record richiesto non disponibile:",
@@ -1201,8 +1206,8 @@
           "summary": "Stai aprendo l'approvazione {{approvalId}} da Teams."
         },
         "timeEntry": {
-          "title": "Voce di tempo {{entryId}}",
-          "summary": "Stai aprendo la voce di tempo {{entryId}} da Teams."
+          "title": "Inserimento ore {{entryId}}",
+          "summary": "Stai aprendo l'inserimento ore {{entryId}} da Teams."
         },
         "contact": {
           "title": "Contatto {{contactId}}",
@@ -1210,6 +1215,32 @@
           "summaryWithClient": "Stai aprendo il contatto {{contactId}} per il cliente {{clientId}} da Teams."
         }
       }
+    },
+    "unsubscribe": {
+      "pageTitle": "Annulla iscrizione",
+      "confirmTitle": "Vuoi annullare l'iscrizione a queste email?",
+      "confirmDescription": "Non riceverai più email di marketing a questo indirizzo.",
+      "confirmAction": "Annulla iscrizione",
+      "doneTitle": "Iscrizione annullata",
+      "doneDescription": "Non riceverai più queste email.",
+      "unavailableTitle": "Link non disponibile",
+      "unavailableDescription": "Questo link non è più valido."
+    },
+    "mcpAuthorize": {
+      "errorTitle": "Errore di autorizzazione",
+      "documentTitle": "Autorizza {{client}}",
+      "consentTitle": "Autorizza l'accesso",
+      "consentRequest": "<strong>{{client}}</strong> richiede di accedere ad AlgaPSA <em>a tuo nome</em>.",
+      "consentScope": "L'app potrà utilizzare gli strumenti MCP con le tue autorizzazioni in questo spazio di lavoro. Puoi disconnetterla in qualsiasi momento da Impostazioni → MCP.",
+      "approve": "Approva",
+      "deny": "Nega"
+    },
+    "microsoftEmailSetup": {
+      "title": "Configura email Microsoft",
+      "finishing": "Completamento della configurazione dell'email Microsoft…",
+      "finished": "Configurazione completata. Puoi chiudere questa finestra.",
+      "notFinished": "La configurazione non è stata completata. Torna ad AlgaPSA per controllare l'errore.",
+      "returnLink": "Torna ad AlgaPSA"
     }
   },
   "feedback": {

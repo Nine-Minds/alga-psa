@@ -72,7 +72,7 @@
     },
     "source": {
       "contract": "Contrarre",
-      "tenantDefault": "Inadempienza dell'inquilino"
+      "tenantDefault": "Valore predefinito del tenant"
     }
   },
   "billing": {
@@ -2296,7 +2296,17 @@
         "hourly": "Orario",
         "usage": "Utilizzo"
       },
-      "usageRate": "Tariffa di utilizzo"
+      "usageRate": "Tariffa di utilizzo",
+      "columns": {
+        "name": "Nome",
+        "type": "Tipo",
+        "value": "Valore",
+        "appliesTo": "Si applica a",
+        "description": "Descrizione",
+        "amount": "Importo ($)",
+        "billingPeriod": "Periodo di fatturazione",
+        "timing": "Tempistica"
+      }
     },
     "timeline": {
       "deltaDown": "−{{amount}} rispetto al contratto corrente",
@@ -2310,7 +2320,7 @@
       "title": "Periodi di fatturazione simulati"
     },
     "unavailable": {
-      "description": "Il simulatore di contratti è disponibile in Alga PSA Pro.",
+      "description": "Il simulatore di contratti è disponibile in AlgaPSA Pro.",
       "title": "Funzionalità Pro"
     }
   }

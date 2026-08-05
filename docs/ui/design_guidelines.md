@@ -1,6 +1,6 @@
 # UI Design Guidelines
 
-Density, typography, and composition rules for Alga PSA product surfaces. The
+Density, typography, and composition rules for AlgaPSA product surfaces. The
 canonical reference implementation is the ticket "Grid" (bento) layout —
 `packages/tickets/src/components/ticket/bento/` — which established this
 language; new panels, tiles, and cards should match it. Color/token rules live

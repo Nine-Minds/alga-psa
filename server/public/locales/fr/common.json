@@ -25,7 +25,12 @@
     "trialAvailable": "Les fonctionnalités Essentials sont actives. Démarrez un essai Pro gratuit de 15 jours pour débloquer toutes les fonctionnalités.",
     "trialExpired": "L'essai Pro a expiré. L'installation utilise désormais les fonctionnalités Essentials.",
     "licenseExpiresIn_one": "La licence expire dans {{count}} jour. Renouvelez pour éviter toute interruption de service.",
-    "licenseExpiresIn_other": "La licence expire dans {{count}} jours. Renouvelez pour éviter toute interruption de service."
+    "licenseExpiresIn_other": "La licence expire dans {{count}} jours. Renouvelez pour éviter toute interruption de service.",
+    "licenseExpired": "La licence a expiré. L'installation utilise désormais les fonctionnalités Essentials.",
+    "licenseWrongTenant": "Cette licence a été émise pour une autre instance et n'est pas valide ici. L'installation utilise les fonctionnalités Essentials.",
+    "manageLicense": "Gérer la licence",
+    "ariaLabel": "Statut de la licence",
+    "dismiss": "Masquer"
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -992,7 +997,7 @@
       "sessionRevoked": "Session révoquée avec succès"
     },
     "warnings": {
-      "oauthLogout": "Cela vous déconnectera uniquement d'Alga PSA. Vous resterez connecté à {{provider}}."
+      "oauthLogout": "Cela vous déconnectera uniquement d'AlgaPSA. Vous resterez connecté à {{provider}}."
     },
     "errors": {
       "fetchFailed": "Échec de la récupération des sessions",
@@ -1075,7 +1080,7 @@
   },
   "enums": {
     "addOnDescription": {
-      "ai_assistant": "Débloquez le chat IA, l'assistance documentaire, l'aide en barre latérale et les outils IA de flux de travail pour votre équipe."
+      "ai_assistant": "Débloquez le chat IA, l'assistance documentaire, l'aide en barre latérale et les outils IA de workflow pour votre équipe."
     }
   },
   "form": {
@@ -1136,7 +1141,7 @@
       "teamLeadAccessRequired": "Accès chef d'équipe requis",
       "teamsTabUnavailable": "Onglet Teams indisponible",
       "teamsFeatureName": "Intégration Microsoft Teams",
-      "teamsEnterprisePitch": "Intégrez le contexte des tickets et les flux de travail des techniciens dans Microsoft Teams.",
+      "teamsEnterprisePitch": "Intégrez le contexte des tickets et les workflows des techniciens dans Microsoft Teams.",
       "teamsSignInUnavailable": "Connexion Teams indisponible",
       "assetNotFound": "Actif introuvable",
       "contactNotFound": "Contact introuvable",
@@ -1172,7 +1177,7 @@
     "teamsTab": {
       "signedInAs": "Connecté en tant que {{name}}",
       "openInFullPsa": "Ouvrir dans PSA complet",
-      "iframeTitle": "{{destination}} dans Alga PSA",
+      "iframeTitle": "{{destination}} dans AlgaPSA",
       "fullPsaHint": "Utilisez « Ouvrir dans PSA complet » pour plus de contexte qu'une carte Teams ne peut afficher.",
       "fallback": {
         "label": "Enregistrement demandé indisponible :",
@@ -1210,6 +1215,32 @@
           "summaryWithClient": "Vous ouvrez le contact {{contactId}} pour le client {{clientId}} depuis Teams."
         }
       }
+    },
+    "unsubscribe": {
+      "pageTitle": "Se désabonner",
+      "confirmTitle": "Voulez-vous vous désabonner de ces e-mails ?",
+      "confirmDescription": "Vous ne recevrez plus d’e-mails marketing à cette adresse.",
+      "confirmAction": "Se désabonner",
+      "doneTitle": "Votre désabonnement est confirmé",
+      "doneDescription": "Vous ne recevrez plus ces e-mails.",
+      "unavailableTitle": "Lien indisponible",
+      "unavailableDescription": "Ce lien n’est plus valide."
+    },
+    "mcpAuthorize": {
+      "errorTitle": "Erreur d’autorisation",
+      "documentTitle": "Autoriser {{client}}",
+      "consentTitle": "Autoriser l’accès",
+      "consentRequest": "<strong>{{client}}</strong> demande à accéder à AlgaPSA <em>en votre nom</em>.",
+      "consentScope": "Cette application pourra utiliser les outils MCP avec vos propres autorisations dans cet espace de travail. Vous pouvez la déconnecter à tout moment dans Paramètres → MCP.",
+      "approve": "Approuver",
+      "deny": "Refuser"
+    },
+    "microsoftEmailSetup": {
+      "title": "Configurer l’e-mail Microsoft",
+      "finishing": "Finalisation de la configuration de l’e-mail Microsoft…",
+      "finished": "Configuration terminée. Vous pouvez fermer cette fenêtre.",
+      "notFinished": "La configuration n’a pas abouti. Revenez dans AlgaPSA pour consulter l’erreur.",
+      "returnLink": "Revenir dans AlgaPSA"
     }
   },
   "feedback": {
@@ -1239,7 +1270,7 @@
       "deactivate": {
         "label": "Marquer comme inactif",
         "description": "Désactive l’enregistrement sans supprimer ses données.",
-        "warning": "Les enregistrements inactifs ne pourront plus être sélectionnés dans les nouveaux flux de travail."
+        "warning": "Les enregistrements inactifs ne pourront plus être sélectionnés dans les nouveaux workflows."
       },
       "archive": {
         "label": "Archiver",

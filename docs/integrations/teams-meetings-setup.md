@@ -44,7 +44,7 @@ New-ApplicationAccessPolicy `
   -AppId $appId `
   -PolicyScopeGroupId "Alga-Teams-Meeting-Organizers@acme.com" `
   -AccessRight RestrictAccess `
-  -Description "Restrict Alga PSA calendar access to Teams meeting organizer mailboxes"
+  -Description "Restrict AlgaPSA calendar access to Teams meeting organizer mailboxes"
 
 Test-ApplicationAccessPolicy `
   -Identity $organizerUpn `
@@ -67,7 +67,7 @@ $organizerObjectId = (Get-CsOnlineUser -Identity $organizerUpn).ExternalDirector
 New-CsApplicationAccessPolicy `
   -Identity "Alga-Appointment-Meetings" `
   -AppIds $appId `
-  -Description "Allow Alga PSA to create appointment meetings"
+  -Description "Allow AlgaPSA to create appointment meetings"
 
 Grant-CsApplicationAccessPolicy `
   -PolicyName "Alga-Appointment-Meetings" `
@@ -76,13 +76,13 @@ Grant-CsApplicationAccessPolicy `
 
 Wait up to 30 minutes for policy propagation before verification.
 
-## 4. Save the organizer in Alga PSA
+## 4. Save the organizer in AlgaPSA
 
 In the MSP app:
 
 1. Go to `Settings -> Integrations -> Microsoft Teams`.
 2. Enter the organizer UPN in `Default meeting organizer UPN`.
-3. Enable `Download recordings to internal storage` only if the tenant wants Alga PSA to copy recording blobs into tenant storage.
+3. Enable `Download recordings to internal storage` only if the tenant wants AlgaPSA to copy recording blobs into tenant storage.
 4. Enable `Show recordings and transcripts in the client portal` only if client users should see meeting artifacts. This is off by default.
 5. Save Teams settings.
 
@@ -155,7 +155,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 - Confirm admin consent for `OnlineMeetingRecording.Read.All` and `OnlineMeetingTranscript.Read.All`.
 - Confirm `Calendars.ReadWrite` is granted and scoped to the organizer mailbox through Exchange Application Access Policy or RBAC for Applications.
-- Confirm the meeting was created by Alga PSA as a calendar-backed event. Legacy standalone meetings cannot reliably return artifacts.
+- Confirm the meeting was created by AlgaPSA as a calendar-backed event. Legacy standalone meetings cannot reliably return artifacts.
 - Confirm the tenant's Teams recording policies allow recording/transcript generation.
 
 ## References

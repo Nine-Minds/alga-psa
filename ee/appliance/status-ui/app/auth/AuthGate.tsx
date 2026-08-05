@@ -22,7 +22,7 @@ function Shell({ title, subtitle, children }: { title: string; subtitle: string;
       <section className={styles.card}>
         <div className={styles.brand}>
           <span className={styles.logo}><AlgaLogo className={styles.logoSvg} /></span>
-          <span className={styles.brandText}><strong>Alga PSA</strong><small>Appliance setup</small></span>
+          <span className={styles.brandText}><strong>AlgaPSA</strong><small>Appliance setup</small></span>
         </div>
         <div className={styles.heading}>
           <h1>{title}</h1>

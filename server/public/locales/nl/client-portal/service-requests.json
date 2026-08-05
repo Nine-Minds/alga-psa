@@ -59,13 +59,13 @@
     "fileTypeLabel": "Type: {{mime}}"
   },
   "recent": {
-    "title": "Je recente verzoeken",
+    "title": "Uw recente verzoeken",
     "viewAll": "Bekijk alle",
     "empty": "Nog geen verzoeken ingediend.",
     "ticket": "Ticket #{{number}}",
     "noTicket": "Nog geen ticket"
   },
   "myRequestsAll": {
-    "title": "Je verzoeken"
+    "title": "Uw verzoeken"
   }
 }

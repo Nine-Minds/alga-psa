@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-This document details the technical implementation for "Native Currency Contracts" in the Alga PSA billing system.
+This document details the technical implementation for "Native Currency Contracts" in the AlgaPSA billing system.
 **Core Principle:** A contract is defined in a specific currency. All rates (fixed, hourly, usage) within that contract are treated as cents/sub-units of that currency. Invoices generated from the contract inherit that currency. We do **not** support real-time FX conversion or mixed-currency invoices in Phase 1.
 
 ## 2. Database Schema & Migrations

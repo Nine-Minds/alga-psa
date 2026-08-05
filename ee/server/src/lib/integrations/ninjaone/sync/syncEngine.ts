@@ -1,7 +1,7 @@
 /**
  * NinjaOne Sync Engine
  *
- * Handles bidirectional synchronization of devices between NinjaOne and Alga PSA.
+ * Handles bidirectional synchronization of devices between NinjaOne and AlgaPSA.
  * Supports full sync, incremental sync, and single device sync operations.
  */
 
@@ -103,7 +103,7 @@ export type SyncProgressCallback = (progress: {
 /**
  * NinjaOne Sync Engine
  *
- * Responsible for synchronizing devices from NinjaOne to Alga PSA assets.
+ * Responsible for synchronizing devices from NinjaOne to AlgaPSA assets.
  */
 export class NinjaOneSyncEngine {
   private tenantId: string;

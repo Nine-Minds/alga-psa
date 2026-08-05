@@ -1,7 +1,7 @@
 /**
  * @alga-psa/projects
  *
- * Project management module for Alga PSA.
+ * Project management module for AlgaPSA.
  * Provides project CRUD operations, task management, and project tracking.
  */
 

@@ -6,7 +6,7 @@
 
 ## Summary
 
-Add user-configurable inbound webhook endpoints to Alga PSA so MSPs can wire external systems (RMM alerts, accounting platforms, Zapier/n8n, custom integrations) into Alga without writing code. Each inbound webhook accepts authenticated HTTP requests, verifies them, dedupes replays, logs the delivery, and dispatches the payload to one of two handlers:
+Add user-configurable inbound webhook endpoints to AlgaPSA so MSPs can wire external systems (RMM alerts, accounting platforms, Zapier/n8n, custom integrations) into Alga without writing code. Each inbound webhook accepts authenticated HTTP requests, verifies them, dedupes replays, logs the delivery, and dispatches the payload to one of two handlers:
 
 1. **Direct action** — invoke a canned operation (create ticket, update ticket by external ref, upsert asset, mark invoice paid) with field-level mapping from the payload.
 2. **Workflow trigger** — start an Alga workflow with a normalized envelope containing the body, headers, and verification metadata.

@@ -14,7 +14,7 @@ The current appliance flow is too easy to loop into reinstalling forever and too
 
 - the installer can boot straight into destructive storage actions without a user-facing confirmation path
 - UTM on Apple Silicon can get stuck in a state where the ISO cannot be cleanly ejected, causing the VM to reboot back into the installer
-- the install media is not clearly branded as an Alga PSA artifact
+- the install media is not clearly branded as an AlgaPSA artifact
 
 We need a safer, user-facing install path that still works offline and keeps the appliance payload on the ISO.
 
@@ -55,14 +55,14 @@ We need a safer, user-facing install path that still works offline and keeps the
 
 - ISO / boot branding should show **AlgaPSA Install**.
 - Keep the stock Ubuntu Server install feel; do not add a second custom installer UI unless necessary.
-- The install media should remain clearly tied to Alga PSA even when used outside UTM.
+- The install media should remain clearly tied to AlgaPSA even when used outside UTM.
 - If the installer can present a concise summary screen, it should indicate that this media includes the Alga appliance payload.
 - The web setup/status UI should use the packaged React/Next App Router UI, Alga-like card/badge styling, asynchronous data loading, and skeleton placeholders for loading regions.
 
 ## Functional Requirements
 
 1. The ISO must boot into a branded **AlgaPSA Install** entry.
-2. The ISO label should identify the media as an Alga PSA install artifact.
+2. The ISO label should identify the media as an AlgaPSA install artifact.
 3. The Ubuntu Server install path must let users configure network and require user confirmation before destructive disk operations.
 4. The appliance web setup/status experience must use the packaged React/Next UI when available, falling back to legacy HTML only when the bundle is missing.
 5. Setup defaults, detected network data, and status diagnostics must load asynchronously with skeleton loading states.

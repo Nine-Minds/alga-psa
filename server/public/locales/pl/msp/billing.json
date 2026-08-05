@@ -139,7 +139,7 @@
     }
   },
   "usage": {
-    "bucketHoursOverview": "Przegląd godzin bucket",
+    "bucketHoursOverview": "Przegląd pakietu godzin",
     "usageRecords": "Zapisy użytkowania",
     "actions": {
       "addUsage": "Dodaj użycie",
@@ -464,7 +464,7 @@
       "selectAction": "Wybierz akcję",
       "show": "Pokaż",
       "hide": "Ukryj",
-      "format": "Format",
+      "format": "Format danych",
       "conditionPlaceholder": "Warunek",
       "targetPlaceholder": "Cel",
       "addRule": "Dodaj regułę"

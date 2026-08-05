@@ -225,5 +225,127 @@
       "body": "Les recharges, la recharge automatique et les changements d'abonnement sont gérés dans la boutique Nine Minds.",
       "openStore": "Ouvrir la boutique"
     }
+  },
+  "managementPage": {
+    "metaTitle": "Licence",
+    "eyebrow": "Gestion des licences de l’appliance",
+    "title": "Licence",
+    "subtitle": "Gérez le niveau fonctionnel de cette appliance auto-hébergée.",
+    "notSelfHost": {
+      "title": "Licence",
+      "description": "La gestion des licences est disponible uniquement pour les installations auto-hébergées."
+    },
+    "tiers": {
+      "unknown": "Niveau inconnu",
+      "essentials": "Offre Essentials",
+      "solo": "Solo",
+      "pro": "Pro"
+    },
+    "status": {
+      "trial": {
+        "eyebrow": "Essai Pro",
+        "title": "Votre essai Pro est actif",
+        "description_one": "Il vous reste {{count}} jour pour utiliser toutes les fonctionnalités Pro.",
+        "description_many": "Il vous reste {{count}} jours pour utiliser toutes les fonctionnalités Pro.",
+        "description_other": "Il vous reste {{count}} jours pour utiliser toutes les fonctionnalités Pro.",
+        "descriptionNoDays": "Vous pouvez utiliser toutes les fonctionnalités Pro pendant la période d’essai.",
+        "badge": "Essai actif"
+      },
+      "licensed": {
+        "eyebrow": "Licence payante",
+        "title": "{{tier}} est actif",
+        "description": "Votre licence payante est active sur cette appliance.",
+        "descriptionWithExpiry": "Votre licence est active jusqu’au {{date}}.",
+        "badge": "Sous licence"
+      },
+      "licenseExpired": {
+        "eyebrow": "La licence nécessite votre attention",
+        "title": "Votre licence a expiré",
+        "description": "L’appliance utilise les fonctionnalités Essentials jusqu’à ce que vous activiez une nouvelle clé de licence ou un nouveau code d’activation.",
+        "badge": "Expirée"
+      },
+      "licenseWrongTenant": {
+        "eyebrow": "La licence nécessite votre attention",
+        "title": "Cette licence n’est pas valide ici",
+        "description": "La licence enregistrée a été émise pour un autre locataire de l’appliance. Activez la licence appropriée pour déverrouiller les fonctionnalités payantes.",
+        "badge": "Installation incorrecte"
+      },
+      "trialExpired": {
+        "eyebrow": "Offre Essentials",
+        "title": "Vous utilisez Essentials",
+        "description": "Votre essai Pro est terminé. Essentials reste actif pour l’ensemble des fonctionnalités PSA principales.",
+        "badge": "Essentials actif"
+      },
+      "essentials": {
+        "eyebrow": "Offre Essentials",
+        "title": "Vous utilisez Essentials",
+        "description": "Essentials est actif sur cette appliance. Continuez à utiliser les fonctionnalités principales ou démarrez un essai Pro unique de 15 jours.",
+        "badge": "Essentials actif"
+      }
+    },
+    "trialCta": {
+      "title": "Essayez Pro pendant 15 jours",
+      "description": "Déverrouillez l’automatisation, les intégrations avancées et toutes les fonctionnalités Pro. Aucune carte bancaire n’est requise ; l’appliance revient à Essentials à la fin de l’essai."
+    },
+    "details": {
+      "currentTier": "Niveau actuel",
+      "expires": "Expire le",
+      "daysRemaining_one": "{{count}} jour restant",
+      "daysRemaining_many": "{{count}} jours restants",
+      "daysRemaining_other": "{{count}} jours restants",
+      "licensedTo": "Licence accordée à",
+      "refreshLabel": "Actualisation de la licence",
+      "connected": "Connecté",
+      "lastCheckIn": "Dernière vérification : {{timestamp}}",
+      "refreshHelp": "Applique immédiatement les changements de postes ou d’offre effectués dans le portail."
+    },
+    "portal": {
+      "manageTitle": "Postes, facturation et codes d’activation",
+      "manageDescription": "Ajoutez ou supprimez des postes, mettez à jour la facturation ou réémettez un code d’activation dans le portail de gestion des licences. Connectez-vous avec votre adresse e-mail enregistrée — aucun mot de passe n’est requis.",
+      "buyTitle": "Prêt à acheter AlgaPSA Pro ?",
+      "buyDescription": "Effectuez votre achat dans le portail de gestion des licences : connectez-vous avec votre adresse e-mail enregistrée, choisissez le nombre de postes et vous recevrez un code d’activation à usage unique à saisir ci-dessous. Votre appliance est mise à niveau sur place."
+    },
+    "advanced": {
+      "summary": "Vous avez un code ou une clé de licence ?",
+      "introPrefix": "Saisissez le code d’activation ou la clé hors ligne que vous avez reçus du",
+      "introLink": "portail de gestion des licences",
+      "introSuffix": "ou de l’assistance Nine Minds.",
+      "claimCode": {
+        "title": "Activer avec un code d’activation",
+        "description": "Utilisez le code à 8 caractères provenant du portail de gestion des licences ou d’un e-mail relatif à une licence payante. Cela active également l’actualisation automatique de la licence."
+      },
+      "licenseKey": {
+        "title": "Coller une clé de licence",
+        "description": "Utilisez cette option pour les clés hors ligne téléchargées depuis le portail de gestion des licences pour les installations isolées du réseau, ou émises par l’assistance."
+      },
+      "installationId": {
+        "title": "ID d’installation",
+        "description": "L’assistance peut vous demander cet ID lors de l’émission d’une clé de licence manuelle."
+      }
+    },
+    "actions": {
+      "startTrial": "Démarrer l’essai Pro de 15 jours",
+      "startingTrial": "Démarrage…",
+      "refreshNow": "Actualiser la licence maintenant",
+      "refreshing": "Actualisation…",
+      "manageInPortal": "Gérer la licence dans le portail",
+      "buyInPortal": "Acheter Pro dans le portail",
+      "applyClaimCode": "Appliquer le code d’activation",
+      "activateLicenseKey": "Activer la clé de licence",
+      "activating": "Activation…"
+    },
+    "success": {
+      "licenseKeyActivated": "Clé de licence activée. Les fonctionnalités payantes sont maintenant disponibles sur cette appliance.",
+      "claimCodeActivated": "Code d’activation activé. L’actualisation automatique de la licence est maintenant configurée.",
+      "trialStarted": "L’essai Pro de 15 jours a démarré.",
+      "licenseRefreshed": "Licence actualisée. Les changements de postes ou d’offre effectués dans le portail sont maintenant actifs."
+    },
+    "errors": {
+      "loadStatus": "Impossible de charger l’état de la licence.",
+      "activateLicenseKey": "Impossible d’activer la clé de licence.",
+      "activateClaimCode": "Impossible d’activer le code d’activation.",
+      "startTrial": "Impossible de démarrer l’essai.",
+      "refreshLicense": "Impossible d’actualiser la licence."
+    }
   }
 }

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Starting Alga PSA Development Environment"
+echo "🚀 Starting AlgaPSA Development Environment"
 echo "PR: ${ALGA_PR_NUMBER:-unknown}"
 echo "Branch: ${ALGA_BRANCH:-unknown}"
 

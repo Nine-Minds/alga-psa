@@ -29,7 +29,7 @@ Examples in the current tree include:
 - Public documentation that describes the paid product rather than the build architecture.
 - A direct UI rendering of an edition-gated action error, if the application presents that exact error to a person.
 
-Preferred forms are `Pro feature`, `requires Pro`, `available in Pro`, `Alga PSA Pro`, and `Pro trial`. Do not invent `Pro Edition` where the existing sentence can simply say `Pro`.
+Preferred forms are `Pro feature`, `requires Pro`, `available in Pro`, `AlgaPSA Pro`, and `Pro trial`. Do not invent `Pro Edition` where the existing sentence can simply say `Pro`.
 
 ### Terms that already have the right tier meaning
 

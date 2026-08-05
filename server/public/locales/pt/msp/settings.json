@@ -1736,14 +1736,14 @@
   },
   "extensions": {
     "title": "Gerenciamento de extensão",
-    "description": "Instale, configure e gerencie extensões para estender a funcionalidade do Alga PSA.",
+    "description": "Instale, configure e gerencie extensões para estender a funcionalidade do AlgaPSA.",
     "tabs": {
       "manage": "Gerenciar",
       "install": "Instalar"
     },
     "enterpriseOnly": {
       "title": "Recurso Pro",
-      "description": "As extensões estão disponíveis no Alga PSA Pro."
+      "description": "As extensões estão disponíveis no AlgaPSA Pro."
     },
     "links": {
       "needLogs": "Precisa de registros de extensão?",
@@ -1861,21 +1861,21 @@
       "description": "Carregando ferramentas de atribuição em massa de SSO..."
     },
     "status": {
-      "title": "Sign-in providers",
-      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
-      "available": "Available",
-      "notConfigured": "Not configured"
+      "title": "Provedores de login",
+      "caption": "Estes provedores são gerenciados pela plataforma — não é necessário configurar IDs de cliente nem DNS. Ative a vinculação automática ou atribua os usuários abaixo.",
+      "available": "Disponível",
+      "notConfigured": "Não configurado"
     },
     "autoLink": {
       "body": "Quando ativado, os usuários MSP recém-adicionados podem fazer login no Google ou na Microsoft usando seu e-mail comercial. Eles não terão que vincular manualmente sua conta.",
-      "clientBody": "When enabled, matching client portal users are automatically linked to their SSO identities on login.",
-      "clientTitle": "Auto-link client portal users",
-      "clientToggleLabel": "Toggle client auto-linking",
+      "clientBody": "Quando ativado, os usuários correspondentes do portal do cliente são vinculados automaticamente às identidades de SSO durante o login.",
+      "clientTitle": "Vincular automaticamente os usuários do portal do cliente",
+      "clientToggleLabel": "Ativar ou desativar a vinculação automática de clientes",
       "description": "Ative esta opção para provisionar imediatamente cada nova conta de equipe com seu provedor de SSO corporativo, para que eles nunca precisem de um login baseado em senha.",
       "disabledInfo": "Ative esta alternância para permitir que funcionários novos e existentes ignorem o fluxo “Conectar SSO” quando seus e-mails já corresponderem a um provedor configurado. Ainda registraremos todos os links automáticos.",
-      "internalBody": "When enabled, matching MSP/internal users are automatically linked to their SSO identities on login.",
-      "internalTitle": "Auto-link internal users",
-      "internalToggleLabel": "Toggle internal auto-linking",
+      "internalBody": "Quando ativado, os usuários internos ou do MSP correspondentes são vinculados automaticamente às identidades de SSO durante o login.",
+      "internalTitle": "Vincular automaticamente os usuários internos",
+      "internalToggleLabel": "Ativar ou desativar a vinculação automática de usuários internos",
       "title": "Configure automaticamente o SSO para novos usuários internos",
       "toggleLabel": "Alternar correspondência automática de SSO"
     },
@@ -1968,19 +1968,19 @@
       }
     },
     "clientPortalProvisioning": {
-      "deactivateBody": "When enabled, users managed by Entra provisioning are deactivated when access-group entitlement is removed.",
-      "deactivateLabel": "Toggle deactivation on entitlement removal",
-      "deactivateTitle": "Deactivate Entra-managed users on entitlement removal",
-      "defaultRoleBody": "Used for newly provisioned client portal users in built-in mode when a client mapping does not override the role.",
-      "defaultRoleLabel": "MSP workspace default client portal role",
-      "defaultRoleTitle": "MSP workspace default client portal role",
-      "modeBody": "Choose whether client portal access from Entra sync is disabled, handled by built-in provisioning, or delegated to workflows.",
-      "modeBuiltIn": "Built-in",
-      "modeDisabled": "Disabled",
-      "modeLabel": "Client portal Entra provisioning mode",
-      "modeTitle": "Client portal Entra provisioning mode",
-      "modeWorkflowManaged": "Workflow-managed",
-      "workflowManagedInfo": "Workflow-managed mode publishes Entra access events only. The selected workflow is responsible for client portal user provisioning, role assignment, invitations, and lifecycle changes."
+      "deactivateBody": "Quando ativado, os usuários gerenciados pelo provisionamento do Entra são desativados quando perdem o direito de acesso concedido pelo grupo.",
+      "deactivateLabel": "Ativar ou desativar a desativação quando o direito de acesso for removido",
+      "deactivateTitle": "Desativar usuários gerenciados pelo Entra quando o direito de acesso for removido",
+      "defaultRoleBody": "Usada para novos usuários provisionados no portal do cliente no modo integrado quando o mapeamento do cliente não substituir a função.",
+      "defaultRoleLabel": "Função padrão do portal do cliente no espaço de trabalho do MSP",
+      "defaultRoleTitle": "Função padrão do portal do cliente no espaço de trabalho do MSP",
+      "modeBody": "Escolha se o acesso ao portal do cliente pela sincronização do Entra fica desativado, é processado pelo provisionamento integrado ou é delegado a fluxos de trabalho.",
+      "modeBuiltIn": "Integrado",
+      "modeDisabled": "Desativado",
+      "modeLabel": "Modo de provisionamento do Entra para o portal do cliente",
+      "modeTitle": "Modo de provisionamento do Entra para o portal do cliente",
+      "modeWorkflowManaged": "Gerenciado por fluxo de trabalho",
+      "workflowManagedInfo": "O modo gerenciado por fluxo de trabalho publica apenas eventos de acesso do Entra. O fluxo de trabalho selecionado é responsável pelo provisionamento de usuários no portal do cliente, pela atribuição de funções, pelos convites e pelas alterações no ciclo de vida."
     }
   },
   "profile": {
@@ -2293,6 +2293,157 @@
           "invalidOptions": "As opções devem ser valores não vazios.",
           "invalidField": "Este campo é inválido."
         }
+      }
+    }
+  },
+  "mcpServer": {
+    "title": "Servidor MCP",
+    "description": "Permita que agentes de IA façam login no AlgaPSA e atuem com as funções que você atribuir a eles.",
+    "errors": {
+      "load": "Falha ao carregar as configurações do MCP.",
+      "update": "Falha ao atualizar as configurações do MCP."
+    },
+    "status": {
+      "active": "Ativo",
+      "inactive": "Inativo"
+    },
+    "providers": {
+      "title": "Provedores de identidade",
+      "description": "Os agentes fazem login por meio destes provedores. Adicione os provedores usados por seus agentes.",
+      "empty": "Ainda não há provedores.",
+      "readyToUse": "Pronto para usar",
+      "platformManaged": "Gerenciado pelo AlgaPSA — nenhuma configuração é necessária. Conecte um agente a um deles na etapa 2.",
+      "addAnother": "Adicionar outro provedor",
+      "advancedOptions": "Opções avançadas",
+      "googleNoSetup": "O Google não exige configuração. Os agentes fazem login com o ID da conta de serviço do Google.",
+      "kinds": {
+        "microsoft": "Microsoft Entra",
+        "google": "Google",
+        "custom": "Personalizado"
+      },
+      "suggestion": {
+        "withName": "Você já está conectado à Microsoft ({{name}}). Deseja usar este diretório para os agentes?",
+        "withoutName": "Você já está conectado à Microsoft. Deseja usar este diretório para os agentes?",
+        "useDirectory": "Usar este diretório"
+      },
+      "fields": {
+        "provider": "Provedor",
+        "entraTenantId": "ID do tenant do Entra",
+        "audienceOptional": "Público-alvo (opcional)",
+        "audience": "Público-alvo",
+        "subjectClaim": "Identificar agentes por",
+        "subjectClaimHelp": "Deixe em branco, a menos que seu provedor indique o contrário.",
+        "issuer": "Emissor",
+        "jwksUri": "URL das chaves de assinatura"
+      },
+      "actions": {
+        "add": "Adicionar provedor"
+      },
+      "hints": {
+        "entraTenantIdRequired": "Informe o ID do tenant do Entra para continuar.",
+        "issuerAndJwksRequired": "Informe o emissor e a URL das chaves de assinatura para continuar."
+      },
+      "table": {
+        "provider": "Provedor",
+        "directory": "Diretório",
+        "status": "Status"
+      }
+    },
+    "agents": {
+      "title": "Agentes",
+      "description": "Cada agente faz login com sua própria identidade e recebe as funções que você atribuir.",
+      "empty": "Ainda não há agentes.",
+      "needsProvider": "Primeiro, adicione um provedor na etapa 1. Depois, adicione os agentes que fazem login por meio dele.",
+      "connectedAs": "Conectado como",
+      "fields": {
+        "name": "Nome",
+        "namePlaceholder": "Bot de triagem do suporte",
+        "identity": "Identidade",
+        "provider": "Provedor",
+        "providerPlaceholder": "Escolha um provedor",
+        "agentId": "ID do agente",
+        "roles": "Funções"
+      },
+      "manualEntry": {
+        "show": "Inserir identidade manualmente",
+        "hide": "Ocultar entrada manual"
+      },
+      "actions": {
+        "add": "Adicionar agente",
+        "change": "Alterar",
+        "connectWith": "Conectar com {{provider}}",
+        "openMenu": "Abrir ações do agente",
+        "viewActivity": "Ver atividade",
+        "deactivate": "Desativar",
+        "reactivate": "Reativar",
+        "remove": "Remover…"
+      },
+      "hints": {
+        "nameRequired": "Dê um nome ao agente para continuar.",
+        "connectOrEnterIdentity": "Conecte um provedor — ou insira uma identidade — para continuar.",
+        "chooseProviderAndAgentId": "Escolha um provedor e um ID de agente para continuar."
+      },
+      "table": {
+        "name": "Nome",
+        "provider": "Provedor",
+        "agentId": "ID do agente",
+        "status": "Status"
+      },
+      "removeDialog": {
+        "title": "Remover agente",
+        "message": "Remover \"{{name}}\"? Isso excluirá permanentemente o agente, suas atribuições de funções e seu registro de atividades. Esta ação não pode ser desfeita.",
+        "confirm": "Remover",
+        "cancel": "Cancelar"
+      }
+    },
+    "agentId": {
+      "unknown": {
+        "placeholder": "o identificador do agente",
+        "helper": "Escolha um provedor para ver o que deve ser informado."
+      },
+      "microsoft": {
+        "userHelper": "O ID do objeto de usuário do agente (oid) no Entra.",
+        "appHelper": "O ID do aplicativo (cliente) do agente no Entra."
+      },
+      "google": {
+        "helper": "O ID da conta de serviço (o valor sub no token)."
+      },
+      "custom": {
+        "placeholder": "valor da sua declaração de assunto",
+        "helper": "O valor da declaração \"{{claim}}\" no token do agente."
+      }
+    },
+    "audit": {
+      "title": "Atividade",
+      "titleForAgent": "Atividade — {{name}}",
+      "description": "O que o agente fez e se cada ação foi permitida.",
+      "table": {
+        "when": "Quando",
+        "action": "Ação",
+        "result": "Resultado",
+        "status": "Status"
+      },
+      "decision": {
+        "allowed": "Permitido",
+        "blocked": "Bloqueado"
+      }
+    },
+    "connectedClients": {
+      "title": "Clientes MCP conectados",
+      "description": "Aplicativos que você autorizou a acessar o AlgaPSA em seu nome por meio do MCP (por exemplo, Claude). Desconecte os que você não usa mais.",
+      "loading": "Carregando…",
+      "empty": "Não há clientes conectados.",
+      "meta": "{{host}} · conectado em {{date}}",
+      "disconnect": "Desconectar",
+      "errors": {
+        "load": "Falha ao carregar as conexões.",
+        "disconnect": "Falha ao desconectar."
+      },
+      "dialog": {
+        "title": "Desconectar cliente",
+        "message": "Desconectar \"{{name}}\"? O cliente perderá o acesso imediatamente e precisará ser autorizado novamente para se reconectar.",
+        "confirm": "Desconectar",
+        "cancel": "Cancelar"
       }
     }
   }

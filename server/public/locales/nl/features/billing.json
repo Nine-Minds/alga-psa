@@ -122,7 +122,7 @@
     "usage": "Verbruik",
     "overage": "Overschrijding",
     "noContractLineTitle": "Geen urenbundels beschikbaar",
-    "noContractLineDescription": "Er zijn geen actieve urenbundels voor je account."
+    "noContractLineDescription": "Er zijn geen actieve urenbundels voor uw account."
   },
   "messages": {
     "noInvoices": "Geen facturen gevonden",
@@ -286,7 +286,7 @@
     "lineItems": {
       "title": "Regels",
       "subtitleEmpty": "Nog geen items.",
-      "subtitleCount": "{{count}} items · {{mix}}",
+      "subtitleCount": "{{count}} artikelen · {{mix}}",
       "mixBoth": "terugkerend en eenmalig",
       "mixRecurring": "terugkerend",
       "mixOneTime": "eenmalig",

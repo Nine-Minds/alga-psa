@@ -13,7 +13,7 @@
     "users": "Utenti",
     "teams": "Team",
     "language": "Lingua",
-    "ticketing": "Ticketing",
+    "ticketing": "Gestione ticket",
     "projects": "Progetti",
     "interactions": "Interazioni",
     "notifications": "Notifiche",
@@ -38,7 +38,7 @@
   },
   "general": {
     "title": "Impostazioni generali",
-    "description": "Gestisca il nome dell'organizzazione e scelga quale scheda cliente rappresenta la Sua azienda. I dati di quel cliente compaiono su fatture, preventivi e comunicazioni ai clienti.",
+    "description": "Gestisci il nome dell'organizzazione e scegli quale scheda cliente rappresenta la tua azienda. I dati di quel cliente compaiono su fatture, preventivi e comunicazioni ai clienti.",
     "fields": {
       "organizationName": {
         "label": "Nome dell'organizzazione"
@@ -53,21 +53,21 @@
       "saveDefaultTimezone": "Salva fuso orario predefinito"
     },
     "clients": {
-      "title": "La Sua azienda",
-      "help": "Il cliente contrassegnato come la Sua azienda rappresenta la Sua organizzazione. Nome, indirizzo e logo di questo cliente compaiono su fatture, preventivi e comunicazioni ai clienti.",
-      "currentDefault": "Attualmente la Sua azienda è {{name}}.",
-      "yourCompanyBadge": "La Sua azienda",
+      "title": "La tua azienda",
+      "help": "Il cliente contrassegnato come la tua azienda rappresenta la tua organizzazione. Nome, indirizzo e logo di questo cliente compaiono su fatture, preventivi e comunicazioni ai clienti.",
+      "currentDefault": "Attualmente la tua azienda è {{name}}.",
+      "yourCompanyBadge": "La tua azienda",
       "table": {
         "name": "Nome",
-        "default": "La Sua azienda (predefinito)",
+        "default": "La tua azienda (predefinito)",
         "actions": "Azioni"
       },
-      "placeholder": "Selezioni un cliente da aggiungere",
+      "placeholder": "Seleziona un cliente da aggiungere",
       "addClient": "Aggiungi cliente",
       "confirmDialog": {
-        "title": "Modificare la Sua azienda?",
-        "message": "Questa operazione cambierà la Sua azienda da {{current}} a {{next}}. {{next}} rappresenterà la Sua organizzazione su fatture, preventivi ed e-mail e inviti destinati ai clienti.",
-        "messageInitial": "Questa operazione imposterà {{next}} come la Sua azienda. {{next}} rappresenterà la Sua organizzazione su fatture, preventivi ed e-mail e inviti destinati ai clienti.",
+        "title": "Modificare la tua azienda?",
+        "message": "Questa operazione cambierà la tua azienda da {{current}} a {{next}}. {{next}} rappresenterà la tua organizzazione su fatture, preventivi ed e-mail e inviti destinati ai clienti.",
+        "messageInitial": "Questa operazione imposterà {{next}} come la tua azienda. {{next}} rappresenterà la tua organizzazione su fatture, preventivi ed e-mail e inviti destinati ai clienti.",
         "confirm": "Modifica azienda",
         "cancel": "Annulla"
       }
@@ -84,7 +84,7 @@
         "loadTenantData": "Impossibile caricare i dati del tenant",
         "updateTenantName": "Impossibile aggiornare il nome del tenant",
         "updateTimezone": "Impossibile aggiornare il fuso orario",
-        "selectClient": "Selezioni un cliente",
+        "selectClient": "Seleziona un cliente",
         "clientNotFound": "Cliente non trovato",
         "clientAlreadyAdded": "Questo cliente è già presente nell’elenco",
         "addClient": "Impossibile aggiungere il cliente",
@@ -96,7 +96,7 @@
   },
   "experimentalFeatures": {
     "title": "Funzionalità sperimentali",
-    "description": "Abiliti o disabiliti le funzionalità sperimentali per il Suo tenant.",
+    "description": "Abilita o disabilita le funzionalità sperimentali per il tuo tenant.",
     "alert": {
       "title": "Sperimentale",
       "description": "Le funzionalità sperimentali possono essere modificate o rimosse senza preavviso."
@@ -127,8 +127,8 @@
   "users": {
     "title": "Gestione utenti",
     "description": {
-      "msp": "Gestisca gli utenti MSP e i permessi",
-      "client": "Gestisca gli utenti del portale clienti e i relativi accessi"
+      "msp": "Gestisci gli utenti MSP e i permessi",
+      "client": "Gestisci gli utenti del portale clienti e i relativi accessi"
     },
     "viewSwitcher": {
       "msp": "MSP",
@@ -151,8 +151,8 @@
     "tabs": {
       "list": "Elenco",
       "structure": "Struttura",
-      "listDescription": "Gestisca i singoli utenti, ruoli e permessi.",
-      "structureDescription": "Visualizzi e gestisca la gerarchia organizzativa."
+      "listDescription": "Gestisci i singoli utenti, ruoli e permessi.",
+      "structureDescription": "Visualizza e gestisci la gerarchia organizzativa."
     },
     "actions": {
       "createNewUser": "Crea nuovo utente",
@@ -186,10 +186,10 @@
         "selectExistingContactRequired": "Seleziona contatto esistente",
         "selectContactToInvite": "Seleziona contatto da invitare",
         "password": "Password",
-        "passwordOptional": "(Lasci vuoto per inviare un invito)",
+        "passwordOptional": "(Lascia vuoto per inviare un invito)",
         "passwordPlaceholder": {
-          "msp": "Inserisca la password",
-          "client": "Lasci vuoto per inviare un invito"
+          "msp": "Inserisci la password",
+          "client": "Lascia vuoto per inviare un invito"
         },
         "selectClient": "Seleziona cliente"
       },
@@ -237,15 +237,15 @@
         "createClientPortalUser": "Impossibile creare l'utente del portale clienti",
         "clipboardUnavailable": "L'API degli appunti non e disponibile in questo browser.",
         "copyPortalLink": "Impossibile copiare il link di accesso al portale",
-        "fillRequiredFields": "Compili tutti i campi obbligatori",
+        "fillRequiredFields": "Compila tutti i campi obbligatori",
         "fixValidationErrors": "Corregga gli errori di validazione prima di continuare",
         "fixValidationBeforeInvitation": "Corregga gli errori di validazione prima di inviare l'invito",
-        "emailAlreadyInUse": "Questo indirizzo email è già in uso. Utilizzi un indirizzo email diverso.",
+        "emailAlreadyInUse": "Questo indirizzo email è già in uso. Usa un indirizzo email diverso.",
         "portalUserExists": "Esistè già un utente del portale per questo contatto o indirizzo email.",
-        "portalUserExistsForContact": "Esistè già un utente del portale per questo contatto. Utilizzi il ripristino della password per l'utente esistente.",
-        "selectAppropriateRole": "Selezioni un ruolo appropriato per questo tipo di utente",
-        "contactMissingEmail": "Il contatto \"{{name}}\" non dispone di un indirizzo email. Aggiorni l'email del contatto prima di inviare un invito.",
-        "licenseLimit": "Impossibile attivare l'utente: limite di licenze raggiunto. Disattivi un altro utente o aggiorni la Sua licenza.",
+        "portalUserExistsForContact": "Esiste già un utente del portale per questo contatto. Usa il ripristino della password per l'utente esistente.",
+        "selectAppropriateRole": "Seleziona un ruolo appropriato per questo tipo di utente",
+        "contactMissingEmail": "Il contatto \"{{name}}\" non dispone di un indirizzo email. Aggiorna l'email del contatto prima di inviare un invito.",
+        "licenseLimit": "Impossibile attivare l'utente: limite di licenze raggiunto. Disattiva un altro utente o aggiorna la tua licenza.",
         "permissionDeniedInvite": "Non hai il permesso di invitare utenti.",
         "permissionDeniedCreate": "Non hai il permesso di creare utenti.",
         "emailNotConfigured": "Il servizio e-mail è disabilitato o non configurato.",
@@ -279,15 +279,15 @@
     "fields": {
       "firstName": {
         "label": "Nome",
-        "placeholder": "Inserisca il nome"
+        "placeholder": "Inserisci il nome"
       },
       "lastName": {
         "label": "Cognome",
-        "placeholder": "Inserisca il cognome"
+        "placeholder": "Inserisci il cognome"
       },
       "email": {
         "label": "E-mail",
-        "placeholder": "Inserisca l'email"
+        "placeholder": "Inserisci l'email"
       },
       "reportsTo": {
         "label": "Riporta a",
@@ -317,7 +317,7 @@
       "lastLogin": "Ultimo accesso",
       "roles": "Ruoli",
       "status": "Stato",
-      "statusHelp": "Imposti lo stato dell'account utente",
+      "statusHelp": "Imposta lo stato dell'account utente",
       "newPassword": "Nuova password"
     },
     "status": {
@@ -367,16 +367,16 @@
   },
   "teams": {
     "title": "Gestione team",
-    "description": "Crei e gestisca i team, assegni i responsabili e organizzi i membri nella Sua organizzazione",
+    "description": "Crea e gestisci i team, assegna i responsabili e organizza i membri nella tua organizzazione",
     "loading": "Caricamento team...",
-    "emptyState": "Selezioni un team per gestire i membri",
+    "emptyState": "Seleziona un team per gestire i membri",
     "list": {
       "title": "Team",
       "addNewTeam": "Aggiungi nuovo team",
       "createTeam": "Crea team",
       "cancel": "Annulla",
       "delete": "Elimina",
-      "placeholder": "Inserisca il nome del nuovo team",
+      "placeholder": "Inserisci il nome del nuovo team",
       "selectManager": "Seleziona un responsabile"
     },
     "details": {
@@ -387,7 +387,7 @@
         "addMember": "Aggiungi membro"
       },
       "placeholders": {
-        "teamName": "Inserisca il nome del team",
+        "teamName": "Inserisci il nome del team",
         "selectTeamLead": "Seleziona un responsabile del team",
         "selectUserToAdd": "Seleziona un utente da aggiungere"
       },
@@ -443,7 +443,7 @@
         "prefix": {
           "label": "Prefisso numero ticket",
           "placeholder": "TK-",
-          "help": "Prefisso opzionale per i numeri dei ticket. Lasci vuoto per nessun prefisso o inserisca un prefisso personalizzato (es. 'TK-')"
+          "help": "Prefisso opzionale per i numeri dei ticket. Lascia vuoto per non usare alcun prefisso oppure inseriscine uno personalizzato (es. 'TK-')"
         },
         "minimumDigits": {
           "label": "Cifre minime",
@@ -451,8 +451,8 @@
         },
         "initialValue": {
           "label": "Valore iniziale",
-          "placeholder": "Inserisca il valore",
-          "help": "Imposti il numero iniziale per la sequenza. Puo essere impostato solo una volta."
+          "placeholder": "Inserisci il valore",
+          "help": "Imposta il numero iniziale per la sequenza. Può essere impostato solo una volta."
         },
         "lastUsedNumber": {
           "label": "Ultimo numero utilizzato",
@@ -475,7 +475,7 @@
       "loading": "Caricamento...",
       "messages": {
         "error": {
-          "noSettings": "Nessuna impostazione di numerazione ticket trovata. Contatti il Suo amministratore.",
+          "noSettings": "Nessuna impostazione di numerazione ticket trovata. Contatta il tuo amministratore.",
           "loadFailed": "Impossibile caricare le impostazioni di numerazione dei ticket",
           "updateFailed": "Impossibile aggiornare le impostazioni",
           "updatePaddingFailed": "Impossibile aggiornare la lunghezza di riempimento",
@@ -563,15 +563,15 @@
       "fields": {
         "boardName": {
           "label": "Nome della bacheca",
-          "placeholder": "Inserisca il nome della bacheca"
+          "placeholder": "Inserisci il nome della bacheca"
         },
         "description": {
           "label": "Descrizione",
-          "placeholder": "Inserisca la descrizione della bacheca"
+          "placeholder": "Inserisci la descrizione della bacheca"
         },
         "displayOrder": {
           "label": "Ordine di visualizzazione",
-          "placeholder": "Inserisca l'ordine di visualizzazione",
+          "placeholder": "Inserisci l'ordine di visualizzazione",
           "help": "Controlla l'ordine di visualizzazione delle bacheche nell'elenco"
         },
         "inactive": "Contrassegna come inattivo",
@@ -655,7 +655,7 @@
         "deleteAndCleanup": "Elimina e pulisci",
         "deleteAll": "Elimina tutto",
         "importTitle": "Importa bacheche standard",
-        "importDescription": "Selezioni le bacheche standard da importare nella Sua organizzazione:",
+        "importDescription": "Seleziona le bacheche standard da importare nella tua organizzazione:",
         "importEmpty": "Nessuna bacheca standard disponibile per l'importazione.",
         "conflictsTitle": "Risolvi conflitti di importazione",
         "conflictsDescription": "I seguenti elementi presentano conflitti che devono essere risolti:",
@@ -912,11 +912,11 @@
       "fields": {
         "name": {
           "label": "Nome modello",
-          "placeholder": "Inserisca il nome del modello"
+          "placeholder": "Inserisci il nome del modello"
         },
         "description": {
           "label": "Descrizione",
-          "placeholder": "Inserisca la descrizione"
+          "placeholder": "Inserisci la descrizione"
         },
         "active": "Attivo",
         "items": {
@@ -925,11 +925,11 @@
           "itemName": "Nome elemento",
           "required": "Obbligatorio",
           "newItemLabel": "Nuovo elemento",
-          "newItemPlaceholder": "Inserisca il nome dell'elemento"
+          "newItemPlaceholder": "Inserisci il nome dell'elemento"
         },
         "rules": {
           "label": "Regole di applicazione automatica",
-          "help": "Il modello viene applicato automaticamente ai nuovi ticket che corrispondono a una qualsiasi di queste regole. Lasci un campo come \"Qualsiasi\" per corrispondere a tutti i valori.",
+          "help": "Il modello viene applicato automaticamente ai nuovi ticket che corrispondono a una qualsiasi di queste regole. Lascia un campo come \"Qualsiasi\" per corrispondere a tutti i valori.",
           "empty": "Nessuna regola di applicazione automatica. Questo modello può comunque essere applicato ai ticket manualmente.",
           "board": "Bacheca",
           "category": "Categoria",
@@ -989,7 +989,7 @@
       "dialog": {
         "import": {
           "title": "Importa tipi di interazione standard",
-          "description": "Selezioni i tipi di interazione standard da importare nella Sua organizzazione:",
+          "description": "Seleziona i tipi di interazione standard da importare nella tua organizzazione:",
           "empty": "Nessun tipo di interazione standard disponibile per l'importazione."
         },
         "conflicts": {
@@ -1067,12 +1067,12 @@
           "placeholder": "es. 1, 2, 3..."
         },
         "icon": {
-          "label": "Scelga un'icona:"
+          "label": "Scegli un'icona:"
         }
       },
       "preview": {
         "title": "Anteprima:",
-        "empty": "Inserisca il nome del tipo sopra"
+        "empty": "Inserisci il nome del tipo sopra"
       },
       "actions": {
         "cancel": "Annulla",
@@ -1083,7 +1083,7 @@
       },
       "messages": {
         "error": {
-          "nameRequired": "Inserisca un nome per il tipo di interazione.",
+          "nameRequired": "Inserisci un nome per il tipo di interazione.",
           "saveFailed": "Impossibile {{action}} il tipo di interazione. Riprovi."
         }
       }
@@ -1093,7 +1093,7 @@
   "clientPortal": {
     "features": {
       "title": "Funzionalità del portale",
-      "description": "Scelga a quali funzionalità self-service possono accedere i clienti.",
+      "description": "Scegli a quali funzionalità self-service possono accedere i clienti.",
       "appointmentsLabel": "Appuntamenti",
       "appointmentsHelp": "Consenta ai clienti di visualizzare e richiedere appuntamenti dal portale clienti.",
       "appointmentsEnabled": "Gli appuntamenti sono ora disponibili nel portale clienti",
@@ -1102,7 +1102,7 @@
     },
     "branding": {
       "title": "Branding e aspetto",
-      "description": "Personalizzi l'aspetto del Suo portale clienti con il marchio della Sua azienda.",
+      "description": "Personalizza l'aspetto del tuo portale clienti con il marchio della tua azienda.",
       "fields": {
         "companyName": "Nome dell'azienda",
         "companyLogo": "Logo dell'azienda",
@@ -1138,9 +1138,9 @@
       "customDomainRequired": "E necessario configurare un dominio personalizzato"
     },
     "dashboardPreview": {
-      "title": "Il Suo portale clienti",
+      "title": "Il tuo portale clienti",
       "welcome": "Bentornato!",
-      "subtitle": "Ecco una panoramica dell'attivita del Suo account",
+      "subtitle": "Ecco una panoramica dell'attivita del tuo account",
       "openTickets": "Ticket aperti",
       "activeProjects": "Progetti attivi",
       "invoices": "Fatture",
@@ -1173,12 +1173,12 @@
     },
     "signInPreview": {
       "portalTitle": "Portale clienti",
-      "welcome": "Benvenuto nel Suo portale clienti",
-      "subtitle": "Gestisca i Suoi ticket di assistenza e rimanga connesso",
+      "welcome": "Benvenuto nel tuo portale clienti",
+      "subtitle": "Gestisci i tuoi ticket di assistenza e rimani connesso",
       "features": {
         "submitTickets": {
           "title": "Invia ticket di assistenza",
-          "description": "Crei e gestisca le Sue richieste di assistenza"
+          "description": "Crea e gestisci le tue richieste di assistenza"
         },
         "trackStatus": {
           "title": "Monitori lo stato dei ticket",
@@ -1186,7 +1186,7 @@
         },
         "ticketHistory": {
           "title": "Storico dei ticket",
-          "description": "Acceda al Suo storico completo dell'assistenza"
+          "description": "Accedi al tuo storico completo dell'assistenza"
         },
         "documentation": {
           "title": "Accesso alla documentazione",
@@ -1195,25 +1195,25 @@
       },
       "signIn": {
         "title": "Accedi",
-        "description": "Inserisca le Sue credenziali per accedere al Suo account.",
+        "description": "Inserisci le tue credenziali per accedere al tuo account.",
         "email": "E-mail",
-        "emailPlaceholder": "Inserisca la Sua email",
+        "emailPlaceholder": "Inserisci la tua email",
         "password": "Password",
-        "passwordPlaceholder": "Inserisca la Sua password",
+        "passwordPlaceholder": "Inserisci la tua password",
         "forgotPassword": "Password dimenticata?",
-        "mspStaffLogin": "Personale MSP? Acceda qui →"
+        "mspStaffLogin": "Personale MSP? Accedi qui →"
       }
     },
     "domain": {
       "title": "Dominio personalizzato",
-      "description": "Configuri un hostname personalizzato per il Suo portale clienti. Provvederemo automaticamente al provisioning dei certificati TLS una volta verificato il DNS.",
+      "description": "Configura un hostname personalizzato per il tuo portale clienti. Provvederemo automaticamente al provisioning dei certificati TLS una volta verificato il DNS.",
       "currentStatus": "Stato attuale",
       "noDomainConfigured": "Nessun dominio personalizzato configurato",
       "defaultStatusMessage": "Nessun dominio personalizzato ancora registrato.",
       "lastChecked": "Ultimo controllo: {{value}}",
       "updatingDomainPrefix": "Aggiornamento del dominio a ",
       "updatingDomainSuffix": ". Il provisioning verrà riavviato dopo l'aggiornamento.",
-      "editInstructions": "Per modificare il Suo dominio, modifichi il valore qui sotto e invii per avviare un nuovo processo di provisioning.",
+      "editInstructions": "Per modificare il tuo dominio, modifica il valore qui sotto e invialo per avviare un nuovo processo di provisioning.",
       "actions": {
         "refresh": "Aggiorna",
         "refreshing": "Aggiornamento in corso...",
@@ -1227,16 +1227,16 @@
       },
       "form": {
         "label": "Dominio personalizzato",
-        "helpTextPrefix": "Aggiunga un record CNAME che punta a ",
+        "helpTextPrefix": "Aggiungi un record CNAME che punta a ",
         "helpTextSuffix": " prima di inviare.",
         "placeholder": "portal.example.com"
       },
       "checklist": {
         "title": "Lista di controllo per la configurazione",
-        "step1Prefix": "Crei un record CNAME per l'host scelto che punti a ",
+        "step1Prefix": "Crea un record CNAME per l'host scelto che punti a ",
         "step1Suffix": ".",
         "step2": "Clicchi su \"Salva dominio\" per attivare la verifica DNS e il provisioning del certificato.",
-        "step3": "Utilizzi il pulsante Aggiorna per controllare l'avanzamento del provisioning. Invieremo un'email ai Suoi amministratori se il provisioning fallisce.",
+        "step3": "Usa il pulsante Aggiorna per controllare l'avanzamento del provisioning. Invieremo un'email ai tuoi amministratori se il provisioning fallisce.",
         "canonicalHostFallback": "host canonico"
       },
       "appliance": {
@@ -1266,7 +1266,7 @@
         "requestSubmitted": "Richiesta di dominio personalizzato inviata.",
         "retryQueued": "Nuovo tentativo in coda. Ricontrolli lo stato tra qualche istante.",
         "removalRequested": "Richiesta di rimozione del dominio personalizzato inviata.",
-        "enterDomainFirst": "Inserisca un dominio prima di inviare.",
+        "enterDomainFirst": "Inserisci un dominio prima di inviare.",
         "confirmRemove": "Rimuovere il dominio personalizzato attuale? Il traffico tornerà all'indirizzo predefinito ospitato.",
         "loadFailed": "Impossibile caricare lo stato del dominio del portale.",
         "registerFailed": "Impossibile registrare il dominio personalizzato.",
@@ -1294,8 +1294,8 @@
   "notifications": {
     "title": "Impostazioni notifiche",
     "description": {
-      "email": "Configuri il modo in cui il Suo tenant invia notifiche email",
-      "internal": "Configuri il modo in cui il Suo tenant invia notifiche interne"
+      "email": "Configura il modo in cui il tuo tenant invia notifiche email",
+      "internal": "Configura il modo in cui il tuo tenant invia notifiche interne"
     },
     "viewSwitcher": {
       "email": "Notifiche email",
@@ -1318,32 +1318,32 @@
     },
     "unsaved": {
       "title": "Modifiche non salvate",
-      "message": "Ha impostazioni di notifica non salvate. È sicuro di voler uscire? Le Sue modifiche andranno perse."
+      "message": "Hai impostazioni di notifica non salvate. Sei sicuro di voler uscire? Le tue modifiche andranno perse."
     },
     "tenantDescription": {
-      "email": "Configuri le impostazioni delle notifiche email per l'intero tenant",
-      "internal": "Configuri le impostazioni delle notifiche interne per l'intero tenant"
+      "email": "Configura le impostazioni delle notifiche email per l'intero tenant",
+      "internal": "Configura le impostazioni delle notifiche interne per l'intero tenant"
     },
     "sections": {
       "globalSettings": {
         "title": "Impostazioni globali",
-        "description": "Configuri le impostazioni globali delle notifiche"
+        "description": "Configura le impostazioni globali delle notifiche"
       },
       "emailTemplates": {
         "title": "Modelli email",
-        "description": "Gestisca i modelli delle notifiche email"
+        "description": "Gestisci i modelli delle notifiche email"
       },
       "categories": {
         "title": "Categorie di notifica",
-        "description": "Gestisca le categorie e i tipi di notifica"
+        "description": "Gestisci le categorie e i tipi di notifica"
       },
       "internalCategories": {
         "title": "Categorie di notifica interne",
-        "description": "Gestisca le categorie e i tipi di notifica interne"
+        "description": "Gestisci le categorie e i tipi di notifica interne"
       },
       "telemetry": {
         "title": "Telemetria e analisi",
-        "description": "Gestisca le Sue preferenze di telemetria e analisi"
+        "description": "Gestisci le tue preferenze di telemetria e analisi"
       }
     },
     "settingsForm": {
@@ -1519,18 +1519,18 @@
   },
   "timeEntry": {
     "title": "Impostazioni registrazione ore",
-    "description": "Gestisca le impostazioni di registrazione ore e i periodi temporali"
+    "description": "Gestisci le impostazioni di registrazione ore e i periodi temporali"
   },
   "billing": {
     "title": "Impostazioni di fatturazione",
-    "description": "Gestisca la Sua fatturazione e il Suo abbonamento"
+    "description": "Gestisci la tua fatturazione e il tuo abbonamento"
   },
   "secrets": {
     "title": "Gestione segreti",
-    "description": "Gestisca i segreti crittografati da utilizzare nei flussi di lavoro. I segreti possono essere referenziati nelle azioni dei flussi di lavoro utilizzando la sintassi $secret.",
+    "description": "Gestisci i segreti crittografati da utilizzare nei flussi di lavoro. I segreti possono essere referenziati nelle azioni dei flussi di lavoro utilizzando la sintassi $secret.",
     "list": {
       "title": "Segreti",
-      "description": "Gestisca i segreti da utilizzare nei flussi di lavoro. I segreti sono crittografati e possono essere referenziati utilizzando { $secret: \"SECRET_NAME\" }",
+      "description": "Gestisci i segreti da utilizzare nei flussi di lavoro. I segreti sono crittografati e possono essere referenziati utilizzando { $secret: \"SECRET_NAME\" }",
       "search": "Cerca segreti...",
       "createSecret": "Crea segreto",
       "table": {
@@ -1555,13 +1555,13 @@
         "name": {
           "label": "Nome *",
           "placeholder": "MY_API_KEY",
-          "help": "Utilizzi solo lettere maiuscole, numeri e trattini bassi"
+          "help": "Usa solo lettere maiuscole, numeri e trattini bassi"
         },
         "value": {
           "label": "Valore *",
-          "placeholder": "Inserisca il valore del segreto",
-          "editPlaceholder": "Inserisca un nuovo valore per aggiornare",
-          "editHelp": "Lasci vuoto per mantenere il valore corrente"
+          "placeholder": "Inserisci il valore del segreto",
+          "editPlaceholder": "Inserisci un nuovo valore per aggiornare",
+          "editHelp": "Lascia vuoto per mantenere il valore corrente"
         },
         "description": {
           "label": "Descrizione",
@@ -1574,7 +1574,7 @@
         "usedByWarning": "L'eliminazione causera il fallimento di quei flussi di lavoro quando tenteranno di accedere a questo segreto.",
         "cannotUndo": "Questa azione non può essere annullata.",
         "typeToConfirm": "Digiti {{name}} per confermare:",
-        "placeholder": "Inserisca il nome del segreto"
+        "placeholder": "Inserisci il nome del segreto"
       },
       "actions": {
         "cancel": "Annulla",
@@ -1604,7 +1604,7 @@
   },
   "importExport": {
     "title": "Importa ed esporta area di lavoro",
-    "description": "Configuri importazioni, esportazioni e flussi di dati automatizzati da un unico centro di controllo.",
+    "description": "Configura importazioni, esportazioni e flussi di dati automatizzati da un unico centro di controllo.",
     "history": {
       "title": "Cronologia importazioni ed esportazioni",
       "description": "Esamini ogni operazione di importazione o esportazione in un unico posto.",
@@ -1633,16 +1633,16 @@
       },
       "placeholders": {
         "noSources": "Nessuna origine di importazione disponibile",
-        "selectSource": "Selezioni un'origine di importazione",
+        "selectSource": "Seleziona un'origine di importazione",
         "sourceColumn": "Nome colonna di origine",
         "example": "es. {{example}}"
       },
       "help": {
-        "fieldMapping": "Inserisca i nomi delle colonne del Suo file corrispondenti a ciascun campo asset obbligatorio. Lasci vuoti i campi opzionali per ignorarli."
+        "fieldMapping": "Inserisci i nomi delle colonne del tuo file corrispondenti a ciascun campo asset obbligatorio. Lascia vuoti i campi opzionali per ignorarli."
       },
       "alerts": {
-        "selectSource": "Selezioni un'origine di importazione per continuare.",
-        "chooseFile": "Scelga un file CSV o XLSX per continuare.",
+        "selectSource": "Seleziona un'origine di importazione per continuare.",
+        "chooseFile": "Scegli un file CSV o XLSX per continuare.",
         "validationIssues": "Rilevati problemi di validazione."
       },
       "actions": {
@@ -1676,7 +1676,7 @@
       "comingSoon": "Gli strumenti di esportazione degli asset saranno disponibili a breve. Le funzionalità previste includono l'esportazione di elenchi di asset filtrati, dati di audit e modelli di mappatura direttamente in CSV/XLSX."
     },
     "templates": {
-      "comingSoon": "I modelli di mappatura e le importazioni pianificate saranno disponibili qui. Salvi le mappature delle colonne, le condivida con il team e configuri operazioni ricorrenti."
+      "comingSoon": "I modelli di mappatura e le importazioni pianificate saranno disponibili qui. Salva le mappature delle colonne, condividile con il team e configura operazioni ricorrenti."
     },
     "jobDetails": {
       "title": "Dettagli operazione di importazione",
@@ -1732,18 +1732,18 @@
   },
   "email": {
     "title": "Configurazione email",
-    "description": "Configuri provider email, domini e impostazioni"
+    "description": "Configura provider email, domini e impostazioni"
   },
   "extensions": {
     "title": "Gestione estensioni",
-    "description": "Installi, configuri e gestisca le estensioni per ampliare le funzionalità di Alga PSA.",
+    "description": "Installa, configura e gestisci le estensioni per ampliare le funzionalità di AlgaPSA.",
     "tabs": {
       "manage": "Gestisci",
       "install": "Installa"
     },
     "enterpriseOnly": {
       "title": "Funzionalità Pro",
-      "description": "Le estensioni sono disponibili in Alga PSA Pro."
+      "description": "Le estensioni sono disponibili in AlgaPSA Pro."
     },
     "links": {
       "needLogs": "Servono i log delle estensioni?",
@@ -1777,8 +1777,8 @@
     "userRoles": {
       "title": "Assegna ruoli agli utenti",
       "description": {
-        "msp": "Gestisca le assegnazioni dei ruoli per gli utenti MSP",
-        "client": "Gestisca le assegnazioni dei ruoli per gli utenti del portale clienti"
+        "msp": "Gestisci le assegnazioni dei ruoli per gli utenti MSP",
+        "client": "Gestisci le assegnazioni dei ruoli per gli utenti del portale clienti"
       },
       "viewSwitcher": {
         "msp": "MSP",
@@ -1833,14 +1833,14 @@
         "client": "Cliente"
       },
       "session": {
-        "yourSession": "La Sua sessione",
+        "yourSession": "La tua sessione",
         "unknownDevice": "Dispositivo sconosciuto",
         "lastActive": "Ultimo accesso {{time}} fa",
         "logout": "Disconnetti",
         "revoke": "Revoca",
         "revoking": "Revoca in corso..."
       },
-      "oauthWarning": "La revoca di questa sessione non revochera l'accesso OAuth di {{provider}}. Revochi l'accesso dalle impostazioni del Suo account {{provider}}.",
+      "oauthWarning": "La revoca di questa sessione non revocherà l'accesso OAuth di {{provider}}. Revoca l'accesso dalle impostazioni del tuo account {{provider}}.",
       "confirmLogout": "Desidera davvero disconnettersi da questo dispositivo?",
       "messages": {
         "loggingOut": "Disconnessione in corso...",
@@ -1848,7 +1848,7 @@
       },
       "emptyState": {
         "loading": "Caricamento sessioni...",
-        "noMatch": "Nessuna sessione corrisponde alla Sua ricerca",
+        "noMatch": "Nessuna sessione corrisponde alla tua ricerca",
         "noSessions": "Nessuna sessione attiva trovata"
       },
       "subtitle_one": "{{sessionCount}} sessione attiva su {{userCount}} utente",
@@ -1861,46 +1861,46 @@
       "description": "Caricamento degli strumenti di assegnazione SSO in blocco..."
     },
     "status": {
-      "title": "Sign-in providers",
-      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
-      "available": "Available",
-      "notConfigured": "Not configured"
+      "title": "Provider di accesso",
+      "caption": "Questi provider sono gestiti dalla piattaforma: non occorre configurare ID client o DNS. Abilita il collegamento automatico oppure assegna gli utenti qui sotto.",
+      "available": "Disponibile",
+      "notConfigured": "Non configurato"
     },
     "autoLink": {
       "body": "Quando è attivata, gli utenti MSP appena aggiunti possono accedere con Google o Microsoft utilizzando la loro email aziendale. Non dovranno collegare manualmente il proprio account.",
-      "clientBody": "When enabled, matching client portal users are automatically linked to their SSO identities on login.",
-      "clientTitle": "Auto-link client portal users",
-      "clientToggleLabel": "Toggle client auto-linking",
-      "description": "Attivi questa opzione per provisionare immediatamente ogni nuovo account del personale con il Suo provider SSO aziendale, in modo che non sia mai necessario un accesso basato su password.",
+      "clientBody": "Quando l'opzione è abilitata, gli utenti del portale clienti corrispondenti vengono collegati automaticamente alle loro identità SSO al momento dell'accesso.",
+      "clientTitle": "Collega automaticamente gli utenti del portale clienti",
+      "clientToggleLabel": "Attiva o disattiva il collegamento automatico dei clienti",
+      "description": "Attiva questa opzione per provisionare immediatamente ogni nuovo account del personale con il tuo provider SSO aziendale, in modo che non sia mai necessario un accesso basato su password.",
       "disabledInfo": "Attivi questo interruttore per consentire al personale nuovo ed esistente di saltare il flusso “Connetti SSO” quando la loro email corrisponde già a un provider configurato. Registreremo comunque ogni collegamento automatico.",
-      "internalBody": "When enabled, matching MSP/internal users are automatically linked to their SSO identities on login.",
-      "internalTitle": "Auto-link internal users",
-      "internalToggleLabel": "Toggle internal auto-linking",
-      "title": "Configuri automaticamente l'SSO per i nuovi utenti interni",
+      "internalBody": "Quando l'opzione è abilitata, gli utenti MSP/interni corrispondenti vengono collegati automaticamente alle loro identità SSO al momento dell'accesso.",
+      "internalTitle": "Collega automaticamente gli utenti interni",
+      "internalToggleLabel": "Attiva o disattiva il collegamento automatico degli utenti interni",
+      "title": "Configura automaticamente l'SSO per i nuovi utenti interni",
       "toggleLabel": "Attiva/disattiva la corrispondenza SSO automatica"
     },
     "bulk": {
       "title": "Assegnazione SSO in blocco",
-      "description": "Selezioni gli utenti interni dall'elenco sottostante e li colleghi a un provider Google o Microsoft configurato. Utilizzi l'anteprima per verificare l'impatto prima dell'esecuzione.",
-      "noProviders": "Nessun provider SSO è ancora configurato. Aggiunga le credenziali OAuth per continuare con le assegnazioni in blocco."
+      "description": "Seleziona gli utenti interni dall'elenco sottostante e collegali a un provider Google o Microsoft configurato. Usa l'anteprima per verificare l'impatto prima dell'esecuzione.",
+      "noProviders": "Nessun provider SSO è ancora configurato. Aggiungi le credenziali OAuth per continuare con le assegnazioni in blocco."
     },
     "errors": {
       "loadProviders": "Impossibile caricare la configurazione del provider SSO.",
       "updatePreferences": "Impossibile aggiornare le preferenze SSO."
     },
     "form": {
-      "title": "Scelga il provider e selezioni gli utenti",
-      "description": "Selezioni il provider SSO configurato per il Suo personale, quindi cerchi e selezioni gli utenti che devono essere collegati.",
-      "providerLabel": "Provider",
+      "title": "Scegli il provider e seleziona gli utenti",
+      "description": "Seleziona il provider SSO configurato per il tuo personale, quindi cerca e seleziona gli utenti che devono essere collegati.",
+      "providerLabel": "Provider SSO",
       "notConfigured": "Non configurato",
       "providerNotConfiguredAlert": "Fornisca le credenziali OAuth per questo provider prima di collegare gli account.",
       "actionLabel": "Azione",
       "linkSelected": "Collega utenti selezionati",
       "unlinkSelected": "Scollega utenti selezionati",
-      "actionPlaceholder": "Selezioni l'azione SSO in blocco",
+      "actionPlaceholder": "Seleziona l'azione SSO in blocco",
       "actionDescription": "Il collegamento aggiunge il provider a ciascun utente selezionato. Lo scollegamento rimuove il provider, quindi l'utente torna all'accesso con password/TOTP fino al prossimo collegamento.",
       "searchLabel": "Trovi utenti interni",
-      "searchPlaceholder": "Cerchi per email o nome",
+      "searchPlaceholder": "Cerca per email o nome",
       "noneSelected": "Nessun utente ancora selezionato.",
       "selected_one": "{{count}} utente selezionato.",
       "selected_other": "{{count}} utenti selezionati.",
@@ -1933,9 +1933,9 @@
       },
       "toast": {
         "providerRequiredTitle": "Provider richiesto",
-        "providerRequiredDescription": "Selezioni un provider configurato prima di continuare.",
+        "providerRequiredDescription": "Seleziona un provider configurato prima di continuare.",
         "noUsersTitle": "Nessun utente selezionato",
-        "noUsersDescription": "Selezioni almeno un utente dalla tabella.",
+        "noUsersDescription": "Seleziona almeno un utente dalla tabella.",
         "failedTitle": "Assegnazione in blocco non riuscita",
         "failedDescription": "Impossibile elaborare l'assegnazione SSO in blocco.",
         "linkCompleteTitle": "Collegamento completato",
@@ -1968,19 +1968,19 @@
       }
     },
     "clientPortalProvisioning": {
-      "deactivateBody": "When enabled, users managed by Entra provisioning are deactivated when access-group entitlement is removed.",
-      "deactivateLabel": "Toggle deactivation on entitlement removal",
-      "deactivateTitle": "Deactivate Entra-managed users on entitlement removal",
-      "defaultRoleBody": "Used for newly provisioned client portal users in built-in mode when a client mapping does not override the role.",
-      "defaultRoleLabel": "MSP workspace default client portal role",
-      "defaultRoleTitle": "MSP workspace default client portal role",
-      "modeBody": "Choose whether client portal access from Entra sync is disabled, handled by built-in provisioning, or delegated to workflows.",
-      "modeBuiltIn": "Built-in",
-      "modeDisabled": "Disabled",
-      "modeLabel": "Client portal Entra provisioning mode",
-      "modeTitle": "Client portal Entra provisioning mode",
-      "modeWorkflowManaged": "Workflow-managed",
-      "workflowManagedInfo": "Workflow-managed mode publishes Entra access events only. The selected workflow is responsible for client portal user provisioning, role assignment, invitations, and lifecycle changes."
+      "deactivateBody": "Quando l'opzione è abilitata, gli utenti gestiti dal provisioning Entra vengono disattivati quando viene rimossa l'autorizzazione del gruppo di accesso.",
+      "deactivateLabel": "Attiva o disattiva la disattivazione alla rimozione dell'autorizzazione",
+      "deactivateTitle": "Disattiva gli utenti gestiti da Entra alla rimozione dell'autorizzazione",
+      "defaultRoleBody": "Usato per i nuovi utenti del portale clienti predisposti in modalità integrata quando una mappatura cliente non sostituisce il ruolo.",
+      "defaultRoleLabel": "Ruolo predefinito del portale clienti nell'ambiente di lavoro MSP",
+      "defaultRoleTitle": "Ruolo predefinito del portale clienti nell'ambiente di lavoro MSP",
+      "modeBody": "Scegli se disabilitare l'accesso al portale clienti dalla sincronizzazione Entra, gestirlo con il provisioning integrato oppure delegarlo ai workflow.",
+      "modeBuiltIn": "Integrata",
+      "modeDisabled": "Disabilitata",
+      "modeLabel": "Modalità di provisioning Entra del portale clienti",
+      "modeTitle": "Modalità di provisioning Entra del portale clienti",
+      "modeWorkflowManaged": "Gestita da workflow",
+      "workflowManagedInfo": "La modalità gestita da workflow pubblica solo gli eventi di accesso Entra. Il workflow selezionato gestisce il provisioning degli utenti del portale clienti, l'assegnazione dei ruoli, gli inviti e le modifiche del ciclo di vita."
     }
   },
   "profile": {
@@ -2029,7 +2029,7 @@
       },
       "error": {
         "userNotFound": "Utente non trovato",
-        "fillRequiredFields": "Compili tutti i campi obbligatori",
+        "fillRequiredFields": "Compila tutti i campi obbligatori",
         "saveFailed": "Impossibile salvare il profilo",
         "emailAlreadyExists": "Esiste già un utente con questo indirizzo e-mail",
         "reportsToSelf": "Un utente non può riferire a se stesso",
@@ -2040,7 +2040,7 @@
       "firstNameRequired": "Il nome è obbligatorio",
       "lastNameRequired": "Il cognome è obbligatorio"
     },
-    "pageTitle": "Il Suo profilo"
+    "pageTitle": "Il tuo profilo"
   },
   "password": {
     "changePassword": "Modifica password",
@@ -2206,10 +2206,10 @@
   },
   "settings": {
     "assetTypes": {
-      "tab": "Risorse",
-      "title": "Tipi di risorsa",
-      "description": "Gestisci i tipi di risorsa disponibili nel modulo risorse. I tipi personalizzati hanno uno schema di campi che determina i loro moduli di creazione/modifica.",
-      "loading": "Caricamento dei tipi di risorsa...",
+      "tab": "Asset",
+      "title": "Tipi di asset",
+      "description": "Gestisci i tipi di asset disponibili nel modulo asset. I tipi personalizzati hanno uno schema di campi che determina i loro moduli di creazione/modifica.",
+      "loading": "Caricamento dei tipi di asset...",
       "table": {
         "name": "Nome",
         "builtin": "Integrato",
@@ -2220,7 +2220,7 @@
         "openMenu": "Apri menu"
       },
       "actions": {
-        "addType": "Aggiungi tipo di risorsa",
+        "addType": "Aggiungi tipo di asset",
         "edit": "Modifica",
         "delete": "Elimina",
         "cancel": "Annulla",
@@ -2229,8 +2229,8 @@
         "confirmDelete": "Elimina"
       },
       "dialog": {
-        "createTitle": "Aggiungi tipo di risorsa",
-        "editTitle": "Modifica tipo di risorsa",
+        "createTitle": "Aggiungi tipo di asset",
+        "editTitle": "Modifica tipo di asset",
         "nameLabel": "Nome",
         "namePlaceholder": "es. Firewall",
         "displayOrderLabel": "Ordine di visualizzazione",
@@ -2238,26 +2238,26 @@
         "builtinSchemaHint": "I tipi integrati usano moduli fissi gestiti da AlgaPSA, quindi il loro schema di campi non può essere modificato. Puoi comunque rinominare il tipo o cambiarne l'icona."
       },
       "deleteDialog": {
-        "title": "Elimina tipo di risorsa",
-        "message": "Questa operazione rimuove definitivamente \"{{name}}\" dal registro dei tipi di risorsa."
+        "title": "Elimina tipo di asset",
+        "message": "Questa operazione rimuove definitivamente \"{{name}}\" dal registro dei tipi di asset."
       },
       "messages": {
-        "created": "Tipo di risorsa creato",
-        "updated": "Tipo di risorsa aggiornato",
-        "deleted": "Tipo di risorsa eliminato"
+        "created": "Tipo di asset creato",
+        "updated": "Tipo di asset aggiornato",
+        "deleted": "Tipo di asset eliminato"
       },
       "errors": {
-        "fetchFailed": "Impossibile caricare i tipi di risorsa.",
-        "saveFailed": "Impossibile salvare il tipo di risorsa.",
-        "deleteFailed": "Impossibile eliminare il tipo di risorsa.",
-        "invalidName": "Inserisci un nome per questo tipo di risorsa.",
+        "fetchFailed": "Impossibile caricare i tipi di asset.",
+        "saveFailed": "Impossibile salvare il tipo di asset.",
+        "deleteFailed": "Impossibile eliminare il tipo di asset.",
+        "invalidName": "Inserisci un nome per questo tipo di asset.",
         "invalidSchema": "Lo schema di campi non è valido. Correggi i campi evidenziati e riprova.",
         "reservedSlug": "L'identificatore \"{{slug}}\" è riservato a un tipo integrato. Scegli un altro nome.",
-        "slugConflict": "Esiste già un tipo di risorsa con l'identificatore \"{{slug}}\".",
-        "notFound": "Questo tipo di risorsa non esiste più.",
+        "slugConflict": "Esiste già un tipo di asset con l'identificatore \"{{slug}}\".",
+        "notFound": "Questo tipo di asset non esiste più.",
         "builtinImmutable": "I tipi integrati consentono solo la modifica di nome e icona.",
         "builtinUndeletable": "I tipi integrati non possono essere eliminati.",
-        "inUse": "Questo tipo è ancora utilizzato da {{assetCount}} risorsa/e. Riassegna quelle risorse prima di eliminarlo.",
+        "inUse": "Questo tipo è ancora utilizzato da {{assetCount}} asset. Riassegna quegli asset prima di eliminarlo.",
         "unknown": "Qualcosa è andato storto."
       },
       "editor": {
@@ -2293,6 +2293,157 @@
           "invalidOptions": "Le opzioni non possono essere vuote.",
           "invalidField": "Questo campo non è valido."
         }
+      }
+    }
+  },
+  "mcpServer": {
+    "title": "Server MCP",
+    "description": "Consenti agli agenti AI di accedere ad AlgaPSA e operare con i ruoli che assegni loro.",
+    "errors": {
+      "load": "Impossibile caricare le impostazioni MCP.",
+      "update": "Impossibile aggiornare le impostazioni MCP."
+    },
+    "status": {
+      "active": "Attivo",
+      "inactive": "Inattivo"
+    },
+    "providers": {
+      "title": "Provider di identità",
+      "description": "Gli agenti accedono tramite questi provider. Aggiungi quelli usati dai tuoi agenti.",
+      "empty": "Nessun provider configurato.",
+      "readyToUse": "Pronto all’uso",
+      "platformManaged": "Gestito da AlgaPSA: non è necessaria alcuna configurazione. Connetti un agente a uno di questi nel passaggio 2.",
+      "addAnother": "Aggiungi un altro provider",
+      "advancedOptions": "Opzioni avanzate",
+      "googleNoSetup": "Google non richiede configurazione. Gli agenti accedono con l’ID del proprio account di servizio Google.",
+      "kinds": {
+        "microsoft": "Microsoft Entra",
+        "google": "Google",
+        "custom": "Personalizzato"
+      },
+      "suggestion": {
+        "withName": "Sei già connesso a Microsoft ({{name}}). Vuoi usare questa directory per gli agenti?",
+        "withoutName": "Sei già connesso a Microsoft. Vuoi usare questa directory per gli agenti?",
+        "useDirectory": "Usa questa directory"
+      },
+      "fields": {
+        "provider": "Provider di identità",
+        "entraTenantId": "ID tenant Entra",
+        "audienceOptional": "Destinatario (facoltativo)",
+        "audience": "Destinatario",
+        "subjectClaim": "Identifica gli agenti tramite",
+        "subjectClaimHelp": "Lascia vuoto a meno che il provider non indichi diversamente.",
+        "issuer": "Emittente",
+        "jwksUri": "URL delle chiavi di firma"
+      },
+      "actions": {
+        "add": "Aggiungi provider"
+      },
+      "hints": {
+        "entraTenantIdRequired": "Inserisci l’ID tenant Entra per continuare.",
+        "issuerAndJwksRequired": "Inserisci l’emittente e l’URL delle chiavi di firma per continuare."
+      },
+      "table": {
+        "provider": "Provider di identità",
+        "directory": "Directory tenant",
+        "status": "Stato"
+      }
+    },
+    "agents": {
+      "title": "Agenti",
+      "description": "Ogni agente accede con la propria identità e ottiene i ruoli che gli assegni.",
+      "empty": "Nessun agente configurato.",
+      "needsProvider": "Aggiungi prima un provider nel passaggio 1. Quindi aggiungi gli agenti che accederanno tramite tale provider.",
+      "connectedAs": "Connesso come",
+      "fields": {
+        "name": "Nome",
+        "namePlaceholder": "Bot di triage dell’assistenza",
+        "identity": "Identità",
+        "provider": "Provider di identità",
+        "providerPlaceholder": "Scegli un provider",
+        "agentId": "ID agente",
+        "roles": "Ruoli"
+      },
+      "manualEntry": {
+        "show": "Inserisci l’identità manualmente",
+        "hide": "Nascondi inserimento manuale"
+      },
+      "actions": {
+        "add": "Aggiungi agente",
+        "change": "Modifica",
+        "connectWith": "Connetti con {{provider}}",
+        "openMenu": "Apri azioni agente",
+        "viewActivity": "Visualizza attività",
+        "deactivate": "Disattiva",
+        "reactivate": "Riattiva",
+        "remove": "Rimuovi…"
+      },
+      "hints": {
+        "nameRequired": "Assegna un nome all’agente per continuare.",
+        "connectOrEnterIdentity": "Connetti un provider oppure inserisci un’identità per continuare.",
+        "chooseProviderAndAgentId": "Scegli un provider e inserisci l’ID agente per continuare."
+      },
+      "table": {
+        "name": "Nome",
+        "provider": "Provider di identità",
+        "agentId": "ID agente",
+        "status": "Stato"
+      },
+      "removeDialog": {
+        "title": "Rimuovi agente",
+        "message": "Vuoi rimuovere \"{{name}}\"? Questa operazione elimina definitivamente l’agente, le relative assegnazioni di ruolo e il registro attività. Non può essere annullata.",
+        "confirm": "Rimuovi",
+        "cancel": "Annulla"
+      }
+    },
+    "agentId": {
+      "unknown": {
+        "placeholder": "l’identificatore dell’agente",
+        "helper": "Scegli un provider per vedere cosa inserire."
+      },
+      "microsoft": {
+        "userHelper": "L’ID oggetto utente (oid) dell’agente in Entra.",
+        "appHelper": "L’ID applicazione (client) dell’app in Entra."
+      },
+      "google": {
+        "helper": "L’ID dell’account di servizio (il valore sub nel relativo token)."
+      },
+      "custom": {
+        "placeholder": "valore del claim subject",
+        "helper": "Il valore del claim \"{{claim}}\" nel token dell’agente."
+      }
+    },
+    "audit": {
+      "title": "Attività",
+      "titleForAgent": "Attività — {{name}}",
+      "description": "Le operazioni eseguite e l’esito dell’autorizzazione per ciascuna.",
+      "table": {
+        "when": "Data e ora",
+        "action": "Azione",
+        "result": "Risultato",
+        "status": "Stato"
+      },
+      "decision": {
+        "allowed": "Consentita",
+        "blocked": "Bloccata"
+      }
+    },
+    "connectedClients": {
+      "title": "Client MCP connessi",
+      "description": "App che hai autorizzato ad accedere ad AlgaPSA per tuo conto tramite MCP (ad es. Claude). Disconnetti quelle che non usi più.",
+      "loading": "Caricamento…",
+      "empty": "Nessun client connesso.",
+      "meta": "{{host}} · connesso il {{date}}",
+      "disconnect": "Disconnetti",
+      "errors": {
+        "load": "Impossibile caricare le connessioni.",
+        "disconnect": "Impossibile disconnettere il client."
+      },
+      "dialog": {
+        "title": "Disconnetti client",
+        "message": "Vuoi disconnettere \"{{name}}\"? Perderà immediatamente l’accesso e dovrà essere autorizzato di nuovo per riconnettersi.",
+        "confirm": "Disconnetti",
+        "cancel": "Annulla"
       }
     }
   }

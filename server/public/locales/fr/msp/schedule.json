@@ -660,7 +660,7 @@
       "all": "Tous les événements"
     },
     "errors": {
-      "loadWorkItem": "Failed to load work item."
+      "loadWorkItem": "Échec du chargement de l'élément de travail."
     }
   },
   "actions": {
@@ -682,7 +682,7 @@
     "noClient": "Aucun client associé",
     "noContact": "Aucun contact associé",
     "noTitle": "Sans titre",
-    "notAvailable": "N/A",
+    "notAvailable": "N/D",
     "title": "Détails de l'interaction",
     "unknownUser": "Inconnu"
   }

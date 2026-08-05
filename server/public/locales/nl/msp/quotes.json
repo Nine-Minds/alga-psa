@@ -35,7 +35,7 @@
     "columns": {
       "actions": "Acties",
       "amount": "Hoeveelheid",
-      "client": "Cliënt",
+      "client": "Klant",
       "created": "Gemaakt",
       "currency": "Munteenheid",
       "date": "Datum",
@@ -51,7 +51,7 @@
       "validUntil": "Geldig tot"
     },
     "labels": {
-      "client": "Cliënt",
+      "client": "Klant",
       "contact": "Contactpersoon",
       "currency": "Munteenheid",
       "description": "Beschrijving / reikwijdte",
@@ -87,7 +87,7 @@
     },
     "filters": {
       "allClients": "Alle klanten",
-      "client": "Cliënt"
+      "client": "Klant"
     },
     "empty": {
       "byCategory": "Geen offertes in deze categorie.",
@@ -232,7 +232,7 @@
       "save": "Kan offerte niet opslaan",
       "saveFailed": "Het opslaan van de offerte is mislukt",
       "workflowAction": "Kan {{action}} niet gebruiken",
-      "removeItem": "Failed to remove quote item"
+      "removeItem": "Offerteartikel verwijderen mislukt"
     },
     "loading": "Offerteformulier laden...",
     "notices": {
@@ -301,7 +301,7 @@
     "lineItems": {
       "title": "Regels",
       "subtitleEmpty": "Nog geen items.",
-      "subtitleCount": "{{count}} items · {{mix}}",
+      "subtitleCount": "{{count}} artikelen · {{mix}}",
       "mixBoth": "terugkerend en eenmalig",
       "mixRecurring": "terugkerend",
       "mixOneTime": "eenmalig",
@@ -476,7 +476,7 @@
       "actions": "Acties",
       "billing": "Facturering",
       "flags": "Vlaggen",
-      "item": "Item",
+      "item": "Artikel",
       "move": "Beweging",
       "quantity": "Aantal",
       "total": "Totaal",
@@ -559,7 +559,7 @@
     },
     "removeAriaLabel": "{{email}} verwijderen",
     "errors": {
-      "contactsLoadFailed": "Could not load client contacts."
+      "contactsLoadFailed": "Kan klantcontacten niet laden."
     }
   },
   "quoteConversion": {
@@ -593,7 +593,7 @@
       "itemMappingPreview": "Voorbeeld van itemtoewijzing",
       "quoteTotal": "Offerte Totaal",
       "statusAfterConversion": "Status na conversie",
-      "willBecomeContractLines": "Worden contractlijnen",
+      "willBecomeContractLines": "Worden contractregels",
       "willBecomeInvoiceCharges": "Worden factuurkosten"
     },
     "empty": {

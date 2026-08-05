@@ -77,7 +77,7 @@
     "viewFullValue": "Volledige waarde bekijken",
     "parameters": "Parameters",
     "plan": "Plan",
-    "playbooks": "Playbooks",
+    "playbooks": "Draaiboeken",
     "validation": {
       "dialogTitle": "Bericht vereist",
       "ok": "OK",
@@ -151,7 +151,9 @@
       "declined": "Functie geweigerd",
       "pending": "Functie in wachtrij",
       "error": "Functiefout"
-    }
+    },
+    "executedCalls": "Uitgevoerde aanroepen",
+    "bundleMore": "+ nog {{remaining}}"
   },
   "mention": {
     "noResultsFound": "Geen resultaten gevonden"

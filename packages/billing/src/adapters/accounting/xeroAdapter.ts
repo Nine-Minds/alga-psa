@@ -633,7 +633,7 @@ export class XeroAdapter implements AccountingExportAdapter {
 
   /**
    * Fetch invoice data including tax amounts from Xero.
-   * Used to import externally calculated tax back into Alga PSA.
+   * Used to import externally calculated tax back into AlgaPSA.
    * Xero provides detailed tax component breakdown per line.
    */
   async fetchExternalInvoice(

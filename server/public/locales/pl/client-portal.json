@@ -244,7 +244,7 @@
         "contactInvalidEmail": "Kontakt ma nieprawidłowy adres e-mail.",
         "userExistsForContact": "Konto użytkownika już istnieje dla tego kontaktu.",
         "portalUserAlreadyExists": "Użytkownik portalu już istnieje dla tego kontaktu.",
-        "noDefaultClient": "Nie skonfigurowano domyślnego klienta dla tego najemcy.",
+        "noDefaultClient": "Nie skonfigurowano domyślnego klienta dla tej organizacji.",
         "noDefaultLocation": "Domyślny klient nie ma skonfigurowanej domyślnej lokalizacji.",
         "noLocationEmail": "Lokalizacja klienta nie ma skonfigurowanego kontaktowego adresu e-mail.",
         "baseUrlNotConfigured": "Bazowy adres URL aplikacji nie jest skonfigurowany.",
@@ -286,6 +286,7 @@
   },
   "account": {
     "title": "Konto",
+    "notAvailable": "Brak",
     "licenseManagement": {
       "title": "Konto",
       "subtitle": "Zarządzanie licencjami jest dostępne w portalu MSP",
@@ -386,6 +387,40 @@
         "expYear": "Wprowadź poprawny rok (2024-2099)",
         "cvv": "Wprowadź poprawny CVV"
       }
+    }
+  },
+  "licenses": {
+    "pageTitle": "Licencje urządzeń",
+    "pageDescription": "Twoje uprawnienia do licencji Pro dla urządzeń Alga. Najważniejsze dokumenty są również dostępne w sekcji Dokumenty.",
+    "loading": "Ładowanie licencji…",
+    "empty": {
+      "message": "Nie znaleziono licencji urządzeń.",
+      "purchaseLink": "Kup licencję",
+      "suffix": "i zacznij."
+    },
+    "downloadKey": "Pobierz klucz",
+    "validFrom": "Ważna od",
+    "expires": "Wygasa",
+    "expiringSoon": "Wkrótce wygaśnie",
+    "renewal": "Odnowienie",
+    "renewalModes": {
+      "auto": "Odnawia się automatycznie",
+      "manual": "Odnowienie ręczne"
+    },
+    "tiers": {
+      "pro": "Pro",
+      "premium": "Pro"
+    },
+    "transports": {
+      "connectedMonthly": "Połączona (miesięczna)",
+      "connectedAnnual": "Połączona (roczna)",
+      "airgapAnnual": "Odizolowana od sieci (roczna)"
+    },
+    "statuses": {
+      "active": "Aktywna",
+      "inactive": "Nieaktywna",
+      "expired": "Wygasła",
+      "terminated": "Zakończona"
     }
   },
   "profile": {

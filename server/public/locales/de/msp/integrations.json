@@ -45,7 +45,7 @@
         "highlightValues": {
           "csv": "CSV",
           "instant": "Sofort",
-          "live": "Live",
+          "live": "Produktiv",
           "manual": "Manuell",
           "twoWay": "Bidirektional"
         },
@@ -63,7 +63,7 @@
             "description": "Exportieren Sie Rechnungen als CSV für den manuellen Import in QuickBooks und importieren Sie Steuerdaten aus Berichten."
           },
           "xero": {
-            "description": "Verbinden Sie Ihre Organisation mit tenant-eigenen OAuth-Anmeldedaten für Live-Buchhaltungsexporte und Zuordnungen."
+            "description": "Verbinden Sie Ihre Organisation mit mandanteneigenen OAuth-Anmeldedaten für Live-Buchhaltungsexporte und Zuordnungen."
           },
           "xeroCsv": {
             "description": "Exportieren Sie Rechnungen als CSV für den manuellen Import in Xero und importieren Sie Steuerdaten aus Xero-Berichten."
@@ -115,8 +115,8 @@
           "dialog": {
             "cancel": "Abbrechen",
             "confirm": "Sperre zurücksetzen",
-            "confirmBatch": "Dadurch kann Alga PSA Rechnungen aus Batch {{batchId}} erneut exportieren. Wenn einige dieser Rechnungen noch in QuickBooks existieren, kann der Import der CSV-Datei Duplikate erzeugen.",
-            "confirmInvoice": "Dadurch kann Alga PSA Rechnung {{invoiceNumber}} erneut exportieren. Wenn diese Rechnung noch in QuickBooks existiert, kann der Import der CSV-Datei Duplikate erzeugen.",
+            "confirmBatch": "Dadurch kann AlgaPSA Rechnungen aus Batch {{batchId}} erneut exportieren. Wenn einige dieser Rechnungen noch in QuickBooks existieren, kann der Import der CSV-Datei Duplikate erzeugen.",
+            "confirmInvoice": "Dadurch kann AlgaPSA Rechnung {{invoiceNumber}} erneut exportieren. Wenn diese Rechnung noch in QuickBooks existiert, kann der Import der CSV-Datei Duplikate erzeugen.",
             "resetting": "Wird zurückgesetzt…",
             "title": "Export-Sperre zurücksetzen?",
             "warning": "Fahren Sie nur fort, wenn Sie sicher sind, dass die Rechnung nicht importiert wurde oder Sie sie in QuickBooks gelöscht/storniert haben."
@@ -132,7 +132,7 @@
           },
           "modes": {
             "ariaLabel": "Modus für Zurücksetzen der Export-Sperre",
-            "batch": "Batch",
+            "batch": "Stapel",
             "invoice": "Rechnung"
           },
           "success": {
@@ -313,7 +313,7 @@
           "title": "Steuern aus CSV importieren",
           "xeroCsvDescription": "Der exportierte CSV enthält Rechnungsnummer, Kontaktname, Zeilenbetrag, Steuerbetrag und Tracking-Kategorien.",
           "xeroHelp": {
-            "note": "Hinweis: Es werden nur Rechnungen zugeordnet, die ursprünglich aus Alga PSA exportiert wurden (mit Tracking „Source System = AlgaPSA“).",
+            "note": "Hinweis: Es werden nur Rechnungen zugeordnet, die ursprünglich aus AlgaPSA exportiert wurden (mit Tracking „Source System = AlgaPSA“).",
             "s1": "Gehen Sie in Xero zu Sales > Invoices",
             "s2": "Wählen Sie den Rechnungs-Tab, aus dem Sie exportieren möchten (z. B. Bezahlt, Offene Zahlung)",
             "s3": "(Optional) Klicken Sie auf „Search“, um nach Startdatum, Enddatum oder Datumstyp zu filtern",
@@ -594,7 +594,7 @@
         },
         "syncStarted": "Synchronisierung für alle zugeordneten Clients gestartet.",
         "tabs": {
-          "clients": "Clients",
+          "clients": "Kunden",
           "connection": "Verbindung",
           "fieldRules": "Feldregeln",
           "history": "Verlauf",
@@ -710,7 +710,7 @@
           "runInitialSyncRunning": "Initiale Synchronisation wird gestartet…",
           "saveFieldSync": "Feldsynchronisationssteuerung speichern",
           "savingFieldSync": "Wird gespeichert…",
-          "syncAll": "Alle Tenants jetzt synchronisieren",
+          "syncAll": "Alle Mandanten jetzt synchronisieren",
           "syncAllStarting": "Wird gestartet…"
         },
         "badges": {
@@ -728,7 +728,7 @@
           "connectingSuffix": " (Verbindung wird hergestellt...)",
           "details": "Verbindungsdetails",
           "directCredentialSourceLabel": "Anmeldedatenquelle:",
-          "directTenantDefault": "common (multi-tenant)",
+          "directTenantDefault": "common (mehrere Mandanten)",
           "directTenantLabel": "Microsoft-Mandant",
           "notAvailable": "Nicht verfügbar",
           "notConfigured": "Nicht konfiguriert",
@@ -746,12 +746,12 @@
           },
           "connectionsBelow": "Verbindungsoptionen werden unten angezeigt.",
           "discover": {
-            "guidance": "Führen Sie Discovery aus, um verwaltete Entra-Tenants vor der Zuordnung zu laden.",
+            "guidance": "Führen Sie Discovery aus, um verwaltete Entra-Mandanten vor der Zuordnung zu laden.",
             "title": "Schritt 2: Erkennen"
           },
           "label": "Aktueller Schritt",
           "map": {
-            "guidance": "Bestätigen oder passen Sie Tenant-Zuordnungen an, um die initiale Synchronisation freizuschalten.",
+            "guidance": "Bestätigen oder passen Sie Mandantenzuordnungen an, um die initiale Synchronisation freizuschalten.",
             "title": "Schritt 3: Zuordnen"
           },
           "sync": {
@@ -759,10 +759,10 @@
             "title": "Schritt 4: Initiale Synchronisation"
           }
         },
-        "description": "Konfigurieren Sie partnerseitigen Entra-Zugriff, erkennen Sie verwaltete Tenants, ordnen Sie sie Kunden zu und führen Sie Sync-Workflows aus.",
+        "description": "Konfigurieren Sie partnerseitigen Entra-Zugriff, erkennen Sie verwaltete Mandanten, ordnen Sie sie Kunden zu und führen Sie Sync-Workflows aus.",
         "disabled": {
-          "description": "Die Entra-Integrations-UI ist für diesen Tenant derzeit deaktiviert.",
-          "title": "Microsoft Entra Integration"
+          "description": "Die Entra-Integrations-UI ist für diesen Mandanten derzeit deaktiviert.",
+          "title": "Microsoft-Entra-Integration"
         },
         "disconnectConfirm": {
           "keeps": "Kontakte, Kundenzuordnungen und der Synchronisierungsverlauf bleiben unverändert erhalten. Es wird nichts gelöscht.",
@@ -771,9 +771,9 @@
           "title": "Microsoft Entra trennen?"
         },
         "discovery": {
-          "completed": "Discovery abgeschlossen. {{count}} Tenants erkannt.",
-          "completedOne": "Discovery abgeschlossen. {{count}} Tenant erkannt.",
-          "failed": "Tenant-Discovery konnte nicht ausgeführt werden."
+          "completed": "Discovery abgeschlossen. {{count}} Mandanten erkannt.",
+          "completedOne": "Discovery abgeschlossen. {{count}} Mandant erkannt.",
+          "failed": "Mandantenerkennung konnte nicht ausgeführt werden."
         },
         "errors": {
           "loadStatus": "Entra-Verbindungsstatus konnte nicht geladen werden.",
@@ -813,7 +813,7 @@
           },
           "preview": "Wirkung vorschauen",
           "previewClientEmpty": "Kein zugeordneter Client passt zu dieser Suche.",
-          "previewClientLabel": "Client",
+          "previewClientLabel": "Kunde",
           "previewClientSearch": "Zugeordnete Clients suchen",
           "previewDescription": "Wendet die bearbeiteten Regeln auf einen Client an und schreibt nichts, damit Sie eine Änderung sehen, bevor sie für alle gilt.",
           "previewTitle": "Regeln testen, bevor Sie sie speichern",
@@ -843,13 +843,13 @@
           "title": "Modus für laufende Operationen"
         },
         "mapping": {
-          "description": "Überprüfen Sie vorgeschlagene Übereinstimmungen, wählen Sie für jeden Tenant den richtigen Kunden aus und bestätigen Sie die Zuordnungen vor der initialen Synchronisation.",
+          "description": "Überprüfen Sie vorgeschlagene Übereinstimmungen, wählen Sie für jeden Mandanten den richtigen Kunden aus und bestätigen Sie die Zuordnungen vor der initialen Synchronisation.",
           "needsReviewLabel": "Benötigt Prüfung:",
           "savedLabel": "Gespeichert:",
           "selectedLabel": "Ausgewählt:",
           "skippedLabel": "Übersprungen:",
           "stepLabel": "Schritt 3",
-          "title": "Tenants Kunden zuordnen"
+          "title": "Mandanten Kunden zuordnen"
         },
         "onboarding": {
           "description": "Schließen Sie jeden Onboarding-Schritt der Reihe nach ab: verbinden, erkennen, zuordnen und dann die erste Synchronisation ausführen.",
@@ -862,13 +862,13 @@
         "overview": {
           "connectionTypeLabel": "Verbindungstyp:",
           "label": "Übersicht",
-          "mappedTenantsLabel": "Zugeordnete Tenants:"
+          "mappedTenantsLabel": "Zugeordnete Mandanten:"
         },
         "skipped": {
-          "empty": "Derzeit sind keine Tenants als übersprungen markiert.",
+          "empty": "Derzeit sind keine Mandanten als übersprungen markiert.",
           "noPrimaryDomain": "Keine primäre Domain",
           "remap": "Neu zuordnen",
-          "title": "Übersprungene Tenants"
+          "title": "Übersprungene Mandanten"
         },
         "status": {
           "connectionHealth": "Verbindungsgesundheit",
@@ -886,7 +886,7 @@
           "started": "Synchronisation gestartet. Run-ID: {{runId}}",
           "startedNoId": "Anfrage zum Synchronisationsstart akzeptiert."
         },
-        "title": "Microsoft Entra Integration",
+        "title": "Microsoft-Entra-Integration",
         "unmapConfirm": {
           "body": "Dadurch wird die gespeicherte Zuordnungsentscheidung für {{tenant}} entfernt, sodass er wieder in der Zuordnungstabelle erscheint. Bereits synchronisierte Kontakte werden nicht geändert.",
           "title": "Diesen Mandanten neu zuordnen?"
@@ -901,16 +901,16 @@
         },
         "wizard": {
           "connect": {
-            "description": "Autorisieren Sie die Direct Microsoft Partner Auth, um diesen Entra-Tenant zu verknüpfen.",
+            "description": "Autorisieren Sie die Direct Microsoft Partner Auth, um diesen Entra-Mandanten zu verknüpfen.",
             "title": "Verbinden"
           },
           "discover": {
-            "description": "Verwaltete Entra-Tenants für diesen MSP-Tenant laden und persistieren.",
-            "title": "Tenants erkennen"
+            "description": "Verwaltete Entra-Mandanten für diesen MSP-Mandanten laden und persistieren.",
+            "title": "Mandanten erkennen"
           },
           "map": {
             "description": "Auto-Match-Vorschläge prüfen und Zuordnungen bestätigen.",
-            "title": "Tenants Kunden zuordnen"
+            "title": "Mandanten Kunden zuordnen"
           },
           "sync": {
             "description": "Starten Sie den ersten Synchronisationslauf für bestätigte Zuordnungen.",
@@ -1032,10 +1032,10 @@
           "viewDetails": "Details anzeigen"
         },
         "details": {
-          "noResults": "Keine Tenant-Ergebnisse aufgezeichnet.",
+          "noResults": "Keine Mandantenergebnisse aufgezeichnet.",
           "stats": "erstellt {{created}}, verknüpft {{linked}}, aktualisiert {{updated}}, mehrdeutig {{ambiguous}}, deaktiviert {{inactivated}}",
-          "summarySkipped": "Skipped provisioning outcomes: {{count}}",
-          "tenantHeader": "Tenant {{tenant}} · {{status}}",
+          "summarySkipped": "Übersprungene Bereitstellungsergebnisse: {{count}}",
+          "tenantHeader": "Mandant {{tenant}} · {{status}}",
           "unknownTenant": "unbekannt"
         },
         "empty": "Noch keine Sync-Läufe gefunden.",
@@ -1048,7 +1048,7 @@
         "run": {
           "header": "{{runType}} · {{status}}",
           "inProgress": "In Bearbeitung",
-          "tenants": "Tenants: {{processed}}/{{total}} · Erfolgreich: {{success}} · Fehlgeschlagen: {{failed}}",
+          "tenants": "Mandanten: {{processed}}/{{total}} · Erfolgreich: {{success}} · Fehlgeschlagen: {{failed}}",
           "timing": "Gestartet {{started}} · Abgeschlossen {{completed}}"
         },
         "title": "Letzte Sync-Läufe"
@@ -1068,22 +1068,22 @@
         "columns": {
           "actions": "Aktionen",
           "confidence": "Konfidenz",
-          "defaultRole": "Default Role",
-          "entraTenant": "Entra-Tenant",
-          "portalAccessGroup": "Portal Access Group",
+          "defaultRole": "Standardrolle",
+          "entraTenant": "Entra-Mandant",
+          "portalAccessGroup": "Portalzugriffsgruppe",
           "primaryDomain": "Primäre Domain",
-          "provisioningModeOverride": "Provisioning Mode Override",
+          "provisioningModeOverride": "Abweichender Bereitstellungsmodus",
           "selectClient": "Kunden auswählen",
           "status": "Status",
           "suggestedClient": "Vorgeschlagener Kunde"
         },
-        "empty": "Keine erkannten Tenants für die Zuordnungsvorschau verfügbar.",
+        "empty": "Keine erkannten Mandanten für die Zuordnungsvorschau verfügbar.",
         "errors": {
           "confirmFailed": "Ausgewählte Zuordnungen konnten nicht bestätigt werden.",
-          "importFailed": "Tenant konnte nicht als Kunde importiert werden.",
-          "loadFailed": "Tenant-Zuordnungsvorschau konnte nicht geladen werden.",
+          "importFailed": "Der Mandant konnte nicht als Kunde importiert werden.",
+          "loadFailed": "Die Mandantenzuordnungsvorschau konnte nicht geladen werden.",
           "selectAtLeastOne": "Wählen Sie mindestens einen Kunden aus, um eine Zuordnung zu bestätigen.",
-          "skipFailed": "Diese Tenant-Zuordnung konnte nicht übersprungen werden."
+          "skipFailed": "Diese Mandantenzuordnung konnte nicht übersprungen werden."
         },
         "feedback": {
           "confirmed": "{{count}} Zuordnungen bestätigt.",
@@ -1100,14 +1100,14 @@
           "unknownClient": "Unbekannter Kunde"
         },
         "portal": {
-          "broadGroupWarning": "Warning: every enabled user in this Entra group will be eligible for client portal access.",
-          "defaultRolePlaceholder": "Inherit workspace role",
-          "groupLoading": "Loading groups…",
-          "modeBuiltIn": "Built-in",
-          "modeDisabled": "Disabled",
-          "modeInherit": "Inherit MSP workspace default",
-          "modeWorkflowManaged": "Workflow-managed",
-          "noGroupSelected": "No group selected"
+          "broadGroupWarning": "Warnung: Jeder aktivierte Benutzer in dieser Entra-Gruppe kann Zugriff auf das Kundenportal erhalten.",
+          "defaultRolePlaceholder": "Arbeitsbereichsrolle übernehmen",
+          "groupLoading": "Gruppen werden geladen…",
+          "modeBuiltIn": "Integriert",
+          "modeDisabled": "Deaktiviert",
+          "modeInherit": "MSP-Arbeitsbereichsstandard übernehmen",
+          "modeWorkflowManaged": "Workflow-verwaltet",
+          "noGroupSelected": "Keine Gruppe ausgewählt"
         },
         "reasons": {
           "exactDomain": "Exakte Domain",
@@ -1121,7 +1121,7 @@
           "skipped": "Übersprungen",
           "unmatched": "Nicht zugeordnet"
         },
-        "title": "Tenant-Zuordnungsvorschau"
+        "title": "Mandantenzuordnungsvorschau"
       }
     },
     "google": {
@@ -1132,7 +1132,7 @@
           "resetting": "Wird zurückgesetzt…",
           "save": "Speichern",
           "saving": "Speichern…",
-          "disconnectProviders": "Disconnect Google providers"
+          "disconnectProviders": "Google-Anbieter trennen"
         },
         "afterSaveNotice": "Gehen Sie nach dem Speichern zu den Integrationen für eingehende E-Mails und Kalender und autorisieren Sie die Provider erneut. Bestehende Google-Provider werden nicht migriert.",
         "consoleLink": "Google Cloud Console",
@@ -1149,8 +1149,8 @@
         },
         "loading": "Wird geladen…",
         "oauth": {
-          "calendarClientId": "Calendar OAuth Client ID",
-          "calendarClientSecret": "Calendar OAuth Client Secret",
+          "calendarClientId": "OAuth-Client-ID des Kalenders",
+          "calendarClientSecret": "OAuth-Clientschlüssel des Kalenders",
           "enterSecret": "Client Secret eingeben",
           "gmailClientId": "Gmail OAuth Client ID",
           "gmailClientSecret": "Gmail OAuth Client Secret",
@@ -1158,17 +1158,17 @@
           "shareApp": "Dieselbe OAuth-App für Gmail und Calendar verwenden",
           "shareAppHelp": "Empfohlen. Sie können pro Integration weiterhin separate Google-Konten autorisieren.",
           "storedSecret": "Gespeichertes Secret: {{secret}}",
-          "locationHelp": "Google Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs."
+          "locationHelp": "Google Cloud: APIs & Dienste > Anmeldedaten > OAuth-2.0-Client-IDs."
         },
         "redirectUrisLabel": "Redirect-URIs (in den Google-OAuth-Client kopieren)",
-        "scopes": "Scopes",
-        "scopesCalendar": "Calendar: {{scopes}}",
+        "scopes": "Berechtigungsbereiche",
+        "scopesCalendar": "Kalender: {{scopes}}",
         "scopesGmail": "Gmail: {{scopes}}",
         "serviceAccount": {
           "alreadyStored": "Ein Service-Account-Schlüssel ist bereits gespeichert (nicht angezeigt).",
           "description": "Fügen Sie das JSON des Service-Account-Schlüssels für das tenant-eigene Dienstkonto ein, das zur Bereitstellung von Pub/Sub verwendet wird.",
           "title": "Pub/Sub-Dienstkonto (erforderlich für Gmail)",
-          "locationHelp": "Google Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON."
+          "locationHelp": "Google Cloud: IAM & Verwaltung > Dienstkonten > Schlüssel > Schlüssel hinzufügen > JSON."
         },
         "setupGuide": "Einrichtungsanleitung",
         "title": "Google",
@@ -1177,19 +1177,19 @@
           "resetFailedTitle": "Zurücksetzen fehlgeschlagen",
           "resetTitle": "Google-Provider zurückgesetzt",
           "saveFailedTitle": "Google-Einstellungen konnten nicht gespeichert werden",
-          "savedDescription": "Die tenant-Google-Konfiguration wurde erfolgreich aktualisiert.",
+          "savedDescription": "Die Google-Konfiguration des Mandanten wurde erfolgreich aktualisiert.",
           "savedTitle": "Google-Einstellungen gespeichert",
           "unknownError": "Unbekannter Fehler"
         },
         "disconnectDialog": {
-          "cancel": "Keep providers connected",
-          "message": "Existing Gmail and Google Calendar provider connections will be marked disconnected and must be re-authorized. Stored Google credentials stay in place.",
-          "title": "Disconnect Google providers?"
+          "cancel": "Anbieter verbunden lassen",
+          "message": "Bestehende Verbindungen zu Gmail- und Google-Kalender-Anbietern werden als getrennt markiert und müssen erneut autorisiert werden. Gespeicherte Google-Anmeldedaten bleiben erhalten.",
+          "title": "Google-Anbieter trennen?"
         },
         "oauthValues": {
-          "title": "Google OAuth app values"
+          "title": "Werte der Google-OAuth-App"
         },
-        "redirectUrisHelp": "Staff sign-in uses the OAuth client saved below. Add the listed Gmail and Calendar callback URLs in Google Cloud."
+        "redirectUrisHelp": "Die Mitarbeiteranmeldung verwendet den unten gespeicherten OAuth-Client. Fügen Sie die aufgeführten Gmail- und Kalender-Callback-URLs in Google Cloud hinzu."
       }
     },
     "hudu": {
@@ -1518,87 +1518,94 @@
     },
     "microsoft": {
       "emailSetup": {
-        "action": "Set up Microsoft",
+        "action": "Microsoft einrichten",
         "actions": {
-          "back": "Back",
-          "cancel": "Cancel",
-          "copy": "Copy",
-          "finish": "Finish",
-          "savePlatform": "Create profile and continue",
-          "signIn": "Sign in to Microsoft",
-          "working": "Working…",
-          "approve": "Approve in Microsoft",
-          "copyApprovalLink": "Copy approval link for your admin",
-          "saveManual": "Save app and continue"
+          "back": "Zurück",
+          "cancel": "Abbrechen",
+          "copy": "Kopieren",
+          "finish": "Fertigstellen",
+          "savePlatform": "Profil erstellen und fortfahren",
+          "signIn": "Bei Microsoft anmelden",
+          "working": "Wird verarbeitet…",
+          "approve": "In Microsoft genehmigen",
+          "copyApprovalLink": "Genehmigungslink für Ihren Administrator kopieren",
+          "saveManual": "App speichern und fortfahren"
         },
         "automated": {
-          "description": "Alga PSA registers a dedicated Entra app automatically. Sign in as a Microsoft 365 administrator.",
-          "title": "Create an app in your Microsoft organization"
+          "description": "AlgaPSA registriert automatisch eine dedizierte Entra-App. Melden Sie sich als Microsoft 365-Administrator an.",
+          "title": "App in Ihrer Microsoft-Organisation erstellen"
         },
-        "callbackUri": "Mailbox callback URI",
+        "callbackUri": "Postfach-Callback-URI",
         "complete": {
-          "consentDone": "Approved by your Microsoft 365 administrator. You can now connect a mailbox.",
-          "consentPending": "A Microsoft 365 administrator for your organization must approve access before mailboxes can connect.",
+          "consentDone": "Von Ihrem Microsoft 365-Administrator genehmigt. Sie können jetzt ein Postfach verbinden.",
+          "consentPending": "Ein Microsoft 365-Administrator Ihrer Organisation muss den Zugriff genehmigen, bevor Postfächer verbunden werden können.",
           "profileCreated": "Microsoft Email profile created and bound",
-          "ready": "Microsoft is ready",
-          "waiting": "Waiting for admin approval"
+          "ready": "Microsoft ist bereit",
+          "waiting": "Warten auf Administratorgenehmigung"
         },
         "consent": {
-          "confirmedDescription": "The Microsoft app is ready for mailbox authorization.",
-          "confirmedTitle": "Administrator consent confirmed",
-          "url": "Administrator consent URL",
-          "urlLabel": "Consent URL",
-          "approvalLink": "Approval link"
+          "confirmedDescription": "Die Microsoft-App ist für die Postfachautorisierung bereit.",
+          "confirmedTitle": "Administratoreinwilligung bestätigt",
+          "url": "URL für die Administratoreinwilligung",
+          "urlLabel": "Einwilligungs-URL",
+          "approvalLink": "Genehmigungslink"
         },
-        "copied": "{{label}} copied",
-        "description": "Choose how Alga PSA connects to Microsoft. You will connect mailboxes separately.",
+        "copied": "{{label}} kopiert",
+        "description": "Wählen Sie aus, wie AlgaPSA eine Verbindung mit Microsoft herstellt. Die Postfächer verbinden Sie separat.",
         "errors": {
-          "automated": "Could not start automated Microsoft app creation.",
-          "generic": "Microsoft Email setup did not complete.",
-          "nameRequired": "Enter a display name for the Microsoft app.",
-          "platform": "Could not configure the platform Microsoft app.",
-          "popupBlocked": "Allow popups for this site, then try again.",
+          "automated": "Die automatische Erstellung der Microsoft-App konnte nicht gestartet werden.",
+          "generic": "Die Einrichtung von Microsoft-E-Mail wurde nicht abgeschlossen.",
+          "nameRequired": "Geben Sie einen Anzeigenamen für die Microsoft-App ein.",
+          "platform": "Die Microsoft-App der Plattform konnte nicht konfiguriert werden.",
+          "popupBlocked": "Erlauben Sie Pop-ups für diese Website und versuchen Sie es erneut.",
           "popupClosed": "Das Microsoft-Fenster wurde geschlossen, bevor die Einrichtung abgeschlossen war. Versuchen Sie es erneut oder wählen Sie eine andere Einrichtungsoption.",
-          "tenantRequired": "Enter your Microsoft tenant ID or verified domain.",
-          "manual": "Could not configure the Microsoft app.",
-          "manualRequired": "Enter the display name, client ID, client secret, and Microsoft tenant ID.",
-          "pendingProfileMissing": "The pending Microsoft app could not be found.",
-          "approvalLink": "Could not create the Microsoft approval link."
+          "tenantRequired": "Geben Sie Ihre Microsoft-Mandanten-ID oder eine verifizierte Domäne ein.",
+          "manual": "Die Microsoft-App konnte nicht konfiguriert werden.",
+          "manualRequired": "Geben Sie den Anzeigenamen, die Client ID, das Client Secret und die Microsoft-Mandanten-ID ein.",
+          "pendingProfileMissing": "Die ausstehende Microsoft-App wurde nicht gefunden.",
+          "approvalLink": "Der Microsoft-Genehmigungslink konnte nicht erstellt werden.",
+          "consentDenied": "Die Microsoft-Anmeldung oder Administratoreinwilligung wurde abgelehnt. Wählen Sie eine andere Einrichtungsoption oder versuchen Sie es erneut.",
+          "consentNotGranted": "Microsoft hat die Einwilligung des Administrators nicht bestätigt.",
+          "consentPersistFailed": "Die Microsoft-Administratoreinwilligung konnte nicht gespeichert werden.",
+          "invalidState": "Diese Microsoft-Einrichtungsanfrage ist ungültig oder abgelaufen. Starten Sie den Vorgang in den Anbietereinstellungen erneut.",
+          "microsoftError": "Microsoft konnte die Einrichtungsanfrage nicht abschließen. Versuchen Sie es erneut oder verwenden Sie die manuelle Einrichtung.",
+          "missingCode": "Microsoft hat keinen Autorisierungscode zurückgegeben. Starten Sie die Einrichtung erneut.",
+          "sessionMismatch": "Ihre Sitzung in AlgaPSA stimmt nicht mit dem Administrator überein, der diese Einrichtung gestartet hat. Melden Sie sich an und versuchen Sie es erneut."
         },
         "fields": {
           "clientId": "Client ID",
-          "displayName": "Profile display name",
-          "tenantId": "Microsoft tenant ID",
-          "clientSecret": "Client secret",
-          "microsoftTenant": "Microsoft tenant ID or verified domain",
-          "redirectUri": "Redirect URI to add in Entra"
+          "displayName": "Profilanzeigename",
+          "tenantId": "Microsoft-Mandanten-ID",
+          "clientSecret": "Client Secret",
+          "microsoftTenant": "Microsoft-Mandanten-ID oder verifizierte Domäne",
+          "redirectUri": "In Entra hinzuzufügende Redirect-URI"
         },
         "manual": {
-          "description": "Use an existing Entra app maintained by your organization.",
-          "title": "Enter an existing app manually"
+          "description": "Verwenden Sie eine vorhandene Entra-App, die von Ihrer Organisation verwaltet wird.",
+          "title": "Vorhandene App manuell eingeben"
         },
         "platform": {
-          "description": "Nothing to register in Microsoft Entra. Your Microsoft 365 administrator approves access.",
-          "title": "Use the app provided by Alga PSA"
+          "description": "In Microsoft Entra muss nichts registriert werden. Ihr Microsoft 365-Administrator genehmigt den Zugriff.",
+          "title": "Von AlgaPSA bereitgestellte App verwenden"
         },
-        "title": "Set up Microsoft",
-        "unavailable": "Unavailable",
-        "recommended": "Recommended",
-        "advanced": "Advanced"
+        "title": "Microsoft einrichten",
+        "unavailable": "Nicht verfügbar",
+        "recommended": "Empfohlen",
+        "advanced": "Erweitert"
       },
       "settings": {
         "advanced": {
-          "title": "Manual Microsoft apps (advanced)",
-          "description": "Create and manage Entra app registrations maintained by your organization.",
-          "warning": "A custom Entra app is normally unnecessary on hosted Alga PSA. Continue only when your organization deliberately requires its own application and credentials."
+          "title": "Manuelle Microsoft-Apps (erweitert)",
+          "description": "Erstellen und verwalten Sie Entra-App-Registrierungen, die von Ihrer Organisation betreut werden.",
+          "warning": "Eine benutzerdefinierte Entra-App ist bei gehostetem AlgaPSA normalerweise nicht erforderlich. Fahren Sie nur fort, wenn Ihre Organisation ausdrücklich eine eigene Anwendung und eigene Anmeldedaten benötigt."
         },
         "platform": {
-          "title": "Microsoft email is ready to connect",
-          "description": "Connect Microsoft 365 with the application supplied by Alga PSA. No Entra app registration is required.",
-          "readyDescription": "The Microsoft app is approved and ready for mailbox sign-in.",
-          "connectAction": "Connect a mailbox →",
-          "unavailableTitle": "Platform Microsoft credentials are unavailable",
-          "unavailableDescription": "This deployment requires an app maintained by your organization. Use the advanced setup below to add one."
+          "title": "Microsoft-E-Mail kann verbunden werden",
+          "description": "Verbinden Sie Microsoft 365 mit der von AlgaPSA bereitgestellten Anwendung. Eine Entra-App-Registrierung ist nicht erforderlich.",
+          "readyDescription": "Die Microsoft-App ist genehmigt und für die Postfachanmeldung bereit.",
+          "connectAction": "Postfach verbinden →",
+          "unavailableTitle": "Microsoft-Plattformanmeldedaten sind nicht verfügbar",
+          "unavailableDescription": "Diese Bereitstellung erfordert eine App, die von Ihrer Organisation verwaltet wird. Fügen Sie über die erweiterte Einrichtung unten eine hinzu."
         },
         "actions": {
           "entraLink": "Microsoft Entra",
@@ -1607,7 +1614,7 @@
           "refresh": "Aktualisieren",
           "resetProviders": "Microsoft-Provider zurücksetzen",
           "resetting": "Wird zurückgesetzt…",
-          "disconnectProviders": "Disconnect Microsoft providers"
+          "disconnectProviders": "Microsoft-Anbieter trennen"
         },
         "archiveDialog": {
           "archiving": "Wird archiviert…",
@@ -1627,16 +1634,16 @@
           "noCapablePlaceholder": "No enabled profile"
         },
         "bindings": {
-          "summaryBound": "Current: {{profile}}.",
+          "summaryBound": "Aktuell: {{profile}}.",
           "summaryNone": "Derzeit ist kein Microsoft-Profil an {{consumer}} gebunden.",
-          "summaryUnavailable": "{{consumer}} ist an ein nicht verfügbares Profil gebunden.",
-          "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
+          "summaryUnavailable": "Die ausgewählte App ist nicht verfügbar.",
+          "warningArchived": "{{profile}} ist archiviert. Wählen Sie eine aktive Microsoft-App aus.",
           "warningNoBinding": "Für {{consumer}} ist noch keine Bindung konfiguriert.",
           "warningNotReady": "{{consumer}} ist an {{profile}} gebunden, aber dieses Profil benötigt noch eine Konfiguration.",
-          "warningProfileMissing": "{{consumer}} ist an ein Profil gebunden, das nicht mehr verfügbar ist. Binden Sie es an ein aktives Profil neu.",
-          "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
-          "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
-          "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."
+          "warningProfileMissing": "Die ausgewählte Microsoft-App ist nicht mehr verfügbar. Wählen Sie eine andere App.",
+          "warningMissingCapability": "{{profile}} ist ausgewählt, kann {{consumer}} aber noch nicht verarbeiten. Bearbeiten Sie die App und aktivieren Sie {{consumer}}, oder wählen Sie eine andere App aus.",
+          "warningNoApps": "Erstellen Sie eine Microsoft-App, aktivieren Sie {{consumer}} und wählen Sie sie anschließend hier aus.",
+          "warningNoCapable": "Noch kann keine App {{consumer}} verarbeiten. Bearbeiten Sie eine Microsoft-App, aktivieren Sie {{consumer}} und wählen Sie sie anschließend hier aus."
         },
         "consumerBindings": {
           "descriptionCe": "Binden Sie ein Microsoft-Profil an MSP-SSO für die Anmeldung und die Nutzung der Anmeldedomäne.",
@@ -1683,7 +1690,7 @@
           "setDefault": "Dieses Profil als Standard-Microsoft-Profil festlegen",
           "setDefaultHelp": "Standardprofile stehen für Profilverwaltungs-Workflows und migrations­sichere Metadaten zur Verfügung, jedoch nicht für das Consumer-Routing.",
           "storedSecretHint": "Gespeichertes Secret: {{secret}}. Lassen Sie dieses Feld leer, um es unverändert zu lassen.",
-          "tenantId": "Microsoft tenant ID",
+          "tenantId": "Microsoft-Mandanten-ID",
           "capabilities": "Enabled capabilities",
           "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
@@ -1714,13 +1721,13 @@
           "notConfigured": "Nicht konfiguriert",
           "redirectUri": "Redirect URI",
           "requiresBaseUrl": "Basis-URL und Client ID erforderlich",
-          "scopes": "Scopes",
+          "scopes": "Berechtigungsbereiche",
           "teamsBotRedirect": "Redirect-URI für persönlichen Bot",
           "teamsMessageRedirect": "Redirect-URI für Message Extension",
           "teamsScopes": "Teams-Scopes",
           "teamsTabRedirect": "Redirect-URI für persönlichen Tab",
           "teamsTitle": "Teams-Anleitung",
-          "tenantId": "Microsoft tenant ID",
+          "tenantId": "Microsoft-Mandanten-ID",
           "unavailable": "Nicht verfügbar"
         },
         "profileCard": {
@@ -1737,7 +1744,7 @@
           "setDefault": "Als Standard festlegen",
           "storedSecret": "Gespeichertes Secret",
           "teamsAppIdUri": "Teams Application ID URI",
-          "tenantIdLabel": "Microsoft tenant ID:",
+          "tenantIdLabel": "Microsoft-Mandanten-ID:",
           "updating": "Wird aktualisiert…",
           "enabledCapabilities": "Enabled capabilities",
           "noEnabledCapabilities": "No enabled capabilities"
@@ -1750,14 +1757,14 @@
           "archived": "Archivierte Profile können nicht für neue Microsoft-Bindungen verwendet werden.",
           "clientIdMissing": "Client ID fehlt.",
           "clientSecretMissing": "Client Secret wurde nicht konfiguriert.",
-          "tenantIdMissing": "Add a Microsoft tenant ID.",
-          "adminConsentPending": "Ask a Microsoft 365 administrator to approve access for Email."
+          "tenantIdMissing": "Fügen Sie eine Microsoft-Mandanten-ID hinzu.",
+          "adminConsentPending": "Bitten Sie einen Microsoft 365-Administrator, den Zugriff auf E-Mail zu genehmigen."
         },
         "statusBadges": {
           "archived": "Archiviert",
           "needsAttention": "Erfordert Aufmerksamkeit",
           "ready": "Bereit",
-          "waitingForAdminApproval": "Waiting for admin approval"
+          "waitingForAdminApproval": "Warten auf Administratorgenehmigung"
         },
         "title": "Microsoft",
         "toasts": {
@@ -1784,12 +1791,12 @@
           "clientIdRequired": "Microsoft OAuth Client ID ist erforderlich",
           "clientSecretRequired": "Microsoft OAuth Client Secret ist erforderlich",
           "displayNameRequired": "Anzeigename des Microsoft-Profils ist erforderlich",
-          "tenantIdRequired": "Microsoft tenant ID is required"
+          "tenantIdRequired": "Microsoft-Mandanten-ID ist erforderlich"
         },
         "disconnectDialog": {
-          "cancel": "Keep providers connected",
+          "cancel": "Anbieter verbunden lassen",
           "message": "Existing Outlook email and calendar provider connections will be marked disconnected and must be re-authorized. Microsoft profiles and service bindings stay in place.",
-          "title": "Disconnect Microsoft providers?"
+          "title": "Microsoft-Anbieter trennen?"
         },
         "profileLibrary": {
           "description": "Named Microsoft app registrations that services can bind to.",
@@ -1834,7 +1841,7 @@
         "connectSuccess": "QuickBooks erfolgreich verbunden. Das verbundene Unternehmen ist nun der Standard-Live-QuickBooks-Kontext.",
         "connection": {
           "defaultCompany": "Verbundenes Unternehmen",
-          "description": "Starten Sie OAuth erst, nachdem die QuickBooks-App-Anmeldedaten konfiguriert sind. Beim Trennen werden gespeicherte QuickBooks-Zugriffstoken entfernt, die tenant-eigenen App-Anmeldedaten bleiben jedoch erhalten.",
+          "description": "Starten Sie OAuth erst, nachdem die QuickBooks-App-Anmeldedaten konfiguriert sind. Beim Trennen werden gespeicherte QuickBooks-Zugriffstoken entfernt, die mandanteneigenen App-Anmeldedaten bleiben jedoch erhalten.",
           "notConnected": "Es ist noch kein QuickBooks-Unternehmen verbunden. Speichern Sie die Anmeldedaten und klicken Sie anschließend auf „QuickBooks verbinden“.",
           "realmId": "Realm ID: {{id}}",
           "title": "Live-QuickBooks-Verbindung",
@@ -1845,7 +1852,7 @@
         "csvAvailablePrefix": "Wenn Sie einen manuellen Workflow bevorzugen, verwenden Sie weiterhin",
         "csvAvailableTitle": "QuickBooks CSV bleibt verfügbar",
         "description": "Konfigurieren Sie QuickBooks-OAuth-Anmeldedaten, verbinden Sie Ihr QuickBooks-Unternehmen und halten Sie Live-QuickBooks parallel zum manuellen QuickBooks-CSV-Workflow verfügbar.",
-        "disconnectSuccess": "Die gespeicherte QuickBooks-Verbindung wurde entfernt. Tenant-eigene QuickBooks-App-Anmeldedaten wurden beibehalten.",
+        "disconnectSuccess": "Die gespeicherte QuickBooks-Verbindung wurde entfernt. Mandanteneigene QuickBooks-App-Anmeldedaten wurden beibehalten.",
         "environment": "Intuit-Umgebung",
         "environmentProduction": "Produktion",
         "environmentSandbox": "Sandbox",
@@ -1854,7 +1861,7 @@
           "load": "QuickBooks-Einstellungen konnten nicht geladen werden.",
           "saveCredentials": "QuickBooks-Anmeldedaten konnten nicht gespeichert werden."
         },
-        "howItWorksDescription": "Speichern Sie hier QuickBooks-App-Anmeldedaten, schließen Sie den Intuit-OAuth-Flow ab, und Alga PSA verwendet das verbundene QuickBooks-Unternehmen als Standard-Live-Kontext für Exporte und Zuordnungen.",
+        "howItWorksDescription": "Speichern Sie hier QuickBooks-App-Anmeldedaten, schließen Sie den Intuit-OAuth-Flow ab, und AlgaPSA verwendet das verbundene QuickBooks-Unternehmen als Standard-Live-Kontext für Exporte und Zuordnungen.",
         "howItWorksTitle": "So funktioniert Live-QuickBooks in dieser Version",
         "loading": "QuickBooks-Einstellungen werden geladen…",
         "mapping": {
@@ -1864,15 +1871,15 @@
           "placeholderDescription": "Verbinden Sie ein QuickBooks-Unternehmen, bevor Sie Live-QuickBooks-Artikel- und Steuer-Zuordnungen konfigurieren.",
           "title": "Live-QuickBooks-Zuordnung & -Konfiguration"
         },
-        "noClientId": "Für diesen Tenant ist noch keine Client ID gespeichert.",
-        "noClientSecret": "Für diesen Tenant ist noch kein Client Secret gespeichert.",
+        "noClientId": "Für diesen Mandanten ist noch keine Client ID gespeichert.",
+        "noClientSecret": "Für diesen Mandanten ist noch kein Client Secret gespeichert.",
         "quickbooksCsv": "QuickBooks CSV",
         "redirectUri": "Redirect URI",
         "requiredScopes": "Erforderliche Scopes",
         "storedClientId": "Gespeicherte Client ID: {{value}}",
         "storedClientSecret": "Gespeichertes Client Secret: {{value}}",
-        "tenantOauthDescription": "Fügen Sie die für diesen Tenant registrierten Intuit-App-Anmeldedaten ein, oder lassen Sie das Feld leer, um die QuickBooks-App auf Anwendungsebene zu verwenden, sofern eine konfiguriert ist. Secret-Werte werden nach dem Speichern nicht mehr an den Browser zurückgegeben.",
-        "tenantOauthTitle": "Tenant-eigene OAuth-App",
+        "tenantOauthDescription": "Fügen Sie die für diesen Mandanten registrierten Intuit-App-Anmeldedaten ein, oder lassen Sie das Feld leer, um die QuickBooks-App auf Anwendungsebene zu verwenden, sofern eine konfiguriert ist. Secret-Werte werden nach dem Speichern nicht mehr an den Browser zurückgegeben.",
+        "tenantOauthTitle": "Mandanteneigene OAuth-App",
         "title": "QuickBooks Online"
       },
       "sync": {
@@ -1894,8 +1901,8 @@
         "refreshTokenExpiry": "QuickBooks-Token läuft am {{date}} ab",
         "refreshTokenExpired": "QuickBooks-Token abgelaufen — erneut verbinden, um die Synchronisierung fortzusetzen.",
         "autoSyncLabel": "Automatische Synchronisierung aktiviert",
-        "autoProvisionCustomersLabel": "Create QuickBooks customers automatically",
-        "autoProvisionCustomersHint": "Off: exports for unmapped customers pause with an exception until you link them in the customer mapping screen.",
+        "autoProvisionCustomersLabel": "QuickBooks-Kunden automatisch erstellen",
+        "autoProvisionCustomersHint": "Aus: Exporte für nicht zugeordnete Kunden werden mit einer Ausnahme angehalten, bis Sie sie in der Kundenzuordnung verknüpfen.",
         "syncNowButton": "Jetzt synchronisieren",
         "syncNowRunning": "Synchronisierung läuft…",
         "syncNowSuccess": "Synchronisierung erfolgreich abgeschlossen.",
@@ -1913,7 +1920,7 @@
         "noDefault": "Kein Standard",
         "saving": "Speichern…",
         "undepositedFunds": "Nicht eingezahlte Mittel (Standard)",
-        "catalogLoadError": "Failed to load QuickBooks sync configuration options."
+        "catalogLoadError": "Die Konfigurationsoptionen für die QuickBooks-Synchronisierung konnten nicht geladen werden."
       }
     },
     "rmm": {
@@ -1947,7 +1954,7 @@
             "navigate": "Navigieren Sie zu Administration → Apps → API",
             "addClient": "Klicken Sie auf „+ Add client app“, um eine neue API-Anwendung zu erstellen",
             "platform": "Stellen Sie die Application Platform auf „Web (PHP, Java, .Net Core, etc.)“",
-            "name": "Geben Sie einen Namen ein (z. B. „Alga PSA“)",
+            "name": "Geben Sie einen Namen ein (z. B. „AlgaPSA“)",
             "redirectUri": "Fügen Sie die Redirect-URI hinzu:",
             "scopes": "Aktivieren Sie unter „Scopes“ „Monitoring“ und „Management“",
             "grantTypes": "Aktivieren Sie unter „Allowed grant types“ „Authorization code“, „Client credentials“ und „Refresh token“",
@@ -1966,7 +1973,7 @@
           "clientSecretLabel": "Client Secret",
           "clientSecretPlaceholder": "Geben Sie Ihr NinjaOne Client Secret ein",
           "clientSecretUpdatePlaceholder": "Neues Secret eingeben, um zu aktualisieren",
-          "secretMaskedLabel": "Secret",
+          "secretMaskedLabel": "Schlüssel",
           "saving": "Wird gespeichert...",
           "save": "Anmeldedaten speichern"
         },
@@ -2205,10 +2212,10 @@
         },
         "connection": {
           "connectedAt": "Verbunden am: {{time}}",
-          "description": "Konfigurieren Sie Tanium-Gateway-Anmeldedaten und verifizieren Sie tenant-bezogenen Zugriff.",
+          "description": "Konfigurieren Sie Tanium-Gateway-Anmeldedaten und verifizieren Sie mandantenbezogenen Zugriff.",
           "never": "Nie",
-          "syncLabel": "Sync: {{status}}",
-          "syncLabelWithError": "Sync: {{status}} ({{error}})",
+          "syncLabel": "Synchronisierung: {{status}}",
+          "syncLabelWithError": "Synchronisierung: {{status}} ({{error}})",
           "title": "Tanium-Verbindung"
         },
         "errors": {
@@ -2370,7 +2377,57 @@
           "load": "Organisationszuordnungen konnten nicht geladen werden",
           "sync": "Synchronisierung fehlgeschlagen",
           "updateMapping": "Zuordnung konnte nicht aktualisiert werden",
-          "updateContact": "Standardkontakt konnte nicht aktualisiert werden"
+          "updateContact": "Standardkontakt konnte nicht aktualisiert werden",
+          "loadStatus": "Status der Huntress-Integration konnte nicht geladen werden",
+          "connect": "Verbindung fehlgeschlagen",
+          "saveSettings": "Einstellungen konnten nicht gespeichert werden",
+          "poll": "Abfrage fehlgeschlagen"
+        },
+        "loadingIntegration": "Huntress-Integration wird geladen…",
+        "connect": {
+          "title": "Huntress verbinden",
+          "description": "Generieren Sie unter <your-account>.huntress.io → API Credentials API-Anmeldedaten und fügen Sie sie hier ein. Vom SOC geprüfte Vorfallberichte werden automatisch zu Tickets.",
+          "apiKeyPlaceholder": "API-Schlüssel",
+          "apiSecretPlaceholder": "Geheimer API-Schlüssel",
+          "submit": "Verbinden",
+          "connecting": "Verbindung wird hergestellt…"
+        },
+        "connection": {
+          "title": "Mit {{account}} verbunden",
+          "summary": "{{organizations}} Organisationen ({{unmapped}} nicht zugeordnet) · {{openIncidents}} offene Vorfälle · letzte Abfrage: {{lastPoll}}",
+          "neverPolled": "nie",
+          "lastPollFailed": "Letzte Abfrage fehlgeschlagen: {{error}}",
+          "routingIncompleteWarning": "Die Vorfallabfrage ist pausiert, bis die Routing-Konfiguration unten vollständig ist (Board, Fallback-Kunde/-Board und Prioritäten für alle drei Schweregrade).",
+          "pollNow": "Jetzt abfragen",
+          "disconnect": "Trennen",
+          "disconnectConfirm": "Huntress trennen? Bestehende Tickets und Zuordnungen bleiben erhalten."
+        },
+        "routing": {
+          "title": "Ticket-Routing",
+          "description": "Hier legen Sie fest, wo Vorfall-Tickets eingehen. Für nicht zugeordnete Huntress-Organisationen werden Tickets immer beim Fallback-Kunden und auf dem Triage-Board erstellt — nichts geht verloren.",
+          "securityBoard": "Security-Board",
+          "selectBoard": "Board auswählen",
+          "category": "Kategorie (optional)",
+          "noCategory": "Keine",
+          "fallbackClient": "Fallback-Kunde",
+          "fallbackBoard": "Fallback-Board (Triage)",
+          "criticalSeverity": "Schweregrad „Kritisch“ →",
+          "highSeverity": "Schweregrad „Hoch“ →",
+          "lowSeverity": "Schweregrad „Niedrig“ →",
+          "selectPriority": "Priorität",
+          "pollInterval": "Abfrageintervall (Minuten)",
+          "autoClose": "Tickets schließen, wenn Huntress den Vorfall schließt",
+          "closedStatus": "Status für geschlossene Tickets",
+          "selectStatus": "Status auswählen",
+          "save": "Routing-Konfiguration speichern",
+          "saving": "Wird gespeichert…"
+        },
+        "messages": {
+          "connected": "Mit dem Huntress-Konto \"{{account}}\" verbunden. Vervollständigen Sie die Routing-Konfiguration unten, um mit der Ticketerstellung zu beginnen.",
+          "routingSaved": "Routing-Konfiguration gespeichert — Vorfallabfrage ist aktiv.",
+          "routingIncomplete": "Gespeichert, aber das Routing ist noch unvollständig; die Abfrage bleibt pausiert, bis alle Felder unten festgelegt sind.",
+          "pollFinished": "Abfrage abgeschlossen. Verarbeitete Vorfälle: {{count}}.",
+          "disconnected": "Huntress wurde getrennt."
         }
       },
       "ninjaone": {
@@ -2378,7 +2435,7 @@
           "organization": "NinjaOne-Organisation",
           "company": "Alga-Unternehmen",
           "defaultContact": "Standardkontakt",
-          "autoSync": "Auto-Sync",
+          "autoSync": "Automatische Synchronisierung",
           "status": "Status"
         },
         "orgFallback": "Org. {{id}}",
@@ -2442,8 +2499,8 @@
         "descriptionCe": "Registrieren Sie Hinweisdomänen für die MSP-Login-SSO-Erkennung. Besitznachweise werden in der Community Edition nicht erzwungen, und nicht verwaltete Domänen greifen auf Nine-Minds-App-Provider zurück.",
         "descriptionEe": "Verwalten Sie den Lebenszyklus von Domänenansprüchen für die Provider-Erkennung beim MSP-Login-SSO. Nicht beanspruchte oder nicht zulässige Domänen greifen auf Nine-Minds-App-Provider zurück.",
         "moved": {
-          "title": "MSP SSO Login Domains",
-          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
+          "title": "MSP-SSO-Anmeldedomänen",
+          "body": "Die Single-Sign-On-Einstellungen einschließlich der Ansprüche für Anmeldedomänen wurden nach Sicherheit → Single Sign-On verschoben.",
           "cta": "Open Single Sign-On settings"
         },
         "dnsHost": "Host:",
@@ -2461,7 +2518,7 @@
           "saveDomains": "MSP-SSO-Anmeldedomänen konnten nicht gespeichert werden.",
           "verifyClaim": "Domänenanspruch konnte nicht verifiziert werden."
         },
-        "fallbackInfo": "Domänen ohne zulässigen Tenant-Anspruch nutzen die Nine-Minds-SSO-Provider-Konfiguration auf App-Ebene.",
+        "fallbackInfo": "Domänen ohne zulässigen Mandantenanspruch nutzen die Nine-Minds-SSO-Provider-Konfiguration auf App-Ebene.",
         "loading": "Wird geladen…",
         "removeDomainAria": "Domäne {{number}} entfernen",
         "requestClaim": "Anspruch anfordern",
@@ -2477,12 +2534,12 @@
           "refreshedTitle": "Challenge aktualisiert",
           "requestClaimFailedTitle": "Domänenanspruch konnte nicht angefordert werden",
           "revokeFailedTitle": "Anspruch konnte nicht widerrufen werden",
-          "revokedDescription": "Die Tenant-Übernahme für diese Domäne ist deaktiviert.",
+          "revokedDescription": "Die Mandantenübernahme für diese Domäne ist deaktiviert.",
           "revokedTitle": "Domänenanspruch widerrufen",
           "saveDomainsFailedTitle": "MSP-SSO-Anmeldedomänen konnten nicht gespeichert werden",
           "savedDescription": "Die Einstellungen für die domänenbasierte SSO-Erkennung wurden aktualisiert.",
           "savedTitle": "MSP-SSO-Anmeldedomänen gespeichert",
-          "verifiedDescription": "Die Domänenübernahme ist jetzt für tenant-bezogenes Provider-Routing zulässig.",
+          "verifiedDescription": "Die Domänenübernahme ist jetzt für mandantenbezogenes Provider-Routing zulässig.",
           "verifiedTitle": "Domänenanspruch verifiziert",
           "verifyFailedTitle": "Domänenverifizierung fehlgeschlagen"
         }
@@ -2543,7 +2600,7 @@
         },
         "checklist": {
           "installState": {
-            "active": "Teams ist für diesen Tenant aktiv.",
+            "active": "Teams ist für diesen Mandanten aktiv.",
             "error": "Die Teams-Einrichtung weist einen Fehler auf, der behoben werden muss.",
             "label": "Teams-Installationsstatus",
             "notConfigured": "Speichern Sie einen Entwurf oder aktivieren Sie Teams, sobald die Einrichtung bereit ist.",
@@ -2562,7 +2619,7 @@
           },
           "ready": "Bereit"
         },
-        "description": "Binden Sie Teams an ein Microsoft-Profil, aktivieren Sie Funktionen und generieren Sie das Tenant-Paket.",
+        "description": "Binden Sie Teams an ein Microsoft-Profil, aktivieren Sie Funktionen und generieren Sie das Mandantenpaket.",
         "errors": {
           "downloadPackage": "Teams-App-Paket konnte nicht heruntergeladen werden",
           "generatePackage": "Teams-App-Paket konnte nicht generiert werden",
@@ -2574,7 +2631,7 @@
           "messageExtension": "Message Extension",
           "personalBot": "Persönlicher Bot",
           "personalTab": "Persönlicher Tab",
-          "redirectUris": "Redirect URIs",
+          "redirectUris": "Weiterleitungs-URIs",
           "requiredScopes": "Erforderliche Scopes",
           "teamsAppIdUri": "Teams App ID URI",
           "unavailable": "Nicht verfügbar"
@@ -2688,7 +2745,7 @@
             "capabilityDisabled": "Aktivieren Sie die Funktion für den persönlichen Bot, bevor Sie eine Testnachricht senden.",
             "botNotConfigured": "Konfigurieren Sie die Teams-Bot-Anmeldedaten, bevor Sie eine Testnachricht senden.",
             "missingUserLinkage": "Verknüpfen Sie Ihr Microsoft-Konto, bevor Sie eine Teams-Testnachricht senden.",
-            "missingConversationReference": "Öffnen Sie den Alga PSA-Bot in Teams und senden Sie ihm zuerst eine beliebige Nachricht, und versuchen Sie es dann erneut.",
+            "missingConversationReference": "Öffnen Sie den AlgaPSA-Bot in Teams und senden Sie ihm zuerst eine beliebige Nachricht, und versuchen Sie es dann erneut.",
             "skipped": "Die Teams-Testnachricht wurde übersprungen."
           },
           "steps": {
@@ -2711,12 +2768,12 @@
             "activeProfile": "Wählen Sie ein aktives Microsoft-Profil für Teams aus.",
             "profileCredentials": "Vervollständigen Sie die Microsoft-Profil-Anmeldedaten, bevor Sie Teams aktivieren.",
             "meetingOrganizer": "Konfigurieren Sie den Standard-Organisator für Teams-Besprechungen in den Teams-Einstellungen.",
-            "meetingOrganizerObjectId": "Speichern Sie den Standard-Organisator für Teams-Besprechungen erneut, damit Alga PSA seine Microsoft Entra-Objekt-ID auflösen kann.",
+            "meetingOrganizerObjectId": "Speichern Sie den Standard-Organisator für Teams-Besprechungen erneut, damit AlgaPSA seine Microsoft Entra-Objekt-ID auflösen kann.",
             "package": "Generieren Sie das Teams-App-Paket, bevor Sie die End-to-End-Validierung ausführen.",
             "baseUrl": "Generieren Sie das Teams-Paket mit einer erreichbaren Basis-URL neu.",
             "botEnv": "Konfigurieren Sie TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID und TEAMS_BOT_APP_PASSWORD.",
             "userLinkage": "Verknüpfen Sie Ihr Microsoft-Konto in Ihren Profileinstellungen.",
-            "conversationReference": "Öffnen Sie den Alga PSA-Bot in Teams und senden Sie ihm zuerst eine beliebige Nachricht, und versuchen Sie es dann erneut.",
+            "conversationReference": "Öffnen Sie den AlgaPSA-Bot in Teams und senden Sie ihm zuerst eine beliebige Nachricht, und versuchen Sie es dann erneut.",
             "deliveryFailure": "Überprüfen Sie den letzten Fehler bei der Teams-Zustellung und versuchen Sie es nach Behebung der Ursache erneut."
           }
         },
@@ -2891,7 +2948,7 @@
               "remedy": "Erteilen Sie in der Azure-App-Registrierung die Administratorzustimmung für die erforderlichen Graph-Berechtigungen (zum Beispiel TeamsActivity.Send)."
             },
             "user_not_mapped": {
-              "cause": "Der Empfänger hat sich nicht mit Microsoft bei Alga PSA angemeldet, daher besteht keine Kontozuordnung.",
+              "cause": "Der Empfänger hat sich nicht mit Microsoft bei AlgaPSA angemeldet, daher besteht keine Kontozuordnung.",
               "remedy": "Lassen Sie den Benutzer sich mit Microsoft anmelden (MSP-Portal-SSO oder die Teams-Registerkarte), damit sein Konto zugeordnet wird."
             },
             "addon_inactive": {
@@ -2908,15 +2965,15 @@
             },
             "graph_not_found": {
               "cause": "Die Teams-App ist für den Empfänger nicht installiert, daher kann Microsoft Graph ihn nicht adressieren (404).",
-              "remedy": "Installieren Sie die Alga PSA-App für diesen Benutzer oder geben Sie sie organisationsweit frei."
+              "remedy": "Installieren Sie die AlgaPSA-App für diesen Benutzer oder geben Sie sie organisationsweit frei."
             },
             "graph_throttled": {
               "cause": "Microsoft Graph hat die Anfrage gedrosselt (429).",
-              "remedy": "Vorübergehend; Alga PSA wiederholt den Vorgang mit Backoff. Untersuchen Sie das Problem nur, wenn es weiterhin besteht."
+              "remedy": "Vorübergehend; AlgaPSA wiederholt den Vorgang mit Backoff. Untersuchen Sie das Problem nur, wenn es weiterhin besteht."
             },
             "graph_server_error": {
               "cause": "Microsoft Graph hat einen Serverfehler zurückgegeben (5xx).",
-              "remedy": "Vorübergehende Graph-Störung; Alga PSA wiederholt den Vorgang. Warten Sie und prüfen Sie den Microsoft-Dienststatus, wenn das Problem weiterhin besteht."
+              "remedy": "Vorübergehende Graph-Störung; AlgaPSA wiederholt den Vorgang. Warten Sie und prüfen Sie den Microsoft-Dienststatus, wenn das Problem weiterhin besteht."
             },
             "transient": {
               "cause": "Ein vorübergehender Fehler (Netzwerk oder Timeout) hat die Zustellung unterbrochen.",
@@ -2933,7 +2990,7 @@
           "description": "Die Microsoft Teams-Integration erfordert das Teams-Add-on für diesen Mandanten.",
           "includedTitle": "Was enthalten ist",
           "feature": {
-            "tab": "Persönliche Registerkarte: Öffnen Sie Alga PSA in Microsoft Teams.",
+            "tab": "Persönliche Registerkarte: Öffnen Sie AlgaPSA in Microsoft Teams.",
             "bot": "Persönlicher und Gruppenchat-Bot für Tickets, Genehmigungen, Zeiten und Notizen.",
             "messageExtension": "Nachrichtenerweiterung und Schnellaktionen, um aus jeder Nachricht heraus auf PSA-Datensätze zu reagieren.",
             "meetings": "Teams-Besprechungen bei Terminbestätigungen mit echten Outlook/Teams-Kalendereinladungen.",
@@ -3077,13 +3134,13 @@
               "s1": "Gehen Sie zu Abrechnung → Buchhaltungsexporte",
               "s2": "Wählen Sie Rechnungen aus und wählen Sie „Xero CSV“ als Adapter",
               "s3": "Laden Sie die generierte CSV-Datei herunter",
-              "s4": "In Xero: Business → Invoices → Import",
+              "s4": "In Xero: Geschäft → Rechnungen → Importieren",
               "s5": "Laden Sie die CSV hoch und importieren Sie als Entwurfsrechnungen",
               "s6": "Xero berechnet die Steuer basierend auf Ihren Steuereinstellungen"
             },
             "exportInvoices": "Rechnungen exportieren",
             "import": {
-              "s1": "In Xero: Reports → All Reports → Invoice Details",
+              "s1": "In Xero: Berichte → Alle Berichte → Rechnungsdetails",
               "s2": "Datumsbereich festlegen und als CSV exportieren",
               "s3": "In Alga: Abrechnung → Buchhaltungsexporte → Steuer importieren",
               "s4": "Die Xero-Bericht-CSV hochladen",
@@ -3118,7 +3175,7 @@
         },
         "callback": {
           "accessDenied": "Der Xero-Zugriff wurde abgelehnt, bevor die Verbindung abgeschlossen werden konnte.",
-          "configMissing": "Xero OAuth konnte nicht gestartet werden, da die Tenant-Client-ID und das Client Secret nicht vollständig konfiguriert waren.",
+          "configMissing": "Xero OAuth konnte nicht gestartet werden, da die Client-ID und das Client Secret des Mandanten nicht vollständig konfiguriert waren.",
           "connectionsUnmapped": "Xero hat Organisationen zurückgegeben, aber keine enthielt die zum Speichern einer Verbindung erforderlichen Kennungen.",
           "generic": "Xero hat einen OAuth-Fehler zurückgegeben: {{code}}",
           "invalidState": "Der Xero-OAuth-Status war ungültig oder abgelaufen. Starten Sie den Verbindungs-Flow erneut.",
@@ -3127,14 +3184,14 @@
           "oauthFailed": "Der Xero-OAuth-Callback ist fehlgeschlagen. Versuchen Sie, die Verbindung erneut herzustellen. Bei weiterhin bestehendem Problem überprüfen Sie Ihre Redirect-URI und Scopes."
         },
         "clientIdLabel": "Xero Client ID",
-        "clientIdPlaceholder": "Fügen Sie Ihre tenant-eigene Xero Client ID ein",
+        "clientIdPlaceholder": "Fügen Sie Ihre mandanteneigene Xero Client ID ein",
         "clientSecretLabel": "Xero Client Secret",
-        "clientSecretPlaceholder": "Fügen Sie Ihr tenant-eigenes Xero Client Secret ein",
+        "clientSecretPlaceholder": "Fügen Sie Ihr mandanteneigenes Xero Client Secret ein",
         "connectSuccess": "Xero erfolgreich verbunden. Die erste verbundene Organisation ist nun der Standard-Live-Xero-Kontext.",
         "connection": {
           "connectionId": "Verbindungs-ID: {{id}}",
           "defaultOrganisation": "Standardorganisation",
-          "description": "Starten Sie OAuth erst, nachdem die tenant-eigene Xero-App konfiguriert ist. Beim Trennen werden gespeicherte Xero-Zugriffstoken entfernt, die tenant-eigenen App-Anmeldedaten bleiben jedoch erhalten.",
+          "description": "Starten Sie OAuth erst, nachdem die mandanteneigene Xero-App konfiguriert ist. Beim Trennen werden gespeicherte Xero-Zugriffstoken entfernt, die mandanteneigenen App-Anmeldedaten bleiben jedoch erhalten.",
           "notConnected": "Es ist noch keine Live-Xero-Organisation verbunden. Speichern Sie die Anmeldedaten und klicken Sie anschließend auf „Xero verbinden“.",
           "title": "Live-Xero-Verbindung",
           "unknown": "unbekannt"
@@ -3143,14 +3200,14 @@
         "csvAvailableMiddle": "in diesem Buchhaltungsbereich und verwalten Sie Exporte über",
         "csvAvailablePrefix": "Wenn Sie einen manuellen Workflow bevorzugen, verwenden Sie weiterhin",
         "csvAvailableTitle": "Xero CSV bleibt verfügbar",
-        "description": "Konfigurieren Sie tenant-eigene Xero-OAuth-Anmeldedaten, verbinden Sie Ihre Standardorganisation und halten Sie Live-Xero parallel zum manuellen Xero-CSV-Workflow verfügbar.",
-        "disconnectSuccess": "Die gespeicherte Xero-Verbindung wurde entfernt. Tenant-eigene Xero-App-Anmeldedaten wurden beibehalten.",
+        "description": "Konfigurieren Sie mandanteneigene Xero-OAuth-Anmeldedaten, verbinden Sie Ihre Standardorganisation und halten Sie Live-Xero parallel zum manuellen Xero-CSV-Workflow verfügbar.",
+        "disconnectSuccess": "Die gespeicherte Xero-Verbindung wurde entfernt. Mandanteneigene Xero-App-Anmeldedaten wurden beibehalten.",
         "errors": {
           "disconnect": "Xero konnte nicht getrennt werden.",
           "load": "Xero-Einstellungen konnten nicht geladen werden.",
           "saveCredentials": "Xero-Anmeldedaten konnten nicht gespeichert werden."
         },
-        "howItWorksDescription": "Speichern Sie hier eine tenant-eigene Xero Client ID und ein Client Secret, schließen Sie den Xero-OAuth-Flow ab, und Alga PSA verwendet die erste verbundene Xero-Organisation als Standard-Live-Kontext.",
+        "howItWorksDescription": "Speichern Sie hier eine mandanteneigene Xero Client ID und ein Client Secret, schließen Sie den Xero-OAuth-Flow ab, und AlgaPSA verwendet die erste verbundene Xero-Organisation als Standard-Live-Kontext.",
         "howItWorksTitle": "So funktioniert Live-Xero in dieser Version",
         "loading": "Xero-Einstellungen werden geladen…",
         "mapping": {
@@ -3160,20 +3217,20 @@
           "placeholderDescription": "Verbinden Sie eine Live-Xero-Organisation, bevor Sie Live-Xero-Artikel- und Steuer-Zuordnungen konfigurieren.",
           "title": "Live-Xero-Zuordnung & -Konfiguration"
         },
-        "noClientId": "Für diesen Tenant ist noch keine Client ID gespeichert.",
-        "noClientSecret": "Für diesen Tenant ist noch kein Client Secret gespeichert.",
+        "noClientId": "Für diesen Mandanten ist noch keine Client ID gespeichert.",
+        "noClientSecret": "Für diesen Mandanten ist noch kein Client Secret gespeichert.",
         "redirectUri": "Redirect URI",
         "requiredScopes": "Erforderliche Scopes",
         "storedClientId": "Gespeicherte Client ID: {{value}}",
         "storedClientSecret": "Gespeichertes Client Secret: {{value}}",
-        "tenantOauthDescription": "Fügen Sie die für diesen Tenant registrierten Xero-App-Anmeldedaten ein. Secret-Werte werden nach dem Speichern nicht mehr an den Browser zurückgegeben.",
-        "tenantOauthTitle": "Tenant-eigene OAuth-App",
+        "tenantOauthDescription": "Fügen Sie die für diesen Mandanten registrierten Xero-App-Anmeldedaten ein. Secret-Werte werden nach dem Speichern nicht mehr an den Browser zurückgegeben.",
+        "tenantOauthTitle": "Mandanteneigene OAuth-App",
         "title": "Xero",
         "xeroCsv": "Xero CSV"
       }
     },
     "stripe": {
-      "title": "Stripe Payments",
+      "title": "Stripe-Zahlungen",
       "description": "Akzeptieren Sie Kreditkartenzahlungen für Ihre Rechnungen",
       "connected": {
         "title": "Stripe verbunden",
@@ -3190,17 +3247,17 @@
         "cancel": "Abbrechen"
       },
       "form": {
-        "secretKeyLabel": "Secret Key",
+        "secretKeyLabel": "Geheimer Schlüssel",
         "secretKeyPlaceholder": "sk_live_... oder sk_test_...",
-        "publishableKeyLabel": "Publishable Key",
+        "publishableKeyLabel": "Veröffentlichbarer Schlüssel",
         "publishableKeyPlaceholder": "pk_live_... oder pk_test_...",
         "findKeyPrefix": "Finden Sie dies in Ihrem",
-        "dashboardLink": "Stripe Dashboard → API Keys"
+        "dashboardLink": "Stripe-Dashboard → API-Schlüssel"
       },
       "webhook": {
         "heading": "Webhook-Konfiguration",
         "configuredAutomatically": "Webhooks automatisch konfiguriert",
-        "receiveNotifications": "Alga PSA erhält Zahlungsbenachrichtigungen für:",
+        "receiveNotifications": "AlgaPSA erhält Zahlungsbenachrichtigungen für:",
         "failedTitle": "Webhook-Konfiguration fehlgeschlagen",
         "failedBody": "Die automatische Webhook-Konfiguration ist fehlgeschlagen. Klicken Sie auf Erneut versuchen, um die Konfiguration erneut zu versuchen.",
         "configuring": "Wird konfiguriert...",
@@ -3232,15 +3289,15 @@
     },
     "providersWorkbench": {
       "badges": {
-        "loading": "Loading",
-        "needsAttention": "Needs attention",
-        "needsSetup": "Needs setup",
-        "notConfigured": "Not configured",
-        "ready": "Ready"
+        "loading": "Wird geladen",
+        "needsAttention": "Erfordert Aufmerksamkeit",
+        "needsSetup": "Einrichtung erforderlich",
+        "notConfigured": "Nicht konfiguriert",
+        "ready": "Bereit"
       },
       "descriptionCe": "Set up the provider path your tenant uses. Configure both only when email or SSO workflows require both ecosystems.",
       "descriptionEe": "Set up the provider path your tenant uses. Configure both only when email, calendar, SSO, or Teams workflows require both ecosystems.",
-      "eyebrow": "Provider setup",
+      "eyebrow": "Anbietereinrichtung",
       "google": {
         "description": "Gmail inbound email and Google Calendar.",
         "label": "Google"

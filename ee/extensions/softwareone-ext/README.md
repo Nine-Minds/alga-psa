@@ -1,6 +1,6 @@
 # SoftwareOne Extension (Enterprise)
 
-This package adds SoftwareOne navigation, settings, agreements, and statements UI to Alga PSA. Delivery is v2‑only via the runner/iframe architecture using the v2 manifest and bundle.
+This package adds SoftwareOne navigation, settings, agreements, and statements UI to AlgaPSA. Delivery is v2‑only via the runner/iframe architecture using the v2 manifest and bundle.
 
 ## Current State
 - UI is a mix of JSON descriptors (navigation, settings page) and React pages/components (agreements, statements, details), built with Vite.

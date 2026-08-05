@@ -1,7 +1,7 @@
 [
   {
     "id": "T001",
-    "description": "Verify root layout generateMetadata() returns title object with template '%s | Alga PSA' and default 'Alga PSA'",
+    "description": "Verify root layout generateMetadata() returns title object with template '%s | AlgaPSA' and default 'AlgaPSA'",
     "implemented": true,
     "featureIds": [
       "F001"
@@ -9,7 +9,7 @@
   },
   {
     "id": "T002",
-    "description": "Verify MSP layout exports metadata with template '%s | Alga PSA' and default 'Dashboard | Alga PSA'",
+    "description": "Verify MSP layout exports metadata with template '%s | AlgaPSA' and default 'Dashboard | AlgaPSA'",
     "implemented": true,
     "featureIds": [
       "F002"
@@ -25,7 +25,7 @@
   },
   {
     "id": "T004",
-    "description": "Verify Auth layout exports metadata with template '%s | Alga PSA' and default 'Sign In | Alga PSA'",
+    "description": "Verify Auth layout exports metadata with template '%s | AlgaPSA' and default 'Sign In | AlgaPSA'",
     "implemented": true,
     "featureIds": [
       "F004"
@@ -33,7 +33,7 @@
   },
   {
     "id": "T005",
-    "description": "Verify Static layout exports metadata with default 'Alga PSA'",
+    "description": "Verify Static layout exports metadata with default 'AlgaPSA'",
     "implemented": true,
     "featureIds": [
       "F005"

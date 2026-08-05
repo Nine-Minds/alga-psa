@@ -1,11 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { TFunction } from 'i18next';
 import { unsubscribeEnrollmentInternal } from '@alga-psa/marketing/lib';
 import { resolvePublicMarketingTenant } from '@/lib/marketing/publicEndpoints';
+import { getServerLocale, getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import logger from '@alga-psa/core/logger';
 
-function htmlPage(title: string, message: string): string {
+interface PageStrings {
+  locale: string;
+  t: TFunction;
+}
+
+/**
+ * Resolve the language for the recipient of a marketing email.
+ *
+ * Always passes an options object so the hierarchical (session-backed)
+ * resolver is skipped — this endpoint is public and the visitor has no Alga
+ * session. That leaves: locale cookie → tenant client-portal default → tenant
+ * default → Accept-Language → English. Deliberately does NOT consult the
+ * enrollment/contact: the GET never looks the enrollment up (so link-scanning
+ * mail clients cannot probe for existence), and resolving per-contact here
+ * would turn the page's language into exactly that existence oracle.
+ */
+async function pageStrings(tenantId?: string): Promise<PageStrings> {
+  const locale = await getServerLocale({ tenantId });
+  const { t } = await getServerTranslation(locale, 'common');
+  return { locale, t };
+}
+
+function htmlPage({ locale }: PageStrings, title: string, message: string): string {
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${locale}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -36,16 +60,24 @@ function htmlResponse(html: string, status = 200): NextResponse {
   });
 }
 
-function confirmPage(): string {
+function unavailablePage(strings: PageStrings): string {
+  return htmlPage(
+    strings,
+    strings.t('pages.unsubscribe.unavailableTitle'),
+    strings.t('pages.unsubscribe.unavailableDescription')
+  );
+}
+
+function confirmPage({ locale, t }: PageStrings): string {
   // Same visual shell as htmlPage, plus the POST form — the GET must never
   // mutate (mail scanners prefetch every link in an email), so the actual
   // unsubscribe is behind this button.
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${locale}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Unsubscribe</title>
+  <title>${t('pages.unsubscribe.pageTitle')}</title>
   <style>
     body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -60,10 +92,10 @@ function confirmPage(): string {
 </head>
 <body>
   <div class="card">
-    <h1>Unsubscribe from these emails?</h1>
-    <p>You will no longer receive marketing emails at this address.</p>
+    <h1>${t('pages.unsubscribe.confirmTitle')}</h1>
+    <p>${t('pages.unsubscribe.confirmDescription')}</p>
     <form method="post">
-      <button type="submit">Unsubscribe</button>
+      <button type="submit">${t('pages.unsubscribe.confirmAction')}</button>
     </form>
   </div>
 </body>
@@ -86,13 +118,10 @@ export async function GET(
 
   const ctx = await resolvePublicMarketingTenant(tenantParam);
   if (!ctx) {
-    return htmlResponse(
-      htmlPage('Link unavailable', 'This link is no longer valid.'),
-      404
-    );
+    return htmlResponse(unavailablePage(await pageStrings()), 404);
   }
 
-  return htmlResponse(confirmPage());
+  return htmlResponse(confirmPage(await pageStrings(ctx.tenantId)));
 }
 
 /**
@@ -113,31 +142,30 @@ export async function POST(
 
   const ctx = await resolvePublicMarketingTenant(tenantParam);
   if (!ctx) {
-    return htmlResponse(
-      htmlPage('Link unavailable', 'This link is no longer valid.'),
-      404
-    );
+    return htmlResponse(unavailablePage(await pageStrings()), 404);
   }
+
+  const strings = await pageStrings(ctx.tenantId);
 
   try {
     const result = await unsubscribeEnrollmentInternal(ctx.knex, ctx.tenantId, enrollmentId);
     if (!result) {
-      return htmlResponse(
-        htmlPage('Link unavailable', 'This link is no longer valid.')
-      );
+      return htmlResponse(unavailablePage(strings));
     }
     logger.info('[marketing-unsubscribe] Enrollment unsubscribed', { tenantId: ctx.tenantId });
     return htmlResponse(
-      htmlPage("You've been unsubscribed", 'You will no longer receive these emails.')
+      htmlPage(
+        strings,
+        strings.t('pages.unsubscribe.doneTitle'),
+        strings.t('pages.unsubscribe.doneDescription')
+      )
     );
   } catch (error) {
     logger.error('[marketing-unsubscribe] Unsubscribe failed', {
       tenantId: ctx.tenantId,
       error: error instanceof Error ? error.message : 'Unknown error',
     });
-    return htmlResponse(
-      htmlPage('Link unavailable', 'This link is no longer valid.')
-    );
+    return htmlResponse(unavailablePage(strings));
   }
 }
 

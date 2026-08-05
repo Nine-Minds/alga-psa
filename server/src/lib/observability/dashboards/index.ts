@@ -1,5 +1,5 @@
 /**
- * Grafana Dashboards for Alga PSA Observability
+ * Grafana Dashboards for AlgaPSA Observability
  * 
  * Pre-built dashboards for operational monitoring using Prometheus metrics.
  * These can be imported into Grafana or provisioned automatically.
@@ -200,7 +200,7 @@ apiVersion: 1
 providers:
   - name: 'alga-psa-dashboards'
     orgId: 1
-    folder: 'Alga PSA'
+    folder: 'AlgaPSA'
     type: file
     disableDeletion: false
     updateIntervalSeconds: 30

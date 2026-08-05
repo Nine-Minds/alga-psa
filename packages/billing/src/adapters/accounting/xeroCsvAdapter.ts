@@ -15,7 +15,7 @@ import { AppError, unparseCSV } from '@alga-psa/core';
 
 /**
  * Fixed tracking category names for Xero CSV export.
- * These are used to link Xero invoices back to Alga PSA for tax import.
+ * These are used to link Xero invoices back to AlgaPSA for tax import.
  */
 const TRACKING_CATEGORY_SOURCE_SYSTEM = 'Source System';
 const TRACKING_CATEGORY_SOURCE_VALUE = 'AlgaPSA';

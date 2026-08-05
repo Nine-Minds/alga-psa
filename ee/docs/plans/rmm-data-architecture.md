@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This document defines the data management architecture for Remote Monitoring and Management (RMM) integrations in Alga PSA. The architecture establishes Alga PSA as the authoritative source of truth for asset data while supporting multiple external data sources, historical tracking, and comprehensive reporting capabilities.
+This document defines the data management architecture for Remote Monitoring and Management (RMM) integrations in AlgaPSA. The architecture establishes AlgaPSA as the authoritative source of truth for asset data while supporting multiple external data sources, historical tracking, and comprehensive reporting capabilities.
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ This document defines the data management architecture for Remote Monitoring and
 
 ### Core Tenets
 
-1. **Alga PSA as Source of Truth** - Asset records in Alga PSA represent the canonical view of managed assets, aggregating data from multiple sources
+1. **AlgaPSA as Source of Truth** - Asset records in AlgaPSA represent the canonical view of managed assets, aggregating data from multiple sources
 2. **Provider Agnostic Design** - All data structures and interfaces abstract away provider-specific details
 3. **Historical Completeness** - Track changes over time for compliance, reporting, and troubleshooting
 4. **Multi-Source Support** - Architecture accommodates multiple data sources reporting on the same physical asset
@@ -31,9 +31,9 @@ This document defines the data management architecture for Remote Monitoring and
 
 ## Data Strategy
 
-### Why Alga PSA Should Store Asset Data
+### Why AlgaPSA Should Store Asset Data
 
-Alga PSA serves as the central business platform for managed service providers. Establishing data storage within Alga provides significant value:
+AlgaPSA serves as the central business platform for managed service providers. Establishing data storage within Alga provides significant value:
 
 **Unified Asset View**
 - MSPs frequently manage assets across multiple RMM platforms (e.g., different tools for different client segments)
@@ -64,7 +64,7 @@ Alga PSA serves as the central business platform for managed service providers. 
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         Alga PSA (Source of Truth)                 │
+│                         AlgaPSA (Source of Truth)                 │
 ├─────────────────────────────────────────────────────────────────────┤
 │  Asset Record                                                       │
 │  ├── Core Identity (name, serial, asset_tag)                       │

@@ -1,26 +1,16 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getClientLicenses } from '../../actions/client-portal-actions/client-licenses';
 import type { ClientLicenseContractSummary } from '../../actions/client-portal-actions/client-licenses';
-
-const transportLabels: Record<string, string> = {
-  'connected-monthly': 'Connected (monthly)',
-  'connected-annual':  'Connected (annual)',
-  'airgap-annual':     'Air-gapped (annual)',
-};
-
-const tierLabels: Record<string, string> = {
-  pro:     'Pro',
-  premium: 'Pro',
-};
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-function statusBadge(status: string) {
+function statusBadge(status: string, label: string) {
   const colors: Record<string, { bg: string; text: string }> = {
     active:      { bg: '#dcfce7', text: '#15803d' },
     inactive:    { bg: '#f3f4f6', text: '#6b7280' },
@@ -34,7 +24,7 @@ function statusBadge(status: string) {
       background: c.bg, color: c.text, fontSize: '0.78rem', fontWeight: 600,
       textTransform: 'capitalize',
     }}>
-      {status}
+      {label}
     </span>
   );
 }
@@ -48,8 +38,27 @@ function statusBadge(status: string) {
  * Route: /client-portal/licenses
  */
 export default function ClientLicensesPage() {
+  const { t } = useTranslation('client-portal');
   const [licenses, setLicenses] = useState<ClientLicenseContractSummary[] | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const transportLabels: Record<string, string> = {
+    'connected-monthly': t('licenses.transports.connectedMonthly', 'Connected (monthly)'),
+    'connected-annual':  t('licenses.transports.connectedAnnual', 'Connected (annual)'),
+    'airgap-annual':     t('licenses.transports.airgapAnnual', 'Air-gapped (annual)'),
+  };
+
+  const tierLabels: Record<string, string> = {
+    pro:     t('licenses.tiers.pro', 'Pro'),
+    premium: t('licenses.tiers.premium', 'Pro'),
+  };
+
+  const statusLabels: Record<string, string> = {
+    active:     t('licenses.statuses.active', 'Active'),
+    inactive:   t('licenses.statuses.inactive', 'Inactive'),
+    expired:    t('licenses.statuses.expired', 'Expired'),
+    terminated: t('licenses.statuses.terminated', 'Terminated'),
+  };
 
   useEffect(() => {
     getClientLicenses().then((data) => {
@@ -62,15 +71,14 @@ export default function ClientLicensesPage() {
   }, []);
 
   if (loading) {
-    return <div style={{ padding: '2rem' }}>Loading licenses…</div>;
+    return <div style={{ padding: '2rem' }}>{t('licenses.loading', 'Loading licenses…')}</div>;
   }
 
   return (
     <div style={{ padding: '2rem' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>Appliance Licenses</h1>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>{t('licenses.pageTitle', 'Appliance Licenses')}</h1>
       <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-        Your Alga appliance Pro license entitlements. Key documents are also available in the
-        Documents section.
+        {t('licenses.pageDescription', 'Your Alga appliance Pro license entitlements. Key documents are also available in the Documents section.')}
       </p>
 
       {licenses && licenses.length === 0 ? (
@@ -78,11 +86,11 @@ export default function ClientLicensesPage() {
           padding: '2rem', border: '1px dashed #e5e7eb', borderRadius: '0.5rem',
           textAlign: 'center', color: '#9ca3af',
         }}>
-          No appliance licenses found.{' '}
+          {t('licenses.empty.message', 'No appliance licenses found.')}{' '}
           <a href="/client-portal/request-services" style={{ color: '#2563eb', textDecoration: 'underline' }}>
-            Purchase a license
+            {t('licenses.empty.purchaseLink', 'Purchase a license')}
           </a>{' '}
-          to get started.
+          {t('licenses.empty.suffix', 'to get started.')}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -111,7 +119,7 @@ export default function ClientLicensesPage() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    {statusBadge(lic.status)}
+                    {statusBadge(lic.status, statusLabels[lic.status] ?? lic.status)}
                     {lic.licenseDocumentId && (
                       <a
                         href={`/client-portal/documents?highlight=${lic.licenseDocumentId}`}
@@ -120,26 +128,26 @@ export default function ClientLicensesPage() {
                           borderRadius: '0.375rem', fontSize: '0.8rem', textDecoration: 'none',
                         }}
                       >
-                        Download key
+                        {t('licenses.downloadKey', 'Download key')}
                       </a>
                     )}
                   </div>
                 </div>
 
                 <dl style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '0.25rem 1rem', marginTop: '0.75rem', fontSize: '0.875rem' }}>
-                  <dt style={{ color: '#6b7280' }}>Valid from</dt>
+                  <dt style={{ color: '#6b7280' }}>{t('licenses.validFrom', 'Valid from')}</dt>
                   <dd>{formatDate(lic.startDate)}</dd>
-                  <dt style={{ color: '#6b7280' }}>Expires</dt>
+                  <dt style={{ color: '#6b7280' }}>{t('licenses.expires', 'Expires')}</dt>
                   <dd>
                     {formatDate(lic.endDate)}
                     {expiringSoon && lic.status === 'active' && (
                       <span style={{ marginLeft: '0.5rem', color: '#92400e', fontWeight: 600, fontSize: '0.8rem' }}>
-                        ⚠ Expiring soon
+                        ⚠ {t('licenses.expiringSoon', 'Expiring soon')}
                       </span>
                     )}
                   </dd>
-                  <dt style={{ color: '#6b7280' }}>Renewal</dt>
-                  <dd style={{ textTransform: 'capitalize' }}>{lic.renewalMode === 'auto' ? 'Auto-renews' : lic.renewalMode === 'manual' ? 'Manual renewal' : '—'}</dd>
+                  <dt style={{ color: '#6b7280' }}>{t('licenses.renewal', 'Renewal')}</dt>
+                  <dd style={{ textTransform: 'capitalize' }}>{lic.renewalMode === 'auto' ? t('licenses.renewalModes.auto', 'Auto-renews') : lic.renewalMode === 'manual' ? t('licenses.renewalModes.manual', 'Manual renewal') : '—'}</dd>
                 </dl>
               </div>
             );

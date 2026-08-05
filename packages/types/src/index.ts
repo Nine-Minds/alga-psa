@@ -1,7 +1,7 @@
 /**
  * @alga-psa/types
  *
- * Shared TypeScript type definitions for Alga PSA.
+ * Shared TypeScript type definitions for AlgaPSA.
  * This module provides centralized type definitions for use across all modules.
  */
 

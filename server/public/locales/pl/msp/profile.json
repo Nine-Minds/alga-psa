@@ -7,7 +7,7 @@
       "apiKeys": "Klucze API",
       "notifications": "Powiadomienia",
       "calendar": "Kalendarz",
-      "keyboardShortcuts": "Keyboard Shortcuts"
+      "keyboardShortcuts": "Skróty klawiaturowe"
     },
     "basicInfo": {
       "title": "Podstawowe informacje"
@@ -92,7 +92,7 @@
       "policies": "Zasady",
       "apiKeys": "Klucze API",
       "webhooks": "Webhooki",
-      "userProvisioning": "User provisioning"
+      "userProvisioning": "Inicjowanie obsługi użytkowników"
     },
     "loading": {
       "roles": "Ładowanie konfiguracji ról...",
@@ -103,13 +103,13 @@
       "webhooks": "Ładowanie konfiguracji webhooków...",
       "sso": "Ładowanie narzędzi zarządzania SSO...",
       "sessions": "Ładowanie aktywnych sesji...",
-      "userProvisioning": "Loading SCIM provisioning..."
+      "userProvisioning": "Wczytywanie inicjowania obsługi SCIM..."
     },
     "sso": {
       "advanced": {
-        "title": "Advanced: custom identity provider routing",
-        "description": "Route MSP login SSO to your own identity provider using verified login domains. Only needed on custom or on-premise installations.",
-        "inertNotice": "No tenant identity provider credentials are configured, so domain claims currently have no effect. Users sign in with the hosted Google / Microsoft providers. Tenant credentials are provisioned on custom and on-premise installations."
+        "title": "Zaawansowane: niestandardowe kierowanie do dostawcy tożsamości",
+        "description": "Kieruj pojedyncze logowanie MSP do własnego dostawcy tożsamości przy użyciu zweryfikowanych domen logowania. Jest to potrzebne tylko w instalacjach niestandardowych lub lokalnych.",
+        "inertNotice": "Nie skonfigurowano poświadczeń dostawcy tożsamości organizacji, dlatego deklaracje domen nie mają obecnie żadnego skutku. Użytkownicy logują się za pośrednictwem hostowanych dostawców Google / Microsoft. Poświadczenia organizacji są udostępniane w instalacjach niestandardowych i lokalnych."
       }
     },
     "userRoles": {
@@ -220,8 +220,8 @@
       },
       "inbound": {
         "title": "Webhooki przychodzące",
-        "description": "Akceptuj uwierzytelnione żądania z systemów zewnętrznych i kieruj je do akcji bezpośrednich lub przepływów pracy.",
-        "placeholder": "Konfiguruj endpointy webhooków przychodzących, które weryfikują żądania, deduplikują dostawy i kierują je do akcji lub przepływów.",
+        "description": "Akceptuj uwierzytelnione żądania z systemów zewnętrznych i kieruj je do akcji bezpośrednich lub workflow.",
+        "placeholder": "Konfiguruj endpointy webhooków przychodzących, które weryfikują żądania, deduplikują dostawy i kierują je do akcji lub workflow.",
         "newWebhook": "Nowy webhook",
         "list": {
           "title": "Skonfigurowane webhooki przychodzące",
@@ -238,7 +238,7 @@
         },
         "handlers": {
           "directAction": "Akcja bezpośrednia",
-          "workflow": "Przepływ pracy"
+          "workflow": "Workflow"
         },
         "status": {
           "active": "Aktywny",
@@ -249,7 +249,7 @@
           "nameRequired": "Nazwa jest wymagana.",
           "slugRequired": "Slug jest wymagany.",
           "actionRequired": "Wybierz akcję przed zapisaniem.",
-          "workflowRequired": "Wybierz przepływ pracy przed zapisaniem.",
+          "workflowRequired": "Wybierz workflow przed zapisaniem.",
           "missingRequiredFields": "Przypisz wartość dla wymaganych pól: {{fields}}"
         },
         "dialog": {
@@ -326,7 +326,7 @@
           "type": "Typ obsługi",
           "types": {
             "directAction": "Akcja bezpośrednia",
-            "workflow": "Przepływ pracy"
+            "workflow": "Workflow"
           },
           "directActionTitle": "Akcja bezpośrednia",
           "directActionHelp": "Wybierz akcję przychodzącą i zmapuj pola payloadu na jej pola docelowe.",
@@ -337,18 +337,18 @@
           "required": "Wymagane",
           "optional": "Opcjonalne",
           "mappingPlaceholder": "Wpisz wyrażenie JSONata, np. payload.field",
-          "workflowTitle": "Przepływ pracy",
-          "workflowHelp": "Wybierz przepływ pracy do uruchomienia z znormalizowaną kopertą webhooka.",
-          "workflow": "Przepływ pracy",
-          "workflowPlaceholder": "Wybierz przepływ pracy",
-          "workflowEmpty": "Brak widocznych przepływów pracy w tym najemcy. Opublikuj lub odkryj przepływ pracy, aby użyć handlera przepływu.",
-          "envelopeTitle": "Koperta wejściowa przepływu pracy",
+          "workflowTitle": "Workflow",
+          "workflowHelp": "Wybierz workflow do uruchomienia z znormalizowaną kopertą webhooka.",
+          "workflow": "Workflow",
+          "workflowPlaceholder": "Wybierz workflow",
+          "workflowEmpty": "Brak widocznych workflow w tej organizacji. Opublikuj lub odkryj workflow, aby użyć handlera workflow.",
+          "envelopeTitle": "Koperta wejściowa workflow",
           "fieldTypes": {
             "string": "tekst",
             "int": "liczba całkowita",
             "number": "liczba",
-            "boolean": "boolean",
-            "enum": "enum",
+            "boolean": "wartość logiczna",
+            "enum": "wyliczenie",
             "json": "json",
             "ref": "referencja"
           }
@@ -588,7 +588,7 @@
         "descriptionPlaceholder": "np. Klucz API do rozwoju",
         "expiration": "Data wygaśnięcia (opcjonalnie)",
         "submit": "Wygeneruj nowy klucz API",
-        "createFailed": "Failed to create API key"
+        "createFailed": "Nie udało się utworzyć klucza API"
       },
       "list": {
         "title": "Twoje klucze API",
@@ -615,7 +615,7 @@
           "inactive": "Nieaktywny"
         },
         "deactivate": "Dezaktywuj",
-        "deactivateFailed": "Failed to deactivate API key"
+        "deactivateFailed": "Nie udało się dezaktywować klucza API"
       },
       "newKeyDialog": {
         "title": "Klucz API wygenerowany",
@@ -625,79 +625,90 @@
         "copySuccess": "Klucz API skopiowany do schowka!",
         "copyFailed": "Nie udało się skopiować klucza API do schowka",
         "downloadFailed": "Nie udało się pobrać klucza API"
+      },
+      "admin": {
+        "title": "Administracja kluczami API",
+        "searchPlaceholder": "Szukaj według użytkownika lub opisu",
+        "columns": {
+          "user": "Użytkownik"
+        },
+        "errors": {
+          "loadFailed": "Nie udało się załadować kluczy API. Sprawdź, czy masz uprawnienia administratora.",
+          "deactivateFailed": "Nie udało się dezaktywować klucza API. Sprawdź, czy masz uprawnienia administratora."
+        }
       }
     },
     "scim": {
-      "title": "User provisioning",
-      "description": "Let Microsoft Entra deactivate and reactivate existing internal users. Alga remains authoritative for profiles, roles, teams, and licenses.",
-      "loading": "Loading user provisioning",
+      "title": "Inicjowanie obsługi użytkowników",
+      "description": "Pozwól usłudze Microsoft Entra dezaktywować i ponownie aktywować istniejących użytkowników wewnętrznych. Alga pozostaje źródłem nadrzędnym dla profili, ról, zespołów i licencji.",
+      "loading": "Wczytywanie inicjowania obsługi użytkowników",
       "status": {
-        "enabled": "Accepting requests",
-        "disabled": "Provisioning paused"
+        "enabled": "Przyjmowanie żądań",
+        "disabled": "Inicjowanie obsługi wstrzymane"
       },
       "errors": {
-        "load": "Unable to load SCIM provisioning.",
-        "update": "Unable to update SCIM provisioning."
+        "load": "Nie udało się wczytać inicjowania obsługi SCIM.",
+        "update": "Nie udało się zaktualizować inicjowania obsługi SCIM."
       },
       "upgrade": {
-        "title": "Directory lifecycle provisioning",
-        "description": "SCIM user provisioning is available on Pro and higher plans."
+        "title": "Inicjowanie obsługi cyklu życia w katalogu",
+        "description": "Inicjowanie obsługi użytkowników SCIM jest dostępne w planie Pro i planach wyższych."
       },
       "setup": {
-        "title": "Connect Microsoft Entra",
-        "description": "Generate a tenant-specific endpoint and one-time bearer token. No Alga users are created by SCIM.",
-        "create": "Generate connection"
+        "title": "Połącz z Microsoft Entra",
+        "description": "Wygeneruj punkt końcowy właściwy dla organizacji i jednorazowy token bearer. SCIM nie tworzy użytkowników Alga.",
+        "create": "Wygeneruj połączenie"
       },
       "connection": {
-        "title": "Entra connection",
-        "description": "Use these values in the Provisioning section of your Entra enterprise application.",
-        "url": "Tenant URL",
-        "copyUrl": "Copy tenant URL",
-        "oneTimeToken": "Copy this token now",
-        "oneTimeWarning": "For security, Alga cannot show this value again.",
-        "rotate": "Rotate token",
-        "revokePrevious": "End token overlap",
-        "enabled": "Accept provisioning requests",
-        "disableWarning": "Pausing preserves every link and current user state."
+        "title": "Połączenie Entra",
+        "description": "Użyj tych wartości w sekcji Inicjowanie obsługi aplikacji dla przedsiębiorstw w Entra.",
+        "url": "Adres URL organizacji",
+        "copyUrl": "Skopiuj adres URL organizacji",
+        "oneTimeToken": "Skopiuj ten token teraz",
+        "oneTimeWarning": "Ze względów bezpieczeństwa Alga nie może ponownie wyświetlić tej wartości.",
+        "rotate": "Rotuj token",
+        "revokePrevious": "Zakończ okres nakładania się tokenów",
+        "enabled": "Przyjmuj żądania inicjowania obsługi",
+        "disableWarning": "Wstrzymanie zachowuje wszystkie powiązania i bieżący stan użytkowników."
       },
       "health": {
-        "title": "Connection health",
-        "lastRequest": "Last authenticated request",
-        "lastSuccess": "Last success",
-        "tokenAge": "Current token created",
-        "lastError": "Last error"
+        "title": "Kondycja połączenia",
+        "lastRequest": "Ostatnie uwierzytelnione żądanie",
+        "lastSuccess": "Ostatnie powodzenie",
+        "tokenAge": "Utworzenie bieżącego tokenu",
+        "lastError": "Ostatni błąd"
       },
       "mapping": {
-        "title": "Entra attribute mapping",
-        "description": "Keep Entra defaults for userName, externalId, active, names, title, and emails. Only active controls Alga access.",
-        "match": "Initial match",
-        "matchValue": "Exact primary email only",
-        "scope": "Provisioning scope",
-        "scopeValue": "Assigned users and groups",
-        "unsupported": "Not supported",
-        "unsupportedValue": "Groups, passwords, roles, teams"
+        "title": "Mapowanie atrybutów Entra",
+        "description": "Zachowaj wartości domyślne Entra dla userName, externalId, active, names, title i emails. Tylko atrybut active kontroluje dostęp do Alga.",
+        "match": "Początkowe dopasowanie",
+        "matchValue": "Tylko dokładnie pasujący główny adres e-mail",
+        "scope": "Zakres inicjowania obsługi",
+        "scopeValue": "Przypisani użytkownicy i grupy",
+        "unsupported": "Nieobsługiwane",
+        "unsupportedValue": "Grupy, hasła, role, zespoły"
       },
       "links": {
-        "title": "Managed users",
-        "user": "Alga user",
-        "directory": "Directory identity",
-        "state": "State",
-        "action": "Action",
-        "drift": "Email drift",
-        "active": "Upstream active",
-        "inactive": "Upstream inactive",
-        "accessOn": "Access enabled",
-        "accessOff": "Access disabled",
-        "unlink": "Unlink",
-        "empty": "No directory identities have linked yet."
+        "title": "Zarządzani użytkownicy",
+        "user": "Użytkownik Alga",
+        "directory": "Tożsamość katalogowa",
+        "state": "Stan",
+        "action": "Działanie",
+        "drift": "Rozbieżność adresu e-mail",
+        "active": "Aktywny w źródle nadrzędnym",
+        "inactive": "Nieaktywny w źródle nadrzędnym",
+        "accessOn": "Dostęp włączony",
+        "accessOff": "Dostęp wyłączony",
+        "unlink": "Odłącz",
+        "empty": "Nie powiązano jeszcze żadnych tożsamości katalogowych."
       },
       "unresolved": {
-        "title": "Needs review",
-        "description": "These identities were rejected without changing an Alga user."
+        "title": "Wymaga sprawdzenia",
+        "description": "Te tożsamości odrzucono bez zmiany użytkownika Alga."
       },
       "state": {
-        "active": "Active upstream",
-        "inactive": "Inactive upstream"
+        "active": "Aktywny w źródle nadrzędnym",
+        "inactive": "Nieaktywny w źródle nadrzędnym"
       }
     }
   },

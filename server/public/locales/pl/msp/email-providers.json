@@ -13,7 +13,7 @@
       "resyncStarted": "Rozpoczęto ponowną synchronizację dla {{providerName}}.",
       "resyncRecovered": "Ponownie połączono z {{providerName}}.",
       "enterpriseOnly": "Przychodząca poczta e-mail usługi Microsoft 365 jest dostępna tylko w Pro.",
-      "loadProvidersError": "Failed to load email providers"
+      "loadProvidersError": "Nie udało się wczytać dostawców poczty e-mail"
     },
     "editDrawer": {
       "title": "Edytuj dostawcę poczty e-mail",
@@ -42,8 +42,8 @@
       "title": "Instrukcje konfiguracji",
       "microsoft": {
         "title": "Konfiguracja Microsoft 365",
-        "providersPointer": "Microsoft app setup is managed in Providers.",
-        "openProviders": "Open Providers"
+        "providersPointer": "Konfiguracją aplikacji Microsoft zarządza się w sekcji Dostawcy.",
+        "openProviders": "Otwórz Dostawców"
       },
       "gmail": {
         "title": "Konfiguracja Gmaila",
@@ -250,7 +250,7 @@
     },
     "microsoft": {
       "hostedOauth": {
-        "sectionTitle": "Connect Microsoft 365"
+        "sectionTitle": "Połącz z Microsoft 365"
       },
       "validation": {
         "providerNameRequired": "Nazwa konfiguracji jest wymagana",
@@ -277,11 +277,11 @@
         "providerNameHelp": "Wewnętrzna nazwa służąca do identyfikacji tej konfiguracji. Nie jest pokazywana w wiadomościach wychodzących.",
         "senderDisplayNameLabel": "Wyświetlana nazwa nadawcy",
         "senderDisplayNamePlaceholder": "np. Acme Support",
-        "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails. It applies when this mailbox matches the configured outbound ticketing address. Leave blank to use the ticket board name."
+        "senderDisplayNameHelp": "Nazwa wyświetlana w nagłówku Od wychodzących wiadomości e-mail dotyczących zgłoszeń. Ma zastosowanie, gdy ta skrzynka pocztowa jest zgodna ze skonfigurowanym adresem do wysyłania zgłoszeń pocztą e-mail. Pozostaw puste pole, aby użyć nazwy tablicy zgłoszeń."
       },
       "oauth": {
-        "signingIn": "Signing in…",
-        "signIn": "Sign in with Microsoft"
+        "signingIn": "Logowanie…",
+        "signIn": "Zaloguj się za pomocą konta Microsoft"
       },
       "advanced": {
         "title": "Ustawienia zaawansowane",
@@ -292,12 +292,12 @@
         "maxEmailsPerSync": "Maksymalna liczba e-maili na synchronizację"
       },
       "readiness": {
-        "checking": "Checking Microsoft setup…",
-        "ready": "Microsoft is set up. Sign in as this mailbox to finish.",
-        "pending": "Waiting for your Microsoft 365 administrator. Setup was started in Providers but hasn't been approved yet.",
-        "openProviders": "Open Providers",
-        "notConfigured": "Microsoft isn't set up yet. Set it up once in Providers, then come back.",
-        "setUpInProviders": "Set up in Providers"
+        "checking": "Sprawdzanie konfiguracji Microsoft…",
+        "ready": "Microsoft jest skonfigurowany. Zaloguj się za pomocą tej skrzynki pocztowej, aby zakończyć.",
+        "pending": "Oczekiwanie na administratora Microsoft 365. Konfiguracja została rozpoczęta w sekcji Dostawcy, ale nie została jeszcze zatwierdzona.",
+        "openProviders": "Otwórz Dostawców",
+        "notConfigured": "Microsoft nie jest jeszcze skonfigurowany. Skonfiguruj go raz w sekcji Dostawcy, a następnie wróć.",
+        "setUpInProviders": "Skonfiguruj w sekcji Dostawcy"
       }
     },
     "gmail": {
@@ -305,13 +305,13 @@
         "providerNameRequired": "Nazwa konfiguracji jest wymagana",
         "gmailAddressRequired": "Wymagany jest prawidłowy adres Gmail",
         "authorizeRequiresValid": "Przed autoryzacją wypełnij wszystkie wymagane pola",
-        "googleNotConfigured": "Integracja Google nie jest skonfigurowana dla tego dzierżawcy. Najpierw skonfiguruj Google, a następnie spróbuj ponownie.",
+        "googleNotConfigured": "Integracja Google nie jest skonfigurowana dla tej organizacji. Najpierw skonfiguruj Google, a następnie spróbuj ponownie.",
         "oauthInitiateFailed": "Nie udało się zainicjować protokołu OAuth",
         "popupBlocked": "Nie udało się otworzyć wyskakującego okienka OAuth. Zezwól na wyświetlanie wyskakujących okienek w tej witrynie.",
         "closedEarly": "Okno autoryzacji zostało zamknięte przed zakończeniem.",
         "authorizationFailed": "Autoryzacja nie powiodła się",
         "popupFailed": "Wyskakujące okienko OAuth nie powiodło się",
-        "configureFailed": "Failed to configure Gmail provider"
+        "configureFailed": "Nie udało się skonfigurować dostawcy Gmail"
       },
       "messages": {
         "setupIncomplete": "Dostawca zapisany, ale konfiguracja niekompletna: {{error}}",
@@ -333,14 +333,14 @@
         "providerNameHelp": "Wewnętrzna nazwa służąca do identyfikacji tej konfiguracji. Nie jest pokazywana w wiadomościach wychodzących.",
         "senderDisplayNameLabel": "Wyświetlana nazwa nadawcy",
         "senderDisplayNamePlaceholder": "np. Acme Support",
-        "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń najemcy. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
+        "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń organizacji. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
       },
       "oauth": {
         "sectionTitle": "OAuth Google",
-        "sectionDescription": "Korzysta z aplikacji Google należącej do dzierżawcy, skonfigurowanej w Ustawieniach → Integracje → Dostawcy.",
+        "sectionDescription": "Korzysta z aplikacji Google należącej do organizacji, skonfigurowanej w Ustawieniach → Integracje → Dostawcy.",
         "setupLabel": "Konsola chmurowa Google",
-        "notConfigured": "Integracja Google nie jest skonfigurowana dla tego dzierżawcy.",
-        "setupHelp": "Najpierw skonfiguruj należącą do dzierżawcy usługę Google OAuth + Pub/Sub: Ustawienia → Integracje → Dostawcy.",
+        "notConfigured": "Integracja Google nie jest skonfigurowana dla tej organizacji.",
+        "setupHelp": "Najpierw skonfiguruj usługę Google OAuth + Pub/Sub należącą do organizacji: Ustawienia → Integracje → Dostawcy.",
         "openSettings": "Otwórz Ustawienia Google",
         "requiredTitle": "Wymagana autoryzacja OAuth",
         "stepTitle": "Krok 1: Autoryzacja OAuth",
@@ -383,7 +383,7 @@
         "providerNameHelp": "Wewnętrzna nazwa służąca do identyfikacji tej konfiguracji. Nie jest pokazywana w wiadomościach wychodzących.",
         "senderDisplayName": "Wyświetlana nazwa nadawcy",
         "senderDisplayNamePlaceholder": "np. Acme Support",
-        "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń najemcy. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
+        "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń organizacji. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
       },
       "auth": {
         "title": "Uwierzytelnianie",
@@ -441,8 +441,8 @@
       "passwordLabel": "Hasło / hasło do aplikacji",
       "authorizeUrl": "Autoryzuj adres URL",
       "tokenUrl": "Adres URL tokena",
-      "oauthClientId": "OAuth Client ID",
-      "oauthClientSecret": "OAuth Client Secret",
+      "oauthClientId": "Identyfikator klienta OAuth",
+      "oauthClientSecret": "Klucz tajny klienta OAuth",
       "oauthScopes": "Zakresy OAuth",
       "oauthScopesPlaceholder": "zakresy rozdzielone spacjami",
       "folderFilters": "Filtry folderów",
@@ -455,7 +455,7 @@
       "providerNameHelp": "Wewnętrzna nazwa służąca do identyfikacji tej konfiguracji. Nie jest pokazywana w wiadomościach wychodzących.",
       "senderDisplayName": "Wyświetlana nazwa nadawcy",
       "senderDisplayNamePlaceholder": "np. Acme Support",
-      "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń najemcy. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
+      "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń organizacji. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
     },
     "authOptions": {
       "password": "Hasło",
@@ -520,7 +520,7 @@
       "providerNameHelp": "Wewnętrzna nazwa służąca do identyfikacji tej konfiguracji. Nie jest pokazywana w wiadomościach wychodzących.",
       "senderDisplayNameLabel": "Wyświetlana nazwa nadawcy",
       "senderDisplayNamePlaceholder": "np. Acme Support",
-      "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń najemcy. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
+      "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń organizacji. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
     },
     "oauth": {
       "connectionTitle": "Połączenie Microsoft 365",
@@ -727,7 +727,7 @@
       "domainRemovalScheduledWithClear": "Zaplanowano usunięcie domeny i wyczyszczono adres nadawcy zgłoszeń",
       "removeDomainFailed": "Nie udało się usunąć domeny",
       "testOutboundFailed": "Nie udało się przetestować poczty wychodzącej",
-      "senderIdentitiesUpdated": "Sender identities updated."
+      "senderIdentitiesUpdated": "Zaktualizowano tożsamości nadawców."
     },
     "tabs": {
       "inboundEmail": "Poczta przychodząca",
@@ -741,7 +741,7 @@
       "providerOptions": {
         "resend": "Zarządzany Nine Minds",
         "smtp": "SMTP",
-        "microsoft": "Microsoft 365 (Microsoft Graph)"
+        "microsoft": "Microsoft 365 (interfejs Microsoft Graph)"
       },
       "resendDescription": "Wiadomości są wysyłane przez zarządzaną infrastrukturę Nine Minds. Dodaj i zweryfikuj niestandardową domenę poniżej.",
       "smtpDescription": "Wiadomości są wysyłane przez Twój własny serwer SMTP.",
@@ -824,36 +824,36 @@
       },
       "senderIdentities": {
         "ticket": {
-          "title": "Ticket email identity",
-          "description": "Replies to ticket emails must return to this address so they can be matched and added to the ticket. Use a connected, monitored inbox.",
-          "connectedInboxLabel": "Connected inbox",
-          "connectedInboxHelp": "A connected inbox keeps client replies in the ticket conversation.",
-          "customAddressOption": "Use another address",
-          "addressLabel": "From address",
+          "title": "Tożsamość nadawcy zgłoszeń",
+          "description": "Odpowiedzi na wiadomości e-mail dotyczące zgłoszeń muszą wracać na ten adres, aby można je było dopasować i dodać do zgłoszenia. Użyj podłączonej, monitorowanej skrzynki odbiorczej.",
+          "connectedInboxLabel": "Podłączona skrzynka odbiorcza",
+          "connectedInboxHelp": "Podłączona skrzynka odbiorcza zachowuje odpowiedzi klientów w konwersacji dotyczącej zgłoszenia.",
+          "customAddressOption": "Użyj innego adresu",
+          "addressLabel": "Adres nadawcy",
           "addressPlaceholder": "support@example.com",
-          "addressHelp": "This address controls reply routing for ticket email only.",
-          "microsoftAddressHelp": "Microsoft 365 requires ticket email to use the selected sending mailbox ({{mailbox}}).",
-          "nameLabel": "Sender display name",
-          "namePlaceholder": "Support",
-          "nameHelp": "Leave blank to use the connected mailbox name or ticket board name."
+          "addressHelp": "Ten adres steruje routingiem odpowiedzi tylko dla wiadomości e-mail dotyczących zgłoszeń.",
+          "microsoftAddressHelp": "Microsoft 365 wymaga, aby wiadomości e-mail dotyczące zgłoszeń korzystały z wybranej skrzynki nadawczej ({{mailbox}}).",
+          "nameLabel": "Wyświetlana nazwa nadawcy",
+          "namePlaceholder": "Pomoc techniczna",
+          "nameHelp": "Pozostaw puste, aby użyć nazwy podłączonej skrzynki pocztowej lub tablicy zgłoszeń."
         },
         "notification": {
-          "title": "All other email identity",
-          "description": "Brand portal invitations, password resets, invoices, project updates, and general notifications independently from ticket routing.",
-          "addressLabel": "From address",
+          "title": "Tożsamość nadawcy pozostałej poczty",
+          "description": "Oddziel identyfikację nadawcy zaproszeń do portalu, wiadomości o resetowaniu haseł, faktur, aktualizacji projektów i ogólnych powiadomień od routingu zgłoszeń.",
+          "addressLabel": "Adres nadawcy",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "This is the branding address used for non-ticket email through your SMTP server.",
-          "lockedAddressHelp": "This address is determined by the active managed domain or selected Microsoft 365 mailbox.",
-          "nameLabel": "Sender display name",
-          "namePlaceholder": "Your company name",
-          "nameHelp": "Leave blank to use {{company}} automatically.",
-          "companyFallback": "your tenant company"
+          "smtpAddressHelp": "To adres marki używany przez serwer SMTP do wysyłania wiadomości e-mail niezwiązanych ze zgłoszeniami.",
+          "lockedAddressHelp": "Ten adres wynika z aktywnej domeny zarządzanej lub wybranej skrzynki pocztowej Microsoft 365.",
+          "nameLabel": "Wyświetlana nazwa nadawcy",
+          "namePlaceholder": "Nazwa Twojej firmy",
+          "nameHelp": "Pozostaw puste. Automatyczna nazwa: {{company}}.",
+          "companyFallback": "Twoja organizacja"
         },
-        "warningTitle": "Check reply routing",
-        "errorTitle": "Fix the ticket identity",
-        "clearButton": "Clear ticket identity",
-        "savingButton": "Saving...",
-        "saveButton": "Save sender identities"
+        "warningTitle": "Sprawdź routing odpowiedzi",
+        "errorTitle": "Popraw tożsamość nadawcy zgłoszeń",
+        "clearButton": "Wyczyść tożsamość nadawcy zgłoszeń",
+        "savingButton": "Zapisywanie...",
+        "saveButton": "Zapisz tożsamości nadawców"
       }
     },
     "inbound": {
@@ -883,7 +883,7 @@
       "customAddressThreadWarning": "Użycie niestandardowego adresu może uniemożliwić prawidłowe grupowanie odpowiedzi przychodzących.",
       "smtpDomainMismatchWarning": "Ta domena nie pasuje do domeny nadawcy Twojego SMTP ({{domain}}). Wiadomości mogą nie zostać dostarczone lub zostać oznaczone jako spam, jeśli Twój serwer SMTP nie jest autoryzowany do wysyłania z tej domeny.",
       "notConnectedWarning": "Przetwarzanie przychodzących zgłoszeń może nie działać z tym adresem, ponieważ nie jest to jedna z Twoich podłączonych skrzynek.",
-      "microsoftMustMatchMailbox": "Ticket email address must match the selected Microsoft 365 mailbox ({{mailbox}})."
+      "microsoftMustMatchMailbox": "Adres e-mail dla zgłoszeń musi być zgodny z wybraną skrzynką pocztową Microsoft 365 ({{mailbox}})."
     },
     "domainList": {
       "loading": "Ładowanie domen…",
@@ -924,7 +924,7 @@
       "mismatchHelp": "Rekord DNS istnieje, ale wartość nie pasuje do tego, czego oczekuje Resend.",
       "matchedHelp": "Wykryta wartość pasuje do oczekiwanej.",
       "unknownHelp": "Nie sprawdziliśmy jeszcze DNS. Sprawdź DNS ponownie, aby uruchomić weryfikację.",
-      "hostLabel": "Host",
+      "hostLabel": "Nazwa hosta",
       "fqdnLabel": "Pełna nazwa",
       "valueLabel": "Wartość",
       "copyHostAriaLabel": "Kopiuj host",
@@ -1046,7 +1046,7 @@
       "skip": "Pomiń e-mail (bez zgłoszenia)"
     },
     "tester": {
-      "alias": "alias",
+      "alias": "alias adresu",
       "aliasAdd": "Dodaj alias",
       "aliasAdded": "Dodano alias. Uruchom test ponownie, aby zobaczyć dopasowanie.",
       "aliasAdding": "Dodawanie…",

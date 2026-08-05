@@ -12,7 +12,7 @@ Tier hierarchy: **Solo < Pro < Premium**. CE build is unaffected.
 
 ## Problem
 
-New single-user MSP operators or freelancers need an affordable entry point into Alga PSA. The current Pro tier (base + per-user pricing) is priced for teams. There's no way to offer a stripped-down, single-user plan without creating a new tier.
+New single-user MSP operators or freelancers need an affordable entry point into AlgaPSA. The current Pro tier (base + per-user pricing) is priced for teams. There's no way to offer a stripped-down, single-user plan without creating a new tier.
 
 Additionally, AI capabilities have different cost structures than core features and should be purchasable independently of tier level, allowing any customer to add AI when they need it.
 
@@ -39,7 +39,7 @@ Additionally, AI capabilities have different cost structures than core features 
 
 ### Personas
 
-1. **Solo user (new signup)**: Freelance MSP / solo technician signing up for Alga PSA. Wants tickets, billing, scheduling, basic asset management. May later want AI or to grow the team (upgrade to Pro).
+1. **Solo user (new signup)**: Freelance MSP / solo technician signing up for AlgaPSA. Wants tickets, billing, scheduling, basic asset management. May later want AI or to grow the team (upgrade to Pro).
 2. **Pro user considering downgrade**: Existing Pro user who is the only active user and wants to save money by dropping to Solo.
 3. **Any-tier user wanting AI**: Customer on any plan who wants to purchase the AI Assistant add-on.
 

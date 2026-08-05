@@ -12,7 +12,7 @@
           "selectExternal": "Selecteer {{field}}."
         },
         "manualEntryHelp": "Voer de identifier exact in zoals deze verschijnt in uw boekhoudsysteem.",
-        "metadataLabel": "Metadata (JSON)",
+        "metadataLabel": "Metagegevens (JSON)",
         "metadataPlaceholder": "Optionele metadata als JSON",
         "realmIdLabel": "Realm-ID",
         "saveMapping": "Toewijzing opslaan",
@@ -51,7 +51,7 @@
         },
         "highlights": {
           "delivery": "Levering",
-          "export": "Export",
+          "export": "Exporteren",
           "format": "Formaat",
           "sync": "Synchronisatie"
         },
@@ -115,8 +115,8 @@
           "dialog": {
             "cancel": "Annuleren",
             "confirm": "Vergrendeling resetten",
-            "confirmBatch": "Hierdoor kan Alga PSA facturen uit batch {{batchId}} opnieuw exporteren. Als sommige van deze facturen nog bestaan in QuickBooks, kan het importeren van de CSV duplicaten creëren.",
-            "confirmInvoice": "Hierdoor kan Alga PSA factuur {{invoiceNumber}} opnieuw exporteren. Als deze factuur nog bestaat in QuickBooks, kan het importeren van de CSV duplicaten creëren.",
+            "confirmBatch": "Hierdoor kan AlgaPSA facturen uit batch {{batchId}} opnieuw exporteren. Als sommige van deze facturen nog bestaan in QuickBooks, kan het importeren van de CSV duplicaten creëren.",
+            "confirmInvoice": "Hierdoor kan AlgaPSA factuur {{invoiceNumber}} opnieuw exporteren. Als deze factuur nog bestaat in QuickBooks, kan het importeren van de CSV duplicaten creëren.",
             "resetting": "Resetten…",
             "title": "Exportvergrendeling resetten?",
             "warning": "Ga alleen door als u zeker weet dat de factuur niet is geïmporteerd, of als u deze hebt verwijderd/geannuleerd in QuickBooks."
@@ -202,7 +202,7 @@
         },
         "qbo": {
           "bullets": {
-            "exportLabel": "Export",
+            "exportLabel": "Exporteren",
             "exportText": "Genereer CSV-bestanden die compatibel zijn met de factuurimportfunctie van QuickBooks",
             "taxImportLabel": "Belastingimport",
             "taxImportText": "Bij gebruik van externe belastingberekening belastingbedragen importeren uit QuickBooks-belastingrapporten"
@@ -313,7 +313,7 @@
           "title": "Belastingen importeren uit CSV",
           "xeroCsvDescription": "De geëxporteerde CSV bevat Factuurnummer, Contactnaam, Regelbedrag, Belastingbedrag en tracking-categorieën.",
           "xeroHelp": {
-            "note": "Let op: alleen facturen die oorspronkelijk uit Alga PSA zijn geëxporteerd (met tracking Source System = AlgaPSA) worden gekoppeld.",
+            "note": "Let op: alleen facturen die oorspronkelijk uit AlgaPSA zijn geëxporteerd (met tracking Source System = AlgaPSA) worden gekoppeld.",
             "s1": "Ga in Xero naar Sales > Invoices",
             "s2": "Selecteer het factuurtabblad waaruit u wilt exporteren (bijv. Paid, Awaiting Payment)",
             "s3": "(Optioneel) Klik op Search om te filteren op startdatum, einddatum of datumtype",
@@ -500,7 +500,7 @@
           "next": "Volgende",
           "onlyFailures": "Alleen fouten",
           "page": "Pagina {{page}} van {{pages}}",
-          "previewBadge": "preview",
+          "previewBadge": "voorbeeld",
           "previous": "Vorige",
           "triggers": {
             "all": "Alle runs",
@@ -728,7 +728,7 @@
           "connectingSuffix": " (Verbinden...)",
           "details": "Verbindingsgegevens",
           "directCredentialSourceLabel": "Bron van inloggegevens:",
-          "directTenantDefault": "common (multi-tenant)",
+          "directTenantDefault": "algemeen (multi-tenant)",
           "directTenantLabel": "Microsoft-tenant",
           "notAvailable": "Niet beschikbaar",
           "notConfigured": "Niet geconfigureerd",
@@ -1034,7 +1034,7 @@
         "details": {
           "noResults": "Geen tenantresultaten geregistreerd.",
           "stats": "aangemaakt {{created}}, gekoppeld {{linked}}, bijgewerkt {{updated}}, dubbelzinnig {{ambiguous}}, gedeactiveerd {{inactivated}}",
-          "summarySkipped": "Skipped provisioning outcomes: {{count}}",
+          "summarySkipped": "Overgeslagen inrichtingsresultaten: {{count}}",
           "tenantHeader": "Tenant {{tenant}} · {{status}}",
           "unknownTenant": "onbekend"
         },
@@ -1068,11 +1068,11 @@
         "columns": {
           "actions": "Acties",
           "confidence": "Vertrouwen",
-          "defaultRole": "Default Role",
+          "defaultRole": "Standaardrol",
           "entraTenant": "Entra-tenant",
-          "portalAccessGroup": "Portal Access Group",
+          "portalAccessGroup": "Toegangsgroep klantenportaal",
           "primaryDomain": "Primair domein",
-          "provisioningModeOverride": "Provisioning Mode Override",
+          "provisioningModeOverride": "Overschrijving van inrichtingsmodus",
           "selectClient": "Selecteer klant",
           "status": "Status",
           "suggestedClient": "Voorgestelde klant"
@@ -1100,14 +1100,14 @@
           "unknownClient": "Onbekende klant"
         },
         "portal": {
-          "broadGroupWarning": "Warning: every enabled user in this Entra group will be eligible for client portal access.",
-          "defaultRolePlaceholder": "Inherit workspace role",
-          "groupLoading": "Loading groups…",
-          "modeBuiltIn": "Built-in",
-          "modeDisabled": "Disabled",
-          "modeInherit": "Inherit MSP workspace default",
-          "modeWorkflowManaged": "Workflow-managed",
-          "noGroupSelected": "No group selected"
+          "broadGroupWarning": "Waarschuwing: elke ingeschakelde gebruiker in deze Entra-groep komt in aanmerking voor toegang tot het klantenportaal.",
+          "defaultRolePlaceholder": "Rol van werkruimte overnemen",
+          "groupLoading": "Groepen laden…",
+          "modeBuiltIn": "Ingebouwd",
+          "modeDisabled": "Uitgeschakeld",
+          "modeInherit": "Standaardwaarde van MSP-werkruimte overnemen",
+          "modeWorkflowManaged": "Door workflow beheerd",
+          "noGroupSelected": "Geen groep geselecteerd"
         },
         "reasons": {
           "exactDomain": "Exact domein",
@@ -1132,7 +1132,7 @@
           "resetting": "Resetten…",
           "save": "Opslaan",
           "saving": "Opslaan…",
-          "disconnectProviders": "Disconnect Google providers"
+          "disconnectProviders": "Verbinding met Google-aanbieders verbreken"
         },
         "afterSaveNotice": "Ga na het opslaan naar de integraties voor inkomende e-mail en agenda en autoriseer de providers opnieuw. Bestaande Google-providers worden niet gemigreerd.",
         "consoleLink": "Google Cloud Console",
@@ -1149,8 +1149,8 @@
         },
         "loading": "Laden…",
         "oauth": {
-          "calendarClientId": "Calendar OAuth Client ID",
-          "calendarClientSecret": "Calendar OAuth Client Secret",
+          "calendarClientId": "OAuth-client-id voor agenda",
+          "calendarClientSecret": "OAuth-clientgeheim voor agenda",
           "enterSecret": "Client secret invoeren",
           "gmailClientId": "Gmail OAuth Client ID",
           "gmailClientSecret": "Gmail OAuth Client Secret",
@@ -1158,17 +1158,17 @@
           "shareApp": "Dezelfde OAuth-app gebruiken voor Gmail en Calendar",
           "shareAppHelp": "Aanbevolen. U kunt nog steeds afzonderlijke Google-accounts per integratie autoriseren.",
           "storedSecret": "Opgeslagen secret: {{secret}}",
-          "locationHelp": "Google Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs."
+          "locationHelp": "Google Cloud: API's en services > Referenties > OAuth 2.0-client-id's."
         },
         "redirectUrisLabel": "Redirect-URI's (kopiëren naar de Google OAuth-client)",
         "scopes": "Scopes",
-        "scopesCalendar": "Calendar: {{scopes}}",
+        "scopesCalendar": "Agenda: {{scopes}}",
         "scopesGmail": "Gmail: {{scopes}}",
         "serviceAccount": {
           "alreadyStored": "Er is al een service-accountsleutel opgeslagen (niet weergegeven).",
           "description": "Plak de JSON-sleutel van het tenant-eigen service account dat wordt gebruikt om Pub/Sub te provisioneren.",
           "title": "Pub/Sub-service-account (vereist voor Gmail)",
-          "locationHelp": "Google Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON."
+          "locationHelp": "Google Cloud: IAM en beheer > Serviceaccounts > Sleutels > Sleutel toevoegen > JSON."
         },
         "setupGuide": "Installatiehandleiding",
         "title": "Google",
@@ -1182,14 +1182,14 @@
           "unknownError": "Onbekende fout"
         },
         "disconnectDialog": {
-          "cancel": "Keep providers connected",
-          "message": "Existing Gmail and Google Calendar provider connections will be marked disconnected and must be re-authorized. Stored Google credentials stay in place.",
-          "title": "Disconnect Google providers?"
+          "cancel": "Aanbieders verbonden houden",
+          "message": "Bestaande verbindingen met Gmail- en Google Calendar-aanbieders worden gemarkeerd als verbroken en moeten opnieuw worden geautoriseerd. Opgeslagen Google-referenties blijven behouden.",
+          "title": "Verbinding met Google-aanbieders verbreken?"
         },
         "oauthValues": {
-          "title": "Google OAuth app values"
+          "title": "Waarden van Google OAuth-app"
         },
-        "redirectUrisHelp": "Staff sign-in uses the OAuth client saved below. Add the listed Gmail and Calendar callback URLs in Google Cloud."
+        "redirectUrisHelp": "Voor aanmelding van medewerkers wordt de hieronder opgeslagen OAuth-client gebruikt. Voeg de vermelde callback-URL's voor Gmail en Agenda toe in Google Cloud."
       }
     },
     "hudu": {
@@ -1495,7 +1495,7 @@
         },
         "sync": {
           "title": "Synchronisatie en automatisering",
-          "description": "Importeer activa voor alle gekoppelde klanten in één keer en houd ze automatisch up-to-date. Het koppelen van een bedrijf of lay-out configureert alleen de integratie — activa verschijnen pas na een import.",
+          "description": "Importeer assets voor alle gekoppelde klanten in één keer en houd ze automatisch up-to-date. Het koppelen van een bedrijf of lay-out configureert alleen de integratie — assets verschijnen pas na een import.",
           "summary": "{{created}} aangemaakt · {{updated}} bijgewerkt · {{skipped}} overgeslagen · {{failed}} mislukt",
           "toastErrorTitle": "Hudu-synchronisatiefout",
           "importDoneTitle": "Hudu-import voltooid",
@@ -1505,7 +1505,7 @@
           "syncing2": "Bezig met synchroniseren…",
           "syncAll": "Alles synchroniseren",
           "autoSyncLabel": "Dagelijkse automatische synchronisatie",
-          "autoSyncHint": "Importeert automatisch nieuwe activa en vernieuwt bestaande één keer per dag voor elke gekoppelde klant.",
+          "autoSyncHint": "Importeert automatisch nieuwe assets en vernieuwt bestaande één keer per dag voor elke gekoppelde klant.",
           "neverRun": "Nog geen tenant-brede uitvoering.",
           "lastRun": "Laatste uitvoering {{at}}: {{created}} aangemaakt · {{updated}} bijgewerkt · {{skipped}} overgeslagen · {{failed}} mislukt",
           "status": {
@@ -1518,87 +1518,94 @@
     },
     "microsoft": {
       "emailSetup": {
-        "action": "Set up Microsoft",
+        "action": "Microsoft instellen",
         "actions": {
-          "back": "Back",
-          "cancel": "Cancel",
-          "copy": "Copy",
-          "finish": "Finish",
-          "savePlatform": "Create profile and continue",
-          "signIn": "Sign in to Microsoft",
-          "working": "Working…",
-          "approve": "Approve in Microsoft",
-          "copyApprovalLink": "Copy approval link for your admin",
-          "saveManual": "Save app and continue"
+          "back": "Terug",
+          "cancel": "Annuleren",
+          "copy": "Kopiëren",
+          "finish": "Voltooien",
+          "savePlatform": "Profiel maken en doorgaan",
+          "signIn": "Aanmelden bij Microsoft",
+          "working": "Bezig…",
+          "approve": "Goedkeuren in Microsoft",
+          "copyApprovalLink": "Goedkeuringslink voor uw beheerder kopiëren",
+          "saveManual": "App opslaan en doorgaan"
         },
         "automated": {
-          "description": "Alga PSA registers a dedicated Entra app automatically. Sign in as a Microsoft 365 administrator.",
-          "title": "Create an app in your Microsoft organization"
+          "description": "AlgaPSA registreert automatisch een speciale Entra-app. Meld u aan als Microsoft 365-beheerder.",
+          "title": "Een app maken in uw Microsoft-organisatie"
         },
-        "callbackUri": "Mailbox callback URI",
+        "callbackUri": "Callback-URI van postvak",
         "complete": {
-          "consentDone": "Approved by your Microsoft 365 administrator. You can now connect a mailbox.",
-          "consentPending": "A Microsoft 365 administrator for your organization must approve access before mailboxes can connect.",
-          "profileCreated": "Microsoft Email profile created and bound",
-          "ready": "Microsoft is ready",
-          "waiting": "Waiting for admin approval"
+          "consentDone": "Goedgekeurd door uw Microsoft 365-beheerder. U kunt nu een postvak verbinden.",
+          "consentPending": "Een Microsoft 365-beheerder van uw organisatie moet de toegang goedkeuren voordat postvakken kunnen worden verbonden.",
+          "profileCreated": "Microsoft-e-mailprofiel aangemaakt en gekoppeld",
+          "ready": "Microsoft is gereed",
+          "waiting": "Wachten op goedkeuring van de beheerder"
         },
         "consent": {
-          "confirmedDescription": "The Microsoft app is ready for mailbox authorization.",
-          "confirmedTitle": "Administrator consent confirmed",
-          "url": "Administrator consent URL",
-          "urlLabel": "Consent URL",
-          "approvalLink": "Approval link"
+          "confirmedDescription": "De Microsoft-app is gereed voor postvakautorisatie.",
+          "confirmedTitle": "Beheerderstoestemming bevestigd",
+          "url": "URL voor beheerderstoestemming",
+          "urlLabel": "Toestemmings-URL",
+          "approvalLink": "Goedkeuringslink"
         },
-        "copied": "{{label}} copied",
-        "description": "Choose how Alga PSA connects to Microsoft. You will connect mailboxes separately.",
+        "copied": "{{label}} gekopieerd",
+        "description": "Kies hoe AlgaPSA verbinding maakt met Microsoft. U verbindt postvakken afzonderlijk.",
         "errors": {
-          "automated": "Could not start automated Microsoft app creation.",
-          "generic": "Microsoft Email setup did not complete.",
-          "nameRequired": "Enter a display name for the Microsoft app.",
-          "platform": "Could not configure the platform Microsoft app.",
-          "popupBlocked": "Allow popups for this site, then try again.",
+          "automated": "Kan het automatisch maken van de Microsoft-app niet starten.",
+          "generic": "De configuratie van Microsoft-e-mail is niet voltooid.",
+          "nameRequired": "Voer een weergavenaam voor de Microsoft-app in.",
+          "platform": "Kan de Microsoft-platformapp niet configureren.",
+          "popupBlocked": "Sta pop-ups voor deze site toe en probeer het opnieuw.",
           "popupClosed": "Het Microsoft-venster is gesloten voordat de configuratie was voltooid. Probeer het opnieuw of kies een andere configuratieoptie.",
-          "tenantRequired": "Enter your Microsoft tenant ID or verified domain.",
-          "manual": "Could not configure the Microsoft app.",
-          "manualRequired": "Enter the display name, client ID, client secret, and Microsoft tenant ID.",
-          "pendingProfileMissing": "The pending Microsoft app could not be found.",
-          "approvalLink": "Could not create the Microsoft approval link."
+          "tenantRequired": "Voer uw Microsoft-tenant-id of geverifieerd domein in.",
+          "manual": "De Microsoft-app kon niet worden geconfigureerd.",
+          "manualRequired": "Voer de weergavenaam, Client ID, het clientgeheim en de Microsoft-tenant-id in.",
+          "pendingProfileMissing": "De Microsoft-app in behandeling is niet gevonden.",
+          "approvalLink": "De Microsoft-goedkeuringslink kon niet worden gemaakt.",
+          "consentDenied": "Microsoft-aanmelding of beheerderstoestemming is geweigerd. Kies een andere configuratieoptie of probeer het opnieuw.",
+          "consentNotGranted": "Microsoft heeft de toestemming van de beheerder niet bevestigd.",
+          "consentPersistFailed": "Kan de Microsoft-beheerderstoestemming niet vastleggen.",
+          "invalidState": "Dit Microsoft-configuratieverzoek is ongeldig of verlopen. Start opnieuw vanuit de providerinstellingen.",
+          "microsoftError": "Microsoft kon het configuratieverzoek niet voltooien. Probeer het opnieuw of gebruik de handmatige configuratie.",
+          "missingCode": "Microsoft heeft geen autorisatiecode geretourneerd. Start de configuratie opnieuw.",
+          "sessionMismatch": "Uw AlgaPSA-sessie komt niet overeen met de beheerder die deze configuratie heeft gestart. Meld u aan en probeer het opnieuw."
         },
         "fields": {
           "clientId": "Client ID",
-          "displayName": "Profile display name",
-          "tenantId": "Microsoft tenant ID",
-          "clientSecret": "Client secret",
-          "microsoftTenant": "Microsoft tenant ID or verified domain",
-          "redirectUri": "Redirect URI to add in Entra"
+          "displayName": "Weergavenaam profiel",
+          "tenantId": "Microsoft-tenant-id",
+          "clientSecret": "Clientgeheim",
+          "microsoftTenant": "Microsoft-tenant-id of geverifieerd domein",
+          "redirectUri": "Redirect-URI om toe te voegen in Entra"
         },
         "manual": {
-          "description": "Use an existing Entra app maintained by your organization.",
-          "title": "Enter an existing app manually"
+          "description": "Gebruik een bestaande Entra-app die door uw organisatie wordt beheerd.",
+          "title": "Een bestaande app handmatig invoeren"
         },
         "platform": {
-          "description": "Nothing to register in Microsoft Entra. Your Microsoft 365 administrator approves access.",
-          "title": "Use the app provided by Alga PSA"
+          "description": "U hoeft niets te registreren in Microsoft Entra. Uw Microsoft 365-beheerder keurt de toegang goed.",
+          "title": "De door AlgaPSA geleverde app gebruiken"
         },
-        "title": "Set up Microsoft",
-        "unavailable": "Unavailable",
-        "recommended": "Recommended",
-        "advanced": "Advanced"
+        "title": "Microsoft instellen",
+        "unavailable": "Niet beschikbaar",
+        "recommended": "Aanbevolen",
+        "advanced": "Geavanceerd"
       },
       "settings": {
         "advanced": {
-          "title": "Manual Microsoft apps (advanced)",
-          "description": "Create and manage Entra app registrations maintained by your organization.",
-          "warning": "A custom Entra app is normally unnecessary on hosted Alga PSA. Continue only when your organization deliberately requires its own application and credentials."
+          "title": "Handmatige Microsoft-apps (geavanceerd)",
+          "description": "Maak en beheer Entra-appregistraties die door uw organisatie worden onderhouden.",
+          "warning": "Een aangepaste Entra-app is normaal gesproken niet nodig op gehoste AlgaPSA. Ga alleen verder wanneer uw organisatie bewust een eigen toepassing en referenties vereist."
         },
         "platform": {
-          "title": "Microsoft email is ready to connect",
-          "description": "Connect Microsoft 365 with the application supplied by Alga PSA. No Entra app registration is required.",
-          "readyDescription": "The Microsoft app is approved and ready for mailbox sign-in.",
-          "connectAction": "Connect a mailbox →",
-          "unavailableTitle": "Platform Microsoft credentials are unavailable",
-          "unavailableDescription": "This deployment requires an app maintained by your organization. Use the advanced setup below to add one."
+          "title": "Microsoft-e-mail kan worden gekoppeld",
+          "description": "Verbind Microsoft 365 met de toepassing die AlgaPSA levert. Er is geen Entra-appregistratie nodig.",
+          "readyDescription": "De Microsoft-app is goedgekeurd en gereed voor aanmelding bij het postvak.",
+          "connectAction": "Een postvak verbinden →",
+          "unavailableTitle": "Microsoft-platformreferenties zijn niet beschikbaar",
+          "unavailableDescription": "Voor deze implementatie is een door uw organisatie beheerde app vereist. Gebruik de geavanceerde configuratie hieronder om er een toe te voegen."
         },
         "actions": {
           "entraLink": "Microsoft Entra",
@@ -1607,7 +1614,7 @@
           "refresh": "Vernieuwen",
           "resetProviders": "Microsoft-providers resetten",
           "resetting": "Resetten…",
-          "disconnectProviders": "Disconnect Microsoft providers"
+          "disconnectProviders": "Verbinding met Microsoft-aanbieders verbreken"
         },
         "archiveDialog": {
           "archiving": "Archiveren…",
@@ -1627,16 +1634,16 @@
           "noCapablePlaceholder": "No enabled profile"
         },
         "bindings": {
-          "summaryBound": "Current: {{profile}}.",
+          "summaryBound": "Huidig: {{profile}}.",
           "summaryNone": "Momenteel is er geen Microsoft-profiel gekoppeld aan {{consumer}}.",
-          "summaryUnavailable": "{{consumer}} is gekoppeld aan een niet-beschikbaar profiel.",
-          "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
+          "summaryUnavailable": "De geselecteerde app is niet beschikbaar.",
+          "warningArchived": "{{profile}} is gearchiveerd. Kies een actieve Microsoft-app.",
           "warningNoBinding": "Er is nog geen {{consumer}}-binding geconfigureerd.",
           "warningNotReady": "{{consumer}} is gekoppeld aan {{profile}}, maar dat profiel moet nog worden geconfigureerd.",
-          "warningProfileMissing": "{{consumer}} is gekoppeld aan een profiel dat niet meer beschikbaar is. Koppel opnieuw aan een actief profiel.",
-          "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
-          "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
-          "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."
+          "warningProfileMissing": "De geselecteerde Microsoft-app is niet meer beschikbaar. Kies een andere app.",
+          "warningMissingCapability": "{{profile}} is geselecteerd, maar kan {{consumer}} nog niet verwerken. Bewerk de app en schakel {{consumer}} in, of kies een andere app.",
+          "warningNoApps": "Maak een Microsoft-app, schakel {{consumer}} in en kies deze vervolgens hier.",
+          "warningNoCapable": "Nog geen app kan {{consumer}} verwerken. Bewerk een Microsoft-app, schakel {{consumer}} in en kies deze vervolgens hier."
         },
         "consumerBindings": {
           "descriptionCe": "Koppel één Microsoft-profiel aan MSP SSO voor aanmelding en gebruik van aanmeldingsdomein.",
@@ -1668,7 +1675,7 @@
         "dialog": {
           "cancel": "Annuleren",
           "clientId": "Client ID",
-          "clientSecret": "Client secret",
+          "clientSecret": "Clientgeheim",
           "clientSecretPlaceholder": "Client secret invoeren",
           "clientSecretPlaceholderEdit": "Laat leeg om het huidige secret te behouden",
           "createProfile": "Profiel aanmaken",
@@ -1683,7 +1690,7 @@
           "setDefault": "Dit profiel instellen als standaard Microsoft-profiel",
           "setDefaultHelp": "Standaardprofielen blijven beschikbaar voor profielbeheer-workflows en migratieveilige metadata, niet voor consumer-routing.",
           "storedSecretHint": "Opgeslagen secret: {{secret}}. Laat dit veld leeg om het ongewijzigd te houden.",
-          "tenantId": "Microsoft tenant ID",
+          "tenantId": "Microsoft-tenant-id",
           "capabilities": "Enabled capabilities",
           "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
@@ -1703,7 +1710,7 @@
           "updateBinding": "Microsoft-binding bijwerken mislukt"
         },
         "guidance": {
-          "applicationIdUri": "Application ID URI",
+          "applicationIdUri": "Toepassings-id-URI",
           "calendarRedirect": "Redirect-URI agendasynchronisatie",
           "calendarTitle": "Agendahandleiding",
           "clientId": "Client ID",
@@ -1720,7 +1727,7 @@
           "teamsScopes": "Teams-scopes",
           "teamsTabRedirect": "Redirect-URI persoonlijk tabblad",
           "teamsTitle": "Teams-handleiding",
-          "tenantId": "Microsoft tenant ID",
+          "tenantId": "Microsoft-tenant-id",
           "unavailable": "Niet beschikbaar"
         },
         "profileCard": {
@@ -1737,7 +1744,7 @@
           "setDefault": "Instellen als standaard",
           "storedSecret": "Opgeslagen secret",
           "teamsAppIdUri": "Teams Application ID URI",
-          "tenantIdLabel": "Microsoft tenant ID:",
+          "tenantIdLabel": "Microsoft-tenant-id:",
           "updating": "Bijwerken…",
           "enabledCapabilities": "Enabled capabilities",
           "noEnabledCapabilities": "No enabled capabilities"
@@ -1750,14 +1757,14 @@
           "archived": "Gearchiveerde profielen kunnen niet worden gebruikt voor nieuwe Microsoft-bindingen.",
           "clientIdMissing": "Client ID ontbreekt.",
           "clientSecretMissing": "Client secret is niet geconfigureerd.",
-          "tenantIdMissing": "Add a Microsoft tenant ID.",
-          "adminConsentPending": "Ask a Microsoft 365 administrator to approve access for Email."
+          "tenantIdMissing": "Voeg een Microsoft-tenant-id toe.",
+          "adminConsentPending": "Vraag een Microsoft 365-beheerder om toegang voor e-mail goed te keuren."
         },
         "statusBadges": {
           "archived": "Gearchiveerd",
           "needsAttention": "Vereist aandacht",
           "ready": "Gereed",
-          "waitingForAdminApproval": "Waiting for admin approval"
+          "waitingForAdminApproval": "Wachten op goedkeuring van de beheerder"
         },
         "title": "Microsoft",
         "toasts": {
@@ -1784,12 +1791,12 @@
           "clientIdRequired": "Microsoft OAuth Client ID is verplicht",
           "clientSecretRequired": "Microsoft OAuth Client Secret is verplicht",
           "displayNameRequired": "Weergavenaam van Microsoft-profiel is verplicht",
-          "tenantIdRequired": "Microsoft tenant ID is required"
+          "tenantIdRequired": "Microsoft-tenant-id is vereist"
         },
         "disconnectDialog": {
-          "cancel": "Keep providers connected",
-          "message": "Existing Outlook email and calendar provider connections will be marked disconnected and must be re-authorized. Microsoft profiles and service bindings stay in place.",
-          "title": "Disconnect Microsoft providers?"
+          "cancel": "Aanbieders verbonden houden",
+          "message": "Bestaande verbindingen met Outlook-e-mail- en agendaproviders worden als niet-verbonden gemarkeerd en moeten opnieuw worden geautoriseerd. Microsoft-profielen en servicekoppelingen blijven behouden.",
+          "title": "Verbinding met Microsoft-aanbieders verbreken?"
         },
         "profileLibrary": {
           "description": "Named Microsoft app registrations that services can bind to.",
@@ -1829,7 +1836,7 @@
         },
         "clientIdLabel": "QuickBooks Client ID",
         "clientIdPlaceholder": "Plak uw Intuit app-client ID",
-        "clientSecretLabel": "QuickBooks Client Secret",
+        "clientSecretLabel": "QuickBooks-clientgeheim",
         "clientSecretPlaceholder": "Plak uw Intuit app-client secret",
         "connectSuccess": "QuickBooks succesvol verbonden. Het verbonden bedrijf is nu de standaard live QuickBooks-context.",
         "connection": {
@@ -1854,7 +1861,7 @@
           "load": "QuickBooks-instellingen laden mislukt.",
           "saveCredentials": "QuickBooks-inloggegevens opslaan mislukt."
         },
-        "howItWorksDescription": "Sla hier QuickBooks app-inloggegevens op, voltooi de Intuit OAuth-flow, en Alga PSA gebruikt het verbonden QuickBooks-bedrijf als standaard live context voor exports en koppelingen.",
+        "howItWorksDescription": "Sla hier QuickBooks app-inloggegevens op, voltooi de Intuit OAuth-flow, en AlgaPSA gebruikt het verbonden QuickBooks-bedrijf als standaard live context voor exports en koppelingen.",
         "howItWorksTitle": "Hoe live QuickBooks werkt in deze release",
         "loading": "QuickBooks-instellingen worden geladen…",
         "mapping": {
@@ -1894,8 +1901,8 @@
         "refreshTokenExpiry": "QuickBooks-token verloopt op {{date}}",
         "refreshTokenExpired": "QuickBooks-token verlopen — maak opnieuw verbinding om de synchronisatie te hervatten.",
         "autoSyncLabel": "Automatische synchronisatie ingeschakeld",
-        "autoProvisionCustomersLabel": "Create QuickBooks customers automatically",
-        "autoProvisionCustomersHint": "Off: exports for unmapped customers pause with an exception until you link them in the customer mapping screen.",
+        "autoProvisionCustomersLabel": "QuickBooks-klanten automatisch maken",
+        "autoProvisionCustomersHint": "Uit: exports voor niet-gekoppelde klanten worden met een uitzondering onderbroken totdat u ze in het scherm voor klanttoewijzing koppelt.",
         "syncNowButton": "Nu synchroniseren",
         "syncNowRunning": "Synchroniseren…",
         "syncNowSuccess": "Synchronisatie voltooid.",
@@ -1913,7 +1920,7 @@
         "noDefault": "Geen standaard",
         "saving": "Opslaan…",
         "undepositedFunds": "Niet-gestorte middelen (standaard)",
-        "catalogLoadError": "Failed to load QuickBooks sync configuration options."
+        "catalogLoadError": "Configuratieopties voor QuickBooks-synchronisatie laden mislukt."
       }
     },
     "rmm": {
@@ -1947,7 +1954,7 @@
             "navigate": "Ga naar Administration → Apps → API",
             "addClient": "Klik op \"+ Add client app\" om een nieuwe API-applicatie aan te maken",
             "platform": "Stel Application Platform in op \"Web (PHP, Java, .Net Core, etc.)\"",
-            "name": "Voer een Name in (bijv. \"Alga PSA\")",
+            "name": "Voer een Name in (bijv. \"AlgaPSA\")",
             "redirectUri": "Voeg de redirect-URI toe:",
             "scopes": "Vink onder \"Scopes\" \"Monitoring\" en \"Management\" aan",
             "grantTypes": "Vink onder \"Allowed grant types\" \"Authorization code\", \"Client credentials\" en \"Refresh token\" aan",
@@ -1963,10 +1970,10 @@
           "saved": "Inloggegevens opgeslagen",
           "clientIdLabel": "Client ID",
           "clientIdPlaceholder": "Voer uw NinjaOne Client ID in",
-          "clientSecretLabel": "Client Secret",
+          "clientSecretLabel": "Clientgeheim",
           "clientSecretPlaceholder": "Voer uw NinjaOne Client Secret in",
           "clientSecretUpdatePlaceholder": "Voer nieuw secret in om bij te werken",
-          "secretMaskedLabel": "Secret",
+          "secretMaskedLabel": "Geheim",
           "saving": "Opslaan...",
           "save": "Inloggegevens opslaan"
         },
@@ -2130,7 +2137,7 @@
           "webhooksDescription": "Configureer een Tactical-webhook voor waarschuwingsacties met de gedeelde secret-header hieronder."
         },
         "status": {
-          "authPrefix": "Auth:",
+          "authPrefix": "Verificatie:",
           "connected": "Verbonden",
           "disconnected": "Niet verbonden",
           "instanceUrlNotSet": "Instance-URL niet ingesteld"
@@ -2298,7 +2305,7 @@
         "fields": {
           "apiKey": "API-sleutel ({{state}})",
           "apiKeyPlaceholderExisting": "Voer een nieuwe sleutel in om de opgeslagen sleutel te vervangen",
-          "apiKeyPlaceholderNew": "Plak je Level-API-sleutel",
+          "apiKeyPlaceholderNew": "Plak uw Level-API-sleutel",
           "apiKeyStateRequired": "vereist",
           "apiKeyStateSaved": "opgeslagen"
         },
@@ -2361,7 +2368,7 @@
           "unmapped": "Niet gekoppeld → triage"
         },
         "title": "Organisatiekoppeling",
-        "description": "Koppel Huntress-organisaties aan klanten. Incidenten van niet-gekoppelde organisaties gaan naar de fallbackklant en het triageboard.",
+        "description": "Koppel Huntress-organisaties aan klanten. Incidenten van niet-gekoppelde organisaties gaan naar de fallbackklant en het triagebord.",
         "unmappedSuffix": "({{count}} niet gekoppeld)",
         "syncButton": "Organisaties synchroniseren",
         "loading": "Laden…",
@@ -2370,7 +2377,57 @@
           "load": "Kan organisatiekoppelingen niet laden",
           "sync": "Synchronisatie mislukt",
           "updateMapping": "Kan koppeling niet bijwerken",
-          "updateContact": "Kan standaardcontact niet bijwerken"
+          "updateContact": "Kan standaardcontact niet bijwerken",
+          "loadStatus": "Kan de status van de Huntress-integratie niet laden",
+          "connect": "Verbinding mislukt",
+          "saveSettings": "Kan instellingen niet opslaan",
+          "poll": "Poll mislukt"
+        },
+        "loadingIntegration": "Huntress-integratie laden…",
+        "connect": {
+          "title": "Huntress verbinden",
+          "description": "Genereer API-referenties via <your-account>.huntress.io → API Credentials en plak ze hier. Door het SOC beoordeelde incidentrapporten worden automatisch tickets.",
+          "apiKeyPlaceholder": "API-sleutel",
+          "apiSecretPlaceholder": "Geheime API-sleutel",
+          "submit": "Verbinden",
+          "connecting": "Verbinden…"
+        },
+        "connection": {
+          "title": "Verbonden met {{account}}",
+          "summary": "{{organizations}} organisaties ({{unmapped}} niet gekoppeld) · {{openIncidents}} open incidenten · laatste poll: {{lastPoll}}",
+          "neverPolled": "nooit",
+          "lastPollFailed": "Laatste poll mislukt: {{error}}",
+          "routingIncompleteWarning": "Het pollen van incidenten is gepauzeerd totdat de onderstaande routeringsconfiguratie volledig is (bord, fallbackklant/-bord en alle drie prioriteiten voor ernstniveaus).",
+          "pollNow": "Nu pollen",
+          "disconnect": "Verbinding verbreken",
+          "disconnectConfirm": "Verbinding met Huntress verbreken? Bestaande tickets en koppelingen blijven behouden."
+        },
+        "routing": {
+          "title": "Ticketroutering",
+          "description": "Hier komen incidenttickets terecht. Voor niet-gekoppelde Huntress-organisaties worden altijd tickets aangemaakt voor de fallbackklant en op het triagebord — niets wordt overgeslagen.",
+          "securityBoard": "Beveiligingsbord",
+          "selectBoard": "Bord selecteren",
+          "category": "Categorie (optioneel)",
+          "noCategory": "Geen",
+          "fallbackClient": "Fallbackklant",
+          "fallbackBoard": "Fallbackbord (triage)",
+          "criticalSeverity": "Kritiek →",
+          "highSeverity": "Hoog →",
+          "lowSeverity": "Laag →",
+          "selectPriority": "Prioriteit",
+          "pollInterval": "Pollinterval (minuten)",
+          "autoClose": "Tickets sluiten wanneer Huntress het incident sluit",
+          "closedStatus": "Status Gesloten",
+          "selectStatus": "Status selecteren",
+          "save": "Routeringsconfiguratie opslaan",
+          "saving": "Opslaan…"
+        },
+        "messages": {
+          "connected": "Verbonden met Huntress-account \"{{account}}\". Voltooi de onderstaande routeringsconfiguratie om tickets te laten aanmaken.",
+          "routingSaved": "Routeringsconfiguratie opgeslagen — incidenten worden nu gepolld.",
+          "routingIncomplete": "Opgeslagen, maar de routering is nog niet volledig. Het pollen blijft gepauzeerd totdat elk veld hieronder is ingesteld.",
+          "pollFinished": "Poll voltooid: {{count}} incident(en) verwerkt.",
+          "disconnected": "Verbinding met Huntress verbroken."
         }
       },
       "ninjaone": {
@@ -2442,8 +2499,8 @@
         "descriptionCe": "Registreer adviesdomeinen voor de detectie van MSP-aanmeldings-SSO. Eigendomsverificatie wordt niet afgedwongen in Community Edition, en onbeheerde domeinen vallen terug op providers op applicatieniveau van Nine Minds.",
         "descriptionEe": "Beheer de levenscyclus van domeinclaims voor de detectie van MSP-aanmeldings-SSO-providers. Niet-geclaimde of niet-geschikte domeinen vallen terug op providers op applicatieniveau van Nine Minds.",
         "moved": {
-          "title": "MSP SSO Login Domains",
-          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
+          "title": "MSP SSO-aanmeldingsdomeinen",
+          "body": "Instellingen voor single sign-on, waaronder claims voor aanmeldingsdomeinen, zijn verplaatst naar Beveiliging → Single sign-on.",
           "cta": "Open Single Sign-On settings"
         },
         "dnsHost": "Host:",
@@ -2530,7 +2587,7 @@
           },
           "messageExtension": {
             "description": "Schakel opzoek- en berichtgestuurde PSA-acties in.",
-            "label": "Message extension"
+            "label": "Berichtextensie"
           },
           "personalBot": {
             "description": "Schakel bot-opdrachten in persoonlijk bereik in voor technici.",
@@ -2570,8 +2627,8 @@
           "saveSettings": "Teams-instellingen opslaan mislukt"
         },
         "guidance": {
-          "applicationIdUri": "Application ID URI",
-          "messageExtension": "Message extension",
+          "applicationIdUri": "Toepassings-id-URI",
+          "messageExtension": "Berichtextensie",
           "personalBot": "Persoonlijke bot",
           "personalTab": "Persoonlijk tabblad",
           "redirectUris": "Redirect-URI's",
@@ -2618,7 +2675,7 @@
           "appId": "App ID",
           "appIds": "App-ID's",
           "botId": "Bot-ID",
-          "deepLinks": "Deep links",
+          "deepLinks": "Diepe koppelingen",
           "description": "Genereer het app-manifest en de installatielinks voor het geselecteerde Microsoft-profiel.",
           "downloadManifest": "Manifest-JSON downloaden",
           "downloadZip": "App-pakket downloaden (.zip)",
@@ -2659,7 +2716,7 @@
         "title": "Microsoft Teams",
         "diagnostics": {
           "title": "Diagnostiek en testbericht",
-          "description": "Controleer de Teams-configuratie en stuur een proactief testbericht naar je Teams-botgesprek.",
+          "description": "Controleer de Teams-configuratie en stuur een proactief testbericht naar uw Teams-botgesprek.",
           "run": "Diagnostiek uitvoeren",
           "running": "Bezig met uitvoeren...",
           "sendTest": "Testbericht verzenden",
@@ -2684,11 +2741,11 @@
             "sent": "Teams-testbericht verzonden.",
             "failed": "Teams-testbericht mislukt.",
             "addonInactive": "De Teams-add-on is niet actief voor deze tenant.",
-            "integrationInactive": "Activeer de Teams-integratie voordat je een testbericht verzendt.",
-            "capabilityDisabled": "Schakel de persoonlijke bot-functie in voordat je een testbericht verzendt.",
-            "botNotConfigured": "Configureer de Teams-botreferenties voordat je een testbericht verzendt.",
-            "missingUserLinkage": "Koppel je Microsoft-account voordat je een Teams-testbericht verzendt.",
-            "missingConversationReference": "Open de Alga PSA-bot in Teams en stuur er eerst een willekeurig bericht naartoe, en probeer het daarna opnieuw.",
+            "integrationInactive": "Activeer de Teams-integratie voordat u een testbericht verzendt.",
+            "capabilityDisabled": "Schakel de persoonlijke bot-functie in voordat u een testbericht verzendt.",
+            "botNotConfigured": "Configureer de Teams-botreferenties voordat u een testbericht verzendt.",
+            "missingUserLinkage": "Koppel uw Microsoft-account voordat u een Teams-testbericht verzendt.",
+            "missingConversationReference": "Open de AlgaPSA-bot in Teams en stuur er eerst een willekeurig bericht naartoe, en probeer het daarna opnieuw.",
             "skipped": "Het Teams-testbericht is overgeslagen."
           },
           "steps": {
@@ -2709,15 +2766,15 @@
             "capabilities": "Schakel de persoonlijke bot en activiteitsmeldingen voor Teams in.",
             "profile": "Selecteer een gereed Microsoft-profiel voor Teams.",
             "activeProfile": "Selecteer een actief Microsoft-profiel voor Teams.",
-            "profileCredentials": "Voltooi de Microsoft-profielreferenties voordat je Teams activeert.",
+            "profileCredentials": "Voltooi de Microsoft-profielreferenties voordat u Teams activeert.",
             "meetingOrganizer": "Configureer de standaard Teams-vergaderingsorganisator in de Teams-instellingen.",
-            "meetingOrganizerObjectId": "Sla de standaard Teams-vergaderingsorganisator opnieuw op zodat Alga PSA de Microsoft Entra-object-ID kan omzetten.",
-            "package": "Genereer het Teams-app-pakket voordat je de end-to-end-validatie uitvoert.",
+            "meetingOrganizerObjectId": "Sla de standaard Teams-vergaderingsorganisator opnieuw op zodat AlgaPSA de Microsoft Entra-object-ID kan omzetten.",
+            "package": "Genereer het Teams-app-pakket voordat u de end-to-end-validatie uitvoert.",
             "baseUrl": "Genereer het Teams-pakket opnieuw met een bereikbare basis-URL.",
             "botEnv": "Configureer TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID en TEAMS_BOT_APP_PASSWORD.",
-            "userLinkage": "Koppel je Microsoft-account in je profielinstellingen.",
-            "conversationReference": "Open de Alga PSA-bot in Teams en stuur er eerst een willekeurig bericht naartoe, en probeer het daarna opnieuw.",
-            "deliveryFailure": "Bekijk de meest recente Teams-leveringsfout en probeer het opnieuw nadat je de oorzaak hebt verholpen."
+            "userLinkage": "Koppel uw Microsoft-account in uw profielinstellingen.",
+            "conversationReference": "Open de AlgaPSA-bot in Teams en stuur er eerst een willekeurig bericht naartoe, en probeer het daarna opnieuw.",
+            "deliveryFailure": "Bekijk de meest recente Teams-leveringsfout en probeer het opnieuw nadat u de oorzaak heeft verholpen."
           }
         },
         "meetings": {
@@ -2891,7 +2948,7 @@
               "remedy": "Verleen beheerderstoestemming voor de vereiste Graph-machtigingen (bijvoorbeeld TeamsActivity.Send) in de Azure-app-registratie."
             },
             "user_not_mapped": {
-              "cause": "De ontvanger heeft zich niet met Microsoft aangemeld bij Alga PSA, dus er bestaat geen accountkoppeling.",
+              "cause": "De ontvanger heeft zich niet met Microsoft aangemeld bij AlgaPSA, dus er bestaat geen accountkoppeling.",
               "remedy": "Laat de gebruiker zich aanmelden met Microsoft (MSP-portal-SSO of het Teams-tabblad) zodat hun account wordt gekoppeld."
             },
             "addon_inactive": {
@@ -2908,15 +2965,15 @@
             },
             "graph_not_found": {
               "cause": "De Teams-app is niet geïnstalleerd voor de ontvanger, dus Microsoft Graph kan deze niet bereiken (404).",
-              "remedy": "Installeer de Alga PSA-app voor die gebruiker of sta deze organisatiebreed toe."
+              "remedy": "Installeer de AlgaPSA-app voor die gebruiker of sta deze organisatiebreed toe."
             },
             "graph_throttled": {
               "cause": "Microsoft Graph heeft de aanvraag beperkt (429).",
-              "remedy": "Tijdelijk; Alga PSA probeert het opnieuw met backoff. Onderzoek dit alleen als het aanhoudt."
+              "remedy": "Tijdelijk; AlgaPSA probeert het opnieuw met backoff. Onderzoek dit alleen als het aanhoudt."
             },
             "graph_server_error": {
               "cause": "Microsoft Graph heeft een serverfout geretourneerd (5xx).",
-              "remedy": "Tijdelijke Graph-storing; Alga PSA probeert het opnieuw. Wacht en controleer de servicestatus van Microsoft als het aanhoudt."
+              "remedy": "Tijdelijke Graph-storing; AlgaPSA probeert het opnieuw. Wacht en controleer de servicestatus van Microsoft als het aanhoudt."
             },
             "transient": {
               "cause": "Een tijdelijke fout (netwerk of time-out) heeft de bezorging onderbroken.",
@@ -2933,7 +2990,7 @@
           "description": "Voor de Microsoft Teams-integratie is de Teams-invoegtoepassing voor deze tenant vereist.",
           "includedTitle": "Wat is inbegrepen",
           "feature": {
-            "tab": "Persoonlijk tabblad: open Alga PSA binnen Microsoft Teams.",
+            "tab": "Persoonlijk tabblad: open AlgaPSA binnen Microsoft Teams.",
             "bot": "Persoonlijke en groepschat-bot voor tickets, goedkeuringen, tijd en notities.",
             "messageExtension": "Berichtextensie en snelle acties om vanuit elk bericht op PSA-records te reageren.",
             "meetings": "Teams-vergaderingen bij goedkeuringen van afspraken met echte Outlook/Teams-agenda-uitnodigingen.",
@@ -3045,7 +3102,7 @@
           },
           "overview": {
             "description": "Exporteer facturen naar CSV voor handmatige import in Xero en importeer belastinggegevens uit Xero-rapporten.",
-            "exportLabel": "Export",
+            "exportLabel": "Exporteren",
             "exportText": "Genereer CSV-bestanden die compatibel zijn met de factuurimportfunctie van Xero",
             "intro": "Deze integratie biedt een alternatief voor op OAuth gebaseerde Xero-connectiviteit:",
             "note": "Let op: configureer de toewijzingen hieronder voor het exporteren. CSV-exports en belastingimports worden beheerd vanuit Facturatie → Boekhoudexports.",
@@ -3060,7 +3117,7 @@
             "description": "Voltooi deze stappen in Xero voordat u CSV-import/export gebruikt.",
             "externalInvoiceId": "Externe Factuur-ID",
             "externalInvoiceIdHelp": "Opties worden automatisch aangemaakt bij het importeren",
-            "sourceSystem": "Source System",
+            "sourceSystem": "Bronsysteem",
             "sourceSystemHelp": "Voeg een optie toe met de naam",
             "step1Description": "Ga in Xero naar Settings → Tracking Categories en maak deze twee categorieën aan:",
             "step1Title": "Stap 1: Tracking-categorieën aanmaken",
@@ -3150,7 +3207,7 @@
           "load": "Xero-instellingen laden mislukt.",
           "saveCredentials": "Xero-inloggegevens opslaan mislukt."
         },
-        "howItWorksDescription": "Sla hier een tenant-eigen Xero Client ID en Client Secret op, voltooi de Xero OAuth-flow, en Alga PSA gebruikt de eerste verbonden Xero-organisatie als standaard live context.",
+        "howItWorksDescription": "Sla hier een tenant-eigen Xero Client ID en Client Secret op, voltooi de Xero OAuth-flow, en AlgaPSA gebruikt de eerste verbonden Xero-organisatie als standaard live context.",
         "howItWorksTitle": "Hoe live Xero werkt in deze release",
         "loading": "Xero-instellingen worden geladen…",
         "mapping": {
@@ -3173,11 +3230,11 @@
       }
     },
     "stripe": {
-      "title": "Stripe Payments",
+      "title": "Stripe-betalingen",
       "description": "Accepteer creditcardbetalingen voor uw facturen",
       "connected": {
         "title": "Stripe verbonden",
-        "publishableKey": "Publishable key: {{key}}..."
+        "publishableKey": "Publiceerbare sleutel: {{key}}..."
       },
       "empty": {
         "description": "Verbind uw Stripe-account om online betalingen voor facturen te accepteren"
@@ -3195,12 +3252,12 @@
         "publishableKeyLabel": "Publishable key",
         "publishableKeyPlaceholder": "pk_live_... of pk_test_...",
         "findKeyPrefix": "Vind dit in uw",
-        "dashboardLink": "Stripe Dashboard → API Keys"
+        "dashboardLink": "Stripe-dashboard → API-sleutels"
       },
       "webhook": {
         "heading": "Webhook-configuratie",
         "configuredAutomatically": "Webhooks automatisch geconfigureerd",
-        "receiveNotifications": "Alga PSA ontvangt betalingsmeldingen voor:",
+        "receiveNotifications": "AlgaPSA ontvangt betalingsmeldingen voor:",
         "failedTitle": "Webhook-configuratie mislukt",
         "failedBody": "Automatische webhook-configuratie mislukt. Klik op Opnieuw proberen om de configuratie opnieuw te proberen.",
         "configuring": "Configureren...",
@@ -3232,22 +3289,22 @@
     },
     "providersWorkbench": {
       "badges": {
-        "loading": "Loading",
-        "needsAttention": "Needs attention",
-        "needsSetup": "Needs setup",
-        "notConfigured": "Not configured",
-        "ready": "Ready"
+        "loading": "Laden",
+        "needsAttention": "Vereist aandacht",
+        "needsSetup": "Moet worden ingesteld",
+        "notConfigured": "Niet geconfigureerd",
+        "ready": "Gereed"
       },
-      "descriptionCe": "Set up the provider path your tenant uses. Configure both only when email or SSO workflows require both ecosystems.",
-      "descriptionEe": "Set up the provider path your tenant uses. Configure both only when email, calendar, SSO, or Teams workflows require both ecosystems.",
-      "eyebrow": "Provider setup",
+      "descriptionCe": "Configureer het providertraject dat uw tenant gebruikt. Configureer beide trajecten alleen als e-mail- of SSO-workflows beide ecosystemen vereisen.",
+      "descriptionEe": "Configureer het providertraject dat uw tenant gebruikt. Configureer beide trajecten alleen als workflows voor e-mail, agenda, SSO of Teams beide ecosystemen vereisen.",
+      "eyebrow": "Aanbieder configureren",
       "google": {
-        "description": "Gmail inbound email and Google Calendar.",
+        "description": "Inkomende Gmail-e-mail en Google Agenda.",
         "label": "Google"
       },
       "microsoft": {
         "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
-        "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
+        "descriptionEe": "MSP-SSO, Outlook-e-mail, agendasynchronisatie en Teams.",
         "label": "Microsoft"
       },
       "selectorLabel": "Provider credential paths",

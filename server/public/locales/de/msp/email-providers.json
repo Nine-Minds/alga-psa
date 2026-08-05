@@ -13,7 +13,7 @@
       "resyncStarted": "Neusynchronisierung für {{providerName}} gestartet.",
       "resyncRecovered": "{{providerName}} wurde erfolgreich wieder verbunden.",
       "enterpriseOnly": "Eingehende E-Mails von Microsoft 365 sind nur in Pro verfügbar.",
-      "loadProvidersError": "Failed to load email providers"
+      "loadProvidersError": "E-Mail-Anbieter konnten nicht geladen werden"
     },
     "editDrawer": {
       "title": "E-Mail-Anbieter bearbeiten",
@@ -42,8 +42,8 @@
       "title": "Einrichtungsanweisungen",
       "microsoft": {
         "title": "Microsoft 365-Setup",
-        "providersPointer": "Microsoft app setup is managed in Providers.",
-        "openProviders": "Open Providers"
+        "providersPointer": "Die Einrichtung der Microsoft-App wird unter „Anbieter“ verwaltet.",
+        "openProviders": "Anbieter öffnen"
       },
       "gmail": {
         "title": "Gmail-Setup",
@@ -250,7 +250,7 @@
     },
     "microsoft": {
       "hostedOauth": {
-        "sectionTitle": "Connect Microsoft 365"
+        "sectionTitle": "Microsoft 365 verbinden"
       },
       "validation": {
         "providerNameRequired": "Konfigurationsname ist erforderlich",
@@ -277,11 +277,11 @@
         "providerNameHelp": "Interner Name zur Identifikation dieser Konfiguration. Wird in ausgehenden E-Mails nicht angezeigt.",
         "senderDisplayNameLabel": "Anzeigename des Absenders",
         "senderDisplayNamePlaceholder": "z. B. Acme Support",
-        "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails. It applies when this mailbox matches the configured outbound ticketing address. Leave blank to use the ticket board name."
+        "senderDisplayNameHelp": "Anzeigename im Von-Header ausgehender Ticket-E-Mails. Er wird verwendet, wenn dieses Postfach mit der konfigurierten Adresse für ausgehende Ticket-E-Mails übereinstimmt. Lassen Sie das Feld leer, um den Namen des Ticket-Boards zu verwenden."
       },
       "oauth": {
-        "signingIn": "Signing in…",
-        "signIn": "Sign in with Microsoft"
+        "signingIn": "Anmeldung läuft…",
+        "signIn": "Mit Microsoft anmelden"
       },
       "advanced": {
         "title": "Erweiterte Einstellungen",
@@ -292,12 +292,12 @@
         "maxEmailsPerSync": "Maximale E-Mails pro Synchronisierung"
       },
       "readiness": {
-        "checking": "Checking Microsoft setup…",
-        "ready": "Microsoft is set up. Sign in as this mailbox to finish.",
-        "pending": "Waiting for your Microsoft 365 administrator. Setup was started in Providers but hasn't been approved yet.",
-        "openProviders": "Open Providers",
-        "notConfigured": "Microsoft isn't set up yet. Set it up once in Providers, then come back.",
-        "setUpInProviders": "Set up in Providers"
+        "checking": "Microsoft-Einrichtung wird geprüft…",
+        "ready": "Microsoft ist eingerichtet. Melden Sie sich zum Abschluss mit diesem Postfach an.",
+        "pending": "Warten auf Ihren Microsoft 365-Administrator. Die Einrichtung wurde unter „Anbieter“ gestartet, aber noch nicht genehmigt.",
+        "openProviders": "Anbieter öffnen",
+        "notConfigured": "Microsoft ist noch nicht eingerichtet. Richten Sie Microsoft einmal unter „Anbieter“ ein und kehren Sie dann zurück.",
+        "setUpInProviders": "Unter „Anbieter“ einrichten"
       }
     },
     "gmail": {
@@ -311,7 +311,7 @@
         "closedEarly": "Das Autorisierungsfenster wurde vor dem Abschluss geschlossen.",
         "authorizationFailed": "Die Autorisierung ist fehlgeschlagen",
         "popupFailed": "OAuth-Popup ist fehlgeschlagen",
-        "configureFailed": "Failed to configure Gmail provider"
+        "configureFailed": "Der Gmail-Anbieter konnte nicht konfiguriert werden"
       },
       "messages": {
         "setupIncomplete": "Anbieter gespeichert, aber Einrichtung unvollständig: {{error}}",
@@ -727,7 +727,7 @@
       "domainRemovalScheduledWithClear": "Domainentfernung geplant und Ticketing-Absenderadresse gelöscht",
       "removeDomainFailed": "Domain konnte nicht entfernt werden",
       "testOutboundFailed": "Test der ausgehenden E-Mail fehlgeschlagen",
-      "senderIdentitiesUpdated": "Sender identities updated."
+      "senderIdentitiesUpdated": "Absenderidentitäten aktualisiert."
     },
     "tabs": {
       "inboundEmail": "Eingehende E-Mail",
@@ -824,36 +824,36 @@
       },
       "senderIdentities": {
         "ticket": {
-          "title": "Ticket email identity",
-          "description": "Replies to ticket emails must return to this address so they can be matched and added to the ticket. Use a connected, monitored inbox.",
-          "connectedInboxLabel": "Connected inbox",
-          "connectedInboxHelp": "A connected inbox keeps client replies in the ticket conversation.",
-          "customAddressOption": "Use another address",
-          "addressLabel": "From address",
+          "title": "Absenderidentität für Ticket-E-Mails",
+          "description": "Antworten auf Ticket-E-Mails müssen an diese Adresse zurückgesendet werden, damit sie zugeordnet und dem Ticket hinzugefügt werden können. Verwenden Sie ein verbundenes, überwachtes Postfach.",
+          "connectedInboxLabel": "Verbundenes Postfach",
+          "connectedInboxHelp": "Ein verbundenes Postfach sorgt dafür, dass Kundenantworten in der Ticket-Konversation bleiben.",
+          "customAddressOption": "Andere Adresse verwenden",
+          "addressLabel": "Absenderadresse",
           "addressPlaceholder": "support@example.com",
-          "addressHelp": "This address controls reply routing for ticket email only.",
-          "microsoftAddressHelp": "Microsoft 365 requires ticket email to use the selected sending mailbox ({{mailbox}}).",
-          "nameLabel": "Sender display name",
+          "addressHelp": "Diese Adresse steuert ausschließlich das Antwort-Routing für Ticket-E-Mails.",
+          "microsoftAddressHelp": "Microsoft 365 erfordert, dass Ticket-E-Mails das ausgewählte Sendepostfach ({{mailbox}}) verwenden.",
+          "nameLabel": "Anzeigename des Absenders",
           "namePlaceholder": "Support",
-          "nameHelp": "Leave blank to use the connected mailbox name or ticket board name."
+          "nameHelp": "Leer lassen, um den Namen des verbundenen Postfachs oder des Ticket-Boards zu verwenden."
         },
         "notification": {
-          "title": "All other email identity",
-          "description": "Brand portal invitations, password resets, invoices, project updates, and general notifications independently from ticket routing.",
-          "addressLabel": "From address",
+          "title": "Absenderidentität für alle anderen E-Mails",
+          "description": "Versehen Sie Portal-Einladungen, Passwortrücksetzungen, Rechnungen, Projektaktualisierungen und allgemeine Benachrichtigungen unabhängig vom Ticket-Routing mit Ihrem Branding.",
+          "addressLabel": "Absenderadresse",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "This is the branding address used for non-ticket email through your SMTP server.",
-          "lockedAddressHelp": "This address is determined by the active managed domain or selected Microsoft 365 mailbox.",
-          "nameLabel": "Sender display name",
-          "namePlaceholder": "Your company name",
-          "nameHelp": "Leave blank to use {{company}} automatically.",
-          "companyFallback": "your tenant company"
+          "smtpAddressHelp": "Dies ist die Branding-Adresse, die für E-Mails ohne Ticketbezug über Ihren SMTP-Server verwendet wird.",
+          "lockedAddressHelp": "Diese Adresse wird durch die aktive verwaltete Domain oder das ausgewählte Microsoft 365-Postfach bestimmt.",
+          "nameLabel": "Anzeigename des Absenders",
+          "namePlaceholder": "Name Ihres Unternehmens",
+          "nameHelp": "Leer lassen, um automatisch {{company}} zu verwenden.",
+          "companyFallback": "Ihr Mandantenunternehmen"
         },
-        "warningTitle": "Check reply routing",
-        "errorTitle": "Fix the ticket identity",
-        "clearButton": "Clear ticket identity",
-        "savingButton": "Saving...",
-        "saveButton": "Save sender identities"
+        "warningTitle": "Antwort-Routing prüfen",
+        "errorTitle": "Absenderidentität für Tickets korrigieren",
+        "clearButton": "Absenderidentität für Tickets löschen",
+        "savingButton": "Wird gespeichert...",
+        "saveButton": "Absenderidentitäten speichern"
       }
     },
     "inbound": {
@@ -883,7 +883,7 @@
       "customAddressThreadWarning": "Die Verwendung einer benutzerdefinierten Adresse kann das korrekte Gruppieren eingehender Antworten verhindern.",
       "smtpDomainMismatchWarning": "Diese Domain stimmt nicht mit Ihrer SMTP-Absenderdomain überein ({{domain}}). E-Mails können fehlschlagen oder als Spam markiert werden, wenn Ihr SMTP-Server nicht berechtigt ist, von dieser Domain zu senden.",
       "notConnectedWarning": "Die Verarbeitung eingehender Tickets funktioniert möglicherweise nicht mit dieser Adresse, da sie keines Ihrer verbundenen Postfächer ist.",
-      "microsoftMustMatchMailbox": "Ticket email address must match the selected Microsoft 365 mailbox ({{mailbox}})."
+      "microsoftMustMatchMailbox": "Die Ticket-E-Mail-Adresse muss mit dem ausgewählten Microsoft 365-Postfach ({{mailbox}}) übereinstimmen."
     },
     "domainList": {
       "loading": "Domänen werden geladen…",

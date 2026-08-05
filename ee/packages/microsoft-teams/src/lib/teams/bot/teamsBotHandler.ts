@@ -441,7 +441,7 @@ async function buildHelpResponse(
   const lines = buttons.map((button) => `• ${button.value}`);
 
   return buildMessageResponse(
-    preamble || 'Alga PSA is ready in Teams. Try one of these commands:',
+    preamble || 'AlgaPSA is ready in Teams. Try one of these commands:',
     {
       attachments: [
         buildCard('Teams bot commands', lines.join('\n'), []),
@@ -499,7 +499,7 @@ async function buildSignInResponse(params: {
       buildCard(
         'Teams sign-in required',
         `${params.message}\nSign in with your Microsoft work account to link it to your PSA user. The bot will confirm here once you are linked.`,
-        [buildOpenUrlButton('Sign in to Alga PSA', signInUrl)]
+        [buildOpenUrlButton('Sign in to AlgaPSA', signInUrl)]
       ),
     ],
     metadata: {
@@ -2028,11 +2028,11 @@ export async function handleTeamsBotActivity(
   });
 
   if (conversationType !== 'personal' && conversationType !== 'groupChat') {
-    return buildMessageResponse('The Alga PSA Teams bot supports personal and group chats. Channel conversations are not supported yet.', {
+    return buildMessageResponse('The AlgaPSA Teams bot supports personal and group chats. Channel conversations are not supported yet.', {
       attachments: [
         buildCard(
           'Unsupported conversation type',
-          'The Alga PSA Teams bot works in personal and group chats. Channel conversations are not supported yet. Open the bot in a personal or group chat and try again.',
+          'The AlgaPSA Teams bot works in personal and group chats. Channel conversations are not supported yet. Open the bot in a personal or group chat and try again.',
           [buildOpenUrlButton('View supported scopes', TEAMS_SCOPE_DOCS_URL)]
         ),
       ],
@@ -2044,11 +2044,11 @@ export async function handleTeamsBotActivity(
   // PSA permissions. Require an explicit per-tenant capability so admins
   // knowingly opt in before the bot echoes ticket data into a shared chat.
   if (conversationType === 'groupChat' && !tenantContext.enabledCapabilities.includes('group_chat_bot')) {
-    return buildMessageResponse('The Alga PSA Teams bot is not enabled for group chats in this tenant. Ask an administrator to enable the group chat capability in Teams integration settings.', {
+    return buildMessageResponse('The AlgaPSA Teams bot is not enabled for group chats in this tenant. Ask an administrator to enable the group chat capability in Teams integration settings.', {
       attachments: [
         buildCard(
           'Group chat not enabled',
-          'Group chat is not enabled for Alga PSA in this tenant. Administrators can enable it under Settings → Integrations → Teams → Capabilities.'
+          'Group chat is not enabled for AlgaPSA in this tenant. Administrators can enable it under Settings → Integrations → Teams → Capabilities.'
         ),
       ],
       metadata: baseMetadata,
@@ -2090,7 +2090,7 @@ export async function handleTeamsBotActivity(
   const microsoftUserId = getMicrosoftAccountId(activity);
 
   if (activity.type === 'conversationUpdate') {
-    return buildHelpResponse(tenantContext.tenantId, user, metadata, 'Alga PSA is ready in your personal Teams bot.');
+    return buildHelpResponse(tenantContext.tenantId, user, metadata, 'AlgaPSA is ready in your personal Teams bot.');
   }
 
   // Inline Adaptive Card actions (Assign to me / Add note) arrive as message
@@ -2182,7 +2182,7 @@ async function dispatchParsedTeamsCommand(params: {
         tenantId,
         user,
         metadata,
-        `The command “${parsed.text}” is not supported by the Alga PSA Teams bot yet.`
+        `The command “${parsed.text}” is not supported by the AlgaPSA Teams bot yet.`
       );
     }
     case 'my_tickets': {

@@ -651,8 +651,8 @@ export class ApiMetadataController extends ApiBaseController {
             language,
             packageName,
             version,
-            author: 'Alga PSA',
-            description: `${language === 'typescript' ? 'TypeScript' : 'JavaScript'} SDK for Alga PSA API with full HATEOAS support`,
+            author: 'AlgaPSA',
+            description: `${language === 'typescript' ? 'TypeScript' : 'JavaScript'} SDK for AlgaPSA API with full HATEOAS support`,
             includeHateoas: true,
             includeExamples: true,
             outputFormat: format as any

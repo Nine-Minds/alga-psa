@@ -74,7 +74,7 @@ export default function ExtensionManagement() {
         <CardTitle>{t('settings.title', { defaultValue: 'Extension Management' })}</CardTitle>
         <CardDescription>
           {t('settings.description', {
-            defaultValue: 'Install, configure, and manage extensions to extend Alga PSA functionality.'
+            defaultValue: 'Install, configure, and manage extensions to extend AlgaPSA functionality.'
           })}
         </CardDescription>
       </CardHeader>
@@ -124,7 +124,7 @@ export default function ExtensionManagement() {
             </div>
             <p className="text-sm text-gray-600 mt-2">
               {t('settings.enterpriseOnly.description', {
-                defaultValue: 'Extensions are available in Alga PSA Pro.'
+                defaultValue: 'Extensions are available in AlgaPSA Pro.'
               })}
             </p>
           </div>

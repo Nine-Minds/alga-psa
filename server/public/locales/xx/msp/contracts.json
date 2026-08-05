@@ -2296,7 +2296,17 @@
         "hourly": "11111",
         "usage": "11111"
       },
-      "title": "11111"
+      "title": "11111",
+      "columns": {
+        "name": "11111",
+        "type": "11111",
+        "value": "11111",
+        "appliesTo": "11111",
+        "description": "11111",
+        "amount": "11111",
+        "billingPeriod": "11111",
+        "timing": "11111"
+      }
     },
     "timeline": {
       "deltaDown": "11111 {{amount}} 11111",

@@ -12,7 +12,7 @@
 
 ## 1. Problem statement & user value
 
-Alga PSA has a **product catalog but no inventory system**. Products are a subset of `service_catalog` (`item_kind='product'`) with pricing/cost/tax/license metadata only. Quantities live on consuming entities (contract lines, invoice items, ticket/project materials) and record what was *billed/consumed* — never decremented from an on-hand ledger. There is no stock, location, serial/lot, movement, allocation, reorder, procurement, or COGS concept anywhere.
+AlgaPSA has a **product catalog but no inventory system**. Products are a subset of `service_catalog` (`item_kind='product'`) with pricing/cost/tax/license metadata only. Quantities live on consuming entities (contract lines, invoice items, ticket/project materials) and record what was *billed/consumed* — never decremented from an on-hand ledger. There is no stock, location, serial/lot, movement, allocation, reorder, procurement, or COGS concept anywhere.
 
 Our ICP is reseller-heavy, including **phone-systems specialists** who warehouse serialized handsets and switches across multiple locations, sell systems as bundles, run heavy advance-replacement RMA cycles, and stock laptops/monitors/components for clients. They cannot run their business on a catalog — today they bolt spreadsheets onto the PSA for MAC lists, dead-units-owed tracking, and system-deal BOMs.
 

@@ -1,20 +1,20 @@
 {
   "page": {
-    "title": "Przepływy pracy"
+    "title": "Workflow"
   },
   "nav": {
     "designer": "Projektant",
     "runs": "Uruchomienia",
-    "control": "Sterowanie przepływem pracy",
+    "control": "Sterowanie workflow",
     "tasks": "Zadania"
   },
   "sections": {
-    "definitions": "Definicje przepływów pracy",
+    "definitions": "Definicje workflow",
     "runStudio": "Studio uruchamiania"
   },
   "empty": {
-    "title": "Nie znaleziono przepływów pracy",
-    "description": "Przepływy pracy pojawią się tutaj po ich utworzeniu."
+    "title": "Nie znaleziono workflow",
+    "description": "Workflow pojawią się tutaj po ich utworzeniu."
   },
   "filters": {
     "allStatuses": "Wszystkie statusy",
@@ -22,7 +22,7 @@
     "allTypes": "Wszystkie typy"
   },
   "actions": {
-    "create": "Utwórz przepływ pracy",
+    "create": "Utwórz workflow",
     "open": "Otwórz",
     "close": "Zamknij",
     "print": "Drukuj",
@@ -37,17 +37,17 @@
     },
     "summary": {
       "total": "Łącznie",
-      "activeWorkflows": "Aktywne przepływy pracy",
+      "activeWorkflows": "Aktywne workflow",
       "runCount": "{{count}} uruchomień"
     },
     "filters": {
       "all": "Wszystkie",
-      "allWorkflows": "Wszystkie przepływy pracy",
+      "allWorkflows": "Wszystkie workflow",
       "searchLabel": "ID uruchomienia lub klucz korelacji",
       "searchPlaceholder": "Szukaj po ID uruchomienia lub kluczu korelacji",
       "statusLabel": "Status",
-      "workflowLabel": "Przepływ pracy",
-      "versionLabel": "Wersja przepływu pracy",
+      "workflowLabel": "Workflow",
+      "versionLabel": "Wersja workflow",
       "versionPlaceholder": "Dowolna wersja",
       "fromLabel": "Od",
       "toLabel": "Do",
@@ -68,9 +68,9 @@
     },
     "table": {
       "runId": "ID uruchomienia",
-      "workflow": "Przepływ pracy",
+      "workflow": "Workflow",
       "version": "Wersja",
-      "tenant": "Dzierżawca",
+      "tenant": "Organizacja",
       "triggerPayload": "Ładunek wyzwalacza",
       "status": "Status",
       "started": "Rozpoczęto",
@@ -84,8 +84,8 @@
       }
     },
     "states": {
-      "loading": "Wczytywanie uruchomień przepływu pracy...",
-      "empty": "Żadne uruchomienia przepływu pracy nie pasują do bieżących filtrów."
+      "loading": "Wczytywanie uruchomień workflow...",
+      "empty": "Żadne uruchomienia workflow nie pasują do bieżących filtrów."
     },
     "bulk": {
       "cancelTitle": "Anuluj zaznaczone uruchomienia",
@@ -95,11 +95,11 @@
       "cancelConfirm": "Anuluj uruchomienia"
     },
     "toasts": {
-      "loadRunsFailed": "Nie udało się wczytać uruchomień przepływu pracy",
-      "selectWorkflowForLatestRun": "Wybierz przepływ pracy, aby zobaczyć jego najnowsze uruchomienie.",
-      "noRunsFoundForWorkflow": "Nie znaleziono uruchomień dla tego przepływu pracy.",
+      "loadRunsFailed": "Nie udało się wczytać uruchomień workflow",
+      "selectWorkflowForLatestRun": "Wybierz workflow, aby zobaczyć jego najnowsze uruchomienie.",
+      "noRunsFoundForWorkflow": "Nie znaleziono uruchomień dla tego workflow.",
       "loadLatestRunFailed": "Nie udało się wczytać najnowszego uruchomienia",
-      "selectWorkflowToRun": "Proszę wybrać przepływ pracy do uruchomienia.",
+      "selectWorkflowToRun": "Proszę wybrać workflow do uruchomienia.",
       "exportReady": "Eksport uruchomienia gotowy",
       "exportFailed": "Nie udało się wyeksportować uruchomień",
       "selectRunsForBulkAction": "Proszę zaznaczyć uruchomienia, aby wykonać tę akcję.",
@@ -114,7 +114,7 @@
       "title": "Uruchomienia workflow",
       "selectedTitle": "Wybrane uruchomienia workflow",
       "subtitle": "{{count}} uruchomień",
-      "noRuns": "Brak uruchomień workflow do wydruku",
+      "noRuns": "Brak uruchomień workflow do wydrukowania",
       "columns": {
         "run": "Uruchomienie",
         "workflow": "Workflow",
@@ -126,7 +126,7 @@
       },
       "optionsDialog": {
         "title": "Opcje drukowania",
-        "description": "Wybierz, które kolumny dołączyć podczas drukowania uruchomień workflow."
+        "description": "Wybierz kolumny, które chcesz uwzględnić na wydruku uruchomień workflow."
       }
     },
     "preview": {
@@ -145,7 +145,7 @@
     },
     "header": {
       "runIdLabel": "ID uruchomienia",
-      "workflowIdLabel": "ID przepływu pracy:",
+      "workflowIdLabel": "ID workflow:",
       "triggerLabel": "Wyzwalacz:"
     },
     "actions": {
@@ -239,7 +239,7 @@
       "attemptLine": "Próba {{count}}",
       "durationLine": "Czas trwania: {{duration}}",
       "sizeLine": "Rozmiar wejścia: {{inputSize}}{{inputSuffix}} · Rozmiar wyjścia: {{outputSize}}{{outputSuffix}}",
-      "truncatedSuffix": " (truncated)",
+      "truncatedSuffix": " (skrócono)",
       "inputLabel": "Wejście",
       "outputLabel": "Wynik"
     },
@@ -276,11 +276,11 @@
     },
     "dialogs": {
       "reasonLabel": "Powód",
-      "cancelTitle": "Anuluj uruchomienie przepływu pracy",
-      "cancelMessage": "Anulować to uruchomienie przepływu pracy? Operacji nie można cofnąć.",
+      "cancelTitle": "Anuluj uruchomienie workflow",
+      "cancelMessage": "Anulować to uruchomienie workflow? Operacji nie można cofnąć.",
       "cancelReasonPlaceholder": "Proszę podać powód anulowania",
       "cancelConfirm": "Anuluj uruchomienie",
-      "replayTitle": "Powtórz uruchomienie przepływu pracy",
+      "replayTitle": "Powtórz uruchomienie workflow",
       "replayMessage": "Powtórz to uruchomienie z nowym ładunkiem.",
       "replayReasonPlaceholder": "Proszę podać powód powtórzenia",
       "payloadLabel": "Ładunek (JSON)",
@@ -304,13 +304,13 @@
       "exportAuditLogsFailed": "Nie udało się wyeksportować dzienników audytu"
     },
     "queuedWarning": {
-      "title": "W kolejce — oczekiwanie na proces roboczy przepływu pracy",
-      "description": "To uruchomienie rozpoczęło się ponad minutę temu, ale nie wykonano jeszcze żadnego kroku. Sprawdź, czy usługa procesu roboczego przepływu pracy działa i jest połączona z Temporal."
+      "title": "W kolejce — oczekiwanie na proces roboczy workflow",
+      "description": "To uruchomienie rozpoczęło się ponad minutę temu, ale nie wykonano jeszcze żadnego kroku. Sprawdź, czy usługa procesu roboczego workflow działa i jest połączona z Temporal."
     }
   },
   "runDialog": {
-    "title": "Uruchom przepływ pracy",
-    "description": "Provide a synthetic payload to preview (and run) a workflow.",
+    "title": "Uruchom workflow",
+    "description": "Podaj syntetyczne dane wejściowe, aby wyświetlić podgląd workflow i go uruchomić.",
     "descriptionEvent": "Zdarzenie: {{name}}.",
     "draftWarning": "Wersja robocza różni się od opublikowanej (v{{version}}).",
     "concurrencyLimit": "Limit równoległości: {{count}} uruchomień jednocześnie.",
@@ -346,17 +346,17 @@
       "loadingEvents": "Wczytywanie zdarzeń...",
       "selectEventType": "Wybierz typ zdarzenia",
       "systemBadge": "System",
-      "tenantBadge": "Dzierżawca",
+      "tenantBadge": "Organizacja",
       "systemEvent": "Zdarzenie systemowe",
-      "tenantEvent": "Zdarzenie dzierżawcy",
+      "tenantEvent": "Zdarzenie organizacji",
       "uncategorized": "Bez kategorii"
     },
     "fields": {
-      "workflowLabel": "Przepływ pracy",
+      "workflowLabel": "Workflow",
       "publishedVersionLabel": "Opublikowana wersja",
       "triggerLabel": "Wyzwalacz",
       "manualTrigger": "Ręczny",
-      "workflowStatusLabel": "Status przepływu pracy",
+      "workflowStatusLabel": "Status workflow",
       "statusActive": "aktywne",
       "statusPaused": "wstrzymane"
     },
@@ -371,7 +371,7 @@
     },
     "noPublishedVersion": {
       "title": "Brak opublikowanej wersji",
-      "description": "Można wyświetlić podgląd kreatora ładunku, ale przed rozpoczęciem uruchomienia należy opublikować przepływ pracy."
+      "description": "Można wyświetlić podgląd kreatora ładunku, ale przed rozpoczęciem uruchomienia należy opublikować workflow."
     },
     "payload": {
       "largePayloadWarning": "Rozmiar ładunku przekracza 256 KB; uruchomienia mogą być wolniejsze.",
@@ -386,7 +386,7 @@
     },
     "schema": {
       "sourceLabel": "Źródło schematu",
-      "workflowSchema": "Schemat przepływu pracy",
+      "workflowSchema": "Schemat workflow",
       "eventSchema": "Schemat zdarzenia",
       "schemaRef": "Referencja schematu",
       "schemaRefLabel": "Referencja schematu",
@@ -398,17 +398,17 @@
       "hideSchemaDiff": "Ukryj różnice schematu",
       "onlyInEvent": "Tylko w schemacie zdarzenia",
       "requiredOnlyInEvent": "Wymagane tylko w zdarzeniu",
-      "onlyInWorkflow": "Tylko w schemacie przepływu pracy",
-      "requiredOnlyInWorkflow": "Wymagane tylko w przepływie pracy",
+      "onlyInWorkflow": "Tylko w schemacie workflow",
+      "requiredOnlyInWorkflow": "Wymagane tylko w workflow",
       "typeMismatches": "Niezgodności typów",
-      "typeMismatchLine": "{{field}}: zdarzenie {{eventType}} vs przepływ pracy {{payloadType}}",
-      "selectedEventWarningPrefix": "Wybrane zdarzenie ({{selectedEventType}}) może nie pasować do wyzwalacza tego przepływu pracy ({{triggerEventName}}). ",
+      "typeMismatchLine": "{{field}}: zdarzenie {{eventType}} vs workflow {{payloadType}}",
+      "selectedEventWarningPrefix": "Wybrane zdarzenie ({{selectedEventType}}) może nie pasować do wyzwalacza tego workflow ({{triggerEventName}}). ",
       "matchOptional": "Referencje schematu są zgodne; mapowanie wyzwalacza zostanie zastosowane (opcjonalnie).",
       "matchIdentity": "Referencje schematu są zgodne; zostanie użyte mapowanie tożsamościowe (mapowanie nie jest wymagane).",
       "diffWillApply": "Referencje schematu różnią się ({{eventSchemaRef}} → {{payloadSchemaRef}}); mapowanie wyzwalacza zostanie zastosowane.",
       "diffRequiredMissing": "Referencje schematu różnią się ({{eventSchemaRef}} → {{payloadSchemaRef}}); mapowanie wyzwalacza jest wymagane, ale nie zostało skonfigurowane.",
-      "triggerEventDiffers": "Schemat zdarzenia wyzwalacza różni się od schematu ładunku przepływu pracy. Proszę przełączyć na „Schemat zdarzenia”, aby wprowadzić ładunek zdarzenia wyzwalacza.",
-      "eventUnavailable": "Schemat zdarzenia jest niedostępny; użyty zostanie schemat przepływu pracy.",
+      "triggerEventDiffers": "Schemat zdarzenia wyzwalacza różni się od schematu ładunku workflow. Proszę przełączyć na „Schemat zdarzenia”, aby wprowadzić ładunek zdarzenia wyzwalacza.",
+      "eventUnavailable": "Schemat zdarzenia jest niedostępny; użyty zostanie schemat workflow.",
       "mapping": {
         "identityOptional": "Mapowanie tożsamościowe (mapowanie nie jest wymagane)",
         "requiredMissing": "Mapowanie wyzwalacza jest wymagane, ale nie zostało skonfigurowane",
@@ -416,7 +416,7 @@
         "willApplyOptional": "Mapowanie wyzwalacza zostanie zastosowane (opcjonalnie)"
       }
     },
-    "systemWorkflowWarning": "To jest systemowy przepływ pracy. Jego uruchomienie może wpłynąć na podstawową automatyzację.",
+    "systemWorkflowWarning": "To jest systemowy workflow. Jego uruchomienie może wpłynąć na podstawową automatyzację.",
     "systemWorkflowConfirm": "Rozumiem i chcę go uruchomić.",
     "templates": {
       "exampleLabel": "Przykład {{count}}",
@@ -426,16 +426,16 @@
       "webhookTemplate": "Zdarzenie webhook"
     },
     "toasts": {
-      "confirmSystemRun": "Proszę potwierdzić chęć uruchomienia tego systemowego przepływu pracy.",
+      "confirmSystemRun": "Proszę potwierdzić chęć uruchomienia tego systemowego workflow.",
       "eventMissingSchemaRef": "Wybrane zdarzenie nie ma referencji schematu ładunku; nie można uruchomić z mapowaniem wyzwalacza.",
       "loadLatestRunFailed": "Nie udało się wczytać najnowszego uruchomienia",
       "mapEntryExists": "Ten klucz już istnieje.",
-      "noPriorPayload": "No prior run payload found.",
+      "noPriorPayload": "Nie znaleziono danych wejściowych wcześniejszego uruchomienia.",
       "payloadCopied": "Ładunek skopiowany do schowka.",
       "presetSaved": "Szablon zapisany.",
       "providePresetName": "Proszę podać nazwę szablonu.",
       "startRunFailed": "Nie udało się rozpocząć uruchomienia",
-      "triggerMappingMissing": "Mapowanie wyzwalacza jest wymagane dla tego schematu zdarzenia, ale nie zostało skonfigurowane w przepływie pracy."
+      "triggerMappingMissing": "Mapowanie wyzwalacza jest wymagane dla tego schematu zdarzenia, ale nie zostało skonfigurowane w workflow."
     },
     "validation": {
       "invalidJson": "Nieprawidłowy JSON",
@@ -443,7 +443,11 @@
       "summaryDescription": "Proszę wypełnić brakujące pola poniżej, przełączyć na kreator formularzy lub użyć przycisku przykładowego ładunku.",
       "moreErrors": "+{{count}} więcej…"
     },
-    "sampleEmailBody": "Przykładowa treść e-maila"
+    "sampleEmailBody": "Przykładowa treść e-maila",
+    "sections": {
+      "schemaAndEvents": "Schemat i zdarzenia",
+      "payloadTools": "Narzędzia ładunku"
+    }
   },
   "eventList": {
     "common": {
@@ -487,7 +491,7 @@
     },
     "states": {
       "loading": "Wczytywanie zdarzeń...",
-      "empty": "Nie znaleziono zdarzeń przepływu pracy."
+      "empty": "Nie znaleziono zdarzeń workflow."
     },
     "detail": {
       "title": "Szczegóły zdarzenia",
@@ -512,7 +516,7 @@
       "payloadLabel": "Ładunek"
     },
     "toasts": {
-      "loadEventsFailed": "Nie udało się wczytać zdarzeń przepływu pracy",
+      "loadEventsFailed": "Nie udało się wczytać zdarzeń workflow",
       "loadEventDetailFailed": "Nie udało się wczytać szczegółów zdarzenia",
       "exportReady": "Eksport zdarzeń gotowy",
       "exportFailed": "Nie udało się wyeksportować zdarzeń"
@@ -533,7 +537,7 @@
     "table": {
       "columns": {
         "runId": "ID uruchomienia",
-        "workflow": "Przepływ pracy",
+        "workflow": "Workflow",
         "version": "Wersja",
         "status": "Status",
         "retries": "Ponowne próby",
@@ -554,7 +558,7 @@
       "emptyValue": "—"
     },
     "header": {
-      "title": "Audyt przepływu pracy"
+      "title": "Audyt workflow"
     },
     "actions": {
       "exportCsv": "Eksportuj CSV",
@@ -570,7 +574,7 @@
       }
     },
     "states": {
-      "selectWorkflow": "Proszę wybrać przepływ pracy, aby zobaczyć historię audytu.",
+      "selectWorkflow": "Proszę wybrać workflow, aby zobaczyć historię audytu.",
       "empty": "Brak wpisów audytu.",
       "loading": "Ładowanie wpisów audytu..."
     },
@@ -585,12 +589,12 @@
   },
   "designer": {
     "page": {
-      "controlPanelTitle": "Panel sterowania przepływami pracy",
+      "controlPanelTitle": "Panel sterowania workflow",
       "controlPanelDescription": "Zarządzaj harmonogramami, uruchomieniami, zdarzeniami i katalogiem zdarzeń.",
-      "designerTitle": "Projektant przepływów pracy",
-      "designerDescription": "Twórz i utrzymuj automatyzacje przepływów pracy.",
-      "editorTitle": "Edytor przepływów pracy",
-      "editorDescription": "Wybierz przepływ pracy do edycji lub utwórz nowy."
+      "designerTitle": "Projektant workflow",
+      "designerDescription": "Twórz i utrzymuj automatyzacje workflow.",
+      "editorTitle": "Edytor workflow",
+      "editorDescription": "Wybierz workflow do edycji lub utwórz nowy."
     },
     "controlPanel": {
       "tabs": {
@@ -608,15 +612,15 @@
         "remainingLabel": "Pozostało",
         "remainingUnit": "pozostało",
         "resetsOn": "Resetuje się {{date}}",
-        "title": "Akcje przepływu pracy",
+        "title": "Akcje workflow",
         "unavailable": "Niedostępne",
         "unlimitedPlan": "Plan bez limitu",
         "unlimitedRemaining": "Bez limitu"
       }
     },
     "toolbar": {
-      "backToList": "Wróć do przepływów pracy",
-      "newWorkflow": "Nowy przepływ pracy",
+      "backToList": "Wróć do workflow",
+      "newWorkflow": "Nowy workflow",
       "saveDraft": "Zapisz wersję roboczą",
       "saving": "Zapisywanie...",
       "publish": "Opublikuj",
@@ -629,29 +633,29 @@
       }
     },
     "form": {
-      "nameLabel": "Nazwa przepływu pracy",
+      "nameLabel": "Nazwa workflow",
       "versionLabel": "Wersja",
       "descriptionLabel": "Opis",
       "latestPublishedVersion": "Ostatnia opublikowana wersja: {{version}}",
       "triggerTypeLabel": "Typ wyzwalacza",
       "triggerTypePlaceholder": "Wybierz typ wyzwalacza",
-      "triggerTypeHelp": "Wybierz, czy ten przepływ pracy uruchamia się ręcznie czy na podstawie zdarzenia. Harmonogramy wielokrotnego użytku są zarządzane w panelu sterowania.",
-      "manualTriggerNote": "Ten przepływ pracy nie ma wyzwalacza. Nadal można go uruchomić ręcznie i zaplanować z panelu sterowania, gdy będzie miał przypięty schemat payloadu i opublikowaną wersję.",
+      "triggerTypeHelp": "Wybierz, czy ten workflow uruchamia się ręcznie czy na podstawie zdarzenia. Harmonogramy wielokrotnego użytku są zarządzane w panelu sterowania.",
+      "manualTriggerNote": "Ten workflow nie ma wyzwalacza. Nadal można go uruchomić ręcznie i zaplanować z panelu sterowania, gdy będzie miał przypięty schemat payloadu i opublikowaną wersję.",
       "eventCategoryLabel": "Kategoria zdarzenia",
       "eventLabel": "Zdarzenie",
       "selectEventCategory": "Wybierz kategorię zdarzenia",
       "selectEvent": "Wybierz zdarzenie",
       "selectCategoryFirst": "Najpierw wybierz kategorię",
-      "inputDataLabel": "Dane wejściowe przepływu pracy",
+      "inputDataLabel": "Dane wejściowe workflow",
       "inputDataEvent": "Twoje kroki odczytują dane z wybranego wyzwalacza.",
-      "inputDataTimePrefix": "Ten przepływ pracy otrzymuje stały syntetyczny payload zegara. Kontrakt jest przypięty do",
+      "inputDataTimePrefix": "Ten workflow otrzymuje stały syntetyczny payload zegara. Kontrakt jest przypięty do",
       "inputDataManualPrefix": "Żaden wyzwalacz nie używa",
-      "inputDataManualSuffix": "domyślnie. Zmień to w zaawansowanych ustawieniach schematu, jeśli ten przepływ pracy wymaga innego kontraktu ręcznego.",
+      "inputDataManualSuffix": "domyślnie. Zmień to w zaawansowanych ustawieniach schematu, jeśli ten workflow wymaga innego kontraktu ręcznego.",
       "triggerMappingRequired": "Wymagane jest mapowanie wyzwalacza. Otwórz zaawansowane ustawienia schematu, aby je skonfigurować.",
       "schemaLocked": "Wersja schematu zablokowana",
       "schemaAutoSelected": "Wybrane automatycznie z wyzwalacza",
       "schemaSuffixClock": " do stałego kontraktu payloadu zegara.",
-      "schemaSuffixPinned": ", aby utrzymać stabilność tego przepływu pracy, gdy zmienią się schematy wyzwalaczy.",
+      "schemaSuffixPinned": ", aby utrzymać stabilność tego workflow, gdy zmienią się schematy wyzwalaczy.",
       "chooseTriggerHint": "Wybierz wyzwalacz, aby zdefiniować dostępne pola.",
       "schemaLoadErrorPrefix": "Nie udało się załadować informacji o schemacie dla",
       "schemaLoadErrorSuffix": "Sprawdź wpis w katalogu zdarzeń.",
@@ -663,10 +667,10 @@
       "inferredSchemaPrefix": "Aktualnie wywnioskowany schemat:",
       "noSchemaInferred": "Jeszcze nie wywnioskowano schematu.",
       "unknownSchemaRef": "Nieznane odwołanie do schematu. Otwórz zaawansowane ustawienia schematu i wybierz prawidłową wersję.",
-      "workflowStepsHeading": "Kroki przepływu pracy",
+      "workflowStepsHeading": "Kroki workflow",
       "workflowStepsListHint": "Przeciągnij kroki, aby zmienić kolejność lub przenieść między potokami.",
       "workflowStepsGraphHint": "Przesuwaj/powiększaj graf. Gałęzie są wyświetlane w oddzielnych torach.",
-      "workflowStepsViewAria": "Widok kroków przepływu pracy",
+      "workflowStepsViewAria": "Widok kroków workflow",
       "warningsCount": "{{count}} ostrzeżeń"
     },
     "stepPanel": {
@@ -695,8 +699,8 @@
       "concurrency": "Współbieżność",
       "onItemError": "Przy błędzie elementu",
       "captureErrorAs": "Przechwyć błąd jako",
-      "workflowId": "ID przepływu pracy",
-      "workflowVersion": "Wersja przepływu pracy",
+      "workflowId": "ID workflow",
+      "workflowVersion": "Wersja workflow",
       "inputMapping": "Mapowanie wejściowe",
       "outputMapping": "Mapowanie wyjściowe",
       "value": "Wartość",
@@ -708,7 +712,7 @@
       "untilInput": "Wejście do",
       "specificDateTime": "Określona data i godzina",
       "untilExpression": "Wyrażenie do",
-      "returnNotice": "Return zatrzymuje wykonanie przepływu pracy."
+      "returnNotice": "Return zatrzymuje wykonanie workflow."
     },
     "mappingExpr": {
       "add": "Dodaj",
@@ -798,35 +802,35 @@
     "actions": {
       "ai.infer": {
         "label": "Wywnioskuj strukturalne wyjście",
-        "description": "Wygeneruj strukturalne dane przepływu pracy z podpowiedzi przy użyciu skonfigurowanego dostawcy AI."
+        "description": "Wygeneruj strukturalne dane workflow z podpowiedzi przy użyciu skonfigurowanego dostawcy AI."
       },
       "store.get": {
         "label": "Pobierz zapisaną wartość",
-        "description": "Odczytaj utrwalony wpis klucz/wartość przepływu pracy."
+        "description": "Odczytaj utrwalony wpis klucz/wartość workflow."
       },
       "store.set": {
         "label": "Ustaw zapisaną wartość",
-        "description": "Utrwal wpis klucz/wartość przepływu pracy."
+        "description": "Utrwal wpis klucz/wartość workflow."
       },
       "store.delete": {
         "label": "Usuń zapisaną wartość",
-        "description": "Usuń utrwalony wpis klucz/wartość przepływu pracy."
+        "description": "Usuń utrwalony wpis klucz/wartość workflow."
       },
       "store.increment": {
         "label": "Zwiększ zapisaną liczbę",
-        "description": "Atomowo zwiększ utrwaloną liczbę przepływu pracy."
+        "description": "Atomowo zwiększ utrwaloną liczbę workflow."
       },
       "store.list": {
         "label": "Wyświetl zapisane wartości",
-        "description": "Wyświetl utrwalone wpisy klucz/wartość przepływu pracy w przestrzeni nazw."
+        "description": "Wyświetl utrwalone wpisy klucz/wartość workflow w przestrzeni nazw."
       },
       "store.list_namespaces": {
         "label": "Wyświetl przestrzenie nazw magazynu",
-        "description": "Wyświetl przestrzenie nazw magazynu danych przepływu pracy używane przez tego dzierżawcę."
+        "description": "Wyświetl przestrzenie nazw magazynu danych workflow używane przez tego dzierżawcę."
       },
       "links.upsert": {
         "label": "Utwórz lub zaktualizuj powiązanie encji",
-        "description": "Utwórz lub zaktualizuj utrwalone powiązanie między dwiema encjami przepływu pracy."
+        "description": "Utwórz lub zaktualizuj utrwalone powiązanie między dwiema encjami workflow."
       },
       "links.lookup": {
         "label": "Wyszukaj powiązania encji",
@@ -842,44 +846,44 @@
       },
       "links.list_namespaces": {
         "label": "Wyświetl przestrzenie nazw powiązań",
-        "description": "Wyświetl przestrzenie nazw powiązań encji przepływu pracy używane przez tego dzierżawcę."
+        "description": "Wyświetl przestrzenie nazw powiązań encji workflow używane przez tego dzierżawcę."
       },
       "ai": {
         "infer": {
           "label": "Wnioskuj ustrukturyzowane dane wyjściowe",
-          "description": "Generuj ustrukturyzowane dane przepływu pracy na podstawie promptu, korzystając ze skonfigurowanego dostawcy AI."
+          "description": "Generuj ustrukturyzowane dane workflow na podstawie promptu, korzystając ze skonfigurowanego dostawcy AI."
         }
       },
       "store": {
         "get": {
           "label": "Pobierz zapisaną wartość",
-          "description": "Odczytaj utrwalony wpis klucz/wartość przepływu pracy."
+          "description": "Odczytaj utrwalony wpis klucz/wartość workflow."
         },
         "set": {
           "label": "Ustaw zapisaną wartość",
-          "description": "Utrwal wpis klucz/wartość przepływu pracy."
+          "description": "Utrwal wpis klucz/wartość workflow."
         },
         "delete": {
           "label": "Usuń zapisaną wartość",
-          "description": "Usuń utrwalony wpis klucz/wartość przepływu pracy."
+          "description": "Usuń utrwalony wpis klucz/wartość workflow."
         },
         "increment": {
           "label": "Zwiększ zapisaną liczbę",
-          "description": "Atomowo zwiększ utrwaloną liczbę przepływu pracy."
+          "description": "Atomowo zwiększ utrwaloną liczbę workflow."
         },
         "list": {
           "label": "Wyświetl zapisane wartości",
-          "description": "Wyświetl utrwalone wpisy klucz/wartość przepływu pracy w przestrzeni nazw."
+          "description": "Wyświetl utrwalone wpisy klucz/wartość workflow w przestrzeni nazw."
         },
         "list_namespaces": {
           "label": "Wyświetl przestrzenie nazw magazynu",
-          "description": "Wyświetl przestrzenie nazw magazynu danych przepływów pracy używane przez tego tenanta."
+          "description": "Wyświetl przestrzenie nazw magazynu danych workflow używane przez tego tenanta."
         }
       },
       "links": {
         "upsert": {
           "label": "Utwórz lub zaktualizuj powiązanie encji",
-          "description": "Utwórz lub zaktualizuj utrwalone powiązanie między dwiema encjami przepływu pracy."
+          "description": "Utwórz lub zaktualizuj utrwalone powiązanie między dwiema encjami workflow."
         },
         "lookup": {
           "label": "Wyszukaj powiązania encji",
@@ -895,7 +899,7 @@
         },
         "list_namespaces": {
           "label": "Wyświetl przestrzenie nazw powiązań",
-          "description": "Wyświetl przestrzenie nazw powiązań encji przepływów pracy używane przez tego tenanta."
+          "description": "Wyświetl przestrzenie nazw powiązań encji workflow używane przez tego tenanta."
         }
       }
     },
@@ -910,14 +914,14 @@
     },
     "discardDialog": {
       "title": "Odrzucić niezapisane zmiany?",
-      "message": "Ten przepływ pracy zawiera niezapisane zmiany. Odrzucić je i kontynuować?",
+      "message": "Ten workflow zawiera niezapisane zmiany. Odrzucić je i kontynuować?",
       "confirm": "Odrzuć zmiany",
       "cancel": "Kontynuuj edycję"
     },
     "eventSchemaDialog": {
-      "title": "Zmienić schemat wejściowy przepływu pracy?",
-      "messageWithEvent": "Wybrane zdarzenie {{eventName}} używa {{schemaRef}}. Czy chcesz przełączyć ten przepływ pracy na ten schemat zdarzenia?",
-      "messageFallback": "Czy chcesz przełączyć ten przepływ pracy na wybrany schemat zdarzenia?",
+      "title": "Zmienić schemat wejściowy workflow?",
+      "messageWithEvent": "Wybrane zdarzenie {{eventName}} używa {{schemaRef}}. Czy chcesz przełączyć ten workflow na ten schemat zdarzenia?",
+      "messageFallback": "Czy chcesz przełączyć ten workflow na wybrany schemat zdarzenia?",
       "confirm": "Użyj schematu zdarzenia",
       "cancel": "Zachowaj bieżący schemat"
     },
@@ -959,8 +963,8 @@
           "description": "Obsługa błędów"
         },
         "control.callWorkflow": {
-          "label": "Wywołaj przepływ pracy",
-          "description": "Wywołaj inny przepływ pracy"
+          "label": "Wywołaj workflow",
+          "description": "Wywołaj inny workflow"
         },
         "control.return": {
           "label": "Zwróć",
@@ -980,8 +984,8 @@
             "description": "Obsługa błędów"
           },
           "callWorkflow": {
-            "label": "Wywołaj przepływ pracy",
-            "description": "Wywołaj inny przepływ pracy"
+            "label": "Wywołaj workflow",
+            "description": "Wywołaj inny workflow"
           },
           "return": {
             "label": "Zwróć",
@@ -992,7 +996,7 @@
       "nodes": {
         "state.set": {
           "label": "Ustaw stan",
-          "description": "Zaktualizuj stan przepływu pracy"
+          "description": "Zaktualizuj stan workflow"
         },
         "event.wait": {
           "label": "Czekaj na zdarzenie",
@@ -1025,7 +1029,7 @@
         "state": {
           "set": {
             "label": "Ustaw stan",
-            "description": "Zaktualizuj stan przepływu pracy"
+            "description": "Zaktualizuj stan workflow"
           }
         },
         "event": {
@@ -1112,7 +1116,7 @@
         },
         "data-store": {
           "label": "Magazyn danych",
-          "description": "Odczytuj i zapisuj trwały stan przepływu pracy między uruchomieniami."
+          "description": "Odczytuj i zapisuj trwały stan workflow między uruchomieniami."
         }
       }
     },
@@ -1143,24 +1147,24 @@
       "disconnectedTitle": "{{group}} nie jest połączony; ten krok zakończy się niepowodzeniem w czasie wykonywania, dopóki połączenie nie zostanie przywrócone."
     },
     "toasts": {
-      "loadRegistriesFailed": "Nie udało się wczytać rejestrów przepływów pracy",
+      "loadRegistriesFailed": "Nie udało się wczytać rejestrów workflow",
       "loadPermissionsFailed": "Nie udało się wczytać uprawnień",
-      "loadWorkflowsFailed": "Nie udało się wczytać przepływów pracy",
+      "loadWorkflowsFailed": "Nie udało się wczytać workflow",
       "loadEventCatalogFailed": "Nie udało się wczytać katalogu zdarzeń",
-      "settingsUpdated": "Zaktualizowano ustawienia przepływu pracy",
-      "settingsUpdateFailed": "Nie udało się zaktualizować ustawień przepływu pracy",
-      "created": "Utworzono przepływ pracy",
-      "saved": "Zapisano przepływ pracy",
-      "saveFailed": "Nie udało się zapisać przepływu pracy",
-      "saveBeforePublish": "Zapisz przepływ pracy przed opublikowaniem",
-      "published": "Opublikowano przepływ pracy",
-      "publishFailed": "Nie udało się opublikować przepływu pracy",
+      "settingsUpdated": "Zaktualizowano ustawienia workflow",
+      "settingsUpdateFailed": "Nie udało się zaktualizować ustawień workflow",
+      "created": "Utworzono workflow",
+      "saved": "Zapisano workflow",
+      "saveFailed": "Nie udało się zapisać workflow",
+      "saveBeforePublish": "Zapisz workflow przed opublikowaniem",
+      "published": "Opublikowano workflow",
+      "publishFailed": "Nie udało się opublikować workflow",
       "publishValidationErrors": "Publikacja nie powiodła się — proszę naprawić błędy walidacji",
       "systemEventMissingSchema": "To zdarzenie systemowe nie ma prawidłowego schematu i nie może zostać wybrane do czasu naprawy."
     },
     "propsPanel": {
       "resizeAria": "Zmień rozmiar panelu właściwości",
-      "settingsTitle": "Ustawienia przepływu pracy",
+      "settingsTitle": "Ustawienia workflow",
       "settingsSubtitle": "Widoczność, wstrzymywanie i kontrole bezpieczeństwa.",
       "visibleToUsers": "Widoczne dla użytkowników",
       "paused": "Wstrzymano (zatrzymaj nowe uruchomienia)",
@@ -1185,12 +1189,12 @@
     },
     "schemaSettings": {
       "lockVersion": "Zablokuj wersję schematu",
-      "lockVersionHelp": "Zablokuj wersję schematu, aby przyszłe zmiany wyzwalaczy nie wpływały na ten przepływ pracy.",
+      "lockVersionHelp": "Zablokuj wersję schematu, aby przyszłe zmiany wyzwalaczy nie wpływały na ten workflow.",
       "lockedVersion": "Zablokowana wersja schematu",
       "manualRef": "Ręczne odniesienie do schematu",
       "fixedForTimeTriggers": "Stałe dla wyzwalaczy czasowych",
       "availableFieldsPreview": "Podgląd dostępnych pól",
-      "payloadContract": "Schemat kontraktu ładunku przepływu pracy",
+      "payloadContract": "Schemat kontraktu ładunku workflow",
       "ref": "Odniesienie do schematu:",
       "loadFailed": "Nie udało się załadować schematu.",
       "notLoaded": "Schemat jeszcze nie załadowany.",
@@ -1218,7 +1222,7 @@
     "required": "Wymagane",
     "requiredTitle": "Wymagane",
     "requiredMissingTitle": "Brakuje wartości w polu wymaganym",
-    "format": "Format: {{value}}",
+    "format": "Format danych: {{value}}",
     "eachItem": "Każdy element: {{value}}",
     "length": "Długość: {{min}} - {{max}}",
     "range": "Zakres: {{min}} - {{max}}",
@@ -1227,7 +1231,7 @@
     "examplePrefix": "Przykład:"
   },
   "actionInputSection": {
-    "heading": "Action inputs"
+    "heading": "Dane wejściowe działania"
   },
   "actionInputFixedPicker": {
     "loadingOptions": "Wczytywanie opcji...",
@@ -1270,26 +1274,26 @@
     "forbidden": "Nie masz uprawnień do wykonania tej akcji.",
     "unauthorized": "Musisz być zalogowany, aby wykonać tę akcję.",
     "notFound": "Nie znaleziono.",
-    "workflowNotFound": "Nie znaleziono przepływu pracy.",
-    "workflowVersionNotFound": "Nie znaleziono wersji przepływu pracy.",
-    "workflowVersionExists": "Wersja {{version}} przepływu pracy już istnieje. Odśwież i spróbuj ponownie.",
-    "workflowValidationFailed": "Walidacja przepływu pracy nie powiodła się.",
-    "noPublishedVersions": "Ten przepływ pracy nie ma jeszcze opublikowanych wersji.",
-    "workflowPaused": "Ten przepływ pracy jest wstrzymany.",
-    "concurrencyLimitReached": "Osiągnięto limit współbieżności przepływu pracy.",
+    "workflowNotFound": "Nie znaleziono workflow.",
+    "workflowVersionNotFound": "Nie znaleziono wersji workflow.",
+    "workflowVersionExists": "Wersja {{version}} workflow już istnieje. Odśwież i spróbuj ponownie.",
+    "workflowValidationFailed": "Walidacja workflow nie powiodła się.",
+    "noPublishedVersions": "Ten workflow nie ma jeszcze opublikowanych wersji.",
+    "workflowPaused": "Ten workflow jest wstrzymany.",
+    "concurrencyLimitReached": "Osiągnięto limit współbieżności workflow.",
     "rateLimitExceeded": "Przekroczono limit częstotliwości uruchomień.",
     "payloadNotSerializable": "Payload musi być możliwy do serializacji w JSON.",
     "payloadTooLarge": "Payload przekracza maksymalny dozwolony rozmiar.",
     "payloadValidationFailed": "Payload nie przeszedł walidacji.",
-    "missingPayloadSchemaRef": "Ten przepływ pracy nie ma odwołania do schematu payloadu.",
+    "missingPayloadSchemaRef": "Ten workflow nie ma odwołania do schematu payloadu.",
     "missingSourcePayloadSchemaRef": "W payloadzie zdarzenia brakuje odwołania do schematu źródłowego.",
     "triggerMappingRequired": "Dla tego uruchomienia wymagane jest mapowanie wyzwalacza.",
     "runNotFailed": "Uruchomienie nie jest w stanie błędu.",
     "failedStepNotFound": "Nie można znaleźć nieudanego kroku.",
     "noEventWaitFound": "Nie znaleziono oczekiwania na zdarzenie dla tego uruchomienia.",
     "cancelTemporalRunFailed": "Nie udało się anulować uruchomienia w silniku wykonawczym.",
-    "noDefinitionToPublish": "Brak definicji przepływu pracy do opublikowania.",
-    "deleteActiveRunsBlocked": "Ten przepływ pracy ma aktywne uruchomienia. Anuluj je przed usunięciem.",
+    "noDefinitionToPublish": "Brak definicji workflow do opublikowania.",
+    "deleteActiveRunsBlocked": "Ten workflow ma aktywne uruchomienia. Anuluj je przed usunięciem.",
     "scheduleOneTimeRunAtRequired": "Harmonogramy jednorazowe wymagają znacznika czasu uruchomienia.",
     "scheduleOneTimeInvalidTimestamp": "Harmonogramy jednorazowe wymagają poprawnego znacznika ISO 8601.",
     "scheduleOneTimeMustBeFuture": "Harmonogramy jednorazowe muszą być zaplanowane w przyszłości.",
@@ -1302,11 +1306,11 @@
     "cronUnsupportedCharacters": "Wyrażenie cron zawiera nieobsługiwane znaki.",
     "cronDayConflict": "Wyrażenie cron nie może jednocześnie ustawiać dnia miesiąca i dnia tygodnia.",
     "cronTooFrequent": "Ten harmonogram cron jest zbyt częsty (minimalny odstęp to 5 minut).",
-    "schedulePublishedRequired": "Harmonogramy można tworzyć tylko dla opublikowanych przepływów pracy.",
-    "schedulePinnedSchemaRequired": "Harmonogramy są obsługiwane tylko dla przepływów pracy z przypiętym schematem payloadu.",
-    "scheduleSchemaNotRegistered": "Najnowsza opublikowana wersja przepływu pracy nie ma zarejestrowanego przypiętego schematu payloadu.",
-    "schedulePayloadInvalid": "Payload harmonogramu nie przeszedł walidacji względem schematu przepływu pracy.",
-    "processEventFailed": "Nie udało się przetworzyć zdarzenia przepływu pracy."
+    "schedulePublishedRequired": "Harmonogramy można tworzyć tylko dla opublikowanych workflow.",
+    "schedulePinnedSchemaRequired": "Harmonogramy są obsługiwane tylko dla workflow z przypiętym schematem payloadu.",
+    "scheduleSchemaNotRegistered": "Najnowsza opublikowana wersja workflow nie ma zarejestrowanego przypiętego schematu payloadu.",
+    "schedulePayloadInvalid": "Payload harmonogramu nie przeszedł walidacji względem schematu workflow.",
+    "processEventFailed": "Nie udało się przetworzyć zdarzenia workflow."
   },
   "taskInbox": {
     "title": "Skrzynka zadań",
@@ -1322,7 +1326,7 @@
     "pagination": {
       "previous": "Poprzednia",
       "next": "Następna",
-      "pageLabel": "Page {{current}} of {{total}}"
+      "pageLabel": "Strona {{current}} z {{total}}"
     },
     "errors": {
       "loadFailed": "Nie udało się wczytać zadań. Proszę spróbować ponownie.",
@@ -1467,9 +1471,9 @@
     "copied": "Skopiowano",
     "copyPath": "Kopiuj ścieżkę",
     "contentHeading": "Zredaguj treść",
-    "contentDescription": "Proszę używać formatowania zgodnego z markdown oraz osadzonych odnośników do przepływu pracy.",
+    "contentDescription": "Proszę używać formatowania zgodnego z markdown oraz osadzonych odnośników do workflow.",
     "insertReference": "Wstaw referencję",
-    "insertReferenceHeading": "Wstaw referencję do przepływu pracy",
+    "insertReferenceHeading": "Wstaw referencję do workflow",
     "errors": {
       "noCodeBlock": "Nie można wstawiać referencji wewnątrz bloków kodu. Proszę przenieść kursor do innego bloku i spróbować ponownie."
     }
@@ -1498,7 +1502,9 @@
     "field": {
       "placeholder": "Wprowadź wyrażenie...",
       "insertFieldPlaceholder": "Wstaw pole"
-    }
+    },
+    "clear": "Wyczyść",
+    "clearAriaLabel": "Wyczyść wyrażenie"
   },
   "sourceDataTree": {
     "searchPlaceholder": "Szukaj pól...",
@@ -1506,7 +1512,7 @@
       "payload": "Ładunek",
       "vars": "Wyjścia kroków (vars)",
       "loopContext": "Kontekst pętli",
-      "workflowMeta": "Metadane przepływu pracy",
+      "workflowMeta": "Metadane workflow",
       "errorContext": "Kontekst błędu"
     },
     "vars": {
@@ -1634,7 +1640,7 @@
       "minLength": "Min. długość: {{value}}",
       "maxLength": "Maks. długość: {{value}}",
       "pattern": "Wzorzec: {{value}}",
-      "format": "Format: {{value}}",
+      "format": "Format danych: {{value}}",
       "examples": "Przykłady: {{list}}",
       "default": "Domyślnie: {{value}}"
     }
@@ -1645,7 +1651,7 @@
     "actionPlaceholder": "Wybierz akcję {{group}}",
     "required": {
       "title": "Wymagana akcja",
-      "message": "Proszę wybrać akcję {{group}} przed skonfigurowaniem wejść lub opublikowaniem tego przepływu pracy."
+      "message": "Proszę wybrać akcję {{group}} przed skonfigurowaniem wejść lub opublikowaniem tego workflow."
     },
     "tileKind": {
       "core-object": "Podstawowe",
@@ -1681,7 +1687,7 @@
       "buildingGraph": "Budowanie grafu…"
     },
     "errors": {
-      "buildFailed": "Nie udało się zbudować grafu przepływu pracy.",
+      "buildFailed": "Nie udało się zbudować grafu workflow.",
       "renderErrorTitle": "Błąd renderowania grafu",
       "switchToList": "Przełącz na widok listy, aby kontynuować edycję."
     },
@@ -1696,7 +1702,7 @@
       "allMapped": "Wszystkie wymagane pola są zmapowane"
     },
     "insert": {
-      "title": "Drop a step here to insert"
+      "title": "Upuść tutaj krok, aby go wstawić"
     },
     "actions": {
       "deleteStep": "Usuń krok"
@@ -1705,10 +1711,10 @@
   "runStudio": {
     "header": {
       "kicker": "Studio uruchamiania",
-      "fallbackTitle": "Uruchomienie przepływu pracy",
+      "fallbackTitle": "Uruchomienie workflow",
       "version": "Wersja {{version}}",
       "updated": "Zaktualizowano {{time}}",
-      "backToWorkflows": "← Wróć do przepływów pracy"
+      "backToWorkflows": "← Wróć do workflow"
     },
     "actions": {
       "replay": "Powtórz",
@@ -1736,8 +1742,8 @@
         "list": "Lista"
       },
       "states": {
-        "loadingDefinition": "Wczytywanie definicji przepływu pracy…",
-        "loadingDefinitionPlain": "Wczytywanie definicji przepływu pracy...",
+        "loadingDefinition": "Wczytywanie definicji workflow…",
+        "loadingDefinitionPlain": "Wczytywanie definicji workflow...",
         "noSteps": "Brak kroków do wyświetlenia."
       },
       "selectPrompt": "Wybierz krok, aby go wyróżnić.",
@@ -1749,7 +1755,7 @@
         "runId": "Identyfikator uruchomienia",
         "started": "Rozpoczęto",
         "duration": "Czas trwania",
-        "tenant": "Dzierżawca",
+        "tenant": "Organizacja",
         "trigger": "Wyzwalacz",
         "eventType": "Typ zdarzenia",
         "scheduleState": "Stan harmonogramu",
@@ -1813,8 +1819,8 @@
         "replay": "Powtórz uruchomienie"
       },
       "heading": {
-        "cancel": "Anuluj uruchomienie przepływu pracy",
-        "replay": "Powtórz uruchomienie przepływu pracy"
+        "cancel": "Anuluj uruchomienie workflow",
+        "replay": "Powtórz uruchomienie workflow"
       },
       "description": {
         "cancel": "Anulowanie zatrzyma wszystkie trwające lub oczekujące kroki tego uruchomienia.",
@@ -1876,9 +1882,9 @@
     },
     "lastRefreshed": "Ostatnio odświeżono {{time}}",
     "navigation": {
-      "backToRuns": "← Powrót do uruchomień przepływów pracy"
+      "backToRuns": "← Powrót do uruchomień workflow"
     },
-    "title": "Studio uruchamiania przepływów pracy"
+    "title": "Studio uruchamiania workflow"
   },
   "schedules": {
     "common": {
@@ -1886,9 +1892,9 @@
       "entityName": "harmonogram"
     },
     "heading": {
-      "reflectionLabel": "Harmonogramy przepływów pracy",
+      "reflectionLabel": "Harmonogramy workflow",
       "title": "Harmonogramy",
-      "description": "Zarządzaj wielokrotnie używanymi harmonogramami przepływów pracy i ich zapisanymi ładunkami."
+      "description": "Zarządzaj wielokrotnie używanymi harmonogramami workflow i ich zapisanymi ładunkami."
     },
     "actions": {
       "new": "Nowy harmonogram",
@@ -1903,7 +1909,7 @@
       "rowMenu": "Akcje harmonogramu dla {{name}}"
     },
     "filters": {
-      "allWorkflows": "Wszystkie przepływy pracy",
+      "allWorkflows": "Wszystkie workflow",
       "allStatuses": "Wszystkie statusy",
       "allTriggers": "Wszystkie wyzwalacze",
       "searchPlaceholder": "Szukaj harmonogramów..."
@@ -1925,10 +1931,10 @@
       "nonBusiness": "Dni nierobocze"
     },
     "table": {
-      "workflowVersion": "Przepływ pracy v{{version}}",
+      "workflowVersion": "Workflow, wersja {{version}}",
       "columns": {
         "schedule": "Harmonogram",
-        "workflow": "Przepływ pracy",
+        "workflow": "Workflow",
         "triggerType": "Typ wyzwalacza",
         "nextFire": "Następne wyzwolenie / uruchomienie",
         "lastFire": "Ostatnie wyzwolenie",
@@ -1938,14 +1944,14 @@
       }
     },
     "states": {
-      "loadingReflection": "Wczytywanie harmonogramów przepływów pracy",
+      "loadingReflection": "Wczytywanie harmonogramów workflow",
       "loading": "Wczytywanie harmonogramów…",
       "never": "Nigdy",
       "calendarMisconfigured": "Kalendarz skonfigurowany nieprawidłowo",
       "noEligibleUpcomingRun": "Brak kwalifikującego się nadchodzącego uruchomienia",
-      "unknownWorkflow": "Nieznany przepływ pracy",
+      "unknownWorkflow": "Nieznany workflow",
       "empty": "Nie znaleziono harmonogramów",
-      "emptyDescription": "Utwórz jednorazowy lub cykliczny harmonogram, aby uruchomić opublikowany przepływ pracy z zapisanymi danymi wejściowymi."
+      "emptyDescription": "Utwórz jednorazowy lub cykliczny harmonogram, aby uruchomić opublikowany workflow z zapisanymi danymi wejściowymi."
     },
     "errors": {
       "loadFailed": "Nie udało się wczytać harmonogramów.",
@@ -1964,13 +1970,13 @@
         "edit": "Edytuj harmonogram",
         "create": "Utwórz harmonogram"
       },
-      "description": "Skonfiguruj czas i statyczne dane ładunku dla harmonogramu przepływu pracy.",
+      "description": "Skonfiguruj czas i statyczne dane ładunku dla harmonogramu workflow.",
       "states": {
         "loading": "Wczytywanie szczegółów harmonogramu…"
       },
       "fields": {
-        "workflow": "Przepływ pracy",
-        "workflowPlaceholder": "Wybierz przepływ pracy",
+        "workflow": "Workflow",
+        "workflowPlaceholder": "Wybierz workflow",
         "name": "Nazwa harmonogramu",
         "namePlaceholder": "Synchronizacja zobowiązań na koniec miesiąca",
         "triggerType": "Typ wyzwalacza",
@@ -1998,26 +2004,26 @@
         }
       },
       "eligibility": {
-        "chooseWorkflow": "Proszę wybrać przepływ pracy przed zapisaniem.",
-        "unpublished": "Harmonogramy można tworzyć tylko dla opublikowanych przepływów pracy.",
-        "pinnedOnly": "Harmonogramy są obsługiwane tylko dla przepływów pracy z przypiętym schematem payloadu.",
-        "noPinnedSchema": "Wybrany przepływ pracy nie udostępnia przypiętego schematu ładunku.",
-        "unavailableSchemaRef": "Wybrany przepływ pracy używa niedostępnej referencji schematu ładunku: {{schemaRef}}."
+        "chooseWorkflow": "Proszę wybrać workflow przed zapisaniem.",
+        "unpublished": "Harmonogramy można tworzyć tylko dla opublikowanych workflow.",
+        "pinnedOnly": "Harmonogramy są obsługiwane tylko dla workflow z przypiętym schematem payloadu.",
+        "noPinnedSchema": "Wybrany workflow nie udostępnia przypiętego schematu ładunku.",
+        "unavailableSchemaRef": "Wybrany workflow używa niedostępnej referencji schematu ładunku: {{schemaRef}}."
       },
       "calendarSource": {
-        "tenantDefault": "Domyślne godziny robocze dzierżawcy",
-        "tenantDefaultMissing": "Domyślne godziny robocze dzierżawcy (nieskonfigurowane)",
-        "tenantDefaultHint": "Proszę najpierw ustawić domyślny harmonogram godzin roboczych dzierżawcy lub wybrać konkretny harmonogram.",
+        "tenantDefault": "Domyślne godziny robocze organizacji",
+        "tenantDefaultMissing": "Domyślne godziny robocze organizacji (nieskonfigurowane)",
+        "tenantDefaultHint": "Najpierw ustaw domyślny harmonogram godzin roboczych organizacji lub wybierz konkretny harmonogram.",
         "specific": "Konkretny harmonogram godzin roboczych",
         "specificHint": "Proszę najpierw utworzyć harmonogram godzin roboczych.",
-        "tenantDefaultMissingDescription": "Nie skonfigurowano jeszcze domyślnego harmonogramu godzin roboczych dzierżawcy. Proszę wybrać konkretny harmonogram godzin roboczych lub najpierw ustawić wartość domyślną dzierżawcy.",
+        "tenantDefaultMissingDescription": "Nie skonfigurowano jeszcze domyślnego harmonogramu godzin roboczych organizacji. Wybierz konkretny harmonogram godzin roboczych lub najpierw ustaw domyślny harmonogram godzin roboczych organizacji.",
         "holidaysNote": "Święta są zawsze traktowane jako dni nierobocze."
       },
       "businessHours": {
-        "defaultSuffix": " (Default)",
+        "defaultSuffix": " (Domyślne)",
         "noneConfigured": "Nie skonfigurowano jeszcze żadnych harmonogramów godzin roboczych.",
-        "usingTenantDefault": "Używa domyślnego harmonogramu godzin roboczych dzierżawcy.",
-        "noTenantDefault": "Nie skonfigurowano jeszcze domyślnego harmonogramu godzin roboczych dzierżawcy."
+        "usingTenantDefault": "Używa domyślnego harmonogramu godzin roboczych organizacji.",
+        "noTenantDefault": "Nie skonfigurowano jeszcze domyślnego harmonogramu godzin roboczych organizacji."
       },
       "recurring": {
         "title": "Harmonogram cykliczny",
@@ -2050,8 +2056,8 @@
           "false": "Fałsz"
         },
         "noSchema": {
-          "title": "Dla tego przepływu pracy nie jest jeszcze dostępny schemat ładunku.",
-          "description": "Pola formularza pojawią się tutaj, gdy ten przepływ pracy opublikuje przypięty schemat ładunku."
+          "title": "Dla tego workflow nie jest jeszcze dostępny schemat ładunku.",
+          "description": "Pola formularza pojawią się tutaj, gdy ten workflow opublikuje przypięty schemat ładunku."
         }
       },
       "validation": {
@@ -2077,7 +2083,7 @@
     "recurrence": {
       "andWord": "i",
       "frequency": {
-        "daily": "Daily",
+        "daily": "Codziennie",
         "weekly": "Co tydzień",
         "monthly": "Co miesiąc"
       },
@@ -2170,7 +2176,7 @@
     "workflowReferenceSection": {
       "payload": "Ładunek",
       "vars": "Wyniki kroków",
-      "meta": "Szczegóły przepływu pracy",
+      "meta": "Szczegóły workflow",
       "error": "Błąd",
       "forEach": "Kontekst pętli"
     },
@@ -2214,19 +2220,19 @@
   },
   "automation": {
     "createWorkflow": {
-      "dialogTitle": "Utwórz nowy przepływ pracy",
+      "dialogTitle": "Utwórz nowy workflow",
       "fields": {
-        "name": "Nazwa przepływu pracy",
+        "name": "Nazwa workflow",
         "namePlaceholder": "np. Wyślij e-mail powitalny",
         "triggerType": "Typ wyzwalacza"
       },
       "validation": {
-        "nameRequired": "Nazwa przepływu pracy jest wymagana",
+        "nameRequired": "Nazwa workflow jest wymagana",
         "nameTooShort": "Nazwa musi mieć co najmniej 3 znaki"
       },
       "actions": {
         "cancel": "Anuluj",
-        "create": "Utwórz przepływ pracy"
+        "create": "Utwórz workflow"
       },
       "triggers": {
         "event": {
@@ -2244,7 +2250,7 @@
       }
     },
     "workflowList": {
-      "header": "Przepływy pracy",
+      "header": "Workflow",
       "stats": {
         "total": "{{count}} łącznie",
         "active": "{{count}} aktywnych",
@@ -2253,12 +2259,12 @@
       },
       "actions": {
         "eventCatalog": "Katalog zdarzeń",
-        "newWorkflow": "Nowy przepływ pracy",
-        "createFirst": "Utwórz swój pierwszy przepływ pracy",
+        "newWorkflow": "Nowy workflow",
+        "createFirst": "Utwórz swój pierwszy workflow",
         "retry": "Ponów",
         "resetFilters": "Resetuj"
       },
-      "searchPlaceholder": "Szukaj przepływów pracy...",
+      "searchPlaceholder": "Szukaj workflow...",
       "statusFilter": {
         "all": "Wszystkie statusy",
         "active": "Aktywny",
@@ -2280,23 +2286,23 @@
         "event": "Zdarzenie"
       },
       "bulk": {
-        "selectedSingular": "Wybrano {{count}} przepływ pracy",
-        "selectedPlural": "Wybrano {{count}} przepływów pracy",
+        "selectedSingular": "Wybrano {{count}} workflow",
+        "selectedPlural": "Wybrano {{count}} workflow",
         "pause": "Wstrzymaj",
         "resume": "Wznów",
         "delete": "Usuń",
         "clearSelection": "Wyczyść zaznaczenie",
-        "deleteDialogTitle": "Usuń wybrane przepływy pracy",
-        "deleteConfirmSingular": "Usuń {{count}} przepływ pracy",
-        "deleteConfirmPlural": "Usuń {{count}} przepływów pracy",
+        "deleteDialogTitle": "Usuń wybrane workflow",
+        "deleteConfirmSingular": "Usuń {{count}} workflow",
+        "deleteConfirmPlural": "Usuń {{count}} workflow",
         "deleteClose": "Zamknij",
         "deleteCancel": "Anuluj",
-        "selectedSummarySingular": "Wybrano <1>{{count}}</1> przepływ pracy.",
-        "selectedSummaryPlural": "Wybrano <1>{{count}}</1> przepływów pracy.",
+        "selectedSummarySingular": "Wybrano <1>{{count}}</1> workflow.",
+        "selectedSummaryPlural": "Wybrano <1>{{count}}</1> workflow.",
         "willBeDeleted": "<1>{{count}}</1> zostanie usunięty.",
         "willBeSkipped": "<1>{{count}}</1> zostanie pominięty.",
-        "skippedHeading": "Pominięte przepływy pracy",
-        "systemWorkflowReason": "Systemowy przepływ pracy"
+        "skippedHeading": "Pominięte workflow",
+        "systemWorkflowReason": "Systemowy workflow"
       },
       "columns": {
         "name": "Nazwa",
@@ -2317,7 +2323,7 @@
         "draftVersion": "Wersja robocza: v{{version}}"
       },
       "rowMenu": {
-        "ariaLabel": "Akcje przepływu pracy",
+        "ariaLabel": "Akcje workflow",
         "resume": "Wznów",
         "pause": "Wstrzymaj",
         "duplicate": "Duplikuj",
@@ -2325,22 +2331,22 @@
         "delete": "Usuń"
       },
       "states": {
-        "errorTitle": "Nie udało się załadować przepływów pracy",
-        "errorFallback": "Nie udało się pobrać przepływów pracy",
+        "errorTitle": "Nie udało się załadować workflow",
+        "errorFallback": "Nie udało się pobrać workflow",
         "validationFailed": "Walidacja usunięcia nie powiodła się. Proszę spróbować ponownie.",
-        "emptyTitle": "Brak przepływów pracy",
-        "emptyDescription": "Proszę utworzyć pierwszy przepływ pracy, aby zautomatyzować zadania, reagować na zdarzenia i usprawnić swoje procesy.",
-        "noResultsTitle": "Nie znaleziono przepływów pracy",
+        "emptyTitle": "Brak workflow",
+        "emptyDescription": "Proszę utworzyć pierwszy workflow, aby zautomatyzować zadania, reagować na zdarzenia i usprawnić swoje procesy.",
+        "noResultsTitle": "Nie znaleziono workflow",
         "noResultsDescription": "Proszę spróbować dostosować wyszukiwanie lub filtry, aby znaleźć to, czego Pan/Pani szuka."
       },
       "deleteDialog": {
-        "fallbackEntityName": "ten przepływ pracy"
+        "fallbackEntityName": "ten workflow"
       }
     },
     "eventsCatalog": {
       "header": {
-        "title": "Katalog zdarzeń przepływu pracy",
-        "subtitle": "Proszę przeglądać, zarządzać i projektować przepływy pracy dla zdarzeń i wyzwalaczy systemowych.",
+        "title": "Katalog zdarzeń workflow",
+        "subtitle": "Proszę przeglądać, zarządzać i projektować workflow dla zdarzeń i wyzwalaczy systemowych.",
         "defineCustomEvent": "Zdefiniuj zdarzenie niestandardowe",
         "managePermissionTitle": "Wymaga uprawnienia workflow:manage"
       },
@@ -2351,7 +2357,7 @@
         "statusOptions": {
           "all": "Wszystkie statusy",
           "active": "Aktywny",
-          "beta": "Beta",
+          "beta": "Wersja beta",
           "draft": "Wersja robocza",
           "deprecated": "Wycofany"
         },
@@ -2359,7 +2365,7 @@
         "sourceOptions": {
           "all": "Wszystkie źródła",
           "system": "System",
-          "tenant": "Tenant"
+          "tenant": "Organizacja"
         },
         "sort": "Sortowanie",
         "sortOptions": {
@@ -2372,11 +2378,11 @@
         "viewList": "Widok listy"
       },
       "card": {
-        "workflowsCount": "{{count}} przepływów pracy",
+        "workflowsCount": "{{count}} workflow",
         "actions": {
           "simulate": "Symuluj",
           "metrics": "Metryki",
-          "attachTitle": "Dołącz (nowy przepływ pracy)"
+          "attachTitle": "Dołącz (nowy workflow)"
         },
         "metrics": {
           "executions": "Wykonania",
@@ -2399,7 +2405,7 @@
       },
       "badges": {
         "system": "System",
-        "tenant": "Tenant",
+        "tenant": "Organizacja",
         "noSchema": "Brak schematu",
         "unknownSchema": "Nieznany schemat",
         "schema": "Schemat"
@@ -2414,15 +2420,15 @@
           "heading": "Schemat",
           "viewFull": "Wyświetl pełny schemat",
           "managedNotice": "Schemat jest zarządzany przez rejestr schematów.",
-          "missingNotice": "Nie ustawiono schemaRef; zdarzenie może nie być użyteczne jako wyzwalacz przepływu pracy.",
+          "missingNotice": "Nie ustawiono schemaRef; zdarzenie może nie być użyteczne jako wyzwalacz workflow.",
           "topLevelFields": "Pola najwyższego poziomu",
           "required": "wymagane",
           "moreFieldsHint": "Wyświetlanie pierwszych 12 pól. Proszę użyć opcji \"Wyświetl pełny schemat\", aby zobaczyć więcej."
         },
         "attached": {
-          "heading": "Dołączone przepływy pracy",
+          "heading": "Dołączone workflow",
           "loading": "Ładowanie…",
-          "empty": "Brak dołączonych przepływów pracy.",
+          "empty": "Brak dołączonych workflow.",
           "publishedBadge": "Opublikowano",
           "systemBadge": "System",
           "pausedBadge": "Wstrzymano",
@@ -2430,7 +2436,7 @@
           "open": "Otwórz",
           "detach": "Odłącz",
           "publishTooltip": "Wymaga uprawnienia workflow:publish",
-          "adminTooltip": "Wymaga workflow:admin dla systemowych przepływów pracy"
+          "adminTooltip": "Wymaga workflow:admin dla systemowych workflow"
         }
       },
       "schemaModal": {
@@ -2450,7 +2456,7 @@
         "from": "Od",
         "to": "Do",
         "refresh": "Odśwież",
-        "openWorkflowEditor": "Otwórz edytor przepływu pracy",
+        "openWorkflowEditor": "Otwórz edytor workflow",
         "loading": "Ładowanie…",
         "totals": {
           "totalEvents": "Łączna liczba zdarzeń",
@@ -2547,7 +2553,7 @@
           "selectPlaceholder": "Proszę wybrać…",
           "payloadSchemaJson": "Schemat ładunku (JSON)"
         },
-        "footer": "Niestandardowe zdarzenia są ograniczone do tenantu i mogą być używane jako wyzwalacze przepływu pracy.",
+        "footer": "Niestandardowe zdarzenia są ograniczone do tenantu i mogą być używane jako wyzwalacze workflow.",
         "validation": {
           "typeAndNameRequired": "Typ zdarzenia i nazwa są wymagane.",
           "schemaRefRequired": "Proszę wybrać odniesienie do schematu ładunku (lub użyć schematu wbudowanego).",
@@ -2560,9 +2566,9 @@
       },
       "toasts": {
         "loadEventsFailed": "Nie udało się załadować zdarzeń",
-        "workflowCreated": "Utworzono przepływ pracy",
-        "createWorkflowFailed": "Nie udało się utworzyć przepływu pracy",
-        "detachConfirm": "Odłączyć ten przepływ pracy od zdarzenia? Spowoduje to opublikowanie nowej wersji bez wyzwalacza.",
+        "workflowCreated": "Utworzono workflow",
+        "createWorkflowFailed": "Nie udało się utworzyć workflow",
+        "detachConfirm": "Odłączyć ten workflow od zdarzenia? Spowoduje to opublikowanie nowej wersji bez wyzwalacza.",
         "detachValidationFailed": "Odłączanie nie powiodło się (błędy walidacji)",
         "detached": "Odłączono",
         "detachFailed": "Odłączanie nie powiodło się"
@@ -2598,11 +2604,11 @@
     }
   },
   "automationGate": {
-    "loading": "Ładowanie automatyzacji przepływów pracy..."
+    "loading": "Ładowanie automatyzacji workflow..."
   },
   "flow": {
     "designer": {
-      "title": "Projektant przepływów pracy"
+      "title": "Projektant workflow"
     },
     "sidebar": {
       "dragHint": "Przeciągnij te węzły na płótno:"
@@ -2617,11 +2623,11 @@
     },
     "delete": {
       "confirmTitle": "Potwierdź usunięcie",
-      "confirmMessage": "Czy na pewno chcesz usunąć ten przepływ pracy?"
+      "confirmMessage": "Czy na pewno chcesz usunąć ten workflow?"
     },
     "topBar": {
-      "workflowName": "Nazwa przepływu pracy",
-      "workflowDescription": "Opis przepływu pracy"
+      "workflowName": "Nazwa workflow",
+      "workflowDescription": "Opis workflow"
     },
     "nodes": {
       "classifier": {

@@ -95,7 +95,7 @@
       "people": "Pessoas",
       "plan": "Evidência, plano e cronologia",
       "quoteTitle": "Cotação para {{title}}",
-      "quotes": "Citações",
+      "quotes": "Cotações",
       "recurring": "Recorrente",
       "timeline": "Linha do tempo",
       "unlinkQuote": "Desvincular",
@@ -150,7 +150,7 @@
       "won": "Venceu este período"
     },
     "linkQuoteDialog": {
-      "confirm": "Citação do link",
+      "confirm": "Vincular cotação",
       "empty": "Nenhuma cotação desvinculada está disponível para este cliente.",
       "title": "Vincular uma cotação existente"
     },
@@ -449,7 +449,7 @@
       "ownerAssigned": "Responsável atualizado",
       "qualified": "Ponto de verificação qualificado registrado",
       "quoteLinked": "Cotação vinculada",
-      "quoteUnlinked": "Citação desvinculada",
+      "quoteUnlinked": "Cotação desvinculada",
       "snoozed": "Adiado por alguns dias",
       "stagePlanned": "Plano da fase adicionado",
       "stageSet": "Estágio definido como {{stage}}",
@@ -507,7 +507,7 @@
       "assetAging": {
         "age_one": "{{count}} ativo com mais de {{oldestYears}} anos",
         "age_other": "{{count}} ativos com mais de {{oldestYears}} anos",
-        "quoteRefresh": " em {{clientName}}. Cite a atualização antes que ela se torne um ticket de interrupção."
+        "quoteRefresh": " em {{clientName}}. Faça uma cotação para a renovação antes que isso gere um ticket de indisponibilidade."
       },
       "forClient": " para {{clientName}}.",
       "goingQuiet": {
@@ -526,8 +526,8 @@
         "assessmentGap_one": " Você não propôs nenhuma em {{count}} mês. Avaliações pagas são seu movimento inicial mais forte.",
         "assessmentGap_other": " Você não propõe uma há {{count}} meses. Avaliações pagas são seu movimento inicial mais forte.",
         "assessmentRate": "Você fecha {{wonPerFive}} de cada 5 avaliações que propõe.",
-        "quoteVelocity": "As cotações que você envia em uma semana são aproximadamente {{ratio}}x mais frequentes",
-        "quoteVelocityCompared": " como aqueles que esperam."
+        "quoteVelocity": "As cotações enviadas em até uma semana fecham com frequência {{ratio}} vezes maior",
+        "quoteVelocityCompared": " do que as que demoram mais."
       },
       "renewal": {
         "age_one": "Renovação em {{count}} dia",

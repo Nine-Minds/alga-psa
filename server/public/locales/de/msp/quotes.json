@@ -232,7 +232,7 @@
       "save": "Angebot konnte nicht gespeichert werden",
       "saveFailed": "Das Speichern des Angebots ist fehlgeschlagen",
       "workflowAction": "{{action}} fehlgeschlagen",
-      "removeItem": "Failed to remove quote item"
+      "removeItem": "Angebotsposition konnte nicht entfernt werden"
     },
     "loading": "Angebotsformular wird geladen...",
     "notices": {
@@ -559,7 +559,7 @@
     },
     "removeAriaLabel": "{{email}} entfernen",
     "errors": {
-      "contactsLoadFailed": "Could not load client contacts."
+      "contactsLoadFailed": "Kundenkontakte konnten nicht geladen werden."
     }
   },
   "quoteConversion": {

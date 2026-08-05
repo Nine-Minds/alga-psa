@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Build and push the Alga PSA code-server image
+# Build and push the AlgaPSA code-server image
 
 # Default values
 REGISTRY="harbor.nineminds.com"
@@ -15,7 +15,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}Building Alga PSA Code Server image...${NC}"
+echo -e "${GREEN}Building AlgaPSA Code Server image...${NC}"
 echo -e "${YELLOW}Registry: ${REGISTRY}/${NAMESPACE}/${IMAGE_NAME}:${TAG}${NC}"
 
 # Build the image from the project root to have access to package.json files

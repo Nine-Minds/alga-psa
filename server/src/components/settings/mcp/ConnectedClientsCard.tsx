@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { EditionGateError, getEditionGateResponse, isEditionGateError } from '@/lib/editionGating/client';
 import type { EditionGateResponseBody } from '@/lib/editionGating/types';
 
@@ -47,6 +48,7 @@ export default function ConnectedClientsCard({
 }: {
   onEditionGate?: (response: EditionGateResponseBody) => void;
 }) {
+  const { t } = useTranslation('msp/settings');
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,10 +65,10 @@ export default function ConnectedClientsCard({
           onEditionGate?.(e.response);
           return;
         }
-        setError('Failed to load connections.');
+        setError(t('mcpServer.connectedClients.errors.load', { defaultValue: 'Failed to load connections.' }));
       })
       .finally(() => setLoading(false));
-  }, [onEditionGate]);
+  }, [onEditionGate, t]);
 
   useEffect(() => {
     reload();
@@ -85,27 +87,33 @@ export default function ConnectedClientsCard({
         onEditionGate?.(e.response);
         return;
       }
-      setError('Failed to disconnect.');
+      setError(t('mcpServer.connectedClients.errors.disconnect', { defaultValue: 'Failed to disconnect.' }));
     } finally {
       setBusy(false);
     }
-  }, [onEditionGate, removeTarget, reload]);
+  }, [onEditionGate, removeTarget, reload, t]);
 
   return (
     <Card id="mcp-connected-clients-card">
       <CardHeader>
-        <CardTitle>Connected MCP clients</CardTitle>
+        <CardTitle>{t('mcpServer.connectedClients.title', { defaultValue: 'Connected MCP clients' })}</CardTitle>
         <CardDescription>
-          Apps you&apos;ve authorized to access AlgaPSA as you over MCP (e.g. Claude). Disconnect any you no
-          longer use.
+          {t('mcpServer.connectedClients.description', {
+            defaultValue:
+              'Apps you\'ve authorized to access AlgaPSA as you over MCP (e.g. Claude). Disconnect any you no longer use.',
+          })}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {error && <p className="mb-3 text-sm text-[rgb(var(--color-accent-600))]">{error}</p>}
         {loading ? (
-          <p className="text-sm text-[rgb(var(--color-text-500))]">Loading…</p>
+          <p className="text-sm text-[rgb(var(--color-text-500))]">
+            {t('mcpServer.connectedClients.loading', { defaultValue: 'Loading…' })}
+          </p>
         ) : connections.length === 0 ? (
-          <p className="text-sm text-[rgb(var(--color-text-500))]">No connected clients.</p>
+          <p className="text-sm text-[rgb(var(--color-text-500))]">
+            {t('mcpServer.connectedClients.empty', { defaultValue: 'No connected clients.' })}
+          </p>
         ) : (
           <ul className="divide-y divide-[rgb(var(--color-border-200))]">
             {connections.map((c) => (
@@ -113,7 +121,11 @@ export default function ConnectedClientsCard({
                 <div>
                   <div className="text-sm font-medium">{c.clientName || hostOf(c.clientId)}</div>
                   <div className="text-xs text-[rgb(var(--color-text-500))]">
-                    {hostOf(c.clientId)} · connected {new Date(c.consentedAt).toLocaleDateString()}
+                    {t('mcpServer.connectedClients.meta', {
+                      defaultValue: '{{host}} · connected {{date}}',
+                      host: hostOf(c.clientId),
+                      date: new Date(c.consentedAt).toLocaleDateString(),
+                    })}
                   </div>
                 </div>
                 <Button
@@ -122,7 +134,7 @@ export default function ConnectedClientsCard({
                   size="sm"
                   onClick={() => setRemoveTarget(c)}
                 >
-                  Disconnect
+                  {t('mcpServer.connectedClients.disconnect', { defaultValue: 'Disconnect' })}
                 </Button>
               </li>
             ))}
@@ -134,10 +146,14 @@ export default function ConnectedClientsCard({
         isOpen={removeTarget !== null}
         onClose={() => setRemoveTarget(null)}
         onConfirm={disconnect}
-        title="Disconnect client"
-        message={`Disconnect "${removeTarget?.clientName || (removeTarget ? hostOf(removeTarget.clientId) : '')}"? It will lose access immediately and need to be re-authorized to reconnect.`}
-        confirmLabel="Disconnect"
-        cancelLabel="Cancel"
+        title={t('mcpServer.connectedClients.dialog.title', { defaultValue: 'Disconnect client' })}
+        message={t('mcpServer.connectedClients.dialog.message', {
+          defaultValue:
+            'Disconnect "{{name}}"? It will lose access immediately and need to be re-authorized to reconnect.',
+          name: removeTarget?.clientName || (removeTarget ? hostOf(removeTarget.clientId) : ''),
+        })}
+        confirmLabel={t('mcpServer.connectedClients.dialog.confirm', { defaultValue: 'Disconnect' })}
+        cancelLabel={t('mcpServer.connectedClients.dialog.cancel', { defaultValue: 'Cancel' })}
         isConfirming={busy}
       />
     </Card>

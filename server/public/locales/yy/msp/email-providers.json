@@ -250,7 +250,7 @@
     },
     "microsoft": {
       "hostedOauth": {
-        "sectionTitle": "yyyyy"
+        "sectionTitle": "55555"
       },
       "validation": {
         "providerNameRequired": "55555",
@@ -283,14 +283,6 @@
         "signingIn": "55555",
         "signIn": "55555"
       },
-      "advanced": {
-        "title": "55555",
-        "description": "55555",
-        "folderFiltersLabel": "55555",
-        "folderFiltersPlaceholder": "55555",
-        "folderFiltersHelp": "55555",
-        "maxEmailsPerSync": "55555"
-      },
       "readiness": {
         "checking": "55555",
         "ready": "55555",
@@ -298,6 +290,14 @@
         "openProviders": "55555",
         "notConfigured": "55555",
         "setUpInProviders": "55555"
+      },
+      "advanced": {
+        "title": "55555",
+        "description": "55555",
+        "folderFiltersLabel": "55555",
+        "folderFiltersPlaceholder": "55555",
+        "folderFiltersHelp": "55555",
+        "maxEmailsPerSync": "55555"
       }
     },
     "gmail": {

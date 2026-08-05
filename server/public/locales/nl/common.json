@@ -6,7 +6,7 @@
     "add": "Reageren",
     "ariaSummary_one": "{{emoji}} {{count}} reactie",
     "ariaSummary_other": "{{emoji}} {{count}} reacties",
-    "ariaYouReacted": ", jij hebt gereageerd"
+    "ariaYouReacted": ", u heeft gereageerd"
   },
   "credits": {
     "expiresInDaysOn_one": "Verloopt over {{count}} dag, op {{date}}",
@@ -25,7 +25,12 @@
     "trialAvailable": "Essentials-functies zijn actief. Start een gratis Pro-proefperiode van 15 dagen om alle functies te ontgrendelen.",
     "trialExpired": "De Pro-proefperiode is verlopen. De installatie gebruikt nu Essentials-functies.",
     "licenseExpiresIn_one": "De licentie verloopt over {{count}} dag. Verleng om serviceonderbreking te voorkomen.",
-    "licenseExpiresIn_other": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen."
+    "licenseExpiresIn_other": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen.",
+    "licenseExpired": "De licentie is verlopen. De installatie gebruikt nu Essentials-functies.",
+    "licenseWrongTenant": "Deze licentie is voor een andere appliance uitgegeven en is hier niet geldig. De installatie gebruikt Essentials-functies.",
+    "manageLicense": "Licentie beheren",
+    "ariaLabel": "Licentiestatus",
+    "dismiss": "Sluiten"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -37,7 +42,7 @@
     "settings": "Instellingen",
     "profile": "Profiel",
     "logout": "Afmelden",
-    "help": "Help"
+    "help": "Hulp"
   },
   "actions": {
     "save": "Opslaan",
@@ -99,7 +104,7 @@
   },
   "messages": {
     "welcome": "Welkom",
-    "confirmDelete": "Weet je zeker dat je dit item wilt verwijderen?",
+    "confirmDelete": "Weet u zeker dat u dit item wilt verwijderen?",
     "saveSuccess": "Wijzigingen succesvol opgeslagen",
     "saveError": "Opslaan van wijzigingen is mislukt",
     "loadError": "Laden van gegevens is mislukt",
@@ -117,7 +122,7 @@
       "clientPortalOnly": "Toegang geweigerd: acties in het klantenportaal zijn alleen toegestaan voor klantgebruikers",
       "insufficientPermissions": "Onvoldoende rechten",
       "userIdNotFound": "Gebruikers-ID niet gevonden in sessie",
-      "tenantNotFound": "Tenant niet gevonden in sessie. Meld je af en weer aan.",
+      "tenantNotFound": "Tenant niet gevonden in de sessie. Meld u af en weer aan.",
       "userNotFound": "Gebruiker niet gevonden",
       "contactNotFound": "Gebruiker is niet gekoppeld aan een contact",
       "clientNotFound": "Contact is niet gekoppeld aan een bedrijf"
@@ -159,7 +164,7 @@
     "currentLanguage": "Huidige taal",
     "preference": {
       "label": "Taalvoorkeur",
-      "helper": "Selecteer je voorkeurstaal voor de interface en e-mailmeldingen",
+      "helper": "Selecteer uw voorkeurstaal voor de interface en e-mailmeldingen",
       "placeholder": "Selecteer een taal",
       "cleared": "Taalvoorkeur verwijderd. Standaardtaal wordt gebruikt...",
       "updating": "Taalvoorkeur wordt bijgewerkt...",
@@ -203,7 +208,7 @@
         },
         "systemDefault": {
           "source": "Systeemstandaard (Engels)",
-          "appliesTo": "Fallback",
+          "appliesTo": "Terugval",
           "whereSet": "Systeemgedefinieerd"
         }
       }
@@ -301,7 +306,7 @@
         "addTitle": "Nieuwe locatie toevoegen",
         "editTitle": "Locatie bewerken",
         "deleteTitle": "Locatie verwijderen",
-        "deleteMessage": "Weet je zeker dat je de locatie \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+        "deleteMessage": "Weet u zeker dat u de locatie \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
       },
       "empty": {
         "title": "Nog geen locaties toegevoegd",
@@ -356,18 +361,18 @@
     "newDocument": "Nieuw document",
     "uploadFile": "Bestand uploaden",
     "deleteTitle": "Document permanent verwijderen",
-    "deleteMessage": "Weet je zeker dat je \"{{name}}\" permanent uit het systeem wilt verwijderen?\\n\\nHiermee wordt het bestand volledig verwijderd en is het nergens meer beschikbaar. Deze actie kan niet ongedaan worden gemaakt.",
+    "deleteMessage": "Weet u zeker dat u \"{{name}}\" permanent uit het systeem wilt verwijderen?\\n\\nHiermee wordt het bestand volledig verwijderd en is het nergens meer beschikbaar. Deze actie kan niet ongedaan worden gemaakt.",
     "deleteVideoTitle": "Video permanent verwijderen",
-    "deleteVideoMessage": "Weet je zeker dat je de video \"{{name}}\" permanent uit het systeem wilt verwijderen?\\n\\nHiermee wordt het bestand volledig verwijderd en is het nergens meer beschikbaar. Deze actie kan niet ongedaan worden gemaakt.",
+    "deleteVideoMessage": "Weet u zeker dat u de video \"{{name}}\" permanent uit het systeem wilt verwijderen?\\n\\nHiermee wordt het bestand volledig verwijderd en is het nergens meer beschikbaar. Deze actie kan niet ongedaan worden gemaakt.",
     "removeTitle": "Document loskoppelen",
-    "removeMessage": "Weet je zeker dat je \"{{name}}\" van dit item wilt loskoppelen?\\n\\nHiermee wordt alleen de koppeling verwijderd — het document blijft beschikbaar in de documentbibliotheek en kan aan andere items worden gekoppeld.",
+    "removeMessage": "Weet u zeker dat u \"{{name}}\" van dit item wilt loskoppelen?\\n\\nHiermee wordt alleen de koppeling verwijderd — het document blijft beschikbaar in de documentbibliotheek en kan aan andere items worden gekoppeld.",
     "removeVideoTitle": "Video loskoppelen",
-    "removeVideoMessage": "Weet je zeker dat je de video \"{{name}}\" van dit item wilt loskoppelen?\\n\\nHiermee wordt alleen de koppeling verwijderd — het bestand blijft beschikbaar in de documentbibliotheek en kan aan andere items worden gekoppeld.",
+    "removeVideoMessage": "Weet u zeker dat u de video \"{{name}}\" van dit item wilt loskoppelen?\\n\\nHiermee wordt alleen de koppeling verwijderd — het bestand blijft beschikbaar in de documentbibliotheek en kan aan andere items worden gekoppeld.",
     "downloadFile": "Bestand downloaden",
     "videoUnsupported": "Videoformaat ({{mimeType}}) wordt niet ondersteund voor weergave in de browser",
-    "videoTagUnsupported": "Je browser ondersteunt de video-tag niet.",
+    "videoTagUnsupported": "Uw browser ondersteunt de videotag niet.",
     "unnamed": "Zonder titel",
-    "videoDownloadInfo": "De video wordt gedownload en kan worden afgespeeld met de standaardvideospeler van je systeem.",
+    "videoDownloadInfo": "De video wordt gedownload en kan worden afgespeeld met de standaardvideospeler van uw systeem.",
     "previewUnavailableNoId": "Voorbeeld niet beschikbaar (geen identificatie)",
     "previewLoadFailed": "Voorbeeld kon niet worden geladen",
     "videoCodecWarning": "Chrome ondersteunt deze videocodec mogelijk niet. Download het bestand of gebruik Safari/Edge.",
@@ -406,8 +411,8 @@
       "clearSelection": "Selectie wissen"
     },
     "prompts": {
-      "confirmBulkDelete_one": "Weet je zeker dat je {{count}} document wilt verwijderen?",
-      "confirmBulkDelete_other": "Weet je zeker dat je {{count}} documenten wilt verwijderen?"
+      "confirmBulkDelete_one": "Weet u zeker dat u {{count}} document wilt verwijderen?",
+      "confirmBulkDelete_other": "Weet u zeker dat u {{count}} documenten wilt verwijderen?"
     },
     "pagination": {
       "perPage": "{{count}} per pagina"
@@ -415,8 +420,8 @@
     "folderSelector": {
       "defaultTitle": "Selecteer doelmap",
       "defaultDescription": "Kies waar dit document moet worden opgeslagen",
-      "singleDescription": "Waar wil je \"{{fileName}}\" opslaan?",
-      "multipleDescription": "Waar wil je deze {{count}} bestanden opslaan?",
+      "singleDescription": "Waar wilt u \"{{fileName}}\" opslaan?",
+      "multipleDescription": "Waar wilt u deze {{count}} bestanden opslaan?",
       "newDocumentTitle": "Selecteer map voor nieuw document",
       "newDocumentDescription": "Kies waar dit nieuwe document moet worden opgeslagen",
       "moveTitle": "Document verplaatsen",
@@ -522,7 +527,7 @@
     },
     "uploadSection": {
       "reflectionLabel": "Documentupload",
-      "dragDrop": "Sleep je bestanden hierheen of",
+      "dragDrop": "Sleep uw bestanden hierheen of",
       "browse": "Bestanden zoeken",
       "uploading": "Bezig met uploaden...",
       "uploadingProgress": "{{current}} van {{total}} uploaden",
@@ -531,12 +536,12 @@
       "fileError": "Bestand kon niet worden geüpload",
       "associatedEntityTypeLabel": "Koppelen aan",
       "noAssociation": "Geen koppeling",
-      "selectAssociatedEntityError": "Selecteer een gekoppelde entiteit voordat je uploadt."
+      "selectAssociatedEntityError": "Selecteer een gekoppelde entiteit voordat u uploadt."
     },
     "folders": {
       "root": "Hoofdmap",
       "loadFailed": "Mappenstructuur kon niet worden geladen",
-      "deleteConfirm": "Weet je zeker dat je de map \"{{name}}\" wilt verwijderen? Dit werkt alleen als de map leeg is.",
+      "deleteConfirm": "Weet u zeker dat u de map \"{{name}}\" wilt verwijderen? Dit werkt alleen als de map leeg is.",
       "deleteSuccess": "Map \"{{name}}\" is succesvol verwijderd",
       "deleteFailed": "Map kon niet worden verwijderd",
       "deleteAction": "Map verwijderen",
@@ -619,7 +624,7 @@
       "handoffNetworkIssue": "Netwerkprobleem gedetecteerd bij het voltooien van uw inloggen. Probeer het opnieuw."
     },
     "checkEmail": {
-      "resendSuccess": "E-mail verzonden! Controleer je inbox.",
+      "resendSuccess": "E-mail verzonden! Controleer uw inbox.",
       "resendFailed": "E-mail opnieuw verzenden is mislukt. Probeer het opnieuw.",
       "whatsNext": "Wat nu?",
       "didntReceive": "E-mail niet ontvangen?"
@@ -670,7 +675,7 @@
         "description": "Beheer de berichten en beoordelingsschalen die naar klanten worden gestuurd.",
         "createButton": "Nieuw sjabloon",
         "emptyTitle": "Nog geen enquêtesjablonen",
-        "emptyDescription": "Maak je eerste sjabloon om de tekst en schaal van de enquête vast te leggen.",
+        "emptyDescription": "Maak uw eerste sjabloon om de tekst en schaal van de enquête vast te leggen.",
         "table": {
           "name": "Sjabloon",
           "rating": "Schaal",
@@ -770,13 +775,13 @@
         "labels": {
           "template": "Enquêtemodel",
           "triggerType": "Triggertype",
-          "boardIds": "Board-ID's",
+          "boardIds": "Bord-ID's",
           "statusIds": "Status-ID's",
           "priorities": "Prioriteiten",
           "enabled": "Trigger actief"
         },
         "placeholders": {
-          "boardIds": "Selecteer board",
+          "boardIds": "Selecteer bord",
           "statusIds": "Status toevoegen",
           "priorities": "Prioriteit toevoegen"
         },
@@ -796,7 +801,7 @@
           "reference": "De triggeropties konden niet worden geladen. Probeer het opnieuw."
         },
         "noTemplates": "Maak eerst een enquêtemal voordat u triggers toevoegt.",
-        "prioritiesMixed": "De geselecteerde boards gebruiken verschillende prioriteitstypen. Alle prioriteiten worden getoond."
+        "prioritiesMixed": "De geselecteerde borden gebruiken verschillende prioriteitstypen. Alle prioriteiten worden getoond."
       },
       "preview": {
         "heading": "Voorbeeld van antwoordpagina",
@@ -815,18 +820,18 @@
       "pageTitle": "Klanttevredenheidsonderzoek",
       "invalidTitle": "Enquête niet beschikbaar",
       "invalidMessage": "Deze feedbacklink is niet meer geldig of is al gebruikt.",
-      "ratingPrompt": "Hoe was je ervaring?",
+      "ratingPrompt": "Hoe was uw ervaring?",
       "ratingAssistive": "Kies een score van 1 tot {{scale}}",
       "commentLabel": "Extra opmerkingen (optioneel)",
       "submitButton": "Feedback verzenden",
       "submitting": "Bezig met verzenden…",
-      "submittedTitle": "Bedankt voor je terugkoppeling!",
+      "submittedTitle": "Bedankt voor uw terugkoppeling!",
       "submittedMessage": "{{thankYouText}}",
       "retryButton": "Opnieuw proberen",
       "ratingSubmitted": "Feedback verzonden",
-      "errorMessage": "Je feedback kon niet worden opgeslagen. Probeer het opnieuw.",
-      "selectRatingError": "Kies een score voordat je verzendt.",
-      "supportMessage": "Neem contact op met je technicus als je vragen hebt."
+      "errorMessage": "Uw feedback kon niet worden opgeslagen. Probeer het opnieuw.",
+      "selectRatingError": "Kies een score voordat u verzendt.",
+      "supportMessage": "Neem contact op met uw technicus als u vragen heeft."
     }
   },
   "availability": {
@@ -992,7 +997,7 @@
       "sessionRevoked": "Sessie succesvol ingetrokken"
     },
     "warnings": {
-      "oauthLogout": "Dit zal u alleen uitloggen van Alga PSA. U blijft ingelogd bij {{provider}}."
+      "oauthLogout": "Dit zal u alleen uitloggen van AlgaPSA. U blijft ingelogd bij {{provider}}."
     },
     "errors": {
       "fetchFailed": "Kan sessies niet ophalen",
@@ -1075,7 +1080,7 @@
   },
   "enums": {
     "addOnDescription": {
-      "ai_assistant": "Ontgrendel AI-chat, documenthulp, zijbalk-assistentie en workflow-AI-tools voor je team."
+      "ai_assistant": "Ontgrendel AI-chat, documenthulp, zijbalk-assistentie en workflow-AI-tools voor uw team."
     }
   },
   "form": {
@@ -1095,9 +1100,9 @@
     "searchUsers": "Gebruikers zoeken...",
     "unassigned": "Niet toegewezen",
     "noUsersAvailable": "Geen gebruikers beschikbaar",
-    "searchBoards": "Boards zoeken...",
-    "searchBoardsLabel": "Boards zoeken",
-    "noBoardsFound": "Geen boards gevonden"
+    "searchBoards": "Borden zoeken...",
+    "searchBoardsLabel": "Borden zoeken",
+    "noBoardsFound": "Geen borden gevonden"
   },
   "tagFilter": {
     "placeholder": "Filter op tags...",
@@ -1172,7 +1177,7 @@
     "teamsTab": {
       "signedInAs": "Aangemeld als {{name}}",
       "openInFullPsa": "Openen in volledige PSA",
-      "iframeTitle": "{{destination}} in Alga PSA",
+      "iframeTitle": "{{destination}} in AlgaPSA openen",
       "fullPsaHint": "Gebruik 'Openen in volledige PSA' voor meer context dan een Teams-kaart kan tonen.",
       "fallback": {
         "label": "Gevraagd record niet beschikbaar:",
@@ -1205,11 +1210,37 @@
           "summary": "U opent tijdregistratie {{entryId}} vanuit Teams."
         },
         "contact": {
-          "title": "Contact {{contactId}}",
+          "title": "Contact {{contactId}} openen",
           "summary": "U opent contact {{contactId}} vanuit Teams.",
           "summaryWithClient": "U opent contact {{contactId}} voor klant {{clientId}} vanuit Teams."
         }
       }
+    },
+    "unsubscribe": {
+      "pageTitle": "Afmelden",
+      "confirmTitle": "Wilt u zich afmelden voor deze e-mails?",
+      "confirmDescription": "U ontvangt geen marketing-e-mails meer op dit adres.",
+      "confirmAction": "Afmelden",
+      "doneTitle": "U bent afgemeld",
+      "doneDescription": "U ontvangt deze e-mails niet meer.",
+      "unavailableTitle": "Link niet beschikbaar",
+      "unavailableDescription": "Deze link is niet meer geldig."
+    },
+    "mcpAuthorize": {
+      "errorTitle": "Autorisatiefout",
+      "documentTitle": "{{client}} autoriseren",
+      "consentTitle": "Toegang autoriseren",
+      "consentRequest": "<strong>{{client}}</strong> vraagt toegang tot AlgaPSA <em>namens u</em>.",
+      "consentScope": "De app kan de MCP-tools met uw eigen machtigingen in deze werkruimte gebruiken. U kunt de verbinding op elk gewenst moment verbreken via Instellingen → MCP.",
+      "approve": "Goedkeuren",
+      "deny": "Weigeren"
+    },
+    "microsoftEmailSetup": {
+      "title": "Microsoft-e-mail instellen",
+      "finishing": "De configuratie van Microsoft-e-mail wordt voltooid…",
+      "finished": "De configuratie is voltooid. U kunt dit venster sluiten.",
+      "notFinished": "De configuratie is niet voltooid. Ga terug naar AlgaPSA om de fout te bekijken.",
+      "returnLink": "Terug naar AlgaPSA"
     }
   },
   "feedback": {

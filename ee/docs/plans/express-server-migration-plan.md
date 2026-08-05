@@ -2,7 +2,7 @@
 
 ## Introduction / Rationale
 
-This document outlines the migration from Next.js built-in server to an Express.js custom server for the Alga PSA application. The primary motivations for this change are:
+This document outlines the migration from Next.js built-in server to an Express.js custom server for the AlgaPSA application. The primary motivations for this change are:
 
 1. **Eliminate Edge Runtime limitations**: The current Next.js middleware runs in Edge Runtime, making it difficult to access long-lived Node primitives (database pools, Redis clients) and mount traditional Express/Connect middleware.
 

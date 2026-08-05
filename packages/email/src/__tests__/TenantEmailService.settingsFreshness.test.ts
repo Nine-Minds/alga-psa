@@ -59,7 +59,7 @@ vi.mock('../senderIdentity', () => ({
     const provider = settings?.providerConfigs?.find((config: Record<string, any>) => config.isEnabled);
     return {
       email: provider?.config?.from || 'notifications@example.test',
-      name: provider?.config?.fromName?.trim() || companyName || 'Alga PSA Notifications',
+      name: provider?.config?.fromName?.trim() || companyName || 'AlgaPSA Notifications',
     };
   },
   resolveTenantCompanyName: vi.fn(async () => runtime.companyName),

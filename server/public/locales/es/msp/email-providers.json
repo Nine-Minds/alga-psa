@@ -13,7 +13,7 @@
       "resyncStarted": "Se inició la resincronización para {{providerName}}.",
       "resyncRecovered": "{{providerName}} se volvió a conectar correctamente.",
       "enterpriseOnly": "El correo electrónico entrante de Microsoft 365 solo está disponible en Pro.",
-      "loadProvidersError": "Failed to load email providers"
+      "loadProvidersError": "No se pudieron cargar los proveedores de correo electrónico"
     },
     "editDrawer": {
       "title": "Editar proveedor de correo electrónico",
@@ -42,8 +42,8 @@
       "title": "Instrucciones de configuración",
       "microsoft": {
         "title": "Configuración de Microsoft 365",
-        "providersPointer": "Microsoft app setup is managed in Providers.",
-        "openProviders": "Open Providers"
+        "providersPointer": "La configuración de la aplicación de Microsoft se administra en Proveedores.",
+        "openProviders": "Abrir Proveedores"
       },
       "gmail": {
         "title": "Configuración de Gmail",
@@ -250,7 +250,7 @@
     },
     "microsoft": {
       "hostedOauth": {
-        "sectionTitle": "Connect Microsoft 365"
+        "sectionTitle": "Conectar Microsoft 365"
       },
       "validation": {
         "providerNameRequired": "El nombre de configuración es obligatorio",
@@ -258,7 +258,7 @@
         "authorizeRequiresValid": "Por favor complete todos los campos requeridos antes de autorizar",
         "oauthInitiateFailed": "No se pudo iniciar OAuth",
         "popupBlocked": "No se pudo abrir la ventana emergente de OAuth. Permita ventanas emergentes para este sitio.",
-        "closedEarly": "La ventana de autorización se cerró antes de completar. Por favor inténtalo de nuevo.",
+        "closedEarly": "La ventana de autorización se cerró antes de completar. Por favor inténtelo de nuevo.",
         "authorizationFailed": "Autorización fallida",
         "senderDisplayNameInvalid": "El nombre para mostrar no puede contener comillas, corchetes angulares ni saltos de línea"
       },
@@ -277,11 +277,11 @@
         "providerNameHelp": "Nombre interno utilizado para identificar esta configuración. No se muestra en los correos salientes.",
         "senderDisplayNameLabel": "Nombre del remitente",
         "senderDisplayNamePlaceholder": "p. ej., Soporte Acme",
-        "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails. It applies when this mailbox matches the configured outbound ticketing address. Leave blank to use the ticket board name."
+        "senderDisplayNameHelp": "Nombre para mostrar que aparece en el encabezado De de los correos electrónicos salientes de tickets. Se aplica cuando este buzón coincide con la dirección saliente configurada para tickets. Déjelo en blanco para usar el nombre del tablero de tickets."
       },
       "oauth": {
-        "signingIn": "Signing in…",
-        "signIn": "Sign in with Microsoft"
+        "signingIn": "Iniciando sesión…",
+        "signIn": "Iniciar sesión con Microsoft"
       },
       "advanced": {
         "title": "Configuración avanzada",
@@ -292,12 +292,12 @@
         "maxEmailsPerSync": "Máximo de correos electrónicos por sincronización"
       },
       "readiness": {
-        "checking": "Checking Microsoft setup…",
-        "ready": "Microsoft is set up. Sign in as this mailbox to finish.",
-        "pending": "Waiting for your Microsoft 365 administrator. Setup was started in Providers but hasn't been approved yet.",
-        "openProviders": "Open Providers",
-        "notConfigured": "Microsoft isn't set up yet. Set it up once in Providers, then come back.",
-        "setUpInProviders": "Set up in Providers"
+        "checking": "Comprobando la configuración de Microsoft…",
+        "ready": "Microsoft está configurado. Inicie sesión con este buzón para finalizar.",
+        "pending": "Esperando a su administrador de Microsoft 365. La configuración se inició en Proveedores, pero aún no se aprobó.",
+        "openProviders": "Abrir Proveedores",
+        "notConfigured": "Microsoft aún no está configurado. Configúrelo una vez en Proveedores y luego regrese.",
+        "setUpInProviders": "Configurar en Proveedores"
       }
     },
     "gmail": {
@@ -311,7 +311,7 @@
         "closedEarly": "La ventana de autorización se cerró antes de completarse.",
         "authorizationFailed": "Autorización fallida",
         "popupFailed": "Error en la ventana emergente de OAuth",
-        "configureFailed": "Failed to configure Gmail provider"
+        "configureFailed": "No se pudo configurar el proveedor de Gmail"
       },
       "messages": {
         "setupIncomplete": "Proveedor guardado pero configuración incompleta: {{error}}",
@@ -333,7 +333,7 @@
         "providerNameHelp": "Nombre interno utilizado para identificar esta configuración. No se muestra en los correos salientes.",
         "senderDisplayNameLabel": "Nombre del remitente",
         "senderDisplayNamePlaceholder": "p. ej., Soporte Acme",
-        "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjalo en blanco para usar el nombre del tablero del ticket."
+        "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjelo en blanco para usar el nombre del tablero del ticket."
       },
       "oauth": {
         "sectionTitle": "OAuth de Google",
@@ -347,7 +347,7 @@
         "requiredDescriptionUpdate": "Debe completar la autorización OAuth anterior antes de actualizar el proveedor para habilitar las notificaciones de Gmail.",
         "stepTitle": "Paso 1: Autorización OAuth",
         "stepDescription": "Complete el flujo de OAuth para otorgar acceso a Gmail",
-        "buttonSuccessSaving": "¡Autorizado exitosamente! Guardando tu configuración..."
+        "buttonSuccessSaving": "¡Autorizado exitosamente! Guardando su configuración..."
       },
       "advanced": {
         "title": "Configuración avanzada",
@@ -383,7 +383,7 @@
         "providerNameHelp": "Nombre interno utilizado para identificar esta configuración. No se muestra en los correos salientes.",
         "senderDisplayName": "Nombre del remitente",
         "senderDisplayNamePlaceholder": "p. ej., Soporte Acme",
-        "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjalo en blanco para usar el nombre del tablero del ticket."
+        "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjelo en blanco para usar el nombre del tablero del ticket."
       },
       "auth": {
         "title": "Autenticación",
@@ -521,8 +521,8 @@
       "passwordLabel": "Contraseña / Contraseña de la aplicación",
       "authorizeUrl": "URL de autorización",
       "tokenUrl": "URL del token",
-      "oauthClientId": "OAuth Client ID",
-      "oauthClientSecret": "OAuth Client Secret",
+      "oauthClientId": "ID de cliente de OAuth",
+      "oauthClientSecret": "Secreto de cliente de OAuth",
       "oauthScopes": "Scopes de OAuth",
       "oauthScopesPlaceholder": "scopes delimitados por espacios",
       "folderFilters": "Filtros de carpeta",
@@ -535,7 +535,7 @@
       "providerNameHelp": "Nombre interno utilizado para identificar esta configuración. No se muestra en los correos salientes.",
       "senderDisplayName": "Nombre del remitente",
       "senderDisplayNamePlaceholder": "p. ej., Soporte Acme",
-      "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjalo en blanco para usar el nombre del tablero del ticket."
+      "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjelo en blanco para usar el nombre del tablero del ticket."
     },
     "authOptions": {
       "password": "Contraseña",
@@ -600,7 +600,7 @@
       "providerNameHelp": "Nombre interno utilizado para identificar esta configuración. No se muestra en los correos salientes.",
       "senderDisplayNameLabel": "Nombre del remitente",
       "senderDisplayNamePlaceholder": "p. ej., Soporte Acme",
-      "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjalo en blanco para usar el nombre del tablero del ticket."
+      "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjelo en blanco para usar el nombre del tablero del ticket."
     },
     "oauth": {
       "connectionTitle": "Conexión con Microsoft 365",
@@ -657,7 +657,7 @@
       "description": "Conecte su cuenta de Gmail para habilitar el procesamiento de correo electrónico",
       "connectionTitle": "Conexión con Gmail",
       "descriptionIdle": "Autorizar el acceso a su cuenta de Gmail",
-      "descriptionSuccess": "¡Conectado correctamente! Guardando tu configuración...",
+      "descriptionSuccess": "¡Conectado correctamente! Guardando su configuración...",
       "buttonIdle": "Conectar Gmail",
       "buttonAuthorizing": "Conectando...",
       "buttonSuccess": "Conectado"
@@ -727,7 +727,7 @@
       "domainRemovalScheduledWithClear": "Eliminación de dominio programada y dirección de remitente de tickets eliminada",
       "removeDomainFailed": "Error al eliminar el dominio",
       "testOutboundFailed": "Error al probar el correo saliente",
-      "senderIdentitiesUpdated": "Sender identities updated."
+      "senderIdentitiesUpdated": "Identidades de remitente actualizadas."
     },
     "tabs": {
       "inboundEmail": "Correo entrante",
@@ -777,7 +777,7 @@
         "saveButton": "Guardar configuración SMTP",
         "test": {
           "title": "Probar correo saliente",
-          "description": "Guarda la configuración actual y luego verifica la conexión con el proveedor. Introduzca una dirección para enviar también un mensaje de prueba.",
+          "description": "Guarde la configuración actual y luego verifique la conexión con el proveedor. Introduzca una dirección para enviar también un mensaje de prueba.",
           "recipientLabel": "Enviar prueba a (opcional)",
           "recipientPlaceholder": "tu@ejemplo.com",
           "testingButton": "Probando...",
@@ -824,36 +824,36 @@
       },
       "senderIdentities": {
         "ticket": {
-          "title": "Ticket email identity",
-          "description": "Replies to ticket emails must return to this address so they can be matched and added to the ticket. Use a connected, monitored inbox.",
-          "connectedInboxLabel": "Connected inbox",
-          "connectedInboxHelp": "A connected inbox keeps client replies in the ticket conversation.",
-          "customAddressOption": "Use another address",
-          "addressLabel": "From address",
+          "title": "Identidad de correo electrónico de tickets",
+          "description": "Las respuestas a los correos electrónicos de tickets deben volver a esta dirección para que se puedan asociar y agregar al ticket. Use una bandeja conectada y supervisada.",
+          "connectedInboxLabel": "Bandeja conectada",
+          "connectedInboxHelp": "Una bandeja conectada mantiene las respuestas del cliente en la conversación del ticket.",
+          "customAddressOption": "Usar otra dirección",
+          "addressLabel": "Dirección del remitente",
           "addressPlaceholder": "support@example.com",
-          "addressHelp": "This address controls reply routing for ticket email only.",
-          "microsoftAddressHelp": "Microsoft 365 requires ticket email to use the selected sending mailbox ({{mailbox}}).",
-          "nameLabel": "Sender display name",
-          "namePlaceholder": "Support",
-          "nameHelp": "Leave blank to use the connected mailbox name or ticket board name."
+          "addressHelp": "Esta dirección controla el enrutamiento de respuestas solo para los correos electrónicos de tickets.",
+          "microsoftAddressHelp": "Microsoft 365 requiere que el correo electrónico de tickets use el buzón de envío seleccionado ({{mailbox}}).",
+          "nameLabel": "Nombre visible del remitente",
+          "namePlaceholder": "Soporte",
+          "nameHelp": "Déjelo en blanco para usar el nombre del buzón conectado o del tablero de tickets."
         },
         "notification": {
-          "title": "All other email identity",
-          "description": "Brand portal invitations, password resets, invoices, project updates, and general notifications independently from ticket routing.",
-          "addressLabel": "From address",
+          "title": "Identidad para todos los demás correos electrónicos",
+          "description": "Personalice las invitaciones al portal, los restablecimientos de contraseña, las facturas, las actualizaciones de proyectos y las notificaciones generales de forma independiente del enrutamiento de tickets.",
+          "addressLabel": "Dirección del remitente",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "This is the branding address used for non-ticket email through your SMTP server.",
-          "lockedAddressHelp": "This address is determined by the active managed domain or selected Microsoft 365 mailbox.",
-          "nameLabel": "Sender display name",
-          "namePlaceholder": "Your company name",
-          "nameHelp": "Leave blank to use {{company}} automatically.",
-          "companyFallback": "your tenant company"
+          "smtpAddressHelp": "Esta es la dirección de marca que se usa para los correos electrónicos que no son de tickets a través de su servidor SMTP.",
+          "lockedAddressHelp": "Esta dirección está determinada por el dominio administrado activo o el buzón de Microsoft 365 seleccionado.",
+          "nameLabel": "Nombre visible del remitente",
+          "namePlaceholder": "Nombre de su empresa",
+          "nameHelp": "Déjelo en blanco para usar {{company}} automáticamente.",
+          "companyFallback": "la empresa de su inquilino"
         },
-        "warningTitle": "Check reply routing",
-        "errorTitle": "Fix the ticket identity",
-        "clearButton": "Clear ticket identity",
-        "savingButton": "Saving...",
-        "saveButton": "Save sender identities"
+        "warningTitle": "Revise el enrutamiento de respuestas",
+        "errorTitle": "Corrija la identidad de tickets",
+        "clearButton": "Borrar identidad de tickets",
+        "savingButton": "Guardando...",
+        "saveButton": "Guardar identidades de remitente"
       }
     },
     "inbound": {
@@ -883,7 +883,7 @@
       "customAddressThreadWarning": "El uso de una dirección personalizada puede impedir que las respuestas entrantes se agrupen correctamente.",
       "smtpDomainMismatchWarning": "Este dominio no coincide con el dominio de remitente de su SMTP ({{domain}}). Los correos pueden no entregarse o marcarse como spam si su servidor SMTP no está autorizado a enviar desde este dominio.",
       "notConnectedWarning": "El procesamiento de tickets entrantes puede no funcionar con esta dirección porque no es una de sus bandejas conectadas.",
-      "microsoftMustMatchMailbox": "Ticket email address must match the selected Microsoft 365 mailbox ({{mailbox}})."
+      "microsoftMustMatchMailbox": "La dirección de correo electrónico de tickets debe coincidir con el buzón de Microsoft 365 seleccionado ({{mailbox}})."
     },
     "domainList": {
       "loading": "Cargando dominios…",

@@ -1,4 +1,4 @@
-# Scout Report: Disambiguation of "Inventory" in the Alga PSA Assets Module
+# Scout Report: Disambiguation of "Inventory" in the AlgaPSA Assets Module
 
 **Goal:** Determine whether the term "inventory" in asset-related files refers to *discovered software on client devices* (via RMM) or *physical product stock*.
 

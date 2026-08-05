@@ -30,12 +30,12 @@
         "declined": "refusé",
         "open": "ouvert",
         "project_task": "tâche de projet",
-        "quote_line": "ligne de citation"
+        "quote_line": "ligne de devis"
       },
       "title": "Engagements"
     },
     "completeDialog": {
-      "due": "Due",
+      "due": "Échéance",
       "nextAction": "Action suivante",
       "pickNext": "Étape suivante",
       "placeholder": "par ex. Suivi de la proposition",
@@ -55,7 +55,7 @@
       "client": "Client",
       "dealTitle": "Titre",
       "dealType": "Type d'affaire",
-      "due": "Due",
+      "due": "Échéance",
       "expectedClose": "Clôture attendue",
       "missing": "Renseignez {{fields}} pour activer Créer une opportunité",
       "nextAction": "Première action",
@@ -94,8 +94,8 @@
       "ownerNote": "Chaque étape peut être confiée à une autre personne. L’affaire conserve un seul responsable.",
       "people": "Personnes",
       "plan": "Preuves, plan et chronologie",
-      "quoteTitle": "Citation pour {{title}}",
-      "quotes": "Citations",
+      "quoteTitle": "Devis pour {{title}}",
+      "quotes": "Devis",
       "recurring": "Récurrent",
       "timeline": "Chronologie",
       "unlinkQuote": "Dissocier",
@@ -150,7 +150,7 @@
       "won": "A gagné cette période"
     },
     "linkQuoteDialog": {
-      "confirm": "Citation de lien",
+      "confirm": "Lier le devis",
       "empty": "Aucun devis non lié n'est disponible pour ce client.",
       "title": "Lier un devis existant"
     },
@@ -245,7 +245,7 @@
       "table": {
         "actions": "Actions",
         "client": "Client",
-        "due": "Due",
+        "due": "Échéance",
         "nextAction": "Action suivante",
         "value": "Valeur"
       },
@@ -352,7 +352,7 @@
       "lost": "Perdu",
       "proposed": "Proposé",
       "qualified": "Qualifié",
-      "verbal": "Verbal",
+      "verbal": "Accord verbal",
       "won": "Gagné"
     },
     "status": {
@@ -430,7 +430,7 @@
       "board": "Conseil",
       "forecast": "Prévisions",
       "meeting": "Réunion",
-      "pipeline": "Pipeline",
+      "pipeline": "Pipeline commercial",
       "queue": "File d'attente",
       "reports": "Rapports",
       "suggestions": "Suggestions"
@@ -448,8 +448,8 @@
       "lost": "Marqué perdu",
       "ownerAssigned": "Responsable mis à jour",
       "qualified": "Point de contrôle qualifié enregistré",
-      "quoteLinked": "Citation liée",
-      "quoteUnlinked": "Citation non liée",
+      "quoteLinked": "Devis lié",
+      "quoteUnlinked": "Devis dissocié",
       "snoozed": "Répété pendant quelques jours",
       "stagePlanned": "Plan de phase ajouté",
       "stageSet": "Étape définie sur {{stage}}",
@@ -541,7 +541,7 @@
         "trailing": " sur les 12 derniers mois. La fiche d’une page leur met la comparaison sous les yeux."
       },
       "whitespace": {
-        "comparable": " de toi encore. Tous les clients comparables le font.",
+        "comparable": " chez vous pour le moment. Tous les clients comparables le font.",
         "missing": "{{clientName}} n'achète pas {{serviceName}}"
       }
     },

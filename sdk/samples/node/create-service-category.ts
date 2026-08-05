@@ -1,7 +1,7 @@
 export {};
 
 /**
- * Standalone sample: create a service category via the Alga PSA API.
+ * Standalone sample: create a service category via the AlgaPSA API.
  *
  * Usage:
  *   ALGA_API_URL="https://algapsa.com" \

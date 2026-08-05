@@ -77,7 +77,7 @@ This is an automated message. Please do not reply to this email.`,
           <div style="padding: 40px 30px;">
             <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">Bonjour,</p>
             <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">
-              Vous avez demand\u00e9 l'acc\u00e8s \u00e0 votre portail{{#if isMultiple}}s{{/if}} client{{#if isMultiple}}s{{/if}}.
+              Vous avez demand\u00e9 l'acc\u00e8s \u00e0 votre portail client{{#if isMultiple}} pour plusieurs organisations{{/if}}.
               {{#if isMultiple}}Nous avons trouv\u00e9 {{tenantCount}} organisations associ\u00e9es \u00e0 votre adresse e-mail.{{else}}Voici votre lien de connexion :{{/if}}
             </p>
 
@@ -112,7 +112,7 @@ This is an automated message. Please do not reply to this email.`,
 
 Bonjour,
 
-Vous avez demand\u00e9 l'acc\u00e8s \u00e0 votre portail{{#if isMultiple}}s{{/if}} client{{#if isMultiple}}s{{/if}}.
+Vous avez demand\u00e9 l'acc\u00e8s \u00e0 votre portail client{{#if isMultiple}} pour plusieurs organisations{{/if}}.
 {{#if isMultiple}}Nous avons trouv\u00e9 {{tenantCount}} organisations associ\u00e9es \u00e0 votre adresse e-mail.{{else}}Voici votre lien de connexion :{{/if}}
 
 Vos liens de connexion :
@@ -127,7 +127,7 @@ Si vous avez des questions ou besoin d'assistance, veuillez contacter l'\u00e9qu
 Ceci est un message automatis\u00e9. Veuillez ne pas r\u00e9pondre \u00e0 cet e-mail.`,
   },
   es: {
-    subject: '{{platformName}} - Tus enlaces de inicio de sesi\u00f3n',
+    subject: '{{platformName}} - Sus enlaces de inicio de sesi\u00f3n',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
@@ -136,8 +136,8 @@ Ceci est un message automatis\u00e9. Veuillez ne pas r\u00e9pondre \u00e0 cet e-
           <div style="padding: 40px 30px;">
             <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">Hola,</p>
             <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">
-              Solicitaste acceso a tu portal{{#if isMultiple}}es{{/if}} de cliente{{#if isMultiple}}s{{/if}}.
-              {{#if isMultiple}}Encontramos {{tenantCount}} organizaciones asociadas con tu direcci\u00f3n de correo electr\u00f3nico.{{else}}Aqu\u00ed est\u00e1 tu enlace de inicio de sesi\u00f3n:{{/if}}
+              Solicit\u00f3 acceso a su portal de cliente{{#if isMultiple}} para varias organizaciones{{/if}}.
+              {{#if isMultiple}}Encontramos {{tenantCount}} organizaciones asociadas con su direcci\u00f3n de correo electr\u00f3nico.{{else}}Aqu\u00ed tiene su enlace de inicio de sesi\u00f3n:{{/if}}
             </p>
 
             <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin: 25px 0;">
@@ -146,13 +146,13 @@ Ceci est un message automatis\u00e9. Veuillez ne pas r\u00e9pondre \u00e0 cet e-
 
             <div style="background-color: #f3f4f6; border-radius: 6px; padding: 20px; margin: 25px 0;">
               <p style="color: #4b5563; font-size: 14px; margin: 0;">
-                <strong>Nota de seguridad:</strong> Si no solicitaste estos enlaces de inicio de sesi\u00f3n, puedes ignorar este correo de forma segura. Tu cuenta permanece segura.
+                <strong>Nota de seguridad:</strong> Si no solicit\u00f3 estos enlaces de inicio de sesi\u00f3n, puede ignorar este correo de forma segura. Su cuenta permanece segura.
               </p>
             </div>
 
             <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
               <p style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">
-                Si tienes preguntas o necesitas asistencia, por favor contacta al equipo de soporte de tu organizaci\u00f3n.
+                Si tiene preguntas o necesita asistencia, contacte al equipo de soporte de su organizaci\u00f3n.
               </p>
             </div>
           </div>
@@ -162,28 +162,28 @@ Ceci est un message automatis\u00e9. Veuillez ne pas r\u00e9pondre \u00e0 cet e-
               \u00a9 {{currentYear}} {{platformName}}. Todos los derechos reservados.
             </p>
             <p style="color: #9ca3af; font-size: 11px; margin: 5px 0;">
-              Este es un mensaje autom\u00e1tico. Por favor no respondas a este correo.
+              Este es un mensaje autom\u00e1tico. No responda a este correo.
             </p>
           </div>
         </div>
       `,
-    text: `{{platformName}} - Tus enlaces de inicio de sesi\u00f3n
+    text: `{{platformName}} - Sus enlaces de inicio de sesi\u00f3n
 
 Hola,
 
-Solicitaste acceso a tu portal{{#if isMultiple}}es{{/if}} de cliente{{#if isMultiple}}s{{/if}}.
-{{#if isMultiple}}Encontramos {{tenantCount}} organizaciones asociadas con tu direcci\u00f3n de correo electr\u00f3nico.{{else}}Aqu\u00ed est\u00e1 tu enlace de inicio de sesi\u00f3n:{{/if}}
+Solicit\u00f3 acceso a su portal de cliente{{#if isMultiple}} para varias organizaciones{{/if}}.
+{{#if isMultiple}}Encontramos {{tenantCount}} organizaciones asociadas con su direcci\u00f3n de correo electr\u00f3nico.{{else}}Aqu\u00ed tiene su enlace de inicio de sesi\u00f3n:{{/if}}
 
-Tus enlaces de inicio de sesi\u00f3n:
+Sus enlaces de inicio de sesi\u00f3n:
 {{tenantLinksText}}
 
-Nota de seguridad: Si no solicitaste estos enlaces de inicio de sesi\u00f3n, puedes ignorar este correo de forma segura.
+Nota de seguridad: Si no solicit\u00f3 estos enlaces de inicio de sesi\u00f3n, puede ignorar este correo de forma segura.
 
-Si tienes preguntas o necesitas asistencia, por favor contacta al equipo de soporte de tu organizaci\u00f3n.
+Si tiene preguntas o necesita asistencia, contacte al equipo de soporte de su organizaci\u00f3n.
 
 ---
 \u00a9 {{currentYear}} {{platformName}}. Todos los derechos reservados.
-Este es un mensaje autom\u00e1tico. Por favor no respondas a este correo.`,
+Este es un mensaje autom\u00e1tico. No responda a este correo.`,
   },
   de: {
     subject: '{{platformName}} - Ihre Anmeldelinks',
@@ -195,7 +195,7 @@ Este es un mensaje autom\u00e1tico. Por favor no respondas a este correo.`,
           <div style="padding: 40px 30px;">
             <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">Hallo,</p>
             <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">
-              Sie haben Zugang zu Ihrem Kundenportal{{#if isMultiple}} angefordert{{else}} angefordert{{/if}}.
+              Sie haben Zugang zu Ihrem Kundenportal{{#if isMultiple}} f\u00fcr mehrere Organisationen{{/if}} angefordert.
               {{#if isMultiple}}Wir haben {{tenantCount}} Organisationen gefunden, die mit Ihrer E-Mail-Adresse verkn\u00fcpft sind.{{else}}Hier ist Ihr Anmeldelink:{{/if}}
             </p>
 
@@ -230,7 +230,7 @@ Este es un mensaje autom\u00e1tico. Por favor no respondas a este correo.`,
 
 Hallo,
 
-Sie haben Zugang zu Ihrem Kundenportal{{#if isMultiple}} angefordert{{else}} angefordert{{/if}}.
+Sie haben Zugang zu Ihrem Kundenportal{{#if isMultiple}} f\u00fcr mehrere Organisationen{{/if}} angefordert.
 {{#if isMultiple}}Wir haben {{tenantCount}} Organisationen gefunden, die mit Ihrer E-Mail-Adresse verkn\u00fcpft sind.{{else}}Hier ist Ihr Anmeldelink:{{/if}}
 
 Ihre Anmeldelinks:
@@ -254,7 +254,7 @@ Dies ist eine automatisierte Nachricht. Bitte antworten Sie nicht auf diese E-Ma
           <div style="padding: 40px 30px;">
             <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">Hallo,</p>
             <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">
-              U heeft toegang aangevraagd tot uw klantenpor{{#if isMultiple}}talen{{else}}taal{{/if}}.
+              U heeft toegang aangevraagd tot uw klantenportaal{{#if isMultiple}} voor meerdere organisaties{{/if}}.
               {{#if isMultiple}}We hebben {{tenantCount}} organisaties gevonden die gekoppeld zijn aan uw e-mailadres.{{else}}Hier is uw inloglink:{{/if}}
             </p>
 
@@ -289,7 +289,7 @@ Dies ist eine automatisierte Nachricht. Bitte antworten Sie nicht auf diese E-Ma
 
 Hallo,
 
-U heeft toegang aangevraagd tot uw klantenpor{{#if isMultiple}}talen{{else}}taal{{/if}}.
+U heeft toegang aangevraagd tot uw klantenportaal{{#if isMultiple}} voor meerdere organisaties{{/if}}.
 {{#if isMultiple}}We hebben {{tenantCount}} organisaties gevonden die gekoppeld zijn aan uw e-mailadres.{{else}}Hier is uw inloglink:{{/if}}
 
 Uw inloglinks:
@@ -313,7 +313,7 @@ Dit is een geautomatiseerd bericht. Reageer alstublieft niet op deze e-mail.`,
           <div style="padding: 40px 30px;">
             <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">Ciao,</p>
             <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">
-              Hai richiesto l'accesso al tuo{{#if isMultiple}}i{{/if}} portale{{#if isMultiple}}i{{/if}} clienti.
+              Hai richiesto l'accesso al portale clienti{{#if isMultiple}} di pi\u00f9 organizzazioni{{/if}}.
               {{#if isMultiple}}Abbiamo trovato {{tenantCount}} organizzazioni associate al tuo indirizzo email.{{else}}Ecco il tuo link di accesso:{{/if}}
             </p>
 
@@ -348,7 +348,7 @@ Dit is een geautomatiseerd bericht. Reageer alstublieft niet op deze e-mail.`,
 
 Ciao,
 
-Hai richiesto l'accesso al tuo{{#if isMultiple}}i{{/if}} portale{{#if isMultiple}}i{{/if}} clienti.
+Hai richiesto l'accesso al portale clienti{{#if isMultiple}} di pi\u00f9 organizzazioni{{/if}}.
 {{#if isMultiple}}Abbiamo trovato {{tenantCount}} organizzazioni associate al tuo indirizzo email.{{else}}Ecco il tuo link di accesso:{{/if}}
 
 I tuoi link di accesso:
@@ -372,7 +372,7 @@ Questo \u00e8 un messaggio automatico. Non rispondere a questa email.`,
           <div style="padding: 40px 30px;">
             <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">Cze\u015b\u0107,</p>
             <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">
-              Poprosi\u0142e\u015b(a\u015b) o dost\u0119p do portalu{{#if isMultiple}}i{{/if}} klienta{{#if isMultiple}}\u00f3w{{/if}}.
+              Poprosi\u0142e\u015b(a\u015b) o dost\u0119p do portalu klienta{{#if isMultiple}} dla wielu organizacji{{/if}}.
               {{#if isMultiple}}Znale\u017ali\u015bmy {{tenantCount}} organizacji powi\u0105zanych z Twoim adresem e-mail.{{else}}Oto Tw\u00f3j link do logowania:{{/if}}
             </p>
 
@@ -407,7 +407,7 @@ Questo \u00e8 un messaggio automatico. Non rispondere a questa email.`,
 
 Cze\u015b\u0107,
 
-Poprosi\u0142e\u015b(a\u015b) o dost\u0119p do portalu{{#if isMultiple}}i{{/if}} klienta{{#if isMultiple}}\u00f3w{{/if}}.
+Poprosi\u0142e\u015b(a\u015b) o dost\u0119p do portalu klienta{{#if isMultiple}} dla wielu organizacji{{/if}}.
 {{#if isMultiple}}Znale\u017ali\u015bmy {{tenantCount}} organizacji powi\u0105zanych z Twoim adresem e-mail.{{else}}Oto Tw\u00f3j link do logowania:{{/if}}
 
 Twoje linki do logowania:

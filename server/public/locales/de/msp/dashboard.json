@@ -172,7 +172,7 @@
       },
       "email": {
         "enterpriseOnly": "Verwaltete E-Mail-Domains sind nur in Pro verfügbar.",
-        "tenantRequired": "Ein Tenant-Kontext ist erforderlich, um den E-Mail-Onboarding-Status zu laden.",
+        "tenantRequired": "Ein Mandantenkontext ist erforderlich, um den E-Mail-Onboarding-Status zu laden.",
         "loadFailed": "Die verwalteten E-Mail-Domains konnten nicht geladen werden.",
         "verificationFailed": "Die Verifizierung für {{domain}} ist fehlgeschlagen."
       }
@@ -193,7 +193,7 @@
   "mspDashboard": "MSP-Dashboard",
   "mobileApp": {
     "title": "Lade die AlgaPSA Mobile App herunter",
-    "description": "Scanne einen QR-Code mit deinem Smartphone, um die AlgaPSA Mobile App herunterzuladen.",
+    "description": "Scannen Sie einen QR-Code mit Ihrem Smartphone, um die AlgaPSA Mobile App herunterzuladen.",
     "selfHostDescription": "1. Scanne einen Store-QR-Code, um die App zu installieren. 2. Tippe in der App auf \"Change server\" → \"Scan QR code\" und scanne den Code \"Diesen Server verbinden\".",
     "appStore": "App Store (iOS)",
     "playStore": "Google Play (Android)",
@@ -206,12 +206,12 @@
     "hiding": "Wird ausgeblendet...",
     "dismissAria": "Mobile-App-Karte ausblenden",
     "dismissError": "Karte konnte nicht ausgeblendet werden.",
-    "restore": "Hol dir die AlgaPSA Mobile App",
+    "restore": "AlgaPSA Mobile App herunterladen",
     "restoring": "Wird wiederhergestellt...",
     "restoreError": "Karte konnte nicht wiederhergestellt werden.",
     "hidden": {
       "title": "Ausgeblendete Mobile-App-Karte",
-      "subtitle": "Stelle sie wieder her, wenn du sie später benötigst."
+      "subtitle": "Stellen Sie sie wieder her, wenn Sie sie später benötigen."
     }
   }
 }

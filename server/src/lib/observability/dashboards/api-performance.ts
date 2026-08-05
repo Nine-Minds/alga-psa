@@ -1,5 +1,5 @@
 /**
- * Grafana Dashboard: Alga PSA API Performance
+ * Grafana Dashboard: AlgaPSA API Performance
  * 
  * Detailed API performance metrics and endpoint analysis.
  * Focuses on individual route performance and patterns.
@@ -7,7 +7,7 @@
 
 export const apiPerformanceDashboard = {
   uid: 'alga-psa-api-performance',
-  title: 'Alga PSA - API Performance',
+  title: 'AlgaPSA - API Performance',
   description: 'Detailed API performance metrics and endpoint analysis for operational monitoring',
   tags: ['alga-psa', 'api', 'performance', 'endpoints'],
   timezone: 'browser',

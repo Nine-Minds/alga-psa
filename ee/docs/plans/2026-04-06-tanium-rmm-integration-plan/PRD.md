@@ -6,7 +6,7 @@
 
 ## Summary
 
-Add Tanium as a new RMM provider in Alga PSA, but do it through a shared RMM provider abstraction instead of adding a third bespoke integration stack.
+Add Tanium as a new RMM provider in AlgaPSA, but do it through a shared RMM provider abstraction instead of adding a third bespoke integration stack.
 
 The recommended shape is:
 

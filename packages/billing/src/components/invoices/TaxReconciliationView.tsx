@@ -129,7 +129,7 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
               <Calculator className="h-4 w-4" />
               <span className="text-sm font-medium">
                 {t('externalTax.reconciliationView.summary.internal', {
-                  defaultValue: 'Internal (Alga PSA)',
+                  defaultValue: 'Internal (AlgaPSA)',
                 })}
               </span>
             </div>

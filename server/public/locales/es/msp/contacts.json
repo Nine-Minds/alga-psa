@@ -84,7 +84,7 @@
       },
       "optionsDialog": {
         "title": "Opciones de impresión",
-        "description": "Elige qué columnas incluir al imprimir los contactos."
+        "description": "Elija qué columnas incluir al imprimir los contactos."
       }
     },
     "shareTooltip": "Imprimir, importar y exportar"
@@ -439,19 +439,19 @@
       "userDeactivated": "Usuario desactivado correctamente",
       "updateUserStatusFailed": "No se pudo actualizar el estado del usuario",
       "errors": {
-        "permissionDeniedInvite": "No tienes permiso para invitar usuarios.",
+        "permissionDeniedInvite": "No tiene permiso para invitar usuarios.",
         "emailNotConfigured": "El servicio de correo electrónico está deshabilitado o no está configurado.",
         "contactNotFound": "Contacto no encontrado.",
-        "contactMissingEmail": "El contacto no tiene dirección de correo electrónico. Agrega una dirección de correo al contacto antes de enviar una invitación.",
-        "contactInvalidEmail": "El contacto tiene una dirección de correo electrónico no válida. Actualiza el contacto con una dirección válida antes de enviar una invitación.",
-        "userExistsForContact": "Ya existe una cuenta de usuario para este contacto. Usa el restablecimiento de contraseña en lugar de enviar una invitación.",
-        "noDefaultClient": "No hay un cliente predeterminado configurado para este tenant. Configura un cliente predeterminado en Configuración General.",
+        "contactMissingEmail": "El contacto no tiene dirección de correo electrónico. Agregue una dirección de correo al contacto antes de enviar una invitación.",
+        "contactInvalidEmail": "El contacto tiene una dirección de correo electrónico no válida. Actualice el contacto con una dirección válida antes de enviar una invitación.",
+        "userExistsForContact": "Ya existe una cuenta de usuario para este contacto. Use el restablecimiento de contraseña en lugar de enviar una invitación.",
+        "noDefaultClient": "No hay un cliente predeterminado configurado para este tenant. Configure un cliente predeterminado en Configuración General.",
         "noDefaultLocation": "El cliente predeterminado debe tener una ubicación predeterminada configurada para enviar invitaciones al portal.",
         "noLocationEmail": "La ubicación del cliente predeterminado debe tener un correo electrónico de contacto configurado.",
         "noBaseUrl": "La URL base no está configurada para las invitaciones al portal.",
         "invitationNotFound": "Invitación no encontrada o ya utilizada."
       },
-      "userNotFound": "Client user not found"
+      "userNotFound": "No se encontró el usuario del cliente"
     }
   },
   "quickAddContact": {
@@ -702,7 +702,7 @@
     "toast": {
       "saved": "Contacto actualizado",
       "saveFailed": "No se pudo actualizar el contacto",
-      "saveFailedDescription": "The contact could not be updated. Please try again."
+      "saveFailedDescription": "No se pudo actualizar el contacto. Inténtelo de nuevo."
     }
   }
 }

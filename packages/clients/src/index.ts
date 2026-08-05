@@ -1,7 +1,7 @@
 /**
  * @alga-psa/clients
  *
- * Client management module for Alga PSA.
+ * Client management module for AlgaPSA.
  * Provides client CRUD operations, validation schemas, and UI components.
  */
 

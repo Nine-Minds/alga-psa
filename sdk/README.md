@@ -1,6 +1,6 @@
-# Alga PSA SDK Workspace
+# AlgaPSA SDK Workspace
 
-This `sdk/` workspace collects all developer-facing tooling, client artifacts, and runnable examples that support the Alga PSA APIs. It acts as an umbrella for multiple packages—each with its own `package.json`—alongside shared docs and samples.
+This `sdk/` workspace collects all developer-facing tooling, client artifacts, and runnable examples that support the AlgaPSA APIs. It acts as an umbrella for multiple packages—each with its own `package.json`—alongside shared docs and samples.
 
 ## Repository Layout
 

@@ -99,7 +99,7 @@ exports.up = async function(knex) {
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Keeping teams aligned</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by AlgaPSA • Keeping teams aligned</td>
             </tr>
           </table>
         </td>
@@ -200,7 +200,7 @@ View ticket: {{ticket.url}}
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Keeping teams aligned</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by AlgaPSA • Keeping teams aligned</td>
             </tr>
           </table>
         </td>
@@ -297,7 +297,7 @@ View ticket: {{ticket.url}}
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f0fdf4;color:#047857;font-size:12px;text-align:center;">Powered by Alga PSA • Keeping teams aligned</td>
+              <td style="padding:18px 32px;background:#f0fdf4;color:#047857;font-size:12px;text-align:center;">Powered by AlgaPSA • Keeping teams aligned</td>
             </tr>
           </table>
         </td>
@@ -397,7 +397,7 @@ View ticket: {{ticket.url}}
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Keeping teams aligned</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by AlgaPSA • Keeping teams aligned</td>
             </tr>
           </table>
         </td>

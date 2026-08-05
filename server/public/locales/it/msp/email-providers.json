@@ -13,7 +13,7 @@
       "resyncStarted": "La risincronizzazione è iniziata per {{providerName}}.",
       "resyncRecovered": "{{providerName}} si è riconnesso correttamente.",
       "enterpriseOnly": "La posta elettronica in entrata di Microsoft 365 è disponibile solo in Pro.",
-      "loadProvidersError": "Failed to load email providers"
+      "loadProvidersError": "Impossibile caricare i provider di posta elettronica"
     },
     "editDrawer": {
       "title": "Modifica provider di posta elettronica",
@@ -42,8 +42,8 @@
       "title": "Istruzioni per l'installazione",
       "microsoft": {
         "title": "Installazione di Microsoft 365",
-        "providersPointer": "Microsoft app setup is managed in Providers.",
-        "openProviders": "Open Providers"
+        "providersPointer": "La configurazione dell'app Microsoft viene gestita in Fornitori.",
+        "openProviders": "Apri Fornitori"
       },
       "gmail": {
         "title": "Configurazione di Gmail",
@@ -250,7 +250,7 @@
     },
     "microsoft": {
       "hostedOauth": {
-        "sectionTitle": "Connect Microsoft 365"
+        "sectionTitle": "Connetti Microsoft 365"
       },
       "validation": {
         "providerNameRequired": "Il nome della configurazione è obbligatorio",
@@ -277,11 +277,11 @@
         "providerNameHelp": "Nome interno usato per identificare questa configurazione. Non viene mostrato nelle email in uscita.",
         "senderDisplayNameLabel": "Nome visualizzato del mittente",
         "senderDisplayNamePlaceholder": "es. Acme Support",
-        "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails. It applies when this mailbox matches the configured outbound ticketing address. Leave blank to use the ticket board name."
+        "senderDisplayNameHelp": "Nome visualizzato mostrato nell'intestazione Da delle email in uscita relative ai ticket. Si applica quando questa cassetta postale corrisponde all'indirizzo configurato per i ticket in uscita. Lascia vuoto per usare il nome della bacheca dei ticket."
       },
       "oauth": {
-        "signingIn": "Signing in…",
-        "signIn": "Sign in with Microsoft"
+        "signingIn": "Accesso in corso…",
+        "signIn": "Accedi con Microsoft"
       },
       "advanced": {
         "title": "Impostazioni avanzate",
@@ -292,12 +292,12 @@
         "maxEmailsPerSync": "Numero massimo di email per sincronizzazione"
       },
       "readiness": {
-        "checking": "Checking Microsoft setup…",
-        "ready": "Microsoft is set up. Sign in as this mailbox to finish.",
-        "pending": "Waiting for your Microsoft 365 administrator. Setup was started in Providers but hasn't been approved yet.",
-        "openProviders": "Open Providers",
-        "notConfigured": "Microsoft isn't set up yet. Set it up once in Providers, then come back.",
-        "setUpInProviders": "Set up in Providers"
+        "checking": "Verifica della configurazione Microsoft…",
+        "ready": "Microsoft è configurato. Accedi con questa cassetta postale per terminare.",
+        "pending": "In attesa del tuo amministratore di Microsoft 365. La configurazione è stata avviata in Fornitori, ma non è ancora stata approvata.",
+        "openProviders": "Apri Fornitori",
+        "notConfigured": "Microsoft non è ancora configurato. Configuralo una volta in Fornitori, quindi torna qui.",
+        "setUpInProviders": "Configura in Fornitori"
       }
     },
     "gmail": {
@@ -311,7 +311,7 @@
         "closedEarly": "La finestra di autorizzazione è stata chiusa prima del completamento.",
         "authorizationFailed": "Autorizzazione fallita",
         "popupFailed": "Il popup OAuth non è riuscito",
-        "configureFailed": "Failed to configure Gmail provider"
+        "configureFailed": "Impossibile configurare il provider Gmail"
       },
       "messages": {
         "setupIncomplete": "Fornitore salvato ma configurazione incompleta: {{error}}",
@@ -333,7 +333,7 @@
         "providerNameHelp": "Nome interno usato per identificare questa configurazione. Non viene mostrato nelle email in uscita.",
         "senderDisplayNameLabel": "Nome visualizzato del mittente",
         "senderDisplayNamePlaceholder": "es. Acme Support",
-        "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della board del ticket."
+        "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della bacheca del ticket."
       },
       "oauth": {
         "sectionTitle": "Google OAuth",
@@ -383,7 +383,7 @@
         "providerNameHelp": "Nome interno usato per identificare questa configurazione. Non viene mostrato nelle email in uscita.",
         "senderDisplayName": "Nome visualizzato del mittente",
         "senderDisplayNamePlaceholder": "es. Acme Support",
-        "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della board del ticket."
+        "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della bacheca del ticket."
       },
       "auth": {
         "title": "Autenticazione",
@@ -535,7 +535,7 @@
       "providerNameHelp": "Nome interno usato per identificare questa configurazione. Non viene mostrato nelle email in uscita.",
       "senderDisplayName": "Nome visualizzato del mittente",
       "senderDisplayNamePlaceholder": "es. Acme Support",
-      "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della board del ticket."
+      "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della bacheca del ticket."
     },
     "authOptions": {
       "password": "Password",
@@ -600,7 +600,7 @@
       "providerNameHelp": "Nome interno usato per identificare questa configurazione. Non viene mostrato nelle email in uscita.",
       "senderDisplayNameLabel": "Nome visualizzato del mittente",
       "senderDisplayNamePlaceholder": "es. Acme Support",
-      "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della board del ticket."
+      "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della bacheca del ticket."
     },
     "oauth": {
       "connectionTitle": "Connessione Microsoft 365",
@@ -727,7 +727,7 @@
       "domainRemovalScheduledWithClear": "Rimozione del dominio pianificata e indirizzo mittente per ticketing cancellato",
       "removeDomainFailed": "Impossibile rimuovere il dominio",
       "testOutboundFailed": "Test dell'e-mail in uscita non riuscito",
-      "senderIdentitiesUpdated": "Sender identities updated."
+      "senderIdentitiesUpdated": "Identità dei mittenti aggiornate."
     },
     "tabs": {
       "inboundEmail": "Email in entrata",
@@ -824,36 +824,36 @@
       },
       "senderIdentities": {
         "ticket": {
-          "title": "Ticket email identity",
-          "description": "Replies to ticket emails must return to this address so they can be matched and added to the ticket. Use a connected, monitored inbox.",
-          "connectedInboxLabel": "Connected inbox",
-          "connectedInboxHelp": "A connected inbox keeps client replies in the ticket conversation.",
-          "customAddressOption": "Use another address",
-          "addressLabel": "From address",
+          "title": "Identità email dei ticket",
+          "description": "Le risposte alle email dei ticket devono tornare a questo indirizzo affinché possano essere associate e aggiunte al ticket. Usa una casella di posta connessa e monitorata.",
+          "connectedInboxLabel": "Casella di posta connessa",
+          "connectedInboxHelp": "Una casella di posta connessa mantiene le risposte dei clienti nella conversazione del ticket.",
+          "customAddressOption": "Usa un altro indirizzo",
+          "addressLabel": "Indirizzo mittente",
           "addressPlaceholder": "support@example.com",
-          "addressHelp": "This address controls reply routing for ticket email only.",
-          "microsoftAddressHelp": "Microsoft 365 requires ticket email to use the selected sending mailbox ({{mailbox}}).",
-          "nameLabel": "Sender display name",
-          "namePlaceholder": "Support",
-          "nameHelp": "Leave blank to use the connected mailbox name or ticket board name."
+          "addressHelp": "Questo indirizzo controlla l’instradamento delle risposte solo per le email dei ticket.",
+          "microsoftAddressHelp": "Microsoft 365 richiede che per le email dei ticket venga usata la casella di posta mittente selezionata ({{mailbox}}).",
+          "nameLabel": "Nome visualizzato del mittente",
+          "namePlaceholder": "Assistenza",
+          "nameHelp": "Lascia vuoto per usare il nome della casella di posta connessa o della bacheca dei ticket."
         },
         "notification": {
-          "title": "All other email identity",
-          "description": "Brand portal invitations, password resets, invoices, project updates, and general notifications independently from ticket routing.",
-          "addressLabel": "From address",
+          "title": "Identità per tutte le altre email",
+          "description": "Inviti al portale personalizzato, reimpostazioni della password, fatture, aggiornamenti dei progetti e notifiche generali, indipendentemente dall’instradamento dei ticket.",
+          "addressLabel": "Indirizzo mittente",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "This is the branding address used for non-ticket email through your SMTP server.",
-          "lockedAddressHelp": "This address is determined by the active managed domain or selected Microsoft 365 mailbox.",
-          "nameLabel": "Sender display name",
-          "namePlaceholder": "Your company name",
-          "nameHelp": "Leave blank to use {{company}} automatically.",
-          "companyFallback": "your tenant company"
+          "smtpAddressHelp": "Questo è l’indirizzo associato al marchio usato per le email non relative ai ticket inviate tramite il tuo server SMTP.",
+          "lockedAddressHelp": "Questo indirizzo è determinato dal dominio gestito attivo o dalla casella di posta Microsoft 365 selezionata.",
+          "nameLabel": "Nome visualizzato del mittente",
+          "namePlaceholder": "Nome della tua azienda",
+          "nameHelp": "Lascia vuoto per usare automaticamente {{company}}.",
+          "companyFallback": "l’azienda del tuo tenant"
         },
-        "warningTitle": "Check reply routing",
-        "errorTitle": "Fix the ticket identity",
-        "clearButton": "Clear ticket identity",
-        "savingButton": "Saving...",
-        "saveButton": "Save sender identities"
+        "warningTitle": "Controlla l’instradamento delle risposte",
+        "errorTitle": "Correggi l’identità dei ticket",
+        "clearButton": "Cancella l’identità dei ticket",
+        "savingButton": "Salvataggio...",
+        "saveButton": "Salva identità dei mittenti"
       }
     },
     "inbound": {
@@ -883,7 +883,7 @@
       "customAddressThreadWarning": "L'uso di un indirizzo personalizzato può impedire il corretto raggruppamento delle risposte in entrata.",
       "smtpDomainMismatchWarning": "Questo dominio non corrisponde al dominio mittente del tuo SMTP ({{domain}}). Le email potrebbero non essere consegnate o essere contrassegnate come spam se il tuo server SMTP non è autorizzato a inviare da questo dominio.",
       "notConnectedWarning": "L'elaborazione dei ticket in entrata potrebbe non funzionare con questo indirizzo perché non è una delle tue caselle di posta collegate.",
-      "microsoftMustMatchMailbox": "Ticket email address must match the selected Microsoft 365 mailbox ({{mailbox}})."
+      "microsoftMustMatchMailbox": "L’indirizzo email dei ticket deve corrispondere alla casella di posta Microsoft 365 selezionata ({{mailbox}})."
     },
     "domainList": {
       "loading": "Caricamento domini…",
@@ -924,7 +924,7 @@
       "mismatchHelp": "Il record DNS esiste, ma il valore non corrisponde a quello atteso da Resend.",
       "matchedHelp": "Il valore rilevato corrisponde a quello atteso.",
       "unknownHelp": "Non abbiamo ancora verificato il DNS. Riverifica il DNS per eseguire la verifica.",
-      "hostLabel": "Host",
+      "hostLabel": "Nome host",
       "fqdnLabel": "Nome completo",
       "valueLabel": "Valore",
       "copyHostAriaLabel": "Copia host",

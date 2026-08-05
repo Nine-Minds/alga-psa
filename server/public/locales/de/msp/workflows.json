@@ -227,7 +227,7 @@
       "tabs": {
         "payload": "Nutzdaten",
         "vars": "Variablen",
-        "meta": "Meta",
+        "meta": "Metadaten",
         "error": "Fehler",
         "raw": "Roh"
       }
@@ -239,7 +239,7 @@
       "attemptLine": "Versuch {{count}}",
       "durationLine": "Dauer: {{duration}}",
       "sizeLine": "Eingabegröße: {{inputSize}}{{inputSuffix}} · Ausgabegröße: {{outputSize}}{{outputSuffix}}",
-      "truncatedSuffix": " (truncated)",
+      "truncatedSuffix": " (gekürzt)",
       "inputLabel": "Eingabe",
       "outputLabel": "Ausgabe"
     },
@@ -267,7 +267,7 @@
       "systemUser": "System",
       "columns": {
         "timestamp": "Zeitstempel",
-        "operation": "Operation",
+        "operation": "Vorgang",
         "user": "Benutzer",
         "details": "Details"
       },
@@ -310,7 +310,7 @@
   },
   "runDialog": {
     "title": "Workflow ausführen",
-    "description": "Provide a synthetic payload to preview (and run) a workflow.",
+    "description": "Geben Sie synthetische Nutzdaten ein, um einen Workflow in der Vorschau anzuzeigen (und auszuführen).",
     "descriptionEvent": "Ereignis: {{name}}.",
     "draftWarning": "Entwurfsversion weicht von veröffentlichter Version (v{{version}}) ab.",
     "concurrencyLimit": "Gleichzeitigkeitslimit: {{count}} Ausführung(en) gleichzeitig.",
@@ -430,7 +430,7 @@
       "eventMissingSchemaRef": "Das gewählte Ereignis hat keine Nutzdatenschema-Referenz; Ausführung mit Auslöserzuordnung nicht möglich.",
       "loadLatestRunFailed": "Letzte Ausführung konnte nicht geladen werden",
       "mapEntryExists": "Dieser Schlüssel existiert bereits.",
-      "noPriorPayload": "No prior run payload found.",
+      "noPriorPayload": "Keine Nutzdaten einer vorherigen Ausführung gefunden.",
       "payloadCopied": "Nutzdaten in die Zwischenablage kopiert.",
       "presetSaved": "Voreinstellung gespeichert.",
       "providePresetName": "Geben Sie einen Voreinstellungsnamen an.",
@@ -443,7 +443,11 @@
       "summaryDescription": "Füllen Sie die fehlenden Felder unten aus, wechseln Sie zum Formular-Assistenten oder verwenden Sie eine Beispiel-Nutzdaten-Schaltfläche.",
       "moreErrors": "+{{count}} weitere…"
     },
-    "sampleEmailBody": "Beispiel-E-Mail-Inhalt"
+    "sampleEmailBody": "Beispiel-E-Mail-Inhalt",
+    "sections": {
+      "schemaAndEvents": "Schema und Ereignisse",
+      "payloadTools": "Nutzdatenwerkzeuge"
+    }
   },
   "eventList": {
     "common": {
@@ -564,7 +568,7 @@
     "table": {
       "columns": {
         "timestamp": "Zeitstempel",
-        "operation": "Operation",
+        "operation": "Vorgang",
         "user": "Benutzer",
         "details": "Details"
       }
@@ -940,7 +944,7 @@
         "Core": "Kern",
         "Transform": "Transformieren",
         "AI": "KI",
-        "Apps": "Apps",
+        "Apps": "Anwendungen",
         "Action": "Aktion",
         "Email": "E-Mail",
         "Nodes": "Knoten"
@@ -968,11 +972,11 @@
         },
         "control": {
           "if": {
-            "label": "If",
+            "label": "Wenn",
             "description": "Bedingte Verzweigung"
           },
           "forEach": {
-            "label": "For Each",
+            "label": "Für jedes Element",
             "description": "Über Elemente iterieren"
           },
           "tryCatch": {
@@ -984,7 +988,7 @@
             "description": "Einen anderen Workflow aufrufen"
           },
           "return": {
-            "label": "Return",
+            "label": "Rückgabe",
             "description": "Ausführung beenden"
           }
         }
@@ -1204,7 +1208,7 @@
     },
     "dataContext": {
       "availableDataAtStep": "Verfügbare Daten in diesem Schritt",
-      "payload": "Payload",
+      "payload": "Nutzdaten",
       "noPayloadFields": "Keine Payload-Felder",
       "payloadSchemaRefHint": "Setzen Sie 'Payload-Schemareferenz', um die Payload-Struktur zu definieren",
       "stepOutputs": "Schritt-Ausgaben (vars)",
@@ -1227,7 +1231,7 @@
     "examplePrefix": "Beispiel:"
   },
   "actionInputSection": {
-    "heading": "Action inputs"
+    "heading": "Aktionseingaben"
   },
   "actionInputFixedPicker": {
     "loadingOptions": "Optionen werden geladen…",
@@ -1322,7 +1326,7 @@
     "pagination": {
       "previous": "Zurück",
       "next": "Weiter",
-      "pageLabel": "Page {{current}} of {{total}}"
+      "pageLabel": "Seite {{current}} von {{total}}"
     },
     "errors": {
       "loadFailed": "Aufgaben konnten nicht geladen werden. Bitte erneut versuchen.",
@@ -1496,7 +1500,9 @@
     "field": {
       "placeholder": "Ausdruck eingeben...",
       "insertFieldPlaceholder": "Feld einfügen"
-    }
+    },
+    "clear": "Löschen",
+    "clearAriaLabel": "Ausdruck löschen"
   },
   "sourceDataTree": {
     "searchPlaceholder": "Felder suchen...",
@@ -1648,7 +1654,7 @@
     "tileKind": {
       "core-object": "Kern",
       "transform": "Transformieren",
-      "app": "App",
+      "app": "Anwendung",
       "ai": "KI"
     },
     "disconnected": {
@@ -1694,7 +1700,7 @@
       "allMapped": "Alle Pflichtfelder zugeordnet"
     },
     "insert": {
-      "title": "Drop a step here to insert"
+      "title": "Legen Sie hier einen Schritt ab, um ihn einzufügen"
     },
     "actions": {
       "deleteStep": "Schritt löschen"
@@ -1923,7 +1929,7 @@
       "nonBusiness": "Nicht-Werktage"
     },
     "table": {
-      "workflowVersion": "Workflow v{{version}}",
+      "workflowVersion": "Workflow-Version {{version}}",
       "columns": {
         "schedule": "Zeitplan",
         "workflow": "Workflow",
@@ -2012,7 +2018,7 @@
         "holidaysNote": "Feiertage werden stets als Nicht-Werktage behandelt."
       },
       "businessHours": {
-        "defaultSuffix": " (Default)",
+        "defaultSuffix": " (Standardwert)",
         "noneConfigured": "Es sind noch keine Geschäftszeiten-Pläne konfiguriert.",
         "usingTenantDefault": "Verwendet den Standard-Geschäftszeiten-Plan des Mandanten.",
         "noTenantDefault": "Es ist noch kein Standard-Geschäftszeiten-Plan für den Mandanten konfiguriert."
@@ -2075,7 +2081,7 @@
     "recurrence": {
       "andWord": "und",
       "frequency": {
-        "daily": "Daily",
+        "daily": "Täglich",
         "weekly": "Wöchentlich",
         "monthly": "Monatlich"
       },
@@ -2357,7 +2363,7 @@
         "sourceOptions": {
           "all": "Alle Quellen",
           "system": "System",
-          "tenant": "Tenant"
+          "tenant": "Mandant"
         },
         "sort": "Sortierung",
         "sortOptions": {
@@ -2397,7 +2403,7 @@
       },
       "badges": {
         "system": "System",
-        "tenant": "Tenant",
+        "tenant": "Mandant",
         "noSchema": "Kein Schema",
         "unknownSchema": "Unbekanntes Schema",
         "schema": "Schema"
@@ -2479,8 +2485,8 @@
           "correlationKeyPlaceholder": "Wird verwendet, um Ereignis-Wartezustände aufzulösen",
           "schemaRef": "Schema-Referenz für Ereignis-Payload (erweitert)",
           "schemaRefPlaceholderEmpty": "Kein schemaRef für dieses Ereignis",
-          "payloadJson": "Payload (JSON)",
-          "payload": "Payload"
+          "payloadJson": "Nutzdaten (JSON)",
+          "payload": "Nutzdaten"
         },
         "modes": {
           "form": "Formular",
@@ -2518,8 +2524,8 @@
         "form": {
           "remove": "Entfernen",
           "addItem": "Eintrag hinzufügen",
-          "rootLabel": "Payload",
-          "payloadJsonLabel": "Payload (JSON)",
+          "rootLabel": "Nutzdaten",
+          "payloadJsonLabel": "Nutzdaten (JSON)",
           "true": "Wahr",
           "false": "Falsch"
         }
@@ -2545,7 +2551,7 @@
           "selectPlaceholder": "Auswählen…",
           "payloadSchemaJson": "Payload-Schema (JSON)"
         },
-        "footer": "Benutzerdefinierte Ereignisse gelten je Tenant und können als Workflow-Auslöser verwendet werden.",
+        "footer": "Benutzerdefinierte Ereignisse gelten für jeden Mandanten und können als Workflow-Auslöser verwendet werden.",
         "validation": {
           "typeAndNameRequired": "Ereignistyp und Name sind erforderlich.",
           "schemaRefRequired": "Wählen Sie eine Payload-Schema-Referenz aus (oder verwenden Sie ein Inline-Schema).",

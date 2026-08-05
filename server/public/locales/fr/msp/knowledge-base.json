@@ -231,11 +231,11 @@
       "publish": {
         "title": "Publier l'article",
         "message": "Etes-vous sûr de vouloir publier cet article ?",
-        "messageWithAudience": "Cela publiera l'article et le rendra visible aux utilisateurs {{audience}}. Es-tu sûr?"
+        "messageWithAudience": "Cette action publiera l'article et le rendra visible aux utilisateurs {{audience}}. Voulez-vous continuer ?"
       },
       "archive": {
         "title": "Article d'archive",
-        "message": "Cela archivera l'article et le supprimera de la visibilité client. Es-tu sûr?"
+        "message": "Cette action archivera l'article et le retirera de l'espace visible par les clients. Voulez-vous continuer ?"
       },
       "delete": {
         "title": "Supprimer l'article",

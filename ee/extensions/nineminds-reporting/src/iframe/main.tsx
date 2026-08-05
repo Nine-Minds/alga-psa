@@ -3786,7 +3786,7 @@ function TenantManagementView() {
   ];
 
   const productCodeOptions: SelectOption[] = [
-    { value: 'psa', label: 'Alga PSA' },
+    { value: 'psa', label: 'AlgaPSA' },
     { value: 'algadesk', label: 'AlgaDesk' },
   ];
 

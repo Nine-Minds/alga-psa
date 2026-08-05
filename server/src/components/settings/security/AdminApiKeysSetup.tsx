@@ -198,7 +198,7 @@ export default function AdminApiKeysSetup() {
       setError(null);
     } catch (error) {
       console.error('Failed to load API keys:', error);
-      setError('Failed to load API keys. Please ensure you have admin privileges.');
+      setError(t('security.apiKeys.admin.errors.loadFailed'));
     }
   };
 
@@ -285,13 +285,13 @@ export default function AdminApiKeysSetup() {
       setError(null);
     } catch (error) {
       console.error('Failed to deactivate API key:', error);
-      setError('Failed to deactivate API key. Please ensure you have admin privileges.');
+      setError(t('security.apiKeys.admin.errors.deactivateFailed'));
     }
   };
 
   const columns: ColumnDefinition<AdminApiKey>[] = useMemo(() => [
     {
-      title: 'User',
+      title: t('security.apiKeys.admin.columns.user'),
       dataIndex: 'username',
       width: '15%',
       render: (_: string, record: AdminApiKey) => {
@@ -300,27 +300,27 @@ export default function AdminApiKeysSetup() {
       },
     },
     {
-      title: 'Description',
+      title: t('security.apiKeys.list.columns.description'),
       dataIndex: 'description',
       width: '20%',
     },
     {
-      title: 'Created',
+      title: t('security.apiKeys.list.columns.created'),
       dataIndex: 'created_at',
       width: '15%',
       render: (value: Date) => new Date(value).toLocaleString(),
     },
     {
-      title: 'Last Used',
+      title: t('security.apiKeys.list.columns.lastUsed'),
       dataIndex: 'last_used_at',
       width: '15%',
-      render: (value: Date | null) => value ? new Date(value).toLocaleString() : 'Never',
+      render: (value: Date | null) => value ? new Date(value).toLocaleString() : t('security.apiKeys.list.never'),
     },
     {
-      title: 'Expires',
+      title: t('security.apiKeys.list.columns.expires'),
       dataIndex: 'expires_at',
       width: '15%',
-      render: (value: Date | null) => value ? new Date(value).toLocaleString() : 'Never',
+      render: (value: Date | null) => value ? new Date(value).toLocaleString() : t('security.apiKeys.list.never'),
     },
     {
       title: t('security.apiKeys.rateLimit.columnTitle'),
@@ -441,17 +441,17 @@ export default function AdminApiKeysSetup() {
       },
     },
     {
-      title: 'Status',
+      title: t('security.apiKeys.list.columns.status'),
       dataIndex: 'active',
       width: '10%',
       render: (value: boolean) => (
         <span className={`px-2 py-1 rounded text-sm ${value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-          {value ? 'Active' : 'Inactive'}
+          {value ? t('security.apiKeys.list.status.active') : t('security.apiKeys.list.status.inactive')}
         </span>
       ),
     },
     {
-      title: 'Actions',
+      title: t('security.apiKeys.list.columns.actions'),
       dataIndex: 'actions',
       width: '10%',
       render: (_: any, record: AdminApiKey) => (
@@ -462,7 +462,7 @@ export default function AdminApiKeysSetup() {
             onClick={() => handleDeactivateKey(record.api_key_id)}
             className="text-sm"
           >
-            Deactivate
+            {t('security.apiKeys.list.deactivate')}
           </Button>
         ) : null
       ),
@@ -484,7 +484,7 @@ export default function AdminApiKeysSetup() {
   return (
     <div className="space-y-6">
       <Card className="p-6">
-        <h2 className="text-2xl font-semibold mb-4">API Keys Administration</h2>
+        <h2 className="text-2xl font-semibold mb-4">{t('security.apiKeys.admin.title')}</h2>
         {error && (
           <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-md">
             {error}
@@ -494,7 +494,7 @@ export default function AdminApiKeysSetup() {
           <AdminSearchInput
             value={searchInput}
             onChange={handleSearchInputChange}
-            placeholder="Search by user or description"
+            placeholder={t('security.apiKeys.admin.searchPlaceholder')}
           />
           <div className="w-48 shrink-0">
             <CustomSelect
@@ -505,9 +505,9 @@ export default function AdminApiKeysSetup() {
                 setCurrentPage(1);
               }}
               options={[
-                { value: 'all', label: 'All Statuses' },
-                { value: 'active', label: 'Active' },
-                { value: 'inactive', label: 'Inactive' },
+                { value: 'all', label: t('security.apiKeys.list.filters.allStatuses') },
+                { value: 'active', label: t('security.apiKeys.list.filters.active') },
+                { value: 'inactive', label: t('security.apiKeys.list.filters.inactive') },
               ]}
             />
           </div>
@@ -520,7 +520,7 @@ export default function AdminApiKeysSetup() {
                 setCurrentPage(1);
               }}
               clearable
-              placeholder="Last used after"
+              placeholder={t('security.apiKeys.list.filters.lastUsedAfter')}
             />
           </div>
           <div className="w-48 shrink-0">
@@ -532,7 +532,7 @@ export default function AdminApiKeysSetup() {
                 setCurrentPage(1);
               }}
               clearable
-              placeholder="Expires before"
+              placeholder={t('security.apiKeys.list.filters.expiresBefore')}
             />
           </div>
           <Button
@@ -544,7 +544,7 @@ export default function AdminApiKeysSetup() {
             disabled={!isFiltered}
           >
             <RotateCcw size={14} />
-            Reset
+            {t('security.apiKeys.list.filters.reset')}
           </Button>
         </div>
         <DataTable

@@ -2295,5 +2295,156 @@
         }
       }
     }
+  },
+  "mcpServer": {
+    "title": "11111",
+    "description": "11111",
+    "errors": {
+      "load": "11111",
+      "update": "11111"
+    },
+    "status": {
+      "active": "11111",
+      "inactive": "11111"
+    },
+    "providers": {
+      "title": "11111",
+      "description": "11111",
+      "empty": "11111",
+      "readyToUse": "11111",
+      "platformManaged": "11111",
+      "addAnother": "11111",
+      "advancedOptions": "11111",
+      "googleNoSetup": "11111",
+      "kinds": {
+        "microsoft": "11111",
+        "google": "11111",
+        "custom": "11111"
+      },
+      "suggestion": {
+        "withName": "11111 {{name}} 11111",
+        "withoutName": "11111",
+        "useDirectory": "11111"
+      },
+      "fields": {
+        "provider": "11111",
+        "entraTenantId": "11111",
+        "audienceOptional": "11111",
+        "audience": "11111",
+        "subjectClaim": "11111",
+        "subjectClaimHelp": "11111",
+        "issuer": "11111",
+        "jwksUri": "11111"
+      },
+      "actions": {
+        "add": "11111"
+      },
+      "hints": {
+        "entraTenantIdRequired": "11111",
+        "issuerAndJwksRequired": "11111"
+      },
+      "table": {
+        "provider": "11111",
+        "directory": "11111",
+        "status": "11111"
+      }
+    },
+    "agents": {
+      "title": "11111",
+      "description": "11111",
+      "empty": "11111",
+      "needsProvider": "11111",
+      "connectedAs": "11111",
+      "fields": {
+        "name": "11111",
+        "namePlaceholder": "11111",
+        "identity": "11111",
+        "provider": "11111",
+        "providerPlaceholder": "11111",
+        "agentId": "11111",
+        "roles": "11111"
+      },
+      "manualEntry": {
+        "show": "11111",
+        "hide": "11111"
+      },
+      "actions": {
+        "add": "11111",
+        "change": "11111",
+        "connectWith": "11111 {{provider}} 11111",
+        "openMenu": "11111",
+        "viewActivity": "11111",
+        "deactivate": "11111",
+        "reactivate": "11111",
+        "remove": "11111"
+      },
+      "hints": {
+        "nameRequired": "11111",
+        "connectOrEnterIdentity": "11111",
+        "chooseProviderAndAgentId": "11111"
+      },
+      "table": {
+        "name": "11111",
+        "provider": "11111",
+        "agentId": "11111",
+        "status": "11111"
+      },
+      "removeDialog": {
+        "title": "11111",
+        "message": "11111 {{name}} 11111",
+        "confirm": "11111",
+        "cancel": "11111"
+      }
+    },
+    "agentId": {
+      "unknown": {
+        "placeholder": "11111",
+        "helper": "11111"
+      },
+      "microsoft": {
+        "userHelper": "11111",
+        "appHelper": "11111"
+      },
+      "google": {
+        "helper": "11111"
+      },
+      "custom": {
+        "placeholder": "11111",
+        "helper": "11111 {{claim}} 11111"
+      }
+    },
+    "audit": {
+      "title": "11111",
+      "titleForAgent": "11111 {{name}} 11111",
+      "description": "11111",
+      "table": {
+        "when": "11111",
+        "action": "11111",
+        "result": "11111",
+        "status": "11111"
+      },
+      "decision": {
+        "allowed": "11111",
+        "blocked": "11111"
+      }
+    },
+    "connectedClients": {
+      "title": "11111",
+      "description": "11111",
+      "loading": "11111",
+      "empty": "11111",
+      "meta": "11111 {{host}} 11111 {{date}} 11111",
+      "disconnect": "11111",
+      "errors": {
+        "load": "11111",
+        "disconnect": "11111"
+      },
+      "dialog": {
+        "title": "11111",
+        "message": "11111 {{name}} 11111",
+        "confirm": "11111",
+        "cancel": "11111"
+      }
+    }
   }
 }

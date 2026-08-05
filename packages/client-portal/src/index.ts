@@ -1,7 +1,7 @@
 /**
  * @alga-psa/client-portal
  *
- * Client-facing portal module for Alga PSA.
+ * Client-facing portal module for AlgaPSA.
  * Provides the customer-facing interface for ticket submission,
  * knowledge base access, and account management.
  */

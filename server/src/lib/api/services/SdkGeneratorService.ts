@@ -123,7 +123,7 @@ export class SdkGeneratorService {
     const pkg = {
       name: config.packageName,
       version: config.version,
-      description: config.description || `${config.language === 'typescript' ? 'TypeScript' : 'JavaScript'} SDK for Alga PSA API`,
+      description: config.description || `${config.language === 'typescript' ? 'TypeScript' : 'JavaScript'} SDK for AlgaPSA API`,
       main: config.language === 'typescript' ? 'dist/index.js' : 'src/index.js',
       types: config.language === 'typescript' ? 'dist/index.d.ts' : 'src/index.d.ts',
       scripts: {
@@ -144,7 +144,7 @@ export class SdkGeneratorService {
         jest: '^29.0.0'
       },
       keywords: ['alga-psa', 'api', 'sdk', 'rest', 'hateoas'],
-      author: config.author || 'Alga PSA',
+      author: config.author || 'AlgaPSA',
       license: 'MIT',
       repository: {
         type: 'git',
@@ -956,7 +956,7 @@ export { HateoasNavigator, withHateoas } from './utils/hateoas';`;
   private static generateReadme(config: SdkGenerationConfig): string {
     return `# ${config.packageName}
 
-${config.description || 'Official TypeScript/JavaScript SDK for the Alga PSA API'}
+${config.description || 'Official TypeScript/JavaScript SDK for the AlgaPSA API'}
 
 ## Installation
 

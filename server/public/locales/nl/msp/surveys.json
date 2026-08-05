@@ -155,14 +155,14 @@
         "enabled": "Trigger ingeschakeld"
       },
       "placeholders": {
-        "boardIds": "Board selecteren",
+        "boardIds": "Selecteer een bord",
         "statusIds": "Status toevoegen",
         "priorities": "Prioriteit toevoegen"
       },
       "boardFilters": {
-        "active": "Actieve boards",
-        "inactive": "Inactieve boards",
-        "all": "Alle boards"
+        "active": "Actieve borden",
+        "inactive": "Inactieve borden",
+        "all": "Alle borden"
       },
       "help": {
         "conditions": "Laat een veld leeg om overeen te komen met elke waarde."
@@ -173,7 +173,7 @@
         "delete": "Trigger verwijderen"
       },
       "noTemplates": "Maak een enquêtesjabloon voordat u triggers toevoegt.",
-      "prioritiesMixed": "De geselecteerde boards gebruiken verschillende prioriteitstypen. Alle prioriteiten worden getoond.",
+      "prioritiesMixed": "De geselecteerde borden gebruiken verschillende prioriteitstypen. Alle prioriteiten worden getoond.",
       "errors": {
         "reference": "Kan triggeropties niet laden. Probeer het opnieuw."
       }
@@ -436,7 +436,7 @@
       "ticket": "Ticket",
       "client": "Klant",
       "contact": "Contactpersoon",
-      "agent": "Agent",
+      "agent": "Medewerker",
       "technician": "Technicus",
       "submitted": "Ingediend",
       "comment": "Opmerking"

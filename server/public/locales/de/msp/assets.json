@@ -67,7 +67,7 @@
     "empty": "Noch keine Übereinstimmungen. Versuchen Sie es mit einem anderen Schlüsselwort.",
     "groups": {
       "quickActions": "Schnelle Aktionen",
-      "assets": "Vermögenswerte",
+      "assets": "Assets",
       "hints": "Hinweise"
     },
     "hint": {
@@ -311,7 +311,7 @@
       "lastMaintenance": "Letzte Wartung",
       "noHistory": "Keine Historie",
       "maintenanceDataPending": "Wartungsdaten werden angezeigt, sobald die Zeitpläne konfiguriert sind.",
-      "assetSummary": "Zusammenfassung der Vermögenswerte",
+      "assetSummary": "Asset-Zusammenfassung",
       "recentLifecycleEvents": "Aktuelle Lebenszyklusereignisse"
     },
     "maintenance": {
@@ -420,7 +420,7 @@
       "serviceHistory": "Serviceverlauf",
       "software": "Software",
       "maintenance": "Wartung",
-      "relatedAssets": "Zugehörige Vermögenswerte",
+      "relatedAssets": "Zugehörige Assets",
       "documentsPasswords": "Dokumente und Passwörter",
       "timeline": "Verlauf"
     }
@@ -487,7 +487,7 @@
       "server": "Serverdetails",
       "mobileDevice": "Details zu Mobilgeräten",
       "printer": "Druckerdetails",
-      "relatedAssets": "Zugehörige Vermögenswerte"
+      "relatedAssets": "Zugehörige Assets"
     },
     "maintenance": {
       "activeSchedules": "Aktive Zeitpläne",
@@ -508,7 +508,7 @@
       "unassigned": "Nicht zugewiesen",
       "never": "Nie",
       "noAdditionalDetails": "Keine weiteren Details verfügbar",
-      "noRelatedAssets": "Keine zugehörigen Vermögenswerte gefunden"
+      "noRelatedAssets": "Keine zugehörigen Assets gefunden"
     },
     "values": {
       "virtual": "Virtuell",
@@ -527,7 +527,7 @@
       "router": "Router",
       "firewall": "Firewall",
       "access_point": "Zugangspunkt",
-      "load_balancer": "Load Balancer"
+      "load_balancer": "Loadbalancer"
     },
     "relationshipTypes": {
       "affected": "Betroffen",
@@ -626,7 +626,7 @@
       "router": "Router",
       "firewall": "Firewall",
       "access_point": "Zugangspunkt",
-      "load_balancer": "Load Balancer"
+      "load_balancer": "Loadbalancer"
     },
     "storageTypes": {
       "ssd": "SSD",
@@ -751,7 +751,7 @@
     "pageTitle": "Asset bearbeiten"
   },
   "associatedAssets": {
-    "title": "Vermögenswerte",
+    "title": "Assets",
     "description": "Verwaltung der Beziehungen zwischen übergeordneten und untergeordneten Assets mit verknüpften Asset-Aktionen",
     "loading": {
       "assets": "Assets werden geladen..."
@@ -779,8 +779,8 @@
       "removed": "Asset-Zuordnung entfernt"
     },
     "empty": {
-      "noneAssociated": "Mit diesem Ticket sind keine Vermögenswerte verknüpft.",
-      "unknownAsset": "Unbekannter Vermögenswert"
+      "noneAssociated": "Mit diesem Ticket sind keine Assets verknüpft.",
+      "unknownAsset": "Unbekanntes Asset"
     },
     "dialog": {
       "title": "Asset hinzufügen",
@@ -792,7 +792,7 @@
       },
       "empty": {
         "search": "Es wurden keine Assets gefunden, die Ihrer Suche entsprechen",
-        "available": "Für diesen Kunden sind keine Vermögenswerte verfügbar"
+        "available": "Für diesen Kunden sind keine Assets verfügbar"
       },
       "relationship": {
         "placeholder": "Typ..."
@@ -873,7 +873,7 @@
     "actions": {
       "removing": "Entfernen…"
     },
-    "entityNameFallback": "dieser Vermögenswert",
+    "entityNameFallback": "dieses Asset",
     "errors": {
       "validationFailed": "Der Löschvorgang konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
       "deleteFailed": "Asset konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
@@ -954,7 +954,7 @@
       "router": "Router",
       "firewall": "Firewall",
       "accessPoint": "Zugangspunkt",
-      "loadBalancer": "Load Balancer"
+      "loadBalancer": "Loadbalancer"
     },
     "mobileOsTypes": {
       "ios": "iOS",
@@ -1007,7 +1007,7 @@
     "errors": {
       "loadTitle": "Notizen konnten nicht geladen werden",
       "unknown": "Unbekannter Fehler",
-      "loadDescription": "Could not load notes. Please try again."
+      "loadDescription": "Notizen konnten nicht geladen werden. Versuchen Sie es erneut."
     },
     "lastUpdated": "Letzte Aktualisierung: {{value}}"
   },
@@ -1064,7 +1064,7 @@
     "description": "Sicherheits- und Patchstatus-Panel für Schwachstellen- und Update-Statusanzeigen",
     "fields": {
       "osVersion": "Betriebssystem-Version",
-      "antivirus": "Antivirus",
+      "antivirus": "Virenschutz",
       "patchStatus": "Patch-Status",
       "firewall": "Firewall"
     },
@@ -1237,7 +1237,7 @@
     }
   },
   "relatedAssetsTab": {
-    "title": "Zugehörige Vermögenswerte ({{count}})",
+    "title": "Zugehörige Assets ({{count}})",
     "description": "Registerkarte zum Durchsuchen und Verwalten verwandter Asset-Beziehungen",
     "loading": "Zugehörige Assets werden geladen...",
     "actions": {
@@ -1261,7 +1261,7 @@
       "actions": "Aktionen"
     },
     "empty": {
-      "linked": "Keine zugehörigen Vermögenswerte verknüpft."
+      "linked": "Keine zugehörigen Assets verknüpft."
     },
     "dialog": {
       "title": "Asset verknüpfen",
@@ -1276,7 +1276,7 @@
         "placeholder": "verwandt"
       },
       "table": {
-        "asset": "Vermögenswert",
+        "asset": "Asset",
         "select": "Wählen"
       },
       "actions": {
@@ -1420,7 +1420,7 @@
     "moreEvents": "{{shown}} von {{total}} Ereignissen werden angezeigt.",
     "lanes": {
       "all": "Alle",
-      "service": "Service",
+      "service": "Dienst",
       "changes": "Änderungen",
       "maintenance": "Wartung",
       "system": "System"

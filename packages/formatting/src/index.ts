@@ -1,7 +1,7 @@
 /**
  * @alga-psa/formatting
  *
- * Shared formatting utilities for Alga PSA.
+ * Shared formatting utilities for AlgaPSA.
  * Provides BlockNote content conversion and avatar/entity image URL helpers.
  */
 

@@ -27,7 +27,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 
 ## Open Questions
 - Which permission names/scopes should each action enforce (tickets vs scheduling vs time)?
-- What is the canonical “schedule entry” entity in Alga PSA v2 workflows (and how do we model conflicts)?
+- What is the canonical “schedule entry” entity in AlgaPSA v2 workflows (and how do we model conflicts)?
 - Which actions require idempotency guarantees on day one (create ticket, send email, create schedule, create time entry)?
 
 ## Discoveries / Constraints (continued)

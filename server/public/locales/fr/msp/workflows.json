@@ -443,7 +443,11 @@
       "summaryDescription": "Remplissez les champs manquants ci-dessous, passez au générateur de formulaire ou utilisez un bouton d’exemple de charge utile.",
       "moreErrors": "+{{count}} autres…"
     },
-    "sampleEmailBody": "Exemple de corps d'e-mail"
+    "sampleEmailBody": "Exemple de corps d'e-mail",
+    "sections": {
+      "schemaAndEvents": "Schéma et événements",
+      "payloadTools": "Outils de charge utile"
+    }
   },
   "eventList": {
     "common": {
@@ -1496,7 +1500,9 @@
     "field": {
       "placeholder": "Saisir une expression...",
       "insertFieldPlaceholder": "Insérer un champ"
-    }
+    },
+    "clear": "Effacer",
+    "clearAriaLabel": "Effacer l'expression"
   },
   "sourceDataTree": {
     "searchPlaceholder": "Rechercher des champs...",
@@ -2357,7 +2363,7 @@
         "sourceOptions": {
           "all": "Toutes les sources",
           "system": "Système",
-          "tenant": "Tenant"
+          "tenant": "Locataire"
         },
         "sort": "Tri",
         "sortOptions": {
@@ -2393,11 +2399,11 @@
         "showing": "Affichage de {{start}} à {{end}} sur {{total}} résultats",
         "prev": "Préc.",
         "next": "Suiv.",
-        "page": "Page {{page}} / {{total}}"
+        "page": "Page {{page}} sur {{total}}"
       },
       "badges": {
         "system": "Système",
-        "tenant": "Tenant",
+        "tenant": "Locataire",
         "noSchema": "Aucun schéma",
         "unknownSchema": "Schéma inconnu",
         "schema": "Schéma"
@@ -2479,8 +2485,8 @@
           "correlationKeyPlaceholder": "Utilisée pour résoudre les attentes d'événement",
           "schemaRef": "Référence du schéma de payload de l'événement (avancé)",
           "schemaRefPlaceholderEmpty": "Aucun schemaRef pour cet événement",
-          "payloadJson": "Payload (JSON)",
-          "payload": "Payload"
+          "payloadJson": "Charge utile (JSON)",
+          "payload": "Charge utile"
         },
         "modes": {
           "form": "Formulaire",
@@ -2518,8 +2524,8 @@
         "form": {
           "remove": "Supprimer",
           "addItem": "Ajouter un élément",
-          "rootLabel": "Payload",
-          "payloadJsonLabel": "Payload (JSON)",
+          "rootLabel": "Charge utile",
+          "payloadJsonLabel": "Charge utile (JSON)",
           "true": "Vrai",
           "false": "Faux"
         }

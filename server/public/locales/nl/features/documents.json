@@ -18,18 +18,18 @@
   "newDocument": "Nieuw document",
   "uploadFile": "Bestand uploaden",
   "deleteTitle": "Document verwijderen",
-  "deleteMessage": "Weet je zeker dat je \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+  "deleteMessage": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
   "deleteVideoTitle": "Video verwijderen",
-  "deleteVideoMessage": "Weet je zeker dat je de video \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+  "deleteVideoMessage": "Weet u zeker dat u de video \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
   "removeTitle": "Document loskoppelen",
-  "removeMessage": "Weet je zeker dat je \"{{name}}\" van dit item wilt loskoppelen? Het document blijft beschikbaar in de documentbibliotheek.",
+  "removeMessage": "Weet u zeker dat u \"{{name}}\" van dit item wilt loskoppelen? Het document blijft beschikbaar in de documentbibliotheek.",
   "removeVideoTitle": "Video loskoppelen",
-  "removeVideoMessage": "Weet je zeker dat je de video \"{{name}}\" van dit item wilt loskoppelen? Het bestand blijft beschikbaar in de documentbibliotheek.",
+  "removeVideoMessage": "Weet u zeker dat u de video \"{{name}}\" van dit item wilt loskoppelen? Het bestand blijft beschikbaar in de documentbibliotheek.",
   "downloadFile": "Bestand downloaden",
   "videoUnsupported": "Videoformaat ({{mimeType}}) wordt niet ondersteund voor weergave in de browser",
-  "videoTagUnsupported": "Je browser ondersteunt de video-tag niet.",
+  "videoTagUnsupported": "Uw browser ondersteunt de videotag niet.",
   "unnamed": "Zonder titel",
-  "videoDownloadInfo": "De video wordt gedownload en kan worden afgespeeld met de standaardvideospeler van je systeem.",
+  "videoDownloadInfo": "De video wordt gedownload en kan worden afgespeeld met de standaardvideospeler van uw systeem.",
   "previewUnavailableNoId": "Voorbeeld niet beschikbaar (geen identificatie)",
   "previewLoadFailed": "Voorbeeld kon niet worden geladen",
   "videoCodecWarning": "Chrome ondersteunt deze videocodec mogelijk niet. Download het bestand of gebruik Safari/Edge.",
@@ -82,8 +82,8 @@
     "clearSelection": "Selectie wissen"
   },
   "prompts": {
-    "confirmBulkDelete_one": "Weet je zeker dat je {{count}} document wilt verwijderen?",
-    "confirmBulkDelete_other": "Weet je zeker dat je {{count}} documenten wilt verwijderen?"
+    "confirmBulkDelete_one": "Weet u zeker dat u {{count}} document wilt verwijderen?",
+    "confirmBulkDelete_other": "Weet u zeker dat u {{count}} documenten wilt verwijderen?"
   },
   "pagination": {
     "perPage": "{{count}} per pagina"
@@ -184,7 +184,7 @@
   },
   "uploadSection": {
     "reflectionLabel": "Documentupload",
-    "dragDrop": "Sleep je bestand hierheen of",
+    "dragDrop": "Sleep uw bestand hierheen of",
     "browse": "Bestanden zoeken",
     "uploading": "Bezig met uploaden...",
     "error": "Document kon niet worden geüpload",
@@ -193,7 +193,7 @@
   "folders": {
     "root": "Hoofdmap",
     "loadFailed": "Mappenstructuur kon niet worden geladen",
-    "deleteConfirm": "Weet je zeker dat je de map \"{{name}}\" wilt verwijderen? Dit werkt alleen als de map leeg is.",
+    "deleteConfirm": "Weet u zeker dat u de map \"{{name}}\" wilt verwijderen? Dit werkt alleen als de map leeg is.",
     "deleteSuccess": "Map \"{{name}}\" is succesvol verwijderd",
     "deleteFailed": "Map kon niet worden verwijderd",
     "deleteAction": "Map verwijderen",
@@ -253,7 +253,7 @@
     },
     "audienceLabels": {
       "internal": "Intern",
-      "client": "Cliënt",
+      "client": "Klant",
       "public": "Openbaar"
     },
     "typeLabels": {
@@ -266,7 +266,7 @@
   "documents": {
     "messages": {
       "error": {
-        "noPermission": "Je hebt geen toestemming om documenten te bekijken",
+        "noPermission": "U heeft geen toestemming om documenten te bekijken",
         "invalidData": "Ongeldige documentgegevens ontvangen",
         "fetchFailed": "Kan documenten niet ophalen"
       }

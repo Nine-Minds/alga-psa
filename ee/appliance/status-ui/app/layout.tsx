@@ -5,7 +5,7 @@ import { AuthGate } from './auth/AuthGate';
 
 export const metadata: Metadata = {
   title: 'Alga Appliance Status',
-  description: 'Early bootstrap and readiness dashboard for the Alga PSA appliance.',
+  description: 'Early bootstrap and readiness dashboard for the AlgaPSA appliance.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -172,7 +172,7 @@ describe('TeamsIntegrationSettings guided setup wizard (F053)', () => {
       'microsoft-profile': '#1-create-the-entra-app-registration',
       'graph-permissions': '#2-grant-graph-application-permissions',
       'bot-framework': '#3-register-the-azure-bot-and-set-bot-credentials',
-      activate: '#4-configure-and-activate-teams-in-alga-psa',
+      activate: '#4-configure-and-activate-teams-in-algapsa',
       package: '#5-generate-and-upload-the-teams-app-package',
       sideload: '#5-generate-and-upload-the-teams-app-package',
       verify: '#7-verify',

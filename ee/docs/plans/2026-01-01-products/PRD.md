@@ -5,7 +5,7 @@
 **Status:** Draft (discovery in progress)
 
 ## 1) Problem Statement
-Alga PSA needs a first-class way for MSPs to define **Products** they sell to customers and then use those products consistently across:
+AlgaPSA needs a first-class way for MSPs to define **Products** they sell to customers and then use those products consistently across:
 - Contracts (recurring + one-time billing)
 - Automated invoices (from billing engine)
 - Manual invoices

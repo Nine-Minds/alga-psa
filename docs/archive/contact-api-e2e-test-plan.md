@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document outlines the plan for implementing end-to-end (e2e) tests for the Contact REST API endpoints in the Alga PSA application. The tests will use Vitest as the testing framework and establish patterns for API testing that can be extended to other endpoints.
+This document outlines the plan for implementing end-to-end (e2e) tests for the Contact REST API endpoints in the AlgaPSA application. The tests will use Vitest as the testing framework and establish patterns for API testing that can be extended to other endpoints.
 
 ## Table of Contents
 

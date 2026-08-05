@@ -30,7 +30,7 @@
     "aiCheckoutFailed": "Impossibile avviare il checkout per AI Assistant",
     "aiRemoved": "AI Assistant sarà rimosso dal tuo abbonamento.",
     "aiCancelFailed": "Impossibile annullare AI Assistant",
-    "cancellationScheduled": "Abbonamento annullato. Puoi continuare a usare Alga PSA fino alla fine del periodo di fatturazione."
+    "cancellationScheduled": "Abbonamento annullato. Puoi continuare a usare AlgaPSA fino alla fine del periodo di fatturazione."
   },
   "common": {
     "loading": "Caricamento in corso...",
@@ -53,12 +53,12 @@
     "advancedAssets": "Asset Avanzati — sblocca la scoperta di asset collegati a RMM e controlli più avanzati sugli asset",
     "clientPortalAdmin": "Amministrazione Portale Cliente — gestisci il branding avanzato e l'amministrazione del portale cliente",
     "workflowDesigner": "Designer Workflow — crea e gestisci automazioni workflow personalizzate",
-    "mobileAccess": "Accesso Mobile — accedi dall'app mobile Alga PSA",
+    "mobileAccess": "Accesso Mobile — accedi dall'app mobile AlgaPSA",
     "entraSync": "Microsoft Entra Sync — scoperta automatica dei tenant e sincronizzazione dei contatti da Entra ID",
     "cipp": "Integrazione CIPP — collega la tua istanza CIPP per la gestione multi-tenant di Entra",
     "teamsIntegration": "Microsoft Teams — integrazione delle riunioni e bot Teams per notifiche ticket",
     "advancedAuthorizationBundles": "Bundle di Autorizzazione Avanzata — crea e gestisci bundle ABAC riutilizzabili di restringimento",
-    "scimProvisioning": "SCIM User Provisioning — synchronize user activation from your identity provider"
+    "scimProvisioning": "Provisioning utenti SCIM — sincronizza l'attivazione degli utenti dal tuo provider di identità"
   },
   "summary": {
     "licensesUsed": "Licenze Utilizzate",
@@ -71,7 +71,7 @@
     "upgradePendingTitle": "Il tuo upgrade è in sospeso",
     "upgradePendingBody": "Apple continuerà a fatturarti per Solo fino al {{date}}. Dopo di che, il tuo abbonamento aggiornato subentrerà automaticamente.",
     "autoRenewWarningStrong": "Il rinnovo automatico è attualmente ATTIVO sul tuo abbonamento Apple",
-    "autoRenewWarningBody": "disabilitalo in Impostazioni iOS → ID Apple → Abbonamenti → Alga PSA, altrimenti Apple ti addebiterà di nuovo e l'upgrade sarà ritardato.",
+    "autoRenewWarningBody": "disabilitalo in Impostazioni iOS → ID Apple → Abbonamenti → AlgaPSA, altrimenti Apple ti addebiterà di nuovo e l'upgrade sarà ritardato.",
     "cancelUpgrade": "Annulla upgrade",
     "appleManagedBody": "Il tuo abbonamento è gestito da Apple. Il periodo di fatturazione corrente termina il {{date}}. Puoi fare l'upgrade a un piano più grande in qualsiasi momento — allineeremo la nuova fatturazione al tuo periodo Apple in modo che tu non paghi mai per entrambi contemporaneamente."
   },
@@ -200,7 +200,7 @@
     "title": "Zona Pericolosa",
     "body": "L'annullamento dell'abbonamento disabiliterà l'accesso per tutti gli utenti alla fine del periodo di fatturazione corrente.",
     "cancelSubscription": "Annulla Abbonamento",
-    "scheduledBody": "L'abbonamento terminerà il {{date}}. Fino ad allora, tutti potranno continuare a usare Alga PSA."
+    "scheduledBody": "L'abbonamento terminerà il {{date}}. Fino ad allora, tutti potranno continuare a usare AlgaPSA."
   },
   "aiCheckoutDialog": {
     "title": "Aggiungi AI Assistant",
@@ -212,7 +212,7 @@
     "howToTitle": "Come disabilitare il rinnovo automatico:",
     "step1": "Apri <strong>Impostazioni</strong> sul tuo iPhone o iPad",
     "step2": "Tocca il tuo nome in alto, poi <strong>Abbonamenti</strong>",
-    "step3": "Tocca <strong>Alga PSA</strong>",
+    "step3": "Tocca <strong>AlgaPSA</strong>",
     "step4": "Tocca <strong>Annulla Abbonamento</strong> — questo disabilita il rinnovo automatico ma mantiene il tuo accesso fino al {{date}}",
     "step5": "Torna a questa pagina e clicca Continua qui sotto",
     "currentPeriodFallback": "il tuo periodo corrente termina",
@@ -341,7 +341,7 @@
     "title": "Annulla Abbonamento",
     "keepSubscription": "Mantieni Abbonamento",
     "canceling": "Annullamento...",
-    "beforeYouCancelBody": "L'abbonamento terminerà il {{date}}. Fino ad allora, tutti potranno continuare a usare Alga PSA.",
+    "beforeYouCancelBody": "L'abbonamento terminerà il {{date}}. Fino ad allora, tutti potranno continuare a usare AlgaPSA.",
     "currentBillingPeriod": "la fine del periodo di fatturazione corrente",
     "replacesScheduledChange": "Questo sostituisce la modifica della licenza programmata.",
     "reasonLabel": "Motivo (facoltativo)",

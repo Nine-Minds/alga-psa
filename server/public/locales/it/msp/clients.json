@@ -39,7 +39,7 @@
     "yes": "Sì"
   },
   "clientLifecycle": {
-    "prospect": "Prospect",
+    "prospect": "Potenziale cliente",
     "active": "Cliente attivo",
     "former": "Ex cliente",
     "all": "Tutte le fasi del ciclo di vita"
@@ -145,12 +145,12 @@
       "documents": "documenti",
       "interaction": "interazione",
       "interactions": "interazioni",
-      "asset": "risorsa",
+      "asset": "asset",
       "assets": "attività",
       "serviceUsageRecord": "registro dell'utilizzo del servizio",
       "serviceUsageRecords": "registri di utilizzo del servizio",
-      "bucketUsageRecord": "record di utilizzo del secchio",
-      "bucketUsageRecords": "record di utilizzo del bucket"
+      "bucketUsageRecord": "record di utilizzo del pacchetto ore",
+      "bucketUsageRecords": "record di utilizzo dei pacchetti ore"
     },
     "deleteSelectedPrompt_one": "Sei sicuro di voler eliminare {{count}} cliente selezionato? Questa azione non può essere annullata.",
     "deleteSelectedPrompt_other": "Sei sicuro di voler eliminare {{count}} clienti selezionati? Questa azione non può essere annullata.",
@@ -394,7 +394,7 @@
       "service": "Servizio"
     },
     "record": {
-      "accountManager": "Account manager",
+      "accountManager": "Responsabile account",
       "additionalInfo": "Informazioni aggiuntive",
       "clientSince": "Cliente dal",
       "defaultContact": "Contatto predefinito",
@@ -495,7 +495,7 @@
     "createAndAddAnother": "Crea + Aggiungi un altro",
     "createAndView": "Crea + Visualizza cliente",
     "additionalDetails": "Dettagli aggiuntivi",
-    "createFailed": "Failed to create client. Please try again."
+    "createFailed": "Impossibile creare il cliente. Riprova."
   },
   "clientCreatedDialog": {
     "title": "Cliente creato",
@@ -614,7 +614,7 @@
     "removeAssignmentTitle": "Rimuovere l'assegnazione della riga di contratto",
     "removeAssignmentMessage": "Rimuovere questa assegnazione della riga di contratto dal cliente? La riga di contratto stessa non verrà eliminata.",
     "contracts": "Contratti",
-    "taxRatesLoadError": "Failed to load tax rate configuration."
+    "taxRatesLoadError": "Impossibile caricare la configurazione delle aliquote fiscali."
   },
   "clientBillingSchedule": {
     "title": "Programma di fatturazione",
@@ -763,14 +763,14 @@
     "startDateRequired": "La data di inizio è obbligatoria",
     "updateAssignment": "Aggiorna assegnazione",
     "useTenantRenewalDefaults": "Utilizza le impostazioni predefinite per il rinnovo del tenant",
-    "saveError": "Failed to save contract. Please try again."
+    "saveError": "Impossibile salvare il contratto. Riprova."
   },
   "clientContractLineDashboard": {
     "title": "Metriche di utilizzo (ultimi 30 giorni)",
     "usageChart": "Grafico di utilizzo",
     "hoursByService": "Ore per servizio (ultimi 30 giorni)",
     "recentInvoices": "Fatture recenti",
-    "bucketUsage": "Utilizzo del secchio",
+    "bucketUsage": "Utilizzo del pacchetto ore",
     "invoiceNumber": "Fattura #",
     "invoiceDate": "Data della fattura",
     "dueDate": "Scadenza",
@@ -782,7 +782,7 @@
     "unit": "Unità",
     "hoursUsed": "ore utilizzate",
     "hoursUsedSummary": "{{used}} / {{total}} ore utilizzate",
-    "noActiveBucketPlans": "Nessun piano bucket attivo trovato.",
+    "noActiveBucketPlans": "Non è stato trovato alcun piano con pacchetto ore attivo.",
     "noHours": "Nessuna ora registrata nel periodo selezionato.",
     "noInvoices": "Nessuna fattura recente trovata.",
     "noUsage": "Nessun dato di utilizzo trovato nel periodo selezionato.",
@@ -798,7 +798,7 @@
     "commonScenariosTitle": "Scenari comuni",
     "bestPractices": {
       "clearNamingDescription": "Assegnare un nome alle linee di contratto in modo da indicarne chiaramente lo scopo e l'ambito per questo cliente.",
-      "clearNamingItem1": "Includere il tipo di riga del contratto nel nome (ad esempio, \"Bucket di supporto mensile\", \"Piano basato su progetto\")",
+      "clearNamingItem1": "Includi il tipo di linea contrattuale nel nome (ad esempio, \"Pacchetto ore di supporto mensile\", \"Piano basato su progetto\")",
       "clearNamingItem2": "Valuta la possibilità di includere date o numeri di versione per le righe di contratto che cambiano nel tempo",
       "clearNamingItem3": "Utilizza modelli di denominazione coerenti in tutte le linee di contratto per questo cliente",
       "clearNamingTitle": "2. Utilizzare convenzioni di denominazione dei piani chiare",
@@ -821,7 +821,7 @@
       "benefitsTitle": "Vantaggi di una corretta disambiguazione",
       "benefitTracking": "Inserimento del tempo e monitoraggio dell'utilizzo semplificati",
       "benefitTransparency": "Migliore trasparenza verso il cliente",
-      "bucketPriorityDescription": "Alle righe del contratto del bucket viene data priorità quando si chiariscono le ambiguità dei servizi per questo cliente.",
+      "bucketPriorityDescription": "Le linee contrattuali associate a un pacchetto ore hanno la priorità quando si risolvono le ambiguità dei servizi per questo cliente.",
       "bucketPriorityLabel": "Priorità del segmento:",
       "description": "Quando un cliente dispone di più righe di contratto che includono lo stesso servizio, il sistema deve determinare quale riga di contratto utilizzare per gli inserimenti orari e i record di utilizzo. Questa guida spiega come gestire questa situazione per questo cliente specifico.",
       "explicitAssignmentDescription": "Quando un servizio appare in più linee contrattuali, gli utenti devono scegliere il contesto di assegnazione previsto invece di fare affidamento sul fallback implicito.",
@@ -840,10 +840,10 @@
     },
     "scenarios": {
       "description": "Questi esempi illustrano come funziona la disambiguazione delle righe di contratto negli scenari comuni per questo cliente.",
-      "scenario1Description": "Quando un servizio viene visualizzato sia in una riga di contratto bucket che in una riga di contratto standard per questo cliente:",
-      "scenario1Item1": "La riga del contratto bucket viene selezionata per impostazione predefinita",
-      "scenario1Item2": "Gli inserimenti di tempo e l'utilizzo consumano la quantità inclusa nel bucket e poi continuano sulla stessa riga del contratto bucket come eccedenza alla tariffa di eccedenza configurata",
-      "scenario1Item3": "La fatturazione non passa automaticamente alla riga di contratto standard quando il bucket è esaurito",
+      "scenario1Description": "Quando un servizio appare sia in una linea contrattuale con pacchetto ore sia in una linea contrattuale standard per questo cliente:",
+      "scenario1Item1": "La linea contrattuale con pacchetto ore viene selezionata per impostazione predefinita",
+      "scenario1Item2": "Gli inserimenti ore e l’utilizzo consumano la quantità inclusa nel pacchetto ore, quindi continuano sulla stessa linea contrattuale come eccedenza alla tariffa configurata",
+      "scenario1Item3": "La fatturazione non passa automaticamente alla linea contrattuale standard quando il pacchetto ore è esaurito",
       "scenario1Item4": "Gli utenti possono ignorare manualmente questa impostazione predefinita selezionando una riga di contratto diversa durante l'immissione delle ore",
       "scenario1Title": "Scenario 1: piano a scaglioni + piano standard",
       "scenario2Description": "Quando un servizio appare in più righe di contratto standard per questo cliente:",
@@ -851,10 +851,10 @@
       "scenario2Item2": "Se nessuna riga di contratto viene selezionata esplicitamente, la fatturazione dovrebbe interrompersi con un errore di ambiguità che richiede la scelta dell'utente",
       "scenario2Item3": "Valuta la possibilità di consolidare queste linee contrattuali per evitare confusione",
       "scenario2Title": "Scenario 2: più piani standard",
-      "scenario3Description": "Quando un servizio viene visualizzato in più righe di contratto bucket per questo cliente:",
-      "scenario3Item1": "Agli utenti verrà richiesto di selezionare il bucket rispetto al quale fatturare durante l'immissione del tempo",
-      "scenario3Item2": "Se non viene selezionato esplicitamente alcun bucket, la fatturazione dovrebbe interrompersi con un errore di ambiguità che richiede la scelta dell'utente",
-      "scenario3Item3": "I team possono definire linee guida interne per la scelta tra bucket sovrapposti",
+      "scenario3Description": "Quando un servizio appare in più linee contrattuali con pacchetto ore per questo cliente:",
+      "scenario3Item1": "Durante l’inserimento ore, agli utenti viene chiesto di selezionare il pacchetto ore a cui imputare la fatturazione",
+      "scenario3Item2": "Se non viene selezionato esplicitamente alcun pacchetto ore, la fatturazione deve interrompersi con un errore di ambiguità che richiede la scelta dell’utente",
+      "scenario3Item3": "I team possono definire linee guida interne per scegliere tra pacchetti ore sovrapposti",
       "scenario3Title": "Scenario 3: piani a scaglioni multipli",
       "title": "Scenari comuni di disambiguazione"
     },
@@ -1085,9 +1085,9 @@
     "error": "Errore",
     "updateExistingTitle": "Aggiorna i clienti esistenti",
     "updateExistingMessage": "I client {{count}} esistono già. Vuoi aggiornarli con i nuovi dati?",
-    "invalidRowsBlocked": "Fix {{count}} invalid rows or enable \"Skip invalid records\" before importing.",
-    "noValidRows": "There are no valid client rows to import.",
-    "serverFailures": "{{failed}} of {{total}} clients failed to import. Review the row issues below."
+    "invalidRowsBlocked": "Correggi {{count}} righe non valide oppure abilita \"Ignora record non validi\" prima dell'importazione.",
+    "noValidRows": "Non ci sono righe cliente valide da importare.",
+    "serverFailures": "Importazione non riuscita per {{failed}} clienti su {{total}}. Esamina i problemi delle righe riportati di seguito."
   },
   "clientsList": {
     "name": "Nome",
@@ -1245,7 +1245,7 @@
     "loadError": "Impossibile caricare le note",
     "unknownError": "Errore sconosciuto",
     "loadErrorTitle": "Impossibile caricare le note",
-    "loadErrorDescription": "Could not load notes. Please try again."
+    "loadErrorDescription": "Impossibile caricare le note. Riprova."
   },
   "actions": {
     "cancel": "Annulla",
@@ -1410,8 +1410,8 @@
         "startRequired": "L'ora di inizio è obbligatoria per creare una riunione Teams",
         "unavailable": "La creazione di riunioni Teams non è disponibile per questo tenant."
       },
-      "loadFailed": "Interaction options could not be loaded. Please try again.",
-      "saveFailed": "The interaction could not be saved. Please try again."
+      "loadFailed": "Impossibile caricare le opzioni di interazione. Riprova.",
+      "saveFailed": "Impossibile salvare l'interazione. Riprova."
     },
     "feed": {
       "addInteraction": "Aggiungi interazione",
@@ -1425,8 +1425,8 @@
       "startDate": "Data di inizio",
       "title": "Interazioni",
       "typePlaceholder": "Tipo di interazione",
-      "loadFailed": "Interactions could not be loaded. Please try again.",
-      "typesLoadFailed": "Interaction types could not be loaded. Please try again."
+      "loadFailed": "Impossibile caricare le interazioni. Riprova.",
+      "typesLoadFailed": "Impossibile caricare i tipi di interazione. Riprova."
     },
     "overall": {
       "allContacts": "Tutti i contatti",
@@ -1444,7 +1444,7 @@
       "startTimePlaceholder": "Filtra a partire da questa ora di inizio",
       "statusPlaceholder": "Stato",
       "title": "Interazioni recenti",
-      "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
+      "statusesLoadFailed": "Impossibile caricare gli stati delle interazioni. Riprova."
     }
   },
   "clientDrawer": {
@@ -1455,7 +1455,7 @@
   "clientTabs": {
     "assets": {
       "columns": {
-        "assetTag": "Etichetta risorsa",
+        "assetTag": "Tag asset",
         "details": "Dettagli",
         "location": "Posizione",
         "name": "Nome",

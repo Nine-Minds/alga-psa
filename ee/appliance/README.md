@@ -1,6 +1,6 @@
 # Appliance Assets (Ubuntu v1)
 
-This directory owns the Alga PSA self-hosted appliance runtime assets.
+This directory owns the AlgaPSA self-hosted appliance runtime assets.
 
 Supported customer appliance path for v1 is Ubuntu Server 24.04 LTS with the host setup/status service on port `8080`. The older local release tree and script-driven bootstrap/upgrade process have been removed from this repository.
 

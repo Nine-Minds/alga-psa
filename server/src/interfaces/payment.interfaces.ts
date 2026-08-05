@@ -53,7 +53,7 @@ export interface CreatePaymentLinkRequest {
   description: string;
   /** External customer ID if customer exists in payment provider */
   customerId?: string;
-  /** Client ID in Alga PSA (for customer creation if needed) */
+  /** Client ID in AlgaPSA (for customer creation if needed) */
   clientId: string;
   /** Client email for customer creation */
   clientEmail: string;
@@ -224,7 +224,7 @@ export interface PaymentProvider {
   /**
    * Gets or creates a customer in the payment provider.
    *
-   * @param clientId - The Alga PSA client ID
+   * @param clientId - The AlgaPSA client ID
    * @param email - Customer email address
    * @param name - Customer name
    * @returns The external customer ID

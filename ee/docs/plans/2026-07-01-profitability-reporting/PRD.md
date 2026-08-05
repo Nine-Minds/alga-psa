@@ -6,7 +6,7 @@
 
 ## 1. Problem Statement
 
-MSP operators cannot see whether a client, agreement, ticket, or project actually makes money. Alga PSA has a "Profitability" report today (billing dashboard → Reports → Profitability tab), but it is a placeholder:
+MSP operators cannot see whether a client, agreement, ticket, or project actually makes money. AlgaPSA has a "Profitability" report today (billing dashboard → Reports → Profitability tab), but it is a placeholder:
 
 - Labor cost is hardcoded at $50/hr (`packages/billing/src/actions/contractReportActions.ts` computes `totalHours * 5000` cents; `packages/reporting/src/lib/reports/definitions/contracts/profitability.ts` uses `billable_duration * 833.33` cents/min).
 - The definition-driven variant contains a semantically broken join (`invoices.client_id = time_entries.user_id`).

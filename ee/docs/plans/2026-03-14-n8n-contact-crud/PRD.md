@@ -5,10 +5,10 @@
 - Status: Draft
 
 ## Summary
-Expand the `Alga PSA` n8n community node so automation builders can work with contacts directly, not just tickets and lookup resources. The first pass adds a first-class `Contact` resource with `Create`, `Get`, `List`, `Update`, and `Delete` operations, and matches the current ticket node’s ergonomics for field grouping, validation, normalized output, and continue-on-fail behavior.
+Expand the `AlgaPSA` n8n community node so automation builders can work with contacts directly, not just tickets and lookup resources. The first pass adds a first-class `Contact` resource with `Create`, `Get`, `List`, `Update`, and `Delete` operations, and matches the current ticket node’s ergonomics for field grouping, validation, normalized output, and continue-on-fail behavior.
 
 ## Problem
-The current `n8n-nodes-alga-psa` package exposes ticket CRUD plus helper lookup resources, but it does not expose contact CRUD. Teams building Alga PSA automations in n8n cannot create or maintain contacts without falling back to generic HTTP nodes, hand-rolled request payloads, and manual error handling.
+The current `n8n-nodes-alga-psa` package exposes ticket CRUD plus helper lookup resources, but it does not expose contact CRUD. Teams building AlgaPSA automations in n8n cannot create or maintain contacts without falling back to generic HTTP nodes, hand-rolled request payloads, and manual error handling.
 
 That gap creates three problems:
 - Contact workflows are inconsistent with ticket workflows in the same package.
@@ -16,7 +16,7 @@ That gap creates three problems:
 - Common automations such as “create contact from form submission” or “update a contact before creating a ticket” require lower-level API wiring than they should.
 
 ## Goals
-1. Add `Contact` as a first-class resource in the `Alga PSA` n8n node.
+1. Add `Contact` as a first-class resource in the `AlgaPSA` n8n node.
 2. Support contact `Create`, `Get`, `List`, `Update`, and `Delete`.
 3. Mirror the ticket node’s editor conventions: separate required and optional fields, manual UUID fallback for lookups, normalized success output, and continue-on-fail support.
 4. Limit the first pass to core contact fields already supported by the current API contract.
@@ -36,7 +36,7 @@ That gap creates three problems:
   - Lists contacts with filters for downstream branching or enrichment.
   - Fetches, updates, or deletes a contact by ID.
 
-- Existing Alga PSA node user:
+- Existing AlgaPSA node user:
   - Expects contact operations to feel like ticket operations.
   - Reuses `Client` lookup behavior when setting `client_id`.
   - Expects list responses and error objects to follow the package’s current conventions.
@@ -119,7 +119,7 @@ That gap creates three problems:
   - optional keys include `contact_phone_number_id`, `canonical_type`, `custom_type`, `is_default`, and `display_order`
 
 ## Security / Permissions
-- The node continues using the existing `Alga PSA API` credential with `x-api-key`.
+- The node continues using the existing `AlgaPSA API` credential with `x-api-key`.
 - No permission model changes are required in the node package.
 - Client and contact UUID fields must be validated before request dispatch.
 - `phone_numbers` JSON must be validated before dispatch to prevent opaque API failures caused by malformed local input.
@@ -138,7 +138,7 @@ That gap creates three problems:
 2. Should the first example workflow focus on create-only, or demonstrate a chained CRUD flow such as create then update?
 
 ## Acceptance Criteria (Definition of Done)
-1. The `Alga PSA` node exposes `Contact` with `Create`, `Get`, `List`, `Update`, and `Delete`.
+1. The `AlgaPSA` node exposes `Contact` with `Create`, `Get`, `List`, `Update`, and `Delete`.
 2. Contact create and update support the agreed core fields and validate IDs plus `phone_numbers` locally.
 3. Contact list preserves pagination metadata and supports core filters required for practical automation use.
 4. Contact operations return normalized outputs and item-level continue-on-fail errors consistent with existing ticket behavior.

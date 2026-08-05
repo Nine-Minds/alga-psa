@@ -26,7 +26,7 @@
     },
     "audienceLabels": {
       "internal": "Intern",
-      "client": "Cliënt",
+      "client": "Klant",
       "public": "Openbaar"
     },
     "typeLabels": {
@@ -231,11 +231,11 @@
       "publish": {
         "title": "Artikel publiceren",
         "message": "Weet u zeker dat u dit artikel wilt publiceren?",
-        "messageWithAudience": "Hierdoor wordt het artikel gepubliceerd en zichtbaar gemaakt voor {{audience}} gebruikers. Weet je het zeker?"
+        "messageWithAudience": "Hierdoor wordt het artikel gepubliceerd en zichtbaar voor {{audience}}-gebruikers. Weet u het zeker?"
       },
       "archive": {
         "title": "Archief artikel",
-        "message": "Hierdoor wordt het artikel gearchiveerd en uit de zichtbaarheid van de klant verwijderd. Weet je het zeker?"
+        "message": "Hierdoor wordt het artikel gearchiveerd en uit de zichtbaarheid van de klant verwijderd. Weet u het zeker?"
       },
       "delete": {
         "title": "Artikel verwijderen",

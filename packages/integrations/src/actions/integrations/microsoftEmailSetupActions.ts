@@ -332,7 +332,7 @@ export const configureMicrosoftEmailPlatformApplication = withAuth(async (
   if (!(await canManageMicrosoftSettings(user))) return { success: false, error: 'Forbidden' };
   try {
     if (await isSelfHostLicensing()) {
-      return { success: false, error: 'The Alga PSA Microsoft app is available only on hosted deployments.' };
+      return { success: false, error: 'The AlgaPSA Microsoft app is available only on hosted deployments.' };
     }
     const [credentials, metadata, secret] = await Promise.all([
       resolvePlatformMicrosoftCredentials(),
@@ -558,7 +558,7 @@ export async function completeMicrosoftEmailApplicationCreation(input: {
       path: '/applications',
       accessToken,
       body: buildMicrosoftEmailApplicationManifest({
-        displayName: input.state.displayName || 'Alga PSA Microsoft Email',
+        displayName: input.state.displayName || 'AlgaPSA Microsoft Email',
         mailboxRedirectUri: metadata.mailboxRedirectUri,
         setupRedirectUri: metadata.setupRedirectUri,
       }),
@@ -575,7 +575,7 @@ export async function completeMicrosoftEmailApplicationCreation(input: {
       accessToken,
       body: {
         passwordCredential: {
-          displayName: 'Alga PSA email client secret',
+          displayName: 'AlgaPSA email client secret',
           endDateTime: new Date(Date.now() + 730 * 24 * 60 * 60 * 1000).toISOString(),
         },
       },

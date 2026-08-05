@@ -7,7 +7,7 @@
       "apiKeys": "Chiavi API",
       "notifications": "Notifiche",
       "calendar": "Calendario",
-      "keyboardShortcuts": "Keyboard Shortcuts"
+      "keyboardShortcuts": "Scorciatoie da tastiera"
     },
     "basicInfo": {
       "title": "Informazioni di base"
@@ -46,7 +46,7 @@
       },
       "error": {
         "userNotFound": "Utente non trovato",
-        "fillRequiredFields": "Compili tutti i campi obbligatori",
+        "fillRequiredFields": "Compila tutti i campi obbligatori",
         "loadFailed": "Impossibile caricare il profilo",
         "saveFailed": "Impossibile salvare il profilo",
         "errorPrefix": "Errore: {{error}}"
@@ -56,7 +56,7 @@
       "firstNameRequired": "Il nome è obbligatorio",
       "lastNameRequired": "Il cognome è obbligatorio"
     },
-    "pageTitle": "Il Suo profilo",
+    "pageTitle": "Il tuo profilo",
     "changePassword": {
       "title": "Cambia password",
       "current": "Password attuale",
@@ -72,7 +72,7 @@
     },
     "loadingStates": {
       "sso": {
-        "title": "Single Sign-On",
+        "title": "Single Sign-On (SSO)",
         "description": "Caricamento impostazioni SSO..."
       },
       "calendar": {
@@ -91,8 +91,8 @@
       "userRoles": "Ruoli utente",
       "policies": "Criteri",
       "apiKeys": "Chiavi API",
-      "webhooks": "Webhooks",
-      "userProvisioning": "User provisioning"
+      "webhooks": "Webhook",
+      "userProvisioning": "Provisioning utenti"
     },
     "loading": {
       "roles": "Caricamento configurazione ruoli...",
@@ -103,20 +103,20 @@
       "webhooks": "Caricamento configurazione webhook...",
       "sso": "Caricamento strumenti di gestione SSO...",
       "sessions": "Caricamento sessioni attive...",
-      "userProvisioning": "Loading SCIM provisioning..."
+      "userProvisioning": "Caricamento del provisioning SCIM…"
     },
     "sso": {
       "advanced": {
-        "title": "Advanced: custom identity provider routing",
-        "description": "Route MSP login SSO to your own identity provider using verified login domains. Only needed on custom or on-premise installations.",
-        "inertNotice": "No tenant identity provider credentials are configured, so domain claims currently have no effect. Users sign in with the hosted Google / Microsoft providers. Tenant credentials are provisioned on custom and on-premise installations."
+        "title": "Avanzate: instradamento del provider di identità personalizzato",
+        "description": "Instrada l'accesso SSO MSP al tuo provider di identità usando domini di accesso verificati. È necessario solo nelle installazioni personalizzate o locali.",
+        "inertNotice": "Non sono configurate credenziali del provider di identità del tenant, quindi le attestazioni sui domini non hanno attualmente effetto. Gli utenti accedono con i provider Google/Microsoft ospitati. Le credenziali del tenant vengono predisposte nelle installazioni personalizzate e locali."
       }
     },
     "userRoles": {
       "title": "Assegna ruoli agli utenti",
       "description": {
-        "msp": "Gestisca le assegnazioni dei ruoli per gli utenti MSP",
-        "client": "Gestisca le assegnazioni dei ruoli per gli utenti del portale clienti"
+        "msp": "Gestisci le assegnazioni dei ruoli per gli utenti MSP",
+        "client": "Gestisci le assegnazioni dei ruoli per gli utenti del portale clienti"
       },
       "viewSwitcher": {
         "msp": "MSP",
@@ -183,14 +183,14 @@
         "client": "Cliente"
       },
       "session": {
-        "yourSession": "La Sua sessione",
+        "yourSession": "La tua sessione",
         "unknownDevice": "Dispositivo sconosciuto",
         "lastActive": "Ultima attività {{time}}",
         "logout": "Disconnetti",
         "revoke": "Revoca",
         "revoking": "Revoca in corso..."
       },
-      "oauthWarning": "La revoca di questa sessione non revochera l'accesso OAuth di {{provider}}. Revochi l'accesso dalle impostazioni del Suo account {{provider}}.",
+      "oauthWarning": "La revoca di questa sessione non revocherà l'accesso OAuth di {{provider}}. Revoca l'accesso dalle impostazioni del tuo account {{provider}}.",
       "confirmLogout": "Desidera davvero disconnettersi da questo dispositivo?",
       "messages": {
         "loggingOut": "Disconnessione in corso...",
@@ -200,7 +200,7 @@
       },
       "emptyState": {
         "loading": "Caricamento sessioni...",
-        "noMatch": "Nessuna sessione corrisponde alla Sua ricerca",
+        "noMatch": "Nessuna sessione corrisponde alla tua ricerca",
         "noSessions": "Nessuna sessione attiva trovata"
       },
       "subtitle_one": "{{sessionCount}} sessione attiva su {{userCount}} utente",
@@ -228,7 +228,7 @@
           "empty": "Nessun webhook in entrata configurato.",
           "columns": {
             "name": "Nome",
-            "handler": "Handler",
+            "handler": "Gestore",
             "lastDelivery": "Ultima consegna",
             "active": "Attivo",
             "actions": "Azioni"
@@ -263,7 +263,7 @@
           "help": "Nomina il webhook e scegli lo slug URL-safe usato nel suo endpoint ricevitore.",
           "name": "Nome",
           "namePlaceholder": "Avvisi RMM critici",
-          "slug": "Slug",
+          "slug": "Identificatore (slug)",
           "slugPlaceholder": "avvisi-rmm-critici",
           "description": "Descrizione",
           "descriptionPlaceholder": "Note opzionali sul sistema sorgente e sul payload."
@@ -319,7 +319,7 @@
           "updateFailed": "Aggiornamento dello stato del webhook in entrata non riuscito."
         },
         "handler": {
-          "title": "Handler",
+          "title": "Gestore",
           "help": "Scegli cosa deve fare Alga dopo che la richiesta è stata verificata e deduplicata.",
           "type": "Tipo di handler",
           "types": {
@@ -346,7 +346,7 @@
             "int": "intero",
             "number": "numero",
             "boolean": "booleano",
-            "enum": "enum",
+            "enum": "Enumerazione",
             "json": "json",
             "ref": "riferimento"
           }
@@ -586,7 +586,7 @@
         "descriptionPlaceholder": "es. Chiave API di sviluppo",
         "expiration": "Data di scadenza (facoltativa)",
         "submit": "Genera nuova chiave API",
-        "createFailed": "Failed to create API key"
+        "createFailed": "Impossibile creare la chiave API"
       },
       "list": {
         "title": "Le tue chiavi API",
@@ -613,7 +613,7 @@
           "inactive": "Inattiva"
         },
         "deactivate": "Disattiva",
-        "deactivateFailed": "Failed to deactivate API key"
+        "deactivateFailed": "Impossibile disattivare la chiave API"
       },
       "newKeyDialog": {
         "title": "Chiave API generata",
@@ -623,79 +623,90 @@
         "copySuccess": "Chiave API copiata negli appunti!",
         "copyFailed": "Impossibile copiare la chiave API negli appunti",
         "downloadFailed": "Impossibile scaricare la chiave API"
+      },
+      "admin": {
+        "title": "Amministrazione delle chiavi API",
+        "searchPlaceholder": "Cerca per utente o descrizione",
+        "columns": {
+          "user": "Utente"
+        },
+        "errors": {
+          "loadFailed": "Impossibile caricare le chiavi API. Verifica di disporre dei privilegi di amministratore.",
+          "deactivateFailed": "Impossibile disattivare la chiave API. Verifica di disporre dei privilegi di amministratore."
+        }
       }
     },
     "scim": {
-      "title": "User provisioning",
-      "description": "Let Microsoft Entra deactivate and reactivate existing internal users. Alga remains authoritative for profiles, roles, teams, and licenses.",
-      "loading": "Loading user provisioning",
+      "title": "Provisioning utenti",
+      "description": "Consenti a Microsoft Entra di disattivare e riattivare gli utenti interni esistenti. Alga resta il sistema autorevole per profili, ruoli, team e licenze.",
+      "loading": "Caricamento del provisioning utenti",
       "status": {
-        "enabled": "Accepting requests",
-        "disabled": "Provisioning paused"
+        "enabled": "Richieste accettate",
+        "disabled": "Provisioning sospeso"
       },
       "errors": {
-        "load": "Unable to load SCIM provisioning.",
-        "update": "Unable to update SCIM provisioning."
+        "load": "Impossibile caricare il provisioning SCIM.",
+        "update": "Impossibile aggiornare il provisioning SCIM."
       },
       "upgrade": {
-        "title": "Directory lifecycle provisioning",
-        "description": "SCIM user provisioning is available on Pro and higher plans."
+        "title": "Provisioning del ciclo di vita dalla directory",
+        "description": "Il provisioning utenti SCIM è disponibile con i piani Pro e superiori."
       },
       "setup": {
-        "title": "Connect Microsoft Entra",
-        "description": "Generate a tenant-specific endpoint and one-time bearer token. No Alga users are created by SCIM.",
-        "create": "Generate connection"
+        "title": "Connetti Microsoft Entra",
+        "description": "Genera un endpoint specifico per il tenant e un token bearer monouso. SCIM non crea utenti Alga.",
+        "create": "Genera connessione"
       },
       "connection": {
-        "title": "Entra connection",
-        "description": "Use these values in the Provisioning section of your Entra enterprise application.",
-        "url": "Tenant URL",
-        "copyUrl": "Copy tenant URL",
-        "oneTimeToken": "Copy this token now",
-        "oneTimeWarning": "For security, Alga cannot show this value again.",
-        "rotate": "Rotate token",
-        "revokePrevious": "End token overlap",
-        "enabled": "Accept provisioning requests",
-        "disableWarning": "Pausing preserves every link and current user state."
+        "title": "Connessione Entra",
+        "description": "Usa questi valori nella sezione Provisioning dell'applicazione aziendale Entra.",
+        "url": "URL tenant",
+        "copyUrl": "Copia URL tenant",
+        "oneTimeToken": "Copia subito questo token",
+        "oneTimeWarning": "Per motivi di sicurezza, Alga non potrà mostrare di nuovo questo valore.",
+        "rotate": "Ruota token",
+        "revokePrevious": "Termina sovrapposizione token",
+        "enabled": "Accetta richieste di provisioning",
+        "disableWarning": "La sospensione mantiene tutti i collegamenti e lo stato corrente degli utenti."
       },
       "health": {
-        "title": "Connection health",
-        "lastRequest": "Last authenticated request",
-        "lastSuccess": "Last success",
-        "tokenAge": "Current token created",
-        "lastError": "Last error"
+        "title": "Stato della connessione",
+        "lastRequest": "Ultima richiesta autenticata",
+        "lastSuccess": "Ultimo esito positivo",
+        "tokenAge": "Creazione del token attuale",
+        "lastError": "Ultimo errore"
       },
       "mapping": {
-        "title": "Entra attribute mapping",
-        "description": "Keep Entra defaults for userName, externalId, active, names, title, and emails. Only active controls Alga access.",
-        "match": "Initial match",
-        "matchValue": "Exact primary email only",
-        "scope": "Provisioning scope",
-        "scopeValue": "Assigned users and groups",
-        "unsupported": "Not supported",
-        "unsupportedValue": "Groups, passwords, roles, teams"
+        "title": "Mappatura degli attributi Entra",
+        "description": "Mantieni le impostazioni predefinite di Entra per userName, externalId, active, names, title ed emails. Solo active controlla l'accesso ad Alga.",
+        "match": "Corrispondenza iniziale",
+        "matchValue": "Solo email principale esatta",
+        "scope": "Ambito del provisioning",
+        "scopeValue": "Utenti e gruppi assegnati",
+        "unsupported": "Non supportato",
+        "unsupportedValue": "Gruppi, password, ruoli, team"
       },
       "links": {
-        "title": "Managed users",
-        "user": "Alga user",
-        "directory": "Directory identity",
-        "state": "State",
-        "action": "Action",
-        "drift": "Email drift",
-        "active": "Upstream active",
-        "inactive": "Upstream inactive",
-        "accessOn": "Access enabled",
-        "accessOff": "Access disabled",
-        "unlink": "Unlink",
-        "empty": "No directory identities have linked yet."
+        "title": "Utenti gestiti",
+        "user": "Utente Alga",
+        "directory": "Identità della directory",
+        "state": "Stato",
+        "action": "Azione",
+        "drift": "Disallineamento email",
+        "active": "Attivo a monte",
+        "inactive": "Inattivo a monte",
+        "accessOn": "Accesso abilitato",
+        "accessOff": "Accesso disabilitato",
+        "unlink": "Scollega",
+        "empty": "Non è ancora stata collegata alcuna identità della directory."
       },
       "unresolved": {
-        "title": "Needs review",
-        "description": "These identities were rejected without changing an Alga user."
+        "title": "Da esaminare",
+        "description": "Queste identità sono state rifiutate senza modificare alcun utente Alga."
       },
       "state": {
-        "active": "Active upstream",
-        "inactive": "Inactive upstream"
+        "active": "Attivo a monte",
+        "inactive": "Inattivo a monte"
       }
     }
   },
@@ -703,7 +714,7 @@
     "detail": {
       "back": "Indietro",
       "labels": {
-        "info": "Info",
+        "info": "Informazioni",
         "warning": "Avviso",
         "destructive": "Critico",
         "success": "Operazione riuscita",
@@ -713,8 +724,8 @@
   },
   "connectSso": {
     "verify": {
-      "title": "Protegga il Suo account con SSO",
-      "description": "Colleghi Azure AD o Google Workspace per riutilizzare le policy aziendali e saltare le richieste locali di autenticazione a due fattori.",
+      "title": "Proteggi il tuo account con SSO",
+      "description": "Collega Azure AD o Google Workspace per riutilizzare le policy aziendali e saltare le richieste locali di autenticazione a due fattori.",
       "signedInAs": "Connesso come",
       "currentPassword": "Password attuale",
       "twoFactorCode": "Codice a due fattori",
@@ -723,14 +734,14 @@
       "verifying": "Verifica in corso...",
       "reset": "Reimposta",
       "linkedSuccess": "Provider collegato correttamente.",
-      "credentialsVerified": "Credenziali verificate. Scelga un provider qui sotto per completare il collegamento del Suo account.",
+      "credentialsVerified": "Credenziali verificate. Scegli un provider qui sotto per completare il collegamento del tuo account.",
       "verifyFailed": "Impossibile verificare le credenziali.",
-      "verifyBeforeProvider": "Verifichi la Sua password (e il codice a due fattori se richiesto) prima di collegare un provider."
+      "verifyBeforeProvider": "Verifica la tua password (e il codice a due fattori se richiesto) prima di collegare un provider."
     },
     "providers": {
-      "title": "Colleghi un provider",
-      "description": "Scelga un provider per completare il collegamento SSO. Verrà reindirizzato attraverso il flusso di accesso del provider.",
-      "noneConfigured": "Nessun provider SSO è configurato per questo ambiente. Chieda al Suo amministratore di configurare le credenziali Google o Microsoft.",
+      "title": "Collega un provider",
+      "description": "Scegli un provider per completare il collegamento SSO. Verrai reindirizzato attraverso il flusso di accesso del provider.",
+      "noneConfigured": "Nessun provider SSO è configurato per questo ambiente. Chiedi al tuo amministratore di configurare le credenziali Google o Microsoft.",
       "notConfigured": "Non configurato",
       "branding": {
         "google": "Continua con Google",
@@ -740,7 +751,7 @@
     },
     "linked": {
       "title": "Account collegati",
-      "description": "Aggiorneremo il collegamento al Suo prossimo accesso tramite un provider connesso.",
+      "description": "Aggiorneremo il collegamento al tuo prossimo accesso tramite un provider connesso.",
       "empty": "Nessun provider SSO ancora collegato. Completi i passaggi precedenti per collegarne uno.",
       "linkedAt": "Collegato il {{date}}",
       "lastUsed": "Ultimo utilizzo: {{date}}",

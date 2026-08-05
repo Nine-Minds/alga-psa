@@ -1,7 +1,7 @@
 /**
  * @alga-psa/scheduling
  *
- * Scheduling module for Alga PSA.
+ * Scheduling module for AlgaPSA.
  * Provides time management, schedule booking, and technician dispatch.
  */
 

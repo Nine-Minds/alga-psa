@@ -225,5 +225,127 @@
       "body": "Recargas, recarga automática e alterações de assinatura são feitas na loja da Nine Minds.",
       "openStore": "Abrir a loja"
     }
+  },
+  "managementPage": {
+    "metaTitle": "Licença",
+    "eyebrow": "Licenciamento do appliance",
+    "title": "Licença",
+    "subtitle": "Gerencie o nível de recursos deste appliance auto-hospedado.",
+    "notSelfHost": {
+      "title": "Licença",
+      "description": "O gerenciamento de licenças está disponível apenas para instalações auto-hospedadas."
+    },
+    "tiers": {
+      "unknown": "Nível desconhecido",
+      "essentials": "Plano Essentials",
+      "solo": "Solo",
+      "pro": "Pro"
+    },
+    "status": {
+      "trial": {
+        "eyebrow": "Avaliação Pro",
+        "title": "Sua avaliação Pro está ativa",
+        "description_one": "Você tem mais {{count}} dia para usar todos os recursos Pro.",
+        "description_many": "Você tem mais {{count}} dias para usar todos os recursos Pro.",
+        "description_other": "Você tem mais {{count}} dias para usar todos os recursos Pro.",
+        "descriptionNoDays": "Você pode usar todos os recursos Pro durante o período de avaliação.",
+        "badge": "Avaliação ativa"
+      },
+      "licensed": {
+        "eyebrow": "Licença paga",
+        "title": "{{tier}} está ativo",
+        "description": "Sua licença paga está ativa neste appliance.",
+        "descriptionWithExpiry": "Sua licença está ativa até {{date}}.",
+        "badge": "Licenciado"
+      },
+      "licenseExpired": {
+        "eyebrow": "A licença requer atenção",
+        "title": "Sua licença expirou",
+        "description": "O appliance usa os recursos Essentials até que você ative uma nova chave de licença ou um novo código de ativação.",
+        "badge": "Expirada"
+      },
+      "licenseWrongTenant": {
+        "eyebrow": "A licença requer atenção",
+        "title": "Esta licença não é válida aqui",
+        "description": "A licença armazenada foi emitida para outro tenant do appliance. Ative a licença correta para desbloquear os recursos pagos.",
+        "badge": "Instalação incorreta"
+      },
+      "trialExpired": {
+        "eyebrow": "Plano Essentials",
+        "title": "Você está usando o Essentials",
+        "description": "Sua avaliação Pro terminou. O Essentials permanece ativo para o conjunto principal de recursos de PSA.",
+        "badge": "Essentials ativo"
+      },
+      "essentials": {
+        "eyebrow": "Plano Essentials",
+        "title": "Você está usando o Essentials",
+        "description": "O Essentials está ativo neste appliance. Continue usando o conjunto principal de recursos ou inicie uma avaliação Pro única de 15 dias.",
+        "badge": "Essentials ativo"
+      }
+    },
+    "trialCta": {
+      "title": "Experimente o Pro por 15 dias",
+      "description": "Desbloqueie a automação, as integrações avançadas e o conjunto completo de recursos Pro. Não é necessário cartão de crédito; o appliance retorna ao Essentials quando a avaliação termina."
+    },
+    "details": {
+      "currentTier": "Nível atual",
+      "expires": "Expira em",
+      "daysRemaining_one": "{{count}} dia restante",
+      "daysRemaining_many": "{{count}} dias restantes",
+      "daysRemaining_other": "{{count}} dias restantes",
+      "licensedTo": "Licenciado para",
+      "refreshLabel": "Atualização da licença",
+      "connected": "Conectado",
+      "lastCheckIn": "Última verificação: {{timestamp}}",
+      "refreshHelp": "Aplica imediatamente as alterações de assentos ou plano feitas no portal."
+    },
+    "portal": {
+      "manageTitle": "Assentos, faturamento e códigos de ativação",
+      "manageDescription": "Adicione ou remova assentos, atualize o faturamento ou reemita um código de ativação no portal de licenciamento. Faça login com seu email cadastrado — não é necessário usar senha.",
+      "buyTitle": "Quer comprar o AlgaPSA Pro?",
+      "buyDescription": "Compre no portal de licenciamento: faça login com seu email cadastrado, escolha o número de assentos e você receberá um código de ativação de uso único para inserir abaixo. Seu appliance é atualizado no local."
+    },
+    "advanced": {
+      "summary": "Tem um código ou uma chave de licença?",
+      "introPrefix": "Insira o código de ativação ou a chave offline que você recebeu do",
+      "introLink": "portal de licenciamento",
+      "introSuffix": "ou do suporte da Nine Minds.",
+      "claimCode": {
+        "title": "Ativar com um código de ativação",
+        "description": "Use o código de 8 caracteres do portal de licenciamento ou de um email de licença paga. Isso também habilita a atualização automática da licença."
+      },
+      "licenseKey": {
+        "title": "Colar uma chave de licença",
+        "description": "Use esta opção para chaves offline baixadas do portal de licenciamento para instalações isoladas da rede ou emitidas pelo suporte."
+      },
+      "installationId": {
+        "title": "ID da instalação",
+        "description": "O suporte pode solicitar este ID ao emitir uma chave de licença manual."
+      }
+    },
+    "actions": {
+      "startTrial": "Iniciar avaliação Pro de 15 dias",
+      "startingTrial": "Iniciando…",
+      "refreshNow": "Atualizar licença agora",
+      "refreshing": "Atualizando…",
+      "manageInPortal": "Gerenciar licença no portal",
+      "buyInPortal": "Comprar Pro no portal",
+      "applyClaimCode": "Aplicar código de ativação",
+      "activateLicenseKey": "Ativar chave de licença",
+      "activating": "Ativando…"
+    },
+    "success": {
+      "licenseKeyActivated": "Chave de licença ativada. Os recursos pagos agora estão disponíveis neste appliance.",
+      "claimCodeActivated": "Código de ativação ativado. A atualização automática da licença agora está configurada.",
+      "trialStarted": "A avaliação Pro de 15 dias foi iniciada.",
+      "licenseRefreshed": "Licença atualizada. As alterações de assentos ou plano feitas no portal agora estão ativas."
+    },
+    "errors": {
+      "loadStatus": "Falha ao carregar o status da licença.",
+      "activateLicenseKey": "Falha ao ativar a chave de licença.",
+      "activateClaimCode": "Falha ao ativar o código de ativação.",
+      "startTrial": "Falha ao iniciar a avaliação.",
+      "refreshLicense": "Falha ao atualizar a licença."
+    }
   }
 }

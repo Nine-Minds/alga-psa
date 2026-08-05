@@ -1,7 +1,7 @@
 # Accounting Export Abstraction Plan
 
 ## Purpose & Overview
-Deliver a reusable accounting export layer that transforms Alga PSA invoices into accounting-ready payloads and adapters for QuickBooks (Online/Desktop) and Xero. The solution must support configurable GL/item/tax mappings, batchable exports with auditability, and integration points for both file-based and API-driven handoffs.
+Deliver a reusable accounting export layer that transforms AlgaPSA invoices into accounting-ready payloads and adapters for QuickBooks (Online/Desktop) and Xero. The solution must support configurable GL/item/tax mappings, batchable exports with auditability, and integration points for both file-based and API-driven handoffs.
 
 Primary outcomes:
 - Canonical “accounting export” schema that captures invoice headers, line items, tax, service-period metadata, and mapping resolutions in tenant scope.

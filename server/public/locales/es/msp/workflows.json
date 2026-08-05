@@ -117,7 +117,7 @@
       "noRuns": "No hay ejecuciones para imprimir",
       "columns": {
         "run": "Ejecución",
-        "workflow": "Workflow",
+        "workflow": "Flujo de trabajo",
         "version": "Versión",
         "status": "Estado",
         "started": "Iniciado",
@@ -239,7 +239,7 @@
       "attemptLine": "Intento {{count}}",
       "durationLine": "Duración: {{duration}}",
       "sizeLine": "Tamaño de entrada: {{inputSize}}{{inputSuffix}} · Tamaño de salida: {{outputSize}}{{outputSuffix}}",
-      "truncatedSuffix": " (truncated)",
+      "truncatedSuffix": " (truncado)",
       "inputLabel": "Entrada",
       "outputLabel": "Salida"
     },
@@ -309,8 +309,12 @@
     }
   },
   "runDialog": {
+    "sections": {
+      "schemaAndEvents": "Esquema y eventos",
+      "payloadTools": "Herramientas de carga útil"
+    },
     "title": "Ejecutar flujo de trabajo",
-    "description": "Provide a synthetic payload to preview (and run) a workflow.",
+    "description": "Proporcione una carga útil sintética para obtener una vista previa de un flujo de trabajo y ejecutarlo.",
     "descriptionEvent": "Evento: {{name}}.",
     "draftWarning": "La versión borrador difiere de la publicada (v{{version}}).",
     "concurrencyLimit": "Límite de concurrencia: {{count}} ejecución(es) a la vez.",
@@ -430,7 +434,7 @@
       "eventMissingSchemaRef": "El evento seleccionado no tiene referencia de esquema de carga útil; no se puede ejecutar con mapeo de disparador.",
       "loadLatestRunFailed": "Error al cargar la última ejecución",
       "mapEntryExists": "Esa clave ya existe.",
-      "noPriorPayload": "No prior run payload found.",
+      "noPriorPayload": "No se encontró la carga útil de una ejecución anterior.",
       "payloadCopied": "Carga útil copiada al portapapeles.",
       "presetSaved": "Preajuste guardado.",
       "providePresetName": "Indique un nombre de preajuste.",
@@ -976,7 +980,7 @@
             "description": "Iterar sobre elementos"
           },
           "tryCatch": {
-            "label": "Try/Catch",
+            "label": "Intentar/Capturar",
             "description": "Manejar errores"
           },
           "callWorkflow": {
@@ -1204,7 +1208,7 @@
     },
     "dataContext": {
       "availableDataAtStep": "Datos disponibles en este paso",
-      "payload": "Payload",
+      "payload": "Carga útil",
       "noPayloadFields": "No hay campos de payload",
       "payloadSchemaRefHint": "Configure 'Referencia del esquema de payload' para definir la estructura del payload",
       "stepOutputs": "Salidas del paso (vars)",
@@ -1227,7 +1231,7 @@
     "examplePrefix": "Ejemplo:"
   },
   "actionInputSection": {
-    "heading": "Action inputs"
+    "heading": "Entradas de la acción"
   },
   "actionInputFixedPicker": {
     "loadingOptions": "Cargando opciones…",
@@ -1322,7 +1326,7 @@
     "pagination": {
       "previous": "Anterior",
       "next": "Siguiente",
-      "pageLabel": "Page {{current}} of {{total}}"
+      "pageLabel": "Página {{current}} de {{total}}"
     },
     "errors": {
       "loadFailed": "Error al cargar tareas. Inténtelo de nuevo.",
@@ -1496,7 +1500,9 @@
     "field": {
       "placeholder": "Introducir expresión...",
       "insertFieldPlaceholder": "Insertar campo"
-    }
+    },
+    "clear": "Borrar",
+    "clearAriaLabel": "Borrar expresión"
   },
   "sourceDataTree": {
     "searchPlaceholder": "Buscar campos...",
@@ -1694,7 +1700,7 @@
       "allMapped": "Todos los campos obligatorios mapeados"
     },
     "insert": {
-      "title": "Drop a step here to insert"
+      "title": "Suelte un paso aquí para insertarlo"
     },
     "actions": {
       "deleteStep": "Eliminar paso"
@@ -2012,7 +2018,7 @@
         "holidaysNote": "Los festivos siempre se tratan como días no laborables."
       },
       "businessHours": {
-        "defaultSuffix": " (Default)",
+        "defaultSuffix": " (Predeterminado)",
         "noneConfigured": "Aún no hay horarios laborales configurados.",
         "usingTenantDefault": "Usa el horario laboral por defecto del inquilino.",
         "noTenantDefault": "Aún no hay horario laboral por defecto configurado para el inquilino."
@@ -2075,7 +2081,7 @@
     "recurrence": {
       "andWord": "y",
       "frequency": {
-        "daily": "Daily",
+        "daily": "Diaria",
         "weekly": "Semanal",
         "monthly": "Mensual"
       },
@@ -2199,7 +2205,7 @@
       "client": "Cliente",
       "project": "Proyecto",
       "appointment": "Cita",
-      "quote": "Presupuesto"
+      "quote": "Cotización"
     },
     "workflowLinkRelation": {
       "related": "Relacionado",
@@ -2357,7 +2363,7 @@
         "sourceOptions": {
           "all": "Todos los orígenes",
           "system": "Sistema",
-          "tenant": "Tenant"
+          "tenant": "Inquilino"
         },
         "sort": "Ordenar",
         "sortOptions": {
@@ -2397,7 +2403,7 @@
       },
       "badges": {
         "system": "Sistema",
-        "tenant": "Tenant",
+        "tenant": "Inquilino",
         "noSchema": "Sin esquema",
         "unknownSchema": "Esquema desconocido",
         "schema": "Esquema"
@@ -2479,8 +2485,8 @@
           "correlationKeyPlaceholder": "Se utiliza para resolver esperas de eventos",
           "schemaRef": "Referencia del esquema de payload del evento (avanzado)",
           "schemaRefPlaceholderEmpty": "Sin schemaRef para este evento",
-          "payloadJson": "Payload (JSON)",
-          "payload": "Payload"
+          "payloadJson": "Carga útil (JSON)",
+          "payload": "Carga útil"
         },
         "modes": {
           "form": "Formulario",
@@ -2518,8 +2524,8 @@
         "form": {
           "remove": "Quitar",
           "addItem": "Añadir elemento",
-          "rootLabel": "Payload",
-          "payloadJsonLabel": "Payload (JSON)",
+          "rootLabel": "Carga útil",
+          "payloadJsonLabel": "Carga útil (JSON)",
           "true": "Verdadero",
           "false": "Falso"
         }

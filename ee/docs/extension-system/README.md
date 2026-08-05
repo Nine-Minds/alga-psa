@@ -1,6 +1,6 @@
-# Alga PSA EE Extension System — Out-of-Process, Multi‑Tenant
+# AlgaPSA EE Extension System — Out-of-Process, Multi‑Tenant
 
-This directory contains the Enterprise Edition documentation for the Alga PSA Extension System. The system is v2-only: out-of-process execution, signed/reproducible bundles, an API Gateway that proxies to the Runner, and iframe-only UI served by the Runner.
+This directory contains the Enterprise Edition documentation for the AlgaPSA Extension System. The system is v2-only: out-of-process execution, signed/reproducible bundles, an API Gateway that proxies to the Runner, and iframe-only UI served by the Runner.
 
 ## Documentation Index
 

@@ -10,7 +10,7 @@ The desired experience is:
 
 - When platform Microsoft credentials are available, lead with a simple Microsoft sign-in/connect path.
 - Keep tenant-owned Microsoft app registration available as an explicit advanced “bring your own app” choice.
-- Explain that BYO credentials are normally unnecessary on hosted Alga PSA.
+- Explain that BYO credentials are normally unnecessary on hosted AlgaPSA.
 - Preserve the existing self-hosted/manual configuration path when platform credentials are absent.
 
 ## Implementation plan
@@ -25,8 +25,8 @@ The desired experience is:
 ### 2. Make Microsoft integration settings progressive
 
 - Update `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.tsx` to load the credential capability with the existing status/bindings request.
-- For `source === 'platform'`, render a primary platform-managed state explaining that Alga PSA supplies the Microsoft application and that the user can proceed to connect/sign in without creating an Entra app. Keep the existing consumer/profile status visible where it helps diagnose active bindings.
-- Move “Create Microsoft app” and tenant-owned profile management behind an explicit collapsed advanced/BYO-app disclosure. The disclosure copy should warn that this is intended for organizations that deliberately require their own Entra application and is normally unnecessary on hosted Alga PSA.
+- For `source === 'platform'`, render a primary platform-managed state explaining that AlgaPSA supplies the Microsoft application and that the user can proceed to connect/sign in without creating an Entra app. Keep the existing consumer/profile status visible where it helps diagnose active bindings.
+- Move “Create Microsoft app” and tenant-owned profile management behind an explicit collapsed advanced/BYO-app disclosure. The disclosure copy should warn that this is intended for organizations that deliberately require their own Entra application and is normally unnecessary on hosted AlgaPSA.
 - For `source === 'tenant'`, keep the tenant-owned profile selected and show the advanced section expanded when editing it.
 - For `source === 'none'`, retain the current manual setup as the available path, with neutral self-hosted guidance rather than promising platform credentials.
 - Add translation keys in the existing `msp/integrations` locale files for the platform-managed state, primary action, advanced disclosure, warning, and no-platform fallback; keep `defaultValue` strings aligned with those keys.

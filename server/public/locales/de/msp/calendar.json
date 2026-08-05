@@ -192,12 +192,12 @@
           "description": "Zugriff auf Ihren Google Calendar autorisieren"
         },
         "configAlert": {
-          "title": "Google ist für diesen Tenant nicht konfiguriert.",
-          "body": "Konfigurieren Sie zunächst das tenant-eigene Google OAuth unter <strong>Einstellungen → Integrationen → Anbieter</strong>.",
+          "title": "Google ist für diesen Mandanten nicht konfiguriert.",
+          "body": "Konfigurieren Sie zunächst die mandanteneigene Google-OAuth-Konfiguration unter <strong>Einstellungen → Integrationen → Anbieter</strong>.",
           "openSettings": "Google-Einstellungen öffnen"
         },
         "errors": {
-          "notConfigured": "Die Google-Integration ist für diesen Tenant nicht konfiguriert. Konfigurieren Sie Google zuerst und versuchen Sie es dann erneut."
+          "notConfigured": "Die Google-Integration ist für diesen Mandanten nicht konfiguriert. Konfigurieren Sie Google zuerst und versuchen Sie es dann erneut."
         },
         "defaults": {
           "providerName": "Google Calendar",

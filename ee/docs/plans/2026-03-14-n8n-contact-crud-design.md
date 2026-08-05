@@ -6,7 +6,7 @@
 
 ## Summary
 
-Expand the `Alga PSA` n8n community node to support a first-class `Contact` resource with ticket-style ergonomics. The first pass should add contact `Create`, `Get`, `List`, `Update`, and `Delete` operations, align the editor experience with the existing ticket resource, and keep scope limited to core contact fields already exercised by the API and product UI.
+Expand the `AlgaPSA` n8n community node to support a first-class `Contact` resource with ticket-style ergonomics. The first pass should add contact `Create`, `Get`, `List`, `Update`, and `Delete` operations, align the editor experience with the existing ticket resource, and keep scope limited to core contact fields already exercised by the API and product UI.
 
 This is an n8n package expansion, not a backend API invention. The server already exposes `GET/POST /api/v1/contacts` and `GET/PUT/DELETE /api/v1/contacts/{id}`.
 

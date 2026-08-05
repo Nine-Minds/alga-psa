@@ -24,11 +24,11 @@
   },
   "onboardingProvider": {
     "title": "Dostawca wdrożenia",
-    "description": "Brama wdrożeniowa na poziomie trasy, która sprawdza stan ukończenia dzierżawcy i przekierowuje nieukończonych dzierżawców do kreatora"
+    "description": "Brama wdrożeniowa na poziomie trasy, która sprawdza stan ukończenia konfiguracji organizacji i przekierowuje do kreatora organizacje, które jej nie ukończyły"
   },
   "onboardingWizard": {
     "title": "Kreator wdrożenia",
-    "description": "Powłoka kreatora do konfiguracji dzierżawcy MSP z prezentacją w oknie dialogowym lub na pełnym ekranie, postępem, walidacją i zakończeniem",
+    "description": "Powłoka kreatora konfiguracji organizacji MSP z prezentacją w oknie dialogowym lub na pełnym ekranie, postępem, walidacją i zakończeniem",
     "steps": {
       "clientInfo": "Twoja firma",
       "teamMembers": "Członkowie zespołu",
@@ -491,7 +491,7 @@
         "fallbackEntity": "ta tablica"
       },
       "title": "Tablice",
-      "description": "Tablice pomagają organizować zgłoszenia według działu, zespołu lub typu przepływu pracy. Gdy klienci tworzą zgłoszenia przez portal klienta, są one automatycznie przypisywane do tablicy oznaczonej jako domyślna.",
+      "description": "Tablice pomagają organizować zgłoszenia według działu, zespołu lub typu workflow. Gdy klienci tworzą zgłoszenia przez portal klienta, są one automatycznie przypisywane do tablicy oznaczonej jako domyślna.",
       "tip": "Kliknij gwiazdkę w kolumnie Domyślna, aby zmienić domyślną tablicę.",
       "actions": {
         "import": "Importuj ze standardu",

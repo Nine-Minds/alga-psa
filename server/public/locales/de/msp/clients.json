@@ -149,8 +149,8 @@
       "assets": "Assets",
       "serviceUsageRecord": "Dienstnutzungsaufzeichnung",
       "serviceUsageRecords": "Dienstnutzungsaufzeichnungen",
-      "bucketUsageRecord": "Bucket-Nutzungsdatensatz",
-      "bucketUsageRecords": "Bucket-Nutzungsdatensätze"
+      "bucketUsageRecord": "Nutzungsdatensatz für ein Stundenkontingent",
+      "bucketUsageRecords": "Nutzungsdatensätze für Stundenkontingente"
     },
     "deleteSelectedPrompt_one": "Sind Sie sicher, dass Sie {{count}} ausgewählten Kunden löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
     "deleteSelectedPrompt_other": "Sind Sie sicher, dass Sie {{count}} ausgewählte Kunden löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
@@ -306,7 +306,7 @@
       "notes": "Notizen",
       "people": "Personen",
       "record": "Kundendatensatz",
-      "service": "Service",
+      "service": "Dienst",
       "timeline": "Alles der Reihe nach"
     },
     "csatEmpty": "Noch keine Umfrageantworten.",
@@ -391,7 +391,7 @@
       "money": "Finanzen",
       "more": "Mehr",
       "records": "Datensätze",
-      "service": "Service"
+      "service": "Dienst"
     },
     "record": {
       "accountManager": "Kundenbetreuer",
@@ -427,7 +427,7 @@
       "filterInteractions": "Interaktionen",
       "filterInventory": "Bestand",
       "filterMoney": "Finanzen",
-      "filterService": "Service",
+      "filterService": "Dienst",
       "hoursAgo": "vor {{count}} Std.",
       "interaction": "Interaktion",
       "invoiceCreated": "Rechnung entworfen",
@@ -495,7 +495,7 @@
     "createAndAddAnother": "Erstellen + Weiteren hinzufügen",
     "createAndView": "Erstellen + Kunde anzeigen",
     "additionalDetails": "Zusätzliche Details",
-    "createFailed": "Failed to create client. Please try again."
+    "createFailed": "Der Kunde konnte nicht erstellt werden. Versuchen Sie es erneut."
   },
   "clientCreatedDialog": {
     "title": "Kunde erstellt",
@@ -614,7 +614,7 @@
     "removeAssignmentTitle": "Vertragspositionszuordnung entfernen",
     "removeAssignmentMessage": "Sind Sie sicher, dass Sie diese Vertragszeilenzuweisung vom Kunden entfernen möchten? Die Vertragszeile selbst wird nicht gelöscht.",
     "contracts": "Verträge",
-    "taxRatesLoadError": "Failed to load tax rate configuration."
+    "taxRatesLoadError": "Die Steuersatzkonfiguration konnte nicht geladen werden."
   },
   "clientBillingSchedule": {
     "title": "Abrechnungsplan",
@@ -763,14 +763,14 @@
     "startDateRequired": "Startdatum ist erforderlich",
     "updateAssignment": "Zuweisung aktualisieren",
     "useTenantRenewalDefaults": "Standardeinstellungen für Mandantenverlängerung verwenden",
-    "saveError": "Failed to save contract. Please try again."
+    "saveError": "Der Vertrag konnte nicht gespeichert werden. Versuchen Sie es erneut."
   },
   "clientContractLineDashboard": {
     "title": "Nutzungsmetriken (letzte 30 Tage)",
     "usageChart": "Nutzungstabelle",
     "hoursByService": "Stunden nach Service (letzte 30 Tage)",
     "recentInvoices": "Aktuelle Rechnungen",
-    "bucketUsage": "Bucket-Nutzung",
+    "bucketUsage": "Nutzung des Stundenkontingents",
     "invoiceNumber": "Rechnung #",
     "invoiceDate": "Rechnungsdatum",
     "dueDate": "Fälligkeitsdatum",
@@ -782,7 +782,7 @@
     "unit": "Einheit",
     "hoursUsed": "Stunden genutzt",
     "hoursUsedSummary": "{{used}} / {{total}} Stunden verbraucht",
-    "noActiveBucketPlans": "Keine aktiven Bucket-Pläne gefunden.",
+    "noActiveBucketPlans": "Keine aktiven Stundenkontingentpläne gefunden.",
     "noHours": "Im ausgewählten Zeitraum wurden keine Stunden erfasst.",
     "noInvoices": "Keine aktuellen Rechnungen gefunden.",
     "noUsage": "Im ausgewählten Zeitraum wurden keine Nutzungsdaten gefunden.",
@@ -793,12 +793,12 @@
   "clientContractLineGuide": {
     "title": "Leitfaden zur Begriffsklärung von Vertragszeilen",
     "overviewTitle": "Überblick",
-    "bestPracticesTitle": "Best Practices",
+    "bestPracticesTitle": "Bewährte Verfahren",
     "troubleshootingTitle": "Fehlerbehebung",
     "commonScenariosTitle": "Häufige Szenarien",
     "bestPractices": {
       "clearNamingDescription": "Benennen Sie Vertragszeilen so, dass ihr Zweck und Umfang für diesen Kunden klar erkennbar ist.",
-      "clearNamingItem1": "Geben Sie den Vertragszeilentyp im Namen an (z. B. „Monatlicher Support-Bucket“, „Projektbasierter Plan“).",
+      "clearNamingItem1": "Geben Sie den Vertragslinientyp im Namen an (z. B. „Monatliches Support-Stundenkontingent“, „Projektbasierter Plan“).",
       "clearNamingItem2": "Erwägen Sie die Angabe von Daten oder Versionsnummern für Vertragspositionen, die sich im Laufe der Zeit ändern",
       "clearNamingItem3": "Verwenden Sie für diesen Kunden einheitliche Benennungsmuster in allen Vertragszeilen",
       "clearNamingTitle": "2. Verwenden Sie klare Namenskonventionen für Pläne",
@@ -821,8 +821,8 @@
       "benefitsTitle": "Vorteile einer ordnungsgemäßen Begriffsklärung",
       "benefitTracking": "Vereinfachte Zeiterfassung und Nutzungsverfolgung",
       "benefitTransparency": "Verbesserte Kundentransparenz",
-      "bucketPriorityDescription": "Bucket-Vertragszeilen haben bei der Eindeutigkeit von Dienstleistungen für diesen Kunden Vorrang.",
-      "bucketPriorityLabel": "Bucket-Priorität:",
+      "bucketPriorityDescription": "Stundenkontingent-Vertragslinien haben Vorrang, wenn Dienste für diesen Kunden eindeutig zugeordnet werden müssen.",
+      "bucketPriorityLabel": "Priorität des Stundenkontingents:",
       "description": "Wenn ein Kunde über mehrere Vertragszeilen verfügt, die denselben Service umfassen, muss das System bestimmen, welche Vertragszeile für Zeiteinträge und Nutzungsdatensätze verwendet werden soll. In diesem Leitfaden wird erläutert, wie Sie mit dieser Situation für diesen bestimmten Kunden umgehen können.",
       "explicitAssignmentDescription": "Wenn ein Service in mehreren Vertragszeilen erscheint, müssen Benutzer den beabsichtigten Zuweisungskontext auswählen, anstatt sich auf implizite Ausweichmöglichkeiten zu verlassen.",
       "explicitAssignmentLabel": "Explizite Zuordnung erforderlich:",
@@ -840,26 +840,26 @@
     },
     "scenarios": {
       "description": "Diese Beispiele veranschaulichen, wie die Disambiguierung von Vertragszeilen in gängigen Szenarien für diesen Kunden funktioniert.",
-      "scenario1Description": "Wenn ein Service sowohl in einer Bucket-Vertragszeile als auch in einer Standardvertragszeile für diesen Kunden erscheint:",
-      "scenario1Item1": "Die Bucket-Vertragszeile wird standardmäßig ausgewählt",
-      "scenario1Item2": "Zeiteinträge und Nutzung verbrauchen die im Bucket enthaltene Menge und werden anschließend auf derselben Bucket-Vertragszeile als Mehrverbrauch zum konfigurierten Mehrverbrauchstarif weiter abgerechnet",
-      "scenario1Item3": "Die Abrechnung wechselt nicht automatisch zur Standardvertragszeile, wenn der Bucket aufgebraucht ist",
+      "scenario1Description": "Wenn ein Dienst für diesen Kunden sowohl in einer Stundenkontingent-Vertragslinie als auch in einer Standardvertragslinie enthalten ist:",
+      "scenario1Item1": "Die Stundenkontingent-Vertragslinie wird standardmäßig ausgewählt",
+      "scenario1Item2": "Zeiteinträge und Nutzung schöpfen die im Stundenkontingent enthaltene Menge aus und werden anschließend über dieselbe Stundenkontingent-Vertragslinie zum konfigurierten Mehrverbrauchstarif weiter abgerechnet",
+      "scenario1Item3": "Die Abrechnung wechselt nicht automatisch zur Standardvertragslinie, wenn das Stundenkontingent ausgeschöpft ist",
       "scenario1Item4": "Benutzer können diese Voreinstellung manuell überschreiben, indem sie während der Zeiteingabe eine andere Vertragszeile auswählen",
-      "scenario1Title": "Szenario 1: Bucket-Plan + Standardplan",
+      "scenario1Title": "Szenario 1: Stundenkontingent + Standardplan",
       "scenario2Description": "Wenn eine Dienstleistung in mehreren Standardvertragszeilen für diesen Kunden erscheint:",
       "scenario2Item1": "Benutzer werden aufgefordert, bei der Zeiteingabe auszuwählen, welche Vertragszeile für die Abrechnung verwendet werden soll",
       "scenario2Item2": "Wenn keine Vertragszeile explizit ausgewählt wird, sollte die Abrechnung mit einem Mehrdeutigkeitsfehler angehalten werden, der eine Benutzerauswahl erfordert",
       "scenario2Item3": "Erwägen Sie die Konsolidierung dieser Vertragspositionen, um Verwirrung zu vermeiden",
       "scenario2Title": "Szenario 2: Mehrere Standardpläne",
-      "scenario3Description": "Wenn ein Service in mehreren Bucket-Vertragszeilen für diesen Kunden erscheint:",
-      "scenario3Item1": "Benutzer werden während der Zeiteingabe aufgefordert, auszuwählen, für welchen Bucket sie abrechnen möchten",
-      "scenario3Item2": "Wenn kein Bucket explizit ausgewählt wird, sollte die Abrechnung mit einem Mehrdeutigkeitsfehler stoppen, der eine Benutzerauswahl erfordert",
-      "scenario3Item3": "Teams können interne Richtlinien für die Auswahl zwischen überlappenden Buckets definieren",
-      "scenario3Title": "Szenario 3: Mehrere Bucket-Pläne",
+      "scenario3Description": "Wenn ein Dienst für diesen Kunden in mehreren Stundenkontingent-Vertragslinien enthalten ist:",
+      "scenario3Item1": "Benutzer werden bei der Zeiterfassung aufgefordert, das abzurechnende Stundenkontingent auszuwählen",
+      "scenario3Item2": "Wenn kein Stundenkontingent ausdrücklich ausgewählt wird, sollte die Abrechnung mit einem Mehrdeutigkeitsfehler beendet werden, der eine Benutzerauswahl erfordert",
+      "scenario3Item3": "Teams können interne Richtlinien für die Auswahl zwischen sich überschneidenden Stundenkontingenten festlegen",
+      "scenario3Title": "Szenario 3: Mehrere Stundenkontingentpläne",
       "title": "Häufige Begriffsklärungsszenarien"
     },
     "tabs": {
-      "bestPractices": "Best Practices",
+      "bestPractices": "Bewährte Verfahren",
       "overview": "Überblick",
       "scenarios": "Häufige Szenarien",
       "troubleshooting": "Fehlerbehebung"
@@ -1085,9 +1085,9 @@
     "error": "Fehler",
     "updateExistingTitle": "Bestehende Clients aktualisieren",
     "updateExistingMessage": "{{count}} Clients sind bereits vorhanden. Möchten Sie sie mit den neuen Daten aktualisieren?",
-    "invalidRowsBlocked": "Fix {{count}} invalid rows or enable \"Skip invalid records\" before importing.",
-    "noValidRows": "There are no valid client rows to import.",
-    "serverFailures": "{{failed}} of {{total}} clients failed to import. Review the row issues below."
+    "invalidRowsBlocked": "Korrigieren Sie {{count}} ungültige Zeilen oder aktivieren Sie „Ungültige Datensätze überspringen“, bevor Sie importieren.",
+    "noValidRows": "Es sind keine gültigen Kundenzeilen zum Importieren vorhanden.",
+    "serverFailures": "{{failed}} von {{total}} Kunden konnten nicht importiert werden. Prüfen Sie die nachstehenden Zeilenprobleme."
   },
   "clientsList": {
     "name": "Name",
@@ -1245,7 +1245,7 @@
     "loadError": "Notizen konnten nicht geladen werden",
     "unknownError": "Unbekannter Fehler",
     "loadErrorTitle": "Notizen konnten nicht geladen werden",
-    "loadErrorDescription": "Could not load notes. Please try again."
+    "loadErrorDescription": "Notizen konnten nicht geladen werden. Versuchen Sie es erneut."
   },
   "actions": {
     "cancel": "Abbrechen",
@@ -1410,8 +1410,8 @@
         "startRequired": "Zum Erstellen einer Teams-Besprechung ist eine Startzeit erforderlich",
         "unavailable": "Die Erstellung von Teams-Besprechungen ist für diesen Mandanten nicht verfügbar."
       },
-      "loadFailed": "Interaction options could not be loaded. Please try again.",
-      "saveFailed": "The interaction could not be saved. Please try again."
+      "loadFailed": "Die Interaktionsoptionen konnten nicht geladen werden. Versuchen Sie es erneut.",
+      "saveFailed": "Die Interaktion konnte nicht gespeichert werden. Versuchen Sie es erneut."
     },
     "feed": {
       "addInteraction": "Interaktion hinzufügen",
@@ -1425,8 +1425,8 @@
       "startDate": "Startdatum",
       "title": "Interaktionen",
       "typePlaceholder": "Interaktionstyp",
-      "loadFailed": "Interactions could not be loaded. Please try again.",
-      "typesLoadFailed": "Interaction types could not be loaded. Please try again."
+      "loadFailed": "Interaktionen konnten nicht geladen werden. Versuchen Sie es erneut.",
+      "typesLoadFailed": "Interaktionstypen konnten nicht geladen werden. Versuchen Sie es erneut."
     },
     "overall": {
       "allContacts": "Alle Kontakte",
@@ -1444,7 +1444,7 @@
       "startTimePlaceholder": "Ab dieser Startzeit filtern",
       "statusPlaceholder": "Status",
       "title": "Letzte Interaktionen",
-      "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
+      "statusesLoadFailed": "Interaktionsstatus konnten nicht geladen werden. Versuchen Sie es erneut."
     }
   },
   "clientDrawer": {

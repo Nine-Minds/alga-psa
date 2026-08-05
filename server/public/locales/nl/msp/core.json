@@ -38,7 +38,7 @@
     "inventoryCounts": "Voorraadtellingen",
     "inventoryWriteOffs": "Afschrijvingen",
     "inventoryMargin": "Marge",
-    "inventoryGhostUsage": "Ghost Usage",
+    "inventoryGhostUsage": "Ghost-verbruik",
     "inventoryRma": "RMA",
     "inventoryLoaners": "Leeneenheden",
     "inventoryKits": "Kits",
@@ -81,7 +81,7 @@
     "workflowEditor": "Workflow-editor",
     "runs": "Uitvoeringen",
     "events": "Gebeurtenissen",
-    "deadLetter": "Dead Letter",
+    "deadLetter": "Dead letter",
     "systemMonitor": "Systeemmonitor",
     "systemMonitoring": "Systeembewaking",
     "jobMonitoring": "Jobbewaking",
@@ -92,7 +92,7 @@
       "label": "Marketing",
       "calendar": "Kalender",
       "posts": "Berichten",
-      "content": "Content",
+      "content": "Inhoud",
       "campaigns": "Campagnes",
       "sequences": "Sequenties",
       "forms": "Formulieren",
@@ -124,8 +124,8 @@
       "teams": "Teams",
       "language": "Taal",
       "clientPortal": "Klantenportaal",
-      "license": "License",
-      "ticketing": "Ticketing",
+      "license": "Licentie",
+      "ticketing": "Ticketbeheer",
       "sla": "SLA",
       "projects": "Projecten",
       "interactions": "Interacties",
@@ -158,7 +158,7 @@
       "heading": "Aanmaken",
       "options": {
         "opportunity": {
-          "description": "Leg een deal vast voordat je hem vergeet",
+          "description": "Leg een deal vast voordat u deze vergeet",
           "label": "Kans"
         },
         "ticket": {
@@ -167,7 +167,7 @@
         },
         "client": {
           "label": "Klant",
-          "description": "Voeg een nieuwe klant toe aan je systeem"
+          "description": "Voeg een nieuwe klant toe aan uw systeem"
         },
         "contact": {
           "label": "Contact",
@@ -179,7 +179,7 @@
         },
         "asset": {
           "label": "Asset",
-          "description": "Voeg een nieuw apparaat toe aan je werkruimte"
+          "description": "Voeg een nieuw apparaat toe aan uw werkruimte"
         },
         "service": {
           "label": "Dienst",
@@ -187,7 +187,7 @@
         },
         "product": {
           "label": "Product",
-          "description": "Voeg een nieuw product toe aan je catalogus"
+          "description": "Voeg een nieuw product toe aan uw catalogus"
         }
       }
     },
@@ -226,13 +226,13 @@
     "aiInterrupt": {
       "navigate": {
         "title": "Pagina verlaten en AI-antwoord annuleren?",
-        "message": "Er is nog een AI-antwoord of toolactie bezig. Als je deze pagina nu verlaat, wordt die geannuleerd.",
+        "message": "Er is nog een AI-antwoord of toolactie bezig. Als u deze pagina nu verlaat, wordt die geannuleerd.",
         "confirm": "Pagina verlaten",
         "cancel": "Op pagina blijven"
       },
       "closeChat": {
         "title": "Chat sluiten en AI-antwoord annuleren?",
-        "message": "Er is nog een AI-antwoord of toolactie bezig. Als je de chat nu sluit, wordt die geannuleerd.",
+        "message": "Er is nog een AI-antwoord of toolactie bezig. Als u de chat nu sluit, wordt die geannuleerd.",
         "confirm": "Chat sluiten",
         "cancel": "Chat open houden"
       }
@@ -289,98 +289,98 @@
   "search": {
     "placeholder": "Klanten, tickets en documenten zoeken...",
     "shortcutHint": "Cmd/Ctrl+K",
-    "loading": "Searching...",
-    "pageTitle": "Search",
-    "helperText": "Search across the workspace.",
-    "resultSummary": "{{count}} results for \"{{query}}\"",
-    "resultsRegionLabel": "Search results",
-    "filtersLabel": "Search filters",
-    "sortLabel": "Sort results",
-    "paginationLabel": "Search pagination",
-    "seeAllResults": "See all {{count}} results",
-    "noResults": "No results for \"{{query}}\"",
-    "emptyBroadenQuery": "Try a broader query.",
-    "emptyRemoveFilter": "Try removing the type filter.",
-    "error": "Search failed. Try again.",
+    "loading": "Zoeken...",
+    "pageTitle": "Zoeken",
+    "helperText": "Zoek in de hele werkruimte.",
+    "resultSummary": "{{count}} resultaten voor '{{query}}'",
+    "resultsRegionLabel": "Zoekresultaten",
+    "filtersLabel": "Zoekfilters",
+    "sortLabel": "Resultaten sorteren",
+    "paginationLabel": "Paginering van zoekresultaten",
+    "seeAllResults": "Alle {{count}} resultaten bekijken",
+    "noResults": "Geen resultaten voor '{{query}}'",
+    "emptyBroadenQuery": "Probeer een bredere zoekopdracht.",
+    "emptyRemoveFilter": "Probeer het typefilter te verwijderen.",
+    "error": "Zoeken mislukt. Probeer het opnieuw.",
     "filters": {
-      "all": "All",
-      "client": "Clients",
-      "contact": "Contacts",
-      "user": "Team members",
+      "all": "Alle",
+      "client": "Klanten",
+      "contact": "Contacten",
+      "user": "Teamleden",
       "ticket": "Tickets",
-      "ticket_comment": "Ticket comments",
-      "project": "Projects",
-      "project_phase": "Project phases",
-      "project_task": "Project tasks",
-      "project_task_comment": "Project task comments",
+      "ticket_comment": "Ticketopmerkingen",
+      "project": "Projecten",
+      "project_phase": "Projectfasen",
+      "project_task": "Projecttaken",
+      "project_task_comment": "Opmerkingen bij projecttaken",
       "asset": "Assets",
       "sales_order": "Verkooporders",
       "purchase_order": "Inkooporders",
       "stock_unit": "Voorraadeenheden",
-      "invoice": "Invoices",
-      "invoice_item": "Invoice line items",
-      "invoice_annotation": "Invoice annotations",
-      "contract": "Contracts",
-      "client_contract": "Client contracts",
-      "document": "Documents",
-      "kb_article": "KB articles",
-      "service_catalog": "Service catalog",
-      "service_request_submission": "Service requests",
-      "service_request_definition": "Service request definitions",
-      "workflow_task": "Workflow tasks",
-      "interaction": "Interactions",
-      "schedule_entry": "Schedule entries",
-      "time_entry": "Time entries",
+      "invoice": "Facturen",
+      "invoice_item": "Factuurregels",
+      "invoice_annotation": "Factuuraantekeningen",
+      "contract": "Contracten",
+      "client_contract": "Klantcontracten",
+      "document": "Documenten",
+      "kb_article": "Kennisbankartikelen",
+      "service_catalog": "Servicecatalogus",
+      "service_request_submission": "Serviceaanvragen",
+      "service_request_definition": "Definities van serviceaanvragen",
+      "workflow_task": "Workflowtaken",
+      "interaction": "Interacties",
+      "schedule_entry": "Planningsitems",
+      "time_entry": "Tijdsvermeldingen",
       "board": "Borden",
-      "category": "Categories",
-      "tag": "Tags",
+      "category": "Categorieën",
+      "tag": "Labels",
       "status": "Statussen"
     },
     "groups": {
-      "client": "Clients",
-      "contact": "Contacts",
-      "user": "Team members",
+      "client": "Klanten",
+      "contact": "Contacten",
+      "user": "Teamleden",
       "ticket": "Tickets",
-      "ticket_comment": "Ticket comments",
-      "project": "Projects",
-      "project_phase": "Project phases",
-      "project_task": "Project tasks",
-      "project_task_comment": "Project task comments",
+      "ticket_comment": "Ticketopmerkingen",
+      "project": "Projecten",
+      "project_phase": "Projectfasen",
+      "project_task": "Projecttaken",
+      "project_task_comment": "Opmerkingen bij projecttaken",
       "asset": "Assets",
       "sales_order": "Verkooporders",
       "purchase_order": "Inkooporders",
       "stock_unit": "Voorraadeenheden",
-      "invoice": "Invoices",
-      "invoice_item": "Invoice line items",
-      "invoice_annotation": "Invoice annotations",
-      "contract": "Contracts",
-      "client_contract": "Client contracts",
-      "document": "Documents",
-      "kb_article": "KB articles",
-      "service_catalog": "Service catalog",
-      "service_request_submission": "Service requests",
-      "service_request_definition": "Service request definitions",
-      "workflow_task": "Workflow tasks",
-      "interaction": "Interactions",
-      "schedule_entry": "Schedule entries",
-      "time_entry": "Time entries",
+      "invoice": "Facturen",
+      "invoice_item": "Factuurregels",
+      "invoice_annotation": "Factuuraantekeningen",
+      "contract": "Contracten",
+      "client_contract": "Klantcontracten",
+      "document": "Documenten",
+      "kb_article": "Kennisbankartikelen",
+      "service_catalog": "Servicecatalogus",
+      "service_request_submission": "Serviceaanvragen",
+      "service_request_definition": "Definities van serviceaanvragen",
+      "workflow_task": "Workflowtaken",
+      "interaction": "Interacties",
+      "schedule_entry": "Planningsitems",
+      "time_entry": "Tijdsvermeldingen",
       "board": "Borden",
-      "category": "Categories",
-      "tag": "Tags",
+      "category": "Categorieën",
+      "tag": "Labels",
       "status": "Statussen"
     },
     "sort": {
-      "relevance": "Relevance",
+      "relevance": "Relevantie",
       "recent": "Recent"
     },
     "pagination": {
-      "previous": "Previous",
-      "next": "Next"
+      "previous": "Vorige",
+      "next": "Volgende"
     }
   },
   "onboardingRedirect": {
-    "title": "We brengen je naar de configuratie",
-    "description": "Je werkruimte heeft een korte configuratie nodig voordat je het dashboard kunt gebruiken.",
+    "title": "We brengen u naar de configuratie",
+    "description": "Uw werkruimte heeft een korte configuratie nodig voordat u het dashboard kunt gebruiken.",
     "action": "Doorgaan naar configuratie"
   },
   "marketing": {
@@ -431,7 +431,7 @@
       "skip": "Overslaan",
       "reschedule": "Herplannen",
       "emptyTitle": "Nog geen berichten",
-      "emptyBody": "Maak een bericht aan vanuit je contentbibliotheek en het verschijnt in deze wachtrij.",
+      "emptyBody": "Maak een bericht aan vanuit uw contentbibliotheek en het verschijnt in deze wachtrij.",
       "status": {
         "scheduled": "gepland",
         "awaiting-manual-publish": "wacht op publicatie",
@@ -440,7 +440,7 @@
         "expired": "verlopen"
       },
       "columns": {
-        "content": "Content",
+        "content": "Inhoud",
         "channel": "Kanaal",
         "campaign": "Campagne",
         "scheduled": "Gepland",
@@ -457,7 +457,7 @@
       },
       "createDialog": {
         "title": "Nieuw bericht",
-        "content": "Content",
+        "content": "Inhoud",
         "contentPlaceholder": "Selecteer content…",
         "channels": "Kanalen",
         "noChannels": "Geen actieve kanalen — voeg er eerst een toe op de pagina Kanalen.",
@@ -485,10 +485,10 @@
       }
     },
     "content": {
-      "title": "Content",
+      "title": "Inhoud",
       "new": "Nieuwe content",
       "emptyTitle": "Nog geen content",
-      "emptyBody": "Schrijf de berichten die je wilt publiceren en plan ze daarna in via de pagina Berichten.",
+      "emptyBody": "Schrijf de berichten die u wilt publiceren en plan ze daarna in via de pagina Berichten.",
       "columns": {
         "title": "Titel",
         "campaign": "Campagne",
@@ -523,7 +523,7 @@
       "new": "Nieuwe campagne",
       "view": "Bekijken",
       "emptyTitle": "Nog geen campagnes",
-      "emptyBody": "Campagnes groeperen berichten, content, formulieren en sequenties, zodat je de funnel op één plek ziet.",
+      "emptyBody": "Campagnes groeperen berichten, content, formulieren en sequenties, zodat u de funnel op één plek ziet.",
       "status": {
         "draft": "concept",
         "active": "actief",
@@ -643,7 +643,7 @@
       "sending": {
         "title": "Verzending",
         "from": "Afzender",
-        "provider": "Provider",
+        "provider": "Aanbieder",
         "notConfigured": "Niet geconfigureerd",
         "unsubscribe": "Afmeldlink",
         "on": "Aan",
@@ -690,7 +690,7 @@
       "title": "Kanalen",
       "new": "Nieuw kanaal",
       "emptyTitle": "Nog geen kanalen",
-      "emptyBody": "Kanalen zijn de plekken waar je publiceert — een LinkedIn-profiel, een YouTube-kanaal, een blog.",
+      "emptyBody": "Kanalen zijn de plekken waar u publiceert — een LinkedIn-profiel, een YouTube-kanaal, een blog.",
       "columns": {
         "name": "Naam",
         "platform": "Platform",
@@ -731,7 +731,7 @@
       "disabledTitle": "Marketing is niet ingeschakeld",
       "disabledDescription": "De marketingmodule is niet ingeschakeld voor dit account.",
       "permissionTitle": "Geen toegang tot Marketing",
-      "permissionDescription": "Je hebt geen rechten om marketing te bekijken. Vraag een beheerder om het leesrecht voor marketing.",
+      "permissionDescription": "U heeft geen rechten om marketing te bekijken. Vraag een beheerder om het leesrecht voor marketing.",
       "backToDashboard": "Ga naar dashboard"
     }
   }

@@ -76,7 +76,7 @@
     "viewDetails": "Zobacz szczegóły",
     "viewFullValue": "Zobacz pełną wartość",
     "parameters": "Parametry",
-    "plan": "Plan",
+    "plan": "Plan działania",
     "playbooks": "Playbooki",
     "validation": {
       "dialogTitle": "Wymagana wiadomość",
@@ -151,7 +151,9 @@
       "declined": "Funkcja odrzucona",
       "pending": "Funkcja w kolejce",
       "error": "Błąd funkcji"
-    }
+    },
+    "executedCalls": "Wykonane wywołania",
+    "bundleMore": "+{{remaining}} więcej"
   },
   "mention": {
     "noResultsFound": "Nie znaleziono wyników"

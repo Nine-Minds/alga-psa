@@ -1,7 +1,7 @@
 {
   "catalog": {
     "title": "Solicitudes de servicio",
-    "description": "Envía una solicitud estructurada y crearemos un ticket automáticamente.",
+    "description": "Envíe una solicitud estructurada y crearemos un ticket automáticamente.",
     "myRequests": "Mis solicitudes",
     "empty": "Actualmente no hay servicios de solicitud disponibles.",
     "fallbackCategory": "Servicio",
@@ -16,8 +16,8 @@
     "unableToSubmit": "No se puede enviar la solicitud",
     "formTitle": "Formulario de solicitud",
     "noFields": "No hay campos configurados.",
-    "selectOption": "Selecciona una opción",
-    "datePlaceholder": "Selecciona una fecha",
+    "selectOption": "Seleccione una opción",
+    "datePlaceholder": "Seleccione una fecha",
     "optionLabel": "Opción {{index}}",
     "submit": "Enviar solicitud",
     "initialValuesTitle": "Valores iniciales",
@@ -59,13 +59,13 @@
     "fileTypeLabel": "Tipo: {{mime}}"
   },
   "recent": {
-    "title": "Tus solicitudes recientes",
+    "title": "Sus solicitudes recientes",
     "viewAll": "Ver todas",
     "empty": "Aún no has enviado solicitudes.",
     "ticket": "Ticket #{{number}}",
     "noTicket": "Aún sin ticket"
   },
   "myRequestsAll": {
-    "title": "Tus solicitudes"
+    "title": "Sus solicitudes"
   }
 }

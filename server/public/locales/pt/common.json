@@ -25,7 +25,12 @@
     "trialAvailable": "Os recursos Essentials estão ativos. Inicie uma avaliação Pro gratuita de 15 dias para desbloquear todos os recursos.",
     "trialExpired": "A avaliação Pro expirou. A instalação agora usa os recursos Essentials.",
     "licenseExpiresIn_one": "A licença expira no dia {{count}}. Renove para evitar interrupção do serviço.",
-    "licenseExpiresIn_other": "A licença expira em {{count}} dias. Renove para evitar interrupção do serviço."
+    "licenseExpiresIn_other": "A licença expira em {{count}} dias. Renove para evitar interrupção do serviço.",
+    "licenseExpired": "A licença expirou. A instalação agora usa os recursos Essentials.",
+    "licenseWrongTenant": "Esta licença foi emitida para outra instância e não é válida aqui. A instalação está usando os recursos Essentials.",
+    "manageLicense": "Gerenciar licença",
+    "ariaLabel": "Status da licença",
+    "dismiss": "Dispensar"
   },
   "nav": {
     "dashboard": "Painel",
@@ -1067,7 +1072,7 @@
       "sessionRevoked": "Sessão revogada com sucesso"
     },
     "warnings": {
-      "oauthLogout": "Isso irá desconectá-lo apenas do Alga PSA. Você permanecerá conectado ao {{provider}}."
+      "oauthLogout": "Isso irá desconectá-lo apenas do AlgaPSA. Você permanecerá conectado ao {{provider}}."
     },
     "errors": {
       "fetchFailed": "Falha ao buscar sessões",
@@ -1172,7 +1177,7 @@
     "teamsTab": {
       "signedInAs": "Conectado como {{name}}",
       "openInFullPsa": "Aberto em PSA completo",
-      "iframeTitle": "{{destination}} em Alga PSA",
+      "iframeTitle": "{{destination}} em AlgaPSA",
       "fullPsaHint": "Use \"Abrir em PSA completo\" para obter um contexto mais rico do que um cartão do Teams pode mostrar.",
       "fallback": {
         "label": "Registro solicitado indisponível:",
@@ -1210,6 +1215,32 @@
           "summaryWithClient": "Você está abrindo o contato {{contactId}} para o cliente {{clientId}} do Teams."
         }
       }
+    },
+    "unsubscribe": {
+      "pageTitle": "Cancelar inscrição",
+      "confirmTitle": "Cancelar o recebimento destes emails?",
+      "confirmDescription": "Você não receberá mais emails de marketing neste endereço.",
+      "confirmAction": "Cancelar inscrição",
+      "doneTitle": "Sua inscrição foi cancelada",
+      "doneDescription": "Você não receberá mais estes emails.",
+      "unavailableTitle": "Link indisponível",
+      "unavailableDescription": "Este link não é mais válido."
+    },
+    "mcpAuthorize": {
+      "errorTitle": "Erro de autorização",
+      "documentTitle": "Autorizar {{client}}",
+      "consentTitle": "Autorizar acesso",
+      "consentRequest": "<strong>{{client}}</strong> está solicitando acesso ao AlgaPSA <em>em seu nome</em>.",
+      "consentScope": "O aplicativo poderá usar as ferramentas MCP com suas próprias permissões neste espaço de trabalho. Você pode desconectá-lo a qualquer momento em Configurações → MCP.",
+      "approve": "Aprovar",
+      "deny": "Negar"
+    },
+    "microsoftEmailSetup": {
+      "title": "Configurar email da Microsoft",
+      "finishing": "Concluindo a configuração do email da Microsoft…",
+      "finished": "Configuração concluída. Você pode fechar esta janela.",
+      "notFinished": "A configuração não foi concluída. Volte ao AlgaPSA para verificar o erro.",
+      "returnLink": "Voltar ao AlgaPSA"
     }
   },
   "feedback": {

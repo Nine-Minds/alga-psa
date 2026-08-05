@@ -451,7 +451,7 @@
         "noBaseUrl": "L'URL de base n'est pas configurée pour les invitations au portail.",
         "invitationNotFound": "Invitation introuvable ou déjà utilisée."
       },
-      "userNotFound": "Client user not found"
+      "userNotFound": "Utilisateur du client introuvable"
     }
   },
   "quickAddContact": {
@@ -702,7 +702,7 @@
     "toast": {
       "saved": "Contact mis a jour",
       "saveFailed": "Impossible de mettre a jour le contact",
-      "saveFailedDescription": "The contact could not be updated. Please try again."
+      "saveFailedDescription": "Impossible de mettre à jour le contact. Réessayez."
     }
   }
 }

@@ -225,5 +225,127 @@
       "body": "Las recargas, la recarga automática y los cambios de suscripción se gestionan en la tienda de Nine Minds.",
       "openStore": "Abrir la tienda"
     }
+  },
+  "managementPage": {
+    "metaTitle": "Licencia",
+    "eyebrow": "Licenciamiento del dispositivo",
+    "title": "Licencia",
+    "subtitle": "Gestione el nivel de funciones de este dispositivo autohospedado.",
+    "notSelfHost": {
+      "title": "Licencia",
+      "description": "La gestión de licencias solo está disponible para instalaciones autohospedadas."
+    },
+    "tiers": {
+      "unknown": "Nivel desconocido",
+      "essentials": "Nivel Essentials",
+      "solo": "Solo",
+      "pro": "Pro"
+    },
+    "status": {
+      "trial": {
+        "eyebrow": "Prueba de Pro",
+        "title": "Su prueba de Pro está activa",
+        "description_one": "Le queda {{count}} día para usar todas las funciones de Pro.",
+        "description_many": "Le quedan {{count}} días para usar todas las funciones de Pro.",
+        "description_other": "Le quedan {{count}} días para usar todas las funciones de Pro.",
+        "descriptionNoDays": "Puede usar todas las funciones de Pro durante el periodo de prueba.",
+        "badge": "Prueba activa"
+      },
+      "licensed": {
+        "eyebrow": "Licencia de pago",
+        "title": "{{tier}} está activo",
+        "description": "Su licencia de pago está activa en este dispositivo.",
+        "descriptionWithExpiry": "Su licencia está activa hasta el {{date}}.",
+        "badge": "Con licencia"
+      },
+      "licenseExpired": {
+        "eyebrow": "La licencia requiere atención",
+        "title": "Su licencia ha vencido",
+        "description": "El dispositivo usa las funciones de Essentials hasta que active una nueva clave de licencia o un código de activación.",
+        "badge": "Vencida"
+      },
+      "licenseWrongTenant": {
+        "eyebrow": "La licencia requiere atención",
+        "title": "Esta licencia no es válida aquí",
+        "description": "La licencia almacenada se emitió para un inquilino de dispositivo diferente. Active la licencia correcta para desbloquear las funciones de pago.",
+        "badge": "Instalación incorrecta"
+      },
+      "trialExpired": {
+        "eyebrow": "Nivel Essentials",
+        "title": "Está usando Essentials",
+        "description": "Su prueba de Pro ha finalizado. Essentials sigue activo para el conjunto principal de funciones de PSA.",
+        "badge": "Essentials activo"
+      },
+      "essentials": {
+        "eyebrow": "Nivel Essentials",
+        "title": "Está usando Essentials",
+        "description": "Essentials está activo en este dispositivo. Siga usando el conjunto principal de funciones o inicie una prueba única de Pro de 15 días.",
+        "badge": "Essentials activo"
+      }
+    },
+    "trialCta": {
+      "title": "Pruebe Pro durante 15 días",
+      "description": "Desbloquee la automatización, las integraciones avanzadas y el conjunto completo de funciones de Pro. No se requiere tarjeta de crédito; el dispositivo vuelve a Essentials cuando finaliza la prueba."
+    },
+    "details": {
+      "currentTier": "Nivel actual",
+      "expires": "Vence",
+      "daysRemaining_one": "Queda {{count}} día",
+      "daysRemaining_many": "Quedan {{count}} días",
+      "daysRemaining_other": "Quedan {{count}} días",
+      "licensedTo": "Licencia concedida a",
+      "refreshLabel": "Actualización de la licencia",
+      "connected": "Conectado",
+      "lastCheckIn": "Última comprobación: {{timestamp}}",
+      "refreshHelp": "Aplica de inmediato los cambios de puestos o de plan realizados en el portal."
+    },
+    "portal": {
+      "manageTitle": "Puestos, facturación y códigos de activación",
+      "manageDescription": "Añada o quite puestos, actualice la facturación o vuelva a emitir un código de activación en el portal de licencias. Inicie sesión con su correo electrónico registrado — no necesita contraseña.",
+      "buyTitle": "¿Está listo para comprar AlgaPSA Pro?",
+      "buyDescription": "Compre en el portal de licencias: inicie sesión con su correo electrónico registrado, elija la cantidad de puestos y recibirá un código de activación de un solo uso para introducirlo a continuación. Su dispositivo se actualiza en el mismo lugar."
+    },
+    "advanced": {
+      "summary": "¿Tiene un código o una clave de licencia?",
+      "introPrefix": "Introduzca el código de activación o la clave sin conexión que recibió del",
+      "introLink": "portal de licencias",
+      "introSuffix": "o del soporte de Nine Minds.",
+      "claimCode": {
+        "title": "Activar con un código de activación",
+        "description": "Use el código de 8 caracteres del portal de licencias o de un correo electrónico de licencia de pago. Esto también habilita la actualización automática de la licencia."
+      },
+      "licenseKey": {
+        "title": "Pegar una clave de licencia",
+        "description": "Use esta opción para claves sin conexión descargadas del portal de licencias para instalaciones aisladas de la red o emitidas por el soporte."
+      },
+      "installationId": {
+        "title": "ID de instalación",
+        "description": "El soporte puede pedirle este ID al emitir una clave de licencia manual."
+      }
+    },
+    "actions": {
+      "startTrial": "Iniciar prueba de Pro de 15 días",
+      "startingTrial": "Iniciando…",
+      "refreshNow": "Actualizar licencia ahora",
+      "refreshing": "Actualizando…",
+      "manageInPortal": "Gestionar licencia en el portal",
+      "buyInPortal": "Comprar Pro en el portal",
+      "applyClaimCode": "Aplicar código de activación",
+      "activateLicenseKey": "Activar clave de licencia",
+      "activating": "Activando…"
+    },
+    "success": {
+      "licenseKeyActivated": "Clave de licencia activada. Las funciones de pago ya están disponibles en este dispositivo.",
+      "claimCodeActivated": "Código de activación activado. La actualización automática de la licencia ya está configurada.",
+      "trialStarted": "Se inició la prueba de Pro de 15 días.",
+      "licenseRefreshed": "Licencia actualizada. Los cambios de puestos o de plan del portal ya están activos."
+    },
+    "errors": {
+      "loadStatus": "No se pudo cargar el estado de la licencia.",
+      "activateLicenseKey": "No se pudo activar la clave de licencia.",
+      "activateClaimCode": "No se pudo activar el código de activación.",
+      "startTrial": "No se pudo iniciar la prueba.",
+      "refreshLicense": "No se pudo actualizar la licencia."
+    }
   }
 }

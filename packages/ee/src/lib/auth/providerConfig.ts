@@ -16,7 +16,7 @@ export async function getSsoProviderOptions(): Promise<SsoProviderOption[]> {
     {
       id: 'azure-ad',
       name: 'Microsoft 365 (Azure AD)',
-      description: 'Allow Azure Active Directory accounts to access Alga PSA.',
+      description: 'Allow Azure Active Directory accounts to access AlgaPSA.',
       configured: false,
     },
   ];

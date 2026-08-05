@@ -7,13 +7,13 @@
 
 ## Summary
 
-Create AlgaDesk as a focused help-desk wedge product inside the existing Alga PSA application. AlgaDesk must feel like a coherent standalone help desk for MSPs that are not ready for the full PSA experience, while continuing to run from the same codebase, Next.js app, database schema, and background-worker model as Alga PSA.
+Create AlgaDesk as a focused help-desk wedge product inside the existing AlgaPSA application. AlgaDesk must feel like a coherent standalone help desk for MSPs that are not ready for the full PSA experience, while continuing to run from the same codebase, Next.js app, database schema, and background-worker model as AlgaPSA.
 
 The seam is a product entitlement and composition boundary, not a physical service boundary. PSA tenants keep the existing PSA experience. AlgaDesk tenants get an intentionally smaller product surface: ticketing, clients/contacts, client portal ticketing, ticket attachments, knowledge base, users/teams settings, and email-to-ticket.
 
 ## Problem
 
-Alga PSA contains a broad MSP operating surface. A prospect that only needs a help desk can be overwhelmed by full PSA navigation, settings, data models, integrations, and workflows. Simply hiding sidebar links is insufficient: direct URLs, broad package barrels, API discovery, server actions, and cross-feature providers can still leak the full PSA product into a lightweight tenant.
+AlgaPSA contains a broad MSP operating surface. A prospect that only needs a help desk can be overwhelmed by full PSA navigation, settings, data models, integrations, and workflows. Simply hiding sidebar links is insufficient: direct URLs, broad package barrels, API discovery, server actions, and cross-feature providers can still leak the full PSA product into a lightweight tenant.
 
 We need a product seam that is strong enough to create confidence in AlgaDesk as a standalone product, but pragmatic enough to share the existing application, database, authentication, ticketing, client portal, and email infrastructure.
 
@@ -76,7 +76,7 @@ We need a product seam that is strong enough to create confidence in AlgaDesk as
 
 1. AlgaDesk should feel like a purpose-built product, not PSA with missing menu items.
 2. Use an AlgaDesk MSP shell/sidebar/dashboard/settings surface instead of the full PSA layout stack.
-3. Major excluded human-facing routes should show a branded upgrade boundary: clear copy that the feature belongs to Alga PSA, not a broken route.
+3. Major excluded human-facing routes should show a branded upgrade boundary: clear copy that the feature belongs to AlgaPSA, not a broken route.
 4. Deep/internal/test routes can return not-found or product-denied.
 5. AlgaDesk dashboard should focus on open tickets, aging, awaiting customer/internal, recent activity, and email channel health.
 6. AlgaDesk settings should expose only General, Users, Teams, Ticketing, Email Channels, Client Portal, Knowledge Base, Profile/Security where appropriate.

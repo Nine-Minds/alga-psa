@@ -80,9 +80,9 @@
       "failedToLoadOpportunityStepData": "No se pudieron cargar los datos del paso de la oportunidad"
     },
     "errors": {
-      "loadUsers": "No se pudieron cargar los usuarios. Intenta refrescar la página.",
+      "loadUsers": "No se pudieron cargar los usuarios. Intente refrescar la página.",
       "loadingContent": "Error al cargar el contenido",
-      "tryAgain": "Inténtalo de nuevo"
+      "tryAgain": "Inténtelo de nuevo"
     },
     "units": {
       "minutes": "minutos"
@@ -97,9 +97,9 @@
       "allClosed": "Todos cerrados"
     },
     "messages": {
-      "accessDenied": "Acceso denegado: no tienes permiso para ver el panel de despacho de técnicos.",
+      "accessDenied": "Acceso denegado: no tiene permiso para ver el panel de despacho de técnicos.",
       "unknownError": "Se produjo un error desconocido.",
-      "permissionDeniedSchedule": "No tienes permiso para programar para este técnico.",
+      "permissionDeniedSchedule": "No tiene permiso para programar para este técnico.",
       "couldNotLoadWorkItemDetails": "No se pudieron cargar los detalles del elemento de trabajo."
     },
     "errors": {
@@ -143,7 +143,7 @@
       "eventDetails": "{{title}}\nAsignado a: {{assigned}}\nInicio: {{start}}\nFin: {{end}}"
     },
     "errors": {
-      "validateDeletion": "No se pudo validar la eliminación. Inténtalo de nuevo."
+      "validateDeletion": "No se pudo validar la eliminación. Inténtelo de nuevo."
     }
   },
   "badges": {

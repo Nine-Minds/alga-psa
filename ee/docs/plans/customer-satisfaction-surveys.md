@@ -9,7 +9,7 @@
 - **Next:** Server actions, event integration, email templates, UI components
 
 ### Goals
-- Automate post-ticket CSAT feedback loops for MSP tenants inside Alga PSA.
+- Automate post-ticket CSAT feedback loops for MSP tenants inside AlgaPSA.
 - Centralize survey configuration, delivery, and analytics while maintaining tenant isolation.
 - Reuse existing UI, email, and workflow foundations to minimize net-new surface area.
 
@@ -77,7 +77,7 @@
 
 ### System Overview
 
-This plan outlines the technical implementation of a customer satisfaction (CSAT) survey system for Alga PSA, targeting MSPs with 5-10 employees and 50-100 customers. The system will automatically send surveys after ticket closure, collect responses, and provide reporting capabilities.
+This plan outlines the technical implementation of a customer satisfaction (CSAT) survey system for AlgaPSA, targeting MSPs with 5-10 employees and 50-100 customers. The system will automatically send surveys after ticket closure, collect responses, and provide reporting capabilities.
 
 ### Technical Architecture
 
@@ -1699,4 +1699,4 @@ This allows disabling surveys per tenant if needed.
 
 This plan provides a complete technical implementation roadmap for a customer satisfaction survey system tailored to small MSPs. The phased approach allows for iterative development and testing, with Phase 1 delivering core functionality and subsequent phases adding reporting and enhancements.
 
-The system leverages existing Alga PSA infrastructure (event bus, email notifications, multi-tenancy) while adding focused survey-specific features that match what competitors offer without unnecessary complexity.
+The system leverages existing AlgaPSA infrastructure (event bus, email notifications, multi-tenancy) while adding focused survey-specific features that match what competitors offer without unnecessary complexity.

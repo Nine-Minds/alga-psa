@@ -1,5 +1,5 @@
 ---
-name: Alga PSA
+name: AlgaPSA
 description: Quiet, dense, exact product UI for MSP operations and client service visibility.
 colors:
   operator-purple: "#8a4dea"
@@ -101,13 +101,13 @@ components:
     typography: "{typography.label}"
 ---
 
-# Design System: Alga PSA
+# Design System: AlgaPSA
 
 ## 1. Overview
 
 **Creative North Star: "The Modern Workbench"**
 
-Alga PSA should feel like a modern operations workbench: quiet enough for long service days, dense enough for real MSP throughput, and exact enough that users trust every status, total, and action. The visual system uses familiar product UI patterns, crisp semantic tokens, and compact spacing to keep the task in front of the user.
+AlgaPSA should feel like a modern operations workbench: quiet enough for long service days, dense enough for real MSP throughput, and exact enough that users trust every status, total, and action. The visual system uses familiar product UI patterns, crisp semantic tokens, and compact spacing to keep the task in front of the user.
 
 The system is product-first. It borrows Notion's directness and Twenty.com's clean business-object clarity, then adapts both for ticket queues, billing approvals, project status, automation, assets, and client-facing transparency. The `/msp` area can be denser and more operator-focused. The `/client` area should translate the same model into calmer service visibility.
 
@@ -179,7 +179,7 @@ The palette is a restrained operational system: Slate Workspace carries the work
 
 ## 4. Elevation
 
-Alga PSA is flat by default, lifted on interaction. Depth is primarily created through tonal layers, borders, table alternation, and selected states. Shadows are reserved for overlays, dropdowns, dialogs, draggable surfaces, and hover moments where the surface has genuinely moved closer to the user.
+AlgaPSA is flat by default, lifted on interaction. Depth is primarily created through tonal layers, borders, table alternation, and selected states. Shadows are reserved for overlays, dropdowns, dialogs, draggable surfaces, and hover moments where the surface has genuinely moved closer to the user.
 
 ### Shadow Vocabulary
 
@@ -267,7 +267,7 @@ Temporary surfaces must be precise and interrupt only when needed.
 
 ### Don't:
 
-- **Don't** make Alga PSA feel like dated enterprise MSP software, especially the heavy clutter associated with ConnectWise.
+- **Don't** make AlgaPSA feel like dated enterprise MSP software, especially the heavy clutter associated with ConnectWise.
 - **Don't** make screens feel AI-generated with decorative gradients, purposeless cards, vague empty states, or elements placed without thought.
 - **Don't** place elements without a task, state, or orientation purpose. Purpose before presence is mandatory.
 - **Don't** use side-stripe accent borders on cards, list items, callouts, or alerts. Use a full border, tint, icon, or clearer copy instead.

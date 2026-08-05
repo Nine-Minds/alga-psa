@@ -1,7 +1,7 @@
 {
   "name": "@alga/ui-kit-showcase-extension",
   "version": "0.1.0",
-  "description": "UI kit showcase extension for Alga PSA",
+  "description": "UI kit showcase extension for AlgaPSA",
   "private": true,
   "main": "dist/index.js",
   "scripts": {

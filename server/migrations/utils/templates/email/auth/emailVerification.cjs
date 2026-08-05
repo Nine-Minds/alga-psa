@@ -212,27 +212,27 @@ const STYLED_COPY = {
     textFooter: 'Ceci est un email de s\u00e9curit\u00e9 automatis\u00e9.\n\u00a9 {{currentYear}} {{tenantClientName}}. Tous droits r\u00e9serv\u00e9s.',
   },
   es: {
-    subject: 'Verifica tu email{{#if registrationClientName}} para {{registrationClientName}}{{/if}}',
-    headerTitle: 'Verificaci\u00f3n de email',
-    headerSubtitle: 'Confirma tu direcci\u00f3n de email para comenzar',
+    subject: 'Verifique su correo electr\u00f3nico{{#if registrationClientName}} para {{registrationClientName}}{{/if}}',
+    headerTitle: 'Verificaci\u00f3n del correo electr\u00f3nico',
+    headerSubtitle: 'Confirme su direcci\u00f3n de correo electr\u00f3nico para comenzar',
     greeting: 'Hola,',
-    intro: '\u00a1Bienvenido! Por favor verifica tu direcci\u00f3n de email para activar tu cuenta{{#if registrationClientName}} para <strong>{{registrationClientName}}</strong>{{/if}}.',
-    whyTitle: '\u2709\ufe0f \u00bfPor qu\u00e9 verificar tu email?',
+    intro: '\u00a1Le damos la bienvenida! Verifique su direcci\u00f3n de correo electr\u00f3nico para activar su cuenta{{#if registrationClientName}} para <strong>{{registrationClientName}}</strong>{{/if}}.',
+    whyTitle: '\u2709\ufe0f \u00bfPor qu\u00e9 verificar su correo electr\u00f3nico?',
     why1: '\u2713 Garantiza la seguridad de la cuenta y opciones de recuperaci\u00f3n',
     why2: '\u2713 Habilita notificaciones y actualizaciones importantes',
-    why3: '\u2713 Confirma que eres el propietario de la cuenta',
-    buttonText: 'Verificar direcci\u00f3n de email',
-    linkInstructions: 'O copia y pega este enlace en tu navegador:',
+    why3: '\u2713 Confirma la titularidad de la cuenta',
+    buttonText: 'Verificar direcci\u00f3n de correo electr\u00f3nico',
+    linkInstructions: 'O copie y pegue este enlace en su navegador:',
     warningTitle: '\u23f0 Verificaci\u00f3n con l\u00edmite de tiempo',
-    warningText: 'Este enlace de verificaci\u00f3n expirar\u00e1 en <strong>{{expirationTime}}</strong>. Por favor completa la verificaci\u00f3n antes.',
-    didntRequest: '<strong>\u00bfNo solicitaste este email?</strong> Puedes ignorarlo de forma segura. Tu direcci\u00f3n de email no se agregar\u00e1 a nuestro sistema a menos que hagas clic en el enlace de verificaci\u00f3n anterior.',
-    footer1: 'Este es un email de seguridad automatizado.',
+    warningText: 'Este enlace de verificaci\u00f3n expirar\u00e1 en <strong>{{expirationTime}}</strong>. Complete la verificaci\u00f3n antes de que venza.',
+    didntRequest: '<strong>\u00bfNo solicit\u00f3 este correo electr\u00f3nico?</strong> Puede ignorarlo de forma segura. Su direcci\u00f3n de correo electr\u00f3nico no se agregar\u00e1 a nuestro sistema a menos que haga clic en el enlace de verificaci\u00f3n anterior.',
+    footer1: 'Este es un correo electr\u00f3nico de seguridad automatizado.',
     footer2: '\u00a9 {{currentYear}} {{tenantClientName}}. Todos los derechos reservados.',
-    textWhy: '\u2709\ufe0f \u00bfPor qu\u00e9 verificar tu email?\n\u2713 Garantiza la seguridad de la cuenta y opciones de recuperaci\u00f3n\n\u2713 Habilita notificaciones y actualizaciones importantes\n\u2713 Confirma que eres el propietario de la cuenta',
-    textButton: 'Verificar direcci\u00f3n de email: {{verificationUrl}}',
-    textWarning: '\u23f0 Verificaci\u00f3n con l\u00edmite de tiempo\nEste enlace de verificaci\u00f3n expirar\u00e1 en {{expirationTime}}. Por favor completa la verificaci\u00f3n antes.',
-    textDidntRequest: '\u00bfNo solicitaste este email? Puedes ignorarlo de forma segura. Tu direcci\u00f3n de email no se agregar\u00e1 a nuestro sistema a menos que hagas clic en el enlace de verificaci\u00f3n anterior.',
-    textFooter: 'Este es un email de seguridad automatizado.\n\u00a9 {{currentYear}} {{tenantClientName}}. Todos los derechos reservados.',
+    textWhy: '\u2709\ufe0f \u00bfPor qu\u00e9 verificar su correo electr\u00f3nico?\n\u2713 Garantiza la seguridad de la cuenta y opciones de recuperaci\u00f3n\n\u2713 Habilita notificaciones y actualizaciones importantes\n\u2713 Confirma la titularidad de la cuenta',
+    textButton: 'Verificar direcci\u00f3n de correo electr\u00f3nico: {{verificationUrl}}',
+    textWarning: '\u23f0 Verificaci\u00f3n con l\u00edmite de tiempo\nEste enlace de verificaci\u00f3n expirar\u00e1 en {{expirationTime}}. Complete la verificaci\u00f3n antes de que venza.',
+    textDidntRequest: '\u00bfNo solicit\u00f3 este correo electr\u00f3nico? Puede ignorarlo de forma segura. Su direcci\u00f3n de correo electr\u00f3nico no se agregar\u00e1 a nuestro sistema a menos que haga clic en el enlace de verificaci\u00f3n anterior.',
+    textFooter: 'Este es un correo electr\u00f3nico de seguridad automatizado.\n\u00a9 {{currentYear}} {{tenantClientName}}. Todos los derechos reservados.',
   },
   de: {
     subject: 'Verifizieren Sie Ihre E-Mail{{#if registrationClientName}} f\u00fcr {{registrationClientName}}{{/if}}',
@@ -359,7 +359,7 @@ function buildStyledHtml(c) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Email Verification</title>
+  <title>${c.headerTitle}</title>
   <style>${EMAIL_VERIFICATION_CSS}
   </style>
 </head>

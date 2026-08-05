@@ -1606,7 +1606,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             />
           </div>
 
-          <CollapsibleSection title="Schema & Events">
+          <CollapsibleSection title={t('runDialog.sections.schemaAndEvents', { defaultValue: 'Schema & Events' })}>
           <div className="rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] p-3 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
@@ -1868,7 +1868,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             </Button>
           </div>
 
-          <CollapsibleSection title="Payload Tools" defaultCollapsed={true}>
+          <CollapsibleSection title={t('runDialog.sections.payloadTools', { defaultValue: 'Payload Tools' })} defaultCollapsed={true}>
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 id="run-dialog-reset-defaults"

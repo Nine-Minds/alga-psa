@@ -16,7 +16,7 @@
     "documents": "Documenti",
     "knowledgeBase": "Base di conoscenza",
     "requestServices": "Richieste di servizio",
-    "home": "Home",
+    "home": "Pagina iniziale",
     "myTickets": "I miei ticket",
     "newRequest": "Nuova richiesta",
     "schedule": "Pianificazione",
@@ -286,6 +286,7 @@
   },
   "account": {
     "title": "Account",
+    "notAvailable": "N/D",
     "licenseManagement": {
       "title": "Account",
       "subtitle": "La gestione delle licenze è disponibile nel Portale MSP",
@@ -386,6 +387,40 @@
         "expYear": "Inserisci un anno valido (2024-2099)",
         "cvv": "Inserisci un CVV valido"
       }
+    }
+  },
+  "licenses": {
+    "pageTitle": "Licenze appliance",
+    "pageDescription": "Le tue licenze Pro per le appliance Alga. I documenti principali sono disponibili anche nella sezione Documenti.",
+    "loading": "Caricamento licenze…",
+    "empty": {
+      "message": "Nessuna licenza appliance trovata.",
+      "purchaseLink": "Acquista una licenza",
+      "suffix": "per iniziare."
+    },
+    "downloadKey": "Scarica chiave",
+    "validFrom": "Valida dal",
+    "expires": "Scade il",
+    "expiringSoon": "In scadenza",
+    "renewal": "Rinnovo",
+    "renewalModes": {
+      "auto": "Si rinnova automaticamente",
+      "manual": "Rinnovo manuale"
+    },
+    "tiers": {
+      "pro": "Pro",
+      "premium": "Pro"
+    },
+    "transports": {
+      "connectedMonthly": "Connessa (mensile)",
+      "connectedAnnual": "Connessa (annuale)",
+      "airgapAnnual": "Isolata dalla rete (annuale)"
+    },
+    "statuses": {
+      "active": "Attiva",
+      "inactive": "Inattiva",
+      "expired": "Scaduta",
+      "terminated": "Cessata"
     }
   },
   "profile": {
@@ -575,15 +610,15 @@
     },
     "visibilityGroups": {
       "title": "Gruppi di visibilità",
-      "description": "Gestisci a quali board dei ticket può accedere ciascun contatto del portale cliente.",
+      "description": "Gestisci a quali bacheche dei ticket può accedere ciascun contatto del portale clienti.",
       "nameLabel": "Nome",
       "descriptionLabel": "Descrizione",
       "boardLabel": "Bacheche",
-      "noBoards": "Nessun board disponibile",
+      "noBoards": "Nessuna bacheca disponibile",
       "loadError": "Impossibile caricare i gruppi di visibilità",
       "empty": "Ancora nessun gruppo di visibilità.",
       "loading": "Caricamento gruppi…",
-      "boardCount": "board",
+      "boardCount": "bacheche",
       "assignmentCount": "contatti assegnati",
       "edit": "Modifica",
       "delete": "Elimina",
@@ -669,7 +704,7 @@
     "types": {
       "workstation": "Postazioni di lavoro",
       "server": "Server",
-      "mobile": "Mobile",
+      "mobile": "Dispositivo mobile",
       "printer": "Stampanti",
       "network": "Rete",
       "unknown": "Altro"

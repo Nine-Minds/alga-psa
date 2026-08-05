@@ -41,7 +41,7 @@
       "noJobs": "Nessun job da stampare",
       "columns": {
         "jobName": "Nome job",
-        "runner": "Runner",
+        "runner": "Esecutore",
         "status": "Stato",
         "duration": "Durata",
         "started": "Avviato",

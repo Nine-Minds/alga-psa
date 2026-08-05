@@ -469,7 +469,7 @@ function rollupFromState(installState, tiers, failures) {
     return {
       state: 'fully_healthy',
       message: 'All appliance services are healthy.',
-      nextAction: 'Open the Alga PSA login URL.'
+      nextAction: 'Open the AlgaPSA login URL.'
     };
   }
 

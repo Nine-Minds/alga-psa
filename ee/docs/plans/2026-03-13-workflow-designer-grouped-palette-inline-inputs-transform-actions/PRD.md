@@ -39,7 +39,7 @@ These issues make workflows harder to discover, harder to author, and harder to 
 ## Users and Primary Flows
 ### Users
 - MSP admin building automations in the workflow designer
-- Internal Alga PSA engineers extending the workflow action catalog
+- Internal AlgaPSA engineers extending the workflow action catalog
 - Future extension/plugin authors who need grouped entry points in the designer
 
 ### Primary flows

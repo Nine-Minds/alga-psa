@@ -147,7 +147,7 @@
     },
     "source": {
       "title": "Steuerberechnungsquelle",
-      "tooltip": "Wählen Sie, ob die Steuern von Alga PSA berechnet oder an Ihr externes Buchhaltungssystem delegiert werden sollen",
+      "tooltip": "Wählen Sie, ob die Steuern von AlgaPSA berechnet oder an Ihr externes Buchhaltungssystem delegiert werden sollen",
       "description": "Konfigurieren Sie, wie Steuerbeträge für Rechnungen berechnet werden.",
       "fields": {
         "defaultMethod": {
@@ -157,7 +157,7 @@
       "options": {
         "internal": {
           "label": "Intern (Algen-PSA)",
-          "description": "Steuern werden automatisch basierend auf den in Alga PSA konfigurierten Steuersätzen berechnet."
+          "description": "Steuern werden automatisch basierend auf den in AlgaPSA konfigurierten Steuersätzen berechnet."
         },
         "external": {
           "label": "Extern (Buchhaltungspaket)",
@@ -169,7 +169,7 @@
         "step1": "Die Rechnung wird ohne Steuerbeträge erstellt",
         "step2": "Die Rechnung wird in Ihr angeschlossenes Buchhaltungssystem (QuickBooks, Xero usw.) exportiert.",
         "step3": "Die Steuer wird vom Buchhaltungssystem auf der Grundlage seiner Steuerregeln berechnet",
-        "step4": "Steuerbeträge werden zurück in Alga PSA importiert",
+        "step4": "Steuerbeträge werden zurück in AlgaPSA importiert",
         "step5": "Rechnungssummen werden mit der importierten Steuer aktualisiert",
         "note": "Das verwendete Buchhaltungssystem wird automatisch ermittelt, je nachdem, in welches System Sie die Rechnung exportieren.",
         "warning": "Wichtig: Rechnungen für Kunden mit externer Steuer können erst abgeschlossen werden, wenn ihre Steuer aus Ihrem Buchhaltungssystem zurückimportiert wurde. Dies erfordert eine verbundene Buchhaltungsintegration (QuickBooks oder Xero) und den vorherigen Export der Rechnung dorthin. Andernfalls bleiben diese Rechnungen im Entwurf hängen – wechseln Sie eine einzelne Rechnung zurück zur internen Steuer, um sie in Alga abzuschließen."
@@ -978,7 +978,7 @@
         "placeholder": "Steuerquelle auswählen...",
         "options": {
           "default": "Mandantenstandard verwenden",
-          "internal": "Alga PSA berechnet Steuer",
+          "internal": "AlgaPSA berechnet Steuer",
           "external": "Buchhaltungspaket berechnet Steuern"
         },
         "effective": {
@@ -1026,7 +1026,7 @@
       "dateRange": "Datumsbereich",
       "startDate": "Startdatum",
       "endDate": "Enddatum",
-      "sequence": "Seq"
+      "sequence": "Reihenfolge"
     },
     "billingMethod": {
       "fixed": "Behoben",
@@ -1192,7 +1192,7 @@
       "webhook": {
         "label": "Webhook-Konfiguration",
         "configuredTitle": "Webhooks automatisch konfiguriert",
-        "configuredDescription": "Alga PSA erhält Zahlungsbenachrichtigungen für:",
+        "configuredDescription": "AlgaPSA erhält Zahlungsbenachrichtigungen für:",
         "failedTitle": "Webhook-Konfiguration fehlgeschlagen",
         "failedDescription": "Die automatische Webhook-Konfiguration ist fehlgeschlagen. Klicken Sie auf Wiederholen, um die Konfiguration erneut zu versuchen.",
         "configuring": "Wird konfiguriert...",

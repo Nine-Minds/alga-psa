@@ -225,5 +225,125 @@
       "body": "Top-ups, auto-top-up, and subscription changes are handled in the Nine Minds store.",
       "openStore": "Open the store"
     }
+  },
+  "managementPage": {
+    "metaTitle": "License",
+    "eyebrow": "Appliance licensing",
+    "title": "License",
+    "subtitle": "Manage the feature tier for this self-hosted appliance.",
+    "notSelfHost": {
+      "title": "License",
+      "description": "License management is only available for self-hosted installations."
+    },
+    "tiers": {
+      "unknown": "Unknown tier",
+      "essentials": "Essentials",
+      "solo": "Solo",
+      "pro": "Pro"
+    },
+    "status": {
+      "trial": {
+        "eyebrow": "Pro trial",
+        "title": "Your Pro trial is active",
+        "description_one": "You have {{count}} day left to use all Pro features.",
+        "description_other": "You have {{count}} days left to use all Pro features.",
+        "descriptionNoDays": "You can use all Pro features during the trial period.",
+        "badge": "Trial active"
+      },
+      "licensed": {
+        "eyebrow": "Paid license",
+        "title": "{{tier}} is active",
+        "description": "Your paid license is active on this appliance.",
+        "descriptionWithExpiry": "Your license is active through {{date}}.",
+        "badge": "Licensed"
+      },
+      "licenseExpired": {
+        "eyebrow": "License needs attention",
+        "title": "Your license has expired",
+        "description": "The appliance is running Essentials features until you activate a new license key or claim code.",
+        "badge": "Expired"
+      },
+      "licenseWrongTenant": {
+        "eyebrow": "License needs attention",
+        "title": "This license is not valid here",
+        "description": "The stored license was issued for a different appliance tenant. Activate the correct license to unlock paid features.",
+        "badge": "Wrong install"
+      },
+      "trialExpired": {
+        "eyebrow": "Essentials",
+        "title": "You’re running Essentials",
+        "description": "Your Pro trial has ended. Essentials remains active for the core PSA feature set.",
+        "badge": "Essentials active"
+      },
+      "essentials": {
+        "eyebrow": "Essentials",
+        "title": "You’re running Essentials",
+        "description": "Essentials is active on this appliance. Keep using the core feature set, or start a one-time 15-day Pro trial.",
+        "badge": "Essentials active"
+      }
+    },
+    "trialCta": {
+      "title": "Try Pro for 15 days",
+      "description": "Unlock automation, advanced integrations, and the full Pro feature set. No credit card required; the appliance returns to Essentials when the trial ends."
+    },
+    "details": {
+      "currentTier": "Current tier",
+      "expires": "Expires",
+      "daysRemaining_one": "{{count}} day remaining",
+      "daysRemaining_other": "{{count}} days remaining",
+      "licensedTo": "Licensed to",
+      "refreshLabel": "License refresh",
+      "connected": "Connected",
+      "lastCheckIn": "Last check-in: {{timestamp}}",
+      "refreshHelp": "Applies seat or plan changes made in the portal immediately."
+    },
+    "portal": {
+      "manageTitle": "Seats, billing, and activation codes",
+      "manageDescription": "Add or remove seats, update billing, or reissue an activation code in the licensing portal. Sign in with your registered email — no password needed.",
+      "buyTitle": "Ready to buy AlgaPSA Pro?",
+      "buyDescription": "Purchase in the licensing portal — sign in with your registered email, pick your seat count, and you'll get a one-time activation code to enter below. Your appliance upgrades in place."
+    },
+    "advanced": {
+      "summary": "Have a license code or key?",
+      "introPrefix": "Enter the activation code or offline key you received from the",
+      "introLink": "licensing portal",
+      "introSuffix": "or from Nine Minds support.",
+      "claimCode": {
+        "title": "Activate with claim code",
+        "description": "Use the 8-character code from the licensing portal or a paid-license email. This also enables automatic license refresh."
+      },
+      "licenseKey": {
+        "title": "Paste a license key",
+        "description": "Use this for offline keys downloaded from the licensing portal (air-gapped installs) or issued by support."
+      },
+      "installationId": {
+        "title": "Installation ID",
+        "description": "Support may ask for this ID when issuing a manual license key."
+      }
+    },
+    "actions": {
+      "startTrial": "Start 15-day Pro trial",
+      "startingTrial": "Starting…",
+      "refreshNow": "Refresh license now",
+      "refreshing": "Refreshing…",
+      "manageInPortal": "Manage license in portal",
+      "buyInPortal": "Buy Pro in the portal",
+      "applyClaimCode": "Apply claim code",
+      "activateLicenseKey": "Activate license key",
+      "activating": "Activating…"
+    },
+    "success": {
+      "licenseKeyActivated": "License key activated. Paid features are now available on this appliance.",
+      "claimCodeActivated": "Claim code activated. Automatic license refresh is now configured.",
+      "trialStarted": "15-day Pro trial started.",
+      "licenseRefreshed": "License refreshed. Seat or plan changes from the portal are now active."
+    },
+    "errors": {
+      "loadStatus": "Failed to load license status.",
+      "activateLicenseKey": "Failed to activate license key.",
+      "activateClaimCode": "Failed to activate claim code.",
+      "startTrial": "Failed to start trial.",
+      "refreshLicense": "Failed to refresh the license."
+    }
   }
 }

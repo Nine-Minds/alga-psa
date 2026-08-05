@@ -270,11 +270,11 @@ export default function SetupPage() {
             <AlgaLogo className={styles.logoSvg} />
           </span>
           <span className={styles.brandText}>
-            <span>Alga PSA</span>
+            <span>AlgaPSA</span>
             <small>Setup</small>
           </span>
         </div>
-        <nav className={styles.nav} aria-label="Alga PSA setup pages">
+        <nav className={styles.nav} aria-label="AlgaPSA setup pages">
           <a className={styles.setupLink} aria-current="page" href="/setup/">
             <SlidersHorizontal className={styles.navIcon} aria-hidden="true" />
             <span>Setup</span>

@@ -2,7 +2,7 @@
 
 ## Intro / Rationale
 
-This plan outlines the extraction of temporal worker components from the main Alga PSA helm chart (`helm/`) into a separate, dedicated helm chart (`ee/helm/temporal-worker/`). This separation will:
+This plan outlines the extraction of temporal worker components from the main AlgaPSA helm chart (`helm/`) into a separate, dedicated helm chart (`ee/helm/temporal-worker/`). This separation will:
 
 - Improve modularity and maintainability by isolating temporal-specific deployments
 - Enable independent versioning and deployment of temporal workers

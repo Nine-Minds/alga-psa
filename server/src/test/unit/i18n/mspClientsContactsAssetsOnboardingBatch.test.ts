@@ -56,6 +56,11 @@ const extractVariables = (value: string): string[] => {
   return matches ? matches.map((match) => match.trim()) : [];
 };
 
+// i18next interpolates by name, so a translation may order placeholders however
+// its language reads best. Only the SET of variables has to match English;
+// asserting order would reject correct translations.
+const extractVariableSet = (value: string): string[] => extractVariables(value).sort();
+
 // CLDR plural suffixes vary per language (e.g. Polish adds _few/_many), so plural
 // variants are collapsed to their base key before comparing against English.
 const cldrPluralSuffix = /_(zero|one|two|few|many|other)$/;
@@ -84,8 +89,8 @@ const assertLocaleBundleMatchesEnglish = (namespace: BatchNamespace) => {
           // already asserted via the normalized key comparison above.
           continue;
         }
-        expect(extractVariables(localeLeaves.get(key) ?? '')).toEqual(
-          extractVariables(englishValue),
+        expect(extractVariableSet(localeLeaves.get(key) ?? '')).toEqual(
+          extractVariableSet(englishValue),
         );
       }
     }

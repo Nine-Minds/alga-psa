@@ -1136,7 +1136,7 @@
       "poRequiredCount": "{{count}} Zuweisungen erfordern eine Bestellung",
       "noPoRequirements": "Keine Bestellanforderungen erfasst.",
       "noClientContracts": "Derzeit verwendet kein Kundenvertrag diese Vorlage.",
-      "reviewBelow": "Die vollständige Zuweisungsliste findest du im Detailbereich unten."
+      "reviewBelow": "Die vollständige Zuweisungsliste finden Sie im Detailbereich unten."
     },
     "assignmentDetails": {
       "title": "Zuweisungsdetails",
@@ -1567,7 +1567,7 @@
         "overageRate": "Überschreitungssatz:",
         "rollover": "Übertrag:",
         "roundUp": "Aufrunden:",
-        "serviceFallback": "Service {{index}}",
+        "serviceFallback": "Dienst {{index}}",
         "services": "Dienste:"
       },
       "title": "Zusammenfassung der Stunden-Services",
@@ -2075,8 +2075,8 @@
     "materializedPeriods": {
       "heading": "Beispielhafte zukünftig materialisierte Zeiträume",
       "summary": {
-        "contract": "Wenn du diese wiederkehrende Zeile speicherst, würden zukünftige Zeiträume in einer jubiläumsbasierten Vorschau am 8. vor der Rechnungserstellung materialisiert.",
-        "client": "Wenn du diese wiederkehrende Zeile speicherst, würden zukünftige Zeiträume in der Vorschau des Kundenabrechnungsplans vor der Rechnungserstellung materialisiert."
+        "contract": "Wenn Sie diese wiederkehrende Vertragslinie speichern, werden zukünftige Zeiträume vor der Rechnungserstellung in der Vorschau nach einer am 8. ausgerichteten Jahrestagslogik erzeugt.",
+        "client": "Wenn Sie diese wiederkehrende Vertragslinie speichern, werden zukünftige Zeiträume vor der Rechnungserstellung in der Vorschau des Kundenabrechnungsplans erzeugt."
       }
     }
   },
@@ -2290,6 +2290,16 @@
         "arrears": "Nachträglich abrechnen"
       },
       "title": "Vertragsänderungen",
+      "columns": {
+        "name": "Name",
+        "type": "Typ",
+        "value": "Wert",
+        "appliesTo": "Gilt für",
+        "description": "Beschreibung",
+        "amount": "Betrag ($)",
+        "billingPeriod": "Abrechnungszeitraum",
+        "timing": "Zeitpunkt"
+      },
       "types": {
         "bucket": "Kontingent-Overlay",
         "fixed": "Fest",
@@ -2310,7 +2320,7 @@
       "title": "Simulierte Rechnungszeiträume"
     },
     "unavailable": {
-      "description": "Der Vertragssimulator ist in Alga PSA Pro verfügbar.",
+      "description": "Der Vertragssimulator ist in AlgaPSA Pro verfügbar.",
       "title": "Pro-Funktion"
     }
   }

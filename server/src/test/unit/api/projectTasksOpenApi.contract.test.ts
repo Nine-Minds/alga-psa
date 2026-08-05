@@ -5,7 +5,7 @@ import { generateBaseDocument } from '@/lib/api/openapi';
 describe('project task OpenAPI contracts', () => {
   it('adds product availability metadata to OpenAPI operations', () => {
     const document = generateBaseDocument({
-      title: 'Alga PSA API',
+      title: 'AlgaPSA API',
       version: '0.1.0-test',
       description: 'Test document',
       edition: 'ee',
@@ -18,7 +18,7 @@ describe('project task OpenAPI contracts', () => {
 
   it('documents UUID path parameters for project task routes instead of placeholder backfill metadata', () => {
     const document = generateBaseDocument({
-      title: 'Alga PSA API',
+      title: 'AlgaPSA API',
       version: '0.1.0-test',
       description: 'Test document',
       edition: 'ee',

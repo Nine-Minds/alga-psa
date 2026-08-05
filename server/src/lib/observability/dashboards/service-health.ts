@@ -1,5 +1,5 @@
 /**
- * Grafana Dashboard: Alga PSA Service Health Overview
+ * Grafana Dashboard: AlgaPSA Service Health Overview
  * 
  * This dashboard provides an overview of service health and performance.
  * Designed for Grafana with Prometheus as the data source.
@@ -7,8 +7,8 @@
 
 export const serviceHealthDashboard = {
   uid: 'alga-psa-service-health',
-  title: 'Alga PSA - Service Health Overview',
-  description: 'High-level service health metrics for Alga PSA application monitoring',
+  title: 'AlgaPSA - Service Health Overview',
+  description: 'High-level service health metrics for AlgaPSA application monitoring',
   tags: ['alga-psa', 'service-health', 'overview'],
   timezone: 'browser',
   refresh: '30s',

@@ -540,7 +540,7 @@ Ceci est un message automatisé. Veuillez ne pas répondre à cet e-mail.`
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Gardons les équipes alignées</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by AlgaPSA • Gardons les équipes alignées</td>
             </tr>
           </table>
         </td>
@@ -640,7 +640,7 @@ Voir le ticket: {{ticket.url}}
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Maintenir les équipes alignées</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by AlgaPSA • Maintenir les équipes alignées</td>
             </tr>
           </table>
         </td>
@@ -740,7 +740,7 @@ Voir le ticket : {{ticket.url}}
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Gardons les équipes alignées</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by AlgaPSA • Gardons les équipes alignées</td>
             </tr>
           </table>
         </td>
@@ -836,7 +836,7 @@ Voir le ticket: {{ticket.url}}
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f0fdf4;color:#047857;font-size:12px;text-align:center;">Powered by Alga PSA • Gardons les équipes alignées</td>
+              <td style="padding:18px 32px;background:#f0fdf4;color:#047857;font-size:12px;text-align:center;">Powered by AlgaPSA • Gardons les équipes alignées</td>
             </tr>
           </table>
         </td>
@@ -935,7 +935,7 @@ Voir le ticket: {{ticket.url}}
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Gardons les équipes alignées</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by AlgaPSA • Gardons les équipes alignées</td>
             </tr>
           </table>
         </td>

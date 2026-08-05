@@ -41,7 +41,7 @@ const COPY = {
     assignedTo: 'Assigned To',
     descriptionLabel: 'Description',
     viewButton: 'View Ticket',
-    footer: 'Powered by Alga PSA &middot; Keeping teams aligned',
+    footer: 'Powered by AlgaPSA &middot; Keeping teams aligned',
     textHeader: 'Your Ticket Has Been Created',
     textDescription: 'Description',
     textView: 'View ticket',
@@ -55,7 +55,7 @@ const COPY = {
     assignedTo: 'Assigné à',
     descriptionLabel: 'Description',
     viewButton: 'Voir le Ticket',
-    footer: 'Powered by Alga PSA &middot; Gardons les équipes alignées',
+    footer: 'Powered by AlgaPSA &middot; Gardons les équipes alignées',
     textHeader: 'Votre ticket a été créé',
     textDescription: 'Description',
     textView: 'Voir le ticket',
@@ -69,7 +69,7 @@ const COPY = {
     assignedTo: 'Asignado a',
     descriptionLabel: 'Descripción',
     viewButton: 'Ver Ticket',
-    footer: 'Powered by Alga PSA &middot; Manteniendo a los equipos alineados',
+    footer: 'Powered by AlgaPSA &middot; Manteniendo a los equipos alineados',
     textHeader: 'Su ticket ha sido creado',
     textDescription: 'Descripción',
     textView: 'Ver ticket',
@@ -83,7 +83,7 @@ const COPY = {
     assignedTo: 'Zugewiesen an',
     descriptionLabel: 'Beschreibung',
     viewButton: 'Ticket Anzeigen',
-    footer: 'Powered by Alga PSA &middot; Teams auf Kurs halten',
+    footer: 'Powered by AlgaPSA &middot; Teams auf Kurs halten',
     textHeader: 'Ihr Ticket wurde erstellt',
     textDescription: 'Beschreibung',
     textView: 'Ticket anzeigen',
@@ -97,7 +97,7 @@ const COPY = {
     assignedTo: 'Toegewezen aan',
     descriptionLabel: 'Beschrijving',
     viewButton: 'Ticket Bekijken',
-    footer: 'Powered by Alga PSA &middot; Teams op één lijn houden',
+    footer: 'Powered by AlgaPSA &middot; Teams op één lijn houden',
     textHeader: 'Uw ticket is aangemaakt',
     textDescription: 'Beschrijving',
     textView: 'Ticket bekijken',
@@ -111,7 +111,7 @@ const COPY = {
     assignedTo: 'Assegnato a',
     descriptionLabel: 'Descrizione',
     viewButton: 'Apri ticket',
-    footer: 'Powered by Alga PSA &middot; Manteniamo i team allineati',
+    footer: 'Powered by AlgaPSA &middot; Manteniamo i team allineati',
     textHeader: 'Il suo ticket è stato creato',
     textDescription: 'Descrizione',
     textView: 'Apri ticket',
@@ -125,7 +125,7 @@ const COPY = {
     assignedTo: 'Przypisane do',
     descriptionLabel: 'Opis',
     viewButton: 'Zobacz zgłoszenie',
-    footer: 'Powered by Alga PSA',
+    footer: 'Powered by AlgaPSA',
     textHeader: 'Twoje zgłoszenie zostało utworzone',
     textDescription: 'Opis',
     textView: 'Zobacz zgłoszenie',
@@ -141,7 +141,7 @@ COPY.pt = {
   assignedTo: 'Atribuído a',
   descriptionLabel: 'Descrição',
   viewButton: 'Ver ticket',
-  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  footer: 'Powered by AlgaPSA &middot; Mantendo as equipes alinhadas',
   textHeader: 'Seu ticket foi criado',
   textDescription: 'Descrição',
   textView: 'Ver ticket',
@@ -172,7 +172,7 @@ function buildBodyHtml(c) {
                 </table>
                 <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:${INFO_BOX_BG};border:1px solid ${INFO_BOX_BORDER};">
                   <div style="font-weight:600;color:${BRAND_DARK};margin-bottom:8px;">${c.descriptionLabel}</div>
-                  <div style="color:#475467;line-height:1.5;">{{ticket.description}}</div>
+                  <div style="color:#475467;line-height:1.5;">{{{ticket.description}}}</div>
                 </div>
                 <a href="{{ticket.url}}" style="display:inline-block;background:${BRAND_PRIMARY};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">${c.viewButton}</a>`;
 }
@@ -187,7 +187,7 @@ ${c.status}: {{ticket.status}}
 ${c.assignedTo}: {{ticket.assignedToName}}
 
 ${c.textDescription}:
-{{ticket.description}}
+{{{ticket.description}}}
 
 ${c.textView}: {{ticket.url}}`;
 }

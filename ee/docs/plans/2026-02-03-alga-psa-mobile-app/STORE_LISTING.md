@@ -5,15 +5,15 @@ Date: `2026-02-03`
 
 ## App name
 
-**Alga PSA**
+**AlgaPSA**
 
 ## Short description
 
-Always-connected ticket triage and updates for Alga PSA technicians.
+Always-connected ticket triage and updates for AlgaPSA technicians.
 
 ## Long description
 
-Alga PSA Mobile helps technicians and service desk staff stay on top of tickets from anywhere.
+AlgaPSA Mobile helps technicians and service desk staff stay on top of tickets from anywhere.
 
 With the Ticketing MVP you can:
 - Sign in securely using your organization’s configured SSO (Microsoft / Google) through the system browser.
@@ -22,7 +22,7 @@ With the Ticketing MVP you can:
 - Post updates (internal or public) and change ticket status.
 - Perform critical actions like assign-to-me, set priority, set due date, and add time entries (where enabled).
 
-This app is intended for existing Alga PSA customers and requires an Alga-hosted environment.
+This app is intended for existing AlgaPSA customers and requires an Alga-hosted environment.
 
 ## Keywords
 

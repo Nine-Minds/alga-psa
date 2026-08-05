@@ -1,4 +1,4 @@
-# Alga PSA Extension System (Enterprise Overview)
+# AlgaPSA Extension System (Enterprise Overview)
 
 This document specifies the Enterprise Edition (EE) extension architecture. It is a v2-only system featuring out-of-process execution, content-addressed signed bundles, a component-model Runner that executes `componentize-js` artifacts, and iframe-only UI delivery served by the Runner.
 

@@ -41,7 +41,7 @@
       "noJobs": "Brak zadań do wydruku",
       "columns": {
         "jobName": "Nazwa zadania",
-        "runner": "Runner",
+        "runner": "Mechanizm uruchamiający",
         "status": "Status",
         "duration": "Czas trwania",
         "started": "Rozpoczęto",

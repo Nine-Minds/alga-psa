@@ -110,7 +110,7 @@ function generateTaskAssignedHtml(t, isPrimary) {
           </td>
         </tr>
         <tr>
-          <td style="padding:18px 32px;background:${footerBg};color:${footerColor};font-size:12px;text-align:center;">Powered by Alga PSA</td>
+          <td style="padding:18px 32px;background:${footerBg};color:${footerColor};font-size:12px;text-align:center;">Powered by AlgaPSA</td>
         </tr>
       </table>
     </td>

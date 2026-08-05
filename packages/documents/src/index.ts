@@ -1,7 +1,7 @@
 /**
  * @alga-psa/documents
  *
- * Document management module for Alga PSA.
+ * Document management module for AlgaPSA.
  * Provides document storage, handlers, and templates.
  */
 

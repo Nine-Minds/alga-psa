@@ -104,7 +104,7 @@
       "ticketRouting": {
         "title": "Configuratie ticketrouting",
         "board": "Bord",
-        "boardPlaceholder": "Board selecteren",
+        "boardPlaceholder": "Selecteer een bord",
         "status": "Status",
         "statusPlaceholder": "Status selecteren",
         "assignedUser": "Toegewezen gebruiker",
@@ -219,7 +219,7 @@
     "mail": "E-mail",
     "phone": "Telefoon",
     "folder-open": "Gedeelde bestanden",
-    "badge-help": "Help",
+    "badge-help": "Hulp",
     "clear": "Pictogram wissen"
   },
   "messages": {

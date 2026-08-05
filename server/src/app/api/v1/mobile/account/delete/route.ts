@@ -118,7 +118,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       // Mobile client shows this message after deletion so the user knows to
       // cancel their Apple subscription themselves.
       subscriptionCancellationInstructions:
-        'To stop future Apple charges, open the Settings app on your iPhone → tap your name → Subscriptions → Alga PSA → Cancel Subscription.',
+        'To stop future Apple charges, open the Settings app on your iPhone → tap your name → Subscriptions → AlgaPSA → Cancel Subscription.',
     }), apiRequest);
   } catch (error) {
     return handleApiError(error);

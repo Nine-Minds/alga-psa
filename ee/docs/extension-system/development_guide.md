@@ -1,6 +1,6 @@
-# Alga PSA Extension Development Guide (Runner + Iframe UI)
+# AlgaPSA Extension Development Guide (Runner + Iframe UI)
 
-This guide describes how to build Enterprise Edition (v2) extensions for Alga PSA:
+This guide describes how to build Enterprise Edition (v2) extensions for AlgaPSA:
 - Server-side handlers execute out-of-process in the Runner as Wasmtime **components** produced by `componentize-js`
 - UI is rendered exclusively in sandboxed iframes
 - Bundles are signed and content-addressed (sha256:...) and validated by the Registry

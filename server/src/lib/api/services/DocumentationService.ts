@@ -51,7 +51,7 @@ export class DocumentationService {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Alga PSA API Documentation</title>
+  <title>AlgaPSA API Documentation</title>
   <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
   <style>
@@ -277,7 +277,7 @@ export class DocumentationService {
 <body>
   <!-- Header -->
   <div class="api-header">
-    <h1>🚀 Alga PSA API</h1>
+    <h1>🚀 AlgaPSA API</h1>
     <p>Comprehensive Professional Services Automation API with full REST Level 3 HATEOAS support</p>
   </div>
 
@@ -295,8 +295,8 @@ export class DocumentationService {
   <!-- Overview Tab -->
   <div id="overview" class="doc-content active">
     <div class="quick-start">
-      <h2>🌟 Welcome to Alga PSA API</h2>
-      <p>The Alga PSA API is a comprehensive REST API that follows <strong>Level 3 REST maturity</strong> with full HATEOAS (Hypermedia as the Engine of Application State) support. This means our API is fully self-discoverable and provides hypermedia links in all responses.</p>
+      <h2>🌟 Welcome to AlgaPSA API</h2>
+      <p>The AlgaPSA API is a comprehensive REST API that follows <strong>Level 3 REST maturity</strong> with full HATEOAS (Hypermedia as the Engine of Application State) support. This means our API is fully self-discoverable and provides hypermedia links in all responses.</p>
       
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0;">
         <div class="step">
@@ -331,7 +331,7 @@ export class DocumentationService {
   <div id="quickstart" class="doc-content">
     <div class="quick-start">
       <h2>⚡ Quick Start Guide</h2>
-      <p>Get up and running with the Alga PSA API in minutes!</p>
+      <p>Get up and running with the AlgaPSA API in minutes!</p>
 
       <div class="step">
         <span class="step-number">1</span>
@@ -398,7 +398,7 @@ print(data)</code></pre>
   <div id="authentication" class="doc-content">
     <div class="quick-start">
       <h2>🔐 Authentication</h2>
-      <p>The Alga PSA API uses API keys for authentication. Include your API key in the <code>X-API-Key</code> header with every request.</p>
+      <p>The AlgaPSA API uses API keys for authentication. Include your API key in the <code>X-API-Key</code> header with every request.</p>
 
       <h3>📋 Authentication Methods</h3>
       <div class="step">
@@ -433,7 +433,7 @@ print(data)</code></pre>
   <div id="webhooks" class="doc-content">
     <div class="quick-start">
       <h2>🔗 Webhooks</h2>
-      <p>Set up real-time notifications for events in your Alga PSA system.</p>
+      <p>Set up real-time notifications for events in your AlgaPSA system.</p>
 
       <h3>📡 Available Events</h3>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
@@ -487,7 +487,7 @@ print(data)</code></pre>
   <div id="sdk" class="doc-content">
     <div class="quick-start">
       <h2>⚙️ Official SDKs</h2>
-      <p>Use our official SDKs to integrate with the Alga PSA API more easily.</p>
+      <p>Use our official SDKs to integrate with the AlgaPSA API more easily.</p>
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
         <div class="step">
@@ -864,11 +864,11 @@ const team = await response.json();`
       {
         id: 'getting-started',
         title: 'Getting Started',
-        description: 'Learn the basics of the Alga PSA API',
+        description: 'Learn the basics of the AlgaPSA API',
         content: `
-# Getting Started with Alga PSA API
+# Getting Started with AlgaPSA API
 
-The Alga PSA API is designed with REST Level 3 maturity, featuring full HATEOAS support. This means every response includes hypermedia links that guide you to related resources and available actions.
+The AlgaPSA API is designed with REST Level 3 maturity, featuring full HATEOAS support. This means every response includes hypermedia links that guide you to related resources and available actions.
 
 ## Key Concepts
 

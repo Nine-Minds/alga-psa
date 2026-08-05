@@ -2,7 +2,7 @@
 
 ## Overview
 
-The tenant onboarding process is a fully automated workflow that provisions new tenants in the Alga PSA system. This process uses Temporal workflows to ensure reliability, consistency, and proper error handling throughout the tenant creation process.
+The tenant onboarding process is a fully automated workflow that provisions new tenants in the AlgaPSA system. This process uses Temporal workflows to ensure reliability, consistency, and proper error handling throughout the tenant creation process.
 
 ## Architecture
 

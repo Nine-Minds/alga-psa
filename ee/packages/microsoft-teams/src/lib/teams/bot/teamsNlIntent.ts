@@ -134,7 +134,7 @@ function buildNlSystemPrompt(availableActions: TeamsNlAvailableAction[]): string
     .join('\n');
 
   return [
-    'You map a technician\'s free-text Microsoft Teams message to exactly one Alga PSA action.',
+    'You map a technician\'s free-text Microsoft Teams message to exactly one AlgaPSA action.',
     'You may ONLY choose an actionId from this list (nothing else is permitted):',
     catalogue || '(no actions are available to this user)',
     '',

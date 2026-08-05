@@ -6,7 +6,7 @@ product
 
 ## Users
 
-Alga PSA serves two primary product audiences:
+AlgaPSA serves two primary product audiences:
 
 - MSP owners and operators working in the `/msp` area, managing service delivery, client relationships, billing, projects, assets, tickets, automations, and business performance.
 - MSP customers working in the `/client` area, checking tickets, projects, billing, assets, documents, appointments, and service progress without needing to understand internal MSP complexity.
@@ -15,7 +15,7 @@ Both groups need a product that feels fast, organized, and trustworthy during re
 
 ## Product Purpose
 
-Alga PSA is an open-source Professional Services Automation platform for Managed Service Providers. It exists to help MSPs run daily operations across support, billing, client management, projects, time tracking, assets, documents, reporting, and workflow automation.
+AlgaPSA is an open-source Professional Services Automation platform for Managed Service Providers. It exists to help MSPs run daily operations across support, billing, client management, projects, time tracking, assets, documents, reporting, and workflow automation.
 
 Success means users can move from signal to action with minimal friction: resolve tickets, track time, approve billing, understand project status, manage clients, and automate repeated work without feeling buried in legacy enterprise clutter.
 

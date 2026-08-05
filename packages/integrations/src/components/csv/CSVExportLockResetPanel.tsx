@@ -145,8 +145,8 @@ export function CSVExportLockResetPanel() {
           <div className="space-y-4">
             <p className="text-sm text-foreground">
               {mode === 'batch'
-                ? t('integrations.csv.export.lockReset.dialog.confirmBatch', { defaultValue: 'This will allow Alga PSA to export invoices from batch {{batchId}} again. If any of these invoices still exist in QuickBooks, importing the CSV may create duplicates.', batchId: batchId.trim() })
-                : t('integrations.csv.export.lockReset.dialog.confirmInvoice', { defaultValue: 'This will allow Alga PSA to export invoice {{invoiceNumber}} again. If this invoice still exists in QuickBooks, importing the CSV may create duplicates.', invoiceNumber: invoiceNumber.trim() })}
+                ? t('integrations.csv.export.lockReset.dialog.confirmBatch', { defaultValue: 'This will allow AlgaPSA to export invoices from batch {{batchId}} again. If any of these invoices still exist in QuickBooks, importing the CSV may create duplicates.', batchId: batchId.trim() })
+                : t('integrations.csv.export.lockReset.dialog.confirmInvoice', { defaultValue: 'This will allow AlgaPSA to export invoice {{invoiceNumber}} again. If this invoice still exists in QuickBooks, importing the CSV may create duplicates.', invoiceNumber: invoiceNumber.trim() })}
             </p>
             <Alert variant="warning">
               <AlertDescription>

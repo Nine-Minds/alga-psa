@@ -115,8 +115,8 @@
           "dialog": {
             "cancel": "Cancel",
             "confirm": "Reset lock",
-            "confirmBatch": "This will allow Alga PSA to export invoices from batch {{batchId}} again. If any of these invoices still exist in QuickBooks, importing the CSV may create duplicates.",
-            "confirmInvoice": "This will allow Alga PSA to export invoice {{invoiceNumber}} again. If this invoice still exists in QuickBooks, importing the CSV may create duplicates.",
+            "confirmBatch": "This will allow AlgaPSA to export invoices from batch {{batchId}} again. If any of these invoices still exist in QuickBooks, importing the CSV may create duplicates.",
+            "confirmInvoice": "This will allow AlgaPSA to export invoice {{invoiceNumber}} again. If this invoice still exists in QuickBooks, importing the CSV may create duplicates.",
             "resetting": "Resetting…",
             "title": "Reset export lock?",
             "warning": "Only proceed if you are sure the invoice was not imported, or you deleted/voided it in QuickBooks."
@@ -313,7 +313,7 @@
           "title": "Import Tax from CSV",
           "xeroCsvDescription": "The exported CSV includes Invoice Number, Contact Name, Line Amount, Tax Amount, and tracking categories.",
           "xeroHelp": {
-            "note": "Note: Only invoices originally exported from Alga PSA (with Source System = AlgaPSA tracking) will be matched.",
+            "note": "Note: Only invoices originally exported from AlgaPSA (with Source System = AlgaPSA tracking) will be matched.",
             "s1": "In Xero, go to Sales > Invoices",
             "s2": "Select the invoice tab you want to export from (e.g., Paid, Awaiting Payment)",
             "s3": "(Optional) Click Search to filter by Start date, End date, or Date type",
@@ -559,22 +559,22 @@
         },
         "schedule": {
           "cadence": {
-            "10080": "every week",
-            "1440": "every day",
-            "240": "every 4 hours",
             "60": "every hour",
-            "720": "every 12 hours"
+            "240": "every 4 hours",
+            "720": "every 12 hours",
+            "1440": "every day",
+            "10080": "every week"
           },
           "changeAction": "Change schedule",
           "description": "When on, Alga syncs every mapped client on this cadence. Turning it off stops scheduled runs; you can still sync by hand.",
           "enablePrompt": "The pilot succeeded. Turn on automatic sync to keep contacts in step without running it by hand.",
           "intervalLabel": "Run every",
           "intervals": {
-            "10080": "Week",
-            "1440": "Day",
-            "240": "4 hours",
             "60": "Hour",
-            "720": "12 hours"
+            "240": "4 hours",
+            "720": "12 hours",
+            "1440": "Day",
+            "10080": "Week"
           },
           "pause": "Pause",
           "pauseHint": "Paused. Save to apply.",
@@ -1532,7 +1532,7 @@
           "working": "Working…"
         },
         "automated": {
-          "description": "Alga PSA registers a dedicated Entra app automatically. Sign in as a Microsoft 365 administrator.",
+          "description": "AlgaPSA registers a dedicated Entra app automatically. Sign in as a Microsoft 365 administrator.",
           "title": "Create an app in your Microsoft organization"
         },
         "callbackUri": "Mailbox callback URI",
@@ -1551,7 +1551,7 @@
           "urlLabel": "Consent URL"
         },
         "copied": "{{label}} copied",
-        "description": "Choose how Alga PSA connects to Microsoft. You will connect mailboxes separately.",
+        "description": "Choose how AlgaPSA connects to Microsoft. You will connect mailboxes separately.",
         "errors": {
           "automated": "Could not start automated Microsoft app creation.",
           "generic": "Microsoft Email setup did not complete.",
@@ -1563,7 +1563,14 @@
           "popupClosed": "The Microsoft window was closed before setup finished. Try again or choose another setup option.",
           "tenantRequired": "Enter your Microsoft tenant ID or verified domain.",
           "pendingProfileMissing": "The pending Microsoft app could not be found.",
-          "approvalLink": "Could not create the Microsoft approval link."
+          "approvalLink": "Could not create the Microsoft approval link.",
+          "consentDenied": "Microsoft sign-in or administrator consent was denied. Choose another setup option or try again.",
+          "consentNotGranted": "Microsoft did not confirm administrator consent.",
+          "consentPersistFailed": "Failed to record Microsoft administrator consent.",
+          "invalidState": "This Microsoft setup request is invalid or expired. Start again from Providers settings.",
+          "microsoftError": "Microsoft could not complete the setup request. Try again or use manual setup.",
+          "missingCode": "Microsoft did not return an authorization code. Start setup again.",
+          "sessionMismatch": "Your AlgaPSA session does not match the administrator who started this setup. Sign in and try again."
         },
         "fields": {
           "clientId": "Client ID",
@@ -1579,7 +1586,7 @@
         },
         "platform": {
           "description": "Nothing to register in Microsoft Entra. Your Microsoft 365 administrator approves access.",
-          "title": "Use the app provided by Alga PSA"
+          "title": "Use the app provided by AlgaPSA"
         },
         "title": "Set up Microsoft",
         "unavailable": "Unavailable",
@@ -1590,11 +1597,11 @@
         "advanced": {
           "title": "Manual Microsoft apps (advanced)",
           "description": "Create and manage Entra app registrations maintained by your organization.",
-          "warning": "A custom Entra app is normally unnecessary on hosted Alga PSA. Continue only when your organization deliberately requires its own application and credentials."
+          "warning": "A custom Entra app is normally unnecessary on hosted AlgaPSA. Continue only when your organization deliberately requires its own application and credentials."
         },
         "platform": {
           "title": "Microsoft email is ready to connect",
-          "description": "Connect Microsoft 365 with the application supplied by Alga PSA. No Entra app registration is required.",
+          "description": "Connect Microsoft 365 with the application supplied by AlgaPSA. No Entra app registration is required.",
           "readyDescription": "The Microsoft app is approved and ready for mailbox sign-in.",
           "connectAction": "Connect a mailbox →",
           "unavailableTitle": "Platform Microsoft credentials are unavailable",
@@ -1877,7 +1884,7 @@
           "load": "Failed to load QuickBooks settings.",
           "saveCredentials": "Failed to save QuickBooks credentials."
         },
-        "howItWorksDescription": "Save QuickBooks app credentials here, complete the Intuit OAuth flow, and Alga PSA will use the connected QuickBooks company as the default live context for exports and mappings.",
+        "howItWorksDescription": "Save QuickBooks app credentials here, complete the Intuit OAuth flow, and AlgaPSA will use the connected QuickBooks company as the default live context for exports and mappings.",
         "howItWorksTitle": "How live QuickBooks works in this release",
         "loading": "Loading QuickBooks settings…",
         "mapping": {
@@ -1970,7 +1977,7 @@
             "navigate": "Navigate to Administration → Apps → API",
             "addClient": "Click \"+ Add client app\" to create a new API application",
             "platform": "Set Application Platform to \"Web (PHP, Java, .Net Core, etc.)\"",
-            "name": "Enter a Name (e.g., \"Alga PSA\")",
+            "name": "Enter a Name (e.g., \"AlgaPSA\")",
             "redirectUri": "Add the redirect URI:",
             "scopes": "Under \"Scopes\", check \"Monitoring\" and \"Management\"",
             "grantTypes": "Under \"Allowed grant types\", check \"Authorization code\", \"Client credentials\", and \"Refresh token\"",
@@ -2393,7 +2400,57 @@
           "load": "Failed to load organization mappings",
           "sync": "Sync failed",
           "updateMapping": "Failed to update mapping",
-          "updateContact": "Failed to update default contact"
+          "updateContact": "Failed to update default contact",
+          "loadStatus": "Failed to load Huntress integration status",
+          "connect": "Connection failed",
+          "saveSettings": "Failed to save settings",
+          "poll": "Poll failed"
+        },
+        "loadingIntegration": "Loading Huntress integration…",
+        "connect": {
+          "title": "Connect Huntress",
+          "description": "Generate API credentials at <your-account>.huntress.io → API Credentials, then paste them here. SOC-reviewed incident reports will become tickets automatically.",
+          "apiKeyPlaceholder": "API Key",
+          "apiSecretPlaceholder": "API Secret Key",
+          "submit": "Connect",
+          "connecting": "Connecting…"
+        },
+        "connection": {
+          "title": "Connected to {{account}}",
+          "summary": "{{organizations}} organizations ({{unmapped}} unmapped) · {{openIncidents}} open incidents · last poll: {{lastPoll}}",
+          "neverPolled": "never",
+          "lastPollFailed": "Last poll failed: {{error}}",
+          "routingIncompleteWarning": "Incident polling is paused until the routing configuration below is complete (board, fallback client/board, and all three severity priorities).",
+          "pollNow": "Poll now",
+          "disconnect": "Disconnect",
+          "disconnectConfirm": "Disconnect Huntress? Existing tickets and mappings are kept."
+        },
+        "routing": {
+          "title": "Ticket Routing",
+          "description": "Where incident tickets land. Unmapped Huntress organizations always create tickets on the fallback client and triage board — nothing is dropped.",
+          "securityBoard": "Security board",
+          "selectBoard": "Select board",
+          "category": "Category (optional)",
+          "noCategory": "None",
+          "fallbackClient": "Fallback client",
+          "fallbackBoard": "Fallback (triage) board",
+          "criticalSeverity": "Critical severity →",
+          "highSeverity": "High severity →",
+          "lowSeverity": "Low severity →",
+          "selectPriority": "Priority",
+          "pollInterval": "Poll interval (minutes)",
+          "autoClose": "Close tickets when Huntress closes the incident",
+          "closedStatus": "Closed status",
+          "selectStatus": "Select status",
+          "save": "Save routing configuration",
+          "saving": "Saving…"
+        },
+        "messages": {
+          "connected": "Connected to Huntress account \"{{account}}\". Complete the routing configuration below to start ticket creation.",
+          "routingSaved": "Routing configuration saved — incident polling is active.",
+          "routingIncomplete": "Saved, but routing is still incomplete; polling stays paused until every field below is set.",
+          "pollFinished": "Poll finished: {{count}} incident(s) processed.",
+          "disconnected": "Huntress disconnected."
         }
       },
       "ninjaone": {
@@ -2711,7 +2768,7 @@
             "capabilityDisabled": "Enable the personal bot capability before sending a test message.",
             "botNotConfigured": "Configure the Teams bot credentials before sending a test message.",
             "missingUserLinkage": "Link your Microsoft account before sending a Teams test message.",
-            "missingConversationReference": "Open the Alga PSA bot in Teams and send it any message first, then retry.",
+            "missingConversationReference": "Open the AlgaPSA bot in Teams and send it any message first, then retry.",
             "skipped": "Teams test message was skipped."
           },
           "steps": {
@@ -2734,12 +2791,12 @@
             "activeProfile": "Select an active Microsoft profile for Teams.",
             "profileCredentials": "Complete Microsoft profile credentials before activating Teams.",
             "meetingOrganizer": "Configure the default Teams meeting organizer in Teams settings.",
-            "meetingOrganizerObjectId": "Save the default Teams meeting organizer again so Alga PSA can resolve its Microsoft Entra object id.",
+            "meetingOrganizerObjectId": "Save the default Teams meeting organizer again so AlgaPSA can resolve its Microsoft Entra object id.",
             "package": "Generate the Teams app package before running end-to-end validation.",
             "baseUrl": "Regenerate the Teams package with a reachable base URL.",
             "botEnv": "Configure TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID, and TEAMS_BOT_APP_PASSWORD.",
             "userLinkage": "Link your Microsoft account in your profile settings.",
-            "conversationReference": "Open the Alga PSA bot in Teams and send it any message first, then retry.",
+            "conversationReference": "Open the AlgaPSA bot in Teams and send it any message first, then retry.",
             "deliveryFailure": "Review the most recent Teams delivery failure and retry after correcting the cause."
           }
         },
@@ -2914,7 +2971,7 @@
               "remedy": "Grant admin consent for the required Graph permissions (for example TeamsActivity.Send) in the Azure app registration."
             },
             "user_not_mapped": {
-              "cause": "The recipient has not signed in to Alga PSA with Microsoft, so no account mapping exists.",
+              "cause": "The recipient has not signed in to AlgaPSA with Microsoft, so no account mapping exists.",
               "remedy": "Have the user sign in with Microsoft (MSP portal SSO or the Teams tab) so their account is mapped."
             },
             "addon_inactive": {
@@ -2931,15 +2988,15 @@
             },
             "graph_not_found": {
               "cause": "The Teams app is not installed for the recipient, so Microsoft Graph cannot target them (404).",
-              "remedy": "Install or org-allow the Alga PSA app for that user."
+              "remedy": "Install or org-allow the AlgaPSA app for that user."
             },
             "graph_throttled": {
               "cause": "Microsoft Graph throttled the request (429).",
-              "remedy": "Transient; Alga PSA retries with backoff. Investigate only if it persists."
+              "remedy": "Transient; AlgaPSA retries with backoff. Investigate only if it persists."
             },
             "graph_server_error": {
               "cause": "Microsoft Graph returned a server error (5xx).",
-              "remedy": "Transient Graph outage; Alga PSA retries. Wait and check Microsoft service health if it persists."
+              "remedy": "Transient Graph outage; AlgaPSA retries. Wait and check Microsoft service health if it persists."
             },
             "transient": {
               "cause": "A temporary failure (network or timeout) interrupted delivery.",
@@ -2956,7 +3013,7 @@
           "description": "The Microsoft Teams integration requires the Teams add-on for this tenant.",
           "includedTitle": "What's included",
           "feature": {
-            "tab": "Personal tab: open Alga PSA inside Microsoft Teams.",
+            "tab": "Personal tab: open AlgaPSA inside Microsoft Teams.",
             "bot": "Personal and group-chat bot for tickets, approvals, time, and notes.",
             "messageExtension": "Message extension and quick actions to act on PSA records from any message.",
             "meetings": "Teams meetings on appointment approvals with real Outlook/Teams calendar invites.",
@@ -3173,7 +3230,7 @@
           "load": "Failed to load Xero settings.",
           "saveCredentials": "Failed to save Xero credentials."
         },
-        "howItWorksDescription": "Save a tenant-owned Xero client ID and client secret here, complete the Xero OAuth flow, and Alga PSA will use the first connected Xero organisation as the default live context.",
+        "howItWorksDescription": "Save a tenant-owned Xero client ID and client secret here, complete the Xero OAuth flow, and AlgaPSA will use the first connected Xero organisation as the default live context.",
         "howItWorksTitle": "How live Xero works in this release",
         "loading": "Loading Xero settings…",
         "mapping": {
@@ -3223,7 +3280,7 @@
       "webhook": {
         "heading": "Webhook Configuration",
         "configuredAutomatically": "Webhooks configured automatically",
-        "receiveNotifications": "Alga PSA will receive payment notifications for:",
+        "receiveNotifications": "AlgaPSA will receive payment notifications for:",
         "failedTitle": "Webhook configuration failed",
         "failedBody": "Automatic webhook configuration failed. Click retry to attempt configuration again.",
         "configuring": "Configuring...",

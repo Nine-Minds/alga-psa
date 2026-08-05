@@ -431,7 +431,7 @@ describe('Teams diagnostics test message action', () => {
     await expect(send()).resolves.toMatchObject({
       status: 'skipped',
       reason: 'missing_conversation_reference',
-      detail: 'Open the Alga PSA bot in Teams and send it any message first, then retry.',
+      detail: 'Open the AlgaPSA bot in Teams and send it any message first, then retry.',
     });
   });
 
@@ -446,11 +446,11 @@ describe('Teams diagnostics test message action', () => {
       conversationId: 'conversation-1',
       activity: expect.objectContaining({
         type: 'message',
-        text: 'Alga PSA Teams test message',
+        text: 'AlgaPSA Teams test message',
         attachments: [
           expect.objectContaining({
             content: expect.objectContaining({
-              title: 'Alga PSA Teams test message',
+              title: 'AlgaPSA Teams test message',
             }),
           }),
         ],
@@ -822,7 +822,7 @@ describe('Teams diagnostics report action', () => {
     const report = await diagnose();
     expect(report.steps.find((step) => step.id === 'conversation_reference')).toMatchObject({
       status: 'warn',
-      detail: 'Open the Alga PSA bot in Teams and send it any message first, then retry.',
+      detail: 'Open the AlgaPSA bot in Teams and send it any message first, then retry.',
     });
   });
 

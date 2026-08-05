@@ -246,7 +246,7 @@ function getTestMessageResultText(result: TeamsTestMessageResult, t: TranslateFn
     case 'missing_user_linkage':
       return t('integrations.teams.settings.diagnostics.test.missingUserLinkage', { defaultValue: 'Link your Microsoft account before sending a Teams test message.' });
     case 'missing_conversation_reference':
-      return t('integrations.teams.settings.diagnostics.test.missingConversationReference', { defaultValue: 'Open the Alga PSA bot in Teams and send it any message first, then retry.' });
+      return t('integrations.teams.settings.diagnostics.test.missingConversationReference', { defaultValue: 'Open the AlgaPSA bot in Teams and send it any message first, then retry.' });
     default:
       return result.detail || t('integrations.teams.settings.diagnostics.test.skipped', { defaultValue: 'Teams test message was skipped.' });
   }
@@ -295,7 +295,7 @@ function getDiagnosticsRecommendationText(recommendation: string, t: TranslateFn
       return t('integrations.teams.settings.diagnostics.recommendation.profileCredentials', { defaultValue: recommendation });
     case 'Configure the default Teams meeting organizer in Teams settings.':
       return t('integrations.teams.settings.diagnostics.recommendation.meetingOrganizer', { defaultValue: recommendation });
-    case 'Save the default Teams meeting organizer again so Alga PSA can resolve its Microsoft Entra object id.':
+    case 'Save the default Teams meeting organizer again so AlgaPSA can resolve its Microsoft Entra object id.':
       return t('integrations.teams.settings.diagnostics.recommendation.meetingOrganizerObjectId', { defaultValue: recommendation });
     case 'Generate the Teams app package before running end-to-end validation.':
       return t('integrations.teams.settings.diagnostics.recommendation.package', { defaultValue: recommendation });
@@ -305,7 +305,7 @@ function getDiagnosticsRecommendationText(recommendation: string, t: TranslateFn
       return t('integrations.teams.settings.diagnostics.recommendation.botEnv', { defaultValue: recommendation });
     case 'Link your Microsoft account in your profile settings.':
       return t('integrations.teams.settings.diagnostics.recommendation.userLinkage', { defaultValue: recommendation });
-    case 'Open the Alga PSA bot in Teams and send it any message first, then retry.':
+    case 'Open the AlgaPSA bot in Teams and send it any message first, then retry.':
       return t('integrations.teams.settings.diagnostics.recommendation.conversationReference', { defaultValue: recommendation });
     case 'Review the most recent Teams delivery failure and retry after correcting the cause.':
       return t('integrations.teams.settings.diagnostics.recommendation.deliveryFailure', { defaultValue: recommendation });

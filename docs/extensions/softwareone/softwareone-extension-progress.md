@@ -1,4 +1,4 @@
-# SoftwareOne ↔ Alga PSA Extension
+# SoftwareOne ↔ AlgaPSA Extension
 
 Expanded Functional Specification & End‑to‑end Implementation Plan (v2.0 - Descriptor Architecture)
 
@@ -98,7 +98,7 @@ export default {
 ## 1. Scope recap
 
 Topic    Goal
-Purpose    Allow MSPs that use Alga PSA to see, activate and bill SoftwareOne agreements & statements without leaving Alga.
+Purpose    Allow MSPs that use AlgaPSA to see, activate and bill SoftwareOne agreements & statements without leaving Alga.
 MVP target    Read‑only listing + detail views, manual "Activate Agreement", push agreements into Alga Billing.
 Stretch    Editable local‑markup, self‑service exposure to customer portal, scheduled auto‑sync.
 
@@ -516,7 +516,7 @@ Stored verbatim JSON from SoftwareOne under storage.set('swone/raw/agreements', 
   "id": "com.alga.softwareone",
   "name": "SoftwareOne Integration",
   "version": "0.1.0",
-  "description": "Browse & bill SoftwareOne agreements inside Alga PSA",
+  "description": "Browse & bill SoftwareOne agreements inside AlgaPSA",
   "minAppVersion": "1.5.0",
   "main": "dist/index.js",
   "permissions": {
@@ -2017,7 +2017,7 @@ export function useAgreementActivation() {
     - Backup procedures
 - [ ] Integration Documentation
   - `/extensions/softwareone-ext/docs/INTEGRATION.md`
-    - Alga PSA integration points
+    - AlgaPSA integration points
     - Webhook configuration
     - API authentication
     - Data flow diagrams

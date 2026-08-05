@@ -1,4 +1,4 @@
-# PRD — Alga PSA n8n Ticket Node CRUD
+# PRD — AlgaPSA n8n Ticket Node CRUD
 
 - Slug: `n8n-ticket-node-crud`
 - Date: `2026-02-16`
@@ -6,7 +6,7 @@
 
 ## Summary
 
-Build and publish a new npm-distributed n8n community node package for Alga PSA with a single `Alga PSA` node that supports ticket CRUD, ticket comments, and helper lookup operations.
+Build and publish a new npm-distributed n8n community node package for AlgaPSA with a single `AlgaPSA` node that supports ticket CRUD, ticket comments, and helper lookup operations.
 
 The v1 node will use one credential (`baseUrl` + `apiKey`) and expose:
 
@@ -16,12 +16,12 @@ The v1 node will use one credential (`baseUrl` + `apiKey`) and expose:
 
 ## Problem
 
-Alga PSA users who want automation in n8n currently need to use generic HTTP Request nodes, manually model request payloads, and discover IDs for required ticket fields. This is error-prone and slows down workflow creation.
+AlgaPSA users who want automation in n8n currently need to use generic HTTP Request nodes, manually model request payloads, and discover IDs for required ticket fields. This is error-prone and slows down workflow creation.
 
 ## Goals
 
-1. Provide a first-party-feeling `Alga PSA` n8n node for ticket CRUD operations.
-2. Make the package installable by Alga PSA users via npm without requiring n8n community-portal verification.
+1. Provide a first-party-feeling `AlgaPSA` n8n node for ticket CRUD operations.
+2. Make the package installable by AlgaPSA users via npm without requiring n8n community-portal verification.
 3. Minimize setup friction with a single credential and dynamic lookup dropdowns.
 4. Support real-world ticket workflow patterns by including status and assignment update operations.
 5. Support common ticket collaboration workflows by allowing comment creation and comment retrieval on existing tickets.
@@ -40,12 +40,12 @@ Alga PSA users who want automation in n8n currently need to use generic HTTP Req
 Primary users:
 
 - MSP operators and automation engineers running self-hosted n8n.
-- Alga PSA admins creating internal workflow automations.
+- AlgaPSA admins creating internal workflow automations.
 
 Primary flows:
 
 1. Install package from npm on self-hosted n8n and restart n8n.
-2. Add `Alga PSA` credential (`baseUrl`, `apiKey`).
+2. Add `AlgaPSA` credential (`baseUrl`, `apiKey`).
 3. Build workflow with `Ticket -> Create` using dropdown-selected client/board/status/priority.
 4. Build workflow with `Ticket -> List/Search` then branch to `Update Status` or `Update Assignment`.
 5. Build workflow with `Ticket -> Add Comment` to append automation notes or customer-facing updates to an existing ticket.
@@ -54,12 +54,12 @@ Primary flows:
 
 ## UX / UI Notes
 
-- One node name: `Alga PSA`.
+- One node name: `AlgaPSA`.
 - Resource-first UX: `Ticket`, `Client`, `Board`, `Status`, `Priority`.
 - Operation list should only show operations valid for selected resource.
 - Ticket create/update forms should prioritize commonly-used fields and group optional fields under additional options.
 - Ticket comment operations should remain under the `Ticket` resource rather than introducing a separate comment resource.
-- `Add Comment` should only expose fields that Alga PSA currently persists (`comment_text`, optional `is_internal`) and must not expose stale fields that are ignored server-side.
+- `Add Comment` should only expose fields that AlgaPSA currently persists (`comment_text`, optional `is_internal`) and must not expose stale fields that are ignored server-side.
 - Dropdown-backed fields must still allow manual UUID entry when lookup calls fail.
 - Error messages should preserve Alga API details (`error.code`, `error.message`, `error.details`) in n8n-friendly format.
 
@@ -84,7 +84,7 @@ Primary flows:
 13. Implement `Ticket -> Add Comment` mapped to `POST /api/v1/tickets/{id}/comments`.
 14. `Ticket -> Add Comment` must send `comment_text` and may optionally send `is_internal`.
 15. `Ticket -> List Comments` must expose optional `limit`, `offset`, and `order` query parameters matching the existing API contract.
-16. Do not expose `time_spent` in the n8n node because the current Alga PSA ticket comment implementation does not persist or consume it.
+16. Do not expose `time_spent` in the n8n node because the current AlgaPSA ticket comment implementation does not persist or consume it.
 17. Implement helper resources:
   - `Client -> List` -> `GET /api/v1/clients`
   - `Board -> List` -> `GET /api/v1/boards`
@@ -173,8 +173,8 @@ Auth model:
 4. Ticket list/search operations return structured outputs usable by downstream n8n nodes.
 5. Required ticket reference fields are selectable via dynamic dropdowns with manual UUID fallback.
 6. Helper list operations for clients/boards/statuses/priorities are available and functional.
-7. Ticket comment list/add operations execute successfully against the existing Alga PSA ticket comment APIs.
-8. `Add Comment` only exposes fields backed by current Alga PSA behavior and does not present unsupported `time_spent` UI.
+7. Ticket comment list/add operations execute successfully against the existing AlgaPSA ticket comment APIs.
+8. `Add Comment` only exposes fields backed by current AlgaPSA behavior and does not present unsupported `time_spent` UI.
 9. Error handling exposes actionable API error details in n8n execution output.
 10. Delete operation returns a usable success payload for downstream workflow steps.
 11. README includes installation and usage guidance for Alga users, including self-hosted limitation notes.

@@ -51,7 +51,7 @@
     "transfer": "Übertragen"
   },
   "settings": {
-    "loadErrorPrefix": "Error loading credit expiration settings:",
+    "loadErrorPrefix": "Fehler beim Laden der Einstellungen für den Gutschriftenablauf:",
     "captionEnabled": "Gutschriftablauf: {{days}} Tage",
     "captionDisabled": "Gutschriftablauf: aus",
     "captionReminders": "Erinnerungen {{reminders}} Tage vorher",

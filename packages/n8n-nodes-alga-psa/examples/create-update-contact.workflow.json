@@ -1,5 +1,5 @@
 {
-  "name": "Alga PSA - Create then Update Contact",
+  "name": "AlgaPSA - Create then Update Contact",
   "nodes": [
     {
       "parameters": {
@@ -29,7 +29,7 @@
       "credentials": {
         "algaPsaApi": {
           "id": "1",
-          "name": "Alga PSA API"
+          "name": "AlgaPSA API"
         }
       }
     },
@@ -54,7 +54,7 @@
       "credentials": {
         "algaPsaApi": {
           "id": "1",
-          "name": "Alga PSA API"
+          "name": "AlgaPSA API"
         }
       }
     }

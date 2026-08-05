@@ -35,7 +35,7 @@
       "addClient": "Aggiungi cliente",
       "clientContact": "Contatto cliente",
       "billing": "Fatturazione",
-      "ticketing": "Ticketing",
+      "ticketing": "Gestione ticket",
       "algadeskWorkspace": "Area di lavoro"
     },
     "errors": {
@@ -96,7 +96,7 @@
     "fields": {
       "clientName": {
         "label": "Nome cliente",
-        "placeholder": "Example Corp"
+        "placeholder": "Azienda esempio"
       },
       "clientEmail": {
         "label": "Email cliente",
@@ -266,7 +266,7 @@
     "fields": {
       "contactName": {
         "label": "Nome contatto",
-        "placeholder": "John Smith"
+        "placeholder": "Mario Rossi"
       },
       "contactEmail": {
         "label": "Email contatto",
@@ -293,7 +293,7 @@
       "fields": {
         "companyName": {
           "label": "Nome azienda",
-          "placeholder": "Acme IT Solutions"
+          "placeholder": "Soluzioni IT Acme"
         }
       },
       "note": "Puoi usare questo wizard per riconfigurare le impostazioni del tuo workspace in qualsiasi momento."
@@ -312,11 +312,11 @@
       },
       "lastName": {
         "label": "Cognome",
-        "placeholder": "Doe"
+        "placeholder": "Rossi"
       },
       "companyName": {
         "label": "Nome dell'azienda",
-        "placeholder": "Acme IT Solutions"
+        "placeholder": "Soluzioni IT Acme"
       },
       "email": {
         "label": "Indirizzo email",
@@ -437,7 +437,7 @@
         "email": "Invia invito via email",
         "password": "Imposto io stesso una password",
         "emailHelp": "Riceveranno un'email con un link per impostare la propria password. Nessuna password da condividere.",
-        "passwordHelp": "Imposti ora una password temporanea e la condividi direttamente con loro."
+        "passwordHelp": "Imposta ora una password temporanea e condividila direttamente con loro."
       },
       "password": {
         "label": "Password temporanea",
@@ -470,38 +470,38 @@
   },
   "ticketingConfigStep": {
     "title": "Passo configurazione ticketing",
-    "description": "Passo del wizard per configurare board, stati, priorità, categorie e impostazioni predefinite SLA durante l'onboarding",
+    "description": "Passaggio della procedura guidata per configurare bacheche, stati, priorità, categorie e impostazioni predefinite degli SLA durante l'onboarding",
     "boards": {
       "toasts": {
-        "firstDefaultSet": "La prima board è stata impostata automaticamente come predefinita",
-        "deleted": "Board eliminata con successo",
-        "defaultUpdated": "Board predefinita aggiornata con successo"
+        "firstDefaultSet": "La prima bacheca è stata impostata automaticamente come predefinita",
+        "deleted": "Bacheca eliminata con successo",
+        "defaultUpdated": "Bacheca predefinita aggiornata con successo"
       },
       "errors": {
-        "import": "Impossibile importare le board",
-        "delete": "Impossibile eliminare la board.",
-        "defaultRequired": "Almeno una board deve essere impostata come predefinita",
-        "defaultUpdate": "Impossibile impostare la board predefinita",
-        "duplicate": "La board esiste già",
-        "create": "Impossibile creare la board. Riprova."
+        "import": "Impossibile importare le bacheche",
+        "delete": "Impossibile eliminare la bacheca.",
+        "defaultRequired": "Almeno una bacheca deve essere impostata come predefinita",
+        "defaultUpdate": "Impossibile impostare la bacheca predefinita",
+        "duplicate": "La bacheca esiste già",
+        "create": "Impossibile creare la bacheca. Riprova."
       },
       "delete": {
-        "fallbackEntity": "questa board"
+        "fallbackEntity": "questa bacheca"
       },
-      "title": "Board",
-      "description": "Le board aiutano a organizzare i ticket per reparto, team o tipo di flusso di lavoro. Quando i clienti creano ticket tramite il portale clienti, verranno assegnati automaticamente alla board contrassegnata come predefinita.",
-      "tip": "Fai clic sulla stella nella colonna Predefinita per cambiare quale board è quella predefinita.",
+      "title": "Bacheche",
+      "description": "Le bacheche aiutano a organizzare i ticket per reparto, team o tipo di workflow. Quando i clienti creano ticket tramite il portale clienti, vengono assegnati automaticamente alla bacheca contrassegnata come predefinita.",
+      "tip": "Fai clic sulla stella nella colonna Predefinita per scegliere la bacheca predefinita.",
       "actions": {
         "import": "Importa da standard",
-        "add": "Aggiungi nuova board",
-        "confirmAdd": "Aggiungi board"
+        "add": "Aggiungi nuova bacheca",
+        "confirmAdd": "Aggiungi bacheca"
       },
       "addForm": {
-        "title": "Aggiungi nuova board",
+        "title": "Aggiungi nuova bacheca",
         "fields": {
           "name": {
-            "label": "Nome board *",
-            "placeholder": "Inserisci nome board"
+            "label": "Nome bacheca *",
+            "placeholder": "Inserisci nome bacheca"
           },
           "description": {
             "label": "Descrizione",
@@ -510,19 +510,19 @@
           "displayOrder": {
             "label": "Ordine di visualizzazione",
             "placeholder": "Lascia vuoto per generare automaticamente",
-            "help": "Controlla l'ordine in cui le board appaiono nei menu a discesa in tutta la piattaforma. I numeri più bassi vengono mostrati per primi."
+            "help": "Controlla l’ordine in cui le bacheche appaiono nei menu a discesa in tutta la piattaforma. I numeri più bassi vengono mostrati per primi."
           },
           "itil": {
-            "label": "Rendi questa board conforme a ITIL"
+            "label": "Rendi questa bacheca conforme a ITIL"
           }
         },
-        "configurationTitle": "Configurazione board"
+        "configurationTitle": "Configurazione bacheca"
       },
       "import": {
-        "title": "Importa board standard",
+        "title": "Importa bacheche standard",
         "success": {
-          "one": "Importata con successo 1 board.",
-          "other": "Importate con successo {{count}} board."
+          "one": "Importata correttamente 1 bacheca.",
+          "other": "Importate correttamente {{count}} bacheche."
         }
       },
       "table": {
@@ -534,10 +534,10 @@
         }
       },
       "current": {
-        "title": "Board attuali",
-        "defaultTitle": "Board predefinita",
-        "setDefaultTitle": "Imposta come board predefinita",
-        "removeTitle": "Rimuovi board"
+        "title": "Bacheche attuali",
+        "defaultTitle": "Bacheca predefinita",
+        "setDefaultTitle": "Imposta come bacheca predefinita",
+        "removeTitle": "Rimuovi bacheca"
       }
     },
     "categories": {
@@ -549,15 +549,15 @@
           "other": "Importate con successo {{count}} categorie."
         },
         "targetBoard": {
-          "label": "Board di destinazione *",
-          "placeholder": "Seleziona una board per le categorie importate",
-          "help": "Tutte le categorie importate verranno assegnate a questa board"
+          "label": "Bacheca di destinazione *",
+          "placeholder": "Seleziona una bacheca per le categorie importate",
+          "help": "Tutte le categorie importate verranno assegnate a questa bacheca"
         },
         "parentAutoSelectTitle": "La categoria padre verrà selezionata automaticamente"
       },
       "errors": {
         "missingParents": "Non è possibile importare le sottocategorie senza le relative categorie padre. Seleziona anche: {{parents}}",
-        "duplicate": "La categoria esiste già in questa board",
+        "duplicate": "La categoria esiste già in questa bacheca",
         "create": "Impossibile creare la categoria. Riprova.",
         "delete": "Impossibile eliminare la categoria."
       },
@@ -568,7 +568,7 @@
         "deleted": "Categoria eliminata con successo"
       },
       "title": "Categorie",
-      "requiresBoard": "(richiede una board)",
+      "requiresBoard": "(richiede una bacheca)",
       "description": "Le categorie aiutano a organizzare i ticket per tipo di problema o richiesta. Puoi creare categorie padre con sottocategorie per una migliore organizzazione. Esempi includono Supporto Tecnico (con sottocategorie come Hardware, Software, Rete) o Richieste di servizio.",
       "actions": {
         "import": "Importa da standard",
@@ -583,8 +583,8 @@
             "placeholder": "Inserisci nome categoria"
           },
           "board": {
-            "label": "Board di destinazione *",
-            "placeholder": "Seleziona una board"
+            "label": "Bacheca di destinazione *",
+            "placeholder": "Seleziona una bacheca"
           },
           "parent": {
             "label": "Categoria padre",
@@ -622,22 +622,22 @@
         "delete": "Impossibile eliminare lo stato.",
         "defaultRequired": "Almeno uno stato deve essere impostato come predefinito",
         "closedCannotBeDefault": "Gli stati chiusi non possono essere impostati come predefiniti",
-        "selectBoardForDefault": "Seleziona o crea una board prima di modificare i predefiniti degli stati.",
+        "selectBoardForDefault": "Seleziona o crea una bacheca prima di modificare i predefiniti degli stati.",
         "defaultUpdate": "Impossibile impostare lo stato predefinito",
         "duplicate": "Lo stato esiste già",
-        "selectBoardForAdd": "Seleziona o crea una board prima di aggiungere stati.",
+        "selectBoardForAdd": "Seleziona o crea una bacheca prima di aggiungere stati.",
         "create": "Impossibile creare lo stato. Riprova."
       },
       "title": "Stati",
-      "description": "Gli stati sono configurati per board. Seleziona una board qui sotto per definire il ciclo di vita dei ticket su quella board. Lo stato aperto predefinito della board selezionata viene assegnato automaticamente ai nuovi ticket creati su quella board.",
-      "tip": "Le board non condividono gli stati. Cambia board qui per rivedere o modificare il set di stati di ciascuna board.",
+      "description": "Gli stati sono configurati per bacheca. Seleziona una bacheca qui sotto per definire il ciclo di vita dei ticket su quella bacheca. Lo stato aperto predefinito della bacheca selezionata viene assegnato automaticamente ai nuovi ticket creati su quella bacheca.",
+      "tip": "Le bacheche non condividono gli stati. Cambia bacheca qui per rivedere o modificare l’insieme di stati di ciascuna bacheca.",
       "fields": {
         "board": {
           "label": "Bacheca",
-          "placeholder": "Seleziona board"
+          "placeholder": "Seleziona bacheca"
         }
       },
-      "noBoardWarning": "Crea o importa una board prima di configurare gli stati. Ogni board ha bisogno del proprio stato aperto predefinito.",
+      "noBoardWarning": "Crea o importa una bacheca prima di configurare gli stati. Ogni bacheca ha bisogno del proprio stato aperto predefinito.",
       "actions": {
         "import": "Importa da standard",
         "add": "Aggiungi nuovo stato",
@@ -654,7 +654,7 @@
             "label": "Ordine di visualizzazione",
             "placeholder": "Lascia vuoto per generare automaticamente",
             "help": "Controlla l'ordine in cui gli stati appaiono nei menu a discesa in tutta la piattaforma. I numeri più bassi vengono mostrati per primi.",
-            "reassigned": "L'ordine di visualizzazione {{requested}} è già utilizzato in questa board, quindi è stato usato {{assigned}} al suo posto."
+            "reassigned": "L'ordine di visualizzazione {{requested}} è già utilizzato in questa bacheca, quindi è stato usato {{assigned}} al suo posto."
           },
           "state": {
             "label": "Tipo di stato",
@@ -694,7 +694,7 @@
       },
       "empty": {
         "forBoard": "{{boardName}} non ha ancora stati. Aggiungi o importa almeno uno stato aperto predefinito prima di completare l'onboarding.",
-        "noBoardSelected": "Seleziona una board per configurarne gli stati."
+        "noBoardSelected": "Seleziona una bacheca per configurarne gli stati."
       }
     },
     "priorities": {
@@ -885,7 +885,7 @@
     },
     "finalRequirement": {
       "label": "Richiesto:",
-      "description": "Configura almeno una board e una priorità per completare la configurazione. Importa configurazioni standard per impostare rapidamente il tuo sistema di ticketing."
+      "description": "Configura almeno una bacheca e una priorità per completare la configurazione. Importa configurazioni standard per impostare rapidamente il tuo sistema di ticketing."
     }
   },
   "teamSetup": {

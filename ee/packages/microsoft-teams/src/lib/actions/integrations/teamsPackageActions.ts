@@ -181,18 +181,18 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
     version: TEAMS_PACKAGE_VERSION,
     id: profile.client_id,
     developer: {
-      name: 'Alga PSA',
+      name: 'AlgaPSA',
       websiteUrl: baseUrl,
       privacyUrl: `${baseUrl}/static/privacy_policy`,
       termsOfUseUrl: `${baseUrl}/static/master_terms`,
     },
     name: {
-      short: 'Alga PSA',
-      full: 'Alga PSA for Microsoft Teams',
+      short: 'AlgaPSA',
+      full: 'AlgaPSA for Microsoft Teams',
     },
     description: {
       short: 'Manage PSA tickets, time, notes, and approvals from Microsoft Teams.',
-      full: 'Alga PSA for Microsoft Teams gives MSP technicians a personal tab, personal-scope bot, message extension, and activity feed notifications backed by the tenant-selected Microsoft profile.',
+      full: 'AlgaPSA for Microsoft Teams gives MSP technicians a personal tab, personal-scope bot, message extension, and activity feed notifications backed by the tenant-selected Microsoft profile.',
     },
     icons: {
       outline: 'outline.png',
@@ -202,7 +202,7 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
     staticTabs: [
       {
         entityId: TEAMS_PERSONAL_TAB_ENTITY_ID,
-        name: 'Alga PSA',
+        name: 'AlgaPSA',
         contentUrl: `${baseUrl}/teams/tab`,
         websiteUrl: `${baseUrl}/teams/tab`,
         searchUrl: `${baseUrl}/teams/search`,

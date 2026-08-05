@@ -1,5 +1,5 @@
 {
-  "name": "Alga PSA - Add Comment then List Comments",
+  "name": "AlgaPSA - Add Comment then List Comments",
   "nodes": [
     {
       "parameters": {
@@ -22,7 +22,7 @@
       "credentials": {
         "algaPsaApi": {
           "id": "1",
-          "name": "Alga PSA API"
+          "name": "AlgaPSA API"
         }
       }
     },
@@ -47,7 +47,7 @@
       "credentials": {
         "algaPsaApi": {
           "id": "1",
-          "name": "Alga PSA API"
+          "name": "AlgaPSA API"
         }
       }
     }

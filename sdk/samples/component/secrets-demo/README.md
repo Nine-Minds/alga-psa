@@ -1,6 +1,6 @@
 # Secrets Demo Component
 
-A minimal Alga PSA extension component demonstrating how to retrieve secrets from the Runner and stream debug logs using the `cap:secrets.get` and `cap:log.emit` capabilities.
+A minimal AlgaPSA extension component demonstrating how to retrieve secrets from the Runner and stream debug logs using the `cap:secrets.get` and `cap:log.emit` capabilities.
 
 ## What it does
 
@@ -107,7 +107,7 @@ npx alga pack . dist/bundle.tar.zst
 
 ### Publish
 
-To publish to your Alga PSA server:
+To publish to your AlgaPSA server:
 
 ```bash
 export PATH="/opt/homebrew/bin:$PATH"

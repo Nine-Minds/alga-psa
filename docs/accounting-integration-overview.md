@@ -1,7 +1,7 @@
-# Alga PSA Accounting Integrations & Mapping Guide
+# AlgaPSA Accounting Integrations & Mapping Guide
 
 ## Audience & Scope
-This document serves product, engineering, implementation, and support teams. It explains how Alga PSA connects to accounting systems (QuickBooks Online/Desktop, Xero), how mapping data is managed, how exports are produced, and how to guide customers through the related workflows. It consolidates technical architecture references, UI behaviors, and operator/user instructions.
+This document serves product, engineering, implementation, and support teams. It explains how AlgaPSA connects to accounting systems (QuickBooks Online/Desktop, Xero), how mapping data is managed, how exports are produced, and how to guide customers through the related workflows. It consolidates technical architecture references, UI behaviors, and operator/user instructions.
 
 ---
 

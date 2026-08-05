@@ -154,7 +154,7 @@ metadata:
   namespace: temporal
 type: Opaque
 data:
-  # Base64 encoded database URLs for Alga PSA database
+  # Base64 encoded database URLs for AlgaPSA database
   database-url: cG9zdGdyZXNxbDovL2FwcF91c2VyOjEyMUVENzY5LTMzQjctNDI1Mi04RDdBLTIyMjNDMTQ5MDI5OEBwZ3ZlY3Rvci5zdGFja2dyZXMtcGd2ZWN0b3Iuc3ZjLmNsdXN0ZXIubG9jYWw6NTQzMi9zZXJ2ZXI=
   admin-database-url: cG9zdGdyZXNxbDovL3Bvc3RncmVzOmQ1NjItMzRmYi00OTMwLWIwNUBwZ3ZlY3Rvci5zdGFja2dyZXMtcGd2ZWN0b3Iuc3ZjLmNsdXN0ZXIubG9jYWw6NTQzMi9zZXJ2ZXI=
 ---

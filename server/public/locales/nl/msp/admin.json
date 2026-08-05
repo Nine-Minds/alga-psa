@@ -200,33 +200,33 @@
     },
     "senderIdentities": {
       "ticket": {
-        "title": "Ticket email identity",
-        "description": "Replies to ticket emails must return to this address so they can be matched and added to the ticket. Use a connected, monitored inbox.",
-        "connectedInboxLabel": "Connected inbox",
-        "connectedInboxHelp": "A connected inbox keeps client replies in the ticket conversation.",
-        "customAddressOption": "Use another address",
-        "addressLabel": "From address",
+        "title": "E-mailidentiteit voor tickets",
+        "description": "Antwoorden op ticket-e-mails moeten naar dit adres terugkomen, zodat ze aan het ticket kunnen worden gekoppeld en toegevoegd. Gebruik een verbonden postvak dat wordt bewaakt.",
+        "connectedInboxLabel": "Verbonden postvak",
+        "connectedInboxHelp": "Een verbonden postvak houdt antwoorden van klanten bij de ticketconversatie.",
+        "customAddressOption": "Een ander adres gebruiken",
+        "addressLabel": "Afzenderadres",
         "addressPlaceholder": "support@example.com",
-        "addressHelp": "This address controls reply routing for ticket email only.",
-        "nameLabel": "Sender display name",
-        "namePlaceholder": "Support",
-        "nameHelp": "Leave blank to use the connected mailbox name or ticket board name.",
-        "notConnectedWarning": "This address is not a connected inbox, so ticket replies may not be ingested.",
-        "microsoftMismatch": "Ticket email address must match the selected Microsoft 365 mailbox ({{mailbox}})."
+        "addressHelp": "Dit adres bepaalt alleen de antwoordroutering voor ticket-e-mail.",
+        "nameLabel": "Weergavenaam van afzender",
+        "namePlaceholder": "Ondersteuning",
+        "nameHelp": "Laat leeg om de naam van het verbonden postvak of het ticketbord te gebruiken.",
+        "notConnectedWarning": "Dit adres is geen verbonden postvak. Daardoor worden antwoorden op tickets mogelijk niet verwerkt.",
+        "microsoftMismatch": "Het e-mailadres voor tickets moet overeenkomen met het geselecteerde Microsoft 365-postvak ({{mailbox}})."
       },
       "notification": {
-        "title": "All other email identity",
-        "description": "Brand portal invitations, password resets, invoices, project updates, and general notifications independently from ticket routing.",
-        "addressLabel": "From address",
+        "title": "E-mailidentiteit voor alle overige berichten",
+        "description": "Geef portaaluitnodigingen, wachtwoordresets, facturen, projectupdates en algemene meldingen onafhankelijk van de ticketroutering een eigen huisstijl.",
+        "addressLabel": "Afzenderadres",
         "addressPlaceholder": "notifications@example.com",
-        "addressHelp": "SMTP and Resend use this address. Microsoft 365 uses the selected sending mailbox.",
-        "nameLabel": "Sender display name",
-        "namePlaceholder": "Your company name",
-        "nameHelp": "Leave blank to use {{company}} automatically.",
-        "companyFallback": "your tenant company"
+        "addressHelp": "SMTP en Resend gebruiken dit adres. Microsoft 365 gebruikt het geselecteerde verzendpostvak.",
+        "nameLabel": "Weergavenaam van afzender",
+        "namePlaceholder": "Uw bedrijfsnaam",
+        "nameHelp": "Laat leeg om automatisch {{company}} te gebruiken.",
+        "companyFallback": "uw tenantbedrijf"
       },
-      "warningTitle": "Check reply routing",
-      "errorTitle": "Fix the ticket identity"
+      "warningTitle": "Antwoordroutering controleren",
+      "errorTitle": "Ticketidentiteit corrigeren"
     }
   },
   "microsoft365": {
@@ -240,7 +240,7 @@
       "body": "De diagnostiek maakt een tijdelijk Microsoft Graph-abonnement en verwijdert dit daarna. Als verwijderen mislukt, moet u het abonnement mogelijk handmatig verwijderen in Microsoft 365."
     },
     "labels": {
-      "provider": "Provider:",
+      "provider": "Aanbieder:",
       "mailbox": "Postvak:",
       "overall": "Algemeen:",
       "resource": "Resource: {{resource}}",
@@ -338,7 +338,7 @@
       "clientPortfolio": "records voor de klantportfolio van de principal",
       "selectedClients": "records in geselecteerde klantscopes",
       "sameTeam": "records die eigendom zijn van hetzelfde team",
-      "selectedBoards": "records in geselecteerde boards"
+      "selectedBoards": "records op geselecteerde borden"
     },
     "constraintSummaries": {
       "notSelfApprover": "blokkeert zelfgoedkeuring",
@@ -405,7 +405,7 @@
         "custom": "Aangepast"
       },
       "badges": {
-        "starter": "Starter"
+        "starter": "Starterspakket"
       },
       "descriptions": {
         "systemStarter": "Systeem-starterbundel.",
@@ -483,7 +483,7 @@
         "clientTitle": "Geselecteerde klantscopes",
         "boardTitle": "Geselecteerde boardscopes",
         "selectClient": "Selecteer klant",
-        "selectBoard": "Selecteer board",
+        "selectBoard": "Selecteer bord",
         "addClientScope": "Klantscope toevoegen",
         "addBoardScope": "Boardscope toevoegen",
         "noClientScopes": "Nog geen klantscopes toegevoegd.",
@@ -527,7 +527,7 @@
       "useSynthetic": "Synthetisch recordscenario gebruiken",
       "syntheticOwnerPlaceholder": "Eigenaar gebruikers-ID (optioneel)",
       "syntheticClientPlaceholder": "Klant-ID (optioneel)",
-      "syntheticBoardPlaceholder": "Board-ID (optioneel)",
+      "syntheticBoardPlaceholder": "Bord-ID (optioneel)",
       "clientVisible": "Zichtbaar voor klant",
       "run": "Simulatie uitvoeren",
       "running": "Simulatie uitvoeren...",
@@ -544,7 +544,7 @@
       "create": "Bundel aanmaken",
       "creating": "Aanmaken...",
       "nameLabel": "Naam",
-      "namePlaceholder": "Finance Reviewer West",
+      "namePlaceholder": "Financieel beoordelaar West",
       "descriptionLabel": "Beschrijving",
       "descriptionPlaceholder": "Herbruikbare beperkingsbundel voor een specifiek team, klantgroep of workflow."
     },
@@ -563,7 +563,7 @@
       "publishDraft": "Kan bundelconcept niet publiceren.",
       "selectTemplate": "Selecteer een sjabloon voordat u een regel opslaat.",
       "selectClientRequired": "Voeg ten minste één geselecteerde klant toe voordat u deze regel opslaat.",
-      "selectBoardRequired": "Voeg ten minste één geselecteerd board toe voordat u deze regel opslaat.",
+      "selectBoardRequired": "Voeg ten minste één geselecteerd bord toe voordat u deze regel opslaat.",
       "redactedFieldRequired": "Voer ten minste één geredigeerd veld in voordat u deze regel opslaat.",
       "saveRule": "Kan conceptregel niet opslaan.",
       "removeRule": "Kan regel niet verwijderen.",
@@ -576,7 +576,7 @@
       "simulator": {
         "unsupportedAction": "De simulator ondersteunt momenteel alleen Lezen- en Goedkeuren-controles. Kies een van deze acties en probeer het opnieuw.",
         "unsupportedResource": "Dit recordtype is nog niet beschikbaar in de simulator. Kies een ondersteund recordtype en probeer het opnieuw.",
-        "clientTicketNotSupported": "Ticketcontroles voor cliënt-gebruikers zijn nog niet beschikbaar in de simulator omdat de zichtbaarheid van ticket-boards niet is inbegrepen. Probeer een interne gebruiker, of verifieer de ticket-toegang voor cliënten in de app."
+        "clientTicketNotSupported": "Ticketcontroles voor klantgebruikers zijn nog niet beschikbaar in de simulator, omdat de zichtbaarheid van ticketborden ontbreekt. Probeer een interne gebruiker of controleer de tickettoegang voor klanten in de app."
       }
     }
   },
@@ -621,12 +621,12 @@
       "noSubject": "Geen onderwerp",
       "sentAt": "Verzonden op",
       "status": "Status",
-      "provider": "Provider",
-      "messageId": "Message ID",
+      "provider": "Aanbieder",
+      "messageId": "Bericht-ID",
       "to": "Aan",
       "from": "Van",
       "error": "Fout",
-      "metadata": "Metadata"
+      "metadata": "Metagegevens"
     }
   }
 }

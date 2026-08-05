@@ -347,7 +347,7 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
                     <li>{t('integrations.csv.taxImport.unified.xeroHelp.s6', { defaultValue: 'Upload that CSV file here' })}</li>
                   </ol>
                   <p className="text-xs text-gray-400 mt-2">
-                    {t('integrations.csv.taxImport.unified.xeroHelp.note', { defaultValue: 'Note: Only invoices originally exported from Alga PSA (with Source System = AlgaPSA tracking) will be matched.' })}
+                    {t('integrations.csv.taxImport.unified.xeroHelp.note', { defaultValue: 'Note: Only invoices originally exported from AlgaPSA (with Source System = AlgaPSA tracking) will be matched.' })}
                   </p>
                 </>
               ) : (

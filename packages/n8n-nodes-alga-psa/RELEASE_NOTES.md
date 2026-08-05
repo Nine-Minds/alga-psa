@@ -2,11 +2,11 @@
 
 ## 0.4.1
 
-Patch release of the `Alga PSA` n8n community node.
+Patch release of the `AlgaPSA` n8n community node.
 
 ### Fixes
 
-- Ticket status lookups now pass `board_id` to `GET /api/v1/statuses`, restoring compatibility with Alga PSA's per-board ticket statuses (generic `type=ticket` calls without a board now return an HTTP 400 from the server)
+- Ticket status lookups now pass `board_id` to `GET /api/v1/statuses`, restoring compatibility with AlgaPSA's per-board ticket statuses (generic `type=ticket` calls without a board now return an HTTP 400 from the server)
 - `Ticket -> Create` and `Ticket -> Update` status dropdowns read the board from the current form state (top-level `board_id` for create, `updateAdditionalFields.board_id` for update) and filter accordingly
 - `Status -> List` with `Ticket` type now requires and forwards a `Board ID`
 
@@ -22,7 +22,7 @@ Patch release of the `Alga PSA` n8n community node.
 
 ## 0.4.0
 
-Feature release of the `Alga PSA` n8n community node.
+Feature release of the `AlgaPSA` n8n community node.
 
 ### Added
 
@@ -39,7 +39,7 @@ Feature release of the `Alga PSA` n8n community node.
 
 ## 0.3.0
 
-Feature release of the `Alga PSA` n8n community node.
+Feature release of the `AlgaPSA` n8n community node.
 
 ### Added
 
@@ -55,7 +55,7 @@ Feature release of the `Alga PSA` n8n community node.
 
 ## 0.2.0
 
-Feature release of the `Alga PSA` n8n community node.
+Feature release of the `AlgaPSA` n8n community node.
 
 ### Added
 
@@ -65,11 +65,11 @@ Feature release of the `Alga PSA` n8n community node.
 
 ### Notes
 
-- `time_spent` is intentionally not exposed in the n8n node because the current Alga PSA ticket comment implementation does not persist or consume it
+- `time_spent` is intentionally not exposed in the n8n node because the current AlgaPSA ticket comment implementation does not persist or consume it
 
 ## 0.1.2
 
-Patch release of the `Alga PSA` n8n community node.
+Patch release of the `AlgaPSA` n8n community node.
 
 ### Fixes
 
@@ -78,7 +78,7 @@ Patch release of the `Alga PSA` n8n community node.
 
 ## 0.1.1
 
-Patch release of the `Alga PSA` n8n community node.
+Patch release of the `AlgaPSA` n8n community node.
 
 ### Fixes
 
@@ -87,7 +87,7 @@ Patch release of the `Alga PSA` n8n community node.
 
 ## 0.1.0
 
-Initial release of the `Alga PSA` n8n community node.
+Initial release of the `AlgaPSA` n8n community node.
 
 ### Included resources and operations
 

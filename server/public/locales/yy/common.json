@@ -25,7 +25,12 @@
     "trialAvailable": "55555",
     "trialExpired": "55555",
     "licenseExpiresIn_one": "55555 {{count}} 55555",
-    "licenseExpiresIn_other": "55555 {{count}} 55555"
+    "licenseExpiresIn_other": "55555 {{count}} 55555",
+    "licenseExpired": "55555",
+    "licenseWrongTenant": "55555",
+    "manageLicense": "55555",
+    "ariaLabel": "55555",
+    "dismiss": "55555"
   },
   "nav": {
     "dashboard": "55555",
@@ -1210,6 +1215,32 @@
           "summaryWithClient": "55555 {{contactId}} 55555 {{clientId}} 55555"
         }
       }
+    },
+    "unsubscribe": {
+      "pageTitle": "55555",
+      "confirmTitle": "55555",
+      "confirmDescription": "55555",
+      "confirmAction": "55555",
+      "doneTitle": "55555",
+      "doneDescription": "55555",
+      "unavailableTitle": "55555",
+      "unavailableDescription": "55555"
+    },
+    "mcpAuthorize": {
+      "errorTitle": "55555",
+      "documentTitle": "55555 {{client}} 55555",
+      "consentTitle": "55555",
+      "consentRequest": "55555 {{client}} 55555",
+      "consentScope": "55555",
+      "approve": "55555",
+      "deny": "55555"
+    },
+    "microsoftEmailSetup": {
+      "title": "55555",
+      "finishing": "55555",
+      "finished": "55555",
+      "notFinished": "55555",
+      "returnLink": "55555"
     }
   },
   "feedback": {

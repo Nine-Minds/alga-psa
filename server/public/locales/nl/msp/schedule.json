@@ -173,7 +173,7 @@
       },
       "labels": {
         "reference": "Referentie",
-        "client": "Cliënt",
+        "client": "Klant",
         "requester": "Aanvrager",
         "contact": "Contact",
         "email": "E-mail",
@@ -572,14 +572,14 @@
       "approved": {
         "title": "Goedgekeurde afspraak",
         "descriptionWithDate": "Deze afspraak kwam voort uit een verzoek van een klant en werd goedgekeurd op {{date}}.",
-        "description": "Deze afspraak is ontstaan ​​vanuit een verzoek van een cliënt.",
+        "description": "Deze afspraak is voortgekomen uit een aanvraag van een klant.",
         "joinTeamsMeeting": "Deelnemen aan Teams-vergadering",
         "downloadRecording": "Opname downloaden",
         "viewTranscript": "Transcriptie bekijken"
       },
       "pending": {
         "title": "Afspraakverzoek in behandeling",
-        "description": "Dit is een afspraakverzoek van een cliënt. U kunt het hieronder goedkeuren of afwijzen."
+        "description": "Dit is een afspraakverzoek van een klant. U kunt het hieronder goedkeuren of afwijzen."
       },
       "declined": {
         "title": "Afgewezen afspraakverzoek",
@@ -588,7 +588,7 @@
       },
       "cancelled": {
         "title": "Afspraakverzoek geannuleerd",
-        "description": "Dit afspraakverzoek is door de cliënt geannuleerd."
+        "description": "Dit afspraakverzoek is door de klant geannuleerd."
       },
       "requesterInfo": {
         "title": "Aanvragerinformatie",
@@ -660,7 +660,7 @@
       "all": "Alle evenementen"
     },
     "errors": {
-      "loadWorkItem": "Failed to load work item."
+      "loadWorkItem": "Werkitem laden mislukt."
     }
   },
   "actions": {

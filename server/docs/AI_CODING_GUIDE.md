@@ -1,6 +1,6 @@
 # AI Coding Assistant Guide
 
-This document provides guidance for AI coding assistants working with the Alga PSA codebase.
+This document provides guidance for AI coding assistants working with the AlgaPSA codebase.
 
 ## Prerequisites
 

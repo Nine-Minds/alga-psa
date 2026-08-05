@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/schema",
   "$id": "AlgaModule",
-  "title": "Create an Alga PSA Module",
+  "title": "Create an AlgaPSA Module",
   "type": "object",
   "properties": {
     "name": {

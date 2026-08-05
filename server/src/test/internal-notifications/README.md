@@ -1,6 +1,6 @@
 # Internal Notifications Test Suite
 
-Comprehensive test suite for the internal notifications system in Alga PSA.
+Comprehensive test suite for the internal notifications system in AlgaPSA.
 
 ## Overview
 

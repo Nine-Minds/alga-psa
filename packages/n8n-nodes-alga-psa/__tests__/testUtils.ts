@@ -20,7 +20,7 @@ export function createExecuteHarness(options: ExecuteHarnessOptions) {
     continueOnFail: () => Boolean(options.continueOnFail),
     getNode: () => ({
       id: '1',
-      name: 'Alga PSA',
+      name: 'AlgaPSA',
       type: 'n8n-nodes-alga-psa.algaPsa',
       typeVersion: 1,
       position: [0, 0],

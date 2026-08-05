@@ -619,12 +619,12 @@ async function deliverTeamsActivityFeedNotification(params: {
         body: JSON.stringify({
           topic: {
             source: 'text',
-            value: normalizeString(notification.title) || 'Alga PSA notification',
+            value: normalizeString(notification.title) || 'AlgaPSA notification',
             webUrl: teamsDeepLink,
           },
           activityType,
           previewText: {
-            content: normalizeString(notification.message) || normalizeString(notification.title) || 'Alga PSA notification',
+            content: normalizeString(notification.message) || normalizeString(notification.title) || 'AlgaPSA notification',
           },
           recipient: {
             '@odata.type': 'microsoft.graph.aadUserNotificationRecipient',
@@ -793,7 +793,7 @@ function buildTeamsBotDmNotificationActivity(params: {
   teamsDeepLink: string;
   psaUrl: string;
 }): TeamsBotDmActivity {
-  const title = normalizeString(params.notification.title) || 'Alga PSA notification';
+  const title = normalizeString(params.notification.title) || 'AlgaPSA notification';
   const message = normalizeString(params.notification.message) || title;
 
   return {
@@ -811,7 +811,7 @@ function buildTeamsBotDmNotificationActivity(params: {
             { type: 'TextBlock', text: message, wrap: true },
           ],
           actions: [
-            { type: 'Action.OpenUrl', title: 'Open in Alga PSA', url: params.teamsDeepLink },
+            { type: 'Action.OpenUrl', title: 'Open in AlgaPSA', url: params.teamsDeepLink },
             { type: 'Action.OpenUrl', title: 'Open in browser', url: params.psaUrl },
           ],
         },

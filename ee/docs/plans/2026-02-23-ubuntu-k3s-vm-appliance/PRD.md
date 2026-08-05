@@ -7,7 +7,7 @@
 - Plan Folder: `ee/docs/plans/2026-02-23-ubuntu-k3s-vm-appliance/`
 
 ## Problem Statement
-Alga PSA needs an enterprise-ready on-prem appliance delivery model that is repeatable, secure, and low-touch for MSP customers. Today there is no standardized automated pipeline that builds and ships VM images with the product pre-integrated into a supported Kubernetes runtime. This causes inconsistent installs, slower onboarding, and risky upgrades.
+AlgaPSA needs an enterprise-ready on-prem appliance delivery model that is repeatable, secure, and low-touch for MSP customers. Today there is no standardized automated pipeline that builds and ships VM images with the product pre-integrated into a supported Kubernetes runtime. This causes inconsistent installs, slower onboarding, and risky upgrades.
 
 ## User Value
 1. New customers can deploy a known-good appliance image quickly with minimal manual steps.
@@ -17,7 +17,7 @@ Alga PSA needs an enterprise-ready on-prem appliance delivery model that is repe
 
 ## Goals
 1. Produce automated, versioned Ubuntu 24.04 LTS VM images for `OVA` and `QCOW2`.
-2. Bootstrap a single-node `k3s` host and deploy Alga PSA using existing `helm/` chart assets.
+2. Bootstrap a single-node `k3s` host and deploy AlgaPSA using existing `helm/` chart assets.
 3. Establish a GitOps pull-based app deployment and upgrade flow.
 4. Maintain an always-current image line for new installs (scheduled rebuilds + release channels).
 5. Define and support a migration path from single-node to 3-node HA.

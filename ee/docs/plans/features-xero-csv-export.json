@@ -164,7 +164,7 @@
   },
   "keyDecisions": {
     "terminology": {
-      "description": "Use Alga terminology in UI; \"Customers\" are called \"Clients\" in Alga PSA",
+      "description": "Use Alga terminology in UI; \"Customers\" are called \"Clients\" in AlgaPSA",
       "clientLabel": "Client"
     },
     "reconciliationIdentifiers": {

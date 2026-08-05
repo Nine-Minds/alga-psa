@@ -227,7 +227,7 @@ The system includes an intelligent auto-close feature for abandoned intervals:
 
 ### Mobile App Time Tracking
 
-The Alga PSA mobile app (iOS and Android) uses a different, **server-backed** time tracking mechanism. Unlike the browser tracker, mobile timer sessions are persisted to the server so they survive app kills, relaunches, and device switches.
+The AlgaPSA mobile app (iOS and Android) uses a different, **server-backed** time tracking mechanism. Unlike the browser tracker, mobile timer sessions are persisted to the server so they survive app kills, relaunches, and device switches.
 
 **How it works — three REST endpoints drive the full lifecycle:**
 

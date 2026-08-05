@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * E2E Test Suite for Alga PSA Email Processing
+ * E2E Test Suite for AlgaPSA Email Processing
  * 
  * This test suite validates the complete email processing workflow:
  * 1. Email ingestion via MailHog
@@ -49,7 +49,7 @@ class E2ETestSuite {
   }
 
   async run() {
-    console.log('🚀 Starting Alga PSA E2E Test Suite');
+    console.log('🚀 Starting AlgaPSA E2E Test Suite');
     console.log('=====================================');
 
     // Setup

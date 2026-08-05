@@ -75,7 +75,7 @@ export async function resolveTeamsTabAuthState(
   if (!session?.user) {
     return {
       status: 'unauthenticated',
-      message: 'Sign in with your MSP account to open Alga PSA in Teams.',
+      message: 'Sign in with your MSP account to open AlgaPSA in Teams.',
     };
   }
 

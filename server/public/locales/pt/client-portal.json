@@ -79,7 +79,7 @@
       "updated": "Atualizado",
       "actions": "Ações"
     },
-    "notAvailable": "N / D",
+    "notAvailable": "N/D",
     "detailsTitle": "Detalhes do recurso",
     "createTicket": "Criar ticket",
     "createTicketForDevice": "Crie um ticket para este dispositivo",
@@ -335,6 +335,7 @@
   },
   "account": {
     "title": "Conta",
+    "notAvailable": "N/D",
     "licenseManagement": {
       "title": "Conta",
       "subtitle": "O gerenciamento de licenças está disponível no Portal MSP",
@@ -366,7 +367,7 @@
       "actions": {
         "manage": "Gerenciar",
         "upgrade": "Atualizar",
-    "downgrade": "Fazer downgrade"
+        "downgrade": "Fazer downgrade"
       },
       "manageTitle": "Gerenciar {{service}}",
       "genericServiceLabel": "Serviço",
@@ -435,6 +436,40 @@
         "expYear": "Insira um ano válido (2024-2099)",
         "cvv": "Por favor insira um CVV válido"
       }
+    }
+  },
+  "licenses": {
+    "pageTitle": "Licenças de appliance",
+    "pageDescription": "Seus direitos de licença Pro para appliances Alga. Os documentos importantes também estão disponíveis na seção Documentos.",
+    "loading": "Carregando licenças…",
+    "empty": {
+      "message": "Nenhuma licença de appliance encontrada.",
+      "purchaseLink": "Compre uma licença",
+      "suffix": "para começar."
+    },
+    "downloadKey": "Baixar chave",
+    "validFrom": "Válida a partir de",
+    "expires": "Expira em",
+    "expiringSoon": "Expira em breve",
+    "renewal": "Renovação",
+    "renewalModes": {
+      "auto": "Renovação automática",
+      "manual": "Renovação manual"
+    },
+    "tiers": {
+      "pro": "Pro",
+      "premium": "Pro"
+    },
+    "transports": {
+      "connectedMonthly": "Conectado (mensal)",
+      "connectedAnnual": "Conectado (anual)",
+      "airgapAnnual": "Isolado da rede (anual)"
+    },
+    "statuses": {
+      "active": "Ativa",
+      "inactive": "Inativa",
+      "expired": "Expirada",
+      "terminated": "Encerrada"
     }
   },
   "profile": {

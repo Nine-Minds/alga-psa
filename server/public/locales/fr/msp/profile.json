@@ -7,7 +7,7 @@
       "apiKeys": "Clés API",
       "notifications": "Notifications",
       "calendar": "Calendrier",
-      "keyboardShortcuts": "Keyboard Shortcuts"
+      "keyboardShortcuts": "Raccourcis clavier"
     },
     "basicInfo": {
       "title": "Informations de base"
@@ -92,7 +92,7 @@
       "policies": "Politiques",
       "apiKeys": "Clés API",
       "webhooks": "Webhooks",
-      "userProvisioning": "User provisioning"
+      "userProvisioning": "Provisionnement des utilisateurs"
     },
     "loading": {
       "roles": "Chargement de la configuration des rôles...",
@@ -103,13 +103,13 @@
       "webhooks": "Chargement de la configuration des webhooks...",
       "sso": "Chargement des outils de gestion SSO...",
       "sessions": "Chargement des sessions actives...",
-      "userProvisioning": "Loading SCIM provisioning..."
+      "userProvisioning": "Chargement du provisionnement SCIM…"
     },
     "sso": {
       "advanced": {
-        "title": "Advanced: custom identity provider routing",
-        "description": "Route MSP login SSO to your own identity provider using verified login domains. Only needed on custom or on-premise installations.",
-        "inertNotice": "No tenant identity provider credentials are configured, so domain claims currently have no effect. Users sign in with the hosted Google / Microsoft providers. Tenant credentials are provisioned on custom and on-premise installations."
+        "title": "Options avancées : routage personnalisé du fournisseur d'identité",
+        "description": "Acheminez la connexion SSO du MSP vers votre propre fournisseur d'identité à l'aide de domaines de connexion vérifiés. Nécessaire uniquement pour les installations personnalisées ou sur site.",
+        "inertNotice": "Aucun identifiant de fournisseur d'identité du locataire n'est configuré ; les revendications de domaine n'ont donc aucun effet pour le moment. Les utilisateurs se connectent avec les fournisseurs Google ou Microsoft hébergés. Les identifiants du locataire sont provisionnés dans les installations personnalisées et sur site."
       }
     },
     "userRoles": {
@@ -586,15 +586,15 @@
         "descriptionPlaceholder": "p. ex. Clé API de développement",
         "expiration": "Date d'expiration (facultatif)",
         "submit": "Générer une nouvelle clé API",
-        "createFailed": "Failed to create API key"
+        "createFailed": "Échec de la création de la clé API"
       },
       "list": {
         "title": "Vos clés API",
         "searchPlaceholder": "Rechercher par description",
         "filters": {
           "allStatuses": "Tous les statuts",
-          "active": "Active",
-          "inactive": "Inactive",
+          "active": "Actives",
+          "inactive": "Inactives",
           "lastUsedAfter": "Dernière utilisation après",
           "expiresBefore": "Expire avant",
           "reset": "Réinitialiser"
@@ -609,11 +609,11 @@
         },
         "never": "Jamais",
         "status": {
-          "active": "Active",
-          "inactive": "Inactive"
+          "active": "Activée",
+          "inactive": "Désactivée"
         },
         "deactivate": "Désactiver",
-        "deactivateFailed": "Failed to deactivate API key"
+        "deactivateFailed": "Échec de la désactivation de la clé API"
       },
       "newKeyDialog": {
         "title": "Clé API générée",
@@ -623,79 +623,90 @@
         "copySuccess": "Clé API copiée dans le presse-papiers !",
         "copyFailed": "Échec de la copie de la clé API dans le presse-papiers",
         "downloadFailed": "Échec du téléchargement de la clé API"
+      },
+      "admin": {
+        "title": "Administration des clés API",
+        "searchPlaceholder": "Rechercher par utilisateur ou description",
+        "columns": {
+          "user": "Utilisateur"
+        },
+        "errors": {
+          "loadFailed": "Échec du chargement des clés API. Vérifiez que vous disposez de privilèges d'administration.",
+          "deactivateFailed": "Échec de la désactivation de la clé API. Vérifiez que vous disposez de privilèges d'administration."
+        }
       }
     },
     "scim": {
-      "title": "User provisioning",
-      "description": "Let Microsoft Entra deactivate and reactivate existing internal users. Alga remains authoritative for profiles, roles, teams, and licenses.",
-      "loading": "Loading user provisioning",
+      "title": "Provisionnement des utilisateurs",
+      "description": "Permettez à Microsoft Entra de désactiver et de réactiver les utilisateurs internes existants. Alga reste la source de référence pour les profils, rôles, équipes et licences.",
+      "loading": "Chargement du provisionnement des utilisateurs",
       "status": {
-        "enabled": "Accepting requests",
-        "disabled": "Provisioning paused"
+        "enabled": "Requêtes acceptées",
+        "disabled": "Provisionnement en pause"
       },
       "errors": {
-        "load": "Unable to load SCIM provisioning.",
-        "update": "Unable to update SCIM provisioning."
+        "load": "Impossible de charger le provisionnement SCIM.",
+        "update": "Impossible de mettre à jour le provisionnement SCIM."
       },
       "upgrade": {
-        "title": "Directory lifecycle provisioning",
-        "description": "SCIM user provisioning is available on Pro and higher plans."
+        "title": "Provisionnement du cycle de vie de l'annuaire",
+        "description": "Le provisionnement des utilisateurs SCIM est disponible avec les forfaits Pro et supérieurs."
       },
       "setup": {
-        "title": "Connect Microsoft Entra",
-        "description": "Generate a tenant-specific endpoint and one-time bearer token. No Alga users are created by SCIM.",
-        "create": "Generate connection"
+        "title": "Connecter Microsoft Entra",
+        "description": "Générez un point de terminaison propre au locataire et un jeton d'accès à usage unique. SCIM ne crée aucun utilisateur Alga.",
+        "create": "Générer la connexion"
       },
       "connection": {
-        "title": "Entra connection",
-        "description": "Use these values in the Provisioning section of your Entra enterprise application.",
-        "url": "Tenant URL",
-        "copyUrl": "Copy tenant URL",
-        "oneTimeToken": "Copy this token now",
-        "oneTimeWarning": "For security, Alga cannot show this value again.",
-        "rotate": "Rotate token",
-        "revokePrevious": "End token overlap",
-        "enabled": "Accept provisioning requests",
-        "disableWarning": "Pausing preserves every link and current user state."
+        "title": "Connexion Entra",
+        "description": "Utilisez ces valeurs dans la section Provisionnement de votre application d'entreprise Entra.",
+        "url": "URL du locataire",
+        "copyUrl": "Copier l'URL du locataire",
+        "oneTimeToken": "Copiez ce jeton maintenant",
+        "oneTimeWarning": "Pour des raisons de sécurité, Alga ne pourra plus afficher cette valeur.",
+        "rotate": "Renouveler le jeton",
+        "revokePrevious": "Mettre fin au chevauchement des jetons",
+        "enabled": "Accepter les requêtes de provisionnement",
+        "disableWarning": "La mise en pause conserve tous les liens et l'état actuel des utilisateurs."
       },
       "health": {
-        "title": "Connection health",
-        "lastRequest": "Last authenticated request",
-        "lastSuccess": "Last success",
-        "tokenAge": "Current token created",
-        "lastError": "Last error"
+        "title": "État de la connexion",
+        "lastRequest": "Dernière requête authentifiée",
+        "lastSuccess": "Dernier succès",
+        "tokenAge": "Création du jeton actuel",
+        "lastError": "Dernière erreur"
       },
       "mapping": {
-        "title": "Entra attribute mapping",
-        "description": "Keep Entra defaults for userName, externalId, active, names, title, and emails. Only active controls Alga access.",
-        "match": "Initial match",
-        "matchValue": "Exact primary email only",
-        "scope": "Provisioning scope",
-        "scopeValue": "Assigned users and groups",
-        "unsupported": "Not supported",
-        "unsupportedValue": "Groups, passwords, roles, teams"
+        "title": "Mappage des attributs Entra",
+        "description": "Conservez les valeurs par défaut d'Entra pour userName, externalId, active, names, title et emails. Seul active contrôle l'accès à Alga.",
+        "match": "Correspondance initiale",
+        "matchValue": "E-mail principal exact uniquement",
+        "scope": "Étendue du provisionnement",
+        "scopeValue": "Utilisateurs et groupes affectés",
+        "unsupported": "Non pris en charge",
+        "unsupportedValue": "Groupes, mots de passe, rôles, équipes"
       },
       "links": {
-        "title": "Managed users",
-        "user": "Alga user",
-        "directory": "Directory identity",
-        "state": "State",
+        "title": "Utilisateurs gérés",
+        "user": "Utilisateur Alga",
+        "directory": "Identité de l'annuaire",
+        "state": "État",
         "action": "Action",
-        "drift": "Email drift",
-        "active": "Upstream active",
-        "inactive": "Upstream inactive",
-        "accessOn": "Access enabled",
-        "accessOff": "Access disabled",
-        "unlink": "Unlink",
-        "empty": "No directory identities have linked yet."
+        "drift": "Écart d'e-mail",
+        "active": "Actif dans l'annuaire",
+        "inactive": "Inactif dans l'annuaire",
+        "accessOn": "Accès activé",
+        "accessOff": "Accès désactivé",
+        "unlink": "Dissocier",
+        "empty": "Aucune identité d'annuaire n'est encore associée."
       },
       "unresolved": {
-        "title": "Needs review",
-        "description": "These identities were rejected without changing an Alga user."
+        "title": "À vérifier",
+        "description": "Ces identités ont été rejetées sans modifier d'utilisateur Alga."
       },
       "state": {
-        "active": "Active upstream",
-        "inactive": "Inactive upstream"
+        "active": "Active dans l'annuaire",
+        "inactive": "Inactive dans l'annuaire"
       }
     }
   },

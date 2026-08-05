@@ -1,7 +1,7 @@
 /**
  * @alga-psa/validation - Validation Utilities
  *
- * Common validation functions and utilities for Alga PSA.
+ * Common validation functions and utilities for AlgaPSA.
  */
 
 import { z } from 'zod';

@@ -1174,7 +1174,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
   /**
    * Fetch invoice data including tax amounts from QuickBooks Online.
-   * Used to import externally calculated tax back into Alga PSA.
+   * Used to import externally calculated tax back into AlgaPSA.
    */
   async fetchExternalInvoice(
     externalInvoiceRef: string,

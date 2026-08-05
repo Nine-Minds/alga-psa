@@ -13,7 +13,7 @@ Add a global full-text search bar to the MSP navigation sidebar that finds recor
 
 ## 2. Problem Statement
 
-Today there is no way to "just find a thing" in Alga PSA. To locate a record, users must know which area of the app it lives in, navigate to that area, and use entity-specific filters. Cross-entity discovery (e.g., "any record that mentions ACME") is impossible. This costs MSP technicians and dispatchers measurable time on every ticket triage, project lookup, and client phone-call workflow.
+Today there is no way to "just find a thing" in AlgaPSA. To locate a record, users must know which area of the app it lives in, navigate to that area, and use entity-specific filters. Cross-entity discovery (e.g., "any record that mentions ACME") is impossible. This costs MSP technicians and dispatchers measurable time on every ticket triage, project lookup, and client phone-call workflow.
 
 ## 3. Goals
 

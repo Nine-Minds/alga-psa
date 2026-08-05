@@ -122,7 +122,7 @@ describe('Microsoft email setup actions', () => {
       displayName: 'Platform Email',
     })).resolves.toEqual({
       success: false,
-      error: 'The Alga PSA Microsoft app is available only on hosted deployments.',
+      error: 'The AlgaPSA Microsoft app is available only on hosted deployments.',
     });
     expect(hoisted.persistProfile).not.toHaveBeenCalled();
   });

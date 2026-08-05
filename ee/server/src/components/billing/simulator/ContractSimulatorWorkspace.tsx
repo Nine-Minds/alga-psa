@@ -562,7 +562,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
         <p className="mt-2 text-sm text-[rgb(var(--color-text-500))]">
           {t("contractSimulator.unavailable.description", {
             defaultValue:
-              "The contract simulator is available in Alga PSA Pro.",
+              "The contract simulator is available in AlgaPSA Pro.",
           })}
         </p>
       </div>

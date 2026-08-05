@@ -15,7 +15,7 @@ describe('EntraIntegrationPage dynamic import target', () => {
 
     expect(screen.getByText('Pro Feature')).toBeInTheDocument();
     expect(
-      screen.getByText('Microsoft Entra integration is available in Alga PSA Pro.')
+      screen.getByText('Microsoft Entra integration is available in AlgaPSA Pro.')
     ).toBeInTheDocument();
   });
 });

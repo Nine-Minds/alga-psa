@@ -32,7 +32,7 @@
       "workspace": "Espace de travail",
       "resources": "Ressources",
       "more": "Plus",
-      "apps": "Apps"
+      "apps": "Applications"
     },
     "licenses": "Licences"
   },
@@ -286,6 +286,7 @@
   },
   "account": {
     "title": "Compte",
+    "notAvailable": "N/D",
     "licenseManagement": {
       "title": "Compte",
       "subtitle": "La gestion des licences est disponible dans le portail MSP",
@@ -386,6 +387,40 @@
         "expYear": "Veuillez saisir une année valide (2024-2099)",
         "cvv": "Veuillez saisir un code CVV valide"
       }
+    }
+  },
+  "licenses": {
+    "pageTitle": "Licences d’appliance",
+    "pageDescription": "Vos droits de licence Pro pour les appliances Alga. Les documents importants sont également disponibles dans la section Documents.",
+    "loading": "Chargement des licences…",
+    "empty": {
+      "message": "Aucune licence d’appliance trouvée.",
+      "purchaseLink": "Achetez une licence",
+      "suffix": "pour commencer."
+    },
+    "downloadKey": "Télécharger la clé",
+    "validFrom": "Valide à partir du",
+    "expires": "Expire le",
+    "expiringSoon": "Expire bientôt",
+    "renewal": "Renouvellement",
+    "renewalModes": {
+      "auto": "Se renouvelle automatiquement",
+      "manual": "Renouvellement manuel"
+    },
+    "tiers": {
+      "pro": "Pro",
+      "premium": "Pro"
+    },
+    "transports": {
+      "connectedMonthly": "Connectée (mensuelle)",
+      "connectedAnnual": "Connectée (annuelle)",
+      "airgapAnnual": "Isolée du réseau (annuelle)"
+    },
+    "statuses": {
+      "active": "En vigueur",
+      "inactive": "Désactivée",
+      "expired": "Expirée",
+      "terminated": "Résiliée"
     }
   },
   "profile": {

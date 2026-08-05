@@ -42,7 +42,7 @@ async function initializedProvider() {
 
 function baseMessage(overrides: Partial<EmailMessage> = {}): EmailMessage {
   return {
-    from: { email: 'noreply@alga.test', name: 'Alga PSA' },
+    from: { email: 'noreply@alga.test', name: 'AlgaPSA' },
     to: [{ email: 'one@example.com', name: 'One' }, { email: 'two@example.com' }],
     subject: 'Test subject',
     text: 'plain body',
@@ -78,7 +78,7 @@ describe('ResendEmailProvider payload construction', () => {
     const [url, payload] = client.post.mock.calls[0];
     expect(url).toBe('/emails');
     expect(payload).toEqual({
-      from: 'Alga PSA <noreply@alga.test>',
+      from: 'AlgaPSA <noreply@alga.test>',
       to: ['one@example.com', 'two@example.com'],
       subject: 'Test subject',
       text: 'plain body',

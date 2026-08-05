@@ -2,7 +2,7 @@
  * Empty RMM Actions for Community Edition
  *
  * These functions provide stubs for RMM functionality that is only available
- * in the Enterprise Edition of Alga PSA.
+ * in the Enterprise Edition of AlgaPSA.
  */
 
 import type { RmmCachedData } from '@alga-psa/types';

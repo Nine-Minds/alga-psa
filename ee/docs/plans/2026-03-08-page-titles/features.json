@@ -1,7 +1,7 @@
 [
   {
     "id": "F001",
-    "description": "Root layout: change generateMetadata() title from static string to template object with `template: '%s | Alga PSA'` and `default: 'Alga PSA'`",
+    "description": "Root layout: change generateMetadata() title from static string to template object with `template: '%s | AlgaPSA'` and `default: 'AlgaPSA'`",
     "implemented": true,
     "prdRefs": [
       "Phase 1"
@@ -9,7 +9,7 @@
   },
   {
     "id": "F002",
-    "description": "MSP layout: add metadata export with `template: '%s | Alga PSA'` and `default: 'Dashboard | Alga PSA'`",
+    "description": "MSP layout: add metadata export with `template: '%s | AlgaPSA'` and `default: 'Dashboard | AlgaPSA'`",
     "implemented": true,
     "prdRefs": [
       "Phase 2"
@@ -25,7 +25,7 @@
   },
   {
     "id": "F004",
-    "description": "Auth layout: add metadata export with `template: '%s | Alga PSA'` and `default: 'Sign In | Alga PSA'`",
+    "description": "Auth layout: add metadata export with `template: '%s | AlgaPSA'` and `default: 'Sign In | AlgaPSA'`",
     "implemented": true,
     "prdRefs": [
       "Phase 2"
@@ -33,7 +33,7 @@
   },
   {
     "id": "F005",
-    "description": "Static layout: add metadata export with `default: 'Alga PSA'`",
+    "description": "Static layout: add metadata export with `default: 'AlgaPSA'`",
     "implemented": true,
     "prdRefs": [
       "Phase 2"
@@ -857,7 +857,7 @@
   },
   {
     "id": "F108",
-    "description": "EE root layout: add metadata title template `'%s | Alga PSA'` and default `'Alga PSA'`",
+    "description": "EE root layout: add metadata title template `'%s | AlgaPSA'` and default `'AlgaPSA'`",
     "implemented": true,
     "prdRefs": [
       "Acceptance Criteria"
@@ -865,7 +865,7 @@
   },
   {
     "id": "F109",
-    "description": "EE MSP layout: add metadata template `'%s | Alga PSA'` and default `'Dashboard | Alga PSA'`",
+    "description": "EE MSP layout: add metadata template `'%s | AlgaPSA'` and default `'Dashboard | AlgaPSA'`",
     "implemented": true,
     "prdRefs": [
       "Acceptance Criteria"

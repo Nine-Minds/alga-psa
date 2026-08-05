@@ -10,7 +10,7 @@
 
 ## 1. Overview
 
-Alga PSA today has a **product catalog but no inventory system**. Products are a subset of `service_catalog` (`item_kind = 'product'`) carrying only pricing/cost/tax/license metadata. Quantities exist only on consuming entities (contract lines, invoice items, ticket/project materials) — they record what was *billed or consumed*, never decremented from an on-hand ledger. There is no notion of stock, locations, lots/serials, allocations, reorder points, stock movements, procurement, or COGS.
+AlgaPSA today has a **product catalog but no inventory system**. Products are a subset of `service_catalog` (`item_kind = 'product'`) carrying only pricing/cost/tax/license metadata. Quantities exist only on consuming entities (contract lines, invoice items, ticket/project materials) — they record what was *billed or consumed*, never decremented from an on-hand ledger. There is no notion of stock, locations, lots/serials, allocations, reorder points, stock movements, procurement, or COGS.
 
 This design adds a **first-class, stock-and-hold inventory module** aimed at our reseller-heavy ICP — explicitly including phone-systems specialists who stock serialized handsets, components, laptops, and monitors — and deliberately scoped to stop short of an enterprise logistics system.
 

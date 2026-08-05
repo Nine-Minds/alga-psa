@@ -125,7 +125,7 @@ export function resolveDefaultFromAddress(
     || tenantCompanyName?.trim()
     || envAddress?.name
     || process.env.EMAIL_FROM_NAME?.trim()
-    || 'Alga PSA Notifications';
+    || 'AlgaPSA Notifications';
   const fallbackEmail = providerAddress?.email || envAddress?.email || 'notifications@example.com';
 
   const emailParts = extractEmailParts(fallbackEmail);

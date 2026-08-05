@@ -1,6 +1,6 @@
-# Alga PSA - UI Navigation Structure
+# AlgaPSA - UI Navigation Structure
 
-This document provides a comprehensive map of the Alga PSA application's UI structure to help automated tools understand how to navigate between screens, tabs, and components. Each entry includes the file paths where components are defined and key automation IDs.
+This document provides a comprehensive map of the AlgaPSA application's UI structure to help automated tools understand how to navigate between screens, tabs, and components. Each entry includes the file paths where components are defined and key automation IDs.
 
 ## Overall Application Structure
 

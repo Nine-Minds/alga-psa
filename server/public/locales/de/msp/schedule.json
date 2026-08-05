@@ -660,7 +660,7 @@
       "all": "Alle Ereignisse"
     },
     "errors": {
-      "loadWorkItem": "Failed to load work item."
+      "loadWorkItem": "Das Arbeitselement konnte nicht geladen werden."
     }
   },
   "actions": {

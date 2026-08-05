@@ -1520,16 +1520,16 @@
       "emailSetup": {
         "action": "55555",
         "actions": {
+          "approve": "55555",
           "back": "55555",
           "cancel": "55555",
           "copy": "55555",
+          "copyApprovalLink": "55555",
           "finish": "55555",
+          "saveManual": "55555",
           "savePlatform": "55555",
           "signIn": "55555",
-          "working": "55555",
-          "approve": "55555",
-          "copyApprovalLink": "55555",
-          "saveManual": "55555"
+          "working": "55555"
         },
         "automated": {
           "description": "55555",
@@ -1546,31 +1546,38 @@
         "consent": {
           "confirmedDescription": "55555",
           "confirmedTitle": "55555",
+          "approvalLink": "55555",
           "url": "55555",
-          "urlLabel": "55555",
-          "approvalLink": "55555"
+          "urlLabel": "55555"
         },
         "copied": "55555 {{label}} 55555",
         "description": "55555",
         "errors": {
           "automated": "55555",
           "generic": "55555",
+          "manual": "55555",
+          "manualRequired": "55555",
           "nameRequired": "55555",
           "platform": "55555",
           "popupBlocked": "55555",
           "popupClosed": "55555",
           "tenantRequired": "55555",
-          "manual": "55555",
-          "manualRequired": "55555",
           "pendingProfileMissing": "55555",
-          "approvalLink": "55555"
+          "approvalLink": "55555",
+          "consentDenied": "55555",
+          "consentNotGranted": "55555",
+          "consentPersistFailed": "55555",
+          "invalidState": "55555",
+          "microsoftError": "55555",
+          "missingCode": "55555",
+          "sessionMismatch": "55555"
         },
         "fields": {
           "clientId": "55555",
-          "displayName": "55555",
-          "tenantId": "55555",
           "clientSecret": "55555",
+          "displayName": "55555",
           "microsoftTenant": "55555",
+          "tenantId": "55555",
           "redirectUri": "55555"
         },
         "manual": {
@@ -1590,14 +1597,14 @@
         "advanced": {
           "title": "55555",
           "description": "55555",
-          "warning": "yyyyy"
+          "warning": "55555"
         },
         "platform": {
-          "title": "yyyyy",
-          "description": "yyyyy",
+          "title": "55555",
+          "description": "55555",
           "readyDescription": "55555",
           "connectAction": "55555",
-          "unavailableTitle": "yyyyy",
+          "unavailableTitle": "55555",
           "unavailableDescription": "55555"
         },
         "actions": {
@@ -2393,7 +2400,57 @@
           "load": "55555",
           "sync": "55555",
           "updateMapping": "55555",
-          "updateContact": "55555"
+          "updateContact": "55555",
+          "loadStatus": "55555",
+          "connect": "55555",
+          "saveSettings": "55555",
+          "poll": "55555"
+        },
+        "loadingIntegration": "55555",
+        "connect": {
+          "title": "55555",
+          "description": "55555",
+          "apiKeyPlaceholder": "55555",
+          "apiSecretPlaceholder": "55555",
+          "submit": "55555",
+          "connecting": "55555"
+        },
+        "connection": {
+          "title": "55555 {{account}} 55555",
+          "summary": "55555 {{organizations}} 55555 {{unmapped}} 55555 {{openIncidents}} 55555 {{lastPoll}} 55555",
+          "neverPolled": "55555",
+          "lastPollFailed": "55555 {{error}} 55555",
+          "routingIncompleteWarning": "55555",
+          "pollNow": "55555",
+          "disconnect": "55555",
+          "disconnectConfirm": "55555"
+        },
+        "routing": {
+          "title": "55555",
+          "description": "55555",
+          "securityBoard": "55555",
+          "selectBoard": "55555",
+          "category": "55555",
+          "noCategory": "55555",
+          "fallbackClient": "55555",
+          "fallbackBoard": "55555",
+          "criticalSeverity": "55555",
+          "highSeverity": "55555",
+          "lowSeverity": "55555",
+          "selectPriority": "55555",
+          "pollInterval": "55555",
+          "autoClose": "55555",
+          "closedStatus": "55555",
+          "selectStatus": "55555",
+          "save": "55555",
+          "saving": "55555"
+        },
+        "messages": {
+          "connected": "55555 {{account}} 55555",
+          "routingSaved": "55555",
+          "routingIncomplete": "55555",
+          "pollFinished": "55555 {{count}} 55555",
+          "disconnected": "55555"
         }
       },
       "ninjaone": {

@@ -2,7 +2,7 @@
 
 > Legacy/internal only. Ubuntu Server 24.04 LTS with k3s is the supported customer appliance path for v1. These Talos docs are retained for historical context, support investigation of older internal environments, and engineering reference. Do not use this directory as the starting point for new customer installs.
 
-This directory captures the historical operating model for running Alga PSA as a Talos-based appliance. The goal is to document the parts that were intended to remain true across Talos sites and releases, not the temporary details of one bootstrap session.
+This directory captures the historical operating model for running AlgaPSA as a Talos-based appliance. The goal is to document the parts that were intended to remain true across Talos sites and releases, not the temporary details of one bootstrap session.
 
 Use these docs only for:
 

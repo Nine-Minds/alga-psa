@@ -113,10 +113,10 @@
     "print": {
       "title": "Workflow-runs",
       "selectedTitle": "Geselecteerde workflow-runs",
-      "subtitle": "{{count}} runs",
+      "subtitle": "{{count}} uitvoeringen",
       "noRuns": "Geen workflow-runs om af te drukken",
       "columns": {
-        "run": "Run",
+        "run": "Uitvoering",
         "workflow": "Workflow",
         "version": "Versie",
         "status": "Status",
@@ -239,7 +239,7 @@
       "attemptLine": "Poging {{count}}",
       "durationLine": "Duur: {{duration}}",
       "sizeLine": "Invoergrootte: {{inputSize}}{{inputSuffix}} · Uitvoergrootte: {{outputSize}}{{outputSuffix}}",
-      "truncatedSuffix": " (truncated)",
+      "truncatedSuffix": " (afgekapt)",
       "inputLabel": "Invoer",
       "outputLabel": "Uitvoer"
     },
@@ -310,7 +310,7 @@
   },
   "runDialog": {
     "title": "Workflow uitvoeren",
-    "description": "Provide a synthetic payload to preview (and run) a workflow.",
+    "description": "Geef een synthetische payload op om een workflow te bekijken en uit te voeren.",
     "descriptionEvent": "Gebeurtenis: {{name}}.",
     "draftWarning": "Conceptversie wijkt af van gepubliceerde versie (v{{version}}).",
     "concurrencyLimit": "Gelijktijdigheidslimiet: {{count}} uitvoering(en) tegelijk.",
@@ -430,7 +430,7 @@
       "eventMissingSchemaRef": "Geselecteerde gebeurtenis heeft geen payload-schemaverwijzing; uitvoering met triggerkoppeling is niet mogelijk.",
       "loadLatestRunFailed": "Kan laatste uitvoering niet laden",
       "mapEntryExists": "Die sleutel bestaat al.",
-      "noPriorPayload": "No prior run payload found.",
+      "noPriorPayload": "Geen payload van een eerdere uitvoering gevonden.",
       "payloadCopied": "Payload naar klembord gekopieerd.",
       "presetSaved": "Voorinstelling opgeslagen.",
       "providePresetName": "Geef een naam voor de voorinstelling op.",
@@ -443,7 +443,11 @@
       "summaryDescription": "Vul de ontbrekende velden hieronder in, schakel over naar de formulierwizard of gebruik een voorbeeld-payloadknop.",
       "moreErrors": "+{{count}} meer…"
     },
-    "sampleEmailBody": "Voorbeeld-e-mailtekst"
+    "sampleEmailBody": "Voorbeeld-e-mailtekst",
+    "sections": {
+      "schemaAndEvents": "Schema en gebeurtenissen",
+      "payloadTools": "Payloadhulpmiddelen"
+    }
   },
   "eventList": {
     "common": {
@@ -1227,7 +1231,7 @@
     "examplePrefix": "Voorbeeld:"
   },
   "actionInputSection": {
-    "heading": "Action inputs"
+    "heading": "Actie-invoer"
   },
   "actionInputFixedPicker": {
     "loadingOptions": "Opties laden…",
@@ -1322,7 +1326,7 @@
     "pagination": {
       "previous": "Vorige",
       "next": "Volgende",
-      "pageLabel": "Page {{current}} of {{total}}"
+      "pageLabel": "Pagina {{current}} van {{total}}"
     },
     "errors": {
       "loadFailed": "Kan taken niet laden. Probeer het opnieuw.",
@@ -1496,7 +1500,9 @@
     "field": {
       "placeholder": "Expressie invoeren...",
       "insertFieldPlaceholder": "Veld invoegen"
-    }
+    },
+    "clear": "Wissen",
+    "clearAriaLabel": "Expressie wissen"
   },
   "sourceDataTree": {
     "searchPlaceholder": "Velden doorzoeken...",
@@ -1694,7 +1700,7 @@
       "allMapped": "Alle verplichte velden gekoppeld"
     },
     "insert": {
-      "title": "Drop a step here to insert"
+      "title": "Zet hier een stap neer om deze in te voegen"
     },
     "actions": {
       "deleteStep": "Stap verwijderen"
@@ -2012,7 +2018,7 @@
         "holidaysNote": "Feestdagen worden altijd als niet-werkdagen behandeld."
       },
       "businessHours": {
-        "defaultSuffix": " (Default)",
+        "defaultSuffix": " (Standaard)",
         "noneConfigured": "Er zijn nog geen werktijdenschema’s geconfigureerd.",
         "usingTenantDefault": "Gebruikt het standaard werktijdenschema van de tenant.",
         "noTenantDefault": "Er is nog geen standaard werktijdenschema voor de tenant geconfigureerd."
@@ -2075,7 +2081,7 @@
     "recurrence": {
       "andWord": "en",
       "frequency": {
-        "daily": "Daily",
+        "daily": "Dagelijks",
         "weekly": "Wekelijks",
         "monthly": "Maandelijks"
       },
@@ -2573,7 +2579,7 @@
         "ticketSearchPlaceholder": "Tickets zoeken op nummer of titel",
         "ticketSelect": "Ticket selecteren",
         "ticketTypeAbove": "Typ hierboven om tickets te zoeken",
-        "selectBoard": "Board selecteren",
+        "selectBoard": "Selecteer een bord",
         "selectClient": "Klant selecteren",
         "selectContact": "Contactpersoon selecteren",
         "selectUser": "Gebruiker selecteren",
@@ -2587,10 +2593,10 @@
       "dependencyHints": {
         "contactClient": "Kies eerst een vaste klant om contactopties te laden.",
         "locationClient": "Kies eerst een vaste klant om locatieopties te laden.",
-        "categoryBoard": "Kies eerst een vast board om categorieopties te laden.",
-        "statusBoard": "Kies eerst een vast board om statusopties te laden.",
+        "categoryBoard": "Kies eerst een vast bord om categorieopties te laden.",
+        "statusBoard": "Kies eerst een vast bord om statusopties te laden.",
         "statusTicket": "Kies eerst een vast ticket om statusopties te laden.",
-        "subcategoryBoard": "Kies eerst een vast board om subcategorieopties te laden.",
+        "subcategoryBoard": "Kies eerst een vast bord om subcategorieopties te laden.",
         "subcategoryCategory": "Kies eerst een vaste categorie om subcategorieopties te laden."
       }
     }

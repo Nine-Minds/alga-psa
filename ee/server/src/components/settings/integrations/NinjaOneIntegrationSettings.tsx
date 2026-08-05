@@ -416,7 +416,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                       <li>{t('integrations.rmm.ninjaOne.setup.steps.navigate', { defaultValue: 'Navigate to Administration → Apps → API' })}</li>
                       <li>{t('integrations.rmm.ninjaOne.setup.steps.addClient', { defaultValue: 'Click "+ Add client app" to create a new API application' })}</li>
                       <li>{t('integrations.rmm.ninjaOne.setup.steps.platform', { defaultValue: 'Set Application Platform to "Web (PHP, Java, .Net Core, etc.)"' })}</li>
-                      <li>{t('integrations.rmm.ninjaOne.setup.steps.name', { defaultValue: 'Enter a Name (e.g., "Alga PSA")' })}</li>
+                      <li>{t('integrations.rmm.ninjaOne.setup.steps.name', { defaultValue: 'Enter a Name (e.g., "AlgaPSA")' })}</li>
                       <li>
                         {t('integrations.rmm.ninjaOne.setup.steps.redirectUri', { defaultValue: 'Add the redirect URI:' })}{' '}
                         <code className="bg-primary-100 px-1 py-0.5 rounded text-xs break-all">

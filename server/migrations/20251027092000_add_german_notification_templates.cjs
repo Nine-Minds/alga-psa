@@ -540,7 +540,7 @@ Dies ist eine automatisierte Nachricht. Bitte antworten Sie nicht auf diese E-Ma
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Teams auf Kurs halten</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by AlgaPSA • Teams auf Kurs halten</td>
             </tr>
           </table>
         </td>
@@ -640,7 +640,7 @@ Ticket anzeigen: {{ticket.url}}
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Teams auf Kurs halten</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by AlgaPSA • Teams auf Kurs halten</td>
             </tr>
           </table>
         </td>
@@ -740,7 +740,7 @@ Ticket anzeigen: {{ticket.url}}
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Teams auf Kurs halten</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by AlgaPSA • Teams auf Kurs halten</td>
             </tr>
           </table>
         </td>
@@ -836,7 +836,7 @@ Ticket anzeigen: {{ticket.url}}
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f0fdf4;color:#047857;font-size:12px;text-align:center;">Powered by Alga PSA • Teams auf Kurs halten</td>
+              <td style="padding:18px 32px;background:#f0fdf4;color:#047857;font-size:12px;text-align:center;">Powered by AlgaPSA • Teams auf Kurs halten</td>
             </tr>
           </table>
         </td>
@@ -935,7 +935,7 @@ Ticket anzeigen: {{ticket.url}}
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Teams auf Kurs halten</td>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by AlgaPSA • Teams auf Kurs halten</td>
             </tr>
           </table>
         </td>

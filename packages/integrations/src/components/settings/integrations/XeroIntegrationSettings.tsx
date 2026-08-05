@@ -172,7 +172,7 @@ export default function XeroIntegrationSettings() {
           <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
             <p className="font-medium text-foreground">{t('integrations.xero.settings.howItWorksTitle', { defaultValue: 'How live Xero works in this release' })}</p>
             <p className="mt-2">
-              {t('integrations.xero.settings.howItWorksDescription', { defaultValue: 'Save a tenant-owned Xero client ID and client secret here, complete the Xero OAuth flow, and Alga PSA will use the first connected Xero organisation as the default live context.' })}
+              {t('integrations.xero.settings.howItWorksDescription', { defaultValue: 'Save a tenant-owned Xero client ID and client secret here, complete the Xero OAuth flow, and AlgaPSA will use the first connected Xero organisation as the default live context.' })}
             </p>
           </div>
 

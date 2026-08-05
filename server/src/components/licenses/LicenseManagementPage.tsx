@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useTransition } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import type { TFunction } from "i18next";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -37,6 +38,7 @@ import {
 } from "@alga-psa/ui/lib/errorHandling";
 import { isEnterpriseEdition } from "@/lib/features";
 import ApplianceAiSection from "@/components/licenses/ApplianceAiSection";
+import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 
 type Tone = "neutral" | "success" | "warning" | "danger" | "premium";
 
@@ -68,14 +70,19 @@ function formatDateTime(value: string | null) {
   });
 }
 
-function tierLabel(tier: string | null) {
-  if (!tier) return "Unknown tier";
-  return tier === "essentials"
-    ? "Essentials"
-    : `${tier.charAt(0).toUpperCase()}${tier.slice(1)}`;
+function tierLabel(tier: string | null, t: TFunction) {
+  if (!tier) {
+    return t("managementPage.tiers.unknown", { defaultValue: "Unknown tier" });
+  }
+  return t(`managementPage.tiers.${tier}`, {
+    defaultValue: `${tier.charAt(0).toUpperCase()}${tier.slice(1)}`,
+  });
 }
 
-function statusPresentation(status: LicenseStatus): {
+function statusPresentation(
+  status: LicenseStatus,
+  t: TFunction,
+): {
   eyebrow: string;
   title: string;
   description: string;
@@ -85,61 +92,118 @@ function statusPresentation(status: LicenseStatus): {
   switch (status.state) {
     case "trial":
       return {
-        eyebrow: "Pro trial",
-        title: "Your Pro trial is active",
+        eyebrow: t("managementPage.status.trial.eyebrow", {
+          defaultValue: "Pro trial",
+        }),
+        title: t("managementPage.status.trial.title", {
+          defaultValue: "Your Pro trial is active",
+        }),
         description:
           status.daysRemaining !== null
-            ? `You have ${status.daysRemaining} day${status.daysRemaining === 1 ? "" : "s"} left to use all Pro features.`
-            : "You can use all Pro features during the trial period.",
-        badge: "Trial active",
+            ? t("managementPage.status.trial.description", {
+                count: status.daysRemaining,
+                defaultValue:
+                  "You have {{count}} days left to use all Pro features.",
+              })
+            : t("managementPage.status.trial.descriptionNoDays", {
+                defaultValue:
+                  "You can use all Pro features during the trial period.",
+              }),
+        badge: t("managementPage.status.trial.badge", {
+          defaultValue: "Trial active",
+        }),
         tone: "premium",
       };
     case "licensed":
       return {
-        eyebrow: "Paid license",
-        title: `${tierLabel(status.tier)} is active`,
+        eyebrow: t("managementPage.status.licensed.eyebrow", {
+          defaultValue: "Paid license",
+        }),
+        title: t("managementPage.status.licensed.title", {
+          tier: tierLabel(status.tier, t),
+          defaultValue: "{{tier}} is active",
+        }),
         description: status.expiresAt
-          ? `Your license is active through ${formatDate(status.expiresAt)}.`
-          : "Your paid license is active on this appliance.",
-        badge: "Licensed",
+          ? t("managementPage.status.licensed.descriptionWithExpiry", {
+              date: formatDate(status.expiresAt),
+              defaultValue: "Your license is active through {{date}}.",
+            })
+          : t("managementPage.status.licensed.description", {
+              defaultValue: "Your paid license is active on this appliance.",
+            }),
+        badge: t("managementPage.status.licensed.badge", {
+          defaultValue: "Licensed",
+        }),
         tone: "success",
       };
     case "license_expired":
       return {
-        eyebrow: "License needs attention",
-        title: "Your license has expired",
-        description:
-          "The appliance is running Essentials features until you activate a new license key or claim code.",
-        badge: "Expired",
+        eyebrow: t("managementPage.status.licenseExpired.eyebrow", {
+          defaultValue: "License needs attention",
+        }),
+        title: t("managementPage.status.licenseExpired.title", {
+          defaultValue: "Your license has expired",
+        }),
+        description: t("managementPage.status.licenseExpired.description", {
+          defaultValue:
+            "The appliance is running Essentials features until you activate a new license key or claim code.",
+        }),
+        badge: t("managementPage.status.licenseExpired.badge", {
+          defaultValue: "Expired",
+        }),
         tone: "danger",
       };
     case "license_wrong_tenant":
       return {
-        eyebrow: "License needs attention",
-        title: "This license is not valid here",
-        description:
-          "The stored license was issued for a different appliance tenant. Activate the correct license to unlock paid features.",
-        badge: "Wrong install",
+        eyebrow: t("managementPage.status.licenseWrongTenant.eyebrow", {
+          defaultValue: "License needs attention",
+        }),
+        title: t("managementPage.status.licenseWrongTenant.title", {
+          defaultValue: "This license is not valid here",
+        }),
+        description: t("managementPage.status.licenseWrongTenant.description", {
+          defaultValue:
+            "The stored license was issued for a different appliance tenant. Activate the correct license to unlock paid features.",
+        }),
+        badge: t("managementPage.status.licenseWrongTenant.badge", {
+          defaultValue: "Wrong install",
+        }),
         tone: "danger",
       };
     case "trial_expired":
       return {
-        eyebrow: "Essentials",
-        title: "You’re running Essentials",
-        description:
-          "Your Pro trial has ended. Essentials remains active for the core PSA feature set.",
-        badge: "Essentials active",
+        eyebrow: t("managementPage.status.trialExpired.eyebrow", {
+          defaultValue: "Essentials",
+        }),
+        title: t("managementPage.status.trialExpired.title", {
+          defaultValue: "You’re running Essentials",
+        }),
+        description: t("managementPage.status.trialExpired.description", {
+          defaultValue:
+            "Your Pro trial has ended. Essentials remains active for the core PSA feature set.",
+        }),
+        badge: t("managementPage.status.trialExpired.badge", {
+          defaultValue: "Essentials active",
+        }),
         tone: "warning",
       };
     case "ce":
     case "trial_available":
     default:
       return {
-        eyebrow: "Essentials",
-        title: "You’re running Essentials",
-        description:
-          "Essentials is active on this appliance. Keep using the core feature set, or start a one-time 15-day Pro trial.",
-        badge: "Essentials active",
+        eyebrow: t("managementPage.status.essentials.eyebrow", {
+          defaultValue: "Essentials",
+        }),
+        title: t("managementPage.status.essentials.title", {
+          defaultValue: "You’re running Essentials",
+        }),
+        description: t("managementPage.status.essentials.description", {
+          defaultValue:
+            "Essentials is active on this appliance. Keep using the core feature set, or start a one-time 15-day Pro trial.",
+        }),
+        badge: t("managementPage.status.essentials.badge", {
+          defaultValue: "Essentials active",
+        }),
         tone: "neutral",
       };
   }
@@ -187,6 +251,7 @@ function toneClasses(tone: Tone) {
  * can always navigate here to renew or start a trial.
  */
 export default function LicenseManagementPage() {
+  const { t } = useTranslation("msp/licensing");
   const [status, setStatus] = useState<LicenseStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [licenseKey, setLicenseKey] = useState("");
@@ -207,7 +272,11 @@ export default function LicenseManagementPage() {
         setStatus(s);
       })
       .catch(() => {
-        setError("Failed to load license status.");
+        setError(
+          t("managementPage.errors.loadStatus", {
+            defaultValue: "Failed to load license status.",
+          }),
+        );
       })
       .finally(() => {
         setLoading(false);
@@ -238,10 +307,18 @@ export default function LicenseManagementPage() {
         await refresh(result.status);
         setLicenseKey("");
         setSuccessMsg(
-          "License key activated. Paid features are now available on this appliance.",
+          t("managementPage.success.licenseKeyActivated", {
+            defaultValue:
+              "License key activated. Paid features are now available on this appliance.",
+          }),
         );
       } else {
-        setError(result.error ?? "Failed to activate license key.");
+        setError(
+          result.error ??
+            t("managementPage.errors.activateLicenseKey", {
+              defaultValue: "Failed to activate license key.",
+            }),
+        );
       }
     });
   }
@@ -255,10 +332,18 @@ export default function LicenseManagementPage() {
         await refresh(result.status);
         setClaimCode("");
         setSuccessMsg(
-          "Claim code activated. Automatic license refresh is now configured.",
+          t("managementPage.success.claimCodeActivated", {
+            defaultValue:
+              "Claim code activated. Automatic license refresh is now configured.",
+          }),
         );
       } else {
-        setError(result.error ?? "Failed to activate claim code.");
+        setError(
+          result.error ??
+            t("managementPage.errors.activateClaimCode", {
+              defaultValue: "Failed to activate claim code.",
+            }),
+        );
       }
     });
   }
@@ -270,9 +355,18 @@ export default function LicenseManagementPage() {
       const result = await startTrial();
       if (result.success && result.status) {
         await refresh(result.status);
-        setSuccessMsg("15-day Pro trial started.");
+        setSuccessMsg(
+          t("managementPage.success.trialStarted", {
+            defaultValue: "15-day Pro trial started.",
+          }),
+        );
       } else {
-        setError(result.error ?? "Failed to start trial.");
+        setError(
+          result.error ??
+            t("managementPage.errors.startTrial", {
+              defaultValue: "Failed to start trial.",
+            }),
+        );
       }
     });
   }
@@ -285,10 +379,18 @@ export default function LicenseManagementPage() {
       if (result.success && result.status) {
         await refresh(result.status);
         setSuccessMsg(
-          "License refreshed. Seat or plan changes from the portal are now active.",
+          t("managementPage.success.licenseRefreshed", {
+            defaultValue:
+              "License refreshed. Seat or plan changes from the portal are now active.",
+          }),
         );
       } else {
-        setError(result.error ?? "Failed to refresh the license.");
+        setError(
+          result.error ??
+            t("managementPage.errors.refreshLicense", {
+              defaultValue: "Failed to refresh the license.",
+            }),
+        );
       }
     });
   }
@@ -313,11 +415,15 @@ export default function LicenseManagementPage() {
         <Card className="border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]">
           <CardHeader>
             <CardTitle className="text-[rgb(var(--color-text-900))]">
-              License
+              {t("managementPage.notSelfHost.title", {
+                defaultValue: "License",
+              })}
             </CardTitle>
             <CardDescription>
-              License management is only available for self-hosted
-              installations.
+              {t("managementPage.notSelfHost.description", {
+                defaultValue:
+                  "License management is only available for self-hosted installations.",
+              })}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -325,7 +431,7 @@ export default function LicenseManagementPage() {
     );
   }
 
-  const presentation = statusPresentation(status);
+  const presentation = statusPresentation(status, t);
   const classes = toneClasses(presentation.tone);
   const canStartTrial = !status.trialUsed && status.state !== "licensed";
   const needsLicenseAttention =
@@ -339,13 +445,16 @@ export default function LicenseManagementPage() {
     <div className="mx-auto w-full max-w-5xl space-y-6 p-6 text-[rgb(var(--color-text-700))]">
       <header className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))]">
-          Appliance licensing
+          {t("managementPage.eyebrow", { defaultValue: "Appliance licensing" })}
         </p>
         <h1 className="text-3xl font-semibold tracking-tight text-[rgb(var(--color-text-900))]">
-          License
+          {t("managementPage.title", { defaultValue: "License" })}
         </h1>
         <p className="max-w-2xl text-sm text-[rgb(var(--color-text-500))]">
-          Manage the feature tier for this self-hosted appliance.
+          {t("managementPage.subtitle", {
+            defaultValue:
+              "Manage the feature tier for this self-hosted appliance.",
+          })}
         </p>
       </header>
 
@@ -420,12 +529,15 @@ export default function LicenseManagementPage() {
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">
-                      Try Pro for 15 days
+                      {t("managementPage.trialCta.title", {
+                        defaultValue: "Try Pro for 15 days",
+                      })}
                     </h2>
                     <p className="mt-1 max-w-2xl text-sm text-[rgb(var(--color-text-600))]">
-                      Unlock automation, advanced integrations, and the full
-                      Pro feature set. No credit card required; the
-                      appliance returns to Essentials when the trial ends.
+                      {t("managementPage.trialCta.description", {
+                        defaultValue:
+                          "Unlock automation, advanced integrations, and the full Pro feature set. No credit card required; the appliance returns to Essentials when the trial ends.",
+                      })}
                     </p>
                   </div>
                 </div>
@@ -436,7 +548,13 @@ export default function LicenseManagementPage() {
                   className="w-full gap-2 md:w-auto"
                 >
                   <Sparkles className="h-4 w-4" aria-hidden="true" />
-                  {isPending ? "Starting…" : "Start 15-day Pro trial"}
+                  {isPending
+                    ? t("managementPage.actions.startingTrial", {
+                        defaultValue: "Starting…",
+                      })
+                    : t("managementPage.actions.startTrial", {
+                        defaultValue: "Start 15-day Pro trial",
+                      })}
                 </Button>
               </div>
             </section>
@@ -445,25 +563,31 @@ export default function LicenseManagementPage() {
           <section className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4">
               <p className="text-xs font-medium uppercase tracking-[0.12em] text-[rgb(var(--color-text-400))]">
-                Current tier
+                {t("managementPage.details.currentTier", {
+                  defaultValue: "Current tier",
+                })}
               </p>
               <p className="mt-2 text-lg font-semibold text-[rgb(var(--color-text-900))]">
-                {tierLabel(status.tier)}
+                {tierLabel(status.tier, t)}
               </p>
             </div>
 
             {expiresAt ? (
               <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4">
                 <p className="text-xs font-medium uppercase tracking-[0.12em] text-[rgb(var(--color-text-400))]">
-                  Expires
+                  {t("managementPage.details.expires", {
+                    defaultValue: "Expires",
+                  })}
                 </p>
                 <p className="mt-2 text-lg font-semibold text-[rgb(var(--color-text-900))]">
                   {expiresAt}
                 </p>
                 {status.daysRemaining !== null ? (
                   <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
-                    {status.daysRemaining} day
-                    {status.daysRemaining === 1 ? "" : "s"} remaining
+                    {t("managementPage.details.daysRemaining", {
+                      count: status.daysRemaining,
+                      defaultValue: "{{count}} days remaining",
+                    })}
                   </p>
                 ) : null}
               </div>
@@ -472,7 +596,9 @@ export default function LicenseManagementPage() {
             {status.customer ? (
               <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4">
                 <p className="text-xs font-medium uppercase tracking-[0.12em] text-[rgb(var(--color-text-400))]">
-                  Licensed to
+                  {t("managementPage.details.licensedTo", {
+                    defaultValue: "Licensed to",
+                  })}
                 </p>
                 <p className="mt-2 text-lg font-semibold text-[rgb(var(--color-text-900))]">
                   {status.customer}
@@ -485,15 +611,22 @@ export default function LicenseManagementPage() {
                 <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
                   <RefreshCw className="h-4 w-4" aria-hidden="true" />
                   <p className="text-xs font-medium uppercase tracking-[0.12em]">
-                    License refresh
+                    {t("managementPage.details.refreshLabel", {
+                      defaultValue: "License refresh",
+                    })}
                   </p>
                 </div>
                 <p className="mt-2 text-lg font-semibold text-emerald-800 dark:text-emerald-200">
-                  Connected
+                  {t("managementPage.details.connected", {
+                    defaultValue: "Connected",
+                  })}
                 </p>
                 {lastCheckIn ? (
                   <p className="mt-1 text-sm text-emerald-700/80 dark:text-emerald-200/80">
-                    Last check-in: {lastCheckIn}
+                    {t("managementPage.details.lastCheckIn", {
+                      timestamp: lastCheckIn,
+                      defaultValue: "Last check-in: {{timestamp}}",
+                    })}
                   </p>
                 ) : null}
                 <Button
@@ -504,10 +637,19 @@ export default function LicenseManagementPage() {
                   className="mt-3 gap-2"
                 >
                   <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                  {isPending ? "Refreshing…" : "Refresh license now"}
+                  {isPending
+                    ? t("managementPage.actions.refreshing", {
+                        defaultValue: "Refreshing…",
+                      })
+                    : t("managementPage.actions.refreshNow", {
+                        defaultValue: "Refresh license now",
+                      })}
                 </Button>
                 <p className="mt-2 text-xs text-emerald-700/80 dark:text-emerald-200/80">
-                  Applies seat or plan changes made in the portal immediately.
+                  {t("managementPage.details.refreshHelp", {
+                    defaultValue:
+                      "Applies seat or plan changes made in the portal immediately.",
+                  })}
                 </p>
               </div>
             ) : null}
@@ -517,12 +659,15 @@ export default function LicenseManagementPage() {
             <section className="flex flex-col gap-3 rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="font-semibold text-[rgb(var(--color-text-900))]">
-                  Seats, billing, and activation codes
+                  {t("managementPage.portal.manageTitle", {
+                    defaultValue: "Seats, billing, and activation codes",
+                  })}
                 </h3>
                 <p className="mt-1 max-w-2xl text-sm text-[rgb(var(--color-text-500))]">
-                  Add or remove seats, update billing, or reissue an activation
-                  code in the licensing portal. Sign in with your registered
-                  email — no password needed.
+                  {t("managementPage.portal.manageDescription", {
+                    defaultValue:
+                      "Add or remove seats, update billing, or reissue an activation code in the licensing portal. Sign in with your registered email — no password needed.",
+                  })}
                 </p>
               </div>
               <Button
@@ -533,7 +678,9 @@ export default function LicenseManagementPage() {
               >
                 <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                  Manage license in portal
+                  {t("managementPage.actions.manageInPortal", {
+                    defaultValue: "Manage license in portal",
+                  })}
                 </a>
               </Button>
             </section>
@@ -541,13 +688,15 @@ export default function LicenseManagementPage() {
             <section className="flex flex-col gap-3 rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="font-semibold text-[rgb(var(--color-text-900))]">
-                  Ready to buy AlgaPSA Pro?
+                  {t("managementPage.portal.buyTitle", {
+                    defaultValue: "Ready to buy AlgaPSA Pro?",
+                  })}
                 </h3>
                 <p className="mt-1 max-w-2xl text-sm text-[rgb(var(--color-text-500))]">
-                  Purchase in the licensing portal — sign in with your
-                  registered email, pick your seat count, and you&apos;ll get a
-                  one-time activation code to enter below. Your appliance
-                  upgrades in place.
+                  {t("managementPage.portal.buyDescription", {
+                    defaultValue:
+                      "Purchase in the licensing portal — sign in with your registered email, pick your seat count, and you'll get a one-time activation code to enter below. Your appliance upgrades in place.",
+                  })}
                 </p>
               </div>
               <Button
@@ -557,7 +706,9 @@ export default function LicenseManagementPage() {
               >
                 <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                  Buy Pro in the portal
+                  {t("managementPage.actions.buyInPortal", {
+                    defaultValue: "Buy Pro in the portal",
+                  })}
                 </a>
               </Button>
             </section>
@@ -581,7 +732,9 @@ export default function LicenseManagementPage() {
               className="h-4 w-4 text-[rgb(var(--color-primary-500))]"
               aria-hidden="true"
             />
-            Have a license code or key?
+            {t("managementPage.advanced.summary", {
+              defaultValue: "Have a license code or key?",
+            })}
           </span>
           <ChevronDown
             className="h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform group-open:rotate-180"
@@ -590,16 +743,23 @@ export default function LicenseManagementPage() {
         </summary>
         <div className="space-y-5 border-t border-[rgb(var(--color-border-200))] px-5 pb-5 pt-4">
           <p className="max-w-3xl text-sm text-[rgb(var(--color-text-500))]">
-            Enter the activation code or offline key you received from the{" "}
+            {t("managementPage.advanced.introPrefix", {
+              defaultValue:
+                "Enter the activation code or offline key you received from the",
+            })}{" "}
             <a
               href={PORTAL_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="font-medium text-[rgb(var(--color-primary-600))] underline underline-offset-2 dark:text-[rgb(var(--color-primary-300))]"
             >
-              licensing portal
+              {t("managementPage.advanced.introLink", {
+                defaultValue: "licensing portal",
+              })}
             </a>{" "}
-            or from Nine Minds support.
+            {t("managementPage.advanced.introSuffix", {
+              defaultValue: "or from Nine Minds support.",
+            })}
           </p>
 
           <div className="grid gap-4 lg:grid-cols-2">
@@ -610,12 +770,15 @@ export default function LicenseManagementPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-[rgb(var(--color-text-900))]">
-                    Activate with claim code
+                    {t("managementPage.advanced.claimCode.title", {
+                      defaultValue: "Activate with claim code",
+                    })}
                   </h3>
                   <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
-                    Use the 8-character code from the licensing portal or a
-                    paid-license email. This also enables automatic license
-                    refresh.
+                    {t("managementPage.advanced.claimCode.description", {
+                      defaultValue:
+                        "Use the 8-character code from the licensing portal or a paid-license email. This also enables automatic license refresh.",
+                    })}
                   </p>
                 </div>
               </div>
@@ -636,7 +799,13 @@ export default function LicenseManagementPage() {
                   disabled={isPending || claimCode.length < 8}
                   className="whitespace-nowrap"
                 >
-                  {isPending ? "Activating…" : "Apply claim code"}
+                  {isPending
+                    ? t("managementPage.actions.activating", {
+                        defaultValue: "Activating…",
+                      })
+                    : t("managementPage.actions.applyClaimCode", {
+                        defaultValue: "Apply claim code",
+                      })}
                 </Button>
               </div>
             </section>
@@ -648,11 +817,15 @@ export default function LicenseManagementPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-[rgb(var(--color-text-900))]">
-                    Paste a license key
+                    {t("managementPage.advanced.licenseKey.title", {
+                      defaultValue: "Paste a license key",
+                    })}
                   </h3>
                   <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
-                    Use this for offline keys downloaded from the licensing
-                    portal (air-gapped installs) or issued by support.
+                    {t("managementPage.advanced.licenseKey.description", {
+                      defaultValue:
+                        "Use this for offline keys downloaded from the licensing portal (air-gapped installs) or issued by support.",
+                    })}
                   </p>
                 </div>
               </div>
@@ -671,7 +844,13 @@ export default function LicenseManagementPage() {
                   onClick={handleSubmitLicense}
                   disabled={isPending || !licenseKey.trim()}
                 >
-                  {isPending ? "Activating…" : "Activate license key"}
+                  {isPending
+                    ? t("managementPage.actions.activating", {
+                        defaultValue: "Activating…",
+                      })
+                    : t("managementPage.actions.activateLicenseKey", {
+                        defaultValue: "Activate license key",
+                      })}
                 </Button>
               </div>
             </section>
@@ -680,10 +859,15 @@ export default function LicenseManagementPage() {
           {status.tenantId ? (
             <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-3 text-sm dark:bg-[rgb(var(--color-border-100))]/40">
               <p className="font-medium text-[rgb(var(--color-text-800))]">
-                Installation ID
+                {t("managementPage.advanced.installationId.title", {
+                  defaultValue: "Installation ID",
+                })}
               </p>
               <p className="mt-1 text-[rgb(var(--color-text-500))]">
-                Support may ask for this ID when issuing a manual license key.
+                {t("managementPage.advanced.installationId.description", {
+                  defaultValue:
+                    "Support may ask for this ID when issuing a manual license key.",
+                })}
               </p>
               <code className="mt-2 block break-all rounded bg-[rgb(var(--color-card))] px-2 py-1 font-mono text-xs text-[rgb(var(--color-text-700))]">
                 {status.tenantId}

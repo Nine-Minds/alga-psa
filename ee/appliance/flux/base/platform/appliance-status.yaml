@@ -1455,7 +1455,7 @@ spec:
                   <body>
                     <main class="shell">
                       <section class="hero">
-                        <div class="eyebrow">Alga PSA Appliance</div>
+                        <div class="eyebrow">AlgaPSA Appliance</div>
                         <h1>Install status</h1>
                         <div id="summary" class="summary">Loading status...</div>
                       </section>

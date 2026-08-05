@@ -147,7 +147,7 @@
     },
     "source": {
       "title": "Fuente de cálculo de impuestos",
-      "tooltip": "Elija si los impuestos son calculados por Alga PSA o delegados a su sistema contable externo",
+      "tooltip": "Elija si los impuestos son calculados por AlgaPSA o delegados a su sistema contable externo",
       "description": "Configure cómo se calculan los montos de impuestos para las facturas.",
       "fields": {
         "defaultMethod": {
@@ -156,8 +156,8 @@
       },
       "options": {
         "internal": {
-          "label": "Interno (Alga PSA)",
-          "description": "Los impuestos se calculan automáticamente en función de las tasas impositivas configuradas en Alga PSA."
+          "label": "Interno (AlgaPSA)",
+          "description": "Los impuestos se calculan automáticamente en función de las tasas impositivas configuradas en AlgaPSA."
         },
         "external": {
           "label": "Externo (Paquete de Contabilidad)",
@@ -169,7 +169,7 @@
         "step1": "La factura se crea sin importes de impuestos.",
         "step2": "La factura se exporta a su sistema de contabilidad conectado (QuickBooks, Xero, etc.)",
         "step3": "El sistema contable calcula el impuesto en función de sus normas fiscales.",
-        "step4": "Los importes de los impuestos se importan de nuevo a Alga PSA",
+        "step4": "Los importes de los impuestos se importan de nuevo a AlgaPSA",
         "step5": "Los totales de las facturas se actualizan con el impuesto importado.",
         "note": "El sistema de contabilidad utilizado se determina automáticamente en función del sistema al que exporta la factura.",
         "warning": "Importante: las facturas de clientes que usan impuesto externo no se pueden finalizar hasta que su impuesto se haya importado de vuelta desde su sistema contable. Esto requiere una integración contable conectada (QuickBooks o Xero) y exportar primero la factura allí. Sin ello, estas facturas quedarán atascadas en Borrador: cambie una factura individual de vuelta a impuesto interno para finalizarla en Alga."
@@ -978,7 +978,7 @@
         "placeholder": "Seleccione la fuente del impuesto...",
         "options": {
           "default": "Usar valor predeterminado de inquilino",
-          "internal": "Alga PSA Calcula Impuestos",
+          "internal": "AlgaPSA Calcula Impuestos",
           "external": "Paquete de contabilidad calcula impuestos"
         },
         "effective": {
@@ -1192,7 +1192,7 @@
       "webhook": {
         "label": "Configuración de webhook",
         "configuredTitle": "Webhooks configurados automáticamente",
-        "configuredDescription": "Alga PSA recibirá notificaciones de pago para:",
+        "configuredDescription": "AlgaPSA recibirá notificaciones de pago para:",
         "failedTitle": "Falló la configuración del webhook",
         "failedDescription": "La configuración automática del webhook falló. Haga clic en reintentar para intentar la configuración nuevamente.",
         "configuring": "Configurando...",

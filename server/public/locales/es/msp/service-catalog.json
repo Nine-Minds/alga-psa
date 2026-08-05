@@ -254,8 +254,8 @@
       "none": "ninguno"
     },
     "bucketOverlay": {
-      "recommendHours": "Recomendar cubo de horas",
-      "recommendUsage": "Recomendar cubo de consumo."
+      "recommendHours": "Recomendar bolsa de horas",
+      "recommendUsage": "Recomendar bolsa de horas para consumo"
     }
   },
   "hourlyConfig": {

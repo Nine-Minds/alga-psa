@@ -225,5 +225,127 @@
       "body": "Ricariche, ricarica automatica e modifiche dell'abbonamento si gestiscono nello store di Nine Minds.",
       "openStore": "Apri lo store"
     }
+  },
+  "managementPage": {
+    "metaTitle": "Licenza",
+    "eyebrow": "Gestione delle licenze dell’appliance",
+    "title": "Licenza",
+    "subtitle": "Gestisci il livello di funzionalità di questa appliance ospitata autonomamente.",
+    "notSelfHost": {
+      "title": "Licenza",
+      "description": "La gestione delle licenze è disponibile solo per le installazioni ospitate autonomamente."
+    },
+    "tiers": {
+      "unknown": "Livello sconosciuto",
+      "essentials": "Piano Essentials",
+      "solo": "Solo",
+      "pro": "Pro"
+    },
+    "status": {
+      "trial": {
+        "eyebrow": "Periodo di prova Pro",
+        "title": "Il tuo periodo di prova Pro è attivo",
+        "description_one": "Ti rimane {{count}} giorno per usare tutte le funzionalità Pro.",
+        "description_many": "Ti rimangono {{count}} giorni per usare tutte le funzionalità Pro.",
+        "description_other": "Ti rimangono {{count}} giorni per usare tutte le funzionalità Pro.",
+        "descriptionNoDays": "Puoi usare tutte le funzionalità Pro durante il periodo di prova.",
+        "badge": "Periodo di prova attivo"
+      },
+      "licensed": {
+        "eyebrow": "Licenza a pagamento",
+        "title": "{{tier}} è attivo",
+        "description": "La tua licenza a pagamento è attiva su questa appliance.",
+        "descriptionWithExpiry": "La tua licenza è attiva fino al {{date}}.",
+        "badge": "Con licenza"
+      },
+      "licenseExpired": {
+        "eyebrow": "La licenza richiede attenzione",
+        "title": "La tua licenza è scaduta",
+        "description": "L’appliance usa le funzionalità Essentials finché non attivi una nuova chiave di licenza o un nuovo codice di attivazione.",
+        "badge": "Scaduta"
+      },
+      "licenseWrongTenant": {
+        "eyebrow": "La licenza richiede attenzione",
+        "title": "Questa licenza non è valida qui",
+        "description": "La licenza memorizzata è stata emessa per un tenant diverso dell’appliance. Attiva la licenza corretta per sbloccare le funzionalità a pagamento.",
+        "badge": "Installazione errata"
+      },
+      "trialExpired": {
+        "eyebrow": "Piano Essentials",
+        "title": "Stai usando Essentials",
+        "description": "Il tuo periodo di prova Pro è terminato. Essentials rimane attivo per il set principale di funzionalità PSA.",
+        "badge": "Essentials attivo"
+      },
+      "essentials": {
+        "eyebrow": "Piano Essentials",
+        "title": "Stai usando Essentials",
+        "description": "Essentials è attivo su questa appliance. Continua a usare il set principale di funzionalità oppure avvia un unico periodo di prova Pro di 15 giorni.",
+        "badge": "Essentials attivo"
+      }
+    },
+    "trialCta": {
+      "title": "Prova Pro per 15 giorni",
+      "description": "Sblocca l’automazione, le integrazioni avanzate e il set completo di funzionalità Pro. Non è richiesta una carta di credito; al termine del periodo di prova, l’appliance torna a Essentials."
+    },
+    "details": {
+      "currentTier": "Livello attuale",
+      "expires": "Scadenza",
+      "daysRemaining_one": "{{count}} giorno rimanente",
+      "daysRemaining_many": "{{count}} giorni rimanenti",
+      "daysRemaining_other": "{{count}} giorni rimanenti",
+      "licensedTo": "Licenza concessa a",
+      "refreshLabel": "Aggiornamento della licenza",
+      "connected": "Connesso",
+      "lastCheckIn": "Ultimo check-in: {{timestamp}}",
+      "refreshHelp": "Applica immediatamente le modifiche alle postazioni o al piano effettuate nel portale."
+    },
+    "portal": {
+      "manageTitle": "Postazioni, fatturazione e codici di attivazione",
+      "manageDescription": "Aggiungi o rimuovi postazioni, aggiorna la fatturazione o emetti di nuovo un codice di attivazione nel portale delle licenze. Accedi con l’email registrata — non serve una password.",
+      "buyTitle": "Vuoi acquistare AlgaPSA Pro?",
+      "buyDescription": "Acquista nel portale delle licenze: accedi con l’email registrata, scegli il numero di postazioni e riceverai un codice di attivazione monouso da inserire qui sotto. L’appliance viene aggiornata sul posto."
+    },
+    "advanced": {
+      "summary": "Hai un codice o una chiave di licenza?",
+      "introPrefix": "Inserisci il codice di attivazione o la chiave offline ricevuti dal",
+      "introLink": "portale delle licenze",
+      "introSuffix": "o dall’assistenza Nine Minds.",
+      "claimCode": {
+        "title": "Attiva con un codice di attivazione",
+        "description": "Usa il codice di 8 caratteri del portale delle licenze o di un’email relativa a una licenza a pagamento. In questo modo abiliti anche l’aggiornamento automatico della licenza."
+      },
+      "licenseKey": {
+        "title": "Incolla una chiave di licenza",
+        "description": "Usa questa opzione per le chiavi offline scaricate dal portale delle licenze per le installazioni isolate dalla rete o emesse dall’assistenza."
+      },
+      "installationId": {
+        "title": "ID installazione",
+        "description": "L’assistenza potrebbe chiederti questo ID quando emette una chiave di licenza manuale."
+      }
+    },
+    "actions": {
+      "startTrial": "Avvia il periodo di prova Pro di 15 giorni",
+      "startingTrial": "Avvio…",
+      "refreshNow": "Aggiorna ora la licenza",
+      "refreshing": "Aggiornamento…",
+      "manageInPortal": "Gestisci la licenza nel portale",
+      "buyInPortal": "Acquista Pro nel portale",
+      "applyClaimCode": "Applica il codice di attivazione",
+      "activateLicenseKey": "Attiva la chiave di licenza",
+      "activating": "Attivazione…"
+    },
+    "success": {
+      "licenseKeyActivated": "Chiave di licenza attivata. Le funzionalità a pagamento sono ora disponibili su questa appliance.",
+      "claimCodeActivated": "Codice di attivazione attivato. L’aggiornamento automatico della licenza è ora configurato.",
+      "trialStarted": "Periodo di prova Pro di 15 giorni avviato.",
+      "licenseRefreshed": "Licenza aggiornata. Le modifiche alle postazioni o al piano effettuate nel portale sono ora attive."
+    },
+    "errors": {
+      "loadStatus": "Impossibile caricare lo stato della licenza.",
+      "activateLicenseKey": "Impossibile attivare la chiave di licenza.",
+      "activateClaimCode": "Impossibile attivare il codice di attivazione.",
+      "startTrial": "Impossibile avviare il periodo di prova.",
+      "refreshLicense": "Impossibile aggiornare la licenza."
+    }
   }
 }

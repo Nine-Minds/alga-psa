@@ -22,9 +22,9 @@ function generateMarkdown(): string {
     "slug: email-template-variables",
     "category: 10. Settings",
     "order: 10.07",
-    'description: "Find, insert, and safely use the variables available in each Alga PSA system email template."',
+    'description: "Find, insert, and safely use the variables available in each AlgaPSA system email template."',
     "---",
-    "Email template variables let your MSP reuse live ticket, client, invoice, appointment, and other operational details in custom messages. Alga PSA limits the available variables to the selected system template so a token from one workflow is not accidentally used in another.",
+    "Email template variables let your MSP reuse live ticket, client, invoice, appointment, and other operational details in custom messages. AlgaPSA limits the available variables to the selected system template so a token from one workflow is not accidentally used in another.",
     "",
     "Open **Settings > Notifications > Email Templates**. Select **Variable reference** to search every template across ticketing, billing, projects, appointments, and other areas.",
     "",
@@ -36,7 +36,7 @@ function generateMarkdown(): string {
     "![The custom email template editor showing its variable panel and a suggestion at the subject cursor](/docs-images/email-template-variable-editor.png)",
     "*Figure 2: The editor limits variables and autocomplete suggestions to the selected template.*",
     "",
-    "Use double braces for ordinary values, such as `{{ticket.title}}`. Variables marked `raw-html` use triple braces, such as `{{{ticket.changes}}}`, because their value contains markup prepared by Alga PSA. Only use triple braces for variables explicitly marked `raw-html`.",
+    "Use double braces for ordinary values, such as `{{ticket.title}}`. Variables marked `raw-html` use triple braces, such as `{{{ticket.changes}}}`, because their value contains markup prepared by AlgaPSA. Only use triple braces for variables explicitly marked `raw-html`.",
     "",
     "After editing a template, preview it with sample data and send a test email. Check the subject, links, optional sections, and plain-text version before saving it for production use.",
     "",
@@ -56,7 +56,7 @@ function generateMarkdown(): string {
       lines.push(`### ${templateName}`, "");
       if (entry.contractInferred) {
         lines.push(
-          "> **Not currently sent:** this variable contract is inferred from the customizable system template. Alga PSA does not currently dispatch this email.",
+          "> **Not currently sent:** this variable contract is inferred from the customizable system template. AlgaPSA does not currently dispatch this email.",
           "",
         );
       }

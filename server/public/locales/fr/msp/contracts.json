@@ -2296,7 +2296,17 @@
         "hourly": "Horaire",
         "usage": "Utilisation"
       },
-      "usageRate": "Tarif d'utilisation"
+      "usageRate": "Tarif d'utilisation",
+      "columns": {
+        "name": "Nom",
+        "type": "Type",
+        "value": "Valeur",
+        "appliesTo": "S'applique à",
+        "description": "Description",
+        "amount": "Montant ($)",
+        "billingPeriod": "Période de facturation",
+        "timing": "Moment de facturation"
+      }
     },
     "timeline": {
       "deltaDown": "−{{amount}} par rapport au contrat actuel",
@@ -2310,7 +2320,7 @@
       "title": "Périodes de facturation simulées"
     },
     "unavailable": {
-      "description": "Le simulateur de contrat est disponible dans Alga PSA Pro.",
+      "description": "Le simulateur de contrat est disponible dans AlgaPSA Pro.",
       "title": "Fonctionnalité Pro"
     }
   }

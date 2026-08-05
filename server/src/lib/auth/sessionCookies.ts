@@ -1,5 +1,5 @@
 /**
- * Session cookie management and JWT encoding utilities for Alga PSA authentication.
+ * Session cookie management and JWT encoding utilities for AlgaPSA authentication.
  * Built on top of @auth/core for NextAuth compatibility.
  */
 

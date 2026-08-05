@@ -1,6 +1,6 @@
 # Testing Standards
 
-This document outlines testing conventions, file organization, and naming patterns for the Alga PSA codebase.
+This document outlines testing conventions, file organization, and naming patterns for the AlgaPSA codebase.
 
 ## Table of Contents
 

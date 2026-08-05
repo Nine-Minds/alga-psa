@@ -148,7 +148,7 @@ const mocks = vi.hoisted(() => {
       {
         client_id: 'tenant-client-1',
         tenant: 'tenant-1',
-        client_name: 'Alga PSA',
+        client_name: 'AlgaPSA',
         address: '500 Billing Ave',
       },
     ],

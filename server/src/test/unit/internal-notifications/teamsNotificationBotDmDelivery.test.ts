@@ -255,7 +255,7 @@ describe('deliverTeamsNotificationImpl per-category channel routing (F044/F045)'
       ])
     );
     const actions = attachment.content.actions as Array<{ type: string; title: string; url: string }>;
-    expect(actions[0]).toMatchObject({ type: 'Action.OpenUrl', title: 'Open in Alga PSA' });
+    expect(actions[0]).toMatchObject({ type: 'Action.OpenUrl', title: 'Open in AlgaPSA' });
     expect(actions[0].url).toContain('https://teams.microsoft.com/l/entity/');
     expect(actions[1]).toMatchObject({
       type: 'Action.OpenUrl',

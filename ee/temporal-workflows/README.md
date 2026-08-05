@@ -1,6 +1,6 @@
 # Temporal Workflows for Tenant Management
 
-This project implements Temporal workflows for enterprise tenant creation and management in the Alga PSA system.
+This project implements Temporal workflows for enterprise tenant creation and management in the AlgaPSA system.
 
 ## Overview
 
@@ -355,7 +355,7 @@ The workflow includes comprehensive error handling:
 
 ### Database Integration
 
-The workflows integrate with the existing Alga PSA database schema:
+The workflows integrate with the existing AlgaPSA database schema:
 
 - Uses `@alga-psa/db` utilities for database connections
 - Follows CitusDB compatibility requirements
@@ -461,4 +461,4 @@ The system supports horizontal scaling through:
 
 ## License
 
-This is part of the Alga PSA enterprise edition. See the main project license for details.
+This is part of the AlgaPSA enterprise edition. See the main project license for details.

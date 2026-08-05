@@ -293,14 +293,14 @@
       "client": "Kunde",
       "invoiceNumber": "Rechnungsnummer",
       "invoiceNumberOptional": "Rechnungsnummer (optional)",
-      "sourceSalesOrder": "Source sales order (optional)"
+      "sourceSalesOrder": "Quellkundenauftrag (optional)"
     },
     "placeholders": {
       "selectClient": "Wählen Sie einen Kunden aus",
       "invoiceNumberOptional": "Für die automatische Generierung leer lassen",
-      "sourceSalesOrder": "Select a fulfilled or manually billable sales order",
-      "searchSalesOrders": "Search sales orders...",
-      "noInvoiceableSalesOrders": "No invoiceable sales orders found."
+      "sourceSalesOrder": "Ausgelieferten oder manuell abrechenbaren Kundenauftrag auswählen",
+      "searchSalesOrders": "Kundenaufträge suchen…",
+      "noInvoiceableSalesOrders": "Keine abrechenbaren Kundenaufträge gefunden."
     },
     "automatedItems": {
       "title": "Automatisierte Werbebuchungen",
@@ -318,8 +318,8 @@
       "generate": "Rechnung erstellen",
       "saveChanges": "Änderungen speichern",
       "processing": "Wird verarbeitet...",
-      "generateSalesOrderInvoice": "Generate Sales Order Invoice",
-      "clearSalesOrderSource": "Clear sales order source"
+      "generateSalesOrderInvoice": "Kundenauftragsrechnung erstellen",
+      "clearSalesOrderSource": "Kundenauftrag als Quelle entfernen"
     },
     "labels": {
       "total": "Gesamt"
@@ -333,7 +333,7 @@
       "helpText": "Lassen Sie das Feld leer, wenn kein Ablaufdatum vorliegt oder der Standardablaufzeitraum verwendet werden soll"
     },
     "errors": {
-      "selectClient": "Bitte wähle einen Kunden aus",
+      "selectClient": "Bitte wählen Sie einen Kunden aus",
       "invoiceNumberUnique": "Diese Rechnungsnummer wird bereits verwendet.",
       "noTaxRateConfigured": "Für die Region ist kein Steuersatz konfiguriert.",
       "serviceNotFound": "Ausgewählter Dienst nicht gefunden.",
@@ -349,11 +349,11 @@
       "NO_TAX_RATE": "Für {{region}} wurde am {{date}} kein aktiver Steuersatz gefunden.",
       "DISCOUNT_TARGET_NOT_FOUND": "Der Dienst {{serviceId}} für diesen Rabatt wurde nicht gefunden.",
       "INVOICE_NUMBER_CONFLICT": "Diese Rechnungsnummer wird bereits verwendet.",
-      "PERMISSION_DENIED": "Du hast keine Berechtigung, diese Rechnung zu erstellen oder zu aktualisieren.",
+      "PERMISSION_DENIED": "Sie haben keine Berechtigung, diese Rechnung zu erstellen oder zu aktualisieren.",
       "UNEXPECTED": "Beim Generieren der Rechnung ist ein Fehler aufgetreten. Gib bei der Kontaktaufnahme mit dem Support die Referenz {{ref}} an.",
-      "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
-      "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
-      "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+      "salesOrderGenerateFailed": "Die Kundenauftragsrechnung konnte nicht erstellt werden.",
+      "salesOrderNothingToInvoice": "Für diesen Kundenauftrag ist nichts mehr abzurechnen.",
+      "salesOrderNotInvoiceable": "Dieser Kundenauftrag kann nicht mehr abgerechnet werden."
     },
     "warnings": {
       "noBillingEmail": "Für diesen Kunden ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege vor dem Generieren der Rechnung eine E-Mail-Adresse am Rechnungsstandort fest."
@@ -363,7 +363,7 @@
       "retry": "Erneut versuchen"
     },
     "salesOrderContext": {
-      "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
+      "summary": "{{quantity}} Artikel aus {{lineCount}} Positionen können abgerechnet werden. Dieser Entwurf wird mit dem Kundenauftrag verknüpft."
     }
   },
   "draftsTab": {
@@ -1029,7 +1029,7 @@
       "generate": "Erzeugen",
       "drafts": "Entwürfe",
       "finalized": "Finalisiert",
-      "projectBilling": "Project Billing"
+      "projectBilling": "Projektabrechnung"
     }
   },
   "invoiceSyncBadge": {
@@ -1060,7 +1060,7 @@
       "pending": "Steuer: Ausstehend"
     },
     "tooltips": {
-      "internal": "Die von Alga PSA berechnete Steuer basiert auf den konfigurierten Steuersätzen",
+      "internal": "Die von AlgaPSA berechnete Steuer basiert auf den konfigurierten Steuersätzen",
       "external": "Die Steuer wird durch ein externes Buchhaltungssystem berechnet",
       "pending": "Steuer wartet auf Import aus externem Buchhaltungssystem",
       "externalAdapter": "Von {{adapter}} berechnete Steuer",
@@ -1667,63 +1667,63 @@
     }
   },
   "projectBilling": {
-    "subtitle": "Ready milestones and deposits awaiting approval across all projects.",
-    "bulkActions": "Actions ({{count}})",
-    "loading": "Loading project billing queue...",
-    "empty": "Nothing is waiting for review. Ready milestones and deposits will appear here.",
+    "subtitle": "Bereite Meilensteine und Anzahlungen aus allen Projekten, die auf Genehmigung warten.",
+    "bulkActions": "Aktionen ({{count}})",
+    "loading": "Warteschlange der Projektabrechnung wird geladen…",
+    "empty": "Es wartet nichts auf Prüfung. Bereite Meilensteine und Anzahlungen werden hier angezeigt.",
     "columns": {
-      "project": "Project",
-      "client": "Client",
-      "description": "Description",
-      "amount": "Amount",
-      "trigger": "Trigger",
-      "daysWaiting": "Days waiting",
-      "actions": "Actions"
+      "project": "Projekt",
+      "client": "Kunde",
+      "description": "Beschreibung",
+      "amount": "Betrag",
+      "trigger": "Auslöser",
+      "daysWaiting": "Wartet seit Tagen",
+      "actions": "Aktionen"
     },
     "trigger": {
-      "phase": "Phase {{phase}} completed {{date}}",
-      "date": "Date reached",
-      "manual": "Manual"
+      "phase": "Phase {{phase}} am {{date}} abgeschlossen",
+      "date": "Datum erreicht",
+      "manual": "Manuell"
     },
     "actions": {
-      "approve": "Approve",
-      "approveInvoiceNow": "Approve & invoice now",
-      "hold": "Hold",
-      "cancel": "Cancel",
-      "approveSelected": "Approve selected",
-      "holdSelected": "Hold selected"
+      "approve": "Genehmigen",
+      "approveInvoiceNow": "Genehmigen und jetzt abrechnen",
+      "hold": "Zurückstellen",
+      "cancel": "Stornieren",
+      "approveSelected": "Ausgewählte genehmigen",
+      "holdSelected": "Ausgewählte zurückstellen"
     },
     "toasts": {
-      "approved": "Entry approved.",
-      "approvedWithWarning": "Entry approved. {{warning}}",
-      "invoiced": "Entry approved and invoiced.",
-      "bulkApproved": "{{count}} entries approved.",
-      "bulkApproveFailed": "{{count}} entries could not be approved (e.g. {{reason}}).",
-      "held": "Entry placed on hold.",
-      "bulkHeld": "{{count}} entries placed on hold.",
-      "bulkHoldFailed": "{{count}} entries could not be held (e.g. {{reason}}).",
-      "canceled": "Entry canceled."
+      "approved": "Eintrag genehmigt.",
+      "approvedWithWarning": "Eintrag genehmigt. {{warning}}",
+      "invoiced": "Eintrag genehmigt und abgerechnet.",
+      "bulkApproved": "{{count}} Einträge genehmigt.",
+      "bulkApproveFailed": "{{count}} Einträge konnten nicht genehmigt werden (z. B. {{reason}}).",
+      "held": "Eintrag zurückgestellt.",
+      "bulkHeld": "{{count}} Einträge zurückgestellt.",
+      "bulkHoldFailed": "{{count}} Einträge konnten nicht zurückgestellt werden (z. B. {{reason}}).",
+      "canceled": "Eintrag storniert."
     },
     "errors": {
-      "loadFailed": "Failed to load the project billing review queue. Please try again.",
-      "approveFailed": "Failed to approve the entry.",
-      "invoiceFailed": "Failed to approve and invoice the entry.",
-      "holdFailed": "Failed to place the entry on hold.",
-      "cancelFailed": "Failed to cancel the entry."
+      "loadFailed": "Die Prüfwarteschlange der Projektabrechnung konnte nicht geladen werden. Versuchen Sie es erneut.",
+      "approveFailed": "Der Eintrag konnte nicht genehmigt werden.",
+      "invoiceFailed": "Der Eintrag konnte nicht genehmigt und abgerechnet werden.",
+      "holdFailed": "Der Eintrag konnte nicht zurückgestellt werden.",
+      "cancelFailed": "Der Eintrag konnte nicht storniert werden."
     },
     "holdDialog": {
-      "title": "Hold entry",
-      "titlePlural": "Hold {{count}} entries",
-      "description": "Holding returns the entry to pending until it is made ready again. A reason is required.",
-      "reasonPlaceholder": "Reason for holding...",
-      "cancel": "Cancel",
-      "confirm": "Hold"
+      "title": "Eintrag zurückstellen",
+      "titlePlural": "{{count}} Einträge zurückstellen",
+      "description": "Durch das Zurückstellen wird der Eintrag wieder als ausstehend geführt, bis er erneut als bereit markiert wird. Eine Begründung ist erforderlich.",
+      "reasonPlaceholder": "Begründung für das Zurückstellen…",
+      "cancel": "Abbrechen",
+      "confirm": "Zurückstellen"
     },
     "cancelDialog": {
-      "title": "Cancel entry",
-      "message": "Canceling this schedule entry removes it from billing. This cannot be undone.",
-      "confirm": "Cancel entry",
-      "dismiss": "Keep entry"
+      "title": "Eintrag stornieren",
+      "message": "Durch das Stornieren wird dieser Zeitplaneintrag aus der Abrechnung entfernt. Dies kann nicht rückgängig gemacht werden.",
+      "confirm": "Eintrag stornieren",
+      "dismiss": "Eintrag behalten"
     }
   }
 }

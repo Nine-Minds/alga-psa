@@ -200,33 +200,33 @@
     },
     "senderIdentities": {
       "ticket": {
-        "title": "Ticket email identity",
-        "description": "Replies to ticket emails must return to this address so they can be matched and added to the ticket. Use a connected, monitored inbox.",
-        "connectedInboxLabel": "Connected inbox",
-        "connectedInboxHelp": "A connected inbox keeps client replies in the ticket conversation.",
-        "customAddressOption": "Use another address",
-        "addressLabel": "From address",
+        "title": "Identité e-mail des tickets",
+        "description": "Les réponses aux e-mails des tickets doivent revenir à cette adresse afin de pouvoir être associées et ajoutées au ticket. Utilisez une boîte de réception connectée et surveillée.",
+        "connectedInboxLabel": "Boîte de réception connectée",
+        "connectedInboxHelp": "Une boîte de réception connectée conserve les réponses du client dans la conversation du ticket.",
+        "customAddressOption": "Utiliser une autre adresse",
+        "addressLabel": "Adresse d'expéditeur",
         "addressPlaceholder": "support@example.com",
-        "addressHelp": "This address controls reply routing for ticket email only.",
-        "nameLabel": "Sender display name",
+        "addressHelp": "Cette adresse détermine le routage des réponses uniquement pour les e-mails des tickets.",
+        "nameLabel": "Nom d'affichage de l'expéditeur",
         "namePlaceholder": "Support",
-        "nameHelp": "Leave blank to use the connected mailbox name or ticket board name.",
-        "notConnectedWarning": "This address is not a connected inbox, so ticket replies may not be ingested.",
-        "microsoftMismatch": "Ticket email address must match the selected Microsoft 365 mailbox ({{mailbox}})."
+        "nameHelp": "Laissez ce champ vide pour utiliser le nom de la boîte aux lettres connectée ou celui du tableau de tickets.",
+        "notConnectedWarning": "Cette adresse n'est pas une boîte de réception connectée ; les réponses aux tickets peuvent donc ne pas être prises en compte.",
+        "microsoftMismatch": "L'adresse e-mail des tickets doit correspondre à la boîte aux lettres Microsoft 365 sélectionnée ({{mailbox}})."
       },
       "notification": {
-        "title": "All other email identity",
-        "description": "Brand portal invitations, password resets, invoices, project updates, and general notifications independently from ticket routing.",
-        "addressLabel": "From address",
+        "title": "Identité e-mail pour tous les autres messages",
+        "description": "Personnalisez les invitations au portail, les réinitialisations de mot de passe, les factures, les mises à jour de projet et les notifications générales indépendamment du routage des tickets.",
+        "addressLabel": "Adresse d'expéditeur",
         "addressPlaceholder": "notifications@example.com",
-        "addressHelp": "SMTP and Resend use this address. Microsoft 365 uses the selected sending mailbox.",
-        "nameLabel": "Sender display name",
-        "namePlaceholder": "Your company name",
-        "nameHelp": "Leave blank to use {{company}} automatically.",
-        "companyFallback": "your tenant company"
+        "addressHelp": "SMTP et Resend utilisent cette adresse. Microsoft 365 utilise la boîte aux lettres d'envoi sélectionnée.",
+        "nameLabel": "Nom d'affichage de l'expéditeur",
+        "namePlaceholder": "Nom de votre entreprise",
+        "nameHelp": "Laissez ce champ vide pour utiliser automatiquement {{company}}.",
+        "companyFallback": "votre entreprise"
       },
-      "warningTitle": "Check reply routing",
-      "errorTitle": "Fix the ticket identity"
+      "warningTitle": "Vérifiez le routage des réponses",
+      "errorTitle": "Corrigez l'identité e-mail des tickets"
     }
   },
   "microsoft365": {
@@ -389,7 +389,7 @@
       "searchPlaceholder": "Rechercher des bundles par nom ou description",
       "showArchived": "Afficher les archivés",
       "columns": {
-        "bundle": "Bundle",
+        "bundle": "Ensemble",
         "status": "Statut",
         "type": "Type",
         "assignments": "Affectations",
@@ -622,7 +622,7 @@
       "sentAt": "Envoyé le",
       "status": "Statut",
       "provider": "Fournisseur",
-      "messageId": "Message ID",
+      "messageId": "ID du message",
       "to": "À",
       "from": "De",
       "error": "Erreur",

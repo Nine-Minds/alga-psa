@@ -121,7 +121,7 @@ describe('TeamsTabPage', () => {
   it('T171: routes expired or invalid Teams tab sessions into a Teams-safe MSP reauthentication gate', async () => {
     resolveTeamsTabAuthStateMock.mockResolvedValue({
       status: 'unauthenticated',
-      message: 'Sign in with your MSP account to open Alga PSA in Teams.',
+      message: 'Sign in with your MSP account to open AlgaPSA in Teams.',
     });
 
     const result = await TeamsTabPage({

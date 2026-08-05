@@ -20,7 +20,7 @@
     "selectTicket": "Seleccione un ticket",
     "noTicket": "Sin ticket",
     "ticketHint": "Opcionalmente vincule esta cita a un ticket de soporte existente",
-    "noTicketsFound": "No se encontraron tickets que coincidan con tu búsqueda",
+    "noTicketsFound": "No se encontraron tickets que coincidan con su búsqueda",
     "searchTickets": "Buscar tickets..."
   },
   "step2": {
@@ -38,7 +38,7 @@
     "selectTechnician": "Seleccione un técnico",
     "noPreference": "Sin preferencia",
     "technicianHint": "Esta es una preferencia y puede ajustarse según la disponibilidad",
-    "noTimeSlotsAvailable": "No hay horarios disponibles para esta fecha. Por favor, selecciona otra fecha."
+    "noTimeSlotsAvailable": "No hay horarios disponibles para esta fecha. Por favor, seleccione otra fecha."
   },
   "step4": {
     "title": "Revisar y confirmar",
@@ -129,7 +129,7 @@
     "title": "Cancelar cita",
     "message": "¿Está seguro de que desea cancelar esta solicitud de cita? Esta acción no se puede deshacer.",
     "confirm": "Sí, cancelar",
-    "messageWithTeamsWarning": "¿Seguro que quieres cancelar esta solicitud de cita? Esta acción no se puede deshacer. También se eliminará la reunión de Microsoft Teams.",
+    "messageWithTeamsWarning": "¿Seguro que quiere cancelar esta solicitud de cita? Esta acción no se puede deshacer. También se eliminará la reunión de Microsoft Teams.",
     "teamsMeetingCleanupNotice": "La reunión de Microsoft Teams vinculada se está cancelando; los asistentes verán que desaparece de sus calendarios en breve."
   },
   "ticketSection": {

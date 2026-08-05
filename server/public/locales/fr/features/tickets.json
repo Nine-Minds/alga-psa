@@ -296,8 +296,8 @@
     "timeEntryDeleted": "Entrée de temps supprimée",
     "closeFailed": "Échec de la fermeture du ticket",
     "scheduleVisitFailed": "Échec de l'ouverture du planificateur",
-    "loadCommentsFailed": "Failed to load comments",
-    "updateTicketFailed": "Failed to update ticket"
+    "loadCommentsFailed": "Échec du chargement des commentaires",
+    "updateTicketFailed": "Échec de la mise à jour du ticket"
   },
   "conversation": {
     "comments": "Commentaires",
@@ -526,7 +526,7 @@
     "bundleCrossClientWarning": "Ce bundle s'étend sur plusieurs clients. Il vous sera demandé de confirmer avant le regroupement.",
     "bundleMasterLabel": "Sélectionner le ticket principal",
     "bundleMasterPlaceholder": "Sélectionnez le ticket principal...",
-    "bundleSyncUpdates": "Synchroniser les mises à jour du maître vers les enfants (réponses publiques + modifications du flux de travail)",
+    "bundleSyncUpdates": "Synchroniser les mises à jour du maître vers les enfants (réponses publiques + modifications du workflow)",
     "bundleSyncUpdatesHelp": "Les tickets enfants conservent leur statut actuel lorsqu'ils sont regroupés. Les champs de workflow sont verrouillés sur les enfants par défaut. Les notes internes restent sur le ticket principal.",
     "bundleSelectAtLeastTwo": "Sélectionnez au moins deux tickets à regrouper.",
     "bundleSelectMaster": "Sélectionnez un ticket principal.",
@@ -1140,8 +1140,8 @@
     "serialUnit": "Numéro de série / MAC (produit sérialisé)",
     "selectUnit": "Sélectionnez une unité à livrer...",
     "onHandByLocation": "En stock par emplacement",
-    "catalogUnitCost": "Catalog unit cost",
-    "costNotConfigured": "Not configured"
+    "catalogUnitCost": "Coût unitaire du catalogue",
+    "costNotConfigured": "Non configuré"
   },
   "watchList": {
     "title": "Liste de surveillance",
@@ -1652,8 +1652,8 @@
         "close_rules_bypassed": "règles de clôture contournées",
         "auto_close_warning_sent": "avertissement de clôture automatique envoyé"
       },
-      "closeStatus": "Close status",
-      "noStatusChange": "Do not change status"
+      "closeStatus": "Statut de fermeture",
+      "noStatusChange": "Ne pas modifier le statut"
     }
   },
   "notifications": {

@@ -255,7 +255,7 @@
     },
     "bucketOverlay": {
       "recommendHours": "Beveel uren aan",
-      "recommendUsage": "Aanbevolen emmer consumptie"
+      "recommendUsage": "Verbruiksbundel aanbevelen"
     }
   },
   "hourlyConfig": {

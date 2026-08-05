@@ -8,7 +8,7 @@
 
 Peet identified three places where the branded client-portal experience breaks down:
 
-1. The **"Forgot password" link** on the client-portal sign-in page uses Alga PSA's default color instead of the portal theme color.
+1. The **"Forgot password" link** on the client-portal sign-in page uses AlgaPSA's default color instead of the portal theme color.
 2. The **password-reset pages** do not display the client's portal branding (logo, colors).
 3. **"Back to login"** from the reset flow sends the user to a separate unbranded login experience.
 

@@ -79,7 +79,7 @@ export function generateICS(eventData: ICSEventData): string {
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Alga PSA//Appointment Request//EN',
+    'PRODID:-//AlgaPSA//Appointment Request//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:REQUEST',
     'BEGIN:VEVENT',

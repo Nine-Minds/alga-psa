@@ -695,13 +695,13 @@ export default function StatusPage() {
             <AlgaLogo className={styles.logoSvg} />
           </span>
           <span className={styles.brandText}>
-            <span>Alga PSA</span>
+            <span>AlgaPSA</span>
             <small>Setup status</small>
           </span>
         </div>
         <nav
           className={styles.nav}
-          aria-label="Alga PSA setup status tabs"
+          aria-label="AlgaPSA setup status tabs"
           role="tablist"
         >
           {statusTabs.map(({ value, label, Icon }) => (
@@ -747,7 +747,7 @@ export default function StatusPage() {
           <>
             <header className={styles.commandBar}>
               <div>
-                <div className={styles.eyebrow}>Alga PSA appliance</div>
+                <div className={styles.eyebrow}>AlgaPSA appliance</div>
                 <h1>Manage</h1>
               </div>
             </header>
@@ -759,7 +759,7 @@ export default function StatusPage() {
         <>
         <header className={styles.commandBar}>
           <div>
-            <div className={styles.eyebrow}>Alga PSA appliance</div>
+            <div className={styles.eyebrow}>AlgaPSA appliance</div>
             <h1>
               {status?.rollup?.message ||
                 error ||
@@ -812,7 +812,7 @@ export default function StatusPage() {
               </strong>
               <p>
                 {appUpdateAvailable
-                  ? `A newer Alga PSA version${
+                  ? `A newer AlgaPSA version${
                       manageSummary?.app?.availableVersion
                         ? ` (${manageSummary.app.availableVersion})`
                         : ""

@@ -8,8 +8,8 @@ import type { Metadata } from 'next';
 // The default includes the suffix because defaults bypass their own template.
 export const metadata: Metadata = {
   title: {
-    template: '%s | Alga PSA',
-    default: 'Dashboard | Alga PSA',
+    template: '%s | AlgaPSA',
+    default: 'Dashboard | AlgaPSA',
   },
 };
 

@@ -16,7 +16,7 @@
   },
   "recentTable": {
     "columns": {
-      "jobName": "Nom du travail",
+      "jobName": "Nom de la tâche en arrière-plan",
       "runner": "Coureur",
       "status": "Statut",
       "duration": "Durée",
@@ -37,7 +37,7 @@
     "externalId": "ID : {{id}}...",
     "print": {
       "title": "Jobs récents",
-      "subtitle": "{{count}} jobs",
+      "subtitle": "{{count}} tâche(s) en arrière-plan",
       "noJobs": "Aucun job à imprimer",
       "columns": {
         "jobName": "Nom du job",
@@ -49,7 +49,7 @@
       },
       "optionsDialog": {
         "title": "Options d'impression",
-        "description": "Choisissez les colonnes à inclure lors de l'impression des travaux."
+        "description": "Choisissez les colonnes à inclure lors de l'impression des tâches en arrière-plan récentes."
       }
     }
   },
@@ -68,11 +68,11 @@
       "running": "En cours"
     },
     "successRate": "{{count}}% de taux de réussite",
-    "successRateNone": "Aucun travail terminé pour le moment"
+    "successRateNone": "Aucune tâche en arrière-plan terminée pour le moment"
   },
   "historyTable": {
     "columns": {
-      "jobName": "Nom du travail",
+      "jobName": "Nom de la tâche en arrière-plan",
       "status": "Statut",
       "created": "Créé",
       "started": "Commencé",
@@ -83,20 +83,20 @@
     "loading": "Chargement des détails de la tâche...",
     "labels": {
       "created": "Créé :",
-      "jobData": "Données de travail"
+      "jobData": "Données de la tâche en arrière-plan"
     }
   },
   "drawer": {
-    "title": "Détails du poste",
+    "title": "Détails de la tâche en arrière-plan",
     "jobId": "ID : {{id}}",
     "sections": {
-      "progress": "Progression du travail",
-      "metrics": "Indicateurs de travail",
+      "progress": "Progression de la tâche en arrière-plan",
+      "metrics": "Indicateurs de la tâche en arrière-plan",
       "history": "Historique des tâches"
     }
   },
   "stepHistory": {
-    "title": "Étapes du travail",
+    "title": "Étapes de la tâche en arrière-plan",
     "labels": {
       "processed": "Traité:",
       "retries": "Nouvelles tentatives :"
@@ -109,8 +109,8 @@
   "clearHistory": {
     "button": "Effacer l'historique",
     "dialog": {
-      "title": "Effacer l'historique des travaux",
-      "warning": "Cette action supprime définitivement l'historique des travaux de cette liste et est irréversible. Elle n'arrête ni n'annule les travaux en cours d'exécution.",
+      "title": "Effacer l'historique des tâches en arrière-plan",
+      "warning": "Cette action supprime définitivement de la liste l'historique des tâches en arrière-plan et est irréversible. Elle n'arrête ni n'annule les tâches en cours d'exécution.",
       "daysLabel": "Âge en jours",
       "daysError": "Saisissez un nombre entier de jours (1 ou plus).",
       "cancel": "Annuler",
@@ -120,21 +120,21 @@
     "scope": {
       "finished": {
         "label": "Terminés uniquement",
-        "description": "Travaux terminés et en échec. Les travaux en attente, en file d'attente et en cours sont conservés."
+        "description": "Tâches en arrière-plan terminées ou ayant échoué. Les tâches en attente, en file d'attente et en cours sont conservées."
       },
       "all": {
         "label": "Tous les statuts",
-        "description": "Tous les travaux, y compris ceux en attente, en file d'attente et encore en cours."
+        "description": "Toutes les tâches en arrière-plan, y compris celles en attente, en file d'attente ou encore en cours."
       }
     },
     "age": {
-      "toggle": "Supprimer uniquement les travaux plus anciens qu'un âge défini"
+      "toggle": "Supprimer uniquement les tâches en arrière-plan dépassant une ancienneté définie"
     },
     "toast": {
-      "success_one": "{{count}} travail supprimé de l'historique.",
-      "success_other": "{{count}} travaux supprimés de l'historique.",
-      "none": "Aucun travail correspondant à supprimer.",
-      "error": "Échec de l'effacement de l'historique des travaux. Veuillez réessayer."
+      "success_one": "{{count}} tâche en arrière-plan supprimée de l'historique.",
+      "success_other": "{{count}} tâches en arrière-plan supprimées de l'historique.",
+      "none": "Aucune tâche en arrière-plan correspondante à supprimer.",
+      "error": "Impossible d'effacer l'historique des tâches en arrière-plan. Veuillez réessayer."
     }
   }
 }

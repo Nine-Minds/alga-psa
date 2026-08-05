@@ -814,7 +814,7 @@
         "description": "Utwórz niestandardowe priorytety dla swojej organizacji lub zaimportuj ze standardowych szablonów.",
         "itilNote": "Standardowych priorytetów ITIL nie można edytować ani usuwać.",
         "itilRemovableNote": "Standardowych priorytetów ITIL nie można edytować, ale można je usunąć, gdy żadna tablica nie używa priorytetów ITIL.",
-        "nonItilNote": "Wszystkie priorytety można edytować lub usuwać, aby dopasować je do przepływu pracy."
+        "nonItilNote": "Wszystkie priorytety można edytować lub usuwać, aby dopasować je do workflow."
       },
       "table": {
         "name": "Nazwa",
@@ -1355,7 +1355,7 @@
     "settingsForm": {
       "enable": {
         "label": "Włącz powiadomienia",
-        "description": "Włącz lub wyłącz wszystkie powiadomienia dla tego najemcy"
+        "description": "Włącz lub wyłącz wszystkie powiadomienia dla tej organizacji"
       },
       "loading": "Ładowanie ustawień powiadomień...",
       "loadError": "Nie udało się załadować ustawień",
@@ -1533,10 +1533,10 @@
   },
   "secrets": {
     "title": "Zarządzanie sekretami",
-    "description": "Zarządzanie zaszyfrowanymi sekretami do użycia w przepływach pracy. Sekrety mogą być odwoływane w akcjach przepływów pracy za pomocą składni $secret.",
+    "description": "Zarządzanie zaszyfrowanymi sekretami do użycia w workflow. Sekrety mogą być odwoływane w akcjach workflow za pomocą składni $secret.",
     "list": {
       "title": "Sekrety",
-      "description": "Zarządzanie sekretami do użycia w przepływach pracy. Sekrety są szyfrowane i mogą być odwoływane za pomocą { $secret: \"SECRET_NAME\" }",
+      "description": "Zarządzanie sekretami do użycia w workflow. Sekrety są szyfrowane i mogą być odwoływane za pomocą { $secret: \"SECRET_NAME\" }",
       "search": "Szukaj sekretów...",
       "createSecret": "Utwórz sekret",
       "table": {
@@ -1576,8 +1576,8 @@
       },
       "delete": {
         "confirmation": "Czy na pewno chcą Państwo usunąć sekret {{name}}?",
-        "usedByWorkflows": "Ten sekret jest używany przez {{count}} przepływ(ów) pracy",
-        "usedByWarning": "Usunięcie go spowoduje, że te przepływy pracy nie będą działać, gdy spróbują uzyskać dostęp do tego sekretu.",
+        "usedByWorkflows": "Ten sekret jest używany przez {{count}} workflow",
+        "usedByWarning": "Usunięcie go spowoduje, że te workflow nie będą działać, gdy spróbują uzyskać dostęp do tego sekretu.",
         "cannotUndo": "Tej operacji nie można cofnąć.",
         "typeToConfirm": "Wpisz {{name}}, aby potwierdzić:",
         "placeholder": "Wprowadź nazwę sekretu"
@@ -1742,14 +1742,14 @@
   },
   "extensions": {
     "title": "Zarządzanie rozszerzeniami",
-    "description": "Instalowanie, konfigurowanie i zarządzanie rozszerzeniami w celu rozszerzenia funkcjonalności Alga PSA.",
+    "description": "Instalowanie, konfigurowanie i zarządzanie rozszerzeniami w celu rozszerzenia funkcjonalności AlgaPSA.",
     "tabs": {
       "manage": "Zarządzanie",
       "install": "Instalacja"
     },
     "enterpriseOnly": {
       "title": "Funkcja Pro",
-      "description": "Rozszerzenia są dostępne w Alga PSA Pro."
+      "description": "Rozszerzenia są dostępne w AlgaPSA Pro."
     },
     "links": {
       "needLogs": "Potrzebujesz logów rozszerzenia?",
@@ -1865,30 +1865,30 @@
   },
   "ssoBulk": {
     "loading": {
-      "title": "Single Sign-On",
+      "title": "Pojedyncze logowanie",
       "description": "Ładowanie narzędzi do masowego przypisywania SSO..."
     },
     "status": {
-      "title": "Sign-in providers",
-      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
-      "available": "Available",
-      "notConfigured": "Not configured"
+      "title": "Dostawcy logowania",
+      "caption": "Tymi dostawcami zarządza platforma — identyfikatory klientów ani konfiguracja DNS nie są wymagane. Włącz automatyczne łączenie lub przypisz użytkowników poniżej.",
+      "available": "Dostępny",
+      "notConfigured": "Nieskonfigurowany"
     },
     "autoLink": {
       "body": "Po włączeniu nowo dodani użytkownicy MSP mogą logować się przez Google lub Microsoft, używając swojego służbowego adresu Email. Nie będą musieli ręcznie łączyć swojego konta.",
-      "clientBody": "When enabled, matching client portal users are automatically linked to their SSO identities on login.",
-      "clientTitle": "Auto-link client portal users",
-      "clientToggleLabel": "Toggle client auto-linking",
+      "clientBody": "Po włączeniu pasujący użytkownicy portalu klienta są automatycznie łączeni ze swoimi tożsamościami SSO podczas logowania.",
+      "clientTitle": "Automatycznie łącz użytkowników portalu klienta",
+      "clientToggleLabel": "Przełącz automatyczne łączenie klientów",
       "description": "Włącz tę opcję, aby każde nowe konto pracownika było natychmiast udostępniane Państwa korporacyjnemu dostawcy SSO, dzięki czemu nigdy nie będzie wymagane logowanie hasłem.",
       "disabledInfo": "Włącz ten przełącznik, aby nowi i obecni pracownicy mogli pominąć proces „Połącz SSO”, gdy ich Email pasuje już do skonfigurowanego dostawcy. Każde automatyczne powiązanie nadal będzie rejestrowane.",
-      "internalBody": "When enabled, matching MSP/internal users are automatically linked to their SSO identities on login.",
-      "internalTitle": "Auto-link internal users",
-      "internalToggleLabel": "Toggle internal auto-linking",
+      "internalBody": "Po włączeniu pasujący użytkownicy MSP/wewnętrzni są automatycznie łączeni ze swoimi tożsamościami SSO podczas logowania.",
+      "internalTitle": "Automatycznie łącz użytkowników wewnętrznych",
+      "internalToggleLabel": "Przełącz automatyczne łączenie użytkowników wewnętrznych",
       "title": "Automatyczne konfigurowanie SSO dla nowych użytkowników wewnętrznych",
       "toggleLabel": "Przełącz automatyczne dopasowywanie SSO"
     },
     "bulk": {
-      "title": "Masowe przypisanie Single Sign-On",
+      "title": "Masowe przypisywanie pojedynczego logowania",
       "description": "Wybierz wewnętrznych użytkowników z listy poniżej i powiąż ich ze skonfigurowanym dostawcą Google lub Microsoft. Skorzystaj z podglądu, aby dwukrotnie sprawdzić wpływ przed wykonaniem.",
       "noProviders": "Nie skonfigurowano jeszcze żadnych dostawców SSO. Dodaj poświadczenia OAuth, aby kontynuować masowe przypisywanie."
     },
@@ -1931,7 +1931,7 @@
         "bulkLabel": "Masowe akcje SSO {{location}}"
       },
       "table": {
-        "email": "Email",
+        "email": "E-mail",
         "id": "ID",
         "name": "Nazwa",
         "status": "Status",
@@ -1982,19 +1982,19 @@
       }
     },
     "clientPortalProvisioning": {
-      "deactivateBody": "When enabled, users managed by Entra provisioning are deactivated when access-group entitlement is removed.",
-      "deactivateLabel": "Toggle deactivation on entitlement removal",
-      "deactivateTitle": "Deactivate Entra-managed users on entitlement removal",
-      "defaultRoleBody": "Used for newly provisioned client portal users in built-in mode when a client mapping does not override the role.",
-      "defaultRoleLabel": "MSP workspace default client portal role",
-      "defaultRoleTitle": "MSP workspace default client portal role",
-      "modeBody": "Choose whether client portal access from Entra sync is disabled, handled by built-in provisioning, or delegated to workflows.",
-      "modeBuiltIn": "Built-in",
-      "modeDisabled": "Disabled",
-      "modeLabel": "Client portal Entra provisioning mode",
-      "modeTitle": "Client portal Entra provisioning mode",
-      "modeWorkflowManaged": "Workflow-managed",
-      "workflowManagedInfo": "Workflow-managed mode publishes Entra access events only. The selected workflow is responsible for client portal user provisioning, role assignment, invitations, and lifecycle changes."
+      "deactivateBody": "Po włączeniu użytkownicy zarządzani przez inicjowanie obsługi Entra są dezaktywowani po odebraniu uprawnienia grupy dostępu.",
+      "deactivateLabel": "Przełącz dezaktywację po odebraniu uprawnienia",
+      "deactivateTitle": "Dezaktywuj użytkowników zarządzanych przez Entra po odebraniu uprawnienia",
+      "defaultRoleBody": "Używana dla nowo inicjowanych użytkowników portalu klienta w trybie wbudowanym, gdy mapowanie klienta nie zastępuje tej roli.",
+      "defaultRoleLabel": "Domyślna rola portalu klienta w obszarze roboczym MSP",
+      "defaultRoleTitle": "Domyślna rola portalu klienta w obszarze roboczym MSP",
+      "modeBody": "Wybierz, czy dostęp do portalu klienta z synchronizacji Entra ma być wyłączony, obsługiwany przez wbudowane tworzenie kont, czy przekazany workflow.",
+      "modeBuiltIn": "Wbudowany",
+      "modeDisabled": "Wyłączony",
+      "modeLabel": "Tryb inicjowania obsługi Entra dla portalu klienta",
+      "modeTitle": "Tryb inicjowania obsługi Entra dla portalu klienta",
+      "modeWorkflowManaged": "Zarządzany przez workflow",
+      "workflowManagedInfo": "Tryb zarządzany przez workflow publikuje tylko zdarzenia dostępu z Entra. Wybrany workflow odpowiada za tworzenie użytkowników portalu klienta, przypisywanie ról, zaproszenia i zmiany w cyklu życia."
     }
   },
   "profile": {
@@ -2097,7 +2097,7 @@
       },
       "communication": {
         "label": "Komunikacja",
-        "description": "Połącz powierzchnie skrzynki odbiorczej i współpracy do przetwarzania zgłoszeń, przepływów pracy operatorów i dostępu do Microsoft Teams."
+        "description": "Połącz powierzchnie skrzynki odbiorczej i współpracy do przetwarzania zgłoszeń, workflow operatorów i dostępu do Microsoft Teams."
       },
       "calendar": {
         "label": "Kalendarz",
@@ -2112,7 +2112,7 @@
       },
       "identity": {
         "label": "Tożsamość",
-        "description": "Połącz dostawców tożsamości w celu odkrywania dzierżawców i synchronizacji kontaktów."
+        "description": "Połącz dostawców tożsamości w celu odkrywania organizacji i synchronizacji kontaktów."
       },
       "payments": {
         "label": "Płatności",
@@ -2161,8 +2161,8 @@
       },
       "entra": {
         "name": "Microsoft Entra",
-        "description": "Odkrywaj zarządzanych dzierżawców Microsoft i synchronizuj użytkowników do kontaktów",
-        "upgradeDescription": "Odkrywaj zarządzanych dzierżawców Microsoft Entra i synchronizuj użytkowników do kontaktów. Przejdź na Pro, aby odblokować tę funkcję."
+        "description": "Odkrywaj zarządzane organizacje Microsoft i synchronizuj użytkowników do kontaktów",
+        "upgradeDescription": "Odkrywaj zarządzane organizacje Microsoft Entra i synchronizuj użytkowników do kontaktów. Przejdź na Pro, aby odblokować tę funkcję."
       },
       "stripe": {
         "name": "Stripe",
@@ -2307,6 +2307,157 @@
           "invalidOptions": "Opcje nie mogą być puste.",
           "invalidField": "To pole jest nieprawidłowe."
         }
+      }
+    }
+  },
+  "mcpServer": {
+    "title": "Serwer MCP",
+    "description": "Pozwól agentom AI logować się do AlgaPSA i działać z nadanymi im rolami.",
+    "errors": {
+      "load": "Nie udało się załadować ustawień MCP.",
+      "update": "Nie udało się zaktualizować ustawień MCP."
+    },
+    "status": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny"
+    },
+    "providers": {
+      "title": "Dostawcy tożsamości",
+      "description": "Agenci logują się za pośrednictwem tych dostawców. Dodaj dostawców używanych przez agentów.",
+      "empty": "Brak dostawców.",
+      "readyToUse": "Gotowy do użycia",
+      "platformManaged": "Zarządzany przez AlgaPSA — nie wymaga konfiguracji. Połącz z nim agenta w kroku 2.",
+      "addAnother": "Dodaj kolejnego dostawcę",
+      "advancedOptions": "Opcje zaawansowane",
+      "googleNoSetup": "Google nie wymaga konfiguracji. Agenci logują się za pomocą identyfikatora konta usługi Google.",
+      "kinds": {
+        "microsoft": "Microsoft Entra",
+        "google": "Google",
+        "custom": "Niestandardowy"
+      },
+      "suggestion": {
+        "withName": "Masz już połączenie z Microsoft ({{name}}). Czy chcesz użyć tego katalogu dla agentów?",
+        "withoutName": "Masz już połączenie z Microsoft. Czy chcesz użyć tego katalogu dla agentów?",
+        "useDirectory": "Użyj tego katalogu"
+      },
+      "fields": {
+        "provider": "Dostawca",
+        "entraTenantId": "Identyfikator organizacji Entra",
+        "audienceOptional": "Odbiorca (opcjonalnie)",
+        "audience": "Odbiorca",
+        "subjectClaim": "Identyfikuj agentów według",
+        "subjectClaimHelp": "Pozostaw puste, chyba że dostawca zaleca inaczej.",
+        "issuer": "Wystawca",
+        "jwksUri": "Adres URL kluczy podpisujących"
+      },
+      "actions": {
+        "add": "Dodaj dostawcę"
+      },
+      "hints": {
+        "entraTenantIdRequired": "Wprowadź identyfikator organizacji Entra, aby kontynuować.",
+        "issuerAndJwksRequired": "Wprowadź wystawcę i adres URL kluczy podpisujących, aby kontynuować."
+      },
+      "table": {
+        "provider": "Dostawca",
+        "directory": "Katalog",
+        "status": "Status"
+      }
+    },
+    "agents": {
+      "title": "Agenci",
+      "description": "Każdy agent loguje się we własnym imieniu i otrzymuje przypisane mu role.",
+      "empty": "Brak agentów.",
+      "needsProvider": "Najpierw dodaj dostawcę w kroku 1. Następnie dodaj agentów, którzy będą się za jego pośrednictwem logować.",
+      "connectedAs": "Połączono jako",
+      "fields": {
+        "name": "Nazwa",
+        "namePlaceholder": "Bot do wstępnej kwalifikacji zgłoszeń",
+        "identity": "Tożsamość",
+        "provider": "Dostawca",
+        "providerPlaceholder": "Wybierz dostawcę",
+        "agentId": "Identyfikator agenta",
+        "roles": "Role"
+      },
+      "manualEntry": {
+        "show": "Wprowadź tożsamość ręcznie",
+        "hide": "Ukryj ręczne wprowadzanie"
+      },
+      "actions": {
+        "add": "Dodaj agenta",
+        "change": "Zmień",
+        "connectWith": "Połącz przez {{provider}}",
+        "openMenu": "Otwórz działania agenta",
+        "viewActivity": "Wyświetl aktywność",
+        "deactivate": "Dezaktywuj",
+        "reactivate": "Aktywuj ponownie",
+        "remove": "Usuń…"
+      },
+      "hints": {
+        "nameRequired": "Nadaj agentowi nazwę, aby kontynuować.",
+        "connectOrEnterIdentity": "Połącz dostawcę lub wprowadź tożsamość, aby kontynuować.",
+        "chooseProviderAndAgentId": "Wybierz dostawcę i identyfikator agenta, aby kontynuować."
+      },
+      "table": {
+        "name": "Nazwa",
+        "provider": "Dostawca",
+        "agentId": "Identyfikator agenta",
+        "status": "Status"
+      },
+      "removeDialog": {
+        "title": "Usuń agenta",
+        "message": "Czy chcesz usunąć agenta „{{name}}”? Spowoduje to trwałe usunięcie agenta, przyznanych mu ról i dziennika aktywności. Tej operacji nie można cofnąć.",
+        "confirm": "Usuń",
+        "cancel": "Anuluj"
+      }
+    },
+    "agentId": {
+      "unknown": {
+        "placeholder": "identyfikator agenta",
+        "helper": "Wybierz dostawcę, aby zobaczyć, co należy wprowadzić."
+      },
+      "microsoft": {
+        "userHelper": "Identyfikator obiektu użytkownika agenta (oid) z Entra.",
+        "appHelper": "Identyfikator aplikacji (klienta) agenta w Entra."
+      },
+      "google": {
+        "helper": "Identyfikator konta usługi (wartość sub w tokenie)."
+      },
+      "custom": {
+        "placeholder": "wartość atrybutu podmiotu",
+        "helper": "Wartość atrybutu „{{claim}}” w tokenie agenta."
+      }
+    },
+    "audit": {
+      "title": "Aktywność",
+      "titleForAgent": "Aktywność — {{name}}",
+      "description": "Działania agenta i informacja, czy każde z nich było dozwolone.",
+      "table": {
+        "when": "Kiedy",
+        "action": "Działanie",
+        "result": "Wynik",
+        "status": "Status"
+      },
+      "decision": {
+        "allowed": "Dozwolone",
+        "blocked": "Zablokowane"
+      }
+    },
+    "connectedClients": {
+      "title": "Połączone klienty MCP",
+      "description": "Aplikacje, którym udzielono dostępu do AlgaPSA w Twoim imieniu przez MCP (np. Claude). Odłącz aplikacje, których już nie używasz.",
+      "loading": "Ładowanie…",
+      "empty": "Brak połączonych klientów.",
+      "meta": "{{host}} · połączono {{date}}",
+      "disconnect": "Odłącz",
+      "errors": {
+        "load": "Nie udało się załadować połączeń.",
+        "disconnect": "Nie udało się rozłączyć."
+      },
+      "dialog": {
+        "title": "Odłącz klienta",
+        "message": "Czy chcesz odłączyć klienta „{{name}}”? Natychmiast utraci dostęp i przed ponownym połączeniem będzie wymagać ponownej autoryzacji.",
+        "confirm": "Odłącz",
+        "cancel": "Anuluj"
       }
     }
   }

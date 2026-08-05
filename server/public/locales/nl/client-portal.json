@@ -16,7 +16,7 @@
     "documents": "Documenten",
     "knowledgeBase": "Kennisbank",
     "requestServices": "Serviceverzoeken",
-    "home": "Home",
+    "home": "Startpagina",
     "myTickets": "Mijn tickets",
     "newRequest": "Nieuw verzoek",
     "schedule": "Planning",
@@ -38,7 +38,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "welcome": "Welkom terug! Hier is een overzicht van je account.",
+    "welcome": "Welkom terug! Hier is een overzicht van uw account.",
     "loading": "Dashboard wordt geladen...",
     "error": "Er is een fout opgetreden bij het laden van het dashboard. Probeer het later opnieuw.",
     "metrics": {
@@ -56,8 +56,8 @@
       "serviceRequests": "Serviceverzoeken",
       "serviceRequestsHint": "Totaal aantal inzendingen",
       "openTicketsDescription": "Supporttickets waar we nog aan werken.",
-      "activeProjectsDescription": "Projecten die we voor je team uitvoeren.",
-      "serviceRequestsDescription": "Gestructureerde verzoeken die je via de catalogus hebt ingediend.",
+      "activeProjectsDescription": "Projecten die we voor uw team uitvoeren.",
+      "serviceRequestsDescription": "Gestructureerde verzoeken die u via de catalogus heeft ingediend.",
       "upcomingVisitsDescription": "Geplande afspraken met onze technici.",
       "activeDevicesDescription": "Apparaten die we momenteel beheren en monitoren."
     },
@@ -82,7 +82,7 @@
     },
     "viewAll": "Alle {{item}} bekijken →",
     "welcomeBack": "Welkom terug",
-    "heroSubtitle": "Hier is een overzicht van je IT-supportactiviteit. Ons team staat klaar om te helpen.",
+    "heroSubtitle": "Hier is een overzicht van uw IT-supportactiviteit. Ons team staat klaar om te helpen.",
     "greeting": {
       "morning": "Goedemorgen",
       "afternoon": "Goedemiddag",
@@ -103,9 +103,9 @@
     },
     "activity": {
       "title": "Recente activiteit",
-      "subtitle": "Laatste updates van je account",
+      "subtitle": "Laatste updates van uw account",
       "empty": "Nog geen activiteit",
-      "emptyHint": "Wanneer tickets worden bijgewerkt of facturen binnenkomen, zie je ze hier.",
+      "emptyHint": "Wanneer tickets worden bijgewerkt of facturen binnenkomen, ziet u ze hier.",
       "viewTickets": "Alle tickets bekijken",
       "titles": {
         "ticket": "Nieuw ticket: {{name}}",
@@ -133,14 +133,14 @@
           "cancelled": "Afspraak geannuleerd: {{name}}"
         }
       },
-      "algadeskEmptyHint": "Wanneer tickets worden bijgewerkt, zie je ze hier."
+      "algadeskEmptyHint": "Wanneer tickets worden bijgewerkt, ziet u ze hier."
     },
     "devices": {
-      "title": "Je apparaten",
+      "title": "Uw apparaten",
       "viewAll": "Bekijk alles",
       "countLabel": "{{count}} beheerd",
       "emptyShort": "Nog geen apparaten",
-      "emptyBody": "De apparaten die je provider beheert verschijnen hier.",
+      "emptyBody": "De apparaten die uw provider beheert, verschijnen hier.",
       "healthy": "Gezond",
       "inactive": "Inactief",
       "active": "Actief"
@@ -157,44 +157,44 @@
     "signOut": "Afmelden",
     "email": "E-mail",
     "password": "Wachtwoord",
-    "emailPlaceholder": "Voer je e-mailadres in",
-    "passwordPlaceholder": "Voer je wachtwoord in",
+    "emailPlaceholder": "Voer uw e-mailadres in",
+    "passwordPlaceholder": "Voer uw wachtwoord in",
     "signingIn": "Bezig met aanmelden...",
     "rememberMe": "Onthoud mij",
     "forgotPasswordLink": "Wachtwoord vergeten?",
     "forgotPasswordPage": {
       "title": "Wachtwoord vergeten?",
-      "subtitle": "Geen zorgen, we sturen je resetinstructies.",
+      "subtitle": "Geen zorgen, we sturen u resetinstructies.",
       "logoAlt": "Logo van het klantportaal",
       "emailLabel": "E-mail",
-      "emailPlaceholder": "Voer je e-mailadres in",
+      "emailPlaceholder": "Voer uw e-mailadres in",
       "sendResetButton": "Verstuur resetlink",
       "backToLogin": "← Terug naar inloggen",
-      "resetLinkSent": "Als er een account bestaat met dit e-mailadres, is er een link om je wachtwoord te resetten verzonden."
+      "resetLinkSent": "Als er een account met dit e-mailadres bestaat, is er een link verzonden waarmee u uw wachtwoord opnieuw kunt instellen."
     },
     "resetPassword": "Wachtwoord opnieuw instellen",
     "backToSignIn": "Terug naar aanmelden",
     "sendResetLink": "Resetlink sturen",
-    "resetLinkSent": "Wachtwoordreset-link is naar je e-mail verzonden",
+    "resetLinkSent": "Er is een link voor het opnieuw instellen van uw wachtwoord naar uw e-mailadres verzonden",
     "invalidCredentials": "Ongeldig e-mailadres of wachtwoord",
     "loginError": "Er is een fout opgetreden tijdens het aanmelden",
-    "sessionExpired": "Je sessie is verlopen. Meld je opnieuw aan.",
-    "welcomeTitle": "Welkom in je klantenportaal",
-    "welcomeSubtitle": "Beheer je supporttickets en blijf op de hoogte",
-    "signInDescription": "Voer je gegevens in om toegang te krijgen tot je account.",
+    "sessionExpired": "Uw sessie is verlopen. Meld u opnieuw aan.",
+    "welcomeTitle": "Welkom in uw klantenportaal",
+    "welcomeSubtitle": "Beheer uw supporttickets en blijf op de hoogte",
+    "signInDescription": "Voer uw gegevens in om toegang te krijgen tot uw account.",
     "clientLogin": "Klantenlogin",
     "mspStaffLogin": "MSP-medewerker? Log hier in →",
     "accessDeniedTitle": "Toegang geweigerd",
-    "accessDeniedMessage": "Je hebt geen toestemming voor toegang tot het klantenportaal.",
+    "accessDeniedMessage": "U heeft geen toestemming voor toegang tot het klantenportaal.",
     "registrationSuccessTitle": "Registratie geslaagd",
-    "registrationSuccessMessage": "Je account is aangemaakt. Meld je aan.",
+    "registrationSuccessMessage": "Uw account is aangemaakt. Meld u aan.",
     "portalSetup": {
       "title": "Portaltoegang instellen",
-      "subtitle": "Rond de setup van je klantportaalaccount af",
+      "subtitle": "Voltooi de configuratie van uw klantenportaalaccount",
       "loading": "Bezig met laden...",
       "invalidInvitation": "Ongeldige uitnodiging",
-      "invalidInvitationDescription": "Er is een probleem opgetreden met je portaluitnodiging",
-      "invalidTokenMessage": "De uitnodigingstoken is ongeldig of verlopen. Neem contact op met je dienstverlener voor een nieuwe uitnodiging.",
+      "invalidInvitationDescription": "Er is een probleem opgetreden met uw portaaluitnodiging",
+      "invalidTokenMessage": "De uitnodigingstoken is ongeldig of verlopen. Neem contact op met uw dienstverlener voor een nieuwe uitnodiging.",
       "noTokenProvided": "Geen uitnodigingstoken opgegeven",
       "invalidOrExpiredToken": "Ongeldige of verlopen uitnodigingstoken",
       "verificationFailed": "Het verificeren van het uitnodigingstoken is mislukt",
@@ -204,9 +204,9 @@
       "email": "E-mailadres:",
       "client": "Klant:",
       "password": "Wachtwoord",
-      "passwordPlaceholder": "Voer je wachtwoord in",
+      "passwordPlaceholder": "Voer uw wachtwoord in",
       "confirmPassword": "Wachtwoord bevestigen",
-      "confirmPasswordPlaceholder": "Bevestig je wachtwoord",
+      "confirmPasswordPlaceholder": "Bevestig uw wachtwoord",
       "passwordRequirements": "Wachtwoordeisen",
       "requirements": {
         "minLength": "Minstens 8 tekens",
@@ -218,11 +218,11 @@
       },
       "createAccount": "Portalaccount aanmaken",
       "creatingAccount": "Bezig met account aanmaken...",
-      "alreadyHaveAccount": "Heb je al een account?",
+      "alreadyHaveAccount": "Heeft u al een account?",
       "signInToPortal": "Aanmelden bij het portal",
       "requirementsNotMet": "Zorg dat aan alle wachtwoordeisen wordt voldaan",
-      "accountReady": "Account klaar. Meld je aan.",
-      "accountCreatedSuccess": "Account succesvol aangemaakt. Meld je aan.",
+      "accountReady": "Account gereed. Meld u aan.",
+      "accountCreatedSuccess": "Account aangemaakt. Meld u aan.",
       "welcome": "Welkom bij het klantportaal!",
       "createFailed": "Account aanmaken is mislukt",
       "errors": {
@@ -232,13 +232,13 @@
         "invalidOrExpiredToken": "Deze uitnodigingslink is ongeldig of verlopen.",
         "tenantContextRequired": "Organisatiecontext ontbreekt. Open de uitnodigingslink opnieuw.",
         "resetPasswordFailed": "Het wachtwoord voor het bestaande account kon niet worden gereset. Probeer het opnieuw.",
-        "createUserFailed": "Je gebruikersaccount kon niet worden aangemaakt. Probeer het opnieuw.",
+        "createUserFailed": "Uw gebruikersaccount kon niet worden aangemaakt. Probeer het opnieuw.",
         "setupFailed": "De portaalconfiguratie kon niet worden voltooid. Probeer het opnieuw.",
-        "verificationFailed": "Je uitnodigingstoken kon niet worden geverifieerd. Probeer het opnieuw.",
+        "verificationFailed": "Uw uitnodigingstoken kon niet worden geverifieerd. Probeer het opnieuw.",
         "invitationFailed": "De uitnodiging kon niet worden verzonden. Probeer het opnieuw.",
-        "permissionDeniedInvite": "Je hebt geen toestemming om portaal-uitnodigingen te verzenden.",
-        "permissionDeniedCreate": "Je hebt geen toestemming om portaal-gebruikersaccounts aan te maken.",
-        "emailNotConfigured": "De e-mailservice is niet geconfigureerd. Neem contact op met je beheerder.",
+        "permissionDeniedInvite": "U heeft geen toestemming om portaaluitnodigingen te verzenden.",
+        "permissionDeniedCreate": "U heeft geen toestemming om gebruikersaccounts voor het portaal aan te maken.",
+        "emailNotConfigured": "De e-mailservice is niet geconfigureerd. Neem contact op met uw beheerder.",
         "contactNotFound": "Contact niet gevonden.",
         "contactMissingEmail": "Het contact heeft geen e-mailadres.",
         "contactInvalidEmail": "Het contact heeft een ongeldig e-mailadres.",
@@ -255,7 +255,7 @@
     "features": {
       "submitTickets": {
         "title": "Supporttickets indienen",
-        "description": "Maak en beheer je ondersteuningsverzoeken"
+        "description": "Maak en beheer uw ondersteuningsverzoeken"
       },
       "trackStatus": {
         "title": "Ticketstatus volgen",
@@ -263,7 +263,7 @@
       },
       "ticketHistory": {
         "title": "Tickethistorie",
-        "description": "Krijg toegang tot je volledige ondersteuningsoverzicht"
+        "description": "Krijg toegang tot uw volledige ondersteuningsoverzicht"
       },
       "documentation": {
         "title": "Toegang tot documentatie",
@@ -281,21 +281,22 @@
         "registrationFailed": "De registratie kon niet worden voltooid. Probeer het opnieuw."
       }
     },
-    "captchaRequired": "Voltooi de onderstaande verificatie en meld je daarna opnieuw aan.",
-    "tooManyAttempts": "Te veel mislukte aanmeldpogingen. Wacht een paar minuten voordat je het opnieuw probeert."
+    "captchaRequired": "Voltooi de onderstaande verificatie en meld u daarna opnieuw aan.",
+    "tooManyAttempts": "Te veel mislukte aanmeldpogingen. Wacht een paar minuten voordat u het opnieuw probeert."
   },
   "account": {
     "title": "Account",
+    "notAvailable": "N.v.t.",
     "licenseManagement": {
       "title": "Account",
       "subtitle": "Licentiebeheer is beschikbaar in het MSP-portaal",
-      "howToPurchaseTitle": "Zo koop je extra licenties:",
-      "step1": "Meld je aan bij het MSP-portaal (als je beheerdersrechten hebt)",
+      "howToPurchaseTitle": "Zo koopt u extra licenties:",
+      "step1": "Meld u aan bij het MSP-portaal (als u beheerdersrechten heeft)",
       "step2": "Ga naar Instellingen → Accountbeheer",
       "step3": "Klik op \"Licenties toevoegen\" om extra licenties te kopen",
       "step4": "Rond het afrekenproces af",
       "needHelpTitle": "Hulp nodig?",
-      "needHelpDescription": "Alleen gebruikers met accountbeheerrechten kunnen licenties kopen. Neem contact op met je AlgaPSA-beheerder als je geen toegang hebt.",
+      "needHelpDescription": "Alleen gebruikers met accountbeheerrechten kunnen licenties kopen. Neem contact op met uw AlgaPSA-beheerder als u geen toegang heeft.",
       "backToDashboard": "Terug naar dashboard",
       "goToMSPPortal": "Ga naar MSP-portaal",
       "signingOut": "Bezig met afmelden..."
@@ -328,7 +329,7 @@
         "learnMore": "Meer info",
         "managedIt": {
           "title": "Managed IT-support",
-          "description": "24/7 IT-ondersteuning en monitoring voor je bedrijf. Inclusief proactief onderhoud, beveiligingsupdates en toegewijde technische ondersteuning.",
+          "description": "24/7 IT-ondersteuning en monitoring voor uw bedrijf. Inclusief proactief onderhoud, beveiligingsupdates en toegewijde technische ondersteuning.",
           "price": "Vanaf $299/maand"
         },
         "cloudBackup": {
@@ -386,6 +387,40 @@
         "expYear": "Voer een geldig jaar in (2024-2099)",
         "cvv": "Voer een geldige CVV in"
       }
+    }
+  },
+  "licenses": {
+    "pageTitle": "Appliance-licenties",
+    "pageDescription": "Uw Pro-licentierechten voor Alga-appliances. Belangrijke documenten zijn ook beschikbaar in de sectie Documenten.",
+    "loading": "Licenties worden geladen…",
+    "empty": {
+      "message": "Geen appliance-licenties gevonden.",
+      "purchaseLink": "Koop een licentie",
+      "suffix": "om aan de slag te gaan."
+    },
+    "downloadKey": "Sleutel downloaden",
+    "validFrom": "Geldig vanaf",
+    "expires": "Verloopt",
+    "expiringSoon": "Verloopt binnenkort",
+    "renewal": "Verlenging",
+    "renewalModes": {
+      "auto": "Wordt automatisch verlengd",
+      "manual": "Handmatige verlenging"
+    },
+    "tiers": {
+      "pro": "Pro",
+      "premium": "Pro"
+    },
+    "transports": {
+      "connectedMonthly": "Verbonden (maandelijks)",
+      "connectedAnnual": "Verbonden (jaarlijks)",
+      "airgapAnnual": "Netwerkgescheiden (jaarlijks)"
+    },
+    "statuses": {
+      "active": "Actief",
+      "inactive": "Inactief",
+      "expired": "Verlopen",
+      "terminated": "Beëindigd"
     }
   },
   "profile": {
@@ -464,7 +499,7 @@
       "userNotFound": "Gebruiker niet gevonden",
       "loadError": "Profiel laden is mislukt",
       "loading": "Profiel wordt geladen...",
-      "avatarDescription": "Deze avatar wordt getoond aan het MSP-team wanneer zij je contactgegevens bekijken.",
+      "avatarDescription": "Deze avatar wordt getoond aan het MSP-team wanneer zij uw contactgegevens bekijken.",
       "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres",
       "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
       "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren"
@@ -479,8 +514,8 @@
       "deleteProfilePicture": "Profielfoto verwijderen",
       "delete": "Verwijderen",
       "deleting": "Bezig met verwijderen...",
-      "deleteLogoConfirm": "Weet je zeker dat je het logo wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
-      "deleteAvatarConfirm": "Weet je zeker dat je de profielfoto wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "deleteLogoConfirm": "Weet u zeker dat u het logo wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "deleteAvatarConfirm": "Weet u zeker dat u de profielfoto wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
       "edit": "Bewerken",
       "invalidType": "Selecteer een afbeeldingsbestand.",
       "sizeLimit": "Afbeelding mag maximaal 2 MB zijn.",
@@ -489,7 +524,7 @@
       "uploadError": "Uploaden is mislukt. Probeer het opnieuw.",
       "deleteSuccess": "Succesvol verwijderd.",
       "deleteError": "Verwijderen is mislukt.",
-      "deleteConfirm": "Weet je zeker dat je dit wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "deleteConfirm": "Weet u zeker dat u dit wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
       "linking": "Koppelen...",
       "linkDocument": "Document koppelen"
     },
@@ -505,7 +540,7 @@
     "title": "Bedrijfsinstellingen",
     "details": "Bedrijfsgegevens",
     "billing": "Facturatiegegevens",
-    "description": "Beheer je bedrijfsinstellingen en configuraties.",
+    "description": "Beheer uw bedrijfsinstellingen en configuraties.",
     "tabs": {
       "account": "Account",
       "clientDetails": "Bedrijfsgegevens",
@@ -564,7 +599,7 @@
       "assignRole": "Rol toewijzen",
       "resetPassword": "Wachtwoord resetten",
       "clientNotFound": "Bedrijf niet gevonden",
-      "permissionError": "Je hebt geen toestemming om gebruikers te beheren",
+      "permissionError": "U heeft geen toestemming om gebruikers te beheren",
       "loadError": "Gebruikers konden niet worden geladen",
       "emailExists": "Er bestaat al een contact met dit e-mailadres",
       "createError": "Gebruiker kon niet worden aangemaakt",
@@ -575,11 +610,11 @@
     },
     "visibilityGroups": {
       "title": "Zichtbaarheidsgroepen",
-      "description": "Beheer tot welke ticket-boards elke klantportaalcontactpersoon toegang heeft.",
+      "description": "Beheer tot welke ticketborden elke contactpersoon in het klantenportaal toegang heeft.",
       "nameLabel": "Naam",
       "descriptionLabel": "Beschrijving",
       "boardLabel": "Borden",
-      "noBoards": "Geen boards beschikbaar",
+      "noBoards": "Geen borden beschikbaar",
       "loadError": "Kan zichtbaarheidsgroepen niet laden",
       "empty": "Nog geen zichtbaarheidsgroepen.",
       "loading": "Groepen laden…",
@@ -615,7 +650,7 @@
       "userAdded": "Gebruiker succesvol toegevoegd",
       "userRemoved": "Gebruiker succesvol verwijderd",
       "inviteSent": "Uitnodiging succesvol verzonden",
-      "noPermission": "Je hebt geen toestemming voor toegang tot bedrijfsinstellingen",
+      "noPermission": "U heeft geen toestemming voor toegang tot bedrijfsinstellingen",
       "clientNotFound": "Bedrijf niet gevonden",
       "detailsLoadError": "Bedrijfsgegevens laden is mislukt",
       "updateError": "Bijwerken van bedrijfsgegevens is mislukt"
@@ -635,7 +670,7 @@
     },
     "preferences": {
       "title": "Notificatievoorkeuren",
-      "description": "Beheer welke interne meldingen je ontvangt",
+      "description": "Beheer welke interne meldingen u ontvangt",
       "loading": "Voorkeuren worden geladen...",
       "loadError": "Voorkeuren konden niet worden geladen",
       "saveError": "Voorkeur kon niet worden opgeslagen",
@@ -664,7 +699,7 @@
     "statusOkBody": "{{count}} apparaten gemeld",
     "empty": {
       "title": "Nog geen apparaten",
-      "body": "De apparaten die je provider beheert verschijnen hier."
+      "body": "De apparaten die uw provider beheert, verschijnen hier."
     },
     "types": {
       "workstation": "Werkstations",

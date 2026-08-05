@@ -283,14 +283,6 @@
         "signingIn": "11111",
         "signIn": "11111"
       },
-      "advanced": {
-        "title": "11111",
-        "description": "11111",
-        "folderFiltersLabel": "11111",
-        "folderFiltersPlaceholder": "11111",
-        "folderFiltersHelp": "11111",
-        "maxEmailsPerSync": "11111"
-      },
       "readiness": {
         "checking": "11111",
         "ready": "11111",
@@ -298,6 +290,14 @@
         "openProviders": "11111",
         "notConfigured": "11111",
         "setUpInProviders": "11111"
+      },
+      "advanced": {
+        "title": "11111",
+        "description": "11111",
+        "folderFiltersLabel": "11111",
+        "folderFiltersPlaceholder": "11111",
+        "folderFiltersHelp": "11111",
+        "maxEmailsPerSync": "11111"
       }
     },
     "gmail": {

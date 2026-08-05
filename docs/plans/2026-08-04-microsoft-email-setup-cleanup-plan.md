@@ -15,7 +15,7 @@ Microsoft 365 email configuration spans three chained surfaces, but the UI prese
 The confusion:
 
 1. The mailbox dialog (`MicrosoftProviderForm`) **re-litigates app-level decisions** that belong to Providers: a platform-managed vs bring-your-own-app choice, a "Microsoft app profile is ready" plumbing notice, and a raw Redirect URI input. The platform/BYO explanation exists three times with drifted wording (mailbox form, provider list page, Providers screen).
-2. **No hosted-vs-self-hosted gating.** All "Alga PSA supplies the application" affordances key off `EDITION === 'enterprise'` (`microsoftConsumerVisibility.ts`). The appliance ships EE, so appliance users see hosted-only options that then fail with "Platform Microsoft credentials are unavailable". In the Providers setup dialog, the platform option renders even when unavailable (disabled with an "Unavailable" badge). The primitive that should gate this (`useTier().isHosted` / self-host licensing) is never used inside `packages/integrations`.
+2. **No hosted-vs-self-hosted gating.** All "AlgaPSA supplies the application" affordances key off `EDITION === 'enterprise'` (`microsoftConsumerVisibility.ts`). The appliance ships EE, so appliance users see hosted-only options that then fail with "Platform Microsoft credentials are unavailable". In the Providers setup dialog, the platform option renders even when unavailable (disabled with an "Unavailable" badge). The primitive that should gate this (`useTier().isHosted` / self-host licensing) is never used inside `packages/integrations`.
 3. **"Tenant" terminology is overloaded.** UI copy uses bare "tenant" ("tenant administrator consent", "tenant-owned app", a bare "Tenant ID" label) meaning the *Microsoft* tenant, in a product where tenant is the internal MSP concept. Internally one interface carries both `tenantId` (Alga) and `microsoftTenantId` (Microsoft).
 
 ## Settled design
@@ -26,7 +26,7 @@ One sentence: **Providers is the sole home for app-level Microsoft configuration
 
 - **Not set up:** a single "Set up Microsoft" call to action opening the setup wizard.
 - **Wizard option list** (order and presence matter):
-  1. *"Use the app provided by Alga PSA"* — **hosted deployments only**, listed first, badged "Recommended". On self-hosted/appliance deployments this option is **not rendered at all** (not disabled-with-badge).
+  1. *"Use the app provided by AlgaPSA"* — **hosted deployments only**, listed first, badged "Recommended". On self-hosted/appliance deployments this option is **not rendered at all** (not disabled-with-badge).
   2. *"Create an app in your Microsoft organization"* — automated Entra provisioning. Becomes the lead option on self-hosted.
   3. *"Enter an existing app manually"* — badged "Advanced". This step is the **only place in the product a Redirect URI appears**, read-only, for copying into the customer's Entra app registration.
 - **Consent step** (all paths funnel here): framed as "a **Microsoft 365 administrator** must approve access", with an "Approve in Microsoft" action and a "Copy approval link for your admin" affordance (the person clicking is often not the Microsoft admin).
@@ -80,7 +80,7 @@ Files: `packages/integrations/src/components/settings/integrations/MicrosoftEmai
 
 1. `getMicrosoftEmailSetupOptions` returns `platformOffered` per Phase 1; the dialog renders the platform card **only when `platformOffered`** — delete the disabled/"Unavailable" rendering path. Order: platform (hosted), automated, manual; "Recommended" badge on platform, "Advanced" on manual.
 2. Consent step: "Microsoft 365 administrator" framing, approve action, copy-approval-link action (reuses `getMicrosoftEmailAdminConsentUrl`). Reconcile the diverged inline `defaultValue` vs locale string for `integrations.microsoft.emailSetup.platform.description`.
-3. `MicrosoftIntegrationSettings`: finish the capability-based conversion started in 83ce26a80d — the edition-branched copy at ~L734-738 and ~L995-997 becomes capability/deployment-driven; the "Bring your own Microsoft app (advanced)" collapse and its copy ("normally unnecessary on hosted Alga PSA") only claims hosted behavior when `hosted` is true. Ready-state hand-off keeps routing to `?category=communication` with "Connect a mailbox →" wording per the mockup.
+3. `MicrosoftIntegrationSettings`: finish the capability-based conversion started in 83ce26a80d — the edition-branched copy at ~L734-738 and ~L995-997 becomes capability/deployment-driven; the "Bring your own Microsoft app (advanced)" collapse and its copy ("normally unnecessary on hosted AlgaPSA") only claims hosted behavior when `hosted` is true. Ready-state hand-off keeps routing to `?category=communication` with "Connect a mailbox →" wording per the mockup.
 
 ### Phase 3 — Communication surface
 

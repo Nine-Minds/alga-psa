@@ -1,6 +1,6 @@
 # Quoting System
 
-The Quoting System enables MSPs to create, send, and manage pricing proposals for clients directly within Alga PSA. Quotes integrate with the existing billing infrastructure — service catalog, tax, discounts, document templates, PDF generation, email, and client portal — and can be converted into contracts and/or invoices upon acceptance.
+The Quoting System enables MSPs to create, send, and manage pricing proposals for clients directly within AlgaPSA. Quotes integrate with the existing billing infrastructure — service catalog, tax, discounts, document templates, PDF generation, email, and client portal — and can be converted into contracts and/or invoices upon acceptance.
 
 ## Table of Contents
 

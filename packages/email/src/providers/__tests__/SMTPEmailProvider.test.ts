@@ -45,7 +45,7 @@ async function initializedProvider() {
 
 function baseMessage(overrides: Partial<EmailMessage> = {}): EmailMessage {
   return {
-    from: { email: 'noreply@alga.test', name: 'Alga PSA' },
+    from: { email: 'noreply@alga.test', name: 'AlgaPSA' },
     to: [{ email: 'one@example.com', name: 'One' }, { email: 'two@example.com' }],
     subject: 'Test subject',
     text: 'plain body',
@@ -77,7 +77,7 @@ describe('SMTPEmailProvider mail options construction', () => {
     await provider.sendEmail(baseMessage(), 'tenant-1');
 
     expect(transporter.sendMail).toHaveBeenCalledWith({
-      from: '"Alga PSA" <noreply@alga.test>',
+      from: '"AlgaPSA" <noreply@alga.test>',
       to: '"One" <one@example.com>, two@example.com',
       subject: 'Test subject',
       text: 'plain body',

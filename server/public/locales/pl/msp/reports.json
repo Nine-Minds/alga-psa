@@ -35,7 +35,7 @@
     },
     "description": "Gotowe raporty operacyjne dla bieżącego obszaru roboczego. Więcej możliwości dostosowania zostanie dodanych do tego katalogu później.",
     "categories": {
-      "helpdesk": "Help desk",
+      "helpdesk": "Centrum wsparcia",
       "operations": "Operacje",
       "billing": "Rozliczenia"
     },

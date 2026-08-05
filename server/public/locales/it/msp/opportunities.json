@@ -30,7 +30,7 @@
         "declined": "rifiutato",
         "open": "aperto",
         "project_task": "compito del progetto",
-        "quote_line": "riga di citazione"
+        "quote_line": "linea del preventivo"
       },
       "title": "Impegni"
     },
@@ -87,15 +87,15 @@
       "metadataTitle": "Opportunità",
       "nextAction": "Azione successiva",
       "nextActionOverdue": "Azione successiva · scaduta",
-      "noQuotes": "Nessuna citazione ancora. Un preventivo inviato sposta automaticamente l'accordo in Proposto.",
+      "noQuotes": "Non ci sono ancora preventivi. Un preventivo inviato sposta automaticamente l’opportunità in Proposta.",
       "oneTime": "Una volta",
       "oneTimeServices": "Servizi una tantum",
       "owner": "Proprietario",
       "ownerNote": "I singoli passaggi possono essere assegnati ad altre persone. La trattativa mantiene un solo responsabile.",
       "people": "Persone",
       "plan": "Prove, piano e cronologia",
-      "quoteTitle": "Citazione per {{title}}",
-      "quotes": "Citazioni",
+      "quoteTitle": "Preventivo per {{title}}",
+      "quotes": "Preventivi",
       "recurring": "Ricorrente",
       "timeline": "Cronologia",
       "unlinkQuote": "Scollega",
@@ -150,7 +150,7 @@
       "won": "Ha vinto questo periodo"
     },
     "linkQuoteDialog": {
-      "confirm": "Citazione del collegamento",
+      "confirm": "Collega preventivo",
       "empty": "Per questo cliente non sono disponibili preventivi non collegati.",
       "title": "Collega un preventivo esistente"
     },
@@ -230,7 +230,7 @@
       },
       "markLost": "Marco ha perso",
       "moneyFound": "Soldi trovati",
-      "moneyFoundSource": "dalla fatturazione, dai contratti e dalle risorse",
+      "moneyFoundSource": "dalla fatturazione, dai contratti e dagli asset",
       "needsYou_one": "{{count}} cosa ha bisogno di te oggi.",
       "needsYou_other": "{{count}} cose hanno bisogno di te oggi.",
       "nothingDue": "Niente è dovuto oggi.",
@@ -403,15 +403,15 @@
       "sendContract": "Invia contratto"
     },
     "suggestionHow": {
-      "assetAging_one": "Limita un aggiornamento per {{count}} risorsa obsoleta.",
-      "assetAging_other": "Aggiorna l'ambito di {{count}} risorse obsolete.",
+      "assetAging_one": "Pianifica un aggiornamento per {{count}} asset obsoleto.",
+      "assetAging_other": "Pianifica un aggiornamento per {{count}} asset obsoleti.",
       "inboundLead": "Segui finché l'interesse è caldo.",
       "renewal": "Avvia la conversazione di rinnovo di {{clientName}} prima della scadenza.",
       "tmConversion": "Confronta la spesa finale per T&M con un contratto ricorrente.",
       "whitespace": "Mostra a {{clientName}} la copertura mancante di {{serviceName}}."
     },
     "suggestionTitles": {
-      "assetAging": "Aggiornamento della risorsa {{clientName}}",
+      "assetAging": "Aggiornamento degli asset di {{clientName}}",
       "inboundLead": "{{clientName}} opportunità in entrata",
       "renewal": "Rinnovo di {{contractName}}",
       "tmConversion": "{{clientName}} Conversione del contratto T&M",
@@ -420,7 +420,7 @@
     "suggestions": {
       "accept": "Crea opportunità",
       "dismiss": "Ignora",
-      "emptyBody": "I generatori controllano i tuoi contratti, la fatturazione e le risorse e le offerte di superficie qui non appena le trovano.",
+      "emptyBody": "I generatori monitorano i tuoi contratti, la fatturazione e gli asset e mostrano qui le opportunità man mano che le individuano.",
       "emptyTitle": "Nessun suggerimento per ora",
       "intro": "Ricavate dai tuoi dati. Accetta per creare l’opportunità, oppure scartala e non tornerà.",
       "seeNumbers": "Vedi i numeri",
@@ -448,8 +448,8 @@
       "lost": "Contrassegnato come perso",
       "ownerAssigned": "Titolare aggiornato",
       "qualified": "Checkpoint qualificato registrato",
-      "quoteLinked": "Citazione collegata",
-      "quoteUnlinked": "Citazione scollegata",
+      "quoteLinked": "Preventivo collegato",
+      "quoteUnlinked": "Preventivo scollegato",
       "snoozed": "Posticipato per qualche giorno",
       "stagePlanned": "Piano di fase aggiunto",
       "stageSet": "Fase impostata su {{stage}}",
@@ -477,7 +477,7 @@
       "currencyFixed": "Valuta: {{code}}",
       "hardware": "Hardware",
       "mrr": "Ricorrente (mensile)",
-      "note": "Queste sono le tue stime. Una citazione accettata li sostituisce con i numeri reali.",
+      "note": "Queste sono le tue stime. Un preventivo accettato le sostituisce con i valori reali.",
       "nrr": "Servizi una tantum",
       "title": "Valore stimato"
     },
@@ -502,11 +502,11 @@
         "proposalAgeShort_other": "{{count}} giorni.",
         "proposalAge_one": "Giorno {{count}} dalla proposta",
         "proposalAge_other": "Giorno {{count}} dalla proposta",
-        "quoteIntro": "{{clientName}} ha ricevuto la citazione {{quoteNumber}} per "
+        "quoteIntro": "{{clientName}} ha il preventivo {{quoteNumber}} da "
       },
       "assetAging": {
-        "age_one": "{{count}} risorsa vecchia di {{oldestYears}} anni",
-        "age_other": "{{count}} risorse vecchie di {{oldestYears}} anni",
+        "age_one": "{{count}} asset con più di {{oldestYears}} anni",
+        "age_other": "{{count}} asset con più di {{oldestYears}} anni",
         "quoteRefresh": " presso {{clientName}}. Preventiva l'aggiornamento prima che diventi un ticket di interruzione."
       },
       "forClient": " per {{clientName}}.",

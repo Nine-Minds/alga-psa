@@ -67,7 +67,7 @@ export function buildAppointmentMeetingBodyHtml(params: {
   const lines = [
     `<p>Appointment: ${escapeHtml(params.serviceName)}</p>`,
     ...(params.description?.trim() ? [`<p>${escapeHtml(params.description.trim())}</p>`] : []),
-    `<p><a href="${psaLink}">Open this appointment in Alga PSA</a></p>`,
+    `<p><a href="${psaLink}">Open this appointment in AlgaPSA</a></p>`,
   ];
   return lines.join('\n');
 }
