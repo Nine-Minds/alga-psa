@@ -1886,7 +1886,7 @@ function createDeactivationEmailContent(tenantName: string, userName: string): {
   const currentYear = new Date().getFullYear();
   const supportEmail = 'info@nineminds.com';
 
-  const subject = `Your Alga PSA account has been deactivated`;
+  const subject = `Your AlgaPSA account has been deactivated`;
 
   const htmlBody = `
   <!DOCTYPE html>
@@ -1930,7 +1930,7 @@ function createDeactivationEmailContent(tenantName: string, userName: string): {
                     <td bgcolor="#ffffff" style="background-color: #ffffff; padding: 40px 32px;">
                       <h2 style="color: ${EMAIL_COLORS.textPrimary}; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 22px; font-weight: 600; margin-bottom: 16px;">Hello ${userName},</h2>
 
-                      <p style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 16px; margin-bottom: 24px;">Your <b style="color: ${EMAIL_COLORS.textPrimary};">${tenantName}</b> account on Alga PSA has been deactivated. We're sorry to see you go.</p>
+                      <p style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 16px; margin-bottom: 24px;">Your <b style="color: ${EMAIL_COLORS.textPrimary};">${tenantName}</b> account on AlgaPSA has been deactivated. We're sorry to see you go.</p>
 
                       <!-- What happens next -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin: 24px 0;">
@@ -1985,9 +1985,9 @@ function createDeactivationEmailContent(tenantName: string, userName: string): {
                         </tr>
                       </table>
 
-                      <p style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 15px; margin-bottom: 8px;">Thank you for being an Alga PSA customer. We truly appreciate your business and hope to work with you again in the future.</p>
+                      <p style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 15px; margin-bottom: 8px;">Thank you for being an AlgaPSA customer. We truly appreciate your business and hope to work with you again in the future.</p>
 
-                      <p style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 15px; margin-top: 20px;">Best regards,<br><b style="color: ${EMAIL_COLORS.textPrimary};">The Alga PSA Team</b></p>
+                      <p style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 15px; margin-top: 20px;">Best regards,<br><b style="color: ${EMAIL_COLORS.textPrimary};">The AlgaPSA Team</b></p>
                     </td>
                   </tr>
 
@@ -2016,7 +2016,7 @@ Account Deactivated
 
 Hello ${userName},
 
-Your "${tenantName}" account on Alga PSA has been deactivated. We're sorry to see you go.
+Your "${tenantName}" account on AlgaPSA has been deactivated. We're sorry to see you go.
 
 WHAT HAPPENS NEXT:
 
@@ -2027,10 +2027,10 @@ WHAT HAPPENS NEXT:
 
 If you've changed your mind or this was a mistake, please contact our support team at ${supportEmail} as soon as possible and we can restore your account during the grace period.
 
-Thank you for being an Alga PSA customer. We truly appreciate your business and hope to work with you again in the future.
+Thank you for being an AlgaPSA customer. We truly appreciate your business and hope to work with you again in the future.
 
 Best regards,
-The Alga PSA Team
+The AlgaPSA Team
 
 ---
 This email was sent as part of your account deactivation process.

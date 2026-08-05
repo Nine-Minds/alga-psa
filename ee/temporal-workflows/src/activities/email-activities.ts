@@ -89,32 +89,32 @@ interface WelcomeEmailCopy {
 }
 
 const PSA_WELCOME_COPY: WelcomeEmailCopy = {
-  subject: 'Welcome to Alga PSA - Your Account is Ready',
-  headerTitle: 'Welcome to Alga PSA!',
+  subject: 'Welcome to AlgaPSA - Your Account is Ready',
+  headerTitle: 'Welcome to AlgaPSA!',
   taglineText:
-    'Say goodbye to scattered tools, manual workarounds, and overly complex systems. Alga PSA by Nine Minds brings everything together in one powerful platform — intuitive, user-focused, and built to grow with your business.',
+    'Say goodbye to scattered tools, manual workarounds, and overly complex systems. AlgaPSA by Nine Minds brings everything together in one powerful platform — intuitive, user-focused, and built to grow with your business.',
   mspCardEmoji: '🏢',
-  mspCardTitle: 'Alga PSA Workspace',
+  mspCardTitle: 'AlgaPSA Workspace',
   mspCardDescription:
     'Use this workspace to manage your MSP operations, including tickets, clients, projects, billing, and team activity.',
-  mspButtonLabel: 'Open Alga PSA →',
+  mspButtonLabel: 'Open AlgaPSA →',
   nextSteps: [
-    'Sign in to your <a href="${defaultLoginUrl}" style="color: #8a4dea; text-decoration: underline;">Alga PSA workspace</a>',
+    'Sign in to your <a href="${defaultLoginUrl}" style="color: #8a4dea; text-decoration: underline;">AlgaPSA workspace</a>',
     'Enter your email and temporary password',
     'Complete the onboarding wizard and set your new password',
     'Start setting up your team, clients, tickets, billing, and workflows',
   ],
-  textHeaderTitle: 'Welcome to Alga PSA!',
+  textHeaderTitle: 'Welcome to AlgaPSA!',
   textMspCardTitle: '🏢 ALGA PSA WORKSPACE',
   textMspCardDescription:
     'Use this workspace to manage your MSP operations, including tickets, clients, projects, billing, and team activity.',
   textNextSteps: [
-    'Sign in to your Alga PSA workspace: ${defaultLoginUrl}',
+    'Sign in to your AlgaPSA workspace: ${defaultLoginUrl}',
     'Enter your email and temporary password',
     'Complete the onboarding wizard and set your new password',
     'Start setting up your team, clients, tickets, billing, and workflows',
   ],
-  textProductName: 'Alga PSA',
+  textProductName: 'AlgaPSA',
 };
 
 const ALGADESK_WELCOME_COPY: WelcomeEmailCopy = {

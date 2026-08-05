@@ -1075,7 +1075,7 @@
       "sessionRevoked": "Sesja unieważniona pomyślnie"
     },
     "warnings": {
-      "oauthLogout": "Wylogujesz się tylko z Alga PSA. Pozostaniesz zalogowany w {{provider}}."
+      "oauthLogout": "Wylogujesz się tylko z AlgaPSA. Pozostaniesz zalogowany w {{provider}}."
     },
     "errors": {
       "fetchFailed": "Nie udało się pobrać sesji",
@@ -1207,7 +1207,7 @@
     "teamsTab": {
       "signedInAs": "Zalogowany jako {{name}}",
       "openInFullPsa": "Otwórz w pełnym PSA",
-      "iframeTitle": "{{destination}} w Alga PSA",
+      "iframeTitle": "{{destination}} w AlgaPSA",
       "fullPsaHint": "Użyj „Otwórz w pełnym PSA”, aby zobaczyć więcej kontekstu niż karta Teams.",
       "fallback": {
         "label": "Żądany rekord niedostępny:",

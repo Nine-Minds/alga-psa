@@ -997,7 +997,7 @@
       "sessionRevoked": "Sessione revocata con successo"
     },
     "warnings": {
-      "oauthLogout": "Questo ti disconnetterà solo da Alga PSA. Rimarrai connesso a {{provider}}."
+      "oauthLogout": "Questo ti disconnetterà solo da AlgaPSA. Rimarrai connesso a {{provider}}."
     },
     "errors": {
       "fetchFailed": "Impossibile recuperare le sessioni",
@@ -1177,7 +1177,7 @@
     "teamsTab": {
       "signedInAs": "Connesso come {{name}}",
       "openInFullPsa": "Apri in PSA completo",
-      "iframeTitle": "Pagina {{destination}} in Alga PSA",
+      "iframeTitle": "Pagina {{destination}} in AlgaPSA",
       "fullPsaHint": "Usa «Apri in PSA completo» per più contesto di quanto possa mostrare una scheda Teams.",
       "fallback": {
         "label": "Record richiesto non disponibile:",

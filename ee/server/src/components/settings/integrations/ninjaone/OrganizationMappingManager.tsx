@@ -3,7 +3,7 @@
 /**
  * NinjaOne Organization Mapping Manager
  *
- * Allows mapping NinjaOne organizations to Alga PSA companies.
+ * Allows mapping NinjaOne organizations to AlgaPSA companies.
  * Devices can only be synced for organizations that have a company mapping.
  */
 

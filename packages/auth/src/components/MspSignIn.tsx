@@ -112,7 +112,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
             >
               <Image
                 src="/images/avatar-purple-big.png"
-                alt="Alga PSA"
+                alt="AlgaPSA"
                 width={200}
                 height={200}
                 className="rounded-full mb-8 mx-auto"

@@ -276,7 +276,7 @@ describe('teamsBotHandler', () => {
       { tenantIdHint: 'tenant-1' }
     );
 
-    expect(welcome.text).toContain('Alga PSA is ready');
+    expect(welcome.text).toContain('AlgaPSA is ready');
     expect(welcome.attachments?.[0]?.content.title).toBe('Teams bot commands');
     expect(welcome.attachments?.[0]?.content.text).toContain('my tickets');
     expect(welcome.attachments?.[0]?.content.text).toContain('my approvals');

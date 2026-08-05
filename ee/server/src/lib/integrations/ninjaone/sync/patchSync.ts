@@ -1,7 +1,7 @@
 /**
  * NinjaOne Patch Status Sync
  *
- * Synchronizes patch status information from NinjaOne to Alga PSA assets.
+ * Synchronizes patch status information from NinjaOne to AlgaPSA assets.
  * Updates pending patches, failed patches, and last scan timestamps.
  */
 

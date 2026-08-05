@@ -115,7 +115,7 @@ class ApiRegistryClass {
     const spec = {
       openapi: '3.0.0',
       info: {
-        title: 'Alga PSA API',
+        title: 'AlgaPSA API',
         version: '1.0.0',
         description: 'Professional Services Automation API'
       },

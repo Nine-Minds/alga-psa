@@ -142,7 +142,7 @@ test('T007: Ink shell renders persistent layout regions instead of sequential pr
 
   await sleep(20);
   const frame = ui.lastFrame() || '';
-  assert.match(frame, /Alga PSA Operator/);
+  assert.match(frame, /AlgaPSA Operator/);
   assert.match(frame, /Actions/);
   assert.match(frame, /Status Dashboard/);
   assert.doesNotMatch(frame, /Live Progress/);

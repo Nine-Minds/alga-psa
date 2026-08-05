@@ -30,7 +30,7 @@
     "aiCheckoutFailed": "Failed to start AI Assistant checkout",
     "aiRemoved": "AI Assistant will be removed from your subscription.",
     "aiCancelFailed": "Failed to cancel AI Assistant",
-    "cancellationScheduled": "Subscription canceled. You can keep using Alga PSA until the end of your billing period."
+    "cancellationScheduled": "Subscription canceled. You can keep using AlgaPSA until the end of your billing period."
   },
   "common": {
     "loading": "Loading...",
@@ -53,7 +53,7 @@
     "advancedAssets": "Advanced Assets — unlock RMM-linked asset discovery and richer asset controls",
     "clientPortalAdmin": "Client Portal Admin — manage advanced client portal branding and administration",
     "workflowDesigner": "Workflow Designer — build and maintain custom workflow automations",
-    "mobileAccess": "Mobile Access — sign in from the Alga PSA mobile app",
+    "mobileAccess": "Mobile Access — sign in from the AlgaPSA mobile app",
     "entraSync": "Microsoft Entra Sync — auto-discover tenants and sync contacts from Entra ID",
     "cipp": "CIPP Integration — connect your CIPP instance for multi-tenant Entra management",
     "teamsIntegration": "Microsoft Teams — meetings integration and Teams bot for ticket notifications",
@@ -71,7 +71,7 @@
     "upgradePendingTitle": "Your upgrade is pending",
     "upgradePendingBody": "Apple will continue billing you for Solo until {{date}}. After that, your upgraded subscription will take over automatically.",
     "autoRenewWarningStrong": "Auto-renew is currently ON on your Apple subscription",
-    "autoRenewWarningBody": "please disable it in iOS Settings → Apple ID → Subscriptions → Alga PSA, otherwise Apple will charge you again and the upgrade will be delayed.",
+    "autoRenewWarningBody": "please disable it in iOS Settings → Apple ID → Subscriptions → AlgaPSA, otherwise Apple will charge you again and the upgrade will be delayed.",
     "cancelUpgrade": "Cancel upgrade",
     "appleManagedBody": "Your subscription is managed by Apple. Current billing period ends {{date}}. You can upgrade to a larger plan at any time — we'll align the new billing to your Apple period so you never pay for both at once."
   },
@@ -200,7 +200,7 @@
     "title": "Danger Zone",
     "body": "Canceling your subscription will disable access for all users at the end of the current billing period.",
     "cancelSubscription": "Cancel Subscription",
-    "scheduledBody": "Your subscription is scheduled to end on {{date}}. Everyone can keep using Alga PSA until then."
+    "scheduledBody": "Your subscription is scheduled to end on {{date}}. Everyone can keep using AlgaPSA until then."
   },
   "aiCheckoutDialog": {
     "title": "Add AI Assistant",
@@ -212,7 +212,7 @@
     "howToTitle": "How to disable auto-renew:",
     "step1": "Open <strong>Settings</strong> on your iPhone or iPad",
     "step2": "Tap your name at the top, then <strong>Subscriptions</strong>",
-    "step3": "Tap <strong>Alga PSA</strong>",
+    "step3": "Tap <strong>AlgaPSA</strong>",
     "step4": "Tap <strong>Cancel Subscription</strong> — this disables auto-renew but keeps your access until {{date}}",
     "step5": "Return to this page and click Continue below",
     "currentPeriodFallback": "your current period ends",
@@ -341,7 +341,7 @@
     "title": "Cancel subscription?",
     "keepSubscription": "Keep subscription",
     "canceling": "Canceling...",
-    "beforeYouCancelBody": "Your subscription will end on {{date}}. Everyone can keep using Alga PSA until then.",
+    "beforeYouCancelBody": "Your subscription will end on {{date}}. Everyone can keep using AlgaPSA until then.",
     "currentBillingPeriod": "the end of your current billing period",
     "replacesScheduledChange": "This replaces your scheduled license change.",
     "reasonLabel": "Reason (optional)",

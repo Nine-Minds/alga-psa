@@ -87,7 +87,7 @@ export class MetadataService {
         generated_at: new Date().toISOString(),
         api_version: 'v1',
         server_info: {
-          name: 'Alga PSA API',
+          name: 'AlgaPSA API',
           version: '1.0.0',
           environment: process.env.NODE_ENV || 'development'
         }
@@ -181,11 +181,11 @@ export class MetadataService {
     const spec: OpenApiSpec = {
       openapi: '3.0.3',
       info: {
-        title: 'Alga PSA REST API',
+        title: 'AlgaPSA REST API',
         version: '1.0.0',
         description: 'Comprehensive REST API for Alga Professional Services Automation platform',
         contact: {
-          name: 'Alga PSA API Support',
+          name: 'AlgaPSA API Support',
           email: 'api-support@alga-psa.com'
         },
         license: {
@@ -231,7 +231,7 @@ export class MetadataService {
       data: spec,
       meta: {
         generated_at: new Date().toISOString(),
-        generator: 'Alga PSA Metadata Service v1.0.0'
+        generator: 'AlgaPSA Metadata Service v1.0.0'
       }
     };
   }

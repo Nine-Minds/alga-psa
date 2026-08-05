@@ -1,7 +1,7 @@
 /**
  * NinjaOne Device Mapper
  *
- * Transforms NinjaOne device data into Alga PSA asset format.
+ * Transforms NinjaOne device data into AlgaPSA asset format.
  * Handles field mapping, type detection, and extension data population.
  */
 

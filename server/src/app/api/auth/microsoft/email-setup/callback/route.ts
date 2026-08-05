@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic';
 // what the user sees.
 const SETUP_FAILURES = {
   invalid_state: 'This Microsoft setup request is invalid or expired. Start again from Providers settings.',
-  session_mismatch: 'Your Alga PSA session does not match the administrator who started this setup. Sign in and try again.',
+  session_mismatch: 'Your AlgaPSA session does not match the administrator who started this setup. Sign in and try again.',
   consent_denied: 'Microsoft sign-in or administrator consent was denied. Choose another setup option or try again.',
   microsoft_error: 'Microsoft could not complete the setup request. Try again or use manual setup.',
   consent_not_granted: 'Microsoft did not confirm tenant administrator consent.',

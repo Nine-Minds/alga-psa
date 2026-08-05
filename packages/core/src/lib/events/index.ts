@@ -3,7 +3,7 @@ import type { EventPayload } from './publisher';
 /**
  * @alga-psa/core - Events Module
  *
- * Event publishing system for Alga PSA.
+ * Event publishing system for AlgaPSA.
  * Publishes events to the workflow engine via Redis streams.
  */
 

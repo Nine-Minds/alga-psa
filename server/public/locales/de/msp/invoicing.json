@@ -1060,7 +1060,7 @@
       "pending": "Steuer: Ausstehend"
     },
     "tooltips": {
-      "internal": "Die von Alga PSA berechnete Steuer basiert auf den konfigurierten Steuersätzen",
+      "internal": "Die von AlgaPSA berechnete Steuer basiert auf den konfigurierten Steuersätzen",
       "external": "Die Steuer wird durch ein externes Buchhaltungssystem berechnet",
       "pending": "Steuer wartet auf Import aus externem Buchhaltungssystem",
       "externalAdapter": "Von {{adapter}} berechnete Steuer",

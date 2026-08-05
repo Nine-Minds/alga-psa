@@ -175,7 +175,7 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
           <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
             <p className="font-medium text-foreground">{t('integrations.qbo.settings.howItWorksTitle', { defaultValue: 'How live QuickBooks works in this release' })}</p>
             <p className="mt-2">
-              {t('integrations.qbo.settings.howItWorksDescription', { defaultValue: 'Save QuickBooks app credentials here, complete the Intuit OAuth flow, and Alga PSA will use the connected QuickBooks company as the default live context for exports and mappings.' })}
+              {t('integrations.qbo.settings.howItWorksDescription', { defaultValue: 'Save QuickBooks app credentials here, complete the Intuit OAuth flow, and AlgaPSA will use the connected QuickBooks company as the default live context for exports and mappings.' })}
             </p>
           </div>
 

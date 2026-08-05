@@ -16,14 +16,14 @@ export default function InstallerPanel() {
       <CardHeader>
         <CardTitle>Extensions (Pro)</CardTitle>
         <CardDescription>
-          Extension installation and management are available in Alga PSA Pro.
+          Extension installation and management are available in AlgaPSA Pro.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col items-center justify-center text-center py-10 space-y-3">
           <div className="text-lg font-medium text-gray-900">Pro feature</div>
           <p className="text-sm text-gray-600">
-            The extensions installer is only available in Alga PSA Pro.
+            The extensions installer is only available in AlgaPSA Pro.
           </p>
           <div className="pt-2">
             <Button id="extensions-enterprise-cta" variant="secondary" disabled>

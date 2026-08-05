@@ -1,7 +1,7 @@
 /**
  * @alga-psa/tags
  *
- * Tag management module for Alga PSA.
+ * Tag management module for AlgaPSA.
  * Includes tag actions, components, and context.
  */
 

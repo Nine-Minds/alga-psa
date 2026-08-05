@@ -1,4 +1,4 @@
-// SoftwareOne Extension for Alga PSA
+// SoftwareOne Extension for AlgaPSA
 // Version: 0.1.0
 
 // Client-only exports for the SoftwareOne demo extension

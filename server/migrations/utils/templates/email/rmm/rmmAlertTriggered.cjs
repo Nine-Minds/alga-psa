@@ -20,7 +20,7 @@ const COPY = {
     device: 'Device',
     message: 'Message',
     ticket: 'Ticket',
-    cta: 'View in Alga PSA',
+    cta: 'View in AlgaPSA',
     textIntro: 'RMM Alert ({{severity}}) on {{deviceName}}: {{message}}',
   },
   fr: {
@@ -31,7 +31,7 @@ const COPY = {
     device: 'Appareil',
     message: 'Message',
     ticket: 'Ticket',
-    cta: 'Voir dans Alga PSA',
+    cta: 'Voir dans AlgaPSA',
     textIntro: 'Alerte RMM ({{severity}}) sur {{deviceName}} : {{message}}',
   },
   es: {
@@ -42,7 +42,7 @@ const COPY = {
     device: 'Dispositivo',
     message: 'Mensaje',
     ticket: 'Ticket',
-    cta: 'Ver en Alga PSA',
+    cta: 'Ver en AlgaPSA',
     textIntro: 'Alerta de RMM ({{severity}}) en {{deviceName}}: {{message}}',
   },
   de: {
@@ -53,7 +53,7 @@ const COPY = {
     device: 'Gerät',
     message: 'Nachricht',
     ticket: 'Ticket',
-    cta: 'In Alga PSA ansehen',
+    cta: 'In AlgaPSA ansehen',
     textIntro: 'RMM-Warnung ({{severity}}) auf {{deviceName}}: {{message}}',
   },
   nl: {
@@ -64,7 +64,7 @@ const COPY = {
     device: 'Apparaat',
     message: 'Bericht',
     ticket: 'Ticket',
-    cta: 'Bekijk in Alga PSA',
+    cta: 'Bekijk in AlgaPSA',
     textIntro: 'RMM-melding ({{severity}}) op {{deviceName}}: {{message}}',
   },
   it: {
@@ -75,7 +75,7 @@ const COPY = {
     device: 'Dispositivo',
     message: 'Messaggio',
     ticket: 'Ticket',
-    cta: 'Visualizza in Alga PSA',
+    cta: 'Visualizza in AlgaPSA',
     textIntro: 'Avviso RMM ({{severity}}) su {{deviceName}}: {{message}}',
   },
   pl: {
@@ -86,7 +86,7 @@ const COPY = {
     device: 'Urządzenie',
     message: 'Wiadomość',
     ticket: 'Zgłoszenie',
-    cta: 'Zobacz w Alga PSA',
+    cta: 'Zobacz w AlgaPSA',
     textIntro: 'Alert RMM ({{severity}}) na {{deviceName}}: {{message}}',
   },
   pt: {
@@ -97,7 +97,7 @@ const COPY = {
     device: 'Dispositivo',
     message: 'Mensagem',
     ticket: 'Ticket',
-    cta: 'Ver no Alga PSA',
+    cta: 'Ver no AlgaPSA',
     textIntro: 'Alerta de RMM ({{severity}}) em {{deviceName}}: {{message}}',
   },
 };

@@ -1736,14 +1736,14 @@
   },
   "extensions": {
     "title": "Gestione estensioni",
-    "description": "Installa, configura e gestisci le estensioni per ampliare le funzionalità di Alga PSA.",
+    "description": "Installa, configura e gestisci le estensioni per ampliare le funzionalità di AlgaPSA.",
     "tabs": {
       "manage": "Gestisci",
       "install": "Installa"
     },
     "enterpriseOnly": {
       "title": "Funzionalità Pro",
-      "description": "Le estensioni sono disponibili in Alga PSA Pro."
+      "description": "Le estensioni sono disponibili in AlgaPSA Pro."
     },
     "links": {
       "needLogs": "Servono i log delle estensioni?",

@@ -1,7 +1,7 @@
 /**
  * @alga-psa/db
  *
- * Database infrastructure module for Alga PSA.
+ * Database infrastructure module for AlgaPSA.
  * Contains Knex configuration, tenant context management, and database utilities.
  */
 

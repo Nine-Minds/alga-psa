@@ -30,7 +30,7 @@
     "aiCheckoutFailed": "Error al iniciar el pago del AI Assistant",
     "aiRemoved": "AI Assistant se eliminará de su suscripción.",
     "aiCancelFailed": "Error al cancelar el AI Assistant",
-    "cancellationScheduled": "Suscripción cancelada. Puede seguir usando Alga PSA hasta el final de su período de facturación."
+    "cancellationScheduled": "Suscripción cancelada. Puede seguir usando AlgaPSA hasta el final de su período de facturación."
   },
   "common": {
     "loading": "Cargando...",
@@ -53,7 +53,7 @@
     "advancedAssets": "Activos Avanzados — desbloquee el descubrimiento de activos vinculados a RMM y controles de activos más completos",
     "clientPortalAdmin": "Administración del Portal de Clientes — gestione la personalización y administración avanzada del portal de clientes",
     "workflowDesigner": "Diseñador de Flujos de Trabajo — cree y mantenga automatizaciones de flujos de trabajo personalizadas",
-    "mobileAccess": "Acceso Móvil — inicie sesión desde la aplicación móvil de Alga PSA",
+    "mobileAccess": "Acceso Móvil — inicie sesión desde la aplicación móvil de AlgaPSA",
     "entraSync": "Microsoft Entra Sync — descubra tenants automáticamente y sincronice contactos desde Entra ID",
     "cipp": "Integración CIPP — conecte su instancia de CIPP para la gestión multi-tenant de Entra",
     "teamsIntegration": "Microsoft Teams — integración de reuniones y bot de Teams para notificaciones de tickets",
@@ -71,7 +71,7 @@
     "upgradePendingTitle": "Su mejora está pendiente",
     "upgradePendingBody": "Apple continuará facturándole Solo hasta el {{date}}. Después de eso, su suscripción mejorada tomará el control automáticamente.",
     "autoRenewWarningStrong": "La renovación automática está actualmente ACTIVADA en su suscripción de Apple",
-    "autoRenewWarningBody": "desactívela en Ajustes de iOS → Apple ID → Suscripciones → Alga PSA, de lo contrario Apple le cobrará de nuevo y la mejora se retrasará.",
+    "autoRenewWarningBody": "desactívela en Ajustes de iOS → Apple ID → Suscripciones → AlgaPSA, de lo contrario Apple le cobrará de nuevo y la mejora se retrasará.",
     "cancelUpgrade": "Cancelar mejora",
     "appleManagedBody": "Su suscripción es gestionada por Apple. El período de facturación actual termina el {{date}}. Puede mejorar a un plan mayor en cualquier momento — alinearemos la nueva facturación con su período de Apple para que nunca pague por ambos al mismo tiempo."
   },
@@ -200,7 +200,7 @@
     "title": "Zona de peligro",
     "body": "Cancelar su suscripción desactivará el acceso para todos los usuarios al final del período de facturación actual.",
     "cancelSubscription": "Cancelar suscripción",
-    "scheduledBody": "Su suscripción finalizará el {{date}}. Todos podrán seguir usando Alga PSA hasta entonces."
+    "scheduledBody": "Su suscripción finalizará el {{date}}. Todos podrán seguir usando AlgaPSA hasta entonces."
   },
   "aiCheckoutDialog": {
     "title": "Añadir AI Assistant",
@@ -212,7 +212,7 @@
     "howToTitle": "Cómo desactivar la renovación automática:",
     "step1": "Abra <strong>Ajustes</strong> en su iPhone o iPad",
     "step2": "Toque su nombre en la parte superior, luego <strong>Suscripciones</strong>",
-    "step3": "Toque <strong>Alga PSA</strong>",
+    "step3": "Toque <strong>AlgaPSA</strong>",
     "step4": "Toque <strong>Cancelar suscripción</strong> — esto desactiva la renovación automática pero mantiene su acceso hasta el {{date}}",
     "step5": "Vuelva a esta página y haga clic en Continuar abajo",
     "currentPeriodFallback": "termina su período actual",
@@ -341,7 +341,7 @@
     "title": "Cancelar suscripción",
     "keepSubscription": "Mantener suscripción",
     "canceling": "Cancelando...",
-    "beforeYouCancelBody": "Su suscripción finalizará el {{date}}. Todos podrán seguir usando Alga PSA hasta entonces.",
+    "beforeYouCancelBody": "Su suscripción finalizará el {{date}}. Todos podrán seguir usando AlgaPSA hasta entonces.",
     "currentBillingPeriod": "el final de su período de facturación actual",
     "replacesScheduledChange": "Esto sustituye su cambio de licencia programado.",
     "reasonLabel": "Motivo (opcional)",

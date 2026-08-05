@@ -1,7 +1,7 @@
 /**
  * @alga-psa/auth
  *
- * Authentication module for Alga PSA.
+ * Authentication module for AlgaPSA.
  * Provides session management, JWT encoding, and auth utilities.
  */
 

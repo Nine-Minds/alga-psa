@@ -1060,7 +1060,7 @@
       "pending": "Taxe : En attente"
     },
     "tooltips": {
-      "internal": "Taxe calculée par Alga PSA sur la base des taux de taxe configurés",
+      "internal": "Taxe calculée par AlgaPSA sur la base des taux de taxe configurés",
       "external": "Taxe calculée par un système comptable externe",
       "pending": "Taxe en attente d'importation depuis un système comptable externe",
       "externalAdapter": "Taxe calculée par {{adapter}}",

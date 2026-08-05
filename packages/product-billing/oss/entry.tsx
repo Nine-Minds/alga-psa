@@ -63,7 +63,7 @@ export const PaymentSettings = () => {
     <div className="text-center py-8 text-muted-foreground">
       <p className="text-lg font-medium">Pro Feature</p>
       <p className="mt-2 text-sm">
-        Payment provider integration (Stripe) is available in Alga PSA Pro.
+        Payment provider integration (Stripe) is available in AlgaPSA Pro.
       </p>
     </div>
   );
@@ -74,7 +74,7 @@ export const StripeConnectionSettings: React.FC = () => {
     <div className="text-center py-8 text-muted-foreground">
       <p className="text-lg font-medium">Pro Feature</p>
       <p className="mt-2 text-sm">
-        Stripe payment integration is available in Alga PSA Pro.
+        Stripe payment integration is available in AlgaPSA Pro.
       </p>
     </div>
   );
@@ -105,7 +105,7 @@ export const PaymentSettingsConfig = () => {
     <div className="text-center py-8 text-muted-foreground">
       <p className="text-lg font-medium">Pro Feature</p>
       <p className="mt-2 text-sm">
-        Payment settings configuration is available in Alga PSA Pro.
+        Payment settings configuration is available in AlgaPSA Pro.
       </p>
     </div>
   );

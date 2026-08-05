@@ -841,7 +841,7 @@
         "amountsMatch": "Gli importi delle imposte corrispondono entro un intervallo accettabile"
       },
       "summary": {
-        "internal": "Interno (Alga PSA)",
+        "internal": "Interno (AlgaPSA)",
         "external": "Esterno (contabilità)"
       },
       "alerts": {
@@ -1060,7 +1060,7 @@
       "pending": "Tasse: in sospeso"
     },
     "tooltips": {
-      "internal": "Imposta calcolata da Alga PSA in base alle aliquote fiscali configurate",
+      "internal": "Imposta calcolata da AlgaPSA in base alle aliquote fiscali configurate",
       "external": "Imposta calcolata dal sistema contabile esterno",
       "pending": "Imposta in attesa di importazione dal sistema contabile esterno",
       "externalAdapter": "Imposta calcolata da {{adapter}}",

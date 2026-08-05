@@ -4269,7 +4269,7 @@ export const sharedBlockSeed: SharedVariableBlockSeed[] = [
       "surveys",
       "opportunities"
     ],
-    "notes": "Footer / layout identity block injected by the shared _shared/emailLayout.cjs wrapper and by every auth template. The wrapper's default footer is '(c) {{currentYear}} {{companyName}}', but MOST non-auth templates override footerText with their own copy (e.g. projects and billing ship a custom 'Powered by Alga PSA' footer), so currentYear/companyName are frequently present in sample data yet render nowhere. Canonical names are currentYear + companyName; every other spelling below is a variant of companyName.",
+    "notes": "Footer / layout identity block injected by the shared _shared/emailLayout.cjs wrapper and by every auth template. The wrapper's default footer is '(c) {{currentYear}} {{companyName}}', but MOST non-auth templates override footerText with their own copy (e.g. projects and billing ship a custom 'Powered by AlgaPSA' footer), so currentYear/companyName are frequently present in sample data yet render nowhere. Canonical names are currentYear + companyName; every other spelling below is a variant of companyName.",
     "variables": [
       {
         "path": "currentYear",

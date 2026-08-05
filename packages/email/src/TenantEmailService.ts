@@ -409,7 +409,7 @@ export class TenantEmailService extends BaseEmailService {
     const message: EmailMessage = {
       from,
       to: [{ email: toAddress }],
-      subject: 'Alga PSA outbound email test',
+      subject: 'AlgaPSA outbound email test',
       text: 'This is a test message confirming your outbound email configuration works.',
       html: '<p>This is a test message confirming your outbound email configuration works.</p>'
     };

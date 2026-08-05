@@ -774,7 +774,7 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
     },
     {
       addOn: ADD_ONS.TEAMS,
-      description: 'Connect Alga PSA to Microsoft Teams with the personal tab, bot, message extension, quick actions, and activity notifications.',
+      description: 'Connect AlgaPSA to Microsoft Teams with the personal tab, bot, message extension, quick actions, and activity notifications.',
       addTitle: 'Add Microsoft Teams',
       addBody: 'Purchase the Teams add-on to activate Microsoft Teams integration for this tenant.',
       activeTitle: 'Teams add-on active',

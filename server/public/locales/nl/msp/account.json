@@ -30,7 +30,7 @@
     "aiCheckoutFailed": "AI Assistant-afrekening kon niet worden gestart",
     "aiRemoved": "AI Assistant wordt verwijderd uit uw abonnement.",
     "aiCancelFailed": "AI Assistant kon niet worden geannuleerd",
-    "cancellationScheduled": "Abonnement geannuleerd. U kunt Alga PSA blijven gebruiken tot het einde van uw factureringsperiode."
+    "cancellationScheduled": "Abonnement geannuleerd. U kunt AlgaPSA blijven gebruiken tot het einde van uw factureringsperiode."
   },
   "common": {
     "loading": "Laden...",
@@ -53,7 +53,7 @@
     "advancedAssets": "Geavanceerde assets — ontgrendel RMM-gekoppelde assetdetectie en uitgebreid assetbeheer",
     "clientPortalAdmin": "Klantportaalbeheer — beheer geavanceerde klantportaal-branding en -administratie",
     "workflowDesigner": "Workflow-ontwerper — bouw en onderhoud aangepaste workflow-automatiseringen",
-    "mobileAccess": "Mobiele toegang — meld u aan via de Alga PSA mobiele app",
+    "mobileAccess": "Mobiele toegang — meld u aan via de AlgaPSA mobiele app",
     "entraSync": "Microsoft Entra Sync — ontdek automatisch tenants en synchroniseer contacten vanuit Entra ID",
     "cipp": "CIPP-integratie — verbind uw CIPP-instantie voor multi-tenant Entra-beheer",
     "teamsIntegration": "Microsoft Teams — vergaderintegratie en Teams-bot voor ticketmeldingen",
@@ -71,7 +71,7 @@
     "upgradePendingTitle": "Uw upgrade is in behandeling",
     "upgradePendingBody": "Apple blijft u factureren voor Solo tot {{date}}. Daarna neemt uw geüpgradede abonnement automatisch over.",
     "autoRenewWarningStrong": "Automatisch verlengen staat momenteel AAN op uw Apple-abonnement",
-    "autoRenewWarningBody": "schakel dit uit in iOS Instellingen → Apple ID → Abonnementen → Alga PSA, anders brengt Apple u opnieuw kosten in rekening en wordt de upgrade vertraagd.",
+    "autoRenewWarningBody": "schakel dit uit in iOS Instellingen → Apple ID → Abonnementen → AlgaPSA, anders brengt Apple u opnieuw kosten in rekening en wordt de upgrade vertraagd.",
     "cancelUpgrade": "Upgrade annuleren",
     "appleManagedBody": "Uw abonnement wordt beheerd door Apple. De huidige factureringsperiode eindigt op {{date}}. U kunt op elk moment upgraden naar een groter plan — we stemmen de nieuwe facturering af op uw Apple-periode zodat u nooit voor beide tegelijk betaalt."
   },
@@ -200,7 +200,7 @@
     "title": "Gevarenzone",
     "body": "Als u uw abonnement annuleert, wordt de toegang voor alle gebruikers aan het einde van de huidige factureringsperiode uitgeschakeld.",
     "cancelSubscription": "Abonnement annuleren",
-    "scheduledBody": "Uw abonnement eindigt op {{date}}. Tot die tijd kan iedereen Alga PSA blijven gebruiken."
+    "scheduledBody": "Uw abonnement eindigt op {{date}}. Tot die tijd kan iedereen AlgaPSA blijven gebruiken."
   },
   "aiCheckoutDialog": {
     "title": "AI Assistant toevoegen",
@@ -212,7 +212,7 @@
     "howToTitle": "Automatisch verlengen uitschakelen:",
     "step1": "Open <strong>Instellingen</strong> op uw iPhone of iPad",
     "step2": "Tik op uw naam bovenaan, en vervolgens op <strong>Abonnementen</strong>",
-    "step3": "Tik op <strong>Alga PSA</strong>",
+    "step3": "Tik op <strong>AlgaPSA</strong>",
     "step4": "Tik op <strong>Abonnement annuleren</strong> — dit schakelt automatisch verlengen uit, maar behoudt uw toegang tot {{date}}",
     "step5": "Keer terug naar deze pagina en klik hieronder op Doorgaan",
     "currentPeriodFallback": "uw huidige periode eindigt",
@@ -341,7 +341,7 @@
     "title": "Abonnement annuleren",
     "keepSubscription": "Abonnement behouden",
     "canceling": "Annuleren...",
-    "beforeYouCancelBody": "Uw abonnement eindigt op {{date}}. Tot die tijd kan iedereen Alga PSA blijven gebruiken.",
+    "beforeYouCancelBody": "Uw abonnement eindigt op {{date}}. Tot die tijd kan iedereen AlgaPSA blijven gebruiken.",
     "currentBillingPeriod": "het einde van uw huidige factureringsperiode",
     "replacesScheduledChange": "Dit vervangt uw geplande licentiewijziging.",
     "reasonLabel": "Reden (optioneel)",

@@ -1,7 +1,7 @@
 /**
  * @alga-psa/tickets
  *
- * Ticket management module for Alga PSA.
+ * Ticket management module for AlgaPSA.
  * Provides ticket CRUD operations, status management, and helpdesk functionality.
  */
 

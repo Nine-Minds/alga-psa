@@ -9,7 +9,7 @@ describe('inbound webhook OpenAPI contracts', () => {
 
   it('documents every inbound webhook management route with tenant-scoped RBAC metadata', () => {
     const document = generateBaseDocument({
-      title: 'Alga PSA API',
+      title: 'AlgaPSA API',
       version: '0.1.0-test',
       description: 'Test document',
       edition: 'ce',
@@ -82,7 +82,7 @@ describe('inbound webhook OpenAPI contracts', () => {
 
   it('documents action discovery response as inbound action definitions with target fields', () => {
     const document = generateBaseDocument({
-      title: 'Alga PSA API',
+      title: 'AlgaPSA API',
       version: '0.1.0-test',
       description: 'Test document',
       edition: 'ce',
@@ -167,7 +167,7 @@ describe('inbound webhook OpenAPI contracts', () => {
 
   it('documents the templated receiver endpoint with headers and response codes', () => {
     const document = generateBaseDocument({
-      title: 'Alga PSA API',
+      title: 'AlgaPSA API',
       version: '0.1.0-test',
       description: 'Test document',
       edition: 'ce',
@@ -199,7 +199,7 @@ describe('inbound webhook OpenAPI contracts', () => {
 
   it('references InboundWebhookConfig from list, get, and create responses', () => {
     const document = generateBaseDocument({
-      title: 'Alga PSA API',
+      title: 'AlgaPSA API',
       version: '0.1.0-test',
       description: 'Test document',
       edition: 'ce',
@@ -216,7 +216,7 @@ describe('inbound webhook OpenAPI contracts', () => {
 
   it('documents auth config variants for each supported auth_type', () => {
     const document = generateBaseDocument({
-      title: 'Alga PSA API',
+      title: 'AlgaPSA API',
       version: '0.1.0-test',
       description: 'Test document',
       edition: 'ce',
@@ -234,7 +234,7 @@ describe('inbound webhook OpenAPI contracts', () => {
 
   it('documents direct-action and workflow handler config variants', () => {
     const document = generateBaseDocument({
-      title: 'Alga PSA API',
+      title: 'AlgaPSA API',
       version: '0.1.0-test',
       description: 'Test document',
       edition: 'ce',
@@ -249,7 +249,7 @@ describe('inbound webhook OpenAPI contracts', () => {
 
   it('documents the WorkflowWebhookEnvelope component with runtime envelope fields', () => {
     const document = generateBaseDocument({
-      title: 'Alga PSA API',
+      title: 'AlgaPSA API',
       version: '0.1.0-test',
       description: 'Test document',
       edition: 'ce',
@@ -273,7 +273,7 @@ describe('inbound webhook OpenAPI contracts', () => {
 
   it('keeps management route response schemas aligned with registered handlers', () => {
     const document = generateBaseDocument({
-      title: 'Alga PSA API',
+      title: 'AlgaPSA API',
       version: '0.1.0-test',
       description: 'Test document',
       edition: 'ce',
@@ -292,7 +292,7 @@ describe('inbound webhook OpenAPI contracts', () => {
 
   it('documents action discovery output with the InboundActionDefinition array schema', () => {
     const document = generateBaseDocument({
-      title: 'Alga PSA API',
+      title: 'AlgaPSA API',
       version: '0.1.0-test',
       description: 'Test document',
       edition: 'ce',

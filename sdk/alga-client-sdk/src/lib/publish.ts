@@ -10,7 +10,7 @@ export interface PublishExtensionOptions {
   apiKey: string;
   /** Tenant ID to install extension for */
   tenantId: string;
-  /** Base URL of Alga PSA server (default: http://localhost:3000) */
+  /** Base URL of AlgaPSA server (default: http://localhost:3000) */
   baseUrl?: string;
   /** Whether to install after publishing (default: true) */
   install?: boolean;
@@ -66,7 +66,7 @@ async function readErrorPayload(res: Response): Promise<{ message?: string; code
 }
 
 /**
- * Publishes an extension to Alga PSA server
+ * Publishes an extension to AlgaPSA server
  *
  * Workflow:
  * 1. Pack the extension if needed (creates bundle.tar.zst)

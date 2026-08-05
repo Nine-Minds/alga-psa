@@ -1736,14 +1736,14 @@
   },
   "extensions": {
     "title": "Erweiterungsverwaltung",
-    "description": "Installieren, konfigurieren und verwalten Sie Erweiterungen, um die Funktionalität von Alga PSA zu erweitern.",
+    "description": "Installieren, konfigurieren und verwalten Sie Erweiterungen, um die Funktionalität von AlgaPSA zu erweitern.",
     "tabs": {
       "manage": "Verwalten",
       "install": "Installieren"
     },
     "enterpriseOnly": {
       "title": "Pro-Funktion",
-      "description": "Erweiterungen sind in Alga PSA Pro verfügbar."
+      "description": "Erweiterungen sind in AlgaPSA Pro verfügbar."
     },
     "links": {
       "needLogs": "Erweiterungsprotokolle benötigt?",

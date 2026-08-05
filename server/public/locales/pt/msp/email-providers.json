@@ -42,8 +42,8 @@
       "title": "Instruções de configuração",
       "microsoft": {
         "title": "Configuração do Microsoft 365",
-        "providersPointer": "Microsoft app setup is managed in Providers.",
-        "openProviders": "Open Providers"
+        "providersPointer": "A configuração do aplicativo da Microsoft é gerenciada em Provedores.",
+        "openProviders": "Abrir Provedores"
       },
       "gmail": {
         "title": "Configuração do Gmail",
@@ -277,11 +277,11 @@
         "providerNameHelp": "Nome interno usado para identificar esta configuração. Não mostrado em e-mails enviados.",
         "senderDisplayNameLabel": "Nome de exibição do remetente",
         "senderDisplayNamePlaceholder": "por exemplo, Suporte Acme",
-        "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails. It applies when this mailbox matches the configured outbound ticketing address. Leave blank to use the ticket board name."
+        "senderDisplayNameHelp": "Nome de exibição mostrado no cabeçalho De dos emails de saída de tickets. Ele se aplica quando esta caixa de correio corresponde ao endereço de saída de tickets configurado. Deixe em branco para usar o nome do quadro de tickets."
       },
       "oauth": {
-        "signingIn": "Signing in…",
-        "signIn": "Sign in with Microsoft"
+        "signingIn": "Entrando…",
+        "signIn": "Entrar com a Microsoft"
       },
       "advanced": {
         "title": "Configurações avançadas",
@@ -292,12 +292,12 @@
         "maxEmailsPerSync": "Máximo de e-mails por sincronização"
       },
       "readiness": {
-        "checking": "Checking Microsoft setup…",
-        "ready": "Microsoft is set up. Sign in as this mailbox to finish.",
-        "pending": "Waiting for your Microsoft 365 administrator. Setup was started in Providers but hasn't been approved yet.",
-        "openProviders": "Open Providers",
-        "notConfigured": "Microsoft isn't set up yet. Set it up once in Providers, then come back.",
-        "setUpInProviders": "Set up in Providers"
+        "checking": "Verificando a configuração da Microsoft…",
+        "ready": "A Microsoft está configurada. Entre com esta caixa de correio para concluir.",
+        "pending": "Aguardando seu administrador do Microsoft 365. A configuração foi iniciada em Provedores, mas ainda não foi aprovada.",
+        "openProviders": "Abrir Provedores",
+        "notConfigured": "A Microsoft ainda não está configurada. Configure-a uma vez em Provedores e depois volte.",
+        "setUpInProviders": "Configurar em Provedores"
       }
     },
     "gmail": {

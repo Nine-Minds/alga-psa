@@ -1,7 +1,7 @@
 {
   "name": "@product/extension-initialization",
   "version": "0.1.0",
-  "description": "Extension initialization for Alga PSA - EE/OSS conditional exports",
+  "description": "Extension initialization for AlgaPSA - EE/OSS conditional exports",
   "main": "index.js",
   "type": "module",
   "exports": {

@@ -1,7 +1,7 @@
 /**
  * @alga-psa/integrations
  *
- * External integrations module for Alga PSA.
+ * External integrations module for AlgaPSA.
  * Provides connections to third-party services including
  * email providers, cloud storage, and external APIs.
  */

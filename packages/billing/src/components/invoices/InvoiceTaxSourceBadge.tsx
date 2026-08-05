@@ -85,7 +85,7 @@ export function InvoiceTaxSourceBadge({
   let tooltipContent = t(`taxBadge.tooltips.${config.tooltipKey}`, {
     defaultValue:
       config.tooltipKey === 'internal'
-        ? 'Tax calculated by Alga PSA based on configured tax rates'
+        ? 'Tax calculated by AlgaPSA based on configured tax rates'
         : config.tooltipKey === 'external'
           ? 'Tax calculated by external accounting system'
           : 'Tax awaiting import from external accounting system',

@@ -30,7 +30,7 @@
     "aiCheckoutFailed": "Falha ao iniciar a finalização da compra do IA Assistant",
     "aiRemoved": "O IA Assistant será removido da sua assinatura.",
     "aiCancelFailed": "Falha ao cancelar o IA Assistant",
-    "cancellationScheduled": "Assinatura cancelada. Você pode continuar usando o Alga PSA até o fim do período de cobrança."
+    "cancellationScheduled": "Assinatura cancelada. Você pode continuar usando o AlgaPSA até o fim do período de cobrança."
   },
   "common": {
     "loading": "Carregando...",
@@ -53,7 +53,7 @@
     "advancedAssets": "Ativos avançados — desbloqueie a descoberta de ativos vinculados ao RMM e controles de ativos mais avançados",
     "clientPortalAdmin": "Administrador do portal do cliente — gerencie a marca e a administração avançadas do portal do cliente",
     "workflowDesigner": "Workflow Designer — crie e mantenha automações de fluxo de trabalho personalizadas",
-    "mobileAccess": "Acesso móvel – faça login no aplicativo móvel Alga PSA",
+    "mobileAccess": "Acesso móvel – faça login no aplicativo móvel AlgaPSA",
     "entraSync": "Microsoft Entra Sync — descubra automaticamente locatários e sincronize contatos do Entra ID",
     "cipp": "Integração CIPP — conecte sua instância CIPP para gerenciamento Entra multilocatário",
     "teamsIntegration": "Microsoft Teams — integração de reuniões e bot do Teams para notificações de tickets",
@@ -71,7 +71,7 @@
     "upgradePendingTitle": "Sua atualização está pendente",
     "upgradePendingBody": "A Apple continuará cobrando Solo até {{date}}. Depois disso, sua assinatura atualizada assumirá automaticamente.",
     "autoRenewWarningStrong": "A renovação automática está ATIVADA na sua assinatura da Apple",
-    "autoRenewWarningBody": "desative-o em Configurações do iOS → Apple ID → Assinaturas → Alga PSA, caso contrário a Apple cobrará novamente e a atualização será atrasada.",
+    "autoRenewWarningBody": "desative-o em Configurações do iOS → Apple ID → Assinaturas → AlgaPSA, caso contrário a Apple cobrará novamente e a atualização será atrasada.",
     "cancelUpgrade": "Cancelar atualização",
     "appleManagedBody": "Sua assinatura é gerenciada pela Apple. O período de faturamento atual termina em {{date}}. Você pode atualizar para um plano maior a qualquer momento – alinharemos a nova cobrança ao seu período Apple para que você nunca pague pelos dois ao mesmo tempo."
   },
@@ -200,7 +200,7 @@
     "title": "Zona de perigo",
     "body": "O cancelamento da sua assinatura desativará o acesso de todos os usuários no final do período de cobrança atual.",
     "cancelSubscription": "Cancelar assinatura",
-    "scheduledBody": "Sua assinatura terminará em {{date}}. Até lá, todos poderão continuar usando o Alga PSA."
+    "scheduledBody": "Sua assinatura terminará em {{date}}. Até lá, todos poderão continuar usando o AlgaPSA."
   },
   "aiCheckoutDialog": {
     "title": "Adicionar assistente de IA",
@@ -212,7 +212,7 @@
     "howToTitle": "Como desativar a renovação automática:",
     "step1": "Abra <strong>Configurações</strong> no seu iPhone ou iPad",
     "step2": "Toque no seu nome na parte superior e depois em <strong>Assinaturas</strong>",
-    "step3": "Toque em <strong>Alga PSA</strong>",
+    "step3": "Toque em <strong>AlgaPSA</strong>",
     "step4": "Toque em <strong>Cancelar assinatura</strong> — isso desativa a renovação automática, mas mantém seu acesso até {{date}}",
     "step5": "Retorne a esta página e clique em Continuar abaixo",
     "currentPeriodFallback": "seu período atual termina",
@@ -341,7 +341,7 @@
     "title": "Cancelar assinatura",
     "keepSubscription": "Manter assinatura",
     "canceling": "Cancelando...",
-    "beforeYouCancelBody": "Sua assinatura terminará em {{date}}. Até lá, todos poderão continuar usando o Alga PSA.",
+    "beforeYouCancelBody": "Sua assinatura terminará em {{date}}. Até lá, todos poderão continuar usando o AlgaPSA.",
     "currentBillingPeriod": "o fim do período de cobrança atual",
     "replacesScheduledChange": "Isso substitui a alteração de licença programada.",
     "reasonLabel": "Motivo (opcional)",

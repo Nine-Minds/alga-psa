@@ -1,7 +1,7 @@
 {
   "name": "@alga/softwareone-extension",
   "version": "0.1.0",
-  "description": "Browse and bill SoftwareOne agreements inside Alga PSA",
+  "description": "Browse and bill SoftwareOne agreements inside AlgaPSA",
   "main": "dist/index.js",
   "scripts": {
     "build": "vite build && vite build -c vite.iframe.config.ts",

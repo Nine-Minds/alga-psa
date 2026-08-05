@@ -841,7 +841,7 @@
         "amountsMatch": "Los montos de los impuestos coinciden dentro del rango aceptable"
       },
       "summary": {
-        "internal": "Interno (Alga PSA)",
+        "internal": "Interno (AlgaPSA)",
         "external": "Externo (Contabilidad)"
       },
       "alerts": {
@@ -1060,7 +1060,7 @@
       "pending": "Impuesto: Pendiente"
     },
     "tooltips": {
-      "internal": "Impuesto calculado por Alga PSA en función de las tasas impositivas configuradas",
+      "internal": "Impuesto calculado por AlgaPSA en función de las tasas impositivas configuradas",
       "external": "Impuesto calculado por sistema contable externo",
       "pending": "Impuesto pendiente de importación desde sistema contable externo",
       "externalAdapter": "Impuesto calculado por {{adapter}}",

@@ -1,7 +1,7 @@
 /**
  * @alga-psa/core - Logger
  *
- * Centralized logging utility for Alga PSA.
+ * Centralized logging utility for AlgaPSA.
  * On server, it uses Winston with file and console transports.
  * On client, it uses standard console.
  */

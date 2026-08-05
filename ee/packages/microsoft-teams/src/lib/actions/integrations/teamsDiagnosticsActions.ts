@@ -78,11 +78,11 @@ interface MicrosoftProfileRow {
   is_archived: boolean | null;
 }
 
-const TEST_MESSAGE_TEXT = 'Alga PSA Teams test message';
+const TEST_MESSAGE_TEXT = 'AlgaPSA Teams test message';
 const MISSING_CONVERSATION_REFERENCE_DETAIL =
-  'Open the Alga PSA bot in Teams and send it any message first, then retry.';
+  'Open the AlgaPSA bot in Teams and send it any message first, then retry.';
 const LINK_MICROSOFT_ACCOUNT_RECOMMENDATION = 'Link your Microsoft account in your profile settings.';
-const MESSAGE_BOT_RECOMMENDATION = 'Open the Alga PSA bot in Teams and send it any message first, then retry.';
+const MESSAGE_BOT_RECOMMENDATION = 'Open the AlgaPSA bot in Teams and send it any message first, then retry.';
 const BOT_ENV_RECOMMENDATION = 'Configure TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID, and TEAMS_BOT_APP_PASSWORD.';
 const ACTIVATE_INTEGRATION_RECOMMENDATION = 'Activate the Teams integration in settings.';
 
@@ -644,13 +644,13 @@ export async function runTeamsDiagnosticsImpl(
         status: 'warn',
         detail: 'The Teams meeting organizer object id is missing. Save the organizer in Teams settings so recording and transcript capture can address Graph by object id.',
         data: { recordingsAvailable: false, reason: 'missing_organizer_object_id', organizerUpn },
-        recommendations: ['Save the default Teams meeting organizer again so Alga PSA can resolve its Microsoft Entra object id.'],
+        recommendations: ['Save the default Teams meeting organizer again so AlgaPSA can resolve its Microsoft Entra object id.'],
       };
     }
 
     return {
       status: 'pass',
-      detail: 'Recording capture prerequisites are configured in Alga PSA. Confirm Microsoft Graph recording/transcript admin consent and Exchange mailbox scoping in Microsoft 365.',
+      detail: 'Recording capture prerequisites are configured in AlgaPSA. Confirm Microsoft Graph recording/transcript admin consent and Exchange mailbox scoping in Microsoft 365.',
       data: {
         recordingsAvailable: true,
         organizerUpn,

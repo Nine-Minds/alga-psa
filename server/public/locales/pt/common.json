@@ -1072,7 +1072,7 @@
       "sessionRevoked": "Sessão revogada com sucesso"
     },
     "warnings": {
-      "oauthLogout": "Isso irá desconectá-lo apenas do Alga PSA. Você permanecerá conectado ao {{provider}}."
+      "oauthLogout": "Isso irá desconectá-lo apenas do AlgaPSA. Você permanecerá conectado ao {{provider}}."
     },
     "errors": {
       "fetchFailed": "Falha ao buscar sessões",
@@ -1177,7 +1177,7 @@
     "teamsTab": {
       "signedInAs": "Conectado como {{name}}",
       "openInFullPsa": "Aberto em PSA completo",
-      "iframeTitle": "{{destination}} em Alga PSA",
+      "iframeTitle": "{{destination}} em AlgaPSA",
       "fullPsaHint": "Use \"Abrir em PSA completo\" para obter um contexto mais rico do que um cartão do Teams pode mostrar.",
       "fallback": {
         "label": "Registro solicitado indisponível:",

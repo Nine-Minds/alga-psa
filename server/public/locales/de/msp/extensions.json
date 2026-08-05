@@ -8,14 +8,14 @@
   },
   "settings": {
     "title": "Erweiterungsverwaltung",
-    "description": "Installieren, konfigurieren und verwalten Sie Erweiterungen, um die Funktionalität von Alga PSA zu erweitern.",
+    "description": "Installieren, konfigurieren und verwalten Sie Erweiterungen, um die Funktionalität von AlgaPSA zu erweitern.",
     "tabs": {
       "manage": "Verwalten",
       "install": "Installieren"
     },
     "enterpriseOnly": {
       "title": "Pro-Funktion",
-      "description": "Erweiterungen sind in Alga PSA Pro verfügbar."
+      "description": "Erweiterungen sind in AlgaPSA Pro verfügbar."
     },
     "links": {
       "needLogs": "Erweiterungsprotokolle benötigt?",
@@ -210,7 +210,7 @@
     "loading": "Erweiterungen werden geladen...",
     "error": "Fehler",
     "emptyTitle": "Keine Erweiterungen installiert",
-    "emptyDescription": "Installieren Sie Erweiterungen, um Alga PSA neue Features und Funktionen hinzuzufügen.",
+    "emptyDescription": "Installieren Sie Erweiterungen, um AlgaPSA neue Features und Funktionen hinzuzufügen.",
     "colExtension": "Erweiterung",
     "colVersion": "Version",
     "colAuthor": "Autor",
@@ -241,7 +241,7 @@
     "error": "Fehler",
     "loadFailed": "Erweiterungen konnten nicht geladen werden",
     "emptyTitle": "Keine Erweiterungen installiert",
-    "emptyDescription": "Installieren Sie Erweiterungen, um Alga PSA neue Features und Funktionen hinzuzufügen.",
+    "emptyDescription": "Installieren Sie Erweiterungen, um AlgaPSA neue Features und Funktionen hinzuzufügen.",
     "colExtension": "Erweiterung",
     "colVersion": "Version",
     "colAuthor": "Autor",

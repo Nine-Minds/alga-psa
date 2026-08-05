@@ -115,8 +115,8 @@
           "dialog": {
             "cancel": "Abbrechen",
             "confirm": "Sperre zurücksetzen",
-            "confirmBatch": "Dadurch kann Alga PSA Rechnungen aus Batch {{batchId}} erneut exportieren. Wenn einige dieser Rechnungen noch in QuickBooks existieren, kann der Import der CSV-Datei Duplikate erzeugen.",
-            "confirmInvoice": "Dadurch kann Alga PSA Rechnung {{invoiceNumber}} erneut exportieren. Wenn diese Rechnung noch in QuickBooks existiert, kann der Import der CSV-Datei Duplikate erzeugen.",
+            "confirmBatch": "Dadurch kann AlgaPSA Rechnungen aus Batch {{batchId}} erneut exportieren. Wenn einige dieser Rechnungen noch in QuickBooks existieren, kann der Import der CSV-Datei Duplikate erzeugen.",
+            "confirmInvoice": "Dadurch kann AlgaPSA Rechnung {{invoiceNumber}} erneut exportieren. Wenn diese Rechnung noch in QuickBooks existiert, kann der Import der CSV-Datei Duplikate erzeugen.",
             "resetting": "Wird zurückgesetzt…",
             "title": "Export-Sperre zurücksetzen?",
             "warning": "Fahren Sie nur fort, wenn Sie sicher sind, dass die Rechnung nicht importiert wurde oder Sie sie in QuickBooks gelöscht/storniert haben."
@@ -313,7 +313,7 @@
           "title": "Steuern aus CSV importieren",
           "xeroCsvDescription": "Der exportierte CSV enthält Rechnungsnummer, Kontaktname, Zeilenbetrag, Steuerbetrag und Tracking-Kategorien.",
           "xeroHelp": {
-            "note": "Hinweis: Es werden nur Rechnungen zugeordnet, die ursprünglich aus Alga PSA exportiert wurden (mit Tracking „Source System = AlgaPSA“).",
+            "note": "Hinweis: Es werden nur Rechnungen zugeordnet, die ursprünglich aus AlgaPSA exportiert wurden (mit Tracking „Source System = AlgaPSA“).",
             "s1": "Gehen Sie in Xero zu Sales > Invoices",
             "s2": "Wählen Sie den Rechnungs-Tab, aus dem Sie exportieren möchten (z. B. Bezahlt, Offene Zahlung)",
             "s3": "(Optional) Klicken Sie auf „Search“, um nach Startdatum, Enddatum oder Datumstyp zu filtern",
@@ -1518,7 +1518,7 @@
     },
     "microsoft": {
       "emailSetup": {
-        "action": "Set up Microsoft",
+        "action": "Microsoft einrichten",
         "actions": {
           "back": "Zurück",
           "cancel": "Abbrechen",
@@ -1527,31 +1527,31 @@
           "savePlatform": "Profil erstellen und fortfahren",
           "signIn": "Bei Microsoft anmelden",
           "working": "Wird verarbeitet…",
-          "approve": "Approve in Microsoft",
-          "copyApprovalLink": "Copy approval link for your admin",
-          "saveManual": "Save app and continue"
+          "approve": "In Microsoft genehmigen",
+          "copyApprovalLink": "Genehmigungslink für Ihren Administrator kopieren",
+          "saveManual": "App speichern und fortfahren"
         },
         "automated": {
-          "description": "Alga PSA registers a dedicated Entra app automatically. Sign in as a Microsoft 365 administrator.",
-          "title": "Create an app in your Microsoft organization"
+          "description": "AlgaPSA registriert automatisch eine dedizierte Entra-App. Melden Sie sich als Microsoft 365-Administrator an.",
+          "title": "App in Ihrer Microsoft-Organisation erstellen"
         },
         "callbackUri": "Postfach-Callback-URI",
         "complete": {
-          "consentDone": "Approved by your Microsoft 365 administrator. You can now connect a mailbox.",
-          "consentPending": "A Microsoft 365 administrator for your organization must approve access before mailboxes can connect.",
+          "consentDone": "Von Ihrem Microsoft 365-Administrator genehmigt. Sie können jetzt ein Postfach verbinden.",
+          "consentPending": "Ein Microsoft 365-Administrator Ihrer Organisation muss den Zugriff genehmigen, bevor Postfächer verbunden werden können.",
           "profileCreated": "Microsoft Email profile created and bound",
-          "ready": "Microsoft is ready",
-          "waiting": "Waiting for admin approval"
+          "ready": "Microsoft ist bereit",
+          "waiting": "Warten auf Administratorgenehmigung"
         },
         "consent": {
           "confirmedDescription": "Die Microsoft-App ist für die Postfachautorisierung bereit.",
           "confirmedTitle": "Administratoreinwilligung bestätigt",
           "url": "URL für die Administratoreinwilligung",
           "urlLabel": "Einwilligungs-URL",
-          "approvalLink": "Approval link"
+          "approvalLink": "Genehmigungslink"
         },
         "copied": "{{label}} kopiert",
-        "description": "Choose how Alga PSA connects to Microsoft. You will connect mailboxes separately.",
+        "description": "Wählen Sie aus, wie AlgaPSA eine Verbindung mit Microsoft herstellt. Die Postfächer verbinden Sie separat.",
         "errors": {
           "automated": "Die automatische Erstellung der Microsoft-App konnte nicht gestartet werden.",
           "generic": "Die Einrichtung von Microsoft-E-Mail wurde nicht abgeschlossen.",
@@ -1560,52 +1560,52 @@
           "popupBlocked": "Erlauben Sie Pop-ups für diese Website und versuchen Sie es erneut.",
           "popupClosed": "Das Microsoft-Fenster wurde geschlossen, bevor die Einrichtung abgeschlossen war. Versuchen Sie es erneut oder wählen Sie eine andere Einrichtungsoption.",
           "tenantRequired": "Geben Sie Ihre Microsoft-Mandanten-ID oder eine verifizierte Domäne ein.",
-          "manual": "Could not configure the Microsoft app.",
-          "manualRequired": "Enter the display name, client ID, client secret, and Microsoft tenant ID.",
-          "pendingProfileMissing": "The pending Microsoft app could not be found.",
-          "approvalLink": "Could not create the Microsoft approval link.",
+          "manual": "Die Microsoft-App konnte nicht konfiguriert werden.",
+          "manualRequired": "Geben Sie den Anzeigenamen, die Client ID, das Client Secret und die Microsoft-Mandanten-ID ein.",
+          "pendingProfileMissing": "Die ausstehende Microsoft-App wurde nicht gefunden.",
+          "approvalLink": "Der Microsoft-Genehmigungslink konnte nicht erstellt werden.",
           "consentDenied": "Die Microsoft-Anmeldung oder Administratoreinwilligung wurde abgelehnt. Wählen Sie eine andere Einrichtungsoption oder versuchen Sie es erneut.",
           "consentNotGranted": "Microsoft hat die Einwilligung des Mandantenadministrators nicht bestätigt.",
           "consentPersistFailed": "Die Microsoft-Administratoreinwilligung konnte nicht gespeichert werden.",
           "invalidState": "Diese Microsoft-Einrichtungsanfrage ist ungültig oder abgelaufen. Starten Sie den Vorgang in den Anbietereinstellungen erneut.",
           "microsoftError": "Microsoft konnte die Einrichtungsanfrage nicht abschließen. Versuchen Sie es erneut oder verwenden Sie die manuelle Einrichtung.",
           "missingCode": "Microsoft hat keinen Autorisierungscode zurückgegeben. Starten Sie die Einrichtung erneut.",
-          "sessionMismatch": "Ihre Sitzung in Alga PSA stimmt nicht mit dem Administrator überein, der diese Einrichtung gestartet hat. Melden Sie sich an und versuchen Sie es erneut."
+          "sessionMismatch": "Ihre Sitzung in AlgaPSA stimmt nicht mit dem Administrator überein, der diese Einrichtung gestartet hat. Melden Sie sich an und versuchen Sie es erneut."
         },
         "fields": {
           "clientId": "Client ID",
           "displayName": "Profilanzeigename",
-          "tenantId": "Microsoft tenant ID",
-          "clientSecret": "Client secret",
-          "microsoftTenant": "Microsoft tenant ID or verified domain",
-          "redirectUri": "Redirect URI to add in Entra"
+          "tenantId": "Microsoft-Mandanten-ID",
+          "clientSecret": "Client Secret",
+          "microsoftTenant": "Microsoft-Mandanten-ID oder verifizierte Domäne",
+          "redirectUri": "In Entra hinzuzufügende Redirect-URI"
         },
         "manual": {
-          "description": "Use an existing Entra app maintained by your organization.",
+          "description": "Verwenden Sie eine vorhandene Entra-App, die von Ihrer Organisation verwaltet wird.",
           "title": "Vorhandene App manuell eingeben"
         },
         "platform": {
-          "description": "Nothing to register in Microsoft Entra. Your Microsoft 365 administrator approves access.",
-          "title": "Use the app provided by Alga PSA"
+          "description": "In Microsoft Entra muss nichts registriert werden. Ihr Microsoft 365-Administrator genehmigt den Zugriff.",
+          "title": "Von AlgaPSA bereitgestellte App verwenden"
         },
-        "title": "Set up Microsoft",
+        "title": "Microsoft einrichten",
         "unavailable": "Nicht verfügbar",
-        "recommended": "Recommended",
-        "advanced": "Advanced"
+        "recommended": "Empfohlen",
+        "advanced": "Erweitert"
       },
       "settings": {
         "advanced": {
-          "title": "Manual Microsoft apps (advanced)",
-          "description": "Create and manage Entra app registrations maintained by your organization.",
-          "warning": "Eine benutzerdefinierte Entra-App ist bei gehostetem Alga PSA normalerweise nicht erforderlich. Fahren Sie nur fort, wenn Ihre Organisation ausdrücklich eine eigene Anwendung und eigene Anmeldedaten benötigt."
+          "title": "Manuelle Microsoft-Apps (erweitert)",
+          "description": "Erstellen und verwalten Sie Entra-App-Registrierungen, die von Ihrer Organisation betreut werden.",
+          "warning": "Eine benutzerdefinierte Entra-App ist bei gehostetem AlgaPSA normalerweise nicht erforderlich. Fahren Sie nur fort, wenn Ihre Organisation ausdrücklich eine eigene Anwendung und eigene Anmeldedaten benötigt."
         },
         "platform": {
           "title": "Microsoft-E-Mail kann verbunden werden",
-          "description": "Verbinden Sie Microsoft 365 mit der von Alga PSA bereitgestellten Anwendung. Eine Entra-App-Registrierung ist nicht erforderlich.",
-          "readyDescription": "The Microsoft app is approved and ready for mailbox sign-in.",
-          "connectAction": "Connect a mailbox →",
+          "description": "Verbinden Sie Microsoft 365 mit der von AlgaPSA bereitgestellten Anwendung. Eine Entra-App-Registrierung ist nicht erforderlich.",
+          "readyDescription": "Die Microsoft-App ist genehmigt und für die Postfachanmeldung bereit.",
+          "connectAction": "Postfach verbinden →",
           "unavailableTitle": "Microsoft-Plattformanmeldedaten sind nicht verfügbar",
-          "unavailableDescription": "This deployment requires an app maintained by your organization. Use the advanced setup below to add one."
+          "unavailableDescription": "Diese Bereitstellung erfordert eine App, die von Ihrer Organisation verwaltet wird. Fügen Sie über die erweiterte Einrichtung unten eine hinzu."
         },
         "actions": {
           "entraLink": "Microsoft Entra",
@@ -1690,7 +1690,7 @@
           "setDefault": "Dieses Profil als Standard-Microsoft-Profil festlegen",
           "setDefaultHelp": "Standardprofile stehen für Profilverwaltungs-Workflows und migrations­sichere Metadaten zur Verfügung, jedoch nicht für das Consumer-Routing.",
           "storedSecretHint": "Gespeichertes Secret: {{secret}}. Lassen Sie dieses Feld leer, um es unverändert zu lassen.",
-          "tenantId": "Microsoft tenant ID",
+          "tenantId": "Microsoft-Mandanten-ID",
           "capabilities": "Enabled capabilities",
           "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
@@ -1727,7 +1727,7 @@
           "teamsScopes": "Teams-Scopes",
           "teamsTabRedirect": "Redirect-URI für persönlichen Tab",
           "teamsTitle": "Teams-Anleitung",
-          "tenantId": "Microsoft tenant ID",
+          "tenantId": "Microsoft-Mandanten-ID",
           "unavailable": "Nicht verfügbar"
         },
         "profileCard": {
@@ -1744,7 +1744,7 @@
           "setDefault": "Als Standard festlegen",
           "storedSecret": "Gespeichertes Secret",
           "teamsAppIdUri": "Teams Application ID URI",
-          "tenantIdLabel": "Microsoft tenant ID:",
+          "tenantIdLabel": "Microsoft-Mandanten-ID:",
           "updating": "Wird aktualisiert…",
           "enabledCapabilities": "Enabled capabilities",
           "noEnabledCapabilities": "No enabled capabilities"
@@ -1757,14 +1757,14 @@
           "archived": "Archivierte Profile können nicht für neue Microsoft-Bindungen verwendet werden.",
           "clientIdMissing": "Client ID fehlt.",
           "clientSecretMissing": "Client Secret wurde nicht konfiguriert.",
-          "tenantIdMissing": "Add a Microsoft tenant ID.",
-          "adminConsentPending": "Ask a Microsoft 365 administrator to approve access for Email."
+          "tenantIdMissing": "Fügen Sie eine Microsoft-Mandanten-ID hinzu.",
+          "adminConsentPending": "Bitten Sie einen Microsoft 365-Administrator, den Zugriff auf E-Mail zu genehmigen."
         },
         "statusBadges": {
           "archived": "Archiviert",
           "needsAttention": "Erfordert Aufmerksamkeit",
           "ready": "Bereit",
-          "waitingForAdminApproval": "Waiting for admin approval"
+          "waitingForAdminApproval": "Warten auf Administratorgenehmigung"
         },
         "title": "Microsoft",
         "toasts": {
@@ -1791,7 +1791,7 @@
           "clientIdRequired": "Microsoft OAuth Client ID ist erforderlich",
           "clientSecretRequired": "Microsoft OAuth Client Secret ist erforderlich",
           "displayNameRequired": "Anzeigename des Microsoft-Profils ist erforderlich",
-          "tenantIdRequired": "Microsoft tenant ID is required"
+          "tenantIdRequired": "Microsoft-Mandanten-ID ist erforderlich"
         },
         "disconnectDialog": {
           "cancel": "Anbieter verbunden lassen",
@@ -1861,7 +1861,7 @@
           "load": "QuickBooks-Einstellungen konnten nicht geladen werden.",
           "saveCredentials": "QuickBooks-Anmeldedaten konnten nicht gespeichert werden."
         },
-        "howItWorksDescription": "Speichern Sie hier QuickBooks-App-Anmeldedaten, schließen Sie den Intuit-OAuth-Flow ab, und Alga PSA verwendet das verbundene QuickBooks-Unternehmen als Standard-Live-Kontext für Exporte und Zuordnungen.",
+        "howItWorksDescription": "Speichern Sie hier QuickBooks-App-Anmeldedaten, schließen Sie den Intuit-OAuth-Flow ab, und AlgaPSA verwendet das verbundene QuickBooks-Unternehmen als Standard-Live-Kontext für Exporte und Zuordnungen.",
         "howItWorksTitle": "So funktioniert Live-QuickBooks in dieser Version",
         "loading": "QuickBooks-Einstellungen werden geladen…",
         "mapping": {
@@ -1954,7 +1954,7 @@
             "navigate": "Navigieren Sie zu Administration → Apps → API",
             "addClient": "Klicken Sie auf „+ Add client app“, um eine neue API-Anwendung zu erstellen",
             "platform": "Stellen Sie die Application Platform auf „Web (PHP, Java, .Net Core, etc.)“",
-            "name": "Geben Sie einen Namen ein (z. B. „Alga PSA“)",
+            "name": "Geben Sie einen Namen ein (z. B. „AlgaPSA“)",
             "redirectUri": "Fügen Sie die Redirect-URI hinzu:",
             "scopes": "Aktivieren Sie unter „Scopes“ „Monitoring“ und „Management“",
             "grantTypes": "Aktivieren Sie unter „Allowed grant types“ „Authorization code“, „Client credentials“ und „Refresh token“",
@@ -2745,7 +2745,7 @@
             "capabilityDisabled": "Aktivieren Sie die Funktion für den persönlichen Bot, bevor Sie eine Testnachricht senden.",
             "botNotConfigured": "Konfigurieren Sie die Teams-Bot-Anmeldedaten, bevor Sie eine Testnachricht senden.",
             "missingUserLinkage": "Verknüpfen Sie Ihr Microsoft-Konto, bevor Sie eine Teams-Testnachricht senden.",
-            "missingConversationReference": "Öffnen Sie den Alga PSA-Bot in Teams und senden Sie ihm zuerst eine beliebige Nachricht, und versuchen Sie es dann erneut.",
+            "missingConversationReference": "Öffnen Sie den AlgaPSA-Bot in Teams und senden Sie ihm zuerst eine beliebige Nachricht, und versuchen Sie es dann erneut.",
             "skipped": "Die Teams-Testnachricht wurde übersprungen."
           },
           "steps": {
@@ -2768,12 +2768,12 @@
             "activeProfile": "Wählen Sie ein aktives Microsoft-Profil für Teams aus.",
             "profileCredentials": "Vervollständigen Sie die Microsoft-Profil-Anmeldedaten, bevor Sie Teams aktivieren.",
             "meetingOrganizer": "Konfigurieren Sie den Standard-Organisator für Teams-Besprechungen in den Teams-Einstellungen.",
-            "meetingOrganizerObjectId": "Speichern Sie den Standard-Organisator für Teams-Besprechungen erneut, damit Alga PSA seine Microsoft Entra-Objekt-ID auflösen kann.",
+            "meetingOrganizerObjectId": "Speichern Sie den Standard-Organisator für Teams-Besprechungen erneut, damit AlgaPSA seine Microsoft Entra-Objekt-ID auflösen kann.",
             "package": "Generieren Sie das Teams-App-Paket, bevor Sie die End-to-End-Validierung ausführen.",
             "baseUrl": "Generieren Sie das Teams-Paket mit einer erreichbaren Basis-URL neu.",
             "botEnv": "Konfigurieren Sie TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID und TEAMS_BOT_APP_PASSWORD.",
             "userLinkage": "Verknüpfen Sie Ihr Microsoft-Konto in Ihren Profileinstellungen.",
-            "conversationReference": "Öffnen Sie den Alga PSA-Bot in Teams und senden Sie ihm zuerst eine beliebige Nachricht, und versuchen Sie es dann erneut.",
+            "conversationReference": "Öffnen Sie den AlgaPSA-Bot in Teams und senden Sie ihm zuerst eine beliebige Nachricht, und versuchen Sie es dann erneut.",
             "deliveryFailure": "Überprüfen Sie den letzten Fehler bei der Teams-Zustellung und versuchen Sie es nach Behebung der Ursache erneut."
           }
         },
@@ -2948,7 +2948,7 @@
               "remedy": "Erteilen Sie in der Azure-App-Registrierung die Administratorzustimmung für die erforderlichen Graph-Berechtigungen (zum Beispiel TeamsActivity.Send)."
             },
             "user_not_mapped": {
-              "cause": "Der Empfänger hat sich nicht mit Microsoft bei Alga PSA angemeldet, daher besteht keine Kontozuordnung.",
+              "cause": "Der Empfänger hat sich nicht mit Microsoft bei AlgaPSA angemeldet, daher besteht keine Kontozuordnung.",
               "remedy": "Lassen Sie den Benutzer sich mit Microsoft anmelden (MSP-Portal-SSO oder die Teams-Registerkarte), damit sein Konto zugeordnet wird."
             },
             "addon_inactive": {
@@ -2965,15 +2965,15 @@
             },
             "graph_not_found": {
               "cause": "Die Teams-App ist für den Empfänger nicht installiert, daher kann Microsoft Graph ihn nicht adressieren (404).",
-              "remedy": "Installieren Sie die Alga PSA-App für diesen Benutzer oder geben Sie sie organisationsweit frei."
+              "remedy": "Installieren Sie die AlgaPSA-App für diesen Benutzer oder geben Sie sie organisationsweit frei."
             },
             "graph_throttled": {
               "cause": "Microsoft Graph hat die Anfrage gedrosselt (429).",
-              "remedy": "Vorübergehend; Alga PSA wiederholt den Vorgang mit Backoff. Untersuchen Sie das Problem nur, wenn es weiterhin besteht."
+              "remedy": "Vorübergehend; AlgaPSA wiederholt den Vorgang mit Backoff. Untersuchen Sie das Problem nur, wenn es weiterhin besteht."
             },
             "graph_server_error": {
               "cause": "Microsoft Graph hat einen Serverfehler zurückgegeben (5xx).",
-              "remedy": "Vorübergehende Graph-Störung; Alga PSA wiederholt den Vorgang. Warten Sie und prüfen Sie den Microsoft-Dienststatus, wenn das Problem weiterhin besteht."
+              "remedy": "Vorübergehende Graph-Störung; AlgaPSA wiederholt den Vorgang. Warten Sie und prüfen Sie den Microsoft-Dienststatus, wenn das Problem weiterhin besteht."
             },
             "transient": {
               "cause": "Ein vorübergehender Fehler (Netzwerk oder Timeout) hat die Zustellung unterbrochen.",
@@ -2990,7 +2990,7 @@
           "description": "Die Microsoft Teams-Integration erfordert das Teams-Add-on für diesen Mandanten.",
           "includedTitle": "Was enthalten ist",
           "feature": {
-            "tab": "Persönliche Registerkarte: Öffnen Sie Alga PSA in Microsoft Teams.",
+            "tab": "Persönliche Registerkarte: Öffnen Sie AlgaPSA in Microsoft Teams.",
             "bot": "Persönlicher und Gruppenchat-Bot für Tickets, Genehmigungen, Zeiten und Notizen.",
             "messageExtension": "Nachrichtenerweiterung und Schnellaktionen, um aus jeder Nachricht heraus auf PSA-Datensätze zu reagieren.",
             "meetings": "Teams-Besprechungen bei Terminbestätigungen mit echten Outlook/Teams-Kalendereinladungen.",
@@ -3207,7 +3207,7 @@
           "load": "Xero-Einstellungen konnten nicht geladen werden.",
           "saveCredentials": "Xero-Anmeldedaten konnten nicht gespeichert werden."
         },
-        "howItWorksDescription": "Speichern Sie hier eine mandanteneigene Xero Client ID und ein Client Secret, schließen Sie den Xero-OAuth-Flow ab, und Alga PSA verwendet die erste verbundene Xero-Organisation als Standard-Live-Kontext.",
+        "howItWorksDescription": "Speichern Sie hier eine mandanteneigene Xero Client ID und ein Client Secret, schließen Sie den Xero-OAuth-Flow ab, und AlgaPSA verwendet die erste verbundene Xero-Organisation als Standard-Live-Kontext.",
         "howItWorksTitle": "So funktioniert Live-Xero in dieser Version",
         "loading": "Xero-Einstellungen werden geladen…",
         "mapping": {
@@ -3257,7 +3257,7 @@
       "webhook": {
         "heading": "Webhook-Konfiguration",
         "configuredAutomatically": "Webhooks automatisch konfiguriert",
-        "receiveNotifications": "Alga PSA erhält Zahlungsbenachrichtigungen für:",
+        "receiveNotifications": "AlgaPSA erhält Zahlungsbenachrichtigungen für:",
         "failedTitle": "Webhook-Konfiguration fehlgeschlagen",
         "failedBody": "Die automatische Webhook-Konfiguration ist fehlgeschlagen. Klicken Sie auf Erneut versuchen, um die Konfiguration erneut zu versuchen.",
         "configuring": "Wird konfiguriert...",

@@ -8,14 +8,14 @@
   },
   "settings": {
     "title": "Gestión de extensiones",
-    "description": "Instale, configure y administre extensiones para ampliar la funcionalidad de Alga PSA.",
+    "description": "Instale, configure y administre extensiones para ampliar la funcionalidad de AlgaPSA.",
     "tabs": {
       "manage": "Administrar",
       "install": "Instalar"
     },
     "enterpriseOnly": {
       "title": "Función Pro",
-      "description": "Las extensiones están disponibles en Alga PSA Pro."
+      "description": "Las extensiones están disponibles en AlgaPSA Pro."
     },
     "links": {
       "needLogs": "¿Necesita registros de extensiones?",
@@ -210,7 +210,7 @@
     "loading": "Cargando extensiones...",
     "error": "Error",
     "emptyTitle": "No hay extensiones instaladas",
-    "emptyDescription": "Instale extensiones para agregar nuevas características y funcionalidad a Alga PSA.",
+    "emptyDescription": "Instale extensiones para agregar nuevas características y funcionalidad a AlgaPSA.",
     "colExtension": "Extensión",
     "colVersion": "Versión",
     "colAuthor": "Autor",
@@ -241,7 +241,7 @@
     "error": "Error",
     "loadFailed": "Error al cargar las extensiones",
     "emptyTitle": "No hay extensiones instaladas",
-    "emptyDescription": "Instale extensiones para agregar nuevas características y funcionalidad a Alga PSA.",
+    "emptyDescription": "Instale extensiones para agregar nuevas características y funcionalidad a AlgaPSA.",
     "colExtension": "Extensión",
     "colVersion": "Versión",
     "colAuthor": "Autor",

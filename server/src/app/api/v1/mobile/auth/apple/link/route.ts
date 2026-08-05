@@ -107,7 +107,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json(
         {
           error: 'already_linked_to_other_user',
-          message: 'This Apple ID is already linked to a different Alga PSA account.',
+          message: 'This Apple ID is already linked to a different AlgaPSA account.',
         },
         { status: 409 },
       );

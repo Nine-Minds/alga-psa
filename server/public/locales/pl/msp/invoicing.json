@@ -877,7 +877,7 @@
         "amountsMatch": "Kwoty podatku mieszczą się w akceptowalnym zakresie"
       },
       "summary": {
-        "internal": "Wewnętrzny (Alga PSA)",
+        "internal": "Wewnętrzny (AlgaPSA)",
         "external": "Zewnętrzne (księgowość)"
       },
       "alerts": {
@@ -1114,7 +1114,7 @@
       "pending": "Podatek: w oczekiwaniu"
     },
     "tooltips": {
-      "internal": "Podatek naliczany przez Alga PSA na podstawie skonfigurowanych stawek podatkowych",
+      "internal": "Podatek naliczany przez AlgaPSA na podstawie skonfigurowanych stawek podatkowych",
       "external": "Podatek naliczany przez zewnętrzny system księgowy",
       "pending": "Podatek oczekujący na import z zewnętrznego systemu księgowego",
       "externalAdapter": "Podatek obliczony przez {{adapter}}",

@@ -13,7 +13,7 @@ import { getAddOnDestination } from '../../../../lib/addOnNavigation';
 const TEAMS_ADDON_DESTINATION = getAddOnDestination(ADD_ONS.TEAMS);
 
 const INCLUDED_FEATURES = [
-  { key: 'tab', defaultValue: 'Personal tab: open Alga PSA inside Microsoft Teams.' },
+  { key: 'tab', defaultValue: 'Personal tab: open AlgaPSA inside Microsoft Teams.' },
   { key: 'bot', defaultValue: 'Personal and group-chat bot for tickets, approvals, time, and notes.' },
   { key: 'messageExtension', defaultValue: 'Message extension and quick actions to act on PSA records from any message.' },
   { key: 'meetings', defaultValue: 'Teams meetings on appointment approvals with real Outlook/Teams calendar invites.' },

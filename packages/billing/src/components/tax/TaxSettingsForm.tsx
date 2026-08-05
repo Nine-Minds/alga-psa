@@ -602,7 +602,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
                     {
                       value: 'internal',
                       label: t('clientTaxSettings.advanced.taxSourceOverride.options.internal', {
-                        defaultValue: 'Alga PSA Calculates Tax'
+                        defaultValue: 'AlgaPSA Calculates Tax'
                       })
                     },
                     {
@@ -624,7 +624,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
                   <span className="font-medium">
                     {effectiveTaxSource === 'internal'
                       ? t('clientTaxSettings.advanced.taxSourceOverride.options.internal', {
-                          defaultValue: 'Alga PSA Calculates Tax'
+                          defaultValue: 'AlgaPSA Calculates Tax'
                         })
                       : effectiveTaxSource === 'external'
                         ? t('clientTaxSettings.advanced.taxSourceOverride.options.external', {

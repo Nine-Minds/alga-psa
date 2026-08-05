@@ -39,7 +39,7 @@ function wrapEmailLayout(opts) {
     headerTitle = '',
     headerMeta = '',
     bodyHtml,
-    footerText = '&copy; {{currentYear}} {{companyName}} &middot; Powered by Alga PSA',
+    footerText = '&copy; {{currentYear}} {{companyName}} &middot; Powered by AlgaPSA',
   } = opts;
 
   return `<!DOCTYPE html>

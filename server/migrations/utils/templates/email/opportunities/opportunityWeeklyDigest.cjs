@@ -16,7 +16,7 @@ const COPY = {
     newSuggestions: 'New suggestions',
     winsLastWeek: 'Wins last week',
     cta: 'Open your opportunity queue',
-    footer: 'Powered by Alga PSA &middot; Keep the next action moving',
+    footer: 'Powered by AlgaPSA &middot; Keep the next action moving',
     textOpenQueue: 'Open your queue',
   },
   fr: {
@@ -29,7 +29,7 @@ const COPY = {
     newSuggestions: 'Nouvelles suggestions',
     winsLastWeek: 'Gains la semaine dernière',
     cta: 'Ouvrez votre file d\'opportunités',
-    footer: 'Powered by Alga PSA &middot; Faites avancer la prochaine action',
+    footer: 'Powered by AlgaPSA &middot; Faites avancer la prochaine action',
     textOpenQueue: 'Ouvrez votre file',
   },
   es: {
@@ -42,7 +42,7 @@ const COPY = {
     newSuggestions: 'Nuevas sugerencias',
     winsLastWeek: 'Oportunidades ganadas la semana pasada',
     cta: 'Abra su cola de oportunidades',
-    footer: 'Powered by Alga PSA &middot; Mantenga la próxima acción en marcha',
+    footer: 'Powered by AlgaPSA &middot; Mantenga la próxima acción en marcha',
     textOpenQueue: 'Abra su cola',
   },
   de: {
@@ -55,7 +55,7 @@ const COPY = {
     newSuggestions: 'Neue Vorschläge',
     winsLastWeek: 'Gewinne letzte Woche',
     cta: 'Öffnen Sie Ihre Opportunity-Warteschlange',
-    footer: 'Powered by Alga PSA &middot; Halten Sie die nächste Aktion in Gang',
+    footer: 'Powered by AlgaPSA &middot; Halten Sie die nächste Aktion in Gang',
     textOpenQueue: 'Öffnen Sie Ihre Warteschlange',
   },
   nl: {
@@ -68,7 +68,7 @@ const COPY = {
     newSuggestions: 'Nieuwe suggesties',
     winsLastWeek: 'Winsten vorige week',
     cta: 'Open uw opportunity-wachtrij',
-    footer: 'Powered by Alga PSA &middot; Houd de volgende actie in beweging',
+    footer: 'Powered by AlgaPSA &middot; Houd de volgende actie in beweging',
     textOpenQueue: 'Open uw wachtrij',
   },
   it: {
@@ -81,7 +81,7 @@ const COPY = {
     newSuggestions: 'Nuovi suggerimenti',
     winsLastWeek: 'Vittorie la settimana scorsa',
     cta: 'Apri la tua coda di opportunità',
-    footer: 'Powered by Alga PSA &middot; Mantieni in movimento la prossima azione',
+    footer: 'Powered by AlgaPSA &middot; Mantieni in movimento la prossima azione',
     textOpenQueue: 'Apri la tua coda',
   },
   pl: {
@@ -94,7 +94,7 @@ const COPY = {
     newSuggestions: 'Nowe sugestie',
     winsLastWeek: 'Wygrane w zeszłym tygodniu',
     cta: 'Otwórz swoją kolejkę szans',
-    footer: 'Powered by Alga PSA &middot; Utrzymuj następną akcję w ruchu',
+    footer: 'Powered by AlgaPSA &middot; Utrzymuj następną akcję w ruchu',
     textOpenQueue: 'Otwórz swoją kolejkę',
   },
   pt: {
@@ -107,7 +107,7 @@ const COPY = {
     newSuggestions: 'Novas sugestões',
     winsLastWeek: 'Vitórias na semana passada',
     cta: 'Abra sua fila de oportunidades',
-    footer: 'Powered by Alga PSA &middot; Mantenha a próxima ação em movimento',
+    footer: 'Powered by AlgaPSA &middot; Mantenha a próxima ação em movimento',
     textOpenQueue: 'Abra sua fila',
   },
 };

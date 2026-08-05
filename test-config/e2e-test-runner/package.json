@@ -1,7 +1,7 @@
 {
   "name": "alga-psa-e2e-tests",
   "version": "1.0.0",
-  "description": "End-to-end tests for Alga PSA email processing",
+  "description": "End-to-end tests for AlgaPSA email processing",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -27,7 +27,7 @@
     "email",
     "workflow"
   ],
-  "author": "Alga PSA Team",
+  "author": "AlgaPSA Team",
   "license": "MIT",
   "overrides": {
     "protobufjs": "^7.5.8",

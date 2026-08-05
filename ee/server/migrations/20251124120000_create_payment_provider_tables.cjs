@@ -50,7 +50,7 @@ const createPaymentProviderConfigs = (knex) =>
 
 /**
  * Client to payment provider customer mapping.
- * Maps Alga PSA clients to their customer IDs in payment providers.
+ * Maps AlgaPSA clients to their customer IDs in payment providers.
  */
 const createClientPaymentCustomers = (knex) =>
   knex.schema.createTable('client_payment_customers', (table) => {

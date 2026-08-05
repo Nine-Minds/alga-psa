@@ -1072,7 +1072,7 @@
       "sessionRevoked": "Session revoked successfully"
     },
     "warnings": {
-      "oauthLogout": "This will log you out of Alga PSA only. You'll remain signed into {{provider}}."
+      "oauthLogout": "This will log you out of AlgaPSA only. You'll remain signed into {{provider}}."
     },
     "errors": {
       "fetchFailed": "Failed to fetch sessions",
@@ -1177,7 +1177,7 @@
     "teamsTab": {
       "signedInAs": "Signed in as {{name}}",
       "openInFullPsa": "Open in full PSA",
-      "iframeTitle": "{{destination}} in Alga PSA",
+      "iframeTitle": "{{destination}} in AlgaPSA",
       "fullPsaHint": "Use \"Open in full PSA\" for richer context than a Teams card can show.",
       "fallback": {
         "label": "Requested record unavailable:",

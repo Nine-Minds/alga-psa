@@ -212,16 +212,16 @@ function getHelperEndpoint(resource: HelperResource): string {
 
 export class AlgaPsa implements INodeType {
   description: INodeTypeDescription = {
-    displayName: 'Alga PSA',
+    displayName: 'AlgaPSA',
     name: 'algaPsa',
     icon: 'file:avatar-purple.png',
     group: ['transform'],
     version: 1,
     subtitle:
       '={{$parameter["resource"] + ": " + ($parameter["ticketOperation"] || $parameter["contactOperation"] || $parameter["projectTaskOperation"] || $parameter["clientOperation"] || $parameter["boardOperation"] || $parameter["statusOperation"] || $parameter["priorityOperation"])}}',
-    description: 'Create and manage Alga PSA tickets, contacts, project tasks, and lookup resources',
+    description: 'Create and manage AlgaPSA tickets, contacts, project tasks, and lookup resources',
     defaults: {
-      name: 'Alga PSA',
+      name: 'AlgaPSA',
     },
     inputs: ['main'],
     outputs: ['main'],

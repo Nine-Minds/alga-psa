@@ -91,7 +91,7 @@ describe('TenantEmailService from address resolution', () => {
 
     expect(from).toEqual({
       email: 'notifications@acme.com',
-      name: 'Alga PSA Notifications',
+      name: 'AlgaPSA Notifications',
     });
   });
 

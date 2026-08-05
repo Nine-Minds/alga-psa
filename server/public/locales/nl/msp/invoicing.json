@@ -841,7 +841,7 @@
         "amountsMatch": "De belastingbedragen komen binnen een acceptabel bereik overeen"
       },
       "summary": {
-        "internal": "Intern (Alga PSA)",
+        "internal": "Intern (AlgaPSA)",
         "external": "Extern (boekhouding)"
       },
       "alerts": {
@@ -1060,7 +1060,7 @@
       "pending": "Belasting: in behandeling"
     },
     "tooltips": {
-      "internal": "Belasting berekend door Alga PSA op basis van geconfigureerde belastingtarieven",
+      "internal": "Belasting berekend door AlgaPSA op basis van geconfigureerde belastingtarieven",
       "external": "Belasting berekend door extern boekhoudsysteem",
       "pending": "Belasting wacht op import uit extern boekhoudsysteem",
       "externalAdapter": "Belasting berekend door {{adapter}}",

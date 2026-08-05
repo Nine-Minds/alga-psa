@@ -1,5 +1,5 @@
 /**
- * Grafana Dashboard: Alga PSA Business & System Metrics
+ * Grafana Dashboard: AlgaPSA Business & System Metrics
  * 
  * Operational business metrics and system resource monitoring.
  * NOTE: This is for operational monitoring, not user behavior analytics.
@@ -7,7 +7,7 @@
 
 export const businessMetricsDashboard = {
   uid: 'alga-psa-business-metrics',
-  title: 'Alga PSA - Business & System Metrics',
+  title: 'AlgaPSA - Business & System Metrics',
   description: 'Operational business metrics and system resource monitoring for capacity planning and system health',
   tags: ['alga-psa', 'business', 'system', 'operations'],
   timezone: 'browser',

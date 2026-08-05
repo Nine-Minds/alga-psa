@@ -1,7 +1,7 @@
 /**
  * @alga-psa/surveys
  *
- * Survey management module for Alga PSA.
+ * Survey management module for AlgaPSA.
  * Provides survey creation, distribution, and response collection.
  */
 

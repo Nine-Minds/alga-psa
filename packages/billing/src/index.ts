@@ -1,7 +1,7 @@
 /**
  * @alga-psa/billing
  *
- * Billing module for Alga PSA.
+ * Billing module for AlgaPSA.
  * Provides invoice management, payment processing, contract billing, and tax calculation.
  */
 

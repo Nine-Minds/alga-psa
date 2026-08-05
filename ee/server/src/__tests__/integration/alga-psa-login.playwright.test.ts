@@ -1,6 +1,6 @@
 /**
- * Alga PSA Login Integration Tests
- * Tests the actual Alga PSA login flow including:
+ * AlgaPSA Login Integration Tests
+ * Tests the actual AlgaPSA login flow including:
  * - Navigation to root path (/)
  * - Login form appearance
  * - Authentication with tenant credentials
@@ -24,7 +24,7 @@ const TEST_CONFIG = {
   baseUrl: resolvePlaywrightBaseUrl(),
 };
 
-test.describe('Alga PSA Login Integration Tests', () => {
+test.describe('AlgaPSA Login Integration Tests', () => {
   test('should show login form when accessing root path', async ({ page }) => {
     // Navigate to root path
     await page.goto(`${TEST_CONFIG.baseUrl}/`);

@@ -8,7 +8,7 @@ describe('DocumentationService', () => {
       const html = DocumentationService.generateEnhancedSwaggerUI();
 
       expect(html).toContain('<html lang="en">');
-      expect(html).toContain('Alga PSA API Documentation');
+      expect(html).toContain('AlgaPSA API Documentation');
       expect(html).toContain('class="doc-tab active" onclick="showTab(\'overview\')"');
       expect(html).toContain('id="swagger-ui"');
       expect(html).toContain('https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui-bundle.js');

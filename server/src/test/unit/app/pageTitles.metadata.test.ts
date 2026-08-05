@@ -79,14 +79,14 @@ function collectPages(rootRelativePath: string): string[] {
 describe('route title metadata coverage', () => {
   it('T001: root layout returns title template metadata', () => {
     const content = read('server/src/app/layout.tsx');
-    expect(content).toContain("template: '%s | Alga PSA'");
-    expect(content).toContain("default: 'Alga PSA'");
+    expect(content).toContain("template: '%s | AlgaPSA'");
+    expect(content).toContain("default: 'AlgaPSA'");
   });
 
-  it('T002: MSP layout exports the Alga PSA title template', () => {
+  it('T002: MSP layout exports the AlgaPSA title template', () => {
     const content = read('server/src/app/msp/layout.tsx');
-    expect(content).toContain("template: '%s | Alga PSA'");
-    expect(content).toContain("default: 'Dashboard | Alga PSA'");
+    expect(content).toContain("template: '%s | AlgaPSA'");
+    expect(content).toContain("default: 'Dashboard | AlgaPSA'");
   });
 
   it('T003: Client Portal layout exports the client portal title template', () => {
@@ -95,15 +95,15 @@ describe('route title metadata coverage', () => {
     expect(content).toContain("default: 'Dashboard | Client Portal'");
   });
 
-  it('T004: Auth layout exports the Alga PSA auth title template', () => {
+  it('T004: Auth layout exports the AlgaPSA auth title template', () => {
     const content = read('server/src/app/auth/layout.tsx');
-    expect(content).toContain("template: '%s | Alga PSA'");
-    expect(content).toContain("default: 'Sign In | Alga PSA'");
+    expect(content).toContain("template: '%s | AlgaPSA'");
+    expect(content).toContain("default: 'Sign In | AlgaPSA'");
   });
 
-  it('T005: Static layout exports the Alga PSA default title', () => {
+  it('T005: Static layout exports the AlgaPSA default title', () => {
     const content = read('server/src/app/static/layout.tsx');
-    expect(content).toContain("title: 'Alga PSA'");
+    expect(content).toContain("title: 'AlgaPSA'");
   });
 
   it('T006: static MSP routes export the expected titles', () => {
@@ -326,9 +326,9 @@ describe('route title metadata coverage', () => {
   });
 
   it('T021: layout defaults cover pages without page-level metadata', () => {
-    expect(read('server/src/app/msp/layout.tsx')).toContain("default: 'Dashboard | Alga PSA'");
+    expect(read('server/src/app/msp/layout.tsx')).toContain("default: 'Dashboard | AlgaPSA'");
     expect(read('server/src/app/client-portal/layout.tsx')).toContain("default: 'Dashboard | Client Portal'");
-    expect(read('server/src/app/auth/layout.tsx')).toContain("default: 'Sign In | Alga PSA'");
+    expect(read('server/src/app/auth/layout.tsx')).toContain("default: 'Sign In | AlgaPSA'");
 
     expect(read('server/src/app/auth/verify/page.tsx')).not.toMatch(/export const metadata|generateMetadata/);
     expect(read('server/src/app/msp/account/page.tsx')).not.toMatch(/export const metadata|generateMetadata/);
@@ -344,12 +344,12 @@ describe('route title metadata coverage', () => {
 
   it('T023: EE layouts export the expected title templates', () => {
     const eeRootLayout = read('ee/server/src/app/layout.tsx');
-    expect(eeRootLayout).toContain("template: '%s | Alga PSA'");
-    expect(eeRootLayout).toContain("default: 'Alga PSA'");
+    expect(eeRootLayout).toContain("template: '%s | AlgaPSA'");
+    expect(eeRootLayout).toContain("default: 'AlgaPSA'");
 
     const eeMspLayout = read('ee/server/src/app/msp/layout.tsx');
-    expect(eeMspLayout).toContain("template: '%s | Alga PSA'");
-    expect(eeMspLayout).toContain("default: 'Dashboard | Alga PSA'");
+    expect(eeMspLayout).toContain("template: '%s | AlgaPSA'");
+    expect(eeMspLayout).toContain("default: 'Dashboard | AlgaPSA'");
 
     const eeClientPortalLayout = read('ee/server/src/app/client-portal/layout.tsx');
     expect(eeClientPortalLayout).toContain("template: '%s | Client Portal'");

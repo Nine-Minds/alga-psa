@@ -997,7 +997,7 @@
       "sessionRevoked": "Sitzung erfolgreich widerrufen"
     },
     "warnings": {
-      "oauthLogout": "Dies meldet Sie nur von Alga PSA ab. Sie bleiben bei {{provider}} angemeldet."
+      "oauthLogout": "Dies meldet Sie nur von AlgaPSA ab. Sie bleiben bei {{provider}} angemeldet."
     },
     "errors": {
       "fetchFailed": "Fehler beim Abrufen der Sitzungen",
@@ -1177,7 +1177,7 @@
     "teamsTab": {
       "signedInAs": "Angemeldet als {{name}}",
       "openInFullPsa": "In vollständiger PSA öffnen",
-      "iframeTitle": "{{destination}} in Alga PSA",
+      "iframeTitle": "{{destination}} in AlgaPSA",
       "fullPsaHint": "Verwenden Sie \"In vollständiger PSA öffnen\", um mehr Kontext anzuzeigen, als eine Teams-Karte bietet.",
       "fallback": {
         "label": "Angeforderter Datensatz nicht verfügbar:",

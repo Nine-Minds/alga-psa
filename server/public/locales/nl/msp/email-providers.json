@@ -42,8 +42,8 @@
       "title": "Installatie-instructies",
       "microsoft": {
         "title": "Microsoft 365-installatie",
-        "providersPointer": "Microsoft app setup is managed in Providers.",
-        "openProviders": "Open Providers"
+        "providersPointer": "De configuratie van de Microsoft-app wordt beheerd in Aanbieders.",
+        "openProviders": "Aanbieders openen"
       },
       "gmail": {
         "title": "Gmail-configuratie",
@@ -277,11 +277,11 @@
         "providerNameHelp": "Interne naam gebruikt om deze configuratie te identificeren. Niet zichtbaar in uitgaande e-mails.",
         "senderDisplayNameLabel": "Weergavenaam afzender",
         "senderDisplayNamePlaceholder": "bv. Acme Support",
-        "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails. It applies when this mailbox matches the configured outbound ticketing address. Leave blank to use the ticket board name."
+        "senderDisplayNameHelp": "Weergavenaam die in de Van-header van uitgaande ticket-e-mails wordt getoond. Dit geldt wanneer dit postvak overeenkomt met het geconfigureerde uitgaande ticket-e-mailadres. Laat dit leeg om de naam van het ticketbord te gebruiken."
       },
       "oauth": {
-        "signingIn": "Signing in…",
-        "signIn": "Sign in with Microsoft"
+        "signingIn": "Bezig met aanmelden…",
+        "signIn": "Aanmelden met Microsoft"
       },
       "advanced": {
         "title": "Geavanceerde instellingen",
@@ -292,12 +292,12 @@
         "maxEmailsPerSync": "Max. e-mails per synchronisatie"
       },
       "readiness": {
-        "checking": "Checking Microsoft setup…",
-        "ready": "Microsoft is set up. Sign in as this mailbox to finish.",
-        "pending": "Waiting for your Microsoft 365 administrator. Setup was started in Providers but hasn't been approved yet.",
-        "openProviders": "Open Providers",
-        "notConfigured": "Microsoft isn't set up yet. Set it up once in Providers, then come back.",
-        "setUpInProviders": "Set up in Providers"
+        "checking": "Microsoft-configuratie controleren…",
+        "ready": "Microsoft is ingesteld. Meld u aan met dit postvak om de configuratie te voltooien.",
+        "pending": "Wachten op uw Microsoft 365-beheerder. De configuratie is gestart in Aanbieders, maar is nog niet goedgekeurd.",
+        "openProviders": "Aanbieders openen",
+        "notConfigured": "Microsoft is nog niet ingesteld. Stel Microsoft eenmaal in via Aanbieders en kom daarna terug.",
+        "setUpInProviders": "Instellen in Aanbieders"
       }
     },
     "gmail": {

@@ -314,7 +314,7 @@ function Header({ env, status }) {
   return React.createElement(
     Box,
     { borderStyle: 'round', borderColor: BRAND_PRIMARY, paddingX: 1, flexDirection: 'column' },
-    React.createElement(Text, { bold: true, color: BRAND_PRIMARY }, 'Alga PSA Operator'),
+    React.createElement(Text, { bold: true, color: BRAND_PRIMARY }, 'AlgaPSA Operator'),
     React.createElement(
       Text,
       { color: BRAND_SECONDARY },

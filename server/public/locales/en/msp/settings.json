@@ -1736,14 +1736,14 @@
   },
   "extensions": {
     "title": "Extension Management",
-    "description": "Install, configure, and manage extensions to extend Alga PSA functionality.",
+    "description": "Install, configure, and manage extensions to extend AlgaPSA functionality.",
     "tabs": {
       "manage": "Manage",
       "install": "Install"
     },
     "enterpriseOnly": {
       "title": "Pro feature",
-      "description": "Extensions are available in Alga PSA Pro."
+      "description": "Extensions are available in AlgaPSA Pro."
     },
     "links": {
       "needLogs": "Need extension logs?",

@@ -8,14 +8,14 @@
   },
   "settings": {
     "title": "Zarządzanie rozszerzeniami",
-    "description": "Instalowanie, konfigurowanie i zarządzanie rozszerzeniami w celu rozszerzenia funkcjonalności Alga PSA.",
+    "description": "Instalowanie, konfigurowanie i zarządzanie rozszerzeniami w celu rozszerzenia funkcjonalności AlgaPSA.",
     "tabs": {
       "manage": "Zarządzanie",
       "install": "Instalacja"
     },
     "enterpriseOnly": {
       "title": "Funkcja Pro",
-      "description": "Rozszerzenia są dostępne w Alga PSA Pro."
+      "description": "Rozszerzenia są dostępne w AlgaPSA Pro."
     },
     "links": {
       "needLogs": "Potrzebujesz logów rozszerzenia?",
@@ -210,7 +210,7 @@
     "loading": "Ładowanie rozszerzeń...",
     "error": "Błąd",
     "emptyTitle": "Brak zainstalowanych rozszerzeń",
-    "emptyDescription": "Zainstaluj rozszerzenia, aby dodać nowe funkcje do Alga PSA.",
+    "emptyDescription": "Zainstaluj rozszerzenia, aby dodać nowe funkcje do AlgaPSA.",
     "colExtension": "Rozszerzenie",
     "colVersion": "Wersja",
     "colAuthor": "Autor",
@@ -241,7 +241,7 @@
     "error": "Błąd",
     "loadFailed": "Nie udało się załadować rozszerzeń",
     "emptyTitle": "Brak zainstalowanych rozszerzeń",
-    "emptyDescription": "Zainstaluj rozszerzenia, aby dodać nowe funkcje do Alga PSA.",
+    "emptyDescription": "Zainstaluj rozszerzenia, aby dodać nowe funkcje do AlgaPSA.",
     "colExtension": "Rozszerzenie",
     "colVersion": "Wersja",
     "colAuthor": "Autor",

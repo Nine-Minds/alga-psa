@@ -121,7 +121,7 @@ interface InvoiceDocumentPayload {
 }
 
 export function buildQuickBooksCsvMemo(invoiceId: string, poNumber?: string | null): string {
-  return poNumber ? `Alga PSA: ${invoiceId} | PO ${poNumber}` : `Alga PSA: ${invoiceId}`;
+  return poNumber ? `AlgaPSA: ${invoiceId} | PO ${poNumber}` : `AlgaPSA: ${invoiceId}`;
 }
 
 /**

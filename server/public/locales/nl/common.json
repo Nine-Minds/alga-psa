@@ -997,7 +997,7 @@
       "sessionRevoked": "Sessie succesvol ingetrokken"
     },
     "warnings": {
-      "oauthLogout": "Dit zal u alleen uitloggen van Alga PSA. U blijft ingelogd bij {{provider}}."
+      "oauthLogout": "Dit zal u alleen uitloggen van AlgaPSA. U blijft ingelogd bij {{provider}}."
     },
     "errors": {
       "fetchFailed": "Kan sessies niet ophalen",
@@ -1177,7 +1177,7 @@
     "teamsTab": {
       "signedInAs": "Aangemeld als {{name}}",
       "openInFullPsa": "Openen in volledige PSA",
-      "iframeTitle": "{{destination}} in Alga PSA openen",
+      "iframeTitle": "{{destination}} in AlgaPSA openen",
       "fullPsaHint": "Gebruik 'Openen in volledige PSA' voor meer context dan een Teams-kaart kan tonen.",
       "fallback": {
         "label": "Gevraagd record niet beschikbaar:",

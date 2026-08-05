@@ -1,7 +1,7 @@
 /**
  * Payment Provider Module
  *
- * Exports all payment-related functionality for the Alga PSA system.
+ * Exports all payment-related functionality for the AlgaPSA system.
  */
 
 // Core interfaces (re-exported from server interfaces)

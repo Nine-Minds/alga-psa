@@ -775,7 +775,7 @@ export function MicrosoftIntegrationSettings({
               <CardTitle>{t('integrations.microsoft.settings.title', { defaultValue: 'Microsoft' })}</CardTitle>
               <CardDescription>
                 {emailSetup?.source === 'platform'
-                  ? t('integrations.microsoft.settings.platform.description', { defaultValue: 'Connect Microsoft 365 with the application supplied by Alga PSA. No Entra app registration is required.' })
+                  ? t('integrations.microsoft.settings.platform.description', { defaultValue: 'Connect Microsoft 365 with the application supplied by AlgaPSA. No Entra app registration is required.' })
                   : isEnterpriseEdition
                     ? t('integrations.microsoft.settings.descriptionEe', { defaultValue: "Manage your company's Microsoft app registrations for staff sign-in, Outlook email, calendar sync, and Teams." })
                   : t('integrations.microsoft.settings.descriptionCe', { defaultValue: "Manage your company's Microsoft app registrations for staff sign-in and Outlook email." })}
@@ -890,7 +890,7 @@ export function MicrosoftIntegrationSettings({
               {isEnterpriseEdition && emailSetup?.hosted && emailSetup.platformOffered && (
                 <Alert variant="warning">
                   <AlertDescription>
-                    {t('integrations.microsoft.settings.advanced.warning', { defaultValue: 'A custom Entra app is normally unnecessary on hosted Alga PSA. Continue only when your organization deliberately requires its own application and credentials.' })}
+                    {t('integrations.microsoft.settings.advanced.warning', { defaultValue: 'A custom Entra app is normally unnecessary on hosted AlgaPSA. Continue only when your organization deliberately requires its own application and credentials.' })}
                   </AlertDescription>
                 </Alert>
               )}

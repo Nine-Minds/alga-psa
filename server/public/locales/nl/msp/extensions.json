@@ -8,14 +8,14 @@
   },
   "settings": {
     "title": "Extensiebeheer",
-    "description": "Installeer, configureer en beheer extensies om de functionaliteit van Alga PSA uit te breiden.",
+    "description": "Installeer, configureer en beheer extensies om de functionaliteit van AlgaPSA uit te breiden.",
     "tabs": {
       "manage": "Beheren",
       "install": "Installeren"
     },
     "enterpriseOnly": {
       "title": "Pro-functie",
-      "description": "Extensies zijn beschikbaar in Alga PSA Pro."
+      "description": "Extensies zijn beschikbaar in AlgaPSA Pro."
     },
     "links": {
       "needLogs": "Extensielogs nodig?",
@@ -210,7 +210,7 @@
     "loading": "Extensies laden...",
     "error": "Fout",
     "emptyTitle": "Geen extensies geïnstalleerd",
-    "emptyDescription": "Installeer extensies om nieuwe functies en functionaliteit toe te voegen aan Alga PSA.",
+    "emptyDescription": "Installeer extensies om nieuwe functies en functionaliteit toe te voegen aan AlgaPSA.",
     "colExtension": "Extensie",
     "colVersion": "Versie",
     "colAuthor": "Auteur",
@@ -241,7 +241,7 @@
     "error": "Fout",
     "loadFailed": "Kan extensies niet laden",
     "emptyTitle": "Geen extensies geïnstalleerd",
-    "emptyDescription": "Installeer extensies om nieuwe functies en functionaliteit toe te voegen aan Alga PSA.",
+    "emptyDescription": "Installeer extensies om nieuwe functies en functionaliteit toe te voegen aan AlgaPSA.",
     "colExtension": "Extensie",
     "colVersion": "Versie",
     "colAuthor": "Auteur",

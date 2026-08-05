@@ -58,7 +58,7 @@ async function importEmulatorPackage(specifier: string): Promise<EmulatorPackage
   return pkg;
 }
 
-const program = new Command('algasim').description('Alga PSA emulator suite');
+const program = new Command('algasim').description('AlgaPSA emulator suite');
 
 program
   .command('serve')

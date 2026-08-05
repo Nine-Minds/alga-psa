@@ -147,7 +147,7 @@
     },
     "source": {
       "title": "Fonte per il calcolo delle imposte",
-      "tooltip": "Scegli se le tasse vengono calcolate da Alga PSA o delegate al tuo sistema contabile esterno",
+      "tooltip": "Scegli se le tasse vengono calcolate da AlgaPSA o delegate al tuo sistema contabile esterno",
       "description": "Configura il modo in cui vengono calcolati gli importi delle imposte per le fatture.",
       "fields": {
         "defaultMethod": {
@@ -156,8 +156,8 @@
       },
       "options": {
         "internal": {
-          "label": "Interno (Alga PSA)",
-          "description": "Le tasse vengono calcolate automaticamente in base alle aliquote fiscali configurate in Alga PSA."
+          "label": "Interno (AlgaPSA)",
+          "description": "Le tasse vengono calcolate automaticamente in base alle aliquote fiscali configurate in AlgaPSA."
         },
         "external": {
           "label": "Esterno (pacchetto contabilità)",
@@ -169,7 +169,7 @@
         "step1": "La fattura viene creata senza importi fiscali",
         "step2": "La fattura viene esportata nel sistema contabile connesso (QuickBooks, Xero, ecc.)",
         "step3": "L'imposta viene calcolata dal sistema contabile in base alle sue norme fiscali",
-        "step4": "Gli importi delle tasse vengono importati nuovamente in Alga PSA",
+        "step4": "Gli importi delle tasse vengono importati nuovamente in AlgaPSA",
         "step5": "I totali delle fatture vengono aggiornati con l'imposta importata",
         "note": "Il sistema contabile utilizzato viene determinato automaticamente in base al sistema in cui si esporta la fattura.",
         "warning": "Importante: le fatture per i clienti che utilizzano l'imposta esterna non possono essere finalizzate finché la loro imposta non è stata reimportata dal tuo sistema contabile. Ciò richiede un'integrazione contabile collegata (QuickBooks o Xero) e l'esportazione preventiva della fattura in essa. Senza di ciò, queste fatture rimarranno bloccate in stato di Bozza: riporta una singola fattura all'imposta interna per finalizzarla in Alga."
@@ -978,7 +978,7 @@
         "placeholder": "Seleziona la fonte fiscale...",
         "options": {
           "default": "Utilizza impostazione predefinita del tenant",
-          "internal": "Alga PSA calcola le tasse",
+          "internal": "AlgaPSA calcola le tasse",
           "external": "Il pacchetto contabile calcola le imposte"
         },
         "effective": {
@@ -1192,7 +1192,7 @@
       "webhook": {
         "label": "Configurazione webhook",
         "configuredTitle": "Webhook configurati automaticamente",
-        "configuredDescription": "Alga PSA riceverà notifiche di pagamento per:",
+        "configuredDescription": "AlgaPSA riceverà notifiche di pagamento per:",
         "failedTitle": "Configurazione webhook non riuscita",
         "failedDescription": "La configurazione automatica del webhook non è riuscita. Fai clic su Riprova per tentare di nuovo la configurazione.",
         "configuring": "Configurazione in corso...",

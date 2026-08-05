@@ -30,7 +30,7 @@
     "aiCheckoutFailed": "Nie udało się rozpocząć płatności za AI Assistant",
     "aiRemoved": "AI Assistant zostanie usunięty z Twojej subskrypcji.",
     "aiCancelFailed": "Nie udało się anulować AI Assistant",
-    "cancellationScheduled": "Subskrypcja anulowana. Możesz nadal korzystać z Alga PSA do końca okresu rozliczeniowego."
+    "cancellationScheduled": "Subskrypcja anulowana. Możesz nadal korzystać z AlgaPSA do końca okresu rozliczeniowego."
   },
   "common": {
     "loading": "Ładowanie...",
@@ -53,7 +53,7 @@
     "advancedAssets": "Zaawansowane Zasoby — odblokuj odkrywanie zasobów powiązanych z RMM i bogatsze mechanizmy kontroli zasobów",
     "clientPortalAdmin": "Administracja Portalem Klienta — zarządzaj zaawansowanym brandingiem i administracją portalu klienta",
     "workflowDesigner": "Projektant Workflow — twórz i utrzymuj niestandardowe automatyzacje workflow",
-    "mobileAccess": "Dostęp Mobilny — zaloguj się z aplikacji mobilnej Alga PSA",
+    "mobileAccess": "Dostęp Mobilny — zaloguj się z aplikacji mobilnej AlgaPSA",
     "entraSync": "Microsoft Entra Sync — automatycznie wykrywaj tenanty i synchronizuj kontakty z Entra ID",
     "cipp": "Integracja CIPP — połącz swoją instancję CIPP do zarządzania wielotenantowego Entra",
     "teamsIntegration": "Microsoft Teams — integracja spotkań i bot Teams do powiadomień o zgłoszeniach",
@@ -71,7 +71,7 @@
     "upgradePendingTitle": "Twoja aktualizacja oczekuje",
     "upgradePendingBody": "Apple będzie nadal obciążać Cię za Solo do {{date}}. Następnie Twoja zaktualizowana subskrypcja przejmie obsługę automatycznie.",
     "autoRenewWarningStrong": "Automatyczne odnawianie jest obecnie WŁĄCZONE w Twojej subskrypcji Apple",
-    "autoRenewWarningBody": "wyłącz je w Ustawienia iOS → Apple ID → Subskrypcje → Alga PSA, w przeciwnym razie Apple obciąży Cię ponownie, a aktualizacja zostanie opóźniona.",
+    "autoRenewWarningBody": "wyłącz je w Ustawienia iOS → Apple ID → Subskrypcje → AlgaPSA, w przeciwnym razie Apple obciąży Cię ponownie, a aktualizacja zostanie opóźniona.",
     "cancelUpgrade": "Anuluj aktualizację",
     "appleManagedBody": "Twoja subskrypcja jest zarządzana przez Apple. Bieżący okres rozliczeniowy kończy się {{date}}. Możesz w każdej chwili przejść na większy plan — dostosujemy nowe rozliczenia do Twojego okresu Apple, więc nigdy nie zapłacisz za oba naraz."
   },
@@ -200,7 +200,7 @@
     "title": "Strefa Niebezpieczna",
     "body": "Anulowanie subskrypcji wyłączy dostęp dla wszystkich użytkowników na koniec bieżącego okresu rozliczeniowego.",
     "cancelSubscription": "Anuluj Subskrypcję",
-    "scheduledBody": "Subskrypcja zakończy się {{date}}. Do tego czasu wszyscy mogą nadal korzystać z Alga PSA."
+    "scheduledBody": "Subskrypcja zakończy się {{date}}. Do tego czasu wszyscy mogą nadal korzystać z AlgaPSA."
   },
   "aiCheckoutDialog": {
     "title": "Dodaj AI Assistant",
@@ -212,7 +212,7 @@
     "howToTitle": "Jak wyłączyć automatyczne odnawianie:",
     "step1": "Otwórz <strong>Ustawienia</strong> na swoim iPhone lub iPad",
     "step2": "Dotknij swojego imienia na górze, następnie <strong>Subskrypcje</strong>",
-    "step3": "Dotknij <strong>Alga PSA</strong>",
+    "step3": "Dotknij <strong>AlgaPSA</strong>",
     "step4": "Dotknij <strong>Anuluj Subskrypcję</strong> — to wyłączy automatyczne odnawianie, ale zachowa dostęp do {{date}}",
     "step5": "Wróć na tę stronę i kliknij Kontynuuj poniżej",
     "currentPeriodFallback": "Twój bieżący okres się kończy",
@@ -341,7 +341,7 @@
     "title": "Anuluj Subskrypcję",
     "keepSubscription": "Zachowaj Subskrypcję",
     "canceling": "Anulowanie...",
-    "beforeYouCancelBody": "Subskrypcja zakończy się {{date}}. Do tego czasu wszyscy mogą nadal korzystać z Alga PSA.",
+    "beforeYouCancelBody": "Subskrypcja zakończy się {{date}}. Do tego czasu wszyscy mogą nadal korzystać z AlgaPSA.",
     "currentBillingPeriod": "koniec bieżącego okresu rozliczeniowego",
     "replacesScheduledChange": "To zastępuje zaplanowaną zmianę licencji.",
     "reasonLabel": "Powód (opcjonalnie)",

@@ -141,7 +141,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         {
           error: 'no_account',
           message:
-            'No Alga PSA account is linked to this Apple ID. If you have a Solo plan, subscribe from the "Create a new workspace" screen; otherwise ask your workspace admin to provision an account for your email.',
+            'No AlgaPSA account is linked to this Apple ID. If you have a Solo plan, subscribe from the "Create a new workspace" screen; otherwise ask your workspace admin to provision an account for your email.',
         },
         { status: 404 },
       );

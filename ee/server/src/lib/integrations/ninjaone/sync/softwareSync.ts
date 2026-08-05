@@ -1,7 +1,7 @@
 /**
  * NinjaOne Software Inventory Sync
  *
- * Synchronizes software inventory from NinjaOne to Alga PSA assets.
+ * Synchronizes software inventory from NinjaOne to AlgaPSA assets.
  * Uses normalized tables (software_catalog + asset_software) for better
  * querying, deduplication, and change tracking.
  *

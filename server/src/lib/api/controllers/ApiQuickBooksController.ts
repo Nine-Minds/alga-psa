@@ -459,7 +459,7 @@ export class ApiQuickBooksController {
 
   /**
    * POST /api/v2/quickbooks/customers/sync
-   * Synchronize customers between Alga PSA and QuickBooks
+   * Synchronize customers between AlgaPSA and QuickBooks
    */
   syncCustomers() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -493,7 +493,7 @@ export class ApiQuickBooksController {
 
   /**
    * GET /api/v2/quickbooks/customers/mappings
-   * Get customer mappings between Alga PSA and QuickBooks
+   * Get customer mappings between AlgaPSA and QuickBooks
    */
   getCustomerMappings() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -573,7 +573,7 @@ export class ApiQuickBooksController {
 
   /**
    * POST /api/v2/quickbooks/invoices/export
-   * Export invoices from Alga PSA to QuickBooks
+   * Export invoices from AlgaPSA to QuickBooks
    */
   exportInvoices() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -607,7 +607,7 @@ export class ApiQuickBooksController {
 
   /**
    * POST /api/v2/quickbooks/invoices/import
-   * Import invoices from QuickBooks to Alga PSA
+   * Import invoices from QuickBooks to AlgaPSA
    */
   importInvoices() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -645,7 +645,7 @@ export class ApiQuickBooksController {
 
   /**
    * POST /api/v2/quickbooks/payments/sync
-   * Synchronize payments between Alga PSA and QuickBooks
+   * Synchronize payments between AlgaPSA and QuickBooks
    */
   syncPayments() {
     return async (req: NextRequest): Promise<NextResponse> => {

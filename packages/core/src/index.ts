@@ -1,7 +1,7 @@
 /**
  * @alga-psa/core
  *
- * Shared infrastructure module for Alga PSA.
+ * Shared infrastructure module for AlgaPSA.
  * Contains client-safe utilities.
  */
 

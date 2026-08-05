@@ -841,7 +841,7 @@
         "amountsMatch": "Tax amounts match within acceptable range"
       },
       "summary": {
-        "internal": "Internal (Alga PSA)",
+        "internal": "Internal (AlgaPSA)",
         "external": "External (Accounting)"
       },
       "alerts": {
@@ -1060,7 +1060,7 @@
       "pending": "Tax: Pending"
     },
     "tooltips": {
-      "internal": "Tax calculated by Alga PSA based on configured tax rates",
+      "internal": "Tax calculated by AlgaPSA based on configured tax rates",
       "external": "Tax calculated by external accounting system",
       "pending": "Tax awaiting import from external accounting system",
       "externalAdapter": "Tax calculated by {{adapter}}",

@@ -84,7 +84,7 @@ export function TeamsTabSignInGate({ fallbackSignInUrl, popupSignInUrl }: TeamsT
       <Card className="m-6 p-6 text-sm text-gray-700">
         <div className="space-y-2">
           <h1 className="text-lg font-semibold text-gray-900">Loading…</h1>
-          <p>Preparing the Alga PSA tab.</p>
+          <p>Preparing the AlgaPSA tab.</p>
         </div>
       </Card>
     );
@@ -94,7 +94,7 @@ export function TeamsTabSignInGate({ fallbackSignInUrl, popupSignInUrl }: TeamsT
     <Card className="m-6 p-6 text-sm text-gray-700">
       <div className="space-y-4">
         <div className="space-y-2">
-          <h1 className="text-lg font-semibold text-gray-900">Sign in to Alga PSA</h1>
+          <h1 className="text-lg font-semibold text-gray-900">Sign in to AlgaPSA</h1>
           <p>
             Teams needs to open a secure sign-in window to finish linking your account. Your existing
             browser session cannot be used from inside Teams.
@@ -111,7 +111,7 @@ export function TeamsTabSignInGate({ fallbackSignInUrl, popupSignInUrl }: TeamsT
             onClick={() => void handleSignIn()}
             disabled={status.kind === 'authenticating'}
           >
-            {status.kind === 'authenticating' ? 'Opening sign-in…' : 'Sign in to Alga PSA'}
+            {status.kind === 'authenticating' ? 'Opening sign-in…' : 'Sign in to AlgaPSA'}
           </Button>
         </div>
       </div>

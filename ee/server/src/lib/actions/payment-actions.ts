@@ -250,7 +250,7 @@ export const connectStripeAction = withAuth(async (
 
           await stripe.webhookEndpoints.update(existingEndpoint.id, {
             enabled_events: STRIPE_WEBHOOK_EVENTS,
-            description: `Alga PSA payment webhook for tenant ${tenant}`,
+            description: `AlgaPSA payment webhook for tenant ${tenant}`,
           });
 
           webhookEndpointId = existingEndpoint.id;
@@ -268,7 +268,7 @@ export const connectStripeAction = withAuth(async (
           const webhookEndpoint = await stripe.webhookEndpoints.create({
             url: webhookUrl,
             enabled_events: STRIPE_WEBHOOK_EVENTS,
-            description: `Alga PSA payment webhook for tenant ${tenant}`,
+            description: `AlgaPSA payment webhook for tenant ${tenant}`,
             metadata: {
               tenant_id: tenant,
               created_by: 'alga-psa',
@@ -303,7 +303,7 @@ export const connectStripeAction = withAuth(async (
         const webhookEndpoint = await stripe.webhookEndpoints.create({
           url: webhookUrl,
           enabled_events: STRIPE_WEBHOOK_EVENTS,
-          description: `Alga PSA payment webhook for tenant ${tenant}`,
+          description: `AlgaPSA payment webhook for tenant ${tenant}`,
           metadata: {
             tenant_id: tenant,
             created_by: 'alga-psa',
@@ -693,7 +693,7 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
     const webhookEndpoint = await stripe.webhookEndpoints.create({
       url: webhookUrl,
       enabled_events: STRIPE_WEBHOOK_EVENTS,
-      description: `Alga PSA payment webhook for tenant ${tenant}`,
+      description: `AlgaPSA payment webhook for tenant ${tenant}`,
       metadata: {
         tenant_id: tenant,
         created_by: 'alga-psa',

@@ -997,7 +997,7 @@
       "sessionRevoked": "Session révoquée avec succès"
     },
     "warnings": {
-      "oauthLogout": "Cela vous déconnectera uniquement d'Alga PSA. Vous resterez connecté à {{provider}}."
+      "oauthLogout": "Cela vous déconnectera uniquement d'AlgaPSA. Vous resterez connecté à {{provider}}."
     },
     "errors": {
       "fetchFailed": "Échec de la récupération des sessions",
@@ -1177,7 +1177,7 @@
     "teamsTab": {
       "signedInAs": "Connecté en tant que {{name}}",
       "openInFullPsa": "Ouvrir dans PSA complet",
-      "iframeTitle": "{{destination}} dans Alga PSA",
+      "iframeTitle": "{{destination}} dans AlgaPSA",
       "fullPsaHint": "Utilisez « Ouvrir dans PSA complet » pour plus de contexte qu'une carte Teams ne peut afficher.",
       "fallback": {
         "label": "Enregistrement demandé indisponible :",

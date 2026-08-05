@@ -58,8 +58,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase,
     title: {
-      template: '%s | Alga PSA',
-      default: 'Alga PSA',
+      template: '%s | AlgaPSA',
+      default: 'AlgaPSA',
     },
     keywords: "MSP, Managed Service Provider, IT Services, Network Management, Cloud Services",
     authors: [{ name: "Nine Minds" }],

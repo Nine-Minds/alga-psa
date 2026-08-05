@@ -32,7 +32,7 @@ const CALLBACK_ERROR_TEXT: Record<string, { key: string; defaultValue: string }>
   },
   session_mismatch: {
     key: 'integrations.microsoft.emailSetup.errors.sessionMismatch',
-    defaultValue: 'Your Alga PSA session does not match the administrator who started this setup. Sign in and try again.',
+    defaultValue: 'Your AlgaPSA session does not match the administrator who started this setup. Sign in and try again.',
   },
   consent_denied: {
     key: 'integrations.microsoft.emailSetup.errors.consentDenied',
@@ -75,7 +75,7 @@ export function MicrosoftEmailSetupDialog({
   const [working, setWorking] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [tenantId, setTenantId] = React.useState('');
-  const [displayName, setDisplayName] = React.useState('Alga PSA Microsoft Email');
+  const [displayName, setDisplayName] = React.useState('AlgaPSA Microsoft Email');
   const [clientId, setClientId] = React.useState('');
   const [clientSecret, setClientSecret] = React.useState('');
   const [completion, setCompletion] = React.useState<MicrosoftEmailSetupCompletionResult | null>(null);
@@ -333,7 +333,7 @@ export function MicrosoftEmailSetupDialog({
         <div className="space-y-5">
           <div>
             <p className="text-sm text-[rgb(var(--color-text-700))]">
-              {t('integrations.microsoft.emailSetup.description', { defaultValue: 'Choose how Alga PSA connects to Microsoft. You will connect mailboxes separately.' })}
+              {t('integrations.microsoft.emailSetup.description', { defaultValue: 'Choose how AlgaPSA connects to Microsoft. You will connect mailboxes separately.' })}
             </p>
           </div>
 
@@ -358,7 +358,7 @@ export function MicrosoftEmailSetupDialog({
                     <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-primary-500" />
                     <div className="min-w-0 space-y-1">
                       <div className="flex flex-wrap items-center gap-2 font-medium">
-                        {t('integrations.microsoft.emailSetup.platform.title', { defaultValue: 'Use the app provided by Alga PSA' })}
+                        {t('integrations.microsoft.emailSetup.platform.title', { defaultValue: 'Use the app provided by AlgaPSA' })}
                         <Badge variant="success">{t('integrations.microsoft.emailSetup.recommended', { defaultValue: 'Recommended' })}</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
@@ -384,7 +384,7 @@ export function MicrosoftEmailSetupDialog({
                       {!options?.automatedCreationAvailable && <Badge variant="secondary">{t('integrations.microsoft.emailSetup.unavailable', { defaultValue: 'Unavailable' })}</Badge>}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {t('integrations.microsoft.emailSetup.automated.description', { defaultValue: 'Alga PSA registers a dedicated Entra app automatically. Sign in as a Microsoft 365 administrator.' })}
+                      {t('integrations.microsoft.emailSetup.automated.description', { defaultValue: 'AlgaPSA registers a dedicated Entra app automatically. Sign in as a Microsoft 365 administrator.' })}
                     </p>
                   </div>
                 </div>

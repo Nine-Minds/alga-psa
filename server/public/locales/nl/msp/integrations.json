@@ -115,8 +115,8 @@
           "dialog": {
             "cancel": "Annuleren",
             "confirm": "Vergrendeling resetten",
-            "confirmBatch": "Hierdoor kan Alga PSA facturen uit batch {{batchId}} opnieuw exporteren. Als sommige van deze facturen nog bestaan in QuickBooks, kan het importeren van de CSV duplicaten creëren.",
-            "confirmInvoice": "Hierdoor kan Alga PSA factuur {{invoiceNumber}} opnieuw exporteren. Als deze factuur nog bestaat in QuickBooks, kan het importeren van de CSV duplicaten creëren.",
+            "confirmBatch": "Hierdoor kan AlgaPSA facturen uit batch {{batchId}} opnieuw exporteren. Als sommige van deze facturen nog bestaan in QuickBooks, kan het importeren van de CSV duplicaten creëren.",
+            "confirmInvoice": "Hierdoor kan AlgaPSA factuur {{invoiceNumber}} opnieuw exporteren. Als deze factuur nog bestaat in QuickBooks, kan het importeren van de CSV duplicaten creëren.",
             "resetting": "Resetten…",
             "title": "Exportvergrendeling resetten?",
             "warning": "Ga alleen door als u zeker weet dat de factuur niet is geïmporteerd, of als u deze hebt verwijderd/geannuleerd in QuickBooks."
@@ -313,7 +313,7 @@
           "title": "Belastingen importeren uit CSV",
           "xeroCsvDescription": "De geëxporteerde CSV bevat Factuurnummer, Contactnaam, Regelbedrag, Belastingbedrag en tracking-categorieën.",
           "xeroHelp": {
-            "note": "Let op: alleen facturen die oorspronkelijk uit Alga PSA zijn geëxporteerd (met tracking Source System = AlgaPSA) worden gekoppeld.",
+            "note": "Let op: alleen facturen die oorspronkelijk uit AlgaPSA zijn geëxporteerd (met tracking Source System = AlgaPSA) worden gekoppeld.",
             "s1": "Ga in Xero naar Sales > Invoices",
             "s2": "Selecteer het factuurtabblad waaruit u wilt exporteren (bijv. Paid, Awaiting Payment)",
             "s3": "(Optioneel) Klik op Search om te filteren op startdatum, einddatum of datumtype",
@@ -1518,7 +1518,7 @@
     },
     "microsoft": {
       "emailSetup": {
-        "action": "Set up Microsoft",
+        "action": "Microsoft instellen",
         "actions": {
           "back": "Terug",
           "cancel": "Annuleren",
@@ -1527,31 +1527,31 @@
           "savePlatform": "Profiel maken en doorgaan",
           "signIn": "Aanmelden bij Microsoft",
           "working": "Bezig…",
-          "approve": "Approve in Microsoft",
-          "copyApprovalLink": "Copy approval link for your admin",
-          "saveManual": "Save app and continue"
+          "approve": "Goedkeuren in Microsoft",
+          "copyApprovalLink": "Goedkeuringslink voor uw beheerder kopiëren",
+          "saveManual": "App opslaan en doorgaan"
         },
         "automated": {
-          "description": "Alga PSA registers a dedicated Entra app automatically. Sign in as a Microsoft 365 administrator.",
-          "title": "Create an app in your Microsoft organization"
+          "description": "AlgaPSA registreert automatisch een speciale Entra-app. Meld u aan als Microsoft 365-beheerder.",
+          "title": "Een app maken in uw Microsoft-organisatie"
         },
         "callbackUri": "Callback-URI van postvak",
         "complete": {
-          "consentDone": "Approved by your Microsoft 365 administrator. You can now connect a mailbox.",
-          "consentPending": "A Microsoft 365 administrator for your organization must approve access before mailboxes can connect.",
+          "consentDone": "Goedgekeurd door uw Microsoft 365-beheerder. U kunt nu een postvak verbinden.",
+          "consentPending": "Een Microsoft 365-beheerder van uw organisatie moet de toegang goedkeuren voordat postvakken kunnen worden verbonden.",
           "profileCreated": "Microsoft-e-mailprofiel aangemaakt en gekoppeld",
-          "ready": "Microsoft is ready",
-          "waiting": "Waiting for admin approval"
+          "ready": "Microsoft is gereed",
+          "waiting": "Wachten op goedkeuring van de beheerder"
         },
         "consent": {
           "confirmedDescription": "De Microsoft-app is gereed voor postvakautorisatie.",
           "confirmedTitle": "Beheerderstoestemming bevestigd",
           "url": "URL voor beheerderstoestemming",
           "urlLabel": "Toestemmings-URL",
-          "approvalLink": "Approval link"
+          "approvalLink": "Goedkeuringslink"
         },
         "copied": "{{label}} gekopieerd",
-        "description": "Choose how Alga PSA connects to Microsoft. You will connect mailboxes separately.",
+        "description": "Kies hoe AlgaPSA verbinding maakt met Microsoft. U verbindt postvakken afzonderlijk.",
         "errors": {
           "automated": "Kan het automatisch maken van de Microsoft-app niet starten.",
           "generic": "De configuratie van Microsoft-e-mail is niet voltooid.",
@@ -1560,52 +1560,52 @@
           "popupBlocked": "Sta pop-ups voor deze site toe en probeer het opnieuw.",
           "popupClosed": "Het Microsoft-venster is gesloten voordat de configuratie was voltooid. Probeer het opnieuw of kies een andere configuratieoptie.",
           "tenantRequired": "Voer uw Microsoft-tenant-id of geverifieerd domein in.",
-          "manual": "Could not configure the Microsoft app.",
-          "manualRequired": "Enter the display name, client ID, client secret, and Microsoft tenant ID.",
-          "pendingProfileMissing": "The pending Microsoft app could not be found.",
-          "approvalLink": "Could not create the Microsoft approval link.",
+          "manual": "De Microsoft-app kon niet worden geconfigureerd.",
+          "manualRequired": "Voer de weergavenaam, Client ID, het clientgeheim en de Microsoft-tenant-id in.",
+          "pendingProfileMissing": "De Microsoft-app in behandeling is niet gevonden.",
+          "approvalLink": "De Microsoft-goedkeuringslink kon niet worden gemaakt.",
           "consentDenied": "Microsoft-aanmelding of beheerderstoestemming is geweigerd. Kies een andere configuratieoptie of probeer het opnieuw.",
           "consentNotGranted": "Microsoft heeft de toestemming van de tenantbeheerder niet bevestigd.",
           "consentPersistFailed": "Kan de Microsoft-beheerderstoestemming niet vastleggen.",
           "invalidState": "Dit Microsoft-configuratieverzoek is ongeldig of verlopen. Start opnieuw vanuit de providerinstellingen.",
           "microsoftError": "Microsoft kon het configuratieverzoek niet voltooien. Probeer het opnieuw of gebruik de handmatige configuratie.",
           "missingCode": "Microsoft heeft geen autorisatiecode geretourneerd. Start de configuratie opnieuw.",
-          "sessionMismatch": "Uw Alga PSA-sessie komt niet overeen met de beheerder die deze configuratie heeft gestart. Meld u aan en probeer het opnieuw."
+          "sessionMismatch": "Uw AlgaPSA-sessie komt niet overeen met de beheerder die deze configuratie heeft gestart. Meld u aan en probeer het opnieuw."
         },
         "fields": {
           "clientId": "Client ID",
           "displayName": "Weergavenaam profiel",
-          "tenantId": "Microsoft tenant ID",
-          "clientSecret": "Client secret",
-          "microsoftTenant": "Microsoft tenant ID or verified domain",
-          "redirectUri": "Redirect URI to add in Entra"
+          "tenantId": "Microsoft-tenant-id",
+          "clientSecret": "Clientgeheim",
+          "microsoftTenant": "Microsoft-tenant-id of geverifieerd domein",
+          "redirectUri": "Redirect-URI om toe te voegen in Entra"
         },
         "manual": {
-          "description": "Use an existing Entra app maintained by your organization.",
+          "description": "Gebruik een bestaande Entra-app die door uw organisatie wordt beheerd.",
           "title": "Een bestaande app handmatig invoeren"
         },
         "platform": {
-          "description": "Nothing to register in Microsoft Entra. Your Microsoft 365 administrator approves access.",
-          "title": "Use the app provided by Alga PSA"
+          "description": "U hoeft niets te registreren in Microsoft Entra. Uw Microsoft 365-beheerder keurt de toegang goed.",
+          "title": "De door AlgaPSA geleverde app gebruiken"
         },
-        "title": "Set up Microsoft",
+        "title": "Microsoft instellen",
         "unavailable": "Niet beschikbaar",
-        "recommended": "Recommended",
-        "advanced": "Advanced"
+        "recommended": "Aanbevolen",
+        "advanced": "Geavanceerd"
       },
       "settings": {
         "advanced": {
-          "title": "Manual Microsoft apps (advanced)",
-          "description": "Create and manage Entra app registrations maintained by your organization.",
-          "warning": "Een aangepaste Entra-app is normaal gesproken niet nodig op gehoste Alga PSA. Ga alleen verder wanneer uw organisatie bewust een eigen toepassing en referenties vereist."
+          "title": "Handmatige Microsoft-apps (geavanceerd)",
+          "description": "Maak en beheer Entra-appregistraties die door uw organisatie worden onderhouden.",
+          "warning": "Een aangepaste Entra-app is normaal gesproken niet nodig op gehoste AlgaPSA. Ga alleen verder wanneer uw organisatie bewust een eigen toepassing en referenties vereist."
         },
         "platform": {
           "title": "Microsoft-e-mail kan worden gekoppeld",
-          "description": "Verbind Microsoft 365 met de toepassing die Alga PSA levert. Er is geen Entra-appregistratie nodig.",
-          "readyDescription": "The Microsoft app is approved and ready for mailbox sign-in.",
-          "connectAction": "Connect a mailbox →",
+          "description": "Verbind Microsoft 365 met de toepassing die AlgaPSA levert. Er is geen Entra-appregistratie nodig.",
+          "readyDescription": "De Microsoft-app is goedgekeurd en gereed voor aanmelding bij het postvak.",
+          "connectAction": "Een postvak verbinden →",
           "unavailableTitle": "Microsoft-platformreferenties zijn niet beschikbaar",
-          "unavailableDescription": "This deployment requires an app maintained by your organization. Use the advanced setup below to add one."
+          "unavailableDescription": "Voor deze implementatie is een door uw organisatie beheerde app vereist. Gebruik de geavanceerde configuratie hieronder om er een toe te voegen."
         },
         "actions": {
           "entraLink": "Microsoft Entra",
@@ -1690,7 +1690,7 @@
           "setDefault": "Dit profiel instellen als standaard Microsoft-profiel",
           "setDefaultHelp": "Standaardprofielen blijven beschikbaar voor profielbeheer-workflows en migratieveilige metadata, niet voor consumer-routing.",
           "storedSecretHint": "Opgeslagen secret: {{secret}}. Laat dit veld leeg om het ongewijzigd te houden.",
-          "tenantId": "Microsoft tenant ID",
+          "tenantId": "Microsoft-tenant-id",
           "capabilities": "Enabled capabilities",
           "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
@@ -1727,7 +1727,7 @@
           "teamsScopes": "Teams-scopes",
           "teamsTabRedirect": "Redirect-URI persoonlijk tabblad",
           "teamsTitle": "Teams-handleiding",
-          "tenantId": "Microsoft tenant ID",
+          "tenantId": "Microsoft-tenant-id",
           "unavailable": "Niet beschikbaar"
         },
         "profileCard": {
@@ -1744,7 +1744,7 @@
           "setDefault": "Instellen als standaard",
           "storedSecret": "Opgeslagen secret",
           "teamsAppIdUri": "Teams Application ID URI",
-          "tenantIdLabel": "Microsoft tenant ID:",
+          "tenantIdLabel": "Microsoft-tenant-id:",
           "updating": "Bijwerken…",
           "enabledCapabilities": "Enabled capabilities",
           "noEnabledCapabilities": "No enabled capabilities"
@@ -1757,14 +1757,14 @@
           "archived": "Gearchiveerde profielen kunnen niet worden gebruikt voor nieuwe Microsoft-bindingen.",
           "clientIdMissing": "Client ID ontbreekt.",
           "clientSecretMissing": "Client secret is niet geconfigureerd.",
-          "tenantIdMissing": "Add a Microsoft tenant ID.",
-          "adminConsentPending": "Ask a Microsoft 365 administrator to approve access for Email."
+          "tenantIdMissing": "Voeg een Microsoft-tenant-id toe.",
+          "adminConsentPending": "Vraag een Microsoft 365-beheerder om toegang voor e-mail goed te keuren."
         },
         "statusBadges": {
           "archived": "Gearchiveerd",
           "needsAttention": "Vereist aandacht",
           "ready": "Gereed",
-          "waitingForAdminApproval": "Waiting for admin approval"
+          "waitingForAdminApproval": "Wachten op goedkeuring van de beheerder"
         },
         "title": "Microsoft",
         "toasts": {
@@ -1791,7 +1791,7 @@
           "clientIdRequired": "Microsoft OAuth Client ID is verplicht",
           "clientSecretRequired": "Microsoft OAuth Client Secret is verplicht",
           "displayNameRequired": "Weergavenaam van Microsoft-profiel is verplicht",
-          "tenantIdRequired": "Microsoft tenant ID is required"
+          "tenantIdRequired": "Microsoft-tenant-id is vereist"
         },
         "disconnectDialog": {
           "cancel": "Aanbieders verbonden houden",
@@ -1861,7 +1861,7 @@
           "load": "QuickBooks-instellingen laden mislukt.",
           "saveCredentials": "QuickBooks-inloggegevens opslaan mislukt."
         },
-        "howItWorksDescription": "Sla hier QuickBooks app-inloggegevens op, voltooi de Intuit OAuth-flow, en Alga PSA gebruikt het verbonden QuickBooks-bedrijf als standaard live context voor exports en koppelingen.",
+        "howItWorksDescription": "Sla hier QuickBooks app-inloggegevens op, voltooi de Intuit OAuth-flow, en AlgaPSA gebruikt het verbonden QuickBooks-bedrijf als standaard live context voor exports en koppelingen.",
         "howItWorksTitle": "Hoe live QuickBooks werkt in deze release",
         "loading": "QuickBooks-instellingen worden geladen…",
         "mapping": {
@@ -1954,7 +1954,7 @@
             "navigate": "Ga naar Administration → Apps → API",
             "addClient": "Klik op \"+ Add client app\" om een nieuwe API-applicatie aan te maken",
             "platform": "Stel Application Platform in op \"Web (PHP, Java, .Net Core, etc.)\"",
-            "name": "Voer een Name in (bijv. \"Alga PSA\")",
+            "name": "Voer een Name in (bijv. \"AlgaPSA\")",
             "redirectUri": "Voeg de redirect-URI toe:",
             "scopes": "Vink onder \"Scopes\" \"Monitoring\" en \"Management\" aan",
             "grantTypes": "Vink onder \"Allowed grant types\" \"Authorization code\", \"Client credentials\" en \"Refresh token\" aan",
@@ -2745,7 +2745,7 @@
             "capabilityDisabled": "Schakel de persoonlijke bot-functie in voordat u een testbericht verzendt.",
             "botNotConfigured": "Configureer de Teams-botreferenties voordat u een testbericht verzendt.",
             "missingUserLinkage": "Koppel uw Microsoft-account voordat u een Teams-testbericht verzendt.",
-            "missingConversationReference": "Open de Alga PSA-bot in Teams en stuur er eerst een willekeurig bericht naartoe, en probeer het daarna opnieuw.",
+            "missingConversationReference": "Open de AlgaPSA-bot in Teams en stuur er eerst een willekeurig bericht naartoe, en probeer het daarna opnieuw.",
             "skipped": "Het Teams-testbericht is overgeslagen."
           },
           "steps": {
@@ -2768,12 +2768,12 @@
             "activeProfile": "Selecteer een actief Microsoft-profiel voor Teams.",
             "profileCredentials": "Voltooi de Microsoft-profielreferenties voordat u Teams activeert.",
             "meetingOrganizer": "Configureer de standaard Teams-vergaderingsorganisator in de Teams-instellingen.",
-            "meetingOrganizerObjectId": "Sla de standaard Teams-vergaderingsorganisator opnieuw op zodat Alga PSA de Microsoft Entra-object-ID kan omzetten.",
+            "meetingOrganizerObjectId": "Sla de standaard Teams-vergaderingsorganisator opnieuw op zodat AlgaPSA de Microsoft Entra-object-ID kan omzetten.",
             "package": "Genereer het Teams-app-pakket voordat u de end-to-end-validatie uitvoert.",
             "baseUrl": "Genereer het Teams-pakket opnieuw met een bereikbare basis-URL.",
             "botEnv": "Configureer TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID en TEAMS_BOT_APP_PASSWORD.",
             "userLinkage": "Koppel uw Microsoft-account in uw profielinstellingen.",
-            "conversationReference": "Open de Alga PSA-bot in Teams en stuur er eerst een willekeurig bericht naartoe, en probeer het daarna opnieuw.",
+            "conversationReference": "Open de AlgaPSA-bot in Teams en stuur er eerst een willekeurig bericht naartoe, en probeer het daarna opnieuw.",
             "deliveryFailure": "Bekijk de meest recente Teams-leveringsfout en probeer het opnieuw nadat u de oorzaak heeft verholpen."
           }
         },
@@ -2948,7 +2948,7 @@
               "remedy": "Verleen beheerderstoestemming voor de vereiste Graph-machtigingen (bijvoorbeeld TeamsActivity.Send) in de Azure-app-registratie."
             },
             "user_not_mapped": {
-              "cause": "De ontvanger heeft zich niet met Microsoft aangemeld bij Alga PSA, dus er bestaat geen accountkoppeling.",
+              "cause": "De ontvanger heeft zich niet met Microsoft aangemeld bij AlgaPSA, dus er bestaat geen accountkoppeling.",
               "remedy": "Laat de gebruiker zich aanmelden met Microsoft (MSP-portal-SSO of het Teams-tabblad) zodat hun account wordt gekoppeld."
             },
             "addon_inactive": {
@@ -2965,15 +2965,15 @@
             },
             "graph_not_found": {
               "cause": "De Teams-app is niet geïnstalleerd voor de ontvanger, dus Microsoft Graph kan deze niet bereiken (404).",
-              "remedy": "Installeer de Alga PSA-app voor die gebruiker of sta deze organisatiebreed toe."
+              "remedy": "Installeer de AlgaPSA-app voor die gebruiker of sta deze organisatiebreed toe."
             },
             "graph_throttled": {
               "cause": "Microsoft Graph heeft de aanvraag beperkt (429).",
-              "remedy": "Tijdelijk; Alga PSA probeert het opnieuw met backoff. Onderzoek dit alleen als het aanhoudt."
+              "remedy": "Tijdelijk; AlgaPSA probeert het opnieuw met backoff. Onderzoek dit alleen als het aanhoudt."
             },
             "graph_server_error": {
               "cause": "Microsoft Graph heeft een serverfout geretourneerd (5xx).",
-              "remedy": "Tijdelijke Graph-storing; Alga PSA probeert het opnieuw. Wacht en controleer de servicestatus van Microsoft als het aanhoudt."
+              "remedy": "Tijdelijke Graph-storing; AlgaPSA probeert het opnieuw. Wacht en controleer de servicestatus van Microsoft als het aanhoudt."
             },
             "transient": {
               "cause": "Een tijdelijke fout (netwerk of time-out) heeft de bezorging onderbroken.",
@@ -2990,7 +2990,7 @@
           "description": "Voor de Microsoft Teams-integratie is de Teams-invoegtoepassing voor deze tenant vereist.",
           "includedTitle": "Wat is inbegrepen",
           "feature": {
-            "tab": "Persoonlijk tabblad: open Alga PSA binnen Microsoft Teams.",
+            "tab": "Persoonlijk tabblad: open AlgaPSA binnen Microsoft Teams.",
             "bot": "Persoonlijke en groepschat-bot voor tickets, goedkeuringen, tijd en notities.",
             "messageExtension": "Berichtextensie en snelle acties om vanuit elk bericht op PSA-records te reageren.",
             "meetings": "Teams-vergaderingen bij goedkeuringen van afspraken met echte Outlook/Teams-agenda-uitnodigingen.",
@@ -3207,7 +3207,7 @@
           "load": "Xero-instellingen laden mislukt.",
           "saveCredentials": "Xero-inloggegevens opslaan mislukt."
         },
-        "howItWorksDescription": "Sla hier een tenant-eigen Xero Client ID en Client Secret op, voltooi de Xero OAuth-flow, en Alga PSA gebruikt de eerste verbonden Xero-organisatie als standaard live context.",
+        "howItWorksDescription": "Sla hier een tenant-eigen Xero Client ID en Client Secret op, voltooi de Xero OAuth-flow, en AlgaPSA gebruikt de eerste verbonden Xero-organisatie als standaard live context.",
         "howItWorksTitle": "Hoe live Xero werkt in deze release",
         "loading": "Xero-instellingen worden geladen…",
         "mapping": {
@@ -3257,7 +3257,7 @@
       "webhook": {
         "heading": "Webhook-configuratie",
         "configuredAutomatically": "Webhooks automatisch geconfigureerd",
-        "receiveNotifications": "Alga PSA ontvangt betalingsmeldingen voor:",
+        "receiveNotifications": "AlgaPSA ontvangt betalingsmeldingen voor:",
         "failedTitle": "Webhook-configuratie mislukt",
         "failedBody": "Automatische webhook-configuratie mislukt. Klik op Opnieuw proberen om de configuratie opnieuw te proberen.",
         "configuring": "Configureren...",

@@ -274,7 +274,7 @@ export const StripeConnectionSettings: React.FC = () => {
                         <span className="font-medium">{t('integrations.stripe.webhook.configuredAutomatically', { defaultValue: 'Webhooks configured automatically' })}</span>
                       </div>
                       <p className="text-sm mb-2">
-                        {t('integrations.stripe.webhook.receiveNotifications', { defaultValue: 'Alga PSA will receive payment notifications for:' })}
+                        {t('integrations.stripe.webhook.receiveNotifications', { defaultValue: 'AlgaPSA will receive payment notifications for:' })}
                       </p>
                       <ul className="text-sm list-disc list-inside space-y-1">
                         {config.webhook_events?.map((event) => (

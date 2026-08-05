@@ -147,7 +147,7 @@
     },
     "source": {
       "title": "Tax Calculation Source",
-      "tooltip": "Choose whether taxes are calculated by Alga PSA or delegated to your external accounting system",
+      "tooltip": "Choose whether taxes are calculated by AlgaPSA or delegated to your external accounting system",
       "description": "Configure how tax amounts are calculated for invoices.",
       "fields": {
         "defaultMethod": {
@@ -156,8 +156,8 @@
       },
       "options": {
         "internal": {
-          "label": "Internal (Alga PSA)",
-          "description": "Taxes are calculated automatically based on tax rates configured in Alga PSA."
+          "label": "Internal (AlgaPSA)",
+          "description": "Taxes are calculated automatically based on tax rates configured in AlgaPSA."
         },
         "external": {
           "label": "External (Accounting Package)",
@@ -169,7 +169,7 @@
         "step1": "Invoice is created without tax amounts",
         "step2": "Invoice is exported to your connected accounting system (QuickBooks, Xero, etc.)",
         "step3": "Tax is calculated by the accounting system based on its tax rules",
-        "step4": "Tax amounts are imported back to Alga PSA",
+        "step4": "Tax amounts are imported back to AlgaPSA",
         "step5": "Invoice totals are updated with the imported tax",
         "note": "The accounting system used is determined automatically based on which system you export the invoice to.",
         "warning": "Important: invoices for clients using external tax cannot be finalized until their tax has been imported back from your accounting system. This requires a connected accounting integration (QuickBooks or Xero) and exporting the invoice there first. Without it, these invoices will stay stuck in Draft — switch an individual invoice back to internal tax to finalize it in Alga."
@@ -978,7 +978,7 @@
         "placeholder": "Select tax source...",
         "options": {
           "default": "Use Tenant Default",
-          "internal": "Alga PSA Calculates Tax",
+          "internal": "AlgaPSA Calculates Tax",
           "external": "Accounting Package Calculates Tax"
         },
         "effective": {
@@ -1192,7 +1192,7 @@
       "webhook": {
         "label": "Webhook Configuration",
         "configuredTitle": "Webhooks configured automatically",
-        "configuredDescription": "Alga PSA will receive payment notifications for:",
+        "configuredDescription": "AlgaPSA will receive payment notifications for:",
         "failedTitle": "Webhook configuration failed",
         "failedDescription": "Automatic webhook configuration failed. Click retry to attempt configuration again.",
         "configuring": "Configuring...",

@@ -86,7 +86,7 @@ describe('GET /api/teams/auth/callback/bot', () => {
   it('T154/T172: redirects unauthenticated bot auth requests into the Teams-safe reauthentication path and returns safe failure payloads for rejected access', async () => {
     resolveTeamsTabAuthStateMock.mockResolvedValueOnce({
       status: 'unauthenticated',
-      message: 'Sign in with your MSP account to open Alga PSA in Teams.',
+      message: 'Sign in with your MSP account to open AlgaPSA in Teams.',
     });
 
     const redirectResponse = await GET(

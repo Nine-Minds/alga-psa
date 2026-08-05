@@ -147,7 +147,7 @@
     },
     "source": {
       "title": "Source de calcul de la taxe",
-      "tooltip": "Choisissez si les taxes sont calculées par Alga PSA ou déléguées à votre système comptable externe",
+      "tooltip": "Choisissez si les taxes sont calculées par AlgaPSA ou déléguées à votre système comptable externe",
       "description": "Configurez la manière dont les montants de taxes sont calculés pour les factures.",
       "fields": {
         "defaultMethod": {
@@ -157,7 +157,7 @@
       "options": {
         "internal": {
           "label": "Interne (Algue PSA)",
-          "description": "Les taxes sont calculées automatiquement en fonction des taux de taxe configurés dans Alga PSA."
+          "description": "Les taxes sont calculées automatiquement en fonction des taux de taxe configurés dans AlgaPSA."
         },
         "external": {
           "label": "Externe (Pack Comptabilité)",
@@ -169,7 +169,7 @@
         "step1": "La facture est créée sans montants de taxes",
         "step2": "La facture est exportée vers votre système comptable connecté (QuickBooks, Xero, etc.)",
         "step3": "La taxe est calculée par le système comptable en fonction de ses règles fiscales",
-        "step4": "Les montants des taxes sont réimportés dans Alga PSA",
+        "step4": "Les montants des taxes sont réimportés dans AlgaPSA",
         "step5": "Les totaux des factures sont mis à jour avec la taxe importée",
         "note": "Le système comptable utilisé est déterminé automatiquement en fonction du système vers lequel vous exportez la facture.",
         "warning": "Important : les factures des clients utilisant la taxe externe ne peuvent pas être finalisées tant que leur taxe n'a pas été réimportée depuis votre système comptable. Cela nécessite une intégration comptable connectée (QuickBooks ou Xero) et l'export préalable de la facture vers celle-ci. Sans cela, ces factures resteront bloquées au stade Brouillon — basculez une facture individuelle en taxe interne pour la finaliser dans Alga."
@@ -978,7 +978,7 @@
         "placeholder": "Sélectionnez la source de taxe...",
         "options": {
           "default": "Utiliser les valeurs par défaut du locataire",
-          "internal": "Alga PSA calcule la taxe",
+          "internal": "AlgaPSA calcule la taxe",
           "external": "Le progiciel de comptabilité calcule la taxe"
         },
         "effective": {
@@ -1192,7 +1192,7 @@
       "webhook": {
         "label": "Configuration du webhook",
         "configuredTitle": "Webhooks configurés automatiquement",
-        "configuredDescription": "Alga PSA recevra des notifications de paiement pour :",
+        "configuredDescription": "AlgaPSA recevra des notifications de paiement pour :",
         "failedTitle": "Échec de la configuration du webhook",
         "failedDescription": "La configuration automatique du webhook a échoué. Cliquez sur Réessayer pour tenter une nouvelle configuration.",
         "configuring": "Configuration en cours...",

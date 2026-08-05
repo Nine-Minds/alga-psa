@@ -86,7 +86,7 @@ describe('edition-gated API responses', () => {
     expect(response.headers.get('cache-control')).toBe('no-store, max-age=0');
     expect(body).toMatchObject({
       error: 'access_denied',
-      error_description: 'MCP server is available with Alga PSA Pro.',
+      error_description: 'MCP server is available with AlgaPSA Pro.',
       code: 'EE_REQUIRED',
       feature: 'mcp',
     });
@@ -100,7 +100,7 @@ describe('edition-gated API responses', () => {
     expect(
       getEditionGateResponse(403, {
         ...createEditionGateResponseBody('mcp'),
-        upgrade: { product: 'Alga PSA Pro', cta: 'View Plans', href: 'javascript:alert(1)' },
+        upgrade: { product: 'AlgaPSA Pro', cta: 'View Plans', href: 'javascript:alert(1)' },
       }),
     ).toBeNull();
   });

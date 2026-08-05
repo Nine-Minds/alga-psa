@@ -30,7 +30,7 @@
     "aiCheckoutFailed": "Échec du démarrage du paiement pour l'AI Assistant",
     "aiRemoved": "L'AI Assistant sera supprimé de votre abonnement.",
     "aiCancelFailed": "Échec de l'annulation de l'AI Assistant",
-    "cancellationScheduled": "Abonnement annulé. Vous pouvez continuer à utiliser Alga PSA jusqu'à la fin de votre période de facturation."
+    "cancellationScheduled": "Abonnement annulé. Vous pouvez continuer à utiliser AlgaPSA jusqu'à la fin de votre période de facturation."
   },
   "common": {
     "loading": "Chargement...",
@@ -53,7 +53,7 @@
     "advancedAssets": "Actifs avancés — débloquez la découverte d'actifs liée à RMM et des contrôles d'actifs plus riches",
     "clientPortalAdmin": "Administration du portail client — gérez la personnalisation et l'administration avancées du portail client",
     "workflowDesigner": "Concepteur de workflows — créez et maintenez des automatisations de workflow personnalisées",
-    "mobileAccess": "Accès mobile — connectez-vous depuis l'application mobile Alga PSA",
+    "mobileAccess": "Accès mobile — connectez-vous depuis l'application mobile AlgaPSA",
     "entraSync": "Microsoft Entra Sync — découvrez automatiquement les tenants et synchronisez les contacts depuis Entra ID",
     "cipp": "Intégration CIPP — connectez votre instance CIPP pour la gestion multi-tenant Entra",
     "teamsIntegration": "Microsoft Teams — intégration des réunions et bot Teams pour les notifications de tickets",
@@ -71,7 +71,7 @@
     "upgradePendingTitle": "Votre mise à niveau est en attente",
     "upgradePendingBody": "Apple continuera à vous facturer pour Solo jusqu'au {{date}}. Après cela, votre abonnement mis à niveau prendra automatiquement le relais.",
     "autoRenewWarningStrong": "Le renouvellement automatique est actuellement ACTIVÉ sur votre abonnement Apple",
-    "autoRenewWarningBody": "veuillez le désactiver dans Réglages iOS → Identifiant Apple → Abonnements → Alga PSA, sinon Apple vous facturera à nouveau et la mise à niveau sera retardée.",
+    "autoRenewWarningBody": "veuillez le désactiver dans Réglages iOS → Identifiant Apple → Abonnements → AlgaPSA, sinon Apple vous facturera à nouveau et la mise à niveau sera retardée.",
     "cancelUpgrade": "Annuler la mise à niveau",
     "appleManagedBody": "Votre abonnement est géré par Apple. La période de facturation actuelle se termine le {{date}}. Vous pouvez passer à un plan plus important à tout moment — nous alignerons la nouvelle facturation sur votre période Apple afin que vous ne payiez jamais les deux en même temps."
   },
@@ -200,7 +200,7 @@
     "title": "Zone de danger",
     "body": "L'annulation de votre abonnement désactivera l'accès pour tous les utilisateurs à la fin de la période de facturation actuelle.",
     "cancelSubscription": "Annuler l'abonnement",
-    "scheduledBody": "Votre abonnement prendra fin le {{date}}. Tout le monde pourra continuer à utiliser Alga PSA jusque-là."
+    "scheduledBody": "Votre abonnement prendra fin le {{date}}. Tout le monde pourra continuer à utiliser AlgaPSA jusque-là."
   },
   "aiCheckoutDialog": {
     "title": "Ajouter AI Assistant",
@@ -212,7 +212,7 @@
     "howToTitle": "Comment désactiver le renouvellement automatique :",
     "step1": "Ouvrez <strong>Réglages</strong> sur votre iPhone ou iPad",
     "step2": "Appuyez sur votre nom en haut, puis sur <strong>Abonnements</strong>",
-    "step3": "Appuyez sur <strong>Alga PSA</strong>",
+    "step3": "Appuyez sur <strong>AlgaPSA</strong>",
     "step4": "Appuyez sur <strong>Annuler l'abonnement</strong> — cela désactive le renouvellement automatique mais conserve votre accès jusqu'au {{date}}",
     "step5": "Revenez à cette page et cliquez sur Continuer ci-dessous",
     "currentPeriodFallback": "la fin de votre période actuelle",
@@ -341,7 +341,7 @@
     "title": "Annuler l'abonnement",
     "keepSubscription": "Conserver l'abonnement",
     "canceling": "Annulation...",
-    "beforeYouCancelBody": "Votre abonnement prendra fin le {{date}}. Tout le monde pourra continuer à utiliser Alga PSA jusque-là.",
+    "beforeYouCancelBody": "Votre abonnement prendra fin le {{date}}. Tout le monde pourra continuer à utiliser AlgaPSA jusque-là.",
     "currentBillingPeriod": "la fin de votre période de facturation actuelle",
     "replacesScheduledChange": "Cela remplace votre modification de licence programmée.",
     "reasonLabel": "Motif (facultatif)",

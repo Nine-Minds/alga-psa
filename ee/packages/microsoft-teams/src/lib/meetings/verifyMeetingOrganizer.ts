@@ -93,7 +93,7 @@ export async function verifyMeetingOrganizer(
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          subject: 'Alga PSA meeting organizer verification',
+          subject: 'AlgaPSA meeting organizer verification',
           startDateTime: startDateTime.toISOString(),
           endDateTime: endDateTime.toISOString(),
         }),

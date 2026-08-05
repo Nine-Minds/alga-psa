@@ -1,5 +1,5 @@
 {
-  "name": "Alga PSA - Create then Update Assignment",
+  "name": "AlgaPSA - Create then Update Assignment",
   "nodes": [
     {
       "parameters": {
@@ -37,7 +37,7 @@
       "credentials": {
         "algaPsaApi": {
           "id": "1",
-          "name": "Alga PSA API"
+          "name": "AlgaPSA API"
         }
       }
     },
@@ -60,7 +60,7 @@
       "credentials": {
         "algaPsaApi": {
           "id": "1",
-          "name": "Alga PSA API"
+          "name": "AlgaPSA API"
         }
       }
     }

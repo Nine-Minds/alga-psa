@@ -1736,14 +1736,14 @@
   },
   "extensions": {
     "title": "Extensiebeheer",
-    "description": "Installeer, configureer en beheer extensies om de functionaliteit van Alga PSA uit te breiden.",
+    "description": "Installeer, configureer en beheer extensies om de functionaliteit van AlgaPSA uit te breiden.",
     "tabs": {
       "manage": "Beheren",
       "install": "Installeren"
     },
     "enterpriseOnly": {
       "title": "Pro-functie",
-      "description": "Extensies zijn beschikbaar in Alga PSA Pro."
+      "description": "Extensies zijn beschikbaar in AlgaPSA Pro."
     },
     "links": {
       "needLogs": "Extensielogs nodig?",

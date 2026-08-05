@@ -201,7 +201,7 @@ describe('provider readiness helpers', () => {
     });
   });
 
-  it('never offers the Alga PSA app on a self-hosted deployment', async () => {
+  it('never offers the AlgaPSA app on a self-hosted deployment', async () => {
     isSelfHostLicensingMock.mockResolvedValue(true);
     resolveMicrosoftConsumerProfileConfigMock.mockResolvedValue({
       status: 'not_configured',

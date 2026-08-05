@@ -1,7 +1,7 @@
 /**
  * @alga-psa/sla
  *
- * SLA (Service Level Agreement) management module for Alga PSA.
+ * SLA (Service Level Agreement) management module for AlgaPSA.
  * Provides SLA policy definitions, business hours schedules, and SLA pause configurations.
  */
 

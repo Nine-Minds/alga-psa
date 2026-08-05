@@ -1,7 +1,7 @@
 /**
  * @alga-psa/sla - Types
  *
- * SLA-related type definitions for Alga PSA.
+ * SLA-related type definitions for AlgaPSA.
  */
 
 import type { TenantScopedEntity, ISODateString } from '@alga-psa/types';

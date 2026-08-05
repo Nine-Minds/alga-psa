@@ -9,8 +9,8 @@ describe('Contract PO accounting export references', () => {
   });
 
   it('T012: QuickBooks CSV export includes PO number in Memo column', () => {
-    expect(buildQuickBooksCsvMemo('inv-1', null)).toBe('Alga PSA: inv-1');
-    expect(buildQuickBooksCsvMemo('inv-1', 'PO-999')).toBe('Alga PSA: inv-1 | PO PO-999');
+    expect(buildQuickBooksCsvMemo('inv-1', null)).toBe('AlgaPSA: inv-1');
+    expect(buildQuickBooksCsvMemo('inv-1', 'PO-999')).toBe('AlgaPSA: inv-1 | PO PO-999');
   });
 
   it('T013: Xero API export includes PO number in Reference without losing invoice identifier', () => {

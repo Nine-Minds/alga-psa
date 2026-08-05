@@ -161,7 +161,7 @@ export default function MobileAppCard({ onDismiss, isDismissing = false, selfHos
                 '1. Scan a store QR code to install the app. 2. In the app, tap "Change server" → "Scan QR code" and scan the "Connect this server" code.',
             })
           : t('mobileApp.description', {
-              defaultValue: 'Scan a QR code with your phone to download the Alga PSA mobile app.',
+              defaultValue: 'Scan a QR code with your phone to download the AlgaPSA mobile app.',
             })}
       </p>
       <div className="flex flex-wrap items-start justify-center gap-12 py-2">

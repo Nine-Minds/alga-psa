@@ -147,7 +147,7 @@
     },
     "source": {
       "title": "Bron van belastingberekening",
-      "tooltip": "Kies of belastingen worden berekend door Alga PSA of worden gedelegeerd aan uw externe boekhoudsysteem",
+      "tooltip": "Kies of belastingen worden berekend door AlgaPSA of worden gedelegeerd aan uw externe boekhoudsysteem",
       "description": "Configureer hoe belastingbedragen voor facturen worden berekend.",
       "fields": {
         "defaultMethod": {
@@ -156,8 +156,8 @@
       },
       "options": {
         "internal": {
-          "label": "Intern (Alga PSA)",
-          "description": "Belastingen worden automatisch berekend op basis van de belastingtarieven die zijn geconfigureerd in Alga PSA."
+          "label": "Intern (AlgaPSA)",
+          "description": "Belastingen worden automatisch berekend op basis van de belastingtarieven die zijn geconfigureerd in AlgaPSA."
         },
         "external": {
           "label": "Extern (boekhoudpakket)",
@@ -169,7 +169,7 @@
         "step1": "Factuur wordt aangemaakt zonder belastingbedragen",
         "step2": "Factuur wordt geëxporteerd naar uw aangesloten boekhoudsysteem (QuickBooks, Xero, enz.)",
         "step3": "Belasting wordt berekend door het boekhoudsysteem op basis van de belastingregels",
-        "step4": "Belastingbedragen worden terug geïmporteerd naar Alga PSA",
+        "step4": "Belastingbedragen worden terug geïmporteerd naar AlgaPSA",
         "step5": "Factuurtotalen worden bijgewerkt met de geïmporteerde belasting",
         "note": "Het gebruikte boekhoudsysteem wordt automatisch bepaald op basis van het systeem waarnaar u de factuur exporteert.",
         "warning": "Belangrijk: facturen voor klanten die externe belasting gebruiken, kunnen pas worden gefinaliseerd nadat hun belasting is teruggeïmporteerd uit uw boekhoudsysteem. Dit vereist een gekoppelde boekhoudintegratie (QuickBooks of Xero) en het eerst exporteren van de factuur daarheen. Zonder dat blijven deze facturen vastzitten in Concept — schakel een afzonderlijke factuur terug naar interne belasting om deze in Alga te finaliseren."
@@ -978,7 +978,7 @@
         "placeholder": "Belastingbron selecteren...",
         "options": {
           "default": "Gebruik standaardtenant",
-          "internal": "Alga PSA berekent belasting",
+          "internal": "AlgaPSA berekent belasting",
           "external": "Boekhoudpakket berekent belasting"
         },
         "effective": {
@@ -1192,7 +1192,7 @@
       "webhook": {
         "label": "Webhook-configuratie",
         "configuredTitle": "Webhooks automatisch geconfigureerd",
-        "configuredDescription": "Alga PSA ontvangt betalingsmeldingen voor:",
+        "configuredDescription": "AlgaPSA ontvangt betalingsmeldingen voor:",
         "failedTitle": "Webhook-configuratie mislukt",
         "failedDescription": "Automatische webhook-configuratie is mislukt. Klik op opnieuw proberen om de configuratie opnieuw te proberen.",
         "configuring": "Configureren...",

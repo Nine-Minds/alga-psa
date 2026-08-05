@@ -3,7 +3,7 @@ import type { ICredentialType, INodeProperties } from 'n8n-workflow';
 export class AlgaPsaApi implements ICredentialType {
   name = 'algaPsaApi';
 
-  displayName = 'Alga PSA API';
+  displayName = 'AlgaPSA API';
 
   documentationUrl = 'https://github.com/alga-psa/alga-psa';
 
@@ -15,7 +15,7 @@ export class AlgaPsaApi implements ICredentialType {
       default: '',
       required: true,
       placeholder: 'https://algapsa.com',
-      description: 'Base URL for your Alga PSA instance',
+      description: 'Base URL for your AlgaPSA instance',
     },
     {
       displayName: 'API Key',
@@ -26,7 +26,7 @@ export class AlgaPsaApi implements ICredentialType {
       },
       default: '',
       required: true,
-      description: 'API key used to authenticate with Alga PSA',
+      description: 'API key used to authenticate with AlgaPSA',
     },
   ];
 }

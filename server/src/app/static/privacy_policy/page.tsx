@@ -309,9 +309,9 @@ export default function PrivacyPolicy() {
             We use data obtained from Google APIs solely to provide and improve the specific features of our Services that you have chosen to use. Specifically:
           </p>
           <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Gmail data is used only to provide inbound ticketing for the Alga PSA service desk</li>
-            <li>Google Calendar data is used only to provide two-way calendar sync between Alga PSA schedules and technician calendars</li>
-            <li>Basic account information is used only to sign you in and associate your Google identity with your Alga PSA account</li>
+            <li>Gmail data is used only to provide inbound ticketing for the AlgaPSA service desk</li>
+            <li>Google Calendar data is used only to provide two-way calendar sync between AlgaPSA schedules and technician calendars</li>
+            <li>Basic account information is used only to sign you in and associate your Google identity with your AlgaPSA account</li>
           </ul>
 
           <h4 className="text-base font-bold text-gray-800">Limited Use Requirements</h4>

@@ -86,7 +86,7 @@ describe('GET /api/teams/auth/callback/message-extension', () => {
   it('T156: redirects unauthenticated message-extension auth requests and returns Teams-safe failure payloads for rejected access', async () => {
     resolveTeamsTabAuthStateMock.mockResolvedValueOnce({
       status: 'unauthenticated',
-      message: 'Sign in with your MSP account to open Alga PSA in Teams.',
+      message: 'Sign in with your MSP account to open AlgaPSA in Teams.',
     });
 
     const redirectResponse = await GET(

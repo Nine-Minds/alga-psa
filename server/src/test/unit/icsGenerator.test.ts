@@ -25,7 +25,7 @@ describe('ICS Generator', () => {
       expect(ics).toContain('BEGIN:VEVENT');
       expect(ics).toContain('END:VEVENT');
       expect(ics).toContain('VERSION:2.0');
-      expect(ics).toContain('PRODID:-//Alga PSA//Appointment Request//EN');
+      expect(ics).toContain('PRODID:-//AlgaPSA//Appointment Request//EN');
     });
 
     it('should include event title', () => {

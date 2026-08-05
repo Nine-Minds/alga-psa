@@ -4,7 +4,7 @@
     "alga-module": {
       "factory": "./alga-module/index",
       "schema": "./alga-module/schema.json",
-      "description": "Create a new Alga PSA module"
+      "description": "Create a new AlgaPSA module"
     }
   }
 }

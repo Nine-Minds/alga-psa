@@ -70,7 +70,7 @@ export function buildWebhookUrl(tenantId: string): string {
 }
 
 /**
- * Create the default webhook configuration for Alga PSA
+ * Create the default webhook configuration for AlgaPSA
  */
 export function createWebhookConfig(
   tenantId: string,
