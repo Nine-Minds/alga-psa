@@ -76,4 +76,4 @@ The following tables store email configuration:
 
 ## Workflow Integration
 
-Domain verification is handled through the workflow system. When a new domain is added, a verification workflow is automatically triggered to handle DNS verification and provider setup.
+Domain verification is handled through the workflow system. When a new domain is added, a verification workflow is automatically triggered to handle DNS verification and provider setup. The workflow polls for DNS record detection with exponential back-off, starting at 5-minute intervals and increasing to a maximum of once per hour, for up to **72 hours** from when the domain was added. If DNS records are not detected within that 72-hour window, the workflow records a failure and the domain status is automatically set to **Failed**; the domain must then be removed and re-added to start a new verification attempt.
