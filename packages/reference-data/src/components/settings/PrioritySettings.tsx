@@ -5,7 +5,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, Palette } from "lucide-react";
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
-import { getAllPriorities, createPriority, deletePriority, updatePriority, validatePriorityDeletion } from '../../actions/priorityActions';
+import { getAllPriorities, createPriority, deletePriority, updatePriority, validatePriorityDeletion, hasItilPriorityBoards } from '../../actions/priorityActions';
 import { isPriorityActionError } from '../../actions/priorityActionErrors';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '../../actions/referenceDataActions';
 import type { IPriority, IStandardPriority, DeletionValidationResult } from '@alga-psa/types';
@@ -46,6 +46,8 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
   const [availableReferencePriorities, setAvailableReferencePriorities] = useState<IStandardPriority[]>([]);
   const [selectedImportPriorities, setSelectedImportPriorities] = useState<string[]>([]);
   const [priorityColor, setPriorityColor] = useState('#6B7280');
+  // ITIL priorities stay protected only while a board still offers them.
+  const [itilBoardExists, setItilBoardExists] = useState(true);
 
   // Delete dialog state
   const [priorityToDelete, setPriorityToDelete] = useState<IPriority | null>(null);
@@ -74,6 +76,18 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
     };
 
     fetchPriorities();
+  }, []);
+
+  useEffect(() => {
+    const fetchItilBoardUsage = async (): Promise<void> => {
+      try {
+        setItilBoardExists(await hasItilPriorityBoards());
+      } catch (error) {
+        console.error('Error checking ITIL board usage:', error);
+      }
+    };
+
+    fetchItilBoardUsage();
   }, []);
 
   const updatePriorityItem = async (updatedPriority: IPriority): Promise<void> => {
@@ -262,7 +276,9 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
           <AlertDescription>
             <strong>{t('ticketing.priorities.alert.header')}</strong> {t('ticketing.priorities.alert.description')}
             {priorities.some(p => 'is_from_itil_standard' in p && p.is_from_itil_standard && p.item_type === selectedPriorityType) ?
-              ` ${t('ticketing.priorities.alert.itilNote')}` :
+              ` ${itilBoardExists
+                ? t('ticketing.priorities.alert.itilNote')
+                : t('ticketing.priorities.alert.itilRemovableNote', 'ITIL standard priorities cannot be edited, but can be deleted now that no board uses ITIL priorities.')}` :
               ` ${t('ticketing.priorities.alert.nonItilNote')}`}
           </AlertDescription>
         </Alert>
@@ -278,8 +294,11 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
             dataIndex: 'action',
             width: '5%',
             render: (_, item) => {
-              // ITIL imported priorities cannot be edited or deleted
-              if ('is_from_itil_standard' in item && item.is_from_itil_standard) {
+              const isItilPriority = 'is_from_itil_standard' in item && Boolean(item.is_from_itil_standard);
+
+              // ITIL imported priorities are never editable, and stay fully
+              // protected only while a board still offers ITIL priorities.
+              if (isItilPriority && itilBoardExists) {
                 return (
                   <span className="text-xs text-gray-400">{t('ticketing.priorities.table.itilProtected')}</span>
                 );
@@ -299,17 +318,19 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      id={`edit-priority-${item.priority_id}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingPriority(item as IPriority);
-                        setPriorityColor(item.color || '#6B7280');
-                        setShowPriorityDialog(true);
-                      }}
-                    >
-                      {t('ticketing.priorities.actions.edit')}
-                    </DropdownMenuItem>
+                    {!isItilPriority && (
+                      <DropdownMenuItem
+                        id={`edit-priority-${item.priority_id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingPriority(item as IPriority);
+                          setPriorityColor(item.color || '#6B7280');
+                          setShowPriorityDialog(true);
+                        }}
+                      >
+                        {t('ticketing.priorities.actions.edit')}
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       id={`delete-priority-${item.priority_id}`}
                       className="text-red-600 focus:text-red-600"

@@ -15,6 +15,19 @@ import type { PriorityActionError } from './priorityActionErrors';
 const tenantScopedTable = (trx: Knex | Knex.Transaction, table: string, tenant: string) =>
   tenantDb(trx, tenant).table(table);
 
+/**
+ * ITIL priorities are immutable while any board offers them, but once the tenant
+ * has walked back the ITIL choice they must be removable — otherwise the rows are
+ * stranded in every picker forever.
+ */
+const hasItilPriorityBoard = async (trx: Knex | Knex.Transaction, tenant: string): Promise<boolean> => {
+  const board = await tenantScopedTable(trx, 'boards', tenant)
+    .where({ priority_type: 'itil' })
+    .first('board_id');
+
+  return Boolean(board);
+};
+
 function priorityActionErrorMessage(error: unknown, fallback: string): string {
   const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
 
@@ -137,11 +150,11 @@ export const validatePriorityDeletion = withAuth(async (
       };
     }
 
-    if (priority.is_from_itil_standard) {
+    if (priority.is_from_itil_standard && await hasItilPriorityBoard(trx, tenant)) {
       return {
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'ITIL standard priorities cannot be deleted.',
+        message: 'ITIL standard priorities cannot be deleted while a board uses ITIL priorities.',
         dependencies: [],
         alternatives: []
       };
@@ -158,9 +171,10 @@ export const deletePriority = withAuth(async (
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
   try {
     const { knex: db } = await createTenantKnex();
-    const priority = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return Priority.get(trx, tenant, priorityId);
-    });
+    const { priority, itilBoardExists } = await withTransaction(db, async (trx: Knex.Transaction) => ({
+      priority: await Priority.get(trx, tenant, priorityId),
+      itilBoardExists: await hasItilPriorityBoard(trx, tenant)
+    }));
 
     if (!priority) {
       return {
@@ -173,12 +187,12 @@ export const deletePriority = withAuth(async (
       };
     }
 
-    if (priority.is_from_itil_standard) {
+    if (priority.is_from_itil_standard && itilBoardExists) {
       return {
         success: false,
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'ITIL standard priorities cannot be deleted.',
+        message: 'ITIL standard priorities cannot be deleted while a board uses ITIL priorities.',
         dependencies: [],
         alternatives: []
       };
@@ -275,6 +289,15 @@ export const getPrioritiesByBoardType = withAuth(async (_user, { tenant }, board
       throw error;
     }
   });
+});
+
+/**
+ * Whether any board still offers ITIL priorities. Settings uses this to decide
+ * whether ITIL rows are protected or removable.
+ */
+export const hasItilPriorityBoards = withAuth(async (_user, { tenant }): Promise<boolean> => {
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => hasItilPriorityBoard(trx, tenant));
 });
 
 export interface FindPriorityByNameOutput {

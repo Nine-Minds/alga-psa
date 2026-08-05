@@ -498,7 +498,8 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     supportsArchive: false,
     dependencies: [
       { type: 'ticket', table: 'tickets', foreignKey: 'priority_id', label: 'ticket' },
-      { type: 'board_default', table: 'boards', foreignKey: 'default_priority_id', label: 'board default priority' }
+      { type: 'board_default', table: 'boards', foreignKey: 'default_priority_id', label: 'board default priority' },
+      { type: 'sla_policy_target', table: 'sla_policy_targets', foreignKey: 'priority_id', label: 'SLA policy target' }
     ]
   },
   board: {
