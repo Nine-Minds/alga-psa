@@ -1,5 +1,6 @@
 'use server';
 
+import type { z } from 'zod';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -61,7 +62,7 @@ export const listOpportunityStepTemplates = withAuth(async (
 async function replaceStageTemplates(
   trx: Parameters<typeof tenantDb>[0],
   tenant: string,
-  data: { stage: OpportunityStage; titles: Array<{ title: string; due_offset_days: number }> },
+  data: z.output<typeof saveOpportunityStepTemplatesSchema>,
 ): Promise<void> {
   await tenantDb(trx, tenant).table('opportunity_step_templates').where({ stage: data.stage }).delete();
   for (const [index, entry] of data.titles.entries()) {
