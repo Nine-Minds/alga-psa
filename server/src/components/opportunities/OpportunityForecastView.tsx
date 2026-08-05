@@ -13,6 +13,12 @@ import { getForecastBand } from '@enterprise/lib/opportunities/actions';
 
 type PeriodKey = 'current' | 'next';
 
+/** The local calendar date as YYYY-MM-DD. toISOString would shift the day for anyone east of UTC. */
+function toDateString(date: Date): string {
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 /** Quarter boundaries, `offset` quarters from the one we are standing in. */
 function quarterPeriod(offset = 0): { start: string; end: string; label: string } {
   const now = new Date();
@@ -20,8 +26,8 @@ function quarterPeriod(offset = 0): { start: string; end: string; label: string 
   const start = new Date(now.getFullYear(), q * 3, 1);
   const end = new Date(now.getFullYear(), q * 3 + 3, 0);
   return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
+    start: toDateString(start),
+    end: toDateString(end),
     label: `Q${Math.floor(start.getMonth() / 3) + 1} ${start.getFullYear()}`,
   };
 }
@@ -179,7 +185,7 @@ export function OpportunityForecastView() {
               </div>
               <div className="text-sm tabular-nums text-[rgb(var(--color-text-500))]">
                 {t('opportunities.forecast.plusOneTime', '+ {{amount}} one-time', {
-                  amount: fmt(currencyBand.floor_nrr_cents, currencyBand.currency_code),
+                  amount: fmt(currencyBand.floor_one_time_cents, currencyBand.currency_code),
                 })}
               </div>
             </div>
@@ -195,7 +201,7 @@ export function OpportunityForecastView() {
               </div>
               <div className="text-sm tabular-nums text-[rgb(var(--color-text-500))]">
                 {t('opportunities.forecast.plusOneTime', '+ {{amount}} one-time', {
-                  amount: fmt(currencyBand.ceiling_nrr_cents, currencyBand.currency_code),
+                  amount: fmt(currencyBand.ceiling_one_time_cents, currencyBand.currency_code),
                 })}
               </div>
             </div>

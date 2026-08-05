@@ -28,18 +28,31 @@ export function QueueGreeting({
 
   const stakes = foundTotals
     .map((total) => {
-      if (total.mrr_cents > 0) {
+      const mrr = total.mrr_cents > 0
+        ? formatCurrencyFromMinorUnits(total.mrr_cents, undefined, total.currency_code)
+        : null;
+      const nrr = total.nrr_cents > 0
+        ? formatCurrencyFromMinorUnits(total.nrr_cents, undefined, total.currency_code)
+        : null;
+      if (mrr && nrr) {
+        return t(
+          'opportunities.queue.stakesBoth',
+          '{{mrr}}/mo of recurring work and {{nrr}} of project work are already visible in your own data.',
+          { mrr, nrr }
+        );
+      }
+      if (mrr) {
         return t(
           'opportunities.queue.stakesMrr',
           '{{amount}}/mo of recurring work is already visible in your own data.',
-          { amount: formatCurrencyFromMinorUnits(total.mrr_cents, undefined, total.currency_code) }
+          { amount: mrr }
         );
       }
-      if (total.nrr_cents > 0) {
+      if (nrr) {
         return t(
           'opportunities.queue.stakesNrr',
           '{{amount}} of project work is already visible in your own data.',
-          { amount: formatCurrencyFromMinorUnits(total.nrr_cents, undefined, total.currency_code) }
+          { amount: nrr }
         );
       }
       return null;

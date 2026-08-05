@@ -239,6 +239,7 @@
       "reviewDraft": "Examiner le brouillon",
       "snooze": "Répéter",
       "snoozeNamed": "Répéter {{title}}",
+      "stakesBoth": "{{mrr}}/mois de travail récurrent et {{nrr}} de travaux de projet sont déjà visibles dans vos propres données.",
       "stakesMrr": "{{amount}}/mois de travail récurrent est déjà visible dans vos propres données.",
       "stakesNrr": "{{amount}} de travaux de projet est déjà visible dans vos propres données.",
       "table": {

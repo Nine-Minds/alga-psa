@@ -414,7 +414,6 @@ export interface IWorkQueue {
   date: ISO8601String;
   /** Found money per currency: dollars and pounds are never added together. */
   found_totals: IQueueFoundTotal[];
-  currency_code: string;
   do_today: IQueueActionItem[];
   going_quiet: IQueueActionItem[];
   money_found: IQueueSuggestionItem[];
@@ -461,17 +460,19 @@ export interface IForecastDealContribution {
   weight: number;
   weight_source: 'base' | 'seller_calibration' | 'won';
   floor_mrr_cents: number;
-  floor_nrr_cents: number;
+  /** One-time value is NRR + hardware, same as every other surface. */
+  floor_one_time_cents: number;
   ceiling_mrr_cents: number;
-  ceiling_nrr_cents: number;
+  ceiling_one_time_cents: number;
 }
 
 export interface IForecastCurrencyBand {
   currency_code: string;
   floor_mrr_cents: number;
-  floor_nrr_cents: number;
+  /** One-time value is NRR + hardware, same as every other surface. */
+  floor_one_time_cents: number;
   ceiling_mrr_cents: number;
-  ceiling_nrr_cents: number;
+  ceiling_one_time_cents: number;
 }
 
 /** One band per currency: cents of different currencies are never added together. */
@@ -580,12 +581,14 @@ export interface ISellerOpportunityRollup {
   office_name: null;
   currency_code: string;
   open_mrr_cents: number;
-  open_nrr_cents: number;
+  /** One-time value is NRR + hardware, same as every other surface. */
+  open_one_time_cents: number;
   won_count: number;
   won_mrr_cents: number;
-  won_nrr_cents: number;
+  won_one_time_cents: number;
   lost_count: number;
   lost_mrr_cents: number;
-  lost_nrr_cents: number;
+  lost_one_time_cents: number;
+  /** Owner-level, across every currency the owner sells in — repeated on each currency row. */
   attach_rate: number;
 }

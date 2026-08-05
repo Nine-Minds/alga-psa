@@ -9,11 +9,12 @@ interface CompletedActionInteractionInput {
   occurredAt: string;
 }
 
+/** Returns the created interaction's id so the completed step can point at it. */
 export async function recordCompletedActionInteraction(
   trx: Knex.Transaction,
   tenant: string,
   input: CompletedActionInteractionInput,
-): Promise<void> {
+): Promise<string | null> {
   const db = tenantDb(trx, tenant);
   const noteType = await db.table('system_interaction_types')
     .where({ type_name: 'Note' })
@@ -24,7 +25,7 @@ export async function recordCompletedActionInteraction(
     throw new Error('System interaction type Note missing');
   }
 
-  await db.table('interactions').insert({
+  const [created] = await db.table('interactions').insert({
     tenant,
     type_id: noteType.type_id,
     contact_name_id: input.opportunity.contact_id ?? null,
@@ -40,5 +41,7 @@ export async function recordCompletedActionInteraction(
     status_id: null,
     visibility: 'internal',
     category: 'opportunity_action',
-  });
+  }).returning('interaction_id');
+  const interactionId = (created as { interaction_id?: unknown } | undefined)?.interaction_id;
+  return interactionId ? String(interactionId) : null;
 }

@@ -77,7 +77,6 @@ describe('OpportunityService mobile REST additions', () => {
       user_first_name: 'Ada',
       date: '2026-07-16T14:00:00.000Z',
       found_totals: [],
-      currency_code: 'USD',
       do_today: [{ opportunity_id: 'opportunity-1', why: { segments: [{ text: 'Call today.' }] } }],
       going_quiet: [],
       money_found: [],

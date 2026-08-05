@@ -239,6 +239,7 @@
       "reviewDraft": "11111",
       "snooze": "11111",
       "snoozeNamed": "11111 {{title}} 11111",
+      "stakesBoth": "11111 {{mrr}} 11111 {{nrr}} 11111",
       "stakesMrr": "11111 {{amount}} 11111",
       "stakesNrr": "11111 {{amount}} 11111",
       "table": {

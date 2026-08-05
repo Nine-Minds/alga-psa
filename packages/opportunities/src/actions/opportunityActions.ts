@@ -88,10 +88,9 @@ export const updateOpportunity = withAuth(async (user, { tenant }, opportunityId
     if (current.values_locked_by_quote && (allowed.mrr_cents !== undefined || allowed.nrr_cents !== undefined || allowed.hardware_cents !== undefined || allowed.currency_code !== undefined)) {
       throw new Error('Opportunity values are locked by an accepted quote');
     }
-    return OpportunityModel.update(trx, tenant, opportunityId, {
-      ...allowed,
-      ...(allowed.next_action_due !== undefined ? { overdue_notified_at: null } : {}),
-    } as Partial<IOpportunity>);
+    // next_action / next_action_due are absent by schema: those columns mirror
+    // the current step, and updateOpportunityNextAction is the way to move it.
+    return OpportunityModel.update(trx, tenant, opportunityId, allowed as Partial<IOpportunity>);
   });
 });
 

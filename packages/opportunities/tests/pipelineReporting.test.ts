@@ -40,6 +40,21 @@ describe('dashboard snapshot stage rows', () => {
     expect(oneTimeCents(rows[0])).toBe(100000);
   });
 
+  it('puts stages in pipeline order no matter how the database groups them', () => {
+    const rows = mapPipelineStageRows([
+      { stage: 'verbal', currency_code: 'USD' },
+      { stage: 'identified', currency_code: 'USD' },
+      { stage: 'proposed', currency_code: 'GBP' },
+      { stage: 'proposed', currency_code: 'EUR' },
+    ]);
+    expect(rows.map((row) => [row.stage, row.currency_code])).toEqual([
+      ['identified', 'USD'],
+      ['proposed', 'EUR'],
+      ['proposed', 'GBP'],
+      ['verbal', 'USD'],
+    ]);
+  });
+
   it('defaults missing sums to zero rather than NaN', () => {
     expect(mapPipelineStageRows([{ stage: 'identified', currency_code: 'USD' }])[0]).toEqual({
       stage: 'identified',
@@ -121,6 +136,37 @@ describe('pipeline report summary', () => {
     );
     expect(usd.closing_30d_count).toBe(0);
   });
+
+  it('counts a deal expected to close today, however late in the day it is', () => {
+    const openRow = (expected_close_date: string) => ({
+      stage: 'proposed' as const,
+      currency_code: 'USD',
+      opportunity_count: 1,
+      mrr_cents: 100000,
+      one_time_cents: 0,
+      expected_close_date,
+    });
+    const lateInTheDay = new Date('2026-08-03T18:30:00.000Z');
+
+    const [today] = summarizePipelineReport([openRow('2026-08-03')], [], lateInTheDay);
+    expect(today.closing_30d_count).toBe(1);
+
+    // The 30th day out is the last one in; the 31st is out.
+    const [day30] = summarizePipelineReport([openRow('2026-09-02')], [], lateInTheDay);
+    expect(day30.closing_30d_count).toBe(1);
+    const [day31] = summarizePipelineReport([openRow('2026-09-03')], [], lateInTheDay);
+    expect(day31.closing_30d_count).toBe(0);
+  });
+
+  it('sums pre-aggregated won rows by their carried counts', () => {
+    const [usd] = summarizePipelineReport(
+      [],
+      [{ currency_code: 'USD', opportunity_count: 3, mrr_cents: 75000, one_time_cents: 15000 }],
+      now,
+    );
+    expect(usd.won_quarter_count).toBe(3);
+    expect(usd.won_quarter_mrr_cents).toBe(75000);
+  });
 });
 
 describe('pipeline report stage breakdown', () => {
@@ -171,5 +217,16 @@ describe('current quarter range', () => {
       endExclusive: '2026-10-01T00:00:00.000Z',
       label: 'Q3 2026',
     });
+  });
+
+  it('brackets the quarter the tenant timezone is standing in, at its local midnights', () => {
+    // 23:00 UTC on 30 June is already 1 July in Berlin: Q3, starting at Berlin midnight.
+    expect(currentQuarterRange(new Date('2026-06-30T23:00:00.000Z'), 'Europe/Berlin')).toEqual({
+      start: '2026-06-30T22:00:00.000Z',
+      endExclusive: '2026-09-30T22:00:00.000Z',
+      label: 'Q3 2026',
+    });
+    // ...while UTC itself is still in Q2.
+    expect(currentQuarterRange(new Date('2026-06-30T23:00:00.000Z')).label).toBe('Q2 2026');
   });
 });

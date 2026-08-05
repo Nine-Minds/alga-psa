@@ -48,7 +48,7 @@ export function calculateForecastBand(
   const composition: IForecastDealContribution[] = rows.map((row) => {
     const mrr = Number(row.mrr_cents ?? 0);
     // One-time value is NRR + hardware everywhere; the forecast band is no exception.
-    const nrr = Number(row.nrr_cents ?? 0) + Number(row.hardware_cents ?? 0);
+    const oneTime = Number(row.nrr_cents ?? 0) + Number(row.hardware_cents ?? 0);
     const won = row.status === 'won';
     const stage = FORECAST_STAGES.includes(row.stage as ForecastStage)
       ? row.stage as ForecastStage
@@ -60,12 +60,12 @@ export function calculateForecastBand(
     const weight = won ? 1 : calibratedRate ?? FORECAST_BASE_RATES[stage];
     const floorEligible = won || (row.status === 'open' && row.stage === 'verbal');
     const floorMrr = floorEligible ? mrr : 0;
-    const floorNrr = floorEligible ? nrr : 0;
+    const floorOneTime = floorEligible ? oneTime : 0;
 
     // The ceiling always contains the floor, then adds weighted non-floor pipeline.
     // This keeps a verbal base rate of 0.8 visible without allowing an inverted band.
     const weightedMrr = won ? mrr : Math.round(mrr * weight);
-    const weightedNrr = won ? nrr : Math.round(nrr * weight);
+    const weightedOneTime = won ? oneTime : Math.round(oneTime * weight);
 
     return {
       opportunity_id: row.opportunity_id,
@@ -78,9 +78,9 @@ export function calculateForecastBand(
       weight,
       weight_source: won ? 'won' : calibratedRate === undefined ? 'base' : 'seller_calibration',
       floor_mrr_cents: floorMrr,
-      floor_nrr_cents: floorNrr,
+      floor_one_time_cents: floorOneTime,
       ceiling_mrr_cents: Math.max(floorMrr, weightedMrr),
-      ceiling_nrr_cents: Math.max(floorNrr, weightedNrr),
+      ceiling_one_time_cents: Math.max(floorOneTime, weightedOneTime),
     };
   });
 
@@ -91,14 +91,14 @@ export function calculateForecastBand(
     const band = byCurrency.get(deal.currency_code) ?? {
       currency_code: deal.currency_code,
       floor_mrr_cents: 0,
-      floor_nrr_cents: 0,
+      floor_one_time_cents: 0,
       ceiling_mrr_cents: 0,
-      ceiling_nrr_cents: 0,
+      ceiling_one_time_cents: 0,
     };
     band.floor_mrr_cents += deal.floor_mrr_cents;
-    band.floor_nrr_cents += deal.floor_nrr_cents;
+    band.floor_one_time_cents += deal.floor_one_time_cents;
     band.ceiling_mrr_cents += deal.ceiling_mrr_cents;
-    band.ceiling_nrr_cents += deal.ceiling_nrr_cents;
+    band.ceiling_one_time_cents += deal.ceiling_one_time_cents;
     byCurrency.set(deal.currency_code, band);
   }
 
