@@ -168,7 +168,7 @@ interface TicketDetailsProps {
     statusOptions?: { value: string; label: string; is_closed?: boolean; className?: string; board_id?: string | null }[];
     agentOptions?: { value: string; label: string }[];
     boardOptions?: { value: string; label: string }[];
-    priorityOptions?: { value: string; label: string }[];
+    priorityOptions?: { value: string; label: string; color?: string | null; is_from_itil_standard?: boolean }[];
     initialCategories?: ITicketCategory[];
     initialClients?: IClient[];
     initialLocations?: IClientLocation[];

@@ -1052,20 +1052,31 @@ export function QuickAddTicket({
   );
 
   const memoizedPriorityOptions = useMemo(
-    () =>
-      priorities.map((priority): SelectOption => ({
-        value: priority.priority_id,
-        label: (
-          <div className="flex items-center gap-2">
-            <div 
-              className="w-3 h-3 rounded-full border border-gray-300" 
-              style={{ backgroundColor: priority.color || '#6B7280' }}
-            />
-            <span>{priority.priority_name}</span>
-          </div>
-        )
-      })),
-    [priorities]
+    () => {
+      // A board only offers the priority family its priority_type declares
+      // (same rule as getBoardDefaultPriorityId and the category picker), so a
+      // custom board never lists leftover ITIL priorities.
+      const selectedBoard = boards.find(board => board.board_id === boardId);
+      const priorityType = selectedBoard?.priority_type ?? boardConfig.priority_type ?? 'custom';
+
+      return priorities
+        .filter(priority => priorityType === 'itil'
+          ? Boolean(priority.is_from_itil_standard)
+          : !priority.is_from_itil_standard)
+        .map((priority): SelectOption => ({
+          value: priority.priority_id,
+          label: (
+            <div className="flex items-center gap-2">
+              <div
+                className="w-3 h-3 rounded-full border border-gray-300"
+                style={{ backgroundColor: priority.color || '#6B7280' }}
+              />
+              <span>{priority.priority_name}</span>
+            </div>
+          )
+        }));
+    },
+    [priorities, boards, boardId, boardConfig.priority_type]
   );
 
   const footer = (

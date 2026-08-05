@@ -69,7 +69,7 @@ interface TicketInfoProps {
   statusOptions: { value: string; label: string }[];
   agentOptions: { value: string; label: string }[];
   boardOptions: { value: string; label: string }[];
-  priorityOptions: { value: string; label: string }[];
+  priorityOptions: { value: string; label: string; is_from_itil_standard?: boolean }[];
   onSelectChange: (field: keyof ITicket, newValue: string | null) => void;
   onSaveChanges?: (
     changes: Record<string, unknown>,
@@ -275,6 +275,18 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
   // Get the effective categories (pending or current)
   const effectiveCategories = pendingCategories ?? categories;
+
+  // A board only offers the priority family its priority_type declares. The
+  // ticket's own priority stays listed so a legacy value still renders.
+  const scopedPriorityOptions = useMemo(() => {
+    const wantsItil = effectiveBoardConfig.priority_type === 'itil';
+    const currentPriorityId = pendingChanges.priority_id ?? originalTicketValues.priority_id ?? null;
+
+    return priorityOptions.filter((option) =>
+      (wantsItil ? Boolean(option.is_from_itil_standard) : !option.is_from_itil_standard)
+      || option.value === currentPriorityId
+    );
+  }, [priorityOptions, effectiveBoardConfig.priority_type, pendingChanges.priority_id, originalTicketValues.priority_id]);
 
   // Calculate ITIL priority when impact and urgency are available
   // Use pending ITIL values if available, otherwise use prop values
@@ -1744,7 +1756,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   <div className={`transition-opacity ${isFieldRemotelyEdited('priority_id') ? 'opacity-60' : ''}`}>
                     <PrioritySelect
                       value={pendingChanges.priority_id ?? originalTicketValues.priority_id ?? null}
-                      options={priorityOptions}
+                      options={scopedPriorityOptions}
                       onValueChange={(value) => handlePendingChange('priority_id', value)}
                       customStyles={customStyles}
                       className="!w-fit"

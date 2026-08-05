@@ -552,11 +552,33 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       tenantScopedTable(trx, 'boards', tenant)
         .orderBy('board_name', 'asc'),
       
-      // Priorities - fetch only tenant-specific ticket priorities
-      tenantScopedTable(trx, 'priorities', tenant)
-        .where({ item_type: 'ticket' })
-        .orderBy('priority_name', 'asc'),
-      
+      // Priorities for the ticket's current board. Mirrors the categories fetch
+      // below: a board only offers the priority family its priority_type declares,
+      // so a custom board never lists leftover ITIL priorities.
+      (async () => {
+        const boardPriorities = () => tenantScopedTable(trx, 'priorities', tenant)
+          .where({ item_type: 'ticket' })
+          .orderBy('priority_name', 'asc');
+
+        if (!ticket.board_id) {
+          return boardPriorities();
+        }
+
+        const ticketBoard = await tenantScopedTable(trx, 'boards', tenant)
+          .where({ board_id: ticket.board_id })
+          .select('priority_type')
+          .first();
+
+        if (ticketBoard?.priority_type === 'itil') {
+          return boardPriorities().where('is_from_itil_standard', true);
+        }
+
+        return boardPriorities()
+          .where((builder: Knex.QueryBuilder) => {
+            builder.where('is_from_itil_standard', false).orWhereNull('is_from_itil_standard');
+          });
+      })(),
+
       // Categories for the ticket's current board. This must match
       // getTicketCategoriesByBoard so the hydrated dropdown doesn't briefly
       // show tenant-wide categories before the client-side board fetch returns.
@@ -780,10 +802,11 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         label: board.board_name || ""
       }));
 
-    const priorityOptions = (priorities as Array<{ priority_id: string; priority_name: string; color?: string | null }>).map((priority) => ({
+    const priorityOptions = (priorities as Array<{ priority_id: string; priority_name: string; color?: string | null; is_from_itil_standard?: boolean | null }>).map((priority) => ({
       value: priority.priority_id,
       label: priority.priority_name,
-      color: priority.color
+      color: priority.color,
+      is_from_itil_standard: Boolean(priority.is_from_itil_standard)
     }));
 
     // Get scheduled hours for ticket

@@ -42,6 +42,7 @@ interface HeroSelectOption {
   is_closed?: boolean;
   board_id?: string | null;
   color?: string | null;
+  is_from_itil_standard?: boolean;
 }
 
 type HeroPendingChanges = Record<string, string | null>;
@@ -521,11 +522,20 @@ export function BentoHero({
     [boardCategories],
   );
 
-  // Priority options may carry the priority color; render it as a dot.
+  // Priority options may carry the priority color; render it as a dot. A board
+  // only offers the priority family its priority_type declares, so a custom board
+  // hides leftover ITIL priorities — except the one this ticket already carries.
+  const effectiveBoardConfig = pendingBoardConfig ?? savedBoardConfig;
+  const displayedPriorityId = displayValue('priority_id');
   const priorityJsxOptions = useMemo<SelectOption[]>(
     () =>
       priorityOptions
         .filter((option) => option.value !== 'all')
+        .filter((option) => (
+          effectiveBoardConfig?.priority_type === 'itil'
+            ? Boolean(option.is_from_itil_standard)
+            : !option.is_from_itil_standard
+        ) || option.value === displayedPriorityId)
         .map((option) => ({
           value: option.value,
           textValue: option.label,
@@ -539,7 +549,7 @@ export function BentoHero({
             </span>
           ),
         })),
-    [priorityOptions],
+    [priorityOptions, effectiveBoardConfig?.priority_type, displayedPriorityId],
   );
 
   // The team currently assigned to the ticket, resolved from the teams pool so
