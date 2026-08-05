@@ -8,6 +8,7 @@ const dbMocks = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/db', () => ({
   tenantDb: dbMocks.tenantDb,
+  registerAfterCommit: vi.fn(),
 }));
 
 import { completeOpportunityNextAction } from '../src/lib/opportunitySteps';

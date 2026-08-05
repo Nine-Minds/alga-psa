@@ -259,6 +259,61 @@ export function WorkItemDrawer({
                     );
                 }
 
+                case 'opportunity_step': {
+                    const stepData = await getWorkItemById(workItem.work_item_id, 'opportunity_step');
+                    if (isReturnedActionError(stepData)) {
+                        toast.error(getErrorMessage(stepData));
+                        return null;
+                    }
+                    if (!stepData) {
+                        toast.error(t('workItemDrawer.errors.failedOpportunityStep', { defaultValue: 'Failed to load deal step data' }));
+                        return null;
+                    }
+
+                    const opportunityUrl = (stepData as { url?: string }).url
+                        ?? (stepData.entity_id ? `/msp/opportunities/${stepData.entity_id}` : null);
+
+                    return (
+                        <div className="min-w-auto h-full bg-white p-6">
+                            <h2 className="text-xl font-bold mb-4">{stepData.name}</h2>
+                            <div className="space-y-3 text-sm">
+                                {stepData.description && (
+                                    <div>
+                                        <div className="font-semibold text-gray-700">
+                                            {t('workItemDrawer.opportunityStep.opportunity', { defaultValue: 'Opportunity' })}
+                                        </div>
+                                        <div>{stepData.description}</div>
+                                    </div>
+                                )}
+                                {stepData.client_name && (
+                                    <div>
+                                        <div className="font-semibold text-gray-700">
+                                            {t('workItemDrawer.opportunityStep.client', { defaultValue: 'Client' })}
+                                        </div>
+                                        <div>{stepData.client_name}</div>
+                                    </div>
+                                )}
+                                {stepData.assigned_to_name && (
+                                    <div>
+                                        <div className="font-semibold text-gray-700">
+                                            {t('workItemDrawer.opportunityStep.assignedTo', { defaultValue: 'Assigned to' })}
+                                        </div>
+                                        <div>{stepData.assigned_to_name}</div>
+                                    </div>
+                                )}
+                            </div>
+                            {opportunityUrl && (
+                                <a
+                                    href={opportunityUrl}
+                                    className="inline-block mt-4 text-[rgb(var(--color-primary-600))] hover:underline"
+                                >
+                                    {t('workItemDrawer.opportunityStep.openOpportunity', { defaultValue: 'Open opportunity' })}
+                                </a>
+                            )}
+                        </div>
+                    );
+                }
+
                 case 'interaction':
                     return (
                         <div className="min-w-auto h-full bg-white">

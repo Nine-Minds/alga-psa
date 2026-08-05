@@ -1,10 +1,65 @@
 import type { Knex } from 'knex';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
-import type { IOpportunity, IOpportunityStep } from '@alga-psa/types';
+import { registerAfterCommit } from '@alga-psa/db';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { IEditScope, type IOpportunity, type IOpportunityStep, type IScheduleEntry } from '@alga-psa/types';
 import { OpportunityModel } from '../models/opportunityModel';
 import { OpportunityStepModel } from '../models/opportunityStepModel';
 import { recordCompletedActionInteraction } from './completedActionInteraction';
 import { currentStep, mirrorOfCurrentStep, nextPlannedStep, scheduleWindow } from './opportunityStepPlan';
+
+/**
+ * Same shape the scheduling domain puts on the bus (see scheduleActions.ts),
+ * so the calendar-sync, search-indexer, and notification subscribers cannot
+ * tell a step-written entry from a hand-written one.
+ */
+function sanitizeScheduleEntryForEvent(entry: IScheduleEntry | null | undefined) {
+  if (!entry) return undefined;
+
+  const toIsoString = (value: unknown): string | null => {
+    if (!value) return null;
+    const date = value instanceof Date ? value : new Date(value as string);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  };
+
+  return {
+    id: entry.entry_id,
+    title: entry.title,
+    scheduledStart: toIsoString(entry.scheduled_start),
+    scheduledEnd: toIsoString(entry.scheduled_end),
+    status: entry.status,
+    workItemId: entry.work_item_id,
+    workItemType: entry.work_item_type,
+    isRecurring: entry.is_recurring,
+    recurrencePattern: entry.recurrence_pattern,
+    assignedUserIds: entry.assigned_user_ids ?? [],
+    isPrivate: entry.is_private,
+  };
+}
+
+/**
+ * The scheduling domain publishes SCHEDULE_ENTRY_* only after its transaction
+ * committed; writing entries from inside the step transaction therefore queues
+ * the event on the commit hook instead of publishing it mid-flight.
+ */
+function publishScheduleEntryEventAfterCommit(
+  trx: Knex.Transaction,
+  tenant: string,
+  actorUserId: string,
+  eventType: 'SCHEDULE_ENTRY_CREATED' | 'SCHEDULE_ENTRY_UPDATED' | 'SCHEDULE_ENTRY_DELETED',
+  entryId: string,
+  changes: Record<string, unknown>,
+): void {
+  registerAfterCommit(trx, () => publishEvent({
+    eventType,
+    payload: {
+      tenantId: tenant,
+      userId: actorUserId,
+      entryId,
+      changes,
+    },
+  }), `${eventType} entry=${entryId}`);
+}
 
 /**
  * Keeps opportunities.next_action / next_action_due equal to the current step.
@@ -32,12 +87,20 @@ export async function syncStepScheduleEntry(
   tenant: string,
   step: IOpportunityStep,
   opportunity: Pick<IOpportunity, 'opportunity_id' | 'title'>,
+  actorUserId: string,
 ): Promise<IOpportunityStep> {
   const shouldSchedule = Boolean(step.has_time && step.due_at && step.assigned_to && step.status !== 'done' && step.status !== 'skipped');
 
   if (!shouldSchedule) {
     if (!step.schedule_entry_id) return step;
+    const before = await ScheduleEntry.get(trx, tenant, step.schedule_entry_id);
     await ScheduleEntry.delete(trx, tenant, step.schedule_entry_id);
+    if (before) {
+      publishScheduleEntryEventAfterCommit(trx, tenant, actorUserId, 'SCHEDULE_ENTRY_DELETED', before.entry_id, {
+        before: sanitizeScheduleEntryForEvent(before),
+        deleteType: IEditScope.SINGLE,
+      });
+    }
     return OpportunityStepModel.update(trx, tenant, step.step_id, { schedule_entry_id: null });
   }
 
@@ -45,13 +108,21 @@ export async function syncStepScheduleEntry(
   const title = `${opportunity.title}: ${step.title}`;
 
   if (step.schedule_entry_id) {
+    const before = await ScheduleEntry.get(trx, tenant, step.schedule_entry_id);
     const updated = await ScheduleEntry.update(trx, tenant, step.schedule_entry_id, {
       title,
       scheduled_start: start as never,
       scheduled_end: end as never,
       assigned_user_ids: [step.assigned_to as string],
     });
-    if (updated) return step;
+    if (updated) {
+      publishScheduleEntryEventAfterCommit(trx, tenant, actorUserId, 'SCHEDULE_ENTRY_UPDATED', updated.entry_id, {
+        before: sanitizeScheduleEntryForEvent(before),
+        after: sanitizeScheduleEntryForEvent(updated),
+        updateType: IEditScope.SINGLE,
+      });
+      return step;
+    }
   }
 
   const created = await ScheduleEntry.create(
@@ -68,7 +139,39 @@ export async function syncStepScheduleEntry(
     } as never,
     { assignedUserIds: [step.assigned_to as string] },
   );
+  publishScheduleEntryEventAfterCommit(trx, tenant, actorUserId, 'SCHEDULE_ENTRY_CREATED', created.entry_id, {
+    after: sanitizeScheduleEntryForEvent(created),
+    assignedUserIds: [step.assigned_to as string],
+  });
   return OpportunityStepModel.update(trx, tenant, step.step_id, { schedule_entry_id: created.entry_id });
+}
+
+/**
+ * Sweeps every calendar entry the plan owns: the entries are deleted, the
+ * steps' pointers cleared, and a SCHEDULE_ENTRY_DELETED queued per entry.
+ * Closing a deal keeps its steps as plan history but takes them off calendars;
+ * deleting a deal calls this before the steps themselves cascade away.
+ */
+export async function removeOpportunityStepScheduleEntries(
+  trx: Knex.Transaction,
+  tenant: string,
+  opportunityId: string,
+  actorUserId: string,
+): Promise<void> {
+  await OpportunityStepModel.lockForOpportunity(trx, tenant, opportunityId);
+  const steps = await OpportunityStepModel.listForOpportunity(trx, tenant, opportunityId);
+  for (const step of steps) {
+    if (!step.schedule_entry_id) continue;
+    const before = await ScheduleEntry.get(trx, tenant, step.schedule_entry_id);
+    await ScheduleEntry.delete(trx, tenant, step.schedule_entry_id);
+    await OpportunityStepModel.update(trx, tenant, step.step_id, { schedule_entry_id: null });
+    if (before) {
+      publishScheduleEntryEventAfterCommit(trx, tenant, actorUserId, 'SCHEDULE_ENTRY_DELETED', before.entry_id, {
+        before: sanitizeScheduleEntryForEvent(before),
+        deleteType: IEditScope.SINGLE,
+      });
+    }
+  }
 }
 
 /**
@@ -174,7 +277,7 @@ export async function completeOpportunityStepCore(
     interaction_id: interactionId,
   });
   if (!completed) throw new Error('Step is already done');
-  await syncStepScheduleEntry(trx, tenant, completed, opportunity);
+  await syncStepScheduleEntry(trx, tenant, completed, opportunity, actorUserId);
 
   // Exactly one current step leaves this transaction: demote before promoting
   // so the single-current index never trips, and only fall back to the next

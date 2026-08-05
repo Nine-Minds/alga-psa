@@ -563,6 +563,14 @@ export async function fetchScheduleActivities(
     }
     let userEntries = await getScheduleActivityEntriesForUser(tenant, userId, start, end);
 
+    // A timed opportunity step also has a schedule entry (work_item_type
+    // 'opportunity_step'), but the feed already surfaces the step itself via
+    // fetchOpportunityActivities — the canonical item, which carries the deal
+    // context. Drop the schedule mirror here so the step doesn't appear twice.
+    // Scoped to this feed fetcher on purpose: the schedule calendar and other
+    // consumers of getScheduleActivityEntriesForUser still see these entries.
+    userEntries = userEntries.filter(entry => entry.work_item_type !== 'opportunity_step');
+
     // Also include ad-hoc entries regardless of the date window — they may have no
     // scheduled time (which the window query above drops) or fall outside now→+30d.
     const adHocEntries = await fetchAdHocEntriesForUser(knex, tenant, userId);

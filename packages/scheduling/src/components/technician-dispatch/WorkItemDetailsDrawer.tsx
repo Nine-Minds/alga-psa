@@ -174,6 +174,69 @@ export function WorkItemDetailsDrawer({
                     );
                 }
 
+                case 'opportunity_step': {
+                    const stepData = await getWorkItemById(workItem.work_item_id, 'opportunity_step');
+                    if (isReturnedActionError(stepData)) {
+                        toast.error(getErrorMessage(stepData));
+                        return null;
+                    }
+                    if (!stepData) {
+                        toast.error(t('details.toasts.failedToLoadOpportunityStepData', { defaultValue: 'Failed to load deal step data' }));
+                        return null;
+                    }
+
+                    const opportunityUrl = (stepData as { url?: string }).url
+                        ?? (stepData.entity_id ? `/msp/opportunities/${stepData.entity_id}` : null);
+
+                    return (
+                        <div className="h-full p-4">
+                            <h2 className="text-2xl font-bold mb-4">{stepData.name}</h2>
+                            <div className="space-y-3 text-sm">
+                                {stepData.description && (
+                                    <div>
+                                        <div className="font-semibold text-gray-700">
+                                            {t('details.fields.opportunity', { defaultValue: 'Opportunity' })}
+                                        </div>
+                                        <div>{stepData.description}</div>
+                                    </div>
+                                )}
+                                {stepData.client_name && (
+                                    <div>
+                                        <div className="font-semibold text-gray-700">
+                                            {t('details.fields.client', { defaultValue: 'Client' })}
+                                        </div>
+                                        <div>{stepData.client_name}</div>
+                                    </div>
+                                )}
+                                {stepData.assigned_to_name && (
+                                    <div>
+                                        <div className="font-semibold text-gray-700">
+                                            {t('details.fields.assignedTo', { defaultValue: 'Assigned to' })}
+                                        </div>
+                                        <div>{stepData.assigned_to_name}</div>
+                                    </div>
+                                )}
+                                {stepData.due_date && (
+                                    <div>
+                                        <div className="font-semibold text-gray-700">
+                                            {t('details.fields.dueDate', { defaultValue: 'Due' })}
+                                        </div>
+                                        <div>{formatLocaleDate(new Date(stepData.due_date))}</div>
+                                    </div>
+                                )}
+                            </div>
+                            {opportunityUrl && (
+                                <a
+                                    href={opportunityUrl}
+                                    className="inline-block mt-4 text-[rgb(var(--color-primary-600))] hover:underline"
+                                >
+                                    {t('details.actions.openOpportunity', { defaultValue: 'Open opportunity' })}
+                                </a>
+                            )}
+                        </div>
+                    );
+                }
+
                 case 'interaction': {
                     console.log('Loading interaction with ID:', workItem.work_item_id);
                     const interactionData = await getSchedulingInteractionById(workItem.work_item_id);

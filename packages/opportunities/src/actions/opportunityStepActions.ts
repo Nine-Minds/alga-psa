@@ -157,7 +157,7 @@ export const createOpportunityStep = withAuth(async (
       sort_order: await OpportunityStepModel.nextSortOrder(trx, tenant, opportunityId),
       created_by: actorId(user),
     });
-    const synced = await syncStepScheduleEntry(trx, tenant, created, opportunity);
+    const synced = await syncStepScheduleEntry(trx, tenant, created, opportunity, actorId(user));
     await mirrorCurrentStepOntoOpportunity(trx, tenant, opportunityId);
     return synced;
   });
@@ -200,7 +200,7 @@ export const updateOpportunityStep = withAuth(async (
         if (candidate) await OpportunityStepModel.update(trx, tenant, candidate.step_id, { status: 'current' });
       }
     }
-    const synced = await syncStepScheduleEntry(trx, tenant, updated, opportunity);
+    const synced = await syncStepScheduleEntry(trx, tenant, updated, opportunity, actorId(user));
     await mirrorCurrentStepOntoOpportunity(trx, tenant, existing.opportunity_id);
     return synced;
   });
@@ -219,7 +219,7 @@ export const deleteOpportunityStep = withAuth(async (
     await OpportunityStepModel.lockForOpportunity(trx, tenant, existing.opportunity_id);
     const opportunity = await OpportunityModel.getById(trx, tenant, existing.opportunity_id);
     if (opportunity && existing.schedule_entry_id) {
-      await syncStepScheduleEntry(trx, tenant, { ...existing, status: 'skipped' }, opportunity);
+      await syncStepScheduleEntry(trx, tenant, { ...existing, status: 'skipped' }, opportunity, actorId(user));
     }
     const deleted = await OpportunityStepModel.delete(trx, tenant, stepId);
     // Deleting the current step does not strand the plan: the next planned
@@ -378,7 +378,7 @@ export const updateOpportunityNextAction = withAuth(async (
         ...(data.next_action !== undefined ? { title: data.next_action } : {}),
         ...(data.next_action_due !== undefined ? { due_at: data.next_action_due } : {}),
       });
-      await syncStepScheduleEntry(trx, tenant, updated, opportunity);
+      await syncStepScheduleEntry(trx, tenant, updated, opportunity, actorId(user));
     } else if (data.next_action) {
       const created = await OpportunityStepModel.create(trx, tenant, {
         opportunity_id: opportunityId,
@@ -389,7 +389,7 @@ export const updateOpportunityNextAction = withAuth(async (
         sort_order: await OpportunityStepModel.nextSortOrder(trx, tenant, opportunityId),
         created_by: actorId(user),
       });
-      await syncStepScheduleEntry(trx, tenant, created, opportunity);
+      await syncStepScheduleEntry(trx, tenant, created, opportunity, actorId(user));
     } else {
       throw new Error('Opportunity has no current step to reschedule');
     }

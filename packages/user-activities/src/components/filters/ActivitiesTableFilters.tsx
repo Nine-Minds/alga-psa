@@ -95,6 +95,9 @@ export function ActivitiesTableFilters({
   const selectedTypes = filters.types || [];
   const hasTickets = selectedTypes.includes(ActivityType.TICKET);
   const hasProjectTasks = selectedTypes.includes(ActivityType.PROJECT_TASK);
+  // Opportunity steps ride the Schedule source, so their scope filter is only
+  // meaningful while Schedule activities are shown.
+  const hasSchedule = selectedTypes.includes(ActivityType.SCHEDULE);
 
   const isPriorityFilterAvailable =
     selectedTypes.length === 1 && PRIORITY_FILTERABLE_TYPES.has(selectedTypes[0]);
@@ -135,6 +138,9 @@ export function ActivitiesTableFilters({
         delete next.excludePhaseIds;
         delete next.excludeProjectStatusMappingIds;
         delete next.projectTaskTagIds;
+      }
+      if (!newTypes.includes(ActivityType.SCHEDULE)) {
+        delete next.opportunityScope;
       }
 
       const stillFilterable =
@@ -743,31 +749,33 @@ export function ActivitiesTableFilters({
 
         {/* Deal steps carry their own assignee, so "mine" and "my deals" are
             different questions once work is handed to a colleague. */}
-        <div className="w-[190px]">
-          <Label htmlFor="opportunity-scope-select" className="sr-only">
-            {t('filters.labels.opportunityScope', { defaultValue: 'Deal work' })}
-          </Label>
-          <CustomSelect
-            id="opportunity-scope-select"
-            value={filters.opportunityScope ?? 'assigned'}
-            onValueChange={handleOpportunityScopeChange}
-            options={[
-              {
-                value: 'assigned',
-                label: t('filters.opportunityScopeOptions.assigned', { defaultValue: 'Deal steps assigned' }),
-              },
-              {
-                value: 'owned',
-                label: t('filters.opportunityScopeOptions.owned', { defaultValue: 'Deal steps on owned deals' }),
-              },
-              {
-                value: 'all',
-                label: t('filters.opportunityScopeOptions.all', { defaultValue: 'Deal steps assigned or owned' }),
-              },
-            ]}
-            size="sm"
-          />
-        </div>
+        {hasSchedule && (
+          <div className="w-[190px]">
+            <Label htmlFor="opportunity-scope-select" className="sr-only">
+              {t('filters.labels.opportunityScope', { defaultValue: 'Deal work' })}
+            </Label>
+            <CustomSelect
+              id="opportunity-scope-select"
+              value={filters.opportunityScope ?? 'assigned'}
+              onValueChange={handleOpportunityScopeChange}
+              options={[
+                {
+                  value: 'assigned',
+                  label: t('filters.opportunityScopeOptions.assigned', { defaultValue: 'Deal steps assigned' }),
+                },
+                {
+                  value: 'owned',
+                  label: t('filters.opportunityScopeOptions.owned', { defaultValue: 'Deal steps on owned deals' }),
+                },
+                {
+                  value: 'all',
+                  label: t('filters.opportunityScopeOptions.all', { defaultValue: 'Deal steps assigned or owned' }),
+                },
+              ]}
+              size="sm"
+            />
+          </div>
+        )}
 
       </div>
 
