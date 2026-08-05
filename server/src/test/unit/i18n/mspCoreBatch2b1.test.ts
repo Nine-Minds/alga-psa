@@ -51,6 +51,12 @@ const extractVariables = (value: string): string[] => {
   return matches ? matches.map((match) => match.trim()) : [];
 };
 
+// i18next interpolates by name, so a translation may order placeholders however
+// its language reads best ("Liczba wyników dla {{query}}: {{count}}"). Only the
+// SET of variables has to match English; asserting order would reject correct
+// translations.
+const extractVariableSet = (value: string): string[] => extractVariables(value).sort();
+
 const expectedPseudoValue = (value: string, fill: '11111' | '55555'): string => {
   const variables = extractVariables(value);
   if (variables.length === 0) {
@@ -254,7 +260,7 @@ describe('MSP core locale batch 2b-1', () => {
     for (const locale of productionLocales.filter((locale) => locale !== 'en')) {
       const localeLeaves = collectLeafEntries(readLocaleJson(locale));
       for (const [key, englishValue] of englishLeaves) {
-        expect(extractVariables(localeLeaves.get(key) ?? '')).toEqual(extractVariables(englishValue));
+        expect(extractVariableSet(localeLeaves.get(key) ?? '')).toEqual(extractVariableSet(englishValue));
       }
     }
   });
