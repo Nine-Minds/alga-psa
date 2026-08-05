@@ -43,6 +43,22 @@ Fallback prerequisites:
 
 If fallback credentials are configured, eligible app providers are returned by discovery and can be used by resolver/start flow. If not configured, provider buttons remain disabled.
 
+### Setting Google SSO credentials
+
+`GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` are used exclusively for Google Sign-In (the app-level SSO fallback). How they are populated depends on your deployment method.
+
+**Helm deployments:** Add a `google_sso` block to your values to run Google Sign-In on its own dedicated OAuth client (the "AlgaPSA Identity" client), independent of the Gmail inbox integration:
+
+```yaml
+google_sso:
+  client_id: "YOUR_SSO_CLIENT_ID.apps.googleusercontent.com"
+  client_secret: "YOUR_SSO_CLIENT_SECRET"
+```
+
+If `google_sso` is absent, the chart falls back to the `gmail_integration` credentials — preserving historical behavior so existing releases are unaffected. However, running sign-in and inbox on the same OAuth client couples the two integrations: reconfiguring or disabling the Gmail client also removes the Google Sign-In button. Using a dedicated `google_sso` block lets you manage them independently, so sign-in continues to work even if the inbox integration is reconfigured or disabled.
+
+**Docker Compose deployments:** Set the `google_oauth_client_id` and `google_oauth_client_secret` secret files as described in the [setup guide](../getting-started/setup_guide.md#email--oauth-secrets).
+
 ## Security and UX Contracts
 
 - Discovery and resolve responses preserve anti-enumeration semantics and do not expose user existence.
