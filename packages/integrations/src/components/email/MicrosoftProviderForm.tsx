@@ -90,7 +90,7 @@ export function MicrosoftProviderForm({
   });
 
   const form = useForm<MicrosoftProviderFormData>({
-    resolver: zodResolver(microsoftProviderSchema),
+    resolver: zodResolver(microsoftProviderSchema) as any,
     defaultValues: provider && provider.microsoftConfig ? {
       providerName: provider.providerName,
       senderDisplayName: provider.senderDisplayName || '',
