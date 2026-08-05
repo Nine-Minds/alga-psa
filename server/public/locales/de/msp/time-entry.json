@@ -316,7 +316,14 @@
       "failedTaskPhase": "Die Aufgabenphase konnte nicht geladen werden",
       "failedTaskProjectMetadata": "Das Laden der Metadaten des Aufgabenprojekts ist fehlgeschlagen",
       "failedAdHoc": "Daten des Ad-hoc-Eintrags konnten nicht geladen werden",
-      "unsupportedType": "Nicht unterstützter Arbeitsaufgabentyp"
+      "unsupportedType": "Nicht unterstützter Arbeitsaufgabentyp",
+      "failedOpportunityStep": "Schrittdaten der Gelegenheit konnten nicht geladen werden"
+    },
+    "opportunityStep": {
+      "opportunity": "Gelegenheit",
+      "client": "Kunde",
+      "assignedTo": "Zugewiesen an",
+      "openOpportunity": "Gelegenheit öffnen"
     }
   },
   "timeSheetClient": {

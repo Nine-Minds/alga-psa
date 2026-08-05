@@ -1,6 +1,6 @@
 {
   "page": {
-    "title": "Despacho de t\u00e9cnicos",
+    "title": "Despacho de técnicos",
     "filteredWorkItems": "Mostrando elementos de trabajo filtrados"
   },
   "workItems": {
@@ -14,7 +14,7 @@
     "pagination": {
       "previous": "Anterior",
       "next": "Siguiente",
-      "pageInfo": "P\u00e1gina {{current}} de {{total}}",
+      "pageInfo": "Página {{current}} de {{total}}",
       "showing": "Mostrando {{count}} de {{total}} elementos"
     }
   },
@@ -23,7 +23,7 @@
     "prev": "< Anterior",
     "next": "Siguiente >",
     "today": "Hoy",
-    "viewDay": "D\u00eda",
+    "viewDay": "Día",
     "viewWeek": "Semana",
     "prevAria": "Anterior {{mode}}",
     "nextAria": "Siguiente {{mode}}",
@@ -42,7 +42,7 @@
       "title": "Detalles de la solicitud de cita"
     },
     "sections": {
-      "approvalInformation": "Informaci\u00f3n de aprobaci\u00f3n"
+      "approvalInformation": "Información de aprobación"
     },
     "fields": {
       "service": "Servicio",
@@ -51,16 +51,19 @@
       "contact": "Contacto",
       "company": "Empresa",
       "requester": "Solicitante",
-      "email": "Correo electr\u00f3nico",
-      "phone": "Tel\u00e9fono",
+      "email": "Correo electrónico",
+      "phone": "Teléfono",
       "requestedDate": "Fecha solicitada",
       "requestedTime": "Hora solicitada",
-      "duration": "Duraci\u00f3n",
-      "preferredTechnician": "T\u00e9cnico preferido",
-      "description": "Descripci\u00f3n",
+      "duration": "Duración",
+      "preferredTechnician": "Técnico preferido",
+      "description": "Descripción",
       "declineReason": "Motivo del rechazo",
       "approvedBy": "Aprobado por:",
-      "approvedAt": "Aprobado el:"
+      "approvedAt": "Aprobado el:",
+      "opportunity": "Oportunidad",
+      "assignedTo": "Asignado a",
+      "dueDate": "debido"
     },
     "messages": {
       "notAvailable": "N/D",
@@ -68,20 +71,24 @@
     },
     "toasts": {
       "noUsersAvailable": "No hay usuarios disponibles en el sistema",
-      "noUserSession": "No se encontr\u00f3 una sesi\u00f3n de usuario",
+      "noUserSession": "No se encontró una sesión de usuario",
       "failedToLoadTicketData": "No se pudieron cargar los datos del ticket",
       "failedToLoadProjectTaskData": "No se pudieron cargar los datos de la tarea del proyecto",
       "failedToLoadAdHocEntryData": "No se pudieron cargar los datos de la entrada ad hoc",
-      "failedToLoadInteractionData": "No se pudieron cargar los datos de la interacci\u00f3n",
-      "failedToLoadAppointmentRequestData": "No se pudieron cargar los datos de la solicitud de cita"
+      "failedToLoadInteractionData": "No se pudieron cargar los datos de la interacción",
+      "failedToLoadAppointmentRequestData": "No se pudieron cargar los datos de la solicitud de cita",
+      "failedToLoadOpportunityStepData": "No se pudieron cargar los datos del paso de la oportunidad"
     },
     "errors": {
-      "loadUsers": "No se pudieron cargar los usuarios. Intenta refrescar la p\u00e1gina.",
+      "loadUsers": "No se pudieron cargar los usuarios. Intenta refrescar la página.",
       "loadingContent": "Error al cargar el contenido",
-      "tryAgain": "Int\u00e9ntalo de nuevo"
+      "tryAgain": "Inténtalo de nuevo"
     },
     "units": {
       "minutes": "minutos"
+    },
+    "actions": {
+      "openOpportunity": "Abrir oportunidad"
     }
   },
   "dashboard": {
@@ -90,9 +97,9 @@
       "allClosed": "Todos cerrados"
     },
     "messages": {
-      "accessDenied": "Acceso denegado: no tienes permiso para ver el panel de despacho de t\u00e9cnicos.",
+      "accessDenied": "Acceso denegado: no tienes permiso para ver el panel de despacho de técnicos.",
       "unknownError": "Se produjo un error desconocido.",
-      "permissionDeniedSchedule": "No tienes permiso para programar para este t\u00e9cnico.",
+      "permissionDeniedSchedule": "No tienes permiso para programar para este técnico.",
       "couldNotLoadWorkItemDetails": "No se pudieron cargar los detalles del elemento de trabajo."
     },
     "errors": {
@@ -128,7 +135,7 @@
       "unknown": "Desconocido",
       "unassigned": "Sin asignar",
       "unknownAgent": "Agente desconocido",
-      "untitled": "Sin t\u00edtulo",
+      "untitled": "Sin título",
       "thisScheduleEntry": "esta entrada del calendario"
     },
     "tooltip": {
@@ -136,12 +143,12 @@
       "eventDetails": "{{title}}\nAsignado a: {{assigned}}\nInicio: {{start}}\nFin: {{end}}"
     },
     "errors": {
-      "validateDeletion": "No se pudo validar la eliminaci\u00f3n. Int\u00e9ntalo de nuevo."
+      "validateDeletion": "No se pudo validar la eliminación. Inténtalo de nuevo."
     }
   },
   "badges": {
-    "needsDispatch": "Necesita asignaci\u00f3n",
-    "needsDispatchFor": "Necesita asignaci\u00f3n para: {{agents}}"
+    "needsDispatch": "Necesita asignación",
+    "needsDispatchFor": "Necesita asignación para: {{agents}}"
   },
   "time": {
     "suffixes": {

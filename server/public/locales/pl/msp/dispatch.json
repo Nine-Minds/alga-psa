@@ -60,7 +60,10 @@
       "description": "Opis",
       "declineReason": "Powód odrzucenia",
       "approvedBy": "Zatwierdził:",
-      "approvedAt": "Zatwierdzono:"
+      "approvedAt": "Zatwierdzono:",
+      "opportunity": "Okazja",
+      "assignedTo": "Przypisano do",
+      "dueDate": "Termin"
     },
     "messages": {
       "notAvailable": "N/D",
@@ -73,7 +76,8 @@
       "failedToLoadProjectTaskData": "Nie udało się wczytać danych zadania projektu",
       "failedToLoadAdHocEntryData": "Nie udało się wczytać danych wpisu ad hoc",
       "failedToLoadInteractionData": "Nie udało się wczytać danych interakcji",
-      "failedToLoadAppointmentRequestData": "Nie udało się wczytać danych prośby o wizytę"
+      "failedToLoadAppointmentRequestData": "Nie udało się wczytać danych prośby o wizytę",
+      "failedToLoadOpportunityStepData": "Nie udało się załadować danych kroku okazji"
     },
     "errors": {
       "loadUsers": "Nie udało się wczytać użytkowników. Odśwież stronę i spróbuj ponownie.",
@@ -82,6 +86,9 @@
     },
     "units": {
       "minutes": "minut"
+    },
+    "actions": {
+      "openOpportunity": "Otwórz okazję"
     }
   },
   "dashboard": {

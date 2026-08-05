@@ -316,7 +316,14 @@
       "failedTaskPhase": "Échec du chargement de la phase de tâche",
       "failedTaskProjectMetadata": "Échec du chargement des métadonnées du projet de tâche",
       "failedAdHoc": "Échec du chargement des données de l'entrée ad hoc",
-      "unsupportedType": "Type d'élément de travail non pris en charge"
+      "unsupportedType": "Type d'élément de travail non pris en charge",
+      "failedOpportunityStep": "Impossible de charger les données de l'étape de l'opportunité"
+    },
+    "opportunityStep": {
+      "opportunity": "Opportunité",
+      "client": "Client",
+      "assignedTo": "Affecté à",
+      "openOpportunity": "Ouvrir l'opportunité"
     }
   },
   "timeSheetClient": {

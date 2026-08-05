@@ -316,7 +316,14 @@
       "failedTaskPhase": "Failed to load task phase",
       "failedTaskProjectMetadata": "Failed to load task project metadata",
       "failedAdHoc": "Failed to load ad-hoc entry data",
-      "unsupportedType": "Unsupported work item type"
+      "unsupportedType": "Unsupported work item type",
+      "failedOpportunityStep": "Failed to load deal step data"
+    },
+    "opportunityStep": {
+      "opportunity": "Opportunity",
+      "client": "Client",
+      "assignedTo": "Assigned to",
+      "openOpportunity": "Open opportunity"
     }
   },
   "timeSheetClient": {

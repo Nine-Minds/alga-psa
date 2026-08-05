@@ -316,7 +316,14 @@
       "failedTaskPhase": "Impossibile caricare la fase dell'attività",
       "failedTaskProjectMetadata": "Impossibile caricare i metadati del progetto dell'attività",
       "failedAdHoc": "Impossibile caricare i dati della voce ad hoc",
-      "unsupportedType": "Tipo di elemento di lavoro non supportato"
+      "unsupportedType": "Tipo di elemento di lavoro non supportato",
+      "failedOpportunityStep": "Impossibile caricare i dati del passaggio dell'opportunità"
+    },
+    "opportunityStep": {
+      "opportunity": "Opportunità",
+      "client": "Cliente",
+      "assignedTo": "Assegnato a",
+      "openOpportunity": "Apri opportunità"
     }
   },
   "timeSheetClient": {

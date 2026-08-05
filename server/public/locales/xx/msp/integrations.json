@@ -1724,7 +1724,7 @@
           "guidanceSummary": "11111",
           "noVisibleBindings": "11111",
           "readinessTitle": "11111",
-          "ready": "11111 {{capabilities}}",
+          "ready": "11111 {{capabilities}} 11111",
           "readyNoCapabilities": "11111",
           "setDefault": "11111",
           "storedSecret": "11111",

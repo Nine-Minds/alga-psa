@@ -316,7 +316,14 @@
       "failedTaskPhase": "Kan de taakfase niet laden",
       "failedTaskProjectMetadata": "Kan de metagegevens van het taakproject niet laden",
       "failedAdHoc": "Gegevens van ad-hoc item konden niet worden geladen",
-      "unsupportedType": "Niet-ondersteund werkitemtype"
+      "unsupportedType": "Niet-ondersteund werkitemtype",
+      "failedOpportunityStep": "Kan de stapgegevens van de gelegenheid niet laden"
+    },
+    "opportunityStep": {
+      "opportunity": "Gelegenheid",
+      "client": "Klant",
+      "assignedTo": "Toegewezen aan",
+      "openOpportunity": "Gelegenheid openen"
     }
   },
   "timeSheetClient": {

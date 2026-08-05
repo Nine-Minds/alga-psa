@@ -60,7 +60,10 @@
       "description": "Descrizione",
       "declineReason": "Motivo del rifiuto",
       "approvedBy": "Approvato da:",
-      "approvedAt": "Approvato il:"
+      "approvedAt": "Approvato il:",
+      "opportunity": "Opportunità",
+      "assignedTo": "Assegnato a",
+      "dueDate": "Dovuto"
     },
     "messages": {
       "notAvailable": "N/D",
@@ -73,7 +76,8 @@
       "failedToLoadProjectTaskData": "Impossibile caricare i dati della task di progetto",
       "failedToLoadAdHocEntryData": "Impossibile caricare i dati della voce ad hoc",
       "failedToLoadInteractionData": "Impossibile caricare i dati dell'interazione",
-      "failedToLoadAppointmentRequestData": "Impossibile caricare i dati della richiesta di appuntamento"
+      "failedToLoadAppointmentRequestData": "Impossibile caricare i dati della richiesta di appuntamento",
+      "failedToLoadOpportunityStepData": "Impossibile caricare i dati del passaggio dell'opportunità"
     },
     "errors": {
       "loadUsers": "Impossibile caricare gli utenti. Riprova aggiornando la pagina.",
@@ -82,6 +86,9 @@
     },
     "units": {
       "minutes": "minuti"
+    },
+    "actions": {
+      "openOpportunity": "Apri opportunità"
     }
   },
   "dashboard": {
