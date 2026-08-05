@@ -135,7 +135,14 @@ describe('CollabTestPageClient', () => {
       expect(getBlockContentMock).toHaveBeenCalledWith('doc-789');
     });
 
-    fireEvent.click(getByText('Snapshot to DB'));
+    // The button stays disabled until the document finishes loading; clicking
+    // before then is a no-op the component never replays.
+    const snapshotButton = getByText('Snapshot to DB') as HTMLButtonElement;
+    await waitFor(() => {
+      expect(snapshotButton.disabled).toBe(false);
+    });
+
+    fireEvent.click(snapshotButton);
 
     expect(await findByText('Snapshot saved to document_block_content.')).toBeTruthy();
     expect(syncCollabSnapshot).toHaveBeenCalledWith('doc-789');

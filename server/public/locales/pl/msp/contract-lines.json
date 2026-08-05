@@ -58,6 +58,9 @@
         },
         "description": "Nazwij linię umowy i wybierz domyślny sposób rozliczeń.",
         "heading": "Podstawy linii kontraktowej",
+        "invoiceLineDescriptionHelp": "Używany dosłownie jako tekst pozycji faktury dla tej opłaty stałej. Pozostaw puste, aby użyć nazwy linii kontraktu.",
+        "invoiceLineDescriptionLabel": "Opis pozycji faktury",
+        "invoiceLineDescriptionPlaceholder": "np. Miesięczna konserwacja systemu telefonicznego zgodnie z umową z 2019 r.",
         "nameLabel": "Nazwa linii kontraktu *",
         "namePlaceholder": "np. Zarządzane wsparcie — złoto"
       },

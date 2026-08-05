@@ -58,6 +58,9 @@
         },
         "description": "Assegna un nome alla riga del contratto e scegli come fatturare per impostazione predefinita.",
         "heading": "Nozioni di base sulla linea di contratto",
+        "invoiceLineDescriptionHelp": "Utilizzato testualmente come testo della riga di fattura per questa tariffa fissa. Lascia vuoto per usare il nome della linea di contratto.",
+        "invoiceLineDescriptionLabel": "Descrizione della riga di fattura",
+        "invoiceLineDescriptionPlaceholder": "per esempio. Manutenzione mensile del sistema telefonico secondo il contratto del 2019",
         "nameLabel": "Nome della linea di contratto *",
         "namePlaceholder": "per esempio. Supporto gestito - Oro"
       },

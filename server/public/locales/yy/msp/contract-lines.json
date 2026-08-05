@@ -58,6 +58,9 @@
         },
         "description": "55555",
         "heading": "55555",
+        "invoiceLineDescriptionHelp": "55555",
+        "invoiceLineDescriptionLabel": "55555",
+        "invoiceLineDescriptionPlaceholder": "55555",
         "nameLabel": "55555",
         "namePlaceholder": "55555"
       },
