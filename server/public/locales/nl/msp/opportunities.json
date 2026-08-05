@@ -239,6 +239,7 @@
       "reviewDraft": "Bekijk het concept",
       "snooze": "Snoozen",
       "snoozeNamed": "Snoozen {{title}}",
+      "stakesBoth": "{{mrr}}/mnd aan terugkerend werk en {{nrr}} aan projectwerk zijn al zichtbaar in uw eigen gegevens.",
       "stakesMrr": "{{amount}}/mnd aan terugkerend werk is al zichtbaar in uw eigen gegevens.",
       "stakesNrr": "{{amount}} aan projectwerk is al zichtbaar in uw eigen gegevens.",
       "table": {

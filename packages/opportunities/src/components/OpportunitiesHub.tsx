@@ -20,9 +20,9 @@ import {
   declareOpportunityStage,
   listOpportunities,
   loseOpportunity,
-  updateOpportunity,
 } from '../actions/opportunityActions';
 import { getWorkQueue } from '../actions/workQueueActions';
+import { updateOpportunityNextAction } from '../actions/opportunityStepActions';
 import { acceptSuggestion, dismissSuggestion, snoozeSuggestion } from '../actions/suggestionActions';
 import { createWhitespaceSuggestion } from '../actions/generatorActions';
 import { DEFAULT_OPPORTUNITY_PAGE_SIZE } from '../lib/opportunityListPaging';
@@ -133,7 +133,8 @@ export function OpportunitiesHub({
     const base = item?.next_action_due ? new Date(item.next_action_due) : new Date();
     const snoozed = new Date(Math.max(base.getTime(), Date.now()) + 3 * 86400000);
     try {
-      await updateOpportunity(opportunityId, { next_action_due: snoozed.toISOString() });
+      // Snoozing moves the current step's due date; the mirror follows it.
+      await updateOpportunityNextAction(opportunityId, { next_action_due: snoozed.toISOString() });
       toast.success(t('opportunities.toast.snoozed', 'Snoozed for a few days'));
       await refresh();
     } catch (err) {

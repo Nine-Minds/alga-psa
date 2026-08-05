@@ -239,6 +239,7 @@
       "reviewDraft": "Rivedi la bozza",
       "snooze": "Posticipa",
       "snoozeNamed": "Posticipa {{title}}",
+      "stakesBoth": "{{mrr}}/mese di lavoro ricorrente e {{nrr}} di lavoro di progetto sono già visibili nei tuoi dati.",
       "stakesMrr": "{{amount}}/mese di lavoro ricorrente è già visibile nei tuoi dati.",
       "stakesNrr": "{{amount}} di lavoro di progetto è già visibile nei tuoi dati.",
       "table": {

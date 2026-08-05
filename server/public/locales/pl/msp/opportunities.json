@@ -241,6 +241,7 @@
       "reviewDraft": "Przejrzyj wersję roboczą",
       "snooze": "Odłóż",
       "snoozeNamed": "Odłóż {{title}}",
+      "stakesBoth": "{{mrr}}/mies. pracy cyklicznej i {{nrr}} pracy projektowej są już widoczne w Twoich danych.",
       "stakesMrr": "{{amount}}/mies. pracy cyklicznej jest już widoczne w Twoich danych.",
       "stakesNrr": "{{amount}} pracy projektowej jest już widoczne w Twoich danych.",
       "table": {

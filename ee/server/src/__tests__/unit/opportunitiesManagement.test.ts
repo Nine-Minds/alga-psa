@@ -52,9 +52,9 @@ describe('enterprise opportunity management behavior', () => {
     expect(band.by_currency).toEqual([{
       currency_code: 'USD',
       floor_mrr_cents: 1500,
-      floor_nrr_cents: 3000,
+      floor_one_time_cents: 3000,
       ceiling_mrr_cents: 1650,
-      ceiling_nrr_cents: 3300,
+      ceiling_one_time_cents: 3300,
     }]);
     expect(band.composition.find((row) => row.opportunity_id === 'qualified')).toMatchObject({
       weight: 0.15,

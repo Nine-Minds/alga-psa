@@ -239,6 +239,7 @@
       "reviewDraft": "Revisar el borrador",
       "snooze": "posponer",
       "snoozeNamed": "Posponer {{title}}",
+      "stakesBoth": "{{mrr}}/mes de trabajo recurrente y {{nrr}} de trabajo de proyecto ya están visibles en sus propios datos.",
       "stakesMrr": "{{amount}}/mes de trabajo recurrente ya está visible en sus propios datos.",
       "stakesNrr": "{{amount}} de trabajo de proyecto ya está visible en sus propios datos.",
       "table": {

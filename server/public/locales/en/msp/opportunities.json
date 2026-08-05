@@ -239,6 +239,7 @@
       "reviewDraft": "Review the draft",
       "snooze": "Snooze",
       "snoozeNamed": "Snooze {{title}}",
+      "stakesBoth": "{{mrr}}/mo of recurring work and {{nrr}} of project work are already visible in your own data.",
       "stakesMrr": "{{amount}}/mo of recurring work is already visible in your own data.",
       "stakesNrr": "{{amount}} of project work is already visible in your own data.",
       "table": {

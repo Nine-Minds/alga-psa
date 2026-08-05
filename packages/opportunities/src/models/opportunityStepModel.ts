@@ -49,6 +49,33 @@ export const OpportunityStepModel = {
     return row ? normalizeStep(row) : null;
   },
 
+  /**
+   * One writer at a time per plan: every read-then-write flow takes this lock
+   * first, so a double-click or a concurrent template apply waits and then
+   * sees the other caller's finished work instead of racing it.
+   */
+  async lockForOpportunity(conn: Knex | Knex.Transaction, tenant: string, opportunityId: string): Promise<void> {
+    await tenantDb(conn, tenant).table('opportunity_steps')
+      .where({ opportunity_id: opportunityId })
+      .forUpdate()
+      .select('step_id');
+  },
+
+  /** Completes a step only if a racing caller has not already done so. */
+  async markDone(
+    conn: Knex | Knex.Transaction,
+    tenant: string,
+    stepId: string,
+    patch: Partial<IOpportunityStep>,
+  ): Promise<IOpportunityStep | null> {
+    const [row] = await tenantDb(conn, tenant).table('opportunity_steps')
+      .where({ step_id: stepId })
+      .whereNot({ status: 'done' })
+      .update({ ...patch, status: 'done', updated_at: new Date().toISOString() })
+      .returning('*');
+    return row ? normalizeStep(row) : null;
+  },
+
   async create(
     conn: Knex | Knex.Transaction,
     tenant: string,

@@ -239,6 +239,7 @@
       "reviewDraft": "Überprüfen Sie den Entwurf",
       "snooze": "Schlummern",
       "snoozeNamed": "Schlummern {{title}}",
+      "stakesBoth": "{{mrr}}/Monat an wiederkehrender Arbeit und {{nrr}} an Projektarbeit sind bereits in Ihren eigenen Daten sichtbar.",
       "stakesMrr": "{{amount}}/Monat an wiederkehrender Arbeit ist bereits in Ihren eigenen Daten sichtbar.",
       "stakesNrr": "{{amount}} an Projektarbeit ist bereits in Ihren eigenen Daten sichtbar.",
       "table": {

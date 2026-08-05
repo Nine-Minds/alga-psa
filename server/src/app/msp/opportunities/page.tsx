@@ -53,7 +53,6 @@ export default async function OpportunitiesPage() {
       user_first_name: firstName,
       date: new Date().toISOString(),
       found_totals: [],
-      currency_code: 'USD',
       do_today: [],
       going_quiet: [],
       money_found: [],

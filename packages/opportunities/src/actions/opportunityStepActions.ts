@@ -3,10 +3,13 @@
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import type { IOpportunityStep, IOpportunityStepTemplate, OpportunityStage } from '@alga-psa/types';
+import type { IOpportunity, IOpportunityStep, IOpportunityStepTemplate, OpportunityStage } from '@alga-psa/types';
 import {
   completeOpportunityStepSchema,
   createOpportunityStepSchema,
+  reorderOpportunityStepsSchema,
+  saveOpportunityStepTemplatesSchema,
+  updateOpportunityNextActionSchema,
   updateOpportunityStepSchema,
 } from '../schemas/opportunitySchemas';
 import { OpportunityModel } from '../models/opportunityModel';
@@ -17,7 +20,7 @@ import {
   mirrorCurrentStepOntoOpportunity,
   syncStepScheduleEntry,
 } from '../lib/opportunitySteps';
-import { templateDueDate } from '../lib/opportunityStepPlan';
+import { nextPlannedStep, templateDueDate } from '../lib/opportunityStepPlan';
 import { OPEN_OPPORTUNITY_STAGES } from '../lib/opportunityStages';
 import { declareStage } from '../lib/stageEngine';
 
@@ -65,21 +68,20 @@ export const saveOpportunityStepTemplates = withAuth(async (
   titles: Array<{ title: string; due_offset_days: number }>,
 ): Promise<IOpportunityStepTemplate[]> => {
   await requirePermission(user, 'update');
+  const data = saveOpportunityStepTemplatesSchema.parse({ stage, titles });
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx) => {
-    await tenantDb(trx, tenant).table('opportunity_step_templates').where({ stage }).delete();
-    for (const [index, entry] of titles.entries()) {
-      const title = entry.title.trim();
-      if (!title) continue;
+    await tenantDb(trx, tenant).table('opportunity_step_templates').where({ stage: data.stage }).delete();
+    for (const [index, entry] of data.titles.entries()) {
       await tenantDb(trx, tenant).table('opportunity_step_templates').insert({
         tenant,
-        stage,
-        title,
+        stage: data.stage,
+        title: entry.title,
         sort_order: index,
-        due_offset_days: Math.max(0, Math.round(entry.due_offset_days)),
+        due_offset_days: entry.due_offset_days,
       });
     }
-    return OpportunityStepModel.listTemplates(trx, tenant, stage);
+    return OpportunityStepModel.listTemplates(trx, tenant, data.stage);
   });
 });
 
@@ -95,8 +97,15 @@ export const createOpportunityStep = withAuth(async (
   return withTransaction(knex, async (trx) => {
     const opportunity = await OpportunityModel.getById(trx, tenant, opportunityId);
     if (!opportunity) throw new Error('Opportunity not found');
+    await OpportunityStepModel.lockForOpportunity(trx, tenant, opportunityId);
     const steps = await ensureCurrentStep(trx, tenant, opportunity, actorId(user));
-    const wantsCurrent = data.status === 'current' || steps.every((step) => step.status !== 'current');
+    const existingCurrent = steps.find((step) => step.status === 'current');
+    const wantsCurrent = data.status === 'current' || !existingCurrent;
+    // The plan carries one current step: an explicit new current demotes the
+    // old one back into the ladder first.
+    if (wantsCurrent && existingCurrent) {
+      await OpportunityStepModel.update(trx, tenant, existingCurrent.step_id, { status: 'planned' });
+    }
     const created = await OpportunityStepModel.create(trx, tenant, {
       opportunity_id: opportunityId,
       title: data.title,
@@ -131,14 +140,31 @@ export const updateOpportunityStep = withAuth(async (
   return withTransaction(knex, async (trx) => {
     const existing = await OpportunityStepModel.getById(trx, tenant, stepId);
     if (!existing) throw new Error('Step not found');
+    await OpportunityStepModel.lockForOpportunity(trx, tenant, existing.opportunity_id);
     const opportunity = await OpportunityModel.getById(trx, tenant, existing.opportunity_id);
     if (!opportunity) throw new Error('Opportunity not found');
+    // Becoming current demotes the previous current step first, so the plan
+    // never carries two.
+    if (data.status === 'current' && existing.status !== 'current') {
+      const siblings = await OpportunityStepModel.listForOpportunity(trx, tenant, existing.opportunity_id);
+      const current = siblings.find((step) => step.status === 'current' && step.step_id !== stepId);
+      if (current) await OpportunityStepModel.update(trx, tenant, current.step_id, { status: 'planned' });
+    }
     const updated = await OpportunityStepModel.update(trx, tenant, stepId, {
       ...data,
       // "The deal owner" is a real answer, not an absence: a step always has
       // someone to put it on a calendar for.
       ...(data.assigned_to === null ? { assigned_to: opportunity.owner_id } : {}),
     } as Partial<IOpportunityStep>);
+    // Skipping (or demoting) the current step hands the deal to the next
+    // planned one, so the ladder never strands.
+    if (existing.status === 'current' && data.status && data.status !== 'current') {
+      const siblings = await OpportunityStepModel.listForOpportunity(trx, tenant, existing.opportunity_id);
+      if (!siblings.some((step) => step.status === 'current')) {
+        const candidate = nextPlannedStep(siblings);
+        if (candidate) await OpportunityStepModel.update(trx, tenant, candidate.step_id, { status: 'current' });
+      }
+    }
     const synced = await syncStepScheduleEntry(trx, tenant, updated, opportunity);
     await mirrorCurrentStepOntoOpportunity(trx, tenant, existing.opportunity_id);
     return synced;
@@ -155,11 +181,19 @@ export const deleteOpportunityStep = withAuth(async (
   return withTransaction(knex, async (trx) => {
     const existing = await OpportunityStepModel.getById(trx, tenant, stepId);
     if (!existing) return false;
+    await OpportunityStepModel.lockForOpportunity(trx, tenant, existing.opportunity_id);
     const opportunity = await OpportunityModel.getById(trx, tenant, existing.opportunity_id);
     if (opportunity && existing.schedule_entry_id) {
       await syncStepScheduleEntry(trx, tenant, { ...existing, status: 'skipped' }, opportunity);
     }
     const deleted = await OpportunityStepModel.delete(trx, tenant, stepId);
+    // Deleting the current step does not strand the plan: the next planned
+    // one takes over before the mirror is rewritten.
+    if (deleted && existing.status === 'current') {
+      const remaining = await OpportunityStepModel.listForOpportunity(trx, tenant, existing.opportunity_id);
+      const candidate = nextPlannedStep(remaining);
+      if (candidate) await OpportunityStepModel.update(trx, tenant, candidate.step_id, { status: 'current' });
+    }
     if (deleted) await mirrorCurrentStepOntoOpportunity(trx, tenant, existing.opportunity_id);
     return deleted;
   });
@@ -173,14 +207,30 @@ export const reorderOpportunitySteps = withAuth(async (
   orderedStepIds: string[],
 ): Promise<IOpportunityStep[]> => {
   await requirePermission(user, 'update');
+  const data = reorderOpportunityStepsSchema.parse({ opportunity_id: opportunityId, ordered_step_ids: orderedStepIds });
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx) => {
-    for (const [index, stepId] of orderedStepIds.entries()) {
+    await OpportunityStepModel.lockForOpportunity(trx, tenant, data.opportunity_id);
+    const steps = await OpportunityStepModel.listForOpportunity(trx, tenant, data.opportunity_id);
+    const known = new Set(steps.map((step) => step.step_id));
+    const seen = new Set<string>();
+    for (const id of data.ordered_step_ids) {
+      if (!known.has(id)) throw new Error('Cannot reorder a step that is not part of this opportunity');
+      if (seen.has(id)) throw new Error('Duplicate step in reorder request');
+      seen.add(id);
+    }
+    // Steps the caller did not mention keep their relative order, after the
+    // named ones, so sort_order stays collision-free on partial lists.
+    const order = [
+      ...data.ordered_step_ids,
+      ...steps.filter((step) => !seen.has(step.step_id)).map((step) => step.step_id),
+    ];
+    for (const [index, stepId] of order.entries()) {
       await tenantDb(trx, tenant).table('opportunity_steps')
-        .where({ step_id: stepId, opportunity_id: opportunityId })
+        .where({ step_id: stepId, opportunity_id: data.opportunity_id })
         .update({ sort_order: index, updated_at: new Date().toISOString() });
     }
-    return OpportunityStepModel.listForOpportunity(trx, tenant, opportunityId);
+    return OpportunityStepModel.listForOpportunity(trx, tenant, data.opportunity_id);
   });
 });
 
@@ -204,6 +254,7 @@ export const applyOpportunityStepTemplate = withAuth(async (
   return withTransaction(knex, async (trx) => {
     const opportunity = await OpportunityModel.getById(trx, tenant, opportunityId);
     if (!opportunity) throw new Error('Opportunity not found');
+    await OpportunityStepModel.lockForOpportunity(trx, tenant, opportunityId);
     const existing = await ensureCurrentStep(trx, tenant, opportunity, actorId(user));
     let sortOrder = await OpportunityStepModel.nextSortOrder(trx, tenant, opportunityId);
     let hasCurrent = existing.some((step) => step.status === 'current');
@@ -217,8 +268,11 @@ export const applyOpportunityStepTemplate = withAuth(async (
     for (const entry of stages) {
       const templates = await OpportunityStepModel.listTemplates(trx, tenant, entry);
       for (const template of templates) {
-        const fingerprint = `${entry}:${template.title.trim().toLowerCase()}`;
-        if (openTitles.has(fingerprint)) continue;
+        const title = template.title.trim().toLowerCase();
+        const fingerprint = `${entry}:${title}`;
+        // A backfilled step carries no stage; its bare title still marks the
+        // same work as already open.
+        if (openTitles.has(fingerprint) || openTitles.has(`:${title}`)) continue;
         openTitles.add(fingerprint);
         // Only the stage the deal is actually on may take over as current work.
         const becomesCurrent = !hasCurrent && entry === opportunity.stage;
@@ -262,6 +316,51 @@ export const completeOpportunityStep = withAuth(async (
       await declareStage(trx, tenant, opportunityId, data.checkpoint, actorId(user), result.completed.title);
     }
     return OpportunityStepModel.listForOpportunity(trx, tenant, opportunityId);
+  });
+});
+
+/**
+ * The legacy "edit the next action" affordances (snooze, the edit dialog)
+ * write through the current step, so the mirror columns keep a single writer.
+ */
+export const updateOpportunityNextAction = withAuth(async (
+  user,
+  { tenant },
+  opportunityId: string,
+  input: unknown,
+): Promise<IOpportunity> => {
+  await requirePermission(user, 'update');
+  const data = updateOpportunityNextActionSchema.parse(input);
+  const { knex } = await createTenantKnex();
+  return withTransaction(knex, async (trx) => {
+    const opportunity = await OpportunityModel.getById(trx, tenant, opportunityId);
+    if (!opportunity) throw new Error('Opportunity not found');
+    await OpportunityStepModel.lockForOpportunity(trx, tenant, opportunityId);
+    const steps = await ensureCurrentStep(trx, tenant, opportunity, actorId(user));
+    const current = steps.find((step) => step.status === 'current');
+    if (current) {
+      const updated = await OpportunityStepModel.update(trx, tenant, current.step_id, {
+        ...(data.next_action !== undefined ? { title: data.next_action } : {}),
+        ...(data.next_action_due !== undefined ? { due_at: data.next_action_due } : {}),
+      });
+      await syncStepScheduleEntry(trx, tenant, updated, opportunity);
+    } else if (data.next_action) {
+      const created = await OpportunityStepModel.create(trx, tenant, {
+        opportunity_id: opportunityId,
+        title: data.next_action,
+        due_at: data.next_action_due ?? null,
+        status: 'current',
+        assigned_to: opportunity.owner_id,
+        sort_order: await OpportunityStepModel.nextSortOrder(trx, tenant, opportunityId),
+        created_by: actorId(user),
+      });
+      await syncStepScheduleEntry(trx, tenant, created, opportunity);
+    } else {
+      throw new Error('Opportunity has no current step to reschedule');
+    }
+    return mirrorCurrentStepOntoOpportunity(trx, tenant, opportunityId, {
+      ...(data.next_action_due !== undefined ? { overdue_notified_at: null } : {}),
+    } as Partial<IOpportunity>);
   });
 });
 

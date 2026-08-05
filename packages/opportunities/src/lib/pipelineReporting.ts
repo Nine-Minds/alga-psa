@@ -1,3 +1,4 @@
+import { Temporal } from '@js-temporal/polyfill';
 import type { OpportunityStage } from '@alga-psa/types';
 
 /**
@@ -18,7 +19,16 @@ export interface PipelineStageRow {
   hardware_cents: number;
 }
 
-/** Normalizes the raw grouped sums (knex returns strings for BIGINT sums). */
+/** The canonical pipeline order every stage breakdown renders in. */
+export const PIPELINE_STAGE_ORDER: ReadonlyArray<Exclude<OpportunityStage, 'won' | 'lost'>> = [
+  'identified', 'qualified', 'assessment', 'proposed', 'verbal',
+];
+
+/**
+ * Normalizes the raw grouped sums (knex returns strings for BIGINT sums) and
+ * puts them in pipeline order — GROUP BY hands rows back in whatever order it
+ * pleases.
+ */
 export function mapPipelineStageRows(rows: Array<Record<string, unknown>>): PipelineStageRow[] {
   return rows.map((row) => ({
     stage: row.stage as OpportunityStage,
@@ -27,7 +37,10 @@ export function mapPipelineStageRows(rows: Array<Record<string, unknown>>): Pipe
     mrr_cents: Number(row.mrr_cents ?? 0),
     nrr_cents: Number(row.nrr_cents ?? 0),
     hardware_cents: Number(row.hardware_cents ?? 0),
-  }));
+  })).sort((a, b) => (
+    PIPELINE_STAGE_ORDER.indexOf(a.stage as never) - PIPELINE_STAGE_ORDER.indexOf(b.stage as never)
+    || a.currency_code.localeCompare(b.currency_code)
+  ));
 }
 
 /**
@@ -60,6 +73,8 @@ export interface PipelineReportRow {
 
 export interface ClosedReportRow {
   currency_code: string;
+  /** How many won deals the row aggregates; a plain per-deal row omits it. */
+  opportunity_count?: number;
   mrr_cents: number;
   one_time_cents: number;
 }
@@ -100,9 +115,13 @@ export function summarizePipelineReport(
   open: PipelineReportRow[],
   wonThisQuarter: ClosedReportRow[],
   now: Date,
+  timeZone?: string,
 ): IOpportunityPipelineReportCurrency[] {
-  const horizon = new Date(now.getTime());
-  horizon.setUTCDate(horizon.getUTCDate() + 30);
+  // The window runs from the start of today, not from this instant: close
+  // dates are date-only, and a deal expected to close today still counts.
+  const window = closingWindowRange(now, timeZone);
+  const windowStart = new Date(`${window.start}T00:00:00.000Z`);
+  const horizon = new Date(`${window.end}T00:00:00.000Z`);
   const byCurrency = new Map<string, IOpportunityPipelineReportCurrency>();
   const bucket = (currency: string): IOpportunityPipelineReportCurrency => {
     const existing = byCurrency.get(currency);
@@ -152,7 +171,7 @@ export function summarizePipelineReport(
     }
     if (row.expected_close_date) {
       const close = new Date(row.expected_close_date);
-      if (!Number.isNaN(close.getTime()) && close >= now && close <= horizon) {
+      if (!Number.isNaN(close.getTime()) && close >= windowStart && close <= horizon) {
         target.closing_30d_count += row.opportunity_count;
         target.closing_30d_mrr_cents += row.mrr_cents;
         target.closing_30d_one_time_cents += row.one_time_cents;
@@ -162,29 +181,45 @@ export function summarizePipelineReport(
 
   for (const row of wonThisQuarter) {
     const target = bucket(row.currency_code);
-    target.won_quarter_count += 1;
+    target.won_quarter_count += row.opportunity_count ?? 1;
     target.won_quarter_mrr_cents += row.mrr_cents;
     target.won_quarter_one_time_cents += row.one_time_cents;
   }
 
-  const stageOrder: Array<Exclude<OpportunityStage, 'won' | 'lost'>> = [
-    'identified', 'qualified', 'assessment', 'proposed', 'verbal',
-  ];
   for (const entry of byCurrency.values()) {
-    entry.by_stage.sort((a, b) => stageOrder.indexOf(a.stage) - stageOrder.indexOf(b.stage));
+    entry.by_stage.sort((a, b) => PIPELINE_STAGE_ORDER.indexOf(a.stage) - PIPELINE_STAGE_ORDER.indexOf(b.stage));
   }
   return [...byCurrency.values()].sort((a, b) => b.open_mrr_cents - a.open_mrr_cents);
 }
 
-/** Inclusive start / exclusive end ISO instants for the calendar quarter containing `now`. */
-export function currentQuarterRange(now: Date): { start: string; endExclusive: string; label: string } {
-  const year = now.getUTCFullYear();
-  const quarter = Math.floor(now.getUTCMonth() / 3);
-  const start = new Date(Date.UTC(year, quarter * 3, 1));
-  const endExclusive = new Date(Date.UTC(year, quarter * 3 + 3, 1));
+/**
+ * The inclusive YYYY-MM-DD bounds of "closing in the next 30 days": today
+ * through the 30th day out, on the calendar of the given zone (UTC when none
+ * is given).
+ */
+export function closingWindowRange(now: Date, timeZone?: string): { start: string; end: string } {
+  const today = Temporal.Instant.fromEpochMilliseconds(now.getTime())
+    .toZonedDateTimeISO(timeZone ?? 'UTC')
+    .toPlainDate();
+  return { start: today.toString(), end: today.add({ days: 30 }).toString() };
+}
+
+/**
+ * Inclusive start / exclusive end ISO instants for the calendar quarter
+ * containing `now` — the quarter the given zone is standing in, bounded by its
+ * local midnights. Without a zone the quarter is UTC's, which is what the
+ * pure-function tests pin.
+ */
+export function currentQuarterRange(now: Date, timeZone?: string): { start: string; endExclusive: string; label: string } {
+  const zone = timeZone ?? 'UTC';
+  const zonedNow = Temporal.Instant.fromEpochMilliseconds(now.getTime()).toZonedDateTimeISO(zone);
+  const quarter = Math.floor((zonedNow.month - 1) / 3);
+  const startDate = Temporal.PlainDate.from({ year: zonedNow.year, month: quarter * 3 + 1, day: 1 });
+  const start = startDate.toZonedDateTime({ timeZone: zone }).toInstant();
+  const endExclusive = startDate.add({ months: 3 }).toZonedDateTime({ timeZone: zone }).toInstant();
   return {
-    start: start.toISOString(),
-    endExclusive: endExclusive.toISOString(),
-    label: `Q${quarter + 1} ${year}`,
+    start: new Date(start.epochMilliseconds).toISOString(),
+    endExclusive: new Date(endExclusive.epochMilliseconds).toISOString(),
+    label: `Q${quarter + 1} ${zonedNow.year}`,
   };
 }

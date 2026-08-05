@@ -230,14 +230,6 @@ export async function assembleWorkQueue(
     };
   });
 
-  const billingSettings = await db.table('default_billing_settings')
-    .select('default_currency_code')
-    .first();
-  const currencyCode = billingSettings?.default_currency_code
-    ?? opportunities[0]?.currency_code
-    ?? suggestions[0]?.currency_code
-    ?? 'USD';
-
   const lessonFacts = await getOpportunityLessonFacts(
     knex,
     tenant,
@@ -264,7 +256,6 @@ export async function assembleWorkQueue(
     user_first_name: userFirstName,
     date: now.toString(),
     found_totals: sumFoundByCurrency(moneyFound),
-    currency_code: String(currencyCode),
     do_today: doToday,
     going_quiet: goingQuiet,
     money_found: moneyFound,

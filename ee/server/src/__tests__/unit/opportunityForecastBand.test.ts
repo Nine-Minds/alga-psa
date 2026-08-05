@@ -26,20 +26,20 @@ function usd(band: ReturnType<typeof calculateForecastBand>) {
 describe('forecast band one-time value', () => {
   it('counts hardware as part of the non-recurring number', () => {
     const band = usd(calculateForecastBand([row()], new Map()));
-    expect(band.floor_nrr_cents).toBe(100000);
-    expect(band.ceiling_nrr_cents).toBe(100000);
+    expect(band.floor_one_time_cents).toBe(100000);
+    expect(band.ceiling_one_time_cents).toBe(100000);
   });
 
   it('weights hardware alongside NRR for non-floor stages', () => {
     const band = usd(calculateForecastBand([row({ stage: 'qualified' })], new Map()));
-    expect(band.floor_nrr_cents).toBe(0);
+    expect(band.floor_one_time_cents).toBe(0);
     // (60000 + 40000) * 0.15
-    expect(band.ceiling_nrr_cents).toBe(15000);
+    expect(band.ceiling_one_time_cents).toBe(15000);
   });
 
   it('treats a missing hardware column as zero', () => {
     const band = usd(calculateForecastBand([row({ hardware_cents: null })], new Map()));
-    expect(band.ceiling_nrr_cents).toBe(60000);
+    expect(band.ceiling_one_time_cents).toBe(60000);
   });
 });
 

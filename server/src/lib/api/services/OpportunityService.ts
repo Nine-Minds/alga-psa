@@ -313,10 +313,9 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
         throw new Error('Opportunity values are locked by an accepted quote');
       }
 
-      return OpportunityModel.update(trx, context.tenant, id, {
-        ...allowed,
-        ...(allowed.next_action_due !== undefined ? { overdue_notified_at: null } : {}),
-      } as Partial<IOpportunity>);
+      // next_action / next_action_due are absent by schema: those columns
+      // mirror the current step, which the step flows own.
+      return OpportunityModel.update(trx, context.tenant, id, allowed as Partial<IOpportunity>);
     }).catch(throwOpportunityApiError);
   }
 

@@ -239,6 +239,7 @@
       "reviewDraft": "Revise o rascunho",
       "snooze": "Adiar",
       "snoozeNamed": "Adiar {{title}}",
+      "stakesBoth": "{{mrr}}/mês de trabalho recorrente e {{nrr}} de trabalho de projeto já estão visíveis nos seus próprios dados.",
       "stakesMrr": "{{amount}}/mês de trabalho recorrente já está visível nos seus próprios dados.",
       "stakesNrr": "{{amount}} de trabalho de projeto já está visível nos seus próprios dados.",
       "table": {

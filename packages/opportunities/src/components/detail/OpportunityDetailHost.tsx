@@ -39,6 +39,7 @@ import { OpportunityPlanPanel } from './OpportunityPlanPanel';
 import {
   assignOpportunityOwner,
   listOpportunityAssignees,
+  updateOpportunityNextAction,
   type OpportunityStepAssignee,
 } from '../../actions/opportunityStepActions';
 import { LoseOpportunityDialog } from '../dialogs/LoseOpportunityDialog';
@@ -316,8 +317,12 @@ export function OpportunityDetailHost({
           next_action_due: detail.next_action_due ?? new Date().toISOString(),
           expected_close_date: detail.expected_close_date?.slice(0, 10) ?? null,
         }}
-        onSubmit={(input) =>
-          run(() => updateOpportunity(detail.opportunity_id, input), t('opportunities.toast.detailsSaved', 'Opportunity updated'))
+        onSubmit={({ next_action, next_action_due, ...rest }) =>
+          run(async () => {
+            // The next-action fields ride the current step; the rest are plain columns.
+            await updateOpportunity(detail.opportunity_id, rest);
+            await updateOpportunityNextAction(detail.opportunity_id, { next_action, next_action_due });
+          }, t('opportunities.toast.detailsSaved', 'Opportunity updated'))
         }
       />
       <EditValuesDialog
