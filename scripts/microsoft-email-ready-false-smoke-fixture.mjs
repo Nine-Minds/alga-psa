@@ -24,6 +24,10 @@ import os from 'node:os';
 import path from 'node:path';
 import knexFactory from 'knex';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import {
+  directoryTimestampSnapshot,
+  restoreDirectoryTimestamps,
+} from './microsoft-email-smoke-timestamps.mjs';
 
 const [command, tenantId] = process.argv.slice(2);
 const allowedCommands = new Set(['apply', 'status', 'cleanup']);
@@ -95,6 +99,20 @@ function removeNewEmptyTenantSecretDirectory(directory, existedBefore) {
   }
 }
 
+/**
+ * Snapshot the directory whose mtime the fixture secret write will churn: the
+ * tenant secret directory itself when it already exists, otherwise the parent
+ * directory that gains (and later loses) the tenant directory.
+ */
+function mutatedSecretDirectorySnapshot(directoryExisted) {
+  if (!tenantSecretDirectory) {
+    return null;
+  }
+  return directoryExisted
+    ? directoryTimestampSnapshot(tenantSecretDirectory)
+    : directoryTimestampSnapshot(path.dirname(tenantSecretDirectory));
+}
+
 function scoped(table) {
   return db(table).where({ tenant: tenantId });
 }
@@ -143,16 +161,21 @@ async function applyFixture() {
     throw new Error(`Fixture state file already exists but the database state is inconsistent: ${stateFile}`);
   }
 
-  const [existingFixture, existingBinding] = await Promise.all([
+  const [existingFixture, existingBinding, existingSecret] = await Promise.all([
     scoped('microsoft_profiles').where({ profile_id: fixtureProfileId }).first(),
     readEmailBindingSnapshot(),
+    secretProvider.getTenantSecret(tenantId, fixtureSecretRef),
   ]);
   if (existingFixture) {
     throw new Error(`Fixture profile ${fixtureProfileId} already exists without a state file; remove it manually after review`);
   }
+  if (existingSecret) {
+    throw new Error(`A tenant secret already exists at ${fixtureSecretRef}; refusing to overwrite it`);
+  }
   const tenantSecretDirectoryExisted = tenantSecretDirectory
     ? fs.existsSync(tenantSecretDirectory)
     : null;
+  const secretDirectorySnapshot = mutatedSecretDirectorySnapshot(tenantSecretDirectoryExisted);
 
   fs.writeFileSync(
     stateFile,
@@ -163,6 +186,7 @@ async function applyFixture() {
       previousEmailBinding: existingBinding,
       tenantSecretDirectory,
       tenantSecretDirectoryExisted,
+      secretDirectorySnapshot,
     }, null, 2)}\n`,
     { flag: 'wx', mode: 0o600 }
   );
@@ -217,6 +241,7 @@ async function applyFixture() {
       tenantSecretDirectory,
       tenantSecretDirectoryExisted
     );
+    restoreDirectoryTimestamps(secretDirectorySnapshot);
     fs.rmSync(stateFile, { force: true });
     throw error;
   }
@@ -234,6 +259,11 @@ async function cleanupFixture() {
   }
   if (state.tenantSecretDirectory !== tenantSecretDirectory) {
     throw new Error('Fixture state secret directory does not match the configured filesystem provider');
+  }
+  if (state.secretDirectorySnapshot
+    && state.secretDirectorySnapshot.path !== tenantSecretDirectory
+    && state.secretDirectorySnapshot.path !== path.dirname(tenantSecretDirectory || '')) {
+    throw new Error('Fixture state timestamp snapshot does not belong to the tenant secret directory');
   }
 
   await db.transaction(async (trx) => {
@@ -283,6 +313,7 @@ async function cleanupFixture() {
     state.tenantSecretDirectory,
     state.tenantSecretDirectoryExisted
   );
+  restoreDirectoryTimestamps(state.secretDirectorySnapshot);
   fs.rmSync(stateFile);
   return {
     tenantId,

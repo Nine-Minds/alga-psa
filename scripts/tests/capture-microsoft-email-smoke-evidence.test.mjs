@@ -7,6 +7,15 @@ import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import {
+  exactComparison,
+  secretInventory,
+} from '../capture-microsoft-email-smoke-evidence.mjs';
+import {
+  directoryTimestampSnapshot,
+  restoreDirectoryTimestamps,
+} from '../microsoft-email-smoke-timestamps.mjs';
+
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SCRIPT = path.join(REPO_ROOT, 'scripts/capture-microsoft-email-smoke-evidence.mjs');
 const WORKFLOW_RUN_ID = '11111111-1111-4111-8111-111111111111';
@@ -141,6 +150,89 @@ function assertFailure(result, message) {
   assert.notEqual(result.status, 0);
   assert.match(`${result.stdout}${result.stderr}`, message);
 }
+
+const SECRET_TENANT_ID = '33333333-3333-4333-8333-333333333333';
+
+function setupSecretBase() {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'microsoft-smoke-secret-test-'));
+  const tenantDirectory = path.join(base, 'tenants', SECRET_TENANT_ID);
+  fs.mkdirSync(tenantDirectory, { recursive: true });
+  fs.writeFileSync(path.join(tenantDirectory, 'existing_secret'), 'value\n', { mode: 0o600 });
+  return { base, tenantDirectory };
+}
+
+function inventory(base) {
+  return secretInventory(
+    REPO_ROOT,
+    { SECRET_WRITE_PROVIDER: 'filesystem', SECRET_FS_BASE_PATH: base },
+    SECRET_TENANT_ID
+  );
+}
+
+test('secret inventory records file mtimes and the truncated directory mtime', (t) => {
+  const { base, tenantDirectory } = setupSecretBase();
+  t.after(() => fs.rmSync(base, { recursive: true, force: true }));
+
+  const recorded = inventory(base);
+  assert.equal(recorded.files.length, 1);
+  assert.equal(
+    recorded.files[0].mtimeMs,
+    fs.statSync(path.join(tenantDirectory, 'existing_secret')).mtimeMs
+  );
+  assert.equal(recorded.directoryExists, true);
+  assert.equal(recorded.directoryMtimeMs, Math.trunc(fs.statSync(tenantDirectory).mtimeMs));
+
+  const emptyBase = fs.mkdtempSync(path.join(os.tmpdir(), 'microsoft-smoke-secret-empty-'));
+  t.after(() => fs.rmSync(emptyBase, { recursive: true, force: true }));
+  const absent = inventory(emptyBase);
+  assert.equal(absent.directoryExists, false);
+  assert.equal(absent.directoryMtimeMs, null);
+  assert.deepEqual(absent.files, []);
+});
+
+test('an mtime-only difference fails the restoration exactness comparison', (t) => {
+  const { base, tenantDirectory } = setupSecretBase();
+  t.after(() => fs.rmSync(base, { recursive: true, force: true }));
+  const secretFile = path.join(tenantDirectory, 'existing_secret');
+
+  const baseline = inventory(base);
+  fs.utimesSync(secretFile, new Date('2026-01-01T00:00:00Z'), new Date('2026-01-01T00:00:00Z'));
+  const fileTouched = inventory(base);
+  assert.equal(exactComparison(baseline, fileTouched).exactMatch, false);
+
+  fs.utimesSync(
+    tenantDirectory,
+    new Date('2026-02-02T00:00:00Z'),
+    new Date('2026-02-02T00:00:00Z')
+  );
+  const directoryTouched = inventory(base);
+  assert.equal(exactComparison(fileTouched, directoryTouched).exactMatch, false);
+});
+
+test('directory timestamp restoration is millisecond-exact', (t) => {
+  const { base, tenantDirectory } = setupSecretBase();
+  t.after(() => fs.rmSync(base, { recursive: true, force: true }));
+
+  fs.utimesSync(
+    tenantDirectory,
+    new Date('2026-03-03T03:03:03.123Z'),
+    new Date('2026-03-03T03:03:03.123Z')
+  );
+  const baseline = inventory(base);
+  const snapshot = directoryTimestampSnapshot(tenantDirectory);
+
+  const churnFile = path.join(tenantDirectory, 'transient_secret');
+  fs.writeFileSync(churnFile, 'transient\n', { mode: 0o600 });
+  fs.rmSync(churnFile);
+  assert.equal(exactComparison(baseline, inventory(base)).exactMatch, false);
+
+  restoreDirectoryTimestamps(snapshot);
+  assert.equal(
+    Math.trunc(fs.statSync(tenantDirectory).mtimeMs),
+    Math.trunc(snapshot.mtimeMs)
+  );
+  assert.equal(exactComparison(baseline, inventory(base)).exactMatch, true);
+});
 
 test('correlate requires shared capture identity, a fidelity note, and the Graph limitation', (t) => {
   const directory = setupEvidence();

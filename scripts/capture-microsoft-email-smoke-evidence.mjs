@@ -47,9 +47,11 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import process from 'node:process';
+import { pathToFileURL } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { parse as parseDotenv } from 'dotenv';
 import pg from 'pg';
+import { truncatedMtimeMs } from './microsoft-email-smoke-timestamps.mjs';
 
 const { Client } = pg;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -388,6 +390,9 @@ function secretInventory(repoRoot, environment, tenantId) {
           name: path.relative(tenantSecretDirectory, entryPath),
           bytes: stat.size,
           mode: stat.mode & 0o777,
+          // Pre-existing secret files are never mutated by the fixture, so
+          // their timestamps are compared at full stat fidelity.
+          mtimeMs: stat.mtimeMs,
           sha256: sha256File(entryPath),
         });
       } else {
@@ -403,11 +408,18 @@ function secretInventory(repoRoot, environment, tenantId) {
     visit(tenantSecretDirectory);
   }
   files.sort((left, right) => left.name.localeCompare(right.name));
+  const directoryExists = fs.existsSync(tenantSecretDirectory);
   return {
     provider: 'filesystem',
     basePath,
     tenantDirectory: tenantSecretDirectory,
-    directoryExists: fs.existsSync(tenantSecretDirectory),
+    directoryExists,
+    // The tenant directory's mtime churns when the fixture writes or deletes
+    // its secret file and is restored through fs.utimes, which is faithful to
+    // the millisecond but not the nanosecond; compare at whole milliseconds.
+    directoryMtimeMs: directoryExists
+      ? truncatedMtimeMs(fs.statSync(tenantSecretDirectory))
+      : null,
     files,
   };
 }
@@ -813,19 +825,26 @@ function createManifest(args) {
   }, null, 2));
 }
 
-try {
-  if (!COMMANDS.has(command)) {
-    fail('Expected command: before, after, correlate, or manifest');
+export { exactComparison, secretInventory };
+
+const invokedAsScript = process.argv[1]
+  && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (invokedAsScript) {
+  try {
+    if (!COMMANDS.has(command)) {
+      fail('Expected command: before, after, correlate, or manifest');
+    }
+    const args = parseArguments(rawArguments);
+    if (command === 'before' || command === 'after') {
+      await capturePhase(command, args);
+    } else if (command === 'correlate') {
+      correlate(args);
+    } else {
+      createManifest(args);
+    }
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
   }
-  const args = parseArguments(rawArguments);
-  if (command === 'before' || command === 'after') {
-    await capturePhase(command, args);
-  } else if (command === 'correlate') {
-    correlate(args);
-  } else {
-    createManifest(args);
-  }
-} catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
 }
