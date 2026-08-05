@@ -20,6 +20,11 @@ import {
   CTIME_NON_RESTORABLE_REASON,
   restorableInventory,
 } from '../../microsoft-email-smoke-timestamps.mjs';
+import {
+  CREATED_SESSIONS_FILE,
+  EXPECTED_TEMPORARY_SESSION_COUNT,
+  SESSION_CLEANUP_FILE,
+} from '../../verify-microsoft-email-smoke-evidence.mjs';
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 export const CAPTURE_SCRIPT = path.join(REPO_ROOT, 'scripts/capture-microsoft-email-smoke-evidence.mjs');
@@ -29,6 +34,12 @@ export const CAPTURE_NONCE = '22222222-2222-4222-8222-222222222222';
 export const TENANT_ID = '33333333-3333-4333-8333-333333333333';
 export const PROFILE_ID = '44444444-4444-4444-8444-444444444444';
 export const EXISTING_PROFILE_ID = '55555555-5555-4555-8555-555555555555';
+export const USER_ID = '66666666-6666-4666-8666-666666666666';
+export const BASELINE_SESSION_ID = '77777777-7777-4777-8777-777777777777';
+export const TEMPORARY_SESSION_IDS = [
+  '88888888-8888-4888-8888-888888888888',
+  '99999999-9999-4999-8999-999999999999',
+];
 export const EXTERNAL_GRAPH_LIMITATION = 'No external Microsoft Graph or Entra OAuth call is performed by this evidence helper.';
 export const CROSS_HOST_CONTEXT = 'The card browser is Mac-hosted while the worktree server runs on Linux through a localhost-to-Tailscale relay.';
 export const FIDELITY_NOTE = 'React handlers were driven from the card-scoped Mac terminal; the exported live DOM was rendered to the attached PNG.';
@@ -47,6 +58,7 @@ export const PHASE_FILES = {
     '90-after-port-route-health.json',
     '90-after-database.json',
     '91-restoration-comparison.json',
+    SESSION_CLEANUP_FILE,
   ],
 };
 export const PHASE_MARKERS = {
@@ -86,6 +98,30 @@ export const DATABASE_SNAPSHOT = {
       updated_at: '2026-01-02T00:00:00.000Z',
     },
   ],
+  sessions: [
+    {
+      tenant: TENANT_ID,
+      session_id: BASELINE_SESSION_ID,
+      user_id: USER_ID,
+      created_at: '2026-08-04T22:00:00.000Z',
+    },
+  ],
+};
+
+export const CREATED_SESSION_ROWS = TEMPORARY_SESSION_IDS.map((sessionId, index) => ({
+  tenant: TENANT_ID,
+  session_id: sessionId,
+  user_id: USER_ID,
+  created_at: `2026-08-04T23:00:0${index + 1}.000Z`,
+}));
+
+export const TEMPORARY_SESSIONS_CREATED = {
+  workflowRunId: WORKFLOW_RUN_ID,
+  tenantId: TENANT_ID,
+  capturedAt: '2026-08-04T23:00:03.000Z',
+  expectedCreatedSessionCount: EXPECTED_TEMPORARY_SESSION_COUNT,
+  assertionsPassed: true,
+  createdSessions: CREATED_SESSION_ROWS,
 };
 
 export const SECRET_INVENTORY_SNAPSHOT = {
@@ -243,6 +279,11 @@ export function setupEvidence({ uiCaptures = {}, omitUiFiles = [] } = {}) {
     appUrl: 'http://localhost:3100',
     tenantId: TENANT_ID,
     profileId: PROFILE_ID,
+    temporarySessionCleanup: {
+      expectedCreatedSessionCount: EXPECTED_TEMPORARY_SESSION_COUNT,
+      createdEvidenceFile: CREATED_SESSIONS_FILE,
+      cleanupEvidenceFile: SESSION_CLEANUP_FILE,
+    },
     externalGraphLimitation: EXTERNAL_GRAPH_LIMITATION,
     crossHostContext: CROSS_HOST_CONTEXT,
   });
@@ -262,6 +303,18 @@ export function setupEvidence({ uiCaptures = {}, omitUiFiles = [] } = {}) {
     writeJson(directory, `${prefix}-database.json`, DATABASE_SNAPSHOT);
   }
   writeJson(directory, '91-restoration-comparison.json', RESTORED);
+  writeJson(directory, CREATED_SESSIONS_FILE, TEMPORARY_SESSIONS_CREATED);
+  writeJson(directory, SESSION_CLEANUP_FILE, {
+    workflowRunId: WORKFLOW_RUN_ID,
+    tenantId: TENANT_ID,
+    verifiedAt: '2026-08-04T23:00:04.000Z',
+    createdEvidence: fileIdentity(directory, CREATED_SESSIONS_FILE),
+    expectedCreatedSessionCount: EXPECTED_TEMPORARY_SESSION_COUNT,
+    createdSessionIds: [...TEMPORARY_SESSION_IDS],
+    deletedSessionIds: [...TEMPORARY_SESSION_IDS],
+    remainingSessionRows: [],
+    allDeleted: true,
+  });
   writePhaseMarker(directory, 'before');
   writePhaseMarker(directory, 'after');
 

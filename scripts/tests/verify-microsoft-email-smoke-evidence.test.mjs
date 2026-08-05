@@ -7,16 +7,23 @@ import assert from 'node:assert/strict';
 import test, { after, before } from 'node:test';
 
 import {
+  CREATED_SESSIONS_FILE,
   INDEX_FILE,
   MANIFEST_FILE,
   REQUIRED_CLAIMS,
+  SESSION_CLEANUP_FILE,
   VERIFIER_COPY_FILE,
   verifyBundle,
 } from '../verify-microsoft-email-smoke-evidence.mjs';
 import {
+  CREATED_SESSION_ROWS,
+  DATABASE_SNAPSHOT,
+  PHASE_MARKERS,
   REPO_ROOT,
   VERIFY_SCRIPT,
   sealedBundle,
+  writeJson,
+  writePhaseMarker,
 } from './helpers/microsoft-smoke-evidence-fixture.mjs';
 
 let sealedSource;
@@ -88,6 +95,18 @@ function rewriteIndex(directory, mutate) {
   fs.writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
 }
 
+function repinIndexEvidence(directory, names) {
+  rewriteIndex(directory, (index) => {
+    for (const claim of index.claims) {
+      claim.evidence = claim.evidence.map((evidence) => (
+        !evidence.sealedAfterIndex && names.has(evidence.file)
+          ? fileIdentity(directory, evidence.file)
+          : evidence
+      ));
+    }
+  });
+}
+
 test('a sealed bundle passes both the repo verifier and its bundled copy', (t) => {
   const directory = copyOfSealedBundle(t);
 
@@ -121,6 +140,18 @@ test('the verification index maps every required claim to sealed evidence', (t) 
   assert.ok(index.disclosures.crossHostFidelityNote.length > 0);
   assert.ok(index.disclosures.ctimeNonRestorableReason.length > 0);
   assert.ok(index.disclosures.integrityAnchor.length > 0);
+  const cleanupClaim = index.claims.find((claim) => claim.id === 'temporary-session-cleanup');
+  assert.deepEqual(
+    cleanupClaim.evidence.map((evidence) => evidence.file),
+    [
+      '00-workflow-run.json',
+      '01-before-database.json',
+      CREATED_SESSIONS_FILE,
+      '90-after-database.json',
+      SESSION_CLEANUP_FILE,
+      MANIFEST_FILE,
+    ]
+  );
   for (const claim of index.claims) {
     for (const evidence of claim.evidence) {
       const filePath = path.join(directory, evidence.file);
@@ -198,6 +229,25 @@ test('a dishonest re-seal cannot weaken a declared assertion', (t) => {
   const result = runVerifier(directory);
   assert.equal(result.status, 1);
   assert.match(result.stdout, /declares different assertions for claim derived-readonly-redirect-uri/);
+});
+
+test('a dishonest re-seal cannot hide one surviving temporary session row', (t) => {
+  const directory = copyOfSealedBundle(t);
+  writeJson(directory, '90-after-database.json', {
+    ...DATABASE_SNAPSHOT,
+    sessions: [...DATABASE_SNAPSHOT.sessions, CREATED_SESSION_ROWS[0]],
+  });
+  writePhaseMarker(directory, 'after');
+  repinIndexEvidence(directory, new Set([
+    '90-after-database.json',
+    PHASE_MARKERS.after,
+  ]));
+  resealDishonestly(directory);
+
+  const result = runVerifier(directory);
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /FAIL temporary-session-cleanup/);
+  assert.match(result.stdout, /remains in the after snapshot/);
 });
 
 test('the verifier deadline bounds execution', (t) => {

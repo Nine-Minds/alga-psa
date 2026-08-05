@@ -45,10 +45,13 @@ export const MANIFEST_FILE = '98-sha256-manifest.json';
 export const CHECKSUM_FILE = 'SHA256SUMS';
 export const METADATA_FILE = '00-workflow-run.json';
 export const RESTORATION_FILE = '91-restoration-comparison.json';
+export const CREATED_SESSIONS_FILE = '89-temporary-sessions-created.json';
+export const SESSION_CLEANUP_FILE = '91-temporary-session-cleanup-proof.json';
 export const CORRELATION_FILE = '95-final-dom-screenshot-correlation.json';
-export const INDEX_SCHEMA_VERSION = 1;
+export const INDEX_SCHEMA_VERSION = 2;
 export const VERIFIER_SOURCE_PATH = fileURLToPath(import.meta.url);
 export const DEFAULT_TIMEOUT_MS = 60_000;
+export const EXPECTED_TEMPORARY_SESSION_COUNT = 2;
 
 export const EXTERNAL_GRAPH_LIMITATION = 'No external Microsoft Graph or Entra OAuth call is performed by this evidence helper.';
 export const CTIME_NON_RESTORABLE_REASON = 'ctime is kernel-managed; not restorable from userspace';
@@ -58,6 +61,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 const SHA256_PATTERN = /^[0-9a-f]{64}$/i;
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/i;
 const PNG_SIGNATURE_HEX = '89504e470d0a1a0a';
+const MAX_SESSION_EVIDENCE_ROWS = 10_000;
 const PHASE_FILES = {
   before: [
     '01-before-git-status.txt',
@@ -73,6 +77,7 @@ const PHASE_FILES = {
     '90-after-port-route-health.json',
     '90-after-database.json',
     '91-restoration-comparison.json',
+    SESSION_CLEANUP_FILE,
   ],
 };
 const PHASE_MARKERS = {
@@ -116,6 +121,27 @@ export const REQUIRED_CLAIMS = [
     evidence: [PHASE_MARKERS.before, PHASE_MARKERS.after],
     assertions: [],
     native: ['phase-markers'],
+  },
+  {
+    id: 'temporary-session-cleanup',
+    title: 'Both temporary session rows created by the smoke run were deleted',
+    proves: 'Exactly two tenant session rows appeared after the run began, neither existed in the baseline, and neither remains in the after-cleanup database snapshot.',
+    evidence: [
+      METADATA_FILE,
+      '01-before-database.json',
+      CREATED_SESSIONS_FILE,
+      '90-after-database.json',
+      SESSION_CLEANUP_FILE,
+      MANIFEST_FILE,
+    ],
+    assertions: [
+      { file: CREATED_SESSIONS_FILE, path: ['expectedCreatedSessionCount'], op: 'equals', expected: EXPECTED_TEMPORARY_SESSION_COUNT },
+      { file: CREATED_SESSIONS_FILE, path: ['assertionsPassed'], op: 'equals', expected: true },
+      { file: SESSION_CLEANUP_FILE, path: ['allDeleted'], op: 'equals', expected: true },
+      { file: MANIFEST_FILE, path: ['temporarySessionRowsDeleted'], op: 'equals', expected: true },
+      { file: MANIFEST_FILE, path: ['temporarySessionRowsDeletedCount'], op: 'equals', expected: EXPECTED_TEMPORARY_SESSION_COUNT },
+    ],
+    native: ['temporary-session-cleanup'],
   },
   {
     id: 'restoration-profiles',
@@ -453,6 +479,7 @@ function resolveEvidenceNames(claim, context) {
 const NATIVE_CHECKS = {
   'checksum-coverage': verifyChecksumCoverage,
   'phase-markers': verifyPhaseMarkers,
+  'temporary-session-cleanup': verifyTemporarySessionCleanup,
   'recompute-profiles': (context) => verifyRestorationSection(
     context,
     'microsoftProfiles',
@@ -570,6 +597,122 @@ function verifyPhaseMarkers(context) {
         failures.push(`${expected.file} changed after the ${phase} assertions passed`);
       }
     }
+  }
+  return failures;
+}
+
+function verifyTemporarySessionCleanup(context) {
+  const failures = [];
+  const metadataContract = context.metadata.temporarySessionCleanup;
+  if (metadataContract?.expectedCreatedSessionCount !== EXPECTED_TEMPORARY_SESSION_COUNT
+    || metadataContract?.createdEvidenceFile !== CREATED_SESSIONS_FILE
+    || metadataContract?.cleanupEvidenceFile !== SESSION_CLEANUP_FILE) {
+    failures.push(`${METADATA_FILE} does not declare the required two-session cleanup contract`);
+  }
+
+  const readSessionMap = (snapshot, label) => {
+    if (!Array.isArray(snapshot.sessions)) {
+      failures.push(`${label} does not include a sessions array`);
+      return new Map();
+    }
+    if (snapshot.sessions.length > MAX_SESSION_EVIDENCE_ROWS) {
+      failures.push(`${label} exceeds the ${MAX_SESSION_EVIDENCE_ROWS}-row verification bound`);
+      return new Map();
+    }
+    const rows = new Map();
+    for (const session of snapshot.sessions) {
+      context.checkDeadline();
+      if (!session || !UUID_PATTERN.test(session.session_id || '')) {
+        failures.push(`${label} contains a session without a UUID session_id`);
+        continue;
+      }
+      if (rows.has(session.session_id)) {
+        failures.push(`${label} contains duplicate session_id ${session.session_id}`);
+        continue;
+      }
+      if (session.tenant !== context.metadata.tenantId) {
+        failures.push(`${label} session ${session.session_id} belongs to a different tenant`);
+      }
+      rows.set(session.session_id, session);
+    }
+    return rows;
+  };
+
+  const beforeSessions = readSessionMap(
+    context.readJson('01-before-database.json'),
+    'Before database snapshot'
+  );
+  const afterSessions = readSessionMap(
+    context.readJson('90-after-database.json'),
+    'After database snapshot'
+  );
+  const creation = context.readJson(CREATED_SESSIONS_FILE);
+  const cleanup = context.readJson(SESSION_CLEANUP_FILE);
+  const createdSessions = Array.isArray(creation.createdSessions)
+    ? creation.createdSessions
+    : [];
+  if (creation.workflowRunId !== context.metadata.workflowRunId
+    || creation.tenantId !== context.metadata.tenantId
+    || creation.expectedCreatedSessionCount !== EXPECTED_TEMPORARY_SESSION_COUNT
+    || creation.assertionsPassed !== true
+    || createdSessions.length !== EXPECTED_TEMPORARY_SESSION_COUNT) {
+    failures.push(`${CREATED_SESSIONS_FILE} does not prove exactly two sessions were created`);
+  }
+
+  const runStartedAt = new Date(context.metadata.startedAt);
+  const sessionsCapturedAt = new Date(creation.capturedAt);
+  if (Number.isNaN(runStartedAt.valueOf())
+    || Number.isNaN(sessionsCapturedAt.valueOf())
+    || sessionsCapturedAt < runStartedAt) {
+    failures.push(`${CREATED_SESSIONS_FILE} has invalid smoke-run timing`);
+  }
+  const createdSessionIds = [];
+  for (const session of createdSessions) {
+    context.checkDeadline();
+    const createdAt = new Date(session?.created_at);
+    if (!session
+      || !UUID_PATTERN.test(session.session_id || '')
+      || !UUID_PATTERN.test(session.user_id || '')
+      || session.tenant !== context.metadata.tenantId
+      || Number.isNaN(createdAt.valueOf())
+      || createdAt < runStartedAt
+      || createdAt > sessionsCapturedAt) {
+      failures.push(`${CREATED_SESSIONS_FILE} contains a row not attributable to this smoke run`);
+      continue;
+    }
+    createdSessionIds.push(session.session_id);
+    if (beforeSessions.has(session.session_id)) {
+      failures.push(`Temporary session ${session.session_id} already existed in the before snapshot`);
+    }
+    if (afterSessions.has(session.session_id)) {
+      failures.push(`Temporary session ${session.session_id} remains in the after snapshot`);
+    }
+  }
+  createdSessionIds.sort((left, right) => left.localeCompare(right));
+  if (new Set(createdSessionIds).size !== EXPECTED_TEMPORARY_SESSION_COUNT) {
+    failures.push(`${CREATED_SESSIONS_FILE} does not identify two distinct session rows`);
+  }
+
+  let createdEvidenceIdentity;
+  try {
+    createdEvidenceIdentity = context.identity(CREATED_SESSIONS_FILE);
+  } catch (error) {
+    failures.push(error instanceof Error ? error.message : String(error));
+  }
+  if (cleanup.workflowRunId !== context.metadata.workflowRunId
+    || cleanup.tenantId !== context.metadata.tenantId
+    || cleanup.expectedCreatedSessionCount !== EXPECTED_TEMPORARY_SESSION_COUNT
+    || !isDeepStrictEqual(cleanup.createdEvidence, createdEvidenceIdentity)
+    || !isDeepStrictEqual(cleanup.createdSessionIds, createdSessionIds)
+    || !isDeepStrictEqual(cleanup.deletedSessionIds, createdSessionIds)
+    || !Array.isArray(cleanup.remainingSessionRows)
+    || cleanup.remainingSessionRows.length !== 0
+    || cleanup.allDeleted !== true) {
+    failures.push(`${SESSION_CLEANUP_FILE} does not match the recomputed two-row deletion proof`);
+  }
+  const cleanupVerifiedAt = new Date(cleanup.verifiedAt);
+  if (Number.isNaN(cleanupVerifiedAt.valueOf()) || cleanupVerifiedAt < sessionsCapturedAt) {
+    failures.push(`${SESSION_CLEANUP_FILE} has invalid verification timing`);
   }
   return failures;
 }
@@ -924,7 +1067,7 @@ export function buildVerificationIndex(evidenceDirectory, { verifierCopySha256 }
     verification: {
       command: `node ${VERIFIER_COPY_FILE} <bundle-dir>`,
       repoScript: 'scripts/verify-microsoft-email-smoke-evidence.mjs',
-      boundedBy: `Internal ${DEFAULT_TIMEOUT_MS} ms deadline; reads only the bundle directory (no network, database, or server); exits 0 only when every claim passes, 1 on any mismatch, 2 on usage errors or timeout.`,
+      boundedBy: `Internal ${DEFAULT_TIMEOUT_MS} ms deadline and ${MAX_SESSION_EVIDENCE_ROWS}-row session-evidence cap; reads only the bundle directory (no network, database, or server); exits 0 only when every claim passes, 1 on any mismatch, 2 on usage errors or timeout.`,
       verifier: { file: VERIFIER_COPY_FILE, sha256: verifierCopySha256 },
     },
     provenance: {

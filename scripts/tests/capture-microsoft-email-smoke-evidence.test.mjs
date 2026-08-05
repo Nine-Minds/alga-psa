@@ -5,9 +5,16 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  buildTemporarySessionCleanupProof,
+  buildTemporarySessionsCreatedProof,
   exactComparison,
   secretInventory,
 } from '../capture-microsoft-email-smoke-evidence.mjs';
+import {
+  CREATED_SESSIONS_FILE,
+  EXPECTED_TEMPORARY_SESSION_COUNT,
+  SESSION_CLEANUP_FILE,
+} from '../verify-microsoft-email-smoke-evidence.mjs';
 import {
   CTIME_NON_RESTORABLE_REASON,
   ctimeDisclosure,
@@ -17,11 +24,14 @@ import {
 } from '../microsoft-email-smoke-timestamps.mjs';
 import {
   DATABASE_SNAPSHOT,
+  CREATED_SESSION_ROWS,
   EXTERNAL_GRAPH_LIMITATION,
   FIDELITY_NOTE,
   PROVENANCE,
   REPO_ROOT,
   RESTORED,
+  TEMPORARY_SESSIONS_CREATED,
+  TEMPORARY_SESSION_IDS,
   TENANT_ID,
   invoke,
   setupEvidence,
@@ -36,6 +46,73 @@ function assertFailure(result, message) {
 }
 
 const SECRET_TENANT_ID = TENANT_ID;
+
+const SESSION_PROOF_METADATA = {
+  workflowRunId: '11111111-1111-4111-8111-111111111111',
+  tenantId: TENANT_ID,
+  startedAt: '2026-08-04T22:59:00.000Z',
+  temporarySessionCleanup: {
+    expectedCreatedSessionCount: EXPECTED_TEMPORARY_SESSION_COUNT,
+    createdEvidenceFile: CREATED_SESSIONS_FILE,
+    cleanupEvidenceFile: SESSION_CLEANUP_FILE,
+  },
+};
+
+test('temporary-session proof identifies exactly two newly created rows and their deletion', () => {
+  const observedDatabase = {
+    ...DATABASE_SNAPSHOT,
+    sessions: [...DATABASE_SNAPSHOT.sessions, ...CREATED_SESSION_ROWS],
+  };
+  const creation = buildTemporarySessionsCreatedProof(
+    SESSION_PROOF_METADATA,
+    DATABASE_SNAPSHOT,
+    observedDatabase,
+    TEMPORARY_SESSIONS_CREATED.capturedAt
+  );
+  assert.deepEqual(
+    creation.createdSessions.map((session) => session.session_id),
+    TEMPORARY_SESSION_IDS
+  );
+
+  const cleanup = buildTemporarySessionCleanupProof(
+    SESSION_PROOF_METADATA,
+    creation,
+    DATABASE_SNAPSHOT,
+    { file: CREATED_SESSIONS_FILE, bytes: 1, sha256: 'ab'.repeat(32) }
+  );
+  assert.equal(cleanup.allDeleted, true);
+  assert.deepEqual(cleanup.deletedSessionIds, TEMPORARY_SESSION_IDS);
+  assert.deepEqual(cleanup.remainingSessionRows, []);
+});
+
+test('temporary-session proof rejects the wrong creation count and reports a surviving row', () => {
+  assert.throws(
+    () => buildTemporarySessionsCreatedProof(
+      SESSION_PROOF_METADATA,
+      DATABASE_SNAPSHOT,
+      {
+        ...DATABASE_SNAPSHOT,
+        sessions: [...DATABASE_SNAPSHOT.sessions, CREATED_SESSION_ROWS[0]],
+      },
+      TEMPORARY_SESSIONS_CREATED.capturedAt
+    ),
+    /Expected exactly 2 temporary session rows, observed 1/
+  );
+
+  const afterWithResidue = {
+    ...DATABASE_SNAPSHOT,
+    sessions: [...DATABASE_SNAPSHOT.sessions, CREATED_SESSION_ROWS[1]],
+  };
+  const cleanup = buildTemporarySessionCleanupProof(
+    SESSION_PROOF_METADATA,
+    TEMPORARY_SESSIONS_CREATED,
+    afterWithResidue,
+    { file: CREATED_SESSIONS_FILE, bytes: 1, sha256: 'ab'.repeat(32) }
+  );
+  assert.equal(cleanup.allDeleted, false);
+  assert.deepEqual(cleanup.deletedSessionIds, [TEMPORARY_SESSION_IDS[0]]);
+  assert.deepEqual(cleanup.remainingSessionRows, [CREATED_SESSION_ROWS[1]]);
+});
 
 function setupSecretBase() {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'microsoft-smoke-secret-test-'));
@@ -314,6 +391,18 @@ test('manifest cannot seal tampered or failed after assertions', (t) => {
   assertFailure(invoke(directory, 'manifest'), /reports unexpected ctime changes/);
 
   writeJson(directory, '91-restoration-comparison.json', RESTORED);
+  const sessionCleanup = JSON.parse(
+    fs.readFileSync(path.join(directory, SESSION_CLEANUP_FILE), 'utf8')
+  );
+  writeJson(directory, SESSION_CLEANUP_FILE, {
+    ...sessionCleanup,
+    deletedSessionIds: [TEMPORARY_SESSION_IDS[0]],
+    allDeleted: false,
+  });
+  writePhaseMarker(directory, 'after');
+  assertFailure(invoke(directory, 'manifest'), /does not show both temporary session rows/);
+
+  writeJson(directory, SESSION_CLEANUP_FILE, sessionCleanup);
   writePhaseMarker(directory, 'after');
   const sealed = invoke(directory, 'manifest');
   assert.equal(sealed.status, 0, `${sealed.stdout}${sealed.stderr}`);
@@ -322,6 +411,8 @@ test('manifest cannot seal tampered or failed after assertions', (t) => {
   );
   assert.equal(manifest.assertionsPassed, true);
   assert.equal(manifest.restorationExact, true);
+  assert.equal(manifest.temporarySessionRowsDeleted, true);
+  assert.equal(manifest.temporarySessionRowsDeletedCount, 2);
   assert.equal(manifest.ctimeDisclosed, true);
   assert.equal(manifest.ctimeNonRestorableReason, CTIME_NON_RESTORABLE_REASON);
   assert.deepEqual(manifest.ctimeUnexpectedChanges, []);

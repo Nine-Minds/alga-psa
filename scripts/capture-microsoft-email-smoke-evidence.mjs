@@ -4,9 +4,10 @@
  * Capture auditable evidence around the Microsoft Email setup smoke test.
  *
  * The helper deliberately records secret presence, never secret contents. Run
- * `before` before any fixture mutation and `after` after cleanup, then attach a
- * final full-DOM export to its rendered screenshot with `correlate` and seal
- * the directory with `manifest`.
+ * `before` before any fixture mutation, `sessions-created` after the smoke run
+ * has created its two temporary login sessions, and `after` after cleanup.
+ * Then attach a final full-DOM export to its rendered screenshot with
+ * `correlate` and seal the directory with `manifest`.
  *
  * Sealing requires the four structured UI captures the smoke run produces
  * (01-self-hosted-providers-wizard, 01b-manual-setup-derived-redirect,
@@ -25,6 +26,8 @@
  *   node scripts/capture-microsoft-email-smoke-evidence.mjs before \
  *     --evidence-dir=/tmp/alga-smoke-evidence/<run> \
  *     --workflow-run-id=<uuid> --tenant-id=<uuid> --profile-id=<uuid>
+ *   node scripts/capture-microsoft-email-smoke-evidence.mjs sessions-created \
+ *     --evidence-dir=<dir>
  *   node scripts/capture-microsoft-email-smoke-evidence.mjs after <same options>
  *   node scripts/capture-microsoft-email-smoke-evidence.mjs correlate \
  *     --evidence-dir=<dir> --dom-file=<full-dom.html> \
@@ -71,8 +74,11 @@ import {
   truncatedMtimeMs,
 } from './microsoft-email-smoke-timestamps.mjs';
 import {
+  CREATED_SESSIONS_FILE,
+  EXPECTED_TEMPORARY_SESSION_COUNT,
   INDEX_FILE,
   REQUIRED_CLAIMS,
+  SESSION_CLEANUP_FILE,
   VERIFIER_COPY_FILE,
   VERIFIER_SOURCE_PATH,
   buildVerificationIndex,
@@ -84,7 +90,7 @@ import {
 const { Client } = pg;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/i;
-const COMMANDS = new Set(['before', 'after', 'correlate', 'manifest']);
+const COMMANDS = new Set(['before', 'sessions-created', 'after', 'correlate', 'manifest']);
 const EXTERNAL_GRAPH_LIMITATION = 'No external Microsoft Graph or Entra OAuth call is performed by this evidence helper.';
 const CROSS_HOST_CONTEXT = 'The card browser is Mac-hosted while the worktree server runs on Linux through a localhost-to-Tailscale relay.';
 const PHASE_FILES = {
@@ -102,6 +108,7 @@ const PHASE_FILES = {
     '90-after-port-route-health.json',
     '90-after-database.json',
     '91-restoration-comparison.json',
+    SESSION_CLEANUP_FILE,
   ],
 };
 const PHASE_MARKERS = {
@@ -360,6 +367,19 @@ async function databaseSnapshot(environment, tenantId) {
         ORDER BY consumer_type, profile_id`,
       [tenantId]
     );
+    // Deliberately omit the legacy token and all mutable activity/device
+    // fields. The evidence needs stable row identity and creation provenance,
+    // never authentication material.
+    const sessionResult = await client.query(
+      `SELECT row_to_json(session_evidence) AS session
+         FROM (
+           SELECT tenant, session_id, user_id, created_at
+             FROM sessions
+            WHERE tenant = $1
+            ORDER BY session_id
+         ) AS session_evidence`,
+      [tenantId]
+    );
     return {
       connection: {
         host: connection.host,
@@ -370,10 +390,137 @@ async function databaseSnapshot(environment, tenantId) {
       identity: identityResult.rows[0],
       microsoftProfiles: profileResult.rows.map((row) => row.profile),
       microsoftConsumerBindings: bindingResult.rows.map((row) => row.binding),
+      sessions: sessionResult.rows.map((row) => row.session),
     };
   } finally {
     await client.end();
   }
+}
+
+function requireSessionRows(snapshot, label) {
+  if (!snapshot || !Array.isArray(snapshot.sessions)) {
+    fail(`${label} must include a sessions array`);
+  }
+  const seen = new Set();
+  for (const session of snapshot.sessions) {
+    if (!session || !UUID_PATTERN.test(session.session_id || '')) {
+      fail(`${label} contains a session without a UUID session_id`);
+    }
+    if (seen.has(session.session_id)) {
+      fail(`${label} contains duplicate session_id ${session.session_id}`);
+    }
+    seen.add(session.session_id);
+  }
+  return snapshot.sessions;
+}
+
+function buildTemporarySessionsCreatedProof(metadata, baselineDatabase, observedDatabase, capturedAt) {
+  const expectedCount = metadata.temporarySessionCleanup?.expectedCreatedSessionCount;
+  if (expectedCount !== EXPECTED_TEMPORARY_SESSION_COUNT
+    || metadata.temporarySessionCleanup?.createdEvidenceFile !== CREATED_SESSIONS_FILE
+    || metadata.temporarySessionCleanup?.cleanupEvidenceFile !== SESSION_CLEANUP_FILE) {
+    fail('Workflow metadata does not declare the required two-session cleanup proof');
+  }
+  const baselineIds = new Set(
+    requireSessionRows(baselineDatabase, 'Before database snapshot')
+      .map((session) => session.session_id)
+  );
+  const createdSessions = requireSessionRows(observedDatabase, 'Created-session database snapshot')
+    .filter((session) => !baselineIds.has(session.session_id));
+  if (createdSessions.length !== expectedCount) {
+    fail(`Expected exactly ${expectedCount} temporary session rows, observed ${createdSessions.length}`);
+  }
+  const startedAt = new Date(metadata.startedAt);
+  const observedAt = new Date(capturedAt);
+  for (const session of createdSessions) {
+    const createdAt = new Date(session.created_at);
+    if (session.tenant !== metadata.tenantId
+      || !UUID_PATTERN.test(session.user_id || '')
+      || Number.isNaN(createdAt.valueOf())
+      || createdAt < startedAt
+      || createdAt > observedAt) {
+      fail(`Temporary session ${session.session_id} is not attributable to this smoke run`);
+    }
+  }
+  return {
+    workflowRunId: metadata.workflowRunId,
+    tenantId: metadata.tenantId,
+    capturedAt,
+    expectedCreatedSessionCount: expectedCount,
+    assertionsPassed: true,
+    createdSessions,
+  };
+}
+
+function buildTemporarySessionCleanupProof(metadata, creation, afterDatabase, createdEvidence) {
+  const expectedCount = metadata.temporarySessionCleanup?.expectedCreatedSessionCount;
+  if (creation.workflowRunId !== metadata.workflowRunId
+    || creation.tenantId !== metadata.tenantId
+    || creation.expectedCreatedSessionCount !== expectedCount
+    || creation.assertionsPassed !== true
+    || !Array.isArray(creation.createdSessions)
+    || creation.createdSessions.length !== expectedCount) {
+    fail('The temporary-session creation evidence is invalid');
+  }
+  const createdSessionIds = creation.createdSessions
+    .map((session) => session.session_id)
+    .sort((left, right) => left.localeCompare(right));
+  if (new Set(createdSessionIds).size !== expectedCount
+    || createdSessionIds.some((sessionId) => !UUID_PATTERN.test(sessionId))) {
+    fail('The temporary-session creation evidence does not identify two distinct rows');
+  }
+  const createdIdSet = new Set(createdSessionIds);
+  const remainingSessionRows = requireSessionRows(afterDatabase, 'After database snapshot')
+    .filter((session) => createdIdSet.has(session.session_id));
+  const deletedSessionIds = createdSessionIds.filter(
+    (sessionId) => !remainingSessionRows.some((session) => session.session_id === sessionId)
+  );
+  return {
+    workflowRunId: metadata.workflowRunId,
+    tenantId: metadata.tenantId,
+    verifiedAt: new Date().toISOString(),
+    createdEvidence,
+    expectedCreatedSessionCount: expectedCount,
+    createdSessionIds,
+    deletedSessionIds,
+    remainingSessionRows,
+    allDeleted: deletedSessionIds.length === expectedCount && remainingSessionRows.length === 0,
+  };
+}
+
+async function captureCreatedSessions(args) {
+  const evidenceDirectory = resolveEvidenceDirectory(requireArgument(args, 'evidence-dir'));
+  const metadata = readJson(
+    path.join(evidenceDirectory, '00-workflow-run.json'),
+    'workflow metadata'
+  );
+  if (metadata.externalGraphLimitation !== EXTERNAL_GRAPH_LIMITATION
+    || metadata.crossHostContext !== CROSS_HOST_CONTEXT) {
+    fail('Workflow metadata is missing the required limitations');
+  }
+  verifyPhaseMarker(evidenceDirectory, 'before', metadata.workflowRunId);
+  const repoRoot = repositoryRoot();
+  const observedDatabase = await databaseSnapshot(readEnvironment(repoRoot), metadata.tenantId);
+  const baselineDatabase = readJson(
+    path.join(evidenceDirectory, '01-before-database.json'),
+    'before database snapshot'
+  );
+  const capturedAt = new Date().toISOString();
+  writeJsonNew(
+    path.join(evidenceDirectory, CREATED_SESSIONS_FILE),
+    buildTemporarySessionsCreatedProof(
+      metadata,
+      baselineDatabase,
+      observedDatabase,
+      capturedAt
+    )
+  );
+  console.log(JSON.stringify({
+    phase: 'sessions-created',
+    workflowRunId: metadata.workflowRunId,
+    evidenceDirectory,
+    temporarySessions: EXPECTED_TEMPORARY_SESSION_COUNT,
+  }, null, 2));
 }
 
 function resolveFilesystemSecretBase(repoRoot, environment) {
@@ -551,6 +698,7 @@ async function capturePhase(phase, args) {
   const appUrl = args['app-url'] || `http://localhost:${port}`;
   fs.mkdirSync(evidenceDirectory, { recursive: true });
 
+  let metadata;
   if (phase === 'before') {
     writeJsonNew(path.join(evidenceDirectory, '00-workflow-run.json'), {
       workflowRunId,
@@ -559,15 +707,23 @@ async function capturePhase(phase, args) {
       appUrl,
       tenantId,
       profileId,
+      temporarySessionCleanup: {
+        expectedCreatedSessionCount: EXPECTED_TEMPORARY_SESSION_COUNT,
+        createdEvidenceFile: CREATED_SESSIONS_FILE,
+        cleanupEvidenceFile: SESSION_CLEANUP_FILE,
+      },
       externalGraphLimitation: EXTERNAL_GRAPH_LIMITATION,
       crossHostContext: CROSS_HOST_CONTEXT,
     });
   } else {
     const metadataPath = path.join(evidenceDirectory, '00-workflow-run.json');
-    const metadata = readJson(metadataPath, 'workflow metadata');
+    metadata = readJson(metadataPath, 'workflow metadata');
     if (metadata.workflowRunId !== workflowRunId
       || metadata.tenantId !== tenantId
       || metadata.profileId !== profileId
+      || metadata.temporarySessionCleanup?.expectedCreatedSessionCount !== EXPECTED_TEMPORARY_SESSION_COUNT
+      || metadata.temporarySessionCleanup?.createdEvidenceFile !== CREATED_SESSIONS_FILE
+      || metadata.temporarySessionCleanup?.cleanupEvidenceFile !== SESSION_CLEANUP_FILE
       || metadata.externalGraphLimitation !== EXTERNAL_GRAPH_LIMITATION
       || metadata.crossHostContext !== CROSS_HOST_CONTEXT) {
       fail('The after arguments do not match the before metadata');
@@ -582,6 +738,7 @@ async function capturePhase(phase, args) {
   const routes = await routeHealth(appUrl);
   const database = await databaseSnapshot(environment, tenantId);
   let restoration;
+  let sessionCleanup;
   if (phase === 'after') {
     const baselineDatabase = readJson(
       path.join(evidenceDirectory, '01-before-database.json'),
@@ -591,6 +748,19 @@ async function capturePhase(phase, args) {
       path.join(evidenceDirectory, '01-before-secret-inventory.json'),
       'before secret inventory'
     );
+    const createdSessionsPath = path.join(evidenceDirectory, CREATED_SESSIONS_FILE);
+    const createdSessions = readJson(createdSessionsPath, 'temporary-session creation evidence');
+    sessionCleanup = buildTemporarySessionCleanupProof(
+      metadata,
+      createdSessions,
+      database,
+      fileIdentity(createdSessionsPath)
+    );
+    if (!sessionCleanup.allDeleted) {
+      fail(
+        `Cleanup left ${sessionCleanup.remainingSessionRows.length} of the two temporary session rows behind`
+      );
+    }
     const disclosure = ctimeDisclosure(baselineSecrets, secrets);
     restoration = {
       microsoftProfiles: exactComparison(
@@ -657,6 +827,7 @@ async function capturePhase(phase, args) {
   writeJsonNew(path.join(evidenceDirectory, `${prefix}-database.json`), database);
   if (phase === 'after') {
     writeJsonNew(path.join(evidenceDirectory, '91-restoration-comparison.json'), restoration);
+    writeJsonNew(path.join(evidenceDirectory, SESSION_CLEANUP_FILE), sessionCleanup);
   }
   writePhaseMarker(evidenceDirectory, phase, workflowRunId);
 
@@ -830,6 +1001,22 @@ function createManifest(args) {
     || restoration.ctimeDisclosure.unexpectedChanges.length !== 0) {
     fail('The ctime disclosure is missing, mislabeled, or reports unexpected ctime changes');
   }
+  const sessionCleanup = readJson(
+    path.join(evidenceDirectory, SESSION_CLEANUP_FILE),
+    'temporary-session cleanup proof'
+  );
+  if (sessionCleanup.workflowRunId !== metadata.workflowRunId
+    || sessionCleanup.tenantId !== metadata.tenantId
+    || sessionCleanup.expectedCreatedSessionCount !== EXPECTED_TEMPORARY_SESSION_COUNT
+    || !Array.isArray(sessionCleanup.createdSessionIds)
+    || sessionCleanup.createdSessionIds.length !== EXPECTED_TEMPORARY_SESSION_COUNT
+    || !Array.isArray(sessionCleanup.deletedSessionIds)
+    || sessionCleanup.deletedSessionIds.length !== EXPECTED_TEMPORARY_SESSION_COUNT
+    || !Array.isArray(sessionCleanup.remainingSessionRows)
+    || sessionCleanup.remainingSessionRows.length !== 0
+    || sessionCleanup.allDeleted !== true) {
+    fail('The proof does not show both temporary session rows were deleted');
+  }
   const correlation = readJson(correlationPath, 'final DOM/PNG correlation');
   if (correlation.workflowRunId !== metadata.workflowRunId
     || correlation.sameCaptureProven !== true
@@ -901,6 +1088,8 @@ function createManifest(args) {
     generatedAt: new Date().toISOString(),
     assertionsPassed: true,
     restorationExact: true,
+    temporarySessionRowsDeleted: true,
+    temporarySessionRowsDeletedCount: sessionCleanup.deletedSessionIds.length,
     ctimeDisclosed: true,
     ctimeNonRestorableReason: CTIME_NON_RESTORABLE_REASON,
     ctimeUnexpectedChanges: restoration.ctimeDisclosure.unexpectedChanges,
@@ -944,7 +1133,12 @@ function createManifest(args) {
   }, null, 2));
 }
 
-export { exactComparison, secretInventory };
+export {
+  buildTemporarySessionCleanupProof,
+  buildTemporarySessionsCreatedProof,
+  exactComparison,
+  secretInventory,
+};
 
 const invokedAsScript = process.argv[1]
   && import.meta.url === pathToFileURL(process.argv[1]).href;
@@ -952,11 +1146,13 @@ const invokedAsScript = process.argv[1]
 if (invokedAsScript) {
   try {
     if (!COMMANDS.has(command)) {
-      fail('Expected command: before, after, correlate, or manifest');
+      fail('Expected command: before, sessions-created, after, correlate, or manifest');
     }
     const args = parseArguments(rawArguments);
     if (command === 'before' || command === 'after') {
       await capturePhase(command, args);
+    } else if (command === 'sessions-created') {
+      await captureCreatedSessions(args);
     } else if (command === 'correlate') {
       correlate(args);
     } else {
