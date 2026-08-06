@@ -50,6 +50,7 @@ vi.mock('@alga-psa/workflows/persistence', async () => {
   };
 });
 
+import { WorkflowDefinitionVersionModelV2, WorkflowScheduleStateModel } from '@alga-psa/workflows/persistence';
 import { registerWorkflowScheduleJobRunner, resetWorkflowScheduleJobRunner } from '@alga-psa/workflows/lib/jobRunnerProvider';
 import { syncWorkflowScheduleState } from '@alga-psa/workflows/lib/workflowScheduleLifecycle';
 
@@ -153,5 +154,38 @@ describe('workflowScheduleLifecycle inline schedule creation', () => {
       cron: '0 6 * * *'
     });
     expect(workflowClockTriggerPayloadSchema.safeParse(schedule?.payload_json).success).toBe(true);
+  });
+
+  it('leaves no provider job registered when payload schema resolution fails before scheduling', async () => {
+    const workflowId = uuidv4();
+    runner.scheduleRecurringJob.mockClear();
+    runner.scheduleJobAt.mockClear();
+    vi.mocked(WorkflowScheduleStateModel.create).mockClear();
+    vi.mocked(WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion).mockRejectedValueOnce(
+      new Error('version lookup failed')
+    );
+
+    await expect(
+      syncWorkflowScheduleState(knex, {
+        tenantId: 'tenant-1',
+        workflowId,
+        desired: {
+          triggerType: 'recurring',
+          workflowVersion: 5,
+          dayTypeFilter: 'any',
+          cron: '0 6 * * *',
+          timezone: 'UTC',
+          enabled: true,
+          status: 'scheduled'
+        }
+      })
+    ).rejects.toThrow('version lookup failed');
+
+    // Resolution runs before provider registration, so a resolver failure must
+    // not orphan an external job or persist any schedule state.
+    expect(runner.scheduleRecurringJob).not.toHaveBeenCalled();
+    expect(runner.scheduleJobAt).not.toHaveBeenCalled();
+    expect(WorkflowScheduleStateModel.create).not.toHaveBeenCalled();
+    expect(scheduleState.size).toBe(0);
   });
 });

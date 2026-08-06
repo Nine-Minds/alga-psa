@@ -616,10 +616,12 @@ export async function syncWorkflowScheduleState(
 
   if (!existing) {
     const scheduleId = uuidv4();
-    const scheduled = await scheduleDesiredWorkflow(params.tenantId, params.workflowId, scheduleId, params.desired);
     // Clock-pinned time-triggered workflows store a schema-valid placeholder so
     // the schedule never depends on a user-authored payload; runtime synthesis
     // re-derives the real clock payload at each fire. Omit display-only fields.
+    // Resolve the schema ref and synthesize the payload BEFORE registering the
+    // provider job: a resolution failure here must not leave an orphaned
+    // external schedule with no persisted state row.
     const versionSchemaRef = await resolveWorkflowVersionPayloadSchemaRef(
       knex,
       params.tenantId,
@@ -636,6 +638,7 @@ export async function syncWorkflowScheduleState(
           timezone: params.desired.timezone
         })
       : {};
+    const scheduled = await scheduleDesiredWorkflow(params.tenantId, params.workflowId, scheduleId, params.desired);
     try {
       return await WorkflowScheduleStateModel.create(knex, {
         id: scheduleId,
