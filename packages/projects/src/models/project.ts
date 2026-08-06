@@ -1109,7 +1109,9 @@ const ProjectModel = {
    * because the phase's effective scope becomes complete.
    *
    * Returns the existing or newly-created phase mappings. No-op (returns the
-   * existing set) when the phase already has phase-scoped mappings.
+   * existing set) when the phase already has phase-scoped mappings. Throws
+   * before any write when the phase does not exist or belongs to a different
+   * project than `projectId`.
    */
   copyProjectStatusMappingsToPhase: async (
     knexOrTrx: Knex | Knex.Transaction,
@@ -1119,6 +1121,19 @@ const ProjectModel = {
   ): Promise<IProjectStatusMapping[]> => {
     if (!tenant) {
       throw new Error('Tenant context is required for copying project status mappings to phase');
+    }
+
+    // Scope guard: the target phase must belong to the given project. Runs on
+    // the caller's connection/transaction before any mapping insert or task
+    // remap, so a foreign-project phase rejects with zero writes behind it.
+    const phase = await tenantScopedTable(knexOrTrx, 'project_phases', tenant)
+      .where('phase_id', phaseId)
+      .first() as IProjectPhase | undefined;
+    if (!phase) {
+      throw new Error('Project phase not found');
+    }
+    if (phase.project_id !== projectId) {
+      throw new Error('Project phase does not belong to this project');
     }
 
     const existing = await ProjectModel.getProjectStatusMappings(knexOrTrx, tenant, projectId, phaseId);

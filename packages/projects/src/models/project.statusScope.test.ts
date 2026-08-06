@@ -176,8 +176,15 @@ describe('ProjectModel phase-scope status mapping invariant', () => {
   const projectId = 'project-1';
   const phaseId = 'phase-a';
 
+  const phaseRow = (id: string, project: string): Row => ({
+    tenant,
+    phase_id: id,
+    project_id: project,
+  });
+
   it('remaps phase tasks to cloned defaults via stable semantic identity without collapsing standards', async () => {
     const tables: Tables = {
+      project_phases: [phaseRow(phaseId, projectId)],
       project_status_mappings: [
         standard('std-open', 'std-1', { display_order: 1, custom_name: 'Open' }),
         standard('std-done', 'std-2', { display_order: 2, custom_name: 'Done' }),
@@ -214,6 +221,7 @@ describe('ProjectModel phase-scope status mapping invariant', () => {
 
   it('preserves duplicate-label custom statuses by their underlying status identity', async () => {
     const tables: Tables = {
+      project_phases: [phaseRow(phaseId, projectId)],
       project_status_mappings: [
         custom('cust-a', 'status-a', 'Blocked', 1),
         custom('cust-b', 'status-b', 'Blocked', 2),
@@ -238,6 +246,7 @@ describe('ProjectModel phase-scope status mapping invariant', () => {
 
   it('is idempotent when the phase already has scoped mappings', async () => {
     const tables: Tables = {
+      project_phases: [phaseRow(phaseId, projectId)],
       project_status_mappings: [
         standard('std-open', 'std-1', { display_order: 1 }),
         { ...standard('phase-existing', 'std-x', { display_order: 2 }), phase_id: phaseId },
@@ -249,6 +258,54 @@ describe('ProjectModel phase-scope status mapping invariant', () => {
     const result = await ProjectModel.copyProjectStatusMappingsToPhase(knex, tenant, projectId, phaseId);
     expect(result).toHaveLength(1);
     expect(result[0].project_status_mapping_id).toBe('phase-existing');
+  });
+
+  it('rejects a foreign-project phase before any mapping insert or task remap', async () => {
+    const projectB = 'project-2';
+    const phaseInB = 'phase-b1';
+    const tables: Tables = {
+      project_phases: [
+        phaseRow(phaseId, projectId),
+        phaseRow(phaseInB, projectB),
+      ],
+      project_status_mappings: [
+        // Project A has defaults that would otherwise be cloned.
+        standard('std-open', 'std-1', { display_order: 1 }),
+        // Project B's own default mapping, used by the phase's task.
+        standard('b-open', 'std-1', { project_id: projectB, display_order: 1 }),
+      ],
+      project_tasks: [
+        { tenant, task_id: 'tb1', phase_id: phaseInB, project_status_mapping_id: 'b-open' },
+      ],
+    };
+    const knex = createKnex(tables);
+
+    // Project A asked to copy its mappings into a phase that belongs to project B.
+    await expect(
+      ProjectModel.copyProjectStatusMappingsToPhase(knex, tenant, projectId, phaseInB)
+    ).rejects.toThrow('Project phase does not belong to this project');
+
+    // Zero writes: no mapping rows were created for the foreign phase...
+    expect(tables.project_status_mappings.filter((m) => m.phase_id === phaseInB)).toHaveLength(0);
+    expect(tables.project_status_mappings).toHaveLength(2);
+    // ...and no task was remapped.
+    expect(tables.project_tasks).toEqual([
+      { tenant, task_id: 'tb1', phase_id: phaseInB, project_status_mapping_id: 'b-open' },
+    ]);
+  });
+
+  it('rejects an unknown phase before any mapping insert or task remap', async () => {
+    const tables: Tables = {
+      project_phases: [phaseRow(phaseId, projectId)],
+      project_status_mappings: [standard('std-open', 'std-1', { display_order: 1 })],
+      project_tasks: [],
+    };
+    const knex = createKnex(tables);
+
+    await expect(
+      ProjectModel.copyProjectStatusMappingsToPhase(knex, tenant, projectId, 'phase-missing')
+    ).rejects.toThrow('Project phase not found');
+    expect(tables.project_status_mappings).toHaveLength(1);
   });
 
   it('resolveTaskStatusMapping remaps a stale default-scope mapping to its phase clone', async () => {
