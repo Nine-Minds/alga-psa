@@ -49,6 +49,9 @@ async function cleanupTenant(tenantId: string): Promise<void> {
   await tenantRows().where({ tenant: tenantId }).del();
 }
 
+const FIXTURE_START_DATE = '2026-08-01T00:00:00.000Z';
+const FIXTURE_END_DATE = '2027-07-31T23:59:59.999Z';
+
 async function createFixture(): Promise<Fixture> {
   const tenantId = uuidv4();
   const clientId = uuidv4();
@@ -82,6 +85,8 @@ async function createFixture(): Promise<Fixture> {
     billing_frequency: 'monthly',
     ...(hasColumn(contractColumns, 'owner_client_id') ? { owner_client_id: clientId } : {}),
     ...(hasColumn(contractColumns, 'is_template') ? { is_template: false } : {}),
+    ...(hasColumn(contractColumns, 'start_date') ? { start_date: FIXTURE_START_DATE } : {}),
+    ...(hasColumn(contractColumns, 'end_date') ? { end_date: FIXTURE_END_DATE } : {}),
     ...(hasColumn(contractColumns, 'status') ? { status: 'draft' } : {}),
     ...(hasColumn(contractColumns, 'is_active') ? { is_active: true } : {}),
     ...(hasColumn(contractColumns, 'created_at') ? { created_at: db.fn.now() } : {}),
@@ -150,6 +155,25 @@ describe('contract line service list integration', () => {
     expect(contract.owner_client_id).toBe(fixture.clientId);
     expect(contract.owner_client_name).toBe(`Owner Client ${fixture.tenantId.slice(0, 8)}`);
     expect(contract.total_plans).toBe(1);
+  });
+
+  // Regression: the explicit select list dropped the public create fields, so
+  // GET /api/v1/contracts silently lost `client_id`, `start_date` and
+  // `end_date` that POST /api/v1/contracts had just returned.
+  it('projects the public create fields (client_id, start_date, end_date, is_template)', async () => {
+    const fixture = await createFixture();
+    const service = serviceFor(fixture);
+
+    const result = await service.listContracts(
+      { page: 1, limit: 25 },
+      { tenant: fixture.tenantId, userId: uuidv4() } as any,
+    );
+
+    const [contract] = result.data as any[];
+    expect(contract.client_id).toBe(fixture.clientId);
+    expect(contract.is_template).toBe(false);
+    expect(new Date(contract.start_date).toISOString()).toBe(FIXTURE_START_DATE);
+    expect(new Date(contract.end_date).toISOString()).toBe(FIXTURE_END_DATE);
   });
 
   it('lists contract lines with include_services without a GROUP BY error', async () => {

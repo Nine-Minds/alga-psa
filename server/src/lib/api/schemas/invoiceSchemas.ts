@@ -97,15 +97,17 @@ const baseInvoiceItemSchema = z.object({
 });
 
 // Create invoice item schema
-// `invoice_id` is assigned server-side to the created invoice and `total_price`
-// is calculated server-side from `unit_price`/`quantity`, so neither is required
-// from the caller on create.
+// `invoice_id` is assigned server-side to the created invoice, and
+// `total_price`/`net_amount` are calculated server-side from
+// `unit_price`/`quantity` when omitted, so none of them is required from the
+// caller on create.
 const createInvoiceItemSchema = baseInvoiceItemSchema
   .omit({ item_id: true })
   .extend({
     tenant: uuidSchema.optional(),
     invoice_id: uuidSchema.optional(),
-    total_price: monetaryAmountSchema.optional()
+    total_price: monetaryAmountSchema.optional(),
+    net_amount: monetaryAmountSchema.optional()
   });
 
 // Update invoice item schema

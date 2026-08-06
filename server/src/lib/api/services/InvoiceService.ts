@@ -2376,31 +2376,38 @@ export class InvoiceService extends BaseService<IInvoice> {
     // Line items persist to the canonical `invoice_charges` table (surfaced to
     // the `invoice_items` view). `total_price`/`net_amount` are calculated
     // server-side from `unit_price`/`quantity` when the caller omits them.
-    const lineItemsData = lineItems.map((item, index) => ({
-      item_id: uuidv4(),
-      invoice_id: invoiceId,
-      service_id: item.service_id,
-      description: item.description,
-      quantity: item.quantity || 1,
-      unit_price: item.unit_price,
-      total_price: item.total_price ?? Number(item.unit_price || 0) * Number(item.quantity || 1),
-      tax_amount: item.tax_amount || 0,
-      net_amount: item.net_amount ?? item.total_price ?? (Number(item.unit_price || 0) * Number(item.quantity || 1)),
-      tax_region: item.tax_region,
-      tax_rate: item.tax_rate,
-      is_manual: item.is_manual || false,
-      is_taxable: item.is_taxable,
-      is_discount: item.is_discount || false,
-      discount_type: item.discount_type,
-      discount_percentage: item.discount_percentage,
-      applies_to_item_id: item.applies_to_item_id,
-      applies_to_service_id: item.applies_to_service_id,
-      client_contract_id: item.client_contract_id,
-      location_id: item.location_id,
-      created_by: context.userId,
-      tenant: context.tenant,
-      created_at: new Date()
-    }));
+    // Fallbacks use nullish checks only: `quantity` (and the derived amounts)
+    // may legitimately be zero, and `||` would silently rewrite a valid 0.
+    const lineItemsData = lineItems.map((item) => {
+      const quantity = item.quantity ?? 1;
+      const unitPrice = item.unit_price ?? 0;
+      const totalPrice = item.total_price ?? Number(unitPrice) * Number(quantity);
+      return {
+        item_id: uuidv4(),
+        invoice_id: invoiceId,
+        service_id: item.service_id,
+        description: item.description,
+        quantity,
+        unit_price: item.unit_price,
+        total_price: totalPrice,
+        tax_amount: item.tax_amount ?? 0,
+        net_amount: item.net_amount ?? totalPrice,
+        tax_region: item.tax_region,
+        tax_rate: item.tax_rate,
+        is_manual: item.is_manual || false,
+        is_taxable: item.is_taxable,
+        is_discount: item.is_discount || false,
+        discount_type: item.discount_type,
+        discount_percentage: item.discount_percentage,
+        applies_to_item_id: item.applies_to_item_id,
+        applies_to_service_id: item.applies_to_service_id,
+        client_contract_id: item.client_contract_id,
+        location_id: item.location_id,
+        created_by: context.userId,
+        tenant: context.tenant,
+        created_at: new Date()
+      };
+    });
 
     await tenantDb(trx, context.tenant).table('invoice_charges').insert(lineItemsData);
 

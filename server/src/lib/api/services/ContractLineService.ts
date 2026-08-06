@@ -776,6 +776,9 @@ export class ContractLineService extends BaseService<IContractLine> {
         'c.billing_frequency',
         'c.status',
         'c.is_active',
+        'c.is_template',
+        'c.start_date',
+        'c.end_date',
         'c.created_at',
         'c.updated_at',
         'c.tenant',
@@ -818,7 +821,12 @@ export class ContractLineService extends BaseService<IContractLine> {
     ]);
 
     const contractsWithLinks = contracts.map((contract: any) =>
-      addHateoasLinks(contract, this.generateContractLinks(contract.contract_id, context))
+      addHateoasLinks(
+        // Public v1 shape: `client_id` aliases the owning client, matching the
+        // createContract response so create and list project the same fields.
+        { ...contract, client_id: contract.owner_client_id },
+        this.generateContractLinks(contract.contract_id, context)
+      )
     );
 
     return {
