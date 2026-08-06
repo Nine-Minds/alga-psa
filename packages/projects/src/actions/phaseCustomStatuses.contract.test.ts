@@ -6,6 +6,7 @@ const readSource = (relativePath: string) =>
   readFileSync(path.resolve(__dirname, '..', relativePath), 'utf8');
 
 const actionsSource = readSource('actions/projectTaskStatusActions.ts');
+const modelSource = readSource('models/project.ts');
 const settingsSource = readSource('components/settings/projects/ProjectTaskStatusSettings.tsx');
 const phaseListItemSource = readSource('components/PhaseListItem.tsx');
 const projectStatusMappingUtilsSource = readSource('lib/projectStatusMappingUtils.ts');
@@ -32,16 +33,19 @@ describe('per-phase custom status scenarios', () => {
   describe('copyProjectStatusesToPhase clones project defaults into a phase', () => {
     it('reads default mappings and inserts copies for the target phase', () => {
       expect(actionsSource).toContain('export const copyProjectStatusesToPhase = withAuth(async (');
-      expect(actionsSource).toContain(".whereNull('phase_id')");
-      expect(actionsSource).toContain('phase_id: phaseId,');
-      expect(actionsSource).toContain('status_id: mapping.status_id,');
-      expect(actionsSource).toContain('display_order: mapping.display_order,');
+      expect(actionsSource).toContain(
+        'return await ProjectModel.copyProjectStatusMappingsToPhase(trx, tenant, projectId, phaseId);'
+      );
+      expect(modelSource).toContain(".whereNull('phase_id')");
+      expect(modelSource).toContain('phase_id: phaseId,');
+      expect(modelSource).toContain('status_id: mapping.status_id,');
+      expect(modelSource).toContain('display_order: mapping.display_order,');
     });
 
     it('preserves custom_name, standard_status_id, and is_visible from defaults', () => {
-      expect(actionsSource).toContain('custom_name: mapping.custom_name,');
-      expect(actionsSource).toContain('standard_status_id: mapping.standard_status_id,');
-      expect(actionsSource).toContain('is_visible: mapping.is_visible');
+      expect(modelSource).toContain('custom_name: mapping.custom_name,');
+      expect(modelSource).toContain('standard_status_id: mapping.standard_status_id,');
+      expect(modelSource).toContain('is_visible: mapping.is_visible');
     });
   });
 
