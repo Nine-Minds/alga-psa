@@ -35,6 +35,7 @@
       "title": "Einrichtungsanweisungen",
       "microsoft": {
         "title": "Microsoft 365-Setup",
+        "ownApp": "Verwenden Sie Ihre eigene Microsoft-App – registrieren Sie sie in Azure AD (Microsoft Entra ID), erteilen Sie E-Mail-Berechtigungen und verbinden Sie sie mit Ihrem Microsoft-365-Postfach.",
         "providersPointer": "Die Einrichtung der Microsoft-App wird unter „Anbieter“ verwaltet.",
         "openProviders": "Anbieter öffnen"
       },

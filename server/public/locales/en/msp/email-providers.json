@@ -35,6 +35,7 @@
       "title": "Setup Instructions",
       "microsoft": {
         "title": "Microsoft 365 Setup",
+        "ownApp": "Bring your own Microsoft app — register it in Azure AD (Microsoft Entra ID), grant mail permissions, and connect it to your Microsoft 365 mailbox.",
         "providersPointer": "Microsoft app setup is managed in Providers.",
         "openProviders": "Open Providers"
       },

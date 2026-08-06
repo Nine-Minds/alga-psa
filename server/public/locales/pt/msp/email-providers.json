@@ -35,6 +35,7 @@
       "title": "Instruções de configuração",
       "microsoft": {
         "title": "Configuração do Microsoft 365",
+        "ownApp": "Traga seu próprio aplicativo da Microsoft — registre-o no Azure AD (Microsoft Entra ID), conceda permissões de email e conecte-o à sua caixa de correio do Microsoft 365.",
         "providersPointer": "A configuração do aplicativo da Microsoft é gerenciada em Provedores.",
         "openProviders": "Abrir Provedores"
       },

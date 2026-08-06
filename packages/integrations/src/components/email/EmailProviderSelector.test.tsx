@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EmailProviderSelector } from './EmailProviderSelector';
 
@@ -62,6 +62,32 @@ describe('EmailProviderSelector edition gates', () => {
     expect(document.getElementById('setup-microsoft-provider-button')).toBeTruthy();
     expect(document.getElementById('setup-imap-provider-button')).toBeTruthy();
     expect(screen.queryByTestId('upgrade-prompt')).toBeNull();
+  });
+
+  it('fires the selection callback when the Microsoft 365 card is selected in CE', () => {
+    process.env.EDITION = 'community';
+    process.env.NEXT_PUBLIC_EDITION = 'community';
+
+    const onProviderSelected = vi.fn();
+    render(<EmailProviderSelector onProviderSelected={onProviderSelected} />);
+
+    fireEvent.click(document.getElementById('microsoft-provider-selector-card')!);
+
+    expect(onProviderSelected).toHaveBeenCalledTimes(1);
+    expect(onProviderSelected).toHaveBeenCalledWith('microsoft');
+  });
+
+  it('still fires the selection callback for the Microsoft 365 card in Enterprise Edition', () => {
+    process.env.EDITION = 'ee';
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+
+    const onProviderSelected = vi.fn();
+    render(<EmailProviderSelector onProviderSelected={onProviderSelected} />);
+
+    fireEvent.click(document.getElementById('microsoft-provider-selector-card')!);
+
+    expect(onProviderSelected).toHaveBeenCalledTimes(1);
+    expect(onProviderSelected).toHaveBeenCalledWith('microsoft');
   });
 
   it('still shows Gmail, Microsoft 365, and IMAP setup cards in Enterprise Edition', () => {

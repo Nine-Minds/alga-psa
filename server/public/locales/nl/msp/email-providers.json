@@ -35,6 +35,7 @@
       "title": "Installatie-instructies",
       "microsoft": {
         "title": "Microsoft 365-installatie",
+        "ownApp": "Breng uw eigen Microsoft-app mee – registreer deze in Azure AD (Microsoft Entra ID), verleen e-mailmachtigingen en verbind deze met uw Microsoft 365-postvak.",
         "providersPointer": "De configuratie van de Microsoft-app wordt beheerd in Aanbieders.",
         "openProviders": "Aanbieders openen"
       },

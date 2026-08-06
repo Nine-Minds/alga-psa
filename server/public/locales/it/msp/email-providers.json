@@ -35,6 +35,7 @@
       "title": "Istruzioni per l'installazione",
       "microsoft": {
         "title": "Installazione di Microsoft 365",
+        "ownApp": "Usa l'app Microsoft: registrala in Azure AD (Microsoft Entra ID), autorizza le autorizzazioni di posta e collegala alla tua cassetta di posta Microsoft 365.",
         "providersPointer": "La configurazione dell'app Microsoft viene gestita in Fornitori.",
         "openProviders": "Apri Fornitori"
       },

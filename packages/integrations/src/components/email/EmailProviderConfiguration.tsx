@@ -551,25 +551,32 @@ function EmailProviderConfigurationContent({
             })}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {isEnterpriseEdition && (
-              <div className="space-y-2">
-                <h4 className="font-medium mb-2">{t('configuration.setup.microsoft.title', {
-                  defaultValue: 'Microsoft 365 Setup',
-                })}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {t('configuration.setup.microsoft.providersPointer', { defaultValue: 'Microsoft app setup is managed in Providers.' })}
-                </p>
-                <Button
-                  id="open-microsoft-providers-settings-button"
-                  type="button"
-                  variant="link"
-                  className="h-auto p-0"
-                  onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
-                >
-                  {t('configuration.setup.microsoft.openProviders', { defaultValue: 'Open Providers' })}
-                </Button>
-              </div>
-            )}
+            <div className="space-y-2">
+              <h4 className="font-medium mb-2">{t('configuration.setup.microsoft.title', {
+                defaultValue: 'Microsoft 365 Setup',
+              })}</h4>
+              <p className="text-sm text-muted-foreground">
+                {t('configuration.setup.microsoft.ownApp', {
+                  defaultValue: 'Bring your own Microsoft app — register it in Azure AD (Microsoft Entra ID), grant mail permissions, and connect it to your Microsoft 365 mailbox.',
+                })}
+              </p>
+              {isEnterpriseEdition && (
+                <div className="space-y-2 pt-1">
+                  <p className="text-sm text-muted-foreground">
+                    {t('configuration.setup.microsoft.providersPointer', { defaultValue: 'Microsoft app setup is managed in Providers.' })}
+                  </p>
+                  <Button
+                    id="open-microsoft-providers-settings-button"
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0"
+                    onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
+                  >
+                    {t('configuration.setup.microsoft.openProviders', { defaultValue: 'Open Providers' })}
+                  </Button>
+                </div>
+              )}
+            </div>
             <div>
               <h4 className="font-medium mb-2">{t('configuration.setup.gmail.title', {
                 defaultValue: 'Gmail Setup',

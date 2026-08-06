@@ -35,6 +35,7 @@
       "title": "Instructions de configuration",
       "microsoft": {
         "title": "Configuration de Microsoft 365",
+        "ownApp": "Apportez votre propre application Microsoft – enregistrez-la dans Azure AD (Microsoft Entra ID), accordez les autorisations de messagerie et connectez-la à votre boîte aux lettres Microsoft 365.",
         "providersPointer": "La configuration de l'application Microsoft est gérée dans Fournisseurs.",
         "openProviders": "Ouvrir Fournisseurs"
       },
