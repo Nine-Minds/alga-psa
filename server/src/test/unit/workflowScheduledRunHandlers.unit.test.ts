@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 type ScheduleRecord = Record<string, any> | null;
 
 let scheduleRecord: ScheduleRecord = null;
+let versionRecord: Record<string, any> | null = null;
 
 const knexMock = {};
 const launchPublishedWorkflowRun = vi.fn();
@@ -33,6 +34,9 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
       updateScheduleState(scheduleId, data);
       return scheduleRecord;
     })
+  },
+  WorkflowDefinitionVersionModelV2: {
+    getByWorkflowAndVersion: vi.fn(async () => versionRecord)
   }
 }));
 
@@ -62,6 +66,7 @@ import { registerJobRunnerAccessor } from '@alga-psa/jobs/runner';
 describe('Workflow scheduled run handlers', () => {
   beforeEach(() => {
     scheduleRecord = null;
+    versionRecord = null;
     // The handlers resolve the runner via @alga-psa/jobs' accessor, not the
     // server JobRunnerFactory; register a matching mock for the unit test.
     registerJobRunnerAccessor(async () => ({
@@ -247,6 +252,69 @@ describe('Workflow scheduled run handlers', () => {
         last_fire_key: 'workflow-schedule-fire:schedule-2:fire-2',
         last_run_status: 'success',
         last_error: null
+      })
+    );
+  });
+
+  it('CLOCK: clock-pinned schedule synthesizes the strict clock payload (omitting scheduleName) instead of stored NULL/{} payload', async () => {
+    versionRecord = {
+      version_id: 'version-clock-1',
+      workflow_id: 'workflow-clock-1',
+      version: 4,
+      definition_json: {
+        id: 'workflow-clock-1',
+        payloadSchemaRef: 'payload.WorkflowClockTrigger.v1'
+      }
+    };
+    scheduleRecord = {
+      id: 'schedule-clock-1',
+      tenant: 'tenant-1',
+      workflow_id: 'workflow-clock-1',
+      workflow_version: 4,
+      name: 'Renewal suggestion generation',
+      trigger_type: 'recurring',
+      day_type_filter: 'any',
+      business_hours_schedule_id: null,
+      run_at: null,
+      cron: '0 6 * * *',
+      timezone: 'UTC',
+      payload_json: null,
+      enabled: true,
+      status: 'scheduled'
+    };
+
+    await workflowRecurringScheduledRunHandler('job-clock-1', {
+      tenantId: 'tenant-1',
+      workflowId: 'workflow-clock-1',
+      scheduleId: 'schedule-clock-1',
+      jobExecutionId: 'fire-clock-1',
+      jobScheduledAt: '2026-08-06T06:00:00.000Z'
+    });
+
+    expect(launchPublishedWorkflowRun).toHaveBeenCalledTimes(1);
+    const launchCall = launchPublishedWorkflowRun.mock.calls[0];
+    const payload = launchCall?.[1]?.payload as Record<string, unknown>;
+    const triggerMetadata = launchCall?.[1]?.triggerMetadata as Record<string, unknown>;
+
+    expect(payload).toMatchObject({
+      triggerType: 'recurring',
+      scheduleId: 'schedule-clock-1',
+      timezone: 'UTC',
+      workflowId: 'workflow-clock-1',
+      workflowVersion: 4,
+      cron: '0 6 * * *'
+    });
+    expect(typeof payload?.scheduledFor).toBe('string');
+    expect(typeof payload?.firedAt).toBe('string');
+    // The strict schema rejects a stray scheduleName; keep it only in metadata.
+    expect(payload?.scheduleName).toBeUndefined();
+    expect(triggerMetadata?.scheduleName).toBe('Renewal suggestion generation');
+    expect(updateScheduleState).toHaveBeenCalledWith(
+      'schedule-clock-1',
+      expect.objectContaining({
+        last_run_status: 'success',
+        last_error: null,
+        last_fire_key: 'workflow-schedule-fire:schedule-clock-1:fire-clock-1'
       })
     );
   });

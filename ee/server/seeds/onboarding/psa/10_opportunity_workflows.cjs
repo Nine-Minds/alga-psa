@@ -84,6 +84,23 @@ function deterministicUuid(namespace, tenantId) {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20)}`;
 }
 
+// Placeholder seed payload for clock-pinned schedules. The runtime re-derives
+// the real clock payload at each fire (runtime synthesis is the source of
+// truth); this only ensures a freshly seeded clock schedule never carries a
+// NULL/`{}` payload that fails strict validation.
+function buildClockPlaceholderPayload(scheduleId, workflowId, workflowVersion, schedule, now) {
+  return {
+    triggerType: 'recurring',
+    scheduleId,
+    scheduledFor: now,
+    firedAt: now,
+    timezone: schedule.timezone,
+    workflowId,
+    workflowVersion,
+    ...(schedule.cron ? { cron: schedule.cron } : {}),
+  };
+}
+
 async function seedWorkflow(knex, tenantId, workflow) {
   const { tenantDb } = await import('@alga-psa/db');
   const db = tenantDb(knex, tenantId);
@@ -155,6 +172,13 @@ async function seedWorkflow(knex, tenantId, workflow) {
       day_type_filter: 'any',
       cron: workflow.schedule.cron,
       timezone: workflow.schedule.timezone,
+      payload_json: buildClockPlaceholderPayload(
+        scheduleId,
+        resolvedWorkflowId,
+        definition.version,
+        workflow.schedule,
+        now
+      ),
       enabled: true,
       status: 'scheduled',
       updated_at: now,
