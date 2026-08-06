@@ -12,7 +12,6 @@
       "resyncError": "Het opnieuw synchroniseren van de IMAP-provider is mislukt",
       "resyncStarted": "Hersynchronisatie gestart voor {{providerName}}.",
       "resyncRecovered": "{{providerName}} is opnieuw verbonden.",
-      "enterpriseOnly": "Microsoft 365 inkomende e-mail is alleen beschikbaar in Pro.",
       "loadProvidersError": "Kan e-mailproviders niet laden"
     },
     "editDrawer": {
@@ -21,14 +20,8 @@
     },
     "header": {
       "title": "Configuratie van e-mailprovider",
-      "description": {
-        "enterprise": "Configureer Gmail-, Microsoft 365- of IMAP-providers om inkomende e-mails als tickets te ontvangen en te verwerken",
-        "standard": "Configureer Gmail- of IMAP-providers om inkomende e-mails als tickets te ontvangen en te verwerken"
-      },
-      "counts": {
-        "enterprise": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}",
-        "standard": "Gmail: {{gmail}} · IMAP: {{imap}}"
-      }
+      "description": "Configureer Gmail-, Microsoft 365- of IMAP-providers om inkomende e-mails als tickets te ontvangen en te verwerken",
+      "counts": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}"
     },
     "actions": {
       "addProvider": "E-mailprovider toevoegen"
@@ -117,10 +110,7 @@
     "actions": {
       "cancel": "Annuleren"
     },
-    "help": {
-      "enterprise": "Kies de provider die uw organisatie al gebruikt. Gebruikt u Google Workspace, kies dan Gmail; gebruikt u Microsoft 365, kies dan Microsoft 365. U kunt dit later wijzigen door uw e-mailprovider te verwijderen en opnieuw te configureren.",
-      "standard": "Kies de provider die uw organisatie al gebruikt. Gebruikt u Google Workspace, kies dan Gmail; kies anders IMAP. U kunt dit later wijzigen door uw e-mailprovider te verwijderen en opnieuw te configureren."
-    }
+    "help": "Kies de provider die uw organisatie al gebruikt. Gebruikt u Google Workspace, kies dan Gmail; gebruikt u Microsoft 365, kies dan Microsoft 365. U kunt dit later wijzigen door uw e-mailprovider te verwijderen en opnieuw te configureren."
   },
   "wizard": {
     "title": {

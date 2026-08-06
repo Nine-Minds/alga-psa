@@ -12,7 +12,6 @@
       "resyncError": "Failed to resync IMAP provider",
       "resyncStarted": "Resync started for {{providerName}}.",
       "resyncRecovered": "{{providerName}} reconnected successfully.",
-      "enterpriseOnly": "Microsoft 365 inbound email is only available in Pro.",
       "loadProvidersError": "Failed to load email providers"
     },
     "editDrawer": {
@@ -21,14 +20,8 @@
     },
     "header": {
       "title": "Email Provider Configuration",
-      "description": {
-        "enterprise": "Configure Gmail, Microsoft 365, or IMAP providers to receive and process inbound emails as tickets",
-        "standard": "Configure Gmail or IMAP providers to receive and process inbound emails as tickets"
-      },
-      "counts": {
-        "enterprise": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}",
-        "standard": "Gmail: {{gmail}} · IMAP: {{imap}}"
-      }
+      "description": "Configure Gmail, Microsoft 365, or IMAP providers to receive and process inbound emails as tickets",
+      "counts": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}"
     },
     "actions": {
       "addProvider": "Add Email Provider"
@@ -117,10 +110,7 @@
     "actions": {
       "cancel": "Cancel"
     },
-    "help": {
-      "enterprise": "Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; if you use Microsoft 365, pick Microsoft 365. You can change this later by removing and reconfiguring your email provider.",
-      "standard": "Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; otherwise choose IMAP. You can change this later by removing and reconfiguring your email provider."
-    }
+    "help": "Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; if you use Microsoft 365, pick Microsoft 365. You can change this later by removing and reconfiguring your email provider."
   },
   "wizard": {
     "title": {

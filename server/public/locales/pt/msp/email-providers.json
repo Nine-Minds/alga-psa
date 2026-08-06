@@ -12,7 +12,6 @@
       "resyncError": "Falha ao sincronizar novamente o provedor IMAP",
       "resyncStarted": "A ressincronização foi iniciada para {{providerName}}.",
       "resyncRecovered": "{{providerName}} foi reconectado com sucesso.",
-      "enterpriseOnly": "O email de entrada do Microsoft 365 está disponível apenas no Pro.",
       "loadProvidersError": "Falha ao carregar os provedores de email"
     },
     "editDrawer": {
@@ -21,14 +20,8 @@
     },
     "header": {
       "title": "Configuração do provedor de e-mail",
-      "description": {
-        "enterprise": "Configure provedores do Gmail, Microsoft 365 ou IMAP para receber e processar emails de entrada como tickets",
-        "standard": "Configure provedores Gmail ou IMAP para receber e processar e-mails recebidos como tickets"
-      },
-      "counts": {
-        "enterprise": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}",
-        "standard": "Gmail: {{gmail}} · IMAP: {{imap}}"
-      }
+      "description": "Configure provedores do Gmail, Microsoft 365 ou IMAP para receber e processar emails de entrada como tickets",
+      "counts": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}"
     },
     "actions": {
       "addProvider": "Adicionar provedor de e-mail"
@@ -117,10 +110,7 @@
     "actions": {
       "cancel": "Cancelar"
     },
-    "help": {
-      "enterprise": "Escolha o provedor que sua organização já usa. Se você usa o Google Workspace, escolha Gmail; se você usa Microsoft 365, escolha Microsoft 365. Você pode alterar isso mais tarde removendo e reconfigurando seu provedor de e-mail.",
-      "standard": "Escolha o provedor que sua organização já usa. Se você usa o Google Workspace, escolha Gmail; caso contrário, escolha IMAP. Você pode alterar isso posteriormente removendo e reconfigurando seu provedor de e-mail."
-    }
+    "help": "Escolha o provedor que sua organização já usa. Se você usa o Google Workspace, escolha Gmail; se você usa Microsoft 365, escolha Microsoft 365. Você pode alterar isso mais tarde removendo e reconfigurando seu provedor de e-mail."
   },
   "wizard": {
     "title": {

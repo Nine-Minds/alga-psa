@@ -52,26 +52,27 @@ describe('EmailProviderSelector edition gates', () => {
     else process.env.NEXT_PUBLIC_EDITION = originalPublicEdition;
   });
 
-  it('shows working Gmail and IMAP setup alongside a Microsoft 365 upgrade prompt in CE', () => {
+  it('shows Gmail, Microsoft 365, and IMAP setup cards in CE', () => {
     process.env.EDITION = 'community';
     process.env.NEXT_PUBLIC_EDITION = 'community';
 
     render(<EmailProviderSelector onProviderSelected={vi.fn()} />);
 
     expect(document.getElementById('setup-google-provider-button')).toBeTruthy();
+    expect(document.getElementById('setup-microsoft-provider-button')).toBeTruthy();
     expect(document.getElementById('setup-imap-provider-button')).toBeTruthy();
-    expect(document.getElementById('setup-microsoft-provider-button')).toBeNull();
-    expect(screen.getByTestId('upgrade-prompt')).toBeTruthy();
-    expect(document.getElementById('upgrade-microsoft-email-provider-button')).toBeTruthy();
+    expect(screen.queryByTestId('upgrade-prompt')).toBeNull();
   });
 
-  it('shows Microsoft 365 setup instead of the upgrade prompt in Enterprise Edition', () => {
+  it('still shows Gmail, Microsoft 365, and IMAP setup cards in Enterprise Edition', () => {
     process.env.EDITION = 'ee';
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
 
     render(<EmailProviderSelector onProviderSelected={vi.fn()} />);
 
+    expect(document.getElementById('setup-google-provider-button')).toBeTruthy();
     expect(document.getElementById('setup-microsoft-provider-button')).toBeTruthy();
+    expect(document.getElementById('setup-imap-provider-button')).toBeTruthy();
     expect(screen.queryByTestId('upgrade-prompt')).toBeNull();
   });
 });

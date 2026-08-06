@@ -12,7 +12,6 @@
       "resyncError": "Die Neusynchronisierung des IMAP-Anbieters ist fehlgeschlagen",
       "resyncStarted": "Neusynchronisierung für {{providerName}} gestartet.",
       "resyncRecovered": "{{providerName}} wurde erfolgreich wieder verbunden.",
-      "enterpriseOnly": "Eingehende E-Mails von Microsoft 365 sind nur in Pro verfügbar.",
       "loadProvidersError": "E-Mail-Anbieter konnten nicht geladen werden"
     },
     "editDrawer": {
@@ -21,14 +20,8 @@
     },
     "header": {
       "title": "Konfiguration des E-Mail-Anbieters",
-      "description": {
-        "enterprise": "Konfigurieren Sie Gmail-, Microsoft 365- oder IMAP-Anbieter so, dass sie eingehende E-Mails als Tickets empfangen und verarbeiten",
-        "standard": "Konfigurieren Sie Gmail- oder IMAP-Anbieter so, dass sie eingehende E-Mails als Tickets empfangen und verarbeiten"
-      },
-      "counts": {
-        "enterprise": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}",
-        "standard": "Gmail: {{gmail}} · IMAP: {{imap}}"
-      }
+      "description": "Konfigurieren Sie Gmail-, Microsoft 365- oder IMAP-Anbieter so, dass sie eingehende E-Mails als Tickets empfangen und verarbeiten",
+      "counts": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}"
     },
     "actions": {
       "addProvider": "E-Mail-Anbieter hinzufügen"
@@ -117,10 +110,7 @@
     "actions": {
       "cancel": "Abbrechen"
     },
-    "help": {
-      "enterprise": "Wählen Sie den Anbieter, den Ihre Organisation bereits nutzt. Wenn Sie Google Workspace verwenden, wählen Sie Gmail; Wenn Sie Microsoft 365 verwenden, wählen Sie Microsoft 365. Sie können dies später ändern, indem Sie Ihren E-Mail-Anbieter entfernen und neu konfigurieren.",
-      "standard": "Wählen Sie den Anbieter, den Ihre Organisation bereits nutzt. Wenn Sie Google Workspace verwenden, wählen Sie Gmail; andernfalls wählen Sie IMAP. Sie können dies später ändern, indem Sie Ihren E-Mail-Anbieter entfernen und neu konfigurieren."
-    }
+    "help": "Wählen Sie den Anbieter, den Ihre Organisation bereits nutzt. Wenn Sie Google Workspace verwenden, wählen Sie Gmail; Wenn Sie Microsoft 365 verwenden, wählen Sie Microsoft 365. Sie können dies später ändern, indem Sie Ihren E-Mail-Anbieter entfernen und neu konfigurieren."
   },
   "wizard": {
     "title": {

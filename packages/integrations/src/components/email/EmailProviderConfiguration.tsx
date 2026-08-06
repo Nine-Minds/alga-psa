@@ -106,8 +106,6 @@ function EmailProviderConfigurationContent({
   }, []);
 
   useEffect(() => {
-    if (!isEnterpriseEdition) return;
-
     const loadMicrosoftEmailSetup = async () => {
       try {
         const result = await getMicrosoftConsumerSetupStatus('email');
@@ -118,7 +116,7 @@ function EmailProviderConfigurationContent({
     };
 
     loadMicrosoftEmailSetup();
-  }, [isEnterpriseEdition]);
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -424,13 +422,6 @@ function EmailProviderConfigurationContent({
   };
 
   const openEditDrawer = (provider: EmailProvider) => {
-    if (!isEnterpriseEdition && provider.providerType === 'microsoft') {
-      setError(t('configuration.feedback.enterpriseOnly', {
-        defaultValue: 'Microsoft 365 inbound email is only available in Pro.',
-      }));
-      return;
-    }
-
     openDrawer(
       (
         <div className="space-y-4">
@@ -489,9 +480,7 @@ function EmailProviderConfigurationContent({
 
   // Build right-hand content for Providers section
   const renderProvidersContent = () => {
-    const visibleProviders = isEnterpriseEdition
-      ? providers
-      : providers.filter((provider) => provider.providerType !== 'microsoft');
+    const visibleProviders = providers;
     const providerCounts = providers.reduce(
       (acc, provider) => {
         acc[provider.providerType] = (acc[provider.providerType] || 0) + 1;
@@ -508,27 +497,17 @@ function EmailProviderConfigurationContent({
               defaultValue: 'Email Provider Configuration',
             })}</h2>
             <p className="text-muted-foreground">
-              {isEnterpriseEdition
-                ? t('configuration.header.description.enterprise', {
-                  defaultValue: 'Configure Gmail, Microsoft 365, or IMAP providers to receive and process inbound emails as tickets',
-                })
-                : t('configuration.header.description.standard', {
-                  defaultValue: 'Configure Gmail or IMAP providers to receive and process inbound emails as tickets',
-                })}
+              {t('configuration.header.description', {
+                defaultValue: 'Configure Gmail, Microsoft 365, or IMAP providers to receive and process inbound emails as tickets',
+              })}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {isEnterpriseEdition
-                ? t('configuration.header.counts.enterprise', {
-                  defaultValue: 'Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}',
-                  gmail: providerCounts.google || 0,
-                  microsoft: providerCounts.microsoft || 0,
-                  imap: providerCounts.imap || 0,
-                })
-                : t('configuration.header.counts.standard', {
-                  defaultValue: 'Gmail: {{gmail}} · IMAP: {{imap}}',
-                  gmail: providerCounts.google || 0,
-                  imap: providerCounts.imap || 0,
-                })}
+              {t('configuration.header.counts', {
+                defaultValue: 'Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}',
+                gmail: providerCounts.google || 0,
+                microsoft: providerCounts.microsoft || 0,
+                imap: providerCounts.imap || 0,
+              })}
             </p>
           </div>
           <Button
