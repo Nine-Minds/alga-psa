@@ -349,7 +349,7 @@ export async function applyProjectTemplate(
         : null;
 
       // Determine which status mapping to use for this task
-      let taskStatusMappingId = getFallbackStatusMappingIdForPhase(templateTask.template_phase_id);
+      let taskStatusMappingId: string | undefined = getFallbackStatusMappingIdForPhase(templateTask.template_phase_id);
       if (templateTask.template_status_mapping_id) {
         // Try to map the template status to the project status
         const mappedStatusId = templateStatusToProjectStatusMap.get(templateTask.template_status_mapping_id);
@@ -359,6 +359,25 @@ export async function applyProjectTemplate(
         }
       } else {
         console.log(`[applyTemplate] Task "${templateTask.task_name}": No template_status_mapping_id, using first status ${taskStatusMappingId}`);
+      }
+
+      // Ensure the chosen mapping is within the created task's phase scope.
+      // A template may reference a default-scope (phase_id IS NULL) mapping for a
+      // task whose phase got its own scoped mappings, which would otherwise
+      // render the task as an orphan in the new project. Resolve to a mapping in
+      // phase scope (by id, then semantic identity, then the phase's first
+      // status). If the phase has no mappings at all the project defaults apply
+      // and the mapping is already in scope.
+      if (taskStatusMappingId) {
+        const resolvedMapping = await ProjectModel.resolveTaskStatusMapping(
+          trx,
+          tenant,
+          newProjectId,
+          newPhaseId,
+          taskStatusMappingId,
+          { allowRemap: true }
+        );
+        taskStatusMappingId = resolvedMapping.project_status_mapping_id;
       }
 
       // Determine assigned_to and assigned_team_id based on assignmentOption

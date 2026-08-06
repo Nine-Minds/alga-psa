@@ -311,9 +311,19 @@ export const addStatusToProject = withAuth(async (
     return await withTransaction(knex, async (trx) => {
       await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
-    // Get next display_order
-    const maxOrderQuery = tenantScopedTable(trx, 'project_status_mappings', tenant)
-      .where({ project_id: projectId });
+      // When adding the first phase-scoped mapping, the phase is about to move
+      // from "defaults" (phase_id IS NULL) to "custom" (phase-scoped) scope.
+      // Establish the complete effective set by cloning the project defaults
+      // into the phase and remapping existing tasks, so no task is silently
+      // dropped from the phase's columns. If the phase already has scoped
+      // mappings (or the project has no defaults) this is a no-op.
+      if (phaseId) {
+        await ProjectModel.copyProjectStatusMappingsToPhase(trx, tenant, projectId, phaseId);
+      }
+
+      // Get next display_order
+      const maxOrderQuery = tenantScopedTable(trx, 'project_status_mappings', tenant)
+        .where({ project_id: projectId });
 
     if (phaseId) {
       maxOrderQuery.andWhere('phase_id', phaseId);
@@ -391,67 +401,10 @@ export const copyProjectStatusesToPhase = withAuth(async (
     return await withTransaction(knex, async (trx) => {
       await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
-    const phase = await tenantScopedTable(trx, 'project_phases', tenant)
-      .where({ project_id: projectId, phase_id: phaseId })
-      .first();
-
-    if (!phase) {
-      throw new Error('Project phase not found');
-    }
-
-    const existingPhaseMappings = await tenantScopedTable(trx, 'project_status_mappings', tenant)
-      .where({ project_id: projectId, phase_id: phaseId })
-      .orderBy('display_order') as IProjectStatusMapping[];
-
-    if (existingPhaseMappings.length > 0) {
-      return existingPhaseMappings;
-    }
-
-    const defaultMappings = await tenantScopedTable(trx, 'project_status_mappings', tenant)
-      .where({ project_id: projectId })
-      .whereNull('phase_id')
-      .orderBy('display_order') as IProjectStatusMapping[];
-
-    if (defaultMappings.length === 0) {
-      return [];
-    }
-
-    const inserts = defaultMappings.map((mapping) => ({
-      tenant,
-      project_id: projectId,
-      phase_id: phaseId,
-      status_id: mapping.status_id,
-      standard_status_id: mapping.standard_status_id,
-      is_standard: mapping.is_standard,
-      custom_name: mapping.custom_name,
-      display_order: mapping.display_order,
-      is_visible: mapping.is_visible
-    }));
-
-    const newMappings: IProjectStatusMapping[] = await tenantScopedTable(trx, 'project_status_mappings', tenant)
-      .insert(inserts)
-      .returning('*');
-
-    // Reassign existing tasks from project-default mappings to the new phase-specific ones
-    // Group by new phase mapping so we can batch with whereIn, matching removePhaseStatuses style
-    const updatesByReplacement = new Map<string, string[]>();
-    for (const defaultMapping of defaultMappings) {
-      const phaseMapping = newMappings.find((m) => m.status_id === defaultMapping.status_id);
-      if (phaseMapping) {
-        const existing = updatesByReplacement.get(phaseMapping.project_status_mapping_id) || [];
-        existing.push(defaultMapping.project_status_mapping_id);
-        updatesByReplacement.set(phaseMapping.project_status_mapping_id, existing);
-      }
-    }
-
-    for (const [newId, oldIds] of updatesByReplacement) {
-      await tenantScopedTable(trx, 'project_tasks', tenant)
-        .where({ phase_id: phaseId })
-        .whereIn('project_status_mapping_id', oldIds)
-        .update({ project_status_mapping_id: newId });
-    }
-
-      return newMappings;
+      // Clone project defaults into the phase and remap existing phase tasks by
+      // stable semantic identity (never nullable status_id alone, which
+      // collapsed every standard mapping onto the first clone).
+      return await ProjectModel.copyProjectStatusMappingsToPhase(trx, tenant, projectId, phaseId);
     });
   } catch (error) {
     const expected = projectTaskStatusActionErrorFrom(error);

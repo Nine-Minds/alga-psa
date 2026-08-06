@@ -8,25 +8,22 @@ const source = readFileSync(
 );
 
 describe('phase status copy/remove action contracts', () => {
-  it('T019/T020/T021: copyProjectStatusesToPhase clones default mappings into the target phase with preserved fields', () => {
+  it('T019/T020/T021: copyProjectStatusesToPhase delegates to the shared clone+remap that preserves standard mappings', () => {
     expect(source).toContain('export const copyProjectStatusesToPhase = withAuth(async (');
-    expect(source).toContain(".where({ project_id: projectId, phase_id: phaseId })");
-    expect(source).toContain(".where({ project_id: projectId })");
-    expect(source).toContain(".whereNull('phase_id')");
-    expect(source).toContain('const inserts = defaultMappings.map((mapping) => ({');
-    expect(source).toContain('phase_id: phaseId,');
-    expect(source).toContain('status_id: mapping.status_id,');
-    expect(source).toContain('standard_status_id: mapping.standard_status_id,');
-    expect(source).toContain('custom_name: mapping.custom_name,');
-    expect(source).toContain('display_order: mapping.display_order,');
-    expect(source).toContain('is_visible: mapping.is_visible');
-    // Task reassignment: existing phase tasks are moved from default to new phase mappings
-    expect(source).toContain("const updatesByReplacement = new Map<string, string[]>();");
-    expect(source).toContain("(m) => m.status_id === defaultMapping.status_id");
-    expect(source).toContain("tenantScopedTable(trx, 'project_tasks', tenant)");
-    expect(source).toContain(".where({ phase_id: phaseId })");
-    expect(source).toContain(".whereIn('project_status_mapping_id', oldIds)");
-    expect(source).toContain("{ project_status_mapping_id: newId }");
+    expect(source).toContain(
+      'return await ProjectModel.copyProjectStatusMappingsToPhase(trx, tenant, projectId, phaseId);'
+    );
+    // The shared helper clones defaults, remaps tasks by stable semantic
+    // identity (never nullable status_id), and is idempotent for existing scopes.
+    const modelSource = readFileSync(
+      path.resolve(__dirname, '../models/project.ts'),
+      'utf8'
+    );
+    expect(modelSource).toContain('copyProjectStatusMappingsToPhase: async (');
+    expect(modelSource).toContain("const defaultMappings = await ProjectModel.getProjectStatusMappings(knexOrTrx, tenant, projectId);");
+    expect(modelSource).toContain('buildStatusMappingCloneCorrespondence(defaultMappings, newMappings);');
+    expect(modelSource).toContain("tenantScopedTable(knexOrTrx, 'project_tasks', tenant)");
+    expect(modelSource).toContain("project_status_mapping_id: oldId");
   });
 
   it('T022/T023/T024: removePhaseStatuses remaps phase tasks to project defaults before deleting phase mappings', () => {
