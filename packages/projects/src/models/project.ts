@@ -26,6 +26,57 @@ function tenantScopedTable<Row extends object = Record<string, any>>(
 }
 
 /**
+ * Stable semantic identity of a status mapping. Standard mappings are keyed by
+ * `standard_status_id`, custom mappings by `status_id`. Never the nullable
+ * `status_id` alone (which under-collapses standard mappings onto one clone).
+ */
+export function statusMappingSemanticKey(mapping: {
+  is_standard?: boolean | null;
+  status_id?: string | null;
+  standard_status_id?: string | null;
+}): string | null {
+  if (mapping.is_standard) {
+    return mapping.standard_status_id ? `standard_status:${mapping.standard_status_id}` : null;
+  }
+  return mapping.status_id ? `custom_status:${mapping.status_id}` : null;
+}
+
+/**
+ * Build the deterministic old->new clone correspondence for a set of phase
+ * mappings that were cloned from project-default mappings. Matches by stable
+ * semantic identity first, falling back to `display_order` so duplicate-label
+ * custom statuses (distinct status_id) and same-status `custom_name` overrides
+ * never collapse onto one clone.
+ */
+export function buildStatusMappingCloneCorrespondence(
+  source: IProjectStatusMapping[],
+  clones: IProjectStatusMapping[]
+): Map<string, string> {
+  const oldToNew = new Map<string, string>();
+
+  const clonesByDisplayOrder = new Map<number, IProjectStatusMapping[]>();
+  for (const clone of clones) {
+    const existing = clonesByDisplayOrder.get(clone.display_order) ?? [];
+    existing.push(clone);
+    clonesByDisplayOrder.set(clone.display_order, existing);
+  }
+
+  for (const src of source) {
+    const key = statusMappingSemanticKey(src);
+    const orderMatch = clonesByDisplayOrder.get(src.display_order) ?? [];
+    const sameScope = clones.filter(
+      (clone) => clone.display_order === src.display_order && (key ? statusMappingSemanticKey(clone) === key : true)
+    );
+    const match = sameScope[0] ?? orderMatch[0] ?? null;
+    if (match) {
+      oldToNew.set(src.project_status_mapping_id, match.project_status_mapping_id);
+    }
+  }
+
+  return oldToNew;
+}
+
+/**
  * Project model with tenant-explicit methods.
  * All methods require an explicit tenant parameter for multi-tenant safety.
  */
@@ -1048,6 +1099,139 @@ const ProjectModel = {
       console.error('Error getting project status mapping:', error);
       throw error;
     }
+  },
+
+  /**
+   * Clone a phase's project-default (phase_id IS NULL) status mappings into
+   * a phase scope, then transactionally remap that phase's tasks from the old
+   * default mapping ids to the new phase-scoped clones. This is what moves a
+   * phase from "defaults" to "custom" scope without dropping its tasks,
+   * because the phase's effective scope becomes complete.
+   *
+   * Returns the existing or newly-created phase mappings. No-op (returns the
+   * existing set) when the phase already has phase-scoped mappings. Throws
+   * before any write when the phase does not exist or belongs to a different
+   * project than `projectId`.
+   */
+  copyProjectStatusMappingsToPhase: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    projectId: string,
+    phaseId: string
+  ): Promise<IProjectStatusMapping[]> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for copying project status mappings to phase');
+    }
+
+    // Scope guard: the target phase must belong to the given project. Runs on
+    // the caller's connection/transaction before any mapping insert or task
+    // remap, so a foreign-project phase rejects with zero writes behind it.
+    const phase = await tenantScopedTable(knexOrTrx, 'project_phases', tenant)
+      .where('phase_id', phaseId)
+      .first() as IProjectPhase | undefined;
+    if (!phase) {
+      throw new Error('Project phase not found');
+    }
+    if (phase.project_id !== projectId) {
+      throw new Error('Project phase does not belong to this project');
+    }
+
+    const existing = await ProjectModel.getProjectStatusMappings(knexOrTrx, tenant, projectId, phaseId);
+    if (existing.length > 0) {
+      return existing;
+    }
+
+    const defaultMappings = await ProjectModel.getProjectStatusMappings(knexOrTrx, tenant, projectId);
+    if (defaultMappings.length === 0) {
+      return [];
+    }
+
+    const inserts = defaultMappings.map((mapping) => ({
+      tenant,
+      project_id: projectId,
+      phase_id: phaseId,
+      status_id: mapping.status_id,
+      standard_status_id: mapping.standard_status_id,
+      is_standard: mapping.is_standard,
+      custom_name: mapping.custom_name,
+      display_order: mapping.display_order,
+      is_visible: mapping.is_visible,
+    }));
+
+    const newMappings = (await tenantScopedTable(knexOrTrx, 'project_status_mappings', tenant)
+      .insert<IProjectStatusMapping>(inserts)
+      .returning('*')) as unknown as IProjectStatusMapping[];
+
+    const oldToNew = buildStatusMappingCloneCorrespondence(defaultMappings, newMappings);
+    for (const [oldId, newId] of oldToNew) {
+      await tenantScopedTable(knexOrTrx, 'project_tasks', tenant)
+        .where({ phase_id: phaseId, project_status_mapping_id: oldId })
+        .update({ project_status_mapping_id: newId });
+    }
+
+    return newMappings;
+  },
+
+  /**
+   * Resolve the project status mapping a phase task should use. Returns a
+   * mapping that is within the phase's effective scope.
+   *
+   * - Exact id match is used when present.
+   * - Otherwise a phase-effective mapping with the same stable semantic
+   *   identity is substituted (stale default-scope clone remap).
+   * - If `allowRemap` (default true) and no semantic match exists, the first
+   *   effective mapping is used so a writer never emits an orphan.
+   * - Otherwise throws so a strict writer (e.g. the API) rejects a cross-scope
+   *   mapping instead of writing it.
+   */
+  resolveTaskStatusMapping: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    projectId: string,
+    phaseId: string,
+    mappingId: string,
+    options?: { allowRemap?: boolean }
+  ): Promise<IProjectStatusMapping> => {
+    const allowance = options?.allowRemap ?? true;
+    const effective = await ProjectModel.getEffectiveStatusMappings(knexOrTrx, tenant, projectId, phaseId);
+    if (effective.length === 0) {
+      throw new Error('Project task status is not defined for this phase');
+    }
+
+    const exact = effective.find((mapping) => mapping.project_status_mapping_id === mappingId);
+    if (exact) {
+      return exact;
+    }
+
+    const candidate = await ProjectModel.getProjectStatusMapping(knexOrTrx, tenant, mappingId);
+    const candidateKey = candidate ? statusMappingSemanticKey(candidate) : null;
+    if (candidateKey) {
+      const semanticMatch = effective.find((mapping) => statusMappingSemanticKey(mapping) === candidateKey);
+      if (semanticMatch) {
+        return semanticMatch;
+      }
+    }
+
+    if (allowance) {
+      return effective[0];
+    }
+
+    throw new Error('Project task status is not valid for this phase');
+  },
+
+  /**
+   * Strict membership check: is `mappingId` one of the phase's effective
+   * mappings (by id)? Rejects cross-scope mappings at write time.
+   */
+  isTaskStatusMappingInScope: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    projectId: string,
+    phaseId: string,
+    mappingId: string
+  ): Promise<boolean> => {
+    const effective = await ProjectModel.getEffectiveStatusMappings(knexOrTrx, tenant, projectId, phaseId);
+    return effective.some((mapping) => mapping.project_status_mapping_id === mappingId);
   },
 };
 

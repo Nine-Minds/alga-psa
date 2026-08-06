@@ -628,6 +628,28 @@ export class ProjectService extends BaseService<IProject> {
           throw new NotFoundError('Phase not found');
         }
   
+        // The task's status mapping must belong to this project and be within
+        // the phase's effective status scope. A default-scope mapping is out of
+        // scope once the phase has its own scoped mappings; writing one would
+        // silently drop the task from the phase's columns.
+        if (!data.project_status_mapping_id) {
+          throw new ValidationError('Task must specify a project status');
+        }
+        const statusMapping = await ProjectModel.getProjectStatusMapping(trx, context.tenant, data.project_status_mapping_id);
+        if (!statusMapping || statusMapping.project_id !== phase.project_id) {
+          throw new ValidationError('Task status does not belong to this project');
+        }
+        const isInScope = await ProjectModel.isTaskStatusMappingInScope(
+          trx,
+          context.tenant,
+          phase.project_id,
+          phaseId,
+          data.project_status_mapping_id
+        );
+        if (!isInScope) {
+          throw new ValidationError('Task status is not in the selected phase\'s status scope');
+        }
+  
         const tasks = await db.table('project_tasks')
           .where({ phase_id: phaseId });
   

@@ -31,6 +31,7 @@ import { TaskTypeSelector } from './TaskTypeSelector';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { highlightSearchMatch } from '../lib/searchUtils';
+import { createFallbackStatus, FALLBACK_STATUS_MAPPING_ID, partitionStatusScope } from '../lib/statusScopeUtils';
 import { useTranslation } from 'react-i18next';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -692,6 +693,14 @@ export default function TaskListView({
         return { status, tasks: statusTasks };
       });
 
+      // Legacy orphans: tasks whose mapping id is outside the phase's effective
+      // scope must stay visible. Append a labelled fallback group so they are
+      // never silently dropped from the list.
+      const { orphanTasks } = partitionStatusScope(phaseStatuses, phaseTasks);
+      if (orphanTasks.length > 0) {
+        statusGroups.push({ status: createFallbackStatus(), tasks: orphanTasks });
+      }
+
       // Calculate completion stats
       const completedTasks = phaseTasks.filter(task =>
         closedStatusIds.has(task.project_status_mapping_id)
@@ -997,6 +1006,11 @@ export default function TaskListView({
   }, []);
 
   const handleStatusDragOver = useCallback((e: React.DragEvent<HTMLTableRowElement>, statusId: string, phaseId: string) => {
+    // The fallback group is not a real status target; never drop into it.
+    if (statusId === FALLBACK_STATUS_MAPPING_ID) {
+      e.preventDefault();
+      return;
+    }
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
 
@@ -1049,6 +1063,13 @@ export default function TaskListView({
 
   const handleDrop = useCallback(async (e: React.DragEvent<HTMLTableRowElement>, statusId: string, phaseId: string, tasksInStatus: IProjectTask[], dropIndex: number) => {
     e.preventDefault();
+
+    // The fallback group is not a real status target; never drop into it.
+    if (statusId === FALLBACK_STATUS_MAPPING_ID) {
+      setDragOverStatus(null);
+      setDropIndicatorIndex(null);
+      return;
+    }
 
     // Clear scroll interval
     scrollSpeedRef.current = 0;

@@ -7,6 +7,10 @@ import { ITag } from '@alga-psa/types';
 import { IPriority, IStandardPriority } from '@alga-psa/types';
 import { getTaskTypes } from '../actions/projectTaskActions';
 import StatusColumn from './StatusColumn';
+import {
+  createFallbackStatus,
+  partitionStatusScope,
+} from '../lib/statusScopeUtils';
 import { calculateColumnWidth, calculateCardGap } from './KanbanZoomControl';
 import styles from './ProjectDetail.module.css';
 import * as LucideIcons from 'lucide-react';
@@ -39,6 +43,7 @@ interface KanbanBoardProps {
   zoomLevel?: number;
   hideHeader?: boolean;
   revealedHiddenStatusIds?: Set<string>;
+  effectiveStatuses?: ProjectStatus[];
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -122,6 +127,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   zoomLevel = 50,
   hideHeader = false,
   revealedHiddenStatusIds,
+  effectiveStatuses,
   onDrop,
   onDragOver,
   onAddCard,
@@ -178,6 +184,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     return task;
   });
   
+  // The fallback group is computed against the phase's full effective scope
+  // (never the display-filtered subset), so a user-hidden in-scope status's
+  // tasks stay hidden and only true cross-scope orphans surface here.
+  const scopeStatuses = effectiveStatuses || statuses;
+  const orphanTasks = partitionStatusScope(scopeStatuses, enrichedPhaseTasks).orphanTasks;
+
   return (
     <div className={styles.kanbanBoard} data-kanban-board="true">
       {statuses.filter(status => status.is_visible).map((status, index): React.JSX.Element => {
@@ -245,6 +257,56 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           />
         );
       })}
+      {orphanTasks.length > 0 && (
+        <StatusColumn
+          status={createFallbackStatus()}
+          tasks={enrichedTasks}
+          displayTasks={orphanTasks}
+          users={users}
+          taskTypes={taskTypes}
+          ticketLinks={ticketLinks}
+          taskResources={taskResources}
+          taskDependencies={taskDependencies}
+          taskTags={taskTags}
+          taskDocumentCounts={taskDocumentCounts instanceof Map ? Object.fromEntries(taskDocumentCounts.entries()) : {}}
+          taskCommentCounts={taskCommentCounts}
+          priorities={priorities}
+          statusIcon={<Clipboard className="w-4 h-4" />}
+          backgroundColor=""
+          darkBackgroundColor="bg-amber-100 dark:bg-amber-950/40"
+          borderColor="border-amber-300 dark:border-amber-800"
+          isAddingTask={false}
+          selectedPhase={selectedPhase}
+          avatarUrls={avatarUrls}
+          teamNames={teamNames}
+          teamAvatarUrls={teamAvatarUrls}
+          columnWidth={columnWidth}
+          cardGap={cardGap}
+          zoomLevel={zoomLevel}
+          hideHeader={hideHeader}
+          isRevealedHidden={false}
+          onDrop={() => undefined}
+          onDragOver={onDragOver}
+          onAddCard={() => undefined}
+          onTaskSelected={onTaskSelected}
+          onAssigneeChange={onAssigneeChange}
+          onTeamAssign={onTeamAssign}
+          teams={teams}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          onReorderTasks={onReorderTasks}
+          projectTreeData={projectTreeData}
+          animatingTasks={animatingTasks}
+          searchQuery={searchQuery}
+          searchCaseSensitive={searchCaseSensitive}
+          searchWholeWord={searchWholeWord}
+          onMoveTaskClick={onMoveTaskClick}
+          onDuplicateTaskClick={onDuplicateTaskClick}
+          onEditTaskClick={onEditTaskClick}
+          onDeleteTaskClick={onDeleteTaskClick}
+          onTaskTagsChange={onTaskTagsChange}
+        />
+      )}
     </div>
   );
 };
