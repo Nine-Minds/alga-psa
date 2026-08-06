@@ -6,6 +6,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiKeyServiceForApi } from '../../services/apiKeyServiceForApi';
 import { runWithTenant } from '../../db';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { runWithApiKeyUser } from '@alga-psa/auth';
 import { getTenantProduct, ProductAccessError } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 import { 
@@ -95,9 +97,11 @@ export async function withApiKeyAuth(
         throw new ProductAccessError(`api:${pathname}`, productCode);
       }
 
-      // Run the handler within the tenant context
+      // Run the handler within the tenant context and with the API-key user
+      // established, so `withAuth`-wrapped server actions resolve the caller.
       return await runWithTenant(apiRequest.context!.tenant, async () => {
-        return await handler(apiRequest);
+        const user = apiRequest.context!.user as unknown as IUserWithRoles;
+        return await runWithApiKeyUser(user, () => handler(apiRequest));
       });
     } catch (error) {
       return handleApiError(error);

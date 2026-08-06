@@ -836,26 +836,55 @@ export class ContractLineService extends BaseService<IContractLine> {
   ): Promise<ContractResponse> {
     const { knex } = await this.getKnex();
 
-    if (typeof data.owner_client_id !== 'string' || data.owner_client_id.trim().length === 0) {
+    const ownerClientId = this.resolveContractOwnerClientId(data);
+    if (typeof ownerClientId !== 'string' || ownerClientId.trim().length === 0) {
       throw new ValidationError('Non-template contracts require an owning client');
     }
     
     return withTransaction(knex, async (trx) => {
-      const { contract_description, ...rest } = data as any;
-      const contractData = this.addCreateAuditFields(
-        {
-          contract_id: uuidv4(),
-          ...rest,
-          contract_description,
-          owner_client_id: data.owner_client_id.trim(),
-          status: data.status ?? 'draft',
-        },
-        context
+      // `client_id` is the public alias for the owning client; it maps onto
+      // `owner_client_id` below and must not re-enter the insert via `...rest`.
+      const { contract_description, client_id: _clientId, ...rest } = data as any;
+      const contractData = await this.filterAuditFields(
+        trx,
+        this.addCreateAuditFields(
+          {
+            contract_id: uuidv4(),
+            ...rest,
+            contract_description,
+            owner_client_id: ownerClientId,
+            start_date: data.start_date,
+            end_date: data.end_date,
+            // The owning client is enforced, so this is a non-template contract.
+            // Explicitly flag it (the column defaults to true) so non-template
+            // listings/reports that filter on is_template don't silently drop it.
+            is_template: false,
+            status: data.status ?? 'draft',
+          },
+          context
+        ),
+        'contracts'
       );
 
       const [contract] = await tenantDb(trx, context.tenant).table('contracts').insert(contractData).returning('*');
-      return addHateoasLinks(contract, this.generateContractLinks(contract.contract_id, context)) as ContractResponse;
+      return addHateoasLinks(
+        { ...contract, client_id: contract.owner_client_id },
+        this.generateContractLinks(contract.contract_id, context)
+      ) as ContractResponse;
     });
+  }
+
+  /**
+   * Resolve the owning client id for a contract. The public v1 create contract
+   * schema exposes `client_id`; internal callers historically sent
+   * `owner_client_id`. Accept both and prefer `client_id` so a payload that
+   * includes both stays consistent.
+   */
+  private resolveContractOwnerClientId(data: CreateContractData): string {
+    const clientId = (data as any).client_id;
+    const ownerClientId = (data as any).owner_client_id;
+    const value = clientId ?? ownerClientId;
+    return typeof value === 'string' ? value.trim() : '';
   }
 
   /**

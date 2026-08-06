@@ -492,6 +492,27 @@ export function handleApiError(error: any): NextResponse {
     }, { status: 400 });
   }
 
+  if (error.code === '42703') { // PostgreSQL undefined column
+    // The raw db detail names the relation and column (e.g. `column "created_by"
+    // of relation "contracts" does not exist`), which is operational diagnostics,
+    // not a safe public message. Log it server-side only.
+    console.error('Undefined database column (42703):', {
+      message: error.message,
+      detail: error.detail,
+      table: error.table,
+      column: error.column,
+      constraint: error.constraint,
+      timestamp: new Date().toISOString()
+    });
+    return NextResponse.json({
+      error: {
+        code: 'INTERNAL_CONFIGURATION',
+        message: 'The server is misconfigured for this operation. Please contact support.',
+        details: undefined
+      }
+    }, { status: 500 });
+  }
+
   // Default server error
   return NextResponse.json({
     error: {
