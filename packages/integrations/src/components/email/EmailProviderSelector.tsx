@@ -8,9 +8,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { UpgradePrompt } from '@alga-psa/ui/components/UpgradePrompt';
 import { Search, Building2, Mail } from 'lucide-react';
-import { isMicrosoftConsumerEnterpriseEdition } from '../../lib/microsoftConsumerVisibility';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface EmailProviderSelectorProps {
@@ -25,7 +23,6 @@ export function EmailProviderSelector({
   hideHeader = false,
 }: EmailProviderSelectorProps) {
   const { t } = useTranslation('msp/email-providers');
-  const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
   
   const handleProviderClick = (providerType: 'google' | 'microsoft' | 'imap') => {
     onProviderSelected(providerType);
@@ -101,60 +98,50 @@ export function EmailProviderSelector({
           </CardContent>
         </Card>
 
-        {isEnterpriseEdition ? (
-          <Card 
-            id="microsoft-provider-selector-card"
-            className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-2 hover:border-blue-200 bg-gradient-to-br from-[rgb(var(--color-card))] to-blue-500/10"
-            onClick={() => handleProviderClick('microsoft')}
-          >
-            <CardHeader className="text-center pb-4">
-              <div className="flex justify-center mb-4">
-                <div className="p-4 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 shadow-lg">
-                  <div className="flex items-center justify-center">
-                    <Building2 className="h-8 w-8 text-white" />
-                  </div>
+        {/* Microsoft 365 Card */}
+        <Card 
+          id="microsoft-provider-selector-card"
+          className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-2 hover:border-blue-200 bg-gradient-to-br from-[rgb(var(--color-card))] to-blue-500/10"
+          onClick={() => handleProviderClick('microsoft')}
+        >
+          <CardHeader className="text-center pb-4">
+            <div className="flex justify-center mb-4">
+              <div className="p-4 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 shadow-lg">
+                <div className="flex items-center justify-center">
+                  <Building2 className="h-8 w-8 text-white" />
                 </div>
               </div>
-              <CardTitle className="text-xl font-bold text-[rgb(var(--color-text-800))]">{t('selector.cards.microsoft.title', {
-                defaultValue: 'Microsoft 365',
-              })}</CardTitle>
-              <CardDescription className="text-base text-[rgb(var(--color-text-600))]">
-                {t('selector.cards.microsoft.description', {
-                  defaultValue: 'Microsoft 365 / Outlook Integration',
-                })}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-center space-y-4">
-              <div className="text-sm text-[rgb(var(--color-text-600))] space-y-2">
-                <p>{t('selector.cards.microsoft.features.accounts', { defaultValue: '✓ Microsoft 365 and Outlook accounts' })}</p>
-                <p>{t('selector.cards.microsoft.features.filtering', { defaultValue: '✓ Folder-based email filtering' })}</p>
-                <p>{t('selector.cards.microsoft.features.processing', { defaultValue: '✓ Real-time email processing' })}</p>
-                <p>{t('selector.cards.microsoft.features.authentication', { defaultValue: '✓ Azure AD OAuth integration' })}</p>
-              </div>
-              <Button 
-                id="setup-microsoft-provider-button"
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-md"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleProviderClick('microsoft');
-                }}
-              >
-                {t('selector.cards.microsoft.action', {
-                  defaultValue: 'Set up Microsoft 365',
-                })}
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <UpgradePrompt
-            featureName={t('selector.cards.microsoft.title', { defaultValue: 'Microsoft 365' })}
-            pitch={t('selector.cards.microsoft.description', {
-              defaultValue: 'Microsoft 365 / Outlook Integration',
-            })}
-            ctaId="upgrade-microsoft-email-provider-button"
-            className="h-full"
-          />
-        )}
+            </div>
+            <CardTitle className="text-xl font-bold text-[rgb(var(--color-text-800))]">{t('selector.cards.microsoft.title', {
+              defaultValue: 'Microsoft 365',
+            })}</CardTitle>
+            <CardDescription className="text-base text-[rgb(var(--color-text-600))]">
+              {t('selector.cards.microsoft.description', {
+                defaultValue: 'Microsoft 365 / Outlook Integration',
+              })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <div className="text-sm text-[rgb(var(--color-text-600))] space-y-2">
+              <p>{t('selector.cards.microsoft.features.accounts', { defaultValue: '✓ Microsoft 365 and Outlook accounts' })}</p>
+              <p>{t('selector.cards.microsoft.features.filtering', { defaultValue: '✓ Folder-based email filtering' })}</p>
+              <p>{t('selector.cards.microsoft.features.processing', { defaultValue: '✓ Real-time email processing' })}</p>
+              <p>{t('selector.cards.microsoft.features.authentication', { defaultValue: '✓ Azure AD OAuth integration' })}</p>
+            </div>
+            <Button 
+              id="setup-microsoft-provider-button"
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-md"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleProviderClick('microsoft');
+              }}
+            >
+              {t('selector.cards.microsoft.action', {
+                defaultValue: 'Set up Microsoft 365',
+              })}
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* IMAP Card */}
         <Card
@@ -220,13 +207,9 @@ export function EmailProviderSelector({
       {/* Help Text */}
       <div className="text-center">
         <p className="text-xs text-muted-foreground max-w-2xl mx-auto">
-          {isEnterpriseEdition
-            ? t('selector.help.enterprise', {
-              defaultValue: 'Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; if you use Microsoft 365, pick Microsoft 365. You can change this later by removing and reconfiguring your email provider.',
-            })
-            : t('selector.help.standard', {
-              defaultValue: 'Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; otherwise choose IMAP. You can change this later by removing and reconfiguring your email provider.',
-            })}
+          {t('selector.help', {
+            defaultValue: 'Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; if you use Microsoft 365, pick Microsoft 365. You can change this later by removing and reconfiguring your email provider.',
+          })}
         </p>
       </div>
     </div>

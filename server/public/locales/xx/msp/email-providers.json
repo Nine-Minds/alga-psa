@@ -12,7 +12,6 @@
       "resyncError": "11111",
       "resyncStarted": "11111 {{providerName}} 11111",
       "resyncRecovered": "11111 {{providerName}} 11111",
-      "enterpriseOnly": "11111",
       "loadProvidersError": "11111"
     },
     "editDrawer": {
@@ -21,14 +20,8 @@
     },
     "header": {
       "title": "11111",
-      "description": {
-        "enterprise": "11111",
-        "standard": "11111"
-      },
-      "counts": {
-        "enterprise": "11111 {{gmail}} 11111 {{microsoft}} 11111 {{imap}} 11111",
-        "standard": "11111 {{gmail}} 11111 {{imap}} 11111"
-      }
+      "description": "11111",
+      "counts": "11111 {{gmail}} 11111 {{microsoft}} 11111 {{imap}} 11111"
     },
     "actions": {
       "addProvider": "11111"
@@ -42,6 +35,7 @@
       "title": "11111",
       "microsoft": {
         "title": "11111",
+        "ownApp": "11111",
         "providersPointer": "11111",
         "openProviders": "11111"
       },
@@ -117,10 +111,7 @@
     "actions": {
       "cancel": "11111"
     },
-    "help": {
-      "enterprise": "11111",
-      "standard": "11111"
-    }
+    "help": "11111"
   },
   "wizard": {
     "title": {

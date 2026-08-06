@@ -12,7 +12,6 @@
       "resyncError": "Nie udało się ponownie zsynchronizować dostawcy IMAP",
       "resyncStarted": "Rozpoczęto ponowną synchronizację dla {{providerName}}.",
       "resyncRecovered": "Ponownie połączono z {{providerName}}.",
-      "enterpriseOnly": "Przychodząca poczta e-mail usługi Microsoft 365 jest dostępna tylko w Pro.",
       "loadProvidersError": "Nie udało się wczytać dostawców poczty e-mail"
     },
     "editDrawer": {
@@ -21,14 +20,8 @@
     },
     "header": {
       "title": "Konfiguracja dostawcy poczty e-mail",
-      "description": {
-        "enterprise": "Skonfiguruj dostawców usług Gmail, Microsoft 365 lub IMAP, aby odbierać i przetwarzać przychodzące wiadomości e-mail jako zgłoszenia",
-        "standard": "Skonfiguruj dostawców Gmaila lub IMAP, aby odbierali i przetwarzali przychodzące wiadomości e-mail jako zgłoszenia"
-      },
-      "counts": {
-        "enterprise": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}",
-        "standard": "Gmail: {{gmail}} · IMAP: {{imap}}"
-      }
+      "description": "Skonfiguruj dostawców usług Gmail, Microsoft 365 lub IMAP, aby odbierać i przetwarzać przychodzące wiadomości e-mail jako zgłoszenia",
+      "counts": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}"
     },
     "actions": {
       "addProvider": "Dodaj dostawcę poczty e-mail"
@@ -42,6 +35,7 @@
       "title": "Instrukcje konfiguracji",
       "microsoft": {
         "title": "Konfiguracja Microsoft 365",
+        "ownApp": "Skorzystaj z własnej aplikacji Microsoft — zarejestruj ją w Azure AD (Microsoft Entra ID), przyznaj uprawnienia poczty i podłącz ją do skrzynki Microsoft 365.",
         "providersPointer": "Konfiguracją aplikacji Microsoft zarządza się w sekcji Dostawcy.",
         "openProviders": "Otwórz Dostawców"
       },
@@ -117,10 +111,7 @@
     "actions": {
       "cancel": "Anuluj"
     },
-    "help": {
-      "enterprise": "Wybierz dostawcę, z którego korzysta już Twoja organizacja. Jeśli korzystasz z Google Workspace, wybierz Gmail; jeśli korzystasz z Microsoft 365, wybierz Microsoft 365. Możesz to zmienić później, usuwając i ponownie konfigurując dostawcę poczty e-mail.",
-      "standard": "Wybierz dostawcę, z którego korzysta już Twoja organizacja. Jeśli korzystasz z Google Workspace, wybierz Gmail; w przeciwnym razie wybierz IMAP. Możesz to zmienić później, usuwając i ponownie konfigurując dostawcę poczty e-mail."
-    }
+    "help": "Wybierz dostawcę, z którego korzysta już Twoja organizacja. Jeśli korzystasz z Google Workspace, wybierz Gmail; jeśli korzystasz z Microsoft 365, wybierz Microsoft 365. Możesz to zmienić później, usuwając i ponownie konfigurując dostawcę poczty e-mail."
   },
   "wizard": {
     "title": {

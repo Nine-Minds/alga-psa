@@ -12,7 +12,6 @@
       "resyncError": "No se pudo resincronizar el proveedor IMAP",
       "resyncStarted": "Se inició la resincronización para {{providerName}}.",
       "resyncRecovered": "{{providerName}} se volvió a conectar correctamente.",
-      "enterpriseOnly": "El correo electrónico entrante de Microsoft 365 solo está disponible en Pro.",
       "loadProvidersError": "No se pudieron cargar los proveedores de correo electrónico"
     },
     "editDrawer": {
@@ -21,14 +20,8 @@
     },
     "header": {
       "title": "Configuración del proveedor de correo electrónico",
-      "description": {
-        "enterprise": "Configure proveedores de Gmail, Microsoft 365 o IMAP para recibir y procesar correos electrónicos entrantes como tickets",
-        "standard": "Configure proveedores de Gmail o IMAP para recibir y procesar correos electrónicos entrantes como tickets"
-      },
-      "counts": {
-        "enterprise": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}",
-        "standard": "Gmail: {{gmail}} · IMAP: {{imap}}"
-      }
+      "description": "Configure proveedores de Gmail, Microsoft 365 o IMAP para recibir y procesar correos electrónicos entrantes como tickets",
+      "counts": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}"
     },
     "actions": {
       "addProvider": "Agregar proveedor de correo electrónico"
@@ -42,6 +35,7 @@
       "title": "Instrucciones de configuración",
       "microsoft": {
         "title": "Configuración de Microsoft 365",
+        "ownApp": "Traiga su propia aplicación de Microsoft: regístrela en Azure AD (Microsoft Entra ID), conceda permisos de correo y conéctela a su buzón de Microsoft 365.",
         "providersPointer": "La configuración de la aplicación de Microsoft se administra en Proveedores.",
         "openProviders": "Abrir Proveedores"
       },
@@ -117,10 +111,7 @@
     "actions": {
       "cancel": "Cancelar"
     },
-    "help": {
-      "enterprise": "Elija el proveedor que su organización ya utiliza. Si utiliza Google Workspace, elija Gmail; Si usa Microsoft 365, elija Microsoft 365. Puede cambiar esto más adelante eliminando y reconfigurando su proveedor de correo electrónico.",
-      "standard": "Elija el proveedor que su organización ya utiliza. Si utiliza Google Workspace, elija Gmail; de lo contrario, elija IMAP. Puede cambiar esto más adelante eliminando y reconfigurando su proveedor de correo electrónico."
-    }
+    "help": "Elija el proveedor que su organización ya utiliza. Si utiliza Google Workspace, elija Gmail; Si usa Microsoft 365, elija Microsoft 365. Puede cambiar esto más adelante eliminando y reconfigurando su proveedor de correo electrónico."
   },
   "wizard": {
     "title": {

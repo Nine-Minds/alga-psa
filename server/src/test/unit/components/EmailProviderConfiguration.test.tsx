@@ -205,6 +205,10 @@ describe('EmailProviderConfiguration', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    // Restore the module-default edition so EE tests are not affected by a
+    // CE test that toggled the environment mid-suite.
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+    process.env.EDITION = 'ee';
   });
 
   it('should render loading state initially', () => {
@@ -235,11 +239,59 @@ describe('EmailProviderConfiguration', () => {
 
     render(<EmailProviderConfiguration />);
 
-    expect(await screen.findByText('Microsoft app setup is managed in Providers.')).toBeInTheDocument();
+    expect(await screen.findByText(/Bring your own Microsoft app/)).toBeInTheDocument();
+    expect(screen.getByText('Microsoft app setup is managed in Providers.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open Providers' })).toBeInTheDocument();
     expect(screen.queryByText(/no Entra app registration is needed/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/use your own Microsoft app/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Register an application in Azure AD')).not.toBeInTheDocument();
+  });
+
+  it('lists microsoft-type providers in CE without filtering them out', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'community';
+    process.env.EDITION = 'ce';
+    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce({ providers: mockProviders } as any);
+
+    render(<EmailProviderConfiguration />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Test Microsoft').length).toBeGreaterThan(0);
+    });
+    expect(screen.getAllByText('Test Microsoft').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Test Gmail').length).toBeGreaterThan(0);
+  });
+
+  it('opens the edit flow for a microsoft-type provider in CE without a Pro-only error', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'community';
+    process.env.EDITION = 'ce';
+    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce({ providers: mockProviders } as any);
+
+    const user = userEvent.setup();
+    render(<EmailProviderConfiguration />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('provider-1')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getAllByText('Edit')[0]);
+
+    expect(screen.getByText('Edit Email Provider')).toBeInTheDocument();
+    expect(screen.getByTestId('microsoft-form')).toBeInTheDocument();
+    expect(screen.queryByText(/only available in Pro/i)).not.toBeInTheDocument();
+  });
+
+  it('shows Microsoft setup guidance in CE without the hosted Providers hint', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'community';
+    process.env.EDITION = 'ce';
+    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce({ providers: [] } as any);
+
+    render(<EmailProviderConfiguration />);
+
+    // Edition-neutral bring-your-own-app guidance renders in every edition.
+    expect(await screen.findByText(/Bring your own Microsoft app/)).toBeInTheDocument();
+    // The hosted/platform-credentials hint stays EE-only.
+    expect(screen.queryByText('Microsoft app setup is managed in Providers.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open Providers' })).not.toBeInTheDocument();
   });
 
   it('should open the setup wizard when add provider button is clicked', async () => {
