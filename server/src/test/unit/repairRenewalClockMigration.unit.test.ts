@@ -117,11 +117,19 @@ describe('repair renewal clock payload migration', () => {
     const { knex, tenantWorkflowSchedule } = buildHarness();
 
     await migration.up(knex);
-    const first = tenantWorkflowSchedule.find((row) => row.id === 'renewal-workflow-schedule')!.payload_json;
-    await migration.up(knex);
-    const second = tenantWorkflowSchedule.find((row) => row.id === 'renewal-workflow-schedule')!.payload_json;
+    const first = tenantWorkflowSchedule.find((row) => row.id === 'renewal-workflow-schedule')!;
+    // Simulate real post-fix fire state appearing on the repaired row.
+    const renewalRow = tenantWorkflowSchedule.find((row) => row.id === 'renewal-workflow-schedule')!;
+    renewalRow.last_error = 'some real post-fix fire outcome';
+    renewalRow.last_run_status = 'success';
 
-    expect(first).toMatchObject(second as Record<string, unknown>);
-    expect((first as Record<string, unknown>).scheduleName).toBeUndefined();
+    await migration.up(knex);
+
+    const after = tenantWorkflowSchedule.find((row) => row.id === 'renewal-workflow-schedule')!;
+    expect(after.payload_json).toMatchObject(first.payload_json as Record<string, unknown>);
+    expect((after.payload_json as Record<string, unknown>).scheduleName).toBeUndefined();
+    // A re-run must not rewrite the payload nor wipe real fire state.
+    expect(after.last_error).toBe('some real post-fix fire outcome');
+    expect(after.last_run_status).toBe('success');
   });
 });

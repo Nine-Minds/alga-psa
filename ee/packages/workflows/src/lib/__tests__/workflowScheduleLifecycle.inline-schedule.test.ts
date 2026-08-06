@@ -8,6 +8,7 @@ type ScheduleRow = Record<string, any>;
 
 const scheduleState = new Map<string, ScheduleRow>();
 const versionsByNumber = new Map<number, Record<string, any>>();
+const workflowById = new Map<string, Record<string, any>>();
 
 const runner = {
   scheduleJobAt: vi.fn(async () => ({ jobId: uuidv4(), externalId: `one-${uuidv4()}` })),
@@ -41,6 +42,10 @@ vi.mock('@alga-psa/workflows/persistence', async () => {
     WorkflowDefinitionVersionModelV2: {
       getByWorkflowAndVersion: vi.fn(async (_knex: unknown, _workflowId: string, version: number) =>
         versionsByNumber.get(Number(version)) ?? null)
+    },
+    WorkflowDefinitionModelV2: {
+      getById: vi.fn(async (_knex: unknown, _tenant: string, workflowId: string) =>
+        workflowById.get(workflowId) ?? null)
     }
   };
 });
@@ -54,6 +59,7 @@ describe('workflowScheduleLifecycle inline schedule creation', () => {
   beforeEach(() => {
     scheduleState.clear();
     versionsByNumber.clear();
+    workflowById.clear();
     registerWorkflowScheduleJobRunner(async () => runner);
   });
 
@@ -117,5 +123,35 @@ describe('workflowScheduleLifecycle inline schedule creation', () => {
     });
 
     expect(schedule?.payload_json).toEqual({});
+  });
+
+  it('falls back to the workflow payload_schema_ref when the version lacks a def ref', async () => {
+    const workflowId = uuidv4();
+    // Version has no definition_json.payloadSchemaRef; only the workflow row does.
+    versionsByNumber.set(2, { version: 2, definition_json: { id: workflowId, version: 2 } });
+    workflowById.set(workflowId, { workflow_id: workflowId, payload_schema_ref: WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF });
+
+    const schedule = await syncWorkflowScheduleState(knex, {
+      tenantId: 'tenant-1',
+      workflowId,
+      desired: {
+        triggerType: 'recurring',
+        workflowVersion: 2,
+        dayTypeFilter: 'any',
+        cron: '0 6 * * *',
+        timezone: 'UTC',
+        enabled: true,
+        status: 'scheduled'
+      }
+    });
+
+    expect(schedule?.payload_json).toMatchObject({
+      triggerType: 'recurring',
+      workflowId,
+      workflowVersion: 2,
+      timezone: 'UTC',
+      cron: '0 6 * * *'
+    });
+    expect(workflowClockTriggerPayloadSchema.safeParse(schedule?.payload_json).success).toBe(true);
   });
 });

@@ -117,6 +117,7 @@ async function runScheduledWorkflow(
   // metadata for observability) so it passes the strict schema unmodified.
   const versionSchemaRef = await resolveWorkflowVersionPayloadSchemaRef(
     knex,
+    tenant,
     schedule.workflow_id,
     schedule.workflow_version
   );

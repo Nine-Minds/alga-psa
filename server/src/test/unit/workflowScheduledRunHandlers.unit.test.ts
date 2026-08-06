@@ -4,6 +4,7 @@ type ScheduleRecord = Record<string, any> | null;
 
 let scheduleRecord: ScheduleRecord = null;
 let versionRecord: Record<string, any> | null = null;
+let workflowRecord: Record<string, any> | null = null;
 
 const knexMock = {};
 const launchPublishedWorkflowRun = vi.fn();
@@ -37,6 +38,9 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   },
   WorkflowDefinitionVersionModelV2: {
     getByWorkflowAndVersion: vi.fn(async () => versionRecord)
+  },
+  WorkflowDefinitionModelV2: {
+    getById: vi.fn(async () => workflowRecord)
   }
 }));
 
@@ -67,6 +71,7 @@ describe('Workflow scheduled run handlers', () => {
   beforeEach(() => {
     scheduleRecord = null;
     versionRecord = null;
+    workflowRecord = null;
     // The handlers resolve the runner via @alga-psa/jobs' accessor, not the
     // server JobRunnerFactory; register a matching mock for the unit test.
     registerJobRunnerAccessor(async () => ({
@@ -317,6 +322,55 @@ describe('Workflow scheduled run handlers', () => {
         last_fire_key: 'workflow-schedule-fire:schedule-clock-1:fire-clock-1'
       })
     );
+  });
+
+  it('CLOCK fallback: version without a def ref synthesizes via the workflow payload_schema_ref', async () => {
+    // The launched version carries no definition_json.payloadSchemaRef; only the
+    // workflow row does. resolveWorkflowVersionPayloadSchemaRef must fall back,
+    // or this schedule would validate strictly at launch but never synthesize.
+    versionRecord = {
+      version_id: 'version-clock-2',
+      workflow_id: 'workflow-clock-2',
+      version: 5,
+      definition_json: { id: 'workflow-clock-2', version: 5 }
+    };
+    workflowRecord = { workflow_id: 'workflow-clock-2', payload_schema_ref: 'payload.WorkflowClockTrigger.v1' };
+    scheduleRecord = {
+      id: 'schedule-clock-2',
+      tenant: 'tenant-1',
+      workflow_id: 'workflow-clock-2',
+      workflow_version: 5,
+      name: 'Renewal suggestion generation',
+      trigger_type: 'recurring',
+      day_type_filter: 'any',
+      business_hours_schedule_id: null,
+      run_at: null,
+      cron: '0 6 * * *',
+      timezone: 'UTC',
+      payload_json: null,
+      enabled: true,
+      status: 'scheduled'
+    };
+
+    await workflowRecurringScheduledRunHandler('job-clock-2', {
+      tenantId: 'tenant-1',
+      workflowId: 'workflow-clock-2',
+      scheduleId: 'schedule-clock-2',
+      jobExecutionId: 'fire-clock-2',
+      jobScheduledAt: '2026-08-06T06:00:00.000Z'
+    });
+
+    expect(launchPublishedWorkflowRun).toHaveBeenCalledTimes(1);
+    const payload = launchPublishedWorkflowRun.mock.calls[0]?.[1]?.payload as Record<string, unknown>;
+    expect(payload).toMatchObject({
+      triggerType: 'recurring',
+      scheduleId: 'schedule-clock-2',
+      workflowId: 'workflow-clock-2',
+      workflowVersion: 5,
+      cron: '0 6 * * *',
+      timezone: 'UTC'
+    });
+    expect(payload?.scheduleName).toBeUndefined();
   });
 
   it('T028: invalid saved payload at fire time does not start execution and records schedule error state', async () => {

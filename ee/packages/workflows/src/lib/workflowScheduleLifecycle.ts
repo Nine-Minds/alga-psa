@@ -622,6 +622,7 @@ export async function syncWorkflowScheduleState(
     // re-derives the real clock payload at each fire. Omit display-only fields.
     const versionSchemaRef = await resolveWorkflowVersionPayloadSchemaRef(
       knex,
+      params.tenantId,
       params.workflowId,
       params.desired.workflowVersion
     );
