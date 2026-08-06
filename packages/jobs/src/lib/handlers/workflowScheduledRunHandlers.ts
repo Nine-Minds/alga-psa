@@ -6,6 +6,12 @@ import {
   resolveWorkflowBusinessDaySettings
 } from '@alga-psa/workflows/lib/workflowBusinessDayScheduling';
 import { createTenantKnex } from '@alga-psa/db';
+import {
+  buildWorkflowClockPayload,
+  isClockPinnedSchemaRef,
+  resolveWorkflowVersionPayloadSchemaRef,
+  toIsoDateTime
+} from '@alga-psa/workflows/lib/workflowClockPayload';
 import { launchPublishedWorkflowRun } from '@alga-psa/workflows/lib/workflowRunLauncher';
 import { getJobRunner } from '../jobRunnerAccessor';
 import type { BaseJobData } from '../jobs/interfaces';
@@ -19,19 +25,6 @@ const buildWorkflowScheduleFireKey = (scheduleId: string, jobId: string): string
   `workflow-schedule-fire:${scheduleId}:${jobId}`;
 
 const TERMINAL_JOB_STATUSES = new Set(['completed', 'failed']);
-
-const toIsoDateTime = (value: unknown): string | null => {
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : value.toISOString();
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    const parsed = new Date(trimmed);
-    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
-  }
-  return null;
-};
 
 const buildScheduleTriggerMetadata = (params: {
   scheduleId: string;
@@ -100,7 +93,7 @@ async function runScheduledWorkflow(
     return;
   }
 
-  const payload = (schedule.payload_json ?? {}) as Record<string, unknown>;
+  const storedPayload = (schedule.payload_json ?? {}) as Record<string, unknown>;
   const scheduledOccurrenceIso = (
     schedule.trigger_type === 'schedule'
       ? toIsoDateTime(schedule.run_at)
@@ -116,6 +109,29 @@ async function runScheduledWorkflow(
     cron: schedule.cron,
     timezone: schedule.timezone
   });
+
+  // Clock-pinned workflows launch with the strict synthetic clock payload the
+  // WorkflowDesigner promises, resolved against the exact launched version;
+  // every other schedule keeps its stored payload untouched. The synthetic
+  // payload deliberately omits display-only `scheduleName` (kept in trigger
+  // metadata for observability) so it passes the strict schema unmodified.
+  const versionSchemaRef = await resolveWorkflowVersionPayloadSchemaRef(
+    knex,
+    tenant,
+    schedule.workflow_id,
+    schedule.workflow_version
+  );
+  const payload = isClockPinnedSchemaRef(versionSchemaRef)
+    ? buildWorkflowClockPayload({
+        scheduleId: schedule.id,
+        workflowId: schedule.workflow_id,
+        workflowVersion: schedule.workflow_version,
+        triggerType: schedule.trigger_type,
+        scheduledFor: scheduledOccurrenceIso,
+        cron: schedule.cron,
+        timezone: schedule.timezone
+      })
+    : storedPayload;
 
   if (schedule.trigger_type === 'recurring') {
     const dayTypeFilter = normalizeWorkflowDayTypeFilter(schedule.day_type_filter);

@@ -12,6 +12,11 @@ import {
   getWorkflowScheduleJobRunner,
   type WorkflowScheduleJobResult as ScheduleJobResult
 } from './jobRunnerProvider';
+import {
+  buildWorkflowClockPayload,
+  isClockPinnedSchemaRef,
+  resolveWorkflowVersionPayloadSchemaRef
+} from './workflowClockPayload';
 import { computeNextFireAtForSchedule } from './computeNextFireAt';
 import { workflowTenantTable } from './workflowTenantDb';
 
@@ -611,6 +616,28 @@ export async function syncWorkflowScheduleState(
 
   if (!existing) {
     const scheduleId = uuidv4();
+    // Clock-pinned time-triggered workflows store a schema-valid placeholder so
+    // the schedule never depends on a user-authored payload; runtime synthesis
+    // re-derives the real clock payload at each fire. Omit display-only fields.
+    // Resolve the schema ref and synthesize the payload BEFORE registering the
+    // provider job: a resolution failure here must not leave an orphaned
+    // external schedule with no persisted state row.
+    const versionSchemaRef = await resolveWorkflowVersionPayloadSchemaRef(
+      knex,
+      params.tenantId,
+      params.workflowId,
+      params.desired.workflowVersion
+    );
+    const payload = isClockPinnedSchemaRef(versionSchemaRef)
+      ? buildWorkflowClockPayload({
+          scheduleId,
+          workflowId: params.workflowId,
+          workflowVersion: params.desired.workflowVersion,
+          triggerType: params.desired.triggerType,
+          cron: params.desired.cron,
+          timezone: params.desired.timezone
+        })
+      : {};
     const scheduled = await scheduleDesiredWorkflow(params.tenantId, params.workflowId, scheduleId, params.desired);
     try {
       return await WorkflowScheduleStateModel.create(knex, {
@@ -625,7 +652,7 @@ export async function syncWorkflowScheduleState(
         run_at: params.desired.runAt ?? null,
         cron: params.desired.cron ?? null,
         timezone: params.desired.timezone ?? null,
-        payload_json: {},
+        payload_json: payload,
         enabled: params.desired.enabled,
         status: params.desired.status,
         job_id: scheduled?.jobId ?? null,
