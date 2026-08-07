@@ -11,6 +11,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 
 const getCachedTicket = cache((id: string) => getClientTicketDetails(id));
@@ -24,21 +25,32 @@ interface TicketPageProps {
 }
 
 export async function generateMetadata({ params }: TicketPageProps): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
   try {
     const { ticketId } = await params;
     const ticket = await getCachedTicket(ticketId);
     if (ticket && !isReturnedActionError(ticket)) {
-      return { title: `Ticket #${ticket.ticket_number} - ${ticket.title}` };
+      return {
+        title: t('clientPortal.tickets.detail.title', {
+          ticketNumber: ticket.ticket_number,
+          ticketTitle: ticket.title,
+          defaultValue: 'Ticket #{{ticketNumber}} - {{ticketTitle}}',
+        }),
+      };
     }
   } catch (error) {
     console.error('[generateMetadata] Failed to fetch ticket title:', error);
   }
-  return { title: 'Ticket Details' };
+  return {
+    title: t('clientPortal.tickets.detail.fallbackTitle', { defaultValue: 'Ticket Details' }),
+  };
 }
 
 export default async function TicketPage({ params }: TicketPageProps) {
   const resolvedParams = await params;
   const { ticketId } = resolvedParams;
+  const { t } = await getServerTranslation(undefined, 'features/tickets');
 
   try {
     const ticketData = await getCachedTicket(ticketId);
@@ -52,7 +64,7 @@ export default async function TicketPage({ params }: TicketPageProps) {
       return (
         <Alert id="ticket-error-message" variant="destructive">
           <AlertDescription>
-            Error: {message}
+            {t('messages.errorWithMessage', { message, defaultValue: 'Error: {{message}}' })}
           </AlertDescription>
         </Alert>
       );
@@ -81,7 +93,12 @@ export default async function TicketPage({ params }: TicketPageProps) {
     return (
       <Alert id="ticket-error-message" variant="destructive">
         <AlertDescription>
-          Error: {error instanceof Error ? error.message : 'Failed to load ticket details'}
+          {t('messages.errorWithMessage', {
+            message: error instanceof Error
+              ? error.message
+              : t('messages.loadError', { defaultValue: 'Failed to load ticket details' }),
+            defaultValue: 'Error: {{message}}',
+          })}
         </AlertDescription>
       </Alert>
     );

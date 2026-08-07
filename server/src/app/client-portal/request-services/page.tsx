@@ -7,9 +7,13 @@ import {
   listMyRecentServiceRequestsAction,
 } from './actions';
 
-export const metadata: Metadata = {
-  title: 'Request Services',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('clientPortal.requestServices.title', { defaultValue: 'Request Services' }),
+  };
+}
 import { ServiceRequestCard } from './ServiceRequestCard';
 import { MyRequestsTable, type MyRequestsTableRow } from './my-requests/MyRequestsTable';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';

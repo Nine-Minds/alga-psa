@@ -36,7 +36,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   } catch (error) {
     console.error('[generateMetadata] Failed to fetch contact title:', error);
   }
-  return { title: 'Contact Details' };
+  const { t } = await getServerTranslation(undefined, 'metadata');
+  return { title: t('msp.contacts.detail.fallbackTitle', { defaultValue: 'Contact Details' }) };
 }
 
 interface ContactDetailPageProps {

@@ -4,12 +4,17 @@ import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-
 import type { IClient, IProject, ITag } from '@alga-psa/types';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { ProjectListFilters } from '@alga-psa/projects/components/Projects';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
-export const metadata: Metadata = {
-  title: 'Projects',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.projects.title', { defaultValue: 'Projects' }),
+  };
+}
 
 interface ProjectsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;

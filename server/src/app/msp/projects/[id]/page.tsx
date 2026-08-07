@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getProject } from '@alga-psa/projects/actions/projectActions';
 import { AIChatContextBoundary } from '@product/chat/context';
 import MspProjectPageClient from '@alga-psa/msp-composition/projects/MspProjectPageClient';
@@ -13,7 +14,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   } catch (error) {
     console.error('[generateMetadata] Failed to fetch project title:', error);
   }
-  return { title: 'Project Details' };
+  const { t } = await getServerTranslation(undefined, 'metadata');
+  return { title: t('msp.projects.detail.fallbackTitle', { defaultValue: 'Project Details' }) };
 }
 
 export default async function ProjectDetailsPage({

@@ -297,7 +297,8 @@
     "closeFailed": "Falha ao fechar ticket",
     "scheduleVisitFailed": "Falha ao abrir o agendador",
     "loadCommentsFailed": "Falha ao carregar os comentários",
-    "updateTicketFailed": "Falha ao atualizar o ticket"
+    "updateTicketFailed": "Falha ao atualizar o ticket",
+    "errorWithMessage": "Erro: {{message}}"
   },
   "conversation": {
     "comments": "Comentários",

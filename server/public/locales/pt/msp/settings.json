@@ -30,7 +30,9 @@
     "loadingTeam": "Carregando configuração da equipe...",
     "loadingExperimental": "Carregando configuração de recurso experimental...",
     "loadingInteractions": "Carregando configurações de interação...",
-    "keyboardShortcuts": "Atalhos de teclado"
+    "keyboardShortcuts": "Atalhos de teclado",
+    "opportunities": "Oportunidades",
+    "mcpServer": "Servidor MCP"
   },
   "unsavedChanges": {
     "title": "Alterações não salvas",

@@ -10,10 +10,14 @@ interface AssetEditPageProps {
   }>;
 }
 
-export const metadata: Metadata = {
-  title: 'Edit Asset',
-  description: 'Edit asset details'
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.assets.detail.edit.title', { defaultValue: 'Edit Asset' }),
+    description: t('msp.assets.detail.edit.description', { defaultValue: 'Edit asset details' }),
+  };
+}
 
 export default async function AssetEditPage({ params }: AssetEditPageProps) {
   const resolvedParams = await params;

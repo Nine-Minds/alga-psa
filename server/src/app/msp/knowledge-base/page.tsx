@@ -1,10 +1,15 @@
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { KnowledgeBasePage } from '@alga-psa/documents/components';
 import { getExperimentalFeatures } from '@alga-psa/tenancy/actions';
 
-export const metadata: Metadata = {
-  title: 'Knowledge Base',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.knowledgeBase.title', { defaultValue: 'Knowledge Base' }),
+  };
+}
 
 export default async function KBArticlesPage() {
   let aiAssistantEnabled = false;

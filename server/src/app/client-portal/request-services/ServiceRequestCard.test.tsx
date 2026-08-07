@@ -16,6 +16,8 @@ describe('ServiceRequestCard', () => {
         description="Collect onboarding details"
         icon="user-plus"
         categoryLabel="Onboarding"
+        fallbackCategory="Service"
+        noDescription="No description provided"
       />
     );
 

@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import { SettingsTab } from '@/components/settings/SettingsTab';
-import { getSettingsTabTitle } from '@/components/settings/settingsTabsRegistry';
+import { settingsTabMetadata } from '@/components/settings/settingsTabMetadata';
 import McpServerSettings from '@/components/settings/mcp/McpServerSettings';
 
-export const metadata: Metadata = { title: getSettingsTabTitle('mcp-server') };
+export async function generateMetadata(): Promise<Metadata> {
+  return settingsTabMetadata('mcp-server');
+}
 
 export default function McpServerSettingsRoute() {
   return (

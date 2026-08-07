@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import { SettingsTab } from '@/components/settings/SettingsTab';
-import { getSettingsTabTitle } from '@/components/settings/settingsTabsRegistry';
+import { settingsTabMetadata } from '@/components/settings/settingsTabMetadata';
 import ClientPortalSettings from '@/components/settings/general/ClientPortalSettings';
 
-export const metadata: Metadata = { title: getSettingsTabTitle('client-portal') };
+export async function generateMetadata(): Promise<Metadata> {
+  return settingsTabMetadata('client-portal');
+}
 
 export default function ClientPortalSettingsRoute() {
   return (

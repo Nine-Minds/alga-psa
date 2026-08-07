@@ -7,9 +7,13 @@ import BackNav from '@alga-psa/ui/components/BackNav';
 import { getMyServiceRequestSubmissionDetailAction } from '../actions';
 import { getSubmissionFieldDisplay } from '../../submissionFieldPresentation';
 
-export const metadata: Metadata = {
-  title: 'Request Details',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('clientPortal.requestServices.myRequests.detail.title', { defaultValue: 'Request Details' }),
+  };
+}
 
 interface MyRequestDetailPageProps {
   params: Promise<{

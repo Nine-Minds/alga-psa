@@ -1,9 +1,14 @@
 import { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
-export const metadata: Metadata = {
-  title: 'Verify Email',
-  description: 'Verify your email address to complete registration',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('auth.verify.layout.title', { defaultValue: 'Verify Email' }),
+    description: t('auth.verify.layout.description', { defaultValue: 'Verify your email address to complete registration' }),
+  };
+}
 
 export default function VerifyLayout({
   children,

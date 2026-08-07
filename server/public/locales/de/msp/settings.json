@@ -30,7 +30,9 @@
     "loadingTeam": "Team-Konfiguration wird geladen...",
     "loadingExperimental": "Experimentelle Funktionskonfiguration wird geladen...",
     "loadingInteractions": "Interaktionseinstellungen werden geladen...",
-    "keyboardShortcuts": "Tastenkürzel"
+    "keyboardShortcuts": "Tastenkürzel",
+    "mcpServer": "MCP-Server",
+    "opportunities": "Verkaufschancen"
   },
   "unsavedChanges": {
     "title": "Ungespeicherte Änderungen",

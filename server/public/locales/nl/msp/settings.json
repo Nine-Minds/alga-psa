@@ -30,7 +30,9 @@
     "loadingTeam": "Teamconfiguratie laden...",
     "loadingExperimental": "Configuratie experimentele functies laden...",
     "loadingInteractions": "Interactie-instellingen laden...",
-    "keyboardShortcuts": "Sneltoetsen"
+    "keyboardShortcuts": "Sneltoetsen",
+    "mcpServer": "MCP-server",
+    "opportunities": "Verkoopkansen"
   },
   "unsavedChanges": {
     "title": "Niet-opgeslagen wijzigingen",

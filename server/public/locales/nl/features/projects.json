@@ -1345,7 +1345,9 @@
     "loadingProjects": "Projecten worden geladen...",
     "noDescription": "Geen beschrijving opgegeven",
     "noPhasesOrTasks": "Geen fasen of taken om weer te geven",
-    "loadError": "Kan projectdetails niet laden"
+    "loadError": "Kan projectdetails niet laden",
+    "errorWithMessage": "Fout: {{message}}",
+    "notFoundOrNoAccess": "Project niet gevonden of u hebt geen toegang tot dit project."
   },
   "backToProjects": "Terug naar Projecten",
   "invalidProjectData": "Ongeldige projectgegevens",

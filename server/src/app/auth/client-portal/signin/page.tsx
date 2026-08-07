@@ -8,11 +8,16 @@ import { isValidTenantSlug } from '@shared/utils/tenantSlug';
 import { UserSession } from '@alga-psa/db/models/UserSession';
 import { recordPortalDomainSeen } from '@/lib/portal-domains/portalDomainSeen';
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { PortalBrandingStyles } from '@/lib/auth/portalBranding';
 
-export const metadata: Metadata = {
-  title: 'Client Portal Sign In',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('auth.clientPortal.signin.title', { defaultValue: 'Client Portal Sign In' }),
+  };
+}
 
 export default async function ClientSignInPage({
   searchParams,

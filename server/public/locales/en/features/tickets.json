@@ -305,7 +305,8 @@
     "timeEntryDeleted": "Time entry deleted",
     "closeFailed": "Failed to close ticket",
     "loadCommentsFailed": "Failed to load comments",
-    "updateTicketFailed": "Failed to update ticket"
+    "updateTicketFailed": "Failed to update ticket",
+    "errorWithMessage": "Error: {{message}}"
   },
   "conversation": {
     "comments": "Comments",

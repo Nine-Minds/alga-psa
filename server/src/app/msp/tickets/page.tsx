@@ -12,9 +12,13 @@ import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Tickets',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.tickets.title', { defaultValue: 'Tickets' }),
+  };
+}
 
 interface TicketsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;

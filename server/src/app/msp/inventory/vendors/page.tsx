@@ -5,11 +5,16 @@ import { getErrorMessage, isActionMessageError, isActionPermissionError } from '
 import { redirect } from 'next/navigation';
 import type { IVendor } from '@alga-psa/types';
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
-export const metadata: Metadata = {
-  title: 'Vendors',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.inventory.vendors.title', { defaultValue: 'Vendors' }),
+  };
+}
 
 export default async function VendorsPage() {
   const boundary = await enforceServerProductRoute({ pathname: '/msp/inventory/vendors', scope: 'msp' });

@@ -30,7 +30,9 @@
     "loadingTeam": "Chargement de la configuration de l'équipe...",
     "loadingExperimental": "Chargement de la configuration des fonctionnalités expérimentales...",
     "loadingInteractions": "Chargement des paramètres d'interaction...",
-    "keyboardShortcuts": "Raccourcis clavier"
+    "keyboardShortcuts": "Raccourcis clavier",
+    "opportunities": "Opportunités",
+    "mcpServer": "Serveur MCP"
   },
   "unsavedChanges": {
     "title": "Modifications non enregistrées",

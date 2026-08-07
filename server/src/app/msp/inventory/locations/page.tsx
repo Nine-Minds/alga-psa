@@ -6,11 +6,16 @@ import { getErrorMessage, isActionMessageError, isActionPermissionError } from '
 import { redirect } from 'next/navigation';
 import type { IStockLocation, IUser } from '@alga-psa/types';
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
-export const metadata: Metadata = {
-  title: 'Stock Locations',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.inventory.locations.title', { defaultValue: 'Stock Locations' }),
+  };
+}
 
 export default async function StockLocationsPage() {
   const boundary = await enforceServerProductRoute({ pathname: '/msp/inventory/locations', scope: 'msp' });

@@ -13,7 +13,7 @@ import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import { AppThemeProvider } from '@/components/providers/AppThemeProvider';
 import { ThemeBridge } from '@/components/providers/ThemeBridge';
 import { ClientUIStateProvider } from '@alga-psa/ui/ui-reflection/ClientUIStateProvider';
-import { getServerLocale } from "@alga-psa/ui/lib/i18n/serverOnly";
+import { getServerLocale, getServerTranslation } from "@alga-psa/ui/lib/i18n/serverOnly";
 import { cookies, headers } from 'next/headers.js';
 import { generateBrandingStyles } from "@alga-psa/tenancy";
 import { resolveDeploymentCapabilities } from '@/lib/deployment/deploymentProfile';
@@ -54,6 +54,7 @@ export async function generateMetadata(): Promise<Metadata> {
     fallbackHost: 'localhost:3010',
     fallbackProto: host.includes('localhost') ? 'http' : 'https',
   });
+  const { t } = await getServerTranslation(undefined, 'metadata');
 
   return {
     metadataBase,
@@ -61,9 +62,11 @@ export async function generateMetadata(): Promise<Metadata> {
       template: '%s | AlgaPSA',
       default: 'AlgaPSA',
     },
-    keywords: "MSP, Managed Service Provider, IT Services, Network Management, Cloud Services",
+    keywords: t('app.keywords', {
+      defaultValue: 'MSP, Managed Service Provider, IT Services, Network Management, Cloud Services',
+    }),
     authors: [{ name: "Nine Minds" }],
-    description: "Managed Service Provider Application",
+    description: t('app.description', { defaultValue: 'Managed Service Provider Application' }),
     icons: {
       icon: '/favicon.ico',
     },
@@ -127,9 +130,12 @@ export default async function RootLayout({
   }
 
   const projectBillingUiEnabled = await checkFeatureFlag('project-billing-ui');
+  // Drives screen-reader pronunciation, browser translation prompts and CSS
+  // `:lang()` — it has to follow the resolved locale, not a hardcoded 'en'.
+  const locale = await getServerLocale();
 
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${inter.className}`} suppressHydrationWarning>
+    <html lang={locale} className={`${inter.variable} ${jetbrainsMono.variable} ${inter.className}`} suppressHydrationWarning>
       <head>
         <link rel="stylesheet" href="https://unpkg.com/react-big-calendar/lib/css/react-big-calendar.css" />
         <link rel="stylesheet" href="https://unpkg.com/@radix-ui/themes@3.2.0/styles.css" />

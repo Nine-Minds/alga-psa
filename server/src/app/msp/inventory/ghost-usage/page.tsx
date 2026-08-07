@@ -10,11 +10,16 @@ import {
 import { getSession } from '@alga-psa/auth';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
-export const metadata: Metadata = {
-  title: 'Ghost Usage',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.inventory.ghostUsage.title', { defaultValue: 'Ghost Usage' }),
+  };
+}
 
 export default async function GhostUsagePage() {
   const boundary = await enforceServerProductRoute({ pathname: '/msp/inventory/ghost-usage', scope: 'msp' });

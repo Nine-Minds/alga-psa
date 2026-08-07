@@ -4,9 +4,13 @@ import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getEmailLogMetrics, getEmailLogs } from '@alga-psa/email/actions';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Email Logs',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.emailLogs.title', { defaultValue: 'Email Logs' }),
+  };
+}
 
 export const dynamic = 'force-dynamic';
 
