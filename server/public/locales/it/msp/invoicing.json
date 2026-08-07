@@ -1,8 +1,5 @@
 {
   "automaticInvoices": {
-    "loading": {
-      "candidates": "Caricamento dei candidati alla fattura."
-    },
     "ready": {
       "title": "Pronto per la fatturazione",
       "description": "Esamina il lavoro ricorrente dovuto e genera bozze di fatture per i periodi selezionati.",
@@ -229,7 +226,8 @@
       "loadHistory": "Impossibile caricare la cronologia delle fatture ricorrenti. Per favore riprova."
     },
     "loading": {
-      "billingData": "Caricamento dati di fatturazione"
+      "billingData": "Caricamento dati di fatturazione",
+      "candidates": "Caricamento dei candidati alla fattura."
     },
     "views": {
       "all": "Tutti",

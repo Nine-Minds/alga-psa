@@ -1,8 +1,5 @@
 {
   "automaticInvoices": {
-    "loading": {
-      "candidates": "Chargement des factures candidates."
-    },
     "ready": {
       "title": "Prêt à facturer",
       "description": "Examinez les travaux récurrents dus et générez des projets de factures pour les périodes sélectionnées.",
@@ -229,7 +226,8 @@
       "loadHistory": "Échec du chargement de l'historique des factures récurrentes. Veuillez réessayer."
     },
     "loading": {
-      "billingData": "Chargement des données de facturation"
+      "billingData": "Chargement des données de facturation",
+      "candidates": "Chargement des factures candidates."
     },
     "views": {
       "all": "Tout",

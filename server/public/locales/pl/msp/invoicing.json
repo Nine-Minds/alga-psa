@@ -1,8 +1,5 @@
 {
   "automaticInvoices": {
-    "loading": {
-      "candidates": "Ładowanie kandydatów do faktury."
-    },
     "ready": {
       "title": "Gotowy do wystawienia faktury",
       "description": "Przeglądaj powtarzające się terminy prac i generuj wersje robocze faktur za wybrane okresy.",
@@ -247,7 +244,8 @@
       "loadHistory": "Nie udało się wczytać historii faktur cyklicznych. Spróbuj ponownie."
     },
     "loading": {
-      "billingData": "Ładowanie danych rozliczeniowych"
+      "billingData": "Ładowanie danych rozliczeniowych",
+      "candidates": "Ładowanie kandydatów do faktury."
     },
     "views": {
       "all": "Wszystkie",

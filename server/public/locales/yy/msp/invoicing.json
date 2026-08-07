@@ -1,8 +1,5 @@
 {
   "automaticInvoices": {
-    "loading": {
-      "candidates": "55555"
-    },
     "ready": {
       "title": "55555",
       "description": "55555",
@@ -229,7 +226,8 @@
       "loadHistory": "55555"
     },
     "loading": {
-      "billingData": "55555"
+      "billingData": "55555",
+      "candidates": "55555"
     },
     "views": {
       "all": "55555",

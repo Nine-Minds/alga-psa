@@ -1,8 +1,5 @@
 {
   "automaticInvoices": {
-    "loading": {
-      "candidates": "Loading invoice candidates."
-    },
     "ready": {
       "title": "Ready to Invoice",
       "description": "Review recurring due work and generate draft invoices for the selected periods.",
@@ -229,7 +226,8 @@
       "loadHistory": "Failed to load recurring invoice history. Please try again."
     },
     "loading": {
-      "billingData": "Loading billing data"
+      "billingData": "Loading billing data",
+      "candidates": "Loading invoice candidates."
     },
     "views": {
       "all": "All",

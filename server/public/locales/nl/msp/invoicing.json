@@ -1,8 +1,5 @@
 {
   "automaticInvoices": {
-    "loading": {
-      "candidates": "Factuurkandidaten laden."
-    },
     "ready": {
       "title": "Klaar om te factureren",
       "description": "Beoordeel terugkerende werkzaamheden en genereer conceptfacturen voor de geselecteerde perioden.",
@@ -229,7 +226,8 @@
       "loadHistory": "Kan terugkerende factuurgeschiedenis niet laden. Probeer het opnieuw."
     },
     "loading": {
-      "billingData": "Factureringsgegevens laden"
+      "billingData": "Factureringsgegevens laden",
+      "candidates": "Factuurkandidaten laden."
     },
     "views": {
       "all": "Alle",

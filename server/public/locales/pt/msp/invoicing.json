@@ -1,8 +1,5 @@
 {
   "automaticInvoices": {
-    "loading": {
-      "candidates": "Carregando candidatos a fatura."
-    },
     "ready": {
       "title": "Pronto para faturar",
       "description": "Revise o trabalho devido recorrente e gere projetos de faturas para os períodos selecionados.",
@@ -229,7 +226,8 @@
       "loadHistory": "Falha ao carregar o histórico de faturas recorrentes. Por favor, tente novamente."
     },
     "loading": {
-      "billingData": "Carregando dados de faturamento"
+      "billingData": "Carregando dados de faturamento",
+      "candidates": "Carregando candidatos a fatura."
     },
     "views": {
       "all": "Todos",

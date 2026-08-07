@@ -1,8 +1,5 @@
 {
   "automaticInvoices": {
-    "loading": {
-      "candidates": "Rechnungskandidaten werden geladen."
-    },
     "ready": {
       "title": "Bereit zur Rechnungsstellung",
       "description": "Überprüfen Sie wiederkehrende fällige Arbeiten und erstellen Sie Rechnungsentwürfe für die ausgewählten Zeiträume.",
@@ -229,7 +226,8 @@
       "loadHistory": "Der Verlauf der wiederkehrenden Rechnungen konnte nicht geladen werden. Bitte versuchen Sie es erneut."
     },
     "loading": {
-      "billingData": "Abrechnungsdaten werden geladen"
+      "billingData": "Abrechnungsdaten werden geladen",
+      "candidates": "Rechnungskandidaten werden geladen."
     },
     "views": {
       "all": "Alle",
