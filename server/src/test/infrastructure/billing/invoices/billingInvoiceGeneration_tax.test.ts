@@ -204,7 +204,6 @@ describe('Billing Invoice Tax Calculations', () => {
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString(),
-        credit_balance: 0,
         url: '',
         is_inactive: false
       }, 'client_id');
@@ -310,7 +309,6 @@ describe('Billing Invoice Tax Calculations', () => {
         client_id: uuidv4(),
         region_code: 'US-NY',
         is_tax_exempt: false,
-        credit_balance: 0,
         url: '',
         is_inactive: false,
         created_at: Temporal.Now.plainDateISO().toString(),
@@ -497,7 +495,6 @@ describe('Billing Invoice Tax Calculations', () => {
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString(),
-        credit_balance: 0,
         url: '',
         is_inactive: false
       }, 'client_id');
@@ -632,7 +629,6 @@ describe('Billing Invoice Tax Calculations', () => {
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString(),
-        credit_balance: 0,
         url: '',
         is_inactive: false
       }, 'client_id');
@@ -751,7 +747,6 @@ describe('Billing Invoice Tax Calculations', () => {
       is_tax_exempt: true, // Set client as tax exempt
       created_at: Temporal.Now.plainDateISO().toString(),
       updated_at: Temporal.Now.plainDateISO().toString(),
-      credit_balance: 0,
       url: '',
       is_inactive: false
     }, 'client_id');
@@ -881,7 +876,6 @@ describe('Billing Invoice Tax Calculations', () => {
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
       updated_at: Temporal.Now.plainDateISO().toString(),
-      credit_balance: 0,
       url: '',
       is_inactive: false
     }, 'client_id');
@@ -965,7 +959,6 @@ describe('Billing Invoice Tax Calculations', () => {
       client_id: uuidv4(),
       region_code: 'US-NY', // Default tax region
       is_tax_exempt: false,
-      credit_balance: 0,
       url: '',
       is_inactive: false,
       created_at: Temporal.Now.plainDateISO().toString(),
@@ -1285,7 +1278,6 @@ describe('Billing Invoice Tax Calculations', () => {
       client_id: uuidv4(),
       region_code: 'US-NY', // Client has a tax region
       is_tax_exempt: false, // NOT tax exempt - reverse charge is different
-      credit_balance: 0,
       url: '',
       is_inactive: false,
       created_at: Temporal.Now.plainDateISO().toString(),
