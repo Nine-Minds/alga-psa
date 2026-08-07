@@ -25,7 +25,7 @@ vi.mock('@alga-psa/db/models/user', () => ({
   },
 }));
 
-describe('client portal OAuth profile mapping', () => {
+describe('OAuth profile mapping user boundaries', () => {
   const tenantId = '11111111-1111-4111-8111-111111111111';
   beforeEach(() => {
     vi.clearAllMocks();
@@ -80,6 +80,54 @@ describe('client portal OAuth profile mapping', () => {
         profile: {},
         tenantHint: tenantId,
         userTypeHint: 'client',
+      })
+    ).rejects.toThrow('User not found');
+  });
+
+  it('authenticates internal users through a type-scoped lookup', async () => {
+    findUserByEmailAndTypeMock.mockResolvedValueOnce({
+      user_id: 'user-3',
+      email: 'internal@example.com',
+      username: 'internal',
+      first_name: 'Internal',
+      last_name: 'User',
+      user_type: 'internal',
+      tenant: tenantId,
+      is_inactive: false,
+    });
+
+    const { mapOAuthProfileToExtendedUser } = await import('../../../lib/auth/ssoProviders');
+    const mapped = await mapOAuthProfileToExtendedUser({
+      provider: 'microsoft',
+      email: 'internal@example.com',
+      profile: {},
+    });
+
+    expect(mapped.user_type).toBe('internal');
+    expect(findUserByEmailAndTypeMock).toHaveBeenCalledWith('internal@example.com', 'internal');
+    expect(findUserByEmailMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a client record returned during internal OAuth mode', async () => {
+    findUserByEmailAndTypeMock.mockResolvedValueOnce({
+      user_id: 'user-4',
+      email: 'client@example.com',
+      username: 'client',
+      first_name: 'Client',
+      last_name: 'User',
+      user_type: 'client',
+      tenant: tenantId,
+      is_inactive: false,
+      contact_id: 'contact-2',
+      client_id: 'client-2',
+    });
+
+    const { mapOAuthProfileToExtendedUser } = await import('../../../lib/auth/ssoProviders');
+    await expect(
+      mapOAuthProfileToExtendedUser({
+        provider: 'microsoft',
+        email: 'client@example.com',
+        profile: {},
       })
     ).rejects.toThrow('User not found');
   });
