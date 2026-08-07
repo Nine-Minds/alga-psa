@@ -155,6 +155,19 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
       (pathname.endsWith('/document') || pathname.endsWith('/email-confirmation')));
 }
 
+export function hasContradictoryPortalIdentity(user: {
+  user_type?: unknown;
+  clientId?: unknown;
+  contactId?: unknown;
+} | null | undefined): boolean {
+  if (user?.user_type !== 'internal') {
+    return false;
+  }
+
+  return (typeof user.clientId === 'string' && user.clientId.length > 0)
+    || (typeof user.contactId === 'string' && user.contactId.length > 0);
+}
+
 export function getVanityClientPortalInternalRedirectTarget(args: {
   pathname: string;
   isAuthPage: boolean;
@@ -247,6 +260,45 @@ const _middleware = auth((request) => {
       headers: requestHeaders,
     },
   });
+
+  // Edge middleware cannot query the database, but client-scoped identifiers
+  // are incompatible with an internal user. Reject this contradictory token
+  // immediately; the Node session gate performs the definitive DB comparison.
+  if (
+    !pathname.startsWith('/api/auth/')
+    && hasContradictoryPortalIdentity(request.auth?.user)
+  ) {
+    console.warn('[middleware] rejecting contradictory internal/client session claims', {
+      tenant: request.auth?.user?.tenant,
+      userId: request.auth?.user?.id,
+    });
+
+    const invalidResponse = pathname.startsWith('/api/')
+      ? NextResponse.json({ error: 'Invalid session identity' }, { status: 401 })
+      : (() => {
+          const loginUrl = request.nextUrl.clone();
+          loginUrl.pathname = pathname.includes('/client-portal')
+            ? '/auth/client-portal/signin'
+            : '/auth/msp/signin';
+          loginUrl.search = '';
+          loginUrl.searchParams.set('error', 'SessionTypeMismatch');
+          return NextResponse.redirect(loginUrl);
+        })();
+
+    const sessionCookieName = getSessionCookieName();
+    const sessionCookies = request.cookies.getAll().filter(({ name }) =>
+      name === sessionCookieName || name.startsWith(`${sessionCookieName}.`)
+    );
+    if (sessionCookies.length === 0) {
+      invalidResponse.cookies.delete(sessionCookieName);
+    } else {
+      for (const { name } of sessionCookies) {
+        invalidResponse.cookies.delete(name);
+      }
+    }
+
+    return applyCorsHeaders(invalidResponse, origin);
+  }
 
   // Add pathname header for use in layouts (e.g., for branding injection)
   response.headers.set('x-pathname', pathname);

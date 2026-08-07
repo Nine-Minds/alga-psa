@@ -98,7 +98,7 @@ vi.mock('./sso/mspSsoResolution', () => ({
 vi.mock('@alga-psa/db/models/UserSession', () => ({
   UserSession: {
     create: vi.fn(async () => 'session-1'),
-    isRevoked: vi.fn(async () => false),
+    isRevokedOrIdentityMismatch: vi.fn(async () => false),
     updateLocation: vi.fn(),
   },
 }));
