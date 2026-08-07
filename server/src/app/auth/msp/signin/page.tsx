@@ -31,9 +31,11 @@ export default async function MspSignInPage({
     cookieStore.get(MSP_REMEMBERED_EMAIL_COOKIE)?.value ?? ''
   );
   const initialEmail = rememberedEmail || undefined;
-  // Pre-login there is no user or tenant to resolve against, so this settles on
-  // the locale cookie / Accept-Language. Passing it explicitly keeps I18nWrapper
-  // from rendering its bootstrap spinner and round-tripping a server action.
+  // MSP sign-in lives on the shared app domain, so unlike the client portal
+  // there is no vanity host to resolve a tenant from, and no session yet: this
+  // resolves to the system default today. Passing it explicitly still keeps
+  // I18nWrapper from rendering its bootstrap spinner and round-tripping a
+  // server action for the same answer.
   const locale = await getServerLocale();
 
   const session = await getSession();
