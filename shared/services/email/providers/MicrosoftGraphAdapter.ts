@@ -14,10 +14,22 @@ import { tenantDb } from '@alga-psa/db';
 import {
   getMicrosoftGraphBaseUrl,
   getMicrosoftTokenUrl,
-  MICROSOFT_EMAIL_OAUTH_SCOPES,
 } from '../microsoftGraphEndpoints';
 
 export type MicrosoftSubscriptionErrorKind = 'validation' | 'authentication' | 'other';
+
+function getAccessTokenTenantId(accessToken: string | undefined): string | undefined {
+  try {
+    const payload = accessToken?.split('.')[1];
+    if (!payload) return undefined;
+    const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    return typeof claims?.tid === 'string' && claims.tid.trim()
+      ? claims.tid.trim()
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export class MicrosoftSubscriptionError extends Error {
   constructor(
@@ -324,9 +336,13 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         throw new Error('Microsoft OAuth credentials not configured');
       }
 
-      // Determine tenant authority for single-tenant apps
+      // The token's tid is the directory that issued the refresh grant. Legacy
+      // hosted providers stored the platform app's home tenant in tenant_id,
+      // which is not the customer's token authority and causes OAuth 400s.
       const vendorTenantId = vendorConfig.resolved_tenant_id || vendorConfig.tenant_id || vendorConfig.tenantId;
-      let tenantAuthority = vendorTenantId || process.env.MICROSOFT_TENANT_ID;
+      let tenantAuthority = getAccessTokenTenantId(this.accessToken)
+        || vendorTenantId
+        || process.env.MICROSOFT_TENANT_ID;
       if (!tenantAuthority) {
         try {
           const secretProvider = await getSecretProviderInstance();
@@ -344,7 +360,6 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         client_secret: clientSecret,
         refresh_token: this.refreshToken,
         grant_type: 'refresh_token',
-        scope: MICROSOFT_EMAIL_OAUTH_SCOPES.join(' '),
       });
 
       const response = await axios.post(tokenUrl, params.toString(), {

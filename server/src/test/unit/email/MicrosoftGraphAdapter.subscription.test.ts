@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => {
   const requestUse = vi.fn();
+  const tokenPost = vi.fn();
   const client = {
     interceptors: { request: { use: requestUse } },
     get: vi.fn(),
@@ -9,13 +10,13 @@ const mocks = vi.hoisted(() => {
     patch: vi.fn(),
     delete: vi.fn(),
   };
-  return { client, requestUse };
+  return { client, requestUse, tokenPost };
 });
 
 vi.mock('axios', () => ({
   default: {
     create: vi.fn(() => mocks.client),
-    post: vi.fn(),
+    post: mocks.tokenPost,
   },
 }));
 
@@ -55,6 +56,10 @@ function config() {
       token_expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
     },
   };
+}
+
+function jwt(claims: Record<string, unknown>): string {
+  return `header.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.signature`;
 }
 
 describe('MicrosoftGraphAdapter subscription hygiene', () => {
@@ -155,5 +160,57 @@ describe('MicrosoftGraphAdapter subscription hygiene', () => {
 
     await expect(new MicrosoftGraphAdapter(config()).registerWebhookSubscription())
       .rejects.toMatchObject<Partial<MicrosoftSubscriptionError>>({ kind: 'authentication', status: 403 });
+  });
+});
+
+describe('MicrosoftGraphAdapter token refresh authority', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.tokenPost.mockRejectedValue({
+      message: 'Request failed with status code 400',
+      response: { status: 400, data: { error: 'invalid_grant' }, headers: {} },
+    });
+  });
+
+  it('refreshes against the tenant that issued the access token', async () => {
+    const providerConfig = config();
+    providerConfig.provider_config = {
+      ...providerConfig.provider_config,
+      client_id: 'platform-client',
+      client_secret: 'platform-secret',
+      tenant_id: 'platform-home-tenant',
+      access_token: jwt({ tid: 'customer-token-tenant' }),
+      token_expires_at: new Date(0).toISOString(),
+    };
+    const adapter = new MicrosoftGraphAdapter(providerConfig);
+
+    await expect(adapter.ensureTokenHealthy()).rejects.toThrow('refreshAccessToken');
+
+    expect(mocks.tokenPost).toHaveBeenCalledOnce();
+    expect(mocks.tokenPost.mock.calls[0][0]).toBe(
+      'https://login.microsoftonline.com/customer-token-tenant/oauth2/v2.0/token'
+    );
+    const params = new URLSearchParams(mocks.tokenPost.mock.calls[0][1]);
+    expect(params.get('grant_type')).toBe('refresh_token');
+    expect(params.has('scope')).toBe(false);
+  });
+
+  it('falls back to the configured authority when the access token is opaque', async () => {
+    const providerConfig = config();
+    providerConfig.provider_config = {
+      ...providerConfig.provider_config,
+      client_id: 'single-tenant-client',
+      client_secret: 'single-tenant-secret',
+      tenant_id: 'configured-tenant',
+      access_token: 'opaque-access-token',
+      token_expires_at: new Date(0).toISOString(),
+    };
+    const adapter = new MicrosoftGraphAdapter(providerConfig);
+
+    await expect(adapter.ensureTokenHealthy()).rejects.toThrow('refreshAccessToken');
+
+    expect(mocks.tokenPost.mock.calls[0][0]).toBe(
+      'https://login.microsoftonline.com/configured-tenant/oauth2/v2.0/token'
+    );
   });
 });
