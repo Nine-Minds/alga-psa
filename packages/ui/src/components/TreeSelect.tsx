@@ -72,6 +72,10 @@ interface TreeSelectProps<T extends string = string> extends AutomationProps {
   onModeChange?: (mode: TreeSelectMode) => void;
   // Arbitrary content rendered in the dropdown header (e.g. an active/inactive filter).
   headerContent?: React.ReactNode;
+  // Ancestors of the current selection, as handed back by onValueChange. Needed when the
+  // same value appears under several branches (project task statuses are shared across
+  // phases) — without it the trigger label shows the first match's ancestors.
+  selectedPath?: TreeSelectPath;
 }
 
 function TreeSelect<T extends string>({
@@ -99,6 +103,7 @@ function TreeSelect<T extends string>({
   modeToggle = false,
   onModeChange,
   headerContent,
+  selectedPath,
 }: TreeSelectProps<T>): React.JSX.Element {
   const { t } = useTranslation();
   const { modal: parentModal } = useModality();
@@ -145,6 +150,29 @@ function TreeSelect<T extends string>({
     return undefined;
   };
 
+  // Same search, but only through branches whose ancestors agree with the caller-supplied
+  // path, so a value that exists under several branches resolves to the selected one.
+  const findSelectedOptionAlongPath = (
+    opts: TreeSelectOption<T>[],
+    targetValue: string,
+    path: TreeSelectPath,
+    parentPath: TreeSelectOption<T>[] = []
+  ): { option: TreeSelectOption<T>; path: TreeSelectOption<T>[] } | undefined => {
+    for (const opt of opts) {
+      const expected = path[opt.type];
+      if (expected !== undefined && expected !== opt.value) continue;
+      const currentPath = [...parentPath, opt];
+      if (opt.value === targetValue) {
+        return { option: opt, path: currentPath };
+      }
+      if (opt.children) {
+        const found = findSelectedOptionAlongPath(opt.children, targetValue, path, currentPath);
+        if (found) return found;
+      }
+    }
+    return undefined;
+  };
+
   // Update expanded items and display label when value changes
   useEffect(() => {
     if (!Array.isArray(options)) {
@@ -165,7 +193,9 @@ function TreeSelect<T extends string>({
 
     // Otherwise, find and reflect the selected option
     setSelectedValue(value);
-    const result = findSelectedOptionWithPath(options, value);
+    const result =
+      (selectedPath ? findSelectedOptionAlongPath(options, value, selectedPath) : undefined) ??
+      findSelectedOptionWithPath(options, value);
     if (result) {
       // Only auto-expand parent nodes on initial mount, not on subsequent renders
       // This allows users to collapse categories while keeping their selection
@@ -209,7 +239,7 @@ function TreeSelect<T extends string>({
       });
       setDisplayLabel(labels.filter(l => l).join(' > '));
     }
-  }, [value, options]);
+  }, [value, options, selectedPath]);
 
   // Keep the mode in sync when the filter opens with a one-sided selection (e.g. a
   // persisted exclude-only filter). Only corrects a clear mismatch, so it never fights
