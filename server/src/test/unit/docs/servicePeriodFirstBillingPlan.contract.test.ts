@@ -172,6 +172,7 @@ const servicePeriodPostInventoryRefs = new Set([
   // rows keyed off the charge's servicePeriodStart.
   'server/test-utils/billingTestHelpers.ts',
   'server/src/test/infrastructure/billing/invoices/clientBillingCycleAnchors.test.ts',
+  'server/src/test/infrastructure/billing/invoices/clientBillingCycleRecurringServicePeriods.test.ts',
   'server/src/test/integration/api/invoiceService.recurringCoexistence.integration.test.ts',
   'server/src/test/integration/contractWizard.integration.test.ts',
   // P0 journey suites (tests/p0_journeys) landed after the pass-0 snapshot and
