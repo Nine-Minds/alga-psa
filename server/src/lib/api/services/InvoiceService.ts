@@ -522,7 +522,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Prepare invoice data
-      const invoiceData = {
+      const invoiceData = await this.filterAuditFields(trx, {
         invoice_id: uuidv4(),
         invoice_number: invoiceNumber,
         client_id: data.client_id,
@@ -545,7 +545,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         tenant: context.tenant,
         created_at: new Date(),
         updated_at: new Date()
-      };
+      }, 'invoices');
 
       // Insert invoice
       const [invoice] = await tenantDb(trx, context.tenant).table('invoices').insert(invoiceData).returning('*');
@@ -2373,36 +2373,43 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async createInvoiceLineItems(invoiceId: string, lineItems: any[], trx: Knex.Transaction, context: ServiceContext): Promise<void> {
-    const lineItemsData = lineItems.map((item, index) => ({
-      item_id: uuidv4(),
-      invoice_id: invoiceId,
-      service_id: item.service_id,
-      contract_line_id: item.contract_line_id,
-      description: item.description,
-      quantity: item.quantity || 1,
-      unit_price: item.unit_price,
-      total_price: item.total_price,
-      tax_amount: item.tax_amount || 0,
-      net_amount: item.net_amount || item.total_price,
-      tax_region: item.tax_region,
-      tax_rate: item.tax_rate,
-      is_manual: item.is_manual || false,
-      is_taxable: item.is_taxable,
-      is_discount: item.is_discount || false,
-      discount_type: item.discount_type,
-      discount_percentage: item.discount_percentage,
-      applies_to_item_id: item.applies_to_item_id,
-      applies_to_service_id: item.applies_to_service_id,
-      client_contract_id: item.client_contract_id,
-      contract_name: item.contract_name,
-      is_bundle_header: (item.is_bundle_header ?? item.is_bundle_header) || false,
-      parent_item_id: item.parent_item_id,
-      rate: item.rate,
-      tenant: context.tenant,
-      created_at: new Date()
-    }));
+    // Line items persist to the canonical `invoice_charges` table (surfaced to
+    // the `invoice_items` view). `total_price`/`net_amount` are calculated
+    // server-side from `unit_price`/`quantity` when the caller omits them.
+    // Fallbacks use nullish checks only: `quantity` (and the derived amounts)
+    // may legitimately be zero, and `||` would silently rewrite a valid 0.
+    const lineItemsData = lineItems.map((item) => {
+      const quantity = item.quantity ?? 1;
+      const unitPrice = item.unit_price ?? 0;
+      const totalPrice = item.total_price ?? Number(unitPrice) * Number(quantity);
+      return {
+        item_id: uuidv4(),
+        invoice_id: invoiceId,
+        service_id: item.service_id,
+        description: item.description,
+        quantity,
+        unit_price: item.unit_price,
+        total_price: totalPrice,
+        tax_amount: item.tax_amount ?? 0,
+        net_amount: item.net_amount ?? totalPrice,
+        tax_region: item.tax_region,
+        tax_rate: item.tax_rate,
+        is_manual: item.is_manual || false,
+        is_taxable: item.is_taxable,
+        is_discount: item.is_discount || false,
+        discount_type: item.discount_type,
+        discount_percentage: item.discount_percentage,
+        applies_to_item_id: item.applies_to_item_id,
+        applies_to_service_id: item.applies_to_service_id,
+        client_contract_id: item.client_contract_id,
+        location_id: item.location_id,
+        created_by: context.userId,
+        tenant: context.tenant,
+        created_at: new Date()
+      };
+    });
 
-    await tenantDb(trx, context.tenant).table('invoice_line_items').insert(lineItemsData);
+    await tenantDb(trx, context.tenant).table('invoice_charges').insert(lineItemsData);
 
     for (const item of lineItemsData) {
       await publishEvent({

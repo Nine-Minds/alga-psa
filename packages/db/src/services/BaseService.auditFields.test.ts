@@ -39,6 +39,20 @@ class TestService extends BaseService<Record<string, unknown>> {
   }
 }
 
+class TargetTableService extends BaseService<Record<string, unknown>> {
+  constructor(private readonly columnsByTable: Record<string, Set<string>>) {
+    super({ tableName: 'contract_lines' });
+  }
+
+  protected async getTableColumns(_conn: Knex | Knex.Transaction, targetTable = this.tableName): Promise<Set<string>> {
+    return this.columnsByTable[targetTable] ?? new Set();
+  }
+
+  async filterCreateForTarget(data: Record<string, unknown>, target: string): Promise<Record<string, unknown>> {
+    return this.filterAuditFields({} as Knex, this.addCreateAuditFields(data, context), target);
+  }
+}
+
 describe('BaseService audit field filtering', () => {
   beforeEach(() => {
     vi.mocked(logger.warn).mockClear();
@@ -95,5 +109,22 @@ describe('BaseService audit field filtering', () => {
     expect(logger.warn).toHaveBeenCalledWith(
       '[db/BaseService] table "audit_fields_warning" has no column "updated_by"; skipping audit field'
     );
+  });
+
+  it('filters audit fields against an explicit target table, not the service default', async () => {
+    // `contract_lines` has created_by/updated_by but the `contracts` target table
+    // does not (hand-rolled insert in ContractLineService.createContract).
+    const service = new TargetTableService({
+      contract_lines: new Set(['tenant', 'created_by', 'updated_by', 'created_at', 'updated_at']),
+      contracts: new Set(['tenant', 'created_at', 'updated_at']),
+    });
+
+    const result = await service.filterCreateForTarget({ name: 'Acme' }, 'contracts');
+
+    expect(result).toMatchObject({ name: 'Acme', tenant: context.tenant });
+    expect(result).not.toHaveProperty('created_by');
+    expect(result).not.toHaveProperty('updated_by');
+    expect(result).toHaveProperty('created_at');
+    expect(result).toHaveProperty('updated_at');
   });
 });

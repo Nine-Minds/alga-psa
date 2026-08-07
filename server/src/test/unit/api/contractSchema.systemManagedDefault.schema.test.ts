@@ -27,7 +27,10 @@ describe('contract schema system-managed default metadata', () => {
   });
 
   it('keeps system-managed marker out of create/update request schemas', () => {
-    const created = createContractSchema.parse({
+    // The create/update schemas are strict: the system-managed marker is not an
+    // accepted field and must be rejected, not silently stripped (which would
+    // hide caller data loss).
+    const created = createContractSchema.safeParse({
       contract_name: 'Manual Contract',
       owner_client_id: '22222222-2222-2222-2222-222222222222',
       billing_frequency: 'monthly',
@@ -36,12 +39,12 @@ describe('contract schema system-managed default metadata', () => {
       is_system_managed_default: true,
     } as Record<string, unknown>);
 
-    const updated = updateContractSchema.parse({
+    const updated = updateContractSchema.safeParse({
       is_system_managed_default: true,
       contract_name: 'Updated Name',
     } as Record<string, unknown>);
 
-    expect((created as Record<string, unknown>).is_system_managed_default).toBeUndefined();
-    expect((updated as Record<string, unknown>).is_system_managed_default).toBeUndefined();
+    expect(created.success).toBe(false);
+    expect(updated.success).toBe(false);
   });
 });
