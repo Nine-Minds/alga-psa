@@ -1216,6 +1216,15 @@
       "noFields": "Geen velden",
       "copyAllPaths": "Alle paden kopiëren",
       "copyAllFieldPaths": "Alle veldpaden kopiëren"
+    },
+    "logoAlt": "Logo van de workfloweditor",
+    "nodes": {
+      "action": "Actie:",
+      "process": "Proces:",
+      "clientId": "Client-ID:",
+      "clientSecret": "Clientgeheim:",
+      "tenantId": "Tenant-ID:",
+      "userEmail": "Gebruikers-e-mailadres:"
     }
   },
   "actionInputFieldInfo": {
@@ -1476,7 +1485,9 @@
     "insertReferenceHeading": "Workflowreferentie invoegen",
     "errors": {
       "noCodeBlock": "Referenties kunnen niet in codeblokken worden ingevoegd. Plaats de cursor in een ander blok en probeer het opnieuw."
-    }
+    },
+    "placeholder": "Markdown-tekst opstellen…",
+    "referenceHint": "Verwijzingen worden weergegeven als inline chips en bewaard als workflowveilige verwijzingsnodes."
   },
   "referenceSelector": {
     "placeholders": {
@@ -2647,5 +2658,25 @@
         "selectPriority": "Selecteer of voer een prioriteit in"
       }
     }
+  },
+  "toggle": {
+    "disableTitle": "Workflow uitschakelen",
+    "enableTitle": "Workflow inschakelen",
+    "confirmDisable": "Weet u zeker dat u deze workflow wilt uitschakelen?",
+    "confirmEnable": "Weet u zeker dat u deze workflow wilt inschakelen?"
+  },
+  "mappingEditor": {
+    "error": {
+      "title": "Schema laden mislukt",
+      "retry": "Opnieuw proberen",
+      "retryWithCount": "Opnieuw proberen ({{retryCount}}/{{maxRetries}})",
+      "attemptOfMax": "Poging {{retryCount}} van {{maxRetries}}",
+      "maxRetriesReached": "Maximaal aantal pogingen bereikt.",
+      "contactSupport": "Contact opnemen met support →"
+    }
+  },
+  "actionInputTypeHint": {
+    "coercible": "Type \"{{sourceType}}\" wordt geconverteerd naar \"{{targetType}}\"",
+    "incompatible": "Type \"{{sourceType}}\" is niet compatibel met het verwachte type \"{{targetType}}\""
   }
 }

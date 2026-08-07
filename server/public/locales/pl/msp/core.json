@@ -107,7 +107,10 @@
     "goToDashboard": "Przejdź do pulpitu",
     "logoAlt": "Logo AlgaPSA",
     "expandSidebar": "Rozwiń pasek boczny",
-    "collapseSidebar": "Zwiń pasek boczny"
+    "collapseSidebar": "Zwiń pasek boczny",
+    "collapseSection": "Zwiń {{section}}",
+    "expandSection": "Rozwiń {{section}}",
+    "appLogoAlt": "Logo {{appName}}"
   },
   "settings": {
     "sections": {
@@ -734,5 +737,9 @@
       "permissionDescription": "Nie masz uprawnień do wyświetlania marketingu. Poproś administratora o uprawnienie odczytu marketingu.",
       "backToDashboard": "Przejdź do pulpitu"
     }
+  },
+  "githubStar": {
+    "label": "Oznacz gwiazdką",
+    "ariaLabel": "Oznacz {{repository}} gwiazdką w serwisie GitHub"
   }
 }

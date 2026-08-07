@@ -175,5 +175,8 @@
       "title": "Se requiere consentimiento para compartir datos",
       "body": "Un administrador debe aceptar los términos de compartición de datos de IA en este dispositivo antes de poder usar la IA."
     }
+  },
+  "mentions": {
+    "removeChip": "Quitar {{mention}}"
   }
 }

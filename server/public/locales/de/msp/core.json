@@ -107,7 +107,10 @@
     "goToDashboard": "Zum Dashboard",
     "logoAlt": "AlgaPSA-Logo",
     "expandSidebar": "Seitenleiste erweitern",
-    "collapseSidebar": "Seitenleiste einklappen"
+    "collapseSidebar": "Seitenleiste einklappen",
+    "collapseSection": "{{section}} einklappen",
+    "expandSection": "{{section}} ausklappen",
+    "appLogoAlt": "{{appName}}-Logo"
   },
   "settings": {
     "sections": {
@@ -734,5 +737,9 @@
       "permissionDescription": "Sie haben keine Berechtigung, Marketing anzuzeigen. Bitten Sie einen Administrator um die Marketing-Leseberechtigung.",
       "backToDashboard": "Zum Dashboard"
     }
+  },
+  "githubStar": {
+    "label": "Mit Stern markieren",
+    "ariaLabel": "{{repository}} auf GitHub mit einem Stern markieren"
   }
 }

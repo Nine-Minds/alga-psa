@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import Sidebar from './Sidebar';
 import {
   bottomMenuItems,
@@ -109,6 +110,7 @@ export function filterNavigationSectionsByFeatureAccess(
 type SidebarWithFeatureFlagsProps = React.ComponentProps<typeof Sidebar>;
 
 export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsProps) {
+  const { t } = useTranslation('msp/core');
   const navigationFlag = useFeatureFlag('ui-navigation-v2', { defaultValue: true });
   const useNavigationSections =
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
@@ -233,7 +235,10 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       menuSections={menuSections}
       bottomMenuItems={bottomMenuItems}
       appDisplayName={isAlgaDesk ? 'AlgaDesk' : 'AlgaPSA'}
-      appLogoAlt={isAlgaDesk ? 'AlgaDesk Logo' : 'AlgaPSA Logo'}
+      appLogoAlt={t('sidebar.appLogoAlt', {
+        appName: isAlgaDesk ? 'AlgaDesk' : 'AlgaPSA',
+        defaultValue: '{{appName}} Logo',
+      })}
       settingsSectionsOverride={settingsSections}
       billingSectionsOverride={billingSections}
       extensionsSectionsOverride={extensionsSections}

@@ -5,7 +5,16 @@ import clsx from 'clsx';
 import { signIn } from 'next-auth/react';
 import { Loader2 } from 'lucide-react';
 import { SiGoogle } from 'react-icons/si';
+// Imports react-i18next directly rather than the @alga-psa/ui wrapper: the MSP
+// sign-in page renders this outside any I18nProvider, so `useSuspense: false`
+// keeps it from throwing a promise with no Suspense boundary above it, and each
+// defaultValue keeps the button readable when i18next was never initialised.
+import { useTranslation } from 'react-i18next';
 import { Button } from '@alga-psa/ui/components/Button';
+
+// LEVERAGE: pattern sso-provider-buttons — byte-identical copy lives at
+// packages/auth/src/components/SsoProviderButtons.tsx; the CE/EE split has no
+// behavioural difference, so both copies must be edited in lockstep.
 
 const MicrosoftMulticolorLogo = () => (
   <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -18,12 +27,13 @@ const MicrosoftMulticolorLogo = () => (
 
 type MspSsoProvider = {
   id: 'google' | 'azure-ad';
-  name: string;
+  nameKey: string;
+  nameFallback: string;
 };
 
 const MSP_SSO_PROVIDERS: MspSsoProvider[] = [
-  { id: 'google', name: 'Sign in with Google' },
-  { id: 'azure-ad', name: 'Sign in with Microsoft' },
+  { id: 'google', nameKey: 'auth.sso.signInWithGoogle', nameFallback: 'Sign in with Google' },
+  { id: 'azure-ad', nameKey: 'auth.sso.signInWithMicrosoft', nameFallback: 'Sign in with Microsoft' },
 ];
 const LAST_PROVIDER_STORAGE_KEY = 'msp_sso_last_provider';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -53,14 +63,16 @@ export default function SsoProviderButtons({
   resolveEndpoint,
   storageKey,
 }: SsoProviderButtonsProps): React.ReactElement {
+  const { t } = useTranslation('common', { useSuspense: false });
   const [pendingProvider, setPendingProvider] = useState<string | null>(null);
   const [isDiscovering, setIsDiscovering] = useState(false);
   const [allowedProviders, setAllowedProviders] = useState<MspSsoProvider['id'][]>([]);
   const [preferredProvider, setPreferredProvider] = useState<MspSsoProvider['id'] | null>(null);
   const normalizedEmail = (email || '').trim().toLowerCase();
   const hasValidEmail = EMAIL_PATTERN.test(normalizedEmail);
-  const genericStartFailureMessage =
-    "We couldn't start SSO sign-in. Please verify provider setup and try again.";
+  const genericStartFailureMessage = t('auth.sso.startFailed', {
+    defaultValue: "We couldn't start SSO sign-in. Please verify provider setup and try again.",
+  });
   const effectiveDiscoveryEndpoint =
     discoveryEndpoint ??
     (authSurface === 'client_portal'
@@ -263,7 +275,9 @@ export default function SsoProviderButtons({
             )}
           >
             {isPending ? <Loader2 className="h-8 w-8 animate-spin" /> : renderProviderIcon(provider.id)}
-            {isPending ? 'Redirecting...' : provider.name}
+            {isPending
+              ? t('auth.sso.redirecting', { defaultValue: 'Redirecting...' })
+              : t(provider.nameKey, { defaultValue: provider.nameFallback })}
           </Button>
         );
       })}

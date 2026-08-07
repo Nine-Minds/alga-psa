@@ -1,10 +1,12 @@
 // src/components/nodes/ThinkingNode.tsx
 import React, { memo } from 'react';
 import { Handle, NodeProps, Position, useReactFlow } from 'reactflow';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import DeleteButton from '../DeleteButton';
 import { ThinkingNodeData } from '../../../services/flow/types/workflowTypes';
 
 const ThinkingNode = ({ data, id }: NodeProps<ThinkingNodeData>) => {
+  const { t } = useTranslation('msp/workflows');
   const { getNode } = useReactFlow();
   const node = getNode(id);
   const isSelected = node?.selected ?? false;
@@ -23,7 +25,7 @@ const ThinkingNode = ({ data, id }: NodeProps<ThinkingNodeData>) => {
       <Handle type="target" position={Position.Left} style={{ left: '-5px' }} />
       <div>
         <strong>{data.label}</strong>
-        <div>Process: {data.thinkingProcess?.template}</div>
+        <div>{t('designer.nodes.process', { defaultValue: 'Process:' })} {data.thinkingProcess?.template}</div>
       </div>
       <Handle type="source" position={Position.Right} style={{ right: '-5px' }} />
     </div>

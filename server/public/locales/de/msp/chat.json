@@ -175,5 +175,8 @@
       "title": "Zustimmung zur Datenweitergabe erforderlich",
       "body": "Ein Administrator muss die KI-Datenweitergabebedingungen auf dieser Appliance akzeptieren, bevor KI genutzt werden kann."
     }
+  },
+  "mentions": {
+    "removeChip": "{{mention}} entfernen"
   }
 }

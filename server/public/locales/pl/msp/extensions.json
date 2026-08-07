@@ -346,5 +346,30 @@
     "scopeToOneInstall": "Ogranicz do jednej instalacji",
     "overrideTenantContext": "Zastąp kontekst tenanta",
     "matchRequestId": "Dopasuj x-request-id / context.request_id"
+  },
+  "permissions": {
+    "categoryHeadings": {
+      "storage": "Uprawnienia do magazynu",
+      "ui": "Uprawnienia interfejsu",
+      "data": "Uprawnienia do danych",
+      "api": "Uprawnienia API",
+      "system": "Uprawnienia systemowe",
+      "other": "Pozostałe uprawnienia"
+    },
+    "access": {
+      "low": "Dostęp tylko do odczytu",
+      "medium": "Dostęp do modyfikacji",
+      "high": "Dostęp zaawansowany"
+    },
+    "severity": {
+      "low": "Niski",
+      "medium": "Średni",
+      "high": "Wysoki"
+    },
+    "legend": {
+      "low": "Uprawnienia tylko do odczytu pozwalają rozszerzeniu wyświetlać dane, ale nie modyfikować ich.",
+      "medium": "Uprawnienia do modyfikacji pozwalają rozszerzeniu aktualizować istniejące dane.",
+      "high": "Uprawnienia zaawansowane pozwalają rozszerzeniu tworzyć, usuwać i wykonywać operacje."
+    }
   }
 }

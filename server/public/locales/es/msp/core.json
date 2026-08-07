@@ -107,7 +107,10 @@
     "goToDashboard": "Ir al panel",
     "logoAlt": "Logo de AlgaPSA",
     "expandSidebar": "Expandir barra lateral",
-    "collapseSidebar": "Contraer barra lateral"
+    "collapseSidebar": "Contraer barra lateral",
+    "collapseSection": "Contraer {{section}}",
+    "expandSection": "Expandir {{section}}",
+    "appLogoAlt": "Logotipo de {{appName}}"
   },
   "settings": {
     "sections": {
@@ -734,5 +737,9 @@
       "permissionDescription": "No tiene permiso para ver marketing. Pida a un administrador el permiso de lectura de marketing.",
       "backToDashboard": "Ir al panel"
     }
+  },
+  "githubStar": {
+    "label": "Marcar con estrella",
+    "ariaLabel": "Marcar {{repository}} con una estrella en GitHub"
   }
 }

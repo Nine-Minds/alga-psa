@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCatalogShortcut } from "@alga-psa/ui/keyboard-shortcuts";
+import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 
 interface VimNavigationLayerProps {
   onOpenHelp: () => void;
@@ -320,6 +321,7 @@ export default function VimNavigationLayer({ onOpenHelp }: VimNavigationLayerPro
   const linkHintNewTabRef = useRef(false);
   const hintActivationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [visualMode, setVisualMode] = useState(false);
+  const { t } = useTranslation("msp/keyboard-shortcuts");
   const [macroStatus, setMacroStatus] = useState<string | null>(null);
   const [hints, setHints] = useState<LinkHint[]>([]);
 
@@ -590,7 +592,14 @@ export default function VimNavigationLayer({ onOpenHelp }: VimNavigationLayerPro
       if (event.key === "Escape") {
         event.preventDefault();
         macroAwaitModeRef.current = null;
-        setMacroStatus(recordingRegisterRef.current ? `Recording @${recordingRegisterRef.current}` : null);
+        setMacroStatus(
+          recordingRegisterRef.current
+            ? t("vim.macro.recording", {
+                register: recordingRegisterRef.current,
+                defaultValue: "Recording @{{register}}",
+              })
+            : null,
+        );
         return;
       }
 
@@ -605,7 +614,9 @@ export default function VimNavigationLayer({ onOpenHelp }: VimNavigationLayerPro
       if (macroAwaitMode === "record") {
         recordingRegisterRef.current = register;
         macrosRef.current[register] = [];
-        setMacroStatus(`Recording @${register}`);
+        setMacroStatus(
+          t("vim.macro.recording", { register, defaultValue: "Recording @{{register}}" }),
+        );
         return;
       }
 
@@ -615,7 +626,7 @@ export default function VimNavigationLayer({ onOpenHelp }: VimNavigationLayerPro
 
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [activateHint, closeHints, replayMacro]);
+  }, [activateHint, closeHints, replayMacro, t]);
 
   const repeatLastAction = useCallback(() => {
     const lastAction = lastActionRef.current;
@@ -634,15 +645,19 @@ export default function VimNavigationLayer({ onOpenHelp }: VimNavigationLayerPro
     }
 
     macroAwaitModeRef.current = "record";
-    setMacroStatus("Record macro: press register");
+    setMacroStatus(
+      t("vim.macro.recordPrompt", { defaultValue: "Record macro: press register" }),
+    );
     return undefined;
-  }, []);
+  }, [t]);
 
   const playMacro = useCallback(() => {
     macroAwaitModeRef.current = "play";
-    setMacroStatus("Play macro: press register");
+    setMacroStatus(
+      t("vim.macro.playPrompt", { defaultValue: "Play macro: press register" }),
+    );
     return undefined;
-  }, []);
+  }, [t]);
 
   useCatalogShortcut("scroll.halfDown", useCallback(() => runAction("scroll.halfDown"), [runAction]));
   useCatalogShortcut("scroll.halfUp", useCallback(() => runAction("scroll.halfUp"), [runAction]));
@@ -694,7 +709,7 @@ export default function VimNavigationLayer({ onOpenHelp }: VimNavigationLayerPro
       ) : null}
       {macroStatus || visualMode ? (
         <div className="fixed bottom-3 right-3 z-[9999] rounded bg-gray-950 px-3 py-2 text-xs font-medium text-white shadow-lg">
-          {macroStatus ?? "Visual row range"}
+          {macroStatus ?? t("vim.visualRowRange", { defaultValue: "Visual row range" })}
         </div>
       ) : null}
     </>

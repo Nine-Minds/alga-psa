@@ -107,7 +107,10 @@
     "goToDashboard": "Ga naar dashboard",
     "logoAlt": "AlgaPSA-logo",
     "expandSidebar": "Zijbalk uitklappen",
-    "collapseSidebar": "Zijbalk inklappen"
+    "collapseSidebar": "Zijbalk inklappen",
+    "collapseSection": "{{section}} samenvouwen",
+    "expandSection": "{{section}} uitvouwen",
+    "appLogoAlt": "{{appName}}-logo"
   },
   "settings": {
     "sections": {
@@ -734,5 +737,9 @@
       "permissionDescription": "U heeft geen rechten om marketing te bekijken. Vraag een beheerder om het leesrecht voor marketing.",
       "backToDashboard": "Ga naar dashboard"
     }
+  },
+  "githubStar": {
+    "label": "Ster geven",
+    "ariaLabel": "{{repository}} een ster geven op GitHub"
   }
 }

@@ -346,5 +346,30 @@
     "scopeToOneInstall": "Limita a un'installazione",
     "overrideTenantContext": "Sovrascrivi il contesto tenant",
     "matchRequestId": "Corrispondi x-request-id / context.request_id"
+  },
+  "permissions": {
+    "categoryHeadings": {
+      "storage": "Autorizzazioni di archiviazione",
+      "ui": "Autorizzazioni dell'interfaccia",
+      "data": "Autorizzazioni sui dati",
+      "api": "Autorizzazioni API",
+      "system": "Autorizzazioni di sistema",
+      "other": "Altre autorizzazioni"
+    },
+    "access": {
+      "low": "Accesso in sola lettura",
+      "medium": "Accesso in modifica",
+      "high": "Accesso avanzato"
+    },
+    "severity": {
+      "low": "Bassa",
+      "medium": "Media",
+      "high": "Alta"
+    },
+    "legend": {
+      "low": "Le autorizzazioni in sola lettura consentono all'estensione di visualizzare i dati ma non di modificarli.",
+      "medium": "Le autorizzazioni di modifica consentono all'estensione di aggiornare i dati esistenti.",
+      "high": "Le autorizzazioni avanzate consentono all'estensione di creare, eliminare o eseguire operazioni."
+    }
   }
 }

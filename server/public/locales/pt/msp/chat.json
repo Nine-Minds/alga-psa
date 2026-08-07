@@ -175,5 +175,8 @@
       "title": "Consentimento de compartilhamento de dados necessário",
       "body": "Um administrador precisa aceitar os termos de compartilhamento de dados de IA neste appliance antes que a IA possa ser usada."
     }
+  },
+  "mentions": {
+    "removeChip": "Remover {{mention}}"
   }
 }

@@ -1216,6 +1216,15 @@
       "noFields": "Keine Felder",
       "copyAllPaths": "Alle Pfade kopieren",
       "copyAllFieldPaths": "Alle Feldpfade kopieren"
+    },
+    "logoAlt": "Workflow-Editor-Logo",
+    "nodes": {
+      "action": "Aktion:",
+      "process": "Prozess:",
+      "clientId": "Client-ID:",
+      "clientSecret": "Clientgeheimnis:",
+      "tenantId": "Tenant-ID:",
+      "userEmail": "Benutzer-E-Mail:"
     }
   },
   "actionInputFieldInfo": {
@@ -1476,7 +1485,9 @@
     "insertReferenceHeading": "Workflow-Referenz einfügen",
     "errors": {
       "noCodeBlock": "Referenzen können nicht in Codeblöcken eingefügt werden. Bewegen Sie den Cursor in einen anderen Block und versuchen Sie es erneut."
-    }
+    },
+    "placeholder": "Markdown-Text verfassen…",
+    "referenceHint": "Referenzen werden als Inline-Chips dargestellt und als workflow-sichere Referenzknoten gespeichert."
   },
   "referenceSelector": {
     "placeholders": {
@@ -2647,5 +2658,25 @@
         "selectPriority": "Priorität auswählen oder eingeben"
       }
     }
+  },
+  "toggle": {
+    "disableTitle": "Workflow deaktivieren",
+    "enableTitle": "Workflow aktivieren",
+    "confirmDisable": "Möchten Sie diesen Workflow wirklich deaktivieren?",
+    "confirmEnable": "Möchten Sie diesen Workflow wirklich aktivieren?"
+  },
+  "mappingEditor": {
+    "error": {
+      "title": "Schema konnte nicht geladen werden",
+      "retry": "Erneut versuchen",
+      "retryWithCount": "Erneut versuchen ({{retryCount}}/{{maxRetries}})",
+      "attemptOfMax": "Versuch {{retryCount}} von {{maxRetries}}",
+      "maxRetriesReached": "Maximale Anzahl an Wiederholungsversuchen erreicht.",
+      "contactSupport": "Support kontaktieren →"
+    }
+  },
+  "actionInputTypeHint": {
+    "coercible": "Typ „{{sourceType}}“ wird in „{{targetType}}“ konvertiert",
+    "incompatible": "Typ „{{sourceType}}“ ist mit dem erwarteten Typ „{{targetType}}“ nicht kompatibel"
   }
 }

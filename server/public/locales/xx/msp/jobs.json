@@ -136,5 +136,9 @@
       "success_one": "11111 {{count}} 11111",
       "success_other": "11111 {{count}} 11111"
     }
+  },
+  "page": {
+    "heading": "11111",
+    "recentJobs": "11111"
   }
 }

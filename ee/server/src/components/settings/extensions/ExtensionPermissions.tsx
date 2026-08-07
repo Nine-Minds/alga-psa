@@ -7,55 +7,68 @@
 
 import React from 'react';
 import { ShieldIcon, CheckCircleIcon, XCircleIcon, AlertTriangleIcon, InfoIcon } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export interface ExtensionPermissionsProps {
   permissions: string[];
   compact?: boolean;
 }
 
+// Stable category ids — the heading each one renders is a translated string,
+// so the bucket must not be keyed on its English label.
+type PermissionCategory = 'storage' | 'ui' | 'data' | 'api' | 'system' | 'other';
+
+const CATEGORY_ORDER: PermissionCategory[] = ['storage', 'ui', 'data', 'api', 'system', 'other'];
+
+const CATEGORY_HEADING_FALLBACKS: Record<PermissionCategory, string> = {
+  storage: 'Storage Permissions',
+  ui: 'UI Permissions',
+  data: 'Data Permissions',
+  api: 'API Permissions',
+  system: 'System Permissions',
+  other: 'Other Permissions',
+};
+
 // Categorize permissions for display
 const categorizePermissions = (permissions: string[]) => {
-  const categories: Record<string, string[]> = {
-    'Storage': [],
-    'UI': [],
-    'Data': [],
-    'API': [],
-    'System': [],
-    'Other': []
-  };
-  
+  const categories = Object.fromEntries(
+    CATEGORY_ORDER.map((category) => [category, [] as string[]]),
+  ) as Record<PermissionCategory, string[]>;
+
   permissions.forEach(permission => {
-    const [resource, action] = permission.split(':');
-    
+    const [resource] = permission.split(':');
+
     switch (resource) {
       case 'storage':
-        categories['Storage'].push(permission);
+        categories.storage.push(permission);
         break;
       case 'ui':
-        categories['UI'].push(permission);
+        categories.ui.push(permission);
         break;
       case 'data':
       case 'client':
       case 'contact':
       case 'invoice':
       case 'ticket':
-        categories['Data'].push(permission);
+        categories.data.push(permission);
         break;
       case 'api':
-        categories['API'].push(permission);
+        categories.api.push(permission);
         break;
       case 'system':
       case 'integration':
-        categories['System'].push(permission);
+        categories.system.push(permission);
         break;
       default:
-        categories['Other'].push(permission);
+        categories.other.push(permission);
         break;
     }
   });
-  
+
   // Filter out empty categories
-  return Object.entries(categories).filter(([_, perms]) => perms.length > 0);
+  return CATEGORY_ORDER
+    .map((category) => [category, categories[category]] as const)
+    .filter(([, perms]) => perms.length > 0);
 };
 
 // Get severity level of a permission
@@ -128,11 +141,13 @@ const getSeverityIcon = (severity: 'low' | 'medium' | 'high') => {
  * Component to display extension permissions in a structured way
  */
 export function ExtensionPermissions({ permissions, compact = false }: ExtensionPermissionsProps) {
+  const { t } = useTranslation('msp/extensions');
+
   // If there are no permissions, render nothing
   if (!permissions || permissions.length === 0) {
     return null;
   }
-  
+
   // Categorize permissions
   const categorizedPermissions = categorizePermissions(permissions);
   
@@ -162,7 +177,11 @@ export function ExtensionPermissions({ permissions, compact = false }: Extension
     <div className="space-y-4">
       {categorizedPermissions.map(([category, categoryPermissions]) => (
         <div key={category}>
-          <h4 className="text-sm font-medium text-gray-700 mb-2">{category} Permissions</h4>
+          <h4 className="text-sm font-medium text-gray-700 mb-2">
+            {t(`permissions.categoryHeadings.${category}`, {
+              defaultValue: CATEGORY_HEADING_FALLBACKS[category],
+            })}
+          </h4>
           <ul className="space-y-2">
             {categoryPermissions.map((permission) => {
               const severity = getPermissionSeverity(permission);
@@ -173,9 +192,12 @@ export function ExtensionPermissions({ permissions, compact = false }: Extension
                     {permission}
                   </span>
                   <span className="ml-2 text-xs text-gray-500">
-                    {severity === 'low' && 'Read-only access'}
-                    {severity === 'medium' && 'Modification access'}
-                    {severity === 'high' && 'Advanced access'}
+                    {severity === 'low' &&
+                      t('permissions.access.low', { defaultValue: 'Read-only access' })}
+                    {severity === 'medium' &&
+                      t('permissions.access.medium', { defaultValue: 'Modification access' })}
+                    {severity === 'high' &&
+                      t('permissions.access.high', { defaultValue: 'Advanced access' })}
                   </span>
                 </li>
               );
@@ -187,21 +209,31 @@ export function ExtensionPermissions({ permissions, compact = false }: Extension
       <div className="text-xs text-gray-500 mt-2">
         <p>
           <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium bg-success/15 text-success mr-1">
-            <CheckCircleIcon className="h-3 w-3 mr-0.5" /> Low
+            <CheckCircleIcon className="h-3 w-3 mr-0.5" />{' '}
+            {t('permissions.severity.low', { defaultValue: 'Low' })}
           </span>{' '}
-          Read-only permissions allow the extension to view data but not modify it.
+          {t('permissions.legend.low', {
+            defaultValue: 'Read-only permissions allow the extension to view data but not modify it.',
+          })}
         </p>
         <p className="mt-1">
           <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium bg-warning/15 text-warning-foreground mr-1">
-            <AlertTriangleIcon className="h-3 w-3 mr-0.5" /> Medium
+            <AlertTriangleIcon className="h-3 w-3 mr-0.5" />{' '}
+            {t('permissions.severity.medium', { defaultValue: 'Medium' })}
           </span>{' '}
-          Modification permissions allow the extension to update existing data.
+          {t('permissions.legend.medium', {
+            defaultValue: 'Modification permissions allow the extension to update existing data.',
+          })}
         </p>
         <p className="mt-1">
           <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium bg-destructive/15 text-destructive mr-1">
-            <XCircleIcon className="h-3 w-3 mr-0.5" /> High
+            <XCircleIcon className="h-3 w-3 mr-0.5" />{' '}
+            {t('permissions.severity.high', { defaultValue: 'High' })}
           </span>{' '}
-          Advanced permissions allow the extension to create, delete, or execute operations.
+          {t('permissions.legend.high', {
+            defaultValue:
+              'Advanced permissions allow the extension to create, delete, or execute operations.',
+          })}
         </p>
       </div>
     </div>
