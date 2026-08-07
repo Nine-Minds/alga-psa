@@ -224,6 +224,14 @@
       "heading": "Acquista crediti o gestisci l'abbonamento",
       "body": "Ricariche, ricarica automatica e modifiche dell'abbonamento si gestiscono nello store di Nine Minds.",
       "openStore": "Apri lo store"
+    },
+    "status": {
+      "canceled": "Annullato",
+      "unpaid": "Non pagata",
+      "none": "Nessun abbonamento",
+      "active": "Attivo",
+      "trialing": "Prova",
+      "past_due": "Scaduto"
     }
   },
   "managementPage": {

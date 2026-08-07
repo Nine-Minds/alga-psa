@@ -224,6 +224,14 @@
       "heading": "11111",
       "body": "11111",
       "openStore": "11111"
+    },
+    "status": {
+      "none": "11111",
+      "active": "11111",
+      "trialing": "11111",
+      "past_due": "11111",
+      "canceled": "11111",
+      "unpaid": "11111"
     }
   },
   "managementPage": {

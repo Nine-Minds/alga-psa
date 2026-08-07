@@ -224,6 +224,14 @@
       "heading": "Credits kopen of het abonnement beheren",
       "body": "Opwaarderingen, automatisch opwaarderen en abonnementswijzigingen worden in de Nine Minds-store beheerd.",
       "openStore": "Store openen"
+    },
+    "status": {
+      "active": "Actief",
+      "canceled": "Geannuleerd",
+      "unpaid": "Onbetaald",
+      "none": "Geen abonnement",
+      "trialing": "Proefperiode",
+      "past_due": "Achterstallig"
     }
   },
   "managementPage": {

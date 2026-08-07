@@ -224,6 +224,14 @@
       "heading": "Kup kredyty lub zarządzaj subskrypcją",
       "body": "Doładowania, automatyczne doładowanie i zmiany subskrypcji obsługiwane są w sklepie Nine Minds.",
       "openStore": "Otwórz sklep"
+    },
+    "status": {
+      "unpaid": "Nieopłacona",
+      "none": "Brak subskrypcji",
+      "active": "Aktywna",
+      "trialing": "Okres próbny",
+      "past_due": "Zaległa",
+      "canceled": "Anulowana"
     }
   },
   "managementPage": {

@@ -1,14 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getClientLicenses } from '../../actions/client-portal-actions/client-licenses';
 import type { ClientLicenseContractSummary } from '../../actions/client-portal-actions/client-licenses';
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-}
 
 function statusBadge(status: string, label: string) {
   const colors: Record<string, { bg: string; text: string }> = {
@@ -39,8 +34,16 @@ function statusBadge(status: string, label: string) {
  */
 export default function ClientLicensesPage() {
   const { t } = useTranslation('client-portal');
+  const { formatDate: formatLocalizedDate } = useFormatters();
   const [licenses, setLicenses] = useState<ClientLicenseContractSummary[] | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Lives in the component so it can use the app's resolved locale; a
+  // module-level toLocaleDateString() would follow the browser instead.
+  const formatDate = useCallback((iso: string | null): string => {
+    if (!iso) return '—';
+    return formatLocalizedDate(new Date(iso), { year: 'numeric', month: 'short', day: 'numeric' });
+  }, [formatLocalizedDate]);
 
   const transportLabels: Record<string, string> = {
     'connected-monthly': t('licenses.transports.connectedMonthly', 'Connected (monthly)'),
