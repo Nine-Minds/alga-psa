@@ -79,7 +79,6 @@ describe('Tax Exemption Handling', () => {
       client_name: overrides.client_name ?? 'Test Client',
       is_tax_exempt: overrides.is_tax_exempt ?? false,
       region_code: overrides.region_code ?? 'US-NY',
-      credit_balance: overrides.credit_balance ?? 0,
       billing_cycle: overrides.billing_cycle ?? 'monthly',
       is_inactive: overrides.is_inactive ?? false,
       created_at: overrides.created_at ?? now,
