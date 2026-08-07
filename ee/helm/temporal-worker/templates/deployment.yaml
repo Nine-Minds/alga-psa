@@ -135,7 +135,14 @@ spec:
             - name: LOG_LEVEL
               value: "{{ .Values.logLevel }}"
             - name: APPLICATION_URL
+              {{- with .Values.applicationUrlSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .name | quote }}
+                  key: {{ .key | quote }}
+              {{- else }}
               value: "{{ .Values.applicationUrl }}"
+              {{- end }}
             - name: NEXT_PUBLIC_BASE_URL
               value: "{{ .Values.publicBaseUrl }}"
             - name: NM_STORE_URL
