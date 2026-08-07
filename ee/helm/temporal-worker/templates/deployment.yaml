@@ -90,7 +90,7 @@ spec:
             - |
               . /vault/secrets/internal-api
               . /vault/secrets/auth-key
-              exec node dist/worker.js
+              exec node dist/ee/temporal-workflows/src/worker.js
           {{- end }}
           env:
             # Node.js module resolution
