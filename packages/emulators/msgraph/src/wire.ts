@@ -2,8 +2,9 @@ import express from 'express';
 import type { NextFunction, Request, Response, Router } from 'express';
 import { route } from '@alga-psa/emulator-host';
 import type { HostEnv } from '@alga-psa/emulator-host';
-import { GraphApiError, publicSubscription } from './core';
+import { GraphApiError, publicSubscription, publicTeam } from './core';
 import type { MsGraphCore } from './core';
+import { BOT_FRAMEWORK_ISSUER, botFrameworkJwks } from './botFramework';
 import { deliverNotifications, validateNotificationUrl } from './notifier';
 
 interface Authed {
@@ -15,13 +16,29 @@ function authed(res: Response): Authed {
 }
 
 /**
- * Vendor surface: Microsoft login (OAuth2 v2.0) plus the Graph v1.0 routes
- * Alga's email integration uses. Point MICROSOFT_LOGIN_BASE_URL and
- * MICROSOFT_GRAPH_BASE_URL (including the /v1.0 suffix) at this emulator.
+ * Vendor surface: Microsoft login (OAuth2 v2.0), the Graph v1.0 routes Alga's
+ * email and Teams integrations use, and the Bot Framework connector plus its
+ * OpenID/JWKS surface. Point MICROSOFT_LOGIN_BASE_URL, MICROSOFT_GRAPH_BASE_URL
+ * (including the /v1.0 suffix) and TEAMS_BOT_OPENID_CONFIG_URL at this emulator.
  */
 export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   router.use(express.json());
   router.use(express.urlencoded({ extended: false }));
+
+  // --- Bot Framework identity provider ---
+  // Registered before the /:tenant login routes so the well-known paths win.
+
+  router.get('/v1/.well-known/openidconfiguration', (req, res) => {
+    res.json({
+      issuer: BOT_FRAMEWORK_ISSUER,
+      jwks_uri: `${req.protocol}://${req.get('host')}/v1/.well-known/keys`,
+      id_token_signing_alg_values_supported: ['RS256'],
+    });
+  });
+
+  router.get('/v1/.well-known/keys', (_req, res) => {
+    res.json(botFrameworkJwks());
+  });
 
   // --- Microsoft login surface ---
 
@@ -65,6 +82,55 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     res.redirect(302, callback.toString());
   });
 
+  // --- Bot Framework connector surface ---
+  // These hang off the root router, so they need their own auth + fault gate;
+  // the /v1.0 middleware below does not reach them.
+
+  router.use('/v3', (req, res, next) => {
+    const bearer = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+    res.locals.access = core.authenticate(bearer);
+    // req.path is mount-relative here, so fault keys read "POST /v3/...".
+    const fault = core.consumeFault(`${req.method} /v3${req.path}`);
+    if (fault) {
+      res.status(fault.status).json(fault.body);
+      return;
+    }
+    next();
+  });
+
+  router.post('/v3/conversations', (req, res) => {
+    res.status(201).json({ id: core.createConversation(req.body ?? {}).id });
+  });
+
+  router.post('/v3/conversations/:conversationId/activities', (req, res) => {
+    const captured = core.recordBotActivity({
+      method: 'POST',
+      conversationId: String(req.params.conversationId),
+      activity: req.body ?? {},
+    });
+    res.json({ id: captured.id });
+  });
+
+  router.post('/v3/conversations/:conversationId/activities/:activityId', (req, res) => {
+    const captured = core.recordBotActivity({
+      method: 'POST',
+      conversationId: String(req.params.conversationId),
+      pathActivityId: String(req.params.activityId),
+      activity: req.body ?? {},
+    });
+    res.json({ id: captured.id });
+  });
+
+  router.put('/v3/conversations/:conversationId/activities/:activityId', (req, res) => {
+    const captured = core.recordBotActivity({
+      method: 'PUT',
+      conversationId: String(req.params.conversationId),
+      pathActivityId: String(req.params.activityId),
+      activity: req.body ?? {},
+    });
+    res.json({ id: captured.id });
+  });
+
   // --- Graph v1.0 surface ---
 
   const graph = express.Router();
@@ -102,6 +168,37 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
       return;
     }
     res.json(mailboxUser);
+  });
+
+  // Teams surface: activity feed notifications plus the channel/chat lookups
+  // the Teams add-on resolves conversation targets with.
+  graph.post('/users/:userId/teamwork/sendActivityNotification', (req, res) => {
+    core.recordActivityNotification(String(req.params.userId), req.body ?? {});
+    res.status(202).end();
+  });
+
+  graph.get('/teams', (_req, res) => {
+    res.json({ value: [...core.teams.values()].map(publicTeam) });
+  });
+
+  graph.get('/teams/:teamId', (req, res) => {
+    res.json(publicTeam(core.getTeam(String(req.params.teamId))));
+  });
+
+  graph.get('/teams/:teamId/channels', (req, res) => {
+    res.json({ value: core.getTeam(String(req.params.teamId)).channels });
+  });
+
+  graph.get('/chats', (_req, res) => {
+    res.json({ value: [...core.chats.values()] });
+  });
+
+  graph.get('/chats/:chatId', (req, res) => {
+    res.json(core.getChat(String(req.params.chatId)));
+  });
+
+  graph.get('/chats/:chatId/messages', (req, res) => {
+    res.json({ value: core.listChatMessages(String(req.params.chatId)) });
   });
 
   graph.post('/applications', (req, res) => {

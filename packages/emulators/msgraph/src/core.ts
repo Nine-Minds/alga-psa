@@ -51,6 +51,104 @@ export interface GraphDirectoryUser {
   jobTitle: string | null;
   mobilePhone: string | null;
   businessPhones: string[];
+  /** "Guest" marks a B2B/external identity, e.g. a client submitting via Teams. */
+  userType: 'Member' | 'Guest';
+  externalUserState: string | null;
+}
+
+export interface GraphTeamChannel {
+  id: string;
+  displayName: string;
+  description: string | null;
+  membershipType: 'standard' | 'private' | 'shared';
+}
+
+export interface GraphTeam {
+  id: string;
+  displayName: string;
+  description: string | null;
+  /** Stripped from the vendor surface; Graph serves channels on a sub-route. */
+  channels: GraphTeamChannel[];
+}
+
+export interface GraphChatMember {
+  id: string;
+  displayName: string;
+  userId: string | null;
+}
+
+export interface GraphChat {
+  id: string;
+  topic: string | null;
+  chatType: 'oneOnOne' | 'group' | 'meeting';
+  createdDateTime: string;
+  members: GraphChatMember[];
+}
+
+export interface GraphChatMessage {
+  id: string;
+  chatId: string;
+  createdDateTime: string;
+  from: { user: { id: string; displayName: string } };
+  body: { contentType: string; content: string };
+}
+
+/** A conversation created through the Bot Framework connector (proactive send). */
+export interface BotConversation {
+  id: string;
+  createdDateTime: string;
+  isGroup: boolean;
+  tenantId: string | null;
+  members: unknown[];
+}
+
+/** One outbound activity the bot pushed at the connector. */
+export interface CapturedBotActivity {
+  id: string;
+  method: 'POST' | 'PUT';
+  conversationId: string;
+  /** Activity id from the request path: the reply target (POST) or update target (PUT). */
+  pathActivityId: string | null;
+  replyToId: string | null;
+  type: string | null;
+  text: string | null;
+  /** Card payloads verbatim, including Adaptive Card JSON. */
+  attachments: unknown[];
+  activity: Record<string, unknown>;
+  receivedAt: string;
+}
+
+export interface ActivityNotificationRecord {
+  id: string;
+  userId: string;
+  body: unknown;
+  receivedAt: string;
+}
+
+/** Defaults for inbound activity injection; tune with the `configure` action. */
+export interface BotConfig {
+  /** Where injected activities are POSTed (the app's bot endpoint). */
+  targetUrl: string;
+  /** serviceUrl stamped on injected activities; the bot replies here. */
+  serviceUrl: string;
+  /** Audience of the signed inbound JWT; must equal TEAMS_BOT_APP_ID. */
+  appId: string;
+  tenantId: string;
+}
+
+export interface InboundBotActivityInput {
+  type?: 'message' | 'invoke' | 'conversationUpdate';
+  text?: string;
+  fromId?: string;
+  fromAadObjectId?: string;
+  fromName?: string;
+  conversationId?: string;
+  conversationType?: 'personal' | 'groupChat' | 'channel';
+  tenantId?: string;
+  serviceUrl?: string;
+  value?: Record<string, unknown>;
+  targetUrl?: string;
+  appId?: string;
 }
 
 export interface OperationFault {
@@ -109,7 +207,35 @@ export interface SeedDirectoryUserInput {
   jobTitle?: string | null;
   mobilePhone?: string | null;
   businessPhones?: string[];
+  userType?: 'Member' | 'Guest';
+  externalUserState?: string | null;
 }
+
+export interface SeedTeamChannelInput {
+  teamId?: string;
+  teamDisplayName?: string;
+  id?: string;
+  displayName?: string;
+  description?: string | null;
+  membershipType?: 'standard' | 'private' | 'shared';
+}
+
+export interface SeedChatInput {
+  id?: string;
+  topic?: string | null;
+  chatType?: 'oneOnOne' | 'group' | 'meeting';
+  members?: Array<{ id?: string; displayName?: string; userId?: string | null }>;
+  messages?: Array<{ id?: string; from?: string; fromName?: string; content?: string }>;
+}
+
+export const EMULATED_TENANT_ID = '11111111-2222-4333-8444-555555555555';
+
+const DEFAULT_BOT_CONFIG: BotConfig = {
+  targetUrl: 'http://localhost:3000/api/teams/bot/messages',
+  serviceUrl: 'http://localhost:4010',
+  appId: 'emulated-teams-bot-app-id',
+  tenantId: EMULATED_TENANT_ID,
+};
 
 /**
  * Pure state machine for the emulated Microsoft login + Graph service.
@@ -132,9 +258,16 @@ export class MsGraphCore implements EmulatorCore {
   readonly directoryUsers = new Map<string, GraphDirectoryUser>();
   readonly applications = new Map<string, GraphApplication>();
   readonly servicePrincipals = new Map<string, GraphServicePrincipal>();
+  readonly teams = new Map<string, GraphTeam>();
+  readonly chats = new Map<string, GraphChat>();
+  readonly chatMessages = new Map<string, GraphChatMessage[]>();
+  readonly botConversations = new Map<string, BotConversation>();
+  readonly capturedBotActivities: CapturedBotActivity[] = [];
+  readonly activityNotifications: ActivityNotificationRecord[] = [];
   readonly faults = new Map<string, OperationFault>();
   accessTokenTtlSeconds = 3600;
   rotateRefreshTokens = true;
+  botConfig: BotConfig = { ...DEFAULT_BOT_CONFIG };
   private idCounter = 0;
 
   constructor(readonly env: HostEnv) {}
@@ -150,9 +283,19 @@ export class MsGraphCore implements EmulatorCore {
     this.directoryUsers.clear();
     this.applications.clear();
     this.servicePrincipals.clear();
+    this.teams.clear();
+    this.chats.clear();
+    this.chatMessages.clear();
+    this.botConversations.clear();
+    this.capturedBotActivities.length = 0;
+    this.activityNotifications.length = 0;
     this.faults.clear();
     this.accessTokenTtlSeconds = 3600;
     this.rotateRefreshTokens = true;
+    // Deliberately does not rotate the Bot Framework signing key: the app
+    // caches the JWKS for 12h, so a reset between tests must not invalidate
+    // tokens it has already learned how to verify.
+    this.botConfig = { ...DEFAULT_BOT_CONFIG };
   }
 
   private newId(prefix: string): string {
@@ -182,7 +325,8 @@ export class MsGraphCore implements EmulatorCore {
 
   grantToken(input: TokenGrantInput): {
     access_token: string;
-    refresh_token: string;
+    /** Absent for the app-only client_credentials grant, exactly like Entra. */
+    refresh_token?: string;
     expires_in: number;
     token_type: 'Bearer';
     id_token?: string;
@@ -208,6 +352,18 @@ export class MsGraphCore implements EmulatorCore {
       }
       return this.issueTokens(String(input.client_id), String(input.refresh_token));
     }
+    if (input.grant_type === 'client_credentials') {
+      // App-only flow used by the Teams bot connector
+      // (scope https://api.botframework.com/.default) and by Graph
+      // app tokens. No user, so no refresh token is issued.
+      const { refresh_token: issuedRefreshToken, ...appOnly } = this.issueTokens(
+        String(input.client_id),
+        undefined,
+        { scope: input.scope || 'https://graph.microsoft.com/.default' },
+      );
+      this.refreshTokens.delete(issuedRefreshToken);
+      return appOnly;
+    }
     throw new GraphApiError(400, { error: 'unsupported_grant_type' });
   }
 
@@ -222,7 +378,7 @@ export class MsGraphCore implements EmulatorCore {
     existingRefreshToken?: string,
     claims?: { nonce?: string; scope?: string }
   ) {
-    const tenantId = '11111111-2222-4333-8444-555555555555';
+    const tenantId = EMULATED_TENANT_ID;
     const accessToken = this.encodeJwt({
       tid: tenantId,
       iss: `https://login.microsoftonline.com/${tenantId}/v2.0`,
@@ -359,6 +515,8 @@ export class MsGraphCore implements EmulatorCore {
       jobTitle: input.jobTitle ?? null,
       mobilePhone: input.mobilePhone ?? null,
       businessPhones: input.businessPhones ?? [],
+      userType: input.userType ?? 'Member',
+      externalUserState: input.externalUserState ?? null,
     };
     this.directoryUsers.set(id, user);
     return user;
@@ -475,6 +633,189 @@ export class MsGraphCore implements EmulatorCore {
       (subscription) => new Date(subscription.expirationDateTime).getTime() > this.nowMs(),
     );
   }
+
+  // --- Teams directory (teams, channels, chats) ---
+
+  addTeamChannel(input: SeedTeamChannelInput): { team: GraphTeam; channel: GraphTeamChannel } {
+    const teamId = input.teamId ?? this.newId('team');
+    const team = this.teams.get(teamId) ?? {
+      id: teamId,
+      displayName: input.teamDisplayName ?? 'Emulated Team',
+      description: null,
+      channels: [],
+    };
+    if (input.teamDisplayName) team.displayName = input.teamDisplayName;
+    this.teams.set(teamId, team);
+
+    const channelId = input.id ?? this.newId('channel');
+    const channel: GraphTeamChannel = {
+      id: channelId,
+      displayName: input.displayName ?? 'General',
+      description: input.description ?? null,
+      membershipType: input.membershipType ?? 'standard',
+    };
+    team.channels = [...team.channels.filter((existing) => existing.id !== channelId), channel];
+    return { team, channel };
+  }
+
+  getTeam(id: string): GraphTeam {
+    const team = this.teams.get(id);
+    if (!team) {
+      throw new GraphApiError(404, { error: { code: 'Request_ResourceNotFound' } });
+    }
+    return team;
+  }
+
+  addChat(input: SeedChatInput): GraphChat {
+    const id = input.id ?? this.newId('chat');
+    const chat: GraphChat = {
+      id,
+      topic: input.topic ?? null,
+      chatType: input.chatType ?? 'oneOnOne',
+      createdDateTime: this.env.clock.now().toISOString(),
+      members: (input.members ?? []).map((member) => ({
+        id: member.id ?? this.newId('chat-member'),
+        displayName: member.displayName ?? 'Emulated Chat Member',
+        userId: member.userId ?? null,
+      })),
+    };
+    this.chats.set(id, chat);
+    this.chatMessages.set(
+      id,
+      (input.messages ?? []).map((message) => ({
+        id: message.id ?? this.newId('chat-message'),
+        chatId: id,
+        createdDateTime: this.env.clock.now().toISOString(),
+        from: { user: { id: message.from ?? 'emulated-user', displayName: message.fromName ?? 'Emulated Sender' } },
+        body: { contentType: 'html', content: message.content ?? '' },
+      })),
+    );
+    return chat;
+  }
+
+  getChat(id: string): GraphChat {
+    const chat = this.chats.get(id);
+    if (!chat) {
+      throw new GraphApiError(404, { error: { code: 'Request_ResourceNotFound' } });
+    }
+    return chat;
+  }
+
+  listChatMessages(id: string): GraphChatMessage[] {
+    this.getChat(id);
+    return this.chatMessages.get(id) ?? [];
+  }
+
+  // --- Bot Framework connector ---
+
+  createConversation(input: { isGroup?: boolean; tenantId?: string; members?: unknown[] }): BotConversation {
+    const conversation: BotConversation = {
+      id: this.newId('conversation'),
+      createdDateTime: this.env.clock.now().toISOString(),
+      isGroup: input.isGroup ?? false,
+      tenantId: input.tenantId ?? this.botConfig.tenantId,
+      members: input.members ?? [],
+    };
+    this.botConversations.set(conversation.id, conversation);
+    return conversation;
+  }
+
+  /** Capture an activity the bot pushed at the connector; returns its new id. */
+  recordBotActivity(input: {
+    method: 'POST' | 'PUT';
+    conversationId: string;
+    pathActivityId?: string | null;
+    activity: Record<string, unknown>;
+  }): CapturedBotActivity {
+    const activity = input.activity ?? {};
+    const captured: CapturedBotActivity = {
+      id: input.method === 'PUT' && input.pathActivityId ? input.pathActivityId : this.newId('activity'),
+      method: input.method,
+      conversationId: input.conversationId,
+      pathActivityId: input.pathActivityId ?? null,
+      replyToId: typeof activity.replyToId === 'string' ? activity.replyToId : input.pathActivityId ?? null,
+      type: typeof activity.type === 'string' ? activity.type : null,
+      text: typeof activity.text === 'string' ? activity.text : null,
+      attachments: Array.isArray(activity.attachments) ? activity.attachments : [],
+      activity,
+      receivedAt: this.env.clock.now().toISOString(),
+    };
+    this.capturedBotActivities.push(captured);
+    return captured;
+  }
+
+  clearBotActivities(): number {
+    const cleared = this.capturedBotActivities.length;
+    this.capturedBotActivities.length = 0;
+    return cleared;
+  }
+
+  recordActivityNotification(userId: string, body: unknown): ActivityNotificationRecord {
+    const record: ActivityNotificationRecord = {
+      id: this.newId('activity-notification'),
+      userId,
+      body,
+      receivedAt: this.env.clock.now().toISOString(),
+    };
+    this.activityNotifications.push(record);
+    return record;
+  }
+
+  /**
+   * Assemble the Bot Framework Activity that inbound injection delivers to the
+   * app's bot endpoint. Pure: the notifier signs it and performs the POST.
+   */
+  buildInboundActivity(input: InboundBotActivityInput): {
+    activity: Record<string, unknown>;
+    targetUrl: string;
+    serviceUrl: string;
+    audience: string;
+    aadObjectId: string;
+    tenantId: string;
+  } {
+    const serviceUrl = input.serviceUrl ?? this.botConfig.serviceUrl;
+    const tenantId = input.tenantId ?? this.botConfig.tenantId;
+    const audience = input.appId ?? this.botConfig.appId;
+    const aadObjectId = input.fromAadObjectId ?? this.newId('aad-object');
+    const conversationType = input.conversationType ?? 'personal';
+    const activity: Record<string, unknown> = {
+      type: input.type ?? 'message',
+      id: this.newId('inbound-activity'),
+      timestamp: this.env.clock.now().toISOString(),
+      channelId: 'msteams',
+      serviceUrl,
+      from: {
+        id: input.fromId ?? `29:${aadObjectId}`,
+        aadObjectId,
+        name: input.fromName ?? 'Emulated Teams User',
+      },
+      recipient: { id: `28:${audience}`, name: 'AlgaPSA' },
+      conversation: {
+        id: input.conversationId ?? this.newId('conversation'),
+        conversationType,
+        tenantId,
+        isGroup: conversationType !== 'personal',
+      },
+      channelData: { tenant: { id: tenantId } },
+      locale: 'en-US',
+      text: input.text ?? '',
+      ...(input.value ? { value: input.value } : {}),
+    };
+    return {
+      activity,
+      targetUrl: input.targetUrl ?? this.botConfig.targetUrl,
+      serviceUrl,
+      audience,
+      aadObjectId,
+      tenantId,
+    };
+  }
+}
+
+/** Vendor-surface representation: channels are served on a sub-route. */
+export function publicTeam(team: GraphTeam): Omit<GraphTeam, 'channels'> {
+  const { channels: _channels, ...rest } = team;
+  return rest;
 }
 
 /** Vendor-surface representation: the owning client id stays internal. */
