@@ -16,7 +16,7 @@ This starts every emulator on its default port and the console at
 
 | Emulator | Package | Port | Emulates |
 | --- | --- | --- | --- |
-| `msgraph` | `@alga-psa/emulator-msgraph` | 4010 | Microsoft login (OAuth2) + Graph v1.0 mail, subscriptions, change notifications |
+| `msgraph` | `@alga-psa/emulator-msgraph` | 4010 | Microsoft login (OAuth2) + Graph v1.0 mail, subscriptions, change notifications, Teams; Bot Framework connector + its OpenID/JWKS |
 | `qbo` | `@alga-psa/emulator-qbo` | 4020 | Intuit OAuth + QBO v3 company API (query, CDC, void/delete, SyncTokens, credits) |
 | `webhook-sink` | `@alga-psa/emulator-webhook-sink` | 4030 | Any webhook receiver; records requests, echoes Graph validation tokens |
 | `smtp-sink` | `@alga-psa/emulator-smtp-sink` | 4040 | SMTP capture (MailHog stand-in) |
@@ -50,9 +50,42 @@ overrides:
 | Vendor | Env vars |
 | --- | --- |
 | Microsoft | `MICROSOFT_LOGIN_BASE_URL=http://localhost:4010`, `MICROSOFT_GRAPH_BASE_URL=http://localhost:4010/v1.0` |
+| Teams / Bot Framework | The two Microsoft vars above, plus `TEAMS_BOT_OPENID_CONFIG_URL=http://localhost:4010/v1/.well-known/openidconfiguration` and `TEAMS_BOT_SERVICE_URL_ALLOWLIST=http://localhost:4010` |
 | QBO | `QBO_OAUTH_AUTHORIZE_URL=http://localhost:4020/connect/oauth2`, `QBO_OAUTH_TOKEN_URL=http://localhost:4020/oauth2/v1/tokens/bearer`, `QBO_API_BASE_URL=http://localhost:4020/v3/company` |
 | Webhooks | Point the integration's webhook/notification URL at `http://localhost:4030/<any path>` |
 | SMTP | Configure the SMTP provider with host `localhost`, port `4040`, no TLS |
+
+Both Teams vars are off by default and ignored entirely under
+`NODE_ENV=production`, so they cannot loosen a deployed trust boundary.
+`TEAMS_BOT_OPENID_CONFIG_URL` moves *discovery only*: the emulator generates
+an RSA keypair, publishes a JWKS, and RS256-signs the activities it injects,
+so the app's signature, issuer, and audience checks all still run.
+`TEAMS_BOT_SERVICE_URL_ALLOWLIST` takes exact origins (comma-separated, no
+wildcards) and is what lets the bot send back to the emulator.
+
+### Teams round trip
+
+```bash
+# Point the emulator at your app, and match TEAMS_BOT_APP_ID.
+algasim action msgraph configure -p '{
+  "botTargetUrl": "http://localhost:3000/api/teams/bot/messages",
+  "botServiceUrl": "http://localhost:4010",
+  "botAppId": "<TEAMS_BOT_APP_ID>"
+}'
+
+# An external/guest client identity, then an inbound message from them.
+algasim seed msgraph teams-user -p '{"id":"guest-1","displayName":"Wanda","userType":"Guest"}'
+algasim seed msgraph bot-activity -p '{
+  "text": "My printer is on fire",
+  "fromAadObjectId": "guest-1",
+  "conversationId": "a:conversation-1",
+  "conversationType": "personal"
+}'
+
+# Read back what the bot sent, adaptive cards and all.
+algasim state msgraph bot-activities
+algasim state msgraph activity-notifications
+```
 
 ## Drive them
 
@@ -97,8 +130,9 @@ Three tiers, so most failure modes cost nothing to support:
   come free with every HTTP emulator via host middleware.
 - **Protocol** — token expiry and revocation actions on `msgraph` and `qbo`.
 - **Domain** — emulator-specific, e.g. `msgraph` `operation-fault` (fail
-  `"GET /me"` N times), QBO stale SyncTokens produced by out-of-band
-  `receive-payment`/`apply-credit` actions.
+  `"GET /me"` or `"POST /v3/conversations/{id}/activities"` N times, for
+  Graph throttling and bot-connector failures), QBO stale SyncTokens
+  produced by out-of-band `receive-payment`/`apply-credit` actions.
 
 ### Scenarios
 
