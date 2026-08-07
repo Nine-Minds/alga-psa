@@ -5,6 +5,10 @@
 # Enable/disable the temporal worker deployment
 enabled: true
 
+# Hosted uses Alga's shared multi-tenant OAuth applications. Appliance installs
+# use customer-owned applications and tenant-specific OAuth authorities.
+deploymentProfile: hosted
+
 # Image configuration
 image:
   repository: ""  # Set to your container registry and image name

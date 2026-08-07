@@ -2,6 +2,8 @@ namespace: msp
 enabled: true
 replicaCount: 1
 
+deploymentProfile: appliance
+
 image:
   repository: ghcr.io/nine-minds/temporal-worker
   tag: latest

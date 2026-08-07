@@ -164,15 +164,26 @@ describe('MicrosoftGraphAdapter subscription hygiene', () => {
 });
 
 describe('MicrosoftGraphAdapter token refresh authority', () => {
+  const previousDeploymentProfile = process.env.DEPLOYMENT_PROFILE;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.DEPLOYMENT_PROFILE;
     mocks.tokenPost.mockRejectedValue({
       message: 'Request failed with status code 400',
       response: { status: 400, data: { error: 'invalid_grant' }, headers: {} },
     });
   });
 
-  it('refreshes against the tenant that issued the access token', async () => {
+  afterEach(() => {
+    if (previousDeploymentProfile === undefined) {
+      delete process.env.DEPLOYMENT_PROFILE;
+    } else {
+      process.env.DEPLOYMENT_PROFILE = previousDeploymentProfile;
+    }
+  });
+
+  it('refreshes a hosted provider through the shared multi-tenant authority', async () => {
     const providerConfig = config();
     providerConfig.provider_config = {
       ...providerConfig.provider_config,
@@ -188,14 +199,15 @@ describe('MicrosoftGraphAdapter token refresh authority', () => {
 
     expect(mocks.tokenPost).toHaveBeenCalledOnce();
     expect(mocks.tokenPost.mock.calls[0][0]).toBe(
-      'https://login.microsoftonline.com/customer-token-tenant/oauth2/v2.0/token'
+      'https://login.microsoftonline.com/common/oauth2/v2.0/token'
     );
     const params = new URLSearchParams(mocks.tokenPost.mock.calls[0][1]);
     expect(params.get('grant_type')).toBe('refresh_token');
     expect(params.has('scope')).toBe(false);
   });
 
-  it('falls back to the configured authority when the access token is opaque', async () => {
+  it('uses the configured tenant authority for an appliance provider', async () => {
+    process.env.DEPLOYMENT_PROFILE = 'appliance';
     const providerConfig = config();
     providerConfig.provider_config = {
       ...providerConfig.provider_config,
@@ -211,6 +223,25 @@ describe('MicrosoftGraphAdapter token refresh authority', () => {
 
     expect(mocks.tokenPost.mock.calls[0][0]).toBe(
       'https://login.microsoftonline.com/configured-tenant/oauth2/v2.0/token'
+    );
+  });
+
+  it('falls back to the token tenant for an appliance provider without a configured tenant', async () => {
+    process.env.DEPLOYMENT_PROFILE = 'appliance';
+    const providerConfig = config();
+    providerConfig.provider_config = {
+      ...providerConfig.provider_config,
+      client_id: 'single-tenant-client',
+      client_secret: 'single-tenant-secret',
+      access_token: jwt({ tid: 'customer-token-tenant' }),
+      token_expires_at: new Date(0).toISOString(),
+    };
+    const adapter = new MicrosoftGraphAdapter(providerConfig);
+
+    await expect(adapter.ensureTokenHealthy()).rejects.toThrow('refreshAccessToken');
+
+    expect(mocks.tokenPost.mock.calls[0][0]).toBe(
+      'https://login.microsoftonline.com/customer-token-tenant/oauth2/v2.0/token'
     );
   });
 });

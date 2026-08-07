@@ -17,7 +17,6 @@ spec:
   selector:
     matchLabels:
       {{- include "temporal-worker.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: temporal-worker
   template:
     metadata:
       annotations:
@@ -131,6 +130,8 @@ spec:
             # Application Configuration
             - name: NODE_ENV
               value: "production"
+            - name: DEPLOYMENT_PROFILE
+              value: {{ .Values.deploymentProfile | default "hosted" | quote }}
             - name: LOG_LEVEL
               value: "{{ .Values.logLevel }}"
             - name: APPLICATION_URL

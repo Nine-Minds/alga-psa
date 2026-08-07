@@ -336,13 +336,18 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         throw new Error('Microsoft OAuth credentials not configured');
       }
 
-      // The token's tid is the directory that issued the refresh grant. Legacy
-      // hosted providers stored the platform app's home tenant in tenant_id,
-      // which is not the customer's token authority and causes OAuth 400s.
       const vendorTenantId = vendorConfig.resolved_tenant_id || vendorConfig.tenant_id || vendorConfig.tenantId;
-      let tenantAuthority = getAccessTokenTenantId(this.accessToken)
-        || vendorTenantId
-        || process.env.MICROSOFT_TENANT_ID;
+      const isHosted = (process.env.DEPLOYMENT_PROFILE || 'hosted').trim().toLowerCase() !== 'appliance';
+
+      // Hosted uses Alga's shared multi-tenant Microsoft app, so preserve the
+      // tenant-independent authority used when the refresh grant was issued.
+      // Appliance deployments use a customer-owned, normally single-tenant app
+      // and therefore require that app's concrete tenant authority.
+      let tenantAuthority = isHosted
+        ? 'common'
+        : vendorTenantId
+          || getAccessTokenTenantId(this.accessToken)
+          || process.env.MICROSOFT_TENANT_ID;
       if (!tenantAuthority) {
         try {
           const secretProvider = await getSecretProviderInstance();
