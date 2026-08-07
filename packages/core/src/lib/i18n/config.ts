@@ -150,6 +150,10 @@ export function filterPseudoLocales(
  * Route prefixes mapped to their required namespaces
  */
 export const ROUTE_NAMESPACES = {
+  // Auth routes serve both portals off one path — which one is decided by a
+  // `portal` query param — so they preload both portals' auth copy.
+  '/auth': ['common', 'msp/auth', 'client-portal'],
+  '/auth/team': ['common', 'msp/auth', 'msp/onboarding'],
   '/client-portal': ['common', 'client-portal'],
   '/client-portal/tickets': ['common', 'client-portal', 'features/tickets'],
   '/client-portal/projects': ['common', 'client-portal', 'features/projects'],

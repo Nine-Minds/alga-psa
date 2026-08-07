@@ -7,11 +7,17 @@ import {
   normalizeRememberedEmail,
 } from '@alga-psa/auth/lib/mspRememberedEmail';
 import { UserSession } from '@alga-psa/db/models/UserSession';
+import { I18nWrapper } from '@alga-psa/tenancy/components';
 import type { Metadata } from 'next';
+import { getServerLocale, getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
-export const metadata: Metadata = {
-  title: 'MSP Sign In',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('auth.msp.signin.title', { defaultValue: 'MSP Sign In' }),
+  };
+}
 
 export default async function MspSignInPage({
   searchParams,
@@ -25,6 +31,10 @@ export default async function MspSignInPage({
     cookieStore.get(MSP_REMEMBERED_EMAIL_COOKIE)?.value ?? ''
   );
   const initialEmail = rememberedEmail || undefined;
+  // Pre-login there is no user or tenant to resolve against, so this settles on
+  // the locale cookie / Accept-Language. Passing it explicitly keeps I18nWrapper
+  // from rendering its bootstrap spinner and round-tripping a server action.
+  const locale = await getServerLocale();
 
   const session = await getSession();
   if (session?.user) {
@@ -34,24 +44,34 @@ export default async function MspSignInPage({
       const isRevoked = await UserSession.isRevoked(session.user.tenant, sessionId);
       if (isRevoked) {
         // Session was revoked, don't redirect - show signin form
-        return <MspSignIn initialEmail={initialEmail} />;
+        return (
+          <I18nWrapper portal="msp" initialLocale={locale}>
+            <MspSignIn initialEmail={initialEmail} />
+          </I18nWrapper>
+        );
       }
     }
 
     if (session.user.user_type === 'client') {
       // Client user trying to access MSP portal - show portal switch prompt
       return (
-        <PortalSwitchPrompt
-          currentPortal="client"
-          targetPortal="msp"
-          currentPortalUrl="/client-portal/dashboard"
-          targetPortalSigninUrl="/auth/msp/signin"
-          userEmail={session.user.email}
-        />
+        <I18nWrapper portal="msp" initialLocale={locale}>
+          <PortalSwitchPrompt
+            currentPortal="client"
+            targetPortal="msp"
+            currentPortalUrl="/client-portal/dashboard"
+            targetPortalSigninUrl="/auth/msp/signin"
+            userEmail={session.user.email}
+          />
+        </I18nWrapper>
       );
     }
 
     redirect(callbackUrl);
   }
-  return <MspSignIn initialEmail={initialEmail} />;
+  return (
+    <I18nWrapper portal="msp" initialLocale={locale}>
+      <MspSignIn initialEmail={initialEmail} />
+    </I18nWrapper>
+  );
 }
