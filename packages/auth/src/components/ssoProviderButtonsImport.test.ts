@@ -2,13 +2,8 @@
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import SsoProviderButtons from './SsoProviderButtons';
-
-// The server-suite setup stubs this hook with empty automationIdProps, which
-// strips DOM ids off UI Buttons — this test locates the provider buttons by
-// id. No-op under this package's own config.
-vi.unmock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister');
 
 const reactWithAct = React as unknown as { act?: (callback: () => unknown) => unknown };
 if (typeof reactWithAct.act !== 'function') {
@@ -76,14 +71,12 @@ describe('SsoProviderButtons runtime DOM behavior', () => {
     );
 
     await waitFor(() => {
-      const googleButton = document.getElementById('sso-provider-google-button');
-      const microsoftButton = document.getElementById('sso-provider-azure-ad-button');
-      expect(googleButton).toBeTruthy();
-      expect(microsoftButton).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Sign in with Microsoft' })).toBeTruthy();
     });
 
-    const googleButton = document.getElementById('sso-provider-google-button');
-    const microsoftButton = document.getElementById('sso-provider-azure-ad-button');
+    const googleButton = screen.getByRole('button', { name: 'Sign in with Google' });
+    const microsoftButton = screen.getByRole('button', { name: 'Sign in with Microsoft' });
     expect(googleButton?.querySelector('svg')).toBeTruthy();
     expect(microsoftButton?.querySelector('svg')).toBeTruthy();
   });
@@ -100,11 +93,15 @@ describe('SsoProviderButtons runtime DOM behavior', () => {
     );
 
     await waitFor(() => {
-      const microsoftButton = document.getElementById('sso-provider-azure-ad-button') as HTMLButtonElement | null;
-      expect(Boolean(microsoftButton && !microsoftButton.disabled)).toBe(true);
+      const microsoftButton = screen.getByRole('button', {
+        name: 'Sign in with Microsoft',
+      }) as HTMLButtonElement;
+      expect(microsoftButton.disabled).toBe(false);
     });
 
-    const googleButton = document.getElementById('sso-provider-google-button') as HTMLButtonElement | null;
-    expect(Boolean(googleButton?.disabled)).toBe(true);
+    const googleButton = screen.getByRole('button', {
+      name: 'Sign in with Google',
+    }) as HTMLButtonElement;
+    expect(googleButton.disabled).toBe(true);
   });
 });
