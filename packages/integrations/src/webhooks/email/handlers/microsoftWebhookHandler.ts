@@ -243,6 +243,8 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
           // Durable path: persist the ingress pointer before the Redis handoff.
           // A failed durable handoff must surface as a retryable webhook failure
           // so the message is not lost; the persisted row is also swept later.
+          // Only `enforce` diverts the handoff; `shadow` falls through to the
+          // legacy enqueue so legacy effects stay authoritative.
           try {
             const durable = await persistIngressPointer({
               tenant: row.tenant,
@@ -259,20 +261,20 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
               },
             });
 
-            if (durable.durable && durable.ingressId) {
-              processedNotifications.push(messageId);
-              unifiedQueuedCount += 1;
-              console.log('✅ Recorded durable Microsoft ingress', {
-                providerId: row.id,
-                tenantId: row.tenant,
-                subscriptionId: notification.subscriptionId,
-                messageId,
-                ingressId: durable.ingressId,
-                enqueued: durable.enqueued,
-              });
-              return;
-            }
-            if (durable.durable) {
+            if (durable.mode === 'enforce') {
+              if (durable.ingressId) {
+                processedNotifications.push(messageId);
+                unifiedQueuedCount += 1;
+                console.log('✅ Recorded durable Microsoft ingress', {
+                  providerId: row.id,
+                  tenantId: row.tenant,
+                  subscriptionId: notification.subscriptionId,
+                  messageId,
+                  ingressId: durable.ingressId,
+                  enqueued: durable.enqueued,
+                });
+                return;
+              }
               throw new Error('Failed to derive durable Microsoft ingress key');
             }
           } catch (durableError: any) {

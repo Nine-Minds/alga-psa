@@ -625,9 +625,11 @@ export class EmailWebhookMaintenanceService {
             },
           },
         });
-        if (durable.durable && durable.ingressId) {
+        if (durable.mode === 'enforce' && durable.ingressId) {
+          // Enforce: the durable pipeline is authoritative; no V1 pointer.
           queuedMessages += 1;
         } else {
+          // Off and shadow both keep the legacy V1 enqueue authoritative.
           await enqueueUnifiedInboundEmailQueueJob({
             tenantId: config.tenant,
             providerId: config.id,

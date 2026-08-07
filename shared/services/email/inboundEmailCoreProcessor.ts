@@ -19,7 +19,7 @@
 
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
-import { withAdminTransaction } from '@alga-psa/db';
+import { tenantDb, withAdminTransaction } from '@alga-psa/db';
 import type {
   InboundEmailInboxRecord,
   UnifiedInboundEmailQueueJobV2,
@@ -33,6 +33,7 @@ import {
   insertEffect,
   lockInboxForUpdate,
   reclaimInbox,
+  releaseInboxClaim,
   transitionInbox,
   type InboundArtifactInsert,
 } from './inboundEmailDurableStore';
@@ -131,6 +132,30 @@ export async function processInboundInbox(
     version: Number(inbox.lease_version),
     owner: params.owner,
   });
+
+  if (params.mode === 'shadow') {
+    // Shadow mode: the durable processor never creates core entities and never
+    // terminal-writes the inbox row. Release the claim back to `received` so
+    // the row stays non-terminal and reconciliation-eligible for enforce-mode
+    // processing, then ACK the wake-up. Legacy processing remains authoritative
+    // (producers fall through to the V1 enqueue in shadow mode).
+    const released = await releaseInboxClaim(db, {
+      tenant: params.tenantId,
+      inbox_id: params.inboxId,
+      owner: params.owner,
+      token: String(inbox.lease_token),
+      version: Number(inbox.lease_version),
+    });
+    if (!released) {
+      return { disposition: 'retry', error: 'shadow_release_fence_superseded' };
+    }
+    console.log('[InboundEmailCoreProcessor] shadow mode released inbox claim', {
+      event: 'inbound_email_shadow_release',
+      tenantId: params.tenantId,
+      inboxId: params.inboxId,
+    });
+    return { disposition: 'ack', outcome: 'shadow' };
+  }
 
   // --- Prepare (no Postgres transaction). ----------------------------------
   if (!inbox.source_object_key || !inbox.source_sha256) {
@@ -238,18 +263,10 @@ async function runCommitPhase(params: {
   const providerId = inbox.provider_id;
 
   if (params.mode === 'shadow') {
-    // Shadow mode: stage/validate coverage only — never create core entities.
-    await transitionInbox(trx, {
-      tenant: tenantId,
-      inbox_id: params.inboxId,
-      token: String(inbox.lease_token),
-      version: Number(inbox.lease_version),
-      owner: params.owner,
-      status: 'skipped',
-      outcome_kind: 'skipped',
-      outcome_reason: 'shadow_mode_no_entities',
-    });
-    return { kind: 'skipped', reason: 'shadow_mode_no_entities' };
+    // Shadow mode is handled before the commit phase (release the claim, never
+    // terminal-write). Reaching here is a bug that would otherwise create a
+    // terminal row without entities, permanently losing the message.
+    throw new Error('shadow_mode_must_not_reach_commit_phase');
   }
 
   const ticketPublisher = new InboundEmailOutboxEventPublisher({
@@ -488,8 +505,6 @@ async function reconcileDeduped(params: {
 }
 
 function tenantDbFor(trx: Knex.Transaction, tenantId: string) {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { tenantDb } = require('@alga-psa/db');
   return tenantDb(trx, tenantId);
 }
 

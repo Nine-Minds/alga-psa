@@ -62,18 +62,22 @@ export async function sweepTenantDurableWork(tenant: string, limit: number = 10)
     }
   }
 
-  const inboxRows = await findDueInbox(db, { tenant, limit });
-  for (const row of inboxRows) {
-    try {
-      await enqueueInboundEmailDurableJob({ workType: 'process_inbox', tenantId: tenant, recordId: row.inbox_id });
-      result.enqueued.inbox += 1;
-    } catch (error: any) {
-      console.warn('[InboundEmailRecovery] inbox enqueue failed', {
-        event: 'inbound_email_recovery_inbox_enqueue_failed',
-        tenantId: tenant,
-        inboxId: row.inbox_id,
-        error: error?.message || String(error),
-      });
+  // In shadow mode the durable processor does not run; legacy is authoritative
+  // and shadow-staged inbox rows stay non-terminal for enforce-mode reconciliation.
+  if (getInboundDurableMode() !== 'shadow') {
+    const inboxRows = await findDueInbox(db, { tenant, limit });
+    for (const row of inboxRows) {
+      try {
+        await enqueueInboundEmailDurableJob({ workType: 'process_inbox', tenantId: tenant, recordId: row.inbox_id });
+        result.enqueued.inbox += 1;
+      } catch (error: any) {
+        console.warn('[InboundEmailRecovery] inbox enqueue failed', {
+          event: 'inbound_email_recovery_inbox_enqueue_failed',
+          tenantId: tenant,
+          inboxId: row.inbox_id,
+          error: error?.message || String(error),
+        });
+      }
     }
   }
 

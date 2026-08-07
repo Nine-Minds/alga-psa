@@ -219,7 +219,9 @@ export async function handleGoogleWebhook(request: NextRequest) {
 
     try {
       // Durable path: persist the ingress pointer before the Redis handoff so
-      // the message is never lost if enqueue/processing fails.
+      // the message is never lost if enqueue/processing fails. Only `enforce`
+      // diverts the handoff; `shadow` falls through to the legacy enqueue so
+      // legacy effects stay authoritative while the durable path stages sources.
       const durable = await persistIngressPointer({
         tenant: provider.tenant,
         providerId: provider.id,
@@ -232,25 +234,28 @@ export async function handleGoogleWebhook(request: NextRequest) {
         },
       });
 
-      if (durable.durable && durable.ingressId) {
-        console.log('✅ Recorded durable Google ingress', {
-          providerId: provider.id,
-          tenantId: provider.tenant,
-          historyId: notification.historyId,
-          pubsubMessageId: payloadData.messageId,
-          ingressId: durable.ingressId,
-          enqueued: durable.enqueued,
-        });
-        return NextResponse.json({
-          success: true,
-          queued: true,
-          handoff: 'durable_ingress',
-          providerId: provider.id,
-          tenant: provider.tenant,
-          historyId: notification.historyId,
-          ingressId: durable.ingressId,
-          enqueued: durable.enqueued,
-        });
+      if (durable.mode === 'enforce') {
+        if (durable.ingressId) {
+          console.log('✅ Recorded durable Google ingress', {
+            providerId: provider.id,
+            tenantId: provider.tenant,
+            historyId: notification.historyId,
+            pubsubMessageId: payloadData.messageId,
+            ingressId: durable.ingressId,
+            enqueued: durable.enqueued,
+          });
+          return NextResponse.json({
+            success: true,
+            queued: true,
+            handoff: 'durable_ingress',
+            providerId: provider.id,
+            tenant: provider.tenant,
+            historyId: notification.historyId,
+            ingressId: durable.ingressId,
+            enqueued: durable.enqueued,
+          });
+        }
+        throw new Error('Failed to derive durable Google ingress key');
       }
     } catch (durableError: any) {
       console.error('❌ Failed to record durable Google ingress', {

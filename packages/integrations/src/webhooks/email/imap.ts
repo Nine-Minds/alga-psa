@@ -122,6 +122,9 @@ export async function POST(request: NextRequest) {
     // Durable path: persist the ingress pointer before any Redis handoff. When
     // the durable handoff cannot be recorded, return a retryable response so
     // the producer (IMAP email-service) retries without advancing its cursor.
+    // Only `enforce` diverts the handoff to the durable pipeline; `shadow`
+    // persists/stages for coverage and falls through to the legacy enqueue so
+    // legacy effects remain authoritative.
     try {
       const durable = await persistIngressPointer({
         tenant: provider.tenant,
@@ -136,7 +139,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      if (durable.durable) {
+      if (durable.mode === 'enforce') {
         if (durable.ingressId && durable.enqueued) {
           return NextResponse.json({
             success: true,

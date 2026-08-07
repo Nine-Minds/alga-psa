@@ -416,6 +416,40 @@ export async function getInboxLeaseExpiry(db: DurableDb, tenant: string, inboxId
 }
 
 /**
+ * Fenced release of a `processing` claim back to `received`. Used by shadow
+ * mode where the durable processor must NOT terminal-write or create entities:
+ * it releases the claim and leaves the row non-terminal and reconciliation
+ * eligible for later enforce-mode processing. A zero-row result means the fence
+ * was superseded.
+ */
+export async function releaseInboxClaim(db: DurableDb, params: {
+  tenant: string;
+  inbox_id: string;
+  owner: string;
+  token: string;
+  version: number;
+}): Promise<boolean> {
+  const updated = await tenantDb(db, params.tenant).table('inbound_email_inbox')
+    .where({
+      tenant: params.tenant,
+      inbox_id: params.inbox_id,
+      status: 'processing',
+      lease_owner: params.owner,
+      lease_token: params.token,
+      lease_version: params.version,
+    })
+    .update({
+      status: 'received',
+      lease_owner: null,
+      lease_token: null,
+      lease_expires_at: null,
+      next_attempt_at: null,
+      updated_at: db.fn.now(),
+    });
+  return updated > 0;
+}
+
+/**
  * Terminal write for the current token/version. A zero-row result means the
  * fence was superseded and the caller must abort (inside a transaction this
  * throws and rolls back).

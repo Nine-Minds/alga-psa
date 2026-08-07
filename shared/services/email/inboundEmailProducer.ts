@@ -8,7 +8,7 @@
  * they preserve the legacy V1 pointer handoff exactly.
  */
 
-import { isInboundDurableEnabled } from './inboundEmailDurableStore';
+import { getInboundDurableMode } from './inboundEmailDurableStore';
 import { enqueueInboundEmailDurableJob } from './unifiedInboundEmailQueueV2';
 import { upsertIngress } from './inboundEmailDurableStore';
 import { buildIngressKey } from './inboundEmailIdentity';
@@ -26,7 +26,10 @@ export interface InboundProviderPointer {
 }
 
 export interface PersistIngressResult {
+  /** True when any durable mode (shadow or enforce) is active. */
   durable: boolean;
+  /** Effective durable mode: 'off' | 'shadow' | 'enforce'. */
+  mode: 'off' | 'shadow' | 'enforce';
   ingressId: string | null;
   enqueued: boolean;
 }
@@ -34,9 +37,12 @@ export interface PersistIngressResult {
 /**
  * Persist the durable ingress pointer and, when durable mode is active, enqueue
  * a V2 `stage_ingress` wake-up. Returns `{ durable: false }` in off mode so
- * callers keep the legacy V1 handoff. A webhook path may acknowledge after the
- * ingress commit even if the V2 enqueue fails (the sweeper recreates the
- * wake-up); the caller decides the response based on `enqueued`.
+ * callers keep the legacy V1 handoff.
+ *
+ * Shadow mode does NOT divert the handoff: callers must fall through to the
+ * legacy `enqueueUnifiedInboundEmailQueueJob` so legacy effects stay
+ * authoritative while the durable path only stages sources for coverage.
+ * Only `enforce` mode diverts the handoff to the V2 durable pipeline.
  */
 export async function persistIngressPointer(params: {
   tenant: string;
@@ -44,8 +50,9 @@ export async function persistIngressPointer(params: {
   providerType: InboundProviderPointer['providerType'];
   pointer: InboundProviderPointer;
 }): Promise<PersistIngressResult> {
-  if (!isInboundDurableEnabled()) {
-    return { durable: false, ingressId: null, enqueued: false };
+  const mode = getInboundDurableMode();
+  if (mode === 'off') {
+    return { durable: false, mode, ingressId: null, enqueued: false };
   }
 
   const db = await (await import('@alga-psa/db/admin')).getAdminConnection();
@@ -65,7 +72,7 @@ export async function persistIngressPointer(params: {
       providerId: params.providerId,
       providerType: params.pointer.providerType,
     });
-    return { durable: true, ingressId: null, enqueued: false };
+    return { durable: true, mode, ingressId: null, enqueued: false };
   }
 
   const ingress = await upsertIngress(db, {
@@ -90,7 +97,7 @@ export async function persistIngressPointer(params: {
       tenantId: params.tenant,
       recordId: ingress.ingress_id,
     });
-    return { durable: true, ingressId: ingress.ingress_id, enqueued: true };
+    return { durable: true, mode, ingressId: ingress.ingress_id, enqueued: true };
   } catch (error: any) {
     console.warn('[InboundEmailProducer] stage_ingress enqueue failed (sweeper will recover)', {
       event: 'inbound_email_producer_stage_enqueue_failed',
@@ -99,7 +106,7 @@ export async function persistIngressPointer(params: {
       ingressId: ingress.ingress_id,
       error: error?.message || String(error),
     });
-    return { durable: true, ingressId: ingress.ingress_id, enqueued: false };
+    return { durable: true, mode, ingressId: ingress.ingress_id, enqueued: false };
   }
 }
 
@@ -112,6 +119,10 @@ export interface StageReadySourceResult {
  * Stage an already-fetched raw MIME source (IMAP email-service path). Blocks
  * until the object upload and inbox insert succeed so the producer never
  * advances its cursor past an unstaged message. Returns null in off mode.
+ *
+ * In shadow mode the source is staged for coverage but a `process_inbox`
+ * wake-up is NOT enqueued: legacy processing remains authoritative and the
+ * inbox row stays non-terminal for later enforce-mode reconciliation.
  */
 export async function stageReadyInboundSource(params: {
   tenant: string;
@@ -120,7 +131,8 @@ export async function stageReadyInboundSource(params: {
   pointer: InboundProviderPointer;
   rawMime: Buffer;
 }): Promise<StageReadySourceResult> {
-  if (!isInboundDurableEnabled()) {
+  const mode = getInboundDurableMode();
+  if (mode === 'off') {
     return { durable: false, inboxId: null };
   }
 
@@ -154,7 +166,7 @@ export async function stageReadyInboundSource(params: {
     rawMime: params.rawMime,
   });
 
-  if (inboxId) {
+  if (inboxId && mode === 'enforce') {
     try {
       await enqueueInboundEmailDurableJob({
         workType: 'process_inbox',

@@ -18,6 +18,7 @@ import { randomUUID } from 'node:crypto';
 import {
   claimIngress,
   getDurableLeaseTtlMs,
+  getInboundDurableMode,
   getIngress,
   transitionIngress,
   upsertIngress,
@@ -80,7 +81,12 @@ export async function processIngressStageJob(
     });
     if (!written) return { disposition: 'retry', error: 'ingress_fence_superseded' };
 
+    // In shadow mode the durable processor must not run (legacy is
+    // authoritative and the inbox row must stay non-terminal for enforce-mode
+    // reconciliation), so no process_inbox wake-up is enqueued.
+    const enqueueProcessInbox = getInboundDurableMode() !== 'shadow';
     for (const inboxId of stagedInboxes) {
+      if (!enqueueProcessInbox) continue;
       try {
         await enqueueInboundEmailDurableJob({
           workType: 'process_inbox',

@@ -1,6 +1,7 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import Knex from 'knex';
 import { randomUUID, createHash } from 'crypto';
+import { NextRequest } from 'next/server';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { tenantDb } from '@alga-psa/db';
@@ -16,6 +17,39 @@ let boardId: string;
 let statusId: string;
 let priorityId: string;
 let enteredByUserId: string;
+
+// Capture the legacy V1 pointer handoff so the shadow-mode producer regression
+// test can assert producers fall through to it (legacy stays authoritative).
+const v1EnqueueMock = vi.fn(async (input: any) => ({
+  job: { ...input, jobId: `v1-${randomUUID()}`, schemaVersion: 1, enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 5 },
+  queueDepth: 1,
+}));
+const v2EnqueueMock = vi.fn(async (input: any) => ({
+  job: { ...input, jobId: `v2-${randomUUID()}`, schemaVersion: 2, enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 5 },
+  queueDepth: 1,
+}));
+vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', () => ({
+  enqueueUnifiedInboundEmailQueueJob: (...args: any[]) => v1EnqueueMock(...args),
+  getInboundEmailRedisClient: vi.fn(async () => ({})),
+}));
+vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueueV2', () => ({
+  enqueueInboundEmailDurableJob: (...args: any[]) => v2EnqueueMock(...args),
+  getInboundEmailDurableRedisClient: vi.fn(async () => ({})),
+  getUnifiedInboundEmailQueueV2Config: () => ({
+    claimTtlMs: 120_000,
+    handlerTimeoutMs: 90_000,
+    heartbeatIntervalMs: 30_000,
+    maxAttempts: 5,
+    claimBlockSeconds: 1,
+    readyQueueKey: 'r',
+    processingQueueKey: 'p',
+    inflightHashKey: 'h',
+    inflightLeaseKey: 'l',
+    delayedKey: 'd',
+    delayedDataKey: 'dd',
+    deadLetterQueueKey: 'dlq',
+  }),
+}));
 
 // Mock storage so staging/artifact persistence runs without a real object store.
 const storageObjects = new Map<string, Buffer>();
@@ -331,6 +365,8 @@ describeDb('Inbound email durable inbox (integration)', () => {
       }
     }
     storageObjects.clear();
+    v1EnqueueMock.mockClear();
+    v2EnqueueMock.mockClear();
     while (cleanup.length) {
       const fn = cleanup.pop();
       if (fn) await fn();
@@ -746,5 +782,141 @@ describeDb('Inbound email durable inbox (integration)', () => {
     const result = await processInbox(inboxId, 'sweep-worker');
     expect(result.disposition).toBe('ack');
     createdTicketIds.push(result.ticketId);
+  });
+
+  it('shadow mode: legacy creates exactly one ticket, inbox stays non-terminal, enforce reconciles', async () => {
+    process.env.UNIFIED_INBOUND_EMAIL_DURABLE_MODE = 'shadow';
+    try {
+      const { providerId } = await setupProvider({ mailbox: 'inbox-shadow@example.com', providerType: 'google' });
+      const messageId = `shadow-${randomUUID()}@example.com`;
+      const rawMime = buildMime({ from: 'sender@example.com', to: 'inbox-shadow@example.com', subject: 'Shadow', messageId, text: 'body' });
+
+      // Producer behavior in shadow: ingress persisted for coverage, but the
+      // handoff must NOT be diverted (durable: true, mode: shadow) so the
+      // webhook handlers fall through to the legacy V1 enqueue.
+      const { persistIngressPointer } = await import('@alga-psa/shared/services/email/inboundEmailProducer');
+      const produced = await persistIngressPointer({
+        tenant: tenantId,
+        providerId,
+        providerType: 'google',
+        pointer: {
+          providerType: 'google',
+          historyId: '1',
+          pubsubMessageId: `pub-${messageId}`,
+          providerMessageId: messageId,
+        },
+      });
+      expect(produced.durable).toBe(true);
+      expect(produced.mode).toBe('shadow');
+      expect(produced.ingressId).toBeTruthy();
+
+      // The durable path stages the source + inbox row for coverage.
+      const { inboxId, normalizedMessageId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+      const { processInboundInbox } = await import('@alga-psa/shared/services/email/inboundEmailCoreProcessor');
+
+      // Shadow process_inbox handling must NOT create entities or terminal-write:
+      // it releases the claim and leaves the row non-terminal.
+      const shadowResult = await processInboundInbox({ tenantId, inboxId, owner: 'shadow-worker', leaseTtlMs: 30_000, mode: 'shadow' });
+      expect(shadowResult.disposition).toBe('ack');
+      const afterShadow = await tenantDb(db, tenantId).table('inbound_email_inbox').where({ inbox_id: inboxId }).first();
+      expect(afterShadow.status).toBe('received');
+      expect(afterShadow.completed_at).toBeNull();
+      expect(afterShadow.lease_token).toBeNull();
+      expect(await countTicketsByMessageId(messageId)).toBe(0);
+      expect(await countRows('inbound_email_effects')).toBe(0);
+
+      // Legacy path (authoritative in shadow) creates exactly one ticket + comment.
+      const { parseStagedMimeIntoEmailDetails } = await import('@alga-psa/shared/services/email/inboundEmailSourceStager');
+      const { readStagedSourceMime } = await import('@alga-psa/shared/services/email/inboundEmailSourceStager');
+      const inbox = await tenantDb(db, tenantId).table('inbound_email_inbox').where({ inbox_id: inboxId }).first();
+      const stagedBuffer = await readStagedSourceMime({
+        tenant: tenantId,
+        providerId,
+        objectKey: inbox.source_object_key,
+        expectedSha256: inbox.source_sha256,
+      });
+      const parsed = await parseStagedMimeIntoEmailDetails({
+        tenant: tenantId,
+        providerId,
+        providerType: 'google',
+        rawMime: stagedBuffer,
+        fallbackProviderMessageId: messageId,
+      });
+      const { processInboundEmailInApp } = await import('@alga-psa/shared/services/email/processInboundEmailInApp');
+      const legacy = await processInboundEmailInApp({ tenantId, providerId, emailData: parsed.emailData });
+      expect(legacy.outcome).toBe('created');
+      expect(await countTicketsByMessageId(messageId)).toBe(1);
+      const legacyTicketId = (legacy as any).ticketId as string;
+      createdTicketIds.push(legacyTicketId);
+
+      // Enforce-mode processing reconciles the legacy-created entities instead
+      // of duplicating or dropping.
+      process.env.UNIFIED_INBOUND_EMAIL_DURABLE_MODE = 'enforce';
+      const enforceResult = await processInboundInbox({ tenantId, inboxId, owner: 'enforce-worker', leaseTtlMs: 30_000, mode: 'enforce' });
+      expect(enforceResult.disposition).toBe('ack');
+      expect(enforceResult.outcome).toBe('reconciled');
+      expect(enforceResult.ticketId).toBe(legacyTicketId);
+
+      expect(await countTicketsByMessageId(messageId)).toBe(1);
+      expect(await countCommentsByMessageId(messageId)).toBe(1);
+      expect(await countRows('inbound_email_effects')).toBe(2);
+
+      const terminalInbox = await tenantDb(db, tenantId).table('inbound_email_inbox').where({ inbox_id: inboxId }).first();
+      expect(terminalInbox.status).toBe('succeeded');
+      expect(terminalInbox.outcome_kind).toBe('reconciled');
+      expect(terminalInbox.normalized_message_id).toBe(normalizedMessageId);
+
+      // Terminal replay: repeated delivery returns the same IDs, no new rows.
+      const replay = await processInboundInbox({ tenantId, inboxId, owner: 'replay-worker', leaseTtlMs: 30_000, mode: 'enforce' });
+      expect(replay.disposition).toBe('ack');
+      expect(replay.ticketId).toBe(legacyTicketId);
+      expect(await countTicketsByMessageId(messageId)).toBe(1);
+      expect(await countRows('inbound_email_effects')).toBe(2);
+    } finally {
+      process.env.UNIFIED_INBOUND_EMAIL_DURABLE_MODE = 'enforce';
+    }
+  });
+
+  it('webhook producer falls through to legacy enqueue in shadow mode but diverts in enforce', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'inbox-shadow-webhook@example.com', providerType: 'imap' });
+    process.env.IMAP_WEBHOOK_SECRET = 'shadow-test-secret';
+    cleanup.push(async () => {
+      delete process.env.IMAP_WEBHOOK_SECRET;
+    });
+
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
+    const messageId = `imap-shadow-${randomUUID()}@example.com`;
+
+    const callHandler = async () => {
+      const req = new NextRequest('http://localhost:3000/api/email/webhooks/imap', {
+        method: 'POST',
+        headers: { 'x-imap-webhook-secret': 'shadow-test-secret', 'content-type': 'application/json' },
+        body: JSON.stringify({
+          providerId,
+          tenant: tenantId,
+          tenantId,
+          pointer: { mailbox: 'INBOX', uid: '99', uidValidity: '7', messageId },
+        }),
+      });
+      const res = await POST(req);
+      return res.json();
+    };
+
+    // Shadow: the handler must persist ingress for coverage but NOT divert the
+    // handoff — legacy V1 enqueue still happens so the message is processed.
+    process.env.UNIFIED_INBOUND_EMAIL_DURABLE_MODE = 'shadow';
+    const shadowBody = await callHandler();
+    expect(shadowBody.handoff).toBe('unified_pointer_queue');
+    expect(v1EnqueueMock).toHaveBeenCalledTimes(1);
+    const ingressRows = await tenantDb(db, tenantId).table('inbound_email_ingress').count<{ count: string }[]>('* as count').first();
+    expect(Number(ingressRows?.count)).toBe(1);
+
+    // Enforce: the handler diverts to the durable ingress and must NOT enqueue
+    // a legacy pointer (which would double-process under the durable pipeline).
+    process.env.UNIFIED_INBOUND_EMAIL_DURABLE_MODE = 'enforce';
+    v1EnqueueMock.mockClear();
+    const enforceBody = await callHandler();
+    expect(enforceBody.handoff).toBe('durable_ingress');
+    expect(v1EnqueueMock).not.toHaveBeenCalled();
   });
 });
