@@ -268,7 +268,7 @@ async function refreshImapAccessToken(params: {
   return accessToken;
 }
 
-async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): Promise<EmailProviderConfig> {
+export async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): Promise<EmailProviderConfig> {
   const db = await getAdminConnection();
   const tenantScopedDb = tenantDb(db, job.tenantId);
   const query = tenantScopedDb.table('microsoft_email_provider_config as mc');
@@ -334,7 +334,7 @@ async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): P
   } as any);
 }
 
-async function fetchGoogleProviderConfig(job: UnifiedInboundEmailQueueJob): Promise<{
+export async function fetchGoogleProviderConfig(job: UnifiedInboundEmailQueueJob): Promise<{
   provider: any;
   googleConfig: any;
   config: EmailProviderConfig;
@@ -472,7 +472,7 @@ function mapParsedMimeToEmailMessageDetails(params: {
   };
 }
 
-async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails> {
+export async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails> {
   if (job.provider !== 'microsoft') {
     throw new Error('invalid provider for microsoft fetch');
   }
@@ -520,7 +520,7 @@ async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQueueJob)
   });
 }
 
-async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails> {
+export async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails> {
   if (job.provider !== 'imap') {
     throw new Error('invalid provider for imap fetch');
   }
@@ -725,7 +725,7 @@ async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Pro
   throw new Error('imap_auth_retry_exhausted');
 }
 
-async function fetchEmailPayloadsForJob(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails[]> {
+export async function fetchEmailPayloadsForJob(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails[]> {
   if (job.provider === 'microsoft') {
     return [await fetchMicrosoftMessageForPointer(job)];
   }

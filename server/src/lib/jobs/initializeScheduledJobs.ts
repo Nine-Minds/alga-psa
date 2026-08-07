@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleTeamsMeetingSweepJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob, scheduleMarketingFlipDuePostsJob, scheduleMarketingExpireStaleTargetsJob, scheduleMarketingSendSequenceStepsJob, scheduleProjectDateReadinessJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleTeamsMeetingSweepJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob, scheduleMarketingFlipDuePostsJob, scheduleMarketingExpireStaleTargetsJob, scheduleMarketingSendSequenceStepsJob, scheduleProjectDateReadinessJob, scheduleInboundEmailRecoveryJob } from './index';
 import { scheduleAccountingSyncCycleJob } from './handlers/accountingSyncCycleHandler';
 import { scheduleHuduAutoSyncJob } from './handlers/huduAutoSyncHandler';
 import logger from '@alga-psa/core/logger';
@@ -301,6 +301,23 @@ export async function initializeScheduledJobs(): Promise<void> {
         }
       } catch (error) {
         logger.error(`Failed to schedule email webhook maintenance job for tenant ${tenantId}`, error);
+      }
+
+      // Schedule inbound email recovery sweep (every minute) for durable ledgers.
+      try {
+        const recoveryCron = process.env.UNIFIED_INBOUND_EMAIL_RECOVERY_CRON || '*/1 * * * *';
+        const recoveryJobId = await scheduleInboundEmailRecoveryJob(tenantId, recoveryCron);
+        if (recoveryJobId) {
+          logger.info(`Scheduled inbound email recovery job for tenant ${tenantId} with job ID ${recoveryJobId}`);
+        } else {
+          logger.info('Inbound email recovery job already scheduled (singleton active)', {
+            tenantId,
+            cron: recoveryCron,
+            returnedJobId: recoveryJobId,
+          });
+        }
+      } catch (error) {
+        logger.error(`Failed to schedule inbound email recovery job for tenant ${tenantId}`, error);
       }
 
       // Schedule renewal queue processing (daily at 5:00 AM)

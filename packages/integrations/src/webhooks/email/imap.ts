@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'crypto';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { tenantDb } from '@alga-psa/db';
 import { enqueueUnifiedInboundEmailQueueJob } from '@alga-psa/shared/services/email/unifiedInboundEmailQueue';
+import { persistIngressPointer } from '@alga-psa/shared/services/email/inboundEmailProducer';
 
 const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
@@ -117,6 +118,56 @@ export async function POST(request: NextRequest) {
     const messageId =
       asNonEmptyString(payload.pointer?.messageId) || asNonEmptyString(payload.emailData?.id) || undefined;
     const uidValidity = asNonEmptyString(payload.pointer?.uidValidity) || undefined;
+
+    // Durable path: persist the ingress pointer before any Redis handoff. When
+    // the durable handoff cannot be recorded, return a retryable response so
+    // the producer (IMAP email-service) retries without advancing its cursor.
+    try {
+      const durable = await persistIngressPointer({
+        tenant: provider.tenant,
+        providerId: provider.id,
+        providerType: 'imap',
+        pointer: {
+          providerType: 'imap',
+          mailbox,
+          uidValidity,
+          uid: pointerUid,
+          providerMessageId: messageId ?? null,
+        },
+      });
+
+      if (durable.durable) {
+        if (durable.ingressId && durable.enqueued) {
+          return NextResponse.json({
+            success: true,
+            queued: true,
+            handoff: 'durable_ingress',
+            providerId: provider.id,
+            tenant: provider.tenant,
+            messageId: messageId || null,
+            uid: pointerUid,
+            ingressId: durable.ingressId,
+          });
+        }
+        return NextResponse.json(
+          { error: 'Failed to record durable IMAP ingress' },
+          { status: 503 }
+        );
+      }
+    } catch (durableError: any) {
+      console.error('IMAP durable ingress persist failed', {
+        providerId: provider.id,
+        tenantId: provider.tenant,
+        mailbox,
+        uid: pointerUid,
+        messageId: messageId || null,
+        error: durableError?.message || String(durableError),
+      });
+      return NextResponse.json(
+        { error: 'Failed to record durable IMAP ingress' },
+        { status: 503 }
+      );
+    }
 
     try {
       const queued = await enqueueUnifiedInboundEmailQueueJob({

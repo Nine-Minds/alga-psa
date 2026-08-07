@@ -5,6 +5,7 @@ import { MicrosoftGraphAdapter } from './providers/MicrosoftGraphAdapter';
 import logger from '../../core/logger';
 import { buildMicrosoftEmailProviderConfig } from './microsoftEmailProviderConfig';
 import { enqueueUnifiedInboundEmailQueueJob } from './unifiedInboundEmailQueue';
+import { persistIngressPointer } from './inboundEmailProducer';
 import { getEmailWebhookBaseUrl } from './webhookBaseUrl';
 
 const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
@@ -608,18 +609,38 @@ export class EmailWebhookMaintenanceService {
       let queuedMessages = 0;
       const silenceEvidenceMessageIds = new Set<string>();
       for (const message of unprocessedMessages) {
-        await enqueueUnifiedInboundEmailQueueJob({
-          tenantId: config.tenant,
+        // Durable path: persist the ingress pointer before the Redis handoff so
+        // reconciliation never advances its cursor past an unstaged message.
+        const durable = await persistIngressPointer({
+          tenant: config.tenant,
           providerId: config.id,
-          provider: 'microsoft',
+          providerType: 'microsoft',
           pointer: {
-            subscriptionId: config.webhook_subscription_id || 'reconcile',
-            messageId: message.id,
-            resource: 'maintenance-reconcile',
-            changeType: 'created',
+            providerType: 'microsoft',
+            providerMessageId: message.id,
+            extra: {
+              subscriptionId: config.webhook_subscription_id || 'reconcile',
+              resource: 'maintenance-reconcile',
+              changeType: 'created',
+            },
           },
         });
-        queuedMessages += 1;
+        if (durable.durable && durable.ingressId) {
+          queuedMessages += 1;
+        } else {
+          await enqueueUnifiedInboundEmailQueueJob({
+            tenantId: config.tenant,
+            providerId: config.id,
+            provider: 'microsoft',
+            pointer: {
+              subscriptionId: config.webhook_subscription_id || 'reconcile',
+              messageId: message.id,
+              resource: 'maintenance-reconcile',
+              changeType: 'created',
+            },
+          });
+          queuedMessages += 1;
+        }
 
         const receivedAtMs = message.receivedDateTime
           ? new Date(message.receivedDateTime).getTime()

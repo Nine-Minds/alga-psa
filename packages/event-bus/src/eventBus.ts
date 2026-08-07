@@ -739,10 +739,20 @@ export class EventBus {
 
   public async publish(
     event: Omit<Event, 'id' | 'timestamp'>,
-    options?: { channel?: string; workflow?: WorkflowPublishHooks }
+    options?: {
+      channel?: string;
+      workflow?: WorkflowPublishHooks;
+      /** Caller-supplied stable event id (used by the inbound outbox dispatcher). */
+      eventId?: string;
+      /** Strict mode propagates an unsuccessful stream write instead of swallowing it. */
+      strict?: boolean;
+    }
   ): Promise<void> {
     if (eventBusDisabled) {
       logger.debug('[EventBus] Skipping publish because the event bus is disabled');
+      if (options?.strict) {
+        throw new Error(eventBusDisabledReason ?? 'Event bus is disabled');
+      }
       return;
     }
 
@@ -758,7 +768,7 @@ export class EventBus {
 
       const fullEvent: Event = {
         ...event,
-        id: uuidv4(),
+        id: options?.eventId ?? uuidv4(),
         timestamp: new Date().toISOString(),
       } as Event;
 
@@ -858,6 +868,11 @@ export class EventBus {
         eventBusDisabled = true;
         eventBusDisabledReason = message;
         logger.warn('[EventBus] Disabling event publishing due to Redis authentication failure. Events will be skipped until the service is restarted.');
+      }
+      // Strict dispatcher mode (inbound outbox) must propagate an unsuccessful
+      // stream write so the outbox row is not falsely marked `published`.
+      if (options?.strict) {
+        throw error;
       }
       // throw error;
     }

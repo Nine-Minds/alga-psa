@@ -153,6 +153,12 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   email_domains: { scope: 'tenant' },
   email_processed_attachments: { scope: 'tenant' },
   email_processed_messages: { scope: 'tenant' },
+  // Durable inbound email ledgers — tenant-distributed, colocated with tenants.
+  inbound_email_ingress: { scope: 'tenant' },
+  inbound_email_inbox: { scope: 'tenant' },
+  inbound_email_effects: { scope: 'tenant' },
+  inbound_email_artifacts: { scope: 'tenant' },
+  inbound_email_outbox: { scope: 'tenant' },
   email_provider_configs: { scope: 'tenant' },
   email_provider_health: { scope: 'tenant' },
   email_providers: { scope: 'tenant' },

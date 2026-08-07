@@ -4,6 +4,7 @@ import { tenantDb } from '@alga-psa/db';
 import { OAuth2Client } from 'google-auth-library';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { enqueueUnifiedInboundEmailQueueJob } from '@alga-psa/shared/services/email/unifiedInboundEmailQueue';
+import { persistIngressPointer } from '@alga-psa/shared/services/email/inboundEmailProducer';
 
 const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
@@ -214,6 +215,55 @@ export async function handleGoogleWebhook(request: NextRequest) {
     } catch (error) {
       console.error('❌ JWT verification failed:', error);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    try {
+      // Durable path: persist the ingress pointer before the Redis handoff so
+      // the message is never lost if enqueue/processing fails.
+      const durable = await persistIngressPointer({
+        tenant: provider.tenant,
+        providerId: provider.id,
+        providerType: 'google',
+        pointer: {
+          providerType: 'google',
+          historyId: notification.historyId,
+          pubsubMessageId: payloadData.messageId,
+          extra: { emailAddress: notification.emailAddress },
+        },
+      });
+
+      if (durable.durable && durable.ingressId) {
+        console.log('✅ Recorded durable Google ingress', {
+          providerId: provider.id,
+          tenantId: provider.tenant,
+          historyId: notification.historyId,
+          pubsubMessageId: payloadData.messageId,
+          ingressId: durable.ingressId,
+          enqueued: durable.enqueued,
+        });
+        return NextResponse.json({
+          success: true,
+          queued: true,
+          handoff: 'durable_ingress',
+          providerId: provider.id,
+          tenant: provider.tenant,
+          historyId: notification.historyId,
+          ingressId: durable.ingressId,
+          enqueued: durable.enqueued,
+        });
+      }
+    } catch (durableError: any) {
+      console.error('❌ Failed to record durable Google ingress', {
+        providerId: provider.id,
+        tenantId: provider.tenant,
+        historyId: notification.historyId,
+        pubsubMessageId: payloadData.messageId,
+        error: durableError?.message || String(durableError),
+      });
+      return NextResponse.json(
+        { error: 'Failed to record durable Google ingress' },
+        { status: 503 }
+      );
     }
 
     try {

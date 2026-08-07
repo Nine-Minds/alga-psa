@@ -1,4 +1,6 @@
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
+import type { IEventPublisher } from '@alga-psa/types';
+import type { InboundEmailExecutionOptions } from '../../workflow/actions/emailWorkflowActions';
 import { createHash } from 'node:crypto';
 import { convertHtmlToBlockNote, convertMarkdownToBlocks } from '../../lib/utils/contentConversion';
 import { extractEmailDomain, normalizeEmailAddress } from '../../lib/email/addressUtils';
@@ -35,6 +37,22 @@ export interface ProcessInboundEmailInAppInput {
 
 export interface ProcessInboundEmailInAppOptions {
   collectDiagnostics?: boolean;
+  /**
+   * Durable pipeline execution. When present, all ticket/comment/watch-list/
+   * reopen writes execute inside the provided transaction with the injected
+   * outbox event publishers, and inline artifact processing is deferred to the
+   * artifact ledger. The caller owns transaction commit and effects/outbox/inbox
+   * terminal writes.
+   */
+  durableExecution?: {
+    mode: 'shadow' | 'enforce';
+    trx: any;
+    inboxId: string;
+    eventPublishers?: {
+      ticket?: IEventPublisher;
+      comment?: IEventPublisher;
+    };
+  };
 }
 
 export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unknown> {
@@ -326,10 +344,11 @@ function toIsoOrNull(value: unknown): string | null {
 
 async function withTenantAdminTransaction<T>(
   tenantId: string,
-  callback: (trx: any, db: any) => Promise<T>
+  callback: (trx: any, db: any) => Promise<T>,
+  existingConnection?: any
 ): Promise<T> {
   const { withAdminTransaction, tenantDb } = await import('@alga-psa/db');
-  return withAdminTransaction(async (trx: any) => callback(trx, tenantDb(trx, tenantId)));
+  return withAdminTransaction(async (trx: any) => callback(trx, tenantDb(trx, tenantId)), existingConnection);
 }
 
 function isClosedTicketBeyondReopenCutoff(params: {
@@ -455,6 +474,7 @@ async function applyInboundReplyReopenTransition(params: {
   ticketId: string;
   statusId: string;
   updatedByUserId?: string;
+  existingConnection?: any;
 }): Promise<void> {
   const {
     writeTicketActivity,
@@ -464,7 +484,9 @@ async function applyInboundReplyReopenTransition(params: {
     TICKET_ACTIVITY_SOURCE,
   } = await import('../../lib/ticketActivity/index');
 
-  await withTenantAdminTransaction(params.tenantId, async (trx: any, db: any) => {
+  await withTenantAdminTransaction(
+    params.tenantId,
+    async (trx: any, db: any) => {
     const previous = await db.table('tickets')
       .select('status_id')
       .where({ ticket_id: params.ticketId })
@@ -502,7 +524,9 @@ async function applyInboundReplyReopenTransition(params: {
         reopen_trigger: 'inbound_email_reply',
       },
     });
-  });
+  },
+    params.existingConnection
+  );
 }
 
 function buildDedupeKey(input: ProcessInboundEmailInAppInput): string {
@@ -902,6 +926,27 @@ export async function processInboundEmailInApp(
   const emailData = input.emailData;
   const dedupeKey = buildDedupeKey(input);
   const senderEmail = normalizeEmailAddress(emailData.from?.email);
+  const durableExecution = options.durableExecution ?? null;
+
+  const helperExecutionOptions = (kind: 'ticket' | 'comment'): InboundEmailExecutionOptions | undefined => {
+    if (!durableExecution) return undefined;
+    return {
+      existingConnection: durableExecution.trx,
+      inboxId: durableExecution.inboxId,
+      eventPublisher:
+        kind === 'ticket' ? durableExecution.eventPublishers?.ticket : durableExecution.eventPublishers?.comment,
+    };
+  };
+
+  /**
+   * Extra helper arguments. In durable mode the helpers receive an existing
+   * transaction plus injected adapters; otherwise the original (ticketData,
+   * tenant[, userId]) call shape is preserved exactly.
+   */
+  const helperExtraArgs = (kind: 'ticket' | 'comment'): any[] =>
+    durableExecution ? [undefined, helperExecutionOptions(kind)] : [];
+
+  const skipInlineArtifacts = Boolean(durableExecution);
 
   // Fast-path: if we've already created a ticket for this email, never create a second one.
   const existingTicket = await findExistingEmailTicket({
@@ -1096,14 +1141,30 @@ export async function processInboundEmailInApp(
     }
 
     try {
-      await upsertTicketWatchListRecipients(
-        {
-          ticketId,
-          recipients,
-        },
-        tenantId
-      );
+      if (durableExecution) {
+        await upsertTicketWatchListRecipients(
+          {
+            ticketId,
+            recipients,
+          },
+          tenantId,
+          durableExecution.trx
+        );
+      } else {
+        await upsertTicketWatchListRecipients(
+          {
+            ticketId,
+            recipients,
+          },
+          tenantId
+        );
+      }
     } catch (error) {
+      // The durable path requires watch-list mutations inside the same
+      // transaction as the core effects; a failure must roll back everything.
+      if (durableExecution) {
+        throw error;
+      }
       console.warn('processInboundEmailInApp: watch-list upsert failed (continuing)', {
         tenantId,
         providerId,
@@ -1306,6 +1367,7 @@ export async function processInboundEmailInApp(
           ticketId: params.ticketId,
           statusId: reopenTarget.statusId,
           updatedByUserId: matchedSenderIsInternalUser ? matchedSenderContact?.user_id : undefined,
+          existingConnection: durableExecution?.trx,
         });
         decisionMetadata.action = 'reopen';
         decisionMetadata.reopenTargetSource = reopenTarget.source;
@@ -1350,25 +1412,32 @@ export async function processInboundEmailInApp(
           matchedBy: params.matchedBy,
         },
       },
-      tenantId
+      tenantId,
+      ...helperExtraArgs('comment')
     );
 
-    const artifactsResult = await processInboundEmailArtifactsBestEffort({
-      tenantId,
-      providerId,
-      ticketId: params.ticketId,
-      emailData,
-      scopeLabel: 'reply',
-      clientVisibleAttachments: !matchedSenderIsInternalUser,
-    });
-    await maybeRewriteCommentWithEmbeddedAttachmentUrls({
-      tenantId,
-      commentId,
-      html: parsedHtml,
-      text: parsedText,
-      originalCommentContent: serializedBlocks,
-      artifactsResult,
-    });
+    if (skipInlineArtifacts) {
+      // Artifacts become durable `inbound_email_artifacts` manifest rows created
+      // by the core orchestrator after the commit phase; nothing is uploaded
+      // while the core transaction is open.
+    } else {
+      const artifactsResult = await processInboundEmailArtifactsBestEffort({
+        tenantId,
+        providerId,
+        ticketId: params.ticketId,
+        emailData,
+        scopeLabel: 'reply',
+        clientVisibleAttachments: !matchedSenderIsInternalUser,
+      });
+      await maybeRewriteCommentWithEmbeddedAttachmentUrls({
+        tenantId,
+        commentId,
+        html: parsedHtml,
+        text: parsedText,
+        originalCommentContent: serializedBlocks,
+        artifactsResult,
+      });
+    }
 
     await upsertWatchListBestEffort(params.ticketId, watchListRecipients);
 
@@ -1776,7 +1845,8 @@ export async function processInboundEmailInApp(
       },
       attributes: seededAttributes ?? undefined,
     },
-    tenantId
+    tenantId,
+    ...helperExtraArgs('ticket')
   );
 
   const commentId = await createCommentFromEmail(
@@ -1807,25 +1877,28 @@ export async function processInboundEmailInApp(
         inboundReopenDecision: rerouteReasonMetadata ?? undefined,
       },
     },
-    tenantId
+    tenantId,
+    ...helperExtraArgs('comment')
   );
 
-  const artifactsResult = await processInboundEmailArtifactsBestEffort({
-    tenantId,
-    providerId,
-    ticketId: ticketResult.ticket_id,
-    emailData,
-    scopeLabel: 'new-ticket',
-    clientVisibleAttachments: !matchedSenderIsInternalUser,
-  });
-  await maybeRewriteCommentWithEmbeddedAttachmentUrls({
-    tenantId,
-    commentId,
-    html: parsedHtml,
-    text: parsedText,
-    originalCommentContent: serializedBlocks,
-    artifactsResult,
-  });
+  if (!skipInlineArtifacts) {
+    const artifactsResult = await processInboundEmailArtifactsBestEffort({
+      tenantId,
+      providerId,
+      ticketId: ticketResult.ticket_id,
+      emailData,
+      scopeLabel: 'new-ticket',
+      clientVisibleAttachments: !matchedSenderIsInternalUser,
+    });
+    await maybeRewriteCommentWithEmbeddedAttachmentUrls({
+      tenantId,
+      commentId,
+      html: parsedHtml,
+      text: parsedText,
+      originalCommentContent: serializedBlocks,
+      artifactsResult,
+    });
+  }
 
   if (diagnostics) {
     diagnostics.threading.failureReason = 'new_ticket_created';
