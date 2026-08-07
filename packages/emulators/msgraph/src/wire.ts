@@ -15,6 +15,14 @@ function authed(res: Response): Authed {
   return res.locals.access as Authed;
 }
 
+function decodePath(path: string): string {
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}
+
 /**
  * Vendor surface: Microsoft login (OAuth2 v2.0), the Graph v1.0 routes Alga's
  * email and Teams integrations use, and the Bot Framework connector plus its
@@ -90,7 +98,9 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     const bearer = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
     res.locals.access = core.authenticate(bearer);
     // req.path is mount-relative here, so fault keys read "POST /v3/...".
-    const fault = core.consumeFault(`${req.method} /v3${req.path}`);
+    // Decoded, because the connector percent-encodes conversation ids and
+    // faults are armed with the readable id ("19:...@thread.v2").
+    const fault = core.consumeFault(`${req.method} /v3${decodePath(req.path)}`);
     if (fault) {
       res.status(fault.status).json(fault.body);
       return;
