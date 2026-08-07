@@ -328,14 +328,23 @@ vi.mock('server/src/app/api/auth/[...nextauth]/edge-auth', () => ({
   auth: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('@alga-psa/auth', () => {
+vi.mock('@alga-psa/auth', async () => {
+  const { AsyncLocalStorage } = await import('node:async_hooks');
+
   const defaultUser = {
     user_id: '00000000-0000-0000-0000-000000000001',
     tenant: '00000000-0000-0000-0000-000000000001',
     roles: [],
   };
 
-  const getCurrentUser = vi.fn().mockResolvedValue(defaultUser);
+  // Mirrors packages/auth apiKeyUserContext: API routes wrap handlers in
+  // runWithApiKeyUser and getCurrentUser() prefers the override.
+  const apiKeyUserStorage = new AsyncLocalStorage<any>();
+  const runWithApiKeyUser = (user: any, fn: () => Promise<any>) =>
+    apiKeyUserStorage.run(user, fn);
+  const getApiKeyUserOverride = () => apiKeyUserStorage.getStore();
+
+  const getCurrentUser = vi.fn(async () => getApiKeyUserOverride() ?? defaultUser);
   const hasPermission = vi.fn().mockResolvedValue(true);
 
   const resolveTenant = async (user: any): Promise<string> => {
@@ -392,5 +401,7 @@ vi.mock('@alga-psa/auth', () => {
     withAuth,
     withAuthCheck,
     withOptionalAuth,
+    runWithApiKeyUser,
+    getApiKeyUserOverride,
   };
 });

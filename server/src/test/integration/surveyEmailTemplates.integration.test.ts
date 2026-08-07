@@ -8,7 +8,7 @@ const TEMPLATE_NAME = 'SURVEY_TICKET_CLOSED';
 const SUPPORTED_LOCALES = [
   { code: 'en', subject: "We'd love your feedback on ticket {{ticket_number}}" },
   { code: 'fr', subject: 'Votre avis sur le ticket {{ticket_number}} nous intéresse' },
-  { code: 'es', subject: 'Queremos conocer tu opinión sobre el ticket {{ticket_number}}' },
+  { code: 'es', subject: 'Queremos conocer su opinión sobre el ticket {{ticket_number}}' },
   { code: 'de', subject: 'Wir freuen uns über Ihr Feedback zu Ticket {{ticket_number}}' },
   { code: 'nl', subject: 'We horen graag uw feedback over ticket {{ticket_number}}' },
   { code: 'it', subject: 'Ci farebbe piacere il tuo feedback sul ticket {{ticket_number}}' },

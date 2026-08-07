@@ -277,6 +277,8 @@ interface CreateServiceOptions {
   custom_service_type_id?: string;
   tax_region?: string;
   tax_rate_id?: string | null;
+  currency_code?: string;
+  seedServicePrice?: boolean;
 }
 
 interface CreateFixedPlanOptions {
@@ -555,6 +557,20 @@ export async function createTestService(
   }
 
   await tenantTable(context, 'service_catalog').insert(serviceData);
+
+  // Rate resolution reads currency-tagged service_prices, never the legacy
+  // currency-untagged service_catalog.default_rate.
+  if ((overrides.seedServicePrice ?? true) && await context.db.schema.hasTable('service_prices')) {
+    await tenantTable(context, 'service_prices')
+      .insert({
+        tenant: context.tenantId,
+        service_id: serviceId,
+        currency_code: overrides.currency_code ?? 'USD',
+        rate: overrides.default_rate ?? 1000
+      })
+      .onConflict(['tenant', 'service_id', 'currency_code'])
+      .merge({ rate: overrides.default_rate ?? 1000 });
+  }
 
   if (overrides.tax_region) {
     await assignServiceTaxRate(context, serviceId, overrides.tax_region);
@@ -1779,6 +1795,13 @@ export async function createBucketOverlayForPlan(
         }
       }
     }
+  }
+
+  // The legacy client_contract_services* chain was dropped from the live
+  // schema; only mirror the overlay into it on schema iterations that still
+  // carry those tables.
+  if (!(await context.db.schema.hasTable('client_contract_services'))) {
+    return { configId, serviceId };
   }
 
   const legacyClientContractServicesForOverlay = () => dynamicTenantTable(

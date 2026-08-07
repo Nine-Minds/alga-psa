@@ -13,8 +13,9 @@ import type { ChargeComputeClient, ChargeComputeTaxPorts } from "./types";
  * usage buckets; for usage buckets these values are quantities, not minutes.
  */
 export interface BucketUsageComputeRow {
-  period_start?: ISO8601String | null;
-  period_end?: ISO8601String | null;
+  /** ISO string when simulated; the pg driver returns Date for persisted rows. */
+  period_start?: ISO8601String | Date | null;
+  period_end?: ISO8601String | Date | null;
   minutes_used?: number | string | null;
   hours_used?: number | string | null;
   overage_minutes?: number | string | null;
@@ -127,6 +128,13 @@ function formatQuantity(quantity: number): string {
   return Number.isInteger(quantity) ? String(quantity) : quantity.toFixed(2);
 }
 
+function toDateOnly(value: ISO8601String | Date | null | undefined): string | null {
+  if (value == null) {
+    return null;
+  }
+  return (value instanceof Date ? value.toISOString() : value).slice(0, 10);
+}
+
 function aggregateUsagePeriods(
   usageRecords: BucketUsageComputeRow[],
   billingPeriod: IBillingPeriod,
@@ -138,8 +146,8 @@ function aggregateUsagePeriods(
   const fallbackEnd = fallbackEndDate.toISOString().slice(0, 10);
 
   for (const record of usageRecords) {
-    const periodStart = (record.period_start ?? fallbackStart).slice(0, 10);
-    const periodEnd = (record.period_end ?? fallbackEnd).slice(0, 10);
+    const periodStart = toDateOnly(record.period_start) ?? fallbackStart;
+    const periodEnd = toDateOnly(record.period_end) ?? fallbackEnd;
     const key = `${periodStart}:${periodEnd}`;
     const existing = byPeriod.get(key) ?? {
       periodStart,
