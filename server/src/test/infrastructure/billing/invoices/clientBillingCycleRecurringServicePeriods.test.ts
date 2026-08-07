@@ -21,6 +21,8 @@ describe('Client billing-cycle recurring service-period replenishment', () => {
     endDate?: string | null;
     billingTiming?: 'arrears' | 'advance';
     name?: string;
+    contractActive?: boolean;
+    lineActive?: boolean;
   } = {}) {
     const contractLineId = await context.createEntity('contract_lines', {
       contract_line_name: options.name ?? `Client Cadence Line ${uuidv4().slice(0, 8)}`,
@@ -29,11 +31,13 @@ describe('Client billing-cycle recurring service-period replenishment', () => {
       is_custom: false,
       contract_line_type: 'Fixed',
       cadence_owner: 'client',
+      is_active: options.lineActive ?? true,
     }, 'contract_line_id');
 
     await assignContractLineToClient(context, contractLineId, {
       startDate: options.startDate ?? '2026-07-01T00:00:00Z',
       endDate: options.endDate ?? null,
+      contractHeaderIsActive: options.contractActive ?? true,
       materializeServicePeriods: false,
     });
 
@@ -218,7 +222,7 @@ describe('Client billing-cycle recurring service-period replenishment', () => {
     expect(new Set(secondRows.map((row) => `${row.schedule_key}:${row.period_key}`)).size).toBe(secondRows.length);
   });
 
-  it('replenishes every active client-cadence contract line in one advancement', async () => {
+  it('replenishes every active line while skipping inactive contracts and contract lines', async () => {
     const firstObligationId = await createClientCadenceLine({
       startDate: '2026-06-01T00:00:00Z',
       name: 'First Active Line',
@@ -226,6 +230,16 @@ describe('Client billing-cycle recurring service-period replenishment', () => {
     const secondObligationId = await createClientCadenceLine({
       startDate: '2026-07-01T00:00:00Z',
       name: 'Second Active Line',
+    });
+    const inactiveContractObligationId = await createClientCadenceLine({
+      startDate: '2026-06-01T00:00:00Z',
+      name: 'Inactive Contract Line',
+      contractActive: false,
+    });
+    const inactiveLineObligationId = await createClientCadenceLine({
+      startDate: '2026-06-01T00:00:00Z',
+      name: 'Inactive Line',
+      lineActive: false,
     });
     await seedCycle('2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z');
 
@@ -239,6 +253,12 @@ describe('Client billing-cycle recurring service-period replenishment', () => {
         dateOnly(row.service_period_start) === '2026-07-01'
         && dateOnly(row.invoice_window_start) === '2026-08-01',
       )).toBe(true);
+    }
+
+    for (const obligationId of [inactiveContractObligationId, inactiveLineObligationId]) {
+      const liveRows = (await loadPeriods(obligationId))
+        .filter((row) => row.lifecycle_state !== 'superseded');
+      expect(liveRows).toHaveLength(0);
     }
   });
 

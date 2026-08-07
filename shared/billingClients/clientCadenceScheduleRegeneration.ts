@@ -297,6 +297,8 @@ async function loadClientCadenceRecurringObligations(
   return query
     .andWhere('cc.client_id', params.clientId)
     .where('cc.is_active', true)
+    .where('ct.is_active', true)
+    .where('cl.is_active', true)
     .where((builder) =>
       builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
     )
