@@ -15,6 +15,16 @@ vi.mock('@alga-psa/auth', () => ({
   withOptionalAuth: (fn: unknown) => fn,
 }));
 
+// The anonymous branch delegates to the request-scoped resolver (cookie ->
+// Accept-Language -> system default), which lives in @alga-psa/ui and needs
+// next/headers. Its own behaviour is covered in packages/ui; here we only
+// assert that the unauthenticated path defers to it.
+const resolveRequestLocaleMock = vi.hoisted(() => vi.fn(async () => 'en'));
+
+vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({
+  resolveRequestLocale: resolveRequestLocaleMock,
+}));
+
 const fixtureState = vi.hoisted(() => ({
   tables: {} as Record<string, Array<Record<string, unknown>>>,
 }));
@@ -81,9 +91,28 @@ function clientChainFixtures(clientProperties: Record<string, unknown> | null) {
 }
 
 describe('getHierarchicalLocaleAction', () => {
-  it('returns the system default when unauthenticated', async () => {
+  it('defers to the request locale when unauthenticated', async () => {
     setFixtures({});
+    resolveRequestLocaleMock.mockResolvedValueOnce('de');
+    await expect(getHierarchicalLocale(null, null)).resolves.toBe('de');
+    expect(resolveRequestLocaleMock).toHaveBeenCalled();
+  });
+
+  it('still lands on the system default when the request carries no preference', async () => {
+    setFixtures({});
+    resolveRequestLocaleMock.mockResolvedValueOnce('en');
     await expect(getHierarchicalLocale(null, null)).resolves.toBe('en');
+  });
+
+  it('does not consult the request locale once a user is present', async () => {
+    setFixtures({
+      user_preferences: [
+        { user_id: 'user-1', setting_name: 'locale', tenant: TENANT, setting_value: '"fr"' },
+      ],
+    });
+    resolveRequestLocaleMock.mockClear();
+    await expect(getHierarchicalLocale(internalUser(), { tenant: TENANT })).resolves.toBe('fr');
+    expect(resolveRequestLocaleMock).not.toHaveBeenCalled();
   });
 
   it('prefers the user preference and strips JSON quoting', async () => {

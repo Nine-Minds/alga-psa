@@ -2,6 +2,7 @@
 
 import { getConnection, tenantDb } from '@alga-psa/db';
 import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
+import { resolveRequestLocale } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
@@ -48,7 +49,13 @@ async function getUserClientId(userId: string, tenantId: string): Promise<string
  */
 export const getHierarchicalLocaleAction = withOptionalAuth(async (user: IUserWithRoles | null, ctx: AuthContext | null): Promise<SupportedLocale> => {
   if (!user || !ctx) {
-    return LOCALE_CONFIG.defaultLocale as SupportedLocale;
+    // No user means steps 1–4 have nothing to resolve against, but the request
+    // still carries a preference: the language this device last chose, then the
+    // browser's. Returning the bare system default here used to strand every
+    // pre-login page in English — this action is what getServerLocale() defers
+    // to, so its answer short-circuited that function's own cookie and
+    // Accept-Language fallbacks.
+    return resolveRequestLocale();
   }
 
   const { tenant } = ctx;

@@ -119,6 +119,46 @@ export function registerServerLocaleResolver(
   registeredServerLocaleResolver = resolver;
 }
 
+/** The device-level language the user last chose, if it is still supported. */
+export async function readLocaleCookie(): Promise<SupportedLocale | null> {
+  const cookieStore = await cookies();
+  const localeCookie = cookieStore.get(LOCALE_CONFIG.cookie.name)?.value;
+  return localeCookie && isSupportedLocale(localeCookie) ? localeCookie : null;
+}
+
+/** The best supported match for the browser's Accept-Language header. */
+export async function readAcceptLanguageLocale(): Promise<SupportedLocale | null> {
+  const headerStore = await headers();
+  const acceptLanguage = headerStore.get('accept-language');
+  if (!acceptLanguage) return null;
+
+  return getBestMatchingLocale(
+    acceptLanguage.split(',').map((lang) => lang.split(';')[0].trim()),
+  );
+}
+
+/**
+ * Locale for a request with no authenticated user: the language the visitor
+ * last chose on this device, then what their browser asks for, then the system
+ * default. Both the server chain below and the hierarchical resolver used by
+ * the client wrapper route anonymous requests through here, so an unauthorized
+ * page renders the same language on both sides.
+ *
+ * Tolerates being called outside a request scope (scheduled report rendering,
+ * for instance), where `cookies()` and `headers()` are unavailable.
+ */
+export async function resolveRequestLocale(): Promise<SupportedLocale> {
+  try {
+    return (
+      (await readLocaleCookie()) ??
+      (await readAcceptLanguageLocale()) ??
+      (LOCALE_CONFIG.defaultLocale as SupportedLocale)
+    );
+  } catch {
+    return LOCALE_CONFIG.defaultLocale as SupportedLocale;
+  }
+}
+
 /**
  * Server-side locale detection with proper fallback chain
  * Cached per request for performance
@@ -149,9 +189,8 @@ export const getServerLocale = cache(
 
       // 1. Check cookie (user's explicit device-level choice). Only consulted
       // when explicit options are passed or no resolver returned a value.
-      const cookieStore = await cookies();
-      const localeCookie = cookieStore.get(LOCALE_CONFIG.cookie.name)?.value;
-      if (localeCookie && isSupportedLocale(localeCookie)) {
+      const localeCookie = await readLocaleCookie();
+      if (localeCookie) {
         return localeCookie;
       }
 
@@ -211,13 +250,9 @@ export const getServerLocale = cache(
       }
 
       // 5. Check Accept-Language header
-      const headerStore = await headers();
-      const acceptLanguage = headerStore.get('accept-language');
-      if (acceptLanguage) {
-        const preferredLocales = acceptLanguage
-          .split(',')
-          .map((lang) => lang.split(';')[0].trim());
-        return getBestMatchingLocale(preferredLocales);
+      const acceptLanguageLocale = await readAcceptLanguageLocale();
+      if (acceptLanguageLocale) {
+        return acceptLanguageLocale;
       }
 
       // 6. Fall back to default locale
