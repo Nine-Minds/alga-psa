@@ -66,6 +66,9 @@ wildcards) and is what lets the bot send back to the emulator.
 ### Teams round trip
 
 ```bash
+# The bot's own credentials, so its client_credentials token grant succeeds.
+algasim seed msgraph client -p '{"clientId":"<TEAMS_BOT_APP_ID>","clientSecret":"<TEAMS_BOT_APP_PASSWORD>"}'
+
 # Point the emulator at your app, and match TEAMS_BOT_APP_ID.
 algasim action msgraph configure -p '{
   "botTargetUrl": "http://localhost:3000/api/teams/bot/messages",
