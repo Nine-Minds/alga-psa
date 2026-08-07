@@ -73,6 +73,8 @@ secrets:
 
 # Service Account configuration
 serviceAccount:
+  # Required for the hosted Vault Kubernetes auth role and chart-managed RBAC.
+  create: true
   # Annotations to add to the service account
   annotations: {}
   # Automatically mount service account token
