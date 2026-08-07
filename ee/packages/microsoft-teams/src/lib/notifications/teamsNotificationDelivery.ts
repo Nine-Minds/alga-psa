@@ -9,6 +9,7 @@ import {
   buildNotificationSentPayload,
 } from '@alga-psa/workflow-streams';
 import { fetchMicrosoftGraphAppToken } from '../graphAuth';
+import { getMicrosoftGraphBaseUrl } from '../teams/microsoftEndpoints';
 import { tenantHasTeamsAddOn } from '../teams/teamsAddOnGate';
 import { buildTeamsNotificationDeepLinkFromPsaUrl } from '../teams/teamsDeepLinks';
 import { sendBotActivity, type SendBotActivityInput } from '../teams/bot/teamsBotConnector';
@@ -609,7 +610,7 @@ async function deliverTeamsActivityFeedNotification(params: {
     });
 
     const response = await sendGraphActivityNotificationWithRetry({
-      url: `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(recipientLink.providerAccountId)}/teamwork/sendActivityNotification`,
+      url: `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(recipientLink.providerAccountId)}/teamwork/sendActivityNotification`,
       init: {
         method: 'POST',
         headers: {

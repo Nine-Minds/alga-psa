@@ -1,3 +1,4 @@
+import { getMicrosoftTokenUrl } from '../microsoftEndpoints';
 import type { TeamsBotResponseActivity } from './teamsBotHandler';
 
 interface CachedToken {
@@ -41,9 +42,38 @@ export function isBotConnectorConfigured(): boolean {
   return readBotCredentialsFromEnv() !== null;
 }
 
+/**
+ * Extra serviceUrl origins trusted outside production, for pointing the bot at
+ * a local emulator (algasim). Exact origins only, comma-separated, no
+ * wildcards. Unset — the default — leaves the trust list byte-identical to the
+ * Microsoft-only allowlist above, and it is ignored entirely under
+ * NODE_ENV=production so it can never loosen the deployed trust boundary.
+ */
+function developmentServiceUrlAllowlist(): Set<string> {
+  if (process.env.NODE_ENV === 'production') {
+    return new Set();
+  }
+  const raw = process.env.TEAMS_BOT_SERVICE_URL_ALLOWLIST?.trim();
+  if (!raw) {
+    return new Set();
+  }
+  const origins = new Set<string>();
+  for (const entry of raw.split(',')) {
+    try {
+      origins.add(new URL(entry.trim()).origin.toLowerCase());
+    } catch {
+      // Ignore unparseable entries rather than widening the trust list.
+    }
+  }
+  return origins;
+}
+
 export function isTrustedServiceUrl(serviceUrl: string): boolean {
   try {
     const url = new URL(serviceUrl);
+    if (developmentServiceUrlAllowlist().has(url.origin.toLowerCase())) {
+      return true;
+    }
     if (url.protocol !== 'https:') {
       return false;
     }
@@ -55,9 +85,7 @@ export function isTrustedServiceUrl(serviceUrl: string): boolean {
 }
 
 async function fetchAccessToken(credentials: BotCredentials): Promise<string> {
-  const tokenUrl = `https://login.microsoftonline.com/${encodeURIComponent(
-    credentials.tenantId
-  )}/oauth2/v2.0/token`;
+  const tokenUrl = getMicrosoftTokenUrl(credentials.tenantId);
 
   const body = new URLSearchParams({
     grant_type: 'client_credentials',

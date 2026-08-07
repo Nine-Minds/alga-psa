@@ -1,3 +1,5 @@
+import { getMicrosoftTokenUrl } from './teams/microsoftEndpoints';
+
 function normalizeString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
@@ -8,7 +10,7 @@ export async function fetchMicrosoftGraphAppToken(params: {
   clientSecret: string;
 }): Promise<string> {
   const tokenResponse = await fetch(
-    `https://login.microsoftonline.com/${encodeURIComponent(params.tenantAuthority)}/oauth2/v2.0/token`,
+    getMicrosoftTokenUrl(params.tenantAuthority),
     {
       method: 'POST',
       headers: {

@@ -5,6 +5,19 @@ const BOT_FRAMEWORK_OPENID_URL =
   'https://login.botframework.com/v1/.well-known/openidconfiguration';
 const BOT_FRAMEWORK_ISSUER = 'https://api.botframework.com';
 
+/**
+ * Outside production, the OpenID discovery document may be redirected at a
+ * local emulator (algasim), which publishes its own JWKS and signs the
+ * activities it injects. Verification itself is untouched: signature, issuer,
+ * and audience are still fully checked against whatever JWKS is discovered.
+ */
+function openIdConfigUrl(): string {
+  if (process.env.NODE_ENV === 'production') {
+    return BOT_FRAMEWORK_OPENID_URL;
+  }
+  return process.env.TEAMS_BOT_OPENID_CONFIG_URL?.trim() || BOT_FRAMEWORK_OPENID_URL;
+}
+
 interface OpenIdConfig {
   jwks_uri?: string;
   issuer?: string;
@@ -36,7 +49,7 @@ async function loadJwksContext(): Promise<CachedJwksContext> {
   }
 
   inFlightConfigFetch = (async () => {
-    const response = await fetch(BOT_FRAMEWORK_OPENID_URL);
+    const response = await fetch(openIdConfigUrl());
     if (!response.ok) {
       throw new Error(
         `Failed to fetch Bot Framework OpenID config (${response.status} ${response.statusText})`
