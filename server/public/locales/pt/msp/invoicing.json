@@ -1,5 +1,8 @@
 {
   "automaticInvoices": {
+    "loading": {
+      "candidates": "Carregando candidatos a fatura."
+    },
     "ready": {
       "title": "Pronto para faturar",
       "description": "Revise o trabalho devido recorrente e gere projetos de faturas para os períodos selecionados.",

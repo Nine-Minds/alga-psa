@@ -1,5 +1,8 @@
 {
   "automaticInvoices": {
+    "loading": {
+      "candidates": "Caricamento dei candidati alla fattura."
+    },
     "ready": {
       "title": "Pronto per la fatturazione",
       "description": "Esamina il lavoro ricorrente dovuto e genera bozze di fatture per i periodi selezionati.",

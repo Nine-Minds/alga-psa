@@ -1,5 +1,8 @@
 {
   "automaticInvoices": {
+    "loading": {
+      "candidates": "Loading invoice candidates."
+    },
     "ready": {
       "title": "Ready to Invoice",
       "description": "Review recurring due work and generate draft invoices for the selected periods.",

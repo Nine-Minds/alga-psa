@@ -1,5 +1,8 @@
 {
   "automaticInvoices": {
+    "loading": {
+      "candidates": "Rechnungskandidaten werden geladen."
+    },
     "ready": {
       "title": "Bereit zur Rechnungsstellung",
       "description": "Überprüfen Sie wiederkehrende fällige Arbeiten und erstellen Sie Rechnungsentwürfe für die ausgewählten Zeiträume.",

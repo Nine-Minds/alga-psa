@@ -1,5 +1,8 @@
 {
   "automaticInvoices": {
+    "loading": {
+      "candidates": "Cargando candidatos de factura."
+    },
     "ready": {
       "title": "Listo para facturar",
       "description": "Revise el trabajo pendiente recurrente y genere borradores de facturas para los períodos seleccionados.",

@@ -1,5 +1,8 @@
 {
   "automaticInvoices": {
+    "loading": {
+      "candidates": "11111"
+    },
     "ready": {
       "title": "11111",
       "description": "11111",
