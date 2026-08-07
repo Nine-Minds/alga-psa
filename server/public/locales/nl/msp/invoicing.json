@@ -226,7 +226,8 @@
       "loadHistory": "Kan terugkerende factuurgeschiedenis niet laden. Probeer het opnieuw."
     },
     "loading": {
-      "billingData": "Factureringsgegevens laden"
+      "billingData": "Factureringsgegevens laden",
+      "candidates": "Factuurkandidaten laden."
     },
     "views": {
       "all": "Alle",

@@ -226,7 +226,8 @@
       "loadHistory": "No se pudo cargar el historial de facturas recurrentes. Por favor inténtelo de nuevo."
     },
     "loading": {
-      "billingData": "Cargando datos de facturación"
+      "billingData": "Cargando datos de facturación",
+      "candidates": "Cargando candidatos de factura."
     },
     "views": {
       "all": "Todos",

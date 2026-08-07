@@ -226,7 +226,8 @@
       "loadHistory": "Falha ao carregar o histórico de faturas recorrentes. Por favor, tente novamente."
     },
     "loading": {
-      "billingData": "Carregando dados de faturamento"
+      "billingData": "Carregando dados de faturamento",
+      "candidates": "Carregando candidatos a fatura."
     },
     "views": {
       "all": "Todos",

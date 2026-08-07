@@ -244,7 +244,8 @@
       "loadHistory": "Nie udało się wczytać historii faktur cyklicznych. Spróbuj ponownie."
     },
     "loading": {
-      "billingData": "Ładowanie danych rozliczeniowych"
+      "billingData": "Ładowanie danych rozliczeniowych",
+      "candidates": "Ładowanie kandydatów do faktury."
     },
     "views": {
       "all": "Wszystkie",

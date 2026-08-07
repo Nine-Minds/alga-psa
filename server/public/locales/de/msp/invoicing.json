@@ -226,7 +226,8 @@
       "loadHistory": "Der Verlauf der wiederkehrenden Rechnungen konnte nicht geladen werden. Bitte versuchen Sie es erneut."
     },
     "loading": {
-      "billingData": "Abrechnungsdaten werden geladen"
+      "billingData": "Abrechnungsdaten werden geladen",
+      "candidates": "Rechnungskandidaten werden geladen."
     },
     "views": {
       "all": "Alle",

@@ -226,7 +226,8 @@
       "loadHistory": "Failed to load recurring invoice history. Please try again."
     },
     "loading": {
-      "billingData": "Loading billing data"
+      "billingData": "Loading billing data",
+      "candidates": "Loading invoice candidates."
     },
     "views": {
       "all": "All",

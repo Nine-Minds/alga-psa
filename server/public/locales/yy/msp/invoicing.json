@@ -226,7 +226,8 @@
       "loadHistory": "55555"
     },
     "loading": {
-      "billingData": "55555"
+      "billingData": "55555",
+      "candidates": "55555"
     },
     "views": {
       "all": "55555",
