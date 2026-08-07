@@ -8,6 +8,7 @@ import '@testing-library/jest-dom/vitest';
 
 let mockDueWorkResponse: any;
 let mockRecurringInvoiceHistoryResponse: any;
+const mockGetAvailableRecurringDueWork = vi.fn();
 const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn(async (groups: Array<{ previewGroupKey: string; selectorInputs: any[] }>) => ({
   success: true,
   invoiceCount: groups.length,
@@ -47,7 +48,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 }));
 
 vi.mock('@alga-psa/billing/actions/billingAndTax', () => ({
-  getAvailableRecurringDueWork: vi.fn(async () => mockDueWorkResponse),
+  getAvailableRecurringDueWork: mockGetAvailableRecurringDueWork,
 }));
 
 vi.mock('@alga-psa/billing/actions/invoiceGeneration', () => ({
@@ -71,10 +72,18 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
     id,
     data,
     columns = [],
+    currentPage,
+    onPageChange,
+    pageSize,
+    onItemsPerPageChange,
   }: {
     id: string;
     data: any[];
     columns?: Array<{ dataIndex?: string; render?: (value: unknown, row: any, index: number) => React.ReactNode }>;
+    currentPage?: number;
+    onPageChange?: (page: number) => void;
+    pageSize?: number;
+    onItemsPerPageChange?: (size: number) => void;
   }) => (
     <div data-testid={id}>
       <div data-testid={`${id}-header`}>
@@ -101,6 +110,22 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
           </div>
         );
       })}
+      {onPageChange ? (
+        <button data-testid={`${id}-next-page`} onClick={() => onPageChange((currentPage ?? 1) + 1)}>
+          Next page
+        </button>
+      ) : null}
+      {onItemsPerPageChange ? (
+        <select
+          data-testid={`${id}-page-size`}
+          value={pageSize}
+          onChange={(event) => onItemsPerPageChange(Number(event.target.value))}
+        >
+          <option value={5}>5</option>
+          <option value={10}>10</option>
+          <option value={25}>25</option>
+        </select>
+      ) : null}
     </div>
   ),
 }));
@@ -144,7 +169,7 @@ vi.mock('@alga-psa/ui/components/DateRangePicker', () => ({
   DateRangePicker: () => <div data-testid="date-range-picker" />,
 }));
 vi.mock('@alga-psa/ui/components/Alert', () => ({
-  Alert: ({ children }: any) => <div>{children}</div>,
+  Alert: ({ variant: _variant, ...props }: any) => <div {...props}>{props.children}</div>,
   AlertDescription: ({ children }: any) => <div>{children}</div>,
 }));
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
@@ -163,6 +188,22 @@ vi.mock('@alga-psa/ui/components/DropdownMenu', () => ({
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
   ConfirmationDialog: () => null,
 }));
+vi.mock('@alga-psa/ui/components/Popover', () => ({
+  Popover: ({ children }: any) => <div>{children}</div>,
+  PopoverContent: ({ children }: any) => <div>{children}</div>,
+  PopoverTrigger: ({ children }: any) => <div>{children}</div>,
+}));
+vi.mock('@alga-psa/ui/components/Switch', () => ({
+  Switch: ({ checked, onCheckedChange, size: _size, ...props }: any) => (
+    <input
+      type="checkbox"
+      role="switch"
+      checked={Boolean(checked)}
+      onChange={(event) => onCheckedChange?.(event.target.checked)}
+      {...props}
+    />
+  ),
+}));
 vi.mock('@alga-psa/ui/components/LoadingIndicator', () => ({
   default: ({ text }: { text: string }) => <div>{text}</div>,
 }));
@@ -174,6 +215,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
 
   beforeEach(() => {
     cleanup();
+    mockGetAvailableRecurringDueWork.mockReset();
     mockPreviewGroupedInvoicesForSelectionInputs.mockClear();
     mockGenerateGroupedInvoicesAsRecurringBillingRun.mockClear();
     mockDueWorkResponse = {
@@ -259,6 +301,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
       totalPages: 1,
     };
     mockRecurringInvoiceHistoryResponse = { rows: [], total: 0, page: 1, pageSize: 10 };
+    mockGetAvailableRecurringDueWork.mockResolvedValue(mockDueWorkResponse);
   });
 
   it('renders one parent group row for a shared client + invoice window instead of one top-level row per child (T001)', async () => {
@@ -772,5 +815,317 @@ describe('AutomaticInvoices grouped parent rows', () => {
     });
     expect(screen.getByText('Multi-assignment invoice (2)')).toBeInTheDocument();
     expect(screen.getByText('Multi-contract invoice')).toBeInTheDocument();
+  });
+
+  // --- Deferred reload loading-skeleton coverage ---------------------------------
+  // The due-work mock is driven by promises we resolve/reject by hand so the
+  // in-flight state can be asserted. Assertions stay behavioral (DOM + a11y),
+  // never source-string based.
+
+  const deferred = () => {
+    let resolve!: (value: unknown) => void;
+    let reject!: (reason?: unknown) => void;
+    const promise = new Promise<unknown>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve, reject };
+  };
+
+  const buildDueWorkResponse = ({ clientName = 'Acme Co', clientId = 'client-1', gapClientName = null, total = 1 }: {
+    clientName?: string;
+    clientId?: string;
+    gapClientName?: string | null;
+    total?: number;
+  } = {}) => ({
+    invoiceCandidates: [
+      {
+        candidateKey: `invoice-candidate:${clientId}:2026-03-01:2026-04-01`,
+        clientId,
+        clientName,
+        windowStart: '2026-03-01',
+        windowEnd: '2026-04-01',
+        windowLabel: '2026-03-01 to 2026-04-01',
+        servicePeriodStart: '2026-03-01',
+        servicePeriodEnd: '2026-04-01',
+        servicePeriodLabel: '2026-03-01 to 2026-04-01',
+        cadenceOwners: ['contract'],
+        cadenceSources: ['contract_anniversary'],
+        contractId: 'contract-1',
+        contractName: 'Main Contract',
+        splitReasons: [],
+        memberCount: 1,
+        canGenerate: true,
+        blockedReason: null,
+        members: [
+          {
+            executionIdentityKey: 'exec-1',
+            canGenerate: true,
+            billingCycleId: 'bc-1',
+            clientId,
+            purchaseOrderScopeKey: 'po-1',
+            currencyCode: 'USD',
+            taxSource: 'exclusive',
+            exportShapeKey: 'shape-a',
+            cadenceSource: 'contract_anniversary',
+            duePosition: 'advance',
+            servicePeriodLabel: '2026-03-01 to 2026-04-01',
+            amountCents: 12500,
+            selectorInput: {
+              clientId,
+              windowStart: '2026-03-01',
+              windowEnd: '2026-04-01',
+              executionWindow: {
+                kind: 'contract_cadence_window',
+                identityKey: `contract-window:line-1:2026-03-01:2026-04-01`,
+                cadenceOwner: 'contract',
+                contractId: 'contract-1',
+                contractLineId: 'line-1',
+              },
+            },
+          },
+        ],
+      },
+    ],
+    materializationGaps: gapClientName
+      ? [
+          {
+            executionIdentityKey: 'gap-exec-1',
+            selectionKey: 'gap-1',
+            clientId: 'gap-client',
+            clientName: gapClientName,
+            scheduleKey: 'client_schedule:gap-client:2026-03-01:2026-04-01',
+            periodKey: 'period-gap-1',
+            reason: 'missing_service_period_materialization',
+            invoiceWindowStart: '2026-03-01',
+            invoiceWindowEnd: '2026-04-01',
+            servicePeriodStart: '2026-03-01',
+            servicePeriodEnd: '2026-04-01',
+            detail: 'Billing schedule drifted',
+          },
+        ]
+      : [],
+    total,
+    page: 1,
+    pageSize: 10,
+    totalPages: Math.max(1, Math.ceil(total / 10)),
+  });
+
+  it('date-filter Apply shows the loading skeleton immediately (R001)', async () => {
+    const initial = deferred();
+    const reload = deferred();
+    mockGetAvailableRecurringDueWork
+      .mockReturnValueOnce(initial.promise)
+      .mockReturnValueOnce(reload.promise);
+
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    await act(async () => {
+      initial.resolve(buildDueWorkResponse({ clientName: 'Acme Co' }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Acme Co')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('automatic-invoices-due-work-region')).toHaveAttribute('aria-busy', 'false');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    expect(screen.getByTestId('billing-table-skeleton')).toBeInTheDocument();
+    expect(screen.getByTestId('automatic-invoices-due-work-region')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('status')).toHaveTextContent('Loading invoice candidates.');
+  });
+
+  it('ready-page change shows the loading skeleton immediately (R002)', async () => {
+    const initial = deferred();
+    const reload = deferred();
+    mockGetAvailableRecurringDueWork
+      .mockReturnValueOnce(initial.promise)
+      .mockReturnValueOnce(reload.promise);
+
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    await act(async () => {
+      initial.resolve(buildDueWorkResponse({ clientName: 'Acme Co' }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Acme Co')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('automatic-invoices-table-next-page'));
+
+    expect(screen.getByTestId('billing-table-skeleton')).toBeInTheDocument();
+    expect(screen.getByTestId('automatic-invoices-due-work-region')).toHaveAttribute('aria-busy', 'true');
+
+    await act(async () => {
+      reload.resolve(buildDueWorkResponse({ clientName: 'Page Two Co', total: 20 }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Page Two Co')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('billing-table-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByTestId('automatic-invoices-due-work-region')).toHaveAttribute('aria-busy', 'false');
+  });
+
+  it('page-size change shows the loading skeleton immediately (R003)', async () => {
+    const initial = deferred();
+    const reload = deferred();
+    mockGetAvailableRecurringDueWork
+      .mockReturnValueOnce(initial.promise)
+      .mockReturnValueOnce(reload.promise);
+
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    await act(async () => {
+      initial.resolve(buildDueWorkResponse({ clientName: 'Acme Co' }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Acme Co')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByTestId('automatic-invoices-table-page-size'), { target: { value: '5' } });
+
+    expect(screen.getByTestId('billing-table-skeleton')).toBeInTheDocument();
+    expect(screen.getByTestId('automatic-invoices-due-work-region')).toHaveAttribute('aria-busy', 'true');
+
+    await act(async () => {
+      reload.resolve(buildDueWorkResponse({ clientName: 'Size Five Co' }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Size Five Co')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('billing-table-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByTestId('automatic-invoices-due-work-region')).toHaveAttribute('aria-busy', 'false');
+  });
+
+  it('parent refreshTrigger rerender shows the loading skeleton immediately (R004)', async () => {
+    const initial = deferred();
+    const reload = deferred();
+    mockGetAvailableRecurringDueWork
+      .mockReturnValueOnce(initial.promise)
+      .mockReturnValueOnce(reload.promise);
+
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    const { rerender } = render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    await act(async () => {
+      initial.resolve(buildDueWorkResponse({ clientName: 'Acme Co' }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Acme Co')).toBeInTheDocument();
+    });
+
+    rerender(<AutomaticInvoices onGenerateSuccess={() => undefined} refreshTrigger={1} />);
+
+    expect(screen.getByTestId('billing-table-skeleton')).toBeInTheDocument();
+    expect(screen.getByTestId('automatic-invoices-due-work-region')).toHaveAttribute('aria-busy', 'true');
+
+    await act(async () => {
+      reload.resolve(buildDueWorkResponse({ clientName: 'Refreshed Co' }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Refreshed Co')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('billing-table-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByTestId('automatic-invoices-due-work-region')).toHaveAttribute('aria-busy', 'false');
+  });
+
+  it('stale candidate rows and the stale materialization-gap panel are suppressed while loading (R005)', async () => {
+    const initial = deferred();
+    const reload = deferred();
+    mockGetAvailableRecurringDueWork
+      .mockReturnValueOnce(initial.promise)
+      .mockReturnValueOnce(reload.promise);
+
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    await act(async () => {
+      initial.resolve(buildDueWorkResponse({ clientName: 'Acme Co', gapClientName: 'Gap Client' }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Acme Co')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('recurring-materialization-gap-panel')).toBeInTheDocument();
+    expect(screen.getByText('Gap Client')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    expect(screen.getByTestId('billing-table-skeleton')).toBeInTheDocument();
+    expect(screen.queryByText('Acme Co')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('recurring-materialization-gap-panel')).not.toBeInTheDocument();
+    expect(screen.queryByText('Gap Client')).not.toBeInTheDocument();
+  });
+
+  it('resolving the reload replaces the skeleton with the new rows and repair panel (R006)', async () => {
+    const initial = deferred();
+    const reload = deferred();
+    mockGetAvailableRecurringDueWork
+      .mockReturnValueOnce(initial.promise)
+      .mockReturnValueOnce(reload.promise);
+
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    await act(async () => {
+      initial.resolve(buildDueWorkResponse({ clientName: 'Acme Co', gapClientName: 'Old Gap' }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Acme Co')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(screen.getByTestId('billing-table-skeleton')).toBeInTheDocument();
+
+    await act(async () => {
+      reload.resolve(buildDueWorkResponse({ clientName: 'Replacement Co', gapClientName: 'New Gap' }));
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId('billing-table-skeleton')).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('Replacement Co')).toBeInTheDocument();
+    expect(screen.queryByText('Acme Co')).not.toBeInTheDocument();
+    expect(screen.getByTestId('recurring-materialization-gap-panel')).toBeInTheDocument();
+    expect(screen.getByText('New Gap')).toBeInTheDocument();
+    expect(screen.queryByText('Old Gap')).not.toBeInTheDocument();
+    expect(screen.getByTestId('automatic-invoices-due-work-region')).toHaveAttribute('aria-busy', 'false');
+  });
+
+  it('rejecting the reload removes the skeleton and shows the existing load-error alert (R007)', async () => {
+    const initial = deferred();
+    const failing = deferred();
+    mockGetAvailableRecurringDueWork
+      .mockReturnValueOnce(initial.promise)
+      .mockReturnValueOnce(failing.promise);
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    try {
+      render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+      await act(async () => {
+        initial.resolve(buildDueWorkResponse({ clientName: 'Acme Co' }));
+      });
+      await waitFor(() => {
+        expect(screen.getByText('Acme Co')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+      expect(screen.getByTestId('billing-table-skeleton')).toBeInTheDocument();
+
+      await act(async () => {
+        failing.reject(new Error('boom'));
+      });
+      await waitFor(() => {
+        expect(screen.queryByTestId('billing-table-skeleton')).not.toBeInTheDocument();
+      });
+      expect(screen.getByText('Failed to load billing periods. Please try again.')).toBeInTheDocument();
+      expect(screen.getByTestId('automatic-invoices-due-work-region')).toHaveAttribute('aria-busy', 'false');
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 });

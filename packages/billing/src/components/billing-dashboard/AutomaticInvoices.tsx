@@ -805,6 +805,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     const loadPeriods = async () => {
       setIsPeriodsLoading(true);
       setLoadError(null);
+      // Every due-work request is a stale-data boundary: drop the previous
+      // page's candidates, gaps, and totals immediately so nothing from the
+      // prior query is presented as current while the reload is in flight.
+      setPeriods([]);
+      setMaterializationGaps([]);
+      setTotalPeriods(0);
       try {
         const dateRangeFilter = buildDateRangeFilter(appliedDateRange);
         const result = await getAvailableRecurringDueWork({
@@ -1834,7 +1840,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   // immediately instead of waiting behind one combined spinner. The fix-list +
   // Ready-to-Invoice block shares the slow due-work fetch; the History table loads
   // on its own (separate, independent server action).
-  const isReadyInitialLoading = !initialLoadDone.current && isPeriodsLoading;
   const isHistoryInitialLoading = !invoicedInitialLoadDone.current && isInvoicedLoading;
 
   return (
@@ -1869,7 +1874,20 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             </AlertDescription>
           </Alert>
         ) : null}
-        <div>
+        <div
+          className="sr-only"
+          role="status"
+          aria-live="polite"
+          data-testid="automatic-invoices-loading-status"
+        >
+          {isPeriodsLoading
+            ? t('automaticInvoices.loading.candidates', { defaultValue: 'Loading invoice candidates.' })
+            : ''}
+        </div>
+        <div
+          aria-busy={isPeriodsLoading}
+          data-testid="automatic-invoices-due-work-region"
+        >
           {needsApprovalParentGroups.length > 0 ? (
             <div className="mb-6 rounded-md border border-warning/40 bg-warning/5 p-4" data-testid="needs-approval-section">
               <h2 className="text-lg font-semibold">
@@ -2339,7 +2357,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               per-column dataIndex tricks (select/tags → compact ids) + mixed px/% widths because
               DataTable's auto-fit overrides plain widths; a first-class "column width spec" on
               DataTable would remove this dance. */}
-          {isReadyInitialLoading ? (
+          {isPeriodsLoading ? (
             <BillingTableSkeleton columns={6} />
           ) : (
           <DataTable
