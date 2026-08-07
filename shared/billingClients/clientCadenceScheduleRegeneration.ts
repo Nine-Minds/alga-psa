@@ -383,12 +383,14 @@ async function persistRecurringServicePeriodRegeneration(
   }
 }
 
-type ClientCadenceScheduleChangeParams = {
+export type ClientCadenceServicePeriodReplenishmentParams = {
   tenant: string;
   clientId: string;
   billingCycle: BillingCycleType;
   anchor: NormalizedBillingCycleAnchorSettings;
 };
+
+type ClientCadenceScheduleChangeParams = ClientCadenceServicePeriodReplenishmentParams;
 
 type ClientCadenceObligationRegenerationPlan = {
   obligationId: string;
@@ -487,9 +489,9 @@ async function computeClientCadenceRegeneration(
   return { billedBoundaryEnd, obligationPlans };
 }
 
-export async function regenerateClientCadenceServicePeriodsForScheduleChange(
+export async function replenishClientCadenceServicePeriods(
   trx: Knex.Transaction,
-  params: ClientCadenceScheduleChangeParams,
+  params: ClientCadenceServicePeriodReplenishmentParams,
 ): Promise<void> {
   const { obligationPlans } = await computeClientCadenceRegeneration(trx, params);
 
@@ -503,6 +505,13 @@ export async function regenerateClientCadenceServicePeriodsForScheduleChange(
       ],
     });
   }
+}
+
+export async function regenerateClientCadenceServicePeriodsForScheduleChange(
+  trx: Knex.Transaction,
+  params: ClientCadenceScheduleChangeParams,
+): Promise<void> {
+  await replenishClientCadenceServicePeriods(trx, params);
 }
 
 export type ClientCadenceChangePreview = {
