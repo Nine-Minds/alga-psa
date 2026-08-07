@@ -1128,4 +1128,41 @@ describe('AutomaticInvoices grouped parent rows', () => {
       errorSpy.mockRestore();
     }
   });
+
+  it('a returned action/permission error removes the skeleton and shows the existing load-error alert (R008)', async () => {
+    const initial = deferred();
+    const denied = deferred();
+    mockGetAvailableRecurringDueWork
+      .mockReturnValueOnce(initial.promise)
+      .mockReturnValueOnce(denied.promise);
+
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    await act(async () => {
+      initial.resolve(buildDueWorkResponse({ clientName: 'Acme Co' }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Acme Co')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('automatic-invoices-due-work-region')).toHaveAttribute('aria-busy', 'false');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(screen.getByTestId('billing-table-skeleton')).toBeInTheDocument();
+    expect(screen.getByTestId('automatic-invoices-due-work-region')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('status')).toHaveTextContent('Loading invoice candidates.');
+    expect(screen.queryByText('Acme Co')).not.toBeInTheDocument();
+
+    // The action settles by returning a permission-error payload (resolved, not rejected).
+    await act(async () => {
+      denied.resolve({ permissionError: 'Permission denied: billing read required' });
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId('billing-table-skeleton')).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId('automatic-invoices-due-work-region')).toHaveAttribute('aria-busy', 'false');
+    expect(screen.getByRole('status')).not.toHaveTextContent('Loading invoice candidates.');
+    expect(screen.getByText('Permission denied: billing read required')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
 });

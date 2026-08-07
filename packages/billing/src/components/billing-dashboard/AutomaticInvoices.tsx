@@ -826,19 +826,18 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           setMaterializationGaps([]);
           setTotalPeriods(0);
           setLoadError(getErrorMessage(result));
-          return;
-        }
+        } else {
+          setPeriods(result.invoiceCandidates as ReadyPeriod[]);
+          setMaterializationGaps(result.materializationGaps);
+          setTotalPeriods(result.total);
+          initialLoadDone.current = true;
 
-        setPeriods(result.invoiceCandidates as ReadyPeriod[]);
-        setMaterializationGaps(result.materializationGaps);
-        setTotalPeriods(result.total);
-        initialLoadDone.current = true;
-
-        // Clamp page if current page is beyond available pages (e.g., after delete/filter)
-        const maxPage = Math.max(1, Math.ceil(result.total / pageSize));
-        if (currentReadyPage > maxPage && currentReadyPage !== maxPage) {
-          setCurrentReadyPage(maxPage);
-          setSelectedTargets(new Set()); // Clear selection since visible rows changed
+          // Clamp page if current page is beyond available pages (e.g., after delete/filter)
+          const maxPage = Math.max(1, Math.ceil(result.total / pageSize));
+          if (currentReadyPage > maxPage && currentReadyPage !== maxPage) {
+            setCurrentReadyPage(maxPage);
+            setSelectedTargets(new Set()); // Clear selection since visible rows changed
+          }
         }
       } catch (error) {
         console.error('Error loading billing periods:', error);
