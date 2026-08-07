@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const extendExpiryMock = vi.fn(async () => undefined);
-const isRevokedMock = vi.fn(async () => false);
+const isRevokedOrIdentityMismatchMock = vi.fn(async () => false);
 const createMock = vi.fn(async () => 'sess-created');
 
 const tenantFirstMock = vi.fn();
@@ -98,7 +98,7 @@ vi.mock('./sso/mspSsoResolution', () => ({
 }));
 vi.mock('@alga-psa/db/models/UserSession', () => ({
   UserSession: {
-    isRevoked: (...args: unknown[]) => isRevokedMock(...(args as [])),
+    isRevokedOrIdentityMismatch: (...args: unknown[]) => isRevokedOrIdentityMismatchMock(...(args as [])),
     extendExpiry: (...args: unknown[]) => extendExpiryMock(...(args as [])),
     create: (...args: unknown[]) => createMock(...(args as [])),
     updateLocation: vi.fn(),
@@ -120,7 +120,7 @@ const { getAuthOptions, options } = await import('./nextAuthOptions');
 describe('nextAuth session expiry sliding', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    isRevokedMock.mockResolvedValue(false);
+    isRevokedOrIdentityMismatchMock.mockResolvedValue(false);
     createMock.mockResolvedValue('sess-created');
     extendExpiryMock.mockResolvedValue(undefined);
     // Keep plan refresh quiet/side-effect-free for these cases.
@@ -141,6 +141,7 @@ describe('nextAuth session expiry sliding', () => {
     await runJwt({
       id: 'u-1',
       tenant: 'tenant-1',
+      user_type: 'internal',
       session_id: 'sess-1',
       last_plan_check: before,
       // no last_session_extend -> treated as 0 -> stale -> should fire
@@ -159,6 +160,7 @@ describe('nextAuth session expiry sliding', () => {
     await runJwt({
       id: 'u-1',
       tenant: 'tenant-1',
+      user_type: 'internal',
       session_id: 'sess-1',
       last_plan_check: Date.now(),
       last_session_extend: Date.now(), // just extended -> inside throttle -> skip
@@ -171,24 +173,26 @@ describe('nextAuth session expiry sliding', () => {
     const token = {
       id: 'u-1',
       tenant: 'tenant-1',
+      user_type: 'internal',
       session_id: 'sess-1',
       last_plan_check: Date.now(),
       last_session_extend: Date.now(),
     };
 
     await runJwt(token);
-    isRevokedMock.mockResolvedValue(true);
+    isRevokedOrIdentityMismatchMock.mockResolvedValue(true);
 
     await expect(runJwt(token)).resolves.toBeNull();
-    expect(isRevokedMock).toHaveBeenCalledTimes(2);
+    expect(isRevokedOrIdentityMismatchMock).toHaveBeenCalledTimes(2);
   });
 
   it('fails closed when durable revocation state cannot be read', async () => {
-    isRevokedMock.mockRejectedValue(new Error('database unavailable'));
+    isRevokedOrIdentityMismatchMock.mockRejectedValue(new Error('database unavailable'));
 
     await expect(runJwt({
       id: 'u-1',
       tenant: 'tenant-1',
+      user_type: 'internal',
       session_id: 'sess-1',
       last_plan_check: Date.now(),
       last_session_extend: Date.now(),
@@ -198,12 +202,13 @@ describe('nextAuth session expiry sliding', () => {
   it('applies immediate fail-closed revocation checks in the synchronous auth config', async () => {
     const jwt = options.callbacks?.jwt;
     expect(jwt).toBeTypeOf('function');
-    isRevokedMock.mockResolvedValue(true);
+    isRevokedOrIdentityMismatchMock.mockResolvedValue(true);
 
     await expect(jwt!({
       token: {
         id: 'u-1',
         tenant: 'tenant-1',
+        user_type: 'internal',
         session_id: 'sess-1',
         last_plan_check: Date.now(),
         last_session_extend: Date.now(),
@@ -219,7 +224,7 @@ describe('nextAuth session expiry sliding', () => {
       last_plan_check: Date.now(),
     })).resolves.toBeNull();
 
-    expect(isRevokedMock).not.toHaveBeenCalled();
+    expect(isRevokedOrIdentityMismatchMock).not.toHaveBeenCalled();
     expect(extendExpiryMock).not.toHaveBeenCalled();
   });
 
@@ -251,7 +256,11 @@ describe('nextAuth session expiry sliding', () => {
       session_id: 'sess-created',
       login_method: 'azure-ad',
     });
-    expect(isRevokedMock).toHaveBeenCalledWith('tenant-1', 'sess-created');
+    expect(isRevokedOrIdentityMismatchMock).toHaveBeenCalledWith(
+      'tenant-1',
+      'sess-created',
+      { userId: 'u-1', userType: 'internal' }
+    );
   });
 
   it('creates a durable OAuth session in the synchronous auth config', async () => {

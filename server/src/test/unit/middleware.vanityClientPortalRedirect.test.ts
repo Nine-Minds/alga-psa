@@ -1,6 +1,28 @@
 import { describe, expect, it } from 'vitest';
 
-import { getVanityClientPortalInternalRedirectTarget } from 'server/src/middleware';
+import {
+  getVanityClientPortalInternalRedirectTarget,
+  hasContradictoryPortalIdentity,
+} from 'server/src/middleware';
+
+describe('hasContradictoryPortalIdentity', () => {
+  it('rejects an internal-stamped identity carrying client scope', () => {
+    expect(hasContradictoryPortalIdentity({
+      user_type: 'internal',
+      clientId: 'client-1',
+      contactId: 'contact-1',
+    })).toBe(true);
+  });
+
+  it('accepts correctly stamped internal and client identities', () => {
+    expect(hasContradictoryPortalIdentity({ user_type: 'internal' })).toBe(false);
+    expect(hasContradictoryPortalIdentity({
+      user_type: 'client',
+      clientId: 'client-1',
+      contactId: 'contact-1',
+    })).toBe(false);
+  });
+});
 
 describe('getVanityClientPortalInternalRedirectTarget', () => {
   const canonicalUrlEnv = new URL('https://algapsa.com');
