@@ -293,7 +293,7 @@ export class MsGraphCore implements EmulatorCore {
     this.accessTokenTtlSeconds = 3600;
     this.rotateRefreshTokens = true;
     // Deliberately does not rotate the Bot Framework signing key: the app
-    // caches the JWKS for 12h, so a reset between tests must not invalidate
+    // caches the discovered JWKS, so a reset between tests must not invalidate
     // tokens it has already learned how to verify.
     this.botConfig = { ...DEFAULT_BOT_CONFIG };
   }

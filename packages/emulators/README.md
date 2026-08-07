@@ -63,6 +63,10 @@ so the app's signature, issuer, and audience checks all still run.
 `TEAMS_BOT_SERVICE_URL_ALLOWLIST` takes exact origins (comma-separated, no
 wildcards) and is what lets the bot send back to the emulator.
 
+Restarting the emulator mints a fresh keypair. While the override is set the
+app re-discovers the JWKS every 30s (instead of the 12h production cache), so
+a restart heals on its own — no need to restart the app.
+
 ### Teams round trip
 
 ```bash

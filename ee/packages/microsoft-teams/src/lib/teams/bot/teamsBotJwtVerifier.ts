@@ -30,6 +30,19 @@ interface CachedJwksContext {
 }
 
 const JWKS_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+const EMULATOR_JWKS_CACHE_TTL_MS = 30 * 1000;
+
+/**
+ * A restarted emulator regenerates its signing keypair, so caching its JWKS for
+ * 12h would reject every injected activity until the app itself is restarted.
+ * Keying off the resolved URL keeps production — and any run without the
+ * override — on the long TTL automatically.
+ */
+function jwksCacheTtlMs(): number {
+  return openIdConfigUrl() === BOT_FRAMEWORK_OPENID_URL
+    ? JWKS_CACHE_TTL_MS
+    : EMULATOR_JWKS_CACHE_TTL_MS;
+}
 
 let cachedContext: CachedJwksContext | null = null;
 let inFlightConfigFetch: Promise<CachedJwksContext> | null = null;
@@ -40,7 +53,7 @@ export function resetTeamsBotJwksCacheForTests(): void {
 }
 
 async function loadJwksContext(): Promise<CachedJwksContext> {
-  if (cachedContext && Date.now() - cachedContext.refreshedAt < JWKS_CACHE_TTL_MS) {
+  if (cachedContext && Date.now() - cachedContext.refreshedAt < jwksCacheTtlMs()) {
     return cachedContext;
   }
 
