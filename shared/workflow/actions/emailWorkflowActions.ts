@@ -8,7 +8,9 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { inboundEmailReplyReceivedEventPayloadSchema } from '@alga-psa/event-schemas';
 import { buildInboundEmailReplyReceivedPayload } from '../streams/domainEventBuilders/inboundEmailReplyEventBuilders';
+import { normalizeRfc822MessageId } from '../../services/email/inboundEmailIdentity';
 import { normalizeEmailAddress } from '../../lib/email/addressUtils';
 import { ContactModel } from '../../models/contactModel';
 import {
@@ -801,6 +803,21 @@ function normalizeThreadLookupList(value: unknown): string[] {
 }
 
 /**
+ * Candidate lookup forms for a raw RFC 5322 Message-ID. The canonical
+ * normalized form strips exactly one bracket pair and lowercases the domain
+ * (matching `email_metadata.messageId` written by the durable pipeline), while
+ * the raw trimmed form still matches legacy rows that stored the bracketed
+ * value verbatim. Every stored-vs-lookup comparison for a Message-ID identity
+ * must use these forms.
+ */
+function rfcMessageIdLookupForms(value: string | null | undefined): string[] {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return [];
+  const normalized = normalizeRfc822MessageId(raw);
+  return Array.from(new Set([normalized, raw].filter((form): form is string => Boolean(form))));
+}
+
+/**
  * Find existing ticket by email thread information
  */
 export async function findTicketByEmailThread(
@@ -901,6 +918,11 @@ async function findTicketByThreadId(
 
 /**
  * Find ticket by original message ID from email metadata
+ *
+ * The lookup matches BOTH the canonical normalized form (how the durable
+ * pipeline writes `email_metadata.messageId` / `inReplyTo` / `references`) and
+ * the raw bracketed form (how legacy rows stored them), so a standards-
+ * compliant `<message-id@host>` reply resolves tickets created by either path.
  */
 async function findTicketByOriginalMessageId(
   trx: Knex.Transaction,
@@ -914,6 +936,11 @@ async function findTicketByOriginalMessageId(
     rootTenantColumn: 't.tenant',
   });
 
+  const forms = rfcMessageIdLookupForms(messageId);
+  if (forms.length === 0) {
+    return null;
+  }
+
   const ticket = await query
     .select(
       't.ticket_id as ticketId',
@@ -922,10 +949,12 @@ async function findTicketByOriginalMessageId(
       's.name as status',
       't.email_metadata'
     )
-    .where(function() {
-      this.whereRaw("t.email_metadata->>'messageId' = ?", [messageId])
-          .orWhereRaw("t.email_metadata->>'inReplyTo' = ?", [messageId])
-          .orWhereRaw("t.email_metadata->'references' \\? ?", [messageId]);
+    .where(function () {
+      for (const form of forms) {
+        this.orWhereRaw("t.email_metadata->>'messageId' = ?", [form])
+          .orWhereRaw("t.email_metadata->>'inReplyTo' = ?", [form]);
+      }
+      this.orWhereRaw("t.email_metadata->'references' \\?| ?", [forms]);
     })
     .first() as unknown as EmailThreadTicketRow | undefined;
 
@@ -1630,59 +1659,79 @@ export async function createCommentFromEmail(
   }
 
   if (commentData.inboundReplyEvent) {
-    if (executionOptions?.existingConnection) {
-      // Durable path: record the reply-received event in the transactional
-      // outbox so a crash cannot orphan the notification.
-      const { insertOutboxRow } = await import('../../services/email/inboundEmailDurableStore');
-      const threadId = commentData.inboundReplyEvent.threadId || commentData.inboundReplyEvent.messageId;
-      const to = commentData.inboundReplyEvent.to?.length
-        ? commentData.inboundReplyEvent.to
-        : [commentData.inboundReplyEvent.from];
-      await insertOutboxRow(executionOptions.existingConnection as Knex.Transaction, {
-        tenant,
-        inbox_id: executionOptions.inboxId ?? '',
-        event_key: 'reply-received',
-        event_type: 'INBOUND_EMAIL_REPLY_RECEIVED',
-        payload: buildInboundEmailReplyReceivedPayload({
-          messageId: commentData.inboundReplyEvent.messageId,
-          threadId,
-          ticketId: commentData.ticket_id,
-          from: commentData.inboundReplyEvent.from,
-          to,
-          subject: commentData.inboundReplyEvent.subject,
-          receivedAt: commentData.inboundReplyEvent.receivedAt,
-          provider: commentData.inboundReplyEvent.provider,
-          matchedBy: commentData.inboundReplyEvent.matchedBy,
-        }) as unknown as Record<string, unknown>,
-      });
-    } else {
-      try {
-        const threadId = commentData.inboundReplyEvent.threadId || commentData.inboundReplyEvent.messageId;
-        const to = commentData.inboundReplyEvent.to?.length
-          ? commentData.inboundReplyEvent.to
-          : [commentData.inboundReplyEvent.from];
+    const threadId = commentData.inboundReplyEvent.threadId || commentData.inboundReplyEvent.messageId;
+    const to = commentData.inboundReplyEvent.to?.length
+      ? commentData.inboundReplyEvent.to
+      : [commentData.inboundReplyEvent.from];
+    const occurredAt = commentData.inboundReplyEvent.receivedAt ?? new Date().toISOString();
 
-        await publishWorkflowEvent({
-          eventType: 'INBOUND_EMAIL_REPLY_RECEIVED',
-          payload: buildInboundEmailReplyReceivedPayload({
-            messageId: commentData.inboundReplyEvent.messageId,
-            threadId,
-            ticketId: commentData.ticket_id,
-            from: commentData.inboundReplyEvent.from,
-            to,
-            subject: commentData.inboundReplyEvent.subject,
-            receivedAt: commentData.inboundReplyEvent.receivedAt,
-            provider: commentData.inboundReplyEvent.provider,
-            matchedBy: commentData.inboundReplyEvent.matchedBy,
-          }),
-          ctx: {
-            tenantId: tenant,
-            occurredAt: commentData.inboundReplyEvent.receivedAt ?? new Date(),
-          },
-          idempotencyKey: `inbound-email-reply:${tenant}:${commentData.ticket_id}:${commentData.inboundReplyEvent.messageId}`,
-        });
-      } catch (eventError) {
-        console.warn('Failed to publish INBOUND_EMAIL_REPLY_RECEIVED event:', eventError);
+    // Building/validating the event is best-effort: a reply comment is never
+    // rolled back or orphaned by an event we cannot construct or validate.
+    let payload: Record<string, unknown> | null = null;
+    try {
+      payload = buildInboundEmailReplyReceivedPayload({
+        tenantId: tenant,
+        occurredAt,
+        messageId: commentData.inboundReplyEvent.messageId,
+        threadId,
+        ticketId: commentData.ticket_id,
+        from: commentData.inboundReplyEvent.from,
+        to,
+        subject: commentData.inboundReplyEvent.subject,
+        receivedAt: commentData.inboundReplyEvent.receivedAt,
+        provider: commentData.inboundReplyEvent.provider,
+        matchedBy: commentData.inboundReplyEvent.matchedBy,
+      });
+    } catch (buildError) {
+      console.warn('[createCommentFromEmail] could not build INBOUND_EMAIL_REPLY_RECEIVED payload', {
+        tenant,
+        ticketId: commentData.ticket_id,
+        messageId: commentData.inboundReplyEvent.messageId,
+        error: buildError instanceof Error ? buildError.message : String(buildError),
+      });
+    }
+
+    if (payload) {
+      if (executionOptions?.existingConnection) {
+        // Durable path: record the reply-received event in the transactional
+        // outbox so a crash cannot orphan the notification. The payload must be
+        // schema-valid before insert — an un-validatable payload would dead-letter
+        // as a doomed outbox row, so it is skipped with a logged warning instead.
+        const validated = inboundEmailReplyReceivedEventPayloadSchema.safeParse(payload);
+        if (!validated.success) {
+          console.warn(
+            '[createCommentFromEmail] skipping INBOUND_EMAIL_REPLY_RECEIVED outbox row: payload failed schema validation',
+            {
+              tenant,
+              ticketId: commentData.ticket_id,
+              messageId: commentData.inboundReplyEvent.messageId,
+              errors: validated.error.issues,
+            }
+          );
+        } else {
+          const { insertOutboxRow } = await import('../../services/email/inboundEmailDurableStore');
+          await insertOutboxRow(executionOptions.existingConnection as Knex.Transaction, {
+            tenant,
+            inbox_id: executionOptions.inboxId ?? '',
+            event_key: 'reply-received',
+            event_type: 'INBOUND_EMAIL_REPLY_RECEIVED',
+            payload: validated.data as unknown as Record<string, unknown>,
+          });
+        }
+      } else {
+        try {
+          await publishWorkflowEvent({
+            eventType: 'INBOUND_EMAIL_REPLY_RECEIVED',
+            payload,
+            ctx: {
+              tenantId: tenant,
+              occurredAt: commentData.inboundReplyEvent.receivedAt ?? new Date(),
+            },
+            idempotencyKey: `inbound-email-reply:${tenant}:${commentData.ticket_id}:${commentData.inboundReplyEvent.messageId}`,
+          });
+        } catch (eventError) {
+          console.warn('Failed to publish INBOUND_EMAIL_REPLY_RECEIVED event:', eventError);
+        }
       }
     }
   }

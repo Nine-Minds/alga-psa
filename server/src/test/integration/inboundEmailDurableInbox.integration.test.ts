@@ -5,6 +5,7 @@ import { NextRequest } from 'next/server';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { tenantDb } from '@alga-psa/db';
+import { inboundEmailReplyReceivedEventPayloadSchema } from '@alga-psa/event-schemas';
 
 const SEEDED_TENANT_DISCOVERY_REASON = 'durable inbox integration discovers seeded tenant';
 
@@ -726,6 +727,211 @@ describeDb('Inbound email durable inbox (integration)', () => {
     expect(await countRows('inbound_email_effects')).toBe(3);
 
     createdTicketIds.push(originalTicketId);
+  });
+
+  it('bracketed In-Reply-To and bracketed References replies resolve the existing ticket (no second ticket)', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'thread-bracket@example.com', providerType: 'google' });
+    const rootMessageId = `root-bracket-${randomUUID()}@example.com`;
+    const rootMime = buildMime({ from: 'client@example.com', to: 'thread-bracket@example.com', subject: 'Bracket root', messageId: rootMessageId, text: 'hello' });
+    const root = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime: rootMime, messageId: rootMessageId });
+    const rootResult = await processInbox(root.inboxId, 'root-worker');
+    expect(rootResult.outcome).toBe('created');
+    const rootTicketId = rootResult.ticketId;
+
+    // Reply A: In-Reply-To carries the BRACKETED form of the root Message-ID
+    // (standards-compliant `<id@host>`), which must resolve the existing ticket.
+    const replyAMessageId = `reply-a-bracket-${randomUUID()}@example.com`;
+    const replyAMime = buildMime({
+      from: 'client@example.com',
+      to: 'thread-bracket@example.com',
+      subject: 'Re: Bracket root',
+      messageId: replyAMessageId,
+      text: 'thanks',
+      inReplyTo: rootMessageId,
+    });
+    const replyA = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime: replyAMime, messageId: replyAMessageId });
+    const replyAResult = await processInbox(replyA.inboxId, 'reply-a-worker');
+    expect(replyAResult.disposition).toBe('ack');
+    expect(replyAResult.outcome).toBe('replied');
+    expect(replyAResult.ticketId).toBe(rootTicketId);
+
+    // Reply B: no In-Reply-To; resolves ONLY via a bracketed References entry.
+    const replyBMessageId = `reply-b-bracket-${randomUUID()}@example.com`;
+    const replyBMime = buildMime({
+      from: 'client@example.com',
+      to: 'thread-bracket@example.com',
+      subject: 'Re: Bracket root',
+      messageId: replyBMessageId,
+      text: 'also thanks',
+      references: [rootMessageId],
+    });
+    const replyB = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime: replyBMime, messageId: replyBMessageId });
+    const replyBResult = await processInbox(replyB.inboxId, 'reply-b-worker');
+    expect(replyBResult.disposition).toBe('ack');
+    expect(replyBResult.outcome).toBe('replied');
+    expect(replyBResult.ticketId).toBe(rootTicketId);
+
+    // No second ticket was created for either reply.
+    expect(Number((await tenantTable('tickets').whereRaw("email_metadata->>'messageId' = ?", [replyAMessageId]).count<{ count: string }[]>('* as count').first())?.count)).toBe(0);
+    expect(Number((await tenantTable('tickets').whereRaw("email_metadata->>'messageId' = ?", [replyBMessageId]).count<{ count: string }[]>('* as count').first())?.count)).toBe(0);
+    expect(Number((await tenantTable('tickets').where({ ticket_id: rootTicketId }).count<{ count: string }[]>('* as count').first())?.count)).toBe(1);
+
+    // The existing ticket gained exactly the two reply comments (plus the root's initial comment).
+    const comments = await tenantTable('comments').where({ ticket_id: rootTicketId }).count<{ count: string }[]>('* as count').first();
+    expect(Number(comments?.count)).toBe(3);
+
+    // The inbox row records the reply outcome against the existing ticket.
+    const replyAInbox = await tenantTable('inbound_email_inbox').where({ inbox_id: replyA.inboxId }).first();
+    expect(replyAInbox.status).toBe('succeeded');
+    expect(replyAInbox.outcome_kind).toBe('replied');
+    expect(replyAInbox.ticket_id).toBe(rootTicketId);
+
+    createdTicketIds.push(rootTicketId);
+  });
+
+  it('replay of a threaded reply is idempotent: stable IDs, one comment, no new outbox rows', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'replay-bracket@example.com', providerType: 'google' });
+    const rootMessageId = `root-replay-bracket-${randomUUID()}@example.com`;
+    const rootMime = buildMime({ from: 'client@example.com', to: 'replay-bracket@example.com', subject: 'Replay root', messageId: rootMessageId, text: 'hello' });
+    const root = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime: rootMime, messageId: rootMessageId });
+    const rootResult = await processInbox(root.inboxId, 'root-worker');
+    expect(rootResult.outcome).toBe('created');
+    const rootTicketId = rootResult.ticketId;
+
+    const replyMessageId = `reply-replay-bracket-${randomUUID()}@example.com`;
+    const replyMime = buildMime({
+      from: 'client@example.com',
+      to: 'replay-bracket@example.com',
+      subject: 'Re: Replay root',
+      messageId: replyMessageId,
+      text: 'thanks',
+      inReplyTo: rootMessageId,
+    });
+    const reply = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime: replyMime, messageId: replyMessageId });
+    const first = await processInbox(reply.inboxId, 'reply-first-worker');
+    expect(first.outcome).toBe('replied');
+    expect(first.ticketId).toBe(rootTicketId);
+    const firstCommentId = first.commentId;
+    const outboxCountBefore = Number((await tenantTable('inbound_email_outbox').count<{ count: string }[]>('* as count').first())?.count);
+
+    // Redelivery of the same reply identity returns the stored IDs and adds
+    // no new comment or outbox rows.
+    const second = await processInbox(reply.inboxId, 'reply-replay-worker');
+    expect(second.disposition).toBe('ack');
+    expect(second.ticketId).toBe(rootTicketId);
+    expect(second.commentId).toBe(firstCommentId);
+
+    const comments = await tenantTable('comments').where({ ticket_id: rootTicketId }).count<{ count: string }[]>('* as count').first();
+    expect(Number(comments?.count)).toBe(2);
+    const outboxCountAfter = Number((await tenantTable('inbound_email_outbox').count<{ count: string }[]>('* as count').first())?.count);
+    expect(outboxCountAfter).toBe(outboxCountBefore);
+
+    createdTicketIds.push(rootTicketId);
+  });
+
+  it('reply event outbox payload is schema-valid and the dispatcher publishes it (never dead-letters)', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'event-bracket@example.com', providerType: 'google' });
+    const rootMessageId = `root-event-bracket-${randomUUID()}@example.com`;
+    const rootMime = buildMime({ from: 'client@example.com', to: 'event-bracket@example.com', subject: 'Event root', messageId: rootMessageId, text: 'hello' });
+    const root = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime: rootMime, messageId: rootMessageId });
+    const rootResult = await processInbox(root.inboxId, 'root-worker');
+    expect(rootResult.outcome).toBe('created');
+    const rootTicketId = rootResult.ticketId;
+
+    const replyMessageId = `reply-event-bracket-${randomUUID()}@example.com`;
+    const replyMime = buildMime({
+      from: 'client@example.com',
+      to: 'event-bracket@example.com',
+      subject: 'Re: Event root',
+      messageId: replyMessageId,
+      text: 'thanks',
+      inReplyTo: rootMessageId,
+    });
+    const reply = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime: replyMime, messageId: replyMessageId });
+    const replyResult = await processInbox(reply.inboxId, 'reply-worker');
+    expect(replyResult.outcome).toBe('replied');
+    expect(replyResult.ticketId).toBe(rootTicketId);
+
+    const replyEventRow = await tenantTable('inbound_email_outbox')
+      .where({ inbox_id: reply.inboxId, event_type: 'INBOUND_EMAIL_REPLY_RECEIVED' })
+      .first();
+    expect(replyEventRow).toBeTruthy();
+
+    const payload = (replyEventRow.payload ?? {}) as Record<string, unknown>;
+    const parsed = inboundEmailReplyReceivedEventPayloadSchema.safeParse(payload);
+    expect(parsed.success).toBe(true);
+    expect(payload.tenantId).toBe(tenantId);
+    expect(typeof payload.occurredAt).toBe('string');
+    expect(String(payload.to?.[0])).toContain('@');
+
+    // Drive the real dispatcher: the row must reach `published`, never
+    // retryable_failed/terminal_failed.
+    const { processInboundOutboxJob } = await import('@alga-psa/shared/services/email/inboundEmailOutboxDispatcher');
+    publishEventMock.mockClear();
+    const job: any = {
+      schemaVersion: 2,
+      workType: 'publish_outbox',
+      tenantId,
+      recordId: String(replyEventRow.outbox_id),
+      inboxId: reply.inboxId,
+      jobId: `reply-ev-${randomUUID()}`,
+      enqueuedAt: new Date().toISOString(),
+      attempt: 0,
+      maxAttempts: 5,
+    };
+    const result = await processInboundOutboxJob(job, {
+      signal: new AbortController().signal,
+      renew: async () => true,
+      registerPostgresLease: () => undefined,
+    });
+    expect(result.disposition).toBe('ack');
+    expect(publishEventMock).toHaveBeenCalledTimes(1);
+
+    const publishedRow = await tenantTable('inbound_email_outbox').where({ outbox_id: String(replyEventRow.outbox_id) }).first();
+    expect(publishedRow.status).toBe('published');
+    expect(publishedRow.attempt_count).toBe(1);
+    expect(publishedRow.published_at).toBeTruthy();
+    expect(publishedRow.lease_token).toBeNull();
+
+    createdTicketIds.push(rootTicketId);
+  });
+
+  it('bracketed reply resolves a legacy ticket whose email_metadata.messageId kept the bracketed form', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'legacy-bracket@example.com', providerType: 'google' });
+    const legacyMessageId = `legacy-bracket-${randomUUID()}@example.com`;
+    const legacyMime = buildMime({ from: 'client@example.com', to: 'legacy-bracket@example.com', subject: 'Legacy root', messageId: legacyMessageId, text: 'hello' });
+    const legacy = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime: legacyMime, messageId: legacyMessageId });
+    const legacyResult = await processInbox(legacy.inboxId, 'legacy-root-worker');
+    expect(legacyResult.outcome).toBe('created');
+    const legacyTicketId = legacyResult.ticketId;
+
+    // Rewrite the stored metadata to the pre-fix bracketed form a legacy row
+    // would carry, then confirm a bracketed reply still resolves it.
+    const legacyRow = await tenantTable('tickets').where({ ticket_id: legacyTicketId }).first('email_metadata');
+    const legacyMetadata = { ...((legacyRow.email_metadata ?? {}) as Record<string, unknown>), messageId: `<${legacyMessageId}>` };
+    await tenantTable('tickets').where({ ticket_id: legacyTicketId }).update({ email_metadata: legacyMetadata });
+
+    const replyMessageId = `reply-legacy-bracket-${randomUUID()}@example.com`;
+    const replyMime = buildMime({
+      from: 'client@example.com',
+      to: 'legacy-bracket@example.com',
+      subject: 'Re: Legacy root',
+      messageId: replyMessageId,
+      text: 'thanks',
+      inReplyTo: legacyMessageId,
+    });
+    const reply = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime: replyMime, messageId: replyMessageId });
+    const replyResult = await processInbox(reply.inboxId, 'legacy-reply-worker');
+    expect(replyResult.disposition).toBe('ack');
+    expect(replyResult.outcome).toBe('replied');
+    expect(replyResult.ticketId).toBe(legacyTicketId);
+
+    // No second ticket was created for the reply.
+    expect(Number((await tenantTable('tickets').whereRaw("email_metadata->>'messageId' = ?", [replyMessageId]).count<{ count: string }[]>('* as count').first())?.count)).toBe(0);
+    const comments = await tenantTable('comments').where({ ticket_id: legacyTicketId }).count<{ count: string }[]>('* as count').first();
+    expect(Number(comments?.count)).toBe(2);
+
+    createdTicketIds.push(legacyTicketId);
   });
 
   it('intentional rule skip is terminal, stores reason, and creates no effects', async () => {

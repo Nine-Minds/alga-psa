@@ -28,6 +28,7 @@ import {
   type InboundReplyAckDeciderResult,
 } from './inboundReplyAcknowledgementDecider';
 import { evaluateInboundEmailRules } from './inboundEmailRules';
+import { normalizeRfc822MessageId } from './inboundEmailIdentity';
 
 export interface ProcessInboundEmailInAppInput {
   tenantId: string;
@@ -252,7 +253,7 @@ function buildDiagnostics(params: {
       threadId: params.emailData.threadId ?? null,
       inReplyTo: params.emailData.inReplyTo ?? null,
       references: params.emailData.references ?? [],
-      originalMessageIdCandidate: params.emailData.inReplyTo ?? params.emailData.id ?? null,
+      originalMessageIdCandidate: normalizeRfc822MessageId(params.emailData.inReplyTo ?? params.emailData.id),
       failureReason: null,
     },
   };
@@ -570,20 +571,48 @@ async function blocksFromEmailBody(params: {
   return blocksFallbackFromText('');
 }
 
+/**
+ * Candidate lookup forms for a raw RFC 5322 Message-ID. The canonical
+ * normalized form matches how the durable pipeline writes `email_metadata`
+ * message ids; the raw trimmed (bracketed) form still matches legacy rows.
+ */
+function rfcMessageIdLookupForms(value: string | null | undefined): string[] {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return [];
+  const normalized = normalizeRfc822MessageId(raw);
+  return Array.from(new Set([normalized, raw].filter((form): form is string => Boolean(form))));
+}
+
+/**
+ * Canonical form for a message-id value persisted into `email_metadata`.
+ * Applies the same RFC normalizer used by every lookup so stored keys and
+ * lookup keys can never disagree on bracketing or domain case.
+ */
+function normalizeStoredMessageId(value: string | null | undefined): string | null {
+  if (typeof value !== 'string' || !value.trim()) {
+    return value ?? null;
+  }
+  return normalizeRfc822MessageId(value) ?? value;
+}
+
 async function findExistingEmailComment(params: {
   tenantId: string;
   ticketId: string;
   messageId: string;
 }): Promise<string | null> {
   return withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
+    const forms = rfcMessageIdLookupForms(params.messageId);
+    if (forms.length === 0) {
+      return null;
+    }
     const row = await db.table('comments as c')
       .select('c.comment_id as commentId')
       .where('c.ticket_id', params.ticketId)
       .andWhere(function (this: any) {
-        this.whereRaw("c.metadata->'email'->>'messageId' = ?", [params.messageId]).orWhereRaw(
-          "c.metadata->>'messageId' = ?",
-          [params.messageId]
-        );
+        for (const form of forms) {
+          this.orWhereRaw("c.metadata->'email'->>'messageId' = ?", [form])
+            .orWhereRaw("c.metadata->>'messageId' = ?", [form]);
+        }
       })
       .first();
     return row?.commentId ?? null;
@@ -596,9 +625,17 @@ async function findExistingEmailTicket(params: {
   messageId: string;
 }): Promise<{ ticketId: string; ticketNumber?: string } | null> {
   return withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
+    const forms = rfcMessageIdLookupForms(params.messageId);
+    if (forms.length === 0) {
+      return null;
+    }
     const row = await db.table('tickets as t')
       .select('t.ticket_id as ticketId', 't.ticket_number as ticketNumber')
-      .andWhereRaw("t.email_metadata->>'messageId' = ?", [params.messageId])
+      .andWhere(function (this: any) {
+        for (const form of forms) {
+          this.orWhereRaw("t.email_metadata->>'messageId' = ?", [form]);
+        }
+      })
       .andWhere(function (this: any) {
         this.whereRaw("t.email_metadata->>'providerId' = ?", [params.providerId]).orWhereRaw(
           "t.email_metadata->>'provider_id' = ?",
@@ -1101,12 +1138,12 @@ export async function processInboundEmailInApp(
     matchedSenderEmail?: string | null;
     primaryContactEmail?: string | null;
   } = {}) => ({
-    messageId: emailData.id,
+    messageId: normalizeStoredMessageId(emailData.id),
     provider: emailData.provider,
     providerId,
     threadId: emailData.threadId,
-    inReplyTo: emailData.inReplyTo,
-    references: emailData.references,
+    inReplyTo: normalizeStoredMessageId(emailData.inReplyTo),
+    references: (emailData.references ?? []).map((reference) => normalizeStoredMessageId(reference)),
     from: emailData.from,
     fromAddress: senderEmail ?? undefined,
     fromName: senderName,
@@ -1402,10 +1439,15 @@ export async function processInboundEmailInApp(
           inboundReopenDecision: decisionMetadata,
         },
         inboundReplyEvent: {
-          messageId: emailData.id,
+          messageId: normalizeRfc822MessageId(emailData.id) ?? emailData.id,
           threadId: emailData.threadId,
           from: emailData.from?.email ?? '',
-          to: (emailData.to ?? []).map((r) => r.email),
+          to: (() => {
+            const recipients = (emailData.to ?? [])
+              .map((recipient) => recipient.email)
+              .filter((email) => email && email.trim());
+            return recipients.length ? recipients : providerMailboxEmail ? [providerMailboxEmail] : [];
+          })(),
           subject: emailData.subject,
           receivedAt: emailData.receivedAt,
           provider: emailData.provider,
@@ -1832,11 +1874,11 @@ export async function processInboundEmailInApp(
       location_id: targetClientId === defaults.client_id ? defaults.location_id : null,
       entered_by: defaults.entered_by,
       email_metadata: {
-        messageId: emailData.id,
+        messageId: normalizeStoredMessageId(emailData.id),
         threadId: emailData.threadId,
         from: emailData.from,
-        inReplyTo: emailData.inReplyTo,
-        references: emailData.references,
+        inReplyTo: normalizeStoredMessageId(emailData.inReplyTo),
+        references: (emailData.references ?? []).map((reference) => normalizeStoredMessageId(reference)),
         providerId,
         clientMatchSource,
         ...(appliedRule

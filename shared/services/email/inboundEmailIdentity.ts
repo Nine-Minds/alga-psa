@@ -50,8 +50,12 @@ function sha256(input: string): string {
  * Trim whitespace, remove exactly one surrounding pair of angle brackets,
  * preserve the local part case, lowercase only the domain, and validate the
  * result is non-empty. Returns null for empty / bracket-only values.
+ *
+ * This is the single canonical RFC 5322 Message-ID normalizer for the inbound
+ * pipeline. Every place a Message-ID lookup key or a stored `email_metadata`
+ * key is derived must go through this function (never a third variant).
  */
-function normalizeRfc822MessageId(raw: string | null | undefined): string | null {
+export function normalizeRfc822MessageId(raw: string | null | undefined): string | null {
   if (typeof raw !== 'string') return null;
   let value = raw.trim();
   if (!value) return null;
