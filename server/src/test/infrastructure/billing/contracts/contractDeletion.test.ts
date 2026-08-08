@@ -246,6 +246,7 @@ describe('Contract deletion infrastructure', () => {
     expect(opportunity.tenant).toBe(context.tenantId);
     expect(opportunity.status).toBe('won');
     expect(opportunity.stage).toBe('won');
+    expect(opportunity.won_at).toBeTruthy();
     expect(opportunity.title).toContain('Converted opportunity');
     expect(opportunity.client_id).toBe(context.clientId);
   });
