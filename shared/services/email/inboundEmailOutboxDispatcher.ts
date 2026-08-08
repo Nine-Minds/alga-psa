@@ -149,6 +149,64 @@ export async function processInboundOutboxJob(
   return { disposition: 'retry', error: publishError ?? 'unknown_publish_error' };
 }
 
+/**
+ * Recovery re-publish of an already-published outbox event.
+ *
+ * The outbox row flips to `published` after Redis accepts the original publish,
+ * so a consumer-side loss after publish is not re-driven by the outbox claim
+ * path (a `published` row is terminal for the dispatcher). Instead the recovery
+ * sweeper finds incomplete consumer deliveries (expired `delivering`
+ * reservations, or due `retryable_failed` rows) and enqueues this job. It
+ * re-publishes the SAME stable `outbox_id` with `force` so the event-bus
+ * bypasses its short-TTL processed sets; each consumer's own delivery ledger
+ * (see inboundEmailConsumerDedupe.ts) reclaims the expired reservation and
+ * re-runs the effect, or skips if already `delivered`.
+ */
+export async function processInboundOutboxRepublishJob(
+  job: UnifiedInboundEmailQueueJobV2,
+  ctx: InboundV2JobContext
+): Promise<InboundEmailQueueDisposition> {
+  const db = await (await import('@alga-psa/db/admin')).getAdminConnection();
+  const row = await getOutboxRow(db, job.tenantId, job.recordId);
+  if (!row) {
+    // Nothing to re-publish; the outbox row is gone.
+    return { disposition: 'ack' };
+  }
+
+  try {
+    const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+    const publishOptions = publishOptionsFor(row);
+    const options: Record<string, unknown> = {
+      eventId: row.outbox_id,
+      strict: true,
+      force: true,
+    };
+    if (publishOptions?.channel) options.channel = String(publishOptions.channel);
+    await publishEvent(
+      { eventType: row.event_type as any, payload: row.payload as any },
+      options as any
+    );
+    console.log('[InboundEmailOutboxDispatcher] recovery republished outbox event', {
+      event: 'inbound_email_outbox_republished',
+      tenantId: row.tenant,
+      inboxId: row.inbox_id,
+      outboxId: row.outbox_id,
+      eventKey: row.event_key,
+      eventType: row.event_type,
+    });
+    return { disposition: 'ack' };
+  } catch (error: any) {
+    const message = error?.message || String(error);
+    console.warn('[InboundEmailOutboxDispatcher] recovery republish failed', {
+      event: 'inbound_email_outbox_republish_failed',
+      tenantId: row.tenant,
+      outboxId: row.outbox_id,
+      error: message,
+    });
+    return { disposition: 'retry', error: `outbox_republish_failed:${message}` };
+  }
+}
+
 function boundedBackoffMs(attemptCount: number): number {
   const base = 2 ** Math.min(attemptCount, 6) * 1000;
   const jitter = Math.floor(Math.random() * 1000);

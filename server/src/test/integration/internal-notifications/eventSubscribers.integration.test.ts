@@ -72,7 +72,14 @@ const createNotificationFromTemplateInternalMock = vi.fn().mockResolvedValue({
   internal_notification_id: 1
 });
 
-const dedupeInboundOutboxEventForConsumerMock = vi.fn().mockResolvedValue('deliver');
+const reserveInboundOutboxEventForConsumerMock = vi.fn().mockResolvedValue({
+  decision: 'deliver',
+  token: 'test-token',
+  version: 0,
+});
+const completeInboundOutboxEventForConsumerMock = vi.fn().mockResolvedValue(true);
+const failInboundOutboxEventForConsumerMock = vi.fn().mockResolvedValue('retryable');
+const recordInboundOutboxDeliveryFailureMock = vi.fn().mockResolvedValue('retryable');
 
 vi.mock('@alga-psa/notifications/actions', () => ({
   createNotificationFromTemplateInternal: createNotificationFromTemplateInternalMock,
@@ -84,12 +91,36 @@ vi.mock('@alga-psa/notifications/actions', () => ({
   deleteNotificationAction: vi.fn()
 }));
 
-// The notification consumer consults the inbound outbox delivery gate before
-// producing any effect. A second delivery of the same outbox event id must be
-// skipped at the first in-repo consumption point.
+// The notification consumer runs durable inbound outbox events through the
+// transactional delivery protocol: reserve + effect + `delivered` mark in ONE
+// transaction. A second delivery of the same outbox event id is skipped at the
+// first in-repo consumption point. Non-outbox events pass through untouched.
 vi.mock('@alga-psa/shared/services/email/inboundEmailConsumerDedupe', () => ({
-  dedupeInboundOutboxEventForConsumer: dedupeInboundOutboxEventForConsumerMock,
+  INBOUND_OUTBOX_EVENT_TYPES: new Set([
+    'TICKET_CREATED',
+    'TICKET_ASSIGNED',
+    'TICKET_UPDATED',
+    'TICKET_CLOSED',
+    'TICKET_COMMENT_ADDED',
+  ]),
+  reserveInboundOutboxEventForConsumer: reserveInboundOutboxEventForConsumerMock,
+  completeInboundOutboxEventForConsumer: completeInboundOutboxEventForConsumerMock,
+  failInboundOutboxEventForConsumer: failInboundOutboxEventForConsumerMock,
+  recordInboundOutboxDeliveryFailure: recordInboundOutboxDeliveryFailureMock,
+  newInboundDeliveryOwner: () => 'test-delivery-owner',
 }));
+
+// The subscriber routes candidate events through the transactional protocol
+// only when an inbound_email_outbox row backs the event id. In this stub-driven
+// suite every candidate is treated as an outbox event (the real query against
+// the one-shot stub table would be consumed by the first delivery).
+vi.mock('@alga-psa/shared/services/email/inboundEmailDurableStore', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/shared/services/email/inboundEmailDurableStore')>();
+  return {
+    ...actual,
+    isInboundOutboxEvent: vi.fn(async () => true),
+  };
+});
 
 const getConnectionMock = vi.fn();
 const createTenantKnexMock = vi.fn();
@@ -171,6 +202,10 @@ function createConnectionStub(responses: Record<string, any | any[]>) {
     return builders.get(table);
   });
   knexStub.raw = vi.fn(() => '');
+  // The transactional delivery protocol wraps the effect in a real
+  // withTransaction frame; the test stub reuses the same knex function as the
+  // shared transaction handle (all tenantDb/table calls route through it).
+  knexStub.transaction = vi.fn(async (cb: (trx: any) => Promise<any>) => cb(knexStub));
   return knexStub;
 }
 
@@ -225,8 +260,18 @@ beforeEach(() => {
   createNotificationFromTemplateInternalMock.mockClear();
   getConnectionMock.mockReset();
   createTenantKnexMock.mockReset();
-  dedupeInboundOutboxEventForConsumerMock.mockReset();
-  dedupeInboundOutboxEventForConsumerMock.mockResolvedValue('deliver');
+  reserveInboundOutboxEventForConsumerMock.mockReset();
+  reserveInboundOutboxEventForConsumerMock.mockResolvedValue({
+    decision: 'deliver',
+    token: 'test-token',
+    version: 0,
+  });
+  completeInboundOutboxEventForConsumerMock.mockReset();
+  completeInboundOutboxEventForConsumerMock.mockResolvedValue(true);
+  failInboundOutboxEventForConsumerMock.mockReset();
+  failInboundOutboxEventForConsumerMock.mockResolvedValue('retryable');
+  recordInboundOutboxDeliveryFailureMock.mockReset();
+  recordInboundOutboxDeliveryFailureMock.mockResolvedValue('retryable');
 });
 
 describe('internal notification event subscriber registration', () => {
@@ -473,6 +518,9 @@ describe('internal notification event handling', () => {
     const assignedUserId = uuidv4();
 
     const knexStub = createConnectionStub({
+      // isInboundOutboxEvent hits inbound_email_outbox first; a present row
+      // routes the event through the transactional delivery protocol.
+      inbound_email_outbox: [{}],
       'tickets as t': [
         {
           ticket_id: ticketId,
@@ -498,11 +546,19 @@ describe('internal notification event handling', () => {
       }
     };
 
-    // First delivery: the DB ledger claims the (tenant, outbox event, consumer)
-    // key and the notification effect is produced.
-    dedupeInboundOutboxEventForConsumerMock.mockReset();
-    dedupeInboundOutboxEventForConsumerMock.mockResolvedValueOnce('deliver');
-    dedupeInboundOutboxEventForConsumerMock.mockResolvedValueOnce('skip');
+    // First delivery: the ledger reserves the (tenant, outbox event, consumer)
+    // key and the notification effect is produced inside the same transaction.
+    reserveInboundOutboxEventForConsumerMock.mockReset();
+    reserveInboundOutboxEventForConsumerMock.mockResolvedValueOnce({
+      decision: 'deliver',
+      token: 'token-1',
+      version: 0,
+    });
+    reserveInboundOutboxEventForConsumerMock.mockResolvedValueOnce({
+      decision: 'skip',
+      reason: 'already_delivered',
+    });
+    completeInboundOutboxEventForConsumerMock.mockClear();
     createNotificationFromTemplateInternalMock.mockClear();
 
     await eventBus.publish(outboxEvent, { channel: 'internal-notifications' });
@@ -510,13 +566,16 @@ describe('internal notification event handling', () => {
     // returns skip so the effect is produced exactly once.
     await eventBus.publish(outboxEvent, { channel: 'internal-notifications' });
 
-    expect(dedupeInboundOutboxEventForConsumerMock).toHaveBeenCalledTimes(2);
-    expect(dedupeInboundOutboxEventForConsumerMock.mock.calls[0][0]).toMatchObject({
+    expect(reserveInboundOutboxEventForConsumerMock).toHaveBeenCalledTimes(2);
+    expect(reserveInboundOutboxEventForConsumerMock.mock.calls[0][0]).toMatchObject({
       consumer: 'internal-notification',
       event: { id: outboxEvent.id, eventType: 'TICKET_CREATED' },
     });
     expect(createNotificationFromTemplateInternalMock).toHaveBeenCalledTimes(1);
     expect(getCallByTemplate('ticket-created')?.user_id).toBe(assignedUserId);
+    // The transactional protocol marks `delivered` in the same transaction after
+    // the effect completes.
+    expect(completeInboundOutboxEventForConsumerMock).toHaveBeenCalledTimes(1);
 
     await unregisterInternalNotificationSubscriber();
   });

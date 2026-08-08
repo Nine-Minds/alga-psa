@@ -7,6 +7,14 @@ import { getEventBus } from '../index';
 import { allIndexers, getIndexer } from '@alga-psa/search';
 import { deleteSearchDoc, upsertSearchDoc } from '@alga-psa/search/upsert';
 import type { EntityIndexer, SearchObjectType } from '@alga-psa/types';
+import {
+  INBOUND_OUTBOX_EVENT_TYPES,
+  withInboundOutboxDelivery,
+  newInboundDeliveryOwner,
+} from '@alga-psa/shared/services/email/inboundEmailConsumerDedupe';
+
+/** Stable ledger consumer id for the search index subscriber. */
+const INBOUND_OUTBOX_SEARCH_INDEX_CONSUMER = 'search-index';
 
 let isRegistered = false;
 let subscribedEventTypes: EventType[] = [];
@@ -423,6 +431,56 @@ async function handleSearchIndexEvent(event: Event): Promise<void> {
     return;
   }
 
+  // Durable inbound outbox events: search indexing is a DB write performed by
+  // this subscriber's own connection, so it is treated as a fenced/lease
+  // consumer — at-least-once with a bounded duplicate window. Re-indexing is
+  // an idempotent upsert, so a duplicate within the crash window is harmless.
+  if (INBOUND_OUTBOX_EVENT_TYPES.has(event.eventType)) {
+    try {
+      const { knex } = await createTenantKnex(tenant);
+      const outcome = await withInboundOutboxDelivery({
+        event: { id: event.id, eventType: event.eventType, payload: event.payload as Record<string, unknown> },
+        consumer: INBOUND_OUTBOX_SEARCH_INDEX_CONSUMER,
+        db: knex,
+        owner: newInboundDeliveryOwner(),
+        effect: () => dispatchSearchIndexEvent(event, tenant, indexers),
+      });
+      if (outcome.status === 'skipped') {
+        logger.info('[SearchIndexSubscriber] Skipping already-delivered inbound outbox event', {
+          eventId: event.id,
+          eventType: event.eventType,
+          tenant,
+          consumer: INBOUND_OUTBOX_SEARCH_INDEX_CONSUMER,
+        });
+      } else if (outcome.status === 'failed') {
+        logger.warn('[SearchIndexSubscriber] Inbound outbox delivery failed; recovery will retry', {
+          eventId: event.id,
+          eventType: event.eventType,
+          tenant,
+          consumer: INBOUND_OUTBOX_SEARCH_INDEX_CONSUMER,
+        });
+      }
+      return;
+    } catch (error) {
+      // Ledger outage fails open: index normally so a transient DB error never
+      // suppresses search indexing.
+      logger.warn('[SearchIndexSubscriber] Delivery gate unavailable; delivering normally', {
+        eventType: event.eventType,
+        eventId: event.id,
+        tenant,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  await dispatchSearchIndexEvent(event, tenant, indexers);
+}
+
+async function dispatchSearchIndexEvent(
+  event: Event,
+  tenant: string,
+  indexers: EntityIndexer[]
+): Promise<void> {
   const { knex } = await createTenantKnex(tenant);
 
   if (isDeleteEvent(event.eventType)) {

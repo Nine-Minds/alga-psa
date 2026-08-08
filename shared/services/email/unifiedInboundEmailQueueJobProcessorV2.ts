@@ -54,6 +54,8 @@ export async function processUnifiedInboundEmailDurableJob(
       return handleProcessArtifact(job, ctx);
     case 'publish_outbox':
       return handlePublishOutbox(job, ctx);
+    case 'republish_outbox_event':
+      return handleRepublishOutboxEvent(job, ctx);
     default:
       return { disposition: 'retry', error: `unknown_v2_work_type:${(job as any).workType}` };
   }
@@ -93,4 +95,9 @@ async function handleProcessArtifact(job: UnifiedInboundEmailQueueJobV2, ctx: In
 async function handlePublishOutbox(job: UnifiedInboundEmailQueueJobV2, ctx: InboundV2JobContext): Promise<InboundEmailQueueDisposition> {
   const { processInboundOutboxJob } = await import('./inboundEmailOutboxDispatcher');
   return processInboundOutboxJob(job, ctx);
+}
+
+async function handleRepublishOutboxEvent(job: UnifiedInboundEmailQueueJobV2, ctx: InboundV2JobContext): Promise<InboundEmailQueueDisposition> {
+  const { processInboundOutboxRepublishJob } = await import('./inboundEmailOutboxDispatcher');
+  return processInboundOutboxRepublishJob(job, ctx);
 }

@@ -1753,26 +1753,579 @@ describeDb('Inbound email durable inbox (integration)', () => {
     // pending stream entry after the crash window). The DB-enforced delivery
     // ledger makes the second delivery a no-op.
     const dbConn = await (await import('@alga-psa/db/admin')).getAdminConnection();
-    const { dedupeInboundOutboxEventForConsumer } = await import('@alga-psa/shared/services/email/inboundEmailConsumerDedupe');
+    const {
+      reserveInboundOutboxEventForConsumer,
+      completeInboundOutboxEventForConsumer,
+    } = await import('@alga-psa/shared/services/email/inboundEmailConsumerDedupe');
     const event = { id: outboxId, eventType: 'TICKET_CREATED', payload: { tenantId } };
-    const firstDecision = await dedupeInboundOutboxEventForConsumer({ event, consumer: 'internal-notification', db: dbConn });
-    expect(firstDecision).toBe('deliver');
-    const secondDecision = await dedupeInboundOutboxEventForConsumer({ event, consumer: 'internal-notification', db: dbConn });
-    expect(secondDecision).toBe('skip');
+    const firstReservation = await reserveInboundOutboxEventForConsumer({
+      event,
+      consumer: 'internal-notification',
+      db: dbConn,
+      owner: 'idem-worker-1',
+    });
+    expect(firstReservation.decision).toBe('deliver');
+    expect(firstReservation.token).toBeTruthy();
+    // The transactional consumer marks `delivered` after producing the effect
+    // (here simulated: the effect is assumed done once the reservation is made
+    // on the durable path); a second delivery then skips.
+    const completed = await completeInboundOutboxEventForConsumer({
+      event,
+      consumer: 'internal-notification',
+      db: dbConn,
+      owner: 'idem-worker-1',
+      token: firstReservation.token!,
+      version: firstReservation.version!,
+    });
+    expect(completed).toBe(true);
+    const secondReservation = await reserveInboundOutboxEventForConsumer({
+      event,
+      consumer: 'internal-notification',
+      db: dbConn,
+      owner: 'idem-worker-2',
+    });
+    expect(secondReservation.decision).toBe('skip');
 
-    // Exactly one ledger row per (tenant, outbox event, consumer).
-    const ledgerCount = Number((await tenantTable('inbound_email_event_deliveries').where({ tenant: tenantId, outbox_id: outboxId, consumer: 'internal-notification' }).count<{ count: string }[]>('* as count').first())?.count);
-    expect(ledgerCount).toBe(1);
+    // Exactly one ledger row per (tenant, outbox event, consumer), and it is a
+    // completed delivery (never a skipped-on-strength-of-reservation).
+    const ledgerRows = await tenantTable('inbound_email_event_deliveries')
+      .where({ tenant: tenantId, outbox_id: outboxId, consumer: 'internal-notification' });
+    expect(ledgerRows).toHaveLength(1);
+    expect(ledgerRows[0].status).toBe('delivered');
+    expect(ledgerRows[0].completed_at).toBeTruthy();
 
     // A different consumer is independent: its own ledger row is claimable.
-    const { claimInboundOutboxEventDelivery } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
-    const otherConsumer = await claimInboundOutboxEventDelivery(db, { tenant: tenantId, outbox_id: outboxId, consumer: 'ticket-email' });
+    const { reserveInboundOutboxEventDelivery } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const otherConsumer = await reserveInboundOutboxEventDelivery(db, {
+      tenant: tenantId,
+      outbox_id: outboxId,
+      consumer: 'ticket-email',
+      owner: 'idem-worker-3',
+      leaseTtlMs: 30_000,
+    });
     expect(otherConsumer.claimed).toBe(true);
 
     // The outbox row itself is `published` exactly once after the reclaim.
     const terminalOutbox = await tenantTable('inbound_email_outbox').where({ outbox_id: outboxId }).first();
     expect(terminalOutbox.status).toBe('published');
     expect(terminalOutbox.published_at).toBeTruthy();
+  });
+
+  it('crash after reservation before effect: redelivery reclaims the expired reservation and the effect is produced exactly once', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'reserve-crash@example.com', providerType: 'google' });
+    const messageId = `reserve-crash-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 's@example.com', to: 'reserve-crash@example.com', subject: 'Reserve', messageId, text: 'x' });
+    const { inboxId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+    const created = await processInbox(inboxId, 'reserve-crash-worker');
+    expect(created.outcome).toBe('created');
+    createdTicketIds.push(created.ticketId);
+
+    const outboxRow = await tenantTable('inbound_email_outbox').where({ inbox_id: inboxId }).orderBy('event_key', 'asc').first();
+    const outboxId = String(outboxRow.outbox_id);
+
+    const {
+      reserveInboundOutboxEventForConsumer,
+      completeInboundOutboxEventForConsumer,
+    } = await import('@alga-psa/shared/services/email/inboundEmailConsumerDedupe');
+    const event = { id: outboxId, eventType: outboxRow.event_type, payload: { tenantId } };
+
+    // A non-transactional consumer reserves (committed `delivering` row) then
+    // crashes before the effect. The reservation holds an active lease.
+    const crashed = await reserveInboundOutboxEventForConsumer({
+      event,
+      consumer: 'ticket-email',
+      db,
+      owner: 'reserve-crash-worker',
+    });
+    expect(crashed.decision).toBe('deliver');
+    expect(crashed.token).toBeTruthy();
+
+    // Simulate the crash: the lease expires with no effect and no completion.
+    await tenantTable('inbound_email_event_deliveries')
+      .where({ tenant: tenantId, outbox_id: outboxId, consumer: 'ticket-email' })
+      .update({ lease_expires_at: db.raw("now() - interval '5 minutes'") });
+
+    // Redelivery: the gate reclaims the expired reservation and delivers —
+    // the effect is NOT permanently lost (the old bug skipped here).
+    const redelivery = await reserveInboundOutboxEventForConsumer({
+      event,
+      consumer: 'ticket-email',
+      db,
+      owner: 'replay-worker',
+    });
+    expect(redelivery.decision).toBe('deliver');
+    expect(redelivery.token).not.toBe(crashed.token); // fenced: new token
+
+    // The reclaim installed a fresh lease and the worker completes the effect.
+    const completed = await completeInboundOutboxEventForConsumer({
+      event,
+      consumer: 'ticket-email',
+      db,
+      owner: 'replay-worker',
+      token: redelivery.token!,
+      version: redelivery.version!,
+    });
+    expect(completed).toBe(true);
+
+    // Ledger converges to a single `delivered` row; any further redelivery skips.
+    const rows = await tenantTable('inbound_email_event_deliveries')
+      .where({ tenant: tenantId, outbox_id: outboxId, consumer: 'ticket-email' });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe('delivered');
+    const again = await reserveInboundOutboxEventForConsumer({
+      event,
+      consumer: 'ticket-email',
+      db,
+      owner: 'another-worker',
+    });
+    expect(again.decision).toBe('skip');
+  });
+
+  it('crash after effect before completion mark: non-transactional redelivery retries and converges to delivered', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'effect-crash@example.com', providerType: 'google' });
+    const messageId = `effect-crash-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 's@example.com', to: 'effect-crash@example.com', subject: 'Effect', messageId, text: 'x' });
+    const { inboxId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+    const created = await processInbox(inboxId, 'effect-crash-worker');
+    expect(created.outcome).toBe('created');
+    createdTicketIds.push(created.ticketId);
+
+    const outboxRow = await tenantTable('inbound_email_outbox').where({ inbox_id: inboxId }).orderBy('event_key', 'asc').first();
+    const outboxId = String(outboxRow.outbox_id);
+
+    const {
+      reserveInboundOutboxEventForConsumer,
+      completeInboundOutboxEventForConsumer,
+    } = await import('@alga-psa/shared/services/email/inboundEmailConsumerDedupe');
+    const event = { id: outboxId, eventType: outboxRow.event_type, payload: { tenantId } };
+
+    // Effect ran, completion mark never landed (worker crashed). The
+    // reservation is `delivering` with a live lease.
+    const crashed = await reserveInboundOutboxEventForConsumer({
+      event,
+      consumer: 'webhook',
+      db,
+      owner: 'effect-crash-worker',
+    });
+    expect(crashed.decision).toBe('deliver');
+    await tenantTable('inbound_email_event_deliveries')
+      .where({ tenant: tenantId, outbox_id: outboxId, consumer: 'webhook' })
+      .update({ lease_expires_at: db.raw("now() - interval '5 minutes'") });
+
+    // Redelivery retries the effect (bounded duplicate window) and the ledger
+    // converges to `delivered` — no unbounded repeats.
+    const retry = await reserveInboundOutboxEventForConsumer({
+      event,
+      consumer: 'webhook',
+      db,
+      owner: 'retry-worker',
+    });
+    expect(retry.decision).toBe('deliver');
+    await completeInboundOutboxEventForConsumer({
+      event,
+      consumer: 'webhook',
+      db,
+      owner: 'retry-worker',
+      token: retry.token!,
+      version: retry.version!,
+    });
+
+    // Repeated redeliveries after completion are all skips.
+    for (let i = 0; i < 3; i += 1) {
+      const dup = await reserveInboundOutboxEventForConsumer({
+        event,
+        consumer: 'webhook',
+        db,
+        owner: `dup-worker-${i}`,
+      });
+      expect(dup.decision).toBe('skip');
+    }
+    const rows = await tenantTable('inbound_email_event_deliveries')
+      .where({ tenant: tenantId, outbox_id: outboxId, consumer: 'webhook' });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe('delivered');
+  });
+
+  it('transactional consumer crash before commit rolls back reservation and effect; redelivery produces the effect once', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'txn-crash@example.com', providerType: 'google' });
+    const messageId = `txn-crash-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 's@example.com', to: 'txn-crash@example.com', subject: 'Txn', messageId, text: 'x' });
+    const { inboxId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+    const created = await processInbox(inboxId, 'txn-crash-worker');
+    expect(created.outcome).toBe('created');
+    createdTicketIds.push(created.ticketId);
+
+    const outboxRow = await tenantTable('inbound_email_outbox').where({ inbox_id: inboxId }).orderBy('event_key', 'asc').first();
+    const outboxId = String(outboxRow.outbox_id);
+
+    const {
+      reserveInboundOutboxEventForConsumer,
+      completeInboundOutboxEventForConsumer,
+    } = await import('@alga-psa/shared/services/email/inboundEmailConsumerDedupe');
+    const event = { id: outboxId, eventType: outboxRow.event_type, payload: { tenantId } };
+    const { withAdminTransaction } = await import('@alga-psa/db');
+
+    // The transactional protocol reserves inside the same transaction as the
+    // effect; a crash before commit rolls BOTH back — the reservation is not
+    // committed, so nothing is acknowledged on its strength.
+    await expect(
+      withAdminTransaction(async (trx: any) => {
+        const reservation = await reserveInboundOutboxEventForConsumer({
+          event,
+          consumer: 'internal-notification',
+          db: trx,
+          owner: 'txn-crash-worker',
+        });
+        expect(reservation.decision).toBe('deliver');
+        throw new Error('simulated crash before commit');
+      })
+    ).rejects.toThrow('simulated crash before commit');
+
+    expect(await countRows('inbound_email_event_deliveries', { outbox_id: outboxId, consumer: 'internal-notification' })).toBe(0);
+
+    // Redelivery: a fresh reservation is created and the effect runs once.
+    const redelivery = await reserveInboundOutboxEventForConsumer({
+      event,
+      consumer: 'internal-notification',
+      db,
+      owner: 'txn-replay-worker',
+    });
+    expect(redelivery.decision).toBe('deliver');
+    await completeInboundOutboxEventForConsumer({
+      event,
+      consumer: 'internal-notification',
+      db,
+      owner: 'txn-replay-worker',
+      token: redelivery.token!,
+      version: redelivery.version!,
+    });
+
+    // A crash after commit (effect + delivered mark landed together) means a
+    // redelivery produces nothing new.
+    const afterCommit = await reserveInboundOutboxEventForConsumer({
+      event,
+      consumer: 'internal-notification',
+      db,
+      owner: 'txn-third-worker',
+    });
+    expect(afterCommit.decision).toBe('skip');
+    const rows = await tenantTable('inbound_email_event_deliveries')
+      .where({ tenant: tenantId, outbox_id: outboxId, consumer: 'internal-notification' });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe('delivered');
+  });
+
+  it('plain duplicate and concurrent delivery yield exactly one delivered ledger row', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'concurrent@example.com', providerType: 'google' });
+    const messageId = `concurrent-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 's@example.com', to: 'concurrent@example.com', subject: 'Concurrent', messageId, text: 'x' });
+    const { inboxId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+    const created = await processInbox(inboxId, 'concurrent-worker');
+    expect(created.outcome).toBe('created');
+    createdTicketIds.push(created.ticketId);
+
+    const outboxRow = await tenantTable('inbound_email_outbox').where({ inbox_id: inboxId }).orderBy('event_key', 'asc').first();
+    const outboxId = String(outboxRow.outbox_id);
+
+    const { reserveInboundOutboxEventDelivery, completeInboundOutboxEventDelivery } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const params = {
+      tenant: tenantId,
+      outbox_id: outboxId,
+      consumer: 'search-index',
+      leaseTtlMs: 30_000,
+    };
+
+    // Concurrent reservations: the PK + lease predicate lets exactly one win.
+    const outcomes = await Promise.all([
+      reserveInboundOutboxEventDelivery(db, { ...params, owner: 'concurrent-a' }),
+      reserveInboundOutboxEventDelivery(db, { ...params, owner: 'concurrent-b' }),
+      reserveInboundOutboxEventDelivery(db, { ...params, owner: 'concurrent-c' }),
+    ]);
+    const winners = outcomes.filter((o) => o.claimed === true);
+    expect(winners).toHaveLength(1);
+    const loser = outcomes.find((o) => o.claimed === false);
+    expect(loser?.reason).toBe('in_progress');
+
+    const winner = winners[0]!;
+    await completeInboundOutboxEventDelivery(db, {
+      tenant: tenantId,
+      outbox_id: outboxId,
+      consumer: 'search-index',
+      owner: winner.row.lease_owner!,
+      token: String(winner.row.lease_token),
+      version: Number(winner.row.lease_version),
+    });
+
+    // Sequential duplicate after completion is refused.
+    const dup = await reserveInboundOutboxEventDelivery(db, { ...params, owner: 'concurrent-d' });
+    expect(dup.claimed).toBe(false);
+    expect(dup.claimed === false ? dup.reason : '').toBe('already_delivered');
+
+    const rows = await tenantTable('inbound_email_event_deliveries')
+      .where({ tenant: tenantId, outbox_id: outboxId, consumer: 'search-index' });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe('delivered');
+  });
+
+  it('stale fencing token cannot write completion for a superseded reservation', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'fence@example.com', providerType: 'google' });
+    const messageId = `fence-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 's@example.com', to: 'fence@example.com', subject: 'Fence', messageId, text: 'x' });
+    const { inboxId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+    const created = await processInbox(inboxId, 'fence-worker');
+    expect(created.outcome).toBe('created');
+    createdTicketIds.push(created.ticketId);
+
+    const outboxRow = await tenantTable('inbound_email_outbox').where({ inbox_id: inboxId }).orderBy('event_key', 'asc').first();
+    const outboxId = String(outboxRow.outbox_id);
+
+    const { reserveInboundOutboxEventDelivery, completeInboundOutboxEventDelivery } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+
+    // Worker A reserves; worker B's reclaim fences A out (expired lease).
+    const a = await reserveInboundOutboxEventDelivery(db, {
+      tenant: tenantId,
+      outbox_id: outboxId,
+      consumer: 'webhook',
+      owner: 'fence-worker-a',
+      leaseTtlMs: 30_000,
+    });
+    expect(a.claimed).toBe(true);
+    const tokenA = String(a.claimed ? a.row.lease_token : '');
+    const versionA = Number(a.claimed ? a.row.lease_version : 0);
+
+    await tenantTable('inbound_email_event_deliveries')
+      .where({ tenant: tenantId, outbox_id: outboxId, consumer: 'webhook' })
+      .update({ lease_expires_at: db.raw("now() - interval '5 minutes'") });
+
+    const b = await reserveInboundOutboxEventDelivery(db, {
+      tenant: tenantId,
+      outbox_id: outboxId,
+      consumer: 'webhook',
+      owner: 'fence-worker-b',
+      leaseTtlMs: 30_000,
+    });
+    expect(b.claimed).toBe(true);
+
+    // A's stale completion is refused.
+    const staleComplete = await completeInboundOutboxEventDelivery(db, {
+      tenant: tenantId,
+      outbox_id: outboxId,
+      consumer: 'webhook',
+      owner: 'fence-worker-a',
+      token: tokenA,
+      version: versionA,
+    });
+    expect(staleComplete).toBe(false);
+
+    // B completes with its own token.
+    const bComplete = await completeInboundOutboxEventDelivery(db, {
+      tenant: tenantId,
+      outbox_id: outboxId,
+      consumer: 'webhook',
+      owner: 'fence-worker-b',
+      token: String(b.claimed ? b.row.lease_token : ''),
+      version: Number(b.claimed ? b.row.lease_version : 0),
+    });
+    expect(bComplete).toBe(true);
+
+    const rows = await tenantTable('inbound_email_event_deliveries')
+      .where({ tenant: tenantId, outbox_id: outboxId, consumer: 'webhook' });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe('delivered');
+    expect(rows[0].lease_token).toBeNull();
+  });
+
+  it('recovery sweeper re-publishes incomplete consumer deliveries and dead-letters over-cap failures', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'recover-delivery@example.com', providerType: 'google' });
+    const messageId = `recover-delivery-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 's@example.com', to: 'recover-delivery@example.com', subject: 'Recover', messageId, text: 'x' });
+    const { inboxId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+    const created = await processInbox(inboxId, 'recover-delivery-worker');
+    expect(created.outcome).toBe('created');
+    createdTicketIds.push(created.ticketId);
+
+    const outboxRow = await tenantTable('inbound_email_outbox').where({ inbox_id: inboxId }).orderBy('event_key', 'asc').first();
+    const outboxId = String(outboxRow.outbox_id);
+
+    const { reserveInboundOutboxEventDelivery, recordInboundOutboxEventDeliveryFailure, getInboundEventDelivery } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const { sweepTenantDurableWork } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+
+    // Two incomplete consumers: an expired reservation and a due retryable.
+    await reserveInboundOutboxEventDelivery(db, {
+      tenant: tenantId,
+      outbox_id: outboxId,
+      consumer: 'sla',
+      owner: 'recover-worker-1',
+      leaseTtlMs: 30_000,
+    });
+    await tenantTable('inbound_email_event_deliveries')
+      .where({ tenant: tenantId, outbox_id: outboxId, consumer: 'sla' })
+      .update({ lease_expires_at: db.raw("now() - interval '5 minutes'") });
+
+    await recordInboundOutboxEventDeliveryFailure(db, {
+      tenant: tenantId,
+      outbox_id: outboxId,
+      consumer: 'survey',
+      error: 'simulated effect failure',
+    });
+
+    const result = await sweepTenantDurableWork(tenantId, 10);
+    expect(result.enqueued.deliveries).toBe(1);
+
+    // The over-cap retryable row dead-letters instead of being re-published.
+    await recordInboundOutboxEventDeliveryFailure(db, {
+      tenant: tenantId,
+      outbox_id: outboxId,
+      consumer: 'ticket-email',
+      error: 'poisoned effect',
+    });
+    await recordInboundOutboxEventDeliveryFailure(db, {
+      tenant: tenantId,
+      outbox_id: outboxId,
+      consumer: 'ticket-email',
+      error: 'poisoned effect',
+    });
+    await recordInboundOutboxEventDeliveryFailure(db, {
+      tenant: tenantId,
+      outbox_id: outboxId,
+      consumer: 'ticket-email',
+      error: 'poisoned effect',
+    });
+    await recordInboundOutboxEventDeliveryFailure(db, {
+      tenant: tenantId,
+      outbox_id: outboxId,
+      consumer: 'ticket-email',
+      error: 'poisoned effect',
+    });
+    await recordInboundOutboxEventDeliveryFailure(db, {
+      tenant: tenantId,
+      outbox_id: outboxId,
+      consumer: 'ticket-email',
+      error: 'poisoned effect',
+    });
+    const terminalRow = await getInboundEventDelivery(db, {
+      tenant: tenantId,
+      outbox_id: outboxId,
+      consumer: 'ticket-email',
+    });
+    expect(terminalRow?.status).toBe('terminal_failed');
+  });
+
+  it('retryable failure is reclaimed when due and the attempt cap dead-letters a poisoned consumer delivery', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'retryable-cap@example.com', providerType: 'google' });
+    const messageId = `retryable-cap-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 's@example.com', to: 'retryable-cap@example.com', subject: 'Cap', messageId, text: 'x' });
+    const { inboxId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+    const created = await processInbox(inboxId, 'retryable-cap-worker');
+    expect(created.outcome).toBe('created');
+    createdTicketIds.push(created.ticketId);
+
+    const outboxRow = await tenantTable('inbound_email_outbox').where({ inbox_id: inboxId }).orderBy('event_key', 'asc').first();
+    const outboxId = String(outboxRow.outbox_id);
+
+    const {
+      reserveInboundOutboxEventForConsumer,
+      failInboundOutboxEventForConsumer,
+      completeInboundOutboxEventForConsumer,
+    } = await import('@alga-psa/shared/services/email/inboundEmailConsumerDedupe');
+    const event = { id: outboxId, eventType: outboxRow.event_type, payload: { tenantId } };
+
+    // A non-transactional consumer's effect throws; the fenced failure record
+    // schedules a backoff and increments the attempt counter.
+    const first = await reserveInboundOutboxEventForConsumer({
+      event,
+      consumer: 'ticket-email',
+      db,
+      owner: 'cap-worker-1',
+    });
+    expect(first.decision).toBe('deliver');
+    const failed = await failInboundOutboxEventForConsumer({
+      event,
+      consumer: 'ticket-email',
+      db,
+      owner: 'cap-worker-1',
+      token: first.token!,
+      version: first.version!,
+      error: 'simulated send failure',
+    });
+    expect(failed).toBe('retryable');
+
+    const failedRow = await tenantTable('inbound_email_event_deliveries')
+      .where({ tenant: tenantId, outbox_id: outboxId, consumer: 'ticket-email' }).first();
+    expect(failedRow.status).toBe('retryable_failed');
+    expect(failedRow.attempt_count).toBe(1);
+    expect(failedRow.next_attempt_at).toBeTruthy();
+
+    // Not due yet: redelivery skips (the backoff is honored).
+    const notDue = await reserveInboundOutboxEventForConsumer({
+      event,
+      consumer: 'ticket-email',
+      db,
+      owner: 'cap-worker-2',
+    });
+    expect(notDue.decision).toBe('skip');
+
+    // Make it due; the retry reclaims and increments the attempt counter.
+    await tenantTable('inbound_email_event_deliveries')
+      .where({ tenant: tenantId, outbox_id: outboxId, consumer: 'ticket-email' })
+      .update({ next_attempt_at: db.raw("now() - interval '1 minute'") });
+    const retry = await reserveInboundOutboxEventForConsumer({
+      event,
+      consumer: 'ticket-email',
+      db,
+      owner: 'cap-worker-3',
+    });
+    expect(retry.decision).toBe('deliver');
+    const retriedRow = await tenantTable('inbound_email_event_deliveries')
+      .where({ tenant: tenantId, outbox_id: outboxId, consumer: 'ticket-email' }).first();
+    expect(retriedRow.attempt_count).toBe(2);
+    await completeInboundOutboxEventForConsumer({
+      event,
+      consumer: 'ticket-email',
+      db,
+      owner: 'cap-worker-3',
+      token: retry.token!,
+      version: retry.version!,
+    });
+
+    // Exhausted attempts dead-letter instead of looping.
+    for (let i = 0; i < 10; i += 1) {
+      await tenantTable('inbound_email_event_deliveries')
+        .where({ tenant: tenantId, outbox_id: outboxId, consumer: 'webhook' })
+        .update({
+          next_attempt_at: db.raw("now() - interval '1 minute'"),
+          lease_expires_at: db.raw("now() - interval '5 minutes'"),
+        });
+      const r = await reserveInboundOutboxEventForConsumer({
+        event,
+        consumer: 'webhook',
+        db,
+        owner: `poison-worker-${i}`,
+      });
+      if (r.decision === 'skip') break;
+      await failInboundOutboxEventForConsumer({
+        event,
+        consumer: 'webhook',
+        db,
+        owner: `poison-worker-${i}`,
+        token: r.token!,
+        version: r.version!,
+        error: `poisoned-${i}`,
+      });
+      const current = await tenantTable('inbound_email_event_deliveries')
+        .where({ tenant: tenantId, outbox_id: outboxId, consumer: 'webhook' }).first();
+      if (current?.status === 'terminal_failed') break;
+    }
+    const terminal = await tenantTable('inbound_email_event_deliveries')
+      .where({ tenant: tenantId, outbox_id: outboxId, consumer: 'webhook' }).first();
+    expect(terminal.status).toBe('terminal_failed');
+    const afterDeadletter = await reserveInboundOutboxEventForConsumer({
+      event,
+      consumer: 'webhook',
+      db,
+      owner: 'post-deadletter-worker',
+    });
+    expect(afterDeadletter.decision).toBe('skip');
   });
 
   it('legacy backfill is resumable: interrupted batches converge to the uninterrupted final state', async () => {

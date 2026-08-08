@@ -1178,39 +1178,361 @@ export async function transitionOutboxRow(db: DurableDb, params: {
 }
 
 // ---------------------------------------------------------------------------
-// Consumer delivery dedupe ledger
+// Consumer delivery ledger — recoverable reservation state machine
 // ---------------------------------------------------------------------------
+//
+// A delivery row is a RESERVATION, not a terminal claim. Statuses:
+//   - `delivering`: a worker reserved the (tenant, outbox event, consumer)
+//     effect and holds a fencing lease (`lease_owner/token/version`). A crash
+//     between reservation and effect leaves an expired lease that the sweeper
+//     or a redelivery reclaims — nothing is permanently lost.
+//   - `delivered`: the effect completed (transactional consumers mark this in
+//     the SAME Postgres transaction as the effect; lease/fenced consumers mark
+//     it after the effect with a fencing predicate). Terminal.
+//   - `retryable_failed`: the effect threw; backoff via `next_attempt_at`.
+//     Reclaimed when due and under `getDurableMaxAttempts()`.
+//   - `terminal_failed`: dead-lettered after exhausting attempts. Terminal.
+//
+// Every key is tenant-first for Citus distribution. The PK
+// `(tenant, outbox_id, consumer)` is the database-enforced dedupe.
 
-export interface InboundEventDelivery {
+export interface InboundEventDeliveryRecord {
   tenant: string;
   outbox_id: string;
   consumer: string;
+  status: string;
+  attempt_count: number;
+  lease_owner: string | null;
+  lease_token: string | null;
+  lease_version: number;
+  lease_expires_at: Date | string | null;
+  next_attempt_at: Date | string | null;
+  last_error: string | null;
   created_at: Date | string;
+  updated_at: Date | string;
+  completed_at: Date | string | null;
+}
+
+export type InboundEventDeliveryClaimResult =
+  | { claimed: true; row: InboundEventDeliveryRecord }
+  | { claimed: false; reason: 'already_delivered' | 'in_progress' | 'not_due' | 'terminal' | 'missing' };
+
+function isLeaseActive(expiresAt: Date | string | null, now: Date): boolean {
+  if (!expiresAt) return false;
+  const at = new Date(expiresAt).getTime();
+  return Number.isFinite(at) && at > now.getTime();
 }
 
 /**
- * Record that a consumer produced its external effect for an outbox event.
- * The primary key `(tenant, outbox_id, consumer)` is the database-enforced
- * dedupe: a second delivery for the same event+consumer is refused. Returns
- * `{ claimed: true }` when this call wins the insert, `{ claimed: false }`
- * when the effect was already produced.
+ * Reserve a consumer delivery. First touch inserts a `delivering` row; a
+ * duplicate PK is refused unless the existing reservation is reclaimable
+ * (expired `delivering` lease, or due under-cap `retryable_failed`).
+ *
+ * Reclaims install a fresh token/version (fencing the crashed worker out) and,
+ * for retryable retries, increment `attempt_count`; crash reclaims do NOT
+ * increment, mirroring reclaimInbox/reclaimOutboxRow. Over-cap due retryable
+ * rows dead-letter to `terminal_failed`.
  */
-export async function claimInboundOutboxEventDelivery(db: DurableDb, params: {
+export async function reserveInboundOutboxEventDelivery(db: DurableDb, params: {
   tenant: string;
   outbox_id: string;
   consumer: string;
-}): Promise<{ claimed: boolean }> {
+  owner: string;
+  leaseTtlMs: number;
+}): Promise<InboundEventDeliveryClaimResult> {
+  const lease = makeLeaseFields(params.owner, params.leaseTtlMs);
+  const maxAttempts = getDurableMaxAttempts();
+  const now = new Date();
+
   const inserted = await tenantDb(db, params.tenant).table('inbound_email_event_deliveries')
     .insert({
       tenant: params.tenant,
       outbox_id: params.outbox_id,
       consumer: params.consumer,
+      status: 'delivering',
+      attempt_count: 0,
+      lease_owner: lease.lease_owner,
+      lease_token: lease.lease_token,
+      lease_version: 0,
+      lease_expires_at: lease.lease_expires_at,
       created_at: db.fn.now(),
+      updated_at: db.fn.now(),
     })
     .onConflict(['tenant', 'outbox_id', 'consumer'])
     .ignore()
-    .returning('outbox_id');
-  return { claimed: Array.isArray(inserted) && inserted.length > 0 };
+    .returning('*');
+  if (Array.isArray(inserted) && inserted.length > 0) {
+    return { claimed: true, row: inserted[0] as InboundEventDeliveryRecord };
+  }
+
+  const current = (await tenantDb(db, params.tenant).table('inbound_email_event_deliveries')
+    .where({ tenant: params.tenant, outbox_id: params.outbox_id, consumer: params.consumer })
+    .first()) as InboundEventDeliveryRecord | undefined;
+  if (!current) return { claimed: false, reason: 'missing' };
+
+  if (current.status === 'delivered') return { claimed: false, reason: 'already_delivered' };
+  if (current.status === 'terminal_failed') return { claimed: false, reason: 'terminal' };
+
+  if (current.status === 'delivering') {
+    if (isLeaseActive(current.lease_expires_at, now)) return { claimed: false, reason: 'in_progress' };
+    const reclaimed = await tenantDb(db, params.tenant).table('inbound_email_event_deliveries')
+      .where({ tenant: params.tenant, outbox_id: params.outbox_id, consumer: params.consumer, status: 'delivering' })
+      .andWhere('lease_expires_at', '<=', db.fn.now())
+      .update({
+        lease_owner: lease.lease_owner,
+        lease_token: lease.lease_token,
+        lease_version: db.raw('lease_version + 1'),
+        lease_expires_at: lease.lease_expires_at,
+        next_attempt_at: null,
+        updated_at: db.fn.now(),
+      })
+      .returning('*');
+    if (reclaimed.length > 0) return { claimed: true, row: reclaimed[0] as InboundEventDeliveryRecord };
+    return { claimed: false, reason: 'in_progress' };
+  }
+
+  // retryable_failed
+  if (current.attempt_count >= maxAttempts) {
+    await deadletterInboundEventDelivery(db, current);
+    return { claimed: false, reason: 'terminal' };
+  }
+  if (!isDue(current.next_attempt_at, now)) return { claimed: false, reason: 'not_due' };
+  const reclaimed = await tenantDb(db, params.tenant).table('inbound_email_event_deliveries')
+    .where({ tenant: params.tenant, outbox_id: params.outbox_id, consumer: params.consumer, status: 'retryable_failed' })
+    .andWhere('attempt_count', '<', maxAttempts)
+    .andWhere((qb: any) => qb.whereNull('next_attempt_at').orWhere('next_attempt_at', '<=', db.fn.now()))
+    .update({
+      status: 'delivering',
+      attempt_count: db.raw('attempt_count + 1'),
+      lease_owner: lease.lease_owner,
+      lease_token: lease.lease_token,
+      lease_version: db.raw('lease_version + 1'),
+      lease_expires_at: lease.lease_expires_at,
+      next_attempt_at: null,
+      last_error: null,
+      updated_at: db.fn.now(),
+    })
+    .returning('*');
+  if (reclaimed.length > 0) return { claimed: true, row: reclaimed[0] as InboundEventDeliveryRecord };
+  return { claimed: false, reason: 'in_progress' };
+}
+
+/**
+ * Mark a reservation `delivered` with a fencing predicate. Returns false when
+ * the token/version no longer match (stale worker, superseded claim) or the row
+ * is no longer `delivering` — a stale worker must never write completion.
+ */
+export async function completeInboundOutboxEventDelivery(db: DurableDb, params: {
+  tenant: string;
+  outbox_id: string;
+  consumer: string;
+  owner: string;
+  token: string;
+  version: number;
+}): Promise<boolean> {
+  const updated = await tenantDb(db, params.tenant).table('inbound_email_event_deliveries')
+    .where({
+      tenant: params.tenant,
+      outbox_id: params.outbox_id,
+      consumer: params.consumer,
+      status: 'delivering',
+      lease_owner: params.owner,
+      lease_token: params.token,
+      lease_version: params.version,
+    })
+    .update({
+      status: 'delivered',
+      lease_owner: null,
+      lease_token: null,
+      lease_expires_at: null,
+      next_attempt_at: null,
+      completed_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+  return updated > 0;
+}
+
+export type InboundEventDeliveryFailureMark = 'retryable' | 'terminal' | 'noop';
+
+/**
+ * Record a fenced failure for a `delivering` reservation. Increments
+ * `attempt_count`; when the attempt cap is reached the row dead-letters to
+ * `terminal_failed` (a poisoned effect stops looping). A `noop` result means
+ * the fencing predicate matched nothing (stale worker — the current owner is
+ * someone else), so nothing is recorded.
+ */
+export async function failInboundOutboxEventDelivery(db: DurableDb, params: {
+  tenant: string;
+  outbox_id: string;
+  consumer: string;
+  owner: string;
+  token: string;
+  version: number;
+  error: string;
+}): Promise<InboundEventDeliveryFailureMark> {
+  const maxAttempts = getDurableMaxAttempts();
+  const backoffMs = boundedBackoffMsForDelivery(
+    await getDeliveryAttemptCount(db, params.tenant, params.outbox_id, params.consumer)
+  );
+  const updated = await tenantDb(db, params.tenant).table('inbound_email_event_deliveries')
+    .where({
+      tenant: params.tenant,
+      outbox_id: params.outbox_id,
+      consumer: params.consumer,
+      status: 'delivering',
+      lease_owner: params.owner,
+      lease_token: params.token,
+      lease_version: params.version,
+    })
+    .update({
+      status: db.raw('CASE WHEN attempt_count + 1 >= ? THEN ? ELSE ? END', [maxAttempts, 'terminal_failed', 'retryable_failed']),
+      attempt_count: db.raw('attempt_count + 1'),
+      lease_owner: null,
+      lease_token: null,
+      lease_expires_at: null,
+      next_attempt_at: db.raw('CASE WHEN attempt_count + 1 >= ? THEN NULL ELSE now() + (? || \' milliseconds\')::interval END', [maxAttempts, backoffMs]),
+      last_error: params.error,
+      completed_at: db.raw('CASE WHEN attempt_count + 1 >= ? THEN now() ELSE NULL END', [maxAttempts]),
+      updated_at: db.fn.now(),
+    });
+  if (updated === 0) return 'noop';
+  const row = (await tenantDb(db, params.tenant).table('inbound_email_event_deliveries')
+    .where({ tenant: params.tenant, outbox_id: params.outbox_id, consumer: params.consumer })
+    .first()) as InboundEventDeliveryRecord | undefined;
+  return row?.status === 'terminal_failed' ? 'terminal' : 'retryable';
+}
+
+async function getDeliveryAttemptCount(db: DurableDb, tenant: string, outboxId: string, consumer: string): Promise<number> {
+  const row = (await tenantDb(db, tenant).table('inbound_email_event_deliveries')
+    .where({ tenant, outbox_id: outboxId, consumer })
+    .first('attempt_count')) as { attempt_count?: number } | undefined;
+  return Number(row?.attempt_count ?? 0);
+}
+
+function boundedBackoffMsForDelivery(attemptCount: number): number {
+  const base = 2 ** Math.min(attemptCount, 6) * 1000;
+  const jitter = Math.floor(Math.random() * 1000);
+  return Math.min(base + jitter, 5 * 60 * 1000);
+}
+
+/**
+ * Record a failure without a fencing predicate. Used by the transactional
+ * (internal-notification) protocol after its reservation was rolled back with
+ * the effect — there is no committed row to fence, so this upserts a
+ * `retryable_failed` row. It never downgrades a `delivered` row and never
+ * touches a reservation held by a live worker.
+ */
+export async function recordInboundOutboxEventDeliveryFailure(db: DurableDb, params: {
+  tenant: string;
+  outbox_id: string;
+  consumer: string;
+  error: string;
+}): Promise<InboundEventDeliveryFailureMark> {
+  const maxAttempts = getDurableMaxAttempts();
+  const backoffMs = boundedBackoffMsForDelivery(1);
+  const now = db.fn.now();
+
+  const inserted = await tenantDb(db, params.tenant).table('inbound_email_event_deliveries')
+    .insert({
+      tenant: params.tenant,
+      outbox_id: params.outbox_id,
+      consumer: params.consumer,
+      status: maxAttempts > 1 ? 'retryable_failed' : 'terminal_failed',
+      attempt_count: 1,
+      lease_owner: null,
+      lease_token: null,
+      lease_expires_at: null,
+      next_attempt_at: maxAttempts > 1 ? db.raw("now() + (? || ' milliseconds')::interval", [backoffMs]) : null,
+      last_error: params.error,
+      created_at: now,
+      updated_at: now,
+      completed_at: maxAttempts > 1 ? null : now,
+    })
+    .onConflict(['tenant', 'outbox_id', 'consumer'])
+    .ignore()
+    .returning('*');
+
+  if (Array.isArray(inserted) && inserted.length > 0) {
+    return maxAttempts > 1 ? 'retryable' : 'terminal';
+  }
+
+  const updated = await tenantDb(db, params.tenant).table('inbound_email_event_deliveries')
+    .where({ tenant: params.tenant, outbox_id: params.outbox_id, consumer: params.consumer })
+    .whereIn('status', ['retryable_failed', 'delivering'])
+    .update({
+      status: db.raw('CASE WHEN attempt_count + 1 >= ? THEN ? ELSE ? END', [maxAttempts, 'terminal_failed', 'retryable_failed']),
+      attempt_count: db.raw('attempt_count + 1'),
+      lease_owner: null,
+      lease_token: null,
+      lease_expires_at: null,
+      next_attempt_at: db.raw('CASE WHEN attempt_count + 1 >= ? THEN NULL ELSE now() + (? || \' milliseconds\')::interval END', [maxAttempts, backoffMs]),
+      last_error: params.error,
+      completed_at: db.raw('CASE WHEN attempt_count + 1 >= ? THEN now() ELSE NULL END', [maxAttempts]),
+      updated_at: now,
+    });
+  if (updated === 0) return 'noop';
+  const row = (await tenantDb(db, params.tenant).table('inbound_email_event_deliveries')
+    .where({ tenant: params.tenant, outbox_id: params.outbox_id, consumer: params.consumer })
+    .first()) as InboundEventDeliveryRecord | undefined;
+  return row?.status === 'terminal_failed' ? 'terminal' : 'retryable';
+}
+
+/** Dead-letter an over-cap due retryable delivery row into `terminal_failed`. */
+export async function deadletterInboundEventDelivery(db: DurableDb, row: InboundEventDeliveryRecord): Promise<boolean> {
+  const updated = await tenantDb(db, row.tenant).table('inbound_email_event_deliveries')
+    .where({ tenant: row.tenant, outbox_id: row.outbox_id, consumer: row.consumer, status: 'retryable_failed' })
+    .update({
+      status: 'terminal_failed',
+      lease_owner: null,
+      lease_token: null,
+      lease_expires_at: null,
+      next_attempt_at: null,
+      completed_at: db.fn.now(),
+      last_error: row.last_error ?? 'max_attempts_exhausted',
+      updated_at: db.fn.now(),
+    });
+  return updated > 0;
+}
+
+export async function getInboundEventDelivery(db: DurableDb, params: {
+  tenant: string;
+  outbox_id: string;
+  consumer: string;
+}): Promise<InboundEventDeliveryRecord | null> {
+  const row = (await tenantDb(db, params.tenant).table('inbound_email_event_deliveries')
+    .where({ tenant: params.tenant, outbox_id: params.outbox_id, consumer: params.consumer })
+    .first()) as InboundEventDeliveryRecord | undefined;
+  return row ?? null;
+}
+
+/**
+ * Rows that need recovery action, most-recently-updated first:
+ *   - `delivering` reservations whose lease expired (crash after reserve)
+ *   - `retryable_failed` rows that are due for another attempt
+ * The sweeper dead-letters over-cap rows and re-publishes the outbox event once
+ * per distinct outbox_id (a single re-publish re-drives every incomplete
+ * consumer through the per-consumer gate).
+ */
+export async function findRecoverableInboundEventDeliveries(db: DurableDb, options: DueScanOptions): Promise<InboundEventDeliveryRecord[]> {
+  const limit = Math.max(1, options.limit ?? 20);
+  const now = options.now ?? new Date();
+  const rows = (await tenantDb(db, options.tenant).table('inbound_email_event_deliveries')
+    .where({ tenant: options.tenant })
+    .andWhere(function (this: any) {
+      this.where((expired: any) => {
+        expired.where({ status: 'delivering' })
+          .where('lease_expires_at', '<=', now.toISOString());
+      })
+        .orWhere((due: any) => {
+          due.where({ status: 'retryable_failed' })
+            .where((next: any) => {
+              next.whereNull('next_attempt_at').orWhere('next_attempt_at', '<=', now.toISOString());
+            });
+        });
+    })
+    .orderBy('updated_at', 'asc')
+    .limit(limit)) as InboundEventDeliveryRecord[];
+  return rows;
 }
 
 /**

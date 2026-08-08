@@ -255,7 +255,8 @@ export type DurableInboundEmailWorkType =
   | 'stage_ingress'
   | 'process_inbox'
   | 'process_artifact'
-  | 'publish_outbox';
+  | 'publish_outbox'
+  | 'republish_outbox_event';
 
 export interface UnifiedInboundEmailQueueJobV2 {
   schemaVersion: 2;

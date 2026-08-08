@@ -39,6 +39,14 @@ import {
   sendOneEmailPerWatcher,
   resolveInternalWatcherEmails,
 } from './watcherRecipients';
+import {
+  INBOUND_OUTBOX_EVENT_TYPES,
+  withInboundOutboxDelivery,
+  newInboundDeliveryOwner,
+} from '@alga-psa/shared/services/email/inboundEmailConsumerDedupe';
+
+/** Stable ledger consumer id for the ticket email subscriber. */
+const INBOUND_OUTBOX_EMAIL_CONSUMER = 'ticket-email';
 
 /**
  * Get the base URL from NEXTAUTH_URL environment variable
@@ -3355,7 +3363,59 @@ export async function handleTicketEvent(event: BaseEvent): Promise<void> {
 
   const validatedEvent = eventSchema.parse(event);
 
-  switch (event.eventType) {
+  // Durable inbound outbox events are at-least-once with a bounded duplicate
+  // window for external (email) effects: fenced reservation -> send -> fenced
+  // completion. A crash between reservation and completion leaves an expired
+  // reclaimable reservation, so redelivery retries the send (possibly duplicating
+  // it within the window); the attempt cap dead-letters a poisoned send. See
+  // inboundEmailConsumerDedupe.ts.
+  const tenantId = (validatedEvent.payload as { tenantId?: unknown } | null)?.tenantId;
+  const isCandidate = typeof tenantId === 'string' && tenantId
+    && INBOUND_OUTBOX_EVENT_TYPES.has(event.eventType);
+  if (isCandidate) {
+    let db: Knex;
+    try {
+      db = await getConnection(tenantId);
+    } catch (error) {
+      logger.warn('[TicketEmailSubscriber] Tenant connection unavailable; delivering normally', {
+        eventId: event.id,
+        eventType: event.eventType,
+        tenantId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      await dispatchTicketEmailHandlers(validatedEvent as any);
+      return;
+    }
+    const outcome = await withInboundOutboxDelivery({
+      event: { id: event.id, eventType: event.eventType, payload: (validatedEvent as any).payload },
+      consumer: INBOUND_OUTBOX_EMAIL_CONSUMER,
+      db,
+      owner: newInboundDeliveryOwner(),
+      effect: () => dispatchTicketEmailHandlers(validatedEvent as any),
+    });
+    if (outcome.status === 'skipped') {
+      logger.info('[TicketEmailSubscriber] Skipping already-delivered inbound outbox event', {
+        eventId: event.id,
+        eventType: event.eventType,
+        tenantId,
+        consumer: INBOUND_OUTBOX_EMAIL_CONSUMER,
+      });
+    } else if (outcome.status === 'failed') {
+      logger.warn('[TicketEmailSubscriber] Inbound outbox delivery failed; recovery will retry', {
+        eventId: event.id,
+        eventType: event.eventType,
+        tenantId,
+        consumer: INBOUND_OUTBOX_EMAIL_CONSUMER,
+      });
+    }
+    return;
+  }
+
+  await dispatchTicketEmailHandlers(validatedEvent as any);
+}
+
+async function dispatchTicketEmailHandlers(validatedEvent: any): Promise<void> {
+  switch (validatedEvent.eventType) {
     case 'TICKET_CREATED':
       await handleTicketCreated(validatedEvent as TicketCreatedEvent);
       break;
@@ -3373,8 +3433,7 @@ export async function handleTicketEvent(event: BaseEvent): Promise<void> {
       break;
     default:
       logger.warn('[TicketEmailSubscriber] Unhandled ticket event type:', {
-        eventType: event.eventType,
-        eventId: event.id
+        eventType: validatedEvent.eventType,
       });
   }
 }

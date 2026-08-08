@@ -21,16 +21,19 @@ import {
   deadletterArtifact,
   deadletterIngress,
   deadletterInbox,
+  deadletterInboundEventDelivery,
   deadletterOutboxRow,
   findDueArtifacts,
   findDueIngress,
   findDueInbox,
   findDueOutbox,
+  findRecoverableInboundEventDeliveries,
   getDurableMaxAttempts,
   getInboxByIdentity,
   insertEffect,
   getInboundDurableMode,
   upsertInbox,
+  type InboundEventDeliveryRecord,
   type InboundIngressRecord,
 } from './inboundEmailDurableStore';
 import { enqueueInboundEmailDurableJob } from './unifiedInboundEmailQueueV2';
@@ -46,12 +49,13 @@ export interface RecoverySweepResult {
     inbox: number;
     artifact: number;
     outbox: number;
+    deliveries: number;
   };
 }
 
 export async function sweepTenantDurableWork(tenant: string, limit: number = 10): Promise<RecoverySweepResult> {
   const db = await (await import('@alga-psa/db/admin')).getAdminConnection();
-  const result: RecoverySweepResult = { enqueued: { ingress: 0, inbox: 0, artifact: 0, outbox: 0 } };
+  const result: RecoverySweepResult = { enqueued: { ingress: 0, inbox: 0, artifact: 0, outbox: 0, deliveries: 0 } };
   const maxAttempts = getDurableMaxAttempts();
 
   const ingressRows = await findDueIngress(db, { tenant, limit });
@@ -142,6 +146,39 @@ export async function sweepTenantDurableWork(tenant: string, limit: number = 10)
         event: 'inbound_email_recovery_outbox_enqueue_failed',
         tenantId: tenant,
         outboxId: row.outbox_id,
+        error: error?.message || String(error),
+      });
+    }
+  }
+
+  // Consumer delivery recovery. The outbox row itself is already `published`
+  // after Redis accept, so a consumer-side loss after publish is NOT re-driven
+  // by the outbox claim path. Recoverable consumer deliveries (expired
+  // `delivering` reservations, or due under-cap `retryable_failed` rows) are
+  // re-driven here by re-publishing the outbox event once per distinct outbox
+  // row; each consumer's per-consumer gate reclaims its own reservation.
+  const deliveryRows = await findRecoverableInboundEventDeliveries(db, { tenant, limit });
+  const republishOutboxIds = new Set<string>();
+  for (const delivery of deliveryRows) {
+    if (delivery.status === 'retryable_failed' && delivery.attempt_count >= maxAttempts) {
+      await deadletterInboundEventDelivery(db, delivery as InboundEventDeliveryRecord);
+      continue;
+    }
+    republishOutboxIds.add(delivery.outbox_id);
+  }
+  for (const outboxId of republishOutboxIds) {
+    try {
+      await enqueueInboundEmailDurableJob({
+        workType: 'republish_outbox_event',
+        tenantId: tenant,
+        recordId: outboxId,
+      });
+      result.enqueued.deliveries += 1;
+    } catch (error: any) {
+      console.warn('[InboundEmailRecovery] consumer delivery re-drive enqueue failed', {
+        event: 'inbound_email_recovery_delivery_republish_enqueue_failed',
+        tenantId: tenant,
+        outboxId,
         error: error?.message || String(error),
       });
     }

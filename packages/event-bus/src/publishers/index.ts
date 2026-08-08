@@ -18,6 +18,12 @@ export interface PublishOptions {
   eventId?: string;
   /** Strict mode propagates an unsuccessful stream write (dispatcher only). */
   strict?: boolean;
+  /**
+   * Recovery re-publish: bypasses the event-bus processed-event/handler Redis
+   * sets so incomplete inbound-outbox consumer deliveries re-run. Consumers
+   * that already completed are skipped by their own idempotency ledger.
+   */
+  force?: boolean;
 }
 
 const EMAIL_EVENT_TYPES = new Set<Event['eventType']>([
@@ -80,6 +86,7 @@ export async function publishEvent(
       workflow: options?.workflow,
       eventId: options?.eventId,
       strict: options?.strict,
+      force: options?.force,
     });
 
     // If this is an internal notification event, publish to the internal-notifications channel
@@ -89,6 +96,7 @@ export async function publishEvent(
         workflow: options?.workflow,
         eventId: options?.eventId,
         strict: options?.strict,
+        force: options?.force,
       });
     }
 
@@ -100,6 +108,7 @@ export async function publishEvent(
         workflow: options?.workflow,
         eventId: options?.eventId,
         strict: options?.strict,
+        force: options?.force,
       });
     } else if (channel) {
       // If a specific channel was provided, publish to that channel as well
@@ -108,6 +117,7 @@ export async function publishEvent(
         workflow: options?.workflow,
         eventId: options?.eventId,
         strict: options?.strict,
+        force: options?.force,
       });
     }
   } catch (error) {

@@ -6,6 +6,63 @@ import { tenantDb } from '@alga-psa/db';
 import { getSurveyTriggersForTenant, type SurveyTrigger } from '@alga-psa/surveys/actions/surveyActions';
 import { createTenantKnex, runWithTenant } from '../../db';
 import { sendSurveyInvitation } from '../../../services/surveyService';
+import {
+  INBOUND_OUTBOX_EVENT_TYPES,
+  withInboundOutboxDelivery,
+  newInboundDeliveryOwner,
+} from '@alga-psa/shared/services/email/inboundEmailConsumerDedupe';
+
+/** Stable ledger consumer id for the survey subscriber. */
+const INBOUND_OUTBOX_SURVEY_CONSUMER = 'survey';
+
+/**
+ * Run a survey effect under the inbound-outbox delivery contract. Sending a
+ * survey invitation is an external (email) effect, so this is at-least-once
+ * with a bounded duplicate window (fenced reservation -> send -> completion).
+ * Non-outbox events pass through untouched; a ledger outage fails open.
+ */
+async function withSurveyInboundOutboxEffect(
+  event: { id: string; eventType: string; payload: Record<string, unknown> },
+  effect: () => Promise<void>
+): Promise<void> {
+  const tenantId = event.payload.tenantId;
+  if (typeof tenantId !== 'string' || !tenantId || !INBOUND_OUTBOX_EVENT_TYPES.has(event.eventType)) {
+    await effect();
+    return;
+  }
+  try {
+    const { knex } = await createTenantKnex(tenantId);
+    const outcome = await withInboundOutboxDelivery({
+      event,
+      consumer: INBOUND_OUTBOX_SURVEY_CONSUMER,
+      db: knex,
+      owner: newInboundDeliveryOwner(),
+      effect,
+    });
+    if (outcome.status === 'skipped') {
+      logger.info('[SurveySubscriber] Skipping already-delivered inbound outbox event', {
+        eventId: event.id,
+        eventType: event.eventType,
+        tenantId,
+        consumer: INBOUND_OUTBOX_SURVEY_CONSUMER,
+      });
+    } else if (outcome.status === 'failed') {
+      logger.warn('[SurveySubscriber] Inbound outbox delivery failed; recovery will retry', {
+        eventId: event.id,
+        eventType: event.eventType,
+        tenantId,
+        consumer: INBOUND_OUTBOX_SURVEY_CONSUMER,
+      });
+    }
+  } catch (error) {
+    logger.warn('[SurveySubscriber] Delivery gate unavailable; delivering normally', {
+      eventType: event.eventType,
+      tenantId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    await effect();
+  }
+}
 
 type TicketSnapshot = {
   ticket_id: string;
@@ -76,47 +133,52 @@ async function handleTicketClosedEvent(event: unknown): Promise<void> {
       return;
     }
 
-    const triggers = await getSurveyTriggersForTenant(tenantId);
-    logger.info('[SurveySubscriber] Loaded triggers', { tenantId, triggerCount: triggers.length });
-    if (triggers.length === 0) {
-      return;
-    }
+    await withSurveyInboundOutboxEffect(
+      { id: validated.id, eventType: validated.eventType, payload: validated.payload },
+      async () => {
+        const triggers = await getSurveyTriggersForTenant(tenantId);
+        logger.info('[SurveySubscriber] Loaded triggers', { tenantId, triggerCount: triggers.length });
+        if (triggers.length === 0) {
+          return;
+        }
 
-    const ticket = await loadTicketSnapshot(tenantId, ticketId);
-    if (!ticket) {
-      logger.warn('[SurveySubscriber] Ticket not found for closed event', { tenantId, ticketId });
-      return;
-    }
+        const ticket = await loadTicketSnapshot(tenantId, ticketId);
+        if (!ticket) {
+          logger.warn('[SurveySubscriber] Ticket not found for closed event', { tenantId, ticketId });
+          return;
+        }
 
-    const matchingTemplates = collectMatchingTemplates(triggers, ticket);
-    if (matchingTemplates.size === 0) {
-      return;
-    }
+        const matchingTemplates = collectMatchingTemplates(triggers, ticket);
+        if (matchingTemplates.size === 0) {
+          return;
+        }
 
-    for (const templateId of matchingTemplates) {
-      try {
-        await sendSurveyInvitation({
-          tenantId,
-          ticketId,
-          templateId,
-          clientId: ticket.client_id,
-          contactId: ticket.contact_name_id,
-          actorUserId,
-        });
-        logger.info('[SurveySubscriber] sendSurveyInvitation dispatched', {
-          tenantId,
-          ticketId,
-          templateId,
-        });
-      } catch (error) {
-        logger.error('[SurveySubscriber] Failed to send survey invitation', {
-          tenantId,
-          ticketId,
-          templateId,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        for (const templateId of matchingTemplates) {
+          try {
+            await sendSurveyInvitation({
+              tenantId,
+              ticketId,
+              templateId,
+              clientId: ticket.client_id,
+              contactId: ticket.contact_name_id,
+              actorUserId,
+            });
+            logger.info('[SurveySubscriber] sendSurveyInvitation dispatched', {
+              tenantId,
+              ticketId,
+              templateId,
+            });
+          } catch (error) {
+            logger.error('[SurveySubscriber] Failed to send survey invitation', {
+              tenantId,
+              ticketId,
+              templateId,
+              error: error instanceof Error ? error.message : 'Unknown error',
+            });
+          }
+        }
       }
-    }
+    );
   } catch (error) {
     logger.error('[SurveySubscriber] Failed to process ticket closed event', {
       error: error instanceof Error ? error.message : 'Unknown error',
