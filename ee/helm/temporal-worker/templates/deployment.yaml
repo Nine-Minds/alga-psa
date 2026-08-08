@@ -17,7 +17,6 @@ spec:
   selector:
     matchLabels:
       {{- include "temporal-worker.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: temporal-worker
   template:
     metadata:
       annotations:
@@ -91,7 +90,7 @@ spec:
             - |
               . /vault/secrets/internal-api
               . /vault/secrets/auth-key
-              exec node dist/worker.js
+              exec node dist/ee/temporal-workflows/src/worker.js
           {{- end }}
           env:
             # Node.js module resolution
@@ -131,10 +130,19 @@ spec:
             # Application Configuration
             - name: NODE_ENV
               value: "production"
+            - name: DEPLOYMENT_PROFILE
+              value: {{ .Values.deploymentProfile | default "hosted" | quote }}
             - name: LOG_LEVEL
               value: "{{ .Values.logLevel }}"
             - name: APPLICATION_URL
+              {{- with .Values.applicationUrlSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .name | quote }}
+                  key: {{ .key | quote }}
+              {{- else }}
               value: "{{ .Values.applicationUrl }}"
+              {{- end }}
             - name: NEXT_PUBLIC_BASE_URL
               value: "{{ .Values.publicBaseUrl }}"
             - name: NM_STORE_URL

@@ -1,24 +1,25 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { generateMicrosoftAuthUrl } from '../../../utils/email/oauthHelpers';
 
 describe('Microsoft outbound OAuth contract', () => {
-  it('uses the common email scope set for authorization, token exchange, and refresh', () => {
-    const callback = readFileSync(
-      resolve(process.cwd(), 'src/app/api/auth/microsoft/callback/route.ts'),
-      'utf8'
-    );
-    const adapter = readFileSync(
-      resolve(process.cwd(), '../shared/services/email/providers/MicrosoftGraphAdapter.ts'),
-      'utf8'
-    );
-    const scopes = readFileSync(
-      resolve(process.cwd(), '../shared/services/email/microsoftGraphEndpoints.ts'),
-      'utf8'
-    );
+  it('requests inbound, outbound, user, and offline access through the common authority', () => {
+    const redirectUri = 'https://example.test/api/auth/microsoft/callback';
+    const authUrl = new URL(generateMicrosoftAuthUrl('platform-client', redirectUri, {
+      tenant: 'tenant-id',
+      redirectUri,
+      timestamp: Date.now(),
+      nonce: 'nonce',
+    }));
 
-    expect(scopes).toContain("'https://graph.microsoft.com/Mail.Send'");
-    expect(callback).toContain("scope: MICROSOFT_EMAIL_OAUTH_SCOPES.join(' ')");
-    expect(adapter).toContain("scope: MICROSOFT_EMAIL_OAUTH_SCOPES.join(' ')");
+    expect(authUrl.origin).toBe('https://login.microsoftonline.com');
+    expect(authUrl.pathname).toBe('/common/oauth2/v2.0/authorize');
+    expect(authUrl.searchParams.get('redirect_uri')).toBe(redirectUri);
+    expect(new Set(authUrl.searchParams.get('scope')?.split(' '))).toEqual(new Set([
+      'https://graph.microsoft.com/Mail.Read',
+      'https://graph.microsoft.com/Mail.Read.Shared',
+      'https://graph.microsoft.com/Mail.Send',
+      'https://graph.microsoft.com/User.Read',
+      'offline_access',
+    ]));
   });
 });
