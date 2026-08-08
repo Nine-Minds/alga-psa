@@ -19,6 +19,8 @@ import {
   claimOutboxRow,
   getDurableLeaseTtlMs,
   getDurableMaxAttempts,
+  getOutboxRow,
+  reclaimOutboxRow,
   transitionOutboxRow,
   type InboundOutboxRecord,
 } from './inboundEmailDurableStore';
@@ -42,17 +44,44 @@ export async function processInboundOutboxJob(
     leaseTtlMs: ttl,
   });
 
-  if (claim.claimed === false) {
-    if (claim.reason === 'terminal') {
+  let row: InboundOutboxRecord;
+  if (claim.claimed === true) {
+    row = claim.row;
+  } else {
+    const current = await getOutboxRow(db, job.tenantId, job.recordId);
+    if (current && (current.status === 'published' || current.status === 'terminal_failed')) {
       return { disposition: 'ack' };
     }
-    if (claim.reason === 'already_claimed') {
-      return { disposition: 'defer', untilIso: new Date(Date.now() + 30_000).toISOString(), reason: 'outbox_lease_active' };
+    if (current?.status === 'publishing') {
+      // Crash between claim and the `published` transition: atomically reclaim
+      // the expired lease and continue publishing (old worker fenced out). An
+      // unexpired lease is deferred, never re-published.
+      const expiry = current.lease_expires_at ? new Date(current.lease_expires_at).getTime() : Date.now() + 30_000;
+      if (expiry > Date.now()) {
+        return { disposition: 'defer', untilIso: new Date(expiry).toISOString(), reason: 'outbox_lease_active' };
+      }
+      const reclaim = await reclaimOutboxRow(db, {
+        tenant: job.tenantId,
+        outbox_id: job.recordId,
+        owner,
+        leaseTtlMs: ttl,
+      });
+      if (reclaim.claimed === true) {
+        row = reclaim.row;
+      } else {
+        const latest = await getOutboxRow(db, job.tenantId, job.recordId);
+        if (latest && (latest.status === 'published' || latest.status === 'terminal_failed')) {
+          return { disposition: 'ack' };
+        }
+        return { disposition: 'defer', untilIso: new Date(Date.now() + 30_000).toISOString(), reason: 'outbox_reclaim_race' };
+      }
+    } else if (current?.status === 'retryable_failed') {
+      const next = current.next_attempt_at ? new Date(current.next_attempt_at).getTime() : Date.now();
+      return { disposition: 'defer', untilIso: new Date(Math.max(Date.now(), next)).toISOString(), reason: 'outbox_not_due' };
+    } else {
+      return { disposition: 'retry', error: `outbox_unclaimable:${claim.reason}` };
     }
-    return { disposition: 'retry', error: `outbox_unclaimable:${claim.reason}` };
   }
-
-  const row = claim.row;
   const token = String(row.lease_token);
   const version = Number(row.lease_version);
 

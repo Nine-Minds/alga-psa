@@ -801,6 +801,13 @@ export async function getArtifactsForInbox(db: DurableDb, tenant: string, inboxI
     .orderBy('artifact_key', 'asc')) as InboundArtifactRecord[];
 }
 
+export async function getArtifact(db: DurableDb, tenant: string, inboxId: string, artifactKey: string): Promise<InboundArtifactRecord | null> {
+  const row = await tenantDb(db, tenant).table('inbound_email_artifacts')
+    .where({ tenant, inbox_id: inboxId, artifact_key: artifactKey })
+    .first();
+  return (row as InboundArtifactRecord) ?? null;
+}
+
 export async function claimArtifact(db: DurableDb, params: {
   tenant: string;
   inbox_id: string;
@@ -865,6 +872,43 @@ export async function deadletterArtifact(db: DurableDb, row: InboundArtifactReco
       updated_at: db.fn.now(),
     });
   return updated > 0;
+}
+
+/**
+ * Atomically reclaim a `processing` artifact row whose lease has expired.
+ * `processing -> processing` installs a new token/version (fencing the crashed
+ * worker out) without incrementing the attempt count, mirroring reclaimInbox. A
+ * crash after the artifact claim but before transition must be recoverable by
+ * the sweeper, never stranded.
+ */
+export async function reclaimArtifact(db: DurableDb, params: {
+  tenant: string;
+  inbox_id: string;
+  artifact_key: string;
+  owner: string;
+  leaseTtlMs: number;
+}): Promise<InboundClaimResult<InboundArtifactRecord>> {
+  const lease = makeLeaseFields(params.owner, params.leaseTtlMs);
+  const updated = await tenantDb(db, params.tenant).table('inbound_email_artifacts')
+    .where({ tenant: params.tenant, inbox_id: params.inbox_id, artifact_key: params.artifact_key, status: 'processing' })
+    .andWhere('lease_expires_at', '<=', db.fn.now())
+    .update({
+      lease_owner: lease.lease_owner,
+      lease_token: lease.lease_token,
+      lease_version: db.raw('lease_version + 1'),
+      lease_expires_at: lease.lease_expires_at,
+      next_attempt_at: null,
+      updated_at: db.fn.now(),
+    })
+    .returning('*');
+  if (updated.length > 0) return { claimed: true, row: updated[0] };
+
+  const current = await getArtifact(db, params.tenant, params.inbox_id, params.artifact_key);
+  if (!current) return { claimed: false, reason: 'missing' };
+  if (['succeeded', 'skipped', 'terminal_failed'].includes(current.status)) {
+    return { claimed: false, reason: 'terminal' };
+  }
+  return { claimed: false, reason: 'already_claimed' };
 }
 
 export async function transitionArtifact(db: DurableDb, params: {
@@ -981,6 +1025,13 @@ export async function getOutboxRowsForInbox(db: DurableDb, tenant: string, inbox
     .orderBy('event_key', 'asc')) as InboundOutboxRecord[];
 }
 
+export async function getOutboxRow(db: DurableDb, tenant: string, outboxId: string): Promise<InboundOutboxRecord | null> {
+  const row = await tenantDb(db, tenant).table('inbound_email_outbox')
+    .where({ tenant, outbox_id: outboxId })
+    .first();
+  return (row as InboundOutboxRecord) ?? null;
+}
+
 export async function claimOutboxRow(db: DurableDb, params: {
   tenant: string;
   outbox_id: string;
@@ -1045,6 +1096,42 @@ export async function deadletterOutboxRow(db: DurableDb, row: InboundOutboxRecor
   return updated > 0;
 }
 
+/**
+ * Atomically reclaim a `publishing` outbox row whose lease has expired.
+ * `publishing -> publishing` installs a new token/version (fencing the crashed
+ * dispatcher out) without incrementing the attempt count, mirroring
+ * reclaimInbox. A crash after the outbox claim but before the `published`
+ * transition must be recoverable by the sweeper, never stranded.
+ */
+export async function reclaimOutboxRow(db: DurableDb, params: {
+  tenant: string;
+  outbox_id: string;
+  owner: string;
+  leaseTtlMs: number;
+}): Promise<InboundClaimResult<InboundOutboxRecord>> {
+  const lease = makeLeaseFields(params.owner, params.leaseTtlMs);
+  const updated = await tenantDb(db, params.tenant).table('inbound_email_outbox')
+    .where({ tenant: params.tenant, outbox_id: params.outbox_id, status: 'publishing' })
+    .andWhere('lease_expires_at', '<=', db.fn.now())
+    .update({
+      lease_owner: lease.lease_owner,
+      lease_token: lease.lease_token,
+      lease_version: db.raw('lease_version + 1'),
+      lease_expires_at: lease.lease_expires_at,
+      next_attempt_at: null,
+      updated_at: db.fn.now(),
+    })
+    .returning('*');
+  if (updated.length > 0) return { claimed: true, row: updated[0] };
+
+  const current = await getOutboxRow(db, params.tenant, params.outbox_id);
+  if (!current) return { claimed: false, reason: 'missing' };
+  if (['published', 'terminal_failed'].includes(current.status)) {
+    return { claimed: false, reason: 'terminal' };
+  }
+  return { claimed: false, reason: 'already_claimed' };
+}
+
 export async function transitionOutboxRow(db: DurableDb, params: {
   tenant: string;
   outbox_id: string;
@@ -1088,6 +1175,57 @@ export async function transitionOutboxRow(db: DurableDb, params: {
     })
     .update(patch);
   return updated > 0;
+}
+
+// ---------------------------------------------------------------------------
+// Consumer delivery dedupe ledger
+// ---------------------------------------------------------------------------
+
+export interface InboundEventDelivery {
+  tenant: string;
+  outbox_id: string;
+  consumer: string;
+  created_at: Date | string;
+}
+
+/**
+ * Record that a consumer produced its external effect for an outbox event.
+ * The primary key `(tenant, outbox_id, consumer)` is the database-enforced
+ * dedupe: a second delivery for the same event+consumer is refused. Returns
+ * `{ claimed: true }` when this call wins the insert, `{ claimed: false }`
+ * when the effect was already produced.
+ */
+export async function claimInboundOutboxEventDelivery(db: DurableDb, params: {
+  tenant: string;
+  outbox_id: string;
+  consumer: string;
+}): Promise<{ claimed: boolean }> {
+  const inserted = await tenantDb(db, params.tenant).table('inbound_email_event_deliveries')
+    .insert({
+      tenant: params.tenant,
+      outbox_id: params.outbox_id,
+      consumer: params.consumer,
+      created_at: db.fn.now(),
+    })
+    .onConflict(['tenant', 'outbox_id', 'consumer'])
+    .ignore()
+    .returning('outbox_id');
+  return { claimed: Array.isArray(inserted) && inserted.length > 0 };
+}
+
+/**
+ * True when an event id corresponds to a durable inbound outbox row (i.e. the
+ * event was published by the inbound outbox dispatcher). Used by consumers to
+ * decide whether the DB delivery ledger applies to an event.
+ */
+export async function isInboundOutboxEvent(db: DurableDb, params: {
+  tenant: string;
+  eventId: string;
+}): Promise<boolean> {
+  const row = await tenantDb(db, params.tenant).table('inbound_email_outbox')
+    .where({ tenant: params.tenant, outbox_id: params.eventId })
+    .first('outbox_id');
+  return Boolean(row);
 }
 
 // ---------------------------------------------------------------------------

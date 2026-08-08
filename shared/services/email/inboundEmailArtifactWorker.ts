@@ -16,9 +16,11 @@ import type { InboundEmailQueueDisposition, UnifiedInboundEmailQueueJobV2 } from
 import type { InboundV2JobContext } from './unifiedInboundEmailQueueJobProcessorV2';
 import {
   claimArtifact,
+  getArtifact,
   getDurableLeaseTtlMs,
   getDurableMaxAttempts,
   getInbox,
+  reclaimArtifact,
   transitionArtifact,
   type InboundArtifactRecord,
 } from './inboundEmailDurableStore';
@@ -53,15 +55,45 @@ export async function processInboundArtifactJob(
     leaseTtlMs: ttl,
   });
 
-  if (claim.claimed === false) {
-    if (claim.reason === 'terminal') return { disposition: 'ack' };
-    if (claim.reason === 'already_claimed') {
-      return { disposition: 'defer', untilIso: new Date(Date.now() + 30_000).toISOString(), reason: 'artifact_lease_active' };
+  let artifact: InboundArtifactRecord;
+  if (claim.claimed === true) {
+    artifact = claim.row;
+  } else {
+    const current = await getArtifact(db, job.tenantId, inboxId, artifactKey);
+    if (current && TERMINAL_ARTIFACT_STATUSES.has(current.status)) {
+      return { disposition: 'ack' };
     }
-    return { disposition: 'retry', error: `artifact_unclaimable:${claim.reason}` };
+    if (current?.status === 'processing') {
+      // Crash between claim and transition: atomically reclaim the expired
+      // lease and continue processing (old worker is fenced out). An unexpired
+      // lease is deferred, never classified as a duplicate.
+      const expiry = current.lease_expires_at ? new Date(current.lease_expires_at).getTime() : Date.now() + 30_000;
+      if (expiry > Date.now()) {
+        return { disposition: 'defer', untilIso: new Date(expiry).toISOString(), reason: 'artifact_lease_active' };
+      }
+      const reclaim = await reclaimArtifact(db, {
+        tenant: job.tenantId,
+        inbox_id: inboxId,
+        artifact_key: artifactKey,
+        owner,
+        leaseTtlMs: ttl,
+      });
+      if (reclaim.claimed === true) {
+        artifact = reclaim.row;
+      } else {
+        const latest = await getArtifact(db, job.tenantId, inboxId, artifactKey);
+        if (latest && TERMINAL_ARTIFACT_STATUSES.has(latest.status)) {
+          return { disposition: 'ack' };
+        }
+        return { disposition: 'defer', untilIso: new Date(Date.now() + 30_000).toISOString(), reason: 'artifact_reclaim_race' };
+      }
+    } else if (current?.status === 'retryable_failed') {
+      const next = current.next_attempt_at ? new Date(current.next_attempt_at).getTime() : Date.now();
+      return { disposition: 'defer', untilIso: new Date(Math.max(Date.now(), next)).toISOString(), reason: 'artifact_not_due' };
+    } else {
+      return { disposition: 'retry', error: `artifact_unclaimable:${claim.reason}` };
+    }
   }
-
-  const artifact = claim.row;
   const token = String(artifact.lease_token);
   const version = Number(artifact.lease_version);
 

@@ -64,6 +64,10 @@ export async function processIngressStageJob(
   } else {
     const current = await getIngress(db, job.tenantId, job.recordId);
     if (current && TERMINAL_INGRESS_STATUSES.has(current.status)) {
+      // A maintenance-reconcile ingress may already be `staged` if the worker
+      // crashed after staging but before the cursor advance (or a prior worker
+      // staged it); catch the reconciliation cursor up so it is not held back.
+      await maybeAdvanceMicrosoftReconcileCursor(db, current);
       return { disposition: 'ack' };
     }
     if (current?.status === 'staging') {
@@ -180,7 +184,52 @@ async function stageIngressSources(db: any, ingress: InboundIngressRecord): Prom
     throw new Error('provider_fetch_returned_no_raw_mime');
   }
 
-  return [await persistStagedInbox(db, ingress, emailData, rawMime)];
+  const inboxId = await persistStagedInbox(db, ingress, emailData, rawMime);
+  // The provider cursor only advances after THIS message's source is durably
+  // staged (mirroring stageGoogleSources). A maintenance-reconcile Microsoft
+  // message moves `last_reconciliation_at` to its received time only once the
+  // object upload + inbox row are durable; a staging failure leaves the cursor
+  // untouched and the message recoverable on the next reconcile pass.
+  await maybeAdvanceMicrosoftReconcileCursor(db, ingress);
+  return [inboxId];
+}
+
+/**
+ * Advance the Microsoft Graph reconciliation cursor to the received time of a
+ * durably staged maintenance-reconcile message. Only pointers recorded with
+ * `resource: 'maintenance-reconcile'` carry cursor semantics (webhook messages
+ * have no timestamp cursor); the update is a monotonic GREATEST so a slower
+ * worker can never regress the cursor.
+ */
+async function maybeAdvanceMicrosoftReconcileCursor(db: any, ingress: InboundIngressRecord): Promise<void> {
+  if (ingress.provider_type !== 'microsoft') return;
+  const pointer = ingress.provider_pointer ?? {};
+  if (pointer.resource !== 'maintenance-reconcile') return;
+  const receivedAt = typeof pointer.reconcileReceivedAt === 'string' ? pointer.reconcileReceivedAt : null;
+  if (!receivedAt || Number.isNaN(new Date(receivedAt).getTime())) return;
+  try {
+    const { tenantDb } = await import('@alga-psa/db');
+    await tenantDb(db, ingress.tenant).table('microsoft_email_provider_config')
+      .where({ email_provider_id: ingress.provider_id })
+      .update({
+        last_reconciliation_at: db.raw(
+          "GREATEST(COALESCE(last_reconciliation_at, '-infinity'::timestamptz), ?::timestamptz)",
+          [receivedAt]
+        ),
+        updated_at: db.fn.now(),
+      });
+  } catch (error: any) {
+    // Cursor advancement must not fail an otherwise-successful staging: the
+    // next reconcile pass will still re-list the window and the ingress row is
+    // the durable checkpoint. Log and continue so the source is not lost.
+    console.warn('[InboundIngressStagingWorker] microsoft reconcile cursor advance failed', {
+      event: 'inbound_email_microsoft_cursor_advance_failed',
+      tenantId: ingress.tenant,
+      providerId: ingress.provider_id,
+      ingressId: ingress.ingress_id,
+      error: error?.message || String(error),
+    });
+  }
 }
 
 async function stageGoogleSources(db: any, ingress: InboundIngressRecord): Promise<string[]> {

@@ -101,7 +101,7 @@ vi.mock('@alga-psa/shared/services/email/inboundReplyAcknowledgementDecider', ()
   })),
 }));
 
-const { gmailAdapterMock, googleProviderConfigMock } = vi.hoisted(() => ({
+const { gmailAdapterMock, googleProviderConfigMock, microsoftFetchMock, microsoftGraphAdapterMock, publishEventMock } = vi.hoisted(() => ({
   gmailAdapterMock: {
     connect: vi.fn(async () => undefined),
     listMessagesSince: vi.fn(async () => ['gmail-msg-1']),
@@ -115,16 +115,39 @@ const { gmailAdapterMock, googleProviderConfigMock } = vi.hoisted(() => ({
       config: {},
     })),
   },
+  microsoftFetchMock: vi.fn(async () => ({
+    id: 'ms-1',
+    rawMime: 'From: Sender <sender@example.com>\r\nTo: Support <inbox@example.com>\r\nSubject: MS\r\nMessage-ID: <ms-1@example.com>\r\n\r\nbody\r\n',
+  })),
+  microsoftGraphAdapterMock: {
+    listMessagesReceivedSince: vi.fn(async () => []),
+    ensureTokenHealthy: vi.fn(async () => undefined),
+    cleanupOrphanedSubscriptions: vi.fn(async () => 1),
+    renewWebhookSubscription: vi.fn(async () => undefined),
+    initializeWebhook: vi.fn(async () => ({ success: true })),
+    deleteWebhookSubscription: vi.fn(async () => undefined),
+    getConfig: vi.fn(async () => ({})),
+  },
+  publishEventMock: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/shared/services/email/providers/GmailAdapter', () => ({
   GmailAdapter: vi.fn(() => gmailAdapterMock),
 }));
 
+vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () => ({
+  MicrosoftGraphAdapter: vi.fn(() => microsoftGraphAdapterMock),
+}));
+
 vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueueJobProcessor', () => ({
   ...googleProviderConfigMock,
-  fetchMicrosoftMessageForPointer: vi.fn(async () => ({ id: 'ms-1' })),
+  fetchMicrosoftMessageForPointer: (...args: any[]) => microsoftFetchMock(...args),
   fetchImapMessageForPointer: vi.fn(async () => ({ id: 'imap-1' })),
+}));
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: (...args: any[]) => publishEventMock(...args),
+  publishWorkflowEvent: vi.fn(async () => undefined),
 }));
 
 function tenantTable<Row extends object = Record<string, any>>(tableExpression: string): Knex.QueryBuilder<Row, Row[]> {
@@ -375,6 +398,7 @@ describeDb('Inbound email durable inbox (integration)', () => {
   }, 180_000);
 
   afterEach(async () => {
+    await tenantDb(db, tenantId).table('inbound_email_event_deliveries').where({ tenant: tenantId }).delete();
     await tenantDb(db, tenantId).table('inbound_email_outbox').where({ tenant: tenantId }).delete();
     await tenantDb(db, tenantId).table('inbound_email_artifacts').where({ tenant: tenantId }).delete();
     await tenantDb(db, tenantId).table('inbound_email_effects').where({ tenant: tenantId }).delete();
@@ -393,6 +417,14 @@ describeDb('Inbound email durable inbox (integration)', () => {
     storageObjects.clear();
     v1EnqueueMock.mockClear();
     v2EnqueueMock.mockClear();
+    publishEventMock.mockClear();
+    microsoftFetchMock.mockReset();
+    microsoftFetchMock.mockResolvedValue({
+      id: 'ms-1',
+      rawMime: 'From: Sender <sender@example.com>\r\nTo: Support <inbox@example.com>\r\nSubject: MS\r\nMessage-ID: <ms-1@example.com>\r\n\r\nbody\r\n',
+    });
+    microsoftGraphAdapterMock.listMessagesReceivedSince.mockReset();
+    microsoftGraphAdapterMock.listMessagesReceivedSince.mockResolvedValue([]);
     while (cleanup.length) {
       const fn = cleanup.pop();
       if (fn) await fn();
@@ -1437,4 +1469,571 @@ describeDb('Inbound email durable inbox (integration)', () => {
     expect(v2EnqueueMock).toHaveBeenCalledWith(expect.objectContaining({ workType: 'stage_ingress', tenantId, recordId: ingress.ingress_id }));
     expect(await countRows('inbound_email_inbox')).toBe(0);
   });
+
+  it('a crashed outbox claim (expired publishing) is reclaimed by the dispatcher and publishes exactly once', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'outbox-reclaim@example.com', providerType: 'google' });
+    const messageId = `outbox-reclaim-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 's@example.com', to: 'outbox-reclaim@example.com', subject: 'Outbox reclaim', messageId, text: 'x' });
+    const { inboxId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+    const created = await processInbox(inboxId, 'outbox-reclaim-worker');
+    expect(created.outcome).toBe('created');
+    createdTicketIds.push(created.ticketId);
+
+    const outboxRow = await tenantTable('inbound_email_outbox').where({ inbox_id: inboxId }).orderBy('event_key', 'asc').first();
+    const outboxId = String(outboxRow.outbox_id);
+
+    // A dispatcher claims the row then "crashes" before marking published.
+    const { claimOutboxRow, findDueOutbox, reclaimOutboxRow } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const { processInboundOutboxJob } = await import('@alga-psa/shared/services/email/inboundEmailOutboxDispatcher');
+    const { sweepTenantDurableWork } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+
+    const crashedClaim = await claimOutboxRow(db, { tenant: tenantId, outbox_id: outboxId, owner: 'crashed-dispatcher', leaseTtlMs: 30_000 });
+    expect(crashedClaim.claimed).toBe(true);
+    await tenantTable('inbound_email_outbox')
+      .where({ outbox_id: outboxId })
+      .update({ lease_expires_at: db.raw("now() - interval '5 minutes'") });
+
+    // The sweeper's due scan sees the expired `publishing` row (not stranded).
+    const due = await findDueOutbox(db, { tenant: tenantId, limit: 10 });
+    expect(due.some((row: any) => row.outbox_id === outboxId && row.status === 'publishing')).toBe(true);
+
+    v2EnqueueMock.mockClear();
+    publishEventMock.mockClear();
+    const sweep = await sweepTenantDurableWork(tenantId, 10);
+    expect(sweep.enqueued.outbox).toBeGreaterThanOrEqual(1);
+    expect(v2EnqueueMock).toHaveBeenCalledWith(expect.objectContaining({ workType: 'publish_outbox', tenantId, recordId: outboxId }));
+
+    // A new dispatcher atomically reclaims the expired publishing lease (new
+    // token) and publishes the SAME stable outbox id exactly once.
+    const job: any = { schemaVersion: 2, workType: 'publish_outbox', tenantId, recordId: outboxId, inboxId, jobId: `ob-${randomUUID()}`, enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 5 };
+    const result = await processInboundOutboxJob(job, { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined });
+    expect(result.disposition).toBe('ack');
+
+    expect(publishEventMock).toHaveBeenCalledTimes(1);
+    const publishArgs = publishEventMock.mock.calls[0];
+    expect((publishArgs as any)[1]).toMatchObject({ eventId: outboxId, strict: true });
+
+    const terminal = await tenantTable('inbound_email_outbox').where({ outbox_id: outboxId }).first();
+    expect(terminal.status).toBe('published');
+    expect(terminal.published_at).toBeTruthy();
+    expect(terminal.lease_token).toBeNull();
+
+    // Redelivery reads the terminal row and ACKs without re-publishing.
+    const again = await processInboundOutboxJob({ ...job, jobId: `ob2-${randomUUID()}` }, { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined });
+    expect(again.disposition).toBe('ack');
+    expect(publishEventMock).toHaveBeenCalledTimes(1);
+
+    // The crashed dispatcher's stale token cannot terminal-write after reclaim.
+    const staleWrite = await (await import('@alga-psa/shared/services/email/inboundEmailDurableStore')).transitionOutboxRow(db, {
+      tenant: tenantId,
+      outbox_id: outboxId,
+      owner: 'crashed-dispatcher',
+      token: String(crashedClaim.row.lease_token),
+      version: Number(crashedClaim.row.lease_version),
+      status: 'terminal_failed',
+      error: 'zombie outbox write must not land',
+    });
+    expect(staleWrite).toBe(false);
+
+    // reclaimOutboxRow on an already-published row is terminal.
+    const reclaim = await reclaimOutboxRow(db, { tenant: tenantId, outbox_id: outboxId, owner: 'late', leaseTtlMs: 30_000 });
+    expect(reclaim.claimed).toBe(false);
+    expect(reclaim.reason).toBe('terminal');
+  });
+
+  it('a crashed artifact claim (expired processing) is reclaimed by the sweeper and completes exactly once', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'artifact-reclaim@example.com', providerType: 'google' });
+    const messageId = `artifact-reclaim-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 's@example.com', to: 'artifact-reclaim@example.com', subject: 'Artifact reclaim', messageId, text: 'x' });
+    const { inboxId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+    const created = await processInbox(inboxId, 'artifact-reclaim-worker');
+    expect(created.outcome).toBe('created');
+    createdTicketIds.push(created.ticketId);
+
+    // Every inbox creates an `original_email` artifact manifest row.
+    const artifact = await tenantTable('inbound_email_artifacts').where({ inbox_id: inboxId }).first();
+    expect(artifact).toBeTruthy();
+    const artifactKey = String(artifact.artifact_key);
+
+    // A worker claims the artifact then "crashes" before the terminal write.
+    const { claimArtifact, findDueArtifacts, reclaimArtifact, transitionArtifact } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const { processInboundArtifactJob } = await import('@alga-psa/shared/services/email/inboundEmailArtifactWorker');
+    const { sweepTenantDurableWork } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+
+    const crashedClaim = await claimArtifact(db, { tenant: tenantId, inbox_id: inboxId, artifact_key: artifactKey, owner: 'crashed-artifact', leaseTtlMs: 30_000 });
+    expect(crashedClaim.claimed).toBe(true);
+    await tenantTable('inbound_email_artifacts')
+      .where({ inbox_id: inboxId, artifact_key: artifactKey })
+      .update({ lease_expires_at: db.raw("now() - interval '5 minutes'") });
+
+    // The sweeper's due scan sees the expired `processing` row (not stranded).
+    const due = await findDueArtifacts(db, { tenant: tenantId, limit: 10 });
+    expect(due.some((row: any) => row.inbox_id === inboxId && row.artifact_key === artifactKey && row.status === 'processing')).toBe(true);
+
+    v2EnqueueMock.mockClear();
+    const sweep = await sweepTenantDurableWork(tenantId, 10);
+    expect(sweep.enqueued.artifact).toBeGreaterThanOrEqual(1);
+    expect(v2EnqueueMock).toHaveBeenCalledWith(expect.objectContaining({ workType: 'process_artifact', tenantId, recordId: artifactKey, inboxId }));
+
+    // Guarantee the artifact completes: pre-seed the legacy compatibility
+    // mirror with a success outcome for this original-email artifact. The
+    // worker reclaims the expired lease (new token) and transitions to
+    // `succeeded` exactly once regardless of the best-effort outcome.
+    const { ORIGINAL_EMAIL_ATTACHMENT_ID } = await import('@alga-psa/shared/services/email/inboundEmailArtifactHelpers');
+    await tenantTable('email_processed_attachments').insert({
+      tenant: tenantId,
+      provider_id: providerId,
+      email_id: messageId,
+      attachment_id: ORIGINAL_EMAIL_ATTACHMENT_ID,
+      processing_status: 'success',
+      file_id: randomUUID(),
+      document_id: randomUUID(),
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+
+    const job: any = { schemaVersion: 2, workType: 'process_artifact', tenantId, recordId: artifactKey, inboxId, jobId: `art-${randomUUID()}`, enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 5 };
+    const result = await processInboundArtifactJob(job, { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined });
+    expect(result.disposition).toBe('ack');
+
+    const terminal = await tenantTable('inbound_email_artifacts').where({ inbox_id: inboxId, artifact_key: artifactKey }).first();
+    expect(terminal.status).toBe('succeeded');
+    expect(terminal.lease_token).toBeNull();
+    expect(terminal.completed_at).toBeTruthy();
+    expect(Number(await countRows('inbound_email_artifacts', { inbox_id: inboxId, artifact_key: artifactKey }))).toBe(1);
+
+    // Redelivery reads the terminal row and ACKs without a second effect.
+    const again = await processInboundArtifactJob({ ...job, jobId: `art2-${randomUUID()}` }, { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined });
+    expect(again.disposition).toBe('ack');
+
+    // The crashed worker's stale token cannot terminal-write after reclaim.
+    const staleWrite = await transitionArtifact(db, {
+      tenant: tenantId,
+      inbox_id: inboxId,
+      artifact_key: artifactKey,
+      owner: 'crashed-artifact',
+      token: String(crashedClaim.row.lease_token),
+      version: Number(crashedClaim.row.lease_version),
+      status: 'terminal_failed',
+      error: 'zombie artifact write must not land',
+    });
+    expect(staleWrite).toBe(false);
+
+    // reclaimArtifact on an already-succeeded row is terminal.
+    const reclaim = await reclaimArtifact(db, { tenant: tenantId, inbox_id: inboxId, artifact_key: artifactKey, owner: 'late', leaseTtlMs: 30_000 });
+    expect(reclaim.claimed).toBe(false);
+    expect(reclaim.reason).toBe('terminal');
+  });
+
+  it('an over-cap expired outbox row dead-letters to terminal_failed instead of looping', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'outbox-dlq@example.com', providerType: 'google' });
+    const messageId = `outbox-dlq-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 's@example.com', to: 'outbox-dlq@example.com', subject: 'Outbox DLQ', messageId, text: 'x' });
+    const { inboxId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+    const created = await processInbox(inboxId, 'outbox-dlq-worker');
+    expect(created.outcome).toBe('created');
+    createdTicketIds.push(created.ticketId);
+
+    process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_MAX_ATTEMPTS = '3';
+    cleanup.push(async () => {
+      delete process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_MAX_ATTEMPTS;
+    });
+
+    const outboxRow = await tenantTable('inbound_email_outbox').where({ inbox_id: inboxId }).orderBy('event_key', 'asc').first();
+    const outboxId = String(outboxRow.outbox_id);
+
+    const { claimOutboxRow } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const { processInboundOutboxJob } = await import('@alga-psa/shared/services/email/inboundEmailOutboxDispatcher');
+
+    // Crash a worker that already exhausted its attempt budget (claim + set
+    // over-cap + expire lease), then republish fails: it must dead-letter, not
+    // loop.
+    const crashedClaim = await claimOutboxRow(db, { tenant: tenantId, outbox_id: outboxId, owner: 'dlq-dispatcher', leaseTtlMs: 30_000 });
+    expect(crashedClaim.claimed).toBe(true);
+    await tenantTable('inbound_email_outbox')
+      .where({ outbox_id: outboxId })
+      .update({ attempt_count: 3, lease_expires_at: db.raw("now() - interval '5 minutes'") });
+
+    publishEventMock.mockRejectedValue(new Error('event_bus_unavailable'));
+    const job: any = { schemaVersion: 2, workType: 'publish_outbox', tenantId, recordId: outboxId, inboxId, jobId: `obdlq-${randomUUID()}`, enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 3 };
+    const result = await processInboundOutboxJob(job, { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined });
+    expect(result.disposition).toBe('ack');
+    expect(result.outcome).toBe('terminal_failed');
+
+    const terminal = await tenantTable('inbound_email_outbox').where({ outbox_id: outboxId }).first();
+    expect(terminal.status).toBe('terminal_failed');
+    expect(terminal.last_error).toBe('event_bus_unavailable');
+    expect(terminal.lease_token).toBeNull();
+
+    // Repeated delivery ACKs the stored terminal failure; nothing loops.
+    const again = await processInboundOutboxJob({ ...job, jobId: `obdlq2-${randomUUID()}` }, { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined });
+    expect(again.disposition).toBe('ack');
+    publishEventMock.mockReset();
+    publishEventMock.mockResolvedValue(undefined);
+  });
+
+  it('an over-cap expired artifact row dead-letters to terminal_failed instead of looping', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'artifact-dlq@example.com', providerType: 'google' });
+    const messageId = `artifact-dlq-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 's@example.com', to: 'artifact-dlq@example.com', subject: 'Artifact DLQ', messageId, text: 'x' });
+    const { inboxId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+    const created = await processInbox(inboxId, 'artifact-dlq-worker');
+    expect(created.outcome).toBe('created');
+    createdTicketIds.push(created.ticketId);
+
+    process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_MAX_ATTEMPTS = '3';
+    cleanup.push(async () => {
+      delete process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_MAX_ATTEMPTS;
+    });
+
+    const artifact = await tenantTable('inbound_email_artifacts').where({ inbox_id: inboxId }).first();
+    expect(artifact).toBeTruthy();
+    const artifactKey = String(artifact.artifact_key);
+
+    const { claimArtifact } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const { processInboundArtifactJob } = await import('@alga-psa/shared/services/email/inboundEmailArtifactWorker');
+
+    // Crash a worker past its attempt budget; the source is gone so the
+    // reclaimed attempt fails and the row must dead-letter, not loop.
+    const crashedClaim = await claimArtifact(db, { tenant: tenantId, inbox_id: inboxId, artifact_key: artifactKey, owner: 'dlq-artifact', leaseTtlMs: 30_000 });
+    expect(crashedClaim.claimed).toBe(true);
+    await tenantTable('inbound_email_artifacts')
+      .where({ inbox_id: inboxId, artifact_key: artifactKey })
+      .update({ attempt_count: 3, lease_expires_at: db.raw("now() - interval '5 minutes'") });
+
+    const inboxRow = await tenantTable('inbound_email_inbox').where({ inbox_id: inboxId }).first();
+    storageObjects.delete(String(inboxRow.source_object_key));
+
+    const job: any = { schemaVersion: 2, workType: 'process_artifact', tenantId, recordId: artifactKey, inboxId, jobId: `artdlq-${randomUUID()}`, enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 3 };
+    const result = await processInboundArtifactJob(job, { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined });
+    expect(result.disposition).toBe('ack');
+    expect(result.outcome).toBe('terminal_failed');
+
+    const terminal = await tenantTable('inbound_email_artifacts').where({ inbox_id: inboxId, artifact_key: artifactKey }).first();
+    expect(terminal.status).toBe('terminal_failed');
+    expect(terminal.lease_token).toBeNull();
+    expect(terminal.completed_at).toBeTruthy();
+
+    // Repeated delivery ACKs the stored terminal failure; nothing loops.
+    const again = await processInboundArtifactJob({ ...job, jobId: `artdlq2-${randomUUID()}` }, { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined });
+    expect(again.disposition).toBe('ack');
+  });
+
+  it('double-published outbox event is deduplicated by the DB delivery ledger (consumer idempotency)', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'idempotency@example.com', providerType: 'google' });
+    const messageId = `idem-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 's@example.com', to: 'idempotency@example.com', subject: 'Idempotency', messageId, text: 'x' });
+    const { inboxId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+    const created = await processInbox(inboxId, 'idem-worker');
+    expect(created.outcome).toBe('created');
+    createdTicketIds.push(created.ticketId);
+
+    const outboxRow = await tenantTable('inbound_email_outbox').where({ inbox_id: inboxId }).orderBy('event_key', 'asc').first();
+    const outboxId = String(outboxRow.outbox_id);
+
+    // Simulate crash-after-publish-before-mark: the first dispatcher claims the
+    // row (publishing), crashes before marking `published`, its lease expires,
+    // and a second dispatcher reclaims and re-publishes the SAME stable event
+    // id (the durable outbox row id).
+    const { claimOutboxRow } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const { processInboundOutboxJob } = await import('@alga-psa/shared/services/email/inboundEmailOutboxDispatcher');
+    const crashed = await claimOutboxRow(db, { tenant: tenantId, outbox_id: outboxId, owner: 'crashed-dispatcher', leaseTtlMs: 30_000 });
+    expect(crashed.claimed).toBe(true);
+    await tenantTable('inbound_email_outbox').where({ outbox_id: outboxId }).update({ lease_expires_at: db.raw("now() - interval '5 minutes'") });
+
+    publishEventMock.mockClear();
+    const job: any = { schemaVersion: 2, workType: 'publish_outbox', tenantId, recordId: outboxId, inboxId, jobId: `idem-${randomUUID()}`, enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 5 };
+    const result = await processInboundOutboxJob(job, { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined });
+    expect(result.disposition).toBe('ack');
+    expect(publishEventMock).toHaveBeenCalledTimes(1);
+    // The event id handed to consumers is the stable durable outbox id.
+    expect(publishEventMock.mock.calls[0]?.[1]).toMatchObject({ eventId: outboxId, strict: true });
+
+    // The consumer receives that event TWICE (Redis redelivery of the still-
+    // pending stream entry after the crash window). The DB-enforced delivery
+    // ledger makes the second delivery a no-op.
+    const dbConn = await (await import('@alga-psa/db/admin')).getAdminConnection();
+    const { dedupeInboundOutboxEventForConsumer } = await import('@alga-psa/shared/services/email/inboundEmailConsumerDedupe');
+    const event = { id: outboxId, eventType: 'TICKET_CREATED', payload: { tenantId } };
+    const firstDecision = await dedupeInboundOutboxEventForConsumer({ event, consumer: 'internal-notification', db: dbConn });
+    expect(firstDecision).toBe('deliver');
+    const secondDecision = await dedupeInboundOutboxEventForConsumer({ event, consumer: 'internal-notification', db: dbConn });
+    expect(secondDecision).toBe('skip');
+
+    // Exactly one ledger row per (tenant, outbox event, consumer).
+    const ledgerCount = Number((await tenantTable('inbound_email_event_deliveries').where({ tenant: tenantId, outbox_id: outboxId, consumer: 'internal-notification' }).count<{ count: string }[]>('* as count').first())?.count);
+    expect(ledgerCount).toBe(1);
+
+    // A different consumer is independent: its own ledger row is claimable.
+    const { claimInboundOutboxEventDelivery } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const otherConsumer = await claimInboundOutboxEventDelivery(db, { tenant: tenantId, outbox_id: outboxId, consumer: 'ticket-email' });
+    expect(otherConsumer.claimed).toBe(true);
+
+    // The outbox row itself is `published` exactly once after the reclaim.
+    const terminalOutbox = await tenantTable('inbound_email_outbox').where({ outbox_id: outboxId }).first();
+    expect(terminalOutbox.status).toBe('published');
+    expect(terminalOutbox.published_at).toBeTruthy();
+  });
+
+  it('legacy backfill is resumable: interrupted batches converge to the uninterrupted final state', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'backfill-resume@example.com', providerType: 'microsoft' });
+    const { backfillTenantLegacyRows } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+
+    // Seed 6 legacy rows in a deterministic processed_at order, mixing the
+    // incident shapes: 2 with reconcilable entities (processing), 1 skipped,
+    // 1 unrecoverable processing, 2 failed/partial (terminal).
+    const createdIds: Array<{ ticketId: string; messageKey: string }> = [];
+    for (let i = 0; i < 2; i += 1) {
+      const messageKey = `resume-${i}-${randomUUID()}@example.com`;
+      const { createTicketFromEmail, createCommentFromEmail } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
+      const { withAdminTransaction } = await import('@alga-psa/db');
+      await withAdminTransaction(async (trx: any) => {
+        const ticket = await createTicketFromEmail(
+          {
+            title: `Resume ${i}`,
+            description: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'body', styles: {} }] }]),
+            client_id: clientId,
+            source: 'email',
+            board_id: boardId,
+            status_id: statusId,
+            priority_id: priorityId,
+            email_metadata: { messageId: messageKey, providerId },
+          },
+          tenantId,
+          undefined,
+          { existingConnection: trx }
+        );
+        await createCommentFromEmail(
+          {
+            ticket_id: ticket.ticket_id,
+            content: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'body', styles: {} }] }]),
+            source: 'email',
+            suppressTechEmailNotification: true,
+            metadata: { email: { messageId: messageKey } },
+          },
+          tenantId,
+          undefined,
+          { existingConnection: trx }
+        );
+        createdIds.push({ ticketId: String(ticket.ticket_id), messageKey });
+      });
+    }
+
+    const legacyRows: Array<{
+      key: string;
+      status: string;
+      processedAt: Date;
+      metadata: Record<string, unknown>;
+    }> = [];
+    const processedAtBase = new Date(Date.now() - 60 * 60 * 1000);
+    const pushLegacy = (key: string, status: string, index: number, metadata: Record<string, unknown>) => {
+      legacyRows.push({ key, status, processedAt: new Date(processedAtBase.getTime() + index * 1000), metadata });
+    };
+    for (let i = 0; i < 2; i += 1) {
+      const entity = createdIds[i];
+      pushLegacy(`microsoft:${entity.messageKey}`, 'processing', i, {
+        queueProvider: 'microsoft',
+        headersSnapshot: { messageId: entity.messageKey },
+      });
+    }
+    pushLegacy(`microsoft:skip-${randomUUID()}@example.com`, 'skipped', 2, { queueProvider: 'microsoft' });
+    pushLegacy(`microsoft:unrec-${randomUUID()}@example.com`, 'processing', 3, { queueProvider: 'microsoft' });
+    pushLegacy(`microsoft:fail1-${randomUUID()}@example.com`, 'failed', 4, { queueProvider: 'microsoft' });
+    pushLegacy(`microsoft:fail2-${randomUUID()}@example.com`, 'partial', 5, { queueProvider: 'microsoft' });
+
+    for (const row of legacyRows) {
+      await tenantTable('email_processed_messages').insert({
+        message_id: row.key,
+        provider_id: providerId,
+        tenant: tenantId,
+        processed_at: row.processedAt,
+        processing_status: row.status,
+        from_email: 'sender@example.com',
+        subject: 'Resume legacy',
+        received_at: db.fn.now(),
+        metadata: JSON.stringify(row.metadata),
+      });
+    }
+    cleanup.push(async () => {
+      for (const { ticketId } of createdIds) {
+        try {
+          await deleteTicketRows(ticketId);
+        } catch {
+          // best effort
+        }
+      }
+    });
+
+    // Interrupted run: only the first batch is processed (crash between
+    // batches), then the backfill is re-run to completion.
+    const firstRun = await backfillTenantLegacyRows(tenantId, 2);
+    expect(firstRun.imported).toBeGreaterThanOrEqual(1);
+    const afterInterrupt = await snapshotBackfillState(tenantId);
+
+    const secondRun = await backfillTenantLegacyRows(tenantId, 50);
+    expect(secondRun.imported).toBeGreaterThanOrEqual(3);
+    const finalState = await snapshotBackfillState(tenantId);
+
+    // The rows imported by the interrupted first batch are UNCHANGED in the
+    // final state: the resume never re-did them with different results.
+    const interruptedNormalized = new Set(afterInterrupt.inbox.map((r) => r.normalized));
+    const finalInterruptedSubset = finalState.inbox.filter((r) => interruptedNormalized.has(r.normalized));
+    expect(finalInterruptedSubset).toEqual(afterInterrupt.inbox);
+    const interruptedEffects = new Set(afterInterrupt.effects.map((e) => `${e.normalized}:${e.type}`));
+    const finalInterruptedEffects = finalState.effects.filter((e) => interruptedEffects.has(`${e.normalized}:${e.type}`));
+    expect(finalInterruptedEffects).toEqual(afterInterrupt.effects);
+
+    // The full run classifies every legacy row exactly once.
+    const inboxRows = await tenantTable('inbound_email_inbox').where({ tenant: tenantId }).count<{ count: string }[]>('* as count').first();
+    expect(Number(inboxRows?.count)).toBe(6);
+    const effectRows = await tenantTable('inbound_email_effects').where({ tenant: tenantId }).count<{ count: string }[]>('* as count').first();
+    expect(Number(effectRows?.count)).toBe(4);
+
+    // No identity appears more than once.
+    const perKey = new Map<string, number>();
+    const allInbox = await tenantTable('inbound_email_inbox').where({ tenant: tenantId });
+    for (const inbox of allInbox) {
+      const key = `${inbox.provider_id}:${inbox.normalized_message_id}`;
+      perKey.set(key, (perKey.get(key) ?? 0) + 1);
+    }
+    expect([...perKey.values()].every((count) => count === 1)).toBe(true);
+
+    // A third run is a pure no-op: the backfill has converged.
+    const thirdRun = await backfillTenantLegacyRows(tenantId, 50);
+    expect(thirdRun.imported).toBe(0);
+    expect(Number((await tenantTable('inbound_email_inbox').where({ tenant: tenantId }).count<{ count: string }[]>('* as count').first())?.count)).toBe(6);
+
+    // Legacy audit rows were never modified or deleted.
+    for (const row of legacyRows) {
+      const legacy = await tenantTable('email_processed_messages').where({ message_id: row.key }).first();
+      expect(legacy.processing_status).toBe(row.status);
+    }
+  });
+
+  it('microsoft maintenance reconcile never advances its cursor past an unstaged message; retry recovers it', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'ms-cursor@example.com', providerType: 'microsoft' });
+    const { EmailWebhookMaintenanceService } = await import('@alga-psa/shared/services/email/EmailWebhookMaintenanceService');
+    const { processIngressStageJob } = await import('@alga-psa/shared/services/email/inboundEmailIngressStagingWorker');
+
+    // Polling provider whose reconciliation window starts in the past.
+    const oldCursor = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).update({
+      delivery_mode: 'polling',
+      last_reconciliation_at: oldCursor,
+    });
+
+    const receivedT1 = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    const receivedT2 = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString();
+    microsoftGraphAdapterMock.listMessagesReceivedSince.mockResolvedValue([
+      { id: 'ms-cursor-1', receivedDateTime: receivedT1 },
+      { id: 'ms-cursor-2', receivedDateTime: receivedT2 },
+    ]);
+
+    const service: any = new EmailWebhookMaintenanceService();
+    const config: any = {
+      id: providerId,
+      tenant: tenantId,
+      provider_type: 'microsoft',
+      mailbox: 'ms-cursor@example.com',
+      delivery_mode: 'polling',
+      webhook_subscription_id: null,
+      webhook_notification_url: 'https://example.com/api/email/webhooks/microsoft',
+      provider_config: { max_emails_per_sync: 50 },
+    };
+    const adapter = new (await import('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter')).MicrosoftGraphAdapter(config);
+    v2EnqueueMock.mockClear();
+
+    // Reconcile in enforce mode persists durable ingress but must NOT advance
+    // the cursor: no message's source is staged yet.
+    const reconcile = await service.reconcileMissedMessages(adapter, config, false);
+    expect(reconcile.queuedMessages).toBe(2);
+
+    let cursor = await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).first();
+    expect(new Date(cursor.last_reconciliation_at).getTime()).toBe(new Date(oldCursor).getTime());
+
+    const ingresses = await tenantTable('inbound_email_ingress').where({ tenant: tenantId }).orderBy('ingress_key', 'asc');
+    expect(ingresses.length).toBe(2);
+    expect(v2EnqueueMock).toHaveBeenCalledWith(expect.objectContaining({ workType: 'stage_ingress', tenantId }));
+    const firstIngress = ingresses.find((r: any) => r.provider_pointer.resource === 'maintenance-reconcile');
+    expect(firstIngress).toBeTruthy();
+
+    // Fail durable staging for the FIRST message: cursor stays untouched and
+    // the ingress becomes retryable (message still recoverable).
+    const failingJob: any = {
+      schemaVersion: 2,
+      workType: 'stage_ingress',
+      tenantId,
+      recordId: String(ingresses[0].ingress_id),
+      jobId: `msstage-fail-${randomUUID()}`,
+      enqueuedAt: new Date().toISOString(),
+      attempt: 0,
+      maxAttempts: 5,
+    };
+    microsoftFetchMock.mockRejectedValueOnce(new Error('provider_unavailable_temporarily'));
+    const failResult = await processIngressStageJob(failingJob, { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined });
+    expect(failResult.disposition).toBe('retry');
+
+    cursor = await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).first();
+    expect(new Date(cursor.last_reconciliation_at).getTime()).toBe(new Date(oldCursor).getTime());
+    const failedIngress = await tenantTable('inbound_email_ingress').where({ ingress_id: ingresses[0].ingress_id }).first();
+    expect(failedIngress.status).toBe('retryable_failed');
+
+    // Re-run reconcile: the failed message is re-listed (its source is not
+    // staged) and re-ingressed idempotently; the cursor still does not advance.
+    const rerun = await service.reconcileMissedMessages(adapter, config, false);
+    expect(rerun.queuedMessages).toBeGreaterThanOrEqual(1);
+    cursor = await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).first();
+    expect(new Date(cursor.last_reconciliation_at).getTime()).toBe(new Date(oldCursor).getTime());
+
+    // Retry staging succeeds: the cursor advances to the staged message's
+    // received time (durable source before cursor). First make the retryable
+    // ingress due (its failure wrote a future backoff).
+    await tenantTable('inbound_email_ingress')
+      .where({ ingress_id: ingresses[0].ingress_id })
+      .update({ next_attempt_at: db.raw("now() - interval '1 minute'") });
+    microsoftFetchMock.mockResolvedValueOnce({
+      id: 'ms-cursor-1',
+      rawMime: 'From: Sender <s@example.com>\r\nTo: Support <ms-cursor@example.com>\r\nSubject: R1\r\nMessage-ID: <ms-cursor-1@example.com>\r\n\r\nbody\r\n',
+    });
+    const retryJob: any = { ...failingJob, jobId: `msstage-retry-${randomUUID()}` };
+    const retryResult = await processIngressStageJob(retryJob, { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined });
+    expect(retryResult.disposition).toBe('ack');
+    const staged1 = await tenantTable('inbound_email_ingress').where({ ingress_id: ingresses[0].ingress_id }).first();
+    expect(staged1.status).toBe('staged');
+
+    cursor = await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).first();
+    expect(new Date(cursor.last_reconciliation_at).getTime()).toBe(new Date(receivedT1).getTime());
+
+    // Stage the second message: the cursor advances monotonically to T2.
+    const secondJob: any = {
+      schemaVersion: 2,
+      workType: 'stage_ingress',
+      tenantId,
+      recordId: String(ingresses[1].ingress_id),
+      jobId: `msstage-2-${randomUUID()}`,
+      enqueuedAt: new Date().toISOString(),
+      attempt: 0,
+      maxAttempts: 5,
+    };
+    microsoftFetchMock.mockResolvedValueOnce({
+      id: 'ms-cursor-2',
+      rawMime: 'From: Sender <s@example.com>\r\nTo: Support <ms-cursor@example.com>\r\nSubject: R2\r\nMessage-ID: <ms-cursor-2@example.com>\r\n\r\nbody\r\n',
+    });
+    const secondResult = await processIngressStageJob(secondJob, { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined });
+    expect(secondResult.disposition).toBe('ack');
+    cursor = await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).first();
+    expect(new Date(cursor.last_reconciliation_at).getTime()).toBe(new Date(receivedT2).getTime());
+  });
 });
+
+async function snapshotBackfillState(tenant: string): Promise<{
+  inbox: Array<{ normalized: string; status: string; outcome: string | null; reason: string | null; ticket: string | null; comment: string | null }>;
+  effects: Array<{ normalized: string; type: string; entity: string; ticket: string }>;
+}> {
+  const inboxRows = await tenantDb(db, tenant).table('inbound_email_inbox').where({ tenant }).orderBy('normalized_message_id', 'asc');
+  const effectRows = await tenantDb(db, tenant).table('inbound_email_effects').where({ tenant }).orderBy('normalized_message_id', 'asc');
+  return {
+    inbox: inboxRows.map((r: any) => ({ normalized: r.normalized_message_id, status: r.status, outcome: r.outcome_kind, reason: r.outcome_reason, ticket: r.ticket_id, comment: r.comment_id })),
+    effects: effectRows.map((r: any) => ({ normalized: r.normalized_message_id, type: r.effect_type, entity: r.entity_id, ticket: r.ticket_id })),
+  };
+}

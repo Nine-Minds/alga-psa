@@ -351,8 +351,11 @@ async function upsertLegacyInbox(
 /**
  * Import a bounded batch of legacy `email_processed_messages` rows into the
  * durable ledgers. Resumable: rows whose normalized identity already has a
- * `legacy_imported` inbox row are skipped (the inbox row is the checkpoint).
- * Never guesses missing effects; ambiguity is terminal/alerted.
+ * `legacy_imported` inbox row are skipped (the inbox row is the checkpoint),
+ * and every row's writes are committed atomically inside one transaction so a
+ * crash mid-row rolls back and a re-run from the start converges to the
+ * identical end state. Never guesses missing effects; ambiguity is
+ * terminal/alerted.
  */
 export async function backfillTenantLegacyRows(tenant: string, limit: number = 25): Promise<BackfillResult> {
   const db = await (await import('@alga-psa/db/admin')).getAdminConnection();
@@ -406,62 +409,52 @@ export async function backfillTenantLegacyRows(tenant: string, limit: number = 2
       lastError: legacy.error_message ?? null,
     };
 
+    // A failed/partial row is never replayable without a real source/pointer;
+    // import it as a terminal failure for review. Runs inside a transaction so
+    // a crash leaves no partial ledger state.
+    const terminalImport = async (
+      outcomeReason: string,
+      opts: { status?: 'succeeded' | 'skipped' | 'terminal_failed'; outcome_kind?: 'reconciled' | 'skipped' | null; ticketId?: string | null; commentId?: string | null } = {}
+    ): Promise<void> => {
+      await db.transaction(async (trx) => {
+        await upsertLegacyInbox(trx, {
+          ...legacyInboxBase,
+          status: opts.status ?? 'terminal_failed',
+          outcome_kind: opts.outcome_kind ?? null,
+          outcome_reason: outcomeReason,
+          ticket_id: opts.ticketId ?? null,
+          comment_id: opts.commentId ?? null,
+        });
+      });
+    };
+
     if (status === 'success') {
       // Map legacy success to `succeeded` only when its ticket AND comment can
       // both be reconciled unambiguously; otherwise import it as terminal_failed
       // with the legacy result preserved for review — never guess an effect.
       if (!messageKey) {
-        await upsertLegacyInbox(db, { ...legacyInboxBase, status: 'terminal_failed', outcome_reason: 'legacy_success_no_entity_key' });
+        await terminalImport('legacy_success_no_entity_key');
         result.imported += 1;
         continue;
       }
-      const reconciliation = await reconcileLegacyEntities(db, tenant, legacy.provider_id, messageKey, legacy.ticket_id);
-      if (reconciliation.matched === true) {
-        const inbox = await upsertLegacyInbox(db, {
-          ...legacyInboxBase,
-          status: 'succeeded',
-          outcome_kind: 'reconciled',
-          ticket_id: reconciliation.ticketId,
-          comment_id: reconciliation.commentId,
-        });
-        await insertEffect(db, {
-          tenant,
-          provider_id: legacy.provider_id,
-          normalized_message_id: identity.normalized,
-          effect_type: 'ticket',
-          inbox_id: inbox.inbox_id,
-          entity_id: reconciliation.ticketId,
-          ticket_id: reconciliation.ticketId,
-          reconciled: true,
-        });
-        await insertEffect(db, {
-          tenant,
-          provider_id: legacy.provider_id,
-          normalized_message_id: identity.normalized,
-          effect_type: 'comment',
-          inbox_id: inbox.inbox_id,
-          entity_id: reconciliation.commentId,
-          ticket_id: reconciliation.ticketId,
-          reconciled: true,
-        });
+      const imported = await importReconciledLegacySuccess(db, tenant, legacy, legacyInboxBase, identity, messageKey);
+      if (imported.reconciled) {
         result.imported += 1;
         continue;
       }
-      await upsertLegacyInbox(db, {
-        ...legacyInboxBase,
-        status: 'terminal_failed',
-        outcome_reason: `legacy_success_reconcile_${reconciliation.reason}`,
-      });
+      await terminalImport(`legacy_success_reconcile_${imported.reason}`);
       result.ambiguous += 1;
       continue;
     }
 
     if (status === 'skipped') {
-      await upsertLegacyInbox(db, {
-        ...legacyInboxBase,
-        status: 'skipped',
-        outcome_kind: 'skipped',
-        outcome_reason: String(legacy.error_message || 'legacy_skipped'),
+      await db.transaction(async (trx) => {
+        await upsertLegacyInbox(trx, {
+          ...legacyInboxBase,
+          status: 'skipped',
+          outcome_kind: 'skipped',
+          outcome_reason: String(legacy.error_message || 'legacy_skipped'),
+        });
       });
       result.imported += 1;
       continue;
@@ -474,44 +467,13 @@ export async function backfillTenantLegacyRows(tenant: string, limit: number = 2
     // incomplete data.
     if (status === 'processing') {
       if (messageKey) {
-        const reconciliation = await reconcileLegacyEntities(db, tenant, legacy.provider_id, messageKey, legacy.ticket_id);
-        if (reconciliation.matched === true) {
-          const inbox = await upsertLegacyInbox(db, {
-            ...legacyInboxBase,
-            status: 'succeeded',
-            outcome_kind: 'reconciled',
-            ticket_id: reconciliation.ticketId,
-            comment_id: reconciliation.commentId,
-          });
-          await insertEffect(db, {
-            tenant,
-            provider_id: legacy.provider_id,
-            normalized_message_id: identity.normalized,
-            effect_type: 'ticket',
-            inbox_id: inbox.inbox_id,
-            entity_id: reconciliation.ticketId,
-            ticket_id: reconciliation.ticketId,
-            reconciled: true,
-          });
-          await insertEffect(db, {
-            tenant,
-            provider_id: legacy.provider_id,
-            normalized_message_id: identity.normalized,
-            effect_type: 'comment',
-            inbox_id: inbox.inbox_id,
-            entity_id: reconciliation.commentId,
-            ticket_id: reconciliation.ticketId,
-            reconciled: true,
-          });
+        const imported = await importReconciledLegacySuccess(db, tenant, legacy, legacyInboxBase, identity, messageKey);
+        if (imported.reconciled) {
           result.imported += 1;
           continue;
         }
-        if (reconciliation.reason === 'ambiguous_ticket' || reconciliation.reason === 'ambiguous_comment') {
-          await upsertLegacyInbox(db, {
-            ...legacyInboxBase,
-            status: 'terminal_failed',
-            outcome_reason: `legacy_processing_reconcile_${reconciliation.reason}`,
-          });
+        if (imported.reason === 'ambiguous_ticket' || imported.reason === 'ambiguous_comment') {
+          await terminalImport(`legacy_processing_reconcile_${imported.reason}`);
           result.ambiguous += 1;
           continue;
         }
@@ -522,7 +484,8 @@ export async function backfillTenantLegacyRows(tenant: string, limit: number = 2
         // No entities to link but a usable provider pointer exists: create
         // durable ingress work so the source can be staged and re-processed.
         // The legacy row stays untouched; the inbox row is the checkpoint once
-        // staging creates it.
+        // staging creates it. persistIngressPointer is idempotent, so a crash
+        // after this point is safe to repeat.
         try {
           const { persistIngressPointer } = await import('./inboundEmailProducer');
           const produced = await persistIngressPointer({
@@ -544,35 +507,90 @@ export async function backfillTenantLegacyRows(tenant: string, limit: number = 2
             error: error?.message || String(error),
           });
         }
-        await upsertLegacyInbox(db, {
-          ...legacyInboxBase,
-          status: 'terminal_failed',
-          outcome_reason: 'legacy_processing_pointer_ingress_failed',
-        });
+        await terminalImport('legacy_processing_pointer_ingress_failed');
         result.imported += 1;
         continue;
       }
 
-      await upsertLegacyInbox(db, {
-        ...legacyInboxBase,
-        status: 'terminal_failed',
-        outcome_reason: 'legacy_processing_unrecoverable',
-      });
+      await terminalImport('legacy_processing_unrecoverable');
       result.imported += 1;
       continue;
     }
 
     // failed / partial: import as terminal failure for review unless a
     // source/pointer and retry policy allow retry (never guessed here).
-    await upsertLegacyInbox(db, {
-      ...legacyInboxBase,
-      status: 'terminal_failed',
-      outcome_reason: `legacy_${status}_not_replayable`,
-    });
+    await terminalImport(`legacy_${status}_not_replayable`);
     result.imported += 1;
   }
 
   return result;
+}
+
+/**
+ * Reconcile and import a legacy row that is expected to have an existing
+ * ticket + comment (legacy `success` or stale `processing`). All writes —
+ * inbox row plus both effect rows — happen in ONE transaction so a crash
+ * mid-row leaves no partial ledger and a re-run converges.
+ */
+async function importReconciledLegacySuccess(
+  db: any,
+  tenant: string,
+  legacy: LegacyProcessedRow,
+  legacyInboxBase: Omit<Parameters<typeof upsertLegacyInbox>[1], 'status' | 'outcome_kind' | 'outcome_reason' | 'ticket_id' | 'comment_id'>,
+  identity: NonNullable<ReturnType<typeof normalizeInboundMessageIdentity>>,
+  messageKey: string
+): Promise<{ reconciled: boolean; ambiguous: boolean; reason: string }> {
+  try {
+    const imported = await db.transaction(async (trx) => {
+      const reconciliation = await reconcileLegacyEntities(trx, tenant, legacy.provider_id, messageKey, legacy.ticket_id);
+      if (reconciliation.matched !== true) {
+        return { reconciled: false as const, ambiguous: true as const, reason: reconciliation.reason };
+      }
+      const inbox = await upsertLegacyInbox(trx, {
+        ...legacyInboxBase,
+        status: 'succeeded',
+        outcome_kind: 'reconciled',
+        ticket_id: reconciliation.ticketId,
+        comment_id: reconciliation.commentId,
+      });
+      await insertEffect(trx, {
+        tenant,
+        provider_id: legacy.provider_id,
+        normalized_message_id: identity.normalized,
+        effect_type: 'ticket',
+        inbox_id: inbox.inbox_id,
+        entity_id: reconciliation.ticketId,
+        ticket_id: reconciliation.ticketId,
+        reconciled: true,
+      });
+      await insertEffect(trx, {
+        tenant,
+        provider_id: legacy.provider_id,
+        normalized_message_id: identity.normalized,
+        effect_type: 'comment',
+        inbox_id: inbox.inbox_id,
+        entity_id: reconciliation.commentId,
+        ticket_id: reconciliation.ticketId,
+        reconciled: true,
+      });
+      return { reconciled: true as const, ambiguous: false as const, reason: '' };
+    });
+    return imported;
+  } catch (error: any) {
+    // A uniqueness conflict on the inbox/effect insert means a concurrent
+    // backfill already imported this row; the ledger is already in the target
+    // state and the row is skipped on re-run. Do not treat it as ambiguity.
+    if (isUniqueViolation(error)) {
+      return { reconciled: true, ambiguous: false, reason: 'concurrent_import' };
+    }
+    throw error;
+  }
+}
+
+function isUniqueViolation(error: any): boolean {
+  const code = error?.code;
+  const message = typeof error?.message === 'string' ? error.message : String(error?.message ?? '');
+  return code === '23505' || message.includes('duplicate key value violates unique constraint');
 }
 
 export interface MirrorResult {

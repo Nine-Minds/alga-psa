@@ -72,6 +72,8 @@ const createNotificationFromTemplateInternalMock = vi.fn().mockResolvedValue({
   internal_notification_id: 1
 });
 
+const dedupeInboundOutboxEventForConsumerMock = vi.fn().mockResolvedValue('deliver');
+
 vi.mock('@alga-psa/notifications/actions', () => ({
   createNotificationFromTemplateInternal: createNotificationFromTemplateInternalMock,
   createNotificationFromTemplateAction: vi.fn(),
@@ -80,6 +82,13 @@ vi.mock('@alga-psa/notifications/actions', () => ({
   markAsReadAction: vi.fn(),
   markAllAsReadAction: vi.fn(),
   deleteNotificationAction: vi.fn()
+}));
+
+// The notification consumer consults the inbound outbox delivery gate before
+// producing any effect. A second delivery of the same outbox event id must be
+// skipped at the first in-repo consumption point.
+vi.mock('@alga-psa/shared/services/email/inboundEmailConsumerDedupe', () => ({
+  dedupeInboundOutboxEventForConsumer: dedupeInboundOutboxEventForConsumerMock,
 }));
 
 const getConnectionMock = vi.fn();
@@ -216,6 +225,8 @@ beforeEach(() => {
   createNotificationFromTemplateInternalMock.mockClear();
   getConnectionMock.mockReset();
   createTenantKnexMock.mockReset();
+  dedupeInboundOutboxEventForConsumerMock.mockReset();
+  dedupeInboundOutboxEventForConsumerMock.mockResolvedValue('deliver');
 });
 
 describe('internal notification event subscriber registration', () => {
@@ -450,6 +461,62 @@ describe('internal notification event handling', () => {
 
     expect(getCallByTemplate('ticket-created')?.user_id).toBe(assignedUserId);
     expect(getCallByTemplate('ticket-created-client')?.user_id).toBe(contactUserId);
+
+    await unregisterInternalNotificationSubscriber();
+  });
+
+  it('skips a second delivery of the same inbound outbox event id (consumer idempotency gate)', async () => {
+    await registerInternalNotificationSubscriber();
+
+    const tenantId = uuidv4();
+    const ticketId = uuidv4();
+    const assignedUserId = uuidv4();
+
+    const knexStub = createConnectionStub({
+      'tickets as t': [
+        {
+          ticket_id: ticketId,
+          ticket_number: 'T-700',
+          title: 'Idempotent',
+          assigned_to: assignedUserId,
+          contact_name_id: null
+        }
+      ]
+    });
+
+    getConnectionMock.mockResolvedValue(knexStub);
+    createTenantKnexMock.mockResolvedValue({ knex: knexStub, tenant: tenantId });
+
+    const outboxEvent = {
+      id: uuidv4(), // stable durable outbox row id, reused on every publish retry
+      eventType: 'TICKET_CREATED' as const,
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: assignedUserId
+      }
+    };
+
+    // First delivery: the DB ledger claims the (tenant, outbox event, consumer)
+    // key and the notification effect is produced.
+    dedupeInboundOutboxEventForConsumerMock.mockReset();
+    dedupeInboundOutboxEventForConsumerMock.mockResolvedValueOnce('deliver');
+    dedupeInboundOutboxEventForConsumerMock.mockResolvedValueOnce('skip');
+    createNotificationFromTemplateInternalMock.mockClear();
+
+    await eventBus.publish(outboxEvent, { channel: 'internal-notifications' });
+    // Crash-after-publish redelivery carries the SAME stable event id; the gate
+    // returns skip so the effect is produced exactly once.
+    await eventBus.publish(outboxEvent, { channel: 'internal-notifications' });
+
+    expect(dedupeInboundOutboxEventForConsumerMock).toHaveBeenCalledTimes(2);
+    expect(dedupeInboundOutboxEventForConsumerMock.mock.calls[0][0]).toMatchObject({
+      consumer: 'internal-notification',
+      event: { id: outboxEvent.id, eventType: 'TICKET_CREATED' },
+    });
+    expect(createNotificationFromTemplateInternalMock).toHaveBeenCalledTimes(1);
+    expect(getCallByTemplate('ticket-created')?.user_id).toBe(assignedUserId);
 
     await unregisterInternalNotificationSubscriber();
   });

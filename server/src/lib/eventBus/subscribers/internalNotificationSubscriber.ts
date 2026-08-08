@@ -13,6 +13,10 @@ import { formatDate as formatAppointmentDate, formatTime as formatAppointmentTim
 import type { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { resolveNotificationLinks } from '../../utils/notificationLinkResolver';
+import { dedupeInboundOutboxEventForConsumer } from '@alga-psa/shared/services/email/inboundEmailConsumerDedupe';
+
+/** Consumers of the inbound outbox events use this stable ledger consumer id. */
+const INBOUND_OUTBOX_NOTIFICATION_CONSUMER = 'internal-notification';
 
 function tenantScopedTable(db: Knex, table: string, tenant: string): Knex.QueryBuilder {
   return tenantDb(db, tenant).table(table);
@@ -2933,6 +2937,38 @@ async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> 
   }
 
   const validatedEvent = eventSchema.parse(event);
+
+  // Durable inbound outbox events carry a stable event id (the outbox row id).
+  // The DB-backed delivery ledger ensures a double-delivered event produces its
+  // notification effect exactly once, even across restarts. Non-outbox events
+  // pass straight through.
+  const tenantId = (validatedEvent.payload as { tenantId?: unknown } | null)?.tenantId;
+  if (typeof tenantId === 'string' && tenantId) {
+    try {
+      const db = await getConnection(tenantId);
+      const decision = await dedupeInboundOutboxEventForConsumer({
+        event: { id: event.id, eventType: event.eventType, payload: (validatedEvent as any).payload },
+        consumer: INBOUND_OUTBOX_NOTIFICATION_CONSUMER,
+        db,
+      });
+      if (decision === 'skip') {
+        logger.info('[InternalNotificationSubscriber] Skipping already-delivered inbound outbox event', {
+          eventId: event.id,
+          eventType: event.eventType,
+          tenantId,
+          consumer: INBOUND_OUTBOX_NOTIFICATION_CONSUMER,
+        });
+        return;
+      }
+    } catch (error) {
+      logger.warn('[InternalNotificationSubscriber] Outbox delivery gate unavailable; delivering normally', {
+        eventId: event.id,
+        eventType: event.eventType,
+        tenantId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 
   switch (event.eventType) {
     case 'TICKET_CREATED':

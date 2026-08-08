@@ -159,6 +159,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   inbound_email_effects: { scope: 'tenant' },
   inbound_email_artifacts: { scope: 'tenant' },
   inbound_email_outbox: { scope: 'tenant' },
+  inbound_email_event_deliveries: { scope: 'tenant' },
   email_provider_configs: { scope: 'tenant' },
   email_provider_health: { scope: 'tenant' },
   email_providers: { scope: 'tenant' },
