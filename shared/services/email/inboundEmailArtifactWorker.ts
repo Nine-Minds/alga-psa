@@ -17,6 +17,7 @@ import type { InboundV2JobContext } from './unifiedInboundEmailQueueJobProcessor
 import {
   claimArtifact,
   getDurableLeaseTtlMs,
+  getDurableMaxAttempts,
   getInbox,
   transitionArtifact,
   type InboundArtifactRecord,
@@ -110,17 +111,8 @@ export async function processInboundArtifactJob(
     });
   } catch (error: any) {
     const message = error?.message || String(error);
-    await transitionArtifact(db, {
-      tenant: job.tenantId,
-      inbox_id: inboxId,
-      artifact_key: artifactKey,
-      owner,
-      token,
-      version,
-      status: 'retryable_failed',
-      nextAttemptAt: new Date(Date.now() + 60_000),
-      error: message,
-    });
+    const failure = await markArtifactRetryable(db, artifact, { owner, token, version }, message);
+    if (failure.terminal) return { disposition: 'ack', outcome: 'terminal_failed', reason: 'max_attempts_exhausted' };
     return { disposition: 'retry', error: message };
   }
 
@@ -147,17 +139,8 @@ export async function processInboundArtifactJob(
   });
 
   if (processError && !mirror) {
-    await transitionArtifact(db, {
-      tenant: job.tenantId,
-      inbox_id: inboxId,
-      artifact_key: artifactKey,
-      owner,
-      token,
-      version,
-      status: 'retryable_failed',
-      nextAttemptAt: new Date(Date.now() + 60_000),
-      error: processError,
-    });
+    const failure = await markArtifactRetryable(db, artifact, { owner, token, version }, processError);
+    if (failure.terminal) return { disposition: 'ack', outcome: 'terminal_failed', reason: 'max_attempts_exhausted' };
     return { disposition: 'retry', error: processError };
   }
 
@@ -192,19 +175,44 @@ export async function processInboundArtifactJob(
     return { disposition: 'ack' };
   }
 
-  // 'processing' / 'failed' / missing mirror: retryable.
-  await transitionArtifact(db, {
-    tenant: job.tenantId,
-    inbox_id: inboxId,
-    artifact_key: artifactKey,
-    owner,
-    token,
-    version,
-    status: 'retryable_failed',
-    nextAttemptAt: new Date(Date.now() + 60_000),
-    error: mirror?.error_message ?? processError ?? 'artifact_failed',
-  });
+  // 'processing' / 'failed' / missing mirror: retryable (terminal at cap).
+  const failure = await markArtifactRetryable(
+    db,
+    artifact,
+    { owner, token, version },
+    mirror?.error_message ?? processError ?? 'artifact_failed'
+  );
+  if (failure.terminal) return { disposition: 'ack', outcome: 'terminal_failed', reason: 'max_attempts_exhausted' };
   return { disposition: 'retry', error: mirror?.error_message ?? processError ?? 'artifact_failed' };
+}
+
+function boundedBackoffMs(attemptCount: number): number {
+  const base = 2 ** Math.min(attemptCount, 6) * 1000;
+  const jitter = Math.floor(Math.random() * 1000);
+  return Math.min(base + jitter, 5 * 60 * 1000);
+}
+
+/** Fenced retryable/terminal failure write honoring the configured attempt cap. */
+async function markArtifactRetryable(
+  db: any,
+  artifact: InboundArtifactRecord,
+  lease: { owner: string; token: string; version: number },
+  error: string
+): Promise<{ terminal: boolean }> {
+  const maxAttempts = getDurableMaxAttempts();
+  const terminal = artifact.attempt_count >= maxAttempts;
+  await transitionArtifact(db, {
+    tenant: artifact.tenant,
+    inbox_id: artifact.inbox_id,
+    artifact_key: artifact.artifact_key,
+    owner: lease.owner,
+    token: lease.token,
+    version: lease.version,
+    status: terminal ? 'terminal_failed' : 'retryable_failed',
+    nextAttemptAt: terminal ? undefined : new Date(Date.now() + boundedBackoffMs(artifact.attempt_count)),
+    error,
+  });
+  return { terminal };
 }
 
 function resolveLegacyAttachmentId(artifact: InboundArtifactRecord, emailId: string): string {

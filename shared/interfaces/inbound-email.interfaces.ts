@@ -283,7 +283,7 @@ export interface ClaimedInboundEmailQueueJobV2 {
 
 /** Dispositions a V2 consumer can return for a handled wake-up. */
 export type InboundEmailQueueDisposition =
-  | { disposition: 'ack' }
+  | { disposition: 'ack'; outcome?: string; reason?: string }
   | { disposition: 'retry'; error: string }
   | { disposition: 'defer'; untilIso: string; reason?: string };
 

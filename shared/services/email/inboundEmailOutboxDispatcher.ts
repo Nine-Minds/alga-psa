@@ -18,6 +18,7 @@ import type { InboundV2JobContext } from './unifiedInboundEmailQueueJobProcessor
 import {
   claimOutboxRow,
   getDurableLeaseTtlMs,
+  getDurableMaxAttempts,
   transitionOutboxRow,
   type InboundOutboxRecord,
 } from './inboundEmailDurableStore';
@@ -100,17 +101,22 @@ export async function processInboundOutboxJob(
   }
 
   const backoffMs = boundedBackoffMs(row.attempt_count);
+  const maxAttempts = getDurableMaxAttempts();
+  // Terminal attempt cap: exhausted publication retries dead-letter into a
+  // queryable terminal-failure state instead of looping forever.
+  const terminal = row.attempt_count >= maxAttempts;
   const written = await transitionOutboxRow(db, {
     tenant: row.tenant,
     outbox_id: row.outbox_id,
     owner,
     token,
     version,
-    status: 'retryable_failed',
-    nextAttemptAt: new Date(Date.now() + backoffMs),
+    status: terminal ? 'terminal_failed' : 'retryable_failed',
+    nextAttemptAt: terminal ? undefined : new Date(Date.now() + backoffMs),
     error: publishError ?? 'unknown_publish_error',
   });
   if (!written) return { disposition: 'retry', error: 'outbox_fence_superseded' };
+  if (terminal) return { disposition: 'ack', outcome: 'terminal_failed', reason: 'max_attempts_exhausted' };
   return { disposition: 'retry', error: publishError ?? 'unknown_publish_error' };
 }
 

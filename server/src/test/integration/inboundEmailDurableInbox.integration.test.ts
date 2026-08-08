@@ -101,6 +101,32 @@ vi.mock('@alga-psa/shared/services/email/inboundReplyAcknowledgementDecider', ()
   })),
 }));
 
+const { gmailAdapterMock, googleProviderConfigMock } = vi.hoisted(() => ({
+  gmailAdapterMock: {
+    connect: vi.fn(async () => undefined),
+    listMessagesSince: vi.fn(async () => ['gmail-msg-1']),
+    downloadMessageSource: vi.fn(async () => Buffer.from('From: a@b.c\r\nTo: x@y.z\r\nSubject: G\r\n\r\nbody\r\n')),
+    close: vi.fn(async () => undefined),
+  },
+  googleProviderConfigMock: {
+    fetchGoogleProviderConfig: vi.fn(async () => ({
+      provider: { id: 'provider-id', tenant: 'tenant' },
+      googleConfig: { history_id: '1' },
+      config: {},
+    })),
+  },
+}));
+
+vi.mock('@alga-psa/shared/services/email/providers/GmailAdapter', () => ({
+  GmailAdapter: vi.fn(() => gmailAdapterMock),
+}));
+
+vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueueJobProcessor', () => ({
+  ...googleProviderConfigMock,
+  fetchMicrosoftMessageForPointer: vi.fn(async () => ({ id: 'ms-1' })),
+  fetchImapMessageForPointer: vi.fn(async () => ({ id: 'imap-1' })),
+}));
+
 function tenantTable<Row extends object = Record<string, any>>(tableExpression: string): Knex.QueryBuilder<Row, Row[]> {
   return tenantDb(db, tenantId).table<Row>(tableExpression);
 }
@@ -918,5 +944,497 @@ describeDb('Inbound email durable inbox (integration)', () => {
     const enforceBody = await callHandler();
     expect(enforceBody.handoff).toBe('durable_ingress');
     expect(v1EnqueueMock).not.toHaveBeenCalled();
+  });
+
+  it('retryable failure gets backoff + error provenance and reclaims to success via the sweeper', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'retry@example.com', providerType: 'google' });
+    const messageId = `retry-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 'sender@example.com', to: 'retry@example.com', subject: 'Retry', messageId, text: 'body' });
+    const { inboxId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+
+    const { processInboundInbox } = await import('@alga-psa/shared/services/email/inboundEmailCoreProcessor');
+    const { claimInbox, findDueInbox } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const { sweepTenantDurableWork } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+
+    // Force a retryable failure by making the staged source temporarily
+    // unreadable (object gone). attempt_count becomes 1.
+    const inboxRow = await tenantTable('inbound_email_inbox').where({ inbox_id: inboxId }).first();
+    storageObjects.delete(String(inboxRow.source_object_key));
+    const firstResult = await processInboundInbox({ tenantId, inboxId, owner: 'retry-worker', leaseTtlMs: 30_000, mode: 'enforce' });
+    expect(firstResult.disposition).toBe('retry');
+
+    const afterFail = await tenantTable('inbound_email_inbox').where({ inbox_id: inboxId }).first();
+    expect(afterFail.status).toBe('retryable_failed');
+    expect(afterFail.next_attempt_at).toBeTruthy();
+    expect(afterFail.last_error).toContain('object not found');
+    expect(Number(afterFail.attempt_count)).toBe(1);
+
+    // Not due yet: claim refuses and the row is deferred, never classified as a duplicate.
+    const notDue = await claimInbox(db, { tenant: tenantId, inbox_id: inboxId, owner: 'other-worker', leaseTtlMs: 30_000, allowRetryable: true });
+    expect(notDue.claimed).toBe(false);
+    expect(notDue.reason).toBe('not_due');
+
+    // Make it due and restore the source, then the sweeper re-enqueues it.
+    await tenantTable('inbound_email_inbox')
+      .where({ inbox_id: inboxId })
+      .update({ next_attempt_at: db.raw("now() - interval '1 minute'") });
+    const due = await findDueInbox(db, { tenant: tenantId, limit: 10 });
+    expect(due.some((row: any) => row.inbox_id === inboxId && row.status === 'retryable_failed')).toBe(true);
+
+    storageProviderMock.upload(rawMime, String(inboxRow.source_object_key));
+    const sweep = await sweepTenantDurableWork(tenantId, 10);
+    expect(sweep.enqueued.inbox).toBeGreaterThanOrEqual(1);
+    expect(v2EnqueueMock).toHaveBeenCalledWith(expect.objectContaining({ workType: 'process_inbox', tenantId, recordId: inboxId }));
+
+    // The reclaimed processing succeeds and lands the row terminal.
+    const replay = await processInboundInbox({ tenantId, inboxId, owner: 'replay-worker', leaseTtlMs: 30_000, mode: 'enforce' });
+    expect(replay.disposition).toBe('ack');
+    expect(replay.outcome).toBe('created');
+
+    const terminal = await tenantTable('inbound_email_inbox').where({ inbox_id: inboxId }).first();
+    expect(terminal.status).toBe('succeeded');
+    expect(await countTicketsByMessageId(messageId)).toBe(1);
+    expect(await countCommentsByMessageId(messageId)).toBe(1);
+    createdTicketIds.push(terminal.ticket_id);
+  });
+
+  it('sweeper re-enqueues received, due retryable_failed, and expired-processing inbox rows', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'sweep-classes@example.com', providerType: 'google' });
+    const { sweepTenantDurableWork } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+    const { claimInbox } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+
+    const stageOne = async (tag: string) => {
+      const messageId = `${tag}-${randomUUID()}@example.com`;
+      const rawMime = buildMime({ from: 's@example.com', to: 'sweep-classes@example.com', subject: tag, messageId, text: 'x' });
+      const { inboxId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+      return { inboxId, messageId };
+    };
+
+    // Class 1: `received` (crash between ingress persist and enqueue).
+    const received = await stageOne('received');
+    // Class 2: due `retryable_failed`.
+    const retryable = await stageOne('retryable');
+    await claimInbox(db, { tenant: tenantId, inbox_id: retryable.inboxId, owner: 'crashed', leaseTtlMs: 30_000, allowRetryable: true });
+    await tenantTable('inbound_email_inbox')
+      .where({ inbox_id: retryable.inboxId })
+      .update({ status: 'retryable_failed', next_attempt_at: db.raw("now() - interval '1 minute'") });
+    // Class 3: expired `processing` (crash mid-processing).
+    const processing = await stageOne('processing');
+    await claimInbox(db, { tenant: tenantId, inbox_id: processing.inboxId, owner: 'crashed', leaseTtlMs: 30_000, allowRetryable: true });
+    await tenantTable('inbound_email_inbox')
+      .where({ inbox_id: processing.inboxId })
+      .update({ lease_expires_at: db.raw("now() - interval '5 minutes'") });
+
+    v2EnqueueMock.mockClear();
+    const sweep = await sweepTenantDurableWork(tenantId, 10);
+    expect(sweep.enqueued.inbox).toBeGreaterThanOrEqual(3);
+    const enqueuedIds = v2EnqueueMock.mock.calls
+      .map((call: any) => call[0])
+      .filter((job: any) => job.workType === 'process_inbox')
+      .map((job: any) => job.recordId);
+    expect(enqueuedIds).toContain(received.inboxId);
+    expect(enqueuedIds).toContain(retryable.inboxId);
+    expect(enqueuedIds).toContain(processing.inboxId);
+
+    // Each class processes to a real terminal state after the sweep wake-up.
+    const { processInboundInbox } = await import('@alga-psa/shared/services/email/inboundEmailCoreProcessor');
+    for (const { inboxId } of [received, retryable, processing]) {
+      const result = await processInboundInbox({ tenantId, inboxId, owner: 'sweep-worker', leaseTtlMs: 30_000, mode: 'enforce' });
+      expect(result.disposition).toBe('ack');
+      const row = await tenantTable('inbound_email_inbox').where({ inbox_id: inboxId }).first();
+      expect(row.status).toBe('succeeded');
+      createdTicketIds.push(row.ticket_id);
+    }
+    expect(await countRows('inbound_email_inbox')).toBe(3);
+  });
+
+  it('a superseded zombie worker cannot create core effects inside the fenced transaction', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'zombie@example.com', providerType: 'google' });
+    const messageId = `zombie-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 'sender@example.com', to: 'zombie@example.com', subject: 'Zombie', messageId, text: 'body' });
+    const { inboxId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+
+    const { claimInbox, reclaimInbox, lockInboxForUpdate, transitionInbox } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const { withAdminTransaction } = await import('@alga-psa/db');
+    const { processInboundInbox } = await import('@alga-psa/shared/services/email/inboundEmailCoreProcessor');
+
+    const first = await claimInbox(db, { tenant: tenantId, inbox_id: inboxId, owner: 'zombie', leaseTtlMs: 30_000, allowRetryable: true });
+    expect(first.claimed).toBe(true);
+    const oldToken = String(first.row.lease_token);
+    const oldVersion = Number(first.row.lease_version);
+
+    // The zombie's lease expires. Its token is now dead: it cannot lock the row
+    // inside the core transaction, so no ticket or comment is created and any
+    // core write rolls back.
+    await tenantTable('inbound_email_inbox').where({ inbox_id: inboxId }).update({ lease_expires_at: db.raw("now() - interval '5 minutes'") });
+    await expect(
+      withAdminTransaction(async (trx: any) => {
+        const locked = await lockInboxForUpdate(trx, { tenant: tenantId, inbox_id: inboxId, token: oldToken, version: oldVersion });
+        if (!locked) throw new Error('inbox_fence_superseded');
+        throw new Error('zombie_should_never_reach_write');
+      })
+    ).rejects.toThrow('inbox_fence_superseded');
+
+    expect(await countTicketsByMessageId(messageId)).toBe(0);
+    expect(await countRows('inbound_email_effects')).toBe(0);
+
+    // A new worker atomically reclaims the expired lease and completes normally
+    // with exactly one ticket + comment; the zombie's superseded token stays dead.
+    const result = await processInboundInbox({ tenantId, inboxId, owner: 'new-worker', leaseTtlMs: 30_000, mode: 'enforce' });
+    expect(result.disposition).toBe('ack');
+    expect(result.outcome).toBe('created');
+    expect(await countTicketsByMessageId(messageId)).toBe(1);
+    expect(await countCommentsByMessageId(messageId)).toBe(1);
+
+    const staleWrite = await transitionInbox(db, {
+      tenant: tenantId,
+      inbox_id: inboxId,
+      owner: 'zombie',
+      token: oldToken,
+      version: oldVersion,
+      status: 'terminal_failed',
+      outcome_reason: 'zombie write should not land after reclaim',
+    });
+    expect(staleWrite).toBe(false);
+    const row = await tenantTable('inbound_email_inbox').where({ inbox_id: inboxId }).first();
+    createdTicketIds.push(row.ticket_id);
+  });
+
+  it('exhausted retries dead-letter to terminal_failed instead of looping forever', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'deadletter@example.com', providerType: 'google' });
+    const messageId = `deadletter-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 'sender@example.com', to: 'deadletter@example.com', subject: 'DLQ', messageId, text: 'body' });
+    const { inboxId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+
+    process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_MAX_ATTEMPTS = '3';
+    cleanup.push(async () => {
+      delete process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_MAX_ATTEMPTS;
+    });
+
+    const { processInboundInbox } = await import('@alga-psa/shared/services/email/inboundEmailCoreProcessor');
+    const inboxRow = await tenantTable('inbound_email_inbox').where({ inbox_id: inboxId }).first();
+    storageObjects.delete(String(inboxRow.source_object_key));
+
+    // Three failed processing attempts (backoff made due between attempts),
+    // then the row must dead-letter into terminal_failed.
+    const results: string[] = [];
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      if (attempt > 1) {
+        await tenantTable('inbound_email_inbox')
+          .where({ inbox_id: inboxId })
+          .update({ next_attempt_at: db.raw("now() - interval '1 minute'") });
+      }
+      const result = await processInboundInbox({ tenantId, inboxId, owner: `dlq-worker-${attempt}`, leaseTtlMs: 30_000, mode: 'enforce' });
+      results.push(result.disposition);
+    }
+    expect(results).toEqual(['retry', 'retry', 'ack']);
+
+    const row = await tenantTable('inbound_email_inbox').where({ inbox_id: inboxId }).first();
+    expect(row.status).toBe('terminal_failed');
+    expect(row.outcome_reason).toBe('max_attempts_exhausted');
+    expect(row.last_error).toContain('object not found');
+    expect(row.completed_at).toBeTruthy();
+    expect(row.lease_token).toBeNull();
+
+    // Repeated delivery reads the stored terminal failure and ACKs it; nothing loops.
+    const again = await processInboundInbox({ tenantId, inboxId, owner: 'dlq-reader', leaseTtlMs: 30_000, mode: 'enforce' });
+    expect(again.disposition).toBe('ack');
+    expect(again.outcome).toBe('terminal_failed');
+    expect(await countTicketsByMessageId(messageId)).toBe(0);
+    expect(await countRows('inbound_email_effects')).toBe(0);
+  });
+
+  it('google staging advances the history cursor only after all sources stage; failure leaves it untouched', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'gmail-cursor@example.com', providerType: 'google' });
+    const { persistIngressPointer } = await import('@alga-psa/shared/services/email/inboundEmailProducer');
+    const { processIngressStageJob } = await import('@alga-psa/shared/services/email/inboundEmailIngressStagingWorker');
+
+    const produced = await persistIngressPointer({
+      tenant: tenantId,
+      providerId,
+      providerType: 'google',
+      pointer: { providerType: 'google', historyId: '7', pubsubMessageId: 'pub-7' },
+    });
+    expect(produced.ingressId).toBeTruthy();
+
+    // Successful staging advances google_email_provider_config.history_id to the
+    // notification's history id ONLY after the inbox rows are durable.
+    const okJob: any = {
+      schemaVersion: 2,
+      workType: 'stage_ingress',
+      tenantId: tenantId,
+      recordId: produced.ingressId,
+      jobId: `stage-${randomUUID()}`,
+      enqueuedAt: new Date().toISOString(),
+      attempt: 0,
+      maxAttempts: 5,
+    };
+    gmailAdapterMock.listMessagesSince.mockResolvedValue(['gmail-msg-1']);
+    gmailAdapterMock.downloadMessageSource.mockImplementation(async (id: string) =>
+      buildMime({ from: 'a@b.c', to: 'gmail-cursor@example.com', subject: 'Cursor', messageId: `gmail-${id}`, text: 'x' })
+    );
+    const ok = await processIngressStageJob(okJob, { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined });
+    expect(ok.disposition).toBe('ack');
+
+    const config = await tenantTable('google_email_provider_config').where({ email_provider_id: providerId }).first();
+    expect(String(config.history_id)).toBe('7');
+    const ingress = await tenantTable('inbound_email_ingress').where({ ingress_id: produced.ingressId }).first();
+    expect(ingress.status).toBe('staged');
+
+    // A staging failure (provider fetch fails) must NOT advance the cursor and
+    // leaves the ingress retryable so the message stays fetchable next poll.
+    const failed = await persistIngressPointer({
+      tenant: tenantId,
+      providerId,
+      providerType: 'google',
+      pointer: { providerType: 'google', historyId: '9', pubsubMessageId: 'pub-9' },
+    });
+    gmailAdapterMock.listMessagesSince.mockResolvedValue(['gmail-msg-2']);
+    gmailAdapterMock.downloadMessageSource.mockRejectedValue(new Error('provider_unavailable_temporarily'));
+    const failJob: any = {
+      schemaVersion: 2,
+      workType: 'stage_ingress',
+      tenantId: tenantId,
+      recordId: failed.ingressId,
+      jobId: `stage-${randomUUID()}`,
+      enqueuedAt: new Date().toISOString(),
+      attempt: 0,
+      maxAttempts: 5,
+    };
+    const failResult = await processIngressStageJob(failJob, { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined });
+    expect(failResult.disposition).toBe('retry');
+
+    const configAfter = await tenantTable('google_email_provider_config').where({ email_provider_id: providerId }).first();
+    expect(String(configAfter.history_id)).toBe('7'); // unchanged
+    const failedIngress = await tenantTable('inbound_email_ingress').where({ ingress_id: failed.ingressId }).first();
+    expect(failedIngress.status).toBe('retryable_failed');
+    expect(failedIngress.last_error).toContain('provider_unavailable_temporarily');
+  });
+
+  it('core processing succeeds from the staged source when the provider message is gone', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'source-gone@example.com', providerType: 'microsoft' });
+    const messageId = `gone-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 'sender@example.com', to: 'source-gone@example.com', subject: 'Gone', messageId, text: 'body' });
+    const { inboxId } = await stageAndUpsertInbox({ providerId, providerType: 'microsoft', rawMime, messageId });
+
+    // The provider-side message disappears: the ingress pointer is invalidated
+    // (no way to re-fetch) and the provider config token is revoked. Processing
+    // must reconstruct everything from the staged object alone.
+    await tenantTable('inbound_email_ingress').where({ tenant: tenantId }).update({ provider_pointer: JSON.stringify({}) });
+    await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).update({ access_token: 'invalidated' });
+
+    const result = await processInbox(inboxId, 'source-gone-worker');
+    expect(result.disposition).toBe('ack');
+    expect(result.outcome).toBe('created');
+    expect(await countTicketsByMessageId(messageId)).toBe(1);
+    expect(await countCommentsByMessageId(messageId)).toBe(1);
+    const row = await tenantTable('inbound_email_inbox').where({ inbox_id: inboxId }).first();
+    expect(row.status).toBe('succeeded');
+    createdTicketIds.push(row.ticket_id);
+  });
+
+  it('legacy stuck-processing reconciliation links a pre-existing ticket/comment without duplicating', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'legacy-reconcile@example.com', providerType: 'microsoft' });
+    const messageId = `legacy-${randomUUID()}@example.com`;
+    const legacyMessageId = `microsoft:${messageId}`;
+
+    // Simulate the incident: the old pipeline already created ticket + comment,
+    // then died before completing the audit row (status stuck in `processing`).
+    const { createTicketFromEmail, createCommentFromEmail } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
+    const { withAdminTransaction } = await import('@alga-psa/db');
+    await withAdminTransaction(async (trx: any) => {
+      const ticket = await createTicketFromEmail(
+        {
+          title: 'Legacy stuck',
+          description: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'body', styles: {} }] }]),
+          client_id: clientId,
+          source: 'email',
+          board_id: boardId,
+          status_id: statusId,
+          priority_id: priorityId,
+          email_metadata: { messageId, providerId },
+        },
+        tenantId,
+        undefined,
+        { existingConnection: trx }
+      );
+      await createCommentFromEmail(
+        {
+          ticket_id: ticket.ticket_id,
+          content: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'body', styles: {} }] }]),
+          source: 'email',
+          suppressTechEmailNotification: true,
+          metadata: { email: { messageId } },
+        },
+        tenantId,
+        undefined,
+        { existingConnection: trx }
+      );
+    });
+    const existingTicket = await tenantTable('tickets')
+      .whereRaw("email_metadata->>'messageId' = ?", [messageId])
+      .first('ticket_id');
+    expect(existingTicket).toBeTruthy();
+    const ticketId = String(existingTicket.ticket_id);
+    createdTicketIds.push(ticketId);
+
+    await tenantTable('email_processed_messages').insert({
+      message_id: legacyMessageId,
+      provider_id: providerId,
+      tenant: tenantId,
+      processed_at: new Date(Date.now() - 60_000),
+      processing_status: 'processing',
+      from_email: 'sender@example.com',
+      subject: 'Legacy stuck',
+      received_at: db.fn.now(),
+      metadata: JSON.stringify({
+        queueJobId: 'legacy-job',
+        queueProvider: 'microsoft',
+        pointer: { subscriptionId: 'sub', messageId },
+        headersSnapshot: { messageId },
+      }),
+    });
+    createdTicketIds.push(ticketId);
+
+    const { backfillTenantLegacyRows } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+    const result = await backfillTenantLegacyRows(tenantId, 50);
+    expect(result.imported).toBeGreaterThanOrEqual(1);
+
+    const inbox = await tenantTable('inbound_email_inbox').where({ tenant: tenantId }).first();
+    expect(inbox).toBeTruthy();
+    expect(inbox.status).toBe('succeeded');
+    expect(inbox.outcome_kind).toBe('reconciled');
+    expect(inbox.legacy_imported).toBe(true);
+    expect(inbox.ticket_id).toBe(ticketId);
+    expect(inbox.comment_id).toBeTruthy();
+
+    expect(await countTicketsByMessageId(messageId)).toBe(1);
+    expect(await countCommentsByMessageId(messageId)).toBe(1);
+    expect(await countRows('inbound_email_effects')).toBe(2);
+
+    // The legacy audit row is preserved untouched (never deleted/overwritten).
+    const legacyRow = await tenantTable('email_processed_messages').where({ message_id: legacyMessageId }).first();
+    expect(legacyRow.processing_status).toBe('processing');
+  });
+
+  it('legacy stuck-processing with no entities and no pointer dead-letters as terminal_failed', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'legacy-unrecoverable@example.com', providerType: 'microsoft' });
+    const messageId = `legacy-unrec-${randomUUID()}@example.com`;
+    const legacyMessageId = `microsoft:${messageId}`;
+
+    await tenantTable('email_processed_messages').insert({
+      message_id: legacyMessageId,
+      provider_id: providerId,
+      tenant: tenantId,
+      processed_at: new Date(Date.now() - 60_000),
+      processing_status: 'processing',
+      from_email: 'sender@example.com',
+      subject: 'Legacy unrecoverable',
+      received_at: db.fn.now(),
+      metadata: JSON.stringify({
+        queueJobId: 'legacy-job',
+        queueProvider: 'microsoft',
+        headersSnapshot: { messageId },
+        // no pointer: the source cannot be re-fetched
+      }),
+    });
+
+    const { backfillTenantLegacyRows } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+    const result = await backfillTenantLegacyRows(tenantId, 50);
+    expect(result.imported).toBeGreaterThanOrEqual(1);
+
+    const inbox = await tenantTable('inbound_email_inbox').where({ tenant: tenantId }).first();
+    expect(inbox).toBeTruthy();
+    expect(inbox.status).toBe('terminal_failed');
+    expect(inbox.outcome_reason).toBe('legacy_processing_unrecoverable');
+    expect(inbox.legacy_imported).toBe(true);
+    expect(inbox.ticket_id).toBeNull();
+    expect(await countRows('inbound_email_effects')).toBe(0);
+    expect(await countTicketsByMessageId(messageId)).toBe(0);
+
+    const legacyRow = await tenantTable('email_processed_messages').where({ message_id: legacyMessageId }).first();
+    expect(legacyRow.processing_status).toBe('processing');
+  });
+
+  it('a crashed ingress claim (expired staging) is reclaimed by the sweeper, not stranded', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'ingress-stuck@example.com', providerType: 'microsoft' });
+    const { upsertIngress, claimIngress, findDueIngress, reclaimIngress, transitionIngress } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const { sweepTenantDurableWork } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+
+    const ingress = await upsertIngress(db, {
+      tenant: tenantId,
+      provider_id: providerId,
+      provider_type: 'microsoft',
+      ingress_key: `stuck:${randomUUID()}`,
+      provider_pointer: { messageId: 'stuck-msg' },
+    });
+
+    // Worker claims the ingress row, then crashes before staging completes.
+    const claim = await claimIngress(db, { tenant: tenantId, ingress_id: ingress.ingress_id, owner: 'crashed', leaseTtlMs: 30_000 });
+    expect(claim.claimed).toBe(true);
+    await tenantTable('inbound_email_ingress')
+      .where({ ingress_id: ingress.ingress_id })
+      .update({ lease_expires_at: db.raw("now() - interval '5 minutes'") });
+
+    // The sweeper's due scan sees the expired `staging` row (not stranded).
+    const due = await findDueIngress(db, { tenant: tenantId, limit: 10 });
+    expect(due.some((row: any) => row.ingress_id === ingress.ingress_id && row.status === 'staging')).toBe(true);
+
+    v2EnqueueMock.mockClear();
+    const sweep = await sweepTenantDurableWork(tenantId, 10);
+    expect(sweep.enqueued.ingress).toBeGreaterThanOrEqual(1);
+    expect(v2EnqueueMock).toHaveBeenCalledWith(expect.objectContaining({ workType: 'stage_ingress', tenantId, recordId: ingress.ingress_id }));
+
+    // A new worker atomically reclaims the expired staging lease (new token),
+    // fencing the crashed worker out, and can continue staging.
+    const reclaim = await reclaimIngress(db, { tenant: tenantId, ingress_id: ingress.ingress_id, owner: 'resumed', leaseTtlMs: 30_000 });
+    expect(reclaim.claimed).toBe(true);
+    expect(String(reclaim.row.lease_token)).not.toBe(String(claim.row.lease_token));
+    const staleWrite = await transitionIngress(db, {
+      tenant: tenantId,
+      ingress_id: ingress.ingress_id,
+      owner: 'crashed',
+      token: String(claim.row.lease_token),
+      version: Number(claim.row.lease_version),
+      status: 'terminal_failed',
+      error: 'zombie ingress write must not land',
+    });
+    expect(staleWrite).toBe(false);
+  });
+
+  it('legacy stuck-processing with a usable pointer becomes retryable via durable ingress work', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'legacy-pointer@example.com', providerType: 'google' });
+    const messageId = `legacy-ptr-${randomUUID()}@example.com`;
+    const legacyMessageId = `google:${messageId}`;
+
+    await tenantTable('email_processed_messages').insert({
+      message_id: legacyMessageId,
+      provider_id: providerId,
+      tenant: tenantId,
+      processed_at: new Date(Date.now() - 60_000),
+      processing_status: 'processing',
+      from_email: 'sender@example.com',
+      subject: 'Legacy pointer',
+      received_at: db.fn.now(),
+      metadata: JSON.stringify({
+        queueJobId: 'legacy-job',
+        queueProvider: 'google',
+        pointer: { historyId: '5', pubsubMessageId: 'pub-5', emailAddress: 'legacy-pointer@example.com' },
+        headersSnapshot: { messageId },
+      }),
+    });
+
+    v2EnqueueMock.mockClear();
+    const { backfillTenantLegacyRows } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+    const result = await backfillTenantLegacyRows(tenantId, 50);
+    expect(result.imported).toBeGreaterThanOrEqual(1);
+
+    // Durable ingress work was created so the source can be staged, and no
+    // terminal inbox row was written (the legacy row stays the checkpoint).
+    const ingress = await tenantTable('inbound_email_ingress').where({ tenant: tenantId }).first();
+    expect(ingress).toBeTruthy();
+    expect(ingress.status).toBe('received');
+    expect(v2EnqueueMock).toHaveBeenCalledWith(expect.objectContaining({ workType: 'stage_ingress', tenantId, recordId: ingress.ingress_id }));
+    expect(await countRows('inbound_email_inbox')).toBe(0);
   });
 });

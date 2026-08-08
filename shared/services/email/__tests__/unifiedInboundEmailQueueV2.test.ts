@@ -144,6 +144,20 @@ describe('V2 durable inbound queue primitives', () => {
     expect(result.action).toBe('noop');
   });
 
+  it('fail passes a timestamp for the DLQ entry (no os.time in the Redis sandbox)', async () => {
+    const { module, client } = await loadQueueV2Module();
+    client.eval.mockResolvedValue(JSON.stringify({ status: 'dlq', attempt: 5 }));
+    const result = await module.failInboundEmailDurableJob({ claim: buildV2Claim(), error: 'exhausted' });
+    expect(result.action).toBe('dlq');
+    // The FAIL script now takes failedAt as ARGV[5] instead of calling
+    // os.time(), which is not available in the Redis Lua sandbox and aborted
+    // the script after the processing-list removal (stranding the job forever).
+    const failCalls = client.eval.mock.calls.filter((call: any) => (call[1]?.keys?.length ?? 0) === 5);
+    const args = failCalls.at(-1)[1].arguments;
+    expect(args.length).toBeGreaterThanOrEqual(5);
+    expect(new Date(String(args[4])).getTime()).not.toBeNaN();
+  });
+
   it('defer moves the job to the delayed set until the DB lease expiry', async () => {
     const { module, client } = await loadQueueV2Module();
     client.eval.mockResolvedValue(JSON.stringify({ status: 'deferred', untilMs: 123456 }));

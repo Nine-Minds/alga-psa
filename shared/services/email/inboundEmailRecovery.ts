@@ -18,10 +18,15 @@ import type {
   InboundProviderType,
 } from '../../interfaces/inbound-email.interfaces';
 import {
+  deadletterArtifact,
+  deadletterIngress,
+  deadletterInbox,
+  deadletterOutboxRow,
   findDueArtifacts,
   findDueIngress,
   findDueInbox,
   findDueOutbox,
+  getDurableMaxAttempts,
   getInboxByIdentity,
   insertEffect,
   getInboundDurableMode,
@@ -31,6 +36,7 @@ import {
 import { enqueueInboundEmailDurableJob } from './unifiedInboundEmailQueueV2';
 import { normalizeInboundMessageIdentity } from './inboundEmailIdentity';
 import { buildInboundSourceObjectKey } from './inboundEmailIdentity';
+import type { InboundProviderPointer } from './inboundEmailProducer';
 
 const MIRROR_MARKER = 'durableMirrored';
 
@@ -46,9 +52,16 @@ export interface RecoverySweepResult {
 export async function sweepTenantDurableWork(tenant: string, limit: number = 10): Promise<RecoverySweepResult> {
   const db = await (await import('@alga-psa/db/admin')).getAdminConnection();
   const result: RecoverySweepResult = { enqueued: { ingress: 0, inbox: 0, artifact: 0, outbox: 0 } };
+  const maxAttempts = getDurableMaxAttempts();
 
   const ingressRows = await findDueIngress(db, { tenant, limit });
   for (const row of ingressRows) {
+    // Exhausted retryable rows dead-letter into a queryable terminal state
+    // instead of being re-woken forever.
+    if (row.status === 'retryable_failed' && row.attempt_count >= maxAttempts) {
+      await deadletterIngress(db, row);
+      continue;
+    }
     try {
       await enqueueInboundEmailDurableJob({ workType: 'stage_ingress', tenantId: tenant, recordId: row.ingress_id });
       result.enqueued.ingress += 1;
@@ -67,6 +80,10 @@ export async function sweepTenantDurableWork(tenant: string, limit: number = 10)
   if (getInboundDurableMode() !== 'shadow') {
     const inboxRows = await findDueInbox(db, { tenant, limit });
     for (const row of inboxRows) {
+      if (row.status === 'retryable_failed' && row.attempt_count >= maxAttempts) {
+        await deadletterInbox(db, row);
+        continue;
+      }
       try {
         await enqueueInboundEmailDurableJob({ workType: 'process_inbox', tenantId: tenant, recordId: row.inbox_id });
         result.enqueued.inbox += 1;
@@ -83,6 +100,10 @@ export async function sweepTenantDurableWork(tenant: string, limit: number = 10)
 
   const artifactRows = await findDueArtifacts(db, { tenant, limit });
   for (const row of artifactRows) {
+    if (row.status === 'retryable_failed' && row.attempt_count >= maxAttempts) {
+      await deadletterArtifact(db, row);
+      continue;
+    }
     try {
       await enqueueInboundEmailDurableJob({
         workType: 'process_artifact',
@@ -104,6 +125,10 @@ export async function sweepTenantDurableWork(tenant: string, limit: number = 10)
 
   const outboxRows = await findDueOutbox(db, { tenant, limit });
   for (const row of outboxRows) {
+    if (row.status === 'retryable_failed' && row.attempt_count >= maxAttempts) {
+      await deadletterOutboxRow(db, row);
+      continue;
+    }
     try {
       await enqueueInboundEmailDurableJob({
         workType: 'publish_outbox',
@@ -147,6 +172,183 @@ interface LegacyProcessedRow {
 }
 
 /**
+ * Parse the legacy `message_id` value, which the old pipeline stored as
+ * `provider:<opaque-id>`, back into a provider type plus the underlying id so
+ * the durable identity is derived from the same provider form instead of a
+ * fabricated rfc822 value. Returns null for malformed values.
+ */
+function parseLegacyMessageIdentity(messageId: string): { providerType: InboundProviderType; rest: string } | null {
+  if (messageId.startsWith('google:')) return { providerType: 'google', rest: messageId.slice('google:'.length) };
+  if (messageId.startsWith('microsoft:')) return { providerType: 'microsoft', rest: messageId.slice('microsoft:'.length) };
+  if (messageId.startsWith('imap:')) return { providerType: 'imap', rest: messageId.slice('imap:'.length) };
+  return null;
+}
+
+/**
+ * The raw entity-lookup key the legacy pipeline wrote into
+ * `tickets.email_metadata.messageId` and `comments.metadata.email.messageId`
+ * (it was `emailData.id`). Prefer the headers snapshot; fall back to the
+ * provider portion of the audit message_id.
+ */
+function resolveLegacyEntityKey(legacy: LegacyProcessedRow): string | null {
+  const snapshot = legacy.metadata?.headersSnapshot as Record<string, unknown> | undefined;
+  const snapKey = typeof snapshot?.messageId === 'string' ? snapshot.messageId.trim() : '';
+  if (snapKey) return snapKey;
+  const parsed = parseLegacyMessageIdentity(legacy.message_id);
+  if (parsed?.rest?.trim()) return parsed.rest.trim();
+  return legacy.message_id.trim() || null;
+}
+
+type LegacyReconciliation =
+  | { matched: true; ticketId: string; commentId: string }
+  | { matched: false; reason: 'none' | 'ambiguous_ticket' | 'ambiguous_comment' | 'missing_ticket' | 'missing_comment' };
+
+/**
+ * Reconcile an unambiguous existing ticket + comment for a legacy message
+ * WITHOUT creating anything. Exactly one of each is linked; multiple
+ * conflicting matches are surfaced for review and never trigger a third entity.
+ */
+async function reconcileLegacyEntities(
+  db: any,
+  tenant: string,
+  providerId: string,
+  messageKey: string,
+  ticketHint?: string | null
+): Promise<LegacyReconciliation> {
+  const { tenantDb } = await import('@alga-psa/db');
+
+  let ticketId: string | null = null;
+  if (ticketHint) {
+    ticketId = ticketHint;
+  } else {
+    const tickets = await tenantDb(db, tenant).table('tickets')
+      .whereRaw("email_metadata->>'messageId' = ?", [messageKey])
+      .andWhere(function (this: any) {
+        this.whereRaw("email_metadata->>'providerId' = ?", [providerId]).orWhereRaw(
+          "email_metadata->>'provider_id' = ?",
+          [providerId]
+        );
+      })
+      .select('ticket_id');
+    if (tickets.length > 1) return { matched: false, reason: 'ambiguous_ticket' };
+    ticketId = tickets[0] ? String(tickets[0].ticket_id) : null;
+  }
+
+  const comments = await tenantDb(db, tenant).table('comments')
+    .whereRaw("metadata->'email'->>'messageId' = ?", [messageKey])
+    .select('comment_id', 'ticket_id');
+  const onTicket = ticketId ? comments.filter((c: any) => String(c.ticket_id) === ticketId) : comments;
+  if (onTicket.length > 1) return { matched: false, reason: 'ambiguous_comment' };
+
+  if (ticketId && onTicket[0]) {
+    return { matched: true, ticketId, commentId: String(onTicket[0].comment_id) };
+  }
+  if (ticketId && !onTicket[0]) return { matched: false, reason: 'missing_comment' };
+  if (!ticketId && comments.length > 0) return { matched: false, reason: 'missing_ticket' };
+  return { matched: false, reason: 'none' };
+}
+
+/**
+ * Derive a provider pointer from legacy audit metadata so a stale `processing`
+ * row with no entities can be re-fetched and staged (become retryable). Only a
+ * real pointer recorded in the audit metadata counts — the audit `message_id`
+ * itself is not a usable pointer (the message may no longer exist).
+ */
+function deriveLegacyPointer(
+  legacy: LegacyProcessedRow
+): InboundProviderPointer | null {
+  const pointer = (legacy.metadata?.pointer ?? {}) as Record<string, unknown>;
+  const queueProvider = legacy.metadata?.queueProvider;
+  if (queueProvider === 'microsoft') {
+    const messageId = typeof pointer.messageId === 'string' ? pointer.messageId : null;
+    if (messageId) return { providerType: 'microsoft', providerMessageId: messageId };
+  }
+  if (queueProvider === 'google') {
+    const historyId = typeof pointer.historyId === 'string' ? pointer.historyId : null;
+    if (historyId) {
+      return {
+        providerType: 'google',
+        historyId,
+        pubsubMessageId: typeof pointer.pubsubMessageId === 'string' ? pointer.pubsubMessageId : null,
+      };
+    }
+  }
+  if (queueProvider === 'imap') {
+    const mailbox = typeof pointer.mailbox === 'string' ? pointer.mailbox : null;
+    const uid = pointer.uid;
+    const uidValidity = typeof pointer.uidValidity === 'string' ? pointer.uidValidity : null;
+    if (mailbox && (typeof uid === 'string' || typeof uid === 'number')) {
+      return { providerType: 'imap', mailbox, uid: String(uid), uidValidity };
+    }
+  }
+  return null;
+}
+
+function resolveLegacyProviderType(legacy: LegacyProcessedRow): InboundProviderType {
+  const queueProvider = legacy.metadata?.queueProvider;
+  if (queueProvider === 'microsoft' || queueProvider === 'google' || queueProvider === 'imap') {
+    return queueProvider;
+  }
+  const parsed = parseLegacyMessageIdentity(legacy.message_id);
+  return parsed?.providerType ?? 'imap';
+}
+
+/**
+ * Insert a legacy-imported inbox row directly in its terminal state. Legacy
+ * imports carry no real staged source, so the `source_required_check` only
+ * permits them terminal (`legacy_imported = true` + terminal status); inserting
+ * as `received` first would violate the check.
+ */
+async function upsertLegacyInbox(
+  db: any,
+  params: {
+    tenant: string;
+    legacy: LegacyProcessedRow;
+    identity: { normalized: string; rfcMessageId: string | null };
+    providerType: InboundProviderType;
+    providerMessageId?: string | null;
+    status: 'succeeded' | 'skipped' | 'terminal_failed';
+    outcome_kind?: 'reconciled' | 'skipped' | null;
+    outcome_reason?: string | null;
+    ticket_id?: string | null;
+    comment_id?: string | null;
+    lastError?: string | null;
+  }
+): Promise<InboundEmailInboxRecord> {
+  return upsertInbox(db, {
+    tenant: params.tenant,
+    ingress_id: null,
+    provider_id: params.legacy.provider_id,
+    provider_type: params.providerType,
+    normalized_message_id: params.identity.normalized,
+    provider_message_id: params.providerMessageId ?? params.legacy.message_id,
+    rfc_message_id: params.identity.rfcMessageId,
+    source_object_key: buildInboundSourceObjectKey({
+      tenant: params.tenant,
+      providerId: params.legacy.provider_id,
+      normalizedMessageId: params.identity.normalized,
+      sourceSha256: 'legacy',
+    }),
+    source_sha256: 'legacy',
+    source_size_bytes: 0,
+    source_staged_at: new Date(),
+    envelope: {
+      legacyMessageId: params.legacy.message_id,
+      from: params.legacy.from_email,
+      subject: params.legacy.subject,
+      receivedAt: params.legacy.received_at,
+    },
+    legacy_imported: true,
+    status: params.status,
+    outcome_kind: params.outcome_kind ?? null,
+    outcome_reason: params.outcome_reason ?? null,
+    ticket_id: params.ticket_id ?? null,
+    comment_id: params.comment_id ?? null,
+    last_error: params.lastError ?? null,
+  });
+}
+
+/**
  * Import a bounded batch of legacy `email_processed_messages` rows into the
  * durable ledgers. Resumable: rows whose normalized identity already has a
  * `legacy_imported` inbox row are skipped (the inbox row is the checkpoint).
@@ -170,16 +372,12 @@ export async function backfillTenantLegacyRows(tenant: string, limit: number = 2
       continue;
     }
 
+    const providerType = resolveLegacyProviderType(legacy);
+    const parsedIdentity = parseLegacyMessageIdentity(legacy.message_id);
     const identity = normalizeInboundMessageIdentity({
-      providerType: 'imap',
-      rfcMessageId: legacy.message_id,
-      providerMessageId: null,
-    }) ?? normalizeInboundMessageIdentity({
-      providerType: 'microsoft',
-      providerMessageId: legacy.message_id,
-    }) ?? normalizeInboundMessageIdentity({
-      providerType: 'google',
-      providerMessageId: legacy.message_id,
+      providerType,
+      rfcMessageId: providerType === 'imap' ? parsedIdentity?.rest ?? legacy.message_id : null,
+      providerMessageId: providerType !== 'imap' ? parsedIdentity?.rest ?? legacy.message_id : null,
     });
 
     if (!identity) {
@@ -197,119 +395,184 @@ export async function backfillTenantLegacyRows(tenant: string, limit: number = 2
       continue;
     }
 
-    // Reconcile ticket/comment from legacy JSON metadata without guessing.
-    const legacyTicketId = legacy.ticket_id ?? null;
-    const legacyMetadata = legacy.metadata ?? {};
-
-    const inbox = await upsertInbox(db, {
-      tenant,
-      ingress_id: null,
-      provider_id: legacy.provider_id,
-      provider_type: 'imap',
-      normalized_message_id: identity.normalized,
-      provider_message_id: legacy.message_id,
-      rfc_message_id: identity.rfcMessageId,
-      source_object_key: buildInboundSourceObjectKey({
-        tenant,
-        providerId: legacy.provider_id,
-        normalizedMessageId: identity.normalized,
-        sourceSha256: 'legacy',
-      }),
-      source_sha256: 'legacy',
-      source_size_bytes: 0,
-      source_staged_at: new Date(),
-      envelope: {
-        legacyMessageId: legacy.message_id,
-        from: legacy.from_email,
-        subject: legacy.subject,
-        receivedAt: legacy.received_at,
-      },
-      legacy_imported: true,
-    });
-
     const status = String(legacy.processing_status || 'success').toLowerCase();
+    const messageKey = resolveLegacyEntityKey(legacy);
+    const legacyInboxBase = {
+      tenant,
+      legacy,
+      identity,
+      providerType,
+      providerMessageId: parsedIdentity?.rest ?? null,
+      lastError: legacy.error_message ?? null,
+    };
 
-    if (status === 'success' && legacyTicketId) {
-      // Map legacy success to `succeeded` only when its ticket can be linked
-      // unambiguously; comment reconciliation happens via the effects ledger.
-      await insertEffect(db, {
-        tenant,
-        provider_id: legacy.provider_id,
-        normalized_message_id: identity.normalized,
-        effect_type: 'ticket',
-        inbox_id: inbox.inbox_id,
-        entity_id: legacyTicketId,
-        ticket_id: legacyTicketId,
-        reconciled: true,
+    if (status === 'success') {
+      // Map legacy success to `succeeded` only when its ticket AND comment can
+      // both be reconciled unambiguously; otherwise import it as terminal_failed
+      // with the legacy result preserved for review — never guess an effect.
+      if (!messageKey) {
+        await upsertLegacyInbox(db, { ...legacyInboxBase, status: 'terminal_failed', outcome_reason: 'legacy_success_no_entity_key' });
+        result.imported += 1;
+        continue;
+      }
+      const reconciliation = await reconcileLegacyEntities(db, tenant, legacy.provider_id, messageKey, legacy.ticket_id);
+      if (reconciliation.matched === true) {
+        const inbox = await upsertLegacyInbox(db, {
+          ...legacyInboxBase,
+          status: 'succeeded',
+          outcome_kind: 'reconciled',
+          ticket_id: reconciliation.ticketId,
+          comment_id: reconciliation.commentId,
+        });
+        await insertEffect(db, {
+          tenant,
+          provider_id: legacy.provider_id,
+          normalized_message_id: identity.normalized,
+          effect_type: 'ticket',
+          inbox_id: inbox.inbox_id,
+          entity_id: reconciliation.ticketId,
+          ticket_id: reconciliation.ticketId,
+          reconciled: true,
+        });
+        await insertEffect(db, {
+          tenant,
+          provider_id: legacy.provider_id,
+          normalized_message_id: identity.normalized,
+          effect_type: 'comment',
+          inbox_id: inbox.inbox_id,
+          entity_id: reconciliation.commentId,
+          ticket_id: reconciliation.ticketId,
+          reconciled: true,
+        });
+        result.imported += 1;
+        continue;
+      }
+      await upsertLegacyInbox(db, {
+        ...legacyInboxBase,
+        status: 'terminal_failed',
+        outcome_reason: `legacy_success_reconcile_${reconciliation.reason}`,
       });
-      await transitionLegacyInboxTerminal(db, inbox, {
-        status: 'succeeded',
-        outcome_kind: 'reconciled',
-        ticket_id: legacyTicketId,
-        comment_id: null,
-        legacyStatus: status,
-      });
-      result.imported += 1;
+      result.ambiguous += 1;
       continue;
     }
 
     if (status === 'skipped') {
-      await transitionLegacyInboxTerminal(db, inbox, {
+      await upsertLegacyInbox(db, {
+        ...legacyInboxBase,
         status: 'skipped',
         outcome_kind: 'skipped',
         outcome_reason: String(legacy.error_message || 'legacy_skipped'),
-        ticket_id: null,
-        comment_id: null,
-        legacyStatus: status,
       });
       result.imported += 1;
       continue;
     }
 
-    // failed / partial / stale processing: import as terminal failure for review
-    // unless a source/pointer and retry policy allow retry (never guessed here).
-    await transitionLegacyInboxTerminal(db, inbox, {
+    // Stale `processing` (the incident shape): reconcile any already-created
+    // entities and complete the state without creating another. With no
+    // entities, become retryable via durable ingress work when a pointer is
+    // available, otherwise terminal_failed rather than creating from
+    // incomplete data.
+    if (status === 'processing') {
+      if (messageKey) {
+        const reconciliation = await reconcileLegacyEntities(db, tenant, legacy.provider_id, messageKey, legacy.ticket_id);
+        if (reconciliation.matched === true) {
+          const inbox = await upsertLegacyInbox(db, {
+            ...legacyInboxBase,
+            status: 'succeeded',
+            outcome_kind: 'reconciled',
+            ticket_id: reconciliation.ticketId,
+            comment_id: reconciliation.commentId,
+          });
+          await insertEffect(db, {
+            tenant,
+            provider_id: legacy.provider_id,
+            normalized_message_id: identity.normalized,
+            effect_type: 'ticket',
+            inbox_id: inbox.inbox_id,
+            entity_id: reconciliation.ticketId,
+            ticket_id: reconciliation.ticketId,
+            reconciled: true,
+          });
+          await insertEffect(db, {
+            tenant,
+            provider_id: legacy.provider_id,
+            normalized_message_id: identity.normalized,
+            effect_type: 'comment',
+            inbox_id: inbox.inbox_id,
+            entity_id: reconciliation.commentId,
+            ticket_id: reconciliation.ticketId,
+            reconciled: true,
+          });
+          result.imported += 1;
+          continue;
+        }
+        if (reconciliation.reason === 'ambiguous_ticket' || reconciliation.reason === 'ambiguous_comment') {
+          await upsertLegacyInbox(db, {
+            ...legacyInboxBase,
+            status: 'terminal_failed',
+            outcome_reason: `legacy_processing_reconcile_${reconciliation.reason}`,
+          });
+          result.ambiguous += 1;
+          continue;
+        }
+      }
+
+      const pointer = deriveLegacyPointer(legacy);
+      if (pointer) {
+        // No entities to link but a usable provider pointer exists: create
+        // durable ingress work so the source can be staged and re-processed.
+        // The legacy row stays untouched; the inbox row is the checkpoint once
+        // staging creates it.
+        try {
+          const { persistIngressPointer } = await import('./inboundEmailProducer');
+          const produced = await persistIngressPointer({
+            tenant,
+            providerId: legacy.provider_id,
+            providerType: pointer.providerType,
+            pointer,
+          });
+          if (produced.ingressId) {
+            result.imported += 1;
+            continue;
+          }
+        } catch (error: any) {
+          console.warn('[InboundEmailRecovery] legacy pointer ingress persist failed', {
+            event: 'inbound_email_recovery_legacy_pointer_ingress_failed',
+            tenantId: tenant,
+            providerId: legacy.provider_id,
+            messageId: legacy.message_id,
+            error: error?.message || String(error),
+          });
+        }
+        await upsertLegacyInbox(db, {
+          ...legacyInboxBase,
+          status: 'terminal_failed',
+          outcome_reason: 'legacy_processing_pointer_ingress_failed',
+        });
+        result.imported += 1;
+        continue;
+      }
+
+      await upsertLegacyInbox(db, {
+        ...legacyInboxBase,
+        status: 'terminal_failed',
+        outcome_reason: 'legacy_processing_unrecoverable',
+      });
+      result.imported += 1;
+      continue;
+    }
+
+    // failed / partial: import as terminal failure for review unless a
+    // source/pointer and retry policy allow retry (never guessed here).
+    await upsertLegacyInbox(db, {
+      ...legacyInboxBase,
       status: 'terminal_failed',
-      outcome_kind: null,
       outcome_reason: `legacy_${status}_not_replayable`,
-      ticket_id: null,
-      comment_id: null,
-      legacyStatus: status,
-      legacyError: legacy.error_message ?? null,
     });
     result.imported += 1;
   }
 
   return result;
-}
-
-async function transitionLegacyInboxTerminal(
-  db: any,
-  inbox: InboundEmailInboxRecord,
-  params: {
-    status: 'succeeded' | 'skipped' | 'terminal_failed';
-    outcome_kind: 'reconciled' | 'skipped' | null;
-    outcome_reason?: string | null;
-    ticket_id: string | null;
-    comment_id: string | null;
-    legacyStatus: string;
-    legacyError?: string | null;
-  }
-): Promise<void> {
-  const { tenantDb } = await import('@alga-psa/db');
-  await tenantDb(db, inbox.tenant).table('inbound_email_inbox')
-    .where({ tenant: inbox.tenant, inbox_id: inbox.inbox_id })
-    .update({
-      status: params.status,
-      outcome_kind: params.outcome_kind,
-      outcome_reason: params.outcome_reason ?? null,
-      ticket_id: params.ticket_id,
-      comment_id: params.comment_id,
-      completed_at: db.fn.now(),
-      updated_at: db.fn.now(),
-      legacy_imported: true,
-      last_error: params.legacyError ?? null,
-    });
 }
 
 export interface MirrorResult {

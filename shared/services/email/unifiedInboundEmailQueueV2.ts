@@ -112,6 +112,7 @@ local jobId = ARGV[1]
 local claimToken = ARGV[2]
 local errorMsg = ARGV[3]
 local maxAttempts = tonumber(ARGV[4])
+local failedAt = ARGV[5]
 
 local claimRaw = redis.call('HGET', inflightHash, jobId)
 if not claimRaw then
@@ -133,7 +134,7 @@ if nextAttempt >= maxAttempts then
   local retriedJob = cjson.decode(payload)
   retriedJob['attempt'] = nextAttempt
   redis.call('RPUSH', dlq, cjson.encode({
-    failedAt = cjson.encode({ _ts = os.time() }),
+    failedAt = failedAt,
     reason = errorMsg,
     job = retriedJob,
   }))
@@ -588,6 +589,7 @@ export async function failInboundEmailDurableJob(params: {
       params.claim.claimToken,
       params.error,
       String(cfg.maxAttempts),
+      new Date().toISOString(),
     ],
   });
   const parsed = typeof result === 'string' ? JSON.parse(result) : result;

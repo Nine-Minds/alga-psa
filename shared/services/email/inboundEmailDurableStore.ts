@@ -60,6 +60,24 @@ export function getDurableLeaseTtlMs(): number {
   return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 30_000;
 }
 
+/**
+ * Terminal attempt limit for Postgres durable rows. Mirrors the V2 Redis
+ * transport maxAttempts (UNIFIED_INBOUND_EMAIL_QUEUE_V2_MAX_ATTEMPTS) so an
+ * exhausted row lands in a queryable terminal-failure state instead of looping
+ * forever through the sweeper/claim cycle.
+ */
+export function getDurableMaxAttempts(): number {
+  const raw = Number(process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_MAX_ATTEMPTS);
+  return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 5;
+}
+
+function isDue(nextAttemptAt: Date | string | null | undefined, now: Date): boolean {
+  if (!nextAttemptAt) return true;
+  const at = new Date(nextAttemptAt).getTime();
+  if (Number.isNaN(at)) return true;
+  return at <= now.getTime();
+}
+
 // ---------------------------------------------------------------------------
 // Ingress
 // ---------------------------------------------------------------------------
@@ -130,13 +148,70 @@ export async function claimIngress(db: DurableDb, params: {
   ingress_id: string;
   owner: string;
   leaseTtlMs: number;
+  allowRetryable?: boolean;
+}): Promise<InboundClaimResult<InboundIngressRecord>> {
+  const lease = makeLeaseFields(params.owner, params.leaseTtlMs);
+  const maxAttempts = getDurableMaxAttempts();
+  const patch = {
+    status: 'staging',
+    attempt_count: db.raw('attempt_count + 1'),
+    lease_owner: lease.lease_owner,
+    lease_token: lease.lease_token,
+    lease_version: db.raw('lease_version + 1'),
+    lease_expires_at: lease.lease_expires_at,
+    next_attempt_at: null,
+    updated_at: db.fn.now(),
+  };
+  const now = new Date();
+
+  let updated = await tenantDb(db, params.tenant).table('inbound_email_ingress')
+    .where({ tenant: params.tenant, ingress_id: params.ingress_id, status: 'received' })
+    .update(patch)
+    .returning('*');
+  if (updated.length === 0 && params.allowRetryable) {
+    updated = await tenantDb(db, params.tenant).table('inbound_email_ingress')
+      .where({ tenant: params.tenant, ingress_id: params.ingress_id, status: 'retryable_failed' })
+      .andWhere('attempt_count', '<', maxAttempts)
+      .andWhere((qb: any) => qb.whereNull('next_attempt_at').orWhere('next_attempt_at', '<=', db.fn.now()))
+      .update(patch)
+      .returning('*');
+  }
+  if (updated.length > 0) return { claimed: true, row: updated[0] };
+
+  const current = await getIngress(db, params.tenant, params.ingress_id);
+  if (!current) return { claimed: false, reason: 'missing' };
+  if (current.status === 'staged' || current.status === 'terminal_failed') {
+    return { claimed: false, reason: 'terminal' };
+  }
+  if (current.status === 'retryable_failed') {
+    // Over-cap due retryable rows are dead-lettered into a queryable terminal
+    // failure state rather than looping forever.
+    if (isDue(current.next_attempt_at, now) && current.attempt_count >= maxAttempts) {
+      await deadletterIngress(db, current);
+      return { claimed: false, reason: 'terminal' };
+    }
+    return { claimed: false, reason: 'not_due' };
+  }
+  return { claimed: false, reason: 'already_claimed' };
+}
+
+/**
+ * Atomically reclaim an expired-lease `staging` ingress row. `staging ->
+ * staging` installs a new token/version (fencing the old worker out) without
+ * incrementing the attempt count, mirroring reclaimInbox. A crash after the
+ * ingress claim but before transition must be recoverable by the sweeper.
+ */
+export async function reclaimIngress(db: DurableDb, params: {
+  tenant: string;
+  ingress_id: string;
+  owner: string;
+  leaseTtlMs: number;
 }): Promise<InboundClaimResult<InboundIngressRecord>> {
   const lease = makeLeaseFields(params.owner, params.leaseTtlMs);
   const updated = await tenantDb(db, params.tenant).table('inbound_email_ingress')
-    .where({ tenant: params.tenant, ingress_id: params.ingress_id, status: 'received' })
+    .where({ tenant: params.tenant, ingress_id: params.ingress_id, status: 'staging' })
+    .andWhere('lease_expires_at', '<=', db.fn.now())
     .update({
-      status: 'staging',
-      attempt_count: db.raw('attempt_count + 1'),
       lease_owner: lease.lease_owner,
       lease_token: lease.lease_token,
       lease_version: db.raw('lease_version + 1'),
@@ -146,12 +221,30 @@ export async function claimIngress(db: DurableDb, params: {
     })
     .returning('*');
   if (updated.length > 0) return { claimed: true, row: updated[0] };
+
   const current = await getIngress(db, params.tenant, params.ingress_id);
   if (!current) return { claimed: false, reason: 'missing' };
   if (current.status === 'staged' || current.status === 'terminal_failed') {
     return { claimed: false, reason: 'terminal' };
   }
   return { claimed: false, reason: 'already_claimed' };
+}
+
+/** Dead-letter an over-cap due retryable ingress row into `terminal_failed`. */
+export async function deadletterIngress(db: DurableDb, row: InboundIngressRecord): Promise<boolean> {
+  const updated = await tenantDb(db, row.tenant).table('inbound_email_ingress')
+    .where({ tenant: row.tenant, ingress_id: row.ingress_id, status: 'retryable_failed' })
+    .update({
+      status: 'terminal_failed',
+      completed_at: db.fn.now(),
+      lease_owner: null,
+      lease_token: null,
+      lease_expires_at: null,
+      next_attempt_at: null,
+      last_error: row.last_error ?? 'max_attempts_exhausted',
+      updated_at: db.fn.now(),
+    });
+  return updated > 0;
 }
 
 export async function getIngress(db: DurableDb, tenant: string, ingressId: string): Promise<InboundIngressRecord | null> {
@@ -242,11 +335,25 @@ export interface InboundInboxInsert {
   source_staged_at: Date | string;
   envelope: Record<string, unknown>;
   legacy_imported?: boolean;
+  /**
+   * Terminal state to insert directly. Legacy imports have no real source, so
+   * the `source_required_check` only permits them in a terminal state
+   * (`legacy_imported = true` + terminal status). The backfill inserts them
+   * straight into their final terminal status instead of via received ->
+   * transition, which the check would reject.
+   */
+  status?: 'succeeded' | 'skipped' | 'terminal_failed';
+  outcome_kind?: InboundEmailInboxOutcomeKind | null;
+  outcome_reason?: string | null;
+  ticket_id?: string | null;
+  comment_id?: string | null;
+  last_error?: string | null;
 }
 
 export async function upsertInbox(db: DurableDb, input: InboundInboxInsert): Promise<InboundEmailInboxRecord> {
   const scoped = tenantDb(db, input.tenant);
   const now = db.fn.now();
+  const terminal = input.status !== undefined;
   const inserted = await scoped.table('inbound_email_inbox')
     .insert({
       tenant: input.tenant,
@@ -262,9 +369,15 @@ export async function upsertInbox(db: DurableDb, input: InboundInboxInsert): Pro
       source_staged_at: input.source_staged_at,
       envelope: JSON.stringify(input.envelope),
       legacy_imported: input.legacy_imported ?? false,
-      status: 'received',
+      status: input.status ?? 'received',
       attempt_count: 0,
       lease_version: 0,
+      outcome_kind: input.outcome_kind ?? null,
+      outcome_reason: input.outcome_reason ?? null,
+      ticket_id: input.ticket_id ?? null,
+      comment_id: input.comment_id ?? null,
+      last_error: input.last_error ?? null,
+      completed_at: terminal ? now : null,
       received_at: now,
       created_at: now,
       updated_at: now,
@@ -316,6 +429,8 @@ export async function claimInbox(db: DurableDb, params: {
   allowRetryable?: boolean;
 }): Promise<InboundClaimResult<InboundEmailInboxRecord>> {
   const lease = makeLeaseFields(params.owner, params.leaseTtlMs);
+  const maxAttempts = getDurableMaxAttempts();
+  const now = new Date();
   const patch = {
     status: 'processing',
     attempt_count: db.raw('attempt_count + 1'),
@@ -334,6 +449,7 @@ export async function claimInbox(db: DurableDb, params: {
   if (updated.length === 0 && params.allowRetryable) {
     updated = await tenantDb(db, params.tenant).table('inbound_email_inbox')
       .where({ tenant: params.tenant, inbox_id: params.inbox_id, status: 'retryable_failed' })
+      .andWhere('attempt_count', '<', maxAttempts)
       .andWhere((qb: any) => qb.whereNull('next_attempt_at').orWhere('next_attempt_at', '<=', db.fn.now()))
       .update(patch)
       .returning('*');
@@ -346,8 +462,39 @@ export async function claimInbox(db: DurableDb, params: {
   if (['succeeded', 'skipped', 'terminal_failed'].includes(current.status)) {
     return { claimed: false, reason: 'terminal' };
   }
-  if (current.status === 'retryable_failed') return { claimed: false, reason: 'not_due' };
+  if (current.status === 'retryable_failed') {
+    // Over-cap due retryable rows are dead-lettered into a queryable terminal
+    // failure state rather than looping forever.
+    if (isDue(current.next_attempt_at, now) && current.attempt_count >= maxAttempts) {
+      await deadletterInbox(db, current);
+      return { claimed: false, reason: 'terminal' };
+    }
+    return { claimed: false, reason: 'not_due' };
+  }
   return { claimed: false, reason: 'already_claimed' };
+}
+
+/**
+ * Dead-letter an over-cap due retryable inbox row into `terminal_failed`.
+ * Preserves the latest error and clears the lease, satisfying the terminal
+ * lease/check constraints. The row is never deleted.
+ */
+export async function deadletterInbox(db: DurableDb, row: InboundEmailInboxRecord): Promise<boolean> {
+  const updated = await tenantDb(db, row.tenant).table('inbound_email_inbox')
+    .where({ tenant: row.tenant, inbox_id: row.inbox_id, status: 'retryable_failed' })
+    .update({
+      status: 'terminal_failed',
+      outcome_kind: null,
+      outcome_reason: 'max_attempts_exhausted',
+      completed_at: db.fn.now(),
+      lease_owner: null,
+      lease_token: null,
+      lease_expires_at: null,
+      next_attempt_at: null,
+      last_error: row.last_error ?? 'max_attempts_exhausted',
+      updated_at: db.fn.now(),
+    });
+  return updated > 0;
 }
 
 /**
@@ -662,6 +809,8 @@ export async function claimArtifact(db: DurableDb, params: {
   leaseTtlMs: number;
 }): Promise<InboundClaimResult<InboundArtifactRecord>> {
   const lease = makeLeaseFields(params.owner, params.leaseTtlMs);
+  const maxAttempts = getDurableMaxAttempts();
+  const now = new Date();
   const patch = {
     status: 'processing',
     attempt_count: db.raw('attempt_count + 1'),
@@ -679,6 +828,7 @@ export async function claimArtifact(db: DurableDb, params: {
   if (updated.length > 0) return { claimed: true, row: updated[0] };
   const retryable = await tenantDb(db, params.tenant).table('inbound_email_artifacts')
     .where({ tenant: params.tenant, inbox_id: params.inbox_id, artifact_key: params.artifact_key, status: 'retryable_failed' })
+    .andWhere('attempt_count', '<', maxAttempts)
     .andWhere((qb: any) => qb.whereNull('next_attempt_at').orWhere('next_attempt_at', '<=', db.fn.now()))
     .update(patch)
     .returning('*');
@@ -690,8 +840,31 @@ export async function claimArtifact(db: DurableDb, params: {
   if (['succeeded', 'skipped', 'terminal_failed'].includes(current.status)) {
     return { claimed: false, reason: 'terminal' };
   }
-  if (current.status === 'retryable_failed') return { claimed: false, reason: 'not_due' };
+  if (current.status === 'retryable_failed') {
+    if (isDue(current.next_attempt_at, now) && current.attempt_count >= maxAttempts) {
+      await deadletterArtifact(db, current as InboundArtifactRecord);
+      return { claimed: false, reason: 'terminal' };
+    }
+    return { claimed: false, reason: 'not_due' };
+  }
   return { claimed: false, reason: 'already_claimed' };
+}
+
+/** Dead-letter an over-cap due retryable artifact row into `terminal_failed`. */
+export async function deadletterArtifact(db: DurableDb, row: InboundArtifactRecord): Promise<boolean> {
+  const updated = await tenantDb(db, row.tenant).table('inbound_email_artifacts')
+    .where({ tenant: row.tenant, inbox_id: row.inbox_id, artifact_key: row.artifact_key, status: 'retryable_failed' })
+    .update({
+      status: 'terminal_failed',
+      completed_at: db.fn.now(),
+      lease_owner: null,
+      lease_token: null,
+      lease_expires_at: null,
+      next_attempt_at: null,
+      last_error: row.last_error ?? 'max_attempts_exhausted',
+      updated_at: db.fn.now(),
+    });
+  return updated > 0;
 }
 
 export async function transitionArtifact(db: DurableDb, params: {
@@ -815,6 +988,8 @@ export async function claimOutboxRow(db: DurableDb, params: {
   leaseTtlMs: number;
 }): Promise<InboundClaimResult<InboundOutboxRecord>> {
   const lease = makeLeaseFields(params.owner, params.leaseTtlMs);
+  const maxAttempts = getDurableMaxAttempts();
+  const now = new Date();
   const patch = {
     status: 'publishing',
     attempt_count: db.raw('attempt_count + 1'),
@@ -832,6 +1007,7 @@ export async function claimOutboxRow(db: DurableDb, params: {
   if (updated.length > 0) return { claimed: true, row: updated[0] };
   const retryable = await tenantDb(db, params.tenant).table('inbound_email_outbox')
     .where({ tenant: params.tenant, outbox_id: params.outbox_id, status: 'retryable_failed' })
+    .andWhere('attempt_count', '<', maxAttempts)
     .andWhere((qb: any) => qb.whereNull('next_attempt_at').orWhere('next_attempt_at', '<=', db.fn.now()))
     .update(patch)
     .returning('*');
@@ -843,8 +1019,30 @@ export async function claimOutboxRow(db: DurableDb, params: {
   if (['published', 'terminal_failed'].includes(current.status)) {
     return { claimed: false, reason: 'terminal' };
   }
-  if (current.status === 'retryable_failed') return { claimed: false, reason: 'not_due' };
+  if (current.status === 'retryable_failed') {
+    if (isDue(current.next_attempt_at, now) && current.attempt_count >= maxAttempts) {
+      await deadletterOutboxRow(db, current as InboundOutboxRecord);
+      return { claimed: false, reason: 'terminal' };
+    }
+    return { claimed: false, reason: 'not_due' };
+  }
   return { claimed: false, reason: 'already_claimed' };
+}
+
+/** Dead-letter an over-cap due retryable outbox row into `terminal_failed`. */
+export async function deadletterOutboxRow(db: DurableDb, row: InboundOutboxRecord): Promise<boolean> {
+  const updated = await tenantDb(db, row.tenant).table('inbound_email_outbox')
+    .where({ tenant: row.tenant, outbox_id: row.outbox_id, status: 'retryable_failed' })
+    .update({
+      status: 'terminal_failed',
+      lease_owner: null,
+      lease_token: null,
+      lease_expires_at: null,
+      next_attempt_at: null,
+      last_error: row.last_error ?? 'max_attempts_exhausted',
+      updated_at: db.fn.now(),
+    });
+  return updated > 0;
 }
 
 export async function transitionOutboxRow(db: DurableDb, params: {
@@ -914,6 +1112,12 @@ export async function findDueIngress(db: DurableDb, options: DueScanOptions): Pr
             .where(function (due: any) {
               due.whereNull('next_attempt_at').orWhere('next_attempt_at', '<=', now.toISOString());
             });
+        })
+        .orWhere((expired: any) => {
+          // Crash between ingress claim (status `staging`) and transition: the
+          // lease expired and the row must be reclaimed, not stranded.
+          expired.where({ status: 'staging' })
+            .where('lease_expires_at', '<=', now.toISOString());
         });
     })
     .orderBy('received_at', 'asc')

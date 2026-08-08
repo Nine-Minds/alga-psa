@@ -26,6 +26,7 @@ import type {
 } from '../../interfaces/inbound-email.interfaces';
 import {
   claimInbox,
+  getDurableMaxAttempts,
   getInbox,
   getEffectsForInbox,
   getInboxLeaseExpiry,
@@ -159,7 +160,13 @@ export async function processInboundInbox(
 
   // --- Prepare (no Postgres transaction). ----------------------------------
   if (!inbox.source_object_key || !inbox.source_sha256) {
-    await markRetryable(db, inbox, params, 'source_missing');
+    const marked = await markRetryable(db, inbox, params, 'source_missing');
+    if (!marked.marked) {
+      return { disposition: 'defer', untilIso: new Date(Date.now() + 30_000).toISOString(), reason: 'source_missing_ownership_lost' };
+    }
+    if (marked.terminal) {
+      return { disposition: 'ack', outcome: 'terminal_failed', reason: 'max_attempts_exhausted' };
+    }
     return { disposition: 'retry', error: 'inbox_source_missing' };
   }
 
@@ -184,7 +191,13 @@ export async function processInboundInbox(
     // transient object-read failure is retryable.
     const isRetryable = /object (not found|unavailable)|ECONN|timed out|timeout/i.test(message) && !message.includes('digest mismatch');
     if (isRetryable) {
-      await markRetryable(db, inbox, params, message);
+      const marked = await markRetryable(db, inbox, params, message);
+      if (!marked.marked) {
+        return { disposition: 'defer', untilIso: new Date(Date.now() + 30_000).toISOString(), reason: 'prepare_retry_ownership_lost' };
+      }
+      if (marked.terminal) {
+        return { disposition: 'ack', outcome: 'terminal_failed', reason: 'max_attempts_exhausted' };
+      }
       return { disposition: 'retry', error: message };
     }
     await markTerminalFailed(db, inbox, params, message);
@@ -195,34 +208,55 @@ export async function processInboundInbox(
   const leaseVersion = Number(inbox.lease_version);
 
   // --- Commit: one short tenant-colocated transaction. ---------------------
-  const commitResult = await withAdminTransaction(async (trx: Knex.Transaction) => {
-    const locked = await lockInboxForUpdate(trx, {
-      tenant: params.tenantId,
-      inbox_id: params.inboxId,
-      token: leaseToken,
-      version: leaseVersion,
-    });
-    if (!locked) {
-      throw new Error('inbox_fence_superseded');
-    }
+  let commitResult: CoreCommitResult;
+  try {
+    commitResult = await withAdminTransaction(async (trx: Knex.Transaction) => {
+      const locked = await lockInboxForUpdate(trx, {
+        tenant: params.tenantId,
+        inbox_id: params.inboxId,
+        token: leaseToken,
+        version: leaseVersion,
+      });
+      if (!locked) {
+        throw new Error('inbox_fence_superseded');
+      }
 
-    const effects = await getEffectsForInbox(trx, params.tenantId, params.inboxId);
-    if (effects.length > 0) {
-      // Replay of an already-committed message: return the stored outcome.
-      return { terminalReplay: true as const, inbox: locked };
-    }
+      const effects = await getEffectsForInbox(trx, params.tenantId, params.inboxId);
+      if (effects.length > 0) {
+        // Replay of an already-committed message: return the stored outcome.
+        return { terminalReplay: true as const, inbox: locked };
+      }
 
-    const result = await runCommitPhase({
-      tenantId: params.tenantId,
-      inboxId: params.inboxId,
-      owner: params.owner,
-      mode: params.mode,
-      trx,
-      inbox: locked,
-      emailData: parsed.emailData,
+      const result = await runCommitPhase({
+        tenantId: params.tenantId,
+        inboxId: params.inboxId,
+        owner: params.owner,
+        mode: params.mode,
+        trx,
+        inbox: locked,
+        emailData: parsed.emailData,
+      });
+      return { terminalReplay: false as const, ...result };
     });
-    return { terminalReplay: false as const, ...result };
-  });
+  } catch (error: any) {
+    const message = error?.message || String(error);
+    if (message === 'inbox_fence_superseded') {
+      // A competing reclaim owns the row now. Stop without ACKing success or
+      // burning a Redis retry; the DB fence governs the next delivery.
+      return { disposition: 'defer', untilIso: new Date(Date.now() + 30_000).toISOString(), reason: 'inbox_fence_superseded' };
+    }
+    // A transient/domain failure inside the core transaction: fenced-mark the
+    // row retryable with backoff so Postgres (not Redis) is the retry
+    // authority and the failure keeps error provenance.
+    const marked = await markRetryable(db, inbox, params, message);
+    if (!marked.marked) {
+      return { disposition: 'defer', untilIso: new Date(Date.now() + 30_000).toISOString(), reason: 'commit_failure_ownership_lost' };
+    }
+    if (marked.terminal) {
+      return { disposition: 'ack', outcome: 'terminal_failed', reason: 'max_attempts_exhausted' };
+    }
+    return { disposition: 'retry', error: message };
+  }
 
   if (commitResult.terminalReplay === true) {
     return storedOutcomeDisposition(commitResult.inbox);
@@ -248,6 +282,10 @@ interface CommitResult {
   reason?: string;
   error?: string;
 }
+
+type CoreCommitResult =
+  | { terminalReplay: true; inbox: InboundEmailInboxRecord }
+  | { terminalReplay: false; kind: CommitResult['kind']; ticketId?: string; commentId?: string; reason?: string; error?: string };
 
 async function runCommitPhase(params: {
   tenantId: string;
@@ -533,19 +571,27 @@ async function markRetryable(
   inbox: InboundEmailInboxRecord,
   params: ProcessInboundInboxParams,
   error: string
-): Promise<void> {
-  const backoffMs = boundedBackoffMs(inbox.attempt_count);
-  await transitionInbox(db, {
+): Promise<{ marked: boolean; terminal: boolean }> {
+  const maxAttempts = getDurableMaxAttempts();
+  // Terminal attempt cap: once the configured number of processing attempts
+  // is exhausted the row dead-letters into a queryable terminal-failure state
+  // (never deleted, never looped forever). Attempt count is incremented at
+  // claim time, so `attempt_count >= max` means this was the final attempt.
+  const terminal = inbox.attempt_count >= maxAttempts;
+  const written = await transitionInbox(db, {
     tenant: params.tenantId,
     inbox_id: params.inboxId,
     token: String(inbox.lease_token),
     version: Number(inbox.lease_version),
       owner: params.owner,
-    status: 'retryable_failed',
-    nextAttemptAt: new Date(Date.now() + backoffMs),
+    status: terminal ? 'terminal_failed' : 'retryable_failed',
+    outcome_kind: terminal ? null : undefined,
+    outcome_reason: terminal ? 'max_attempts_exhausted' : undefined,
+    nextAttemptAt: terminal ? undefined : new Date(Date.now() + boundedBackoffMs(inbox.attempt_count)),
     error,
-    errorDetails: { phase: 'prepare' },
+    errorDetails: { phase: 'prepare', maxAttemptsExhausted: terminal || undefined },
   });
+  return { marked: written, terminal };
 }
 
 async function markTerminalFailed(

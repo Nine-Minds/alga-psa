@@ -18,8 +18,10 @@ import { randomUUID } from 'node:crypto';
 import {
   claimIngress,
   getDurableLeaseTtlMs,
+  getDurableMaxAttempts,
   getInboundDurableMode,
   getIngress,
+  reclaimIngress,
   transitionIngress,
   upsertIngress,
   upsertInbox,
@@ -33,6 +35,12 @@ import { GmailAdapter } from './providers/GmailAdapter';
 
 const TERMINAL_INGRESS_STATUSES = new Set(['staged', 'terminal_failed']);
 
+function boundedBackoffMs(attemptCount: number): number {
+  const base = 2 ** Math.min(attemptCount, 6) * 1000;
+  const jitter = Math.floor(Math.random() * 1000);
+  return Math.min(base + jitter, 5 * 60 * 1000);
+}
+
 export async function processIngressStageJob(
   job: UnifiedInboundEmailQueueJobV2,
   ctx: InboundV2JobContext
@@ -40,31 +48,54 @@ export async function processIngressStageJob(
   const db = await (await import('@alga-psa/db/admin')).getAdminConnection();
   const owner = `ingress-stager-${job.jobId}`;
   const ttl = getDurableLeaseTtlMs();
+  const maxAttempts = getDurableMaxAttempts();
 
-  const claim = await claimIngress(db, {
+  let claim = await claimIngress(db, {
     tenant: job.tenantId,
     ingress_id: job.recordId,
     owner,
     leaseTtlMs: ttl,
+    allowRetryable: true,
   });
 
-  if (claim.claimed === false) {
+  let ingress: InboundIngressRecord;
+  if (claim.claimed === true) {
+    ingress = claim.row;
+  } else {
     const current = await getIngress(db, job.tenantId, job.recordId);
     if (current && TERMINAL_INGRESS_STATUSES.has(current.status)) {
       return { disposition: 'ack' };
     }
     if (current?.status === 'staging') {
       const expiry = current.lease_expires_at ? new Date(current.lease_expires_at).getTime() : Date.now() + 30_000;
-      return { disposition: 'defer', untilIso: new Date(expiry).toISOString(), reason: 'ingress_lease_active' };
-    }
-    if (current?.status === 'retryable_failed') {
+      if (expiry > Date.now()) {
+        return { disposition: 'defer', untilIso: new Date(expiry).toISOString(), reason: 'ingress_lease_active' };
+      }
+      // Crash between claim and transition: atomically reclaim the expired
+      // lease and continue staging (old worker is fenced out).
+      const reclaim = await reclaimIngress(db, {
+        tenant: job.tenantId,
+        ingress_id: job.recordId,
+        owner,
+        leaseTtlMs: ttl,
+      });
+      if (reclaim.claimed === true) {
+        ingress = reclaim.row;
+      } else {
+        const latest = await getIngress(db, job.tenantId, job.recordId);
+        if (latest && TERMINAL_INGRESS_STATUSES.has(latest.status)) {
+          return { disposition: 'ack' };
+        }
+        return { disposition: 'defer', untilIso: new Date(Date.now() + 30_000).toISOString(), reason: 'ingress_reclaim_race' };
+      }
+    } else if (current?.status === 'retryable_failed') {
       const next = current.next_attempt_at ? new Date(current.next_attempt_at).getTime() : Date.now();
       return { disposition: 'defer', untilIso: new Date(Math.max(Date.now(), next)).toISOString(), reason: 'ingress_not_due' };
+    } else {
+      return { disposition: 'retry', error: `ingress_unclaimable:${claim.reason}` };
     }
-    return { disposition: 'retry', error: `ingress_unclaimable:${claim.reason}` };
   }
 
-  const ingress = claim.row;
   const token = String(ingress.lease_token);
   const version = Number(ingress.lease_version);
 
@@ -106,7 +137,10 @@ export async function processIngressStageJob(
   } catch (error: any) {
     const message = error?.message || String(error);
     const retryable = isRetryableStageError(message);
-    const status = retryable ? 'retryable_failed' : 'terminal_failed';
+    // Terminal attempt cap: exhausted retries land in a queryable terminal
+    // failure state instead of looping forever.
+    const exhausted = retryable && ingress.attempt_count >= maxAttempts;
+    const status = retryable && !exhausted ? 'retryable_failed' : 'terminal_failed';
     await transitionIngress(db, {
       tenant: ingress.tenant,
       ingress_id: ingress.ingress_id,
@@ -114,11 +148,11 @@ export async function processIngressStageJob(
       token,
       version,
       status,
-      nextAttemptAt: retryable ? new Date(Date.now() + 30_000) : undefined,
+      nextAttemptAt: retryable && !exhausted ? new Date(Date.now() + boundedBackoffMs(ingress.attempt_count)) : undefined,
       error: message,
-      errorDetails: { phase: 'staging' },
+      errorDetails: { phase: 'staging', maxAttemptsExhausted: exhausted || undefined },
     });
-    return { disposition: 'retry', error: message };
+    return retryable && !exhausted ? { disposition: 'retry', error: message } : { disposition: 'ack', outcome: 'terminal_failed', reason: message };
   }
 }
 
@@ -186,6 +220,21 @@ async function stageGoogleSources(db: any, ingress: InboundIngressRecord): Promi
       providerMessageIdOverride: messageId,
     });
     inboxIds.push(inboxId);
+  }
+
+  // The provider cursor never advances before every source in this batch is
+  // durable: only after all inbox rows are inserted do we move the history
+  // cursor to the notification's historyId. If any message failed to stage,
+  // the caller marks the ingress retryable and this update is skipped.
+  const cursorHistoryId = String(ingress.provider_pointer?.historyId ?? googleConfig.history_id ?? startHistoryId);
+  if (cursorHistoryId) {
+    const { tenantDb } = await import('@alga-psa/db');
+    await tenantDb(db, ingress.tenant).table('google_email_provider_config')
+      .where({ email_provider_id: ingress.provider_id })
+      .update({
+        history_id: cursorHistoryId,
+        updated_at: db.fn.now(),
+      });
   }
   return inboxIds;
 }
@@ -309,6 +358,7 @@ export async function stageIngressFromReadySource(params: {
     ingress_id: ingress.ingress_id,
     owner,
     leaseTtlMs: getDurableLeaseTtlMs(),
+    allowRetryable: true,
   });
   if (claim.claimed === false) {
     return null;
