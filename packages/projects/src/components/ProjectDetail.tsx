@@ -1457,6 +1457,7 @@ export default function ProjectDetail({
       // previous one, preserving the relative order at the drop position.
       let prevBefore: string | null = safeBefore;
       const statusUpdatedById = new Map<string, IProjectTask>();
+      const movedIds: string[] = [];
       for (const task of tasksToMove) {
         try {
           if (task.phase_id !== newPhaseId) {
@@ -1489,6 +1490,7 @@ export default function ProjectDetail({
             statusUpdatedById.set(task.task_id, updatedTask);
           }
           prevBefore = task.task_id;
+          movedIds.push(task.task_id);
           success++;
         } catch (error) {
           console.error(`Failed to move task ${task.task_id}:`, error);
@@ -1536,6 +1538,9 @@ export default function ProjectDetail({
           }),
         );
       }
+      // Drop the moved tasks from the selection so a follow-up drag doesn't
+      // carry them along. Failed tasks stay selected for a retry.
+      setTasksSelected(movedIds, false);
       return;
     }
 
@@ -1577,7 +1582,7 @@ export default function ProjectDetail({
     } catch (error) {
       handleError(error, 'Failed to move task');
     }
-  }, [allProjectTasks, selectedTaskIds, selectedPhase, t]);
+  }, [allProjectTasks, selectedTaskIds, selectedPhase, setTasksSelected, t]);
   
   // Handle tag changes
   const handleProjectTagsChange = (tags: ITag[]) => {
@@ -2008,7 +2013,7 @@ export default function ProjectDetail({
 
     try {
       const statusUpdatedById = new Map<string, IProjectTask>();
-      let movedInCount = 0;
+      const movedInIds: string[] = [];
       let failed = 0;
 
       // Reposition same-phase tasks at the drop location, grouped consecutively
@@ -2033,7 +2038,7 @@ export default function ProjectDetail({
       for (const task of otherPhaseTasks) {
         try {
           unwrapActionResult(await moveTaskToPhase(task.task_id, currentPhaseId, targetStatusId));
-          movedInCount++;
+          movedInIds.push(task.task_id);
         } catch (error) {
           console.error(`Failed to move task ${task.task_id}:`, error);
           failed++;
@@ -2088,7 +2093,7 @@ export default function ProjectDetail({
         }, 500);
       }
 
-      const total = statusUpdatedById.size + movedInCount;
+      const total = statusUpdatedById.size + movedInIds.length;
       if (failed === 0) {
         toast.success(
           t('projectDetail.bulkTasksMovedSuccess', '{{count}} tasks moved', { count: total }),
@@ -2101,6 +2106,10 @@ export default function ProjectDetail({
           }),
         );
       }
+
+      // Drop the moved tasks from the selection so a follow-up drag doesn't
+      // carry them along. Failed tasks stay selected for a retry.
+      setTasksSelected([...statusUpdatedById.keys(), ...movedInIds], false);
     } catch (error) {
       handleError(error, 'Failed to move tasks');
     }
@@ -2532,6 +2541,9 @@ export default function ProjectDetail({
           }),
         );
       }
+      // Drop the moved tasks from the selection so a follow-up drag doesn't
+      // carry them along. Failed tasks stay selected for a retry.
+      setTasksSelected([...movedById.keys()], false);
       setMoveConfirmation(null);
       return;
     }

@@ -94,6 +94,7 @@ export default function MoveTaskDialog({
             <TreeSelect<'project' | 'phase' | 'status'>
                 // Use status if selected, otherwise phase, to show full path including status
                 value={selectedTargetPath?.['status'] || selectedTargetPath?.['phase'] || ''}
+                selectedPath={selectedTargetPath ?? undefined}
                 onValueChange={handleTreeSelect}
                 options={projectTreeData}
                 placeholder={t('dialogs.moveTask.placeholder', 'Select target project/phase/status...')}
