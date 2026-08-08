@@ -1,0 +1,36 @@
+                           Table "public.inbound_email_artifacts"
+        Column        |           Type           | Collation | Nullable |      Default      
+----------------------+--------------------------+-----------+----------+-------------------
+ tenant               | uuid                     |           | not null | 
+ inbox_id             | uuid                     |           | not null | 
+ artifact_key         | text                     |           | not null | 
+ artifact_type        | text                     |           | not null | 
+ source_attachment_id | text                     |           |          | 
+ content_digest       | text                     |           |          | 
+ storage_key          | text                     |           |          | 
+ status               | text                     |           | not null | 'pending'::text
+ attempt_count        | integer                  |           | not null | 0
+ lease_owner          | text                     |           |          | 
+ lease_token          | uuid                     |           |          | 
+ lease_version        | bigint                   |           | not null | '0'::bigint
+ lease_expires_at     | timestamp with time zone |           |          | 
+ next_attempt_at      | timestamp with time zone |           |          | 
+ file_id              | uuid                     |           |          | 
+ document_id          | uuid                     |           |          | 
+ last_error           | text                     |           |          | 
+ created_at           | timestamp with time zone |           | not null | CURRENT_TIMESTAMP
+ updated_at           | timestamp with time zone |           | not null | CURRENT_TIMESTAMP
+ completed_at         | timestamp with time zone |           |          | 
+Indexes:
+    "inbound_email_artifacts_pkey" PRIMARY KEY, btree (tenant, inbox_id, artifact_key)
+    "inbound_email_artifacts_due_idx" btree (tenant, status, next_attempt_at, lease_expires_at)
+Check constraints:
+    "inbound_email_artifacts_attempt_count_check" CHECK (attempt_count >= 0)
+    "inbound_email_artifacts_processing_lease_check" CHECK (status <> 'processing'::text OR lease_owner IS NOT NULL AND lease_token IS NOT NULL AND lease_expires_at IS NOT NULL)
+    "inbound_email_artifacts_retryable_next_attempt_check" CHECK (status <> 'retryable_failed'::text OR next_attempt_at IS NOT NULL)
+    "inbound_email_artifacts_status_check" CHECK (status = ANY (ARRAY['pending'::text, 'processing'::text, 'succeeded'::text, 'skipped'::text, 'retryable_failed'::text, 'terminal_failed'::text]))
+    "inbound_email_artifacts_terminal_lease_check" CHECK ((status <> ALL (ARRAY['succeeded'::text, 'skipped'::text, 'terminal_failed'::text])) OR lease_owner IS NULL AND lease_token IS NULL AND lease_expires_at IS NULL)
+    "inbound_email_artifacts_type_check" CHECK (artifact_type = ANY (ARRAY['attachment'::text, 'embedded_image'::text, 'original_email'::text]))
+Foreign-key constraints:
+    "inbound_email_artifacts_tenant_inbox_id_foreign" FOREIGN KEY (tenant, inbox_id) REFERENCES inbound_email_inbox(tenant, inbox_id)
+

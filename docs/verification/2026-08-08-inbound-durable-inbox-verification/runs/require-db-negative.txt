@@ -1,0 +1,27 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/fix-inbound-email-durable-inbox/server
+      Running tests with seed "1786156087736"
+
+Environment file path: /home/robert/alga-copies/fix-inbound-email-durable-inbox/.env.localtest
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/test/integration/inboundEmailDurableInbox.integration.test.ts [ src/test/integration/inboundEmailDurableInbox.integration.test.ts ]
+Error: REQUIRE_DB=1 but the test database at 127.0.0.1:5999 is unreachable. Refusing to skip DB-backed tests in a required-DB environment.
+ ❯ Module.describeWithDb test-utils/requireDb.ts:44:11
+     42|   }
+     43|   if (process.env.REQUIRE_DB === '1') {
+     44|     throw new Error(
+       |           ^
+     45|       `REQUIRE_DB=1 but the test database at ${DB_HOST}:${DB_PORT} is …
+     46|         'Refusing to skip DB-backed tests in a required-DB environment…
+ ❯ src/test/integration/inboundEmailDurableInbox.integration.test.ts:11:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  no tests
+   Start at  02:28:07
+   Duration  706ms (transform 222ms, setup 63ms, collect 0ms, tests 0ms, environment 0ms, prepare 29ms)
+

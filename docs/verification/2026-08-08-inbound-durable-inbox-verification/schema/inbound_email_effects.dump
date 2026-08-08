@@ -1,0 +1,20 @@
+                            Table "public.inbound_email_effects"
+        Column         |           Type           | Collation | Nullable |      Default      
+-----------------------+--------------------------+-----------+----------+-------------------
+ tenant                | uuid                     |           | not null | 
+ provider_id           | uuid                     |           | not null | 
+ normalized_message_id | text                     |           | not null | 
+ effect_type           | text                     |           | not null | 
+ inbox_id              | uuid                     |           | not null | 
+ entity_id             | uuid                     |           | not null | 
+ ticket_id             | uuid                     |           | not null | 
+ reconciled            | boolean                  |           | not null | false
+ created_at            | timestamp with time zone |           | not null | CURRENT_TIMESTAMP
+Indexes:
+    "inbound_email_effects_pkey" PRIMARY KEY, btree (tenant, provider_id, normalized_message_id, effect_type)
+    "inbound_email_effects_inbox_effect_unique" UNIQUE CONSTRAINT, btree (tenant, inbox_id, effect_type)
+Check constraints:
+    "inbound_email_effects_type_check" CHECK (effect_type = ANY (ARRAY['ticket'::text, 'comment'::text]))
+Foreign-key constraints:
+    "inbound_email_effects_tenant_inbox_id_foreign" FOREIGN KEY (tenant, inbox_id) REFERENCES inbound_email_inbox(tenant, inbox_id)
+
