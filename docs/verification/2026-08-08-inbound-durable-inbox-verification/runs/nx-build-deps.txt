@@ -42,6 +42,9 @@
 > nx run @alga-psa/agent-tooling:build  [existing outputs match the cache, left as is]
 
 
+> nx run sebastian-ee:build  [existing outputs match the cache, left as is]
+
+
 > nx run @alga-psa/core:build  [existing outputs match the cache, left as is]
 
 
@@ -160,5 +163,5 @@
 
  NX   Successfully ran target build-deps for project server and 52 tasks it depends on
 
-Nx read the output from the cache instead of running the command for 51 out of 53 tasks.
+Nx read the output from the cache instead of running the command for 52 out of 53 tasks.
 

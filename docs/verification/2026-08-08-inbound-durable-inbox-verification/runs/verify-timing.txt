@@ -1,0 +1,30 @@
+Verify-sequence wall-clock timings (mitigation round 2, HEAD f4b697d6ee)
+
+Measured with /usr/bin/time on the branch worktree (repo root or noted dir).
+Every step exited on its own (code 0 except the REQUIRE_DB negative control,
+which must exit 1). No --forceExit, no external kill.
+
+Step                                   Dir                Exit    Wall clock
+durable suite (39 tests)               server/            0       12.68s
+subscriber suite (15 tests)            server/            0        3.38s
+both suites in one vitest run (54)     server/            0       15.09s
+server typecheck                       server/            0       22.09s
+shared typecheck                       shared/            0       13.88s
+packages/db typecheck                  packages/db/       0        1.52s
+packages/event-bus typecheck           packages/event-bus/ 0       1.24s
+packages/integrations typecheck        packages/integrations/ 0   17.16s
+services/email-service typecheck       services/email-service/ 0        5.07s
+services/email-service build           services/email-service/ 0   8.19s
+nx build-deps server                   repo root          0        5.87s
+REQUIRE_DB negative (dead port 5999)   server/            1        1.30s
+
+Total for the documented verify sequence (typechecks + build + both suites):
+roughly 90s wall clock in the order above, comfortably under the verifier's
+budget. The focused DB-backed gate can be bounded to ~15s by running both
+suites in a single vitest invocation.
+
+Tests never sleep through production lease intervals: they pass leaseTtlMs
+30_000 to claim helpers and force expiry with SQL
+(lease_expires_at = now() - interval '5 minutes'), and the mocked V2 queue
+config (claimTtlMs 120_000 / handlerTimeoutMs 90_000 / heartbeatIntervalMs
+30_000) is inert because the Redis client is stubbed.

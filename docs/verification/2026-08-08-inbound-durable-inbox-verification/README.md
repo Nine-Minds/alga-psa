@@ -1,11 +1,16 @@
 # Verification bundle — durable inbound-email inbox (mitigation round)
 
-**Branch/worktree:** `fix/inbound-email-durable-inbox` @ `4c7322a6f7`
+**Branch/worktree:** `fix/inbound-email-durable-inbox` @ `f4b697d6ee`
 **Date:** 2026-08-08
-**Round type:** verifier-timeout mitigation. No substantive code defect was
-recorded in the last draft review; this bundle produces durable evidence so a
-reviewer can confirm the branch's correctness claims without re-running
-anything.
+**Round type:** verifier-timeout mitigation (round 2). The previous
+verifier-timeout (`e53d1420`) was recorded as an orchestration failure — the
+independent verifier subagent returned without a verdict after its terminal
+pane/thread could not be resumed; no substantive code defect was established
+(board annotation, 2026-08-08T21:03Z). This round reproduces and times the
+full verifier path at current HEAD to prove every step is bounded and exits
+cleanly, and refreshes this bundle to match HEAD `f4b697d6ee` (which added four
+bracketed-reply threading tests to the durable suite since this bundle's first
+commit `7e4f7d7952` at `4c7322a6f7`).
 
 **Spec of record:** `docs/plans/2026-08-07-inbound-email-durable-inbox-plan.md`
 (commit `ce7dd8bcc8`). Every "does this truly fail?" judgment below is made
@@ -23,6 +28,7 @@ check the focused suite logs under `runs/` and the schema dumps under
 Verbatim `git log --oneline main...HEAD` at bundle time:
 
 ```
+f4b697d6ee fix(inbound-email): normalize reply Message-ID threading and repair reply-event payloads
 4c7322a6f7 fix(inbound-email): make consumer delivery idempotency crash-safe via a reservation state machine
 2fb075170e fix(inbound-email): resolve all four draft-review blockers
 7973a65372 fix(inbound-email): harden durable retry lifecycle, source-cursor safety, and legacy backfill
@@ -113,15 +119,16 @@ open (deliver) so a transient DB error can never suppress a notification
 
 All assertions below are copied verbatim from the DB-backed integration suite
 `server/src/test/integration/inboundEmailDurableInbox.integration.test.ts`
-(35 tests) and, where noted, the stub-driven subscriber suite
+(39 tests) and, where noted, the stub-driven subscriber suite
 `server/src/test/integration/internal-notifications/eventSubscribers.integration.test.ts`
 (15 tests). Full raw output is in `runs/durable-suite.txt` and
-`runs/subscriber-suite.txt`.
+`runs/subscriber-suite.txt`. Line anchors refer to the test file at HEAD
+`f4b697d6ee`.
 
 ### 3.1 Crash before core effect → replay creates exactly one ticket/comment
 
 `it('crash after inbox claim before core writes: replay creates exactly one ticket + comment')`
-(`:439`). Worker A claims the inbox row then "crashes" (lease expired via
+(`:440`). Worker A claims the inbox row then "crashes" (lease expired via
 `lease_expires_at = now() - interval '5 minutes'`); worker B replays:
 
 ```
@@ -143,7 +150,7 @@ Plus the mid-transaction crash variant, where the ticket insert commits but the
 whole transaction rolls back before `comment`:
 
 `it('crash after ticket insert before commit: everything rolls back, replay completes once')`
-(`:479`) — `withAdminTransaction(...)` writes ticket + comment through the
+(`:480`) — `withAdminTransaction(...)` writes ticket + comment through the
 injected `InboundEmailOutboxEventPublisher`, then `throw new Error('simulated
 crash before commit')`:
 
@@ -161,7 +168,7 @@ then after expiry + replay: `expect(result.outcome).toBe('created')`,
 ### 3.2 Crash after effect but before completion/ACK → redelivery returns stored outcome, no duplicate
 
 `it('crash after commit before ACK: redelivery returns stored IDs without new effects')`
-(`:553`):
+(`:554`):
 
 ```
 const second = await processInbox(inboxId, 'redelivery-worker');
@@ -174,30 +181,30 @@ expect(await countRows('inbound_email_effects')).toBe(2);
 ```
 
 Consumer-side equivalents (reservation + delivery-ledger crash windows):
-- `it('crash after reservation before effect: redelivery reclaims the expired reservation and the effect is produced exactly once')` (`:1814`) — expired `delivering` reservation is reclaimed on redelivery (`expect(redelivery.decision).toBe('deliver')`, `expect(redelivery.token).not.toBe(crashed.token)`), completes once, then `again.decision` is `'skip'`; ledger converges to a single `delivered` row.
-- `it('crash after effect before completion mark: non-transactional redelivery retries and converges to delivered')` (`:1884`) — effect ran, mark never landed; retry delivers, 3 further redeliveries all `skip`, one `delivered` row.
-- `it('transactional consumer crash before commit rolls back reservation and effect; redelivery produces the effect once')` (`:1949`) — reserve inside `withAdminTransaction` then throw; `countRows(...,'internal-notification')` is `0` after rollback; a fresh reservation + completion lands exactly one `delivered` row.
+- `it('crash after reservation before effect: redelivery reclaims the expired reservation and the effect is produced exactly once')` (`:2020`) — expired `delivering` reservation is reclaimed on redelivery (`expect(redelivery.decision).toBe('deliver')`, `expect(redelivery.token).not.toBe(crashed.token)`), completes once, then `again.decision` is `'skip'`; ledger converges to a single `delivered` row.
+- `it('crash after effect before completion mark: non-transactional redelivery retries and converges to delivered')` (`:2090`) — effect ran, mark never landed; retry delivers, 3 further redeliveries all `skip`, one `delivered` row.
+- `it('transactional consumer crash before commit rolls back reservation and effect; redelivery produces the effect once')` (`:2155`) — reserve inside `withAdminTransaction` then throw; `countRows(...,'internal-notification')` is `0` after rollback; a fresh reservation + completion lands exactly one `delivered` row.
 
 ### 3.3 Expired reservation / lease reclaim (inbox, ingress, outbox, artifact)
 
-- **Inbox (core):** `it('a superseded zombie worker cannot create core effects inside the fenced transaction')` (`:1083`) — zombie token cannot `lockInboxForUpdate` (`rejects.toThrow('inbox_fence_superseded')`), no ticket/effect rows; a new worker reclaims and completes exactly once; the zombie's `transitionInbox` with the old token returns `false`.
-- **Ingress (staging):** `it('a crashed ingress claim (expired staging) is reclaimed by the sweeper, not stranded')` (`:1391`) — `findDueIngress` sees the expired `staging` row, the sweeper enqueues `stage_ingress`, `reclaimIngress` installs a new token, and the crashed worker's `transitionIngress` returns `false`.
-- **Outbox (publishing):** `it('a crashed outbox claim (expired publishing) is reclaimed by the dispatcher and publishes exactly once')` (`:1473`) — `findDueOutbox` sees expired `publishing`, sweeper enqueues `publish_outbox`, a new dispatcher publishes the SAME `outbox_id` (`eventId: outboxId, strict: true`) exactly once, and `reclaimOutboxRow` on the terminal row returns `{ claimed: false, reason: 'terminal' }`.
-- **Artifact:** `it('a crashed artifact claim (expired processing) is reclaimed by the sweeper and completes exactly once')` (`:1544`) — same pattern; expired `processing` is seen due, re-enqueued, reclaimed with a new token, completes once, and `reclaimArtifact` on the terminal row returns `reason: 'terminal'`.
+- **Inbox (core):** `it('a superseded zombie worker cannot create core effects inside the fenced transaction')` (`:1289`) — zombie token cannot `lockInboxForUpdate` (`rejects.toThrow('inbox_fence_superseded')`), no ticket/effect rows; a new worker reclaims and completes exactly once; the zombie's `transitionInbox` with the old token returns `false`.
+- **Ingress (staging):** `it('a crashed ingress claim (expired staging) is reclaimed by the sweeper, not stranded')` (`:1597`) — `findDueIngress` sees the expired `staging` row, the sweeper enqueues `stage_ingress`, `reclaimIngress` installs a new token, and the crashed worker's `transitionIngress` returns `false`.
+- **Outbox (publishing):** `it('a crashed outbox claim (expired publishing) is reclaimed by the dispatcher and publishes exactly once')` (`:1679`) — `findDueOutbox` sees expired `publishing`, sweeper enqueues `publish_outbox`, a new dispatcher publishes the SAME `outbox_id` (`eventId: outboxId, strict: true`) exactly once, and `reclaimOutboxRow` on the terminal row returns `{ claimed: false, reason: 'terminal' }`.
+- **Artifact:** `it('a crashed artifact claim (expired processing) is reclaimed by the sweeper and completes exactly once')` (`:1750`) — same pattern; expired `processing` is seen due, re-enqueued, reclaimed with a new token, completes once, and `reclaimArtifact` on the terminal row returns `reason: 'terminal'`.
 
 ### 3.4 Duplicate/redelivery of terminal rows → stable entity IDs
 
 `it('repeated terminal replay')` is covered across the suite:
 - `crash after commit before ACK` (3.2) asserts the same `ticketId`/`commentId` on redelivery.
-- `it('intentional rule skip is terminal, stores reason, and creates no effects')` (`:731`) — `dup` delivery returns `ack` with `outcome: 'skipped'`, no effects/outbox/artifacts/tickets.
-- `it('exhausted retries dead-letter to terminal_failed instead of looping forever')` (`:1135`) — repeated delivery of a `terminal_failed` inbox returns `ack`/`terminal_failed`, no tickets/effects.
-- `it('double-published outbox event is deduplicated by the DB delivery ledger (consumer idempotency)')` (`:1722`) — after reclaim + re-publish with the same `outbox_id`, the consumer ledger yields one `delivered` row (`expect(ledgerRows).toHaveLength(1)`) and a second reservation `skip`s; a different consumer is independently claimable.
-- `it('plain duplicate and concurrent delivery yield exactly one delivered ledger row')` (`:2018`) — 3 concurrent reservations: exactly one winner, loser reason `in_progress`; sequential duplicate refused with `already_delivered`; one `delivered` row.
+- `it('intentional rule skip is terminal, stores reason, and creates no effects')` (`:937`) — `dup` delivery returns `ack` with `outcome: 'skipped'`, no effects/outbox/artifacts/tickets.
+- `it('exhausted retries dead-letter to terminal_failed instead of looping forever')` (`:1341`) — repeated delivery of a `terminal_failed` inbox returns `ack`/`terminal_failed`, no tickets/effects.
+- `it('double-published outbox event is deduplicated by the DB delivery ledger (consumer idempotency)')` (`:1928`) — after reclaim + re-publish with the same `outbox_id`, the consumer ledger yields one `delivered` row (`expect(ledgerRows).toHaveLength(1)`) and a second reservation `skip`s; a different consumer is independently claimable.
+- `it('plain duplicate and concurrent delivery yield exactly one delivered ledger row')` (`:2224`) — 3 concurrent reservations: exactly one winner, loser reason `in_progress`; sequential duplicate refused with `already_delivered`; one `delivered` row.
 
 ### 3.5 Stale fencing token rejection (superseded writer cannot commit)
 
-- `it('stale fencing token cannot terminal-write a superseded claim')` (`:605`) — an `intruder` owner cannot `transitionInbox` with the current token; after reclaim installs a new token, the old owner's write returns `false`.
-- `it('stale fencing token cannot write completion for a superseded reservation')` (`:2070`) — worker A reserves, B reclaims after expiry; A's `completeInboundOutboxEventDelivery` returns `false`; B completes with its own token; single `delivered` row with `lease_token` null.
+- `it('stale fencing token cannot terminal-write a superseded claim')` (`:606`) — an `intruder` owner cannot `transitionInbox` with the current token; after reclaim installs a new token, the old owner's write returns `false`.
+- `it('stale fencing token cannot write completion for a superseded reservation')` (`:2276`) — worker A reserves, B reclaims after expiry; A's `completeInboundOutboxEventDelivery` returns `false`; B completes with its own token; single `delivered` row with `lease_token` null.
 
 ### 3.6 Forced recovery republish (sweeper + event-bus force flag, `republish_outbox_event`)
 
@@ -214,20 +221,48 @@ Consumer-side equivalents (reservation + delivery-ledger crash windows):
   `:864`), so an already-`published` outbox row's incomplete consumer deliveries
   are re-driven deterministically. Each consumer's ledger reclaims its own
   expired reservation or skips if already `delivered`.
-- Test: `it('recovery sweeper re-publishes incomplete consumer deliveries and dead-letters over-cap failures')` (`:2138`) — an expired `sla` reservation and a due `survey` retryable produce `expect(result.enqueued.deliveries).toBe(1)`; five `recordInboundOutboxEventDeliveryFailure` calls for `ticket-email` drive it over the attempt cap and it dead-letters (`terminal_failed`).
-- Consumer-side reclaim on redelivery is covered by the tests in 3.2 and by `it('retryable failure is reclaimed when due and the attempt cap dead-letters a poisoned consumer delivery')` (`:2214`) — `failInboundOutboxEventForConsumer` returns `'retryable'` with `attempt_count` 1 and `next_attempt_at` set; not-due redelivery is `skip`; a due retry increments the attempt counter; a poisoned `webhook` effect loop dead-letters to `terminal_failed`.
+- Test: `it('recovery sweeper re-publishes incomplete consumer deliveries and dead-letters over-cap failures')` (`:2344`) — an expired `sla` reservation and a due `survey` retryable produce `expect(result.enqueued.deliveries).toBe(1)`; five `recordInboundOutboxEventDeliveryFailure` calls for `ticket-email` drive it over the attempt cap and it dead-letters (`terminal_failed`).
+- Consumer-side reclaim on redelivery is covered by the tests in 3.2 and by `it('retryable failure is reclaimed when due and the attempt cap dead-letters a poisoned consumer delivery')` (`:2420`) — `failInboundOutboxEventForConsumer` returns `'retryable'` with `attempt_count` 1 and `next_attempt_at` set; not-due redelivery is `skip`; a due retry increments the attempt counter; a poisoned `webhook` effect loop dead-letters to `terminal_failed`.
 
 ### 3.7 Legacy-backfill old-row handling + idempotent rerun
 
-- `it('legacy stuck-processing reconciliation links a pre-existing ticket/comment without duplicating')` (`:1268`) — a legacy `processing` audit row whose ticket+comment already exist imports as `succeeded`/`reconciled` with `legacy_imported = true` and exactly two effect rows; the audit row is preserved (`processing_status` still `'processing'`).
-- `it('legacy stuck-processing with no entities and no pointer dead-letters as terminal_failed')` (`:1352`) — `terminal_failed` with `legacy_processing_unrecoverable`, no effects, audit row untouched.
-- `it('legacy stuck-processing with a usable pointer becomes retryable via durable ingress work')` (`:1437`) — creates a `received` ingress row and enqueues `stage_ingress`; no terminal inbox written.
-- `it('legacy backfill is resumable: interrupted batches converge to the uninterrupted final state')` (`:2331`) — 6 seeded legacy rows (2 reconcilable processing, 1 skipped, 1 unrecoverable processing, 2 failed/partial); run with `limit: 2`, snapshot, resume with `limit: 50`:
+- `it('legacy stuck-processing reconciliation links a pre-existing ticket/comment without duplicating')` (`:1474`) — a legacy `processing` audit row whose ticket+comment already exist imports as `succeeded`/`reconciled` with `legacy_imported = true` and exactly two effect rows; the audit row is preserved (`processing_status` still `'processing'`).
+- `it('legacy stuck-processing with no entities and no pointer dead-letters as terminal_failed')` (`:1558`) — `terminal_failed` with `legacy_processing_unrecoverable`, no effects, audit row untouched.
+- `it('legacy stuck-processing with a usable pointer becomes retryable via durable ingress work')` (`:1643`) — creates a `received` ingress row and enqueues `stage_ingress`; no terminal inbox written.
+- `it('legacy backfill is resumable: interrupted batches converge to the uninterrupted final state')` (`:2537`) — 6 seeded legacy rows (2 reconcilable processing, 1 skipped, 1 unrecoverable processing, 2 failed/partial); run with `limit: 2`, snapshot, resume with `limit: 50`:
   - the interrupted batch's rows are UNCHANGED in the final state (`expect(finalInterruptedSubset).toEqual(afterInterrupt.inbox)`),
   - every legacy row classifies exactly once (`inboxRows` count 6, `effectRows` count 4),
   - no identity appears twice,
   - a third run is a pure no-op (`expect(thirdRun.imported).toBe(0)`),
   - legacy audit rows are never modified or deleted (`expect(legacy.processing_status).toBe(row.status)`).
+
+### 3.8 Reply threading: bracketed In-Reply-To/References resolve the existing ticket
+
+Added at HEAD `f4b697d6ee` after the live smoke (2026-08-08) confirmed a
+standards-compliant bracketed reply created a duplicate ticket. The durable
+inbox stores `email_metadata.messageId` in the normalized (unbracketed) form,
+so a bracketed reply looked up verbatim and missed. The fix exports
+`normalizeRfc822MessageId` (`shared/services/email/inboundEmailIdentity.ts`)
+and applies it to every stored message-id key and every lookup;
+`findTicketByOriginalMessageId` matches BOTH the canonical normalized form and
+the raw bracketed form (legacy rows) across `messageId`/`inReplyTo` equality
+and `references` JSON containment.
+
+- `it('bracketed In-Reply-To and bracketed References replies resolve the existing ticket (no second ticket)')` (`:732`) — a bracketed `In-Reply-To` reply and a bracketed-`References`-only reply both append a comment to the original ticket; `countTicketsByMessageId` stays 1.
+- `it('replay of a threaded reply is idempotent: stable IDs, one comment, no new outbox rows')` (`:792`) — redelivery of a threaded reply returns the stored `ticketId`/`commentId`, one comment total, and the outbox dedupe key prevents a second outbox row.
+- `it('reply event outbox payload is schema-valid and the dispatcher publishes it (never dead-letters)')` (`:832`) — the `INBOUND_EMAIL_REPLY_RECEIVED` outbox payload validates against `inboundEmailReplyReceivedEventPayloadSchema` (tenantId/occurredAt required, bare `from`/`to` addresses; `to` falls back to the provider mailbox when empty) and the dispatcher drives the row to `published`.
+- `it('bracketed reply resolves a legacy ticket whose email_metadata.messageId kept the bracketed form')` (`:899`) — legacy rows that stored the raw bracketed id are still matched by the two-form lookup.
+
+### 3.9 Reply-event payload schema validation
+
+`buildInboundEmailReplyReceivedPayload`
+(`shared/workflow/streams/domainEventBuilders/inboundEmailReplyEventBuilders.ts`)
+now requires `tenantId`/`occurredAt`, normalizes `from`/`to` to bare RFC
+addresses via `normalizeEmailAddress`, and throws on a missing/empty `to`. The
+durable outbox insert validates the payload against the real event schema and
+skips-with-warning rather than inserting a doomed `terminal_failed` row (the
+pre-fix live failure: payload lacked `tenantId`/`occurredAt` and carried an
+invalid recipient; five retries then dead-lettered).
 
 ---
 
@@ -252,14 +287,17 @@ REQUIRE_DB=1 npx vitest run src/test/integration/inboundEmailDurableInbox.integr
 Exit code: `0`. Result (verbatim, `runs/durable-suite.txt`):
 
 ```
- ✓ src/test/integration/inboundEmailDurableInbox.integration.test.ts (35 tests) 11214ms 103 MB heap used
-   ✓ Inbound email durable inbox (integration) > crash after inbox claim before core writes: replay creates exactly one ticket + comment  604ms
+ ✓ src/test/integration/inboundEmailDurableInbox.integration.test.ts (39 tests) 11536ms 148 MB heap used
+   ✓ Inbound email durable inbox (integration) > sweeper re-enqueues received, due retryable_failed, and expired-processing inbox rows  714ms
 
  Test Files  1 passed (1)
-      Tests  35 passed (35)
-   Start at  02:27:46
-   Duration  11.94s
+      Tests  39 passed (39)
+   Start at  21:18:23
+   Duration  12.28s
 ```
+
+Wall clock (this run): 12.68s; process exited on its own with code 0 (no
+`--forceExit`, no external kill).
 
 Command:
 
@@ -273,12 +311,28 @@ REQUIRE_DB=1 npx vitest run src/test/integration/internal-notifications/eventSub
 Exit code: `0`. Result (verbatim, `runs/subscriber-suite.txt`):
 
 ```
- ✓ src/test/integration/internal-notifications/eventSubscribers.integration.test.ts (15 tests) 2406ms 74 MB heap used
+ ✓ src/test/integration/internal-notifications/eventSubscribers.integration.test.ts (15 tests) 2513ms 76 MB heap used
 
  Test Files  1 passed (1)
       Tests  15 passed (15)
-   Start at  02:27:47
-   Duration  2.83s
+   Start at  21:18:39
+   Duration  2.94s
+```
+
+Wall clock (this run): 3.38s; process exited on its own with code 0.
+
+Both suites also pass in a single vitest invocation (54/54 in 15.09s wall
+clock, exit 0), which is the shape a verifier script can use to bound the whole
+focused run to ~15s:
+
+```
+DB_HOST=127.0.0.1 DB_PORT=5472 \
+DB_PASSWORD_ADMIN=$(cat ../secrets/postgres_password) \
+DB_PASSWORD_SERVER=$(cat ../secrets/db_password_server) \
+REQUIRE_DB=1 npx vitest run \
+  src/test/integration/inboundEmailDurableInbox.integration.test.ts \
+  src/test/integration/internal-notifications/eventSubscribers.integration.test.ts \
+  --coverage.enabled=false
 ```
 
 **Why `REQUIRE_DB=1` is mandatory evidence:** without it, `describeWithDb`
@@ -295,7 +349,7 @@ Error: REQUIRE_DB=1 but the test database at 127.0.0.1:5999 is unreachable. Refu
       Tests  no tests
 ```
 
-Baseline confirmed: durable **35/35**, subscriber **15/15**, both real exit
+Baseline confirmed: durable **39/39**, subscriber **15/15**, both real exit
 code 0 with the guard active.
 
 ---
@@ -306,21 +360,31 @@ All commands below produced exit code `0` with zero diagnostics (the `*.txt`
 files under `runs/` are empty for the tsc runs; `nx-build-deps.txt` contains
 the Nx summary).
 
-| Check | Command (from dir) | Exit |
-| --- | --- | --- |
-| server | `NODE_OPTIONS=--max-old-space-size=16384 npx tsc --noEmit -p tsconfig.json` (from `server/`) | 0 |
-| shared | `npx tsc --noEmit` (from `shared/`) | 0 |
-| packages/db | `npx tsc --noEmit` (from `packages/db/`) | 0 |
-| packages/event-bus | `npx tsc --noEmit` (from `packages/event-bus/`) | 0 |
-| packages/integrations | `npx tsc --noEmit` (from `packages/integrations/`) | 0 |
-| services/email-service | `npx tsc --noEmit -p tsconfig.json` (from `services/email-service/`) | 0 |
-| deps build | `npx nx build-deps server` (from repo root) | 0 |
+| Check | Command (from dir) | Exit | Wall clock |
+| --- | --- | --- | --- |
+| server | `NODE_OPTIONS=--max-old-space-size=16384 npx tsc --noEmit -p tsconfig.json` (from `server/`) | 0 | 22.09s |
+| shared | `npx tsc --noEmit` (from `shared/`) | 0 | 13.88s |
+| packages/db | `npx tsc --noEmit` (from `packages/db/`) | 0 | 1.52s |
+| packages/event-bus | `npx tsc --noEmit` (from `packages/event-bus/`) | 0 | 1.24s |
+| packages/integrations | `npx tsc --noEmit` (from `packages/integrations/`) | 0 | 17.16s |
+| services/email-service | `npx tsc --noEmit -p tsconfig.json` (from `services/email-service/`) | 0 | 5.07s |
+| services/email-service build | `npm run build` (from `services/email-service/`) | 0 | 8.19s |
+| deps build | `npx nx build-deps server` (from repo root) | 0 | 5.87s (cache warm) |
 
 `nx build-deps` summary (verbatim, `runs/nx-build-deps.txt`):
 
 ```
  NX   Successfully ran target build-deps for project server and 52 tasks it depends on
 ```
+
+The full documented verify sequence (server + shared + db + event-bus +
+integrations + email-service typechecks, email-service build, `nx build-deps`,
+durable suite, subscriber suite) completes in roughly **~90s wall clock** in the
+order above — comfortably under the verifier's budget — and every command exits
+on its own with code 0. No step waits on a real 120s/90s/30s lease: tests
+inject `leaseTtlMs: 30_000` and force expiry via SQL
+(`lease_expires_at = now() - interval '5 minutes'`), never by sleeping through
+production-scale intervals.
 
 ---
 
@@ -443,8 +507,8 @@ Because Citus is absent locally, the "same identity valid in another tenant"
 and "duplicate identity fails within a tenant" claims are exercised through the
 real constraint behavior:
 
-- `it('tenant isolation: same provider+message identity in another tenant creates its own inbox')` (`:778`) — the identical `(provider_id, normalized_message_id)` is inserted in two tenants and both rows exist with distinct `inbox_id`s.
-- The within-tenant uniqueness is asserted structurally by the `inbound_email_inbox_identity_unique` constraint in `schema/inbound_email_inbox.dump:38` and behaviorally by the effect-ledger PK in the concurrent test (`:582`).
+- `it('tenant isolation: same provider+message identity in another tenant creates its own inbox')` (`:984`) — the identical `(provider_id, normalized_message_id)` is inserted in two tenants and both rows exist with distinct `inbox_id`s.
+- The within-tenant uniqueness is asserted structurally by the `inbound_email_inbox_identity_unique` constraint in `schema/inbound_email_inbox.dump:38` and behaviorally by the effect-ledger PK in the concurrent test (`:583`).
 
 The migration up/down check is part of the durable suite bootstrap (a clean
 `test_database` is dropped, recreated, migrated through `20260807140000`, and
@@ -454,7 +518,34 @@ seeded on every run of `runs/durable-suite.txt`).
 
 ## 8. What this round changed
 
-Nothing except this verification bundle. Zero product-code files were modified
-in this round; no focused check failed, so no defect fix was required. The only
-unstaged change in the tree remains the pre-existing `package-lock.json`
-modification, which is untouched and not committed.
+This mitigation round refreshed the bundle to HEAD `f4b697d6ee`. The four
+bracketed-reply/threading tests added since the bundle's first commit
+(`7e4f7d7952`) bring the durable suite to 39 tests; all `runs/*.txt` files were
+regenerated verbatim at HEAD (durable 39/39, subscriber 15/15, the
+`REQUIRE_DB` negative control, all typechecks, `nx build-deps`), and the
+behavioral-evidence and typecheck sections now carry the updated counts, line
+anchors, and measured wall-clock times.
+
+No product-code files were modified in this round — the branch's code is
+unchanged from `f4b697d6ee`. The only unstaged change in the tree remains the
+pre-existing `package-lock.json` modification, which is untouched and not
+committed.
+
+**Known-open items (not fixed in this round, listed for the reviewer):**
+
+1. **Host-run webhook 404 on `/api/email/webhooks/imap`** — a live POST returns
+   404 (observed in the 2026-08-08 smoke). Durable V2 commits but the provider
+   cursor fails to advance under the legacy IMAP webhook path. Not the cause of
+   this verifier-timeout; tracked separately.
+2. **Bracketed-reply duplicate ticket** (e.g. TIC001018→TIC001019) — the
+   2026-08-08 smoke reproduced it; HEAD `f4b697d6ee` normalizes reply
+   Message-ID threading and adds the 39th durable test asserting the bracketed
+   reply resolves the existing ticket. Regression tests are green; a live
+   GreenMail re-smoke is still pending.
+3. **`INBOUND_EMAIL_REPLY_RECEIVED` payload** — the smoke found it dead-lettered
+   after five validation failures (payload lacked `tenantId`/`occurredAt`, invalid
+   recipient). Fixed at HEAD by `buildInboundEmailReplyReceivedPayload`
+   (schema-valid payload, bare-address normalization, provider-mailbox `to`
+   fallback) and by skip-with-warning on outbox insert; covered by the new
+   schema-valid-payload test (`:832`). Existing `terminal_failed` reply rows
+   stay terminal (no backfill).

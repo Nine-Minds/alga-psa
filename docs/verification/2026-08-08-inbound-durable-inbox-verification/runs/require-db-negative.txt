@@ -1,6 +1,6 @@
 
  RUN  v3.2.7 /home/robert/alga-copies/fix-inbound-email-durable-inbox/server
-      Running tests with seed "1786156087736"
+      Running tests with seed "1786223923034"
 
 Environment file path: /home/robert/alga-copies/fix-inbound-email-durable-inbox/.env.localtest
 
@@ -15,13 +15,15 @@ Error: REQUIRE_DB=1 but the test database at 127.0.0.1:5999 is unreachable. Refu
        |           ^
      45|       `REQUIRE_DB=1 but the test database at ${DB_HOST}:${DB_PORT} is …
      46|         'Refusing to skip DB-backed tests in a required-DB environment…
- ❯ src/test/integration/inboundEmailDurableInbox.integration.test.ts:11:20
+ ❯ src/test/integration/inboundEmailDurableInbox.integration.test.ts:12:20
 
 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
 
 
  Test Files  1 failed (1)
       Tests  no tests
-   Start at  02:28:07
-   Duration  706ms (transform 222ms, setup 63ms, collect 0ms, tests 0ms, environment 0ms, prepare 29ms)
+   Start at  21:18:43
+   Duration  742ms (transform 288ms, setup 50ms, collect 0ms, tests 0ms, environment 0ms, prepare 31ms)
 
+Command exited with non-zero status 1
+WALLCLOCK: 1.17s
