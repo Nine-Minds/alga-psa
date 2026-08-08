@@ -578,7 +578,7 @@ async function importReconciledLegacySuccess(
   messageKey: string
 ): Promise<{ reconciled: boolean; ambiguous: boolean; reason: string }> {
   try {
-    const imported = await db.transaction(async (trx) => {
+    const imported = await db.transaction(async (trx: any) => {
       const reconciliation = await reconcileLegacyEntities(trx, tenant, legacy.provider_id, messageKey, legacy.ticket_id);
       if (reconciliation.matched !== true) {
         return { reconciled: false as const, ambiguous: true as const, reason: reconciliation.reason };

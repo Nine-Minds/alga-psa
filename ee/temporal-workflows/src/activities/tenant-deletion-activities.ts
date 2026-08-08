@@ -560,6 +560,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'inbound_email_rules',
   'inbound_ticket_defaults', 'user_type_rates', 'next_number',
   'event_catalog',
+  // Durable inbound email family. Deletion order follows the composite FKs:
+  // event_deliveries -> outbox, and effects/artifacts/outbox -> inbox -> ingress.
+  'inbound_email_event_deliveries', 'inbound_email_effects', 'inbound_email_artifacts',
+  'inbound_email_outbox', 'inbound_email_inbox', 'inbound_email_ingress',
 
   // Extension installation (must come before tenant_settings)
   'tenant_extension_schedule', 'tenant_extension_install_secrets',
