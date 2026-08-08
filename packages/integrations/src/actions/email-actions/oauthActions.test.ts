@@ -83,9 +83,8 @@ describe("initiateEmailOAuth Microsoft credential source", () => {
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.authUrl).toContain("client_id=platform-client-id");
-    expect(mocks.resolveMicrosoftConsumerProfileConfig).toHaveBeenCalledWith("tenant-1", "email", {
-      credentialPreference: "tenant",
-    });
+    expect(new URL(result.authUrl).pathname).toBe('/common/oauth2/v2.0/authorize');
+    expect(mocks.resolveMicrosoftConsumerProfileConfig).toHaveBeenCalledWith("tenant-1", "email");
     expect(result.authUrl).toContain(encodeURIComponent('https://psa.example.com/api/auth/microsoft/callback'));
     expect(result.authUrl).not.toContain('attacker.example');
     expect(
@@ -116,8 +115,25 @@ describe("initiateEmailOAuth Microsoft credential source", () => {
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.authUrl).toContain("client_id=tenant-client-id");
-    expect(mocks.resolveMicrosoftConsumerProfileConfig).toHaveBeenCalledWith("tenant-1", "email", {
-      credentialPreference: "tenant",
+    expect(new URL(result.authUrl).pathname).toBe('/tenant-directory-id/oauth2/v2.0/authorize');
+    expect(mocks.resolveMicrosoftConsumerProfileConfig).toHaveBeenCalledWith("tenant-1", "email");
+  });
+
+  it('fails closed when a tenant app has no concrete Microsoft tenant ID', async () => {
+    mocks.resolveMicrosoftConsumerProfileConfig.mockResolvedValue({
+      status: 'ready',
+      tenantId: 'tenant-1',
+      consumerType: 'email',
+      credentialSource: 'binding',
+      profileId: 'profile-1',
+      clientId: 'tenant-client-id',
+      clientSecret: 'tenant-client-secret',
+      microsoftTenantId: 'common',
+    });
+
+    await expect(initiateEmailOAuth({ provider: 'microsoft' })).resolves.toEqual({
+      success: false,
+      error: 'Failed to initiate OAuth',
     });
   });
 });

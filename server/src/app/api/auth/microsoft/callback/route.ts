@@ -14,6 +14,7 @@ import axios from 'axios';
 import {
   getMicrosoftTokenUrl,
   MICROSOFT_EMAIL_OAUTH_SCOPES,
+  resolveMicrosoftEmailOAuthAuthority,
 } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
 
@@ -146,8 +147,6 @@ export async function GET(request: NextRequest) {
       console.error('[MS OAuth] OAuth error from Microsoft:', {
         error,
         errorDescription: errorDescription || '',
-        code: searchParams.get('code'),
-        state: searchParams.get('state')
       });
       return respondWithPostMessage({
         type: 'oauth-callback',
@@ -269,9 +268,32 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    let tenantAuthority: string;
+    try {
+      tenantAuthority = resolveMicrosoftEmailOAuthAuthority({
+        clientId,
+        tenantId: microsoftProfile.status === 'ready' ? microsoftProfile.microsoftTenantId : undefined,
+        credentialSource: microsoftProfile.status === 'ready' && microsoftProfile.credentialSource === 'app'
+          ? 'platform'
+          : 'tenant',
+      });
+    } catch (authorityError) {
+      const message = authorityError instanceof Error
+        ? authorityError.message
+        : 'Microsoft tenant ID is not configured';
+      await persistProviderError(stateData, 'configuration_error', message);
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'microsoft',
+        success: false,
+        error: 'configuration_error',
+        errorDescription: message,
+      });
+    }
+
     // Exchange authorization code for tokens
     try {
-      const tokenUrl = getMicrosoftTokenUrl('common');
+      const tokenUrl = getMicrosoftTokenUrl(tenantAuthority);
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
@@ -307,7 +329,7 @@ export async function GET(request: NextRequest) {
                 token_expires_at: expiresAt.toISOString(),
                 client_id: clientId,
                 client_secret: clientSecret,
-                tenant_id: microsoftProfile.status === 'ready' ? microsoftProfile.microsoftTenantId || 'common' : 'common',
+                tenant_id: tenantAuthority,
                 microsoft_profile_id: microsoftProfile.status === 'ready' ? microsoftProfile.profileId || null : null,
                 client_secret_ref: microsoftProfile.status === 'ready' ? microsoftProfile.clientSecretRef || null : null,
                 updated_at: new Date().toISOString(),
@@ -363,7 +385,7 @@ export async function GET(request: NextRequest) {
                   provider_config: {
                     client_id: clientId,
                     client_secret: clientSecret,
-                    tenant_id: microsoftProfile.status === 'ready' ? microsoftProfile.microsoftTenantId : null,
+                    tenant_id: tenantAuthority,
                     access_token: access_token,
                     refresh_token: refresh_token || null,
                     token_expires_at: expiresAt.toISOString(),
@@ -488,7 +510,9 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error: any) {
-    console.error('Unexpected error in Microsoft OAuth callback:', error);
+    console.error('Unexpected error in Microsoft OAuth callback:', {
+      message: error?.message || String(error),
+    });
     return new NextResponse(
       (() => {
         const encoded = Buffer.from(JSON.stringify({

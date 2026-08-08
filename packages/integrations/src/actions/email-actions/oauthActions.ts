@@ -9,6 +9,7 @@ import {
   resolveMicrosoftConsumerProfileConfig,
 } from '../../lib/microsoftConsumerProfileResolution';
 import { getMicrosoftEmailSetupMetadataInternal } from '../integrations/microsoftActions';
+import { resolveMicrosoftEmailOAuthAuthority } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 
 export const initiateEmailOAuth = withAuth(async (
   user,
@@ -47,14 +48,15 @@ export const initiateEmailOAuth = withAuth(async (
     let clientId: string | null = null;
     let effectiveRedirectUri = redirectUri || '';
     let microsoftCredentialSource: 'tenant' | 'platform' | undefined;
+    let microsoftTenantId: string | undefined;
 
     if (provider === 'google') {
       // Google is always tenant-owned (CE and EE): do not fall back to app-level secrets.
       clientId = (await secretProvider.getTenantSecret(tenant, 'google_client_id')) || null;
     } else {
-      const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(tenant, 'email', {
-        credentialPreference: 'tenant',
-      });
+      // A bound tenant profile wins; when none exists the resolver may return
+      // the Alga-managed platform application.
+      const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(tenant, 'email');
       if (microsoftProfile.status !== 'ready') {
         return {
           success: false,
@@ -64,6 +66,7 @@ export const initiateEmailOAuth = withAuth(async (
 
       clientId = microsoftProfile.clientId || null;
       microsoftCredentialSource = microsoftProfile.credentialSource === 'app' ? 'platform' : 'tenant';
+      microsoftTenantId = microsoftProfile.microsoftTenantId;
       effectiveRedirectUri = (await getMicrosoftEmailSetupMetadataInternal()).mailboxRedirectUri;
     }
 
@@ -92,9 +95,13 @@ export const initiateEmailOAuth = withAuth(async (
       microsoftCredentialSource,
     };
 
-    // For multi-tenant Azure AD apps, always use 'common' for the authorization URL
-    // This allows users from any Azure AD tenant to authenticate
-    const msTenantAuthority = 'common';
+    const msTenantAuthority = provider === 'microsoft'
+      ? resolveMicrosoftEmailOAuthAuthority({
+          clientId,
+          tenantId: microsoftTenantId,
+          credentialSource: microsoftCredentialSource,
+        })
+      : undefined;
 
     const authUrl = provider === 'microsoft'
       ? generateMicrosoftAuthUrl(clientId, state.redirectUri, state, undefined as any, msTenantAuthority)

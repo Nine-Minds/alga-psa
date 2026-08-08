@@ -10,6 +10,10 @@ import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/ema
 import { GmailAdapter } from './providers/GmailAdapter';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import axios from 'axios';
+import {
+  getMicrosoftTokenUrl,
+  resolveMicrosoftEmailOAuthAuthority,
+} from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 
 export interface AutoWiringResult {
   success: boolean;
@@ -272,15 +276,22 @@ export class EmailProviderAutoWiring {
     try {
       // Get OAuth client credentials
       const secretProvider = await getSecretProviderInstance();
-      const clientId = process.env.MICROSOFT_CLIENT_ID || await secretProvider.getTenantSecret(config.tenant, 'microsoft_client_id');
-      const clientSecret = process.env.MICROSOFT_CLIENT_SECRET || await secretProvider.getTenantSecret(config.tenant, 'microsoft_client_secret');
+      const clientId = config.clientId
+        || process.env.MICROSOFT_CLIENT_ID
+        || await secretProvider.getTenantSecret(config.tenant, 'microsoft_client_id');
+      const clientSecret = config.clientSecret
+        || process.env.MICROSOFT_CLIENT_SECRET
+        || await secretProvider.getTenantSecret(config.tenant, 'microsoft_client_secret');
       
       if (!clientId || !clientSecret) {
         throw new Error('Microsoft OAuth credentials not configured');
       }
 
       // Exchange authorization code for tokens
-      const tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+      const tokenUrl = getMicrosoftTokenUrl(resolveMicrosoftEmailOAuthAuthority({
+        clientId,
+        tenantId: config.tenantId,
+      }));
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,

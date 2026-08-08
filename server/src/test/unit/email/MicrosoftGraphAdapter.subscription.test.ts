@@ -34,6 +34,7 @@ import {
   MicrosoftGraphAdapter,
   MicrosoftSubscriptionError,
 } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import { ALGA_MICROSOFT_EMAIL_CLIENT_ID } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 
 function config() {
   return {
@@ -58,10 +59,6 @@ function config() {
   };
 }
 
-function jwt(claims: Record<string, unknown>): string {
-  return `header.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.signature`;
-}
-
 describe('MicrosoftGraphAdapter subscription hygiene', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -73,6 +70,7 @@ describe('MicrosoftGraphAdapter subscription hygiene', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllEnvs();
   });
 
   it('keeps creation and renewal expirations within the Graph 4230-minute cap', async () => {
@@ -164,33 +162,22 @@ describe('MicrosoftGraphAdapter subscription hygiene', () => {
 });
 
 describe('MicrosoftGraphAdapter token refresh authority', () => {
-  const previousDeploymentProfile = process.env.DEPLOYMENT_PROFILE;
-
   beforeEach(() => {
     vi.clearAllMocks();
-    delete process.env.DEPLOYMENT_PROFILE;
     mocks.tokenPost.mockRejectedValue({
       message: 'Request failed with status code 400',
       response: { status: 400, data: { error: 'invalid_grant' }, headers: {} },
     });
   });
 
-  afterEach(() => {
-    if (previousDeploymentProfile === undefined) {
-      delete process.env.DEPLOYMENT_PROFILE;
-    } else {
-      process.env.DEPLOYMENT_PROFILE = previousDeploymentProfile;
-    }
-  });
-
-  it('refreshes a hosted provider through the shared multi-tenant authority', async () => {
+  it('refreshes the Alga-managed provider through the shared multi-tenant authority', async () => {
+    vi.stubEnv('DEPLOYMENT_PROFILE', 'appliance');
     const providerConfig = config();
     providerConfig.provider_config = {
       ...providerConfig.provider_config,
-      client_id: 'platform-client',
+      client_id: ALGA_MICROSOFT_EMAIL_CLIENT_ID,
       client_secret: 'platform-secret',
       tenant_id: 'platform-home-tenant',
-      access_token: jwt({ tid: 'customer-token-tenant' }),
       token_expires_at: new Date(0).toISOString(),
     };
     const adapter = new MicrosoftGraphAdapter(providerConfig);
@@ -206,8 +193,8 @@ describe('MicrosoftGraphAdapter token refresh authority', () => {
     expect(params.has('scope')).toBe(false);
   });
 
-  it('uses the configured tenant authority for an appliance provider', async () => {
-    process.env.DEPLOYMENT_PROFILE = 'appliance';
+  it('uses the configured tenant authority for a BYO provider even when hosted', async () => {
+    vi.stubEnv('DEPLOYMENT_PROFILE', 'hosted');
     const providerConfig = config();
     providerConfig.provider_config = {
       ...providerConfig.provider_config,
@@ -226,22 +213,19 @@ describe('MicrosoftGraphAdapter token refresh authority', () => {
     );
   });
 
-  it('falls back to the token tenant for an appliance provider without a configured tenant', async () => {
-    process.env.DEPLOYMENT_PROFILE = 'appliance';
+  it('fails closed for a BYO provider without a configured tenant', async () => {
     const providerConfig = config();
     providerConfig.provider_config = {
       ...providerConfig.provider_config,
       client_id: 'single-tenant-client',
       client_secret: 'single-tenant-secret',
-      access_token: jwt({ tid: 'customer-token-tenant' }),
       token_expires_at: new Date(0).toISOString(),
     };
     const adapter = new MicrosoftGraphAdapter(providerConfig);
 
-    await expect(adapter.ensureTokenHealthy()).rejects.toThrow('refreshAccessToken');
-
-    expect(mocks.tokenPost.mock.calls[0][0]).toBe(
-      'https://login.microsoftonline.com/customer-token-tenant/oauth2/v2.0/token'
+    await expect(adapter.ensureTokenHealthy()).rejects.toThrow(
+      'A concrete Microsoft tenant ID is required'
     );
+    expect(mocks.tokenPost).not.toHaveBeenCalled();
   });
 });

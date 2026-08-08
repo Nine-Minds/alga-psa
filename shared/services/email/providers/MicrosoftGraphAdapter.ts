@@ -14,22 +14,10 @@ import { tenantDb } from '@alga-psa/db';
 import {
   getMicrosoftGraphBaseUrl,
   getMicrosoftTokenUrl,
+  resolveMicrosoftEmailOAuthAuthority,
 } from '../microsoftGraphEndpoints';
 
 export type MicrosoftSubscriptionErrorKind = 'validation' | 'authentication' | 'other';
-
-function getAccessTokenTenantId(accessToken: string | undefined): string | undefined {
-  try {
-    const payload = accessToken?.split('.')[1];
-    if (!payload) return undefined;
-    const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
-    return typeof claims?.tid === 'string' && claims.tid.trim()
-      ? claims.tid.trim()
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 export class MicrosoftSubscriptionError extends Error {
   constructor(
@@ -337,29 +325,11 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
 
       const vendorTenantId = vendorConfig.resolved_tenant_id || vendorConfig.tenant_id || vendorConfig.tenantId;
-      const isHosted = (process.env.DEPLOYMENT_PROFILE || 'hosted').trim().toLowerCase() !== 'appliance';
-
-      // Hosted uses Alga's shared multi-tenant Microsoft app, so preserve the
-      // tenant-independent authority used when the refresh grant was issued.
-      // Appliance deployments use a customer-owned, normally single-tenant app
-      // and therefore require that app's concrete tenant authority.
-      let tenantAuthority = isHosted
-        ? 'common'
-        : vendorTenantId
-          || getAccessTokenTenantId(this.accessToken)
-          || process.env.MICROSOFT_TENANT_ID;
-      if (!tenantAuthority) {
-        try {
-          const secretProvider = await getSecretProviderInstance();
-          tenantAuthority = await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_tenant_id')
-            || await secretProvider.getAppSecret('MICROSOFT_TENANT_ID')
-            || 'common';
-        } catch {
-          tenantAuthority = 'common';
-        }
-      }
-
-      const tokenUrl = getMicrosoftTokenUrl(tenantAuthority || 'common');
+      const tenantAuthority = resolveMicrosoftEmailOAuthAuthority({
+        clientId,
+        tenantId: vendorTenantId,
+      });
+      const tokenUrl = getMicrosoftTokenUrl(tenantAuthority);
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
