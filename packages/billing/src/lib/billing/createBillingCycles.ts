@@ -1,8 +1,9 @@
-import { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import type { Knex } from 'knex';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import type { IClientContractLineCycle, IClient, ISO8601String, BillingCycleType } from '@alga-psa/types';
 import { parseISO } from 'date-fns';
+import { replenishClientCadenceServicePeriods } from '@alga-psa/shared/billingClients/clientCadenceScheduleRegeneration';
 import {
   ensureUtcMidnightIsoDate,
   getAnchorDefaultsForCycle,
@@ -30,6 +31,13 @@ export type BillingCycleCreationResult = {
   message?: string;
   suggestedDate?: ISO8601String;
 };
+
+class BillingCycleCreationAbort extends Error {
+  constructor(readonly result: BillingCycleCreationResult) {
+    super(result.message);
+    this.name = 'BillingCycleCreationAbort';
+  }
+}
 
 function getNextCycleDate(
   currentDate: ISO8601String,
@@ -149,12 +157,12 @@ async function createBillingCycle(
       // Handle race condition - another cycle was created between our check and insert
       const nextDate = new Date(cycle.effective_date);
       nextDate.setDate(nextDate.getDate() + 1);
-      return {
+      throw new BillingCycleCreationAbort({
         success: false,
         error: 'duplicate',
         message: 'A billing period for this date already exists. Please select a different date.',
         suggestedDate: nextDate.toISOString().split('T')[0] + 'T00:00:00Z'
-      };
+      });
     }
     console.error(`Error creating billing cycle:`, error);
     throw error;
@@ -194,53 +202,114 @@ export async function createClientContractLineCycles(
     };
   }
 
-  const anchorSettings = await loadClientAnchorSettings(knex, client, billingCycle);
-  const db = tenantDb(knex, tenant);
+  return withTransaction<BillingCycleCreationResult>(knex, async (trx) => {
+    const anchorSettings = await loadClientAnchorSettings(trx, client, billingCycle);
+    const db = tenantDb(trx, tenant);
 
-  const lastCycle = await db.table('client_billing_cycles')
-    .where({
-      client_id: client.client_id,
-      tenant,
-      is_active: true
-    })
-    .orderBy('period_start_date', 'desc')
-    .first()
-    .select('period_start_date', 'period_end_date') as IClientContractLineCycle | undefined;
+    const finishSuccessfulPass = async (): Promise<BillingCycleCreationResult> => {
+      await replenishClientCadenceServicePeriods(trx, {
+        tenant,
+        clientId: client.client_id,
+        billingCycle,
+        anchor: anchorSettings
+      });
+      return { success: true };
+    };
 
-  const referenceDate = options.effectiveDate ? ensureUtcMidnightIsoDate(options.effectiveDate) : now;
+    const lastCycle = await db.table('client_billing_cycles')
+      .where({
+        client_id: client.client_id,
+        tenant,
+        is_active: true
+      })
+      .orderBy('period_start_date', 'desc')
+      .first()
+      .select('period_start_date', 'period_end_date') as IClientContractLineCycle | undefined;
 
-  if (!lastCycle) {
-    const initial = getStartOfCurrentCycle(referenceDate, billingCycle, anchorSettings);
-    const initialResult = await createBillingCycle(knex, {
-      client_id: client.client_id,
-      billing_cycle: billingCycle,
-      effective_date: initial.effectiveDate,
-      period_start_date: initial.periodStart,
-      period_end_date: initial.periodEnd,
-      tenant: client.tenant
-    });
+    const referenceDate = options.effectiveDate ? ensureUtcMidnightIsoDate(options.effectiveDate) : now;
 
-    if (!initialResult.success) {
-      return initialResult;
+    if (!lastCycle) {
+      const initial = getStartOfCurrentCycle(referenceDate, billingCycle, anchorSettings);
+      const initialResult = await createBillingCycle(trx, {
+        client_id: client.client_id,
+        billing_cycle: billingCycle,
+        effective_date: initial.effectiveDate,
+        period_start_date: initial.periodStart,
+        period_end_date: initial.periodEnd,
+        tenant
+      });
+
+      if (!initialResult.success) {
+        return initialResult;
+      }
+
+      if (options.manual) {
+        return finishSuccessfulPass();
+      }
+
+      // Backfill additional cycles until we cover "now" (i.e., lastEnd > now).
+      let start = initial.periodEnd;
+      let iterations = 0;
+      const MAX_ITERATIONS = 200;
+      while (parseISO(start) <= parseISO(now) && iterations < MAX_ITERATIONS) {
+        const end = getNextBillingBoundaryAfter(start, billingCycle, anchorSettings);
+        const result = await createBillingCycle(trx, {
+          client_id: client.client_id,
+          billing_cycle: billingCycle,
+          effective_date: start,
+          period_start_date: start,
+          period_end_date: end,
+          tenant
+        });
+
+        if (!result.success) {
+          return result;
+        }
+
+        iterations++;
+        start = end;
+      }
+
+      return finishSuccessfulPass();
     }
+
+    if (!lastCycle.period_end_date) {
+      return {
+        success: false,
+        error: 'db_error',
+        message: 'Client has an active billing cycle without a period end date.'
+      };
+    }
+
+    // Next cycle starts at the last cycle's exclusive end boundary.
+    let start = normalizeDbIsoUtcMidnight(lastCycle.period_end_date);
 
     if (options.manual) {
-      return { success: true };
-    }
-
-    // Backfill additional cycles until we cover "now" (i.e., lastEnd > now).
-    let start = initial.periodEnd;
-    let iterations = 0;
-    const MAX_ITERATIONS = 200;
-    while (parseISO(start) <= parseISO(now) && iterations < MAX_ITERATIONS) {
+      // Manual mode creates exactly one cycle (including a transition period if start isn't aligned).
       const end = getNextBillingBoundaryAfter(start, billingCycle, anchorSettings);
-      const result = await createBillingCycle(knex, {
+      const result = await createBillingCycle(trx, {
         client_id: client.client_id,
         billing_cycle: billingCycle,
         effective_date: start,
         period_start_date: start,
         period_end_date: end,
-        tenant: client.tenant
+        tenant
+      });
+      return result.success ? finishSuccessfulPass() : result;
+    }
+
+    // Automatic mode backfills until we cover "now".
+    let iterations = 0;
+    const MAX_ITERATIONS = 200;
+    while (parseISO(start) <= parseISO(now) && iterations < MAX_ITERATIONS) {
+      const end = getNextBillingBoundaryAfter(start, billingCycle, anchorSettings);
+      const result = await createBillingCycle(trx, {
+        client_id: client.client_id,
+        billing_cycle: billingCycle,
+        effective_date: start,
+        period_start_date: start,
+        period_end_date: end,
+        tenant
       });
 
       if (!result.success) {
@@ -251,56 +320,13 @@ export async function createClientContractLineCycles(
       start = end;
     }
 
-    return { success: true };
-  }
-
-  if (!lastCycle.period_end_date) {
-    return {
-      success: false,
-      error: 'db_error',
-      message: 'Client has an active billing cycle without a period end date.'
-    };
-  }
-
-  // Next cycle starts at the last cycle's exclusive end boundary.
-  let start = normalizeDbIsoUtcMidnight(lastCycle.period_end_date);
-
-  if (options.manual) {
-    // Manual mode creates exactly one cycle (including a transition period if start isn't aligned).
-    const end = getNextBillingBoundaryAfter(start, billingCycle, anchorSettings);
-    return await createBillingCycle(knex, {
-      client_id: client.client_id,
-      billing_cycle: billingCycle,
-      effective_date: start,
-      period_start_date: start,
-      period_end_date: end,
-      tenant: client.tenant
-    });
-  }
-
-  // Automatic mode backfills until we cover "now".
-  let iterations = 0;
-  const MAX_ITERATIONS = 200;
-  while (parseISO(start) <= parseISO(now) && iterations < MAX_ITERATIONS) {
-    const end = getNextBillingBoundaryAfter(start, billingCycle, anchorSettings);
-    const result = await createBillingCycle(knex, {
-      client_id: client.client_id,
-      billing_cycle: billingCycle,
-      effective_date: start,
-      period_start_date: start,
-      period_end_date: end,
-      tenant: client.tenant
-    });
-
-    if (!result.success) {
-      return result;
+    return finishSuccessfulPass();
+  }).catch((error: unknown) => {
+    if (error instanceof BillingCycleCreationAbort) {
+      return error.result;
     }
-
-    iterations++;
-    start = end;
-  }
-
-  return { success: true };
+    throw error;
+  });
 }
 
 async function loadClientAnchorSettings(
