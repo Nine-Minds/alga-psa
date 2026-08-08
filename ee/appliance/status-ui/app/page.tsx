@@ -792,8 +792,9 @@ export default function StatusPage() {
               <strong>Install code needs attention</strong>
               <p>
                 The install code could not be redeemed — it may be invalid,
-                expired, or already used. Re-issue a fresh code from the portal,
-                then re-enter it to continue.
+                expired, or already used. Re-issue a fresh code at{" "}
+                <strong>nineminds.com/order/appliance/reissue</strong> and we
+                will email it to you, then re-enter it to continue.
               </p>
             </div>
             <a className={styles.primaryButton} href="/setup/">
