@@ -37,7 +37,7 @@ import {
   type InboundIngressRecord,
 } from './inboundEmailDurableStore';
 import { enqueueInboundEmailDurableJob } from './unifiedInboundEmailQueueV2';
-import { normalizeInboundMessageIdentity } from './inboundEmailIdentity';
+import { normalizeInboundMessageIdentity, parseCanonicalInboundIdentity } from './inboundEmailIdentity';
 import { buildInboundSourceObjectKey } from './inboundEmailIdentity';
 import type { InboundProviderPointer } from './inboundEmailProducer';
 
@@ -225,7 +225,10 @@ function parseLegacyMessageIdentity(messageId: string): { providerType: InboundP
  * The raw entity-lookup key the legacy pipeline wrote into
  * `tickets.email_metadata.messageId` and `comments.metadata.email.messageId`
  * (it was `emailData.id`). Prefer the headers snapshot; fall back to the
- * provider portion of the audit message_id.
+ * provider portion of the audit message_id. A durable-mirrored audit row stores
+ * the CANONICAL normalized identity (`rfc822:…`/`provider:…`/`imap:…`) in
+ * `message_id`, but the durable pipeline wrote the unprefixed form into the
+ * entity metadata — so a canonical value is unwrapped to its raw entity key.
  */
 function resolveLegacyEntityKey(legacy: LegacyProcessedRow): string | null {
   const snapshot = legacy.metadata?.headersSnapshot as Record<string, unknown> | undefined;
@@ -233,6 +236,11 @@ function resolveLegacyEntityKey(legacy: LegacyProcessedRow): string | null {
   if (snapKey) return snapKey;
   const parsed = parseLegacyMessageIdentity(legacy.message_id);
   if (parsed?.rest?.trim()) return parsed.rest.trim();
+  const canonical = parseCanonicalInboundIdentity(legacy.message_id);
+  if (canonical) {
+    const unwrapped = canonical.rfcMessageId ?? canonical.providerMessageId ?? null;
+    if (unwrapped) return unwrapped;
+  }
   return legacy.message_id.trim() || null;
 }
 
@@ -414,10 +422,24 @@ export async function backfillTenantLegacyRows(tenant: string, limit: number = 2
 
     const providerType = resolveLegacyProviderType(legacy);
     const parsedIdentity = parseLegacyMessageIdentity(legacy.message_id);
+    // A durable-mirrored audit row stores the CANONICAL normalized identity in
+    // `message_id` (`rfc822:…`/`provider:…`/`imap:…`). Feed that through as-is
+    // so the idempotent normalizer preserves the original scheme instead of
+    // re-deriving a drifted (double-prefixed) key that misses the succeeded
+    // inbox row. Genuine legacy rows keep the provider-rest extraction.
+    const alreadyCanonical = parseCanonicalInboundIdentity(legacy.message_id);
     const identity = normalizeInboundMessageIdentity({
       providerType,
-      rfcMessageId: providerType === 'imap' ? parsedIdentity?.rest ?? legacy.message_id : null,
-      providerMessageId: providerType !== 'imap' ? parsedIdentity?.rest ?? legacy.message_id : null,
+      rfcMessageId: alreadyCanonical
+        ? legacy.message_id
+        : providerType === 'imap'
+          ? parsedIdentity?.rest ?? legacy.message_id
+          : null,
+      providerMessageId: alreadyCanonical
+        ? null
+        : providerType !== 'imap'
+          ? parsedIdentity?.rest ?? legacy.message_id
+          : null,
     });
 
     if (!identity) {

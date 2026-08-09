@@ -54,6 +54,13 @@ function sha256(input: string): string {
  * This is the single canonical RFC 5322 Message-ID normalizer for the inbound
  * pipeline. Every place a Message-ID lookup key or a stored `email_metadata`
  * key is derived must go through this function (never a third variant).
+ *
+ * Idempotency: an already-canonical `rfc822:<id>` value (for example a stored
+ * `inbound_email_inbox.normalized_message_id` or a mirror-written legacy audit
+ * `message_id`) is unwrapped before normalizing, so feeding a normalized value
+ * back in NEVER produces a double-prefixed `rfc822:rfc822:<id>` key. All
+ * leading `rfc822:` prefixes are stripped (a corrupted double-prefixed value
+ * heals to the bare RFC id).
  */
 export function normalizeRfc822MessageId(raw: string | null | undefined): string | null {
   if (typeof raw !== 'string') return null;
@@ -64,11 +71,59 @@ export function normalizeRfc822MessageId(raw: string | null | undefined): string
     value = value.slice(1, -1).trim();
   }
   if (!value) return null;
+  // Unwrap every already-applied canonical `rfc822:` prefix (this runs after
+  // bracket removal so a bracketed prefixed value like `<rfc822:abc@x>` also
+  // heals), making normalization idempotent for canonical inputs.
+  while (value.startsWith('rfc822:')) {
+    value = value.slice('rfc822:'.length).trim();
+  }
+  if (!value) return null;
   const atIndex = value.indexOf('@');
   if (atIndex <= 0) return value;
   const local = value.slice(0, atIndex);
   const domain = value.slice(atIndex + 1).toLowerCase();
   return `${local}@${domain}`;
+}
+
+/**
+ * Parse a string that already carries a canonical `scheme:`-prefixed inbound
+ * identity (`rfc822:<id>`, `provider:<type>:<opaque>`, or `imap:<mailbox>:
+ * <uidvalidity>:<uid>`). Returns null when the value is not an already-canonical
+ * identity. Used to make `normalizeInboundMessageIdentity` idempotent: a stored
+ * normalized key fed back into any field is preserved scheme-for-scheme instead
+ * of being re-wrapped into a double-prefixed key.
+ */
+export function parseCanonicalInboundIdentity(
+  value: string | null | undefined
+): { scheme: InboundIdentityScheme; normalized: string; rfcMessageId: string | null; providerMessageId: string | null } | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith('rfc822:')) {
+    const bare = normalizeRfc822MessageId(trimmed.slice('rfc822:'.length));
+    if (!bare) return null;
+    return { scheme: 'rfc822', normalized: `rfc822:${bare}`, rfcMessageId: bare, providerMessageId: null };
+  }
+
+  if (trimmed.startsWith('provider:')) {
+    const rest = trimmed.slice('provider:'.length);
+    const sep = rest.indexOf(':');
+    if (sep <= 0 || sep === rest.length - 1) return null;
+    const providerType = rest.slice(0, sep);
+    const opaqueId = rest.slice(sep + 1);
+    if (!providerType || !opaqueId) return null;
+    return { scheme: 'provider', normalized: `provider:${providerType}:${opaqueId}`, rfcMessageId: null, providerMessageId: opaqueId };
+  }
+
+  if (trimmed.startsWith('imap:')) {
+    const parts = trimmed.slice('imap:'.length).split(':');
+    const [mailbox, uidValidity, uid] = parts;
+    if (!mailbox || !uidValidity || !uid) return null;
+    return { scheme: 'imap', normalized: `imap:${mailbox}:${uidValidity}:${uid}`, rfcMessageId: null, providerMessageId: null };
+  }
+
+  return null;
 }
 
 function isUsableProviderId(value: string | null | undefined): boolean {
@@ -99,10 +154,28 @@ function isUsableImapIdentity(input: InboundIdentityInput): boolean {
  * Returns `null` when no durable identity can be derived (callers must decide
  * retryability/terminality from source availability rather than substituting a
  * random value).
+ *
+ * Idempotency: an input that is already a canonical `scheme:`-prefixed identity
+ * (`rfc822:`, `provider:<type>:`, or `imap:`) is preserved as-is — the original
+ * scheme is kept and never re-wrapped. This protects every round-trip path
+ * (staging, recovery/backfill, replay, mirror) that feeds a stored normalized
+ * key back into a raw-identity field: it can never produce a double-prefixed
+ * `rfc822:rfc822:…` key that misses the canonical inbox row.
  */
 export function normalizeInboundMessageIdentity(
   input: InboundIdentityInput
 ): NormalizedInboundIdentity | null {
+  // An already-canonical identity in the RFC field keeps its own scheme.
+  const canonicalRfc = parseCanonicalInboundIdentity(input.rfcMessageId);
+  if (canonicalRfc) {
+    return {
+      scheme: canonicalRfc.scheme,
+      normalized: canonicalRfc.normalized,
+      rfcMessageId: canonicalRfc.rfcMessageId,
+      providerMessageId: canonicalRfc.providerMessageId,
+    };
+  }
+
   const rfcMessageId = normalizeRfc822MessageId(input.rfcMessageId);
   if (rfcMessageId) {
     return {
@@ -110,6 +183,17 @@ export function normalizeInboundMessageIdentity(
       scheme: 'rfc822',
       rfcMessageId,
       providerMessageId: null,
+    };
+  }
+
+  // An already-canonical identity in the provider field keeps its own scheme.
+  const canonicalProvider = parseCanonicalInboundIdentity(input.providerMessageId);
+  if (canonicalProvider) {
+    return {
+      scheme: canonicalProvider.scheme,
+      normalized: canonicalProvider.normalized,
+      rfcMessageId: canonicalProvider.rfcMessageId,
+      providerMessageId: canonicalProvider.providerMessageId,
     };
   }
 

@@ -2783,6 +2783,258 @@ describeDb('Inbound email durable inbox (integration)', () => {
     cursor = await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).first();
     expect(new Date(cursor.last_reconciliation_at).getTime()).toBe(new Date(receivedT2).getTime());
   });
+
+  it('prefix idempotency: an already-canonical identity re-normalizes to the same key and resolves the same inbox row', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'prefix-idem@example.com', providerType: 'google' });
+    const messageId = `prefix-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 'sender@example.com', to: 'prefix-idem@example.com', subject: 'Prefix', messageId, text: 'body' });
+    const { inboxId, normalizedMessageId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+    expect(normalizedMessageId).toBe(`rfc822:${messageId}`);
+    expect(normalizedMessageId).not.toContain('rfc822:rfc822');
+
+    const first = await processInbox(inboxId, 'prefix-first');
+    expect(first.outcome).toBe('created');
+    createdTicketIds.push(first.ticketId);
+
+    // A replay that feeds the STORED canonical identity back into the normalizer
+    // must derive the SAME key (never rfc822:rfc822) and resolve the SAME row.
+    const { normalizeInboundMessageIdentity } = await import('@alga-psa/shared/services/email/inboundEmailIdentity');
+    const replayIdentity = normalizeInboundMessageIdentity({
+      providerType: 'google',
+      rfcMessageId: normalizedMessageId,
+      providerMessageId: normalizedMessageId,
+    })!;
+    expect(replayIdentity.normalized).toBe(normalizedMessageId);
+    expect(replayIdentity.normalized).not.toContain('rfc822:rfc822');
+
+    const { getInboxByIdentity } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const resolved = await getInboxByIdentity(db, {
+      tenant: tenantId,
+      provider_id: providerId,
+      normalized_message_id: replayIdentity.normalized,
+    });
+    expect(resolved?.inbox_id).toBe(inboxId);
+    expect(resolved?.status).toBe('succeeded');
+
+    // Re-staging the message with the canonical id returns the same inbox row.
+    const { inboxId: replayInboxId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId: normalizedMessageId });
+    expect(replayInboxId).toBe(inboxId);
+    const replay = await processInbox(replayInboxId, 'prefix-replay');
+    expect(replay.ticketId).toBe(first.ticketId);
+    expect(replay.commentId).toBe(first.commentId);
+
+    expect(await countRows('inbound_email_inbox')).toBe(1);
+    expect(await countRows('inbound_email_effects')).toBe(2);
+    const doublePrefix = await tenantTable('inbound_email_inbox')
+      .where({ tenant: tenantId })
+      .andWhere('normalized_message_id', 'like', 'rfc822:rfc822:%')
+      .count<{ count: string }[]>('* as count')
+      .first();
+    expect(Number(doublePrefix?.count)).toBe(0);
+  });
+
+  it('exact replay of a succeeded message resolves the original row, returns stored IDs, and mints no legacy reconcile failure', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'replay-ok@example.com', providerType: 'google' });
+    const messageId = `replay-ok-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 'sender@example.com', to: 'replay-ok@example.com', subject: 'Replay ok', messageId, text: 'body' });
+    const { inboxId, normalizedMessageId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+
+    const first = await processInbox(inboxId, 'replay-ok-first');
+    expect(first.disposition).toBe('ack');
+    expect(first.outcome).toBe('created');
+    const ticketId = first.ticketId;
+    const commentId = first.commentId;
+    createdTicketIds.push(ticketId);
+
+    // The recovery job mirrors terminal inbox outcomes into the legacy audit
+    // table using the CANONICAL normalized id as message_id (the confirmed
+    // double-prefix entry path).
+    await tenantTable('email_processed_messages').insert({
+      message_id: normalizedMessageId,
+      provider_id: providerId,
+      tenant: tenantId,
+      processed_at: db.fn.now(),
+      processing_status: 'success',
+      ticket_id: ticketId,
+      from_email: 'sender@example.com',
+      subject: 'Replay ok',
+      received_at: db.fn.now(),
+      metadata: JSON.stringify({ durableMirrored: true, inboxId, outcome: 'created' }),
+    });
+
+    // Backfill must SKIP this row (identity already resolves to the succeeded
+    // inbox) instead of re-deriving a drifted key and minting a terminal_failed
+    // legacy_success_reconcile_* row.
+    const { backfillTenantLegacyRows } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+    const backfill = await backfillTenantLegacyRows(tenantId, 50);
+    expect(backfill.skipped).toBeGreaterThanOrEqual(1);
+    const terminalFailures = await tenantTable('inbound_email_inbox')
+      .where({ tenant: tenantId, status: 'terminal_failed' })
+      .count<{ count: string }[]>('* as count')
+      .first();
+    expect(Number(terminalFailures?.count)).toBe(0);
+    const reconcileFailures = await tenantTable('inbound_email_inbox')
+      .where({ tenant: tenantId })
+      .where('outcome_reason', 'like', 'legacy_success_reconcile%')
+      .count<{ count: string }[]>('* as count')
+      .first();
+    expect(Number(reconcileFailures?.count)).toBe(0);
+    expect(await countRows('inbound_email_inbox')).toBe(1);
+    expect(await countRows('inbound_email_effects')).toBe(2);
+
+    // Exact replay (same raw MIME, same identity) resolves the original row and
+    // returns the stored IDs with zero new rows.
+    const { inboxId: replayInboxId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+    expect(replayInboxId).toBe(inboxId);
+    const replay = await processInbox(replayInboxId, 'replay-ok-second');
+    expect(replay.disposition).toBe('ack');
+    expect(replay.ticketId).toBe(ticketId);
+    expect(replay.commentId).toBe(commentId);
+
+    expect(await countTicketsByMessageId(messageId)).toBe(1);
+    expect(await countCommentsByMessageId(messageId)).toBe(1);
+    expect(await countRows('inbound_email_inbox')).toBe(1);
+    expect(await countRows('inbound_email_effects')).toBe(2);
+    const doublePrefix = await tenantTable('inbound_email_inbox')
+      .where({ tenant: tenantId })
+      .andWhere('normalized_message_id', 'like', 'rfc822:rfc822:%')
+      .count<{ count: string }[]>('* as count')
+      .first();
+    expect(Number(doublePrefix?.count)).toBe(0);
+  });
+
+  it('actual concurrent identical deliveries: both derive the same key, one creates, the loser observes the committed outcome', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'race-real@example.com', providerType: 'google' });
+    const messageId = `race-real-${randomUUID()}@example.com`;
+    const rawMime = buildMime({ from: 'sender@example.com', to: 'race-real@example.com', subject: 'Race', messageId, text: 'body' });
+    const { inboxId, normalizedMessageId } = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+
+    // Two genuinely concurrent processing attempts (parallel transactions) on
+    // the same canonical identity. Both workers derive the same canonical key.
+    const { normalizeInboundMessageIdentity } = await import('@alga-psa/shared/services/email/inboundEmailIdentity');
+    const identityA = normalizeInboundMessageIdentity({ providerType: 'google', rfcMessageId: messageId })!.normalized;
+    const identityB = normalizeInboundMessageIdentity({ providerType: 'google', rfcMessageId: messageId })!.normalized;
+    expect(identityA).toBe(normalizedMessageId);
+    expect(identityB).toBe(normalizedMessageId);
+    expect(identityA).toBe(identityB);
+
+    const results = await Promise.allSettled([
+      processInbox(inboxId, 'race-real-a'),
+      processInbox(inboxId, 'race-real-b'),
+    ]);
+    // A genuinely concurrent pair may include a rejected loser: the harness
+    // dynamic-import mock for `@alga-psa/db/admin` races when two workers both
+    // resolve it in the same tick (the pre-existing suite's concurrent test
+    // tolerates exactly this via `acked.length >= 1`). The DB outcome is what
+    // matters: exactly one real creator and the winner's committed row.
+    const rejectedCount = results.filter((r) => r.status === 'rejected').length;
+    expect(rejectedCount).toBeLessThanOrEqual(1);
+    const fulfilled = results.filter((r) => r.status === 'fulfilled') as Array<{ status: 'fulfilled'; value: any }>;
+
+    // Exactly one worker actually creates the ticket/comment (a terminal-replay
+    // ack carries reason 'terminal_replay' and the stored IDs instead).
+    const realCreators = fulfilled.filter((r) => r.value.outcome === 'created' && r.value.reason !== 'terminal_replay');
+    expect(realCreators).toHaveLength(1);
+    const winnerTicketId = realCreators[0].value.ticketId;
+    const winnerCommentId = realCreators[0].value.commentId;
+
+    // The other worker either deferred to the winner's live lease or observed
+    // the committed outcome; it never created a second entity.
+    const others = fulfilled.filter((r) => r.value !== realCreators[0].value);
+    for (const other of others) {
+      expect(['created', 'defer']).toContain(other.value.outcome ?? other.value.disposition);
+      if (other.value.disposition === 'ack' && other.value.ticketId) {
+        expect(other.value.ticketId).toBe(winnerTicketId);
+      }
+    }
+
+    // A follow-up delivery always resolves the winner's committed row with the
+    // same stored IDs (the loser can observe the committed outcome).
+    const observe = await processInbox(inboxId, 'race-real-observer');
+    expect(observe.disposition).toBe('ack');
+    expect(observe.ticketId).toBe(winnerTicketId);
+    expect(observe.commentId).toBe(winnerCommentId);
+
+    expect(await countRows('inbound_email_inbox')).toBe(1);
+    expect(await countTicketsByMessageId(messageId)).toBe(1);
+    expect(await countCommentsByMessageId(messageId)).toBe(1);
+    expect(await countRows('inbound_email_effects')).toBe(2);
+
+    // Deterministic unique-constraint contention on a canonical key: two
+    // parallel transactions both attempt the SAME effect row; exactly one
+    // commits and the loser observes the winner's committed row via a 23505
+    // unique-violation rollback (the plan's second database guard). Uses a
+    // dedicated inbox row so the race does not collide with the effects the
+    // winner already committed above.
+    const { insertEffect, upsertInbox, upsertIngress } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const { withAdminTransaction } = await import('@alga-psa/db');
+    const raceProviderId = randomUUID();
+    const raceNormalized = `provider:google:${randomUUID()}`;
+    const raceIngress = await upsertIngress(db, {
+      tenant: tenantId,
+      provider_id: raceProviderId,
+      provider_type: 'google',
+      ingress_key: `race-fx:${raceNormalized}`,
+      provider_pointer: { messageId: 'race-fx' },
+    });
+    const raceInbox = await upsertInbox(db, {
+      tenant: tenantId,
+      ingress_id: raceIngress.ingress_id,
+      provider_id: raceProviderId,
+      provider_type: 'google',
+      normalized_message_id: raceNormalized,
+      provider_message_id: 'race-fx',
+      rfc_message_id: null,
+      source_object_key: 'k/race-fx',
+      source_sha256: 'racefx',
+      source_size_bytes: 1,
+      source_staged_at: new Date(),
+      envelope: {},
+    });
+    const entityIdA = randomUUID();
+    const entityIdB = randomUUID();
+    const effectRace = await Promise.allSettled([
+      withAdminTransaction(async (trx: any) => {
+        await insertEffect(trx, {
+          tenant: tenantId,
+          provider_id: raceProviderId,
+          normalized_message_id: raceNormalized,
+          effect_type: 'ticket',
+          inbox_id: raceInbox.inbox_id,
+          entity_id: entityIdA,
+          ticket_id: entityIdA,
+        });
+        return 'a';
+      }),
+      withAdminTransaction(async (trx: any) => {
+        await insertEffect(trx, {
+          tenant: tenantId,
+          provider_id: raceProviderId,
+          normalized_message_id: raceNormalized,
+          effect_type: 'ticket',
+          inbox_id: raceInbox.inbox_id,
+          entity_id: entityIdB,
+          ticket_id: entityIdB,
+        });
+        return 'b';
+      }),
+    ]);
+    const effectWinners = effectRace.filter((r) => r.status === 'fulfilled');
+    const effectLosers = effectRace.filter((r) => r.status === 'rejected');
+    expect(effectWinners).toHaveLength(1);
+    expect(effectLosers).toHaveLength(1);
+    expect((effectLosers[0] as PromiseRejectedResult).reason?.code).toBe('23505');
+    expect(
+      Number((await tenantTable('inbound_email_effects')
+        .where({ tenant: tenantId, provider_id: raceProviderId, normalized_message_id: raceNormalized, effect_type: 'ticket' })
+        .count<{ count: string }[]>('* as count').first())?.count)
+    ).toBe(1);
+
+    const inbox = await tenantTable('inbound_email_inbox').where({ inbox_id: inboxId }).first();
+    expect(inbox.status).toBe('succeeded');
+    expect(inbox.ticket_id).toBe(winnerTicketId);
+    createdTicketIds.push(winnerTicketId);
+  });
 });
 
 async function snapshotBackfillState(tenant: string): Promise<{
