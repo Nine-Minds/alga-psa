@@ -527,7 +527,7 @@
     },
     "boards": {
       "title": "Quadros",
-      "alert": "Os quadros organizam os tickets em grupos lógicos. Cada conselho pode ter seu próprio agente padrão, prioridade e política de SLA.",
+      "alert": "Os quadros organizam os tickets em grupos lógicos. Cada quadro pode ter seu próprio agente padrão, prioridade e política de SLA.",
       "table": {
         "name": "Nome",
         "description": "Descrição",
@@ -535,9 +535,9 @@
         "default": "Padrão",
         "defaultAgent": "Agente padrão",
         "defaultPriority": "Prioridade padrão",
-        "boardManager": "Gerente do Conselho",
+        "boardManager": "Gerente do Quadro",
         "order": "Ordem",
-        "itilBoard": "Conselho ITIL",
+        "itilBoard": "Quadro ITIL",
         "actions": "Ações",
         "ticketLoad": "Carga de tickets",
         "statuses": "Status"
@@ -564,7 +564,7 @@
       },
       "fields": {
         "boardName": {
-          "label": "Nome do Conselho",
+          "label": "Nome do Quadro",
           "placeholder": "Digite o nome do quadro"
         },
         "description": {
@@ -580,8 +580,8 @@
         "itilCompliant": "Compatível com ITIL",
         "boardConfiguration": "Configuração do quadro",
         "boardManager": {
-          "label": "Gerente do Conselho",
-          "placeholder": "Selecione um gerente do conselho",
+          "label": "Gerente do Quadro",
+          "placeholder": "Selecione um gerente do quadro",
           "help": "O usuário responsável por gerenciar este fórum"
         },
         "defaultAssignedAgent": {
@@ -673,7 +673,7 @@
       },
       "itilInfo": {
         "title": "Informações ITIL",
-        "tooltip": "Este conselho segue as melhores práticas do ITIL",
+        "tooltip": "Este quadro segue as melhores práticas do ITIL",
         "categoriesTitle": "Categorias ITIL",
         "priorityMatrixTitle": "Matriz Prioritária",
         "impactDescription": "Os níveis de impacto definem o escopo do problema",
@@ -723,7 +723,7 @@
         "error": {
           "fetchFailed": "Falha ao carregar quadros",
           "fetchAvailableFailed": "Falha ao buscar quadros disponíveis para importação",
-          "nameRequired": "O nome do conselho é obrigatório",
+          "nameRequired": "O nome do quadro é obrigatório",
           "saveFailed": "Falha ao salvar o quadro",
           "lastDefault": "Não é possível remover o último quadro padrão",
           "statusRequired": "Adicione pelo menos um status de ticket antes de salvar o quadro.",

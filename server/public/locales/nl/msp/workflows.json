@@ -936,7 +936,7 @@
       "showPalette": "Palet weergeven",
       "hidePalette": "Palet verbergen",
       "searchPlaceholder": "Zoeken",
-      "dragHint": "Sleep naar de pijplijn om toe te voegen",
+      "dragHint": "Sleep naar de pipeline om toe te voegen",
       "chooseAction": "Kies een actie nadat u deze stap hebt toegevoegd",
       "returnsSummary": "Retourneert: {{list}}{{suffix}}",
       "categories": {
@@ -1785,7 +1785,7 @@
     },
     "stepDetails": {
       "title": "Stapdetails",
-      "empty": "Selecteer een stap in de pijplijn om invoer, uitvoer en snapshots te bekijken.",
+      "empty": "Selecteer een stap in de pipeline om invoer, uitvoer en snapshots te bekijken.",
       "fields": {
         "step": "Stap"
       },
