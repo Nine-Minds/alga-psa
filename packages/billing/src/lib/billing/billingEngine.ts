@@ -2052,6 +2052,7 @@ export class BillingEngine {
       .whereNull("time_entries.contract_line_id")
       .whereNotNull("time_entries.service_id")
       .where("time_entries.approval_status", "APPROVED")
+      .where("time_entries.billable_duration", ">", 0)
       .where(function (this: Knex.QueryBuilder) {
         this.where("projects.client_id", clientId).orWhere(
           "tickets.client_id",
@@ -2150,22 +2151,12 @@ export class BillingEngine {
         });
       }
 
-      const startDateTime = Temporal.PlainDateTime.from(
-        entry.start_time.toISOString().replace("Z", ""),
-      );
-      const endDateTime = Temporal.PlainDateTime.from(
-        entry.end_time.toISOString().replace("Z", ""),
-      );
-      const durationMinutes = Math.max(
-        1,
-        startDateTime.until(endDateTime, {
-          largestUnit: "minutes",
-        }).minutes,
-      );
-      // Bill the actual elapsed hours. Unresolved (non-contract) entries have no
-      // contract-line rounding config, so fall back to exact time rather than
-      // Math.ceil to a whole hour, which overbilled every partial-hour entry.
-      const duration = durationMinutes / 60;
+      // Bill the positive billable minutes; zero-billable entries are filtered
+      // out of the loader, so the authoritative quantity can never be zero.
+      // Unresolved (non-contract) entries have no contract-line rounding
+      // config, so fall back to exact time rather than Math.ceil to a whole
+      // hour, which overbilled every partial-hour entry.
+      const duration = Number(entry.billable_duration) / 60;
       const phaseOverride = this.resolveProjectPhaseRateOverride(
         projectBillingContext ?? null,
         entry.project_phase_id,
@@ -3759,6 +3750,7 @@ export class BillingEngine {
       })
       .where("time_entries.invoiced", false)
       .whereIn("time_entries.service_id", configuredServiceIds)
+      .where("time_entries.billable_duration", ">", 0)
       .where(function (this: Knex.QueryBuilder) {
         // Either the time entry has the specific contract line ID (use contract_line_id for contract associations)
         this.where(

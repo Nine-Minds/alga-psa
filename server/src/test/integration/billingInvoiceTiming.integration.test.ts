@@ -1953,6 +1953,173 @@ it('T073: mixed recurring invoice generation can combine fixed, hourly, and usag
   expect(detailRowsForCurrentWindow).toHaveLength(3);
 }, HOOK_TIMEOUT);
 
+it('excludes zero-billable time entries from recurring hourly charges and leaves them uninvoiced', async () => {
+  setupCommonMocks({ tenantId, userId: 'zero-billable-user', permissionCheck: () => true });
+
+  const { contextLike, cycleId } = await createClientWithRecurringCycles({
+    clientName: 'Zero Billable Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-01-01',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+
+  const hourlyLine = await createHourlyContractLine(contextLike, {
+    serviceName: 'Zero Billable Service',
+    planName: 'Zero Billable Plan',
+    baseRateCents: 12000,
+    startDate: '2025-02-01',
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'client',
+  });
+  await syncContractLineRecurringPeriods(hourlyLine.contractLineId);
+
+  const entry = await createApprovedTimeEntryForContractLine({
+    clientId: contextLike.clientId,
+    serviceId: hourlyLine.serviceId,
+    contractLineId: hourlyLine.contractLineId,
+    startTime: '2025-02-14T09:00:00.000Z',
+    endTime: '2025-02-14T11:00:00.000Z',
+    billableDuration: 0,
+  });
+
+  const result = await generateInvoice(cycleId);
+  expect(result).toBeTruthy();
+  expect(result).toMatchObject({ subtotal: 0 });
+
+  const chargeRows = await tenantTable(db, tenantId, 'invoice_charges')
+    .where({ invoice_id: result!.invoice_id, service_id: hourlyLine.serviceId })
+    .select('item_id');
+  expect(chargeRows).toHaveLength(0);
+
+  const mappingRows = await tenantTable(db, tenantId, 'invoice_time_entries')
+    .where({ invoice_id: result!.invoice_id, tenant: tenantId })
+    .select('entry_id');
+  expect(mappingRows).toHaveLength(0);
+
+  const persistedEntry = await tenantTable(db, tenantId, 'time_entries')
+    .where({ tenant: tenantId, entry_id: entry.entry_id })
+    .first('invoiced');
+  expect(persistedEntry?.invoiced).toBe(false);
+}, HOOK_TIMEOUT);
+
+it('charges billable minutes, not elapsed start/end time, for recurring hourly entries', async () => {
+  setupCommonMocks({ tenantId, userId: 'billable-minutes-user', permissionCheck: () => true });
+
+  const { contextLike, cycleId } = await createClientWithRecurringCycles({
+    clientName: 'Billable Minutes Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-01-01',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+
+  const hourlyLine = await createHourlyContractLine(contextLike, {
+    serviceName: 'Billable Minutes Service',
+    planName: 'Billable Minutes Plan',
+    baseRateCents: 12000,
+    startDate: '2025-02-01',
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'client',
+  });
+  await syncContractLineRecurringPeriods(hourlyLine.contractLineId);
+
+  // Two elapsed hours but only 45 billable minutes.
+  await createApprovedTimeEntryForContractLine({
+    clientId: contextLike.clientId,
+    serviceId: hourlyLine.serviceId,
+    contractLineId: hourlyLine.contractLineId,
+    startTime: '2025-02-14T09:00:00.000Z',
+    endTime: '2025-02-14T11:00:00.000Z',
+    billableDuration: 45,
+  });
+
+  const result = await generateInvoice(cycleId);
+  expect(result).toBeTruthy();
+  expect(result).not.toMatchObject({ actionError: expect.any(String) });
+
+  const chargeRows = await tenantTable(db, tenantId, 'invoice_charges')
+    .where({ invoice_id: result!.invoice_id, service_id: hourlyLine.serviceId })
+    .select(['item_id', 'quantity', 'net_amount']);
+  expect(chargeRows).toHaveLength(1);
+  expect(Number(chargeRows[0].quantity)).toBe(0.75);
+  expect(Number(chargeRows[0].net_amount)).toBe(9000);
+}, HOOK_TIMEOUT);
+
+it('invoices multiple approved hourly entries sharing one recurring period with a single period link', async () => {
+  setupCommonMocks({ tenantId, userId: 'shared-period-hourly-user', permissionCheck: () => true });
+
+  const { contextLike, cycleId } = await createClientWithRecurringCycles({
+    clientName: 'Shared Period Hourly Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-01-01',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+
+  const hourlyLine = await createHourlyContractLine(contextLike, {
+    serviceName: 'Shared Period Hourly Service',
+    planName: 'Shared Period Hourly Plan',
+    baseRateCents: 12000,
+    startDate: '2025-02-01',
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'client',
+  });
+  await syncContractLineRecurringPeriods(hourlyLine.contractLineId);
+
+  const firstEntry = await createApprovedTimeEntryForContractLine({
+    clientId: contextLike.clientId,
+    serviceId: hourlyLine.serviceId,
+    contractLineId: hourlyLine.contractLineId,
+    startTime: '2025-02-14T09:00:00.000Z',
+    endTime: '2025-02-14T11:00:00.000Z',
+  });
+  const secondEntry = await createApprovedTimeEntryForContractLine({
+    clientId: contextLike.clientId,
+    serviceId: hourlyLine.serviceId,
+    contractLineId: hourlyLine.contractLineId,
+    startTime: '2025-02-15T09:00:00.000Z',
+    endTime: '2025-02-15T10:00:00.000Z',
+  });
+
+  const result = await generateInvoice(cycleId);
+  expect(result).toBeTruthy();
+  expect(result).toMatchObject({ subtotal: 36000 });
+
+  const chargeRows = await tenantTable(db, tenantId, 'invoice_charges')
+    .where({ invoice_id: result!.invoice_id, service_id: hourlyLine.serviceId })
+    .select(['item_id', 'quantity', 'net_amount']);
+  expect(chargeRows).toHaveLength(2);
+  expect(new Set(chargeRows.map((row) => Number(row.net_amount)))).toEqual(
+    new Set([12000, 24000]),
+  );
+
+  const timeMappingRows = await tenantTable(db, tenantId, 'invoice_time_entries')
+    .where({ invoice_id: result!.invoice_id, tenant: tenantId })
+    .select(['entry_id', 'item_id']);
+  expect(timeMappingRows.map((row) => row.entry_id).sort()).toEqual(
+    [firstEntry.entry_id, secondEntry.entry_id].sort(),
+  );
+  expect(
+    new Set(timeMappingRows.map((row) => row.item_id)),
+  ).toEqual(new Set(chargeRows.map((row) => row.item_id)));
+
+  const billedPeriodRows = await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({
+      tenant: tenantId,
+      obligation_id: hourlyLine.contractLineId,
+      invoice_id: result!.invoice_id,
+    })
+    .select(['record_id', 'lifecycle_state', 'invoice_charge_detail_id']);
+  expect(billedPeriodRows).toHaveLength(1);
+  expect(billedPeriodRows[0]).toMatchObject({
+    lifecycle_state: 'billed',
+  });
+}, HOOK_TIMEOUT);
+
 it('T021: deleting a recurring invoice clears service-period invoice linkage and restores invoiceable lifecycle state for unbridged contract-cadence rows', async () => {
   setupCommonMocks({ tenantId, userId: 'contract-delete-user', permissionCheck: () => true });
 
@@ -5279,6 +5446,7 @@ async function createApprovedTimeEntryForContractLine(params: {
   endTime: string;
   approvalStatus?: 'APPROVED' | 'DRAFT' | 'SUBMITTED' | 'CHANGES_REQUESTED' | null;
   invoiced?: boolean;
+  billableDuration?: number;
 }) {
   const userId = await createUser(db, tenantId, {
     user_type: 'internal',
@@ -5299,6 +5467,10 @@ async function createApprovedTimeEntryForContractLine(params: {
     start_time: new Date(params.startTime),
     end_time: new Date(params.endTime),
     invoiced: params.invoiced ?? false,
+    billable_duration:
+      params.billableDuration !== undefined
+        ? params.billableDuration
+        : undefined,
   });
 
   if (params.approvalStatus === null) {

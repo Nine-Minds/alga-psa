@@ -459,6 +459,74 @@ describe('recurring billing run actions', () => {
     });
   });
 
+  it('logs the actionable underlying exception while returning the generic failure for the UI', async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    const contractTarget = buildContractCadenceTarget({ contractLineId: 'line-distinctive' });
+
+    mocks.generateInvoiceForSelectionInput.mockRejectedValueOnce(
+      new Error('Distinctive linkage failure: recurring service period could not be claimed'),
+    );
+
+    const result = await generateInvoicesAsRecurringBillingRun({
+      targets: [contractTarget],
+    });
+
+    expect(result).toMatchObject({
+      invoicesCreated: 0,
+      failedCount: 1,
+      failures: [
+        expect.objectContaining({
+          executionIdentityKey: contractTarget.executionWindow.identityKey,
+          errorMessage: 'Failed to generate invoice for this billing cycle.',
+        }),
+      ],
+    });
+
+    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+    const [, loggedContext] = consoleErrorSpy.mock.calls[0] as [string, Record<string, unknown>];
+    expect(loggedContext).toMatchObject({
+      event: 'billing.recurringBillingRun.invoiceFailure',
+      runId: result.runId,
+      tenantId: 'tenant-1',
+      executionIdentityKey: contractTarget.executionWindow.identityKey,
+      executionWindowKind: 'contract_cadence_window',
+      error: {
+        name: 'Error',
+        message: 'Distinctive linkage failure: recurring service period could not be claimed',
+      },
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('does not log expected duplicate-invoice outcomes as failures', async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    const duplicateInvoiceError = Object.assign(
+      new Error('Invoice already exists for this recurring execution window'),
+      { code: 'DUPLICATE_RECURRING_INVOICE' },
+    );
+    const contractTarget = buildContractCadenceTarget();
+
+    mocks.generateInvoiceForSelectionInput.mockRejectedValueOnce(duplicateInvoiceError);
+
+    const result = await generateInvoicesAsRecurringBillingRun({
+      targets: [contractTarget],
+    });
+
+    expect(result).toMatchObject({
+      invoicesCreated: 0,
+      failedCount: 0,
+      failures: [],
+    });
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
+
   it('T024: client-cadence recurring run target selection maps canonical due-work rows instead of billing-cycle periods', async () => {
     const firstRow = buildRecurringDueWorkRow({
       selectorInput: buildClientCadenceDueSelectionInput({
