@@ -1,4 +1,3 @@
-import { Temporal } from "@js-temporal/polyfill";
 import type {
   ChargeExplanation,
   IBillingPeriod,
@@ -13,11 +12,11 @@ import type {
 
 /**
  * Time-entry charge math extracted from BillingEngine.calculateTimeBasedCharges.
- * The engine's load phase supplies approved time entries and hourly service
- * configuration; this module reproduces the duration rounding, rate
- * resolution, and overtime arithmetic byte-for-byte with zero I/O outside the
- * injected tax ports. The simulator feeds synthetic aggregate entries through
- * the same math.
+ * The engine's load phase supplies approved, positively-billable time entries
+ * and hourly service configuration; this module reproduces the duration
+ * rounding, rate resolution, and overtime arithmetic byte-for-byte with zero
+ * I/O outside the injected tax ports. The simulator feeds synthetic aggregate
+ * entries through the same math.
  */
 
 export interface TimeEntryComputeRow {
@@ -32,6 +31,8 @@ export interface TimeEntryComputeRow {
   custom_rate?: number | null;
   /** service_prices rate for the contract currency, when present. */
   currency_rate?: number | string | null;
+  /** Authoritative billable minutes; the loaders exclude zero-billable rows. */
+  billable_duration: number;
   project_phase_id?: string | null;
   project_id?: string | null;
 }
@@ -125,21 +126,12 @@ export function computeTimeBasedCharges(
   const explanations: ChargeExplanation[] = [];
 
   const charges = timeEntries.map((entry): ITimeBasedCharge => {
-    const startDateTime = Temporal.PlainDateTime.from(
-      entry.start_time.toISOString().replace("Z", ""),
-    );
-    const endDateTime = Temporal.PlainDateTime.from(
-      entry.end_time.toISOString().replace("Z", ""),
-    );
-
     const serviceConfig = serviceConfigMap.get(entry.service_id);
     const isSystemManagedDefault =
       (clientContractLine as { is_system_managed_default?: boolean | null })
         .is_system_managed_default === true;
 
-    const rawDurationMinutes = startDateTime.until(endDateTime, {
-      largestUnit: "minutes",
-    }).minutes;
+    const rawDurationMinutes = Number(entry.billable_duration);
     let durationMinutes = rawDurationMinutes;
     let minimumApplied = false;
     let roundingApplied = false;

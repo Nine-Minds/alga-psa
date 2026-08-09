@@ -305,6 +305,7 @@ describe("computeTimeBasedCharges", () => {
       tax_rate_id: "tax-1",
       custom_rate: null,
       currency_rate: 15000,
+      billable_duration: 120,
       ...overrides,
     };
   }
@@ -336,8 +337,9 @@ describe("computeTimeBasedCharges", () => {
         serviceConfigMap: new Map([["svc-h", config]]),
         timeEntries: [
           entry({
-            // 70 minutes -> round up to 75 -> 1.25 hrs
+            // 70 billable minutes -> round up to 75 -> 1.25 hrs
             end_time: new Date("2026-08-05T11:10:00Z"),
+            billable_duration: 70,
           }),
         ],
       }),
@@ -347,6 +349,23 @@ describe("computeTimeBasedCharges", () => {
     expect(result.charges[0].duration).toBe(1.25);
     expect(result.charges[0].total).toBe(Math.round(1.25 * 15000));
     expect(result.explanations[0].markers).toContain("rounding_applied");
+  });
+
+  it("uses billable minutes, not elapsed start/end time, as the charge quantity", async () => {
+    const result = await computeTimeBasedCharges(
+      timeInputs({
+        timeEntries: [
+          entry({
+            // Elapsed span is 2 hours but only 45 minutes are billable.
+            billable_duration: 45,
+          }),
+        ],
+      }),
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges[0].duration).toBe(0.75);
+    expect(result.charges[0].total).toBe(Math.round(0.75 * 15000));
   });
 
   it("prefers user-type rates over the currency price and entry custom rates over both", async () => {

@@ -135,6 +135,7 @@ describe("production compute extraction golden", () => {
             tax_rate_id: "tax-1",
             custom_rate: null,
             currency_rate: 5_000,
+            billable_duration: 120,
           },
         ],
         contractCurrency: "USD",

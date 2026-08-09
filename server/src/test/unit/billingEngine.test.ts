@@ -1328,6 +1328,7 @@ describe('BillingEngine', () => {
             user_id: 'user1',
             start_time: new Date('2023-01-01T10:00:00.000Z'),
             end_time: new Date('2023-01-01T12:15:00.000Z'), // 135 minutes = 2.25 hours
+            billable_duration: 135, // 2.25 hours billable
             user_rate: null,
             default_rate: 120,
             currency_rate: 120,
@@ -1622,6 +1623,7 @@ describe('BillingEngine', () => {
             user_id: 'user1',
             start_time: new Date('2023-01-01T10:00:00.000Z'),
             end_time: new Date('2023-01-01T12:00:00.000Z'),
+            billable_duration: 120, // 2 hours billable
             user_rate: 50,
             default_rate: 40,
             currency_rate: 40,
@@ -1635,6 +1637,7 @@ describe('BillingEngine', () => {
             user_id: 'user2',
             start_time: new Date('2023-01-02T14:00:00.000Z'),
             end_time: new Date('2023-01-02T17:00:00.000Z'),
+            billable_duration: 180, // 3 hours billable
             user_rate: null,
             default_rate: 60,
             currency_rate: 60,
