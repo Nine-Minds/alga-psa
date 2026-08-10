@@ -371,7 +371,12 @@ export function writeChecksums(bundleDir) {
 }
 
 export function scanForSecrets(bundleDir, secret) {
-  if (!secret) {
+  return scanForSecretsAll(bundleDir, secret ? [secret] : []);
+}
+
+export function scanForSecretsAll(bundleDir, secrets) {
+  const unique = [...new Set(secrets.filter((value) => typeof value === 'string' && value.trim().length >= 8))];
+  if (unique.length === 0) {
     return { leaked: false, files: [] };
   }
   const leaked = [];
@@ -380,11 +385,45 @@ export function scanForSecrets(bundleDir, secret) {
       continue;
     }
     const contents = fs.readFileSync(path.join(bundleDir, name), 'utf8');
-    if (contents.includes(secret)) {
-      leaked.push(name);
+    for (const secret of unique) {
+      if (contents.includes(secret)) {
+        leaked.push(name);
+        break;
+      }
     }
   }
   return { leaked: leaked.length > 0, files: leaked };
+}
+
+export function collectSecretCandidates(dbPassword, algaPassword) {
+  const secrets = [dbPassword, algaPassword];
+  for (const key of ['NEXTAUTH_SECRET', 'NEXTAUTH_URL', 'DB_PASSWORD_SERVER', 'DB_PASSWORD']) {
+    const value = parseDotenvValue(readEnvLocalText(), key);
+    if (typeof value === 'string' && value.trim() !== '') {
+      secrets.push(value);
+    }
+  }
+  return [...new Set(secrets.filter((value) => typeof value === 'string' && value.trim() !== ''))];
+}
+
+function readEnvLocalText() {
+  const envPath = path.join(REPO_ROOT, 'server', '.env.local');
+  if (!fs.existsSync(envPath)) {
+    return '';
+  }
+  return fs.readFileSync(envPath, 'utf8');
+}
+
+export function redactAll(text, secrets) {
+  let out = String(text);
+  for (const secret of secrets) {
+    if (typeof secret !== 'string' || secret.length < 8) {
+      continue;
+    }
+    out = out.split(secret).join('<redacted>');
+  }
+  out = out.replace(/(Password is ->\s*\[\s*)[^\]]+(\s*\])/g, '$1<redacted>$2');
+  return out;
 }
 
 export function loadBundleState(bundleDir) {
@@ -1128,18 +1167,24 @@ function fetchDevServerHistory(projectId) {
     };
   }
   const historyResult = runShell('alga-dev', [
-    'terminal-get-history', '--sessionId', devServer.sessionId,
+    'terminal-get-history', `--sessionId=${devServer.sessionId}`,
   ], { timeout: 120_000, maxBuffer: 64 * 1024 * 1024 });
+  const facts = isObjectLike(devServer.facts) ? devServer.facts : {};
   return {
     ok: true,
     serviceName: devServer.name,
     sessionId: devServer.sessionId,
     worktreePath: serviceCwd,
+    algaPassword: typeof facts.algaPassword === 'string' ? facts.algaPassword : null,
     servicesCommand,
     historyCommand: `alga-dev terminal-get-history --sessionId=${devServer.sessionId}`,
     history: historyResult.stdout,
     exitCode: historyResult.status,
   };
+}
+
+function isObjectLike(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 function discoverWorkflowRunId(projectId) {
@@ -1172,6 +1217,7 @@ function discoverWorkflowRunId(projectId) {
 
 function captureLogScans(bundleDir, opts, dbPassword) {
   const devServer = fetchDevServerHistory(opts.projectId);
+  const secretCandidates = collectSecretCandidates(dbPassword, devServer.ok ? devServer.algaPassword : null);
   const scanTxtLines = ['# Dev-server output scan (raw)', ''];
   const scanJson = {
     capturedAt: nowIso(),
@@ -1191,15 +1237,16 @@ function captureLogScans(bundleDir, opts, dbPassword) {
     scanJson.worktreePath = devServer.worktreePath;
     scanJson.scanCommand = devServer.historyCommand;
     const patterns = ERROR_SCAN_PATTERNS.map((pattern) => pattern.regex);
-    const matches = devServer.history.split('\n')
+    const redactedHistory = redactAll(devServer.history, secretCandidates);
+    const matches = redactedHistory.split('\n')
       .map((line, index) => ({ line, index }))
       .filter(({ line }) => patterns.some((regex) => regex.test(line)));
     scanJson.matches = matches.map((match) => match.line);
     scanJson.matchCount = matches.length;
     scanTxtLines.push(`$ ${devServer.historyCommand}`);
     scanTxtLines.push('');
-    scanTxtLines.push('# Raw dev-server scrollback (unmodified):');
-    scanTxtLines.push(devServer.history.replace(/\n$/, ''));
+    scanTxtLines.push('# Raw dev-server scrollback (unmodified, secrets redacted):');
+    scanTxtLines.push(redactedHistory.replace(/\n$/, ''));
     scanTxtLines.push('');
     scanTxtLines.push(`# Matching error-pattern lines (${matches.length}):`);
     if (matches.length === 0) {
@@ -1223,7 +1270,7 @@ function captureLogScans(bundleDir, opts, dbPassword) {
   const captureBrowserLog = (toolCommand, args, outFile, kind) => {
     const record = {
       capturedAt: nowIso(),
-      scanCommand: `alga-dev ${toolCommand} ${args.join(' ')}`,
+      scanCommand: `alga-dev ${toolCommand} ${args.join(' ')} --paneId=<id>`,
       entries: [],
       errors: [],
       failedRequests: [],
@@ -1236,7 +1283,7 @@ function captureLogScans(bundleDir, opts, dbPassword) {
       fail(`cannot capture ${kind} evidence without --browser-pane`);
     }
     record.paneId = opts.browserPane;
-    const result = runShell('alga-dev', [toolCommand, ...args, '--paneId', opts.browserPane], { timeout: 60_000 });
+    const result = runShell('alga-dev', [toolCommand, ...args, `--paneId=${opts.browserPane}`], { timeout: 60_000 });
     record.rawExitCode = result.status;
     record.rawStderr = result.stderr.trim() || undefined;
     let parsed;
@@ -1246,12 +1293,18 @@ function captureLogScans(bundleDir, opts, dbPassword) {
       parsed = null;
     }
     const payload = parsed && typeof parsed === 'object' ? parsed.result ?? parsed : parsed;
+    const messages = Array.isArray(payload?.messages) ? payload.messages : (Array.isArray(payload?.entries) ? payload.entries : []);
     if (kind === 'console') {
-      record.entries = Array.isArray(payload?.entries) ? payload.entries : [];
-      record.errors = Array.isArray(payload?.errors)
-        ? payload.errors
-        : record.entries.filter((entry) => String(entry?.level || entry?.type || '').toLowerCase() === 'error');
-      record.console = payload;
+      // Record only sanitized per-entry metadata — never the raw `args` arrays,
+      // which can carry session tokens / user payloads — so secrets stay out.
+      record.entries = messages.map((entry) => ({
+        level: entry?.level || null,
+        message: typeof entry?.message === 'string' ? redactAll(entry.message, secretCandidates) : null,
+        sourceUrl: typeof entry?.sourceUrl === 'string' ? entry.sourceUrl : null,
+        line: typeof entry?.line === 'number' ? entry.line : null,
+      }));
+      record.errors = record.entries.filter((entry) => String(entry.level || '').toLowerCase() === 'error');
+      record.total = typeof payload?.total === 'number' ? payload.total : record.entries.length;
     } else {
       record.failedRequests = Array.isArray(payload?.failedRequests)
         ? payload.failedRequests
@@ -1268,10 +1321,11 @@ function captureLogScans(bundleDir, opts, dbPassword) {
   captureBrowserLog('browser-get-console', ['--level', 'error', '--limit', '500'], CONSOLE_FILE, 'console');
   captureBrowserLog('browser-get-network', ['--failedOnly', '--limit', '500'], NETWORK_FILE, 'network');
 
-  const { leaked, files: leakedFiles } = scanForSecrets(bundleDir, dbPassword);
+  const { leaked, files: leakedFiles } = scanForSecretsAll(bundleDir, secretCandidates);
   if (leaked) {
-    fail(`refusing to seal: bundle contains the DB password in ${leakedFiles.join(', ')}`);
+    fail(`refusing to seal: bundle contains a known secret (DB password / NEXTAUTH value / dev login) in ${leakedFiles.join(', ')}`);
   }
+  return secretCandidates;
 }
 
 function buildReadme(bundleDir, opts, state) {
@@ -1753,7 +1807,7 @@ export function commandRestore(opts) {
   state.seeded = false;
 
   process.stdout.write('[restore] capturing failure-log scans\n');
-  captureLogScans(bundleDir, opts, db.password);
+  const secretCandidates = captureLogScans(bundleDir, opts, db.password);
   state = loadBundleState(bundleDir);
 
   const scan = JSON.parse(fs.readFileSync(path.join(bundleDir, DEV_SERVER_SCAN_JSON), 'utf8'));
@@ -1782,9 +1836,9 @@ export function commandRestore(opts) {
   fs.copyFileSync(path.join(REPO_ROOT, 'scripts', 'verify-template-status-mapping-smoke-evidence.mjs'), path.join(bundleDir, VERIFIER_COPY_FILE));
   writeChecksums(bundleDir);
 
-  const { leaked, leakedFiles } = scanForSecrets(bundleDir, db.password);
+  const { leaked, leakedFiles } = scanForSecretsAll(bundleDir, secretCandidates);
   if (leaked) {
-    fail(`refusing to seal: bundle contains the DB password in ${leakedFiles.join(', ')}`);
+    fail(`refusing to seal: bundle contains a known secret (DB password / NEXTAUTH value / dev login) in ${leakedFiles.join(', ')}`);
   }
 
   state.sealed = true;
