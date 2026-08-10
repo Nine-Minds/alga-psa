@@ -203,6 +203,21 @@ export const SCREENSHOT_SLOTS = [
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/i;
 
+// The single dirty line this surface tolerates anywhere: the root
+// package-lock.json, worktree-modified (porcelain XY `<M>`). The live repo
+// check requires exactly this porcelain line and nothing else; the bundle
+// manifest check requires exactly this line too, compared against the
+// capture harness's recorded form (the capture `.trim()`s the porcelain
+// output, so the manifest line is matched after the same trim). Any other
+// line — different path, different status code, extra lines — fails closed.
+export const ALLOWED_DIRT_LINE = ' M package-lock.json';
+
+// Flags that toggle behavior and must never consume a following token as
+// their value. Kept explicit so `--xoverdict <bundle-dir>` (bundle dir after
+// the flag) and `<bundle-dir> --xoverdict ...` (bundle dir before the flag)
+// parse identically.
+const BOOLEAN_FLAGS = new Set(['xoverdict']);
+
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 function sha256File(filePath) {
@@ -399,9 +414,14 @@ function validateManifest(context, expectedRunId, expectedHeadSha) {
     failures.push(`${GIT_HEAD_FILE} does not record the invoked HEAD ${expectedHeadSha}`);
   }
   const gitStatus = manifest.gitStatus;
-  const gitStatusText = Array.isArray(gitStatus) ? gitStatus.join('\n') : String(gitStatus || '');
-  if (typeof gitStatusText !== 'string' || !gitStatusText.includes('package-lock.json')) {
-    failures.push(`${MANIFEST_FILE} git status does not record the known-dirty package-lock.json`);
+  const gitStatusLines = Array.isArray(gitStatus)
+    ? gitStatus.map((line) => String(line).trim())
+    : [String(gitStatus || '').trim()];
+  if (gitStatusLines.length !== 1 || gitStatusLines[0] !== ALLOWED_DIRT_LINE.trim()) {
+    failures.push(
+      `${MANIFEST_FILE} git status must record exactly the known-dirty line '${ALLOWED_DIRT_LINE}'`
+      + ` (recorded ${gitStatusLines.length} line(s): ${gitStatusLines.join('; ')})`
+    );
   }
   const timestamp = new Date(manifest.timestamp);
   if (typeof manifest.timestamp !== 'string'
@@ -1142,7 +1162,10 @@ function scanBundleForSecrets(context, candidates) {
     candidates.filter((value) => typeof value === 'string' && value.trim().length >= 8)
   )];
   if (unique.length === 0) {
-    return { pass: true, detail: 'no secret candidates were available to scan for' };
+    return {
+      pass: false,
+      detail: 'no secret candidates could be derived from server/.env.local and the live dev-login; the secret scan fails closed (0 candidates scanned)',
+    };
   }
   const leaked = [];
   for (const name of listFilesRecursive(context.directory)) {
@@ -1265,10 +1288,19 @@ export function computeLiveChecks(context, options, providers) {
   };
 
   const repoStatus = providers.repoStatus();
-  const cleanDirt = repoStatus.length === 1 && repoStatus[0].includes('package-lock.json');
+  const unexpectedDirt = repoStatus.filter((line) => line !== ALLOWED_DIRT_LINE);
+  const cleanDirt = repoStatus.length === 1 && unexpectedDirt.length === 0;
+  let repoStatusDetail;
+  if (repoStatus.length === 0) {
+    repoStatusDetail = `git status --porcelain is clean; expected exactly '${ALLOWED_DIRT_LINE}'`;
+  } else if (unexpectedDirt.length > 0) {
+    repoStatusDetail = `git status --porcelain shows unexpected dirt: ${unexpectedDirt.join('; ')}; expected exactly '${ALLOWED_DIRT_LINE}'`;
+  } else {
+    repoStatusDetail = `git status --porcelain = exactly '${ALLOWED_DIRT_LINE}' (the one allowed dirty line)`;
+  }
   checks.repoStatus = {
     pass: cleanDirt,
-    detail: `git status --porcelain = ${repoStatus.length} line(s)${repoStatus.length ? ` (${repoStatus.join('; ')})` : ''}; expected exactly ' M package-lock.json'`,
+    detail: repoStatusDetail,
   };
 
   let boardPass = false;
@@ -1496,8 +1528,7 @@ function printXoverdict(result) {
   process.stdout.write(`runId=${result.runId}\n`);
 }
 
-export function main(argv) {
-  const args = argv.slice(2);
+export function parseArgv(args) {
   const flags = {};
   const positional = [];
   for (let index = 0; index < args.length; index += 1) {
@@ -1509,6 +1540,10 @@ export function main(argv) {
     if (arg.startsWith('--')) {
       const eq = arg.indexOf('=');
       const key = eq >= 0 ? arg.slice(2, eq) : arg.slice(2);
+      if (BOOLEAN_FLAGS.has(key)) {
+        flags[key] = true;
+        continue;
+      }
       if (eq >= 0) {
         flags[key] = arg.slice(eq + 1);
       } else {
@@ -1524,6 +1559,11 @@ export function main(argv) {
       positional.push(arg);
     }
   }
+  return { flags, positional };
+}
+
+export function main(argv) {
+  const { flags, positional } = parseArgv(argv.slice(2));
   if (positional.length !== 1) {
     process.stderr.write(
       'Usage: node verify-template-status-mapping-smoke-evidence.mjs <bundle-dir>'
@@ -1544,6 +1584,9 @@ export function main(argv) {
       repoRoot: flags['repo-root'],
     });
     printXoverdict(result);
+    if (!result.claims) {
+      return 2;
+    }
     return result.pass ? 0 : 1;
   }
   const result = verifyBundle(positional[0], {

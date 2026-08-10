@@ -14,6 +14,7 @@ import {
   utcTimestamp,
 } from '../capture-template-status-mapping-smoke-evidence.mjs';
 import {
+  ALLOWED_DIRT_LINE,
   CONSOLE_FILE,
   DEV_SERVER_SCAN_JSON,
   DEV_SERVER_SCAN_TXT,
@@ -29,6 +30,7 @@ import {
   VERIFIER_COPY_FILE,
   createContext,
   isValidPng,
+  parseArgv,
   runXoverdict,
   verifyBundle,
 } from '../verify-template-status-mapping-smoke-evidence.mjs';
@@ -1072,4 +1074,216 @@ test('xoverdict FAILS closed when invoked without the required flags', () => {
   });
   assert.equal(withoutRepo.pass, false);
   assert.ok(withoutRepo.failures.some((failure) => failure.includes('--repo-root')));
+});
+
+// ---------------------------------------------------------------------------
+// Deploy-fix round: executable bit, order-independent parsing, fail-closed
+// dirt-line and secret-candidate handling
+// ---------------------------------------------------------------------------
+
+const VERIFIER_PATH = path.join(WORKTREE, 'scripts', 'verify-template-status-mapping-smoke-evidence.mjs');
+
+function runVerifier(args) {
+  return spawnSync(process.execPath, [VERIFIER_PATH, ...args], {
+    cwd: WORKTREE,
+    encoding: 'utf8',
+    env: { ...process.env },
+  });
+}
+
+test('verifier is directly executable and prints usage (exit 2) when invoked bare', () => {
+  const result = spawnSync(VERIFIER_PATH, [], {
+    cwd: WORKTREE,
+    encoding: 'utf8',
+    env: { ...process.env },
+  });
+  assert.notEqual(result.status, null, 'the script must spawn via its shebang (not EACCES/126)');
+  assert.equal(result.status, 2, `expected usage exit 2; got ${result.status}, stderr: ${result.stderr}`);
+  assert.match(result.stderr, /Usage:/);
+});
+
+test('parseArgv accepts both documented flag orders', () => {
+  const bundleDir = '/tmp/some-bundle';
+  const docOrder = parseArgv([
+    bundleDir, '--xoverdict', '--run-id', WORKFLOW_RUN_ID,
+    '--head-sha', HEAD_SHA, '--repo-root', WORKTREE,
+  ]);
+  assert.equal(docOrder.positional.length, 1);
+  assert.equal(docOrder.positional[0], bundleDir);
+  assert.equal(docOrder.flags.xoverdict, true);
+  assert.equal(docOrder.flags['run-id'], WORKFLOW_RUN_ID);
+  assert.equal(docOrder.flags['head-sha'], HEAD_SHA);
+  assert.equal(docOrder.flags['repo-root'], WORKTREE);
+
+  const prescribedOrder = parseArgv([
+    '--xoverdict', bundleDir, '--run-id', WORKFLOW_RUN_ID,
+    '--head-sha', HEAD_SHA, '--repo-root', WORKTREE,
+  ]);
+  assert.equal(prescribedOrder.positional.length, 1);
+  assert.equal(prescribedOrder.positional[0], bundleDir);
+  assert.equal(prescribedOrder.flags.xoverdict, true);
+  assert.equal(prescribedOrder.flags['run-id'], WORKFLOW_RUN_ID);
+  assert.equal(prescribedOrder.flags['head-sha'], HEAD_SHA);
+  assert.equal(prescribedOrder.flags['repo-root'], WORKTREE);
+});
+
+test('parseArgv keeps positional parsing order-independent for malformed invocations', () => {
+  const missingBundle = parseArgv([
+    '--xoverdict', '--run-id', WORKFLOW_RUN_ID, '--head-sha', HEAD_SHA, '--repo-root', WORKTREE,
+  ]);
+  assert.equal(missingBundle.positional.length, 0);
+  assert.equal(missingBundle.flags.xoverdict, true);
+  assert.equal(missingBundle.flags['run-id'], WORKFLOW_RUN_ID);
+
+  const missingRunId = parseArgv([
+    '/tmp/some-bundle', '--xoverdict', '--head-sha', HEAD_SHA, '--repo-root', WORKTREE,
+  ]);
+  assert.equal(missingRunId.positional.length, 1);
+  assert.equal(missingRunId.flags['run-id'], undefined);
+});
+
+test('the prescribed flag order (--xoverdict first) reaches xoverdict, not usage', () => {
+  const bundleDir = makeTempBundle('flagorder-prescribed');
+  const result = runVerifier([
+    '--xoverdict', bundleDir, '--run-id', WORKFLOW_RUN_ID, '--head-sha', HEAD_SHA, '--repo-root', WORKTREE,
+  ]);
+  assert.equal(result.status, 1, `expected xoverdict FAIL (HEAD stale) exit 1; got ${result.status}; stdout: ${result.stdout}; stderr: ${result.stderr}`);
+  assert.doesNotMatch(result.stderr, /Usage:/);
+  assert.match(result.stdout, /^XOVERDICT: FAIL/);
+});
+
+test('the documented flag order (bundle dir first) reaches xoverdict, not usage', () => {
+  const bundleDir = makeTempBundle('flagorder-doc');
+  const result = runVerifier([
+    bundleDir, '--xoverdict', '--run-id', WORKFLOW_RUN_ID, '--head-sha', HEAD_SHA, '--repo-root', WORKTREE,
+  ]);
+  assert.equal(result.status, 1, `expected xoverdict FAIL (HEAD stale) exit 1; got ${result.status}; stdout: ${result.stdout}; stderr: ${result.stderr}`);
+  assert.doesNotMatch(result.stderr, /Usage:/);
+  assert.match(result.stdout, /^XOVERDICT: FAIL/);
+});
+
+test('a genuinely malformed invocation with no bundle directory still exits 2', () => {
+  const result = runVerifier([
+    '--xoverdict', '--run-id', WORKFLOW_RUN_ID, '--head-sha', HEAD_SHA, '--repo-root', WORKTREE,
+  ]);
+  assert.equal(result.status, 2, `expected usage exit 2; got ${result.status}; stdout: ${result.stdout}; stderr: ${result.stderr}`);
+  assert.match(result.stderr, /Usage:/);
+});
+
+test('a genuinely malformed invocation with no --run-id still exits 2', () => {
+  const bundleDir = makeTempBundle('flagorder-norunid');
+  const result = runVerifier([
+    bundleDir, '--xoverdict', '--head-sha', HEAD_SHA, '--repo-root', WORKTREE,
+  ]);
+  assert.equal(result.status, 2, `expected usage exit 2; got ${result.status}; stdout: ${result.stdout}; stderr: ${result.stderr}`);
+  assert.match(result.stdout, /xoverdict requires the --run-id flag/);
+});
+
+test('xoverdict PASSES when the live repo shows exactly the allowed dirt line', () => {
+  const bundleDir = makeTempBundle('dirt-exact');
+  const result = runXoverdictOn(bundleDir, {
+    providers: { repoStatus: () => [ALLOWED_DIRT_LINE] },
+  });
+  const dirt = result.claims.find((claim) => claim.id === 'claim-9-known-dirt-unchanged');
+  assert.equal(dirt.pass, true, JSON.stringify(dirt, null, 2));
+});
+
+test('xoverdict FAILS closed when the live repo shows server/package-lock.json dirt', () => {
+  const bundleDir = makeTempBundle('dirt-subdir');
+  const result = runXoverdictOn(bundleDir, {
+    providers: { repoStatus: () => [' M server/package-lock.json'] },
+  });
+  assert.equal(result.pass, false);
+  const dirt = result.claims.find((claim) => claim.id === 'claim-9-known-dirt-unchanged');
+  assert.equal(dirt.pass, false);
+  assert.ok(dirt.detail.some((detail) => detail.includes(' M server/package-lock.json')));
+});
+
+test('xoverdict FAILS closed when the live repo shows an untracked *-package-lock.json file', () => {
+  const bundleDir = makeTempBundle('dirt-untracked');
+  const result = runXoverdictOn(bundleDir, {
+    providers: { repoStatus: () => ['?? something-package-lock.json'] },
+  });
+  assert.equal(result.pass, false);
+  const dirt = result.claims.find((claim) => claim.id === 'claim-9-known-dirt-unchanged');
+  assert.equal(dirt.pass, false);
+});
+
+test('xoverdict FAILS closed when the live repo shows the allowed line plus any other dirt', () => {
+  const bundleDir = makeTempBundle('dirt-plus');
+  const result = runXoverdictOn(bundleDir, {
+    providers: { repoStatus: () => [ALLOWED_DIRT_LINE, ' M server/package-lock.json'] },
+  });
+  assert.equal(result.pass, false);
+  const dirt = result.claims.find((claim) => claim.id === 'claim-9-known-dirt-unchanged');
+  assert.equal(dirt.pass, false);
+});
+
+test('verifyBundle REJECTS a manifest recording a substring-matching impostor dirt line', () => {
+  const bundleDir = makeTempBundle('manifest-dirt-impostor');
+  const manifest = readJson(bundleDir, MANIFEST_FILE);
+  manifest.gitStatus = [' M server/package-lock.json'];
+  writeJson(bundleDir, MANIFEST_FILE, manifest);
+  const result = verifyBundle(bundleDir, defaultVerifyOptions());
+  assert.equal(result.pass, false);
+  assert.ok(result.failures.some((failure) => failure.includes('git status must record exactly')));
+});
+
+test('verifyBundle REJECTS a manifest recording extra dirt alongside the allowed line', () => {
+  const bundleDir = makeTempBundle('manifest-dirt-extra');
+  const manifest = readJson(bundleDir, MANIFEST_FILE);
+  manifest.gitStatus = [ALLOWED_DIRT_LINE, '?? something-package-lock.json'];
+  writeJson(bundleDir, MANIFEST_FILE, manifest);
+  const result = verifyBundle(bundleDir, defaultVerifyOptions());
+  assert.equal(result.pass, false);
+  assert.ok(result.failures.some((failure) => failure.includes('git status must record exactly')));
+});
+
+test('xoverdict FAILS closed when zero secret candidates can be derived', () => {
+  const bundleDir = makeTempBundle('secret-nocandidates');
+  const result = runXoverdictOn(bundleDir, {
+    providers: { secretCandidates: () => [] },
+  });
+  assert.equal(result.pass, false);
+  const integrity = result.claims.find((claim) => claim.id === 'claim-8-no-mocks-no-secrets-no-drift');
+  assert.equal(integrity.pass, false);
+  assert.ok(integrity.detail.some((detail) => detail.includes('no secret candidates')));
+});
+
+test('xoverdict FAILS closed when every secret candidate is too short to scan for', () => {
+  const bundleDir = makeTempBundle('secret-short');
+  const result = runXoverdictOn(bundleDir, {
+    providers: { secretCandidates: () => ['x', 'short'] },
+  });
+  assert.equal(result.pass, false);
+  const integrity = result.claims.find((claim) => claim.id === 'claim-8-no-mocks-no-secrets-no-drift');
+  assert.equal(integrity.pass, false);
+  assert.ok(integrity.detail.some((detail) => detail.includes('no secret candidates')));
+});
+
+test('xoverdict FAILS closed naming the file when the bundle leaks a derived secret', () => {
+  const bundleDir = makeTempBundle('secret-named');
+  const readmePath = path.join(bundleDir, README_FILE);
+  const original = fs.readFileSync(readmePath, 'utf8');
+  fs.writeFileSync(readmePath, `${original}\nLEAKED candidate-not-in-bundle-12345678 here\n`);
+  const checksumPath = path.join(bundleDir, 'SHA256SUMS');
+  const lines = fs.readFileSync(checksumPath, 'utf8').split('\n').filter((line) => line !== '');
+  const kept = lines.filter((line) => !line.endsWith(`  ${README_FILE}`));
+  kept.push(`${crypto.createHash('sha256').update(fs.readFileSync(readmePath)).digest('hex')}  ${README_FILE}`);
+  fs.writeFileSync(checksumPath, `${kept.join('\n')}\n`);
+
+  const result = runXoverdictOn(bundleDir);
+  assert.equal(result.pass, false);
+  const integrity = result.claims.find((claim) => claim.id === 'claim-8-no-mocks-no-secrets-no-drift');
+  assert.equal(integrity.pass, false);
+  assert.ok(integrity.detail.some((detail) => detail.includes(README_FILE)));
+});
+
+test('xoverdict PASSES the secret scan when derived candidates are absent from the bundle', () => {
+  const bundleDir = makeTempBundle('secret-clean');
+  const result = runXoverdictOn(bundleDir, {
+    providers: { secretCandidates: () => ['absent-candidate-12345678'] },
+  });
+  const integrity = result.claims.find((claim) => claim.id === 'claim-8-no-mocks-no-secrets-no-drift');
+  assert.equal(integrity.pass, true, JSON.stringify(integrity, null, 2));
 });
