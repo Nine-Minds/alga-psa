@@ -69,15 +69,87 @@ a restart heals on its own — no need to restart the app.
 
 ### Teams round trip
 
-```bash
-# The bot's own credentials, so its client_credentials token grant succeeds.
-algasim seed msgraph client -p '{"clientId":"<TEAMS_BOT_APP_ID>","clientSecret":"<TEAMS_BOT_APP_PASSWORD>"}'
+The whole walkthrough below was run end to end against a real EE dev server;
+every step is reproducible from a clean worktree.
 
+**1. A server to point at.** Teams is EE, so the app has to run enterprise.
+Give the worktree its own database rather than sharing the dev one:
+
+```bash
+PW=$(cat secrets/postgres_password)
+docker exec -e PGPASSWORD=$PW alga_psa_postgres psql -U postgres \
+  -c 'CREATE DATABASE server_mine'
+# Clone an existing dev database (pg_dump, because CREATE DATABASE ... TEMPLATE
+# refuses to run while the source has open connections), or migrate from empty.
+docker exec -e PGPASSWORD=$PW alga_psa_postgres bash -lc \
+  'pg_dump -U postgres -d server --no-owner --no-acl -Fc -f /tmp/s.dump &&
+   pg_restore -U postgres -d server_mine --no-owner --no-acl -j4 /tmp/s.dump'
+
+# CE and EE migrations share one knex_migrations table, so `knex migrate:latest`
+# on ./migrations alone reports the EE rows as a "corrupt migration directory".
+# Always use the merged runner:
+cd server && DB_HOST=127.0.0.1 DB_PORT=5432 DB_USER_ADMIN=postgres \
+  DB_NAME_SERVER=server_mine node scripts/run-ee-migrations.js latest
+
+cd .. && npx nx build-deps server
+cd server && npx next dev -p 3210
+```
+
+`server/.env.local` needs `NEXT_PUBLIC_EDITION=enterprise`, `NEXTAUTH_URL`
+matching the port, `DB_NAME`/`DB_NAME_SERVER` pointing at the new database, and
+the emulator vars:
+
+```
+MICROSOFT_LOGIN_BASE_URL=http://127.0.0.1:4010
+MICROSOFT_GRAPH_BASE_URL=http://127.0.0.1:4010/v1.0
+TEAMS_BOT_OPENID_CONFIG_URL=http://127.0.0.1:4010/v1/.well-known/openidconfiguration
+TEAMS_BOT_SERVICE_URL_ALLOWLIST=http://127.0.0.1:4010
+TEAMS_BOT_APP_ID=11111111-2222-4333-8444-999999999999
+TEAMS_BOT_APP_PASSWORD=algasim-bot-secret
+TEAMS_BOT_APP_TENANT_ID=11111111-2222-4333-8444-555555555555
+```
+
+Use one host spelling everywhere: the allowlist matches origins exactly, so a
+`serviceUrl` of `http://localhost:4010` is *not* covered by an allowlist entry
+of `http://127.0.0.1:4010`.
+
+**2. Seed the Microsoft side.** The Graph client is the one you will enter as a
+Microsoft profile; `appRoles` are the admin-consented application permissions
+its app-only tokens carry, which is what the setup wizard's permission probe
+reads:
+
+```bash
+algasim seed msgraph client -p '{
+  "clientId": "alga-teams-graph-client",
+  "clientSecret": "alga-teams-graph-secret",
+  "appRoles": ["Calendars.ReadWrite","OnlineMeetings.ReadWrite.All",
+               "OnlineMeetingRecording.Read.All","OnlineMeetingTranscript.Read.All",
+               "TeamsActivity.Send","User.Read.All"]
+}'
+# The bot's own credentials, so its client_credentials token grant succeeds.
+algasim seed msgraph client -p '{"clientId":"11111111-2222-4333-8444-999999999999","clientSecret":"algasim-bot-secret"}'
+```
+
+**3. Set the tenant up through the product.** The Teams add-on has to be
+granted (`POST /api/v1/tenant-management/tenants/<tenant>/addons` with
+`{"action":"grant","addonKey":"teams"}`, from the master billing tenant), then
+in **Settings → Integrations**:
+
+- *Providers → Microsoft → Add profile*: client id, tenant id
+  (`11111111-2222-4333-8444-555555555555`) and secret from step 2.
+- *Communication → Teams*: pick that profile, save the draft, then run the
+  wizard's three checks — validate the Microsoft profile, probe Graph
+  permissions, validate the Bot Framework connector — and Activate. All three
+  hit the emulator.
+
+**4. Drive a conversation.**
+
+```bash
 # Point the emulator at your app, and match TEAMS_BOT_APP_ID.
 algasim action msgraph configure -p '{
-  "botTargetUrl": "http://localhost:3000/api/teams/bot/messages",
-  "botServiceUrl": "http://localhost:4010",
-  "botAppId": "<TEAMS_BOT_APP_ID>"
+  "botTargetUrl": "http://localhost:3210/api/teams/bot/messages",
+  "botServiceUrl": "http://127.0.0.1:4010",
+  "botAppId": "11111111-2222-4333-8444-999999999999"
 }'
 
 # An external/guest client identity, then an inbound message from them.
@@ -93,6 +165,16 @@ algasim seed msgraph bot-activity -p '{
 algasim state msgraph bot-activities
 algasim state msgraph activity-notifications
 ```
+
+`seed bot-activity` returns the app's HTTP status and body, so a rejected
+activity shows up immediately (`401` with `{"error":"unauthorized"}` when the
+audience or signature does not check out).
+
+The bot answers an unlinked Teams identity with the "Teams sign-in required"
+card. Linking a Teams user to a PSA user happens through Microsoft SSO sign-in,
+which the emulator does not serve yet (no OIDC discovery document on the login
+surface), so richer command replies still need a tenant whose users are already
+linked.
 
 ## Drive them
 
