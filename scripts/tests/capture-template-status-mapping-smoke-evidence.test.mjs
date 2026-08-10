@@ -29,6 +29,7 @@ import {
   VERIFIER_COPY_FILE,
   createContext,
   isValidPng,
+  runXoverdict,
   verifyBundle,
 } from '../verify-template-status-mapping-smoke-evidence.mjs';
 
@@ -840,4 +841,235 @@ test('the test-concurrent-creator CLI flag cannot reach the injection seam', () 
   assert.equal(withFlag.status, withoutFlag.status, 'the flag must not change the exit code');
   assert.equal(withFlag.stdout, withoutFlag.stdout, 'the flag must not change the stdout');
   assert.equal(withFlag.stderr, withoutFlag.stderr, 'the flag must not change the stderr');
+});
+
+// ---------------------------------------------------------------------------
+// Compact run-bound verification surface (--xoverdict): hermetic live providers
+// ---------------------------------------------------------------------------
+
+// Fake psql dispatcher for the xoverdict live-DB checks. The real queries are
+// keyed by the distinctive table aliases / literals in computeLiveChecks.
+function fakePsql(sql) {
+  if (sql.includes('knex_migrations')) {
+    return { tuple: { exitCode: 0, stdout: '1\n', stderr: '' } };
+  }
+  if (sql.includes('FROM project_template_status_mappings tm')) {
+    const stdout = MAPPING_ROWS.map((row) => JSON.stringify(row)).join('\n');
+    return { tuple: { exitCode: 0, stdout: `${stdout}\n`, stderr: '' } };
+  }
+  if (sql.includes("status_source = 'unresolved'")) {
+    return { tuple: { exitCode: 0, stdout: '0\n', stderr: '' } };
+  }
+  if (sql.includes('FROM project_template_tasks t')) {
+    return { tuple: { exitCode: 0, stdout: '21\n', stderr: '' } };
+  }
+  if (sql.includes("SMOKE Mixed Mapping Template%")) {
+    return { tuple: { exitCode: 0, stdout: '0\n', stderr: '' } };
+  }
+  if (sql.includes('FROM project_status_mappings psm')) {
+    const rows = [
+      { project_status_mapping_id: 'aaa00001-0000-4000-8000-000000000001', status_id: null, standard_status_id: '90d706a0-1911-460c-9e38-4159e8b059e2', is_standard: true, display_order: 1 },
+      { project_status_mapping_id: 'aaa00001-0000-4000-8000-000000000002', status_id: '314c7eed-5902-48ee-bab2-1cf82983f124', standard_status_id: null, is_standard: false, display_order: 2 },
+    ];
+    const stdout = rows.map((row) => JSON.stringify(row)).join('\n');
+    return { tuple: { exitCode: 0, stdout: `${stdout}\n`, stderr: '' } };
+  }
+  if (sql.includes('FROM projects')) {
+    return { tuple: { exitCode: 0, stdout: '1\n', stderr: '' } };
+  }
+  return { tuple: { exitCode: 1, stdout: '', stderr: `unmatched fake SQL: ${sql.slice(0, 80)}` } };
+}
+
+function fakeLiveProviders(overrides = {}) {
+  return {
+    db: { host: '127.0.0.1', port: 5472, user: 'app_user', password: 'not-a-secret-12345678', name: 'server' },
+    psql: (db, sql) => fakePsql(sql),
+    repoHead: () => HEAD_SHA,
+    repoStatus: () => [' M package-lock.json'],
+    boardRuns: () => ({ runs: [{ id: WORKFLOW_RUN_ID, status: 'running' }] }),
+    secretCandidates: () => ['candidate-not-in-bundle-12345678'],
+    ...overrides,
+  };
+}
+
+function runXoverdictOn(bundleDir, overrides = {}) {
+  const providersOverrides = overrides.providers || {};
+  return runXoverdict(bundleDir, {
+    expectedRunId: overrides.expectedRunId || WORKFLOW_RUN_ID,
+    expectedHeadSha: overrides.expectedHeadSha || HEAD_SHA,
+    repoRoot: WORKTREE,
+    liveProviders: fakeLiveProviders(providersOverrides),
+  });
+}
+
+test('xoverdict PASSES a valid synthetic bundle with matching live providers', () => {
+  const bundleDir = makeTempBundle('xoverdict-ok');
+  const result = runXoverdictOn(bundleDir);
+  assert.equal(result.pass, true, JSON.stringify(result, null, 2));
+  assert.equal(result.claims.length, 9);
+  for (const claim of result.claims) {
+    assert.equal(claim.pass, true, `${claim.id} should pass: ${JSON.stringify(claim.detail)}`);
+  }
+  assert.equal(result.runId, WORKFLOW_RUN_ID);
+  assert.equal(result.headSha, HEAD_SHA);
+  assert.match(result.bundleDigest, /^[0-9a-f]{64}$/);
+});
+
+test('xoverdict FAILS closed on a run-id mismatch (invoked vs bundle)', () => {
+  const bundleDir = makeTempBundle('xoverdict-runmismatch');
+  const result = runXoverdictOn(bundleDir, { expectedRunId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee' });
+  assert.equal(result.pass, false);
+  const provenance = result.claims.find((claim) => claim.id === 'claim-7-exact-provenance');
+  assert.equal(provenance.pass, false);
+  assert.ok(provenance.detail.some((detail) => detail.includes('invoked against')));
+});
+
+test('xoverdict FAILS closed on a head-sha mismatch (invoked vs bundle)', () => {
+  const bundleDir = makeTempBundle('xoverdict-headmismatch');
+  const result = runXoverdictOn(bundleDir, { expectedHeadSha: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' });
+  assert.equal(result.pass, false);
+  const provenance = result.claims.find((claim) => claim.id === 'claim-7-exact-provenance');
+  assert.equal(provenance.pass, false);
+  assert.ok(provenance.detail.some((detail) => detail.includes('invoked against')));
+});
+
+test('xoverdict FAILS closed when the board is not bound to the invoked run', () => {
+  const bundleDir = makeTempBundle('xoverdict-stalerun');
+  const result = runXoverdictOn(bundleDir, {
+    providers: { boardRuns: () => ({ runs: [{ id: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee', status: 'running' }] }) },
+  });
+  assert.equal(result.pass, false);
+  const provenance = result.claims.find((claim) => claim.id === 'claim-7-exact-provenance');
+  assert.equal(provenance.pass, false);
+  assert.ok(provenance.detail.some((detail) => detail.includes('running board run')));
+});
+
+test('xoverdict FAILS closed on a missing manifest field (capture identity)', () => {
+  const bundleDir = makeTempBundle('xoverdict-nocapidentity');
+  const manifest = readJson(bundleDir, MANIFEST_FILE);
+  delete manifest.captureIdentity;
+  writeJson(bundleDir, MANIFEST_FILE, manifest);
+  const result = runXoverdictOn(bundleDir);
+  assert.equal(result.pass, false);
+  const provenance = result.claims.find((claim) => claim.id === 'claim-7-exact-provenance');
+  assert.equal(provenance.pass, false);
+  assert.ok(provenance.detail.some((detail) => detail.includes('capture source identity')));
+});
+
+test('xoverdict FAILS closed on a tampered screenshot registry (checksum mismatch)', () => {
+  const bundleDir = makeTempBundle('xoverdict-tamper', { tamperScreenshot: true });
+  const result = runXoverdictOn(bundleDir);
+  assert.equal(result.pass, false);
+  const integrity = result.claims.find((claim) => claim.id === 'claim-8-no-mocks-no-secrets-no-drift');
+  assert.equal(integrity.pass, false);
+  assert.ok(integrity.detail.some((detail) => detail.includes('SHA256SUMS')));
+});
+
+test('xoverdict FAILS closed on an unexpected dirty file in the live repo', () => {
+  const bundleDir = makeTempBundle('xoverdict-dirt');
+  const result = runXoverdictOn(bundleDir, {
+    providers: { repoStatus: () => [' M package-lock.json', ' M unexpected-file.ts'] },
+  });
+  assert.equal(result.pass, false);
+  const dirt = result.claims.find((claim) => claim.id === 'claim-9-known-dirt-unchanged');
+  assert.equal(dirt.pass, false);
+  assert.ok(dirt.detail.some((detail) => detail.includes('package-lock.json')));
+});
+
+test('xoverdict FAILS closed when the live repo HEAD differs from the bundle HEAD', () => {
+  const bundleDir = makeTempBundle('xoverdict-livehead');
+  const result = runXoverdictOn(bundleDir, {
+    providers: { repoHead: () => 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
+  });
+  assert.equal(result.pass, false);
+  const provenance = result.claims.find((claim) => claim.id === 'claim-7-exact-provenance');
+  assert.equal(provenance.pass, false);
+  assert.ok(provenance.detail.some((detail) => detail.includes('live git HEAD')));
+});
+
+test('xoverdict FAILS closed when the live seed template is not at the baseline', () => {
+  const bundleDir = makeTempBundle('xoverdict-baseline');
+  const result = runXoverdictOn(bundleDir, {
+    providers: {
+      psql: (db, sql) => (sql.includes('FROM project_template_status_mappings tm')
+        ? { tuple: { exitCode: 0, stdout: `${BROKEN_STATE.map((row) => JSON.stringify(row)).join('\n')}\n`, stderr: '' } }
+        : fakePsql(sql)),
+    },
+  });
+  assert.equal(result.pass, false);
+  const cleanup = result.claims.find((claim) => claim.id === 'claim-6-cleanup-restoration');
+  assert.equal(cleanup.pass, false);
+  assert.ok(cleanup.detail.some((detail) => detail.includes('baseline')));
+});
+
+test('xoverdict FAILS closed when the branch migration is not applied in the live DB', () => {
+  const bundleDir = makeTempBundle('xoverdict-migration');
+  const result = runXoverdictOn(bundleDir, {
+    providers: {
+      psql: (db, sql) => (sql.includes('knex_migrations')
+        ? { tuple: { exitCode: 0, stdout: '0\n', stderr: '' } }
+        : fakePsql(sql)),
+    },
+  });
+  assert.equal(result.pass, false);
+  const integrity = result.claims.find((claim) => claim.id === 'claim-8-no-mocks-no-secrets-no-drift');
+  assert.equal(integrity.pass, false);
+  assert.ok(integrity.detail.some((detail) => detail.includes('branch migration')));
+});
+
+test('xoverdict FAILS closed when the bundle leaks a derived secret value', () => {
+  const bundleDir = makeTempBundle('xoverdict-secret');
+  const readmePath = path.join(bundleDir, README_FILE);
+  const original = fs.readFileSync(readmePath, 'utf8');
+  fs.writeFileSync(readmePath, `${original}\nLEAKED candidate-not-in-bundle-12345678 here\n`);
+  const checksumPath = path.join(bundleDir, 'SHA256SUMS');
+  const lines = fs.readFileSync(checksumPath, 'utf8').split('\n').filter((line) => line !== '');
+  const kept = lines.filter((line) => !line.endsWith(`  ${README_FILE}`));
+  kept.push(`${crypto.createHash('sha256').update(fs.readFileSync(readmePath)).digest('hex')}  ${README_FILE}`);
+  fs.writeFileSync(checksumPath, `${kept.join('\n')}\n`);
+
+  const result = runXoverdictOn(bundleDir);
+  assert.equal(result.pass, false);
+  const integrity = result.claims.find((claim) => claim.id === 'claim-8-no-mocks-no-secrets-no-drift');
+  assert.equal(integrity.pass, false);
+  assert.ok(integrity.detail.some((detail) => detail.includes('secret')));
+});
+
+test('xoverdict FAILS closed on a live psql failure (stack unreachable)', () => {
+  const bundleDir = makeTempBundle('xoverdict-dbdown');
+  const result = runXoverdictOn(bundleDir, {
+    providers: {
+      psql: () => ({ tuple: { exitCode: 1, stdout: '', stderr: 'connection refused' } }),
+    },
+  });
+  assert.equal(result.pass, false);
+  const cleanup = result.claims.find((claim) => claim.id === 'claim-6-cleanup-restoration');
+  assert.equal(cleanup.pass, false);
+  assert.ok(cleanup.detail.some((detail) => detail.includes('psql exited 1')));
+});
+
+test('xoverdict FAILS closed when invoked without the required flags', () => {
+  const bundleDir = makeTempBundle('xoverdict-usage');
+  const result = runXoverdict(bundleDir, {
+    expectedRunId: '',
+    expectedHeadSha: HEAD_SHA,
+    repoRoot: WORKTREE,
+  });
+  assert.equal(result.pass, false);
+  assert.equal(result.claims, null);
+  assert.ok(result.failures.some((failure) => failure.includes('--run-id')));
+  const withoutHead = runXoverdict(bundleDir, {
+    expectedRunId: WORKFLOW_RUN_ID,
+    expectedHeadSha: '',
+    repoRoot: WORKTREE,
+  });
+  assert.equal(withoutHead.pass, false);
+  assert.ok(withoutHead.failures.some((failure) => failure.includes('--head-sha')));
+  const withoutRepo = runXoverdict(bundleDir, {
+    expectedRunId: WORKFLOW_RUN_ID,
+    expectedHeadSha: HEAD_SHA,
+    repoRoot: '',
+  });
+  assert.equal(withoutRepo.pass, false);
+  assert.ok(withoutRepo.failures.some((failure) => failure.includes('--repo-root')));
 });

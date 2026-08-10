@@ -503,6 +503,9 @@ Commands:
   verify                   Run the bundle's own verifier (provenance-bound).
                            Requires --bundle <dir> --run-id <uuid>
                            --head-sha <40-hex>.
+                           Compact one-command surface: run the verifier with
+                           --xoverdict --repo-root <path> (see
+                           docs/verification/template-status-mapping-xoverdict.md).
 
 Options:
   --bundle <dir>           Bundle directory (init defaults to
@@ -1444,6 +1447,20 @@ function buildReadme(bundleDir, opts, state) {
     'valid CRCs); arbitrary bytes or zero-length files are rejected. Capture',
     'commands record their exit codes; any nonzero exit or a browser capture',
     'without an explicit pane fails the seal.',
+    '',
+    '## Compact verification (XOVERDICT)',
+    '',
+    'For a single bounded verdict covering all nine claims without exploring',
+    'this bundle or any logs, run the compact surface (see',
+    '`docs/verification/template-status-mapping-xoverdict.md`):',
+    '',
+    `    node scripts/verify-template-status-mapping-smoke-evidence.mjs <bundle-dir>`,
+    `        --xoverdict --run-id ${state.workflowRunId} --head-sha ${state.gitHead.headSha}`,
+    `        --repo-root ${REPO_ROOT}`,
+    '',
+    'It re-verifies this bundle AND the live world (repo git state, real',
+    'PostgreSQL, board run record, secret re-scan) and prints',
+    '`XOVERDICT: PASS` or `XOVERDICT: FAIL <reason>` plus nine keyed claim lines.',
     '',
     '## What the smoke agent does manually (vs the harness)',
     '',

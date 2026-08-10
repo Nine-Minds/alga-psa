@@ -17,6 +17,29 @@
  *       [--expected-server-url <url>] [--expected-dev-server-session <id>]
  *   node <bundle-dir>/verify-evidence.mjs <bundle-dir> --run-id ... --head-sha ...   # sealed identical copy
  *
+ * Compact mode (the "XOVERDICT" surface — see
+ * `docs/verification/template-status-mapping-xoverdict.md`). One bounded,
+ * deterministic command that re-proves the nine smoke claims against the
+ * bundle AND the live world (repo git state, real PostgreSQL, board run
+ * record) and emits a single verdict line plus nine keyed claim lines:
+ *
+ *   node scripts/verify-template-status-mapping-smoke-evidence.mjs \
+ *       <bundle-dir> \
+ *       --xoverdict --run-id <uuid> --head-sha <40-hex> --repo-root <repo>
+ *
+ * The compact mode additionally: binds the bundle to the live `git rev-parse
+ * HEAD` of --repo-root, requires `git status --porcelain` to show exactly the
+ * known `package-lock.json` dirt, re-proves cleanup restoration against the
+ * real PostgreSQL (seed template at its recorded baseline, zero unresolved
+ * mappings, the retained smoke project present, its typed
+ * `project_status_mappings` still standard/tenant-split), confirms THIS
+ * branch's migration (`20260809120000_type_template_status_mappings.cjs`) is
+ * recorded in `knex_migrations` (unrelated migration-history drift in the
+ * shared dev DB is ignored by design), verifies the invoked --run-id is the
+ * board's current running run (or a real recorded run), and re-scans the
+ * bundle for every secret derivable from `server/.env.local` plus the live
+ * dev-login. Every live mismatch fails closed. Runtime is a few seconds.
+ *
  * The `--run-id` / `--head-sha` values MUST be supplied and MUST match the
  * values recorded in the manifest; the verifier rejects any mismatch and any
  * bundle that omits provenance, capture-source identity, or cleanup
@@ -66,6 +89,7 @@
  * Exit codes: 0 when every claim passes, 1 on any mismatch, 2 on usage errors.
  */
 
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -89,6 +113,18 @@ export const DEV_SERVER_SCAN_TXT = '40-dev-server-log-scan.txt';
 export const CONSOLE_FILE = '41-browser-console.json';
 export const NETWORK_FILE = '42-browser-network.json';
 export const REDACTION_PLACEHOLDER = '<redacted: server/.env.local DB_PASSWORD_SERVER>';
+
+// The single migration this branch adds. The compact xoverdict surface scopes
+// its migration check to THIS migration only: the shared dev DB has known,
+// unrelated migration-history drift (many recorded names that are not files in
+// this checkout, and vice versa), so a full-list comparison would fail on that
+// drift rather than on anything this branch changed.
+export const BRANCH_MIGRATION_NAME = '20260809120000_type_template_status_mappings.cjs';
+
+// Direct Postgres endpoint the smoke harness (and this live surface) probes.
+// The app itself talks to the pgbouncer endpoint recorded as
+// server/.env.local DB_PORT (6472 in the shared dev environment).
+export const DEFAULT_DB_PORT_DIRECT = 5472;
 
 export const EVIDENCE_STEPS = {
   before: { json: '10-fixture-before.json', txt: '10-fixture-before-queries.txt' },
@@ -928,6 +964,44 @@ function validateCleanupConsistency(context) {
   return failures;
 }
 
+/**
+ * Run every bundle-internal check and return the per-check failures grouped by
+ * check name, so the compact xoverdict surface can attribute failures to the
+ * nine claims without duplicating any check logic.
+ */
+export function collectCollectorResults(context, options = {}) {
+  const { expectedRunId, expectedHeadSha } = options;
+  const expected = {
+    worktreePath: options.expectedWorktree || null,
+    serverUrl: options.expectedServerUrl || null,
+    browserPane: options.expectedPane || null,
+    devServerSessionId: options.expectedDevServerSession || null,
+  };
+  const collectors = [
+    ['validateRunRecord', (ctx) => validateRunRecord(ctx, expectedRunId)],
+    ['validateManifest', (ctx) => validateManifest(ctx, expectedRunId, expectedHeadSha)],
+    ['validateCaptureIdentity', (ctx) => validateCaptureIdentity(ctx, expected)],
+    ['validateChecksumCoverage', (ctx) => validateChecksumCoverage(ctx)],
+    ['validateEvidenceAssertions', (ctx) => validateEvidenceAssertions(ctx)],
+    ['validateCrossFileClaims', (ctx) => validateCrossFileClaims(ctx)],
+    ['validateScreenshotSlots', (ctx) => validateScreenshotSlots(ctx)],
+    ['validateLogScans', (ctx) => validateLogScans(ctx, expected)],
+    ['validateReadmeAndRedaction', (ctx) => validateReadmeAndRedaction(ctx)],
+    ['validateCleanupConsistency', (ctx) => validateCleanupConsistency(ctx)],
+  ];
+  const results = [];
+  for (const [name, collector] of collectors) {
+    let failures;
+    try {
+      failures = collector(context);
+    } catch (error) {
+      failures = [error instanceof Error ? error.message : String(error)];
+    }
+    results.push({ name, failures });
+  }
+  return results;
+}
+
 export function verifyBundle(evidenceDirectory, options = {}) {
   const failures = [];
   const context = createContext(evidenceDirectory, options);
@@ -941,32 +1015,8 @@ export function verifyBundle(evidenceDirectory, options = {}) {
   if (!COMMIT_PATTERN.test(expectedHeadSha || '')) {
     failures.push('--head-sha must be a 40-hex commit SHA');
   }
-  const expected = {
-    worktreePath: options.expectedWorktree || null,
-    serverUrl: options.expectedServerUrl || null,
-    browserPane: options.expectedPane || null,
-    devServerSessionId: options.expectedDevServerSession || null,
-  };
-  const collectors = [
-    (ctx) => validateRunRecord(ctx, expectedRunId),
-    (ctx) => validateManifest(ctx, expectedRunId, expectedHeadSha),
-    validateCaptureIdentity,
-    validateChecksumCoverage,
-    validateEvidenceAssertions,
-    validateCrossFileClaims,
-    validateScreenshotSlots,
-    validateLogScans,
-    validateReadmeAndRedaction,
-    validateCleanupConsistency,
-  ];
-  for (const collector of collectors) {
-    let result;
-    try {
-      result = collector(context, expected);
-    } catch (error) {
-      result = [error instanceof Error ? error.message : String(error)];
-    }
-    failures.push(...result);
+  for (const result of collectCollectorResults(context, options)) {
+    failures.push(...result.failures);
   }
 
   const screenshotSlots = context.readJson(SCREENSHOT_NOTES_FILE).slots || [];
@@ -978,6 +1028,472 @@ export function verifyBundle(evidenceDirectory, options = {}) {
     pass: failures.length === 0,
   };
   return { ...summary, failures };
+}
+
+// Map of the nine claims to the bundle-internal check groups and live checks
+// that must all pass for the claim to hold. Collector attribution is coarse
+// but fail-closed: a defect in any bucketed check fails every claim that
+// depends on it, never masks one.
+const CLAIM_BUCKETS = [
+  {
+    id: 'claim-1-mixed-standard-tenant-apply',
+    collectors: ['validateCrossFileClaims'],
+    live: ['appliedProjectMappings'],
+  },
+  {
+    id: 'claim-2-unresolved-repair',
+    collectors: ['validateCrossFileClaims', 'validateScreenshotSlots'],
+    live: [],
+  },
+  {
+    id: 'claim-3-id-preserving-replacement',
+    collectors: ['validateCrossFileClaims'],
+    live: ['taskCount'],
+  },
+  {
+    id: 'claim-4-two-template-delete-guard',
+    collectors: ['validateCrossFileClaims', 'validateScreenshotSlots'],
+    live: [],
+  },
+  {
+    id: 'claim-5-zero-project-global-apply',
+    collectors: ['validateCrossFileClaims', 'validateScreenshotSlots'],
+    live: [],
+  },
+  {
+    id: 'claim-6-cleanup-restoration',
+    collectors: ['validateCleanupConsistency', 'validateCrossFileClaims'],
+    live: ['baseline', 'unresolvedCount', 'validTemplateGone', 'appliedProjectRetained'],
+  },
+  {
+    id: 'claim-7-exact-provenance',
+    collectors: ['validateRunRecord', 'validateManifest', 'validateCaptureIdentity'],
+    live: ['repoHead', 'boardRun'],
+  },
+  {
+    id: 'claim-8-no-mocks-no-secrets-no-drift',
+    collectors: [
+      'validateChecksumCoverage',
+      'validateEvidenceAssertions',
+      'validateScreenshotSlots',
+      'validateLogScans',
+      'validateReadmeAndRedaction',
+    ],
+    live: ['secretScan', 'migrationApplied'],
+  },
+  {
+    id: 'claim-9-known-dirt-unchanged',
+    collectors: ['validateManifest'],
+    live: ['repoStatus'],
+  },
+];
+
+function parseDotenvValue(content, key) {
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (line === '' || line.startsWith('#')) {
+      continue;
+    }
+    const match = /^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
+    if (!match || match[1] !== key) {
+      continue;
+    }
+    let value = match[2].trim();
+    if (value.length >= 2
+      && ((value.startsWith('"') && value.endsWith('"'))
+        || (value.startsWith("'") && value.endsWith("'")))) {
+      value = value.slice(1, -1);
+    }
+    if (value.startsWith('"') && value.endsWith('"')) {
+      value = value.slice(1, -1);
+    }
+    return value;
+  }
+  return null;
+}
+
+/**
+ * Read the live DB connection and secret candidates from the repository's
+ * `server/.env.local` as dotenv strings (the file is not shell-source safe:
+ * its values contain shell metacharacters). Never echoes a secret value.
+ */
+function readEnvLocal(root) {
+  const envPath = path.join(root, 'server', '.env.local');
+  let content = '';
+  if (fs.existsSync(envPath)) {
+    content = fs.readFileSync(envPath, 'utf8');
+  }
+  return {
+    dbHost: parseDotenvValue(content, 'DB_HOST') || '127.0.0.1',
+    dbUser: parseDotenvValue(content, 'DB_USER_SERVER') || 'app_user',
+    dbPassword: parseDotenvValue(content, 'DB_PASSWORD_SERVER')
+      || parseDotenvValue(content, 'DB_PASSWORD')
+      || '',
+    dbName: parseDotenvValue(content, 'DB_NAME_SERVER')
+      || parseDotenvValue(content, 'DB_NAME')
+      || 'server',
+    dbPort: DEFAULT_DB_PORT_DIRECT,
+    nextAuthSecret: parseDotenvValue(content, 'NEXTAUTH_SECRET'),
+  };
+}
+
+function scanBundleForSecrets(context, candidates) {
+  const unique = [...new Set(
+    candidates.filter((value) => typeof value === 'string' && value.trim().length >= 8)
+  )];
+  if (unique.length === 0) {
+    return { pass: true, detail: 'no secret candidates were available to scan for' };
+  }
+  const leaked = [];
+  for (const name of listFilesRecursive(context.directory)) {
+    if (name === CHECKSUM_FILE) {
+      continue;
+    }
+    const contents = fs.readFileSync(context.filePath(name), 'utf8');
+    for (const secret of unique) {
+      if (contents.includes(secret)) {
+        leaked.push(name);
+        break;
+      }
+    }
+  }
+  return leaked.length === 0
+    ? { pass: true, detail: `bundle contains no ${unique.length} derived secret candidate(s) (${unique.length} scanned)` }
+    : { pass: false, detail: `bundle contains a derived secret value in ${leaked.join(', ')}` };
+}
+
+/**
+ * The live-data providers used by the compact surface. Every provider is
+ * injectable so the behavioral tests stay hermetic (no live git, PostgreSQL,
+ * or board required); the defaults shell out to the real tools.
+ */
+export function defaultLiveProviders(repoRoot) {
+  const envLocal = readEnvLocal(repoRoot);
+  const db = {
+    host: envLocal.dbHost,
+    port: envLocal.dbPort,
+    user: envLocal.dbUser,
+    password: envLocal.dbPassword,
+    name: envLocal.dbName,
+  };
+  const run = (command, args, options = {}) => spawnSync(command, args, {
+    encoding: 'utf8',
+    cwd: repoRoot,
+    env: { ...process.env, ...(options.env || {}) },
+    timeout: options.timeout || 60_000,
+    maxBuffer: options.maxBuffer || 64 * 1024 * 1024,
+  });
+  return {
+    db,
+    psql(dbConfig, sql) {
+      const result = run('psql', [
+        '-h', dbConfig.host, '-p', String(dbConfig.port), '-U', dbConfig.user,
+        '-d', dbConfig.name, '-A', '-t', '-F', '|', '-c', sql,
+      ], { env: { PGPASSWORD: dbConfig.password }, timeout: 30_000 });
+      return {
+        tuple: {
+          exitCode: result.status === null ? -1 : result.status,
+          stdout: result.stdout || '',
+          stderr: result.stderr || '',
+        },
+      };
+    },
+    repoHead() {
+      return run('git', ['rev-parse', 'HEAD']).stdout.trim();
+    },
+    repoStatus() {
+      return run('git', ['status', '--porcelain']).stdout
+        .split('\n')
+        .filter((line) => line !== '');
+    },
+    boardRuns(projectId) {
+      const result = run('alga-dev', ['workflow-get-project', `--projectId=${projectId}`]);
+      if (result.status !== 0) {
+        return { error: result.stderr.trim() || `alga-dev workflow-get-project exited ${result.status}` };
+      }
+      const parsed = JSON.parse(result.stdout || '{}');
+      return { runs: Array.isArray(parsed.runs) ? parsed.runs : [] };
+    },
+    secretCandidates(projectId) {
+      const secrets = [db.password, envLocal.nextAuthSecret];
+      try {
+        const result = run('alga-dev', [
+          'workflow-list-services', `--projectId=${projectId}`, '--live=true', '--pretty',
+        ]);
+        if (result.status === 0) {
+          const parsed = JSON.parse(result.stdout || '{}');
+          const devServer = (Array.isArray(parsed.services) ? parsed.services : [])
+            .find((service) => service.name === 'dev-server');
+          if (devServer && typeof devServer.facts?.algaPassword === 'string') {
+            secrets.push(devServer.facts.algaPassword);
+          }
+        }
+      } catch {
+        // Best-effort: the DB password + NEXTAUTH secrets are already covered.
+      }
+      return secrets.filter((value) => typeof value === 'string' && value.trim() !== '');
+    },
+  };
+}
+
+/**
+ * Recompute the claims that depend on the live world: the repo git state, the
+ * real PostgreSQL state (restoration, retained project, live typed mappings,
+ * this branch's migration), the board run record, and the bundle secret
+ * re-scan. Every provider failure fails closed.
+ */
+export function computeLiveChecks(context, options, providers) {
+  const run = context.readJson(RUN_FILE);
+  const before = context.readJson(EVIDENCE_STEPS.before.json);
+  const afterApply = context.readJson(EVIDENCE_STEPS['after-apply'].json);
+  const beforeData = before.structuredData || {};
+  const afterApplyData = afterApply.structuredData || {};
+  const tenant = run.tenantId;
+  const seedTemplateId = run.seedTemplateId;
+  const knownMappingId = run.knownMappingId;
+  const expectedTaskCount = run.expectedTaskCount;
+  const appliedProjectId = afterApplyData.appliedProjectId || null;
+  const baselineRows = Array.isArray(beforeData.seedTemplateOriginal)
+    ? beforeData.seedTemplateOriginal
+    : [];
+  const checks = {};
+
+  const repoHead = providers.repoHead();
+  checks.repoHead = {
+    pass: repoHead === options.expectedHeadSha,
+    detail: `live git HEAD ${repoHead || '(unreadable)'} vs invoked ${options.expectedHeadSha}`,
+  };
+
+  const repoStatus = providers.repoStatus();
+  const cleanDirt = repoStatus.length === 1 && repoStatus[0].includes('package-lock.json');
+  checks.repoStatus = {
+    pass: cleanDirt,
+    detail: `git status --porcelain = ${repoStatus.length} line(s)${repoStatus.length ? ` (${repoStatus.join('; ')})` : ''}; expected exactly ' M package-lock.json'`,
+  };
+
+  let boardPass = false;
+  let boardDetail = 'board lookup failed';
+  try {
+    const board = providers.boardRuns(context.readJson(MANIFEST_FILE).captureIdentity?.projectId);
+    const runs = Array.isArray(board.runs) ? board.runs : [];
+    const running = runs.filter((entry) => entry && entry.status === 'running');
+    if (running.length === 1) {
+      boardPass = running[0].id === options.expectedRunId;
+      boardDetail = `single running board run ${running[0].id} vs invoked ${options.expectedRunId}`;
+    } else if (running.length === 0) {
+      boardPass = runs.some((entry) => entry && entry.id === options.expectedRunId);
+      boardDetail = `no running board run; invoked ${options.expectedRunId} ${boardPass ? 'present in' : 'ABSENT from'} the ${runs.length} recorded runs`;
+    } else {
+      boardDetail = `ambiguous: ${running.length} running board runs (${running.map((entry) => entry.id).join(', ')})`;
+    }
+  } catch (error) {
+    boardDetail = `board lookup error: ${error instanceof Error ? error.message : String(error)}`;
+  }
+  checks.boardRun = { pass: boardPass, detail: boardDetail };
+
+  const runQuery = (sql) => providers.psql(providers.db, sql);
+  const queryOk = (sql) => {
+    const record = runQuery(sql);
+    if (record.tuple.exitCode !== 0) {
+      return { ok: false, detail: `psql exited ${record.tuple.exitCode}${record.tuple.stderr ? `: ${record.tuple.stderr.trim()}` : ''}` };
+    }
+    return { ok: true, stdout: record.tuple.stdout };
+  };
+
+  const parseRows = (stdout) => {
+    try {
+      return stdout.split('\n').filter((line) => line !== '').map((line) => JSON.parse(line));
+    } catch {
+      return null;
+    }
+  };
+
+  const baselineResult = queryOk(`SELECT to_jsonb(x) FROM (
+     SELECT tm.template_status_mapping_id, tm.status_source, tm.status_id,
+            tm.standard_status_id, tm.unresolved_status_id, tm.unresolved_reason, tm.display_order
+     FROM project_template_status_mappings tm
+     WHERE tm.tenant = '${tenant}' AND tm.template_id = '${seedTemplateId}'
+     ORDER BY tm.display_order
+   ) x`);
+  let baselineRowsLive = null;
+  if (baselineResult.ok) {
+    baselineRowsLive = parseRows(baselineResult.stdout);
+  }
+  checks.baseline = {
+    pass: baselineResult.ok
+      && Array.isArray(baselineRowsLive)
+      && baselineRowsLive.length === baselineRows.length
+      && JSON.stringify(baselineRowsLive) === JSON.stringify(baselineRows),
+    detail: baselineResult.ok
+      ? `live seed-template rows ${Array.isArray(baselineRowsLive) ? baselineRowsLive.length : 'unparseable'} vs recorded baseline ${baselineRows.length}`
+      : baselineResult.detail,
+  };
+
+  const unresolvedResult = queryOk(`SELECT count(*) FROM project_template_status_mappings
+     WHERE tenant = '${tenant}' AND template_id = '${seedTemplateId}' AND status_source = 'unresolved'`);
+  const unresolvedCount = unresolvedResult.ok ? Number((unresolvedResult.stdout || '').trim()) : Number.NaN;
+  checks.unresolvedCount = {
+    pass: unresolvedResult.ok && unresolvedCount === 0,
+    detail: unresolvedResult.ok ? `unresolved mappings live=${unresolvedCount}, expected 0` : unresolvedResult.detail,
+  };
+
+  const taskResult = queryOk(`SELECT count(*) FROM project_template_tasks t
+     JOIN project_template_phases p ON p.tenant = t.tenant AND p.template_phase_id = t.template_phase_id
+     WHERE p.template_id = '${seedTemplateId}' AND t.tenant = '${tenant}'
+       AND t.template_status_mapping_id = '${knownMappingId}'`);
+  const taskCount = taskResult.ok ? Number((taskResult.stdout || '').trim()) : Number.NaN;
+  checks.taskCount = {
+    pass: taskResult.ok && taskCount === expectedTaskCount,
+    detail: taskResult.ok ? `task assignments live=${taskCount}, expected ${expectedTaskCount}` : taskResult.detail,
+  };
+
+  const validResult = queryOk(`SELECT count(*) FROM project_templates
+     WHERE tenant = '${tenant}' AND template_name LIKE 'SMOKE Mixed Mapping Template%'`);
+  const validCount = validResult.ok ? Number((validResult.stdout || '').trim()) : Number.NaN;
+  checks.validTemplateGone = {
+    pass: validResult.ok && validCount === 0,
+    detail: validResult.ok ? `SMOKE valid templates live=${validCount}, expected 0` : validResult.detail,
+  };
+
+  if (appliedProjectId) {
+    const retainedResult = queryOk(`SELECT count(*) FROM projects
+       WHERE tenant = '${tenant}' AND project_id = '${appliedProjectId}'`);
+    const retainedCount = retainedResult.ok ? Number((retainedResult.stdout || '').trim()) : Number.NaN;
+    checks.appliedProjectRetained = {
+      pass: retainedResult.ok && retainedCount === 1,
+      detail: retainedResult.ok ? `retained project live=${retainedCount}, expected 1` : retainedResult.detail,
+    };
+
+    const mappingsResult = queryOk(`SELECT to_jsonb(x) FROM (
+       SELECT psm.project_status_mapping_id, psm.status_id, psm.standard_status_id,
+              psm.is_standard, psm.display_order
+       FROM project_status_mappings psm
+       WHERE psm.tenant = '${tenant}' AND psm.project_id = '${appliedProjectId}'
+       ORDER BY psm.display_order
+     ) x`);
+    const typedRows = mappingsResult.ok ? parseRows(mappingsResult.stdout) : null;
+    const standardRows = Array.isArray(typedRows) ? typedRows.filter((row) => row.is_standard === true) : [];
+    const tenantRows = Array.isArray(typedRows) ? typedRows.filter((row) => row.is_standard === false) : [];
+    checks.appliedProjectMappings = {
+      pass: mappingsResult.ok
+        && standardRows.some((row) => row.standard_status_id && row.status_id === null)
+        && tenantRows.some((row) => row.status_id && row.standard_status_id === null),
+      detail: mappingsResult.ok
+        ? `applied project typed mappings live: ${standardRows.length} standard / ${tenantRows.length} tenant`
+        : mappingsResult.detail,
+    };
+  } else {
+    checks.appliedProjectRetained = { pass: false, detail: 'bundle records no applied project id' };
+    checks.appliedProjectMappings = { pass: false, detail: 'bundle records no applied project id' };
+  }
+
+  const migrationResult = queryOk(`SELECT count(*) FROM knex_migrations
+     WHERE name = '${BRANCH_MIGRATION_NAME}'`);
+  const migrationCount = migrationResult.ok ? Number((migrationResult.stdout || '').trim()) : Number.NaN;
+  checks.migrationApplied = {
+    pass: migrationResult.ok && migrationCount === 1,
+    detail: migrationResult.ok
+      ? `branch migration ${BRANCH_MIGRATION_NAME} recorded live=${migrationCount}, expected 1 (other migration drift ignored)`
+      : migrationResult.detail,
+  };
+
+  checks.secretScan = scanBundleForSecrets(
+    context,
+    providers.secretCandidates(context.readJson(MANIFEST_FILE).captureIdentity?.projectId)
+  );
+
+  return checks;
+}
+
+/**
+ * Compact run-bound verification surface. Runs the full bundle-internal
+ * verifier, then re-proves the claims that live in the repo (git state),
+ * the real PostgreSQL (restoration, live typed mappings, this branch's
+ * migration), and the board (run provenance), and re-scans the bundle for
+ * derived secret values. Prints one verdict line plus nine keyed claim lines.
+ */
+export function runXoverdict(evidenceDirectory, options = {}) {
+  const usageFailures = [];
+  const { expectedRunId, expectedHeadSha, repoRoot } = options;
+  if (typeof expectedRunId !== 'string' || expectedRunId.trim() === '') {
+    usageFailures.push('xoverdict requires the --run-id flag');
+  }
+  if (typeof expectedHeadSha !== 'string' || expectedHeadSha.trim() === '') {
+    usageFailures.push('xoverdict requires the --head-sha flag');
+  }
+  if (!COMMIT_PATTERN.test(expectedHeadSha || '')) {
+    usageFailures.push('--head-sha must be a 40-hex commit SHA');
+  }
+  if (typeof repoRoot !== 'string' || repoRoot.trim() === '') {
+    usageFailures.push('xoverdict requires the --repo-root flag');
+  }
+  if (usageFailures.length > 0) {
+    return { pass: false, claims: null, failures: usageFailures };
+  }
+
+  const context = createContext(evidenceDirectory, options);
+  const providers = options.liveProviders || defaultLiveProviders(path.resolve(repoRoot));
+  const collectorResults = collectCollectorResults(context, {
+    ...options,
+    expectedWorktree: path.resolve(repoRoot),
+  });
+  const live = computeLiveChecks(context, options, providers);
+
+  const claims = CLAIM_BUCKETS.map((bucket) => {
+    const collectorFailures = collectorResults
+      .filter((result) => bucket.collectors.includes(result.name))
+      .flatMap((result) => result.failures);
+    const liveFailures = bucket.live
+      .map((name) => live[name])
+      .filter((check) => check && check.pass !== true)
+      .map((check) => check.detail);
+    const detail = [...collectorFailures, ...liveFailures].slice(0, 2);
+    return {
+      id: bucket.id,
+      pass: collectorFailures.length === 0 && liveFailures.length === 0,
+      detail,
+    };
+  });
+
+  const bundleFailures = collectorResults.flatMap((result) => result.failures);
+  return {
+    pass: claims.every((claim) => claim.pass),
+    claims,
+    failures: bundleFailures,
+    live,
+    bundleDigest: sha256File(context.filePath(CHECKSUM_FILE)),
+    headSha: context.readJson(MANIFEST_FILE).headSha,
+    runId: context.readJson(RUN_FILE).workflowRunId,
+  };
+}
+
+function printXoverdict(result) {
+  if (!result.claims) {
+    process.stdout.write('XOVERDICT: FAIL (usage)\n');
+    for (const failure of result.failures) {
+      process.stdout.write(`  - ${failure}\n`);
+    }
+    return;
+  }
+  const failedClaims = result.claims.filter((claim) => !claim.pass);
+  if (result.pass) {
+    process.stdout.write('XOVERDICT: PASS\n');
+  } else {
+    const reason = failedClaims.length > 0
+      ? `${failedClaims.length}/${result.claims.length} claims failed (${failedClaims[0].id}: ${failedClaims[0].detail[0] || 'check failed'})`
+      : (result.failures[0] || 'xoverdict failed');
+    process.stdout.write(`XOVERDICT: FAIL ${reason}\n`);
+  }
+  for (const claim of result.claims) {
+    if (claim.pass) {
+      process.stdout.write(`${claim.id}: PASS\n`);
+    } else {
+      process.stdout.write(`${claim.id}: FAIL ${claim.detail.join('; ') || 'check failed'}\n`);
+    }
+  }
+  process.stdout.write(`bundleDigest=${result.bundleDigest}\n`);
+  process.stdout.write(`headSha=${result.headSha}\n`);
+  process.stdout.write(`runId=${result.runId}\n`);
 }
 
 export function main(argv) {
@@ -1015,8 +1531,20 @@ export function main(argv) {
       + ' [--expected-worktree <path>] [--expected-pane <id>]'
       + ' [--expected-server-url <url>] [--expected-dev-server-session <id>]'
       + ' [--timeout-ms=<n>]\n'
+      + '  compact: node verify-template-status-mapping-smoke-evidence.mjs <bundle-dir>'
+      + ' --xoverdict --run-id <uuid> --head-sha <40-hex> --repo-root <path>\n'
     );
     return 2;
+  }
+  if (flags.xoverdict !== undefined) {
+    const result = runXoverdict(positional[0], {
+      timeoutMs: flags.timeoutMs || undefined,
+      expectedRunId: flags['run-id'],
+      expectedHeadSha: flags['head-sha'],
+      repoRoot: flags['repo-root'],
+    });
+    printXoverdict(result);
+    return result.pass ? 0 : 1;
   }
   const result = verifyBundle(positional[0], {
     timeoutMs: flags.timeoutMs || undefined,
