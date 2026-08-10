@@ -200,4 +200,133 @@ describe('buildMicrosoftEmailProviderConfig provider-pinned issuer resolution', 
     expect(config.provider_config.resolved_client_secret).toBe('legacy-vendor-secret');
     expect(config.provider_config.resolved_credential_source).toBe('vendor');
   });
+
+  it('fails closed when the pinned profile no longer exists instead of falling back to the Email binding', async () => {
+    // The provider pinned its issuer to profile p-gone, which has been deleted.
+    // A fallback Email binding points at a different app; the resolver must
+    // hard-fail rather than silently re-issuing tokens from another app.
+    hoisted.state.tenantSecrets.set('tenant-1:ref-gone', 'secret-for-gone-profile');
+    hoisted.state.bindings.push({
+      tenant: 'tenant-1',
+      consumer_type: 'email',
+      profile_id: 'p-bound',
+    });
+    hoisted.state.microsoftProfiles.push({
+      tenant: 'tenant-1',
+      profile_id: 'p-bound',
+      client_id: 'bound-app',
+      client_secret_ref: 'ref-bound',
+      tenant_id: 'tenant-dir',
+      capabilities: JSON.stringify(['email']),
+      is_archived: false,
+    });
+    hoisted.state.tenantSecrets.set('tenant-1:ref-bound', 'bound-secret');
+
+    await expect(
+      buildMicrosoftEmailProviderConfig({
+        id: 'provider-1',
+        tenant: 'tenant-1',
+        name: 'Mailbox',
+        provider_type: 'microsoft',
+        mailbox: 'support@client.com',
+        folder_to_monitor: 'Inbox',
+        active: true,
+        provider_config: {
+          client_id: 'pinned-app',
+          client_secret: 'stale-vendor-secret',
+          microsoft_profile_id: 'p-gone',
+          client_secret_ref: 'ref-gone',
+          tenant_id: 'tenant-dir',
+        },
+      } as any)
+    ).rejects.toThrow(/pinned to profile p-gone/);
+    await expect(
+      buildMicrosoftEmailProviderConfig({
+        id: 'provider-1',
+        tenant: 'tenant-1',
+        name: 'Mailbox',
+        provider_type: 'microsoft',
+        mailbox: 'support@client.com',
+        folder_to_monitor: 'Inbox',
+        active: true,
+        provider_config: {
+          client_id: 'pinned-app',
+          client_secret: 'stale-vendor-secret',
+          microsoft_profile_id: 'p-gone',
+          client_secret_ref: 'ref-gone',
+          tenant_id: 'tenant-dir',
+        },
+      } as any)
+    ).rejects.toThrow(/ms_email_provider_not_found/);
+  });
+
+  it('fails closed when the pinned profile resolves but disagrees with the persisted issuing client', async () => {
+    // The pin references an existing profile whose app differs from the
+    // persisted client_id; that is a corrupted pin, not a fallback signal.
+    hoisted.state.microsoftProfiles.push({
+      tenant: 'tenant-1',
+      profile_id: 'p-wrong',
+      client_id: 'different-app',
+      client_secret_ref: 'ref-wrong',
+      tenant_id: 'tenant-dir',
+      capabilities: JSON.stringify(['email']),
+      is_archived: false,
+    });
+    hoisted.state.tenantSecrets.set('tenant-1:ref-wrong', 'wrong-secret');
+
+    await expect(
+      buildMicrosoftEmailProviderConfig({
+        id: 'provider-1',
+        tenant: 'tenant-1',
+        name: 'Mailbox',
+        provider_type: 'microsoft',
+        mailbox: 'support@client.com',
+        folder_to_monitor: 'Inbox',
+        active: true,
+        provider_config: {
+          client_id: 'pinned-app',
+          client_secret: 'stale-vendor-secret',
+          microsoft_profile_id: 'p-wrong',
+          client_secret_ref: 'ref-wrong',
+          tenant_id: 'tenant-dir',
+        },
+      } as any)
+    ).rejects.toThrow(/ms_email_client_mismatch_reconnect_required/);
+  });
+
+  it('never resolves the tenant Teams app as an email credential source', async () => {
+    // Even if a provider row is somehow pinned to a profile carrying the
+    // well-known Teams app client id (with email capability misconfigured on),
+    // the resolver must fail closed instead of handing the Teams app's
+    // credentials to a mailbox.
+    hoisted.state.microsoftProfiles.push({
+      tenant: 'tenant-1',
+      profile_id: 'p-teams',
+      client_id: '02c1ecbc-10db-4439-b002-1187acf7b268',
+      client_secret_ref: 'ref-teams',
+      tenant_id: 'tenant-dir',
+      capabilities: JSON.stringify(['email', 'teams']),
+      is_archived: false,
+    });
+    hoisted.state.tenantSecrets.set('tenant-1:ref-teams', 'teams-secret');
+
+    await expect(
+      buildMicrosoftEmailProviderConfig({
+        id: 'provider-1',
+        tenant: 'tenant-1',
+        name: 'Mailbox',
+        provider_type: 'microsoft',
+        mailbox: 'support@client.com',
+        folder_to_monitor: 'Inbox',
+        active: true,
+        provider_config: {
+          client_id: '02c1ecbc-10db-4439-b002-1187acf7b268',
+          client_secret: 'teams-secret',
+          microsoft_profile_id: 'p-teams',
+          client_secret_ref: 'ref-teams',
+          tenant_id: 'tenant-dir',
+        },
+      } as any)
+    ).rejects.toThrow(/ms_email_provider_not_found/);
+  });
 });

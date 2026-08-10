@@ -44,6 +44,17 @@ export class MicrosoftSubscriptionError extends Error {
   }
 }
 
+/**
+ * Receives a record of Graph subscription mutations performed by the adapter.
+ * The OAuth callback wires this into a compensation ledger so that a failed
+ * webhook setup can delete subscriptions it created and can avoid resurrecting
+ * a subscription id that no longer exists in Graph.
+ */
+export interface MicrosoftGraphWebhookLifecycleObserver {
+  onSubscriptionDeleted(subscriptionId: string): void;
+  onSubscriptionCreated(subscriptionId: string): void;
+}
+
 export interface MicrosoftWebhookInitializationResult {
   success: boolean;
   subscriptionId?: string;
@@ -97,6 +108,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   private httpClient: AxiosInstance;
   private baseUrl = getMicrosoftGraphBaseUrl();
   private authenticatedUserEmail: string | undefined; // Email of the user who authorized the app
+  private webhookLifecycle: MicrosoftGraphWebhookLifecycleObserver | undefined;
 
   constructor(config: EmailProviderConfig) {
     super(config);
@@ -118,6 +130,15 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
       return config;
     });
+  }
+
+  /**
+   * Register an observer for Graph subscription mutations so the OAuth
+   * callback can compensate (delete) any subscription created by a setup that
+   * subsequently fails.
+   */
+  attachWebhookLifecycle(observer: MicrosoftGraphWebhookLifecycleObserver): void {
+    this.webhookLifecycle = observer;
   }
 
   /**
@@ -546,13 +567,18 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     if (!oldSubscriptionId) return;
     try {
       await this.httpClient.delete(`/subscriptions/${encodeURIComponent(oldSubscriptionId)}`);
+      this.webhookLifecycle?.onSubscriptionDeleted(oldSubscriptionId);
     } catch (error: any) {
-      if (error?.response?.status !== 404) {
-        this.log('warn', 'Failed to delete previous Microsoft subscription before replacement', {
-          subscriptionId: oldSubscriptionId,
-          error: error?.message || String(error),
-        });
+      if (error?.response?.status === 404) {
+        // The previous subscription no longer exists in Graph; record that so
+        // compensation never restores a phantom id.
+        this.webhookLifecycle?.onSubscriptionDeleted(oldSubscriptionId);
+        return;
       }
+      this.log('warn', 'Failed to delete previous Microsoft subscription before replacement', {
+        subscriptionId: oldSubscriptionId,
+        error: error?.message || String(error),
+      });
     }
   }
 
@@ -595,10 +621,11 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
       await this.deletePreviousSubscription();
       const response = await this.httpClient.post('/subscriptions', subscription);
-      
+
       // Update config with subscription ID
       this.config.webhook_subscription_id = response.data.id;
       this.config.webhook_expires_at = response.data.expirationDateTime;
+      this.webhookLifecycle?.onSubscriptionCreated(response.data.id);
 
       // Persist webhook details only in microsoft vendor config
       try {
@@ -1485,10 +1512,12 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
     try {
       await this.httpClient.delete(`/subscriptions/${encodeURIComponent(subscriptionId)}`);
+      this.webhookLifecycle?.onSubscriptionDeleted(subscriptionId);
     } catch (error: any) {
       if (error?.response?.status !== 404) {
         throw this.handleError(error, 'deleteWebhookSubscription');
       }
+      this.webhookLifecycle?.onSubscriptionDeleted(subscriptionId);
     }
   }
 

@@ -6,7 +6,6 @@ import {
   MicrosoftGraphAdapter,
   MicrosoftSubscriptionError,
 } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
-import { resolveMicrosoftConsumerProfileConfig } from '@alga-psa/integrations/lib/microsoftConsumerProfileResolution';
 import {
   MicrosoftEmailIssuerError,
   MICROSOFT_EMAIL_ISSUER_ERRORS,
@@ -46,9 +45,18 @@ type CallbackStateContext = {
   tenant?: string;
   providerId?: string;
   redirectUri?: string;
-  microsoftCredentialSource?: 'tenant' | 'platform' | null;
   issuer?: { kind: 'managed' | 'profile'; profileId?: string; clientId: string };
 };
+
+/**
+ * Verify the OAuth state is one of our signed tokens. Every callback must pass
+ * signature verification; legacy unsigned base64-encoded state is no longer
+ * accepted — there is no backward-compat path that skips it.
+ */
+async function verifySignedState(state: string): Promise<MicrosoftEmailOAuthStatePayload | null> {
+  const signingSecret = await getMicrosoftEmailOAuthSigningSecret();
+  return validateMicrosoftEmailOAuthState({ token: state, secret: signingSecret });
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -117,20 +125,6 @@ export async function GET(request: NextRequest) {
       return new NextResponse(html, { status: 200, headers: { 'Content-Type': 'text/html' } });
     };
 
-    const parseStateValue = (rawState: string) => {
-      try {
-        const decodedState = Buffer.from(rawState, 'base64').toString();
-        return JSON.parse(decodedState);
-      } catch (e: any) {
-        console.error('[MS OAuth] Failed to parse state:', {
-          error: e.message,
-          stateLength: rawState?.length,
-          statePreview: rawState ? `${rawState.substring(0, 20)}...` : 'null'
-        });
-        return null;
-      }
-    };
-
     const persistProviderError = async (stateData: CallbackStateContext, errorCode: string, description?: string | null) => {
       if (!stateData?.providerId || !stateData?.tenant) {
         return;
@@ -159,12 +153,19 @@ export async function GET(request: NextRequest) {
       });
     };
 
-    // Handle OAuth errors
+    // Handle OAuth errors. Microsoft rejected the authorization before any
+    // token exchange. We may attribute the failure to a provider only when the
+    // echoed state is one of our signed tokens; an unverifiable state is
+    // ignored and never causes a provider status write.
     if (error) {
-      const errorStateData = state ? parseStateValue(state) : null;
-      if (errorStateData?.providerId) {
+      const errorPayload = state ? await verifySignedState(state) : null;
+      if (errorPayload?.providerId) {
         try {
-          await persistProviderError(errorStateData, error, errorDescription || '');
+          await persistProviderError(
+            { tenant: errorPayload.tenant, providerId: errorPayload.providerId },
+            error,
+            errorDescription || ''
+          );
         } catch (persistError: any) {
           console.warn('⚠️ Failed to persist Microsoft OAuth error:', persistError?.message || persistError);
         }
@@ -197,78 +198,57 @@ export async function GET(request: NextRequest) {
     }
 
     /**
-     * The state may be either:
-     *  - the new signed token `base64url(payload).signature` (issued by the
-     *    explicit-selection flow), or
-     *  - a legacy base64-encoded JSON object (in-flight OAuth started before
-     *    this deploy).
+     * The state must be the signed token issued by the explicit-selection flow
+     * (`base64url(payload).signature`). Legacy unsigned base64-encoded state is
+     * no longer accepted: every callback must pass signature verification and
+     * relationship checks or fail with a stable error code.
      */
-    const isSignedState = state.includes('.');
-    let stateContext: CallbackStateContext;
-    let signedPayload: MicrosoftEmailOAuthStatePayload | null = null;
-
-    if (isSignedState) {
-      const signingSecret = await getMicrosoftEmailOAuthSigningSecret();
-      const payload = validateMicrosoftEmailOAuthState({ token: state, secret: signingSecret });
-
-      if (!payload) {
-        // Distinguish an expired token from a tampered/invalid one.
-        const [payloadEncoded] = state.split('.');
-        let expired = false;
-        try {
-          const decoded = JSON.parse(Buffer.from(payloadEncoded, 'base64url').toString('utf8')) as {
-            expiresAt?: number;
-          };
-          expired = typeof decoded.expiresAt === 'number' && decoded.expiresAt <= Math.floor(Date.now() / 1000);
-        } catch {
-          // fall through to invalid_state
-        }
-        return respondWithPostMessage({
-          type: 'oauth-callback',
-          provider: 'microsoft',
-          success: false,
-          error: expired ? MICROSOFT_EMAIL_ISSUER_ERRORS.EXPIRED_STATE : MICROSOFT_EMAIL_ISSUER_ERRORS.INVALID_STATE,
-          errorDescription: expired
-            ? 'This Microsoft authorization request expired. Start again from the mailbox form.'
-            : 'This Microsoft authorization request is invalid or tampered with. Start again from the mailbox form.'
-        });
+    const signedPayload = await verifySignedState(state);
+    if (!signedPayload) {
+      // Distinguish an expired token from a tampered/invalid one.
+      const [payloadEncoded] = state.split('.');
+      let expired = false;
+      try {
+        const decoded = JSON.parse(Buffer.from(payloadEncoded, 'base64url').toString('utf8')) as {
+          expiresAt?: number;
+        };
+        expired = typeof decoded.expiresAt === 'number' && decoded.expiresAt <= Math.floor(Date.now() / 1000);
+      } catch {
+        // fall through to invalid_state
       }
-
-      // Single-use nonce: the same signed state cannot complete twice.
-      const consumed = await consumeMicrosoftEmailOAuthNonce(payload.nonce);
-      if (!consumed) {
-        return respondWithPostMessage({
-          type: 'oauth-callback',
-          provider: 'microsoft',
-          success: false,
-          error: MICROSOFT_EMAIL_ISSUER_ERRORS.REPLAYED_STATE,
-          errorDescription: 'This Microsoft authorization request has already been used. Start again from the mailbox form.'
-        });
-      }
-
-      signedPayload = payload;
-      stateContext = {
-        tenant: payload.tenant,
-        providerId: payload.providerId,
-        redirectUri: payload.redirectUri,
-        issuer: {
-          kind: payload.issuerKind,
-          profileId: payload.issuerProfileId,
-          clientId: payload.clientId,
-        },
-      };
-    } else {
-      stateContext = parseStateValue(state);
-      if (!stateContext) {
-        return respondWithPostMessage({
-          type: 'oauth-callback',
-          provider: 'microsoft',
-          success: false,
-          error: 'invalid_state',
-          errorDescription: 'Invalid state parameter'
-        });
-      }
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'microsoft',
+        success: false,
+        error: expired ? MICROSOFT_EMAIL_ISSUER_ERRORS.EXPIRED_STATE : MICROSOFT_EMAIL_ISSUER_ERRORS.INVALID_STATE,
+        errorDescription: expired
+          ? 'This Microsoft authorization request expired. Start again from the mailbox form.'
+          : 'This Microsoft authorization request is invalid or tampered with. Start again from the mailbox form.'
+      });
     }
+
+    // Single-use nonce: the same signed state cannot complete twice.
+    const consumed = await consumeMicrosoftEmailOAuthNonce(signedPayload.nonce);
+    if (!consumed) {
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'microsoft',
+        success: false,
+        error: MICROSOFT_EMAIL_ISSUER_ERRORS.REPLAYED_STATE,
+        errorDescription: 'This Microsoft authorization request has already been used. Start again from the mailbox form.'
+      });
+    }
+
+    const stateContext: CallbackStateContext = {
+      tenant: signedPayload.tenant,
+      providerId: signedPayload.providerId,
+      redirectUri: signedPayload.redirectUri,
+      issuer: {
+        kind: signedPayload.issuerKind,
+        profileId: signedPayload.issuerProfileId,
+        clientId: signedPayload.clientId,
+      },
+    };
 
     // The state parameter is not trusted on its own. Require an authenticated
     // session whose tenant matches the state tenant before writing any tokens —
@@ -291,7 +271,7 @@ export async function GET(request: NextRequest) {
     // Enforce every relationship signed into the state. A valid signature only
     // proves the token was issued by us; ownership, provider binding, and
     // purpose semantics must each be verified before any credential write.
-    if (signedPayload) {
+    {
       let stateProvider: {
         id: string;
         tenant: string;
@@ -368,48 +348,35 @@ export async function GET(request: NextRequest) {
     const isHostedFlow = nextauthUrl.startsWith('https://algapsa.com');
     let clientId: string | null = null;
     let clientSecret: string | null = null;
+
+    // Revalidate the explicit selection server-side: ownership, active status,
+    // Email capability, readiness, and consent. Never trust the client's claim.
     let issuerResolution: Awaited<ReturnType<typeof resolveMicrosoftEmailIssuerChoice>> | null = null;
-
-    if (signedPayload) {
-      // Revalidate the explicit selection server-side: ownership, active status,
-      // Email capability, readiness, and consent. Never trust the client's claim.
+    try {
+      issuerResolution = await resolveMicrosoftEmailIssuerChoice(stateContext.tenant!, {
+        kind: signedPayload.issuerKind,
+        profileId: signedPayload.issuerProfileId,
+        clientId: signedPayload.clientId,
+      });
+      clientId = issuerResolution.clientId;
+      clientSecret = issuerResolution.clientSecret;
+    } catch (issuerError: any) {
+      const code = issuerError instanceof MicrosoftEmailIssuerError
+        ? issuerError.code
+        : MICROSOFT_EMAIL_ISSUER_ERRORS.INVALID_STATE;
+      console.error('[MS OAuth] Issuer revalidation failed', { code });
       try {
-        issuerResolution = await resolveMicrosoftEmailIssuerChoice(stateContext.tenant!, {
-          kind: signedPayload.issuerKind,
-          profileId: signedPayload.issuerProfileId,
-          clientId: signedPayload.clientId,
-        });
-        clientId = issuerResolution.clientId;
-        clientSecret = issuerResolution.clientSecret;
-      } catch (issuerError: any) {
-        const code = issuerError instanceof MicrosoftEmailIssuerError
-          ? issuerError.code
-          : MICROSOFT_EMAIL_ISSUER_ERRORS.INVALID_STATE;
-        console.error('[MS OAuth] Issuer revalidation failed', { code });
-        try {
-          await persistProviderError(stateContext, code, issuerError?.message || 'Issuer revalidation failed');
-        } catch (persistError: any) {
-          console.warn('⚠️ Failed to persist Microsoft OAuth issuer error:', persistError?.message || persistError);
-        }
-        return respondWithPostMessage({
-          type: 'oauth-callback',
-          provider: 'microsoft',
-          success: false,
-          error: code,
-          errorDescription: issuerError?.message || 'The selected Microsoft application is no longer eligible for mailbox authorization.'
-        });
+        await persistProviderError(stateContext, code, issuerError?.message || 'Issuer revalidation failed');
+      } catch (persistError: any) {
+        console.warn('⚠️ Failed to persist Microsoft OAuth issuer error:', persistError?.message || persistError);
       }
-    } else {
-      const microsoftProfile = stateContext.microsoftCredentialSource
-        ? await resolveMicrosoftConsumerProfileConfig(stateContext.tenant, 'email', {
-            credentialPreference: stateContext.microsoftCredentialSource,
-          })
-        : await resolveMicrosoftConsumerProfileConfig(stateContext.tenant, 'email');
-
-      if (microsoftProfile.status === 'ready') {
-        clientId = microsoftProfile.clientId || null;
-        clientSecret = microsoftProfile.clientSecret || null;
-      }
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'microsoft',
+        success: false,
+        error: code,
+        errorDescription: issuerError?.message || 'The selected Microsoft application is no longer eligible for mailbox authorization.'
+      });
     }
 
     // Normalize whitespace just in case the secret was copied with spaces/newlines
@@ -432,7 +399,7 @@ export async function GET(request: NextRequest) {
     // Log non-sensitive debug information to help diagnose invalid_client
     const maskedClientId = clientId ? `${clientId.substring(0, 4)}...${clientId.substring(clientId.length - 4)}` : 'null';
     console.log('[MS OAuth] Using credentials', {
-      source: signedPayload ? 'explicit-selection' : (stateContext.microsoftCredentialSource || 'automatic'),
+      source: 'explicit-selection',
       clientId: maskedClientId,
       redirectUri,
       stateRedirectUri: stateContext.redirectUri,
@@ -552,6 +519,15 @@ export async function GET(request: NextRequest) {
                 };
 
                 const adapter = new MicrosoftGraphAdapter(providerConfig);
+                // Record every Graph subscription the setup deletes or creates
+                // so a later failure can compensate (delete new subs, avoid
+                // resurrecting deleted ones).
+                adapter.attachWebhookLifecycle({
+                  onSubscriptionDeleted: (subscriptionId) =>
+                    ctx.webhookCompensation.onSubscriptionDeleted(subscriptionId),
+                  onSubscriptionCreated: (subscriptionId) =>
+                    ctx.webhookCompensation.onSubscriptionCreated(subscriptionId),
+                });
                 try {
                   // Load credentials and authenticated user email before subscription
                   // This ensures mailbox path auto-detection works correctly
@@ -598,6 +574,62 @@ export async function GET(request: NextRequest) {
                     requestId: subErr?.requestId,
                   });
                   throw subErr;
+                }
+              },
+              compensateWebhook: async (compLedger) => {
+                // Delete every Graph subscription the failed setup created, so a
+                // retry of the callback cannot duplicate subscriptions. The
+                // database restore (run by persistMicrosoftEmailOAuthResult after
+                // this hook) reverts the config/provider rows.
+                if (!compLedger.createdSubscriptionIds.length) return;
+                try {
+                  const { knex: compKnex } = await createTenantKnex();
+                  const compDb = tenantDb(compKnex, stateContext.tenant!);
+                  const [compConfig, compProvider] = await Promise.all([
+                    compDb.table('microsoft_email_provider_config')
+                      .where('email_provider_id', stateContext.providerId)
+                      .first(),
+                    compDb.table('email_providers')
+                      .where('id', stateContext.providerId)
+                      .first(),
+                  ]);
+                  if (!compConfig || !compProvider) return;
+
+                  const compAdapter = new MicrosoftGraphAdapter({
+                    id: compProvider.id,
+                    tenant: compProvider.tenant,
+                    name: compProvider.provider_name || compProvider.mailbox,
+                    provider_type: 'microsoft',
+                    mailbox: compProvider.mailbox,
+                    folder_to_monitor: 'Inbox',
+                    active: compProvider.is_active,
+                    provider_config: {
+                      client_id: compConfig.client_id,
+                      client_secret: compConfig.client_secret,
+                      tenant_id: compConfig.tenant_id || null,
+                      access_token,
+                      refresh_token: refresh_token || null,
+                      token_expires_at: expiresAt.toISOString(),
+                      microsoft_profile_id: compConfig.microsoft_profile_id || undefined,
+                      client_secret_ref: compConfig.client_secret_ref || undefined,
+                    },
+                  } as any);
+
+                  for (const subscriptionId of compLedger.createdSubscriptionIds) {
+                    try {
+                      await compAdapter.deleteSubscription(subscriptionId);
+                      console.info('[MS OAuth Callback] Deleted subscription created by failed webhook setup', { subscriptionId });
+                    } catch (delErr: any) {
+                      console.warn('[MS OAuth Callback] Failed to delete subscription created by failed webhook setup', {
+                        subscriptionId,
+                        error: delErr?.message || String(delErr),
+                      });
+                    }
+                  }
+                } catch (compErr: any) {
+                  console.warn('[MS OAuth Callback] Graph compensation failed; leaving cleanup to the maintenance probe', {
+                    error: compErr?.message || String(compErr),
+                  });
                 }
               },
             });

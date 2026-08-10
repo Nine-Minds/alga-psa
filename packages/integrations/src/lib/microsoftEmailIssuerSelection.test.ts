@@ -280,6 +280,37 @@ describe('listEligibleMicrosoftEmailIssuers', () => {
     expect(issuers.profiles.map((p) => p.profileId)).toEqual(['p-ready']);
   });
 
+  it('never lists or recommends the tenant Teams app even when it carries Email capability', async () => {
+    hoisted.resolveMicrosoftConsumerProfileConfig.mockResolvedValue({
+      status: 'not_configured',
+      tenantId: 'tenant-1',
+      consumerType: 'email',
+      message: 'not configured',
+    });
+    // The well-known Teams client id must be excluded regardless of how the
+    // profile is labeled.
+    seedProfiles([
+      profile({
+        profile_id: 'p-teams-app',
+        display_name: 'Teams App',
+        client_id: '02c1ecbc-10db-4439-b002-1187acf7b268',
+        capabilities: ['teams', 'email'],
+        is_default: true,
+      }),
+    ]);
+    hoisted.state.tenantSecrets.set('tenant-1:ref-1', 'secret-1');
+    hoisted.state.microsoftConsumerBindings.push({
+      tenant: 'tenant-1',
+      consumer_type: 'email',
+      profile_id: 'p-teams-app',
+    });
+
+    const issuers = await listEligibleMicrosoftEmailIssuers('tenant-1');
+
+    expect(issuers.profiles).toHaveLength(0);
+    expect(issuers.recommended).toBeNull();
+  });
+
   it('does not recommend a bound profile whose secret cannot be resolved', async () => {
     hoisted.resolveMicrosoftConsumerProfileConfig.mockResolvedValue({
       status: 'not_configured',
@@ -383,6 +414,25 @@ describe('resolveMicrosoftEmailIssuerChoice', () => {
     await expect(promise).rejects.toMatchObject({
       code: MICROSOFT_EMAIL_ISSUER_ERRORS.MISSING_EMAIL_CAPABILITY,
     });
+  });
+
+  it('rejects the tenant Teams app client id even when the profile claims Email capability', async () => {
+    seedProfiles([
+      profile({
+        profile_id: 'p-teams-app',
+        client_id: '02c1ecbc-10db-4439-b002-1187acf7b268',
+        capabilities: ['teams', 'email'],
+      }),
+    ]);
+    hoisted.state.tenantSecrets.set('tenant-1:ref-1', 'secret-1');
+
+    await expect(
+      resolveMicrosoftEmailIssuerChoice('tenant-1', {
+        kind: 'profile',
+        profileId: 'p-teams-app',
+        clientId: '02c1ecbc-10db-4439-b002-1187acf7b268',
+      })
+    ).rejects.toMatchObject({ code: MICROSOFT_EMAIL_ISSUER_ERRORS.INVALID_CHOICE });
   });
 
   it('rejects an archived profile', async () => {
@@ -490,6 +540,28 @@ describe('backfillMicrosoftEmailProviderIssuerMetadata', () => {
       profile({ profile_id: 'p-1', client_id: 'unique-client', client_secret_ref: 'ref-nosecret' }),
     ]);
     const providerId = seedProviderConfig('unique-client');
+
+    const result = await backfillMicrosoftEmailProviderIssuerMetadata('tenant-1');
+
+    expect(result.backfilled).toBe(0);
+    const config = hoisted.state.microsoftEmailProviderConfigs.find(
+      (row) => row.email_provider_id === providerId
+    );
+    expect(config?.microsoft_profile_id).toBeNull();
+    expect(config?.client_secret_ref).toBeNull();
+  });
+
+  it('never backfills an email provider onto the tenant Teams app', async () => {
+    seedProfiles([
+      profile({
+        profile_id: 'p-teams-app',
+        client_id: '02c1ecbc-10db-4439-b002-1187acf7b268',
+        capabilities: ['teams', 'email'],
+        is_default: true,
+      }),
+    ]);
+    hoisted.state.tenantSecrets.set('tenant-1:ref-1', 'secret-1');
+    const providerId = seedProviderConfig('02c1ecbc-10db-4439-b002-1187acf7b268');
 
     const result = await backfillMicrosoftEmailProviderIssuerMetadata('tenant-1');
 

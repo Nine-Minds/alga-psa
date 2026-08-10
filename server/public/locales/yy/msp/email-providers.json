@@ -252,7 +252,7 @@
         "closedEarly": "55555",
         "authorizationFailed": "55555",
         "senderDisplayNameInvalid": "55555",
-        "issuerRequired": "Choose a Microsoft app before signing in"
+        "issuerRequired": "55555"
       },
       "requiredFields": {
         "providerName": "55555",
@@ -284,15 +284,15 @@
         "setUpInProviders": "55555"
       },
       "issuer": {
-        "title": "Microsoft app that authorizes this mailbox",
-        "description": "Choose which application signs in as this mailbox. This choice is stored with the mailbox and does not affect other services.",
-        "managedLabel": "AlgaPSA app (managed by Nine Minds)",
-        "managedDescription": "No Microsoft app registration is required on your side.",
-        "recommended": "Recommended",
-        "currentApp": "Current app: {{app}}",
-        "switchWarning": "Changing the Microsoft app requires reconnecting this mailbox. Sign in with Microsoft again to finish the switch.",
-        "noneAvailable": "No Microsoft app is ready for mailbox authorization yet. Set one up in Providers, then come back.",
-        "retry": "Try again"
+        "title": "55555",
+        "description": "55555",
+        "managedLabel": "55555",
+        "managedDescription": "55555",
+        "recommended": "55555",
+        "currentApp": "55555 {{app}} 55555",
+        "switchWarning": "55555",
+        "noneAvailable": "55555",
+        "retry": "55555"
       },
       "advanced": {
         "title": "55555",

@@ -88,7 +88,12 @@ describe('microsoft consumer runtime resolution contracts', () => {
     expect(emailCallbackSource).toContain("status: 'error'");
     expect(emailCallbackSource).toContain('error_message: message');
     expect(emailCallbackSource).toContain('CALLBACK_PERSISTENCE_FAILED');
-    expect(emailCallbackSource).toContain("resolveMicrosoftConsumerProfileConfig(stateContext.tenant, 'email')");
+    // Every callback verifies the signed state; the legacy binding resolution
+    // path is gone — no unsigned state, no automatic binding-based resolution.
+    expect(emailCallbackSource).toContain('verifySignedState');
+    expect(emailCallbackSource).not.toContain("resolveMicrosoftConsumerProfileConfig(stateContext.tenant, 'email')");
+    expect(emailCallbackSource).not.toContain('parseStateValue');
+    expect(emailCallbackSource).not.toContain('microsoftCredentialSource');
     expect(emailCallbackSource).not.toContain("getTenantSecret(stateData.tenant, 'microsoft_client_id')");
     expect(emailCallbackSource).not.toContain('process.env.MICROSOFT_CLIENT_ID');
 

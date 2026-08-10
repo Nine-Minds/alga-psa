@@ -15,6 +15,7 @@
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { MICROSOFT_TEAMS_APP_CLIENT_ID } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import {
   hasMicrosoftProfileCapability,
   normalizeMicrosoftProfileCapabilities,
@@ -131,6 +132,17 @@ export function isSameMicrosoftClientId(left: string | null | undefined, right: 
   return normalizeClientId(left).toLowerCase() === normalizeClientId(right).toLowerCase();
 }
 
+/**
+ * True when the client id belongs to the tenant-wide Teams application. The
+ * Teams app must never be treated as Email-eligible: it has no mailbox redirect
+ * URI and no Mail.Read grant, so offering it as an email issuer or backfilling
+ * an email provider onto it would hand the mailbox OAuth flow an app that
+ * cannot authorize.
+ */
+export function isMicrosoftTeamsAppClientId(value: string | null | undefined): boolean {
+  return isSameMicrosoftClientId(value, MICROSOFT_TEAMS_APP_CLIENT_ID);
+}
+
 function profileHasEmailCapability(profile: Pick<MicrosoftProfileRow, 'capabilities'>): boolean {
   return hasMicrosoftProfileCapability(normalizeMicrosoftProfileCapabilities(profile.capabilities), 'email');
 }
@@ -143,6 +155,7 @@ function isEligibleProfile(profile: MicrosoftProfileRow): boolean {
   return (
     !profile.is_archived &&
     profileHasEmailCapability(profile) &&
+    !isMicrosoftTeamsAppClientId(profile.client_id) &&
     Boolean(normalizeClientId(profile.client_id)) &&
     Boolean((profile.tenant_id || '').trim()) &&
     isConsentReady(profile)
@@ -243,6 +256,12 @@ async function resolveProfileIssuer(tenant: string, choice: MicrosoftEmailIssuer
     throw new MicrosoftEmailIssuerError(
       MICROSOFT_EMAIL_ISSUER_ERRORS.MISSING_EMAIL_CAPABILITY,
       'The selected Microsoft application is not enabled for Outlook email'
+    );
+  }
+  if (isMicrosoftTeamsAppClientId(profile.client_id)) {
+    throw new MicrosoftEmailIssuerError(
+      MICROSOFT_EMAIL_ISSUER_ERRORS.INVALID_CHOICE,
+      'The selected application is the Microsoft Teams app and cannot authorize mailboxes'
     );
   }
   if (!isConsentReady(profile)) {

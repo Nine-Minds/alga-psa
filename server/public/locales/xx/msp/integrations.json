@@ -1660,7 +1660,7 @@
             "description": "11111",
             "label": "11111",
             "reconnect": "11111",
-            "perProviderIssuerNote": "Existing mailbox connections keep their current Microsoft app until they are reconnected. This choice applies to new mailbox connections."
+            "perProviderIssuerNote": "11111"
           },
           "mspSso": {
             "description": "11111",
