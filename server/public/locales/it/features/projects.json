@@ -959,7 +959,17 @@
       "add_title": "Aggiungi colonna di stato",
       "select_placeholder": "Seleziona uno stato...",
       "all_in_use": "Tutti gli stati disponibili sono in uso",
-      "create_new": "Crea nuovo"
+      "create_new": "Crea nuovo",
+      "status_no_longer_exists": "Status no longer exists",
+      "missing_status": "Missing status",
+      "ambiguous_status": "Ambiguous historical status",
+      "replace_placeholder": "Select replacement status...",
+      "replace_status": "Replace status",
+      "replacing": "Replacing...",
+      "replaced": "Status column replaced",
+      "replace_failed": "Failed to replace status column",
+      "repair_status_columns": "Repair status columns",
+      "unresolved_apply_guard": "Status columns need repair ({{count}})"
     },
     "list": {
       "title": "Modelli di progetto",
@@ -1047,7 +1057,8 @@
         "all": "Copia tutte le assegnazioni"
       },
       "fixErrors": "Correggi i seguenti errori:",
-      "addStatus": "Aggiungi nuovo stato"
+      "addStatus": "Aggiungi nuovo stato",
+      "unresolved_guard": "This template has status columns that must be repaired before it can be applied."
     },
     "detail": {
       "description": "Descrizione:",
