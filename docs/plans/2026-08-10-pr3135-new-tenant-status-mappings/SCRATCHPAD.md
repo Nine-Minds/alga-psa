@@ -18,11 +18,12 @@
 - 2026-08-10: `server/migrations/20251211100001_seed_ad_to_m365_project_template.cjs` is the historical all-tenant seed migration. Its legacy rows are intentionally handled later by the typed backfill.
 - 2026-08-10: `server/seeds/dev/88_alice_wonderland_project_template.cjs` and application create/copy writers already emit typed mappings.
 - 2026-08-10: `package-lock.json` contains a pre-existing local change from `npm install`. Do not edit, restore, or stage it.
+- 2026-08-10: Local integration runs need the real DB passwords in the environment. The vitest fork cannot run `FileSystemSecretProvider` ("no dynamic import"), and the committed `.env.localtest` sets `DB_PASSWORD_ADMIN`/`DB_PASSWORD_SERVER` to literal `/run/secrets/<name>` paths, so `getSecret` falls back to those literal strings and postgres auth fails. Export the passwords from the gitignored `secrets/` dir as shown below.
 
 ## Commands / Runbooks
 
-- Focused integration test: `cd server && npx vitest run src/test/integration/onboardingAdToM365TemplateStatusMappings.integration.test.ts --coverage.enabled=false`
-- Optional related typed-mapping regression tests: `cd server && npx vitest run src/test/integration/projectTemplateStatusMappingsMigration.integration.test.ts src/test/integration/projectTemplateApplyStatusMappings.integration.test.ts --coverage.enabled=false`
+- Focused integration test: `cd server && DB_PASSWORD_ADMIN="$(cat ../secrets/postgres_password)" DB_PASSWORD_SERVER="$(cat ../secrets/db_password_server)" npx vitest run src/test/integration/onboardingAdToM365TemplateStatusMappings.integration.test.ts --coverage.enabled=false`
+- Optional related typed-mapping regression tests: `cd server && DB_PASSWORD_ADMIN="$(cat ../secrets/postgres_password)" DB_PASSWORD_SERVER="$(cat ../secrets/db_password_server)" npx vitest run src/test/integration/projectTemplateStatusMappingsMigration.integration.test.ts src/test/integration/projectTemplateApplyStatusMappings.integration.test.ts --coverage.enabled=false`
 - Validate plan JSON: `jq empty docs/plans/2026-08-10-pr3135-new-tenant-status-mappings/features.json docs/plans/2026-08-10-pr3135-new-tenant-status-mappings/tests.json`
 - Validate whitespace: `git diff --check`
 - Review intended implementation scope: `git diff -- ee/server/seeds/onboarding/psa/07_ad_to_m365_project_template.cjs server/src/test/integration/onboardingAdToM365TemplateStatusMappings.integration.test.ts docs/plans/2026-08-10-pr3135-new-tenant-status-mappings docs/plans/2026-08-10-pr3135-new-tenant-status-mappings-plan.md`
