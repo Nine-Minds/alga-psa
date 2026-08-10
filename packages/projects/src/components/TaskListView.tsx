@@ -33,6 +33,7 @@ import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { highlightSearchMatch } from '../lib/searchUtils';
 import { createFallbackStatus, FALLBACK_STATUS_MAPPING_ID, partitionStatusScope } from '../lib/statusScopeUtils';
 import { useTranslation } from 'react-i18next';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useTaskSelection } from './TaskSelectionContext';
@@ -285,6 +286,8 @@ export default function TaskListView({
   searchCaseSensitive = false
 }: TaskListViewProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  // toLocaleDateString() with no locale follows the browser, not the app.
+  const { formatDate } = useFormatters();
   const { money, symbol } = useCurrencyFormat();
   const { isSelected, toggleTask, setTasksSelected, selectedTaskIds } = useTaskSelection();
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
@@ -1453,7 +1456,7 @@ export default function TaskListView({
                                   </Tooltip>
                                 )}
                                 {phaseGroup.phase.completed_at && (
-                                  <Tooltip content={t('phases.completedOn', 'Completed {{date}}', { date: new Date(phaseGroup.phase.completed_at as string).toLocaleDateString() })}>
+                                  <Tooltip content={t('phases.completedOn', 'Completed {{date}}', { date: formatDate(new Date(phaseGroup.phase.completed_at as string), { dateStyle: 'medium' }) })}>
                                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                                   </Tooltip>
                                 )}

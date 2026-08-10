@@ -332,12 +332,22 @@ export function detectClientLocale(
 }
 
 /**
- * Format utilities for client-side use
+ * Format utilities for client-side use.
+ *
+ * Reads the locale optionally: a formatter must not crash the tree it renders
+ * in just because no provider is above it (drawers, print views and component
+ * tests all render outside one). Without a provider it falls back to the
+ * default locale, which at least stays deterministic rather than following
+ * whatever the browser happens to be set to. `locale` is returned so callers
+ * can pass it to module-scope helpers that have no hook of their own.
  */
 export function useFormatters() {
-  const { locale } = useI18n();
+  const context = useOptionalI18n();
+  const locale = context?.locale ?? (LOCALE_CONFIG.defaultLocale as SupportedLocale);
 
   return useMemo(() => ({
+    locale,
+
     formatDate: (
       date: Date | string,
       options?: Intl.DateTimeFormatOptions

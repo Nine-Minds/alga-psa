@@ -96,7 +96,7 @@ import {
     type TicketDetailLayout,
 } from '../../actions/ticketLayoutPreference';
 import TicketOriginBadge from '../TicketOriginBadge';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTicketLiveContext } from './TicketLiveProvider';
 import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
 import { getTicketOrigin } from '../../lib/ticketOrigin';
@@ -311,6 +311,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     disableAgentSchedule = false,
 }) => {
     const { t } = useTranslation('features/tickets');
+    // Hardcoded English, and a date that followed the browser's locale.
+    const { formatDate } = useFormatters();
     const ticketLive = useTicketLiveContext();
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
@@ -3300,8 +3302,10 @@ const handleClose = () => {
                                                 id={`${id}-auto-close-banner`}
                                                 className="flex-1 min-w-[260px] rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
                                             >
-                                                {`Will close automatically on ${new Date(autoCloseState.scheduled_close_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })} unless there's new activity.`}
-                                                {autoCloseState.warning_sent_at ? ' The customer has been warned.' : ''}
+                                                {t('details.autoClose', "Will close automatically on {{date}} unless there's new activity.", {
+                                                    date: formatDate(new Date(autoCloseState.scheduled_close_at), { year: 'numeric', month: 'long', day: 'numeric' }),
+                                                })}
+                                                {autoCloseState.warning_sent_at ? ` ${t('details.autoCloseWarned', 'The customer has been warned.')}` : ''}
                                             </div>
                                         )}
                                         {checklistSummary.requiredTotal > 0 && (

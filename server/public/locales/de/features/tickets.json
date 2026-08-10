@@ -31,7 +31,9 @@
     "skipDropped_one": "Überspringen ({{count}} Ticket wird verworfen)",
     "skipDropped_other": "Überspringen ({{count}} Tickets werden verworfen)",
     "createdSuccess_one": "{{count}} Ticket erfolgreich erstellt.",
-    "createdSuccess_other": "{{count}} Tickets erfolgreich erstellt."
+    "createdSuccess_other": "{{count}} Tickets erfolgreich erstellt.",
+    "rowLimitExceeded": "Zeilenlimit überschritten:",
+    "rowLimitDescription": "Ihre CSV-Datei hat {{original}} Zeilen, aber nur die ersten {{kept}} Zeilen werden importiert. Teilen Sie Ihre Datei in kleinere Batches auf."
   },
   "title": "Support-Tickets",
   "subtitle": "Zeigen und verwalten Sie Ihre Support-Tickets",
@@ -1350,7 +1352,9 @@
       "noChildren": "Keine Untertickets in diesem Bündel.",
       "addChildMultiClientMessage": "Dadurch wird {{ticket}} von einem anderen Kunden zum Bündel hinzugefügt. Bestätigen Sie, dass Sie fortfahren möchten.",
       "thisTicket": "dieses Ticket"
-    }
+    },
+    "autoClose": "Wird am {{date}} automatisch geschlossen, sofern keine neue Aktivität erfolgt.",
+    "autoCloseWarned": "Der Kunde wurde benachrichtigt."
   },
   "invalidTicketData": "Ungültige Ticketdaten",
   "timeEntries": {

@@ -31,7 +31,9 @@
     "skipDropped_one": "Ignorar (ticket {{count}} descartado)",
     "skipDropped_other": "Pular (tickets {{count}} descartados)",
     "createdSuccess_one": "Ticket {{count}} criado com sucesso.",
-    "createdSuccess_other": "Tickets {{count}} criados com sucesso."
+    "createdSuccess_other": "Tickets {{count}} criados com sucesso.",
+    "rowLimitExceeded": "Limite de linhas excedido:",
+    "rowLimitDescription": "Seu CSV possui linhas {{original}}, mas somente as primeiras linhas {{kept}} serão importadas. Divida seu arquivo em lotes menores para as linhas restantes."
   },
   "title": "Tickets de suporte",
   "subtitle": "Visualize e gerencie seus tickets de suporte",
@@ -1350,7 +1352,9 @@
       "noChildren": "Nenhum filho neste pacote.",
       "addChildMultiClientMessage": "Isso adicionará {{ticket}} de um cliente diferente ao pacote. Confirme que deseja continuar.",
       "thisTicket": "este ticket"
-    }
+    },
+    "autoClose": "Será fechado automaticamente em {{date}}, a menos que haja nova atividade.",
+    "autoCloseWarned": "O cliente foi avisado."
   },
   "invalidTicketData": "Dados de ticket inválidos",
   "timeEntries": {

@@ -85,6 +85,7 @@ import {
   isTaskRichTextEmpty,
 } from '../lib/taskRichText';
 import { useTranslation } from 'react-i18next';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import checklistDnd from './ChecklistDragDrop.module.css';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
@@ -137,6 +138,8 @@ export default function TaskForm({
   printTitle,
 }: TaskFormProps): React.JSX.Element {
   const { t } = useTranslation(['features/projects', 'common']);
+  // Read 'en-US' outright, so it stayed American in every locale.
+  const { formatDate } = useFormatters();
   const { enabled: projectBillingUiEnabled } = useFeatureFlag('project-billing-ui', { defaultValue: false });
   const billingIntegration = useProjectBillingIntegration();
   const { createDocumentAssociations, deleteDocument, removeDocumentAssociations } = useDocumentsCrossFeature();
@@ -1821,7 +1824,7 @@ export default function TaskForm({
               <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('createdAtLabel', 'Created At')}</label>
               {mode === 'edit' && task ? (
                 <div className="p-2 bg-gray-50 border border-gray-200 rounded-md text-gray-700">
-                  {new Date(task.created_at).toLocaleDateString('en-US', {
+                  {formatDate(new Date(task.created_at), {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',

@@ -9,6 +9,7 @@ import TaskFormSkeleton from '@alga-psa/ui/components/skeletons/TaskFormSkeleton
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { PrintableDetailHeader, type PrintableDetailField } from '@alga-psa/ui/components/PrintableDetailHeader';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { extractTaskDescriptionText } from '../lib/taskRichText';
 
 // Dynamic import for TaskForm
@@ -43,6 +44,8 @@ export default function TaskEdit({
   onCommentCountChange
 }: TaskEditProps): React.JSX.Element {
   const { t } = useTranslation('projects');
+  // toLocaleDateString() with no locale follows the browser, not the app.
+  const { formatDate } = useFormatters();
   const [selectedPhaseStatuses, setSelectedPhaseStatuses] = useState<ProjectStatus[]>(initialStatuses || []);
 
   // If caller didn't provide statuses (e.g., opened from user activities drawer),
@@ -100,7 +103,7 @@ export default function TaskEdit({
         { label: t('projectPrint.tasks.fields.phase', { defaultValue: 'Phase' }), value: phase?.phase_name },
         { label: t('projectPrint.tasks.fields.status', { defaultValue: 'Status' }), value: status?.custom_name || status?.name },
         { label: t('projectPrint.tasks.fields.assignee', { defaultValue: 'Assignee' }), value: assignedToName },
-        { label: t('projectPrint.tasks.fields.dueDate', { defaultValue: 'Due Date' }), value: task.due_date ? new Date(task.due_date).toLocaleDateString() : undefined },
+        { label: t('projectPrint.tasks.fields.dueDate', { defaultValue: 'Due Date' }), value: task.due_date ? formatDate(new Date(task.due_date), { dateStyle: 'medium' }) : undefined },
         { label: t('projectPrint.tasks.fields.estimatedHours', { defaultValue: 'Estimated Hours' }), value: task.estimated_hours ? `${task.estimated_hours}h` : undefined },
         { label: t('projectPrint.tasks.fields.wbsCode', { defaultValue: 'WBS Code' }), value: task.wbs_code },
         { label: t('projectPrint.tasks.fields.description', { defaultValue: 'Description' }), value: descriptionText },

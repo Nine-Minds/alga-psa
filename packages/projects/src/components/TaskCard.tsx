@@ -28,6 +28,7 @@ import styles from './ProjectDetail.module.css';
 import { highlightSearchMatch } from '../lib/searchUtils';
 import { calculateZoomScales } from './KanbanZoomControl';
 import { useTranslation } from 'react-i18next';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTaskSelection } from './TaskSelectionContext';
 
 interface TaskCardProps {
@@ -107,6 +108,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   teamAvatarUrls = {},
 }) => {
   const { t } = useTranslation(['features/projects', 'common']);
+  // toLocaleDateString() with no locale follows the browser, not the app.
+  const { formatDate } = useFormatters();
   const { isSelected, toggleTask, selectedTaskIds } = useTaskSelection();
   const selected = isSelected(task.task_id);
   // Use data from props — parent (StatusColumn) always provides arrays from batch-loaded data
@@ -501,7 +504,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       <div className={`flex items-center justify-between ${zoomScales.metaSize} text-gray-500`}>
         <div className="flex items-center gap-2">
           {task.due_date ? (
-            <>{zoomLevel > 30 && `${t('projectDetail.dueLabel', 'Due')}: `}<span className='bg-primary-100 p-1 rounded-md'>{new Date(task.due_date).toLocaleDateString()}</span></>
+            <>{zoomLevel > 30 && `${t('projectDetail.dueLabel', 'Due')}: `}<span className='bg-primary-100 p-1 rounded-md'>{formatDate(new Date(task.due_date), { dateStyle: 'medium' })}</span></>
           ) : (
             zoomLevel > 30 && <>{t('projectDetail.noDueDate', 'No due date')}</>
           )}

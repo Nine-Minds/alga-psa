@@ -31,7 +31,9 @@
     "skipDropped_one": "Overslaan ({{count}} ticket vervalt)",
     "skipDropped_other": "Overslaan ({{count}} tickets vervallen)",
     "createdSuccess_one": "{{count}} ticket succesvol aangemaakt.",
-    "createdSuccess_other": "{{count}} tickets succesvol aangemaakt."
+    "createdSuccess_other": "{{count}} tickets succesvol aangemaakt.",
+    "rowLimitExceeded": "Rijlimiet overschreden:",
+    "rowLimitDescription": "Uw CSV heeft {{original}} rijen, maar alleen de eerste {{kept}} worden geïmporteerd. Splits het bestand in kleinere batches voor de overige rijen."
   },
   "title": "Supporttickets",
   "subtitle": "Bekijk en beheer uw supporttickets",
@@ -1350,7 +1352,9 @@
       "noChildren": "Geen onderliggende tickets in deze bundel.",
       "addChildMultiClientMessage": "Hiermee wordt {{ticket}} van een andere klant aan de bundel toegevoegd. Bevestig dat u wilt doorgaan.",
       "thisTicket": "dit ticket"
-    }
+    },
+    "autoClose": "Wordt automatisch gesloten op {{date}}, tenzij er nieuwe activiteit is.",
+    "autoCloseWarned": "De klant is gewaarschuwd."
   },
   "invalidTicketData": "Ongeldige ticketgegevens",
   "timeEntries": {
