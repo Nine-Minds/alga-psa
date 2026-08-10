@@ -58,6 +58,36 @@ async function verifySignedState(state: string): Promise<MicrosoftEmailOAuthStat
   return validateMicrosoftEmailOAuthState({ token: state, secret: signingSecret });
 }
 
+/**
+ * Load the provider row (plus its persisted refresh-token flag) that the state
+ * names, exactly as the relationship guard needs it. Used by both the success
+ * path and the guarded error path; returns `null` when the state names no
+ * provider or the row is absent.
+ */
+async function loadStateProviderRow(stateContext: CallbackStateContext) {
+  if (!stateContext.providerId || !stateContext.tenant) return null;
+  const db = tenantDb(
+    (await createTenantKnex()).knex,
+    stateContext.tenant
+  );
+  const providerRow = await db.table('email_providers')
+    .where('id', stateContext.providerId)
+    .select('id', 'tenant', 'provider_type', 'status')
+    .first();
+  if (!providerRow) return null;
+  const configRow = await db.table('microsoft_email_provider_config')
+    .where('email_provider_id', stateContext.providerId)
+    .select('refresh_token')
+    .first();
+  return {
+    id: providerRow.id,
+    tenant: providerRow.tenant,
+    provider_type: providerRow.provider_type,
+    status: providerRow.status,
+    refresh_token: configRow?.refresh_token ?? null,
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -155,19 +185,109 @@ export async function GET(request: NextRequest) {
 
     // Handle OAuth errors. Microsoft rejected the authorization before any
     // token exchange. We may attribute the failure to a provider only when the
-    // echoed state is one of our signed tokens; an unverifiable state is
-    // ignored and never causes a provider status write.
+    // echoed state is one of our signed tokens AND every relationship the state
+    // asserts still holds — the same guard chain as the success path: single-use
+    // nonce, session ownership, purpose, provider existence/tenant/type, and
+    // issuer readiness. A forged, replayed, or mismatched error callback must
+    // change nothing.
     if (error) {
       const errorPayload = state ? await verifySignedState(state) : null;
-      if (errorPayload?.providerId) {
-        try {
-          await persistProviderError(
-            { tenant: errorPayload.tenant, providerId: errorPayload.providerId },
-            error,
-            errorDescription || ''
-          );
-        } catch (persistError: any) {
-          console.warn('⚠️ Failed to persist Microsoft OAuth error:', persistError?.message || persistError);
+
+      // An error callback that echoes unsigned or tampered state is rejected
+      // outright — the same no-dual-acceptance rule as the success path. It
+      // must never be attributed to a provider.
+      if (state && !errorPayload) {
+        console.error('[MS OAuth] OAuth error callback rejected: unsigned or tampered state', {
+          error,
+          hasState: Boolean(state),
+        });
+        return respondWithPostMessage({
+          type: 'oauth-callback',
+          provider: 'microsoft',
+          success: false,
+          error: MICROSOFT_EMAIL_ISSUER_ERRORS.INVALID_STATE,
+          errorDescription: 'This Microsoft authorization request is invalid or tampered with. Start again from the mailbox form.'
+        });
+      }
+
+      if (errorPayload) {
+        // Single-use: consume the nonce so neither this nor a replayed error
+        // callback can ever be attributed again (and the state can never be
+        // reused for a later success).
+        const consumed = await consumeMicrosoftEmailOAuthNonce(errorPayload.nonce);
+
+        if (consumed) {
+          const errorContext: CallbackStateContext = {
+            tenant: errorPayload.tenant,
+            providerId: errorPayload.providerId,
+          };
+
+          let stateProvider: Awaited<ReturnType<typeof loadStateProviderRow>> = null;
+          if (errorPayload.providerId) {
+            try {
+              stateProvider = await runWithTenant(errorPayload.tenant, () =>
+                loadStateProviderRow(errorContext)
+              );
+            } catch (providerError: any) {
+              console.error('[MS OAuth] Failed to load state provider for error-callback verification', {
+                providerId: errorPayload.providerId,
+                error: providerError?.message || String(providerError),
+              });
+              stateProvider = null;
+            }
+          }
+
+          const guard = verifyMicrosoftEmailOAuthStateRelationships({
+            payload: errorPayload,
+            sessionUser: await getCurrentUser(),
+            provider: stateProvider,
+          });
+
+          // Issuer readiness is part of the guard: an app that can no longer
+          // authorize mailboxes makes this callback "mismatched", so it must
+          // not change the provider.
+          let issuerReady = false;
+          if (guard.ok && errorContext.tenant) {
+            try {
+              await resolveMicrosoftEmailIssuerChoice(errorContext.tenant, {
+                kind: errorPayload.issuerKind,
+                profileId: errorPayload.issuerProfileId,
+                clientId: errorPayload.clientId,
+              });
+              issuerReady = true;
+            } catch (issuerError: any) {
+              console.error('[MS OAuth] OAuth error callback issuer revalidation failed', {
+                code: issuerError instanceof MicrosoftEmailIssuerError ? issuerError.code : 'unknown',
+              });
+              issuerReady = false;
+            }
+          }
+
+          if (guard.ok && issuerReady && errorPayload.providerId) {
+            try {
+              await persistProviderError(
+                { tenant: errorPayload.tenant, providerId: errorPayload.providerId },
+                error,
+                errorDescription || ''
+              );
+            } catch (persistError: any) {
+              console.warn('⚠️ Failed to persist Microsoft OAuth error:', persistError?.message || persistError);
+            }
+          } else {
+            console.error('[MS OAuth] OAuth error callback rejected before any provider mutation', {
+              guardCode: guard.ok ? undefined : guard.code,
+              issuerReady,
+              purpose: errorPayload.purpose,
+              providerId: errorPayload.providerId,
+            });
+          }
+        } else {
+          // A replayed error callback: the nonce was already consumed by an
+          // earlier callback. Never attribute it.
+          console.error('[MS OAuth] Replayed OAuth error callback ignored', {
+            nonce: errorPayload.nonce,
+            providerId: errorPayload.providerId,
+          });
         }
       }
 
@@ -272,36 +392,13 @@ export async function GET(request: NextRequest) {
     // proves the token was issued by us; ownership, provider binding, and
     // purpose semantics must each be verified before any credential write.
     {
-      let stateProvider: {
-        id: string;
-        tenant: string;
-        provider_type: string;
-        status?: string | null;
-        refresh_token?: string | null;
-      } | null = null;
+      let stateProvider: Awaited<ReturnType<typeof loadStateProviderRow>> = null;
 
       if (signedPayload.providerId) {
         try {
-          stateProvider = await runWithTenant(stateContext.tenant!, async () => {
-            const { knex } = await createTenantKnex();
-            const db = tenantDb(knex, stateContext.tenant!);
-            const providerRow = await db.table('email_providers')
-              .where('id', signedPayload.providerId)
-              .select('id', 'tenant', 'provider_type', 'status')
-              .first();
-            if (!providerRow) return null;
-            const configRow = await db.table('microsoft_email_provider_config')
-              .where('email_provider_id', signedPayload.providerId)
-              .select('refresh_token')
-              .first();
-            return {
-              id: providerRow.id,
-              tenant: providerRow.tenant,
-              provider_type: providerRow.provider_type,
-              status: providerRow.status,
-              refresh_token: configRow?.refresh_token ?? null,
-            };
-          });
+          stateProvider = await runWithTenant(stateContext.tenant!, () =>
+            loadStateProviderRow(stateContext)
+          );
         } catch (providerError: any) {
           console.error('[MS OAuth] Failed to load state provider for verification', {
             providerId: signedPayload.providerId,
@@ -635,12 +732,12 @@ export async function GET(request: NextRequest) {
             });
           });
         } catch (persistErr: any) {
-          console.warn('⚠️ Failed to persist Microsoft OAuth tokens or initialize webhook:', persistErr?.message || persistErr);
-          try {
-            await persistProviderError(stateContext, 'token_persistence_failed', persistErr?.message || 'Failed to persist Microsoft OAuth tokens or initialize webhook');
-          } catch (providerErrorPersistErr: any) {
-            console.warn('⚠️ Failed to persist Microsoft OAuth token persistence error:', providerErrorPersistErr?.message || providerErrorPersistErr);
-          }
+          // `persistMicrosoftEmailOAuthResult` already compensated the Graph
+          // side and restored the provider to its prior connected/polling
+          // snapshot before throwing. Do NOT mark the provider `error` here —
+          // that would clobber the restored state and take a working mailbox
+          // offline. The user still sees the failed callback.
+          console.warn('⚠️ Failed to persist Microsoft OAuth tokens or initialize webhook (provider restored to its prior state):', persistErr?.message || persistErr);
           return respondWithPostMessage({
             type: 'oauth-callback',
             provider: 'microsoft',

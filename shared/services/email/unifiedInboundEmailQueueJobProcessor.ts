@@ -288,7 +288,9 @@ async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): P
       db.raw('mc.token_expires_at as mc_token_expires_at'),
       db.raw('mc.webhook_subscription_id as mc_webhook_subscription_id'),
       db.raw('mc.webhook_expires_at as mc_webhook_expires_at'),
-      db.raw('mc.folder_filters as mc_folder_filters')
+      db.raw('mc.folder_filters as mc_folder_filters'),
+      db.raw('mc.microsoft_profile_id as mc_microsoft_profile_id'),
+      db.raw('mc.client_secret_ref as mc_client_secret_ref')
     )) as any;
 
   if (!row) {
@@ -330,6 +332,12 @@ async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): P
       access_token: (row as any).mc_access_token,
       refresh_token: (row as any).mc_refresh_token,
       token_expires_at: (row as any).mc_token_expires_at,
+      // The persisted profile pin is authoritative for which app issued the
+      // refresh token. Propagate it so buildMicrosoftEmailProviderConfig
+      // resolves ONLY through the pinned profile and fails closed when the
+      // pin is unresolvable — never silently falls back to the Email binding.
+      microsoft_profile_id: (row as any).mc_microsoft_profile_id ?? null,
+      client_secret_ref: (row as any).mc_client_secret_ref ?? null,
     },
   } as any);
 }
