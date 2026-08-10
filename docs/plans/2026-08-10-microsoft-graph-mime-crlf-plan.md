@@ -193,8 +193,9 @@ Run from the repository root:
 4. Package build:
    `npm -w packages/email run build`
 5. Relevant unchanged adapter contract test, if the shared package suite is not
-   already part of CI:
-   `npx vitest run shared/services/email/providers/__tests__/MicrosoftGraphAdapter.sendMail.test.ts`
+   already part of CI (run from the `shared` directory so the shared Vitest
+   config is picked up):
+   `npx vitest run services/email/providers/__tests__/MicrosoftGraphAdapter.sendMail.test.ts`
 
 The SMTP sink cannot reproduce this defect because SMTP transports normalize
 line endings and therefore mask the invalid MIME producer. The current
