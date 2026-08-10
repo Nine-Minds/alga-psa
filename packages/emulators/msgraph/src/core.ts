@@ -243,7 +243,7 @@ const DEFAULT_BOT_CONFIG: BotConfig = {
  * expires access tokens and subscriptions exactly like real elapsed time.
  */
 export class MsGraphCore implements EmulatorCore {
-  private readonly clients = new Map<string, string>();
+  private readonly clients = new Map<string, { secret: string; appRoles: string[] }>();
   private readonly codes = new Map<string, {
     clientId: string;
     redirectUri: string;
@@ -310,8 +310,13 @@ export class MsGraphCore implements EmulatorCore {
 
   // --- OAuth ---
 
-  registerClient(clientId: string, clientSecret: string): void {
-    this.clients.set(clientId, clientSecret);
+  /**
+   * `appRoles` are the admin-consented application permissions Entra stamps
+   * into the `roles` claim of an app-only token. Empty (the default) emulates
+   * an app registration whose permissions were never consented.
+   */
+  registerClient(clientId: string, clientSecret: string, appRoles: string[] = []): void {
+    this.clients.set(clientId, { secret: clientSecret, appRoles: [...appRoles] });
   }
 
   authorize(clientId: string, redirectUri: string, input?: { nonce?: string; scope?: string }): string {
@@ -331,7 +336,7 @@ export class MsGraphCore implements EmulatorCore {
     token_type: 'Bearer';
     id_token?: string;
   } {
-    if (this.clients.get(String(input.client_id)) !== String(input.client_secret)) {
+    if (this.clients.get(String(input.client_id))?.secret !== String(input.client_secret)) {
       throw new GraphApiError(401, { error: 'invalid_client' });
     }
     if (input.grant_type === 'authorization_code') {
@@ -359,7 +364,7 @@ export class MsGraphCore implements EmulatorCore {
       const { refresh_token: issuedRefreshToken, ...appOnly } = this.issueTokens(
         String(input.client_id),
         undefined,
-        { scope: input.scope || 'https://graph.microsoft.com/.default' },
+        { scope: input.scope || 'https://graph.microsoft.com/.default', appOnly: true },
       );
       this.refreshTokens.delete(issuedRefreshToken);
       return appOnly;
@@ -376,13 +381,18 @@ export class MsGraphCore implements EmulatorCore {
   private issueTokens(
     clientId: string,
     existingRefreshToken?: string,
-    claims?: { nonce?: string; scope?: string }
+    claims?: { nonce?: string; scope?: string; appOnly?: boolean }
   ) {
     const tenantId = EMULATED_TENANT_ID;
+    // App-only tokens carry the consented application permissions in `roles`
+    // and no `scp`; delegated tokens are the other way round. Setup probes
+    // read `roles` straight off the token, exactly as Entra issues it.
     const accessToken = this.encodeJwt({
       tid: tenantId,
       iss: `https://login.microsoftonline.com/${tenantId}/v2.0`,
-      scp: claims?.scope || 'Mail.Read Mail.Read.Shared offline_access',
+      ...(claims?.appOnly
+        ? { roles: this.clients.get(clientId)?.appRoles ?? [] }
+        : { scp: claims?.scope || 'Mail.Read Mail.Read.Shared offline_access' }),
       aud: '00000003-0000-0000-c000-000000000000',
       exp: Math.floor((this.nowMs() + this.accessTokenTtlSeconds * 1000) / 1000),
     });

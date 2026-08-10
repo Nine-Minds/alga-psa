@@ -21,11 +21,16 @@ const directoryUserParams = {
 export function register(reg: ControlRegistry, core: MsGraphCore): void {
   reg.seeder({
     name: 'client',
-    description: 'Register an OAuth client id/secret pair',
-    params: z.object({ clientId: z.string(), clientSecret: z.string() }),
-    run: ({ clientId, clientSecret }) => {
-      core.registerClient(clientId, clientSecret);
-      return { clientId };
+    description:
+      'Register an OAuth client id/secret pair, optionally with the admin-consented application permissions its app-only tokens carry in "roles"',
+    params: z.object({
+      clientId: z.string(),
+      clientSecret: z.string(),
+      appRoles: z.array(z.string()).optional(),
+    }),
+    run: ({ clientId, clientSecret, appRoles }) => {
+      core.registerClient(clientId, clientSecret, appRoles ?? []);
+      return { clientId, appRoles: appRoles ?? [] };
     },
   });
 

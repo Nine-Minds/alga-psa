@@ -447,6 +447,54 @@ describe('msgraph emulator', { shuffle: false }, () => {
     });
   });
 
+  it('stamps consented application permissions into app-only tokens', async () => {
+    const seeded = await controlPost('/control/msgraph/seed/client', {
+      clientId: 'teams-graph-app',
+      clientSecret: 'teams-graph-secret',
+      appRoles: ['TeamsActivity.Send', 'User.Read.All'],
+    });
+    expect(seeded.ok).toBe(true);
+
+    const claimsOf = (token: string) =>
+      JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
+
+    const consented = await (
+      await fetch(
+        `${base}/common/oauth2/v2.0/token`,
+        form({
+          client_id: 'teams-graph-app',
+          client_secret: 'teams-graph-secret',
+          grant_type: 'client_credentials',
+          scope: 'https://graph.microsoft.com/.default',
+        }),
+      )
+    ).json();
+    // Entra puts admin-consented application permissions in `roles` (never
+    // `scp`) on app-only tokens; the Teams setup probe reads them from there.
+    expect(claimsOf(consented.access_token)).toMatchObject({
+      roles: ['TeamsActivity.Send', 'User.Read.All'],
+    });
+    expect(claimsOf(consented.access_token).scp).toBeUndefined();
+
+    // A client seeded without consent gets an empty roles claim.
+    const unconsented = await (
+      await fetch(
+        `${base}/common/oauth2/v2.0/token`,
+        form({
+          client_id: 'premise-app',
+          client_secret: 'premise-secret',
+          grant_type: 'client_credentials',
+          scope: 'https://graph.microsoft.com/.default',
+        }),
+      )
+    ).json();
+    expect(claimsOf(unconsented.access_token).roles).toEqual([]);
+
+    // Delegated tokens are the other way round.
+    expect(claimsOf(accessToken).scp).toBeTruthy();
+    expect(claimsOf(accessToken).roles).toBeUndefined();
+  });
+
   it('records activity notifications and serves teams, channels, and chats', async () => {
     const headers = { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' };
 
