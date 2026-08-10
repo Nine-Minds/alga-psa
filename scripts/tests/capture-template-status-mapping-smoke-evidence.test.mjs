@@ -453,17 +453,18 @@ function runInit(bundleDir, extraArgs = [], env = {}) {
 }
 
 // Drive commandInit through the module-load-only concurrent-creator injection
-// seam (opts.testConcurrentCreator), which the CLI entry path can never set.
-// The bootstrap loads the harness as a library so the seam is reachable while
-// the rejection/exit behavior stays observable as a black box.
+// seam (the second testHooks argument, which the CLI entry path can never
+// supply), so the seam is reachable while the rejection/exit behavior stays
+// observable as a black box.
 function runInitWithInjection(bundleDir, filename) {
   const scriptPath = path.join(WORKTREE, 'scripts', 'capture-template-status-mapping-smoke-evidence.mjs');
   const moduleUrl = pathToFileURL(scriptPath).href;
   const bootstrap = [
     `import { commandInit } from ${JSON.stringify(moduleUrl)};`,
     'const opts = { bundle: process.argv[1] };',
-    'if (process.argv[2] !== undefined) { opts.testConcurrentCreator = process.argv[2]; }',
-    'commandInit(opts);',
+    'const testHooks = {};',
+    'if (process.argv[2] !== undefined) { testHooks.concurrentCreatorFilename = process.argv[2]; }',
+    'commandInit(opts, testHooks);',
   ].join('\n');
   return spawnSync(process.execPath, ['--input-type=module', '-e', bootstrap, bundleDir, filename], {
     cwd: WORKTREE,
@@ -823,4 +824,20 @@ test('SMOKE_TEST_INJECT_CONCURRENT_BUNDLE is inert in normal CLI execution', () 
   assert.doesNotMatch(result.stderr, /bundle directory already exists/, 'the env var must not pre-create the bundle directory');
   assert.equal(fs.existsSync(escapeTarget), false, 'the malicious env value must not write outside the bundle directory');
   assert.equal(fs.existsSync(bundleDir), false, 'a harness-created bundle must be cleaned up on init failure');
+});
+
+test('the test-concurrent-creator CLI flag cannot reach the injection seam', () => {
+  const parentDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cliflag-parent-'));
+  const bundleDir = path.join(parentDir, 'cliflag-bundle');
+
+  const withFlag = runInit(bundleDir, ['--test-concurrent-creator=evil.txt', '--db-port', '1']);
+  const withoutFlag = runInit(bundleDir, ['--db-port', '1']);
+
+  assert.notEqual(withFlag.status, 0, `expected nonzero exit; stderr: ${withFlag.stderr}`);
+  assert.doesNotMatch(withFlag.stderr, /bundle directory already exists/, 'the CLI flag must not pre-create the bundle directory');
+  assert.equal(fs.existsSync(path.join(bundleDir, 'evil.txt')), false, 'no sentinel file may be created from a CLI flag');
+  assert.equal(fs.existsSync(bundleDir), false, 'a harness-created bundle must be cleaned up on init failure');
+  assert.equal(withFlag.status, withoutFlag.status, 'the flag must not change the exit code');
+  assert.equal(withFlag.stdout, withoutFlag.stdout, 'the flag must not change the stdout');
+  assert.equal(withFlag.stderr, withoutFlag.stderr, 'the flag must not change the stderr');
 });

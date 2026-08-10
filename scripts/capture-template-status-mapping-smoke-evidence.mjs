@@ -1510,9 +1510,11 @@ function appendStepLog(state, entry) {
 
 /**
  * Test-only concurrent-creator injection seam. Reachable only when this module
- * is loaded and `commandInit` is called directly with a `testConcurrentCreator`
- * option — the CLI entry path never sets it and no environment variable is
- * consulted, so normal production execution has no injection surface.
+ * is loaded and `commandInit` is called directly with a `concurrentCreatorFilename`
+ * in its second `testHooks` argument. The CLI entry path (`main`) never supplies
+ * that argument and no environment variable is consulted, so no CLI flag name
+ * and no env value can ever reach this seam — normal production execution has
+ * no injection surface.
  *
  * Simulates a racing creator that creates the bundle directory between parent
  * preparation and the exclusive mkdir in `commandInit`, writing a `KEEP`
@@ -1542,12 +1544,19 @@ function injectTestConcurrentBundle(bundleDir, filename) {
   }
 }
 
-export function commandInit(opts) {
+/**
+ * @param {object} opts CLI/API options for the init command.
+ * @param {object} [testHooks] Test-only hooks. `main` never passes this
+ *   argument, so no CLI flag name can collide with it.
+ * @param {string} [testHooks.concurrentCreatorFilename] See
+ *   {@link injectTestConcurrentBundle}.
+ */
+export function commandInit(opts, testHooks = {}) {
   const root = REPO_ROOT;
   const bundleDir = loadOrCreateBundleDir(opts);
   currentInitContext = { bundleDir, db: null, opts, seeded: false, validTemplateId: null, createdBundleDir: false };
   fs.mkdirSync(path.dirname(bundleDir), { recursive: true });
-  injectTestConcurrentBundle(bundleDir, opts.testConcurrentCreator);
+  injectTestConcurrentBundle(bundleDir, testHooks.concurrentCreatorFilename);
   try {
     fs.mkdirSync(bundleDir);
   } catch (error) {
