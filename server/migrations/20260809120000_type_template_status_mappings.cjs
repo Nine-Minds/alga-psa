@@ -280,14 +280,26 @@ exports.up = async function up(knex) {
 };
 
 exports.down = async function down(knex) {
-  // Loss-aware collapse: move every typed or unresolved UUID back into
-  // status_id before dropping the typed columns so no evidence is discarded.
-  await knex.raw(`
-    UPDATE project_template_status_mappings
-    SET status_id = COALESCE(status_id, standard_status_id, unresolved_status_id)
-    WHERE standard_status_id IS NOT NULL OR unresolved_status_id IS NOT NULL
-  `);
+  const onCitus = await knex.raw(
+    "SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'citus') AS enabled"
+  );
+  if (onCitus.rows?.[0]?.enabled) {
+    // The rewrite below is a multi-shard UPDATE (and the DDL around it touches
+    // distributed tables), so propagate one shard at a time like up() and the
+    // standard-statuses migration do.
+    await knex.raw("SET citus.multi_shard_modify_mode TO 'sequential'");
+  }
 
+  if (!(await knex.schema.hasTable('project_template_status_mappings'))) {
+    return;
+  }
+
+  // Remove every guard that would reject the legacy rewrite before it runs: the
+  // status_source and variant-shape CHECKs, both foreign keys, and the helper
+  // indexes. The tenant-status FK rejects standard-catalog and quarantined UUIDs
+  // (the exact 23503 failure class this migration exists to fix), so it must be
+  // gone before any typed UUID moves back into status_id. All drops are
+  // defensive so a partially-applied state self-heals on re-run.
   for (const fk of FKS) {
     await knex.raw(
       `ALTER TABLE project_template_status_mappings DROP CONSTRAINT IF EXISTS "${fk.name}"`
@@ -300,6 +312,18 @@ exports.down = async function down(knex) {
   }
   for (const [name] of INDEXES) {
     await knex.raw(`DROP INDEX IF EXISTS "${name}"`);
+  }
+
+  // Loss-aware collapse: move every typed or unresolved UUID back into
+  // status_id before dropping the typed columns so no evidence is discarded.
+  // Guarded by column presence so a table already in legacy shape (or one whose
+  // earlier rollback was interrupted) is a no-op rather than an error.
+  if (await tableHasAnyColumn(knex)) {
+    await knex.raw(`
+      UPDATE project_template_status_mappings
+      SET status_id = COALESCE(status_id, standard_status_id, unresolved_status_id)
+      WHERE standard_status_id IS NOT NULL OR unresolved_status_id IS NOT NULL
+    `);
   }
 
   for (const column of COLUMNS) {
