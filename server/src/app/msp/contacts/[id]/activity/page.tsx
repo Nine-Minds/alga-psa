@@ -7,16 +7,25 @@ import ContactActivityFeed from './ContactActivityFeed';
 const getCachedContact = cache((id: string) => getContactByContactNameId(id));
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
   try {
     const { id } = await params;
     const contact = await getCachedContact(id);
     if (contact) {
-      return { title: `${contact.full_name} - Activity` };
+      return {
+        title: t('msp.contacts.detail.activity.title', {
+          contactName: contact.full_name,
+          defaultValue: '{{contactName}} - Activity',
+        }),
+      };
     }
   } catch (error) {
     console.error('[generateMetadata] Failed to fetch contact title:', error);
   }
-  return { title: 'Contact Activity' };
+  return {
+    title: t('msp.contacts.detail.activity.fallbackTitle', { defaultValue: 'Contact Activity' }),
+  };
 }
 
 export default async function ContactActivityPage({ params }: { params: Promise<{ id: string }> }) {

@@ -386,5 +386,13 @@
   "hud": {
     "combinations": "Kombinationen",
     "thenPress": "dann…"
+  },
+  "vim": {
+    "visualRowRange": "Sichtbaren Zeilenbereich auswählen",
+    "macro": {
+      "recording": "Aufzeichnung @{{register}}",
+      "recordPrompt": "Makro aufzeichnen: Register drücken",
+      "playPrompt": "Makro abspielen: Register drücken"
+    }
   }
 }

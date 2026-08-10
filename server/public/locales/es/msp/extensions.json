@@ -346,5 +346,30 @@
     "scopeToOneInstall": "Limitar a una instalación",
     "overrideTenantContext": "Anular contexto de tenant",
     "matchRequestId": "Coincidir x-request-id / context.request_id"
+  },
+  "permissions": {
+    "categoryHeadings": {
+      "storage": "Permisos de almacenamiento",
+      "ui": "Permisos de interfaz",
+      "data": "Permisos de datos",
+      "api": "Permisos de API",
+      "system": "Permisos del sistema",
+      "other": "Otros permisos"
+    },
+    "access": {
+      "low": "Acceso de solo lectura",
+      "medium": "Acceso de modificación",
+      "high": "Acceso avanzado"
+    },
+    "severity": {
+      "low": "Bajo",
+      "medium": "Medio",
+      "high": "Alto"
+    },
+    "legend": {
+      "low": "Los permisos de solo lectura permiten que la extensión vea los datos, pero no los modifique.",
+      "medium": "Los permisos de modificación permiten que la extensión actualice datos existentes.",
+      "high": "Los permisos avanzados permiten que la extensión cree, elimine o ejecute operaciones."
+    }
   }
 }

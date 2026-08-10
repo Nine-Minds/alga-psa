@@ -30,7 +30,10 @@
     "loadingTeam": "Cargando configuración del equipo...",
     "loadingExperimental": "Cargando configuración de funciones experimentales...",
     "loadingInteractions": "Cargando configuración de interacciones...",
-    "keyboardShortcuts": "Atajos de teclado"
+    "keyboardShortcuts": "Atajos de teclado",
+    "opportunities": "Oportunidades",
+    "mcpServer": "Servidor MCP",
+    "settingsFallback": "Configuración"
   },
   "unsavedChanges": {
     "title": "Cambios sin guardar",

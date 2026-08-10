@@ -1216,6 +1216,15 @@
       "noFields": "Brak pól",
       "copyAllPaths": "Kopiuj wszystkie ścieżki",
       "copyAllFieldPaths": "Kopiuj wszystkie ścieżki pól"
+    },
+    "logoAlt": "Logo edytora workflow",
+    "nodes": {
+      "action": "Akcja:",
+      "process": "Proces:",
+      "clientId": "Identyfikator klienta:",
+      "clientSecret": "Klucz tajny klienta:",
+      "tenantId": "Identyfikator organizacji:",
+      "userEmail": "Adres e-mail użytkownika:"
     }
   },
   "actionInputFieldInfo": {
@@ -1476,7 +1485,9 @@
     "insertReferenceHeading": "Wstaw referencję do workflow",
     "errors": {
       "noCodeBlock": "Nie można wstawiać referencji wewnątrz bloków kodu. Proszę przenieść kursor do innego bloku i spróbować ponownie."
-    }
+    },
+    "placeholder": "Napisz tekst w formacie Markdown…",
+    "referenceHint": "Odwołania są wyświetlane jako wstawki w tekście i zapisywane jako węzły odwołań bezpieczne dla workflow."
   },
   "referenceSelector": {
     "placeholders": {
@@ -2649,5 +2660,25 @@
         "selectPriority": "Wybierz lub wprowadź priorytet"
       }
     }
+  },
+  "toggle": {
+    "disableTitle": "Wyłącz workflow",
+    "enableTitle": "Włącz workflow",
+    "confirmDisable": "Czy na pewno chcesz wyłączyć ten workflow?",
+    "confirmEnable": "Czy na pewno chcesz włączyć ten workflow?"
+  },
+  "mappingEditor": {
+    "error": {
+      "title": "Nie udało się wczytać schematu",
+      "retry": "Spróbuj ponownie",
+      "retryWithCount": "Spróbuj ponownie ({{retryCount}}/{{maxRetries}})",
+      "attemptOfMax": "Próba {{retryCount}} z {{maxRetries}}",
+      "maxRetriesReached": "Osiągnięto maksymalną liczbę prób.",
+      "contactSupport": "Skontaktuj się z pomocą techniczną →"
+    }
+  },
+  "actionInputTypeHint": {
+    "coercible": "Typ „{{sourceType}}” zostanie przekonwertowany na „{{targetType}}”",
+    "incompatible": "Typ „{{sourceType}}” jest niezgodny z oczekiwanym typem „{{targetType}}”"
   }
 }

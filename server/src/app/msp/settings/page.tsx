@@ -1,32 +1,14 @@
 import { redirect } from 'next/navigation';
 import SettingsPage from '@/components/settings/SettingsPage';
-import { MIGRATED_SETTINGS_TAB_IDS } from '@/components/settings/settingsTabsRegistry';
+import { MIGRATED_SETTINGS_TAB_IDS, getSettingsTab } from '@/components/settings/settingsTabsRegistry';
+import { settingsTabMetadata } from '@/components/settings/settingsTabMetadata';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 
-// Browser tab titles for each settings section. Settings is a single route whose
-// sections are selected via the `?tab=` query param, so the title is derived from
-// that param to mirror the active section. Keys match the tab `id`s in
-// server/src/components/settings/SettingsPage.tsx (matched case-insensitively).
-const SETTINGS_TAB_TITLES: Record<string, string> = {
-  general: 'General',
-  'experimental-features': 'Experimental Features',
-  'client-portal': 'Client Portal',
-  users: 'Users',
-  teams: 'Teams',
-  language: 'Language',
-  ticketing: 'Ticketing',
-  projects: 'Projects',
-  interactions: 'Interactions',
-  notifications: 'Notifications',
-  'time-entry': 'Time Entry',
-  billing: 'Billing',
-  secrets: 'Secrets',
-  'import-export': 'Import/Export',
-  email: 'Email',
-  integrations: 'Integrations',
-  extensions: 'Extensions',
-};
-
+// Settings is a single route whose sections are selected via the `?tab=` query
+// param, so the browser-tab title is derived from that param to mirror the
+// active section. The label comes from the tab registry, the same source the
+// in-page tab strip renders from.
 export async function generateMetadata({
   searchParams,
 }: {
@@ -34,7 +16,13 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const resolvedSearchParams = await searchParams;
   const tab = typeof resolvedSearchParams?.tab === 'string' ? resolvedSearchParams.tab.toLowerCase() : undefined;
-  return { title: (tab && SETTINGS_TAB_TITLES[tab]) || 'Settings' };
+
+  if (tab && getSettingsTab(tab)) {
+    return settingsTabMetadata(tab);
+  }
+
+  const { t } = await getServerTranslation(undefined, 'metadata');
+  return { title: t('msp.settings.title', { defaultValue: 'Settings' }) };
 }
 
 export default async function Page({

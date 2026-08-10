@@ -1,7 +1,7 @@
 'use server';
 
 import { getConnection, tenantDb } from '@alga-psa/db';
-import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
+import { SupportedLocale, normalizeLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
 import { withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
@@ -67,8 +67,8 @@ export const getInheritedLocaleAction = withOptionalAuth(async (user: IUserWithR
       })
       .first();
 
-    const clientLocale = client?.properties?.defaultLocale;
-    if (clientLocale && isSupportedLocale(clientLocale)) {
+    const clientLocale = normalizeLocale(client?.properties?.defaultLocale);
+    if (clientLocale) {
       return {
         locale: clientLocale,
         source: 'client'
@@ -81,8 +81,8 @@ export const getInheritedLocaleAction = withOptionalAuth(async (user: IUserWithR
 
   // 2. Client-portal default — applies to client-portal users only
   if (user.user_type === 'client') {
-    const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
-    if (clientPortalLocale && isSupportedLocale(clientPortalLocale)) {
+    const clientPortalLocale = normalizeLocale(tenantSettings?.settings?.clientPortal?.defaultLocale);
+    if (clientPortalLocale) {
       return {
         locale: clientPortalLocale,
         source: 'tenant'
@@ -91,8 +91,8 @@ export const getInheritedLocaleAction = withOptionalAuth(async (user: IUserWithR
   }
 
   // 3. Organization default (applies to everyone)
-  const tenantDefaultLocale = tenantSettings?.settings?.defaultLocale;
-  if (tenantDefaultLocale && isSupportedLocale(tenantDefaultLocale)) {
+  const tenantDefaultLocale = normalizeLocale(tenantSettings?.settings?.defaultLocale);
+  if (tenantDefaultLocale) {
     return {
       locale: tenantDefaultLocale,
       source: 'tenant'
@@ -101,8 +101,8 @@ export const getInheritedLocaleAction = withOptionalAuth(async (user: IUserWithR
 
   // Legacy MSP-only default written by the retired split UI
   if (user.user_type === 'internal') {
-    const legacyMspLocale = tenantSettings?.settings?.mspPortal?.defaultLocale;
-    if (legacyMspLocale && isSupportedLocale(legacyMspLocale)) {
+    const legacyMspLocale = normalizeLocale(tenantSettings?.settings?.mspPortal?.defaultLocale);
+    if (legacyMspLocale) {
       return {
         locale: legacyMspLocale,
         source: 'tenant'

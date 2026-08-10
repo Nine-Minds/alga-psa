@@ -1094,6 +1094,15 @@
       "noFields": "Nenhum campo",
       "copyAllPaths": "Copie todos os caminhos",
       "copyAllFieldPaths": "Copie todos os caminhos de campo"
+    },
+    "logoAlt": "Logotipo do editor de fluxos de trabalho",
+    "nodes": {
+      "action": "Ação:",
+      "process": "Processo:",
+      "clientId": "ID do cliente:",
+      "clientSecret": "Segredo do cliente:",
+      "tenantId": "ID do tenant:",
+      "userEmail": "Email do usuário:"
     }
   },
   "actionInputFieldInfo": {
@@ -1354,7 +1363,9 @@
     "insertReferenceHeading": "Inserir referência de fluxo de trabalho",
     "errors": {
       "noCodeBlock": "As referências não podem ser inseridas dentro de blocos de código. Mova o cursor para outro bloco e tente novamente."
-    }
+    },
+    "placeholder": "Escreva o texto em Markdown…",
+    "referenceHint": "As referências aparecem como chips embutidos e são salvas como nós de referência compatíveis com o fluxo de trabalho."
   },
   "referenceSelector": {
     "placeholders": {
@@ -2525,5 +2536,25 @@
         "selectPriority": "Selecione ou insira uma prioridade"
       }
     }
+  },
+  "mappingEditor": {
+    "error": {
+      "retry": "Tentar novamente",
+      "title": "Falha ao carregar o esquema",
+      "retryWithCount": "Tentar novamente ({{retryCount}}/{{maxRetries}})",
+      "attemptOfMax": "Tentativa {{retryCount}} de {{maxRetries}}",
+      "maxRetriesReached": "Número máximo de tentativas atingido.",
+      "contactSupport": "Falar com o suporte →"
+    }
+  },
+  "toggle": {
+    "disableTitle": "Desativar fluxo de trabalho",
+    "enableTitle": "Ativar fluxo de trabalho",
+    "confirmDisable": "Tem certeza de que deseja desativar este fluxo de trabalho?",
+    "confirmEnable": "Tem certeza de que deseja ativar este fluxo de trabalho?"
+  },
+  "actionInputTypeHint": {
+    "coercible": "O tipo \"{{sourceType}}\" será convertido para \"{{targetType}}\"",
+    "incompatible": "O tipo \"{{sourceType}}\" é incompatível com o tipo esperado \"{{targetType}}\""
   }
 }

@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import styles from './WorkflowToggle.module.css';
 import Popup from './Popup';
 
@@ -11,6 +12,7 @@ interface WorkflowToggleProps {
 }
 
 const WorkflowToggle: React.FC<WorkflowToggleProps> = ({ workflowId, isEnabled }) => {
+  const { t } = useTranslation(['msp/workflows', 'common']);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
 
@@ -51,22 +53,38 @@ const WorkflowToggle: React.FC<WorkflowToggleProps> = ({ workflowId, isEnabled }
       <Popup 
         isOpen={isPopupOpen} 
         onClose={() => setIsPopupOpen(false)} 
-        title={`${isEnabled ? 'Disable' : 'Enable'} Workflow`}
+        title={
+          isEnabled
+            ? t('toggle.disableTitle', { defaultValue: 'Disable Workflow' })
+            : t('toggle.enableTitle', { defaultValue: 'Enable Workflow' })
+        }
       >
-        <p>Are you sure you want to {isEnabled ? 'disable' : 'enable'} this workflow?</p>
+        {/* Whole sentences per branch rather than an interpolated verb: the verb
+            inflects with the object in most target languages. */}
+        <p>
+          {isEnabled
+            ? t('toggle.confirmDisable', {
+                defaultValue: 'Are you sure you want to disable this workflow?',
+              })
+            : t('toggle.confirmEnable', {
+                defaultValue: 'Are you sure you want to enable this workflow?',
+              })}
+        </p>
         <div className={styles.popupButtons}>
-          <button 
-            className={styles.cancelButton} 
+          <button
+            className={styles.cancelButton}
             onClick={() => setIsPopupOpen(false)}
           >
-            Cancel
+            {t('common:actions.cancel', { defaultValue: 'Cancel' })}
           </button>
-          <button 
-            className={styles.confirmButton} 
-            onClick={handleConfirmToggle} 
+          <button
+            className={styles.confirmButton}
+            onClick={handleConfirmToggle}
             disabled={isToggling}
           >
-            {isToggling ? 'Processing...' : 'Confirm'}
+            {isToggling
+              ? t('common:status.processing', { defaultValue: 'Processing...' })
+              : t('common:actions.confirm', { defaultValue: 'Confirm' })}
           </button>
         </div>
       </Popup>

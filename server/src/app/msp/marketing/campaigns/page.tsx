@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { redirect } from 'next/navigation';
 import { getSession } from '@alga-psa/auth';
 import { getMarketingAccess } from '@alga-psa/marketing/actions';
@@ -7,9 +8,13 @@ import { CampaignsList, MarketingAccessBoundary } from '@alga-psa/marketing/comp
 import type { IMarketingCampaign } from '@alga-psa/types';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
-export const metadata: Metadata = {
-  title: 'Marketing Campaigns',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.marketing.campaigns.title', { defaultValue: 'Marketing Campaigns' }),
+  };
+}
 
 export default async function MarketingCampaignsPage() {
   const boundary = await enforceServerProductRoute({ pathname: '/msp/marketing/campaigns', scope: 'msp' });

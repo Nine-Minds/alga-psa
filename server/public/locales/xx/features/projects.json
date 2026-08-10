@@ -1345,7 +1345,9 @@
     "loadingProjects": "11111",
     "noDescription": "11111",
     "noPhasesOrTasks": "11111",
-    "loadError": "11111"
+    "loadError": "11111",
+    "errorWithMessage": "11111 {{message}} 11111",
+    "notFoundOrNoAccess": "11111"
   },
   "backToProjects": "11111",
   "invalidProjectData": "11111",

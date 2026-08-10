@@ -7,9 +7,13 @@ import { getCurrentUser } from '@alga-psa/auth';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Timesheet Approvals',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.timeSheetApprovals.title', { defaultValue: 'Timesheet Approvals' }),
+  };
+}
 
 export default async function TimeSheetApprovalsPage() {
   const currentUser = await getCurrentUser();

@@ -10,6 +10,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import toast from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { I18nWrapper } from '@alga-psa/tenancy/components';
 
 type FormData = {
   email: string;
@@ -100,4 +101,12 @@ const MspForgotPassword: React.FC = () => {
   );
 };
 
-export default MspForgotPassword;
+// MspForgotPassword calls useTranslation itself, so the provider has to sit in
+// a parent — hence this thin wrapper rather than an I18nWrapper inside it.
+export default function MspForgotPasswordPage() {
+  return (
+    <I18nWrapper portal="msp">
+      <MspForgotPassword />
+    </I18nWrapper>
+  );
+}

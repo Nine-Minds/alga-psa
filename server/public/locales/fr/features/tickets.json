@@ -297,7 +297,8 @@
     "closeFailed": "Échec de la fermeture du ticket",
     "scheduleVisitFailed": "Échec de l'ouverture du planificateur",
     "loadCommentsFailed": "Échec du chargement des commentaires",
-    "updateTicketFailed": "Échec de la mise à jour du ticket"
+    "updateTicketFailed": "Échec de la mise à jour du ticket",
+    "errorWithMessage": "Erreur : {{message}}"
   },
   "conversation": {
     "comments": "Commentaires",

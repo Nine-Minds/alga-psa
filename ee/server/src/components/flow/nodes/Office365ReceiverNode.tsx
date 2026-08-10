@@ -1,11 +1,13 @@
 // src/components/nodes/Office365ReceiverNode.tsx
 import React, { memo, useState, useEffect } from 'react';
 import { Handle, NodeProps, Position, useReactFlow } from 'reactflow';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import DeleteButton from '../DeleteButton';
 import { Office365ReceiverNodeData, Template } from '../../../services/flow/types/workflowTypes';
 import InputFieldSelector from '../InputFieldSelector';
 
 const Office365ReceiverNode = ({ data, id }: NodeProps<Office365ReceiverNodeData>) => {
+  const { t } = useTranslation('msp/workflows');
   const { getNode, setNodes } = useReactFlow();
   const node = getNode(id);
   const isSelected = node?.selected ?? false;
@@ -66,7 +68,7 @@ const Office365ReceiverNode = ({ data, id }: NodeProps<Office365ReceiverNodeData
       </div>
       <div style={{ marginBottom: '10px' }}>
         <label htmlFor="clientId" style={{ display: 'block', marginBottom: '5px' }}>
-          Client ID:
+          {t('designer.nodes.clientId', { defaultValue: 'Client ID:' })}
         </label>
         <InputFieldSelector
           value={nodeData.clientId || { template: '', type: { value: '' } }}
@@ -76,7 +78,7 @@ const Office365ReceiverNode = ({ data, id }: NodeProps<Office365ReceiverNodeData
       </div>
       <div style={{ marginBottom: '10px' }}>
         <label htmlFor="clientSecret" style={{ display: 'block', marginBottom: '5px' }}>
-          Client Secret:
+          {t('designer.nodes.clientSecret', { defaultValue: 'Client Secret:' })}
         </label>
         <InputFieldSelector
           value={nodeData.clientSecret || { template: '', type: { value: '' } }}
@@ -86,7 +88,7 @@ const Office365ReceiverNode = ({ data, id }: NodeProps<Office365ReceiverNodeData
       </div>
       <div style={{ marginBottom: '10px' }}>
         <label htmlFor="tenantId" style={{ display: 'block', marginBottom: '5px' }}>
-          Tenant ID:
+          {t('designer.nodes.tenantId', { defaultValue: 'Tenant ID:' })}
         </label>
         <InputFieldSelector
           value={nodeData.tenantId || { template: '', type: { value: '' } }}
@@ -96,7 +98,7 @@ const Office365ReceiverNode = ({ data, id }: NodeProps<Office365ReceiverNodeData
       </div>
       <div style={{ marginBottom: '10px' }}>
         <label htmlFor="userEmail" style={{ display: 'block', marginBottom: '5px' }}>
-          User Email:
+          {t('designer.nodes.userEmail', { defaultValue: 'User Email:' })}
         </label>
         <InputFieldSelector
           value={nodeData.userEmail || { template: '', type: { value: '' } }}

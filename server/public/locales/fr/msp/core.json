@@ -107,7 +107,10 @@
     "goToDashboard": "Aller au tableau de bord",
     "logoAlt": "Logo AlgaPSA",
     "expandSidebar": "Développer la barre latérale",
-    "collapseSidebar": "Réduire la barre latérale"
+    "collapseSidebar": "Réduire la barre latérale",
+    "collapseSection": "Réduire {{section}}",
+    "expandSection": "Développer {{section}}",
+    "appLogoAlt": "Logo {{appName}}"
   },
   "settings": {
     "sections": {
@@ -734,5 +737,9 @@
       "permissionDescription": "Vous n’avez pas la permission de consulter le marketing. Demandez à un administrateur la permission de lecture marketing.",
       "backToDashboard": "Aller au tableau de bord"
     }
+  },
+  "githubStar": {
+    "label": "Ajouter une étoile",
+    "ariaLabel": "Ajouter une étoile à {{repository}} sur GitHub"
   }
 }

@@ -37,7 +37,8 @@
     "categories": {
       "helpdesk": "Help desk",
       "operations": "Operations",
-      "billing": "Billing"
+      "billing": "Billing",
+      "inventory": "Inventory"
     },
     "badges": {
       "planned": "Planned"
@@ -45,6 +46,7 @@
     "actions": {
       "viewReport": "View report",
       "openInBilling": "Open in billing",
+      "openReport": "Open report",
       "requiresTier": "Requires {{tier}}",
       "comingSoon": "Coming soon"
     },
@@ -150,6 +152,18 @@
       "contractReports": {
         "title": "Contract Reports",
         "description": "Contract revenue, renewals, bucket utilization, and profitability."
+      },
+      "inventoryMargin": {
+        "title": "Margin Report",
+        "description": "Per-product revenue, cost of goods sold, and margin from fulfilled sales orders."
+      },
+      "inventoryWriteOffs": {
+        "title": "Write-offs",
+        "description": "Inventory shrink and adjustments written off, by reason and period."
+      },
+      "inventoryGhostUsage": {
+        "title": "Ghost Usage",
+        "description": "Closed hardware tickets with no recorded parts — cost the shop may have eaten."
       }
     },
     "table": {

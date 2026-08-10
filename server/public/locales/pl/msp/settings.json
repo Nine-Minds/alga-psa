@@ -32,7 +32,10 @@
     "loadingTeam": "Ładowanie konfiguracji zespołu...",
     "loadingExperimental": "Ładowanie konfiguracji funkcji eksperymentalnych...",
     "loadingInteractions": "Ładowanie ustawień interakcji...",
-    "keyboardShortcuts": "Skróty klawiaturowe"
+    "keyboardShortcuts": "Skróty klawiaturowe",
+    "mcpServer": "Serwer MCP",
+    "opportunities": "Szanse sprzedaży",
+    "settingsFallback": "Ustawienia"
   },
   "unsavedChanges": {
     "title": "Niezapisane zmiany",

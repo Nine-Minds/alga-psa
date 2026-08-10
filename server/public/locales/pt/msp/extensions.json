@@ -346,5 +346,30 @@
     "scopeToOneInstall": "Escopo para uma instalação",
     "overrideTenantContext": "Substituir o contexto do locatário",
     "matchRequestId": "Corresponder x-request-id / context.request_id"
+  },
+  "permissions": {
+    "severity": {
+      "low": "Baixo",
+      "medium": "Médio",
+      "high": "Alto"
+    },
+    "categoryHeadings": {
+      "storage": "Permissões de armazenamento",
+      "ui": "Permissões de interface",
+      "data": "Permissões de dados",
+      "api": "Permissões de API",
+      "system": "Permissões do sistema",
+      "other": "Outras permissões"
+    },
+    "access": {
+      "low": "Acesso somente leitura",
+      "medium": "Acesso de modificação",
+      "high": "Acesso avançado"
+    },
+    "legend": {
+      "low": "As permissões somente leitura permitem que a extensão veja os dados, mas não os modifique.",
+      "medium": "As permissões de modificação permitem que a extensão atualize dados existentes.",
+      "high": "As permissões avançadas permitem que a extensão crie, exclua ou execute operações."
+    }
   }
 }

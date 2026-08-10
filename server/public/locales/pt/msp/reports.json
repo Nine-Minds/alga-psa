@@ -37,7 +37,8 @@
     "categories": {
       "helpdesk": "Suporte técnico",
       "operations": "Operações",
-      "billing": "Cobrança"
+      "billing": "Cobrança",
+      "inventory": "Inventário"
     },
     "badges": {
       "planned": "Planejado"
@@ -45,6 +46,7 @@
     "actions": {
       "viewReport": "Ver relatório",
       "openInBilling": "Aberto no faturamento",
+      "openReport": "Abrir relatório",
       "requiresTier": "Requer {{tier}}",
       "comingSoon": "Em breve"
     },
@@ -150,6 +152,18 @@
       "contractReports": {
         "title": "Relatórios de contrato",
         "description": "Receita de contrato, renovações, utilização de bucket e rentabilidade."
+      },
+      "inventoryMargin": {
+        "title": "Relatório de Margem",
+        "description": "Receita, custo das mercadorias vendidas e margem por produto a partir de pedidos de venda atendidos."
+      },
+      "inventoryWriteOffs": {
+        "title": "Baixas",
+        "description": "Perdas de estoque e ajustes baixados, por motivo e período."
+      },
+      "inventoryGhostUsage": {
+        "title": "Uso Fantasma",
+        "description": "Chamados de hardware fechados sem peças registradas — custos que a oficina pode ter absorvido."
       }
     },
     "table": {

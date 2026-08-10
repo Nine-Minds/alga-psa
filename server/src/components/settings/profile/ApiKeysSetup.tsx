@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -61,6 +62,9 @@ SearchInput.displayName = 'SearchInput';
 
 export default function ApiKeysSetup() {
   const { t } = useTranslation('msp/profile');
+  // toLocaleString() with no locale renders in the browser's locale, not the
+  // app's; useFormatters is bound to the resolved i18n locale.
+  const { formatDate } = useFormatters();
   const [description, setDescription] = useState('');
   const [expirationDate, setExpirationDate] = useState('');
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
@@ -211,19 +215,19 @@ export default function ApiKeysSetup() {
       title: t('security.apiKeys.list.columns.created', 'Created'),
       dataIndex: 'created_at',
       width: '20%',
-      render: (value: Date) => new Date(value).toLocaleString(),
+      render: (value: Date) => formatDate(new Date(value), { dateStyle: 'medium', timeStyle: 'short' }),
     },
     {
       title: t('security.apiKeys.list.columns.lastUsed', 'Last Used'),
       dataIndex: 'last_used_at',
       width: '20%',
-      render: (value: Date | null) => value ? new Date(value).toLocaleString() : t('security.apiKeys.list.never', 'Never'),
+      render: (value: Date | null) => value ? formatDate(new Date(value), { dateStyle: 'medium', timeStyle: 'short' }) : t('security.apiKeys.list.never', 'Never'),
     },
     {
       title: t('security.apiKeys.list.columns.expires', 'Expires'),
       dataIndex: 'expires_at',
       width: '20%',
-      render: (value: Date | null) => value ? new Date(value).toLocaleString() : t('security.apiKeys.list.never', 'Never'),
+      render: (value: Date | null) => value ? formatDate(new Date(value), { dateStyle: 'medium', timeStyle: 'short' }) : t('security.apiKeys.list.never', 'Never'),
     },
     {
       title: t('security.apiKeys.list.columns.status', 'Status'),

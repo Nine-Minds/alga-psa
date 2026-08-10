@@ -628,6 +628,19 @@
       "resendFailed": "E-mail opnieuw verzenden is mislukt. Probeer het opnieuw.",
       "whatsNext": "Wat nu?",
       "didntReceive": "E-mail niet ontvangen?"
+    },
+    "sso": {
+      "signInWithMicrosoft": "Aanmelden met Microsoft",
+      "signInWithGoogle": "Aanmelden met Google",
+      "redirecting": "Doorverwijzen...",
+      "startFailed": "We konden het aanmelden via SSO niet starten. Controleer de providerconfiguratie en probeer het opnieuw."
+    },
+    "verify": {
+      "title": "E-mailverificatie niet meer beschikbaar",
+      "selfRegistrationRemoved": "Zelfregistratie via het e-maildomein wordt om veiligheidsredenen niet meer ondersteund.",
+      "existingContactsOnly": "Registratie is nu alleen beschikbaar voor bestaande contacten. Neem contact op met uw beheerder om eerst als contact te worden toegevoegd.",
+      "registerFromSignIn": "Als u al een bestaand contact bent, kunt u zich rechtstreeks registreren op de aanmeldpagina met uw contact-e-mailadres.",
+      "returnToSignIn": "Terug naar aanmelden"
     }
   },
   "share": {
@@ -1289,5 +1302,17 @@
   },
   "richTextEditorSkeleton": {
     "loading": "Editor laden…"
+  },
+  "productBoundary": {
+    "upgrade": {
+      "title": "Beschikbaar in AlgaPSA",
+      "description": "Dit onderdeel maakt deel uit van het volledige AlgaPSA-product. AlgaDesk bevat alleen gerichte helpdeskfunctionaliteit.",
+      "cta": "Terug naar het AlgaDesk-dashboard"
+    },
+    "notFound": {
+      "title": "Pagina niet beschikbaar",
+      "description": "Deze pagina is niet beschikbaar in uw huidige productervaring.",
+      "cta": "Ga naar dashboard"
+    }
   }
 }

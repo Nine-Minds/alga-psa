@@ -1,0 +1,1026 @@
+{
+  "$schema": "../lib/glossary.schema.json",
+  "locale": "nl",
+  "dialect": "nl-NL",
+  "displayName": "Nederlands",
+  "description": "Dutch (Netherlands) terminology, register, and audit allowlist for the AlgaPSA nl locale.",
+  "domainTerms": [
+    {
+      "id": "account",
+      "en-term": "account",
+      "term": "account",
+      "notes": "Keep account as the established Dutch software term (het account, de accounts) for user, MSP, and customer accounts."
+    },
+    {
+      "id": "appointment",
+      "en-term": "appointment",
+      "term": "afspraak",
+      "notes": "Use afspraak for calendar appointments and afspraakverzoek for appointment requests; use inplannen when emphasizing the scheduling action."
+    },
+    {
+      "id": "approval",
+      "en-term": "approval",
+      "term": "goedkeuring",
+      "notes": "Use goedkeuring for approval workflows, requests, invoices, and timesheets; use goedkeuren for the action."
+    },
+    {
+      "id": "asset",
+      "en-term": "asset",
+      "term": "asset",
+      "notes": "Keep asset (de asset, de assets) for managed devices, inventory, and configuration assets. Activa and bezit occur in the current files but have financial/property senses and are inconsistent with the dominant MSP term. Reserve activa strictly for accounting/financial prose, never as the managed-asset entity label."
+    },
+    {
+      "id": "assignment",
+      "en-term": "assignment",
+      "term": "toewijzing",
+      "notes": "Use toewijzing for assigning tickets, tasks, users, or technicians; use toewijzen for the action."
+    },
+    {
+      "id": "automation",
+      "en-term": "automation",
+      "term": "automatisering",
+      "notes": "Use for workflow automation and automated operational behavior."
+    },
+    {
+      "id": "billing",
+      "en-term": "billing",
+      "term": "facturatie",
+      "notes": "Use facturatie for the billing product area and billing settings. Facturering is also frequent and should be reserved for the invoicing process where a distinction is useful."
+    },
+    {
+      "id": "board",
+      "en-term": "board",
+      "term": "bord",
+      "notes": "Use bord/borden for ticket and kanban boards. Board remains in a few current strings; never use bestuur, which means a governing board."
+    },
+    {
+      "id": "bucket",
+      "en-term": "bucket",
+      "term": "urenbundel",
+      "notes": "Use urenbundel for prepaid or retainer hour pools and verbruiksbundel for consumption pools. Current contracts, catalog, billing, and reports establish bundel; literal emmer and untranslated bucket remnants are inconsistent."
+    },
+    {
+      "id": "budget",
+      "en-term": "budget",
+      "term": "begroting",
+      "notes": "Use begroting for project or financial budgets and spending limits. A sales quote is an offerte."
+    },
+    {
+      "id": "client",
+      "en-term": "client",
+      "term": "klant",
+      "notes": "Use klant/klanten for customer organizations and client-portal users. Cliënt appears in current files but is not the dominant PSA/IT term."
+    },
+    {
+      "id": "client-portal",
+      "en-term": "client portal",
+      "term": "klantenportaal",
+      "notes": "Use the closed compound klantenportaal for the customer-facing app. Klantportaal occurs once but klantenportaal dominates."
+    },
+    {
+      "id": "comment",
+      "en-term": "comment",
+      "term": "opmerking",
+      "notes": "Use opmerking for ticket, project, task, and document comments. Reactie is appropriate only when the source specifically means a reply/reaction."
+    },
+    {
+      "id": "contact",
+      "en-term": "contact",
+      "term": "contact",
+      "notes": "Use contact for the CRM record and compact field labels; use contactpersoon when the person must be explicit. Do not translate the noun as contact opnemen met, which is a verb phrase."
+    },
+    {
+      "id": "contract",
+      "en-term": "contract",
+      "term": "contract",
+      "notes": "Use contract for service contracts, contract templates, and contract lines."
+    },
+    {
+      "id": "contract-line",
+      "en-term": "contract line",
+      "term": "contractregel",
+      "notes": "Use contractregel for billable contract lines — dominant in the app (~205 contractregel vs ~13 contractlijn) and more idiomatic. Normalize remaining contractlijn occurrences. Adversarial review 2026-08."
+    },
+    {
+      "id": "credit",
+      "en-term": "credit",
+      "term": "krediet",
+      "notes": "Use krediet for customer credits, available credit, and credit application; use saldo or restant when referring only to the remaining balance."
+    },
+    {
+      "id": "dashboard",
+      "en-term": "dashboard",
+      "term": "dashboard",
+      "notes": "Keep dashboard as the established Dutch software loanword (het dashboard)."
+    },
+    {
+      "id": "dispatch",
+      "en-term": "dispatch",
+      "term": "technicusplanning",
+      "notes": "Area label is Planning; the dispatch board is the planbord (Dynamics Field Service convention). Use technicusplanning only when the technician scope must be explicit."
+    },
+    {
+      "id": "document",
+      "en-term": "document",
+      "term": "document",
+      "notes": "Use document for uploaded documents, folders, sharing, and document management."
+    },
+    {
+      "id": "email",
+      "en-term": "email",
+      "term": "e-mail",
+      "notes": "Spell the noun e-mail with a hyphen; use E-mail at the start of a label or sentence and e-mails in the plural."
+    },
+    {
+      "id": "email-address",
+      "en-term": "email address",
+      "term": "e-mailadres",
+      "notes": "Use the closed compound e-mailadres for one address and e-mailadressen for the plural."
+    },
+    {
+      "id": "email-label",
+      "en-term": "email label",
+      "term": "e-mailtype",
+      "notes": "Use e-mailtype for the label/type picker on an email row, matching the contacts namespace."
+    },
+    {
+      "id": "extension",
+      "en-term": "extension",
+      "term": "extensie",
+      "notes": "Use extensie for platform/product extensions and installed extension metadata."
+    },
+    {
+      "id": "file",
+      "en-term": "file",
+      "term": "bestand",
+      "notes": "Use bestand for uploaded and generated files; use map for folders."
+    },
+    {
+      "id": "filter",
+      "en-term": "filter",
+      "term": "filter",
+      "notes": "Use filter as the UI noun and filteren for the action."
+    },
+    {
+      "id": "industry",
+      "en-term": "industry",
+      "term": "branche",
+      "notes": "Use branche for the client/CRM business vertical (Dynamics NL convention). industrie reads as manufacturing; sector is acceptable in broader prose. Adversarial review 2026-08."
+    },
+    {
+      "id": "invoice",
+      "en-term": "invoice",
+      "term": "factuur",
+      "notes": "Use factuur for customer invoices and conceptfactuur for a draft invoice."
+    },
+    {
+      "id": "invoicing",
+      "en-term": "invoicing",
+      "term": "facturering",
+      "notes": "Use facturering for the invoice-generation process. The current navigation also uses facturatie for this area; keep facturatie as the broader billing label."
+    },
+    {
+      "id": "job",
+      "en-term": "job",
+      "term": "achtergrondtaak",
+      "notes": "Use achtergrondtaak for the background-job entity and taak where context is already clear. msp/jobs currently mixes taak, job, baan, and vacature; baan/vacature are false friends for employment."
+    },
+    {
+      "id": "knowledge-base",
+      "en-term": "knowledge base",
+      "term": "kennisbank",
+      "notes": "Use kennisbank for KB articles, categories, and review flows."
+    },
+    {
+      "id": "license",
+      "en-term": "license",
+      "term": "licentie",
+      "notes": "Use licentie for software licensing, seats, and activation."
+    },
+    {
+      "id": "location",
+      "en-term": "location",
+      "term": "locatie",
+      "notes": "Use locatie for client, inventory, and service locations."
+    },
+    {
+      "id": "milestone",
+      "en-term": "milestone",
+      "term": "mijlpaal",
+      "notes": "Use mijlpaal for project milestones and milestone billing schedules."
+    },
+    {
+      "id": "mobile-phone-type",
+      "en-term": "mobile (phone type)",
+      "term": "mobiel",
+      "notes": "Use Mobiel for the compact phone-type label and Mobiel nummer when the field needs an explicit noun."
+    },
+    {
+      "id": "notification",
+      "en-term": "notification",
+      "term": "melding",
+      "notes": "Use melding/meldingen for generic in-app and email notifications. Client-portal.json and notification settings currently use notificatie, while melding dominates elsewhere; do not mix both within one workflow."
+    },
+    {
+      "id": "onboarding",
+      "en-term": "onboarding",
+      "term": "onboarding",
+      "notes": "Keep onboarding as the established Dutch MSP loanword and form closed compounds such as onboardingwizard, onboardingstap, and onboardingchecklist."
+    },
+    {
+      "id": "payment",
+      "en-term": "payment",
+      "term": "betaling",
+      "notes": "Use betaling for invoice payments, online payments, and payment status."
+    },
+    {
+      "id": "pipeline",
+      "en-term": "pipeline",
+      "term": "salesfunnel",
+      "notes": "Gebruik salesfunnel voor de commerciële pipeline in het CRM. Nooit pijpleiding of pijplijn: dat is een fysieke buisleiding."
+    },
+    {
+      "id": "primary-email",
+      "en-term": "primary email",
+      "term": "primair e-mailadres",
+      "notes": "Use Primair e-mailadres as a label and primair e-mailadres in running text."
+    },
+    {
+      "id": "priority",
+      "en-term": "priority",
+      "term": "prioriteit",
+      "notes": "Use prioriteit for ticket, task, and workflow priority labels."
+    },
+    {
+      "id": "progress",
+      "en-term": "progress",
+      "term": "voortgang",
+      "notes": "Use voortgang for progress labels and indicators; the all-caps micro-label is VOORTGANG."
+    },
+    {
+      "id": "project",
+      "en-term": "project",
+      "term": "project",
+      "notes": "Use project for project management, phases, tasks, budgets, and project templates."
+    },
+    {
+      "id": "quote",
+      "en-term": "quote",
+      "term": "offerte",
+      "notes": "Use offerte/offertes for sales and service quotes. Never citaat, which means a textual quotation."
+    },
+    {
+      "id": "report",
+      "en-term": "report",
+      "term": "rapport",
+      "notes": "Use rapport for analytics, operational, billing, and audit reports."
+    },
+    {
+      "id": "request",
+      "en-term": "request",
+      "term": "aanvraag",
+      "notes": "Use aanvraag for service, approval, and appointment requests; use aanvragen for the action."
+    },
+    {
+      "id": "schedule",
+      "en-term": "schedule",
+      "term": "planning",
+      "notes": "Use planning for the schedule product area and general planned timetable; use inplannen for the action. Schema appears in dispatch and activity namespaces and should be limited to rule/timetable structures."
+    },
+    {
+      "id": "screen",
+      "en-term": "screen",
+      "term": "scherm",
+      "notes": "Use scherm for UI screens and weergave when the source means a view rather than a screen."
+    },
+    {
+      "id": "service",
+      "en-term": "service",
+      "term": "service",
+      "notes": "Use service for catalog items, managed services, and support services; it is the dominant current term. Dienst is also frequent, especially in billing and ticket namespaces, and should not be mixed within one workflow."
+    },
+    {
+      "id": "service-catalog",
+      "en-term": "service catalog",
+      "term": "servicecatalogus",
+      "notes": "Use the closed compound servicecatalogus for the billing/service catalog product area. Untranslated Service catalog occurs in search strings and is inconsistent."
+    },
+    {
+      "id": "settings",
+      "en-term": "settings",
+      "term": "instellingen",
+      "notes": "Use plural instellingen for settings pages and controls."
+    },
+    {
+      "id": "single-sign-on",
+      "en-term": "single sign-on",
+      "term": "single sign-on",
+      "notes": "Keep single sign-on as the established feature name and SSO as the abbreviation; use sentence-style capitalization except where a brand or source title requires otherwise."
+    },
+    {
+      "id": "sla",
+      "en-term": "SLA",
+      "term": "SLA",
+      "notes": "Keep SLA as the standard abbreviation; use SLA-overeenkomst only when the expanded entity must be explicit."
+    },
+    {
+      "id": "status",
+      "en-term": "status",
+      "term": "status",
+      "notes": "Keep status as the accepted Dutch software noun; the plural is statussen."
+    },
+    {
+      "id": "survey",
+      "en-term": "survey",
+      "term": "enquête",
+      "notes": "Use enquête for satisfaction surveys, templates, and response analytics."
+    },
+    {
+      "id": "tag",
+      "en-term": "tag",
+      "term": "label",
+      "notes": "Use label/labels for metadata tags; this is the dominant current term. Tag/tags remain in some asset and core strings and should not be introduced into new generic UI copy."
+    },
+    {
+      "id": "task",
+      "en-term": "task",
+      "term": "taak",
+      "notes": "Use taak for project tasks, workflow tasks, and task inbox items. Use achtergrondtaak when a background job must be distinguished from user work."
+    },
+    {
+      "id": "technician",
+      "en-term": "technician",
+      "term": "technicus",
+      "notes": "Use technicus for field/service technicians and technician assignment. Monteur appears once in dispatch copy and is more mechanical/trade-specific."
+    },
+    {
+      "id": "tenant",
+      "en-term": "tenant",
+      "term": "tenant",
+      "notes": "Keep tenant in admin, security, and integration contexts. Never huurder, which is the real-estate sense; use klant only when the customer organization is meant."
+    },
+    {
+      "id": "ticket",
+      "en-term": "ticket",
+      "term": "ticket",
+      "notes": "Keep ticket as the MSP support term (het ticket, de tickets). Never kaartje, which implies a small card or travel/admission ticket."
+    },
+    {
+      "id": "time-entry",
+      "en-term": "time entry",
+      "term": "tijdregistratie",
+      "notes": "Use tijdregistratie for the module/process (matches navigation). Use tijdsvermelding for a single time record and \"tijd invoeren\" for the action (Dynamics NL distinction). tijdinvoer/tijdsinvoer occurrences should converge on these forms."
+    },
+    {
+      "id": "timesheet",
+      "en-term": "timesheet",
+      "term": "urenstaat",
+      "notes": "Use urenstaat for grouped/submitted time entries and approval flows. Urenregistratie appears in one header but urenstaat dominates the workflow."
+    },
+    {
+      "id": "user",
+      "en-term": "user",
+      "term": "gebruiker",
+      "notes": "Use gebruiker/gebruikers for application users."
+    },
+    {
+      "id": "webhook",
+      "en-term": "webhook",
+      "term": "webhook",
+      "notes": "Keep webhook as the technical loanword (de webhook, de webhooks)."
+    },
+    {
+      "id": "work-phone-type",
+      "en-term": "work (phone type)",
+      "term": "werk",
+      "notes": "Use Werk for the work phone-type label, matching all current contact label sets."
+    },
+    {
+      "id": "workflow",
+      "en-term": "workflow",
+      "term": "workflow",
+      "notes": "Keep workflow as the established software loanword (de workflow, de workflows). AlgaPSA workflows are n8n-style event automation (triggers, actions, runs), not Jira-style status flows."
+    }
+  ],
+  "forbiddenTerms": [
+    {
+      "term": "activa",
+      "preferred": "asset",
+      "enWhen": "\\bassets?\\b",
+      "reason": "Accounting register wrongly used for managed/configuration assets; keep activa for financial prose only."
+    },
+    {
+      "term": "baan",
+      "preferred": "achtergrondtaak",
+      "reason": "False friend in the job monitor; baan normally means employment or a track, not a background job.",
+      "enWhen": "\\bjobs?\\b"
+    },
+    {
+      "term": "banen",
+      "preferred": "achtergrondtaken",
+      "reason": "Plural employment/track sense; background jobs are achtergrondtaken.",
+      "enWhen": "\\bjobs?\\b"
+    },
+    {
+      "term": "bestuur",
+      "preferred": "bord",
+      "reason": "False friend for a ticket/kanban board; bestuur means a governing body.",
+      "enWhen": "\\bboards?\\b"
+    },
+    {
+      "term": "bezit",
+      "preferred": "asset",
+      "reason": "Property/possession sense; managed IT devices and configuration assets use asset.",
+      "enWhen": "\\bassets?\\b"
+    },
+    {
+      "term": "board",
+      "preferred": "bord",
+      "enWhen": "\\bboards?\\b",
+      "reason": "Untranslated English leak for kanban/ticket boards."
+    },
+    {
+      "term": "boards",
+      "preferred": "borden",
+      "enWhen": "\\bboards?\\b",
+      "reason": "Plural of the untranslated board leak."
+    },
+    {
+      "term": "bucket",
+      "preferred": "urenbundel",
+      "enWhen": "\\bbuckets?\\b",
+      "reason": "Untranslated English leak for prepaid hour pools."
+    },
+    {
+      "term": "buckets",
+      "preferred": "urenbundels",
+      "enWhen": "\\bbuckets?\\b",
+      "reason": "Plural of the untranslated bucket leak."
+    },
+    {
+      "term": "citaat",
+      "preferred": "offerte",
+      "reason": "Wrong sense for a sales quote; citaat is a textual quotation.",
+      "enWhen": "\\bquot(e|es|ed|ing)\\b"
+    },
+    {
+      "term": "citaten",
+      "preferred": "offertes",
+      "reason": "Plural wrong-sense sales-quote term; use offertes.",
+      "enWhen": "\\bquot(e|es|ed|ing)\\b"
+    },
+    {
+      "term": "cliënt",
+      "preferred": "klant",
+      "reason": "Non-dominant register for this PSA; the customer organization is consistently klant in core workflows.",
+      "enWhen": "\\bclients?\\b"
+    },
+    {
+      "term": "cliënten",
+      "preferred": "klanten",
+      "reason": "Plural non-dominant customer term; use klanten.",
+      "enWhen": "\\bclients?\\b"
+    },
+    {
+      "term": "contractlijn",
+      "preferred": "contractregel",
+      "reason": "contractregel is dominant (205:13) and idiomatic for billable contract lines."
+    },
+    {
+      "term": "contractlijnen",
+      "preferred": "contractregels",
+      "reason": "Plural of the losing contract-line variant."
+    },
+    {
+      "term": "email",
+      "preferred": "e-mail",
+      "reason": "Wrong spelling for the established nl-NL UI style; use the hyphenated noun e-mail."
+    },
+    {
+      "term": "emmer",
+      "preferred": "urenbundel",
+      "reason": "Literal translation of billing bucket; emmer means a physical pail. Use urenbundel or verbruiksbundel.",
+      "enWhen": "\\bbuckets?\\b"
+    },
+    {
+      "term": "huurder",
+      "preferred": "tenant",
+      "reason": "Real-estate false friend in multitenant software; keep tenant in admin and integration contexts.",
+      "enWhen": "\\btenants?\\b"
+    },
+    {
+      "term": "industrie",
+      "preferred": "branche",
+      "enWhen": "\\bindustry\\b",
+      "reason": "Manufacturing register for the CRM business-vertical field; use branche."
+    },
+    {
+      "term": "je",
+      "preferred": "u",
+      "reason": "Informal address conflicts with the dominant formal u register; current je remnants should not be copied into new strings."
+    },
+    {
+      "term": "jij",
+      "preferred": "u",
+      "reason": "Informal emphatic subject pronoun conflicts with the dominant formal register."
+    },
+    {
+      "term": "job",
+      "preferred": "achtergrondtaak",
+      "enWhen": "\\bjobs?\\b",
+      "reason": "Untranslated English leak for background jobs."
+    },
+    {
+      "term": "jobs",
+      "preferred": "achtergrondtaken",
+      "enWhen": "\\bjobs?\\b",
+      "reason": "Plural of the untranslated job leak."
+    },
+    {
+      "term": "jou",
+      "preferred": "u",
+      "reason": "Informal object pronoun conflicts with the dominant formal register."
+    },
+    {
+      "term": "jouw",
+      "preferred": "uw",
+      "reason": "Informal possessive conflicts with the dominant formal register."
+    },
+    {
+      "term": "kaartje",
+      "preferred": "ticket",
+      "reason": "Wrong register for a support ticket; kaartje means a small card or travel/admission ticket.",
+      "enWhen": "\\btickets?\\b"
+    },
+    {
+      "term": "pijpleiding",
+      "preferred": "salesfunnel",
+      "reason": "A physical pipe. Use salesfunnel for the CRM sales pipeline, or the loanword pipeline for a technical/processing one (workflow canvas, render pipeline).",
+      "enWhen": "\\bpipelines?\\b"
+    },
+    {
+      "term": "pijplijn",
+      "preferred": "salesfunnel",
+      "reason": "A physical pipe. Use salesfunnel for the CRM sales pipeline, or the loanword pipeline for a technical/processing one (workflow canvas, render pipeline).",
+      "enWhen": "\\bpipelines?\\b"
+    },
+    {
+      "term": "vacature",
+      "preferred": "achtergrondtaak",
+      "reason": "False friend in the job monitor; vacature means a job opening.",
+      "enWhen": "\\bjobs?\\b"
+    }
+  ],
+  "dialectRules": [
+    {
+      "id": "formal-u-register",
+      "rule": "Address users consistently with formal u/uw forms; do not introduce je/jij/jouw forms in new user-facing copy.",
+      "notes": "Formal u/uw forms dominate the locale overall, especially msp/integrations.json, msp/settings.json, msp/account.json, and features/projects.json. Informal copy remains concentrated in features/tickets.json, client-portal.json, msp/onboarding.json, and common.json and is an existing inconsistency. Formal u/uw is the normalization target, not the current uniform state: portal, tickets and onboarding contain informal pockets (~365 hits) that are cleanup debt."
+    },
+    {
+      "id": "sentence-case",
+      "rule": "Use Dutch sentence case for headings and labels; capitalize only the first word, proper names, and abbreviations.",
+      "notes": "Examples: Primair e-mailadres, Goedkeuring urenstaat, Single sign-on. Do not copy English title case."
+    },
+    {
+      "id": "compounds-and-email",
+      "rule": "Write Dutch compounds as one word and spell e-mail with a hyphen.",
+      "notes": "Examples: klantenportaal, servicecatalogus, onboardingwizard, ticketprioriteit, e-mailadres, e-mailtype."
+    },
+    {
+      "id": "ticket-client-quote-register",
+      "rule": "Use ticket for support work, klant for the customer, and offerte for a sales quote.",
+      "notes": "The support entity is het ticket. Kaartje, cliënt, and citaat are audited through forbiddenTerms."
+    },
+    {
+      "id": "billing-distinctions",
+      "rule": "Keep facturatie (billing area), factuur (invoice), facturering (invoicing process), krediet (credit), and urenbundel (bucket) distinct.",
+      "notes": "These entities coexist in the billing UI; do not collapse them into one generic factuur term or translate bucket literally."
+    },
+    {
+      "id": "established-loanwords",
+      "rule": "Retain established Dutch MSP/software loanwords when the locale consistently uses them.",
+      "notes": "Examples: account, asset, dashboard, onboarding, service, status, tenant, ticket, webhook, workflow. Use Dutch plurals where needed: assets, tickets, webhooks, workflows, statussen."
+    },
+    {
+      "id": "interpolation",
+      "rule": "Preserve every {{variable}} exactly as in the English source.",
+      "notes": "Do not translate placeholders, braces, or variable names."
+    }
+  ],
+  "identicalAllowlist": {
+    "exact": [
+      "({{count}} ticket)",
+      "({{count}} tickets)",
+      ",",
+      "1 service",
+      "<30d",
+      "AI",
+      "API",
+      "Account",
+      "Acme IT Solutions",
+      "Ad hoc",
+      "Ad-hoc",
+      "Adapter",
+      "Add-ons",
+      "Agenda",
+      "Alga",
+      "AlgaDesk",
+      "AlgaPSA",
+      "Alt",
+      "Android",
+      "Antarctica",
+      "Antivirus",
+      "App",
+      "App ID",
+      "App Store (iOS)",
+      "Apps",
+      "Array",
+      "Asset",
+      "Assets",
+      "Authorization: Bearer abc123\nX-Source: alga-psa",
+      "Backorder {{shortfall}}",
+      "Batch",
+      "Beta",
+      "Boolean",
+      "Bot",
+      "Browser",
+      "Budget:",
+      "CIPP (CyberDrain Improved Partner Portal)",
+      "CPU",
+      "CSV",
+      "Chat",
+      "Client ID",
+      "Code",
+      "Compact",
+      "Component",
+      "Conflict",
+      "Contact",
+      "Contact:",
+      "Context",
+      "Contract",
+      "Contract.pdf",
+      "Contract:",
+      "Contract: {{name}}",
+      "Control",
+      "Cron",
+      "Ctrl",
+      "Dashboard",
+      "Dashboard | AlgaPSA",
+      "Datto",
+      "Deadline",
+      "Debug",
+      "Details",
+      "Directory",
+      "Document",
+      "EUR — Euro",
+      "Editor",
+      "Entra ID",
+      "Exact",
+      "Excel",
+      "Fax",
+      "Filters",
+      "Firewall",
+      "GPU",
+      "Gmail",
+      "Google",
+      "Google Calendar",
+      "Google Cloud Console",
+      "Google OAuth",
+      "Google Play (Android)",
+      "Google Workspace",
+      "HMAC-SHA256",
+      "HTML",
+      "Handle / URL",
+      "Handler",
+      "Hard",
+      "Hardware",
+      "Header: {{name}}",
+      "Headers",
+      "Host",
+      "Host:",
+      "Hudu",
+      "Huntress",
+      "Hypervisor",
+      "ID",
+      "IMAP",
+      "IMEI",
+      "ITIL",
+      "Impact",
+      "In RMA",
+      "In Xero: Business → Invoices → Import",
+      "In Xero: Reports → All Reports → Invoice Details",
+      "Info",
+      "Interval",
+      "Interval *",
+      "JSON",
+      "JSON Schema",
+      "KB",
+      "Kanban",
+      "Keycloak",
+      "Kit",
+      "Kits",
+      "Knox",
+      "Label",
+      "Laptop",
+      "Linux",
+      "Live",
+      "Logo",
+      "MY_API_KEY",
+      "Manager",
+      "Marketing",
+      "Media",
+      "Meta",
+      "Microsoft",
+      "Microsoft 365",
+      "Microsoft 365 (Microsoft Graph)",
+      "Microsoft Entra",
+      "Microsoft Entra Direct",
+      "Microsoft OAuth",
+      "Microsoft Outlook Calendar",
+      "Microsoft Teams",
+      "Model",
+      "NVMe",
+      "NinjaOne",
+      "November",
+      "OAuth",
+      "OAuth2 (XOAUTH2)",
+      "OK",
+      "Object",
+      "Offline",
+      "Onboarding",
+      "Online",
+      "Open",
+      "Ops",
+      "Outlook",
+      "Outlook Calendar",
+      "PDF",
+      "Parameters",
+      "Payload",
+      "Payload (JSON)",
+      "Percentage",
+      "Percentage (%) *",
+      "Perfect",
+      "Phishing/Spam",
+      "Plan",
+      "Planning",
+      "Planning (5)",
+      "Platform",
+      "Printer",
+      "Printers",
+      "Pro",
+      "Product",
+      "Product {{index}}",
+      "Project",
+      "QBO #",
+      "QuickBooks",
+      "QuickBooks CSV",
+      "QuickBooks Client ID",
+      "QuickBooks Online",
+      "RAM (GB)",
+      "RMA",
+      "RMA #",
+      "Realm ID: {{id}}",
+      "Recent",
+      "Record",
+      "Records",
+      "Records ({{count}})",
+      "Redirect URI",
+      "Resource",
+      "Resource: {{resource}}",
+      "Router",
+      "SKU",
+      "SLA",
+      "SMS",
+      "SMTP",
+      "SSO",
+      "Sandbox",
+      "Schema",
+      "Scopes",
+      "Server",
+      "Servers",
+      "Service",
+      "Service {{index}}",
+      "Service:",
+      "Services",
+      "Services ({{count}})",
+      "Services:",
+      "Shift",
+      "Simulator",
+      "Slug",
+      "Software",
+      "Solo",
+      "Start",
+      "Status",
+      "Stripe",
+      "T&M",
+      "TTL:",
+      "Tactical RMM",
+      "Tanium",
+      "Team",
+      "Teams",
+      "Temporal",
+      "Tenant",
+      "Tenant ID",
+      "Tenant ID:",
+      "Tenant {{tenant}} · {{status}}",
+      "Test",
+      "Ticket",
+      "Ticket #",
+      "Tickets",
+      "Tip",
+      "Tip:",
+      "Tokens",
+      "Tracking",
+      "Trigger",
+      "Trigger:",
+      "Triggers",
+      "Try/Catch",
+      "Type",
+      "Type *",
+      "Type:",
+      "Type: {{mime}}",
+      "Type: {{value}}",
+      "URL",
+      "UUID",
+      "Video",
+      "Website",
+      "Week",
+      "Wi-Fi",
+      "Windows",
+      "Workflow",
+      "Workflow v{{version}}",
+      "Workflow: {{id}}",
+      "Workflows",
+      "X-Alga-Signature",
+      "X-Idempotency-Key",
+      "XML",
+      "Xero",
+      "Xero CSV",
+      "Xero Client ID",
+      "Xero Client Secret",
+      "Zoom",
+      "alert.id",
+      "alias",
+      "calendar",
+      "checkbox",
+      "date",
+      "details",
+      "email@example.com, another@example.com",
+      "enum",
+      "file-upload",
+      "iOS",
+      "internal_cost, margin",
+      "long-text",
+      "m",
+      "macOS",
+      "minimum",
+      "my-project-id",
+      "offline",
+      "online",
+      "patches",
+      "payload",
+      "percentage",
+      "phase_name, task_description, assigned_to, estimated_hours, due_date, priority, service, task_type, status, tags",
+      "primary",
+      "select",
+      "short-text",
+      "smtp.example.com",
+      "support@{{domain}}",
+      "task_name",
+      "team",
+      "token",
+      "via",
+      "week",
+      "wk",
+      "workflow-id",
+      "workflow.event",
+      "{{count}} apps",
+      "{{count}} assets",
+      "{{count}} backorder",
+      "{{count}} contact",
+      "{{count}} open",
+      "{{count}} product",
+      "{{count}} project",
+      "{{count}} services",
+      "{{count}} status",
+      "{{count}} team",
+      "{{count}} teams",
+      "{{count}} ticket",
+      "{{count}} tickets",
+      "{{count}} urgent",
+      "{{count}} workflows",
+      "{{location}} · 90d",
+      "{{n}} product",
+      "{{rate}} per {{unit}}",
+      "| null",
+      "—",
+      "• Database",
+      "• Printer",
+      "• Server",
+      "• VPN"
+    ],
+    "caseInsensitive": [
+      "account",
+      "api",
+      "asset",
+      "assets",
+      "contact",
+      "contract",
+      "csv",
+      "dashboard",
+      "html",
+      "id",
+      "json",
+      "label",
+      "ok",
+      "onboarding",
+      "pdf",
+      "project",
+      "service",
+      "services",
+      "sla",
+      "sms",
+      "sso",
+      "status",
+      "tenant",
+      "ticket",
+      "tickets",
+      "url",
+      "webhook",
+      "webhooks",
+      "workflow",
+      "workflows",
+      "min",
+      "xml"
+    ],
+    "patterns": [
+      "^\\s*$",
+      "^\\.\\.\\.$",
+      "^-$",
+      "^[-+]?\\d+(?:[.,:]\\d+)?\\s*(?:%|ms|s|min|h|MB|GB|TB)?$",
+      "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "^[A-Z]{2,8}$",
+      "^#[0-9A-Fa-f]{3,8}$",
+      "^\\{\\{[^{}]+\\}\\}$",
+      "^[\\s()\\[\\]{},.:;#/+\\-–—·|]*\\{\\{[^{}]+\\}\\}(?:[\\s()\\[\\]{},.:;#/+\\-–—·|]*\\{\\{[^{}]+\\}\\})*[\\s()\\[\\]{},.:;#/+\\-–—·|]*$",
+      "^v\\{\\{[^{}]+\\}\\}$",
+      "^Item \\{\\{[^{}]+\\}\\}$",
+      "^Tickets?:?$",
+      "^Ticket #?\\{\\{[^{}]+\\}\\}$",
+      "^Ticket #…$",
+      "^Subtotal: \\{\\{[^{}]+\\}\\}\\{\\{[^{}]+\\}\\}$",
+      "^\\{\\{count\\}\\} min$",
+      "^PO \\{\\{number\\}\\}$",
+      "^Status ?[:*]? ?(?:\\{\\{[^{}]+\\}\\})?$",
+      "^Total: \\{\\{[^{}]+\\}\\}$",
+      "^\\(\\{\\{[^{}]+\\}\\}h\\)$",
+      "^\\{\\{[^{}]+\\}\\} • \\{\\{[^{}]+\\}\\}$",
+      "^URL:$",
+      "^~\\{\\{[^{}]+\\}\\}%$",
+      "^via \\{\\{[^{}]+\\}\\}$",
+      "^\\{\\{[^{}]+\\}\\} ms$",
+      "^\\{\\{regionLabel\\}\\} - \\{\\{percentage\\}\\}% \\(\\{\\{description\\}\\}\\)$",
+      "^\\{\\{regionCode\\}\\} - \\{\\{percentage\\}\\}%$",
+      "^\\{\\{description\\}\\} - \\{\\{percentage\\}\\}%$",
+      "^\\{\\{taxType\\}\\} \\(\\{\\{countryCode\\}\\}\\) - \\{\\{percentage\\}\\}%$",
+      "^re_x+$",
+      "^Gmail: \\{\\{gmail\\}\\}(?: · Microsoft: \\{\\{microsoft\\}\\})? · IMAP: \\{\\{imap\\}\\}$",
+      "^\\{\\{name\\}\\} v\\{\\{version\\}\\}$",
+      "^\\(\\{\\{size\\}\\} KB\\)$",
+      "^Gmail: \\{\\{scopes\\}\\}$",
+      "^ID: \\{\\{id\\}\\}(?:\\.\\.\\.)?$",
+      "^Total:? ?(?:\\{\\{[^{}]+\\}\\}/\\{\\{[^{}]+\\}\\})?$",
+      "^\\{\\{count\\}\\}(?:ms|s)$",
+      "^\\{\\{minutes\\}\\}m \\{\\{seconds\\}\\}s$",
+      "^\\{\\{hours\\}\\}h \\{\\{minutes\\}\\}m$",
+      "^\\+1 \\(555\\) 123-4567$",
+      "^(?:John|Jane|Smith)$",
+      "^TK-$",
+      "^• (?:LAN/WAN|Firewall|Phishing/Spam)$",
+      "^corr-\\d+$",
+      "^Etc/GMT[+-]\\d+$",
+      "^Cron: \\{\\{cron\\}\\}$",
+      "^\\{\\{count\\}\\} total$",
+      "^Cmd/Ctrl\\+K$",
+      "^%$",
+      "^[0-9./\\n]+$",
+      "^https?://",
+      "^[\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,}$",
+      "^P\\{\\{number\\}\\}$",
+      "^\\{\\{hours\\}\\} h$",
+      "^\\{\\{pct\\}\\}%$",
+      "^\\{\\{amount\\}\\} MRR$",
+      "^\\{\\{amount\\}\\} NRR$",
+      "^\\{\\{value\\}\\}%$",
+      "^\\{\\{days\\}\\}d$",
+      "^\\{\\{count\\}\\} POs?$",
+      "^\\{\\{count\\}\\} SOs$",
+      "^\\{\\{count\\}\\} kits$",
+      "^\\{\\{type\\}\\} \\{\\{qty\\}\\} × \\{\\{name\\}\\}$",
+      "^\\(SN \\{\\{sn\\}\\}\\)$",
+      "^T[+-]\\{\\{days\\}\\}$"
+    ],
+    "notes": "This allowlist is intentionally conservative; audit tooling should report English-identical Dutch strings unless they match one of these exact values, case-insensitive established loanwords, or technical patterns."
+  }
+}

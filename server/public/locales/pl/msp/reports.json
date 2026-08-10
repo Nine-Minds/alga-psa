@@ -37,7 +37,8 @@
     "categories": {
       "helpdesk": "Centrum wsparcia",
       "operations": "Operacje",
-      "billing": "Rozliczenia"
+      "billing": "Rozliczenia",
+      "inventory": "Zapasy"
     },
     "badges": {
       "planned": "Planowane"
@@ -45,6 +46,7 @@
     "actions": {
       "viewReport": "Zobacz raport",
       "openInBilling": "Otwórz w rozliczeniach",
+      "openReport": "Otwórz raport",
       "requiresTier": "Wymaga {{tier}}",
       "comingSoon": "Wkrótce"
     },
@@ -150,6 +152,18 @@
       "contractReports": {
         "title": "Raporty kontraktów",
         "description": "Przychody z kontraktów, odnowienia, wykorzystanie puli godzin i rentowność."
+      },
+      "inventoryMargin": {
+        "title": "Raport marży",
+        "description": "Przychód, koszt własny sprzedaży i marża na produkt ze zrealizowanych zamówień sprzedaży."
+      },
+      "inventoryWriteOffs": {
+        "title": "Odpisy",
+        "description": "Ubytki zapasów i korekty spisane w koszty, według przyczyny i okresu."
+      },
+      "inventoryGhostUsage": {
+        "title": "Zużycie widmowe",
+        "description": "Zamknięte zgłoszenia sprzętowe bez zarejestrowanych części — koszty, które warsztat mógł ponieść."
       }
     },
     "table": {

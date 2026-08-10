@@ -30,7 +30,10 @@
     "loadingTeam": "Caricamento configurazione team...",
     "loadingExperimental": "Caricamento configurazione funzionalità sperimentali...",
     "loadingInteractions": "Caricamento impostazioni interazioni...",
-    "keyboardShortcuts": "Scorciatoie da tastiera"
+    "keyboardShortcuts": "Scorciatoie da tastiera",
+    "opportunities": "Opportunità",
+    "mcpServer": "Server MCP",
+    "settingsFallback": "Impostazioni"
   },
   "unsavedChanges": {
     "title": "Modifiche non salvate",

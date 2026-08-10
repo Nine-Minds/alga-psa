@@ -1,9 +1,14 @@
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import TicketImportRouteContent from '../../_components/TicketImportRouteContent';
 
-export const metadata: Metadata = {
-  title: 'Import Tickets',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.tickets.import.title', { defaultValue: 'Import Tickets' }),
+  };
+}
 
 export default function TicketImportModalPage() {
   return <TicketImportRouteContent closeMode="back" />;

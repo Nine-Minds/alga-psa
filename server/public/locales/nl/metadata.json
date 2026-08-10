@@ -1,0 +1,614 @@
+{
+  "clientPortal": {
+    "appointments": {
+      "layout": {
+        "title": "Afspraken"
+      },
+      "detail": {
+        "layout": {
+          "title": "Afspraakdetails"
+        }
+      }
+    },
+    "devices": {
+      "title": "Mijn apparaten"
+    },
+    "documents": {
+      "title": "Documenten"
+    },
+    "licenses": {
+      "title": "Licenties"
+    },
+    "projects": {
+      "title": "Projecten",
+      "detail": {
+        "fallbackTitle": "Projectgegevens"
+      }
+    },
+    "billing": {
+      "invoices": {
+        "detail": {
+          "pay": {
+            "title": "Factuur betalen"
+          },
+          "paymentSuccess": {
+            "title": "Betaling geslaagd"
+          }
+        }
+      },
+      "quotes": {
+        "detail": {
+          "title": "Offertegegevens"
+        }
+      },
+      "title": "Facturatie"
+    },
+    "clientSettings": {
+      "description": "Beheer uw bedrijfsinstellingen en configuraties",
+      "title": "Bedrijfsinstellingen"
+    },
+    "dashboard": {
+      "title": "Dashboard"
+    },
+    "tickets": {
+      "detail": {
+        "title": "Ticket nr. {{ticketNumber}} - {{ticketTitle}}",
+        "fallbackTitle": "Ticketgegevens"
+      },
+      "layout": {
+        "title": "Klanttickets"
+      }
+    },
+    "extensions": {
+      "detail": {
+        "title": "Extensie"
+      }
+    },
+    "knowledgeBase": {
+      "layout": {
+        "title": "Kennisbank"
+      }
+    },
+    "profile": {
+      "layout": {
+        "title": "Profiel"
+      }
+    },
+    "requestServices": {
+      "myRequests": {
+        "title": "Mijn aanvragen",
+        "detail": {
+          "title": "Aanvraaggegevens"
+        }
+      },
+      "detail": {
+        "title": "Serviceaanvraag"
+      },
+      "title": "Services aanvragen"
+    },
+    "account": {
+      "layout": {
+        "title": "Account"
+      }
+    },
+    "layout": {
+      "titleTemplate": "%s | Klantenportaal",
+      "defaultTitle": "Dashboard | Klantenportaal"
+    }
+  },
+  "msp": {
+    "clients": {
+      "title": "Klanten",
+      "detail": {
+        "fallbackTitle": "Klantgegevens"
+      }
+    },
+    "createAsset": {
+      "title": "Asset maken"
+    },
+    "createClient": {
+      "title": "Klant aanmaken"
+    },
+    "createProject": {
+      "title": "Project maken"
+    },
+    "createTicket": {
+      "title": "Ticket aanmaken"
+    },
+    "extensions": {
+      "layout": {
+        "title": "Extensies"
+      },
+      "detail": {
+        "debug": {
+          "layout": {
+            "title": "Extensiefoutopsporing"
+          }
+        }
+      }
+    },
+    "inventory": {
+      "counts": {
+        "title": "Voorraadtellingen"
+      },
+      "ghostUsage": {
+        "title": "Ghost-verbruik"
+      },
+      "loaners": {
+        "title": "Leeneenheden"
+      },
+      "locations": {
+        "title": "Voorraadlocaties"
+      },
+      "margin": {
+        "title": "Margerapport"
+      },
+      "purchaseOrders": {
+        "title": "Inkooporders"
+      },
+      "salesOrders": {
+        "title": "Verkooporders"
+      },
+      "stock": {
+        "title": "Voorraad"
+      },
+      "transfers": {
+        "title": "Overboekingen"
+      },
+      "units": {
+        "title": "Voorraadeenheden"
+      },
+      "vendorBills": {
+        "title": "Leveranciersfacturen"
+      },
+      "vendors": {
+        "title": "Leveranciers"
+      },
+      "writeOffs": {
+        "title": "Afschrijvingen"
+      },
+      "kits": {
+        "title": "Kits"
+      },
+      "title": "Inventaris",
+      "rma": {
+        "title": "RMA"
+      }
+    },
+    "jobs": {
+      "title": "Taken"
+    },
+    "knowledgeBase": {
+      "title": "Kennisbank",
+      "review": {
+        "title": "Kennisbankbeoordeling"
+      }
+    },
+    "projects": {
+      "detail": {
+        "tasks": {
+          "detail": {
+            "title": "Projecttaak"
+          }
+        },
+        "fallbackTitle": "Projectgegevens"
+      },
+      "title": "Projecten",
+      "templates": {
+        "layout": {
+          "title": "Projectsjablonen"
+        },
+        "detail": {
+          "layout": {
+            "title": "Sjabloongegevens"
+          }
+        }
+      }
+    },
+    "quoteApprovals": {
+      "title": "Goedkeuringen van offertes"
+    },
+    "reports": {
+      "title": "Rapporten"
+    },
+    "securitySettings": {
+      "title": "Beveiligingsinstellingen"
+    },
+    "surveys": {
+      "dashboard": {
+        "title": "Enquêtedashboard"
+      },
+      "analytics": {
+        "title": "Enquête-analyses"
+      },
+      "responses": {
+        "title": "Enquêtereacties",
+        "detail": {
+          "title": "Reactiegegevens"
+        }
+      },
+      "settings": {
+        "title": "Enquête-instellingen"
+      },
+      "title": "Enquêtes"
+    },
+    "tickets": {
+      "export": {
+        "title": "Tickets exporteren"
+      },
+      "bulkAssign": {
+        "title": "Tickets toewijzen"
+      },
+      "bulkDueDate": {
+        "title": "Vervaldatum instellen"
+      },
+      "bulkPriority": {
+        "title": "Prioriteit instellen"
+      },
+      "bulkStatus": {
+        "title": "Status instellen"
+      },
+      "bulkTags": {
+        "title": "Labels instellen"
+      },
+      "import": {
+        "title": "Tickets importeren"
+      },
+      "title": "Klanttickets",
+      "detail": {
+        "title": "Ticket nr. {{ticketNumber}} - {{ticketTitle}}",
+        "fallbackTitle": "Ticketgegevens"
+      }
+    },
+    "timeEntry": {
+      "title": "Tijdregistratie",
+      "timesheet": {
+        "detail": {
+          "title": "Urenstaat"
+        }
+      }
+    },
+    "userActivities": {
+      "title": "Gebruikersactiviteiten"
+    },
+    "workflowEditor": {
+      "new": {
+        "title": "Nieuwe workflow"
+      },
+      "detail": {
+        "title": "Workflow bewerken"
+      },
+      "title": "Workfloweditor"
+    },
+    "documentTemplates": {
+      "detail": {
+        "fallbackTitle": "Documentlay-outs",
+        "title": "{{documentType}}-lay-outs"
+      }
+    },
+    "settings": {
+      "title": "Instellingen",
+      "extensions": {
+        "description": "Extensies beheren",
+        "detail": {
+          "description": "Extensiedetails bekijken",
+          "layout": {
+            "title": "Extensie-instellingen"
+          },
+          "settings": {
+            "description": "Extensie-instellingen configureren",
+            "title": "Extensie-instellingen",
+            "layout": {
+              "title": "Extensieconfiguratie"
+            }
+          },
+          "title": "Extensiedetails"
+        },
+        "layout": {
+          "title": "Extensie-instellingen"
+        },
+        "title": "Extensies"
+      },
+      "sla": {
+        "layout": {
+          "title": "SLA-instellingen"
+        }
+      },
+      "notifications": {
+        "layout": {
+          "title": "Meldingsinstellingen"
+        }
+      }
+    },
+    "assets": {
+      "automation": {
+        "title": "Assetautomatisering"
+      },
+      "imports": {
+        "title": "Assetimports"
+      },
+      "integrations": {
+        "title": "Assetintegraties"
+      },
+      "maintenance": {
+        "title": "Assetonderhoud"
+      },
+      "policies": {
+        "title": "Assetbeleid"
+      },
+      "title": "Assetinventaris",
+      "detail": {
+        "edit": {
+          "description": "Assetgegevens bewerken",
+          "title": "Asset bewerken"
+        },
+        "fallbackTitle": "Activadetails"
+      }
+    },
+    "chat": {
+      "title": "Chat"
+    },
+    "contacts": {
+      "title": "Contacten",
+      "detail": {
+        "fallbackTitle": "Contactdetails",
+        "activity": {
+          "title": "{{contactName}} - Activiteit",
+          "fallbackTitle": "Contactactiviteit"
+        }
+      }
+    },
+    "createContact": {
+      "title": "Contact aanmaken"
+    },
+    "createOpportunity": {
+      "title": "Verkoopkans aanmaken"
+    },
+    "createProduct": {
+      "title": "Product aanmaken"
+    },
+    "createService": {
+      "title": "Service aanmaken"
+    },
+    "dashboard": {
+      "title": "Dashboard"
+    },
+    "invoices": {
+      "detail": {
+        "title": "Factuur"
+      }
+    },
+    "marketing": {
+      "calendar": {
+        "title": "Marketingkalender"
+      },
+      "campaigns": {
+        "title": "Marketingcampagnes"
+      },
+      "channels": {
+        "title": "Marketingkanalen"
+      },
+      "content": {
+        "title": "Marketingcontent"
+      },
+      "forms": {
+        "title": "Marketingformulieren"
+      },
+      "posts": {
+        "title": "Marketingberichten"
+      },
+      "sequences": {
+        "title": "Marketingreeksen"
+      },
+      "title": "Marketing"
+    },
+    "onboarding": {
+      "layout": {
+        "title": "Onboarding"
+      }
+    },
+    "platformUpdates": {
+      "detail": {
+        "title": "Platformupdate"
+      }
+    },
+    "quoteDocumentTemplates": {
+      "title": "Offertelay-outs"
+    },
+    "schedule": {
+      "title": "Planning"
+    },
+    "search": {
+      "title": "Zoeken"
+    },
+    "serviceRequests": {
+      "title": "Serviceaanvragen",
+      "detail": {
+        "fallbackTitle": "Serviceaanvraag"
+      }
+    },
+    "technicianDispatch": {
+      "title": "Technicusplanning"
+    },
+    "workflowControl": {
+      "title": "Workflowbeheer"
+    },
+    "billing": {
+      "credits": {
+        "title": "Kredieten"
+      }
+    },
+    "documents": {
+      "title": "Documenten"
+    },
+    "profile": {
+      "layout": {
+        "title": "Profiel"
+      }
+    },
+    "workflows": {
+      "runs": {
+        "detail": {
+          "layout": {
+            "title": "Workflowuitvoering"
+          }
+        }
+      },
+      "title": "Automatiseringshub"
+    },
+    "account": {
+      "layout": {
+        "title": "Account"
+      }
+    },
+    "addOns": {
+      "layout": {
+        "title": "Add-ons"
+      }
+    },
+    "emailLogs": {
+      "title": "E-maillogboeken"
+    },
+    "shareDocument": {
+      "title": "Document delen"
+    },
+    "test": {
+      "collab": {
+        "title": "Samenwerkingstest"
+      },
+      "layout": {
+        "title": "Test"
+      },
+      "onboarding": {
+        "layout": {
+          "title": "Onboardingtest"
+        }
+      },
+      "uiKit": {
+        "layout": {
+          "title": "UI-kit"
+        }
+      }
+    },
+    "timeSheetApprovals": {
+      "title": "Goedkeuringen urenstaat"
+    },
+    "layout": {
+      "defaultTitle": "Dashboard | AlgaPSA"
+    }
+  },
+  "auth": {
+    "clientPortal": {
+      "handoff": {
+        "title": "Bezig met aanmelden"
+      },
+      "signin": {
+        "title": "Aanmelden klantenportaal"
+      },
+      "forgotPassword": {
+        "layout": {
+          "title": "Wachtwoord vergeten"
+        }
+      }
+    },
+    "msp": {
+      "signin": {
+        "title": "MSP-aanmelding"
+      },
+      "forgotPassword": {
+        "layout": {
+          "title": "Wachtwoord vergeten"
+        }
+      }
+    },
+    "verify": {
+      "layout": {
+        "description": "Verifieer uw e-mailadres om de registratie te voltooien",
+        "title": "E-mail verifiëren"
+      }
+    },
+    "signin": {
+      "title": "Aanmelden"
+    },
+    "verifyEmail": {
+      "layout": {
+        "title": "E-mail verifiëren"
+      }
+    },
+    "checkEmail": {
+      "layout": {
+        "title": "Controleer uw e-mail"
+      }
+    },
+    "passwordReset": {
+      "confirmation": {
+        "layout": {
+          "title": "Wachtwoord opnieuw instellen"
+        }
+      },
+      "setNewPassword": {
+        "layout": {
+          "title": "Nieuw wachtwoord instellen"
+        }
+      }
+    },
+    "portal": {
+      "setup": {
+        "layout": {
+          "title": "Portaalinstellingen"
+        }
+      }
+    },
+    "register": {
+      "layout": {
+        "title": "Registreren"
+      }
+    },
+    "team": {
+      "setup": {
+        "layout": {
+          "title": "Teaminstellingen"
+        }
+      }
+    },
+    "layout": {
+      "defaultTitle": "Aanmelden | AlgaPSA"
+    }
+  },
+  "app": {
+    "keywords": "MSP, managed serviceprovider, IT-diensten, netwerkbeheer, clouddiensten",
+    "description": "Applicatie voor managed serviceproviders"
+  },
+  "teams": {
+    "tab": {
+      "title": "Teams-handleiding"
+    },
+    "auth": {
+      "popupComplete": {
+        "title": "Teams-verificatie"
+      }
+    }
+  },
+  "share": {
+    "detail": {
+      "layout": {
+        "title": "Gedeeld document"
+      }
+    }
+  },
+  "static": {
+    "layout": {
+      "title": "AlgaPSA"
+    },
+    "masterTerms": {
+      "layout": {
+        "title": "Algemene voorwaarden"
+      }
+    },
+    "privacyPolicy": {
+      "layout": {
+        "title": "Privacybeleid"
+      }
+    }
+  }
+}

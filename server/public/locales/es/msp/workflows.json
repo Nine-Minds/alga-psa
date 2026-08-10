@@ -1216,6 +1216,15 @@
       "noFields": "Sin campos",
       "copyAllPaths": "Copiar todas las rutas",
       "copyAllFieldPaths": "Copiar todas las rutas de campo"
+    },
+    "logoAlt": "Logotipo del editor de flujos de trabajo",
+    "nodes": {
+      "action": "Acción:",
+      "process": "Proceso:",
+      "clientId": "ID de cliente:",
+      "clientSecret": "Secreto de cliente:",
+      "tenantId": "ID de inquilino:",
+      "userEmail": "Correo electrónico del usuario:"
     }
   },
   "actionInputFieldInfo": {
@@ -1476,7 +1485,9 @@
     "insertReferenceHeading": "Insertar referencia de flujo de trabajo",
     "errors": {
       "noCodeBlock": "No se pueden insertar referencias dentro de bloques de código. Mueva el cursor a otro bloque e inténtelo de nuevo."
-    }
+    },
+    "placeholder": "Redacte texto en Markdown…",
+    "referenceHint": "Las referencias se muestran como fichas en línea y se guardan como nodos de referencia seguros para el flujo de trabajo."
   },
   "referenceSelector": {
     "placeholders": {
@@ -2647,5 +2658,25 @@
         "selectPriority": "Seleccione o introduzca una prioridad"
       }
     }
+  },
+  "toggle": {
+    "disableTitle": "Desactivar flujo de trabajo",
+    "enableTitle": "Activar flujo de trabajo",
+    "confirmDisable": "¿Está seguro de que desea desactivar este flujo de trabajo?",
+    "confirmEnable": "¿Está seguro de que desea activar este flujo de trabajo?"
+  },
+  "mappingEditor": {
+    "error": {
+      "title": "No se pudo cargar el esquema",
+      "retry": "Reintentar",
+      "retryWithCount": "Reintentar ({{retryCount}}/{{maxRetries}})",
+      "attemptOfMax": "Intento {{retryCount}} de {{maxRetries}}",
+      "maxRetriesReached": "Se alcanzó el número máximo de reintentos.",
+      "contactSupport": "Contactar con soporte →"
+    }
+  },
+  "actionInputTypeHint": {
+    "coercible": "El tipo «{{sourceType}}» se convertirá a «{{targetType}}»",
+    "incompatible": "El tipo «{{sourceType}}» es incompatible con el tipo esperado «{{targetType}}»"
   }
 }

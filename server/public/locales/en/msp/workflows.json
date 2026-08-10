@@ -1094,6 +1094,15 @@
       "noFields": "No fields",
       "copyAllPaths": "Copy all paths",
       "copyAllFieldPaths": "Copy all field paths"
+    },
+    "logoAlt": "Workflow Editor Logo",
+    "nodes": {
+      "action": "Action:",
+      "process": "Process:",
+      "clientId": "Client ID:",
+      "clientSecret": "Client Secret:",
+      "tenantId": "Tenant ID:",
+      "userEmail": "User Email:"
     }
   },
   "actionInputFieldInfo": {
@@ -1354,7 +1363,9 @@
     "insertReferenceHeading": "Insert workflow reference",
     "errors": {
       "noCodeBlock": "References cannot be inserted inside code blocks. Move the cursor to another block and try again."
-    }
+    },
+    "placeholder": "Compose markdown text…",
+    "referenceHint": "References render as inline chips and persist as workflow-safe reference nodes."
   },
   "referenceSelector": {
     "placeholders": {
@@ -2525,5 +2536,25 @@
         "selectPriority": "Select or enter a priority"
       }
     }
+  },
+  "toggle": {
+    "disableTitle": "Disable Workflow",
+    "enableTitle": "Enable Workflow",
+    "confirmDisable": "Are you sure you want to disable this workflow?",
+    "confirmEnable": "Are you sure you want to enable this workflow?"
+  },
+  "mappingEditor": {
+    "error": {
+      "title": "Failed to Load Schema",
+      "retry": "Retry",
+      "retryWithCount": "Retry ({{retryCount}}/{{maxRetries}})",
+      "attemptOfMax": "Attempt {{retryCount}} of {{maxRetries}}",
+      "maxRetriesReached": "Maximum retry attempts reached.",
+      "contactSupport": "Contact Support →"
+    }
+  },
+  "actionInputTypeHint": {
+    "coercible": "Type \"{{sourceType}}\" will be converted to \"{{targetType}}\"",
+    "incompatible": "Type \"{{sourceType}}\" is incompatible with expected \"{{targetType}}\""
   }
 }

@@ -37,7 +37,8 @@
     "categories": {
       "helpdesk": "Assistenza tecnica",
       "operations": "Operazioni",
-      "billing": "Fatturazione"
+      "billing": "Fatturazione",
+      "inventory": "Inventario"
     },
     "badges": {
       "planned": "Pianificato"
@@ -45,6 +46,7 @@
     "actions": {
       "viewReport": "Visualizza report",
       "openInBilling": "Apri in fatturazione",
+      "openReport": "Apri report",
       "requiresTier": "Richiede {{tier}}",
       "comingSoon": "In arrivo"
     },
@@ -150,6 +152,18 @@
       "contractReports": {
         "title": "Report contratti",
         "description": "Ricavi dei contratti, rinnovi, utilizzo dei pacchetti e redditività."
+      },
+      "inventoryMargin": {
+        "title": "Report sul margine",
+        "description": "Ricavo, costo del venduto e margine per prodotto dagli ordini di vendita evasi."
+      },
+      "inventoryWriteOffs": {
+        "title": "Svalutazioni",
+        "description": "Cali di magazzino e rettifiche svalutate, per motivo e periodo."
+      },
+      "inventoryGhostUsage": {
+        "title": "Utilizzo fantasma",
+        "description": "Ticket hardware chiusi senza parti registrate — costi che l'officina potrebbe aver assorbito."
       }
     },
     "table": {

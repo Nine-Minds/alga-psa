@@ -339,7 +339,8 @@
     "closeFailed": "Nie udało się zamknąć zgłoszenia",
     "scheduleVisitFailed": "Nie udało się otworzyć harmonogramu",
     "loadCommentsFailed": "Nie udało się wczytać komentarzy",
-    "updateTicketFailed": "Nie udało się zaktualizować zgłoszenia"
+    "updateTicketFailed": "Nie udało się zaktualizować zgłoszenia",
+    "errorWithMessage": "Błąd: {{message}}"
   },
   "conversation": {
     "comments": "Komentarze",

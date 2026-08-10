@@ -6,8 +6,10 @@ interface ServiceRequestCardProps {
   description?: string | null;
   icon?: string | null;
   categoryLabel?: string | null;
-  fallbackCategory?: string;
-  noDescription?: string;
+  // Required so the card never invents English copy of its own; both call sites
+  // pass translated strings from their route's namespace.
+  fallbackCategory: string;
+  noDescription: string;
 }
 
 export function ServiceRequestCard({
@@ -15,8 +17,8 @@ export function ServiceRequestCard({
   description,
   icon,
   categoryLabel,
-  fallbackCategory = 'Service',
-  noDescription = 'No description provided',
+  fallbackCategory,
+  noDescription,
 }: ServiceRequestCardProps) {
   return (
     <div className="group h-full rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 shadow-sm transition-all hover:border-[rgb(var(--color-primary-300))] hover:shadow-md">

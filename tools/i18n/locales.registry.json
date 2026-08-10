@@ -1,0 +1,44 @@
+{
+  "pt": {
+    "dir": "tools/i18n/pt",
+    "glossary": "glossary.json",
+    "reviewState": "review-state.json",
+    "dialect": "pt-BR"
+  },
+  "de": {
+    "dir": "tools/i18n/de",
+    "glossary": "glossary.json",
+    "reviewState": "review-state.json",
+    "dialect": "de-DE"
+  },
+  "es": {
+    "dir": "tools/i18n/es",
+    "glossary": "glossary.json",
+    "reviewState": "review-state.json",
+    "dialect": "es-419"
+  },
+  "fr": {
+    "dir": "tools/i18n/fr",
+    "glossary": "glossary.json",
+    "reviewState": "review-state.json",
+    "dialect": "fr-FR"
+  },
+  "it": {
+    "dir": "tools/i18n/it",
+    "glossary": "glossary.json",
+    "reviewState": "review-state.json",
+    "dialect": "it-IT"
+  },
+  "nl": {
+    "dir": "tools/i18n/nl",
+    "glossary": "glossary.json",
+    "reviewState": "review-state.json",
+    "dialect": "nl-NL"
+  },
+  "pl": {
+    "dir": "tools/i18n/pl",
+    "glossary": "glossary.json",
+    "reviewState": "review-state.json",
+    "dialect": "pl-PL"
+  }
+}

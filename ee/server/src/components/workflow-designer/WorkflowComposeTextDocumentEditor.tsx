@@ -30,6 +30,7 @@ import {
   hydrateComposeTextDocumentToBlocks,
   serializeComposeTextBlocksToDocument,
 } from './workflowComposeTextUtils';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { TemplateDocument } from '@alga-psa/workflows/authoring';
 
 export type WorkflowComposeTextDocumentEditorHandle = {
@@ -83,7 +84,8 @@ export const composeTextBlockNoteSchema = BlockNoteSchema.create({
 
 // Block type `name` surfaces in BlockNote's formatting toolbar dropdown. These strings are rendered by the
 // BlockNote vendor toolbar which does not accept i18n wiring; the registry stays English to match the vendor UI.
-// Track localization of the formatting-toolbar dropdown under the BlockNote vendor UI backlog.
+// The `workflowReference` propSchema default above is English for the same reason: propSchema is evaluated at
+// module scope, where no `t` exists. Track localization of both under the BlockNote vendor UI backlog.
 const composeTextBlockTypeItems = [
   { name: 'Paragraph', type: 'paragraph', icon: RiText },
   { name: 'Heading 1', type: 'heading', props: { level: 1, isToggleable: false }, icon: RiH1 },
@@ -115,6 +117,7 @@ export const WorkflowComposeTextDocumentEditor = forwardRef<
   WorkflowComposeTextDocumentEditorHandle,
   WorkflowComposeTextDocumentEditorProps
 >(({ value, disabled = false, onChange }, ref) => {
+  const { t } = useTranslation('msp/workflows');
   const initialContent = useMemo(
     () => hydrateComposeTextDocumentToBlocks(value),
     [value]
@@ -124,7 +127,7 @@ export const WorkflowComposeTextDocumentEditor = forwardRef<
     schema: composeTextBlockNoteSchema,
     initialContent,
     placeholders: {
-      default: 'Compose markdown text…',
+      default: t('composeText.placeholder', { defaultValue: 'Compose markdown text…' }),
     },
   });
 
@@ -176,7 +179,10 @@ export const WorkflowComposeTextDocumentEditor = forwardRef<
         </BlockNoteView>
       </div>
       <p className="text-xs text-gray-500">
-        References render as inline chips and persist as workflow-safe reference nodes.
+        {t('composeText.referenceHint', {
+          defaultValue:
+            'References render as inline chips and persist as workflow-safe reference nodes.',
+        })}
       </p>
     </div>
   );

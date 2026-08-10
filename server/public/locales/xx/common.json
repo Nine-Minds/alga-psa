@@ -181,6 +181,19 @@
       "resendFailed": "11111",
       "whatsNext": "11111",
       "didntReceive": "11111"
+    },
+    "sso": {
+      "signInWithGoogle": "11111",
+      "signInWithMicrosoft": "11111",
+      "redirecting": "11111",
+      "startFailed": "11111"
+    },
+    "verify": {
+      "title": "11111",
+      "selfRegistrationRemoved": "11111",
+      "existingContactsOnly": "11111",
+      "registerFromSignIn": "11111",
+      "returnToSignIn": "11111"
     }
   },
   "share": {
@@ -1289,5 +1302,17 @@
   },
   "richTextEditorSkeleton": {
     "loading": "11111"
+  },
+  "productBoundary": {
+    "upgrade": {
+      "title": "11111",
+      "description": "11111",
+      "cta": "11111"
+    },
+    "notFound": {
+      "title": "11111",
+      "description": "11111",
+      "cta": "11111"
+    }
   }
 }

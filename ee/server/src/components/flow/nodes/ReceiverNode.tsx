@@ -1,10 +1,12 @@
 // src/components/nodes/ReceiverNode.tsx
 import React, { memo } from 'react';
 import { Handle, NodeProps, Position, useReactFlow } from 'reactflow';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import DeleteButton from '../DeleteButton';
 import { Office365ReceiverNodeData } from '../../../services/flow/types/workflowTypes';
 
 const ReceiverNode = ({ data, id }: NodeProps<Office365ReceiverNodeData>) => {
+  const { t } = useTranslation('msp/workflows');
   const { getNode } = useReactFlow();
   const node = getNode(id);
   const isSelected = node?.selected ?? false;
@@ -21,8 +23,8 @@ const ReceiverNode = ({ data, id }: NodeProps<Office365ReceiverNodeData>) => {
       {isSelected && <DeleteButton nodeId={id} />}
       <div>
         <strong>{data.label}</strong>
-        <div>Client ID: {data.clientId?.template}</div>
-        <div>User Email: {data.userEmail?.template}</div>
+        <div>{t('designer.nodes.clientId', { defaultValue: 'Client ID:' })} {data.clientId?.template}</div>
+        <div>{t('designer.nodes.userEmail', { defaultValue: 'User Email:' })} {data.userEmail?.template}</div>
       </div>
       <Handle type="source" position={Position.Right} style={{ right: '-5px' }} />
     </div>

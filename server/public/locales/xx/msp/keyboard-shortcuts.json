@@ -386,5 +386,13 @@
   "hud": {
     "combinations": "11111",
     "thenPress": "11111"
+  },
+  "vim": {
+    "macro": {
+      "recording": "11111 {{register}} 11111",
+      "recordPrompt": "11111",
+      "playPrompt": "11111"
+    },
+    "visualRowRange": "11111"
   }
 }

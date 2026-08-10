@@ -1,0 +1,864 @@
+{
+  "$schema": "../lib/glossary.schema.json",
+  "locale": "it",
+  "dialect": "it-IT",
+  "displayName": "Italiano",
+  "description": "Terminologia, registro, convenzioni e allowlist di audit per la traduzione italiana di AlgaPSA.",
+  "domainTerms": [
+    {
+      "id": "account",
+      "en-term": "account",
+      "term": "account",
+      "notes": "Mantieni account come prestito per account utente, MSP e cliente (l'account, gli account). Non usare conto salvo un conto contabile o bancario."
+    },
+    {
+      "id": "appointment",
+      "en-term": "appointment",
+      "term": "appuntamento",
+      "notes": "Usa appuntamento per l'entità di calendario e richiesta di appuntamento per appointment request."
+    },
+    {
+      "id": "approval",
+      "en-term": "approval",
+      "term": "approvazione",
+      "notes": "Usa approvazione per workflow, code e stati di approvazione di appuntamenti, fatture, preventivi e fogli presenze."
+    },
+    {
+      "id": "asset",
+      "en-term": "asset",
+      "term": "asset",
+      "notes": "Mantieni asset, maschile invariabile, per dispositivi gestiti e asset di configurazione. msp/assets alterna risorsa e bene e msp/clients contiene anche attività: non estendere queste varianti. Per apparecchiature in contesti field-service/contabili è accettabile cespite cliente; mai risorsa generica come etichetta dell'entità asset."
+    },
+    {
+      "id": "assignment",
+      "en-term": "assignment",
+      "term": "assegnazione",
+      "notes": "Usa assegnazione per ticket, attività, contatti e tecnici; assegnare è l'azione."
+    },
+    {
+      "id": "automation",
+      "en-term": "automation",
+      "term": "automazione",
+      "notes": "Usa automazione per comportamento automatico e automazioni dei workflow."
+    },
+    {
+      "id": "billing",
+      "en-term": "billing",
+      "term": "fatturazione",
+      "notes": "Usa fatturazione per l'area prodotto, le impostazioni di addebito e il processo che genera fatture."
+    },
+    {
+      "id": "board",
+      "en-term": "board",
+      "term": "bacheca",
+      "notes": "Usa bacheca per board di ticket, kanban e workflow. Alcune stringhe mantengono board o rendono board come coda; normalizza l'entità come bacheca."
+    },
+    {
+      "id": "bucket",
+      "en-term": "bucket",
+      "term": "pacchetto ore",
+      "notes": "Usa pacchetto ore per gruppi prepagati o a consumo. Banca ore servizio compare in features/billing; pacchetto ore è il termine dell'entità nei contratti e nel catalogo."
+    },
+    {
+      "id": "budget",
+      "en-term": "budget",
+      "term": "budget",
+      "notes": "Mantieni budget per budget finanziari, limiti e ore a budget. Bilancio compare in un campo di features/projects ma indica più propriamente un rendiconto; non usare preventivo, riservato alle offerte."
+    },
+    {
+      "id": "client",
+      "en-term": "client",
+      "term": "cliente",
+      "notes": "Usa cliente per l'organizzazione che riceve servizi. Azienda va bene quando il campo indica esplicitamente la società, non come sostituto dell'entità Cliente."
+    },
+    {
+      "id": "client-portal",
+      "en-term": "client portal",
+      "term": "portale clienti",
+      "notes": "Usa portale clienti per l'applicazione rivolta ai clienti. Portale cliente compare in features/projects; mantieni la forma plurale consolidata nella navigazione."
+    },
+    {
+      "id": "comment",
+      "en-term": "comment",
+      "term": "commento",
+      "notes": "Usa commento per ticket, progetti, attività, documenti e sondaggi."
+    },
+    {
+      "id": "contact",
+      "en-term": "contact",
+      "term": "contatto",
+      "notes": "Usa contatto per persone di clienti e fornitori; contattare è il verbo per l'azione."
+    },
+    {
+      "id": "contract",
+      "en-term": "contract",
+      "term": "contratto",
+      "notes": "Usa contratto per contratti di servizio, modelli, rinnovi e relative linee. Contrarre in msp/contracts è un errore isolato, non un termine alternativo."
+    },
+    {
+      "id": "contract-line",
+      "en-term": "contract line",
+      "term": "linea contrattuale",
+      "notes": "Usa linea contrattuale per ogni servizio fatturabile del contratto. Righe contratto appare in msp/clients; linea contrattuale è maggioritaria negli altri namespace."
+    },
+    {
+      "id": "credit",
+      "en-term": "credit",
+      "term": "credito",
+      "notes": "Usa credito per saldi, scadenze e note di credito; il plurale è crediti."
+    },
+    {
+      "id": "dashboard",
+      "en-term": "dashboard",
+      "term": "dashboard",
+      "notes": "Mantieni dashboard come prestito comune nell'interfaccia IT; trattalo normalmente al femminile (la dashboard). Vai al dashboard nel portale è un'incongruenza di accordo isolata."
+    },
+    {
+      "id": "dispatch",
+      "en-term": "dispatch",
+      "term": "pianificazione tecnici",
+      "notes": "Usa pianificazione tecnici per l'area di dispatch; la board è la scheda di pianificazione (Dynamics Field Service). Evita smistamento, che indica smistamento logistico o di rete."
+    },
+    {
+      "id": "document",
+      "en-term": "document",
+      "term": "documento",
+      "notes": "Usa documento per file e documenti caricati, condivisi e gestiti; documentazione indica l'insieme o la funzione."
+    },
+    {
+      "id": "email",
+      "en-term": "email",
+      "term": "email",
+      "notes": "Usa email come prestito invariabile. I file alternano email ed e-mail, soprattutto nelle etichette; preferisci email senza trattino nei nuovi testi."
+    },
+    {
+      "id": "email-address",
+      "en-term": "email address",
+      "term": "indirizzo email",
+      "notes": "Usa indirizzo email per un singolo campo indirizzo. Indirizzo e-mail è una grafia esistente ma non va mescolata nello stesso flusso."
+    },
+    {
+      "id": "email-label",
+      "en-term": "email label",
+      "term": "tipo di email",
+      "notes": "Usa tipo di email per il selettore che classifica una riga email, in parallelo con tipo di telefono."
+    },
+    {
+      "id": "extension",
+      "en-term": "extension",
+      "term": "estensione",
+      "notes": "Usa estensione per estensioni della piattaforma, marketplace, manifest e impostazioni installate."
+    },
+    {
+      "id": "file",
+      "en-term": "file",
+      "term": "file",
+      "notes": "Mantieni file, maschile invariabile (il file, i file), per caricamenti, download e allegati."
+    },
+    {
+      "id": "filter",
+      "en-term": "filter",
+      "term": "filtro",
+      "notes": "Usa filtro come sostantivo e filtra/filtrare per l'azione. Rimuovi filtri è la formulazione usata per azzerarli."
+    },
+    {
+      "id": "industry",
+      "en-term": "industry",
+      "term": "settore",
+      "notes": "Usa settore per il settore economico del cliente. client-portal usa correttamente Settore, mentre msp/clients mostra Industria in due campi: trattalo come incoerenza, non come preferenza."
+    },
+    {
+      "id": "invoice",
+      "en-term": "invoice",
+      "term": "fattura",
+      "notes": "Usa fattura per il documento di addebito al cliente e fatturare per l'azione; ricevuta implica normalmente un pagamento già effettuato."
+    },
+    {
+      "id": "invoicing",
+      "en-term": "invoicing",
+      "term": "fatturazione",
+      "notes": "Usa fatturazione per il processo o l'area di emissione fatture. Emissione fatture è accettabile quando l'atto di emissione è esplicito."
+    },
+    {
+      "id": "job",
+      "en-term": "job",
+      "term": "job",
+      "notes": "Mantieni job per l'entità di elaborazione in background (Monitoraggio job). Usa esecuzione per una singola run e lavoro solo in senso operativo generico. Mantieni job per il monitor e le etichette entità; nella prosa esplicativa usa processo in background."
+    },
+    {
+      "id": "knowledge-base",
+      "en-term": "knowledge base",
+      "term": "base di conoscenza",
+      "notes": "Usa base di conoscenza per il modulo, gli articoli, le categorie e i flussi di revisione; è uniforme nei namespace principali."
+    },
+    {
+      "id": "license",
+      "en-term": "license",
+      "term": "licenza",
+      "notes": "Usa licenza per licenze software, attivazione, acquisto e gestione."
+    },
+    {
+      "id": "location",
+      "en-term": "location",
+      "term": "sede",
+      "notes": "Usa sede per la location cliente o di servizio. I contesti inventario/asset alternano ubicazione e posizione; usa ubicazione per collocazione fisica di scorte e posizione per coordinate o stato spaziale."
+    },
+    {
+      "id": "milestone",
+      "en-term": "milestone",
+      "term": "traguardo",
+      "notes": "Usa traguardo per milestone di progetto e fatturazione. features/projects alterna Traguardo, Milestone e pietra miliare; traguardo è il termine italiano più ricorrente nelle etichette. In contesti formali di progetto/fatturazione è accettabile attività cardine."
+    },
+    {
+      "id": "mobile-phone-type",
+      "en-term": "mobile (phone type)",
+      "term": "cellulare",
+      "notes": "Usa Cellulare come etichetta del tipo di telefono. Mobile resta appropriato per accesso, app o dispositivi mobili, non per il numero telefonico."
+    },
+    {
+      "id": "notification",
+      "en-term": "notification",
+      "term": "notifica",
+      "notes": "Usa notifica/notifiche per avvisi in-app, email e attività Teams."
+    },
+    {
+      "id": "onboarding",
+      "en-term": "onboarding",
+      "term": "onboarding",
+      "notes": "Mantieni onboarding come prestito per il percorso iniziale del prodotto; integrazione è riservato alle connessioni tra sistemi."
+    },
+    {
+      "id": "payment",
+      "en-term": "payment",
+      "term": "pagamento",
+      "notes": "Usa pagamento per pagamenti fattura, metodi, stato e configurazione Stripe."
+    },
+    {
+      "id": "pipeline",
+      "en-term": "pipeline",
+      "term": "pipeline di vendita",
+      "notes": "Usa pipeline di vendita per il pipeline commerciale del CRM. Mai conduttura o gasdotto: indicano un condotto fisico."
+    },
+    {
+      "id": "primary-email",
+      "en-term": "primary email",
+      "term": "email principale",
+      "notes": "Usa email principale per l'indirizzo predefinito di contatti, clienti o sedi; indirizzo email principale va bene nei campi estesi."
+    },
+    {
+      "id": "priority",
+      "en-term": "priority",
+      "term": "priorità",
+      "notes": "Usa priorità, invariabile, per ticket, attività, bacheche e workflow."
+    },
+    {
+      "id": "progress",
+      "en-term": "progress",
+      "term": "avanzamento",
+      "notes": "Usa avanzamento per indicatori ed etichette di progresso. La microetichetta maiuscola è AVANZAMENTO; progressi è adatto nella prosa."
+    },
+    {
+      "id": "project",
+      "en-term": "project",
+      "term": "progetto",
+      "notes": "Usa progetto per progetti, fasi, attività, modelli, budget e fatturazione di progetto."
+    },
+    {
+      "id": "quote",
+      "en-term": "quote",
+      "term": "preventivo",
+      "notes": "Usa preventivo (maschile) per offerte commerciali. Citazione è un falso amico presente soprattutto in msp/opportunities e in alcuni errori msp/quotes; non va usato per sales quote."
+    },
+    {
+      "id": "report",
+      "en-term": "report",
+      "term": "report",
+      "notes": "Mantieni report, maschile invariabile, per report analitici, operativi, finanziari e di audit. Rapporti compare in msp/billing, ma può significare relazioni e non è il termine dominante del modulo."
+    },
+    {
+      "id": "request",
+      "en-term": "request",
+      "term": "richiesta",
+      "notes": "Usa richiesta per richieste di servizio, approvazione e appuntamento; richiedere è l'azione."
+    },
+    {
+      "id": "schedule",
+      "en-term": "schedule",
+      "term": "pianificazione",
+      "notes": "Usa pianificazione per regole, esecuzioni e attività pianificate; programma per la vista principale del personale e calendario per una vista calendario. I namespace alternano tutte e tre in base al contesto."
+    },
+    {
+      "id": "screen",
+      "en-term": "screen",
+      "term": "schermata",
+      "notes": "Usa schermata per schermate dell'interfaccia e del consenso OAuth; usa pagina solo quando la fonte indica realmente una pagina."
+    },
+    {
+      "id": "service",
+      "en-term": "service",
+      "term": "servizio",
+      "notes": "Usa servizio per servizi gestiti, supporto, appuntamenti e voci del catalogo. Service non tradotto in features/inventory è un residuo."
+    },
+    {
+      "id": "service-catalog",
+      "en-term": "service catalog",
+      "term": "catalogo dei servizi",
+      "notes": "Usa catalogo dei servizi per l'area e l'entità del catalogo. Due stringhe msp/core sono ancora in inglese e non indicano terminologia approvata."
+    },
+    {
+      "id": "settings",
+      "en-term": "settings",
+      "term": "impostazioni",
+      "notes": "Usa il plurale impostazioni per pagine e controlli di configurazione."
+    },
+    {
+      "id": "single-sign-on",
+      "en-term": "single sign-on",
+      "term": "SSO",
+      "notes": "Usa SSO nelle etichette compatte e Single Sign-On come nome esteso della funzione. Non tradurre letteralmente come accesso singolo."
+    },
+    {
+      "id": "sla",
+      "en-term": "SLA",
+      "term": "SLA",
+      "notes": "Mantieni SLA come abbreviazione standard di accordo sul livello di servizio."
+    },
+    {
+      "id": "status",
+      "en-term": "status",
+      "term": "stato",
+      "notes": "Usa stato per ticket, fatture, utenti, asset e workflow; non lasciare status in inglese nelle etichette generiche."
+    },
+    {
+      "id": "survey",
+      "en-term": "survey",
+      "term": "sondaggio",
+      "notes": "Usa sondaggio per sondaggi di soddisfazione, moduli, risposte e analisi post-ticket."
+    },
+    {
+      "id": "tag",
+      "en-term": "tag",
+      "term": "tag",
+      "notes": "Mantieni tag, maschile invariabile, per ticket, progetti e filtri. msp/assets usa una volta etichetta, ma tag è dominante."
+    },
+    {
+      "id": "task",
+      "en-term": "task",
+      "term": "attività",
+      "notes": "Usa attività, invariabile, per task di progetto, workflow, inbox e checklist. Task compare nel namespace dispatch e in alcune notifiche, ma non è il termine generale preferito."
+    },
+    {
+      "id": "technician",
+      "en-term": "technician",
+      "term": "tecnico",
+      "notes": "Usa tecnico/tecnica quando il genere è noto; nelle etichette generiche correnti si usa tecnico."
+    },
+    {
+      "id": "tenant",
+      "en-term": "tenant",
+      "term": "tenant",
+      "notes": "Mantieni tenant nei contesti multi-tenant, amministrativi e di integrazione. Inquilino è una traduzione letterale errata presente in msp/assets e msp/contracts."
+    },
+    {
+      "id": "ticket",
+      "en-term": "ticket",
+      "term": "ticket",
+      "notes": "Mantieni ticket come prestito standard del supporto (il ticket, i ticket). Non usare biglietto, che indica viaggio o ingresso."
+    },
+    {
+      "id": "time-entry",
+      "en-term": "time entry",
+      "term": "inserimento ore",
+      "notes": "Usa inserimento ore per la singola registrazione di tempo (convenzione Dynamics); plurale inserimenti ore. Evita il calco voce di tempo, oggi maggioritario nei file e da normalizzare."
+    },
+    {
+      "id": "timesheet",
+      "en-term": "timesheet",
+      "term": "foglio ore",
+      "notes": "Usa foglio ore per il gruppo di voci fatturabili inviato o approvato. Foglio presenze indica il registro presenze/timbrature e va riservato ai flussi di presenza. Revisione avversaria 2026-08."
+    },
+    {
+      "id": "user",
+      "en-term": "user",
+      "term": "utente",
+      "notes": "Usa utente/utenti per account e membri del sistema."
+    },
+    {
+      "id": "webhook",
+      "en-term": "webhook",
+      "term": "webhook",
+      "notes": "Mantieni webhook/webhook al plurale come prestito tecnico in impostazioni, integrazioni e sicurezza."
+    },
+    {
+      "id": "work-phone-type",
+      "en-term": "work (phone type)",
+      "term": "lavoro",
+      "notes": "Usa il sostantivo Lavoro come etichetta del tipo di telefono, come in msp/contacts; non usare lavorare."
+    },
+    {
+      "id": "workflow",
+      "en-term": "workflow",
+      "term": "workflow",
+      "notes": "Mantieni workflow come prestito tecnico, maschile invariabile. Flusso di lavoro è accettabile nella prosa esplicativa, ma le schermate di automazione usano soprattutto workflow. I workflow di AlgaPSA sono automazione a eventi in stile n8n (trigger, azioni, esecuzioni), non flussi di stato in stile Jira."
+    }
+  ],
+  "forbiddenTerms": [
+    {
+      "term": "biglietti",
+      "preferred": "ticket",
+      "reason": "Plurale errato per ticket di supporto; ticket resta invariabile.",
+      "enWhen": "\\btickets?\\b"
+    },
+    {
+      "term": "biglietto",
+      "preferred": "ticket",
+      "reason": "Registro errato per un ticket di supporto; biglietto indica viaggio o ingresso.",
+      "enWhen": "\\btickets?\\b"
+    },
+    {
+      "term": "board",
+      "preferred": "bacheca",
+      "enWhen": "\\bboards?\\b",
+      "reason": "Residuo inglese non tradotto per le bacheche kanban/ticket."
+    },
+    {
+      "term": "bucket",
+      "preferred": "pacchetto ore",
+      "enWhen": "\\bbuckets?\\b",
+      "reason": "Residuo inglese non tradotto per i pacchetti di ore prepagate."
+    },
+    {
+      "term": "citazione",
+      "preferred": "preventivo",
+      "reason": "Falso amico di sales quote; citazione indica una fonte testuale o convocazione. È un errore esistente da non propagare.",
+      "enWhen": "\\bquot(e|es|ed|ing)\\b"
+    },
+    {
+      "term": "citazioni",
+      "preferred": "preventivi",
+      "reason": "Plurale del falso amico usato in msp/opportunities; usa preventivi.",
+      "enWhen": "\\bquot(e|es|ed|ing)\\b"
+    },
+    {
+      "term": "conduttura",
+      "preferred": "pipeline di vendita",
+      "reason": "A physical conduit; the CRM sales pipeline is a pipeline di vendita.",
+      "enWhen": "\\bpipelines?\\b"
+    },
+    {
+      "term": "consiglio",
+      "preferred": "bacheca",
+      "reason": "False friend for a kanban/ticket board; consiglio is a board of directors or advice.",
+      "enWhen": "\\bboards?\\b"
+    },
+    {
+      "term": "cruscotti",
+      "preferred": "dashboard",
+      "reason": "Per le dashboard del prodotto usa il prestito invariabile dashboard.",
+      "enWhen": "\\bdashboards?\\b"
+    },
+    {
+      "term": "cruscotto",
+      "preferred": "dashboard",
+      "reason": "La terminologia prodotto mantiene dashboard; cruscotto è un'incoerenza isolata in features/tickets.",
+      "enWhen": "\\bdashboards?\\b"
+    },
+    {
+      "term": "fogli presenze",
+      "preferred": "fogli ore",
+      "enWhen": "\\btime ?sheets?\\b",
+      "reason": "Plurale del termine presenze errato per il timesheet."
+    },
+    {
+      "term": "foglio presenze",
+      "preferred": "foglio ore",
+      "enWhen": "\\btime ?sheets?\\b",
+      "reason": "Foglio presenze indica il registro presenze/timbrature; il gruppo di voci fatturabili è il foglio ore."
+    },
+    {
+      "term": "gasdotto",
+      "preferred": "pipeline di vendita",
+      "reason": "A gas pipeline; the CRM sales pipeline is a pipeline di vendita.",
+      "enWhen": "\\bpipelines?\\b"
+    },
+    {
+      "term": "inquilini",
+      "preferred": "tenant",
+      "reason": "Plurale letterale errato nel contesto SaaS; tenant resta invariabile.",
+      "enWhen": "\\btenants?\\b"
+    },
+    {
+      "term": "inquilino",
+      "preferred": "tenant",
+      "reason": "Traduzione letterale errata nel contesto SaaS multi-tenant; usa tenant.",
+      "enWhen": "\\btenants?\\b"
+    },
+    {
+      "term": "locatari",
+      "preferred": "tenant",
+      "reason": "Plurale immobiliare, non adatto all'entità tecnica multi-tenant.",
+      "enWhen": "\\btenants?\\b"
+    },
+    {
+      "term": "locatario",
+      "preferred": "tenant",
+      "reason": "Termine immobiliare, non adatto all'entità tecnica multi-tenant.",
+      "enWhen": "\\btenants?\\b"
+    },
+    {
+      "term": "milestone",
+      "preferred": "traguardo",
+      "enWhen": "\\bmilestones?\\b",
+      "reason": "Residuo inglese non tradotto; il termine di prodotto è traguardo."
+    },
+    {
+      "term": "quotazione",
+      "preferred": "preventivo",
+      "reason": "In italiano indica soprattutto una quotazione finanziaria; l'offerta commerciale PSA è un preventivo.",
+      "enWhen": "\\bquot(e|es|ed|ing)\\b"
+    },
+    {
+      "term": "quotazioni",
+      "preferred": "preventivi",
+      "reason": "Per le offerte commerciali del prodotto usa preventivi, non quotazioni finanziarie.",
+      "enWhen": "\\bquot(e|es|ed|ing)\\b"
+    },
+    {
+      "term": "risorsa",
+      "preferred": "asset",
+      "enWhen": "\\bassets?\\b",
+      "reason": "Etichetta errata per l'entità asset quando la sorgente inglese usa asset; risorsa resta legittima altrove."
+    },
+    {
+      "term": "risorse",
+      "preferred": "asset",
+      "enWhen": "\\bassets?\\b",
+      "reason": "Plurale dell'etichetta errata per l'entità asset."
+    },
+    {
+      "term": "secchi",
+      "preferred": "pacchetti ore",
+      "enWhen": "\\bbuckets?\\b",
+      "reason": "Plurale della traduzione letterale del bucket."
+    },
+    {
+      "term": "secchio",
+      "preferred": "pacchetto ore",
+      "enWhen": "\\bbuckets?\\b",
+      "reason": "Traduzione letterale del bucket di ore prepagate; il termine di listino è pacchetto ore."
+    },
+    {
+      "term": "voce di tempo",
+      "preferred": "inserimento ore",
+      "enWhen": "\\btime entr(y|ies)\\b",
+      "reason": "Calco rifiutato in revisione 2026-08; il termine è inserimento ore (convenzione Dynamics)."
+    },
+    {
+      "term": "voci di tempo",
+      "preferred": "inserimenti ore",
+      "enWhen": "\\btime entr(y|ies)\\b",
+      "reason": "Plurale del calco rifiutato voce di tempo."
+    }
+  ],
+  "dialectRules": [
+    {
+      "id": "italian-informal-register",
+      "rule": "Rivolgiti all'utente con il registro informale tu: inserisci, seleziona, configura, riprova.",
+      "notes": "Il registro informale è nettamente dominante. Restano residui formali (inserisca, selezioni, configuri e possessivi formali) che non vanno mescolati nello stesso flusso. Le impostazioni (msp/settings) contengono residui formali (Lei) da normalizzare al tu."
+    },
+    {
+      "id": "it-loanwords",
+      "rule": "Mantieni gli anglicismi consolidati nel linguaggio software e MSP italiano.",
+      "notes": "Esempi documentati: account, asset, budget, dashboard, email, file, job, onboarding, report, tag, tenant, ticket, webhook e workflow."
+    },
+    {
+      "id": "loanword-number",
+      "rule": "I prestiti non adattati restano invariabili al plurale.",
+      "notes": "Esempi: gli account, gli asset, i file, i report, i ticket, i workflow; non aggiungere una -s inglese."
+    },
+    {
+      "id": "quote-register",
+      "rule": "Traduci sales quote come preventivo, mai citazione o quotazione.",
+      "notes": "Preventivo è dominante in billing e quotes. Le occorrenze di citazione in opportunities, invoicing e alcuni errori quotes sono falsi amici esistenti."
+    },
+    {
+      "id": "entity-vs-generic-nouns",
+      "rule": "Mantieni i nomi entità tecnici coerenti: asset, dashboard, tenant, ticket e workflow.",
+      "notes": "Risorsa/bene, cruscotto, inquilino e flusso di lavoro compaiono in modo disomogeneo; usa le alternative italiane solo nella prosa generica dove non indicano l'entità."
+    },
+    {
+      "id": "email-spelling",
+      "rule": "Preferisci email senza trattino e mantienilo invariabile.",
+      "notes": "I file alternano email ed e-mail; non mescolare le due grafie nello stesso percorso utente."
+    },
+    {
+      "id": "interpolation",
+      "rule": "Preserve every {{variable}} exactly as in the English source.",
+      "notes": "Do not translate placeholders, braces, or variable names."
+    }
+  ],
+  "identicalAllowlist": {
+    "exact": [
+      "AI",
+      "API",
+      "Account",
+      "Africa",
+      "Alga",
+      "AlgaDesk",
+      "AlgaPSA",
+      "Alt",
+      "America",
+      "Android",
+      "App Store (iOS)",
+      "Asia",
+      "Asset",
+      "Australia",
+      "Authorization: Bearer abc123\nX-Source: alga-psa",
+      "Budget",
+      "CIPP (CyberDrain Improved Partner Portal)",
+      "CPU",
+      "CSV",
+      "Control",
+      "Cron",
+      "Ctrl",
+      "Dashboard",
+      "Dashboard | AlgaPSA",
+      "Datto",
+      "Email",
+      "Email:",
+      "Entra ID",
+      "Excel",
+      "Fax",
+      "Firewall",
+      "GPU",
+      "Gmail",
+      "Google",
+      "Google Calendar",
+      "Google OAuth",
+      "Google Play (Android)",
+      "Google Workspace",
+      "HMAC-SHA256",
+      "HTML",
+      "Hardware",
+      "Hudu",
+      "Huntress",
+      "Hypervisor",
+      "ID",
+      "IMAP",
+      "ITIL",
+      "JSON",
+      "Job",
+      "KB",
+      "Kanban",
+      "Keycloak",
+      "Knox",
+      "Linux",
+      "MSP",
+      "MY_API_KEY",
+      "Meta",
+      "Microsoft",
+      "Microsoft 365",
+      "Microsoft 365 (Microsoft Graph)",
+      "Microsoft Entra",
+      "Microsoft OAuth",
+      "Microsoft Outlook Calendar",
+      "Microsoft Teams",
+      "NVMe",
+      "NinjaOne",
+      "OAuth",
+      "OAuth2 (XOAUTH2)",
+      "OK",
+      "Onboarding",
+      "Outlook",
+      "Outlook Calendar",
+      "PDF",
+      "Payload",
+      "Pro",
+      "QBO #",
+      "QuickBooks",
+      "QuickBooks CSV",
+      "QuickBooks Online",
+      "RAM",
+      "RAM (GB)",
+      "RMA",
+      "Report",
+      "Router",
+      "SKU",
+      "SLA",
+      "SMS",
+      "SMTP",
+      "SSO",
+      "Server",
+      "Shift",
+      "Software",
+      "Solo",
+      "Stripe",
+      "T&M",
+      "TTL:",
+      "Tactical RMM",
+      "Tag",
+      "Tanium",
+      "Teams",
+      "Tenant",
+      "Test",
+      "Ticket",
+      "Trigger",
+      "Try/Catch",
+      "URL",
+      "UUID",
+      "Webhook",
+      "Wi-Fi",
+      "Windows",
+      "Workflow",
+      "X-Alga-Signature",
+      "X-Idempotency-Key",
+      "XML",
+      "Xero",
+      "Xero CSV",
+      "alert.id",
+      "calendar",
+      "common (multi-tenant)",
+      "email@example.com, another@example.com",
+      "h",
+      "iOS",
+      "internal_cost, margin",
+      "m",
+      "macOS",
+      "my-project-id",
+      "phase_name, task_description, assigned_to, estimated_hours, due_date, priority, service, task_type, status, tags",
+      "primary",
+      "task_name",
+      "token",
+      "workflow.event",
+      "{{rate}} per {{unit}}",
+      "| null",
+      "—"
+    ],
+    "caseInsensitive": [
+      "account",
+      "api",
+      "asset",
+      "budget",
+      "csv",
+      "dashboard",
+      "email",
+      "file",
+      "html",
+      "id",
+      "job",
+      "json",
+      "ok",
+      "onboarding",
+      "pdf",
+      "report",
+      "sla",
+      "sms",
+      "sso",
+      "tag",
+      "tenant",
+      "ticket",
+      "url",
+      "webhook",
+      "workflow",
+      "min",
+      "xml",
+      "oauth",
+      "server",
+      "hardware",
+      "software",
+      "firewall",
+      "payload",
+      "trigger",
+      "no",
+      "video",
+      "antivirus",
+      "logo",
+      "marketing",
+      "agenda",
+      "password",
+      "chat",
+      "team",
+      "kit",
+      "alias",
+      "endpoint",
+      "debug",
+      "escalation",
+      "bot",
+      "editor",
+      "drop-ship"
+    ],
+    "patterns": [
+      "^\\s*$",
+      "^\\.\\.\\.$",
+      "^-$",
+      "^[-+]?\\d+(?:[.,:]\\d+)?\\s*(?:%|ms|s|min|h|MB|GB|TB)?$",
+      "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "^[A-Z]{2,8}$",
+      "^#[0-9A-Fa-f]{3,8}$",
+      "^\\{\\{[^{}]+\\}\\}$",
+      "^[\\s()\\[\\]{},.:;#/+\\-–—·|]*\\{\\{[^{}]+\\}\\}(?:[\\s()\\[\\]{},.:;#/+\\-–—·|]*\\{\\{[^{}]+\\}\\})*[\\s()\\[\\]{},.:;#/+\\-–—·|]*$",
+      "^v\\{\\{[^{}]+\\}\\}$",
+      "^Item \\{\\{[^{}]+\\}\\}$",
+      "^Tickets?:?$",
+      "^Ticket #?\\{\\{[^{}]+\\}\\}$",
+      "^Ticket #…$",
+      "^Subtotal: \\{\\{[^{}]+\\}\\}\\{\\{[^{}]+\\}\\}$",
+      "^\\{\\{count\\}\\} min$",
+      "^PO \\{\\{number\\}\\}$",
+      "^Status ?[:*]? ?(?:\\{\\{[^{}]+\\}\\})?$",
+      "^Total: \\{\\{[^{}]+\\}\\}$",
+      "^\\(\\{\\{[^{}]+\\}\\}h\\)$",
+      "^\\{\\{[^{}]+\\}\\} • \\{\\{[^{}]+\\}\\}$",
+      "^URL:$",
+      "^~\\{\\{[^{}]+\\}\\}%$",
+      "^via \\{\\{[^{}]+\\}\\}$",
+      "^\\{\\{[^{}]+\\}\\} ms$",
+      "^\\{\\{regionLabel\\}\\} - \\{\\{percentage\\}\\}% \\(\\{\\{description\\}\\}\\)$",
+      "^\\{\\{regionCode\\}\\} - \\{\\{percentage\\}\\}%$",
+      "^\\{\\{description\\}\\} - \\{\\{percentage\\}\\}%$",
+      "^\\{\\{taxType\\}\\} \\(\\{\\{countryCode\\}\\}\\) - \\{\\{percentage\\}\\}%$",
+      "^re_x+$",
+      "^Gmail: \\{\\{gmail\\}\\}(?: · Microsoft: \\{\\{microsoft\\}\\})? · IMAP: \\{\\{imap\\}\\}$",
+      "^\\{\\{name\\}\\} v\\{\\{version\\}\\}$",
+      "^\\(\\{\\{size\\}\\} KB\\)$",
+      "^Gmail: \\{\\{scopes\\}\\}$",
+      "^ID: \\{\\{id\\}\\}(?:\\.\\.\\.)?$",
+      "^Total:? ?(?:\\{\\{[^{}]+\\}\\}/\\{\\{[^{}]+\\}\\})?$",
+      "^\\{\\{count\\}\\}(?:ms|s)$",
+      "^\\{\\{minutes\\}\\}m \\{\\{seconds\\}\\}s$",
+      "^\\{\\{hours\\}\\}h \\{\\{minutes\\}\\}m$",
+      "^\\+1 \\(555\\) 123-4567$",
+      "^(?:John|Jane|Smith)$",
+      "^TK-$",
+      "^• (?:LAN/WAN|Firewall|Phishing/Spam)$",
+      "^corr-\\d+$",
+      "^Etc/GMT[+-]\\d+$",
+      "^Cron: \\{\\{cron\\}\\}$",
+      "^\\{\\{count\\}\\} total$",
+      "^Cmd/Ctrl\\+K$",
+      "^%$",
+      "^[0-9./\\n]+$",
+      "^https?://",
+      "^[\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,}$",
+      "^P\\{\\{number\\}\\}$",
+      "^\\{\\{hours\\}\\} h$",
+      "^\\{\\{pct\\}\\}%$",
+      "^\\{\\{amount\\}\\} MRR$",
+      "^\\{\\{amount\\}\\} NRR$",
+      "^\\{\\{value\\}\\}%$",
+      "^\\{\\{days\\}\\}d$",
+      "^\\{\\{count\\}\\} POs?$",
+      "^\\{\\{count\\}\\} SOs$",
+      "^\\{\\{count\\}\\} kits$",
+      "^\\{\\{type\\}\\} \\{\\{qty\\}\\} × \\{\\{name\\}\\}$",
+      "^\\(SN \\{\\{sn\\}\\}\\)$",
+      "^T[+-]\\{\\{days\\}\\}$",
+      "^ ?\\(?Standard\\)?$",
+      "^\\(?\\{\\{count\\}\\} (?:team|ticket)\\)?$",
+      "^• (?:Server|Database|VPN|Wi-Fi|Malware/Virus)$",
+      "^(?:smtp|portal)\\.example\\.com$",
+      "^,$"
+    ],
+    "notes": "Questa allowlist è volutamente conservativa: l'audit deve segnalare il testo identico all'inglese salvo corrispondenza con uno di questi valori esatti, prestiti senza distinzione tra maiuscole e minuscole o pattern tecnici."
+  }
+}

@@ -6,11 +6,16 @@ import { redirect } from 'next/navigation';
 import type { IRmaCase } from '@alga-psa/types';
 import type { DeadUnitOwedRow } from '@alga-psa/inventory/actions';
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
-export const metadata: Metadata = {
-  title: 'RMA',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.inventory.rma.title', { defaultValue: 'RMA' }),
+  };
+}
 
 export default async function RmaPage() {
   const boundary = await enforceServerProductRoute({ pathname: '/msp/inventory/rma', scope: 'msp' });

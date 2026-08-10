@@ -67,21 +67,37 @@ export function isSupportedLocale(locale: string): locale is SupportedLocale {
 }
 
 /**
+ * Coerce a stored or supplied locale to one we actually ship, or null.
+ *
+ * Region-tagged values reach us from several directions — `pt_BR` written into
+ * `clients.properties.defaultLocale`, `en-US` from an Accept-Language header,
+ * `FR` from an import. The packs are language-only, so a bare `isSupportedLocale`
+ * check rejected all of them and the setting silently did nothing. Anything that
+ * still does not name a shipped language returns null so callers can fall
+ * through deliberately rather than guess.
+ */
+export function normalizeLocale(value: unknown): SupportedLocale | null {
+  if (typeof value !== 'string') return null;
+
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return null;
+  if (isSupportedLocale(trimmed)) return trimmed;
+
+  // 'pt_BR' / 'pt-BR' / 'zh-Hans-CN' -> leading language subtag
+  const languagePart = trimmed.split(/[-_]/)[0];
+  return isSupportedLocale(languagePart) ? languagePart : null;
+}
+
+/**
  * Get the best matching locale from a list of preferred locales
  */
 export function getBestMatchingLocale(
   preferredLocales: readonly string[],
 ): SupportedLocale {
   for (const locale of preferredLocales) {
-    // Exact match
-    if (isSupportedLocale(locale)) {
-      return locale;
-    }
-
-    // Try language part only (e.g., 'en' from 'en-US')
-    const languagePart = locale.split('-')[0];
-    if (isSupportedLocale(languagePart)) {
-      return languagePart as SupportedLocale;
+    const normalized = normalizeLocale(locale);
+    if (normalized) {
+      return normalized;
     }
   }
 
@@ -150,6 +166,10 @@ export function filterPseudoLocales(
  * Route prefixes mapped to their required namespaces
  */
 export const ROUTE_NAMESPACES = {
+  // Auth routes serve both portals off one path — which one is decided by a
+  // `portal` query param — so they preload both portals' auth copy.
+  '/auth': ['common', 'msp/auth', 'client-portal'],
+  '/auth/team': ['common', 'msp/auth', 'msp/onboarding'],
   '/client-portal': ['common', 'client-portal'],
   '/client-portal/tickets': ['common', 'client-portal', 'features/tickets'],
   '/client-portal/projects': ['common', 'client-portal', 'features/projects'],

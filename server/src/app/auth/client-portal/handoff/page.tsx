@@ -3,12 +3,17 @@ import { PortalSessionHandoff } from '@alga-psa/auth/client';
 import { I18nWrapper } from '@alga-psa/tenancy/components';
 import { getTenantLocaleByDomain } from '@alga-psa/tenancy/actions';
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { resolveDeploymentCapabilities } from '@/lib/deployment/deploymentProfile';
 import { resolveRequestHost } from '@/lib/deployment/requestHost';
 
-export const metadata: Metadata = {
-  title: 'Signing In',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('auth.clientPortal.handoff.title', { defaultValue: 'Signing In' }),
+  };
+}
 
 function buildFallbackLoginUrl(): string {
   const authUrl = process.env.NEXTAUTH_URL;

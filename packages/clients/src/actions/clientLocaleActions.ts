@@ -3,7 +3,7 @@
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { SupportedLocale, isSupportedLocale } from '@alga-psa/core/i18n/config';
+import { SupportedLocale, normalizeLocale } from '@alga-psa/core/i18n/config';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import { assertMspOrClientPortalOwnClientPermission } from '../lib/authHelpers';
 import {
@@ -54,7 +54,10 @@ export const updateClientLocaleAction = withAuth(async (
         trx
       );
 
-      if (!isSupportedLocale(locale)) {
+      // Normalize before storing so a region-tagged value ('pt_BR') lands as the
+      // language we actually ship rather than sitting in the column unreadable.
+      const normalizedLocale = normalizeLocale(locale);
+      if (!normalizedLocale) {
         throw new Error(`Unsupported locale: ${locale}`);
       }
 
@@ -72,7 +75,7 @@ export const updateClientLocaleAction = withAuth(async (
       // Update properties JSONB with new locale
       const updatedProperties = {
         ...(client.properties || {}),
-        defaultLocale: locale
+        defaultLocale: normalizedLocale
       };
 
       await tenantDb(trx, tenant).table('clients')
@@ -137,6 +140,7 @@ export const getClientLocaleAction = withOptionalAuth(async (
     throw error;
   }
 
-  const locale = client?.properties?.defaultLocale;
-  return isSupportedLocale(locale) ? locale : null;
+  // Reads normalize too: rows written before validation existed still hold
+  // values like 'pt_BR'.
+  return normalizeLocale(client?.properties?.defaultLocale);
 });

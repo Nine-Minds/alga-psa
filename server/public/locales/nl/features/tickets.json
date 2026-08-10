@@ -297,7 +297,8 @@
     "closeFailed": "Ticket sluiten is mislukt",
     "scheduleVisitFailed": "Kan de planner niet openen",
     "loadCommentsFailed": "Opmerkingen laden mislukt",
-    "updateTicketFailed": "Ticket bijwerken mislukt"
+    "updateTicketFailed": "Ticket bijwerken mislukt",
+    "errorWithMessage": "Fout: {{message}}"
   },
   "conversation": {
     "comments": "Reacties",

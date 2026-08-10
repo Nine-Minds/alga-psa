@@ -37,7 +37,8 @@
     "categories": {
       "helpdesk": "Support",
       "operations": "Opérations",
-      "billing": "Facturation"
+      "billing": "Facturation",
+      "inventory": "Inventaire"
     },
     "badges": {
       "planned": "Planifié"
@@ -45,6 +46,7 @@
     "actions": {
       "viewReport": "Voir le rapport",
       "openInBilling": "Ouvrir dans la facturation",
+      "openReport": "Ouvrir le rapport",
       "requiresTier": "Requiert {{tier}}",
       "comingSoon": "Bientôt disponible"
     },
@@ -150,6 +152,18 @@
       "contractReports": {
         "title": "Rapports de contrats",
         "description": "Revenus de contrat, renouvellements, utilisation des forfaits et rentabilité."
+      },
+      "inventoryMargin": {
+        "title": "Rapport de marge",
+        "description": "Chiffre d'affaires, coût des marchandises vendues et marge par produit issus des commandes client livrées."
+      },
+      "inventoryWriteOffs": {
+        "title": "Radiations",
+        "description": "Pertes de stock et ajustements radiés, par motif et période."
+      },
+      "inventoryGhostUsage": {
+        "title": "Usage fantôme",
+        "description": "Tickets matériel fermés sans pièces enregistrées — des coûts que l'atelier a peut-être absorbés."
       }
     },
     "table": {

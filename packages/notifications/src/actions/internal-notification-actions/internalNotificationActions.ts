@@ -3,6 +3,7 @@
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { normalizeLocale } from '@alga-psa/core/i18n/config';
 import { hasPermissionAsync } from '../../lib/authHelpers';
 import {
   InternalNotification,
@@ -79,13 +80,17 @@ async function getUserLocale(
 
   if (userPreference?.setting_value) {
     const raw = userPreference.setting_value;
-    const locale = typeof raw === 'string' ? raw.replace(/"/g, '') : raw;
+    // Every read normalizes: these columns hold values like 'pt_BR' that name a
+    // language we ship under a code we don't, and an unnormalized one reaches
+    // the renderer as a locale with no pack behind it.
+    const locale = normalizeLocale(typeof raw === 'string' ? raw.replace(/"/g, '') : raw);
     if (locale) return locale;
   }
 
   // 2. Client-specific default (client users only)
-  if (user?.user_type !== 'internal' && user?.properties?.defaultLocale) {
-    return user.properties.defaultLocale;
+  if (user?.user_type !== 'internal') {
+    const clientLocale = normalizeLocale(user?.properties?.defaultLocale);
+    if (clientLocale) return clientLocale;
   }
 
   // 3. Tenant settings — portal-specific default then tenant-wide default
@@ -94,15 +99,16 @@ async function getUserLocale(
     .first();
 
   if (user?.user_type === 'internal') {
-    const mspPortalLocale = tenantSettings?.settings?.mspPortal?.defaultLocale;
+    const mspPortalLocale = normalizeLocale(tenantSettings?.settings?.mspPortal?.defaultLocale);
     if (mspPortalLocale) return mspPortalLocale;
   } else {
-    const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
+    const clientPortalLocale = normalizeLocale(tenantSettings?.settings?.clientPortal?.defaultLocale);
     if (clientPortalLocale) return clientPortalLocale;
   }
 
-  if (tenantSettings?.settings?.defaultLocale) {
-    return tenantSettings.settings.defaultLocale;
+  const tenantDefaultLocale = normalizeLocale(tenantSettings?.settings?.defaultLocale);
+  if (tenantDefaultLocale) {
+    return tenantDefaultLocale;
   }
 
   // 4. System default

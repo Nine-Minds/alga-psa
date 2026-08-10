@@ -9,11 +9,16 @@ import { getErrorMessage, isActionMessageError, isActionPermissionError } from '
 import { redirect } from 'next/navigation';
 import type { IClient, IStockUnit } from '@alga-psa/types';
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
-export const metadata: Metadata = {
-  title: 'Stock Units',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.inventory.units.title', { defaultValue: 'Stock Units' }),
+  };
+}
 
 export default async function StockUnitsPage() {
   const boundary = await enforceServerProductRoute({ pathname: '/msp/inventory/units', scope: 'msp' });

@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import { SettingsTab } from '@/components/settings/SettingsTab';
-import { getSettingsTabTitle } from '@/components/settings/settingsTabsRegistry';
+import { settingsTabMetadata } from '@/components/settings/settingsTabMetadata';
 import UserManagement from '@/components/settings/general/UserManagement';
 
-export const metadata: Metadata = { title: getSettingsTabTitle('users') };
+export async function generateMetadata(): Promise<Metadata> {
+  return settingsTabMetadata('users');
+}
 
 export default function UsersSettingsRoute() {
   return (

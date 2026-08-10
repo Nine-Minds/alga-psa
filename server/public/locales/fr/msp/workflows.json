@@ -1216,6 +1216,15 @@
       "noFields": "Aucun champ",
       "copyAllPaths": "Copier tous les chemins",
       "copyAllFieldPaths": "Copier tous les chemins de champ"
+    },
+    "logoAlt": "Logo de l'éditeur de workflows",
+    "nodes": {
+      "action": "Action :",
+      "process": "Processus :",
+      "clientId": "ID client :",
+      "clientSecret": "Secret client :",
+      "tenantId": "ID de locataire :",
+      "userEmail": "E-mail de l'utilisateur :"
     }
   },
   "actionInputFieldInfo": {
@@ -1476,7 +1485,9 @@
     "insertReferenceHeading": "Insérer une référence de workflow",
     "errors": {
       "noCodeBlock": "Impossible d’insérer une référence dans un bloc de code. Déplacez le curseur dans un autre bloc et réessayez."
-    }
+    },
+    "placeholder": "Rédigez du texte Markdown…",
+    "referenceHint": "Les références s'affichent sous forme de puces en ligne et sont conservées comme des nœuds de référence compatibles avec le workflow."
   },
   "referenceSelector": {
     "placeholders": {
@@ -2647,5 +2658,25 @@
         "selectPriority": "Sélectionnez ou saisissez une priorité"
       }
     }
+  },
+  "mappingEditor": {
+    "error": {
+      "retry": "Réessayer",
+      "title": "Échec du chargement du schéma",
+      "retryWithCount": "Réessayer ({{retryCount}}/{{maxRetries}})",
+      "attemptOfMax": "Tentative {{retryCount}} sur {{maxRetries}}",
+      "maxRetriesReached": "Nombre maximal de tentatives atteint.",
+      "contactSupport": "Contacter l'assistance →"
+    }
+  },
+  "toggle": {
+    "disableTitle": "Désactiver le workflow",
+    "enableTitle": "Activer le workflow",
+    "confirmDisable": "Voulez-vous vraiment désactiver ce workflow ?",
+    "confirmEnable": "Voulez-vous vraiment activer ce workflow ?"
+  },
+  "actionInputTypeHint": {
+    "coercible": "Le type « {{sourceType}} » sera converti en « {{targetType}} »",
+    "incompatible": "Le type « {{sourceType}} » est incompatible avec le type attendu « {{targetType}} »"
   }
 }

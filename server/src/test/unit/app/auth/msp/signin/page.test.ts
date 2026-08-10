@@ -10,6 +10,11 @@ const cookiesMock = vi.fn();
 
 const MspSignInMock = () => null;
 const PortalSwitchPromptMock = () => null;
+const I18nWrapperMock = ({ children }: { children?: React.ReactNode }) => children ?? null;
+
+// Every page return is now wrapped in the i18n provider; assertions care about
+// what it wraps.
+const inner = (result: unknown) => (result as any)?.props?.children;
 
 vi.mock('next/headers', () => ({
   cookies: cookiesMock,
@@ -32,6 +37,20 @@ vi.mock('@alga-psa/db/models/UserSession', () => ({
 vi.mock('@alga-psa/auth/client', () => ({
   MspSignIn: MspSignInMock,
   PortalSwitchPrompt: PortalSwitchPromptMock,
+}));
+
+// The page wraps its output in I18nWrapper so the SSO buttons and login form
+// resolve their copy. Mocking the barrel also keeps @alga-psa/tenancy/server —
+// which it re-exports — out of this unit test's module graph.
+vi.mock('@alga-psa/tenancy/components', () => ({
+  I18nWrapper: I18nWrapperMock,
+}));
+
+vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({
+  getServerLocale: async () => 'en',
+  getServerTranslation: async () => ({
+    t: (_key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? _key,
+  }),
 }));
 
 const { default: MspSignInPage } = await import('server/src/app/auth/msp/signin/page');
@@ -72,7 +91,8 @@ describe('MspSignInPage', () => {
     const result = await MspSignInPage({ searchParams: Promise.resolve({}) });
 
     expect(redirectMock).not.toHaveBeenCalled();
-    expect((result as any)?.type).toBe(PortalSwitchPromptMock);
+    expect((result as any)?.type).toBe(I18nWrapperMock);
+    expect(inner(result)?.type).toBe(PortalSwitchPromptMock);
   });
 
   it('renders the sign-in component for unauthenticated users', async () => {
@@ -81,7 +101,8 @@ describe('MspSignInPage', () => {
     const result = await MspSignInPage({ searchParams: Promise.resolve({}) });
 
     expect(redirectMock).not.toHaveBeenCalled();
-    expect((result as any)?.type).toBe(MspSignInMock);
+    expect((result as any)?.type).toBe(I18nWrapperMock);
+    expect(inner(result)?.type).toBe(MspSignInMock);
   });
 
   it('T001: passes the remembered email into the shared sign-in component when the durable cookie is present', async () => {
@@ -94,8 +115,8 @@ describe('MspSignInPage', () => {
 
     const result = await MspSignInPage({ searchParams: Promise.resolve({}) });
 
-    expect((result as any)?.type).toBe(MspSignInMock);
-    expect((result as any)?.props).toMatchObject({
+    expect(inner(result)?.type).toBe(MspSignInMock);
+    expect(inner(result)?.props).toMatchObject({
       initialEmail: 'remembered@example.com',
     });
   });
@@ -105,7 +126,7 @@ describe('MspSignInPage', () => {
 
     const result = await MspSignInPage({ searchParams: Promise.resolve({}) });
 
-    expect((result as any)?.type).toBe(MspSignInMock);
-    expect((result as any)?.props.initialEmail).toBeUndefined();
+    expect(inner(result)?.type).toBe(MspSignInMock);
+    expect(inner(result)?.props.initialEmail).toBeUndefined();
   });
 });

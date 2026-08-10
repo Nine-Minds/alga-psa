@@ -723,7 +723,7 @@
       "load": "Kan de offertesjablooneditor niet laden",
       "nameRequired": "Sjabloonnaam is vereist.",
       "notFound": "Offertedocumentsjabloon niet gevonden.",
-      "previewPipeline": "Preview-pijplijn is mislukt.",
+      "previewPipeline": "Preview-pipeline is mislukt.",
       "saveFailed": "Kan offertesjabloon niet opslaan",
       "unknownAstExport": "Onbekende AST-exportfout"
     },

@@ -13,7 +13,8 @@ import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import { AppThemeProvider } from '@/components/providers/AppThemeProvider';
 import { ThemeBridge } from '@/components/providers/ThemeBridge';
 import { ClientUIStateProvider } from '@alga-psa/ui/ui-reflection/ClientUIStateProvider';
-import { getServerLocale } from "@alga-psa/ui/lib/i18n/serverOnly";
+import { getServerLocale, getServerTranslation, registerServerLocaleResolver } from "@alga-psa/ui/lib/i18n/serverOnly";
+import { getHierarchicalLocaleAction } from '@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale';
 import { cookies, headers } from 'next/headers.js';
 import { generateBrandingStyles } from "@alga-psa/tenancy";
 import { resolveDeploymentCapabilities } from '@/lib/deployment/deploymentProfile';
@@ -44,6 +45,15 @@ const jetbrainsMono = localFont({
 export const dynamic = 'force-dynamic';
 //export const revalidate = false;
 
+// instrumentation.ts registers this too, but it is compiled into a different
+// webpack layer than server rendering, so the module-level singleton it sets is
+// invisible to `getServerLocale()`. Registering here puts the resolver in the
+// RSC layer's copy — the root layout is in every route's module graph. Without
+// it `getServerLocale()` reaches no caller-supplied options either, so the DB
+// hierarchy is skipped entirely and every server-rendered string falls back to
+// the browser's Accept-Language.
+registerServerLocaleResolver(() => getHierarchicalLocaleAction());
+
 export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers();
   const request = { headers: headersList };
@@ -53,6 +63,7 @@ export async function generateMetadata(): Promise<Metadata> {
     fallbackHost: 'localhost:3010',
     fallbackProto: host.includes('localhost') ? 'http' : 'https',
   });
+  const { t } = await getServerTranslation(undefined, 'metadata');
 
   return {
     metadataBase,
@@ -60,9 +71,11 @@ export async function generateMetadata(): Promise<Metadata> {
       template: '%s | AlgaPSA',
       default: 'AlgaPSA',
     },
-    keywords: "MSP, Managed Service Provider, IT Services, Network Management, Cloud Services",
+    keywords: t('app.keywords', {
+      defaultValue: 'MSP, Managed Service Provider, IT Services, Network Management, Cloud Services',
+    }),
     authors: [{ name: "Nine Minds" }],
-    description: "Managed Service Provider Application",
+    description: t('app.description', { defaultValue: 'Managed Service Provider Application' }),
     icons: {
       icon: '/favicon.ico',
     },
@@ -125,8 +138,12 @@ export default async function RootLayout({
     brandingStyles = branding?.computedStyles || generateBrandingStyles(branding);
   }
 
+  // Drives screen-reader pronunciation, browser translation prompts and CSS
+  // `:lang()` — it has to follow the resolved locale, not a hardcoded 'en'.
+  const locale = await getServerLocale();
+
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${inter.className}`} suppressHydrationWarning>
+    <html lang={locale} className={`${inter.variable} ${jetbrainsMono.variable} ${inter.className}`} suppressHydrationWarning>
       <head>
         <link rel="stylesheet" href="https://unpkg.com/react-big-calendar/lib/css/react-big-calendar.css" />
         <link rel="stylesheet" href="https://unpkg.com/@radix-ui/themes@3.2.0/styles.css" />

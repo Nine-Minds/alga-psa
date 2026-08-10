@@ -224,6 +224,14 @@
       "heading": "Comprar créditos o gestionar la suscripción",
       "body": "Las recargas, la recarga automática y los cambios de suscripción se gestionan en la tienda de Nine Minds.",
       "openStore": "Abrir la tienda"
+    },
+    "status": {
+      "canceled": "Cancelado",
+      "unpaid": "Sin pagar",
+      "none": "Sin suscripción",
+      "active": "Activo",
+      "trialing": "Prueba",
+      "past_due": "Vencido"
     }
   },
   "managementPage": {

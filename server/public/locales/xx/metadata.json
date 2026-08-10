@@ -1,0 +1,614 @@
+{
+  "app": {
+    "description": "11111",
+    "keywords": "11111"
+  },
+  "auth": {
+    "checkEmail": {
+      "layout": {
+        "title": "11111"
+      }
+    },
+    "clientPortal": {
+      "forgotPassword": {
+        "layout": {
+          "title": "11111"
+        }
+      },
+      "handoff": {
+        "title": "11111"
+      },
+      "signin": {
+        "title": "11111"
+      }
+    },
+    "msp": {
+      "forgotPassword": {
+        "layout": {
+          "title": "11111"
+        }
+      },
+      "signin": {
+        "title": "11111"
+      }
+    },
+    "passwordReset": {
+      "confirmation": {
+        "layout": {
+          "title": "11111"
+        }
+      },
+      "setNewPassword": {
+        "layout": {
+          "title": "11111"
+        }
+      }
+    },
+    "portal": {
+      "setup": {
+        "layout": {
+          "title": "11111"
+        }
+      }
+    },
+    "register": {
+      "layout": {
+        "title": "11111"
+      }
+    },
+    "signin": {
+      "title": "11111"
+    },
+    "team": {
+      "setup": {
+        "layout": {
+          "title": "11111"
+        }
+      }
+    },
+    "verify": {
+      "layout": {
+        "description": "11111",
+        "title": "11111"
+      }
+    },
+    "verifyEmail": {
+      "layout": {
+        "title": "11111"
+      }
+    },
+    "layout": {
+      "defaultTitle": "11111"
+    }
+  },
+  "clientPortal": {
+    "account": {
+      "layout": {
+        "title": "11111"
+      }
+    },
+    "appointments": {
+      "detail": {
+        "layout": {
+          "title": "11111"
+        }
+      },
+      "layout": {
+        "title": "11111"
+      }
+    },
+    "billing": {
+      "invoices": {
+        "detail": {
+          "pay": {
+            "title": "11111"
+          },
+          "paymentSuccess": {
+            "title": "11111"
+          }
+        }
+      },
+      "quotes": {
+        "detail": {
+          "title": "11111"
+        }
+      },
+      "title": "11111"
+    },
+    "clientSettings": {
+      "description": "11111",
+      "title": "11111"
+    },
+    "dashboard": {
+      "title": "11111"
+    },
+    "devices": {
+      "title": "11111"
+    },
+    "documents": {
+      "title": "11111"
+    },
+    "extensions": {
+      "detail": {
+        "title": "11111"
+      }
+    },
+    "knowledgeBase": {
+      "layout": {
+        "title": "11111"
+      }
+    },
+    "licenses": {
+      "title": "11111"
+    },
+    "profile": {
+      "layout": {
+        "title": "11111"
+      }
+    },
+    "projects": {
+      "detail": {
+        "fallbackTitle": "11111"
+      },
+      "title": "11111"
+    },
+    "requestServices": {
+      "detail": {
+        "title": "11111"
+      },
+      "myRequests": {
+        "detail": {
+          "title": "11111"
+        },
+        "title": "11111"
+      },
+      "title": "11111"
+    },
+    "tickets": {
+      "detail": {
+        "fallbackTitle": "11111",
+        "title": "11111 {{ticketNumber}} 11111 {{ticketTitle}} 11111"
+      },
+      "layout": {
+        "title": "11111"
+      }
+    },
+    "layout": {
+      "titleTemplate": "11111",
+      "defaultTitle": "11111"
+    }
+  },
+  "msp": {
+    "account": {
+      "layout": {
+        "title": "11111"
+      }
+    },
+    "addOns": {
+      "layout": {
+        "title": "11111"
+      }
+    },
+    "assets": {
+      "automation": {
+        "title": "11111"
+      },
+      "detail": {
+        "edit": {
+          "description": "11111",
+          "title": "11111"
+        },
+        "fallbackTitle": "11111"
+      },
+      "imports": {
+        "title": "11111"
+      },
+      "integrations": {
+        "title": "11111"
+      },
+      "maintenance": {
+        "title": "11111"
+      },
+      "policies": {
+        "title": "11111"
+      },
+      "title": "11111"
+    },
+    "billing": {
+      "credits": {
+        "title": "11111"
+      }
+    },
+    "chat": {
+      "title": "11111"
+    },
+    "clients": {
+      "detail": {
+        "fallbackTitle": "11111"
+      },
+      "title": "11111"
+    },
+    "contacts": {
+      "title": "11111",
+      "detail": {
+        "fallbackTitle": "11111",
+        "activity": {
+          "title": "11111 {{contactName}} 11111",
+          "fallbackTitle": "11111"
+        }
+      }
+    },
+    "createAsset": {
+      "title": "11111"
+    },
+    "createClient": {
+      "title": "11111"
+    },
+    "createContact": {
+      "title": "11111"
+    },
+    "createOpportunity": {
+      "title": "11111"
+    },
+    "createProduct": {
+      "title": "11111"
+    },
+    "createProject": {
+      "title": "11111"
+    },
+    "createService": {
+      "title": "11111"
+    },
+    "createTicket": {
+      "title": "11111"
+    },
+    "dashboard": {
+      "title": "11111"
+    },
+    "documentTemplates": {
+      "detail": {
+        "fallbackTitle": "11111",
+        "title": "11111 {{documentType}} 11111"
+      }
+    },
+    "documents": {
+      "title": "11111"
+    },
+    "emailLogs": {
+      "title": "11111"
+    },
+    "extensions": {
+      "detail": {
+        "debug": {
+          "layout": {
+            "title": "11111"
+          }
+        }
+      },
+      "layout": {
+        "title": "11111"
+      }
+    },
+    "inventory": {
+      "counts": {
+        "title": "11111"
+      },
+      "ghostUsage": {
+        "title": "11111"
+      },
+      "kits": {
+        "title": "11111"
+      },
+      "loaners": {
+        "title": "11111"
+      },
+      "locations": {
+        "title": "11111"
+      },
+      "margin": {
+        "title": "11111"
+      },
+      "purchaseOrders": {
+        "title": "11111"
+      },
+      "rma": {
+        "title": "11111"
+      },
+      "salesOrders": {
+        "title": "11111"
+      },
+      "stock": {
+        "title": "11111"
+      },
+      "title": "11111",
+      "transfers": {
+        "title": "11111"
+      },
+      "units": {
+        "title": "11111"
+      },
+      "vendorBills": {
+        "title": "11111"
+      },
+      "vendors": {
+        "title": "11111"
+      },
+      "writeOffs": {
+        "title": "11111"
+      }
+    },
+    "invoices": {
+      "detail": {
+        "title": "11111"
+      }
+    },
+    "jobs": {
+      "title": "11111"
+    },
+    "knowledgeBase": {
+      "review": {
+        "title": "11111"
+      },
+      "title": "11111"
+    },
+    "marketing": {
+      "calendar": {
+        "title": "11111"
+      },
+      "campaigns": {
+        "title": "11111"
+      },
+      "channels": {
+        "title": "11111"
+      },
+      "content": {
+        "title": "11111"
+      },
+      "forms": {
+        "title": "11111"
+      },
+      "posts": {
+        "title": "11111"
+      },
+      "sequences": {
+        "title": "11111"
+      },
+      "title": "11111"
+    },
+    "onboarding": {
+      "layout": {
+        "title": "11111"
+      }
+    },
+    "platformUpdates": {
+      "detail": {
+        "title": "11111"
+      }
+    },
+    "profile": {
+      "layout": {
+        "title": "11111"
+      }
+    },
+    "projects": {
+      "detail": {
+        "fallbackTitle": "11111",
+        "tasks": {
+          "detail": {
+            "title": "11111"
+          }
+        }
+      },
+      "templates": {
+        "detail": {
+          "layout": {
+            "title": "11111"
+          }
+        },
+        "layout": {
+          "title": "11111"
+        }
+      },
+      "title": "11111"
+    },
+    "quoteApprovals": {
+      "title": "11111"
+    },
+    "quoteDocumentTemplates": {
+      "title": "11111"
+    },
+    "reports": {
+      "title": "11111"
+    },
+    "schedule": {
+      "title": "11111"
+    },
+    "search": {
+      "title": "11111"
+    },
+    "securitySettings": {
+      "title": "11111"
+    },
+    "serviceRequests": {
+      "detail": {
+        "fallbackTitle": "11111"
+      },
+      "title": "11111"
+    },
+    "settings": {
+      "extensions": {
+        "description": "11111",
+        "detail": {
+          "description": "11111",
+          "layout": {
+            "title": "11111"
+          },
+          "settings": {
+            "description": "11111",
+            "layout": {
+              "title": "11111"
+            },
+            "title": "11111"
+          },
+          "title": "11111"
+        },
+        "layout": {
+          "title": "11111"
+        },
+        "title": "11111"
+      },
+      "notifications": {
+        "layout": {
+          "title": "11111"
+        }
+      },
+      "sla": {
+        "layout": {
+          "title": "11111"
+        }
+      },
+      "title": "11111"
+    },
+    "shareDocument": {
+      "title": "11111"
+    },
+    "surveys": {
+      "analytics": {
+        "title": "11111"
+      },
+      "dashboard": {
+        "title": "11111"
+      },
+      "responses": {
+        "detail": {
+          "title": "11111"
+        },
+        "title": "11111"
+      },
+      "settings": {
+        "title": "11111"
+      },
+      "title": "11111"
+    },
+    "technicianDispatch": {
+      "title": "11111"
+    },
+    "test": {
+      "collab": {
+        "title": "11111"
+      },
+      "layout": {
+        "title": "11111"
+      },
+      "onboarding": {
+        "layout": {
+          "title": "11111"
+        }
+      },
+      "uiKit": {
+        "layout": {
+          "title": "11111"
+        }
+      }
+    },
+    "tickets": {
+      "bulkAssign": {
+        "title": "11111"
+      },
+      "bulkDueDate": {
+        "title": "11111"
+      },
+      "bulkPriority": {
+        "title": "11111"
+      },
+      "bulkStatus": {
+        "title": "11111"
+      },
+      "bulkTags": {
+        "title": "11111"
+      },
+      "export": {
+        "title": "11111"
+      },
+      "import": {
+        "title": "11111"
+      },
+      "title": "11111",
+      "detail": {
+        "title": "11111 {{ticketNumber}} 11111 {{ticketTitle}} 11111",
+        "fallbackTitle": "11111"
+      }
+    },
+    "timeEntry": {
+      "timesheet": {
+        "detail": {
+          "title": "11111"
+        }
+      },
+      "title": "11111"
+    },
+    "timeSheetApprovals": {
+      "title": "11111"
+    },
+    "userActivities": {
+      "title": "11111"
+    },
+    "workflowControl": {
+      "title": "11111"
+    },
+    "workflowEditor": {
+      "detail": {
+        "title": "11111"
+      },
+      "new": {
+        "title": "11111"
+      },
+      "title": "11111"
+    },
+    "workflows": {
+      "runs": {
+        "detail": {
+          "layout": {
+            "title": "11111"
+          }
+        }
+      },
+      "title": "11111"
+    },
+    "layout": {
+      "defaultTitle": "11111"
+    }
+  },
+  "share": {
+    "detail": {
+      "layout": {
+        "title": "11111"
+      }
+    }
+  },
+  "static": {
+    "layout": {
+      "title": "11111"
+    },
+    "masterTerms": {
+      "layout": {
+        "title": "11111"
+      }
+    },
+    "privacyPolicy": {
+      "layout": {
+        "title": "11111"
+      }
+    }
+  },
+  "teams": {
+    "auth": {
+      "popupComplete": {
+        "title": "11111"
+      }
+    },
+    "tab": {
+      "title": "11111"
+    }
+  }
+}

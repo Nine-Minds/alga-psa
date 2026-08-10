@@ -37,7 +37,8 @@
     "categories": {
       "helpdesk": "Helpdesk",
       "operations": "Operaties",
-      "billing": "Facturatie"
+      "billing": "Facturatie",
+      "inventory": "Inventaris"
     },
     "badges": {
       "planned": "Gepland"
@@ -45,6 +46,7 @@
     "actions": {
       "viewReport": "Rapport bekijken",
       "openInBilling": "Openen in facturatie",
+      "openReport": "Rapport openen",
       "requiresTier": "Vereist {{tier}}",
       "comingSoon": "Binnenkort"
     },
@@ -150,6 +152,18 @@
       "contractReports": {
         "title": "Contractrapporten",
         "description": "Contractomzet, verlengingen, bundelgebruik en winstgevendheid."
+      },
+      "inventoryMargin": {
+        "title": "Margerapport",
+        "description": "Omzet, kostprijs van verkochte goederen en marge per product uit uitgevoerde verkooporders."
+      },
+      "inventoryWriteOffs": {
+        "title": "Afschrijvingen",
+        "description": "Afgeschreven voorraadverlies en aanpassingen, per reden en periode."
+      },
+      "inventoryGhostUsage": {
+        "title": "Ghost-verbruik",
+        "description": "Gesloten hardware-tickets zonder geregistreerde onderdelen — kosten die de werkplaats mogelijk heeft opgeslokt."
       }
     },
     "table": {

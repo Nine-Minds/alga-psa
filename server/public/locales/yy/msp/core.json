@@ -459,7 +459,10 @@
     "goToDashboard": "55555",
     "logoAlt": "55555",
     "expandSidebar": "55555",
-    "collapseSidebar": "55555"
+    "collapseSidebar": "55555",
+    "collapseSection": "55555 {{section}} 55555",
+    "expandSection": "55555 {{section}} 55555",
+    "appLogoAlt": "55555 {{appName}} 55555"
   },
   "settings": {
     "sections": {
@@ -734,5 +737,9 @@
     "title": "55555",
     "description": "55555",
     "action": "55555"
+  },
+  "githubStar": {
+    "label": "55555",
+    "ariaLabel": "55555 {{repository}} 55555"
   }
 }

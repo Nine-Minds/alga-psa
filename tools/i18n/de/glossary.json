@@ -1,0 +1,955 @@
+{
+  "$schema": "../lib/glossary.schema.json",
+  "locale": "de",
+  "dialect": "de-DE",
+  "displayName": "Deutsch",
+  "description": "German (Germany) terminology, register, and audit allowlist for the AlgaPSA de locale.",
+  "domainTerms": [
+    {
+      "id": "account",
+      "en-term": "account",
+      "term": "Konto",
+      "notes": "Use Konto (neuter: das Konto, die Konten) for user, MSP, and customer accounts. Keep Account only inside established product or provider names."
+    },
+    {
+      "id": "appointment",
+      "en-term": "appointment",
+      "term": "Termin",
+      "notes": "Use Termin (der Termin) for calendar appointments and appointment requests; use Terminplanung when the scheduling process is meant."
+    },
+    {
+      "id": "approval",
+      "en-term": "approval",
+      "term": "Genehmigung",
+      "notes": "Use Genehmigung for approval workflows, requests, and timesheets. Freigabe occurs occasionally in the current files; reserve it for release/clearance contexts."
+    },
+    {
+      "id": "asset",
+      "en-term": "asset",
+      "term": "Asset",
+      "notes": "Use Asset (neuter: das Asset, die Assets) for managed devices, inventory, and configuration assets. Vermögenswert is a financial asset and is inconsistent with the dominant MSP usage."
+    },
+    {
+      "id": "assignment",
+      "en-term": "assignment",
+      "term": "Zuweisung",
+      "notes": "Use Zuweisung for assigning tickets, tasks, users, or technicians; use zuweisen for the action."
+    },
+    {
+      "id": "automation",
+      "en-term": "automation",
+      "term": "Automatisierung",
+      "notes": "Use for workflow automation and automated operational behavior."
+    },
+    {
+      "id": "billing",
+      "en-term": "billing",
+      "term": "Abrechnung",
+      "notes": "Use Abrechnung for the billing product area, billing settings, and charge calculation. Do not use Rechnung for the area; Rechnung is an invoice."
+    },
+    {
+      "id": "board",
+      "en-term": "board",
+      "term": "Board",
+      "notes": "Keep Board as the established UI loanword (neuter: das Board, die Boards) for ticket and kanban boards. Never use Vorstand, which means a corporate board of directors."
+    },
+    {
+      "id": "bucket",
+      "en-term": "bucket",
+      "term": "Stundenkontingent",
+      "notes": "Use Stundenkontingent for prepaid or retainer hour pools and Verbrauchskontingent for consumption pools. Current contract/report/catalog files establish Kontingent; literal Eimer and untranslated Bucket remnants are inconsistent."
+    },
+    {
+      "id": "budget",
+      "en-term": "budget",
+      "term": "Budget",
+      "notes": "Use Budget (neuter: das Budget) only for project or financial spending limits. A sales quote is an Angebot."
+    },
+    {
+      "id": "client",
+      "en-term": "client",
+      "term": "Kunde",
+      "notes": "Use Kunde/Kunden for customer organizations and client-portal users. Client appears in a few current strings but is not the dominant user-facing term."
+    },
+    {
+      "id": "client-portal",
+      "en-term": "client portal",
+      "term": "Kundenportal",
+      "notes": "Use the closed compound Kundenportal for the customer-facing app."
+    },
+    {
+      "id": "comment",
+      "en-term": "comment",
+      "term": "Kommentar",
+      "notes": "Use Kommentar for ticket, project, task, and document comments; use kommentieren for the action."
+    },
+    {
+      "id": "contact",
+      "en-term": "contact",
+      "term": "Kontakt",
+      "notes": "Use Kontakt for a CRM contact record; Kontaktperson is acceptable when the person rather than the record must be explicit."
+    },
+    {
+      "id": "contract",
+      "en-term": "contract",
+      "term": "Vertrag",
+      "notes": "Use Vertrag for service contracts, contract templates, and contract lines."
+    },
+    {
+      "id": "contract-line",
+      "en-term": "contract line",
+      "term": "Vertragslinie",
+      "notes": "Use Vertragslinie for the billable service entity associated with a contract. The current locale also contains Vertragszeile and Vertragsposition; keep the glossary term consistent in new copy."
+    },
+    {
+      "id": "credit",
+      "en-term": "credit",
+      "term": "Gutschrift",
+      "notes": "Use Gutschrift for a credit record applied to an invoice and Guthaben for the resulting available balance. Kredit and Credits occur in headings, but Gutschrift dominates operational actions."
+    },
+    {
+      "id": "dashboard",
+      "en-term": "dashboard",
+      "term": "Dashboard",
+      "notes": "Keep Dashboard as the established German software loanword (neuter: das Dashboard)."
+    },
+    {
+      "id": "dispatch",
+      "en-term": "dispatch",
+      "term": "Einsatzplanung",
+      "notes": "Use Einsatzplanung for the technician scheduling/dispatch workspace (Dynamics convention). Use Disposition only for the organizational function or the dispatcher role. Adversarial review 2026-08."
+    },
+    {
+      "id": "document",
+      "en-term": "document",
+      "term": "Dokument",
+      "notes": "Use Dokument for uploaded documents, folders, sharing, and document management."
+    },
+    {
+      "id": "email",
+      "en-term": "email",
+      "term": "E-Mail",
+      "notes": "Always spell the noun E-Mail with a hyphen and capitals; use E-Mails in the plural."
+    },
+    {
+      "id": "email-address",
+      "en-term": "email address",
+      "term": "E-Mail-Adresse",
+      "notes": "Use E-Mail-Adresse for an address field and E-Mail-Adressen for the plural section heading."
+    },
+    {
+      "id": "email-label",
+      "en-term": "email label",
+      "term": "E-Mail-Typ",
+      "notes": "Use E-Mail-Typ for the label/type picker on an email row, matching the established contacts namespace."
+    },
+    {
+      "id": "extension",
+      "en-term": "extension",
+      "term": "Erweiterung",
+      "notes": "Use Erweiterung for platform/product extensions and installed extension metadata."
+    },
+    {
+      "id": "file",
+      "en-term": "file",
+      "term": "Datei",
+      "notes": "Use Datei for uploaded and generated files; use Ordner for folders."
+    },
+    {
+      "id": "filter",
+      "en-term": "filter",
+      "term": "Filter",
+      "notes": "Use Filter (masculine: der Filter) as the UI noun and filtern for the action."
+    },
+    {
+      "id": "industry",
+      "en-term": "industry",
+      "term": "Branche",
+      "notes": "Use Branche for the client/CRM business-sector field. Industrie is narrower and usually means manufacturing."
+    },
+    {
+      "id": "invoice",
+      "en-term": "invoice",
+      "term": "Rechnung",
+      "notes": "Use Rechnung for customer invoices and Rechnungsentwurf for draft invoice. Do not use Abrechnung for the invoice entity."
+    },
+    {
+      "id": "invoicing",
+      "en-term": "invoicing",
+      "term": "Rechnungsstellung",
+      "notes": "Use Rechnungsstellung for the invoice-generation process. Fakturierung appears once in the billing navigation and is an existing inconsistency."
+    },
+    {
+      "id": "job",
+      "en-term": "job",
+      "term": "Job",
+      "notes": "Keep Job for the background-job entity (der Job, die Jobs), as established in msp/jobs and msp/core. Use Auftrag only for import/export work orders and never Beruf for a background job."
+    },
+    {
+      "id": "knowledge-base",
+      "en-term": "knowledge base",
+      "term": "Wissensdatenbank",
+      "notes": "Use Wissensdatenbank for KB articles, categories, and review flows."
+    },
+    {
+      "id": "license",
+      "en-term": "license",
+      "term": "Lizenz",
+      "notes": "Use Lizenz for software licensing, seats, and activation."
+    },
+    {
+      "id": "location",
+      "en-term": "location",
+      "term": "Standort",
+      "notes": "Use Standort for client, inventory, and service locations; use Ort only for a general place."
+    },
+    {
+      "id": "milestone",
+      "en-term": "milestone",
+      "term": "Meilenstein",
+      "notes": "Use Meilenstein for project milestones and milestone billing schedules."
+    },
+    {
+      "id": "mobile-phone-type",
+      "en-term": "mobile (phone type)",
+      "term": "Mobil",
+      "notes": "Use Mobil for the compact phone-type label and Mobiltelefon when the field needs an explicit noun."
+    },
+    {
+      "id": "notification",
+      "en-term": "notification",
+      "term": "Benachrichtigung",
+      "notes": "Use Benachrichtigung for in-app and email notifications."
+    },
+    {
+      "id": "onboarding",
+      "en-term": "onboarding",
+      "term": "Onboarding",
+      "notes": "Keep Onboarding as the established MSP loanword and form compounds such as Onboarding-Assistent and Onboarding-Checkliste with a hyphen. Einrichtung is suitable only when setup, not customer onboarding, is meant."
+    },
+    {
+      "id": "payment",
+      "en-term": "payment",
+      "term": "Zahlung",
+      "notes": "Use Zahlung for invoice payments, online payments, and payment status."
+    },
+    {
+      "id": "pipeline",
+      "en-term": "pipeline",
+      "term": "Pipeline",
+      "notes": "Use Pipeline (die Pipeline) for the CRM sales pipeline. Never Gaspipeline or any physical-conduit word."
+    },
+    {
+      "id": "primary-email",
+      "en-term": "primary email",
+      "term": "primäre E-Mail",
+      "notes": "Use Primäre E-Mail as a label and primäre E-Mail in running text; keep adjective agreement when case changes."
+    },
+    {
+      "id": "priority",
+      "en-term": "priority",
+      "term": "Priorität",
+      "notes": "Use Priorität for ticket, task, and workflow priority labels."
+    },
+    {
+      "id": "progress",
+      "en-term": "progress",
+      "term": "Fortschritt",
+      "notes": "Use Fortschritt for progress labels and indicators; the all-caps micro-label is FORTSCHRITT."
+    },
+    {
+      "id": "project",
+      "en-term": "project",
+      "term": "Projekt",
+      "notes": "Use Projekt for project management, phases, tasks, budgets, and project templates."
+    },
+    {
+      "id": "quote",
+      "en-term": "quote",
+      "term": "Angebot",
+      "notes": "Use Angebot (neuter: das Angebot, die Angebote) for sales/service quotes. Never Zitat, which means a textual quotation."
+    },
+    {
+      "id": "report",
+      "en-term": "report",
+      "term": "Bericht",
+      "notes": "Use Bericht for analytics, operational, billing, and audit reports."
+    },
+    {
+      "id": "request",
+      "en-term": "request",
+      "term": "Anfrage",
+      "notes": "Use Anfrage for service, approval, and appointment requests; use anfordern only for the action of requesting something."
+    },
+    {
+      "id": "schedule",
+      "en-term": "schedule",
+      "term": "Zeitplan",
+      "notes": "Use Zeitplan for a schedule as a general entity and planen for the action. Dispatch entries are Termineinträge in the current locale; calendar-specific copy may use Terminplan."
+    },
+    {
+      "id": "screen",
+      "en-term": "screen",
+      "term": "Bildschirm",
+      "notes": "Use Bildschirm for a UI screen, as established in account and integrations copy; use Ansicht when the source means a view rather than the physical/display metaphor."
+    },
+    {
+      "id": "service",
+      "en-term": "service",
+      "term": "Dienst",
+      "notes": "Use Dienst for catalog items, managed services, and support services; the current files also use Service frequently, especially in project, quote, and client copy. Prefer Dienst in new generic labels but preserve branded service names."
+    },
+    {
+      "id": "service-catalog",
+      "en-term": "service catalog",
+      "term": "Servicekatalog",
+      "notes": "Use the closed compound Servicekatalog for the billing/service catalog product area. Dienstkatalog and untranslated Service catalog occur in isolated current strings."
+    },
+    {
+      "id": "settings",
+      "en-term": "settings",
+      "term": "Einstellungen",
+      "notes": "Use plural Einstellungen for settings pages and controls."
+    },
+    {
+      "id": "single-sign-on",
+      "en-term": "single sign-on",
+      "term": "Single Sign-On",
+      "notes": "Keep Single Sign-On as the established feature name and SSO as the abbreviation; preserve capitalization in titles."
+    },
+    {
+      "id": "sla",
+      "en-term": "SLA",
+      "term": "SLA",
+      "notes": "Keep SLA as the standard abbreviation; use SLA-Vereinbarung only when the expanded entity must be explicit."
+    },
+    {
+      "id": "status",
+      "en-term": "status",
+      "term": "Status",
+      "notes": "Keep Status (masculine: der Status); the plural is also Status, not Statusse."
+    },
+    {
+      "id": "survey",
+      "en-term": "survey",
+      "term": "Umfrage",
+      "notes": "Use Umfrage for satisfaction surveys, templates, and response analytics."
+    },
+    {
+      "id": "tag",
+      "en-term": "tag",
+      "term": "Tag",
+      "notes": "Keep Tag (neuter: das Tag, die Tags) for metadata labels. Schlagwort occurs in a minority of current strings and should not be introduced into new UI copy."
+    },
+    {
+      "id": "task",
+      "en-term": "task",
+      "term": "Aufgabe",
+      "notes": "Use Aufgabe for project tasks, workflow tasks, and task inbox items; do not confuse it with the background Job entity."
+    },
+    {
+      "id": "technician",
+      "en-term": "technician",
+      "term": "Techniker",
+      "notes": "Use Techniker for field/service technicians and technician assignment; use Technikerin when an explicitly feminine person is meant."
+    },
+    {
+      "id": "tenant",
+      "en-term": "tenant",
+      "term": "Mandant",
+      "notes": "Use Mandant (der Mandant, die Mandanten) for tenant — final product-owner decision 2026-08-05: Microsoft de-DE terminology (Entra/M365 admin UI), and AlgaPSA tenant strings live almost entirely in Microsoft-integration screens where technicians see Mandant daily. The professional-services reading (client of a lawyer/accountant) is contained by that context. Tenant ID, Tenant-ID and provider-branded concepts stay untranslated."
+    },
+    {
+      "id": "ticket",
+      "en-term": "ticket",
+      "term": "Ticket",
+      "notes": "Keep Ticket as the MSP support term (neuter: das Ticket, die Tickets). Never Fahrkarte or Eintrittskarte, which refer to travel/admission tickets."
+    },
+    {
+      "id": "time-entry",
+      "en-term": "time entry",
+      "term": "Zeiteintrag",
+      "notes": "Use Zeiteintrag for one billable time record. Zeiterfassung is dominant in navigation and can mean the overall time-tracking feature; current namespaces mix both senses."
+    },
+    {
+      "id": "timesheet",
+      "en-term": "timesheet",
+      "term": "Stundenzettel",
+      "notes": "Use Stundenzettel for grouped/submitted time entries and approval flows. The current msp/time-entry file also uses Arbeitszeitnachweis and Zeiterfassung; keep Stundenzettel for the entity. Arbeitszeitnachweis is an acceptable formal synonym (Microsoft uses both); Arbeitszeittabelle also appears in the files and should converge on Stundenzettel."
+    },
+    {
+      "id": "user",
+      "en-term": "user",
+      "term": "Benutzer",
+      "notes": "Use Benutzer for application users and Benutzerin when an explicitly feminine person is meant."
+    },
+    {
+      "id": "webhook",
+      "en-term": "webhook",
+      "term": "Webhook",
+      "notes": "Keep Webhook as the technical loanword (der Webhook, die Webhooks)."
+    },
+    {
+      "id": "work-phone-type",
+      "en-term": "work (phone type)",
+      "term": "Geschäftlich",
+      "notes": "Use Geschäftlich for the work phone-type label, matching all current contact label sets."
+    },
+    {
+      "id": "workflow",
+      "en-term": "workflow",
+      "term": "Workflow",
+      "notes": "Keep Workflow as the established software loanword (der Workflow, die Workflows). AlgaPSA-Workflows sind ereignisgesteuerte Automatisierung im Stil von n8n (Trigger, Aktionen, Ausführungen), keine Jira-artigen Statusabläufe."
+    }
+  ],
+  "forbiddenTerms": [
+    {
+      "term": "berufsverlauf",
+      "preferred": "Jobverlauf",
+      "reason": "False friend in the background-job monitor; Berufsverlauf means employment/career history."
+    },
+    {
+      "term": "bucket",
+      "preferred": "Stundenkontingent",
+      "enWhen": "\\bbuckets?\\b",
+      "reason": "Untranslated English leak for prepaid hour pools."
+    },
+    {
+      "term": "buckets",
+      "preferred": "Stundenkontingente",
+      "enWhen": "\\bbuckets?\\b",
+      "reason": "Plural of the untranslated bucket leak."
+    },
+    {
+      "term": "dein",
+      "preferred": "Ihr",
+      "reason": "Informal possessive conflicts with the established Sie register; inflect Ihr to match case and gender."
+    },
+    {
+      "term": "deine",
+      "preferred": "Ihre",
+      "reason": "Informal possessive conflicts with the established Sie register; inflect Ihr to match case and gender."
+    },
+    {
+      "term": "deinem",
+      "preferred": "Ihrem",
+      "reason": "Informal possessive inflection; the register is Sie-Form."
+    },
+    {
+      "term": "deinen",
+      "preferred": "Ihren",
+      "reason": "Informal possessive inflection; the register is Sie-Form."
+    },
+    {
+      "term": "deiner",
+      "preferred": "Ihrer",
+      "reason": "Informal possessive inflection; the register is Sie-Form."
+    },
+    {
+      "term": "deines",
+      "preferred": "Ihres",
+      "reason": "Informal possessive inflection; the register is Sie-Form."
+    },
+    {
+      "term": "dich",
+      "preferred": "Sie",
+      "reason": "Informal object pronoun conflicts with the established Sie register."
+    },
+    {
+      "term": "dir",
+      "preferred": "Ihnen",
+      "reason": "Informal dative pronoun conflicts with the established Sie register."
+    },
+    {
+      "term": "du",
+      "preferred": "Sie",
+      "reason": "Informal address conflicts with the dominant formal register; current du remnants should not be copied into new strings."
+    },
+    {
+      "term": "eimer",
+      "preferred": "Stundenkontingent",
+      "reason": "Literal translation of billing bucket; Eimer means a physical pail. Use Stundenkontingent or Verbrauchskontingent.",
+      "enWhen": "\\bbuckets?\\b"
+    },
+    {
+      "term": "eintrittskarte",
+      "preferred": "Ticket",
+      "reason": "Wrong sense for a support ticket; Eintrittskarte means an admission ticket.",
+      "enWhen": "\\btickets?\\b"
+    },
+    {
+      "term": "fahrkarte",
+      "preferred": "Ticket",
+      "reason": "Wrong sense for a support ticket; Fahrkarte means a travel ticket.",
+      "enWhen": "\\btickets?\\b"
+    },
+    {
+      "term": "gaspipeline",
+      "preferred": "Pipeline",
+      "reason": "A gas pipeline; the CRM sales pipeline is just Pipeline.",
+      "enWhen": "\\bpipelines?\\b"
+    },
+    {
+      "term": "möchtest",
+      "preferred": "möchten Sie",
+      "reason": "Informal second-person singular; the register is Sie-Form."
+    },
+    {
+      "term": "quote",
+      "preferred": "Angebot",
+      "enWhen": "\\bquot(e|es|ed|ing)\\b",
+      "reason": "Untranslated English leak for sales quotes."
+    },
+    {
+      "term": "tenant",
+      "preferred": "Mandant",
+      "enWhen": "\\btenants?\\b",
+      "unless": "\\btenant[- ]?id\\b|\\btenant governance\\b",
+      "reason": "User-facing multi-tenant copy uses Mandant (Microsoft de-DE convention; finale Produktentscheidung 2026-08-05). Tenant ID bleibt unverändert."
+    },
+    {
+      "term": "tenants",
+      "preferred": "Mandanten",
+      "enWhen": "\\btenants?\\b",
+      "unless": "\\btenant[- ]?id\\b",
+      "reason": "Plural: die Mandanten."
+    },
+    {
+      "term": "vermögenswert",
+      "preferred": "Asset",
+      "reason": "Financial-asset sense; managed IT devices and configuration assets use Asset.",
+      "enWhen": "\\bassets?\\b"
+    },
+    {
+      "term": "vermögenswerte",
+      "preferred": "Assets",
+      "reason": "Plural financial-asset sense; managed IT assets use Assets.",
+      "enWhen": "\\bassets?\\b"
+    },
+    {
+      "term": "vorstand",
+      "preferred": "Board",
+      "reason": "False friend for a ticket/kanban board; Vorstand means a corporate board of directors.",
+      "enWhen": "\\bboards?\\b"
+    },
+    {
+      "term": "wähle",
+      "preferred": "Wählen Sie",
+      "reason": "Informal imperative; the register is Sie-Form (Wählen Sie)."
+    },
+    {
+      "term": "zitat",
+      "preferred": "Angebot",
+      "reason": "Wrong sense for a sales quote; Zitat is a textual quotation.",
+      "enWhen": "\\bquot(e|es|ed|ing)\\b"
+    },
+    {
+      "term": "zitate",
+      "preferred": "Angebote",
+      "reason": "Plural wrong-sense sales-quote term; use Angebote.",
+      "enWhen": "\\bquot(e|es|ed|ing)\\b"
+    }
+  ],
+  "dialectRules": [
+    {
+      "id": "formal-sie-register",
+      "rule": "Address users consistently with formal Sie/Ihr forms; never use du/dein forms in user-facing copy.",
+      "notes": "Formal forms heavily dominate the de files (for example, common.json uses „Aktualisieren Sie …“). Legacy du strings remain mainly in client-portal.json, features/tickets.json, and common.json and are inconsistencies, not precedent."
+    },
+    {
+      "id": "noun-capitalization",
+      "rule": "Capitalize every German noun, including nouns inside labels and compounds.",
+      "notes": "Examples: Rechnung, Zeiteintrag, Kundenportal, E-Mail-Adresse. Preserve brand casing and all-uppercase abbreviations."
+    },
+    {
+      "id": "compound-nouns",
+      "rule": "Prefer idiomatic German compounds and use linking hyphens around abbreviations or English loanword components where readability requires them.",
+      "notes": "Examples: Kundenportal, Servicekatalog, Stundenkontingent, E-Mail-Adresse, SLA-Vereinbarung, Onboarding-Assistent. Avoid English-style spaced noun stacks."
+    },
+    {
+      "id": "ticket-and-quote-register",
+      "rule": "Keep Ticket for support work and translate a sales quote as Angebot.",
+      "notes": "Ticket is neuter (das Ticket); Angebot is neuter (das Angebot). Travel/admission terms and Zitat are forbidden."
+    },
+    {
+      "id": "billing-distinctions",
+      "rule": "Keep Abrechnung (billing), Rechnung (invoice), Rechnungsstellung (invoicing), and Gutschrift (credit) distinct.",
+      "notes": "These entities coexist in the billing UI and must not collapse into Rechnung or Kredit indiscriminately."
+    },
+    {
+      "id": "established-loanwords",
+      "rule": "Retain established German MSP/software loanwords and give them normal German articles and plural forms.",
+      "notes": "Examples: das Asset/die Assets, das Board/die Boards, das Dashboard, der Job/die Jobs, das Ticket/die Tickets, der Workflow/die Workflows, der Webhook/die Webhooks."
+    },
+    {
+      "id": "interpolation",
+      "rule": "Preserve every {{variable}} exactly as in the English source.",
+      "notes": "Do not translate placeholders, braces, or variable names."
+    }
+  ],
+  "identicalAllowlist": {
+    "exact": [
+      " (Standard)",
+      "(Standard)",
+      "(optional)",
+      ",",
+      "API",
+      "Acme IT Solutions",
+      "Ad hoc",
+      "Adapter",
+      "Administrator",
+      "Administrator:",
+      "Agenda",
+      "Agent",
+      "Agent: {{value}}",
+      "Alga",
+      "AlgaDesk",
+      "AlgaPSA",
+      "Alt",
+      "Android",
+      "App ID",
+      "App IDs",
+      "App Store (iOS)",
+      "Application ID URI",
+      "April",
+      "Array",
+      "Asset",
+      "Assets",
+      "August",
+      "Authorization: Bearer abc123\nX-Source: alga-psa",
+      "Barcode (UPC/EAN)",
+      "Beta",
+      "Block",
+      "Board",
+      "Board *",
+      "Board:",
+      "Board: {{name}}",
+      "Boards",
+      "Bot",
+      "Bot ID",
+      "Browser",
+      "Budget",
+      "Budget:",
+      "CIPP (CyberDrain Improved Partner Portal)",
+      "CPU",
+      "CSV",
+      "Chat",
+      "Client ID",
+      "Client Secret",
+      "Code",
+      "Control",
+      "Cron",
+      "Dashboard",
+      "Dashboard | AlgaPSA",
+      "Datto",
+      "Debug",
+      "Designer",
+      "Details",
+      "Details (optional)",
+      "Dialog",
+      "Doe",
+      "Domain",
+      "Domain:",
+      "EUR — Euro",
+      "Editor",
+      "Emojis",
+      "Entra ID",
+      "Excel",
+      "Export",
+      "Fax",
+      "Filter",
+      "Firewall",
+      "Format",
+      "Format: {{value}}",
+      "GPU",
+      "Global",
+      "Gmail",
+      "Google",
+      "Google Calendar",
+      "Google Cloud Console",
+      "Google OAuth",
+      "Google Play (Android)",
+      "Google Workspace",
+      "Graph",
+      "HMAC-SHA256",
+      "HTML",
+      "Handler",
+      "Hardware",
+      "Header: {{name}}",
+      "Horizontal",
+      "Host",
+      "Host:",
+      "Hudu",
+      "Huntress",
+      "Hypervisor",
+      "ID",
+      "IMAP",
+      "IMEI",
+      "ITIL",
+      "Import/Export",
+      "Info",
+      "JSON",
+      "John Smith",
+      "KB",
+      "Kanban",
+      "Keycloak",
+      "Kits",
+      "Knox",
+      "Laptop",
+      "Layout",
+      "Linux",
+      "Logo",
+      "MAC (optional)",
+      "MY_API_KEY",
+      "Manager",
+      "Marketing",
+      "Meta",
+      "Microsoft",
+      "Microsoft 365",
+      "Microsoft 365 (Microsoft Graph)",
+      "Microsoft Entra",
+      "Microsoft OAuth",
+      "Microsoft Outlook Calendar",
+      "Microsoft Teams",
+      "NVMe",
+      "Name",
+      "Name *",
+      "Name:",
+      "Navigation",
+      "NinjaOne",
+      "Normal",
+      "November",
+      "OAuth",
+      "OAuth2 (XOAUTH2)",
+      "OK",
+      "Offboarding",
+      "Offline",
+      "Onboarding",
+      "Online",
+      "Option {{index}}",
+      "Optional",
+      "Optional:",
+      "Outlook",
+      "Outlook Calendar",
+      "PDF",
+      "Performance",
+      "Permalink (optional)",
+      "Phase",
+      "Phase:",
+      "Phase: {{name}}",
+      "Phase: {{phase}}",
+      "Phishing/Spam",
+      "Pipeline",
+      "Plan",
+      "Port",
+      "Portal",
+      "Pro",
+      "QBO #",
+      "QuickBooks",
+      "QuickBooks CSV",
+      "QuickBooks Client ID",
+      "QuickBooks Client Secret",
+      "QuickBooks Online",
+      "RAM (GB)",
+      "RMA",
+      "RMAs",
+      "Radius",
+      "Realm ID: {{id}}",
+      "Redirect URI",
+      "Region",
+      "Region:",
+      "Revision",
+      "Router",
+      "SKU",
+      "SLA",
+      "SMS",
+      "SMTP",
+      "SSO",
+      "Sandbox",
+      "Schema",
+      "September",
+      "Server",
+      "Shift",
+      "Simulator",
+      "Single Sign-On",
+      "Slug",
+      "Software",
+      "Solo",
+      "Standard",
+      "Start",
+      "Start (optional)",
+      "Start *",
+      "Status",
+      "Stripe",
+      "Support",
+      "Switch",
+      "System",
+      "System (null)",
+      "T&M",
+      "TTL:",
+      "Tactical RMM",
+      "Tag",
+      "Tags",
+      "Tags:",
+      "Tanium",
+      "Team",
+      "Teams",
+      "Temporal",
+      "Tenant ID",
+      "Tenant ID:",
+      "Test",
+      "Text",
+      "Ticket",
+      "Tickets",
+      "Try/Catch",
+      "URL",
+      "UUID",
+      "Upgrade",
+      "Version",
+      "Version {{version}}",
+      "Version:",
+      "Version: {{version}}",
+      "Video",
+      "Website",
+      "Wi-Fi",
+      "Windows",
+      "Workflow",
+      "Workflow: {{id}}",
+      "Workflows",
+      "X-Alga-Signature",
+      "X-Idempotency-Key",
+      "XML",
+      "Xero",
+      "Xero CSV",
+      "Xero Client ID",
+      "Xero Client Secret",
+      "Zoom",
+      "alert.id",
+      "calendar",
+      "email@example.com, another@example.com",
+      "iOS",
+      "internal_cost, margin",
+      "m",
+      "macOS",
+      "my-project-id",
+      "offline",
+      "online",
+      "phase_name, task_description, assigned_to, estimated_hours, due_date, priority, service, task_type, status, tags",
+      "portal.example.com",
+      "primary",
+      "smtp.example.com",
+      "support@{{domain}}",
+      "task_name",
+      "token",
+      "workflow-id",
+      "workflow.event",
+      "{{destination}} in AlgaPSA",
+      "| null",
+      "—",
+      "• Desktop/Laptop",
+      "• Malware/Virus",
+      "• Server",
+      "• VPN"
+    ],
+    "caseInsensitive": [
+      "api",
+      "asset",
+      "assets",
+      "board",
+      "boards",
+      "csv",
+      "dashboard",
+      "html",
+      "id",
+      "job",
+      "jobs",
+      "json",
+      "ok",
+      "onboarding",
+      "pdf",
+      "sla",
+      "sms",
+      "sso",
+      "status",
+      "tag",
+      "tags",
+      "ticket",
+      "tickets",
+      "url",
+      "webhook",
+      "webhooks",
+      "workflow",
+      "workflows",
+      "min",
+      "xml"
+    ],
+    "patterns": [
+      "^\\s*$",
+      "^\\.\\.\\.$",
+      "^-$",
+      "^[-+]?\\d+(?:[.,:]\\d+)?\\s*(?:%|ms|s|min|h|MB|GB|TB)?$",
+      "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "^[A-Z]{2,8}$",
+      "^#[0-9A-Fa-f]{3,8}$",
+      "^\\{\\{[^{}]+\\}\\}$",
+      "^[\\s()\\[\\]{},.:;#/+\\-–—·|]*\\{\\{[^{}]+\\}\\}(?:[\\s()\\[\\]{},.:;#/+\\-–—·|]*\\{\\{[^{}]+\\}\\})*[\\s()\\[\\]{},.:;#/+\\-–—·|]*$",
+      "^v\\{\\{[^{}]+\\}\\}$",
+      "^Item \\{\\{[^{}]+\\}\\}$",
+      "^Tickets?:?$",
+      "^Ticket #?\\{\\{[^{}]+\\}\\}$",
+      "^Ticket #…$",
+      "^Subtotal: \\{\\{[^{}]+\\}\\}\\{\\{[^{}]+\\}\\}$",
+      "^\\{\\{count\\}\\} min$",
+      "^PO \\{\\{number\\}\\}$",
+      "^Status ?[:*]? ?(?:\\{\\{[^{}]+\\}\\})?$",
+      "^Total: \\{\\{[^{}]+\\}\\}$",
+      "^\\(\\{\\{[^{}]+\\}\\}h\\)$",
+      "^\\{\\{[^{}]+\\}\\} • \\{\\{[^{}]+\\}\\}$",
+      "^URL:$",
+      "^~\\{\\{[^{}]+\\}\\}%$",
+      "^via \\{\\{[^{}]+\\}\\}$",
+      "^\\{\\{[^{}]+\\}\\} ms$",
+      "^\\{\\{regionLabel\\}\\} - \\{\\{percentage\\}\\}% \\(\\{\\{description\\}\\}\\)$",
+      "^\\{\\{regionCode\\}\\} - \\{\\{percentage\\}\\}%$",
+      "^\\{\\{description\\}\\} - \\{\\{percentage\\}\\}%$",
+      "^\\{\\{taxType\\}\\} \\(\\{\\{countryCode\\}\\}\\) - \\{\\{percentage\\}\\}%$",
+      "^re_x+$",
+      "^Gmail: \\{\\{gmail\\}\\}(?: · Microsoft: \\{\\{microsoft\\}\\})? · IMAP: \\{\\{imap\\}\\}$",
+      "^\\{\\{name\\}\\} v\\{\\{version\\}\\}$",
+      "^\\(\\{\\{size\\}\\} KB\\)$",
+      "^Gmail: \\{\\{scopes\\}\\}$",
+      "^ID: \\{\\{id\\}\\}(?:\\.\\.\\.)?$",
+      "^Total:? ?(?:\\{\\{[^{}]+\\}\\}/\\{\\{[^{}]+\\}\\})?$",
+      "^\\{\\{count\\}\\}(?:ms|s)$",
+      "^\\{\\{minutes\\}\\}m \\{\\{seconds\\}\\}s$",
+      "^\\{\\{hours\\}\\}h \\{\\{minutes\\}\\}m$",
+      "^\\+1 \\(555\\) 123-4567$",
+      "^(?:John|Jane|Smith)$",
+      "^TK-$",
+      "^• (?:LAN/WAN|Firewall|Phishing/Spam)$",
+      "^corr-\\d+$",
+      "^Etc/GMT[+-]\\d+$",
+      "^Cron: \\{\\{cron\\}\\}$",
+      "^\\{\\{count\\}\\} total$",
+      "^Cmd/Ctrl\\+K$",
+      "^%$",
+      "^[0-9./\\n]+$",
+      "^https?://",
+      "^[\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,}$",
+      "^P\\{\\{number\\}\\}$",
+      "^\\{\\{hours\\}\\} h$",
+      "^\\{\\{pct\\}\\}%$",
+      "^\\{\\{amount\\}\\} MRR$",
+      "^\\{\\{amount\\}\\} NRR$",
+      "^\\{\\{value\\}\\}%$",
+      "^\\{\\{days\\}\\}d$",
+      "^\\{\\{count\\}\\} POs?$",
+      "^\\{\\{count\\}\\} SOs$",
+      "^\\{\\{count\\}\\} kits$",
+      "^\\{\\{type\\}\\} \\{\\{qty\\}\\} × \\{\\{name\\}\\}$",
+      "^\\(SN \\{\\{sn\\}\\}\\)$",
+      "^T[+-]\\{\\{days\\}\\}$"
+    ],
+    "notes": "This allowlist is intentionally conservative; audit tooling should report English-identical German strings unless they match one of these exact values, case-insensitive established loanwords, or technical patterns."
+  }
+}

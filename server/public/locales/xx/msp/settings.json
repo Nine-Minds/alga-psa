@@ -30,7 +30,10 @@
     "loadingTeam": "11111",
     "loadingExperimental": "11111",
     "loadingInteractions": "11111",
-    "keyboardShortcuts": "11111"
+    "keyboardShortcuts": "11111",
+    "opportunities": "11111",
+    "mcpServer": "11111",
+    "settingsFallback": "11111"
   },
   "unsavedChanges": {
     "title": "11111",

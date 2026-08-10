@@ -860,7 +860,7 @@
       "loadPriorities": "Impossibile caricare le priorità",
       "loadBoards": "Impossibile caricare le schede",
       "loadStatuses": "Impossibile caricare gli stati",
-      "requiredFields": "Inserisci titolo, consiglio, stato e priorità",
+      "requiredFields": "Inserisci titolo, bacheca, stato e priorità",
       "createFailed": "Impossibile creare il ticket"
     },
     "success": {

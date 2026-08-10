@@ -195,7 +195,7 @@ export function buildRow() {
   ];
 }
 
-function parseServiceAccountKey(raw) {
+export function parseServiceAccountKey(raw) {
   try {
     return JSON.parse(raw);
   } catch {
@@ -203,7 +203,7 @@ function parseServiceAccountKey(raw) {
   }
 }
 
-async function getAccessToken(sa) {
+export async function getAccessToken(sa) {
   const b64url = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url');
   const now = Math.floor(Date.now() / 1000);
   const unsigned = `${b64url({ alg: 'RS256', typ: 'JWT' })}.${b64url({
@@ -259,7 +259,7 @@ async function ensureHeaderRow(token, sheetId, tab, header) {
   }
 }
 
-async function appendRows(token, sheetId, tab, header, rows) {
+export async function appendRows(token, sheetId, tab, header, rows) {
   await ensureHeaderRow(token, sheetId, tab, header);
   const append = await sheetsApi(
     token, sheetId,

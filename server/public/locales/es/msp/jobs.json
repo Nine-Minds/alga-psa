@@ -136,5 +136,9 @@
       "none": "No hay trabajos que coincidan para borrar.",
       "error": "No se pudo borrar el historial de trabajos. Inténtalo de nuevo."
     }
+  },
+  "page": {
+    "heading": "Monitoreo de trabajos",
+    "recentJobs": "Trabajos recientes"
   }
 }

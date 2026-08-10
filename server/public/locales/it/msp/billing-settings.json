@@ -114,7 +114,7 @@
         "queueOnly": "Solo coda"
       },
       "states": {
-        "unnamedBoard": "Consiglio senza nome"
+        "unnamedBoard": "Bacheca senza nome"
       },
       "actions": {
         "save": "Salva",
