@@ -5,6 +5,10 @@
 # Enable/disable the temporal worker deployment
 enabled: true
 
+# Hosted uses Alga's shared multi-tenant OAuth applications. Appliance installs
+# use customer-owned applications and tenant-specific OAuth authorities.
+deploymentProfile: hosted
+
 # Image configuration
 image:
   repository: ""  # Set to your container registry and image name
@@ -69,6 +73,8 @@ secrets:
 
 # Service Account configuration
 serviceAccount:
+  # Required for the hosted Vault Kubernetes auth role and chart-managed RBAC.
+  create: true
   # Annotations to add to the service account
   annotations: {}
   # Automatically mount service account token
@@ -227,6 +233,9 @@ stripe:
 
 # Application configuration
 applicationUrl: ""  # Set to your application URL (e.g., https://example.com)
+# Prefer an existing Secret in hosted environments; when set, this takes
+# precedence over applicationUrl.
+applicationUrlSecret: {}
 publicBaseUrl: ""  # Public URL used in recipient-facing links (e.g., https://example.com)
 
 # Namespace override (optional)

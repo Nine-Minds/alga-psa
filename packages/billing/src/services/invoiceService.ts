@@ -968,6 +968,14 @@ export async function persistInvoiceCharges(
   let otherSubtotal = 0;
   const now = Temporal.Now.instant().toString();
 
+  // Non-fixed recurring charges may legitimately share one recurring service
+  // period (e.g. several hourly time entries under one obligation). Each
+  // charge must still persist its own invoice charge, detail row, source
+  // mapping, subtotal, and tax contribution, but the recurring period row is
+  // claimed exactly once per invoice. The fixed path keeps its own set because
+  // a persisted fixed period has a single charge family and cannot cross paths.
+  const claimedNonFixedServicePeriodRecordIds = new Set<string>();
+
   // Separate fixed charges from others
   const fixedCharges: IFixedPriceCharge[] = [];
   const otherCharges: IBillingCharge[] = [];
@@ -1076,28 +1084,37 @@ export async function persistInvoiceCharges(
       });
 
       if (shouldLinkRecurringServicePeriod) {
-        const linkedCount = await linkRecurringServicePeriodToInvoiceDetail({
-          tx,
-          tenant,
-          clientId: client.client_id,
-          invoiceId,
-          invoiceChargeId: invoiceItem.item_id,
-          invoiceChargeDetailId: detailId,
-          servicePeriodRecordId: charge.servicePeriodRecordId ?? null,
-          configId: charge.config_id,
-          contractLineId: charge.client_contract_line_id ?? null,
-          servicePeriodStart: charge.servicePeriodStart ?? null,
-          servicePeriodEnd: charge.servicePeriodEnd ?? null,
-          billingTiming: charge.billingTiming ?? null,
-          linkedAt: now,
-        });
-        assertRecurringPeriodLinked({
-          updatedCount: linkedCount,
-          invoiceId,
-          invoiceChargeId: invoiceItem.item_id,
-          invoiceChargeDetailId: detailId,
-          servicePeriodRecordId: charge.servicePeriodRecordId ?? null,
-        });
+        const servicePeriodRecordId = charge.servicePeriodRecordId ?? null;
+        const alreadyClaimed =
+          servicePeriodRecordId !== null
+          && claimedNonFixedServicePeriodRecordIds.has(servicePeriodRecordId);
+        if (!alreadyClaimed) {
+          const linkedCount = await linkRecurringServicePeriodToInvoiceDetail({
+            tx,
+            tenant,
+            clientId: client.client_id,
+            invoiceId,
+            invoiceChargeId: invoiceItem.item_id,
+            invoiceChargeDetailId: detailId,
+            servicePeriodRecordId,
+            configId: charge.config_id,
+            contractLineId: charge.client_contract_line_id ?? null,
+            servicePeriodStart: charge.servicePeriodStart ?? null,
+            servicePeriodEnd: charge.servicePeriodEnd ?? null,
+            billingTiming: charge.billingTiming ?? null,
+            linkedAt: now,
+          });
+          assertRecurringPeriodLinked({
+            updatedCount: linkedCount,
+            invoiceId,
+            invoiceChargeId: invoiceItem.item_id,
+            invoiceChargeDetailId: detailId,
+            servicePeriodRecordId,
+          });
+          if (servicePeriodRecordId !== null) {
+            claimedNonFixedServicePeriodRecordIds.add(servicePeriodRecordId);
+          }
+        }
       }
     }
 

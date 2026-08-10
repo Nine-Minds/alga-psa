@@ -59,12 +59,13 @@ export interface SyntheticTimeEntryInput {
 /**
  * One synthetic aggregate time entry per hourly service per period: the
  * period's assumed hours as a single block starting at the service period
- * start (it may span days — duration math uses start.until(end), so that is
- * fine). Rate resolution mirrors production time-entry pricing: the entry
- * custom_rate carries the contract's hourly config rate (or the service-level
- * custom rate), and currency_rate carries the currency-resolved catalog rate
- * as the fallback — the same precedence computeTimeBasedCharges applies to
- * real entries.
+ * start (it may span days). The authoritative billable minutes are the
+ * assumed hours converted to minutes; start/end remain only for billing-window
+ * eligibility. Rate resolution mirrors production time-entry pricing: the
+ * entry custom_rate carries the contract's hourly config rate (or the
+ * service-level custom rate), and currency_rate carries the
+ * currency-resolved catalog rate as the fallback — the same precedence
+ * computeTimeBasedCharges applies to real entries.
  */
 export function buildSyntheticTimeEntry(
   input: SyntheticTimeEntryInput,
@@ -94,6 +95,7 @@ export function buildSyntheticTimeEntry(
     tax_rate_id: service.tax_rate_id,
     custom_rate: hourly.hourly_rate ?? service.custom_rate ?? null,
     currency_rate: service.default_rate,
+    billable_duration: assumedHours * 60,
   };
 }
 

@@ -37,6 +37,8 @@ vi.mock('@alga-psa/auth', () => ({
   ApiKeyService: {
     validateApiKey: (...args: unknown[]) => testState.validateApiKeyMock(...args),
   },
+  runWithApiKeyUser: (_user: unknown, fn: () => Promise<unknown>) => fn(),
+  getApiKeyUserOverride: () => undefined,
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({

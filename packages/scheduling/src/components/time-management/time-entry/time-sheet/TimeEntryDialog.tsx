@@ -27,7 +27,6 @@ import { TimeEntryProvider, useTimeEntry } from './TimeEntryProvider';
 import TimeEntrySkeletons from './TimeEntrySkeletons';
 import SingleTimeEntryForm from './SingleTimeEntryForm';
 import { validateTimeEntry } from './utils';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useSchedulingCrossFeatureOptional } from '../../../../context/SchedulingCrossFeatureContext';
 
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
@@ -77,7 +76,6 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     inDrawer,
   } = props;
   const { t } = useTranslation('msp/time-entry');
-  const { enabled: projectBillingUiEnabled } = useFeatureFlag('project-billing-ui', { defaultValue: false });
   // Injected from the composition layer (billing owns the warning action).
   const getProjectTaskPaymentWarning = useSchedulingCrossFeatureOptional()?.getProjectTaskPaymentWarning;
   const {
@@ -342,7 +340,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       data-automation-type="container"
     >
       {inDrawer && <h2 className="mb-4 text-lg font-semibold">{title}</h2>}
-      {projectBillingUiEnabled && hasProjectPaymentWarning && (
+      {hasProjectPaymentWarning && (
         <Alert id={`${id}-project-payment-warning`} variant="warning" className="mb-3">
           <AlertDescription>
             <span className="font-medium">

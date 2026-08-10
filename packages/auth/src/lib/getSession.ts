@@ -7,14 +7,15 @@ import { auth as fullAuth } from '../nextauth/auth';
 
 /**
  * Decoding a session cookie only proves the JWT is authentic; it says nothing
- * about whether the session is still alive. Revocation state lives in the
- * sessions table (SCIM deactivation, admin revoke, sign out everywhere), so
- * every session handed to a caller is checked against it on every request and
- * fails closed:
+ * about whether the session is still alive or correctly stamped. Revocation
+ * state and the session owner's canonical user type live in the database, so
+ * every session handed to a caller is checked against them on every request
+ * and fails closed:
  *
  * - a session with no tracked tenant/session identifier (e.g. an OAuth token
  *   minted before session tracking existed) is treated as revoked, and
- * - an unreachable sessions table is treated as revoked.
+ * - an unreachable sessions table is treated as revoked, and
+ * - identity claims that disagree with the tracked user are rejected.
  *
  * This is the single gate for the edge-decoded path, which cannot query the
  * database itself, and the reason callers may authorize on any session this
@@ -26,20 +27,28 @@ async function requireLiveSession(session: Session | null): Promise<Session | nu
   }
 
   const tenant = (session.user as { tenant?: unknown }).tenant;
+  const userId = (session.user as { id?: unknown }).id;
+  const userType = (session.user as { user_type?: unknown }).user_type;
   const sessionId = (session as { session_id?: unknown }).session_id;
 
   if (
     typeof tenant !== 'string'
     || tenant.length === 0
+    || typeof userId !== 'string'
+    || userId.length === 0
+    || (userType !== 'internal' && userType !== 'client')
     || typeof sessionId !== 'string'
     || sessionId.length === 0
   ) {
-    logger.warn('[auth] Rejecting session without a tracked tenant or session identifier');
+    logger.warn('[auth] Rejecting session without complete tracked identity claims');
     return null;
   }
 
   try {
-    if (await UserSession.isRevoked(tenant, sessionId)) {
+    if (await UserSession.isRevokedOrIdentityMismatch(tenant, sessionId, {
+      userId,
+      userType,
+    })) {
       return null;
     }
   } catch (error) {

@@ -65,6 +65,7 @@ class MockQueryBuilder {
     private readonly inserts: Record<string, Row[]>,
     private readonly tableName: string,
     private readonly missingTables: Set<string>,
+    private readonly updateLog: Array<{ tableName: string; matchedRows: number }>,
   ) {}
 
   private get rows() {
@@ -133,6 +134,7 @@ class MockQueryBuilder {
     for (const row of rows) {
       Object.assign(row, payload);
     }
+    this.updateLog.push({ tableName: this.tableName, matchedRows: rows.length });
     return rows.length;
   }
 
@@ -161,6 +163,7 @@ function createMockTx(
     invoice_charge_fixed_details: [],
     invoice_time_entries: [],
   };
+  const updateLog: Array<{ tableName: string; matchedRows: number }> = [];
 
   const tx: any = (tableName: string) =>
     new MockQueryBuilder(
@@ -168,9 +171,40 @@ function createMockTx(
       inserts,
       normalizeTableName(tableName),
       missingTables,
+      updateLog,
     );
 
-  return { tx, inserts, tables };
+  return { tx, inserts, tables, updateLog };
+}
+
+function buildRecurringCharge(
+  type: string,
+  overrides: Record<string, any> = {},
+): Row {
+  return {
+    type,
+    serviceId: `service-${type}`,
+    config_id: `config-${type}-1`,
+    serviceName: `${type} charge`,
+    quantity: 1,
+    rate: 5000,
+    total: 5000,
+    tax_amount: 0,
+    tax_rate: 0,
+    tax_region: "US-NY",
+    is_taxable: false,
+    client_contract_line_id: "contract-line-1",
+    servicePeriodStart: "2025-02-01",
+    servicePeriodEnd: "2025-03-01",
+    servicePeriodRecordId: "rsp-shared",
+    billingTiming: "arrears",
+    tenant: "tenant-1",
+    ...overrides,
+  };
+}
+
+function periodUpdatesFor(updateLog: Array<{ tableName: string; matchedRows: number }>) {
+  return updateLog.filter((entry) => entry.tableName === "recurring_service_periods");
 }
 
 describe("invoiceService fixed recurring persistence", () => {
@@ -1189,5 +1223,230 @@ describe("invoiceService fixed recurring persistence", () => {
         .sort((left, right) => left - right),
     ).toEqual([4000, 6000]);
     expect(inserts.invoice_charge_fixed_details).toHaveLength(2);
+  });
+
+  it("persists every hourly charge sharing one recurring period while claiming the period once", async () => {
+    const { tx, inserts, tables, updateLog } = createMockTx({
+      time_entries: [
+        { entry_id: "entry-1", invoiced: false, tenant: "tenant-1" },
+        { entry_id: "entry-2", invoiced: false, tenant: "tenant-1" },
+      ],
+      recurring_service_periods: [
+        {
+          record_id: "rsp-hourly-shared",
+          tenant: "tenant-1",
+          charge_family: "hourly",
+          due_position: "arrears",
+          lifecycle_state: "generated",
+          invoice_charge_detail_id: null,
+        },
+      ],
+    });
+
+    const subtotal = await persistInvoiceCharges(
+      tx,
+      "invoice-1",
+      [
+        buildRecurringCharge("time", {
+          serviceId: "service-hourly",
+          config_id: "config-hourly-1",
+          serviceName: "Hourly Support",
+          userId: "user-1",
+          duration: 2,
+          quantity: 2,
+          rate: 2500,
+          total: 5000,
+          servicePeriodRecordId: "rsp-hourly-shared",
+          entryId: "entry-1",
+        }),
+        buildRecurringCharge("time", {
+          serviceId: "service-hourly",
+          config_id: "config-hourly-1",
+          serviceName: "Hourly Support",
+          userId: "user-1",
+          duration: 1,
+          quantity: 1,
+          rate: 2500,
+          total: 2500,
+          servicePeriodRecordId: "rsp-hourly-shared",
+          entryId: "entry-2",
+        }),
+      ],
+      {
+        client_id: "client-1",
+        tax_region: "US-NY",
+      },
+      {
+        user: {
+          id: "user-1",
+        },
+      } as any,
+      "tenant-1",
+    );
+
+    expect(subtotal).toBe(7500);
+    expect(inserts.invoice_charges).toHaveLength(2);
+    expect(inserts.invoice_charge_details).toHaveLength(2);
+    expect(
+      inserts.invoice_time_entries.map((row) => row.entry_id).sort(),
+    ).toEqual(["entry-1", "entry-2"]);
+    expect(tables.time_entries.every((entry) => entry.invoiced)).toBe(true);
+
+    const periodUpdates = periodUpdatesFor(updateLog);
+    expect(periodUpdates).toHaveLength(1);
+    expect(periodUpdates[0].matchedRows).toBe(1);
+
+    const periodRow = tables.recurring_service_periods[0];
+    expect(periodRow).toMatchObject({
+      record_id: "rsp-hourly-shared",
+      lifecycle_state: "billed",
+      invoice_id: "invoice-1",
+    });
+    expect(periodRow.invoice_charge_detail_id).toBe(
+      inserts.invoice_charge_details[0].item_detail_id,
+    );
+  });
+
+  it.each([
+    {
+      family: "usage",
+      first: { usageId: "usage-1" },
+      second: { usageId: "usage-2" },
+    },
+    { family: "product" },
+    { family: "license" },
+  ])(
+    "persists every shared-period $family charge while claiming the period once",
+    async ({ family, first, second }) => {
+      const { tx, inserts, tables, updateLog } = createMockTx({
+        usage_tracking: [
+          { usage_id: "usage-1", invoiced: false, tenant: "tenant-1" },
+          { usage_id: "usage-2", invoiced: false, tenant: "tenant-1" },
+        ],
+        recurring_service_periods: [
+          {
+            record_id: "rsp-shared",
+            tenant: "tenant-1",
+            charge_family: family,
+            due_position: "arrears",
+            lifecycle_state: "generated",
+            invoice_charge_detail_id: null,
+          },
+        ],
+      });
+
+      const subtotal = await persistInvoiceCharges(
+        tx,
+        "invoice-1",
+        [
+          buildRecurringCharge(family, {
+            total: 5000,
+            ...first,
+          }),
+          buildRecurringCharge(family, {
+            total: 2500,
+            ...second,
+          }),
+        ],
+        {
+          client_id: "client-1",
+          tax_region: "US-NY",
+        },
+        {
+          user: {
+            id: "user-1",
+          },
+        } as any,
+        "tenant-1",
+      );
+
+      expect(subtotal).toBe(7500);
+      expect(inserts.invoice_charges).toHaveLength(2);
+      expect(inserts.invoice_charge_details).toHaveLength(2);
+      expect(tables.recurring_service_periods).toHaveLength(1);
+
+      if (family === "usage") {
+        expect(inserts.invoice_usage_records).toHaveLength(2);
+        expect(
+          tables.usage_tracking.every((row) => row.invoiced),
+        ).toBe(true);
+      }
+
+      const periodUpdates = periodUpdatesFor(updateLog);
+      expect(periodUpdates).toHaveLength(1);
+      expect(periodUpdates[0].matchedRows).toBe(1);
+
+      const periodRow = tables.recurring_service_periods[0];
+      expect(periodRow).toMatchObject({
+        record_id: "rsp-shared",
+        lifecycle_state: "billed",
+        invoice_id: "invoice-1",
+      });
+      expect(periodRow.invoice_charge_detail_id).toBe(
+        inserts.invoice_charge_details[0].item_detail_id,
+      );
+    },
+  );
+
+  it("still aborts when the first claim of a shared recurring period cannot be linked", async () => {
+    const { tx } = createMockTx({
+      time_entries: [
+        { entry_id: "entry-1", invoiced: false, tenant: "tenant-1" },
+        { entry_id: "entry-2", invoiced: false, tenant: "tenant-1" },
+      ],
+      recurring_service_periods: [
+        {
+          record_id: "rsp-hourly-claimed",
+          tenant: "tenant-1",
+          charge_family: "hourly",
+          due_position: "arrears",
+          lifecycle_state: "billed",
+          invoice_charge_detail_id: "already-linked",
+        },
+      ],
+    });
+
+    await expect(
+      persistInvoiceCharges(
+        tx,
+        "invoice-1",
+        [
+          buildRecurringCharge("time", {
+            serviceId: "service-hourly",
+            config_id: "config-hourly-1",
+            serviceName: "Hourly Support",
+            userId: "user-1",
+            duration: 2,
+            quantity: 2,
+            rate: 2500,
+            total: 5000,
+            servicePeriodRecordId: "rsp-hourly-claimed",
+            entryId: "entry-1",
+          }),
+          buildRecurringCharge("time", {
+            serviceId: "service-hourly",
+            config_id: "config-hourly-1",
+            serviceName: "Hourly Support",
+            userId: "user-1",
+            duration: 1,
+            quantity: 1,
+            rate: 2500,
+            total: 2500,
+            servicePeriodRecordId: "rsp-hourly-claimed",
+            entryId: "entry-2",
+          }),
+        ],
+        {
+          client_id: "client-1",
+          tax_region: "US-NY",
+        },
+        {
+          user: {
+            id: "user-1",
+          },
+        } as any,
+        "tenant-1",
+      ),
+    ).rejects.toThrow(/could not be linked to invoice/);
   });
 });

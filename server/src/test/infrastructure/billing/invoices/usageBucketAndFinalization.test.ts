@@ -231,13 +231,15 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         tenant: context.tenantId
       });
 
-      // Create billing cycle and assign contract line
+      // Create billing cycle and assign contract line. Usage lines default to
+      // arrears timing, so January's service period is invoiced in the
+      // February window (invoice_window = service period shifted one cycle).
       const billingCycleId = await context.createEntity('client_billing_cycles', {
         client_id: context.clientId,
         billing_cycle: 'monthly',
-        effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
+        effective_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
+        period_start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
+        period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
       }, 'billing_cycle_id');
 
       await assignContractLineToClient(context, contractLineId, {
@@ -322,7 +324,9 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         detailBaseRateCents: 0,
         billingFrequency: 'monthly',
         startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        billingTiming: 'advance'
+        billingTiming: 'advance',
+        ensureBillingEmail: true,
+        materializeServicePeriods: true
       });
 
       await createBucketOverlayForPlan(context, contractLineId, {
@@ -339,7 +343,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         billing_cycle: 'monthly',
         effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
+        period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
       }, 'billing_cycle_id');
 
       // Record bucket usage for the period (45 hours consumed, 5 hours overage)
@@ -403,7 +407,9 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         detailBaseRateCents: 20000,
         quantity: 1,
         startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        billingTiming: 'advance'
+        billingTiming: 'advance',
+        ensureBillingEmail: true,
+        materializeServicePeriods: true
       });
 
       // Create billing cycle
@@ -412,7 +418,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         billing_cycle: 'monthly',
         effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
+        period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
       }, 'billing_cycle_id');
 
       await assignContractLineToClient(context, contractLineId, {

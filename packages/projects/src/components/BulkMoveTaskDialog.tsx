@@ -75,6 +75,7 @@ export default function BulkMoveTaskDialog({
         <div className="mb-6">
           <TreeSelect<'project' | 'phase' | 'status'>
             value={selectedTargetPath?.['status'] || selectedTargetPath?.['phase'] || ''}
+            selectedPath={selectedTargetPath ?? undefined}
             onValueChange={handleTreeSelect}
             options={projectTreeData}
             placeholder={t('dialogs.moveTask.placeholder', 'Select target project/phase/status...')}

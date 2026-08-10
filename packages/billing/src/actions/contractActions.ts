@@ -64,6 +64,9 @@ function contractActionErrorFrom(error: unknown): ContractActionError | null {
     if (error.message.startsWith('Template contract line') && error.message.includes('not found')) {
       return actionError('The selected template line is no longer available. Please refresh and try again.');
     }
+    if (error.message === 'Cannot delete contract that has associated invoices') {
+      return actionError('This contract has associated invoices and cannot be deleted.');
+    }
   }
 
   const dbError = error as { code?: string; column?: string; constraint?: string };

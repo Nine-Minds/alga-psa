@@ -50,6 +50,11 @@ export interface CreateSessionParams {
   login_method: string;
 }
 
+export interface SessionIdentity {
+  userId: string;
+  userType: 'internal' | 'client';
+}
+
 export type RevocationReason =
   | 'user_logout'
   | 'user_logout_all'
@@ -207,6 +212,36 @@ export class UserSession {
     const session = await sessions(knex, tenant).where({ session_id: sessionId }).select('revoked_at').first();
 
     return session ? (session as any).revoked_at !== null : true;
+  }
+
+  /**
+   * Validates both durable session state and the identity claims carried by the
+   * JWT. A signed JWT is not sufficient authority when its user type disagrees
+   * with the user that owns the tracked session.
+   */
+  static async isRevokedOrIdentityMismatch(
+    tenant: string,
+    sessionId: string,
+    identity: SessionIdentity
+  ): Promise<boolean> {
+    const knex = await getConnection(tenant);
+    const db = tenantDb(knex, tenant);
+    const query = db.table<Record<string, any>>('sessions')
+      .where({ 'sessions.session_id': sessionId })
+      .select({
+        revoked_at: 'sessions.revoked_at',
+        session_user_id: 'sessions.user_id',
+        actual_user_type: 'users.user_type',
+      });
+
+    db.tenantJoin(query, 'users', 'sessions.user_id', 'users.user_id', { type: 'left' });
+
+    const session = await query.first();
+
+    return !session
+      || session.revoked_at !== null
+      || session.session_user_id !== identity.userId
+      || session.actual_user_type !== identity.userType;
   }
 
   static async enforceMaxSessions(tenant: string, userId: string, maxSessions: number): Promise<void> {

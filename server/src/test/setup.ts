@@ -328,14 +328,23 @@ vi.mock('server/src/app/api/auth/[...nextauth]/edge-auth', () => ({
   auth: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('@alga-psa/auth', () => {
+vi.mock('@alga-psa/auth', async () => {
+  const { AsyncLocalStorage } = await import('node:async_hooks');
+
   const defaultUser = {
     user_id: '00000000-0000-0000-0000-000000000001',
     tenant: '00000000-0000-0000-0000-000000000001',
     roles: [],
   };
 
-  const getCurrentUser = vi.fn().mockResolvedValue(defaultUser);
+  // Mirrors packages/auth apiKeyUserContext: API routes wrap handlers in
+  // runWithApiKeyUser and getCurrentUser() prefers the override.
+  const apiKeyUserStorage = new AsyncLocalStorage<any>();
+  const runWithApiKeyUser = (user: any, fn: () => Promise<any>) =>
+    apiKeyUserStorage.run(user, fn);
+  const getApiKeyUserOverride = () => apiKeyUserStorage.getStore();
+
+  const getCurrentUser = vi.fn(async () => getApiKeyUserOverride() ?? defaultUser);
   const hasPermission = vi.fn().mockResolvedValue(true);
 
   const resolveTenant = async (user: any): Promise<string> => {
@@ -385,12 +394,50 @@ vi.mock('@alga-psa/auth', () => {
     };
   };
 
+  // Every name that production code value-imports from '@alga-psa/auth' must
+  // exist here — a missing one makes vitest throw at the import binding and
+  // every API test 500s (see the runWithApiKeyUser nightly break). The
+  // authGlobalMock contract test enumerates prod imports and enforces this.
   return {
     getSession: vi.fn().mockResolvedValue(null),
+    getSessionWithRevocationCheck: vi.fn().mockResolvedValue(null),
     getCurrentUser,
     hasPermission,
     withAuth,
     withAuthCheck,
     withOptionalAuth,
+    runWithApiKeyUser,
+    getApiKeyUserOverride,
+    getSessionCookieName: vi.fn(() => 'authjs.session-token'),
+    getNextAuthSecret: vi.fn(async () => 'test-nextauth-secret'),
+    formatRateLimitError: vi.fn(async () => 'Too many attempts. Please try again later.'),
+    checkPortalInvitationLimit: vi.fn(async () => undefined),
+    verifyAuthenticator: vi.fn(async () => false),
+    registerAuthEmailProvider: vi.fn(),
+    preCheckDeletion: vi.fn(async () => ({ canDelete: true })),
+    buildSessionCookie: vi.fn(() => ({ name: 'authjs.session-token', value: 'test-session', options: {} })),
+    consumePortalDomainOtt: vi.fn(async () => null),
+    encodePortalSessionToken: vi.fn(async () => 'test-portal-session-token'),
+    generateDeviceFingerprint: vi.fn(() => 'test-device-fingerprint'),
+    getClientIp: vi.fn(() => '127.0.0.1'),
+    getDeviceInfo: vi.fn(() => ({})),
+    getLocationFromIp: vi.fn(async () => null),
+    getSessionMaxAge: vi.fn(() => 60 * 60 * 24),
+    ApiKeyService: {
+      generateApiKey: vi.fn(() => 'test-api-key'),
+      createApiKey: vi.fn(),
+      validateApiKey: vi.fn(async () => null),
+      deactivateApiKey: vi.fn(),
+      listUserApiKeys: vi.fn(async () => []),
+      listAllApiKeys: vi.fn(async () => []),
+    },
+    PasswordResetService: {
+      generateSecureToken: vi.fn(() => 'test-reset-token'),
+      hashToken: vi.fn((token: string) => `hashed:${token}`),
+      createResetToken: vi.fn(),
+      createResetTokenWithTransaction: vi.fn(),
+      verifyToken: vi.fn(async () => ({ valid: false })),
+      markTokenAsUsed: vi.fn(async () => false),
+    },
   };
 });

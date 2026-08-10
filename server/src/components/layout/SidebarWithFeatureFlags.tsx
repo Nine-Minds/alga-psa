@@ -114,9 +114,6 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const navigationFlag = useFeatureFlag('ui-navigation-v2', { defaultValue: true });
   const useNavigationSections =
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
-  const opportunitiesFlag = useFeatureFlag('opportunities-module', { defaultValue: false });
-  const opportunitiesEnabled =
-    typeof opportunitiesFlag === 'boolean' ? opportunitiesFlag : opportunitiesFlag?.enabled ?? false;
   const marketingFlag = useFeatureFlag('marketing-module', { defaultValue: false });
   const marketingEnabled =
     typeof marketingFlag === 'boolean' ? marketingFlag : marketingFlag?.enabled ?? false;
@@ -179,7 +176,6 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     const filteredSections = baseSections.map((section) => ({
       ...section,
       items: section.items
-        .filter((item) => item.name !== 'Opportunities' || opportunitiesEnabled)
         .filter((item) => item.name !== 'Marketing' || marketingEnabled)
         .map((item) => {
         if (item.name === 'Workflows') {
@@ -200,21 +196,17 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       productCode,
       filterNavigationSectionsByFeatureAccess(editionSections, hasFeature),
     );
-  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, edition, opportunitiesEnabled, marketingEnabled]);
+  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, edition, marketingEnabled]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     const editionSections = filterNavigationSectionsByEdition(settingsNavigationSections, edition);
     const productSections = filterMenuSectionsByProduct(productCode, editionSections);
-    const opportunitiesFilteredSections = productSections.map((section) => ({
-      ...section,
-      items: section.items.filter((item) => item.name !== 'Opportunities' || opportunitiesEnabled),
-    }));
 
     return filterNavigationSectionsBySelfHost(
-      opportunitiesFilteredSections,
+      productSections,
       selfHostMode,
     );
-  }, [edition, opportunitiesEnabled, productCode, selfHostMode]);
+  }, [edition, productCode, selfHostMode]);
 
   const billingSections = useMemo(
     () => filterNavigationSectionsByEdition(billingNavigationSections, edition),

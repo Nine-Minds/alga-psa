@@ -146,6 +146,43 @@ function isDuplicateRecurringInvoiceActionError(error: RecurringBillingRunAction
   );
 }
 
+/**
+ * Logs the actionable underlying invoice-generation exception for a recurring
+ * run failure while the caller keeps the generic user-facing message. Only
+ * safe identifiers already present in the run are included; no invoice
+ * contents, customer data, or other sensitive payloads are logged.
+ */
+function logRecurringBillingRunInvoiceFailure(params: {
+  runId: string;
+  tenantId: string;
+  error: unknown;
+  billingCycleId?: string | null;
+  executionIdentityKey: string;
+  executionWindowKind: string;
+}) {
+  const {
+    runId,
+    tenantId,
+    error,
+    billingCycleId,
+    executionIdentityKey,
+    executionWindowKind,
+  } = params;
+  const normalizedError =
+    error instanceof Error
+      ? { name: error.name, message: error.message, stack: error.stack }
+      : { name: 'Unknown', message: String(error), stack: undefined };
+  console.error('[billing.recurringBillingRun.invoiceFailure]', {
+    event: 'billing.recurringBillingRun.invoiceFailure',
+    runId,
+    tenantId,
+    billingCycleId: billingCycleId ?? null,
+    executionIdentityKey,
+    executionWindowKind,
+    error: normalizedError,
+  });
+}
+
 export async function generateInvoicesAsRecurringBillingRun(params: {
   targets?: RecurringBillingRunTarget[];
   allowPoOverage?: boolean;
@@ -232,6 +269,15 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
         if (isDuplicateRecurringInvoiceError(err)) {
           continue;
         }
+
+        logRecurringBillingRunInvoiceFailure({
+          runId,
+          tenantId,
+          error: err,
+          billingCycleId: target.billingCycleId ?? null,
+          executionIdentityKey: executionWindow.identityKey,
+          executionWindowKind: executionWindow.kind,
+        });
 
         failures.push({
           billingCycleId: target.billingCycleId ?? null,
@@ -393,6 +439,15 @@ export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
         if (isDuplicateRecurringInvoiceError(err)) {
           continue;
         }
+
+        logRecurringBillingRunInvoiceFailure({
+          runId,
+          tenantId,
+          error: err,
+          billingCycleId: group.billingCycleId ?? null,
+          executionIdentityKey: executionWindow.identityKey,
+          executionWindowKind: executionWindow.kind,
+        });
 
         failures.push({
           billingCycleId: group.billingCycleId ?? null,

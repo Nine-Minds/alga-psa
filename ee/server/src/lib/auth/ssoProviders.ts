@@ -5,11 +5,6 @@ import { buildTenantPortalSlug, isValidTenantSlug, getSlugParts } from '@shared/
 
 type InternalUserType = 'internal' | 'client';
 
-async function findUserByEmail(email: string): Promise<IUser | undefined> {
-  const User = (await import('@alga-psa/db/models/user')).default;
-  return User.findUserByEmail(email);
-}
-
 async function findUserByEmailAndType(email: string, userType: InternalUserType): Promise<IUser | undefined> {
   const User = (await import('@alga-psa/db/models/user')).default;
   return User.findUserByEmailAndType(email, userType);
@@ -141,7 +136,7 @@ async function locateUser(
     return findUserByEmailTenantAndType(email, tenantId, 'client');
   }
 
-  const defaultUser = await findUserByEmail(email);
+  const defaultUser = await findUserByEmailAndType(email, normalizedType);
   if (defaultUser) {
     return defaultUser;
   }
@@ -164,7 +159,7 @@ async function locateUser(
     }
   }
 
-  return findUserByEmailAndType(email, normalizedType);
+  return undefined;
 }
 
 function coerceString(value: unknown): string | undefined {
@@ -290,10 +285,11 @@ export async function mapOAuthProfileToExtendedUser(
     throw new Error('User not found');
   }
 
-  if (requestedUserType === 'client' && user.user_type !== 'client') {
-    logger.warn(`[auth] Non-client user attempted client portal ${provider} OAuth`, {
+  if (user.user_type !== requestedUserType) {
+    logger.warn(`[auth] User type mismatch during ${provider} OAuth`, {
       email: normalizedEmail,
-      userType: user.user_type,
+      requestedUserType,
+      storedUserType: user.user_type,
     });
     throw new Error('User not found');
   }
