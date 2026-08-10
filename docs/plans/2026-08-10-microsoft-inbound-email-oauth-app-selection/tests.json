@@ -1,0 +1,12 @@
+[
+  {"id":"T001","title":"Managed selection persists in PostgreSQL","description":"With real PostgreSQL, select managed issuer, complete OAuth, and verify tokens plus authoritative client ID persist atomically.","featureIds":["F001","F002","F006","F009","F010","F011"],"implemented":false},
+  {"id":"T002","title":"Tenant profile selection among multiple profiles","description":"Select one of multiple eligible tenant profiles and verify the chosen profile and client ID persist.","featureIds":["F003","F006","F008","F011"],"implemented":false},
+  {"id":"T003","title":"Cross-tenant and Teams-only guards","description":"Reject cross-tenant profiles and profiles lacking Email capability without affecting Teams.","featureIds":["F008","F017","F018"],"implemented":false},
+  {"id":"T004","title":"Binding change preserves token issuer","description":"Change the tenant Email binding after connection and verify refresh still uses the provider's persisted issuer.","featureIds":["F012","F013"],"implemented":false},
+  {"id":"T005","title":"Same-client secret rotation","description":"Rotate the secret reference for an unchanged client ID and verify refresh succeeds without reconnect.","featureIds":["F014"],"implemented":false},
+  {"id":"T006","title":"Different-client requires reconnect","description":"Attempt to change client ID without OAuth and verify stable reconnect-required rejection.","featureIds":["F005","F015","F018"],"implemented":false},
+  {"id":"T007","title":"Failed callback preserves credentials","description":"Force callback validation or persistence failure and verify old tokens and issuer metadata remain intact.","featureIds":["F010","F011","F012","F018"],"implemented":false},
+  {"id":"T008","title":"Signed-state tamper and replay rejection","description":"Reject modified signed fields and a second use of the same valid nonce.","featureIds":["F009","F010","F018"],"implemented":false},
+  {"id":"T009","title":"Conservative backfill ambiguity","description":"Backfill a unique same-client eligible profile but leave zero-match and multiple-match legacy rows unchanged.","featureIds":["F016","F017"],"implemented":false},
+  {"id":"T010","title":"UI recommendation issuer and warning","description":"Verify managed recommendation, current issuer display, explicit choices, and client-change warning across create and reconnect.","featureIds":["F002","F004","F005","F006","F007"],"implemented":false}
+]
