@@ -444,6 +444,7 @@
       }
     },
     "billing": {
+      "title": "Facturation",
       "credits": {
         "title": "Crédits"
       }

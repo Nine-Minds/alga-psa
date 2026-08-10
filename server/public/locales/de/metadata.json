@@ -462,6 +462,7 @@
       "title": "Automatisierungs-Hub"
     },
     "billing": {
+      "title": "Abrechnung",
       "credits": {
         "title": "Gutschriften"
       }

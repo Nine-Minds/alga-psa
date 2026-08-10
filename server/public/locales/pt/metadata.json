@@ -444,6 +444,7 @@
       }
     },
     "billing": {
+      "title": "Cobrança",
       "credits": {
         "title": "Créditos"
       }
