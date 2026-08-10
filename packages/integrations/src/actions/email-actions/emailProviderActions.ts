@@ -26,9 +26,6 @@ import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers
 import type { Microsoft365DiagnosticsReport } from '@alga-psa/shared/interfaces/microsoft365-diagnostics.interfaces';
 import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
 import {
-  resolveMicrosoftConsumerProfileConfig,
-} from '../../lib/microsoftConsumerProfileResolution';
-import {
   MicrosoftEmailIssuerError,
   MICROSOFT_EMAIL_ISSUER_ERRORS,
   isSameMicrosoftClientId,
@@ -352,36 +349,27 @@ async function persistMicrosoftConfig(
   if (!config) return undefined;
   if (!tenant) throwExpectedEmailProviderError('Tenant context is required to save Microsoft email configuration');
 
-  // Resolve the intended issuing app from the explicit selection when
-  // available; otherwise fall back to the tenant Email binding (legacy callers).
-  let effectiveClientId = '';
-  let effectiveClientSecret = '';
-  let effectiveTenantId = 'common';
-  let effectiveProfileId: string | null = null;
-  let effectiveClientSecretRef: string | null = null;
-
-  if (issuer) {
-    const resolution = await resolveMicrosoftEmailIssuerChoice(tenant, issuer);
-    effectiveClientId = resolution.clientId;
-    effectiveClientSecret = resolution.clientSecret;
-    effectiveTenantId = resolution.microsoftTenantId || 'common';
-    effectiveProfileId = resolution.profileId || null;
-    effectiveClientSecretRef = resolution.clientSecretRef || null;
-  } else {
-    const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(tenant, 'email', {
-      credentialPreference: 'tenant',
-    });
-    if (microsoftProfile.status !== 'ready') {
-      throwExpectedEmailProviderError(
-        microsoftProfile.message || 'Microsoft Email profile is not configured'
-      );
-    }
-    effectiveClientId = microsoftProfile.clientId || '';
-    effectiveClientSecret = microsoftProfile.clientSecret || '';
-    effectiveTenantId = microsoftProfile.microsoftTenantId || 'common';
-    effectiveProfileId = microsoftProfile.profileId || null;
-    effectiveClientSecretRef = microsoftProfile.clientSecretRef || null;
+  // An explicit issuer selection is mandatory on create/save. The server never
+  // silently falls back to the tenant Email binding for a new write: the
+  // binding may only inform the UI's default pre-selection and the documented
+  // legacy runtime backfill for pre-existing providers. A request without an
+  // explicit selection fails loudly instead of guessing the app.
+  if (!issuer) {
+    throw new MicrosoftEmailIssuerError(
+      MICROSOFT_EMAIL_ISSUER_ERRORS.ISSUER_REQUIRED,
+      'Choose which Microsoft application authorizes this mailbox before saving'
+    );
   }
+
+  // Resolve the intended issuing app from the explicit selection. This is the
+  // authoritative gate: ownership, active status, Email capability, readiness,
+  // and consent are all revalidated server-side.
+  const resolution = await resolveMicrosoftEmailIssuerChoice(tenant, issuer);
+  let effectiveClientId = resolution.clientId;
+  let effectiveClientSecret = resolution.clientSecret;
+  let effectiveTenantId = resolution.microsoftTenantId || 'common';
+  let effectiveProfileId = resolution.profileId || null;
+  let effectiveClientSecretRef = resolution.clientSecretRef || null;
 
   const effectiveRedirectUri = (await getMicrosoftEmailSetupMetadataInternal()).mailboxRedirectUri;
 

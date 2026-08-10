@@ -349,6 +349,34 @@ describe('Email Provider Creation', () => {
 
       delete process.env[otherSecretEnvKey];
     });
+
+    it('fails loudly when creating a Microsoft provider without an explicit issuer choice', async () => {
+      // No microsoftIssuer: the server must reject rather than silently
+      // resolving the tenant Email binding.
+      const result = await createEmailProvider({
+        tenant: testTenant,
+        providerType: 'microsoft' as const,
+        providerName: 'No Issuer',
+        mailbox: 'no-issuer@client.com',
+        isActive: true,
+        microsoftConfig: {
+          client_id: '',
+          client_secret: '',
+          tenant_id: '',
+          redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback',
+          auto_process_emails: true,
+          max_emails_per_sync: 50,
+        } as any,
+      }, true);
+
+      expect((result as any).actionError).toContain('Choose which Microsoft application authorizes this mailbox');
+      expect((result as any).errorCode).toBe('ms_email_issuer_required');
+
+      const dbRecord = await tenantTable<any>('email_providers')
+        .where('mailbox', 'no-issuer@client.com')
+        .first();
+      expect(dbRecord).toBeUndefined();
+    });
   });
 
   describe('Provider Management', () => {
@@ -370,6 +398,11 @@ describe('Email Provider Creation', () => {
         providerName: 'Outlook Provider',
         mailbox: 'outlook@client.com',
         isActive: true,
+        microsoftIssuer: {
+          kind: 'profile',
+          profileId: microsoftProfileId,
+          clientId: microsoftProfileClientId,
+        },
         microsoftConfig: {
           client_id: 'microsoft-client-id',
           client_secret: 'microsoft-client-secret',

@@ -92,19 +92,20 @@ describe('Microsoft providers-first form contracts', () => {
     expect(calendarFormSource).toContain("tenant_id: ''");
   });
 
-  it('T022: Microsoft email persistence pins the explicit issuer and keeps the binding as a legacy fallback', () => {
+  it('T022: Microsoft email persistence requires an explicit issuer and never falls back to the Email binding on create/save', () => {
     expect(emailActionsSource).toContain('resolveMicrosoftEmailIssuerChoice(tenant, issuer)');
     expect(emailActionsSource).toContain('preserveIssuingApp');
     expect(emailActionsSource).toContain('CLIENT_MISMATCH_RECONNECT_REQUIRED');
-    expect(emailActionsSource).toContain("resolveMicrosoftConsumerProfileConfig(tenant, 'email', {");
-    expect(emailActionsSource).toContain("credentialPreference: 'tenant'");
+    expect(emailActionsSource).toContain('ISSUER_REQUIRED');
+    expect(emailActionsSource).toContain('explicit selection fails loudly');
+    // The silent tenant-binding fallback on new writes is gone; the binding may
+    // only inform the UI default and the legacy runtime backfill.
+    expect(emailActionsSource).not.toContain("resolveMicrosoftConsumerProfileConfig(tenant, 'email', {");
+    expect(emailActionsSource).not.toContain("credentialPreference: 'tenant'");
     expect(emailActionsSource).not.toContain('microsoftCredentialSource');
     expect(emailActionsSource).toContain('getMicrosoftEmailSetupMetadataInternal()).mailboxRedirectUri');
     expect(emailActionsSource).toContain(
-      "effectiveClientId = microsoftProfile.clientId || '';"
-    );
-    expect(emailActionsSource).toContain(
-      "effectiveClientSecret = microsoftProfile.clientSecret || '';"
+      'let effectiveClientId = resolution.clientId;'
     );
     expect(emailActionsSource).toContain('microsoft_profile_id: pinnedProfileId');
     expect(emailActionsSource).toContain('client_secret_ref: pinnedClientSecretRef');

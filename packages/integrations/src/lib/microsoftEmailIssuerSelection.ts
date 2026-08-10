@@ -83,6 +83,12 @@ export const MICROSOFT_EMAIL_ISSUER_ERRORS = {
   EXPIRED_STATE: 'ms_email_expired_state',
   REPLAYED_STATE: 'ms_email_replayed_state',
   CALLBACK_PERSISTENCE_FAILED: 'ms_email_callback_persistence_failed',
+  ISSUER_REQUIRED: 'ms_email_issuer_required',
+  STATE_USER_MISMATCH: 'ms_email_state_user_mismatch',
+  STATE_PURPOSE_MISMATCH: 'ms_email_state_purpose_mismatch',
+  PROVIDER_NOT_FOUND: 'ms_email_provider_not_found',
+  PROVIDER_TENANT_MISMATCH: 'ms_email_provider_tenant_mismatch',
+  PROVIDER_TYPE_NOT_SUPPORTED: 'ms_email_provider_type_not_supported',
 } as const;
 
 export type MicrosoftEmailIssuerErrorCode =
@@ -141,6 +147,22 @@ function isEligibleProfile(profile: MicrosoftProfileRow): boolean {
     Boolean((profile.tenant_id || '').trim()) &&
     isConsentReady(profile)
   );
+}
+
+/**
+ * An eligible profile must also prove its credential secret is actually
+ * resolvable — not merely claim readiness via a `client_secret_ref`. A profile
+ * whose secret cannot be resolved must never surface as a selectable issuer or
+ * as a backfill candidate.
+ */
+async function isEligibleProfileWithResolvableSecret(
+  tenant: string,
+  profile: MicrosoftProfileRow
+): Promise<boolean> {
+  if (!isEligibleProfile(profile)) return false;
+  const secretProvider = await getSecretProviderInstance();
+  const clientSecret = await secretProvider.getTenantSecret(tenant, profile.client_secret_ref);
+  return Boolean(clientSecret && clientSecret.trim());
 }
 
 async function getTenantProfiles(db: any, tenant: string): Promise<MicrosoftProfileRow[]> {
@@ -326,10 +348,18 @@ export async function listEligibleMicrosoftEmailIssuers(
     getBoundEmailProfile(db, tenant),
   ]);
 
-  const eligibleProfiles = profiles.filter(isEligibleProfile).sort((left, right) => {
-    if (left.is_default !== right.is_default) return left.is_default ? -1 : 1;
-    return left.display_name.localeCompare(right.display_name);
-  });
+  const eligibleProfiles = (await Promise.all(
+    profiles.map(async (profile) => ({
+      profile,
+      eligible: await isEligibleProfileWithResolvableSecret(tenant, profile),
+    }))
+  ))
+    .filter((entry) => entry.eligible)
+    .map((entry) => entry.profile)
+    .sort((left, right) => {
+      if (left.is_default !== right.is_default) return left.is_default ? -1 : 1;
+      return left.display_name.localeCompare(right.display_name);
+    });
 
   const profileOptions: MicrosoftEmailIssuerOption[] = eligibleProfiles.map((profile) => ({
     kind: 'profile',
@@ -349,11 +379,11 @@ export async function listEligibleMicrosoftEmailIssuers(
     : undefined;
 
   // The create-flow default: managed when offered, else the tenant Email
-  // binding's profile when it is eligible.
+  // binding's profile when it is eligible and its secret is resolvable.
   let recommended: MicrosoftEmailIssuerChoice | null = null;
   if (managedOption) {
     recommended = { kind: 'managed', clientId: managedOption.clientId };
-  } else if (boundProfile && isEligibleProfile(boundProfile)) {
+  } else if (boundProfile && await isEligibleProfileWithResolvableSecret(tenant, boundProfile)) {
     recommended = {
       kind: 'profile',
       profileId: boundProfile.profile_id,
@@ -405,7 +435,7 @@ export async function backfillMicrosoftEmailProviderIssuerMetadata(tenant: strin
   const profiles = await getTenantProfiles(db, tenant);
   const eligibleByClientId = new Map<string, MicrosoftProfileRow[]>();
   for (const profile of profiles) {
-    if (!isEligibleProfile(profile)) continue;
+    if (!(await isEligibleProfileWithResolvableSecret(tenant, profile))) continue;
     const key = normalizeClientId(profile.client_id).toLowerCase();
     if (!key) continue;
     const bucket = eligibleByClientId.get(key) || [];

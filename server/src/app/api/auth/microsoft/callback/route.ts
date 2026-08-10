@@ -18,6 +18,8 @@ import {
   type MicrosoftEmailOAuthStatePayload,
 } from '@alga-psa/integrations/utils/email/microsoftEmailOAuthState';
 import { consumeMicrosoftEmailOAuthNonce } from '@alga-psa/integrations/utils/email/microsoftEmailOAuthStateStore';
+import { verifyMicrosoftEmailOAuthStateRelationships } from '@alga-psa/integrations/lib/microsoftEmailStateGuard';
+import { persistMicrosoftEmailOAuthResult } from '../../../../../services/email/MicrosoftEmailOAuthResultPersistence';
 import { getWebhookBaseUrl } from '../../../../../utils/email/webhookHelpers';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import axios from 'axios';
@@ -286,6 +288,80 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Enforce every relationship signed into the state. A valid signature only
+    // proves the token was issued by us; ownership, provider binding, and
+    // purpose semantics must each be verified before any credential write.
+    if (signedPayload) {
+      let stateProvider: {
+        id: string;
+        tenant: string;
+        provider_type: string;
+        status?: string | null;
+        refresh_token?: string | null;
+      } | null = null;
+
+      if (signedPayload.providerId) {
+        try {
+          stateProvider = await runWithTenant(stateContext.tenant!, async () => {
+            const { knex } = await createTenantKnex();
+            const db = tenantDb(knex, stateContext.tenant!);
+            const providerRow = await db.table('email_providers')
+              .where('id', signedPayload.providerId)
+              .select('id', 'tenant', 'provider_type', 'status')
+              .first();
+            if (!providerRow) return null;
+            const configRow = await db.table('microsoft_email_provider_config')
+              .where('email_provider_id', signedPayload.providerId)
+              .select('refresh_token')
+              .first();
+            return {
+              id: providerRow.id,
+              tenant: providerRow.tenant,
+              provider_type: providerRow.provider_type,
+              status: providerRow.status,
+              refresh_token: configRow?.refresh_token ?? null,
+            };
+          });
+        } catch (providerError: any) {
+          console.error('[MS OAuth] Failed to load state provider for verification', {
+            providerId: signedPayload.providerId,
+            error: providerError?.message || String(providerError),
+          });
+          return respondWithPostMessage({
+            type: 'oauth-callback',
+            provider: 'microsoft',
+            success: false,
+            error: MICROSOFT_EMAIL_ISSUER_ERRORS.INVALID_STATE,
+            errorDescription: 'This Microsoft authorization request is invalid or tampered with. Start again from the mailbox form.'
+          });
+        }
+      }
+
+      const guard = verifyMicrosoftEmailOAuthStateRelationships({
+        payload: signedPayload,
+        sessionUser,
+        provider: stateProvider,
+      });
+
+      if (!guard.ok) {
+        console.error('[MS OAuth] Signed state relationship verification failed', {
+          code: guard.code,
+          purpose: signedPayload.purpose,
+          providerId: signedPayload.providerId,
+        });
+        // The prior connection is left untouched — these are authorization /
+        // state-integrity failures, not provider failures, and writing an
+        // error status would take a working mailbox offline.
+        return respondWithPostMessage({
+          type: 'oauth-callback',
+          provider: 'microsoft',
+          success: false,
+          error: guard.code,
+          errorDescription: guard.message,
+        });
+      }
+    }
+
     // Get OAuth client credentials - prefer server-side NEXTAUTH_URL for hosted detection
     const secretProvider = await getSecretProviderInstance();
     const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
@@ -402,69 +478,40 @@ export async function GET(request: NextRequest) {
       // Calculate expiration time
       const expiresAt = new Date(Date.now() + expires_in * 1000);
 
-      // Persist tokens and initialize webhook if we have provider context
+      // Persist tokens and initialize the webhook if we have provider context.
+      // The write is atomic with webhook/subscription setup: any failure after
+      // the token write restores the prior connection (old refresh token, old
+      // client_id/profile pinning, old subscription state).
       if (stateContext.providerId && stateContext.tenant) {
         try {
-          await runWithTenant(stateContext.tenant, async () => {
-            const { knex } = await createTenantKnex();
-
-            // The effective issuer metadata to persist. For the explicit flow it
-            // comes from the revalidated selection; for legacy flows from the
-            // resolved binding/platform config.
-            const issuerMetadata = issuerResolution
-              ? {
-                  client_id: issuerResolution.clientId,
-                  client_secret: issuerResolution.clientSecret,
-                  tenant_id: issuerResolution.microsoftTenantId || 'common',
-                  microsoft_profile_id: issuerResolution.profileId || null,
-                  client_secret_ref: issuerResolution.clientSecretRef || null,
-                }
-              : null;
-
-            // Atomically write tokens + authoritative issuer metadata so a
-            // partial failure cannot clobber a previous working connection.
-            await knex.transaction(async (trx) => {
-              const db = tenantDb(trx, stateContext.tenant!);
-              const updatePayload: Record<string, unknown> = {
-                access_token: access_token,
-                refresh_token: refresh_token || null,
-                token_expires_at: expiresAt.toISOString(),
-                updated_at: new Date().toISOString(),
-              };
-              if (issuerMetadata) {
-                updatePayload.client_id = issuerMetadata.client_id;
-                updatePayload.client_secret = issuerMetadata.client_secret;
-                updatePayload.tenant_id = issuerMetadata.tenant_id;
-                updatePayload.microsoft_profile_id = issuerMetadata.microsoft_profile_id;
-                updatePayload.client_secret_ref = issuerMetadata.client_secret_ref;
+          // The effective issuer metadata to persist. For the explicit flow it
+          // comes from the revalidated state choice; for legacy flows from the
+          // resolved binding/platform config. It is never re-resolved from the
+          // tenant binding after this point.
+          const issuerMetadata = issuerResolution
+            ? {
+                client_id: issuerResolution.clientId,
+                client_secret: issuerResolution.clientSecret,
+                tenant_id: issuerResolution.microsoftTenantId || 'common',
+                microsoft_profile_id: issuerResolution.profileId || null,
+                client_secret_ref: issuerResolution.clientSecretRef || null,
               }
+            : null;
 
-              await db.table('microsoft_email_provider_config')
-                .where('email_provider_id', stateContext.providerId)
-                .update(updatePayload);
+          await runWithTenant(stateContext.tenant, async () => {
+            await persistMicrosoftEmailOAuthResult({
+              tenant: stateContext.tenant!,
+              providerId: stateContext.providerId!,
+              tokens: {
+                accessToken: access_token,
+                refreshToken: refresh_token || null,
+                expiresAt,
+              },
+              issuerMetadata,
+              setupWebhook: async (ctx) => {
+                const { provider, config: msConfig } = ctx;
+                if (!provider || !msConfig) return;
 
-              await db.table('email_providers')
-                .where('id', stateContext.providerId)
-                .update({
-                  status: 'connected',
-                  error_message: null,
-                  updated_at: trx.fn.now(),
-                });
-            });
-
-            // Build provider config and register webhook subscription
-            try {
-              const { knex: webhookKnex } = await createTenantKnex();
-              const db = tenantDb(webhookKnex, stateContext.tenant);
-              const provider = await db.table('email_providers')
-                .where('id', stateContext.providerId)
-                .first();
-
-              const msConfig = await db.table('microsoft_email_provider_config')
-                .where('email_provider_id', stateContext.providerId)
-                .first();
-
-              if (provider && msConfig) {
                 const baseUrl = getWebhookBaseUrl();
                 const webhookUrl = `${baseUrl}/api/email/webhooks/microsoft`;
 
@@ -493,12 +540,12 @@ export async function GET(request: NextRequest) {
                   created_at: provider.created_at,
                   updated_at: provider.updated_at,
                   provider_config: {
-                    client_id: msConfig.client_id || clientId,
-                    client_secret: msConfig.client_secret || clientSecret,
+                    client_id: msConfig.client_id || ctx.clientId,
+                    client_secret: msConfig.client_secret || ctx.clientSecret,
                     tenant_id: msConfig.tenant_id || null,
-                    access_token: access_token,
-                    refresh_token: refresh_token || null,
-                    token_expires_at: expiresAt.toISOString(),
+                    access_token: ctx.accessToken,
+                    refresh_token: ctx.refreshToken || null,
+                    token_expires_at: ctx.expiresAt.toISOString(),
                     microsoft_profile_id: msConfig.microsoft_profile_id || undefined,
                     client_secret_ref: msConfig.client_secret_ref || undefined,
                   },
@@ -552,11 +599,8 @@ export async function GET(request: NextRequest) {
                   });
                   throw subErr;
                 }
-              }
-            } catch (e) {
-              console.warn('⚠️ Microsoft webhook initialization failed after OAuth:', (e as any)?.message || e);
-              throw e;
-            }
+              },
+            });
           });
         } catch (persistErr: any) {
           console.warn('⚠️ Failed to persist Microsoft OAuth tokens or initialize webhook:', persistErr?.message || persistErr);

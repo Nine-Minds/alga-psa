@@ -259,6 +259,46 @@ describe('listEligibleMicrosoftEmailIssuers', () => {
 
     expect(issuers.profiles).toHaveLength(0);
   });
+
+  it('never lists a profile whose credential secret cannot be resolved', async () => {
+    hoisted.resolveMicrosoftConsumerProfileConfig.mockResolvedValue({
+      status: 'not_configured',
+      tenantId: 'tenant-1',
+      consumerType: 'email',
+      message: 'not configured',
+    });
+    // Structurally eligible (active, Email-capable, consented) but the secret
+    // behind client_secret_ref is absent — it must not be selectable.
+    seedProfiles([
+      profile({ profile_id: 'p-nosecret', display_name: 'No Secret', client_id: 'nosecret-client', client_secret_ref: 'ref-nosecret' }),
+      profile({ profile_id: 'p-ready', display_name: 'Ready App', client_id: 'ready-client', is_default: false }),
+    ]);
+    hoisted.state.tenantSecrets.set('tenant-1:ref-1', 'secret-1');
+
+    const issuers = await listEligibleMicrosoftEmailIssuers('tenant-1');
+
+    expect(issuers.profiles.map((p) => p.profileId)).toEqual(['p-ready']);
+  });
+
+  it('does not recommend a bound profile whose secret cannot be resolved', async () => {
+    hoisted.resolveMicrosoftConsumerProfileConfig.mockResolvedValue({
+      status: 'not_configured',
+      tenantId: 'tenant-1',
+      consumerType: 'email',
+      message: 'not configured',
+    });
+    seedProfiles([profile({ profile_id: 'p-bound', display_name: 'Bound No Secret', client_id: 'bound-client' })]);
+    hoisted.state.microsoftConsumerBindings.push({
+      tenant: 'tenant-1',
+      consumer_type: 'email',
+      profile_id: 'p-bound',
+    });
+
+    const issuers = await listEligibleMicrosoftEmailIssuers('tenant-1');
+
+    expect(issuers.recommended).toBeNull();
+    expect(issuers.profiles).toHaveLength(0);
+  });
 });
 
 describe('resolveMicrosoftEmailIssuerChoice', () => {
@@ -443,5 +483,21 @@ describe('backfillMicrosoftEmailProviderIssuerMetadata', () => {
     expect(result.backfilled).toBe(0);
     const config = hoisted.state.microsoftEmailProviderConfigs[0];
     expect(config.microsoft_profile_id).toBe('p-1');
+  });
+
+  it('does not backfill a profile whose secret cannot be resolved', async () => {
+    seedProfiles([
+      profile({ profile_id: 'p-1', client_id: 'unique-client', client_secret_ref: 'ref-nosecret' }),
+    ]);
+    const providerId = seedProviderConfig('unique-client');
+
+    const result = await backfillMicrosoftEmailProviderIssuerMetadata('tenant-1');
+
+    expect(result.backfilled).toBe(0);
+    const config = hoisted.state.microsoftEmailProviderConfigs.find(
+      (row) => row.email_provider_id === providerId
+    );
+    expect(config?.microsoft_profile_id).toBeNull();
+    expect(config?.client_secret_ref).toBeNull();
   });
 });
