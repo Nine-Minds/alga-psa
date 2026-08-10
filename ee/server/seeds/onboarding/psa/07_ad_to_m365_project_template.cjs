@@ -413,6 +413,9 @@ async function getStatusMappings(db, tenant, templateId) {
       template_status_mapping_id: mappingId,
       template_id: templateId,
       status_id: status.status_id,
+      standard_status_id: null,
+      unresolved_status_id: null,
+      status_source: 'tenant',
       custom_status_name: null,
       custom_status_color: status.color || statusColor,
       display_order: i + 1
