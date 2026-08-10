@@ -1361,7 +1361,7 @@
       "addChildMultiClientMessage": "11111 {{ticket}} 11111",
       "thisTicket": "11111"
     },
-    "autoClose": "11111",
+    "autoClose": "11111 {{date}} 11111",
     "autoCloseWarned": "11111"
   },
   "invalidTicketData": "11111",

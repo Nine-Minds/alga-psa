@@ -286,7 +286,8 @@
     "bulkTagsSuccess_one": "Tags zu {{count}} Aufgabe hinzugefügt",
     "bulkTagsSuccess_other": "Tags zu {{count}} Aufgaben hinzugefügt",
     "bulkTagsPartial": "Tags konnten zu einigen Aufgaben nicht hinzugefügt werden",
-    "bulkTagsFailure": "Tags konnten nicht zu den ausgewählten Aufgaben hinzugefügt werden"
+    "bulkTagsFailure": "Tags konnten nicht zu den ausgewählten Aufgaben hinzugefügt werden",
+    "taskTypeFallback": "Aufgabe"
   },
   "taskForm": {
     "addTitle": "Aufgabe hinzufügen",

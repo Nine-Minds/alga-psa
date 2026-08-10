@@ -324,7 +324,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       </div>
 
       {/* Task type indicator */}
-      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 right-6' : 'top-2 right-8'}`} title={taskType?.type_name || t('task', 'Task')}>
+      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 right-6' : 'top-2 right-8'}`} title={taskType?.type_name || t('projectDetail.taskTypeFallback', 'Task')}>
         <Icon
           className={zoomLevel <= 15 ? 'w-3 h-3' : 'w-4 h-4'}
           style={{ color: taskType?.color || '#6B7280' }}

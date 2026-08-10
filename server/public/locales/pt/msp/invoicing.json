@@ -650,16 +650,16 @@
     "months": {
       "january": "Janeiro",
       "february": "Fevereiro",
-      "march": "Marchar",
-      "april": "abril",
-      "may": "Poderia",
+      "march": "Março",
+      "april": "Abril",
+      "may": "Maio",
       "june": "Junho",
       "july": "Julho",
       "august": "Agosto",
       "september": "Setembro",
-      "october": "outubro",
-      "november": "novembro",
-      "december": "dezembro"
+      "october": "Outubro",
+      "november": "Novembro",
+      "december": "Dezembro"
     }
   },
   "invoicePreview": {

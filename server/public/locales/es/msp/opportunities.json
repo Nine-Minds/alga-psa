@@ -83,7 +83,7 @@
       "loadFailed": "No se pudo cargar la oportunidad",
       "loading": "Cargando oportunidad...",
       "markLost": "Marque como perdida",
-      "markWon": "marcos gano",
+      "markWon": "Marcar como ganada",
       "metadataTitle": "Oportunidad",
       "nextAction": "Siguiente acción",
       "nextActionOverdue": "Próxima acción · vencida",
@@ -249,7 +249,7 @@
         "nextAction": "Siguiente acción",
         "value": "Valor"
       },
-      "tableView": "mesa",
+      "tableView": "Tabla",
       "viewLabel": "Vista de cola"
     },
     "reports": {
@@ -548,7 +548,7 @@
     "winDialog": {
       "body": "El trato se cierra como ganado.",
       "bodyProspect": "{{client}} se convierte en un cliente activo.",
-      "confirm": "marcos gano",
+      "confirm": "Marcar como ganada",
       "convertQuote": "Convertir una cotización aceptada en un borrador de acuerdo (opcional)",
       "nextConvert": "Convierta la cotización aceptada en un acuerdo a continuación, o después desde la pantalla de la cotización.",
       "nextSendQuote": "Todavía no hay una cotización aceptada vinculada. Envíe la cotización, consiga su aprobación y conviértala después en un acuerdo. Puede marcar la oportunidad como ganada igualmente.",
@@ -558,7 +558,7 @@
       "projectStart": "Fecha de inicio",
       "projectStatus": "Estado inicial",
       "projectTemplate": "Crear un proyecto de incorporación (opcional)",
-      "title": "marcos gano"
+      "title": "Marcar como ganada"
     }
   }
 }

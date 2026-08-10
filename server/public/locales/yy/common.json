@@ -82,7 +82,8 @@
     "share": "55555",
     "done": "55555",
     "continue": "55555",
-    "printSelected": "55555 {{count}} 55555"
+    "printSelected": "55555 {{count}} 55555",
+    "removeTag": "55555"
   },
   "upgradePrompt": {
     "editionLabel": "55555",
@@ -107,7 +108,11 @@
     "noUsersAvailable": "55555",
     "searchBoards": "55555",
     "searchBoardsLabel": "55555",
-    "noBoardsFound": "55555"
+    "noBoardsFound": "55555",
+    "notAssigned": "55555",
+    "searchUsersOrTeams": "55555",
+    "unnamedUser": "55555",
+    "unnamedTeam": "55555"
   },
   "tagFilter": {
     "placeholder": "55555",

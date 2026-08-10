@@ -82,7 +82,8 @@
     "share": "11111",
     "done": "11111",
     "continue": "11111",
-    "printSelected": "11111 {{count}} 11111"
+    "printSelected": "11111 {{count}} 11111",
+    "removeTag": "11111"
   },
   "upgradePrompt": {
     "editionLabel": "11111",
@@ -107,7 +108,11 @@
     "noUsersAvailable": "11111",
     "searchBoards": "11111",
     "searchBoardsLabel": "11111",
-    "noBoardsFound": "11111"
+    "noBoardsFound": "11111",
+    "notAssigned": "11111",
+    "searchUsersOrTeams": "11111",
+    "unnamedUser": "11111",
+    "unnamedTeam": "11111"
   },
   "tagFilter": {
     "placeholder": "11111",

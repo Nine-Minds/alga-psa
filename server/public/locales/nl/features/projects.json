@@ -286,7 +286,8 @@
     "bulkTagsSuccess_one": "Labels toegevoegd aan {{count}} taak",
     "bulkTagsSuccess_other": "Labels toegevoegd aan {{count}} taken",
     "bulkTagsPartial": "Labels konden niet aan sommige taken worden toegevoegd",
-    "bulkTagsFailure": "Labels konden niet aan de geselecteerde taken worden toegevoegd"
+    "bulkTagsFailure": "Labels konden niet aan de geselecteerde taken worden toegevoegd",
+    "taskTypeFallback": "Taak"
   },
   "taskForm": {
     "addTitle": "Nieuwe taak toevoegen",
