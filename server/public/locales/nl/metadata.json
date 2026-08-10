@@ -254,7 +254,7 @@
       "import": {
         "title": "Tickets importeren"
       },
-      "title": "Klanttickets",
+      "title": "Tickets",
       "detail": {
         "title": "Ticket nr. {{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Ticketgegevens"
