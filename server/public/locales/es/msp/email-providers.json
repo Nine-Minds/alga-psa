@@ -251,7 +251,8 @@
         "popupBlocked": "No se pudo abrir la ventana emergente de OAuth. Permita ventanas emergentes para este sitio.",
         "closedEarly": "La ventana de autorización se cerró antes de completar. Por favor inténtelo de nuevo.",
         "authorizationFailed": "Autorización fallida",
-        "senderDisplayNameInvalid": "El nombre para mostrar no puede contener comillas, corchetes angulares ni saltos de línea"
+        "senderDisplayNameInvalid": "El nombre para mostrar no puede contener comillas, corchetes angulares ni saltos de línea",
+        "issuerRequired": "Choose a Microsoft app before signing in"
       },
       "requiredFields": {
         "providerName": "Nombre de configuración",
@@ -289,6 +290,17 @@
         "openProviders": "Abrir Proveedores",
         "notConfigured": "Microsoft aún no está configurado. Configúrelo una vez en Proveedores y luego regrese.",
         "setUpInProviders": "Configurar en Proveedores"
+      },
+      "issuer": {
+        "title": "Microsoft app that authorizes this mailbox",
+        "description": "Choose which application signs in as this mailbox. This choice is stored with the mailbox and does not affect other services.",
+        "managedLabel": "AlgaPSA app (managed by Nine Minds)",
+        "managedDescription": "No Microsoft app registration is required on your side.",
+        "recommended": "Recommended",
+        "currentApp": "Current app: {{app}}",
+        "switchWarning": "Changing the Microsoft app requires reconnecting this mailbox. Sign in with Microsoft again to finish the switch.",
+        "noneAvailable": "No Microsoft app is ready for mailbox authorization yet. Set one up in Providers, then come back.",
+        "retry": "Try again"
       }
     },
     "gmail": {

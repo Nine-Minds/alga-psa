@@ -122,6 +122,7 @@ export {
 export {
   getMicrosoftIntegrationStatus,
   getMicrosoftConsumerSetupStatus,
+  getMicrosoftEmailIssuerOptions,
   listMicrosoftProfiles,
   listMicrosoftConsumerBindings,
   createMicrosoftProfile,

@@ -1659,7 +1659,8 @@
           "email": {
             "description": "Choisissez le profil Microsoft pour les e-mails Outlook entrants et sortants.",
             "label": "E-mail",
-            "reconnect": "Les connexions e-mail Outlook existantes doivent être autorisées à nouveau pour accorder Mail.Send avant de pouvoir envoyer des e-mails sortants."
+            "reconnect": "Les connexions e-mail Outlook existantes doivent être autorisées à nouveau pour accorder Mail.Send avant de pouvoir envoyer des e-mails sortants.",
+            "perProviderIssuerNote": "Existing mailbox connections keep their current Microsoft app until they are reconnected. This choice applies to new mailbox connections."
           },
           "mspSso": {
             "description": "Choisissez quel profil Microsoft sous-tend les domaines de connexion MSP SSO, la connexion Microsoft et la découverte de tenant.",

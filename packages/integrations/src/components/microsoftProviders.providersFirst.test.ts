@@ -92,16 +92,19 @@ describe('Microsoft providers-first form contracts', () => {
     expect(calendarFormSource).toContain("tenant_id: ''");
   });
 
-  it('T022: Microsoft email persistence derives credentials from tenant providers secrets instead of form fields', () => {
+  it('T022: Microsoft email persistence pins the explicit issuer and keeps the binding as a legacy fallback', () => {
+    expect(emailActionsSource).toContain('resolveMicrosoftEmailIssuerChoice(tenant, issuer)');
+    expect(emailActionsSource).toContain('preserveIssuingApp');
+    expect(emailActionsSource).toContain('CLIENT_MISMATCH_RECONNECT_REQUIRED');
     expect(emailActionsSource).toContain("resolveMicrosoftConsumerProfileConfig(tenant, 'email', {");
     expect(emailActionsSource).toContain("credentialPreference: 'tenant'");
     expect(emailActionsSource).not.toContain('microsoftCredentialSource');
     expect(emailActionsSource).toContain('getMicrosoftEmailSetupMetadataInternal()).mailboxRedirectUri');
     expect(emailActionsSource).toContain(
-      "const effectiveClientId = microsoftProfile.clientId || '';"
+      "effectiveClientId = microsoftProfile.clientId || '';"
     );
     expect(emailActionsSource).toContain(
-      "const effectiveClientSecret = microsoftProfile.clientSecret || '';"
+      "effectiveClientSecret = microsoftProfile.clientSecret || '';"
     );
     expect(emailActionsSource).toContain('microsoft_profile_id: pinnedProfileId');
     expect(emailActionsSource).toContain('client_secret_ref: pinnedClientSecretRef');

@@ -1,20 +1,110 @@
 [
-  {"id":"F001","title":"Choice DTO","description":"Define a managed-or-tenant-profile issuer choice DTO with explicit client identity.","implemented":false},
-  {"id":"F002","title":"Hosted recommendation","description":"Recommend the managed issuer when hosted configuration is ready.","implemented":false},
-  {"id":"F003","title":"Eligible tenant profiles","description":"List only active tenant-owned Microsoft profiles with Email capability and readiness.","implemented":false},
-  {"id":"F004","title":"Current issuer display","description":"Show the provider-authoritative current issuer in the inbound email UI.","implemented":false},
-  {"id":"F005","title":"Reauthorization warning","description":"Warn that changing client ID requires reconnection.","implemented":false},
-  {"id":"F006","title":"Explicit create input","description":"Require an explicit issuer choice when creating a Microsoft inbound email provider.","implemented":false},
-  {"id":"F007","title":"Explicit reconnect input","description":"Require an explicit issuer choice when reconnecting a Microsoft inbound email provider.","implemented":false},
-  {"id":"F008","title":"Tenant and capability guards","description":"Enforce ownership, active, Email capability, readiness, and consent guards.","implemented":false},
-  {"id":"F009","title":"Signed OAuth state","description":"Sign tenant, provider, choice, client ID, nonce, and purpose without secrets.","implemented":false},
-  {"id":"F010","title":"Callback revalidation","description":"Revalidate state, nonce, tenant ownership, eligibility, purpose, and client ID at callback.","implemented":false},
-  {"id":"F011","title":"Atomic issuer persistence","description":"Atomically persist tokens and authoritative issuer metadata after callback.","implemented":false},
-  {"id":"F012","title":"Old connection preservation","description":"Keep existing working credentials when authorization or callback persistence fails.","implemented":false},
-  {"id":"F013","title":"Provider-authoritative runtime resolution","description":"Resolve runtime credentials from persisted provider issuer metadata, not current bindings.","implemented":false},
-  {"id":"F014","title":"Same-client secret rotation","description":"Allow secret-reference rotation when client ID is unchanged.","implemented":false},
-  {"id":"F015","title":"Different-client rejection","description":"Reject client-ID changes with a stable reconnect-required result.","implemented":false},
-  {"id":"F016","title":"Conservative backfill","description":"Backfill only unique eligible same-client profile matches and preserve ambiguous legacy rows.","implemented":false},
-  {"id":"F017","title":"Teams isolation","description":"Ensure inbound email selection and migration never modify Teams behavior or credentials.","implemented":false},
-  {"id":"F018","title":"Stable errors","description":"Return stable machine-readable error codes for selection, state, eligibility, and persistence failures.","implemented":false}
+  {
+    "id": "F001",
+    "title": "Choice DTO",
+    "description": "Define a managed-or-tenant-profile issuer choice DTO with explicit client identity.",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "title": "Hosted recommendation",
+    "description": "Recommend the managed issuer when hosted configuration is ready.",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "title": "Eligible tenant profiles",
+    "description": "List only active tenant-owned Microsoft profiles with Email capability and readiness.",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "title": "Current issuer display",
+    "description": "Show the provider-authoritative current issuer in the inbound email UI.",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "title": "Reauthorization warning",
+    "description": "Warn that changing client ID requires reconnection.",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "title": "Explicit create input",
+    "description": "Require an explicit issuer choice when creating a Microsoft inbound email provider.",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "title": "Explicit reconnect input",
+    "description": "Require an explicit issuer choice when reconnecting a Microsoft inbound email provider.",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "title": "Tenant and capability guards",
+    "description": "Enforce ownership, active, Email capability, readiness, and consent guards.",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "title": "Signed OAuth state",
+    "description": "Sign tenant, provider, choice, client ID, nonce, and purpose without secrets.",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "title": "Callback revalidation",
+    "description": "Revalidate state, nonce, tenant ownership, eligibility, purpose, and client ID at callback.",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "title": "Atomic issuer persistence",
+    "description": "Atomically persist tokens and authoritative issuer metadata after callback.",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "title": "Old connection preservation",
+    "description": "Keep existing working credentials when authorization or callback persistence fails.",
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "title": "Provider-authoritative runtime resolution",
+    "description": "Resolve runtime credentials from persisted provider issuer metadata, not current bindings.",
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "title": "Same-client secret rotation",
+    "description": "Allow secret-reference rotation when client ID is unchanged.",
+    "implemented": true
+  },
+  {
+    "id": "F015",
+    "title": "Different-client rejection",
+    "description": "Reject client-ID changes with a stable reconnect-required result.",
+    "implemented": true
+  },
+  {
+    "id": "F016",
+    "title": "Conservative backfill",
+    "description": "Backfill only unique eligible same-client profile matches and preserve ambiguous legacy rows.",
+    "implemented": true
+  },
+  {
+    "id": "F017",
+    "title": "Teams isolation",
+    "description": "Ensure inbound email selection and migration never modify Teams behavior or credentials.",
+    "implemented": true
+  },
+  {
+    "id": "F018",
+    "title": "Stable errors",
+    "description": "Return stable machine-readable error codes for selection, state, eligibility, and persistence failures.",
+    "implemented": true
+  }
 ]

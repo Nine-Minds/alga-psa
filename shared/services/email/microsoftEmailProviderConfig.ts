@@ -87,6 +87,53 @@ async function resolveBoundProfileCredentials(
   };
 }
 
+/**
+ * Resolve credentials from the provider row's pinned profile (the persisted
+ * `microsoft_profile_id` + `client_secret_ref`), which is authoritative for the
+ * app that issued the refresh token. Unlike the current Email binding this
+ * keeps working after a binding change, and it lets a same-client secret
+ * rotation flow through without a reconnect.
+ */
+async function resolveProviderPinnedProfileCredentials(
+  tenant: string,
+  vendorConfig: NonNullable<EmailProviderConfig['provider_config']>
+): Promise<MicrosoftEmailRuntimeCredentials | null> {
+  const profileId = normalized(vendorConfig.microsoft_profile_id);
+  const secretRef = normalized(vendorConfig.client_secret_ref);
+  if (!profileId || !secretRef) return null;
+
+  const knex = await getAdminConnection();
+  const db = tenantDb(knex, tenant);
+  const profile = await db
+    .table('microsoft_profiles')
+    .where({ profile_id: profileId })
+    .first(
+      'profile_id',
+      'client_id',
+      'client_secret_ref',
+      'tenant_id',
+      'capabilities',
+      'is_archived'
+    );
+
+  if (!profile || profile.is_archived || !hasEmailCapability(profile.capabilities)) return null;
+  const secretProvider = await getSecretProviderInstance();
+  const clientSecret = normalized(
+    await secretProvider.getTenantSecret(tenant, profile.client_secret_ref)
+  );
+  const clientId = normalized(profile.client_id);
+  if (!clientId || !clientSecret) return null;
+
+  return {
+    clientId,
+    clientSecret,
+    tenantId: normalized(profile.tenant_id) || 'common',
+    profileId: profile.profile_id,
+    clientSecretRef: profile.client_secret_ref,
+    source: 'profile',
+  };
+}
+
 async function resolveFallbackCredentials(
   tenant: string,
   vendorConfig: NonNullable<EmailProviderConfig['provider_config']>,
@@ -139,24 +186,25 @@ async function resolveFallbackCredentials(
 
 /**
  * Resolves credentials before adapter construction. The client id stored on the
- * vendor row pins an existing refresh token to its issuing app. A newly-bound
- * profile may supply a rotated secret only when its client id still matches.
+ * vendor row pins an existing refresh token to its issuing app. The provider's
+ * pinned profile (persisted issuer metadata) is authoritative; the current
+ * Email binding is only consulted as a fallback, and a newly-bound profile may
+ * supply a rotated secret only when its client id still matches.
  */
 export async function buildMicrosoftEmailProviderConfig(
   config: EmailProviderConfig
 ): Promise<EmailProviderConfig> {
   const vendorConfig = config.provider_config || {};
   const issuingClientId = normalized(vendorConfig.client_id);
-  const profileCredentials = await resolveBoundProfileCredentials(config.tenant);
-  const fallbackCredentials = await resolveFallbackCredentials(
-    config.tenant,
-    vendorConfig,
-    issuingClientId
-  );
+  const [pinnedProfileCredentials, boundProfileCredentials, fallbackCredentials] = await Promise.all([
+    resolveProviderPinnedProfileCredentials(config.tenant, vendorConfig),
+    resolveBoundProfileCredentials(config.tenant),
+    resolveFallbackCredentials(config.tenant, vendorConfig, issuingClientId),
+  ]);
 
   const selected = selectMicrosoftEmailRuntimeCredentials({
     issuingClientId,
-    profileCredentials,
+    profileCredentials: pinnedProfileCredentials ?? boundProfileCredentials,
     fallbackCredentials,
   });
 

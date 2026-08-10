@@ -1027,6 +1027,16 @@ export function MicrosoftIntegrationSettings({
                         </Alert>
                       </div>
                     )}
+
+                    {consumer.consumerType === 'email' && (
+                      <div className="lg:col-span-3">
+                        <p className="text-xs text-muted-foreground">
+                          {t('integrations.microsoft.settings.consumers.email.perProviderIssuerNote', {
+                            defaultValue: 'Existing mailbox connections keep their current Microsoft app until they are reconnected. This choice applies to new mailbox connections.',
+                          })}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 );
               })}

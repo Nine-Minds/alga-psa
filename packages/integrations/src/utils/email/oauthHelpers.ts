@@ -22,13 +22,17 @@ export interface OAuthState {
 /**
  * Generate OAuth authorization URL for Microsoft
  * Requests inbound read access and Mail.Send for the same configured mailbox.
+ *
+ * Pass `encodedState` to supply a pre-signed state string (used by the
+ * Microsoft mailbox flow). Otherwise `state` is base64-encoded as before.
  */
 export function generateMicrosoftAuthUrl(
   clientId: string,
   redirectUri: string,
   state: OAuthState,
   scopes: string[] = [...MICROSOFT_EMAIL_OAUTH_SCOPES],
-  tenantAuthority: string = 'common'
+  tenantAuthority: string = 'common',
+  encodedState?: string
 ): string {
   const baseUrl = getMicrosoftAuthorizeUrl(tenantAuthority);
 
@@ -38,7 +42,7 @@ export function generateMicrosoftAuthUrl(
     redirect_uri: redirectUri,
     response_mode: 'query',
     scope: scopes.join(' '),
-    state: encodeState(state),
+    state: encodedState ?? encodeState(state),
     prompt: 'consent' // Force consent to ensure we get refresh token
   });
 

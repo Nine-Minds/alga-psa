@@ -1659,7 +1659,8 @@
           "email": {
             "description": "Elija el perfil de Microsoft para el correo entrante y saliente de Outlook.",
             "label": "Correo",
-            "reconnect": "Las conexiones existentes de correo de Outlook deben volver a autorizarse para conceder Mail.Send antes de poder enviar correo saliente."
+            "reconnect": "Las conexiones existentes de correo de Outlook deben volver a autorizarse para conceder Mail.Send antes de poder enviar correo saliente.",
+            "perProviderIssuerNote": "Existing mailbox connections keep their current Microsoft app until they are reconnected. This choice applies to new mailbox connections."
           },
           "mspSso": {
             "description": "Elija qué perfil de Microsoft respalda los dominios de inicio de sesión de MSP SSO, el inicio de sesión con Microsoft y el descubrimiento de inquilinos.",

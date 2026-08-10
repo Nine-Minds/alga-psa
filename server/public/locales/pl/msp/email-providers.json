@@ -251,7 +251,8 @@
         "popupBlocked": "Nie udało się otworzyć wyskakującego okienka OAuth. Zezwól na wyświetlanie wyskakujących okienek w tej witrynie.",
         "closedEarly": "Okno autoryzacji zostało zamknięte przed zakończeniem. Spróbuj ponownie.",
         "authorizationFailed": "Autoryzacja nie powiodła się",
-        "senderDisplayNameInvalid": "Nazwa wyświetlana nie może zawierać cudzysłowów, nawiasów ostrych ani znaków nowego wiersza"
+        "senderDisplayNameInvalid": "Nazwa wyświetlana nie może zawierać cudzysłowów, nawiasów ostrych ani znaków nowego wiersza",
+        "issuerRequired": "Choose a Microsoft app before signing in"
       },
       "requiredFields": {
         "providerName": "Nazwa konfiguracji",
@@ -289,6 +290,17 @@
         "openProviders": "Otwórz Dostawców",
         "notConfigured": "Microsoft nie jest jeszcze skonfigurowany. Skonfiguruj go raz w sekcji Dostawcy, a następnie wróć.",
         "setUpInProviders": "Skonfiguruj w sekcji Dostawcy"
+      },
+      "issuer": {
+        "title": "Microsoft app that authorizes this mailbox",
+        "description": "Choose which application signs in as this mailbox. This choice is stored with the mailbox and does not affect other services.",
+        "managedLabel": "AlgaPSA app (managed by Nine Minds)",
+        "managedDescription": "No Microsoft app registration is required on your side.",
+        "recommended": "Recommended",
+        "currentApp": "Current app: {{app}}",
+        "switchWarning": "Changing the Microsoft app requires reconnecting this mailbox. Sign in with Microsoft again to finish the switch.",
+        "noneAvailable": "No Microsoft app is ready for mailbox authorization yet. Set one up in Providers, then come back.",
+        "retry": "Try again"
       }
     },
     "gmail": {

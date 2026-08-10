@@ -26,6 +26,11 @@ import {
   type MicrosoftProfileConsumer,
 } from './microsoftShared';
 import { resolveMicrosoftBindingCandidateProfile } from '../../lib/microsoftConsumerProfileResolution';
+import {
+  backfillMicrosoftEmailProviderIssuerMetadata,
+  listEligibleMicrosoftEmailIssuers,
+  type MicrosoftEmailIssuerOptions,
+} from '../../lib/microsoftEmailIssuerSelection';
 
 const MICROSOFT_CLIENT_ID_SECRET = 'microsoft_client_id';
 const MICROSOFT_CLIENT_SECRET_SECRET = 'microsoft_client_secret';
@@ -161,6 +166,7 @@ export interface MicrosoftProfileStatusResponse {
   };
   emailSetup?: MicrosoftEmailSetupReadiness;
   profiles?: MicrosoftProfileSummary[];
+  issuerBackfill?: { backfilled: number; ambiguous: number; unchanged: number };
 }
 
 function maskSecret(value: string): string {
@@ -1592,6 +1598,23 @@ export const getMicrosoftConsumerSetupStatus = withAuth(async (
   }
 });
 
+export const getMicrosoftEmailIssuerOptions = withAuth(async (
+  user,
+  { tenant }
+): Promise<{ success: boolean; error?: string; issuers?: MicrosoftEmailIssuerOptions }> => {
+  try {
+    if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
+    if (!(await canManageMicrosoftSettings(user))) return { success: false, error: 'Forbidden' };
+
+    return {
+      success: true,
+      issuers: await listEligibleMicrosoftEmailIssuers(tenant),
+    };
+  } catch (err: any) {
+    return { success: false, error: microsoftActionErrorMessage(err, 'Failed to load Microsoft email application options') };
+  }
+});
+
 export const getMicrosoftIntegrationStatus = withAuth(async (
   user,
   { tenant }
@@ -1600,6 +1623,10 @@ export const getMicrosoftIntegrationStatus = withAuth(async (
     if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
 
     const profiles = await listMicrosoftProfilesForTenant(tenant, (user as any)?.user_id);
+    // Conservative same-client backfill: associates a legacy provider row with a
+    // profile only when its persisted client ID has exactly one eligible
+    // match. Never touches Teams rows.
+    const backfill = await backfillMicrosoftEmailProviderIssuerMetadata(tenant);
     const baseUrl = await getDeploymentBaseUrl();
     const metadata = getVisibleMicrosoftIntegrationMetadata(baseUrl);
     const mspSsoProfile = await resolveMicrosoftProfileForConsumer(tenant, 'msp_sso');
@@ -1622,6 +1649,7 @@ export const getMicrosoftIntegrationStatus = withAuth(async (
       },
       emailSetup,
       profiles: visibleProfiles,
+      issuerBackfill: backfill,
     };
   } catch (err: any) {
     return { success: false, error: microsoftActionErrorMessage(err, 'Failed to load Microsoft integration status') };

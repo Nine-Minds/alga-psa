@@ -1,5 +1,77 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+
+const hoisted = vi.hoisted(() => {
+  const state = {
+    tenantSecrets: new Map<string, string>(),
+    appSecrets: new Map<string, string>(),
+    microsoftProfiles: [] as Record<string, unknown>[],
+    bindings: [] as Record<string, unknown>[],
+  };
+
+  const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
+  const matches = (row: Record<string, unknown>, conditions: Record<string, unknown>): boolean =>
+    Object.entries(conditions).every(([key, value]) => row[key] === value);
+
+  const createQuery = (table: string) => {
+    const filters: Record<string, unknown>[] = [];
+    const filteredRows = () =>
+      (table.startsWith('microsoft_profile_consumer_bindings')
+        ? state.bindings
+        : table === 'microsoft_profiles'
+          ? state.microsoftProfiles
+          : []
+      ).filter((row) => filters.every((filter) => matches(row, filter)));
+
+    return {
+      where(conditions: Record<string, unknown>) {
+        filters.push(conditions);
+        return this;
+      },
+      andWhere(conditions: Record<string, unknown>) {
+        filters.push(conditions);
+        return this;
+      },
+      tenantJoin() {
+        return this;
+      },
+      async first() {
+        const row = filteredRows()[0];
+        return row ? clone(row) : undefined;
+      },
+    };
+  };
+
+  const dbMock: any = ((table: string) => createQuery(table)) as any;
+
+  return {
+    state,
+    getAdminConnection: vi.fn(async () => dbMock),
+    getAppSecret: vi.fn(async (key: string) => state.appSecrets.get(key) || null),
+    getTenantSecret: vi.fn(async (tenant: string, key: string) =>
+      state.tenantSecrets.get(`${tenant}:${key}`) || null
+    ),
+  };
+});
+
+vi.mock('@alga-psa/db', () => ({
+  getAdminConnection: hoisted.getAdminConnection,
+  destroyAdminConnection: vi.fn(),
+  refreshAdminConnection: vi.fn(),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+    tenantJoin: (query: any) => query,
+  }),
+}));
+
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecretProviderInstance: async () => ({
+    getAppSecret: hoisted.getAppSecret,
+    getTenantSecret: hoisted.getTenantSecret,
+  }),
+}));
+
 import {
+  buildMicrosoftEmailProviderConfig,
   selectMicrosoftEmailRuntimeCredentials,
   type MicrosoftEmailRuntimeCredentials,
 } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
@@ -59,5 +131,73 @@ describe('Microsoft email runtime credential selection', () => {
     });
 
     expect(selected).toBeNull();
+  });
+});
+
+describe('buildMicrosoftEmailProviderConfig provider-pinned issuer resolution', () => {
+  beforeEach(() => {
+    hoisted.state.tenantSecrets.clear();
+    hoisted.state.appSecrets.clear();
+    hoisted.state.microsoftProfiles.length = 0;
+    hoisted.state.bindings.length = 0;
+  });
+
+  it('T004/T014: resolves the pinned profile secret after the Email binding changes', async () => {
+    // Provider pinned to profile p-pinned (issuing app), current binding now
+    // points at a different app; the pinned profile holds a rotated secret.
+    hoisted.state.microsoftProfiles.push({
+      tenant: 'tenant-1',
+      profile_id: 'p-pinned',
+      client_id: 'provider-app',
+      client_secret_ref: 'ref-pinned',
+      tenant_id: 'tenant-dir',
+      capabilities: JSON.stringify(['email']),
+      is_archived: false,
+    });
+    hoisted.state.tenantSecrets.set('tenant-1:ref-pinned', 'rotated-secret');
+
+    const config = await buildMicrosoftEmailProviderConfig({
+      id: 'provider-1',
+      tenant: 'tenant-1',
+      name: 'Mailbox',
+      provider_type: 'microsoft',
+      mailbox: 'support@client.com',
+      folder_to_monitor: 'Inbox',
+      active: true,
+      provider_config: {
+        client_id: 'provider-app',
+        client_secret: 'stale-vendor-secret',
+        microsoft_profile_id: 'p-pinned',
+        client_secret_ref: 'ref-pinned',
+        tenant_id: 'tenant-dir',
+      },
+    } as any);
+
+    expect(config.provider_config.resolved_client_id).toBe('provider-app');
+    expect(config.provider_config.resolved_client_secret).toBe('rotated-secret');
+    expect(config.provider_config.resolved_profile_id).toBe('p-pinned');
+    expect(config.provider_config.resolved_client_secret_ref).toBe('ref-pinned');
+    expect(config.provider_config.resolved_credential_source).toBe('profile');
+  });
+
+  it('T009/T013: legacy rows without a pinned profile fall back to stored vendor credentials', async () => {
+    const config = await buildMicrosoftEmailProviderConfig({
+      id: 'provider-1',
+      tenant: 'tenant-1',
+      name: 'Mailbox',
+      provider_type: 'microsoft',
+      mailbox: 'support@client.com',
+      folder_to_monitor: 'Inbox',
+      active: true,
+      provider_config: {
+        client_id: 'legacy-app',
+        client_secret: 'legacy-vendor-secret',
+        tenant_id: 'common',
+      },
+    } as any);
+
+    expect(config.provider_config.resolved_client_id).toBe('legacy-app');
+    expect(config.provider_config.resolved_client_secret).toBe('legacy-vendor-secret');
+    expect(config.provider_config.resolved_credential_source).toBe('vendor');
   });
 });

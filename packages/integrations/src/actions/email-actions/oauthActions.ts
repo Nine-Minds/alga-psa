@@ -6,8 +6,15 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { generateMicrosoftAuthUrl, generateGoogleAuthUrl, generateNonce, type OAuthState } from '../../utils/email/oauthHelpers';
 import {
-  resolveMicrosoftConsumerProfileConfig,
-} from '../../lib/microsoftConsumerProfileResolution';
+  resolveMicrosoftEmailIssuerChoice,
+  type MicrosoftEmailIssuerChoice,
+} from '../../lib/microsoftEmailIssuerSelection';
+import {
+  createMicrosoftEmailOAuthState,
+  getMicrosoftEmailOAuthSigningSecret,
+  type MicrosoftEmailOAuthPurpose,
+} from '../../utils/email/microsoftEmailOAuthState';
+import { storeMicrosoftEmailOAuthNonce } from '../../utils/email/microsoftEmailOAuthStateStore';
 import { getMicrosoftEmailSetupMetadataInternal } from '../integrations/microsoftActions';
 
 export const initiateEmailOAuth = withAuth(async (
@@ -17,8 +24,16 @@ export const initiateEmailOAuth = withAuth(async (
     provider: 'microsoft' | 'google';
     providerId?: string;
     redirectUri?: string;
+    /**
+     * Explicit issuer choice for Microsoft mailbox authorization. Required for
+     * Microsoft; the server resolves and validates it — it never infers the
+     * app from the tenant Email binding.
+     */
+    issuer?: MicrosoftEmailIssuerChoice;
+    /** create vs reconnect. Defaults to reconnect when a providerId is present. */
+    purpose?: MicrosoftEmailOAuthPurpose;
   }
-): Promise<{ success: true; authUrl: string; state: string } | { success: false; error: string }> => {
+): Promise<{ success: true; authUrl: string; state: string } | { success: false; error: string; errorCode?: string }> => {
 
   try {
     // RBAC: validate permission based on intent (create vs update)
@@ -52,18 +67,13 @@ export const initiateEmailOAuth = withAuth(async (
       // Google is always tenant-owned (CE and EE): do not fall back to app-level secrets.
       clientId = (await secretProvider.getTenantSecret(tenant, 'google_client_id')) || null;
     } else {
-      const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(tenant, 'email', {
-        credentialPreference: 'tenant',
-      });
-      if (microsoftProfile.status !== 'ready') {
-        return {
-          success: false,
-          error: microsoftProfile.message || 'Microsoft Email binding is not configured',
-        };
-      }
+      // Explicit issuer selection is mandatory for Microsoft. The server
+      // resolves and validates ownership + Email capability + readiness and
+      // returns the issuing app's credentials, never the tenant binding's.
+      const resolution = await resolveMicrosoftEmailIssuerChoice(tenant, params.issuer);
 
-      clientId = microsoftProfile.clientId || null;
-      microsoftCredentialSource = microsoftProfile.credentialSource === 'app' ? 'platform' : 'tenant';
+      clientId = resolution.clientId;
+      microsoftCredentialSource = resolution.issuerKind === 'managed' ? 'platform' : 'tenant';
       effectiveRedirectUri = (await getMicrosoftEmailSetupMetadataInternal()).mailboxRedirectUri;
     }
 
@@ -96,17 +106,47 @@ export const initiateEmailOAuth = withAuth(async (
     // This allows users from any Azure AD tenant to authenticate
     const msTenantAuthority = 'common';
 
-    const authUrl = provider === 'microsoft'
-      ? generateMicrosoftAuthUrl(clientId, state.redirectUri, state, undefined as any, msTenantAuthority)
-      : generateGoogleAuthUrl(clientId, state.redirectUri, state);
+    let authUrl: string;
+    let returnedState = Buffer.from(JSON.stringify(state)).toString('base64');
 
-    return { success: true, authUrl, state: Buffer.from(JSON.stringify(state)).toString('base64') };
+    if (provider === 'microsoft' && params.issuer) {
+      // Signed state carries the complete non-secret selection context so the
+      // callback can revalidate eligibility and detect tampering/replay.
+      const signingSecret = await getMicrosoftEmailOAuthSigningSecret();
+      if (!signingSecret) {
+        return { success: false, error: 'OAuth state signing is not configured on this server.', errorCode: 'ms_email_invalid_state' };
+      }
+      const purpose: MicrosoftEmailOAuthPurpose =
+        params.purpose ?? (providerId ? 'reconnect' : 'create');
+      const signed = createMicrosoftEmailOAuthState({
+        purpose,
+        tenant,
+        userId: user.user_id,
+        providerId,
+        issuer: params.issuer,
+        clientId,
+        redirectUri: effectiveRedirectUri,
+        secret: signingSecret,
+      });
+      await storeMicrosoftEmailOAuthNonce(signed.payload.nonce);
+
+      authUrl = generateMicrosoftAuthUrl(clientId, effectiveRedirectUri, state, undefined as any, msTenantAuthority, signed.token);
+      returnedState = signed.token;
+    } else {
+      authUrl = provider === 'microsoft'
+        ? generateMicrosoftAuthUrl(clientId, state.redirectUri, state, undefined as any, msTenantAuthority)
+        : generateGoogleAuthUrl(clientId, state.redirectUri, state);
+    }
+
+    return { success: true, authUrl, state: returnedState };
   } catch (err: any) {
+    const errorCode =
+      typeof err?.code === 'string' ? err.code : undefined;
     console.error('[EmailOAuthActions] Failed to initiate OAuth', {
       provider: params.provider,
       providerId: params.providerId,
       error: err,
     });
-    return { success: false, error: 'Failed to initiate OAuth' };
+    return { success: false, error: err?.message || 'Failed to initiate OAuth', errorCode };
   }
 });
