@@ -1508,15 +1508,46 @@ function appendStepLog(state, entry) {
   state.stepLog.push({ ...entry, at: nowIso() });
 }
 
+/**
+ * Test-only concurrent-creator injection seam. Reachable only when this module
+ * is loaded and `commandInit` is called directly with a `testConcurrentCreator`
+ * option — the CLI entry path never sets it and no environment variable is
+ * consulted, so normal production execution has no injection surface.
+ *
+ * Simulates a racing creator that creates the bundle directory between parent
+ * preparation and the exclusive mkdir in `commandInit`, writing a `KEEP`
+ * sentinel file. The filename must be a single basename confined to the bundle
+ * directory: separators, `..`, absolute paths, and empty strings are rejected
+ * with an error (never silently sanitized), and the sentinel is written
+ * exclusively (`wx`) so an existing file is never overwritten.
+ */
+function injectTestConcurrentBundle(bundleDir, filename) {
+  if (filename === undefined || filename === null) {
+    return;
+  }
+  const name = String(filename);
+  if (name === '' || name.includes('/') || name.includes('\\') || name.includes('\0')
+    || name === '.' || name === '..' || name.includes('..')
+    || path.isAbsolute(name) || name.trim() !== name) {
+    throw new Error(`invalid test injection filename ${JSON.stringify(name)}: must be a single basename inside the bundle directory`);
+  }
+  fs.mkdirSync(bundleDir, { recursive: true });
+  try {
+    fs.writeFileSync(path.join(bundleDir, name), 'KEEP', { flag: 'wx' });
+  } catch (error) {
+    if (error && error.code === 'EEXIST') {
+      return;
+    }
+    throw error;
+  }
+}
+
 export function commandInit(opts) {
   const root = REPO_ROOT;
   const bundleDir = loadOrCreateBundleDir(opts);
   currentInitContext = { bundleDir, db: null, opts, seeded: false, validTemplateId: null, createdBundleDir: false };
   fs.mkdirSync(path.dirname(bundleDir), { recursive: true });
-  if (process.env.SMOKE_TEST_INJECT_CONCURRENT_BUNDLE) {
-    fs.mkdirSync(bundleDir, { recursive: true });
-    fs.writeFileSync(path.join(bundleDir, process.env.SMOKE_TEST_INJECT_CONCURRENT_BUNDLE), 'KEEP');
-  }
+  injectTestConcurrentBundle(bundleDir, opts.testConcurrentCreator);
   try {
     fs.mkdirSync(bundleDir);
   } catch (error) {

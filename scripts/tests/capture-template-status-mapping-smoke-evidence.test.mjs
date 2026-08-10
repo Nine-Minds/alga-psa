@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import test from 'node:test';
+import { pathToFileURL } from 'node:url';
 
 import {
   parseDotenvValue,
@@ -451,6 +452,26 @@ function runInit(bundleDir, extraArgs = [], env = {}) {
   });
 }
 
+// Drive commandInit through the module-load-only concurrent-creator injection
+// seam (opts.testConcurrentCreator), which the CLI entry path can never set.
+// The bootstrap loads the harness as a library so the seam is reachable while
+// the rejection/exit behavior stays observable as a black box.
+function runInitWithInjection(bundleDir, filename) {
+  const scriptPath = path.join(WORKTREE, 'scripts', 'capture-template-status-mapping-smoke-evidence.mjs');
+  const moduleUrl = pathToFileURL(scriptPath).href;
+  const bootstrap = [
+    `import { commandInit } from ${JSON.stringify(moduleUrl)};`,
+    'const opts = { bundle: process.argv[1] };',
+    'if (process.argv[2] !== undefined) { opts.testConcurrentCreator = process.argv[2]; }',
+    'commandInit(opts);',
+  ].join('\n');
+  return spawnSync(process.execPath, ['--input-type=module', '-e', bootstrap, bundleDir, filename], {
+    cwd: WORKTREE,
+    encoding: 'utf8',
+    env: { ...process.env },
+  });
+}
+
 test('utcTimestamp produces YYYYMMDDTHHMMSSZ', () => {
   assert.match(utcTimestamp(new Date('2026-08-10T13:14:15.123Z')), /^20260810T131415Z$/);
 });
@@ -732,10 +753,74 @@ test('init treats a concurrently created bundle directory as caller-owned and le
   const bundleDir = path.join(parentDir, 'concurrent-creator-bundle');
   assert.equal(fs.existsSync(bundleDir), false);
 
-  const result = runInit(bundleDir, [], { SMOKE_TEST_INJECT_CONCURRENT_BUNDLE: 'sentinel.txt' });
+  const result = runInitWithInjection(bundleDir, 'sentinel.txt');
 
   assert.notEqual(result.status, 0, `expected nonzero exit; stderr: ${result.stderr}`);
   assert.match(result.stderr, /bundle directory already exists/);
   assert.equal(fs.existsSync(bundleDir), true, 'the concurrently created bundle directory must survive the rejection');
   assert.equal(fs.readFileSync(path.join(bundleDir, 'sentinel.txt'), 'utf8'), 'KEEP', 'the concurrently written sentinel must survive the rejection');
+});
+
+test('test injection rejects a path-traversal filename without writing outside the bundle directory', () => {
+  const parentDir = fs.mkdtempSync(path.join(os.tmpdir(), 'escape-parent-'));
+  const bundleDir = path.join(parentDir, 'escape-bundle');
+  const escapeTarget = path.join(parentDir, 'escaped.txt');
+  assert.equal(fs.existsSync(escapeTarget), false);
+
+  const result = runInitWithInjection(bundleDir, '../escaped.txt');
+
+  assert.notEqual(result.status, 0, `expected nonzero exit; stderr: ${result.stderr}`);
+  assert.match(result.stderr, /invalid test injection filename/);
+  assert.equal(fs.existsSync(escapeTarget), false, 'the traversal target must not be created outside the bundle directory');
+  assert.equal(fs.existsSync(bundleDir), false, 'no bundle directory may be created when the injection is rejected');
+});
+
+test('test injection rejects an absolute-path filename without writing at that path', () => {
+  const parentDir = fs.mkdtempSync(path.join(os.tmpdir(), 'abs-parent-'));
+  const bundleDir = path.join(parentDir, 'abs-bundle');
+  const absoluteTarget = path.join(parentDir, 'escaped.txt');
+
+  const result = runInitWithInjection(bundleDir, absoluteTarget);
+
+  assert.notEqual(result.status, 0, `expected nonzero exit; stderr: ${result.stderr}`);
+  assert.match(result.stderr, /invalid test injection filename/);
+  assert.equal(fs.existsSync(absoluteTarget), false, 'the absolute-path target must not be created');
+});
+
+test('test injection rejects a filename containing path separators', () => {
+  const parentDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sep-parent-'));
+  const bundleDir = path.join(parentDir, 'sep-bundle');
+
+  const result = runInitWithInjection(bundleDir, 'a/b.txt');
+
+  assert.notEqual(result.status, 0, `expected nonzero exit; stderr: ${result.stderr}`);
+  assert.match(result.stderr, /invalid test injection filename/);
+  assert.equal(fs.existsSync(path.join(bundleDir, 'a')), false, 'no nested directory may be created inside the bundle');
+});
+
+test('test injection never overwrites an existing file', () => {
+  const parentDir = fs.mkdtempSync(path.join(os.tmpdir(), 'overwrite-parent-'));
+  const bundleDir = path.join(parentDir, 'overwrite-bundle');
+  fs.mkdirSync(bundleDir);
+  const sentinelPath = path.join(bundleDir, 'sentinel.txt');
+  fs.writeFileSync(sentinelPath, 'ORIGINAL');
+
+  const result = runInitWithInjection(bundleDir, 'sentinel.txt');
+
+  assert.notEqual(result.status, 0, `expected nonzero exit; stderr: ${result.stderr}`);
+  assert.match(result.stderr, /bundle directory already exists/);
+  assert.equal(fs.readFileSync(sentinelPath, 'utf8'), 'ORIGINAL', 'the existing file must not be overwritten by the sentinel write');
+});
+
+test('SMOKE_TEST_INJECT_CONCURRENT_BUNDLE is inert in normal CLI execution', () => {
+  const parentDir = fs.mkdtempSync(path.join(os.tmpdir(), 'inert-parent-'));
+  const bundleDir = path.join(parentDir, 'inert-bundle');
+  const escapeTarget = path.join(parentDir, 'escaped.txt');
+
+  const result = runInit(bundleDir, ['--db-port', '1'], { SMOKE_TEST_INJECT_CONCURRENT_BUNDLE: '../escaped.txt' });
+
+  assert.notEqual(result.status, 0, `expected nonzero exit; stderr: ${result.stderr}`);
+  assert.doesNotMatch(result.stderr, /bundle directory already exists/, 'the env var must not pre-create the bundle directory');
+  assert.equal(fs.existsSync(escapeTarget), false, 'the malicious env value must not write outside the bundle directory');
+  assert.equal(fs.existsSync(bundleDir), false, 'a harness-created bundle must be cleaned up on init failure');
 });
