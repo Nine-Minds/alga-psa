@@ -273,7 +273,7 @@
       "import": {
         "title": "Importar tickets"
       },
-      "title": "Tickets del cliente",
+      "title": "Tickets",
       "detail": {
         "title": "Ticket n.º {{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Detalles del ticket"
