@@ -1582,7 +1582,7 @@ export function commandRegisterArtifact(opts) {
 
 export function commandRestore(opts) {
   const bundleDir = path.resolve(opts.bundle);
-  let state = requireState(bundleDir);
+  let state = requireState(bundleDir, { sealedOk: opts.force });
   if (state.sealed && !opts.force) {
     fail(`bundle is already sealed; pass --force to reseal`);
   }
