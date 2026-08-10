@@ -395,29 +395,56 @@ async function upsertLegacyInbox(
 
 /**
  * Import a bounded batch of legacy `email_processed_messages` rows into the
- * durable ledgers. Resumable: rows whose normalized identity already has a
- * `legacy_imported` inbox row are skipped (the inbox row is the checkpoint),
- * and every row's writes are committed atomically inside one transaction so a
- * crash mid-row rolls back and a re-run from the start converges to the
- * identical end state. Never guesses missing effects; ambiguity is
- * terminal/alerted.
+ * durable ledgers, guaranteeing every eligible row is eventually visited across
+ * repeated sweeps.
+ *
+ * Pagination is a deterministic keyset over `(processed_at, message_id,
+ * provider_id)` — `email_processed_messages`'s primary key makes that tuple
+ * unique within a tenant, so a `LIMIT` window can never silently re-select a
+ * completed window forever. A sweep pages forward from the start of the table,
+ * scanning past completed-checkpoint and malformed rows, until either `limit`
+ * eligible rows (rows without an existing inbox checkpoint that get imported or
+ * flagged ambiguous) have been handled or the table is exhausted.
+ *
+ * The checkpoint (`tenant + provider_id + normalized_message_id`) is derived by
+ * JS normalization (`normalizeInboundMessageIdentity` /
+ * `parseCanonicalInboundIdentity`), so it cannot be excluded exactly in SQL;
+ * each sweep instead restarts from the beginning and skips rows whose
+ * normalized identity already has a `legacy_imported` inbox row (the inbox row
+ * is the resumable checkpoint). Resumable and idempotent: every row's writes
+ * commit atomically inside one transaction so a crash mid-row rolls back and a
+ * re-run — or an overlapping sweep — converges to the identical end state with
+ * no duplicate inbox/effect rows. Never guesses missing effects; ambiguity is
+ * terminal/alerted. Legacy audit rows are never deleted or overwritten.
+ *
+ * Counter semantics: `processed` counts every legacy row examined during the
+ * sweep (it may exceed `limit` because completed checkpoints are scanned past
+ * to reach eligible rows); `imported` counts rows that produced a durable
+ * inbox/effect/ingress outcome; `ambiguous` counts rows imported as
+ * terminal-failed for reconciliation review; `skipped` counts examined rows
+ * that produced no durable outcome (malformed, non-normalizable, or already
+ * checkpointed).
  */
 export async function backfillTenantLegacyRows(tenant: string, limit: number = 25): Promise<BackfillResult> {
   const db = await (await import('@alga-psa/db/admin')).getAdminConnection();
   const { tenantDb } = await import('@alga-psa/db');
 
-  const legacyRows = (await tenantDb(db, tenant).table('email_processed_messages')
-    .where({ tenant })
-    .orderBy('processed_at', 'asc')
-    .limit(Math.max(1, limit))) as LegacyProcessedRow[];
-
   const result: BackfillResult = { processed: 0, imported: 0, ambiguous: 0, skipped: 0 };
-
-  for (const legacy of legacyRows) {
+  const batchSize = Math.max(1, limit);
+  // `limit` bounds how many eligible rows one sweep handles; the legacy
+  // `Math.max(1, limit)` clamping is kept so a degenerate `limit = 0` call
+  // still examines at least one row instead of silently doing nothing.
+  const eligibleTarget = Math.max(1, limit);
+  // Import one legacy row into the durable ledgers. The inbox row is the
+  // resumable checkpoint: a row whose normalized identity already has one is
+  // skipped (no durable outcome), and every other row's writes commit inside
+  // one transaction so a crash rolls back and a re-run converges. `continue`
+  // in the original per-row loop becomes `return` here.
+  const importLegacyRow = async (legacy: LegacyProcessedRow): Promise<void> => {
     result.processed += 1;
     if (!legacy.message_id || !legacy.provider_id) {
       result.skipped += 1;
-      continue;
+      return;
     }
 
     const providerType = resolveLegacyProviderType(legacy);
@@ -444,7 +471,7 @@ export async function backfillTenantLegacyRows(tenant: string, limit: number = 2
 
     if (!identity) {
       result.skipped += 1;
-      continue;
+      return;
     }
 
     const existing = await getInboxByIdentity(db, {
@@ -454,7 +481,7 @@ export async function backfillTenantLegacyRows(tenant: string, limit: number = 2
     });
     if (existing) {
       result.skipped += 1;
-      continue;
+      return;
     }
 
     const status = String(legacy.processing_status || 'success').toLowerCase();
@@ -494,16 +521,16 @@ export async function backfillTenantLegacyRows(tenant: string, limit: number = 2
       if (!messageKey) {
         await terminalImport('legacy_success_no_entity_key');
         result.imported += 1;
-        continue;
+        return;
       }
       const imported = await importReconciledLegacySuccess(db, tenant, legacy, legacyInboxBase, identity, messageKey);
       if (imported.reconciled) {
         result.imported += 1;
-        continue;
+        return;
       }
       await terminalImport(`legacy_success_reconcile_${imported.reason}`);
       result.ambiguous += 1;
-      continue;
+      return;
     }
 
     if (status === 'skipped') {
@@ -516,7 +543,7 @@ export async function backfillTenantLegacyRows(tenant: string, limit: number = 2
         });
       });
       result.imported += 1;
-      continue;
+      return;
     }
 
     // Stale `processing` (the incident shape): reconcile any already-created
@@ -529,12 +556,12 @@ export async function backfillTenantLegacyRows(tenant: string, limit: number = 2
         const imported = await importReconciledLegacySuccess(db, tenant, legacy, legacyInboxBase, identity, messageKey);
         if (imported.reconciled) {
           result.imported += 1;
-          continue;
+          return;
         }
         if (imported.reason === 'ambiguous_ticket' || imported.reason === 'ambiguous_comment') {
           await terminalImport(`legacy_processing_reconcile_${imported.reason}`);
           result.ambiguous += 1;
-          continue;
+          return;
         }
       }
 
@@ -555,7 +582,7 @@ export async function backfillTenantLegacyRows(tenant: string, limit: number = 2
           });
           if (produced.ingressId) {
             result.imported += 1;
-            continue;
+            return;
           }
         } catch (error: any) {
           console.warn('[InboundEmailRecovery] legacy pointer ingress persist failed', {
@@ -568,18 +595,65 @@ export async function backfillTenantLegacyRows(tenant: string, limit: number = 2
         }
         await terminalImport('legacy_processing_pointer_ingress_failed');
         result.imported += 1;
-        continue;
+        return;
       }
 
       await terminalImport('legacy_processing_unrecoverable');
       result.imported += 1;
-      continue;
+      return;
     }
 
     // failed / partial: import as terminal failure for review unless a
     // source/pointer and retry policy allow retry (never guessed here).
     await terminalImport(`legacy_${status}_not_replayable`);
     result.imported += 1;
+  };
+
+  // Deterministic keyset cursor. `(processed_at, message_id, provider_id)` is a
+  // total order within a tenant (the legacy primary key is `(message_id,
+  // provider_id, tenant)`), so each page starts strictly after the previous
+  // page's last row: every row is examined at most once per sweep, no row is
+  // skipped by a completed-checkpoint window, and the loop cannot spin.
+  let cursor: { processedAt: Date | string; messageId: string; providerId: string } | null = null;
+
+  while (result.imported + result.ambiguous < eligibleTarget) {
+    const pageQuery = tenantDb(db, tenant).table('email_processed_messages')
+      .where({ tenant })
+      .orderBy('processed_at', 'asc')
+      .orderBy('message_id', 'asc')
+      .orderBy('provider_id', 'asc')
+      .limit(batchSize);
+    if (cursor) {
+      pageQuery.andWhere(function (this: any) {
+        this.where('processed_at', '>', cursor!.processedAt)
+          .orWhere(function (this: any) {
+            this.where('processed_at', '=', cursor!.processedAt)
+              .andWhere('message_id', '>', cursor!.messageId)
+              .orWhere(function (this: any) {
+                this.where('processed_at', '=', cursor!.processedAt)
+                  .andWhere('message_id', '=', cursor!.messageId)
+                  .andWhere('provider_id', '>', cursor!.providerId);
+              });
+          });
+      });
+    }
+
+    const legacyRows = (await pageQuery) as LegacyProcessedRow[];
+    if (legacyRows.length === 0) break;
+
+    for (const legacy of legacyRows) {
+      cursor = {
+        processedAt: legacy.processed_at,
+        messageId: legacy.message_id,
+        providerId: legacy.provider_id,
+      };
+      await importLegacyRow(legacy);
+      if (result.imported + result.ambiguous >= eligibleTarget) break;
+    }
+
+    // A short page means the table is exhausted (all remaining rows have been
+    // examined); stop even though the eligible-row budget was not reached.
+    if (legacyRows.length < batchSize) break;
   }
 
   return result;

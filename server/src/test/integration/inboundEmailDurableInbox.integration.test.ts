@@ -2669,6 +2669,172 @@ describeDb('Inbound email durable inbox (integration)', () => {
     }
   });
 
+  it('bounded backfill does not starve: later eligible rows are imported past a completed-checkpoint window larger than the batch size', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'backfill-starve@example.com', providerType: 'microsoft' });
+    const { backfillTenantLegacyRows } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+    const { upsertInbox } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+
+    // Seed 8 already-completed checkpoint rows with the OLDEST processed_at and
+    // 3 later eligible rows that have no inbox checkpoint. The batch limit (5)
+    // is smaller than the completed window (8): a LIMIT-first query re-selects
+    // only completed checkpoints forever and never reaches the eligible rows.
+    const base = new Date(Date.now() - 60 * 60 * 1000);
+    const checkpointKeys: string[] = [];
+    for (let i = 0; i < 8; i += 1) {
+      const key = `chk-${i}-${randomUUID()}@example.com`;
+      checkpointKeys.push(key);
+      // Checkpoint: a legacy-imported terminal inbox row for the normalized
+      // identity the legacy `rfc822:` message_id will derive.
+      await upsertInbox(db, {
+        tenant: tenantId,
+        ingress_id: null,
+        provider_id: providerId,
+        provider_type: 'microsoft',
+        normalized_message_id: `rfc822:${key}`,
+        provider_message_id: null,
+        rfc_message_id: key,
+        source_object_key: null,
+        source_sha256: null,
+        source_size_bytes: null,
+        source_staged_at: null,
+        envelope: {},
+        legacy_imported: true,
+        status: 'terminal_failed',
+        outcome_reason: 'seed-checkpoint',
+      });
+      await tenantTable('email_processed_messages').insert({
+        message_id: `rfc822:${key}`,
+        provider_id: providerId,
+        tenant: tenantId,
+        processed_at: new Date(base.getTime() - (8 - i) * 60_000),
+        processing_status: 'success',
+        from_email: 'sender@example.com',
+        subject: 'Checkpoint',
+        received_at: db.fn.now(),
+        metadata: JSON.stringify({ headersSnapshot: { messageId: key } }),
+      });
+    }
+
+    const eligibleKeys: string[] = [];
+    for (let i = 0; i < 3; i += 1) {
+      const key = `later-${i}-${randomUUID()}@example.com`;
+      eligibleKeys.push(key);
+      await tenantTable('email_processed_messages').insert({
+        message_id: `microsoft:${key}`,
+        provider_id: providerId,
+        tenant: tenantId,
+        processed_at: new Date(base.getTime() + (i + 1) * 60_000),
+        processing_status: 'skipped',
+        error_message: 'seed-eligible',
+        from_email: 'sender@example.com',
+        subject: 'Eligible',
+        received_at: db.fn.now(),
+        metadata: JSON.stringify({ queueProvider: 'microsoft' }),
+      });
+    }
+
+    // Every bounded sweep scans past the completed-checkpoint window and
+    // imports the later eligible rows; on the pre-fix LIMIT-first code the
+    // first sweep re-selects the 5 oldest completed rows, skips all of them,
+    // and no later sweep ever makes forward progress.
+    const firstRun = await backfillTenantLegacyRows(tenantId, 5);
+    expect(firstRun.imported).toBe(3);
+    expect(firstRun.skipped).toBe(8);
+    expect(firstRun.processed).toBe(11);
+
+    const secondRun = await backfillTenantLegacyRows(tenantId, 5);
+    expect(secondRun.imported).toBe(0);
+
+    const finalRun = await backfillTenantLegacyRows(tenantId, 5);
+    expect(finalRun.imported).toBe(0);
+    expect(finalRun.skipped).toBe(11);
+
+    // Every eligible legacy row was imported exactly once as a terminal
+    // skipped inbox row.
+    for (const key of eligibleKeys) {
+      const inbox = await tenantTable('inbound_email_inbox')
+        .where({ tenant: tenantId, provider_id: providerId, normalized_message_id: `provider:microsoft:${key}` })
+        .first();
+      expect(inbox).toBeTruthy();
+      expect(inbox.status).toBe('skipped');
+      expect(inbox.outcome_kind).toBe('skipped');
+      expect(inbox.legacy_imported).toBe(true);
+    }
+
+    // Converged end state: one inbox row per legacy row (8 checkpoints + 3
+    // imported), no identity twice, no effects from skipped imports.
+    const inboxCount = await tenantTable('inbound_email_inbox').where({ tenant: tenantId }).count<{ count: string }[]>('* as count').first();
+    expect(Number(inboxCount?.count)).toBe(11);
+    const identityCounts = new Map<string, number>();
+    const allInbox = await tenantTable('inbound_email_inbox').where({ tenant: tenantId });
+    for (const inbox of allInbox) {
+      const key = `${inbox.provider_id}:${inbox.normalized_message_id}`;
+      identityCounts.set(key, (identityCounts.get(key) ?? 0) + 1);
+    }
+    expect([...identityCounts.values()].every((count) => count === 1)).toBe(true);
+    expect(await countRows('inbound_email_effects')).toBe(0);
+
+    // Legacy audit rows were never modified or deleted (checkpoints stay
+    // `success`, eligible rows stay `skipped`).
+    for (const key of checkpointKeys) {
+      const legacy = await tenantTable('email_processed_messages').where({ message_id: `rfc822:${key}` }).first();
+      expect(legacy.processing_status).toBe('success');
+    }
+    for (const key of eligibleKeys) {
+      const legacy = await tenantTable('email_processed_messages').where({ message_id: `microsoft:${key}` }).first();
+      expect(legacy.processing_status).toBe('skipped');
+    }
+  });
+
+  it('bounded backfill visits every row tied on processed_at (keyset tiebreaker)', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'backfill-tie@example.com', providerType: 'microsoft' });
+    const { backfillTenantLegacyRows } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+
+    // Two eligible rows share the EXACT same processed_at; a keyset without a
+    // stable tiebreaker would permanently skip the second row. `message_id` is
+    // the tiebreak column, so `tie-0…` sorts before `tie-1…`.
+    const sharedTs = new Date(Date.now() - 30 * 60 * 1000);
+    const keys: string[] = [];
+    for (let i = 0; i < 2; i += 1) {
+      const key = `tie-${i}-${randomUUID()}@example.com`;
+      keys.push(key);
+      await tenantTable('email_processed_messages').insert({
+        message_id: `microsoft:${key}`,
+        provider_id: providerId,
+        tenant: tenantId,
+        processed_at: sharedTs,
+        processing_status: 'skipped',
+        error_message: 'seed-tie',
+        from_email: 'sender@example.com',
+        subject: 'Tie',
+        received_at: db.fn.now(),
+        metadata: JSON.stringify({ queueProvider: 'microsoft' }),
+      });
+    }
+
+    // Run with batch size 1: the first sweep imports only the alphabetically
+    // first tied row; the second sweep restarts, skips the now-checkpointed
+    // first row, and must still visit (and import) the second tied row.
+    const firstRun = await backfillTenantLegacyRows(tenantId, 1);
+    expect(firstRun.imported).toBe(1);
+
+    const secondRun = await backfillTenantLegacyRows(tenantId, 1);
+    expect(secondRun.imported).toBe(1);
+
+    const convergedRun = await backfillTenantLegacyRows(tenantId, 1);
+    expect(convergedRun.imported).toBe(0);
+
+    // Both tied rows were visited and imported exactly once.
+    const normalizedSet = new Set(
+      (await tenantTable('inbound_email_inbox').where({ tenant: tenantId })).map((r: any) => r.normalized_message_id)
+    );
+    for (const key of keys) {
+      expect(normalizedSet.has(`provider:microsoft:${key}`)).toBe(true);
+    }
+    expect(normalizedSet.size).toBe(2);
+    expect(await countRows('inbound_email_effects')).toBe(0);
+  });
+
   it('microsoft maintenance reconcile never advances its cursor past an unstaged message; retry recovers it', async () => {
     const { providerId } = await setupProvider({ mailbox: 'ms-cursor@example.com', providerType: 'microsoft' });
     const { EmailWebhookMaintenanceService } = await import('@alga-psa/shared/services/email/EmailWebhookMaintenanceService');
