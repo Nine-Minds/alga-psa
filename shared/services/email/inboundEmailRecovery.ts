@@ -406,6 +406,16 @@ async function upsertLegacyInbox(
  * eligible rows (rows without an existing inbox checkpoint that get imported or
  * flagged ambiguous) have been handled or the table is exhausted.
  *
+ * The keyset cursor is LOSSESS. node-postgres materializes `timestamptz`
+ * columns as JavaScript `Date`, truncating the stored microseconds to
+ * milliseconds, so the timestamp cursor component is selected additionally as
+ * text (`to_char(processed_at, 'YYYY-MM-DD HH24:MI:SS.USOF')`) and passed
+ * back to the next page as a parameter — the round trip PostgreSQL -> Node ->
+ * PostgreSQL is bit-exact and the row-value comparison runs in the database at
+ * full precision. Rounding the cursor through a `Date` compares BEFORE the real
+ * row value and re-selects the same row forever (a `limit = 1` sweep spins on
+ * any row with sub-millisecond digits).
+ *
  * The checkpoint (`tenant + provider_id + normalized_message_id`) is derived by
  * JS normalization (`normalizeInboundMessageIdentity` /
  * `parseCanonicalInboundIdentity`), so it cannot be excluded exactly in SQL;
@@ -614,36 +624,43 @@ export async function backfillTenantLegacyRows(tenant: string, limit: number = 2
   // provider_id, tenant)`), so each page starts strictly after the previous
   // page's last row: every row is examined at most once per sweep, no row is
   // skipped by a completed-checkpoint window, and the loop cannot spin.
-  let cursor: { processedAt: Date | string; messageId: string; providerId: string } | null = null;
+  //
+  // The timestamp cursor component is carried as TEXT (`to_char` with a fixed
+  // microsecond format), never as a JavaScript `Date`. node-postgres
+  // materializes `timestamptz` columns as `Date`, which truncates to
+  // milliseconds; feeding that rounded value back into the next page's cursor
+  // compares BEFORE the real row value and re-selects the same row forever, so
+  // a sweep with `limit=1` spins on any row whose microseconds are non-zero.
+  // The text form round-trips PostgreSQL -> Node -> PostgreSQL bit-exactly, and
+  // the row-value comparison below runs entirely in the database at full
+  // precision.
+  let cursor: { processedAtText: string; messageId: string; providerId: string } | null = null;
 
   while (result.imported + result.ambiguous < eligibleTarget) {
     const pageQuery = tenantDb(db, tenant).table('email_processed_messages')
+      .select('*', db.raw("to_char(processed_at, 'YYYY-MM-DD HH24:MI:SS.USOF') as processed_at_text"))
       .where({ tenant })
       .orderBy('processed_at', 'asc')
       .orderBy('message_id', 'asc')
       .orderBy('provider_id', 'asc')
       .limit(batchSize);
     if (cursor) {
-      pageQuery.andWhere(function (this: any) {
-        this.where('processed_at', '>', cursor!.processedAt)
-          .orWhere(function (this: any) {
-            this.where('processed_at', '=', cursor!.processedAt)
-              .andWhere('message_id', '>', cursor!.messageId)
-              .orWhere(function (this: any) {
-                this.where('processed_at', '=', cursor!.processedAt)
-                  .andWhere('message_id', '=', cursor!.messageId)
-                  .andWhere('provider_id', '>', cursor!.providerId);
-              });
-          });
-      });
+      // Row-value comparison matching the ORDER BY exactly: lexicographic
+      // `(processed_at, message_id, provider_id)`, so tied microsecond-identical
+      // timestamps still advance deterministically via the tie-breaker columns.
+      pageQuery.andWhereRaw('(processed_at, message_id, provider_id) > (?::timestamptz, ?::text, ?::uuid)', [
+        cursor.processedAtText,
+        cursor.messageId,
+        cursor.providerId,
+      ]);
     }
 
-    const legacyRows = (await pageQuery) as LegacyProcessedRow[];
+    const legacyRows = (await pageQuery) as Array<LegacyProcessedRow & { processed_at_text: string }>;
     if (legacyRows.length === 0) break;
 
     for (const legacy of legacyRows) {
       cursor = {
-        processedAt: legacy.processed_at,
+        processedAtText: legacy.processed_at_text,
         messageId: legacy.message_id,
         providerId: legacy.provider_id,
       };

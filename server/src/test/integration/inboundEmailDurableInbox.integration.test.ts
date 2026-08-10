@@ -2835,6 +2835,83 @@ describeDb('Inbound email durable inbox (integration)', () => {
     expect(await countRows('inbound_email_effects')).toBe(0);
   });
 
+  it('legacy backfill cursor is lossless: microsecond processed_at rows terminate with limit=1 and visit each row exactly once', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'backfill-precision@example.com', providerType: 'microsoft' });
+    const { backfillTenantLegacyRows } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+
+    // Insert legacy rows via SQL with explicit microsecond-precision
+    // timestamps (NEVER through a JS Date, which node-postgres truncates to
+    // milliseconds): one value whose microseconds are non-zero beyond the
+    // millisecond boundary (the live repro shape) and a pair tied at the
+    // identical microsecond instant to exercise the tie-breaker losslessly.
+    const seeded: Array<{ key: string; ts: string }> = [
+      { key: `prec-a-${randomUUID()}@example.com`, ts: '2026-08-10 13:24:42.233090+00' },
+      { key: `prec-b-${randomUUID()}@example.com`, ts: '2026-08-10 13:24:43.000120+00' },
+      { key: `prec-c-${randomUUID()}@example.com`, ts: '2026-08-10 13:24:44.123456+00' },
+      { key: `prec-d-${randomUUID()}@example.com`, ts: '2026-08-10 13:24:44.123456+00' },
+    ];
+    for (const row of seeded) {
+      await tenantTable('email_processed_messages').insert({
+        message_id: `microsoft:${row.key}`,
+        provider_id: providerId,
+        tenant: tenantId,
+        processed_at: db.raw(`'${row.ts}'::timestamptz`),
+        processing_status: 'skipped',
+        error_message: 'seed-precision',
+        from_email: 'sender@example.com',
+        subject: 'Precision',
+        received_at: db.fn.now(),
+        metadata: JSON.stringify({ queueProvider: 'microsoft' }),
+      });
+    }
+
+    // Guard: PostgreSQL really stored the microseconds (a JS-Date-derived
+    // value would have collapsed to `.233000`/`.000000`/`.000000`).
+    const stored = await db.raw(
+      "select to_char(processed_at, 'YYYY-MM-DD HH24:MI:SS.USOF') as ts from email_processed_messages where message_id = ?",
+      [`microsoft:${seeded[0].key}`]
+    );
+    expect(stored.rows[0].ts).toBe('2026-08-10 13:24:42.233090+00');
+
+    // Run with limit=1 (the live repro shape) once per row. Each sweep must
+    // terminate, scan exactly the already-checkpointed prefix, and import
+    // exactly one NEW row — it must never reselect the row it already advanced
+    // past. On the lossy Date-cursor code the first sweep past a checkpointed
+    // microsecond row re-selects that same row forever and this loop hangs.
+    for (let i = 1; i <= seeded.length; i += 1) {
+      const run = await backfillTenantLegacyRows(tenantId, 1);
+      expect(run.imported).toBe(1);
+      expect(run.skipped).toBe(i - 1);
+      expect(run.processed).toBe(i);
+    }
+
+    // Converged: every row is checkpointed and the sweep still terminates
+    // (pre-fix this call spins on the truncated microsecond cursor).
+    const converged = await backfillTenantLegacyRows(tenantId, 1);
+    expect(converged.imported).toBe(0);
+    expect(converged.skipped).toBe(seeded.length);
+    expect(converged.processed).toBe(seeded.length);
+
+    // Every legacy row was visited exactly once and imported as a terminal
+    // skipped inbox row (no reselection, no skips, no duplicate identities).
+    const normalizedSet = new Set(
+      (await tenantTable('inbound_email_inbox').where({ tenant: tenantId })).map((r: any) => r.normalized_message_id)
+    );
+    for (const row of seeded) {
+      expect(normalizedSet.has(`provider:microsoft:${row.key}`)).toBe(true);
+    }
+    expect(normalizedSet.size).toBe(seeded.length);
+    expect(await countRows('inbound_email_effects')).toBe(0);
+
+    // Legacy audit rows were never modified or deleted.
+    for (const row of seeded) {
+      const legacy = await tenantTable('email_processed_messages').where({ message_id: `microsoft:${row.key}` }).first();
+      expect(legacy.processing_status).toBe('skipped');
+    }
+    // Explicit bound: the whole point is that the sweep TERMINATES on real
+    // microsecond data (pre-fix it spins until the timeout).
+  }, 15_000);
+
   it('microsoft maintenance reconcile never advances its cursor past an unstaged message; retry recovers it', async () => {
     const { providerId } = await setupProvider({ mailbox: 'ms-cursor@example.com', providerType: 'microsoft' });
     const { EmailWebhookMaintenanceService } = await import('@alga-psa/shared/services/email/EmailWebhookMaintenanceService');
