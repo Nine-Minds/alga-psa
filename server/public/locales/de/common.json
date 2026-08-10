@@ -82,7 +82,8 @@
     "share": "Teilen",
     "done": "Fertig",
     "continue": "Weiter",
-    "printSelected": "Ausgewählte drucken ({{count}})"
+    "printSelected": "Ausgewählte drucken ({{count}})",
+    "removeTag": "Tag entfernen"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1115,7 +1116,11 @@
     "noUsersAvailable": "Keine Benutzer verfügbar",
     "searchBoards": "Boards suchen...",
     "searchBoardsLabel": "Boards suchen",
-    "noBoardsFound": "Keine Boards gefunden"
+    "noBoardsFound": "Keine Boards gefunden",
+    "notAssigned": "Nicht zugewiesen",
+    "searchUsersOrTeams": "Benutzer oder Teams suchen...",
+    "unnamedUser": "Unbenannter Benutzer",
+    "unnamedTeam": "Unbenanntes Team"
   },
   "tagFilter": {
     "placeholder": "Nach Tags filtern...",

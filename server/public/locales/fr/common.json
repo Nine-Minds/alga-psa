@@ -82,7 +82,8 @@
     "share": "Partager",
     "done": "Terminé",
     "continue": "Continuer",
-    "printSelected": "Imprimer la sélection ({{count}})"
+    "printSelected": "Imprimer la sélection ({{count}})",
+    "removeTag": "Retirer l'étiquette"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1115,7 +1116,11 @@
     "noUsersAvailable": "Aucun utilisateur disponible",
     "searchBoards": "Rechercher des tableaux...",
     "searchBoardsLabel": "Rechercher des tableaux",
-    "noBoardsFound": "Aucun tableau trouvé"
+    "noBoardsFound": "Aucun tableau trouvé",
+    "notAssigned": "Non attribué",
+    "searchUsersOrTeams": "Rechercher des utilisateurs ou des équipes...",
+    "unnamedUser": "Utilisateur sans nom",
+    "unnamedTeam": "Équipe sans nom"
   },
   "tagFilter": {
     "placeholder": "Filtrer par étiquettes...",

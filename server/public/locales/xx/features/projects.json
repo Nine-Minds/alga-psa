@@ -286,7 +286,8 @@
     "bulkTasksMovedSuccess": "11111 {{count}} 11111",
     "bulkTasksMovedToPhase": "11111 {{count}} 11111 {{phaseName}} 11111",
     "moveTasksTitle": "11111",
-    "confirmMoveTasksMessage": "11111 {{count}} 11111 {{targetPhase}} 11111"
+    "confirmMoveTasksMessage": "11111 {{count}} 11111 {{targetPhase}} 11111",
+    "taskTypeFallback": "11111"
   },
   "taskForm": {
     "addTitle": "11111",

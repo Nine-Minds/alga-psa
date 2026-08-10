@@ -82,7 +82,8 @@
     "share": "Delen",
     "done": "Klaar",
     "continue": "Doorgaan",
-    "printSelected": "Geselecteerde afdrukken ({{count}})"
+    "printSelected": "Geselecteerde afdrukken ({{count}})",
+    "removeTag": "Label verwijderen"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1115,7 +1116,11 @@
     "noUsersAvailable": "Geen gebruikers beschikbaar",
     "searchBoards": "Borden zoeken...",
     "searchBoardsLabel": "Borden zoeken",
-    "noBoardsFound": "Geen borden gevonden"
+    "noBoardsFound": "Geen borden gevonden",
+    "notAssigned": "Niet toegewezen",
+    "searchUsersOrTeams": "Zoek gebruikers of teams...",
+    "unnamedUser": "Naamloze gebruiker",
+    "unnamedTeam": "Naamloos team"
   },
   "tagFilter": {
     "placeholder": "Filter op tags...",

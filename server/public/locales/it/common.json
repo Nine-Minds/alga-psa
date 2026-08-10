@@ -82,7 +82,8 @@
     "share": "Condividi",
     "done": "Fatto",
     "continue": "Continua",
-    "printSelected": "Stampa selezionati ({{count}})"
+    "printSelected": "Stampa selezionati ({{count}})",
+    "removeTag": "Rimuovi tag"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1115,7 +1116,11 @@
     "noUsersAvailable": "Nessun utente disponibile",
     "searchBoards": "Cerca bacheche...",
     "searchBoardsLabel": "Cerca bacheche",
-    "noBoardsFound": "Nessuna bacheca trovata"
+    "noBoardsFound": "Nessuna bacheca trovata",
+    "notAssigned": "Non assegnato",
+    "searchUsersOrTeams": "Cerca utenti o team...",
+    "unnamedUser": "Utente senza nome",
+    "unnamedTeam": "Team senza nome"
   },
   "tagFilter": {
     "placeholder": "Filtra per tag...",

@@ -96,7 +96,8 @@
     "continue": "Kontynuuj",
     "printSelected": "Drukuj zaznaczone ({{count}})",
     "printSelected_few": "Drukuj zaznaczone ({{count}})",
-    "printSelected_many": "Drukuj zaznaczone ({{count}})"
+    "printSelected_many": "Drukuj zaznaczone ({{count}})",
+    "removeTag": "Usuń tag"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1145,7 +1146,11 @@
     "noUsersAvailable": "Brak dostępnych użytkowników",
     "searchBoards": "Szukaj tablic...",
     "searchBoardsLabel": "Szukaj tablic",
-    "noBoardsFound": "Nie znaleziono tablic"
+    "noBoardsFound": "Nie znaleziono tablic",
+    "notAssigned": "Nieprzypisane",
+    "searchUsersOrTeams": "Szukaj użytkowników lub zespołów...",
+    "unnamedUser": "Użytkownik bez nazwy",
+    "unnamedTeam": "Zespół bez nazwy"
   },
   "tagFilter": {
     "placeholder": "Filtruj według tagów...",

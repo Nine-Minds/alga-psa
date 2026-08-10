@@ -286,7 +286,8 @@
     "bulkTagsSuccess_one": "Tag aggiunti a {{count}} attività",
     "bulkTagsSuccess_other": "Tag aggiunti a {{count}} attività",
     "bulkTagsPartial": "Impossibile aggiungere i tag ad alcune attività",
-    "bulkTagsFailure": "Impossibile aggiungere i tag alle attività selezionate"
+    "bulkTagsFailure": "Impossibile aggiungere i tag alle attività selezionate",
+    "taskTypeFallback": "Attività"
   },
   "taskForm": {
     "addTitle": "Aggiungi attività",

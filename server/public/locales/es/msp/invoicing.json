@@ -652,7 +652,7 @@
       "february": "Febrero",
       "march": "Marzo",
       "april": "Abril",
-      "may": "May.",
+      "may": "Mayo",
       "june": "Junio",
       "july": "Julio",
       "august": "Agosto",
@@ -898,9 +898,9 @@
       "importTaxFailed": "No se pudo importar el impuesto"
     },
     "adapterNames": {
-      "quickbooks": "QuickBooks en línea",
-      "xero": "xero",
-      "sage": "Sabio"
+      "quickbooks": "QuickBooks Online",
+      "xero": "Xero",
+      "sage": "Sage"
     }
   },
   "sendEmail": {
@@ -1069,9 +1069,9 @@
       "pendingAdapter": "En espera de cálculo de impuestos de {{adapter}}"
     },
     "adapterNames": {
-      "quickbooks": "QuickBooks en línea",
-      "xero": "xero",
-      "sage": "Sabio"
+      "quickbooks": "QuickBooks Online",
+      "xero": "Xero",
+      "sage": "Sage"
     }
   },
   "annotations": {

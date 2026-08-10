@@ -286,7 +286,8 @@
     "bulkTagsSuccess_one": "Etiquetas añadidas a {{count}} tarea",
     "bulkTagsSuccess_other": "Etiquetas añadidas a {{count}} tareas",
     "bulkTagsPartial": "No se pudieron añadir etiquetas a algunas tareas",
-    "bulkTagsFailure": "No se pudieron añadir etiquetas a las tareas seleccionadas"
+    "bulkTagsFailure": "No se pudieron añadir etiquetas a las tareas seleccionadas",
+    "taskTypeFallback": "Tarea"
   },
   "taskForm": {
     "addTitle": "Agregar tarea",

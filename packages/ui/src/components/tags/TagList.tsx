@@ -8,6 +8,7 @@ import { ITag } from '@alga-psa/types';
 import { TagEditForm } from './TagEditForm';
 import type { TagSize } from './tagSizeConfig';
 import { useTheme } from 'next-themes';
+import { useTranslation } from '../../lib/i18n/client';
 
 interface TagListProps {
   tags: ITag[];
@@ -39,6 +40,7 @@ export const TagList: React.FC<TagListProps> = ({
   onDeleteAll: onDeleteAllProp,
   size = 'md'
 }) => {
+  const { t } = useTranslation('common');
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
@@ -122,7 +124,7 @@ export const TagList: React.FC<TagListProps> = ({
                 type="button"
                 onClick={() => void onRemoveTag(tag.tag_id)}
                 className={`text-red-500 hover:text-red-700 flex-shrink-0 ${size === 'sm' ? 'ml-0.5' : 'ml-1'}`}
-                title="Remove tag"
+                title={t('actions.removeTag', 'Remove tag')}
               >
                 <X size={sizeConfig.xSize} />
               </button>

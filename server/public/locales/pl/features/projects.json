@@ -290,7 +290,8 @@
     "bulkTagsPartial": "Nie udało się dodać tagów do niektórych zadań",
     "bulkTagsFailure": "Nie udało się dodać tagów do wybranych zadań",
     "bulkTagsSuccess_few": "Dodano tagi do {{count}} zadań",
-    "bulkTagsSuccess_many": "Dodano tagi do {{count}} zadań"
+    "bulkTagsSuccess_many": "Dodano tagi do {{count}} zadań",
+    "taskTypeFallback": "Zadanie"
   },
   "taskForm": {
     "addTitle": "Dodaj nowe zadanie",
