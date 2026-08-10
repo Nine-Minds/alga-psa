@@ -6,6 +6,7 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { resolveTeamsMicrosoftProviderConfigImpl } from '../../auth/teamsMicrosoftProviderResolution';
 import { fetchMicrosoftGraphAppToken } from '../../graphAuth';
 import { readBotCredentialsFromEnv } from '../../teams/bot/teamsBotConnector';
+import { getMicrosoftTokenUrl } from '../../teams/microsoftEndpoints';
 import { getTeamsAvailability } from '../../teams/teamsAvailability';
 
 // Every Graph application permission the Teams integration actually exercises
@@ -289,21 +290,18 @@ async function requestBotFrameworkToken(credentials: {
 }): Promise<BotTokenRequestResult> {
   let response: Response;
   try {
-    response = await fetch(
-      `https://login.microsoftonline.com/${encodeURIComponent(credentials.tenantId)}/oauth2/v2.0/token`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          grant_type: 'client_credentials',
-          client_id: credentials.appId,
-          client_secret: credentials.password,
-          scope: 'https://api.botframework.com/.default',
-        }),
-      }
-    );
+    response = await fetch(getMicrosoftTokenUrl(credentials.tenantId), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: credentials.appId,
+        client_secret: credentials.password,
+        scope: 'https://api.botframework.com/.default',
+      }),
+    });
   } catch (error) {
     return {
       ok: false,

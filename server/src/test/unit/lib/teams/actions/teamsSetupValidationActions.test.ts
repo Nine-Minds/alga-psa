@@ -343,6 +343,18 @@ describe('validateTeamsBotConnector (T093)', () => {
     expect(body.get('scope')).toBe('https://api.botframework.com/.default');
   });
 
+  it('sends the bot token request to MICROSOFT_LOGIN_BASE_URL when it is set', async () => {
+    stubBotEnv();
+    vi.stubEnv('MICROSOFT_LOGIN_BASE_URL', 'http://127.0.0.1:4010');
+    fetchMock.mockResolvedValueOnce(tokenResponse(mintJwt({ aud: 'https://api.botframework.com' })));
+
+    await expect(validateTeamsBotConnectorImpl(USER, { tenant: TENANT })).resolves.toEqual({
+      status: 'ok',
+      appId: 'bot-app-1',
+    });
+    expect(fetchMock.mock.calls[0][0]).toBe('http://127.0.0.1:4010/bot-tenant-1/oauth2/v2.0/token');
+  });
+
   it('maps a wrong password (AADSTS7000215) to invalid_password naming TEAMS_BOT_APP_PASSWORD', async () => {
     stubBotEnv({ TEAMS_BOT_APP_PASSWORD: 'wrong-password' });
     fetchMock.mockResolvedValueOnce(
