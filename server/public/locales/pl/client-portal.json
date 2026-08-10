@@ -282,7 +282,26 @@
       }
     },
     "captchaRequired": "Ukończ poniższą weryfikację, a następnie zaloguj się ponownie.",
-    "tooManyAttempts": "Zbyt wiele nieudanych prób logowania. Poczekaj kilka minut przed kolejną próbą."
+    "tooManyAttempts": "Zbyt wiele nieudanych prób logowania. Poczekaj kilka minut przed kolejną próbą.",
+    "tenantDiscovery": {
+      "title": "Znajdź swoją organizację",
+      "description": "Wpisz swój adres e-mail, a wyślemy Ci linki logowania do wszystkich organizacji, do których masz dostęp.",
+      "emailLabel": "Adres e-mail",
+      "emailPlaceholder": "twoj.email@firma.com",
+      "submit": "Wyślij linki logowania",
+      "submitting": "Wysyłanie...",
+      "invalidEmail": "Wpisz prawidłowy adres e-mail",
+      "linksSent": "Sprawdź swoją skrzynkę, aby znaleźć linki logowania",
+      "sent": {
+        "title": "Sprawdź swoją skrzynkę",
+        "description": "Jeśli konto z tym adresem e-mail istnieje, wysłaliśmy Ci linki logowania do każdej organizacji, do której masz dostęp.",
+        "noEmailReceived": "Nie otrzymałeś wiadomości?",
+        "checkSpam": "Sprawdź folder ze spamem",
+        "verifyAddress": "Sprawdź, czy adres e-mail jest poprawny",
+        "contactSupport": "Skontaktuj się z zespołem wsparcia swojej organizacji",
+        "tryAnother": "Spróbuj innego adresu e-mail"
+      }
+    }
   },
   "account": {
     "title": "Konto",

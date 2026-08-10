@@ -7,6 +7,9 @@ import MspLoginForm from './MspLoginForm';
 import TwoFactorInput from './TwoFA';
 import Alert from './Alert';
 import type { AlertProps } from '@alga-psa/types';
+// See MspLoginForm: 'msp/auth' is still loading when this first renders, so
+// suspense stays off and every key carries a defaultValue.
+import { useTranslation } from 'react-i18next';
 import { Ticket, Mail, Calendar, Clock, Users, FileText, Layers } from 'lucide-react';
 
 interface MspSignInProps {
@@ -14,6 +17,7 @@ interface MspSignInProps {
 }
 
 export default function MspSignIn({ initialEmail }: MspSignInProps) {
+  const { t } = useTranslation('msp/auth', { useSuspense: false });
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });
   const [isOpen2FA, setIsOpen2FA] = useState(false);
@@ -27,19 +31,19 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
     if (error === 'AccessDenied') {
       setAlertInfo({
         type: 'error',
-        title: 'Access Denied',
-        message: 'You do not have permission to access the MSP dashboard.'
+        title: t('signin.alerts.accessDeniedTitle', 'Access Denied'),
+        message: t('signin.alerts.accessDeniedMessage', 'You do not have permission to access the MSP dashboard.')
       });
       setIsAlertOpen(true);
     } else if (error === 'SessionRevoked') {
       setAlertInfo({
         type: 'warning',
-        title: 'Session Ended',
-        message: 'Your session has been signed out. Please sign in again.'
+        title: t('signin.alerts.sessionEndedTitle', 'Session Ended'),
+        message: t('signin.alerts.sessionEndedMessage', 'Your session has been signed out. Please sign in again.')
       });
       setIsAlertOpen(true);
     }
-  }, [error]);
+  }, [error, t]);
 
   const handle2FA = (twoFactorCode: string) => {
     setIsOpen2FA(false);
@@ -54,7 +58,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
       }
       setAlertInfo({
         type: 'error',
-        title: 'Error',
+        title: t('signin.alerts.errorTitle', 'Error'),
         message: error
       });
     } else {
@@ -125,7 +129,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
               className="block hover:opacity-80 transition-opacity"
             >
               <h1 className="text-4xl font-bold text-[rgb(var(--color-text-800))] mb-4 text-center">
-                Professional Services Automation
+                {t('signin.hero.title', 'Professional Services Automation')}
               </h1>
             </a>
             <a
@@ -135,7 +139,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
               className="block hover:opacity-80 transition-opacity"
             >
               <p className="text-lg text-[rgb(var(--color-text-600))] mb-2 text-center">
-                Open source PSA platform for Managed Service Providers
+                {t('signin.hero.subtitle', 'Open source PSA platform for Managed Service Providers')}
               </p>
             </a>
             <div className="space-y-3">
@@ -147,7 +151,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
               >
                 <Ticket className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Comprehensive Ticketing</h3>
+                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">{t('signin.hero.features.ticketing', 'Comprehensive Ticketing')}</h3>
                 </div>
               </a>
               <a
@@ -158,7 +162,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
               >
                 <Mail className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Inbound Emails</h3>
+                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">{t('signin.hero.features.inboundEmails', 'Inbound Emails')}</h3>
                 </div>
               </a>
               <a
@@ -169,7 +173,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
               >
                 <Calendar className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Technician Dispatch and Scheduling</h3>
+                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">{t('signin.hero.features.dispatch', 'Technician Dispatch and Scheduling')}</h3>
                 </div>
               </a>
               <a
@@ -180,7 +184,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
               >
                 <Clock className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Time Entry/Tracking</h3>
+                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">{t('signin.hero.features.timeEntry', 'Time Entry/Tracking')}</h3>
                 </div>
               </a>
               <a
@@ -191,7 +195,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
               >
                 <Layers className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Project Management Tools</h3>
+                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">{t('signin.hero.features.projects', 'Project Management Tools')}</h3>
                 </div>
               </a>
               <a
@@ -202,7 +206,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
               >
                 <Users className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Client and Contact Management</h3>
+                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">{t('signin.hero.features.clients', 'Client and Contact Management')}</h3>
                 </div>
               </a>
               <a
@@ -213,7 +217,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
               >
                 <FileText className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Centralized Document Uploads and Storage</h3>
+                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">{t('signin.hero.features.documents', 'Centralized Document Uploads and Storage')}</h3>
                 </div>
               </a>
             </div>
@@ -225,10 +229,10 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
           <Card className="max-w-md w-full bg-card/95 backdrop-blur dark:bg-card dark:backdrop-blur-none dark:border dark:border-border-200">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">
-                MSP Dashboard Login
+                {t('signin.card.title', 'MSP Dashboard Login')}
               </CardTitle>
               <CardDescription className="text-center">
-                Access your managed services platform
+                {t('signin.card.description', 'Access your managed services platform')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -240,7 +244,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
               />
               <div className="mt-6 text-center">
                 <a href="/auth/client-portal/signin" className="block text-sm text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]">
-                  Looking for the Client Portal? Click here →
+                  {t('signin.card.clientPortalLink', 'Looking for the Client Portal? Click here →')}
                 </a>
               </div>
             </CardContent>

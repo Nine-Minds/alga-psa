@@ -7,6 +7,9 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Mail } from 'lucide-react';
 import { requestTenantLoginLinksAction } from '@alga-psa/client-portal/actions';
+// Suspense stays off: the client-portal auth pages mount I18nWrapper without
+// preloaded resources, so 'client-portal' is still loading on first render.
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
 interface ClientPortalTenantDiscoveryProps {
@@ -14,6 +17,7 @@ interface ClientPortalTenantDiscoveryProps {
 }
 
 export default function ClientPortalTenantDiscovery({ callbackUrl }: ClientPortalTenantDiscoveryProps) {
+  const { t } = useTranslation('client-portal', { useSuspense: false });
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -22,7 +26,7 @@ export default function ClientPortalTenantDiscovery({ callbackUrl }: ClientPorta
     e.preventDefault();
 
     if (!email || !email.includes('@')) {
-      toast.error('Please enter a valid email address');
+      toast.error(t('auth.tenantDiscovery.invalidEmail', 'Please enter a valid email address'));
       return;
     }
 
@@ -32,7 +36,7 @@ export default function ClientPortalTenantDiscovery({ callbackUrl }: ClientPorta
 
       if (result.success) {
         setIsSubmitted(true);
-        toast.success(result.message || 'Check your email for login links');
+        toast.success(result.message || t('auth.tenantDiscovery.linksSent', 'Check your email for login links'));
       } else {
         // Always show generic success message to prevent account enumeration
         setIsSubmitted(true);
@@ -57,19 +61,19 @@ export default function ClientPortalTenantDiscovery({ callbackUrl }: ClientPorta
               </div>
             </div>
             <CardTitle className="text-2xl font-bold text-center">
-              Check Your Email
+              {t('auth.tenantDiscovery.sent.title', 'Check Your Email')}
             </CardTitle>
             <CardDescription className="text-center">
-              If an account exists with that email address, we've sent you login links for each organization you have access to.
+              {t('auth.tenantDiscovery.sent.description', "If an account exists with that email address, we've sent you login links for each organization you have access to.")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-sm text-gray-600 text-center">
-              <p className="mb-2">Didn't receive an email?</p>
+              <p className="mb-2">{t('auth.tenantDiscovery.sent.noEmailReceived', "Didn't receive an email?")}</p>
               <ul className="list-disc list-inside text-left space-y-1">
-                <li>Check your spam folder</li>
-                <li>Verify the email address is correct</li>
-                <li>Contact your organization's support team</li>
+                <li>{t('auth.tenantDiscovery.sent.checkSpam', 'Check your spam folder')}</li>
+                <li>{t('auth.tenantDiscovery.sent.verifyAddress', 'Verify the email address is correct')}</li>
+                <li>{t('auth.tenantDiscovery.sent.contactSupport', "Contact your organization's support team")}</li>
               </ul>
             </div>
             <Button
@@ -81,7 +85,7 @@ export default function ClientPortalTenantDiscovery({ callbackUrl }: ClientPorta
                 setEmail('');
               }}
             >
-              Try Another Email
+              {t('auth.tenantDiscovery.sent.tryAnother', 'Try Another Email')}
             </Button>
           </CardContent>
         </Card>
@@ -94,20 +98,20 @@ export default function ClientPortalTenantDiscovery({ callbackUrl }: ClientPorta
       <Card className="max-w-md w-full bg-white shadow-xl">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            Find Your Organization
+            {t('auth.tenantDiscovery.title', 'Find Your Organization')}
           </CardTitle>
           <CardDescription className="text-center">
-            Enter your email address and we'll send you login links for all organizations you have access to.
+            {t('auth.tenantDiscovery.description', "Enter your email address and we'll send you login links for all organizations you have access to.")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form id="tenant-discovery-form" onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="tenant-discovery-email">Email Address</Label>
+              <Label htmlFor="tenant-discovery-email">{t('auth.tenantDiscovery.emailLabel', 'Email Address')}</Label>
               <Input
                 id="tenant-discovery-email"
                 type="email"
-                placeholder="your.email@company.com"
+                placeholder={t('auth.tenantDiscovery.emailPlaceholder', 'your.email@company.com')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -125,12 +129,12 @@ export default function ClientPortalTenantDiscovery({ callbackUrl }: ClientPorta
               {isSubmitting ? (
                 <>
                   <Mail className="w-4 h-4 mr-2 animate-pulse" />
-                  Sending...
+                  {t('auth.tenantDiscovery.submitting', 'Sending...')}
                 </>
               ) : (
                 <>
                   <Mail className="w-4 h-4 mr-2" />
-                  Send Login Links
+                  {t('auth.tenantDiscovery.submit', 'Send Login Links')}
                 </>
               )}
             </Button>
@@ -138,7 +142,7 @@ export default function ClientPortalTenantDiscovery({ callbackUrl }: ClientPorta
 
           <div className="mt-6 pt-6 border-t text-center">
             <a href="/auth/msp/signin" className="text-sm text-gray-600 hover:text-indigo-600">
-              MSP Staff? Login here →
+              {t('auth.mspStaffLogin', 'MSP Staff? Login here →')}
             </a>
           </div>
         </CardContent>

@@ -7,6 +7,11 @@ import { Label, Input, Button, Alert, AlertDescription, Checkbox } from '@alga-p
 import type { AlertProps } from '@alga-psa/types';
 import { useRegisterUIComponent, withDataAutomationId } from '@alga-psa/ui/ui-reflection';
 import type { FormComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection';
+// Imports react-i18next directly rather than the @alga-psa/ui wrapper: the auth
+// pages mount I18nWrapper without preloaded resources, so 'msp/auth' is still
+// loading when this first renders. `useSuspense: false` plus a defaultValue per
+// key keeps the form readable instead of suspending with no boundary above it.
+import { useTranslation } from 'react-i18next';
 import SsoProviderButtons from '@alga-psa/auth/sso/entry';
 import CaptchaChallenge from './CaptchaChallenge';
 import { useLoginCaptcha } from './useLoginCaptcha';
@@ -24,6 +29,7 @@ export default function MspLoginForm({
   onError,
   onTwoFactorRequired,
 }: MspLoginFormProps) {
+  const { t } = useTranslation('msp/auth', { useSuspense: false });
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState(() => initialEmail ?? '');
   const [password, setPassword] = useState('');
@@ -78,12 +84,12 @@ export default function MspLoginForm({
         onTwoFactorRequired();
       } else if (result?.code === 'CAPTCHA_REQUIRED') {
         await captcha.requireCaptcha();
-        setLookupError('Please complete the verification below, then sign in again.');
+        setLookupError(t('signin.alerts.captchaRequired', 'Please complete the verification below, then sign in again.'));
       } else if (result?.code === 'RATE_LIMITED') {
         onError({
           type: 'error',
-          title: 'Too Many Attempts',
-          message: 'Too many failed sign-in attempts. Please wait a few minutes before trying again.'
+          title: t('signin.alerts.tooManyAttemptsTitle', 'Too Many Attempts'),
+          message: t('signin.alerts.tooManyAttemptsMessage', 'Too many failed sign-in attempts. Please wait a few minutes before trying again.')
         });
       } else if (result?.error) {
         if (captcha.required) {
@@ -91,18 +97,18 @@ export default function MspLoginForm({
         }
         onError({
           type: 'error',
-          title: 'Sign-in Failed',
-          message: 'Invalid email or password. Please try again.'
+          title: t('signin.alerts.signInFailedTitle', 'Sign-in Failed'),
+          message: t('signin.alerts.signInFailedMessage', 'Invalid email or password. Please try again.')
         });
       } else if (result?.url) {
         await persistRememberedEmail();
         window.location.href = result.url;
       }
     } catch (error) {
-      onError({ 
-        type: 'error', 
-        title: 'Error', 
-        message: 'An unexpected error occurred. Please try again.' 
+      onError({
+        type: 'error',
+        title: t('signin.alerts.errorTitle', 'Error'),
+        message: t('signin.alerts.unexpectedError', 'An unexpected error occurred. Please try again.')
       });
     } finally {
       setIsSubmitting(false);
@@ -119,12 +125,12 @@ export default function MspLoginForm({
     >
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="msp-email-field">Email</Label>
+          <Label htmlFor="msp-email-field">{t('signin.form.emailLabel', 'Email')}</Label>
           <Input
             type="email"
             id="msp-email-field"
             name="email"
-            placeholder="Enter your email"
+            placeholder={t('signin.form.emailPlaceholder', 'Enter your email')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -132,13 +138,13 @@ export default function MspLoginForm({
           />
         </div>
         <div className="space-y-2 relative">
-          <Label htmlFor="msp-password-field">Password</Label>
+          <Label htmlFor="msp-password-field">{t('signin.form.passwordLabel', 'Password')}</Label>
           <div className="relative">
             <Input
               type={showPassword ? "text" : "password"}
               id="msp-password-field"
               name="password"
-              placeholder="Password"
+              placeholder={t('signin.form.passwordPlaceholder', 'Password')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -164,7 +170,7 @@ export default function MspLoginForm({
         <Checkbox
           id="msp-public-workstation-checkbox"
           checked={isPublicWorkstation}
-          label="Public workstation - do not remember my email"
+          label={t('signin.form.publicWorkstation', 'Public workstation - do not remember my email')}
           onChange={(event) => setIsPublicWorkstation(event.target.checked)}
         />
       </div>
@@ -189,18 +195,18 @@ export default function MspLoginForm({
             <Link href="/auth/msp/forgot-password"
             className="font-medium text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]"
             {...withDataAutomationId({ id: 'msp-forgot-password-link' })}>
-              Forgot your password?
+              {t('signin.form.forgotPassword', 'Forgot your password?')}
             </Link>
           </div>
           <div className="text-[rgb(var(--color-text-600))]">
-            Don&apos;t have an account?{' '}
+            {t('signin.form.noAccount', "Don't have an account?")}{' '}
             <a
               href="https://www.nineminds.com/plans"
               target="_blank"
               rel="noopener noreferrer"
               className="font-medium text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]"
             >
-              Sign up
+              {t('signin.form.signUp', 'Sign up')}
             </a>
           </div>
         </div>
@@ -212,7 +218,7 @@ export default function MspLoginForm({
           id="msp-sign-in-button"
           disabled={isSubmitting || (captcha.required && !!captcha.config?.siteKey && !captcha.token)}
         >
-          Sign in
+          {t('signin.form.submit', 'Sign in')}
         </Button>
       </div>
 

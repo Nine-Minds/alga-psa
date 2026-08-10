@@ -13,6 +13,9 @@ const recordPortalDomainSeenMock = vi.fn();
 const ClientPortalSignInMock = () => null;
 const ClientPortalTenantDiscoveryMock = () => null;
 const PortalSwitchPromptMock = () => null;
+const I18nWrapperMock = ({ children }: { children?: React.ReactNode }) => children ?? null;
+
+const inner = (result: unknown) => (result as any)?.props?.children;
 
 vi.mock('next/navigation', () => ({
   redirect: redirectMock,
@@ -34,7 +37,14 @@ vi.mock('@alga-psa/tenancy/actions', () => ({
 }));
 
 vi.mock('@alga-psa/tenancy/components', () => ({
-  I18nWrapper: ({ children }: { children: React.ReactNode }) => children,
+  I18nWrapper: I18nWrapperMock,
+}));
+
+vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({
+  getServerLocale: async () => 'en',
+  getServerTranslation: async () => ({
+    t: (_key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? _key,
+  }),
 }));
 
 vi.mock('@alga-psa/auth/client', () => ({
@@ -82,13 +92,16 @@ describe('ClientPortalSignInPage', () => {
     }
   });
 
-  it('renders tenant discovery when no tenant hint is present', async () => {
+  it('renders tenant discovery inside the i18n provider when no tenant hint is present', async () => {
     getSessionMock.mockResolvedValue(null);
 
     const result = await ClientPortalSignInPage({ searchParams: Promise.resolve({}) });
 
     expect(redirectMock).not.toHaveBeenCalled();
-    expect((result as any)?.type).toBe(ClientPortalTenantDiscoveryMock);
+    // Discovery has no tenant to resolve a locale from, so it must still be
+    // wrapped: unwrapped it renders English whatever the visitor's locale is.
+    expect((result as any)?.type).toBe(I18nWrapperMock);
+    expect(inner(result)?.type).toBe(ClientPortalTenantDiscoveryMock);
   });
 
   it('redirects authenticated client portal users to the provided callback when already authenticated', async () => {

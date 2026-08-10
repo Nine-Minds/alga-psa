@@ -8,7 +8,7 @@ import { isValidTenantSlug } from '@shared/utils/tenantSlug';
 import { UserSession } from '@alga-psa/db/models/UserSession';
 import { recordPortalDomainSeen } from '@/lib/portal-domains/portalDomainSeen';
 import type { Metadata } from 'next';
-import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { getServerLocale, getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { PortalBrandingStyles } from '@/lib/auth/portalBranding';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -81,9 +81,16 @@ export default async function ClientSignInPage({
     }
   }
 
-  // If no tenant slug and no vanity domain, show tenant discovery form
+  // If no tenant slug and no vanity domain, show tenant discovery form. There is
+  // no tenant to resolve a locale from here, so fall back to the anonymous
+  // resolution the MSP sign-in page uses.
   if (!tenantSlug && !portalDomain) {
-    return <ClientPortalTenantDiscovery callbackUrl={callbackUrl} />;
+    const discoveryLocale = await getServerLocale();
+    return (
+      <I18nWrapper portal="client" initialLocale={discoveryLocale}>
+        <ClientPortalTenantDiscovery callbackUrl={callbackUrl} />
+      </I18nWrapper>
+    );
   }
 
   // Fetch tenant branding and locale based on portalDomain (if present)
