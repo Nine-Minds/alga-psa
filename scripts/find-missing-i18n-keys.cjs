@@ -89,6 +89,49 @@ function resolvesKey(obj, dotted) {
 }
 
 const RE_USE_TRANSLATION = /useTranslation\(\s*['"`]([^'"`]+)['"`]/g;
+// Server components declare their namespace through getServerTranslation(locale, ns)
+// instead of the hook. Without this they looked namespace-less, so a route that
+// only ever calls the server helper was skipped entirely.
+const RE_SERVER_TRANSLATION = /getServerTranslation\(\s*[^,)]*,\s*['"`]([^'"`]+)['"`]/g;
+
+// Comments are not code. A prose reference to `useTranslation('msp/auth')`
+// explaining what a child component does was being read as a declaration on the
+// parent, which then failed every key that lived in the namespace the file
+// actually uses. Blank comment bodies while preserving offsets so the line
+// numbers reported below stay correct.
+function stripComments(source) {
+  let out = '';
+  let i = 0;
+  let state = 'code';
+  while (i < source.length) {
+    const two = source.slice(i, i + 2);
+    if (state === 'code') {
+      if (two === '//') { state = 'line'; out += '  '; i += 2; continue; }
+      if (two === '/*') { state = 'block'; out += '  '; i += 2; continue; }
+      if (source[i] === "'" || source[i] === '"' || source[i] === '`') {
+        const quote = source[i];
+        out += source[i++];
+        while (i < source.length && source[i] !== quote) {
+          if (source[i] === '\\') { out += source[i++] ?? ''; }
+          out += source[i++] ?? '';
+        }
+        out += source[i++] ?? '';
+        continue;
+      }
+      out += source[i++];
+      continue;
+    }
+    if (state === 'line') {
+      if (source[i] === '\n') { state = 'code'; out += '\n'; i += 1; continue; }
+      out += ' '; i += 1; continue;
+    }
+    // block
+    if (two === '*/') { state = 'code'; out += '  '; i += 2; continue; }
+    out += source[i] === '\n' ? '\n' : ' ';
+    i += 1;
+  }
+  return out;
+}
 // t('key'…) or t("key"…) — skip template strings (dynamic keys).
 const RE_T_CALL = /(?<![A-Za-z0-9_$])t\(\s*['"]([^'"]+)['"]/g;
 
@@ -97,14 +140,18 @@ const findings = [];
 for (const root of SCAN_ROOTS) {
   for (const file of walk(root)) {
     if (RE_TEST_FILE.test(file)) continue;
-    const src = fs.readFileSync(file, 'utf8');
-    if (!src.includes('useTranslation') && !/(?<![A-Za-z0-9_$])t\(/.test(src)) continue;
+    const src = stripComments(fs.readFileSync(file, 'utf8'));
+    if (!src.includes('useTranslation') && !src.includes('getServerTranslation')
+      && !/(?<![A-Za-z0-9_$])t\(/.test(src)) continue;
 
-    // Collect namespaces declared in this file.
+    // Collect namespaces declared in this file, from the client hook and the
+    // server helper alike.
     const nsList = [];
     let m;
     RE_USE_TRANSLATION.lastIndex = 0;
     while ((m = RE_USE_TRANSLATION.exec(src))) nsList.push(m[1]);
+    RE_SERVER_TRANSLATION.lastIndex = 0;
+    while ((m = RE_SERVER_TRANSLATION.exec(src))) nsList.push(m[1]);
     if (!nsList.length) continue;
 
     // Collect t() keys with line numbers.
