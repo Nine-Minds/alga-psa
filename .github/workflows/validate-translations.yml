@@ -19,12 +19,20 @@ on:
       - main
 
 env:
-  # Rollout switch for the three translation-quality jobs below. While 'false'
-  # they run on every PR and publish what they found, but always exit 0 — the
-  # check goes green even with findings, so nothing blocks a merge. Flip to
-  # 'true' (and add the jobs to branch protection) to make them blocking.
-  # The two key-consistency jobs are unaffected: they were already enforcing.
-  I18N_ENFORCE: 'false'
+  # The three translation-quality jobs below fail the run when they find
+  # something. Failing is not the same as blocking: `main` lists no required
+  # status checks, so a red run here is a visible signal on the PR that nobody
+  # has to wait on. Making these gate a merge means adding them to branch
+  # protection — a separate, deliberate decision, not a side effect of this
+  # flag.
+  #
+  # Set to 'false' to go back to reporting findings on a green check. That was
+  # the rollout mode, and it hid a real defect: PR 3139 carried 11 untranslated
+  # strings in five packs and showed a passing tick, because the failure was
+  # swallowed before it reached the step.
+  #
+  # The two key-consistency jobs ignore this flag; they were always enforcing.
+  I18N_ENFORCE: 'true'
 
 jobs:
   validate:
