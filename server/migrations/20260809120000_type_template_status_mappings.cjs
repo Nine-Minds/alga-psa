@@ -37,6 +37,10 @@ const COLUMNS = [
   'status_source',
 ];
 
+// The only typed columns that carry a UUID worth restoring into status_id on
+// rollback. unresolved_reason and status_source hold no evidence to collapse.
+const STATUS_ID_COLLAPSE_COLUMNS = ['standard_status_id', 'unresolved_status_id'];
+
 const CHECK_CONSTRAINTS = [
   {
     name: 'project_template_status_mappings_status_source_check',
@@ -69,15 +73,6 @@ const INDEXES = [
   ['project_template_status_mappings_standard_status_idx', ['standard_status_id']],
   ['project_template_status_mappings_source_idx', ['tenant', 'status_source']],
 ];
-
-async function tableHasAnyColumn(knex) {
-  for (const column of COLUMNS) {
-    if (await knex.schema.hasColumn('project_template_status_mappings', column)) {
-      return true;
-    }
-  }
-  return false;
-}
 
 async function ensureColumns(knex) {
   const existing = new Set(
@@ -316,13 +311,23 @@ exports.down = async function down(knex) {
 
   // Loss-aware collapse: move every typed or unresolved UUID back into
   // status_id before dropping the typed columns so no evidence is discarded.
-  // Guarded by column presence so a table already in legacy shape (or one whose
-  // earlier rollback was interrupted) is a no-op rather than an error.
-  if (await tableHasAnyColumn(knex)) {
+  // The COALESCE list and WHERE clause are built only from the typed UUID
+  // columns that still exist at this moment: a rerun where a previous invocation
+  // already dropped standard_status_id and/or unresolved_status_id must never
+  // reference a dropped column (that would crash with 42703 and leave the table
+  // stuck in a partial state forever). When both are gone the restore is already
+  // complete and the rewrite is skipped entirely.
+  const collapseSources = [];
+  for (const column of STATUS_ID_COLLAPSE_COLUMNS) {
+    if (await knex.schema.hasColumn('project_template_status_mappings', column)) {
+      collapseSources.push(column);
+    }
+  }
+  if (collapseSources.length > 0) {
     await knex.raw(`
       UPDATE project_template_status_mappings
-      SET status_id = COALESCE(status_id, standard_status_id, unresolved_status_id)
-      WHERE standard_status_id IS NOT NULL OR unresolved_status_id IS NOT NULL
+      SET status_id = COALESCE(status_id, ${collapseSources.join(', ')})
+      WHERE ${collapseSources.map((column) => `${column} IS NOT NULL`).join(' OR ')}
     `);
   }
 

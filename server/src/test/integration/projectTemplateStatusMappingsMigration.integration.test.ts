@@ -196,6 +196,172 @@ async function expectLegacyRows(
   expect(ambiguousRow.custom_status_name).toBeNull();
 }
 
+/** Assert the full typed schema (columns, CHECKs, FKs, indexes, NOT NULL) exists. */
+async function expectTypedSchemaPresent(knex: Knex | Knex.Transaction): Promise<void> {
+  const columns = await knex('information_schema.columns')
+    .where({ table_schema: 'public', table_name: 'project_template_status_mappings' })
+    .whereIn('column_name', TYPED_COLUMNS)
+    .select('column_name');
+  expect(columns.map((column) => column.column_name).sort()).toEqual([...TYPED_COLUMNS].sort());
+
+  const constraints = await knex('pg_constraint')
+    .whereRaw("conrelid = 'project_template_status_mappings'::regclass")
+    .whereIn('conname', TYPED_CONSTRAINTS)
+    .select('conname');
+  expect(constraints.map((constraint) => constraint.conname).sort()).toEqual(
+    [...TYPED_CONSTRAINTS].sort()
+  );
+
+  const indexes = await knex('pg_indexes')
+    .where({ tablename: 'project_template_status_mappings' })
+    .whereIn('indexname', TYPED_INDEXES)
+    .select('indexname');
+  expect(indexes.map((index) => index.indexname).sort()).toEqual([...TYPED_INDEXES].sort());
+
+  const sourceNullable = await knex('information_schema.columns')
+    .where({
+      table_schema: 'public',
+      table_name: 'project_template_status_mappings',
+      column_name: 'status_source',
+    })
+    .select('is_nullable')
+    .first();
+  expect(sourceNullable?.is_nullable).toBe('NO');
+}
+
+async function dropTypedColumns(
+  knex: Knex | Knex.Transaction,
+  columns: string[]
+): Promise<void> {
+  for (const column of columns) {
+    await knex.raw(
+      `ALTER TABLE project_template_status_mappings DROP COLUMN IF EXISTS "${column}"`
+    );
+  }
+}
+
+async function dropTypedConstraints(
+  knex: Knex | Knex.Transaction,
+  names: string[]
+): Promise<void> {
+  for (const name of names) {
+    await knex.raw(
+      `ALTER TABLE project_template_status_mappings DROP CONSTRAINT IF EXISTS "${name}"`
+    );
+  }
+}
+
+async function dropTypedIndexes(knex: Knex | Knex.Transaction, names: string[]): Promise<void> {
+  for (const name of names) {
+    await knex.raw(`DROP INDEX IF EXISTS "${name}"`);
+  }
+}
+
+interface PartialRollbackShape {
+  /** Human-readable description used in the test name. */
+  name: string;
+  /** Mutate the fully-typed table into the partial rollback state under test. */
+  build: (knex: Knex | Knex.Transaction) => Promise<void>;
+  /**
+   * True when the shape preserves every typed UUID so the full legacy fixture is
+   * recoverable; false when it dropped one or both typed UUID columns, which
+   * destroys that evidence and only allows relaxed post-down assertions.
+   */
+  preserved: boolean;
+}
+
+/**
+ * Representative partial rollback states: prefixes of down() interrupted at
+ * every stage, plus the full guard-drop and data-restore prefixes. The shapes
+ * flagged preserved=false are exactly the ones a hardcoded COALESCE rewrite
+ * crashes on (42703) because it references a typed UUID column a previous
+ * invocation already dropped.
+ */
+const PARTIAL_ROLLBACK_SHAPES: PartialRollbackShape[] = [
+  {
+    name: 'status_source dropped (CHECKs and source index auto-dropped, typed UUIDs intact)',
+    preserved: true,
+    build: async (knex) => {
+      await dropTypedColumns(knex, ['status_source']);
+    },
+  },
+  {
+    name: 'unresolved_reason dropped (variant CHECK auto-dropped, typed UUIDs intact)',
+    preserved: true,
+    build: async (knex) => {
+      await dropTypedColumns(knex, ['unresolved_reason']);
+    },
+  },
+  {
+    name: 'standard_status_id dropped (standard FK, variant CHECK, standard index auto-dropped)',
+    preserved: false,
+    build: async (knex) => {
+      await dropTypedColumns(knex, ['standard_status_id']);
+    },
+  },
+  {
+    name: 'unresolved_status_id dropped (variant CHECK auto-dropped)',
+    preserved: false,
+    build: async (knex) => {
+      await dropTypedColumns(knex, ['unresolved_status_id']);
+    },
+  },
+  {
+    name: 'both typed UUID columns dropped (discriminator and reason still present)',
+    preserved: false,
+    build: async (knex) => {
+      await dropTypedColumns(knex, ['standard_status_id', 'unresolved_status_id']);
+    },
+  },
+  {
+    name: 'fully-partial mid-column-drop: both typed UUID columns and all guards gone',
+    preserved: false,
+    build: async (knex) => {
+      await dropTypedConstraints(knex, TYPED_CONSTRAINTS);
+      await dropTypedIndexes(knex, TYPED_INDEXES);
+      await dropTypedColumns(knex, ['standard_status_id', 'unresolved_status_id']);
+    },
+  },
+  {
+    name: 'only foreign keys dropped (CHECKs, indexes, and columns still present)',
+    preserved: true,
+    build: async (knex) => {
+      await dropTypedConstraints(knex, [
+        'project_template_status_mappings_tenant_status_id_foreign',
+        'project_template_status_mappings_standard_status_id_foreign',
+      ]);
+    },
+  },
+  {
+    name: 'foreign keys and CHECKs dropped (indexes and columns still present)',
+    preserved: true,
+    build: async (knex) => {
+      await dropTypedConstraints(knex, TYPED_CONSTRAINTS);
+    },
+  },
+  {
+    name: 'all guards dropped but every column and typed row intact',
+    preserved: true,
+    build: async (knex) => {
+      await dropTypedConstraints(knex, TYPED_CONSTRAINTS);
+      await dropTypedIndexes(knex, TYPED_INDEXES);
+    },
+  },
+  {
+    name: 'loss-aware collapse already applied (data restored, columns still present)',
+    preserved: true,
+    build: async (knex) => {
+      await dropTypedConstraints(knex, TYPED_CONSTRAINTS);
+      await dropTypedIndexes(knex, TYPED_INDEXES);
+      await knex.raw(`
+        UPDATE project_template_status_mappings
+        SET status_id = COALESCE(status_id, standard_status_id, unresolved_status_id)
+        WHERE standard_status_id IS NOT NULL OR unresolved_status_id IS NOT NULL
+      `);
+    },
+  },
+];
+
 /** Assert no typed column, CHECK, FK, or helper index survives down(). */
 async function expectTypedSchemaGone(knex: Knex | Knex.Transaction): Promise<void> {
   const columns = await knex('information_schema.columns')
@@ -516,6 +682,126 @@ describe('project_template_status_mappings typed migration (integration)', () =>
         rejected = true;
       }
       expect(rejected).toBe(true);
+    } catch (error) {
+      testError = error;
+    } finally {
+      await trx.rollback();
+    }
+
+    if (testError) {
+      throw testError;
+    }
+  });
+
+  it.each(PARTIAL_ROLLBACK_SHAPES)(
+    'down() rerun converges from a partial rollback shape: $name',
+    async ({ build, preserved }) => {
+      const trx = await knex.transaction();
+      let testError: unknown;
+
+      try {
+        await migration.down(trx);
+        const fixture = await createTypedFixture(trx);
+        await migration.up(trx);
+
+        await build(trx);
+
+        await migration.down(trx);
+
+        await expectTypedSchemaGone(trx);
+        if (preserved) {
+          await expectLegacyRows(trx, fixture);
+        } else {
+          const rows = await trx('project_template_status_mappings')
+            .where({ tenant: fixture.tenantId })
+            .orderBy('display_order')
+            .select('*');
+          expect(rows).toHaveLength(5);
+          expect(rows[0].status_id).toBe(fixture.tenantStatusId);
+          const inlineRow = rows.find((row) => row.custom_status_name === 'Inline custom');
+          expect(inlineRow?.status_id).toBeNull();
+        }
+
+        await migration.up(trx);
+
+        await expectTypedSchemaPresent(trx);
+        const retyped = await trx('project_template_status_mappings')
+          .where({ tenant: fixture.tenantId })
+          .orderBy('display_order')
+          .select('*');
+        expect(retyped).toHaveLength(5);
+        expect(retyped[0]).toMatchObject({
+          status_id: fixture.tenantStatusId,
+          status_source: 'tenant',
+        });
+        const inlineRetyped = retyped.find((row) => row.custom_status_name === 'Inline custom');
+        expect(inlineRetyped).toMatchObject({
+          status_id: null,
+          status_source: 'inline',
+        });
+      } catch (error) {
+        testError = error;
+      } finally {
+        await trx.rollback();
+      }
+
+      if (testError) {
+        throw testError;
+      }
+    }
+  );
+
+  it('clean full cycle: up() -> down() -> up() retypes and collapses deterministically', async () => {
+    const trx = await knex.transaction();
+    let testError: unknown;
+
+    try {
+      await migration.down(trx);
+      const fixture = await createTypedFixture(trx);
+
+      await migration.up(trx);
+      await migration.down(trx);
+
+      await expectLegacyRows(trx, fixture);
+      await expectTypedSchemaGone(trx);
+
+      await migration.up(trx);
+
+      await expectTypedSchemaPresent(trx);
+      const rows = await trx('project_template_status_mappings')
+        .where({ tenant: fixture.tenantId })
+        .orderBy('display_order')
+        .select('*');
+      expect(rows).toHaveLength(5);
+
+      const [tenantRow, standardRow, inlineRow, missingRow, ambiguousRow] = rows;
+
+      expect(tenantRow).toMatchObject({
+        status_id: fixture.tenantStatusId,
+        status_source: 'tenant',
+      });
+      expect(standardRow).toMatchObject({
+        status_id: null,
+        standard_status_id: fixture.standardStatusId,
+        status_source: 'standard',
+      });
+      expect(inlineRow).toMatchObject({
+        status_id: null,
+        custom_status_name: 'Inline custom',
+        status_source: 'inline',
+      });
+      expect(missingRow).toMatchObject({
+        status_id: null,
+        unresolved_status_id: fixture.missingId,
+        unresolved_reason: 'missing',
+        status_source: 'unresolved',
+      });
+      expect(ambiguousRow).toMatchObject({
+        status_id: null,
+        unresolved_status_id: fixture.ambiguousId,
+        unresolved_reason: 'ambiguous',
+        status_source: 'unresolved',
+      });
     } catch (error) {
       testError = error;
     } finally {
