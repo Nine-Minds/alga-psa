@@ -960,16 +960,16 @@
       "select_placeholder": "Seleccionar un estado...",
       "all_in_use": "Todos los estados disponibles están en uso",
       "create_new": "Crear nuevo",
-      "status_no_longer_exists": "Status no longer exists",
-      "missing_status": "Missing status",
-      "ambiguous_status": "Ambiguous historical status",
-      "replace_placeholder": "Select replacement status...",
-      "replace_status": "Replace status",
-      "replacing": "Replacing...",
-      "replaced": "Status column replaced",
-      "replace_failed": "Failed to replace status column",
-      "repair_status_columns": "Repair status columns",
-      "unresolved_apply_guard": "Status columns need repair ({{count}})"
+      "status_no_longer_exists": "El estado ya no existe",
+      "missing_status": "Estado faltante",
+      "ambiguous_status": "Estado histórico ambiguo",
+      "replace_placeholder": "Seleccionar estado de reemplazo...",
+      "replace_status": "Reemplazar estado",
+      "replacing": "Reemplazando...",
+      "replaced": "Columna de estado reemplazada",
+      "replace_failed": "No se pudo reemplazar la columna de estado",
+      "repair_status_columns": "Reparar columnas de estado",
+      "unresolved_apply_guard": "Las columnas de estado requieren reparación ({{count}})"
     },
     "list": {
       "title": "Plantillas de proyecto",
@@ -1058,7 +1058,7 @@
       },
       "fixErrors": "Corrige los siguientes errores:",
       "addStatus": "Agregar nuevo estado",
-      "unresolved_guard": "This template has status columns that must be repaired before it can be applied."
+      "unresolved_guard": "Esta plantilla tiene columnas de estado que deben repararse antes de poder aplicarse."
     },
     "detail": {
       "description": "Descripción:",
